@@ -783,20 +783,21 @@ export class MemoryManager {
   }
 
   /**
-   * Two-layer injection index (用户拍板). Merges GLOBAL (cross-project
-   * experience) + PROJECT (this repo's facts) memories into a compact index —
-   * one line per entry, name + description only, NO body. The model reads a
-   * specific entry's full content on demand via MemoryRead (which records a
-   * recall → drives TTL + UI visibility).
+   * Three-layer injection index (用户拍板). Merges GLOBAL (cross-project
+   * experience) + DIGITAL-HUMAN (portable profile experience) + PROJECT
+   * (this repo's facts) memories into a compact index — one line per entry,
+   * name + description only, NO body.
    *
    * This is what fixes "global memory never shows up": global memories are now
    * injected alongside project ones, every session, regardless of cwd.
    *
-   * Static because it must construct two managers (global = no projectDir,
-   * project = with projectDir). `projectDir` undefined → only global is shown.
+   * Static because it must construct the managers for each configured layer.
+   * `projectDir` undefined → no project layer; `profileDir` undefined → no
+   * digital-human layer.
    */
   static buildInjectionIndex(opts: {
     projectDir?: string;
+    profileDir?: string;
     baseDir?: string;
     maxAgeDays?: number;
     now?: number;
@@ -805,6 +806,9 @@ export class MemoryManager {
     const project = opts.projectDir
       ? new MemoryManager({ baseDir: opts.baseDir, projectDir: opts.projectDir })
       : null;
+    // 数字人层：baseDir 直接指向 profiles/<name>（其 memory/ 子目录随
+    // MemoryManager 的常规布局落盘）。跟着 Profile 走、跨 workspace 复用。
+    const profile = opts.profileDir ? new MemoryManager({ baseDir: opts.profileDir }) : null;
 
     const pinnedFirst = (a: MemoryEntry, b: MemoryEntry): number =>
       Number(b.pinned ?? false) - Number(a.pinned ?? false);
@@ -817,9 +821,12 @@ export class MemoryManager {
       ).sort(pinnedFirst);
 
     const globalEntries = collect(global);
+    const profileEntries = profile ? collect(profile) : [];
     const projectEntries = project ? collect(project) : [];
 
-    if (globalEntries.length === 0 && projectEntries.length === 0) return "";
+    if (globalEntries.length === 0 && profileEntries.length === 0 && projectEntries.length === 0) {
+      return "";
+    }
 
     const fmt = (e: MemoryEntry): string =>
       `- ${e.pinned ? "[pinned] " : ""}[${e.type}] ${e.name}: ${e.description}`;
@@ -828,6 +835,11 @@ export class MemoryManager {
     if (globalEntries.length > 0) {
       lines.push("## Global memories (apply across all projects)");
       for (const e of globalEntries) lines.push(fmt(e));
+    }
+    if (profileEntries.length > 0) {
+      if (lines.length > 0) lines.push("");
+      lines.push("## Digital-human memories (travel with the active profile)");
+      for (const e of profileEntries) lines.push(fmt(e));
     }
     if (projectEntries.length > 0) {
       if (lines.length > 0) lines.push("");

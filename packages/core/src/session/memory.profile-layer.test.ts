@@ -1,0 +1,62 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { MemoryManager } from "./memory.js";
+
+let home: string;
+
+beforeEach(() => {
+  home = mkdtempSync(join(tmpdir(), "cs-mem-profile-"));
+});
+
+afterEach(() => {
+  rmSync(home, { recursive: true, force: true });
+});
+
+describe("buildInjectionIndex profile layer", () => {
+  test("orders sections global → digital-human → project", () => {
+    const globalMemory = new MemoryManager({ baseDir: home });
+    const profileDir = join(home, "profiles", "seedance");
+    const profileMemory = new MemoryManager({ baseDir: profileDir });
+    const projectDir = join(home, "ws");
+    const projectMemory = new MemoryManager({ baseDir: home, projectDir });
+
+    globalMemory.save({
+      name: "g",
+      description: "global fact",
+      type: "semantic",
+      content: "global body",
+    });
+    profileMemory.save({
+      name: "p",
+      description: "digital-human fact",
+      type: "semantic",
+      content: "digital-human body",
+    });
+    projectMemory.save({
+      name: "l",
+      description: "project fact",
+      type: "semantic",
+      content: "project body",
+    });
+
+    const index = MemoryManager.buildInjectionIndex({
+      baseDir: home,
+      projectDir,
+      profileDir,
+    });
+    const globalPosition = index.indexOf("global fact");
+    const profilePosition = index.indexOf("digital-human fact");
+    const projectPosition = index.indexOf("project fact");
+    expect(globalPosition).toBeGreaterThan(-1);
+    expect(profilePosition).toBeGreaterThan(globalPosition);
+    expect(projectPosition).toBeGreaterThan(profilePosition);
+    expect(index).toContain("## Digital-human memories");
+  });
+
+  test("no profileDir → no digital-human section", () => {
+    const index = MemoryManager.buildInjectionIndex({ baseDir: home });
+    expect(index).not.toContain("Digital-human memories");
+  });
+});

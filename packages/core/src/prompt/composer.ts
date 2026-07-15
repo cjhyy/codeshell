@@ -40,6 +40,8 @@ export interface ComposerOptions {
    * 解析后传入；composer 不自行读盘。
    */
   profileMainInstruction?: string;
+  /** 激活数字人的可移植记忆层根目录（portableMemory=true 时由 engine 传入）。 */
+  profileMemoryDir?: string;
   /**
    * Skill names (full names including any "<plugin>:" prefix) the user
    * has disabled in settings. Filtered out of the LLM's skills listing
@@ -296,12 +298,13 @@ export class PromptComposer {
 
   private getMemoryContext(): string {
     try {
-      // Two-layer injection (用户拍板): a compact index merging GLOBAL +
-      // PROJECT memories. Global memories are now surfaced every session
-      // regardless of cwd (the fix for "global memory never shows up"); the
-      // model reads full bodies on demand via MemoryRead.
+      // Three-layer injection (用户拍板): a compact index merging GLOBAL +
+      // DIGITAL-HUMAN + PROJECT memories. Global memories are surfaced every
+      // session; the portable middle layer is present only when the active
+      // workspace profile opts in.
       return MemoryManager.buildInjectionIndex({
         projectDir: this.options.cwd,
+        profileDir: this.options.profileMemoryDir,
         maxAgeDays: this.options.memoriesMaxAgeDays,
       });
     } catch {

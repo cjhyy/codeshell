@@ -123,6 +123,7 @@ import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
 import { resolveActiveWorkspaceProfile } from "../profile/resolve.js";
+import { workspaceProfileDir } from "../profile/store.js";
 import {
   composeDynamicContextProviders,
   composeCapabilityEngineHooks,
@@ -1931,6 +1932,9 @@ export class Engine {
         responseLanguage: this.config.responseLanguage,
         userProfile: this.config.userProfile,
         profileMainInstruction: workspaceProfile?.mainInstruction,
+        profileMemoryDir: workspaceProfile?.portableMemory
+          ? workspaceProfileDir(workspaceProfile.name)
+          : undefined,
         instructionOptions: {
           compatFileNames: compatFileNamesFrom(this.config.instructions),
           boundaryFinder: (scanCwd) => resolveInstructionBoundary(scanCwd, this.capabilities),
