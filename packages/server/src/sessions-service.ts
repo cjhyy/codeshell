@@ -296,5 +296,3 @@ export async function listDiskSessions(
     nextCursor: i < dirs.length && i > 0 ? encodeDiskSessionCursor(dirs[i - 1]!) : null,
   };
 }
-
-export { getSessionTranscript } from "./transcript-reader.js";

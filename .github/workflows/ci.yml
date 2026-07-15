@@ -68,7 +68,7 @@ jobs:
             packages/core/src/tool-system/builtin/tool-guards.test.ts \
             packages/desktop/scripts/mock-provider-server.test.mjs \
             packages/desktop/src/main/im-gateway-control-server.test.ts \
-            packages/desktop/src/main/mobile-remote/tunnel-manager.test.ts \
+            packages/server/src/mobile-remote/tunnel-manager.test.ts \
             packages/desktop/src/main/plugin-panel-protocol.test.ts \
             tests/agent-notifications.test.ts \
             tests/background-agent-protocol.test.ts \
@@ -140,4 +140,4 @@ jobs:
             packages/core/src/tool-system/builtin/crlf.test.ts `
             packages/core/src/tool-system/sandbox/sandbox-win32.test.ts `
             packages/core/src/utils/exec.test.ts `
-            packages/desktop/src/main/mobile-remote/cloudflared-binary.test.ts
+            packages/server/src/mobile-remote/cloudflared-binary.test.ts

@@ -1,4 +1,4 @@
-// packages/desktop/src/main/sessions-service.disk.test.ts
+// packages/server/src/sessions-service.disk.test.ts
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";

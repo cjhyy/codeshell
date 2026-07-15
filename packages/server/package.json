@@ -1,0 +1,33 @@
+{
+  "name": "@cjhyy/code-shell-server",
+  "version": "0.7.1",
+  "description": "CodeShell server transport layer — mobile remote HTTP/WS host, pairing, passcode gate, tunnel, rooms, uploads, and session/attachment services. Electron-free; precursor of the auth gateway.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@cjhyy/code-shell-capability-coding": "workspace:*",
+    "@cjhyy/code-shell-core": "workspace:*",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}
