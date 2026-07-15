@@ -89,7 +89,11 @@ async function renderSection(): Promise<HTMLElement> {
   const container = document.createElement("div") as unknown as HTMLElement;
   root = createRoot(container);
   await act(async () => {
-    root?.render(<DataSourcesSection cwd="/repo" />);
+    root?.render(
+      <form>
+        <DataSourcesSection cwd="/repo" />
+      </form>,
+    );
     await flushMicrotasks();
     await flushMicrotasks();
   });
@@ -170,6 +174,7 @@ describe("DataSourcesSection", () => {
     const deleted: Array<[string, string]> = [];
     let accessCalls = 0;
     Object.assign(window, {
+      confirm: () => true,
       codeshell: {
         listSourceCatalog: async () => [],
         workspaceSourceAccess: async () => {
@@ -236,7 +241,7 @@ describe("DataSourcesSection", () => {
     expect(accessCalls).toBe(2);
   });
 
-  test("loads explicit scopes and binds the checked scopes with ask policy", async () => {
+  test("loads explicit scopes and binds the checked scopes with the selected policy", async () => {
     ensureMiniDom();
     const scopeCalls: string[] = [];
     const bindings: Array<[string, WorkspaceSourceBinding]> = [];
@@ -264,10 +269,10 @@ describe("DataSourcesSection", () => {
       },
     });
     const container = await renderSection();
-    const select = findElements(container, "SELECT")[0];
+    const [sourceSelect, policySelect] = findElements(container, "SELECT");
 
     await act(async () => {
-      reactPropsOf(select).onChange({ target: { value: "mock-one" } });
+      reactPropsOf(sourceSelect).onChange({ target: { value: "mock-one" } });
       await flushMicrotasks();
       await flushMicrotasks();
     });
@@ -277,6 +282,7 @@ describe("DataSourcesSection", () => {
     );
     await act(async () => {
       reactPropsOf(alpha).onChange({ target: { checked: true } });
+      reactPropsOf(policySelect).onChange({ target: { value: "deny" } });
       await flushMicrotasks();
     });
     const bindButton = findElements(container, "BUTTON").find(
@@ -290,7 +296,7 @@ describe("DataSourcesSection", () => {
 
     expect(scopeCalls).toEqual(["mock-one"]);
     expect(bindings).toEqual([
-      ["/repo", { sourceId: "mock-one", scopes: ["alpha"], readPolicy: "ask" }],
+      ["/repo", { sourceId: "mock-one", scopes: ["alpha"], readPolicy: "deny" }],
     ]);
     expect(accessCalls).toBe(2);
   });

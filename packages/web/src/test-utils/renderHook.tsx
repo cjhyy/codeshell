@@ -73,6 +73,7 @@ class MiniElement extends MiniNode {
   readonly style: Record<string, string> = {};
   namespaceURI = "http://www.w3.org/1999/xhtml";
   tagName: string;
+  private formValue = "";
 
   constructor(tagName: string, ownerDocument: MiniDocument) {
     super();
@@ -81,12 +82,63 @@ class MiniElement extends MiniNode {
     this.nodeName = this.tagName;
   }
 
+  override appendChild<T extends MiniNode>(node: T): T {
+    const appended = super.appendChild(node);
+    this.syncSelectOptions();
+    return appended;
+  }
+
+  override insertBefore<T extends MiniNode>(node: T, before: MiniNode | null): T {
+    const inserted = super.insertBefore(node, before);
+    this.syncSelectOptions();
+    return inserted;
+  }
+
+  override removeChild<T extends MiniNode>(node: T): T {
+    const removed = super.removeChild(node);
+    this.syncSelectOptions();
+    return removed;
+  }
+
+  get length(): number {
+    return this.tagName === "SELECT" ? this.childNodes.length : 0;
+  }
+
+  get options(): MiniElement {
+    return this;
+  }
+
+  get value(): string {
+    return this.formValue;
+  }
+
+  set value(value: string) {
+    this.formValue = value;
+  }
+
+  private syncSelectOptions(): void {
+    if (this.tagName !== "SELECT") return;
+    this.childNodes.forEach((node, index) => {
+      (this as unknown as Record<number, MiniNode>)[index] = node;
+    });
+  }
+
   setAttribute(name: string, value: string): void {
     this.attributes.set(name, value);
   }
 
   removeAttribute(name: string): void {
     this.attributes.delete(name);
+  }
+
+  closest(selector: string): MiniElement | null {
+    const tagName = selector.toUpperCase();
+    let current: MiniNode | null = this;
+    while (current) {
+      if (current instanceof MiniElement && current.tagName === tagName) return current;
+      current = current.parentNode;
+    }
+    return null;
   }
 }
 
@@ -145,6 +197,7 @@ export function ensureMiniDom(): void {
   win.Node = MiniNode;
   win.Element = MiniElement;
   win.HTMLElement = MiniElement;
+  win.HTMLSelectElement = MiniElement;
   win.HTMLIFrameElement = class {};
   win.SVGElement = MiniElement;
   win.setTimeout = globalThis.setTimeout.bind(globalThis);
@@ -160,6 +213,7 @@ export function ensureMiniDom(): void {
     Node: MiniNode,
     Element: MiniElement,
     HTMLElement: MiniElement,
+    HTMLSelectElement: MiniElement,
     SVGElement: MiniElement,
   });
   installed = true;

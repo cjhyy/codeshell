@@ -7,6 +7,7 @@ import type {
 } from "@cjhyy/code-shell-core";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { useT, type TFunction } from "../i18n";
 import { useToast } from "../ui/ToastProvider";
 
@@ -33,6 +34,13 @@ function statusLabel(t: TFunction, status: EffectiveSourceAccess["status"]): str
   return t("projectConfig.dataSources.statusUnavailable");
 }
 
+function kindLabel(t: TFunction, kind: string): string {
+  if (kind === "mock") return t("projectConfig.dataSources.kindMock");
+  if (kind === "mcp-resource") return t("projectConfig.dataSources.kindMcpResource");
+  if (kind === "local-files") return t("projectConfig.dataSources.kindLocalFiles");
+  return kind;
+}
+
 /** Project-local upload and source-binding controls. Content reads stay in ReadSource. */
 export function DataSourcesSection({ cwd }: { cwd: string }) {
   const { t } = useT();
@@ -45,6 +53,7 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
   const [selectedSourceId, setSelectedSourceId] = React.useState("");
   const [scopes, setScopes] = React.useState<SourceScope[]>([]);
   const [selectedScopes, setSelectedScopes] = React.useState<Set<string>>(() => new Set());
+  const [readPolicy, setReadPolicy] = React.useState<"ask" | "deny">("ask");
   const [loading, setLoading] = React.useState(true);
   const [loadingScopes, setLoadingScopes] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -85,6 +94,7 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
         setSelectedSourceId("");
         setScopes([]);
         setSelectedScopes(new Set());
+        setReadPolicy("ask");
       }
       if (opts?.successMessage) toast({ message: opts.successMessage });
     } catch (caught) {
@@ -239,7 +249,7 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{item.label}</span>
-                    <Badge variant="secondary">{item.kind}</Badge>
+                    <Badge variant="secondary">{kindLabel(t, item.kind)}</Badge>
                     <Badge variant={item.status === "ok" ? "default" : "destructive"}>
                       {statusLabel(t, item.status)}
                     </Badge>
@@ -268,7 +278,9 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
                   >
                     {t("projectConfig.dataSources.unbind")}
                   </Button>
-                ) : null}
+                ) : (
+                  <Badge variant="outline">{t("projectConfig.dataSources.builtinBadge")}</Badge>
+                )}
               </li>
             ))}
           </ul>
@@ -292,18 +304,19 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
           <>
             <label className="block space-y-1 text-xs text-muted-foreground">
               <span>{t("projectConfig.dataSources.sourceLabel")}</span>
-              <select
-                className="cs-control h-9 w-full rounded-md px-3 text-sm text-foreground"
+              <SimpleSelect
+                size="sm"
+                value={selectedSourceId}
                 disabled={busy}
-                onChange={(event) => void selectSource(event.target.value)}
-              >
-                <option value="">{t("projectConfig.dataSources.sourcePlaceholder")}</option>
-                {available.map((source) => (
-                  <option key={source.id} value={source.id}>
-                    {source.label} ({source.kind})
-                  </option>
-                ))}
-              </select>
+                placeholder={t("projectConfig.dataSources.sourcePlaceholder")}
+                ariaLabel={t("projectConfig.dataSources.sourceLabel")}
+                onChange={(value) => void selectSource(value)}
+                options={available.map((source) => ({
+                  value: source.id,
+                  label: source.label,
+                  description: kindLabel(t, source.kind),
+                }))}
+              />
             </label>
 
             <fieldset className="space-y-2" disabled={busy || loadingScopes}>
@@ -350,6 +363,29 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
               )}
             </fieldset>
 
+            <label className="block space-y-1 text-xs text-muted-foreground">
+              <span>{t("projectConfig.dataSources.readPolicyLabel")}</span>
+              <SimpleSelect<"ask" | "deny">
+                size="sm"
+                value={readPolicy}
+                disabled={busy}
+                ariaLabel={t("projectConfig.dataSources.readPolicyLabel")}
+                onChange={setReadPolicy}
+                options={[
+                  {
+                    value: "ask",
+                    label: t("projectConfig.dataSources.readPolicyAsk"),
+                    description: t("projectConfig.dataSources.readPolicyAskDesc"),
+                  },
+                  {
+                    value: "deny",
+                    label: t("projectConfig.dataSources.readPolicyDeny"),
+                    description: t("projectConfig.dataSources.readPolicyDenyDesc"),
+                  },
+                ]}
+              />
+            </label>
+
             <Button
               size="sm"
               disabled={busy || !selectedSourceId || selectedScopes.size === 0}
@@ -361,7 +397,7 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
                       scopes: scopes
                         .filter((scope) => selectedScopes.has(scope.id))
                         .map((scope) => scope.id),
-                      readPolicy: "ask",
+                      readPolicy,
                     }),
                   {
                     clearSelection: true,
