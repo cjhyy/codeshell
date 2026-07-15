@@ -58,3 +58,4 @@ packages/desktop/.preview/
 
 # nightly loop bookkeeping (untracked)
 .loop/
+packages/web/dist-app/
