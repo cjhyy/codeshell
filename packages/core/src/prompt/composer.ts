@@ -34,6 +34,13 @@ export interface ComposerOptions {
   /** How to address the user / short profile (free text). */
   userProfile?: string;
   /**
+   * 激活数字人（WorkspaceProfile）的主指令。排序在 preset behavior 之后、
+   * appendSystemPrompt 之前 —— 本地 CLAUDE.md（user-context 消息）与用户
+   * append 都比它更“具体/优先”。来源：engine 经 resolveActiveWorkspaceProfile
+   * 解析后传入；composer 不自行读盘。
+   */
+  profileMainInstruction?: string;
+  /**
    * Skill names (full names including any "<plugin>:" prefix) the user
    * has disabled in settings. Filtered out of the LLM's skills listing
    * so the prompt matches what the skill builtin tool will actually
@@ -236,6 +243,15 @@ export class PromptComposer {
         });
       },
     });
+
+    // 数字人主指令 —— 见 profileMainInstruction 的 doc comment。
+    if (this.options.profileMainInstruction) {
+      sections.push({
+        name: "profile_main_instruction",
+        compute: () =>
+          `# Digital-Human Main Instruction\n\n${this.options.profileMainInstruction!}`,
+      });
+    }
 
     // Skills listing is intentionally NOT a system section: it changes when a
     // skill is installed/disabled, which would invalidate the whole cached

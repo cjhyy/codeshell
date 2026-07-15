@@ -122,6 +122,7 @@ import { computeEffectiveDisabledLists } from "../capability-control/disabled-li
 import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
+import { resolveActiveWorkspaceProfile } from "../profile/resolve.js";
 import {
   composeDynamicContextProviders,
   composeCapabilityEngineHooks,
@@ -1912,6 +1913,12 @@ export class Engine {
           (visibilityDefaultGoal !== undefined && visibilityDefaultGoal.paused !== true));
 
       const { disabledSkills, disabledPlugins } = this.readDisabledLists();
+      // WorkspaceProfile（数字人）：mainInstruction 从库活读（settings 只记名字）。
+      // 命名注意：局部变量 `profile` 已被 RunBehaviorProfile 占用。
+      const workspaceProfile = resolveActiveWorkspaceProfile({
+        cwd,
+        settings: this.getSettingsManager(),
+      });
       const promptComposer = new PromptComposer({
         cwd,
         model: this.config.llm.model,
@@ -1923,6 +1930,7 @@ export class Engine {
             .join("\n\n") || undefined,
         responseLanguage: this.config.responseLanguage,
         userProfile: this.config.userProfile,
+        profileMainInstruction: workspaceProfile?.mainInstruction,
         instructionOptions: {
           compatFileNames: compatFileNamesFrom(this.config.instructions),
           boundaryFinder: (scanCwd) => resolveInstructionBoundary(scanCwd, this.capabilities),
