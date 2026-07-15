@@ -7,8 +7,13 @@
 import type {
   StreamEvent,
   CapabilityDescriptor,
+  EffectiveSourceAccess,
   SessionWorkspace,
   SessionForkLineage,
+  SourceDefinition,
+  SourceResourceMeta,
+  SourceScope,
+  WorkspaceSourceBinding,
 } from "@cjhyy/code-shell-core";
 import type { ApprovalRequest, ReasoningControl } from "@cjhyy/code-shell-core/internal";
 import type {
@@ -1281,6 +1286,19 @@ export interface CodeshellApi {
    * override key so the capability falls back to the global baseline.
    */
   setCapabilityOverride(cwd: string, id: string, state: "inherit" | "on" | "off"): Promise<void>;
+  listSourceCatalog(): Promise<SourceDefinition[]>;
+  saveSourceCatalog(definition: SourceDefinition): Promise<void>;
+  deleteSourceCatalog(id: string): Promise<void>;
+  workspaceSourceAccess(cwd: string): Promise<{
+    bindings: WorkspaceSourceBinding[];
+    access: EffectiveSourceAccess[];
+    uploads: SourceResourceMeta[];
+  }>;
+  bindSource(cwd: string, binding: WorkspaceSourceBinding): Promise<void>;
+  unbindSource(cwd: string, sourceId: string): Promise<void>;
+  listSourceScopes(sourceId: string): Promise<SourceScope[]>;
+  pickAndUploadSources(cwd: string): Promise<string[]>;
+  deleteUpload(cwd: string, name: string): Promise<void>;
   listProfiles(cwd?: string): Promise<
     Array<{
       name: string;

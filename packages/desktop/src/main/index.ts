@@ -270,6 +270,17 @@ import {
   setCapabilityOverride,
 } from "./capabilities-service.js";
 import {
+  bind as bindSource,
+  catalogDelete as deleteSourceCatalog,
+  catalogList as listSourceCatalog,
+  catalogSave as saveSourceCatalog,
+  deleteUpload,
+  listScopes as listSourceScopes,
+  unbind as unbindSource,
+  uploadFiles,
+  workspaceAccess as workspaceSourceAccess,
+} from "./sources-service.js";
+import {
   activateProfile,
   deactivateProfile,
   installCatalogProfile,
@@ -1663,6 +1674,57 @@ ipcMain.handle(
     setCapabilityOverride(cwd, id, state);
   },
 );
+ipcMain.handle("sources:catalogList", async () => listSourceCatalog());
+ipcMain.handle("sources:catalogSave", async (_e, definition: unknown) => {
+  if (typeof definition !== "object" || definition === null || Array.isArray(definition)) {
+    throw new Error("sources:catalogSave requires definition");
+  }
+  saveSourceCatalog(definition as Parameters<typeof saveSourceCatalog>[0]);
+});
+ipcMain.handle("sources:catalogDelete", async (_e, id: string) => {
+  if (typeof id !== "string" || !id) throw new Error("sources:catalogDelete requires id");
+  deleteSourceCatalog(id);
+});
+ipcMain.handle("sources:workspaceAccess", async (_e, cwd: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("sources:workspaceAccess requires cwd");
+  return workspaceSourceAccess(cwd);
+});
+ipcMain.handle("sources:bind", async (_e, cwd: string, binding: unknown) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("sources:bind requires cwd");
+  if (typeof binding !== "object" || binding === null || Array.isArray(binding)) {
+    throw new Error("sources:bind requires binding");
+  }
+  bindSource(cwd, binding as Parameters<typeof bindSource>[1]);
+});
+ipcMain.handle("sources:unbind", async (_e, cwd: string, sourceId: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("sources:unbind requires cwd");
+  if (typeof sourceId !== "string" || !sourceId) {
+    throw new Error("sources:unbind requires sourceId");
+  }
+  unbindSource(cwd, sourceId);
+});
+ipcMain.handle("sources:listScopes", async (_e, sourceId: string) => {
+  if (typeof sourceId !== "string" || !sourceId) {
+    throw new Error("sources:listScopes requires sourceId");
+  }
+  return listSourceScopes(sourceId);
+});
+ipcMain.handle("sources:pickAndUpload", async (_e, cwd: string) => {
+  if (typeof cwd !== "string" || !cwd) {
+    throw new Error("sources:pickAndUpload requires cwd");
+  }
+  const result = await dialog.showOpenDialog({
+    title: "选择数据源文件",
+    properties: ["openFile", "multiSelections"],
+  });
+  if (result.canceled || result.filePaths.length === 0) return [];
+  return uploadFiles(cwd, result.filePaths);
+});
+ipcMain.handle("sources:deleteUpload", async (_e, cwd: string, name: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("sources:deleteUpload requires cwd");
+  if (typeof name !== "string" || !name) throw new Error("sources:deleteUpload requires name");
+  deleteUpload(cwd, name);
+});
 ipcMain.handle("profiles:list", async (_e, cwd?: string) => {
   if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
     throw new Error("profiles:list cwd must be a non-empty string");

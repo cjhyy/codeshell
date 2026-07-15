@@ -936,6 +936,19 @@ contextBridge.exposeInMainWorld("codeshell", {
   ) => ipcRenderer.invoke("capabilities:setEnabled", cwd, id, on, opts),
   setCapabilityOverride: (cwd: string, id: string, state: "inherit" | "on" | "off") =>
     ipcRenderer.invoke("capabilities:setOverride", cwd, id, state),
+  listSourceCatalog: () => ipcRenderer.invoke("sources:catalogList"),
+  saveSourceCatalog: (definition: import("@cjhyy/code-shell-core").SourceDefinition) =>
+    ipcRenderer.invoke("sources:catalogSave", definition),
+  deleteSourceCatalog: (id: string) => ipcRenderer.invoke("sources:catalogDelete", id),
+  workspaceSourceAccess: (cwd: string) => ipcRenderer.invoke("sources:workspaceAccess", cwd),
+  bindSource: (cwd: string, binding: import("@cjhyy/code-shell-core").WorkspaceSourceBinding) =>
+    ipcRenderer.invoke("sources:bind", cwd, binding),
+  unbindSource: (cwd: string, sourceId: string) =>
+    ipcRenderer.invoke("sources:unbind", cwd, sourceId),
+  listSourceScopes: (sourceId: string) => ipcRenderer.invoke("sources:listScopes", sourceId),
+  pickAndUploadSources: (cwd: string) => ipcRenderer.invoke("sources:pickAndUpload", cwd),
+  deleteUpload: (cwd: string, name: string) =>
+    ipcRenderer.invoke("sources:deleteUpload", cwd, name),
   listProfiles: (cwd?: string) => ipcRenderer.invoke("profiles:list", cwd),
   activateProfile: (cwd: string, name: string) =>
     ipcRenderer.invoke("profiles:activate", cwd, name),
