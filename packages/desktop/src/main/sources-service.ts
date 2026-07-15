@@ -1,6 +1,7 @@
-/** 数据源的 desktop main 门面（组合 core 公共 API，样板 = profiles-service.ts）。 */
+/** 数据源的 desktop main 门面（组合 core host API，样板 = profiles-service.ts）。 */
 import { copyFileSync, mkdirSync, rmSync } from "node:fs";
 import { basename } from "node:path";
+import { SettingsManager } from "@cjhyy/code-shell-core";
 import {
   bindSource as bindWorkspaceSource,
   connectorAdapterFor,
@@ -13,10 +14,9 @@ import {
   resolveEffectiveSourceAccess,
   resolveUploadTarget,
   saveSourceDefinition,
-  SettingsManager,
   unbindSource as unbindWorkspaceSource,
   uploadsDir,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 
 export function catalogList() {
   return listSourceDefinitions();

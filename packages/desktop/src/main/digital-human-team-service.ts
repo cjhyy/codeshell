@@ -8,11 +8,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import {
-  codeShellHome,
-  listWorkspaceProfiles,
-  readWorkspaceProfile,
-} from "@cjhyy/code-shell-core";
+import { codeShellHome } from "@cjhyy/code-shell-core";
+import { listWorkspaceProfiles, readWorkspaceProfile } from "@cjhyy/code-shell-core/internal";
 import {
   DIGITAL_HUMAN_TEAM_ID_RE,
   parseDigitalHumanTeam,

@@ -1,7 +1,7 @@
 /**
  * Capability-control forwarders for the 扩展能力 settings page.
  *
- * The desktop main process imports core directly (same rationale as
+ * The desktop main process imports core's host surface directly (same rationale as
  * skills-service): the agent worker isn't running between turns, and this is
  * "what's configured on disk" data. We build a fresh CapabilityService per
  * call — it holds no mutable state, so there's nothing to cache.
@@ -16,7 +16,6 @@
  */
 
 import {
-  CapabilityService,
   BUILTIN_TOOLS,
   SettingsManager,
   ToolRegistry,
@@ -26,6 +25,7 @@ import {
   loadAgentDefinitionsForCwd,
   type CapabilityDescriptor,
 } from "@cjhyy/code-shell-core";
+import { CapabilityService } from "@cjhyy/code-shell-core/internal";
 import { CODING_CAPABILITY, CODING_TOOLS } from "@cjhyy/code-shell-capability-coding";
 
 function makeService(cwd: string): CapabilityService {

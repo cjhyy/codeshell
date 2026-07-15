@@ -4,6 +4,15 @@ import type {
   ProtocolModelEntry as _InternalProtocolModelEntry,
   TaskInfo as _InternalTaskInfo,
 } from "@cjhyy/code-shell-core/internal";
+import type {
+  BuildSourcesContextSummaryInput as _BuildSourcesContextSummaryInput,
+  ConnectorAdapter as _ConnectorAdapter,
+  EffectiveDisabledLists as _EffectiveDisabledLists,
+  EffectiveSourceAccess as _EffectiveSourceAccess,
+  ResolveActiveWorkspaceProfileInput as _ResolveActiveWorkspaceProfileInput,
+  WorkspaceProfile as _WorkspaceProfile,
+  WorkspaceProfileSubtree as _WorkspaceProfileSubtree,
+} from "./index.js";
 import * as publicApi from "./index.js";
 
 // The full pinned runtime surface of the /internal host entry. /internal is the
@@ -119,6 +128,47 @@ const expectedRuntimeExportsByPartition = {
     "REASONING_EFFORTS",
   ],
   extendedHostTypes: [],
+  sourcesProfilesCapabilityControl: [
+    "sourceCatalogPath",
+    "listSourceDefinitions",
+    "readSourceDefinition",
+    "saveSourceDefinition",
+    "deleteSourceDefinition",
+    "registerConnectorAdapter",
+    "connectorAdapterFor",
+    "mockAdapter",
+    "LOCAL_FILES_SOURCE_ID",
+    "uploadsDir",
+    "localFilesSourceFor",
+    "resolveUploadTarget",
+    "localFilesAdapter",
+    "listLocalFiles",
+    "createMcpResourceAdapter",
+    "defaultMcpResourceAdapter",
+    "listBindings",
+    "bindSource",
+    "unbindSource",
+    "resolveEffectiveSourceAccess",
+    "defaultCredentialStatus",
+    "buildSourcesContextSummary",
+    "listWorkspaceProfiles",
+    "readWorkspaceProfile",
+    "saveWorkspaceProfile",
+    "workspaceProfileDir",
+    "workspaceProfilesRoot",
+    "activateWorkspaceProfile",
+    "deactivateWorkspaceProfile",
+    "profileOverridesFromDefinition",
+    "resolveActiveWorkspaceProfile",
+    "workspaceProfilePresetFor",
+    "CapabilityService",
+    "CapabilityNotFoundError",
+    "projectBuiltin",
+    "projectMcp",
+    "projectSkills",
+    "projectPlugins",
+    "computeEffectiveDisabledLists",
+  ],
 } as const;
 
 const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).flat();
@@ -142,6 +192,12 @@ const hostOnlySamples = [
   "createInProcessClient",
   "fetchModelList",
   "PROVIDER_KINDS",
+  "listSourceDefinitions",
+  "LOCAL_FILES_SOURCE_ID",
+  "resolveUploadTarget",
+  "activateWorkspaceProfile",
+  "CapabilityService",
+  "computeEffectiveDisabledLists",
 ] as const;
 
 // Runtime members of the /extension capability contract (coding/arena imports).
@@ -163,34 +219,13 @@ const extensionRuntimeContract = [
   "logger",
 ] as const;
 
-// Stable workspace data-source SDK surface. Builtin ListSources/ReadSource
-// tools are intentionally not part of this public contract.
-const sourceRuntimeContract = [
+// Stable workspace data-source schema/constants surface. Host runtime belongs
+// to /internal; renderer/preload consumers only need these values and types.
+const sourcePublicRuntimeContract = [
   "SOURCE_ID_RE",
   "SOURCE_KINDS",
   "SourceDefinitionSchema",
   "WorkspaceSourceBindingSchema",
-  "sourceCatalogPath",
-  "listSourceDefinitions",
-  "readSourceDefinition",
-  "saveSourceDefinition",
-  "deleteSourceDefinition",
-  "registerConnectorAdapter",
-  "connectorAdapterFor",
-  "mockAdapter",
-  "LOCAL_FILES_SOURCE_ID",
-  "uploadsDir",
-  "localFilesSourceFor",
-  "localFilesAdapter",
-  "listLocalFiles",
-  "createMcpResourceAdapter",
-  "defaultMcpResourceAdapter",
-  "listBindings",
-  "bindSource",
-  "unbindSource",
-  "resolveEffectiveSourceAccess",
-  "defaultCredentialStatus",
-  "buildSourcesContextSummary",
 ] as const;
 
 describe("core public/internal export contract", () => {
@@ -198,9 +233,8 @@ describe("core public/internal export contract", () => {
     expect(publicApi.Engine).toBeDefined();
     expect(publicApi.createServer).toBeDefined();
     expect(publicApi.WorkspaceProfileSchema).toBeDefined();
-    expect(publicApi.activateWorkspaceProfile).toBeDefined();
-    expect(publicApi.listWorkspaceProfiles).toBeDefined();
-    for (const name of sourceRuntimeContract) {
+    expect(publicApi.WORKSPACE_PROFILE_NAME_RE).toBeDefined();
+    for (const name of sourcePublicRuntimeContract) {
       expect(publicApi[name], `public root must export ${name}`).toBeDefined();
     }
 

@@ -188,3 +188,53 @@ export {
   type ToolRegistryHarness,
   type ToolRegistryHarnessOptions,
 } from "./tool-system/testing/tool-registry-harness.js";
+
+// ─── Sources / WorkspaceProfile host surface (desktop main) ─────
+
+export {
+  sourceCatalogPath,
+  listSourceDefinitions,
+  readSourceDefinition,
+  saveSourceDefinition,
+  deleteSourceDefinition,
+} from "./sources/catalog.js";
+export { registerConnectorAdapter, connectorAdapterFor } from "./sources/adapter.js";
+export { mockAdapter } from "./sources/adapters/mock.js";
+export {
+  LOCAL_FILES_SOURCE_ID,
+  uploadsDir,
+  localFilesSourceFor,
+  resolveUploadTarget,
+  localFilesAdapter,
+  listLocalFiles,
+} from "./sources/adapters/local-files.js";
+export {
+  createMcpResourceAdapter,
+  defaultMcpResourceAdapter,
+} from "./sources/adapters/mcp-resource.js";
+export { listBindings, bindSource, unbindSource } from "./sources/binding.js";
+export { resolveEffectiveSourceAccess } from "./sources/resolve.js";
+export { defaultCredentialStatus } from "./sources/credential-status.js";
+export { buildSourcesContextSummary } from "./sources/context-summary.js";
+export {
+  listWorkspaceProfiles,
+  readWorkspaceProfile,
+  saveWorkspaceProfile,
+  workspaceProfileDir,
+  workspaceProfilesRoot,
+} from "./profile/store.js";
+export {
+  activateWorkspaceProfile,
+  deactivateWorkspaceProfile,
+  profileOverridesFromDefinition,
+} from "./profile/activation.js";
+export { resolveActiveWorkspaceProfile, workspaceProfilePresetFor } from "./profile/resolve.js";
+export { CapabilityService } from "./capability-control/service.js";
+export { CapabilityNotFoundError } from "./capability-control/types.js";
+export {
+  projectBuiltin,
+  projectMcp,
+  projectSkills,
+  projectPlugins,
+} from "./capability-control/project.js";
+export { computeEffectiveDisabledLists } from "./capability-control/disabled-lists.js";

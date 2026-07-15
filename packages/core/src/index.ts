@@ -125,21 +125,34 @@ export { createOffBackend } from "./tool-system/sandbox/off.js";
 
 // ─── WorkspaceProfile（数字人）harness 元机制 ─────────────────────
 export {
+  WORKSPACE_PROFILE_NAME_RE,
   WorkspaceProfileSchema,
-  activateWorkspaceProfile,
-  deactivateWorkspaceProfile,
-  listWorkspaceProfiles,
-  readWorkspaceProfile,
-  resolveActiveWorkspaceProfile,
-  saveWorkspaceProfile,
-  workspaceProfileDir,
-  workspaceProfilesRoot,
   type WorkspaceProfile,
   type WorkspaceProfileSubtree,
+  type ResolveActiveWorkspaceProfileInput,
 } from "./profile/index.js";
 
 // ─── Workspace data sources ─────────────────────────────────────
-export * from "./sources/index.js";
+export {
+  SOURCE_ID_RE,
+  SOURCE_KINDS,
+  SourceDefinitionSchema,
+  WorkspaceSourceBindingSchema,
+  type SourceKind,
+  type SourceDefinition,
+  type WorkspaceSourceBinding,
+  type SourceScope,
+  type SourceResourceMeta,
+  type SourceContent,
+} from "./sources/types.js";
+export type { ConnectorAdapter } from "./sources/adapter.js";
+export type {
+  SourceAccessStatus,
+  CredentialStatusFn,
+  EffectiveSourceAccess,
+  ResolveSourceAccessInput,
+} from "./sources/resolve.js";
+export type { BuildSourcesContextSummaryInput } from "./sources/context-summary.js";
 
 export {
   createFakeToolContext,
@@ -342,25 +355,14 @@ export type { ContentReplacementState } from "./context/tool-result-storage.js";
 export { scanSkills, invalidateSkillCache } from "./skills/index.js";
 export type { SkillDefinition } from "./skills/index.js";
 
-// ─── Capability control (扩展能力 backend) ───────────────────────
-export {
-  CapabilityService,
-  CapabilityNotFoundError,
-  projectBuiltin,
-  projectMcp,
-  projectSkills,
-  projectPlugins,
-} from "./capability-control/index.js";
+// ─── Capability control (扩展能力 types) ─────────────────────────
 export type {
   CapabilityServiceDeps,
   CapabilityDescriptor,
   CapabilityControl,
 } from "./capability-control/index.js";
 export { readInstalledPlugins } from "./plugins/installedPlugins.js";
-export {
-  computeEffectiveDisabledLists,
-  type EffectiveDisabledLists,
-} from "./capability-control/disabled-lists.js";
+export type { EffectiveDisabledLists } from "./capability-control/disabled-lists.js";
 export type { InstalledPluginsV2 } from "./plugins/types.js";
 
 // ─── Plugin installer (CC + Codex) ───────────────────────────────

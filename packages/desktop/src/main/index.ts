@@ -22,7 +22,6 @@ import { writeFile } from "node:fs/promises";
 import {
   mergePluginMcpServers,
   listPluginHooks,
-  computeEffectiveDisabledLists,
   SettingsManager,
   writeSettingsSchemaFile,
   userHome,
@@ -59,6 +58,7 @@ import {
   resolveTranscribeProvider,
   isTranscribeAvailable,
   describeTranscribe,
+  computeEffectiveDisabledLists,
 } from "@cjhyy/code-shell-core/internal";
 import {
   CODING_CAPABILITY,

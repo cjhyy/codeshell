@@ -2,13 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  SettingsManager,
-  bindSource,
-  createToolRegistryHarness,
-  saveSourceDefinition,
-  unbindSource,
-} from "../index.js";
+import { SettingsManager, createToolRegistryHarness } from "../index.js";
+import { bindSource, saveSourceDefinition, unbindSource } from "../index.internal.js";
 import type { ToolResult } from "../types.js";
 
 const previousCodeShellHome = process.env.CODE_SHELL_HOME;
