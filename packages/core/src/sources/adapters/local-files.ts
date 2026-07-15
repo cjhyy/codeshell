@@ -6,6 +6,7 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import type { ConnectorAdapter } from "../adapter.js";
+import { truncateUtf8Bytes } from "../truncate-utf8.js";
 import type { SourceDefinition, SourceResourceMeta } from "../types.js";
 
 export const LOCAL_FILES_SOURCE_ID = "project-uploads";
@@ -80,16 +81,6 @@ function resolveInsideUploads(
   return { path: real, resourceId: finalId };
 }
 
-function truncateUtf8(buffer: Buffer, maxBytes: number): string {
-  let end = Math.max(0, Math.min(Math.trunc(maxBytes), buffer.byteLength));
-
-  while (end > 0 && end < buffer.byteLength && (buffer[end] & 0xc0) === 0x80) {
-    end -= 1;
-  }
-
-  return buffer.subarray(0, end).toString("utf8");
-}
-
 export const localFilesAdapter: ConnectorAdapter = {
   kind: "local-files",
 
@@ -108,13 +99,11 @@ export const localFilesAdapter: ConnectorAdapter = {
 
     const resolved = resolveInsideUploads(options.cwd, resourceId);
     const buffer = readFileSync(resolved.path);
-    const maxBytes = Math.max(0, Math.trunc(options.maxBytes));
-    const truncated = buffer.byteLength > maxBytes;
+    const truncated = truncateUtf8Bytes(buffer, options.maxBytes);
 
     return {
       resourceId: resolved.resourceId,
-      text: truncated ? truncateUtf8(buffer, maxBytes) : buffer.toString("utf8"),
-      truncated,
+      ...truncated,
     };
   },
 };
