@@ -7,6 +7,8 @@
  * retaining; everything else (responses, other methods, malformed lines)
  * yields null — those lines are still forwarded, just not snapshotted.
  */
+import { Methods } from "@cjhyy/code-shell-core";
+
 export interface SnapshotAppend {
   sessionId: string;
   event: unknown;
@@ -25,7 +27,7 @@ export function parseSnapshotAppend(line: string): SnapshotAppend | null {
   } catch {
     return null;
   }
-  if (m.method !== "agent/streamEvent") return null;
+  if (m.method !== Methods.StreamEvent) return null;
   const sessionId = m.params?.sessionId;
   if (typeof sessionId !== "string" || !sessionId) return null;
   if (m.params?.event === undefined) return null;
@@ -51,7 +53,7 @@ export function parseLiveStreamEnvelope(
   } catch {
     return null;
   }
-  if (m.method !== "agent/streamEvent") return null;
+  if (m.method !== Methods.StreamEvent) return null;
   if (m.params?.event === undefined) return null;
   const sessionId = typeof m.params.sessionId === "string" ? m.params.sessionId : "";
   return {

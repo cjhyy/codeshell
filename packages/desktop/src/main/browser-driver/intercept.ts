@@ -10,6 +10,7 @@
  * requestId with the JSON result string.
  */
 
+import { Methods } from "@cjhyy/code-shell-core";
 import type { BrowserActionRequest } from "./automation-host.js";
 
 export interface ParsedBrowserAction {
@@ -30,7 +31,7 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
   } catch {
     return null;
   }
-  if (!msg || msg.method !== "agent/approvalRequest") return null;
+  if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const p = msg.params;
   if (!p || typeof p.requestId !== "string") return null;
   const r = p.request;
@@ -113,7 +114,7 @@ export function parseCredentialActionLine(line: string): ParsedCredentialAction 
   } catch {
     return null;
   }
-  if (!msg || msg.method !== "agent/approvalRequest") return null;
+  if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const p = msg.params;
   if (!p || typeof p.requestId !== "string") return null;
   const r = p.request;
@@ -166,7 +167,7 @@ export function parseWorkspaceActionLine(line: string): ParsedWorkspaceAction | 
   } catch {
     return null;
   }
-  if (!msg || msg.method !== "agent/approvalRequest") return null;
+  if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const p = msg.params;
   if (!p || typeof p.requestId !== "string") return null;
   const r = p.request;
@@ -213,7 +214,7 @@ export function parsePanelActionLine(line: string): ParsedPanelAction | null {
   } catch {
     return null;
   }
-  if (!msg || msg.method !== "agent/approvalRequest") return null;
+  if (!msg || msg.method !== Methods.ApprovalRequest) return null;
   const params = msg.params;
   if (!params || typeof params.requestId !== "string") return null;
   const request = params.request;
