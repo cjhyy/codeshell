@@ -8,6 +8,7 @@ export type ViewMode =
   | "automation" // scheduled automation jobs (cron) — list + detail + create
   | "settings" // legacy modal route — kept for routing back-compat
   | "settings_page" // full-screen Settings page (new in batch E)
+  | "project_config" // full-screen settings for one tracked project
   | "customize" // full-screen 扩展 (plugins + skills + MCP + market) view
   | "credentials" // full-screen 凭证 (cookie + token + link) view
   | "logs";
@@ -46,6 +47,7 @@ const VALID_MODES: ReadonlySet<ViewMode> = new Set([
   "automation",
   "settings",
   "settings_page",
+  "project_config",
   "customize",
   "credentials",
   "logs",

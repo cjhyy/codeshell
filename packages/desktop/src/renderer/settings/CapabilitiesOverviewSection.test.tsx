@@ -31,4 +31,15 @@ describe("CapabilitiesOverviewSection", () => {
     expect(html).toContain("alpha");
     expect(html).toContain("Beta!");
   });
+
+  test("can start on the current project instead of the global scope", () => {
+    const html = renderToStaticMarkup(
+      <CapabilitiesOverviewSection
+        projects={[{ id: "1", name: "alpha", path: "/a", addedAt: 0 }]}
+        initialProjectPath="/a"
+      />,
+    );
+    expect(html).toContain("为这个项目单独覆盖 MCP、技能和插件");
+    expect(html).not.toContain("设置所有项目继承的默认能力");
+  });
 });

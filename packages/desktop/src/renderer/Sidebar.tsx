@@ -62,6 +62,7 @@ interface SidebarProps {
   onOpenCustomize: () => void;
   onOpenDigitalHumans: () => void;
   onOpenCredentials: () => void;
+  onOpenProjectConfig: (id: string) => void;
   onOpenSettingsPage: () => void;
   onOpenPetPage: () => void;
   onTogglePetWidget: () => void;
@@ -109,6 +110,7 @@ export function Sidebar({
   onOpenCustomize,
   onOpenDigitalHumans,
   onOpenCredentials,
+  onOpenProjectConfig,
   onOpenSettingsPage,
   onOpenPetPage,
   onTogglePetWidget,
@@ -133,6 +135,10 @@ export function Sidebar({
   const noRepoSessions = noRepoIndex?.sessions.filter((s) => !s.archived) ?? [];
 
   const projectMenu = (project: TrackedProject): ContextMenuItem[] => [
+    {
+      label: t("projectConfig.open"),
+      onClick: () => onOpenProjectConfig(project.id),
+    },
     {
       label: project.pinned ? t("sidebar.unpinProject") : t("sidebar.pinProject"),
       onClick: () => onPinProject(project.id, !project.pinned),

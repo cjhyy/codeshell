@@ -76,6 +76,7 @@ import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
 // Full-page Settings — driven by viewMode === 'settings_page'.
 import { SettingsPage } from "./settings/SettingsPage";
+import { ProjectConfigPage } from "./project-config/ProjectConfigPage";
 import { RunsView } from "./runs/RunsView";
 import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
@@ -399,6 +400,13 @@ function App() {
   const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(() => null);
   const defaultPermissionModeRef = useRef<PermissionMode | null>(null);
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
+
+  // A persisted project-config route can outlive a removed project. Fail back
+  // to chat instead of leaving a full-page overlay with no project to render.
+  useEffect(() => {
+    if (view.viewMode !== "project_config" || activeProject) return;
+    setView((current) => ({ ...current, viewMode: "chat" }));
+  }, [activeProject, view.viewMode]);
 
   useEffect(() => {
     let alive = true;
@@ -1116,7 +1124,7 @@ function App() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if (view.viewMode === "settings_page") return;
+      if (view.viewMode === "settings_page" || view.viewMode === "project_config") return;
 
       const mod = e.metaKey || e.ctrlKey;
       // Is the user typing into an editable field? Panel-switch hotkeys
@@ -1723,7 +1731,9 @@ function App() {
   };
 
   const platformClass = isMac ? "platform-darwin" : "";
-  const isSettingsPage = view.viewMode === "settings_page";
+  // Both settings routes replace the entire application chrome. Keep this
+  // shared flag so the expensive session tree stays mounted but hidden.
+  const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
   const isPetView = view.viewMode === "pet";
   const isChatView = view.viewMode === "chat";
   const petPendingCount = surfaceablePendingCount;
@@ -1805,6 +1815,10 @@ function App() {
                 onOpenCustomize={() => setViewMode("customize")}
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
                 onOpenCredentials={() => setViewMode("credentials")}
+                onOpenProjectConfig={(projectId) => {
+                  setActiveProjectId(projectId);
+                  setViewMode("project_config");
+                }}
                 onOpenSettingsPage={() => setViewMode("settings_page")}
                 onOpenPetPage={openPetPage}
                 onTogglePetWidget={togglePetWidget}
@@ -2127,22 +2141,30 @@ function App() {
 
       {isSettingsPage && (
         <div className="absolute inset-0 z-50 overflow-hidden bg-background">
-          <SettingsPage
-            activeProjectPath={activeProject?.path ?? null}
-            projects={projects}
-            sessionIndices={sessionIndices}
-            onRestoreArchivedSession={(projectId, sessionId) => {
-              const next = archiveSession(projectId, sessionId, false);
-              setSessionIndices((prev) => ({
-                ...prev,
-                [projectBucketSegmentFor(projectId)]: next,
-              }));
-            }}
-            onDeleteArchivedSession={handleDeleteSession}
-            isMac={isMac}
-            isFullscreen={isFullscreen}
-            onBack={() => setViewMode("chat")}
-          />
+          {view.viewMode === "settings_page" ? (
+            <SettingsPage
+              activeProjectPath={activeProject?.path ?? null}
+              projects={projects}
+              sessionIndices={sessionIndices}
+              onRestoreArchivedSession={(projectId, sessionId) => {
+                const next = archiveSession(projectId, sessionId, false);
+                setSessionIndices((prev) => ({
+                  ...prev,
+                  [projectBucketSegmentFor(projectId)]: next,
+                }));
+              }}
+              onDeleteArchivedSession={handleDeleteSession}
+              isMac={isMac}
+              isFullscreen={isFullscreen}
+              onBack={() => setViewMode("chat")}
+            />
+          ) : activeProject ? (
+            <ProjectConfigPage
+              cwd={activeProject.path}
+              project={activeProject}
+              onBack={() => setViewMode("chat")}
+            />
+          ) : null}
         </div>
       )}
     </AppShell>

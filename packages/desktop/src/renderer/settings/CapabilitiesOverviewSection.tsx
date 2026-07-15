@@ -54,6 +54,8 @@ type LucideIcon = React.ComponentType<{ size?: number; className?: string }>;
 
 interface Props {
   projects: TrackedProject[];
+  /** Open directly on one project. Settings leaves this unset to keep the global default. */
+  initialProjectPath?: string;
   /**
    * Click a capability row's info area → jump to that kind's dedicated detail
    * tab. The parent maps the kind to a settings module (mcp/skill/plugin/agent);
@@ -114,14 +116,27 @@ function projectStateLabel(t: TFunction, cap: CapabilityDescriptor): string {
   return t("settingsX.capOverview.projectInherit");
 }
 
-export function CapabilitiesOverviewSection({ projects, onNavigateToKind }: Props) {
+export function CapabilitiesOverviewSection({
+  projects,
+  initialProjectPath,
+  onNavigateToKind,
+}: Props) {
   const { t } = useT();
   const PROJECT_STATE_LABEL: Record<ProjectState, string> = {
     inherit: t("settingsX.capOverview.inherit"),
     on: t("settingsX.capOverview.on"),
     off: t("settingsX.capOverview.off"),
   };
-  const [node, setNode] = useState<ScopeNode>({ kind: "user" });
+  const [node, setNode] = useState<ScopeNode>(() => {
+    const initialProject = projects.find((project) => project.path === initialProjectPath);
+    return initialProject
+      ? {
+          kind: "project",
+          projectPath: initialProject.path,
+          label: projectLabel(initialProject),
+        }
+      : { kind: "user" };
+  });
   // Seed from the last-loaded user-scope snapshot (settingsCache) so a
   // remount (tab switch) renders synchronously instead of flashing "加载中".
   const [caps, setCaps] = useState<CapabilityDescriptor[]>(
