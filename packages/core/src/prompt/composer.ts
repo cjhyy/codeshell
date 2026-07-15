@@ -28,6 +28,11 @@ export interface ComposerOptions {
   capabilityPromptSections?: Readonly<Record<string, string>>;
   /** Per-turn context owned by installed capability modules. */
   dynamicContextProviders?: readonly CapabilityDynamicContextProvider[];
+  /**
+   * 已绑定数据源的 metadata 摘要（名称/scope/状态；无源返回 ""）。只走动态
+   * 上下文（不进可缓存 system 前缀），资源内容与 secret 永不注入（ADR §5/§7）。
+   */
+  sourcesContextProvider?: () => string | Promise<string>;
   toolCatalog?: readonly BuiltinTool[];
   /** User's preferred response language (free text), injected as a stable system section. */
   responseLanguage?: string;
@@ -154,11 +159,21 @@ export class PromptComposer {
     // prefix — so a memory change (extraction / recall usage++ / approve) never
     // re-bills the cached prefix. See buildUserContextMessage for the rationale.
     const memoryContext = this.getMemoryContext();
+    let sourcesContext = "";
+    try {
+      sourcesContext = (await this.options.sourcesContextProvider?.()) ?? "";
+    } catch {
+      // Optional metadata context must not make a turn fail.
+    }
     const goalToolContext = this.buildGoalToolContext();
 
-    const parts = [skillsListing, capabilityContext, memoryContext, goalToolContext].filter(
-      Boolean,
-    );
+    const parts = [
+      skillsListing,
+      capabilityContext,
+      memoryContext,
+      sourcesContext,
+      goalToolContext,
+    ].filter(Boolean);
     if (parts.length === 0) return null;
 
     return {

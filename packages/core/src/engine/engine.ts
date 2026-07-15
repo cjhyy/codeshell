@@ -125,6 +125,7 @@ import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from ".
 import { resolveActiveWorkspaceProfile } from "../profile/resolve.js";
 import { workspaceProfileDir } from "../profile/store.js";
 import { profileOverridesFromDefinition } from "../profile/activation.js";
+import { buildSourcesContextSummary } from "../sources/context-summary.js";
 import {
   composeDynamicContextProviders,
   composeCapabilityEngineHooks,
@@ -1979,6 +1980,8 @@ export class Engine {
         goalToolState: { hasGoal: hasRunnableGoal },
         capabilityPromptSections: this.capabilityPromptSections,
         dynamicContextProviders: this.capabilityDynamicContextProviders,
+        sourcesContextProvider: () =>
+          buildSourcesContextSummary({ cwd, settings: this.getSettingsManager() }),
         toolCatalog: this.toolCatalog,
       });
 
