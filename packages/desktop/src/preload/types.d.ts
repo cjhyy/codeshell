@@ -14,6 +14,7 @@ import type {
   SourceResourceMeta,
   SourceScope,
   WorkspaceSourceBinding,
+  WorkspaceProfile,
 } from "@cjhyy/code-shell-core";
 import type { ApprovalRequest, ReasoningControl } from "@cjhyy/code-shell-core/internal";
 import type {
@@ -1309,6 +1310,7 @@ export interface CodeshellApi {
       skills: string[];
       mcp: string[];
       agents: string[];
+      mainInstruction: string | undefined;
       active: boolean;
       portableMemory: boolean;
       version: string | undefined;
@@ -1335,6 +1337,7 @@ export interface CodeshellApi {
     }>
   >;
   installCatalogProfile(name: string): Promise<void>;
+  saveProfile(profile: WorkspaceProfile): Promise<void>;
   listDigitalHumanTeams(): Promise<import("@cjhyy/code-shell-pet").DigitalHumanTeam[]>;
   saveDigitalHumanTeam(
     team: import("@cjhyy/code-shell-pet").DigitalHumanTeam,

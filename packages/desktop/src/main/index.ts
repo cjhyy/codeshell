@@ -286,6 +286,7 @@ import {
   installCatalogProfile,
   listProfileCatalog,
   listProfiles,
+  saveProfile,
 } from "./profiles-service.js";
 import {
   deleteDigitalHumanTeam,
@@ -1745,6 +1746,12 @@ ipcMain.handle("profiles:install", async (_e, name: string) => {
   if (typeof name !== "string" || !name) throw new Error("profiles:install requires name");
   installCatalogProfile(name);
 });
+ipcMain.handle("profiles:save", async (_e, profile: unknown) => {
+  if (typeof profile !== "object" || profile === null || Array.isArray(profile)) {
+    throw new Error("profiles:save requires profile");
+  }
+  saveProfile(profile as Parameters<typeof saveProfile>[0]);
+});
 ipcMain.handle("digital-human-teams:list", async () => listDigitalHumanTeams());
 ipcMain.handle("digital-human-teams:save", async (_e, team: unknown) =>
   saveDigitalHumanTeam(team as import("@cjhyy/code-shell-pet").DigitalHumanTeam),
@@ -1764,8 +1771,7 @@ ipcMain.handle("plugin-panels:list", async (_e, cwd: string, locale: string) => 
 });
 ipcMain.handle("plugin-panels:listExtensions", async (_e, cwd: string, locale: string) => {
   if (typeof cwd !== "string") throw new Error("plugin-panels:listExtensions requires cwd");
-  if (typeof locale !== "string")
-    throw new Error("plugin-panels:listExtensions requires locale");
+  if (typeof locale !== "string") throw new Error("plugin-panels:listExtensions requires locale");
   return listPanelExtensions(cwd, locale);
 });
 

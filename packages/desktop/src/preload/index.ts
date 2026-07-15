@@ -955,6 +955,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   deactivateProfile: (cwd: string) => ipcRenderer.invoke("profiles:deactivate", cwd),
   listProfileCatalog: () => ipcRenderer.invoke("profiles:catalog"),
   installCatalogProfile: (name: string) => ipcRenderer.invoke("profiles:install", name),
+  saveProfile: (profile: import("@cjhyy/code-shell-core").WorkspaceProfile) =>
+    ipcRenderer.invoke("profiles:save", profile),
   listDigitalHumanTeams: () => ipcRenderer.invoke("digital-human-teams:list"),
   saveDigitalHumanTeam: (team: import("@cjhyy/code-shell-pet").DigitalHumanTeam) =>
     ipcRenderer.invoke("digital-human-teams:save", team),

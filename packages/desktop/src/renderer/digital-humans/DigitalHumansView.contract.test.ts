@@ -3,18 +3,16 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const source = readFileSync(join(import.meta.dir, "DigitalHumansView.tsx"), "utf-8");
+const editorSource = readFileSync(join(import.meta.dir, "DigitalHumanEditorDialog.tsx"), "utf-8");
 const sidebar = readFileSync(join(import.meta.dir, "..", "Sidebar.tsx"), "utf-8");
-const settings = readFileSync(
-  join(import.meta.dir, "..", "settings", "SettingsPage.tsx"),
-  "utf-8",
-);
+const settings = readFileSync(join(import.meta.dir, "..", "settings", "SettingsPage.tsx"), "utf-8");
 
 describe("DigitalHumansView contract", () => {
   test("is a first-class market and library rather than a capabilities toggle", () => {
     expect(sidebar).toContain('t("sidebar.digitalHumans")');
     expect(source).toContain('value="market"');
     expect(source).toContain('value="mine"');
-    expect(source).toContain('window.codeshell.installCatalogProfile');
+    expect(source).toContain("window.codeshell.installCatalogProfile");
     expect(settings).not.toContain("<ProfileSection");
   });
 
@@ -23,6 +21,16 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain('value="compare"');
     expect(source).toContain("saveDigitalHumanTeam");
     expect(source).toContain('kind: "team"');
+  });
+
+  test("creates and edits a digital human with installed Skill assignment", () => {
+    expect(source).toContain("DigitalHumanEditorDialog");
+    expect(source).toContain("window.codeshell.saveProfile");
+    expect(source).toContain("window.codeshell.listSkills");
+    expect(editorSource).toContain("profile?.skills");
+    expect(editorSource).toContain("selectedSkills");
+    expect(source).toContain('t("digitalHumans.editor.create")');
+    expect(source).toContain('t("digitalHumans.editor.edit")');
   });
 
   test("uses only the product term digital human", () => {

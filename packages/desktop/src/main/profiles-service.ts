@@ -12,6 +12,7 @@ import {
   resolveActiveWorkspaceProfile,
   saveWorkspaceProfile,
   SettingsManager,
+  type WorkspaceProfile,
 } from "@cjhyy/code-shell-core";
 import { DIGITAL_HUMAN_CATALOG, type DigitalHumanCatalogEntry } from "./digital-human-catalog.js";
 
@@ -24,6 +25,7 @@ export interface ProfileListEntry {
   skills: string[];
   mcp: string[];
   agents: string[];
+  mainInstruction: string | undefined;
   active: boolean;
   portableMemory: boolean;
   version: string | undefined;
@@ -42,6 +44,7 @@ export function listProfiles(cwd?: string): ProfileListEntry[] {
     skills: profile.skills,
     mcp: profile.mcp,
     agents: profile.agents,
+    mainInstruction: profile.mainInstruction,
     active: profile.name === active,
     portableMemory: profile.portableMemory,
     version: profile.version,
@@ -71,5 +74,10 @@ export function installCatalogProfile(name: string): void {
   const entry = DIGITAL_HUMAN_CATALOG.find((candidate) => candidate.name === name);
   if (!entry) throw new Error(`Unknown digital human catalog entry "${name}"`);
   const { category: _category, tags: _tags, ...profile } = entry;
+  saveWorkspaceProfile(profile);
+}
+
+/** Create or atomically update one user-owned digital-human definition. */
+export function saveProfile(profile: WorkspaceProfile): void {
   saveWorkspaceProfile(profile);
 }

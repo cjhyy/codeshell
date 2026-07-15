@@ -3,6 +3,7 @@ import {
   Brain,
   Check,
   GitFork,
+  Pencil,
   Plus,
   Search,
   Sparkles,
@@ -33,10 +34,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n";
+import { DigitalHumanEditorDialog } from "./DigitalHumanEditorDialog";
 import type {
   DigitalHumanCatalogEntry,
   DigitalHumanProfileEntry,
   DigitalHumanSelection,
+  DigitalHumanSkillEntry,
 } from "./types";
 
 interface Props {
@@ -45,7 +48,9 @@ interface Props {
 }
 
 function capabilityCount(profile: DigitalHumanProfileEntry): number {
-  return profile.plugins.length + profile.skills.length + profile.mcp.length + profile.agents.length;
+  return (
+    profile.plugins.length + profile.skills.length + profile.mcp.length + profile.agents.length
+  );
 }
 
 function modeKey(mode: DigitalHumanTeamMode): "auto" | "divide" | "compare" {
@@ -57,21 +62,25 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
   const [profiles, setProfiles] = React.useState<DigitalHumanProfileEntry[]>([]);
   const [catalog, setCatalog] = React.useState<DigitalHumanCatalogEntry[]>([]);
   const [teams, setTeams] = React.useState<DigitalHumanTeam[]>([]);
+  const [availableSkills, setAvailableSkills] = React.useState<DigitalHumanSkillEntry[]>([]);
   const [query, setQuery] = React.useState("");
   const [busy, setBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [teamDialogOpen, setTeamDialogOpen] = React.useState(false);
+  const [editor, setEditor] = React.useState<{ profile?: DigitalHumanProfileEntry } | null>(null);
 
   const refresh = React.useCallback(async () => {
     try {
-      const [nextProfiles, nextCatalog, nextTeams] = await Promise.all([
+      const [nextProfiles, nextCatalog, nextTeams, nextSkills] = await Promise.all([
         window.codeshell.listProfiles(activeProjectPath ?? undefined),
         window.codeshell.listProfileCatalog(),
         window.codeshell.listDigitalHumanTeams(),
+        window.codeshell.listSkills(activeProjectPath ?? "/", { includeDisabled: true }),
       ]);
       setProfiles(nextProfiles);
       setCatalog(nextCatalog);
       setTeams(nextTeams);
+      setAvailableSkills(nextSkills);
       setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -118,18 +127,24 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
               {t("digitalHumans.subtitle")}
             </p>
           </div>
-          <div className="relative w-full max-w-xs">
-            <Search
-              size={15}
-              className="pointer-events-none absolute left-3 top-2.5 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="pl-9"
-              placeholder={t("digitalHumans.search")}
-            />
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+            <Button size="sm" onClick={() => setEditor({})}>
+              <Plus size={14} aria-hidden="true" />
+              {t("digitalHumans.editor.create")}
+            </Button>
+            <div className="relative w-full sm:w-72">
+              <Search
+                size={15}
+                className="pointer-events-none absolute left-3 top-2.5 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="pl-9"
+                placeholder={t("digitalHumans.search")}
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -188,6 +203,7 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
                       onUse={() =>
                         onUse({ kind: "single", id: profile.name, label: profile.label })
                       }
+                      onEdit={() => setEditor({ profile })}
                       onToggleDefault={() => {
                         if (!activeProjectPath) return;
                         void run(`profile:${profile.name}`, () =>
@@ -232,7 +248,9 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {teams
-                    .filter((team) => matches({ name: team.id, label: team.name, description: team.description }))
+                    .filter((team) =>
+                      matches({ name: team.id, label: team.name, description: team.description }),
+                    )
                     .map((team) => (
                       <TeamCard
                         key={team.id}
@@ -263,6 +281,23 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
           </Tabs>
         </div>
       </div>
+
+      <DigitalHumanEditorDialog
+        open={editor !== null}
+        profile={editor?.profile}
+        existingIds={profiles.map((profile) => profile.name)}
+        skills={availableSkills}
+        busy={busy === "save-profile"}
+        onOpenChange={(open) => {
+          if (!open) setEditor(null);
+        }}
+        onSave={(profile) =>
+          void run("save-profile", async () => {
+            await window.codeshell.saveProfile(profile);
+            setEditor(null);
+          })
+        }
+      />
 
       <TeamDialog
         open={teamDialogOpen}
@@ -333,12 +368,14 @@ function ProfileCard({
   hasProject,
   busy,
   onUse,
+  onEdit,
   onToggleDefault,
 }: {
   profile: DigitalHumanProfileEntry;
   hasProject: boolean;
   busy: boolean;
   onUse: () => void;
+  onEdit: () => void;
   onToggleDefault: () => void;
 }) {
   const { t } = useT();
@@ -367,6 +404,10 @@ function ProfileCard({
         <Button size="sm" onClick={onUse}>
           {t("digitalHumans.use")}
         </Button>
+        <Button size="sm" variant="outline" onClick={onEdit}>
+          <Pencil size={13} aria-hidden="true" />
+          {t("digitalHumans.editor.edit")}
+        </Button>
         <Button
           size="sm"
           variant="outline"
@@ -374,9 +415,7 @@ function ProfileCard({
           disabled={!hasProject || busy}
           title={!hasProject ? t("digitalHumans.pickProject") : undefined}
         >
-          {profile.active
-            ? t("digitalHumans.clearDefault")
-            : t("digitalHumans.setProjectDefault")}
+          {profile.active ? t("digitalHumans.clearDefault") : t("digitalHumans.setProjectDefault")}
         </Button>
       </CardFooter>
     </Card>
@@ -516,7 +555,10 @@ function TeamDialog({
                     key={profile.name}
                     type="button"
                     variant="outline"
-                    className={cn("h-auto justify-start px-3 py-2", selected && "border-primary/50 bg-primary/5")}
+                    className={cn(
+                      "h-auto justify-start px-3 py-2",
+                      selected && "border-primary/50 bg-primary/5",
+                    )}
                     onClick={() => toggleMember(profile.name)}
                   >
                     <span

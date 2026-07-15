@@ -9,6 +9,7 @@ import {
   installCatalogProfile,
   listProfileCatalog,
   listProfiles,
+  saveProfile,
 } from "./profiles-service.js";
 
 let home: string;
@@ -53,6 +54,7 @@ describe("desktop profiles service", () => {
         skills: [],
         mcp: [],
         agents: [],
+        mainInstruction: undefined,
         active: true,
         portableMemory: false,
         version: undefined,
@@ -65,14 +67,58 @@ describe("desktop profiles service", () => {
   });
 
   test("installs a starter digital human from the local catalog", () => {
-    expect(listProfileCatalog().find((entry) => entry.name === "product-researcher")?.installed).toBe(
-      false,
-    );
+    expect(
+      listProfileCatalog().find((entry) => entry.name === "product-researcher")?.installed,
+    ).toBe(false);
     installCatalogProfile("product-researcher");
     expect(listProfiles().some((entry) => entry.name === "product-researcher")).toBe(true);
-    expect(listProfileCatalog().find((entry) => entry.name === "product-researcher")?.installed).toBe(
-      true,
-    );
+    expect(
+      listProfileCatalog().find((entry) => entry.name === "product-researcher")?.installed,
+    ).toBe(true);
+  });
+
+  test("creates and updates a digital human with assigned skills", () => {
+    saveProfile({
+      name: "research-lead",
+      label: "研究负责人",
+      description: "负责研究与交付",
+      basePreset: "general",
+      plugins: [],
+      skills: ["web-search", "spreadsheets:analysis"],
+      mcp: [],
+      agents: [],
+      mainInstruction: "先核对来源，再综合结论。",
+      portableMemory: true,
+      version: "1.0.0",
+    });
+
+    expect(listProfiles().find((profile) => profile.name === "research-lead")).toMatchObject({
+      label: "研究负责人",
+      skills: ["web-search", "spreadsheets:analysis"],
+      mainInstruction: "先核对来源，再综合结论。",
+      portableMemory: true,
+    });
+
+    saveProfile({
+      name: "research-lead",
+      label: "首席研究员",
+      basePreset: "general",
+      plugins: [],
+      skills: ["web-search"],
+      mcp: [],
+      agents: [],
+      mainInstruction: "只使用可追溯来源。",
+      portableMemory: false,
+      version: "1.0.1",
+    });
+
+    expect(listProfiles().find((profile) => profile.name === "research-lead")).toMatchObject({
+      label: "首席研究员",
+      skills: ["web-search"],
+      mainInstruction: "只使用可追溯来源。",
+      portableMemory: false,
+      version: "1.0.1",
+    });
   });
 
   test("activate writes the subtree; deactivate removes it", () => {

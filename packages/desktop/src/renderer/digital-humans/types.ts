@@ -19,9 +19,16 @@ export interface DigitalHumanProfileEntry {
   skills: string[];
   mcp: string[];
   agents: string[];
+  mainInstruction?: string;
   active: boolean;
   portableMemory: boolean;
   version?: string;
+}
+
+export interface DigitalHumanSkillEntry {
+  name: string;
+  description: string;
+  source: "project" | "user" | "plugin";
 }
 
 export interface DigitalHumanCatalogEntry extends Omit<DigitalHumanProfileEntry, "active"> {
