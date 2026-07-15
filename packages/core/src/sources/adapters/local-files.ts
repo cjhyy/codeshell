@@ -4,7 +4,7 @@
  * 并校验消解 symlink 后的真实路径仍在 uploads 目录内。
  */
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import type { ConnectorAdapter } from "../adapter.js";
 import { truncateUtf8Bytes } from "../truncate-utf8.js";
 import type { SourceDefinition, SourceResourceMeta } from "../types.js";
@@ -13,6 +13,37 @@ export const LOCAL_FILES_SOURCE_ID = "project-uploads";
 
 export function uploadsDir(cwd: string): string {
   return join(cwd, ".code-shell", "uploads");
+}
+
+/** Validate a write/delete basename and resolve it inside the workspace uploads directory. */
+export function resolveUploadTarget(cwd: string, name: string): string {
+  let decoded = name;
+  try {
+    for (let pass = 0; pass < 3; pass += 1) {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    }
+  } catch {
+    throw new Error(`invalid upload name: ${name}`);
+  }
+
+  if (
+    !name ||
+    name !== decoded ||
+    name.startsWith(".") ||
+    name.includes("/") ||
+    name.includes("\\") ||
+    name.includes("\0") ||
+    basename(name) !== name
+  ) {
+    throw new Error(`invalid upload name: ${name}`);
+  }
+
+  const root = resolve(uploadsDir(cwd));
+  const target = resolve(root, name);
+  if (dirname(target) !== root) throw new Error(`invalid upload name: ${name}`);
+  return target;
 }
 
 export function localFilesSourceFor(cwd: string): SourceDefinition {

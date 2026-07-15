@@ -7,6 +7,7 @@ import {
   listLocalFiles,
   localFilesAdapter,
   localFilesSourceFor,
+  resolveUploadTarget,
   uploadsDir,
 } from "./local-files.js";
 
@@ -92,4 +93,24 @@ describe("local-files adapter", () => {
 
     expect(listLocalFiles(cwd)).toEqual([]);
   });
+});
+
+describe("resolveUploadTarget", () => {
+  test("resolves a plain basename inside the uploads dir", () => {
+    expect(resolveUploadTarget(cwd, "notes.md")).toBe(join(uploadsDir(cwd), "notes.md"));
+  });
+
+  for (const bad of [
+    "../escape.md",
+    "a/b.md",
+    "a\\b.md",
+    ".hidden",
+    "%2e%2e%2fescape.md",
+    "nul\0l.md",
+    "",
+  ]) {
+    test(`rejects ${JSON.stringify(bad)}`, () => {
+      expect(() => resolveUploadTarget(cwd, bad)).toThrow(/invalid upload name/);
+    });
+  }
 });
