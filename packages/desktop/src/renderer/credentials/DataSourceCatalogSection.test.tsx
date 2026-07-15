@@ -60,7 +60,11 @@ async function renderSection(): Promise<HTMLElement> {
   const container = document.createElement("div") as unknown as HTMLElement;
   root = createRoot(container);
   await act(async () => {
-    root?.render(<DataSourceCatalogSection />);
+    root?.render(
+      <form>
+        <DataSourceCatalogSection />
+      </form>,
+    );
     await flushMicrotasks();
     await flushMicrotasks();
   });
@@ -96,7 +100,7 @@ describe("DataSourceCatalogSection", () => {
     expect(textOf(container)).toContain("Mock Notes");
     expect(textOf(container)).toContain("已启用");
     expect(textOf(container)).toContain("design-mcp");
-    expect(textOf(container)).toContain("mcp-resource");
+    expect(textOf(container)).toContain("MCP 资源");
     expect(textOf(container)).toContain("Design MCP");
     expect(textOf(container)).toContain("已禁用");
   });

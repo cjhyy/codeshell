@@ -90,9 +90,9 @@ export function SimpleSelect<V extends string = string>({
   const grouped = options.length > 0 && isGroup(options[0]);
   // Does the option set include an explicit "" option? If so, "" is a real
   // selectable value (→ sentinel); otherwise treat "" as "no selection".
-  const hasEmptyOption = !grouped && (options as SimpleSelectOption<V>[]).some((o) => o.value === "");
-  const radixValue =
-    value === "" ? (hasEmptyOption ? EMPTY_SENTINEL : undefined) : value;
+  const hasEmptyOption =
+    !grouped && (options as SimpleSelectOption<V>[]).some((o) => o.value === "");
+  const radixValue = value === "" ? (hasEmptyOption ? EMPTY_SENTINEL : "") : value;
 
   // The trigger shows only the selected option's LABEL on a single line.
   // Radix's default <SelectValue> mirrors the whole selected <SelectItem> body,
@@ -111,7 +111,10 @@ export function SimpleSelect<V extends string = string>({
       onValueChange={(v) => onChange(fromRadix(v) as V)}
       disabled={disabled}
     >
-      <SelectTrigger aria-label={ariaLabel} className={cn(size === "sm" && "h-8 text-xs", className)}>
+      <SelectTrigger
+        aria-label={ariaLabel}
+        className={cn(size === "sm" && "h-8 text-xs", className)}
+      >
         {selectedLabel !== undefined ? (
           // Render the label ourselves as a leaf span. We deliberately do NOT
           // pass children to <SelectValue>: radix uses that node as its own

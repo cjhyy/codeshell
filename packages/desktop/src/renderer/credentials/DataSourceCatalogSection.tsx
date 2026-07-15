@@ -3,12 +3,20 @@ import type { SourceDefinition } from "@cjhyy/code-shell-core";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useT } from "../i18n/I18nProvider";
+import { SimpleSelect } from "@/components/ui/simple-select";
+import { useT, type TFunction } from "../i18n";
 
 type EditableSourceKind = "mock" | "mcp-resource";
 
 function errorText(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
+}
+
+function kindLabel(t: TFunction, kind: string): string {
+  if (kind === "mock") return t("ext.link.sourcesKindMock");
+  if (kind === "mcp-resource") return t("ext.link.sourcesKindMcpResource");
+  if (kind === "local-files") return t("projectConfig.dataSources.kindLocalFiles");
+  return kind;
 }
 
 /** Global connection definitions; project-specific grants stay in Project Config. */
@@ -19,7 +27,6 @@ export function DataSourceCatalogSection() {
   const [kind, setKind] = React.useState<EditableSourceKind>("mock");
   const [label, setLabel] = React.useState("");
   const [server, setServer] = React.useState("");
-  const [formVersion, setFormVersion] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -75,7 +82,6 @@ export function DataSourceCatalogSection() {
       setKind("mock");
       setLabel("");
       setServer("");
-      setFormVersion((version) => version + 1);
     }
   };
 
@@ -106,16 +112,17 @@ export function DataSourceCatalogSection() {
           </label>
           <label className="space-y-1 text-xs text-muted-foreground">
             <span>{t("ext.link.sourcesKind")}</span>
-            <select
-              key={formVersion}
-              name="source-kind"
-              className="cs-control h-9 w-full rounded-md px-3 text-sm text-foreground"
+            <SimpleSelect<EditableSourceKind>
+              size="sm"
+              value={kind}
               disabled={busy}
-              onChange={(event) => setKind(event.target.value as EditableSourceKind)}
-            >
-              <option value="mock">mock</option>
-              <option value="mcp-resource">mcp-resource</option>
-            </select>
+              ariaLabel={t("ext.link.sourcesKind")}
+              onChange={setKind}
+              options={[
+                { value: "mock", label: kindLabel(t, "mock") },
+                { value: "mcp-resource", label: kindLabel(t, "mcp-resource") },
+              ]}
+            />
           </label>
           <label className="space-y-1 text-xs text-muted-foreground">
             <span>{t("ext.link.sourcesLabel")}</span>
@@ -172,7 +179,7 @@ export function DataSourceCatalogSection() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium text-foreground">{source.label}</span>
-                  <Badge variant="secondary">{source.kind}</Badge>
+                  <Badge variant="secondary">{kindLabel(t, source.kind)}</Badge>
                   <Badge variant={source.enabled ? "success" : "secondary"}>
                     {source.enabled ? t("ext.link.sourcesEnabled") : t("ext.link.sourcesDisabled")}
                   </Badge>
