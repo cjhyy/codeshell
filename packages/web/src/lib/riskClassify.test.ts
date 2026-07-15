@@ -18,6 +18,12 @@ test("无已知字段 → JSON 兜底", () => {
   expect(summarizeApproval(undefined).summary).toBe("{}");
 });
 
+test("ReadSource 参数显示可读的数据源路径", () => {
+  expect(summarizeApproval({ source: "docs", scope: "guides", resource: "intro.md" }).summary).toBe(
+    "读取数据源 docs / guides / intro.md",
+  );
+});
+
 test("risk: 显式 low/medium/high 保留;未指定兜底 medium;未知值 fail-safe high", () => {
   expect(summarizeApproval({}, "high").risk).toBe("high");
   expect(summarizeApproval({}, "low").risk).toBe("low");

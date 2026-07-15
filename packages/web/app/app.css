@@ -46,6 +46,14 @@ body {
   font-size: 12px;
   cursor: pointer;
 }
+.rail-cwd {
+  overflow: hidden;
+  padding: 8px 12px 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .dot.open { background: #22c55e; }
 .dot.connecting { background: #eab308; }
@@ -127,8 +135,10 @@ body {
 .approval-title { font-size: 13px; font-weight: 600; }
 .approval-title em { color: var(--muted); font-style: normal; font-weight: 400; }
 .approval-desc { font-size: 13px; color: var(--muted); }
+.approval-summary { font-size: 13px; word-break: break-word; }
+.approval-raw > summary { color: var(--muted); cursor: pointer; font-size: 12px; }
 .approval-args {
-  margin: 0;
+  margin: 8px 0 0;
   font-size: 12px;
   background: #0f0f11;
   border-radius: 8px;

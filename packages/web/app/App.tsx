@@ -17,6 +17,7 @@ import {
   reduceStream,
   type ChatState,
 } from "../src/lib/streamReducer.js";
+import { summarizeApproval } from "../src/lib/riskClassify.js";
 import { chatFromTranscript, sessionTitle } from "./chat.js";
 
 function newSessionId(): string {
@@ -60,10 +61,12 @@ export function App() {
     const offNotify = client.onNotification((method, params) => {
       if (method === "agent/streamEvent") {
         const { sessionId, event } = params as unknown as StreamEventPayload;
+        const eventType = (event as { type?: string }).type;
         if (sessionId === activeIdRef.current) {
           setChat((prev) => reduceStream(prev, event));
         }
-        if ((event as { type?: string }).type === "turn_complete") void refreshSessions();
+        if (eventType === "stream_request_start") setWorkerNote(null);
+        if (eventType === "turn_complete") void refreshSessions();
         return;
       }
       if (method === "agent/approvalRequest") {
@@ -80,7 +83,11 @@ export function App() {
       }
       if (method === "serve/workerExit") {
         const clean = (params as { clean?: boolean }).clean;
-        setWorkerNote(clean ? "agent worker 已退出" : "agent worker 崩溃，将在下一条消息时重启");
+        setWorkerNote(
+          clean
+            ? "agent worker 已退出，发送消息会自动重启"
+            : "agent worker 崩溃，发送消息会自动重启",
+        );
         setChat((prev) => ({ ...prev, run: "idle" }));
       }
     });
@@ -137,6 +144,8 @@ export function App() {
   };
 
   const running = chat.run === "running" || chat.run === "waiting";
+  const workspaceCwd =
+    sessions.find((session) => session.sessionId === activeId)?.cwd ?? sessions[0]?.cwd ?? null;
 
   return (
     <div className="shell">
@@ -148,6 +157,11 @@ export function App() {
             ＋ 新会话
           </button>
         </div>
+        {workspaceCwd ? (
+          <div className="rail-cwd" title={workspaceCwd}>
+            {workspaceCwd}
+          </div>
+        ) : null}
         <ul className="sessions">
           {sessions.map((s) => (
             <li key={s.sessionId}>
@@ -268,17 +282,24 @@ function ApprovalCard({
 }) {
   const [answer, setAnswer] = React.useState("");
   const isAskUser = payload.request.toolName === "__ask_user__";
+  const { summary, risk } = summarizeApproval(payload.request.args, payload.request.riskLevel);
   return (
     <div className="approval">
       <div className="approval-title">
         {isAskUser ? "Agent 提问" : `工具审批：${payload.request.toolName}`}
-        {payload.request.riskLevel ? <em> · {payload.request.riskLevel}</em> : null}
+        {!isAskUser ? <em> · {risk}</em> : null}
       </div>
       {payload.request.description ? (
         <div className="approval-desc">{payload.request.description}</div>
       ) : null}
       {!isAskUser ? (
-        <pre className="approval-args">{JSON.stringify(payload.request.args, null, 2)}</pre>
+        <>
+          <div className="approval-summary">{summary}</div>
+          <details className="approval-raw">
+            <summary>原始参数</summary>
+            <pre className="approval-args">{JSON.stringify(payload.request.args, null, 2)}</pre>
+          </details>
+        </>
       ) : null}
       {isAskUser ? (
         <textarea
