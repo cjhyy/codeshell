@@ -106,14 +106,18 @@ import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { SettingsManager, userHome } from "../settings/manager.js";
 import { getCredentialAccess } from "../credentials/access.js";
-import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
+import type { CapabilityOverride } from "../settings/schema.js";
 import {
   isFeatureEnabled,
   resolveFeatureFlags,
   type FeatureFlagName,
   type FeatureFlagOverrides,
 } from "../settings/feature-flags.js";
-import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
+import {
+  effectiveBuiltinLists,
+  effectiveDisabledList,
+  effectiveProjectOverrides,
+} from "../capability-control/overlay.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
@@ -3895,9 +3899,7 @@ export class Engine {
       const sm = this.getSettingsManager();
       const settings = sm.get() as { disabledAgents?: string[] };
       const baseline = Array.isArray(settings.disabledAgents) ? settings.disabledAgents : [];
-      const overrides = cwd
-        ? (sm.getForScope("project", cwd).capabilityOverrides as CapabilityOverrides | undefined)
-        : undefined;
+      const overrides = effectiveProjectOverrides(sm, cwd);
       return effectiveDisabledList(baseline, overrides?.agents);
     } catch {
       return [];
@@ -3914,8 +3916,7 @@ export class Engine {
   private readBuiltinOverride(cwd?: string): Record<string, CapabilityOverride> | undefined {
     if (this.config.isSubAgent === true || !cwd) return undefined;
     try {
-      const overrides = this.getSettingsManager().getForScope("project", cwd)
-        .capabilityOverrides as CapabilityOverrides | undefined;
+      const overrides = effectiveProjectOverrides(this.getSettingsManager(), cwd);
       return overrides?.builtin;
     } catch {
       return undefined;

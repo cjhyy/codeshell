@@ -12,6 +12,7 @@
  * See docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md
  */
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
+import type { SettingsManager } from "../settings/manager.js";
 import type { CapabilityDescriptor } from "./types.js";
 
 /** Buckets in capabilityOverrides: "skills" | "plugins" | "agents" | "mcp" | "builtin". */
@@ -146,4 +147,45 @@ export function effectiveBuiltinLists(
     enabledBuiltinTools: [...enabled],
     disabledBuiltinTools: [...disabled],
   };
+}
+
+const OVERRIDE_BUCKETS = ["skills", "plugins", "agents", "mcp", "builtin", "pluginHooks"] as const;
+
+/**
+ * 合并两层三态 overlay：`top`（用户手写 capabilityOverrides）按 key 赢过
+ * `base`（profile.overrides 快照）。空结果收敛为 undefined。
+ */
+export function mergeCapabilityOverrides(
+  base: CapabilityOverrides | undefined,
+  top: CapabilityOverrides | undefined,
+): CapabilityOverrides | undefined {
+  if (!base) return top;
+  if (!top) return base;
+  const merged: NonNullable<CapabilityOverrides> = {};
+  for (const bucket of OVERRIDE_BUCKETS) {
+    const combined = { ...(base[bucket] ?? {}), ...(top[bucket] ?? {}) };
+    if (Object.keys(combined).length > 0) merged[bucket] = combined;
+  }
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
+/**
+ * 项目 overrides 的唯一读取咽喉：profile 快照垫底、用户手写覆盖。
+ * 所有折叠消费方（engine / disabled-lists / capability service）必须
+ * 经这里读，不得再直接 getForScope().capabilityOverrides。
+ */
+export function effectiveProjectOverrides(
+  settings: Pick<SettingsManager, "getForScope">,
+  cwd: string | undefined,
+): CapabilityOverrides | undefined {
+  if (!cwd) return undefined;
+  try {
+    const scoped = settings.getForScope("project", cwd) as {
+      capabilityOverrides?: CapabilityOverrides;
+      profile?: { overrides?: CapabilityOverrides };
+    };
+    return mergeCapabilityOverrides(scoped.profile?.overrides, scoped.capabilityOverrides);
+  } catch {
+    return undefined;
+  }
 }

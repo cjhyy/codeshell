@@ -26,7 +26,13 @@ import {
   projectPlugins,
   projectAgents,
 } from "./project.js";
-import { applyOverride, bucketForKind, overrideTokenForId, overrideFor } from "./overlay.js";
+import {
+  applyOverride,
+  bucketForKind,
+  effectiveProjectOverrides,
+  overrideTokenForId,
+  overrideFor,
+} from "./overlay.js";
 import type { CapabilityOverrides } from "../settings/schema.js";
 
 export interface CapabilityServiceDeps {
@@ -98,20 +104,22 @@ export class CapabilityService {
       }),
     ];
 
-    const overrides: CapabilityOverrides | undefined = cwd
+    const userOverrides: CapabilityOverrides | undefined = cwd
       ? (this.deps.settings.getForScope("project", cwd).capabilityOverrides as CapabilityOverrides)
       : undefined;
+    const foldedOverrides = cwd ? effectiveProjectOverrides(this.deps.settings, cwd) : undefined;
 
     return base.map((d) => {
       const globalEnabled = d.enabled;
       const token = overrideTokenForId(d.id);
-      const ov = cwd ? overrideFor(overrides, d.kind, token) : undefined;
+      const ov = cwd ? overrideFor(foldedOverrides, d.kind, token) : undefined;
+      const userOverride = cwd ? overrideFor(userOverrides, d.kind, token) : undefined;
       const enabled = applyOverride(globalEnabled, ov);
       return {
         ...d,
         enabled,
         globalEnabled,
-        projectOverride: ov,
+        projectOverride: userOverride,
         effectiveSource: ov ? "project" : cwd ? "default" : "user",
       } as CapabilityDescriptor;
     });
