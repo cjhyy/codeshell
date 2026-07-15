@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MessageCircleMore } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronDown,
+  ExternalLink,
+  MessageCircleMore,
+} from "lucide-react";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,24 +20,82 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
+import { IM_GATEWAY_CHANNEL_NAMES } from "../imGatewayChannels";
 import { LINK_CATALOG, type LinkIntegration } from "./link-catalog";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import type { MaskedCredentialView } from "./types";
-import type { ImGatewayChannel, ImGatewayStatus, ImGatewayUiEvent } from "../../preload/types";
+import type {
+  ImGatewayChannel,
+  ImGatewayChannelStatus,
+  ImGatewayStatus,
+  ImGatewayUiEvent,
+} from "../../preload/types";
 
-const CHANNEL_NAMES: Record<ImGatewayChannel, string> = {
-  telegram: "Telegram",
-  discord: "Discord",
-  slack: "Slack",
-  lark: "飞书 / Lark",
-  dingtalk: "钉钉",
-  wecom: "企业微信",
-  wechat: "个人微信",
-  matrix: "Matrix",
-  mattermost: "Mattermost",
-  line: "LINE",
-  whatsapp: "WhatsApp",
-  teams: "Microsoft Teams",
+const CHANNEL_GUIDES: Record<
+  ImGatewayChannel,
+  {
+    transport: "polling" | "socket" | "webhook" | "qr";
+    fields: string;
+    manageUrl?: string | { zh: string; en: string };
+  }
+> = {
+  telegram: {
+    transport: "polling",
+    fields: "botToken · allowedChatIds",
+    manageUrl: "https://t.me/BotFather",
+  },
+  discord: {
+    transport: "socket",
+    fields: "botToken · allowedChannelIds",
+    manageUrl: "https://discord.com/developers/applications",
+  },
+  slack: {
+    transport: "socket",
+    fields: "botToken · appToken · allowedChannelIds",
+    manageUrl: "https://api.slack.com/apps",
+  },
+  lark: {
+    transport: "socket",
+    fields: "appId · appSecret · allowedChatIds",
+    manageUrl: { zh: "https://open.feishu.cn/app", en: "https://open.larksuite.com/app" },
+  },
+  dingtalk: {
+    transport: "socket",
+    fields: "clientId · clientSecret · allowedConversationIds",
+    manageUrl: "https://open-dev.dingtalk.com/fe/app",
+  },
+  wecom: {
+    transport: "socket",
+    fields: "botId · secret · allowedChatIds",
+    manageUrl: "https://work.weixin.qq.com/wework_admin/frame#apps",
+  },
+  wechat: { transport: "qr", fields: "accountId · allowedUserIds (auto-saved)" },
+  matrix: { transport: "polling", fields: "homeserverUrl · accessToken · allowedRoomIds" },
+  mattermost: { transport: "socket", fields: "serverUrl · botToken · allowedChannelIds" },
+  line: {
+    transport: "webhook",
+    fields: "channelSecret · channelAccessToken · allowedTargetIds",
+    manageUrl: "https://developers.line.biz/console/",
+  },
+  whatsapp: {
+    transport: "webhook",
+    fields: "accessToken · appSecret · phoneNumberId",
+    manageUrl: "https://developers.facebook.com/apps/",
+  },
+  teams: {
+    transport: "webhook",
+    fields: "appId · appPassword · appType · tenantId",
+    manageUrl: "https://portal.azure.com/#create/Microsoft.AzureBot",
+  },
+};
+
+const CHANNEL_STATE_CLASS: Record<ImGatewayChannelStatus["state"], string> = {
+  disabled: "bg-muted text-muted-foreground",
+  "needs-config": "bg-status-err/10 text-status-err",
+  ready: "bg-sky-500/10 text-sky-600",
+  starting: "bg-status-warn/10 text-status-warn",
+  running: "bg-status-ok/10 text-status-ok",
+  retrying: "bg-status-err/10 text-status-err",
 };
 
 /**
@@ -149,7 +213,7 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
 }
 
 function ChatGatewayCard() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const toast = useToast();
   const [status, setStatus] = useState<ImGatewayStatus | null>(null);
   const [busy, setBusy] = useState<"start" | "stop" | "config" | null>(null);
@@ -160,6 +224,7 @@ function ChatGatewayCard() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loginStage, setLoginStage] = useState<"waiting" | "scanned" | "verify">("waiting");
   const [verificationCode, setVerificationCode] = useState("");
+  const [channelsOpen, setChannelsOpen] = useState(true);
 
   const refresh = useCallback(async () => {
     const next = await window.codeshell.imGateway.status();
@@ -244,6 +309,21 @@ function ChatGatewayCard() {
       await refresh();
     });
 
+  const openChannelConsole = async (channel: ImGatewayChannel) => {
+    const configured = CHANNEL_GUIDES[channel].manageUrl;
+    const url =
+      typeof configured === "string" ? configured : configured?.[lang === "zh" ? "zh" : "en"];
+    if (!url) return;
+    try {
+      await window.codeshell.openExternal(url);
+    } catch (error) {
+      toast({
+        message: error instanceof Error ? error.message : t("ext.link.gatewayOpenConsoleFailed"),
+        variant: "error",
+      });
+    }
+  };
+
   const loginWechat = () => {
     if (wechatBusy) return;
     setWechatBusy(true);
@@ -298,8 +378,24 @@ function ChatGatewayCard() {
   };
 
   const hasChannels = Boolean(status?.channels.length);
+  const fallbackStatuses = useMemo<ImGatewayChannelStatus[]>(
+    () =>
+      (Object.keys(IM_GATEWAY_CHANNEL_NAMES) as ImGatewayChannel[]).map((channel) => ({
+        channel,
+        enabled: Boolean(status?.channels.includes(channel)),
+        state: status?.channels.includes(channel) ? "ready" : "disabled",
+      })),
+    [status?.channels],
+  );
+  const channelStatuses = status?.channelStatuses ?? fallbackStatuses;
+  const enabledCount = channelStatuses.filter(({ enabled }) => enabled).length;
+  const degraded = channelStatuses.some(
+    ({ state }) => state === "retrying" || state === "needs-config",
+  );
   const statusLabel = status?.running
-    ? t("ext.link.gatewayRunning")
+    ? degraded
+      ? t("ext.link.gatewayDegraded")
+      : t("ext.link.gatewayRunning")
     : hasChannels
       ? t("ext.link.gatewayStopped")
       : t("ext.link.gatewayNeedsConfig");
@@ -319,7 +415,9 @@ function ChatGatewayCard() {
                 className={cn(
                   "rounded px-1.5 py-0.5 text-[10px] font-medium",
                   status?.running
-                    ? "bg-status-ok/10 text-status-ok"
+                    ? degraded
+                      ? "bg-status-warn/10 text-status-warn"
+                      : "bg-status-ok/10 text-status-ok"
                     : hasChannels
                       ? "bg-muted text-muted-foreground"
                       : "bg-amber-500/10 text-amber-600",
@@ -340,7 +438,7 @@ function ChatGatewayCard() {
             {status?.channels.length ? (
               status.channels.map((channel) => (
                 <span key={channel} className="rounded bg-background px-1.5 py-0.5 text-foreground">
-                  {CHANNEL_NAMES[channel]}
+                  {IM_GATEWAY_CHANNEL_NAMES[channel]}
                 </span>
               ))
             ) : (
@@ -351,8 +449,162 @@ function ChatGatewayCard() {
           <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
             {status?.configPath ?? "~/.code-shell/im-gateway/config.json"}
           </p>
-          {status?.configExists && status.error && !status.running && (
+          {status?.configExists && status.error && (
             <p className="mt-1.5 text-status-err">{status.error}</p>
+          )}
+        </div>
+
+        <div className="mt-3 overflow-hidden rounded-md border border-border/70">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 bg-muted/25 px-3 py-2 text-left text-xs hover:bg-muted/45"
+            onClick={() => setChannelsOpen((open) => !open)}
+            aria-expanded={channelsOpen}
+          >
+            <span>
+              <span className="font-medium">{t("ext.link.gatewaySupportedChannels")}</span>
+              <span className="ml-2 text-muted-foreground">
+                {t("ext.link.gatewayEnabledCount", { enabled: enabledCount, total: 12 })}
+              </span>
+            </span>
+            <ChevronDown
+              className={cn(
+                "size-4 text-muted-foreground transition",
+                channelsOpen && "rotate-180",
+              )}
+              aria-hidden
+            />
+          </button>
+          {channelsOpen && (
+            <div className="grid gap-px bg-border/60 sm:grid-cols-2">
+              {channelStatuses.map((channelStatus) => {
+                const guide = CHANNEL_GUIDES[channelStatus.channel];
+                return (
+                  <div key={channelStatus.channel} className="min-w-0 bg-card px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-xs font-medium">
+                        {IM_GATEWAY_CHANNEL_NAMES[channelStatus.channel]}
+                      </span>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                          CHANNEL_STATE_CLASS[channelStatus.state],
+                        )}
+                      >
+                        {t(`ext.link.gatewayChannelState.${channelStatus.state}`)}
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
+                      {t(`ext.link.gatewaySetup.${channelStatus.channel}`)}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <span className="rounded bg-muted px-1.5 py-0.5">
+                        {t(`ext.link.gatewayTransport.${guide.transport}`)}
+                      </span>
+                      <span className="truncate font-mono" title={guide.fields}>
+                        {guide.fields}
+                      </span>
+                    </div>
+                    {guide.manageUrl ? (
+                      <button
+                        type="button"
+                        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:underline"
+                        aria-label={`${IM_GATEWAY_CHANNEL_NAMES[channelStatus.channel]}：${t("ext.link.gatewayOpenConsole")}`}
+                        onClick={() => void openChannelConsole(channelStatus.channel)}
+                      >
+                        <ExternalLink className="size-3" aria-hidden />
+                        {t("ext.link.gatewayOpenConsole")}
+                      </button>
+                    ) : channelStatus.channel === "wechat" ? (
+                      <button
+                        type="button"
+                        className="mt-2 inline-flex items-center text-[10px] font-medium text-primary hover:underline disabled:opacity-50"
+                        disabled={wechatBusy}
+                        onClick={loginWechat}
+                      >
+                        {status?.wechatConnected
+                          ? t("ext.link.gatewayWechatReconnect")
+                          : t("ext.link.gatewayWechatConnect")}
+                      </button>
+                    ) : null}
+                    {channelStatus.error && (
+                      <p className="mt-1.5 line-clamp-2 text-[10px] leading-4 text-status-err">
+                        {channelStatus.error}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-3 rounded-md border border-border/70 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium">{t("ext.link.gatewayRecentActivity")}</span>
+            <span className="text-[10px] text-muted-foreground">
+              {t("ext.link.gatewayActivityLive")}
+            </span>
+          </div>
+          {status?.recentActivity?.length ? (
+            <div className="mt-2 space-y-1.5">
+              {status.recentActivity.slice(0, 8).map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-2 rounded bg-muted/35 px-2 py-1.5 text-[11px]"
+                >
+                  {activity.direction === "inbound" ? (
+                    <ArrowDownLeft className="mt-0.5 size-3.5 shrink-0 text-sky-600" aria-hidden />
+                  ) : (
+                    <ArrowUpRight
+                      className={cn(
+                        "mt-0.5 size-3.5 shrink-0",
+                        activity.status === "failed" ? "text-status-err" : "text-status-ok",
+                      )}
+                      aria-hidden
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {IM_GATEWAY_CHANNEL_NAMES[activity.channel]}
+                      </span>
+                      <span>
+                        {activity.direction === "inbound"
+                          ? t("ext.link.gatewayInbound")
+                          : activity.status === "failed"
+                            ? t("ext.link.gatewaySendFailed")
+                            : t("ext.link.gatewayOutbound")}
+                      </span>
+                      <span className="ml-auto shrink-0">
+                        {new Date(activity.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 line-clamp-2 break-all leading-4">
+                      {activity.text ||
+                        t("ext.link.gatewayAttachmentMessage", {
+                          count: activity.attachmentCount ?? 0,
+                        })}
+                    </p>
+                    {activity.direction === "inbound" && activity.senderId && (
+                      <p
+                        className="mt-0.5 truncate font-mono text-[9px] text-muted-foreground"
+                        title={`${activity.senderId} → ${activity.target}`}
+                      >
+                        {activity.senderId} → {activity.target}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+              {t("ext.link.gatewayNoActivity")}
+            </p>
           )}
         </div>
 
@@ -378,11 +630,6 @@ function ChatGatewayCard() {
           )}
           <Button size="sm" variant="outline" disabled={busy !== null} onClick={configure}>
             {t("ext.link.gatewayConfigure")}
-          </Button>
-          <Button size="sm" variant="outline" disabled={wechatBusy} onClick={loginWechat}>
-            {status?.wechatConnected
-              ? t("ext.link.gatewayWechatReconnect")
-              : t("ext.link.gatewayWechatConnect")}
           </Button>
         </div>
       </div>

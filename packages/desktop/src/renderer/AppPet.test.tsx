@@ -11,6 +11,10 @@ const sessionNavigationSource = readFileSync(
   join(rendererRoot, "app", "useSessionNavigation.ts"),
   "utf8",
 );
+const hostSubscriptionsSource = readFileSync(
+  join(rendererRoot, "app", "useHostSubscriptions.ts"),
+  "utf8",
+);
 const settingsMenuSource = readFileSync(join(rendererRoot, "settings", "SettingsMenu.tsx"), "utf8");
 const petSource = readdirSync(join(rendererRoot, "pet"))
   .filter((name) => name.endsWith(".ts") || name.endsWith(".tsx"))
@@ -56,22 +60,18 @@ describe("App Pet lifecycle boundaries", () => {
     expect(appSource).not.toContain("aria-hidden={petState.overviewOpen}");
   });
 
-  test("keeps one Pet input and automatically delegates execution into a normal session", () => {
+  test("keeps one Pet input while main owns automatic Work Session execution", () => {
     expect(petSource).toContain('data-pet-manager-chat="true"');
     expect(petSource).toContain('data-pet-auto-routing="true"');
     expect(petSource).not.toContain("<ChatView");
     expect(petSource).not.toContain('t("pet.chat.delegate")');
     expect(petSource).not.toContain('t("pet.chat.ask")');
-    expect(petSource).toContain('event.kind !== "delegation-requested"');
-    const start = appSource.indexOf("const delegatePetTask");
-    const end = appSource.indexOf("const toggleSidebar", start);
-    const delegationHandler = appSource.slice(start, end);
-    expect(delegationHandler).toContain("createSession(projectId, undefined, { activate: false })");
-    expect(delegationHandler).toContain("bucket: bucketKey(projectId, sessionId)");
-    expect(delegationHandler).not.toContain("handleNewConversationForProject");
-    expect(delegationHandler).not.toContain('viewMode: "chat"');
-    expect(appSource).toContain("<PetAutoDelegationHost");
-    expect(appSource).toContain("onDelegate={delegatePetTask}");
+    expect(appSource).not.toContain("PetAutoDelegationHost");
+    expect(appSource).not.toContain("delegatePetTask");
+    expect(appSource).not.toContain('event.kind !== "delegation-requested"');
+    expect(hostSubscriptionsSource).toContain("onPetDelegationSession");
+    expect(hostSubscriptionsSource).toContain('announceHostSession(meta, "pet-delegation")');
+    expect(hostSubscriptionsSource).toContain("registerBrowserSessionBucket");
   });
 
   test("selecting a normal session exits the Pet surface", () => {

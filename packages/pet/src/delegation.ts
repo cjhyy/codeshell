@@ -7,10 +7,21 @@ export interface PetWorkspaceOption {
   description?: string;
 }
 
+/** Host-provided closed set of existing Work Sessions Mimi may continue. */
+export interface PetReusableSessionOption {
+  /** Opaque turn-scoped selector; never an unvalidated model-authored Session id. */
+  id: string;
+  workspaceId: string;
+  name: string;
+  description?: string;
+}
+
 /** Structured decision produced only by a successful DelegateWork tool call. */
 export interface PetWorkDelegation {
   workspaceId: string;
   objective: string;
+  /** Opaque id from the host-provided reusable Session set; absent means create. */
+  reusableSessionId?: string;
 }
 
 export interface PetWorkDelegationDecision {

@@ -16,6 +16,7 @@ import {
   screen,
 } from "electron";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import {
@@ -79,9 +80,10 @@ import {
 } from "@cjhyy/code-shell-capability-coding";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
-import { registerPetIpc } from "./pet/pet-ipc.js";
+import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { PetDispatchService } from "./pet/pet-dispatch-service.js";
+import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -984,12 +986,33 @@ async function createWindow(): Promise<BrowserWindow> {
     const petMetadata = new PetMetadataStore(
       resolve(app.getPath("userData"), "pet", "metadata.json"),
     );
+    const petWorkDelegationHost = new PetWorkDelegationHost({
+      bridge,
+      noWorkspaceCwd: resolveNoRepoCwd(),
+    });
     petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
       listWorkspaces: () => mobileOrchestrator.projectList(),
+      listReusableSessions: async () => {
+        const noWorkspaceCwd = resolveNoRepoCwd();
+        const { sessions } = await listDiskSessions({ limit: 100 });
+        return sessions
+          .filter((session) => session.origin === "desktop")
+          .map((session) => ({
+            sessionId: session.engineSessionId,
+            workspacePath:
+              resolve(session.cwd || noWorkspaceCwd) === resolve(noWorkspaceCwd)
+                ? null
+                : session.cwd,
+            title: session.title,
+            updatedAt: session.updatedAt,
+            status: session.status,
+          }));
+      },
+      startWorkSession: (delegation) => petWorkDelegationHost.start(delegation),
     });
     const petReceipts = new PetReceiptStore(
       resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
@@ -1010,7 +1033,6 @@ async function createWindow(): Promise<BrowserWindow> {
       dispatcher: petDispatchService,
       attention,
       windows: () => BrowserWindow.getAllWindows(),
-      delegationWindows: () => (win && !win.isDestroyed() ? [win] : []),
       ready: petInitialization,
     });
     await petInitialization;
@@ -1366,17 +1388,34 @@ async function dispatchGatewayPetChat(
     }
   }
 
+  const sourceChannel =
+    request.origin?.channel
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, "-")
+      .slice(0, 32) || "unknown";
+  const clientMessageId = request.origin?.messageId
+    ? `im:${sourceChannel}:${stablePromptHash(
+        `${request.origin.channel}\0${request.origin.target}\0${request.origin.senderId}\0${request.origin.messageId}`,
+      )}`
+    : `im:${sourceChannel}:${randomUUID()}`;
+  const submitted = {
+    kind: "user-submitted" as const,
+    clientMessageId,
+    message: request.message.trim(),
+    createdAt: Date.now(),
+    ...(request.origin ? { origin: request.origin } : {}),
+  };
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, submitted);
+  }
+
   const result = await dispatcher.dispatch({
     type: "chat",
     message: request.message,
     ...(attachments.length > 0 ? { attachments } : {}),
-    ...(request.origin?.messageId
-      ? {
-          clientMessageId: `im:${stablePromptHash(
-            `${request.origin.channel}\0${request.origin.target}\0${request.origin.senderId}\0${request.origin.messageId}`,
-          )}`,
-        }
-      : {}),
+    clientMessageId,
+    source: { kind: "im-gateway", channel: sourceChannel },
   });
   if (!result.ok) throw new Error(result.message ?? result.code);
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
@@ -1699,10 +1738,14 @@ ipcMain.on(
       if (!sessionId || !bucket) return;
       const existingBucket = bucketForSession(sessionId);
       if (!existingBucket) {
-        dlog("browser", "register_session_bucket_rejected", {
-          sessionId,
-          reason: "no main-owned mapping",
-        });
+        if (!bridge?.hasKnownSession(sessionId)) {
+          dlog("browser", "register_session_bucket_rejected", {
+            sessionId,
+            reason: "no main-owned session",
+          });
+          return;
+        }
+        registerSessionBucket(sessionId, bucket, partition);
         return;
       }
       if (existingBucket !== bucket) {

@@ -136,15 +136,11 @@ export function registerPetIpc(options: {
   ipcMain: PetIpcMainLike;
   aggregator: PetIpcAggregator;
   windows: () => readonly PetIpcWindowLike[];
-  /** The single app surface allowed to materialize a delegated Work Session. */
-  delegationWindows?: () => readonly PetIpcWindowLike[];
   dispatcher?: PetIpcDispatcher;
   attention?: PetIpcAttention;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
-  const emittedDelegations = new Set<string>();
-
   options.ipcMain.handle(PET_SNAPSHOT_CHANNEL, (_event, ...args) => {
     if (args.length > 0) throw new Error("pet:getSnapshot does not accept arguments");
     return afterReady(options.ready, () => options.aggregator.getSnapshot());
@@ -174,28 +170,6 @@ export function registerPetIpc(options: {
           if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, event);
         }
         const result = await options.dispatcher!.dispatch(command);
-        if (
-          result.ok &&
-          result.type === "chat" &&
-          result.delegation &&
-          !emittedDelegations.has(result.delegation.clientMessageId)
-        ) {
-          emittedDelegations.add(result.delegation.clientMessageId);
-          if (emittedDelegations.size > 500) {
-            const oldest = emittedDelegations.values().next().value;
-            if (oldest) emittedDelegations.delete(oldest);
-          }
-          const delegationEvent = {
-            kind: "delegation-requested" as const,
-            ...result.delegation,
-            createdAt: Date.now(),
-          };
-          for (const window of (options.delegationWindows ?? options.windows)()) {
-            if (!window.isDestroyed()) {
-              window.webContents.send(PET_CHAT_EVENT_CHANNEL, delegationEvent);
-            }
-          }
-        }
         return result;
       });
     });

@@ -2,6 +2,10 @@ import type { PetPeek, PetProjectionEvent } from "../../preload/types";
 import React from "react";
 import { useT } from "../i18n";
 import type { Message } from "../types";
+import {
+  IM_GATEWAY_CHANNEL_NAMES,
+  imGatewayChannelFromClientMessageId,
+} from "../imGatewayChannels";
 import { initialPetState, petStateReducer } from "./petStateReducer";
 import { visiblePetAssistantText } from "./petChatRouting";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
@@ -25,12 +29,21 @@ export interface MiniChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
+  source?: string;
 }
 
 export function selectMiniChatMessages(messages: readonly Message[]): MiniChatMessage[] {
   return messages.flatMap<MiniChatMessage>((message) => {
     if (message.kind === "user" && message.text.trim()) {
-      return [{ id: message.id, role: "user" as const, text: message.text.trim() }];
+      const channel = imGatewayChannelFromClientMessageId(message.clientMessageId);
+      return [
+        {
+          id: message.id,
+          role: "user" as const,
+          text: message.text.trim(),
+          ...(channel ? { source: IM_GATEWAY_CHANNEL_NAMES[channel] } : {}),
+        },
+      ];
     }
     if (message.kind === "assistant") {
       const text = visiblePetAssistantText(message.text);
@@ -360,7 +373,7 @@ export function PetDesktopWindow() {
               </button>
             )}
             {messages.slice(-6).map((message) => (
-              <p
+              <div
                 key={message.id}
                 className={
                   message.role === "user"
@@ -368,8 +381,11 @@ export function PetDesktopWindow() {
                     : "mr-6 rounded-lg bg-muted px-2.5 py-1.5"
                 }
               >
-                {message.text}
-              </p>
+                {message.source && (
+                  <div className="mb-0.5 text-[9px] font-medium opacity-70">{message.source}</div>
+                )}
+                <p>{message.text}</p>
+              </div>
             ))}
             {chatBusy && <p className="text-muted-foreground">{t("pet.widget.replying")}</p>}
             {chatError && <p className="text-status-err">{chatError}</p>}

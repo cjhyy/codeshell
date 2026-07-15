@@ -95,6 +95,7 @@ describe("PetDispatchService", () => {
         type: "chat",
         message: "What is running?",
         clientMessageId: "im:one",
+        source: { kind: "im-gateway", channel: "telegram" },
         attachments: [
           {
             id: "att-one",
@@ -126,6 +127,9 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.task)).not.toContain("<pet-world>");
     expect(String(request?.params.task)).not.toContain("requestId");
     expect(String(request?.params.petRuntimeContext)).toContain('"runState":"running"');
+    expect(String(request?.params.petRuntimeContext)).toContain(
+      '"currentMessageSource":{"kind":"im-gateway","channel":"telegram"}',
+    );
     expect(request?.params.petWorkspaces).toEqual([
       expect.objectContaining({ id: "no-workspace", name: "No workspace" }),
       expect.objectContaining({ name: "CodeShell", description: "/work/codeshell" }),
@@ -133,6 +137,7 @@ describe("PetDispatchService", () => {
   });
 
   test("uses only the validated DelegateWork result for automatic delegation", async () => {
+    const starts: unknown[] = [];
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
       aggregator: {
@@ -158,6 +163,10 @@ describe("PetDispatchService", () => {
       },
       hostCwd: "/safe/pet",
       listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      startWorkSession: async (delegation) => {
+        starts.push(delegation);
+        return { sessionId: "pet-work-one", cwd: delegation.workspacePath! };
+      },
     });
 
     expect(
@@ -174,8 +183,142 @@ describe("PetDispatchService", () => {
         clientMessageId: "client-delegate",
         task: "修复 CodeShell 登录问题",
         workspacePath: "/work/codeshell",
+        sessionId: "pet-work-one",
       },
     });
+    expect(starts).toEqual([
+      {
+        clientMessageId: "client-delegate",
+        task: "修复 CodeShell 登录问题",
+        workspacePath: "/work/codeshell",
+      },
+    ]);
+  });
+
+  test("offers a bounded reusable Session set and resumes only the selected host entry", async () => {
+    const starts: unknown[] = [];
+    let exposedSessions: Array<{ id: string; workspaceId: string; name: string }> = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const profileParams = params.profileParams as {
+            workspaces: Array<{ id: string; name: string }>;
+            reusableSessions: Array<{ id: string; workspaceId: string; name: string }>;
+          };
+          exposedSessions = profileParams.reusableSessions;
+          const workspace = profileParams.workspaces.find(
+            (candidate) => candidate.name === "CodeShell",
+          )!;
+          const reusable = exposedSessions.find((candidate) => candidate.name === "Login work")!;
+          return {
+            ok: true,
+            result: {
+              text: "继续原会话。",
+              extensions: {
+                pet: {
+                  workDelegation: {
+                    workspaceId: workspace.id,
+                    objective: "继续修复登录问题",
+                    reusableSessionId: reusable.id,
+                  },
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      listReusableSessions: async () => [
+        {
+          sessionId: "work-a",
+          workspacePath: "/work/codeshell",
+          title: "Busy work",
+          updatedAt: 20,
+          status: "active",
+        },
+        {
+          sessionId: "work-login",
+          workspacePath: "/work/codeshell",
+          title: "Login work",
+          updatedAt: 19,
+          status: "completed",
+        },
+        {
+          sessionId: "work-other",
+          workspacePath: "/work/not-listed",
+          title: "Other work",
+          updatedAt: 18,
+          status: "completed",
+        },
+      ],
+      startWorkSession: async (delegation) => {
+        starts.push(delegation);
+        return { sessionId: delegation.targetSessionId!, cwd: delegation.workspacePath! };
+      },
+    });
+
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "继续刚才的登录修复",
+        clientMessageId: "client-reuse",
+      }),
+    ).toMatchObject({
+      ok: true,
+      type: "chat",
+      delegation: {
+        sessionId: "work-login",
+        reusedSession: true,
+      },
+    });
+    expect(exposedSessions).toEqual([expect.objectContaining({ name: "Login work" })]);
+    expect(starts).toEqual([
+      {
+        clientMessageId: "client-reuse",
+        task: "继续修复登录问题",
+        workspacePath: "/work/codeshell",
+        targetSessionId: "work-login",
+      },
+    ]);
+  });
+
+  test("binds a reusable Session whose cwd differs from its Workspace only by a trailing separator", async () => {
+    let exposed: Array<{ id: string; workspaceId: string; name: string }> = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          exposed = (params.profileParams as { reusableSessions: typeof exposed }).reusableSessions;
+          return { ok: true, result: { text: "noop" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      listReusableSessions: async () => [
+        {
+          sessionId: "work-login",
+          workspacePath: "/work/codeshell/",
+          title: "Login work",
+          updatedAt: 19,
+          status: "completed",
+        },
+      ],
+    });
+
+    await service.dispatch({ type: "chat", message: "继续", clientMessageId: "client-slash" });
+    // Without trailing-separator normalization this Session would be dropped
+    // because "/work/codeshell/" !== the Workspace's "/work/codeshell".
+    expect(exposed).toEqual([expect.objectContaining({ name: "Login work" })]);
   });
 
   test("rejects a DelegateWork result outside the host-provided Workspace list", async () => {
@@ -206,6 +349,105 @@ describe("PetDispatchService", () => {
       code: "worker-error",
       message: "Mimi returned a Workspace outside the host-provided list",
     });
+  });
+
+  test("rejects a reusable Session selector outside the host-provided closed set", async () => {
+    let started = false;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
+            (candidate) => candidate.name === "CodeShell",
+          )!;
+          return {
+            ok: true,
+            result: {
+              extensions: {
+                pet: {
+                  workDelegation: {
+                    workspaceId: workspace.id,
+                    objective: "do not run this",
+                    reusableSessionId: "session-invented",
+                  },
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      listReusableSessions: async () => [
+        {
+          sessionId: "work-login",
+          workspacePath: "/work/codeshell",
+          title: "Login work",
+          updatedAt: 1,
+        },
+      ],
+      startWorkSession: async () => {
+        started = true;
+        return { sessionId: "bad", cwd: "/work/codeshell" };
+      },
+    });
+
+    expect(await service.dispatch({ type: "chat", message: "继续登录修复" })).toEqual({
+      ok: false,
+      code: "worker-error",
+      message: "Mimi returned a Session outside the host-provided reusable set",
+    });
+    expect(started).toBe(false);
+  });
+
+  test("keeps Mimi's chat reply but reports a delegationError when the Work Session cannot start", async () => {
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
+            (candidate) => candidate.name === "CodeShell",
+          )!;
+          return {
+            ok: true,
+            result: {
+              text: "已交给工作会话。",
+              petWorkDelegation: {
+                workspaceId: workspace.id,
+                objective: "修复 CodeShell 登录问题",
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      startWorkSession: async () => {
+        throw new Error("queue rejected");
+      },
+    });
+
+    const failedResult = await service.dispatch({
+      type: "chat",
+      message: "修复登录问题",
+      clientMessageId: "client-delegate-failed",
+    });
+    expect(failedResult).toMatchObject({
+      ok: true,
+      type: "chat",
+      petSessionId: "pet-one",
+      result: { text: "已交给工作会话。" },
+      delegationError: "Mimi failed to start the delegated Work Session: queue rejected",
+    });
+    expect(failedResult).not.toHaveProperty("delegation");
   });
 
   test("does not treat the legacy text marker as a delegation", async () => {

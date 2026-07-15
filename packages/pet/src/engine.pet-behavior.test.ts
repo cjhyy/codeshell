@@ -39,7 +39,11 @@ class PetBehaviorClient extends LLMClientBase {
               {
                 id: "delegate-work",
                 toolName: "DelegateWork",
-                args: { workspace_id: "workspace-codeshell", objective: "inspect CodeShell" },
+                args: {
+                  workspace_id: "workspace-codeshell",
+                  session_id: "session-existing",
+                  objective: "inspect CodeShell",
+                },
               },
             ],
             stopReason: "tool_use",
@@ -90,6 +94,15 @@ describe("Engine pet behavior", () => {
       petWorkspaces: [
         { id: "workspace-codeshell", name: "CodeShell", description: "/work/codeshell" },
       ],
+      profileParams: {
+        reusableSessions: [
+          {
+            id: "session-existing",
+            workspaceId: "workspace-codeshell",
+            name: "Existing work",
+          },
+        ],
+      },
     });
 
     const first = calls.get(model)![0]!;
@@ -103,12 +116,14 @@ describe("Engine pet behavior", () => {
     expect(result.petWorkDelegation).toEqual({
       workspaceId: "workspace-codeshell",
       objective: "inspect CodeShell",
+      reusableSessionId: "session-existing",
     });
     expect(result.extensions).toEqual({
       pet: {
         workDelegation: {
           workspaceId: "workspace-codeshell",
           objective: "inspect CodeShell",
+          reusableSessionId: "session-existing",
         },
       },
     });

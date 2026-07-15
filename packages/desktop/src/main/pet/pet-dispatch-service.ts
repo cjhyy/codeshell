@@ -4,13 +4,32 @@ import type {
   PetNavigationResult,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
-import type { PetWorkspaceOption, PetWorkDelegation } from "@cjhyy/code-shell-pet";
+import type {
+  PetReusableSessionOption,
+  PetWorkspaceOption,
+  PetWorkDelegation,
+} from "@cjhyy/code-shell-pet";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
   task: string;
   workspacePath: string | null;
+  /** Existing host-validated Work Session to continue; absent means create. */
+  targetSessionId?: string;
+}
+
+export type PetStartedDelegation = Omit<PetAutoDelegation, "targetSessionId"> & {
+  sessionId: string;
+  reusedSession: boolean;
+};
+
+export interface PetReusableSessionCandidate {
+  sessionId: string;
+  workspacePath: string | null;
+  title: string;
+  updatedAt: number;
+  status?: "active" | "paused" | "completed" | "failed" | "cancelled";
 }
 
 export type PetDispatchCommand =
@@ -23,6 +42,7 @@ export type PetDispatchCommand =
       clientMessageId?: string;
       preferredProjectPath?: string;
       attachments?: InputAttachmentMeta[];
+      source?: { kind: "im-gateway"; channel: string };
     };
 
 export type PetDispatchResult =
@@ -51,7 +71,13 @@ export type PetDispatchResult =
       type: "chat";
       petSessionId: string;
       result: unknown;
-      delegation?: PetAutoDelegation;
+      delegation?: PetStartedDelegation;
+      /**
+       * Present when Mimi decided to delegate but the Work Session could not be
+       * launched. The chat turn still succeeds (her reply is in `result`); this
+       * only records the delegation side effect that failed.
+       */
+      delegationError?: string;
     };
 
 interface PetDispatchOptions {
@@ -68,12 +94,28 @@ interface PetDispatchOptions {
   };
   hostCwd: string;
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
+  listReusableSessions?(): Promise<PetReusableSessionCandidate[]>;
+  startWorkSession?(delegation: PetAutoDelegation): Promise<{ sessionId: string; cwd: string }>;
 }
 
 const NO_WORKSPACE_ID = "no-workspace";
 
+/**
+ * Trailing separators must not split one workspace into two ids: the tracked
+ * project list and a disk session's cwd can disagree only by a trailing slash
+ * (e.g. "/work/site/" vs "/work/site"). Mirrors the normalization the former
+ * renderer PetAutoDelegationHost applied before this moved into the host.
+ */
+function normalizeWorkspacePath(path: string): string {
+  return path.replace(/[/\\]+$/, "");
+}
+
 function workspaceIdForPath(path: string): string {
   return `workspace-${createHash("sha256").update(path).digest("hex").slice(0, 16)}`;
+}
+
+function reusableSessionId(sessionId: string): string {
+  return `session-${createHash("sha256").update(sessionId).digest("hex").slice(0, 20)}`;
 }
 
 function readPetWorkDelegation(result: unknown): PetWorkDelegation | null {
@@ -101,7 +143,19 @@ function readPetWorkDelegation(result: unknown): PetWorkDelegation | null {
   ) {
     return null;
   }
-  return { workspaceId: record.workspaceId, objective: record.objective.trim() };
+  if (
+    record.reusableSessionId !== undefined &&
+    (typeof record.reusableSessionId !== "string" || !record.reusableSessionId.trim())
+  ) {
+    return null;
+  }
+  return {
+    workspaceId: record.workspaceId,
+    objective: record.objective.trim(),
+    ...(typeof record.reusableSessionId === "string"
+      ? { reusableSessionId: record.reusableSessionId.trim() }
+      : {}),
+  };
 }
 
 function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<string, unknown> {
@@ -190,8 +244,12 @@ export class PetDispatchService {
           return { ok: false, code: "invalid-command" };
         }
         const metadata = await this.options.metadata.ensure();
-        const listedWorkspaces = (await this.options.listWorkspaces?.()) ?? [];
+        const [listedWorkspaces, listedReusableSessions] = await Promise.all([
+          this.options.listWorkspaces?.() ?? [],
+          this.options.listReusableSessions?.() ?? [],
+        ]);
         const workspacePathById = new Map<string, string | null>([[NO_WORKSPACE_ID, null]]);
+        const workspaceIdByPath = new Map<string, string>();
         const petWorkspaces: PetWorkspaceOption[] = [
           {
             id: NO_WORKSPACE_ID,
@@ -203,6 +261,7 @@ export class PetDispatchService {
           if (!workspace.path || [...workspacePathById.values()].includes(workspace.path)) continue;
           const id = workspaceIdForPath(workspace.path);
           workspacePathById.set(id, workspace.path);
+          workspaceIdByPath.set(normalizeWorkspacePath(workspace.path), id);
           petWorkspaces.push({
             id,
             name: workspace.name,
@@ -212,9 +271,64 @@ export class PetDispatchService {
                 : workspace.path,
           });
         }
+        const snapshot = this.options.aggregator.getSnapshot();
+        const unavailableSessionIds = new Set(
+          snapshot.sessions
+            .filter(
+              (session) =>
+                session.runState === "running" ||
+                session.runState === "queued" ||
+                session.pendingDecisionCount > 0,
+            )
+            .map((session) => session.agentSessionId),
+        );
+        const reusableSessionById = new Map<
+          string,
+          PetReusableSessionCandidate & { workspaceId: string }
+        >();
+        const reusableSessionCounts = new Map<string, number>();
+        const petReusableSessions: PetReusableSessionOption[] = [];
+        for (const candidate of listedReusableSessions) {
+          if (
+            petReusableSessions.length >= 32 ||
+            !candidate.sessionId ||
+            candidate.sessionId === metadata.petSessionId ||
+            unavailableSessionIds.has(candidate.sessionId)
+          ) {
+            continue;
+          }
+          const workspaceId =
+            candidate.workspacePath === null
+              ? NO_WORKSPACE_ID
+              : workspaceIdByPath.get(normalizeWorkspacePath(candidate.workspacePath));
+          if (!workspaceId || (reusableSessionCounts.get(workspaceId) ?? 0) >= 6) continue;
+          const id = reusableSessionId(candidate.sessionId);
+          if (reusableSessionById.has(id)) continue;
+          reusableSessionById.set(id, { ...candidate, workspaceId });
+          reusableSessionCounts.set(workspaceId, (reusableSessionCounts.get(workspaceId) ?? 0) + 1);
+          petReusableSessions.push({
+            id,
+            workspaceId,
+            name: candidate.title.slice(0, 120) || "Untitled Session",
+            description: `status=${candidate.status ?? "idle"}; updated=${
+              Number.isFinite(candidate.updatedAt)
+                ? new Date(candidate.updatedAt).toISOString()
+                : "unknown"
+            }`,
+          });
+        }
         const world = {
-          ...boundedWorld(this.options.aggregator.getSnapshot()),
+          ...boundedWorld(snapshot),
           workspaces: petWorkspaces,
+          reusableSessions: petReusableSessions,
+          ...(command.source
+            ? {
+                currentMessageSource: {
+                  kind: command.source.kind,
+                  channel: command.source.channel.slice(0, 32),
+                },
+              }
+            : {}),
         };
         const response = await this.options.worker.requestWorker("agent/run", {
           sessionId: metadata.petSessionId,
@@ -225,6 +339,7 @@ export class PetDispatchService {
           profileParams: {
             runtimeContext: JSON.stringify(world),
             workspaces: petWorkspaces,
+            reusableSessions: petReusableSessions,
           },
           cwd: this.options.hostCwd,
           behaviorMode: "pet",
@@ -243,20 +358,62 @@ export class PetDispatchService {
             message: "Mimi returned a Workspace outside the host-provided list",
           };
         }
+        const reusableSession = workDelegation?.reusableSessionId
+          ? reusableSessionById.get(workDelegation.reusableSessionId)
+          : undefined;
+        if (workDelegation?.reusableSessionId && !reusableSession) {
+          return {
+            ok: false,
+            code: "worker-error",
+            message: "Mimi returned a Session outside the host-provided reusable set",
+          };
+        }
+        if (reusableSession && reusableSession.workspaceId !== workDelegation?.workspaceId) {
+          return {
+            ok: false,
+            code: "worker-error",
+            message: "Mimi returned a reusable Session outside the selected Workspace",
+          };
+        }
+        let delegation: PetStartedDelegation | undefined;
+        let delegationError: string | undefined;
+        if (workDelegation) {
+          const request: PetAutoDelegation = {
+            clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
+            task: workDelegation.objective,
+            workspacePath: workspacePathById.get(workDelegation.workspaceId) ?? null,
+            ...(reusableSession ? { targetSessionId: reusableSession.sessionId } : {}),
+          };
+          // A delegation-launch failure must not discard Mimi's already-generated
+          // chat reply: the turn succeeded, only the side effect of starting the
+          // Work Session failed. On IM channels a thrown error here would drop the
+          // reply entirely, so we surface it as a non-fatal `delegationError`.
+          if (!this.options.startWorkSession) {
+            delegationError = "Mimi work delegation host is unavailable";
+          } else {
+            try {
+              const launched = await this.options.startWorkSession(request);
+              delegation = {
+                clientMessageId: request.clientMessageId,
+                task: request.task,
+                workspacePath: request.workspacePath,
+                sessionId: launched.sessionId,
+                reusedSession: Boolean(request.targetSessionId),
+              };
+            } catch (error) {
+              delegationError = `Mimi failed to start the delegated Work Session: ${
+                error instanceof Error ? error.message : String(error)
+              }`;
+            }
+          }
+        }
         return {
           ok: true,
           type: "chat",
           petSessionId: metadata.petSessionId,
           result: response.result,
-          ...(workDelegation
-            ? {
-                delegation: {
-                  clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
-                  task: workDelegation.objective,
-                  workspacePath: workspacePathById.get(workDelegation.workspaceId) ?? null,
-                },
-              }
-            : {}),
+          ...(delegation ? { delegation } : {}),
+          ...(delegationError ? { delegationError } : {}),
         };
       }
       default:

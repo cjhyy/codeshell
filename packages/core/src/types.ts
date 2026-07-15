@@ -1045,4 +1045,5 @@ export interface LegacyPetWorkspaceOption {
 export interface LegacyPetWorkDelegation {
   workspaceId: string;
   objective: string;
+  reusableSessionId?: string;
 }

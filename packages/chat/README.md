@@ -35,9 +35,12 @@ await chat.run(shutdown.signal);
 ## CodeShell integration
 
 包内置了可选的 `@cjhyy/code-shell-chat/codeshell` integration 和 `code-shell-chat` CLI。
-在 CodeShell Desktop 中可直接进入「凭证 → Link → CodeShell Chat Gateway」查看已配置渠道、
-启动/停止 gateway、编辑配置，或扫码连接个人微信；无需再单独打开终端运行 CLI。
+在 CodeShell Desktop 中可直接进入「凭证 → Link → CodeShell Chat Gateway」查看全部支持渠道、
+逐渠道连接状态和接入说明，一键打开可用平台的官方配置后台，启动/停止 gateway、编辑配置，
+或扫码连接个人微信；卡片还会显示本次桌面运行中最近的收发消息。无需再单独打开终端运行 CLI。
 CLI 会把普通文字和附件转到桌面端的 Mimi Pet 长期会话，并把最终文字回复送回原 IM 会话。
+不同渠道继续共享 Mimi 的长期上下文，但每条入站消息会标明来源渠道，当前消息来源也会进入
+Mimi 的运行时上下文，避免多渠道同时使用时无法分辨入口。
 `/open`、`/close`、`/status` 仍作为确定性快捷入口；“帮我打开手机遥控”“关闭公网入口”
 和“看看手机遥控状态”等明确自然语言也会触发相同操作。mobile remote 继续复用 tunnel +
 pairing + passcode，并把 10 分钟一次性配对入口作为按钮回到原会话。

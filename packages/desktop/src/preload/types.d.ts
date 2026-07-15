@@ -625,11 +625,34 @@ export type ImGatewayChannel =
   | "whatsapp"
   | "teams";
 
+export interface ImGatewayChannelStatus {
+  channel: ImGatewayChannel;
+  enabled: boolean;
+  state: "disabled" | "needs-config" | "ready" | "starting" | "running" | "retrying";
+  attempts?: number;
+  error?: string;
+}
+
+export interface ImGatewayActivity {
+  id: string;
+  requestId: string;
+  channel: ImGatewayChannel;
+  direction: "inbound" | "outbound";
+  status: "received" | "sent" | "failed";
+  target: string;
+  senderId?: string;
+  text: string;
+  attachmentCount?: number;
+  createdAt: number;
+}
+
 export interface ImGatewayStatus {
   running: boolean;
   configPath: string;
   configExists: boolean;
   channels: ImGatewayChannel[];
+  channelStatuses: ImGatewayChannelStatus[];
+  recentActivity: ImGatewayActivity[];
   wechatConnected: boolean;
   startedAt?: number;
   error?: string;
@@ -835,6 +858,16 @@ export interface CodeshellApi {
       title: string;
       prompt: string;
       clientMessageId?: string;
+    }) => void,
+  ): Unsubscribe;
+  /** A normal Work Session created and started directly by Mimi's main-process host. */
+  onPetDelegationSession(
+    cb: (meta: {
+      sessionId: string;
+      cwd: string;
+      title: string;
+      prompt: string;
+      clientMessageId: string;
     }) => void,
   ): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;

@@ -952,6 +952,11 @@ export class AgentBridge implements PetStateBridge {
     return this.sessionCwd.has(sessionId);
   }
 
+  /** Reserve a main-owned Session before a headless producer submits agent/run. */
+  reserveHostSession(sessionId: string, cwd: string): void {
+    this.sessionCwd.set(sessionId, cwd);
+  }
+
   /**
    * Inject a JSON-RPC line into the worker exactly as the renderer would via
    * the "agent:msg" IPC channel. This is the reuse seam for alternate front
@@ -1090,6 +1095,24 @@ export class AgentBridge implements PetStateBridge {
       JSON.stringify({
         jsonrpc: "2.0",
         method: "agent/automationSession",
+        params: meta,
+      }),
+    );
+  }
+
+  /** Announce a Work Session created directly by Mimi's main-process host. */
+  broadcastPetDelegationSession(meta: {
+    sessionId: string;
+    cwd: string;
+    title: string;
+    prompt: string;
+    clientMessageId: string;
+  }): void {
+    this.safeSend(
+      "agent:msg",
+      JSON.stringify({
+        jsonrpc: "2.0",
+        method: "agent/petDelegationSession",
         params: meta,
       }),
     );

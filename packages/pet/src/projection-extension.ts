@@ -76,6 +76,41 @@ function validateWorkspaces(value: unknown, label: string): string | null {
   return null;
 }
 
+function validateReusableSessions(value: unknown, label: string): string | null {
+  if (!Array.isArray(value) || value.length > 32) {
+    return `${label} must be a bounded array`;
+  }
+  const ids = new Set<string>();
+  for (const entry of value) {
+    const session = entry as {
+      id?: unknown;
+      workspaceId?: unknown;
+      name?: unknown;
+      description?: unknown;
+    } | null;
+    if (
+      !session ||
+      typeof session !== "object" ||
+      typeof session.id !== "string" ||
+      !session.id.trim() ||
+      session.id.length > 128 ||
+      typeof session.workspaceId !== "string" ||
+      !session.workspaceId.trim() ||
+      session.workspaceId.length > 128 ||
+      typeof session.name !== "string" ||
+      !session.name.trim() ||
+      session.name.length > 256 ||
+      (session.description !== undefined &&
+        (typeof session.description !== "string" || session.description.length > 4_096)) ||
+      ids.has(session.id)
+    ) {
+      return `${label} contains an invalid or duplicate reusable Session`;
+    }
+    ids.add(session.id);
+  }
+  return null;
+}
+
 /**
  * Pet-specific agent/run params validation. This validator owns only Pet
  * requests: other extension modes and kinds must pass through untouched. For
@@ -111,6 +146,9 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
   const hasCanonicalWorkspaces =
     profileParams !== undefined &&
     Object.prototype.hasOwnProperty.call(profileParams, "workspaces");
+  const hasCanonicalReusableSessions =
+    profileParams !== undefined &&
+    Object.prototype.hasOwnProperty.call(profileParams, "reusableSessions");
 
   const runtimeContext = hasCanonicalRuntimeContext
     ? profileParams.runtimeContext
@@ -128,6 +166,13 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
     const error = validateWorkspaces(
       workspaces,
       hasCanonicalWorkspaces ? "profileParams.workspaces" : "petWorkspaces",
+    );
+    if (error) return error;
+  }
+  if (hasCanonicalReusableSessions) {
+    const error = validateReusableSessions(
+      profileParams.reusableSessions,
+      "profileParams.reusableSessions",
     );
     if (error) return error;
   }

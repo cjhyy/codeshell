@@ -94,9 +94,6 @@ export const pet = {
         stale: "该请求已处理或状态已更新；已打开原会话",
         notFound: "原会话已不存在或不可打开",
       },
-      delegation: {
-        unresolved: "Mimi 已委派任务，但当前未找到对应的 Workspace；请刷新项目列表后重试",
-      },
       chat: {
         title: "和 Mimi 对话",
         subtitle: "聊想法、理清下一步，需要执行时会自动创建 Session",
@@ -238,10 +235,6 @@ export const pet = {
       navigation: {
         stale: "The request changed or was handled; opened the original session",
         notFound: "The original session no longer exists or cannot be opened",
-      },
-      delegation: {
-        unresolved:
-          "Mimi delegated the task, but its Workspace is not currently tracked; refresh the project list and try again",
       },
       chat: {
         title: "Chat with Mimi",

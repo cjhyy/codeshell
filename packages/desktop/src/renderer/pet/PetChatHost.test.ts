@@ -34,4 +34,17 @@ describe("PetChatHost", () => {
       ]),
     ).toEqual([{ id: "a1", role: "assistant", text: "准备派发" }]);
   });
+
+  test("labels user messages received from an IM gateway channel", () => {
+    expect(
+      selectPetChatRows([
+        {
+          kind: "user",
+          id: "u-im",
+          text: "从微信发来的问题",
+          clientMessageId: "im:wechat:message-hash",
+        },
+      ]),
+    ).toEqual([{ id: "u-im", role: "user", text: "从微信发来的问题", source: "个人微信" }]);
+  });
 });

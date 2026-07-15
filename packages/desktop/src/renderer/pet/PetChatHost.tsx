@@ -3,6 +3,10 @@ import { ArrowUp, Sparkles } from "lucide-react";
 import dogIcon from "../assets/codeshell-dog-icon.png";
 import type { Message } from "../types";
 import { useT } from "../i18n";
+import {
+  IM_GATEWAY_CHANNEL_NAMES,
+  imGatewayChannelFromClientMessageId,
+} from "../imGatewayChannels";
 import { visiblePetAssistantText } from "./petChatRouting";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 
@@ -10,12 +14,21 @@ interface PetChatRow {
   id: string;
   role: "user" | "assistant";
   text: string;
+  source?: string;
 }
 
 export function selectPetChatRows(messages: readonly Message[]): PetChatRow[] {
   return messages.flatMap<PetChatRow>((message) => {
     if (message.kind === "user" && message.text.trim()) {
-      return [{ id: message.id, role: "user" as const, text: message.text.trim() }];
+      const channel = imGatewayChannelFromClientMessageId(message.clientMessageId);
+      return [
+        {
+          id: message.id,
+          role: "user" as const,
+          text: message.text.trim(),
+          ...(channel ? { source: IM_GATEWAY_CHANNEL_NAMES[channel] } : {}),
+        },
+      ];
     }
     if (message.kind === "assistant") {
       const text = visiblePetAssistantText(message.text);
@@ -117,6 +130,11 @@ export function PetChatHost({ defaultProjectPath }: { defaultProjectPath: string
               row.role === "user" ? (
                 <div key={row.id} className="flex justify-end pl-10">
                   <div className="max-w-[88%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm leading-6 text-primary-foreground shadow-sm">
+                    {row.source && (
+                      <div className="mb-1 text-[10px] font-medium text-primary-foreground/70">
+                        {row.source}
+                      </div>
+                    )}
                     <div className="whitespace-pre-wrap break-words">{row.text}</div>
                   </div>
                 </div>

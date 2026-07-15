@@ -26,6 +26,12 @@ function buttonWithLabel(container: HTMLElement, label: string): any {
   );
 }
 
+function buttonWithAriaLabel(container: HTMLElement, label: string): any {
+  return findElements(container, "BUTTON").find(
+    (button) => reactPropsOf(button)["aria-label"] === label,
+  );
+}
+
 let root: Root | null = null;
 
 afterEach(async () => {
@@ -42,6 +48,7 @@ describe("LinkTab integrations", () => {
   test("surfaces the Chat Gateway in Link and starts configured channels", async () => {
     ensureMiniDom();
     let starts = 0;
+    const openedUrls: string[] = [];
     Object.assign(window, {
       codeshell: {
         imGateway: {
@@ -74,6 +81,7 @@ describe("LinkTab integrations", () => {
         },
         openInEditor: async () => "editor",
         openPath: async (path: string) => path,
+        openExternal: async (url: string) => void openedUrls.push(url),
         credentials: { list: async () => [] },
         mcpOAuth: {
           refresh: async () => undefined,
@@ -92,6 +100,13 @@ describe("LinkTab integrations", () => {
     });
 
     expect(buttonWithLabel(container, "连接个人微信")).toBeDefined();
+    const telegramSetup = buttonWithAriaLabel(container, "Telegram：打开官方配置页");
+    expect(telegramSetup).toBeDefined();
+    await act(async () => {
+      reactPropsOf(telegramSetup).onClick();
+      await flushMicrotasks();
+    });
+    expect(openedUrls).toEqual(["https://t.me/BotFather"]);
     const start = buttonWithLabel(container, "启动");
     expect(start).toBeDefined();
     await act(async () => {
@@ -148,6 +163,7 @@ describe("LinkTab integrations", () => {
         },
         openInEditor: async () => "editor",
         openPath: async (path: string) => path,
+        openExternal: async () => undefined,
         credentials: { list: async () => [credential()] },
         mcpOAuth: {
           refresh: async () => {

@@ -1,19 +1,17 @@
 export type PetWorkerState = "active" | "reclaimed" | "disconnected" | "reconciling" | "unknown";
 
-export type PetChatEvent =
-  | {
-      kind: "user-submitted";
-      clientMessageId: string;
-      message: string;
-      createdAt: number;
-    }
-  | {
-      kind: "delegation-requested";
-      clientMessageId: string;
-      task: string;
-      workspacePath: string | null;
-      createdAt: number;
-    };
+export type PetChatEvent = {
+  kind: "user-submitted";
+  clientMessageId: string;
+  message: string;
+  createdAt: number;
+  origin?: {
+    channel: string;
+    target: string;
+    senderId: string;
+    messageId?: string;
+  };
+};
 
 export type PetSessionRunState = "dormant" | "idle" | "queued" | "running" | "terminal" | "unknown";
 
@@ -126,7 +124,10 @@ export type PetDispatchResult =
         clientMessageId: string;
         task: string;
         workspacePath: string | null;
+        sessionId: string;
+        reusedSession: boolean;
       };
+      delegationError?: string;
     };
 
 export interface PetPeek {

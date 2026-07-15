@@ -8,7 +8,6 @@ import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
 import { openPetTarget } from "./pet/petNavigation";
 import { PetChatHost } from "./pet/PetChatHost";
-import { PetAutoDelegationHost } from "./pet/PetAutoDelegationHost";
 import { PetPeekHost } from "./pet/PetPeekHost";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
@@ -1105,24 +1104,6 @@ function App() {
     setRunsInitialRunId,
   });
 
-  const delegatePetTask = (
-    projectId: string | null,
-    prompt: string,
-    clientMessageId: string,
-  ): void => {
-    const message = prompt.trim();
-    if (!message) return;
-    const { index, sessionId } = createSession(projectId, undefined, { activate: false });
-    setSessionIndices((prev) => ({
-      ...prev,
-      [projectBucketSegmentFor(projectId)]: index,
-    }));
-    void send(message, {
-      bucket: bucketKey(projectId, sessionId),
-      clientMessageId,
-    });
-  };
-
   const toggleSidebar = (): void =>
     setView((p) => ({ ...p, sidebarCollapsed: !p.sidebarCollapsed }));
   // toggleInspector retained as a no-op for menu/palette wiring that
@@ -1833,14 +1814,6 @@ function App() {
               />
             </div>
           )}
-
-          <PetAutoDelegationHost
-            projects={projects}
-            onDelegate={delegatePetTask}
-            onUnresolved={() =>
-              toast({ message: t("pet.delegation.unresolved"), variant: "error" })
-            }
-          />
 
           {/* Chat column + dock share a relative container so a maximized panel can
           overlay the chat/composer (TODO 2.4) without covering the sidebar. */}

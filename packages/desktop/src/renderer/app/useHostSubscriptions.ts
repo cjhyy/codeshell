@@ -29,7 +29,11 @@ import { placeLiveAutomationSession } from "../automation/liveSession";
 import { planDiskRebuild } from "../automation/rebuildFromDisk";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
 import { resolveProjectCwd } from "./useAutomationSessionImport";
-import { fromMobilePermissionMode, stablePromptHash } from "./appUtils";
+import {
+  browserPartitionForBucket,
+  fromMobilePermissionMode,
+  stablePromptHash,
+} from "./appUtils";
 import { titleFromWire } from "../chat/attachments";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
@@ -414,8 +418,17 @@ export function useHostSubscriptions({
         setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
       })();
     });
-    const offMobileSession = window.codeshell.onMobileSession((meta) => {
-      window.codeshell.log("mobile.session.announce", {
+    const announceHostSession = (
+      meta: {
+        sessionId: string;
+        cwd: string;
+        title: string;
+        prompt: string;
+        clientMessageId?: string;
+      },
+      source: "mobile" | "pet-delegation",
+    ): void => {
+      window.codeshell.log(`${source}.session.announce`, {
         sessionId: meta.sessionId,
         cwd: meta.cwd,
       });
@@ -476,20 +489,32 @@ export function useHostSubscriptions({
 
       const bucket = bucketKey(projectId, sessionId);
       engineToBucketRef.current.set(meta.sessionId, bucket);
+      window.codeshell.registerBrowserSessionBucket({
+        sessionId: meta.sessionId,
+        bucket,
+        partition: browserPartitionForBucket(bucket),
+      });
       setBusyForKey(bucket, true);
       if (meta.prompt.trim()) {
         let clientMessageId = meta.clientMessageId;
         if (!clientMessageId) {
           mobileAnnounceSeqRef.current += 1;
           const fallbackTurnId = `${Date.now().toString(36)}-${mobileAnnounceSeqRef.current.toString(36)}`;
-          clientMessageId = `mobile:${meta.sessionId}:fallback-${fallbackTurnId}:${stablePromptHash(
+          clientMessageId = `${source}:${meta.sessionId}:fallback-${fallbackTurnId}:${stablePromptHash(
             meta.prompt.trim(),
           )}`;
         }
         dispatch({ type: "user_message", bucket, text: meta.prompt, clientMessageId });
       }
       setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
-    });
+    };
+    const offMobileSession = window.codeshell.onMobileSession((meta) =>
+      announceHostSession(meta, "mobile"),
+    );
+    const offPetDelegationSession =
+      window.codeshell.onPetDelegationSession?.((meta) =>
+        announceHostSession(meta, "pet-delegation"),
+      ) ?? (() => undefined);
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
       window.codeshell.log("approval.request", {
         requestId: env.requestId,
@@ -713,6 +738,7 @@ export function useHostSubscriptions({
       offStream();
       offAutomationSession();
       offMobileSession();
+      offPetDelegationSession();
       offApproval();
       offApprovalResolved();
       offMobilePermissionMode();

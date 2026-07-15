@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { IpcMain } from "electron";
 import {
@@ -8,6 +8,8 @@ import {
   createAllowlistMiddleware,
   createDesktopNotificationHandler,
   createRateLimitMiddleware,
+  type AdapterRuntimeState,
+  type ChatMiddleware,
   type GatewayInstanceLease,
 } from "@cjhyy/code-shell-chat";
 import {
@@ -35,11 +37,49 @@ export type ImGatewayChannel =
   | "whatsapp"
   | "teams";
 
+export const IM_GATEWAY_CHANNELS: readonly ImGatewayChannel[] = [
+  "telegram",
+  "discord",
+  "slack",
+  "lark",
+  "dingtalk",
+  "wecom",
+  "wechat",
+  "matrix",
+  "mattermost",
+  "line",
+  "whatsapp",
+  "teams",
+];
+
+export interface ImGatewayChannelStatus {
+  channel: ImGatewayChannel;
+  enabled: boolean;
+  state: "disabled" | "needs-config" | "ready" | "starting" | "running" | "retrying";
+  attempts?: number;
+  error?: string;
+}
+
+export interface ImGatewayActivity {
+  id: string;
+  requestId: string;
+  channel: ImGatewayChannel;
+  direction: "inbound" | "outbound";
+  status: "received" | "sent" | "failed";
+  target: string;
+  senderId?: string;
+  text: string;
+  attachmentCount?: number;
+  createdAt: number;
+}
+
 export interface ImGatewayStatus {
   running: boolean;
   configPath: string;
   configExists: boolean;
   channels: ImGatewayChannel[];
+  channelStatuses: ImGatewayChannelStatus[];
+  recentActivity: ImGatewayActivity[];
   wechatConnected: boolean;
   startedAt?: number;
   error?: string;
@@ -77,6 +117,8 @@ export class ImGatewayService {
   private lastError?: string;
   private login?: { id: string; abort: AbortController };
   private verification?: PendingVerification;
+  private readonly adapterStates = new Map<ImGatewayChannel, AdapterRuntimeState>();
+  private readonly recentActivity: ImGatewayActivity[] = [];
   /** Set while a stopped gateway's instance lease is still being released. */
   private pendingRelease?: Promise<void>;
 
@@ -89,7 +131,9 @@ export class ImGatewayService {
   status(): ImGatewayStatus {
     let channels: ImGatewayChannel[] = this.active?.channels ?? [];
     let configError: string | undefined;
+    let rawEnabled = new Set<ImGatewayChannel>();
     try {
+      rawEnabled = readEnabledChannels(this.configPath);
       const configuredChannels = loadGatewayConfig({ configPath: this.configPath }).channels.map(
         ({ channel }) => channel,
       );
@@ -97,11 +141,45 @@ export class ImGatewayService {
     } catch (error) {
       configError = error instanceof Error ? error.message : String(error);
     }
+    for (const channel of channels) rawEnabled.add(channel);
+    const activeChannels = new Set(this.active?.channels ?? []);
+    const channelStatuses = IM_GATEWAY_CHANNELS.map((channel): ImGatewayChannelStatus => {
+      const enabled = rawEnabled.has(channel);
+      if (!enabled) return { channel, enabled: false, state: "disabled" };
+      if (configError && !this.active) {
+        return { channel, enabled: true, state: "needs-config", error: configError };
+      }
+      if (!this.active) return { channel, enabled: true, state: "ready" };
+      if (!activeChannels.has(channel)) {
+        return configError
+          ? { channel, enabled: true, state: "needs-config", error: configError }
+          : { channel, enabled: true, state: "ready" };
+      }
+      const runtime = this.adapterStates.get(channel);
+      if (!runtime) return { channel, enabled: true, state: "starting" };
+      if (runtime.state === "backoff") {
+        return {
+          channel,
+          enabled: true,
+          state: "retrying",
+          attempts: runtime.attempts,
+          ...(runtime.error ? { error: runtime.error } : {}),
+        };
+      }
+      return {
+        channel,
+        enabled: true,
+        state: runtime.state === "running" ? "running" : "starting",
+        attempts: runtime.attempts,
+      };
+    });
     return {
       running: Boolean(this.active),
       configPath: this.configPath,
       configExists: existsSync(this.configPath),
       channels,
+      channelStatuses,
+      recentActivity: [...this.recentActivity],
       wechatConnected: channels.includes("wechat"),
       ...(this.active ? { startedAt: this.active.startedAt } : {}),
       ...((this.lastError ?? configError) ? { error: this.lastError ?? configError } : {}),
@@ -121,6 +199,7 @@ export class ImGatewayService {
     if (this.pendingRelease) await this.pendingRelease;
     const lease = acquireGatewayInstanceLock(config.runtime.lockPath, "CodeShell Desktop");
     try {
+      this.adapterStates.clear();
       const desktop = new DesktopControlClient(config.desktop);
       const abort = new AbortController();
       const adapters = config.channels.map((channel) =>
@@ -148,12 +227,23 @@ export class ImGatewayService {
         },
         onAdapterState: (state) => {
           if (this.active !== active) return;
+          const previous = isImGatewayChannel(state.channel)
+            ? this.adapterStates.get(state.channel)
+            : undefined;
+          if (isImGatewayChannel(state.channel)) this.adapterStates.set(state.channel, state);
           // `running` is set optimistically before the adapter connects, so a
           // later transition to `backoff` (a real connect/auth failure) is the
           // meaningful signal. Clear a recorded failure once an adapter reruns.
           if (state.state === "running") {
             adapterEverRan.add(state.id);
             adapterFirstError.delete(state.id);
+            if (
+              previous?.state === "backoff" &&
+              previous.error === this.lastError &&
+              adapterFirstError.size === 0
+            ) {
+              this.lastError = undefined;
+            }
           }
           if (state.state === "backoff" && state.error) {
             adapterFirstError.set(state.id, `${state.channel}: ${state.error}`);
@@ -175,6 +265,7 @@ export class ImGatewayService {
         ),
       );
       gateway.use(createRateLimitMiddleware(config.runtime.maxMessagesPerUserPerMinute));
+      gateway.use(createImGatewayActivityMiddleware((activity) => this.recordActivity(activity)));
       gateway.use(createCodeShellRemoteCommands({ desktop }));
       gateway.use(createMimiPetChat({ desktop }));
 
@@ -236,6 +327,7 @@ export class ImGatewayService {
       const active = this.active;
       if (active?.lease === lease) {
         this.active = undefined;
+        this.adapterStates.clear();
         active.abort.abort();
         void active.task.catch(() => undefined).then(() => lease.release());
       } else {
@@ -249,6 +341,7 @@ export class ImGatewayService {
     const active = this.active;
     if (!active) return this.status();
     this.active = undefined;
+    this.adapterStates.clear();
     active.abort.abort();
     // Release the single-instance lease only once the gateway task actually
     // settles — an adapter mid-long-poll may not observe the abort for tens of
@@ -353,6 +446,7 @@ export class ImGatewayService {
   private onGatewaySettled(active: ActiveGateway, error: unknown): void {
     if (this.active !== active) return;
     this.active = undefined;
+    this.adapterStates.clear();
     const stoppedByOwner = active.abort.signal.aborted;
     active.abort.abort();
     active.lease.release();
@@ -370,9 +464,94 @@ export class ImGatewayService {
     this.emit({ type: "status-changed", status: this.status() });
   }
 
+  private recordActivity(activity: ImGatewayActivity): void {
+    this.recentActivity.unshift(activity);
+    if (this.recentActivity.length > 30) this.recentActivity.length = 30;
+    this.emitStatus();
+  }
+
   private emit(event: ImGatewayUiEvent): void {
     this.options.emit?.(event);
   }
+}
+
+export function createImGatewayActivityMiddleware(
+  record: (activity: ImGatewayActivity) => void,
+): ChatMiddleware {
+  return async (context, next) => {
+    const channel = context.message.channel;
+    if (!isImGatewayChannel(channel)) {
+      await next();
+      return;
+    }
+    const requestId = randomUUID();
+    const message = context.message;
+    record({
+      id: randomUUID(),
+      requestId,
+      channel,
+      direction: "inbound",
+      status: "received",
+      target: message.target,
+      senderId: message.senderId,
+      text: activityPreview(message.text),
+      ...(message.attachments?.length ? { attachmentCount: message.attachments.length } : {}),
+      createdAt: Date.now(),
+    });
+    const reply = context.reply;
+    context.reply = async (outgoing) => {
+      try {
+        await reply(outgoing);
+        record({
+          id: randomUUID(),
+          requestId,
+          channel,
+          direction: "outbound",
+          status: "sent",
+          target: message.target,
+          text: activityPreview(outgoing.text),
+          createdAt: Date.now(),
+        });
+      } catch (error) {
+        record({
+          id: randomUUID(),
+          requestId,
+          channel,
+          direction: "outbound",
+          status: "failed",
+          target: message.target,
+          text: activityPreview(outgoing.text),
+          createdAt: Date.now(),
+        });
+        throw error;
+      }
+    };
+    await next();
+  };
+}
+
+function activityPreview(text: string): string {
+  const normalized = text.trim().replace(/\s+/g, " ");
+  if (normalized.length <= 280) return normalized;
+  return `${normalized.slice(0, 279)}…`;
+}
+
+function isImGatewayChannel(value: string): value is ImGatewayChannel {
+  return (IM_GATEWAY_CHANNELS as readonly string[]).includes(value);
+}
+
+function readEnabledChannels(configPath: string): Set<ImGatewayChannel> {
+  const enabled = new Set<ImGatewayChannel>();
+  if (!existsSync(configPath)) return enabled;
+  const raw = JSON.parse(readFileSync(configPath, "utf8")) as unknown;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return enabled;
+  const record = raw as Record<string, unknown>;
+  for (const channel of IM_GATEWAY_CHANNELS) {
+    const section = record[channel];
+    if (!section || typeof section !== "object" || Array.isArray(section)) continue;
+    if ((section as Record<string, unknown>).enabled !== false) enabled.add(channel);
+  }
+  return enabled;
 }
 
 export function registerImGatewayIpc(ipcMain: IpcMain, service: ImGatewayService): void {

@@ -174,6 +174,15 @@ const mobileSessionListeners: Array<
     clientMessageId?: string;
   }) => void
 > = [];
+const petDelegationSessionListeners: Array<
+  (meta: {
+    sessionId: string;
+    cwd: string;
+    title: string;
+    prompt: string;
+    clientMessageId: string;
+  }) => void
+> = [];
 
 // Browser automation may need to OPEN the panel before it can drive it (the
 // agent asked to use the browser but no panel/tab is open yet). Main sends
@@ -260,6 +269,17 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
       typeof params?.clientMessageId === "string" ? params.clientMessageId : undefined;
     if (sessionId) {
       mobileSessionListeners.forEach((cb) =>
+        cb({ sessionId, cwd, title, prompt, clientMessageId }),
+      );
+    }
+  } else if (method === "agent/petDelegationSession") {
+    const sessionId = (params?.sessionId as string | undefined) ?? "";
+    const cwd = (params?.cwd as string | undefined) ?? "";
+    const title = (params?.title as string | undefined) ?? "";
+    const prompt = (params?.prompt as string | undefined) ?? "";
+    const clientMessageId = (params?.clientMessageId as string | undefined) ?? "";
+    if (sessionId && clientMessageId) {
+      petDelegationSessionListeners.forEach((cb) =>
         cb({ sessionId, cwd, title, prompt, clientMessageId }),
       );
     }
@@ -631,6 +651,21 @@ contextBridge.exposeInMainWorld("codeshell", {
     return () => {
       const i = mobileSessionListeners.indexOf(cb);
       if (i >= 0) mobileSessionListeners.splice(i, 1);
+    };
+  },
+  onPetDelegationSession: (
+    cb: (meta: {
+      sessionId: string;
+      cwd: string;
+      title: string;
+      prompt: string;
+      clientMessageId: string;
+    }) => void,
+  ): (() => void) => {
+    petDelegationSessionListeners.push(cb);
+    return () => {
+      const i = petDelegationSessionListeners.indexOf(cb);
+      if (i >= 0) petDelegationSessionListeners.splice(i, 1);
     };
   },
   onApprovalRequest: (cb: (req: unknown) => void): (() => void) => {
