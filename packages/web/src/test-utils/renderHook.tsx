@@ -156,6 +156,19 @@ class MiniText extends MiniNode {
   }
 }
 
+class MiniDocumentFragment extends MiniNode {
+  override nodeType = 11;
+  override nodeName = "#document-fragment";
+
+  constructor(
+    ownerDocument: MiniDocument | null =
+      ((globalThis as typeof globalThis & { document?: MiniDocument }).document ?? null),
+  ) {
+    super();
+    this.ownerDocument = ownerDocument;
+  }
+}
+
 class MiniDocument extends MiniEventTarget {
   readonly nodeType = 9;
   readonly nodeName = "#document";
@@ -182,6 +195,10 @@ class MiniDocument extends MiniEventTarget {
   createTextNode(text: string): MiniText {
     return new MiniText(text, this);
   }
+
+  createDocumentFragment(): MiniDocumentFragment {
+    return new MiniDocumentFragment(this);
+  }
 }
 
 let installed = false;
@@ -199,6 +216,7 @@ export function ensureMiniDom(): void {
   win.HTMLElement = MiniElement;
   win.HTMLSelectElement = MiniElement;
   win.HTMLIFrameElement = class {};
+  win.DocumentFragment = MiniDocumentFragment;
   win.SVGElement = MiniElement;
   win.setTimeout = globalThis.setTimeout.bind(globalThis);
   win.clearTimeout = globalThis.clearTimeout.bind(globalThis);
@@ -214,6 +232,7 @@ export function ensureMiniDom(): void {
     Element: MiniElement,
     HTMLElement: MiniElement,
     HTMLSelectElement: MiniElement,
+    DocumentFragment: MiniDocumentFragment,
     SVGElement: MiniElement,
   });
   installed = true;
