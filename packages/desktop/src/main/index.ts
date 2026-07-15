@@ -269,6 +269,7 @@ import {
   setCapabilityEnabled,
   setCapabilityOverride,
 } from "./capabilities-service.js";
+import { activateProfile, deactivateProfile, listProfiles } from "./profiles-service.js";
 import { searchFiles } from "./file-search-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
@@ -1649,6 +1650,19 @@ ipcMain.handle(
     setCapabilityOverride(cwd, id, state);
   },
 );
+ipcMain.handle("profiles:list", async (_e, cwd: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("profiles:list requires cwd");
+  return listProfiles(cwd);
+});
+ipcMain.handle("profiles:activate", async (_e, cwd: string, name: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("profiles:activate requires cwd");
+  if (typeof name !== "string" || !name) throw new Error("profiles:activate requires name");
+  activateProfile(cwd, name);
+});
+ipcMain.handle("profiles:deactivate", async (_e, cwd: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("profiles:deactivate requires cwd");
+  deactivateProfile(cwd);
+});
 ipcMain.handle("plugins:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");
   return listPlugins(cwd);
