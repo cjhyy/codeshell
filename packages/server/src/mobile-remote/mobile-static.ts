@@ -1,6 +1,7 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { join, normalize, resolve, sep, extname } from "node:path";
 import { request as httpRequest, type IncomingMessage, type ServerResponse } from "node:http";
+import { contentTypeFor } from "../static-files.js";
 
 /**
  * Serves the built mobile web app (out/mobile) as static assets for the
@@ -19,24 +20,6 @@ import { request as httpRequest, type IncomingMessage, type ServerResponse } fro
  * path is normalized and re-resolved; anything that escapes the root → 404.
  * This closes the path-traversal hole the beta1 sweep fixed elsewhere.
  */
-
-const CONTENT_TYPES: Record<string, string> = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".mjs": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".ico": "image/x-icon",
-  ".woff": "font/woff",
-  ".woff2": "font/woff2",
-  ".ttf": "font/ttf",
-  ".map": "application/json; charset=utf-8",
-};
 
 /** Strip `/mobile` (and an optional trailing slash) off the request URL, drop
  *  any query/hash, and return the asset sub-path. `/mobile` → "", `/mobile/` →
@@ -134,7 +117,7 @@ export function serveMobile(
     res.end("not found");
     return;
   }
-  const type = CONTENT_TYPES[extname(file).toLowerCase()] ?? "application/octet-stream";
+  const type = contentTypeFor(extname(file));
   // Hashed bundles under /assets are content-addressed → cache forever. The
   // entry HTML (index.html, served for "" or the SPA fallback) must NOT be
   // cached: after an app upgrade ships a new bundle with new hashed filenames, a

@@ -28,6 +28,7 @@ import { randomBytes } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 import { AccessPasscode } from "../mobile-remote/access-passcode.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
+import { contentTypeFor } from "../static-files.js";
 import { WorkerBridgeCore, previewLine, type WorkerBridgeLog } from "../worker-bridge-core.js";
 
 export interface HeadlessServeOptions {
@@ -66,19 +67,6 @@ export interface HeadlessServer {
   tabCount(): number;
   close(): Promise<void>;
 }
-
-const CONTENT_TYPES: Record<string, string> = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".mjs": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".ico": "image/x-icon",
-  ".map": "application/json",
-  ".woff2": "font/woff2",
-};
 
 export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<HeadlessServer> {
   const host = opts.host ?? "127.0.0.1";
@@ -154,7 +142,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     try {
       const body = readFileSync(filePath);
       res.writeHead(200, {
-        "content-type": CONTENT_TYPES[extname(filePath)] ?? "application/octet-stream",
+        "content-type": contentTypeFor(extname(filePath)),
         "cache-control": "no-cache",
       });
       res.end(body);
