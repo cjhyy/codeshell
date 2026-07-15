@@ -21,7 +21,7 @@ import {
   type ApproveChoice,
   type ApprovePathScope,
 } from "./approvalDecision";
-import { useT } from "../i18n/I18nProvider";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
 
@@ -78,7 +78,7 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
   // only if missing (e.g. older worker versions).
   const risk = (request.riskLevel as "low" | "medium" | "high" | undefined)
     ?? riskFor(request.toolName, argsJson);
-  const summary = summarizeRequest(request);
+  const summary = summarizeRequest(request, t);
 
   // Path-scoped options for file tools (Write/Edit) — pulls file_path so the
   // menu can offer "this file / this dir / all paths".
@@ -209,12 +209,23 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
   );
 }
 
-function summarizeRequest(req: ApprovalRequestEnvelope["request"]): string {
+function summarizeRequest(req: ApprovalRequestEnvelope["request"], t: TFunction): string {
   const args = (req.args ?? {}) as Record<string, unknown>;
+  if (req.toolName === "ReadSource") {
+    return t("auto.approvalCard.readSourceSummary", {
+      source: stringArg(args.source),
+      scope: stringArg(args.scope),
+      resource: stringArg(args.resource),
+    });
+  }
   const candidates: Array<keyof typeof args> = ["command", "file_path", "path", "url", "pattern", "query"];
   for (const k of candidates) {
     const v = args[k];
     if (typeof v === "string") return v;
   }
   return req.toolName;
+}
+
+function stringArg(value: unknown): string {
+  return typeof value === "string" && value ? value : "—";
 }

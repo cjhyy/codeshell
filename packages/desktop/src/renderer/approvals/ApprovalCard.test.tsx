@@ -41,4 +41,21 @@ describe("ApprovalCard render", () => {
     // The scope chooser affordance (split-button ▾) is present.
     expect(html).toContain("选择批准范围");
   });
+
+  test("renders a human-readable ReadSource summary and keeps raw args available", () => {
+    const envelope = {
+      ...ENV,
+      request: {
+        toolName: "ReadSource",
+        args: { source: "team-docs", scope: "handbook", resource: "onboarding.md" },
+        description: "Read a bound source",
+        riskLevel: "medium",
+      },
+    } as ApprovalRequestEnvelope;
+
+    const html = renderToStaticMarkup(<ApprovalCard envelope={envelope} onDecide={() => {}} />);
+
+    expect(html).toContain("读取数据源 team-docs · 范围 handbook · 资源 onboarding.md");
+    expect(html).toContain("show raw args");
+  });
 });
