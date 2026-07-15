@@ -25,19 +25,19 @@ describe("buildInjectionIndex profile layer", () => {
     globalMemory.save({
       name: "g",
       description: "global fact",
-      type: "semantic",
+      type: "user",
       content: "global body",
     });
     profileMemory.save({
       name: "p",
       description: "digital-human fact",
-      type: "semantic",
+      type: "user",
       content: "digital-human body",
     });
     projectMemory.save({
       name: "l",
       description: "project fact",
-      type: "semantic",
+      type: "user",
       content: "project body",
     });
 
