@@ -8,6 +8,7 @@
 // ── Session / attachment services ───────────────────────────────────────────
 export * from "./attachment-service.js";
 export * from "./client-message-id.js";
+export * from "./worker-bridge-core.js";
 export * from "./image-byte-probe.js";
 export * from "./sessions-service.js";
 

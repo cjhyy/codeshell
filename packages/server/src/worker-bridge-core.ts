@@ -1,4 +1,4 @@
-// packages/desktop/src/main/worker-bridge-core.ts
+// packages/server/src/worker-bridge-core.ts
 //
 // WorkerBridgeCore — transport-agnostic driver for a per-user agent worker
 // subprocess speaking line-delimited JSON-RPC over stdio.
