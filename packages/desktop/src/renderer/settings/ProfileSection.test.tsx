@@ -81,8 +81,8 @@ describe("ProfileSection", () => {
     const text = textOf(container);
     expect(text).toContain("Seedance");
     expect(text).toContain("UI 设计师");
-    expect(text).toContain("当前");
-    expect(text).toContain("关闭");
+    expect(text).toContain("项目默认");
+    expect(text).toContain("取消项目默认");
   });
 
   test("activates an inactive profile and refreshes the list", async () => {
@@ -128,7 +128,7 @@ describe("ProfileSection", () => {
     });
 
     const activateButton = findElements(container, "BUTTON").find(
-      (button) => textOf(button) === "激活",
+      (button) => textOf(button) === "设为项目默认",
     );
     expect(activateButton).toBeDefined();
     await act(async () => {
