@@ -13,6 +13,7 @@
  */
 
 import { basename } from "node:path";
+import { Methods } from "@cjhyy/code-shell-core";
 import {
   DEFAULT_DISCOVER_LIMIT,
   DEFAULT_DISCOVER_SINCE_MS,
@@ -342,7 +343,7 @@ export class MobileRemoteOrchestrator {
     this.deps.pendingApprovals.resolve(params.requestId);
     const line = JSON.stringify({
       jsonrpc: "2.0",
-      method: "agent/approvalResolved",
+      method: Methods.ApprovalResolved,
       params,
     });
     this.deps.broadcastToWindows("agent:msg", line);
