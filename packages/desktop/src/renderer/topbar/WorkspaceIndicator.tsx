@@ -422,11 +422,20 @@ export function WorkspaceIndicator({
   const mainRows = rows.filter((row) => row.isMain);
   const externalRows = rows.filter((row) => !row.isMain && workspaceIsExternal(row));
   const managedRows = rows.filter((row) => !row.isMain && !workspaceIsExternal(row));
+  const profileBadge = activeProfileLabel ? (
+    <span
+      data-active-profile="true"
+      title={t("topbar.workspace.activeProfileTitle", { name: activeProfileLabel })}
+      className="no-drag ml-1 inline-flex h-7 max-w-28 items-center truncate rounded-sm bg-secondary px-1.5 text-xs text-secondary-foreground"
+    >
+      {activeProfileLabel}
+    </span>
+  ) : null;
 
   if (!canLoad) return null;
-  // Not a git repo (or still probing / probe failed) → hide entirely. A
-  // worktree switcher is meaningless outside a git repo.
-  if (isGitRepo !== true) return null;
+  // The worktree switcher is meaningless outside a git repo, but the active
+  // digital human belongs to the project and remains useful there.
+  if (isGitRepo !== true) return profileBadge;
 
   return (
     <TooltipProvider delayDuration={250}>
@@ -441,14 +450,6 @@ export function WorkspaceIndicator({
           >
             <GitBranch className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate">{label}</span>
-            {activeProfileLabel ? (
-              <span
-                data-active-profile="true"
-                className="ml-1 max-w-28 shrink-0 truncate rounded-sm bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground"
-              >
-                {activeProfileLabel}
-              </span>
-            ) : null}
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[520px] max-w-[calc(100vw-2rem)] p-0">
@@ -534,6 +535,8 @@ export function WorkspaceIndicator({
           </div>
         </PopoverContent>
       </Popover>
+
+      {profileBadge}
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="max-w-sm">

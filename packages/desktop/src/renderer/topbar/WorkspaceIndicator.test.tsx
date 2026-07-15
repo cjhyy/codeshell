@@ -410,6 +410,62 @@ describe("WorkspaceIndicator", () => {
     });
 
     expect(textOf(container)).toContain("Seedance 制片人");
+    const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+    const badge = findElement(container, (node) =>
+      Boolean(
+        (node as { attributes?: Map<string, string> }).attributes?.has("data-active-profile"),
+      ),
+    );
+    expect(badge).not.toBeNull();
+    expect(
+      findElement(trigger, (node) =>
+        Boolean(
+          (node as { attributes?: Map<string, string> }).attributes?.has("data-active-profile"),
+        ),
+      ),
+    ).toBeNull();
+  });
+
+  test("shows the active digital-human label in a non-git workspace", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/notes", kind: "main" };
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: false, current: null, branches: [] }),
+      getSessionWorkspace: async () => mainWorkspace,
+      listSessionWorktrees: async () => ({
+        current: mainWorkspace,
+        mainRoot: "/notes",
+        worktrees: [],
+      }),
+      listProfiles: async () => [
+        {
+          name: "writer",
+          label: "Writer",
+          description: undefined,
+          active: true,
+          portableMemory: false,
+        },
+      ],
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/notes" projectName="notes" />,
+      );
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toContain("Writer");
+    expect(
+      findElement(container, (node) =>
+        Boolean(
+          (node as { attributes?: Map<string, string> }).attributes?.has("data-active-profile"),
+        ),
+      ),
+    ).not.toBeNull();
+    expect(findElement(container, (node) => node.tagName === "BUTTON")).toBeNull();
   });
 
   test("renders no digital-human label when none is active", async () => {
