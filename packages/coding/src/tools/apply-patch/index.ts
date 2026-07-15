@@ -15,7 +15,7 @@
  *   - Context-anchor matching tolerates whitespace and Unicode quirks.
  */
 
-import { invalidateFileCache, type ToolContext, type ToolDefinition } from "@cjhyy/code-shell-core";
+import { invalidateFileCache, type ToolContext, type ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { applyPatch } from "./applier.js";
 import { parsePatch } from "./parser.js";
 import { resolve as resolvePath } from "node:path";

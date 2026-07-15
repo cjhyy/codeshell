@@ -9,7 +9,7 @@ import type {
   SessionWorkspace,
   ToolContext,
   ToolDefinition,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/extension";
 import {
   createWorktree,
   removeWorktree,

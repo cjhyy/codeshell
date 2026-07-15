@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
-import type { ProtocolModelEntry } from "@cjhyy/code-shell-core";
+import type { ProtocolModelEntry } from "@cjhyy/code-shell-core/internal";
 import { fmtTokens, modelTags } from "./model-display.js";
 
 /** Re-export under the UI name for convenience. */

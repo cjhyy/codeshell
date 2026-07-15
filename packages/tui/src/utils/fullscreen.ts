@@ -1,5 +1,5 @@
 import { spawnSync } from 'child_process'
-import { logForDebugging, isEnvDefinedFalsy, isEnvTruthy, execFileNoThrow } from '@cjhyy/code-shell-core'
+import { logForDebugging, isEnvDefinedFalsy, isEnvTruthy, execFileNoThrow } from '@cjhyy/code-shell-core/internal'
 
 let loggedTmuxCcDisable = false
 let checkedTmuxMouseHint = false

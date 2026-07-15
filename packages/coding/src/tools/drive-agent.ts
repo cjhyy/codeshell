@@ -7,7 +7,7 @@ import {
   type BackgroundJobEntry,
   type ToolContext,
   type ToolDefinition,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/extension";
 import { runAgentOnce, type AgentRunResult } from "../cc-orchestrator/external-agent-driver.js";
 import { claudeAdapter, codexAdapter } from "../cc-orchestrator/agent-adapter.js";
 import { readExternalChangedFiles } from "../cc-orchestrator/external-agent-changes.js";

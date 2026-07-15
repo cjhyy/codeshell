@@ -9,7 +9,7 @@
  * Claude costs ~1 output token because Anthropic only returns quota via
  * response headers. So restrict with `provider` when you only need one.
  */
-import type { ToolContext, ToolDefinition } from "@cjhyy/code-shell-core";
+import type { ToolContext, ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { checkQuota, formatQuota } from "../quota/index.js";
 import { resolveQuotaCredentials } from "../quota/credentials.js";
 

@@ -1,4 +1,4 @@
-import { registerCapability } from "@cjhyy/code-shell-core";
+import { registerCapability } from "@cjhyy/code-shell-core/extension";
 import { CODING_CAPABILITY } from "../index.js";
 
 registerCapability(CODING_CAPABILITY);

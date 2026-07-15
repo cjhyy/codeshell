@@ -4,7 +4,7 @@
 import React from "react";
 import { Box, Text } from "../../render/index.js";
 import { Spinner } from "./Spinner.js";
-import type { TaskInfo } from "@cjhyy/code-shell-core";
+import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 
 interface TaskListProps {
   tasks: TaskInfo[];

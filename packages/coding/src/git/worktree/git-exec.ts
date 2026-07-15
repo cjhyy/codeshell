@@ -1,5 +1,5 @@
 import { execFile, execFileSync } from "node:child_process";
-import { killChildTree, resolveExecutable } from "@cjhyy/code-shell-core";
+import { killChildTree, resolveExecutable } from "@cjhyy/code-shell-core/extension";
 
 // git resolved via PATH×PATHEXT on Windows (.cmd/.exe shim); no-op on POSIX.
 export const GIT_BIN = resolveExecutable("git");

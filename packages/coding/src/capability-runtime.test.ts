@@ -3,12 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
-import {
-  ArtifactTracker,
-  createOffBackend,
-  type RunArtifactRef,
-  type RunStore,
-} from "@cjhyy/code-shell-core";
+import { ArtifactTracker, type RunArtifactRef, type RunStore } from "@cjhyy/code-shell-core";
+import { createOffBackend } from "@cjhyy/code-shell-core/internal";
 import {
   codingArtifactDetector,
   createCodingToolService,

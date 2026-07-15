@@ -27,7 +27,7 @@
 import { useState } from "react";
 import { homedir } from "node:os";
 import { Box, Text, useInput } from "../../render/index.js";
-import type { ApprovalScope } from "@cjhyy/code-shell-core";
+import type { ApprovalScope } from "@cjhyy/code-shell-core/internal";
 import { DiffLine } from "./DiffLine.js";
 
 interface PermissionPromptProps {

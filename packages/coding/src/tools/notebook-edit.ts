@@ -2,7 +2,7 @@
  * NotebookEditTool — read and edit Jupyter notebook (.ipynb) cells.
  */
 
-import type { ToolContext, ToolDefinition } from "@cjhyy/code-shell-core";
+import type { ToolContext, ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 

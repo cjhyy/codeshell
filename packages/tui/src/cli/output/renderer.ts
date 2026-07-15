@@ -8,7 +8,7 @@ import {
   formatToolArgs,
   singleLine,
   formatBytes,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 import { truncate } from "../../ui/truncate.js";
 
 export type OutputFormat = "text" | "json" | "jsonl" | "stream-json";

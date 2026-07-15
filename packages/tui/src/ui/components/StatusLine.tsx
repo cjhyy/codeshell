@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useRef, type MutableRefObject } from "react";
 import { Box, Text } from "../../render/index.js";
 import { logger } from "@cjhyy/code-shell-core";
-import { recordUIEvent } from "@cjhyy/code-shell-core";
+import { recordUIEvent } from "@cjhyy/code-shell-core/internal";
 import { PERF_ENABLED } from "../perf-probes.js";
 
 // UI-scoped — routes to ui-ink-*.log.

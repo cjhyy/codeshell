@@ -12,7 +12,7 @@
  * accumulated. A timeout is reported by the caller, not silently swallowed.
  */
 
-import { notificationQueue, asyncAgentRegistry, type NotificationItem } from "@cjhyy/code-shell-core";
+import { notificationQueue, asyncAgentRegistry, type NotificationItem } from "@cjhyy/code-shell-core/internal";
 
 export interface DrainOptions {
   /** Wait for in-flight background agents before draining. Default true. */

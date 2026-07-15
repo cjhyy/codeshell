@@ -2,7 +2,7 @@
 import emojiRegex from 'emoji-regex'
 import { eastAsianWidth } from 'get-east-asian-width'
 import stripAnsi from 'strip-ansi'
-import { getGraphemeSegmenter } from "@cjhyy/code-shell-core"
+import { getGraphemeSegmenter } from "@cjhyy/code-shell-core/internal"
 
 const EMOJI_REGEX = emojiRegex()
 

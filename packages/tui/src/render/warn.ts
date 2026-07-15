@@ -1,4 +1,4 @@
-import { logForDebugging } from "@cjhyy/code-shell-core"
+import { logForDebugging } from "@cjhyy/code-shell-core/internal"
 
 export function ifNotInteger(value: number | undefined, name: string): void {
   if (value === undefined) return

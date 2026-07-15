@@ -2,7 +2,7 @@
  * BriefTool — send structured messages with markdown support.
  */
 
-import type { ToolDefinition } from "@cjhyy/code-shell-core";
+import type { ToolDefinition } from "@cjhyy/code-shell-core/extension";
 
 export const briefToolDef: ToolDefinition = {
   name: "Brief",

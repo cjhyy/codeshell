@@ -3,7 +3,7 @@ import {
   ansiCodesToString,
   diffAnsiCodes,
 } from '@alcalzone/ansi-tokenize'
-import { logForDebugging } from "@cjhyy/code-shell-core"
+import { logForDebugging } from "@cjhyy/code-shell-core/internal"
 import type { Diff, FlickerReason, Frame } from './frame.js'
 import type { Point } from './layout/geometry.js'
 import {

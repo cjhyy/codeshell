@@ -4,7 +4,7 @@ import {
   styledCharsFromTokens,
   tokenize,
 } from '@alcalzone/ansi-tokenize'
-import { logForDebugging, getGraphemeSegmenter, sliceAnsi } from "@cjhyy/code-shell-core"
+import { logForDebugging, getGraphemeSegmenter, sliceAnsi } from "@cjhyy/code-shell-core/internal"
 import { reorderBidi } from './bidi.js'
 import { type Rectangle, unionRect } from './layout/geometry.js'
 import {

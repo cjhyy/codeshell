@@ -17,7 +17,7 @@ import {
   mergeShellEnv,
   safeSpawnShell,
   type SandboxBackend,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/extension";
 import { execGit, execGitSync, gitErrorMessage, gitOutput } from "./git-exec.js";
 import { assertBranchNotCheckedOut, currentBranch, findGitRoot } from "./query.js";
 import { applyPrefix, isManagedWorktreeBranch, validateWorktreeSlug } from "./slug.js";

@@ -9,15 +9,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
 import TextInput from "./TextInput.js";
-import { PROVIDER_KINDS, type ProviderKindName } from "@cjhyy/code-shell-core";
-import { fetchModelList, type FetchResult } from "@cjhyy/code-shell-core";
-import { defaultCacheDir } from "@cjhyy/code-shell-core";
-import type { ProviderConfig } from "@cjhyy/code-shell-core";
-import type { CachedModel } from "@cjhyy/code-shell-core";
+import { PROVIDER_KINDS, type ProviderKindName } from "@cjhyy/code-shell-core/internal";
+import { fetchModelList, type FetchResult } from "@cjhyy/code-shell-core/internal";
+import { defaultCacheDir } from "@cjhyy/code-shell-core/internal";
+import type { ProviderConfig } from "@cjhyy/code-shell-core/internal";
+import type { CachedModel } from "@cjhyy/code-shell-core/internal";
 import {
   sanitizeApiKey,
   hasNonAsciiPrintable,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 
 export interface EnvKeyHint {
   envKey: string;

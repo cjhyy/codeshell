@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveProjectRoot } from "./utils.js";
-import { setGitPathOverride } from "@cjhyy/code-shell-core";
+import { setGitPathOverride } from "@cjhyy/code-shell-core/internal";
 
 describe("coding resolveProjectRoot", () => {
   afterEach(() => {

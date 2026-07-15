@@ -11,7 +11,7 @@
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { parseGitLog, type GitLogEntry } from "./parse-log.js";
-import { resolveExecutable, resolveGit } from "@cjhyy/code-shell-core";
+import { resolveExecutable, resolveGit } from "@cjhyy/code-shell-core/extension";
 
 export interface GitStatusEntry {
   status: string;

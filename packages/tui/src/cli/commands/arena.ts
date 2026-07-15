@@ -28,7 +28,8 @@ import {
 } from "@cjhyy/code-shell-arena";
 import { CHALK_COLORIZER } from "../../utils/colorizer.js";
 import { ModelPool, type ModelEntry } from "@cjhyy/code-shell-core";
-import { getMergedCatalog, modelEntriesFromConnections } from "@cjhyy/code-shell-core";
+import { modelEntriesFromConnections } from "@cjhyy/code-shell-core";
+import { getMergedCatalog } from "@cjhyy/code-shell-core/internal";
 import type { EngineConfig } from "@cjhyy/code-shell-core";
 import type { LLMConfig } from "@cjhyy/code-shell-core";
 

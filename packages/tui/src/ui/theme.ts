@@ -15,14 +15,14 @@ import {
   type Theme,
   type ThemeName,
   type ThemeSetting,
-} from "@cjhyy/code-shell-core";
-import { resolveThemeSetting } from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
+import { resolveThemeSetting } from "@cjhyy/code-shell-core/internal";
 
 // ─── Re-exports from canonical theme ──────────────────────────────
 // Consumers import these from here to avoid reaching into utils/ directly.
 
-export { getTheme, type Theme, type ThemeName, type ThemeSetting } from "@cjhyy/code-shell-core";
-export { resolveThemeSetting } from "@cjhyy/code-shell-core";
+export { getTheme, type Theme, type ThemeName, type ThemeSetting } from "@cjhyy/code-shell-core/internal";
+export { resolveThemeSetting } from "@cjhyy/code-shell-core/internal";
 
 /**
  * Resolve a color that may be a theme key or raw color value.

@@ -1,7 +1,7 @@
 // Width-aware truncation/wrapping — needs render/stringWidth (not leaf-safe).
 
 import { stringWidth } from '../render/stringWidth.js'
-import { getGraphemeSegmenter } from '@cjhyy/code-shell-core'
+import { getGraphemeSegmenter } from '@cjhyy/code-shell-core/internal'
 
 /**
  * Truncates a file path in the middle to preserve both directory context and filename.

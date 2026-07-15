@@ -1,4 +1,4 @@
-import { sliceAnsi } from "@cjhyy/code-shell-core"
+import { sliceAnsi } from "@cjhyy/code-shell-core/internal"
 import { stringWidth } from './stringWidth.js'
 import type { Styles } from './styles.js'
 import { wrapAnsi } from './wrapAnsi.js'

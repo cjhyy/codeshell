@@ -2,7 +2,7 @@
  * LSPTool — language server protocol operations for code intelligence.
  */
 
-import type { ToolContext, ToolDefinition } from "@cjhyy/code-shell-core";
+import type { ToolContext, ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { getLSPManager } from "../lsp/manager.js";
 import { detectLSPServer } from "../lsp/servers.js";
 import { pathToFileURL } from "node:url";

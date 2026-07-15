@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import type { SessionWorkspace } from "@cjhyy/code-shell-core";
+import type { SessionWorkspace } from "@cjhyy/code-shell-core/extension";
 import { getWorktreeDiff, type WorktreeDiffSummary } from "./diff.js";
 import { execGit, gitOutput, normalizeBranchName } from "./git-exec.js";
 import { isManagedWorktreeBranch } from "./slug.js";

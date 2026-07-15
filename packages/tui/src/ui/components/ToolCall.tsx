@@ -24,7 +24,7 @@ import {
   formatBytes,
   MAX_LINE_WIDTH,
   classifyBashLines,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 import { truncate } from "../truncate.js";
 import { DiffLine, classifyDiffLine } from "./DiffLine.js";
 

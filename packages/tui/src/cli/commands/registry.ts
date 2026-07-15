@@ -6,7 +6,7 @@
  */
 
 import type { AgentClient } from "@cjhyy/code-shell-core";
-import type { TaskInfo } from "@cjhyy/code-shell-core";
+import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 
 /** A reconstructed chat entry for loading into the UI. */
 export interface RestoredChatEntry {

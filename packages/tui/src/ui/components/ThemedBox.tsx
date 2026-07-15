@@ -9,7 +9,7 @@
 import React from "react";
 import { Box, type BoxProps } from "../../render/index.js";
 import { useTheme, resolveColor } from "../theme.js";
-import type { Theme } from "@cjhyy/code-shell-core";
+import type { Theme } from "@cjhyy/code-shell-core/internal";
 
 type ColorProp = keyof Theme | string;
 

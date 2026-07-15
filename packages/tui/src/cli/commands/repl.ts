@@ -19,18 +19,18 @@ import { MCPManager } from "@cjhyy/code-shell-core";
 import { CostTracker } from "@cjhyy/code-shell-core";
 import { resolveLLMConfigForTag } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
-import { defaultSandboxConfig } from "@cjhyy/code-shell-core";
+import { defaultSandboxConfig } from "@cjhyy/code-shell-core/internal";
 import type { ClientDefaults, LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
 import { startInkRepl } from "../../ui/index.js";
 import { runInkOnboarding } from "../../ui/onboarding-runner.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
-import { getInteractiveApprovalBackend } from "@cjhyy/code-shell-core";
+import { getInteractiveApprovalBackend } from "@cjhyy/code-shell-core/internal";
 import {
   cronScheduler,
   CronStore,
   bindCronToEngine,
   type CronRunResult,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 import { resolveMaxContextTokens } from "./max-context-tokens.js";
 import { createArenaCapability } from "@cjhyy/code-shell-arena";
 

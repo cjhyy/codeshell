@@ -8,7 +8,8 @@
 
 import chalk from "chalk";
 import type { PermissionMode } from "@cjhyy/code-shell-core";
-import { rotateLogs, logger, writeSettingsSchemaFile, userHome } from "@cjhyy/code-shell-core";
+import { logger, writeSettingsSchemaFile, userHome } from "@cjhyy/code-shell-core";
+import { rotateLogs } from "@cjhyy/code-shell-core/internal";
 import { join } from "node:path";
 
 export interface SetupOptions {

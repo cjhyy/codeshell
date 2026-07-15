@@ -1,6 +1,6 @@
 import chalk from 'chalk'
 import cliBoxes, { type Boxes, type BoxStyle } from 'cli-boxes'
-import { sliceAnsi } from '@cjhyy/code-shell-core'
+import { sliceAnsi } from '@cjhyy/code-shell-core/internal'
 import { applyColor } from './colorize.js'
 import type { DOMNode } from './dom.js'
 import type Output from './output.js'

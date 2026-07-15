@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { drainBackgroundNotifications } from "./drain-notifications.js";
-import type { NotificationItem } from "@cjhyy/code-shell-core";
+import type { NotificationItem } from "@cjhyy/code-shell-core/internal";
 
 // Minimal fakes for the two process-global singletons the drainer consults.
 function fakeQueue(items: NotificationItem[]) {

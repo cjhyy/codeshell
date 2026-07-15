@@ -1,4 +1,4 @@
-import { logForDebugging } from '@cjhyy/code-shell-core'
+import { logForDebugging } from '@cjhyy/code-shell-core/internal'
 import { beginFrame, endFrame } from './dirty-diag.js'
 import { type DOMElement, markDirty } from './dom.js'
 import type { Frame } from './frame.js'

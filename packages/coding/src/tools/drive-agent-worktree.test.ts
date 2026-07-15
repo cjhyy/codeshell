@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { backgroundJobRegistry } from "@cjhyy/code-shell-core";
+import { backgroundJobRegistry } from "@cjhyy/code-shell-core/extension";
 import { ExternalAgentSessionStore } from "../cc-orchestrator/external-agent-session-store.js";
 import { driveAgentJobsTool, makeDriveAgentTool } from "./drive-agent.js";
 

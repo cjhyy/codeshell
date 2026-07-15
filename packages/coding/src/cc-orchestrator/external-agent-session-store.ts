@@ -8,7 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { codeShellHome, logger, normalizeCwdPath } from "@cjhyy/code-shell-core";
+import { codeShellHome, logger, normalizeCwdPath } from "@cjhyy/code-shell-core/extension";
 
 export type ExternalAgentCli = "claude" | "codex";
 

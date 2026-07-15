@@ -13,14 +13,14 @@
 import { useState } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
 import { ProviderModelFlow, type FlowResult } from "./ProviderModelFlow.js";
-import type { ProviderKindName } from "@cjhyy/code-shell-core";
+import type { ProviderKindName } from "@cjhyy/code-shell-core/internal";
 import {
   type OnboardingResult,
   detectEnvKeys,
   appendOnboardingResult,
 } from "@cjhyy/code-shell-core";
 import { saveArenaSettingsByKeys } from "@cjhyy/code-shell-arena";
-import type { ProviderConfig } from "@cjhyy/code-shell-core";
+import type { ProviderConfig } from "@cjhyy/code-shell-core/internal";
 
 type Step = "flow" | "arena";
 

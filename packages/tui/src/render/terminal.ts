@@ -1,7 +1,7 @@
 import { coerce } from 'semver'
 import type { Writable } from 'stream'
-import { env } from "@cjhyy/code-shell-core"
-import { gte } from "@cjhyy/code-shell-core"
+import { env } from "@cjhyy/code-shell-core/internal"
+import { gte } from "@cjhyy/code-shell-core/internal"
 import { getClearTerminalSequence } from './clearTerminal.js'
 import type { Diff } from './frame.js'
 import { cursorMove, cursorTo, eraseLines } from './termio/csi.js'

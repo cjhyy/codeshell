@@ -23,12 +23,12 @@ import { costTracker } from "@cjhyy/code-shell-core";
 import { createRenderer, type OutputFormat } from "../output/renderer.js";
 import type { LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
-import { defaultSandboxConfig, type SandboxConfig } from "@cjhyy/code-shell-core";
+import { defaultSandboxConfig, type SandboxConfig } from "@cjhyy/code-shell-core/internal";
 import {
   asyncAgentRegistry,
   buildNotificationMessage,
   buildNotificationSummary,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 import { drainBackgroundNotifications } from "./drain-notifications.js";
 import { resolveMaxContextTokens } from "./max-context-tokens.js";
 

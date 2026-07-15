@@ -10,7 +10,7 @@ import {
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { encodeCwd } from "./session-discovery.js";
-import { logger } from "@cjhyy/code-shell-core";
+import { logger } from "@cjhyy/code-shell-core/extension";
 
 /**
  * #6 — attribute file changes made by a background external agent (DriveAgent

@@ -3,7 +3,7 @@ import { Box, Text } from "../../render/index.js";
 import {
   asyncAgentRegistry,
   type AsyncAgentEntry,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 import { logger as uiLogger } from "@cjhyy/code-shell-core";
 import { stringWidth } from "../../render/stringWidth.js";
 

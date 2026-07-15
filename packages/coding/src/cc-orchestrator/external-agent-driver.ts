@@ -2,7 +2,7 @@ import { execFile, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { AgentAdapter, BuildArgsOpts, PermissionMode } from "./agent-adapter.js";
 import { pathWithCommonBins } from "./cc-capability.js";
-import { killProcessGroup } from "@cjhyy/code-shell-core";
+import { killProcessGroup } from "@cjhyy/code-shell-core/extension";
 
 export interface AgentRunResult {
   sessionId: string;

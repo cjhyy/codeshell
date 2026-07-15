@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
-import { codeShellHome, SessionManager } from "@cjhyy/code-shell-core";
+import { codeShellHome, SessionManager } from "@cjhyy/code-shell-core/extension";
 
 export type ExternalAgentCli = "claude" | "codex";
 

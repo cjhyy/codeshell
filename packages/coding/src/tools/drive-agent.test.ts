@@ -12,11 +12,11 @@ import {
   driveAgentJobsTool,
 } from "./drive-agent.js";
 import {
-  agentNotificationBus,
   backgroundJobRegistry,
   notificationQueue,
   type BackgroundJobEntry,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/extension";
+import { agentNotificationBus } from "@cjhyy/code-shell-core/internal";
 import { makeDriveClaudeCodeTool as mkBg } from "./drive-agent.js";
 import { ExternalAgentSessionStore } from "../cc-orchestrator/external-agent-session-store.js";
 import { CODING_TOOLS } from "../index.js";

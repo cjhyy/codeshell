@@ -36,12 +36,12 @@ import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
 import { AgentDock, getVisibleAgents, MAX_VISIBLE } from "./components/AgentDock.js";
-import { asyncAgentRegistry } from "@cjhyy/code-shell-core";
+import { asyncAgentRegistry } from "@cjhyy/code-shell-core/internal";
 import {
   notificationQueue,
   buildNotificationMessage,
   buildNotificationSummary,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
 import { gitCommands } from "../cli/commands/builtin/git-commands.js";
 import { permissionsCommand } from "../cli/commands/builtin/permissions-command.js";
@@ -55,17 +55,18 @@ import {
 } from "../cli/commands/builtin/goal-command.js";
 import { imageCommand } from "../cli/commands/builtin/image-command.js";
 import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
-import type { ApprovalRequest, StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
+import type { StreamEvent } from "@cjhyy/code-shell-core";
+import type { ApprovalRequest, TaskInfo } from "@cjhyy/code-shell-core/internal";
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
 import {
   nextPermissionMode,
   permissionConfigurePayload,
   type TuiPermissionMode,
 } from "./permission-mode.js";
-import { formatDuration, formatTokens } from "@cjhyy/code-shell-core";
+import { formatDuration, formatTokens } from "@cjhyy/code-shell-core/internal";
 import { removeLastFromHistory } from "./input-history.js";
 import { logger } from "@cjhyy/code-shell-core";
-import { recordUIEvent } from "@cjhyy/code-shell-core";
+import { recordUIEvent } from "@cjhyy/code-shell-core/internal";
 import {
   recordAppRender,
   recordStreamEvent,

@@ -8,7 +8,7 @@ import {
   type BuiltinTool,
   type CapabilityModule,
   type RegisteredTool,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/extension";
 import { briefTool, briefToolDef } from "./tools/brief.js";
 import { lspTool, lspToolDef } from "./tools/lsp.js";
 import { notebookEditTool, notebookEditToolDef } from "./tools/notebook-edit.js";

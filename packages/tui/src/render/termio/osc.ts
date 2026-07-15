@@ -3,8 +3,8 @@
  */
 
 import { Buffer } from 'buffer'
-import { env } from "@cjhyy/code-shell-core"
-import { execFileNoThrow } from "@cjhyy/code-shell-core"
+import { env } from "@cjhyy/code-shell-core/internal"
+import { execFileNoThrow } from "@cjhyy/code-shell-core/internal"
 import { BEL, ESC, ESC_TYPE, SEP } from './ansi.js'
 import type { Action, Color, TabStatusAction } from './types.js'
 

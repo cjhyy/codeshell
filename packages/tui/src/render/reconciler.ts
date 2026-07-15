@@ -4,7 +4,7 @@
 import { appendFileSync } from 'fs'
 import createReconciler from 'react-reconciler'
 import { getYogaCounters } from '../native-ts/yoga-layout/index.js'
-import { isEnvTruthy } from "@cjhyy/code-shell-core"
+import { isEnvTruthy } from "@cjhyy/code-shell-core/internal"
 import {
   appendChildNode,
   clearYogaNodeReferences,

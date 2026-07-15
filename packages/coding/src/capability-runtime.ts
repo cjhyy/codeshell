@@ -6,7 +6,7 @@ import type {
   CapabilityToolServiceHost,
   SessionManager,
   ToolContext,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/extension";
 import { getCurrentBranch, getGitLog, getGitStatus } from "./git/utils.js";
 
 export const CODING_CAPABILITY_ID = "coding";

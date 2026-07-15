@@ -1,8 +1,8 @@
 // @ts-nocheck
 import React, { PureComponent, type ReactNode } from 'react';
-import { logForDebugging } from "@cjhyy/code-shell-core";
-import { stopCapturingEarlyInput } from "@cjhyy/code-shell-core";
-import { isEnvTruthy } from "@cjhyy/code-shell-core";
+import { logForDebugging } from "@cjhyy/code-shell-core/internal";
+import { stopCapturingEarlyInput } from "@cjhyy/code-shell-core/internal";
+import { isEnvTruthy } from "@cjhyy/code-shell-core/internal";
 import { isMouseClicksDisabled } from "../../utils/fullscreen.js";
 import { logger } from "@cjhyy/code-shell-core";
 import { EventEmitter } from '../events/emitter.js';

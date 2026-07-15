@@ -17,7 +17,7 @@
  */
 
 import type { DOMElement } from './dom.js'
-import { logForDebugging } from "@cjhyy/code-shell-core"
+import { logForDebugging } from "@cjhyy/code-shell-core/internal"
 
 const ENABLED = process.env.CODESHELL_DEBUG_DIRTY === '1'
 
