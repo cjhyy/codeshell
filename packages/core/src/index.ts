@@ -122,6 +122,22 @@ export type {
 export { fileCache, invalidateFileCache } from "./tool-system/builtin/file-cache.js";
 export { validateToolArgs } from "./tool-system/validation.js";
 export { createOffBackend } from "./tool-system/sandbox/off.js";
+
+// ─── WorkspaceProfile（数字人）harness 元机制 ─────────────────────
+export {
+  WorkspaceProfileSchema,
+  activateWorkspaceProfile,
+  deactivateWorkspaceProfile,
+  listWorkspaceProfiles,
+  readWorkspaceProfile,
+  resolveActiveWorkspaceProfile,
+  saveWorkspaceProfile,
+  workspaceProfileDir,
+  workspaceProfilesRoot,
+  type WorkspaceProfile,
+  type WorkspaceProfileSubtree,
+} from "./profile/index.js";
+
 export {
   createFakeToolContext,
   createToolRegistryHarness,

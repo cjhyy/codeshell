@@ -167,6 +167,9 @@ describe("core public/internal export contract", () => {
   it("keeps the stable public API without host process state", () => {
     expect(publicApi.Engine).toBeDefined();
     expect(publicApi.createServer).toBeDefined();
+    expect(publicApi.WorkspaceProfileSchema).toBeDefined();
+    expect(publicApi.activateWorkspaceProfile).toBeDefined();
+    expect(publicApi.listWorkspaceProfiles).toBeDefined();
 
     expect(publicApi).not.toHaveProperty("getSessionId");
     expect(publicApi).not.toHaveProperty("markScrollActivity");
