@@ -22,10 +22,11 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
-import { extname, join } from "node:path";
+import { extname, join, resolve } from "node:path";
 import type { Duplex } from "node:stream";
 import { randomBytes } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
+import { SessionManager } from "@cjhyy/code-shell-core";
 import { AccessPasscode } from "../mobile-remote/access-passcode.js";
 import { resolveSafe } from "../mobile-remote/mobile-static.js";
 import { contentTypeFor } from "../static-files.js";
@@ -42,6 +43,8 @@ export interface HeadlessServeOptions {
   dataDir: string;
   /** Absolute path of the agent-server-stdio worker entry. */
   workerEntryPath: string;
+  /** Session root override for tests/relocated workers. Defaults to core's canonical root. */
+  sessionRootDir?: string;
   /** Runtime binary for the worker; defaults to process.execPath. */
   execPath?: string;
   /** Built web app root; when absent the server is WS/API-only. */
@@ -71,6 +74,8 @@ export interface HeadlessServer {
 export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<HeadlessServer> {
   const host = opts.host ?? "127.0.0.1";
   const log: WorkerBridgeLog = opts.log ?? (() => {});
+  const workspaceCwd = resolve(opts.cwd);
+  const sessionManager = new SessionManager(opts.sessionRootDir);
 
   const passcode = new AccessPasscode({ filePath: join(opts.dataDir, "access.json") });
   let generatedPasscode: string | undefined;
@@ -175,7 +180,14 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         const line = String(data);
         // Validate framing before touching the worker: a malformed frame from
         // one tab must never kill the shared pipe.
-        let parsed: { jsonrpc?: string } | undefined;
+        let parsed:
+          | {
+              jsonrpc?: string;
+              id?: string | number | null;
+              method?: string;
+              params?: Record<string, unknown>;
+            }
+          | undefined;
         try {
           parsed = JSON.parse(line) as { jsonrpc?: string };
         } catch {
@@ -186,10 +198,25 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           log("tab.frame_dropped", { reason: "not jsonrpc", raw: previewLine(line) });
           return;
         }
+        const hostReply = replyToHostSessionQuery(parsed, sessionManager, workspaceCwd);
+        if (hostReply) {
+          ws.send(hostReply);
+          return;
+        }
+        // This host intentionally exposes one workspace. A browser must not be
+        // able to escape it by supplying another cwd, and a missing cwd must
+        // not silently become the worker's global no-repo conversation.
+        const workerLine =
+          parsed.method === "agent/run"
+            ? JSON.stringify({
+                ...parsed,
+                params: { ...(parsed.params ?? {}), cwd: workspaceCwd },
+              })
+            : line;
         // Spawn-on-first-frame (idempotent): the browser's first request wakes
         // the worker, mirroring the renderer's spawn-on-agent/run semantics.
         bridge.ensureWorker(opts.cwd);
-        bridge.injectWorkerMessage(line);
+        bridge.injectWorkerMessage(workerLine);
       });
       ws.on("close", () => {
         tabs.delete(ws);
@@ -241,6 +268,68 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       });
     },
   };
+}
+
+function replyToHostSessionQuery(
+  message: {
+    id?: string | number | null;
+    method?: string;
+    params?: Record<string, unknown>;
+  },
+  sessionManager: SessionManager,
+  workspaceCwd: string,
+): string | undefined {
+  if (message.method !== "agent/query" || message.id === undefined) return undefined;
+  const queryType = message.params?.type;
+  if (queryType === "sessions") {
+    const sessions = sessionManager
+      .list()
+      .filter((session) => resolve(session.cwd) === workspaceCwd)
+      .map((session) => ({
+        sessionId: session.sessionId,
+        cwd: session.cwd,
+        startedAt: session.startedAt,
+        model: session.model,
+        status: session.status,
+        turnCount: session.turnCount,
+        ...(session.preview ? { preview: session.preview } : {}),
+      }));
+    return JSON.stringify({
+      jsonrpc: "2.0",
+      id: message.id,
+      result: { type: "sessions", data: sessions },
+    });
+  }
+  if (queryType !== "session_detail") return undefined;
+
+  const sessionId = message.params?.sessionId;
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    return hostQueryError(message.id, -32602, "sessionId required for session_detail");
+  }
+  try {
+    const bundle = sessionManager.resume(sessionId);
+    if (resolve(bundle.state.cwd) !== workspaceCwd) {
+      return hostQueryError(message.id, -32001, "Session not found in this workspace");
+    }
+    return JSON.stringify({
+      jsonrpc: "2.0",
+      id: message.id,
+      result: {
+        type: "session_detail",
+        data: { state: bundle.state, transcript: bundle.transcript.getEvents() },
+      },
+    });
+  } catch (error) {
+    return hostQueryError(
+      message.id,
+      -32001,
+      error instanceof Error ? error.message : "Session not found",
+    );
+  }
+}
+
+function hostQueryError(id: string | number | null, code: number, message: string): string {
+  return JSON.stringify({ jsonrpc: "2.0", id, error: { code, message } });
 }
 
 /** decodeURIComponent that returns null instead of throwing on bad input. */

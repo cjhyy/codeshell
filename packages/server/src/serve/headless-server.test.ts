@@ -56,13 +56,56 @@ afterEach(async () => {
   for (const s of servers.splice(0)) await s.close();
 });
 
-async function boot(): Promise<HeadlessServer> {
+async function boot(options: { seedSession?: boolean } = {}): Promise<HeadlessServer> {
+  const runtimeDir = mkdtempSync(join(dir, "runtime-"));
+  const sessionRootDir = join(runtimeDir, "sessions");
+  if (options.seedSession) {
+    const sessionDir = join(sessionRootDir, "session-in-workspace");
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(
+      join(sessionDir, "state.json"),
+      JSON.stringify({
+        sessionId: "session-in-workspace",
+        kind: "work",
+        cwd: dir,
+        startedAt: 123,
+        model: "test-model",
+        status: "completed",
+        turnCount: 1,
+      }),
+    );
+    writeFileSync(
+      join(sessionDir, "transcript.jsonl"),
+      `${JSON.stringify({
+        id: "m1",
+        type: "message",
+        timestamp: 123,
+        turnNumber: 0,
+        data: { role: "user", content: "Readable session title" },
+      })}\n`,
+    );
+    const otherSessionDir = join(sessionRootDir, "session-outside-workspace");
+    mkdirSync(otherSessionDir, { recursive: true });
+    writeFileSync(
+      join(otherSessionDir, "state.json"),
+      JSON.stringify({
+        sessionId: "session-outside-workspace",
+        kind: "work",
+        cwd: join(dir, "other-workspace"),
+        startedAt: 456,
+        model: "test-model",
+        status: "completed",
+        turnCount: 1,
+      }),
+    );
+  }
   const server = await startHeadlessServer({
     host: "127.0.0.1",
     port: 0,
     cwd: dir,
-    dataDir: join(dir, "serve-data"),
+    dataDir: join(runtimeDir, "serve-data"),
     workerEntryPath: entryPath,
+    sessionRootDir,
     execPath: process.execPath,
     staticRootDir: staticDir,
     passcode: PASSCODE,
@@ -152,7 +195,38 @@ describe("headless serve — WS pipe", () => {
     const ws = await openWs(server, { "x-access-passcode": PASSCODE });
     ws.send(JSON.stringify({ jsonrpc: "2.0", id: "r1", method: "agent/run", params: { task: "hi" } }));
     const reply = await nextMessage(ws, (m) => m.id === "r1");
-    expect(reply.result).toEqual({ echo: { task: "hi" } });
+    expect(reply.result).toEqual({ echo: { task: "hi", cwd: dir } });
+    ws.close();
+  });
+
+  test("session queries are persisted, workspace-scoped, and include a readable preview", async () => {
+    const server = await boot({ seedSession: true });
+    const ws = await openWs(server, { "x-access-passcode": PASSCODE });
+    ws.send(JSON.stringify({ jsonrpc: "2.0", id: "s1", method: "agent/query", params: { type: "sessions" } }));
+    const listReply = await nextMessage(ws, (m) => m.id === "s1");
+    expect(listReply.result).toEqual({
+      type: "sessions",
+      data: [
+        {
+          sessionId: "session-in-workspace",
+          cwd: dir,
+          startedAt: 123,
+          model: "test-model",
+          status: "completed",
+          turnCount: 1,
+          preview: "Readable session title",
+        },
+      ],
+    });
+
+    ws.send(JSON.stringify({
+      jsonrpc: "2.0",
+      id: "s2",
+      method: "agent/query",
+      params: { type: "session_detail", sessionId: "session-in-workspace" },
+    }));
+    const detailReply = await nextMessage(ws, (m) => m.id === "s2");
+    expect((detailReply.result as { type: string }).type).toBe("session_detail");
     ws.close();
   });
 
@@ -177,9 +251,9 @@ describe("headless serve — WS pipe", () => {
     const server = await boot();
     const ws = await openWs(server, { "x-access-passcode": PASSCODE });
     ws.send("not json at all");
-    ws.send(JSON.stringify({ jsonrpc: "2.0", id: "r2", method: "agent/query", params: { type: "sessions" } }));
+    ws.send(JSON.stringify({ jsonrpc: "2.0", id: "r2", method: "agent/query", params: { type: "tools" } }));
     const reply = await nextMessage(ws, (m) => m.id === "r2");
-    expect(reply.result).toEqual({ echo: { type: "sessions" } });
+    expect(reply.result).toEqual({ echo: { type: "tools" } });
     ws.close();
   });
 });

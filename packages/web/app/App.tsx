@@ -41,9 +41,9 @@ export function App() {
     if (!client) return;
     try {
       const res = await client.listSessions();
-      setSessions(res.data.sessions.sort((a, b) => b.startedAt - a.startedAt));
+      setSessions([...res.data].sort((a, b) => b.startedAt - a.startedAt));
     } catch {
-      // Worker not spawned yet (first boot) — an empty list is accurate.
+      // First boot or a temporarily unavailable host — an empty list is accurate.
       setSessions([]);
     }
   }, []);
@@ -172,7 +172,7 @@ export function App() {
                 <span className="session-title">
                   {s.sessionId === activeId
                     ? sessionTitle(chat, s.sessionId)
-                    : s.sessionId.slice(0, 8)}
+                    : s.preview?.trim() || s.sessionId.slice(0, 8)}
                 </span>
                 <span className="session-meta">
                   {s.status} · {s.turnCount} turns

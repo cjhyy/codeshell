@@ -14,6 +14,7 @@ export interface SessionSummary {
   model: string;
   status: string;
   turnCount: number;
+  preview?: string;
 }
 
 export interface ApprovalRequestPayload {
@@ -153,7 +154,7 @@ export class ProtocolClient {
     this.ws?.send(JSON.stringify({ jsonrpc: "2.0", id, method: "agent/run", params }));
   }
 
-  listSessions(): Promise<{ type: string; data: { sessions: SessionSummary[] } }> {
+  listSessions(): Promise<{ type: string; data: SessionSummary[] }> {
     return this.request("agent/query", { type: "sessions" });
   }
 
