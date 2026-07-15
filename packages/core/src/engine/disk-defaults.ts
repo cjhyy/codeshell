@@ -57,7 +57,10 @@ export function diskDefaultsFrom(
 ): DiskDefaultPatch {
   const agent = settings.agent ?? {};
   return {
-    preset: agent.preset,
+    // preset 优先级：用户显式 agent.preset > 激活数字人的 profile.preset >
+    // capability 默认（resolveAgentPreset 内）。settings 已含合并后的
+    // project 层，profile 子树随之而来。
+    preset: agent.preset ?? settings.profile?.preset,
     customSystemPrompt: agent.customSystemPrompt,
     appendSystemPrompt: agent.appendSystemPrompt,
     ...personalizationFrom(agent),

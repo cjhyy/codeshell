@@ -75,6 +75,16 @@ describe("resolveSessionAgentConfig", () => {
     expect(out.appendSystemPrompt).toBe("FROM_SLICE");
     expect(out.preset).toBe("general");
   });
+
+  it("falls back to profile.preset when neither slice nor agent selects one", () => {
+    const settings = {
+      ...baseSettings,
+      agent: { ...baseSettings.agent, preset: undefined },
+      profile: { active: "seedance", preset: "general" },
+    } as unknown as ValidatedSettings;
+    const out = resolveSessionAgentConfig({ permissionMode: "default" } as any, settings);
+    expect(out.preset).toBe("general");
+  });
 });
 
 describe("resolveSessionCwd", () => {

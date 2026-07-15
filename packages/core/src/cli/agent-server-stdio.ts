@@ -91,7 +91,7 @@ async function loadConfiguredExtensionModules(): Promise<ExtensionModule[]> {
  */
 export function resolveSessionAgentConfig(slice: EngineConfigSlice, settings: ValidatedSettings) {
   return {
-    preset: slice.preset ?? settings.agent.preset,
+    preset: slice.preset ?? settings.agent.preset ?? settings.profile?.preset,
     customSystemPrompt: slice.customSystemPrompt ?? settings.agent.customSystemPrompt,
     appendSystemPrompt: slice.appendSystemPrompt ?? settings.agent.appendSystemPrompt,
   };
@@ -172,7 +172,7 @@ const llmConfig = seedLlm;
 const seedEngine = new Engine({
   llm: llmConfig,
   cwd,
-  preset: settings.agent.preset,
+  preset: settings.agent.preset ?? settings.profile?.preset,
   enabledBuiltinTools: settings.agent.enabledBuiltinTools,
   disabledBuiltinTools: settings.agent.disabledBuiltinTools,
   builtinToolHost: "desktop",
