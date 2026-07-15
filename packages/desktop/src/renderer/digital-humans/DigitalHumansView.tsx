@@ -34,6 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n";
+import { useToast } from "../ui/ToastProvider";
 import { DigitalHumanEditorDialog } from "./DigitalHumanEditorDialog";
 import type {
   DigitalHumanCatalogEntry,
@@ -59,6 +60,7 @@ function modeKey(mode: DigitalHumanTeamMode): "auto" | "divide" | "compare" {
 
 export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
   const { t } = useT();
+  const toast = useToast();
   const [profiles, setProfiles] = React.useState<DigitalHumanProfileEntry[]>([]);
   const [catalog, setCatalog] = React.useState<DigitalHumanCatalogEntry[]>([]);
   const [teams, setTeams] = React.useState<DigitalHumanTeam[]>([]);
@@ -91,14 +93,24 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
     void refresh();
   }, [refresh]);
 
-  const run = async (key: string, action: () => Promise<unknown>) => {
+  const run = async (
+    key: string,
+    action: () => Promise<unknown>,
+    opts: { name: string; successMessage?: string },
+  ) => {
     setBusy(key);
-    setError(null);
     try {
       await action();
       await refresh();
+      if (opts.successMessage) toast({ message: opts.successMessage });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      toast({
+        message: t("digitalHumans.actionFailed", {
+          name: opts.name,
+          message: caught instanceof Error ? caught.message : String(caught),
+        }),
+        variant: "error",
+      });
     } finally {
       setBusy(null);
     }
@@ -175,8 +187,13 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
                     entry={entry}
                     busy={busy === `install:${entry.name}`}
                     onInstall={() =>
-                      void run(`install:${entry.name}`, () =>
-                        window.codeshell.installCatalogProfile(entry.name),
+                      void run(
+                        `install:${entry.name}`,
+                        () => window.codeshell.installCatalogProfile(entry.name),
+                        {
+                          name: entry.label,
+                          successMessage: t("digitalHumans.installDone", { name: entry.label }),
+                        },
                       )
                     }
                     onUse={() => onUse({ kind: "single", id: entry.name, label: entry.label })}
@@ -206,10 +223,13 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
                       onEdit={() => setEditor({ profile })}
                       onToggleDefault={() => {
                         if (!activeProjectPath) return;
-                        void run(`profile:${profile.name}`, () =>
-                          profile.active
-                            ? window.codeshell.deactivateProfile(activeProjectPath)
-                            : window.codeshell.activateProfile(activeProjectPath, profile.name),
+                        void run(
+                          `profile:${profile.name}`,
+                          () =>
+                            profile.active
+                              ? window.codeshell.deactivateProfile(activeProjectPath)
+                              : window.codeshell.activateProfile(activeProjectPath, profile.name),
+                          { name: profile.label },
                         );
                       }}
                     />
@@ -226,14 +246,21 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
                     {t("digitalHumans.team.description")}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => setTeamDialogOpen(true)}
-                  disabled={profiles.length < 2}
-                >
-                  <Plus size={14} aria-hidden="true" />
-                  {t("digitalHumans.team.create")}
-                </Button>
+                <div className="flex flex-col items-end gap-1">
+                  <Button
+                    size="sm"
+                    onClick={() => setTeamDialogOpen(true)}
+                    disabled={profiles.length < 2}
+                  >
+                    <Plus size={14} aria-hidden="true" />
+                    {t("digitalHumans.team.create")}
+                  </Button>
+                  {profiles.length < 2 ? (
+                    <p className="max-w-xs text-right text-xs text-muted-foreground">
+                      {t("digitalHumans.team.needMembers")}
+                    </p>
+                  ) : null}
+                </div>
               </div>
               {teams.length === 0 ? (
                 <EmptyState
@@ -269,8 +296,10 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
                           })
                         }
                         onDelete={() =>
-                          void run(`delete-team:${team.id}`, () =>
-                            window.codeshell.deleteDigitalHumanTeam(team.id),
+                          void run(
+                            `delete-team:${team.id}`,
+                            () => window.codeshell.deleteDigitalHumanTeam(team.id),
+                            { name: team.name },
                           )
                         }
                       />
@@ -292,10 +321,14 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
           if (!open) setEditor(null);
         }}
         onSave={(profile) =>
-          void run("save-profile", async () => {
-            await window.codeshell.saveProfile(profile);
-            setEditor(null);
-          })
+          void run(
+            "save-profile",
+            async () => {
+              await window.codeshell.saveProfile(profile);
+              setEditor(null);
+            },
+            { name: profile.label },
+          )
         }
       />
 
@@ -305,10 +338,14 @@ export function DigitalHumansView({ activeProjectPath, onUse }: Props) {
         busy={busy === "save-team"}
         onOpenChange={setTeamDialogOpen}
         onSave={(team) =>
-          void run("save-team", async () => {
-            await window.codeshell.saveDigitalHumanTeam(team);
-            setTeamDialogOpen(false);
-          })
+          void run(
+            "save-team",
+            async () => {
+              await window.codeshell.saveDigitalHumanTeam(team);
+              setTeamDialogOpen(false);
+            },
+            { name: team.name },
+          )
         }
       />
     </section>
@@ -400,23 +437,32 @@ function ProfileCard({
           <Badge variant="secondary">{t("digitalHumans.portableMemory")}</Badge>
         ) : null}
       </CardContent>
-      <CardFooter className="flex-wrap gap-2">
-        <Button size="sm" onClick={onUse}>
-          {t("digitalHumans.use")}
-        </Button>
+      <CardFooter className="flex-wrap items-start gap-3">
+        <div className="space-y-1">
+          <Button size="sm" onClick={onUse}>
+            {t("digitalHumans.use")}
+          </Button>
+          <p className="text-xs text-muted-foreground">{t("digitalHumans.useHint")}</p>
+        </div>
         <Button size="sm" variant="outline" onClick={onEdit}>
           <Pencil size={13} aria-hidden="true" />
           {t("digitalHumans.editor.edit")}
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onToggleDefault}
-          disabled={!hasProject || busy}
-          title={!hasProject ? t("digitalHumans.pickProject") : undefined}
-        >
-          {profile.active ? t("digitalHumans.clearDefault") : t("digitalHumans.setProjectDefault")}
-        </Button>
+        <div className="space-y-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onToggleDefault}
+            disabled={!hasProject || busy}
+          >
+            {profile.active
+              ? t("digitalHumans.clearDefault")
+              : t("digitalHumans.setProjectDefault")}
+          </Button>
+          <p className="max-w-48 text-xs text-muted-foreground">
+            {hasProject ? t("digitalHumans.setProjectDefaultHint") : t("digitalHumans.pickProject")}
+          </p>
+        </div>
       </CardFooter>
     </Card>
   );
