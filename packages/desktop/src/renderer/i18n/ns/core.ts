@@ -38,6 +38,7 @@ export const core = {
       tasksTip: "任务进度(已完成/总数)——悬停看清单",
       workspace: {
         openSwitcher: "切换工作区",
+        activeProfileTitle: "当前数字人：{name}（在设置 › 数字人中切换）",
         switcherTitle: "工作区",
         groupMain: "主工作区",
         groupWorktrees: "CodeShell worktrees",
@@ -157,6 +158,7 @@ export const core = {
       tasksTip: "Task progress (done/total) — hover for the list",
       workspace: {
         openSwitcher: "Switch workspace",
+        activeProfileTitle: "Active digital human: {name} (switch in Settings › Digital humans)",
         switcherTitle: "Workspaces",
         groupMain: "Main workspace",
         groupWorktrees: "CodeShell worktrees",
