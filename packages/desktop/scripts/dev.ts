@@ -48,6 +48,7 @@ async function startVite(): Promise<void> {
     configFile: resolve(root, "vite.config.ts"),
     forceOptimizeDeps: true,
   });
+  viteServers.push(server);
   await server.listen(VITE_PORT);
   await warmRenderer(server);
   // eslint-disable-next-line no-console
@@ -65,12 +66,75 @@ async function startMobileVite(): Promise<void> {
   const server = await createViteServer({
     configFile: resolve(root, "vite.mobile.config.ts"),
   });
+  viteServers.push(server);
   await server.listen(MOBILE_PORT);
   // eslint-disable-next-line no-console
   console.log(`[dev] vite dev server (mobile):   ${MOBILE_URL}`);
 }
 
 let electronProc: ChildProcess | null = null;
+
+// Kill a child AND everything it spawned. Children here are `bun run dev`
+// wrappers around tsc --watch and the electron helper swarm — signalling the
+// direct child does NOT reach its descendants (bun didn't forward SIGTERM to
+// tsc, which is exactly how these got orphaned before). We spawn each with
+// detached:true so it leads its own process group, then signal the whole group
+// via a negative pid. Falls back to a plain kill if the group is already gone.
+function killTree(proc: ChildProcess | null, signal: NodeJS.Signals = "SIGTERM"): void {
+  if (!proc?.pid) return;
+  try {
+    process.kill(-proc.pid, signal); // negative pid → whole process group
+  } catch {
+    try {
+      proc.kill(signal);
+    } catch {
+      /* already dead */
+    }
+  }
+}
+
+// Everything the orchestrator owns and must tear down on exit. Without this,
+// Ctrl-C kills only the orchestrator process and orphans its children (esbuild
+// contexts, vite servers, the tsc --watch procs, electron) — they reparent to
+// PID 1 and keep running, so `bun run dev` becomes impossible to actually stop.
+const viteServers: ViteDevServer[] = [];
+const esbuildContexts: Array<{ dispose: () => Promise<void> }> = [];
+let shuttingDown = false;
+
+async function shutdown(code: number): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  // Detach electron's exit listener first — otherwise killing it here would
+  // re-enter shutdown via its handler and race the process.exit below.
+  if (electronProc) {
+    electronProc.removeAllListeners();
+    killTree(electronProc);
+    electronProc = null;
+  }
+  killTree(coreWatchProc);
+  killTree(codingWatchProc);
+
+  // esbuild watch contexts and vite servers hold their own child procs / ports;
+  // dispose them so nothing lingers. Bounded so a hung dispose can't wedge exit.
+  await Promise.race([
+    Promise.allSettled([
+      ...esbuildContexts.map((c) => c.dispose()),
+      ...viteServers.map((s) => s.close()),
+    ]),
+    new Promise((r) => setTimeout(r, 2000)),
+  ]);
+
+  process.exit(code);
+}
+
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+  process.on(sig, () => {
+    // eslint-disable-next-line no-console
+    console.log(`[dev] ${sig} → shutting down`);
+    void shutdown(0);
+  });
+}
 
 function electronLaunchEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
@@ -84,12 +148,14 @@ function electronLaunchEnv(): NodeJS.ProcessEnv {
 function spawnElectron(): void {
   if (electronProc) {
     electronProc.removeAllListeners();
-    electronProc.kill("SIGTERM");
+    killTree(electronProc);
   }
   const env = electronLaunchEnv();
   electronProc = spawn("electron", ["."], {
     cwd: root,
     stdio: "inherit",
+    // Own process group → killTree can take down electron + its helper swarm.
+    detached: true,
     env: {
       ...env,
       VITE_DEV_URL: VITE_URL,
@@ -109,9 +175,8 @@ function spawnElectron(): void {
   electronProc.on("exit", (code) => {
     // eslint-disable-next-line no-console
     console.log(`[dev] electron exited (${code}); quitting orchestrator`);
-    coreWatchProc?.kill("SIGTERM");
-    codingWatchProc?.kill("SIGTERM");
-    process.exit(code ?? 0);
+    electronProc = null; // already gone — don't SIGTERM a dead pid in shutdown
+    void shutdown(code ?? 0);
   });
 }
 
@@ -149,14 +214,18 @@ function startCoreWatch(): void {
     process.exit(codingBuilt.status ?? 1);
   }
 
-  // tsc --watch keeps dist in sync with core source edits.
+  // tsc --watch keeps dist in sync with core source edits. detached:true so the
+  // bun wrapper + its tsc grandchild form one group killTree can take down —
+  // bun does not forward SIGTERM to tsc, which is how these got orphaned before.
   coreWatchProc = spawn("bun", ["run", "dev"], {
     cwd: coreDir,
     stdio: "inherit",
+    detached: true,
   });
   codingWatchProc = spawn("bun", ["run", "dev"], {
     cwd: codingDir,
     stdio: "inherit",
+    detached: true,
   });
 
   // core is `external` in main's bundle → main imports the built dist at
@@ -226,6 +295,7 @@ async function buildAndWatch(): Promise<void> {
       },
     ],
   });
+  esbuildContexts.push(mainCtx);
   await mainCtx.watch();
 
   const preloadCtx = await esbuild.context({
@@ -254,6 +324,7 @@ async function buildAndWatch(): Promise<void> {
       },
     ],
   });
+  esbuildContexts.push(preloadCtx);
   await preloadCtx.watch();
 }
 
