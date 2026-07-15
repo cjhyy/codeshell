@@ -122,10 +122,6 @@ import { computeEffectiveDisabledLists } from "../capability-control/disabled-li
 import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
-import { resolveActiveWorkspaceProfile } from "../profile/resolve.js";
-import { workspaceProfileDir } from "../profile/store.js";
-import { profileOverridesFromDefinition } from "../profile/activation.js";
-import { buildSourcesContextSummary } from "../sources/context-summary.js";
 import {
   composeDynamicContextProviders,
   composeCapabilityEngineHooks,
@@ -160,6 +156,7 @@ import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
 import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
 import { PermissionController } from "./permission-controller.js";
+import { buildPromptComposerConfig, resolveRunProfileState } from "./run-setup.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../types.js";
@@ -1358,18 +1355,12 @@ export class Engine {
         configCwd: this.config.cwd,
         processCwd: process.cwd(),
       });
-    const runWorkspaceProfile = resolveActiveWorkspaceProfile({
-      ...(sessionWorkspaceProfile ? { sessionProfile: sessionWorkspaceProfile } : {}),
-      cwd,
-      settings: this.getSettingsManager(),
-    });
-    if (sessionWorkspaceProfile && !runWorkspaceProfile) {
-      throw new Error(`Workspace profile "${sessionWorkspaceProfile}" is unavailable`);
-    }
-    const sessionProfileOverrides =
-      sessionWorkspaceProfile && runWorkspaceProfile
-        ? profileOverridesFromDefinition(runWorkspaceProfile)
-        : undefined;
+    const { workspaceProfile: runWorkspaceProfile, sessionProfileOverrides } =
+      resolveRunProfileState({
+        sessionWorkspaceProfile,
+        cwd,
+        settings: this.getSettingsManager(),
+      });
 
     // Wrap the caller's onStream so we can intercept `task_update`
     // events emitted by TodoWrite and keep an in-engine snapshot.
@@ -1951,39 +1942,33 @@ export class Engine {
         cwd,
         sessionProfileOverrides,
       );
-      // WorkspaceProfile（数字人）：mainInstruction 从库活读（settings 只记名字）。
-      // 命名注意：局部变量 `profile` 已被 RunBehaviorProfile 占用。
-      const workspaceProfile = runWorkspaceProfile;
-      const promptComposer = new PromptComposer({
-        cwd,
-        model: this.config.llm.model,
-        preset: this.preset,
-        customSystemPrompt: this.config.customSystemPrompt,
-        appendSystemPrompt:
-          [this.config.appendSystemPrompt, profile?.systemPromptAppend]
-            .filter(Boolean)
-            .join("\n\n") || undefined,
-        responseLanguage: this.config.responseLanguage,
-        userProfile: this.config.userProfile,
-        profileMainInstruction: workspaceProfile?.mainInstruction,
-        profileMemoryDir: workspaceProfile?.portableMemory
-          ? workspaceProfileDir(workspaceProfile.name)
-          : undefined,
-        instructionOptions: {
-          compatFileNames: compatFileNamesFrom(this.config.instructions),
-          boundaryFinder: (scanCwd) => resolveInstructionBoundary(scanCwd, this.capabilities),
-        },
-        disabledSkills,
-        disabledPlugins,
-        skillAllowlist: this.config.skillAllowlist,
-        memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
-        goalToolState: { hasGoal: hasRunnableGoal },
-        capabilityPromptSections: this.capabilityPromptSections,
-        dynamicContextProviders: this.capabilityDynamicContextProviders,
-        sourcesContextProvider: () =>
-          buildSourcesContextSummary({ cwd, settings: this.getSettingsManager() }),
-        toolCatalog: this.toolCatalog,
-      });
+      const promptComposer = new PromptComposer(
+        buildPromptComposerConfig({
+          cwd,
+          model: this.config.llm.model,
+          preset: this.preset,
+          customSystemPrompt: this.config.customSystemPrompt,
+          appendSystemPrompt:
+            [this.config.appendSystemPrompt, profile?.systemPromptAppend]
+              .filter(Boolean)
+              .join("\n\n") || undefined,
+          responseLanguage: this.config.responseLanguage,
+          userProfile: this.config.userProfile,
+          workspaceProfile: runWorkspaceProfile,
+          instructionCompatFileNames: compatFileNamesFrom(this.config.instructions),
+          instructionBoundaryFinder: (scanCwd) =>
+            resolveInstructionBoundary(scanCwd, this.capabilities),
+          disabledSkills,
+          disabledPlugins,
+          skillAllowlist: this.config.skillAllowlist,
+          memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
+          goalToolState: { hasGoal: hasRunnableGoal },
+          capabilityPromptSections: this.capabilityPromptSections,
+          dynamicContextProviders: this.capabilityDynamicContextProviders,
+          getSettingsManager: () => this.getSettingsManager(),
+          toolCatalog: this.toolCatalog,
+        }),
+      );
 
       // Connect MCP servers (if configured and not already connected).
       // B1: prefer the Runtime-owned MCPManager so all sessions in a
