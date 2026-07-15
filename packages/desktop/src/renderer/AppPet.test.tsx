@@ -30,14 +30,19 @@ describe("App Pet lifecycle boundaries", () => {
     expect(appSource).not.toMatch(/if\s*\(isSettingsPage\)\s*return/);
   });
 
-  test("contains no Pet approval, direction, Team, or quick-chat cleanup route", () => {
+  test("contains no Pet approval, direction, or quick-chat cleanup route", () => {
     expect(petSource).not.toContain("codeshell.approve");
     expect(petSource).not.toContain("ApprovalResult");
     expect(petSource).not.toContain("PetSendDirection");
     expect(petSource).not.toContain("send_direction");
-    expect(petSource).not.toContain("teamId");
     expect(petSource).not.toContain("cleanupQuickChatSession");
     expect(petSource).not.toContain('type: "evict"');
+  });
+
+  test("lets the Digital Human Center select a Pet-led team without adding approval powers", () => {
+    expect(appSource).toContain("petDigitalHumanSelection");
+    expect(petSource).toContain("digitalHumanTeamId");
+    expect(petSource).toContain("digitalHumanId");
   });
 
   test("opens the Pet page only from explicit entry or peek action wiring", () => {

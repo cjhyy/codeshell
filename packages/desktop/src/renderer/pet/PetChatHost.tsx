@@ -1,5 +1,7 @@
 import React from "react";
-import { ArrowUp, Sparkles } from "lucide-react";
+import { ArrowUp, Sparkles, UserRound, UsersRound, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import dogIcon from "../assets/codeshell-dog-icon.png";
 import type { Message } from "../types";
 import { useT } from "../i18n";
@@ -9,6 +11,7 @@ import {
 } from "../imGatewayChannels";
 import { visiblePetAssistantText } from "./petChatRouting";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
+import type { DigitalHumanSelection } from "../digital-humans/types";
 
 interface PetChatRow {
   id: string;
@@ -38,7 +41,15 @@ export function selectPetChatRows(messages: readonly Message[]): PetChatRow[] {
   });
 }
 
-export function PetChatHost({ defaultProjectPath }: { defaultProjectPath: string | null }) {
+export function PetChatHost({
+  defaultProjectPath,
+  digitalHumanSelection,
+  onClearDigitalHumanSelection,
+}: {
+  defaultProjectPath: string | null;
+  digitalHumanSelection: DigitalHumanSelection | null;
+  onClearDigitalHumanSelection: () => void;
+}) {
   const { t } = useT();
   const { state, dispatch, petSessionId, chatState, chatDispatch, chatBusy, setChatBusy } =
     usePetState();
@@ -71,6 +82,12 @@ export function PetChatHost({ defaultProjectPath }: { defaultProjectPath: string
         message,
         clientMessageId,
         ...(defaultProjectPath ? { preferredProjectPath: defaultProjectPath } : {}),
+        ...(digitalHumanSelection?.kind === "single"
+          ? { digitalHumanId: digitalHumanSelection.id }
+          : {}),
+        ...(digitalHumanSelection?.kind === "team"
+          ? { digitalHumanTeamId: digitalHumanSelection.id }
+          : {}),
       });
       if (!result.ok) setError(result.message ?? t("pet.chat.failed"));
     } catch (dispatchError) {
@@ -105,6 +122,38 @@ export function PetChatHost({ defaultProjectPath }: { defaultProjectPath: string
           <p className="mt-0.5 truncate text-xs text-muted-foreground">{t("pet.chat.subtitle")}</p>
         </div>
       </div>
+
+      {digitalHumanSelection ? (
+        <div className="flex items-center justify-between gap-3 border-b border-border/55 bg-primary/5 px-5 py-2.5">
+          <div className="flex min-w-0 items-center gap-2 text-xs">
+            {digitalHumanSelection.kind === "team" ? (
+              <UsersRound size={14} className="shrink-0 text-primary" aria-hidden="true" />
+            ) : (
+              <UserRound size={14} className="shrink-0 text-primary" aria-hidden="true" />
+            )}
+            <span className="text-muted-foreground">
+              {t(
+                digitalHumanSelection.kind === "team"
+                  ? "digitalHumans.selection.team"
+                  : "digitalHumans.selection.single",
+              )}
+            </span>
+            <Badge variant="accent" className="max-w-52 truncate">
+              {digitalHumanSelection.label}
+            </Badge>
+          </div>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 shrink-0"
+            onClick={onClearDigitalHumanSelection}
+          >
+            <X size={13} aria-hidden="true" />
+            <span className="sr-only">{t("digitalHumans.selection.clear")}</span>
+          </Button>
+        </div>
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto bg-muted/15 px-4 py-5 min-[1440px]:px-5">
         {rows.length === 0 ? (

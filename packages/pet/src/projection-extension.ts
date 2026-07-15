@@ -111,6 +111,31 @@ function validateReusableSessions(value: unknown, label: string): string | null 
   return null;
 }
 
+function validateDigitalHumans(value: unknown, label: string): string | null {
+  if (!Array.isArray(value) || value.length > 8) return `${label} must be a bounded array`;
+  const ids = new Set<string>();
+  for (const entry of value) {
+    const human = entry as { id?: unknown; name?: unknown; description?: unknown } | null;
+    if (
+      !human ||
+      typeof human !== "object" ||
+      typeof human.id !== "string" ||
+      !human.id.trim() ||
+      human.id.length > 128 ||
+      typeof human.name !== "string" ||
+      !human.name.trim() ||
+      human.name.length > 256 ||
+      (human.description !== undefined &&
+        (typeof human.description !== "string" || human.description.length > 4_096)) ||
+      ids.has(human.id)
+    ) {
+      return `${label} contains an invalid or duplicate digital human`;
+    }
+    ids.add(human.id);
+  }
+  return null;
+}
+
 /**
  * Pet-specific agent/run params validation. This validator owns only Pet
  * requests: other extension modes and kinds must pass through untouched. For
@@ -149,6 +174,9 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
   const hasCanonicalReusableSessions =
     profileParams !== undefined &&
     Object.prototype.hasOwnProperty.call(profileParams, "reusableSessions");
+  const hasCanonicalDigitalHumans =
+    profileParams !== undefined &&
+    Object.prototype.hasOwnProperty.call(profileParams, "digitalHumans");
 
   const runtimeContext = hasCanonicalRuntimeContext
     ? profileParams.runtimeContext
@@ -173,6 +201,13 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
     const error = validateReusableSessions(
       profileParams.reusableSessions,
       "profileParams.reusableSessions",
+    );
+    if (error) return error;
+  }
+  if (hasCanonicalDigitalHumans) {
+    const error = validateDigitalHumans(
+      profileParams.digitalHumans,
+      "profileParams.digitalHumans",
     );
     if (error) return error;
   }

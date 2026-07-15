@@ -259,6 +259,8 @@ export interface SessionState {
   sessionId: string;
   /** Durable local classification. Missing on legacy state and normalized to `work`. */
   kind?: SessionKind;
+  /** Durable per-session digital-human binding. It overrides the Workspace default profile. */
+  workspaceProfile?: string;
   /**
    * Monotonic whole-state revision used by SessionManager.saveState as a CAS
    * token. Absent only on legacy state files; the first successful save

@@ -269,7 +269,18 @@ import {
   setCapabilityEnabled,
   setCapabilityOverride,
 } from "./capabilities-service.js";
-import { activateProfile, deactivateProfile, listProfiles } from "./profiles-service.js";
+import {
+  activateProfile,
+  deactivateProfile,
+  installCatalogProfile,
+  listProfileCatalog,
+  listProfiles,
+} from "./profiles-service.js";
+import {
+  deleteDigitalHumanTeam,
+  listDigitalHumanTeams,
+  saveDigitalHumanTeam,
+} from "./digital-human-team-service.js";
 import { searchFiles } from "./file-search-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
@@ -1013,6 +1024,8 @@ async function createWindow(): Promise<BrowserWindow> {
             status: session.status,
           }));
       },
+      listDigitalHumans: async () => listProfiles(),
+      listDigitalHumanTeams: async () => listDigitalHumanTeams(),
       startWorkSession: (delegation) => petWorkDelegationHost.start(delegation),
     });
     const petReceipts = new PetReceiptStore(
@@ -1650,8 +1663,10 @@ ipcMain.handle(
     setCapabilityOverride(cwd, id, state);
   },
 );
-ipcMain.handle("profiles:list", async (_e, cwd: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("profiles:list requires cwd");
+ipcMain.handle("profiles:list", async (_e, cwd?: string) => {
+  if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
+    throw new Error("profiles:list cwd must be a non-empty string");
+  }
   return listProfiles(cwd);
 });
 ipcMain.handle("profiles:activate", async (_e, cwd: string, name: string) => {
@@ -1662,6 +1677,19 @@ ipcMain.handle("profiles:activate", async (_e, cwd: string, name: string) => {
 ipcMain.handle("profiles:deactivate", async (_e, cwd: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("profiles:deactivate requires cwd");
   deactivateProfile(cwd);
+});
+ipcMain.handle("profiles:catalog", async () => listProfileCatalog());
+ipcMain.handle("profiles:install", async (_e, name: string) => {
+  if (typeof name !== "string" || !name) throw new Error("profiles:install requires name");
+  installCatalogProfile(name);
+});
+ipcMain.handle("digital-human-teams:list", async () => listDigitalHumanTeams());
+ipcMain.handle("digital-human-teams:save", async (_e, team: unknown) =>
+  saveDigitalHumanTeam(team as import("@cjhyy/code-shell-pet").DigitalHumanTeam),
+);
+ipcMain.handle("digital-human-teams:delete", async (_e, id: string) => {
+  if (typeof id !== "string" || !id) throw new Error("digital-human-teams:delete requires id");
+  deleteDigitalHumanTeam(id);
 });
 ipcMain.handle("plugins:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");

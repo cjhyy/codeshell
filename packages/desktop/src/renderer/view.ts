@@ -1,6 +1,7 @@
 export type ViewMode =
   | "chat"
   | "pet" // first-class Pet workspace; never layered over chat
+  | "digital_humans" // market, installed digital humans, and Pet-led teams
   | "sessions"
   | "approvals"
   | "runs"
@@ -38,6 +39,7 @@ const DEFAULT: ViewState = {
 const VALID_MODES: ReadonlySet<ViewMode> = new Set([
   "chat",
   "pet",
+  "digital_humans",
   "sessions",
   "approvals",
   "runs",

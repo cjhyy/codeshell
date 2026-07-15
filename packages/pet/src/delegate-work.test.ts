@@ -19,6 +19,10 @@ const REUSABLE_SESSIONS = [
     description: "completed",
   },
 ];
+const DIGITAL_HUMANS = [
+  { id: "researcher", name: "研究员" },
+  { id: "developer", name: "开发者" },
+];
 
 function context() {
   const recorded: Array<{ workspaceId: string; objective: string }> = [];
@@ -26,6 +30,7 @@ function context() {
     runScopedServices: {
       petWorkspaces: WORKSPACES,
       petReusableSessions: REUSABLE_SESSIONS,
+      petDigitalHumans: [],
       requestPetWorkDelegation: (request: { workspaceId: string; objective: string }) => {
         if (recorded.length > 0) return { ok: false, error: "only one delegation is allowed" };
         recorded.push(request);
@@ -103,6 +108,54 @@ describe("DelegateWork", () => {
       ),
     ).toContain("does not belong");
     expect(second.recorded).toEqual([]);
+  });
+
+  test("closes delegation to the selected digital-human team", async () => {
+    const recorded: unknown[] = [];
+    const ctx = {
+      runScopedServices: {
+        petWorkspaces: WORKSPACES,
+        petReusableSessions: [],
+        petDigitalHumans: DIGITAL_HUMANS,
+        requestPetWorkDelegation: (request: unknown) => {
+          recorded.push(request);
+          return { ok: true };
+        },
+      },
+    } as unknown as ToolContext;
+    const definition = delegateWorkToolDefFor(WORKSPACES, [], DIGITAL_HUMANS);
+    expect(
+      (definition.inputSchema.properties as Record<string, { enum?: string[] }>).digital_human_id
+        ?.enum,
+    ).toEqual(["researcher", "developer"]);
+    expect(definition.inputSchema.required).toContain("digital_human_id");
+    expect(
+      await delegateWorkTool(
+        {
+          workspace_id: "workspace-a",
+          digital_human_id: "developer",
+          objective: "implement the feature",
+        },
+        ctx,
+      ),
+    ).toContain("开发者");
+    expect(recorded).toEqual([
+      {
+        workspaceId: "workspace-a",
+        digitalHumanId: "developer",
+        objective: "implement the feature",
+      },
+    ]);
+    expect(
+      await delegateWorkTool(
+        {
+          workspace_id: "workspace-a",
+          digital_human_id: "invented",
+          objective: "do not run",
+        },
+        ctx,
+      ),
+    ).toContain("unknown digital_human_id");
   });
 });
 
@@ -189,5 +242,20 @@ describe("validatePetRunParams", () => {
         },
       }),
     ).toBe("profileParams.reusableSessions contains an invalid or duplicate reusable Session");
+  });
+
+  test("rejects malformed canonical digital humans", () => {
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: {
+          digitalHumans: [
+            { id: "duplicate", name: "One" },
+            { id: "duplicate", name: "Two" },
+          ],
+        },
+      }),
+    ).toBe("profileParams.digitalHumans contains an invalid or duplicate digital human");
   });
 });

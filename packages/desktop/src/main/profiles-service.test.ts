@@ -3,7 +3,13 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { saveWorkspaceProfile } from "@cjhyy/code-shell-core";
-import { activateProfile, deactivateProfile, listProfiles } from "./profiles-service.js";
+import {
+  activateProfile,
+  deactivateProfile,
+  installCatalogProfile,
+  listProfileCatalog,
+  listProfiles,
+} from "./profiles-service.js";
 
 let home: string;
 let cwd: string;
@@ -42,10 +48,31 @@ describe("desktop profiles service", () => {
         name: "seedance",
         label: "Seedance",
         description: undefined,
+        basePreset: "general",
+        plugins: [],
+        skills: [],
+        mcp: [],
+        agents: [],
         active: true,
         portableMemory: false,
+        version: undefined,
       },
     ]);
+  });
+
+  test("lists the library without a selected workspace", () => {
+    expect(listProfiles()[0]).toMatchObject({ name: "seedance", active: false });
+  });
+
+  test("installs a starter digital human from the local catalog", () => {
+    expect(listProfileCatalog().find((entry) => entry.name === "product-researcher")?.installed).toBe(
+      false,
+    );
+    installCatalogProfile("product-researcher");
+    expect(listProfiles().some((entry) => entry.name === "product-researcher")).toBe(true);
+    expect(listProfileCatalog().find((entry) => entry.name === "product-researcher")?.installed).toBe(
+      true,
+    );
   });
 
   test("activate writes the subtree; deactivate removes it", () => {

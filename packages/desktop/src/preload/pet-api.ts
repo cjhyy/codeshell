@@ -92,6 +92,8 @@ export type PetDispatchCommand =
       message: string;
       clientMessageId?: string;
       preferredProjectPath?: string;
+      digitalHumanId?: string;
+      digitalHumanTeamId?: string;
     };
 
 export type PetDispatchResult =
@@ -124,9 +126,18 @@ export type PetDispatchResult =
         clientMessageId: string;
         task: string;
         workspacePath: string | null;
+        digitalHumanId?: string;
         sessionId: string;
         reusedSession: boolean;
       };
+      delegations?: Array<{
+        clientMessageId: string;
+        task: string;
+        workspacePath: string | null;
+        digitalHumanId?: string;
+        sessionId: string;
+        reusedSession: boolean;
+      }>;
       delegationError?: string;
     };
 

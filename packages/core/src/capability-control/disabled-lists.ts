@@ -19,6 +19,7 @@ import {
   effectiveProjectOverrides,
   whitelistDisabledList,
 } from "./overlay.js";
+import type { CapabilityOverrides } from "../settings/schema.js";
 
 export interface EffectiveDisabledLists {
   disabledSkills: string[];
@@ -35,6 +36,7 @@ export interface EffectiveDisabledLists {
 export function computeEffectiveDisabledLists(
   sm: SettingsManager,
   cwd: string | undefined,
+  explicitProfileOverrides?: CapabilityOverrides,
 ): EffectiveDisabledLists {
   try {
     const settings = sm.get() as {
@@ -44,7 +46,7 @@ export function computeEffectiveDisabledLists(
     // Read the project overlay UNMERGED (getForScope), not the merged get(),
     // so tri-state inheritance survives. No cwd / no overlay → the baseline
     // is returned unchanged (zero regression).
-    const overrides = effectiveProjectOverrides(sm, cwd);
+    const overrides = effectiveProjectOverrides(sm, cwd, explicitProfileOverrides);
     // no-repo "conversation" scope: INVERT skill/plugin filtering to a
     // whitelist (default-all-off, only explicit "on" survives). Only this
     // fixed cwd flips; every real project keeps the denylist below. agent/

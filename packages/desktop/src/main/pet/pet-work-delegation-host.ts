@@ -83,6 +83,7 @@ export class PetWorkDelegationHost {
         cwd,
         clientMessageId: workClientMessageId,
         permissionMode: "default",
+        ...(delegation.digitalHumanId ? { workspaceProfile: delegation.digitalHumanId } : {}),
         ...(delegation.targetSessionId ? { requireExisting: true } : {}),
       },
     });

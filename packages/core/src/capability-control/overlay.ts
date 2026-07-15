@@ -177,6 +177,7 @@ export function mergeCapabilityOverrides(
 export function effectiveProjectOverrides(
   settings: Pick<SettingsManager, "getForScope">,
   cwd: string | undefined,
+  explicitProfileOverrides?: CapabilityOverrides,
 ): CapabilityOverrides | undefined {
   if (!cwd) return undefined;
   try {
@@ -184,7 +185,10 @@ export function effectiveProjectOverrides(
       capabilityOverrides?: CapabilityOverrides;
       profile?: { overrides?: CapabilityOverrides };
     };
-    return mergeCapabilityOverrides(scoped.profile?.overrides, scoped.capabilityOverrides);
+    return mergeCapabilityOverrides(
+      explicitProfileOverrides ?? scoped.profile?.overrides,
+      scoped.capabilityOverrides,
+    );
   } catch {
     return undefined;
   }

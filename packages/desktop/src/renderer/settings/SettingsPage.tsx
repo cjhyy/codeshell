@@ -32,7 +32,6 @@ import { AgentsSection } from "./AgentsSection";
 import { SandboxSection } from "./SandboxSection";
 import { AppearanceSection } from "./AppearanceSection";
 import { CapabilitiesOverviewSection } from "./CapabilitiesOverviewSection";
-import { ProfileSection } from "./ProfileSection";
 import { ConversationSettingsSection } from "./ConversationSettingsSection";
 import { ContextSettingsSection } from "./ContextSettingsSection";
 import {
@@ -269,7 +268,6 @@ export function SettingsPage({
                     if (next) setActive(next);
                   }}
                 />
-                {activeProjectPath ? <ProfileSection cwd={activeProjectPath} /> : null}
               </>
             )}
             {active === "mcp" && <McpSection scope={scope} activeProjectPath={activeProjectPath} />}

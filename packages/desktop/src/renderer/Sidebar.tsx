@@ -13,6 +13,7 @@ import {
   Archive,
   Clock,
   Loader2,
+  UsersRound,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -59,6 +60,7 @@ interface SidebarProps {
   onOpenSearch: () => void;
   onOpenAutomations: () => void;
   onOpenCustomize: () => void;
+  onOpenDigitalHumans: () => void;
   onOpenCredentials: () => void;
   onOpenSettingsPage: () => void;
   onOpenPetPage: () => void;
@@ -105,6 +107,7 @@ export function Sidebar({
   onOpenSearch,
   onOpenAutomations,
   onOpenCustomize,
+  onOpenDigitalHumans,
   onOpenCredentials,
   onOpenSettingsPage,
   onOpenPetPage,
@@ -252,6 +255,12 @@ export function Sidebar({
           Icon={Search}
           onClick={onOpenSearch}
           active={false}
+        />
+        <SidebarItem
+          label={t("sidebar.digitalHumans")}
+          Icon={UsersRound}
+          onClick={onOpenDigitalHumans}
+          active={viewMode === "digital_humans"}
         />
         <SidebarItem
           label={t("sidebar.extensions")}

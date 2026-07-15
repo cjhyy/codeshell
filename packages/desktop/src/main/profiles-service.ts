@@ -8,27 +8,43 @@ import {
   activateWorkspaceProfile,
   deactivateWorkspaceProfile,
   listWorkspaceProfiles,
+  readWorkspaceProfile,
   resolveActiveWorkspaceProfile,
+  saveWorkspaceProfile,
   SettingsManager,
 } from "@cjhyy/code-shell-core";
+import { DIGITAL_HUMAN_CATALOG, type DigitalHumanCatalogEntry } from "./digital-human-catalog.js";
 
 export interface ProfileListEntry {
   name: string;
   label: string;
   description: string | undefined;
+  basePreset: string;
+  plugins: string[];
+  skills: string[];
+  mcp: string[];
+  agents: string[];
   active: boolean;
   portableMemory: boolean;
+  version: string | undefined;
 }
 
-export function listProfiles(cwd: string): ProfileListEntry[] {
-  const settings = new SettingsManager(cwd, "full");
-  const active = resolveActiveWorkspaceProfile({ cwd, settings })?.name;
+export function listProfiles(cwd?: string): ProfileListEntry[] {
+  const active = cwd
+    ? resolveActiveWorkspaceProfile({ cwd, settings: new SettingsManager(cwd, "full") })?.name
+    : undefined;
   return listWorkspaceProfiles().map((profile) => ({
     name: profile.name,
     label: profile.label,
     description: profile.description,
+    basePreset: profile.basePreset,
+    plugins: profile.plugins,
+    skills: profile.skills,
+    mcp: profile.mcp,
+    agents: profile.agents,
     active: profile.name === active,
     portableMemory: profile.portableMemory,
+    version: profile.version,
   }));
 }
 
@@ -40,4 +56,20 @@ export function activateProfile(cwd: string, name: string): void {
 export function deactivateProfile(cwd: string): void {
   const settings = new SettingsManager(cwd, "full");
   deactivateWorkspaceProfile(settings, cwd);
+}
+
+export type ProfileCatalogEntry = DigitalHumanCatalogEntry & { installed: boolean };
+
+export function listProfileCatalog(): ProfileCatalogEntry[] {
+  return DIGITAL_HUMAN_CATALOG.map((entry) => ({
+    ...entry,
+    installed: readWorkspaceProfile(entry.name) !== undefined,
+  }));
+}
+
+export function installCatalogProfile(name: string): void {
+  const entry = DIGITAL_HUMAN_CATALOG.find((candidate) => candidate.name === name);
+  if (!entry) throw new Error(`Unknown digital human catalog entry "${name}"`);
+  const { category: _category, tags: _tags, ...profile } = entry;
+  saveWorkspaceProfile(profile);
 }

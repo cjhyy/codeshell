@@ -632,6 +632,21 @@ export class SessionManager {
     }
   }
 
+  /** Cheap durable digital-human binding read. */
+  readSessionWorkspaceProfile(sessionId: string): string | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+      const stateFile = join(this.sessionsDir, sessionId, "state.json");
+      if (!existsSync(stateFile)) return undefined;
+      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+      return typeof state.workspaceProfile === "string" && state.workspaceProfile
+        ? state.workspaceProfile
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   /** @deprecated Use readSessionMainRoot; retained for public API compatibility. */
   readCwd(sessionId: string): string | undefined {
     return this.readSessionMainRoot(sessionId);

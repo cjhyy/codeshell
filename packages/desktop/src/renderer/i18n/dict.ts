@@ -33,6 +33,7 @@ import { automation } from "./ns/automation";
 import { misc } from "./ns/misc";
 import { mobile } from "@cjhyy/code-shell-web";
 import { pet } from "./ns/pet";
+import { digitalHumans } from "./ns/digital-humans";
 
 export const messages = {
   zh: {
@@ -46,6 +47,7 @@ export const messages = {
     ...misc.zh,
     ...mobile.zh,
     ...pet.zh,
+    ...digitalHumans.zh,
   },
   en: {
     ...core.en,
@@ -58,6 +60,7 @@ export const messages = {
     ...misc.en,
     ...mobile.en,
     ...pet.en,
+    ...digitalHumans.en,
   },
 } as const;
 

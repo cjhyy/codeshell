@@ -44,6 +44,8 @@ export interface TurnOpts {
   behaviorMode?: RunBehaviorMode;
   /** Generic per-run parameters consumed by the active behavior profile. */
   profileParams?: Record<string, unknown>;
+  /** Digital human to bind durably to this Work Session. */
+  workspaceProfile?: string;
   /** @deprecated Compat alias for `profileParams.runtimeContext`. */
   petRuntimeContext?: string;
   /** @deprecated Compat alias for `profileParams.workspaces`. */
@@ -380,6 +382,7 @@ export class ChatSession {
         planMode: next.opts.planMode,
         behaviorMode: next.opts.behaviorMode,
         profileParams: next.opts.profileParams,
+        workspaceProfile: next.opts.workspaceProfile,
         petRuntimeContext: next.opts.petRuntimeContext,
         petWorkspaces: next.opts.petWorkspaces,
         kind: next.opts.kind,

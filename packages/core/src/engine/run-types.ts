@@ -95,6 +95,8 @@ export interface EngineRunOptions {
    * Never persisted; never part of `task`.
    */
   profileParams?: Record<string, unknown>;
+  /** Digital human bound to this Work Session; persisted on first use. */
+  workspaceProfile?: string;
   /**
    * @deprecated Compat alias for `profileParams.runtimeContext` — bounded host
    * Pet world JSON; model-visible for this run, never persisted.

@@ -64,4 +64,18 @@ describe("computeEffectiveDisabledLists", () => {
     const r = computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd);
     expect(r.disabledPluginHooks).toEqual(["p:SessionStart:echo hi"]);
   });
+
+  test("an explicit session profile replaces the Workspace profile while user overrides still win", () => {
+    seed(home, { disabledPlugins: ["session-plugin", "manual-off"] });
+    seed(cwd, {
+      profile: { active: "workspace", overrides: { plugins: { "workspace-plugin": "on" } } },
+      capabilityOverrides: { plugins: { "manual-off": "off" } },
+    });
+    const r = computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd, {
+      plugins: { "session-plugin": "on", "manual-off": "on" },
+    });
+    expect(r.disabledPlugins).not.toContain("session-plugin");
+    expect(r.disabledPlugins).toContain("manual-off");
+    expect(r.disabledPlugins).not.toContain("workspace-plugin");
+  });
 });

@@ -106,7 +106,7 @@ import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { SettingsManager, userHome } from "../settings/manager.js";
 import { getCredentialAccess } from "../credentials/access.js";
-import type { CapabilityOverride } from "../settings/schema.js";
+import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import {
   isFeatureEnabled,
   resolveFeatureFlags,
@@ -124,6 +124,7 @@ import type { ToolContext } from "../tool-system/context.js";
 import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
 import { resolveActiveWorkspaceProfile } from "../profile/resolve.js";
 import { workspaceProfileDir } from "../profile/store.js";
+import { profileOverridesFromDefinition } from "../profile/activation.js";
 import {
   composeDynamicContextProviders,
   composeCapabilityEngineHooks,
@@ -1271,6 +1272,20 @@ export class Engine {
       );
     }
     const sessionKind = persistedSessionKind ?? options?.kind ?? "work";
+    const persistedWorkspaceProfile =
+      options?.sessionId && this.sessionManager.exists(options.sessionId)
+        ? this.sessionManager.readSessionWorkspaceProfile(options.sessionId)
+        : undefined;
+    if (
+      persistedWorkspaceProfile &&
+      options?.workspaceProfile &&
+      persistedWorkspaceProfile !== options.workspaceProfile
+    ) {
+      throw new Error(
+        `session workspace profile mismatch: persisted ${persistedWorkspaceProfile}, requested ${options.workspaceProfile}`,
+      );
+    }
+    const sessionWorkspaceProfile = options?.workspaceProfile ?? persistedWorkspaceProfile;
     const profile = this.resolveBehaviorProfile(sessionKind, options?.behaviorMode);
     // Normalize per-run profile parameters. The legacy pet-named run options
     // fold into the generic bag (runtimeContext / workspaces) so existing
@@ -1342,6 +1357,18 @@ export class Engine {
         configCwd: this.config.cwd,
         processCwd: process.cwd(),
       });
+    const runWorkspaceProfile = resolveActiveWorkspaceProfile({
+      ...(sessionWorkspaceProfile ? { sessionProfile: sessionWorkspaceProfile } : {}),
+      cwd,
+      settings: this.getSettingsManager(),
+    });
+    if (sessionWorkspaceProfile && !runWorkspaceProfile) {
+      throw new Error(`Workspace profile "${sessionWorkspaceProfile}" is unavailable`);
+    }
+    const sessionProfileOverrides =
+      sessionWorkspaceProfile && runWorkspaceProfile
+        ? profileOverridesFromDefinition(runWorkspaceProfile)
+        : undefined;
 
     // Wrap the caller's onStream so we can intercept `task_update`
     // events emitted by TodoWrite and keep an in-engine snapshot.
@@ -1457,12 +1484,12 @@ export class Engine {
     // intentionally shaped as a mutable local; we treat it as immutable
     // after the assignment.
     const toolCtx: ToolContext = {
-      ...this.buildToolContext(),
+      ...this.buildToolContext(cwd, sessionProfileOverrides),
       approvalRouter: options?.approvalRouter ?? this.config.approvalRouter,
       permissionMode: runPermissionMode,
       planMode: runPlanMode,
       subAgentSpawner,
-      agentDefinitions: this.getAgentDefinitions(cwd),
+      agentDefinitions: this.getAgentDefinitions(cwd, sessionProfileOverrides),
       // Stamp the resolved network policy onto the backend the tools see so
       // Bash can surface "网络 deny" on its result. Shallow-copy (don't mutate
       // the cached backend) — `wrap`/`hintForBlockedOutput` are plain function
@@ -1660,6 +1687,12 @@ export class Engine {
     // or tool calls it spans. File-history snapshots taken below are tagged
     // with this value so `/undo` reverts exactly this turn's file changes.
     // (Both resume and cold-start paths converge here.)
+    if (sessionWorkspaceProfile && session.state.workspaceProfile !== sessionWorkspaceProfile) {
+      session.state.workspaceProfile = sessionWorkspaceProfile;
+      this.sessionManager.saveStateOrUpdateFields(session.state, {
+        workspaceProfile: sessionWorkspaceProfile,
+      });
+    }
     session.state.turnSeq = (session.state.turnSeq ?? 0) + 1;
 
     // B2 / Gate 1: stamp the resolved sid onto the tool context so
@@ -1913,13 +1946,13 @@ export class Engine {
           (visibilityStoredGoal !== undefined && visibilityStoredGoal.paused !== true) ||
           (visibilityDefaultGoal !== undefined && visibilityDefaultGoal.paused !== true));
 
-      const { disabledSkills, disabledPlugins } = this.readDisabledLists();
+      const { disabledSkills, disabledPlugins } = this.readDisabledLists(
+        cwd,
+        sessionProfileOverrides,
+      );
       // WorkspaceProfile（数字人）：mainInstruction 从库活读（settings 只记名字）。
       // 命名注意：局部变量 `profile` 已被 RunBehaviorProfile 占用。
-      const workspaceProfile = resolveActiveWorkspaceProfile({
-        cwd,
-        settings: this.getSettingsManager(),
-      });
+      const workspaceProfile = runWorkspaceProfile;
       const promptComposer = new PromptComposer({
         cwd,
         model: this.config.llm.model,
@@ -2014,7 +2047,7 @@ export class Engine {
       // but `on` for a tool already present is a no-op (it stays). This makes a
       // builtin toggle take effect on the NEXT message, like other capability
       // kinds, without touching the registry.
-      const builtinOverride = this.readBuiltinOverride(guardCwd);
+      const builtinOverride = this.readBuiltinOverride(guardCwd, sessionProfileOverrides);
       // Turn `off` from a prompt-visibility filter into a real execution gate:
       // collect the builtin tool names the override marks `off` and hand them to
       // the executor (via the shared toolCtx the executor already holds a
@@ -3883,9 +3916,12 @@ export class Engine {
    * directory is read once rather than every turn. A new cwd (e.g. via
    * run({ cwd })) reloads.
    */
-  private getAgentDefinitions(cwd: string): AgentDefinitionRegistry {
-    const disabledAgents = this.readDisabledAgents(cwd);
-    const disabledPlugins = this.readDisabledLists().disabledPlugins;
+  private getAgentDefinitions(
+    cwd: string,
+    explicitProfileOverrides?: CapabilityOverrides,
+  ): AgentDefinitionRegistry {
+    const disabledAgents = this.readDisabledAgents(cwd, explicitProfileOverrides);
+    const disabledPlugins = this.readDisabledLists(cwd, explicitProfileOverrides).disabledPlugins;
     const disabledKey = [...disabledAgents, "::", ...disabledPlugins].slice().sort().join(" ");
     if (this.agentDefsCache?.cwd !== cwd || this.agentDefsCache.disabledKey !== disabledKey) {
       this.agentDefsCache = {
@@ -3906,12 +3942,15 @@ export class Engine {
    * (getForScope) so inherit survives. No cwd / no overlay → baseline
    * unchanged. Mirrors readDisabledLists (skills/plugins).
    */
-  private readDisabledAgents(cwd?: string): string[] {
+  private readDisabledAgents(
+    cwd?: string,
+    explicitProfileOverrides?: CapabilityOverrides,
+  ): string[] {
     try {
       const sm = this.getSettingsManager();
       const settings = sm.get() as { disabledAgents?: string[] };
       const baseline = Array.isArray(settings.disabledAgents) ? settings.disabledAgents : [];
-      const overrides = effectiveProjectOverrides(sm, cwd);
+      const overrides = effectiveProjectOverrides(sm, cwd, explicitProfileOverrides);
       return effectiveDisabledList(baseline, overrides?.agents);
     } catch {
       return [];
@@ -3925,10 +3964,17 @@ export class Engine {
    * are already narrowed by resolveChildToolScope. No cwd / error → undefined,
    * so the caller's baseline builtin lists pass through unchanged.
    */
-  private readBuiltinOverride(cwd?: string): Record<string, CapabilityOverride> | undefined {
+  private readBuiltinOverride(
+    cwd?: string,
+    explicitProfileOverrides?: CapabilityOverrides,
+  ): Record<string, CapabilityOverride> | undefined {
     if (this.config.isSubAgent === true || !cwd) return undefined;
     try {
-      const overrides = effectiveProjectOverrides(this.getSettingsManager(), cwd);
+      const overrides = effectiveProjectOverrides(
+        this.getSettingsManager(),
+        cwd,
+        explicitProfileOverrides,
+      );
       return overrides?.builtin;
     } catch {
       return undefined;
@@ -3940,8 +3986,14 @@ export class Engine {
    * overlays turn-specific fields like sandbox and subAgentSpawner) and
    * by tests that want a ToolContext without a full run() cycle.
    */
-  buildToolContext(): ToolContext {
-    const { disabledSkills, disabledPlugins } = this.readDisabledLists();
+  buildToolContext(
+    cwd = this.config.cwd ?? process.cwd(),
+    explicitProfileOverrides?: CapabilityOverrides,
+  ): ToolContext {
+    const { disabledSkills, disabledPlugins } = this.readDisabledLists(
+      cwd,
+      explicitProfileOverrides,
+    );
     const capabilityServices = Object.fromEntries(
       this.capabilities.flatMap((capability) => {
         if (!capability.createToolService) return [];
@@ -3956,8 +4008,8 @@ export class Engine {
       }),
     );
     const ctx: ToolContext = {
-      shellEnv: this.runEnvironmentResolver.readShellEnv(this.config.cwd),
-      cwd: this.config.cwd ?? process.cwd(),
+      shellEnv: this.runEnvironmentResolver.readShellEnv(cwd),
+      cwd,
       llmConfig: this.config.llm,
       modelPool: this.modelPool,
       toolRegistry: this.toolRegistry,
@@ -4004,7 +4056,10 @@ export class Engine {
    * reads — the prompt composer and the tool context will always see
    * the same snapshot.
    */
-  private readDisabledLists(): {
+  private readDisabledLists(
+    cwd = this.config.cwd,
+    explicitProfileOverrides?: CapabilityOverrides,
+  ): {
     disabledSkills: string[];
     disabledPlugins: string[];
     disabledPluginHooks: string[];
@@ -4016,7 +4071,11 @@ export class Engine {
     // capabilityOverrides over the global baseline + the no-repo whitelist
     // inversion. Extracted so the MCP merge consumers (engineFactory /
     // diskDefaultsFrom) fold identically — see that module's doc.
-    return computeEffectiveDisabledLists(this.getSettingsManager(), this.config.cwd);
+    return computeEffectiveDisabledLists(
+      this.getSettingsManager(),
+      cwd,
+      explicitProfileOverrides,
+    );
   }
 
   /**

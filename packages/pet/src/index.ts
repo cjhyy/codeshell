@@ -10,6 +10,7 @@
 
 export * from "./types.js";
 export * from "./delegation.js";
+export * from "./team.js";
 export * from "./protocol.js";
 export { SessionIndex } from "./session-index.js";
 export { PendingDecisionIndex, safePendingTitle } from "./pending-decision-index.js";

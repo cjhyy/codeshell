@@ -8,6 +8,8 @@ import type {
   PetReusableSessionOption,
   PetWorkspaceOption,
   PetWorkDelegation,
+  DigitalHumanTeam,
+  PetDigitalHumanOption,
 } from "@cjhyy/code-shell-pet";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server";
 
@@ -17,6 +19,8 @@ export interface PetAutoDelegation {
   workspacePath: string | null;
   /** Existing host-validated Work Session to continue; absent means create. */
   targetSessionId?: string;
+  /** Host-validated profile name bound to the new Work Session. */
+  digitalHumanId?: string;
 }
 
 export type PetStartedDelegation = Omit<PetAutoDelegation, "targetSessionId"> & {
@@ -41,6 +45,8 @@ export type PetDispatchCommand =
       message: string;
       clientMessageId?: string;
       preferredProjectPath?: string;
+      digitalHumanId?: string;
+      digitalHumanTeamId?: string;
       attachments?: InputAttachmentMeta[];
       source?: { kind: "im-gateway"; channel: string };
     };
@@ -72,6 +78,7 @@ export type PetDispatchResult =
       petSessionId: string;
       result: unknown;
       delegation?: PetStartedDelegation;
+      delegations?: PetStartedDelegation[];
       /**
        * Present when Mimi decided to delegate but the Work Session could not be
        * launched. The chat turn still succeeds (her reply is in `result`); this
@@ -95,6 +102,8 @@ interface PetDispatchOptions {
   hostCwd: string;
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
   listReusableSessions?(): Promise<PetReusableSessionCandidate[]>;
+  listDigitalHumans?(): Promise<Array<{ name: string; label: string; description?: string }>>;
+  listDigitalHumanTeams?(): Promise<DigitalHumanTeam[]>;
   startWorkSession?(delegation: PetAutoDelegation): Promise<{ sessionId: string; cwd: string }>;
 }
 
@@ -118,23 +127,9 @@ function reusableSessionId(sessionId: string): string {
   return `session-${createHash("sha256").update(sessionId).digest("hex").slice(0, 20)}`;
 }
 
-function readPetWorkDelegation(result: unknown): PetWorkDelegation | null {
-  if (!result || typeof result !== "object" || Array.isArray(result)) return null;
-  // New shape: RunResult.extensions.pet.workDelegation (generic result slot);
-  // legacy petWorkDelegation mirror kept as fallback for older workers.
-  const extensions = (result as { extensions?: unknown }).extensions;
-  const petExtension =
-    extensions && typeof extensions === "object" && !Array.isArray(extensions)
-      ? (extensions as { pet?: unknown }).pet
-      : undefined;
-  const fromExtensions =
-    petExtension && typeof petExtension === "object" && !Array.isArray(petExtension)
-      ? (petExtension as { workDelegation?: unknown }).workDelegation
-      : undefined;
-  const delegation =
-    fromExtensions ?? (result as { petWorkDelegation?: unknown }).petWorkDelegation;
-  if (!delegation || typeof delegation !== "object" || Array.isArray(delegation)) return null;
-  const record = delegation as Record<string, unknown>;
+function parsePetWorkDelegation(value: unknown): PetWorkDelegation | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
   if (
     typeof record.workspaceId !== "string" ||
     !record.workspaceId.trim() ||
@@ -149,13 +144,46 @@ function readPetWorkDelegation(result: unknown): PetWorkDelegation | null {
   ) {
     return null;
   }
+  if (
+    record.digitalHumanId !== undefined &&
+    (typeof record.digitalHumanId !== "string" || !record.digitalHumanId.trim())
+  ) {
+    return null;
+  }
   return {
-    workspaceId: record.workspaceId,
+    workspaceId: record.workspaceId.trim(),
     objective: record.objective.trim(),
+    ...(typeof record.digitalHumanId === "string"
+      ? { digitalHumanId: record.digitalHumanId.trim() }
+      : {}),
     ...(typeof record.reusableSessionId === "string"
       ? { reusableSessionId: record.reusableSessionId.trim() }
       : {}),
   };
+}
+
+function readPetWorkDelegations(result: unknown): PetWorkDelegation[] {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return [];
+  // New shape: RunResult.extensions.pet.workDelegation (generic result slot);
+  // legacy petWorkDelegation mirror kept as fallback for older workers.
+  const extensions = (result as { extensions?: unknown }).extensions;
+  const petExtension =
+    extensions && typeof extensions === "object" && !Array.isArray(extensions)
+      ? (extensions as { pet?: unknown }).pet
+      : undefined;
+  const petResults =
+    petExtension && typeof petExtension === "object" && !Array.isArray(petExtension)
+      ? (petExtension as { workDelegation?: unknown; workDelegations?: unknown })
+      : undefined;
+  if (Array.isArray(petResults?.workDelegations)) {
+    if (petResults.workDelegations.length > 8) return [];
+    const parsed = petResults.workDelegations.map(parsePetWorkDelegation);
+    return parsed.every((entry): entry is PetWorkDelegation => entry !== null) ? parsed : [];
+  }
+  const delegation =
+    petResults?.workDelegation ?? (result as { petWorkDelegation?: unknown }).petWorkDelegation;
+  const parsed = parsePetWorkDelegation(delegation);
+  return parsed ? [parsed] : [];
 }
 
 function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<string, unknown> {
@@ -244,10 +272,54 @@ export class PetDispatchService {
           return { ok: false, code: "invalid-command" };
         }
         const metadata = await this.options.metadata.ensure();
-        const [listedWorkspaces, listedReusableSessions] = await Promise.all([
-          this.options.listWorkspaces?.() ?? [],
-          this.options.listReusableSessions?.() ?? [],
-        ]);
+        if (command.digitalHumanId && command.digitalHumanTeamId) {
+          return {
+            ok: false,
+            code: "invalid-command",
+            message: "Choose either one digital human or one team",
+          };
+        }
+        const [listedWorkspaces, listedReusableSessions, listedDigitalHumans, listedTeams] =
+          await Promise.all([
+            this.options.listWorkspaces?.() ?? [],
+            this.options.listReusableSessions?.() ?? [],
+            this.options.listDigitalHumans?.() ?? [],
+            this.options.listDigitalHumanTeams?.() ?? [],
+          ]);
+        const digitalHumanByName = new Map(
+          listedDigitalHumans.map((profile) => [profile.name, profile] as const),
+        );
+        let selectedTeam: DigitalHumanTeam | undefined;
+        let selectedDigitalHumanNames: string[] = [];
+        if (command.digitalHumanTeamId) {
+          selectedTeam = listedTeams.find((team) => team.id === command.digitalHumanTeamId);
+          if (!selectedTeam) {
+            return {
+              ok: false,
+              code: "invalid-command",
+              message: "The selected digital-human team no longer exists",
+            };
+          }
+          selectedDigitalHumanNames = selectedTeam.members;
+        } else if (command.digitalHumanId) {
+          selectedDigitalHumanNames = [command.digitalHumanId];
+        }
+        const selectedDigitalHumans: PetDigitalHumanOption[] = [];
+        for (const name of selectedDigitalHumanNames) {
+          const profile = digitalHumanByName.get(name);
+          if (!profile) {
+            return {
+              ok: false,
+              code: "invalid-command",
+              message: `Digital human "${name}" no longer exists`,
+            };
+          }
+          selectedDigitalHumans.push({
+            id: profile.name,
+            name: profile.label,
+            ...(profile.description ? { description: profile.description } : {}),
+          });
+        }
         const workspacePathById = new Map<string, string | null>([[NO_WORKSPACE_ID, null]]);
         const workspaceIdByPath = new Map<string, string>();
         const petWorkspaces: PetWorkspaceOption[] = [
@@ -288,7 +360,7 @@ export class PetDispatchService {
         >();
         const reusableSessionCounts = new Map<string, number>();
         const petReusableSessions: PetReusableSessionOption[] = [];
-        for (const candidate of listedReusableSessions) {
+        for (const candidate of selectedDigitalHumans.length > 0 ? [] : listedReusableSessions) {
           if (
             petReusableSessions.length >= 32 ||
             !candidate.sessionId ||
@@ -321,6 +393,16 @@ export class PetDispatchService {
           ...boundedWorld(snapshot),
           workspaces: petWorkspaces,
           reusableSessions: petReusableSessions,
+          digitalHumans: selectedDigitalHumans,
+          ...(selectedTeam
+            ? {
+                selectedTeam: {
+                  id: selectedTeam.id,
+                  name: selectedTeam.name,
+                  mode: selectedTeam.mode,
+                },
+              }
+            : {}),
           ...(command.source
             ? {
                 currentMessageSource: {
@@ -340,6 +422,8 @@ export class PetDispatchService {
             runtimeContext: JSON.stringify(world),
             workspaces: petWorkspaces,
             reusableSessions: petReusableSessions,
+            digitalHumans: selectedDigitalHumans,
+            ...(selectedTeam ? { teamMode: selectedTeam.mode, teamName: selectedTeam.name } : {}),
           },
           cwd: this.options.hostCwd,
           behaviorMode: "pet",
@@ -350,40 +434,84 @@ export class PetDispatchService {
         if (!response.ok) {
           return { ok: false, code: "worker-error", message: response.message };
         }
-        const workDelegation = readPetWorkDelegation(response.result);
-        if (workDelegation && !workspacePathById.has(workDelegation.workspaceId)) {
+        const workDelegations = readPetWorkDelegations(response.result);
+        if (workDelegations.some((entry) => !workspacePathById.has(entry.workspaceId))) {
           return {
             ok: false,
             code: "worker-error",
             message: "Mimi returned a Workspace outside the host-provided list",
           };
         }
-        const reusableSession = workDelegation?.reusableSessionId
-          ? reusableSessionById.get(workDelegation.reusableSessionId)
-          : undefined;
-        if (workDelegation?.reusableSessionId && !reusableSession) {
+        const selectedDigitalHumanIds = new Set(selectedDigitalHumans.map((human) => human.id));
+        if (
+          workDelegations.some(
+            (entry) =>
+              selectedDigitalHumanIds.size > 0
+                ? !entry.digitalHumanId || !selectedDigitalHumanIds.has(entry.digitalHumanId)
+                : entry.digitalHumanId !== undefined,
+          )
+        ) {
+          return {
+            ok: false,
+            code: "worker-error",
+            message: "Mimi returned a digital human outside the selected set",
+          };
+        }
+        if (
+          new Set(workDelegations.map((entry) => entry.digitalHumanId).filter(Boolean)).size !==
+          workDelegations.filter((entry) => entry.digitalHumanId).length
+        ) {
+          return {
+            ok: false,
+            code: "worker-error",
+            message: "Mimi assigned one digital human more than once",
+          };
+        }
+        const resolvedDelegations = workDelegations.map((entry) => ({
+          entry,
+          reusableSession: entry.reusableSessionId
+            ? reusableSessionById.get(entry.reusableSessionId)
+            : undefined,
+        }));
+        if (
+          resolvedDelegations.some(
+            ({ entry, reusableSession }) => entry.reusableSessionId && !reusableSession,
+          )
+        ) {
           return {
             ok: false,
             code: "worker-error",
             message: "Mimi returned a Session outside the host-provided reusable set",
           };
         }
-        if (reusableSession && reusableSession.workspaceId !== workDelegation?.workspaceId) {
+        if (
+          resolvedDelegations.some(
+            ({ entry, reusableSession }) =>
+              reusableSession && reusableSession.workspaceId !== entry.workspaceId,
+          )
+        ) {
           return {
             ok: false,
             code: "worker-error",
             message: "Mimi returned a reusable Session outside the selected Workspace",
           };
         }
-        let delegation: PetStartedDelegation | undefined;
+        let delegations: PetStartedDelegation[] = [];
         let delegationError: string | undefined;
-        if (workDelegation) {
-          const request: PetAutoDelegation = {
-            clientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
-            task: workDelegation.objective,
-            workspacePath: workspacePathById.get(workDelegation.workspaceId) ?? null,
-            ...(reusableSession ? { targetSessionId: reusableSession.sessionId } : {}),
-          };
+        if (resolvedDelegations.length > 0) {
+          const baseClientMessageId = command.clientMessageId ?? `pet-${randomUUID()}`;
+          const requests: PetAutoDelegation[] = resolvedDelegations.map(
+            ({ entry, reusableSession }, index) => ({
+              clientMessageId:
+                resolvedDelegations.length === 1
+                  ? baseClientMessageId
+                  : `${baseClientMessageId}:${index}:${entry.digitalHumanId ?? "work"}`,
+              task: entry.objective,
+              workspacePath: workspacePathById.get(entry.workspaceId) ?? null,
+              ...(entry.digitalHumanId ? { digitalHumanId: entry.digitalHumanId } : {}),
+              ...(reusableSession ? { targetSessionId: reusableSession.sessionId } : {}),
+            }),
+          );
           // A delegation-launch failure must not discard Mimi's already-generated
           // chat reply: the turn succeeded, only the side effect of starting the
           // Work Session failed. On IM channels a thrown error here would drop the
@@ -391,28 +519,47 @@ export class PetDispatchService {
           if (!this.options.startWorkSession) {
             delegationError = "Mimi work delegation host is unavailable";
           } else {
-            try {
-              const launched = await this.options.startWorkSession(request);
-              delegation = {
-                clientMessageId: request.clientMessageId,
-                task: request.task,
-                workspacePath: request.workspacePath,
-                sessionId: launched.sessionId,
-                reusedSession: Boolean(request.targetSessionId),
-              };
-            } catch (error) {
-              delegationError = `Mimi failed to start the delegated Work Session: ${
-                error instanceof Error ? error.message : String(error)
-              }`;
+            const outcomes = await Promise.allSettled(
+              requests.map((request) => this.options.startWorkSession!(request)),
+            );
+            delegations = outcomes.flatMap((outcome, index) => {
+              const request = requests[index]!;
+              if (outcome.status === "rejected") return [];
+              return [
+                {
+                  clientMessageId: request.clientMessageId,
+                  task: request.task,
+                  workspacePath: request.workspacePath,
+                  ...(request.digitalHumanId ? { digitalHumanId: request.digitalHumanId } : {}),
+                  sessionId: outcome.value.sessionId,
+                  reusedSession: Boolean(request.targetSessionId),
+                },
+              ];
+            });
+            const failures = outcomes.filter(
+              (outcome): outcome is PromiseRejectedResult => outcome.status === "rejected",
+            );
+            if (failures.length > 0) {
+              const failureMessage = failures
+                .map((failure) =>
+                  failure.reason instanceof Error ? failure.reason.message : String(failure.reason),
+                )
+                .join("; ");
+              delegationError =
+                failures.length === 1
+                  ? `Mimi failed to start the delegated Work Session: ${failureMessage}`
+                  : `Mimi failed to start ${failures.length} delegated Work Sessions: ${failureMessage}`;
             }
           }
         }
+        const delegation = delegations[0];
         return {
           ok: true,
           type: "chat",
           petSessionId: metadata.petSessionId,
           result: response.result,
           ...(delegation ? { delegation } : {}),
+          ...(selectedDigitalHumans.length > 0 ? { delegations } : {}),
           ...(delegationError ? { delegationError } : {}),
         };
       }

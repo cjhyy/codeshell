@@ -1281,17 +1281,47 @@ export interface CodeshellApi {
    * override key so the capability falls back to the global baseline.
    */
   setCapabilityOverride(cwd: string, id: string, state: "inherit" | "on" | "off"): Promise<void>;
-  listProfiles(cwd: string): Promise<
+  listProfiles(cwd?: string): Promise<
     Array<{
       name: string;
       label: string;
       description: string | undefined;
+      basePreset: string;
+      plugins: string[];
+      skills: string[];
+      mcp: string[];
+      agents: string[];
       active: boolean;
       portableMemory: boolean;
+      version: string | undefined;
     }>
   >;
   activateProfile(cwd: string, name: string): Promise<void>;
   deactivateProfile(cwd: string): Promise<void>;
+  listProfileCatalog(): Promise<
+    Array<{
+      name: string;
+      label: string;
+      description?: string;
+      basePreset: string;
+      plugins: string[];
+      skills: string[];
+      mcp: string[];
+      agents: string[];
+      mainInstruction?: string;
+      portableMemory: boolean;
+      version?: string;
+      category: "product" | "design" | "engineering" | "quality";
+      tags: string[];
+      installed: boolean;
+    }>
+  >;
+  installCatalogProfile(name: string): Promise<void>;
+  listDigitalHumanTeams(): Promise<import("@cjhyy/code-shell-pet").DigitalHumanTeam[]>;
+  saveDigitalHumanTeam(
+    team: import("@cjhyy/code-shell-pet").DigitalHumanTeam,
+  ): Promise<import("@cjhyy/code-shell-pet").DigitalHumanTeam>;
+  deleteDigitalHumanTeam(id: string): Promise<void>;
   /** Force context compaction for a live engine session. */
   compactSession(
     sessionId: string,

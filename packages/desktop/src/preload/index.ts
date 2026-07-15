@@ -936,10 +936,16 @@ contextBridge.exposeInMainWorld("codeshell", {
   ) => ipcRenderer.invoke("capabilities:setEnabled", cwd, id, on, opts),
   setCapabilityOverride: (cwd: string, id: string, state: "inherit" | "on" | "off") =>
     ipcRenderer.invoke("capabilities:setOverride", cwd, id, state),
-  listProfiles: (cwd: string) => ipcRenderer.invoke("profiles:list", cwd),
+  listProfiles: (cwd?: string) => ipcRenderer.invoke("profiles:list", cwd),
   activateProfile: (cwd: string, name: string) =>
     ipcRenderer.invoke("profiles:activate", cwd, name),
   deactivateProfile: (cwd: string) => ipcRenderer.invoke("profiles:deactivate", cwd),
+  listProfileCatalog: () => ipcRenderer.invoke("profiles:catalog"),
+  installCatalogProfile: (name: string) => ipcRenderer.invoke("profiles:install", name),
+  listDigitalHumanTeams: () => ipcRenderer.invoke("digital-human-teams:list"),
+  saveDigitalHumanTeam: (team: import("@cjhyy/code-shell-pet").DigitalHumanTeam) =>
+    ipcRenderer.invoke("digital-human-teams:save", team),
+  deleteDigitalHumanTeam: (id: string) => ipcRenderer.invoke("digital-human-teams:delete", id),
   uninstallPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:uninstall", pluginName, marketplaceName),
   uninstallLocalPlugin: (name: string) => ipcRenderer.invoke("plugins:uninstallLocal", name),

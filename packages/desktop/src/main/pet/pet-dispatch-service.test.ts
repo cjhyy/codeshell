@@ -195,6 +195,94 @@ describe("PetDispatchService", () => {
     ]);
   });
 
+  test("launches a selected digital-human team as parallel profile-bound Sessions", async () => {
+    const starts: Array<Record<string, unknown>> = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const profileParams = params.profileParams as {
+            workspaces: Array<{ id: string; name: string }>;
+            digitalHumans: Array<{ id: string; name: string }>;
+          };
+          const workspace = profileParams.workspaces.find(
+            (candidate) => candidate.name === "CodeShell",
+          )!;
+          return {
+            ok: true,
+            result: {
+              text: "团队已并行派出。",
+              extensions: {
+                pet: {
+                  workDelegations: profileParams.digitalHumans.map((human) => ({
+                    workspaceId: workspace.id,
+                    digitalHumanId: human.id,
+                    objective: human.id === "researcher" ? "研究现有实现" : "独立准备实现方案",
+                  })),
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      listDigitalHumans: async () => [
+        { name: "researcher", label: "研究员", description: "研究问题" },
+        { name: "developer", label: "开发者", description: "实现功能" },
+      ],
+      listDigitalHumanTeams: async () => [
+        {
+          id: "build-team",
+          name: "构建小队",
+          members: ["researcher", "developer"],
+          mode: "divide",
+        },
+      ],
+      startWorkSession: async (delegation) => {
+        starts.push(delegation as unknown as Record<string, unknown>);
+        return {
+          sessionId: `work-${String(delegation.digitalHumanId)}`,
+          cwd: delegation.workspacePath!,
+        };
+      },
+    });
+
+    const result = await service.dispatch({
+      type: "chat",
+      message: "分析并实现这个功能",
+      clientMessageId: "client-team",
+      preferredProjectPath: "/work/codeshell",
+      digitalHumanTeamId: "build-team",
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      type: "chat",
+      delegations: [
+        { digitalHumanId: "researcher", sessionId: "work-researcher" },
+        { digitalHumanId: "developer", sessionId: "work-developer" },
+      ],
+    });
+    expect(starts).toEqual([
+      expect.objectContaining({
+        digitalHumanId: "researcher",
+        task: "研究现有实现",
+        workspacePath: "/work/codeshell",
+      }),
+      expect.objectContaining({
+        digitalHumanId: "developer",
+        task: "独立准备实现方案",
+        workspacePath: "/work/codeshell",
+      }),
+    ]);
+    expect(starts[0]?.clientMessageId).not.toBe(starts[1]?.clientMessageId);
+  });
+
   test("offers a bounded reusable Session set and resumes only the selected host entry", async () => {
     const starts: unknown[] = [];
     let exposedSessions: Array<{ id: string; workspaceId: string; name: string }> = [];

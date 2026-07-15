@@ -80,6 +80,8 @@ import { RunsView } from "./runs/RunsView";
 import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
 import { CredentialsPage } from "./credentials/CredentialsPage";
+import { DigitalHumansView } from "./digital-humans/DigitalHumansView";
+import type { DigitalHumanSelection } from "./digital-humans/types";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -131,6 +133,8 @@ function App() {
   } = useOptionalPetState();
   // Pet visibility is process-scoped and mirrored by the desktop host.
   const [petWidgetVisible, setPetWidgetVisible] = useState(false);
+  const [petDigitalHumanSelection, setPetDigitalHumanSelection] =
+    useState<DigitalHumanSelection | null>(null);
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -1799,6 +1803,7 @@ function App() {
                 onOpenSearch={() => setSessionSearchOpen(true)}
                 onOpenAutomations={() => setViewMode("automation")}
                 onOpenCustomize={() => setViewMode("customize")}
+                onOpenDigitalHumans={() => setViewMode("digital_humans")}
                 onOpenCredentials={() => setViewMode("credentials")}
                 onOpenSettingsPage={() => setViewMode("settings_page")}
                 onOpenPetPage={openPetPage}
@@ -1841,7 +1846,11 @@ function App() {
                     excludedSessionIds={archivedPetSessionIds}
                     onNavigate={(request) => void handleOpenPetTarget(request)}
                   />
-                  <PetChatHost defaultProjectPath={activeProject?.path ?? null} />
+                  <PetChatHost
+                    defaultProjectPath={activeProject?.path ?? null}
+                    digitalHumanSelection={petDigitalHumanSelection}
+                    onClearDigitalHumanSelection={() => setPetDigitalHumanSelection(null)}
+                  />
                 </PetPage>
               ) : view.viewMode === "approvals" ? (
                 <ApprovalsView
@@ -1853,6 +1862,14 @@ function App() {
                 <LogsView />
               ) : view.viewMode === "customize" ? (
                 <CustomizeView activeProjectPath={activeProject?.path ?? null} />
+              ) : view.viewMode === "digital_humans" ? (
+                <DigitalHumansView
+                  activeProjectPath={activeProject?.path ?? null}
+                  onUse={(selection) => {
+                    setPetDigitalHumanSelection(selection);
+                    openPetPage();
+                  }}
+                />
               ) : view.viewMode === "credentials" ? (
                 <CredentialsPage
                   activeProjectPath={activeProject?.path ?? null}

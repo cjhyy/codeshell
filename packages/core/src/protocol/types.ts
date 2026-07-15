@@ -142,6 +142,8 @@ export interface RunParams {
    * transcript).
    */
   profileParams?: Record<string, unknown>;
+  /** Digital human to bind to this Work Session. */
+  workspaceProfile?: string;
   /**
    * Host-built bounded Pet world JSON for this invocation. It is delivered as
    * non-durable system context and must never be appended to the user task or

@@ -16,10 +16,19 @@ export interface PetReusableSessionOption {
   description?: string;
 }
 
+/** Host-validated digital humans available for this one Pet manager turn. */
+export interface PetDigitalHumanOption {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 /** Structured decision produced only by a successful DelegateWork tool call. */
 export interface PetWorkDelegation {
   workspaceId: string;
   objective: string;
+  /** Exact id from the selected digital-human/team member set. */
+  digitalHumanId?: string;
   /** Opaque id from the host-provided reusable Session set; absent means create. */
   reusableSessionId?: string;
 }
