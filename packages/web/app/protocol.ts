@@ -1,10 +1,11 @@
 // packages/web/app/protocol.ts
 //
 // Browser-side client for the CodeShell core JSON-RPC protocol over the
-// headless serve WS pipe (/ws). Deliberately dependency-free: minimal local
-// types mirror packages/core/src/protocol/types.ts for exactly the frames
-// this UI uses. Auth rides the cs_access remember-cookie set by the page's
-// passcode gate, so the WS upgrade needs no extra credentials.
+// headless serve WS pipe (/ws). Deliberately dependency-free: SessionSummary,
+// ApprovalRequestPayload, and StreamEventPayload stay as minimal local mirrors
+// because core does not export these UI-facing payload shapes. Auth rides the
+// cs_access remember-cookie set by the page's passcode gate, so the WS upgrade
+// needs no extra credentials.
 
 export interface SessionSummary {
   sessionId: string;

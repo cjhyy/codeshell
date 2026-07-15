@@ -13,11 +13,11 @@ import {
 } from "./protocol.js";
 import {
   appendUserMessage,
-  chatFromTranscript,
-  emptyChat,
-  foldStreamEvent,
-  type ChatViewState,
-} from "./chat.js";
+  initialChatState,
+  reduceStream,
+  type ChatState,
+} from "../src/lib/streamReducer.js";
+import { chatFromTranscript, sessionTitle } from "./chat.js";
 
 function newSessionId(): string {
   return crypto.randomUUID();
@@ -28,7 +28,7 @@ export function App() {
   const [connection, setConnection] = React.useState<ConnectionState>("connecting");
   const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
   const [activeId, setActiveId] = React.useState<string | null>(null);
-  const [chat, setChat] = React.useState<ChatViewState>(emptyChat);
+  const [chat, setChat] = React.useState<ChatState>(initialChatState());
   const [approvals, setApprovals] = React.useState<ApprovalRequestPayload[]>([]);
   const [draft, setDraft] = React.useState("");
   const [workerNote, setWorkerNote] = React.useState<string | null>(null);
@@ -61,7 +61,7 @@ export function App() {
       if (method === "agent/streamEvent") {
         const { sessionId, event } = params as unknown as StreamEventPayload;
         if (sessionId === activeIdRef.current) {
-          setChat((prev) => foldStreamEvent(prev, event));
+          setChat((prev) => reduceStream(prev, event));
         }
         if ((event as { type?: string }).type === "turn_complete") void refreshSessions();
         return;
@@ -81,7 +81,7 @@ export function App() {
       if (method === "serve/workerExit") {
         const clean = (params as { clean?: boolean }).clean;
         setWorkerNote(clean ? "agent worker 已退出" : "agent worker 崩溃，将在下一条消息时重启");
-        setChat((prev) => ({ ...prev, running: false }));
+        setChat((prev) => ({ ...prev, run: "idle" }));
       }
     });
     client.connect();
@@ -95,7 +95,7 @@ export function App() {
   const openSession = async (sessionId: string): Promise<void> => {
     setActiveId(sessionId);
     setApprovals([]);
-    setChat(emptyChat);
+    setChat(initialChatState());
     const client = clientRef.current;
     if (!client) return;
     try {
@@ -109,7 +109,7 @@ export function App() {
   const startNewSession = (): void => {
     setActiveId(newSessionId());
     setApprovals([]);
-    setChat(emptyChat);
+    setChat(initialChatState());
   };
 
   const send = (): void => {
@@ -136,6 +136,8 @@ export function App() {
     if (activeId) clientRef.current?.cancel(activeId);
   };
 
+  const running = chat.run === "running" || chat.run === "waiting";
+
   return (
     <div className="shell">
       <aside className="rail">
@@ -153,7 +155,11 @@ export function App() {
                 className={s.sessionId === activeId ? "session active" : "session"}
                 onClick={() => void openSession(s.sessionId)}
               >
-                <span className="session-title">{s.sessionId.slice(0, 8)}</span>
+                <span className="session-title">
+                  {s.sessionId === activeId
+                    ? sessionTitle(chat, s.sessionId)
+                    : s.sessionId.slice(0, 8)}
+                </span>
                 <span className="session-meta">
                   {s.status} · {s.turnCount} turns
                 </span>
@@ -167,15 +173,58 @@ export function App() {
       <main className="chat">
         {workerNote ? <div className="banner">{workerNote}</div> : null}
         {connection !== "open" ? (
-          <div className="banner">连接{connection === "connecting" ? "中…" : "已断开，重连中…"}</div>
+          <div className="banner">
+            连接{connection === "connecting" ? "中…" : "已断开，重连中…"}
+          </div>
         ) : null}
         <div className="messages">
-          {chat.items.map((item, i) => (
-            <div key={i} className={`msg ${item.kind}`}>
-              {item.text}
-              {item.streaming ? <span className="cursor">▍</span> : null}
-            </div>
-          ))}
+          {chat.goal ? <div className="banner goal">{chat.goal}</div> : null}
+          {chat.items.map((item) => {
+            switch (item.kind) {
+              case "user":
+                return (
+                  <div key={item.id} className="msg user">
+                    {item.text}
+                  </div>
+                );
+              case "assistant":
+                return (
+                  <div key={item.id} className="msg assistant">
+                    {item.text}
+                    {!item.done ? <span className="cursor">▍</span> : null}
+                  </div>
+                );
+              case "tool":
+                return (
+                  <div key={item.id} className={`msg tool${item.error ? " tool-error" : ""}`}>
+                    <span className="tool-head">
+                      ⚙ {item.name} {item.done ? (item.error ? "✗" : "✓") : "…"}
+                    </span>
+                    {item.summary ? <span className="tool-summary"> {item.summary}</span> : null}
+                    {item.result ? (
+                      <details>
+                        <summary>结果</summary>
+                        <pre className="tool-result">{item.result}</pre>
+                      </details>
+                    ) : null}
+                  </div>
+                );
+              case "subagent":
+                return (
+                  <div key={item.id} className="msg info">
+                    ↳ {item.label} — {item.status}
+                  </div>
+                );
+              case "system_error":
+                return (
+                  <div key={item.id} className="msg error">
+                    {item.text}
+                  </div>
+                );
+              default:
+                return null;
+            }
+          })}
           {approvals.map((a) => (
             <ApprovalCard key={a.requestId} payload={a} onDecide={decide} />
           ))}
@@ -195,7 +244,7 @@ export function App() {
               }
             }}
           />
-          {chat.running ? (
+          {running ? (
             <button className="stop" onClick={stop}>
               停止
             </button>
@@ -240,7 +289,10 @@ function ApprovalCard({
         />
       ) : null}
       <div className="approval-actions">
-        <button className="send" onClick={() => onDecide(payload, true, isAskUser ? answer : undefined)}>
+        <button
+          className="send"
+          onClick={() => onDecide(payload, true, isAskUser ? answer : undefined)}
+        >
           {isAskUser ? "回答" : "允许"}
         </button>
         <button className="stop" onClick={() => onDecide(payload, false)}>

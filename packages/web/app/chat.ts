@@ -1,81 +1,20 @@
 // packages/web/app/chat.ts
 //
-// Pure chat-view state: fold core-protocol stream events (and loaded
-// transcript history) into a renderable message list per session. Kept free
-// of React/DOM so it is unit-testable under bun.
+// Transcript replay + title helpers for the standalone SPA. Live stream
+// folding is handled by the shared reducer in ../src/lib/streamReducer —
+// do NOT reintroduce a local fold here.
+import { initialChatState, type ChatItem, type ChatState } from "../src/lib/streamReducer.js";
 
-export interface ChatItem {
-  kind: "user" | "assistant" | "tool" | "error" | "info";
-  text: string;
-  /** In-progress assistant text accumulates deltas until the turn settles. */
-  streaming?: boolean;
-}
-
-export interface ChatViewState {
-  items: ChatItem[];
-  running: boolean;
-}
-
-export const emptyChat: ChatViewState = { items: [], running: false };
-
-export function appendUserMessage(state: ChatViewState, text: string): ChatViewState {
-  return { items: [...state.items, { kind: "user", text }], running: true };
-}
-
-/** Fold one agent/streamEvent payload event into the view state. */
-export function foldStreamEvent(
-  state: ChatViewState,
-  event: Record<string, unknown>,
-): ChatViewState {
-  const type = event.type as string | undefined;
-  switch (type) {
-    case "stream_request_start":
-      return { ...state, running: true };
-    case "text_delta": {
-      const text = String(event.text ?? "");
-      if (!text) return state;
-      const items = [...state.items];
-      const last = items[items.length - 1];
-      if (last && last.kind === "assistant" && last.streaming) {
-        items[items.length - 1] = { ...last, text: last.text + text };
-      } else {
-        items.push({ kind: "assistant", text, streaming: true });
-      }
-      return { ...state, items };
-    }
-    case "tool_use_start": {
-      const call = event.toolCall as { name?: string } | undefined;
-      return {
-        ...state,
-        items: [...sealStreaming(state.items), { kind: "tool", text: `⚙ ${call?.name ?? "tool"}` }],
-      };
-    }
-    case "turn_complete":
-      return { items: sealStreaming(state.items), running: false };
-    case "error":
-      return {
-        items: [...sealStreaming(state.items), { kind: "error", text: String(event.error ?? "error") }],
-        running: false,
-      };
-    default:
-      return state;
-  }
-}
-
-/** Mark any trailing streaming assistant item as settled. */
-function sealStreaming(items: ChatItem[]): ChatItem[] {
-  const last = items[items.length - 1];
-  if (!last || !last.streaming) return items;
-  return [...items.slice(0, -1), { ...last, streaming: false }];
-}
+export { initialChatState, type ChatItem, type ChatState };
 
 /**
  * Best-effort mapping of a persisted transcript (session_detail) into chat
  * items. Transcript event shapes vary across event kinds; anything we don't
  * recognize is skipped rather than rendered wrong.
  */
-export function chatFromTranscript(events: Array<Record<string, unknown>>): ChatViewState {
+export function chatFromTranscript(events: Array<Record<string, unknown>>): ChatState {
   const items: ChatItem[] = [];
+  let seq = 0;
   for (const event of events) {
     const message = (event.message ?? event) as Record<string, unknown>;
     const role = message.role as string | undefined;
@@ -84,9 +23,25 @@ export function chatFromTranscript(events: Array<Record<string, unknown>>): Chat
     if (!text) continue;
     // Skip synthetic frames (system reminders ride user turns).
     if (role === "user" && text.startsWith("<system-reminder>")) continue;
-    items.push({ kind: role, text });
+    seq += 1;
+    items.push(
+      role === "user"
+        ? { kind: "user", id: `h-${seq}`, text }
+        : { kind: "assistant", id: `h-${seq}`, text, reasoning: "", done: true },
+    );
   }
-  return { items, running: false };
+  return { ...initialChatState(), items, seq };
+}
+
+/** Session-rail title: reducer-pushed title, else first user line, else id. */
+export function sessionTitle(state: ChatState | undefined, sessionId: string): string {
+  if (state?.title) return state.title;
+  const firstUser = state?.items.find((item) => item.kind === "user");
+  if (firstUser && firstUser.kind === "user" && firstUser.text.trim()) {
+    const line = firstUser.text.trim().split("\n")[0];
+    return line.length > 32 ? `${line.slice(0, 32)}…` : line;
+  }
+  return sessionId.slice(0, 8);
 }
 
 function extractText(content: unknown): string {
