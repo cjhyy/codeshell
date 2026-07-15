@@ -8,6 +8,7 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useT, type TFunction } from "../i18n";
+import { useToast } from "../ui/ToastProvider";
 
 interface WorkspaceSourceSnapshot {
   access: EffectiveSourceAccess[];
@@ -35,6 +36,7 @@ function statusLabel(t: TFunction, status: EffectiveSourceAccess["status"]): str
 /** Project-local upload and source-binding controls. Content reads stay in ReadSource. */
 export function DataSourcesSection({ cwd }: { cwd: string }) {
   const { t } = useT();
+  const toast = useToast();
   const [catalog, setCatalog] = React.useState<SourceDefinition[]>([]);
   const [snapshot, setSnapshot] = React.useState<WorkspaceSourceSnapshot>({
     access: [],
@@ -69,18 +71,22 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
     void refresh();
   }, [refresh]);
 
-  const act = async (operation: () => Promise<unknown>, clearSelection = false) => {
+  const act = async (
+    operation: () => Promise<unknown>,
+    opts?: { clearSelection?: boolean; successMessage?: string },
+  ) => {
     setBusy(true);
     setError(null);
     try {
       await operation();
       await refresh();
-      if (clearSelection) {
+      if (opts?.clearSelection) {
         scopeRequest.current += 1;
         setSelectedSourceId("");
         setScopes([]);
         setSelectedScopes(new Set());
       }
+      if (opts?.successMessage) toast({ message: opts.successMessage });
     } catch (caught) {
       setError(errorText(caught));
     } finally {
@@ -121,6 +127,20 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
   const boundIds = new Set(snapshot.access.map((item) => item.sourceId));
   const available = catalog.filter((source) => source.enabled && !boundIds.has(source.id));
 
+  if (loading) {
+    return (
+      <section className="space-y-4 rounded-md border border-border bg-card p-4">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">
+            {t("projectConfig.dataSources.title")}
+          </h2>
+          <p className="text-xs text-muted-foreground">{t("projectConfig.dataSources.subtitle")}</p>
+        </div>
+        <p className="text-xs text-muted-foreground">{t("projectConfig.dataSources.loading")}</p>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4 rounded-md border border-border bg-card p-4">
       <div>
@@ -131,9 +151,6 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
       </div>
 
       {error ? <p className="text-xs text-status-err">{error}</p> : null}
-      {loading ? (
-        <p className="text-xs text-muted-foreground">{t("projectConfig.dataSources.loading")}</p>
-      ) : null}
 
       <div className="space-y-3 rounded-md border border-border p-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -148,7 +165,11 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
           <Button
             size="sm"
             disabled={busy}
-            onClick={() => void act(() => window.codeshell.pickAndUploadSources(cwd))}
+            onClick={() =>
+              void act(() => window.codeshell.pickAndUploadSources(cwd), {
+                successMessage: t("projectConfig.dataSources.uploadDone"),
+              })
+            }
           >
             {t("projectConfig.dataSources.upload")}
           </Button>
@@ -173,7 +194,20 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
                   size="sm"
                   variant="outline"
                   disabled={busy}
-                  onClick={() => void act(() => window.codeshell.deleteUpload(cwd, upload.name))}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        t("projectConfig.dataSources.deleteUploadConfirm", {
+                          name: upload.name,
+                        }),
+                      )
+                    ) {
+                      return;
+                    }
+                    void act(() => window.codeshell.deleteUpload(cwd, upload.name), {
+                      successMessage: t("projectConfig.dataSources.deleteUploadDone"),
+                    });
+                  }}
                 >
                   {t("projectConfig.dataSources.deleteUpload")}
                 </Button>
@@ -227,7 +261,9 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
                     variant="outline"
                     disabled={busy}
                     onClick={() =>
-                      void act(() => window.codeshell.unbindSource(cwd, item.sourceId))
+                      void act(() => window.codeshell.unbindSource(cwd, item.sourceId), {
+                        successMessage: t("projectConfig.dataSources.unbindDone"),
+                      })
                     }
                   >
                     {t("projectConfig.dataSources.unbind")}
@@ -327,7 +363,10 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
                         .map((scope) => scope.id),
                       readPolicy: "ask",
                     }),
-                  true,
+                  {
+                    clearSelection: true,
+                    successMessage: t("projectConfig.dataSources.bindDone"),
+                  },
                 )
               }
             >
