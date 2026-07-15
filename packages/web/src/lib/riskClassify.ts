@@ -8,25 +8,32 @@
 export type Risk = "low" | "medium" | "high";
 
 /** Arg keys to surface as the one-line summary, in priority order. */
-const SUMMARY_KEYS = [
-  "command",
-  "file_path",
-  "path",
-  "url",
-  "pattern",
-  "query",
-] as const;
+const SUMMARY_KEYS = ["command", "file_path", "path", "url", "pattern", "query"] as const;
 
 export function summarizeApproval(
   args: Record<string, unknown> | undefined,
   risk?: string,
 ): { summary: string; risk: Risk } {
   let summary = "";
-  for (const k of SUMMARY_KEYS) {
-    const v = args?.[k];
-    if (typeof v === "string" && v.length > 0) {
-      summary = v;
-      break;
+  const source = args?.source;
+  const scope = args?.scope;
+  const resource = args?.resource;
+  if (
+    typeof source === "string" &&
+    source.length > 0 &&
+    typeof scope === "string" &&
+    scope.length > 0 &&
+    typeof resource === "string" &&
+    resource.length > 0
+  ) {
+    summary = `读取数据源 ${source} / ${scope} / ${resource}`;
+  } else {
+    for (const k of SUMMARY_KEYS) {
+      const v = args?.[k];
+      if (typeof v === "string" && v.length > 0) {
+        summary = v;
+        break;
+      }
     }
   }
   if (!summary) summary = JSON.stringify(args ?? {});
