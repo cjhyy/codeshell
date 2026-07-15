@@ -11,6 +11,9 @@
       "import": "./dist/index.js"
     }
   },
+  "bin": {
+    "code-shell-serve": "./dist/bin/code-shell-serve.js"
+  },
   "files": [
     "dist"
   ],
@@ -21,6 +24,7 @@
   "dependencies": {
     "@cjhyy/code-shell-capability-coding": "workspace:*",
     "@cjhyy/code-shell-core": "workspace:*",
+    "@cjhyy/code-shell-web": "workspace:*",
     "ws": "^8.21.0"
   },
   "devDependencies": {

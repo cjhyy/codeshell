@@ -161,9 +161,13 @@
     "packages/server": {
       "name": "@cjhyy/code-shell-server",
       "version": "0.7.1",
+      "bin": {
+        "code-shell-serve": "./dist/bin/code-shell-serve.js",
+      },
       "dependencies": {
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
+        "@cjhyy/code-shell-web": "workspace:*",
         "ws": "^8.21.0",
       },
       "devDependencies": {

@@ -9,6 +9,8 @@
 export * from "./attachment-service.js";
 export * from "./client-message-id.js";
 export * from "./worker-bridge-core.js";
+export * from "./serve/headless-server.js";
+export { parseServeArgs, resolveWebAppRoot, resolveWorkerEntry, runServeCli } from "./serve/cli.js";
 export * from "./image-byte-probe.js";
 export * from "./sessions-service.js";
 
