@@ -7,7 +7,7 @@ import { buildSessionTitle } from "./session-title.js";
 import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
-import type { GoalConfig } from "./goal.js";
+import type { GoalConfig } from "../goal/lifecycle.js";
 import type { LLMResponse, SessionState } from "../types.js";
 
 function fakeClient(text: string, opts?: { throws?: boolean }): LLMClientBase {

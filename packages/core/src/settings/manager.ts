@@ -216,7 +216,21 @@ export class SettingsManager {
      * host (desktop) passes the real trust decision from its trust-store.
      */
     private readonly projectTrusted: boolean = true,
+    /**
+     * Override the user-level config directory (the `~/.code-shell` layer:
+     * settings.managed.json / settings.json live directly inside it). When
+     * absent the manager keeps today's behavior — `join(userHome(),
+     * ".code-shell")` resolved per call so `$HOME` overrides still work.
+     * Injection point for identity-scoped server deployments (a per-user
+     * worker passes `<dataRoot>` here instead of relocating `$HOME`).
+     */
+    private readonly userConfigDirOverride?: string,
   ) {}
+
+  /** User-layer config dir: explicit override wins, else `~/.code-shell`. */
+  private userConfigDir(): string {
+    return this.userConfigDirOverride ?? join(userHome(), ".code-shell");
+  }
 
   /**
    * Load settings from all sources.
@@ -231,7 +245,7 @@ export class SettingsManager {
 
     if (readUser) {
       // 1. Managed (lowest priority)
-      this.loadJsonFile(join(userHome(), ".code-shell", "settings.managed.json"), "managed", 0);
+      this.loadJsonFile(join(this.userConfigDir(), "settings.managed.json"), "managed", 0);
 
       // 2. User — only ~/.code-shell/. We used to also read ~/.claude/settings.json
       // for "zero-migration from Claude Code", but Claude Code's schema diverges
@@ -239,7 +253,7 @@ export class SettingsManager {
       // crashes on machines that had Claude Code installed but never ran us.
       // File-level compat (CLAUDE.md, .claude/skills/) is kept elsewhere — only
       // the settings.json read is dropped.
-      this.loadJsonFile(join(userHome(), ".code-shell", "settings.json"), "user", 1);
+      this.loadJsonFile(join(this.userConfigDir(), "settings.json"), "user", 1);
     }
 
     if (readProject) {
@@ -265,7 +279,7 @@ export class SettingsManager {
     // dirtying the user's (or a repo-tracked project) file for; steps are
     // idempotent, so re-running on unstamped files each load is fine.
     if (readUser) {
-      this.applyConfigMigration(join(userHome(), ".code-shell", "settings.json"), "user");
+      this.applyConfigMigration(join(this.userConfigDir(), "settings.json"), "user");
     }
     if (readProject) {
       this.applyConfigMigration(join(this.cwd, ".code-shell", "settings.json"), "project");
@@ -293,7 +307,7 @@ export class SettingsManager {
     // collapses provenance and the migration needs to write back to a
     // single physical file. Gated on readUser: under non-full scope we must
     // not read — let alone rewrite — the host's ~/.code-shell/settings.json.
-    const userPath = join(userHome(), ".code-shell", "settings.json");
+    const userPath = join(this.userConfigDir(), "settings.json");
     if (readUser && existsSync(userPath)) {
       try {
         const userRaw = sanitizeSettingsObject(
@@ -392,7 +406,7 @@ export class SettingsManager {
    * The merged cache is invalidated so the next get() picks up the change.
    */
   saveUserSetting(key: string, value: unknown): void {
-    const path = join(userHome(), ".code-shell", "settings.json");
+    const path = join(this.userConfigDir(), "settings.json");
     let current: Record<string, unknown> = {};
     if (existsSync(path)) {
       try {
@@ -478,7 +492,7 @@ export class SettingsManager {
   getForScope(scope: "user" | "project", cwd?: string): Partial<ValidatedSettings> {
     const path =
       scope === "user"
-        ? join(userHome(), ".code-shell", "settings.json")
+        ? join(this.userConfigDir(), "settings.json")
         : this.projectSettingsPath(cwd ?? this.cwd);
     const raw = this.readJsonObject(path);
     // validateSettings applies defaults; for a scope view we want only the

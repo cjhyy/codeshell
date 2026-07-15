@@ -35,7 +35,7 @@ import {
   addCumulativeUsage,
   addTokenUsage,
   normalizeCumulativeUsageCounters,
-} from "../engine/session-usage.js";
+} from "./usage.js";
 import {
   armGoalLifecycle,
   createGoalLifecycle,
@@ -52,7 +52,7 @@ import {
   type GoalLifecycleV1,
   type GoalTerminal,
   type PersistedGoalTerminationReason,
-} from "../engine/goal.js";
+} from "../goal/lifecycle.js";
 import { lockSync } from "../utils/lockfile.js";
 import { resolveCapabilities, type SessionWorkspaceCapability } from "../capabilities/index.js";
 
@@ -387,9 +387,13 @@ export function codeShellHome(): string {
   return process.env.CODE_SHELL_HOME || join(homedir(), ".code-shell");
 }
 
-/** Canonical root for every persisted CodeShell session. */
-export function sessionsRoot(): string {
-  return join(codeShellHome(), "sessions");
+/**
+ * Canonical root for every persisted CodeShell session. An explicit `home`
+ * (a `~/.code-shell`-equivalent data root) overrides the default resolution;
+ * absent → `codeShellHome()` exactly as before.
+ */
+export function sessionsRoot(home?: string): string {
+  return join(home ?? codeShellHome(), "sessions");
 }
 
 function isSessionWorkspace(value: unknown): value is SessionWorkspace {
@@ -817,7 +821,7 @@ export class SessionManager {
    * run. Returns undefined for an unknown / malformed / traversal-shaped id, or
    * a session with no active goal — never throws.
    */
-  readActiveGoal(sessionId: string): import("../engine/goal.js").GoalConfig | undefined {
+  readActiveGoal(sessionId: string): import("../goal/lifecycle.js").GoalConfig | undefined {
     try {
       assertSafeSessionId(sessionId);
     } catch {
@@ -1572,8 +1576,13 @@ export class SessionManager {
     }
   }
 
-  list(limit = 20): SessionListEntry[] {
+  list(limit = 20, opts?: { excludeKinds?: readonly string[] }): SessionListEntry[] {
     if (!existsSync(this.sessionsDir)) return [];
+    // Extension-owned session kinds stay out of generic lists. Defaults to
+    // hiding "pet" so default-arg callers keep today's behavior.
+    // TODO(pet-out-of-core): drop the default once every caller passes the
+    // host's hidden-kind union explicitly.
+    const excludeKinds = opts?.excludeKinds ?? ["pet"];
 
     const dirs = readdirSync(this.sessionsDir, { withFileTypes: true })
       .filter(
@@ -1623,7 +1632,7 @@ export class SessionManager {
         const state = JSON.parse(readFileSync(c.stateFile, "utf-8")) as SessionState;
         if (isEphemeralSessionState(state)) continue;
         state.kind = normalizedSessionKind(state.kind);
-        if (state.kind === "pet") continue;
+        if (excludeKinds.includes(state.kind)) continue;
         const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
         sessions.push({ ...state, preview, lastActiveAt: c.lastActiveAt });
       } catch {

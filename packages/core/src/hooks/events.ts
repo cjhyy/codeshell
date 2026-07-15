@@ -1,7 +1,7 @@
 /**
  * Hook event type definitions.
  */
-import type { GoalTerminationReason } from "../engine/goal.js";
+import type { GoalTerminationReason } from "../goal/lifecycle.js";
 
 /**
  * Lifecycle hooks the engine emits.
@@ -68,14 +68,24 @@ import type { GoalTerminationReason } from "../engine/goal.js";
  *                                          window/emergency), `beforeTokens`,
  *                                          `afterTokens`. Microcompact is
  *                                          intentionally suppressed.
- *   - notification                         (agent.ts) — fired when a background
- *                                          sub-agent transitions to a terminal
- *                                          state. ctx.data carries `kind`
- *                                          ("agent_completed" / "agent_failed" /
- *                                          "agent_cancelled"), `agentId`,
- *                                          `name`, `description`, plus
- *                                          `finalText` (completed) or `error`
- *                                          (failed). Fired void — handler
+ *   - notification                         — the fan-in "something happened"
+ *                                          channel; ctx.data.kind discriminates:
+ *                                          · agent_completed / agent_failed /
+ *                                            agent_cancelled (agent.ts) — bg
+ *                                            sub-agent terminal states, plus
+ *                                            agentId/name/finalText/error.
+ *                                          · approval_requested /
+ *                                            approval_resolved (engine.ts ←
+ *                                            PermissionClassifier) — an
+ *                                            interactive approval is waiting /
+ *                                            was answered; data carries
+ *                                            toolName, riskLevel, approved.
+ *                                          · mcp_server_connected /
+ *                                            mcp_server_failed (engine.ts ←
+ *                                            MCPManager.connectAll) — per-server
+ *                                            connect outcome; data carries
+ *                                            server, error.
+ *                                          Fired void — handler
  *                                          latency does not block the main
  *                                          loop. Not consumed by the engine
  *                                          (bg-agent feed renders the same

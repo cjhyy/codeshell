@@ -30,12 +30,15 @@
  *   PreCompact         → pre_compact
  *   Notification       → notification
  *   Stop               → on_session_end
- *   SubagentStop       → (skipped — codeshell sub-agents don't surface this event)
+ *   SubagentStop       → notification (implied matcher on kind ^agent_(completed|failed|cancelled)$)
  *
  * matcher semantics:
  *   SessionStart    — matches against ctx.data.source ("startup"|"resume"|"clear"|"compact")
  *   PreToolUse /
  *   PostToolUse     — matches against ctx.data.toolName
+ *   Notification /
+ *   SubagentStop    — matches against ctx.data.kind (agent_* terminal states,
+ *                     approval_requested/resolved, mcp_server_*, …)
  *   other events    — matcher is currently ignored (the CC spec doesn't
  *                     define matcher semantics for them either)
  *
@@ -61,7 +64,17 @@ const EVENT_NAME_MAP: Record<string, HookEventName | null> = {
   PreCompact: "pre_compact",
   Notification: "notification",
   Stop: "on_session_end",
-  SubagentStop: null,
+  // Sub-agent terminal states surface on the notification hook with
+  // kind "agent_completed" / "agent_failed" / "agent_cancelled"; the matcher
+  // filters on that kind, so SubagentStop maps to a kind-filtered
+  // notification subscription (notify-only — codeshell sub-agent stops are
+  // not interceptable the way CC's SubagentStop is).
+  SubagentStop: "notification",
+};
+
+/** CC events whose codeshell notification `kind` the matcher defaults to when absent. */
+const IMPLIED_NOTIFICATION_KIND: Record<string, string> = {
+  SubagentStop: "^agent_(completed|failed|cancelled)$",
 };
 
 interface RawCommandHook {
@@ -104,7 +117,7 @@ function readHooksJson(installPath: string): RawHooksJson | null {
  * We only consult the matcher for events where CC defines its semantics;
  * for others we always fire (matcher is treated as advisory metadata only).
  */
-function matcherAccepts(
+export function matcherAccepts(
   event: HookEventName,
   matcher: string | undefined,
   ctx: HookContext,
@@ -127,6 +140,14 @@ function matcherAccepts(
     const toolName = ctx.data.toolName;
     if (typeof toolName !== "string") return false;
     return re.test(toolName);
+  }
+  if (event === "notification") {
+    // Notification fan-in carries a `kind` discriminator (agent_* terminal
+    // states, approval_requested/resolved, mcp_server_*…). Matcher filters on
+    // it so a subscriber only wakes for the kinds it cares about.
+    const kind = ctx.data.kind;
+    if (typeof kind !== "string") return true;
+    return re.test(kind);
   }
   return true;
 }
@@ -212,7 +233,10 @@ export function loadPluginHooks(
             }
             const commandLine = cmd.command;
             const timeoutMs = cmd.timeout_ms;
-            const matcher = group.matcher;
+            // A CC event that maps onto a SHARED codeshell event (SubagentStop
+            // → notification) gets an implied kind-matcher, so it only fires
+            // for the notification kinds that correspond to the CC semantics.
+            const matcher = group.matcher ?? IMPLIED_NOTIFICATION_KIND[eventNameRaw];
             const handler = async (ctx: HookContext): Promise<HookResult> => {
               if (!matcherAccepts(mapped, matcher, ctx)) return {};
               return runPluginCommandHook(

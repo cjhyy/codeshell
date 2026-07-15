@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { CronScheduler, type CronJob } from "./scheduler.js";
-import { bindCronToEngine, type CronRunRequest } from "./cron-runtime.js";
+import { bindCronToEngine, type CronRunRequest } from "./runner.js";
 import { HeadlessApprovalBackend } from "../tool-system/permission.js";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));

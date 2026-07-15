@@ -2,7 +2,7 @@
  * Public Engine configuration & result types.
  *
  * Extracted out of engine/engine.ts so consumers (protocol server, run
- * factory, product layer, settings/disk-defaults, SDK index) can import the
+ * factory, product layer, engine/disk-defaults, SDK index) can import the
  * Engine's *types* without importing the 3000-line Engine *implementation* —
  * which would pull the whole engine module (and its transitive deps) into a
  * type-only consumer and make engine.ts a "type water tower". engine.ts
@@ -19,7 +19,7 @@ import type {
   TokenUsage,
 } from "../types.js";
 import type { AgentPresetName } from "../preset/index.js";
-import type { GoalConfig, GoalTerminationReason } from "./goal.js";
+import type { GoalConfig, GoalTerminationReason } from "../goal/lifecycle.js";
 import type { ApprovalBackend, ApprovalRouter } from "../tool-system/permission.js";
 import type { SandboxConfig } from "../tool-system/sandbox/index.js";
 import type { CostStateStore } from "./cost-store.js";
@@ -30,7 +30,8 @@ import type { HookEventName } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import type { CapabilityModule } from "../capabilities/index.js";
 import type { ExtensionModule } from "../tool-system/capability-module.js";
-import type { PetWorkDelegation } from "../pet/delegation.js";
+import type { RunBehaviorProfile } from "./run-types.js";
+import type { LegacyPetWorkDelegation } from "../types.js";
 
 export interface EngineConfig {
   llm: LLMConfig;
@@ -56,6 +57,12 @@ export interface EngineConfig {
   capabilities?: readonly CapabilityModule[];
   /** Lightweight runtime tools and queries loaded by the host process. */
   extensionModules?: readonly ExtensionModule[];
+  /**
+   * Named per-run behavior profiles selectable via EngineRunOptions.behaviorMode
+   * or a profile's activateForSessionKinds. Merged (by id, later wins) over the
+   * core defaults and any ExtensionModule.behaviorProfiles.
+   */
+  behaviorProfiles?: readonly RunBehaviorProfile[];
   /**
    * When false, `Bash(run_in_background=true)` is rejected and the
    * background-shell tools are disabled (design §5.5). Set false by
@@ -200,6 +207,15 @@ export interface EngineResult {
   sessionId: string;
   turnCount: number;
   usage: TokenUsage;
-  /** Present only when Mimi successfully invoked DelegateWork during this run. */
-  petWorkDelegation?: PetWorkDelegation;
+  /**
+   * Structured results reported by the run's active behavior profile, keyed by
+   * profile id (each profile's reportResult(key, value) calls land under
+   * extensions[profileId][key]). Absent when no profile reported anything.
+   */
+  extensions?: Record<string, unknown>;
+  /**
+   * Present only when Mimi successfully invoked DelegateWork during this run.
+   * @deprecated Compat mirror of `extensions.pet?.workDelegation`.
+   */
+  petWorkDelegation?: LegacyPetWorkDelegation;
 }

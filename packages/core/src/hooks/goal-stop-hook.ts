@@ -23,7 +23,7 @@
 import type { HookContext, HookResult } from "./events.js";
 import type { HookHandler } from "./registry.js";
 import type { LLMResponse, Message, TokenUsage } from "../types.js";
-import { isSameGoalVersion, normalizeGoal, type GoalConfig } from "../engine/goal.js";
+import { isSameGoalVersion, normalizeGoal, type GoalConfig } from "../goal/lifecycle.js";
 import { listRunningBackgroundWork } from "../tool-system/builtin/background-work.js";
 import { scrubSecrets } from "../utils/secret-scrubber.js";
 

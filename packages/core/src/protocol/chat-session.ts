@@ -6,8 +6,8 @@ import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta, PendingApprovalMetadata } from "./types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
-import type { PetWorkspaceOption } from "../pet/delegation.js";
-import { isSameGoalInstance, type GoalConfig } from "../engine/goal.js";
+import type { LegacyPetWorkspaceOption } from "../types.js";
+import { isSameGoalInstance, type GoalConfig } from "../goal/lifecycle.js";
 
 export interface ChatSessionOptions {
   id: string;
@@ -27,7 +27,7 @@ export interface TurnOpts {
   onStream?: (event: StreamEvent) => void;
   /** Goal mode for this turn — forwarded to engine.run (loop-until-done).
    *  String objective or full GoalConfig (objective + optional budgets). */
-  goal?: string | import("../engine/goal.js").GoalConfig;
+  goal?: string | import("../goal/lifecycle.js").GoalConfig;
   /** Marks this turn as a synthetic system-reminder injection (background-job
    *  completion notification) rather than the user's own input — persisted so
    *  the disk reader skips it as a user bubble on replay. See Engine.run. */
@@ -42,10 +42,12 @@ export interface TurnOpts {
   planMode?: boolean;
   /** Named behavior profile snapshot for this queued turn only. */
   behaviorMode?: RunBehaviorMode;
-  /** Bounded host Pet world JSON for this turn; never part of `task`. */
+  /** Generic per-run parameters consumed by the active behavior profile. */
+  profileParams?: Record<string, unknown>;
+  /** @deprecated Compat alias for `profileParams.runtimeContext`. */
   petRuntimeContext?: string;
-  /** Closed Workspace choices exposed to Mimi's DelegateWork tool. */
-  petWorkspaces?: PetWorkspaceOption[];
+  /** @deprecated Compat alias for `profileParams.workspaces`. */
+  petWorkspaces?: LegacyPetWorkspaceOption[];
   /** Durable classification used only when the Engine creates the session. */
   kind?: SessionKind;
   /** Connection owner router for permission prompts in this turn. */
@@ -226,7 +228,7 @@ export class ChatSession {
    * when none. Cheap — reads only state.json. The host calls this on session
    * load to re-surface the goal block + Cancel button after a reload.
    */
-  getGoal(): import("../engine/goal.js").GoalConfig | undefined {
+  getGoal(): import("../goal/lifecycle.js").GoalConfig | undefined {
     return this.engine.getGoal(this.id);
   }
 
@@ -244,7 +246,7 @@ export class ChatSession {
     paused?: boolean;
     expectedGoalId?: string;
     expectedRevision?: number;
-  }): import("../engine/goal.js").GoalConfig | undefined {
+  }): import("../goal/lifecycle.js").GoalConfig | undefined {
     return this.engine.updateGoal(this.id, patch);
   }
 
@@ -377,6 +379,7 @@ export class ChatSession {
         permissionMode: next.opts.permissionMode,
         planMode: next.opts.planMode,
         behaviorMode: next.opts.behaviorMode,
+        profileParams: next.opts.profileParams,
         petRuntimeContext: next.opts.petRuntimeContext,
         petWorkspaces: next.opts.petWorkspaces,
         kind: next.opts.kind,

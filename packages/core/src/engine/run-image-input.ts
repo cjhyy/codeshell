@@ -3,7 +3,7 @@ import { isAbsolute, join } from "node:path";
 import { capabilitiesFor } from "../llm/capabilities/index.js";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
 import { logger } from "../logging/logger.js";
-import type { InputAttachmentMeta } from "../protocol/types.js";
+import type { InputAttachmentMeta } from "../types.js";
 import type { ContentBlock, LLMConfig } from "../types.js";
 import { tryCompressImages } from "./image-compression.js";
 import {

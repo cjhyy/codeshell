@@ -19,6 +19,20 @@ export interface ApprovalBackend {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResult>;
 }
 
+/**
+ * Interactive-approval lifecycle observation (see
+ * PermissionClassifier.setApprovalEventListener). "requested" fires right
+ * before the backend prompt is awaited; "resolved" fires after the user (or
+ * backend policy) answered, with the outcome.
+ */
+export interface ApprovalLifecycleEvent {
+  phase: "requested" | "resolved";
+  toolName: string;
+  riskLevel: "low" | "medium" | "high";
+  approved?: boolean;
+  sessionId?: string;
+}
+
 export interface ApprovalRouteTarget {
   connectionId: string;
   sessionId: string;
@@ -1387,6 +1401,7 @@ export class PermissionClassifier {
    */
   private log: typeof rootPermLogger = rootPermLogger;
   private approvalStateListener?: (waiting: boolean, toolName: string) => void;
+  private approvalEventListener?: (event: ApprovalLifecycleEvent) => void;
   private activeApprovalCount = 0;
 
   constructor(
@@ -1403,6 +1418,25 @@ export class PermissionClassifier {
     listener: ((waiting: boolean, toolName: string) => void) | undefined,
   ): void {
     this.approvalStateListener = listener;
+  }
+
+  /**
+   * Observe interactive-approval lifecycle (requested → resolved). The engine
+   * wires this to the `notification` hook so plugins / settings hooks can
+   * react to "waiting for the user's decision" moments (system notification,
+   * IM ping, …). Listener errors are swallowed — observation must never
+   * affect the approval outcome.
+   */
+  setApprovalEventListener(listener: ((event: ApprovalLifecycleEvent) => void) | undefined): void {
+    this.approvalEventListener = listener;
+  }
+
+  private emitApprovalEvent(event: ApprovalLifecycleEvent): void {
+    try {
+      this.approvalEventListener?.(event);
+    } catch {
+      /* observers must not affect approval flow */
+    }
   }
 
   /** Replace mode + backend in place so live tool execution sees the change. */
@@ -1503,6 +1537,12 @@ export class PermissionClassifier {
     let result: ApprovalResult;
     this.activeApprovalCount++;
     this.approvalStateListener?.(true, toolName);
+    this.emitApprovalEvent({
+      phase: "requested",
+      toolName,
+      riskLevel,
+      ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
+    });
     try {
       const baseDescription = this.describeToolCall(toolName, args);
       const description = reason ? `${baseDescription}\n\nReason:\n${reason}` : baseDescription;
@@ -1526,6 +1566,13 @@ export class PermissionClassifier {
     } else {
       this.denialTracker.record(toolName);
     }
+    this.emitApprovalEvent({
+      phase: "resolved",
+      toolName,
+      riskLevel,
+      approved: result.approved,
+      ...(opts?.sessionId ? { sessionId: opts.sessionId } : {}),
+    });
 
     span.end({
       tool: toolName,

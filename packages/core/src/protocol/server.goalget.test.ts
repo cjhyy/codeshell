@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { AgentServer } from "./server.js";
 import type { Engine } from "../engine/engine.js";
-import type { GoalConfig } from "../engine/goal.js";
+import type { GoalConfig } from "../goal/lifecycle.js";
 
 /**
  * agent/goalGet re-surfaces a session's persisted active goal on load. The goal

@@ -112,4 +112,29 @@ describe("Engine quick-chat prompt guidance", () => {
     expect(elevated?.systemPrompt).toContain("# Side Conversation Boundary");
     expect(elevated?.toolNames).toEqual(expect.arrayContaining(["Agent", "Write", "Edit", "Bash"]));
   });
+
+  it("fails closed for unknown behavior profiles and unowned session kinds", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "unknown-behavior-profile-"));
+    tempDirs.push(cwd);
+    const model = `${provider}-${Date.now()}-${Math.random()}`;
+    callsByModel.set(model, []);
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd,
+      sessionStorageDir: join(cwd, "sessions"),
+      permissionMode: "bypassPermissions",
+      settingsScope: "isolated",
+      headless: true,
+      maxTurns: 2,
+    });
+    (engine as any).hooks.clear();
+
+    await expect(
+      engine.run("must not run unrestricted", { behaviorMode: "missing-profile" }),
+    ).rejects.toThrow("unknown behavior profile: missing-profile");
+    await expect(engine.run("must not run unrestricted", { kind: "pet" })).rejects.toThrow(
+      "session kind has no registered behavior profile: pet",
+    );
+    expect(callsByModel.get(model)).toEqual([]);
+  });
 });

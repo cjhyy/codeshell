@@ -6,6 +6,4 @@ export {
   ErrorCodes,
   type RpcMessage,
   type RunResult,
-  type PetProjectionDelta,
-  type PetProjectionSnapshotResult,
 } from "./types.js";

@@ -29,8 +29,6 @@ import {
   type GoalUpdateParams,
   type SetWorkspaceParams,
   type PendingApprovalMetadata,
-  type PetProjectionDelta,
-  type PetProjectionSnapshotResult,
   Methods,
   ErrorCodes,
   createResponse,
@@ -65,14 +63,14 @@ import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manag
 import { assertSafeSessionId, SessionManager } from "../session/session-manager.js";
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
-import { PendingDecisionIndex } from "../pet/pending-decision-index.js";
-import { SessionIndex } from "../pet/session-index.js";
-import {
-  LOCAL_PET_OWNER,
-  type PendingDecisionProjection,
-  type PendingDecisionStatus,
-  type PetSessionProjection,
-} from "../pet/types.js";
+import type {
+  ExtensionModule,
+  ExtensionQueryHandler,
+  ProtocolObserver,
+  ProtocolObserverHost,
+} from "../tool-system/capability-module.js";
+// TODO(pet-out-of-core): the pet extension is default-loaded here only until
+// the pet domain leaves core; hosts will then register it explicitly.
 
 type ContextCompactStreamEvent = Extract<StreamEvent, { type: "context_compact" }>;
 
@@ -103,57 +101,23 @@ function runInputError(params: RunParams): string | null {
   }
   if (
     params.behaviorMode !== undefined &&
-    params.behaviorMode !== "quickChatRestricted" &&
-    params.behaviorMode !== "pet"
+    (typeof params.behaviorMode !== "string" || params.behaviorMode.length === 0)
   ) {
     return `invalid behavior mode: ${String(params.behaviorMode)}`;
   }
-  if (params.kind !== undefined && params.kind !== "work" && params.kind !== "pet") {
+  if (params.kind !== undefined && (typeof params.kind !== "string" || params.kind.length === 0)) {
     return `invalid session kind: ${String(params.kind)}`;
   }
-  if (params.petRuntimeContext !== undefined) {
-    if (params.behaviorMode !== "pet" || params.kind !== "pet") {
-      return "petRuntimeContext requires behaviorMode=pet and kind=pet";
-    }
-    if (typeof params.petRuntimeContext !== "string" || params.petRuntimeContext.length > 32_768) {
-      return "petRuntimeContext must be bounded JSON";
-    }
-    try {
-      const parsed = JSON.parse(params.petRuntimeContext) as unknown;
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        return "petRuntimeContext must be a JSON object";
-      }
-    } catch {
-      return "petRuntimeContext must be valid JSON";
-    }
+  if (
+    params.profileParams !== undefined &&
+    (!params.profileParams ||
+      typeof params.profileParams !== "object" ||
+      Array.isArray(params.profileParams))
+  ) {
+    return "profileParams must be an object";
   }
-  if (params.petWorkspaces !== undefined) {
-    if (params.behaviorMode !== "pet" || params.kind !== "pet") {
-      return "petWorkspaces requires behaviorMode=pet and kind=pet";
-    }
-    if (!Array.isArray(params.petWorkspaces) || params.petWorkspaces.length > 64) {
-      return "petWorkspaces must be a bounded array";
-    }
-    const ids = new Set<string>();
-    for (const workspace of params.petWorkspaces) {
-      if (
-        !workspace ||
-        typeof workspace !== "object" ||
-        typeof workspace.id !== "string" ||
-        !workspace.id.trim() ||
-        workspace.id.length > 128 ||
-        typeof workspace.name !== "string" ||
-        !workspace.name.trim() ||
-        workspace.name.length > 256 ||
-        (workspace.description !== undefined &&
-          (typeof workspace.description !== "string" || workspace.description.length > 4_096)) ||
-        ids.has(workspace.id)
-      ) {
-        return "petWorkspaces contains an invalid or duplicate Workspace";
-      }
-      ids.add(workspace.id);
-    }
-  }
+  // Domain-specific run-param validation (e.g. behavior-mode vocabularies and
+  // extension-owned param shapes) lives in ExtensionModule.validateRunParams.
   return null;
 }
 
@@ -223,7 +187,7 @@ export interface AgentServerOptions {
    */
   readActiveGoalFromDisk?: (
     sessionId: string,
-  ) => import("../engine/goal.js").GoalConfig | undefined;
+  ) => import("../goal/lifecycle.js").GoalConfig | undefined;
   /** Disk controls for a persisted goal whose ChatSession is not live. */
   updateActiveGoalOnDisk?: (
     sessionId: string,
@@ -233,7 +197,7 @@ export interface AgentServerOptions {
       expectedGoalId?: string;
       expectedRevision?: number;
     },
-  ) => import("../engine/goal.js").GoalConfig | undefined;
+  ) => import("../goal/lifecycle.js").GoalConfig | undefined;
   clearActiveGoalOnDisk?: (
     sessionId: string,
     expected?: { goalId?: string; revision?: number },
@@ -249,12 +213,45 @@ export interface AgentServerOptions {
   /** Stable transport connection identity. Supplying it enables strict
    * connection+session+generation+requestId approval response matching. */
   connectionId?: string;
+  /**
+   * Resolve the user identity this connection acts as (identity dimension
+   * foundations, Task 2). Absent → today's behavior byte-for-byte: every
+   * request routes through the single host-supplied chatManager. Present →
+   * the server resolves the identity per request and routes getOrCreate/get
+   * (and session lists/streams) through a lazily-created per-identity
+   * manager (`chatManager.forIdentity(id)`), whose sessions persist under
+   * `<dataRoot>/identities/<id>/sessions`. Returning the base manager's own
+   * identity ("local" unless the host injected one) selects the base manager
+   * unchanged. The returned identity is validated as a safe path segment;
+   * an invalid identity fails the request (fail closed).
+   */
+  resolveIdentity?: (ctx: { connectionId: string }) => string;
+  /**
+   * Sessions dir for the server's lazy disk reader (background-wakeup
+   * rehydrate). Defaults to the standard sessions root; a host that relocates
+   * its data root (CODE_SHELL_DATA_ROOT worker) points this at
+   * `<dataRoot>/sessions` so cold wakeups read the same store its engines
+   * write.
+   */
+  sessionDiskRoot?: string;
   /** Shared owner router; injectable for hosts/tests, process singleton by default. */
   approvalRouter?: ApprovalRouter;
+  /**
+   * Extension modules whose protocol observers / run-param validators /
+   * hidden session kinds this server applies. Defaults to core's built-in
+   * pet extension so existing hosts keep the Pet projection channel.
+   * TODO(pet-out-of-core): drop the default once hosts register it explicitly.
+   */
+  extensionModules?: readonly ExtensionModule[];
 }
 
 export class AgentServer {
-  private readonly chatManager: ChatSessionManager | null;
+  /** Host-supplied manager; requests route through the `chatManager` getter. */
+  private readonly baseChatManager: ChatSessionManager | null;
+  /** Identity resolution hook; null → single-manager behavior (today's path). */
+  private readonly resolveIdentity: ((ctx: { connectionId: string }) => string) | null;
+  /** Lazily-derived managers keyed by identity (non-base identities only). */
+  private readonly identityManagers = new Map<string, ChatSessionManager>();
   private readonly legacyEngine: Engine | null;
   private globalQueryEngine: Engine | null = null;
   private transport: Transport;
@@ -262,7 +259,7 @@ export class AgentServer {
   private readonly settingsReader: (() => ValidatedSettings) | null;
   /** Disk-only active-goal reader for agent/goalGet on a non-live session. */
   private readonly readActiveGoalFromDisk:
-    | ((sessionId: string) => import("../engine/goal.js").GoalConfig | undefined)
+    | ((sessionId: string) => import("../goal/lifecycle.js").GoalConfig | undefined)
     | null;
   private readonly updateActiveGoalOnDisk:
     | ((
@@ -273,7 +270,7 @@ export class AgentServer {
           expectedGoalId?: string;
           expectedRevision?: number;
         },
-      ) => import("../engine/goal.js").GoalConfig | undefined)
+      ) => import("../goal/lifecycle.js").GoalConfig | undefined)
     | null;
   private readonly clearActiveGoalOnDisk:
     | ((sessionId: string, expected?: { goalId?: string; revision?: number }) => boolean)
@@ -289,12 +286,14 @@ export class AgentServer {
     string,
     ApprovalRouteTarget & { requestId: string }
   >();
-  private readonly pendingDecisionIndex = new PendingDecisionIndex();
-  private readonly petSessionIndex = new SessionIndex();
-  private readonly petCatalog = new Map<string, { sessionId: string; updatedAt: number }>();
-  private petProjectionVersion = 0;
-  private petProjectionDisconnected = false;
-  private petProjectionClosing = false;
+  /** Extension modules this server consults for protocol-level hooks. */
+  private readonly extensionModules: readonly ExtensionModule[];
+  /** Protocol lifecycle observers created by extension modules (registration order). */
+  private readonly protocolObservers: ProtocolObserver[] = [];
+  /** Extension-registered protocol method/query aliases (compat channel). */
+  private readonly protocolQueryHandlers = new Map<string, ExtensionQueryHandler>();
+  /** Union of extension hiddenSessionKinds, excluded from generic session lists. */
+  private readonly hiddenSessionKinds: readonly string[];
   /**
    * Last per-session EngineConfigSlice supplied by agent/run. Kept even after
    * idle eviction so background-completion wakeups can rebuild the ChatSession
@@ -304,6 +303,8 @@ export class AgentServer {
   private readonly lastSliceBySession = new Map<string, EngineConfigSlice>();
   /** Lazy disk reader for cold wakeup rehydrate when this process lacks a slice. */
   private diskSessionReader: SessionManager | null = null;
+  /** Sessions dir for diskSessionReader; undefined → default sessions root. */
+  private readonly sessionDiskRoot: string | undefined;
   /**
    * Monotonic config-reload version, bumped per reloadSettings request so each
    * Engine.refreshRuntimeConfig can drop out-of-order (stale) deliveries (Q5).
@@ -348,8 +349,32 @@ export class AgentServer {
   private bgAgentBusUnsubscribe: (() => void) | null = null;
   private readonly wakeupsInFlight = new Set<string>();
 
+  /**
+   * Effective session manager for the connection this server serves. Without
+   * a resolveIdentity hook this is exactly the host-supplied manager —
+   * today's single-manager behavior, byte-for-byte. With the hook, requests
+   * route through a lazily-created per-identity manager, so the same
+   * sessionId under two identities resolves to two isolated ChatSessions and
+   * a connection can only list/stream sessions of its own identity.
+   */
+  private get chatManager(): ChatSessionManager | null {
+    if (!this.baseChatManager || !this.resolveIdentity) return this.baseChatManager;
+    const identity = this.resolveIdentity({ connectionId: this.connectionId });
+    if (identity === this.baseChatManager.identity) return this.baseChatManager;
+    let manager = this.identityManagers.get(identity);
+    if (!manager) {
+      // forIdentity validates the identity as a safe path segment and throws
+      // on garbage — the request that triggered routing then fails closed.
+      manager = this.baseChatManager.forIdentity(identity);
+      this.identityManagers.set(identity, manager);
+    }
+    return manager;
+  }
+
   constructor(options: AgentServerOptions) {
-    this.chatManager = options.chatManager ?? null;
+    this.baseChatManager = options.chatManager ?? null;
+    this.resolveIdentity = options.resolveIdentity ?? null;
+    this.sessionDiskRoot = options.sessionDiskRoot;
     this.legacyEngine = options.engine ?? null;
     this.settingsReader = options.settingsReader ?? null;
     this.readActiveGoalFromDisk = options.readActiveGoalFromDisk ?? null;
@@ -365,11 +390,50 @@ export class AgentServer {
     }
     getInteractiveApprovalBackend().clearPromptFn();
 
-    if (!this.chatManager && !this.legacyEngine) {
+    if (!this.baseChatManager && !this.legacyEngine) {
       throw new Error("AgentServer: either chatManager or engine must be supplied");
     }
 
     this.transport = options.transport;
+
+    // Protocol lifecycle observers. Each configured extension module may
+    // attach one; the server calls them at every lifecycle hook point and
+    // isolates per-observer failures. Core default-loads the pet extension
+    // until the pet domain moves out of core (see AgentServerOptions).
+    this.extensionModules = options.extensionModules ?? [];
+    this.hiddenSessionKinds = [
+      ...new Set(this.extensionModules.flatMap((module) => module.hiddenSessionKinds ?? [])),
+    ];
+    const observerHost: ProtocolObserverHost = {
+      getLiveSessionSnapshot: () => this.chatManager?.getLiveSessionSnapshot().sessions ?? [],
+      projectionGeneration: () => this.workerGeneration(),
+      getSessionKind: (sessionId) => {
+        const session = this.chatManager?.get(sessionId);
+        if (!session) return undefined;
+        return (
+          session.engine as Engine & {
+            getSessionManager?: () => { readSessionKind?: (sessionId: string) => string };
+          }
+        )
+          .getSessionManager?.()
+          .readSessionKind?.(sessionId);
+      },
+      isTransportDisconnected: () => this.disconnected,
+      notify: (method, params) => this.notify(method, params),
+      registerQuery: (type, handler) => {
+        this.protocolQueryHandlers.set(type, handler);
+      },
+    };
+    for (const module of this.extensionModules) {
+      if (!module.createProtocolObserver) continue;
+      try {
+        this.protocolObservers.push(module.createProtocolObserver(observerHost));
+      } catch (err) {
+        logger.warn(
+          `protocol observer init failed for extension ${module.id}: ${(err as Error).message}`,
+        );
+      }
+    }
 
     // Wire up incoming messages
     this.transport.onMessage((msg) => {
@@ -571,7 +635,7 @@ export class AgentServer {
     const cached = this.lastSliceBySession.get(sessionId);
     if (cached) return { ...cached };
 
-    if (!this.diskSessionReader) this.diskSessionReader = new SessionManager();
+    if (!this.diskSessionReader) this.diskSessionReader = new SessionManager(this.sessionDiskRoot);
     const cwd = this.diskSessionReader.readSessionMainRoot(sessionId);
     if (!cwd) return null;
     return {
@@ -662,14 +726,104 @@ export class AgentServer {
       case Methods.BackgroundWork:
         this.handleBackgroundWork(req);
         break;
+      // Compat channel: the wire method name is retained, but the handler is
+      // whatever extension registered it (the pet extension by default).
       case Methods.GetPetProjectionSnapshot:
-        this.transport.send(createResponse(req.id, this.buildPetProjectionSnapshot()));
+        await this.handleExtensionProtocolMethod(req);
         break;
       default:
         this.transport.send(
           createErrorResponse(req.id, ErrorCodes.MethodNotFound, `Unknown method: ${req.method}`),
         );
     }
+  }
+
+  /** Route a protocol method to its extension-registered handler, if any. */
+  private async handleExtensionProtocolMethod(req: RpcRequest): Promise<void> {
+    const handler = this.protocolQueryHandlers.get(req.method);
+    if (!handler) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.MethodNotFound, `Unknown method: ${req.method}`),
+      );
+      return;
+    }
+    try {
+      const data = await handler((req.params ?? {}) as Readonly<Record<string, unknown>>);
+      this.transport.send(createResponse(req.id, data as Record<string, unknown>));
+    } catch (err) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+      );
+    }
+  }
+
+  // ─── Protocol observers ─────────────────────────────────────────
+  // Domain-agnostic lifecycle dispatch. Observers run in registration order
+  // and a throwing observer never breaks the protocol path or its peers.
+
+  private forEachObserver(hook: string, fn: (observer: ProtocolObserver) => void): void {
+    for (const observer of this.protocolObservers) {
+      try {
+        fn(observer);
+      } catch (err) {
+        logger.warn(`protocol observer ${hook} hook failed: ${(err as Error).message}`);
+      }
+    }
+  }
+
+  private observeSessionAttached(sessionId: string, lastActivityAt: number): void {
+    this.forEachObserver("onSessionAttached", (observer) =>
+      observer.onSessionAttached?.(sessionId, lastActivityAt),
+    );
+  }
+
+  private observeSessionStream(sessionId: string, event: StreamEvent): void {
+    this.forEachObserver("onSessionStream", (observer) =>
+      observer.onSessionStream?.(sessionId, event),
+    );
+  }
+
+  private observeRunBoundary(sessionId: string, phase: "start" | "end" | "error"): void {
+    this.forEachObserver("onRunBoundary", (observer) => observer.onRunBoundary?.(sessionId, phase));
+  }
+
+  /** Observers may replace approval metadata (e.g. surfaceable overrides). */
+  private observeApprovalCreated(metadata: PendingApprovalMetadata): PendingApprovalMetadata {
+    for (const observer of this.protocolObservers) {
+      try {
+        const next = observer.onApprovalCreated?.(metadata);
+        if (next) metadata = next;
+      } catch (err) {
+        logger.warn(`protocol observer onApprovalCreated hook failed: ${(err as Error).message}`);
+      }
+    }
+    return metadata;
+  }
+
+  private observeApprovalTransition(metadata: PendingApprovalMetadata, status: string): void {
+    this.forEachObserver("onApprovalTransition", (observer) =>
+      observer.onApprovalTransition?.(metadata, status),
+    );
+  }
+
+  private observeSessionClosed(sessionId: string): void {
+    this.forEachObserver("onSessionClosed", (observer) => observer.onSessionClosed?.(sessionId));
+  }
+
+  private observeServerClose(): void {
+    this.forEachObserver("onServerClose", (observer) => observer.onServerClose?.());
+  }
+
+  /** Generic run-param shape checks plus each extension's domain validation. */
+  private validateRunInput(params: RunParams): string | null {
+    const generic = runInputError(params);
+    if (generic) return generic;
+    for (const module of this.extensionModules) {
+      if (!module.validateRunParams) continue;
+      const error = module.validateRunParams(params as unknown as Record<string, unknown>);
+      if (error) return error;
+    }
+    return null;
   }
 
   // ─── Run ────────────────────────────────────────────────────────
@@ -963,7 +1117,7 @@ export class AgentServer {
       );
       return;
     }
-    const inputError = runInputError(params);
+    const inputError = this.validateRunInput(params);
     if (inputError) {
       this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, inputError));
       return;
@@ -1008,7 +1162,7 @@ export class AgentServer {
       return;
     }
     const sid = params.sessionId;
-    this.ensurePetSession(sid, session.lastActivityAt);
+    this.observeSessionAttached(sid, session.lastActivityAt);
     const approvalRegistration = this.approvalRouter.register(sid, this.connectionId);
     if (!approvalRegistration.ok) {
       this.transport.send(
@@ -1050,10 +1204,10 @@ export class AgentServer {
         goal:
           typeof params.goal === "string" ||
           (params.goal != null && typeof params.goal === "object")
-            ? (params.goal as string | import("../engine/goal.js").GoalConfig)
+            ? (params.goal as string | import("../goal/lifecycle.js").GoalConfig)
             : undefined,
         onStream: (event: StreamEvent) => {
-          this.recordPetStreamEvent(sid, event);
+          this.observeSessionStream(sid, event);
           this.notify(Methods.StreamEvent, { sessionId: sid, event });
         },
         clientMessageId:
@@ -1061,15 +1215,16 @@ export class AgentServer {
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
+        profileParams: params.profileParams,
         petRuntimeContext: params.petRuntimeContext,
         petWorkspaces: params.petWorkspaces,
         kind: params.kind,
         approvalRouter: this.approvalRouter,
       });
       this.notify(Methods.RunAccepted, { requestId: req.id, sessionId: sid });
-      this.emitPetSessionUpsert(sid);
+      this.observeRunBoundary(sid, "start");
       const result = await run;
-      this.emitPetSessionUpsert(sid);
+      this.observeRunBoundary(sid, "end");
 
       const runResult: RunResult = {
         text: result.text,
@@ -1077,6 +1232,7 @@ export class AgentServer {
         sessionId: result.sessionId ?? sid,
         turnCount: result.turnCount,
         usage: result.usage,
+        ...(result.extensions ? { extensions: result.extensions } : {}),
         petWorkDelegation: result.petWorkDelegation,
       };
       this.transport.send(createResponse(req.id, runResult));
@@ -1087,7 +1243,7 @@ export class AgentServer {
       // drained its sub-agents inside engine.run before returning.
       this.maybeWakeIdleSession(sid);
     } catch (err) {
-      this.emitPetSessionUpsert(sid);
+      this.observeRunBoundary(sid, "error");
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
       );
@@ -1106,7 +1262,7 @@ export class AgentServer {
     }
 
     const params = (req.params ?? {}) as unknown as RunParams;
-    const inputError = runInputError(params);
+    const inputError = this.validateRunInput(params);
     if (inputError) {
       this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, inputError));
       return;
@@ -1196,11 +1352,12 @@ export class AgentServer {
         goal:
           typeof params.goal === "string" ||
           (params.goal != null && typeof params.goal === "object")
-            ? (params.goal as string | import("../engine/goal.js").GoalConfig)
+            ? (params.goal as string | import("../goal/lifecycle.js").GoalConfig)
             : undefined,
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
+        profileParams: params.profileParams,
         petRuntimeContext: params.petRuntimeContext,
         petWorkspaces: params.petWorkspaces,
         kind: params.kind,
@@ -1212,6 +1369,7 @@ export class AgentServer {
         sessionId: result.sessionId,
         turnCount: result.turnCount,
         usage: result.usage,
+        ...(result.extensions ? { extensions: result.extensions } : {}),
         petWorkDelegation: result.petWorkDelegation,
       };
 
@@ -1300,7 +1458,7 @@ export class AgentServer {
         return;
       }
       s.pendingApprovals.delete(params.requestId);
-      this.transitionPendingDecision(entry.metadata, "resolved");
+      this.observeApprovalTransition(entry.metadata, "resolved");
       this.pendingApprovalTargets.delete(params.requestId);
       // Cancel the pending timeout for requests that arm one (browser actions,
       // credential injection, and tool approvals). AskUserQuestion does not use
@@ -1458,7 +1616,7 @@ export class AgentServer {
   /** Start a fully rebuilt Goal run for an idle or goal-less in-flight session. */
   private async queueGoalResumeTurn(
     sessionId: string,
-    goal: import("../engine/goal.js").GoalConfig,
+    goal: import("../goal/lifecycle.js").GoalConfig,
     existing?: import("./chat-session.js").ChatSession,
   ): Promise<{ completion: Promise<boolean> } | null> {
     if (!this.chatManager) return null;
@@ -1486,7 +1644,7 @@ export class AgentServer {
 
   private reconcileFailedGoalResume(
     sessionId: string,
-    goal: import("../engine/goal.js").GoalConfig,
+    goal: import("../goal/lifecycle.js").GoalConfig,
     claimedOwner: ApprovalRouteTarget | null,
     error: unknown,
   ): void {
@@ -1916,8 +2074,7 @@ export class AgentServer {
       }
       this.approvalRouter.release(params.sessionId, this.connectionId, "session closed");
       await this.chatManager.close(params.sessionId);
-      this.petCatalog.delete(params.sessionId);
-      this.emitPetSessionRemove(params.sessionId);
+      this.observeSessionClosed(params.sessionId);
     }
     // Explicit session teardown — reap that session's background shells
     // (design §6 "session 被显式删除 → killSession"). This is the RPC path
@@ -2243,7 +2400,9 @@ export class AgentServer {
           const { sessions } = this.chatManager.getLiveSessionSnapshot();
           this.transport.send(createResponse(req.id, { type: "sessions", data: sessions }));
         } else if (engine) {
-          const sessions = engine.getSessionManager().list();
+          const sessions = engine
+            .getSessionManager()
+            .list(undefined, { excludeKinds: this.hiddenSessionKinds });
           this.transport.send(createResponse(req.id, { type: "sessions", data: sessions }));
         } else {
           this.transport.send(createResponse(req.id, { type: "sessions", data: [] }));
@@ -2949,7 +3108,7 @@ export class AgentServer {
             sessionId,
             requestId,
             routeGeneration: effectiveRoute.generation,
-            workerGeneration: this.petWorkerGeneration(),
+            workerGeneration: this.workerGeneration(),
             kind: internal ? "internal" : "tool_approval",
             title: internal ? "内部操作等待" : `等待批准 ${toolName}`,
             toolName,
@@ -3023,7 +3182,7 @@ export class AgentServer {
           sessionId,
           requestId,
           routeGeneration: "generation" in routeEnvelope ? routeEnvelope.generation : undefined,
-          workerGeneration: this.petWorkerGeneration(),
+          workerGeneration: this.workerGeneration(),
           kind: "ask_user",
           title: "需要用户回答",
           createdAt: Date.now(),
@@ -3463,8 +3622,7 @@ export class AgentServer {
   // ─── Lifecycle ──────────────────────────────────────────────────
 
   close(): void {
-    this.petProjectionClosing = true;
-    this.emitPetWorkerDisconnected();
+    this.observeServerClose();
     this.disconnect("server closing");
     // Detach the bg-agent bus subscription first so a final flurry of
     // completions during shutdown can't race the `shutdown` status
@@ -3479,11 +3637,17 @@ export class AgentServer {
       this.bgAgentBusUnsubscribe = null;
     }
 
-    if (this.chatManager) {
-      this.chatManager.forEachSession((session) => {
-        this.cancelSessionApprovals(session, "server closing");
-      });
-      this.chatManager.closeAll();
+    // Close the host-supplied manager plus every identity-derived manager
+    // this server lazily created (the map is empty without a resolveIdentity
+    // hook, so the default path closes exactly the base manager as before).
+    if (this.baseChatManager) {
+      const managers = [this.baseChatManager, ...this.identityManagers.values()];
+      for (const manager of managers) {
+        manager.forEachSession((session) => {
+          this.cancelSessionApprovals(session, "server closing");
+        });
+        manager.closeAll();
+      }
     }
 
     // Legacy path cleanup
@@ -3517,200 +3681,19 @@ export class AgentServer {
     }
   }
 
-  /** Resolver-free metadata view for Pet projection and protocol snapshots. */
-  getPendingDecisionSnapshot(): import("../pet/types.js").PendingDecisionProjection[] {
-    return this.pendingDecisionIndex.snapshot();
+  /** Resolver-free metadata view for extension projections and protocol snapshots. */
+  getPendingDecisionSnapshot(): readonly unknown[] {
+    const entries: unknown[] = [];
+    this.forEachObserver("snapshotPendingDecisions", (observer) => {
+      const snapshot = observer.snapshotPendingDecisions?.();
+      if (snapshot) entries.push(...snapshot);
+    });
+    return entries;
   }
 
-  private petWorkerGeneration(): number {
+  /** Host lifecycle generation stamped onto pending-approval metadata. */
+  private workerGeneration(): number {
     return this.chatManager?.getLiveSessionSnapshot().generation ?? 0;
-  }
-
-  private ensurePetSession(sessionId: string, updatedAt = Date.now()): void {
-    const previous = this.petCatalog.get(sessionId);
-    this.petCatalog.set(sessionId, {
-      sessionId,
-      updatedAt: Math.max(previous?.updatedAt ?? 0, updatedAt),
-    });
-    this.petSessionIndex.replaceCatalog({
-      owner: LOCAL_PET_OWNER,
-      sessions: [...this.petCatalog.values()],
-      observedAt: updatedAt,
-    });
-  }
-
-  private currentPetSessionProjection(
-    sessionId: string,
-    observedAt: number,
-  ): PetSessionProjection | undefined {
-    const live = this.chatManager
-      ?.getLiveSessionSnapshot()
-      .sessions.find((session) => session.sessionId === sessionId);
-    if (!live || live.kind === "pet") return undefined;
-    this.ensurePetSession(sessionId, live.lastActivityAt);
-    const indexed = this.petSessionIndex.get(sessionId);
-    const pendingDecisionCount = this.pendingDecisionIndex
-      .pendingSnapshot()
-      .filter((entry) => entry.agentSessionId === sessionId).length;
-    const runState = live.busy ? "running" : live.queueDepth > 0 ? "queued" : "idle";
-    return {
-      owner: LOCAL_PET_OWNER,
-      agentSessionId: sessionId,
-      coreSessionId: sessionId,
-      title: indexed?.title,
-      workspaceDisplayName: indexed?.workspaceDisplayName,
-      runState,
-      phase: pendingDecisionCount > 0 ? "waiting-decision" : indexed?.phase,
-      summary:
-        pendingDecisionCount > 0
-          ? pendingDecisionCount === 1
-            ? "等待用户决定"
-            : `等待用户决定（${pendingDecisionCount}）`
-          : (indexed?.summary ?? (runState === "running" ? "运行中" : undefined)),
-      queueDepth: live.queueDepth,
-      lastActivityAt: live.lastActivityAt,
-      pendingDecisionCount,
-      terminal: runState === "idle" ? undefined : indexed?.terminal,
-      freshness: { source: "live-snapshot", observedAt, workerState: "active" },
-    };
-  }
-
-  private buildPetProjectionSnapshot(): PetProjectionSnapshotResult {
-    const observedAt = Date.now();
-    const live = this.chatManager?.getLiveSessionSnapshot();
-    const sessions = (live?.sessions ?? [])
-      .filter((session) => session.kind !== "pet")
-      .map((session) => this.currentPetSessionProjection(session.sessionId, observedAt))
-      .filter((session): session is PetSessionProjection => session !== undefined)
-      .sort((a, b) => a.agentSessionId.localeCompare(b.agentSessionId));
-    return {
-      snapshotVersion: this.petProjectionVersion,
-      workerGeneration: live?.generation ?? 0,
-      observedAt,
-      sessions,
-      pending: this.pendingDecisionIndex.pendingSnapshot(),
-    };
-  }
-
-  private nextPetProjectionVersion(): number {
-    this.petProjectionVersion += 1;
-    return this.petProjectionVersion;
-  }
-
-  private recordPetStreamEvent(sessionId: string, event: StreamEvent): void {
-    const observedAt = Date.now();
-    const live = this.chatManager
-      ?.getLiveSessionSnapshot()
-      .sessions.find((session) => session.sessionId === sessionId);
-    if (live?.kind === "pet") return;
-    this.ensurePetSession(sessionId, observedAt);
-    const version = this.nextPetProjectionVersion();
-    this.petSessionIndex.applyStreamEvent({
-      sessionId,
-      event,
-      generation: this.petWorkerGeneration(),
-      version,
-      observedAt,
-    });
-    const session = this.currentPetSessionProjection(sessionId, observedAt);
-    if (!session) return;
-    this.sendPetProjectionDelta({
-      workerGeneration: this.petWorkerGeneration(),
-      version,
-      observedAt,
-      kind: "session-upsert",
-      session,
-    });
-  }
-
-  private emitPetSessionUpsert(sessionId: string): void {
-    const observedAt = Date.now();
-    const session = this.currentPetSessionProjection(sessionId, observedAt);
-    if (!session) return;
-    this.sendPetProjectionDelta({
-      workerGeneration: this.petWorkerGeneration(),
-      version: this.nextPetProjectionVersion(),
-      observedAt,
-      kind: "session-upsert",
-      session,
-    });
-  }
-
-  private emitPetSessionRemove(sessionId: string): void {
-    const observedAt = Date.now();
-    this.sendPetProjectionDelta({
-      workerGeneration: this.petWorkerGeneration(),
-      version: this.nextPetProjectionVersion(),
-      observedAt,
-      kind: "session-remove",
-      sessionId,
-    });
-  }
-
-  private emitPetPendingUpsert(pending: PendingDecisionProjection): void {
-    const observedAt = Date.now();
-    this.sendPetProjectionDelta({
-      workerGeneration: this.petWorkerGeneration(),
-      version: this.nextPetProjectionVersion(),
-      observedAt,
-      kind: "pending-upsert",
-      pending,
-    });
-  }
-
-  private transitionPendingDecision(
-    metadata: PendingApprovalMetadata,
-    status: Exclude<PendingDecisionStatus, "pending">,
-  ): void {
-    const observedAt = Date.now();
-    if (
-      !this.pendingDecisionIndex.transition({
-        sessionId: metadata.sessionId,
-        requestId: metadata.requestId,
-        routeGeneration: metadata.routeGeneration,
-        status,
-        terminalAt: observedAt,
-      })
-    ) {
-      return;
-    }
-    this.sendPetProjectionDelta({
-      workerGeneration: this.petWorkerGeneration(),
-      version: this.nextPetProjectionVersion(),
-      observedAt,
-      kind: "pending-remove",
-      sessionId: metadata.sessionId,
-      requestId: metadata.requestId,
-      status,
-    });
-    this.emitPetSessionUpsert(metadata.sessionId);
-  }
-
-  private emitPetWorkerDisconnected(): void {
-    if (this.petProjectionDisconnected) return;
-    this.petProjectionDisconnected = true;
-    const observedAt = Date.now();
-    const version = this.nextPetProjectionVersion();
-    this.petSessionIndex.applyWorkerLifecycle({
-      state: "disconnected",
-      generation: this.petWorkerGeneration(),
-      version,
-      observedAt,
-    });
-    this.sendPetProjectionDelta({
-      workerGeneration: this.petWorkerGeneration(),
-      version,
-      observedAt,
-      kind: "worker-state",
-      state: "disconnected",
-    });
-  }
-
-  private sendPetProjectionDelta(delta: PetProjectionDelta): void {
-    // Socket teardown can resolve a fail-closed approval and finish its run.
-    // Do not write projection tail events to a transport whose owner is gone.
-    if (this.disconnected && !this.petProjectionClosing) return;
-    this.notify(Methods.PetProjectionDelta, delta as unknown as Record<string, unknown>);
   }
 
   private registerSessionApproval(
@@ -3718,35 +3701,19 @@ export class AgentServer {
     metadata: PendingApprovalMetadata,
     resolve: (decision: unknown) => void,
   ): void {
-    const kind = (
-      session.engine as Engine & {
-        getSessionManager?: () => { readSessionKind?: (sessionId: string) => "work" | "pet" };
-      }
-    )
-      .getSessionManager?.()
-      .readSessionKind?.(session.id);
-    if (kind === "pet") {
-      metadata = { ...metadata, surfaceable: false };
-    }
+    metadata = this.observeApprovalCreated(metadata);
     session.pendingApprovals.set(metadata.requestId, { resolve, metadata });
-    if (this.pendingDecisionIndex.created(metadata)) {
-      const pending = this.pendingDecisionIndex.get(metadata.sessionId, metadata.requestId);
-      if (pending) {
-        this.emitPetPendingUpsert(pending);
-        this.emitPetSessionUpsert(metadata.sessionId);
-      }
-    }
   }
 
   private takeSessionApproval(
     session: ChatSession,
     requestId: string,
-    status: Exclude<PendingDecisionStatus, "pending">,
+    status: string,
   ): import("./chat-session.js").PendingApprovalEntry | undefined {
     const entry = session.pendingApprovals.get(requestId);
     if (!entry) return undefined;
     session.pendingApprovals.delete(requestId);
-    this.transitionPendingDecision(entry.metadata, status);
+    this.observeApprovalTransition(entry.metadata, status);
     return entry;
   }
 
@@ -3761,7 +3728,7 @@ export class AgentServer {
       sessionId,
       requestId,
       routeGeneration: "generation" in route ? route.generation : undefined,
-      workerGeneration: this.petWorkerGeneration(),
+      workerGeneration: this.workerGeneration(),
       kind: "internal",
       title: "内部操作等待",
       toolName,
@@ -3789,12 +3756,12 @@ export class AgentServer {
   private cancelSessionApprovals(
     session: import("./chat-session.js").ChatSession,
     reason = "cancelled",
-    status: Exclude<PendingDecisionStatus, "pending"> = "cancelled",
+    status = "cancelled",
   ): void {
     for (const [requestId, entry] of session.pendingApprovals) {
       this.clearApprovalTimer(requestId);
       this.pendingApprovalTargets.delete(requestId);
-      this.transitionPendingDecision(entry.metadata, status);
+      this.observeApprovalTransition(entry.metadata, status);
       try {
         entry.resolve({ approved: false, reason });
       } catch {

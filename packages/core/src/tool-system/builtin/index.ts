@@ -105,7 +105,6 @@ import {
   isInjectCredentialAvailable,
 } from "../../credentials/inject-credential-tool.js";
 import { credentialAccessScope, getCredentialAccess } from "../../credentials/access.js";
-import { delegateWorkToolDef, delegateWorkTool } from "./delegate-work.js";
 
 /**
  * Tool executor signature.
@@ -221,6 +220,14 @@ export interface BuiltinToolExposure {
   requires?: readonly string[];
   /** Shared by model visibility and the executor's second safety gate. */
   availability?: BuiltinToolGuard;
+  /**
+   * Per-turn dynamic rewrite of the tool definition the model sees (e.g. a
+   * closed enum derived from run-scoped state). Pure; must not mutate `def`.
+   */
+  rewriteDefinition?: (
+    def: import("../../types.js").ToolDefinition,
+    ctx: ToolVisibilityContext,
+  ) => import("../../types.js").ToolDefinition;
 }
 
 const GENERAL_TAGS = ["general"] as const;
@@ -882,20 +889,6 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     execute: injectCredentialTool,
     exposure: expose(GENERAL_TAGS, {
       availability: (ctx) => isInjectCredentialAvailable(ctx.cwd, ctx.settingsScope),
-    }),
-  },
-  {
-    definition: {
-      ...delegateWorkToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: delegateWorkTool,
-    exposure: expose(HARNESS_TAGS, {
-      defaultPermissionRules: allow(delegateWorkToolDef.name),
-      availability: (ctx) => ctx.behaviorProfile === "pet" && (ctx.petWorkspaceCount ?? 0) > 0,
     }),
   },
 ];

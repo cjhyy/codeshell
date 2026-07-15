@@ -10,7 +10,7 @@ import { sanitizeContent } from "../logging/sanitize-messages.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { resolveAuxKey } from "./aux-key.js";
-import type { CumulativeUsageCounters } from "./session-usage.js";
+import type { CumulativeUsageCounters } from "../session/usage.js";
 import type { EngineConfig } from "./types.js";
 
 export type EngineLlmClient = Awaited<ReturnType<typeof createLLMClient>>;

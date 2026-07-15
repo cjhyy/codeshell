@@ -468,6 +468,17 @@ export function buildRegisteredTool(serverName: string, tool: McpTool): Register
   };
 }
 
+/**
+ * Per-server outcome of a connectAll() sweep (see the optional onServerEvent
+ * parameter). The engine forwards these onto the `notification` hook so hosts
+ * and plugins can surface MCP availability without polling.
+ */
+export interface McpServerLifecycleEvent {
+  type: "mcp_server_connected" | "mcp_server_failed";
+  server: string;
+  error?: string;
+}
+
 export class MCPManager {
   private static instance: MCPManager | null = null;
   private connections = new Map<string, MCPConnection>();
@@ -502,7 +513,11 @@ export class MCPManager {
   /**
    * Connect to all configured MCP servers and register their tools.
    */
-  async connectAll(servers: Record<string, MCPServerConfig>, owner?: unknown): Promise<void> {
+  async connectAll(
+    servers: Record<string, MCPServerConfig>,
+    owner?: unknown,
+    onServerEvent?: (event: McpServerLifecycleEvent) => void,
+  ): Promise<void> {
     const enabledNames = this.enabledServerNames(servers);
     // Register this owner's desired set up front (see reconcile's shared-pool
     // note) so a later reconcile from ANOTHER session can't disconnect servers
@@ -531,11 +546,21 @@ export class MCPManager {
 
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
+      const server = entries[i][0];
       if (result.status === "rejected") {
         logger.warn("mcp.connect_failed", {
-          server: entries[i][0],
+          server,
           error: (result.reason as Error).message,
         });
+      }
+      try {
+        onServerEvent?.(
+          result.status === "rejected"
+            ? { type: "mcp_server_failed", server, error: (result.reason as Error).message }
+            : { type: "mcp_server_connected", server },
+        );
+      } catch {
+        /* observers must not affect connection handling */
       }
     }
   }

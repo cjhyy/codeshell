@@ -12,7 +12,7 @@ import {
   recordLLMResponse,
 } from "../logging/session-recorder.js";
 import { sanitizeMessages } from "../logging/sanitize-messages.js";
-import { cacheHitRateFromUsage } from "./session-usage.js";
+import { cacheHitRateFromUsage } from "../session/usage.js";
 import {
   createPromptPrefixFingerprint,
   type PromptPrefixFingerprint,

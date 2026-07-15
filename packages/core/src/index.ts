@@ -45,29 +45,7 @@ export type {
   GoalLifecyclePhase,
   GoalLifecycleTerminalReason,
   GoalLifecycleV1,
-} from "./engine/goal.js";
-export { SessionIndex } from "./pet/session-index.js";
-export { PendingDecisionIndex, safePendingTitle } from "./pet/pending-decision-index.js";
-export type {
-  PetCatalogSession,
-  PetLiveSessionState,
-  PetLiveSessionsSnapshot,
-  PetOwnerId,
-  PetOwnerScopedCatalog,
-  PetProjectionCursor,
-  PetProjectionFreshness,
-  PetProjectionSnapshot,
-  PetSessionPhase,
-  PetSessionProjection,
-  PetSessionRunState,
-  PetSessionStreamEvent,
-  PetTerminalStatus,
-  PetWorkerLifecycleEvent,
-  PetWorkerState,
-  PendingDecisionKind,
-  PendingDecisionProjection,
-  PendingDecisionStatus,
-} from "./pet/types.js";
+} from "./goal/lifecycle.js";
 
 // ─── Exceptions ──────────────────────────────────────────────────
 
@@ -91,12 +69,7 @@ export {
 
 export { Engine, loadAgentDefinitionsForCwd } from "./engine/engine.js";
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/types.js";
-export type { RunBehaviorMode } from "./engine/run-types.js";
-export {
-  DELEGATE_WORK_TOOL_NAME,
-  type PetWorkspaceOption,
-  type PetWorkDelegation,
-} from "./pet/delegation.js";
+export type { RunBehaviorMode, RunBehaviorProfile } from "./engine/run-types.js";
 export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
 export { resolveAuxKey } from "./engine/aux-key.js";
 export {
@@ -108,7 +81,11 @@ export { AgentDefinitionRegistry, type AgentSourceDir } from "./agent/agent-defi
 export type { CostStateStore, CostStateSnapshot } from "./engine/cost-store.js";
 export { EngineRuntime } from "./engine/runtime.js";
 export type { EngineRuntimeOptions } from "./engine/runtime.js";
-export { ChatSessionManager } from "./protocol/chat-session-manager.js";
+export {
+  ChatSessionManager,
+  createChatSessionManager,
+  LOCAL_CHAT_IDENTITY,
+} from "./protocol/chat-session-manager.js";
 export type {
   ChatSessionManagerOptions,
   LiveChatSessionSnapshot,
@@ -183,6 +160,9 @@ export type {
   ExtensionModule,
   ExtensionQueryHandler,
   ExtensionTool,
+  ProtocolLiveSession,
+  ProtocolObserver,
+  ProtocolObserverHost,
 } from "./tool-system/capability-module.js";
 export {
   registerExtensionModules,
@@ -237,8 +217,6 @@ export {
   type RunResult,
   type ForkSessionParams,
   type ForkSessionResult as ProtocolForkSessionResult,
-  type PetProjectionDelta,
-  type PetProjectionSnapshotResult,
 } from "./protocol/types.js";
 
 // ─── Session ─────────────────────────────────────────────────────
@@ -547,77 +525,6 @@ export {
   getDefaultCredentialCipher,
 } from "./credentials/index.js";
 
-// ─── Utils (shared primitives used by TUI) ───────────────────────
-/** @internal Shared primitives for the in-repo TUI/desktop hosts; not stable SDK surface. */
-
-export {
-  getGraphemeSegmenter,
-  firstGrapheme,
-  lastGrapheme,
-  getWordSegmenter,
-  getRelativeTimeFormat,
-  getTimeZone,
-  getSystemLocaleLanguage,
-} from "./utils/intl.js";
-
-export { env } from "./utils/env.js";
-export { default as sliceAnsi } from "./utils/sliceAnsi.js";
-export { execFileNoThrow } from "./utils/execFileNoThrow.js";
-export {
-  findExecutable,
-  resolveExecutable,
-  setGitPathOverride,
-  resolveGit,
-  isGitAvailable,
-  resolveGitPath,
-} from "./utils/exec.js";
-export { gte } from "./utils/semver.js";
-// Cross-process file lock (proper-lockfile via createRequire, ESM-safe). Used by
-// RunLock / CronStore internally; exported so other writers of shared files
-// (e.g. desktop settings-service writing the same settings.json as the worker)
-// can take the same advisory lock.
-export { lock, lockSync, unlock, check } from "./utils/lockfile.js";
-export { logForDebugging } from "./utils/debug.js";
-export {
-  isEnvTruthy,
-  isEnvDefinedFalsy,
-  getClaudeConfigHomeDir,
-  isBareMode,
-  parseEnvVars,
-  shouldMaintainProjectWorkingDir,
-  getAWSRegion,
-  getDefaultVertexRegion,
-  getVertexRegionForModel,
-} from "./utils/envUtils.js";
-export {
-  startCapturingEarlyInput,
-  stopCapturingEarlyInput,
-  consumeEarlyInput,
-  hasEarlyInput,
-  seedEarlyInput,
-  isCapturingEarlyInput,
-} from "./utils/earlyInput.js";
-export {
-  formatBytes,
-  formatToolArgs,
-  singleLine,
-  MAX_LINE_WIDTH,
-  TOOL_DOT_COLORS,
-} from "./utils/toolDisplay.js";
-export {
-  classifyBashLines,
-  type BashLineKind,
-  type ClassifiedBashLine,
-} from "./tool-system/builtin/bash-output-style.js";
-export { formatDuration, formatTokens } from "./utils/format.js";
-export { getTheme, type Theme, type ThemeName, type ThemeSetting } from "./utils/theme.js";
-export { resolveThemeSetting, type SystemTheme } from "./utils/systemTheme.js";
-
-// ─── Logging (extended) ──────────────────────────────────────────
-/** @internal Host-lifecycle logging hooks for the in-repo TUI/desktop hosts; not stable SDK surface. */
-
-export { rotateLogs } from "./logging/logger.js";
-export { recordUIEvent } from "./logging/session-recorder.js";
 
 // ─── Cost Tracker ────────────────────────────────────────────────
 
@@ -645,131 +552,7 @@ export {
   type UpdateInfo,
 } from "./updater.js";
 
-// ─── Tool-system (extended for TUI) ─────────────────────────────
-/**
- * @internal Exports below are consumed by the in-repo TUI/desktop hosts, not
- * part of the stable `@cjhyy/code-shell-core` SDK surface. They may change or
- * move to a `/tui` subpath without a major bump. External SDK users: prefer the
- * primary Engine/Protocol API above.
- */
 
-export { getInteractiveApprovalBackend } from "./tool-system/permission.js";
-export {
-  defaultSandboxConfig,
-  type SandboxBackend,
-  type SandboxConfig,
-} from "./tool-system/sandbox/index.js";
-export { safeSpawnShell } from "./runtime/safe-spawn.js";
-export {
-  buildSandboxEnv,
-  defaultShellBinary,
-  killChildTree,
-  killProcessGroup,
-  mergeShellEnv,
-} from "./runtime/spawn-common.js";
-export { isExistingDirectory, normalizeCwdPath } from "./utils/cwd-normalize.js";
-export {
-  backgroundJobRegistry,
-  type BackgroundJobEntry,
-} from "./tool-system/builtin/background-jobs.js";
-export {
-  buildNotificationMessage,
-  buildNotificationSummary,
-  notificationQueue,
-  agentNotificationBus,
-  notificationItemToStreamEvent,
-  type NotificationItem,
-} from "./tool-system/builtin/agent-notifications.js";
-// B2.2 — typed projection of the new `background_agent_completed` StreamEvent
-// variant so SDK consumers can write handlers without re-destructuring the
-// StreamEvent union themselves.
-export type { BackgroundAgentCompletedEvent } from "./types.js";
-// Automation — zero-env-dependency scheduling module (startAutomation facade
-// + scheduler/store/runner). Hosts (Electron main, future CLI server) load
-// this and inject store + runner. See docs/automation-plan-2026-05-31.md.
-export {
-  startAutomation,
-  type StartAutomationDeps,
-  type AutomationHandle,
-  CronScheduler,
-  cronScheduler,
-  type CronJob,
-  type CronPermissionLevel,
-  type CreateJobOptions,
-  type UpdateJobPatch,
-  CronStore,
-  defaultCronStorePath,
-  bindCronToEngine,
-  bindCronToRunManager,
-  type CronRunner,
-  type CronRunRequest,
-  type CronRunResult,
-  type RunSubmitter,
-  isCronExpression,
-  parseCronExpression,
-  nextCronTime,
-  type ParsedCron,
-  resolveWritePolicy,
-  wrapUntrustedInput,
-  type WritePolicy,
-  runWriteJobInWorktree,
-  type WriteJobGitOps,
-  type RunWriteJobInput,
-  type RunWriteJobResult,
-} from "./automation/index.js";
-export { asyncAgentRegistry, type AsyncAgentEntry } from "./tool-system/builtin/agent-registry.js";
-export {
-  backgroundShellManager,
-  BackgroundShellManager,
-  type BgShell,
-  type BgShellStatus,
-} from "./runtime/background-shell.js";
-export { ENV_DENY_REGEX, ENV_ALLOWLIST } from "./runtime/spawn-common.js";
-export {
-  getImageProvider,
-  DEFAULT_IMAGE_MODEL,
-  type ImageProvider,
-  type ImageProviderCreds,
-  type ImageGenerateRequest,
-  type ImageGenerateResult,
-} from "./tool-system/builtin/image-providers.js";
-
-// ─── Speech-to-text (voice input / 听写) ────────────────────────
-export {
-  transcribe,
-  type TranscribeCreds,
-  type TranscribeRequest,
-  type TranscribeResult,
-} from "./stt/transcribe.js";
-export {
-  resolveTranscribeProvider,
-  isTranscribeAvailable,
-  describeTranscribe,
-  type ResolvedTranscribeProvider,
-  type TranscribeDescription,
-} from "./stt/resolve-transcribe.js";
-
-export {
-  BUILTIN_CATALOG,
-  getMergedCatalog,
-  loadUserCatalog,
-  userCatalogPath,
-  findCatalogEntry,
-  saveCatalogEntry,
-  deleteUserCatalogEntry,
-  catalogEntryOrigins,
-  type CatalogEntry,
-} from "./model-catalog/index.js";
-
-// ─── Protocol (extended for TUI) ────────────────────────────────
-/** @internal Extended protocol surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
-
-export { createInProcessClient } from "./protocol/helpers.js";
-// Note: agent-server-stdio.ts is a self-running entry point in the multi-session
-// rewrite; the previous named exports (runAgentServerStdio,
-// buildEngineConfigFromSettings) were only used in this re-export and have been
-// dropped. Hosts spawn the file directly via `node agent-server-stdio.js`.
-export type { ProtocolModelEntry } from "./protocol/types.js";
 
 // ─── Plugins ─────────────────────────────────────────────────────
 
@@ -784,29 +567,11 @@ export {
 export { parseMarketplaceInput, deriveMarketplaceName } from "./plugins/parseMarketplaceInput.js";
 export { scanPluginCommands, type PluginCommand } from "./plugins/pluginCommandsLoader.js";
 
-// ─── LLM (extended for TUI) ─────────────────────────────────────
-/** @internal Extended LLM surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
-
-export { type CachedModel, defaultCacheDir } from "./llm/model-cache.js";
-export { fetchModelList, type FetchResult } from "./llm/model-fetcher.js";
-export { sanitizeApiKey, hasNonAsciiPrintable } from "./llm/api-key-sanitize.js";
-export { PROVIDER_KINDS, type ProviderKindName } from "./llm/provider-kinds.js";
-export { capabilitiesFor, type Capability } from "./llm/capabilities/index.js";
-export {
-  reasoningControlFor,
-  type ReasoningControl,
-} from "./llm/capabilities/reasoning-control.js";
-export { REASONING_EFFORTS, type ReasoningSetting } from "./llm/reasoning-setting.js";
-export { type ProviderConfig } from "./llm/provider-catalog.js";
 
 // ─── Data ────────────────────────────────────────────────────────
 
 export { syncOpenRouterCatalog, getOpenRouterSnapshot } from "./data/openrouter-sync.js";
 
-// ─── Types (extended for TUI) ────────────────────────────────────
-/** @internal Extended type surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
-
-export type { ApprovalRequest, ApprovalResult, ApprovalScope, TaskInfo } from "./types.js";
 
 // ─── External agent config (Mobile Web Remote Rooms) ─────────────
 // Resolves the externalAgents settings block (notably claudeCode.trustedWorkspaces),

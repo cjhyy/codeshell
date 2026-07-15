@@ -144,11 +144,13 @@ export function resolveCapabilities(local: readonly CapabilityModule[] = []): Ca
 export function composeToolCatalog(
   coreTools: readonly BuiltinTool[],
   capabilities: readonly CapabilityModule[],
+  extensionModules: readonly { catalogTools?: readonly BuiltinTool[] }[] = [],
 ): BuiltinTool[] {
   const catalog = new Map<string, BuiltinTool>();
   for (const tool of [
     ...coreTools,
     ...capabilities.flatMap((capability) => [...(capability.tools ?? [])]),
+    ...extensionModules.flatMap((module) => [...(module.catalogTools ?? [])]),
   ]) {
     const name = tool.definition.name;
     if (catalog.has(name)) throw new Error(`Tool '${name}' is contributed more than once`);

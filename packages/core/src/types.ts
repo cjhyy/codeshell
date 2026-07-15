@@ -2,7 +2,7 @@
  * Core type definitions for the code-shell orchestration framework.
  */
 
-import type { GoalConfig, GoalLifecycleV1, GoalTerminal } from "./engine/goal.js";
+import type { GoalConfig, GoalLifecycleV1, GoalTerminal } from "./goal/lifecycle.js";
 
 // ─── Content & Messages ───────────────────────────────────────────
 
@@ -216,7 +216,13 @@ export type BuiltinSessionOrigin = "desktop" | "tui" | "automation" | "subagent"
  * it, so extension packages never need to add a literal back into core.
  */
 export type SessionOrigin = BuiltinSessionOrigin | (string & {});
-export type SessionKind = "work" | "pet";
+/**
+ * Persisted session kind. "work" is the core default; extensions may own
+ * additional kinds (e.g. the pet extension's "pet") — the open string form
+ * keeps literal inference/autocomplete for "work" while allowing extension
+ * kinds without a core enum change.
+ */
+export type SessionKind = "work" | (string & {});
 
 export interface SessionWorkspace {
   /** Current execution root used when this session resumes. */
@@ -976,4 +982,67 @@ export interface Settings {
    * parses the HookResult. Empty / missing = no shell hooks.
    */
   hooks?: SettingsHookConfig[];
+}
+
+// ─── Input attachments ───────────────────────────────────────────────
+// Shared shape used by both the engine (run input, steer queue, image
+// policy) and the protocol layer (RunParams / stream events). Lives here
+// so engine code never has to reach up into protocol/.
+
+export type InputAttachmentKind = "image" | "file" | "directory";
+
+export type InputAttachmentOrigin =
+  | "paste"
+  | "os-drop"
+  | "file-panel"
+  | "picker"
+  | "mention"
+  | "generated"
+  | "mobile"
+  | "im-gateway"
+  | "tool";
+
+export interface InputAttachmentMeta {
+  id: string;
+  sessionId: string;
+  kind: InputAttachmentKind;
+  origin: InputAttachmentOrigin;
+  path: string;
+  absPath: string;
+  relPath?: string;
+  mime?: string;
+  size: number;
+  sha256: string;
+  originalName?: string;
+  createdAt: number;
+  sourcePath?: string;
+  width?: number;
+  height?: number;
+  vision?: {
+    include: boolean;
+    mediaPath?: string;
+    detail?: "low" | "standard" | "high";
+  };
+  directory?: {
+    treePath?: string;
+    truncated?: boolean;
+    entryCount?: number;
+  };
+}
+
+// ─── Legacy pet wire aliases ─────────────────────────────────────────
+// Structural mirrors of @cjhyy/code-shell-pet's delegation shapes. They keep
+// the deprecated petWorkspaces / petWorkDelegation wire fields typed without
+// core importing the pet domain. New clients send RunParams.profileParams and
+// read RunResult.extensions instead.
+
+export interface LegacyPetWorkspaceOption {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface LegacyPetWorkDelegation {
+  workspaceId: string;
+  objective: string;
 }

@@ -27,7 +27,7 @@ import {
   terminateGoalLifecycle,
   waitGoalLifecycle,
   type GoalConfig,
-} from "./goal.js";
+} from "./lifecycle.js";
 
 describe("GoalLifecycleV1", () => {
   test("stores identity and control revision once outside config", () => {

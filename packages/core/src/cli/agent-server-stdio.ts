@@ -30,6 +30,7 @@
  * bootstrap is invisible to them.
  */
 
+import { join } from "node:path";
 import { Engine } from "../engine/engine.js";
 import { EngineRuntime } from "../engine/runtime.js";
 import { ChatSessionManager } from "../protocol/chat-session-manager.js";
@@ -117,6 +118,15 @@ export function resolveSessionCwd(slice: EngineConfigSlice): string {
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 const extensionModules = await loadConfiguredExtensionModules();
+
+// Injectable data root (identity dimension foundations, Task 3). Server
+// Phase 2 per-user workers spawn this entry with CODE_SHELL_DATA_ROOT set to
+// the user's isolated data root; session persistence (engine session store,
+// the disk goal/wakeup readers) and cron persistence then live under it.
+// Unset (every existing host today) keeps the default `~/.code-shell` layout
+// byte-for-byte.
+const dataRoot = process.env.CODE_SHELL_DATA_ROOT?.trim() || undefined;
+const dataSessionsDir = dataRoot ? join(dataRoot, "sessions") : undefined;
 
 // Load settings once to derive llm config for the seed engine.
 // Desktop is a host application: read the full disk hierarchy (incl. the
@@ -314,11 +324,17 @@ const chatManager = new ChatSessionManager({
       ...personalizationFrom(live.agent),
       maxTurns: slice.maxTurns,
       maxContextTokens: slice.maxContextTokens,
+      // Session persistence root: an identity-derived manager passes an
+      // explicit per-identity dir through the slice; otherwise the worker's
+      // injected data root (CODE_SHELL_DATA_ROOT) applies; otherwise
+      // undefined keeps the engine's default sessions root (today's path).
+      sessionStorageDir: slice.sessionStorageDir ?? dataSessionsDir,
       // cwd already set to sessionCwd above (slice.cwd → no-repo fallback).
     });
   },
   maxSessions: 16,
   idleTtlMs: 30 * 60 * 1000,
+  ...(dataRoot ? { dataRoot } : {}),
 });
 chatManager.startIdleSweeper();
 
@@ -333,7 +349,7 @@ chatManager.startIdleSweeper();
 // main process owns execution); persistence is its only cron role. Without
 // this, loadJobs()/CronCreate would arm timers in this process too, double-
 // running jobs and corrupting run stats.
-cronScheduler.setStore(new CronStore(defaultCronStorePath()));
+cronScheduler.setStore(new CronStore(defaultCronStorePath(dataRoot)));
 cronScheduler.setExecutionEnabled(false);
 cronScheduler.loadJobs();
 
@@ -355,13 +371,17 @@ setCronChangedSink(() => {
 // ChatSession (that only happens on a send), so chatManager.get() misses. This
 // reads the same ~/.code-shell/sessions/<id>/state.json every Engine writes, so
 // the goal block re-surfaces on load ("goal 还在但页面不显示" fix).
-const goalDiskReader = new SessionManager();
+const goalDiskReader = new SessionManager(dataSessionsDir);
 
 const agentServer = new AgentServer({
   chatManager,
   transport: stdioTransport,
+  extensionModules,
   workspaceBridge: true,
   panelBridge: true,
+  // Cold background-wakeup rehydrate must read the same sessions store the
+  // engines write when the data root is relocated (undefined → default root).
+  sessionDiskRoot: dataSessionsDir,
   // Config hot-reload (layer 2) reads disk through the SAME closure the
   // engineFactory uses for new sessions, so a reloaded running session and a
   // newly-created session converge on identical disk config (no divergence).

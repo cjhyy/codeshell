@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { Engine, EngineResult } from "../engine/engine.js";
-import type { GoalConfig } from "../engine/goal.js";
+import type { GoalConfig } from "../goal/lifecycle.js";
 import { ChatSession } from "./chat-session.js";
 
 function result(sessionId: string): EngineResult {

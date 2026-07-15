@@ -58,7 +58,7 @@ import {
   cacheHitRateFromUsage,
   cumulativeCacheHitRate,
   type CumulativeUsageCounters,
-} from "./session-usage.js";
+} from "../session/usage.js";
 import {
   type GoalConfig,
   type GoalBudgetTracker,
@@ -72,7 +72,7 @@ import {
   isSameGoalVersion,
   normalizeGoal,
   GOAL_DEFAULT_MAX_STOP_BLOCKS,
-} from "./goal.js";
+} from "../goal/lifecycle.js";
 
 export interface TurnLoopConfig {
   maxTurns: number;

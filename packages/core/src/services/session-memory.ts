@@ -22,15 +22,18 @@ export interface SessionMemoryEntry {
 // Resolve per-call (NOT a module const): userHome() reads $HOME live, so a
 // relocated/test HOME redirects writes instead of pinning the real ~/.code-shell
 // at import time (bun freezes a module-level homedir() and never re-reads it).
-function memoryDir(): string {
-  return join(userHome(), ".code-shell", "session-memories");
+// `baseDir` is the explicit injection point (the `~/.code-shell`-equivalent
+// root): when provided it wins over $HOME resolution — identity-scoped server
+// deployments pass their per-user data root here.
+function memoryDir(baseDir?: string): string {
+  return join(baseDir ?? join(userHome(), ".code-shell"), "session-memories");
 }
 
 /**
  * Save a session memory entry.
  */
-export function saveSessionMemory(entry: SessionMemoryEntry): void {
-  const dir = memoryDir();
+export function saveSessionMemory(entry: SessionMemoryEntry, baseDir?: string): void {
+  const dir = memoryDir(baseDir);
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${entry.sessionId}.json`);
   writeFileSync(file, JSON.stringify(entry, null, 2), "utf-8");
@@ -39,8 +42,8 @@ export function saveSessionMemory(entry: SessionMemoryEntry): void {
 /**
  * Load a session memory by session ID.
  */
-export function loadSessionMemory(sessionId: string): SessionMemoryEntry | null {
-  const file = join(memoryDir(), `${sessionId}.json`);
+export function loadSessionMemory(sessionId: string, baseDir?: string): SessionMemoryEntry | null {
+  const file = join(memoryDir(baseDir), `${sessionId}.json`);
   if (!existsSync(file)) return null;
   try {
     return JSON.parse(readFileSync(file, "utf-8"));
@@ -52,8 +55,8 @@ export function loadSessionMemory(sessionId: string): SessionMemoryEntry | null 
 /**
  * List all session memories, most recent first.
  */
-export function listSessionMemories(limit = 50): SessionMemoryEntry[] {
-  const dir = memoryDir();
+export function listSessionMemories(limit = 50, baseDir?: string): SessionMemoryEntry[] {
+  const dir = memoryDir(baseDir);
   if (!existsSync(dir)) return [];
 
   // Read all entries, then order by createdAt (not by filename — the filename
@@ -74,8 +77,8 @@ export function listSessionMemories(limit = 50): SessionMemoryEntry[] {
 /**
  * Search session memories by keyword.
  */
-export function searchSessionMemories(query: string): SessionMemoryEntry[] {
-  const all = listSessionMemories(200);
+export function searchSessionMemories(query: string, baseDir?: string): SessionMemoryEntry[] {
+  const all = listSessionMemories(200, baseDir);
   const q = query.toLowerCase();
 
   return all.filter(

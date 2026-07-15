@@ -45,12 +45,21 @@ export class CredentialStore {
   constructor(
     private readonly cwd?: string,
     cipher?: EncryptionCipher,
+    /**
+     * Override the user-scope store directory (the `~/.code-shell` layer;
+     * `credentials.json` lives directly inside it). Absent → today's
+     * behavior: `join(userHome(), ".code-shell")` resolved per call.
+     * Injection point for identity-scoped server deployments.
+     */
+    private readonly userDirOverride?: string,
   ) {
     this.cipher = cipher ?? getDefaultCredentialCipher();
   }
 
   private pathFor(scope: CredentialScope): string | undefined {
-    if (scope === "user") return join(userHome(), ".code-shell", "credentials.json");
+    if (scope === "user") {
+      return join(this.userDirOverride ?? join(userHome(), ".code-shell"), "credentials.json");
+    }
     if (!this.cwd) return undefined;
     return join(this.cwd, ".code-shell", "credentials.json");
   }

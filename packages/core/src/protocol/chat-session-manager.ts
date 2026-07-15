@@ -1,4 +1,6 @@
+import { join } from "node:path";
 import { ChatSession } from "./chat-session.js";
+import { codeShellHome } from "../session/session-manager.js";
 import type { SessionKind } from "../types.js";
 import type { Engine } from "../engine/engine.js";
 import type { EngineRuntime } from "../engine/runtime.js";
@@ -26,7 +28,34 @@ export type EngineConfigSlice = Pick<
   | "maxContextTokens"
   | "cwd"
   | "projectTrusted"
+  // Identity-scoped session persistence root. Only identity-derived managers
+  // (see ChatSessionManager.forIdentity) set it; the default path leaves it
+  // undefined, so existing engineFactory implementations are unaffected.
+  | "sessionStorageDir"
 >;
+
+/** Identity scope every ChatSessionManager belongs to when none is injected. */
+export const LOCAL_CHAT_IDENTITY = "local";
+
+/**
+ * An identity becomes an on-disk path segment (`<root>/identities/<id>`), so
+ * it gets the same conservative validation as session ids: no separators, no
+ * parent-dir tokens, short, and a strict character allow-list.
+ */
+function assertSafeIdentity(identity: string): void {
+  if (typeof identity !== "string" || identity.length === 0 || identity.length > 64) {
+    throw new Error(`invalid identity: must be a non-empty string of at most 64 chars`);
+  }
+  if (
+    identity.includes("/") ||
+    identity.includes("\\") ||
+    identity === "." ||
+    identity.includes("..") ||
+    !/^[A-Za-z0-9_.-]+$/.test(identity)
+  ) {
+    throw new Error(`invalid identity: unexpected characters: ${identity}`);
+  }
+}
 
 export interface ChatSessionManagerOptions {
   /**
@@ -41,10 +70,27 @@ export interface ChatSessionManagerOptions {
   idleTtlMs?: number; // default 30 min
   /** Host lifecycle generation attached to Pet projection snapshots/deltas. */
   projectionGeneration?: number;
+  /**
+   * Identity scope this manager serves. Defaults to "local" — the single
+   * OS-user manager every host uses today. A server host that authenticates
+   * connections derives one manager per identity via {@link
+   * ChatSessionManager.forIdentity}; sessions never cross identities.
+   */
+  identity?: string;
+  /**
+   * Base data root used to derive per-identity session persistence
+   * (`<dataRoot>/identities/<id>/sessions`). Defaults to `codeShellHome()`
+   * (`CODE_SHELL_HOME` env → `~/.code-shell`). Only consulted when a
+   * non-default identity manager is derived — the default "local" manager
+   * never redirects persistence.
+   */
+  dataRoot?: string;
 }
 
 export interface LiveChatSessionSnapshot {
   generation: number;
+  /** Identity scope of the manager that produced this snapshot. */
+  identity: string;
   sessions: Array<{
     sessionId: string;
     busy: boolean;
@@ -62,18 +108,52 @@ export class ChatSessionManager {
   private readonly closedSessions = new Set<string>();
   private readonly sessionGeneration = new Map<string, number>();
   readonly runtime: EngineRuntime;
+  /** Identity scope this manager serves ("local" unless injected). */
+  readonly identity: string;
   private readonly factory: (slice: EngineConfigSlice) => Engine;
   private readonly maxSessions: number;
   private readonly idleTtlMs: number;
   private readonly projectionGeneration: number;
+  /** Construction options retained so forIdentity() can derive siblings. */
+  private readonly baseOptions: ChatSessionManagerOptions;
   private sweeper: ReturnType<typeof setInterval> | null = null;
 
   constructor(opts: ChatSessionManagerOptions) {
     this.runtime = opts.runtime;
+    this.identity = opts.identity ?? LOCAL_CHAT_IDENTITY;
+    if (opts.identity !== undefined) assertSafeIdentity(opts.identity);
     this.factory = opts.engineFactory;
     this.maxSessions = opts.maxSessions ?? 16;
     this.idleTtlMs = opts.idleTtlMs ?? 30 * 60 * 1000;
     this.projectionGeneration = opts.projectionGeneration ?? 1;
+    this.baseOptions = opts;
+  }
+
+  /**
+   * Derive a manager scoped to another identity. The derived manager shares
+   * this manager's runtime/limits but persists its sessions under
+   * `<dataRoot>/identities/<identity>/sessions` by injecting
+   * `sessionStorageDir` into every engineFactory slice (Task 1's SessionManager
+   * storageDir seam). Asking for this manager's own identity returns `this`
+   * unchanged, so the default single-identity ("local") path is byte-for-byte
+   * today's behavior. Callers (AgentServer) cache derived managers per
+   * identity; each call here builds a fresh instance.
+   */
+  forIdentity(identity: string): ChatSessionManager {
+    assertSafeIdentity(identity);
+    if (identity === this.identity) return this;
+    const sessionStorageDir = join(
+      this.baseOptions.dataRoot ?? codeShellHome(),
+      "identities",
+      identity,
+      "sessions",
+    );
+    const baseFactory = this.baseOptions.engineFactory;
+    return new ChatSessionManager({
+      ...this.baseOptions,
+      identity,
+      engineFactory: (slice) => baseFactory({ ...slice, sessionStorageDir }),
+    });
   }
 
   async getOrCreate(sessionId: string, slice: EngineConfigSlice): Promise<ChatSession> {
@@ -190,7 +270,7 @@ export class ChatSessionManager {
       });
     });
     sessions.sort((a, b) => a.sessionId.localeCompare(b.sessionId));
-    return { generation: this.projectionGeneration, sessions };
+    return { generation: this.projectionGeneration, identity: this.identity, sessions };
   }
 
   close(sessionId: string): Promise<void> {
@@ -312,6 +392,7 @@ export class ChatSessionManager {
     void mcpPool.unregisterOwner(session.engine).catch((err) => {
       logger.warn("chat_session.mcp_owner_unregister_failed", {
         sessionId: session.id,
+        identity: this.identity,
         error: err instanceof Error ? err.message : String(err),
       });
     });
@@ -341,4 +422,14 @@ export class ChatSessionManager {
       incrementSessionGeneration: (sessionId: string) => number;
     };
   }
+}
+
+/**
+ * Factory counterpart of `new ChatSessionManager(opts)` for identity/dataRoot
+ * aware hosts (identity dimension foundations, Task 2). Identity defaults to
+ * "local" and dataRoot to `codeShellHome()`, so omitting both is exactly the
+ * constructor every existing host already calls.
+ */
+export function createChatSessionManager(opts: ChatSessionManagerOptions): ChatSessionManager {
+  return new ChatSessionManager(opts);
 }

@@ -22,11 +22,6 @@ import type { SessionManager } from "../session/session-manager.js";
 import type { SessionWorkspace } from "../types.js";
 import type { ApprovalRouter } from "./permission.js";
 import type { ChildWriterLease, LiveChildControl } from "./builtin/agent-registry.js";
-import type {
-  PetWorkspaceOption,
-  PetWorkDelegation,
-  PetWorkDelegationDecision,
-} from "../pet/delegation.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -209,7 +204,12 @@ export interface ToolVisibilityContext {
   host?: string;
   isSubAgent?: boolean;
   behaviorProfile?: string;
-  petWorkspaceCount?: number;
+  /**
+   * Per-run metadata produced by the active behavior profile's
+   * buildVisibilityMeta. Availability guards / definition rewriters that share
+   * the profile's domain read their conventional keys from here.
+   */
+  profileMeta?: Readonly<Record<string, unknown>>;
 }
 
 export interface ExternalFileChangesRecord {
@@ -237,10 +237,13 @@ export interface ToolContext {
   toolRegistry: ToolRegistry;
   /** Opaque services contributed by capability modules, keyed by capability id. */
   capabilityServices?: Readonly<Record<string, unknown>>;
-  /** Closed host-provided Workspace set for a Mimi manager turn. */
-  petWorkspaces?: readonly PetWorkspaceOption[];
-  /** Records the one structured work delegation returned with the Engine result. */
-  requestPetWorkDelegation?: (request: PetWorkDelegation) => PetWorkDelegationDecision;
+  /**
+   * Run-scoped services produced by the active behavior profile's
+   * createRunServices. Tools that share the profile's domain conventions read
+   * their keys from here (e.g. DelegateWork reads the pet profile's
+   * petWorkspaces / requestPetWorkDelegation entries).
+   */
+  runScopedServices?: Readonly<Record<string, unknown>>;
   /** UI-backed AskUserQuestion handler. Undefined → headless mode. */
   askUser?: AskUserFn;
   /** Sub-agent spawner (Agent tool). Undefined → Agent tool unavailable. */

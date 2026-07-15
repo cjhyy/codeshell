@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CronStore } from "./cron-store.js";
+import { CronStore } from "./store.js";
 import type { CronJob } from "./scheduler.js";
 
 let dir: string;

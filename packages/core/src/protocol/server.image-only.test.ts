@@ -50,6 +50,7 @@ function makeEngine() {
         sessionId: options?.sessionId ?? "session-1",
         turnCount: 1,
         usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        extensions: { testProfile: { structured: true } },
       };
     },
   } as unknown as Engine;
@@ -87,6 +88,9 @@ describe("AgentServer image-only agent/run", () => {
     });
     expect(accepted(transport.sent, 101)?.params?.sessionId).toBe("session-1");
     expect(transport.sent.find((message) => message.id === 101)?.result?.text).toBe("saw image");
+    expect(transport.sent.find((message) => message.id === 101)?.result?.extensions).toEqual({
+      testProfile: { structured: true },
+    });
   });
 
   test("legacy accepts image-only and forwards attachments to Engine.run", async () => {
@@ -108,6 +112,9 @@ describe("AgentServer image-only agent/run", () => {
       options: { sessionId: "session-1", attachments: [attachment] },
     });
     expect(accepted(transport.sent, 102)).toBeDefined();
+    expect(transport.sent.find((message) => message.id === 102)?.result?.extensions).toEqual({
+      testProfile: { structured: true },
+    });
   });
 
   test("still rejects missing, non-string, or whitespace-only input without valid attachments", async () => {

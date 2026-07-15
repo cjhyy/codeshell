@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { logger } from "../logging/logger.js";
-import type { InputAttachmentMeta } from "../protocol/types.js";
+import type { InputAttachmentMeta } from "../types.js";
 import { classifyPath } from "../tool-system/path-policy.js";
 import { enforceImageBytePolicy } from "./image-policy.js";
 import type { ParsedImage } from "./parse-task.js";

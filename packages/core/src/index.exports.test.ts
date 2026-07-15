@@ -6,6 +6,10 @@ import type {
 } from "@cjhyy/code-shell-core/internal";
 import * as publicApi from "./index.js";
 
+// The full pinned runtime surface of the /internal host entry. /internal is the
+// ONLY entry for these host-facing exports — index.ts no longer re-exports them
+// (export-surface convergence, 2026-07-15). Keep this list in sync with
+// index.internal.ts.
 const expectedRuntimeExportsByPartition = {
   utils: [
     "getGraphemeSegmenter",
@@ -119,6 +123,46 @@ const expectedRuntimeExportsByPartition = {
 
 const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).flat();
 
+// Host-only symbols that must NOT leak back onto the public root barrel.
+// (Representative sample across the removed @internal partitions.)
+const hostOnlySamples = [
+  "sliceAnsi",
+  "getGraphemeSegmenter",
+  "logForDebugging",
+  "getTheme",
+  "rotateLogs",
+  "recordUIEvent",
+  "notificationQueue",
+  "cronScheduler",
+  "asyncAgentRegistry",
+  "backgroundShellManager",
+  "ENV_DENY_REGEX",
+  "transcribe",
+  "getMergedCatalog",
+  "createInProcessClient",
+  "fetchModelList",
+  "PROVIDER_KINDS",
+] as const;
+
+// Runtime members of the /extension capability contract (coding/arena imports).
+const extensionRuntimeContract = [
+  "registerCapability",
+  "SessionManager",
+  "SettingsManager",
+  "codeShellHome",
+  "notificationQueue",
+  "backgroundJobRegistry",
+  "safeSpawnShell",
+  "buildSandboxEnv",
+  "resolveExecutable",
+  "resolveGit",
+  "invalidateFileCache",
+  "BUILTIN_AGENT_PRESETS",
+  "BUILTIN_TOOLS",
+  "derivePresetExposure",
+  "logger",
+] as const;
+
 describe("core public/internal export contract", () => {
   it("keeps the stable public API without host process state", () => {
     expect(publicApi.Engine).toBeDefined();
@@ -128,6 +172,12 @@ describe("core public/internal export contract", () => {
     expect(publicApi).not.toHaveProperty("markScrollActivity");
     expect(publicApi).not.toHaveProperty("Arena");
     expect(publicApi).not.toHaveProperty("formatArenaResult");
+
+    // Host-only surface has moved to /internal (or /extension); the public
+    // barrel must not re-grow it.
+    for (const name of hostOnlySamples) {
+      expect(publicApi, `${name} must stay off the public root barrel`).not.toHaveProperty(name);
+    }
   });
 
   it("exposes the complete host-only runtime surface from the source internal entry", async () => {
@@ -138,12 +188,12 @@ describe("core public/internal export contract", () => {
     expect(new Set(expectedRuntimeExports).size).toBe(expectedRuntimeExports.length);
     expect(Object.keys(internalApi).sort()).toEqual([...expectedRuntimeExports].sort());
 
-    for (const [partition, exportNames] of Object.entries(expectedRuntimeExportsByPartition)) {
-      for (const exportName of exportNames) {
-        expect(publicExports, `${partition}.${exportName} must remain public`).toHaveProperty(
-          exportName,
-        );
-        expect(internalExports[exportName], `${partition}.${exportName} identity`).toBe(
+    // Where a symbol is intentionally shared with the public barrel (process
+    // singletons and helpers that SDK users legitimately need too), the two
+    // entries must resolve to the same reference.
+    for (const exportName of expectedRuntimeExports) {
+      if (exportName in publicExports) {
+        expect(internalExports[exportName], `${exportName} identity across entries`).toBe(
           publicExports[exportName],
         );
       }
@@ -152,6 +202,23 @@ describe("core public/internal export contract", () => {
     // /internal is a focused host barrel rather than a duplicate of index.ts.
     expect(internalApi).not.toHaveProperty("Engine");
     expect(internalApi).not.toHaveProperty("Arena");
+  });
+
+  it("exposes the capability contract from the extension entry with singleton identity", async () => {
+    const extensionApi = (await import("./index.extension.js")) as Record<string, unknown>;
+    const internalApi = (await import("./index.internal.js")) as Record<string, unknown>;
+
+    for (const name of extensionRuntimeContract) {
+      expect(extensionApi[name], `/extension must export ${name}`).toBeDefined();
+    }
+
+    // Process singletons shared by hosts (via /internal) and capability
+    // packages (via /extension) must be the same instance.
+    expect(extensionApi.notificationQueue).toBe(internalApi.notificationQueue);
+
+    // The extension entry stays narrow: no Engine, no host UI utilities.
+    expect(extensionApi).not.toHaveProperty("Engine");
+    expect(extensionApi).not.toHaveProperty("sliceAnsi");
   });
 
   it("declares the internal package subpath and an exact source alias", async () => {

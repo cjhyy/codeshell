@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CronScheduler } from "./scheduler.js";
-import { CronStore } from "./cron-store.js";
+import { CronStore } from "./store.js";
 
 let dir: string;
 let file: string;

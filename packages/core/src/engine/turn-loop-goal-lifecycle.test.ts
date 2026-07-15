@@ -20,7 +20,7 @@ import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js
 import { ToolRegistry } from "../tool-system/registry.js";
 import type { CapabilityModule } from "../capabilities/index.js";
 import { Engine } from "./engine.js";
-import { goalConfigFromLifecycle } from "./goal.js";
+import { goalConfigFromLifecycle } from "../goal/lifecycle.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 
 const TEST_WORKSPACE_CAPABILITY: CapabilityModule = {

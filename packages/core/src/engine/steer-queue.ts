@@ -6,7 +6,7 @@
  * it. Pure + side-effect-free so it unit-tests without the Engine/TurnLoop
  * harness (same rationale as the renderer's queuedInput.ts).
  */
-import type { InputAttachmentMeta } from "../protocol/types.js";
+import type { InputAttachmentMeta } from "../types.js";
 
 export interface SteerItem {
   id: string;

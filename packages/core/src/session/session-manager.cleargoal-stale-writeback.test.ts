@@ -29,7 +29,7 @@ import {
   goalConfigFromLifecycle,
   type GoalConfig,
   type GoalLifecycleTerminalReason,
-} from "../engine/goal.js";
+} from "../goal/lifecycle.js";
 import type { SessionState } from "../types.js";
 
 const OBJ = "帮我继续看看还有没有问题 我已经修复了一个版本了";

@@ -56,29 +56,6 @@ describe("builtin tool availability guards", () => {
     expect(cancel!({ cwd: "/x", hasGoal: true })).toBe(true);
   });
 
-  test("DelegateWork is available only for a Pet turn with host-provided Workspaces", () => {
-    const delegateWork = BUILTIN_TOOL_GUARDS.get("DelegateWork");
-    expect(delegateWork).toBeFunction();
-    expect(
-      delegateWork!({
-        cwd: "/x",
-        hasGoal: false,
-        behaviorProfile: "pet",
-        petWorkspaceCount: 1,
-      }),
-    ).toBe(true);
-    expect(
-      delegateWork!({
-        cwd: "/x",
-        hasGoal: false,
-        behaviorProfile: "pet",
-        petWorkspaceCount: 0,
-      }),
-    ).toBe(false);
-    expect(
-      delegateWork!({ cwd: "/x", hasGoal: false, behaviorProfile: "quickChatRestricted" }),
-    ).toBe(false);
-  });
 
   test("credential guards use metadata provider and honor project scope", () => {
     const access: CredentialAccess = {

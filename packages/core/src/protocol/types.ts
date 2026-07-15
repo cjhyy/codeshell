@@ -9,6 +9,9 @@
  */
 
 import type {
+  InputAttachmentMeta,
+  LegacyPetWorkspaceOption,
+  LegacyPetWorkDelegation,
   StreamEvent,
   TokenUsage,
   TerminalReason,
@@ -20,13 +23,6 @@ import type {
   SessionWorkspace,
 } from "../types.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
-import type { PetWorkspaceOption, PetWorkDelegation } from "../pet/delegation.js";
-import type {
-  PendingDecisionProjection,
-  PetProjectionSnapshot,
-  PetSessionProjection,
-  PetWorkerState,
-} from "../pet/types.js";
 
 export type PendingApprovalKind = "tool_approval" | "ask_user" | "internal";
 
@@ -97,46 +93,9 @@ export const ErrorCodes = {
 
 // ─── Client → Server Requests ───────────────────────────────────────
 
-export type InputAttachmentKind = "image" | "file" | "directory";
-
-export type InputAttachmentOrigin =
-  | "paste"
-  | "os-drop"
-  | "file-panel"
-  | "picker"
-  | "mention"
-  | "generated"
-  | "mobile"
-  | "im-gateway"
-  | "tool";
-
-export interface InputAttachmentMeta {
-  id: string;
-  sessionId: string;
-  kind: InputAttachmentKind;
-  origin: InputAttachmentOrigin;
-  path: string;
-  absPath: string;
-  relPath?: string;
-  mime?: string;
-  size: number;
-  sha256: string;
-  originalName?: string;
-  createdAt: number;
-  sourcePath?: string;
-  width?: number;
-  height?: number;
-  vision?: {
-    include: boolean;
-    mediaPath?: string;
-    detail?: "low" | "standard" | "high";
-  };
-  directory?: {
-    treePath?: string;
-    truncated?: boolean;
-    entryCount?: number;
-  };
-}
+// Moved to ../types.ts so the engine never imports up into protocol/.
+// Re-exported here because these names are part of the protocol surface.
+export type { InputAttachmentKind, InputAttachmentOrigin, InputAttachmentMeta } from "../types.js";
 
 /** Start an agent run with a user task. */
 export interface RunParams {
@@ -178,13 +137,23 @@ export interface RunParams {
   /** Named behavior profile for a product-specific per-run interaction mode. */
   behaviorMode?: RunBehaviorMode;
   /**
+   * Generic per-run parameters consumed by the active behavior profile
+   * (delivered as non-durable run context; never appended to the task or
+   * transcript).
+   */
+  profileParams?: Record<string, unknown>;
+  /**
    * Host-built bounded Pet world JSON for this invocation. It is delivered as
    * non-durable system context and must never be appended to the user task or
    * transcript. Valid only for an explicitly durable Pet run.
+   * @deprecated Compat alias for `profileParams.runtimeContext`.
    */
   petRuntimeContext?: string;
-  /** Closed Workspace choices exposed to Mimi's DelegateWork tool. */
-  petWorkspaces?: PetWorkspaceOption[];
+  /**
+   * Closed Workspace choices exposed to Mimi's DelegateWork tool.
+   * @deprecated Compat alias for `profileParams.workspaces`.
+   */
+  petWorkspaces?: LegacyPetWorkspaceOption[];
   /** Durable classification used only when creating a new session. */
   kind?: SessionKind;
   /**
@@ -204,7 +173,7 @@ export interface RunParams {
    * Accepts a bare objective string or a full GoalConfig (objective +
    * optional token/time budgets). Normalized at the engine run boundary.
    */
-  goal?: string | import("../engine/goal.js").GoalConfig;
+  goal?: string | import("../goal/lifecycle.js").GoalConfig;
 }
 
 export interface RunResult {
@@ -213,7 +182,9 @@ export interface RunResult {
   sessionId: string;
   turnCount: number;
   usage: TokenUsage;
-  petWorkDelegation?: PetWorkDelegation;
+  /** Structured results reported by the active behavior profile. */
+  extensions?: Record<string, unknown>;
+  petWorkDelegation?: LegacyPetWorkDelegation;
 }
 
 export interface FullForkSessionParams {
@@ -481,47 +452,6 @@ export interface RunAcceptedNotification {
   requestId: string | number;
   sessionId: string;
 }
-
-export type PetProjectionDelta =
-  | {
-      workerGeneration: number;
-      version: number;
-      observedAt: number;
-      kind: "session-upsert";
-      session: PetSessionProjection;
-    }
-  | {
-      workerGeneration: number;
-      version: number;
-      observedAt: number;
-      kind: "session-remove";
-      sessionId: string;
-    }
-  | {
-      workerGeneration: number;
-      version: number;
-      observedAt: number;
-      kind: "pending-upsert";
-      pending: PendingDecisionProjection;
-    }
-  | {
-      workerGeneration: number;
-      version: number;
-      observedAt: number;
-      kind: "pending-remove";
-      sessionId: string;
-      requestId: string;
-      status: Exclude<PendingDecisionProjection["status"], "pending">;
-    }
-  | {
-      workerGeneration: number;
-      version: number;
-      observedAt: number;
-      kind: "worker-state";
-      state: PetWorkerState;
-    };
-
-export type PetProjectionSnapshotResult = PetProjectionSnapshot;
 
 // ─── Method Names ───────────────────────────────────────────────────
 

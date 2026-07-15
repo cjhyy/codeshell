@@ -63,6 +63,17 @@ export interface CronJob {
   disabledReason?: string;
 }
 
+/**
+ * Job execution lifecycle event (see CronScheduler.setJobEventListener).
+ * job_error carries the message `fire()` would otherwise swallow.
+ */
+export interface CronJobLifecycleEvent {
+  type: "job_start" | "job_end" | "job_error";
+  job: CronJob;
+  durationMs?: number;
+  error?: string;
+}
+
 /** Optional metadata accepted by create(). */
 export interface CreateJobOptions {
   cwd?: string;
@@ -102,6 +113,7 @@ export class CronScheduler {
   >();
   private nextId = 1;
   private onExecute?: (job: CronJob, signal: AbortSignal) => Promise<void>;
+  private onJobEvent?: (event: CronJobLifecycleEvent) => void;
   /** Optional persistence backend. When set, every create/delete/pause/resume
    *  writes the full job set to disk so jobs survive a restart. */
   private store?: CronStore;
@@ -135,6 +147,24 @@ export class CronScheduler {
 
   setExecutor(fn: (job: CronJob, signal: AbortSignal) => Promise<void>): void {
     this.onExecute = fn;
+  }
+
+  /**
+   * Observe job execution lifecycle (job_start → job_end | job_error). Hosts
+   * wire this to their notification surface so scheduled runs — especially
+   * failures, which `fire()` otherwise swallows — are no longer silent.
+   * Listener errors are swallowed; observation never affects scheduling.
+   */
+  setJobEventListener(listener: ((event: CronJobLifecycleEvent) => void) | undefined): void {
+    this.onJobEvent = listener;
+  }
+
+  private emitJobEvent(event: CronJobLifecycleEvent): void {
+    try {
+      this.onJobEvent?.(event);
+    } catch {
+      /* observers must not affect the tick loop */
+    }
   }
 
   /**
@@ -701,10 +731,19 @@ export class CronScheduler {
     afterStats();
     // Persist updated run stats so runCount/lastRun/nextRun survive a restart.
     this.persistRunStats(job);
+    const startedAt = Date.now();
+    this.emitJobEvent({ type: "job_start", job });
     try {
       await this.onExecute?.(job, controller.signal);
-    } catch {
-      // Job execution failed — continue scheduling.
+      this.emitJobEvent({ type: "job_end", job, durationMs: Date.now() - startedAt });
+    } catch (err) {
+      // Job execution failed — continue scheduling (but tell observers).
+      this.emitJobEvent({
+        type: "job_error",
+        job,
+        durationMs: Date.now() - startedAt,
+        error: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       // The executor may have recorded lastRunId on the job. Persist only run
       // metadata so an old in-flight job cannot overwrite an edited prompt or

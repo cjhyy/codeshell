@@ -24,9 +24,13 @@ interface CronSnapshot {
   jobs: CronJob[];
 }
 
-/** Default global location. Mirrors FileRunStore's `~/.code-shell/...` layout. */
-export function defaultCronStorePath(): string {
-  return join(homedir(), ".code-shell", "cron.json");
+/**
+ * Default global location. Mirrors FileRunStore's `~/.code-shell/...` layout.
+ * An explicit `root` (a `~/.code-shell`-equivalent data root) overrides the
+ * default; absent → today's behavior byte-for-byte.
+ */
+export function defaultCronStorePath(root?: string): string {
+  return join(root ?? join(homedir(), ".code-shell"), "cron.json");
 }
 
 export class CronStore {
