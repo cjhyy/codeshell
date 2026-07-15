@@ -63,6 +63,12 @@ import {
   readMcpResourceToolDef,
   readMcpResourceTool,
 } from "./mcp-tools.js";
+import {
+  listSourcesToolDef,
+  listSourcesTool,
+  readSourceToolDef,
+  readSourceTool,
+} from "./sources.js";
 import { replToolDef, replTool } from "./repl.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
 import {
@@ -666,6 +672,33 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: true,
     },
     execute: readMcpResourceTool,
+    exposure: expose(HARNESS_TAGS),
+  },
+  {
+    definition: {
+      ...listSourcesToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: listSourcesTool,
+    exposure: expose(HARNESS_TAGS, {
+      defaultPermissionRules: allow(listSourcesToolDef.name),
+    }),
+  },
+  {
+    definition: {
+      ...readSourceToolDef,
+      source: "builtin",
+      // Source content is untrusted and may contain sensitive workspace data.
+      // Match ReadMcpResource: every read requires explicit approval, while
+      // the executor performs a second source/scope/resource authorization.
+      permissionDefault: "ask",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: readSourceTool,
     exposure: expose(HARNESS_TAGS),
   },
   {
