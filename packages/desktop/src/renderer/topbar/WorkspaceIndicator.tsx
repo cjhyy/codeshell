@@ -147,6 +147,7 @@ export function WorkspaceIndicator({
   // the same signal BranchPicker uses.
   const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
   const [mainBranch, setMainBranch] = useState<string | null>(null);
+  const [activeProfileLabel, setActiveProfileLabel] = useState<string | null>(null);
   const currentRequestId = useRef(0);
   const listRequestId = useRef(0);
   const diffRequestId = useRef(0);
@@ -308,6 +309,27 @@ export function WorkspaceIndicator({
   }, [refreshGitProbe]);
 
   useEffect(() => {
+    let cancelled = false;
+    if (!projectPath || typeof window.codeshell.listProfiles !== "function") {
+      setActiveProfileLabel(null);
+      return;
+    }
+    setActiveProfileLabel(null);
+    void window.codeshell
+      .listProfiles(projectPath)
+      .then((profiles) => {
+        if (!cancelled)
+          setActiveProfileLabel(profiles.find((profile) => profile.active)?.label ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveProfileLabel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectPath]);
+
+  useEffect(() => {
     if (!projectPath) return;
     const onBranchesChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ cwd?: string }>).detail;
@@ -412,13 +434,21 @@ export function WorkspaceIndicator({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="no-drag inline-flex h-7 max-w-[220px] items-center gap-1.5 rounded-sm px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="no-drag inline-flex h-7 max-w-[320px] items-center gap-1.5 rounded-sm px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
             title={t("topbar.workspace.openSwitcher")}
             aria-busy={isLoading}
           >
             <GitBranch className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate">{label}</span>
+            {activeProfileLabel ? (
+              <span
+                data-active-profile="true"
+                className="ml-1 max-w-28 shrink-0 truncate rounded-sm bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground"
+              >
+                {activeProfileLabel}
+              </span>
+            ) : null}
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[520px] max-w-[calc(100vw-2rem)] p-0">

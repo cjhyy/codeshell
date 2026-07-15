@@ -378,6 +378,66 @@ describe("WorkspaceRow", () => {
 });
 
 describe("WorkspaceIndicator", () => {
+  test("shows the active digital-human label", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+      getSessionWorkspace: async () => mainWorkspace,
+      listSessionWorktrees: async () => ({
+        current: mainWorkspace,
+        mainRoot: "/repo",
+        worktrees: [],
+      }),
+      listProfiles: async () => [
+        {
+          name: "seedance",
+          label: "Seedance 制片人",
+          description: undefined,
+          active: true,
+          portableMemory: true,
+        },
+      ],
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toContain("Seedance 制片人");
+  });
+
+  test("renders no digital-human label when none is active", async () => {
+    ensureMiniDom();
+    const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+      getSessionWorkspace: async () => mainWorkspace,
+      listSessionWorktrees: async () => ({
+        current: mainWorkspace,
+        mainRoot: "/repo",
+        worktrees: [],
+      }),
+      listProfiles: async () => [],
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).not.toContain("Seedance 制片人");
+  });
+
   test("uses the real main branch and refreshes after a branch-change event", async () => {
     ensureMiniDom();
     const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
