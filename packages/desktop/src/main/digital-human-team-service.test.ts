@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { saveWorkspaceProfile } from "@cjhyy/code-shell-core";
+import { saveWorkspaceProfile } from "@cjhyy/code-shell-core/internal";
 import {
   deleteDigitalHumanTeam,
   listDigitalHumanTeams,

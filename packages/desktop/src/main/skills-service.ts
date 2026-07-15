@@ -12,12 +12,12 @@
 
 import {
   SettingsManager,
-  computeEffectiveDisabledLists,
   scanSkills,
   invalidateSkillCache,
   userHome,
   type SkillDefinition,
 } from "@cjhyy/code-shell-core";
+import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
 import { assertCodeShellMarkdownPath, rememberCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";

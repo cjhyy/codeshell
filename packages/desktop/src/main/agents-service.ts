@@ -12,10 +12,10 @@
 import {
   loadAgentDefinitionsForCwd,
   serializeAgentDefinition,
-  computeEffectiveDisabledLists,
   SettingsManager,
   type AgentDefinition,
 } from "@cjhyy/code-shell-core";
+import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
 import { assertCodeShellMarkdownPath, rememberCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";

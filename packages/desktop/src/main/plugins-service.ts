@@ -25,9 +25,9 @@ import {
   type PluginContentInventory,
   type UpdateResult,
   type UpdateCheck,
-  computeEffectiveDisabledLists,
   SettingsManager,
 } from "@cjhyy/code-shell-core";
+import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import * as path from "node:path";
