@@ -15,6 +15,7 @@ import { defaultMcpResourceAdapter } from "../../sources/adapters/mcp-resource.j
 import { mockAdapter } from "../../sources/adapters/mock.js";
 import { defaultCredentialStatus } from "../../sources/credential-status.js";
 import { resolveEffectiveSourceAccess, type EffectiveSourceAccess } from "../../sources/resolve.js";
+import { truncateUtf8Text } from "../../sources/truncate-utf8.js";
 import type { SourceResourceMeta } from "../../sources/types.js";
 import type { ToolDefinition } from "../../types.js";
 import { scrubSecrets } from "../../utils/secret-scrubber.js";
@@ -50,15 +51,6 @@ async function resourcesFor(
   if (access.sourceId === LOCAL_FILES_SOURCE_ID) return listLocalFiles(cwd);
   if (!access.definition) return [];
   return (await connectorAdapterFor(access.kind)?.listResources(access.definition, scope)) ?? [];
-}
-
-function truncateUtf8(text: string, maxBytes: number): { text: string; truncated: boolean } {
-  const bytes = Buffer.from(text, "utf8");
-  if (bytes.byteLength <= maxBytes) return { text, truncated: false };
-
-  let end = maxBytes;
-  while (end > 0 && (bytes[end] & 0xc0) === 0x80) end -= 1;
-  return { text: bytes.subarray(0, end).toString("utf8"), truncated: true };
 }
 
 export const listSourcesToolDef: ToolDefinition = {
@@ -170,7 +162,7 @@ export async function readSourceTool(
 
     // Adapters enforce maxBytes too; keep this boundary-level cap so a future
     // or injected adapter cannot bypass the 256 KiB context limit.
-    const capped = truncateUtf8(content.text, DEFAULT_MAX_BYTES);
+    const capped = truncateUtf8Text(content.text, DEFAULT_MAX_BYTES);
     const truncated = content.truncated || capped.truncated;
     const provenance = `source=${source} scope=${scope} resource=${resource}${
       truncated ? " (truncated)" : ""

@@ -1,5 +1,6 @@
 /** MCP resource 包装 adapter：MCP 只是 kind 之一，不塞 mcpServers（ADR §1/§4）。 */
 import type { ConnectorAdapter } from "../adapter.js";
+import { truncateUtf8Text } from "../truncate-utf8.js";
 import type { SourceDefinition } from "../types.js";
 
 interface McpResourceInfo {
@@ -22,18 +23,6 @@ function serverOf(definition: SourceDefinition): string {
     throw new Error(`mcp-resource source "${definition.id}" requires adapterConfig.server`);
   }
   return configured.trim();
-}
-
-function truncateUtf8(text: string, maxBytes: number): string {
-  const bytes = Buffer.from(text, "utf8");
-  const limit = Number.isFinite(maxBytes) ? Math.max(0, Math.trunc(maxBytes)) : 0;
-  let end = Math.min(limit, bytes.length);
-
-  while (end > 0 && end < bytes.length && (bytes[end] & 0xc0) === 0x80) {
-    end -= 1;
-  }
-
-  return bytes.subarray(0, end).toString("utf8");
 }
 
 export function createMcpResourceAdapter(getManager: McpManagerFactory): ConnectorAdapter {
@@ -59,15 +48,11 @@ export function createMcpResourceAdapter(getManager: McpManagerFactory): Connect
       const text = await (
         await getManager()
       ).readResource(serverOf(definition), resourceId, options.signal);
-      const maxBytes = Number.isFinite(options.maxBytes)
-        ? Math.max(0, Math.trunc(options.maxBytes))
-        : 0;
-      const truncated = Buffer.byteLength(text, "utf8") > maxBytes;
+      const truncated = truncateUtf8Text(text, options.maxBytes);
 
       return {
         resourceId,
-        text: truncated ? truncateUtf8(text, maxBytes) : text,
-        truncated,
+        ...truncated,
       };
     },
   };
