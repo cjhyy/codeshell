@@ -61,7 +61,9 @@ export function resolveWorkerEntry(): string {
 export function resolveWebAppRoot(): string | undefined {
   try {
     const require = createRequire(import.meta.url);
-    // package.json is always resolvable; dist-app is its build output sibling.
+    // package.json is exposed via the web package's exports map exactly so a
+    // CJS-style resolve (createRequire) can locate the package root; dist-app
+    // is the app build output sibling.
     const pkgJson = require.resolve("@cjhyy/code-shell-web/package.json");
     const candidate = join(pkgJson, "..", "dist-app");
     return existsSync(candidate) ? candidate : undefined;
