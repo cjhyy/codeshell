@@ -90,6 +90,7 @@ export default [
       "examples/**/output/**",
       "packages/desktop/out/**",
       "packages/*/dist/**",
+      "packages/web/dist-app/**",
     ],
   },
   js.configs.recommended,
