@@ -163,6 +163,36 @@ const extensionRuntimeContract = [
   "logger",
 ] as const;
 
+// Stable workspace data-source SDK surface. Builtin ListSources/ReadSource
+// tools are intentionally not part of this public contract.
+const sourceRuntimeContract = [
+  "SOURCE_ID_RE",
+  "SOURCE_KINDS",
+  "SourceDefinitionSchema",
+  "WorkspaceSourceBindingSchema",
+  "sourceCatalogPath",
+  "listSourceDefinitions",
+  "readSourceDefinition",
+  "saveSourceDefinition",
+  "deleteSourceDefinition",
+  "registerConnectorAdapter",
+  "connectorAdapterFor",
+  "mockAdapter",
+  "LOCAL_FILES_SOURCE_ID",
+  "uploadsDir",
+  "localFilesSourceFor",
+  "localFilesAdapter",
+  "listLocalFiles",
+  "createMcpResourceAdapter",
+  "defaultMcpResourceAdapter",
+  "listBindings",
+  "bindSource",
+  "unbindSource",
+  "resolveEffectiveSourceAccess",
+  "defaultCredentialStatus",
+  "buildSourcesContextSummary",
+] as const;
+
 describe("core public/internal export contract", () => {
   it("keeps the stable public API without host process state", () => {
     expect(publicApi.Engine).toBeDefined();
@@ -170,6 +200,9 @@ describe("core public/internal export contract", () => {
     expect(publicApi.WorkspaceProfileSchema).toBeDefined();
     expect(publicApi.activateWorkspaceProfile).toBeDefined();
     expect(publicApi.listWorkspaceProfiles).toBeDefined();
+    for (const name of sourceRuntimeContract) {
+      expect(publicApi[name], `public root must export ${name}`).toBeDefined();
+    }
 
     expect(publicApi).not.toHaveProperty("getSessionId");
     expect(publicApi).not.toHaveProperty("markScrollActivity");

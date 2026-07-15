@@ -138,6 +138,9 @@ export {
   type WorkspaceProfileSubtree,
 } from "./profile/index.js";
 
+// ─── Workspace data sources ─────────────────────────────────────
+export * from "./sources/index.js";
+
 export {
   createFakeToolContext,
   createToolRegistryHarness,
