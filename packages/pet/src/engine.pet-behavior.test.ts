@@ -2,11 +2,12 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { LLMClientBase } from "../llm/client-base.js";
-import { registerProvider } from "../llm/client-factory.js";
-import type { CreateMessageOptions } from "../llm/types.js";
-import type { LLMResponse, Message } from "../types.js";
-import { Engine } from "./engine.js";
+import { LLMClientBase } from "@cjhyy/code-shell-core/extension";
+import { registerProvider } from "@cjhyy/code-shell-core/extension";
+import type { CreateMessageOptions } from "@cjhyy/code-shell-core/extension";
+import type { LLMResponse, Message } from "@cjhyy/code-shell-core/extension";
+import { Engine } from "@cjhyy/code-shell-core";
+import { createPetCapability } from "./capability.js";
 
 const provider = "fake-pet-behavior";
 const calls = new Map<
@@ -71,6 +72,7 @@ describe("Engine pet behavior", () => {
     const engine = new Engine({
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
+      extensionModules: [createPetCapability()],
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",
@@ -102,6 +104,14 @@ describe("Engine pet behavior", () => {
       workspaceId: "workspace-codeshell",
       objective: "inspect CodeShell",
     });
+    expect(result.extensions).toEqual({
+      pet: {
+        workDelegation: {
+          workspaceId: "workspace-codeshell",
+          objective: "inspect CodeShell",
+        },
+      },
+    });
     expect(existsSync(join(cwd, "should-not-exist.txt"))).toBe(false);
     expect(JSON.stringify(calls.get(model)![1]!.messages)).toContain(
       "not allowed by this run profile",
@@ -119,6 +129,7 @@ describe("Engine pet behavior", () => {
     const engine = new Engine({
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
+      extensionModules: [createPetCapability()],
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",

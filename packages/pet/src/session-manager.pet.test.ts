@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SessionError } from "../exceptions.js";
-import { SessionManager } from "./session-manager.js";
+import { SessionError } from "@cjhyy/code-shell-core";
+import { SessionManager } from "@cjhyy/code-shell-core/extension";
 
 describe("SessionManager pet kind", () => {
   let dir: string;

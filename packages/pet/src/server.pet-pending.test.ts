@@ -1,9 +1,15 @@
+import { createPetCapability } from "./capability.js";
+import {
+  GET_PET_PROJECTION_SNAPSHOT_METHOD,
+  PET_PROJECTION_DELTA_METHOD,
+  type PetProjectionSnapshotResult,
+} from "./protocol.js";
 import { describe, expect, spyOn, test } from "bun:test";
-import type { Engine } from "../engine/engine.js";
-import { ApprovalRouter } from "../tool-system/permission.js";
-import { ChatSessionManager } from "./chat-session-manager.js";
-import { AgentServer } from "./server.js";
-import { Methods } from "./types.js";
+import type { Engine } from "@cjhyy/code-shell-core";
+import { ApprovalRouter } from "@cjhyy/code-shell-core/extension";
+import { ChatSessionManager } from "@cjhyy/code-shell-core";
+import { AgentServer } from "@cjhyy/code-shell-core";
+import { Methods } from "@cjhyy/code-shell-core";
 
 function makeTransport() {
   const sent: any[] = [];
@@ -49,7 +55,7 @@ describe("AgentServer Pet pending projection", () => {
     });
     const session = await manager.getOrCreate("session-a", {} as never);
     const t = makeTransport();
-    const server = new AgentServer({ transport: t.transport, chatManager: manager });
+    const server = new AgentServer({ transport: t.transport, chatManager: manager, extensionModules: [createPetCapability()] });
 
     const decision = (server as any).requestApprovalFromClient({
       sessionId: "session-a",
@@ -116,7 +122,7 @@ describe("AgentServer Pet pending projection", () => {
     });
     const session = await manager.getOrCreate("session-a", {} as never);
     const t = makeTransport();
-    const server = new AgentServer({ transport: t.transport, chatManager: manager });
+    const server = new AgentServer({ transport: t.transport, chatManager: manager, extensionModules: [createPetCapability()] });
 
     void (server as any).requestAskUserForSession(
       session,
@@ -165,7 +171,7 @@ describe("AgentServer Pet pending projection", () => {
       await manager.getOrCreate("closed", {} as never);
       await manager.getOrCreate("shutdown", {} as never);
       const t = makeTransport();
-      const server = new AgentServer({ transport: t.transport, chatManager: manager });
+      const server = new AgentServer({ transport: t.transport, chatManager: manager, extensionModules: [createPetCapability()] });
 
       void (server as any).requestApprovalFromClient({
         sessionId: "timeout",
@@ -215,6 +221,7 @@ describe("AgentServer Pet pending projection", () => {
     const router = new ApprovalRouter();
     const t = makeTransport();
     const server = new AgentServer({
+      extensionModules: [createPetCapability()],
       transport: t.transport,
       chatManager: manager,
       approvalRouter: router,

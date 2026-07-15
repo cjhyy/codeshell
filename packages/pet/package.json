@@ -1,0 +1,28 @@
+{
+  "name": "@cjhyy/code-shell-pet",
+  "version": "0.7.1",
+  "description": "Pet (top-level personal assistant) capability for CodeShell — projection state machine, DelegateWork contract, Mimi behavior profile.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@cjhyy/code-shell-core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}
