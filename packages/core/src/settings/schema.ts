@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { WorkspaceSourceBindingSchema } from "../sources/types.js";
 const DEFAULT_WORKTREE_BRANCH_PREFIX = "worktree/";
 
 function isValidWorktreeBranchPrefix(prefix: string): boolean {
@@ -400,6 +401,13 @@ export const SettingsSchema = z
         overrides: CapabilityOverridesSchema,
       })
       .optional(),
+
+    /**
+     * Workspace 数据源绑定（只存 ref/scope/readPolicy，绝不存 secret）。
+     * 语义见 docs/todo/workspace-datasource-binding-adr.md §1.2。
+     * 只存在于 PROJECT settings。
+     */
+    sources: z.array(WorkspaceSourceBindingSchema).optional(),
 
     /**
      * Feature flags overlay: a map of flag name → boolean that overrides the
