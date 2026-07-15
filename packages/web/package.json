@@ -17,7 +17,7 @@
     "dist-app"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && vite build",
     "build:app": "vite build",
     "dev:app": "vite dev",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\""
