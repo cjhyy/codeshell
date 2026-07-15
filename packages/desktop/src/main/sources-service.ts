@@ -1,6 +1,6 @@
 /** 数据源的 desktop main 门面（组合 core 公共 API，样板 = profiles-service.ts）。 */
 import { copyFileSync, mkdirSync, rmSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { basename } from "node:path";
 import {
   bindSource as bindWorkspaceSource,
   connectorAdapterFor,
@@ -11,6 +11,7 @@ import {
   listSourceDefinitions,
   readSourceDefinition,
   resolveEffectiveSourceAccess,
+  resolveUploadTarget,
   saveSourceDefinition,
   SettingsManager,
   unbindSource as unbindWorkspaceSource,
@@ -59,41 +60,11 @@ export async function listScopes(sourceId: string) {
   return adapter.listScopes(definition);
 }
 
-function uploadTarget(cwd: string, name: string): string {
-  let decoded = name;
-  try {
-    for (let pass = 0; pass < 3; pass += 1) {
-      const next = decodeURIComponent(decoded);
-      if (next === decoded) break;
-      decoded = next;
-    }
-  } catch {
-    throw new Error(`invalid upload name: ${name}`);
-  }
-
-  if (
-    !name ||
-    name !== decoded ||
-    name.startsWith(".") ||
-    name.includes("/") ||
-    name.includes("\\") ||
-    name.includes("\0") ||
-    basename(name) !== name
-  ) {
-    throw new Error(`invalid upload name: ${name}`);
-  }
-
-  const root = resolve(uploadsDir(cwd));
-  const target = resolve(root, name);
-  if (dirname(target) !== root) throw new Error(`invalid upload name: ${name}`);
-  return target;
-}
-
 /** 上传 = 把用户选中的文件按 basename 拷进 uploads 目录（同名覆盖）。 */
 export function uploadFiles(cwd: string, absolutePaths: string[]): string[] {
   const files = absolutePaths.map((path) => {
     const name = basename(path);
-    return { path, name, target: uploadTarget(cwd, name) };
+    return { path, name, target: resolveUploadTarget(cwd, name) };
   });
 
   mkdirSync(uploadsDir(cwd), { recursive: true });
@@ -103,5 +74,5 @@ export function uploadFiles(cwd: string, absolutePaths: string[]): string[] {
 
 /** 只允许删除 uploads 根目录下一层、未编码且非隐藏的 basename。 */
 export function deleteUpload(cwd: string, name: string): void {
-  rmSync(uploadTarget(cwd, name), { force: true });
+  rmSync(resolveUploadTarget(cwd, name), { force: true });
 }
