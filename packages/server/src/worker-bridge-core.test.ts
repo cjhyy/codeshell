@@ -1,4 +1,4 @@
-// packages/desktop/src/main/worker-bridge-core.test.ts
+// packages/server/src/worker-bridge-core.test.ts
 //
 // WorkerBridgeCore is the transport-agnostic half of the agent bridge (zero
 // electron imports), so it is directly testable under bun with a real child

@@ -3,7 +3,7 @@
  *
  * The transport-agnostic half (spawn/respawn of the stdio worker, line
  * framing, request/response correlation, inject semantics, crash accounting)
- * lives in WorkerBridgeCore (worker-bridge-core.ts, zero electron imports —
+ * lives in WorkerBridgeCore (@cjhyy/code-shell-server worker-bridge-core, zero electron imports —
  * the reuse seam for other hosts like packages/server). This class is the
  * Electron adapter on top of it:
  *   - Configure the core with the desktop worker entry
@@ -73,7 +73,7 @@ import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 import { PetWorkerProjectionGeneration } from "./pet/pet-worker-generation.js";
 import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
-import { previewLine, WorkerBridgeCore } from "./worker-bridge-core.js";
+import { previewLine, WorkerBridgeCore } from "@cjhyy/code-shell-server";
 import type {
   AgentPanelHostRequest,
   AgentPanelHostResponse,

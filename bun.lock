@@ -161,9 +161,13 @@
     "packages/server": {
       "name": "@cjhyy/code-shell-server",
       "version": "0.7.1",
+      "bin": {
+        "code-shell-serve": "./dist/bin/code-shell-serve.js",
+      },
       "dependencies": {
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
+        "@cjhyy/code-shell-web": "workspace:*",
         "ws": "^8.21.0",
       },
       "devDependencies": {
@@ -216,8 +220,10 @@
       "devDependencies": {
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.0",
+        "@vitejs/plugin-react": "^5.0.0",
         "react": "19.2.6",
         "react-dom": "19.2.6",
+        "vite": "^7.0.0",
       },
       "peerDependencies": {
         "react": "19.2.6",
