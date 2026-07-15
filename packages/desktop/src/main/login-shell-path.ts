@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { delimiter } from "node:path";
-import { ENV_DENY_REGEX } from "../../../core/src/runtime/spawn-common.js";
+import { ENV_DENY_REGEX } from "@cjhyy/code-shell-core/internal";
 
 const DEFAULT_TIMEOUT_MS = 2_500;
 const MAX_CAPTURE_BYTES = 64 * 1024;

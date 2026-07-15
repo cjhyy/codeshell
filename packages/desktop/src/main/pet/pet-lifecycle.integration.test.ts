@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { PetProjectionSnapshotResult } from "@cjhyy/code-shell-core";
-import type { ListDiskSessionsResult } from "../sessions-service";
+import type { PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
+import type { ListDiskSessionsResult } from "@cjhyy/code-shell-server";
 import { PetAttentionPolicy } from "./pet-attention-policy";
 import {
   PetStateAggregator,

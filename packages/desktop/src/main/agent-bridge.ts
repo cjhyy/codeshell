@@ -1,23 +1,25 @@
 /**
  * AgentBridge — Electron main ↔ agent worker subprocess broker.
  *
- * Responsibilities:
- *   - Spawn a Node subprocess running @cjhyy/code-shell-core's
- *     agent-server-stdio.js with ELECTRON_RUN_AS_NODE=1 so the
- *     Electron binary serves as the Node runtime. Worker is spawned
- *     on-demand (when an agent/run request arrives) and exits cleanly
- *     after each run completes.
- *   - Pipe child stdout (readline-split) → renderer via
- *     window.webContents.send("agent:msg", line).
- *   - Pipe ipcMain "agent:msg" lines from renderer → child stdin.
- *   - Watch for child exit. Differentiate clean exits (code=0) from
- *     crashes. After a crash, track a 3×/60s restart cap and emit
- *     lifecycle events; but DON'T pre-emptively respawn — next user
- *     run will trigger a fresh spawn anyway.
+ * The transport-agnostic half (spawn/respawn of the stdio worker, line
+ * framing, request/response correlation, inject semantics, crash accounting)
+ * lives in WorkerBridgeCore (worker-bridge-core.ts, zero electron imports —
+ * the reuse seam for other hosts like packages/server). This class is the
+ * Electron adapter on top of it:
+ *   - Configure the core with the desktop worker entry
+ *     (@cjhyy/code-shell-core's agent-server-stdio.js run under
+ *     ELECTRON_RUN_AS_NODE=1 so the Electron binary serves as Node).
+ *   - Pipe worker stdout lines → renderer via
+ *     window.webContents.send("agent:msg", line), with the desktop-only
+ *     intercepts (browser/credential/workspace/panel actions, cron reload,
+ *     pet projection) consumed in main and never forwarded.
+ *   - Pipe ipcMain "agent:msg" lines from renderer → worker stdin.
+ *   - Surface worker lifecycle to the renderer. Clean exits (code=0) differ
+ *     from crashes; after a crash the core tracks a 3×/60s restart cap and we
+ *     emit lifecycle events; but DON'T pre-emptively respawn — next user run
+ *     will trigger a fresh spawn anyway.
  */
 
-import { spawn, type ChildProcess } from "node:child_process";
-import { createInterface } from "node:readline";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -37,13 +39,11 @@ import {
   buildPanelActionReply,
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
-import {
-  Methods,
-  SessionManager,
-  type PetProjectionDelta,
-  type PetProjectionSnapshotResult,
-  type SessionWorkspace,
-} from "@cjhyy/code-shell-core";
+import { Methods, SessionManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
+import type {
+  PetProjectionDelta,
+  PetProjectionSnapshotResult,
+} from "@cjhyy/code-shell-pet";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import {
@@ -73,6 +73,7 @@ import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 import { PetWorkerProjectionGeneration } from "./pet/pet-worker-generation.js";
 import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
+import { previewLine, WorkerBridgeCore } from "./worker-bridge-core.js";
 import type {
   AgentPanelHostRequest,
   AgentPanelHostResponse,
@@ -100,13 +101,6 @@ export type { QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 
 const require = createRequire(import.meta.url);
 const agentEntry = require.resolve("@cjhyy/code-shell-capability-coding/bin/agent-server-stdio");
-
-const RESTART_WINDOW_MS = 60_000;
-const RESTART_LIMIT = 3;
-
-function previewLine(s: string, max = 200): string {
-  return s.length > max ? s.slice(0, max) + `…(+${s.length - max} more)` : s;
-}
 
 function normalizeCredentialResolveParams(params: Record<string, unknown> | undefined): {
   cwd?: string;
@@ -141,11 +135,8 @@ function normalizeCredentialMaterializeParams(params: Record<string, unknown> | 
 }
 
 export class AgentBridge implements PetStateBridge {
-  private child: ChildProcess | null = null;
-  /** Pending lines that arrived before the worker was spawned. */
-  private outbox: string[] = [];
-  private restartCount = 0;
-  private restartWindowStart = Date.now();
+  /** Transport-agnostic worker driver (spawn / framing / correlation). */
+  private readonly core: WorkerBridgeCore;
   private ipcListenerAttached = false;
   /**
    * Lazily-created SessionManager for disk-backed fallbacks when no worker is
@@ -167,6 +158,8 @@ export class AgentBridge implements PetStateBridge {
    * it was gone. See SessionSnapshotStore.
    */
   private readonly snapshots = new SessionSnapshotStore();
+  /** Sessions the CURRENT worker streamed events for (reset per spawn). */
+  private workerSnapshotSessionIds = new Set<string>();
   /**
    * Out-of-band observers of worker→renderer lines (e.g. the Mobile Web
    * Remote, which streams the same events to a phone). Taps are read-only:
@@ -197,10 +190,6 @@ export class AgentBridge implements PetStateBridge {
   private readonly petProjectionObservers = new Set<
     (event: AgentBridgePetEvent) => void | Promise<void>
   >();
-  private readonly pendingPetSnapshots = new Map<
-    string,
-    (snapshot: PetProjectionSnapshotResult | null) => void
-  >();
   private petSnapshotRequestId = 0;
   private petHostRequestId = 0;
   private readonly petWorkerGeneration = new PetWorkerProjectionGeneration();
@@ -220,6 +209,54 @@ export class AgentBridge implements PetStateBridge {
     private readonly quickChatForkLifecycle?: QuickChatForkLifecycle,
   ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
+    this.core = new WorkerBridgeCore({
+      entryPath: agentEntry,
+      buildEnv: () => ({
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: "1",
+        CODESHELL_AGENT_STDIO: "1",
+        CODE_SHELL_CAPABILITY_MODULES:
+          "@cjhyy/code-shell-arena#createArenaCapability," +
+          "@cjhyy/code-shell-pet#createPetCapability",
+      }),
+      fallbackCwd: resolveNoRepoCwd,
+      log: (event, data) => dlog("bridge", event, data),
+      prepareInbound: (line) => this.prepareInboundLine(line),
+      onStderr: (text) => {
+        dlog("agent", "stderr", { text: previewLine(text, 800) });
+        process.stderr.write(`[agent] ${text}`);
+      },
+      onWorkerStarted: () => {
+        this.workerSnapshotSessionIds = new Set<string>();
+        this.petWorkerGeneration.beginWorker();
+        this.emitPetProjection({ kind: "lifecycle", state: "active" });
+      },
+      onSpawnFailed: () => {
+        this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
+        this.safeSend("agent:lifecycle", { type: "gave_up" });
+      },
+      onSpawnError: () => {
+        this.failPendingQuickChatForks();
+        // Snapshots intentionally survive worker exit — a respawn may resume
+        // the same session, and a remounted renderer still needs to replay.
+        this.snapshots.onWorkerExit(this.workerSnapshotSessionIds);
+        this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
+        this.safeSend("agent:lifecycle", { type: "gave_up" });
+      },
+      onExit: ({ code, clean, gaveUp }) => {
+        this.failPendingQuickChatForks();
+        this.snapshots.onWorkerExit(this.workerSnapshotSessionIds);
+        if (clean) {
+          this.emitPetProjection({ kind: "lifecycle", state: "reclaimed" });
+          this.safeSend("agent:lifecycle", { type: "exited", code });
+          return;
+        }
+        this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
+        if (gaveUp) this.safeSend("agent:lifecycle", { type: "gave_up" });
+        else this.safeSend("agent:lifecycle", { type: "exited", code });
+      },
+    });
+    this.core.subscribeLines((line) => this.handleWorkerLine(line));
     this.windows.add(window);
     this.quickChatForkRouter = quickChatForkLifecycle
       ? new QuickChatForkRouter(quickChatForkLifecycle)
@@ -235,184 +272,68 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /**
-   * Spawn the worker for a new run. `cwd` is the working directory the
-   * Engine will use (i.e. the repo root). Idempotent if a child is alive.
+   * One worker stdout line (already framed by the core, and not consumed by
+   * a core-internal correlated request). Runs the desktop intercept chain,
+   * then forwards to renderer windows + outbound taps.
    */
-  private spawnChild(cwd: string | undefined): void {
-    if (this.child) return;
-    const workerCwd = cwd ?? resolveNoRepoCwd();
-    dlog("bridge", "spawn.start", {
-      cwd: workerCwd,
-      requestedCwd: cwd,
-      restartCount: this.restartCount,
-    });
+  private handleWorkerLine(line: string): void {
+    // Internal credential access: worker asks main to resolve/materialize
+    // secrets. Consumed here; never forwarded to renderer/transcript.
+    if (this.maybeHandleCredentialAccessMessage(line)) return;
+    // Browser automation: intercept __browser_action__ requests here (drive the
+    // webview in main, reply to the worker) and DON'T forward to the renderer.
+    if (this.maybeHandleBrowserAction(line)) return;
+    // InjectCredential: intercept __credential_action__ (restore a cookie
+    // credential into the built-in browser) here; DON'T forward to renderer.
+    if (this.maybeHandleCredentialAction(line)) return;
+    // Workspace switching: intercept __workspace_action__ so the worker uses
+    // the same main-process service path as the UI switcher.
+    if (this.maybeHandleWorkspaceAction(line)) return;
+    // Generic Panel tool: renderer owns the live registry and tab state.
+    if (this.maybeHandlePanelAction(line)) return;
+    // cron change: the worker created/deleted a cron job (agent/cronChanged);
+    // reload main's scheduler so it arms immediately. DON'T forward to renderer.
+    if (this.maybeHandleCronChanged(line)) return;
+    // Pet projection is a host-only read model. Its snapshot RPC responses are
+    // consumed inside WorkerBridgeCore (consume: true); the delta notification
+    // is consumed here so core-shaped payloads never leak through the generic
+    // renderer agent:msg channel.
+    if (this.routePetProjectionLine(line)) return;
+    const quickChatForkSettlement = this.quickChatForkRouter?.routeWorkerResponse(line) ?? null;
+    let summary: Record<string, unknown> = { raw: previewLine(line) };
     try {
-      this.child = spawn(process.execPath, [agentEntry], {
-        cwd: workerCwd,
-        env: {
-          ...process.env,
-          ELECTRON_RUN_AS_NODE: "1",
-          CODESHELL_AGENT_STDIO: "1",
-          CODE_SHELL_CAPABILITY_MODULES:
-            "@cjhyy/code-shell-arena#createArenaCapability",
-        },
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-    } catch (e) {
-      // spawn() can throw synchronously (e.g. invalid execPath). Don't let it
-      // bubble out of the ipcMain listener / injectWorkerMessage uncaught —
-      // declare give-up so preload rejects the pending run instead of hanging.
-      dlog("bridge", "spawn.throw", { error: String(e) });
-      this.child = null;
-      this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-      this.safeSend("agent:lifecycle", { type: "gave_up" });
-      return;
+      const m = JSON.parse(line) as { method?: string; id?: number };
+      if (m.method) summary = { method: m.method, raw: previewLine(line) };
+      else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
+    } catch {
+      /* keep raw */
     }
-    dlog("bridge", "spawn.ok", { pid: this.child.pid, cwd: workerCwd, requestedCwd: cwd });
-    if (!this.child.stdout || !this.child.stdin || !this.child.stderr) {
-      dlog("bridge", "spawn.error", { reason: "stdio not piped" });
-      this.child = null;
-      this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-      this.safeSend("agent:lifecycle", { type: "gave_up" });
-      return;
+    // Mirror stream events into the per-session snapshot so a remounted
+    // renderer can replay what it missed. Non-streamEvent lines yield null.
+    const append = parseSnapshotAppend(line);
+    if (append) this.workerSnapshotSessionIds.add(append.sessionId);
+    const snapshotEntry = append
+      ? { sessionId: append.sessionId, ...this.snapshots.append(append.sessionId, append.event) }
+      : undefined;
+    const liveStreamEnvelope = parseLiveStreamEnvelope(line, snapshotEntry);
+    dlog("bridge", "worker→renderer", summary);
+    if (liveStreamEnvelope) {
+      this.safeSend("agent:streamEvent", liveStreamEnvelope);
+    } else if (!quickChatForkSettlement) {
+      this.safeSend("agent:msg", line);
     }
-    this.petWorkerGeneration.beginWorker();
-    this.emitPetProjection({ kind: "lifecycle", state: "active" });
-    const workerSnapshotSessionIds = new Set<string>();
-    const rl = createInterface({ input: this.child.stdout });
-    rl.on("line", (line) => {
-      if (!line.trim()) return;
-      // Internal credential access: worker asks main to resolve/materialize
-      // secrets. Consumed here; never forwarded to renderer/transcript.
-      if (this.maybeHandleCredentialAccessMessage(line)) return;
-      // Browser automation: intercept __browser_action__ requests here (drive the
-      // webview in main, reply to the worker) and DON'T forward to the renderer.
-      if (this.maybeHandleBrowserAction(line)) return;
-      // InjectCredential: intercept __credential_action__ (restore a cookie
-      // credential into the built-in browser) here; DON'T forward to renderer.
-      if (this.maybeHandleCredentialAction(line)) return;
-      // Workspace switching: intercept __workspace_action__ so the worker uses
-      // the same main-process service path as the UI switcher.
-      if (this.maybeHandleWorkspaceAction(line)) return;
-      // Generic Panel tool: renderer owns the live registry and tab state.
-      if (this.maybeHandlePanelAction(line)) return;
-      // cron change: the worker created/deleted a cron job (agent/cronChanged);
-      // reload main's scheduler so it arms immediately. DON'T forward to renderer.
-      if (this.maybeHandleCronChanged(line)) return;
-      // Pet projection is a host-only read model. Consume its internal snapshot
-      // responses/deltas here so resolver-free-but-core-shaped payloads never
-      // leak through the generic renderer agent:msg channel.
-      if (this.routePetProjectionLine(line)) return;
-      const quickChatForkSettlement = this.quickChatForkRouter?.routeWorkerResponse(line) ?? null;
-      let summary: Record<string, unknown> = { raw: previewLine(line) };
-      try {
-        const m = JSON.parse(line) as { method?: string; id?: number };
-        if (m.method) summary = { method: m.method, raw: previewLine(line) };
-        else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
-      } catch {
-        /* keep raw */
-      }
-      // Mirror stream events into the per-session snapshot so a remounted
-      // renderer can replay what it missed. Non-streamEvent lines yield null.
-      const append = parseSnapshotAppend(line);
-      if (append) workerSnapshotSessionIds.add(append.sessionId);
-      const snapshotEntry = append
-        ? { sessionId: append.sessionId, ...this.snapshots.append(append.sessionId, append.event) }
-        : undefined;
-      const liveStreamEnvelope = parseLiveStreamEnvelope(line, snapshotEntry);
-      dlog("bridge", "worker→renderer", summary);
-      if (liveStreamEnvelope) {
-        this.safeSend("agent:streamEvent", liveStreamEnvelope);
-      } else if (!quickChatForkSettlement) {
-        this.safeSend("agent:msg", line);
-      }
-      void quickChatForkSettlement?.catch((error) =>
-        dlog("bridge", "quick_chat.fork_settle_failed", { error: String(error) }),
-      );
-      if (!quickChatForkSettlement) {
-        for (const tap of this.outboundTaps) {
-          try {
-            tap(line, snapshotEntry);
-          } catch {
-            /* a tap must never break worker streaming */
-          }
+    void quickChatForkSettlement?.catch((error) =>
+      dlog("bridge", "quick_chat.fork_settle_failed", { error: String(error) }),
+    );
+    if (!quickChatForkSettlement) {
+      for (const tap of this.outboundTaps) {
+        try {
+          tap(line, snapshotEntry);
+        } catch {
+          /* a tap must never break worker streaming */
         }
       }
-    });
-    this.child.stderr.on("data", (chunk: Buffer) => {
-      const text = chunk.toString();
-      dlog("agent", "stderr", { text: previewLine(text, 800) });
-      process.stderr.write(`[agent] ${text}`);
-    });
-    // A failed spawn (ENOENT/EACCES/EAGAIN/process-limit) emits 'error' and
-    // NO 'exit'. Without this listener Node throws it as an uncaught exception
-    // (can crash main), and — worse — neither path below fires, so the
-    // renderer's run() (timeout disabled) never settles and the UI hangs busy
-    // forever. Treat a spawn error like a give-up crash so preload rejects the
-    // pending run.
-    this.child.on("error", (err) => {
-      dlog("bridge", "child.error", { error: String(err) });
-      try {
-        rl.close();
-      } catch {
-        /* ignore */
-      }
-      this.child = null;
-      this.outbox = [];
-      this.failPendingQuickChatForks();
-      this.snapshots.onWorkerExit(workerSnapshotSessionIds);
-      this.resolvePendingPetSnapshots(null);
-      this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-      this.safeSend("agent:lifecycle", { type: "gave_up" });
-    });
-    this.child.on("exit", (code, signal) => {
-      // Close the readline interface bound to the dead child's stdout so it
-      // (and its "line" listener) doesn't leak across restarts.
-      rl.close();
-      dlog("bridge", "child.exit", { code, signal, pid: this.child?.pid });
-      this.child = null;
-      this.outbox = []; // any queued messages were for the dead child; drop
-      this.failPendingQuickChatForks();
-      // Snapshots intentionally survive worker exit — a respawn may resume the
-      // same session, and a remounted renderer still needs to replay them.
-      this.snapshots.onWorkerExit(workerSnapshotSessionIds);
-      if (code === 0 && signal === null) {
-        // Normal completion. Reset restart counter — clean exits don't count.
-        this.restartCount = 0;
-        this.resolvePendingPetSnapshots(null);
-        this.emitPetProjection({ kind: "lifecycle", state: "reclaimed" });
-        this.safeSend("agent:lifecycle", { type: "exited", code });
-        return;
-      }
-      // Real crash. Note it but DON'T pre-emptively respawn — next user
-      // run will trigger a fresh spawn anyway. We just decide whether to
-      // declare "gave up" so the renderer can show a banner.
-      this.resolvePendingPetSnapshots(null);
-      this.emitPetProjection({ kind: "lifecycle", state: "disconnected" });
-      if (this.shouldDeclareGaveUp()) {
-        dlog("bridge", "crash.gave_up", { restartCount: this.restartCount });
-        this.safeSend("agent:lifecycle", { type: "gave_up" });
-      } else {
-        dlog("bridge", "crash.tolerable", { restartCount: this.restartCount });
-        this.safeSend("agent:lifecycle", { type: "exited", code });
-      }
-    });
-    // Flush queued lines now that stdin exists.
-    for (const queued of this.outbox) {
-      this.child.stdin.write(queued + "\n");
     }
-    this.outbox = [];
-  }
-
-  /** Returns true after >= RESTART_LIMIT crashes in the current 60s window. */
-  private shouldDeclareGaveUp(): boolean {
-    const now = Date.now();
-    if (now - this.restartWindowStart > RESTART_WINDOW_MS) {
-      this.restartWindowStart = now;
-      this.restartCount = 0;
-    }
-    this.restartCount++;
-    return this.restartCount > RESTART_LIMIT;
   }
 
   /** Lazily build the disk-backed SessionManager used for no-worker fallbacks. */
@@ -422,7 +343,7 @@ export class AgentBridge implements PetStateBridge {
   }
 
   private handleAgentRunMetadata(prepared: ReturnType<typeof prepareAgentRunMetadata>): string {
-    this.spawnChild(prepared.cwd);
+    this.core.ensureWorker(prepared.cwd);
     this.lastRunContext = {
       cwd: prepared.cwd,
       sessionId: prepared.sessionId,
@@ -439,6 +360,22 @@ export class AgentBridge implements PetStateBridge {
     }
     this.pushCredentialSnapshot(prepared.cwd);
     return prepared.outLine;
+  }
+
+  /**
+   * WorkerBridgeCore prepareInbound hook: rewrite injected lines the same way
+   * the renderer IPC path does (an `agent/run` spawns the worker on demand
+   * and gets trust/session metadata injected; everything else passes through
+   * verbatim).
+   */
+  private prepareInboundLine(line: string): { line: string; method?: string } {
+    const prepared = prepareAgentRunMetadata(line, (cwd) => getTrustCachedSync(cwd) === "trusted");
+    const parsed = prepared.parsed;
+    let outLine = line;
+    if (parsed.method === "agent/run") {
+      outLine = this.handleAgentRunMetadata(prepared);
+    }
+    return { line: outLine, method: parsed.method };
   }
 
   private cwdForSessionOrThrow(sessionId: string): string {
@@ -480,19 +417,19 @@ export class AgentBridge implements PetStateBridge {
       } else {
         const forkSourceId = forkSourceSessionId(parsed);
         if (forkSourceId) {
-          this.spawnChild(this.sessionsForFallback().readSessionMainRoot(forkSourceId));
+          this.core.ensureWorker(this.sessionsForFallback().readSessionMainRoot(forkSourceId));
         }
         const compactSessionId = compactQuerySessionId(parsed);
         if (compactSessionId) {
-          this.spawnChild(
+          this.core.ensureWorker(
             this.sessionsForFallback().readSessionMainRoot(compactSessionId) ?? parsed.params?.cwd,
           );
         }
       }
 
-      if (!this.child?.stdin || this.child.stdin.destroyed) {
+      if (!this.core.canSend()) {
         // No live worker. For approve / cancel this is fine — drop.
-        // For run, spawnChild above should have created one; if it
+        // For run, ensureWorker above should have created one; if it
         // didn't, log and drop.
         // BUT some requests must still get a REPLY, or the renderer's rpc()
         // hangs its 30s timeout: read-only registry queries (backgroundShells /
@@ -505,7 +442,7 @@ export class AgentBridge implements PetStateBridge {
           this.safeSend("agent:msg", fallback);
         }
         dlog("bridge", "renderer→worker.dropped", {
-          reason: this.child ? "stdin destroyed" : "no child",
+          reason: this.core.hasChild() ? "stdin destroyed" : "no child",
           method: parsed.method,
           answered: fallback !== null,
         });
@@ -519,7 +456,7 @@ export class AgentBridge implements PetStateBridge {
         return;
       }
       dlog("bridge", "renderer→worker", { method: parsed.method, raw: previewLine(outLine) });
-      this.child.stdin.write(outLine + "\n");
+      this.core.sendLine(outLine);
     });
 
     ipcMain.on(
@@ -608,10 +545,7 @@ export class AgentBridge implements PetStateBridge {
           detail: e instanceof Error ? e.message : String(e),
         });
       }
-      const reply = buildBrowserActionReply(parsed, resultJson);
-      if (this.child?.stdin?.writable) {
-        this.child.stdin.write(reply + "\n");
-      }
+      this.core.sendLine(buildBrowserActionReply(parsed, resultJson));
     })();
     return true;
   }
@@ -695,9 +629,7 @@ export class AgentBridge implements PetStateBridge {
           error: { code: -32603, message: err instanceof Error ? err.message : String(err) },
         };
       }
-      if (this.child?.stdin?.writable) {
-        this.child.stdin.write(JSON.stringify(reply) + "\n");
-      }
+      this.core.sendLine(JSON.stringify(reply));
     })();
     return true;
   }
@@ -763,10 +695,7 @@ export class AgentBridge implements PetStateBridge {
           error: e instanceof Error ? e.message : String(e),
         });
       }
-      const reply = buildCredentialActionReply(parsed, resultJson);
-      if (this.child?.stdin?.writable) {
-        this.child.stdin.write(reply + "\n");
-      }
+      this.core.sendLine(buildCredentialActionReply(parsed, resultJson));
     })();
     return true;
   }
@@ -795,10 +724,7 @@ export class AgentBridge implements PetStateBridge {
           error: e instanceof Error ? e.message : String(e),
         });
       }
-      const reply = buildWorkspaceActionReply(parsed, resultJson);
-      if (this.child?.stdin?.writable) {
-        this.child.stdin.write(reply + "\n");
-      }
+      this.core.sendLine(buildWorkspaceActionReply(parsed, resultJson));
     })();
     return true;
   }
@@ -849,33 +775,26 @@ export class AgentBridge implements PetStateBridge {
           });
         }
       }
-      const reply = buildPanelActionReply(parsed, JSON.stringify(result));
-      if (this.child?.stdin?.writable) this.child.stdin.write(reply + "\n");
+      this.core.sendLine(buildPanelActionReply(parsed, JSON.stringify(result)));
     })();
     return true;
   }
 
+  /**
+   * Consume the worker's `agent/petProjectionDelta` notification (the pet
+   * projection is a host-only read model — it must never leak through the
+   * generic renderer agent:msg channel). Snapshot RPC responses are already
+   * correlated + consumed inside WorkerBridgeCore.
+   */
   private routePetProjectionLine(line: string): boolean {
     let message: {
-      id?: string | number;
       method?: string;
       params?: unknown;
-      result?: unknown;
-      error?: unknown;
     };
     try {
       message = JSON.parse(line) as typeof message;
     } catch {
       return false;
-    }
-    if (typeof message.id === "string") {
-      const resolve = this.pendingPetSnapshots.get(message.id);
-      if (resolve) {
-        this.pendingPetSnapshots.delete(message.id);
-        const result = message.error ? null : (message.result as PetProjectionSnapshotResult);
-        resolve(result ? this.petWorkerGeneration.normalizeSnapshot(result) : null);
-        return true;
-      }
     }
     if (message.method !== Methods.PetProjectionDelta) return false;
     const delta = message.params as Partial<PetProjectionDelta> | undefined;
@@ -906,38 +825,24 @@ export class AgentBridge implements PetStateBridge {
     }
   }
 
-  private resolvePendingPetSnapshots(snapshot: PetProjectionSnapshotResult | null): void {
-    const pending = [...this.pendingPetSnapshots.values()];
-    this.pendingPetSnapshots.clear();
-    for (const resolve of pending) resolve(snapshot);
-  }
-
   hasLiveWorker(): boolean {
-    return !!this.child?.stdin?.writable && !this.child.stdin.destroyed;
+    return this.core.hasLiveWorker();
   }
 
-  requestPetProjectionSnapshot(): Promise<PetProjectionSnapshotResult | null> {
-    if (!this.hasLiveWorker()) return Promise.resolve(null);
+  async requestPetProjectionSnapshot(): Promise<PetProjectionSnapshotResult | null> {
+    if (!this.hasLiveWorker()) return null;
     const id = `desktop-pet-snapshot-${++this.petSnapshotRequestId}`;
-    return new Promise((resolve) => {
-      let settled = false;
-      const finish = (snapshot: PetProjectionSnapshotResult | null): void => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        this.pendingPetSnapshots.delete(id);
-        resolve(snapshot);
-      };
-      const timer = setTimeout(() => finish(null), 5_000);
-      this.pendingPetSnapshots.set(id, finish);
-      try {
-        this.child!.stdin!.write(
-          JSON.stringify({ jsonrpc: "2.0", id, method: Methods.GetPetProjectionSnapshot }) + "\n",
-        );
-      } catch {
-        finish(null);
-      }
+    const outcome = await this.core.request(Methods.GetPetProjectionSnapshot, undefined, {
+      id,
+      timeoutMs: 5_000,
+      consume: true,
+      settleOnExit: true,
+      failFast: true,
     });
+    if (outcome.status !== "result" || !outcome.result) return null;
+    return this.petWorkerGeneration.normalizeSnapshot(
+      outcome.result as PetProjectionSnapshotResult,
+    );
   }
 
   subscribePetProjection(
@@ -947,50 +852,39 @@ export class AgentBridge implements PetStateBridge {
     return () => this.petProjectionObservers.delete(observer);
   }
 
-  requestWorker(
+  async requestWorker(
     method: string,
     params: Record<string, unknown>,
     timeoutMs = 120_000,
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
     const id = `desktop-pet-host-${++this.petHostRequestId}`;
-    return new Promise((resolve) => {
-      let settled = false;
-      const finish = (
-        result: { ok: true; result: unknown } | { ok: false; message: string; code?: number },
-      ): void => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        unsubscribe();
-        resolve(result);
-      };
-      const unsubscribe = this.subscribeOutbound((line) => {
-        try {
-          const message = JSON.parse(line) as {
-            id?: string;
-            result?: unknown;
-            error?: { message?: string; code?: number };
-          };
-          if (message.id !== id) return;
-          if (message.error) {
-            finish({
-              ok: false,
-              message: message.error.message ?? "worker rejected the request",
-              code: message.error.code,
-            });
-          } else {
-            finish({ ok: true, result: message.result });
-          }
-        } catch {
-          /* ignore unrelated worker output */
-        }
-      });
-      const timer = setTimeout(
-        () => finish({ ok: false, message: "worker did not respond" }),
-        timeoutMs,
-      );
-      this.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
+    // consume: false — the response line still flows to renderer + taps, like
+    // any other worker output. failFast unset — a dropped send waits out the
+    // timeout, matching the old inject-then-wait semantics.
+    //
+    // agent/run is the only method that may spawn the worker on demand, exactly
+    // as the renderer's "agent:msg" path does. Without this a pet/IM-gateway
+    // agent/run to a lazily-unspawned worker is dropped and hangs to timeout
+    // ("Mimi 正在整理…" forever; WeChat messages never answered).
+    const ensureWorker = method === "agent/run";
+    const cwd = typeof params.cwd === "string" ? params.cwd : undefined;
+    const outcome = await this.core.request(method, params, {
+      id,
+      timeoutMs,
+      ...(ensureWorker ? { ensureWorker: true, ...(cwd ? { ensureWorkerCwd: cwd } : {}) } : {}),
     });
+    switch (outcome.status) {
+      case "result":
+        return { ok: true, result: outcome.result };
+      case "error":
+        return {
+          ok: false,
+          message: outcome.error.message ?? "worker rejected the request",
+          code: outcome.error.code,
+        };
+      default:
+        return { ok: false, message: "worker did not respond" };
+    }
   }
 
   /**
@@ -1024,18 +918,18 @@ export class AgentBridge implements PetStateBridge {
 
   pushCredentialSnapshot(cwd?: string): void {
     if (typeof cwd === "string" && cwd) this.credentialSnapshotCwds.add(cwd);
-    if (!this.child?.stdin?.writable) return;
+    if (!this.core.hasLiveWorker()) return;
     this.credentialSnapshotRevision += 1;
     const snapshot = buildCredentialSnapshot(
       [...this.credentialSnapshotCwds],
       this.credentialSnapshotRevision,
     );
-    this.child.stdin.write(
+    this.core.sendLine(
       JSON.stringify({
         jsonrpc: "2.0",
         method: "desktop/credentialSnapshot",
         params: snapshot,
-      }) + "\n",
+      }),
     );
   }
 
@@ -1067,21 +961,7 @@ export class AgentBridge implements PetStateBridge {
    * responsible for building a well-formed line (see preload's rpc()).
    */
   injectWorkerMessage(line: string): void {
-    const prepared = prepareAgentRunMetadata(line, (cwd) => getTrustCachedSync(cwd) === "trusted");
-    const parsed = prepared.parsed;
-    let outLine = line;
-    if (parsed.method === "agent/run") {
-      outLine = this.handleAgentRunMetadata(prepared);
-    }
-    if (!this.child?.stdin || this.child.stdin.destroyed) {
-      dlog("bridge", "inject.dropped", {
-        reason: this.child ? "stdin destroyed" : "no child",
-        method: parsed.method,
-      });
-      return;
-    }
-    dlog("bridge", "inject→worker", { method: parsed.method, raw: previewLine(outLine) });
-    this.child.stdin.write(outLine + "\n");
+    this.core.injectWorkerMessage(line);
   }
 
   /**
@@ -1109,107 +989,66 @@ export class AgentBridge implements PetStateBridge {
    * shells to reap. With a live worker, resolve only after its close ACK so a
    * caller can safely remove the session directory afterward.
    */
-  closeSession(sessionId: string): Promise<void> {
-    if (!this.child?.stdin || this.child.stdin.destroyed) return Promise.resolve();
+  async closeSession(sessionId: string): Promise<void> {
+    if (!this.core.canSend()) return;
     const id = `close-${sessionId}-${Date.now()}`;
-    const line = JSON.stringify({
-      jsonrpc: "2.0",
-      id,
-      method: "agent/closeSession",
-      params: { sessionId },
-    });
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const finish = (err?: Error): void => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        unsubscribe();
-        if (err) reject(err);
-        else resolve();
-      };
-      const unsubscribe = this.subscribeOutbound((outLine) => {
-        try {
-          const msg = JSON.parse(outLine) as {
-            id?: string | number;
-            error?: { message?: string };
-            result?: { ok?: boolean; error?: string };
-          };
-          if (msg.id !== id) return;
-          const resultError =
-            msg.result && msg.result.ok === false
-              ? new Error(msg.result.error ?? "closeSession failed")
-              : undefined;
-          finish(msg.error ? new Error(msg.error.message ?? "closeSession failed") : resultError);
-        } catch {
-          /* ignore non-json worker output */
+    const outcome = await this.core.request(
+      "agent/closeSession",
+      { sessionId },
+      { id, timeoutMs: 30_000, failFast: true },
+    );
+    switch (outcome.status) {
+      case "result": {
+        const result = outcome.result as { ok?: boolean; error?: string } | undefined;
+        if (result && result.ok === false) {
+          throw new Error(result.error ?? "closeSession failed");
         }
-      });
-      const timer = setTimeout(
-        () => finish(new Error(`closeSession timed out for session ${sessionId}`)),
-        30_000,
-      );
-      try {
-        this.child!.stdin!.write(line + "\n");
-      } catch (err) {
-        finish(err instanceof Error ? err : new Error(String(err)));
+        return;
       }
-    });
+      case "error":
+        throw new Error(outcome.error.message ?? "closeSession failed");
+      case "timeout":
+        throw new Error(`closeSession timed out for session ${sessionId}`);
+      case "sendFailed":
+        throw outcome.error instanceof Error
+          ? outcome.error
+          : new Error(String(outcome.error ?? "closeSession failed: no live worker"));
+      default:
+        throw new Error("closeSession failed: worker exited");
+    }
   }
 
-  releaseWorkspace(sessionId: string): Promise<void> {
-    if (!this.child?.stdin || this.child.stdin.destroyed) return Promise.resolve();
+  async releaseWorkspace(sessionId: string): Promise<void> {
+    if (!this.core.canSend()) return;
     const id = `release-workspace-${sessionId}-${Date.now()}`;
-    const line = JSON.stringify({
-      jsonrpc: "2.0",
-      id,
-      method: "agent/releaseWorkspace",
-      params: { sessionId },
-    });
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      const finish = (err?: Error): void => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        unsubscribe();
-        if (err) reject(err);
-        else resolve();
-      };
-      const unsubscribe = this.subscribeOutbound((outLine) => {
-        try {
-          const msg = JSON.parse(outLine) as {
-            id?: string | number;
-            error?: { message?: string };
-            result?: { ok?: boolean; error?: string };
-          };
-          if (msg.id === id) {
-            const resultError =
-              msg.result && msg.result.ok === false
-                ? new Error(msg.result.error ?? "releaseWorkspace failed")
-                : undefined;
-            finish(
-              msg.error ? new Error(msg.error.message ?? "releaseWorkspace failed") : resultError,
-            );
-          }
-        } catch {
-          /* ignore non-json worker output */
+    const outcome = await this.core.request(
+      "agent/releaseWorkspace",
+      { sessionId },
+      { id, timeoutMs: 5_000, failFast: true },
+    );
+    switch (outcome.status) {
+      case "result": {
+        const result = outcome.result as { ok?: boolean; error?: string } | undefined;
+        if (result && result.ok === false) {
+          throw new Error(result.error ?? "releaseWorkspace failed");
         }
-      });
-      const timer = setTimeout(
-        () => finish(new Error(`releaseWorkspace timed out for session ${sessionId}`)),
-        5000,
-      );
-      try {
-        this.child!.stdin!.write(line + "\n");
-      } catch (err) {
-        finish(err instanceof Error ? err : new Error(String(err)));
+        return;
       }
-    });
+      case "error":
+        throw new Error(outcome.error.message ?? "releaseWorkspace failed");
+      case "timeout":
+        throw new Error(`releaseWorkspace timed out for session ${sessionId}`);
+      case "sendFailed":
+        throw outcome.error instanceof Error
+          ? outcome.error
+          : new Error(String(outcome.error ?? "releaseWorkspace failed: no live worker"));
+      default:
+        throw new Error("releaseWorkspace failed: worker exited");
+    }
   }
 
   async setWorkspace(sessionId: string, workspace: SessionWorkspace): Promise<void> {
-    if (!this.child?.stdin || this.child.stdin.destroyed) {
+    if (!this.core.canSend()) {
       throw new Error(`no live worker for session ${sessionId}`);
     }
     const response = await this.requestWorker(
@@ -1257,7 +1096,6 @@ export class AgentBridge implements PetStateBridge {
   }
 
   kill(): void {
-    dlog("bridge", "kill", { pid: this.child?.pid });
-    this.child?.kill("SIGTERM");
+    this.core.kill();
   }
 }

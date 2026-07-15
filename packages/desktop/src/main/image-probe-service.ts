@@ -9,7 +9,7 @@
  * thumbnail — proof the whole pipeline works, not just "no error".
  */
 
-import { getImageProvider, DEFAULT_IMAGE_MODEL } from "@cjhyy/code-shell-core";
+import { getImageProvider, DEFAULT_IMAGE_MODEL } from "@cjhyy/code-shell-core/internal";
 
 export interface ImageProbeInput {
   /** Adapter selector — "openai" | "google" | … */

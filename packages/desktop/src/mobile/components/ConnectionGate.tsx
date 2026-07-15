@@ -1,5 +1,5 @@
 import { useT } from "@/i18n";
-import type { ConnStatus } from "@mobile/hooks/useRemoteSocket";
+import type { ConnStatus } from "@cjhyy/code-shell-web";
 
 /** Full-screen state for everything before "online": connecting, authing,
  *  unpaired (needs QR), or offline (reconnecting). */

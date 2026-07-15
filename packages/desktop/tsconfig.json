@@ -7,8 +7,10 @@
     "paths": {
       "@/*": ["src/renderer/*"],
       "@ui/*": ["src/renderer/components/ui/*"],
-      "@protocol": ["src/main/mobile-remote/types.ts"],
-      "@mobile/*": ["src/mobile/*"]
+      "@protocol": ["../server/src/mobile-remote/types.ts"],
+      "@mobile/*": ["src/mobile/*"],
+      "@cjhyy/code-shell-web": ["../web/src/index.ts"],
+      "@cjhyy/code-shell-web/*": ["../web/src/*"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",

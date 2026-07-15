@@ -3,9 +3,9 @@ import type {
   PetProjectionDelta,
   PetProjectionSnapshotResult,
   PetSessionProjection,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-pet";
 import path from "node:path";
-import type { DiskSessionMeta, ListDiskSessionsResult } from "../sessions-service.js";
+import type { DiskSessionMeta, ListDiskSessionsResult } from "@cjhyy/code-shell-server";
 
 export type DesktopPetWorkerState =
   | "active"

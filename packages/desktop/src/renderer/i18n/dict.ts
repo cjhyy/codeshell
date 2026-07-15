@@ -31,7 +31,7 @@ import { settingsNs } from "./ns/settings";
 import { extensions } from "./ns/extensions";
 import { automation } from "./ns/automation";
 import { misc } from "./ns/misc";
-import { mobile } from "./ns/mobile";
+import { mobile } from "@cjhyy/code-shell-web";
 import { pet } from "./ns/pet";
 
 export const messages = {

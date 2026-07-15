@@ -16,7 +16,7 @@
   },
   "scripts": {
     "preinstall": "node scripts/check-node.cjs",
-    "build": "bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-arena' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run --filter '@cjhyy/code-shell-chat' build && bun run scripts/build-meta.ts",
+    "build": "bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-pet' build && bun run --filter '@cjhyy/code-shell-arena' build && bun run --filter '@cjhyy/code-shell-capability-coding' build && bun run --filter '@cjhyy/code-shell-server' build && bun run --filter '@cjhyy/code-shell-web' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run --filter '@cjhyy/code-shell-chat' build && bun run scripts/build-meta.ts",
     "dev": "bun run dev:desktop",
     "dev:desktop": "bun run --filter '@cjhyy/code-shell-desktop' dev",
     "dev:tui": "CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 bun run packages/tui/src/cli/main.ts",

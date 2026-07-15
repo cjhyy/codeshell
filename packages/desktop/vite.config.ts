@@ -56,6 +56,9 @@ export default defineConfig({
     alias: {
       "@renderer": resolve(__dirname, "src/renderer"),
       "@": resolve(__dirname, "src/renderer"),
+      // Workspace TS source package (web client logic layer): bundle straight
+      // from src so dev/build never read a stale dist. Barrel imports only.
+      "@cjhyy/code-shell-web": resolve(__dirname, "../web/src/index.ts"),
     },
   },
 });

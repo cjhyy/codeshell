@@ -7,7 +7,7 @@
  * Returns plain serializable summaries (no class instances cross IPC).
  */
 
-import type { CronScheduler, CronJob, CronPermissionLevel } from "@cjhyy/code-shell-core";
+import type { CronScheduler, CronJob, CronPermissionLevel } from "@cjhyy/code-shell-core/internal";
 
 export interface AutomationSummary {
   id: string;

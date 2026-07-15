@@ -1,4 +1,4 @@
-import type { PetProjectionDelta, PetProjectionSnapshotResult } from "@cjhyy/code-shell-core";
+import type { PetProjectionDelta, PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
 
 /**
  * Fences process-local Pet cursors with the desktop worker lifecycle.

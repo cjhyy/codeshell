@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
-import type { ConnStatus } from "@mobile/hooks/useRemoteSocket";
-import type { RunState } from "@/lib/streamReducer";
+import type { ConnStatus } from "@cjhyy/code-shell-web";
+import type { RunState } from "@cjhyy/code-shell-web";
 
 const CONN_LABEL_KEY: Record<
   ConnStatus,

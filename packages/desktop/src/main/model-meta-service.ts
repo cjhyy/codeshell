@@ -1,4 +1,4 @@
-import { capabilitiesFor } from "@cjhyy/code-shell-core";
+import { capabilitiesFor } from "@cjhyy/code-shell-core/internal";
 
 /**
  * Resolve a model's true `maxContextTokens` without making the user

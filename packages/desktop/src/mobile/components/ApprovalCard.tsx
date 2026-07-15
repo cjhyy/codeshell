@@ -5,7 +5,7 @@ import { Button } from "@ui/button";
 import { Textarea } from "@ui/textarea";
 import { useT } from "@/i18n";
 import type { ApprovalScope, ApprovalPathScope } from "@protocol";
-import type { PendingApproval } from "@mobile/hooks/useRemoteApp";
+import type { PendingApproval } from "@cjhyy/code-shell-web";
 
 export interface ApprovalResponse {
   reason?: string;

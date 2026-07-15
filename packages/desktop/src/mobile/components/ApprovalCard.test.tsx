@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApprovalCard } from "./ApprovalCard";
-import type { PendingApproval } from "@mobile/hooks/useRemoteApp";
+import type { PendingApproval } from "@cjhyy/code-shell-web";
 
 const base: PendingApproval = {
   requestId: "r1",

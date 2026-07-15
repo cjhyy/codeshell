@@ -97,11 +97,14 @@
         "@cjhyy/code-shell-arena": "workspace:*",
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
+        "@cjhyy/code-shell-pet": "workspace:*",
         "node-pty": "^1.1.0",
       },
       "devDependencies": {
         "@cjhyy/code-shell-cdp": "workspace:*",
         "@cjhyy/code-shell-chat": "workspace:*",
+        "@cjhyy/code-shell-server": "workspace:*",
+        "@cjhyy/code-shell-web": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.12.1",
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -148,6 +151,25 @@
         "ws": "^8.21.0",
       },
     },
+    "packages/pet": {
+      "name": "@cjhyy/code-shell-pet",
+      "version": "0.7.1",
+      "dependencies": {
+        "@cjhyy/code-shell-core": "workspace:*",
+      },
+    },
+    "packages/server": {
+      "name": "@cjhyy/code-shell-server",
+      "version": "0.7.1",
+      "dependencies": {
+        "@cjhyy/code-shell-capability-coding": "workspace:*",
+        "@cjhyy/code-shell-core": "workspace:*",
+        "ws": "^8.21.0",
+      },
+      "devDependencies": {
+        "@types/ws": "^8.18.1",
+      },
+    },
     "packages/tui": {
       "name": "@cjhyy/code-shell-tui",
       "version": "0.7.1",
@@ -183,6 +205,22 @@
         "type-fest": "^5.5.0",
         "usehooks-ts": "^3.1.1",
         "wrap-ansi": "^10.0.0",
+      },
+    },
+    "packages/web": {
+      "name": "@cjhyy/code-shell-web",
+      "version": "0.7.1",
+      "dependencies": {
+        "@cjhyy/code-shell-server": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.0",
+        "react": "19.2.6",
+        "react-dom": "19.2.6",
+      },
+      "peerDependencies": {
+        "react": "19.2.6",
       },
     },
   },
@@ -270,7 +308,13 @@
 
     "@cjhyy/code-shell-desktop": ["@cjhyy/code-shell-desktop@workspace:packages/desktop"],
 
+    "@cjhyy/code-shell-pet": ["@cjhyy/code-shell-pet@workspace:packages/pet"],
+
+    "@cjhyy/code-shell-server": ["@cjhyy/code-shell-server@workspace:packages/server"],
+
     "@cjhyy/code-shell-tui": ["@cjhyy/code-shell-tui@workspace:packages/tui"],
+
+    "@cjhyy/code-shell-web": ["@cjhyy/code-shell-web@workspace:packages/web"],
 
     "@colors/colors": ["@colors/colors@1.5.0", "", {}, "sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ=="],
 

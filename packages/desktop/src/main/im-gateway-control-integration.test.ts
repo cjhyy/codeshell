@@ -2,9 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { GatewayControlServer } from "../../desktop/src/main/im-gateway-control-server.js";
-import type { DesktopGatewayConfig } from "./config.js";
-import { DesktopControlClient } from "./desktop-control-client.js";
+import { GatewayControlServer } from "./im-gateway-control-server.js";
+import {
+  DesktopControlClient,
+  type DesktopGatewayConfig,
+} from "@cjhyy/code-shell-chat/codeshell";
 
 const roots: string[] = [];
 

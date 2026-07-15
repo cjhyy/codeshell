@@ -6,12 +6,11 @@
 
 import type {
   StreamEvent,
-  ApprovalRequest,
   CapabilityDescriptor,
-  ReasoningControl,
   SessionWorkspace,
   SessionForkLineage,
 } from "@cjhyy/code-shell-core";
+import type { ApprovalRequest, ReasoningControl } from "@cjhyy/code-shell-core/internal";
 import type {
   CCAvailability,
   DiscoveredSession,

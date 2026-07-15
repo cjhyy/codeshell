@@ -3,7 +3,7 @@ import { DoorOpen, LogOut, Menu, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import { useT } from "@/i18n";
-import { useRemoteApp } from "@mobile/hooks/useRemoteApp";
+import { useRemoteApp } from "@cjhyy/code-shell-web";
 import { ConnectionGate } from "@mobile/components/ConnectionGate";
 import { StatusBar } from "@mobile/components/StatusBar";
 import { MessageStream } from "@mobile/components/MessageStream";

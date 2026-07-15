@@ -1,4 +1,4 @@
-// Pre-package step: replace the core, coding, and optional Arena workspace
+// Pre-package step: replace the core, coding, Arena, and Pet workspace
 // SYMLINKS with real, self-contained directories inside desktop/node_modules.
 //
 // WHY THIS EXISTS
@@ -14,13 +14,13 @@
 // `files` field avoids it — both were tried and don't work.
 //
 // All of desktop's OTHER deps are build-time only (esbuild bundles main, vite
-// bundles the renderer). Core, coding, and Arena are runtime deps: main spawns
-// the coding worker, which composes core and dynamically loads Arena through
-// core's extension seam.
+// bundles the renderer). Core, coding, Arena, and Pet are runtime deps: main
+// spawns the coding worker, which composes core and dynamically loads Arena and
+// Pet through core's extension seam.
 //
 // THE FIX
 // -------
-// Materialize all three packages into real in-tree directories containing exactly
+// Materialize all four packages into real in-tree directories containing exactly
 // what the app needs at runtime: dist/ + package.json, plus core's production
 // dependency closure. LICENSE and README are deliberately NOT copied — they
 // are the offending out-of-tree files and a bundled internal copy needs neither.
@@ -50,9 +50,11 @@ const repoRoot = resolve(desktopRoot, "../..");
 const coreSrc = resolve(repoRoot, "packages/core");
 const codingSrc = resolve(repoRoot, "packages/coding");
 const arenaSrc = resolve(repoRoot, "packages/arena");
+const petSrc = resolve(repoRoot, "packages/pet");
 const coreTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
 const codingTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-capability-coding");
 const arenaTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-arena");
+const petTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-pet");
 
 function log(msg: string): void {
   // eslint-disable-next-line no-console
@@ -63,6 +65,7 @@ function main(): void {
   if (!existsSync(coreSrc)) throw new Error(`core package not found at ${coreSrc}`);
   if (!existsSync(codingSrc)) throw new Error(`coding package not found at ${codingSrc}`);
   if (!existsSync(arenaSrc)) throw new Error(`Arena package not found at ${arenaSrc}`);
+  if (!existsSync(petSrc)) throw new Error(`Pet package not found at ${petSrc}`);
 
   // Rebuild the desktop bundle FIRST. electron-builder only packs whatever is
   // already in out/**; predist itself just materializes core. Without this, a
@@ -82,10 +85,12 @@ function main(): void {
   removeWorkspaceTarget(coreTarget, "core");
   removeWorkspaceTarget(codingTarget, "coding");
   removeWorkspaceTarget(arenaTarget, "Arena");
+  removeWorkspaceTarget(petTarget, "Pet");
 
   materializePackage(coreSrc, coreTarget);
   materializePackage(codingSrc, codingTarget);
   materializePackage(arenaSrc, arenaTarget);
+  materializePackage(petSrc, petTarget);
 
   // Each materialized sibling owns its production closure. Arena imports zod
   // directly, so relying on core's nested node_modules would break Node's
@@ -94,7 +99,7 @@ function main(): void {
   installProductionDeps(arenaSrc, arenaTarget, "Arena");
   verifyMaterializedCapabilities();
 
-  log(`materialized core + coding + Arena into node_modules (LICENSE/README excluded)`);
+  log(`materialized core + coding + Arena + Pet into node_modules (LICENSE/README excluded)`);
 }
 
 function verifyMaterializedCapabilities(): void {
@@ -103,7 +108,7 @@ function verifyMaterializedCapabilities(): void {
     "bun",
     [
       "--eval",
-      "await import('@cjhyy/code-shell-arena'); await import('@cjhyy/code-shell-capability-coding')",
+      "await import('@cjhyy/code-shell-arena'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding')",
     ],
     { cwd: desktopRoot, stdio: "inherit" },
   );

@@ -5,7 +5,8 @@
  * Message; one tool call (start → result) is one Message.
  */
 
-import type { StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
+import type { StreamEvent } from "@cjhyy/code-shell-core";
+import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import type { ApprovalRequestEnvelope } from "../preload/types";
 import { aggregateFileChangeSummary } from "./messages/fileChangeAggregator";
 import { translate } from "./i18n/translate";

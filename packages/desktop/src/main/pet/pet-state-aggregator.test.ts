@@ -4,7 +4,7 @@ import type {
   PetProjectionSnapshotResult,
   PetSessionProjection,
 } from "@cjhyy/code-shell-core";
-import type { DiskSessionMeta, ListDiskSessionsResult } from "../sessions-service";
+import type { DiskSessionMeta, ListDiskSessionsResult } from "@cjhyy/code-shell-server";
 import {
   PetStateAggregator,
   type AgentBridgePetEvent,

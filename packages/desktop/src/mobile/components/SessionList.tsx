@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import { useT } from "@/i18n";
 import type { MobileProjectMeta, MobileSessionMeta } from "@protocol";
-import { basename, relativeTime, groupByProject, projectForCwd } from "@mobile/lib/format";
+import { basename, relativeTime, groupByProject, projectForCwd } from "@cjhyy/code-shell-web";
 
 function sameCwd(a?: string | null, b?: string | null): boolean {
   const norm = (v?: string | null): string => (v ?? "").replace(/[/\\]+$/, "").toLowerCase();

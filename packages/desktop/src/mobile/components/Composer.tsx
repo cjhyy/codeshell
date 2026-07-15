@@ -2,10 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, Images, SendHorizonal, Square, X } from "lucide-react";
 import { Button } from "@ui/button";
 import { useT } from "@/i18n";
-import {
-  MOBILE_MAX_ATTACHMENTS,
-  type MobileComposerAttachment,
-} from "@mobile/lib/mobileAttachments";
+import { MOBILE_MAX_ATTACHMENTS, type MobileComposerAttachment } from "@cjhyy/code-shell-web";
 
 interface DraftAttachment extends MobileComposerAttachment {
   previewUrl: string;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { PetSessionProjection } from "@cjhyy/code-shell-core";
+import type { PetSessionProjection } from "@cjhyy/code-shell-pet";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SessionStatusSection, sessionDisplayState } from "./SessionStatusSection";

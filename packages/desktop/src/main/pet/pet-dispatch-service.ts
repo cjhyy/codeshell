@@ -4,8 +4,8 @@ import type {
   PetNavigationResult,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
-import type { PetWorkspaceOption, PetWorkDelegation } from "@cjhyy/code-shell-core";
-import type { InputAttachmentMeta } from "../attachment-service.js";
+import type { PetWorkspaceOption, PetWorkDelegation } from "@cjhyy/code-shell-pet";
+import type { InputAttachmentMeta } from "@cjhyy/code-shell-server";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -78,7 +78,19 @@ function workspaceIdForPath(path: string): string {
 
 function readPetWorkDelegation(result: unknown): PetWorkDelegation | null {
   if (!result || typeof result !== "object" || Array.isArray(result)) return null;
-  const delegation = (result as { petWorkDelegation?: unknown }).petWorkDelegation;
+  // New shape: RunResult.extensions.pet.workDelegation (generic result slot);
+  // legacy petWorkDelegation mirror kept as fallback for older workers.
+  const extensions = (result as { extensions?: unknown }).extensions;
+  const petExtension =
+    extensions && typeof extensions === "object" && !Array.isArray(extensions)
+      ? (extensions as { pet?: unknown }).pet
+      : undefined;
+  const fromExtensions =
+    petExtension && typeof petExtension === "object" && !Array.isArray(petExtension)
+      ? (petExtension as { workDelegation?: unknown }).workDelegation
+      : undefined;
+  const delegation =
+    fromExtensions ?? (result as { petWorkDelegation?: unknown }).petWorkDelegation;
   if (!delegation || typeof delegation !== "object" || Array.isArray(delegation)) return null;
   const record = delegation as Record<string, unknown>;
   if (
@@ -210,6 +222,10 @@ export class PetDispatchService {
           ...(attachments.length > 0 ? { attachments } : {}),
           petRuntimeContext: JSON.stringify(world),
           petWorkspaces,
+          profileParams: {
+            runtimeContext: JSON.stringify(world),
+            workspaces: petWorkspaces,
+          },
           cwd: this.options.hostCwd,
           behaviorMode: "pet",
           kind: "pet",

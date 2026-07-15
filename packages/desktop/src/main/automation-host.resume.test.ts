@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { makeCronRunnerWithResume } from "./automation-host.js";
-import type { CronRunRequest, CronRunResult } from "@cjhyy/code-shell-core";
+import type { CronRunRequest, CronRunResult } from "@cjhyy/code-shell-core/internal";
 
 // A resume job (job.resumeSessionId set) must NOT run the isolated headless
 // runner. Instead it feeds its prompt as a user turn into the LIVE session via

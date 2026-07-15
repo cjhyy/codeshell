@@ -20,7 +20,7 @@ import {
   type HistoryMessage,
   type SessionTailEvent,
 } from "@cjhyy/code-shell-capability-coding";
-import type { RoomKind, RoomMessage } from "../mobile-remote/room-manager.js";
+import type { RoomKind, RoomMessage } from "@cjhyy/code-shell-server";
 
 interface TranscriptTarget {
   roomId: string;

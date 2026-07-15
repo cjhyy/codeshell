@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import type { CcDiscoveredSession, PermissionMode } from "@protocol";
-import type { CcCliKind } from "@mobile/hooks/useRemoteApp";
-import { relativeTime } from "@mobile/lib/format";
+import type { CcCliKind } from "@cjhyy/code-shell-web";
+import { relativeTime } from "@cjhyy/code-shell-web";
 import { CcPermissionModeSheet } from "./CcPermissionModeSheet";
 
 const CLI_LABEL: Record<CcCliKind, string> = { "claude-code": "Claude Code", codex: "Codex" };

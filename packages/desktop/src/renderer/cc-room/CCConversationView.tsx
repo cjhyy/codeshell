@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/Markdown";
-import { reduceStream, initialChatState, type ChatItem, type ChatState } from "@/lib/streamReducer";
-import { roomMsgToEvent, ccHistoryToEvents } from "@/lib/messageMappers";
+import { reduceStream, initialChatState, type ChatItem, type ChatState } from "@cjhyy/code-shell-web";
+import { roomMsgToEvent, ccHistoryToEvents } from "@cjhyy/code-shell-web";
 
 /**
  * CCConversationView — one resident Claude Code (external CLI) conversation.

@@ -18,15 +18,17 @@
     "paths": {
       "@/*": ["src/renderer/*"],
       "@ui/*": ["src/renderer/components/ui/*"],
-      "@protocol": ["src/main/mobile-remote/types.ts"],
-      "@mobile/*": ["src/mobile/*"]
+      "@protocol": ["../server/src/mobile-remote/types.ts"],
+      "@mobile/*": ["src/mobile/*"],
+      "@cjhyy/code-shell-web": ["../web/src/index.ts"],
+      "@cjhyy/code-shell-web/*": ["../web/src/*"]
     }
   },
   "include": [
     "src/mobile",
     "src/renderer/components/ui",
     "src/renderer/lib",
-    "src/main/mobile-remote/types.ts"
+    "../server/src/mobile-remote/types.ts"
   ],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
-import type { ChatItem } from "@/lib/streamReducer";
+import type { ChatItem } from "@cjhyy/code-shell-web";
 
 type Tool = Extract<ChatItem, { kind: "tool" }>;
 

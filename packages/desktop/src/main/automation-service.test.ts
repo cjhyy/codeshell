@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from "bun:test";
-import { CronScheduler } from "@cjhyy/code-shell-core";
+import { CronScheduler } from "@cjhyy/code-shell-core/internal";
 import {
   reloadAutomations,
   setAutomationScheduler,

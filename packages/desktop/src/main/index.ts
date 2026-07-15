@@ -19,6 +19,22 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve, basename, extname, join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import {
+  mergePluginMcpServers,
+  listPluginHooks,
+  computeEffectiveDisabledLists,
+  SettingsManager,
+  writeSettingsSchemaFile,
+  userHome,
+  CredentialStore,
+  type Credential,
+  type CredentialScope,
+  sweepStaleCredentialCookies,
+  setDefaultCredentialCipher,
+  // Quota — remaining CC/Codex subscription usage.
+  ErrorCodes,
+  registerCapability,
+} from "@cjhyy/code-shell-core";
+import {
   defaultCacheDir,
   fetchModelList,
   PROVIDER_KINDS,
@@ -28,12 +44,6 @@ import {
   CronStore,
   defaultCronStorePath,
   agentNotificationBus,
-  mergePluginMcpServers,
-  listPluginHooks,
-  computeEffectiveDisabledLists,
-  SettingsManager,
-  writeSettingsSchemaFile,
-  userHome,
   type AutomationHandle,
   getMergedCatalog,
   saveCatalogEntry,
@@ -43,20 +53,12 @@ import {
   setGitPathOverride,
   isGitAvailable,
   resolveGitPath,
-  CredentialStore,
-  type Credential,
-  type CredentialScope,
-  sweepStaleCredentialCookies,
   // Speech-to-text (voice input / 听写).
   transcribe,
   resolveTranscribeProvider,
   isTranscribeAvailable,
   describeTranscribe,
-  setDefaultCredentialCipher,
-  // Quota — remaining CC/Codex subscription usage.
-  ErrorCodes,
-  registerCapability,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 import {
   CODING_CAPABILITY,
   checkQuota,
@@ -71,7 +73,6 @@ import {
   probeCodexCli,
   readCodexRecentHistory,
   readRecentHistory,
-  resolveExternalAgentConfig,
   resolveProjectRoot,
   resolveQuotaCredentials,
   type QuotaResult,
@@ -83,7 +84,6 @@ import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { PetDispatchService } from "./pet/pet-dispatch-service.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
-import { stablePromptHash } from "./client-message-id.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -98,7 +98,7 @@ import {
   registerSessionBucket,
 } from "./browser-driver/active-guest.js";
 import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
-import type { CronRunResult } from "@cjhyy/code-shell-core";
+import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
   setAutomationScheduler,
   listAutomations,
@@ -134,16 +134,39 @@ import {
   type ElectronCookieLike,
 } from "./credentials-service.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
-import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
 import {
+  AccessPasscode,
+  cleanupAttachments,
+  cleanupSessionAttachments,
+  cleanupStaleQuickChatSessions,
+  CloudflaredBinary,
+  CodexRoomAgent,
+  deleteSession,
+  listDiskSessions,
+  listRecentAttachments,
+  listSessions,
+  markAttachmentsSent,
+  MobileUploadService,
   mobileTranscriptSubscriberId,
+  PendingMobileApprovals,
+  RemoteHostManager,
+  ResidentAgentProcess,
+  RoomManager,
+  stablePromptHash,
+  stageFileBytes,
+  stageImageBytes,
+  stageImageDataUrl,
+  TrustedDeviceStore,
+  TunnelManager,
+  type InputAttachmentMeta,
   type MobileViewerIdentity,
-} from "./mobile-remote/viewer-identity.js";
-import { PendingMobileApprovals } from "./mobile-remote/pending-approvals.js";
-import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
-import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
-import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
-import { AccessPasscode } from "./mobile-remote/access-passcode.js";
+} from "@cjhyy/code-shell-server";
+import {
+  MobileRemoteOrchestrator,
+  injectAndAwaitResult,
+  resolveRoomPermissionMode,
+  type AuthenticatedMobileClientEvent,
+} from "./mobile-remote-orchestrator.js";
 import {
   GatewayControlServer,
   type MobileRemoteGatewayStatus,
@@ -152,27 +175,9 @@ import {
   type PetChatControlResult,
 } from "./im-gateway-control-server.js";
 import { ImGatewayService, registerImGatewayIpc } from "./im-gateway-service.js";
-import {
-  MobileUploadService,
-  type ClaimedMobileUpload,
-} from "./mobile-remote/mobile-upload-service.js";
-import { materializeMobileAttachments } from "./mobile-remote/mobile-attachments.js";
-import { dispatchMobileChatTurn } from "./mobile-remote/mobile-chat-turn.js";
-import type {
-  MobileClientEvent,
-  MobilePermissionModeSnapshotEntry,
-  MobileProjectMeta,
-  MobileServerEvent,
-  PermissionMode,
-  RoomPublic,
-} from "./mobile-remote/types.js";
-import { RoomManager } from "./mobile-remote/room-manager.js";
-import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
-import { CodexRoomAgent } from "./mobile-remote/codex-room-agent.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
-import { buildSessionHistory } from "./mobile-remote/mobile-history.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import {
   getGitStatus,
@@ -213,13 +218,7 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import {
-  cleanupStaleQuickChatSessions,
-  listSessions,
-  deleteSession,
-  getSessionTranscript,
-  listDiskSessions,
-} from "./sessions-service.js";
+import { getSessionTranscript } from "./transcript-reader.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
@@ -269,16 +268,6 @@ import {
   setCapabilityOverride,
 } from "./capabilities-service.js";
 import { searchFiles } from "./file-search-service.js";
-import {
-  cleanupSessionAttachments,
-  cleanupAttachments,
-  listRecentAttachments,
-  markAttachmentsSent,
-  stageImageDataUrl,
-  stageImageBytes,
-  stageFileBytes,
-  type InputAttachmentMeta,
-} from "./attachment-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
 import {
@@ -488,86 +477,18 @@ const mobileUploads = new MobileUploadService({
 const mobileRemote = new RemoteHostManager({
   devices: mobileDevices,
   uploads: mobileUploads,
+  // The built mobile web app stays a desktop asset (out/mobile, sibling of the
+  // bundled out/main) — pass it explicitly now that RemoteHostManager lives in
+  // @cjhyy/code-shell-server and can no longer derive it from its own location.
+  mobileRootDir: resolve(__dirname, "../mobile"),
   onClientEvent: (event) => {
     // The remote host tags authenticated events with both the device id and a
     // per-socket viewer id. Device state/replies remain shared per phone, while
     // transcript ownership follows the exact tab that subscribed.
-    void handleMobileClientEvent(event as AuthenticatedMobileClientEvent);
+    void mobileOrchestrator.handleMobileClientEvent(event as AuthenticatedMobileClientEvent);
   },
 });
 const pendingMobileApprovals = new PendingMobileApprovals();
-
-let mobileProjects: MobileProjectMeta[] = [];
-function normalizeMobileProjects(projects: unknown): MobileProjectMeta[] {
-  if (!Array.isArray(projects)) return [];
-  const out: MobileProjectMeta[] = [];
-  const seen = new Set<string>();
-  for (const item of projects) {
-    const p = item as Partial<MobileProjectMeta> | null;
-    if (!p || typeof p.path !== "string" || !p.path || seen.has(p.path)) continue;
-    seen.add(p.path);
-    out.push({
-      path: p.path,
-      name: typeof p.name === "string" && p.name.trim() ? p.name : basename(p.path),
-      ...(typeof p.addedAt === "number" ? { addedAt: p.addedAt } : {}),
-      ...(typeof p.pinned === "boolean" ? { pinned: p.pinned } : {}),
-    });
-  }
-  return out;
-}
-async function mobileProjectList(): Promise<MobileProjectMeta[]> {
-  // Disk recents are the source of truth (pinned + soft-delete aware). The
-  // legacy in-memory `mobileProjects` (pushed from the renderer's localStorage)
-  // is only a fallback if disk is somehow empty — disk wins so a desktop
-  // add/remove/pin is reflected on phones and survives restart.
-  const projects = await loadProjects().catch(() => []);
-  if (projects.length > 0) {
-    return projects.map((r) => ({
-      path: r.path,
-      name: r.name,
-      addedAt: r.lastOpenedAt,
-      pinned: r.pinned,
-    }));
-  }
-  return mobileProjects;
-}
-async function sendMobileProjectList(deviceId?: string): Promise<void> {
-  const event: MobileServerEvent = {
-    type: "room.projects.ok",
-    projects: await mobileProjectList(),
-  };
-  if (deviceId) mobileRemote.sendToDevice(deviceId, event);
-  else mobileRemote.broadcast(event);
-}
-/**
- * After a disk project change (add / remove / pin), push the fresh list to BOTH
- * transports: phones via room.projects.ok, desktop windows via projects:changed
- * (so the renderer re-projects its localStorage cache). Disk is the truth; this
- * is how a desktop edit becomes live on phones and how every window stays synced.
- */
-async function broadcastProjects(): Promise<void> {
-  const projects = await mobileProjectList();
-  mobileRemote.broadcast({ type: "room.projects.ok", projects });
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send("projects:changed", projects);
-  }
-}
-function broadcastMobileSession(meta: {
-  sessionId: string;
-  cwd: string;
-  title: string;
-  prompt: string;
-  clientMessageId?: string;
-}): void {
-  const line = JSON.stringify({
-    jsonrpc: "2.0",
-    method: "agent/mobileSession",
-    params: meta,
-  });
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send("agent:msg", line);
-  }
-}
 
 // ── Public tunnel mode (off by default) ─────────────────────────────────────
 // cloudflared binary manager, tunnel process manager, and the access passcode
@@ -693,17 +614,23 @@ const transcriptSubscriptions = new TranscriptSubscriptionManager({
   onMessages: (roomId, messages) => roomManager.ingestTranscriptMessages(roomId, messages),
 });
 
-function roomMatchesTranscript(
-  roomId: string,
-  cwd: string,
-  sessionId: string,
-  kind: "claude-code" | "codex",
-): boolean {
-  const room = roomManager.getRoom(roomId);
-  return Boolean(
-    room && room.cwd === cwd && room.claudeSessionId === sessionId && room.kind === kind,
-  );
-}
+// Routes authenticated mobile events into the same run/permission path the
+// renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
+// see mobile-remote-orchestrator.ts.
+const mobileOrchestrator = new MobileRemoteOrchestrator({
+  remote: mobileRemote,
+  uploads: mobileUploads,
+  pendingApprovals: pendingMobileApprovals,
+  roomManager,
+  approvalBridge,
+  transcriptSubscriptions,
+  getBridge: () => bridge,
+  broadcastToWindows: (channel, payload) => {
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send(channel, payload);
+    }
+  },
+});
 
 // An abruptly closed phone tab has no chance to send unsubscribe. Release the
 // exact socket/viewer without disturbing another tab authenticated as the same
@@ -721,823 +648,6 @@ try {
   if (reaped.length) console.log(`[rooms] pruned ${reaped.length} stale room(s)`);
 } catch {
   /* GC is best-effort; never block startup */
-}
-
-/**
- * A stable session id for the mobile client when it isn't following a specific
- * desktop session. The worker's multi-session path REQUIRES a non-empty
- * sessionId on agent/run (server.ts: "sessionId is required") — sending
- * undefined is exactly the "session id 没有" error. We lazily mint one and
- * reuse it so the phone's turns land in one coherent session. A phone that
- * explicitly selects a session (session.select) overrides this.
- */
-/**
- * Per-device mobile state. Each connected phone/tablet drives its OWN session
- * selection, so two devices never clobber each other (a
- * shared global made device B's "select session 2" overwrite device A). Keyed
- * by trusted-device id. The agent OUTPUT stream is still broadcast to all
- * devices (each front-end filters to its bound session — so switching to
- * another session and pulling its history shows the latest), but per-device
- * REPLIES (chat.accepted / permission.mode / session.*) go only to that device.
- */
-interface MobileDeviceState {
-  /** Lazily-minted fallback session id for this device's fresh chats. */
-  sessionId?: string;
-  /** The session this device explicitly selected (overrides everything). */
-  selectedSessionId?: string;
-  /** The cwd bound to the selected or freshly-created mobile session. */
-  selectedCwd?: string | null;
-  /** Preset chosen before this device has a concrete session; promoted later. */
-  permissionMode?: PermissionMode;
-}
-const mobileDeviceStates = new Map<string, MobileDeviceState>();
-const mobileSessionCwds = new Map<string, string | null>();
-const mobilePermissionModes = new Map<string, PermissionMode>();
-function deviceState(deviceId: string): MobileDeviceState {
-  let s = mobileDeviceStates.get(deviceId);
-  if (!s) {
-    s = {};
-    mobileDeviceStates.set(deviceId, s);
-  }
-  return s;
-}
-function ensureMobileSessionId(st: MobileDeviceState): string {
-  if (!st.sessionId) {
-    st.sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  }
-  return st.sessionId;
-}
-
-async function lookupDiskSessionCwd(sessionId: string): Promise<string | null | undefined> {
-  const cached = mobileSessionCwds.get(sessionId);
-  if (cached !== undefined) return cached;
-  let cursor: string | undefined;
-  for (let page = 0; page < 10; page++) {
-    const res = await listDiskSessions({ limit: 100, cursor }).catch(() => ({
-      sessions: [],
-      nextCursor: null,
-    }));
-    for (const s of res.sessions) {
-      mobileSessionCwds.set(s.id, s.cwd || null);
-      if (s.id === sessionId || s.engineSessionId === sessionId) {
-        const cwd = s.cwd || null;
-        mobileSessionCwds.set(sessionId, cwd);
-        return cwd;
-      }
-    }
-    if (!res.nextCursor) break;
-    cursor = res.nextCursor;
-  }
-  return undefined;
-}
-
-function effectiveMobileRunCwd(st: MobileDeviceState, ctxCwd?: string): string {
-  if (st.selectedCwd === null) return resolveNoRepoCwd();
-  return st.selectedCwd || ctxCwd || process.cwd();
-}
-
-function normalizePermissionMode(raw: unknown): PermissionMode | null {
-  return raw === "default" || raw === "acceptEdits" || raw === "bypassPermissions" ? raw : null;
-}
-
-function normalizePermissionModeSnapshot(raw: unknown): MobilePermissionModeSnapshotEntry[] {
-  if (!Array.isArray(raw)) return [];
-  const out: MobilePermissionModeSnapshotEntry[] = [];
-  const seen = new Set<string>();
-  for (const item of raw) {
-    const row = item as { sessionId?: unknown; mode?: unknown } | null;
-    const sessionId = typeof row?.sessionId === "string" ? row.sessionId : "";
-    const mode = normalizePermissionMode(row?.mode);
-    if (!sessionId || !mode || seen.has(sessionId)) continue;
-    seen.add(sessionId);
-    out.push({ sessionId, mode });
-  }
-  return out;
-}
-
-function sendMobilePermissionMode(deviceId: string | undefined, sessionId: string): void {
-  const event: MobileServerEvent = {
-    type: "permission.mode",
-    sessionId,
-    mode: mobilePermissionModes.get(sessionId) ?? "default",
-  };
-  if (deviceId) mobileRemote.sendToDevice(deviceId, event);
-  else mobileRemote.broadcast(event);
-}
-
-function sendSelectedMobilePermissionModes(): void {
-  for (const [deviceId, st] of mobileDeviceStates) {
-    const sessionId = st.selectedSessionId ?? st.sessionId;
-    if (sessionId) sendMobilePermissionMode(deviceId, sessionId);
-  }
-}
-
-function broadcastDesktopPermissionMode(params: { sessionId: string; mode: PermissionMode }): void {
-  const line = JSON.stringify({
-    jsonrpc: "2.0",
-    method: "agent/mobilePermissionMode",
-    params,
-  });
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send("agent:msg", line);
-  }
-}
-
-function replayPendingMobileApprovals(sessionId: string, deviceId?: string): void {
-  for (const line of pendingMobileApprovals.replayLines(sessionId)) {
-    if (deviceId) mobileRemote.sendRawToDevice(deviceId, line);
-    else mobileRemote.broadcastRaw(line);
-  }
-}
-
-function broadcastApprovalResolved(params: {
-  requestId: string;
-  sessionId?: string;
-  approved?: boolean;
-}): void {
-  pendingMobileApprovals.resolve(params.requestId);
-  const line = JSON.stringify({
-    jsonrpc: "2.0",
-    method: "agent/approvalResolved",
-    params,
-  });
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send("agent:msg", line);
-  }
-  mobileRemote.broadcast({
-    type: "approval.resolved",
-    approvalId: params.requestId,
-    ...(params.sessionId ? { sessionId: params.sessionId } : {}),
-    ...(params.approved !== undefined ? { approved: params.approved } : {}),
-  });
-}
-
-/**
- * Inject a JSON-RPC request into the worker and resolve with its ACTUAL
- * response (result on success, or failure on a JSON-RPC error / timeout). The
- * worker's reply flows back through subscribeOutbound (the same lines mirrored
- * to mobile), so we correlate by request id rather than fabricating success — a
- * model.set for an invalid model or a rejected goal.extend must NOT be reported
- * to the phone as ok.
- */
-// Monotonic suffix so two requests for the same method in the same millisecond
-// get distinct ids (Date.now() alone collides under concurrency → reply串台).
-let mobileRequestSeq = 0;
-function injectAndAwaitResult(
-  b: AgentBridge,
-  method: string,
-  params: Record<string, unknown>,
-): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
-  const id = `mobile-${method.replace(/\W+/g, "-")}-${Date.now()}-${mobileRequestSeq++}`;
-  return new Promise((resolveResult) => {
-    let settled = false;
-    const done = (
-      v: { ok: true; result: unknown } | { ok: false; message: string; code?: number },
-    ): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      unsub();
-      resolveResult(v);
-    };
-    const unsub = b.subscribeOutbound((line) => {
-      try {
-        const m = JSON.parse(line) as {
-          id?: string;
-          result?: unknown;
-          error?: { message?: string; code?: number };
-        };
-        if (m.id !== id) return;
-        if (m.error)
-          done({
-            ok: false,
-            message: m.error.message ?? "worker rejected the request",
-            code: m.error.code,
-          });
-        else done({ ok: true, result: m.result });
-      } catch {
-        /* not JSON / not ours */
-      }
-    });
-    // Fallback: if the worker never answers (dead/slow), report failure rather
-    // than hanging — the phone keeps showing its prior state.
-    const timer = setTimeout(() => done({ ok: false, message: "worker did not respond" }), 5000);
-    b.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
-  });
-}
-
-/**
- * Route an authenticated mobile client event into the SAME run/permission
- * path the renderer uses, via AgentBridge.injectWorkerMessage. There is no
- * second run loop: chat/approval/cancel become the identical JSON-RPC lines
- * the renderer's preload rpc() would emit, so the core permission engine,
- * goal logic, and snapshots all apply unchanged.
- */
-async function handleMobileClientEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
-  if (event.type === "attachment.upload.begin") {
-    const deviceId = event.deviceId;
-    if (!deviceId) return;
-    try {
-      const ticket = mobileUploads.begin(deviceId, {
-        clientId: event.clientId,
-        name: event.name,
-        mime: event.mime,
-        size: event.size,
-      });
-      mobileRemote.sendToDevice(deviceId, { type: "attachment.upload.ready", ...ticket });
-    } catch (error) {
-      mobileRemote.sendToDevice(deviceId, {
-        type: "attachment.upload.failed",
-        clientId: event.clientId,
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-    return;
-  }
-  // ── CC Room (external claude CLI sessions) — checked first so "ccRoom.*"
-  // never gets misrouted by the "room." prefix check below ───────────────
-  if (event.type.startsWith("ccRoom.")) {
-    await handleCcRoomEvent(event);
-    return;
-  }
-  // ── Rooms (independent of the chat worker bridge) ─────────────────────
-  if (event.type.startsWith("room.")) {
-    await handleRoomEvent(event);
-    return;
-  }
-  if (!bridge) return;
-  const ctx = bridge.getLastRunContext();
-  // Per-device state: the remote host tags every authenticated event with the
-  // device id (see onClientEvent wiring). Replies that are device-specific go
-  // back to ONLY that device via sendToDevice; the agent output stream is still
-  // broadcast (each front-end filters to its bound session).
-  const deviceId = event.deviceId;
-  const st = deviceId ? deviceState(deviceId) : {};
-  const reply = (e: MobileServerEvent): void => {
-    if (deviceId) mobileRemote.sendToDevice(deviceId, e);
-    else mobileRemote.broadcast(e);
-  };
-  // session selection priority: explicit per-event → this device's selection →
-  // desktop's current run → a stable minted per-device session.
-  const resolveSessionId = (explicit?: string): string =>
-    explicit ?? st.selectedSessionId ?? ctx.sessionId ?? ensureMobileSessionId(st);
-  if (event.type === "session.select") {
-    st.selectedSessionId = event.sessionId;
-    const cwd = await lookupDiskSessionCwd(event.sessionId);
-    if (cwd !== undefined) st.selectedCwd = cwd;
-    if (deviceId) sendMobilePermissionMode(deviceId, event.sessionId);
-    else {
-      reply({
-        type: "permission.mode",
-        sessionId: event.sessionId,
-        mode: mobilePermissionModes.get(event.sessionId) ?? "default",
-      });
-    }
-    replayPendingMobileApprovals(event.sessionId, deviceId);
-    return;
-  }
-  if (event.type === "session.create") {
-    // Mint a fresh session for THIS device and make it its active selection.
-    st.sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-    st.selectedSessionId = st.sessionId;
-    if ("cwd" in event) {
-      st.selectedCwd = event.cwd ?? null;
-    } else {
-      st.selectedCwd = ctx.cwd ?? process.cwd();
-    }
-    mobileSessionCwds.set(st.sessionId, st.selectedCwd);
-    if (st.permissionMode) mobilePermissionModes.set(st.sessionId, st.permissionMode);
-    reply({ type: "chat.accepted", sessionId: st.sessionId, cwd: st.selectedCwd });
-    if (deviceId) sendMobilePermissionMode(deviceId, st.sessionId);
-    else {
-      reply({
-        type: "permission.mode",
-        sessionId: st.sessionId,
-        mode: mobilePermissionModes.get(st.sessionId) ?? "default",
-      });
-    }
-    return;
-  }
-  if (event.type === "chat.send") {
-    const sessionId = resolveSessionId(event.sessionId);
-    const fallbackCwd = effectiveMobileRunCwd(st, ctx.cwd);
-    if (st.permissionMode && !mobilePermissionModes.has(sessionId)) {
-      mobilePermissionModes.set(sessionId, st.permissionMode);
-    }
-    const permissionMode = mobilePermissionModes.get(sessionId);
-    const text = typeof event.text === "string" ? event.text.trim() : "";
-    const runId = `mobile-run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-    const dispatched = await dispatchMobileChatTurn({
-      deviceId: deviceId ?? "",
-      sessionId,
-      fallbackCwd,
-      text,
-      attachments: event.attachments,
-      clientMessageId: event.clientMessageId,
-      permissionMode,
-      runId,
-      bridge,
-      uploads: mobileUploads,
-      resolveWorkspace: (targetSessionId, fallback) =>
-        getSessionWorkspaceForUi(targetSessionId, fallback)
-          .then((workspace) => workspace.root)
-          .catch(() => fallback),
-    });
-    if (!dispatched.ok) {
-      reply({
-        type: "error",
-        message: dispatched.message,
-        ...(event.clientMessageId ? { clientMessageId: event.clientMessageId } : {}),
-      });
-      return;
-    }
-    mobileSessionCwds.set(sessionId, dispatched.cwd);
-    const title = text || `图片 ${dispatched.metas.length} 张`;
-    broadcastMobileSession({
-      sessionId,
-      cwd: dispatched.cwd,
-      title,
-      prompt: text,
-      clientMessageId: dispatched.clientMessageId,
-    });
-    // Tell THIS device which session its turn landed in.
-    reply({
-      type: "chat.accepted",
-      sessionId,
-      cwd: dispatched.cwd,
-      clientMessageId: dispatched.clientMessageId,
-      attachments: dispatched.summaries,
-    });
-    return;
-  }
-  if (event.type === "approval.respond") {
-    // Build the same ApprovalResult branch the renderer's preload assembles:
-    // approve carries optional answer (AskUser) + remembered scope/pathScope;
-    // reject carries an optional reason. Decisions still go through the core
-    // permission engine — the remote host never bypasses it (design §6).
-    let decision: Record<string, unknown>;
-    if (event.decision === "approve") {
-      const branch: Record<string, unknown> = { approved: true };
-      if (event.answer !== undefined) branch.answer = event.answer;
-      if (event.scope && event.scope !== "once") {
-        branch.always = true;
-        branch.scope = event.scope;
-        if (event.pathScope && event.pathScope !== "tool") branch.pathScope = event.pathScope;
-      }
-      decision = branch;
-    } else {
-      decision = { approved: false, reason: event.reason };
-    }
-    const sessionId = resolveSessionId(event.sessionId);
-    bridge.injectWorkerMessage(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: `mobile-approve-${Date.now()}`,
-        method: "agent/approve",
-        params: { sessionId, requestId: event.approvalId, decision },
-      }),
-    );
-    broadcastApprovalResolved({
-      requestId: event.approvalId,
-      sessionId,
-      approved: event.decision === "approve",
-    });
-    return;
-  }
-  if (event.type === "run.stop") {
-    bridge.injectWorkerMessage(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: `mobile-cancel-${Date.now()}`,
-        method: "agent/cancel",
-        params: { sessionId: resolveSessionId(event.sessionId) },
-      }),
-    );
-    return;
-  }
-  if (event.type === "session.list") {
-    // Every desktop session the sidebar would show (top-level, existing cwd).
-    const { sessions } = await listDiskSessions({ limit: 100 });
-    for (const s of sessions) mobileSessionCwds.set(s.id, s.cwd || null);
-    const activeSessionId = st.selectedSessionId ?? ctx.sessionId;
-    reply({
-      type: "session.list.ok",
-      sessions: sessions.map((s) => ({
-        id: s.id,
-        title: s.title,
-        cwd: s.cwd,
-        updatedAt: s.updatedAt,
-        origin: s.origin,
-      })),
-      activeSessionId,
-    });
-    if (activeSessionId) {
-      if (deviceId) sendMobilePermissionMode(deviceId, activeSessionId);
-      else {
-        reply({
-          type: "permission.mode",
-          sessionId: activeSessionId,
-          mode: mobilePermissionModes.get(activeSessionId) ?? "default",
-        });
-      }
-    }
-    return;
-  }
-  if (event.type === "session.history") {
-    try {
-      const events = await buildSessionHistory(event.sessionId);
-      reply({ type: "session.history.ok", sessionId: event.sessionId, events });
-    } catch (err) {
-      reply({
-        type: "error",
-        message: `读取会话历史失败: ${err instanceof Error ? err.message : String(err)}`,
-      });
-    }
-    return;
-  }
-  if (event.type === "session.sync") {
-    const snapshot = bridge.getSnapshot(
-      event.sessionId,
-      typeof event.sinceSeq === "number" ? event.sinceSeq : 0,
-    );
-    reply({
-      type: "session.snapshot",
-      sessionId: event.sessionId,
-      entries: snapshot.events,
-      nextSeq: snapshot.nextSeq,
-    });
-    replayPendingMobileApprovals(event.sessionId, deviceId);
-    return;
-  }
-  if (event.type === "permission.setMode") {
-    const sessionId = event.sessionId ?? st.selectedSessionId;
-    if (sessionId) {
-      mobilePermissionModes.set(sessionId, event.mode);
-      sendSelectedMobilePermissionModes();
-      broadcastDesktopPermissionMode({ sessionId, mode: event.mode });
-    } else {
-      // No session is bound yet; keep this as the preset for the next mobile
-      // session this device creates, then promote it into the session map.
-      st.permissionMode = event.mode;
-      reply({ type: "permission.mode", mode: event.mode });
-    }
-    return;
-  }
-  if (event.type === "model.set") {
-    // Only confirm the model AFTER the worker actually applied it; an invalid
-    // model name must not be shown as the current model. Model is engine-global,
-    // so a successful change broadcasts to all devices.
-    const res = await injectAndAwaitResult(bridge, "agent/configure", { model: event.model });
-    if (res.ok) {
-      mobileRemote.broadcast({ type: "model.current", model: event.model });
-    } else {
-      reply({ type: "error", message: `切换模型失败:${res.message}` });
-    }
-    return;
-  }
-  if (event.type === "goal.extend") {
-    const res = await injectAndAwaitResult(bridge, "agent/goalExtend", {
-      sessionId: event.sessionId,
-      addTurns: event.addTurns,
-      addTokenBudget: event.addTokenBudget,
-      addTimeBudgetMs: event.addTimeBudgetMs,
-      addStopBlocks: event.addStopBlocks,
-    });
-    // Report the REAL outcome (ok:false carries the worker's reason).
-    reply({
-      type: "goal.extended",
-      sessionId: event.sessionId,
-      ok: res.ok,
-      message: res.ok ? undefined : res.message,
-    });
-    return;
-  }
-  if (event.type === "goal.clear") {
-    const res = await injectAndAwaitResult(bridge, "agent/goalClear", {
-      sessionId: event.sessionId,
-    });
-    // The worker's result carries { ok, cleared }; surface `cleared` so the
-    // phone can tell "there was a goal, now gone" from "nothing to clear".
-    const cleared =
-      res.ok && typeof (res.result as { cleared?: boolean } | undefined)?.cleared === "boolean"
-        ? (res.result as { cleared: boolean }).cleared
-        : undefined;
-    reply({
-      type: "goal.cleared",
-      sessionId: event.sessionId,
-      ok: res.ok,
-      cleared,
-      message: res.ok ? undefined : res.message,
-    });
-    return;
-  }
-}
-
-function roomToPublic(room: {
-  id: string;
-  name: string;
-  cwd: string;
-  kind: "claude-code" | "codex";
-  permissionMode: "default" | "acceptEdits" | "bypassPermissions";
-  createdAt: number;
-  lastActiveAt: number;
-}): RoomPublic {
-  return { ...room, open: roomManager.isOpen(room.id) };
-}
-
-/**
- * Decide a room's permission mode. A room in a TRUSTED workspace (per
- * externalAgents.claudeCode.trustedWorkspaces, the same allowlist that governs
- * /cc dangerous mode) gets bypassPermissions so the resident CC can actually
- * do work without being blocked by its own default gate. Anywhere else stays
- * "default" (CC auto-denies risky ops). An explicit mode from the phone wins,
- * EXCEPT a non-trusted cwd cannot silently get bypassPermissions — it is
- * downgraded to "default" (the high-risk gate). cwd normalized to ignore
- * trailing slashes.
- */
-async function resolveRoomPermissionMode(
-  cwd: string,
-  explicit: "default" | "acceptEdits" | "bypassPermissions" | undefined,
-): Promise<"default" | "acceptEdits" | "bypassPermissions"> {
-  const userSettings = ((await readSettings("user", cwd).catch(() => null)) ?? {}) as {
-    externalAgents?: Parameters<typeof resolveExternalAgentConfig>[0];
-  };
-  const projectSettings = ((await readSettings("project", cwd).catch(() => null)) ?? {}) as {
-    externalAgents?: Parameters<typeof resolveExternalAgentConfig>[0];
-  };
-  const userAgents = userSettings.externalAgents ?? {};
-  const projectAgents = projectSettings.externalAgents ?? {};
-  const mergedAgents = {
-    ...userAgents,
-    ...projectAgents,
-    claudeCode: {
-      ...userAgents.claudeCode,
-      ...projectAgents.claudeCode,
-    },
-  };
-  const cfg = resolveExternalAgentConfig(mergedAgents).claudeCode;
-  const norm = (p: string) => p.replace(/\/+$/, "");
-  const trusted = cfg.trustedWorkspaces.some((p) => norm(p) === norm(cwd));
-  if (explicit === "bypassPermissions") {
-    return trusted ? "bypassPermissions" : "default"; // non-trusted can't silently bypass
-  }
-  if (explicit) return explicit;
-  return trusted ? "bypassPermissions" : "default";
-}
-
-/**
- * Handle a room.* mobile event. Rooms are resident stream-json Claude Code
- * sessions; they do not go through the chat worker bridge. permissionMode for
- * a non-trusted cwd that requests bypassPermissions is downgraded to "default"
- * here (the high-risk gate is surfaced by the UI / future approval step).
- */
-type AuthenticatedMobileClientEvent = MobileClientEvent & {
-  deviceId?: string;
-  viewerId?: string;
-};
-
-async function handleRoomEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
-  const reply = (serverEvent: MobileServerEvent): void => {
-    if (event.deviceId) mobileRemote.sendToDevice(event.deviceId, serverEvent);
-    else mobileRemote.broadcast(serverEvent);
-  };
-  try {
-    if (event.type === "room.list") {
-      mobileRemote.broadcast({
-        type: "room.list.ok",
-        rooms: roomManager.listRooms().map(roomToPublic),
-      });
-      return;
-    }
-    if (event.type === "room.projects") {
-      await sendMobileProjectList(event.deviceId);
-      return;
-    }
-    if (event.type === "room.create") {
-      const permissionMode = await resolveRoomPermissionMode(event.cwd, event.permissionMode);
-      const room = roomManager.createRoom({
-        name: event.name,
-        cwd: event.cwd,
-        kind: event.kind,
-        permissionMode,
-      });
-      const opened = roomManager.open(room.id);
-      mobileRemote.broadcast({
-        type: "room.list.ok",
-        rooms: roomManager.listRooms().map(roomToPublic),
-      });
-      mobileRemote.broadcast({ type: "room.opened", roomId: room.id, status: opened.status });
-      return;
-    }
-    if (event.type === "room.open") {
-      const res = roomManager.open(event.roomId);
-      mobileRemote.broadcast({ type: "room.opened", roomId: event.roomId, status: res.status });
-      return;
-    }
-    if (event.type === "room.close") {
-      roomManager.close(event.roomId);
-      mobileRemote.broadcast({ type: "room.closed", roomId: event.roomId });
-      return;
-    }
-    if (event.type === "room.history") {
-      const messages = roomManager.getMessages(event.roomId, event.sinceSeq ?? 0);
-      const latestSeq = messages.length
-        ? messages[messages.length - 1]!.seq
-        : (event.sinceSeq ?? 0);
-      mobileRemote.broadcast({
-        type: "room.history.ok",
-        roomId: event.roomId,
-        messages,
-        latestSeq,
-      });
-      return;
-    }
-    if (event.type === "room.send") {
-      const clientMessageId =
-        event.clientMessageId?.trim() ||
-        `room:${event.roomId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
-      if (clientMessageId.length > 200) {
-        reply({
-          type: "room.error",
-          roomId: event.roomId,
-          clientMessageId,
-          message: "clientMessageId is too long",
-        });
-        return;
-      }
-      const room = roomManager.getRoom(event.roomId);
-      if (!room) {
-        reply({
-          type: "room.error",
-          roomId: event.roomId,
-          clientMessageId,
-          message: "房间不存在",
-        });
-        return;
-      }
-      const text = typeof event.text === "string" ? event.text.trim() : "";
-      const materialized = await materializeMobileAttachments({
-        deviceId: event.deviceId ?? "",
-        cwd: room.cwd,
-        sessionId: room.id,
-        attachments: event.attachments,
-        uploads: mobileUploads,
-      });
-      let ok: boolean;
-      try {
-        ok = roomManager.send(event.roomId, text, materialized.metas);
-      } catch (error) {
-        await settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
-        throw error;
-      }
-      if (!ok) {
-        await settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "release");
-        reply({
-          type: "room.error",
-          roomId: event.roomId,
-          clientMessageId,
-          message: "房间未就绪或已关闭",
-        });
-        return;
-      }
-      await markAttachmentsSent(room.cwd, room.id, materialized.metas).catch((error) =>
-        dlog("main", "mobile.room_attachment.mark_sent_failed", {
-          error: String(error),
-          roomId: room.id,
-        }),
-      );
-      await settleMobileUploadClaims(event.deviceId ?? "", materialized.claims, "finalize");
-      reply({ type: "room.accepted", roomId: event.roomId, clientMessageId });
-      return;
-    }
-  } catch (err) {
-    reply({
-      type: "room.error",
-      message: err instanceof Error ? err.message : String(err),
-      ...("clientMessageId" in event && typeof event.clientMessageId === "string"
-        ? { clientMessageId: event.clientMessageId }
-        : {}),
-    });
-  }
-}
-
-async function settleMobileUploadClaims(
-  deviceId: string,
-  claims: ClaimedMobileUpload[],
-  action: "release" | "finalize",
-): Promise<void> {
-  const results = await Promise.allSettled(
-    claims.map((claim) => mobileUploads[action](deviceId, claim.uploadId, claim.claimId)),
-  );
-  const failures = results.filter((result) => result.status === "rejected");
-  if (failures.length > 0) {
-    dlog("main", `mobile.attachment_claim.${action}_failed`, {
-      count: failures.length,
-      errors: failures.map((result) => String(result.reason)),
-    });
-  }
-}
-
-/**
- * CC Room (external `claude` CLI sessions) for mobile — mirrors the desktop
- * ccRoom:* IPC handlers, reusing the SAME core discovery + roomManager backend.
- * Discovery replies (probe/listSessions/readHistory) go per-device; open and
- * approval-response feed the shared roomManager / approvalBridge (the room is
- * dual-ended, like desktop). listSessions echoes the cwd so a phone that has
- * since switched projects can discard a stale reply.
- */
-async function handleCcRoomEvent(event: AuthenticatedMobileClientEvent): Promise<void> {
-  const deviceId = event.deviceId;
-  const reply = (e: MobileServerEvent): void => {
-    if (deviceId) mobileRemote.sendToDevice(deviceId, e);
-    else mobileRemote.broadcast(e);
-  };
-  try {
-    if (event.type === "ccRoom.probe") {
-      const kind = event.kind ?? "claude-code";
-      const a = await (kind === "codex" ? probeCodexCli : probeClaudeCli)(Boolean(event.force));
-      reply({
-        type: "ccRoom.probe.ok",
-        available: a.available,
-        command: a.command,
-        version: a.version,
-        reason: a.reason,
-        kind,
-      });
-      return;
-    }
-    if (event.type === "ccRoom.listSessions") {
-      const kind = event.kind ?? "claude-code";
-      // Bound the mobile list too (recent 2 weeks AND ≤20) — phones especially
-      // shouldn't pull + deep-read an entire project's session history.
-      const opts = { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-      const sessions =
-        kind === "codex"
-          ? discoverCodexSessions(event.cwd, undefined, opts)
-          : discoverSessions(event.cwd, undefined, opts);
-      reply({ type: "ccRoom.listSessions.ok", cwd: event.cwd, sessions, kind });
-      return;
-    }
-    if (event.type === "ccRoom.openSession") {
-      const mode = await resolveRoomPermissionMode(event.cwd, event.mode);
-      const { roomId, status } = roomManager.openForSession(
-        event.sessionId,
-        event.cwd,
-        mode,
-        event.kind ?? "claude-code",
-      );
-      reply({ type: "ccRoom.opened", roomId, sessionId: event.sessionId, status });
-      return;
-    }
-    if (event.type === "ccRoom.subscribeTranscript") {
-      const kind = event.kind ?? "claude-code";
-      if (!roomMatchesTranscript(event.roomId, event.cwd, event.sessionId, kind)) {
-        throw new Error("cc-room transcript subscription does not match the opened room");
-      }
-      const snapshot = transcriptSubscriptions!.subscribe({
-        subscriberId: mobileTranscriptSubscriberId(event.viewerId ?? ""),
-        roomId: event.roomId,
-        cwd: event.cwd,
-        sessionId: event.sessionId,
-        kind,
-        limit: event.limit,
-      });
-      reply({
-        type: "ccRoom.transcriptSubscribed",
-        roomId: event.roomId,
-        sessionId: event.sessionId,
-        ...snapshot,
-      });
-      return;
-    }
-    if (event.type === "ccRoom.unsubscribeTranscript") {
-      transcriptSubscriptions!.unsubscribe(
-        mobileTranscriptSubscriberId(event.viewerId ?? ""),
-        event.roomId,
-      );
-      return;
-    }
-    if (event.type === "ccRoom.readHistory") {
-      const h =
-        event.kind === "codex"
-          ? readCodexRecentHistory(event.cwd, event.sessionId, event.limit)
-          : readRecentHistory(event.cwd, event.sessionId, event.limit);
-      reply({
-        type: "ccRoom.readHistory.ok",
-        sessionId: event.sessionId,
-        messages: h.messages,
-        hasMore: h.hasMore,
-        totalCount: h.totalCount,
-      });
-      return;
-    }
-    if (event.type === "ccRoom.respondApproval") {
-      approvalBridge.respond(event.roomId, event.requestId, event.decision);
-      return;
-    }
-  } catch (err) {
-    reply({ type: "room.error", message: err instanceof Error ? err.message : String(err) });
-  }
 }
 
 /**
@@ -1879,7 +989,7 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
-      listWorkspaces: mobileProjectList,
+      listWorkspaces: () => mobileOrchestrator.projectList(),
     });
     const petReceipts = new PetReceiptStore(
       resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
@@ -3426,15 +2536,11 @@ ipcMain.handle("mobileRemote:tunnelStatus", async () => ({
   connected: tunnelManager.isConnected(),
 }));
 ipcMain.handle("mobileRemote:updateProjects", async (_e, projects: unknown) => {
-  mobileProjects = normalizeMobileProjects(projects);
-  await sendMobileProjectList();
+  await mobileOrchestrator.updateProjects(projects);
   return true;
 });
 ipcMain.handle("mobileRemote:updatePermissionModes", async (_e, entries: unknown) => {
-  const next = normalizePermissionModeSnapshot(entries);
-  mobilePermissionModes.clear();
-  for (const entry of next) mobilePermissionModes.set(entry.sessionId, entry.mode);
-  sendSelectedMobilePermissionModes();
+  mobileOrchestrator.updatePermissionModes(entries);
   return true;
 });
 ipcMain.handle(
@@ -3442,7 +2548,7 @@ ipcMain.handle(
   async (_e, input: { requestId?: unknown; sessionId?: unknown; approved?: unknown }) => {
     const requestId = typeof input?.requestId === "string" ? input.requestId : "";
     if (!requestId) return false;
-    broadcastApprovalResolved({
+    mobileOrchestrator.broadcastApprovalResolved({
       requestId,
       sessionId: typeof input?.sessionId === "string" ? input.sessionId : undefined,
       approved: typeof input?.approved === "boolean" ? input.approved : undefined,
@@ -3452,7 +2558,7 @@ ipcMain.handle(
 );
 
 // ── Projects (disk recents = source of truth; renderer is a projection) ─────
-ipcMain.handle("projects:list", async () => mobileProjectList());
+ipcMain.handle("projects:list", async () => mobileOrchestrator.projectList());
 ipcMain.handle("projects:resolveRoot", async (_e, path: string) => {
   const root = resolveProjectRoot(path);
   return { path: root, name: basename(root) };
@@ -3460,20 +2566,22 @@ ipcMain.handle("projects:resolveRoot", async (_e, path: string) => {
 ipcMain.handle("projects:add", async (_e, project: { path: string; name: string }) => {
   const path = resolveProjectRoot(project.path);
   await pushRecent({ path, name: project.name || basename(path), lastOpenedAt: Date.now() });
-  await broadcastProjects();
+  await mobileOrchestrator.broadcastProjects();
 });
 ipcMain.handle("projects:remove", async (_e, projectPath: string) => {
   await softDelete(projectPath);
-  await broadcastProjects();
+  await mobileOrchestrator.broadcastProjects();
 });
 ipcMain.handle("projects:setPinned", async (_e, projectPath: string, pinned: boolean) => {
   await setPinned(projectPath, pinned);
-  await broadcastProjects();
+  await mobileOrchestrator.broadcastProjects();
 });
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
-ipcMain.handle("rooms:list", async () => roomManager.listRooms().map(roomToPublic));
-ipcMain.handle("rooms:projects", async () => mobileProjectList());
+ipcMain.handle("rooms:list", async () =>
+  roomManager.listRooms().map((room) => mobileOrchestrator.roomToPublic(room)),
+);
+ipcMain.handle("rooms:projects", async () => mobileOrchestrator.projectList());
 ipcMain.handle(
   "rooms:create",
   async (
@@ -3492,7 +2600,7 @@ ipcMain.handle(
       kind: input.kind,
       permissionMode,
     });
-    return roomToPublic(room);
+    return mobileOrchestrator.roomToPublic(room);
   },
 );
 ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(roomId));
@@ -3554,7 +2662,7 @@ ipcMain.handle(
     kind: "claude-code" | "codex",
     limit: number,
   ) => {
-    if (!roomMatchesTranscript(roomId, cwd, sessionId, kind)) {
+    if (!mobileOrchestrator.roomMatchesTranscript(roomId, cwd, sessionId, kind)) {
       throw new Error("cc-room transcript subscription does not match the opened room");
     }
     const senderId = event.sender.id;
