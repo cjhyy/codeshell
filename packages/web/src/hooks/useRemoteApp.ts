@@ -4,12 +4,12 @@ import type {
   MobileSessionMeta,
   MobileProjectMeta,
   RoomPublic,
-  PermissionMode,
+  MobileRemotePermissionMode as PermissionMode,
   ApprovalScope,
   ApprovalPathScope,
   CcDiscoveredSession,
   MobileImageBase,
-} from "@cjhyy/code-shell-server";
+} from "@cjhyy/code-shell-core";
 import {
   reduceStream,
   initialChatState,
@@ -208,7 +208,7 @@ export function useRemoteApp(): RemoteApp {
    *  socket's callback), so it can't close over `socket` directly. */
   const sendRef = useRef<
     | ((
-        e: import("@cjhyy/code-shell-server").MobileClientEvent,
+        e: import("@cjhyy/code-shell-core").MobileClientEvent,
         expectedGeneration?: number,
       ) => boolean)
     | null

@@ -237,6 +237,7 @@ export {
   type ForkSessionParams,
   type ForkSessionResult as ProtocolForkSessionResult,
 } from "./protocol/types.js";
+export type * from "./protocol/mobile-remote-types.js";
 
 // ─── Session ─────────────────────────────────────────────────────
 

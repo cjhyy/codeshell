@@ -215,7 +215,7 @@
       "name": "@cjhyy/code-shell-web",
       "version": "0.7.1",
       "dependencies": {
-        "@cjhyy/code-shell-server": "workspace:*",
+        "@cjhyy/code-shell-core": "workspace:*",
       },
       "devDependencies": {
         "@types/react": "^19.2.14",

@@ -3,7 +3,7 @@
  * client (extracted from packages/desktop src/mobile). Zero Electron, zero
  * preload-bridge globals, zero @cjhyy/code-shell-core runtime imports:
  * everything here runs in a plain browser (localStorage/WebSocket/navigator).
- * Protocol types come from @cjhyy/code-shell-server (type-only, erased).
+ * Protocol types come from @cjhyy/code-shell-core (type-only, erased).
  *
  * The desktop mobile UI (packages/desktop/src/mobile) renders on top of this;
  * a future standalone browser client is meant to grow from this package.

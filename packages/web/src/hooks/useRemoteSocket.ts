@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { MobileClientEvent, MobileServerEvent } from "@cjhyy/code-shell-server";
+import type { MobileClientEvent, MobileServerEvent } from "@cjhyy/code-shell-core";
 import { deviceStore } from "../lib/storage.js";
 import { generateSecret } from "../lib/deviceCredential.js";
 import { parsePairingToken } from "../lib/pairing.js";
