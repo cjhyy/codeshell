@@ -95,7 +95,7 @@ describe("loadPluginHooks", () => {
     expect(reg.countHandlers("post_tool_use")).toBe(1);
   });
 
-  it("skips unknown event names (e.g. SubagentStop)", () => {
+  it("maps SubagentStop and skips genuinely unknown event names", () => {
     installPlugin("foo", "mp", {
       hooks: {
         SubagentStop: [{ hooks: [{ type: "command", command: "echo hi" }] }],
@@ -104,7 +104,8 @@ describe("loadPluginHooks", () => {
     });
     const reg = new HookRegistry();
     loadPluginHooks(reg);
-    expect(reg.listEvents().length).toBe(0);
+    expect(reg.countHandlers("notification")).toBe(1);
+    expect(reg.listEvents()).toEqual(["notification"]);
   });
 
   it("ignores non-command hook types", () => {
