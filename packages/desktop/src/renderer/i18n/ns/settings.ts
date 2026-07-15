@@ -141,13 +141,13 @@ export const settingsNs = {
       },
       profiles: {
         title: "数字人",
-        subtitle: "给这个 Workspace 激活一个数字同事：人设、能力与经验随之上线；关闭即消失",
+        subtitle: "给这个 Workspace 设一个默认数字同事：人设、能力与经验会随新会话上线。",
         empty:
           "全局库还没有数字人（~/.code-shell/profiles/）。参考 docs/examples/workspace-profile-sample.md 创建一个。",
-        activeBadge: "当前",
+        activeBadge: "项目默认",
         memoryBadge: "可移植经验",
-        activate: "激活",
-        deactivate: "关闭",
+        activate: "设为项目默认",
+        deactivate: "取消项目默认",
       },
       conversation: {
         title: "对话能力",
@@ -975,13 +975,13 @@ export const settingsNs = {
       profiles: {
         title: "Digital humans",
         subtitle:
-          "Activate a digital colleague for this workspace: persona, capabilities and memory come online together",
+          "Set a default digital colleague for this workspace; their persona, capabilities, and memory apply to new sessions.",
         empty:
           "No profiles in the global library yet (~/.code-shell/profiles/). See docs/examples/workspace-profile-sample.md.",
-        activeBadge: "Active",
+        activeBadge: "Project default",
         memoryBadge: "Portable memory",
-        activate: "Activate",
-        deactivate: "Deactivate",
+        activate: "Set as project default",
+        deactivate: "Clear project default",
       },
       conversation: {
         title: "Conversation capabilities",
