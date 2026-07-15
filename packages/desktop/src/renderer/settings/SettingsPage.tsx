@@ -32,6 +32,7 @@ import { AgentsSection } from "./AgentsSection";
 import { SandboxSection } from "./SandboxSection";
 import { AppearanceSection } from "./AppearanceSection";
 import { CapabilitiesOverviewSection } from "./CapabilitiesOverviewSection";
+import { ProfileSection } from "./ProfileSection";
 import { ConversationSettingsSection } from "./ConversationSettingsSection";
 import { ContextSettingsSection } from "./ContextSettingsSection";
 import {
@@ -252,21 +253,24 @@ export function SettingsPage({
             )}
             {active === "shortcuts" && <ShortcutsSection />}
             {active === "capabilities" && (
-              <CapabilitiesOverviewSection
-                projects={projects}
-                onNavigateToKind={(kind) => {
-                  // Jump from a capability row to its dedicated detail tab.
-                  // builtin has no detail tab → stay on 能力总览 (no-op).
-                  const target: Record<string, ModuleId> = {
-                    mcp: "mcp",
-                    skill: "plugins-skills",
-                    plugin: "plugins-skills",
-                    agent: "agents",
-                  };
-                  const next = target[kind];
-                  if (next) setActive(next);
-                }}
-              />
+              <>
+                <CapabilitiesOverviewSection
+                  projects={projects}
+                  onNavigateToKind={(kind) => {
+                    // Jump from a capability row to its dedicated detail tab.
+                    // builtin has no detail tab → stay on 能力总览 (no-op).
+                    const target: Record<string, ModuleId> = {
+                      mcp: "mcp",
+                      skill: "plugins-skills",
+                      plugin: "plugins-skills",
+                      agent: "agents",
+                    };
+                    const next = target[kind];
+                    if (next) setActive(next);
+                  }}
+                />
+                {activeProjectPath ? <ProfileSection cwd={activeProjectPath} /> : null}
+              </>
             )}
             {active === "mcp" && <McpSection scope={scope} activeProjectPath={activeProjectPath} />}
             {active === "hooks" && (

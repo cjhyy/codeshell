@@ -139,6 +139,16 @@ export const settingsNs = {
         openDetail: "打开{label}详情",
         projectOverrideAria: "{name} 项目覆盖",
       },
+      profiles: {
+        title: "数字人",
+        subtitle: "给这个 Workspace 激活一个数字同事：人设、能力与经验随之上线；关闭即消失",
+        empty:
+          "全局库还没有数字人（~/.code-shell/profiles/）。参考 docs/examples/workspace-profile-sample.md 创建一个。",
+        activeBadge: "当前",
+        memoryBadge: "可移植经验",
+        activate: "激活",
+        deactivate: "关闭",
+      },
       conversation: {
         title: "对话能力",
         descPrefix: "以下设置只影响",
@@ -961,6 +971,17 @@ export const settingsNs = {
         none: "No capabilities to manage.",
         openDetail: "Open {label} details",
         projectOverrideAria: "{name} project override",
+      },
+      profiles: {
+        title: "Digital humans",
+        subtitle:
+          "Activate a digital colleague for this workspace: persona, capabilities and memory come online together",
+        empty:
+          "No profiles in the global library yet (~/.code-shell/profiles/). See docs/examples/workspace-profile-sample.md.",
+        activeBadge: "Active",
+        memoryBadge: "Portable memory",
+        activate: "Activate",
+        deactivate: "Deactivate",
       },
       conversation: {
         title: "Conversation capabilities",
