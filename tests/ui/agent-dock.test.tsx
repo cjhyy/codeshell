@@ -6,7 +6,7 @@ import {
   formatElapsed,
   getVisibleAgents,
 } from "../../packages/tui/src/ui/components/AgentDock.js";
-import { asyncAgentRegistry } from "../../packages/tui/node_modules/@cjhyy/code-shell-core/dist/index.js";
+import { asyncAgentRegistry } from "../../packages/tui/node_modules/@cjhyy/code-shell-core/dist/index.internal.js";
 
 function reset() {
   asyncAgentRegistry.reset();
@@ -16,9 +16,7 @@ const VIEW_MAIN = { kind: "main" as const };
 
 test("no agents → dock renders nothing", async () => {
   reset();
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }));
   await flush();
   const out = plainText(h);
   expect(out).not.toContain("agents");
@@ -34,10 +32,9 @@ test("one running agent → row shows name and elapsed, no tool name", async () 
     startedAt: Date.now() - 5_000,
     abort: () => {},
   });
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
-    { columns: 80 },
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }), {
+    columns: 80,
+  });
   await flush();
   const out = plainText(h);
   expect(out).toContain("review module");
@@ -63,10 +60,9 @@ test("focusedIndex 0 shows '>' cursor on main row", async () => {
     startedAt: 20,
     abort: () => {},
   });
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: 0 }),
-    { columns: 80 },
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: 0 }), {
+    columns: 80,
+  });
   await flush();
   const out = plainText(h);
   expect(out).toMatch(/>\s*◆\s*main/);
@@ -91,10 +87,9 @@ test("focusedIndex 1 shows '>' cursor on first agent row", async () => {
     startedAt: 20,
     abort: () => {},
   });
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: 1 }),
-    { columns: 80 },
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: 1 }), {
+    columns: 80,
+  });
   await flush();
   const out = plainText(h);
   expect(out).toMatch(/>\s*●\s*first agent/);
@@ -117,10 +112,9 @@ test("completed agent → removed from dock immediately", async () => {
   });
   asyncAgentRegistry.markCompleted("done-soon");
 
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
-    { columns: 80 },
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }), {
+    columns: 80,
+  });
   await flush();
   const out = plainText(h);
   expect(out).not.toContain("completes fast");
@@ -138,15 +132,12 @@ test("failed agent lingers within finishedFadeAt window", async () => {
     abort: () => {},
   });
   asyncAgentRegistry.markFailed("fail-row");
-  const a = asyncAgentRegistry
-    .getSnapshot()
-    .find((x) => x.agentId === "fail-row");
+  const a = asyncAgentRegistry.getSnapshot().find((x) => x.agentId === "fail-row");
   expect(a?.finishedFadeAt).toBeGreaterThan(Date.now());
 
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
-    { columns: 80 },
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }), {
+    columns: 80,
+  });
   await flush();
   const out = plainText(h);
   expect(out).toContain("broken job");
@@ -206,10 +197,9 @@ test("more than 5 agents → '+N more' overflow indicator", async () => {
       abort: () => {},
     });
   }
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
-    { columns: 200 },
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }), {
+    columns: 200,
+  });
   await flush();
   const out = plainText(h);
   expect(out).toContain("agent-4");
@@ -247,10 +237,10 @@ test("agent rows render in startedAt order with first above second", async () =>
     startedAt: 20,
     abort: () => {},
   });
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
-    { columns: 80, rows: 30 },
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }), {
+    columns: 80,
+    rows: 30,
+  });
   await flush();
   const raw = h.frames.join("");
   const stripped = raw
@@ -275,10 +265,9 @@ test("dock with running agent renders main row above agent row", async () => {
     startedAt: 10,
     abort: () => {},
   });
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
-    { columns: 80 },
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }), {
+    columns: 80,
+  });
   await flush();
   const out = plainText(h);
   expect(out).toContain("main");
@@ -293,9 +282,7 @@ test("dock with running agent renders main row above agent row", async () => {
 
 test("dock with no agents renders nothing (no orphan main row)", async () => {
   reset();
-  const h = mount(
-    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
-  );
+  const h = mount(React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }));
   await flush();
   const out = plainText(h);
   expect(out).not.toContain("main");

@@ -7,18 +7,30 @@ Guidance for AI assistants (Code Shell, Claude Code, Codex) working in this repo
 
 **CodeShell** — a general-purpose AI Agent orchestration framework. The engine is domain-agnostic; "coding" is expressed as a preset, not hardcoded. Design principles: (1) Core First (engine decoupled from domain), (2) Presets over Hardcoding, (3) Secure by Default (permission-gated tools), (4) Long-running Ready (Task/Cron/Sleep/Sub-Agent are first-class).
 
-## Monorepo layout (7 packages)
+## Monorepo layout (10 packages)
 
 ```
 packages/
-  core/     @cjhyy/code-shell-core     — engine, tools, hooks, protocol. UI-agnostic.
+  core/     @cjhyy/code-shell-core     — engine, tools, hooks, protocol. UI-agnostic, domain-agnostic.
   coding/   @cjhyy/code-shell-capability-coding — optional coding/git/LSP/worktree capability pack.
   arena/    @cjhyy/code-shell-arena    — optional Arena capability built on core/extension.
+  pet/      @cjhyy/code-shell-pet      — Pet (Mimi) capability: behavior profile, DelegateWork tool,
+                                          projection observer. Loaded by hosts via extension seams.
+  server/   @cjhyy/code-shell-server   — pure-Node remote transport layer (HTTP+WS host, pairing,
+                                          passcode, tunnel, rooms, uploads). Extracted from desktop
+                                          main; the seed of the future auth-gateway server.
+  web/      @cjhyy/code-shell-web      — browser client logic layer (stream reducer, approval state,
+                                          reconnect hooks). Seed of the future Web Client; consumed
+                                          by desktop's mobile UI today.
   tui/      @cjhyy/code-shell-tui      — Ink-based terminal REPL on top of core.
   desktop/  @cjhyy/code-shell-desktop  — Electron client (private, not published).
   cdp/      @cjhyy/code-shell-cdp      — env-agnostic CDP browser action layer (no Playwright).
   chat/     @cjhyy/code-shell-chat     — standalone multi-channel chat gateway + optional CodeShell integration.
 ```
+
+Core entry contract: `.` = stable public SDK; `/extension` = capability-package
+contract (coding/arena/pet import ONLY this); `/internal` = in-repo host surface
+(tui/desktop import host-only helpers from here, never from `.`).
 
 Root package `@cjhyy/code-shell` is the meta package that installs core + tui and exposes the `code-shell` bin.
 
@@ -26,7 +38,7 @@ Root package `@cjhyy/code-shell` is the meta package that installs core + tui an
 
 ```bash
 bun install            # bun workspaces (NOT npm/yarn/pnpm)
-bun run build          # filter order: core → arena/coding → tui → chat → build-meta.ts (desktop/cdp separate)
+bun run build          # filter order: core → pet → arena → coding → server → web → tui → chat → build-meta.ts (desktop/cdp separate)
 bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
 bun test               # bun test runner (NOT vitest/jest)
@@ -74,6 +86,7 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 
 - **`engine.ts` remains a large orchestrator.** Its old `core → tool-system → engine` type cycle is already broken and shared engine types have moved out; keep future extraction incremental and preserve the protocol construction guard.
 - **Arena is an optional product capability**, owned by `packages/arena` and composed by hosts through `@cjhyy/code-shell-core/extension`. Do not add Arena imports, built-ins, settings, or fixed RPC queries back into core.
+- **Pet is likewise out of core** (`packages/pet`): the Mimi behavior profile, DelegateWork tool and projection state machine ride the generic extension seams (`RunBehaviorProfile`, `catalogTools`, `createProtocolObserver`, `validateRunParams`, `hiddenSessionKinds`). Do not add pet literals back into engine/protocol; the only sanctioned residue is the deprecated `petRuntimeContext`/`petWorkspaces`/`petWorkDelegation` wire aliases and the two projection method-name strings in `Methods`. The desktop worker loads pet via `CODE_SHELL_CAPABILITY_MODULES`.
 - **Plugin SessionStart hooks are wired** and receive `source: "startup" | "resume"`; plugin `SKILL.md` files still are not auto-injected unless a hook emits messages or the model invokes the `Skill` tool.
 
 ## Commit Style
