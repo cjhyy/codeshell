@@ -387,6 +387,21 @@ export const SettingsSchema = z
     capabilityOverrides: CapabilityOverridesSchema,
 
     /**
+     * 由 WorkspaceProfile 激活事务整体拥有的子树（profile/activation.ts）。
+     * 激活/切换 = 原子全量重写本子树；关闭 = 删除本子树。
+     * `overrides` 是 profile 声明展开的 force-enable 快照，折叠时排在
+     * 用户手写 capabilityOverrides 之下（用户按 key 永远赢，见 overlay.ts
+     * 的 effectiveProjectOverrides）。只存在于 PROJECT settings。
+     */
+    profile: z
+      .object({
+        active: z.string(),
+        preset: z.string().optional(),
+        overrides: CapabilityOverridesSchema,
+      })
+      .optional(),
+
+    /**
      * Feature flags overlay: a map of flag name → boolean that overrides the
      * compiled-in defaults (see settings/feature-flags.ts FEATURE_FLAGS).
      * Project settings override user settings via the normal merge, so a flag
