@@ -170,15 +170,15 @@ export const settingsNs = {
       },
       digitalHumans: {
         title: "数字人库",
-        subtitle: "管理全局数字人定义;市场安装与团队编排在数字人页。",
+        subtitle: "管理全局数字人定义；市场安装与团队编排在数字人页。",
         openMarket: "打开数字人页",
         create: "新建",
         edit: "编辑",
-        empty: "还没有数字人,点击「新建」或从市场安装。",
-        skillsLoadFailed: "技能列表加载失败:{message}",
+        empty: "还没有数字人，点击「新建」或从市场安装。",
+        skillsLoadFailed: "技能列表加载失败：{message}",
       },
       dataSources: {
-        globalHint: "这里管理全局连接目录;把数据源授权给某个项目请切换到项目范围。",
+        globalHint: "这里管理全局连接目录；把数据源授权给某个项目请切换到项目范围。",
       },
       conversation: {
         title: "对话能力",

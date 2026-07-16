@@ -2197,6 +2197,7 @@ function App() {
           <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
             {view.viewMode === "settings_page" ? (
               <SettingsPage
+                key="settings-global"
                 activeProjectPath={activeProject?.path ?? null}
                 projects={projects}
                 sessionIndices={sessionIndices}
@@ -2217,6 +2218,9 @@ function App() {
               // project_config: the same settings center, preselected to the
               // project's scope (SettingsPage opens on its project overview).
               <SettingsPage
+                // key forces a remount when hopping between the global route and
+                // a project-config route — initialProjectPath is mount-time only.
+                key={`settings-project-${activeProject.path}`}
                 activeProjectPath={activeProject.path}
                 initialProjectPath={activeProject.path}
                 projects={projects}
