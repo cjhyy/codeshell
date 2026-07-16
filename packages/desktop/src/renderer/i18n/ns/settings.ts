@@ -84,6 +84,7 @@ export const settingsNs = {
         config: "配置",
         modelCatalog: "模型模板",
         personalization: "个性化",
+        digitalHumans: "数字人",
         shortcuts: "键盘快捷键",
         groupExtend: "扩展能力",
         capabilities: "能力总览",
@@ -159,6 +160,14 @@ export const settingsNs = {
         memoryBadge: "可移植经验",
         activate: "设为项目默认",
         deactivate: "取消项目默认",
+      },
+      digitalHumans: {
+        title: "数字人库",
+        subtitle: "管理全局数字人定义;市场安装与团队编排在数字人页。",
+        openMarket: "打开数字人页",
+        create: "新建",
+        edit: "编辑",
+        empty: "还没有数字人,点击「新建」或从市场安装。",
       },
       conversation: {
         title: "对话能力",
@@ -928,6 +937,7 @@ export const settingsNs = {
         config: "Config",
         modelCatalog: "Model templates",
         personalization: "Personalization",
+        digitalHumans: "Digital humans",
         shortcuts: "Keyboard shortcuts",
         groupExtend: "Extensions",
         capabilities: "Capabilities",
@@ -1005,6 +1015,15 @@ export const settingsNs = {
         memoryBadge: "Portable memory",
         activate: "Set as project default",
         deactivate: "Clear project default",
+      },
+      digitalHumans: {
+        title: "Digital human library",
+        subtitle:
+          "Manage global digital human definitions; market installs and teams live on the Digital humans page.",
+        openMarket: "Open digital humans",
+        create: "Create",
+        edit: "Edit",
+        empty: "No digital humans yet — create one or install from the market.",
       },
       conversation: {
         title: "Conversation capabilities",

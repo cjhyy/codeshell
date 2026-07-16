@@ -6,6 +6,10 @@ const source = readFileSync(join(import.meta.dir, "DigitalHumansView.tsx"), "utf
 const editorSource = readFileSync(join(import.meta.dir, "DigitalHumanEditorDialog.tsx"), "utf-8");
 const sidebar = readFileSync(join(import.meta.dir, "..", "Sidebar.tsx"), "utf-8");
 const settings = readFileSync(join(import.meta.dir, "..", "settings", "SettingsPage.tsx"), "utf-8");
+const dhSection = readFileSync(
+  join(import.meta.dir, "..", "settings", "DigitalHumansSection.tsx"),
+  "utf-8",
+);
 
 describe("DigitalHumansView contract", () => {
   test("is a first-class market and library rather than a capabilities toggle", () => {
@@ -13,7 +17,12 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain('value="market"');
     expect(source).toContain('value="mine"');
     expect(source).toContain("window.codeshell.installCatalogProfile");
-    expect(settings).not.toContain("<ProfileSection");
+    // Settings now hosts digital humans through a dedicated dual-scope section:
+    // global scope manages the library with the SAME editor dialog as the
+    // digital-humans page; project scope reuses ProfileSection for activation.
+    expect(settings).toContain("<DigitalHumansSection");
+    expect(dhSection).toContain("DigitalHumanEditorDialog");
+    expect(dhSection).toContain("<ProfileSection");
   });
 
   test("creates Pet-led teams with both parallel modes", () => {

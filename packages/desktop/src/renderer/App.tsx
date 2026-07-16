@@ -2224,6 +2224,7 @@ function App() {
                 isMac={isMac}
                 isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
+                onOpenDigitalHumans={() => setViewMode("digital_humans")}
               />
             ) : activeProject ? (
               <ProjectConfigPage

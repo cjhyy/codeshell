@@ -22,10 +22,12 @@ import {
   Smartphone,
   MessageSquare,
   Gauge,
+  UsersRound,
   X,
 } from "lucide-react";
 import { TextConnectionsPanel } from "./TextConnectionsPanel";
 import { ModelCatalogPanel } from "./ModelCatalogPanel";
+import { DigitalHumansSection } from "./DigitalHumansSection";
 import { MemorySection } from "./MemorySection";
 import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
@@ -65,6 +67,7 @@ type ModuleId =
   | "config"
   | "model-catalog"
   | "personalization"
+  | "digital-humans"
   | "shortcuts"
   | "mcp"
   | "hooks"
@@ -159,6 +162,12 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
           Icon: User,
           scopes: ["user", "project"],
         },
+        {
+          id: "digital-humans",
+          label: t("settingsX.page.digitalHumans"),
+          Icon: UsersRound,
+          scopes: ["user", "project"],
+        },
         { id: "shortcuts", label: t("settingsX.page.shortcuts"), Icon: Keyboard },
       ],
     },
@@ -210,6 +219,8 @@ interface Props {
   isMac: boolean;
   isFullscreen: boolean;
   onBack: () => void;
+  /** Jump to the full digital-humans page (market / teams). */
+  onOpenDigitalHumans?: () => void;
 }
 
 /**
@@ -230,6 +241,7 @@ export function SettingsPage({
   isMac,
   isFullscreen,
   onBack,
+  onOpenDigitalHumans,
 }: Props) {
   const { t } = useT();
   const MODULE_GROUPS = useMemo(() => buildModuleGroups(t), [t]);
@@ -505,6 +517,13 @@ export function SettingsPage({
                     activeProjectPath={scopeProjectPath ?? activeProjectPath}
                   />
                 </>
+              )}
+              {active === "digital-humans" && (
+                <DigitalHumansSection
+                  scope={scope}
+                  projectPath={scopeProjectPath}
+                  onOpenDigitalHumans={onOpenDigitalHumans}
+                />
               )}
               {active === "shortcuts" && <ShortcutsSection />}
               {active === "capabilities" && (
