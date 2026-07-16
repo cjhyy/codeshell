@@ -49,11 +49,11 @@ import {
   ResponsePrefsSection,
   ShortcutsSection,
 } from "./AdvancedSections";
+import { projectLabel } from "../projects";
 import type { TrackedProject } from "../projects";
 import type { SessionIndex } from "../transcripts";
 import { useT } from "../i18n/I18nProvider";
 import type { TFunction } from "../i18n/I18nProvider";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
@@ -81,16 +81,28 @@ type ModuleId =
   | "memory"
   | "archived";
 
+type SettingsScopeKind = "user" | "project";
+export type SettingsScope = { kind: "user" } | { kind: "project"; path: string };
+
 interface Module {
   id: ModuleId;
   label: string;
   Icon: React.ComponentType<{ size?: number }>;
+  /** Which scopes this module can render in. Defaults to user-only. */
+  scopes?: SettingsScopeKind[];
 }
 
 interface ModuleGroup {
   /** Section header shown above the group; "" renders no header. */
   title: string;
   modules: Module[];
+}
+
+export function moduleSupportsScope(
+  module: { scopes?: SettingsScopeKind[] },
+  scope: SettingsScope,
+): boolean {
+  return (module.scopes ?? ["user"]).includes(scope.kind);
 }
 
 const SETTINGS_LAST_MODULE_KEY = "codeshell:settings:last-module";
@@ -124,11 +136,29 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
     {
       title: "",
       modules: [
-        { id: "general", label: t("settingsX.page.general"), Icon: SettingsIcon },
+        {
+          id: "general",
+          label: t("settingsX.page.general"),
+          Icon: SettingsIcon,
+          scopes: ["user", "project"],
+        },
         { id: "appearance", label: t("settingsX.page.appearance"), Icon: Sun },
-        { id: "config", label: t("settingsX.page.config"), Icon: Sliders },
+        {
+          id: "config",
+          label: t("settingsX.page.config"),
+          Icon: Sliders,
+          scopes: ["user", "project"],
+        },
+        // model-catalog deliberately stays user-only: ModelCatalogPanel
+        // ignores its scope props (window.codeshell.getModelCatalog has no
+        // per-project variant), so offering it in project scope would lie.
         { id: "model-catalog", label: t("settingsX.page.modelCatalog"), Icon: LayoutTemplate },
-        { id: "personalization", label: t("settingsX.page.personalization"), Icon: User },
+        {
+          id: "personalization",
+          label: t("settingsX.page.personalization"),
+          Icon: User,
+          scopes: ["user", "project"],
+        },
         { id: "shortcuts", label: t("settingsX.page.shortcuts"), Icon: Keyboard },
       ],
     },
@@ -136,7 +166,7 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
       title: t("settingsX.page.groupExtend"),
       modules: [
         { id: "capabilities", label: t("settingsX.page.capabilities"), Icon: Layers },
-        { id: "mcp", label: t("settingsX.page.mcp"), Icon: Plug },
+        { id: "mcp", label: t("settingsX.page.mcp"), Icon: Plug, scopes: ["user", "project"] },
         { id: "plugins-skills", label: t("settingsX.page.plugins"), Icon: Puzzle },
         { id: "agents", label: t("settingsX.page.agents"), Icon: Bot },
         { id: "hooks", label: t("settingsX.page.hooks"), Icon: Webhook },
@@ -145,7 +175,12 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
     {
       title: t("settingsX.page.groupEnvConn"),
       modules: [
-        { id: "connections", label: t("settingsX.page.connections"), Icon: Wifi },
+        {
+          id: "connections",
+          label: t("settingsX.page.connections"),
+          Icon: Wifi,
+          scopes: ["user", "project"],
+        },
         { id: "git", label: "Git", Icon: GitBranch },
         { id: "environment", label: t("settingsX.page.environment"), Icon: Terminal },
         { id: "sandbox", label: t("settingsX.page.sandbox"), Icon: ShieldCheck },
@@ -166,6 +201,8 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
 
 interface Props {
   activeProjectPath: string | null;
+  /** When set, open in project scope for this project (project_config route). */
+  initialProjectPath?: string | null;
   projects: TrackedProject[];
   sessionIndices: Record<string, SessionIndex>;
   onRestoreArchivedSession: (projectId: string | null, sessionId: string) => void;
@@ -185,6 +222,7 @@ interface Props {
  */
 export function SettingsPage({
   activeProjectPath,
+  initialProjectPath,
   projects,
   sessionIndices,
   onRestoreArchivedSession,
@@ -199,10 +237,17 @@ export function SettingsPage({
   const [active, setActive] = useState<ModuleId>(() => storedModuleId(MODULES));
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
-  // All settings are global (user scope). Per-project overrides are not
-  // supported in the UI; sections still take a `scope`/`activeProjectPath`
-  // prop pair, so we pass the fixed user scope through unchanged.
-  const scope = "user" as const;
+  const [scopeState, setScopeState] = useState<SettingsScope>(() =>
+    initialProjectPath ? { kind: "project", path: initialProjectPath } : { kind: "user" },
+  );
+  // The selected project disappeared (removed from tracked list) → fall back to global.
+  useEffect(() => {
+    if (scopeState.kind === "project" && !projects.some((p) => p.path === scopeState.path)) {
+      setScopeState({ kind: "user" });
+    }
+  }, [projects, scopeState]);
+  const scope: "user" | "project" = scopeState.kind;
+  const scopeProjectPath = scopeState.kind === "project" ? scopeState.path : null;
   const showTrafficLightGutter = isMac && !isFullscreen;
   const activeModule = MODULES.find((module) => module.id === active) ?? MODULES[0];
   const activeGroup =
@@ -212,11 +257,13 @@ export function SettingsPage({
     () =>
       MODULE_GROUPS.map((group) => ({
         ...group,
-        modules: group.modules.filter((module) =>
-          matchesSettingsModule(query, module.label, group.title),
+        modules: group.modules.filter(
+          (module) =>
+            moduleSupportsScope(module, scopeState) &&
+            matchesSettingsModule(query, module.label, group.title),
         ),
       })).filter((group) => group.modules.length > 0),
-    [MODULE_GROUPS, query],
+    [MODULE_GROUPS, query, scopeState],
   );
   const resultCount = filteredGroups.reduce((count, group) => count + group.modules.length, 0);
 
@@ -227,6 +274,15 @@ export function SettingsPage({
       // Storage can be disabled; settings navigation still works in-memory.
     }
   }, [active]);
+
+  // Scope switch can leave a module active that the new scope doesn't
+  // support → jump to the first module available in that scope.
+  useEffect(() => {
+    if (activeModule && !moduleSupportsScope(activeModule, scopeState)) {
+      const first = MODULES.find((module) => moduleSupportsScope(module, scopeState));
+      if (first) setActive(first.id);
+    }
+  }, [scopeState, activeModule, MODULES]);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -246,8 +302,15 @@ export function SettingsPage({
 
   const mobileOptions = MODULE_GROUPS.map((group) => ({
     label: group.title || t("settingsX.page.settings"),
-    options: group.modules.map((module) => ({ value: module.id, label: module.label })),
-  }));
+    options: group.modules
+      .filter((module) => moduleSupportsScope(module, scopeState))
+      .map((module) => ({ value: module.id, label: module.label })),
+  })).filter((group) => group.options.length > 0);
+
+  const scopeOptions = [
+    { value: "__user__", label: t("settingsX.page.scopeSwitchGlobal") },
+    ...projects.map((project) => ({ value: project.path, label: projectLabel(project) })),
+  ];
 
   return (
     <div className="h-full bg-background">
@@ -379,33 +442,66 @@ export function SettingsPage({
                     {activeGroup}
                   </span>
                 ) : null}
-                <Badge variant="secondary">{t("settingsX.page.globalScope")}</Badge>
+                <SimpleSelect<string>
+                  value={scopeState.kind === "user" ? "__user__" : scopeState.path}
+                  options={scopeOptions}
+                  size="sm"
+                  ariaLabel={t("settingsX.page.scopeSwitcher")}
+                  onChange={(value) =>
+                    setScopeState(
+                      value === "__user__" ? { kind: "user" } : { kind: "project", path: value },
+                    )
+                  }
+                />
               </div>
               <h1 className="text-xl font-semibold tracking-tight">{activeModule?.label}</h1>
               <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-                {t("settingsX.page.globalScopeHint")}
+                {scopeState.kind === "project"
+                  ? t("settingsX.page.projectScopeHint")
+                  : t("settingsX.page.globalScopeHint")}
               </p>
             </div>
 
             <div className="flex flex-col gap-6">
               {active === "general" && (
-                <GeneralSection scope={scope} activeProjectPath={activeProjectPath} />
+                <GeneralSection
+                  scope={scope}
+                  activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                />
               )}
               {active === "appearance" && <AppearanceSection />}
               {active === "config" && (
                 <>
-                  <TextConnectionsPanel scope={scope} activeProjectPath={activeProjectPath} />
-                  <ImageSettingsSection scope={scope} activeProjectPath={activeProjectPath} />
+                  <TextConnectionsPanel
+                    scope={scope}
+                    activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                  />
+                  <ImageSettingsSection
+                    scope={scope}
+                    activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                  />
                 </>
               )}
               {active === "model-catalog" && (
-                <ModelCatalogPanel scope={scope} activeProjectPath={activeProjectPath} />
+                <ModelCatalogPanel
+                  scope={scope}
+                  activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                />
               )}
               {active === "personalization" && (
                 <>
-                  <InstructionFilesSection scope={scope} activeProjectPath={activeProjectPath} />
-                  <ResponsePrefsSection scope={scope} activeProjectPath={activeProjectPath} />
-                  <PersonalizationSection scope={scope} activeProjectPath={activeProjectPath} />
+                  <InstructionFilesSection
+                    scope={scope}
+                    activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                  />
+                  <ResponsePrefsSection
+                    scope={scope}
+                    activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                  />
+                  <PersonalizationSection
+                    scope={scope}
+                    activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                  />
                 </>
               )}
               {active === "shortcuts" && <ShortcutsSection />}
@@ -425,11 +521,17 @@ export function SettingsPage({
                 />
               )}
               {active === "mcp" && (
-                <McpSection scope={scope} activeProjectPath={activeProjectPath} />
+                <McpSection
+                  scope={scope}
+                  activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                />
               )}
               {active === "hooks" && <HooksSection projects={projects} />}
               {active === "connections" && (
-                <ConnectionsSection scope={scope} activeProjectPath={activeProjectPath} />
+                <ConnectionsSection
+                  scope={scope}
+                  activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                />
               )}
               {active === "git" && <GitSection />}
               {active === "environment" && <EnvironmentSection projects={projects} />}
@@ -444,7 +546,7 @@ export function SettingsPage({
               {active === "memory" && (
                 <MemorySection
                   scope={scope}
-                  activeProjectPath={activeProjectPath}
+                  activeProjectPath={scopeProjectPath ?? activeProjectPath}
                   projects={projects}
                 />
               )}

@@ -110,6 +110,9 @@ export const settingsNs = {
         globalScope: "全局",
         globalScopeHint:
           "这里的默认设置对所有项目生效；需要覆盖单个项目时，请打开对应项目的项目配置。",
+        scopeSwitcher: "配置范围",
+        scopeSwitchGlobal: "全局",
+        projectScopeHint: "以下设置仅作用于所选项目，覆盖全局默认值。",
       },
       capOverview: {
         groupMcp: "MCP 服务器",
@@ -952,6 +955,10 @@ export const settingsNs = {
         globalScope: "Global",
         globalScopeHint:
           "These defaults apply to every project. Open a project's settings when you need a project-specific override.",
+        scopeSwitcher: "Configuration scope",
+        scopeSwitchGlobal: "Global",
+        projectScopeHint:
+          "These settings apply only to the selected project and override global defaults.",
       },
       capOverview: {
         groupMcp: "MCP servers",

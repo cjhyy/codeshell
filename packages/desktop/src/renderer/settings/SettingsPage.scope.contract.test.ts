@@ -1,0 +1,26 @@
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const source = readFileSync(join(import.meta.dir, "SettingsPage.tsx"), "utf-8");
+
+describe("SettingsPage scope contract", () => {
+  test("scope is page state with a header switcher, not a hardcoded user constant", () => {
+    expect(source).not.toContain('const scope = "user" as const');
+    expect(source).toContain("SettingsScope");
+    expect(source).toContain("scopeOptions");
+  });
+
+  test("modules declare supported scopes and the nav filters by the active scope", () => {
+    expect(source).toContain("scopes:");
+    expect(source).toContain("moduleSupportsScope");
+  });
+
+  test("project scope forwards the selected project path to sections", () => {
+    expect(source).toContain("scopeProjectPath");
+  });
+
+  test("opening with an initial project preselects project scope", () => {
+    expect(source).toContain("initialProjectPath");
+  });
+});
