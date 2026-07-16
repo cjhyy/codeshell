@@ -11,6 +11,7 @@ import {
   Webhook,
   Wifi,
   Database,
+  FileText,
   GitBranch,
   Terminal,
   ShieldCheck,
@@ -34,6 +35,7 @@ import { MemorySection } from "./MemorySection";
 import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
+import { ProjectInstructionsSection } from "../project-config/ProjectInstructionsSection";
 import { AgentsSection } from "./AgentsSection";
 import { SandboxSection } from "./SandboxSection";
 import { AppearanceSection } from "./AppearanceSection";
@@ -68,6 +70,7 @@ type ModuleId =
   | "appearance"
   | "config"
   | "model-catalog"
+  | "instructions"
   | "personalization"
   | "digital-humans"
   | "shortcuts"
@@ -159,6 +162,12 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
         // ignores its scope props (window.codeshell.getModelCatalog has no
         // per-project variant), so offering it in project scope would lie.
         { id: "model-catalog", label: t("settingsX.page.modelCatalog"), Icon: LayoutTemplate },
+        {
+          id: "instructions",
+          label: t("settingsX.page.instructions"),
+          Icon: FileText,
+          scopes: ["user", "project"],
+        },
         {
           id: "personalization",
           label: t("settingsX.page.personalization"),
@@ -511,12 +520,17 @@ export function SettingsPage({
                   activeProjectPath={scopeProjectPath ?? activeProjectPath}
                 />
               )}
-              {active === "personalization" && (
-                <>
+              {active === "instructions" &&
+                (scope === "project" && scopeProjectPath ? (
+                  <ProjectInstructionsSection cwd={scopeProjectPath} />
+                ) : (
                   <InstructionFilesSection
                     scope={scope}
                     activeProjectPath={scopeProjectPath ?? activeProjectPath}
                   />
+                ))}
+              {active === "personalization" && (
+                <>
                   <ResponsePrefsSection
                     scope={scope}
                     activeProjectPath={scopeProjectPath ?? activeProjectPath}

@@ -24,6 +24,12 @@ describe("SettingsPage scope contract", () => {
     expect(source).toContain("initialProjectPath");
   });
 
+  test("instructions module: global compat toggles in user scope, project files in project scope", () => {
+    expect(source).toContain('active === "instructions"');
+    expect(source).toContain("ProjectInstructionsSection");
+    expect(source).toContain("InstructionFilesSection");
+  });
+
   test("data sources module bridges the global catalog and per-project bindings", () => {
     const module = readFileSync(join(import.meta.dir, "DataSourcesModule.tsx"), "utf-8");
     expect(source).toContain("<DataSourcesModule");
