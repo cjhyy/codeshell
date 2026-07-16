@@ -1,9 +1,8 @@
 /**
  * 三方集成市场目录(Link tab)。
  *
- * 这是 Phase 1 的「静态壳」:目录数据先写死在前端,用来渲染分类卡片(品牌图标 + 名字 +
- * 一句话描述 + 添加按钮)。点「添加」目前不接后端 —— 后续会接上后台服务,让每个集成
- * 配 skill + 官方 MCP 来读写该三方的数据(见 CredentialsPage / LinkTab 注释)。
+ * 目录数据保留在前端，用于渲染可发现的集成分类。只有带 oauthProfileId 的条目
+ * 才能调用 main 进程中经过审计的 OAuth profile；其他条目作为 roadmap 可见项展示。
  *
  * 描述文案走 i18n(descKey),图标暂用单字母占位品牌标(brandText + brandColor),
  * 接入真实 logo 时把 brandText/brandColor 换成 iconUrl 即可。

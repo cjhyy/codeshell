@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { useT, type TFunction } from "../i18n";
+import { useConfirm } from "../ui/DialogProvider";
 
 type EditableSourceKind = "mock" | "mcp-resource";
 
@@ -20,8 +21,14 @@ function kindLabel(t: TFunction, kind: string): string {
 }
 
 /** Global connection definitions; project-specific grants stay in Project Config. */
-export function DataSourceCatalogSection() {
+export function DataSourceCatalogSection({
+  confirmDelete,
+}: {
+  /** Test seam; production uses the app-level themed confirmation dialog. */
+  confirmDelete?: (source: SourceDefinition) => Promise<boolean>;
+} = {}) {
   const { t } = useT();
+  const confirm = useConfirm();
   const [sources, setSources] = React.useState<SourceDefinition[]>([]);
   const [id, setId] = React.useState("");
   const [kind, setKind] = React.useState<EditableSourceKind>("mock");
@@ -86,7 +93,15 @@ export function DataSourceCatalogSection() {
   };
 
   const deleteSource = async (source: SourceDefinition) => {
-    if (!window.confirm(t("ext.link.sourcesDeleteConfirm", { label: source.label }))) return;
+    const accepted = confirmDelete
+      ? await confirmDelete(source)
+      : await confirm({
+          title: t("ext.link.sourcesDeleteTitle"),
+          message: t("ext.link.sourcesDeleteConfirm", { label: source.label }),
+          confirmLabel: t("ext.link.sourcesDelete"),
+          destructive: true,
+        });
+    if (!accepted) return;
     await run(() => window.codeshell.deleteSourceCatalog(source.id));
   };
 

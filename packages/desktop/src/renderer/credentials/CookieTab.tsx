@@ -63,21 +63,30 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
   const [urlHistory, setUrlHistory] = useState<string[]>(() => readUrlHistory());
 
   const load = useCallback(() => {
-    void window.codeshell.credentials.list(cwd).then((all) =>
-      setItems(all.filter((c) => c.type === "cookie")),
-    );
+    void window.codeshell.credentials
+      .list(cwd)
+      .then((all) => setItems(all.filter((c) => c.type === "cookie")));
   }, [cwd]);
   useEffect(load, [load]);
 
   /** platform__slug(label):同一平台多账号不撞键;slug 只保留安全字符。 */
   const buildId = (platform: string, name: string): string => {
-    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const slug = name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
     return `${platform}__${slug || "account"}`;
   };
 
   /** 主域:从用户输入里取「站点名」当 platform(去协议 / www. / 端口 / 路径)。 */
   const normalizeDomain = (raw: string): string =>
-    raw.trim().replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0].split(":")[0];
+    raw
+      .trim()
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .split("/")[0]
+      .split(":")[0];
 
   const platformOf = (d: string): string => {
     const parts = d.split(".");
@@ -91,7 +100,13 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
    */
   const runLogin = async (opts: {
     rawUrl: string;
-    fixed?: { id: string; label: string; autoUseByAI?: boolean; autoInjectByAI?: boolean; switchMode?: SwitchMode };
+    fixed?: {
+      id: string;
+      label: string;
+      autoUseByAI?: boolean;
+      autoInjectByAI?: boolean;
+      switchMode?: SwitchMode;
+    };
   }): Promise<boolean> => {
     const raw = opts.rawUrl.trim();
     if (!raw) {
@@ -115,7 +130,10 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
         return false;
       }
       if (res.jar.length === 0) {
-        toast({ message: t("ext.cookie.emptyJarAfterLogin", { domain: res.domain }), variant: "error" });
+        toast({
+          message: t("ext.cookie.emptyJarAfterLogin", { domain: res.domain }),
+          variant: "error",
+        });
         return false;
       }
       const accountName = opts.fixed
@@ -129,7 +147,12 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
         secret: JSON.stringify(res.jar),
         autoUseByAI: opts.fixed?.autoUseByAI,
         autoInjectByAI: opts.fixed?.autoInjectByAI,
-        meta: { platform, domain: res.domain, scope: "all", switchMode: opts.fixed?.switchMode ?? "merge" },
+        meta: {
+          platform,
+          domain: res.domain,
+          scope: "all",
+          switchMode: opts.fixed?.switchMode ?? "merge",
+        },
       });
       toast({
         message: t(opts.fixed ? "ext.cookie.repulledToast" : "ext.cookie.capturedAllToast", {
@@ -271,7 +294,11 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
   /** 逐条 meta 开关/选择写回(只改元数据,保留 secret)。 */
   const patch = async (
     c: MaskedCredentialView,
-    fields: { autoUseByAI?: boolean; autoInjectByAI?: boolean; meta?: MaskedCredentialView["meta"] },
+    fields: {
+      autoUseByAI?: boolean;
+      autoInjectByAI?: boolean;
+      meta?: MaskedCredentialView["meta"];
+    },
     toastMsg?: string,
   ) => {
     setBusy(true);
@@ -288,7 +315,9 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     void patch(
       c,
       { autoUseByAI: next },
-      next ? t("ext.cookie.aiAutoUseOnToast", { label: c.label }) : t("ext.cookie.aiAutoUseOffToast", { label: c.label }),
+      next
+        ? t("ext.cookie.aiAutoUseOnToast", { label: c.label })
+        : t("ext.cookie.aiAutoUseOffToast", { label: c.label }),
     );
 
   const toggleAiInject = (c: MaskedCredentialView, next: boolean) =>
@@ -305,7 +334,12 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     void patch(c, { meta: { ...c.meta, switchMode: mode } });
 
   const del = async (c: MaskedCredentialView) => {
-    if (!(await confirm({ message: t("ext.cookie.deleteConfirm", { label: c.label }), destructive: true })))
+    if (
+      !(await confirm({
+        message: t("ext.cookie.deleteConfirm", { label: c.label }),
+        destructive: true,
+      }))
+    )
       return;
     await window.codeshell.credentials.remove(cwd, "user", c.id);
     load();
@@ -336,15 +370,17 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
           {urlHistory.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
               {urlHistory.map((h) => (
-                <button
+                <Button
                   key={h}
                   type="button"
-                  className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 rounded-full bg-muted/50 px-2 text-xs text-muted-foreground"
                   onClick={() => setUrl(h)}
                   title={t("ext.cookie.historyChipTip")}
                 >
                   {h}
-                </button>
+                </Button>
               ))}
             </div>
           )}
@@ -359,7 +395,9 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
         <div className="space-y-2">
           <div>
             <p className="text-sm font-medium">{t("ext.cookie.browserSectionTitle")}</p>
-            <p className="text-xs text-muted-foreground">{t("ext.cookie.captureFromBrowserTitle")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("ext.cookie.captureFromBrowserTitle")}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -377,7 +415,9 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
               {t("ext.cookie.captureAllSessions")}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">{t("ext.cookie.captureAllSessionsWarning")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("ext.cookie.captureAllSessionsWarning")}
+          </p>
         </div>
       </Card>
 
@@ -406,13 +446,28 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
                     <div className="text-xs text-muted-foreground">{c.meta?.domain ?? c.id}</div>
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <Button variant="secondary" size="sm" disabled={busy} onClick={() => void switchTo(c)}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void switchTo(c)}
+                    >
                       {t("ext.cookie.actionSwitch")}
                     </Button>
-                    <Button variant="ghost" size="sm" disabled={busy} onClick={() => void rename(c)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void rename(c)}
+                    >
                       {t("ext.cookie.actionEdit")}
                     </Button>
-                    <Button variant="ghost" size="sm" disabled={busy} onClick={() => void relogin(c)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void relogin(c)}
+                    >
                       {t("ext.cookie.actionRepull")}
                     </Button>
                     <Button variant="ghost" size="sm" disabled={busy} onClick={() => void del(c)}>

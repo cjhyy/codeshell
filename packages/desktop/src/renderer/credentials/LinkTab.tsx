@@ -5,8 +5,11 @@ import {
   ChevronDown,
   ExternalLink,
   MessageCircleMore,
+  RefreshCw,
+  Search,
+  Settings2,
+  X,
 } from "lucide-react";
-import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +28,7 @@ import { LINK_CATALOG, type LinkIntegration } from "./link-catalog";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
 import type { MaskedCredentialView } from "./types";
 import { DataSourceCatalogSection } from "./DataSourceCatalogSection";
+import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
 import type {
   ImGatewayChannel,
   ImGatewayChannelStatus,
@@ -99,6 +103,12 @@ const CHANNEL_STATE_CLASS: Record<ImGatewayChannelStatus["state"], string> = {
   retrying: "bg-status-err/10 text-status-err",
 };
 
+type IntegrationFilter = "all" | "connected" | "available";
+
+export function oauthErrorRequiresRelogin(message: string | undefined): boolean {
+  return /invalid[_ -]?grant|requires? (?:a )?login|sign in again/i.test(message ?? "");
+}
+
 /**
  * Link tab = 三方集成市场(Codex 风格)。目录写死在 link-catalog.ts;OAuth
  * credential 已存在时展示登录状态。只有 main 已审计 profile 的集成可发起登录。
@@ -109,13 +119,29 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
   const [credentials, setCredentials] = useState<MaskedCredentialView[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<IntegrationFilter>("all");
 
   const load = useCallback(async () => {
-    const all = await window.codeshell.credentials.list("");
-    setCredentials(all.filter((c) => c.type === "oauth"));
+    setLoading(true);
+    try {
+      const all = await window.codeshell.credentials.list("");
+      setCredentials(all.filter((c) => c.type === "oauth"));
+      setLoadError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setLoadError(message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => void load(), [load]);
+  useEffect(() => {
+    void load().catch(() => undefined);
+  }, [load]);
 
   const byIntegration = useMemo(() => {
     const map = new Map<string, MaskedCredentialView>();
@@ -130,6 +156,23 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
     }
     return map;
   }, [credentials]);
+
+  const catalogItems = useMemo(() => LINK_CATALOG.flatMap((category) => category.items), []);
+  const connectedCount = catalogItems.filter((item) => byIntegration.has(item.id)).length;
+  const availableCount = catalogItems.filter((item) => Boolean(item.oauthProfileId)).length;
+  const filteredCatalog = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    return LINK_CATALOG.map((category) => ({
+      ...category,
+      items: category.items.filter((item) => {
+        if (filter === "connected" && !byIntegration.has(item.id)) return false;
+        if (filter === "available" && !item.oauthProfileId) return false;
+        if (!needle) return true;
+        const haystack = `${item.name} ${t(item.descKey)} ${t(category.titleKey)}`;
+        return haystack.toLocaleLowerCase().includes(needle);
+      }),
+    })).filter((category) => category.items.length > 0);
+  }, [byIntegration, filter, query, t]);
 
   const run = async (item: LinkIntegration, action: () => Promise<void>) => {
     if (busyId) return;
@@ -168,6 +211,8 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
   };
 
   const onRefresh = (item: LinkIntegration, credential: MaskedCredentialView) => {
+    // `run` keeps the original provider error visible so the row can derive an
+    // immediate re-login action while persisted metadata catches up.
     void run(item, async () => {
       await window.codeshell.mcpOAuth.refresh(credential.id);
     });
@@ -186,31 +231,160 @@ export function LinkTab({ cwd: _cwd }: { cwd: string }) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">{t("ext.link.intro")}</p>
+      <section className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="border-b border-border bg-muted/25 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <h2 className="text-base font-semibold text-foreground">
+                {t("ext.link.overviewTitle")}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">{t("ext.link.intro")}</p>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="rounded-md border border-border bg-background px-2.5 py-1.5">
+                <span className="font-semibold text-foreground">{connectedCount}</span>{" "}
+                <span className="text-muted-foreground">{t("ext.link.connectedCount")}</span>
+              </span>
+              <span className="rounded-md border border-border bg-background px-2.5 py-1.5">
+                <span className="font-semibold text-foreground">{availableCount}</span>{" "}
+                <span className="text-muted-foreground">{t("ext.link.availableCount")}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-52 flex-1">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={query}
+                type="search"
+                className="h-9 pl-9 pr-9"
+                placeholder={t("ext.link.searchPlaceholder")}
+                aria-label={t("ext.link.searchPlaceholder")}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              {query ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0.5 top-0.5 size-8 text-muted-foreground"
+                  aria-label={t("ext.link.clearSearch")}
+                  onClick={() => setQuery("")}
+                >
+                  <X className="size-3.5" aria-hidden />
+                </Button>
+              ) : null}
+            </div>
+            <div
+              className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-1"
+              role="group"
+              aria-label={t("ext.link.filterAria")}
+            >
+              {(["all", "connected", "available"] as IntegrationFilter[]).map((value) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-7 px-2.5",
+                    filter === value && "bg-background text-foreground shadow-sm",
+                  )}
+                  aria-pressed={filter === value}
+                  onClick={() => setFilter(value)}
+                >
+                  {t(`ext.link.filter.${value}`)}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {loadError ? (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-status-err/30 bg-status-err/5 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-status-err">{t("ext.link.loadFailed")}</p>
+                <p className="mt-0.5 break-words text-xs text-muted-foreground">{loadError}</p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={loading}
+                onClick={() => void load().catch(() => undefined)}
+              >
+                <RefreshCw className={cn("size-3.5", loading && "animate-spin")} aria-hidden />
+                {t("ext.link.retry")}
+              </Button>
+            </div>
+          ) : loading ? (
+            <p className="text-xs text-muted-foreground" aria-live="polite">
+              {t("ext.link.loadingConnections")}
+            </p>
+          ) : null}
+        </div>
+      </section>
 
       <ChatGatewayCard />
 
       <DataSourceCatalogSection />
 
-      {LINK_CATALOG.map((cat) => (
-        <section key={cat.id} className="space-y-2">
-          <h3 className="text-sm font-semibold">{t(cat.titleKey)}</h3>
-          <div className="space-y-1">
-            {cat.items.map((item) => (
-              <LinkIntegrationRow
-                key={item.id}
-                item={item}
-                credential={byIntegration.get(item.id)}
-                busy={busyId === item.id}
-                error={errors[item.id]}
-                onLogin={(credential) => onLogin(item, credential)}
-                onRefresh={(credential) => onRefresh(item, credential)}
-                onLogout={(credential) => onLogout(item, credential)}
-              />
-            ))}
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold">{t("ext.link.appsTitle")}</h3>
+          <p className="mt-1 text-xs text-muted-foreground">{t("ext.link.appsDescription")}</p>
+        </div>
+        {filteredCatalog.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
+            <p className="text-sm font-medium text-foreground">{t("ext.link.noMatches")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("ext.link.noMatchesDescription")}
+            </p>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="mt-2"
+              onClick={() => {
+                setQuery("");
+                setFilter("all");
+              }}
+            >
+              {t("ext.link.resetFilters")}
+            </Button>
           </div>
-        </section>
-      ))}
+        ) : (
+          filteredCatalog.map((cat) => (
+            <section key={cat.id} className="space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t(cat.titleKey)}
+              </h4>
+              <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+                {cat.items.map((item) => (
+                  <LinkIntegrationRow
+                    key={item.id}
+                    item={item}
+                    credential={byIntegration.get(item.id)}
+                    busy={busyId === item.id}
+                    error={errors[item.id]}
+                    onLogin={(credential) => onLogin(item, credential)}
+                    onRefresh={(credential) => onRefresh(item, credential)}
+                    onLogout={(credential) => onLogout(item, credential)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        )}
+      </section>
     </div>
   );
 }
@@ -219,6 +393,7 @@ function ChatGatewayCard() {
   const { t, lang } = useT();
   const toast = useToast();
   const [status, setStatus] = useState<ImGatewayStatus | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"start" | "stop" | "config" | null>(null);
   const [wechatBusy, setWechatBusy] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -227,21 +402,23 @@ function ChatGatewayCard() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loginStage, setLoginStage] = useState<"waiting" | "scanned" | "verify">("waiting");
   const [verificationCode, setVerificationCode] = useState("");
-  const [channelsOpen, setChannelsOpen] = useState(true);
+  const [channelsOpen, setChannelsOpen] = useState(false);
+  const [dingtalkSetupOpen, setDingtalkSetupOpen] = useState(false);
 
   const refresh = useCallback(async () => {
-    const next = await window.codeshell.imGateway.status();
-    setStatus(next);
-    return next;
+    try {
+      const next = await window.codeshell.imGateway.status();
+      setStatus(next);
+      setStatusError(null);
+      return next;
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }, []);
 
   useEffect(() => {
-    void refresh().catch((error) => {
-      toast({
-        message: error instanceof Error ? error.message : String(error),
-        variant: "error",
-      });
-    });
+    void refresh().catch(() => undefined);
     const unsubscribe = window.codeshell.imGateway.onEvent((event: ImGatewayUiEvent) => {
       if (event.type === "status-changed") {
         setStatus(event.status);
@@ -270,7 +447,10 @@ function ChatGatewayCard() {
       return;
     }
     let cancelled = false;
-    void QRCode.toDataURL(qrUrl, { width: 224, margin: 1 })
+    // QR rendering is only needed during the short WeChat login flow. Keep the
+    // encoder out of the renderer's initial bundle and fetch it on demand.
+    void import("qrcode")
+      .then(({ default: QRCode }) => QRCode.toDataURL(qrUrl, { width: 224, margin: 1 }))
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })
@@ -395,13 +575,15 @@ function ChatGatewayCard() {
   const degraded = channelStatuses.some(
     ({ state }) => state === "retrying" || state === "needs-config",
   );
-  const statusLabel = status?.running
-    ? degraded
-      ? t("ext.link.gatewayDegraded")
-      : t("ext.link.gatewayRunning")
-    : hasChannels
-      ? t("ext.link.gatewayStopped")
-      : t("ext.link.gatewayNeedsConfig");
+  const statusLabel = !status
+    ? t("ext.link.gatewayChecking")
+    : status.running
+      ? degraded
+        ? t("ext.link.gatewayDegraded")
+        : t("ext.link.gatewayRunning")
+      : hasChannels
+        ? t("ext.link.gatewayStopped")
+        : t("ext.link.gatewayNeedsConfig");
 
   return (
     <section className="space-y-2">
@@ -417,13 +599,15 @@ function ChatGatewayCard() {
               <span
                 className={cn(
                   "rounded px-1.5 py-0.5 text-[10px] font-medium",
-                  status?.running
-                    ? degraded
-                      ? "bg-status-warn/10 text-status-warn"
-                      : "bg-status-ok/10 text-status-ok"
-                    : hasChannels
-                      ? "bg-muted text-muted-foreground"
-                      : "bg-amber-500/10 text-amber-600",
+                  !status
+                    ? "bg-muted text-muted-foreground"
+                    : status.running
+                      ? degraded
+                        ? "bg-status-warn/10 text-status-warn"
+                        : "bg-status-ok/10 text-status-ok"
+                      : hasChannels
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-amber-500/10 text-amber-600",
                 )}
               >
                 {statusLabel}
@@ -432,6 +616,23 @@ function ChatGatewayCard() {
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
               {t("ext.link.gatewayDescription")}
             </p>
+            {statusError ? (
+              <div
+                role="alert"
+                className="mt-2 flex flex-wrap items-center gap-2 text-xs text-status-err"
+              >
+                <span className="min-w-0 flex-1 break-words">{statusError}</span>
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0 text-status-err"
+                  onClick={() => void refresh().catch(() => undefined)}
+                >
+                  {t("ext.link.retry")}
+                </Button>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -458,11 +659,13 @@ function ChatGatewayCard() {
         </div>
 
         <div className="mt-3 overflow-hidden rounded-md border border-border/70">
-          <button
+          <Button
             type="button"
-            className="flex w-full items-center justify-between gap-3 bg-muted/25 px-3 py-2 text-left text-xs hover:bg-muted/45"
+            variant="ghost"
+            className="h-auto w-full justify-between rounded-none bg-muted/25 px-3 py-2 text-left text-xs font-normal whitespace-normal"
             onClick={() => setChannelsOpen((open) => !open)}
             aria-expanded={channelsOpen}
+            aria-label={t("ext.link.gatewayToggleChannels")}
           >
             <span>
               <span className="font-medium">{t("ext.link.gatewaySupportedChannels")}</span>
@@ -477,7 +680,7 @@ function ChatGatewayCard() {
               )}
               aria-hidden
             />
-          </button>
+          </Button>
           {channelsOpen && (
             <div className="grid gap-px bg-border/60 sm:grid-cols-2">
               {channelStatuses.map((channelStatus) => {
@@ -508,27 +711,44 @@ function ChatGatewayCard() {
                         {guide.fields}
                       </span>
                     </div>
-                    {guide.manageUrl ? (
-                      <button
+                    {channelStatus.channel === "dingtalk" && (
+                      <Button
                         type="button"
-                        className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:underline"
+                        variant="link"
+                        size="sm"
+                        className="mr-3 mt-2 h-auto gap-1 p-0 text-[10px]"
+                        aria-label={t("ext.link.dingtalk.configure")}
+                        onClick={() => setDingtalkSetupOpen(true)}
+                      >
+                        <Settings2 className="size-3" aria-hidden />
+                        {t("ext.link.dingtalk.configure")}
+                      </Button>
+                    )}
+                    {guide.manageUrl ? (
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="mt-2 h-auto gap-1 p-0 text-[10px]"
                         aria-label={`${IM_GATEWAY_CHANNEL_NAMES[channelStatus.channel]}：${t("ext.link.gatewayOpenConsole")}`}
                         onClick={() => void openChannelConsole(channelStatus.channel)}
                       >
                         <ExternalLink className="size-3" aria-hidden />
                         {t("ext.link.gatewayOpenConsole")}
-                      </button>
+                      </Button>
                     ) : channelStatus.channel === "wechat" ? (
-                      <button
+                      <Button
                         type="button"
-                        className="mt-2 inline-flex items-center text-[10px] font-medium text-primary hover:underline disabled:opacity-50"
+                        variant="link"
+                        size="sm"
+                        className="mt-2 h-auto p-0 text-[10px]"
                         disabled={wechatBusy}
                         onClick={loginWechat}
                       >
                         {status?.wechatConnected
                           ? t("ext.link.gatewayWechatReconnect")
                           : t("ext.link.gatewayWechatConnect")}
-                      </button>
+                      </Button>
                     ) : null}
                     {channelStatus.error && (
                       <p className="mt-1.5 line-clamp-2 text-[10px] leading-4 text-status-err">
@@ -542,74 +762,79 @@ function ChatGatewayCard() {
           )}
         </div>
 
-        <div className="mt-3 rounded-md border border-border/70 px-3 py-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium">{t("ext.link.gatewayRecentActivity")}</span>
-            <span className="text-[10px] text-muted-foreground">
-              {t("ext.link.gatewayActivityLive")}
-            </span>
-          </div>
-          {status?.recentActivity?.length ? (
-            <div className="mt-2 space-y-1.5">
-              {status.recentActivity.slice(0, 8).map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start gap-2 rounded bg-muted/35 px-2 py-1.5 text-[11px]"
-                >
-                  {activity.direction === "inbound" ? (
-                    <ArrowDownLeft className="mt-0.5 size-3.5 shrink-0 text-sky-600" aria-hidden />
-                  ) : (
-                    <ArrowUpRight
-                      className={cn(
-                        "mt-0.5 size-3.5 shrink-0",
-                        activity.status === "failed" ? "text-status-err" : "text-status-ok",
-                      )}
-                      aria-hidden
-                    />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <span className="font-medium text-foreground">
-                        {IM_GATEWAY_CHANNEL_NAMES[activity.channel]}
-                      </span>
-                      <span>
-                        {activity.direction === "inbound"
-                          ? t("ext.link.gatewayInbound")
-                          : activity.status === "failed"
-                            ? t("ext.link.gatewaySendFailed")
-                            : t("ext.link.gatewayOutbound")}
-                      </span>
-                      <span className="ml-auto shrink-0">
-                        {new Date(activity.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 line-clamp-2 break-all leading-4">
-                      {activity.text ||
-                        t("ext.link.gatewayAttachmentMessage", {
-                          count: activity.attachmentCount ?? 0,
-                        })}
-                    </p>
-                    {activity.direction === "inbound" && activity.senderId && (
-                      <p
-                        className="mt-0.5 truncate font-mono text-[9px] text-muted-foreground"
-                        title={`${activity.senderId} → ${activity.target}`}
-                      >
-                        {activity.senderId} → {activity.target}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+        {Boolean(status?.running || status?.recentActivity?.length) && (
+          <div className="mt-3 rounded-md border border-border/70 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium">{t("ext.link.gatewayRecentActivity")}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {t("ext.link.gatewayActivityLive")}
+              </span>
             </div>
-          ) : (
-            <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-              {t("ext.link.gatewayNoActivity")}
-            </p>
-          )}
-        </div>
+            {status?.recentActivity?.length ? (
+              <div className="mt-2 space-y-1.5">
+                {status.recentActivity.slice(0, 8).map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-2 rounded bg-muted/35 px-2 py-1.5 text-[11px]"
+                  >
+                    {activity.direction === "inbound" ? (
+                      <ArrowDownLeft
+                        className="mt-0.5 size-3.5 shrink-0 text-sky-600"
+                        aria-hidden
+                      />
+                    ) : (
+                      <ArrowUpRight
+                        className={cn(
+                          "mt-0.5 size-3.5 shrink-0",
+                          activity.status === "failed" ? "text-status-err" : "text-status-ok",
+                        )}
+                        aria-hidden
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                          {IM_GATEWAY_CHANNEL_NAMES[activity.channel]}
+                        </span>
+                        <span>
+                          {activity.direction === "inbound"
+                            ? t("ext.link.gatewayInbound")
+                            : activity.status === "failed"
+                              ? t("ext.link.gatewaySendFailed")
+                              : t("ext.link.gatewayOutbound")}
+                        </span>
+                        <span className="ml-auto shrink-0">
+                          {new Date(activity.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 line-clamp-2 break-all leading-4">
+                        {activity.text ||
+                          t("ext.link.gatewayAttachmentMessage", {
+                            count: activity.attachmentCount ?? 0,
+                          })}
+                      </p>
+                      {activity.direction === "inbound" && activity.senderId && (
+                        <p
+                          className="mt-0.5 truncate font-mono text-[9px] text-muted-foreground"
+                          title={`${activity.senderId} → ${activity.target}`}
+                        >
+                          {activity.senderId} → {activity.target}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                {t("ext.link.gatewayNoActivity")}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {status?.running ? (
@@ -619,23 +844,43 @@ function ChatGatewayCard() {
               disabled={busy !== null}
               onClick={() => void run("stop", () => window.codeshell.imGateway.stop())}
             >
-              {t("ext.link.gatewayStop")}
+              {busy === "stop" ? t("ext.link.gatewayStopping") : t("ext.link.gatewayStop")}
             </Button>
           ) : (
             <Button
               size="sm"
               variant="secondary"
-              disabled={busy !== null || !hasChannels}
+              disabled={busy !== null || !hasChannels || !status}
               onClick={() => void run("start", () => window.codeshell.imGateway.start())}
             >
-              {t("ext.link.gatewayStart")}
+              {busy === "start" ? t("ext.link.gatewayStarting") : t("ext.link.gatewayStart")}
             </Button>
           )}
           <Button size="sm" variant="outline" disabled={busy !== null} onClick={configure}>
-            {t("ext.link.gatewayConfigure")}
+            {busy === "config"
+              ? t("ext.link.gatewayOpeningConfig")
+              : t("ext.link.gatewayAdvancedConfigure")}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={!status || busy !== null}
+            onClick={() => void refresh().catch(() => undefined)}
+          >
+            <RefreshCw className="size-3.5" aria-hidden />
+            {t("ext.link.refreshStatus")}
           </Button>
         </div>
       </div>
+
+      <DingTalkSetupDialog
+        open={dingtalkSetupOpen}
+        gatewayStatus={status}
+        onOpenChange={setDingtalkSetupOpen}
+        onStatusChange={setStatus}
+        onOpenConsole={() => void openChannelConsole("dingtalk")}
+      />
 
       <Dialog open={loginOpen} onOpenChange={(open) => !open && cancelWechatLogin()}>
         <DialogContent className="max-w-sm">
@@ -707,7 +952,9 @@ function LinkIntegrationRow({
 }) {
   const { t } = useT();
   const state = credential?.oauthStatus?.state ?? (credential ? "valid" : "missing");
-  const primaryAction = linkOAuthPrimaryAction(credential, Boolean(item.oauthProfileId));
+  const primaryAction = oauthErrorRequiresRelogin(error)
+    ? "login"
+    : linkOAuthPrimaryAction(credential, Boolean(item.oauthProfileId));
   const status =
     state === "valid"
       ? t("ext.link.oauthStatusValid")
@@ -718,47 +965,53 @@ function LinkIntegrationRow({
           : t("ext.link.oauthStatusMissing");
 
   return (
-    <div className="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-accent/50">
-      <div
-        className={
-          "flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white " +
-          item.brandColor
-        }
-        aria-hidden
-      >
-        {item.brandText}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <div className="text-sm font-medium">{item.name}</div>
-          <span
-            className={cn(
-              "rounded px-1.5 py-0.5 text-[10px] font-medium",
-              state === "valid"
-                ? "bg-status-ok/10 text-status-ok"
-                : state === "missing"
-                  ? "bg-muted text-muted-foreground"
-                  : "bg-status-err/10 text-status-err",
+    <div className="flex flex-col gap-3 p-3 transition-colors hover:bg-accent/35 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <div
+          className={
+            "flex size-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white shadow-sm " +
+            item.brandColor
+          }
+          aria-hidden
+        >
+          {item.brandText}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="text-sm font-medium">{item.name}</div>
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                state === "valid"
+                  ? "bg-status-ok/10 text-status-ok"
+                  : state === "missing"
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-status-err/10 text-status-err",
+              )}
+            >
+              {status}
+            </span>
+          </div>
+          <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
+            {credential ? (
+              <span title={`${credential.label} (${credential.id})`}>
+                {credential.label} · <span className="font-mono">{credential.id}</span>
+                {credential.oauthStatus?.expiresAt
+                  ? ` · ${new Date(credential.oauthStatus.expiresAt).toLocaleString()}`
+                  : ""}
+              </span>
+            ) : (
+              t(item.descKey)
             )}
-          >
-            {status}
-          </span>
+          </div>
+          {error ? (
+            <div role="alert" className="mt-1 break-words text-xs text-status-err">
+              {error}
+            </div>
+          ) : null}
         </div>
-        <div className="truncate text-xs text-muted-foreground">
-          {credential ? (
-            <>
-              {credential.label} ({credential.id})
-              {credential.oauthStatus?.expiresAt
-                ? ` · ${new Date(credential.oauthStatus.expiresAt).toLocaleString()}`
-                : ""}
-            </>
-          ) : (
-            t(item.descKey)
-          )}
-        </div>
-        {error && <div className="truncate text-xs text-status-err">{error}</div>}
       </div>
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 flex-wrap items-center gap-1 self-end sm:self-auto">
         {credential ? (
           <>
             <Button
@@ -769,6 +1022,7 @@ function LinkIntegrationRow({
               }
               disabled={busy}
             >
+              {busy ? <RefreshCw className="size-3.5 animate-spin" aria-hidden /> : null}
               {primaryAction === "login" ? t("ext.link.oauthRelogin") : t("ext.link.oauthRefresh")}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => onLogout(credential)} disabled={busy}>

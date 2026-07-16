@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type { SourceDefinition } from "@cjhyy/code-shell-core";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { DataSourceCatalogSection } from "./DataSourceCatalogSection";
+import { DialogProvider } from "../ui/DialogProvider";
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -56,14 +57,18 @@ const mcpSource: SourceDefinition = {
 
 let root: Root | null = null;
 
-async function renderSection(): Promise<HTMLElement> {
+async function renderSection(
+  confirmDelete?: (source: SourceDefinition) => Promise<boolean>,
+): Promise<HTMLElement> {
   const container = document.createElement("div") as unknown as HTMLElement;
   root = createRoot(container);
   await act(async () => {
     root?.render(
-      <form>
-        <DataSourceCatalogSection />
-      </form>,
+      <DialogProvider>
+        <form>
+          <DataSourceCatalogSection confirmDelete={confirmDelete} />
+        </form>
+      </DialogProvider>,
     );
     await flushMicrotasks();
     await flushMicrotasks();
@@ -193,7 +198,6 @@ describe("DataSourceCatalogSection", () => {
     const confirmations = [false, true];
     let listCalls = 0;
     Object.assign(window, {
-      confirm: () => confirmations.shift() ?? false,
       codeshell: {
         listSourceCatalog: async () => {
           listCalls += 1;
@@ -203,11 +207,12 @@ describe("DataSourceCatalogSection", () => {
         deleteSourceCatalog: async (id: string) => void deleted.push(id),
       },
     });
-    const container = await renderSection();
+    const container = await renderSection(async () => confirmations.shift() ?? false);
     const remove = withDataAttribute(container, "BUTTON", "data-source-delete")[0];
 
     await act(async () => {
       reactPropsOf(remove).onClick();
+      await flushMicrotasks();
       await flushMicrotasks();
     });
     expect(deleted).toEqual([]);
