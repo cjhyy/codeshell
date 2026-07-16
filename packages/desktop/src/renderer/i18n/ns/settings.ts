@@ -94,6 +94,7 @@ export const settingsNs = {
         hooks: "钩子",
         groupEnvConn: "环境与连接",
         connections: "连接",
+        dataSources: "数据源",
         environment: "本地环境",
         sandbox: "沙箱",
         conversation: "对话",
@@ -169,6 +170,9 @@ export const settingsNs = {
         edit: "编辑",
         empty: "还没有数字人,点击「新建」或从市场安装。",
         skillsLoadFailed: "技能列表加载失败:{message}",
+      },
+      dataSources: {
+        globalHint: "这里管理全局连接目录;把数据源授权给某个项目请切换到项目范围。",
       },
       conversation: {
         title: "对话能力",
@@ -948,6 +952,7 @@ export const settingsNs = {
         hooks: "Hooks",
         groupEnvConn: "Environment & connections",
         connections: "Connections",
+        dataSources: "Data sources",
         environment: "Local environment",
         sandbox: "Sandbox",
         conversation: "Conversation",
@@ -1026,6 +1031,10 @@ export const settingsNs = {
         edit: "Edit",
         empty: "No digital humans yet — create one or install from the market.",
         skillsLoadFailed: "Failed to load skills: {message}",
+      },
+      dataSources: {
+        globalHint:
+          "Manage the global connection catalog here; switch to a project scope to grant sources to a project.",
       },
       conversation: {
         title: "Conversation capabilities",

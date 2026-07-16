@@ -23,4 +23,11 @@ describe("SettingsPage scope contract", () => {
   test("opening with an initial project preselects project scope", () => {
     expect(source).toContain("initialProjectPath");
   });
+
+  test("data sources module bridges the global catalog and per-project bindings", () => {
+    const module = readFileSync(join(import.meta.dir, "DataSourcesModule.tsx"), "utf-8");
+    expect(source).toContain("<DataSourcesModule");
+    expect(module).toContain("DataSourceCatalogSection");
+    expect(module).toContain("DataSourcesSection");
+  });
 });

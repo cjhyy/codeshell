@@ -10,6 +10,7 @@ import {
   Plug,
   Webhook,
   Wifi,
+  Database,
   GitBranch,
   Terminal,
   ShieldCheck,
@@ -28,6 +29,7 @@ import {
 import { TextConnectionsPanel } from "./TextConnectionsPanel";
 import { ModelCatalogPanel } from "./ModelCatalogPanel";
 import { DigitalHumansSection } from "./DigitalHumansSection";
+import { DataSourcesModule } from "./DataSourcesModule";
 import { MemorySection } from "./MemorySection";
 import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
@@ -72,6 +74,7 @@ type ModuleId =
   | "mcp"
   | "hooks"
   | "connections"
+  | "data-sources"
   | "git"
   | "environment"
   | "sandbox"
@@ -188,6 +191,12 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
           id: "connections",
           label: t("settingsX.page.connections"),
           Icon: Wifi,
+          scopes: ["user", "project"],
+        },
+        {
+          id: "data-sources",
+          label: t("settingsX.page.dataSources"),
+          Icon: Database,
           scopes: ["user", "project"],
         },
         { id: "git", label: "Git", Icon: GitBranch },
@@ -557,6 +566,9 @@ export function SettingsPage({
                   scope={scope}
                   activeProjectPath={scopeProjectPath ?? activeProjectPath}
                 />
+              )}
+              {active === "data-sources" && (
+                <DataSourcesModule scope={scope} projectPath={scopeProjectPath} />
               )}
               {active === "git" && <GitSection />}
               {active === "environment" && <EnvironmentSection projects={projects} />}
