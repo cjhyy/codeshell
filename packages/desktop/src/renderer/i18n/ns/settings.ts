@@ -107,7 +107,6 @@ export const settingsNs = {
         clearSearch: "清除搜索",
         searchResults: "找到 {count} 项设置",
         noSearchResults: "没有匹配的设置",
-        globalScope: "全局",
         globalScopeHint:
           "这里的默认设置对所有项目生效；需要覆盖单个项目时，请打开对应项目的项目配置。",
         scopeSwitcher: "配置范围",
@@ -952,7 +951,6 @@ export const settingsNs = {
         clearSearch: "Clear search",
         searchResults: "{count} settings found",
         noSearchResults: "No matching settings",
-        globalScope: "Global",
         globalScopeHint:
           "These defaults apply to every project. Open a project's settings when you need a project-specific override.",
         scopeSwitcher: "Configuration scope",

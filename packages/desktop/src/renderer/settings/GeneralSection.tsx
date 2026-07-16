@@ -72,8 +72,15 @@ export function GeneralSection({ scope, activeProjectPath }: Props) {
   return (
     <>
       <PermissionSection scope={scope} activeProjectPath={activeProjectPath} />
-      <LanguageBlock />
-      <UpdaterSettingsRow />
+      {/* UI language and app updates are inherently app-global (localStorage /
+          updater), so they'd contradict the "project-only overrides" header in
+          project scope — only the permission default is per-project. */}
+      {scope === "user" && (
+        <>
+          <LanguageBlock />
+          <UpdaterSettingsRow />
+        </>
+      )}
     </>
   );
 }

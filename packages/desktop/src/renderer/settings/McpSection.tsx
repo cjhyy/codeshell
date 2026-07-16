@@ -142,7 +142,13 @@ function broadcastSettingsChanged(): void {
 
 interface Props {
   scope: "user" | "project";
+  /** The APP's active project — used only to fold runtime-effective plugin
+   *  state (capabilityOverrides), never as the settings write target. */
   activeProjectPath: string | null;
+  /** Which project's settings file to read/write when scope === "project".
+   *  Defaults to activeProjectPath so existing call sites (SettingsView /
+   *  ManagePage), where both are the same project, are unchanged. */
+  settingsProjectPath?: string | null;
 }
 
 type EditState =
@@ -153,7 +159,7 @@ type EditState =
   // saved to the global mcpServerOverrides layer (not mcpServers).
   | { kind: "override"; original: string };
 
-export function McpSection({ scope, activeProjectPath }: Props) {
+export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Props) {
   const [servers, setServers] = useState<McpServer[]>([]);
   const [probes, setProbes] = useState<Record<string, McpProbeResult>>({});
   const [loadingProbe, setLoadingProbe] = useState<Set<string>>(new Set());
@@ -164,7 +170,8 @@ export function McpSection({ scope, activeProjectPath }: Props) {
   const confirm = useConfirm();
   const { t } = useT();
 
-  const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const projectPath =
+    scope === "project" ? (settingsProjectPath ?? activeProjectPath ?? undefined) : undefined;
 
   const load = useCallback(async () => {
     setError(null);
@@ -178,9 +185,13 @@ export function McpSection({ scope, activeProjectPath }: Props) {
         disabledPlugins,
         // pluginDisabled is a RUNTIME-effective flag, not "which settings file
         // am I editing" — always fold the ACTIVE repo's capabilityOverrides
-        // (能力总览 project on/off), even while viewing the 用户(全局) scope.
-        // Otherwise a project-enabled plugin's MCP shows 关闭 in the global
-        // view while the session is actually connecting it (user-confusing).
+        // (能力总览 project on/off), even while viewing the 用户(全局) scope
+        // or another project's scope (settingsProjectPath). Otherwise a
+        // project-enabled plugin's MCP shows 关闭 in the global view while the
+        // session is actually connecting it (user-confusing). That's why the
+        // two paths are separate props: `projectPath` above targets the
+        // settings file being edited; `activeProjectPath` here mirrors what
+        // the running session actually loads.
         activeProjectPath ?? undefined,
       );
       const list = mcpServersFromSettings(merged);

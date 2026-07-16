@@ -307,6 +307,8 @@ export function SettingsPage({
       .map((module) => ({ value: module.id, label: module.label })),
   })).filter((group) => group.options.length > 0);
 
+  // "__user__" shares the string domain with project paths, which is safe:
+  // project values are absolute filesystem paths, so they can never equal it.
   const scopeOptions = [
     { value: "__user__", label: t("settingsX.page.scopeSwitchGlobal") },
     ...projects.map((project) => ({ value: project.path, label: projectLabel(project) })),
@@ -521,9 +523,13 @@ export function SettingsPage({
                 />
               )}
               {active === "mcp" && (
+                // Two distinct paths: activeProjectPath stays the APP's active
+                // project (runtime-effective plugin folding), while the scope
+                // switcher only decides which settings file is edited.
                 <McpSection
                   scope={scope}
-                  activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                  activeProjectPath={activeProjectPath}
+                  settingsProjectPath={scopeProjectPath}
                 />
               )}
               {active === "hooks" && <HooksSection projects={projects} />}
