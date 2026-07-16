@@ -1,15 +1,60 @@
 import { DWClient, TOPIC_ROBOT, type RobotTextMessage } from "dingtalk-stream";
-import type { ChannelAdapter, ChannelMessageHandler, OutgoingMessage } from "./channel.js";
+import type {
+  ChannelAdapter,
+  ChannelMessage,
+  ChannelMessageHandler,
+  OutgoingMessage,
+} from "./channel.js";
 import { dispatchSafely, waitForAbort } from "./lifecycle.js";
 
 export interface DingTalkAdapterConfig {
   clientId: string;
   clientSecret: string;
+  onConnected?: () => void;
+}
+
+type DingTalkTextMessage = RobotTextMessage & {
+  conversationTitle?: unknown;
+};
+
+/** Parse one Stream frame without exposing the SDK client, useful for discovery and tests. */
+export function parseDingTalkTextMessage(
+  data: string,
+  messageId?: string,
+): ChannelMessage | undefined {
+  let message: DingTalkTextMessage;
+  try {
+    message = JSON.parse(data) as DingTalkTextMessage;
+  } catch {
+    return undefined;
+  }
+  if (message.msgtype !== "text" || !message.text?.content || !message.conversationId) {
+    return undefined;
+  }
+  return {
+    channel: "dingtalk",
+    target: message.conversationId,
+    senderId: message.senderStaffId || message.senderId,
+    text: message.text.content,
+    ...(messageId ? { messageId } : {}),
+    metadata: {
+      ...(typeof message.conversationTitle === "string" && message.conversationTitle.trim()
+        ? { conversationTitle: message.conversationTitle.trim() }
+        : {}),
+      ...(typeof message.conversationType === "string"
+        ? { conversationType: message.conversationType }
+        : {}),
+      ...(typeof message.senderNick === "string" && message.senderNick.trim()
+        ? { senderName: message.senderNick.trim() }
+        : {}),
+    },
+  };
 }
 
 export class DingTalkAdapter implements ChannelAdapter {
   readonly channel = "dingtalk";
   private readonly client: DWClient;
+  private readonly onConnected?: () => void;
   private readonly responseUrls = new Map<string, string>();
 
   constructor(
@@ -17,31 +62,23 @@ export class DingTalkAdapter implements ChannelAdapter {
     private readonly fetchFn: typeof fetch = fetch,
   ) {
     this.client = new DWClient({ clientId: config.clientId, clientSecret: config.clientSecret });
+    this.onConnected = config.onConnected;
   }
 
   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
     this.client.registerCallbackListener(TOPIC_ROBOT, async (frame) => {
-      let message: RobotTextMessage;
-      try {
-        message = JSON.parse(frame.data) as RobotTextMessage;
-      } catch {
-        return;
-      }
-      if (message.msgtype !== "text" || !message.text?.content) return;
-      this.responseUrls.set(message.conversationId, message.sessionWebhook);
+      const incoming = parseDingTalkTextMessage(frame.data, frame.headers.messageId);
+      if (!incoming) return;
+      const message = JSON.parse(frame.data) as RobotTextMessage;
+      this.responseUrls.set(incoming.target, message.sessionWebhook);
       // dispatchSafely so a rejected delivery never escapes this stream
       // callback as an unhandled rejection (which would crash the process);
       // the SUCCESS ack below must still run so DingTalk stops redelivering.
-      await dispatchSafely(handler, {
-        channel: this.channel,
-        target: message.conversationId,
-        senderId: message.senderStaffId || message.senderId,
-        text: message.text.content,
-        messageId: frame.headers.messageId,
-      });
+      await dispatchSafely(handler, incoming);
       this.client.socketCallBackResponse(frame.headers.messageId, { status: "SUCCESS" });
     });
     await this.client.connect();
+    this.onConnected?.();
     try {
       await waitForAbort(signal);
     } finally {

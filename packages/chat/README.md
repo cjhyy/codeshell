@@ -38,6 +38,12 @@ await chat.run(shutdown.signal);
 在 CodeShell Desktop 中可直接进入「凭证 → Link → CodeShell Chat Gateway」查看全部支持渠道、
 逐渠道连接状态和接入说明，一键打开可用平台的官方配置后台，启动/停止 gateway、编辑配置，
 或扫码连接个人微信；卡片还会显示本次桌面运行中最近的收发消息。无需再单独打开终端运行 CLI。
+钉钉渠道提供独立的结构化向导：填写应用凭据后可建立临时 Stream 连接，通过向机器人发送
+测试消息自动发现 `conversationId` 和 `senderStaffId`，勾选后保存白名单并启动。Desktop 会把
+Client Secret 放入 CodeShell 安全凭据库（系统支持时使用系统加密），`config.json` 只保留
+Client ID 和白名单；旧版配置中的
+明文 Secret 会在首次使用新向导保存时迁移。独立 CLI 继续支持配置文件或
+`CODE_SHELL_DINGTALK_CLIENT_SECRET` 环境变量。
 CLI 会把普通文字和附件转到桌面端的 Mimi Pet 长期会话，并把最终文字回复送回原 IM 会话。
 不同渠道继续共享 Mimi 的长期上下文，但每条入站消息会标明来源渠道，当前消息来源也会进入
 Mimi 的运行时上下文，避免多渠道同时使用时无法分辨入口。
