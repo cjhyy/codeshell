@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { loadUILanguage, saveUILanguage, languageLabel, type UILanguage } from "../uiLanguage";
 import { useT } from "../i18n/I18nProvider";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface Props {
   /** Switch to the full-page Settings view. */
@@ -65,8 +67,8 @@ export function SettingsMenu({
     if (!open) setSubmenu(null);
   }, [open]);
 
-  const openSubmenu = (e: React.MouseEvent<HTMLLIElement>): void => {
-    const r = e.currentTarget.getBoundingClientRect();
+  const openSubmenu = (element: HTMLElement): void => {
+    const r = element.getBoundingClientRect();
     // Anchor the submenu's BOTTOM to the trigger item's bottom so it grows
     // upward — the settings menu lives in the bottom-left corner, so a
     // downward submenu would overflow the viewport. Clamp left into the
@@ -81,70 +83,100 @@ export function SettingsMenu({
     setOpen(false);
   };
 
-  const triggerClass = [
-    "flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm text-muted-foreground",
-    "hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-    open ? "bg-accent text-accent-foreground" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
     <div className="relative" ref={ref}>
-      <button
-        className={triggerClass}
+      <Button
+        type="button"
+        variant="ghost"
+        className={cn(
+          "h-9 w-full justify-start gap-2 px-2 text-sm text-muted-foreground",
+          open && "bg-accent text-accent-foreground",
+        )}
+        aria-haspopup="menu"
+        aria-expanded={open}
         onClick={sidebarCollapsed ? onOpenSettingsPage : () => setOpen((o) => !o)}
       >
         <SettingsIcon size={14} className="shrink-0" />
         <span className="truncate">{t("settingsX.menu.settings")}</span>
-      </button>
+      </Button>
       {open && (
-        <ul className="absolute bottom-full left-0 z-40 mb-2 min-w-56 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
-          <li
-            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent font-medium text-primary"
-            onClick={() => {
-              setOpen(false);
-              onOpenSettingsPage();
-            }}
-          >
-            <SettingsIcon size={13} />
-            <span>{t("settingsX.menu.openSettings")}</span>
-            <ArrowRight size={11} className="ml-auto text-muted-foreground" />
+        <ul
+          role="menu"
+          className="cs-popup-surface absolute bottom-full left-0 z-40 mb-2 min-w-56 rounded-md p-1"
+        >
+          <li role="none">
+            <Button
+              type="button"
+              role="menuitem"
+              variant="ghost"
+              size="sm"
+              className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-medium text-primary"
+              onClick={() => {
+                setOpen(false);
+                onOpenSettingsPage();
+              }}
+            >
+              <SettingsIcon size={13} />
+              <span>{t("settingsX.menu.openSettings")}</span>
+              <ArrowRight size={11} className="ml-auto text-muted-foreground" />
+            </Button>
           </li>
-          <li className="my-1 h-px bg-border" />
-          <li
-            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-            onClick={() => {
-              onTogglePetWidget();
-              setOpen(false);
-            }}
-          >
-            <Ghost size={14} />
-            <span>{t(petWidgetVisible ? "pet.widget.hide" : "pet.widget.show")}</span>
+          <li role="separator" className="my-1 h-px bg-border" />
+          <li role="none">
+            <Button
+              type="button"
+              role="menuitem"
+              variant="ghost"
+              size="sm"
+              className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal"
+              onClick={() => {
+                onTogglePetWidget();
+                setOpen(false);
+              }}
+            >
+              <Ghost size={14} />
+              <span>{t(petWidgetVisible ? "pet.widget.hide" : "pet.widget.show")}</span>
+            </Button>
           </li>
-          <li
-            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-            onMouseEnter={openSubmenu}
-          >
-            <Globe size={13} />
-            <span>{t("settingsX.menu.switchLanguage")}</span>
-            <ChevronRight size={12} className="ml-auto text-muted-foreground" />
+          <li role="none">
+            <Button
+              type="button"
+              role="menuitem"
+              variant="ghost"
+              size="sm"
+              className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal"
+              aria-haspopup="menu"
+              aria-expanded={submenu !== null}
+              onMouseEnter={(event) => openSubmenu(event.currentTarget)}
+              onFocus={(event) => openSubmenu(event.currentTarget)}
+            >
+              <Globe size={13} />
+              <span>{t("settingsX.menu.switchLanguage")}</span>
+              <ChevronRight size={12} className="ml-auto text-muted-foreground" />
+            </Button>
           </li>
         </ul>
       )}
       {open && submenu && (
         <ul
-          className="fixed z-50 min-w-44 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+          role="menu"
+          className="cs-popup-surface fixed z-50 min-w-44 rounded-md p-1"
           style={{ left: submenu.left, bottom: submenu.bottom }}
         >
           {LANGUAGES.map((code) => (
-            <li
-              key={code}
-              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-              onClick={() => chooseLanguage(code)}
-            >
-              <span className="ml-auto text-primary">{lang === code && <Check size={12} />}</span>
-              <span>{languageLabel(code)}</span>
+            <li key={code} role="none">
+              <Button
+                type="button"
+                role="menuitemradio"
+                aria-checked={lang === code}
+                variant="ghost"
+                size="sm"
+                className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal"
+                onClick={() => chooseLanguage(code)}
+              >
+                <span className="flex-1 text-left">{languageLabel(code)}</span>
+                <span className="text-primary">{lang === code && <Check size={12} />}</span>
+              </Button>
             </li>
           ))}
         </ul>

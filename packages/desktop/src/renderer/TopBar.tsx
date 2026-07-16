@@ -7,6 +7,7 @@ import { WorkspaceIndicator } from "./topbar/WorkspaceIndicator";
 import type { LiveActivity } from "./topbar/liveActivity";
 import type { ActiveGoal, TaskListMessage } from "./types";
 import { useT } from "./i18n";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   projectName: string | null;
@@ -226,9 +227,11 @@ function StatusBadge({
       className="relative flex items-center"
       // Opt out of the header's drag region so hover/focus reach the dot.
       style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-      // tabIndex makes the div keyboard-focusable so the onFocus/onBlur popover
-      // toggling works via keyboard, not just descendant focus bubbling.
-      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          setOpen(false);
+        }
+      }}
       onMouseEnter={() => {
         cancelClose();
         setOpen(true);
@@ -237,7 +240,16 @@ function StatusBadge({
       onFocus={() => setOpen(true)}
       onBlur={scheduleClose}
     >
-      <div className="flex items-center gap-1.5">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 gap-1.5 rounded-full px-1.5"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={t("topbar.statusDetails")}
+        onClick={() => setOpen((current) => !current)}
+      >
         {activeGoal && (
           // ◎ marker: an active persistent goal exists. Hover the dot to see it.
           <span
@@ -264,8 +276,11 @@ function StatusBadge({
             {tasks.tasks.filter((tk) => tk.status === "completed").length}/{tasks.tasks.length}
           </span>
         )}
-        <StatusDot status={busy ? "running" : "idle"} title={busy ? "running" : "idle"} />
-      </div>
+        <StatusDot
+          status={busy ? "running" : "idle"}
+          title={t(busy ? "misc.status.running" : "misc.status.idle")}
+        />
+      </Button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1">
           <StatusPopover
@@ -314,8 +329,11 @@ function topBarPropsEqual(a: Props, b: Props): boolean {
     a.sessionTitle === b.sessionTitle &&
     a.busy === b.busy &&
     a.sidebarCollapsed === b.sidebarCollapsed &&
+    a.isMac === b.isMac &&
+    a.isFullscreen === b.isFullscreen &&
     a.onToggleSidebar === b.onToggleSidebar &&
     a.panelOpen === b.panelOpen &&
+    a.panelAvailable === b.panelAvailable &&
     a.onTogglePanel === b.onTogglePanel &&
     a.statusAvailable === b.statusAvailable &&
     a.contextSelectionAvailable === b.contextSelectionAvailable &&

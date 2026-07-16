@@ -28,6 +28,7 @@ import { projectLabel, type TrackedProject } from "../projects";
 import { cacheGet, cacheSet } from "./settingsCache";
 import { ProjectPicker } from "./ProjectPicker";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { Switch } from "@/components/ui/switch";
@@ -829,11 +830,10 @@ function CleanupReview({
         key={entry.fileName}
         className="flex min-w-0 items-start gap-2 rounded px-1 py-1 text-xs"
       >
-        <input
-          type="checkbox"
+        <Checkbox
           className="mt-0.5"
           checked={selected.has(entry.fileName)}
-          onChange={() => onToggle(entry.fileName)}
+          onCheckedChange={() => onToggle(entry.fileName)}
         />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex min-w-0 items-center gap-1.5">

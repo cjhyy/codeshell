@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { writeSettings } from "../settingsBus";
 import { useT } from "../i18n/I18nProvider";
 import { useToast } from "../ui/ToastProvider";
@@ -208,15 +209,14 @@ export function ContextSettingsSection() {
                 <span>%</span>
               </label>
             </div>
-            <input
-              type="range"
+            <Slider
               min={field.min}
               max={field.max}
-              value={ratios[field.key]}
+              value={[ratios[field.key]]}
               disabled={loading || saving}
-              className="mt-3 w-full accent-primary"
+              className="mt-3"
               aria-label={t(field.title)}
-              onChange={(e) => setRatio(field.key, Number(e.currentTarget.value))}
+              onValueChange={([value]) => setRatio(field.key, value)}
             />
           </div>
         ))}

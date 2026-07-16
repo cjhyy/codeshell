@@ -86,6 +86,9 @@ export function ProjectPicker({
         size="sm"
         className="cs-control h-8 gap-1.5 px-2 py-1 text-xs text-foreground disabled:opacity-50"
         disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={triggerLabel}
         onClick={() => setOpen((o) => !o)}
       >
         <Folder size={12} />
@@ -101,6 +104,7 @@ export function ProjectPicker({
               ref={inputRef}
               className="h-7 flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
               placeholder={t("chat.project.searchPlaceholder")}
+              aria-label={t("chat.project.searchPlaceholder")}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
@@ -117,7 +121,11 @@ export function ProjectPicker({
             )}
           </div>
 
-          <ul className="max-h-64 overflow-y-auto py-1">
+          <ul
+            className="max-h-64 overflow-y-auto py-1"
+            role="listbox"
+            aria-label={t("chat.project.searchPlaceholder")}
+          >
             {filtered.length === 0 && (
               <li className="px-2 py-1.5 text-sm text-muted-foreground">
                 {t("chat.project.noMatch")}
@@ -126,17 +134,24 @@ export function ProjectPicker({
             {filtered.map((project) => {
               const isActive = project.id === activeProjectId;
               return (
-                <li
-                  key={project.id}
-                  className={itemCls(isActive)}
-                  onClick={() => {
-                    onSelect(project.id);
-                    setOpen(false);
-                  }}
-                >
-                  <Folder size={12} className="opacity-60" />
-                  <span className="flex-1 truncate">{projectLabel(project)}</span>
-                  {isActive && <Check size={12} className="text-primary" />}
+                <li key={project.id} role="none">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    role="option"
+                    aria-selected={isActive}
+                    className={`${itemCls(isActive)} h-auto w-full justify-start font-normal`}
+                    onClick={() => {
+                      onSelect(project.id);
+                      setFilter("");
+                      setOpen(false);
+                    }}
+                  >
+                    <Folder size={12} className="opacity-60" />
+                    <span className="flex-1 truncate text-left">{projectLabel(project)}</span>
+                    {isActive && <Check size={12} className="text-primary" />}
+                  </Button>
                 </li>
               );
             })}
@@ -144,27 +159,41 @@ export function ProjectPicker({
 
           <div className="my-1 h-px bg-border" />
 
-          <ul className="py-1">
-            <li
-              className={itemCls(false)}
-              onClick={() => {
-                onAddProject();
-                setOpen(false);
-              }}
-            >
-              <FolderPlus size={12} className="opacity-60" />
-              <span className="flex-1 truncate">{t("chat.project.addNew")}</span>
+          <ul className="py-1" role="none">
+            <li role="none">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={`${itemCls(false)} h-auto w-full justify-start font-normal`}
+                onClick={() => {
+                  onAddProject();
+                  setFilter("");
+                  setOpen(false);
+                }}
+              >
+                <FolderPlus size={12} className="opacity-60" />
+                <span className="flex-1 truncate text-left">{t("chat.project.addNew")}</span>
+              </Button>
             </li>
-            <li
-              className={itemCls(activeProjectId === null)}
-              onClick={() => {
-                onSelect(null);
-                setOpen(false);
-              }}
-            >
-              <Folder size={12} className="opacity-60" />
-              <span className="flex-1 truncate">{t("chat.project.none")}</span>
-              {activeProjectId === null && <Check size={12} className="text-primary" />}
+            <li role="none">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                role="option"
+                aria-selected={activeProjectId === null}
+                className={`${itemCls(activeProjectId === null)} h-auto w-full justify-start font-normal`}
+                onClick={() => {
+                  onSelect(null);
+                  setFilter("");
+                  setOpen(false);
+                }}
+              >
+                <Folder size={12} className="opacity-60" />
+                <span className="flex-1 truncate text-left">{t("chat.project.none")}</span>
+                {activeProjectId === null && <Check size={12} className="text-primary" />}
+              </Button>
             </li>
           </ul>
         </div>

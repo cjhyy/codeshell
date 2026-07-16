@@ -3,6 +3,7 @@ import { ChevronRight, FolderGit2, Globe } from "lucide-react";
 import { projectLabel, type TrackedProject } from "../projects";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
+import { Button } from "@/components/ui/button";
 
 /**
  * A list of projects (projects) the user can click to drill into. Used by the
@@ -82,11 +83,12 @@ function Row({
 }) {
   return (
     <li>
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={onClick}
         className={cn(
-          "group flex w-full items-center gap-3 rounded-md border border-border bg-card px-4 py-3 text-left transition-colors",
+          "group h-auto w-full justify-start gap-3 whitespace-normal bg-card px-4 py-3 text-left",
           "hover:bg-accent/60",
         )}
       >
@@ -99,7 +101,7 @@ function Row({
           size={16}
           className="ml-auto shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
         />
-      </button>
+      </Button>
     </li>
   );
 }

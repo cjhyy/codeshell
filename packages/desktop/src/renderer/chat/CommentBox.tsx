@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
@@ -34,7 +35,7 @@ export function CommentBox({ title, onSubmit, onCancel }: Props) {
         <MessageSquarePlus className="h-3.5 w-3.5" />
         {t("chat.comment.localComment", { title })}
       </div>
-      <textarea
+      <Textarea
         ref={ref}
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -48,7 +49,7 @@ export function CommentBox({ title, onSubmit, onCancel }: Props) {
           }
         }}
         placeholder={t("chat.comment.placeholder")}
-        className="h-16 w-full resize-none rounded border border-border bg-background p-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
+        className="h-16 min-h-16 w-full resize-none p-1.5 text-xs"
       />
       <div className="mt-1 flex justify-end gap-1.5">
         <Button size="sm" variant="ghost" onClick={onCancel}>

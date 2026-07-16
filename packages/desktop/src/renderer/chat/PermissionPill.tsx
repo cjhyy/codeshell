@@ -3,6 +3,8 @@ import { ChevronDown } from "lucide-react";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 import { useT } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/dict";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export type PermissionMode = "plan" | "default" | "accept_edits" | "bypass";
 export type CorePermissionMode = "plan" | "default" | "acceptEdits" | "bypassPermissions";
@@ -82,8 +84,18 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
         setOpen(false);
       }
     };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        anchorRef.current?.focus();
+      }
+    };
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open]);
 
   const toneText = (t: "ok" | "warn" | "err") =>
@@ -95,13 +107,17 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
 
   return (
     <div className="relative" ref={ref}>
-      <button
+      <Button
         ref={anchorRef}
         type="button"
-        className={`cs-control inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50 ${toneText(cur.tone)} ${toneBorder(cur.tone)}`}
+        variant="outline"
+        size="sm"
+        className={`cs-control min-h-7 shrink-0 gap-1.5 px-2 py-1 text-xs font-medium ${toneText(cur.tone)} ${toneBorder(cur.tone)}`}
         disabled={disabled}
         aria-label={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
         title={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(cur.tone)}`} aria-hidden="true" />
@@ -113,27 +129,36 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
           className="shrink-0 opacity-60 @max-[520px]/composer-controls:hidden"
           aria-hidden="true"
         />
-      </button>
+      </Button>
       {open && (
         <ul
           ref={popoverRef}
           style={popoverStyle}
           className="cs-popup-surface w-64 overflow-hidden rounded-md p-1"
+          role="listbox"
+          aria-label={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
         >
           {MODES.map((m) => (
-            <li
-              key={m.id}
-              className={
-                "cs-menu-item flex cursor-pointer gap-2 px-2 py-1.5 text-sm " +
-                (m.id === value ? "bg-accent" : "")
-              }
-              onClick={() => {
-                onChange(m.id);
-                setOpen(false);
-              }}
-            >
-              <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`} />
-              <span className="font-medium">{t(m.labelKey)}</span>
+            <li key={m.id} role="none">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                role="option"
+                aria-selected={m.id === value}
+                className={cn(
+                  "cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm",
+                  m.id === value && "bg-accent",
+                )}
+                onClick={() => {
+                  onChange(m.id);
+                  setOpen(false);
+                  anchorRef.current?.focus();
+                }}
+              >
+                <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`} />
+                <span className="font-medium">{t(m.labelKey)}</span>
+              </Button>
             </li>
           ))}
         </ul>

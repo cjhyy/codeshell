@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -380,16 +381,18 @@ function AgentsEditor({ target }: { target: Target }) {
                 <ul className="space-y-1">{g.enabled.map(renderRow)}</ul>
                 {g.disabled.length > 0 && (
                   <>
-                    <button
+                    <Button
                       type="button"
-                      className="flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-full justify-start gap-1 px-2 text-xs text-muted-foreground"
                       onClick={() => setShowDisabled((s) => ({ ...s, [g.id]: !open }))}
                     >
                       {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                       <span>
                         {t("settingsX.agents.disabledCount", { count: g.disabled.length })}
                       </span>
-                    </button>
+                    </Button>
                     {open && <ul className="space-y-1">{g.disabled.map(renderRow)}</ul>}
                   </>
                 )}
@@ -507,11 +510,9 @@ function AgentsEditor({ target }: { target: Target }) {
                   const checked = (draft.tools ?? []).includes(tool);
                   return (
                     <label key={tool} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        className="accent-primary"
+                      <Checkbox
                         checked={checked}
-                        onChange={() => {
+                        onCheckedChange={() => {
                           const cur = new Set(draft.tools ?? []);
                           if (checked) cur.delete(tool);
                           else cur.add(tool);

@@ -241,15 +241,6 @@ export function McpSection({ scope, activeProjectPath }: Props) {
   // Load on mount + auto-refresh on config change anywhere.
   useRefreshOnSettingsChange(() => void load(), [load]);
 
-  const persist = async (next: McpServer[]) => {
-    const record = Object.fromEntries(
-      persistableMcpServers(next).map((s) => [s.name, stripNameFromServer(s)]),
-    );
-    await window.codeshell.updateSettings(scope, { mcpServers: record }, projectPath);
-    setServers(next);
-    broadcastSettingsChanged();
-  };
-
   const removeServer = async (name: string) => {
     const ok = await confirm({
       title: t("settingsX.mcp.confirmRemoveTitle"),
@@ -1357,29 +1348,25 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
                   </div>
                   <OAuthCredentialStatus credential={selectedOAuthCredential} />
                   <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-                    <input
-                      className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                    <Input
                       value={oauthClientId}
                       onChange={(event) => setOAuthClientId(event.target.value)}
                       placeholder={t("settingsX.mcp.oauthClientIdPlaceholder")}
                       disabled={oauthBusy}
                     />
-                    <input
-                      className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                    <Input
                       value={oauthScopes}
                       onChange={(event) => setOAuthScopes(event.target.value)}
                       placeholder={t("settingsX.mcp.oauthScopesPlaceholder")}
                       disabled={oauthBusy}
                     />
-                    <input
-                      className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                    <Input
                       value={oauthAuthorizationEndpoint}
                       onChange={(event) => setOAuthAuthorizationEndpoint(event.target.value)}
                       placeholder={t("settingsX.mcp.oauthAuthorizationPlaceholder")}
                       disabled={oauthBusy}
                     />
-                    <input
-                      className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                    <Input
                       value={oauthTokenEndpoint}
                       onChange={(event) => setOAuthTokenEndpoint(event.target.value)}
                       placeholder={t("settingsX.mcp.oauthTokenPlaceholder")}

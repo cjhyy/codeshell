@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  Search,
   Settings as SettingsIcon,
   Sun,
   Sliders,
@@ -21,6 +22,7 @@ import {
   Smartphone,
   MessageSquare,
   Gauge,
+  X,
 } from "lucide-react";
 import { TextConnectionsPanel } from "./TextConnectionsPanel";
 import { ModelCatalogPanel } from "./ModelCatalogPanel";
@@ -46,12 +48,16 @@ import {
   PersonalizationSection,
   ResponsePrefsSection,
   ShortcutsSection,
-  ToggleCapabilitySection,
 } from "./AdvancedSections";
 import type { TrackedProject } from "../projects";
 import type { SessionIndex } from "../transcripts";
 import { useT } from "../i18n/I18nProvider";
 import type { TFunction } from "../i18n/I18nProvider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SimpleSelect } from "@/components/ui/simple-select";
+import { cn } from "@/lib/utils";
 
 type ModuleId =
   | "general"
@@ -69,12 +75,11 @@ type ModuleId =
   | "conversation"
   | "context"
   | "mobile-remote"
-  | "archived"
   | "capabilities"
   | "plugins-skills"
   | "agents"
   | "memory"
-  | "update";
+  | "archived";
 
 interface Module {
   id: ModuleId;
@@ -86,6 +91,24 @@ interface ModuleGroup {
   /** Section header shown above the group; "" renders no header. */
   title: string;
   modules: Module[];
+}
+
+const SETTINGS_LAST_MODULE_KEY = "codeshell:settings:last-module";
+
+function storedModuleId(modules: Module[]): ModuleId {
+  if (typeof window === "undefined") return "general";
+  try {
+    const stored = window.localStorage.getItem(SETTINGS_LAST_MODULE_KEY);
+    return modules.some(({ id }) => id === stored) ? (stored as ModuleId) : "general";
+  } catch {
+    return "general";
+  }
+}
+
+export function matchesSettingsModule(query: string, label: string, groupTitle: string): boolean {
+  const needle = query.trim().toLocaleLowerCase();
+  if (!needle) return true;
+  return `${label} ${groupTitle}`.toLocaleLowerCase().includes(needle);
 }
 
 /**
@@ -171,32 +194,119 @@ export function SettingsPage({
   onBack,
 }: Props) {
   const { t } = useT();
-  const MODULE_GROUPS = buildModuleGroups(t);
-  const MODULES: Module[] = MODULE_GROUPS.flatMap((g) => g.modules);
-  const [active, setActive] = useState<ModuleId>("general");
+  const MODULE_GROUPS = useMemo(() => buildModuleGroups(t), [t]);
+  const MODULES = useMemo(() => MODULE_GROUPS.flatMap((group) => group.modules), [MODULE_GROUPS]);
+  const [active, setActive] = useState<ModuleId>(() => storedModuleId(MODULES));
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   // All settings are global (user scope). Per-project overrides are not
   // supported in the UI; sections still take a `scope`/`activeProjectPath`
   // prop pair, so we pass the fixed user scope through unchanged.
   const scope = "user" as const;
   const showTrafficLightGutter = isMac && !isFullscreen;
+  const activeModule = MODULES.find((module) => module.id === active) ?? MODULES[0];
+  const activeGroup =
+    MODULE_GROUPS.find((group) => group.modules.some((module) => module.id === active))?.title ??
+    "";
+  const filteredGroups = useMemo(
+    () =>
+      MODULE_GROUPS.map((group) => ({
+        ...group,
+        modules: group.modules.filter((module) =>
+          matchesSettingsModule(query, module.label, group.title),
+        ),
+      })).filter((group) => group.modules.length > 0),
+    [MODULE_GROUPS, query],
+  );
+  const resultCount = filteredGroups.reduce((count, group) => count + group.modules.length, 0);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SETTINGS_LAST_MODULE_KEY, active);
+    } catch {
+      // Storage can be disabled; settings navigation still works in-memory.
+    }
+  }, [active]);
+
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "f") {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
+
+  const selectModule = (id: ModuleId) => {
+    setActive(id);
+    setQuery("");
+  };
+
+  const mobileOptions = MODULE_GROUPS.map((group) => ({
+    label: group.title || t("settingsX.page.settings"),
+    options: group.modules.map((module) => ({ value: module.id, label: module.label })),
+  }));
 
   return (
-    <div className="h-full">
+    <div className="h-full bg-background">
       <div className="flex h-full max-[720px]:flex-col">
         <nav
-          className={
-            "w-60 shrink-0 overflow-y-auto border-r border-border px-4 pb-4 max-[720px]:h-44 max-[720px]:w-full max-[720px]:border-b max-[720px]:border-r-0 max-[720px]:px-3 max-[720px]:py-3 " +
-            (showTrafficLightGutter ? "pt-8" : "pt-4")
-          }
+          aria-label={t("settingsX.page.settingsNav")}
+          className={cn(
+            "w-64 shrink-0 overflow-y-auto border-r border-border bg-muted/20 px-3 pb-4 max-[720px]:hidden",
+            showTrafficLightGutter ? "pt-8" : "pt-4",
+          )}
         >
-          <button
-            className="mb-5 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mb-4 w-full justify-start gap-1.5 px-2 text-muted-foreground"
             onClick={onBack}
           >
             <ArrowLeft size={14} />
             <span>{t("settingsX.page.back")}</span>
-          </button>
-          {MODULE_GROUPS.map((group) => (
+          </Button>
+
+          <div className="relative mb-3">
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              ref={searchRef}
+              value={query}
+              type="search"
+              className="h-8 pl-8 pr-8 text-xs"
+              placeholder={t("settingsX.page.searchPlaceholder")}
+              aria-label={t("settingsX.page.searchPlaceholder")}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            {query ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0.5 top-0.5 size-7 text-muted-foreground"
+                aria-label={t("settingsX.page.clearSearch")}
+                onClick={() => {
+                  setQuery("");
+                  searchRef.current?.focus();
+                }}
+              >
+                <X className="size-3.5" aria-hidden />
+              </Button>
+            ) : null}
+          </div>
+
+          {query ? (
+            <p className="mb-2 px-2 text-[11px] text-muted-foreground">
+              {t("settingsX.page.searchResults", { count: resultCount })}
+            </p>
+          ) : null}
+
+          {filteredGroups.map((group) => (
             <div key={group.title || "_top"} className="mb-3">
               {group.title && (
                 <div className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -204,60 +314,105 @@ export function SettingsPage({
                 </div>
               )}
               {group.modules.map(({ id, label, Icon }) => (
-                <button
+                <Button
                   key={id}
-                  className={
-                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors " +
-                    (active === id
-                      ? "bg-accent text-foreground"
-                      : "text-muted-foreground hover:bg-accent/60")
-                  }
-                  onClick={() => setActive(id)}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "mb-0.5 h-8 w-full justify-start gap-2 px-2 text-sm font-normal",
+                    active === id
+                      ? "bg-accent font-medium text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                  aria-current={active === id ? "page" : undefined}
+                  onClick={() => selectModule(id)}
                 >
                   <Icon size={13} />
-                  <span>{label}</span>
-                </button>
+                  <span className="truncate">{label}</span>
+                </Button>
               ))}
             </div>
           ))}
+
+          {filteredGroups.length === 0 ? (
+            <div className="rounded-md border border-dashed border-border p-3 text-center">
+              <p className="text-xs text-muted-foreground">{t("settingsX.page.noSearchResults")}</p>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="mt-1 h-auto px-0"
+                onClick={() => setQuery("")}
+              >
+                {t("settingsX.page.clearSearch")}
+              </Button>
+            </div>
+          ) : null}
         </nav>
 
-        <main className="min-w-0 flex-1 overflow-y-auto px-8 pb-6 pt-8 max-[720px]:px-4 max-[720px]:pt-4">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold tracking-tight">
-              {MODULES.find((m) => m.id === active)?.label}
-            </h2>
-          </div>
+        <div className="hidden shrink-0 border-b border-border bg-card px-3 py-2 max-[720px]:flex max-[720px]:items-center max-[720px]:gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            aria-label={t("settingsX.page.back")}
+            onClick={onBack}
+          >
+            <ArrowLeft className="size-4" aria-hidden />
+          </Button>
+          <SimpleSelect<ModuleId>
+            value={active}
+            options={mobileOptions}
+            ariaLabel={t("settingsX.page.settingsNav")}
+            className="min-w-0 flex-1"
+            onChange={selectModule}
+          />
+        </div>
 
-          <div className="flex flex-col gap-6">
-            {active === "general" && (
-              <GeneralSection scope={scope} activeProjectPath={activeProjectPath} />
-            )}
-            {active === "appearance" && <AppearanceSection />}
-            {active === "config" && (
-              <>
-                <TextConnectionsPanel scope={scope} activeProjectPath={activeProjectPath} />
-                <ImageSettingsSection scope={scope} activeProjectPath={activeProjectPath} />
-              </>
-            )}
-            {active === "model-catalog" && (
-              <ModelCatalogPanel scope={scope} activeProjectPath={activeProjectPath} />
-            )}
-            {active === "personalization" && (
-              <>
-                <InstructionFilesSection scope={scope} activeProjectPath={activeProjectPath} />
-                <ResponsePrefsSection scope={scope} activeProjectPath={activeProjectPath} />
-                <PersonalizationSection scope={scope} activeProjectPath={activeProjectPath} />
-              </>
-            )}
-            {active === "shortcuts" && <ShortcutsSection />}
-            {active === "capabilities" && (
-              <>
+        <main className="min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-8 max-[720px]:px-4 max-[720px]:pt-5">
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-6 border-b border-border pb-4">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
+                {activeGroup ? (
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {activeGroup}
+                  </span>
+                ) : null}
+                <Badge variant="secondary">{t("settingsX.page.globalScope")}</Badge>
+              </div>
+              <h1 className="text-xl font-semibold tracking-tight">{activeModule?.label}</h1>
+              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                {t("settingsX.page.globalScopeHint")}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              {active === "general" && (
+                <GeneralSection scope={scope} activeProjectPath={activeProjectPath} />
+              )}
+              {active === "appearance" && <AppearanceSection />}
+              {active === "config" && (
+                <>
+                  <TextConnectionsPanel scope={scope} activeProjectPath={activeProjectPath} />
+                  <ImageSettingsSection scope={scope} activeProjectPath={activeProjectPath} />
+                </>
+              )}
+              {active === "model-catalog" && (
+                <ModelCatalogPanel scope={scope} activeProjectPath={activeProjectPath} />
+              )}
+              {active === "personalization" && (
+                <>
+                  <InstructionFilesSection scope={scope} activeProjectPath={activeProjectPath} />
+                  <ResponsePrefsSection scope={scope} activeProjectPath={activeProjectPath} />
+                  <PersonalizationSection scope={scope} activeProjectPath={activeProjectPath} />
+                </>
+              )}
+              {active === "shortcuts" && <ShortcutsSection />}
+              {active === "capabilities" && (
                 <CapabilitiesOverviewSection
                   projects={projects}
                   onNavigateToKind={(kind) => {
-                    // Jump from a capability row to its dedicated detail tab.
-                    // builtin has no detail tab → stay on 能力总览 (no-op).
                     const target: Record<string, ModuleId> = {
                       mcp: "mcp",
                       skill: "plugins-skills",
@@ -265,60 +420,43 @@ export function SettingsPage({
                       agent: "agents",
                     };
                     const next = target[kind];
-                    if (next) setActive(next);
+                    if (next) selectModule(next);
                   }}
                 />
-              </>
-            )}
-            {active === "mcp" && <McpSection scope={scope} activeProjectPath={activeProjectPath} />}
-            {active === "hooks" && (
-              // Hooks live at two levels (global user + per project; core
-              // concatenates both) — the section shows a "全局" row plus the
-              // project list, then drills into the chosen level's hooks.
-              <HooksSection projects={projects} />
-            )}
-            {active === "connections" && (
-              <ConnectionsSection scope={scope} activeProjectPath={activeProjectPath} />
-            )}
-            {active === "git" && <GitSection />}
-            {active === "environment" && (
-              // Local environment is project-scoped (setup/cleanup/env).
-              <EnvironmentSection projects={projects} />
-            )}
-            {active === "sandbox" && (
-              // Sandbox (isolation + network) is its own tab — global default
-              // plus per-project overrides via the drill-in picker.
-              <SandboxSection projects={projects} />
-            )}
-            {active === "conversation" && <ConversationSettingsSection />}
-            {active === "context" && <ContextSettingsSection />}
-            {active === "mobile-remote" && <MobileRemoteSection />}
-            {active === "plugins-skills" && (
-              <ExtensionsPage activeProjectPath={activeProjectPath} showDiscover={false} />
-            )}
-            {active === "agents" && (
-              // Sub-agents are project-scoped like 钩子/记忆: pick 全局 or a
-              // project first, then edit. Project mode flips a tri-state
-              // capabilityOverrides.agents overlay.
-              <AgentsSection projects={projects} />
-            )}
-            {active === "memory" && (
-              // Memory: pick a store first (global, or a project), then view
-              // that store's entries. Reuses the sidebar `projects` list.
-              <MemorySection
-                scope={scope}
-                activeProjectPath={activeProjectPath}
-                projects={projects}
-              />
-            )}
-            {active === "archived" && (
-              <ArchivedConversationsSection
-                projects={projects}
-                sessionIndices={sessionIndices}
-                onRestore={onRestoreArchivedSession}
-                onDelete={onDeleteArchivedSession}
-              />
-            )}
+              )}
+              {active === "mcp" && (
+                <McpSection scope={scope} activeProjectPath={activeProjectPath} />
+              )}
+              {active === "hooks" && <HooksSection projects={projects} />}
+              {active === "connections" && (
+                <ConnectionsSection scope={scope} activeProjectPath={activeProjectPath} />
+              )}
+              {active === "git" && <GitSection />}
+              {active === "environment" && <EnvironmentSection projects={projects} />}
+              {active === "sandbox" && <SandboxSection projects={projects} />}
+              {active === "conversation" && <ConversationSettingsSection />}
+              {active === "context" && <ContextSettingsSection />}
+              {active === "mobile-remote" && <MobileRemoteSection />}
+              {active === "plugins-skills" && (
+                <ExtensionsPage activeProjectPath={activeProjectPath} showDiscover={false} />
+              )}
+              {active === "agents" && <AgentsSection projects={projects} />}
+              {active === "memory" && (
+                <MemorySection
+                  scope={scope}
+                  activeProjectPath={activeProjectPath}
+                  projects={projects}
+                />
+              )}
+              {active === "archived" && (
+                <ArchivedConversationsSection
+                  projects={projects}
+                  sessionIndices={sessionIndices}
+                  onRestore={onRestoreArchivedSession}
+                  onDelete={onDeleteArchivedSession}
+                />
+              )}
+            </div>
           </div>
         </main>
       </div>

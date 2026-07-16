@@ -45,6 +45,9 @@ import { useToast } from "./ui/ToastProvider";
 import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 import { pageAttribution } from "./browser/markerEcho";
 import { useT } from "./i18n/I18nProvider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Props {
   /** Quick chats reuse the normal composer but omit durable-session controls. */
@@ -1254,27 +1257,31 @@ export function ChatView({
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   {busy && onGuideQueuedInput && (
-                    <button
+                    <Button
                       type="button"
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 gap-1 rounded-full px-2 text-xs text-muted-foreground"
                       aria-label={t("chat.queue.guideAllAria")}
                       title={t("chat.queue.guideAllTitle")}
                       onClick={onGuideQueuedInput}
                     >
                       <CornerDownRight size={12} />
                       <span>{t("chat.queue.guideAll")}</span>
-                    </button>
+                    </Button>
                   )}
                   {onClearQueuedInput && (
-                    <button
+                    <Button
                       type="button"
-                      className="rounded-full p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      variant="ghost"
+                      size="icon"
+                      className="size-6 rounded-full text-muted-foreground"
                       aria-label={t("chat.queue.clearAria")}
                       title={t("chat.queue.clearTitle")}
                       onClick={onClearQueuedInput}
                     >
                       <Trash2 size={14} />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -1289,16 +1296,18 @@ export function ChatView({
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
                       {onRemoveQueuedInput && (
-                        <button
+                        <Button
                           type="button"
-                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground hover:bg-background hover:text-foreground"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 gap-1 rounded-full px-2 text-xs text-muted-foreground hover:bg-background"
                           aria-label={t("chat.queue.removeItemAria", { index: i + 1 })}
                           title={t("chat.queue.removeItemTitle")}
                           onClick={() => onRemoveQueuedInput(i)}
                         >
                           <Trash2 size={12} />
                           <span>{t("chat.queue.removeItem")}</span>
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -1351,14 +1360,16 @@ export function ChatView({
                     {a.comment && (
                       <span className="truncate text-muted-foreground">· {a.comment}</span>
                     )}
-                    <button
+                    <Button
                       type="button"
-                      className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-background"
+                      variant="ghost"
+                      size="icon"
+                      className="size-5 shrink-0 rounded-full text-muted-foreground hover:bg-background"
                       aria-label={t("chat.anchors.removeAria")}
                       onClick={() => onRemoveAnchor?.(a.id)}
                     >
                       <X size={11} />
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -1398,14 +1409,16 @@ export function ChatView({
                         {formatBytes(a.size)}
                       </span>
                     </div>
-                    <button
+                    <Button
                       type="button"
-                      className="absolute right-1 top-1 rounded-full bg-background/80 p-0.5 text-muted-foreground hover:text-foreground"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1 size-5 rounded-full bg-background/80 text-muted-foreground"
                       aria-label={t("chat.composer.removeImageAria", { name: a.name })}
                       onClick={() => removeAttachment(a.id)}
                     >
                       <X size={11} />
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -1419,16 +1432,18 @@ export function ChatView({
                     ? t("chat.composer.visionUnsupportedWithModel", { label: activeModel.label })
                     : t("chat.composer.visionUnsupportedUnknown")}
                 </span>
-                <button
+                <Button
                   type="button"
-                  className="self-start underline"
+                  variant="link"
+                  size="sm"
+                  className="h-auto self-start p-0 text-status-warn"
                   onClick={() => {
                     setAttachments([]);
                     setAttachmentError(null);
                   }}
                 >
                   {t("chat.composer.removeAllImages")}
-                </button>
+                </Button>
               </div>
             )}
             {attachmentError && (
@@ -1494,7 +1509,7 @@ export function ChatView({
                   )}
                 </div>
               )}
-              <textarea
+              <Textarea
                 ref={textareaRef}
                 value={draft}
                 onChange={(e) => {
@@ -1537,16 +1552,16 @@ export function ChatView({
                 placeholder={placeholder}
                 disabled={inputDisabled}
                 rows={1}
-                className="max-h-[200px] min-h-[36px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
+                className="max-h-[200px] min-h-[36px] w-full resize-none rounded-none border-0 bg-transparent px-2 py-1.5 text-sm leading-relaxed shadow-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:opacity-60"
               />
             </div>
 
-            <input
+            <Input
               ref={fileInputRef}
               type="file"
               accept="image/png,image/jpeg,image/webp,image/gif"
               multiple
-              style={{ display: "none" }}
+              className="hidden"
               onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
                 if (e.target) e.target.value = "";
@@ -1574,9 +1589,11 @@ export function ChatView({
               <div className="flex min-w-0 items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-1.5">
                   {variant !== "pet" && (
-                    <button
+                    <Button
                       type="button"
-                      className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 text-muted-foreground"
                       aria-label={t("chat.composer.addImage")}
                       title={
                         activeSupportsVision
@@ -1587,7 +1604,7 @@ export function ChatView({
                       disabled={controlsDisabled}
                     >
                       <Paperclip size={14} />
-                    </button>
+                    </Button>
                   )}
                   {variant !== "pet" && (
                     <PermissionPill
@@ -1629,10 +1646,12 @@ export function ChatView({
                   />
                   {/* 语音输入(听写):点击录音 → 再点停止 → 转写填进输入框(不自动发)。
                     idle=Mic / recording=红色 Square 脉冲 / transcribing=spinner。 */}
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     className={cn(
-                      "inline-flex shrink-0 items-center rounded-md p-1.5 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50",
+                      "size-8 shrink-0 disabled:cursor-not-allowed",
                       voiceState === "recording"
                         ? "border border-status-err/60 text-status-err"
                         : "text-muted-foreground hover:text-foreground",
@@ -1669,11 +1688,13 @@ export function ChatView({
                     ) : (
                       <Mic size={14} />
                     )}
-                  </button>
+                  </Button>
                   {busy && draft.trim() && onForceSend && (
-                    <button
+                    <Button
                       type="button"
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shrink-0 gap-1 rounded-full px-2.5 text-xs text-muted-foreground"
                       onClick={() => {
                         if (attachments.some((img) => !img.path)) {
                           setAttachmentError(t("chat.attachment.missingPath"));
@@ -1704,31 +1725,37 @@ export function ChatView({
                     >
                       <CornerDownRight size={13} />
                       {t("chat.composer.guide")}
-                    </button>
+                    </Button>
                   )}
                   {busy && (
-                    <button
+                    <Button
                       type="button"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
                       onClick={onStop}
                       aria-label={t("chat.composer.stop")}
+                      title={t("chat.composer.stop")}
                     >
                       <Square size={14} fill="currentColor" />
-                    </button>
+                    </Button>
                   )}
                   {!busy && !compacting && (
-                    <button
+                    <Button
                       type="button"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50 disabled:opacity-50"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50"
                       onClick={submit}
                       disabled={
                         (!draft.trim() && attachments.length === 0) ||
                         (attachments.length > 0 && !activeSupportsVision)
                       }
                       aria-label={t("chat.composer.send")}
+                      title={t("chat.composer.sendTitle")}
                     >
                       <ArrowUp size={16} />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

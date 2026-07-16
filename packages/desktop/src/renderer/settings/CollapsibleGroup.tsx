@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   title: string;
@@ -21,12 +22,13 @@ export function CollapsibleGroup({ title, subtitle, badge, defaultOpen = true, c
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
-      <button
+      <Button
         type="button"
+        variant="ghost"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex w-full select-none items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-accent/50",
+          "h-auto w-full select-none justify-between gap-3 rounded-none px-3 py-2.5 text-left hover:bg-accent/50",
           // No stray focus ring on mouse click; only a subtle inset ring on
           // keyboard focus (the orange browser-default outline looked broken).
           "outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset",
@@ -45,7 +47,7 @@ export function CollapsibleGroup({ title, subtitle, badge, defaultOpen = true, c
             className={cn("text-muted-foreground transition-transform", open && "rotate-90")}
           />
         </span>
-      </button>
+      </Button>
       {open && <div className="p-3">{children}</div>}
     </div>
   );

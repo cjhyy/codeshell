@@ -18,6 +18,7 @@ import { loadUILanguage, saveUILanguage, languageLabel, type UILanguage } from "
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n";
 import type { TranslationKey } from "../i18n";
+import { Button } from "@/components/ui/button";
 
 const LANGUAGES: Array<{ id: UILanguage; descriptionKey: TranslationKey }> = [
   { id: "zh", descriptionKey: "settings.general.langZhDescription" },
@@ -43,17 +44,19 @@ function LanguageBlock() {
       </p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {LANGUAGES.map((item) => (
-          <button
+          <Button
             key={item.id}
+            type="button"
+            variant="outline"
             className={cn(
-              "flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent",
+              "h-auto min-h-20 flex-col items-start gap-1 whitespace-normal p-3 text-left",
               lang === item.id && "border-primary bg-primary/10 ring-1 ring-primary/30",
             )}
             onClick={() => choose(item.id)}
           >
             <span className="text-sm font-medium text-foreground">{languageLabel(item.id)}</span>
             <span className="text-xs text-muted-foreground">{t(item.descriptionKey)}</span>
-          </button>
+          </Button>
         ))}
       </div>
     </section>

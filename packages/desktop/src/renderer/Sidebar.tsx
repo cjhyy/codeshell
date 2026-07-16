@@ -30,6 +30,8 @@ import type { SessionStatus } from "./sessionStatus";
 import { useT } from "./i18n";
 import { PetSidebarEntry } from "./pet/PetSidebarEntry";
 import { compactSidebarSessions } from "./sidebarSessionVisibility";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   projects: TrackedProject[];
@@ -297,20 +299,38 @@ export function Sidebar({
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t("sidebar.projects")}
           </span>
-          <button
+          <Button
             type="button"
-            className="text-muted-foreground hover:text-foreground"
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground"
             onClick={onAddProject}
             aria-label={t("sidebar.addProject")}
             title={t("sidebar.addProject")}
           >
             <Plus size={16} strokeWidth={2.25} />
-          </button>
+          </Button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2">
           {orderedProjects.length === 0 && noRepoSessions.length === 0 && (
-            <div className="px-2 py-3 text-xs text-muted-foreground">{t("sidebar.emptyHint")}</div>
+            <div className="mx-1 rounded-lg border border-dashed border-border px-3 py-4 text-center">
+              <FolderOpen className="mx-auto size-5 text-muted-foreground" aria-hidden />
+              <p className="mt-2 text-xs font-medium text-foreground">{t("sidebar.emptyTitle")}</p>
+              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                {t("sidebar.emptyHint")}
+              </p>
+              <div className="mt-3 flex flex-col gap-1.5">
+                <Button type="button" size="sm" variant="outline" onClick={onAddProject}>
+                  <Plus className="size-3.5" aria-hidden />
+                  {t("sidebar.addProject")}
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={onNewConversation}>
+                  <MessageSquare className="size-3.5" aria-hidden />
+                  {t("sidebar.emptyNewChat")}
+                </Button>
+              </div>
+            </div>
           )}
           {orderedProjects.map((project) => (
             <ProjectGroup
@@ -365,9 +385,11 @@ export function Sidebar({
           )}
 
           {(sessionHistoryLoading || hasMoreSessionHistory) && (
-            <button
+            <Button
               type="button"
-              className="my-2 flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground disabled:cursor-wait disabled:opacity-60"
+              variant="ghost"
+              size="sm"
+              className="my-2 w-full gap-1.5 text-muted-foreground disabled:cursor-wait"
               onClick={onLoadMoreSessionHistory}
               disabled={sessionHistoryLoading}
             >
@@ -377,7 +399,7 @@ export function Sidebar({
                   ? "sidebar.loadingSessionHistory"
                   : "sidebar.loadSessionHistory",
               )}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -426,17 +448,21 @@ function SidebarItem({
   badge?: number;
 }) {
   return (
-    <button
-      className={
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors " +
-        (active ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60")
-      }
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className={cn(
+        "h-8 w-full justify-start gap-2 px-2 text-sm font-normal",
+        active ? "bg-accent font-medium text-foreground" : "text-muted-foreground",
+      )}
+      aria-current={active ? "page" : undefined}
       onClick={onClick}
     >
       <Icon size={14} />
       <span className="flex-1 text-left">{label}</span>
       {badge !== undefined && badge > 0 && <Badge count={badge} />}
-    </button>
+    </Button>
   );
 }
 
@@ -492,30 +518,41 @@ function ProjectGroup({
   return (
     <div className="mb-1">
       <div
-        className={
-          "group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm " +
-          (isActiveProject ? "bg-accent" : "hover:bg-accent/60")
-        }
-        onClick={() => {
-          onSelectProject();
-          onToggle();
-        }}
+        className={cn(
+          "group flex items-center gap-1 rounded-md px-1 text-sm",
+          isActiveProject ? "bg-accent" : "hover:bg-accent/60",
+        )}
         onContextMenu={onProjectContextMenu}
       >
-        {collapsed ? (
-          <Folder size={13} className="shrink-0 text-muted-foreground" />
-        ) : (
-          <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
-        )}
-        <span className="flex-1 truncate font-medium">{projectLabel(project)}</span>
-        {project.pinned && (
-          <span className="text-primary" title={t("sidebar.pinned")}>
-            ·
-          </span>
-        )}
-        <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
-          <button
-            className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 min-w-0 flex-1 justify-start gap-1.5 px-1 hover:bg-transparent"
+          aria-expanded={!collapsed}
+          onClick={() => {
+            onSelectProject();
+            onToggle();
+          }}
+        >
+          {collapsed ? (
+            <Folder size={13} className="shrink-0 text-muted-foreground" />
+          ) : (
+            <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
+          )}
+          <span className="flex-1 truncate text-left font-medium">{projectLabel(project)}</span>
+          {project.pinned && (
+            <span className="text-primary" title={t("sidebar.pinned")}>
+              ·
+            </span>
+          )}
+        </Button>
+        <span className="flex items-center gap-0.5 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6 text-muted-foreground hover:bg-background"
             aria-label={t("common.more")}
             title={t("common.more")}
             onClick={(e) => {
@@ -525,9 +562,12 @@ function ProjectGroup({
             }}
           >
             <MoreHorizontal size={13} />
-          </button>
-          <button
-            className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6 text-muted-foreground hover:bg-background"
             aria-label={t("sidebar.newChatIn", { name: projectLabel(project) })}
             title={t("sidebar.newChatIn", { name: projectLabel(project) })}
             onClick={(e) => {
@@ -536,7 +576,7 @@ function ProjectGroup({
             }}
           >
             <PenSquare size={13} />
-          </button>
+          </Button>
         </span>
       </div>
 
@@ -558,12 +598,17 @@ function ProjectGroup({
                 />
               ))}
               {hiddenLiveCount > 0 && !showMore && (
-                <li
-                  className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-accent/60"
-                  onClick={() => setShowMore(true)}
-                >
-                  <span>{t("common.expand")}</span>
-                  <span className="text-muted-foreground">{hiddenLiveCount}</span>
+                <li>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-full justify-between px-2 text-xs text-primary"
+                    onClick={() => setShowMore(true)}
+                  >
+                    <span>{t("common.expand")}</span>
+                    <span className="text-muted-foreground">{hiddenLiveCount}</span>
+                  </Button>
                 </li>
               )}
             </ul>
@@ -639,7 +684,7 @@ function SessionRow({
   onContextMenu: (e: React.MouseEvent) => void;
   onArchive?: () => void;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [confirming, setConfirming] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -667,12 +712,11 @@ function SessionRow({
 
   return (
     <li
-      className={
-        "group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-sm " +
-        (isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60") +
-        (s.archived ? " opacity-60" : "")
-      }
-      onClick={onClick}
+      className={cn(
+        "group flex items-center gap-1 rounded-md px-1 text-sm",
+        isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60",
+        s.archived && "opacity-60",
+      )}
       onContextMenu={onContextMenu}
       onMouseLeave={() => {
         if (confirming) {
@@ -682,41 +726,53 @@ function SessionRow({
       }}
       title={s.title}
     >
-      {s.source === "automation" && (
-        <Clock
-          className="h-3 w-3 shrink-0 text-muted-foreground"
-          aria-label={t("sidebar.automationLabel")}
-        />
-      )}
-      <span className="flex-1 truncate">{s.title}</span>
-      {status === "running" ? (
-        <Loader2
-          className="h-3 w-3 shrink-0 animate-spin text-status-running"
-          aria-label={t("sidebar.sessionRunning")}
-        />
-      ) : status === "asking" ? (
-        <span
-          className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
-          aria-label={t("sidebar.sessionAsking")}
-          role="img"
-        />
-      ) : status === "unread" ? (
-        <span
-          className="h-2 w-2 shrink-0 rounded-full bg-primary"
-          aria-label={t("sidebar.sessionUnread")}
-          role="img"
-        />
-      ) : null}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 min-w-0 flex-1 justify-start gap-1.5 px-1 font-normal hover:bg-transparent"
+        aria-current={isActive ? "page" : undefined}
+        onClick={onClick}
+      >
+        {s.source === "automation" && (
+          <Clock
+            className="h-3 w-3 shrink-0 text-muted-foreground"
+            aria-label={t("sidebar.automationLabel")}
+          />
+        )}
+        <span className="flex-1 truncate text-left">{s.title}</span>
+        {status === "running" ? (
+          <Loader2
+            className="h-3 w-3 shrink-0 animate-spin text-status-running"
+            aria-label={t("sidebar.sessionRunning")}
+          />
+        ) : status === "asking" ? (
+          <span
+            className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
+            aria-label={t("sidebar.sessionAsking")}
+            role="img"
+          />
+        ) : status === "unread" ? (
+          <span
+            className="h-2 w-2 shrink-0 rounded-full bg-primary"
+            aria-label={t("sidebar.sessionUnread")}
+            role="img"
+          />
+        ) : null}
+      </Button>
       <span className="relative flex shrink-0 items-center">
         {confirming ? (
-          <button
-            className="rounded px-1.5 text-xs text-status-err hover:bg-background"
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-1.5 text-xs text-status-err hover:bg-background"
             onClick={fireArchive}
             aria-label={t("sidebar.confirmArchive")}
             title={t("sidebar.confirmArchive")}
           >
             {t("common.confirm")}
-          </button>
+          </Button>
         ) : (
           <>
             {/* Shortcut / relative-time badge sits in normal flow and defines
@@ -727,20 +783,23 @@ function SessionRow({
               </kbd>
             ) : (
               <span className="text-[10px] text-muted-foreground">
-                {formatRelative(s.updatedAt)}
+                {formatRelative(s.updatedAt, lang)}
               </span>
             )}
             {/* Archive action overlays the badge on hover (absolute, right-
                 anchored) so it covers the shortcut instead of pushing it. */}
             {onArchive && (
-              <button
-                className="absolute right-0 rounded bg-accent p-0.5 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100"
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 size-6 bg-accent text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
                 onClick={armConfirm}
                 aria-label={t("common.archive")}
                 title={t("common.archive")}
               >
                 <Archive size={12} />
-              </button>
+              </Button>
             )}
           </>
         )}
@@ -749,18 +808,20 @@ function SessionRow({
   );
 }
 
-function formatRelative(ts: number): string {
-  const delta = Date.now() - ts;
+export function formatRelative(ts: number, lang: "zh" | "en", now = Date.now()): string {
+  const delta = Math.max(0, now - ts);
   const sec = Math.floor(delta / 1000);
-  if (sec < 60) return `${sec}秒`;
+  const locale = lang === "zh" ? "zh-CN" : "en";
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "narrow" });
+  if (sec < 60) return formatter.format(-sec, "second");
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}分`;
+  if (min < 60) return formatter.format(-min, "minute");
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}小时`;
+  if (hr < 24) return formatter.format(-hr, "hour");
   const day = Math.floor(hr / 24);
-  if (day < 30) return `${day}天`;
+  if (day < 30) return formatter.format(-day, "day");
   const month = Math.floor(day / 30);
-  if (month < 12) return `${month}月`;
+  if (month < 12) return formatter.format(-month, "month");
   const year = Math.floor(day / 365);
-  return `${year}年`;
+  return formatter.format(-year, "year");
 }

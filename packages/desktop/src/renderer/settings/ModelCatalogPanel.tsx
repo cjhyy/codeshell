@@ -203,10 +203,11 @@ export function ModelCatalogPanel(_props: Props) {
                   : t("settingsX.catalog.originUser");
             return (
               <ConnCard key={entry.id} className="gap-0 p-0">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={() => toggle(entry)}
-                  className="flex w-full min-w-0 items-center gap-2 px-4 py-3 text-left"
+                  className="h-auto w-full min-w-0 justify-start gap-2 rounded-none px-4 py-3 text-left"
                 >
                   {isOpen ? (
                     <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
@@ -222,7 +223,7 @@ export function ModelCatalogPanel(_props: Props) {
                   <Badge variant={origin === "builtin" ? "outline" : "accent"} className="ml-auto">
                     {originLabel}
                   </Badge>
-                </button>
+                </Button>
 
                 {isOpen && draft && (
                   <div className="flex flex-col gap-2.5 border-t border-border px-4 pb-4 pt-3">

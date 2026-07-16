@@ -7,6 +7,7 @@ import {
 } from "../chat/PermissionPill";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
+import { Button } from "@/components/ui/button";
 
 const MODES: PermissionMode[] = ["plan", "default", "accept_edits", "bypass"];
 
@@ -78,10 +79,12 @@ export function PermissionSection({ scope, activeProjectPath }: Props) {
       <p className="m-0 text-xs text-muted-foreground">{t("settingsX.permission.desc")}</p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {MODES.map((m) => (
-          <button
+          <Button
             key={m}
+            type="button"
+            variant="outline"
             className={cn(
-              "flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60",
+              "h-auto min-h-20 flex-col items-start gap-1 whitespace-normal p-3 text-left",
               mode === m && "border-primary bg-primary/10 ring-1 ring-primary/30",
             )}
             aria-pressed={mode === m}
@@ -90,7 +93,7 @@ export function PermissionSection({ scope, activeProjectPath }: Props) {
           >
             <span className="text-sm font-medium text-foreground">{MODE_LABELS[m]}</span>
             <span className="text-xs text-muted-foreground">{MODE_DESCRIPTIONS[m]}</span>
-          </button>
+          </Button>
         ))}
       </div>
     </section>

@@ -72,16 +72,6 @@ import {
 import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
 import { loadView, saveView, type ViewState } from "./view";
-import { ApprovalsView } from "./approvals/ApprovalsView";
-import { LogsView } from "./logs/LogsView";
-// Full-page Settings — driven by viewMode === 'settings_page'.
-import { SettingsPage } from "./settings/SettingsPage";
-import { ProjectConfigPage } from "./project-config/ProjectConfigPage";
-import { RunsView } from "./runs/RunsView";
-import { AutomationView } from "./automation/AutomationView";
-import { CustomizeView } from "./customize/CustomizeView";
-import { CredentialsPage } from "./credentials/CredentialsPage";
-import { DigitalHumansView } from "./digital-humans/DigitalHumansView";
 import type { DigitalHumanSelection } from "./digital-humans/types";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
@@ -94,7 +84,6 @@ import { copyContextPackageOverrides } from "./contextSelection";
 import type { ModelOption } from "./chat/ModelPill";
 import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
 import type { QuickChatSessionRef } from "./quickChatSession";
-import { replacePluginPanels } from "./panels/PanelRegistry";
 import { resolveAgentPanelHostRequest } from "./panels/AgentPanelHost";
 import {
   browserPartitionForBucket,
@@ -112,8 +101,44 @@ import { useSessionNavigation } from "./app/useSessionNavigation";
 import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
 import { usePanelBuckets } from "./app/usePanelBuckets";
-import { SessionPanelDock } from "./app/SessionPanelDock";
 import { AppMainView, AppShell } from "./app/AppShell";
+
+// Large, low-frequency pages stay off the chat startup path. Each route keeps
+// its own visible loading state through the Suspense boundaries below.
+const SettingsPage = React.lazy(() =>
+  import("./settings/SettingsPage").then((module) => ({ default: module.SettingsPage })),
+);
+const ProjectConfigPage = React.lazy(() =>
+  import("./project-config/ProjectConfigPage").then((module) => ({
+    default: module.ProjectConfigPage,
+  })),
+);
+const CredentialsPage = React.lazy(() =>
+  import("./credentials/CredentialsPage").then((module) => ({ default: module.CredentialsPage })),
+);
+const DigitalHumansView = React.lazy(() =>
+  import("./digital-humans/DigitalHumansView").then((module) => ({
+    default: module.DigitalHumansView,
+  })),
+);
+const ApprovalsView = React.lazy(() =>
+  import("./approvals/ApprovalsView").then((module) => ({ default: module.ApprovalsView })),
+);
+const LogsView = React.lazy(() =>
+  import("./logs/LogsView").then((module) => ({ default: module.LogsView })),
+);
+const RunsView = React.lazy(() =>
+  import("./runs/RunsView").then((module) => ({ default: module.RunsView })),
+);
+const AutomationView = React.lazy(() =>
+  import("./automation/AutomationView").then((module) => ({ default: module.AutomationView })),
+);
+const CustomizeView = React.lazy(() =>
+  import("./customize/CustomizeView").then((module) => ({ default: module.CustomizeView })),
+);
+const SessionPanelDock = React.lazy(() =>
+  import("./app/SessionPanelDock").then((module) => ({ default: module.SessionPanelDock })),
+);
 
 // Bucket key for sessions without a project — re-exported from transcripts.
 // We use NO_REPO_KEY everywhere instead of a local const so the renderer
@@ -121,6 +146,15 @@ import { AppMainView, AppShell } from "./app/AppShell";
 // imported from transcripts (the single source of truth) so App's map build
 // can't drift from Sidebar's row lookup.
 const GLOBAL_KEY = NO_REPO_KEY;
+
+function PageLoading({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-40 flex-1 items-center justify-center text-sm text-muted-foreground" role="status">
+      <span className="mr-2 size-3 animate-pulse rounded-full bg-primary/60" aria-hidden />
+      {label}
+    </div>
+  );
+}
 
 function App() {
   const toast = useToast();
@@ -410,6 +444,10 @@ function App() {
 
   useEffect(() => {
     let alive = true;
+    const applyPanels = async (panels: Awaited<ReturnType<typeof window.codeshell.listPluginPanels>>) => {
+      const { replacePluginPanels } = await import("./panels/PanelRegistry");
+      if (alive) replacePluginPanels(panels);
+    };
     const compatibilityApi = window.codeshell as typeof window.codeshell & {
       listPluginPanels?: typeof window.codeshell.listPluginPanels;
       onPluginPanelsChanged?: typeof window.codeshell.onPluginPanelsChanged;
@@ -417,16 +455,16 @@ function App() {
     const listPanels = compatibilityApi.listPluginPanels;
     const subscribePanels = compatibilityApi.onPluginPanelsChanged;
     if (!listPanels || !subscribePanels) {
-      replacePluginPanels([]);
+      void applyPanels([]);
       return;
     }
     const refresh = () => {
       void listPanels(activeProject?.path ?? "", lang)
         .then((panels) => {
-          if (alive) replacePluginPanels(panels);
+          void applyPanels(panels);
         })
         .catch(() => {
-          if (alive) replacePluginPanels([]);
+          void applyPanels([]);
         });
     };
     refresh();
@@ -1867,47 +1905,61 @@ function App() {
                   />
                 </PetPage>
               ) : view.viewMode === "approvals" ? (
-                <ApprovalsView
-                  queue={approvalQueue}
-                  history={approvalHistory}
-                  onDecide={decideEnvelope}
-                />
+                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+                  <ApprovalsView
+                    queue={approvalQueue}
+                    history={approvalHistory}
+                    onDecide={decideEnvelope}
+                  />
+                </React.Suspense>
               ) : view.viewMode === "logs" ? (
-                <LogsView />
+                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+                  <LogsView />
+                </React.Suspense>
               ) : view.viewMode === "customize" ? (
-                <CustomizeView activeProjectPath={activeProject?.path ?? null} />
+                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+                  <CustomizeView activeProjectPath={activeProject?.path ?? null} />
+                </React.Suspense>
               ) : view.viewMode === "digital_humans" ? (
-                <DigitalHumansView
-                  activeProjectPath={activeProject?.path ?? null}
-                  onUse={(selection) => {
-                    setPetDigitalHumanSelection(selection);
-                    openPetPage();
-                  }}
-                />
+                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+                  <DigitalHumansView
+                    activeProjectPath={activeProject?.path ?? null}
+                    onUse={(selection) => {
+                      setPetDigitalHumanSelection(selection);
+                      openPetPage();
+                    }}
+                  />
+                </React.Suspense>
               ) : view.viewMode === "credentials" ? (
-                <CredentialsPage
-                  activeProjectPath={activeProject?.path ?? null}
-                  activeBucket={activeSessionId !== null ? activeBucket : null}
-                />
+                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+                  <CredentialsPage
+                    activeProjectPath={activeProject?.path ?? null}
+                    activeBucket={activeSessionId !== null ? activeBucket : null}
+                  />
+                </React.Suspense>
               ) : view.viewMode === "runs" ? (
-                <RunsView initialRunId={runsInitialRunId} />
+                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+                  <RunsView initialRunId={runsInitialRunId} />
+                </React.Suspense>
               ) : view.viewMode === "automation" ? (
-                <AutomationView
-                  onCreateConversational={startConversationalAutomation}
-                  onViewRun={(runId) => {
-                    setRunsInitialRunId(runId);
-                    setViewMode("runs");
-                  }}
-                  onOpenRunSession={(run) => {
-                    void handleOpenAutomationRunSession(run);
-                  }}
-                  onOpenDiskSession={(session) => {
-                    void handleOpenAutomationDiskSession(session);
-                  }}
-                  onOpenSession={handleSelectSession}
-                  sessionIndices={sessionIndices}
-                  projects={projects}
-                />
+                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+                  <AutomationView
+                    onCreateConversational={startConversationalAutomation}
+                    onViewRun={(runId) => {
+                      setRunsInitialRunId(runId);
+                      setViewMode("runs");
+                    }}
+                    onOpenRunSession={(run) => {
+                      void handleOpenAutomationRunSession(run);
+                    }}
+                    onOpenDiskSession={(session) => {
+                      void handleOpenAutomationDiskSession(session);
+                    }}
+                    onOpenSession={handleSelectSession}
+                    sessionIndices={sessionIndices}
+                    projects={projects}
+                  />
+                </React.Suspense>
               ) : (
                 <>
                   <ChatView
@@ -2056,7 +2108,19 @@ function App() {
           is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
           We still gate on having tabs so an empty dock doesn't mount stray
           panel bodies before the user has opened anything. */}
-            <SessionPanelDock
+            {panelBuckets.length > 0 && (
+              <React.Suspense
+                fallback={
+                  <div
+                    className="flex shrink-0 items-center justify-center border-l border-border text-xs text-muted-foreground"
+                    style={{ width: panelWidth }}
+                    role="status"
+                  >
+                    {t("panels.common.loading")}
+                  </div>
+                }
+              >
+                <SessionPanelDock
               panelBuckets={panelBuckets}
               panelByBucket={panelByBucket}
               activeBucket={activeBucket}
@@ -2095,8 +2159,10 @@ function App() {
               sendQuickChat={sendQuickChat}
               stop={stop}
               handleAskUserAnswer={handleAskUserAnswer}
-              decideEnvelope={decideEnvelope}
-            />
+                  decideEnvelope={decideEnvelope}
+                />
+              </React.Suspense>
+            )}
           </div>
         </div>
 
@@ -2141,30 +2207,32 @@ function App() {
 
       {isSettingsPage && (
         <div className="absolute inset-0 z-50 overflow-hidden bg-background">
-          {view.viewMode === "settings_page" ? (
-            <SettingsPage
-              activeProjectPath={activeProject?.path ?? null}
-              projects={projects}
-              sessionIndices={sessionIndices}
-              onRestoreArchivedSession={(projectId, sessionId) => {
-                const next = archiveSession(projectId, sessionId, false);
-                setSessionIndices((prev) => ({
-                  ...prev,
-                  [projectBucketSegmentFor(projectId)]: next,
-                }));
-              }}
-              onDeleteArchivedSession={handleDeleteSession}
-              isMac={isMac}
-              isFullscreen={isFullscreen}
-              onBack={() => setViewMode("chat")}
-            />
-          ) : activeProject ? (
-            <ProjectConfigPage
-              cwd={activeProject.path}
-              project={activeProject}
-              onBack={() => setViewMode("chat")}
-            />
-          ) : null}
+          <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+            {view.viewMode === "settings_page" ? (
+              <SettingsPage
+                activeProjectPath={activeProject?.path ?? null}
+                projects={projects}
+                sessionIndices={sessionIndices}
+                onRestoreArchivedSession={(projectId, sessionId) => {
+                  const next = archiveSession(projectId, sessionId, false);
+                  setSessionIndices((prev) => ({
+                    ...prev,
+                    [projectBucketSegmentFor(projectId)]: next,
+                  }));
+                }}
+                onDeleteArchivedSession={handleDeleteSession}
+                isMac={isMac}
+                isFullscreen={isFullscreen}
+                onBack={() => setViewMode("chat")}
+              />
+            ) : activeProject ? (
+              <ProjectConfigPage
+                cwd={activeProject.path}
+                project={activeProject}
+                onBack={() => setViewMode("chat")}
+              />
+            ) : null}
+          </React.Suspense>
         </div>
       )}
     </AppShell>

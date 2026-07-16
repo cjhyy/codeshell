@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
@@ -79,13 +87,20 @@ export function TrustGate({ projectPath, onDecide }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
-      <div className="w-full max-w-lg rounded-md border bg-popover p-5 text-popover-foreground shadow-2xl">
-        <h2 className="mb-2 text-lg font-semibold">{t("auto.trust.title")}</h2>
+    <Dialog open onOpenChange={() => undefined}>
+      <DialogContent
+        className="max-w-lg"
+        showClose={false}
+        onEscapeKeyDown={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.preventDefault()}
+      >
+        <DialogHeader>
+          <DialogTitle>{t("auto.trust.title")}</DialogTitle>
+          <DialogDescription className="leading-relaxed">{t("auto.trust.body")}</DialogDescription>
+        </DialogHeader>
         <div className="mb-3 break-all rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
           {projectPath}
         </div>
-        <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{t("auto.trust.body")}</p>
         {risks &&
           (riskLines.length > 0 ? (
             <div className="mb-4 rounded-md border border-status-warn/40 bg-status-warn/10 px-3 py-2">
@@ -103,15 +118,15 @@ export function TrustGate({ projectPath, onDecide }: Props) {
           ) : (
             <p className="mb-4 text-xs text-muted-foreground">{t("auto.trust.risksNone")}</p>
           ))}
-        <div className="flex justify-end gap-2">
+        <DialogFooter>
           <Button variant="default" disabled={pending} onClick={() => void decide("untrusted")}>
             {t("auto.trust.viewOnly")}
           </Button>
           <Button variant="solid" disabled={pending} onClick={() => void decide("trusted")}>
             {t("auto.trust.trustContinue")}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

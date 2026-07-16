@@ -31,6 +31,7 @@ export const chat = {
         guideAria: "引导",
         stop: "停止",
         send: "发送",
+        sendTitle: "发送（Enter）",
         runningAgents: "后台 {count} 个子代理运行中…",
         compacting: "正在压缩上下文…",
         cachedHint: "已排队 {count} 条，将在下一步插入当前轮",
@@ -260,6 +261,7 @@ export const chat = {
         guideAria: "Guide",
         stop: "Stop",
         send: "Send",
+        sendTitle: "Send (Enter)",
         runningAgents: "{count} sub-agent(s) running in the background…",
         compacting: "Compacting context…",
         cachedHint:

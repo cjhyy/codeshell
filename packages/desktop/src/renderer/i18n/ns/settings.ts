@@ -78,6 +78,7 @@ export const settingsNs = {
         savedAt: "已保存 · {time}",
       },
       page: {
+        settings: "设置",
         general: "常规",
         appearance: "外观",
         config: "配置",
@@ -101,6 +102,14 @@ export const settingsNs = {
         memory: "记忆",
         archived: "已归档对话",
         back: "返回应用",
+        settingsNav: "设置导航",
+        searchPlaceholder: "搜索设置…",
+        clearSearch: "清除搜索",
+        searchResults: "找到 {count} 项设置",
+        noSearchResults: "没有匹配的设置",
+        globalScope: "全局",
+        globalScopeHint:
+          "这里的默认设置对所有项目生效；需要覆盖单个项目时，请打开对应项目的项目配置。",
       },
       capOverview: {
         groupMcp: "MCP 服务器",
@@ -911,6 +920,7 @@ export const settingsNs = {
         savedAt: "Saved · {time}",
       },
       page: {
+        settings: "Settings",
         general: "General",
         appearance: "Appearance",
         config: "Config",
@@ -934,6 +944,14 @@ export const settingsNs = {
         memory: "Memory",
         archived: "Archived conversations",
         back: "Back to app",
+        settingsNav: "Settings navigation",
+        searchPlaceholder: "Search settings…",
+        clearSearch: "Clear search",
+        searchResults: "{count} settings found",
+        noSearchResults: "No matching settings",
+        globalScope: "Global",
+        globalScopeHint:
+          "These defaults apply to every project. Open a project's settings when you need a project-specific override.",
       },
       capOverview: {
         groupMcp: "MCP servers",

@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, Zap, Image } from "lucide-react";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 import { useT } from "../i18n/I18nProvider";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * One row in the model dropdown.
@@ -45,8 +47,18 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
     const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        anchorRef.current?.focus();
+      }
+    };
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open]);
 
   const active = options.find((o) => o.key === activeKey) ?? null;
@@ -54,14 +66,18 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
 
   return (
     <div className="relative" ref={ref}>
-      <button
+      <Button
         ref={anchorRef}
         type="button"
+        variant="outline"
+        size="sm"
         data-active-model={activeKey ?? ""}
-        className="cs-control inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-foreground disabled:opacity-50"
+        className="cs-control min-h-7 shrink-0 gap-1.5 px-2 py-1 text-xs text-foreground"
         disabled={disabled}
         aria-label={t("chat.model.currentLabel", { label })}
         title={t("chat.model.currentLabel", { label })}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
         <Zap size={12} className="shrink-0" aria-hidden="true" />
@@ -73,12 +89,14 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
           className="shrink-0 opacity-60 @max-[520px]/composer-controls:hidden"
           aria-hidden="true"
         />
-      </button>
+      </Button>
       {open && (
         <ul
           ref={popoverRef}
           style={popoverStyle}
           className="cs-popup-surface max-h-[min(20rem,calc(100vh-20px))] w-72 overflow-y-auto rounded-md p-1"
+          role="listbox"
+          aria-label={t("chat.model.select")}
         >
           {options.length === 0 ? (
             <li className="px-2 py-1.5 text-sm text-muted-foreground">
@@ -86,29 +104,36 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
             </li>
           ) : (
             options.map((o) => (
-              <li
-                key={o.key}
-                data-model-key={o.key}
-                className={
-                  "cs-menu-item flex cursor-pointer gap-2 px-2 py-1.5 text-sm " +
-                  (o.key === activeKey ? "bg-accent" : "")
-                }
-                onClick={() => {
-                  onSelect(o);
-                  setOpen(false);
-                }}
-              >
-                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                  {o.provider}
-                </span>
-                <span className="flex-1 truncate">{o.label}</span>
-                {o.supportsVision && (
-                  <Image
-                    size={11}
-                    aria-label={t("chat.model.visionSupported")}
-                    className="opacity-60"
-                  />
-                )}
+              <li key={o.key} role="none">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  role="option"
+                  aria-selected={o.key === activeKey}
+                  data-model-key={o.key}
+                  className={cn(
+                    "cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal",
+                    o.key === activeKey && "bg-accent",
+                  )}
+                  onClick={() => {
+                    onSelect(o);
+                    setOpen(false);
+                    anchorRef.current?.focus();
+                  }}
+                >
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                    {o.provider}
+                  </span>
+                  <span className="flex-1 truncate text-left">{o.label}</span>
+                  {o.supportsVision && (
+                    <Image
+                      size={11}
+                      aria-label={t("chat.model.visionSupported")}
+                      className="opacity-60"
+                    />
+                  )}
+                </Button>
               </li>
             ))
           )}

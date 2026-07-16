@@ -23,7 +23,6 @@ import type { PluginHookEntry } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
-import QRCode from "qrcode";
 import { useT } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
@@ -830,8 +829,8 @@ export function GitSection() {
           control={
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                <input
-                  className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+                <Input
+                  className="h-8"
                   value={gitPath}
                   placeholder={t("settingsX.adv.gitPathPlaceholder")}
                   onChange={(e) => {
@@ -875,8 +874,8 @@ export function GitSection() {
           help={t("settingsX.adv.branchPrefixHelp")}
           control={
             <div className="flex flex-col gap-1">
-              <input
-                className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+              <Input
+                className="h-8"
                 value={prefs.branchPrefix}
                 placeholder={DEFAULT_GIT_PREFS.branchPrefix}
                 aria-invalid={branchPrefixError ? true : undefined}
@@ -905,8 +904,8 @@ export function GitSection() {
           help={t("settingsX.adv.graceHelp")}
           control={
             <div className="flex items-center gap-2">
-              <input
-                className="w-24 rounded-sm border bg-transparent px-2 py-1.5 text-sm"
+              <Input
+                className="h-8 w-24"
                 type="number"
                 value={prefs.autoDeleteWorktreesGraceMins}
                 min={1}
@@ -1370,11 +1369,12 @@ export function ImageSettingsSection({ scope, activeProjectPath }: ScopedProps) 
       </p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {options.map((o) => (
-          <button
+          <Button
             key={o.id || "default"}
             type="button"
+            variant="outline"
             className={cn(
-              "flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60",
+              "h-auto min-h-20 flex-col items-start gap-1 whitespace-normal p-3 text-left",
               detail === o.id && "border-primary bg-primary/10 ring-1 ring-primary/30",
             )}
             disabled={saving}
@@ -1382,7 +1382,7 @@ export function ImageSettingsSection({ scope, activeProjectPath }: ScopedProps) 
           >
             <span className="text-sm font-medium text-foreground">{o.label}</span>
             <span className="text-xs text-muted-foreground">{o.help}</span>
-          </button>
+          </Button>
         ))}
       </div>
     </section>
@@ -1452,14 +1452,15 @@ export function ArchivedConversationsSection({
   return (
     <section className="rounded-md border p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <button
+        <Button
           type="button"
-          className="h-8 px-3 text-xs text-status-err hover:text-status-err"
+          variant="destructive"
+          size="sm"
           onClick={removeAll}
           disabled={rows.length === 0}
         >
           {t("settingsX.adv.deleteAll")}
-        </button>
+        </Button>
       </div>
 
       {rows.length === 0 ? (
@@ -1484,23 +1485,27 @@ export function ArchivedConversationsSection({
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                <button
+                <Button
                   type="button"
-                  className="h-7 w-7 text-muted-foreground hover:text-status-err"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-status-err"
                   onClick={() => removeOne(projectId, session.id, session.title)}
                   title={t("settingsX.adv.permDelete")}
                   aria-label={t("settingsX.adv.permDelete")}
                 >
                   <Trash2 size={14} />
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   className="h-7 px-2 text-xs"
                   onClick={() => onRestore(projectId, session.id)}
                   title={t("settingsX.adv.unarchive")}
                 >
                   {t("settingsX.adv.unarchive")}
-                </button>
+                </Button>
               </div>
             </li>
           ))}
@@ -1629,7 +1634,10 @@ export function MobileRemoteSection() {
       return;
     }
     let cancelled = false;
-    void QRCode.toDataURL(pairingUrl, { width: 220, margin: 1 })
+    // Pairing is an infrequent settings flow, so keep the QR encoder out of
+    // the renderer's startup path and load it only after a URL is generated.
+    void import("qrcode")
+      .then(({ default: QRCode }) => QRCode.toDataURL(pairingUrl, { width: 220, margin: 1 }))
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })
