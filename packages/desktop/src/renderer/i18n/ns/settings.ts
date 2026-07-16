@@ -79,11 +79,14 @@ export const settingsNs = {
       },
       page: {
         settings: "设置",
+        projectOverview: "项目概览",
         general: "常规",
         appearance: "外观",
         config: "配置",
         modelCatalog: "模型模板",
+        instructions: "指令文件",
         personalization: "个性化",
+        digitalHumans: "数字人",
         shortcuts: "键盘快捷键",
         groupExtend: "扩展能力",
         capabilities: "能力总览",
@@ -93,6 +96,7 @@ export const settingsNs = {
         hooks: "钩子",
         groupEnvConn: "环境与连接",
         connections: "连接",
+        dataSources: "数据源",
         environment: "本地环境",
         sandbox: "沙箱",
         conversation: "对话",
@@ -107,9 +111,15 @@ export const settingsNs = {
         clearSearch: "清除搜索",
         searchResults: "找到 {count} 项设置",
         noSearchResults: "没有匹配的设置",
-        globalScope: "全局",
         globalScopeHint:
           "这里的默认设置对所有项目生效；需要覆盖单个项目时，请打开对应项目的项目配置。",
+        scopeSwitcher: "配置范围",
+        scopeSwitchGlobal: "全局",
+        projectScopeHint: "以下设置仅作用于所选项目，覆盖全局默认值。",
+      },
+      projectOverview: {
+        title: "项目配置",
+        subtitle: "管理该项目的专属配置；全局默认值在全局范围中修改。",
       },
       capOverview: {
         groupMcp: "MCP 服务器",
@@ -157,6 +167,18 @@ export const settingsNs = {
         memoryBadge: "可移植经验",
         activate: "设为项目默认",
         deactivate: "取消项目默认",
+      },
+      digitalHumans: {
+        title: "数字人库",
+        subtitle: "管理全局数字人定义；市场安装与团队编排在数字人页。",
+        openMarket: "打开数字人页",
+        create: "新建",
+        edit: "编辑",
+        empty: "还没有数字人，点击「新建」或从市场安装。",
+        skillsLoadFailed: "技能列表加载失败：{message}",
+      },
+      dataSources: {
+        globalHint: "这里管理全局连接目录；把数据源授权给某个项目请切换到项目范围。",
       },
       conversation: {
         title: "对话能力",
@@ -921,11 +943,14 @@ export const settingsNs = {
       },
       page: {
         settings: "Settings",
+        projectOverview: "Project overview",
         general: "General",
         appearance: "Appearance",
         config: "Config",
         modelCatalog: "Model templates",
+        instructions: "Instruction files",
         personalization: "Personalization",
+        digitalHumans: "Digital humans",
         shortcuts: "Keyboard shortcuts",
         groupExtend: "Extensions",
         capabilities: "Capabilities",
@@ -935,6 +960,7 @@ export const settingsNs = {
         hooks: "Hooks",
         groupEnvConn: "Environment & connections",
         connections: "Connections",
+        dataSources: "Data sources",
         environment: "Local environment",
         sandbox: "Sandbox",
         conversation: "Conversation",
@@ -949,9 +975,17 @@ export const settingsNs = {
         clearSearch: "Clear search",
         searchResults: "{count} settings found",
         noSearchResults: "No matching settings",
-        globalScope: "Global",
         globalScopeHint:
           "These defaults apply to every project. Open a project's settings when you need a project-specific override.",
+        scopeSwitcher: "Configuration scope",
+        scopeSwitchGlobal: "Global",
+        projectScopeHint:
+          "These settings apply only to the selected project and override global defaults.",
+      },
+      projectOverview: {
+        title: "Project configuration",
+        subtitle:
+          "Manage this project's dedicated configuration; global defaults are edited in the global scope.",
       },
       capOverview: {
         groupMcp: "MCP servers",
@@ -1000,6 +1034,20 @@ export const settingsNs = {
         memoryBadge: "Portable memory",
         activate: "Set as project default",
         deactivate: "Clear project default",
+      },
+      digitalHumans: {
+        title: "Digital human library",
+        subtitle:
+          "Manage global digital human definitions; market installs and teams live on the Digital humans page.",
+        openMarket: "Open digital humans",
+        create: "Create",
+        edit: "Edit",
+        empty: "No digital humans yet — create one or install from the market.",
+        skillsLoadFailed: "Failed to load skills: {message}",
+      },
+      dataSources: {
+        globalHint:
+          "Manage the global connection catalog here; switch to a project scope to grant sources to a project.",
       },
       conversation: {
         title: "Conversation capabilities",

@@ -81,10 +81,10 @@ export const core = {
     sidebar: {
       newConversation: "新对话",
       search: "搜索",
-      extensions: "扩展",
       digitalHumans: "数字人",
       automation: "自动化",
       credentials: "凭证",
+      settings: "设置",
       projects: "项目",
       conversations: "对话",
       loadSessionHistory: "加载更多历史 Session",
@@ -206,10 +206,10 @@ export const core = {
     sidebar: {
       newConversation: "New chat",
       search: "Search",
-      extensions: "Extensions",
       digitalHumans: "Digital humans",
       automation: "Automation",
       credentials: "Credentials",
+      settings: "Settings",
       projects: "Projects",
       conversations: "Conversations",
       loadSessionHistory: "Load more session history",

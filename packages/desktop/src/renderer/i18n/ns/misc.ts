@@ -95,16 +95,6 @@ export const misc = {
         welcomeTitleNoRepo: "开始一个无项目对话",
         welcomeHintNoRepo: "在下方选择一个项目，或直接在「不使用项目」模式开始",
       },
-      nav: {
-        chat: "对话",
-        sessions: "会话",
-        approvals: "审批",
-        runs: "运行",
-        automation: "自动化",
-        credentials: "凭证",
-        logs: "日志",
-        settings: "设置",
-      },
       session: {
         defaultTitle: "新对话",
       },
@@ -215,16 +205,6 @@ export const misc = {
         welcomeTitleRepo: "What do you want to build in {name}?",
         welcomeTitleNoRepo: "Start a conversation without a project",
         welcomeHintNoRepo: "Pick a project below, or just start in “no project” mode",
-      },
-      nav: {
-        chat: "Chat",
-        sessions: "Sessions",
-        approvals: "Approvals",
-        runs: "Runs",
-        automation: "Automation",
-        credentials: "Credentials",
-        logs: "Logs",
-        settings: "Settings",
       },
       session: {
         defaultTitle: "New chat",

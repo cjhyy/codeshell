@@ -129,9 +129,9 @@ export function buildCommands(opts: {
     { id: "go.sessions", label: tt("panels.palette.openSessions"), run: () => setViewMode("sessions") },
     { id: "go.approvals", label: tt("panels.palette.openApprovals"), run: () => setViewMode("approvals") },
     { id: "go.runs", label: tt("panels.palette.openRuns"), run: () => setViewMode("runs") },
-    { id: "go.extensions", label: tt("panels.palette.openExtensions"), run: () => setViewMode("customize") },
+    // 扩展并入设置中心(双门收口)— palette 直达设置页,扩展在其左侧导航里。
+    { id: "go.settings", label: tt("panels.palette.openSettings"), run: () => setViewMode("settings_page") },
     { id: "go.logs", label: tt("panels.palette.openLogs"), run: () => setViewMode("logs") },
-    // 设置改为左下角上拉菜单 — 不再由 viewMode 驱动，所以不放进 palette。
     { id: "toggle.sidebar", label: tt("panels.palette.toggleSidebar"), hint: "Cmd+B", run: toggleSidebar },
     { id: "toggle.inspector", label: tt("panels.palette.toggleInspector"), hint: "Cmd+I", run: toggleInspector },
     { id: "transcript.clear", label: tt("panels.palette.clearTranscript"), run: clearTranscript },

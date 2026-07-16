@@ -9,7 +9,6 @@ export type ViewMode =
   | "settings" // legacy modal route — kept for routing back-compat
   | "settings_page" // full-screen Settings page (new in batch E)
   | "project_config" // full-screen settings for one tracked project
-  | "customize" // full-screen 扩展 (plugins + skills + MCP + market) view
   | "credentials" // full-screen 凭证 (cookie + token + link) view
   | "logs";
 
@@ -48,7 +47,6 @@ const VALID_MODES: ReadonlySet<ViewMode> = new Set([
   "settings",
   "settings_page",
   "project_config",
-  "customize",
   "credentials",
   "logs",
 ]);
@@ -58,6 +56,8 @@ export function loadView(): ViewState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const merged = { ...DEFAULT, ...(JSON.parse(raw) as Partial<ViewState>) };
+    // Legacy route: the standalone 扩展 view merged into Settings (双门收口).
+    if ((merged.viewMode as string) === "customize") merged.viewMode = "settings_page";
     // Old builds persisted panel kinds (files/browser/review/terminal) as
     // ViewModes; those are now dock tabs, not full-screen views. Fall back to
     // chat so a stale value doesn't leave the user on a blank/unknown view.

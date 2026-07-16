@@ -108,11 +108,6 @@ import { AppMainView, AppShell } from "./app/AppShell";
 const SettingsPage = React.lazy(() =>
   import("./settings/SettingsPage").then((module) => ({ default: module.SettingsPage })),
 );
-const ProjectConfigPage = React.lazy(() =>
-  import("./project-config/ProjectConfigPage").then((module) => ({
-    default: module.ProjectConfigPage,
-  })),
-);
 const CredentialsPage = React.lazy(() =>
   import("./credentials/CredentialsPage").then((module) => ({ default: module.CredentialsPage })),
 );
@@ -132,9 +127,6 @@ const RunsView = React.lazy(() =>
 );
 const AutomationView = React.lazy(() =>
   import("./automation/AutomationView").then((module) => ({ default: module.AutomationView })),
-);
-const CustomizeView = React.lazy(() =>
-  import("./customize/CustomizeView").then((module) => ({ default: module.CustomizeView })),
 );
 const SessionPanelDock = React.lazy(() =>
   import("./app/SessionPanelDock").then((module) => ({ default: module.SessionPanelDock })),
@@ -1850,7 +1842,6 @@ function App() {
                 onNewConversation={handleNewConversation}
                 onOpenSearch={() => setSessionSearchOpen(true)}
                 onOpenAutomations={() => setViewMode("automation")}
-                onOpenCustomize={() => setViewMode("customize")}
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
                 onOpenCredentials={() => setViewMode("credentials")}
                 onOpenProjectConfig={(projectId) => {
@@ -1915,10 +1906,6 @@ function App() {
               ) : view.viewMode === "logs" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <LogsView />
-                </React.Suspense>
-              ) : view.viewMode === "customize" ? (
-                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
-                  <CustomizeView activeProjectPath={activeProject?.path ?? null} />
                 </React.Suspense>
               ) : view.viewMode === "digital_humans" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
@@ -2210,6 +2197,7 @@ function App() {
           <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
             {view.viewMode === "settings_page" ? (
               <SettingsPage
+                key="settings-global"
                 activeProjectPath={activeProject?.path ?? null}
                 projects={projects}
                 sessionIndices={sessionIndices}
@@ -2224,12 +2212,31 @@ function App() {
                 isMac={isMac}
                 isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
+                onOpenDigitalHumans={() => setViewMode("digital_humans")}
               />
             ) : activeProject ? (
-              <ProjectConfigPage
-                cwd={activeProject.path}
-                project={activeProject}
+              // project_config: the same settings center, preselected to the
+              // project's scope (SettingsPage opens on its project overview).
+              <SettingsPage
+                // key forces a remount when hopping between the global route and
+                // a project-config route — initialProjectPath is mount-time only.
+                key={`settings-project-${activeProject.path}`}
+                activeProjectPath={activeProject.path}
+                initialProjectPath={activeProject.path}
+                projects={projects}
+                sessionIndices={sessionIndices}
+                onRestoreArchivedSession={(projectId, sessionId) => {
+                  const next = archiveSession(projectId, sessionId, false);
+                  setSessionIndices((prev) => ({
+                    ...prev,
+                    [projectBucketSegmentFor(projectId)]: next,
+                  }));
+                }}
+                onDeleteArchivedSession={handleDeleteSession}
+                isMac={isMac}
+                isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
+                onOpenDigitalHumans={() => setViewMode("digital_humans")}
               />
             ) : null}
           </React.Suspense>
