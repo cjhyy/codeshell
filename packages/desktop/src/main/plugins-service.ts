@@ -1,5 +1,5 @@
 /**
- * Read-only enumeration of installed plugins for the Customize UI.
+ * Read-only enumeration of installed plugins for the 扩展 (extensions) settings UI.
  *
  * Sourced from core's trusted plugin catalog (the same installed state the
  * runtime uses). For each install key (`<plugin>@<marketplace>`) we derive a
@@ -10,7 +10,7 @@
  *
  * Plugin descriptions are read best-effort from `plugin.json` if it
  * exists; missing manifests are not an error. We deliberately never
- * throw — the Customize page should still render if a single entry's
+ * throw — the extensions page should still render if a single entry's
  * installPath has disappeared.
  */
 

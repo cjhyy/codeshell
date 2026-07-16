@@ -1,5 +1,5 @@
 /**
- * Plugin-marketplace plumbing for the Customize UI. Thin wrappers over
+ * Plugin-marketplace plumbing for the 扩展 (extensions) settings UI. Thin wrappers over
  * core's marketplaceManager / pluginInstaller / parseMarketplaceInput so
  * the renderer never imports core directly.
  *

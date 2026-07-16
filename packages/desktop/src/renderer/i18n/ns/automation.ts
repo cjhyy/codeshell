@@ -1,4 +1,4 @@
-/** automation/* + runs/* + approvals/* + sessions/* + logs/* + workspace-trust + customize. Owns `auto`. */
+/** automation/* + runs/* + approvals/* + sessions/* + logs/* + workspace-trust. Owns `auto`. */
 export const automation = {
   zh: {
     auto: {
@@ -197,10 +197,6 @@ export const automation = {
         riskMcp: "MCP 服务器: {names}",
         riskSetup: "工作区初始化脚本(打开时执行 shell)",
       },
-      // CustomizeView
-      customize: {
-        title: "扩展",
-      },
     },
   },
   en: {
@@ -383,9 +379,6 @@ export const automation = {
         riskHooks: "{n} lifecycle hook(s) (run commands automatically)",
         riskMcp: "MCP servers: {names}",
         riskSetup: "Workspace setup scripts (shell run on open)",
-      },
-      customize: {
-        title: "Extensions",
       },
     },
   },

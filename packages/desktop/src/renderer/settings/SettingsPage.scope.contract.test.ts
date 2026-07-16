@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const source = readFileSync(join(import.meta.dir, "SettingsPage.tsx"), "utf-8");
+const sidebar = readFileSync(join(import.meta.dir, "..", "Sidebar.tsx"), "utf-8");
+const view = readFileSync(join(import.meta.dir, "..", "view.ts"), "utf-8");
 
 describe("SettingsPage scope contract", () => {
   test("scope is page state with a header switcher, not a hardcoded user constant", () => {
@@ -33,6 +35,13 @@ describe("SettingsPage scope contract", () => {
   test("project scope opens on a project overview that links to the scoped modules", () => {
     expect(source).toContain('"project-overview"');
     expect(source).toContain("ProjectOverviewSection");
+  });
+
+  test("settings is a first-class sidebar entry and the customize double-door is gone", () => {
+    expect(sidebar).toContain('t("sidebar.settings")');
+    expect(sidebar).not.toContain("onOpenCustomize");
+    expect(view).toContain('"customize"'); // migration mapping keeps the literal
+    expect(view).toContain("settings_page");
   });
 
   test("data sources module bridges the global catalog and per-project bindings", () => {

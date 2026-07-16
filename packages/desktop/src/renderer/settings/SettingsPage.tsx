@@ -99,7 +99,7 @@ export type SettingsScope = { kind: "user" } | { kind: "project"; path: string }
 interface Module {
   id: ModuleId;
   label: string;
-  Icon: React.ComponentType<{ size?: number }>;
+  Icon: React.ComponentType<{ className?: string; size?: number }>;
   /** Which scopes this module can render in. Defaults to user-only. */
   scopes?: SettingsScopeKind[];
 }
@@ -524,7 +524,7 @@ export function SettingsPage({
                     (module) =>
                       module.id !== "project-overview" && moduleSupportsScope(module, scopeState),
                   )}
-                  onSelect={(id) => selectModule(id as ModuleId)}
+                  onSelect={selectModule}
                 />
               )}
               {active === "general" && (
@@ -623,7 +623,9 @@ export function SettingsPage({
               {active === "context" && <ContextSettingsSection />}
               {active === "mobile-remote" && <MobileRemoteSection />}
               {active === "plugins-skills" && (
-                <ExtensionsPage activeProjectPath={activeProjectPath} showDiscover={false} />
+                // Market/discover moved in here with the 双门收口 — settings is
+                // now the only door to extensions, so it must show everything.
+                <ExtensionsPage activeProjectPath={activeProjectPath} />
               )}
               {active === "agents" && <AgentsSection projects={projects} />}
               {active === "memory" && (

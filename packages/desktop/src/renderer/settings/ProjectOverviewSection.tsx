@@ -2,19 +2,19 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n";
 
-export interface OverviewModuleCard {
-  id: string;
+export interface OverviewModuleCard<Id extends string = string> {
+  id: Id;
   label: string;
   Icon: React.ComponentType<{ className?: string; size?: number }>;
 }
 
-interface Props {
-  modules: OverviewModuleCard[];
-  onSelect: (id: string) => void;
+interface Props<Id extends string> {
+  modules: OverviewModuleCard<Id>[];
+  onSelect: (id: Id) => void;
 }
 
 /** 项目 scope 首屏:该项目可配置模块的导航卡片。 */
-export function ProjectOverviewSection({ modules, onSelect }: Props) {
+export function ProjectOverviewSection<Id extends string>({ modules, onSelect }: Props<Id>) {
   const { t } = useT();
   return (
     <div className="space-y-5">

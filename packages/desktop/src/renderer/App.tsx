@@ -128,9 +128,6 @@ const RunsView = React.lazy(() =>
 const AutomationView = React.lazy(() =>
   import("./automation/AutomationView").then((module) => ({ default: module.AutomationView })),
 );
-const CustomizeView = React.lazy(() =>
-  import("./customize/CustomizeView").then((module) => ({ default: module.CustomizeView })),
-);
 const SessionPanelDock = React.lazy(() =>
   import("./app/SessionPanelDock").then((module) => ({ default: module.SessionPanelDock })),
 );
@@ -1845,7 +1842,6 @@ function App() {
                 onNewConversation={handleNewConversation}
                 onOpenSearch={() => setSessionSearchOpen(true)}
                 onOpenAutomations={() => setViewMode("automation")}
-                onOpenCustomize={() => setViewMode("customize")}
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
                 onOpenCredentials={() => setViewMode("credentials")}
                 onOpenProjectConfig={(projectId) => {
@@ -1910,10 +1906,6 @@ function App() {
               ) : view.viewMode === "logs" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <LogsView />
-                </React.Suspense>
-              ) : view.viewMode === "customize" ? (
-                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
-                  <CustomizeView activeProjectPath={activeProject?.path ?? null} />
                 </React.Suspense>
               ) : view.viewMode === "digital_humans" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>

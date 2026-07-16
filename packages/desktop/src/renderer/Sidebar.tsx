@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   MessageSquare,
   Search,
-  Blocks,
+  Settings as SettingsIcon,
   Workflow,
   KeyRound,
   Folder,
@@ -61,7 +61,6 @@ interface SidebarProps {
   onNewConversation: () => void;
   onOpenSearch: () => void;
   onOpenAutomations: () => void;
-  onOpenCustomize: () => void;
   onOpenDigitalHumans: () => void;
   onOpenCredentials: () => void;
   onOpenProjectConfig: (id: string) => void;
@@ -109,7 +108,6 @@ export function Sidebar({
   onNewConversation,
   onOpenSearch,
   onOpenAutomations,
-  onOpenCustomize,
   onOpenDigitalHumans,
   onOpenCredentials,
   onOpenProjectConfig,
@@ -270,12 +268,6 @@ export function Sidebar({
           onClick={onOpenDigitalHumans}
           active={viewMode === "digital_humans"}
         />
-        <SidebarItem
-          label={t("sidebar.extensions")}
-          Icon={Blocks}
-          onClick={onOpenCustomize}
-          active={viewMode === "customize"}
-        />
         {/* NOTE: this row used to carry the GLOBAL pending-approvals badge (a
             Phase-9 IA leftover) — approvals have nothing to do with 自动化 and
             the misplaced dot confused users. The per-session asking dot + the
@@ -291,6 +283,12 @@ export function Sidebar({
           Icon={KeyRound}
           onClick={onOpenCredentials}
           active={viewMode === "credentials"}
+        />
+        <SidebarItem
+          label={t("sidebar.settings")}
+          Icon={SettingsIcon}
+          onClick={onOpenSettingsPage}
+          active={viewMode === "settings_page" || viewMode === "project_config"}
         />
       </nav>
 
