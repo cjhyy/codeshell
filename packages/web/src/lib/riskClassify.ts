@@ -5,6 +5,8 @@
  * agent/approvalRequest. Decisions still go through the core permission engine
  * (the phone never bypasses it — design §6).
  */
+import { t } from "../i18n/translate.js";
+
 export type Risk = "low" | "medium" | "high";
 
 /** Arg keys to surface as the one-line summary, in priority order. */
@@ -13,12 +15,17 @@ const SUMMARY_KEYS = ["command", "file_path", "path", "url", "pattern", "query"]
 export function summarizeApproval(
   args: Record<string, unknown> | undefined,
   risk?: string,
+  toolName?: string,
 ): { summary: string; risk: Risk } {
   let summary = "";
+  // Match on the tool NAME, never on arg shape: a third-party/MCP tool whose
+  // args happen to carry source/scope/resource must not masquerade as a
+  // data-source read (nor shadow its real `command`/`file_path` summary).
   const source = args?.source;
   const scope = args?.scope;
   const resource = args?.resource;
   if (
+    toolName === "ReadSource" &&
     typeof source === "string" &&
     source.length > 0 &&
     typeof scope === "string" &&
@@ -26,7 +33,7 @@ export function summarizeApproval(
     typeof resource === "string" &&
     resource.length > 0
   ) {
-    summary = `读取数据源 ${source} / ${scope} / ${resource}`;
+    summary = t("mobile.approval.readSourceSummary", { source, scope, resource });
   } else {
     for (const k of SUMMARY_KEYS) {
       const v = args?.[k];

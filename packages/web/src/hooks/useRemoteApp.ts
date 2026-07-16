@@ -825,7 +825,7 @@ export function useRemoteApp(): RemoteApp {
             }
           | undefined;
         if (rq) {
-          const { summary, risk } = summarizeApproval(rq.args, rq.riskLevel);
+          const { summary, risk } = summarizeApproval(rq.args, rq.riskLevel, rq.toolName);
           const askOptions = extractAskUserOptions(rq.args);
           addApproval({
             requestId: String(params.requestId),

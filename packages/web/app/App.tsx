@@ -282,7 +282,11 @@ function ApprovalCard({
 }) {
   const [answer, setAnswer] = React.useState("");
   const isAskUser = payload.request.toolName === "__ask_user__";
-  const { summary, risk } = summarizeApproval(payload.request.args, payload.request.riskLevel);
+  const { summary, risk } = summarizeApproval(
+    payload.request.args,
+    payload.request.riskLevel,
+    payload.request.toolName,
+  );
   return (
     <div className="approval">
       <div className="approval-title">

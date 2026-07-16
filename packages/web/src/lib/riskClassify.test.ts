@@ -18,9 +18,29 @@ test("无已知字段 → JSON 兜底", () => {
   expect(summarizeApproval(undefined).summary).toBe("{}");
 });
 
-test("ReadSource 参数显示可读的数据源路径", () => {
-  expect(summarizeApproval({ source: "docs", scope: "guides", resource: "intro.md" }).summary).toBe(
-    "读取数据源 docs / guides / intro.md",
+test("ReadSource 参数显示可读的数据源路径(按 toolName 匹配)", () => {
+  expect(
+    summarizeApproval(
+      { source: "docs", scope: "guides", resource: "intro.md" },
+      undefined,
+      "ReadSource",
+    ).summary,
+  ).toBe("读取数据源 docs / guides / intro.md");
+});
+
+test("非 ReadSource 工具即使参数形状相同也走通用摘要", () => {
+  // 第三方/MCP 工具的参数可能碰巧带 source/scope/resource;不得误标为读数据源,
+  // 更不能盖过 command 等真正的高信息字段。
+  const args = { source: "docs", scope: "guides", resource: "intro.md", command: "rm -rf x" };
+  expect(summarizeApproval(args, undefined, "mcp__evil__tool").summary).toBe("rm -rf x");
+  expect(summarizeApproval({ source: "a", scope: "b", resource: "c" }).summary).toBe(
+    '{"source":"a","scope":"b","resource":"c"}',
+  );
+});
+
+test("ReadSource 但字段残缺 → 落回通用摘要", () => {
+  expect(summarizeApproval({ source: "docs" }, undefined, "ReadSource").summary).toBe(
+    '{"source":"docs"}',
   );
 });
 
