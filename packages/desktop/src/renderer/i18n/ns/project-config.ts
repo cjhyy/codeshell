@@ -3,26 +3,6 @@ export const projectConfig = {
   zh: {
     projectConfig: {
       open: "项目配置",
-      title: "项目配置",
-      subtitle: "集中管理当前项目的数据源、数字人、项目指令和能力开关。",
-      back: "返回项目",
-      nav: {
-        ariaLabel: "项目配置导航",
-        overview: "概览",
-        overviewDescription: "查看当前项目可配置的内容，并快速进入对应模块。",
-        sources: "数据源",
-        sourcesDescription: "上传项目资料，绑定外部数据源，并控制可见范围与读取策略。",
-        profile: "数字人",
-        profileDescription: "选择这个项目默认使用的数字同事与可移植经验。",
-        instructions: "项目指令",
-        instructionsDescription: "管理 CodeShell 主指令和 Claude、Codex 兼容指令文件。",
-        capabilities: "能力",
-        capabilitiesDescription: "覆盖当前项目的 MCP、技能、插件、子代理和内置工具开关。",
-      },
-      overview: {
-        title: "配置这个项目",
-        subtitle: "每项设置都只作用于当前项目；全局连接和默认值仍在应用设置中管理。",
-      },
       dataSources: {
         title: "数据源",
         subtitle: "上传项目资料，或从全局连接库绑定当前项目可见的范围。",
@@ -87,32 +67,6 @@ export const projectConfig = {
   en: {
     projectConfig: {
       open: "Project settings",
-      title: "Project settings",
-      subtitle:
-        "Manage this project's data sources, digital humans, instructions, and capabilities in one place.",
-      back: "Back to project",
-      nav: {
-        ariaLabel: "Project settings navigation",
-        overview: "Overview",
-        overviewDescription: "See what can be configured for this project and jump to each module.",
-        sources: "Data sources",
-        sourcesDescription:
-          "Upload project material, bind external sources, and control scopes and read policy.",
-        profile: "Digital human",
-        profileDescription:
-          "Choose the default digital colleague and portable memory for this project.",
-        instructions: "Instructions",
-        instructionsDescription:
-          "Manage the primary CodeShell instructions and Claude/Codex compatibility files.",
-        capabilities: "Capabilities",
-        capabilitiesDescription:
-          "Override MCP, skills, plugins, sub-agents, and built-in tools for this project.",
-      },
-      overview: {
-        title: "Configure this project",
-        subtitle:
-          "Each setting here applies only to this project. Manage global connections and defaults in app settings.",
-      },
       dataSources: {
         title: "Data sources",
         subtitle:

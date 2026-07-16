@@ -30,6 +30,11 @@ describe("SettingsPage scope contract", () => {
     expect(source).toContain("InstructionFilesSection");
   });
 
+  test("project scope opens on a project overview that links to the scoped modules", () => {
+    expect(source).toContain('"project-overview"');
+    expect(source).toContain("ProjectOverviewSection");
+  });
+
   test("data sources module bridges the global catalog and per-project bindings", () => {
     const module = readFileSync(join(import.meta.dir, "DataSourcesModule.tsx"), "utf-8");
     expect(source).toContain("<DataSourcesModule");

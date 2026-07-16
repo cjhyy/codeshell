@@ -79,6 +79,7 @@ export const settingsNs = {
       },
       page: {
         settings: "设置",
+        projectOverview: "项目概览",
         general: "常规",
         appearance: "外观",
         config: "配置",
@@ -115,6 +116,10 @@ export const settingsNs = {
         scopeSwitcher: "配置范围",
         scopeSwitchGlobal: "全局",
         projectScopeHint: "以下设置仅作用于所选项目，覆盖全局默认值。",
+      },
+      projectOverview: {
+        title: "项目配置",
+        subtitle: "管理该项目的专属配置；全局默认值在全局范围中修改。",
       },
       capOverview: {
         groupMcp: "MCP 服务器",
@@ -938,6 +943,7 @@ export const settingsNs = {
       },
       page: {
         settings: "Settings",
+        projectOverview: "Project overview",
         general: "General",
         appearance: "Appearance",
         config: "Config",
@@ -975,6 +981,11 @@ export const settingsNs = {
         scopeSwitchGlobal: "Global",
         projectScopeHint:
           "These settings apply only to the selected project and override global defaults.",
+      },
+      projectOverview: {
+        title: "Project configuration",
+        subtitle:
+          "Manage this project's dedicated configuration; global defaults are edited in the global scope.",
       },
       capOverview: {
         groupMcp: "MCP servers",

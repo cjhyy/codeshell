@@ -108,11 +108,6 @@ import { AppMainView, AppShell } from "./app/AppShell";
 const SettingsPage = React.lazy(() =>
   import("./settings/SettingsPage").then((module) => ({ default: module.SettingsPage })),
 );
-const ProjectConfigPage = React.lazy(() =>
-  import("./project-config/ProjectConfigPage").then((module) => ({
-    default: module.ProjectConfigPage,
-  })),
-);
 const CredentialsPage = React.lazy(() =>
   import("./credentials/CredentialsPage").then((module) => ({ default: module.CredentialsPage })),
 );
@@ -2227,10 +2222,25 @@ function App() {
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
               />
             ) : activeProject ? (
-              <ProjectConfigPage
-                cwd={activeProject.path}
-                project={activeProject}
+              // project_config: the same settings center, preselected to the
+              // project's scope (SettingsPage opens on its project overview).
+              <SettingsPage
+                activeProjectPath={activeProject.path}
+                initialProjectPath={activeProject.path}
+                projects={projects}
+                sessionIndices={sessionIndices}
+                onRestoreArchivedSession={(projectId, sessionId) => {
+                  const next = archiveSession(projectId, sessionId, false);
+                  setSessionIndices((prev) => ({
+                    ...prev,
+                    [projectBucketSegmentFor(projectId)]: next,
+                  }));
+                }}
+                onDeleteArchivedSession={handleDeleteSession}
+                isMac={isMac}
+                isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
+                onOpenDigitalHumans={() => setViewMode("digital_humans")}
               />
             ) : null}
           </React.Suspense>

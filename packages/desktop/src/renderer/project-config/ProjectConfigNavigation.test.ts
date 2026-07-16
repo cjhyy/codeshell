@@ -19,9 +19,9 @@ describe("project config navigation", () => {
     expect(sidebarSource).toContain('t("projectConfig.open")');
   });
 
-  test("renders the active project in a dedicated full-page overlay", () => {
+  test("opens the settings center preselected to the project's scope", () => {
     expect(appSource).toContain('view.viewMode === "project_config"');
-    expect(appSource).toContain("<ProjectConfigPage");
+    expect(appSource).toContain("initialProjectPath={activeProject.path}");
     expect(appSource).toContain('setViewMode("project_config")');
   });
 });

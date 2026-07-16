@@ -20,6 +20,7 @@ import {
   Bot,
   Brain,
   Layers,
+  LayoutDashboard,
   LayoutTemplate,
   Smartphone,
   MessageSquare,
@@ -36,6 +37,7 @@ import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { ProjectInstructionsSection } from "../project-config/ProjectInstructionsSection";
+import { ProjectOverviewSection } from "./ProjectOverviewSection";
 import { AgentsSection } from "./AgentsSection";
 import { SandboxSection } from "./SandboxSection";
 import { AppearanceSection } from "./AppearanceSection";
@@ -66,6 +68,7 @@ import { SimpleSelect } from "@/components/ui/simple-select";
 import { cn } from "@/lib/utils";
 
 type ModuleId =
+  | "project-overview"
   | "general"
   | "appearance"
   | "config"
@@ -145,6 +148,15 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
     {
       title: "",
       modules: [
+        // Project-scope landing page: must stay FIRST so the scope
+        // auto-jump (and the initial-state scope check) naturally lands
+        // here when entering project scope from a user-only module.
+        {
+          id: "project-overview",
+          label: t("settingsX.page.projectOverview"),
+          Icon: LayoutDashboard,
+          scopes: ["project"],
+        },
         {
           id: "general",
           label: t("settingsX.page.general"),
@@ -264,7 +276,18 @@ export function SettingsPage({
   const { t } = useT();
   const MODULE_GROUPS = useMemo(() => buildModuleGroups(t), [t]);
   const MODULES = useMemo(() => MODULE_GROUPS.flatMap((group) => group.modules), [MODULE_GROUPS]);
-  const [active, setActive] = useState<ModuleId>(() => storedModuleId(MODULES));
+  // Scope-check the stored module in the initializer (not the auto-jump
+  // effect) so opening in project scope never flashes an unsupported
+  // module for one frame before jumping.
+  const [active, setActive] = useState<ModuleId>(() => {
+    const initialScope: SettingsScope = initialProjectPath
+      ? { kind: "project", path: initialProjectPath }
+      : { kind: "user" };
+    const stored = storedModuleId(MODULES);
+    const storedModule = MODULES.find(({ id }) => id === stored);
+    if (storedModule && moduleSupportsScope(storedModule, initialScope)) return stored;
+    return MODULES.find((module) => moduleSupportsScope(module, initialScope))?.id ?? stored;
+  });
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const [scopeState, setScopeState] = useState<SettingsScope>(() =>
@@ -495,6 +518,15 @@ export function SettingsPage({
             </div>
 
             <div className="flex flex-col gap-6">
+              {active === "project-overview" && (
+                <ProjectOverviewSection
+                  modules={MODULES.filter(
+                    (module) =>
+                      module.id !== "project-overview" && moduleSupportsScope(module, scopeState),
+                  )}
+                  onSelect={(id) => selectModule(id as ModuleId)}
+                />
+              )}
               {active === "general" && (
                 <GeneralSection
                   scope={scope}
