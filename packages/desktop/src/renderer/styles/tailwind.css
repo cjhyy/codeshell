@@ -125,6 +125,15 @@
   .cs-switch[data-state="unchecked"] .cs-switch-thumb {
     transform: translateX(0);
   }
+  .cs-checkbox[data-state="checked"],
+  .cs-checkbox[data-state="indeterminate"] {
+    border-color: hsl(var(--cs-primary));
+    background-color: hsl(var(--cs-primary));
+    color: hsl(var(--cs-primary-foreground));
+  }
+  .cs-checkbox[data-state="unchecked"] {
+    background-color: hsl(var(--cs-background));
+  }
 }
 
 /*
