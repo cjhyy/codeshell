@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ProjectConfigPage } from "./ProjectConfigPage";
 
 describe("ProjectConfigPage", () => {
-  test("aggregates data sources, profile, instructions, and project capabilities", () => {
+  test("renders an overview with focused project configuration modules", () => {
     const html = renderToStaticMarkup(
       <ProjectConfigPage
         cwd="/repo"
@@ -16,7 +16,9 @@ describe("ProjectConfigPage", () => {
     expect(html).toContain("数据源");
     expect(html).toContain("数字人");
     expect(html).toContain("项目指令");
-    expect(html).toContain("能力总览");
+    expect(html).toContain("能力");
+    expect(html).toContain("配置这个项目");
+    expect(html).toContain('aria-label="项目配置导航"');
     expect(html).toContain("/repo");
   });
 });

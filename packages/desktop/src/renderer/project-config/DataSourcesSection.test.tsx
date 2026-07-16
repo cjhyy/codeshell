@@ -9,6 +9,7 @@ import type {
 } from "@cjhyy/code-shell-core";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { DataSourcesSection } from "./DataSourcesSection";
+import { DialogProvider } from "../ui/DialogProvider";
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -85,14 +86,18 @@ function snapshot(
 
 let root: Root | null = null;
 
-async function renderSection(): Promise<HTMLElement> {
+async function renderSection(
+  confirmDeleteUpload?: (upload: SourceResourceMeta) => Promise<boolean>,
+): Promise<HTMLElement> {
   const container = document.createElement("div") as unknown as HTMLElement;
   root = createRoot(container);
   await act(async () => {
     root?.render(
-      <form>
-        <DataSourcesSection cwd="/repo" />
-      </form>,
+      <DialogProvider>
+        <form>
+          <DataSourcesSection cwd="/repo" confirmDeleteUpload={confirmDeleteUpload} />
+        </form>
+      </DialogProvider>,
     );
     await flushMicrotasks();
     await flushMicrotasks();
@@ -174,7 +179,6 @@ describe("DataSourcesSection", () => {
     const deleted: Array<[string, string]> = [];
     let accessCalls = 0;
     Object.assign(window, {
-      confirm: () => true,
       codeshell: {
         listSourceCatalog: async () => [],
         workspaceSourceAccess: async () => {
@@ -190,7 +194,7 @@ describe("DataSourcesSection", () => {
         },
       },
     });
-    const container = await renderSection();
+    const container = await renderSection(async () => true);
     const deleteButton = findElements(container, "BUTTON").find(
       (button) => textOf(button) === "删除",
     );
@@ -277,11 +281,14 @@ describe("DataSourcesSection", () => {
       await flushMicrotasks();
     });
 
-    const alpha = findElements(container, "INPUT").find(
-      (input) => reactPropsOf(input).value === "alpha",
+    const alpha = findElements(container, "BUTTON").find(
+      (button) => button.attributes?.get("data-scope-id") === "alpha",
     );
     await act(async () => {
-      reactPropsOf(alpha).onChange({ target: { checked: true } });
+      reactPropsOf(alpha).onClick({
+        isPropagationStopped: () => false,
+        stopPropagation: () => undefined,
+      });
       reactPropsOf(policySelect).onChange({ target: { value: "deny" } });
       await flushMicrotasks();
     });

@@ -6,6 +6,23 @@ export const projectConfig = {
       title: "项目配置",
       subtitle: "集中管理当前项目的数据源、数字人、项目指令和能力开关。",
       back: "返回项目",
+      nav: {
+        ariaLabel: "项目配置导航",
+        overview: "概览",
+        overviewDescription: "查看当前项目可配置的内容，并快速进入对应模块。",
+        sources: "数据源",
+        sourcesDescription: "上传项目资料，绑定外部数据源，并控制可见范围与读取策略。",
+        profile: "数字人",
+        profileDescription: "选择这个项目默认使用的数字同事与可移植经验。",
+        instructions: "项目指令",
+        instructionsDescription: "管理 CodeShell 主指令和 Claude、Codex 兼容指令文件。",
+        capabilities: "能力",
+        capabilitiesDescription: "覆盖当前项目的 MCP、技能、插件、子代理和内置工具开关。",
+      },
+      overview: {
+        title: "配置这个项目",
+        subtitle: "每项设置都只作用于当前项目；全局连接和默认值仍在应用设置中管理。",
+      },
       dataSources: {
         title: "数据源",
         subtitle: "上传项目资料，或从全局连接库绑定当前项目可见的范围。",
@@ -50,12 +67,20 @@ export const projectConfig = {
       },
       instructions: {
         title: "项目指令",
-        subtitle: "CodeShell 会从项目根目录读取 CLAUDE.md 作为项目级协作说明。",
-        fileName: "CLAUDE.md",
+        subtitle: "CodeShell 始终读取 CODESHELL.md，并可兼容读取 Claude 与 Codex 的指令文件。",
+        primaryBadge: "主文件",
+        primaryLabel: "CodeShell 项目指令",
+        primaryDescription: "始终读取，适合放置本项目的构建、测试、风格与架构约定。",
+        claudeLabel: "Claude 兼容指令",
+        claudeDescription: "默认兼容读取，可在全局设置中关闭。",
+        agentsLabel: "Codex 兼容指令",
+        agentsDescription: "默认兼容读取，并支持目录层级覆盖。",
         checking: "正在检查…",
         exists: "文件已存在",
         missing: "文件不存在",
         open: "在编辑器打开",
+        create: "创建并打开",
+        opening: "正在打开…",
       },
     },
   },
@@ -66,6 +91,28 @@ export const projectConfig = {
       subtitle:
         "Manage this project's data sources, digital humans, instructions, and capabilities in one place.",
       back: "Back to project",
+      nav: {
+        ariaLabel: "Project settings navigation",
+        overview: "Overview",
+        overviewDescription: "See what can be configured for this project and jump to each module.",
+        sources: "Data sources",
+        sourcesDescription:
+          "Upload project material, bind external sources, and control scopes and read policy.",
+        profile: "Digital human",
+        profileDescription:
+          "Choose the default digital colleague and portable memory for this project.",
+        instructions: "Instructions",
+        instructionsDescription:
+          "Manage the primary CodeShell instructions and Claude/Codex compatibility files.",
+        capabilities: "Capabilities",
+        capabilitiesDescription:
+          "Override MCP, skills, plugins, sub-agents, and built-in tools for this project.",
+      },
+      overview: {
+        title: "Configure this project",
+        subtitle:
+          "Each setting here applies only to this project. Manage global connections and defaults in app settings.",
+      },
       dataSources: {
         title: "Data sources",
         subtitle:
@@ -115,12 +162,22 @@ export const projectConfig = {
       },
       instructions: {
         title: "Project instructions",
-        subtitle: "CodeShell reads CLAUDE.md from the project root as project-level guidance.",
-        fileName: "CLAUDE.md",
+        subtitle:
+          "CodeShell always reads CODESHELL.md and can also read Claude and Codex compatibility files.",
+        primaryBadge: "Primary",
+        primaryLabel: "CodeShell project instructions",
+        primaryDescription:
+          "Always loaded; use it for this project's build, test, style, and architecture guidance.",
+        claudeLabel: "Claude compatibility instructions",
+        claudeDescription: "Loaded by default and can be disabled in global settings.",
+        agentsLabel: "Codex compatibility instructions",
+        agentsDescription: "Loaded by default with hierarchical directory overrides.",
         checking: "Checking…",
         exists: "File exists",
         missing: "File not found",
         open: "Open in editor",
+        create: "Create and open",
+        opening: "Opening…",
       },
     },
   },

@@ -7,9 +7,11 @@ import type {
 } from "@cjhyy/code-shell-core";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { useT, type TFunction } from "../i18n";
 import { useToast } from "../ui/ToastProvider";
+import { useConfirm } from "../ui/DialogProvider";
 
 interface WorkspaceSourceSnapshot {
   access: EffectiveSourceAccess[];
@@ -42,9 +44,17 @@ function kindLabel(t: TFunction, kind: string): string {
 }
 
 /** Project-local upload and source-binding controls. Content reads stay in ReadSource. */
-export function DataSourcesSection({ cwd }: { cwd: string }) {
+export function DataSourcesSection({
+  cwd,
+  confirmDeleteUpload,
+}: {
+  cwd: string;
+  /** Test seam; production uses the app-level themed confirmation dialog. */
+  confirmDeleteUpload?: (upload: SourceResourceMeta) => Promise<boolean>;
+}) {
   const { t } = useT();
   const toast = useToast();
+  const confirm = useConfirm();
   const [catalog, setCatalog] = React.useState<SourceDefinition[]>([]);
   const [snapshot, setSnapshot] = React.useState<WorkspaceSourceSnapshot>({
     access: [],
@@ -205,17 +215,21 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
                   variant="outline"
                   disabled={busy}
                   onClick={() => {
-                    if (
-                      !window.confirm(
-                        t("projectConfig.dataSources.deleteUploadConfirm", {
-                          name: upload.name,
-                        }),
-                      )
-                    ) {
-                      return;
-                    }
-                    void act(() => window.codeshell.deleteUpload(cwd, upload.name), {
-                      successMessage: t("projectConfig.dataSources.deleteUploadDone"),
+                    const approval = confirmDeleteUpload
+                      ? confirmDeleteUpload(upload)
+                      : confirm({
+                          title: t("projectConfig.dataSources.deleteUpload"),
+                          message: t("projectConfig.dataSources.deleteUploadConfirm", {
+                            name: upload.name,
+                          }),
+                          confirmLabel: t("projectConfig.dataSources.deleteUpload"),
+                          destructive: true,
+                        });
+                    void approval.then((accepted) => {
+                      if (!accepted) return;
+                      void act(() => window.codeshell.deleteUpload(cwd, upload.name), {
+                        successMessage: t("projectConfig.dataSources.deleteUploadDone"),
+                      });
                     });
                   }}
                 >
@@ -342,12 +356,12 @@ export function DataSourcesSection({ cwd }: { cwd: string }) {
                       key={scope.id}
                       className="flex items-start gap-2 rounded-md border border-border px-3 py-2 text-sm text-foreground"
                     >
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 accent-primary"
+                      <Checkbox
+                        className="mt-0.5"
                         value={scope.id}
+                        data-scope-id={scope.id}
                         checked={selectedScopes.has(scope.id)}
-                        onChange={(event) => toggleScope(scope.id, event.target.checked)}
+                        onCheckedChange={(checked) => toggleScope(scope.id, checked === true)}
                       />
                       <span className="min-w-0">
                         <span className="block">{scope.label}</span>
