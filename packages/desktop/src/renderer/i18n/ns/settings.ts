@@ -168,6 +168,7 @@ export const settingsNs = {
         create: "新建",
         edit: "编辑",
         empty: "还没有数字人,点击「新建」或从市场安装。",
+        skillsLoadFailed: "技能列表加载失败:{message}",
       },
       conversation: {
         title: "对话能力",
@@ -1024,6 +1025,7 @@ export const settingsNs = {
         create: "Create",
         edit: "Edit",
         empty: "No digital humans yet — create one or install from the market.",
+        skillsLoadFailed: "Failed to load skills: {message}",
       },
       conversation: {
         title: "Conversation capabilities",
