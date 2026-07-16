@@ -36,8 +36,12 @@ beforeEach(() => {
     value: { getItem: () => null, setItem: () => undefined },
   });
   Object.assign(globalThis, {
+    // Full stub: this global leaks to later test files in the same bun
+    // process; Radix useSize cleanup calls unobserve and would crash on a
+    // partial stub.
     ResizeObserver: class {
       observe() {}
+      unobserve() {}
       disconnect() {}
     },
   });

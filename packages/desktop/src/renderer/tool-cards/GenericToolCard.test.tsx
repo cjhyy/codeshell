@@ -92,11 +92,13 @@ describe("GenericToolCard DriveAgent CLI link", () => {
 
   async function renderCard(backgroundJobs: Array<typeof job>) {
     ensureMiniDom();
+    // This global leaks to later test files in the same bun process, and
+    // Radix dispatches `new CustomEvent(type)` with NO init — keep it optional.
     class DetailEvent<T> extends Event {
-      readonly detail: T;
-      constructor(type: string, init: { detail: T }) {
+      readonly detail: T | undefined;
+      constructor(type: string, init?: { detail?: T }) {
         super(type);
-        this.detail = init.detail;
+        this.detail = init?.detail;
       }
     }
     Object.assign(globalThis, { CustomEvent: DetailEvent });
