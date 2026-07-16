@@ -664,11 +664,53 @@ export interface ImGatewayStatus {
   error?: string;
 }
 
+export interface DingTalkSetup {
+  enabled: boolean;
+  clientId: string;
+  hasClientSecret: boolean;
+  secretStorage: "missing" | "environment" | "secure" | "legacy-config";
+  allowedConversationIds: string[];
+  allowedUserIds: string[];
+}
+
+export interface DingTalkSetupInput {
+  enabled: boolean;
+  clientId: string;
+  clientSecret?: string;
+  allowedConversationIds: string[];
+  allowedUserIds: string[];
+}
+
+export interface DingTalkDiscoveredUser {
+  id: string;
+  name?: string;
+}
+
+export interface DingTalkDiscoveredConversation {
+  conversationId: string;
+  title?: string;
+  conversationType?: string;
+  users: DingTalkDiscoveredUser[];
+  lastMessagePreview: string;
+  discoveredAt: number;
+}
+
 export type ImGatewayUiEvent =
   | { type: "status-changed"; status: ImGatewayStatus }
   | { type: "wechat-qr"; loginId: string; url: string }
   | { type: "wechat-status"; loginId: string; status: string }
-  | { type: "wechat-verification-required"; loginId: string };
+  | { type: "wechat-verification-required"; loginId: string }
+  | {
+      type: "dingtalk-discovery-state";
+      discoveryId: string;
+      state: "connecting" | "listening" | "stopped" | "error";
+      error?: string;
+    }
+  | {
+      type: "dingtalk-conversation-discovered";
+      discoveryId: string;
+      conversation: DingTalkDiscoveredConversation;
+    };
 
 export interface CodeshellApi {
   /** Read-only bounded Pet projection. */
@@ -1608,6 +1650,10 @@ export interface CodeshellApi {
     start(): Promise<ImGatewayStatus>;
     stop(): Promise<ImGatewayStatus>;
     ensureConfig(): Promise<string>;
+    getDingTalkSetup(): Promise<DingTalkSetup>;
+    saveDingTalkSetup(input: DingTalkSetupInput): Promise<DingTalkSetup>;
+    startDingTalkDiscovery(): Promise<{ discoveryId: string }>;
+    stopDingTalkDiscovery(): Promise<boolean>;
     loginWechat(): Promise<{ accountId: string; configPath: string }>;
     cancelWechatLogin(): Promise<boolean>;
     submitWechatVerification(input: { loginId: string; code: string }): Promise<boolean>;

@@ -1309,6 +1309,16 @@ contextBridge.exposeInMainWorld("codeshell", {
     start: () => ipcRenderer.invoke("im-gateway:start"),
     stop: () => ipcRenderer.invoke("im-gateway:stop"),
     ensureConfig: () => ipcRenderer.invoke("im-gateway:ensureConfig"),
+    getDingTalkSetup: () => ipcRenderer.invoke("im-gateway:dingtalkGetSetup"),
+    saveDingTalkSetup: (input: {
+      enabled: boolean;
+      clientId: string;
+      clientSecret?: string;
+      allowedConversationIds: string[];
+      allowedUserIds: string[];
+    }) => ipcRenderer.invoke("im-gateway:dingtalkSaveSetup", input),
+    startDingTalkDiscovery: () => ipcRenderer.invoke("im-gateway:dingtalkStartDiscovery"),
+    stopDingTalkDiscovery: () => ipcRenderer.invoke("im-gateway:dingtalkStopDiscovery"),
     loginWechat: () => ipcRenderer.invoke("im-gateway:wechatLogin"),
     cancelWechatLogin: () => ipcRenderer.invoke("im-gateway:wechatCancelLogin"),
     submitWechatVerification: (input: { loginId: string; code: string }) =>
