@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -12,6 +13,9 @@ import {
   removeInstallEntries,
   writeInstalledPlugins,
 } from "../installedPlugins.js";
+import { pluginHookInstallRecord } from "../pluginHookIntegrity.js";
+import { pluginMcpInstallRecord } from "../pluginMcpIntegrity.js";
+import { readPluginMcp } from "./loadPluginMcp.js";
 import { CodexPluginManifest, CSMeta, PluginInstallError } from "./types.js";
 
 export interface UpdateResult {
@@ -33,8 +37,8 @@ export interface UpdatePluginOptions {
  * on failure we delete any partial install and rename the backup back.
  *
  * Async fs only — this runs in the Electron main process, so we never block the
- * event loop with sync fs. process.pid (not Date.now(), unavailable here) makes
- * the backup name unique.
+ * event loop with sync fs. A random sibling name keeps concurrent attempts
+ * from deleting or restoring each other's backup.
  */
 export async function reinstallAtomic(
   name: string,
@@ -42,7 +46,7 @@ export async function reinstallAtomic(
   doInstall: () => Promise<unknown>,
 ): Promise<void> {
   const dir = pluginInstallDir(name);
-  const backup = `${dir}.bak-${process.pid}`;
+  const backup = `${dir}.bak-${process.pid}-${randomUUID()}`;
 
   // Capture the existing install_plugins.json entries so a failed reinstall can
   // restore them (uninstall-then-install used to drop them on failure; here the
@@ -50,7 +54,6 @@ export async function reinstallAtomic(
   const key = pluginInstallKey(name, "local");
   const savedEntries = readInstalledPlugins().plugins[key];
 
-  await rm(backup, { recursive: true, force: true });
   await rename(dir, backup);
   // The installer re-adds the entry on success; remove the stale one first so a
   // successful reinstall doesn't accumulate a duplicate.
@@ -58,6 +61,38 @@ export async function reinstallAtomic(
 
   try {
     await doInstall();
+    if (savedEntries) {
+      const data = readInstalledPlugins();
+      const installed = data.plugins[key] ?? [];
+      let changed = false;
+      for (const entry of installed) {
+        const next = pluginHookInstallRecord(entry.installPath, savedEntries);
+        const nextMcp = pluginMcpInstallRecord(
+          entry.installPath,
+          Object.keys(readPluginMcp(entry.installPath, name)).length > 0,
+          savedEntries,
+        );
+        if (
+          entry.hookDigest !== next.hookDigest ||
+          entry.approvedHookDigest !== next.approvedHookDigest ||
+          JSON.stringify(entry.approvedHookSnapshot) !==
+            JSON.stringify(next.approvedHookSnapshot) ||
+          entry.mcpDigest !== nextMcp.mcpDigest ||
+          entry.approvedMcpDigest !== nextMcp.approvedMcpDigest
+        ) {
+          entry.hookDigest = next.hookDigest;
+          if (next.approvedHookDigest) entry.approvedHookDigest = next.approvedHookDigest;
+          else delete entry.approvedHookDigest;
+          if (next.approvedHookSnapshot) entry.approvedHookSnapshot = next.approvedHookSnapshot;
+          else delete entry.approvedHookSnapshot;
+          entry.mcpDigest = nextMcp.mcpDigest;
+          if (nextMcp.approvedMcpDigest) entry.approvedMcpDigest = nextMcp.approvedMcpDigest;
+          else delete entry.approvedMcpDigest;
+          changed = true;
+        }
+      }
+      if (changed) writeInstalledPlugins(data);
+    }
   } catch (err) {
     // Roll back: drop any partial install, restore the old dir + its entries.
     await rm(dir, { recursive: true, force: true });
@@ -105,6 +140,12 @@ export async function updatePluginByName(
   const parsed = parseSource(meta.source, {
     allowUnsafeTransport: options.allowUnsafeTransport === true,
   });
+
+  if (parsed.kind === "npm") {
+    throw new PluginInstallError(
+      "npm plugin auto-update is not available in Phase A; install an explicit npm:<package>@<version> source instead",
+    );
+  }
 
   if (parsed.kind === "remote") {
     // No local version to diff against — always re-clone and reinstall.

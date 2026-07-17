@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "panels": {
+    "version": 1,
+    "entries": [
+      {
+        "id": "video-cut",
+        "title": {
+          "default": "Video Cut",
+          "en": "Video Cut",
+          "zh-CN": "视频剪辑"
+        },
+        "entry": "panels/video-cut/index.html",
+        "icon": "activity",
+        "placement": "right-dock",
+        "singleton": true,
+        "permissions": ["context.session", "context.workspace", "storage", "agent.submitPrompt"]
+      }
+    ]
+  },
+  "automations": {
+    "version": 1,
+    "templates": [
+      {
+        "id": "daily-edit-audit",
+        "title": {
+          "default": "Daily video edit audit",
+          "en": "Daily video edit audit",
+          "zh-CN": "每日视频剪辑审查"
+        },
+        "description": "Review pending video-edit plans, missing inputs, and QA gaps without rendering or modifying media.",
+        "schedule": "0 9 * * *",
+        "prompt": "Inspect this project's pending video-edit plans and source-media references. Do not render, overwrite, rename, or modify any media. Report missing inputs, unsafe output paths, unreviewed destructive steps, subtitle or audio risks, and the next human decisions required.",
+        "timezone": "UTC",
+        "permissionLevel": "read-only",
+        "workspace": "current"
+      }
+    ]
+  }
+}

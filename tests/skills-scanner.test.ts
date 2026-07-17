@@ -153,12 +153,7 @@ describe("scanSkills - directory layout", () => {
 
   it("discovers <project>/.agents/skills/<name>/SKILL.md as a project skill", () => {
     const agentsBase = join(projectRoot, ".agents", "skills");
-    makeSkillDir(
-      agentsBase,
-      "review",
-      "name: review\ndescription: review helper",
-      "review body",
-    );
+    makeSkillDir(agentsBase, "review", "name: review\ndescription: review helper", "review body");
     const skills = scanSkills(projectRoot);
     const review = skills.find((s) => s.name === "review");
     expect(review).toBeDefined();
@@ -168,8 +163,18 @@ describe("scanSkills - directory layout", () => {
   });
 
   it("project skill shadows user skill of the same name", () => {
-    makeSkillDir(join(fakeHome, ".code-shell", "skills"), "shared", "description: from user", "user body");
-    makeSkillDir(join(projectRoot, ".code-shell", "skills"), "shared", "description: from project", "project body");
+    makeSkillDir(
+      join(fakeHome, ".code-shell", "skills"),
+      "shared",
+      "description: from user",
+      "user body",
+    );
+    makeSkillDir(
+      join(projectRoot, ".code-shell", "skills"),
+      "shared",
+      "description: from project",
+      "project body",
+    );
     const skills = scanSkills(projectRoot);
     const matches = skills.filter((s) => s.name === "shared");
     expect(matches).toHaveLength(1);
@@ -471,7 +476,12 @@ describe("scanSkills - plugin integration", () => {
     const cache = mkdtempSync(join(tmpdir(), "scan-plugin-coexist-"));
     try {
       // User-level skill named "pdf"
-      makeSkillDir(join(fakeHome, ".code-shell", "skills"), "pdf", "description: u-pdf", "user body");
+      makeSkillDir(
+        join(fakeHome, ".code-shell", "skills"),
+        "pdf",
+        "description: u-pdf",
+        "user body",
+      );
       // Plugin skill named "pdf" under plugin "docs"
       makePluginInstall("docs@mkt", cache, "pdf", "plugin pdf body");
 
@@ -508,5 +518,60 @@ describe("scanSkills - plugin integration", () => {
     // No fakeHome plugins dir written — should still scan project/user clean.
     const skills = scanSkills(projectRoot);
     expect(skills).toEqual([]);
+  });
+
+  it("ignores a plugin SKILL.md symlink that escapes the plugin root", () => {
+    if (process.platform === "win32") return;
+    const cache = mkdtempSync(join(tmpdir(), "scan-plugin-skill-link-"));
+    const outside = mkdtempSync(join(tmpdir(), "scan-plugin-skill-outside-"));
+    try {
+      makePluginInstall("docs@mkt", cache, "leak", "placeholder");
+      const skillFile = join(cache, "skills", "leak", "SKILL.md");
+      rmSync(skillFile, { force: true });
+      writeFileSync(
+        join(outside, "SKILL.md"),
+        "---\ndescription: private\n---\nprivate local contents",
+      );
+      symlinkSync(join(outside, "SKILL.md"), skillFile);
+      invalidateSkillCache();
+      expect(scanSkills(projectRoot).find((skill) => skill.name === "docs:leak")).toBeUndefined();
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a plugin skills directory symlink that escapes the plugin root", () => {
+    if (process.platform === "win32") return;
+    const cache = mkdtempSync(join(tmpdir(), "scan-plugin-skills-link-"));
+    const outside = mkdtempSync(join(tmpdir(), "scan-plugin-skills-outside-"));
+    try {
+      makeSkillDir(outside, "leak", "description: private", "private local contents");
+      symlinkSync(outside, join(cache, "skills"));
+      const pluginsDir = join(fakeHome, ".code-shell", "plugins");
+      mkdirSync(pluginsDir, { recursive: true });
+      writeFileSync(
+        join(pluginsDir, "installed_plugins.json"),
+        JSON.stringify({
+          version: 2,
+          plugins: {
+            "docs@mkt": [
+              {
+                scope: "user",
+                installPath: cache,
+                version: "abc123",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
+          },
+        }),
+      );
+      invalidateSkillCache();
+      expect(scanSkills(projectRoot).find((skill) => skill.name === "docs:leak")).toBeUndefined();
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 });

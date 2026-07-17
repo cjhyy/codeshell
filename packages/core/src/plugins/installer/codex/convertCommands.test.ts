@@ -1,5 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { copyCodexCommands } from "./convertCommands.js";
@@ -17,11 +25,14 @@ describe("copyCodexCommands", () => {
 
   test("copies prompts/<name>.md into dest/commands (Codex prompts ARE CC commands)", async () => {
     mkdirSync(join(src, "prompts"), { recursive: true });
-    writeFileSync(join(src, "prompts", "review.md"), "---\ndescription: review a PR\n---\nDo the review of $1.");
+    writeFileSync(
+      join(src, "prompts", "review.md"),
+      "---\ndescription: review a PR\n---\nDo the review of $1.",
+    );
     await copyCodexCommands(src, dest);
     const out = join(dest, "commands", "review.md");
     expect(existsSync(out)).toBe(true);
-    // Body (incl. $1 placeholder) preserved verbatim — v1 inert, like codex_ agent fields.
+    // Body is preserved verbatim; runtime expansion handles the $1 placeholder.
     expect(readFileSync(out, "utf-8")).toContain("Do the review of $1.");
   });
 
@@ -53,5 +64,36 @@ describe("copyCodexCommands", () => {
   test("no-op when source has neither prompts nor commands", async () => {
     await copyCodexCommands(src, dest);
     expect(existsSync(join(dest, "commands"))).toBe(false);
+  });
+
+  test("rejects a prompt file symlink that escapes the plugin root", async () => {
+    if (process.platform === "win32") return;
+    const outside = mkdtempSync(join(tmpdir(), "cs-cmd-outside-"));
+    try {
+      mkdirSync(join(src, "prompts"), { recursive: true });
+      writeFileSync(join(outside, "private.md"), "must not be copied");
+      symlinkSync(join(outside, "private.md"), join(src, "prompts", "leak.md"));
+      await expect(copyCodexCommands(src, dest)).rejects.toThrow(
+        "plugin command source escapes plugin dir",
+      );
+      expect(existsSync(join(dest, "commands", "leak.md"))).toBe(false);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects a prompts directory symlink that escapes the plugin root", async () => {
+    if (process.platform === "win32") return;
+    const outside = mkdtempSync(join(tmpdir(), "cs-cmd-dir-outside-"));
+    try {
+      writeFileSync(join(outside, "leak.md"), "must not be copied");
+      symlinkSync(outside, join(src, "prompts"));
+      await expect(copyCodexCommands(src, dest)).rejects.toThrow(
+        "plugin command source escapes plugin dir",
+      );
+      expect(existsSync(join(dest, "commands"))).toBe(false);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 });

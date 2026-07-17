@@ -10,6 +10,7 @@ describe("MCPManager connectAll lifecycle events", () => {
     await manager.connectAll(
       {
         broken: {
+          name: "broken",
           command: "/nonexistent-codeshell-test-binary",
           args: [],
           transport: "stdio",
@@ -30,7 +31,7 @@ describe("MCPManager connectAll lifecycle events", () => {
     const manager = new MCPManager(new ToolRegistry({ builtinTools: [] }));
     const events: McpServerLifecycleEvent[] = [];
     await manager.connectAll(
-      { off: { command: "/bin/echo", transport: "stdio", enabled: false } },
+      { off: { name: "off", command: "/bin/echo", transport: "stdio", enabled: false } },
       undefined,
       (event) => events.push(event),
     );

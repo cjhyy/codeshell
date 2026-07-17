@@ -57,6 +57,37 @@ export interface PluginInstallEntry {
   installedAt: string;
   lastUpdated: string;
   gitCommitSha?: string;
+  /** CodeShell extension: digest of hooks/hooks.json captured at install/update. */
+  hookDigest?: string;
+  /**
+   * CodeShell extension: the hook digest the user explicitly approved.
+   * Missing means executable hooks are pending approval. Hook-free installs
+   * auto-approve their absent-hooks digest so they never show a prompt.
+   */
+  approvedHookDigest?: string;
+  /**
+   * Bounded display snapshot of the last explicitly approved hook definition.
+   * It is non-executable review metadata used to show per-command update diffs.
+   */
+  approvedHookSnapshot?: StoredPluginHookReview[];
+  /** CodeShell extension: digest of the effective plugin MCP declaration. */
+  mcpDigest?: string;
+  /**
+   * CodeShell extension: the MCP digest the user explicitly approved.
+   * Missing means plugin-provided external processes / remote connections are
+   * pending approval. Installs without any valid MCP servers auto-approve.
+   */
+  approvedMcpDigest?: string;
+}
+
+export interface StoredPluginHookReview {
+  rawEvent: string;
+  matcher?: string;
+  command: string;
+  commandDigest: string;
+  commandTruncated?: boolean;
+  async?: boolean;
+  timeoutMs?: number;
 }
 
 export interface InstalledPluginsV2 {
@@ -64,6 +95,4 @@ export interface InstalledPluginsV2 {
   plugins: Record<string, PluginInstallEntry[]>;
 }
 
-export type ValidationResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; error: string };
+export type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string };

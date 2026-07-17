@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { valid as validSemver, validRange as validSemverRange } from "semver";
 import { githubRepoToCloneUrl } from "../gitOps.js";
 import { PluginInstallError } from "./types.js";
 
@@ -12,6 +13,14 @@ import { PluginInstallError } from "./types.js";
  */
 export type ParsedSource =
   | { kind: "local"; path: string }
+  | {
+      kind: "npm";
+      packageName: string;
+      selector: string;
+      selectorKind: "exact" | "tag";
+      raw: string;
+      inferredName: string;
+    }
   | {
       kind: "remote";
       url: string;
@@ -33,6 +42,62 @@ function isSshUrl(s: string): boolean {
 function isRemote(s: string): boolean {
   const lower = s.toLowerCase();
   return lower.startsWith("github:") || /^[a-z][a-z0-9+.-]*:\/\//i.test(s) || isSshUrl(s);
+}
+
+const MAX_NPM_PACKAGE_NAME = 214;
+const MAX_NPM_SELECTOR = 128;
+const NPM_PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/;
+const NPM_DIST_TAG = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+/** Parse the intentionally small npm Phase-A source grammar. */
+export function parseNpmPluginSource(input: string): Extract<ParsedSource, { kind: "npm" }> {
+  if (!input.startsWith("npm:")) {
+    throw new PluginInstallError("npm plugin source must start with npm:");
+  }
+  const spec = input.slice("npm:".length);
+  let packageName = spec;
+  let selector = "latest";
+
+  // Scoped names contain their own leading '@'. A selector separator is only
+  // an '@' after the slash; unscoped names use their last '@'.
+  const selectorAt = spec.startsWith("@")
+    ? (() => {
+        const slash = spec.indexOf("/");
+        return slash < 0 ? -1 : spec.lastIndexOf("@") > slash ? spec.lastIndexOf("@") : -1;
+      })()
+    : spec.lastIndexOf("@");
+  if (selectorAt >= 0) {
+    packageName = spec.slice(0, selectorAt);
+    selector = spec.slice(selectorAt + 1);
+  }
+
+  if (
+    packageName.length === 0 ||
+    packageName.length > MAX_NPM_PACKAGE_NAME ||
+    !NPM_PACKAGE_NAME.test(packageName)
+  ) {
+    throw new PluginInstallError(`invalid public npm package name: ${packageName || "(empty)"}`);
+  }
+  const exact = validSemver(selector);
+  if (
+    selector.length === 0 ||
+    selector.length > MAX_NPM_SELECTOR ||
+    (!exact && (!NPM_DIST_TAG.test(selector) || validSemverRange(selector) !== null))
+  ) {
+    throw new PluginInstallError(
+      `npm selector must be an exact version or dist-tag (ranges are not supported): ${selector || "(empty)"}`,
+    );
+  }
+
+  const inferredName = packageName.split("/").pop() ?? packageName;
+  return {
+    kind: "npm",
+    packageName,
+    selector: exact ?? selector,
+    selectorKind: exact ? "exact" : "tag",
+    raw: input,
+    inferredName,
+  };
 }
 
 function unsafeTransport(input: string): string | null {
@@ -67,6 +132,7 @@ function lastSegment(p: string): string {
 }
 
 export function parseSource(input: string, options: ParseSourceOptions = {}): ParsedSource {
+  if (input.startsWith("npm:")) return parseNpmPluginSource(input);
   if (!isRemote(input)) {
     return { kind: "local", path: resolve(input) };
   }

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { MessageCircle } from "lucide-react";
-import type { PluginLifecycleEvent } from "@cjhyy/code-shell-core/plugin-runtime";
+import type { PluginLifecycleEvent } from "@cjhyy/code-shell-core/browser/plugin-runtime";
 import {
   registerDesktopPanelPlugin,
   type DesktopPanelLifecycleContext,

@@ -25,6 +25,12 @@ Core now exposes two code boundaries for trusted in-process modules:
 - `PluginLifecycleRuntime` coordinates `activate`, `panel_mount`, `panel_context_changed`,
   `panel_visibility_changed`, `panel_unmount`, and `deactivate` without importing React or Electron.
 
+Browser hosts import that coordinator from the reviewed
+`@cjhyy/code-shell-core/browser/plugin-runtime` entry. The general
+`@cjhyy/code-shell-core/plugin-runtime` path remains compatible for existing
+Node/headless consumers, but Desktop renderer code intentionally uses only the
+browser-named entry.
+
 Desktop's `DesktopPanelPlugin` binds that lifecycle to a logical dock tab and supplies a scoped host
 service plus a view adapter. QuickChat is the first built-in code-backed panel: its module ensures a
 side session on mount/context change and releases the claimed session on unmount. `PanelRegistry`
@@ -73,13 +79,14 @@ implement the core lifecycle RPC contract without weakening this sandbox boundar
 
 ## Manifest
 
-Declare the same `panels` object in either `.claude-plugin/plugin.json` or
-`.codex-plugin/plugin.json`:
+For a Codex-compatible package, keep `.codex-plugin/plugin.json` standard and
+put CodeShell-only UI contributions in `.codeshell-plugin/plugin.json`.
+Legacy packages may still declare the same `panels` object directly in either
+`.claude-plugin/plugin.json` or `.codex-plugin/plugin.json`.
 
 ```json
 {
-  "name": "build-insights",
-  "version": "1.0.0",
+  "schemaVersion": 1,
   "panels": {
     "version": 1,
     "entries": [

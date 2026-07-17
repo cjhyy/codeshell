@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   scanPluginCommands,
   invalidatePluginCommandsCache,
+  MAX_PLUGIN_COMMAND_FILE_BYTES,
 } from "../packages/core/src/plugins/pluginCommandsLoader.js";
 
 describe("scanPluginCommands", () => {
@@ -82,8 +83,7 @@ describe("scanPluginCommands", () => {
     const cache = mkdtempSync(join(tmpdir(), "plugincmd-arg-"));
     try {
       installPluginWithCommands("sp@mkt", cache, {
-        "review.md":
-          "---\ndescription: review code\nargument-hint: <pr-number>\n---\nReview body",
+        "review.md": "---\ndescription: review code\nargument-hint: <pr-number>\n---\nReview body",
       });
       const cmds = scanPluginCommands();
       expect(cmds[0]!.argumentHint).toBe("<pr-number>");
@@ -102,6 +102,18 @@ describe("scanPluginCommands", () => {
       const cmds = scanPluginCommands();
       expect(cmds).toHaveLength(1);
       expect(cmds[0]!.commandName).toBe("real");
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores command files over the bounded prompt size", () => {
+    const cache = mkdtempSync(join(tmpdir(), "plugincmd-oversized-"));
+    try {
+      installPluginWithCommands("sp@mkt", cache, {
+        "oversized.md": "x".repeat(MAX_PLUGIN_COMMAND_FILE_BYTES + 1),
+      });
+      expect(scanPluginCommands()).toEqual([]);
     } finally {
       rmSync(cache, { recursive: true, force: true });
     }
@@ -157,13 +169,29 @@ describe("scanPluginCommands", () => {
         JSON.stringify({
           version: 2,
           plugins: {
-            "b@m": [{ scope: "user", installPath: cacheB, version: "v", installedAt: "t", lastUpdated: "t" }],
-            "a@m": [{ scope: "user", installPath: cacheA, version: "v", installedAt: "t", lastUpdated: "t" }],
+            "b@m": [
+              {
+                scope: "user",
+                installPath: cacheB,
+                version: "v",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
+            "a@m": [
+              {
+                scope: "user",
+                installPath: cacheA,
+                version: "v",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
           },
         }),
       );
       const cmds = scanPluginCommands();
-      expect(cmds.map((c) => c.name)).toEqual(["a:z", "a:a", "b:m"]);
+      expect(cmds.map((c) => c.name)).toEqual(["a:a", "a:z", "b:m"]);
     } finally {
       rmSync(cacheA, { recursive: true, force: true });
       rmSync(cacheB, { recursive: true, force: true });
@@ -182,6 +210,56 @@ describe("scanPluginCommands", () => {
       expect(cmds.some((c) => c.name === "sp:later")).toBe(true);
     } finally {
       rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a command file symlink that escapes the plugin root", () => {
+    if (process.platform === "win32") return;
+    const cache = mkdtempSync(join(tmpdir(), "plugincmd-symlink-file-"));
+    const outside = mkdtempSync(join(tmpdir(), "plugincmd-outside-file-"));
+    try {
+      installPluginWithCommands("sp@mkt", cache, {});
+      writeFileSync(join(outside, "private.md"), "private local contents");
+      symlinkSync(join(outside, "private.md"), join(cache, "commands", "leak.md"));
+      invalidatePluginCommandsCache();
+      expect(scanPluginCommands()).toEqual([]);
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a commands directory symlink that escapes the plugin root", () => {
+    if (process.platform === "win32") return;
+    const cache = mkdtempSync(join(tmpdir(), "plugincmd-symlink-dir-"));
+    const outside = mkdtempSync(join(tmpdir(), "plugincmd-outside-dir-"));
+    try {
+      writeFileSync(join(outside, "leak.md"), "private local contents");
+      symlinkSync(outside, join(cache, "commands"));
+      const pluginsDir = join(fakeHome, ".code-shell", "plugins");
+      mkdirSync(pluginsDir, { recursive: true });
+      writeFileSync(
+        join(pluginsDir, "installed_plugins.json"),
+        JSON.stringify({
+          version: 2,
+          plugins: {
+            "sp@mkt": [
+              {
+                scope: "user",
+                installPath: cache,
+                version: "abc",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
+          },
+        }),
+      );
+      invalidatePluginCommandsCache();
+      expect(scanPluginCommands()).toEqual([]);
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
     }
   });
 });

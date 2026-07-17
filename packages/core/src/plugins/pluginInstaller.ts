@@ -6,7 +6,7 @@
  */
 
 import { existsSync, realpathSync, rmSync, rmdirSync } from "node:fs";
-import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { gitClone, gitRevParseHead, gitSparseCheckoutAdd, githubRepoToCloneUrl } from "./gitOps.js";
@@ -17,13 +17,20 @@ import {
   pluginInstallKey,
   readInstalledPlugins,
   removeInstallEntries,
-  writeInstalledPlugins,
 } from "./installedPlugins.js";
 import { rewritePluginVars } from "./varRewrite.js";
+import { pluginHookInstallRecord } from "./pluginHookIntegrity.js";
+import { pluginMcpInstallRecord } from "./pluginMcpIntegrity.js";
 import { assertSafePluginName } from "./installer/paths.js";
 import { pruneDisabledSettingsForPlugin } from "./installer/pruneDisabled.js";
 import { detectPluginFormat } from "./installer/detectFormat.js";
 import { normalizePluginManifest } from "./installer/normalizeManifest.js";
+import { normalizePluginMcpMap, readPluginMcp } from "./installer/loadPluginMcp.js";
+import { convertCodexAgentsDirectory } from "./installer/codex/convertAgents.js";
+import { copyCodexCommands } from "./installer/codex/convertCommands.js";
+import { copyCodexHooks } from "./installer/codex/convertHooks.js";
+import { resolveCodexMcpServers } from "./installer/codex/convertMcp.js";
+import { CodexPluginManifest } from "./installer/types.js";
 import {
   resolveContainedPluginSubpath,
   validateRelativePluginSubpath,
@@ -106,6 +113,40 @@ export interface VarRewriteReport {
 export type InstallResult =
   | { ok: true; entry: PluginInstallEntry; freshlyCloned: boolean; varRewrite: VarRewriteReport }
   | { ok: false; error: string };
+
+async function projectMarketplacePluginRuntime(
+  pluginDir: string,
+  pluginName: string,
+  format: "cc" | "codex",
+): Promise<void> {
+  if (format !== "codex") return;
+  const manifest = CodexPluginManifest.parse(
+    JSON.parse(await readFile(join(pluginDir, ".codex-plugin", "plugin.json"), "utf-8")),
+  );
+  // Marketplace installs already preserve the complete source package. Add
+  // only the CodeShell-native projections that runtime loaders consume.
+  await convertCodexAgentsDirectory(pluginDir, pluginDir, pluginName);
+  await copyCodexCommands(pluginDir, pluginDir);
+  await copyCodexHooks(pluginDir, pluginDir, manifest.hooks);
+
+  const servers = resolveCodexMcpServers(pluginDir, manifest.mcpServers);
+  const keyed: Record<string, unknown> = {};
+  for (const [serverName, config] of Object.entries(servers)) {
+    const key = `${pluginName}:${serverName}`;
+    keyed[key] = { ...(config as object), name: key };
+  }
+  if (Object.keys(keyed).length > 0) {
+    const normalized = normalizePluginMcpMap(keyed, pluginName, true);
+    if (Object.keys(normalized).length !== Object.keys(keyed).length) {
+      throw new Error("invalid plugin MCP server declaration");
+    }
+    await writeFile(
+      join(pluginDir, "mcp-servers.json"),
+      JSON.stringify(normalized, null, 2),
+      "utf-8",
+    );
+  }
+}
 
 async function materializePath(
   marketplaceInstallLocation: string,
@@ -293,6 +334,8 @@ export async function installPlugin(
   pluginName: string,
   marketplaceName: string,
 ): Promise<InstallResult> {
+  const key = pluginInstallKey(pluginName, marketplaceName);
+  const previousEntries = readInstalledPlugins().plugins[key] ?? [];
   const known = readKnownMarketplaces();
   const km = known[marketplaceName];
   if (!km) {
@@ -331,14 +374,16 @@ export async function installPlugin(
   }
   if (!mat.ok) return mat;
 
-  // Validate and freeze the author-facing manifest before the install becomes
-  // visible in installed_plugins.json. Marketplace plugins keep their source
-  // tree in place, so no panel asset copy/conversion is needed here.
+  // Project Codex package components into the same runtime-native layout used
+  // by local/direct installs, then validate and freeze the author manifest
+  // before the install becomes visible in installed_plugins.json.
   try {
+    const format = detectPluginFormat(mat.cacheDir);
+    await projectMarketplacePluginRuntime(mat.cacheDir, pluginName, format);
     await normalizePluginManifest(mat.cacheDir, {
       name: pluginName,
       version: entry.version ?? mat.version,
-      format: detectPluginFormat(mat.cacheDir),
+      format,
       destinationRoot: mat.cacheDir,
     });
   } catch (error) {
@@ -349,18 +394,14 @@ export async function installPlugin(
     };
   }
 
-  // Rewrite ${CLAUDE_PLUGIN_ROOT} → ${CODESHELL_PLUGIN_ROOT} across every
-  // text file in the materialized tree. Plugins authored against Claude
-  // Code's protocol bake CLAUDE_PLUGIN_ROOT into hooks.json and shell
-  // scripts; we normalize at install time so the runtime only ever sets
-  // CODESHELL_PLUGIN_ROOT and host-detection branches in plugin scripts
-  // pick the codeshell-native code path. The breadcrumb file dropped at
-  // the root documents the rewrite for users debugging upstream diffs.
+  // Rewrite Claude-specific plugin root/data variables across every text file
+  // in the materialized tree. The runtime exposes CodeShell-native names plus
+  // Codex aliases, while keeping Claude host-detection variables unset. The
+  // breadcrumb documents the rewrite for users debugging upstream diffs.
   const rewriteSummary = rewritePluginVars(mat.cacheDir);
 
   // Remove old install entries for the same key so we don't pile up
   // historical versions (Phase A: single-scope only).
-  const key = pluginInstallKey(pluginName, marketplaceName);
   removeInstallEntries(key);
 
   const now = new Date().toISOString();
@@ -371,6 +412,12 @@ export async function installPlugin(
     installedAt: now,
     lastUpdated: now,
     ...(mat.sha ? { gitCommitSha: mat.sha } : {}),
+    ...pluginHookInstallRecord(mat.cacheDir, previousEntries),
+    ...pluginMcpInstallRecord(
+      mat.cacheDir,
+      Object.keys(readPluginMcp(mat.cacheDir, pluginName)).length > 0,
+      previousEntries,
+    ),
   };
   appendInstallEntry(key, installEntry);
 

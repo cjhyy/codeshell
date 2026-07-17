@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import {
   PluginLifecycleRuntime,
   type PluginLifecycleModule,
-} from "@cjhyy/code-shell-core/plugin-runtime";
+} from "@cjhyy/code-shell-core/browser/plugin-runtime";
 import type { LucideIcon } from "lucide-react";
 import {
   PANEL_REGISTRY,

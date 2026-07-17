@@ -173,6 +173,7 @@ describe("buildRegisteredTool readOnlyHint", () => {
       annotations: { readOnlyHint: true },
     });
     expect(t.name).toBe("mcp_srv_search");
+    expect(t.mcpToolName).toBe("search");
     expect(t.isConcurrencySafe).toBe(true);
     expect(t.isReadOnly).toBe(true);
     expect(t.permissionDefault).toBe("ask");
@@ -807,7 +808,7 @@ describe("createMcpAuthenticatedFetch", () => {
         refreshes++;
         return "access";
       }),
-      (async () => new Response("", { status: 403 })) as typeof fetch,
+      (async () => new Response("", { status: 403 })) as unknown as typeof fetch,
     );
     expect((await oauthFetch("https://mcp.example/rpc")).status).toBe(403);
     expect(refreshes).toBe(1);
@@ -829,7 +830,7 @@ describe("createMcpAuthenticatedFetch", () => {
       (async (request: Request) => {
         expect(request.headers.get("Authorization")).toBe("Bearer plain-token");
         return new Response("", { status: 401 });
-      }) as typeof fetch,
+      }) as unknown as typeof fetch,
     );
     expect((await tokenFetch("https://mcp.example/rpc")).status).toBe(401);
   });
@@ -849,7 +850,7 @@ describe("createMcpAuthenticatedFetch", () => {
         sends++;
         controller.abort();
         return new Response("", { status: 401 });
-      }) as typeof fetch,
+      }) as unknown as typeof fetch,
     );
 
     expect(
@@ -863,10 +864,14 @@ describe("createMcpAuthenticatedFetch", () => {
     const resolved: boolean[] = [];
     let sends = 0;
     const originalClone = Request.prototype.clone;
-    Request.prototype.clone = function cloneWithUnreplayableFixture(): Request {
-      if (this.url.includes("unreplayable")) throw new TypeError("body is not replayable");
-      return originalClone.call(this);
-    };
+    Reflect.set(
+      Request.prototype,
+      "clone",
+      function cloneWithUnreplayableFixture(this: Request): Request {
+        if (this.url.includes("unreplayable")) throw new TypeError("body is not replayable");
+        return originalClone.call(this) as unknown as Request;
+      },
+    );
     try {
       const authenticatedFetch = createMcpAuthenticatedFetch(
         "srv",
@@ -878,14 +883,14 @@ describe("createMcpAuthenticatedFetch", () => {
         (async () => {
           sends++;
           return new Response("", { status: 401 });
-        }) as typeof fetch,
+        }) as unknown as typeof fetch,
       );
 
       expect((await authenticatedFetch("https://mcp.example/unreplayable")).status).toBe(401);
       expect(resolved).toEqual([false]);
       expect(sends).toBe(1);
     } finally {
-      Request.prototype.clone = originalClone;
+      Reflect.set(Request.prototype, "clone", originalClone);
     }
   });
 });
@@ -1007,6 +1012,67 @@ describe("executor gate: MCP tool from a server this session didn't enable", () 
     } as never);
     expect(result.isError).toBe(true);
     expect(String(result.error)).toContain("not enabled for this project");
+  });
+});
+
+describe("executor gate: MCP tool policy", () => {
+  test("direct registered and generic MCPTool calls use the same exact-name policy", async () => {
+    const registry = new ToolRegistry();
+    const calls: string[] = [];
+    registry.registerTool(
+      {
+        name: "mcp_mine_srv_delete",
+        description: "delete",
+        inputSchema: { type: "object", properties: {} },
+        source: "mcp",
+        serverName: "mine:srv",
+        mcpToolName: "delete",
+      } as never,
+      async () => {
+        calls.push("direct");
+        return "ran";
+      },
+    );
+    registry.registerTool(
+      {
+        name: "MCPTool",
+        description: "generic",
+        inputSchema: { type: "object", properties: {} },
+        source: "builtin",
+      } as never,
+      async () => {
+        calls.push("generic");
+        return "ran";
+      },
+    );
+    const executor = new ToolExecutor(
+      registry,
+      new PermissionClassifier([], "bypassPermissions"),
+      new HookRegistry(),
+    );
+    executor.setContext({
+      allowedMcpServers: new Set(["mine:srv"]),
+      mcpToolPolicies: new Map([
+        ["mine:srv", { allowedTools: new Set(["read"]), disabledTools: new Set() }],
+      ]),
+    } as never);
+
+    const direct = await executor.executeSingle({
+      id: "p1",
+      toolName: "mcp_mine_srv_delete",
+      args: {},
+    } as never);
+    const generic = await executor.executeSingle({
+      id: "p2",
+      toolName: "MCPTool",
+      args: { server: "mine:srv", tool: "delete" },
+    } as never);
+
+    expect(direct.isError).toBe(true);
+    expect(generic.isError).toBe(true);
+    expect(String(direct.error)).toContain("tool policy");
+    expect(String(generic.error)).toContain("tool policy");
+    expect(calls).toEqual([]);
   });
 });
 

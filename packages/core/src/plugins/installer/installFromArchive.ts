@@ -20,6 +20,49 @@ export interface InstallLocalOptions {
   overwrite?: boolean;
 }
 
+export interface LocalPluginSourceInput {
+  kind: "dir" | "zip";
+  path: string;
+}
+
+const MAX_LOCAL_PLUGIN_SOURCE_PATH = 4096;
+
+/**
+ * Resolve a directory/zip input to its actual plugin root. Zip extraction is
+ * private and always cleaned after the callback settles.
+ */
+export async function withLocalPluginSourceRoot<T>(
+  input: LocalPluginSourceInput,
+  operation: (root: string) => Promise<T>,
+): Promise<T> {
+  if (
+    !input ||
+    (input.kind !== "dir" && input.kind !== "zip") ||
+    typeof input.path !== "string" ||
+    input.path.length === 0 ||
+    input.path.length > MAX_LOCAL_PLUGIN_SOURCE_PATH ||
+    input.path.includes("\0")
+  ) {
+    throw new PluginInstallError("local plugin source is invalid");
+  }
+  if (input.kind === "dir") {
+    if (!existsSync(input.path) || !statSync(input.path).isDirectory()) {
+      throw new PluginInstallError(`source is not a directory: ${input.path}`);
+    }
+    return operation(await findPluginRoot(input.path));
+  }
+  if (!existsSync(input.path) || !statSync(input.path).isFile()) {
+    throw new PluginInstallError(`archive is not a file: ${input.path}`);
+  }
+  const tmp = await mkdtemp(join(tmpdir(), "cs-tmp-zip-"));
+  try {
+    await extractZip(input.path, tmp);
+    return await operation(await findPluginRoot(tmp));
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+}
+
 /**
  * Install `root` as plugin `name`, atomically replacing an already-installed
  * plugin of the same name when `overwrite` is set. When no same-name plugin
@@ -61,16 +104,8 @@ export async function installPluginFromArchive(
   name?: string,
   options?: InstallLocalOptions,
 ): Promise<{ dir: string; name: string }> {
-  if (!existsSync(zipPath) || !statSync(zipPath).isFile()) {
-    throw new PluginInstallError(`archive is not a file: ${zipPath}`);
-  }
-  const tmp = await mkdtemp(join(tmpdir(), "cs-tmp-zip-"));
-  try {
-    await extractZip(zipPath, tmp);
-    const root = await findPluginRoot(tmp);
+  return withLocalPluginSourceRoot({ kind: "zip", path: zipPath }, async (root) => {
     const resolvedName = normalizePluginName(name ?? (await deriveName(root)));
-    // Overwrite (when set) runs inside this try so the extracted `root` is still
-    // present while reinstallAtomic installs from it; the finally removes tmp.
     const dir = await installRootMaybeOverwrite(
       root,
       resolvedName,
@@ -78,9 +113,7 @@ export async function installPluginFromArchive(
       options?.overwrite ?? false,
     );
     return { dir, name: resolvedName };
-  } finally {
-    await rm(tmp, { recursive: true, force: true });
-  }
+  });
 }
 
 /**
@@ -93,26 +126,21 @@ export async function installPluginFromArchive(
  * the manifest rather than forcing the caller to guess it.
  */
 export async function installLocalPlugin(
-  input: { kind: "dir" | "zip"; path: string },
+  input: LocalPluginSourceInput,
   installedAt: string,
   name?: string,
   options?: InstallLocalOptions,
 ): Promise<{ dir: string; name: string }> {
-  if (input.kind === "zip") {
-    return installPluginFromArchive(input.path, installedAt, name, options);
-  }
-  if (!existsSync(input.path) || !statSync(input.path).isDirectory()) {
-    throw new PluginInstallError(`source is not a directory: ${input.path}`);
-  }
-  const root = await findPluginRoot(input.path);
-  const resolvedName = normalizePluginName(name ?? (await deriveName(root)));
-  const dir = await installRootMaybeOverwrite(
-    root,
-    resolvedName,
-    installedAt,
-    options?.overwrite ?? false,
-  );
-  return { dir, name: resolvedName };
+  return withLocalPluginSourceRoot(input, async (root) => {
+    const resolvedName = normalizePluginName(name ?? (await deriveName(root)));
+    const dir = await installRootMaybeOverwrite(
+      root,
+      resolvedName,
+      installedAt,
+      options?.overwrite ?? false,
+    );
+    return { dir, name: resolvedName };
+  });
 }
 
 /**
@@ -121,7 +149,7 @@ export async function installLocalPlugin(
  * `dir` itself isn't a plugin root but contains exactly one subdirectory, dive
  * one level. Only one level — deeper nesting is treated as malformed.
  */
-async function findPluginRoot(dir: string): Promise<string> {
+export async function findPluginRoot(dir: string): Promise<string> {
   if (looksLikePluginRoot(dir)) return dir;
   const entries = await readdir(dir, { withFileTypes: true });
   const subDirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith("."));
@@ -143,7 +171,7 @@ function looksLikePluginRoot(dir: string): boolean {
 }
 
 /** Read the `name` field from a CC or Codex manifest; fall back to the dir name. */
-async function deriveName(root: string): Promise<string> {
+export async function deriveName(root: string): Promise<string> {
   for (const rel of [
     [".claude-plugin", "plugin.json"],
     [".codex-plugin", "plugin.json"],
@@ -166,12 +194,14 @@ async function deriveName(root: string): Promise<string> {
  * (called by installPluginFromPath) rejects separators outright; this makes a
  * manifest name like "My Plugin" usable instead of erroring.
  */
-function normalizePluginName(raw: string): string {
+export function normalizePluginName(raw: string): string {
   const cleaned = raw
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^[-.]+|[-.]+$/g, "");
-  if (!cleaned) throw new PluginInstallError(`cannot derive a valid plugin name from: ${JSON.stringify(raw)}`);
+  if (!cleaned) {
+    throw new PluginInstallError(`cannot derive a valid plugin name from: ${JSON.stringify(raw)}`);
+  }
   return cleaned;
 }

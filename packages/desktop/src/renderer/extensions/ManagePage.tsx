@@ -1,8 +1,8 @@
 /**
  * ManagePage — tabbed container wiring PluginsTab / SkillsTab / McpSection.
  *
- * Owns the enable/disable state for plugins and skills (mirrors CustomizePage
- * in PluginsAndSkillsSection). State lives in TWO user-scope settings arrays:
+ * Owns the enable/disable state for plugins and skills. State lives in TWO
+ * user-scope settings arrays:
  *
  *   - disabledSkills: bare skill names that are off.
  *   - disabledPlugins: bare plugin names that are off. THIS is what suppresses
@@ -32,7 +32,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-// Replicated from PluginsAndSkillsSection (helper is not exported there).
 // A plugin skill's namespace is the part of its name before the first ":".
 const STANDALONE_NAMESPACE = "__standalone__";
 

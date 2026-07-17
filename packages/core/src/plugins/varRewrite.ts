@@ -2,7 +2,11 @@
  * Plugin variable rewriter.
  *
  * After a plugin is materialized into the cache dir, walk its files and
- * rewrite every occurrence of `CLAUDE_PLUGIN_ROOT` to `CODESHELL_PLUGIN_ROOT`.
+ * rewrite Claude-specific plugin environment variables to CodeShell-native
+ * names:
+ *
+ * - `CLAUDE_PLUGIN_ROOT` → `CODESHELL_PLUGIN_ROOT`
+ * - `CLAUDE_PLUGIN_DATA` → `CODESHELL_PLUGIN_DATA`
  *
  * Why: plugins authored against Claude Code's protocol embed
  * `${CLAUDE_PLUGIN_ROOT}` in their hooks.json command strings and inside
@@ -30,8 +34,10 @@
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const FROM = "CLAUDE_PLUGIN_ROOT";
-const TO = "CODESHELL_PLUGIN_ROOT";
+const REWRITES = [
+  ["CLAUDE_PLUGIN_ROOT", "CODESHELL_PLUGIN_ROOT"],
+  ["CLAUDE_PLUGIN_DATA", "CODESHELL_PLUGIN_DATA"],
+] as const;
 
 const SCAN_BYTES = 8192;
 
@@ -50,7 +56,12 @@ function isLikelyBinary(buf: Buffer): boolean {
 }
 
 function walkAndRewrite(dir: string, summary: RewriteSummary): void {
-  let entries: { name: string; isDirectory(): boolean; isFile(): boolean; isSymbolicLink(): boolean }[];
+  let entries: {
+    name: string;
+    isDirectory(): boolean;
+    isFile(): boolean;
+    isSymbolicLink(): boolean;
+  }[];
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch {
@@ -79,9 +90,11 @@ function walkAndRewrite(dir: string, summary: RewriteSummary): void {
     if (isLikelyBinary(raw)) continue;
 
     const text = raw.toString("utf8");
-    if (!text.includes(FROM)) continue;
-
-    const rewritten = text.split(FROM).join(TO);
+    let rewritten = text;
+    for (const [from, to] of REWRITES) {
+      rewritten = rewritten.split(from).join(to);
+    }
+    if (rewritten === text) continue;
     try {
       writeFileSync(full, rewritten, "utf8");
       summary.filesRewritten += 1;
@@ -94,12 +107,12 @@ function walkAndRewrite(dir: string, summary: RewriteSummary): void {
 }
 
 /**
- * Rewrite every `CLAUDE_PLUGIN_ROOT` → `CODESHELL_PLUGIN_ROOT` under
- * `installPath`, then drop a breadcrumb file at the root.
+ * Rewrite Claude-specific plugin environment variables under `installPath`,
+ * then drop a breadcrumb file at the root.
  *
  * Idempotent: re-running on an already-rewritten tree is a no-op for the
- * rewrite (no `CLAUDE_PLUGIN_ROOT` left) but refreshes the breadcrumb's
- * timestamp so the user can see when the most recent install/update ran.
+ * rewrite but refreshes the breadcrumb's timestamp so the user can see when
+ * the most recent install/update ran.
  */
 export function rewritePluginVars(installPath: string): RewriteSummary {
   const summary: RewriteSummary = {
@@ -107,24 +120,24 @@ export function rewritePluginVars(installPath: string): RewriteSummary {
     filesRewritten: 0,
     rewrittenPaths: [],
   };
-  let exists = false;
   try {
-    exists = statSync(installPath).isDirectory();
+    if (!statSync(installPath).isDirectory()) return summary;
   } catch {
-    exists = false;
+    return summary;
   }
-  if (!exists) return summary;
 
   walkAndRewrite(installPath, summary);
 
   const breadcrumb = {
     rewrittenAt: new Date().toISOString(),
-    from: FROM,
-    to: TO,
+    // Keep the original fields for older tooling that reads this breadcrumb.
+    from: REWRITES[0][0],
+    to: REWRITES[0][1],
+    rewrites: REWRITES.map(([from, to]) => ({ from, to })),
     filesScanned: summary.filesScanned,
     filesRewritten: summary.filesRewritten,
     note:
-      "codeshell rewrote plugin files at install time so ${CLAUDE_PLUGIN_ROOT} placeholders use codeshell's native env var. " +
+      "codeshell rewrote Claude-specific plugin environment placeholders to codeshell-native names at install time. " +
       "Upstream plugin sources are unchanged; only this local copy was modified.",
   };
   try {

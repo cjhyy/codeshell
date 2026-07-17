@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, realpathSync, statSync } from "node:fs";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { readInstalledPlugins } from "../installedPlugins.js";
 import type { AgentSourceDir } from "../../agent/agent-definition-registry.js";
 
@@ -21,7 +21,18 @@ export function pluginAgentDirs(disabledPlugins: string[] = []): AgentSourceDir[
       // Carry pluginName so a plugin agent's bare skill allowlist
       // (`director-skill`) can be namespaced to `<pluginName>:director-skill`
       // at spawn time — see resolveAgentTypeOverrides.
-      if (existsSync(dir)) out.push({ dir, source: "plugin", pluginName });
+      if (!existsSync(dir)) continue;
+      try {
+        const installRoot = realpathSync(entry.installPath);
+        const resolvedDir = realpathSync(dir);
+        const rel = relative(installRoot, resolvedDir);
+        if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) continue;
+        if (statSync(resolvedDir).isDirectory()) {
+          out.push({ dir, source: "plugin", pluginName });
+        }
+      } catch {
+        // Missing, unreadable, or escaping plugin contribution — ignore it.
+      }
     }
   }
   return out;

@@ -1,12 +1,16 @@
 /**
  * Convert PluginCommand[] (from pluginCommandsLoader) to SlashCommand[]
  * registrable on the CommandRegistry. Each command's execute() reads
- * the body, substitutes $ARGUMENTS / {args}, and stages the result via
+ * the body, expands CodeShell/CC/Codex placeholders, and stages the result via
  * ctx.setNextContext so the user can submit by pressing Enter.
  */
 
 import type { SlashCommand } from "../registry.js";
-import { scanPluginCommands, type PluginCommand } from "@cjhyy/code-shell-core";
+import {
+  expandPluginCommandBody,
+  scanPluginCommands,
+  type PluginCommand,
+} from "@cjhyy/code-shell-core";
 
 function pluginCommandToSlash(pc: PluginCommand): SlashCommand {
   const usage = pc.argumentHint ? `/${pc.name} ${pc.argumentHint}` : `/${pc.name}`;
@@ -16,9 +20,7 @@ function pluginCommandToSlash(pc: PluginCommand): SlashCommand {
     usage,
     group: "advanced",
     execute: (arg, ctx) => {
-      const expanded = pc.body
-        .replace(/\$ARGUMENTS/g, arg ?? "")
-        .replace(/\{args\}/g, arg ?? "");
+      const expanded = expandPluginCommandBody(pc.body, arg ?? "");
       ctx.setNextContext(expanded);
       ctx.addStatus(
         `Prompt staged from ${pc.name}. Press Enter to submit (or edit your message first).`,

@@ -1,0 +1,27 @@
+{
+  "name": "video-editor",
+  "version": "0.1.0",
+  "description": "Deterministic local video editing with FFmpeg, an agent workflow, and a CodeShell dock panel.",
+  "author": {
+    "name": "CodeShell",
+    "url": "https://github.com/cjhyy/codeshell"
+  },
+  "homepage": "https://github.com/cjhyy/codeshell/tree/main/examples/plugins/video-editor",
+  "repository": "https://github.com/cjhyy/codeshell",
+  "license": "MIT",
+  "keywords": ["video", "ffmpeg", "editing", "creative"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Video Editor",
+    "shortDescription": "Trim, reframe, caption, and render local video",
+    "longDescription": "Plan and execute deterministic local video edits through FFmpeg and FFprobe.",
+    "developerName": "CodeShell",
+    "category": "Creative",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Trim this video into a short clip.",
+      "Reframe this clip for a vertical 9:16 export.",
+      "Build a reviewed video edit plan and render it."
+    ]
+  }
+}

@@ -270,7 +270,10 @@ export function createMcpAuthenticatedFetch(
       token = (await access.resolveOAuthAccess({ id: credentialId!, scope: "full" })).accessToken;
     }
 
-    const source = new Request(input, init);
+    // The SDK and Bun can contribute distinct undici-compatible Request types.
+    // Normalize once at the adapter boundary instead of leaking that ambient
+    // declaration mismatch through the authentication/replay logic.
+    const source = new Request(input as unknown as string, init);
     let replayable = true;
     try {
       source.clone();
@@ -279,10 +282,14 @@ export function createMcpAuthenticatedFetch(
     }
     const send = async (accessToken?: string): Promise<Response> => {
       const request = replayable ? source.clone() : source;
-      const requestHeaders = new Headers(request.headers);
+      const requestHeaders = new Headers(Array.from(request.headers.entries()));
       for (const [name, value] of Object.entries(headers)) requestHeaders.set(name, value);
       if (accessToken) requestHeaders.set("Authorization", `Bearer ${accessToken}`);
-      return baseFetch(new Request(request, { headers: requestHeaders }));
+      return baseFetch(
+        new Request(request as unknown as string, {
+          headers: Array.from(requestHeaders.entries()),
+        }),
+      );
     };
 
     const first = await send(token);
@@ -462,6 +469,7 @@ export function buildRegisteredTool(serverName: string, tool: McpTool): Register
     },
     source: "mcp",
     serverName,
+    mcpToolName: tool.name,
     permissionDefault: "ask",
     isConcurrencySafe: readOnly,
     isReadOnly: readOnly,

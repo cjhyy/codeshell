@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pluginAgentDirs } from "./loadPluginAgents.js";
@@ -21,7 +21,11 @@ describe("pluginAgentDirs", () => {
     const p = join(home, ".code-shell", "plugins", "p1");
     mkdirSync(join(p, "agents"), { recursive: true });
     appendInstallEntry(pluginInstallKey("p1", "local"), {
-      scope: "user", installPath: p, version: "1", installedAt: "t", lastUpdated: "t",
+      scope: "user",
+      installPath: p,
+      version: "1",
+      installedAt: "t",
+      lastUpdated: "t",
     });
     // pluginName is carried so a plugin agent's bare skill allowlist can be
     // namespaced (`director-skill` → `p1:director-skill`) at spawn time.
@@ -35,8 +39,32 @@ describe("pluginAgentDirs", () => {
     const p = join(home, ".code-shell", "plugins", "p2");
     mkdirSync(p, { recursive: true });
     appendInstallEntry(pluginInstallKey("p2", "local"), {
-      scope: "user", installPath: p, version: "1", installedAt: "t", lastUpdated: "t",
+      scope: "user",
+      installPath: p,
+      version: "1",
+      installedAt: "t",
+      lastUpdated: "t",
     });
     expect(pluginAgentDirs([])).toEqual([]);
+  });
+
+  test("omits an agents directory symlink that escapes the plugin root", () => {
+    if (process.platform === "win32") return;
+    const p = join(home, ".code-shell", "plugins", "p3");
+    const outside = mkdtempSync(join(tmpdir(), "cs-pa-outside-"));
+    mkdirSync(p, { recursive: true });
+    symlinkSync(outside, join(p, "agents"));
+    appendInstallEntry(pluginInstallKey("p3", "local"), {
+      scope: "user",
+      installPath: p,
+      version: "1",
+      installedAt: "t",
+      lastUpdated: "t",
+    });
+    try {
+      expect(pluginAgentDirs([])).toEqual([]);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 });

@@ -22,6 +22,9 @@
  *                             reference this via ${CODESHELL_PLUGIN_ROOT}
  *                             (varRewrite.ts rewrites CC's CLAUDE_PLUGIN_ROOT
  *                             to this name at install time).
+ *   PLUGIN_ROOT             — Codex-compatible alias for the installed root.
+ *   CODESHELL_PLUGIN_DATA   — stable writable state directory for this plugin.
+ *   PLUGIN_DATA             — Codex-compatible alias for the state directory.
  *   CODESHELL_HOOK_EVENT    — the codeshell-side event name (snake_case)
  *
  * We deliberately do NOT set CLAUDE_PLUGIN_ROOT here. Plugin scripts that
@@ -32,6 +35,10 @@
  */
 
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { HookContext, HookResult } from "../hooks/events.js";
 import { MAX_HOOK_OUTPUT_BYTES } from "../hooks/hook-output.js";
 import { closeHookStdin, MAX_HOOK_STDIN_BYTES, writeHookStdin } from "../hooks/shell-runner.js";
@@ -46,8 +53,19 @@ export interface PluginCommandHookSpec {
   installPath: string;
   /** Plugin install key (`name@marketplace`), used for log lines. */
   pluginKey: string;
+  /** Stable writable plugin data directory; primarily an injection point for tests/hosts. */
+  dataPath?: string;
   /** Per-hook override; falls back to DEFAULT_TIMEOUT_MS. */
   timeoutMs?: number;
+}
+
+function codeShellHome(): string {
+  return process.env.CODE_SHELL_HOME || join(process.env.HOME ?? homedir(), ".code-shell");
+}
+
+export function resolvePluginDataPath(pluginKey: string): string {
+  const stableKey = createHash("sha256").update(pluginKey).digest("hex");
+  return join(codeShellHome(), "plugin-data", stableKey);
 }
 
 /**
@@ -130,19 +148,28 @@ export async function runPluginCommandHook(
   return new Promise<HookResult>((resolve) => {
     let child;
     try {
-      // Strip CLAUDE_PLUGIN_ROOT from the inherited env: a plugin script
-      // that branches on `[ -n "$CLAUDE_PLUGIN_ROOT" ]` must conclude
+      const pluginDataPath = spec.dataPath ?? resolvePluginDataPath(spec.pluginKey);
+      mkdirSync(pluginDataPath, { recursive: true, mode: 0o700 });
+
+      // Strip Claude-specific plugin vars from the inherited env: a plugin
+      // script that branches on `[ -n "$CLAUDE_PLUGIN_ROOT" ]` must conclude
       // "not Claude Code" and pick the codeshell branch. varRewrite.ts
-      // converted the literal `${CLAUDE_PLUGIN_ROOT}` references to the
-      // codeshell name; this drop closes the runtime side of the same
-      // story.
+      // converted literal root/data references to CodeShell-native names;
+      // this drop closes the runtime side of the same story.
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { CLAUDE_PLUGIN_ROOT: _stripped, ...parentEnv } = process.env;
+      const {
+        CLAUDE_PLUGIN_ROOT: _strippedRoot,
+        CLAUDE_PLUGIN_DATA: _strippedData,
+        ...parentEnv
+      } = process.env;
       child = spawn(spec.command, [], {
         shell: true,
         env: {
           ...parentEnv,
           CODESHELL_PLUGIN_ROOT: spec.installPath,
+          PLUGIN_ROOT: spec.installPath,
+          CODESHELL_PLUGIN_DATA: pluginDataPath,
+          PLUGIN_DATA: pluginDataPath,
           CODESHELL_HOOK_EVENT: ctx.eventName,
         },
       });
@@ -159,7 +186,6 @@ export async function runPluginCommandHook(
     let stdout = "";
     let stderr = "";
     let settled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
     // Output byte caps mirror src/hooks/shell-runner.ts so a chatty plugin
     // hook can't hold engine memory hostage. Past the cap we SIGTERM the
     // child and treat the hook as failed; stderr cap truncates with a
@@ -180,7 +206,7 @@ export async function runPluginCommandHook(
       settle({});
     };
 
-    timer = setTimeout(() => {
+    const timer = setTimeout(() => {
       // eslint-disable-next-line no-console
       console.warn(
         `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} timed out after ${timeoutMs}ms`,
@@ -221,10 +247,7 @@ export async function runPluginCommandHook(
     child.on("error", (err: Error) => {
       clearTimeout(timer);
       // eslint-disable-next-line no-console
-      console.error(
-        `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} spawn error:`,
-        err.message,
-      );
+      console.error(`[plugin-hook] ${spec.pluginKey} ${ctx.eventName} spawn error:`, err.message);
       settle({});
     });
 

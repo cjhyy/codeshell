@@ -8,6 +8,7 @@ import {
   ArrowUp,
   Square,
   Monitor,
+  Plug,
   Trash2,
   X,
 } from "lucide-react";
@@ -26,7 +27,12 @@ import { ApprovalCard } from "./approvals/ApprovalCard";
 import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
 import type { AskUserMessage } from "./types";
 import type { TrackedProject } from "./projects";
-import type { ApprovalRequestEnvelope, FileSearchHit, InputAttachmentMeta } from "../preload/types";
+import type {
+  ApprovalRequestEnvelope,
+  FileSearchHit,
+  InputAttachmentMeta,
+  PluginCommandDescriptor,
+} from "../preload/types";
 import {
   buildAttachments,
   decodeWireForDisplay,
@@ -39,6 +45,13 @@ import {
 import { compressBatch, type ImageDetail } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
 import { detectMention } from "./chat/mention";
+import {
+  completedSlashCommandDraft,
+  filterSlashCommandItems,
+  parsePluginSlashInvocation,
+  toPluginSlashCommandItems,
+  type SlashCommandItem,
+} from "./chat/pluginSlashCommands";
 import { classifyPath } from "./tool-cards/attachments";
 import { formatBytes, cn } from "@/lib/utils";
 import { useToast } from "./ui/ToastProvider";
@@ -176,6 +189,8 @@ interface Props {
    */
   composerSeed?: string;
   composerSeedNonce?: number;
+  /** Acknowledge the one-shot seed after it has replaced the draft. */
+  onComposerSeedConsumed?: (nonce: number) => void;
   /** Composer draft state is owned by App so full-page routes don't lose it. */
   draft: string;
   onDraftChange: React.Dispatch<React.SetStateAction<string>>;
@@ -192,12 +207,6 @@ const MAX_TEXTAREA_PX = 200;
 // session switch) can report scrollHeight ~0; flooring here stops the box from
 // collapsing to a sliver. Matches the textarea's CSS min-h backstop.
 const MIN_TEXTAREA_PX = 36;
-
-type SlashCommandItem = {
-  name: "/compact";
-  title: string;
-  description: string;
-};
 
 function detectSlashCommand(value: string, caret: number): { query: string } | null {
   if (!value.startsWith("/")) return null;
@@ -358,6 +367,7 @@ export function ChatView({
   welcomeNode,
   composerSeed,
   composerSeedNonce,
+  onComposerSeedConsumed,
   draft,
   onDraftChange,
   attachments,
@@ -571,42 +581,82 @@ export function ChatView({
   const [mentionSelected, setMentionSelected] = useState(0);
   const [slash, setSlash] = useState<{ query: string } | null>(null);
   const [slashSelected, setSlashSelected] = useState(0);
+  const [pluginCommands, setPluginCommands] = useState<PluginCommandDescriptor[]>([]);
+  const [expandingPluginCommand, setExpandingPluginCommand] = useState(false);
+  const pluginCommandCwd = messageCwd ?? activeProjectPath ?? "";
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        if (typeof window.codeshell.listPluginCommands !== "function") {
+          if (!cancelled) setPluginCommands([]);
+          return;
+        }
+        const commands = await window.codeshell.listPluginCommands(pluginCommandCwd);
+        if (!cancelled) setPluginCommands(commands);
+      } catch {
+        if (!cancelled) setPluginCommands([]);
+      }
+    };
+    const refresh = (): void => {
+      void load();
+    };
+
+    void load();
+    window.addEventListener("codeshell:settings-changed", refresh);
+    const off =
+      typeof window.codeshell.onPluginCommandsChanged === "function"
+        ? window.codeshell.onPluginCommandsChanged(refresh)
+        : undefined;
+    return () => {
+      cancelled = true;
+      window.removeEventListener("codeshell:settings-changed", refresh);
+      off?.();
+    };
+  }, [pluginCommandCwd]);
 
   const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
   const activeSupportsVision = activeModel?.supportsVision === true;
-  const slashCommands = useMemo<SlashCommandItem[]>(
-    () =>
-      onCompactCommand
-        ? [
-            {
-              name: "/compact",
-              title: t("chat.slash.compactTitle"),
-              description: t("chat.slash.compactDescription"),
-            },
-          ]
-        : [],
-    [onCompactCommand, t],
-  );
+  const slashCommands = useMemo<SlashCommandItem[]>(() => {
+    const commands: SlashCommandItem[] = [];
+    if (onCompactCommand) {
+      commands.push({
+        kind: "builtin",
+        name: "/compact",
+        title: t("chat.slash.compactTitle"),
+        description: t("chat.slash.compactDescription"),
+      });
+    }
+    commands.push(
+      ...toPluginSlashCommandItems(pluginCommands, (pluginName) =>
+        t("chat.slash.pluginProvidedBy", { plugin: pluginName }),
+      ),
+    );
+    return commands;
+  }, [onCompactCommand, pluginCommands, t]);
   const slashItems = useMemo(() => {
     if (!slash) return [];
-    const query = slash.query.trim().toLowerCase();
-    if (!query) return slashCommands;
-    return slashCommands.filter(
-      (cmd) =>
-        cmd.name.slice(1).toLowerCase().includes(query) || cmd.title.toLowerCase().includes(query),
-    );
+    return filterSlashCommandItems(slashCommands, slash.query);
   }, [slash, slashCommands]);
 
   // Seed the composer from outside (e.g. the "新建自动化" entry) without
   // sending. Keyed on the nonce so re-clicking re-applies the same text.
   useEffect(() => {
     if (composerSeed && composerSeed.length > 0) {
-      setDraft(composerSeed);
+      // A hidden composer may already contain unsent user text. Never discard
+      // it when another surface contributes a starter prompt; append with a
+      // visible paragraph boundary. Fresh automation drafts remain unchanged
+      // because their new session starts empty.
+      setDraft((current) =>
+        current.trim().length > 0 ? `${current}\n\n${composerSeed}` : composerSeed,
+      );
+      onComposerSeedConsumed?.(composerSeedNonce ?? 0);
       requestAnimationFrame(() => {
         const ta = textareaRef.current;
         if (ta) {
           ta.focus();
-          ta.setSelectionRange(composerSeed.length, composerSeed.length);
+          ta.setSelectionRange(ta.value.length, ta.value.length);
         }
       });
     }
@@ -662,13 +712,15 @@ export function ChatView({
   // Busy no longer disables the textarea: Enter queues input for the next turn.
   // Manual compaction is the exception because it is an uncancellable RPC, not
   // an agent turn, so we block composer edits/actions until it settles.
-  const controlsDisabled = busy || compacting;
-  const inputDisabled = compacting;
-  const placeholder = compacting
-    ? t("chat.composer.placeholderCompacting")
-    : busy
-      ? t("chat.composer.placeholderBusy")
-      : t("chat.composer.placeholderIdle");
+  const controlsDisabled = busy || compacting || expandingPluginCommand;
+  const inputDisabled = compacting || expandingPluginCommand;
+  const placeholder = expandingPluginCommand
+    ? t("chat.composer.placeholderExpandingCommand")
+    : compacting
+      ? t("chat.composer.placeholderCompacting")
+      : busy
+        ? t("chat.composer.placeholderBusy")
+        : t("chat.composer.placeholderIdle");
 
   const closeMention = (): void => {
     setMention(null);
@@ -780,16 +832,60 @@ export function ChatView({
   };
 
   const completeSlashCommand = (item: SlashCommandItem): void => {
-    setDraft(item.name);
+    const nextDraft = completedSlashCommandDraft(item);
+    setDraft(nextDraft);
     closeSlash();
     requestAnimationFrame(() => {
       textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(item.name.length, item.name.length);
+      textareaRef.current?.setSelectionRange(nextDraft.length, nextDraft.length);
     });
   };
 
-  const executeSlashCommand = (item: SlashCommandItem): void => {
-    if (compacting) return;
+  const expandPluginSlashCommand = async (
+    item: Extract<SlashCommandItem, { kind: "plugin" }>,
+    rawArguments: string,
+  ): Promise<void> => {
+    if (compacting || expandingPluginCommand) return;
+    if (typeof window.codeshell.expandPluginCommand !== "function") {
+      toast({ message: t("chat.slash.pluginExpandUnavailable"), variant: "error" });
+      return;
+    }
+    setExpandingPluginCommand(true);
+    closeSlash();
+    try {
+      const result = await window.codeshell.expandPluginCommand(
+        pluginCommandCwd,
+        item.pluginCommandName,
+        rawArguments,
+      );
+      if (!mountedRef.current) return;
+      setDraft(result.prompt);
+      setHistoryCursor(-1);
+      liveDraftStash.current = "";
+      toast({ message: t("chat.slash.pluginExpanded"), variant: "success" });
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(result.prompt.length, result.prompt.length);
+      });
+    } catch (error) {
+      if (!mountedRef.current) return;
+      toast({
+        message: t("chat.slash.pluginExpandFailed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+        variant: "error",
+      });
+    } finally {
+      if (mountedRef.current) setExpandingPluginCommand(false);
+    }
+  };
+
+  const executeSlashCommand = (item: SlashCommandItem, rawArguments = ""): void => {
+    if (compacting || expandingPluginCommand) return;
+    if (item.kind === "plugin") {
+      void expandPluginSlashCommand(item, rawArguments);
+      return;
+    }
     if (item.name === "/compact") {
       if (!onCompactCommand) return;
       onCompactCommand();
@@ -803,7 +899,12 @@ export function ChatView({
   };
 
   const submit = (): void => {
-    if (compacting) return;
+    if (compacting || expandingPluginCommand) return;
+    const pluginInvocation = parsePluginSlashInvocation(draft, slashCommands);
+    if (pluginInvocation) {
+      executeSlashCommand(pluginInvocation.command, pluginInvocation.rawArguments);
+      return;
+    }
     // Some embedded variants (quick chat) intentionally do not support the
     // main session's queued-input pipeline. Keep the draft intact while busy.
     if (busy && !onQueueInput) return;
@@ -811,8 +912,12 @@ export function ChatView({
     const hasImages = attachments.length > 0;
     const hasAnchors = anchors.length > 0;
     if (!text && !hasImages && !hasAnchors) return;
-    if (text === "/compact" && !hasImages && !hasAnchors && slashCommands[0]) {
-      executeSlashCommand(slashCommands[0]);
+    const compactCommand = slashCommands.find(
+      (command): command is Extract<SlashCommandItem, { kind: "builtin" }> =>
+        command.kind === "builtin" && command.name === "/compact",
+    );
+    if (text === "/compact" && !hasImages && !hasAnchors && compactCommand) {
+      executeSlashCommand(compactCommand);
       return;
     }
     // Block send when there are images but the active model can't accept
@@ -1490,11 +1595,23 @@ export function ChatView({
                             aria-selected={active}
                             onMouseDown={(e) => {
                               e.preventDefault();
-                              executeSlashCommand(item);
+                              if (item.kind === "plugin") completeSlashCommand(item);
+                              else executeSlashCommand(item);
                             }}
                           >
-                            <Archive size={14} className="mt-0.5 text-muted-foreground" />
-                            <span className="min-w-0 truncate font-medium">{item.name}</span>
+                            {item.kind === "plugin" ? (
+                              <Plug size={14} className="mt-0.5 text-muted-foreground" />
+                            ) : (
+                              <Archive size={14} className="mt-0.5 text-muted-foreground" />
+                            )}
+                            <span className="min-w-0 truncate font-medium">
+                              {item.name}
+                              {item.kind === "plugin" && item.argumentHint && (
+                                <span className="ml-1 font-normal text-muted-foreground">
+                                  {item.argumentHint}
+                                </span>
+                              )}
+                            </span>
                             <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">
                               {item.description}
                             </span>

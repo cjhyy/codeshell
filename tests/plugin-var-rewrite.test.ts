@@ -20,13 +20,25 @@ describe("rewritePluginVars", () => {
     writeFileSync(
       file,
       JSON.stringify({
-        hooks: { SessionStart: [{ hooks: [{ type: "command", command: "${CLAUDE_PLUGIN_ROOT}/run" }] }] },
+        hooks: {
+          SessionStart: [{ hooks: [{ type: "command", command: "${CLAUDE_PLUGIN_ROOT}/run" }] }],
+        },
       }),
     );
     rewritePluginVars(workDir);
     const after = readFileSync(file, "utf8");
     expect(after).toContain("${CODESHELL_PLUGIN_ROOT}/run");
     expect(after).not.toContain("CLAUDE_PLUGIN_ROOT");
+  });
+
+  it("replaces CLAUDE_PLUGIN_DATA in scripts and configuration", () => {
+    const file = join(workDir, "persist.sh");
+    writeFileSync(file, 'mkdir -p "${CLAUDE_PLUGIN_DATA}"\necho ok > "$CLAUDE_PLUGIN_DATA/state"');
+    rewritePluginVars(workDir);
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain("${CODESHELL_PLUGIN_DATA}");
+    expect(after).toContain("$CODESHELL_PLUGIN_DATA/state");
+    expect(after).not.toContain("CLAUDE_PLUGIN_DATA");
   });
 
   it("rewrites shell script content", () => {
@@ -59,7 +71,10 @@ describe("rewritePluginVars", () => {
 
   it("skips binary files (NUL byte heuristic)", () => {
     const file = join(workDir, "icon.png");
-    const buf = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x43, 0x4c, 0x41, 0x55, 0x44, 0x45, 0x5f, 0x50, 0x4c, 0x55, 0x47, 0x49, 0x4e, 0x5f, 0x52, 0x4f, 0x4f, 0x54]);
+    const buf = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x00, 0x43, 0x4c, 0x41, 0x55, 0x44, 0x45, 0x5f, 0x50, 0x4c, 0x55,
+      0x47, 0x49, 0x4e, 0x5f, 0x52, 0x4f, 0x4f, 0x54,
+    ]);
     writeFileSync(file, buf);
     rewritePluginVars(workDir);
     const after = readFileSync(file);
@@ -74,6 +89,10 @@ describe("rewritePluginVars", () => {
     );
     expect(breadcrumb.from).toBe("CLAUDE_PLUGIN_ROOT");
     expect(breadcrumb.to).toBe("CODESHELL_PLUGIN_ROOT");
+    expect(breadcrumb.rewrites).toEqual([
+      { from: "CLAUDE_PLUGIN_ROOT", to: "CODESHELL_PLUGIN_ROOT" },
+      { from: "CLAUDE_PLUGIN_DATA", to: "CODESHELL_PLUGIN_DATA" },
+    ]);
     expect(typeof breadcrumb.rewrittenAt).toBe("string");
   });
 

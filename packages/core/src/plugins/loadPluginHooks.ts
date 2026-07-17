@@ -46,17 +46,25 @@
  * must not block other plugins from loading.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { HookContext, HookEventName, HookResult } from "../hooks/events.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { readInstalledPlugins } from "./installedPlugins.js";
 import { runPluginCommandHook } from "./pluginCommandHook.js";
+import {
+  inspectPluginHooks,
+  pluginHookApprovalState,
+  verifyPluginHookIntegrity,
+  type ParsedPluginCommandHook,
+  type ParsedPluginHooksDefinition,
+  type PluginHookApprovalState,
+  type PluginHookIntegrity,
+  type SupportedPluginHookEvent,
+} from "./pluginHookIntegrity.js";
 
 /** Priority for plugin hooks — between built-in (100) and settings (50). */
 const PLUGIN_HOOK_PRIORITY = 80;
 
-const EVENT_NAME_MAP: Record<string, HookEventName | null> = {
+const EVENT_NAME_MAP: Record<SupportedPluginHookEvent, HookEventName> = {
   SessionStart: "on_session_start",
   UserPromptSubmit: "user_prompt_submit",
   PreToolUse: "pre_tool_use",
@@ -77,40 +85,6 @@ const IMPLIED_NOTIFICATION_KIND: Record<string, string> = {
   SubagentStop: "^agent_(completed|failed|cancelled)$",
 };
 
-interface RawCommandHook {
-  type?: string;
-  command?: string;
-  async?: boolean;
-  timeout_ms?: number;
-}
-
-interface RawMatcherGroup {
-  matcher?: string;
-  hooks?: RawCommandHook[];
-}
-
-interface RawHooksJson {
-  hooks?: Record<string, RawMatcherGroup[]>;
-}
-
-function readHooksJson(installPath: string): RawHooksJson | null {
-  const path = join(installPath, "hooks", "hooks.json");
-  if (!existsSync(path)) return null;
-  try {
-    const raw = JSON.parse(readFileSync(path, "utf8"));
-    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-      return raw as RawHooksJson;
-    }
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      `[plugin-hooks] failed to parse ${path}:`,
-      (err as Error).message,
-    );
-  }
-  return null;
-}
-
 /**
  * Per-event matcher logic. Returns true when the hook should fire.
  *
@@ -127,8 +101,9 @@ export function matcherAccepts(
   try {
     re = new RegExp(matcher);
   } catch {
-    // Bad regex — be permissive (matches CC's "log + drop" behavior).
-    return true;
+    // Runtime definitions are pre-validated, but direct callers still fail
+    // closed if they supply an invalid expression.
+    return false;
   }
 
   if (event === "on_session_start") {
@@ -157,6 +132,29 @@ function pluginNameFromKey(key: string): string {
   return at > 0 ? key.slice(0, at) : key;
 }
 
+interface ParsedPluginHook {
+  rawEvent: SupportedPluginHookEvent;
+  event: HookEventName;
+  matcher?: string;
+  command: ParsedPluginCommandHook;
+}
+
+function* iteratePluginHooks(definition: ParsedPluginHooksDefinition): Generator<ParsedPluginHook> {
+  for (const rawEvent of Object.keys(definition.hooks) as SupportedPluginHookEvent[]) {
+    const event = EVENT_NAME_MAP[rawEvent];
+    for (const group of definition.hooks[rawEvent] ?? []) {
+      for (const command of group.hooks) {
+        yield {
+          rawEvent,
+          event,
+          matcher: group.matcher,
+          command,
+        };
+      }
+    }
+  }
+}
+
 /**
  * Stable identity for ONE plugin-provided hook, used as the record key in
  * `capabilityOverrides.pluginHooks` (per-hook project off-switch). Derived
@@ -165,9 +163,7 @@ function pluginNameFromKey(key: string): string {
  * differ only by matcher collide — acceptable: toggling one toggles both,
  * and identical commands on the same event are in practice the same hook.
  */
-export function pluginHookKey(
-  hook: { plugin: string; rawEvent: string; command: string },
-): string {
+export function pluginHookKey(hook: { plugin: string; rawEvent: string; command: string }): string {
   return `${hook.plugin}:${hook.rawEvent}:${hook.command}`;
 }
 
@@ -201,62 +197,52 @@ export function loadPluginHooks(
     if (disabledSet.has(pluginNameFromKey(key))) continue;
     for (const entry of entries) {
       const installPath = entry.installPath;
-      if (!installPath || !existsSync(installPath)) continue;
-      const raw = readHooksJson(installPath);
-      if (!raw?.hooks) continue;
+      if (!installPath) continue;
+      const snapshot = inspectPluginHooks(installPath);
+      const approval = pluginHookApprovalState(entry, snapshot);
+      if (approval === "pending" || approval === "changed" || approval === "none") {
+        // Pending and changed executable definitions fail closed. The rest of
+        // the plugin remains available; hook-free installs have nothing to load.
+        continue;
+      }
+      if (!snapshot.definition) continue;
 
-      for (const [eventNameRaw, groups] of Object.entries(raw.hooks)) {
-        const mapped = EVENT_NAME_MAP[eventNameRaw];
-        if (mapped === null || mapped === undefined) {
-          // Unmapped event name (e.g. SubagentStop) — silently skip; logging
-          // every unknown event for every plugin would be noisy.
+      for (const hook of iteratePluginHooks(snapshot.definition)) {
+        if (
+          disabledHookSet.has(
+            pluginHookKey({
+              plugin: pluginNameFromKey(key),
+              rawEvent: hook.rawEvent,
+              command: hook.command.command,
+            }),
+          )
+        ) {
           continue;
         }
-        if (!Array.isArray(groups)) continue;
-
-        for (const group of groups) {
-          const commands = group.hooks ?? [];
-          for (const cmd of commands) {
-            if (cmd.type !== "command" || typeof cmd.command !== "string") {
-              continue;
-            }
-            if (
-              disabledHookSet.has(
-                pluginHookKey({
-                  plugin: pluginNameFromKey(key),
-                  rawEvent: eventNameRaw,
-                  command: cmd.command,
-                }),
-              )
-            ) {
-              continue;
-            }
-            const commandLine = cmd.command;
-            const timeoutMs = cmd.timeout_ms;
-            // A CC event that maps onto a SHARED codeshell event (SubagentStop
-            // → notification) gets an implied kind-matcher, so it only fires
-            // for the notification kinds that correspond to the CC semantics.
-            const matcher = group.matcher ?? IMPLIED_NOTIFICATION_KIND[eventNameRaw];
-            const handler = async (ctx: HookContext): Promise<HookResult> => {
-              if (!matcherAccepts(mapped, matcher, ctx)) return {};
-              return runPluginCommandHook(
-                {
-                  command: commandLine,
-                  installPath,
-                  pluginKey: key,
-                  timeoutMs,
-                },
-                ctx,
-              );
-            };
-            registry.register(
-              mapped,
-              handler,
-              PLUGIN_HOOK_PRIORITY,
-              `plugin:${pluginNameFromKey(key)}:${eventNameRaw}`,
-            );
-          }
-        }
+        const commandLine = hook.command.command;
+        const timeoutMs = hook.command.timeoutMs;
+        // A CC event that maps onto a SHARED codeshell event (SubagentStop
+        // → notification) gets an implied kind-matcher, so it only fires
+        // for the notification kinds that correspond to the CC semantics.
+        const matcher = hook.matcher ?? IMPLIED_NOTIFICATION_KIND[hook.rawEvent];
+        const handler = async (ctx: HookContext): Promise<HookResult> => {
+          if (!matcherAccepts(hook.event, matcher, ctx)) return {};
+          return runPluginCommandHook(
+            {
+              command: commandLine,
+              installPath,
+              pluginKey: key,
+              timeoutMs,
+            },
+            ctx,
+          );
+        };
+        registry.register(
+          hook.event,
+          handler,
+          PLUGIN_HOOK_PRIORITY,
+          `plugin:${pluginNameFromKey(key)}:${hook.rawEvent}`,
+        );
       }
     }
   }
@@ -264,6 +250,8 @@ export function loadPluginHooks(
 
 /** A single plugin-provided hook, surfaced read-only to the settings UI. */
 export interface PluginHookEntry {
+  /** Full install key (`plugin@marketplace`) used by approval APIs. */
+  installKey: string;
   /** Source plugin name (bare, no @marketplace). */
   plugin: string;
   /** Mapped codeshell event name. */
@@ -276,6 +264,10 @@ export interface PluginHookEntry {
   matcher?: string;
   /** Whether the owning plugin is currently disabled (its hooks don't fire). */
   disabled: boolean;
+  /** Install-time integrity state for the executable hook definition. */
+  integrity: PluginHookIntegrity;
+  /** Explicit execution trust state. Pending/changed hooks do not register. */
+  approval: PluginHookApprovalState;
   /** Stable per-hook identity ({@link pluginHookKey}) — the record key the
    *  UI writes to `capabilityOverrides.pluginHooks` to toggle just this hook. */
   key: string;
@@ -298,27 +290,28 @@ export function listPluginHooks(disabledPlugins: string[] = []): PluginHookEntry
     const disabled = disabledSet.has(plugin);
     for (const entry of entries) {
       const installPath = entry.installPath;
-      if (!installPath || !existsSync(installPath)) continue;
-      const raw = readHooksJson(installPath);
-      if (!raw?.hooks) continue;
-      for (const [eventNameRaw, groups] of Object.entries(raw.hooks)) {
-        const mapped = EVENT_NAME_MAP[eventNameRaw];
-        if (mapped === null || mapped === undefined) continue;
-        if (!Array.isArray(groups)) continue;
-        for (const group of groups) {
-          for (const cmd of group.hooks ?? []) {
-            if (cmd.type !== "command" || typeof cmd.command !== "string") continue;
-            out.push({
-              plugin,
-              event: mapped,
-              rawEvent: eventNameRaw,
-              command: cmd.command,
-              matcher: group.matcher,
-              disabled,
-              key: pluginHookKey({ plugin, rawEvent: eventNameRaw, command: cmd.command }),
-            });
-          }
-        }
+      if (!installPath) continue;
+      const snapshot = inspectPluginHooks(installPath);
+      const integrity = verifyPluginHookIntegrity(entry, snapshot);
+      const approval = pluginHookApprovalState(entry, snapshot);
+      if (!snapshot.definition) continue;
+      for (const hook of iteratePluginHooks(snapshot.definition)) {
+        out.push({
+          installKey: key,
+          plugin,
+          event: hook.event,
+          rawEvent: hook.rawEvent,
+          command: hook.command.command,
+          matcher: hook.matcher,
+          disabled,
+          integrity,
+          approval,
+          key: pluginHookKey({
+            plugin,
+            rawEvent: hook.rawEvent,
+            command: hook.command.command,
+          }),
+        });
       }
     }
   }

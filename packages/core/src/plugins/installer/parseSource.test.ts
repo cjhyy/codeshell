@@ -15,6 +15,43 @@ describe("parseSource", () => {
     expect(parseSource("x")).toEqual({ kind: "local", path: resolve("x") });
   });
 
+  test("public npm exact version → immutable npm source", () => {
+    expect(parseSource("npm:@acme/video-plugin@1.2.3")).toEqual({
+      kind: "npm",
+      packageName: "@acme/video-plugin",
+      selector: "1.2.3",
+      selectorKind: "exact",
+      raw: "npm:@acme/video-plugin@1.2.3",
+      inferredName: "video-plugin",
+    });
+  });
+
+  test("public npm dist-tag and omitted selector are accepted", () => {
+    expect(parseSource("npm:video-plugin@next")).toMatchObject({
+      kind: "npm",
+      packageName: "video-plugin",
+      selector: "next",
+      selectorKind: "tag",
+    });
+    expect(parseSource("npm:video-plugin")).toMatchObject({
+      kind: "npm",
+      selector: "latest",
+      selectorKind: "tag",
+    });
+  });
+
+  test("npm Phase A rejects ranges, URLs, malformed scoped names and empty selectors", () => {
+    for (const source of [
+      "npm:video-plugin@^1.0.0",
+      "npm:video-plugin@1.x",
+      "npm:video-plugin@",
+      "npm:@acme@1.0.0",
+      "npm:https://registry.npmjs.org/video-plugin",
+    ]) {
+      expect(() => parseSource(source)).toThrow();
+    }
+  });
+
   test("github:org/repo → remote https url, inferredName=repo", () => {
     expect(parseSource("github:org/repo")).toEqual({
       kind: "remote",

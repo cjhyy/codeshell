@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { installPlugin } from "./pluginInstaller.js";
@@ -107,5 +107,68 @@ describe("installPlugin marketplace source path containment", () => {
       readFileSync(join(res.entry.installPath, ".cs-plugin-manifest.json"), "utf-8"),
     );
     expect(canonical.panels.entries[0].entry).toBe("panels/dashboard/index.html");
+  });
+
+  test("projects Codex marketplace plugins into runtime-native contributions", async () => {
+    mkdirSync(join(mpDir, "payload", ".codex-plugin"), { recursive: true });
+    mkdirSync(join(mpDir, "payload", "agents"), { recursive: true });
+    mkdirSync(join(mpDir, "payload", "prompts"), { recursive: true });
+    mkdirSync(join(mpDir, "payload", "lifecycle"), { recursive: true });
+    mkdirSync(join(mpDir, "payload", "scripts"), { recursive: true });
+    writeFileSync(
+      join(mpDir, "payload", ".codex-plugin", "plugin.json"),
+      JSON.stringify({
+        name: "p",
+        version: "1.0.0",
+        hooks: "./lifecycle/hooks.json",
+        mcpServers: {
+          files: { command: "files", env_vars: ["FILES_TOKEN"] },
+        },
+      }),
+    );
+    writeFileSync(
+      join(mpDir, "payload", "agents", "reviewer.toml"),
+      'name = "reviewer"\ndescription = "Review changes"',
+    );
+    writeFileSync(
+      join(mpDir, "payload", "prompts", "review.md"),
+      "---\ndescription: review\n---\nReview $1",
+    );
+    writeFileSync(
+      join(mpDir, "payload", "lifecycle", "hooks.json"),
+      JSON.stringify({
+        hooks: {
+          SessionStart: [
+            {
+              hooks: [
+                {
+                  type: "command",
+                  command: "node $PLUGIN_ROOT/scripts/start.mjs",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    writeFileSync(join(mpDir, "payload", "scripts", "start.mjs"), "console.log('{}')");
+    writeMarketplace("./payload");
+
+    const res = await installPlugin("p", "shop");
+
+    if (!res.ok) throw new Error(res.error);
+    expect(existsSync(join(res.entry.installPath, "agents", "reviewer.md"))).toBe(true);
+    expect(existsSync(join(res.entry.installPath, "commands", "review.md"))).toBe(true);
+    expect(existsSync(join(res.entry.installPath, "hooks", "hooks.json"))).toBe(true);
+    expect(res.entry.hookDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.entry.approvedHookDigest).toBeUndefined();
+    expect(res.entry.mcpDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.entry.approvedMcpDigest).toBeUndefined();
+    const mcp = JSON.parse(readFileSync(join(res.entry.installPath, "mcp-servers.json"), "utf-8"));
+    expect(mcp["p:files"]).toMatchObject({
+      command: "files",
+      envVars: ["FILES_TOKEN"],
+      name: "p:files",
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, truncateSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { mergePluginMcpServers } from "./loadPluginMcp.js";
@@ -22,7 +22,11 @@ describe("mergePluginMcpServers", () => {
     mkdirSync(p, { recursive: true });
     writeFileSync(join(p, "mcp-servers.json"), JSON.stringify(servers));
     appendInstallEntry(pluginInstallKey(name, "local"), {
-      scope: "user", installPath: p, version: "1", installedAt: "t", lastUpdated: "t",
+      scope: "user",
+      installPath: p,
+      version: "1",
+      installedAt: "t",
+      lastUpdated: "t",
     });
   }
 
@@ -32,15 +36,24 @@ describe("mergePluginMcpServers", () => {
     mkdirSync(p, { recursive: true });
     writeFileSync(join(p, ".mcp.json"), JSON.stringify(mcpJson));
     appendInstallEntry(pluginInstallKey(name, "local"), {
-      scope: "user", installPath: p, version: "1", installedAt: "t", lastUpdated: "t",
+      scope: "user",
+      installPath: p,
+      version: "1",
+      installedAt: "t",
+      lastUpdated: "t",
     });
   }
 
   test("falls back to .mcp.json when no mcp-servers.json (CC plugin), keying <plugin>:<server>", () => {
-    regCcPlugin("docker", { mcpServers: { "mcp-gateway": { command: "docker", args: ["mcp", "gateway", "run"] } } });
+    regCcPlugin("docker", {
+      mcpServers: { "mcp-gateway": { command: "docker", args: ["mcp", "gateway", "run"] } },
+    });
     const merged = mergePluginMcpServers({}, []);
     expect(merged["docker:mcp-gateway"]).toBeDefined();
-    expect(merged["docker:mcp-gateway"]).toMatchObject({ command: "docker", name: "docker:mcp-gateway" });
+    expect(merged["docker:mcp-gateway"]).toMatchObject({
+      command: "docker",
+      name: "docker:mcp-gateway",
+    });
   });
 
   test("merges plugin servers into the base map", () => {
@@ -57,19 +70,140 @@ describe("mergePluginMcpServers", () => {
   });
 
   test("user-configured key wins over plugin same-key", () => {
-    regPlugin("p3", { dup: { command: "plugin", name: "dup" } });
-    const merged = mergePluginMcpServers({ dup: { command: "user", name: "dup" } as any }, []);
-    expect(merged.dup.command).toBe("user");
+    regPlugin("p3", { "p3:dup": { command: "plugin", name: "p3:dup" } });
+    const merged = mergePluginMcpServers(
+      { "p3:dup": { command: "user", name: "p3:dup" } as any },
+      [],
+    );
+    expect(merged["p3:dup"].command).toBe("user");
   });
 
-  describe("overrides (plugin MCP env/credential supplement)", () => {
-    test("layers override env/envVars/credential fields onto the plugin config", () => {
+  test("keeps plugin servers inside their own namespace and overwrites spoofed name fields", () => {
+    regPlugin("safe", {
+      "safe:ok": { command: "ok", name: "other:spoofed" },
+      "other:escape": { command: "escape", name: "other:escape" },
+      bare: { command: "bare", name: "bare" },
+    });
+    const merged = mergePluginMcpServers({}, []);
+    expect(merged["safe:ok"]).toEqual({ command: "ok", name: "safe:ok" });
+    expect(merged["other:escape"]).toBeUndefined();
+    expect(merged.bare).toBeUndefined();
+  });
+
+  test("drops malformed plugin servers before MCPManager startup", () => {
+    regPlugin("bad", {
+      "bad:no-command": { transport: "stdio" },
+      "bad:no-url": { transport: "streamable-http" },
+      "bad:inprocess": { transport: "inprocess", command: "x" },
+      "bad:credentials": { url: "https://user:secret@example.com/mcp" },
+      "bad:invalid-env": { command: "x", envVars: ["OK", "NOT=VALID"] },
+      "bad:invalid-header": { url: "https://example.com/mcp", headers: { "Bad Header": "x" } },
+      "bad:header-injection": {
+        url: "https://example.com/mcp",
+        headers: { Authorization: "safe\r\nInjected: true" },
+      },
+      "bad:valid": {
+        command: "mcp-server",
+        args: ["--stdio"],
+        env: { MODE: "safe" },
+        envVars: ["TOKEN"],
+        enabled: false,
+        allowed_tools: ["read", "search"],
+        disabledTools: ["delete"],
+        ignored: "field",
+      },
+    });
+    const merged = mergePluginMcpServers({}, []);
+    expect(Object.keys(merged)).toEqual(["bad:valid"]);
+    expect(merged["bad:valid"]).toEqual({
+      name: "bad:valid",
+      command: "mcp-server",
+      args: ["--stdio"],
+      env: { MODE: "safe" },
+      envVars: ["TOKEN"],
+      enabled: false,
+      allowedTools: ["read", "search"],
+      disabledTools: ["delete"],
+    });
+  });
+
+  test("rejects an excessive server map as a unit", () => {
+    regPlugin(
+      "many",
+      Object.fromEntries(
+        Array.from({ length: 65 }, (_, index) => [
+          `many:s${index}`,
+          { command: "mcp-server", name: `many:s${index}` },
+        ]),
+      ),
+    );
+    expect(mergePluginMcpServers({}, [])).toEqual({});
+  });
+
+  test("normalizes raw .mcp.json names and rejects invalid server identifiers", () => {
+    regCcPlugin("cc", {
+      mcpServers: {
+        valid_name: { url: "http://127.0.0.1:3000/mcp" },
+        "bad:name": { command: "x" },
+        "../escape": { command: "x" },
+      },
+    });
+    expect(mergePluginMcpServers({}, [])).toEqual({
+      "cc:valid_name": {
+        name: "cc:valid_name",
+        url: "http://127.0.0.1:3000/mcp",
+      },
+    });
+  });
+
+  test("does not load MCP config symlinks or oversized files", () => {
+    if (process.platform === "win32") return;
+    const plugin = join(home, ".code-shell", "plugins", "unsafe");
+    const outside = mkdtempSync(join(tmpdir(), "cs-pm-outside-"));
+    mkdirSync(plugin, { recursive: true });
+    writeFileSync(
+      join(outside, ".mcp.json"),
+      JSON.stringify({ mcpServers: { escape: { command: "outside" } } }),
+    );
+    symlinkSync(join(outside, ".mcp.json"), join(plugin, ".mcp.json"));
+    appendInstallEntry(pluginInstallKey("unsafe", "local"), {
+      scope: "user",
+      installPath: plugin,
+      version: "1",
+      installedAt: "t",
+      lastUpdated: "t",
+    });
+    try {
+      expect(mergePluginMcpServers({}, [])["unsafe:escape"]).toBeUndefined();
+      rmSync(join(plugin, ".mcp.json"));
+      writeFileSync(
+        join(plugin, "mcp-servers.json"),
+        JSON.stringify({ "unsafe:large": { command: "large", name: "unsafe:large" } }),
+      );
+      truncateSync(join(plugin, "mcp-servers.json"), 1024 * 1024 + 1);
+      expect(mergePluginMcpServers({}, [])["unsafe:large"]).toBeUndefined();
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  describe("overrides (plugin MCP policy and credential supplement)", () => {
+    test("layers server/tool policy and env/credential fields onto the plugin config", () => {
       regPlugin("gh", { "gh:server": { command: "gh-mcp", name: "gh:server" } });
       const merged = mergePluginMcpServers({}, [], {
-        "gh:server": { envVars: ["GITHUB_TOKEN"], env: { FOO: "bar" } },
+        "gh:server": {
+          enabled: false,
+          allowedTools: ["search"],
+          disabledTools: ["delete"],
+          envVars: ["GITHUB_TOKEN"],
+          env: { FOO: "bar" },
+        },
       });
       // command stays from the plugin; override fields are added on top.
       expect(merged["gh:server"].command).toBe("gh-mcp");
+      expect(merged["gh:server"].enabled).toBe(false);
+      expect(merged["gh:server"].allowedTools).toEqual(["search"]);
+      expect(merged["gh:server"].disabledTools).toEqual(["delete"]);
       expect(merged["gh:server"].envVars).toEqual(["GITHUB_TOKEN"]);
       expect(merged["gh:server"].env).toEqual({ FOO: "bar" });
     });

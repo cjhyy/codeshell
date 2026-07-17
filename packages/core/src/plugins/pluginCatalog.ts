@@ -1,10 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { readInstalledPlugins } from "./installedPlugins.js";
 import { pluginsRoot } from "./installer/paths.js";
 import {
   CANONICAL_PLUGIN_MANIFEST_FILE,
   CanonicalPluginManifest,
+  type PluginAutomationTemplate,
   type CanonicalPluginManifest as CanonicalPluginManifestData,
   type PluginPanelManifestEntry,
 } from "./installer/types.js";
@@ -23,6 +25,8 @@ export interface PluginCatalogEntry {
   manifest: CanonicalPluginManifestData | null;
   /** Panel declarations are plugin content; UI hosts decide how to render them. */
   panels: readonly PluginPanelManifestEntry[];
+  /** Reusable scheduled-task templates. They never instantiate during install. */
+  automationTemplates: readonly PluginAutomationTemplate[];
 }
 
 export interface LoadPluginCatalogOptions {
@@ -39,6 +43,34 @@ export interface PluginPanelContribution {
   marketplace: string | null;
   installPath: string;
   panel: PluginPanelManifestEntry;
+}
+
+export interface PluginAutomationTemplateContribution {
+  kind: "automation-template";
+  installKey: string;
+  pluginName: string;
+  marketplace: string | null;
+  installPath: string;
+  pluginVersion?: string;
+  revision: string;
+  template: PluginAutomationTemplate;
+}
+
+/**
+ * Stable content revision used to bind a user review to the exact template
+ * instantiated later. Install paths and timestamps are intentionally excluded.
+ */
+export function pluginAutomationTemplateRevision(
+  installKey: string,
+  template: PluginAutomationTemplate,
+): string {
+  return createHash("sha256")
+    .update("codeshell-plugin-automation-template-v1")
+    .update("\0")
+    .update(installKey)
+    .update("\0")
+    .update(JSON.stringify(template))
+    .digest("hex");
 }
 
 function readCanonicalManifest(installPath: string): CanonicalPluginManifestData | null {
@@ -91,12 +123,31 @@ export function loadPluginCatalog(options: LoadPluginCatalogOptions = {}): Plugi
         lastUpdated: entry.lastUpdated,
         manifest,
         panels: manifest?.panels?.entries ?? [],
+        automationTemplates: manifest?.automations?.templates ?? [],
       });
       loadedKeys.add(installKey);
     }
   }
 
   return catalog;
+}
+
+/** Load reusable automation templates without creating or enabling any jobs. */
+export function loadPluginAutomationTemplateContributions(
+  options: LoadPluginCatalogOptions = {},
+): PluginAutomationTemplateContribution[] {
+  return loadPluginCatalog(options).flatMap((plugin) =>
+    plugin.automationTemplates.map((template) => ({
+      kind: "automation-template" as const,
+      installKey: plugin.installKey,
+      pluginName: plugin.name,
+      marketplace: plugin.marketplace,
+      installPath: plugin.installPath,
+      ...(plugin.manifest?.version ? { pluginVersion: plugin.manifest.version } : {}),
+      revision: pluginAutomationTemplateRevision(plugin.installKey, template),
+      template,
+    })),
+  );
 }
 
 /** Load only UI panel contributions from installed plugin packages. */

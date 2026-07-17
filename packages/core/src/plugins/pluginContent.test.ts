@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describePluginContent } from "./pluginContent.js";
@@ -34,8 +34,7 @@ describe("describePluginContent (插件详情页 inventory)", () => {
       ]);
       expect(inv.commands).toEqual(["review"]);
       expect(inv.agents).toEqual(["helper"]);
-      // hooks/MCP come from the installed-plugins registry — this fixture
-      // isn't registered, so this plugin contributes none.
+      // Hooks come from the installed registry; this fixture has no MCP file.
       expect(inv.hooks).toEqual([]);
       expect(inv.mcpServers).toEqual([]);
     } finally {
@@ -54,9 +53,81 @@ describe("describePluginContent (插件详情页 inventory)", () => {
         hooks: [],
         mcpServers: [],
         panels: [],
+        automationTemplates: [],
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("inventories declared MCP servers even while runtime approval is pending", () => {
+    const root = mkdtempSync(join(tmpdir(), "cs-plugin-mcp-content-"));
+    try {
+      writeFileSync(
+        join(root, "mcp-servers.json"),
+        JSON.stringify({
+          "demo:stdio": { command: "demo-mcp", name: "demo:stdio" },
+          "demo:remote": { url: "https://example.com/mcp", name: "demo:remote" },
+        }),
+      );
+      expect(describePluginContent("demo", root).mcpServers).toEqual(["remote", "stdio"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("inventories automation templates with a review revision", () => {
+    const root = mkdtempSync(join(tmpdir(), "cs-plugin-automation-content-"));
+    try {
+      writeFileSync(
+        join(root, ".cs-plugin-manifest.json"),
+        JSON.stringify({
+          schemaVersion: 1,
+          name: "demo",
+          automations: {
+            version: 1,
+            templates: [
+              {
+                id: "daily-review",
+                title: { default: "Daily review" },
+                schedule: "1d",
+                prompt: "Review pending work.",
+              },
+            ],
+          },
+        }),
+      );
+      expect(describePluginContent("demo", root, "demo@local").automationTemplates).toEqual([
+        expect.objectContaining({
+          id: "daily-review",
+          permissionLevel: "read-only",
+          workspace: "current",
+          revision: expect.stringMatching(/^[a-f0-9]{64}$/),
+        }),
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("does not inventory contribution symlinks that escape the plugin root", () => {
+    if (process.platform === "win32") return;
+    const root = mkdtempSync(join(tmpdir(), "cs-plugin-content-safe-"));
+    const outside = mkdtempSync(join(tmpdir(), "cs-plugin-content-outside-"));
+    try {
+      mkdirSync(join(root, "commands"), { recursive: true });
+      mkdirSync(join(root, "skills", "leak"), { recursive: true });
+      writeFileSync(join(outside, "private.md"), "private command");
+      writeFileSync(join(outside, "SKILL.md"), "---\ndescription: private\n---\nprivate skill");
+      symlinkSync(join(outside, "private.md"), join(root, "commands", "leak.md"));
+      symlinkSync(join(outside, "SKILL.md"), join(root, "skills", "leak", "SKILL.md"));
+
+      const inv = describePluginContent("unsafe", root);
+      expect(inv.commands).toEqual([]);
+      expect(inv.skills).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
     }
   });
 });

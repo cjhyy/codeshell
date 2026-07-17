@@ -1,5 +1,12 @@
 import { describe, test, expect } from "bun:test";
-import { CodexPluginManifest, PluginPanelsManifest, CSMeta, PluginInstallError } from "./types.js";
+import {
+  CodexPluginManifest,
+  PluginAutomationsManifest,
+  PluginInterfaceMetadata,
+  PluginPanelsManifest,
+  CSMeta,
+  PluginInstallError,
+} from "./types.js";
 
 describe("CodexPluginManifest", () => {
   test("accepts minimal manifest with string mcpServers ref", () => {
@@ -102,6 +109,85 @@ describe("PluginPanelsManifest", () => {
         ],
       }),
     ).toThrow(/requires context.session/);
+  });
+});
+
+describe("PluginAutomationsManifest", () => {
+  test("normalizes safe templates to read-only current-workspace defaults", () => {
+    const automations = PluginAutomationsManifest.parse({
+      version: 1,
+      templates: [
+        {
+          id: "weekday-review",
+          title: { default: "Weekday review", "zh-CN": "工作日检查" },
+          schedule: "0 9 * * 1-5",
+          prompt: "Inspect pending work and report risks.",
+        },
+      ],
+    });
+    expect(automations.templates[0]).toMatchObject({
+      permissionLevel: "read-only",
+      workspace: "current",
+    });
+  });
+
+  test("rejects duplicate ids, unknown execution fields, and oversized prompts", () => {
+    expect(() =>
+      PluginAutomationsManifest.parse({
+        version: 1,
+        templates: [
+          { id: "same", title: { default: "One" }, schedule: "1h", prompt: "one" },
+          { id: "same", title: { default: "Two" }, schedule: "2h", prompt: "two" },
+        ],
+      }),
+    ).toThrow(/duplicate automation template id/);
+    expect(
+      PluginAutomationsManifest.safeParse({
+        version: 1,
+        templates: [
+          {
+            id: "unsafe",
+            title: { default: "Unsafe" },
+            schedule: "1h",
+            prompt: "run",
+            cwd: "/tmp/plugin-selected",
+          },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      PluginAutomationsManifest.safeParse({
+        version: 1,
+        templates: [
+          {
+            id: "too-large",
+            title: { default: "Too large" },
+            schedule: "1h",
+            prompt: "x".repeat(32_769),
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("PluginInterfaceMetadata", () => {
+  test("accepts at most three default prompts of at most 128 characters", () => {
+    expect(
+      PluginInterfaceMetadata.parse({
+        defaultPrompt: ["a".repeat(128), "second", "third"],
+      }).defaultPrompt,
+    ).toHaveLength(3);
+    expect(
+      PluginInterfaceMetadata.safeParse({
+        defaultPrompt: ["one", "two", "three", "four"],
+      }).success,
+    ).toBe(false);
+    expect(
+      PluginInterfaceMetadata.safeParse({
+        defaultPrompt: ["a".repeat(129)],
+      }).success,
+    ).toBe(false);
   });
 });
 

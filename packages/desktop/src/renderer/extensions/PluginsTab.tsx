@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import type { PluginSummary } from "../../main/plugins-service";
+import type { LocalPluginPreview, PluginMediaDto, PluginSummary } from "../../preload/types";
 import { resolveUninstallTarget } from "./uninstallTarget";
 import { PluginDetailView } from "./PluginDetailView";
+import { PluginInstallReviewDialog } from "./PluginInstallReviewDialog";
 import {
   ArrowUpCircle,
   ChevronRight,
@@ -23,6 +24,7 @@ import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 import { signalHotReload, runBatchUpdate, summarizeBatch } from "./applyUpdates";
 import { useT } from "../i18n/I18nProvider";
+import { pluginLogoSources, shouldLoadPluginListMedia } from "./pluginPresentation";
 
 interface Props {
   cwd: string;
@@ -46,6 +48,13 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   const [selected, setSelected] = useState<string | null>(null);
   const [localBusy, setLocalBusy] = useState<"dir" | "zip" | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [localReview, setLocalReview] = useState<{
+    path: string;
+    preview: LocalPluginPreview;
+  } | null>(null);
+  const [mediaByInstallKey, setMediaByInstallKey] = useState<Record<string, PluginMediaDto | null>>(
+    {},
+  );
   const retry = () => setReloadKey((k) => k + 1);
   const confirm = useConfirm();
   const alert = useAlert();
@@ -55,11 +64,33 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     setPlugins(null);
     setError(null);
     setUpdatable({});
+    setMediaByInstallKey({});
     window.codeshell
       .listPlugins(cwd)
       .then((d) => {
         if (!alive) return;
         setPlugins(d);
+        for (const p of d) {
+          if (!shouldLoadPluginListMedia(p.mediaAvailability)) continue;
+          void window.codeshell
+            .getPluginMedia(p.installKey)
+            .then((media) => {
+              if (alive) {
+                setMediaByInstallKey((current) => ({
+                  ...current,
+                  [p.installKey]: media,
+                }));
+              }
+            })
+            .catch(() => {
+              if (alive) {
+                setMediaByInstallKey((current) => ({
+                  ...current,
+                  [p.installKey]: null,
+                }));
+              }
+            });
+        }
         // Background, non-blocking: probe each plugin for an upstream update
         // (network per plugin; core no-ops fast for non-remote sources). Each
         // resolves independently so badges appear as they come back.
@@ -86,7 +117,10 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   const uninstall = async (p: PluginSummary) => {
     const target = resolveUninstallTarget(p);
     if (!target.uninstallable) {
-      void alert({ title: t("ext.plugins.cannotUninstallTitle"), message: t("ext.plugins.cannotUninstallMsg") });
+      void alert({
+        title: t("ext.plugins.cannotUninstallTitle"),
+        message: t("ext.plugins.cannotUninstallMsg"),
+      });
       return;
     }
     const ok = await confirm({
@@ -106,7 +140,10 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
       setReloadKey((k) => k + 1);
       onChanged();
     } catch (e) {
-      void alert({ title: t("ext.plugins.uninstallFailedTitle"), message: String((e as Error)?.message ?? e) });
+      void alert({
+        title: t("ext.plugins.uninstallFailedTitle"),
+        message: String((e as Error)?.message ?? e),
+      });
     } finally {
       setBusy(null);
     }
@@ -127,7 +164,10 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
       );
     } catch (e) {
       // Atomic in core — the old version is kept on failure.
-      void alert({ title: t("ext.plugins.updateFailedTitle"), message: String((e as Error)?.message ?? e) });
+      void alert({
+        title: t("ext.plugins.updateFailedTitle"),
+        message: String((e as Error)?.message ?? e),
+      });
     } finally {
       setBusy(null);
     }
@@ -159,17 +199,48 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
 
     setLocalBusy(kind);
     try {
-      // Install optimistically. core derives the AUTHORITATIVE plugin name from
-      // the manifest (after extracting a zip), so we don't pre-guess the name
-      // from the picker's filename. On a same-name collision core returns
-      // { alreadyInstalled, name } — we then confirm an overwrite using that
-      // real name and retry. (The picker filename can differ from the manifest
-      // name, e.g. "mimi-video-0.2.0.zip" vs plugin "mimi-video".)
-      let res = await window.codeshell.installLocalPlugin({
+      const result = await window.codeshell.previewLocalPlugin({
         kind: picked.kind,
         path: picked.path,
       });
-      if (!res.ok && "alreadyInstalled" in res && res.alreadyInstalled) {
+      if (!result.ok) {
+        setLocalError(result.error || t("ext.plugins.localInstallFailed"));
+        return;
+      }
+      setLocalReview({ path: picked.path, preview: result.preview });
+    } catch (e) {
+      setLocalError(String((e as Error)?.message ?? e));
+    } finally {
+      setLocalBusy(null);
+    }
+  };
+
+  const installReviewedLocal = async () => {
+    if (!localReview) return;
+    const { path, preview } = localReview;
+    let overwrite = false;
+    if (preview.alreadyInstalled) {
+      const ok = await confirm({
+        title: t("ext.plugins.overwriteTitle"),
+        message: t("ext.plugins.overwriteConfirm", { name: preview.name }),
+        confirmLabel: t("ext.plugins.overwriteConfirmLabel"),
+      });
+      if (!ok) return;
+      overwrite = true;
+    }
+
+    setLocalBusy(preview.source.kind);
+    setLocalError(null);
+    try {
+      let res = await window.codeshell.installLocalPlugin({
+        kind: preview.source.kind,
+        path,
+        reviewToken: preview.reviewToken,
+        overwrite,
+      });
+      // A same-name install may race in after preview. Preserve the required
+      // overwrite second confirmation before retrying.
+      if (!res.ok && "alreadyInstalled" in res && res.alreadyInstalled && !overwrite) {
         const ok = await confirm({
           title: t("ext.plugins.overwriteTitle"),
           message: t("ext.plugins.overwriteConfirm", { name: res.name }),
@@ -177,23 +248,29 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
         });
         if (!ok) return;
         res = await window.codeshell.installLocalPlugin({
-          kind: picked.kind,
-          path: picked.path,
+          kind: preview.source.kind,
+          path,
+          reviewToken: preview.reviewToken,
           overwrite: true,
         });
       }
       if (!res.ok) {
+        setLocalReview(null);
         setLocalError(
           ("error" in res ? res.error : undefined) ?? t("ext.plugins.localInstallFailed"),
         );
         return;
       }
+      setLocalReview(null);
       // Hot-reload hooks/MCP into running sessions. Skills and commands are
       // disk-scanned on demand; the list refresh below makes the UI immediate.
       signalHotReload();
       setReloadKey((k) => k + 1);
       onChanged();
-      toast({ message: t("ext.plugins.localInstalledToast", { name: res.name }), variant: "success" });
+      toast({
+        message: t("ext.plugins.localInstalledToast", { name: res.name }),
+        variant: "success",
+      });
     } catch (e) {
       setLocalError(String((e as Error)?.message ?? e));
     } finally {
@@ -202,20 +279,27 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   };
 
   if (selected !== null) {
-    return <PluginDetailView installKey={selected} onBack={() => setSelected(null)} />;
+    return <PluginDetailView installKey={selected} cwd={cwd} onBack={() => setSelected(null)} />;
   }
   if (error)
     return (
       <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-        {t("ext.common.loadFailed", { error })} <Button size="sm" variant="outline" onClick={retry}>{t("ext.common.retry")}</Button>
+        {t("ext.common.loadFailed", { error })}{" "}
+        <Button size="sm" variant="outline" onClick={retry}>
+          {t("ext.common.retry")}
+        </Button>
       </div>
     );
-  if (plugins === null) return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
+  if (plugins === null)
+    return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
   const q = query.trim().toLowerCase();
   const rows = q
     ? plugins.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
+          p.displayName.toLowerCase().includes(q) ||
+          (p.developerName ?? "").toLowerCase().includes(q) ||
+          (p.category ?? "").toLowerCase().includes(q) ||
           (p.description ?? "").toLowerCase().includes(q),
       )
     : plugins;
@@ -223,7 +307,9 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   const localInstallBar = (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed bg-muted/20 p-3">
       <div className="min-w-[180px] flex-1">
-        <div className="text-sm font-medium text-foreground">{t("ext.plugins.localInstallTitle")}</div>
+        <div className="text-sm font-medium text-foreground">
+          {t("ext.plugins.localInstallTitle")}
+        </div>
         <div className="text-xs text-muted-foreground">{t("ext.plugins.localInstallDesc")}</div>
         {localError && <div className="mt-1 text-xs text-status-err">{localError}</div>}
       </div>
@@ -259,6 +345,14 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   );
   return (
     <div className="space-y-3">
+      {localReview && (
+        <PluginInstallReviewDialog
+          preview={localReview.preview}
+          busy={localBusy !== null}
+          onCancel={() => setLocalReview(null)}
+          onInstall={() => void installReviewedLocal()}
+        />
+      )}
       {localInstallBar}
       {updatableCount > 1 && (
         <div className="flex justify-end">
@@ -282,72 +376,120 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
         <div className="p-4 text-sm text-muted-foreground">{t("ext.plugins.empty")}</div>
       ) : (
         <ul className="space-y-1">
-        {rows.map((p) => (
-          <li key={p.installKey} className="flex items-center gap-3 rounded-lg border bg-card p-3 text-sm">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground">
-              <Puzzle className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <button
-              type="button"
-              className="group flex min-w-0 flex-1 items-center gap-1 text-left"
-              onClick={() => setSelected(p.installKey)}
-              title={t("ext.plugins.viewContentTip")}
+          {rows.map((p) => (
+            <li
+              key={p.installKey}
+              className="flex items-center gap-3 rounded-lg border bg-card p-3 text-sm"
             >
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium group-hover:underline">{p.name}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {p.sourceLabel} · {t("ext.plugins.skillCount", { count: p.skillCount })}
-                </div>
-              </div>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />
-            </button>
-            {updatable[p.installKey] && (
-              <Button
-                size="icon"
-                variant="ghost"
-                title={t("ext.plugins.hasUpdateTip")}
-                className="text-status-running hover:text-status-running"
-                disabled={busy === p.installKey}
-                onClick={() => void update(p)}
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background text-muted-foreground"
+                style={
+                  p.brandColor ? { borderColor: p.brandColor, color: p.brandColor } : undefined
+                }
               >
-                {busy === p.installKey ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowUpCircle className="h-4 w-4" />
-                )}
-              </Button>
-            )}
-            <span className="text-xs text-muted-foreground">{p.marketplace ?? t("ext.plugins.local")}</span>
-            <Switch checked={isEnabled(p)} onCheckedChange={(v) => onToggle(p, v)} />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+                <PluginLogo
+                  media={mediaByInstallKey[p.installKey]}
+                  alt={p.displayName}
+                  fallback={<Puzzle className="h-4 w-4" aria-hidden="true" />}
+                />
+              </span>
+              <button
+                type="button"
+                className="group flex min-w-0 flex-1 items-center gap-1 text-left"
+                onClick={() => setSelected(p.installKey)}
+                title={t("ext.plugins.viewContentTip")}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium group-hover:underline">{p.displayName}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {p.displayName !== p.name ? `${p.name} · ` : ""}
+                    {p.category ? `${p.category} · ` : ""}
+                    {p.sourceLabel} · {t("ext.plugins.skillCount", { count: p.skillCount })}
+                  </div>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />
+              </button>
+              {updatable[p.installKey] && (
                 <Button
                   size="icon"
                   variant="ghost"
-                  title={t("ext.plugins.moreActions")}
+                  title={t("ext.plugins.hasUpdateTip")}
+                  className="text-status-running hover:text-status-running"
                   disabled={busy === p.installKey}
+                  onClick={() => void update(p)}
                 >
                   {busy === p.installKey ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <MoreHorizontal className="h-4 w-4" />
+                    <ArrowUpCircle className="h-4 w-4" />
                   )}
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => void update(p)}>{t("ext.common.update")}</DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-status-err focus:text-status-err"
-                  onSelect={() => void uninstall(p)}
-                >
-                  {t("ext.common.uninstall")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </li>
-        ))}
+              )}
+              <span className="text-xs text-muted-foreground">
+                {p.marketplace ?? t("ext.plugins.local")}
+              </span>
+              <Switch checked={isEnabled(p)} onCheckedChange={(v) => onToggle(p, v)} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    title={t("ext.plugins.moreActions")}
+                    disabled={busy === p.installKey}
+                  >
+                    {busy === p.installKey ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <MoreHorizontal className="h-4 w-4" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => void update(p)}>
+                    {t("ext.common.update")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-status-err focus:text-status-err"
+                    onSelect={() => void uninstall(p)}
+                  >
+                    {t("ext.common.uninstall")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </li>
+          ))}
         </ul>
       )}
     </div>
+  );
+}
+
+function PluginLogo({
+  media,
+  alt,
+  fallback,
+}: {
+  media: PluginMediaDto | null | undefined;
+  alt: string;
+  fallback: React.ReactNode;
+}) {
+  const sources = pluginLogoSources(media);
+  if (!sources.light) return fallback;
+  const hasDistinctDark = sources.dark && sources.dark !== sources.light;
+  return (
+    <>
+      <img
+        src={sources.light}
+        alt={alt}
+        className={`h-full w-full object-contain p-1 ${hasDistinctDark ? "dark:hidden" : ""}`}
+      />
+      {hasDistinctDark && (
+        <img
+          src={sources.dark}
+          alt={alt}
+          className="hidden h-full w-full object-contain p-1 dark:block"
+        />
+      )}
+    </>
   );
 }

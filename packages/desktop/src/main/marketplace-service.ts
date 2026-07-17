@@ -22,10 +22,13 @@ import {
   refreshMarketplace,
   removeMarketplace,
   installPlugin,
-  installLocalPlugin,
+  installReviewedLocalPlugin,
+  LocalPluginReviewChangedError,
+  previewLocalPlugin,
   parseMarketplaceInput,
   deriveMarketplaceName,
   invalidateSkillCache,
+  type LocalPluginPreview,
 } from "@cjhyy/code-shell-core";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -69,9 +72,7 @@ function humanizeGitError(error: string | undefined): string | undefined {
 }
 
 // Local type mirrors (core does not re-export these). Keep in sync with core.
-export type MarketplaceSource =
-  | { source: "github"; repo: string }
-  | { source: "git"; url: string };
+export type MarketplaceSource = { source: "github"; repo: string } | { source: "git"; url: string };
 
 export type MarketplaceFormat = "claude-code" | "codex" | "universal";
 
@@ -169,7 +170,11 @@ function recommendedCachePath(): string {
 }
 
 function safeId(input: string): string {
-  return input.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function sourceKey(source: MarketplaceSource): string {
@@ -198,8 +203,12 @@ function normalizeRecommendedItem(raw: unknown, index: number): RecommendedMarke
     typeof obj.name === "string" && obj.name.trim()
       ? obj.name.trim()
       : source.source === "github"
-        ? source.repo.split("/").pop() ?? `marketplace-${index + 1}`
-        : source.url.split(/[/:]/).filter(Boolean).pop()?.replace(/\.git$/i, "") ?? `marketplace-${index + 1}`;
+        ? (source.repo.split("/").pop() ?? `marketplace-${index + 1}`)
+        : (source.url
+            .split(/[/:]/)
+            .filter(Boolean)
+            .pop()
+            ?.replace(/\.git$/i, "") ?? `marketplace-${index + 1}`);
   const id = typeof obj.id === "string" && obj.id.trim() ? safeId(obj.id) : safeId(name);
   return {
     id: id || `marketplace-${index + 1}`,
@@ -207,9 +216,10 @@ function normalizeRecommendedItem(raw: unknown, index: number): RecommendedMarke
     ...(typeof obj.description === "string" ? { description: obj.description } : {}),
     ...(typeof obj.reason === "string" ? { reason: obj.reason } : {}),
     ...(typeof obj.homepage === "string" ? { homepage: obj.homepage } : {}),
-    source: source.source === "github"
-      ? { source: "github", repo: source.repo.trim() }
-      : { source: "git", url: source.url.trim() },
+    source:
+      source.source === "github"
+        ? { source: "github", repo: source.repo.trim() }
+        : { source: "git", url: source.url.trim() },
     ...(obj.format === "claude-code" || obj.format === "codex" || obj.format === "universal"
       ? { format: obj.format }
       : {}),
@@ -221,7 +231,9 @@ function normalizeRecommendedItem(raw: unknown, index: number): RecommendedMarke
 export function parseRecommendedMarketplaces(raw: unknown): RecommendedMarketplaceDTO[] {
   const list = Array.isArray(raw)
     ? raw
-    : raw && typeof raw === "object" && Array.isArray((raw as { marketplaces?: unknown }).marketplaces)
+    : raw &&
+        typeof raw === "object" &&
+        Array.isArray((raw as { marketplaces?: unknown }).marketplaces)
       ? (raw as { marketplaces: unknown[] }).marketplaces
       : [];
   return list
@@ -270,7 +282,8 @@ function writeRecommendedCache(raw: unknown): void {
 }
 
 export async function listRecommendedMarketplacesForUi(): Promise<RecommendedMarketplaceListDTO> {
-  const url = process.env.CODESHELL_RECOMMENDED_MARKETPLACES_URL || DEFAULT_RECOMMENDED_MARKETPLACES_URL;
+  const url =
+    process.env.CODESHELL_RECOMMENDED_MARKETPLACES_URL || DEFAULT_RECOMMENDED_MARKETPLACES_URL;
   try {
     const raw = await fetchRecommendedRaw(url);
     const parsed = parseRecommendedMarketplaces(raw);
@@ -376,9 +389,7 @@ export function listPluginInstallJobsForUi(): PluginInstallJobDTO[] {
   return [...installJobs.values()].sort((a, b) => a.requestedAt - b.requestedAt);
 }
 
-export function onPluginInstallJobsChanged(
-  cb: (jobs: PluginInstallJobDTO[]) => void,
-): () => void {
+export function onPluginInstallJobsChanged(cb: (jobs: PluginInstallJobDTO[]) => void): () => void {
   installListeners.add(cb);
   return () => installListeners.delete(cb);
 }
@@ -410,7 +421,12 @@ async function drainInstallQueue(): Promise<void> {
     return;
   }
   activeInstallJobId = nextId;
-  installJobs.set(nextId, { ...job, status: "installing", startedAt: Date.now(), error: undefined });
+  installJobs.set(nextId, {
+    ...job,
+    status: "installing",
+    startedAt: Date.now(),
+    error: undefined,
+  });
   emitPluginInstallJobsChanged();
   try {
     const res = await installPlugin(job.pluginName, job.marketplaceName);
@@ -457,7 +473,11 @@ export async function installPluginForUi(
   const id = installJobId(pluginName, marketplaceName);
   const existing = installJobs.get(id);
   if (existing) {
-    if (existing.status === "queued" || existing.status === "installing" || existing.status === "installed") {
+    if (
+      existing.status === "queued" ||
+      existing.status === "installing" ||
+      existing.status === "installed"
+    ) {
       return { ok: true, job: existing };
     }
     const job: PluginInstallJobDTO = {
@@ -512,6 +532,7 @@ export async function addRecommendedMarketplaceForUi(
  */
 export type LocalInstallError =
   | { ok: false; alreadyInstalled: true; name: string }
+  | { ok: false; previewChanged: true; error: string }
   | { ok: false; error?: string };
 
 /**
@@ -532,22 +553,59 @@ export function classifyLocalInstallError(raw: string): LocalInstallError {
   return { ok: false, error: humanizeGitError(raw) };
 }
 
-export async function installLocalPluginForUi(
-  input: { kind: "dir" | "zip"; path: string; overwrite?: boolean },
-): Promise<{ ok: true; name: string } | LocalInstallError> {
-  if (!input || (input.kind !== "dir" && input.kind !== "zip") || typeof input.path !== "string" || !input.path) {
-    throw new Error("installLocalPluginForUi requires { kind: 'dir'|'zip', path }");
+export async function previewLocalPluginForUi(input: {
+  kind: "dir" | "zip";
+  path: string;
+}): Promise<{ ok: true; preview: LocalPluginPreview } | { ok: false; error: string }> {
+  if (
+    !input ||
+    (input.kind !== "dir" && input.kind !== "zip") ||
+    typeof input.path !== "string" ||
+    !input.path
+  ) {
+    throw new Error("previewLocalPluginForUi requires { kind: 'dir'|'zip', path }");
   }
   try {
-    const { name } = await installLocalPlugin(
+    return { ok: true, preview: await previewLocalPlugin(input) };
+  } catch (error) {
+    return {
+      ok: false,
+      error: String(error instanceof Error ? error.message : error),
+    };
+  }
+}
+
+export async function installLocalPluginForUi(input: {
+  kind: "dir" | "zip";
+  path: string;
+  reviewToken: string;
+  overwrite?: boolean;
+}): Promise<{ ok: true; name: string } | LocalInstallError> {
+  if (
+    !input ||
+    (input.kind !== "dir" && input.kind !== "zip") ||
+    typeof input.path !== "string" ||
+    !input.path ||
+    typeof input.reviewToken !== "string" ||
+    !/^[a-f0-9]{64}$/.test(input.reviewToken)
+  ) {
+    throw new Error(
+      "installLocalPluginForUi requires a reviewed { kind, path, reviewToken } input",
+    );
+  }
+  try {
+    const { name } = await installReviewedLocalPlugin(
       { kind: input.kind, path: input.path },
+      input.reviewToken,
       new Date().toISOString(),
-      undefined,
       { overwrite: input.overwrite === true },
     );
     invalidateSkillCache();
     return { ok: true, name };
   } catch (e) {
+    if (e instanceof LocalPluginReviewChangedError) {
+      return { ok: false, previewChanged: true, error: e.message };
+    }
     const raw = String(e instanceof Error ? e.message : e);
     return classifyLocalInstallError(raw);
   }

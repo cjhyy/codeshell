@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { homedir } from "node:os";
 import { memoize } from "../utils/memoize.js";
 import { parseFrontmatter, coerceDescription } from "./frontmatter.js";
@@ -70,6 +70,18 @@ function readSkillFile(skillFile: string): string | null {
       return null;
     }
     throw e;
+  }
+}
+
+function resolveContainedPluginPath(root: string, candidate: string): string | null {
+  try {
+    const realRoot = realpathSync(root);
+    const realCandidate = realpathSync(candidate);
+    const rel = relative(realRoot, realCandidate);
+    if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return null;
+    return realCandidate;
+  } catch {
+    return null;
   }
 }
 
@@ -152,14 +164,18 @@ function scanInstalledPlugins(results: SkillDefinition[]): void {
     for (const entry of entries) {
       const skillsDir = join(entry.installPath, "skills");
       if (!existsSync(skillsDir)) continue;
+      const resolvedSkillsDir = resolveContainedPluginPath(entry.installPath, skillsDir);
+      if (!resolvedSkillsDir) continue;
 
       let dirEntries: { name: string; isDirectory: () => boolean; isSymbolicLink: () => boolean }[];
       try {
-        dirEntries = readdirSync(skillsDir, { withFileTypes: true });
+        dirEntries = readdirSync(resolvedSkillsDir, { withFileTypes: true }).sort((a, b) =>
+          a.name.localeCompare(b.name),
+        );
       } catch (e) {
         if (isInaccessible(e)) {
           // eslint-disable-next-line no-console
-          console.warn(`[skills] cannot read ${skillsDir}: ${(e as Error).message}`);
+          console.warn(`[skills] cannot read ${resolvedSkillsDir}: ${(e as Error).message}`);
           continue;
         }
         throw e;
@@ -170,13 +186,27 @@ function scanInstalledPlugins(results: SkillDefinition[]): void {
         const namespacedName = `${pluginName}:${dirent.name}`;
         if (pluginSeen.has(namespacedName)) continue;
 
-        const skillFile = join(skillsDir, dirent.name, "SKILL.md");
+        const skillDir = resolveContainedPluginPath(
+          resolvedSkillsDir,
+          join(resolvedSkillsDir, dirent.name),
+        );
+        if (!skillDir) continue;
+        try {
+          if (!statSync(skillDir).isDirectory()) continue;
+        } catch {
+          continue;
+        }
+        const skillFile = resolveContainedPluginPath(skillDir, join(skillDir, "SKILL.md"));
+        if (!skillFile) continue;
+        try {
+          if (!statSync(skillFile).isFile()) continue;
+        } catch {
+          continue;
+        }
         const raw = readSkillFile(skillFile);
         if (raw === null) continue;
 
-        results.push(
-          buildSkillFromFile(skillFile, dirent.name, "plugin", raw, pluginName),
-        );
+        results.push(buildSkillFromFile(skillFile, dirent.name, "plugin", raw, pluginName));
         pluginSeen.add(namespacedName);
       }
     }
@@ -227,8 +257,7 @@ function skillsDirsMtime(cwd: string): string {
 
 const memoized = memoize(
   scanOnce,
-  (cwd: string) =>
-    `${cwd}\0${userHome()}\0${installedPluginsMtime()}\0${skillsDirsMtime(cwd)}`,
+  (cwd: string) => `${cwd}\0${userHome()}\0${installedPluginsMtime()}\0${skillsDirsMtime(cwd)}`,
 );
 
 /**
@@ -259,10 +288,7 @@ export interface ScanSkillsOptions {
   skillAllowlist?: string[];
 }
 
-export function scanSkills(
-  cwd: string,
-  opts?: ScanSkillsOptions,
-): SkillDefinition[] {
+export function scanSkills(cwd: string, opts?: ScanSkillsOptions): SkillDefinition[] {
   const all = memoized(cwd);
   const disabledSkills = opts?.disabledSkills;
   const disabledPlugins = opts?.disabledPlugins;

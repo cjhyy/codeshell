@@ -1,5 +1,11 @@
 import { describe, it, expect } from "bun:test";
-import { runPluginCommandHook } from "../packages/core/src/plugins/pluginCommandHook.js";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  resolvePluginDataPath,
+  runPluginCommandHook,
+} from "../packages/core/src/plugins/pluginCommandHook.js";
 import type { HookContext } from "../packages/core/src/hooks/events.js";
 
 function ctx(eventName: HookContext["eventName"] = "on_session_start"): HookContext {
@@ -81,29 +87,50 @@ describe("runPluginCommandHook — stdout parsing", () => {
 });
 
 describe("runPluginCommandHook — env exposure", () => {
-  it("exposes CODESHELL_PLUGIN_ROOT and strips CLAUDE_PLUGIN_ROOT from inherited env", async () => {
-    // Set CLAUDE_PLUGIN_ROOT in the parent — the runner must strip it
-    // before spawning so plugin-side host-detection branches conclude
-    // "not Claude Code".
-    const saved = process.env.CLAUDE_PLUGIN_ROOT;
+  it("exposes CodeShell/Codex root and data vars and strips Claude vars", async () => {
+    const dataPath = mkdtempSync(join(tmpdir(), "codeshell-plugin-data-"));
+    const savedRoot = process.env.CLAUDE_PLUGIN_ROOT;
+    const savedData = process.env.CLAUDE_PLUGIN_DATA;
     process.env.CLAUDE_PLUGIN_ROOT = "/parent/leaked";
+    process.env.CLAUDE_PLUGIN_DATA = "/parent/data-leaked";
     try {
       const res = await runPluginCommandHook(
         {
-          command: `printf '{"additionalContext":"plugin_root=%s claude=%s"}' "$CODESHELL_PLUGIN_ROOT" "$CLAUDE_PLUGIN_ROOT"`,
+          command: `printf '{"additionalContext":"plugin_root=%s codex_root=%s plugin_data=%s codex_data=%s claude_root=%s claude_data=%s"}' "$CODESHELL_PLUGIN_ROOT" "$PLUGIN_ROOT" "$CODESHELL_PLUGIN_DATA" "$PLUGIN_DATA" "$CLAUDE_PLUGIN_ROOT" "$CLAUDE_PLUGIN_DATA"`,
           installPath: "/expected/path",
           pluginKey: "test@m",
+          dataPath,
         },
         ctx(),
       );
       const msg = res.messages?.[0] ?? "";
       expect(msg).toContain("plugin_root=/expected/path");
-      // CLAUDE_PLUGIN_ROOT should be empty inside the child, even though
-      // the parent set it.
-      expect(msg).toMatch(/claude=\s*$/);
+      expect(msg).toContain("codex_root=/expected/path");
+      expect(msg).toContain(`plugin_data=${dataPath}`);
+      expect(msg).toContain(`codex_data=${dataPath}`);
+      expect(msg).toMatch(/claude_root= claude_data=\s*$/);
+      expect(existsSync(dataPath)).toBe(true);
     } finally {
-      if (saved === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
-      else process.env.CLAUDE_PLUGIN_ROOT = saved;
+      if (savedRoot === undefined) delete process.env.CLAUDE_PLUGIN_ROOT;
+      else process.env.CLAUDE_PLUGIN_ROOT = savedRoot;
+      if (savedData === undefined) delete process.env.CLAUDE_PLUGIN_DATA;
+      else process.env.CLAUDE_PLUGIN_DATA = savedData;
+      rmSync(dataPath, { recursive: true, force: true });
+    }
+  });
+
+  it("derives a stable traversal-safe data directory from CODE_SHELL_HOME", () => {
+    const saved = process.env.CODE_SHELL_HOME;
+    process.env.CODE_SHELL_HOME = "/tmp/codeshell-home";
+    try {
+      const first = resolvePluginDataPath("../../same@marketplace");
+      const second = resolvePluginDataPath("../../same@marketplace");
+      expect(first).toBe(second);
+      expect(first.startsWith("/tmp/codeshell-home/plugin-data/")).toBe(true);
+      expect(first).not.toContain("..");
+    } finally {
+      if (saved === undefined) delete process.env.CODE_SHELL_HOME;
+      else process.env.CODE_SHELL_HOME = saved;
     }
   });
 

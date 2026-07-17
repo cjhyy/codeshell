@@ -1,8 +1,9 @@
 import { describe, test, expect, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadPluginHooks, listPluginHooks, pluginHookKey } from "./loadPluginHooks.js";
+import { pluginHooksDigest } from "./pluginHookIntegrity.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { Engine } from "../engine/engine.js";
 import { LLMClientBase } from "../llm/client-base.js";
@@ -31,7 +32,9 @@ afterEach(() => {
 function stagePlugin(
   pluginKey: string,
   sessionStartGroups: unknown[] = [{ hooks: [{ type: "command", command: "echo hi" }] }],
-): void {
+  hookDigest?: "current" | string,
+  approvedHookDigest?: "current" | string,
+): string {
   const home = mkdtempSync(join(tmpdir(), "plughome-"));
   dirs.push(home);
   process.env.HOME = home;
@@ -61,11 +64,26 @@ function stagePlugin(
             version: "1.0.0",
             installedAt: "2026-01-01",
             lastUpdated: "2026-01-01",
+            ...(hookDigest
+              ? {
+                  hookDigest:
+                    hookDigest === "current" ? pluginHooksDigest(installPath) : hookDigest,
+                }
+              : {}),
+            ...(approvedHookDigest
+              ? {
+                  approvedHookDigest:
+                    approvedHookDigest === "current"
+                      ? pluginHooksDigest(installPath)
+                      : approvedHookDigest,
+                }
+              : {}),
           },
         ],
       },
     }),
   );
+  return installPath;
 }
 
 const fakeProvider = "fake-session-start-source";
@@ -148,6 +166,101 @@ describe("loadPluginHooks disabledPluginHooks (per-hook) filter", () => {
     const reg = new HookRegistry();
     loadPluginHooks(reg, [], ["superpowers:SessionStart:echo other"]);
     expect(reg.hasHooks("on_session_start")).toBe(true);
+  });
+});
+
+describe("loadPluginHooks install-time integrity", () => {
+  test("registers a hook whose digest was explicitly approved", () => {
+    stagePlugin("verified@market", undefined, "current", "current");
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    expect(reg.hasHooks("on_session_start")).toBe(true);
+    expect(listPluginHooks()[0]?.integrity).toBe("verified");
+    expect(listPluginHooks()[0]?.approval).toBe("approved");
+  });
+
+  test("fails closed while a new matching hook digest is pending approval", () => {
+    stagePlugin("pending@market", undefined, "current");
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    expect(reg.hasHooks("on_session_start")).toBe(false);
+    expect(listPluginHooks()[0]?.integrity).toBe("verified");
+    expect(listPluginHooks()[0]?.approval).toBe("pending");
+  });
+
+  test("fails closed when hooks.json changes after installation", () => {
+    const installPath = stagePlugin("changed@market", undefined, "current");
+    writeFileSync(
+      join(installPath, "hooks", "hooks.json"),
+      JSON.stringify({
+        hooks: {
+          SessionStart: [{ hooks: [{ type: "command", command: "echo tampered" }] }],
+        },
+      }),
+    );
+
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    expect(reg.hasHooks("on_session_start")).toBe(false);
+    expect(listPluginHooks()[0]?.integrity).toBe("changed");
+    expect(listPluginHooks()[0]?.approval).toBe("changed");
+  });
+
+  test("keeps legacy installs compatible until the user explicitly revokes them", () => {
+    stagePlugin("legacy@market");
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    expect(reg.hasHooks("on_session_start")).toBe(true);
+    expect(listPluginHooks()[0]?.approval).toBe("legacy");
+  });
+
+  test("ignores blank command declarations instead of prompting or registering", () => {
+    stagePlugin("blank@market", [{ hooks: [{ type: "command", command: "   " }] }], "current");
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    expect(reg.hasHooks("on_session_start")).toBe(false);
+    expect(listPluginHooks()).toEqual([]);
+  });
+
+  test("fails closed for one invalid plugin without blocking other plugins", () => {
+    stagePlugin("valid@market");
+    const home = process.env.HOME!;
+    const invalidInstallPath = join(home, "invalid-plugin-install");
+    mkdirSync(join(invalidInstallPath, "hooks"), { recursive: true });
+    writeFileSync(
+      join(invalidInstallPath, "hooks", "hooks.json"),
+      JSON.stringify({
+        hooks: {
+          SessionStart: [
+            {
+              matcher: "[",
+              hooks: [{ type: "command", command: "echo must-not-run" }],
+            },
+          ],
+        },
+      }),
+    );
+
+    const installedPath = join(home, ".code-shell", "plugins", "installed_plugins.json");
+    const installed = JSON.parse(readFileSync(installedPath, "utf-8"));
+    installed.plugins = {
+      "invalid@market": [
+        {
+          scope: "user",
+          installPath: invalidInstallPath,
+          version: "1.0.0",
+          installedAt: "2026-01-01",
+          lastUpdated: "2026-01-01",
+        },
+      ],
+      ...installed.plugins,
+    };
+    writeFileSync(installedPath, JSON.stringify(installed));
+
+    const reg = new HookRegistry();
+    loadPluginHooks(reg);
+    expect(reg.hasHooks("on_session_start")).toBe(true);
+    expect(listPluginHooks().map((hook) => hook.plugin)).toEqual(["valid"]);
   });
 });
 
@@ -237,10 +350,13 @@ describe("listPluginHooks (read-only, for the settings UI)", () => {
     expect(list).toHaveLength(1);
     expect(list[0]).toMatchObject({
       plugin: "superpowers",
+      installKey: "superpowers@market",
       event: "on_session_start",
       rawEvent: "SessionStart",
       command: "echo hi",
       disabled: false,
+      integrity: "legacy",
+      approval: "legacy",
       key: "superpowers:SessionStart:echo hi",
     });
   });

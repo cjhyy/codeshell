@@ -16,6 +16,9 @@ import { installPluginFromPath } from "./install.js";
 import { installPluginFromSource } from "./installFromSource.js";
 import { parseSource } from "./parseSource.js";
 import { PluginInstallError } from "./types.js";
+import { approvePluginHooks, reviewPluginHooks } from "../pluginHookApproval.js";
+import { approvePluginMcp } from "../pluginMcpApproval.js";
+import { readInstalledPlugins } from "../installedPlugins.js";
 
 /** Any leftover backup dirs (`.bak-*`) in the plugins root — must be empty after both success and failure. */
 function leftoverBaks(home: string): string[] {
@@ -104,6 +107,119 @@ describe("updatePluginByName", () => {
     );
     expect(meta.version).toBe("3.0.0");
     expect(leftoverBaks(home).length).toBe(0);
+  });
+
+  test("does not remove an unrelated stale backup while staging an update", async () => {
+    const staleBackup = join(home, ".code-shell", "plugins", `u.bak-${process.pid}`);
+    mkdirSync(staleBackup, { recursive: true });
+    writeFileSync(join(staleBackup, "sentinel.txt"), "keep");
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "u", version: "4.0.0" }),
+    );
+
+    const result = await updatePluginByName("u", "t2", false);
+
+    expect(result.updated).toBe(true);
+    expect(readFileSync(join(staleBackup, "sentinel.txt"), "utf-8")).toBe("keep");
+  });
+
+  test("preserves approval for an unchanged hook digest and resets it when hooks change", async () => {
+    mkdirSync(join(src, "hooks"), { recursive: true });
+    writeFileSync(
+      join(src, "hooks", "hooks.json"),
+      JSON.stringify({
+        hooks: {
+          SessionStart: [{ hooks: [{ type: "command", command: "echo v1" }] }],
+        },
+      }),
+    );
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "u", version: "2.0.0" }),
+    );
+
+    await updatePluginByName("u", "t2", false);
+    let entry = readInstalledPlugins().plugins["u@local"]?.[0];
+    expect(entry?.hookDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(entry?.approvedHookDigest).toBeUndefined();
+
+    approvePluginHooks("u");
+    const approvedEntry = readInstalledPlugins().plugins["u@local"]?.[0];
+    const approvedDigest = approvedEntry?.approvedHookDigest;
+    expect(approvedDigest).toBeDefined();
+    expect(approvedEntry?.approvedHookSnapshot?.[0]?.command).toBe("echo v1");
+
+    await updatePluginByName("u", "t3", true);
+    entry = readInstalledPlugins().plugins["u@local"]?.[0];
+    expect(entry?.approvedHookDigest).toBe(approvedDigest);
+
+    writeFileSync(
+      join(src, "hooks", "hooks.json"),
+      JSON.stringify({
+        hooks: {
+          SessionStart: [{ hooks: [{ type: "command", command: "echo v2" }] }],
+        },
+      }),
+    );
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "u", version: "3.0.0" }),
+    );
+
+    await updatePluginByName("u", "t4", false);
+    entry = readInstalledPlugins().plugins["u@local"]?.[0];
+    expect(entry?.hookDigest).not.toBe(approvedDigest);
+    expect(entry?.approvedHookDigest).toBeUndefined();
+    expect(entry?.approvedHookSnapshot?.[0]?.command).toBe("echo v1");
+    expect(reviewPluginHooks("u")[0]).toMatchObject({
+      baselineAvailable: true,
+      items: [
+        {
+          change: "changed",
+          previous: { command: "echo v1" },
+          current: { command: "echo v2" },
+        },
+      ],
+    });
+  });
+
+  test("preserves approval for an unchanged MCP digest and resets it when config changes", async () => {
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({
+        name: "u",
+        version: "2.0.0",
+        mcpServers: { server: { command: "mcp-v1" } },
+      }),
+    );
+
+    await updatePluginByName("u", "t2", false);
+    let entry = readInstalledPlugins().plugins["u@local"]?.[0];
+    expect(entry?.mcpDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(entry?.approvedMcpDigest).toBeUndefined();
+
+    approvePluginMcp("u");
+    const approvedDigest = readInstalledPlugins().plugins["u@local"]?.[0]?.approvedMcpDigest;
+    expect(approvedDigest).toBeDefined();
+
+    await updatePluginByName("u", "t3", true);
+    entry = readInstalledPlugins().plugins["u@local"]?.[0];
+    expect(entry?.approvedMcpDigest).toBe(approvedDigest);
+
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({
+        name: "u",
+        version: "3.0.0",
+        mcpServers: { server: { command: "mcp-v2" } },
+      }),
+    );
+
+    await updatePluginByName("u", "t4", false);
+    entry = readInstalledPlugins().plugins["u@local"]?.[0];
+    expect(entry?.mcpDigest).not.toBe(approvedDigest);
+    expect(entry?.approvedMcpDigest).toBeUndefined();
   });
 });
 

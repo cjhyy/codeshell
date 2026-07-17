@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Video Cut</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">CODESHELL VIDEO EDITOR</p>
+          <h1>视频剪辑</h1>
+        </div>
+        <span id="status" class="status">准备就绪</span>
+      </header>
+
+      <section class="card">
+        <label>
+          源视频
+          <input id="input" placeholder="/absolute/path/source.mp4" />
+        </label>
+        <label>
+          输出视频
+          <input id="output" placeholder="/absolute/path/export.mp4" />
+        </label>
+        <div class="grid">
+          <label>
+            画幅
+            <select id="aspect">
+              <option value="original">保持原画幅</option>
+              <option value="9:16">9:16 竖屏</option>
+              <option value="16:9">16:9 横屏</option>
+              <option value="1:1">1:1 方形</option>
+              <option value="4:5">4:5 社交媒体</option>
+            </select>
+          </label>
+          <label>
+            适配
+            <select id="fit">
+              <option value="cover">铺满并裁切</option>
+              <option value="contain">完整保留并留边</option>
+            </select>
+          </label>
+        </div>
+        <div class="grid">
+          <label>
+            片段转场
+            <select id="transition">
+              <option value="cut">直接切换</option>
+              <option value="fade">淡化转场</option>
+            </select>
+          </label>
+          <label>
+            转场时长（秒）
+            <input
+              id="transitionDuration"
+              type="number"
+              min="0.01"
+              max="5"
+              step="0.05"
+              value="0.25"
+            />
+          </label>
+        </div>
+        <label>
+          保留片段（每行一个）
+          <textarea id="clips" rows="4" placeholder="00:00:02.500 - 00:00:08.000"></textarea>
+        </label>
+        <label>
+          字幕文件（可选）
+          <input id="subtitles" placeholder="/absolute/path/captions.srt" />
+        </label>
+        <label>
+          额外要求
+          <textarea id="notes" rows="3" placeholder="例如：保留原声，输出 30fps"></textarea>
+        </label>
+      </section>
+
+      <section class="preview">
+        <div class="preview-title">
+          <strong>剪辑计划预览</strong>
+          <button id="copy" class="ghost" type="button">复制 JSON</button>
+        </div>
+        <pre id="plan"></pre>
+      </section>
+
+      <button id="submit" class="primary" type="button">交给当前 CodeShell 会话</button>
+      <p class="hint">提交后，Agent 会先检查媒体、生成 dry-run 并向你确认，不会直接覆盖文件。</p>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

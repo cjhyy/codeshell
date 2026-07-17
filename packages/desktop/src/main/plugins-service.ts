@@ -22,7 +22,9 @@ import {
   updatePluginByName,
   checkPluginUpdate,
   describePluginContent,
+  listPluginMcpTrust,
   type PluginContentInventory,
+  type PluginMcpTrustEntry,
   type UpdateResult,
   type UpdateCheck,
   SettingsManager,
@@ -39,10 +41,15 @@ import {
   replacePluginPanelResources,
   type PluginPanelProtocolResource,
 } from "./plugin-panel-protocol.js";
+import { normalizePluginDisplayMetadata } from "./plugin-display-metadata.js";
+import { pluginMediaAvailability } from "./plugin-media-service.js";
+import type { PluginMediaAvailability } from "../shared/plugin-media.js";
 
 export interface PluginSummary {
   /** Display name (without the `@marketplace` suffix). */
   name: string;
+  /** Author-provided marketplace/install surface name. */
+  displayName: string;
   /** Full install key from installed-plugins.json (e.g. "superpowers@official"). */
   installKey: string;
   /** Marketplace source — null for direct git / GitHub installs without marketplace. */
@@ -57,11 +64,34 @@ export interface PluginSummary {
   skillCount: number;
   /** Optional plugin description if `plugin.json` provides one. */
   description?: string;
+  longDescription?: string;
+  developerName?: string;
+  category?: string;
+  capabilities?: string[];
+  websiteURL?: string;
+  privacyPolicyURL?: string;
+  termsOfServiceURL?: string;
+  defaultPrompt?: string[];
+  brandColor?: string;
+  mediaAvailability: PluginMediaAvailability;
 }
 
 interface PluginManifest {
   description?: string;
   name?: string;
+  interface?: {
+    displayName?: string;
+    shortDescription?: string;
+    longDescription?: string;
+    developerName?: string;
+    category?: string;
+    capabilities?: string[];
+    websiteURL?: string;
+    privacyPolicyURL?: string;
+    termsOfServiceURL?: string;
+    defaultPrompt?: string[];
+    brandColor?: string;
+  };
 }
 
 function readLegacyPluginManifest(installPath: string): PluginManifest | null {
@@ -233,9 +263,12 @@ export function listPlugins(_cwd: string): PluginSummary[] {
   for (const plugin of plugins) {
     const { installKey, name, marketplace, installPath } = plugin;
     const manifest = plugin.manifest ?? readLegacyPluginManifest(installPath);
+    const metadata = normalizePluginDisplayMetadata(name, manifest);
 
     out.push({
       name,
+      ...metadata,
+      mediaAvailability: pluginMediaAvailability(plugin.manifest?.interface),
       installKey,
       marketplace,
       sourceLabel: deriveSourceLabel(marketplace),
@@ -243,7 +276,6 @@ export function listPlugins(_cwd: string): PluginSummary[] {
       installedAt: plugin.installedAt,
       version: plugin.version,
       skillCount: countSkills(installPath),
-      description: manifest?.description,
     });
   }
   return out;
@@ -252,15 +284,25 @@ export function listPlugins(_cwd: string): PluginSummary[] {
 /** Full inventory for the plugin detail view (feedback#15: 看不到插件里有啥). */
 export interface PluginDetail extends PluginSummary {
   content: PluginContentInventory;
+  mcpTrust?: PluginMcpTrustEntry;
 }
 
 export function getPluginDetail(installKey: string): PluginDetail | null {
   const summary = listPlugins("").find((p) => p.installKey === installKey);
   if (!summary) return null;
   const content = summary.installPath
-    ? describePluginContent(summary.name, summary.installPath)
-    : { skills: [], commands: [], agents: [], hooks: [], mcpServers: [], panels: [] };
-  return { ...summary, content };
+    ? describePluginContent(summary.name, summary.installPath, summary.installKey)
+    : {
+        skills: [],
+        commands: [],
+        agents: [],
+        hooks: [],
+        mcpServers: [],
+        panels: [],
+        automationTemplates: [],
+      };
+  const mcpTrust = listPluginMcpTrust().find((entry) => entry.installKey === installKey);
+  return { ...summary, content, ...(mcpTrust ? { mcpTrust } : {}) };
 }
 
 export interface UninstallPluginResult {

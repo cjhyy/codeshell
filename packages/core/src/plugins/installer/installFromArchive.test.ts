@@ -30,7 +30,10 @@ describe("installLocalPlugin (dir)", () => {
 
   test("installs a CC plugin dir; derives name from manifest", async () => {
     mkdirSync(join(src, ".claude-plugin"), { recursive: true });
-    writeFileSync(join(src, ".claude-plugin", "plugin.json"), JSON.stringify({ name: "My Plugin" }));
+    writeFileSync(
+      join(src, ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "My Plugin" }),
+    );
     mkdirSync(join(src, "skills", "s"), { recursive: true });
     writeFileSync(join(src, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
 
@@ -50,7 +53,9 @@ describe("installLocalPlugin (dir)", () => {
 
   test("rejects a dir with no recognizable plugin", async () => {
     writeFileSync(join(src, "random.txt"), "hi");
-    await expect(installLocalPlugin({ kind: "dir", path: src }, STAMP)).rejects.toThrow(/no plugin found/);
+    await expect(installLocalPlugin({ kind: "dir", path: src }, STAMP)).rejects.toThrow(
+      /no plugin found/,
+    );
   });
 
   test("installLocalPlugin overwrite reinstalls an already-installed plugin", async () => {
@@ -61,7 +66,10 @@ describe("installLocalPlugin (dir)", () => {
         JSON.stringify({ name: "upgrade-me", version }),
       );
       mkdirSync(join(src, "skills", "s"), { recursive: true });
-      writeFileSync(join(src, "skills", "s", "SKILL.md"), `---\nname: s\ndescription: d\n---\n${marker}`);
+      writeFileSync(
+        join(src, "skills", "s", "SKILL.md"),
+        `---\nname: s\ndescription: d\n---\n${marker}`,
+      );
     };
 
     // Install v1.
@@ -73,9 +81,9 @@ describe("installLocalPlugin (dir)", () => {
     writeSource("0.2.0", "v2-body");
 
     // Without overwrite → hard error (already installed).
-    await expect(
-      installLocalPlugin({ kind: "dir", path: src }, STAMP),
-    ).rejects.toThrow(/already installed/);
+    await expect(installLocalPlugin({ kind: "dir", path: src }, STAMP)).rejects.toThrow(
+      /already installed/,
+    );
 
     // With overwrite → succeeds and replaces with the new version + content.
     const second = await installLocalPlugin({ kind: "dir", path: src }, STAMP, undefined, {
@@ -108,7 +116,10 @@ describe("installPluginFromArchive (zip)", () => {
   test("extracts and installs a zipped CC plugin", async () => {
     const content = join(work, "content");
     mkdirSync(join(content, ".claude-plugin"), { recursive: true });
-    writeFileSync(join(content, ".claude-plugin", "plugin.json"), JSON.stringify({ name: "zipplug" }));
+    writeFileSync(
+      join(content, ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "zipplug" }),
+    );
     mkdirSync(join(content, "skills", "s"), { recursive: true });
     writeFileSync(join(content, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
     const zipPath = join(work, "plug.zip");
@@ -120,7 +131,9 @@ describe("installPluginFromArchive (zip)", () => {
   });
 
   test("rejects a non-existent archive", async () => {
-    await expect(installPluginFromArchive(join(work, "nope.zip"), STAMP)).rejects.toThrow(/not a file/);
+    await expect(installPluginFromArchive(join(work, "nope.zip"), STAMP)).rejects.toThrow(
+      /not a file/,
+    );
   });
 });
 
@@ -135,5 +148,7 @@ describe("safeJoin (zip-slip guard)", () => {
   });
   test("rejects absolute-ish escape", () => {
     expect(() => safeJoin(dest, "../../etc/passwd")).toThrow(PluginInstallError);
+    expect(() => safeJoin(dest, String.raw`..\evil.cmd`)).toThrow(PluginInstallError);
+    expect(() => safeJoin(dest, "/absolute/plugin.json")).toThrow(PluginInstallError);
   });
 });

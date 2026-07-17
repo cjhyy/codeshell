@@ -96,7 +96,9 @@ describe("PluginLifecycleRuntime", () => {
           () => {
             throw new Error("broken hook");
           },
-          ({ host }) => host.log.push("continued"),
+          ({ host }) => {
+            host.log.push("continued");
+          },
         ],
       },
     });
