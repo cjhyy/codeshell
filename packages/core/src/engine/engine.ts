@@ -42,10 +42,7 @@ import {
 } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry, type LiveChildState } from "../tool-system/builtin/agent-registry.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
-import {
-  notificationQueue,
-  buildNotificationMessage,
-} from "../tool-system/builtin/agent-notifications.js";
+import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
@@ -75,7 +72,6 @@ import {
 } from "../context/compaction.js";
 import { PromptComposer } from "../prompt/composer.js";
 import {
-  isEphemeralSessionState,
   SessionManager,
   sessionsRoot,
   type ForkSessionOptions,
@@ -87,7 +83,7 @@ import {
 } from "../session/session-manager.js";
 import { createRunUsageAccounting, wireRunModelFacade } from "./run-accounting.js";
 import { logger, runWithSid } from "../logging/logger.js";
-import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
+import { recordSessionStart } from "../logging/session-recorder.js";
 import { sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
@@ -124,8 +120,6 @@ import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
 import { detectProviderFromApiKey, buildModelPool } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
-import { formatFriendlyError } from "./friendly-error.js";
-import { buildSessionTitle } from "./session-title.js";
 import {
   PromptCacheDiagnosticRecorder,
   promptCacheDropHint,
@@ -138,9 +132,7 @@ import {
   type EngineRunOptions,
   type RunBehaviorProfile,
 } from "./run-types.js";
-import type { LegacyPetWorkDelegation } from "../types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
-import { stripInjectedContextMessages } from "./injected-context-cache.js";
 import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
 import { PermissionController } from "./permission-controller.js";
 import { buildPromptComposerConfig } from "./run-setup.js";
@@ -163,6 +155,11 @@ import {
   createGoalTerminationApplier,
   type GoalRunSlots,
 } from "./run-goal.js";
+import {
+  drainHeadlessBackgroundAgents,
+  finalizeRunSuccess,
+  buildRunFailureResult,
+} from "./run-finalize.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../types.js";
@@ -2121,52 +2118,21 @@ export class Engine {
         const sid = session.state.sessionId;
         const isTopLevel = this.config.isSubAgent !== true;
         if (isTopLevel && this.isHeadless()) {
-          let aborted = options?.signal?.aborted === true;
-          // Loop: a summarize turn can spawn a NEW background sub-agent; keep
-          // draining + summarizing until none remain. turnCount accumulates, so
-          // the turn-loop's maxTurns still bounds runaway re-summarization.
-          for (;;) {
-            while (!aborted && asyncAgentRegistry.hasRunningForSession(sid)) {
-              aborted = await this.waitForBackgroundAgentChange(sid, options?.signal);
-            }
-            let pending = notificationQueue.drainAll(sid);
-            if (aborted && pending.length === 0) {
-              // Abort race: an agent calls markCompleted (registry notify) and only
-              // THEN enqueue (queue notify) as two separate statements. If the abort
-              // fired before that agent's completion `.then` ran, the while above
-              // exited on `aborted`, this drainAll caught nothing, and a naive
-              // `break` here would drop the agent's output. Give still-settling
-              // agents a bounded window to finish enqueuing, then drain once more.
-              // Each wait is timeout-bounded so a genuinely stuck (never-completing)
-              // agent can't hang abort cleanup forever — we'd rather lose nothing in
-              // the common case and not hang in the pathological one.
-              for (let i = 0; i < 20 && asyncAgentRegistry.hasRunningForSession(sid); i++) {
-                const changed = await this.waitForBackgroundAgentChangeOrTimeout(sid, 25);
-                if (!changed) break; // timed out with no state change → stop waiting
-              }
-              pending = notificationQueue.drainAll(sid);
-              if (pending.length === 0) break;
-            } else if (pending.length === 0) {
-              break;
-            }
-            const injected: Message = {
-              role: "user",
-              content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
-            };
-            if (aborted || firstGoalTermination) {
-              // Mark injected: a synthetic notification, not the user's own input —
-              // the disk reader drops it on replay so no phantom user bubble.
-              // A goal termination is also a hard boundary: retain the notification
-              // for recovery, but never re-enter TurnLoop (which would reset its
-              // run-scoped goal budget tracker and could overwrite the first reason).
-              session.transcript.appendMessage(injected.role, injected.content, { injected: true });
-              result = { ...result, messages: [...result.messages, injected] };
-              break;
-            }
-            result = await turnLoop.run([...result.messages, injected]);
-            firstGoalTermination ??= result.goalTermination;
-            applyGoalTermination(result.goalTermination, result.goalTerminationRound);
-          }
+          result = await drainHeadlessBackgroundAgents({
+            sid,
+            session,
+            signal: options?.signal,
+            initialResult: result,
+            runTurnLoop: (msgs) => turnLoop.run(msgs),
+            applyGoalTermination,
+            waitForBackgroundAgentChange: (s, sig) => this.waitForBackgroundAgentChange(s, sig),
+            waitForBackgroundAgentChangeOrTimeout: (s, ms) =>
+              this.waitForBackgroundAgentChangeOrTimeout(s, ms),
+            getFirstGoalTermination: () => firstGoalTermination,
+            setFirstGoalTermination: (t) => {
+              firstGoalTermination = t;
+            },
+          });
         }
       } finally {
         // Run-scoped: drop the GoalStopHook so a later goal-less send on this
@@ -2184,204 +2150,45 @@ export class Engine {
         // dropped here or it stacks duplicates that re-snapshot on every tool.
         fileHistoryHook.dispose();
       }
-      this.lastMessages = result.messages;
-      const cachedMessages = stripInjectedContextMessages(
-        result.messages,
+      return await finalizeRunSuccess({
+        session,
+        result,
+        firstGoalTermination,
+        turnCount: turnLoop.currentTurn,
+        getRunUsage,
+        usageBaseline,
         userContextMsg,
         dynamicContextMsg,
-      );
-      this.compactedMessagesBySession.set(session.state.sessionId, cachedMessages);
-
-      logger.info("engine.done", {
-        sessionId: session.state.sessionId,
-        reason: result.reason,
-        turns: turnLoop.currentTurn,
-        tokens: getRunUsage().totalTokens,
+        setCompactedMessages: (s, msgs) => this.compactedMessagesBySession.set(s, msgs),
+        setLastMessages: (msgs) => {
+          this.lastMessages = msgs;
+        },
+        options,
+        emitHook: (event, payload, signal) => this.emitHook(event, payload, signal),
+        cwd,
+        llmClient,
+        auxSummaryClient,
+        recordExternalBilledUsage,
+        runMemoryPipeline: (transcript, sessionId, runCwd, client, record) =>
+          this.runMemoryPipeline(transcript, sessionId, runCwd, client, record),
+        updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
+        persistFinalRunState: (state) => this.persistFinalRunState(state),
+        markRunAccountingFinalized: () => accounting.markRunAccountingFinalized(),
+        costStoreSerialize: this.config.costStore
+          ? () => this.config.costStore!.serialize() as Record<string, unknown>
+          : undefined,
+        profile,
+        getProfileReportedResults: () => profileReportedResults,
       });
-      recordSessionEnd(session.state.sessionId, {
-        reason: result.reason,
-        turns: turnLoop.currentTurn,
-        cost: getRunUsage(),
-      });
-
-      // Session-level hook: fired symmetrically with on_session_start once
-      // the turn loop has resolved (completion, error, or abort). Handlers
-      // are notify-only — any returned messages are dropped because the run
-      // is already over and there's no next turn to inject into.
-      await this.emitHook(
-        "on_session_end",
-        {
-          sessionId: session.state.sessionId,
-          reason: result.reason,
-          turnCount: turnLoop.currentTurn,
-        },
-        options?.signal,
-      );
-
-      // Ephemeral side chats must never leak into durable memory, even after
-      // the user explicitly elevates tool permissions for a turn. Lifecycle
-      // isolation is independent of the run-scoped behavior/permission mode.
-      if (!isEphemeralSessionState(session.state)) {
-        // Fire-and-forget memory pipeline: extract durable memories from the
-        // transcript, save a session summary, and conditionally trigger
-        // auto-dream consolidation. Doesn't block the Engine result.
-        void this.runMemoryPipeline(
-          session.transcript,
-          session.state.sessionId,
-          cwd,
-          llmClient,
-          recordExternalBilledUsage,
-        );
-      }
-
-      // Fire-and-forget session title generation — only after the FIRST turn.
-      // Reuses the already-resolved auxSummaryClient (aux model, cheap). Best-
-      // effort: failures never touch the run result. The renderer writes the
-      // title into the sidebar on receipt of the session_title stream event.
-      {
-        const messageEvents = session.transcript.getEvents("message");
-        const userMsgEvents = messageEvents.filter(
-          (e) => (e.data as { role?: string }).role === "user",
-        );
-        const userMsgCount = userMsgEvents.length;
-        const onStream = options?.onStream;
-        if (userMsgCount === 1 && onStream && result.text) {
-          const sessionId = session.state.sessionId;
-          const rawContent = (userMsgEvents[0]?.data as { content?: unknown })?.content;
-          const firstUserText =
-            typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent ?? "");
-          void buildSessionTitle(
-            auxSummaryClient,
-            firstUserText,
-            result.text,
-            recordExternalBilledUsage,
-          )
-            .then((title) => {
-              if (title) {
-                // Persist the title so it survives a localStorage wipe / disk
-                // rebuild — it used to live only in the renderer's localStorage
-                // index. Read the latest persisted state at callback time and
-                // merge only title; the completed run's session.state snapshot
-                // may already be stale after later serial session updates.
-                this.updatePersistedSessionState(sessionId, { title });
-                onStream({
-                  type: "session_title",
-                  sessionId,
-                  title,
-                });
-              }
-            })
-            .catch(() => {});
-        }
-      }
-
-      // Update session state. Persist the raw terminal reason as the status so
-      // callers can distinguish user-cancelled (aborted_streaming) from real
-      // failures (model_error, prompt_too_long, ...) — previously every
-      // non-completed outcome collapsed to "errored", which threw away the
-      // distinction and misled anyone reading state.json.
-      const transcriptFlushFailed = session.transcript.flushFailed();
-      if (transcriptFlushFailed) {
-        const failure = session.transcript.getFlushFailure();
-        logger.error("engine.transcript_persistence_failed", {
-          sessionId: session.state.sessionId,
-          terminalReason: result.reason,
-          degraded: true,
-          ...failure,
-        });
-      }
-      options?.onAgentProgress?.({ type: "phase", phase: "finalizing" });
-      session.state.turnCount = turnLoop.currentTurn;
-      session.state.status = result.reason;
-      if (result.reason === "completed") {
-        session.state.completedSnapshotVersion = 1;
-        if (!transcriptFlushFailed) {
-          session.state.completedThroughEventId = session.transcript.getEvents().at(-1)?.id;
-        }
-      }
-      // Session-cumulative (baseline + this run) for persistence...
-      const usage = getRunUsage();
-      session.state.tokenUsage = foldRunUsage(usageBaseline, usage);
-      if (this.config.costStore) {
-        session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
-      }
-      this.persistFinalRunState(session.state);
-      accounting.markRunAccountingFinalized();
-
-      // Hook: agent end
-      await this.emitHook(
-        "on_agent_end",
-        {
-          sessionId: session.state.sessionId,
-          reason: result.reason,
-          turnCount: turnLoop.currentTurn,
-        },
-        options?.signal,
-      );
-
-      // Emit completion
-      options?.onStream?.({ type: "turn_complete", reason: result.reason });
-
-      // Structured results the active profile's run services reported, keyed
-      // by profile id. petWorkDelegation stays as a compat mirror of
-      // extensions.pet?.workDelegation until pet-aware hosts migrate.
-      const runExtensions =
-        profile && profileReportedResults ? { [profile.id]: profileReportedResults } : undefined;
-      const petWorkDelegationMirror = (
-        runExtensions?.pet as { workDelegation?: LegacyPetWorkDelegation } | undefined
-      )?.workDelegation;
-
-      return {
-        text: result.text,
-        reason: result.reason,
-        goalTermination: firstGoalTermination,
-        sessionId: session.state.sessionId,
-        turnCount: turnLoop.currentTurn,
-        usage: {
-          promptTokens: usage.totalPromptTokens,
-          completionTokens: usage.totalCompletionTokens,
-          totalTokens: usage.totalTokens,
-          cacheReadTokens: usage.totalCacheReadTokens,
-          cacheCreationTokens: usage.totalCacheCreationTokens,
-        },
-        ...(runExtensions ? { extensions: runExtensions } : {}),
-        ...(petWorkDelegationMirror ? { petWorkDelegation: petWorkDelegationMirror } : {}),
-      };
     });
-    return Promise.resolve(sessionRun).catch((err): EngineResult => {
-      // The session is already persisted as active before runWithSid starts.
-      // Initialization failures (client creation, MCP connection, prompt/hooks)
-      // therefore need the same terminal lifecycle treatment as turn-loop errors.
-      const error = formatFriendlyError(err);
-      session.state.status = "model_error";
-      this.persistFinalRunState(session.state);
-      session.transcript.appendError(error, { phase: "initialization" });
-      logger.error("engine.run_lifecycle_failed", {
-        sessionId: session.state.sessionId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      recordSessionEnd(session.state.sessionId, {
-        reason: "model_error",
-        turns: session.state.turnCount,
-      });
-      options?.onStream?.({ type: "error", error });
-      options?.onStream?.({ type: "turn_complete", reason: "model_error" });
-
-      const usage = session.state.tokenUsage;
-      return {
-        text: `ERROR: ${error}`,
-        reason: "model_error",
-        sessionId: session.state.sessionId,
-        turnCount: session.state.turnCount,
-        usage: {
-          promptTokens: usage.promptTokens ?? 0,
-          completionTokens: usage.completionTokens ?? 0,
-          totalTokens: usage.totalTokens ?? 0,
-          cacheReadTokens: usage.cacheReadTokens ?? 0,
-          cacheCreationTokens: usage.cacheCreationTokens ?? 0,
-        },
-      };
-    });
+    return Promise.resolve(sessionRun).catch((err): EngineResult =>
+      buildRunFailureResult({
+        err,
+        session,
+        options,
+        persistFinalRunState: (state) => this.persistFinalRunState(state),
+      }),
+    );
   }
 
   private buildSummarizeFn(
