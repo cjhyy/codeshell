@@ -160,7 +160,8 @@ import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { stripInjectedContextMessages } from "./injected-context-cache.js";
 import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
 import { PermissionController } from "./permission-controller.js";
-import { buildPromptComposerConfig, resolveRunProfileState } from "./run-setup.js";
+import { buildPromptComposerConfig } from "./run-setup.js";
+import { resolveRunWorkspace } from "./run-workspace.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../types.js";
@@ -215,31 +216,16 @@ export { diskDefaultsFrom, type DiskDefaultPatch } from "./disk-defaults.js";
  */
 export { resolveChildLlm, resolveChildToolScope } from "./subagent-spawner.js";
 
+// resolveRunCwd moved to run-workspace.ts; re-exported here so
+// engine.resolve-cwd.test.ts keeps resolving it from engine.js unchanged.
+export { resolveRunCwd } from "./run-workspace.js";
+
 /**
  * Load reusable sub-agent role definitions, merging:
  *   1. project-level  <cwd>/.code-shell/agents/*.md   (ships built-ins)
  *   2. user-level     ~/.code-shell/agents/*.md        (user wins on name)
  * Names in `disabledAgents` are filtered out so the LLM never sees them.
  */
-/**
- * Resolve the working directory for a run. Precedence for legacy sessions:
- *   options.cwd  >  resumed session's state.cwd  >  config.cwd  >  process.cwd()
- *
- * The session-cwd tier is what stops a project-bound session from being
- * resumed against the wrong directory: when a host omits options.cwd (e.g. its
- * sidebar repo selection drifted to null), the session's own recorded cwd is
- * recovered so the engine still loads THAT project's agents/settings/memory,
- * not whatever process.cwd() happens to be. Pure so the precedence is testable
- * without standing up an Engine.
- */
-export function resolveRunCwd(args: {
-  optionCwd?: string;
-  sessionCwd?: string;
-  configCwd?: string;
-  processCwd: string;
-}): string {
-  return args.optionCwd ?? args.sessionCwd ?? args.configCwd ?? args.processCwd;
-}
 
 export function loadAgentDefinitionsForCwd(
   cwd: string,
@@ -1260,114 +1246,32 @@ export class Engine {
     // Freeze permission context once, before the first await. Per-turn protocol
     // overrides live only for this run; persistent setPermissionMode/setPlanMode
     // calls made while busy are staged separately and cannot mutate this pair.
-    const persistedSessionKind =
-      options?.sessionId && this.sessionManager.exists(options.sessionId)
-        ? this.sessionManager.readSessionKind(options.sessionId)
-        : undefined;
-    if (
-      persistedSessionKind !== undefined &&
-      options?.kind !== undefined &&
-      persistedSessionKind !== options.kind
-    ) {
-      throw new Error(
-        `session kind mismatch: persisted ${persistedSessionKind}, requested ${options.kind}`,
-      );
-    }
-    const sessionKind = persistedSessionKind ?? options?.kind ?? "work";
-    const persistedWorkspaceProfile =
-      options?.sessionId && this.sessionManager.exists(options.sessionId)
-        ? this.sessionManager.readSessionWorkspaceProfile(options.sessionId)
-        : undefined;
-    if (
-      persistedWorkspaceProfile &&
-      options?.workspaceProfile &&
-      persistedWorkspaceProfile !== options.workspaceProfile
-    ) {
-      throw new Error(
-        `session workspace profile mismatch: persisted ${persistedWorkspaceProfile}, requested ${options.workspaceProfile}`,
-      );
-    }
-    const sessionWorkspaceProfile = options?.workspaceProfile ?? persistedWorkspaceProfile;
-    const profile = this.resolveBehaviorProfile(sessionKind, options?.behaviorMode);
-    // Normalize per-run profile parameters. The legacy pet-named run options
-    // fold into the generic bag (runtimeContext / workspaces) so existing
-    // hosts keep working; an explicit profileParams entry wins on key clash.
-    const profileParams: Readonly<Record<string, unknown>> = {
-      ...(options?.petRuntimeContext !== undefined
-        ? { runtimeContext: options.petRuntimeContext }
-        : {}),
-      ...(options?.petWorkspaces !== undefined ? { workspaces: options.petWorkspaces } : {}),
-      ...(options?.profileParams ?? {}),
-    };
+    const workspaceResolved = await resolveRunWorkspace({
+      options,
+      sessionManager: this.sessionManager,
+      resolveBehaviorProfile: (kind, mode) => this.resolveBehaviorProfile(kind, mode),
+      configPermissionMode: this.config.permissionMode,
+      configCwd: this.config.cwd,
+      settings: this.getSettingsManager(),
+      processCwd: process.cwd(),
+    });
+    if (!workspaceResolved.ok) return workspaceResolved.result;
+    const {
+      sessionKind,
+      sessionWorkspaceProfile,
+      profile,
+      profileParams,
+      runPermissionMode,
+      runPlanMode,
+      cwd,
+      profileState: {
+        workspaceProfile: runWorkspaceProfile,
+        sessionProfileOverrides,
+        profileMemoryDir,
+      },
+    } = workspaceResolved.resolution;
     /** Structured results the profile's run services report; keyed per profile contract. */
     let profileReportedResults: Record<string, unknown> | undefined;
-    const planModeDisabled = profile?.disablePlanMode === true;
-    let runPermissionMode =
-      profile?.forcePermissionMode ??
-      options?.permissionMode ??
-      this.config.permissionMode ??
-      "acceptEdits";
-    if (!planModeDisabled && options?.planMode === true) {
-      runPermissionMode = "plan";
-    } else if (!planModeDisabled && options?.planMode === false && runPermissionMode === "plan") {
-      runPermissionMode = "acceptEdits";
-    }
-    const runPlanMode = runPermissionMode === "plan";
-    const workspaceResume =
-      options?.sessionId && this.sessionManager.exists(options.sessionId)
-        ? await this.sessionManager.resolveSessionWorkspaceForResume(options.sessionId)
-        : undefined;
-    if (workspaceResume && !workspaceResume.ok) {
-      return {
-        text: `ERROR: ${workspaceResume.message}`,
-        reason: "completed",
-        sessionId: options!.sessionId!,
-        turnCount: 0,
-        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-      };
-    }
-    if (
-      workspaceResume?.ok &&
-      workspaceResume.reason === "worktree_missing_branch_gone" &&
-      workspaceResume.message
-    ) {
-      return {
-        text: workspaceResume.message,
-        reason: "completed",
-        sessionId: options!.sessionId!,
-        turnCount: 0,
-        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-      };
-    }
-
-    // Existing P1 sessions resolve cwd from SessionWorkspace, even if the host
-    // passes a stale cwd. Legacy sessions without workspace keep the historical
-    // explicit-cwd precedence for backward compatibility.
-    const workspaceCwd =
-      workspaceResume?.ok && workspaceResume.reason !== "legacy" ? workspaceResume.cwd : undefined;
-    const sessionCwd =
-      workspaceCwd === undefined && options?.cwd === undefined && options?.sessionId
-        ? workspaceResume?.ok
-          ? workspaceResume.cwd
-          : this.sessionManager.readSessionMainRoot(options.sessionId)
-        : undefined;
-    const cwd =
-      workspaceCwd ??
-      resolveRunCwd({
-        optionCwd: options?.cwd,
-        sessionCwd,
-        configCwd: this.config.cwd,
-        processCwd: process.cwd(),
-      });
-    const {
-      workspaceProfile: runWorkspaceProfile,
-      sessionProfileOverrides,
-      profileMemoryDir,
-    } = resolveRunProfileState({
-      sessionWorkspaceProfile,
-      cwd,
-      settings: this.getSettingsManager(),
-    });
 
     // Wrap the caller's onStream so we can intercept `task_update`
     // events emitted by TodoWrite and keep an in-engine snapshot.
