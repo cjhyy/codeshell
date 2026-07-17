@@ -91,11 +91,17 @@ export class PetSegmentController {
    */
   async beginTurn(clientMessageId?: string): Promise<string | undefined> {
     const now = this.options.now();
-    const openNew = shouldStartNewSegment({
-      lastInteractionAt: this.options.store.lastInteractionAt(),
-      now,
-      idleMs: this.options.idleMs,
-    });
+    const lastInteractionAt = this.options.store.lastInteractionAt();
+    // The very first interaction has no preceding segment to close, so it only
+    // establishes the interaction baseline — never a visible boundary. Without
+    // this guard `shouldStartNewSegment(0, now, idleMs)` is always true and the
+    // user's first message would render a bare "new topic" divider (with no
+    // brief, since work memory is still empty). Only a *later* turn that crosses
+    // the idle gap opens a visible new segment.
+    const isFirstInteraction = lastInteractionAt === 0;
+    const openNew =
+      !isFirstInteraction &&
+      shouldStartNewSegment({ lastInteractionAt, now, idleMs: this.options.idleMs });
     if (!openNew) {
       await this.options.store.setLastInteractionAt(now);
       return undefined;

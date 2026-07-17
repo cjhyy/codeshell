@@ -3,6 +3,7 @@ import type { PetTopicSegment, PetWorkMemoryEntry } from "@cjhyy/code-shell-pet"
 import { PetSegmentController } from "./pet-segment-controller";
 import type { PetWorkMemoryStoreLike } from "./pet-segment-controller";
 
+const MINUTE = 60 * 1000;
 const HOUR = 60 * 60 * 1000;
 
 class FakePetWorkMemoryStore implements PetWorkMemoryStoreLike {
@@ -99,7 +100,8 @@ describe("PetSegmentController", () => {
   test("carryover brief is produced when a new segment opens after long idle", async () => {
     const store = new FakePetWorkMemoryStore();
     store.seed({
-      lastInteractionAt: 0,
+      // A real prior interaction (not a fresh store) so the idle gap can be crossed.
+      lastInteractionAt: 30 * MINUTE,
       entries: [
         { segmentId: "old", objective: "重构 X", outcome: "completed", at: 1, workspace: "alpha" },
       ],
@@ -124,6 +126,9 @@ describe("PetSegmentController", () => {
 
   test("each long-idle turn opens a distinct message-keyed boundary", async () => {
     const store = new FakePetWorkMemoryStore();
+    // Seed a real prior interaction so both turns are genuine idle crossings
+    // (not the first-interaction baseline, which never opens a segment).
+    store.seed({ lastInteractionAt: 30 * MINUTE, entries: [] });
     let now = 0;
     const controller = new PetSegmentController({
       store,
@@ -142,8 +147,34 @@ describe("PetSegmentController", () => {
     ]);
   });
 
+  test("a fresh store's first chat turn opens no visible segment boundary", async () => {
+    const store = new FakePetWorkMemoryStore();
+    let now = HOUR; // fresh store → lastInteractionAt === 0
+    const controller = new PetSegmentController({
+      store,
+      petSessionId: "pet-1",
+      archiveRange: async () => ({ before: 0, after: 0 }),
+      now: () => now,
+      idleMs: 12 * HOUR,
+    });
+    // First turn: establishes the baseline only — no brief, no boundary, even
+    // though the idle gap since epoch nominally exceeds idleMs.
+    const first = await controller.beginTurn("pet-first");
+    expect(first).toBeUndefined();
+    expect(store.segmentBoundaries()).toEqual([]);
+    expect(store.lastInteractionAt()).toBe(HOUR);
+
+    // A later turn crossing the 12h idle window opens the first visible segment.
+    now = HOUR + 13 * HOUR;
+    await controller.beginTurn("pet-second");
+    expect(store.segmentBoundaries()).toEqual([{ boundaryBeforeMessageId: "pet-second" }]);
+  });
+
   test("a segment opened without a message id records no UI boundary", async () => {
     const store = new FakePetWorkMemoryStore();
+    // Prior interaction present so the idle crossing genuinely opens a segment;
+    // it just carries no message id (e.g. an IM-gateway turn without one).
+    store.seed({ lastInteractionAt: 30 * MINUTE, entries: [] });
     const controller = new PetSegmentController({
       store,
       petSessionId: "pet-1",
