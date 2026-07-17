@@ -1279,24 +1279,13 @@ export class Engine {
     // store is the transcript, but TaskGuard runs in-loop and can't
     // afford a transcript scan per turn.
     let latestTodos: TaskInfo[] = [];
-    const userOnStream = options?.onStream;
-    const wrappedOnStream: StreamCallback = (event) => {
-      if (event.type === "task_update") {
-        latestTodos = event.tasks;
-      }
-      // Persist goal progress so replay/history shows how many rounds the
-      // goal ran. Display-only — toMessages() ignores this type, so it never
-      // re-enters the LLM context.
-      if (event.type === "goal_progress") {
-        session.transcript.append("goal_progress", {
-          ...(event.goalId ? { goalId: event.goalId } : {}),
-          status: event.status,
-          round: event.round,
-          ...(event.gaps ? { gaps: event.gaps } : {}),
-        });
-      }
-      userOnStream?.(event);
-    };
+    const wrappedOnStream = this.buildWrappedOnStream({
+      userOnStream: options?.onStream,
+      getSession: () => session,
+      setLatestTodos: (todos) => {
+        latestTodos = todos;
+      },
+    });
     if (options) options.onStream = wrappedOnStream;
 
     const imageInput = await prepareRunImageInput({
@@ -1325,77 +1314,16 @@ export class Engine {
       };
     }
 
-    // Resolve before constructing the child spawner: a parent sandbox may come
-    // solely from project/user settings rather than config.sandbox, while a
-    // child intentionally skips project settings. Passing the complete
-    // effective config is what makes undefined role sandbox mean inherit.
-    const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(cwd);
-
-    // Build the per-Engine ToolContext that will be threaded through every
-    // tool call. Replaces the old module-level singleton setters used by
-    // built-ins and product capabilities.
-    const subAgentSpawner = createSubAgentSpawner({
-      parentConfig: this.config,
-      parentSandbox: sandboxConfig,
-      presetName: this.preset.name,
-      cwd,
-      permissionMode: runPermissionMode,
-      modelPool: this.modelPool,
-      parentStream: options?.onStream,
-      appendParentSubagent: (agentId, description) => {
-        session.transcript.appendSubagent(agentId, undefined, description);
-      },
-      sessionExists: (sessionId) => this.sessionManager.exists(sessionId),
-      getSessionParentId: (sessionId) => this.sessionManager.readParentSessionId(sessionId),
-      childRunner: {
-        createChild: (config) => new Engine(config),
-        runChild: async (config, childTask, childOptions) => {
-          const child = new Engine(config);
-          return child.run(childTask, childOptions);
-        },
-      },
-    });
-
-    // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
-    // per standard §S4. resolveSandboxBackend throws when an explicit
-    // mode is unavailable on this host; we let it propagate. The
-    // previous behavior — catching the throw inside the hot turn and
-    // silently downgrading to "off" — was the leak A2 closes. The
-    // `auto` mode handles its own downgrade with a one-time warning
-    // inside resolveSandboxBackend; explicit modes do not.
-    //
-    // Backend is cached per runtime/engine so the capability probe runs once
-    // per (mode, cwd) instead of every turn.
-    const sandboxBackend = await this.runEnvironmentResolver.resolveSandbox(cwd);
-
-    // Observability: surface what sandbox actually applied this run — the
-    // configured mode vs the resolved backend (auto may downgrade to off when
-    // no OS backend is available) + the network policy. Without this you can't
-    // tell whether shell commands were isolated /网络放没放. One line per run.
-    logger.info("sandbox.resolved", {
-      mode: sandboxConfig.mode,
-      backend: sandboxBackend.name,
-      isolated: sandboxBackend.name !== "off",
-      network: sandboxConfig.network,
-      cwd,
-    });
-
-    const toolCtx: ToolContext = buildRunToolContext({
-      base: this.buildToolContext(cwd, sessionProfileOverrides, profileMemoryDir),
+    const toolCtx = await this.wireRunSandboxToolContext({
       options,
-      configApprovalRouter: this.config.approvalRouter,
+      cwd,
       runPermissionMode,
       runPlanMode,
-      subAgentSpawner,
-      agentDefinitions: this.getAgentDefinitions(cwd, sessionProfileOverrides),
-      sandbox:
-        sandboxBackend.name === "off"
-          ? sandboxBackend
-          : { ...sandboxBackend, network: sandboxConfig.network },
-      cwd,
-      shellEnv: this.runEnvironmentResolver.readShellEnv(cwd),
       profile,
       profileParams,
+      sessionProfileOverrides,
+      profileMemoryDir,
+      getSession: () => session,
       reportResult: (key, value) => {
         (profileReportedResults ??= {})[key] = value;
       },
@@ -1452,6 +1380,338 @@ export class Engine {
       openedResult.opened;
     session = openedResult.opened.session;
 
+    this.stampRunToolContext(toolCtx, session, options);
+    const sessionRun = runWithSid(session.state.sessionId, async () => {
+      const hookMessages = await this.runSessionStartHooks({
+        session,
+        task,
+        cwd,
+        runPermissionMode,
+        resumedFromDisk,
+        options,
+        taskText,
+        messages,
+      });
+
+      const sid = session.state.sessionId;
+      const { contextManager, llmClientPromise, toolExecutor } =
+        this.wireRunContextAndPermission({
+          session,
+          sid,
+          options,
+          cwd,
+          toolCtx,
+          runPermissionMode,
+          messages,
+          getLatestTodos: () => latestTodos,
+          setLatestTodos: (todos) => {
+            latestTodos = todos;
+          },
+        });
+
+      const { promptComposer, toolDefs } = await this.wireRunTooling({
+        options,
+        session,
+        cwd,
+        toolCtx,
+        profile,
+        profileParams,
+        runWorkspaceProfile,
+        profileMemoryDir,
+        sessionProfileOverrides,
+        runPlanMode,
+      });
+
+      const { llmClient, fullSystemPrompt, dynamicContextMsg, userContextMsg } =
+        await this.assembleRunPrompts({
+          session,
+          messages,
+          hookMessages,
+          promptComposer,
+          toolDefs,
+          llmClientPromise,
+          contextManager,
+          profile,
+          profileParams,
+        });
+
+      // 1. Context-compaction summary (setSummarizeFn) → PRIMARY model. This
+      //    condenses many rounds into the running summary that REPLACES the real
+      //    history; a dropped decision makes the conversation "forget" and poisons
+      //    every subsequent turn. It fires only near the compact ratio (~0.85), so
+      //    it's infrequent — quality far outweighs the occasional extra cost of a
+      //    primary-model call. (Manual /compact uses the primary for the same
+      //    reason; see forceCompact.)
+      //
+      // 2. Tool-use one-liner summaries (modelFacade.summarize below) → AUX model.
+      //    These are tiny throwaway outputs ("Wrote design doc") fired every turn;
+      //    that high-frequency, low-stakes chore is exactly what aux is for.
+      const auxSummaryClient = await this.resolveAuxClient(llmClient);
+      // Auto-compaction runs inside TurnLoop.manageAsync(), after the loop has
+      // initialized its run-scoped Goal tracker. The closure is wired before
+      // construction but cannot execute until turnLoop.run() starts.
+      // Assigned after the callbacks that close over it are constructed; they
+      // cannot run until turnLoop.run(), so definite assignment is intentional.
+      const {
+        turnLoop,
+        applyGoalTermination,
+        goalHookHandler,
+        fileHistoryHook,
+        getRunUsage,
+        recordExternalBilledUsage,
+        accounting,
+        usageBaseline,
+      } = await this.wireRunLoop({
+        session,
+        sid,
+        task,
+        cwd,
+        options,
+        toolCtx,
+        toolExecutor,
+        contextManager,
+        llmClient,
+        auxSummaryClient,
+        fullSystemPrompt,
+        toolDefs,
+        claimClientMessageId,
+        releaseClientMessageId,
+        freshImageMessage,
+        dynamicContextMsg,
+      });
+
+      let result: Awaited<ReturnType<typeof turnLoop.run>>;
+      let firstGoalTermination: GoalTerminationReason | undefined;
+      try {
+        ({ result, firstGoalTermination } = await this.runTurnLoopWithHeadlessDrain({
+          turnLoop,
+          messages,
+          applyGoalTermination,
+          session,
+          options,
+        }));
+      } finally {
+        // Run-scoped: drop the GoalStopHook so a later goal-less send on this
+        // long-lived engine doesn't keep blocking stops.
+        if (goalHookHandler) this.hooks.unregister("on_stop", goalHookHandler);
+        if (this.activeGoalHook === goalHookHandler) {
+          this.activeGoalHook = null;
+          this.activeGoalHookAttached = false;
+          this.activeRuntimeGoal = null;
+          this.activePersistedRunGoal = null;
+        }
+        if (this.activeTurnLoop === turnLoop) this.activeTurnLoop = null;
+        if (this.activeRunSession === session) this.activeRunSession = null;
+        // Run-scoped too: this handler is re-registered every run(), so it must be
+        // dropped here or it stacks duplicates that re-snapshot on every tool.
+        fileHistoryHook.dispose();
+      }
+      return await this.finalizeRun({
+        session,
+        result,
+        firstGoalTermination,
+        turnCount: turnLoop.currentTurn,
+        getRunUsage,
+        usageBaseline,
+        userContextMsg,
+        dynamicContextMsg,
+        options,
+        cwd,
+        llmClient,
+        auxSummaryClient,
+        recordExternalBilledUsage,
+        accounting,
+        profile,
+        getProfileReportedResults: () => profileReportedResults,
+      });
+    });
+    return Promise.resolve(sessionRun).catch((err): EngineResult =>
+      buildRunFailureResult({
+        err,
+        session,
+        options,
+        persistFinalRunState: (state) => this.persistFinalRunState(state),
+      }),
+    );
+  }
+
+  /**
+   * Terminal success path: forward to {@link finalizeRunSuccess} with the
+   * engine-bound persistence / memory / hook closures filled in. Extracted from
+   * the {@link runExclusive} skeleton so the terminal-state assembly reads as a
+   * single call; behavior is unchanged.
+   */
+  private finalizeRun(args: {
+    session: SessionBundle;
+    result: Awaited<ReturnType<TurnLoop["run"]>>;
+    firstGoalTermination: GoalTerminationReason | undefined;
+    turnCount: number;
+    getRunUsage: () => ReturnType<import("./model-facade.js").ModelFacade["getUsage"]>;
+    usageBaseline: TokenUsage;
+    userContextMsg: Message | null;
+    dynamicContextMsg: Message | null;
+    options: EngineRunOptions | undefined;
+    cwd: string;
+    llmClient: Awaited<ReturnType<typeof createLLMClient>>;
+    auxSummaryClient: Awaited<ReturnType<typeof createLLMClient>>;
+    recordExternalBilledUsage: (usage: TokenUsage) => CumulativeUsageCounters;
+    accounting: ReturnType<typeof createRunUsageAccounting>;
+    profile: RunBehaviorProfile | undefined;
+    getProfileReportedResults: () => Record<string, unknown> | undefined;
+  }): Promise<EngineResult> {
+    const {
+      session,
+      result,
+      firstGoalTermination,
+      turnCount,
+      getRunUsage,
+      usageBaseline,
+      userContextMsg,
+      dynamicContextMsg,
+      options,
+      cwd,
+      llmClient,
+      auxSummaryClient,
+      recordExternalBilledUsage,
+      accounting,
+      profile,
+      getProfileReportedResults,
+    } = args;
+    return finalizeRunSuccess({
+      session,
+      result,
+      firstGoalTermination,
+      turnCount,
+      getRunUsage,
+      usageBaseline,
+      userContextMsg,
+      dynamicContextMsg,
+      setCompactedMessages: (s, msgs) => this.compactedMessagesBySession.set(s, msgs),
+      setLastMessages: (msgs) => {
+        this.lastMessages = msgs;
+      },
+      options,
+      emitHook: (event, payload, signal) => this.emitHook(event, payload, signal),
+      cwd,
+      llmClient,
+      auxSummaryClient,
+      recordExternalBilledUsage,
+      runMemoryPipeline: (transcript, sessionId, runCwd, client, record) =>
+        this.runMemoryPipeline(transcript, sessionId, runCwd, client, record),
+      updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
+      persistFinalRunState: (state) => this.persistFinalRunState(state),
+      markRunAccountingFinalized: () => accounting.markRunAccountingFinalized(),
+      costStoreSerialize: this.config.costStore
+        ? () => this.config.costStore!.serialize() as Record<string, unknown>
+        : undefined,
+      profile,
+      getProfileReportedResults,
+    });
+  }
+
+  /**
+   * Build the stream callback that wraps the caller's `onStream`: it snapshots
+   * TodoWrite `task_update` events for TaskGuard and persists `goal_progress`
+   * events to the transcript before delegating. Extracted verbatim from the
+   * {@link runExclusive} skeleton; the todo buffer and (not-yet-open) session
+   * are reached through the `setLatestTodos` / `getSession` accessors.
+   */
+  private buildWrappedOnStream(args: {
+    userOnStream: StreamCallback | undefined;
+    getSession: () => SessionBundle;
+    setLatestTodos: (todos: TaskInfo[]) => void;
+  }): StreamCallback {
+    const { userOnStream, getSession, setLatestTodos } = args;
+    return (event) => {
+      if (event.type === "task_update") {
+        setLatestTodos(event.tasks);
+      }
+      // Persist goal progress so replay/history shows how many rounds the
+      // goal ran. Display-only — toMessages() ignores this type, so it never
+      // re-enters the LLM context.
+      if (event.type === "goal_progress") {
+        getSession().transcript.append("goal_progress", {
+          ...(event.goalId ? { goalId: event.goalId } : {}),
+          status: event.status,
+          round: event.round,
+          ...(event.gaps ? { gaps: event.gaps } : {}),
+        });
+      }
+      userOnStream?.(event);
+    };
+  }
+
+  /**
+   * Run the turn loop once, apply its goal termination, and — for a top-level
+   * headless run only — drain background sub-agents before resolving. Extracted
+   * verbatim from the body of the {@link runExclusive} try block; the cleanup
+   * `finally` stays in the skeleton so the run-scoped hook/loop teardown is
+   * guaranteed regardless of how this method returns or throws.
+   */
+  private async runTurnLoopWithHeadlessDrain(args: {
+    turnLoop: TurnLoop;
+    messages: Message[];
+    applyGoalTermination: ReturnType<typeof createGoalTerminationApplier>;
+    session: SessionBundle;
+    options: EngineRunOptions | undefined;
+  }): Promise<{
+    result: Awaited<ReturnType<TurnLoop["run"]>>;
+    firstGoalTermination: GoalTerminationReason | undefined;
+  }> {
+    const { turnLoop, messages, applyGoalTermination, session, options } = args;
+
+    let result = await turnLoop.run(messages);
+    let firstGoalTermination: GoalTerminationReason | undefined = result.goalTermination;
+    applyGoalTermination(result.goalTermination, result.goalTerminationRound);
+
+    // ── Headless: drain background sub-agents before resolving ───────
+    // Unified background-work model (2026-06-17): the engine NO LONGER parks
+    // every run waiting on background work. Background work (sub-agents,
+    // video polls, shells) ends the turn, yields, and is picked up later by
+    // the server's notification-wakeup path (maybeWakeIdleSession). The
+    // INTERACTIVE path relies on that wakeup + a run-boundary re-check.
+    //
+    // HEADLESS is the exception: a one-shot `engine.run` whose caller takes
+    // `result.text` as THE answer (automation / SDK) has no later turn to
+    // pick up a wakeup — so it must wait, before resolving, until its own
+    // background SUB-AGENTS finish and summarize. Only sub-agents (their
+    // summary IS part of this run's result), NOT shells (a dev server never
+    // exits → would hang headless forever) and NOT video (a long render the
+    // one-shot run shouldn't block on). This replaces the old for(;;) park
+    // (s-mpvf4rsj-bb6e4639 invariant) for the headless case only.
+    const sid = session.state.sessionId;
+    const isTopLevel = this.config.isSubAgent !== true;
+    if (isTopLevel && this.isHeadless()) {
+      result = await drainHeadlessBackgroundAgents({
+        sid,
+        session,
+        signal: options?.signal,
+        initialResult: result,
+        runTurnLoop: (msgs) => turnLoop.run(msgs),
+        applyGoalTermination,
+        waitForBackgroundAgentChange: (s, sig) => this.waitForBackgroundAgentChange(s, sig),
+        waitForBackgroundAgentChangeOrTimeout: (s, ms) =>
+          this.waitForBackgroundAgentChangeOrTimeout(s, ms),
+        getFirstGoalTermination: () => firstGoalTermination,
+        setFirstGoalTermination: (t) => {
+          firstGoalTermination = t;
+        },
+      });
+    }
+
+    return { result, firstGoalTermination };
+  }
+
+  /**
+   * Stamp the resolved session identity and session-scoped side-effect sinks
+   * onto the run's {@link ToolContext}, now that the session bundle is open.
+   * Extracted verbatim from the {@link runExclusive} skeleton.
+   */
+  private stampRunToolContext(
+    toolCtx: ToolContext,
+    session: SessionBundle,
+    options: EngineRunOptions | undefined,
+  ): void {
     // B2 / Gate 1: stamp the resolved sid onto the tool context so
     // session-scoped side effects (background-agent completion
     // notifications) attribute to the right session. toolCtx is created
@@ -1475,720 +1735,1007 @@ export class Engine {
         this.sessionManager.setSessionWorkspace(session.state.sessionId, workspace);
       Object.assign(session.state, { workspace, stateRevision });
     };
-    const sessionRun = runWithSid(session.state.sessionId, async () => {
-      recordSessionStart(session.state.sessionId, {
-        // Strip <codeshell-image> base64 payloads before they reach
-        // <repo>/log/. Reader still sees the marker + byte count, just
-        // not the bytes. Transcript persistence keeps the full payload.
-        task: sanitizeTaskString(task),
+  }
+
+  /**
+   * Await the parallel prompt/context assembly (LLM client handshake, system
+   * prompt, dynamic + user context messages), splice the hook-injected and
+   * context messages into `messages`, publish this run's last-session snapshot,
+   * and prime the {@link ContextManager}'s transcript path + replacement state.
+   * Extracted verbatim from the {@link runExclusive} skeleton.
+   */
+  private async assembleRunPrompts(args: {
+    session: SessionBundle;
+    messages: Message[];
+    hookMessages: string[];
+    promptComposer: PromptComposer;
+    toolDefs: import("../types.js").ToolDefinition[];
+    llmClientPromise: ReturnType<typeof createLLMClient>;
+    contextManager: ContextManager;
+    profile: RunBehaviorProfile | undefined;
+    profileParams: Readonly<Record<string, unknown>>;
+  }): Promise<{
+    llmClient: Awaited<ReturnType<typeof createLLMClient>>;
+    fullSystemPrompt: string;
+    dynamicContextMsg: Message | null;
+    userContextMsg: Message | null;
+  }> {
+    const {
+      session,
+      messages,
+      hookMessages,
+      promptComposer,
+      toolDefs,
+      llmClientPromise,
+      contextManager,
+      profile,
+      profileParams,
+    } = args;
+
+    const [llmClient, baseSystemPrompt, dynamicContextMsg] = await Promise.all([
+      llmClientPromise,
+      // System prompt is now the STABLE prefix only — skills + git status moved
+      // out to a trailing per-turn message so they no longer bust the cache.
+      promptComposer.buildSystemPrompt(toolDefs),
+      promptComposer.buildDynamicContextMessage(),
+    ]);
+    const fullSystemPrompt = composeRunSystemPrompt({
+      baseSystemPrompt,
+      profile,
+      profileParams,
+    });
+    const userContextMsg = promptComposer.buildUserContextMessage();
+    assembleRunMessages({
+      messages,
+      userContextMsg,
+      hookMessages,
+      dynamicContextMsg,
+    });
+    this.lastSessionId = session.state.sessionId;
+    this.lastMessages = messages;
+
+    // Wire up LLM summarization for context compaction
+    // Uses a lightweight call without tools
+    contextManager.setTranscriptPath(session.transcript.getFilePath());
+    // Re-derive frozen persistence decisions from the messages we just
+    // loaded. Skipped on cold start (messages == [userContextMsg] only).
+    // Critical for resume — otherwise a result that was persisted last
+    // run would be evaluated fresh and might get a different replacement
+    // string than the one already in the message, breaking idempotency.
+    contextManager.initReplacementStateFromMessages(messages);
+    // Two summarizers with DIFFERENT quality needs (see the run loop wiring for
+    // the aux-model summarizer set up alongside the ModelFacade).
+
+    return { llmClient, fullSystemPrompt, dynamicContextMsg, userContextMsg };
+  }
+
+  /**
+   * Seed the run's {@link ContextManager}, emit the early `session_started`
+   * event, replay the last TodoWrite snapshot on resume, kick off the LLM client
+   * handshake, and build the permission-gated {@link ToolExecutor}. Extracted
+   * verbatim from the {@link runExclusive} skeleton; the todo snapshot is read
+   * and written through the `getLatestTodos` / `setLatestTodos` accessors so the
+   * outer wrapped-onStream and TaskGuard keep observing the same buffer.
+   */
+  private wireRunContextAndPermission(args: {
+    session: SessionBundle;
+    sid: string;
+    options: EngineRunOptions | undefined;
+    cwd: string;
+    toolCtx: ToolContext;
+    runPermissionMode: NonNullable<EngineConfig["permissionMode"]>;
+    messages: Message[];
+    getLatestTodos: () => TaskInfo[];
+    setLatestTodos: (todos: TaskInfo[]) => void;
+  }): {
+    contextManager: ContextManager;
+    llmClientPromise: ReturnType<typeof createLLMClient>;
+    toolExecutor: import("../tool-system/executor.js").ToolExecutor;
+  } {
+    const {
+      session,
+      sid,
+      options,
+      cwd,
+      toolCtx,
+      runPermissionMode,
+      messages,
+      getLatestTodos,
+      setLatestTodos,
+    } = args;
+
+    const { contextManager, ctxSeed } = createRunContextManager({
+      maxTokens: this.resolveMaxContextTokens(),
+      ratios: this.resolveContextRatios(),
+      persistedAnchor: session.state.contextUsageAnchor,
+      llmProvider: this.config.llm.provider,
+      llmModel: this.config.llm.model,
+      messages,
+      needsCtxSeed: !this.ctxSeedSent.has(sid),
+    });
+    this.lastContextManager = contextManager;
+    if (!this.ctxSeedSent.has(sid)) this.ctxSeedSent.add(sid);
+
+    // Tell the client the sid *now* instead of waiting for run() to resolve.
+    // The user wants `/sid` to work mid-turn; without this, the client only
+    // learns the sid when the run completes.
+    options?.onStream?.({
+      type: "session_started",
+      sessionId: sid,
+      promptTokens: ctxSeed.tokens,
+      promptTokensSource: ctxSeed.source,
+      promptTokensConfidence: ctxSeed.confidence,
+    });
+
+    // Replay the last TodoWrite snapshot on resume so the UI's pinned
+    // task panel re-hydrates without the LLM needing to call TodoWrite
+    // again. Scans the resumed transcript newest-first (and tolerates
+    // legacy TaskCreate/Update events for sessions recorded against
+    // the pre-2026-05-24 API). New sessions have no transcript yet so
+    // readLastTodoSnapshot returns null and nothing is emitted.
+    if (options?.sessionId) {
+      const snap = readLastTodoSnapshot(session.transcript.getEvents());
+      if (snap && snap.length > 0) {
+        setLatestTodos(snap);
+        options?.onStream?.({ type: "task_update", tasks: snap });
+      }
+    }
+
+    // Kick off LLM client creation early (network handshake)
+    const llmClientPromise = createLLMClient(this.config.llm, this.config.clientDefaults);
+    // MCP connection below may keep us from awaiting this promise for a while.
+    // Observe rejection immediately so a fast client-init failure cannot become
+    // an unhandledRejection during that gap; Promise.all still receives the
+    // original promise and routes the same error through the lifecycle catch.
+    void llmClientPromise.catch(() => {});
+
+    const mode = runPermissionMode;
+    const { toolExecutor } = buildRunPermissionPipeline({
+      permissionController: this.permissionController,
+      mode,
+      cwd,
+      approvalRouter: toolCtx.approvalRouter,
+      sessionId: session.state.sessionId,
+      toolRegistry: this.toolRegistry,
+      hooks: this.hooks,
+      toolCtx,
+      signal: options?.signal,
+      readOnlySession: this.config.readOnlySession === true,
+      headless: this.config.headless === true,
+      getLatestTodos: () => getLatestTodos(),
+      onApprovalPhase: (waiting, toolName) => {
+        options?.onAgentProgress?.({
+          type: "phase",
+          phase: waiting ? "waiting-permission" : "tool",
+          toolName,
+        });
+      },
+      emitNotificationHook: (payload) => {
+        void this.emitHook("notification", payload);
+      },
+    });
+
+    return { contextManager, llmClientPromise, toolExecutor };
+  }
+
+  /**
+   * Resolve the run sandbox, construct the child sub-agent spawner (the sole
+   * `new Engine(...)` call path, kept in engine.ts so the protocol bypass guard
+   * stays satisfied), and assemble the per-run {@link ToolContext}. Extracted
+   * verbatim from the {@link runExclusive} skeleton; the session bundle is read
+   * lazily via `getSession` because it is opened after this wiring runs.
+   */
+  private async wireRunSandboxToolContext(args: {
+    options: EngineRunOptions | undefined;
+    cwd: string;
+    runPermissionMode: NonNullable<EngineConfig["permissionMode"]>;
+    runPlanMode: boolean;
+    profile: RunBehaviorProfile | undefined;
+    profileParams: Readonly<Record<string, unknown>>;
+    sessionProfileOverrides: import("./run-setup.js").RunProfileState["sessionProfileOverrides"];
+    profileMemoryDir: string | undefined;
+    getSession: () => SessionBundle;
+    reportResult: (key: string, value: unknown) => void;
+  }): Promise<ToolContext> {
+    const {
+      options,
+      cwd,
+      runPermissionMode,
+      runPlanMode,
+      profile,
+      profileParams,
+      sessionProfileOverrides,
+      profileMemoryDir,
+      getSession,
+      reportResult,
+    } = args;
+
+    // Resolve before constructing the child spawner: a parent sandbox may come
+    // solely from project/user settings rather than config.sandbox, while a
+    // child intentionally skips project settings. Passing the complete
+    // effective config is what makes undefined role sandbox mean inherit.
+    const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(cwd);
+
+    // Build the per-Engine ToolContext that will be threaded through every
+    // tool call. Replaces the old module-level singleton setters used by
+    // built-ins and product capabilities.
+    const subAgentSpawner = createSubAgentSpawner({
+      parentConfig: this.config,
+      parentSandbox: sandboxConfig,
+      presetName: this.preset.name,
+      cwd,
+      permissionMode: runPermissionMode,
+      modelPool: this.modelPool,
+      parentStream: options?.onStream,
+      appendParentSubagent: (agentId, description) => {
+        getSession().transcript.appendSubagent(agentId, undefined, description);
+      },
+      sessionExists: (sessionId) => this.sessionManager.exists(sessionId),
+      getSessionParentId: (sessionId) => this.sessionManager.readParentSessionId(sessionId),
+      childRunner: {
+        createChild: (config) => new Engine(config),
+        runChild: async (config, childTask, childOptions) => {
+          const child = new Engine(config);
+          return child.run(childTask, childOptions);
+        },
+      },
+    });
+
+    // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
+    // per standard §S4. resolveSandboxBackend throws when an explicit
+    // mode is unavailable on this host; we let it propagate. The
+    // previous behavior — catching the throw inside the hot turn and
+    // silently downgrading to "off" — was the leak A2 closes. The
+    // `auto` mode handles its own downgrade with a one-time warning
+    // inside resolveSandboxBackend; explicit modes do not.
+    //
+    // Backend is cached per runtime/engine so the capability probe runs once
+    // per (mode, cwd) instead of every turn.
+    const sandboxBackend = await this.runEnvironmentResolver.resolveSandbox(cwd);
+
+    // Observability: surface what sandbox actually applied this run — the
+    // configured mode vs the resolved backend (auto may downgrade to off when
+    // no OS backend is available) + the network policy. Without this you can't
+    // tell whether shell commands were isolated /网络放没放. One line per run.
+    logger.info("sandbox.resolved", {
+      mode: sandboxConfig.mode,
+      backend: sandboxBackend.name,
+      isolated: sandboxBackend.name !== "off",
+      network: sandboxConfig.network,
+      cwd,
+    });
+
+    const toolCtx: ToolContext = buildRunToolContext({
+      base: this.buildToolContext(cwd, sessionProfileOverrides, profileMemoryDir),
+      options,
+      configApprovalRouter: this.config.approvalRouter,
+      runPermissionMode,
+      runPlanMode,
+      subAgentSpawner,
+      agentDefinitions: this.getAgentDefinitions(cwd, sessionProfileOverrides),
+      sandbox:
+        sandboxBackend.name === "off"
+          ? sandboxBackend
+          : { ...sandboxBackend, network: sandboxConfig.network },
+      cwd,
+      shellEnv: this.runEnvironmentResolver.readShellEnv(cwd),
+      profile,
+      profileParams,
+      reportResult,
+    });
+
+    return toolCtx;
+  }
+
+  /**
+   * Wire every run-scoped dependency the turn loop needs: usage accounting +
+   * summarizer, the {@link ModelFacade}, the file-history hook, the
+   * `on_agent_start` hook, goal resolution / arming, the {@link TurnLoop} itself,
+   * and the goal-termination applier. Extracted verbatim from the
+   * {@link runExclusive} skeleton; the goal slots, judge-context buffer and usage
+   * baseline are fully local here — only the values the try/finally + finalize
+   * phases consume cross back out.
+   */
+  private async wireRunLoop(args: {
+    session: SessionBundle;
+    sid: string;
+    task: string;
+    cwd: string;
+    options: EngineRunOptions | undefined;
+    toolCtx: ToolContext;
+    toolExecutor: import("../tool-system/executor.js").ToolExecutor;
+    contextManager: ContextManager;
+    llmClient: Awaited<ReturnType<typeof createLLMClient>>;
+    auxSummaryClient: Awaited<ReturnType<typeof createLLMClient>>;
+    fullSystemPrompt: string;
+    toolDefs: import("../types.js").ToolDefinition[];
+    claimClientMessageId: (
+      bundle: SessionBundle,
+      clientMessageId: string | undefined,
+      source: "submit" | "steer",
+    ) => boolean;
+    releaseClientMessageId: (clientMessageId: string) => void;
+    freshImageMessage: Message | undefined;
+    dynamicContextMsg: Message | null;
+  }): Promise<{
+    turnLoop: TurnLoop;
+    applyGoalTermination: ReturnType<typeof createGoalTerminationApplier>;
+    goalHookHandler: import("./run-goal.js").GoalStopHookHandler | null;
+    fileHistoryHook: ReturnType<typeof registerFileHistoryHook>;
+    getRunUsage: () => ReturnType<import("./model-facade.js").ModelFacade["getUsage"]>;
+    recordExternalBilledUsage: (usage: TokenUsage) => CumulativeUsageCounters;
+    accounting: ReturnType<typeof createRunUsageAccounting>;
+    usageBaseline: TokenUsage;
+  }> {
+    const {
+      session,
+      sid,
+      task,
+      cwd,
+      options,
+      toolCtx,
+      toolExecutor,
+      contextManager,
+      llmClient,
+      auxSummaryClient,
+      fullSystemPrompt,
+      toolDefs,
+      claimClientMessageId,
+      releaseClientMessageId,
+      freshImageMessage,
+      dynamicContextMsg,
+    } = args;
+
+    // eslint-disable-next-line prefer-const
+    let turnLoop!: TurnLoop;
+    const accounting = createRunUsageAccounting({
+      session,
+      sid,
+      resumeState: (s) => this.sessionManager.resume(s).state,
+      updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
+      costStore: this.config.costStore,
+      recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
+    });
+    const { recordCumulativeUsage, recordExternalBilledUsage } = accounting;
+    contextManager.setSummarizeFn(this.buildSummarizeFn(llmClient, recordExternalBilledUsage));
+    const { modelFacade, getRunUsage } = wireRunModelFacade({
+      llmClient,
+      auxSummaryClient,
+      transcript: session.transcript,
+      accounting,
+    });
+
+    // Session-cumulative usage baseline: the LLM client is recreated per run
+    // (its getUsage() counts only THIS run), so to accumulate across runs we
+    // capture the persisted total at run start and fold this run's usage onto
+    // it (see foldRunUsage). Snapshot now, before any turn boundary fires.
+    const usageBaseline: TokenUsage = { ...session.state.tokenUsage };
+
+    const sessionDir = join(
+      this.config.sessionStorageDir ?? sessionsRoot(),
+      session.state.sessionId,
+    );
+    const fileHistoryHook = registerFileHistoryHook({
+      hooks: this.hooks,
+      sessionDir,
+      cwd,
+      getTurnSeq: () => session.state.turnSeq,
+      contributions: this.capabilities.flatMap((capability) => [
+        ...(capability.fileHistory ?? []),
+      ]),
+    });
+
+    // Hook: agent start
+    await this.emitHook(
+      "on_agent_start",
+      {
+        sessionId: session.state.sessionId,
+        task,
+        model: this.config.llm.model,
+      },
+      options?.signal,
+    );
+
+    // Goal mode: register a GoalStopHook for the lifetime of THIS run so the
+    // turn loop keeps going until the session model judges the goal met.
+    // Registered per-run (and cleared in `finally`) so a later goal-less
+    // send doesn't inherit a stale goal. The judge runs on the primary
+    // session client; auxSummaryClient remains dedicated to low-consequence
+    // summaries/titles and retains defaults.auxText routing/fallback behavior.
+    // Normalize the raw goal (string | GoalConfig) once at the run boundary;
+    // everything inward uses the GoalConfig. normalizeGoal() returns undefined
+    // when there's effectively no goal (empty objective).
+    //
+    // PERSISTENT GOAL (CC /goal style): a goal set on one send survives across
+    // later sends and manual interrupts until met or cleared. Goal completion
+    // is a high-consequence decision, so V1 routes it to the primary session
+    // client, which is the model expected to interpret the supplied execution
+    // evidence. defaults.auxText remains in force for summaries, titles and
+    // other auxiliary work through auxSummaryClient.
+    // Resolution:
+    //   1. options.goal — this send explicitly sets/replaces the goal.
+    //   2. session.state.goalLifecycle — a goal set on an earlier send.
+    //   3. config.goal — engine-level default (rare; e.g. headless).
+    // When (1) supplies a goal that differs from the stored one we REPLACE the
+    // persisted active goal (one active goal per session) and announce it. A
+    // bare send with no options.goal inherits the stored active goal so the
+    // model keeps working toward it — that's what makes it persistent.
+    const goalSlots: GoalRunSlots = {
+      getActiveRuntimeGoal: () => this.activeRuntimeGoal,
+      setActiveRuntimeGoal: (g) => {
+        this.activeRuntimeGoal = g;
+      },
+      getActivePersistedRunGoal: () => this.activePersistedRunGoal,
+      setActivePersistedRunGoal: (g) => {
+        this.activePersistedRunGoal = g;
+      },
+      getActiveGoalHook: () => this.activeGoalHook,
+      setActiveGoalHook: (h) => {
+        this.activeGoalHook = h;
+      },
+      setActiveGoalHookAttached: (a) => {
+        this.activeGoalHookAttached = a;
+      },
+    };
+    const { normalizedGoal, persistedRunGoal } = resolveRunGoal({
+      options,
+      session,
+      sessionManager: this.sessionManager,
+      configGoal: this.config.goal,
+      isSubAgent: this.config.isSubAgent === true,
+      sid,
+      onStream: options?.onStream,
+    });
+    let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
+    const goalHookHandler = armRunGoalHook({
+      slots: goalSlots,
+      hooks: this.hooks,
+      llmClient,
+      isSubAgent: this.config.isSubAgent === true,
+      normalizedGoal,
+      persistedRunGoal,
+      session,
+      sessionManager: this.sessionManager,
+      persistGoalTerminal: (state, goal, reason) => this.persistGoalTerminal(state, goal, reason),
+      getJudgeContext: () => latestGoalJudgeContext,
+      recordCumulativeUsage,
+      recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
+    });
+
+    turnLoop = this.buildTurnLoop({
+      modelFacade,
+      toolExecutor,
+      contextManager,
+      session,
+      fullSystemPrompt,
+      toolDefs,
+      sid,
+      options,
+      cwd,
+      claimClientMessageId,
+      releaseClientMessageId,
+      toolCtx,
+      persistedRunGoal,
+      goalHookHandler,
+      normalizedGoal,
+      freshImageMessage,
+      dynamicContextMsg,
+      usageBaseline,
+      getRunUsage,
+      recordCumulativeUsage,
+      publishGoalJudgeContext: (context) => {
+        latestGoalJudgeContext = context;
+      },
+    });
+    toolCtx.recordBilledUsage = recordExternalBilledUsage;
+
+    // Expose this run's loop for mid-run extension (TODO 3.1). Top-level only —
+    // a sub-agent's loop is its own concern and isn't user-extendable.
+    if (this.config.isSubAgent !== true) this.activeTurnLoop = turnLoop;
+    // Expose this run's session bundle so a mid-run clearGoal() wipes the goal
+    // on the very instance this loop keeps saving (see field doc). Top-level
+    // only — sub-agents don't carry user-clearable persistent goals.
+    if (this.config.isSubAgent !== true) this.activeRunSession = session;
+
+    const applyGoalTermination = createGoalTerminationApplier({
+      slots: goalSlots,
+      hooks: this.hooks,
+      session,
+      persistedRunGoal,
+      goalHookHandler,
+      persistGoalTerminalOutcome: (state, goal, t) =>
+        this.persistGoalTerminalOutcome(state, goal, t),
+      readActiveGoal: (s) => this.sessionManager.readActiveGoal(s),
+      onStream: options?.onStream,
+    });
+
+    return {
+      turnLoop,
+      applyGoalTermination,
+      goalHookHandler,
+      fileHistoryHook,
+      getRunUsage,
+      recordExternalBilledUsage,
+      accounting,
+      usageBaseline,
+    };
+  }
+
+  /**
+   * Record the session start and fire the once-per-run `on_session_start` and
+   * per-turn `user_prompt_submit` / `agent_direction_submit` hooks, applying any
+   * `updatedPrompt` rewrite in place on `messages`. Extracted verbatim from the
+   * {@link runExclusive} skeleton; returns the combined hook-injected messages
+   * for {@link assembleRunMessages}.
+   */
+  private async runSessionStartHooks(args: {
+    session: SessionBundle;
+    task: string;
+    cwd: string;
+    runPermissionMode: NonNullable<EngineConfig["permissionMode"]>;
+    resumedFromDisk: boolean;
+    options: EngineRunOptions | undefined;
+    taskText: string;
+    messages: Message[];
+  }): Promise<string[]> {
+    const { session, task, cwd, runPermissionMode, resumedFromDisk, options, taskText, messages } =
+      args;
+
+    recordSessionStart(session.state.sessionId, {
+      // Strip <codeshell-image> base64 payloads before they reach
+      // <repo>/log/. Reader still sees the marker + byte count, just
+      // not the bytes. Transcript persistence keeps the full payload.
+      task: sanitizeTaskString(task),
+      cwd,
+      model: this.config.llm.model,
+      provider: this.config.llm.provider,
+      permissionMode: runPermissionMode,
+      resumed: resumedFromDisk,
+    });
+
+    // Session-level hook: fired once per Engine.run() entry, regardless of
+    // cold-start vs resume. Handlers can return `messages` to inject a
+    // <system-reminder> at the head of the conversation (between
+    // userContext and the new user prompt). Used by the built-in
+    // superpowers injector to surface the `using-superpowers` ruleset.
+    const sessionStartHook = await this.emitHook(
+      "on_session_start",
+      {
+        sessionId: session.state.sessionId,
+        cwd,
+        resumed: resumedFromDisk,
+        source: resumedFromDisk ? "resume" : "startup",
+      },
+      options?.signal,
+    );
+
+    // Per-turn hook: fired every time a new user prompt enters the loop.
+    // Equivalent to CC's UserPromptSubmit. Handlers can inject lightweight
+    // reminders that should accompany each user turn (e.g. "skills
+    // available — check before acting").
+    const promptSubmitHook = await this.emitHook(
+      options?.agentDirection ? "agent_direction_submit" : "user_prompt_submit",
+      {
+        sessionId: session.state.sessionId,
+        // Pass the text-only portion. Handlers reading the prompt for keyword
+        // detection / classification (e.g. superpowers' "did the user ask
+        // about X?") don't gain anything from megabytes of base64 inlined here,
+        // and silently leaking attachment bytes through hooks is the kind of
+        // exfiltration risk a curious user-installed shell hook shouldn't carry.
+        prompt: taskText,
+        resumed: resumedFromDisk,
+        ...(options?.agentDirection
+          ? {
+              source: "agent-direction",
+              authority: "agent",
+              envelopeIds: options.agentDirection.envelopeIds,
+              correlationIds: options.agentDirection.correlationIds,
+            }
+          : {}),
+      },
+      options?.signal,
+    );
+    // updatedPrompt: handler rewrote the user's prompt text. Replace the
+    // last user message we just pushed (cold-start: line ~511; resume:
+    // line ~500). Original prompt is in the transcript already — we log
+    // the rewrite so audit chains know a hook touched user input.
+    if (typeof promptSubmitHook.updatedPrompt === "string") {
+      const lastIdx = messages.length - 1;
+      const last = messages[lastIdx];
+      if (last && last.role === "user" && typeof last.content === "string") {
+        logger.info("hook.updated_prompt", {
+          sessionId: session.state.sessionId,
+          originalChars: last.content.length,
+          updatedChars: promptSubmitHook.updatedPrompt.length,
+        });
+        messages[lastIdx] = { role: "user", content: promptSubmitHook.updatedPrompt };
+      }
+    }
+
+    return [...(sessionStartHook.messages ?? []), ...(promptSubmitHook.messages ?? [])];
+  }
+
+  /**
+   * Resolve goal visibility, disabled skill/plugin lists, build the
+   * {@link PromptComposer}, connect MCP, and assemble the visibility-filtered
+   * tool defs for this run. Extracted verbatim from the {@link runExclusive}
+   * skeleton; the intermediate visibility/disabled/mcp values are fully local to
+   * this method — only the composer and tool defs cross back out.
+   */
+  private async wireRunTooling(args: {
+    options: EngineRunOptions | undefined;
+    session: SessionBundle;
+    cwd: string;
+    toolCtx: ToolContext;
+    profile: RunBehaviorProfile | undefined;
+    profileParams: Readonly<Record<string, unknown>>;
+    runWorkspaceProfile: import("./run-setup.js").RunProfileState["workspaceProfile"];
+    profileMemoryDir: string | undefined;
+    sessionProfileOverrides: import("./run-setup.js").RunProfileState["sessionProfileOverrides"];
+    runPlanMode: boolean;
+  }): Promise<{ promptComposer: PromptComposer; toolDefs: import("../types.js").ToolDefinition[] }> {
+    const {
+      options,
+      session,
+      cwd,
+      toolCtx,
+      profile,
+      profileParams,
+      runWorkspaceProfile,
+      profileMemoryDir,
+      sessionProfileOverrides,
+      runPlanMode,
+    } = args;
+
+    const visibilityExplicitGoal = normalizeGoal(options?.goal);
+    const visibilityLifecycle = session.state.goalLifecycle;
+    const visibilityStoredGoal =
+      visibilityLifecycle && isGoalLifecycleCurrent(visibilityLifecycle)
+        ? goalConfigFromLifecycle(visibilityLifecycle)
+        : undefined;
+    const visibilityDefaultGoal = normalizeGoal(this.config.goal);
+    const hasRunnableGoal =
+      this.config.isSubAgent !== true &&
+      ((visibilityExplicitGoal !== undefined && visibilityExplicitGoal.paused !== true) ||
+        (visibilityStoredGoal !== undefined && visibilityStoredGoal.paused !== true) ||
+        (visibilityDefaultGoal !== undefined && visibilityDefaultGoal.paused !== true));
+
+    const { disabledSkills, disabledPlugins } = this.readDisabledLists(
+      cwd,
+      sessionProfileOverrides,
+    );
+    const promptComposer = new PromptComposer(
+      buildPromptComposerConfig({
         cwd,
         model: this.config.llm.model,
-        provider: this.config.llm.provider,
-        permissionMode: runPermissionMode,
-        resumed: resumedFromDisk,
-      });
-
-      // Session-level hook: fired once per Engine.run() entry, regardless of
-      // cold-start vs resume. Handlers can return `messages` to inject a
-      // <system-reminder> at the head of the conversation (between
-      // userContext and the new user prompt). Used by the built-in
-      // superpowers injector to surface the `using-superpowers` ruleset.
-      const sessionStartHook = await this.emitHook(
-        "on_session_start",
-        {
-          sessionId: session.state.sessionId,
-          cwd,
-          resumed: resumedFromDisk,
-          source: resumedFromDisk ? "resume" : "startup",
-        },
-        options?.signal,
-      );
-
-      // Per-turn hook: fired every time a new user prompt enters the loop.
-      // Equivalent to CC's UserPromptSubmit. Handlers can inject lightweight
-      // reminders that should accompany each user turn (e.g. "skills
-      // available — check before acting").
-      const promptSubmitHook = await this.emitHook(
-        options?.agentDirection ? "agent_direction_submit" : "user_prompt_submit",
-        {
-          sessionId: session.state.sessionId,
-          // Pass the text-only portion. Handlers reading the prompt for keyword
-          // detection / classification (e.g. superpowers' "did the user ask
-          // about X?") don't gain anything from megabytes of base64 inlined here,
-          // and silently leaking attachment bytes through hooks is the kind of
-          // exfiltration risk a curious user-installed shell hook shouldn't carry.
-          prompt: taskText,
-          resumed: resumedFromDisk,
-          ...(options?.agentDirection
-            ? {
-                source: "agent-direction",
-                authority: "agent",
-                envelopeIds: options.agentDirection.envelopeIds,
-                correlationIds: options.agentDirection.correlationIds,
-              }
-            : {}),
-        },
-        options?.signal,
-      );
-      // updatedPrompt: handler rewrote the user's prompt text. Replace the
-      // last user message we just pushed (cold-start: line ~511; resume:
-      // line ~500). Original prompt is in the transcript already — we log
-      // the rewrite so audit chains know a hook touched user input.
-      if (typeof promptSubmitHook.updatedPrompt === "string") {
-        const lastIdx = messages.length - 1;
-        const last = messages[lastIdx];
-        if (last && last.role === "user" && typeof last.content === "string") {
-          logger.info("hook.updated_prompt", {
-            sessionId: session.state.sessionId,
-            originalChars: last.content.length,
-            updatedChars: promptSubmitHook.updatedPrompt.length,
-          });
-          messages[lastIdx] = { role: "user", content: promptSubmitHook.updatedPrompt };
-        }
-      }
-
-      const sid = session.state.sessionId;
-      const { contextManager, ctxSeed } = createRunContextManager({
-        maxTokens: this.resolveMaxContextTokens(),
-        ratios: this.resolveContextRatios(),
-        persistedAnchor: session.state.contextUsageAnchor,
-        llmProvider: this.config.llm.provider,
-        llmModel: this.config.llm.model,
-        messages,
-        needsCtxSeed: !this.ctxSeedSent.has(sid),
-      });
-      this.lastContextManager = contextManager;
-      if (!this.ctxSeedSent.has(sid)) this.ctxSeedSent.add(sid);
-
-      // Tell the client the sid *now* instead of waiting for run() to resolve.
-      // The user wants `/sid` to work mid-turn; without this, the client only
-      // learns the sid when the run completes.
-      options?.onStream?.({
-        type: "session_started",
-        sessionId: sid,
-        promptTokens: ctxSeed.tokens,
-        promptTokensSource: ctxSeed.source,
-        promptTokensConfidence: ctxSeed.confidence,
-      });
-
-      // Replay the last TodoWrite snapshot on resume so the UI's pinned
-      // task panel re-hydrates without the LLM needing to call TodoWrite
-      // again. Scans the resumed transcript newest-first (and tolerates
-      // legacy TaskCreate/Update events for sessions recorded against
-      // the pre-2026-05-24 API). New sessions have no transcript yet so
-      // readLastTodoSnapshot returns null and nothing is emitted.
-      if (options?.sessionId) {
-        const snap = readLastTodoSnapshot(session.transcript.getEvents());
-        if (snap && snap.length > 0) {
-          latestTodos = snap;
-          options?.onStream?.({ type: "task_update", tasks: snap });
-        }
-      }
-
-      // Kick off LLM client creation early (network handshake)
-      const llmClientPromise = createLLMClient(this.config.llm, this.config.clientDefaults);
-      // MCP connection below may keep us from awaiting this promise for a while.
-      // Observe rejection immediately so a fast client-init failure cannot become
-      // an unhandledRejection during that gap; Promise.all still receives the
-      // original promise and routes the same error through the lifecycle catch.
-      void llmClientPromise.catch(() => {});
-
-      const mode = runPermissionMode;
-      const { toolExecutor } = buildRunPermissionPipeline({
-        permissionController: this.permissionController,
-        mode,
-        cwd,
-        approvalRouter: toolCtx.approvalRouter,
-        sessionId: session.state.sessionId,
-        toolRegistry: this.toolRegistry,
-        hooks: this.hooks,
-        toolCtx,
-        signal: options?.signal,
-        readOnlySession: this.config.readOnlySession === true,
-        headless: this.config.headless === true,
-        getLatestTodos: () => latestTodos,
-        onApprovalPhase: (waiting, toolName) => {
-          options?.onAgentProgress?.({
-            type: "phase",
-            phase: waiting ? "waiting-permission" : "tool",
-            toolName,
-          });
-        },
-        emitNotificationHook: (payload) => {
-          void this.emitHook("notification", payload);
-        },
-      });
-
-      const visibilityExplicitGoal = normalizeGoal(options?.goal);
-      const visibilityLifecycle = session.state.goalLifecycle;
-      const visibilityStoredGoal =
-        visibilityLifecycle && isGoalLifecycleCurrent(visibilityLifecycle)
-          ? goalConfigFromLifecycle(visibilityLifecycle)
-          : undefined;
-      const visibilityDefaultGoal = normalizeGoal(this.config.goal);
-      const hasRunnableGoal =
-        this.config.isSubAgent !== true &&
-        ((visibilityExplicitGoal !== undefined && visibilityExplicitGoal.paused !== true) ||
-          (visibilityStoredGoal !== undefined && visibilityStoredGoal.paused !== true) ||
-          (visibilityDefaultGoal !== undefined && visibilityDefaultGoal.paused !== true));
-
-      const { disabledSkills, disabledPlugins } = this.readDisabledLists(
-        cwd,
-        sessionProfileOverrides,
-      );
-      const promptComposer = new PromptComposer(
-        buildPromptComposerConfig({
-          cwd,
-          model: this.config.llm.model,
-          preset: this.preset,
-          customSystemPrompt: this.config.customSystemPrompt,
-          appendSystemPrompt:
-            [this.config.appendSystemPrompt, profile?.systemPromptAppend]
-              .filter(Boolean)
-              .join("\n\n") || undefined,
-          responseLanguage: this.config.responseLanguage,
-          userProfile: this.config.userProfile,
-          workspaceProfile: runWorkspaceProfile,
-          profileMemoryDir,
-          instructionCompatFileNames: compatFileNamesFrom(this.config.instructions),
-          instructionBoundaryFinder: (scanCwd) =>
-            resolveInstructionBoundary(scanCwd, this.capabilities),
-          disabledSkills,
-          disabledPlugins,
-          skillAllowlist: this.config.skillAllowlist,
-          memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
-          goalToolState: { hasGoal: hasRunnableGoal },
-          capabilityPromptSections: this.capabilityPromptSections,
-          dynamicContextProviders: this.capabilityDynamicContextProviders,
-          getSettingsManager: () => this.getSettingsManager(),
-          toolCatalog: this.toolCatalog,
-        }),
-      );
-
-      const mcpServers = this.config.mcpServers ?? {};
-      const mcpDisabled = profile?.disableMcp === true;
-      await connectRunMcp({
-        mcpServers,
-        mcpDisabled,
-        getManager: () => this.mcpManager,
-        setManager: (m) => {
-          this.mcpManager = m;
-        },
-        runtimePool: this.runtime?.mcpPool,
-        toolRegistry: this.toolRegistry,
-        engineForConnect: this,
-        emitNotificationHook: (payload) => {
-          void this.emitHook("notification", payload);
-        },
-      });
-
-      // Parallelize slow initialization:
-      //   1. createLLMClient — network handshake (started earlier)
-      //   2. buildSystemPrompt — cacheable prompt assembled from generic sections
-      //   3. buildSystemContext — reads environment context
-      // Inject the live available-agent-types listing into the Agent tool's
-      // description. The registry is per-engine (loaded from .code-shell/agents
-      // for this cwd), so it can't live in the static tool def — without this
-      // the model never learns the reusable roles exist and spawns nameless
-      // ad-hoc agents instead (the Core A/B/C incident).
-      // The Agent tool is always available: with configured roles, an omitted
-      // agent_type falls back to one of them (see resolveAgentTypeOverrides); with
-      // no roles configured it runs a true ephemeral agent, so workflows that need
-      // sub-agents (e.g. superpowers) work in any project.
-      // Availability guard (tool-visibility): a gated builtin (WebSearch needs a
-      // search provider, GenerateImage needs an OpenAI provider) is hidden from
-      // the toolDefs the model sees when its credential isn't configured for this
-      // cwd. Recomputed every message, so configuring a key takes effect on the
-      // NEXT message without a restart. Tools with no guard entry are always kept.
-      const toolDefs = assembleRunToolDefs({
-        toolRegistry: this.toolRegistry,
-        toolCtx,
-        guardCwd: toolCtx.cwd,
-        hasRunnableGoal,
-        settingsScope: this.config.settingsScope ?? "project",
-        builtinToolHost: this.config.builtinToolHost,
-        isSubAgent: this.config.isSubAgent === true,
-        behaviorProfileId: profile?.id ?? options?.behaviorMode,
-        profileMeta: profile?.buildVisibilityMeta?.(profileParams),
-        builtinOverride: this.readBuiltinOverride(toolCtx.cwd, sessionProfileOverrides),
-        mcpServers: this.config.mcpServers ?? {},
-        mcpDisabled,
-        featureFlags: this.readFeatureFlags(),
-        toolGuards: this.toolGuards,
-        toolRewriters: this.toolRewriters,
-        toolFeatureFlags: TOOL_FEATURE_FLAGS,
-        applyBuiltinOverrideVisibility,
-        profileAllowedToolNames: profile?.allowedToolNames,
-        runPlanMode,
-      });
-
-      const [llmClient, baseSystemPrompt, dynamicContextMsg] = await Promise.all([
-        llmClientPromise,
-        // System prompt is now the STABLE prefix only — skills + git status moved
-        // out to a trailing per-turn message so they no longer bust the cache.
-        promptComposer.buildSystemPrompt(toolDefs),
-        promptComposer.buildDynamicContextMessage(),
-      ]);
-      const fullSystemPrompt = composeRunSystemPrompt({
-        baseSystemPrompt,
-        profile,
-        profileParams,
-      });
-      const userContextMsg = promptComposer.buildUserContextMessage();
-      assembleRunMessages({
-        messages,
-        userContextMsg,
-        hookMessages: [...(sessionStartHook.messages ?? []), ...(promptSubmitHook.messages ?? [])],
-        dynamicContextMsg,
-      });
-      this.lastSessionId = session.state.sessionId;
-      this.lastMessages = messages;
-
-      // Wire up LLM summarization for context compaction
-      // Uses a lightweight call without tools
-      contextManager.setTranscriptPath(session.transcript.getFilePath());
-      // Re-derive frozen persistence decisions from the messages we just
-      // loaded. Skipped on cold start (messages == [userContextMsg] only).
-      // Critical for resume — otherwise a result that was persisted last
-      // run would be evaluated fresh and might get a different replacement
-      // string than the one already in the message, breaking idempotency.
-      contextManager.initReplacementStateFromMessages(messages);
-      // Two summarizers with DIFFERENT quality needs:
-      //
-      // 1. Context-compaction summary (setSummarizeFn) → PRIMARY model. This
-      //    condenses many rounds into the running summary that REPLACES the real
-      //    history; a dropped decision makes the conversation "forget" and poisons
-      //    every subsequent turn. It fires only near the compact ratio (~0.85), so
-      //    it's infrequent — quality far outweighs the occasional extra cost of a
-      //    primary-model call. (Manual /compact uses the primary for the same
-      //    reason; see forceCompact.)
-      //
-      // 2. Tool-use one-liner summaries (modelFacade.summarize below) → AUX model.
-      //    These are tiny throwaway outputs ("Wrote design doc") fired every turn;
-      //    that high-frequency, low-stakes chore is exactly what aux is for.
-      const auxSummaryClient = await this.resolveAuxClient(llmClient);
-      // Auto-compaction runs inside TurnLoop.manageAsync(), after the loop has
-      // initialized its run-scoped Goal tracker. The closure is wired before
-      // construction but cannot execute until turnLoop.run() starts.
-      // Assigned after the callbacks that close over it are constructed; they
-      // cannot run until turnLoop.run(), so definite assignment is intentional.
-      // eslint-disable-next-line prefer-const
-      let turnLoop!: TurnLoop;
-      const accounting = createRunUsageAccounting({
-        session,
-        sid,
-        resumeState: (s) => this.sessionManager.resume(s).state,
-        updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
-        costStore: this.config.costStore,
-        recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
-      });
-      const { recordCumulativeUsage, recordExternalBilledUsage } = accounting;
-      contextManager.setSummarizeFn(this.buildSummarizeFn(llmClient, recordExternalBilledUsage));
-      const { modelFacade, getRunUsage } = wireRunModelFacade({
-        llmClient,
-        auxSummaryClient,
-        transcript: session.transcript,
-        accounting,
-      });
-
-      // Session-cumulative usage baseline: the LLM client is recreated per run
-      // (its getUsage() counts only THIS run), so to accumulate across runs we
-      // capture the persisted total at run start and fold this run's usage onto
-      // it (see foldRunUsage). Snapshot now, before any turn boundary fires.
-      const usageBaseline: TokenUsage = { ...session.state.tokenUsage };
-
-      const sessionDir = join(
-        this.config.sessionStorageDir ?? sessionsRoot(),
-        session.state.sessionId,
-      );
-      const fileHistoryHook = registerFileHistoryHook({
-        hooks: this.hooks,
-        sessionDir,
-        cwd,
-        getTurnSeq: () => session.state.turnSeq,
-        contributions: this.capabilities.flatMap((capability) => [
-          ...(capability.fileHistory ?? []),
-        ]),
-      });
-
-      // Hook: agent start
-      await this.emitHook(
-        "on_agent_start",
-        {
-          sessionId: session.state.sessionId,
-          task,
-          model: this.config.llm.model,
-        },
-        options?.signal,
-      );
-
-      // Goal mode: register a GoalStopHook for the lifetime of THIS run so the
-      // turn loop keeps going until the session model judges the goal met.
-      // Registered per-run (and cleared in `finally`) so a later goal-less
-      // send doesn't inherit a stale goal. The judge runs on the primary
-      // session client; auxSummaryClient remains dedicated to low-consequence
-      // summaries/titles and retains defaults.auxText routing/fallback behavior.
-      // Normalize the raw goal (string | GoalConfig) once at the run boundary;
-      // everything inward uses the GoalConfig. normalizeGoal() returns undefined
-      // when there's effectively no goal (empty objective).
-      //
-      // PERSISTENT GOAL (CC /goal style): a goal set on one send survives across
-      // later sends and manual interrupts until met or cleared. Goal completion
-      // is a high-consequence decision, so V1 routes it to the primary session
-      // client, which is the model expected to interpret the supplied execution
-      // evidence. defaults.auxText remains in force for summaries, titles and
-      // other auxiliary work through auxSummaryClient.
-      // Resolution:
-      //   1. options.goal — this send explicitly sets/replaces the goal.
-      //   2. session.state.goalLifecycle — a goal set on an earlier send.
-      //   3. config.goal — engine-level default (rare; e.g. headless).
-      // When (1) supplies a goal that differs from the stored one we REPLACE the
-      // persisted active goal (one active goal per session) and announce it. A
-      // bare send with no options.goal inherits the stored active goal so the
-      // model keeps working toward it — that's what makes it persistent.
-      const goalSlots: GoalRunSlots = {
-        getActiveRuntimeGoal: () => this.activeRuntimeGoal,
-        setActiveRuntimeGoal: (g) => {
-          this.activeRuntimeGoal = g;
-        },
-        getActivePersistedRunGoal: () => this.activePersistedRunGoal,
-        setActivePersistedRunGoal: (g) => {
-          this.activePersistedRunGoal = g;
-        },
-        getActiveGoalHook: () => this.activeGoalHook,
-        setActiveGoalHook: (h) => {
-          this.activeGoalHook = h;
-        },
-        setActiveGoalHookAttached: (a) => {
-          this.activeGoalHookAttached = a;
-        },
-      };
-      const { normalizedGoal, persistedRunGoal } = resolveRunGoal({
-        options,
-        session,
-        sessionManager: this.sessionManager,
-        configGoal: this.config.goal,
-        isSubAgent: this.config.isSubAgent === true,
-        sid,
-        onStream: options?.onStream,
-      });
-      let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
-      const goalHookHandler = armRunGoalHook({
-        slots: goalSlots,
-        hooks: this.hooks,
-        llmClient,
-        isSubAgent: this.config.isSubAgent === true,
-        normalizedGoal,
-        persistedRunGoal,
-        session,
-        sessionManager: this.sessionManager,
-        persistGoalTerminal: (state, goal, reason) => this.persistGoalTerminal(state, goal, reason),
-        getJudgeContext: () => latestGoalJudgeContext,
-        recordCumulativeUsage,
-        recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
-      });
-
-      // Surface compaction events to the UI so the user knows when context was trimmed.
-      // Buffer the most recent event so TurnLoop can drain it and emit the
-      // post_compact hook on the next turn (ContextManager itself doesn't
-      // know about HookRegistry — the buffer is the seam).
-      let pendingCompactInfo: { strategy: string; before: number; after: number } | null = null;
-      contextManager.setOnCompact((info) => {
-        pendingCompactInfo = info;
-        options?.onStream?.({ type: "context_compact", ...info });
-      });
-
-      // Run turn loop
-      turnLoop = new TurnLoop(
-        {
-          model: modelFacade,
-          toolExecutor,
-          contextManager,
-          hooks: this.hooks,
-          transcript: session.transcript,
-          systemPrompt: fullSystemPrompt,
-          tools: toolDefs,
-          sessionId: sid,
-          isSubAgent: this.config.isSubAgent === true,
-          consumePendingCompactInfo: () => {
-            const info = pendingCompactInfo;
-            pendingCompactInfo = null;
-            return info;
-          },
-          consumeSteer: (source) => this.consumeSteer(sid, source),
-          consumeAgentDirections:
-            this.config.isSubAgent === true
-              ? () =>
-                  notificationQueue.drain(
-                    sid,
-                    (envelope) =>
-                      envelope.kind === "direction" &&
-                      envelope.runtimeGeneration === options?.runtimeGeneration,
-                  ) as import("../tool-system/builtin/agent-notifications.js").DirectionEnvelope[]
-              : undefined,
-          onAgentControlState:
-            this.config.isSubAgent === true
-              ? (state) => {
-                  this.agentControlStateListener?.(state);
-                  if (state === "model") {
-                    options?.onAgentProgress?.({ type: "phase", phase: "model" });
-                  } else if (state === "tool-batch") {
-                    options?.onAgentProgress?.({ type: "phase", phase: "tool" });
-                  }
-                }
-              : undefined,
-          onAgentDirectionsDelivered:
-            this.config.isSubAgent === true
-              ? (envelopeIds) => this.agentDirectionsDeliveredListener?.(envelopeIds)
-              : undefined,
-          restoreSteer: (items) => this.restoreSteer(sid, items),
-          buildSteerUserMessageContent: async (item) => {
-            const steerImageInput = await prepareRunImageInput({
-              task: item.text,
-              cwd,
-              llm: this.config.llm,
-              sessionId: sid,
-              attachments: item.attachments,
-            });
-            if (!steerImageInput.ok) {
-              throw new Error(steerImageInput.result.text);
-            }
-            return buildRunUserMessageContent(
-              steerImageInput.parsedTask,
-              cwd,
-              steerImageInput.taskText,
-            );
-          },
-          claimClientMessageId: (clientMessageId, source) =>
-            claimClientMessageId(session, clientMessageId, source),
-          releaseClientMessageId,
-          setOriginClientMessageId: (clientMessageId) => {
-            toolCtx.originClientMessageId = clientMessageId;
-          },
-          recordCumulativeUsage,
-          onAgentUsage: (usage) => options?.onAgentProgress?.({ type: "usage", usage }),
-          recordCacheReadDiagnostics: (sample) => {
-            this.recordCacheReadDiagnostics(sid, sample);
-          },
-          recordContextUsageAnchor: (anchor) => {
-            session.state.contextUsageAnchor = {
-              ...anchor,
-              provider: this.config.llm.provider,
-              model: this.config.llm.model,
-            };
-          },
-          // Clear the persisted goal for a self-reported completion / confirmed
-          // cancel. Clears the in-RAM session's activeGoal (so THIS run's later
-          // turns don't re-arm) AND persists it, and drops the in-flight stop
-          // hook so nothing re-blocks the stop we're about to return.
-          clearPersistedGoal: (reason) => {
-            const runGoal = this.activePersistedRunGoal ?? persistedRunGoal;
-            if (runGoal && !this.persistGoalTerminal(session.state, runGoal, reason)) {
-              return false;
-            }
-            if (goalHookHandler) {
-              this.hooks.unregister("on_stop", goalHookHandler);
-              if (this.activeGoalHook === goalHookHandler) {
-                this.activeGoalHook = null;
-                this.activeGoalHookAttached = false;
-                this.activeRuntimeGoal = null;
-                this.activePersistedRunGoal = null;
-              }
-            }
-            return true;
-          },
-          publishGoalJudgeContext: (context) => {
-            latestGoalJudgeContext = context;
-          },
-          ctxOverheadStore: {
-            get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
-            set: (s, n) => {
-              this.ctxOverheadBySid.set(s, n);
-            },
-          },
-        },
-        {
-          // Goal mode raises the turn ceiling: an unattended goal run keeps
-          // getting re-blocked by the stop-hook until it's done, and the 100
-          // interactive default would silently truncate a long objective. The
-          // real backstops are the goal token/time budgets + maxStopBlocks.
-          maxTurns: resolveMaxTurns(this.config.maxTurns, normalizedGoal),
-          // Consecutive stop-block cap: config override > goal.maxStopBlocks >
-          // GOAL_DEFAULT_MAX_STOP_BLOCKS(25). The old hardcoded 8 was too tight
-          // for complex goals that legitimately get re-blocked while advancing.
-          maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, normalizedGoal),
-          // 25 (was 10): modern models routinely batch >10 parallel tool calls
-          // (e.g. reading a dozen files at once). At 10 the excess was silently
-          // dropped; the turn loop now also warns the model when it caps, but a
-          // higher ceiling avoids the round-trip in the common case. (B-3)
-          maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 25,
-          onStream: options?.onStream,
-          signal: options?.signal,
-          freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
-          volatileContextMessages: dynamicContextMsg ? [dynamicContextMsg] : undefined,
-          // Goal mode: the active goal is surfaced to the on_stop handler via
-          // ctx.data.goal; the GoalStopHook (registered above) judges it.
-          goal: normalizedGoal,
-          // Heartbeat: flush turnCount + tokens to state.json after every turn
-          // so external observers (other CLI processes, /sid, the session list)
-          // see live progress instead of a stale snapshot from the last
-          // completed run.
-          onTurnBoundary: (turnCount) => {
-            session.state.turnCount = turnCount;
-            // baseline + this run's running total (idempotent per boundary,
-            // accumulates across runs; carries cacheRead/cacheCreation too).
-            session.state.tokenUsage = foldRunUsage(usageBaseline, getRunUsage());
-            // Surface the whole-session monotonic cache counts to the UI.
-            // Separate from turn-loop's authoritative per-response emit (which
-            // drives the live context reading and single-turn metric).
-            const cumulative = normalizeCumulativeUsageCounters(
-              session.state,
-              session.state.tokenUsage,
-            );
-            const cumulativeHitRate = cumulativeCacheHitRate(cumulative);
-            options?.onStream?.({
-              type: "usage_update",
-              promptTokens: cumulative.cumulativePromptTokens,
-              promptTokensSource: "session_cumulative",
-              promptTokensConfidence: "high",
-              cumulativePromptTokens: cumulative.cumulativePromptTokens,
-              cumulativeCacheReadTokens: cumulative.cumulativeCacheReadTokens,
-              cumulativeCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
-              ...(cumulativeHitRate !== undefined
-                ? { cumulativeCacheHitRate: cumulativeHitRate }
-                : {}),
-              sessionPromptTokens: cumulative.cumulativePromptTokens,
-              sessionCacheReadTokens: cumulative.cumulativeCacheReadTokens,
-              sessionCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
-            });
-            if (this.config.costStore) {
-              session.state.costState = this.config.costStore.serialize() as Record<
-                string,
-                unknown
-              >;
-            }
-            this.persistRunProgress(session.state);
-          },
-        },
-      );
-      toolCtx.recordBilledUsage = recordExternalBilledUsage;
-
-      // Expose this run's loop for mid-run extension (TODO 3.1). Top-level only —
-      // a sub-agent's loop is its own concern and isn't user-extendable.
-      if (this.config.isSubAgent !== true) this.activeTurnLoop = turnLoop;
-      // Expose this run's session bundle so a mid-run clearGoal() wipes the goal
-      // on the very instance this loop keeps saving (see field doc). Top-level
-      // only — sub-agents don't carry user-clearable persistent goals.
-      if (this.config.isSubAgent !== true) this.activeRunSession = session;
-
-      const applyGoalTermination = createGoalTerminationApplier({
-        slots: goalSlots,
-        hooks: this.hooks,
-        session,
-        persistedRunGoal,
-        goalHookHandler,
-        persistGoalTerminalOutcome: (state, goal, t) =>
-          this.persistGoalTerminalOutcome(state, goal, t),
-        readActiveGoal: (s) => this.sessionManager.readActiveGoal(s),
-        onStream: options?.onStream,
-      });
-
-      let result: Awaited<ReturnType<typeof turnLoop.run>>;
-      let firstGoalTermination: GoalTerminationReason | undefined;
-      try {
-        result = await turnLoop.run(messages);
-        firstGoalTermination = result.goalTermination;
-        applyGoalTermination(result.goalTermination, result.goalTerminationRound);
-
-        // ── Headless: drain background sub-agents before resolving ───────
-        // Unified background-work model (2026-06-17): the engine NO LONGER parks
-        // every run waiting on background work. Background work (sub-agents,
-        // video polls, shells) ends the turn, yields, and is picked up later by
-        // the server's notification-wakeup path (maybeWakeIdleSession). The
-        // INTERACTIVE path relies on that wakeup + a run-boundary re-check.
-        //
-        // HEADLESS is the exception: a one-shot `engine.run` whose caller takes
-        // `result.text` as THE answer (automation / SDK) has no later turn to
-        // pick up a wakeup — so it must wait, before resolving, until its own
-        // background SUB-AGENTS finish and summarize. Only sub-agents (their
-        // summary IS part of this run's result), NOT shells (a dev server never
-        // exits → would hang headless forever) and NOT video (a long render the
-        // one-shot run shouldn't block on). This replaces the old for(;;) park
-        // (s-mpvf4rsj-bb6e4639 invariant) for the headless case only.
-        const sid = session.state.sessionId;
-        const isTopLevel = this.config.isSubAgent !== true;
-        if (isTopLevel && this.isHeadless()) {
-          result = await drainHeadlessBackgroundAgents({
-            sid,
-            session,
-            signal: options?.signal,
-            initialResult: result,
-            runTurnLoop: (msgs) => turnLoop.run(msgs),
-            applyGoalTermination,
-            waitForBackgroundAgentChange: (s, sig) => this.waitForBackgroundAgentChange(s, sig),
-            waitForBackgroundAgentChangeOrTimeout: (s, ms) =>
-              this.waitForBackgroundAgentChangeOrTimeout(s, ms),
-            getFirstGoalTermination: () => firstGoalTermination,
-            setFirstGoalTermination: (t) => {
-              firstGoalTermination = t;
-            },
-          });
-        }
-      } finally {
-        // Run-scoped: drop the GoalStopHook so a later goal-less send on this
-        // long-lived engine doesn't keep blocking stops.
-        if (goalHookHandler) this.hooks.unregister("on_stop", goalHookHandler);
-        if (this.activeGoalHook === goalHookHandler) {
-          this.activeGoalHook = null;
-          this.activeGoalHookAttached = false;
-          this.activeRuntimeGoal = null;
-          this.activePersistedRunGoal = null;
-        }
-        if (this.activeTurnLoop === turnLoop) this.activeTurnLoop = null;
-        if (this.activeRunSession === session) this.activeRunSession = null;
-        // Run-scoped too: this handler is re-registered every run(), so it must be
-        // dropped here or it stacks duplicates that re-snapshot on every tool.
-        fileHistoryHook.dispose();
-      }
-      return await finalizeRunSuccess({
-        session,
-        result,
-        firstGoalTermination,
-        turnCount: turnLoop.currentTurn,
-        getRunUsage,
-        usageBaseline,
-        userContextMsg,
-        dynamicContextMsg,
-        setCompactedMessages: (s, msgs) => this.compactedMessagesBySession.set(s, msgs),
-        setLastMessages: (msgs) => {
-          this.lastMessages = msgs;
-        },
-        options,
-        emitHook: (event, payload, signal) => this.emitHook(event, payload, signal),
-        cwd,
-        llmClient,
-        auxSummaryClient,
-        recordExternalBilledUsage,
-        runMemoryPipeline: (transcript, sessionId, runCwd, client, record) =>
-          this.runMemoryPipeline(transcript, sessionId, runCwd, client, record),
-        updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
-        persistFinalRunState: (state) => this.persistFinalRunState(state),
-        markRunAccountingFinalized: () => accounting.markRunAccountingFinalized(),
-        costStoreSerialize: this.config.costStore
-          ? () => this.config.costStore!.serialize() as Record<string, unknown>
-          : undefined,
-        profile,
-        getProfileReportedResults: () => profileReportedResults,
-      });
-    });
-    return Promise.resolve(sessionRun).catch((err): EngineResult =>
-      buildRunFailureResult({
-        err,
-        session,
-        options,
-        persistFinalRunState: (state) => this.persistFinalRunState(state),
+        preset: this.preset,
+        customSystemPrompt: this.config.customSystemPrompt,
+        appendSystemPrompt:
+          [this.config.appendSystemPrompt, profile?.systemPromptAppend]
+            .filter(Boolean)
+            .join("\n\n") || undefined,
+        responseLanguage: this.config.responseLanguage,
+        userProfile: this.config.userProfile,
+        workspaceProfile: runWorkspaceProfile,
+        profileMemoryDir,
+        instructionCompatFileNames: compatFileNamesFrom(this.config.instructions),
+        instructionBoundaryFinder: (scanCwd) =>
+          resolveInstructionBoundary(scanCwd, this.capabilities),
+        disabledSkills,
+        disabledPlugins,
+        skillAllowlist: this.config.skillAllowlist,
+        memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
+        goalToolState: { hasGoal: hasRunnableGoal },
+        capabilityPromptSections: this.capabilityPromptSections,
+        dynamicContextProviders: this.capabilityDynamicContextProviders,
+        getSettingsManager: () => this.getSettingsManager(),
+        toolCatalog: this.toolCatalog,
       }),
     );
+
+    const mcpServers = this.config.mcpServers ?? {};
+    const mcpDisabled = profile?.disableMcp === true;
+    await connectRunMcp({
+      mcpServers,
+      mcpDisabled,
+      getManager: () => this.mcpManager,
+      setManager: (m) => {
+        this.mcpManager = m;
+      },
+      runtimePool: this.runtime?.mcpPool,
+      toolRegistry: this.toolRegistry,
+      engineForConnect: this,
+      emitNotificationHook: (payload) => {
+        void this.emitHook("notification", payload);
+      },
+    });
+
+    // Parallelize slow initialization:
+    //   1. createLLMClient — network handshake (started earlier)
+    //   2. buildSystemPrompt — cacheable prompt assembled from generic sections
+    //   3. buildSystemContext — reads environment context
+    // Inject the live available-agent-types listing into the Agent tool's
+    // description. The registry is per-engine (loaded from .code-shell/agents
+    // for this cwd), so it can't live in the static tool def — without this
+    // the model never learns the reusable roles exist and spawns nameless
+    // ad-hoc agents instead (the Core A/B/C incident).
+    // The Agent tool is always available: with configured roles, an omitted
+    // agent_type falls back to one of them (see resolveAgentTypeOverrides); with
+    // no roles configured it runs a true ephemeral agent, so workflows that need
+    // sub-agents (e.g. superpowers) work in any project.
+    // Availability guard (tool-visibility): a gated builtin (WebSearch needs a
+    // search provider, GenerateImage needs an OpenAI provider) is hidden from
+    // the toolDefs the model sees when its credential isn't configured for this
+    // cwd. Recomputed every message, so configuring a key takes effect on the
+    // NEXT message without a restart. Tools with no guard entry are always kept.
+    const toolDefs = assembleRunToolDefs({
+      toolRegistry: this.toolRegistry,
+      toolCtx,
+      guardCwd: toolCtx.cwd,
+      hasRunnableGoal,
+      settingsScope: this.config.settingsScope ?? "project",
+      builtinToolHost: this.config.builtinToolHost,
+      isSubAgent: this.config.isSubAgent === true,
+      behaviorProfileId: profile?.id ?? options?.behaviorMode,
+      profileMeta: profile?.buildVisibilityMeta?.(profileParams),
+      builtinOverride: this.readBuiltinOverride(toolCtx.cwd, sessionProfileOverrides),
+      mcpServers: this.config.mcpServers ?? {},
+      mcpDisabled,
+      featureFlags: this.readFeatureFlags(),
+      toolGuards: this.toolGuards,
+      toolRewriters: this.toolRewriters,
+      toolFeatureFlags: TOOL_FEATURE_FLAGS,
+      applyBuiltinOverrideVisibility,
+      profileAllowedToolNames: profile?.allowedToolNames,
+      runPlanMode,
+    });
+
+    return { promptComposer, toolDefs };
+  }
+
+  /**
+   * Assemble the run-scoped {@link TurnLoop} (its dependency object + option
+   * object) from the per-run locals gathered in {@link runExclusive}. Extracted
+   * verbatim from the orchestration skeleton so `runExclusive` stays a readable
+   * sequence of phase calls; the buffered-compaction `let` lives entirely inside
+   * here now, and the only value crossing back out is the goal-judge context,
+   * published through the `publishGoalJudgeContext` callback.
+   */
+  private buildTurnLoop(args: {
+    modelFacade: import("./model-facade.js").ModelFacade;
+    toolExecutor: import("../tool-system/executor.js").ToolExecutor;
+    contextManager: ContextManager;
+    session: SessionBundle;
+    fullSystemPrompt: string;
+    toolDefs: import("../types.js").ToolDefinition[];
+    sid: string;
+    options: EngineRunOptions | undefined;
+    cwd: string;
+    claimClientMessageId: (
+      bundle: SessionBundle,
+      clientMessageId: string | undefined,
+      source: "submit" | "steer",
+    ) => boolean;
+    releaseClientMessageId: (clientMessageId: string) => void;
+    toolCtx: ToolContext;
+    persistedRunGoal: GoalConfig | undefined;
+    goalHookHandler: import("./run-goal.js").GoalStopHookHandler | null;
+    normalizedGoal: GoalConfig | undefined;
+    freshImageMessage: Message | undefined;
+    dynamicContextMsg: Message | null;
+    usageBaseline: TokenUsage;
+    getRunUsage: () => ReturnType<import("./model-facade.js").ModelFacade["getUsage"]>;
+    recordCumulativeUsage: (usage: TokenUsage) => CumulativeUsageCounters;
+    publishGoalJudgeContext: (context: GoalJudgeRuntimeContext) => void;
+  }): TurnLoop {
+    const {
+      modelFacade,
+      toolExecutor,
+      contextManager,
+      session,
+      fullSystemPrompt,
+      toolDefs,
+      sid,
+      options,
+      cwd,
+      claimClientMessageId,
+      releaseClientMessageId,
+      toolCtx,
+      persistedRunGoal,
+      goalHookHandler,
+      normalizedGoal,
+      freshImageMessage,
+      dynamicContextMsg,
+      usageBaseline,
+      getRunUsage,
+      recordCumulativeUsage,
+      publishGoalJudgeContext,
+    } = args;
+
+    // Surface compaction events to the UI so the user knows when context was trimmed.
+    // Buffer the most recent event so TurnLoop can drain it and emit the
+    // post_compact hook on the next turn (ContextManager itself doesn't
+    // know about HookRegistry — the buffer is the seam).
+    let pendingCompactInfo: { strategy: string; before: number; after: number } | null = null;
+    contextManager.setOnCompact((info) => {
+      pendingCompactInfo = info;
+      options?.onStream?.({ type: "context_compact", ...info });
+    });
+
+    // Run turn loop
+    const turnLoop = new TurnLoop(
+      {
+        model: modelFacade,
+        toolExecutor,
+        contextManager,
+        hooks: this.hooks,
+        transcript: session.transcript,
+        systemPrompt: fullSystemPrompt,
+        tools: toolDefs,
+        sessionId: sid,
+        isSubAgent: this.config.isSubAgent === true,
+        consumePendingCompactInfo: () => {
+          const info = pendingCompactInfo;
+          pendingCompactInfo = null;
+          return info;
+        },
+        consumeSteer: (source) => this.consumeSteer(sid, source),
+        consumeAgentDirections:
+          this.config.isSubAgent === true
+            ? () =>
+                notificationQueue.drain(
+                  sid,
+                  (envelope) =>
+                    envelope.kind === "direction" &&
+                    envelope.runtimeGeneration === options?.runtimeGeneration,
+                ) as import("../tool-system/builtin/agent-notifications.js").DirectionEnvelope[]
+            : undefined,
+        onAgentControlState:
+          this.config.isSubAgent === true
+            ? (state) => {
+                this.agentControlStateListener?.(state);
+                if (state === "model") {
+                  options?.onAgentProgress?.({ type: "phase", phase: "model" });
+                } else if (state === "tool-batch") {
+                  options?.onAgentProgress?.({ type: "phase", phase: "tool" });
+                }
+              }
+            : undefined,
+        onAgentDirectionsDelivered:
+          this.config.isSubAgent === true
+            ? (envelopeIds) => this.agentDirectionsDeliveredListener?.(envelopeIds)
+            : undefined,
+        restoreSteer: (items) => this.restoreSteer(sid, items),
+        buildSteerUserMessageContent: async (item) => {
+          const steerImageInput = await prepareRunImageInput({
+            task: item.text,
+            cwd,
+            llm: this.config.llm,
+            sessionId: sid,
+            attachments: item.attachments,
+          });
+          if (!steerImageInput.ok) {
+            throw new Error(steerImageInput.result.text);
+          }
+          return buildRunUserMessageContent(
+            steerImageInput.parsedTask,
+            cwd,
+            steerImageInput.taskText,
+          );
+        },
+        claimClientMessageId: (clientMessageId, source) =>
+          claimClientMessageId(session, clientMessageId, source),
+        releaseClientMessageId,
+        setOriginClientMessageId: (clientMessageId) => {
+          toolCtx.originClientMessageId = clientMessageId;
+        },
+        recordCumulativeUsage,
+        onAgentUsage: (usage) => options?.onAgentProgress?.({ type: "usage", usage }),
+        recordCacheReadDiagnostics: (sample) => {
+          this.recordCacheReadDiagnostics(sid, sample);
+        },
+        recordContextUsageAnchor: (anchor) => {
+          session.state.contextUsageAnchor = {
+            ...anchor,
+            provider: this.config.llm.provider,
+            model: this.config.llm.model,
+          };
+        },
+        // Clear the persisted goal for a self-reported completion / confirmed
+        // cancel. Clears the in-RAM session's activeGoal (so THIS run's later
+        // turns don't re-arm) AND persists it, and drops the in-flight stop
+        // hook so nothing re-blocks the stop we're about to return.
+        clearPersistedGoal: (reason) => {
+          const runGoal = this.activePersistedRunGoal ?? persistedRunGoal;
+          if (runGoal && !this.persistGoalTerminal(session.state, runGoal, reason)) {
+            return false;
+          }
+          if (goalHookHandler) {
+            this.hooks.unregister("on_stop", goalHookHandler);
+            if (this.activeGoalHook === goalHookHandler) {
+              this.activeGoalHook = null;
+              this.activeGoalHookAttached = false;
+              this.activeRuntimeGoal = null;
+              this.activePersistedRunGoal = null;
+            }
+          }
+          return true;
+        },
+        publishGoalJudgeContext: (context) => {
+          publishGoalJudgeContext(context);
+        },
+        ctxOverheadStore: {
+          get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
+          set: (s, n) => {
+            this.ctxOverheadBySid.set(s, n);
+          },
+        },
+      },
+      {
+        // Goal mode raises the turn ceiling: an unattended goal run keeps
+        // getting re-blocked by the stop-hook until it's done, and the 100
+        // interactive default would silently truncate a long objective. The
+        // real backstops are the goal token/time budgets + maxStopBlocks.
+        maxTurns: resolveMaxTurns(this.config.maxTurns, normalizedGoal),
+        // Consecutive stop-block cap: config override > goal.maxStopBlocks >
+        // GOAL_DEFAULT_MAX_STOP_BLOCKS(25). The old hardcoded 8 was too tight
+        // for complex goals that legitimately get re-blocked while advancing.
+        maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, normalizedGoal),
+        // 25 (was 10): modern models routinely batch >10 parallel tool calls
+        // (e.g. reading a dozen files at once). At 10 the excess was silently
+        // dropped; the turn loop now also warns the model when it caps, but a
+        // higher ceiling avoids the round-trip in the common case. (B-3)
+        maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 25,
+        onStream: options?.onStream,
+        signal: options?.signal,
+        freshImageMessages: freshImageMessage ? [freshImageMessage] : undefined,
+        volatileContextMessages: dynamicContextMsg ? [dynamicContextMsg] : undefined,
+        // Goal mode: the active goal is surfaced to the on_stop handler via
+        // ctx.data.goal; the GoalStopHook (registered above) judges it.
+        goal: normalizedGoal,
+        // Heartbeat: flush turnCount + tokens to state.json after every turn
+        // so external observers (other CLI processes, /sid, the session list)
+        // see live progress instead of a stale snapshot from the last
+        // completed run.
+        onTurnBoundary: (turnCount) => {
+          session.state.turnCount = turnCount;
+          // baseline + this run's running total (idempotent per boundary,
+          // accumulates across runs; carries cacheRead/cacheCreation too).
+          session.state.tokenUsage = foldRunUsage(usageBaseline, getRunUsage());
+          // Surface the whole-session monotonic cache counts to the UI.
+          // Separate from turn-loop's authoritative per-response emit (which
+          // drives the live context reading and single-turn metric).
+          const cumulative = normalizeCumulativeUsageCounters(
+            session.state,
+            session.state.tokenUsage,
+          );
+          const cumulativeHitRate = cumulativeCacheHitRate(cumulative);
+          options?.onStream?.({
+            type: "usage_update",
+            promptTokens: cumulative.cumulativePromptTokens,
+            promptTokensSource: "session_cumulative",
+            promptTokensConfidence: "high",
+            cumulativePromptTokens: cumulative.cumulativePromptTokens,
+            cumulativeCacheReadTokens: cumulative.cumulativeCacheReadTokens,
+            cumulativeCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
+            ...(cumulativeHitRate !== undefined
+              ? { cumulativeCacheHitRate: cumulativeHitRate }
+              : {}),
+            sessionPromptTokens: cumulative.cumulativePromptTokens,
+            sessionCacheReadTokens: cumulative.cumulativeCacheReadTokens,
+            sessionCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
+          });
+          if (this.config.costStore) {
+            session.state.costState = this.config.costStore.serialize() as Record<
+              string,
+              unknown
+            >;
+          }
+          this.persistRunProgress(session.state);
+        },
+      },
+    );
+    return turnLoop;
   }
 
   private buildSummarizeFn(
