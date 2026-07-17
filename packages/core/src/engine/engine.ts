@@ -73,7 +73,6 @@ import {
 } from "../goal/lifecycle.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
-import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager, type CompactStrategy } from "../context/manager.js";
 import {
@@ -98,7 +97,7 @@ import {
   type GoalTerminalSaveOutcome,
 } from "../session/session-manager.js";
 import { ModelFacade } from "./model-facade.js";
-import { logger, runWithSid, getCurrentSid } from "../logging/logger.js";
+import { logger, runWithSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
 import { sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop } from "./turn-loop.js";
@@ -162,6 +161,7 @@ import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
 import { PermissionController } from "./permission-controller.js";
 import { buildPromptComposerConfig } from "./run-setup.js";
 import { resolveRunWorkspace } from "./run-workspace.js";
+import { openRunSession } from "./run-session-open.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../types.js";
@@ -1448,155 +1448,33 @@ export class Engine {
     // surfacing as `[-32603] Session not found: <sid>` on the very first
     // TUI turn. Detection now uses `sessionManager.exists()` (one stat
     // call) instead of a try/catch on resume.
-    let session: SessionBundle;
-    let messages: Message[];
-    let freshImageMessage: Message | undefined;
-    let resumedFromDisk = false;
-    const claimedClientMessageIds = new Set<string>();
-    const claimClientMessageId = (
-      bundle: SessionBundle,
-      clientMessageId: string | undefined,
-      source: "submit" | "steer",
-    ): boolean => {
-      if (!clientMessageId) return true;
-      if (
-        claimedClientMessageIds.has(clientMessageId) ||
-        bundle.transcript.hasClientMessageId(clientMessageId)
-      ) {
-        logger.info("engine.client_message.duplicate_ignored", {
-          sessionId: bundle.state.sessionId,
-          clientMessageId,
-          source,
-        });
-        return false;
-      }
-      claimedClientMessageIds.add(clientMessageId);
-      return true;
-    };
-
-    if (options?.sessionId && this.sessionManager.exists(options.sessionId)) {
-      resumedFromDisk = true;
-      session = this.sessionManager.resume(options.sessionId);
-      const cachedCompacted = this.compactedMessagesBySession.get(options.sessionId);
-      messages = cachedCompacted ? [...cachedCompacted] : session.transcript.toMessages();
-      // If the previous run was Ctrl+C'd or crashed between an assistant
-      // tool_use and the matching tool_result being persisted, the
-      // loaded sequence is invalid for OpenAI (which 400s on dangling
-      // tool_calls). Patch synthetic tool_results so the next API call
-      // doesn't fail before the turn even starts.
-      const patched = patchOrphanedToolUses(messages);
-      if (patched.gapsPatched > 0) {
-        logger.warn("engine.resume.patched_orphaned_tool_uses", {
-          sessionId: options.sessionId,
-          gaps: patched.gapsPatched,
-          toolResults: patched.toolResultsInjected,
-        });
-      }
-      // Restore cost state from previous session, if the caller injected a store
-      if (session.state.costState && this.config.costStore) {
-        this.config.costStore.restore(session.state.costState);
-      }
-      // Append new user message
-      const userMsg: Message = { role: "user", content: userMessageContent };
-      if (!claimClientMessageId(session, options?.clientMessageId, "submit")) {
-        const usage = session.state.tokenUsage ?? {
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-        };
-        return {
-          text: "",
-          reason: "completed",
-          sessionId: session.state.sessionId,
-          turnCount: session.state.turnCount ?? 0,
-          usage: {
-            promptTokens: usage.promptTokens ?? 0,
-            completionTokens: usage.completionTokens ?? 0,
-            totalTokens: usage.totalTokens ?? 0,
-          },
-        };
-      }
-      if (parsedTask.hasImages) freshImageMessage = userMsg;
-      messages.push(userMsg);
-      session.transcript.appendMessage("user", userMessageContent, {
-        injected: options?.injected === true,
-        clientMessageId: options?.clientMessageId,
-        ...(options?.agentDirection
-          ? {
-              authority: "agent" as const,
-              source: "agent-direction" as const,
-              envelopeIds: options.agentDirection.envelopeIds,
-              correlationIds: options.agentDirection.correlationIds,
-            }
-          : {}),
-      });
-      if (options?.agentDirection) {
-        this.agentDirectionsDeliveredListener?.(options.agentDirection.envelopeIds);
-      }
-      // Flush "active" status to disk immediately. resume() set it in memory
-      // (session-manager.ts), but without this write the on-disk state.json
-      // still shows the previous run's terminal reason — so any external
-      // observer (another CLI process, /sid, the session list) would think
-      // the session is still errored/aborted while we're actually running.
-      this.sessionManager.saveStateOrUpdateFields(session.state, {
-        status: session.state.status,
-      });
-    } else {
-      // Cold start: shape (2) reuses the host-supplied sid; shape (3)
-      // lets sessionManager generate one with nanoid.
-      session = this.sessionManager.create(
-        cwd,
-        this.config.llm.model,
-        this.config.llm.provider,
-        options?.sessionId,
-        this.config.isSubAgent === true ? getCurrentSid() : undefined,
-        this.config.isSubAgent === true ? "subagent" : this.config.origin,
-        sessionKind,
-      );
-      const userMsg: Message = { role: "user", content: userMessageContent };
-      claimClientMessageId(session, options?.clientMessageId, "submit");
-      if (parsedTask.hasImages) freshImageMessage = userMsg;
-      messages = [userMsg];
-      session.transcript.appendMessage("user", userMessageContent, {
-        injected: options?.injected === true,
-        clientMessageId: options?.clientMessageId,
-        ...(options?.agentDirection
-          ? {
-              authority: "agent" as const,
-              source: "agent-direction" as const,
-              envelopeIds: options.agentDirection.envelopeIds,
-              correlationIds: options.agentDirection.correlationIds,
-            }
-          : {}),
-      });
-      if (options?.agentDirection) {
-        this.agentDirectionsDeliveredListener?.(options.agentDirection.envelopeIds);
-      }
-      // Save first user message as session summary — text only. The summary
-      // shows up in the session list; "[image]" is more informative than a
-      // truncated `[object Object]` when the prompt was purely visual.
-      const summarySrc = parsedTask.hasImages
-        ? parsedTask.text ||
-          `[image${parsedTask.images.length > 1 ? `s × ${parsedTask.images.length}` : ""}]`
-        : taskText;
-      session.state.summary = summarySrc.slice(0, 80).replace(/\n/g, " ");
-      this.sessionManager.saveStateOrUpdateFields(session.state, {
-        summary: session.state.summary,
-      });
-    }
-
-    // Bump the conversation-turn counter: this user message starts a new turn.
-    // One user message = one turn, regardless of how many turn-loop iterations
-    // or tool calls it spans. File-history snapshots taken below are tagged
-    // with this value so `/undo` reverts exactly this turn's file changes.
-    // (Both resume and cold-start paths converge here.)
-    if (sessionWorkspaceProfile && session.state.workspaceProfile !== sessionWorkspaceProfile) {
-      session.state.workspaceProfile = sessionWorkspaceProfile;
-      this.sessionManager.saveStateOrUpdateFields(session.state, {
-        workspaceProfile: sessionWorkspaceProfile,
-      });
-    }
-    session.state.turnSeq = (session.state.turnSeq ?? 0) + 1;
+    // wrappedOnStream (defined before the session opens, executed only after)
+    // closes over `session`, so keep the declaration here and assign from the
+    // opener's result.
+    let session!: SessionBundle;
+    const openedResult = openRunSession({
+      sessionManager: this.sessionManager,
+      options,
+      parsedTask,
+      taskText,
+      userMessageContent,
+      cwd,
+      sessionKind,
+      sessionWorkspaceProfile,
+      llmModel: this.config.llm.model,
+      llmProvider: this.config.llm.provider,
+      isSubAgent: this.config.isSubAgent === true,
+      origin: this.config.origin,
+      costStore: this.config.costStore,
+      onAgentDirectionsDelivered: (ids) => this.agentDirectionsDeliveredListener?.(ids),
+      cachedCompactedMessages: options?.sessionId
+        ? this.compactedMessagesBySession.get(options.sessionId)
+        : undefined,
+    });
+    if (!openedResult.ok) return openedResult.result;
+    const { messages, freshImageMessage, resumedFromDisk, claimClientMessageId, releaseClientMessageId } =
+      openedResult.opened;
+    session = openedResult.opened.session;
 
     // B2 / Gate 1: stamp the resolved sid onto the tool context so
     // session-scoped side effects (background-agent completion
@@ -2490,9 +2368,7 @@ export class Engine {
           },
           claimClientMessageId: (clientMessageId, source) =>
             claimClientMessageId(session, clientMessageId, source),
-          releaseClientMessageId: (clientMessageId) => {
-            claimedClientMessageIds.delete(clientMessageId);
-          },
+          releaseClientMessageId,
           setOriginClientMessageId: (clientMessageId) => {
             toolCtx.originClientMessageId = clientMessageId;
           },
