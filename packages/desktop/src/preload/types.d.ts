@@ -15,9 +15,12 @@ import type {
   SourceScope,
   WorkspaceSourceBinding,
   WorkspaceProfile,
-  LocalPluginPreview,
 } from "@cjhyy/code-shell-core";
-import type { ApprovalRequest, ReasoningControl } from "@cjhyy/code-shell-core/internal";
+import type {
+  ApprovalRequest,
+  ReasoningControl,
+  LocalPluginPreview,
+} from "@cjhyy/code-shell-core/internal";
 import type {
   CCAvailability,
   DiscoveredSession,

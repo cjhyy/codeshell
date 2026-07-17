@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { PluginInstallError } from "@cjhyy/code-shell-core";
 import {
   installPluginFromPath,
   installPluginFromNpm,
@@ -7,8 +8,7 @@ import {
   uninstallPluginByName,
   listInstalledPlugins,
   updatePluginByName,
-  PluginInstallError,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 
 export function createPluginCommand(): Command {
   const plugin = new Command("plugin").description("Manage plugins (CC + Codex formats)");

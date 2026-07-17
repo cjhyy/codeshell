@@ -8,7 +8,7 @@ import { Marked } from "marked";
 // @ts-ignore — marked-terminal has no up-to-date type declarations
 import { markedTerminal } from "marked-terminal";
 import { highlight } from "cli-highlight";
-import { getCurrentVersion } from "@cjhyy/code-shell-core";
+import { getCurrentVersion } from "@cjhyy/code-shell-core/internal";
 
 // ─── Markdown Renderer ───────────────────────────────────────────
 

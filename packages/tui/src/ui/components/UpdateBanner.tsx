@@ -17,7 +17,7 @@ import {
   getUpdateAvailable,
   scheduleAutoInstallOnExit,
   type UpdateInfo,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 const PACKAGE_NAME = "@cjhyy/code-shell";

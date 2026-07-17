@@ -156,10 +156,20 @@ experimental/internal unless explicitly documented otherwise, and may
 change between minor versions without notice. Plan to migrate via the
 protocol surface instead of deep-importing.
 
+In 0.8 the plugin installer / marketplace / onboarding / self-updater exports
+(`installPluginFromPath`, `installPlugin`, `addMarketplace`, `resolveApiKey`,
+`checkForUpdate`, …) moved off this root entry to
+`@cjhyy/code-shell-core/internal` — they are host-assembly surfaces for the
+in-repo TUI/desktop apps, not part of the embeddable agent SDK.
+
 ## Stability
 
 Pre-1.0 — APIs may change between minor versions. The "stable surface"
 table above is the contract; everything else is mobile.
+
+**Breaking in 0.8:** host-assembly exports (installer/marketplace/onboarding/
+updater) left the root entry; import them from
+`@cjhyy/code-shell-core/internal` if you must (no stability promise there).
 
 See [CHANGELOG.md](https://github.com/cjhyy/codeshell/blob/main/CHANGELOG.md) in the monorepo.
 

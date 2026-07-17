@@ -1,6 +1,6 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
-import type { AgentClient, OnboardingResult } from "@cjhyy/code-shell-core";
-import { asyncAgentRegistry } from "@cjhyy/code-shell-core/internal";
+import type { AgentClient } from "@cjhyy/code-shell-core";
+import { asyncAgentRegistry, type OnboardingResult } from "@cjhyy/code-shell-core/internal";
 import { Box, Text } from "../../render/index.js";
 import { CommandInput } from "./CommandInput.js";
 import { AskUserPrompt } from "./AskUserPrompt.js";

@@ -17,19 +17,21 @@
 import {
   loadPluginCatalog,
   loadPluginPanelContributions,
-  uninstallPlugin,
-  uninstallPluginByName,
-  updatePluginByName,
-  checkPluginUpdate,
   describePluginContent,
   listPluginMcpTrust,
   type PluginContentInventory,
   type PluginMcpTrustEntry,
-  type UpdateResult,
-  type UpdateCheck,
   SettingsManager,
 } from "@cjhyy/code-shell-core";
-import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
+import {
+  computeEffectiveDisabledLists,
+  uninstallPlugin,
+  uninstallPluginByName,
+  updatePluginByName,
+  checkPluginUpdate,
+  type UpdateResult,
+  type UpdateCheck,
+} from "@cjhyy/code-shell-core/internal";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import * as path from "node:path";

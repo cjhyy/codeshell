@@ -200,7 +200,7 @@ export const utilityCommands: SlashCommand[] = [
     execute: async (_arg, ctx) => {
       try {
         const { getCurrentVersion, getUpdateAvailable, getAutoUpdateDisabledReason } =
-          await import("@cjhyy/code-shell-core");
+          await import("@cjhyy/code-shell-core/internal");
         const current = getCurrentVersion();
         const info = getUpdateAvailable();
         const disabledReason = getAutoUpdateDisabledReason();

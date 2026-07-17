@@ -171,6 +171,14 @@ const codingEngine = new Engine({
 
 Everything is exported from the package root — `import { ... } from "@cjhyy/code-shell"` (or directly from `@cjhyy/code-shell-core`). There are no `/run`, `/arena`, or `/product` subpath entry points.
 
+Runnable SDK examples live in [`examples/`](examples/) — each runs directly
+with `bun run <file>` and supports `--dry-run` (scripted mock LLM) when no API
+key is configured:
+
+- [`examples/01-minimal-agent.ts`](examples/01-minimal-agent.ts) — one Engine, one run, streamed output
+- [`examples/02-approval-flow.ts`](examples/02-approval-flow.ts) — a custom `ApprovalBackend` gating tool calls
+- [`examples/03-in-process-transport.ts`](examples/03-in-process-transport.ts) — the recommended `createServer` / `createClient` factory pair
+
 ---
 
 ## Configuration

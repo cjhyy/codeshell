@@ -10,7 +10,7 @@ import { gitDiff, gitDiffStat } from "./git-diff.js";
 import { existsSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { resolveApiKey } from "@cjhyy/code-shell-core";
+import { resolveApiKey } from "@cjhyy/code-shell-core/internal";
 import { initCommand } from "./init/index.js";
 
 const REDACTED_SETTING_VALUE = "[REDACTED]";

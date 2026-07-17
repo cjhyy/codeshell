@@ -19,7 +19,8 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import { installPlugin, readInstalledPlugins, pluginInstallKey } from "@cjhyy/code-shell-core";
+import { readInstalledPlugins, pluginInstallKey } from "@cjhyy/code-shell-core";
+import { installPlugin } from "@cjhyy/code-shell-core/internal";
 
 export interface CorePlugin {
   plugin: string;
