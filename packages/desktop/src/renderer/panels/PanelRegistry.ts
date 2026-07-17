@@ -1,21 +1,17 @@
 import { createElement, type ReactNode } from "react";
 import {
-  Activity,
-  BarChart3,
   Bot,
   FolderTree,
   GitCompare,
   Globe,
-  PanelTop,
-  Plug,
   ServerCog,
   SquareTerminal,
-  Table2,
   type LucideIcon,
 } from "lucide-react";
 import type { PanelId } from "../view";
 import type { Anchor } from "../chat/anchors";
-import type { PluginPanelDescriptor, PluginPanelIconName } from "../../shared/plugin-panels";
+import type { PluginPanelDescriptor } from "../../shared/plugin-panels";
+import { resolvePluginPanelIcon } from "./pluginPanelIcons";
 import { FilesPanel } from "./FilesPanel";
 import { BrowserPanel } from "./BrowserPanel";
 import { ReviewPanel } from "./ReviewPanel";
@@ -253,14 +249,6 @@ export class PanelRegistry {
 export const PANEL_REGISTRY = new PanelRegistry();
 for (const entry of BUILTIN_PANEL_ENTRIES) PANEL_REGISTRY.register(entry);
 
-const PLUGIN_ICONS: Record<PluginPanelIconName, LucideIcon> = {
-  panel: PanelTop,
-  chart: BarChart3,
-  table: Table2,
-  activity: Activity,
-  plug: Plug,
-};
-
 export function replacePluginPanels(descriptors: PluginPanelDescriptor[]): void {
   PANEL_REGISTRY.replacePluginEntries(
     descriptors.map(
@@ -272,7 +260,7 @@ export function replacePluginPanels(descriptors: PluginPanelDescriptor[]): void 
           panelId: descriptor.panelId,
         },
         title: { kind: "literal", value: descriptor.title },
-        icon: PLUGIN_ICONS[descriptor.icon],
+        icon: resolvePluginPanelIcon(descriptor.icon),
         order: 1_000 + index,
         singleton: descriptor.singleton,
         enabled: alwaysEnabled,

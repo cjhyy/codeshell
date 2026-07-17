@@ -110,6 +110,27 @@ describe("PluginPanelsManifest", () => {
       }),
     ).toThrow(/requires context.session/);
   });
+
+  test("accepts allowlisted lucide icon names and keeps the panel default", () => {
+    const panels = PluginPanelsManifest.parse({
+      version: 1,
+      entries: [
+        { id: "a", title: { default: "A" }, entry: "panels/a.html", icon: "bar-chart-3" },
+        { id: "b", title: { default: "B" }, entry: "panels/b.html" },
+      ],
+    });
+    expect(panels.entries[0].icon).toBe("bar-chart-3");
+    expect(panels.entries[1].icon).toBe("panel");
+  });
+
+  test("rejects icon names outside the allowlist", () => {
+    expect(() =>
+      PluginPanelsManifest.parse({
+        version: 1,
+        entries: [{ id: "a", title: { default: "A" }, entry: "panels/a.html", icon: "grid-3x3" }],
+      }),
+    ).toThrow();
+  });
 });
 
 describe("PluginAutomationsManifest", () => {
