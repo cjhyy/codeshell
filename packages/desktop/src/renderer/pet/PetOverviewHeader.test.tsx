@@ -32,18 +32,18 @@ describe("PetOverviewHeader", () => {
   test("hides counts and freshness behind the Mimi workspace summary by default", () => {
     const html = renderToStaticMarkup(
       <PetOverviewHeader
-        unfinishedCount={2}
-        optimizationCount={1}
-        completedCount={3}
+        runningCount={2}
+        pendingCount={1}
+        followUpCount={3}
         observedAt={1_000}
         now={61_000}
       />,
     );
     expect(html).toContain("Mimi 工作台");
     expect(html).toContain('aria-expanded="false"');
-    expect(html).not.toContain('data-pet-overview-stat="unfinished"');
-    expect(html).not.toContain('data-pet-overview-stat="optimization"');
-    expect(html).not.toContain('data-pet-overview-stat="completed"');
+    expect(html).not.toContain('data-pet-overview-stat="running"');
+    expect(html).not.toContain('data-pet-overview-stat="pending"');
+    expect(html).not.toContain('data-pet-overview-stat="follow-up"');
     expect(html).not.toContain("1 分钟前更新");
   });
 
@@ -54,9 +54,9 @@ describe("PetOverviewHeader", () => {
     await act(async () => {
       root.render(
         <PetOverviewHeader
-          unfinishedCount={2}
-          optimizationCount={1}
-          completedCount={3}
+          runningCount={2}
+          pendingCount={1}
+          followUpCount={3}
           observedAt={1_000}
           now={61_000}
         />,
@@ -70,9 +70,9 @@ describe("PetOverviewHeader", () => {
     });
 
     expect(reactPropsOf(button)["aria-expanded"]).toBe(true);
-    expect(textOf(container)).toContain("未完成2");
-    expect(textOf(container)).toContain("可优化1");
-    expect(textOf(container)).toContain("最近完成3");
+    expect(textOf(container)).toContain("进行中2");
+    expect(textOf(container)).toContain("待决策1");
+    expect(textOf(container)).toContain("待跟进3");
     expect(textOf(container)).toContain("1 分钟前更新");
     await act(async () => root.unmount());
   });
@@ -81,9 +81,9 @@ describe("PetOverviewHeader", () => {
     expect(renderToStaticMarkup(<PetOverviewHeader loading />)).toContain("正在加载工作状态");
     const html = renderToStaticMarkup(
       <PetOverviewHeader
-        unfinishedCount={0}
-        optimizationCount={0}
-        completedCount={0}
+        runningCount={0}
+        pendingCount={0}
+        followUpCount={0}
         observedAt={1_000}
         now={2_000}
         reconciling

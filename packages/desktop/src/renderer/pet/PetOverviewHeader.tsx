@@ -1,19 +1,12 @@
 import React from "react";
-import {
-  CheckCircle2,
-  ChevronDown,
-  CircleDot,
-  Clock3,
-  LayoutDashboard,
-  Sparkles,
-} from "lucide-react";
+import { ChevronDown, CircleDot, Clock3, LayoutDashboard, Sparkles } from "lucide-react";
 import dogIcon from "../assets/codeshell-dog-icon.png";
 import { useT } from "../i18n";
 
 export interface PetOverviewHeaderProps {
-  unfinishedCount?: number;
-  optimizationCount?: number;
-  completedCount?: number;
+  runningCount?: number;
+  pendingCount?: number;
+  followUpCount?: number;
   observedAt?: number;
   now?: number;
   loading?: boolean;
@@ -23,9 +16,9 @@ export interface PetOverviewHeaderProps {
 }
 
 export function PetOverviewHeader({
-  unfinishedCount = 0,
-  optimizationCount = 0,
-  completedCount = 0,
+  runningCount = 0,
+  pendingCount = 0,
+  followUpCount = 0,
   observedAt,
   now = Date.now(),
   loading = false,
@@ -116,34 +109,34 @@ export function PetOverviewHeader({
           {!loading && (
             <div className="grid grid-cols-3 gap-2">
               <div
-                data-pet-overview-stat="unfinished"
+                data-pet-overview-stat="running"
+                className="rounded-xl border border-status-running/15 bg-background/75 p-3"
+              >
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CircleDot size={13} className="text-status-running" aria-hidden="true" />
+                  {t("pet.overview.runningLabel")}
+                </div>
+                <div className="mt-1 text-xl font-semibold tabular-nums">{runningCount}</div>
+              </div>
+              <div
+                data-pet-overview-stat="pending"
                 className="rounded-xl border border-status-warn/15 bg-background/75 p-3"
               >
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <CircleDot size={13} className="text-status-warn" aria-hidden="true" />
-                  {t("pet.overview.unfinishedLabel")}
+                  {t("pet.overview.pendingLabel")}
                 </div>
-                <div className="mt-1 text-xl font-semibold tabular-nums">{unfinishedCount}</div>
+                <div className="mt-1 text-xl font-semibold tabular-nums">{pendingCount}</div>
               </div>
               <div
-                data-pet-overview-stat="optimization"
-                className="rounded-xl border border-status-running/15 bg-background/75 p-3"
+                data-pet-overview-stat="follow-up"
+                className="rounded-xl border border-status-warn/15 bg-background/75 p-3"
               >
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Sparkles size={13} className="text-status-running" aria-hidden="true" />
-                  {t("pet.overview.optimizationLabel")}
+                  <Sparkles size={13} className="text-status-warn" aria-hidden="true" />
+                  {t("pet.overview.followUpLabel")}
                 </div>
-                <div className="mt-1 text-xl font-semibold tabular-nums">{optimizationCount}</div>
-              </div>
-              <div
-                data-pet-overview-stat="completed"
-                className="rounded-xl border border-status-ok/15 bg-background/75 p-3"
-              >
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CheckCircle2 size={13} className="text-status-ok" aria-hidden="true" />
-                  {t("pet.overview.completedLabel")}
-                </div>
-                <div className="mt-1 text-xl font-semibold tabular-nums">{completedCount}</div>
+                <div className="mt-1 text-xl font-semibold tabular-nums">{followUpCount}</div>
               </div>
             </div>
           )}

@@ -2,7 +2,6 @@ import React from "react";
 import {
   CheckCircle2,
   ChevronDown,
-  CircleEllipsis,
   CircleDot,
   FolderKanban,
   Inbox,
@@ -14,44 +13,45 @@ import {
 } from "lucide-react";
 import { useT } from "../i18n";
 import type { PetSessionEmptyState } from "./SessionStatusSection";
-import type { PetWorkItem, PetWorkKind, PetWorkMap } from "./petWorkMap";
+import type { PetWorkGroup, PetWorkItem, PetWorkMap } from "./petWorkMap";
 
 const STATE_DOT: Record<PetWorkItem["state"], string> = {
   "needs-action": "bg-status-warn",
+  "follow-up": "bg-status-warn",
   running: "bg-status-running animate-pulse motion-reduce:animate-none",
   queued: "bg-status-running",
   failed: "bg-status-err",
   cancelled: "bg-muted-foreground",
-  optimization: "bg-status-running",
   completed: "bg-status-ok",
   idle: "bg-muted-foreground",
-  dormant: "bg-muted-foreground",
-  unknown: "bg-status-warn",
 };
 
 const STATE_BADGE: Record<PetWorkItem["state"], string> = {
   "needs-action": "bg-status-warn/10 text-status-warn",
+  "follow-up": "bg-status-warn/10 text-status-warn",
   running: "bg-status-running/10 text-status-running",
   queued: "bg-status-running/10 text-status-running",
   failed: "bg-status-err/10 text-status-err",
   cancelled: "bg-muted text-muted-foreground",
-  optimization: "bg-status-running/10 text-status-running",
   completed: "bg-status-ok/10 text-status-ok",
   idle: "bg-muted text-muted-foreground",
-  dormant: "bg-muted text-muted-foreground",
-  unknown: "bg-status-warn/10 text-status-warn",
 };
 
-const BRANCH_META: Record<PetWorkKind, { Icon: LucideIcon; icon: string; count: string }> = {
-  unfinished: {
+const BRANCH_META: Record<PetWorkGroup, { Icon: LucideIcon; icon: string; count: string }> = {
+  running: {
+    Icon: CircleDot,
+    icon: "bg-status-running/10 text-status-running",
+    count: "bg-status-running/10 text-status-running",
+  },
+  pending: {
     Icon: CircleDot,
     icon: "bg-status-warn/10 text-status-warn",
     count: "bg-status-warn/10 text-status-warn",
   },
-  optimization: {
+  "follow-up": {
     Icon: Sparkles,
-    icon: "bg-status-running/10 text-status-running",
-    count: "bg-status-running/10 text-status-running",
+    icon: "bg-status-warn/10 text-status-warn",
+    count: "bg-status-warn/10 text-status-warn",
   },
   completed: {
     Icon: CheckCircle2,
@@ -59,26 +59,26 @@ const BRANCH_META: Record<PetWorkKind, { Icon: LucideIcon; icon: string; count: 
     count: "bg-status-ok/10 text-status-ok",
   },
   other: {
-    Icon: CircleEllipsis,
+    Icon: Inbox,
     icon: "bg-muted text-muted-foreground",
     count: "bg-muted text-muted-foreground",
   },
 };
 
 function WorkBranch({
-  kind,
+  group,
   items,
   onOpen,
   onDismiss,
 }: {
-  kind: PetWorkKind;
+  group: PetWorkGroup;
   items: readonly PetWorkItem[];
   onOpen?: (item: PetWorkItem) => void;
   onDismiss?: (item: PetWorkItem) => void;
 }) {
   const { t } = useT();
   const [open, setOpen] = React.useState(false);
-  const { Icon, icon, count } = BRANCH_META[kind];
+  const { Icon, icon, count } = BRANCH_META[group];
   if (items.length === 0) return null;
   return (
     <details
@@ -90,7 +90,7 @@ function WorkBranch({
         <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${icon}`}>
           <Icon size={14} aria-hidden="true" />
         </span>
-        <span className="min-w-0 flex-1 text-sm font-medium">{t(`pet.work.branch.${kind}`)}</span>
+        <span className="min-w-0 flex-1 text-sm font-medium">{t(`pet.work.branch.${group}`)}</span>
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums ${count}`}
         >
@@ -187,11 +187,7 @@ export function PetWorkTree({
   const hasVisibleWork = workMap.groups.length > 0;
   const visibleItemCount = workMap.groups.reduce(
     (count, group) =>
-      count +
-      group.unfinished.length +
-      group.optimization.length +
-      group.completed.length +
-      group.other.length,
+      count + group.buckets.reduce((bucketCount, bucket) => bucketCount + bucket.items.length, 0),
     0,
   );
   const drawerSubtitle =
@@ -286,11 +282,10 @@ export function PetWorkTree({
           ) : hasVisibleWork ? (
             <ul className="space-y-3">
               {workMap.groups.map((group) => {
-                const itemCount =
-                  group.unfinished.length +
-                  group.optimization.length +
-                  group.completed.length +
-                  group.other.length;
+                const itemCount = group.buckets.reduce(
+                  (count, bucket) => count + bucket.items.length,
+                  0,
+                );
                 return (
                   <li
                     key={group.workspace ?? "__unassigned__"}
@@ -308,30 +303,15 @@ export function PetWorkTree({
                       </span>
                     </div>
                     <div className="space-y-0.5">
-                      <WorkBranch
-                        kind="unfinished"
-                        items={group.unfinished}
-                        onOpen={onOpen}
-                        onDismiss={onDismiss}
-                      />
-                      <WorkBranch
-                        kind="optimization"
-                        items={group.optimization}
-                        onOpen={onOpen}
-                        onDismiss={onDismiss}
-                      />
-                      <WorkBranch
-                        kind="completed"
-                        items={group.completed}
-                        onOpen={onOpen}
-                        onDismiss={onDismiss}
-                      />
-                      <WorkBranch
-                        kind="other"
-                        items={group.other}
-                        onOpen={onOpen}
-                        onDismiss={onDismiss}
-                      />
+                      {group.buckets.map((bucket) => (
+                        <WorkBranch
+                          key={bucket.group}
+                          group={bucket.group}
+                          items={bucket.items}
+                          onOpen={onOpen}
+                          onDismiss={onDismiss}
+                        />
+                      ))}
                     </div>
                   </li>
                 );

@@ -134,9 +134,9 @@ export function PetWorldPane({
       className="mimi-surface flex max-h-full flex-col self-start overflow-hidden rounded-3xl"
     >
       <PetOverviewHeader
-        unfinishedCount={workMap.counts.unfinished}
-        optimizationCount={workMap.counts.optimization}
-        completedCount={workMap.counts.completed}
+        runningCount={workMap.counts.running}
+        pendingCount={workMap.counts.pending}
+        followUpCount={workMap.counts["follow-up"]}
         observedAt={projection?.observedAt}
         now={now}
         loading={status === "loading"}
