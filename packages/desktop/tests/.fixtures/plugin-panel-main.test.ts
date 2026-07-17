@@ -2,7 +2,7 @@
 // ESM mocks cannot collide with the rest of the repository's test modules.
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   installPluginPanelElectronMock,
@@ -382,5 +382,77 @@ describe("PluginPanelBridge", () => {
     await expect(call("hang")).rejects.toThrow(/timed out/);
     await expect(call("large-again")).rejects.toThrow(/result is too large/);
     await expect(call("rate")).rejects.toThrow(/rate limit/);
+  });
+
+  test("returns read-only workspace metadata with a best-effort git branch", async () => {
+    const workspaceRoot = mkdtempSync(join(tmpdir(), "csplugin-workspace-"));
+    mkdirSync(join(workspaceRoot, ".git"), { recursive: true });
+    writeFileSync(join(workspaceRoot, ".git", "HEAD"), "ref: refs/heads/feature/x\n");
+    try {
+      const bridge = new PluginPanelBridge({
+        isTrustedHost: () => true,
+        isWorkspaceTrusted: (cwd) => cwd === workspaceRoot,
+        getAgentBridge: () => null,
+      });
+      bridge.registerIpc();
+      const guest = fakeGuest(14);
+      bridge.registerGuest(
+        guest as any,
+        pluginPanelElectronMock.ownerWindow as any,
+        bridgeResource(["workspace.info"]) as any,
+      );
+      await bindBridgeGuest(14, { cwd: workspaceRoot });
+      const info = await pluginPanelElectronMock.ipcHandlers.get("plugin-panel:call")!(
+        { sender: guest },
+        "workspace.info",
+        {},
+      );
+      expect(info).toEqual({
+        name: basename(workspaceRoot),
+        root: workspaceRoot,
+        trusted: true,
+        gitBranch: "feature/x",
+      });
+    } finally {
+      rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("sends title-prefixed system notifications under a dedicated per-window cap", async () => {
+    const shown: { title: string; body: string }[] = [];
+    const bridge = new PluginPanelBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      getAgentBridge: () => null,
+      showNotification: (notification) => {
+        shown.push(notification);
+        return true;
+      },
+      limits: { maxNotificationsPerWindow: 2, rateWindowMs: 60_000 },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(15);
+    bridge.registerGuest(
+      guest as any,
+      pluginPanelElectronMock.ownerWindow as any,
+      bridgeResource(["notifications.send"]) as any,
+    );
+    await bindBridgeGuest(15);
+    const call = (params: unknown) =>
+      pluginPanelElectronMock.ipcHandlers.get("plugin-panel:call")!(
+        { sender: guest },
+        "notifications.send",
+        params,
+      ) as Promise<unknown>;
+
+    expect(await call({ body: "build finished" })).toBe(true);
+    expect(await call({ title: "CI", body: "build finished" })).toBe(true);
+    // The panel title always prefixes the notification: no app impersonation.
+    expect(shown).toEqual([
+      { title: "Dashboard", body: "build finished" },
+      { title: "Dashboard: CI", body: "build finished" },
+    ]);
+    await expect(call({ body: "third" })).rejects.toThrow(/notification limit/);
+    await expect(call({ body: "" })).rejects.toThrow(/non-empty body/);
   });
 });

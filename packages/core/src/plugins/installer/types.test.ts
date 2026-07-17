@@ -131,6 +131,21 @@ describe("PluginPanelsManifest", () => {
       }),
     ).toThrow();
   });
+
+  test("accepts the workspace.info and notifications.send permissions", () => {
+    const panels = PluginPanelsManifest.parse({
+      version: 1,
+      entries: [
+        {
+          id: "a",
+          title: { default: "A" },
+          entry: "panels/a.html",
+          permissions: ["workspace.info", "notifications.send"],
+        },
+      ],
+    });
+    expect(panels.entries[0].permissions).toEqual(["workspace.info", "notifications.send"]);
+  });
 });
 
 describe("PluginAutomationsManifest", () => {

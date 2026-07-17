@@ -5,7 +5,9 @@ export type PluginPanelPermission =
   | "context.workspace"
   | "storage"
   | "external.open"
-  | "agent.submitPrompt";
+  | "agent.submitPrompt"
+  | "workspace.info"
+  | "notifications.send";
 
 /**
  * Icon allowlist — must stay byte-identical to core's PLUGIN_PANEL_ICONS

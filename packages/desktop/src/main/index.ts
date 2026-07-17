@@ -430,6 +430,12 @@ const pluginPanelBridge = new PluginPanelBridge({
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
   isWorkspaceTrusted: (cwd) => getTrustCachedSync(cwd) === "trusted",
   getAgentBridge: () => bridge,
+  showNotification: ({ title, body }) => {
+    if (!Notification.isSupported()) return false;
+    // Best-effort, same as the app's own agent notifications.
+    new Notification({ title, body }).show();
+    return true;
+  },
 });
 pluginPanelBridge.registerIpc();
 const imGatewayService = new ImGatewayService({

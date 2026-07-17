@@ -6,6 +6,8 @@ export const PLUGIN_PANEL_PERMISSIONS = [
   "storage",
   "external.open",
   "agent.submitPrompt",
+  "workspace.info",
+  "notifications.send",
 ] as const;
 
 /**
