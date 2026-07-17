@@ -33,6 +33,24 @@ describe("PetWorkInboxStore", () => {
     }
   });
 
+  test("accepts every structured work group prefix, including running", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codeshell-pet-work-inbox-"));
+    try {
+      const file = join(root, "work-inbox.json");
+      const store = new PetWorkInboxStore(file);
+      const ids = [
+        "running:session-a",
+        "pending:session-b:req-1",
+        "follow-up:session-c",
+        "completed:session-d",
+        "other:session-e",
+      ];
+      expect(store.add(ids).dismissedIds).toEqual(ids);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test("rejects malformed ids, bounds history and persists clear", async () => {
     const root = await mkdtemp(join(tmpdir(), "codeshell-pet-work-inbox-"));
     try {

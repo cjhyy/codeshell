@@ -5,7 +5,7 @@ export const MAX_PET_WORK_INBOX_DISMISSED_ITEMS = 1_000;
 export const MAX_PET_WORK_ITEM_ID_LENGTH = 512;
 
 const PET_WORK_ITEM_ID_PATTERN =
-  /^(?:pending|unfinished|optimization|completed|other|follow-up):[^\u0000\r\n]+$/;
+  /^(?:running|pending|follow-up|completed|other):[^\u0000\r\n]+$/;
 
 export interface PetWorkInboxSnapshot {
   revision: number;
