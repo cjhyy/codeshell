@@ -98,7 +98,10 @@ import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
+import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
+import { PetSegmentController } from "./pet/pet-segment-controller.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
+import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -1060,11 +1063,23 @@ async function createWindow(): Promise<BrowserWindow> {
       bridge,
       noWorkspaceCwd: resolveNoRepoCwd(),
     });
+    const petWorkMemory = new PetWorkMemoryStore(
+      resolve(app.getPath("userData"), "pet", "work-memory.json"),
+    );
+    // The topic-segment controller is created inside petInitialization once the
+    // durable pet session id is known; until then the dispatch service holds a
+    // stable wrapper that no-ops (beginTurn → undefined; closure → nothing).
+    let petSegmentController: PetSegmentController | null = null;
     petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
+      segmentController: {
+        beginTurn: () => petSegmentController?.beginTurn() ?? Promise.resolve(undefined),
+        onDelegationClosed: (closure) =>
+          petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
+      },
       listWorkspaces: () => mobileOrchestrator.projectList(),
       listReusableSessions: async () => {
         const noWorkspaceCwd = resolveNoRepoCwd();
@@ -1107,7 +1122,29 @@ async function createWindow(): Promise<BrowserWindow> {
     petAttentionPolicy = attention;
     const petInitialization = (async () => {
       await aggregator.start();
-      await Promise.all([petReceipts.load(), petWorkInbox.load()]);
+      await Promise.all([petReceipts.load(), petWorkInbox.load(), petWorkMemory.load()]);
+      // Build the topic-segment controller now that the pet session id is
+      // resolved. Range archival rides the generic archive_range worker query;
+      // dispatch currently passes no turnRange, so it stays dormant.
+      const { petSessionId } = await petMetadata.ensure();
+      const petBridge = bridge;
+      petSegmentController = new PetSegmentController({
+        store: petWorkMemory,
+        petSessionId,
+        archiveRange: async (sessionId, range) => {
+          const response = await petBridge.requestWorker("agent/query", {
+            type: "archive_range",
+            sessionId,
+            start: range.start,
+            end: range.end,
+          });
+          if (!response.ok) throw new Error(response.message);
+          const data = (response.result as { data?: { before?: number; after?: number } })?.data;
+          return { before: data?.before ?? 0, after: data?.after ?? 0 };
+        },
+        now: Date.now,
+        idleMs: DEFAULT_SEGMENT_IDLE_MS,
+      });
       attention.start();
       // Auto-archive completed work sessions idle for 7+ days, then force a full
       // catalog rebuild. Rationale for the full pass: archiveDiskSession touches
