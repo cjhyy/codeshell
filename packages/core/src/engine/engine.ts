@@ -2,7 +2,6 @@
  * Engine — the main facade that wires all components together.
  */
 
-import { randomUUID } from "node:crypto";
 import type {
   ClientDefaults,
   Message,
@@ -53,7 +52,6 @@ import type { HookHandler } from "../hooks/registry.js";
 import { createGoalStopHook, type GoalJudgeRuntimeContext } from "../hooks/goal-stop-hook.js";
 import {
   normalizeGoal,
-  resolveGoalSetAt,
   resolveMaxTurns,
   resolveMaxStopBlocks,
   goalConfigFromLifecycle,
@@ -159,6 +157,12 @@ import {
   composeRunSystemPrompt,
   assembleRunMessages,
 } from "./run-context.js";
+import {
+  resolveRunGoal,
+  armRunGoalHook,
+  createGoalTerminationApplier,
+  type GoalRunSlots,
+} from "./run-goal.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../types.js";
@@ -1845,129 +1849,47 @@ export class Engine {
       // persisted active goal (one active goal per session) and announce it. A
       // bare send with no options.goal inherits the stored active goal so the
       // model keeps working toward it — that's what makes it persistent.
-      const explicitGoal = normalizeGoal(options?.goal);
-      const storedLifecycle = session.state.goalLifecycle;
-      const storedGoal =
-        this.config.isSubAgent !== true &&
-        storedLifecycle &&
-        isGoalLifecycleCurrent(storedLifecycle)
-          ? goalConfigFromLifecycle(storedLifecycle)
-          : undefined;
-      if (
-        storedGoal &&
-        !explicitGoal &&
-        session.state.goalLifecycle?.phase === "waiting" &&
-        !this.sessionManager.saveActiveGoal(session.state, storedGoal)
-      ) {
-        throw new Error(`Failed to arm waiting goal for session ${sid}`);
-      }
-      if (explicitGoal && this.config.isSubAgent !== true) {
-        // Supplying a goal on a run is an explicit arm/resume operation.
-        delete explicitGoal.paused;
-        const replaced = !!storedGoal && storedGoal.objective !== explicitGoal.objective;
-        // Stamp WHEN this goal was set so the judge can anchor relative deadlines
-        // ("做到3点") to the set time, not "now" — else once the clock passes the
-        // deadline the judge could read "3点" as tomorrow's and never stop. A new
-        // or changed objective gets a fresh stamp; re-sending the SAME objective
-        // keeps the original anchor (the goal continues, the user didn't restate a
-        // new deadline). User input never carries setAtMs, so we set it here.
-        const resolvedSetAt = resolveGoalSetAt(explicitGoal.objective, storedGoal, Date.now());
-        explicitGoal.setAtMs = resolvedSetAt;
-        explicitGoal.goalId = randomUUID();
-        explicitGoal.revision = 1;
-        if (
-          !this.sessionManager.saveActiveGoal(session.state, explicitGoal, {
-            replaceCurrent: storedGoal !== undefined,
-          })
-        ) {
-          throw new Error(`Failed to persist active goal for session ${sid}`);
-        }
-        options?.onStream?.({
-          type: "goal_set",
-          goalId: explicitGoal.goalId,
-          revision: explicitGoal.revision,
-          objective: explicitGoal.objective,
-          replaced,
-        });
-      }
-      const fallbackGoal = normalizeGoal(this.config.goal);
-      if (fallbackGoal && !fallbackGoal.goalId) fallbackGoal.goalId = randomUUID();
-      if (fallbackGoal && !fallbackGoal.revision) fallbackGoal.revision = 1;
-      const normalizedGoal =
-        explicitGoal ??
-        (storedGoal?.paused === true ? undefined : storedGoal) ??
-        (fallbackGoal?.paused === true ? undefined : fallbackGoal);
-      // Snapshot the persisted goal identity owned by THIS run. Terminal
-      // cleanup compares against this immutable copy so an old run cannot
-      // delete a replacement goal installed while it was finishing.
-      const persistedRunGoal =
-        normalizedGoal &&
-        session.state.goalLifecycle &&
-        isGoalLifecycleCurrent(session.state.goalLifecycle) &&
-        isSameGoalVersion(goalConfigFromLifecycle(session.state.goalLifecycle), normalizedGoal)
-          ? { ...normalizedGoal }
-          : undefined;
-      let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
+      const goalSlots: GoalRunSlots = {
+        getActiveRuntimeGoal: () => this.activeRuntimeGoal,
+        setActiveRuntimeGoal: (g) => {
+          this.activeRuntimeGoal = g;
+        },
+        getActivePersistedRunGoal: () => this.activePersistedRunGoal,
+        setActivePersistedRunGoal: (g) => {
+          this.activePersistedRunGoal = g;
+        },
+        getActiveGoalHook: () => this.activeGoalHook,
+        setActiveGoalHook: (h) => {
+          this.activeGoalHook = h;
+        },
+        setActiveGoalHookAttached: (a) => {
+          this.activeGoalHookAttached = a;
+        },
+      };
+      const { normalizedGoal, persistedRunGoal } = resolveRunGoal({
+        options,
+        session,
+        sessionManager: this.sessionManager,
+        configGoal: this.config.goal,
+        isSubAgent: this.config.isSubAgent === true,
+        sid,
+        onStream: options?.onStream,
+      });
       let latestGoalJudgeContext: GoalJudgeRuntimeContext | undefined;
-      if (this.config.isSubAgent !== true) {
-        // Keep a dormant hook even when this ordinary run inherited a paused
-        // persisted goal. A mid-run Resume can then arm Goal mode at the same
-        // safe step boundary as Steer instead of waiting for another submit.
-        this.activeRuntimeGoal = normalizedGoal ?? null;
-        this.activePersistedRunGoal = persistedRunGoal ?? null;
-        goalHookHandler = createGoalStopHook({
-          goal: normalizedGoal,
-          getGoal: () => this.activeRuntimeGoal ?? undefined,
-          llm: llmClient,
-          log: logger,
-          getJudgeContext: () => latestGoalJudgeContext,
-          onJudgeUsage: (usage) => {
-            // The provider records this request into llmClient.getUsage() and the
-            // process-wide CostTracker. This separate callback feeds the session
-            // cumulative cache counters and the live Goal hard-budget tracker.
-            if (usage) recordCumulativeUsage(usage);
-            // Charge the request even if an edit landed while the judge was
-            // awaiting its response. Revision fencing suppresses the old
-            // verdict, not the provider cost; otherwise repeated edits can
-            // bypass the Goal hard budget.
-            return turnLoop.recordGoalJudgeUsage(usage);
-          },
-          // Clear the persisted active goal the moment the judge says it's met,
-          // so a later bare send doesn't re-inherit a satisfied goal. The hook
-          // calls this from inside its met branch (single source of truth for
-          // "goal achieved"); engine owns the persistence side-effect.
-          onMet: () => {
-            const runGoal = this.activePersistedRunGoal ?? persistedRunGoal;
-            return runGoal ? this.persistGoalTerminal(session.state, runGoal, "completed") : true;
-          },
-          onWaiting: () => {
-            const runGoal = this.activePersistedRunGoal ?? persistedRunGoal;
-            return runGoal ? this.sessionManager.markGoalWaiting(session.state, runGoal) : true;
-          },
-          // Re-read the persisted goal each turn so a mid-run 清除 (clearGoal
-          // wrote state.json but this hook's frozen goal copy + the closure's
-          // in-RAM session are untouched) actually stops the judge. Reads disk
-          // via readActiveGoal — authoritative and independent of which session
-          // instance the run closure holds.
-          isGoalActive: (sid) => {
-            const runtimeGoal = this.activeRuntimeGoal;
-            if (!runtimeGoal) return false;
-            // A config-only Goal has no disk record to re-check.
-            if (!this.activePersistedRunGoal) return true;
-            const liveGoal = this.sessionManager.readActiveGoal(sid);
-            return liveGoal?.paused !== true && isSameGoalVersion(liveGoal, runtimeGoal);
-          },
-        });
-        if (normalizedGoal) {
-          this.hooks.register("on_stop", goalHookHandler, 0, "goal-stop");
-          this.activeGoalHookAttached = true;
-        } else {
-          this.activeGoalHookAttached = false;
-        }
-        // Expose for edit/pause/resume/delete mid-run. Already guarded by
-        // isSubAgent above.
-        this.activeGoalHook = goalHookHandler;
-      }
+      const goalHookHandler = armRunGoalHook({
+        slots: goalSlots,
+        hooks: this.hooks,
+        llmClient,
+        isSubAgent: this.config.isSubAgent === true,
+        normalizedGoal,
+        persistedRunGoal,
+        session,
+        sessionManager: this.sessionManager,
+        persistGoalTerminal: (state, goal, reason) => this.persistGoalTerminal(state, goal, reason),
+        getJudgeContext: () => latestGoalJudgeContext,
+        recordCumulativeUsage,
+        recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
+      });
 
       // Surface compaction events to the UI so the user knows when context was trimmed.
       // Buffer the most recent event so TurnLoop can drain it and emit the
@@ -2162,53 +2084,17 @@ export class Engine {
       // only — sub-agents don't carry user-clearable persistent goals.
       if (this.config.isSubAgent !== true) this.activeRunSession = session;
 
-      const applyGoalTermination = (
-        termination: GoalTerminationReason | undefined,
-        round: number | undefined,
-      ): void => {
-        const runGoal = this.activePersistedRunGoal ?? persistedRunGoal;
-        if (!termination || !runGoal) return;
-        // Judge prompt overflow ends only this run. The objective is unfinished
-        // and may be resumed after the user reduces fixed judge context, so it
-        // must not get a terminal tombstone or be cleared from activeGoal.
-        if (termination === "judge_prompt_too_large") return;
-        const outcome = this.persistGoalTerminalOutcome(session.state, runGoal, termination);
-        if (outcome === "failed") {
-          // No terminal event has been published. Re-assert the authoritative
-          // active Goal in case another optimistic control changed the client.
-          const authoritative = this.sessionManager.readActiveGoal(session.state.sessionId);
-          if (authoritative) {
-            options?.onStream?.({
-              type: "goal_updated",
-              goalId: authoritative.goalId,
-              revision: authoritative.revision,
-              objective: authoritative.objective,
-              paused: authoritative.paused === true,
-            });
-          }
-          return;
-        }
-        if (outcome === "persisted") {
-          // The durable terminal transition is the publication barrier: clients
-          // must never observe an exhausted Goal that does not exist on disk.
-          options?.onStream?.({
-            type: "goal_progress",
-            goalId: runGoal.goalId,
-            revision: runGoal.revision,
-            status: "exhausted",
-            round: round ?? 0,
-          });
-        }
-        if (goalHookHandler) {
-          this.hooks.unregister("on_stop", goalHookHandler);
-          if (this.activeGoalHook === goalHookHandler) {
-            this.activeGoalHook = null;
-            this.activeGoalHookAttached = false;
-            this.activeRuntimeGoal = null;
-            this.activePersistedRunGoal = null;
-          }
-        }
-      };
+      const applyGoalTermination = createGoalTerminationApplier({
+        slots: goalSlots,
+        hooks: this.hooks,
+        session,
+        persistedRunGoal,
+        goalHookHandler,
+        persistGoalTerminalOutcome: (state, goal, t) =>
+          this.persistGoalTerminalOutcome(state, goal, t),
+        readActiveGoal: (s) => this.sessionManager.readActiveGoal(s),
+        onStream: options?.onStream,
+      });
 
       let result: Awaited<ReturnType<typeof turnLoop.run>>;
       let firstGoalTermination: GoalTerminationReason | undefined;
