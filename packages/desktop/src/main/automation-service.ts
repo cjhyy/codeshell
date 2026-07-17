@@ -7,7 +7,12 @@
  * Returns plain serializable summaries (no class instances cross IPC).
  */
 
-import type { CronScheduler, CronJob, CronPermissionLevel } from "@cjhyy/code-shell-core/internal";
+import type {
+  CronScheduler,
+  CronJob,
+  CronPermissionLevel,
+  CronTemplateSource,
+} from "@cjhyy/code-shell-core/internal";
 
 export interface AutomationSummary {
   id: string;
@@ -27,6 +32,8 @@ export interface AutomationSummary {
   once: boolean;
   /** Bound conversation to continue on fire (CronCreate resumeSessionId); null = fresh session. */
   resumeSessionId: string | null;
+  /** Plugin template provenance; null for ordinary jobs. */
+  templateSource: CronTemplateSource | null;
 }
 
 export interface CreateAutomationInput {
@@ -45,7 +52,7 @@ export function setAutomationScheduler(s: CronScheduler | null): void {
   scheduler = s;
 }
 
-function toSummary(job: CronJob): AutomationSummary {
+export function automationSummary(job: CronJob): AutomationSummary {
   return {
     id: job.id,
     name: job.name,
@@ -62,12 +69,18 @@ function toSummary(job: CronJob): AutomationSummary {
     lastRunId: job.lastRunId ?? null,
     once: job.once === true,
     resumeSessionId: job.resumeSessionId ?? null,
+    templateSource: job.templateSource ?? null,
   };
 }
 
 function requireScheduler(): CronScheduler {
   if (!scheduler) throw new Error("automation scheduler not initialized");
   return scheduler;
+}
+
+/** Scheduler injection stays host-owned; plugin instantiation receives it explicitly. */
+export function requireAutomationScheduler(): CronScheduler {
+  return requireScheduler();
 }
 
 /**
@@ -92,14 +105,14 @@ export function reloadAutomations(): void {
 export function listAutomations(): AutomationSummary[] {
   if (!scheduler) return [];
   syncFromStore();
-  return scheduler.list().map(toSummary);
+  return scheduler.list().map(automationSummary);
 }
 
 export function getAutomation(id: string): AutomationSummary | null {
   if (!scheduler) return null;
   syncFromStore();
   const job = scheduler.get(id);
-  return job ? toSummary(job) : null;
+  return job ? automationSummary(job) : null;
 }
 
 export function createAutomation(input: CreateAutomationInput): AutomationSummary {
@@ -110,7 +123,7 @@ export function createAutomation(input: CreateAutomationInput): AutomationSummar
     ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
     ...(input.permissionLevel !== undefined ? { permissionLevel: input.permissionLevel } : {}),
   });
-  return toSummary(job);
+  return automationSummary(job);
 }
 
 export interface UpdateAutomationInput {
@@ -122,11 +135,14 @@ export interface UpdateAutomationInput {
   permissionLevel?: CronPermissionLevel;
 }
 
-export function updateAutomation(id: string, patch: UpdateAutomationInput): AutomationSummary | null {
+export function updateAutomation(
+  id: string,
+  patch: UpdateAutomationInput,
+): AutomationSummary | null {
   const s = requireScheduler();
   syncFromStore();
   const job = s.update(id, patch);
-  return job ? toSummary(job) : null;
+  return job ? automationSummary(job) : null;
 }
 
 export function deleteAutomation(id: string): boolean {

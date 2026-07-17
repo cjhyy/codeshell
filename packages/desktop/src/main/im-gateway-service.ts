@@ -12,6 +12,7 @@ import {
   type AdapterRuntimeState,
   type ChannelAdapter,
   type ChannelMessage,
+  type ChatCommandDefinition,
   type ChatMiddleware,
   type GatewayInstanceLease,
 } from "@cjhyy/code-shell-chat";
@@ -19,6 +20,7 @@ import {
   CODE_SHELL_REMOTE_COMMANDS,
   createCodeShellRemoteCommands,
   createMimiPetChat,
+  type ConfiguredChannel,
   defaultGatewayConfigPath,
   DesktopControlClient,
   gatewayConfigTemplate,
@@ -152,6 +154,10 @@ export interface ImGatewayServiceOptions {
     clientSecret: string;
     onConnected?: () => void;
   }) => ChannelAdapter | Promise<ChannelAdapter>;
+  createChannelAdapter?: (
+    config: ConfiguredChannel,
+    options?: { discordCommands?: readonly ChatCommandDefinition[] },
+  ) => ChannelAdapter | Promise<ChannelAdapter>;
 }
 
 interface ActiveGateway {
@@ -315,10 +321,12 @@ export class ImGatewayService {
   async start(): Promise<ImGatewayStatus> {
     if (this.active) return this.status();
     await this.stopDingTalkDiscovery();
-    // Adapter imports include optional third-party SDKs. Load them only when
-    // starting the gateway so status/config operations stay lightweight and
-    // do not probe a renderer-like global `window` in mixed test processes.
-    const { createChannelAdapter } = await import("@cjhyy/code-shell-chat/factory");
+    // Load only the selected platform modules when starting the gateway so
+    // status/config operations stay lightweight and mixed test processes do
+    // not evaluate unrelated SDK globals.
+    const createChannelAdapter =
+      this.options.createChannelAdapter ??
+      (await import("@cjhyy/code-shell-chat/factory")).createChannelAdapterAsync;
     const config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
     // A previous stop() may still be releasing its cross-process lease while
     // its adapters wind down. Wait for that to finish before re-acquiring so a
@@ -329,8 +337,10 @@ export class ImGatewayService {
       this.adapterStates.clear();
       const desktop = new DesktopControlClient(config.desktop);
       const abort = new AbortController();
-      const adapters = config.channels.map((channel) =>
-        createChannelAdapter(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),
+      const adapters = await Promise.all(
+        config.channels.map((channel) =>
+          createChannelAdapter(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),
+        ),
       );
       // Track each adapter's first-turn outcome. superviseAdapter catches
       // adapter.run rejections and restarts with backoff, so gateway.run never

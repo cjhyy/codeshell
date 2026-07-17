@@ -6,4 +6,9 @@ export {
   ErrorCodes,
   type RpcMessage,
   type RunResult,
+  type PluginCommandsListParams,
+  type PluginCommandsListResult,
+  type ProtocolPluginCommandDescriptor,
+  type PluginCommandExpandParams,
+  type PluginCommandExpandResult,
 } from "./types.js";

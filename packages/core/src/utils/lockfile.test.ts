@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { lock, check, unlock } from "./lockfile.js";
@@ -15,6 +15,12 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 describe("lockfile (proper-lockfile lazy accessor)", () => {
+  test("keeps proper-lockfile's missing declarations out of the public type surface", () => {
+    const source = readFileSync(join(import.meta.dir, "lockfile.ts"), "utf8");
+    expect(source).not.toMatch(/import\s+type\b[^;]*from\s+["']proper-lockfile["']/);
+    expect(source).not.toMatch(/typeof\s+import\(["']proper-lockfile["']\)/);
+  });
+
   // Regression: this module compiles to ESM and proper-lockfile is CommonJS.
   // A bare `require()` threw "require is not defined" in ESM hosts (Electron
   // main), which made every run lock silently fail. Loading the package must

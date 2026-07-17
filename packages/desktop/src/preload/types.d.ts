@@ -15,13 +15,14 @@ import type {
   SourceScope,
   WorkspaceSourceBinding,
   WorkspaceProfile,
+  LocalPluginPreview,
 } from "@cjhyy/code-shell-core";
 import type { ApprovalRequest, ReasoningControl } from "@cjhyy/code-shell-core/internal";
 import type {
   CCAvailability,
   DiscoveredSession,
   QuotaResult,
-} from "@cjhyy/code-shell-capability-coding";
+} from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { PetApi } from "./pet-api";
 import type {
   PluginPanelBindInput,
@@ -31,6 +32,14 @@ import type {
   PreparedPluginPanel,
 } from "../shared/plugin-panels";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
+import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
+import type { PluginMediaAvailability, PluginMediaDto } from "../shared/plugin-media";
+import type {
+  DigitalHumanProfileExportResult,
+  DigitalHumanProfileImportCommitInput,
+  DigitalHumanProfileImportCommitResult,
+  DigitalHumanProfileImportPickResult,
+} from "../shared/digital-human-profile-transfer";
 
 export type {
   PluginPanelBindInput,
@@ -39,6 +48,15 @@ export type {
   PluginPanelHostContext,
   PreparedPluginPanel,
 };
+export type { ExpandedPluginCommand, PluginCommandDescriptor };
+export type { PluginMediaAvailability, PluginMediaDto };
+export type {
+  DigitalHumanProfileExportResult,
+  DigitalHumanProfileImportCommitInput,
+  DigitalHumanProfileImportCommitResult,
+  DigitalHumanProfileImportPickResult,
+  DigitalHumanProfileImportPreview,
+} from "../shared/digital-human-profile-transfer";
 
 export type {
   PetApi,
@@ -57,9 +75,12 @@ export type {
   PetWorkerState,
   PetPeek,
   PetWidgetPosition,
+  PetWorkInboxSnapshot,
+  PetWorkInboxUpdate,
 } from "./pet-api";
 
 export type { SessionWorkspace, SessionForkLineage };
+export type { LocalPluginPreview };
 
 /** Kept local so desktop typechecking does not depend on a prebuilt core dist. */
 export interface ContextTransferStreamEvent {
@@ -213,15 +234,65 @@ export type PtyStartResult = { ok: true; pid: number } | { ok: false; detail: st
 /** A plugin-provided hook surfaced to the settings 钩子 page. Mirrors
  *  core's PluginHookEntry (renderer can't import core). */
 export interface PluginHookEntry {
+  installKey: string;
   plugin: string;
   event: string;
   rawEvent: string;
   command: string;
   matcher?: string;
   disabled: boolean;
+  /** Hook definition matches install-time digest, changed after install, or predates digests. */
+  integrity: "verified" | "changed" | "legacy";
+  /** Explicit execution trust. Pending/changed hooks fail closed. */
+  approval: "approved" | "pending" | "changed" | "legacy" | "none";
   /** Stable per-hook identity (`plugin:RawEvent:command`) — the record key
    *  written to `capabilityOverrides.pluginHooks` to toggle just this hook. */
   key: string;
+}
+
+export interface PluginHookApprovalResult {
+  installKey: string;
+  plugin: string;
+  status: PluginHookEntry["approval"];
+  changed: boolean;
+}
+
+export interface PluginHookReviewCommand {
+  rawEvent: string;
+  matcher?: string;
+  command: string;
+  commandDigest: string;
+  commandTruncated?: boolean;
+  async?: boolean;
+  timeoutMs?: number;
+}
+
+export interface PluginHookReviewDiffItem {
+  change: "added" | "removed" | "changed" | "unchanged";
+  current?: PluginHookReviewCommand;
+  previous?: PluginHookReviewCommand;
+}
+
+export interface PluginHookReview {
+  installKey: string;
+  plugin: string;
+  status: PluginHookEntry["approval"];
+  baselineAvailable: boolean;
+  items: PluginHookReviewDiffItem[];
+  error?: string;
+}
+
+export type PluginMcpApprovalState = "approved" | "pending" | "changed" | "legacy" | "none";
+
+export interface PluginMcpTrustEntry {
+  installKey: string;
+  plugin: string;
+  serverNames: string[];
+  status: PluginMcpApprovalState;
+}
+
+export interface PluginMcpApprovalResult extends PluginMcpTrustEntry {
+  changed: boolean;
 }
 
 export interface ApprovalRequestEnvelope {
@@ -1299,6 +1370,14 @@ export interface CodeshellApi {
   cancelAutomationRun(id: string): Promise<boolean>;
   listSkills(cwd: string, opts?: { includeDisabled?: boolean }): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
+  getPluginMedia(installKey: string, includeScreenshots?: boolean): Promise<PluginMediaDto | null>;
+  listPluginCommands(cwd: string): Promise<PluginCommandDescriptor[]>;
+  expandPluginCommand(
+    cwd: string,
+    name: string,
+    rawArguments: string,
+  ): Promise<ExpandedPluginCommand>;
+  onPluginCommandsChanged(cb: () => void): () => void;
   listPluginPanels(cwd: string, locale: string): Promise<PluginPanelDescriptor[]>;
   listPanelExtensions(cwd: string, locale: string): Promise<PluginPanelExtensionSummary[]>;
   preparePluginPanel(id: string): Promise<PreparedPluginPanel>;
@@ -1308,6 +1387,12 @@ export interface CodeshellApi {
   respondAgentPanelRequest(response: AgentPanelHostResponse): void;
   /** Full content inventory for one installed plugin (详情页). */
   getPluginDetail(installKey: string): Promise<PluginDetail | null>;
+  createAutomationFromPluginTemplate(
+    installKey: string,
+    templateId: string,
+    expectedRevision: string,
+    cwd?: string,
+  ): Promise<AutomationSummary>;
   /**
    * Unified capability view (builtin tools + MCP servers + skills + plugins)
    * via the core CapabilityService. Never throws — returns [] on error.
@@ -1380,6 +1465,15 @@ export interface CodeshellApi {
   >;
   installCatalogProfile(name: string): Promise<void>;
   saveProfile(profile: WorkspaceProfile): Promise<void>;
+  pickProfileDefinitionImport(): Promise<DigitalHumanProfileImportPickResult>;
+  importReviewedProfileDefinition(
+    input: DigitalHumanProfileImportCommitInput,
+  ): Promise<DigitalHumanProfileImportCommitResult>;
+  exportProfileDefinition(name: string): Promise<DigitalHumanProfileExportResult>;
+  deleteProfile(
+    name: string,
+    options?: { cwd?: string; clearActiveProject?: boolean },
+  ): Promise<void>;
   listDigitalHumanTeams(): Promise<import("@cjhyy/code-shell-pet").DigitalHumanTeam[]>;
   saveDigitalHumanTeam(
     team: import("@cjhyy/code-shell-pet").DigitalHumanTeam,
@@ -1489,19 +1583,24 @@ export interface CodeshellApi {
   pickPluginSource(
     kind: "dir" | "zip",
   ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null>;
+  /** Validate and summarize a local plugin without mutating installed state. */
+  previewLocalPlugin(input: {
+    kind: "dir" | "zip";
+    path: string;
+  }): Promise<{ ok: true; preview: LocalPluginPreview } | { ok: false; error: string }>;
   /**
-   * Install a plugin from a local directory or .zip (global scope). On a
-   * same-name collision, resolves to { ok:false, alreadyInstalled:true, name }
-   * carrying the AUTHORITATIVE plugin name (from the manifest) — the UI confirms
-   * an overwrite and retries with `overwrite: true`.
+   * Install a previously reviewed local plugin. Main re-previews and requires
+   * the same reviewToken before any installed-state mutation.
    */
   installLocalPlugin(input: {
     kind: "dir" | "zip";
     path: string;
+    reviewToken: string;
     overwrite?: boolean;
   }): Promise<
     | { ok: true; name: string }
     | { ok: false; alreadyInstalled: true; name: string }
+    | { ok: false; previewChanged: true; error: string }
     | { ok: false; error?: string }
   >;
   /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
@@ -1556,6 +1655,11 @@ export interface CodeshellApi {
   >;
   /** Read-only list of plugin-provided hooks (for the settings 钩子 page). */
   listPluginHooks(disabledPlugins?: string[]): Promise<PluginHookEntry[]>;
+  approvePluginHooks(installKey: string): Promise<PluginHookApprovalResult[]>;
+  revokePluginHooks(installKey: string): Promise<PluginHookApprovalResult[]>;
+  listPluginMcpTrust(): Promise<PluginMcpTrustEntry[]>;
+  approvePluginMcp(installKey: string): Promise<PluginMcpApprovalResult[]>;
+  revokePluginMcp(installKey: string): Promise<PluginMcpApprovalResult[]>;
   invalidateMcpProbeCache(name?: string): Promise<void>;
   probeSearch(input: SearchProbeInput): Promise<SearchProbeResult>;
   probeImage(input: ImageProbeInput): Promise<ImageProbeResult>;
@@ -2082,6 +2186,8 @@ export interface AgentDefinitionInput {
 export interface PluginSummary {
   /** Display name (without the `@marketplace` suffix). */
   name: string;
+  /** Author-provided marketplace/install surface name. */
+  displayName: string;
   /** Full install key from installed-plugins.json (e.g. "superpowers@official"). */
   installKey: string;
   /** Marketplace source — null for direct git / GitHub installs without marketplace. */
@@ -2096,16 +2202,39 @@ export interface PluginSummary {
   skillCount: number;
   /** Optional plugin description if `plugin.json` provides one. */
   description?: string;
+  longDescription?: string;
+  developerName?: string;
+  category?: string;
+  capabilities?: string[];
+  websiteURL?: string;
+  privacyPolicyURL?: string;
+  termsOfServiceURL?: string;
+  defaultPrompt?: string[];
+  brandColor?: string;
+  mediaAvailability: PluginMediaAvailability;
 }
 
 /** Full inventory for the plugin detail view (plugins:detail). */
 export interface PluginDetail extends PluginSummary {
+  mcpTrust?: PluginMcpTrustEntry;
   content: {
     skills: { name: string; description?: string }[];
     commands: string[];
     agents: string[];
     hooks: PluginHookEntry[];
+    hookReview?: PluginHookReview;
     mcpServers: string[];
+    automationTemplates: Array<{
+      id: string;
+      revision: string;
+      title: { default: string; en?: string; "zh-CN"?: string };
+      description?: string;
+      schedule: string;
+      prompt: string;
+      timezone?: string;
+      permissionLevel: AutomationPermissionLevel;
+      workspace: "current" | "none";
+    }>;
     panels: Array<{
       id: string;
       title: { default: string; en?: string; "zh-CN"?: string };
@@ -2136,6 +2265,12 @@ export interface AutomationSummary {
   lastRunId: string | null;
   once: boolean;
   resumeSessionId: string | null;
+  templateSource: {
+    installKey: string;
+    templateId: string;
+    revision: string;
+    pluginVersion?: string;
+  } | null;
 }
 
 export interface CreateAutomationInput {

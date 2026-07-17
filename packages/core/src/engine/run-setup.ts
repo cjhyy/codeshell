@@ -9,6 +9,7 @@ import { buildSourcesContextSummary } from "../sources/context-summary.js";
 export interface RunProfileState {
   workspaceProfile: ReturnType<typeof resolveActiveWorkspaceProfile>;
   sessionProfileOverrides: ReturnType<typeof profileOverridesFromDefinition> | undefined;
+  profileMemoryDir: string | undefined;
 }
 
 /** Resolve the digital-human profile bound to this run (session pin wins). */
@@ -30,7 +31,10 @@ export function resolveRunProfileState(args: {
     sessionWorkspaceProfile && workspaceProfile
       ? profileOverridesFromDefinition(workspaceProfile)
       : undefined;
-  return { workspaceProfile, sessionProfileOverrides };
+  const profileMemoryDir = workspaceProfile?.portableMemory
+    ? workspaceProfileDir(workspaceProfile.name)
+    : undefined;
+  return { workspaceProfile, sessionProfileOverrides, profileMemoryDir };
 }
 
 export interface RunPromptComposerConfigInput {
@@ -42,6 +46,7 @@ export interface RunPromptComposerConfigInput {
   responseLanguage: ComposerOptions["responseLanguage"];
   userProfile: ComposerOptions["userProfile"];
   workspaceProfile: WorkspaceProfile | undefined;
+  profileMemoryDir: ComposerOptions["profileMemoryDir"];
   instructionCompatFileNames: NonNullable<
     NonNullable<ComposerOptions["instructionOptions"]>["compatFileNames"]
   >;
@@ -70,6 +75,7 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     responseLanguage,
     userProfile,
     workspaceProfile,
+    profileMemoryDir,
     instructionCompatFileNames,
     instructionBoundaryFinder,
     disabledSkills,
@@ -94,9 +100,7 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     // WorkspaceProfile（数字人）：mainInstruction 从库活读（settings 只记名字）。
     // 命名注意：engine 的局部变量 `profile` 已被 RunBehaviorProfile 占用。
     profileMainInstruction: workspaceProfile?.mainInstruction,
-    profileMemoryDir: workspaceProfile?.portableMemory
-      ? workspaceProfileDir(workspaceProfile.name)
-      : undefined,
+    profileMemoryDir,
     instructionOptions: {
       compatFileNames: instructionCompatFileNames,
       boundaryFinder: instructionBoundaryFinder,

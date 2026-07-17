@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { Engine, EngineResult, EngineRunOptions } from "../engine/engine.js";
+import type { Engine, EngineResult } from "../engine/engine.js";
+import type { EngineRunOptions } from "../engine/run-types.js";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import { ErrorCodes, Methods, type InputAttachmentMeta } from "./types.js";

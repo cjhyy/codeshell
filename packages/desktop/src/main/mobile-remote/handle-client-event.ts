@@ -1,7 +1,6 @@
 import {
   buildSessionHistory,
   dispatchMobileChatTurn,
-  listDiskSessions,
   type ClaimedMobileUpload,
   type MobileClientEvent,
   type MobileServerEvent,
@@ -11,7 +10,8 @@ import {
   type RoomManager,
   type RoomMeta,
   type RoomPublic,
-} from "@cjhyy/code-shell-server";
+} from "@cjhyy/code-shell-server/mobile-remote";
+import { listDiskSessions } from "@cjhyy/code-shell-server/storage";
 import type { AgentBridge } from "../agent-bridge.js";
 import type { ApprovalBridge } from "../cc-room/approval-bridge.js";
 import type { TranscriptSubscriptionManager } from "../cc-room/transcript-subscriptions.js";

@@ -19,8 +19,8 @@ import {
   parseRecentHistory,
   type HistoryMessage,
   type SessionTailEvent,
-} from "@cjhyy/code-shell-capability-coding";
-import type { RoomKind, RoomMessage } from "@cjhyy/code-shell-server";
+} from "@cjhyy/code-shell-capability-coding/orchestration";
+import type { RoomKind, RoomMessage } from "@cjhyy/code-shell-server/mobile-remote";
 
 interface TranscriptTarget {
   roomId: string;

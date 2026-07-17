@@ -25,7 +25,7 @@ import {
   type ArenaParticipant,
   type ArenaResultV2,
   type OutputSink,
-} from "@cjhyy/code-shell-arena";
+} from "@cjhyy/code-shell-arena/runtime";
 import { CHALK_COLORIZER } from "../../utils/colorizer.js";
 import { ModelPool, type ModelEntry } from "@cjhyy/code-shell-core";
 import { modelEntriesFromConnections } from "@cjhyy/code-shell-core";
@@ -34,7 +34,7 @@ import type { EngineConfig } from "@cjhyy/code-shell-core";
 import type { LLMConfig } from "@cjhyy/code-shell-core";
 
 // Re-export for backward compat with core-commands.ts
-export { formatArenaResultForSession } from "@cjhyy/code-shell-arena";
+export { formatArenaResultForSession } from "@cjhyy/code-shell-arena/runtime";
 
 /** Options for controlling arena output destination. */
 export interface ArenaRunOptions {
@@ -74,8 +74,13 @@ export async function runArenaReview(
   engineConfig: EngineConfig,
   opts?: ArenaRunOptions,
 ): Promise<ArenaResultV2 | undefined> {
-  const { models: modelsFlag, mode: explicitMode, base, head, topic } =
-    typeof arg === "string" ? parseFlags(arg) : normalizeInvocation(arg);
+  const {
+    models: modelsFlag,
+    mode: explicitMode,
+    base,
+    head,
+    topic,
+  } = typeof arg === "string" ? parseFlags(arg) : normalizeInvocation(arg);
   const out: OutputSink = opts?.output ?? ((text) => console.log(text));
 
   if (!topic) {
@@ -153,7 +158,9 @@ function buildModelPool(_engineConfig: EngineConfig): ModelPool {
         pool.register(entry);
       }
     }
-  } catch { /* no settings */ }
+  } catch {
+    /* no settings */
+  }
   return pool;
 }
 
@@ -161,7 +168,9 @@ function buildModelPool(_engineConfig: EngineConfig): ModelPool {
  * Resolve a single participant entry (string key or full object) to ArenaParticipant.
  */
 function resolveOneParticipant(
-  entry: string | { name: string; model: string; provider?: string; apiKey?: string; baseUrl?: string },
+  entry:
+    | string
+    | { name: string; model: string; provider?: string; apiKey?: string; baseUrl?: string },
   pool: ModelPool,
   engineConfig: EngineConfig,
 ): ArenaParticipant | undefined {
@@ -195,10 +204,7 @@ function resolveOneParticipant(
   };
 }
 
-function resolveParticipants(
-  engineConfig: EngineConfig,
-  modelsFlag?: string,
-): ArenaParticipant[] {
+function resolveParticipants(engineConfig: EngineConfig, modelsFlag?: string): ArenaParticipant[] {
   const pool = buildModelPool(engineConfig);
 
   if (modelsFlag) {
@@ -270,9 +276,7 @@ function resolveParticipants(
 
   if (engineConfig.llm.baseUrl?.includes("openrouter")) {
     const current = engineConfig.llm.model;
-    const opponent = current.includes("claude")
-      ? "openai/gpt-5.4"
-      : "anthropic/claude-opus-4.6";
+    const opponent = current.includes("claude") ? "openai/gpt-5.4" : "anthropic/claude-opus-4.6";
     participants.push({
       name: modelDisplayName(opponent),
       llm: {

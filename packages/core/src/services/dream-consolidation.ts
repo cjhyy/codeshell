@@ -194,7 +194,10 @@ async function dispatchDreamTool(
   }
 
   try {
-    const dreamCtx = { ...ctx, __dreamLoop: true } as ToolContext;
+    // Portable profile memory is intentionally not part of automatic dream
+    // routing. Normal profile-bound runs may manage it explicitly, but the
+    // consolidation loop remains limited to its existing global/project stores.
+    const dreamCtx = { ...ctx, profileMemoryDir: undefined, __dreamLoop: true } as ToolContext;
     const result = await toolRegistry.executeTool(tc.toolName, tc.args, { ctx: dreamCtx });
     if (result.isError) return result.error ?? `Error executing ${tc.toolName}`;
     return result.result ?? "";
@@ -212,6 +215,12 @@ function checkDreamWriteGuard(
     return {
       ok: false,
       error: `Error: dream loop may only write to scope "dream" or "user", got "${scope}".`,
+    };
+  }
+  if (tc.args?.location === "profile") {
+    return {
+      ok: false,
+      error: "Error: dream loop does not manage portable profile memory.",
     };
   }
 

@@ -12,6 +12,7 @@ import type {
   ToolPathPolicy,
   ToolPathPolicyOperation,
 } from "../types.js";
+import { isMcpToolNameAllowed, isRegisteredMcpToolAllowed } from "./mcp-tool-policy.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier, classifyBashCommand } from "./permission.js";
@@ -206,12 +207,31 @@ export class ToolExecutor {
       const reg = this.registry.getTool(call.toolName) as {
         source?: string;
         serverName?: string;
+        mcpToolName?: string;
       } | null;
       if (reg?.source === "mcp" && !allowed.has(reg.serverName ?? "")) {
         return {
           id: call.id,
           toolName: call.toolName,
           error: `Tool ${call.toolName} belongs to an MCP server that is not enabled for this project. Do NOT retry this tool call.`,
+          isError: true,
+        };
+      }
+      if (
+        reg?.source === "mcp" &&
+        !isRegisteredMcpToolAllowed(
+          {
+            source: "mcp",
+            serverName: reg.serverName,
+            mcpToolName: reg.mcpToolName,
+          },
+          this.toolCtx.mcpToolPolicies,
+        )
+      ) {
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          error: `MCP tool "${reg.mcpToolName ?? call.toolName}" is disabled by this project's tool policy. Do NOT retry this tool call.`,
           isError: true,
         };
       }
@@ -231,6 +251,17 @@ export class ToolExecutor {
             error: `MCP server "${server}" is not enabled for this project. Do NOT retry this tool call.`,
             isError: true,
           };
+        }
+        if (call.toolName === "MCPTool") {
+          const tool = String((call.args as Record<string, unknown>).tool ?? "");
+          if (!isMcpToolNameAllowed(this.toolCtx.mcpToolPolicies, server, tool)) {
+            return {
+              id: call.id,
+              toolName: call.toolName,
+              error: `MCP tool "${tool}" is disabled by this project's tool policy. Do NOT retry this tool call.`,
+              isError: true,
+            };
+          }
         }
       } else if (call.toolName === "ListMcpResources") {
         const server = String((call.args as Record<string, unknown>).server ?? "");

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AgentDefinitionRegistry } from "./agent-definition-registry.js";
@@ -27,10 +27,27 @@ describe("AgentDefinitionRegistry.loadFromDirs", () => {
     writeAgent(projectDir, "researcher");
     writeAgent(userDir, "myhelper");
     const reg = AgentDefinitionRegistry.loadFromDirs(
-      [{ dir: projectDir, source: "project" }, { dir: userDir, source: "user" }],
+      [
+        { dir: projectDir, source: "project" },
+        { dir: userDir, source: "user" },
+      ],
       [],
     );
-    expect(reg.list().map((d) => d.name).sort()).toEqual(["myhelper", "researcher"]);
+    expect(
+      reg
+        .list()
+        .map((d) => d.name)
+        .sort(),
+    ).toEqual(["myhelper", "researcher"]);
+  });
+
+  it("loads nested agent definitions in deterministic path order", () => {
+    mkdirSync(join(projectDir, "review"), { recursive: true });
+    writeAgent(join(projectDir, "review"), "security");
+    writeAgent(projectDir, "root");
+    const reg = AgentDefinitionRegistry.loadFromDirs([{ dir: projectDir, source: "project" }], []);
+    expect(reg.list().map((definition) => definition.name)).toEqual(["security", "root"]);
+    expect(reg.get("security")?.filePath).toBe(join(projectDir, "review", "security.md"));
   });
 
   it("last dir wins on name clash and marks override (mechanism)", () => {
@@ -40,7 +57,10 @@ describe("AgentDefinitionRegistry.loadFromDirs", () => {
     writeAgent(projectDir, "researcher", "slow");
     writeAgent(userDir, "researcher", "fast");
     const reg = AgentDefinitionRegistry.loadFromDirs(
-      [{ dir: projectDir, source: "project" }, { dir: userDir, source: "user" }],
+      [
+        { dir: projectDir, source: "project" },
+        { dir: userDir, source: "user" },
+      ],
       [],
     );
     const def = reg.get("researcher")!;
@@ -54,7 +74,10 @@ describe("AgentDefinitionRegistry.loadFromDirs", () => {
     writeAgent(projectDir, "researcher", "p");
     // project last → project wins, shadows user
     const reg = AgentDefinitionRegistry.loadFromDirs(
-      [{ dir: userDir, source: "user" }, { dir: projectDir, source: "project" }],
+      [
+        { dir: userDir, source: "user" },
+        { dir: projectDir, source: "project" },
+      ],
       [],
     );
     const def = reg.get("researcher")!;
@@ -65,10 +88,7 @@ describe("AgentDefinitionRegistry.loadFromDirs", () => {
 
   it("non-clashing def has no shadowedSources", () => {
     writeAgent(projectDir, "solo");
-    const reg = AgentDefinitionRegistry.loadFromDirs(
-      [{ dir: projectDir, source: "project" }],
-      [],
-    );
+    const reg = AgentDefinitionRegistry.loadFromDirs([{ dir: projectDir, source: "project" }], []);
     expect(reg.get("solo")!.shadowedSources).toBeUndefined();
   });
 
@@ -85,12 +105,25 @@ describe("AgentDefinitionRegistry.loadFromDirs", () => {
     expect(def.pluginName).toBe("mimi-video");
   });
 
+  it("does not read a plugin agent symlink that escapes its contribution directory", () => {
+    if (process.platform === "win32") return;
+    const outside = mkdtempSync(join(tmpdir(), "plugin-agent-outside-"));
+    try {
+      writeAgent(outside, "private");
+      symlinkSync(join(outside, "private.md"), join(projectDir, "leak.md"));
+      const reg = AgentDefinitionRegistry.loadFromDirs(
+        [{ dir: projectDir, source: "plugin", pluginName: "unsafe" }],
+        [],
+      );
+      expect(reg.list()).toEqual([]);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   it("leaves pluginName undefined for project/user sources", () => {
     writeAgent(projectDir, "solo");
-    const reg = AgentDefinitionRegistry.loadFromDirs(
-      [{ dir: projectDir, source: "project" }],
-      [],
-    );
+    const reg = AgentDefinitionRegistry.loadFromDirs([{ dir: projectDir, source: "project" }], []);
     expect(reg.get("solo")!.pluginName).toBeUndefined();
   });
 

@@ -106,7 +106,10 @@ export function createHardenedOAuthFetch(
 ): typeof fetch {
   const maxRedirects = Math.max(0, Math.min(10, options.maxRedirects ?? 5));
   return (async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
-    const initial = new Request(input, init);
+    // Bun and Node's undici declarations currently expose incompatible global
+    // Request overloads even though both accept the standard fetch input at
+    // runtime. Keep that ambient type conflict contained at this boundary.
+    const initial = new Request(input as unknown as string, init);
     let currentUrl = new URL(initial.url);
     const initialLoopback = isLoopbackHostname(currentUrl.hostname);
     let method = initial.method.toUpperCase();
@@ -119,7 +122,7 @@ export function createHardenedOAuthFetch(
 
     for (let redirectCount = 0; ; redirectCount++) {
       validateOAuthRequestUrl(currentUrl);
-      const request = new Request(currentUrl, {
+      const request = new Request(currentUrl.toString(), {
         method,
         headers,
         body: body ? body.slice() : undefined,

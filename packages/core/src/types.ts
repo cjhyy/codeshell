@@ -123,6 +123,8 @@ export interface RegisteredTool {
   inputSchema: Record<string, unknown>;
   source: ToolSource;
   serverName?: string;
+  /** Original, unprefixed MCP tool name used by per-server allow/deny policy. */
+  mcpToolName?: string;
   /**
    * Declarative UI/metadata hint for hosts, docs, and capability listings.
    * It is not an execution-policy input: PermissionClassifier does not read
@@ -606,7 +608,7 @@ export type StreamEvent =
       type: "memory_recalled";
       name: string;
       scope: "user" | "dream";
-      location: "global" | "project";
+      location: "global" | "project" | "profile";
       agentId?: string;
     }
   | { type: "thinking_delta"; text: string; agentId?: string }
@@ -899,17 +901,29 @@ export interface MCPServerConfig {
    * UI toggle can flip it back on. See connectAll().
    */
   enabled?: boolean;
+  /**
+   * Exact MCP tool-name allowlist. Undefined exposes every discovered tool;
+   * an empty list exposes none. `disabledTools` is applied afterwards.
+   */
+  allowedTools?: string[];
+  /** Exact MCP tool-name denylist, applied after `allowedTools`. */
+  disabledTools?: string[];
 }
 
 /**
  * User-supplied supplement for a PLUGIN-provided MCP server, keyed by the
  * server's `<plugin>:<server>` name. Stored globally under
  * `settings.mcpServerOverrides` and layered onto the plugin's config at merge
- * time (see mergePluginMcpServers). Only env/credential fields are allowed —
- * command/args/url/transport stay owned by the plugin manifest so a plugin
- * update is never shadowed by a stale user copy.
+ * time (see mergePluginMcpServers). Only user-controlled server/tool policy
+ * and env/credential fields are allowed — command/args/url/transport stay
+ * owned by the plugin manifest so an update is never shadowed by a stale copy.
  */
 export interface MCPServerOverride {
+  /** Per-server user policy. Allows one server to be disabled without disabling its owner plugin. */
+  enabled?: boolean;
+  /** User policy layered over the plugin server's reviewed connection identity. */
+  allowedTools?: string[];
+  disabledTools?: string[];
   env?: Record<string, string>;
   envVars?: string[];
   /** (HTTP) id of a stored token/link/oauth credential used as Bearer auth. */

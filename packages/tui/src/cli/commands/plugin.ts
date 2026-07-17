@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import {
   installPluginFromPath,
+  installPluginFromNpm,
   installPluginFromSource,
   parseSource,
   uninstallPluginByName,
@@ -15,9 +16,9 @@ export function createPluginCommand(): Command {
   plugin
     .command("install")
     .description(
-      "Install a plugin from a local directory or git source (github:org/repo, https, ssh; @ref #subdir)",
+      "Install from a local directory, git source, or public npm source (npm:package@version-or-tag)",
     )
-    .argument("<source>", "Local directory path or git source")
+    .argument("<source>", "Local path, git source, or public npm: source")
     .option("--name <name>", "Override the installed plugin name")
     .option(
       "--allow-unsafe-transport",
@@ -31,6 +32,13 @@ export function createPluginCommand(): Command {
         const name =
           opts.name ?? (parsed.kind === "local" ? basenameOf(parsed.path) : parsed.inferredName);
         const ts = new Date().toISOString();
+        if (parsed.kind === "npm") {
+          const result = await installPluginFromNpm(parsed, name, ts);
+          console.log(
+            `Installed '${result.name}' v${result.resolution.resolvedVersion} from public npm → ${result.dir}`,
+          );
+          return;
+        }
         const dir =
           parsed.kind === "local"
             ? installPluginFromPath(parsed.path, name, ts)

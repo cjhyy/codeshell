@@ -38,9 +38,14 @@ function memoryRegistry(): ToolRegistry {
   });
 }
 
-function toolContext(projectDir: string, registry: ToolRegistry): ToolContext {
+function toolContext(
+  projectDir: string,
+  registry: ToolRegistry,
+  profileMemoryDir?: string,
+): ToolContext {
   return {
     cwd: projectDir,
+    profileMemoryDir,
     llmConfig: { provider: "test", model: "test" },
     toolRegistry: registry,
     planMode: false,
@@ -51,12 +56,16 @@ function toolContext(projectDir: string, registry: ToolRegistry): ToolContext {
   } as ToolContext;
 }
 
-async function runGuardedDream(projectDir: string, toolCalls: ToolCall[]): Promise<void> {
+async function runGuardedDream(
+  projectDir: string,
+  toolCalls: ToolCall[],
+  profileMemoryDir?: string,
+): Promise<void> {
   const registry = memoryRegistry();
   await runDreamConsolidation({
     llmClient: fakeClient(toolCalls),
     toolRegistry: registry,
-    toolContext: toolContext(projectDir, registry),
+    toolContext: toolContext(projectDir, registry, profileMemoryDir),
     projectDir,
     sessionId: "s-dream-guard",
   });
@@ -188,6 +197,43 @@ describe("dream consolidation origin guard", () => {
         expect(entries).toHaveLength(1);
         expect(entries[0]!.origin).toBe("dream");
         expect(entries[0]!.updateCount).toBe(0);
+      });
+    } finally {
+      info.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
+  it("does not route automatic dream writes into portable profile memory", async () => {
+    const info = spyOn(logger, "info").mockImplementation(() => {});
+    const warn = spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      await withCodeShellHome(async (base) => {
+        const projectDir = "/tmp/dream-guard-profile";
+        const profileMemoryDir = join(base, "profiles", "researcher");
+
+        await runGuardedDream(
+          projectDir,
+          [
+            {
+              id: "tc_profile_save",
+              toolName: "MemorySave",
+              args: {
+                scope: "dream",
+                location: "profile",
+                name: "must-not-land",
+                description: "must not land",
+                type: "project",
+                content: "must not land",
+              },
+            },
+          ],
+          profileMemoryDir,
+        );
+
+        expect(new MemoryManager({ baseDir: profileMemoryDir, scope: "dream" }).loadAll()).toEqual(
+          [],
+        );
       });
     } finally {
       info.mockRestore();

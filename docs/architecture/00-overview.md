@@ -1,38 +1,52 @@
 # 00 · CodeShell Architecture — Overview & Reading Path
 
-> A source-accurate architecture of CodeShell, written against the current tree (commit `2e32726c`, 2026-07-06). This set supersedes the prior `docs/archive/architecture/` documents, which are kept for history but predate large subsystems (Codex orchestration, the unified model catalog, the phone remote, capability control). Each chapter is anchored to real `file:line` locations and intended to read on its own.
+> A source-accurate architecture of CodeShell. This set supersedes the prior
+> `docs/archive/architecture/` documents, which are kept for history but predate
+> large subsystems and the current ten-package monorepo. Each chapter is intended
+> to read on its own; re-check line anchors after large refactors.
 
 ## What CodeShell is
 
-CodeShell is **one agent-orchestration engine with three product surfaces and one browser-automation package boundary**:
+CodeShell is **one agent-orchestration engine composed with optional capability
+packs and several host/client packages**:
 
-- a terminal CLI (`code-shell`) - interactive REPL and headless `run`;
+- a terminal CLI (`code-shell`) — interactive REPL and headless `run`;
 - an Electron **desktop app** - chat, file/browser/terminal/diff panels, model and credential management, an extensions marketplace, automation, persistent goals, memory, and a phone remote;
+- a headless **server + browser client** pair for remote access;
 - a programmatic **SDK** - the root package still re-exports the core API for `import { Engine } from "@cjhyy/code-shell"` (`scripts/build-meta.ts:4`, `scripts/build-meta.ts:26`);
-- a standalone **CDP package** - a zero-dependency browser action driver used by hosts that can supply a Chrome DevTools Protocol sender (`packages/cdp/src/index.ts:1`, `packages/cdp/src/sender.ts:1`).
+- optional **coding, Arena, and Pet capabilities** composed through core extension contracts;
+- standalone **chat gateway** and private **CDP browser-action** packages.
 
-The core is deliberately **domain-agnostic**: it carries the turn loop, context management, permissions, MCP, hooks, tools, protocol, sessions, runtime state, model plumbing, and memory mechanisms, while policy and catalog data are expected to live in data files, hosts, plugins, or optional packages (`packages/core/CONTRIBUTING.md:5`, `packages/core/CONTRIBUTING.md:26`). The package manifests are the canonical public package version, and the core `VERSION` export is aligned with them at `0.6.0-rc.12` in this snapshot (`packages/core/src/index.ts:7`).
+The core is deliberately **domain-agnostic**: it carries the turn loop, context
+management, permissions, MCP, hooks, tools, protocol, sessions, runtime state,
+model plumbing, and memory mechanisms. Coding policy, Arena orchestration and
+Pet/Mimi behavior live in physical packages that depend on
+`@cjhyy/code-shell-core/extension`; core does not depend back on them.
 
-## The four packages
+## The ten workspace packages
 
-![Four-package architecture overview](images/overview-four-packages.png)
+| Package   | Role                                                             | Boundary                                                      |
+| --------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
+| `core`    | Engine, protocol, tools, settings, sessions, runtime mechanisms  | Stable `.`, capability `/extension`, in-repo host `/internal` |
+| `coding`  | Coding/git/LSP/worktree capability and coding worker entry       | Depends on core extension contract                            |
+| `arena`   | Multi-model Arena capability and algorithms                      | Depends on core extension contract                            |
+| `pet`     | Mimi behavior, DelegateWork, Pet projection, digital-human teams | Depends on core extension contract                            |
+| `server`  | Pure-Node remote transports, rooms, uploads, headless serve host | Host/service layer; currently also composes coding + web      |
+| `web`     | Browser-safe remote client state/reducers and SPA                | Type-only core protocol use; React peer                       |
+| `tui`     | Commander CLI, Ink REPL, headless run, custom renderer           | In-repo host over core + coding + Arena                       |
+| `desktop` | Electron broker, preload bridge, renderer and mobile host        | Private composition root                                      |
+| `cdp`     | Injected-sender CDP actions                                      | Private, zero runtime dependencies                            |
+| `chat`    | Standalone multi-channel chat gateway                            | Independent of core; optional CodeShell integration subpath   |
 
-```
-packages/
-├── core/      Engine, protocol, sessions, tools, MCP, hooks, settings, LLM, presets,
-│              model catalog, plugins, skills, capabilities, credentials, memory,
-│              runs, automation, Arena, and product-extension primitives
-├── tui/       Commander CLI, Ink REPL, headless run, custom terminal renderer
-├── desktop/   Electron main broker + stdio core worker + React renderer + mobile remote
-└── cdp/       Environment-agnostic CDP browser-action layer; no Playwright/launcher
-```
+`@cjhyy/code-shell` at the repository root is a meta-package. Its generated
+`dist/index.js` re-exports core and its CLI shim loads
+`@cjhyy/code-shell-tui/cli`. The standard build is topological:
+`core -> pet/arena/coding -> server/web -> tui/chat -> meta`; desktop and the
+private CDP package have separate build commands.
 
-`@cjhyy/code-shell` at the repo root is a meta-package: its manifest exposes `dist/index.js` plus the `code-shell` binary (`package.json:2`, `package.json:14`), the root build runs `core -> tui -> build-meta` (`package.json:19`), and `scripts/build-meta.ts` writes a tiny core re-export plus a CLI shim into `dist/` (`scripts/build-meta.ts:1`, `scripts/build-meta.ts:26`, `scripts/build-meta.ts:30`).
-
-- `packages/core/` publishes `@cjhyy/code-shell-core` and the stdio agent-server entrypoint (`packages/core/package.json:2`, `packages/core/package.json:13`). Its public barrel exports the Engine and config helpers, the protocol factory/client/server surface, sessions and memory, presets, context utilities, skill/capability/plugin APIs, Arena, run lifecycle APIs, and product-extension helpers (`packages/core/src/index.ts:57`, `packages/core/src/index.ts:109`, `packages/core/src/index.ts:139`, `packages/core/src/index.ts:166`, `packages/core/src/index.ts:217`, `packages/core/src/index.ts:266`, `packages/core/src/index.ts:354`, `packages/core/src/index.ts:410`).
-- `packages/tui/` publishes the `code-shell` terminal binary (`packages/tui/package.json:17`). The CLI command tree lives in `packages/tui/src/cli/main.ts:40`; both headless `run` and interactive REPL use the same Engine -> AgentServer -> AgentClient path over an in-process transport (`packages/tui/src/cli/commands/run.ts:1`, `packages/tui/src/cli/commands/repl.ts:1`), and the Ink app consumes `AgentClient` rather than importing `Engine` directly (`packages/tui/src/ui/App.tsx:1`).
-- `packages/desktop/` is the Electron host (`packages/desktop/package.json:7`). The main process is a broker (`packages/desktop/src/main/index.ts:1`), creates the BrowserWindow and preload bridge (`packages/desktop/src/main/index.ts:1132`, `packages/desktop/src/preload/index.ts:1`), spawns a core worker through `AgentBridge` (`packages/desktop/src/main/agent-bridge.ts:1`), and keeps renderer code in React (`packages/desktop/src/renderer/main.tsx:1`).
-- `packages/cdp/` publishes `@cjhyy/code-shell-cdp` as a dependency-free CDP action layer (`packages/cdp/package.json:2`, `packages/cdp/package.json:4`). Its driver accepts an injected `CdpSender` and owns action primitives without importing Electron, React, or core (`packages/cdp/src/driver.ts:1`, `packages/cdp/src/sender.ts:1`, `packages/cdp/src/types.ts:1`). Desktop adapts core browser tools to this package in the browser-driver bridge (`packages/desktop/src/main/browser-driver/automation-host.ts:1`, `packages/desktop/src/main/browser-driver/cdp-driver.ts:1`).
+For the package dependency graph, release boundaries, and the rationale behind
+the Pet split, see
+[12 · Package Boundaries & Release Units](12-package-boundaries-and-release-units.md).
 
 ## The layered picture
 
@@ -77,18 +91,22 @@ The current run path is:
 
 ## Reading path
 
-| # | Chapter | Read it for |
-|---|---------|-------------|
-| 01 | [Engine & turn loop](01-engine-and-turn-loop.md) | How `Engine.run` drives a turn; context compaction; steering; goal ceilings; invariants |
-| 02 | [Tool system](02-tool-system.md) | Registry -> executor -> permission/path/sandbox/MCP; the builtin tools; the two-place gotcha |
-| 03 | [LLM & model layer](03-llm-and-model-layer.md) | Tag -> catalog -> provider client; capabilities RULES; reasoning/params; streaming & cost |
-| 04 | [Protocol & sessions](04-protocol-and-sessions.md) | The RPC seam, transports, the run path; transcripts, undo, disk recovery |
-| 05 | [Presets, prompt, hooks, skills](05-presets-prompt-hooks-skills.md) | How behavior is configured; prompt assembly & cache breakpoint; hook chain; skills |
-| 06 | [Long-running orchestration](06-long-running-orchestration.md) | RunManager state machine; cron & the read-only contract; persistent goals |
-| 07 | [Plugins, capabilities, credentials, memory](07-plugins-capabilities-credentials-memory.md) | Plugin install; capability projection; credential store; memory + Dream |
-| 08 | [Arena & integrations](08-arena-and-integrations.md) | Multi-model Arena; external CLI orchestration; STT; review |
-| 09 | [TUI package](09-tui.md) | The `code-shell` terminal client, the Ink REPL, the custom terminal renderer |
-| 10 | [Desktop & mobile](10-desktop-and-mobile.md) | The desktop broker/worker/renderer split, main services, panels, phone remote, CDP |
+| #   | Chapter                                                                                     | Read it for                                                                                  |
+| --- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 01  | [Engine & turn loop](01-engine-and-turn-loop.md)                                            | How `Engine.run` drives a turn; context compaction; steering; goal ceilings; invariants      |
+| 02  | [Tool system](02-tool-system.md)                                                            | Registry -> executor -> permission/path/sandbox/MCP; the builtin tools; the two-place gotcha |
+| 03  | [LLM & model layer](03-llm-and-model-layer.md)                                              | Tag -> catalog -> provider client; capabilities RULES; reasoning/params; streaming & cost    |
+| 04  | [Protocol & sessions](04-protocol-and-sessions.md)                                          | The RPC seam, transports, the run path; transcripts, undo, disk recovery                     |
+| 05  | [Presets, prompt, hooks, skills](05-presets-prompt-hooks-skills.md)                         | How behavior is configured; prompt assembly & cache breakpoint; hook chain; skills           |
+| 06  | [Long-running orchestration](06-long-running-orchestration.md)                              | RunManager state machine; cron & the read-only contract; persistent goals                    |
+| 07  | [Plugins, capabilities, credentials, memory](07-plugins-capabilities-credentials-memory.md) | Plugin install; capability projection; credential store; memory + Dream                      |
+| 08  | [Arena & integrations](08-arena-and-integrations.md)                                        | Multi-model Arena; external CLI orchestration; STT; review                                   |
+| 09  | [TUI package](09-tui.md)                                                                    | The `code-shell` terminal client, the Ink REPL, the custom terminal renderer                 |
+| 10  | [Desktop & mobile](10-desktop-and-mobile.md)                                                | The desktop broker/worker/renderer split, main services, panels, phone remote, CDP           |
+| 11  | [Feature inventory](11-feature-inventory.md)                                                | Flat capability map across desktop, TUI and supporting packages                              |
+| 12  | [Package boundaries](12-package-boundaries-and-release-units.md)                            | Dependency direction, Pet split rationale, exports and publish units                         |
+| 13  | [Plugin parity & video editor](13-plugin-parity-and-video-editor.md)                        | Codex compatibility, trust gates, remaining ecosystem gaps and the reference video plugin    |
+| 14  | [Digital humans & Pet](14-digital-human-and-pet.md)                                         | Profile/team lifecycle, durable Pet read models, attention, deletion and recovery            |
 
 ## Cross-cutting: settings, onboarding, disk layout
 

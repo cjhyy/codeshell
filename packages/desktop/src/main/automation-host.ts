@@ -30,10 +30,10 @@ import {
   type CronRunner,
   type CronRunResult,
 } from "@cjhyy/code-shell-core/internal";
-import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding";
+import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
 import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
 import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
-import { stablePromptHash } from "@cjhyy/code-shell-server";
+import { stablePromptHash } from "@cjhyy/code-shell-server/storage";
 
 /**
  * Build a read-only RunManager for automation. Per-job cwd is passed at submit

@@ -31,11 +31,7 @@ import type {
 } from "../types.js";
 import { Transcript } from "./transcript.js";
 import { SessionError } from "../exceptions.js";
-import {
-  addCumulativeUsage,
-  addTokenUsage,
-  normalizeCumulativeUsageCounters,
-} from "./usage.js";
+import { addCumulativeUsage, addTokenUsage, normalizeCumulativeUsageCounters } from "./usage.js";
 import {
   armGoalLifecycle,
   createGoalLifecycle,
@@ -645,6 +641,48 @@ export class SessionManager {
     } catch {
       return undefined;
     }
+  }
+
+  /**
+   * Find durable Sessions pinned to one digital-human profile without loading
+   * transcripts. Used by profile deletion guards so a reusable/historical
+   * Session cannot be left permanently unresumable.
+   */
+  findSessionIdsByWorkspaceProfile(profileName: string, limit = 20): string[] {
+    const target = typeof profileName === "string" ? profileName.trim() : "";
+    if (!target || target.length > 64 || limit <= 0) return [];
+    const cap = Math.max(1, Math.min(100, Math.floor(limit)));
+    let entries;
+    try {
+      entries = readdirSync(this.sessionsDir, { withFileTypes: true });
+    } catch {
+      return [];
+    }
+
+    const matches: string[] = [];
+    for (const entry of entries) {
+      if (matches.length >= cap) break;
+      if (
+        !entry.isDirectory() ||
+        entry.name.startsWith(".pending-") ||
+        entry.name.startsWith("qchat-")
+      ) {
+        continue;
+      }
+      try {
+        assertSafeSessionId(entry.name);
+        const stateFile = join(this.sessionsDir, entry.name, "state.json");
+        const info = lstatSync(stateFile);
+        if (info.isSymbolicLink() || !info.isFile() || info.size > 1024 * 1024) continue;
+        const state = JSON.parse(readFileSync(stateFile, "utf-8")) as {
+          workspaceProfile?: unknown;
+        };
+        if (state.workspaceProfile === target) matches.push(entry.name);
+      } catch {
+        // Corrupt or unsafe Sessions are isolated from the deletion decision.
+      }
+    }
+    return matches.sort();
   }
 
   /** @deprecated Use readSessionMainRoot; retained for public API compatibility. */

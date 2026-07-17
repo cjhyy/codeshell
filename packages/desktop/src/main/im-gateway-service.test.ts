@@ -276,6 +276,57 @@ describe("ImGatewayService", () => {
     expect(await service.stopDingTalkDiscovery()).toBe(true);
   });
 
+  test("awaits the lazy channel factory before starting selected adapters", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-lazy-adapter-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: {
+          botToken: "test-token",
+          allowedChatIds: ["owner-chat"],
+          allowedUserIds: [],
+        },
+        desktop: { autoLaunch: false },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+          adapterRestartBaseMs: 5,
+          adapterRestartMaxMs: 5,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    if (process.platform !== "win32") chmodSync(configPath, 0o600);
+    const factoryCalls: string[] = [];
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (config) => {
+        await Promise.resolve();
+        factoryCalls.push(config.channel);
+        return {
+          channel: config.channel,
+          run: async (_handler, signal) => {
+            if (signal.aborted) return;
+            await new Promise<void>((resolveDone) =>
+              signal.addEventListener("abort", () => resolveDone(), { once: true }),
+            );
+          },
+          send: async () => undefined,
+        };
+      },
+    });
+
+    try {
+      const status = await service.start();
+      expect(factoryCalls).toEqual(["telegram"]);
+      expect(status).toMatchObject({ running: true, channels: ["telegram"] });
+    } finally {
+      await service.stop();
+    }
+  });
+
   test("captures bounded message previews around replies", async () => {
     const activity: ImGatewayActivity[] = [];
     const sent: string[] = [];

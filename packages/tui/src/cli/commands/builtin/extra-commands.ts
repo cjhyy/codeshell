@@ -42,9 +42,7 @@ export function loginConfigureParams(
   sessionId: string | undefined,
   model: string,
 ): { sessionId?: string; reloadModels: true; model: string } {
-  return sessionId
-    ? { sessionId, reloadModels: true, model }
-    : { reloadModels: true, model };
+  return sessionId ? { sessionId, reloadModels: true, model } : { reloadModels: true, model };
 }
 
 export const extraCommands: SlashCommand[] = [
@@ -70,16 +68,13 @@ export const extraCommands: SlashCommand[] = [
         // Unified store: the active text model is settings.defaults.text (a
         // connection id). Route the key into that connection's credential —
         // settings.model.apiKey is dead (nothing reads it anymore).
-        const activeConnId = typeof settings.defaults?.text === "string"
-          ? settings.defaults.text
-          : undefined;
+        const activeConnId =
+          typeof settings.defaults?.text === "string" ? settings.defaults.text : undefined;
         const connections: any[] = Array.isArray(settings.modelConnections)
           ? settings.modelConnections
           : [];
         const conn = connections.find((c) => c?.id === activeConnId);
-        const credentials: any[] = Array.isArray(settings.credentials)
-          ? settings.credentials
-          : [];
+        const credentials: any[] = Array.isArray(settings.credentials) ? settings.credentials : [];
         const cred = conn?.credentialId
           ? credentials.find((c) => c?.id === conn.credentialId)
           : undefined;
@@ -227,22 +222,16 @@ export const extraCommands: SlashCommand[] = [
         const user = skills.filter((s) => s.source === "user");
         const groups: string[] = [];
         if (project.length > 0) {
-          const lines = project.map(
-            (s) => `  ${s.name} — ${s.description || "(no description)"}`,
-          );
+          const lines = project.map((s) => `  ${s.name} — ${s.description || "(no description)"}`);
           groups.push(`Project skills (${project.length}):\n${lines.join("\n")}`);
         }
         if (user.length > 0) {
-          const lines = user.map(
-            (s) => `  ${s.name} — ${s.description || "(no description)"}`,
-          );
+          const lines = user.map((s) => `  ${s.name} — ${s.description || "(no description)"}`);
           groups.push(`User skills (${user.length}):\n${lines.join("\n")}`);
         }
         const plugin = skills.filter((s) => s.source === "plugin");
         if (plugin.length > 0) {
-          const lines = plugin.map(
-            (s) => `  ${s.name} — ${s.description || "(no description)"}`,
-          );
+          const lines = plugin.map((s) => `  ${s.name} — ${s.description || "(no description)"}`);
           groups.push(`Plugin skills (${plugin.length}):\n${lines.join("\n")}`);
         }
         ctx.addStatus(groups.join("\n\n"));
@@ -257,11 +246,31 @@ export const extraCommands: SlashCommand[] = [
     group: "config",
     description: "Manage plugin marketplaces and installed plugins",
     usage:
-      "/plugin marketplace add|remove|list ... | /plugin install|uninstall <p>@<mkt> | /plugin list",
+      "/plugin marketplace add|remove|list ... | /plugin install|uninstall <p>@<mkt> | /plugin list | /plugin hooks list|diff|approve|revoke ... | /plugin mcp list|approve|revoke|enable|disable|tools|allow|deny|tools-reset ...",
     execute: async (arg, ctx) => {
       try {
-        const { runPluginCommand } = await import("./plugin-handler.js");
-        const out = await runPluginCommand(arg ?? "");
+        const { pluginTrustDecisionSucceeded, runPluginCommand } =
+          await import("./plugin-handler.js");
+        const out = await runPluginCommand(arg ?? "", ctx.cwd);
+        if (pluginTrustDecisionSucceeded(arg ?? "", out)) {
+          try {
+            await ctx.client.configure({
+              ...(ctx.sessionId ? { sessionId: ctx.sessionId } : {}),
+              reloadSettings: true,
+            });
+            ctx.addStatus(
+              `${out}\nRuntime settings reloaded; hook/MCP changes apply at the next turn boundary.`,
+            );
+            return;
+          } catch (reloadError) {
+            ctx.addStatus(
+              `${out}\nPlugin trust decision was saved, but the current runtime could not reload: ${
+                reloadError instanceof Error ? reloadError.message : String(reloadError)
+              }. It will apply to a new session.`,
+            );
+            return;
+          }
+        }
         ctx.addStatus(out);
       } catch (err) {
         ctx.addStatus(`/plugin failed: ${(err as Error).message}`);

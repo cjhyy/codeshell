@@ -32,7 +32,7 @@ import {
   type CronRunResult,
 } from "@cjhyy/code-shell-core/internal";
 import { resolveMaxContextTokens } from "./max-context-tokens.js";
-import { createArenaCapability } from "@cjhyy/code-shell-arena";
+import { createArenaCapability } from "@cjhyy/code-shell-arena/runtime";
 
 export type EffortLevel = "low" | "medium" | "high" | "max";
 

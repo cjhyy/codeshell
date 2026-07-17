@@ -51,4 +51,24 @@ describe("AutomationDetail dedup", () => {
     const html = renderToStaticMarkup(<AutomationDetail {...baseProps} />);
     expect(html).toContain("配置");
   });
+  test("plugin-created jobs surface immutable template provenance", () => {
+    const html = renderToStaticMarkup(
+      <AutomationDetail
+        {...({
+          ...baseProps,
+          job: {
+            ...job,
+            templateSource: {
+              installKey: "video-editor@local",
+              templateId: "daily-edit-audit",
+              revision: "a".repeat(64),
+            },
+          },
+        } as never)}
+      />,
+    );
+    expect(html).toContain("来自插件模板");
+    expect(html).toContain("video-editor@local/daily-edit-audit");
+    expect(html).toContain("aaaaaaaa");
+  });
 });

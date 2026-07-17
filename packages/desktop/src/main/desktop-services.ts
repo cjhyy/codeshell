@@ -16,7 +16,7 @@ import * as fs from "node:fs/promises";
 import {
   isManagedWorktreeBranch,
   normalizeWorktreeBranchPrefix,
-} from "@cjhyy/code-shell-capability-coding";
+} from "@cjhyy/code-shell-capability-coding/git";
 import { editorCandidates, splitTarget, buildEditorInvocation } from "./editor.js";
 import { resolveTargetPath } from "./paths.js";
 

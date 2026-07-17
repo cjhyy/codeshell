@@ -19,6 +19,13 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import { createPetApi } from "./pet-api";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
+import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
+import type { PluginMediaDto } from "../shared/plugin-media";
+import type {
+  LocalPluginPreview,
+  PluginHookApprovalResult,
+  PluginMcpApprovalResult,
+} from "./types";
 
 /** One background shell as surfaced to the dock panel (TODO 3.2). Mirrors core
  *  BgShell's public shape; renderer-local since the renderer can't import core. */
@@ -906,6 +913,24 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("skills:list", cwd, opts),
   searchFiles: (cwd: string, query: string) => ipcRenderer.invoke("files:search", cwd, query),
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
+  getPluginMedia: (
+    installKey: string,
+    includeScreenshots?: boolean,
+  ): Promise<PluginMediaDto | null> =>
+    ipcRenderer.invoke("plugins:media", installKey, includeScreenshots),
+  listPluginCommands: (cwd: string): Promise<PluginCommandDescriptor[]> =>
+    ipcRenderer.invoke("plugin-commands:list", cwd),
+  expandPluginCommand: (
+    cwd: string,
+    name: string,
+    rawArguments: string,
+  ): Promise<ExpandedPluginCommand> =>
+    ipcRenderer.invoke("plugin-commands:expand", cwd, name, rawArguments),
+  onPluginCommandsChanged: (cb: () => void) => {
+    const handler = () => cb();
+    ipcRenderer.on("plugin-commands:changed", handler);
+    return () => ipcRenderer.removeListener("plugin-commands:changed", handler);
+  },
   listPluginPanels: (cwd: string, locale: string) =>
     ipcRenderer.invoke("plugin-panels:list", cwd, locale),
   listPanelExtensions: (cwd: string, locale: string) =>
@@ -927,6 +952,19 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.send("panel:agent-response", response),
   /** Full content inventory for one installed plugin (详情页). */
   getPluginDetail: (installKey: string) => ipcRenderer.invoke("plugins:detail", installKey),
+  createAutomationFromPluginTemplate: (
+    installKey: string,
+    templateId: string,
+    expectedRevision: string,
+    cwd?: string,
+  ) =>
+    ipcRenderer.invoke(
+      "plugins:createAutomationFromTemplate",
+      installKey,
+      templateId,
+      expectedRevision,
+      cwd,
+    ),
   listCapabilities: (cwd: string) => ipcRenderer.invoke("capabilities:list", cwd),
   setCapabilityEnabled: (
     cwd: string,
@@ -957,6 +995,13 @@ contextBridge.exposeInMainWorld("codeshell", {
   installCatalogProfile: (name: string) => ipcRenderer.invoke("profiles:install", name),
   saveProfile: (profile: import("@cjhyy/code-shell-core").WorkspaceProfile) =>
     ipcRenderer.invoke("profiles:save", profile),
+  pickProfileDefinitionImport: () => ipcRenderer.invoke("profiles:pickDefinitionImport"),
+  importReviewedProfileDefinition: (
+    input: import("../shared/digital-human-profile-transfer").DigitalHumanProfileImportCommitInput,
+  ) => ipcRenderer.invoke("profiles:importReviewedDefinition", input),
+  exportProfileDefinition: (name: string) => ipcRenderer.invoke("profiles:exportDefinition", name),
+  deleteProfile: (name: string, options?: { cwd?: string; clearActiveProject?: boolean }) =>
+    ipcRenderer.invoke("profiles:delete", name, options),
   listDigitalHumanTeams: () => ipcRenderer.invoke("digital-human-teams:list"),
   saveDigitalHumanTeam: (team: import("@cjhyy/code-shell-pet").DigitalHumanTeam) =>
     ipcRenderer.invoke("digital-human-teams:save", team),
@@ -1009,13 +1054,20 @@ contextBridge.exposeInMainWorld("codeshell", {
     kind: "dir" | "zip",
   ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickPluginSource", kind),
+  previewLocalPlugin: (input: {
+    kind: "dir" | "zip";
+    path: string;
+  }): Promise<{ ok: true; preview: LocalPluginPreview } | { ok: false; error: string }> =>
+    ipcRenderer.invoke("plugins:previewLocal", input),
   installLocalPlugin: (input: {
     kind: "dir" | "zip";
     path: string;
+    reviewToken: string;
     overwrite?: boolean;
   }): Promise<
     | { ok: true; name: string }
     | { ok: false; alreadyInstalled: true; name: string }
+    | { ok: false; previewChanged: true; error: string }
     | { ok: false; error?: string }
   > => ipcRenderer.invoke("plugins:installLocal", input),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
@@ -1042,6 +1094,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("mcp:listMerged", base, disabledPlugins, cwd),
   listPluginHooks: (disabledPlugins?: unknown) =>
     ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
+  approvePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
+    ipcRenderer.invoke("hooks:approvePlugin", installKey),
+  revokePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>
+    ipcRenderer.invoke("hooks:revokePlugin", installKey),
+  listPluginMcpTrust: () => ipcRenderer.invoke("mcp:listPluginTrust"),
+  approvePluginMcp: (installKey: string): Promise<PluginMcpApprovalResult[]> =>
+    ipcRenderer.invoke("mcp:approvePlugin", installKey),
+  revokePluginMcp: (installKey: string): Promise<PluginMcpApprovalResult[]> =>
+    ipcRenderer.invoke("mcp:revokePlugin", installKey),
   invalidateMcpProbeCache: (name?: string) => ipcRenderer.invoke("mcp:invalidate", name),
   probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),
   probeImage: (input: unknown) => ipcRenderer.invoke("image:probe", input),

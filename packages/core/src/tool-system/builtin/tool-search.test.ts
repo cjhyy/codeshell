@@ -80,6 +80,7 @@ describe("toolSearchTool — MCP visibility gate (worker-shared registry leak)",
         inputSchema: { type: "object", properties: {} },
         source: "mcp",
         serverName: "chrome-devtools:chrome",
+        mcpToolName: "list_pages",
         permissionDefault: "ask",
       },
       async () => "ok",
@@ -91,6 +92,7 @@ describe("toolSearchTool — MCP visibility gate (worker-shared registry leak)",
         inputSchema: { type: "object", properties: {} },
         source: "mcp",
         serverName: "mine:srv",
+        mcpToolName: "doit",
         permissionDefault: "ask",
       },
       async () => "ok",
@@ -102,10 +104,7 @@ describe("toolSearchTool — MCP visibility gate (worker-shared registry leak)",
 
   it("keyword search hides MCP tools from servers this session didn't enable", async () => {
     const r = registryWithMcp();
-    const out = await toolSearchTool(
-      { query: "chrome pages doit" },
-      gatedCtx(r, ["mine:srv"]),
-    );
+    const out = await toolSearchTool({ query: "chrome pages doit" }, gatedCtx(r, ["mine:srv"]));
     expect(out).not.toContain("mcp_chrome_chrome_list_pages");
     expect(out).toContain("mcp_mine_srv_doit");
   });
@@ -123,5 +122,23 @@ describe("toolSearchTool — MCP visibility gate (worker-shared registry leak)",
     const r = registryWithMcp();
     const out = await toolSearchTool({ query: "chrome" }, ctx(r));
     expect(out).toContain("mcp_chrome_chrome_list_pages");
+  });
+
+  it("hides tools denied by the enabled server's exact-name policy", async () => {
+    const r = registryWithMcp();
+    const out = await toolSearchTool(
+      { query: "pages doit" },
+      {
+        ...gatedCtx(r, ["chrome-devtools:chrome", "mine:srv"]),
+        mcpToolPolicies: new Map([
+          [
+            "chrome-devtools:chrome",
+            { allowedTools: new Set(["other"]), disabledTools: new Set<string>() },
+          ],
+        ]),
+      },
+    );
+    expect(out).not.toContain("mcp_chrome_chrome_list_pages");
+    expect(out).toContain("mcp_mine_srv_doit");
   });
 });

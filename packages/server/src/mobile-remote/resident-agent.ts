@@ -1,6 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
-import { CC_COST_GUARD_PROMPT } from "@cjhyy/code-shell-capability-coding";
 import { pathWithCommonBins } from "./path-bins.js";
 
 /**
@@ -150,6 +149,8 @@ export interface ResidentAgentOptions {
   cwd: string;
   permissionMode: "default" | "acceptEdits" | "bypassPermissions";
   resumeSessionId?: string;
+  /** Optional host policy appended to the external agent's system prompt. */
+  appendSystemPrompt?: string;
   onEvent: (event: ResidentAgentEvent) => void;
 }
 
@@ -174,12 +175,10 @@ export class ResidentAgentProcess {
       "stream-json",
       "--permission-prompt-tool",
       "stdio",
-      // Soft cost-guard: a room keeps the Workflow tool (a human is present to
-      // approve), but we ask CC to surface intent before fanning out a fleet of
-      // agents, so an expensive Workflow doesn't kick off unprompted.
-      "--append-system-prompt",
-      CC_COST_GUARD_PROMPT,
     ];
+    if (this.opts.appendSystemPrompt) {
+      args.push("--append-system-prompt", this.opts.appendSystemPrompt);
+    }
     if (this.opts.resumeSessionId) {
       args.push("--resume", this.opts.resumeSessionId);
     }

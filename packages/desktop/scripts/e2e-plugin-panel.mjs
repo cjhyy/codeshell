@@ -64,6 +64,19 @@ async function installFixture(version, marker) {
           },
         ],
       },
+      automations: {
+        version: 1,
+        templates: [
+          {
+            id: "daily-review",
+            title: { default: "E2E daily review" },
+            schedule: "1d",
+            prompt: `Review plugin marker ${marker} without changing files.`,
+            permissionLevel: "read-only",
+            workspace: "current",
+          },
+        ],
+      },
     })}\n`,
   );
   await writeFile(
@@ -159,6 +172,31 @@ try {
   win.on("pageerror", (error) => console.error("renderer pageerror:", error.message));
 
   const first = await descriptor(win);
+  const firstDetail = await win.evaluate(() => window.codeshell.getPluginDetail("panel-e2e@local"));
+  const firstTemplate = firstDetail?.content.automationTemplates[0];
+  assert(firstTemplate?.id === "daily-review", "automation template was not inventoried");
+  assert(
+    /^[a-f0-9]{64}$/.test(firstTemplate.revision),
+    "automation template revision was not exposed",
+  );
+  const createdAutomation = await win.evaluate(
+    ({ revision }) =>
+      window.codeshell.createAutomationFromPluginTemplate(
+        "panel-e2e@local",
+        "daily-review",
+        revision,
+        "/tmp/e2e",
+      ),
+    { revision: firstTemplate.revision },
+  );
+  assert(
+    createdAutomation.prompt === "Review plugin marker panel-v1 without changing files.",
+    "automation did not copy the reviewed canonical prompt",
+  );
+  assert(
+    createdAutomation.templateSource?.revision === firstTemplate.revision,
+    "automation provenance did not retain the reviewed revision",
+  );
   const firstPrepared = await win.evaluate(
     (id) => window.codeshell.preparePluginPanel(id),
     first.id,
@@ -210,6 +248,31 @@ try {
   assert(networkBlocked, "CSP did not block external network access");
 
   await installFixture("1.0.1", "panel-v2");
+  const staleReviewRejected = await win.evaluate(
+    async ({ revision }) => {
+      try {
+        await window.codeshell.createAutomationFromPluginTemplate(
+          "panel-e2e@local",
+          "daily-review",
+          revision,
+          "/tmp/e2e",
+        );
+        return false;
+      } catch (error) {
+        return String(error).includes("changed after review");
+      }
+    },
+    { revision: firstTemplate.revision },
+  );
+  assert(staleReviewRejected, "stale automation review was accepted after plugin update");
+  const persistedAutomation = await win.evaluate(
+    (id) => window.codeshell.getAutomation(id),
+    createdAutomation.id,
+  );
+  assert(
+    persistedAutomation?.prompt === "Review plugin marker panel-v1 without changing files.",
+    "plugin update mutated an already-created standalone automation",
+  );
   const second = await descriptor(win);
   const secondPrepared = await win.evaluate(
     (id) => window.codeshell.preparePluginPanel(id),

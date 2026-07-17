@@ -14,8 +14,8 @@
 
 import { basename } from "node:path";
 import { Methods } from "@cjhyy/code-shell-core";
+import { listDiskSessions } from "@cjhyy/code-shell-server/storage";
 import {
-  listDiskSessions,
   type ClaimedMobileUpload,
   type MobilePermissionModeSnapshotEntry,
   type MobileProjectMeta,
@@ -26,7 +26,7 @@ import {
   type RemoteHostManager,
   type RoomManager,
   type RoomPublic,
-} from "@cjhyy/code-shell-server";
+} from "@cjhyy/code-shell-server/mobile-remote";
 import { resolveNoRepoCwd, type AgentBridge } from "./agent-bridge.js";
 import type { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import type { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";

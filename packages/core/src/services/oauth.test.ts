@@ -68,11 +68,13 @@ describe("OAuth authorization code flow", () => {
           tokenEndpoint: "https://auth.example/token",
         },
         {
-          openExternal: (url) => callbackFromAuthorizationUrl(url, { code: "code", state: "bad" }),
+          openExternal: async (url) => {
+            await callbackFromAuthorizationUrl(url, { code: "code", state: "bad" });
+          },
           fetch: (async () => {
             exchanges++;
             return Response.json({ access_token: "never" });
-          }) as typeof fetch,
+          }) as unknown as typeof fetch,
         },
       ),
     ).rejects.toThrow(/state mismatch/);
@@ -84,7 +86,9 @@ describe("OAuth authorization code flow", () => {
           tokenEndpoint: "https://auth.example/token",
         },
         {
-          openExternal: (url) => callbackFromAuthorizationUrl(url, { error: "access_denied" }),
+          openExternal: async (url) => {
+            await callbackFromAuthorizationUrl(url, { error: "access_denied" });
+          },
         },
       ),
     ).rejects.toThrow(/access denied/);
@@ -121,7 +125,7 @@ describe("hardened OAuth fetch redirects", () => {
     test(`does not forward a secret-bearing POST across origins after ${status}`, async () => {
       const calls: Array<{ url: string; body: string }> = [];
       const baseFetch = (async (input: string | URL | Request, init?: RequestInit) => {
-        const request = new Request(input, init);
+        const request = new Request(input as unknown as string, init);
         calls.push({ url: request.url, body: await request.text() });
         if (request.url === "https://auth.example/token") {
           return new Response(null, {
@@ -130,7 +134,7 @@ describe("hardened OAuth fetch redirects", () => {
           });
         }
         return new Response("unexpected", { status: 500 });
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
       const hardened = createHardenedOAuthFetch(baseFetch);
 
       await expect(
@@ -158,10 +162,10 @@ describe("hardened OAuth fetch redirects", () => {
         input: string | URL | Request,
         init?: RequestInit,
       ) => {
-        const request = new Request(input, init);
+        const request = new Request(input as unknown as string, init);
         calls.push(request.url);
         return new Response(null, { status: 302, headers: { Location: target } });
-      }) as typeof fetch);
+      }) as unknown as typeof fetch);
 
       await expect(hardened("https://auth.example/.well-known/oauth")).rejects.toThrow();
       expect(calls).toEqual(["https://auth.example/.well-known/oauth"]);
@@ -169,18 +173,18 @@ describe("hardened OAuth fetch redirects", () => {
   });
 
   test("follows a bounded same-origin redirect while preserving a POST body", async () => {
-    const calls: Array<{ url: string; body: string; redirect: RequestRedirect }> = [];
+    const calls: Array<{ url: string; body: string; redirect: Request["redirect"] }> = [];
     const hardened = createHardenedOAuthFetch((async (
       input: string | URL | Request,
       init?: RequestInit,
     ) => {
-      const request = new Request(input, init);
+      const request = new Request(input as unknown as string, init);
       calls.push({ url: request.url, body: await request.text(), redirect: request.redirect });
       if (new URL(request.url).pathname === "/token") {
         return new Response(null, { status: 308, headers: { Location: "/oauth/token" } });
       }
       return Response.json({ access_token: "ok" });
-    }) as typeof fetch);
+    }) as unknown as typeof fetch);
 
     const response = await hardened("https://auth.example/token", {
       method: "POST",
@@ -206,14 +210,14 @@ describe("hardened OAuth fetch redirects", () => {
     const calls: string[] = [];
     const hardened = createHardenedOAuthFetch(
       (async (input: string | URL | Request, init?: RequestInit) => {
-        const request = new Request(input, init);
+        const request = new Request(input as unknown as string, init);
         calls.push(request.url);
         const step = Number(new URL(request.url).searchParams.get("step") ?? "0");
         return new Response(null, {
           status: 302,
           headers: { Location: `https://auth.example/discovery?step=${step + 1}` },
         });
-      }) as typeof fetch,
+      }) as unknown as typeof fetch,
       { maxRedirects: 1 },
     );
 

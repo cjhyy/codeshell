@@ -23,6 +23,8 @@ import {
   type ConfigureParams,
   type QueryParams,
   type QueryResult,
+  type PluginCommandsListResult,
+  type PluginCommandExpandResult,
   Methods,
   createRequest,
   isResponse,
@@ -393,6 +395,27 @@ export class AgentClient {
     return this.request(Methods.Query, params) as Promise<QueryResult>;
   }
 
+  /** Discover enabled installed plugin commands for one workspace. */
+  async listPluginCommands(cwd: string): Promise<PluginCommandsListResult> {
+    return this.request(Methods.PluginCommandsList, { cwd }) as Promise<PluginCommandsListResult>;
+  }
+
+  /**
+   * Expand one plugin command inside the trusted server. The command source
+   * body and install path never cross the protocol boundary.
+   */
+  async expandPluginCommand(
+    cwd: string,
+    name: string,
+    rawArguments = "",
+  ): Promise<PluginCommandExpandResult> {
+    return this.request(Methods.PluginCommandExpand, {
+      cwd,
+      name,
+      rawArguments,
+    }) as Promise<PluginCommandExpandResult>;
+  }
+
   /**
    * Inject context into the session transcript without triggering a LLM turn.
    * Used to make arena results, tool outputs, etc. visible to subsequent LLM calls.
@@ -575,7 +598,10 @@ export class AgentClient {
   }
 
   /** Subscribe to an extension-owned server notification method. */
-  onExtensionNotification(method: string, handler: (params: Record<string, unknown>) => void): void {
+  onExtensionNotification(
+    method: string,
+    handler: (params: Record<string, unknown>) => void,
+  ): void {
     this.emitter.on(`notification:${method}`, handler);
   }
 
@@ -587,10 +613,7 @@ export class AgentClient {
   }
 
   /** Issue a request to an extension-registered protocol method. */
-  async requestExtension(
-    method: string,
-    params?: Record<string, unknown>,
-  ): Promise<unknown> {
+  async requestExtension(method: string, params?: Record<string, unknown>): Promise<unknown> {
     return this.request(method, params);
   }
 

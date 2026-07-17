@@ -57,6 +57,7 @@ function composerInput(
     responseLanguage: undefined,
     userProfile: undefined,
     workspaceProfile: undefined,
+    profileMemoryDir: undefined,
     instructionCompatFileNames: ["CLAUDE.md", "AGENTS.md"],
     instructionBoundaryFinder: () => cwd,
     disabledSkills: [],
@@ -95,6 +96,23 @@ describe("resolveRunProfileState", () => {
 
     expect(state.workspaceProfile?.name).toBe("researcher");
     expect(state.sessionProfileOverrides).toBeUndefined();
+    expect(state.profileMemoryDir).toBeUndefined();
+  });
+
+  test("resolves the portable profile memory root once for the run", () => {
+    const settings = new SettingsManager(cwd, "project");
+    saveWorkspaceProfile(workspaceProfile({ portableMemory: true }));
+    activateWorkspaceProfile(settings, "researcher", cwd);
+
+    const state = resolveRunProfileState({
+      sessionWorkspaceProfile: undefined,
+      cwd,
+      settings,
+    });
+
+    expect(state.profileMemoryDir).toBe(
+      join(process.env.CODE_SHELL_HOME!, "profiles", "researcher"),
+    );
   });
 });
 
@@ -106,6 +124,7 @@ describe("buildPromptComposerConfig", () => {
           mainInstruction: "Coordinate the research in three stages.",
           portableMemory: true,
         }),
+        profileMemoryDir: join(process.env.CODE_SHELL_HOME!, "profiles", "researcher"),
       }),
     );
 

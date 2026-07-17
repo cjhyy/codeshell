@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { WorkspaceProfileSchema } from "./types.js";
+import { WORKSPACE_PROFILE_LIMITS, WorkspaceProfileSchema } from "./types.js";
 
 describe("WorkspaceProfile schema", () => {
   test("accepts a minimal valid profile and fills defaults", () => {
@@ -42,5 +42,48 @@ describe("WorkspaceProfile schema", () => {
 
   test("rejects missing basePreset", () => {
     expect(() => WorkspaceProfileSchema.parse({ name: "x", label: "x" })).toThrow();
+  });
+
+  test("accepts values at the documented persistence limits", () => {
+    const capabilities = Array.from(
+      { length: WORKSPACE_PROFILE_LIMITS.capabilityCount },
+      (_, index) => `capability-${index}`,
+    );
+    expect(
+      WorkspaceProfileSchema.parse({
+        name: "bounded",
+        label: "l".repeat(WORKSPACE_PROFILE_LIMITS.label),
+        description: "d".repeat(WORKSPACE_PROFILE_LIMITS.description),
+        basePreset: "p".repeat(WORKSPACE_PROFILE_LIMITS.basePreset),
+        plugins: capabilities,
+        skills: capabilities,
+        mcp: capabilities,
+        agents: capabilities,
+        mainInstruction: "i".repeat(WORKSPACE_PROFILE_LIMITS.mainInstruction),
+        version: "v".repeat(WORKSPACE_PROFILE_LIMITS.version),
+      }).label,
+    ).toHaveLength(WORKSPACE_PROFILE_LIMITS.label);
+  });
+
+  test("rejects oversized strings, capability lists, entries, and duplicates", () => {
+    const base = { name: "bounded", label: "Bounded", basePreset: "general" };
+    for (const patch of [
+      { label: "l".repeat(WORKSPACE_PROFILE_LIMITS.label + 1) },
+      { description: "d".repeat(WORKSPACE_PROFILE_LIMITS.description + 1) },
+      { basePreset: "p".repeat(WORKSPACE_PROFILE_LIMITS.basePreset + 1) },
+      { mainInstruction: "i".repeat(WORKSPACE_PROFILE_LIMITS.mainInstruction + 1) },
+      { version: "v".repeat(WORKSPACE_PROFILE_LIMITS.version + 1) },
+      {
+        skills: Array.from(
+          { length: WORKSPACE_PROFILE_LIMITS.capabilityCount + 1 },
+          (_, index) => `skill-${index}`,
+        ),
+      },
+      { plugins: ["p".repeat(WORKSPACE_PROFILE_LIMITS.capabilityName + 1)] },
+      { mcp: ["duplicate", "duplicate"] },
+      { agents: [""] },
+    ]) {
+      expect(() => WorkspaceProfileSchema.parse({ ...base, ...patch })).toThrow();
+    }
   });
 });

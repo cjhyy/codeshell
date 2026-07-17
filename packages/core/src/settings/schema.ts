@@ -5,6 +5,15 @@
 import { z } from "zod";
 import { WorkspaceSourceBindingSchema } from "../sources/types.js";
 const DEFAULT_WORKTREE_BRANCH_PREFIX = "worktree/";
+const McpToolNameListSchema = z
+  .array(
+    z
+      .string()
+      .min(1)
+      .max(256)
+      .refine((value) => !value.includes("\0"), "Invalid MCP tool name"),
+  )
+  .max(256);
 
 function isValidWorktreeBranchPrefix(prefix: string): boolean {
   const raw = prefix.trim();
@@ -329,22 +338,27 @@ export const SettingsSchema = z
             // Codex-style on/off switch. Absent or true → connected; only
             // literal false disables. Filtered in MCPManager.connectAll.
             enabled: z.boolean().optional(),
+            allowedTools: McpToolNameListSchema.optional(),
+            disabledTools: McpToolNameListSchema.optional(),
           }),
         ),
       )
       .default({}),
 
     /**
-     * User supplements for PLUGIN-provided MCP servers, keyed by the server's
-     * `<plugin>:<server>` name. Layered onto the plugin config at merge time
-     * (mergePluginMcpServers). Only env/credential fields are accepted —
-     * command/args/url/transport are intentionally absent and `.strict()`
-     * rejects them, so a plugin update is never shadowed by a stale copy.
+     * User policy/supplements for PLUGIN-provided MCP servers, keyed by the
+     * server's `<plugin>:<server>` name. Layered onto the plugin config at merge
+     * time (mergePluginMcpServers). Only server/tool policy + env/credential
+     * fields are accepted — command/args/url/transport are intentionally absent and
+     * `.strict()` rejects them, so an update is never shadowed by a stale copy.
      */
     mcpServerOverrides: z
       .record(
         z
           .object({
+            enabled: z.boolean().optional(),
+            allowedTools: McpToolNameListSchema.optional(),
+            disabledTools: McpToolNameListSchema.optional(),
             env: z.record(z.string()).optional(),
             envVars: z.array(z.string()).optional(),
             credentialRef: z.string().optional(),

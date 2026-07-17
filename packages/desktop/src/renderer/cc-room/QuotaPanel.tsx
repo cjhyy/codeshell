@@ -7,7 +7,7 @@
  * so the panel notes that and lets you refresh explicitly.
  */
 import React from "react";
-import type { ProviderQuota, QuotaResult } from "@cjhyy/code-shell-capability-coding";
+import type { ProviderQuota, QuotaResult } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

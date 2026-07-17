@@ -104,6 +104,10 @@ import { sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
+import {
+  buildMcpToolPolicies,
+  isRegisteredMcpToolAllowed,
+} from "../tool-system/mcp-tool-policy.js";
 import { SettingsManager, userHome } from "../settings/manager.js";
 import { getCredentialAccess } from "../credentials/access.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
@@ -1355,12 +1359,15 @@ export class Engine {
         configCwd: this.config.cwd,
         processCwd: process.cwd(),
       });
-    const { workspaceProfile: runWorkspaceProfile, sessionProfileOverrides } =
-      resolveRunProfileState({
-        sessionWorkspaceProfile,
-        cwd,
-        settings: this.getSettingsManager(),
-      });
+    const {
+      workspaceProfile: runWorkspaceProfile,
+      sessionProfileOverrides,
+      profileMemoryDir,
+    } = resolveRunProfileState({
+      sessionWorkspaceProfile,
+      cwd,
+      settings: this.getSettingsManager(),
+    });
 
     // Wrap the caller's onStream so we can intercept `task_update`
     // events emitted by TodoWrite and keep an in-engine snapshot.
@@ -1476,7 +1483,7 @@ export class Engine {
     // intentionally shaped as a mutable local; we treat it as immutable
     // after the assignment.
     const toolCtx: ToolContext = {
-      ...this.buildToolContext(cwd, sessionProfileOverrides),
+      ...this.buildToolContext(cwd, sessionProfileOverrides, profileMemoryDir),
       approvalRouter: options?.approvalRouter ?? this.config.approvalRouter,
       permissionMode: runPermissionMode,
       planMode: runPlanMode,
@@ -1955,6 +1962,7 @@ export class Engine {
           responseLanguage: this.config.responseLanguage,
           userProfile: this.config.userProfile,
           workspaceProfile: runWorkspaceProfile,
+          profileMemoryDir,
           instructionCompatFileNames: compatFileNamesFrom(this.config.instructions),
           instructionBoundaryFinder: (scanCwd) =>
             resolveInstructionBoundary(scanCwd, this.capabilities),
@@ -2067,12 +2075,26 @@ export class Engine {
               .map(([n]) => n),
       );
       toolCtx.allowedMcpServers = allowedMcpServers;
+      const mcpToolPolicies = buildMcpToolPolicies(this.config.mcpServers ?? {});
+      toolCtx.mcpToolPolicies = mcpToolPolicies;
       const mcpVisible = (toolName: string): boolean => {
         const reg = this.toolRegistry.getTool(toolName) as {
           source?: string;
           serverName?: string;
+          mcpToolName?: string;
         } | null;
-        return reg?.source !== "mcp" || allowedMcpServers.has(reg?.serverName ?? "");
+        return (
+          reg?.source !== "mcp" ||
+          (allowedMcpServers.has(reg?.serverName ?? "") &&
+            isRegisteredMcpToolAllowed(
+              {
+                source: "mcp",
+                serverName: reg?.serverName,
+                mcpToolName: reg?.mcpToolName,
+              },
+              mcpToolPolicies,
+            ))
+        );
       };
       // Feature-flag visibility: a builtin mapped in TOOL_FEATURE_FLAGS is
       // hidden when its flag resolves to false (default-on flags only hide when
@@ -3977,6 +3999,7 @@ export class Engine {
   buildToolContext(
     cwd = this.config.cwd ?? process.cwd(),
     explicitProfileOverrides?: CapabilityOverrides,
+    profileMemoryDir?: string,
   ): ToolContext {
     const { disabledSkills, disabledPlugins } = this.readDisabledLists(
       cwd,
@@ -3998,6 +4021,7 @@ export class Engine {
     const ctx: ToolContext = {
       shellEnv: this.runEnvironmentResolver.readShellEnv(cwd),
       cwd,
+      profileMemoryDir,
       llmConfig: this.config.llm,
       modelPool: this.modelPool,
       toolRegistry: this.toolRegistry,
@@ -4059,11 +4083,7 @@ export class Engine {
     // capabilityOverrides over the global baseline + the no-repo whitelist
     // inversion. Extracted so the MCP merge consumers (engineFactory /
     // diskDefaultsFrom) fold identically — see that module's doc.
-    return computeEffectiveDisabledLists(
-      this.getSettingsManager(),
-      cwd,
-      explicitProfileOverrides,
-    );
+    return computeEffectiveDisabledLists(this.getSettingsManager(), cwd, explicitProfileOverrides);
   }
 
   /**

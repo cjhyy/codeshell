@@ -830,6 +830,7 @@ export class MemoryManager {
 
     const fmt = (e: MemoryEntry): string =>
       `- ${e.pinned ? "[pinned] " : ""}[${e.type}] ${e.name}: ${e.description}`;
+    const readableLocations = profile ? "global, profile, or project" : "global or project";
 
     const lines: string[] = [];
     if (globalEntries.length > 0) {
@@ -851,7 +852,7 @@ export class MemoryManager {
       `# Persistent Memory (index)\n\n` +
       `These are summaries of memories from previous sessions. Only the summary is shown here.\n` +
       `When a memory looks relevant to the current task, read its full content with the ` +
-      `MemoryRead tool (scope = user or dream; location = global or project) before relying on it.\n\n` +
+      `MemoryRead tool (scope = user or dream; location = ${readableLocations}) before relying on it.\n\n` +
       lines.join("\n")
     );
   }

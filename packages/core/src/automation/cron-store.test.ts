@@ -33,12 +33,23 @@ function job(over: Partial<CronJob> = {}): CronJob {
 describe("CronStore", () => {
   test("save then load round-trips jobs", () => {
     const store = new CronStore(file);
-    const jobs = [job(), job({ id: "2", name: "other", enabled: false })];
+    const jobs = [
+      job({
+        templateSource: {
+          installKey: "review@local",
+          templateId: "nightly-review",
+          revision: "a".repeat(64),
+          pluginVersion: "1.2.3",
+        },
+      }),
+      job({ id: "2", name: "other", enabled: false }),
+    ];
     store.save(jobs);
 
     const loaded = new CronStore(file).load();
     expect(loaded).toHaveLength(2);
     expect(loaded[0].name).toBe("nightly");
+    expect(loaded[0].templateSource).toEqual(jobs[0].templateSource);
     expect(loaded[1].enabled).toBe(false);
   });
 

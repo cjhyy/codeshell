@@ -1,9 +1,9 @@
-import { resolveExternalAgentConfig } from "@cjhyy/code-shell-capability-coding";
+import { resolveExternalAgentConfig } from "@cjhyy/code-shell-capability-coding/orchestration";
+import { markAttachmentsSent } from "@cjhyy/code-shell-server/storage";
 import {
-  markAttachmentsSent,
   materializeMobileAttachments,
   type MobileServerEvent,
-} from "@cjhyy/code-shell-server";
+} from "@cjhyy/code-shell-server/mobile-remote";
 import { dlog } from "../desktop-logger.js";
 import { readSettings } from "../settings-service.js";
 import type { AuthenticatedMobileClientEvent, OrchestratorCtx } from "./handle-client-event.js";

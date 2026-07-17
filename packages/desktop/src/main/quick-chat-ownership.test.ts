@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership";
-import { deleteSessionDir, listDiskSessions } from "@cjhyy/code-shell-server";
+import { deleteSessionDir, listDiskSessions } from "@cjhyy/code-shell-server/storage";
 
 const tempDirs: string[] = [];
 

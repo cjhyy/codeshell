@@ -13,6 +13,12 @@
  *
  * Delete is SOFT — files are moved to <baseDir>/memory-trash/<ISO>/<scope>/
  * by MemoryManager, so accidental deletions are recoverable by hand.
+ *
+ * Three locations are exposed:
+ *   - "global"   Cross-project memory under CODE_SHELL_HOME.
+ *   - "project"  Memory scoped to ctx.cwd (the backward-compatible default).
+ *   - "profile"  Portable memory owned by the active digital-human profile;
+ *                available only when ToolContext.profileMemoryDir is present.
  */
 
 import type { ToolDefinition } from "../../types.js";
@@ -23,7 +29,7 @@ const VALID_SCOPES: readonly MemoryScope[] = ["user", "dream"] as const;
 const VALID_TYPES = ["user", "feedback", "project", "reference"] as const;
 const VALID_ORIGINS: readonly MemoryOrigin[] = ["auto", "manual", "dream"] as const;
 
-type MemoryLocation = "global" | "project";
+type MemoryLocation = "global" | "project" | "profile";
 
 function parseScope(raw: unknown): MemoryScope | string {
   if (typeof raw !== "string") return 'Error: scope is required ("user" or "dream")';
@@ -33,10 +39,10 @@ function parseScope(raw: unknown): MemoryScope | string {
   return raw as MemoryScope;
 }
 
-/** Location: "global" → cross-project store (no projectDir); "project"
- *  (default, back-compat) → this repo's store. Anything else → "project". */
+/** Location defaults to project for backward compatibility. */
 function parseLocation(raw: unknown): MemoryLocation {
-  return raw === "global" ? "global" : "project";
+  if (raw === "global" || raw === "profile") return raw;
+  return "project";
 }
 
 function parseOrigin(raw: unknown): MemoryOrigin | undefined {
@@ -50,6 +56,14 @@ function mmFor(
   scope: MemoryScope,
   location: MemoryLocation = "project",
 ): MemoryManager {
+  if (location === "profile") {
+    if (!ctx?.profileMemoryDir) {
+      throw new Error(
+        'profile memory is unavailable for this run; activate a digital human with portableMemory enabled before using location "profile"',
+      );
+    }
+    return new MemoryManager({ baseDir: ctx.profileMemoryDir, scope });
+  }
   // location=global → omit projectDir so the manager points at the global store.
   return new MemoryManager({
     projectDir: location === "global" ? undefined : ctx?.cwd,
@@ -59,9 +73,9 @@ function mmFor(
 
 const LOCATION_SCHEMA = {
   type: "string",
-  enum: ["global", "project"],
+  enum: ["global", "project", "profile"],
   description:
-    'Which store: "global" (applies across all projects) or "project" (this repo only). Defaults to "project".',
+    'Which store: "global" (applies across all projects), "project" (this repo only), or "profile" (travels with the active digital human; requires portableMemory). Defaults to "project".',
 } as const;
 
 // ─── MemoryList ────────────────────────────────────────────────────────────
@@ -204,7 +218,7 @@ export const memorySaveToolDef: ToolDefinition = {
     "feedback (how to approach work), " +
     "project (non-obvious facts about ongoing work), " +
     "reference (pointers to external resources). " +
-    "Pick `location`: global (a lesson/preference true in ANY project) vs project (this repo only). " +
+    "Pick `location`: global (a lesson/preference true in ANY project), project (this repo only), or profile (knowledge that should travel with the active digital human). " +
     "If a memory in the injected index is now stale or wrong, update it by id or MemoryDelete it — keep the store correct rather than letting contradictions pile up. " +
     "The `description` is a one-line summary shown in the index; the `content` is the full body.",
   inputSchema: {

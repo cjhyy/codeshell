@@ -64,7 +64,8 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 - **Terminal UI is Ink** (React for CLI). `packages/tui/src/ui/**.tsx` are Ink React components, NOT browser DOM.
 - **Core is `packages/core/`** (package name `@cjhyy/code-shell-core`). Coding policy lives in
   `packages/coding/`; hosts compose that package explicitly. There is no `src/core` directory.
-- **Typecheck is not a clean gate**: `bun run typecheck` reports pre-existing errors across the repo. Don't treat it as a blocker for your changes.
+- **Root typecheck is a clean gate**: keep `bun run typecheck` passing. Desktop also has its own
+  package-level typecheck and should be verified when Electron code changes.
 - **Two hard ESLint guardrails** (in `eslint.config.js`):
   - `packages/core/**` MUST NOT import `@cjhyy/code-shell-tui` (core is UI-agnostic).
   - `packages/desktop/src/renderer/**` MUST NOT runtime-import any codeshell package — talk to main via `window.codeshell.*`. Type-only imports are allowed and used to share `StreamEvent`/`TaskInfo` shapes.
@@ -72,7 +73,7 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 - **`sync-models.ts` exists** at `scripts/sync-models.ts` but is NOT run automatically by `bun run build`. Run it manually to refresh OpenRouter model data (`bun run scripts/sync-models.ts`).
 - **Markdown rendering stacks differ**: Desktop uses `react-markdown + remark-gfm + rehype-highlight` (streaming phase uses plain/pre without live parse); TUI uses `marked + marked-terminal`. Don't assume they render identically.
 - **MCP servers may be project-scoped**: `SettingsManager` defaults to `project` scope and reads `${cwd}/.code-shell/settings.json` + `.local.json`. It does NOT read `~/.code-shell/settings.json` unless explicitly configured. Local-first is the intended pattern.
-- **Plugin env-var rewrite is deliberate**: `packages/core/src/plugins/varRewrite.ts` rewrites `CLAUDE_PLUGIN_ROOT` → `CODESHELL_PLUGIN_ROOT` in plugin files at install time. This prevents plugins from detecting CC at runtime and emitting CC-specific output. Do NOT change this to dual-set env vars at runtime.
+- **Plugin env-var rewrite is deliberate**: `packages/core/src/plugins/varRewrite.ts` rewrites Claude-specific root/data variables to `CODESHELL_PLUGIN_ROOT` / `CODESHELL_PLUGIN_DATA` in plugin files at install time. Hook processes expose the CodeShell names plus the Codex-compatible `PLUGIN_ROOT` / `PLUGIN_DATA` aliases, but deliberately strip the Claude names so plugins do not misdetect the host.
 
 ## Where to put things
 

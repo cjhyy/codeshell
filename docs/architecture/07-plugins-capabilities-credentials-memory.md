@@ -4,51 +4,84 @@
 
 ## 1. Plugins (`plugins/`)
 
-CodeShell has two plugin install families:
+CodeShell has three plugin install families:
 
 1. **Marketplace/cache install** (`/plugin install <plugin>@<marketplace>`) clones or refreshes a marketplace, materializes one entry into `~/.code-shell/plugins/cache/...`, rewrites CC root variables, and records it in `installed_plugins.json`.
 2. **Local/direct install** (`code-shell plugin install <source>` and the desktop dir/zip entry) installs into `~/.code-shell/plugins/<name>/`, detects CC vs Codex, converts Codex assets into the CC-shaped runtime layout, writes `.cs-meta.json`, and registers the plugin as `name@local`.
+3. **Public npm Phase A** (`code-shell plugin install npm:<package>@<exact-or-tag>`) resolves only against `registry.npmjs.org`, locks a tag to an exact version, verifies the registry SHA-512 digest, and then hands a self-contained package to the same local projector. It never runs npm/Bun, lifecycle scripts, dependency installation, private registries, ranges, or auto-update.
 
 ![Plugin extension surface](images/plugin-extension-surface.png)
 
-| File | Role | Anchor |
-|------|------|--------|
-| `plugins/marketplaceManager.ts` | Clone/refresh/remove/list marketplaces; detect CC/Codex/universal manifest layout | `marketplaceManager.ts:46`, `marketplaceManager.ts:72`, `marketplaceManager.ts:93`, `marketplaceManager.ts:164`, `marketplaceManager.ts:177` |
-| `plugins/pluginInstaller.ts` | Marketplace install/uninstall/list, cache path validation, SHA check, var rewrite | `pluginInstaller.ts:56`, `pluginInstaller.ts:187`, `pluginInstaller.ts:196`, `pluginInstaller.ts:289`, `pluginInstaller.ts:370` |
-| `plugins/installer/install.ts` | Local install into `~/.code-shell/plugins/<name>/`; CC copy or Codex conversion; `.cs-meta.json`; `name@local` entry | `install.ts:21`, `install.ts:42`, `install.ts:57`, `install.ts:61`, `install.ts:65`, `install.ts:67`, `install.ts:79`, `install.ts:84` |
-| `plugins/installer/installFromSource.ts` / `installFromArchive.ts` | Direct git/subdir and zip/dir handoff to the local installer; zip overwrite is atomic | `installFromSource.ts:21`, `installFromSource.ts:42`, `installFromSource.ts:52`, `installFromArchive.ts:58`, `installFromArchive.ts:95` |
-| `plugins/installer/codex/*.ts` | Codex conversion: skills copied/validated, commands copied from `prompts/` + `commands/`, agents TOML->MD, MCP snake_case fields normalized | `convertSkills.ts:19`, `convertCommands.ts:23`, `convertAgents.ts:14`, `convertMcp.ts:23`, `convertMcp.ts:53` |
-| `plugins/loadPluginHooks.ts` / `pluginCommandHook.ts` | Register `hooks/hooks.json`, map CC events, per-hook keys, run command hooks with CodeShell env | `loadPluginHooks.ts:56`, `loadPluginHooks.ts:147`, `loadPluginHooks.ts:171`, `loadPluginHooks.ts:268`, `pluginCommandHook.ts:91`, `pluginCommandHook.ts:107` |
-| `plugins/installer/loadPluginMcp.ts` / `loadPluginAgents.ts` | Merge plugin MCP servers and expose plugin agent directories, honoring disabled plugins | `loadPluginMcp.ts:21`, `loadPluginMcp.ts:48`, `loadPluginMcp.ts:91`, `loadPluginAgents.ts:12` |
-| `plugins/pluginCommandsLoader.ts` / `pluginContent.ts` | Runtime slash-command scan and read-only inventory of skills/commands/agents/hooks/MCP | `pluginCommandsLoader.ts:63`, `pluginCommandsLoader.ts:135`, `pluginContent.ts:68` |
-| `plugins/gitOps.ts` | Git subprocess wrapper: non-interactive env, sparse marketplace clone, `--` separators against arg injection | `gitOps.ts:48`, `gitOps.ts:118`, `gitOps.ts:126`, `gitOps.ts:143`, `gitOps.ts:171`, `gitOps.ts:177`, `gitOps.ts:186` |
+| File                                                               | Role                                                                                                                                        | Anchor                                                                                                                                                       |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `plugins/marketplaceManager.ts`                                    | Clone/refresh/remove/list marketplaces; detect CC/Codex/universal manifest layout                                                           | `marketplaceManager.ts:46`, `marketplaceManager.ts:72`, `marketplaceManager.ts:93`, `marketplaceManager.ts:164`, `marketplaceManager.ts:177`                 |
+| `plugins/pluginInstaller.ts`                                       | Marketplace install/uninstall/list, cache path validation, SHA check, var rewrite                                                           | `pluginInstaller.ts:56`, `pluginInstaller.ts:187`, `pluginInstaller.ts:196`, `pluginInstaller.ts:289`, `pluginInstaller.ts:370`                              |
+| `plugins/installer/install.ts`                                     | Local install into `~/.code-shell/plugins/<name>/`; CC copy or Codex conversion; `.cs-meta.json`; `name@local` entry                        | `install.ts:21`, `install.ts:42`, `install.ts:57`, `install.ts:61`, `install.ts:65`, `install.ts:67`, `install.ts:79`, `install.ts:84`                       |
+| `plugins/installer/installFromSource.ts` / `installFromArchive.ts` | Direct git/subdir and zip/dir handoff to the local installer; zip overwrite is atomic                                                       | `installFromSource.ts:21`, `installFromSource.ts:42`, `installFromSource.ts:52`, `installFromArchive.ts:58`, `installFromArchive.ts:95`                      |
+| `plugins/installer/installFromNpm.ts` / `npmTar.ts`                | Fixed-origin npm metadata/download, exact-version lock, SHA-512 verification, bounded gzip/tar extraction, self-contained package gate      | `installFromNpm.ts`, `npmTar.ts`                                                                                                                             |
+| `plugins/installer/codex/*.ts`                                     | Codex conversion: skills copied/validated, commands copied from `prompts/` + `commands/`, agents TOML->MD, MCP snake_case fields normalized | `convertSkills.ts:19`, `convertCommands.ts:23`, `convertAgents.ts:14`, `convertMcp.ts:23`, `convertMcp.ts:53`                                                |
+| `plugins/loadPluginHooks.ts` / `pluginCommandHook.ts`              | Register `hooks/hooks.json`, map CC events, per-hook keys, run command hooks with CodeShell env                                             | `loadPluginHooks.ts:56`, `loadPluginHooks.ts:147`, `loadPluginHooks.ts:171`, `loadPluginHooks.ts:268`, `pluginCommandHook.ts:91`, `pluginCommandHook.ts:107` |
+| `plugins/installer/loadPluginMcp.ts` / `loadPluginAgents.ts`       | Merge plugin MCP servers and expose plugin agent directories, honoring disabled plugins                                                     | `loadPluginMcp.ts:21`, `loadPluginMcp.ts:48`, `loadPluginMcp.ts:91`, `loadPluginAgents.ts:12`                                                                |
+| `plugins/pluginCommandsLoader.ts` / `pluginContent.ts`             | Runtime slash-command scan and read-only inventory of skills/commands/agents/hooks/MCP                                                      | `pluginCommandsLoader.ts:63`, `pluginCommandsLoader.ts:135`, `pluginContent.ts:68`                                                                           |
+| `plugins/gitOps.ts`                                                | Git subprocess wrapper: non-interactive env, sparse marketplace clone, `--` separators against arg injection                                | `gitOps.ts:48`, `gitOps.ts:118`, `gitOps.ts:126`, `gitOps.ts:143`, `gitOps.ts:171`, `gitOps.ts:177`, `gitOps.ts:186`                                         |
 
-**Format handling is path-specific.** The local/direct installer uses `detectPluginFormat` (`detectFormat.ts:4`) and converts Codex plugins into runtime-native files (`install.ts:57`-`install.ts:76`). The marketplace/cache installer does not call that converter; it materializes the marketplace entry source and rewrites `CLAUDE_PLUGIN_ROOT` to `CODESHELL_PLUGIN_ROOT` (`pluginInstaller.ts:328`, `pluginInstaller.ts:335`). That means "Codex conversion" currently belongs to the local/direct installer family, while marketplace install is the CC-compatible cache path.
+**Format handling is shared.** Local directory/ZIP installs project the source
+through the same Codex/CC normalization used for the reviewed snapshot.
+Marketplace installs detect the materialized package format and project Codex
+skills, commands, agents, hooks, and MCP into the runtime-native layout too.
+Both paths retain the complete plugin tree for scripts/assets and rewrite the
+compatible plugin-root aliases.
 
 **Install records.** Both families write the shared V2 manifest at `~/.code-shell/plugins/installed_plugins.json` (`installedPlugins.ts:15`, `installedPlugins.ts:21`, `installedPlugins.ts:45`). Marketplace installs key entries as `<plugin>@<marketplace>` (`pluginInstaller.ts:339`), while local/direct installs key them as `<name>@local` (`install.ts:84`). Local plugin listing reads `.cs-meta.json` and skips cache entries without it (`list.ts:14`, `list.ts:23`).
 
 **Runtime surfaces.** Installed plugins can contribute five runtime surfaces:
 
-- **Hooks**: CC event names are mapped to CodeShell hook names (`loadPluginHooks.ts:56`), registered at priority 80 (`loadPluginHooks.ts:53`, `loadPluginHooks.ts:228`), and suppressed either by whole-plugin disable or a stable `pluginHookKey(plugin:RawEvent:command)` (`loadPluginHooks.ts:147`, `loadPluginHooks.ts:171`).
-- **MCP servers**: `mcp-servers.json` wins over `.mcp.json`; CC `.mcp.json` is unwrapped and re-keyed to `<plugin>:<server>` (`loadPluginMcp.ts:36`, `loadPluginMcp.ts:48`). User overrides only supplement env/credential fields, never command/args/url/transport (`loadPluginMcp.ts:11`, `settings/schema.ts:297`).
+- **Hooks**: CC event names are mapped to CodeShell hook names
+  (`loadPluginHooks.ts:56`), registered at priority 80
+  (`loadPluginHooks.ts:53`, `loadPluginHooks.ts:228`), and suppressed either
+  by whole-plugin disable or a stable
+  `pluginHookKey(plugin:RawEvent:command)` (`loadPluginHooks.ts:147`,
+  `loadPluginHooks.ts:171`). Executable definitions are digest-gated.
+  Approval records a bounded non-executable per-command snapshot; when an
+  update changes the digest, execution approval is cleared while the old
+  snapshot remains available for added/removed/changed/unchanged review in
+  Desktop and TUI.
+- **MCP servers**: `mcp-servers.json` wins over `.mcp.json`; CC `.mcp.json` is
+  unwrapped and re-keyed to `<plugin>:<server>`. A plugin-level digest approval
+  gates all external connections first. The global per-server override can
+  then enable/disable one server, apply exact-name tool allow/deny policy, or
+  supplement env/credential fields, but can never replace
+  command/args/url/transport. Tool policy is enforced in the model tool list,
+  ToolSearch, direct registered-tool calls, and generic `MCPTool` dispatch.
 - **Skills**: scanner-side filters honor both `disabledSkills` and bare-name `disabledPlugins` (`settings/schema.ts:318`, `settings/schema.ts:326`); prompt and tool paths receive the same folded lists from the engine (`engine.ts:1627`, `engine.ts:3317`).
 - **Agents**: installed plugin `agents/` directories are inserted between user and project agent dirs, and plugin-sourced bare skill allowlists can be namespaced at spawn time (`loadPluginAgents.ts:12`, `engine.ts:255`, `engine.ts:269`).
-- **Slash commands**: `commands/*.md` becomes `/plugin:command`; the TUI stages the prompt body after `$ARGUMENTS` / `{args}` substitution (`pluginCommandsLoader.ts:63`, `plugin-commands-registration.ts:11`, `plugin-commands-registration.ts:18`).
+- **Slash commands**: `commands/*.md` becomes `/plugin:command`. TUI and Desktop
+  surface the commands directly; protocol-capable hosts can use
+  `pluginCommands/list` and `pluginCommands/expand`, which keep command bodies
+  server-side while applying bounded `$ARGUMENTS`, `{args}`, positional, and
+  named substitution.
 
 **Security invariants.** Plugin and marketplace names must be one safe path segment (`paths.ts:9`, `marketplaceManager.ts:37`, `pluginInstaller.ts:56`). Marketplace uninstall realpaths the target and requires strict containment below the plugin cache root before `rmSync` (`pluginInstaller.ts:73`, `pluginInstaller.ts:370`). Git never prompts for credentials/host keys (`gitOps.ts:48`) and puts `--` before URL/ref/path values that originate outside the process (`gitOps.ts:126`, `gitOps.ts:143`, `gitOps.ts:177`, `gitOps.ts:190`).
+
+The npm path additionally caps metadata, compressed bytes, expanded bytes,
+entry count, individual file size, path bytes, and path depth. Its tar parser
+rejects absolute or parent paths, duplicate portable names, symlinks,
+hardlinks, devices, FIFOs, sparse/unknown entry types, malformed checksums and
+trailing archive data. Both registry metadata and the extracted
+`package/package.json` must identify the same exact dependency-free package.
 
 ## 2. Capability Control (`capability-control/`)
 
 Capability control is a **read-only projection layer** over builtin tools, MCP servers, user/project skills, installed plugins, and user/project agents. It computes descriptors for the UI and writes toggles back to the real settings keys; it is not a second source of truth.
 
-| File | Role | Anchor |
-|------|------|--------|
-| `capability-control/types.ts` | `CapabilityDescriptor`, five `kind`s, inlined `control`, write-scope types | `types.ts:13`, `types.ts:17`, `types.ts:42`, `types.ts:68` |
-| `capability-control/service.ts` | Compose projections, apply project overlays, route writes by descriptor control | `service.ts:68`, `service.ts:74`, `service.ts:102`, `service.ts:126`, `service.ts:144`, `service.ts:161` |
-| `capability-control/project.ts` | Project builtin/MCP/skills/agents/plugins into uniform descriptors | `project.ts:21`, `project.ts:57`, `project.ts:91`, `project.ts:122`, `project.ts:149` |
-| `capability-control/overlay.ts` | Tri-state math, kind->bucket mapping, effective disabled lists, no-repo whitelist, builtin allow/deny folding | `overlay.ts:20`, `overlay.ts:28`, `overlay.ts:71`, `overlay.ts:99`, `overlay.ts:127` |
-| `capability-control/disabled-lists.ts` | Single fold for runtime disabled skills/plugins/plugin-hooks plus no-repo inversion | `disabled-lists.ts:20`, `disabled-lists.ts:32`, `disabled-lists.ts:51`, `disabled-lists.ts:65` |
-| `settings/schema.ts` | Project `capabilityOverrides` buckets: skills/plugins/agents/MCP/builtin/pluginHooks | `settings/schema.ts:7`, `settings/schema.ts:20`, `settings/schema.ts:27`, `settings/schema.ts:343` |
+| File                                   | Role                                                                                                          | Anchor                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `capability-control/types.ts`          | `CapabilityDescriptor`, five `kind`s, inlined `control`, write-scope types                                    | `types.ts:13`, `types.ts:17`, `types.ts:42`, `types.ts:68`                                               |
+| `capability-control/service.ts`        | Compose projections, apply project overlays, route writes by descriptor control                               | `service.ts:68`, `service.ts:74`, `service.ts:102`, `service.ts:126`, `service.ts:144`, `service.ts:161` |
+| `capability-control/project.ts`        | Project builtin/MCP/skills/agents/plugins into uniform descriptors                                            | `project.ts:21`, `project.ts:57`, `project.ts:91`, `project.ts:122`, `project.ts:149`                    |
+| `capability-control/overlay.ts`        | Tri-state math, kind->bucket mapping, effective disabled lists, no-repo whitelist, builtin allow/deny folding | `overlay.ts:20`, `overlay.ts:28`, `overlay.ts:71`, `overlay.ts:99`, `overlay.ts:127`                     |
+| `capability-control/disabled-lists.ts` | Single fold for runtime disabled skills/plugins/plugin-hooks plus no-repo inversion                           | `disabled-lists.ts:20`, `disabled-lists.ts:32`, `disabled-lists.ts:51`, `disabled-lists.ts:65`           |
+| `settings/schema.ts`                   | Project `capabilityOverrides` buckets: skills/plugins/agents/MCP/builtin/pluginHooks                          | `settings/schema.ts:7`, `settings/schema.ts:20`, `settings/schema.ts:27`, `settings/schema.ts:343`       |
 
 Each descriptor carries `{ settingsKey, mode, token }` (`types.ts:42`) so user-scope writes can be generic: MCP toggles flip `mcpServers[token].enabled`, default builtin toggles write a denylist, non-default builtin toggles write an allowlist, and skills/plugins/agents write denylists (`service.ts:167`, `service.ts:176`). Project-scope writes go to `capabilityOverrides.<bucket>.<token>` and delete the key for inherit (`service.ts:144`, `service.ts:155`).
 
@@ -64,15 +97,15 @@ The credential layer stores `token`, `link`, and `cookie` credentials in user/pr
 
 ![Credential store gates](images/credential-store-gates.png)
 
-| File | Role | Anchor |
-|------|------|--------|
-| `credentials/types.ts` | Credential shape: `token` / `link` / `cookie`, env exposure, auto-use/auto-inject, cookie metadata | `types.ts:6`, `types.ts:8`, `types.ts:27`, `types.ts:33`, `types.ts:39`, `types.ts:46` |
-| `credentials/store.ts` | Two-scope store, disk encryption boundary, atomic 0o600 writes, scope-aware list/resolve/env/mask | `store.ts:29`, `store.ts:44`, `store.ts:51`, `store.ts:74`, `store.ts:92`, `store.ts:107`, `store.ts:154`, `store.ts:182`, `store.ts:199` |
-| `credentials/cipher.ts` | Core-owned `EncryptionCipher` interface and default `PlaintextCipher` | `cipher.ts:19`, `cipher.ts:41`, `cipher.ts:71`, `cipher.ts:75` |
-| `credentials/use-gate.ts` | Three-step approval: global/per-credential auto approve, session allow, interactive ask/headless deny | `use-gate.ts:44`, `use-gate.ts:62`, `use-gate.ts:67`, `use-gate.ts:69`, `use-gate.ts:71`, `use-gate.ts:87` |
-| `credentials/use-credential-tool.ts` | Dynamic tool description, masked list, scoped resolve, gate, value return, cookie materialization and sweep | `use-credential-tool.ts:65`, `use-credential-tool.ts:90`, `use-credential-tool.ts:125`, `use-credential-tool.ts:146`, `use-credential-tool.ts:158`, `use-credential-tool.ts:174`, `use-credential-tool.ts:191`, `use-credential-tool.ts:198`, `use-credential-tool.ts:211` |
-| `credentials/inject-credential-tool.ts` | Cookie-only browser injection with separate auto-inject/session gate and host callback | `inject-credential-tool.ts:67`, `inject-credential-tool.ts:90`, `inject-credential-tool.ts:99`, `inject-credential-tool.ts:111`, `inject-credential-tool.ts:126`, `inject-credential-tool.ts:145` |
-| `credentials/cookie-jar.ts` | Serialized Electron-cookie subset -> Netscape cookies.txt | `cookie-jar.ts:10`, `cookie-jar.ts:26`, `cookie-jar.ts:44` |
+| File                                    | Role                                                                                                        | Anchor                                                                                                                                                                                                                                                                     |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `credentials/types.ts`                  | Credential shape: `token` / `link` / `cookie`, env exposure, auto-use/auto-inject, cookie metadata          | `types.ts:6`, `types.ts:8`, `types.ts:27`, `types.ts:33`, `types.ts:39`, `types.ts:46`                                                                                                                                                                                     |
+| `credentials/store.ts`                  | Two-scope store, disk encryption boundary, atomic 0o600 writes, scope-aware list/resolve/env/mask           | `store.ts:29`, `store.ts:44`, `store.ts:51`, `store.ts:74`, `store.ts:92`, `store.ts:107`, `store.ts:154`, `store.ts:182`, `store.ts:199`                                                                                                                                  |
+| `credentials/cipher.ts`                 | Core-owned `EncryptionCipher` interface and default `PlaintextCipher`                                       | `cipher.ts:19`, `cipher.ts:41`, `cipher.ts:71`, `cipher.ts:75`                                                                                                                                                                                                             |
+| `credentials/use-gate.ts`               | Three-step approval: global/per-credential auto approve, session allow, interactive ask/headless deny       | `use-gate.ts:44`, `use-gate.ts:62`, `use-gate.ts:67`, `use-gate.ts:69`, `use-gate.ts:71`, `use-gate.ts:87`                                                                                                                                                                 |
+| `credentials/use-credential-tool.ts`    | Dynamic tool description, masked list, scoped resolve, gate, value return, cookie materialization and sweep | `use-credential-tool.ts:65`, `use-credential-tool.ts:90`, `use-credential-tool.ts:125`, `use-credential-tool.ts:146`, `use-credential-tool.ts:158`, `use-credential-tool.ts:174`, `use-credential-tool.ts:191`, `use-credential-tool.ts:198`, `use-credential-tool.ts:211` |
+| `credentials/inject-credential-tool.ts` | Cookie-only browser injection with separate auto-inject/session gate and host callback                      | `inject-credential-tool.ts:67`, `inject-credential-tool.ts:90`, `inject-credential-tool.ts:99`, `inject-credential-tool.ts:111`, `inject-credential-tool.ts:126`, `inject-credential-tool.ts:145`                                                                          |
+| `credentials/cookie-jar.ts`             | Serialized Electron-cookie subset -> Netscape cookies.txt                                                   | `cookie-jar.ts:10`, `cookie-jar.ts:26`, `cookie-jar.ts:44`                                                                                                                                                                                                                 |
 
 **Scope and isolation.** `CredentialStore.list("full")` merges user then project credentials, with project winning by id; `list("project")` reads only the project store (`store.ts:146`, `store.ts:154`). `UseCredential` maps `settingsScope === "full"` to full access and every project/isolated engine to project-only (`use-credential-tool.ts:125`). That same isolation applies to `credentialUse.autoApprove` (`use-credential-tool.ts:132`) and env exposure (`store.ts:182`, `engine.ts:3266`).
 
@@ -90,12 +123,12 @@ Memory is a two-location (`global` / `project`) and three-scope (`user` / `dream
 
 ### Storage and injection (`session/memory.ts`, `tool-system/builtin/memory.ts`)
 
-| File | Role | Anchor |
-|------|------|--------|
-| `session/memory.ts` | Scopes, file layout, frontmatter lifecycle, soft delete, pending approval/demotion, two-layer injection index | `memory.ts:44`, `memory.ts:140`, `memory.ts:148`, `memory.ts:171`, `memory.ts:248`, `memory.ts:301`, `memory.ts:328`, `memory.ts:357`, `memory.ts:383`, `memory.ts:391`, `memory.ts:519` |
-| `tool-system/builtin/memory.ts` | `MemoryList`/`MemoryRead`/`MemorySave`/`MemoryDelete`; only `user` and `dream` are tool-visible; `location` selects global/project | `memory.ts:22`, `memory.ts:35`, `memory.ts:62`, `memory.ts:105`, `memory.ts:146`, `memory.ts:175`, `memory.ts:256` |
-| `prompt/composer.ts` | Memory index is dynamic tail context, not cached system prefix | `composer.ts:156`, `composer.ts:164`, `composer.ts:296`, `composer.ts:302` |
-| `engine.ts` | Dream-scope write permission and memory pipeline trigger | `engine.ts:2228`, `engine.ts:2409`, `engine.ts:2440`, `engine.ts:2930` |
+| File                            | Role                                                                                                                               | Anchor                                                                                                                                                                                   |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session/memory.ts`             | Scopes, file layout, frontmatter lifecycle, soft delete, pending approval/demotion, two-layer injection index                      | `memory.ts:44`, `memory.ts:140`, `memory.ts:148`, `memory.ts:171`, `memory.ts:248`, `memory.ts:301`, `memory.ts:328`, `memory.ts:357`, `memory.ts:383`, `memory.ts:391`, `memory.ts:519` |
+| `tool-system/builtin/memory.ts` | `MemoryList`/`MemoryRead`/`MemorySave`/`MemoryDelete`; only `user` and `dream` are tool-visible; `location` selects global/project | `memory.ts:22`, `memory.ts:35`, `memory.ts:62`, `memory.ts:105`, `memory.ts:146`, `memory.ts:175`, `memory.ts:256`                                                                       |
+| `prompt/composer.ts`            | Memory index is dynamic tail context, not cached system prefix                                                                     | `composer.ts:156`, `composer.ts:164`, `composer.ts:296`, `composer.ts:302`                                                                                                               |
+| `engine.ts`                     | Dream-scope write permission and memory pipeline trigger                                                                           | `engine.ts:2228`, `engine.ts:2409`, `engine.ts:2440`, `engine.ts:2930`                                                                                                                   |
 
 The base dir resolves as explicit `baseDir`, then `CODE_SHELL_HOME`, then `~/.code-shell` (`memory.ts:112`). Global memory lives under `<base>/memory/{user,dream,pending}`; project memory lives under `<base>/projects/<project-hash>/memory/{user,dream,pending}` (`memory.ts:148`). `pending` is used only as an approval queue for global candidates and is not exposed by the memory tools (`memory.ts:35`, `tool-system/builtin/memory.ts:22`).
 

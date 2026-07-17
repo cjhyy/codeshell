@@ -7,7 +7,7 @@ import {
   registerSecondInstanceFocus,
   runOwnedQuickChatStartupCleanup,
 } from "./quick-chat-startup-cleanup";
-import { cleanupStaleQuickChatSessions } from "@cjhyy/code-shell-server";
+import { cleanupStaleQuickChatSessions } from "@cjhyy/code-shell-server/storage";
 
 const tempDirs: string[] = [];
 

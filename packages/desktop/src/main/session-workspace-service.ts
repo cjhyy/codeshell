@@ -12,7 +12,7 @@ import {
   type WorktreeDiffSummary,
   type WorktreeInfo,
   type WorktreeWorkspaceOwner,
-} from "@cjhyy/code-shell-capability-coding";
+} from "@cjhyy/code-shell-capability-coding/git";
 
 export type WorkspaceCleanupAction = "detach" | "discard";
 

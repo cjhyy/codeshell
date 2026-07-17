@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { parseAgentDefinition, type AgentDefinition } from "./agent-definition.js";
 
 export interface AgentSourceDir {
@@ -11,8 +11,8 @@ export interface AgentSourceDir {
 }
 
 /**
- * Loads reusable sub-agent role definitions from one or more directories
- * of `*.md` files. Non-recursive. Malformed files are skipped with a
+ * Loads reusable sub-agent role definitions recursively from one or more
+ * directories. Malformed `.md` files are skipped with a
  * warning rather than failing the whole load — one bad role file must
  * not break the agent system.
  *
@@ -33,20 +33,17 @@ export class AgentDefinitionRegistry {
     return AgentDefinitionRegistry.loadFromDirs([{ dir, source: "project" }], []);
   }
 
-  static loadFromDirs(
-    dirs: AgentSourceDir[],
-    disabled: string[],
-  ): AgentDefinitionRegistry {
+  static loadFromDirs(dirs: AgentSourceDir[], disabled: string[]): AgentDefinitionRegistry {
     const reg = new AgentDefinitionRegistry();
 
     for (const { dir, source, pluginName } of dirs) {
       if (!existsSync(dir) || !statSync(dir).isDirectory()) continue;
-      for (const entry of readdirSync(dir).sort()) {
-        if (!entry.endsWith(".md")) continue;
-        const full = join(dir, entry);
+      const pluginRoot = source === "plugin" ? safeRealpath(dir) : null;
+      if (source === "plugin" && !pluginRoot) continue;
+      for (const { full, sourceName } of collectAgentMarkdownFiles(dir, pluginRoot)) {
         try {
           if (!statSync(full).isFile()) continue;
-          const def = parseAgentDefinition(readFileSync(full, "utf8"), entry);
+          const def = parseAgentDefinition(readFileSync(full, "utf8"), sourceName);
           def.source = source;
           if (pluginName) def.pluginName = pluginName;
           def.filePath = full;
@@ -63,7 +60,7 @@ export class AgentDefinitionRegistry {
           }
           reg.defs.set(def.name, def);
         } catch (err) {
-          reg.warnings.push(`${entry}: ${(err as Error).message}`);
+          reg.warnings.push(`${sourceName}: ${(err as Error).message}`);
         }
       }
     }
@@ -83,4 +80,45 @@ export class AgentDefinitionRegistry {
   list(): AgentDefinition[] {
     return [...this.defs.values()];
   }
+}
+
+function safeRealpath(path: string): string | null {
+  try {
+    return realpathSync(path);
+  } catch {
+    return null;
+  }
+}
+
+function resolveContainedPluginAgent(root: string, candidate: string): string | null {
+  const target = safeRealpath(candidate);
+  if (!target) return null;
+  const rel = relative(root, target);
+  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return null;
+  return target;
+}
+
+function collectAgentMarkdownFiles(
+  root: string,
+  pluginRoot: string | null,
+): Array<{ full: string; sourceName: string }> {
+  const files: Array<{ full: string; sourceName: string }> = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
+      const candidate = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(candidate);
+        continue;
+      }
+      if (!entry.name.endsWith(".md")) continue;
+      const full =
+        pluginRoot === null ? candidate : resolveContainedPluginAgent(pluginRoot, candidate);
+      if (!full) continue;
+      files.push({ full, sourceName: relative(root, candidate) });
+    }
+  };
+  walk(root);
+  return files;
 }

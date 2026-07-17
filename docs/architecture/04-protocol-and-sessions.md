@@ -12,15 +12,15 @@ This is a product-host convention, not a universal `Engine` invariant. SDK embed
 
 That seam is intentional: request validation, stream envelopes, approvals, cancellation, background-work wakeups, model switches, config reloads, and session lifetime all pass through one protocol surface. The legacy typed helper still exists for embedders that want one `Engine` wrapped by one `AgentServer` (`packages/core/src/protocol/factories.ts:86`, `packages/core/src/protocol/factories.ts:93`, `packages/core/src/protocol/factories.ts:94`), but the multi-session desktop/TUI/TCP paths are manager-backed.
 
-| File | Role |
-|------|------|
-| `packages/core/src/protocol/types.ts` | JSON-RPC envelopes, error codes, request/result shapes, method names (`packages/core/src/protocol/types.ts:25`, `packages/core/src/protocol/types.ts:55`, `packages/core/src/protocol/types.ts:333`) |
-| `packages/core/src/protocol/server.ts` | `AgentServer`: dispatch, run routing, approvals, query/config, background wakeups, lifecycle (`packages/core/src/protocol/server.ts:110`, `packages/core/src/protocol/server.ts:314`) |
-| `packages/core/src/protocol/client.ts` | `AgentClient`: request builder, pending-response map, typed stream/status events (`packages/core/src/protocol/client.ts:63`, `packages/core/src/protocol/client.ts:349`) |
-| `packages/core/src/protocol/transport.ts` | `Transport`, `createInProcessTransport`, `StdioTransport` (`packages/core/src/protocol/transport.ts:17`, `packages/core/src/protocol/transport.ts:34`, `packages/core/src/protocol/transport.ts:76`) |
-| `packages/core/src/protocol/tcp-transport.ts` | `SocketTransport` and `listenTcp` for NDJSON over TCP (`packages/core/src/protocol/tcp-transport.ts:25`, `packages/core/src/protocol/tcp-transport.ts:69`) |
-| `packages/core/src/protocol/chat-session-manager.ts` | Live multi-session container with shared runtime, cap, idle TTL (`packages/core/src/protocol/chat-session-manager.ts:34`) |
-| `packages/core/src/protocol/chat-session.ts` | One live engine per chat tab/session, FIFO turn queue, cancellation, deferred model switch (`packages/core/src/protocol/chat-session.ts:40`) |
+| File                                                 | Role                                                                                                                                                                                                 |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core/src/protocol/types.ts`                | JSON-RPC envelopes, error codes, request/result shapes, method names (`packages/core/src/protocol/types.ts:25`, `packages/core/src/protocol/types.ts:55`, `packages/core/src/protocol/types.ts:333`) |
+| `packages/core/src/protocol/server.ts`               | `AgentServer`: dispatch, run routing, approvals, query/config, background wakeups, lifecycle (`packages/core/src/protocol/server.ts:110`, `packages/core/src/protocol/server.ts:314`)                |
+| `packages/core/src/protocol/client.ts`               | `AgentClient`: request builder, pending-response map, typed stream/status events (`packages/core/src/protocol/client.ts:63`, `packages/core/src/protocol/client.ts:349`)                             |
+| `packages/core/src/protocol/transport.ts`            | `Transport`, `createInProcessTransport`, `StdioTransport` (`packages/core/src/protocol/transport.ts:17`, `packages/core/src/protocol/transport.ts:34`, `packages/core/src/protocol/transport.ts:76`) |
+| `packages/core/src/protocol/tcp-transport.ts`        | `SocketTransport` and `listenTcp` for NDJSON over TCP (`packages/core/src/protocol/tcp-transport.ts:25`, `packages/core/src/protocol/tcp-transport.ts:69`)                                           |
+| `packages/core/src/protocol/chat-session-manager.ts` | Live multi-session container with shared runtime, cap, idle TTL (`packages/core/src/protocol/chat-session-manager.ts:34`)                                                                            |
+| `packages/core/src/protocol/chat-session.ts`         | One live engine per chat tab/session, FIFO turn queue, cancellation, deferred model switch (`packages/core/src/protocol/chat-session.ts:40`)                                                         |
 
 ## 2. Protocol shape and transports
 
@@ -29,6 +29,13 @@ That seam is intentional: request validation, stream envelopes, approvals, cance
 `RunParams` is now richer than the old "task + cwd" surface: it requires a client-minted `sessionId`, supports `clientMessageId` idempotency, per-run `cwd`, `permissionMode`, `model`, `projectTrusted`, `planMode`, `requireExisting`, and `goal` (`packages/core/src/protocol/types.ts:76`). The method table includes `Run`, `Approve`, `Cancel`, `Configure`, `Query`, `Inject`, `Steer`, `Unsteer`, `CloseSession`, `GoalExtend`, `GoalClear`, `GoalGet`, `BackgroundShells`, and `BackgroundWork` (`packages/core/src/protocol/types.ts:333`). Stream events are always wrapped for multi-session routing as `{ sessionId, event }` (`packages/core/src/protocol/types.ts:311`).
 
 `AgentClient.run()` accepts either the legacy string form or the object form needed by multi-session servers, stamps the logger with the caller/resolved session id, and sends `Methods.Run` (`packages/core/src/protocol/client.ts:107`, `packages/core/src/protocol/client.ts:129`, `packages/core/src/protocol/client.ts:135`). Its private `request()` stores a resolver by JSON-RPC id before transport send, and `handleResponse()` resolves or rejects with the protocol error code attached (`packages/core/src/protocol/client.ts:349`, `packages/core/src/protocol/client.ts:357`). Notifications become emitter events: `agent/streamEvent` re-emits the session envelope, `agent/approvalRequest` emits request id + request, and `agent/status` emits status text (`packages/core/src/protocol/client.ts:375`, `packages/core/src/protocol/client.ts:379`, `packages/core/src/protocol/client.ts:388`, `packages/core/src/protocol/client.ts:396`).
+
+Plugin prompt commands also cross this seam. `pluginCommands/list` returns only
+enabled, renderer-safe command metadata for a workspace; `pluginCommands/expand`
+expands one named command inside the trusted server and returns the bounded
+prompt. Command bodies and install paths never cross the protocol boundary, so
+Desktop, Web, headless, and SDK hosts can share discovery semantics without
+giving an untrusted renderer direct filesystem access.
 
 ## 3. The run path
 

@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "@cjhyy/code-shell-core";
-import { createWorktree, removeWorktree } from "@cjhyy/code-shell-capability-coding";
+import { createWorktree, removeWorktree } from "@cjhyy/code-shell-capability-coding/git";
 import {
   __setSessionWorkspaceServiceSessionManagerForTests,
   cleanupSessionWorktreeForUi,

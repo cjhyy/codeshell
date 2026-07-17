@@ -73,6 +73,13 @@ import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
 import { loadView, saveView, type ViewState } from "./view";
 import type { DigitalHumanSelection } from "./digital-humans/types";
+import {
+  DIGITAL_HUMAN_SELECTION_STORAGE_KEY,
+  digitalHumanSelectionsEqual,
+  loadDigitalHumanSelection,
+  parseStoredDigitalHumanSelection,
+  saveDigitalHumanSelection,
+} from "./digital-humans/selectionStorage";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -141,7 +148,10 @@ const GLOBAL_KEY = NO_REPO_KEY;
 
 function PageLoading({ label }: { label: string }) {
   return (
-    <div className="flex min-h-40 flex-1 items-center justify-center text-sm text-muted-foreground" role="status">
+    <div
+      className="flex min-h-40 flex-1 items-center justify-center text-sm text-muted-foreground"
+      role="status"
+    >
       <span className="mr-2 size-3 animate-pulse rounded-full bg-primary/60" aria-hidden />
       {label}
     </div>
@@ -161,7 +171,7 @@ function App() {
   // Pet visibility is process-scoped and mirrored by the desktop host.
   const [petWidgetVisible, setPetWidgetVisible] = useState(false);
   const [petDigitalHumanSelection, setPetDigitalHumanSelection] =
-    useState<DigitalHumanSelection | null>(null);
+    useState<DigitalHumanSelection | null>(() => loadDigitalHumanSelection());
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -290,6 +300,61 @@ function App() {
   const activeBucketRef = useRef(activeBucket);
   activeBucketRef.current = activeBucket;
   quickChatSessionsRef.current = quickChatSessions;
+  useEffect(() => {
+    saveDigitalHumanSelection(petDigitalHumanSelection);
+  }, [petDigitalHumanSelection]);
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== DIGITAL_HUMAN_SELECTION_STORAGE_KEY) return;
+      const next = parseStoredDigitalHumanSelection(event.newValue);
+      setPetDigitalHumanSelection((current) =>
+        digitalHumanSelectionsEqual(current, next) ? current : next,
+      );
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+  useEffect(() => {
+    const selection = petDigitalHumanSelection;
+    if (!selection) return;
+    let active = true;
+    const refresh =
+      selection.kind === "single"
+        ? window.codeshell.listProfiles().then((profiles) => {
+            const profile = profiles.find((entry) => entry.name === selection.id);
+            return profile
+              ? ({ kind: "single", id: profile.name, label: profile.label } as const)
+              : null;
+          })
+        : window.codeshell.listDigitalHumanTeams().then((teams) => {
+            const team = teams.find((entry) => entry.id === selection.id);
+            return team
+              ? ({
+                  kind: "team",
+                  id: team.id,
+                  label: team.name,
+                  members: [...team.members],
+                  mode: team.mode,
+                } as const)
+              : null;
+          });
+    void refresh
+      .then((next) => {
+        if (!active) return;
+        setPetDigitalHumanSelection((current) => {
+          if (!current || current.kind !== selection.kind || current.id !== selection.id) {
+            return current;
+          }
+          return digitalHumanSelectionsEqual(current, next) ? current : next;
+        });
+      })
+      .catch(() => {
+        // A transient library read failure must not discard the user's choice.
+      });
+    return () => {
+      active = false;
+    };
+  }, [petDigitalHumanSelection]);
   useEffect(() => {
     if (!activeSessionId) return;
     window.codeshell.registerBrowserSessionBucket({
@@ -436,7 +501,9 @@ function App() {
 
   useEffect(() => {
     let alive = true;
-    const applyPanels = async (panels: Awaited<ReturnType<typeof window.codeshell.listPluginPanels>>) => {
+    const applyPanels = async (
+      panels: Awaited<ReturnType<typeof window.codeshell.listPluginPanels>>,
+    ) => {
       const { replacePluginPanels } = await import("./panels/PanelRegistry");
       if (alive) replacePluginPanels(panels);
     };
@@ -1044,6 +1111,7 @@ function App() {
     beginPanelResize,
     composerSeed,
     composerSeedNonce,
+    onComposerSeedConsumed,
     startConversationalAutomation,
     anchors,
     anchorsByBucket,
@@ -1911,10 +1979,12 @@ function App() {
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <DigitalHumansView
                     activeProjectPath={activeProject?.path ?? null}
+                    currentSelection={petDigitalHumanSelection}
                     onUse={(selection) => {
                       setPetDigitalHumanSelection(selection);
                       openPetPage();
                     }}
+                    onClearSelection={() => setPetDigitalHumanSelection(null)}
                   />
                 </React.Suspense>
               ) : view.viewMode === "credentials" ? (
@@ -2005,6 +2075,7 @@ function App() {
                     activeProjectId={activeProjectId}
                     composerSeed={composerSeed}
                     composerSeedNonce={composerSeedNonce}
+                    onComposerSeedConsumed={onComposerSeedConsumed}
                     draft={composerDraft.text}
                     onDraftChange={setComposerDraftText}
                     attachments={composerDraft.attachments}
@@ -2108,44 +2179,44 @@ function App() {
                 }
               >
                 <SessionPanelDock
-              panelBuckets={panelBuckets}
-              panelByBucket={panelByBucket}
-              activeBucket={activeBucket}
-              isChatView={isChatView}
-              projects={projects}
-              updatePanelBucket={updatePanelBucket}
-              onRevealConsumed={onRevealConsumed}
-              onOpenCliSessionConsumed={onOpenCliSessionConsumed}
-              panelWidth={panelWidth}
-              beginPanelResize={beginPanelResize}
-              onAttachImage={(path) => void attachImageByPath(path)}
-              anchorsByBucket={anchorsByBucket}
-              removeAnchor={removeAnchor}
-              updateAnchorComment={updateAnchorComment}
-              resolveEngineSessionIdForBucket={resolveEngineSessionIdForBucket}
-              quickChatSessions={quickChatSessions}
-              transcripts={transcripts}
-              busyKeys={busyKeys}
-              approvalForBucket={approvalForBucket}
-              noRepoCwd={noRepoCwdRef.current}
-              permissionOverrides={permissionOverrides}
-              defaultPermissionMode={defaultPermissionMode}
-              modelOverrides={modelOverrides}
-              defaultActiveModelKey={defaultActiveModelKey}
-              quickChatDrafts={quickChatDrafts}
-              quickChatAttachments={quickChatAttachments}
-              modelOptions={modelOptions}
-              imageDetail={imageDetail}
-              setQuickChatPermission={setQuickChatPermission}
-              setQuickChatModel={setQuickChatModel}
-              ensureQuickChatSession={ensureQuickChatSession}
-              cleanupQuickChatPanelSession={cleanupQuickChatPanelSession}
-              restartQuickChatSession={restartQuickChatSession}
-              setQuickChatDraft={setQuickChatDraft}
-              setQuickChatAttachmentState={setQuickChatAttachmentState}
-              sendQuickChat={sendQuickChat}
-              stop={stop}
-              handleAskUserAnswer={handleAskUserAnswer}
+                  panelBuckets={panelBuckets}
+                  panelByBucket={panelByBucket}
+                  activeBucket={activeBucket}
+                  isChatView={isChatView}
+                  projects={projects}
+                  updatePanelBucket={updatePanelBucket}
+                  onRevealConsumed={onRevealConsumed}
+                  onOpenCliSessionConsumed={onOpenCliSessionConsumed}
+                  panelWidth={panelWidth}
+                  beginPanelResize={beginPanelResize}
+                  onAttachImage={(path) => void attachImageByPath(path)}
+                  anchorsByBucket={anchorsByBucket}
+                  removeAnchor={removeAnchor}
+                  updateAnchorComment={updateAnchorComment}
+                  resolveEngineSessionIdForBucket={resolveEngineSessionIdForBucket}
+                  quickChatSessions={quickChatSessions}
+                  transcripts={transcripts}
+                  busyKeys={busyKeys}
+                  approvalForBucket={approvalForBucket}
+                  noRepoCwd={noRepoCwdRef.current}
+                  permissionOverrides={permissionOverrides}
+                  defaultPermissionMode={defaultPermissionMode}
+                  modelOverrides={modelOverrides}
+                  defaultActiveModelKey={defaultActiveModelKey}
+                  quickChatDrafts={quickChatDrafts}
+                  quickChatAttachments={quickChatAttachments}
+                  modelOptions={modelOptions}
+                  imageDetail={imageDetail}
+                  setQuickChatPermission={setQuickChatPermission}
+                  setQuickChatModel={setQuickChatModel}
+                  ensureQuickChatSession={ensureQuickChatSession}
+                  cleanupQuickChatPanelSession={cleanupQuickChatPanelSession}
+                  restartQuickChatSession={restartQuickChatSession}
+                  setQuickChatDraft={setQuickChatDraft}
+                  setQuickChatAttachmentState={setQuickChatAttachmentState}
+                  sendQuickChat={sendQuickChat}
+                  stop={stop}
+                  handleAskUserAnswer={handleAskUserAnswer}
                   decideEnvelope={decideEnvelope}
                 />
               </React.Suspense>

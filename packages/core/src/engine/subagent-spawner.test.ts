@@ -298,7 +298,11 @@ describe("subagent spawner", () => {
       childRunner: {
         async runChild(_config, _task, options) {
           childSid = options.sessionId!;
-          return { text: "continued", sessionId: childSid };
+          return {
+            text: "continued",
+            sessionId: childSid,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          };
         },
       },
     });
@@ -333,7 +337,11 @@ describe("subagent spawner", () => {
       childRunner: {
         async runChild(config, _task, options) {
           childConfig = config;
-          return { text: "done", sessionId: options.sessionId! };
+          return {
+            text: "done",
+            sessionId: options.sessionId!,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          };
         },
       },
     });
@@ -375,7 +383,11 @@ describe("subagent spawner", () => {
       childRunner: {
         async runChild(config, _task, options) {
           childConfig = config;
-          return { text: "done", sessionId: options.sessionId! };
+          return {
+            text: "done",
+            sessionId: options.sessionId!,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          };
         },
       },
     });
@@ -408,7 +420,11 @@ describe("subagent spawner", () => {
       childRunner: {
         async runChild(config, _task, options) {
           childConfig = config;
-          return { text: "done", sessionId: options.sessionId! };
+          return {
+            text: "done",
+            sessionId: options.sessionId!,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          };
         },
       },
     });
@@ -427,8 +443,10 @@ describe("subagent spawner", () => {
 
   it("filters child context events and tags forwarded events with agentId", () => {
     const seen: any[] = [];
-    const stream = wrapChildStream((event) => seen.push(event), "child-1")!;
-    stream({ type: "session_started", sessionId: "child-1" });
+    const stream = wrapChildStream((event) => {
+      seen.push(event);
+    }, "child-1")!;
+    stream({ type: "session_started", sessionId: "child-1", promptTokens: 0 });
     stream({ type: "usage_update", promptTokens: 10 });
     stream({ type: "context_compact", strategy: "summary", before: 10, after: 2 });
     stream({ type: "text_delta", text: "hello" });

@@ -53,10 +53,19 @@ describe("buildInjectionIndex profile layer", () => {
     expect(profilePosition).toBeGreaterThan(globalPosition);
     expect(projectPosition).toBeGreaterThan(profilePosition);
     expect(index).toContain("## Digital-human memories");
+    expect(index).toContain("location = global, profile, or project");
   });
 
   test("no profileDir → no digital-human section", () => {
+    new MemoryManager({ baseDir: home }).save({
+      name: "g",
+      description: "global fact",
+      type: "user",
+      content: "global body",
+    });
     const index = MemoryManager.buildInjectionIndex({ baseDir: home });
     expect(index).not.toContain("Digital-human memories");
+    expect(index).toContain("location = global or project");
+    expect(index).not.toContain("location = global, profile");
   });
 });

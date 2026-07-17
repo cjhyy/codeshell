@@ -28,6 +28,8 @@ import {
   type UnsteerParams,
   type GoalUpdateParams,
   type SetWorkspaceParams,
+  type PluginCommandsListParams,
+  type PluginCommandExpandParams,
   type PendingApprovalMetadata,
   Methods,
   ErrorCodes,
@@ -39,7 +41,7 @@ import {
 import type { Engine, EngineConfig } from "../engine/engine.js";
 import { diskDefaultsFrom } from "../engine/engine.js";
 import type { ValidatedSettings } from "../settings/schema.js";
-import { isProtectedSettingKey } from "../settings/manager.js";
+import { isProtectedSettingKey, SettingsManager } from "../settings/manager.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
 import {
   type ApprovalRouteTarget,
@@ -69,6 +71,13 @@ import type {
   ProtocolObserver,
   ProtocolObserverHost,
 } from "../tool-system/capability-module.js";
+import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
+import {
+  describePluginCommands,
+  expandPluginCommandBody,
+  scanPluginCommands,
+  MAX_PLUGIN_COMMAND_ARGUMENT_CHARS,
+} from "../plugins/pluginCommandsLoader.js";
 // TODO(pet-out-of-core): the pet extension is default-loaded here only until
 // the pet domain leaves core; hosts will then register it explicitly.
 
@@ -726,6 +735,12 @@ export class AgentServer {
       case Methods.BackgroundWork:
         this.handleBackgroundWork(req);
         break;
+      case Methods.PluginCommandsList:
+        this.handlePluginCommandsList(req);
+        break;
+      case Methods.PluginCommandExpand:
+        this.handlePluginCommandExpand(req);
+        break;
       // Compat channel: the wire method name is retained, but the handler is
       // whatever extension registered it (the pet extension by default).
       case Methods.GetPetProjectionSnapshot:
@@ -735,6 +750,106 @@ export class AgentServer {
         this.transport.send(
           createErrorResponse(req.id, ErrorCodes.MethodNotFound, `Unknown method: ${req.method}`),
         );
+    }
+  }
+
+  private pluginCommandContext(
+    cwd: unknown,
+  ): { cwd: string; disabledPluginNames: Set<string> } | { error: string } {
+    if (
+      typeof cwd !== "string" ||
+      cwd.trim().length === 0 ||
+      cwd.length > 4_096 ||
+      cwd.includes("\0")
+    ) {
+      return { error: "cwd must be a non-empty string of at most 4096 characters" };
+    }
+    const disabledPluginNames = new Set(
+      computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd).disabledPlugins,
+    );
+    return { cwd, disabledPluginNames };
+  }
+
+  private handlePluginCommandsList(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as PluginCommandsListParams;
+    const context = this.pluginCommandContext(params.cwd);
+    if ("error" in context) {
+      this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, context.error));
+      return;
+    }
+    try {
+      this.transport.send(
+        createResponse(req.id, {
+          commands: describePluginCommands(scanPluginCommands(), context.disabledPluginNames),
+        }),
+      );
+    } catch (error) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InternalError, (error as Error).message),
+      );
+    }
+  }
+
+  private handlePluginCommandExpand(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as PluginCommandExpandParams;
+    const context = this.pluginCommandContext(params.cwd);
+    if ("error" in context) {
+      this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, context.error));
+      return;
+    }
+    if (
+      typeof params.name !== "string" ||
+      params.name.length === 0 ||
+      params.name.length > 512 ||
+      params.name.includes("\0")
+    ) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "name must be a non-empty string of at most 512 characters",
+        ),
+      );
+      return;
+    }
+    const rawArguments = params.rawArguments ?? "";
+    if (
+      typeof rawArguments !== "string" ||
+      rawArguments.length > MAX_PLUGIN_COMMAND_ARGUMENT_CHARS
+    ) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          `rawArguments must be a string of at most ${MAX_PLUGIN_COMMAND_ARGUMENT_CHARS} characters`,
+        ),
+      );
+      return;
+    }
+    const command = scanPluginCommands().find(
+      (candidate) =>
+        candidate.name === params.name && !context.disabledPluginNames.has(candidate.pluginName),
+    );
+    if (!command) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          `plugin command is unavailable: ${params.name}`,
+        ),
+      );
+      return;
+    }
+    try {
+      this.transport.send(
+        createResponse(req.id, {
+          prompt: expandPluginCommandBody(command.body, rawArguments),
+        }),
+      );
+    } catch (error) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, (error as Error).message),
+      );
     }
   }
 

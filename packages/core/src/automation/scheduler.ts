@@ -30,6 +30,14 @@ export function isCronMisfire(scheduledFor: number, now: number): boolean {
 /** Permission tier a scheduled job runs under (Phase 5 enforces write tiers). */
 export type CronPermissionLevel = "read-only" | "workspace-write" | "full";
 
+/** Non-executable provenance for a job explicitly created from a plugin template. */
+export interface CronTemplateSource {
+  installKey: string;
+  templateId: string;
+  revision: string;
+  pluginVersion?: string;
+}
+
 export interface CronJob {
   id: string;
   name: string;
@@ -61,6 +69,11 @@ export interface CronJob {
    *  target whose session no longer exists. Surfaced in the UI so a silently
    *  stopped job is explainable; cleared when the job is re-enabled. */
   disabledReason?: string;
+  /**
+   * Immutable provenance copied when a user instantiates a plugin template.
+   * The job remains standalone if the plugin is later updated or uninstalled.
+   */
+  templateSource?: CronTemplateSource;
 }
 
 /**
@@ -81,6 +94,7 @@ export interface CreateJobOptions {
   permissionLevel?: CronPermissionLevel;
   once?: boolean;
   resumeSessionId?: string;
+  templateSource?: CronTemplateSource;
 }
 
 /** Fields editable via update(). Any omitted field is left unchanged. */
@@ -373,6 +387,7 @@ export class CronScheduler {
           ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
           ...(opts?.once === true ? { once: true } : {}),
           ...(opts?.resumeSessionId !== undefined ? { resumeSessionId: opts.resumeSessionId } : {}),
+          ...(opts?.templateSource !== undefined ? { templateSource: opts.templateSource } : {}),
         };
         this.refreshNextRunForDisplay(job);
         return { jobs: [...jobs, job], result: job };
@@ -395,6 +410,7 @@ export class CronScheduler {
       ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
       ...(opts?.once === true ? { once: true } : {}),
       ...(opts?.resumeSessionId !== undefined ? { resumeSessionId: opts.resumeSessionId } : {}),
+      ...(opts?.templateSource !== undefined ? { templateSource: opts.templateSource } : {}),
     };
 
     this.jobs.set(id, job);
@@ -763,13 +779,15 @@ export class CronScheduler {
 }
 
 /** Validate a schedule string (interval or cron expr) without scheduling. Throws on invalid. */
-function validateSchedule(schedule: string, timezone?: string): void {
+export function validateSchedule(schedule: string, timezone?: string): void {
+  // A supplied timezone must always be a real IANA zone, even for interval
+  // schedules where it is currently display-only. Persisting inert garbage
+  // would later become executable if the schedule is edited to cron.
+  if (timezone !== undefined) {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+  }
   if (isCronExpression(schedule)) {
     parseCronExpression(schedule); // throws on bad fields
-    // Validate timezone is acceptable to Intl (throws RangeError if not).
-    if (timezone !== undefined) {
-      new Intl.DateTimeFormat("en-US", { timeZone: timezone });
-    }
     return;
   }
   parseSchedule(schedule); // throws on bad interval

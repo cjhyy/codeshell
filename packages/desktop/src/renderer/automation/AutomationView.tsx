@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock3, History, Link2, Loader2, Play, Plus, Trash2 } from "lucide-react";
+import { Clock3, History, Link2, Loader2, PackageOpen, Play, Plus, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
 import {
   parseSchedule,
@@ -536,6 +536,12 @@ export function AutomationDetail(props: {
                   {t("auto.detail.resumeBadge")}
                 </span>
               )}
+              {job.templateSource && (
+                <span className="mt-1 inline-flex w-fit items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  <PackageOpen size={11} />
+                  {t("auto.detail.pluginTemplateBadge")}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -809,6 +815,18 @@ export function AutomationDetail(props: {
             </SelectContent>
           </Select>
         </FieldRow>
+
+        {job.templateSource && (
+          <FieldRow label={t("auto.detail.templateSource")}>
+            <span
+              className="max-w-[320px] truncate font-mono text-xs"
+              title={`${job.templateSource.installKey}/${job.templateSource.templateId}\n${job.templateSource.revision}`}
+            >
+              {job.templateSource.installKey}/{job.templateSource.templateId} ·{" "}
+              {job.templateSource.revision.slice(0, 8)}
+            </span>
+          </FieldRow>
+        )}
       </div>
 
       {job.resumeSessionId ? (

@@ -292,6 +292,33 @@ export interface UnsteerParams {
   id: string;
 }
 
+/** Discover renderer-safe metadata for enabled installed plugin commands. */
+export interface PluginCommandsListParams {
+  cwd: string;
+}
+
+export interface ProtocolPluginCommandDescriptor {
+  name: string;
+  pluginName: string;
+  description: string;
+  argumentHint?: string;
+}
+
+export interface PluginCommandsListResult {
+  commands: ProtocolPluginCommandDescriptor[];
+}
+
+/** Expand one enabled command inside the trusted host; command bodies stay server-side. */
+export interface PluginCommandExpandParams {
+  cwd: string;
+  name: string;
+  rawArguments?: string;
+}
+
+export interface PluginCommandExpandResult {
+  prompt: string;
+}
+
 /** Edit or pause/resume a persisted goal without replacing its identity. */
 export interface GoalUpdateParams {
   sessionId: string;
@@ -495,6 +522,10 @@ export const Methods = {
   BackgroundWork: "agent/backgroundWork",
   /** Read-only bounded Pet projection plus the ordered-delta cursor. */
   GetPetProjectionSnapshot: "agent/getPetProjectionSnapshot",
+  /** Discover enabled plugin slash commands without exposing their source bodies or file paths. */
+  PluginCommandsList: "pluginCommands/list",
+  /** Expand one enabled plugin command into a reviewable prompt draft. */
+  PluginCommandExpand: "pluginCommands/expand",
 
   // Server → Client (notifications, no id)
   RunAccepted: "agent/runAccepted",

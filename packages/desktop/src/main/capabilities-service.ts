@@ -26,7 +26,7 @@ import {
   type CapabilityDescriptor,
 } from "@cjhyy/code-shell-core";
 import { CapabilityService } from "@cjhyy/code-shell-core/internal";
-import { CODING_CAPABILITY, CODING_TOOLS } from "@cjhyy/code-shell-capability-coding";
+import { CODING_CAPABILITY, CODING_TOOLS } from "@cjhyy/code-shell-capability-coding/capability";
 
 function makeService(cwd: string): CapabilityService {
   const settings = new SettingsManager(cwd, "full");

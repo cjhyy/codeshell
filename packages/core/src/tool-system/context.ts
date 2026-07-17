@@ -22,6 +22,7 @@ import type { SessionManager } from "../session/session-manager.js";
 import type { SessionWorkspace } from "../types.js";
 import type { ApprovalRouter } from "./permission.js";
 import type { ChildWriterLease, LiveChildControl } from "./builtin/agent-registry.js";
+import type { McpToolPolicy } from "./mcp-tool-policy.js";
 
 /**
  * Narrow view of the owning Engine that tools are allowed to call back into.
@@ -225,6 +226,13 @@ export interface ExternalFileChangesRecord {
 export interface ToolContext {
   /** Active working directory for this Engine. */
   cwd: string;
+  /**
+   * Active digital-human profile's portable memory root. Present only when
+   * the resolved WorkspaceProfile enables portableMemory for this run.
+   * Memory tools use it for location:"profile"; other tools should treat the
+   * path as trusted run metadata, not as model-supplied input.
+   */
+  profileMemoryDir?: string;
   /** Mutate the owning live context cwd. Worktree switching intentionally does not use this. */
   setCwd?(cwd: string): void;
   /** Mutate/rebase the owning live session state after a workspace switch. */
@@ -390,6 +398,11 @@ export interface ToolContext {
    * no gating (sub-agents / tests whose registries carry no MCP tools).
    */
   allowedMcpServers?: Set<string>;
+  /**
+   * Exact per-server MCP tool policy for this run. The engine uses the same
+   * map for model visibility, ToolSearch, and the executor's direct-call gate.
+   */
+  mcpToolPolicies?: ReadonlyMap<string, McpToolPolicy>;
   /**
    * The engine's settings scope, so tools that read disk config directly (e.g.
    * the credential tools) can honor host-isolation instead of always merging

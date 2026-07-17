@@ -34,7 +34,11 @@ describe("Agent role sandbox and MCP spawn integration", () => {
       childRunner: {
         async runChild(config, _task, options) {
           childConfig = config;
-          return { text: "done", sessionId: options.sessionId! };
+          return {
+            text: "done",
+            sessionId: options.sessionId!,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          };
         },
       },
     });

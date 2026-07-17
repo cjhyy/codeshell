@@ -7,8 +7,11 @@ import {
   probeCodexCli,
   readCodexRecentHistory,
   readRecentHistory,
-} from "@cjhyy/code-shell-capability-coding";
-import { mobileTranscriptSubscriberId, type MobileServerEvent } from "@cjhyy/code-shell-server";
+} from "@cjhyy/code-shell-capability-coding/orchestration";
+import {
+  mobileTranscriptSubscriberId,
+  type MobileServerEvent,
+} from "@cjhyy/code-shell-server/mobile-remote";
 import type { AuthenticatedMobileClientEvent, OrchestratorCtx } from "./handle-client-event.js";
 import { resolveRoomPermissionMode } from "./handle-room-event.js";
 

@@ -4,6 +4,7 @@ export {
   type WorkspaceProfile,
 } from "./types.js";
 export {
+  deleteWorkspaceProfile,
   listWorkspaceProfiles,
   readWorkspaceProfile,
   saveWorkspaceProfile,

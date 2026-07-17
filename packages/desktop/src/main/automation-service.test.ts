@@ -37,6 +37,7 @@ describe("automation-service", () => {
     expect(created.name).toBe("nightly");
     expect(created.cwd).toBe("/tmp/proj");
     expect(created.permissionLevel).toBe("read-only");
+    expect(created.templateSource).toBeNull();
     expect(typeof created.nextRun).toBe("number");
 
     const list = listAutomations();
@@ -57,7 +58,11 @@ describe("automation-service", () => {
 
   test("update changes prompt + schedule and returns the new summary", () => {
     const job = createAutomation({ name: "j", schedule: "1h", prompt: "old" });
-    const updated = updateAutomation(job.id, { prompt: "new", schedule: "0 9 * * 1-5", timezone: "UTC" });
+    const updated = updateAutomation(job.id, {
+      prompt: "new",
+      schedule: "0 9 * * 1-5",
+      timezone: "UTC",
+    });
     expect(updated?.prompt).toBe("new");
     expect(updated?.schedule).toBe("0 9 * * 1-5");
     expect(updated?.timezone).toBe("UTC");
@@ -95,7 +100,11 @@ describe("automation-service", () => {
 
 test("reloadAutomations calls scheduler.loadJobs", () => {
   let loaded = 0;
-  setAutomationScheduler({ loadJobs: () => { loaded++; } } as unknown as import("@cjhyy/code-shell-core").CronScheduler);
+  setAutomationScheduler({
+    loadJobs: () => {
+      loaded++;
+    },
+  } as unknown as import("@cjhyy/code-shell-core").CronScheduler);
   reloadAutomations();
   expect(loaded).toBe(1);
   setAutomationScheduler(null);

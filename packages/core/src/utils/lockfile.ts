@@ -9,10 +9,48 @@
  * package is only loaded the first time a lock function is actually called.
  */
 
-import { createRequire } from 'node:module'
-import type { CheckOptions, LockOptions, UnlockOptions } from 'proper-lockfile'
+import { createRequire } from "node:module";
 
-type Lockfile = typeof import('proper-lockfile')
+interface LockRetryOptions {
+  retries?: number;
+  factor?: number;
+  minTimeout?: number;
+  maxTimeout?: number;
+  randomize?: boolean;
+  forever?: boolean;
+  unref?: boolean;
+  maxRetryTime?: number;
+}
+
+interface LockfilePathOptions {
+  realpath?: boolean;
+  /**
+   * proper-lockfile accepts a callback-style fs implementation. Keep this
+   * structural at the package boundary so Core's declarations do not leak the
+   * untyped CommonJS dependency to TypeScript consumers.
+   */
+  fs?: object;
+  lockfilePath?: string;
+}
+
+interface CheckOptions extends LockfilePathOptions {
+  stale?: number;
+}
+
+type UnlockOptions = LockfilePathOptions;
+
+interface LockOptions extends CheckOptions {
+  update?: number;
+  retries?: number | LockRetryOptions;
+  onCompromised?: (error: Error) => void;
+}
+
+interface LockfileApi {
+  lock(file: string, options?: LockOptions): Promise<() => Promise<void>>;
+  lockSync(file: string, options?: LockOptions): () => void;
+  unlock(file: string, options?: UnlockOptions): Promise<void>;
+  check(file: string, options?: CheckOptions): Promise<boolean>;
+}
 
 // proper-lockfile is CommonJS. This module compiles to ESM (tsc module: ESNext,
 // package "type":"module"), and `require` is NOT a global in ESM — under the
@@ -20,32 +58,29 @@ type Lockfile = typeof import('proper-lockfile')
 // a bare `require('proper-lockfile')` throws "require is not defined", which
 // surfaced as run locks silently failing ("Run now does nothing"). createRequire
 // gives us a CJS-capable require that works in both ESM and CJS/Bun hosts.
-const nodeRequire = createRequire(import.meta.url)
+const nodeRequire = createRequire(import.meta.url);
 
-let _lockfile: Lockfile | undefined
+let _lockfile: LockfileApi | undefined;
 
-function getLockfile(): Lockfile {
+function getLockfile(): LockfileApi {
   if (!_lockfile) {
-    _lockfile = nodeRequire('proper-lockfile') as Lockfile
+    _lockfile = nodeRequire("proper-lockfile") as LockfileApi;
   }
-  return _lockfile
+  return _lockfile;
 }
 
-export function lock(
-  file: string,
-  options?: LockOptions,
-): Promise<() => Promise<void>> {
-  return getLockfile().lock(file, options)
+export function lock(file: string, options?: LockOptions): Promise<() => Promise<void>> {
+  return getLockfile().lock(file, options);
 }
 
 export function lockSync(file: string, options?: LockOptions): () => void {
-  return getLockfile().lockSync(file, options)
+  return getLockfile().lockSync(file, options);
 }
 
 export function unlock(file: string, options?: UnlockOptions): Promise<void> {
-  return getLockfile().unlock(file, options)
+  return getLockfile().unlock(file, options);
 }
 
 export function check(file: string, options?: CheckOptions): Promise<boolean> {
-  return getLockfile().check(file, options)
+  return getLockfile().check(file, options);
 }

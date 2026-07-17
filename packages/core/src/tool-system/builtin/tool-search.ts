@@ -9,6 +9,7 @@
 import type { ToolDefinition, RegisteredTool } from "../../types.js";
 import type { ToolRegistry } from "../registry.js";
 import type { ToolContext } from "../context.js";
+import { isRegisteredMcpToolAllowed } from "../mcp-tool-policy.js";
 
 export const toolSearchToolDef: ToolDefinition = {
   name: "ToolSearch",
@@ -58,12 +59,18 @@ export async function toolSearchTool(
   const visible = (tool: RegisteredTool): boolean => {
     if (tool.source !== "mcp") return true;
     const allowed = ctx.allowedMcpServers;
-    return !allowed || allowed.has(tool.serverName ?? "");
+    return (
+      (!allowed || allowed.has(tool.serverName ?? "")) &&
+      isRegisteredMcpToolAllowed(tool, ctx.mcpToolPolicies)
+    );
   };
 
   // "select:Name1,Name2" → exact match
   if (query.startsWith("select:")) {
-    const names = query.slice(7).split(",").map((n) => n.trim());
+    const names = query
+      .slice(7)
+      .split(",")
+      .map((n) => n.trim());
     return matchExact(ctx.toolRegistry, names, visible);
   }
 

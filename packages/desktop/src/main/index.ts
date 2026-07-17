@@ -14,14 +14,21 @@ import {
   webContents,
   Notification,
   screen,
+  type OpenDialogOptions,
+  type SaveDialogOptions,
 } from "electron";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import {
+  approvePluginHooks,
+  approvePluginMcp,
+  listPluginMcpTrust,
   mergePluginMcpServers,
   listPluginHooks,
+  revokePluginMcp,
+  revokePluginHooks,
   SettingsManager,
   writeSettingsSchemaFile,
   userHome,
@@ -33,6 +40,7 @@ import {
   // Quota — remaining CC/Codex subscription usage.
   ErrorCodes,
   registerCapability,
+  WORKSPACE_PROFILE_NAME_RE,
 } from "@cjhyy/code-shell-core";
 import {
   defaultCacheDir,
@@ -61,7 +69,7 @@ import {
   computeEffectiveDisabledLists,
 } from "@cjhyy/code-shell-core/internal";
 import {
-  CODING_CAPABILITY,
+  CC_COST_GUARD_PROMPT,
   checkQuota,
   countCodexSessions,
   countSessions,
@@ -69,15 +77,18 @@ import {
   DEFAULT_DISCOVER_SINCE_MS,
   discoverCodexSessions,
   discoverSessions,
-  normalizeWorktreeBranchPrefix,
   probeClaudeCli,
   probeCodexCli,
   readCodexRecentHistory,
   readRecentHistory,
-  resolveProjectRoot,
   resolveQuotaCredentials,
   type QuotaResult,
-} from "@cjhyy/code-shell-capability-coding";
+} from "@cjhyy/code-shell-capability-coding/orchestration";
+import { CODING_CAPABILITY } from "@cjhyy/code-shell-capability-coding/capability";
+import {
+  normalizeWorktreeBranchPrefix,
+  resolveProjectRoot,
+} from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
@@ -86,6 +97,7 @@ import { PetDispatchService } from "./pet/pet-dispatch-service.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
+import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -137,32 +149,34 @@ import {
 } from "./credentials-service.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import {
-  AccessPasscode,
   cleanupAttachments,
   cleanupSessionAttachments,
   cleanupStaleQuickChatSessions,
-  CloudflaredBinary,
-  CodexRoomAgent,
   deleteSession,
   listDiskSessions,
   listRecentAttachments,
   listSessions,
   markAttachmentsSent,
+  stablePromptHash,
+  stageFileBytes,
+  stageImageBytes,
+  stageImageDataUrl,
+  type InputAttachmentMeta,
+} from "@cjhyy/code-shell-server/storage";
+import {
+  AccessPasscode,
+  CloudflaredBinary,
+  CodexRoomAgent,
   MobileUploadService,
   mobileTranscriptSubscriberId,
   PendingMobileApprovals,
   RemoteHostManager,
   ResidentAgentProcess,
   RoomManager,
-  stablePromptHash,
-  stageFileBytes,
-  stageImageBytes,
-  stageImageDataUrl,
   TrustedDeviceStore,
   TunnelManager,
-  type InputAttachmentMeta,
   type MobileViewerIdentity,
-} from "@cjhyy/code-shell-server";
+} from "@cjhyy/code-shell-server/mobile-remote";
 import {
   MobileRemoteOrchestrator,
   injectAndAwaitResult,
@@ -242,6 +256,9 @@ import {
   updatePluginEntry,
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
+import { createAutomationFromPluginTemplate } from "./plugin-automation-service.js";
+import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
+import { getPluginMedia } from "./plugin-media-service.js";
 import {
   expectedPluginPanelPartition,
   registerPluginPanelSchemePrivileges,
@@ -259,6 +276,7 @@ import {
   refreshMarketplaceForUi,
   installPluginForUi,
   installLocalPluginForUi,
+  previewLocalPluginForUi,
   onPluginInstallJobsChanged,
   retryPluginInstallJobForUi,
   gitDownloadUrl,
@@ -282,10 +300,14 @@ import {
 } from "./sources-service.js";
 import {
   activateProfile,
+  deleteProfile,
   deactivateProfile,
+  exportProfileDefinition,
+  importReviewedProfileDefinition,
   installCatalogProfile,
   listProfileCatalog,
   listProfiles,
+  previewProfileDefinitionImport,
   saveProfile,
 } from "./profiles-service.js";
 import {
@@ -421,6 +443,7 @@ registerImGatewayIpc(ipcMain, imGatewayService);
 let petStateAggregator: PetStateAggregator | null = null;
 let petDispatchService: PetDispatchService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
+let petWorkInboxStore: PetWorkInboxStore | null = null;
 let disposePetIpc: (() => void) | null = null;
 let mcpOAuthService: McpOAuthService | null = null;
 let cspInstalled = false;
@@ -480,13 +503,21 @@ function broadcastWorkspaceChanged(payload: {
   }
 }
 
+function broadcastPluginCommandsChanged(windows: Iterable<BrowserWindow>): void {
+  for (const window of windows) {
+    if (!window.isDestroyed()) window.webContents.send("plugin-commands:changed");
+  }
+}
+
 onPluginInstallJobsChanged((jobs) => {
+  const installed = jobs.some((job) => job.status === "installed");
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("plugins:installJobsChanged", jobs);
-    if (!w.isDestroyed() && jobs.some((job) => job.status === "installed")) {
+    if (!w.isDestroyed() && installed) {
       w.webContents.send("plugin-panels:changed");
     }
   }
+  if (installed) broadcastPluginCommandsChanged(BrowserWindow.getAllWindows());
 });
 
 // ── Mobile Web Remote (LAN phone controller; off by default) ────────────────
@@ -610,6 +641,7 @@ const roomManager = new RoomManager({
           cwd: room.cwd,
           permissionMode: room.permissionMode,
           resumeSessionId: room.claudeSessionId,
+          appendSystemPrompt: CC_COST_GUARD_PROMPT,
           onEvent,
         }),
   onMessage: (roomId, msg) => {
@@ -1005,7 +1037,13 @@ async function createWindow(): Promise<BrowserWindow> {
         mobileRemote.broadcastRaw(line);
       }
     });
-    const aggregator = new PetStateAggregator({ bridge, listDiskSessions });
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions,
+      onBackgroundError: (operation, error) => {
+        dlog("main", `pet.${operation}.failed`, { error: String(error) });
+      },
+    });
     petStateAggregator = aggregator;
     const petMetadata = new PetMetadataStore(
       resolve(app.getPath("userData"), "pet", "metadata.json"),
@@ -1037,12 +1075,19 @@ async function createWindow(): Promise<BrowserWindow> {
           }));
       },
       listDigitalHumans: async () => listProfiles(),
-      listDigitalHumanTeams: async () => listDigitalHumanTeams(),
+      listDigitalHumanTeams: async () =>
+        listDigitalHumanTeams({
+          onInvalidTeam: (issue) => dlog("main", "digital_human_team.invalid", { ...issue }),
+        }),
       startWorkSession: (delegation) => petWorkDelegationHost.start(delegation),
     });
     const petReceipts = new PetReceiptStore(
       resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
     );
+    const petWorkInbox = new PetWorkInboxStore(
+      resolve(app.getPath("userData"), "pet", "work-inbox.json"),
+    );
+    petWorkInboxStore = petWorkInbox;
     const attention = new PetAttentionPolicy({
       source: aggregator,
       receipts: petReceipts,
@@ -1050,7 +1095,7 @@ async function createWindow(): Promise<BrowserWindow> {
     petAttentionPolicy = attention;
     const petInitialization = (async () => {
       await aggregator.start();
-      await petReceipts.load();
+      await Promise.all([petReceipts.load(), petWorkInbox.load()]);
       attention.start();
     })();
     disposePetIpc = registerPetIpc({
@@ -1058,6 +1103,7 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       dispatcher: petDispatchService,
       attention,
+      workInbox: petWorkInbox,
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });
@@ -1752,7 +1798,76 @@ ipcMain.handle("profiles:save", async (_e, profile: unknown) => {
   }
   saveProfile(profile as Parameters<typeof saveProfile>[0]);
 });
-ipcMain.handle("digital-human-teams:list", async () => listDigitalHumanTeams());
+ipcMain.handle("profiles:pickDefinitionImport", async (event) => {
+  const options: OpenDialogOptions = {
+    title: "Import digital-human profile definition JSON",
+    properties: ["openFile"],
+    filters: [{ name: "JSON", extensions: ["json"] }],
+  };
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = win
+    ? await dialog.showOpenDialog(win, options)
+    : await dialog.showOpenDialog(options);
+  const filePath = result.filePaths[0];
+  if (result.canceled || !filePath) return { canceled: true };
+  return { canceled: false, preview: previewProfileDefinitionImport(filePath) };
+});
+ipcMain.handle("profiles:importReviewedDefinition", async (_e, input: unknown) => {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    throw new Error("profiles:importReviewedDefinition requires input");
+  }
+  const candidate = input as { reviewToken?: unknown; overwrite?: unknown };
+  if (typeof candidate.reviewToken !== "string" || !candidate.reviewToken) {
+    throw new Error("profiles:importReviewedDefinition requires reviewToken");
+  }
+  if (candidate.overwrite !== undefined && typeof candidate.overwrite !== "boolean") {
+    throw new Error("profiles:importReviewedDefinition overwrite must be a boolean");
+  }
+  return importReviewedProfileDefinition({
+    reviewToken: candidate.reviewToken,
+    ...(candidate.overwrite === undefined ? {} : { overwrite: candidate.overwrite }),
+  });
+});
+ipcMain.handle("profiles:exportDefinition", async (event, name: string) => {
+  if (typeof name !== "string" || !WORKSPACE_PROFILE_NAME_RE.test(name)) {
+    throw new Error("profiles:exportDefinition requires a valid profile name");
+  }
+  const options: SaveDialogOptions = {
+    title: "Export digital-human profile definition JSON",
+    defaultPath: `${name}.codeshell-profile.json`,
+    filters: [{ name: "JSON", extensions: ["json"] }],
+  };
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = win
+    ? await dialog.showSaveDialog(win, options)
+    : await dialog.showSaveDialog(options);
+  if (result.canceled || !result.filePath) return { canceled: true };
+  return exportProfileDefinition(name, result.filePath);
+});
+ipcMain.handle(
+  "profiles:delete",
+  async (_e, name: string, options?: { cwd?: string; clearActiveProject?: boolean }) => {
+    if (typeof name !== "string" || !name) throw new Error("profiles:delete requires name");
+    if (options !== undefined && (typeof options !== "object" || options === null)) {
+      throw new Error("profiles:delete options must be an object");
+    }
+    if (options?.cwd !== undefined && (typeof options.cwd !== "string" || !options.cwd)) {
+      throw new Error("profiles:delete cwd must be a non-empty string");
+    }
+    if (
+      options?.clearActiveProject !== undefined &&
+      typeof options.clearActiveProject !== "boolean"
+    ) {
+      throw new Error("profiles:delete clearActiveProject must be a boolean");
+    }
+    deleteProfile(name, options);
+  },
+);
+ipcMain.handle("digital-human-teams:list", async () =>
+  listDigitalHumanTeams({
+    onInvalidTeam: (issue) => dlog("main", "digital_human_team.invalid", { ...issue }),
+  }),
+);
 ipcMain.handle("digital-human-teams:save", async (_e, team: unknown) =>
   saveDigitalHumanTeam(team as import("@cjhyy/code-shell-pet").DigitalHumanTeam),
 );
@@ -1764,6 +1879,32 @@ ipcMain.handle("plugins:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");
   return listPlugins(cwd);
 });
+ipcMain.handle("plugins:media", async (_e, installKey: string, includeScreenshots?: boolean) => {
+  if (typeof installKey !== "string" || !installKey) {
+    throw new Error("plugins:media requires installKey");
+  }
+  if (includeScreenshots !== undefined && typeof includeScreenshots !== "boolean") {
+    throw new Error("plugins:media includeScreenshots must be boolean");
+  }
+  return getPluginMedia(installKey, includeScreenshots === true);
+});
+ipcMain.handle("plugin-commands:list", async (_e, cwd: string) => {
+  if (typeof cwd !== "string") throw new Error("plugin-commands:list requires cwd");
+  return listPluginCommands(cwd);
+});
+ipcMain.handle(
+  "plugin-commands:expand",
+  async (_e, cwd: string, name: string, rawArguments: string) => {
+    if (typeof cwd !== "string") throw new Error("plugin-commands:expand requires cwd");
+    if (typeof name !== "string" || !name) {
+      throw new Error("plugin-commands:expand requires name");
+    }
+    if (typeof rawArguments !== "string") {
+      throw new Error("plugin-commands:expand requires rawArguments");
+    }
+    return expandPluginCommand(cwd, name, rawArguments);
+  },
+);
 ipcMain.handle("plugin-panels:list", async (_e, cwd: string, locale: string) => {
   if (typeof cwd !== "string") throw new Error("plugin-panels:list requires cwd");
   if (typeof locale !== "string") throw new Error("plugin-panels:list requires locale");
@@ -1984,22 +2125,45 @@ ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
   }
   return getPluginDetail(installKey);
 });
+ipcMain.handle(
+  "plugins:createAutomationFromTemplate",
+  async (_e, installKey: string, templateId: string, expectedRevision: string, cwd?: string) => {
+    if (
+      typeof installKey !== "string" ||
+      typeof templateId !== "string" ||
+      typeof expectedRevision !== "string"
+    ) {
+      throw new Error("installKey, templateId and expectedRevision are required");
+    }
+    const normalizedCwd =
+      typeof cwd === "string" && cwd.length > 0 ? resolveProjectRoot(cwd) : undefined;
+    return createAutomationFromPluginTemplate(
+      installKey,
+      templateId,
+      expectedRevision,
+      normalizedCwd,
+    );
+  },
+);
 ipcMain.handle("plugins:uninstall", async (_e, pluginName: string, marketplaceName: string) => {
   const result = uninstallPluginEntry(pluginName, marketplaceName);
   pluginPanelBridge.revokeInstallKey(`${pluginName}@${marketplaceName}`);
   for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+  broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
 ipcMain.handle("plugins:uninstallLocal", async (_e, name: string) => {
   const result = uninstallLocalPluginEntry(name);
   pluginPanelBridge.revokeInstallKey(`${name}@local`);
   for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+  broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
 ipcMain.handle("plugins:update", async (_e, name: string) => {
   const result = await updatePluginEntry(name);
   pluginPanelBridge.revokeInstallKey(`${name}@local`);
   for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+  broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
 ipcMain.handle("plugins:checkUpdate", async (_e, name: string) => {
@@ -2099,13 +2263,28 @@ ipcMain.handle("plugins:install", async (_e, pluginName: string, marketplaceName
   installPluginForUi(pluginName, marketplaceName),
 );
 ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) => retryPluginInstallJobForUi(id));
-ipcMain.handle("plugins:installLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) => {
-  const result = await installLocalPluginForUi(input);
-  if (result.ok) {
-    for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
-  }
-  return result;
-});
+ipcMain.handle("plugins:previewLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) =>
+  previewLocalPluginForUi(input),
+);
+ipcMain.handle(
+  "plugins:installLocal",
+  async (
+    _e,
+    input: {
+      kind: "dir" | "zip";
+      path: string;
+      reviewToken: string;
+      overwrite?: boolean;
+    },
+  ) => {
+    const result = await installLocalPluginForUi(input);
+    if (result.ok) {
+      for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+      broadcastPluginCommandsChanged(mainWindows);
+    }
+    return result;
+  },
+);
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
 ipcMain.handle("skills:checkUpdate", async (_e, filePath: string) =>
   checkSkillUpdateEntry(filePath),
@@ -2448,6 +2627,31 @@ ipcMain.handle("hooks:listPlugin", async (_e, rawDisabledPlugins?: unknown) => {
     ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
     : [];
   return listPluginHooks(disabledPlugins);
+});
+ipcMain.handle("hooks:approvePlugin", async (_e, installKey: string) => {
+  if (typeof installKey !== "string" || !installKey) {
+    throw new Error("hooks:approvePlugin requires installKey");
+  }
+  return approvePluginHooks(installKey);
+});
+ipcMain.handle("hooks:revokePlugin", async (_e, installKey: string) => {
+  if (typeof installKey !== "string" || !installKey) {
+    throw new Error("hooks:revokePlugin requires installKey");
+  }
+  return revokePluginHooks(installKey);
+});
+ipcMain.handle("mcp:listPluginTrust", async () => listPluginMcpTrust());
+ipcMain.handle("mcp:approvePlugin", async (_e, installKey: string) => {
+  if (typeof installKey !== "string" || !installKey) {
+    throw new Error("mcp:approvePlugin requires installKey");
+  }
+  return approvePluginMcp(installKey);
+});
+ipcMain.handle("mcp:revokePlugin", async (_e, installKey: string) => {
+  if (typeof installKey !== "string" || !installKey) {
+    throw new Error("mcp:revokePlugin requires installKey");
+  }
+  return revokePluginMcp(installKey);
 });
 
 ipcMain.handle("mcp:invalidate", async (_e, name?: string) => {
@@ -3470,6 +3674,7 @@ ipcMain.handle(
     if ("git" in patch) void applyGitPathFromSettings();
     if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
       for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
+      broadcastPluginCommandsChanged(mainWindows);
     }
   },
 );
@@ -3751,6 +3956,8 @@ app.on("before-quit", (event) => {
   petDispatchService = null;
   petAttentionPolicy?.stop();
   petAttentionPolicy = null;
+  const petWorkInboxFlush = petWorkInboxStore?.flush();
+  petWorkInboxStore = null;
   disposePetIpc?.();
   disposePetIpc = null;
   automationHandle?.stop();
@@ -3764,6 +3971,7 @@ app.on("before-quit", (event) => {
       tunnelManager.stop(),
       mobileRemote.stop(),
       gatewayControlServer?.stop(),
+      petWorkInboxFlush,
     ]);
     gatewayControlServer = undefined;
     await mobileUploads.dispose();

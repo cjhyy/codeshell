@@ -40,10 +40,7 @@ import {
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
 import { Methods, SessionManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
-import type {
-  PetProjectionDelta,
-  PetProjectionSnapshotResult,
-} from "@cjhyy/code-shell-pet";
+import type { PetProjectionDelta, PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import {
@@ -73,7 +70,7 @@ import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 import { PetWorkerProjectionGeneration } from "./pet/pet-worker-generation.js";
 import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
-import { previewLine, WorkerBridgeCore } from "@cjhyy/code-shell-server";
+import { previewLine, WorkerBridgeCore } from "@cjhyy/code-shell-server/worker";
 import type {
   AgentPanelHostRequest,
   AgentPanelHostResponse,

@@ -37,6 +37,7 @@ import type { TranscriptsAction } from "../transcriptsReducer";
 import type { ApprovalState } from "../types";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import type { PanelTab, ViewMode } from "../view";
+import { onComposerSeedRequest } from "../chat/composerSeed";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import {
@@ -688,6 +689,28 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
   // and when, then calls CronCreate — the user never touches cron syntax.
   const [composerSeed, setComposerSeed] = useState("");
   const [composerSeedNonce, setComposerSeedNonce] = useState(0);
+  const composerSeedNonceRef = useRef(0);
+  const seedComposer = useCallback((text: string): void => {
+    const nonce = composerSeedNonceRef.current + 1;
+    composerSeedNonceRef.current = nonce;
+    setComposerSeed(text);
+    setComposerSeedNonce(nonce);
+  }, []);
+  const onComposerSeedConsumed = useCallback((nonce: number): void => {
+    // An older ChatView effect must never clear a newer request.
+    if (nonce === composerSeedNonceRef.current) setComposerSeed("");
+  }, []);
+  useEffect(
+    () =>
+      onComposerSeedRequest((request) => {
+        // Keep the current conversation bucket. Unlike conversational
+        // automation creation, a plugin starter prompt is an explicit draft
+        // for the session the user was viewing before opening Settings.
+        seedComposer(request.text);
+        setViewMode("chat");
+      }),
+    [seedComposer, setViewMode],
+  );
   const startConversationalAutomation = (): void => {
     // Start a FRESH draft session — never pile onto whatever task/run session
     // happened to be active. Mirrors handleNewConversation: clear
@@ -697,8 +720,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
       ...prev,
       [projectBucketSegmentFor(projectId)]: setActiveSession(projectId, null),
     }));
-    setComposerSeed(t("misc.app.automationSeed"));
-    setComposerSeedNonce((n) => n + 1);
+    seedComposer(t("misc.app.automationSeed"));
     setViewMode("chat");
   };
 
@@ -898,6 +920,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     beginPanelResize,
     composerSeed,
     composerSeedNonce,
+    onComposerSeedConsumed,
     startConversationalAutomation,
     anchors,
     anchorsByBucket,

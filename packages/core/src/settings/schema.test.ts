@@ -101,13 +101,23 @@ describe('mcpServers name resilience (regression: settings died on {"23":{no nam
   });
 });
 
-describe("mcpServerOverrides (plugin MCP env/credential supplement)", () => {
-  it("accepts the env/credential supplement fields", () => {
+describe("mcpServerOverrides (plugin MCP user policy and credentials)", () => {
+  it("accepts server/tool policy and env/credential supplement fields", () => {
     const parsed = SettingsSchema.parse({
       mcpServerOverrides: {
-        "gh:server": { envVars: ["GITHUB_TOKEN"], env: { A: "b" }, credentialRef: "c" },
+        "gh:server": {
+          enabled: false,
+          allowedTools: ["search", "read"],
+          disabledTools: ["delete"],
+          envVars: ["GITHUB_TOKEN"],
+          env: { A: "b" },
+          credentialRef: "c",
+        },
       },
     });
+    expect(parsed.mcpServerOverrides["gh:server"].enabled).toBe(false);
+    expect(parsed.mcpServerOverrides["gh:server"].allowedTools).toEqual(["search", "read"]);
+    expect(parsed.mcpServerOverrides["gh:server"].disabledTools).toEqual(["delete"]);
     expect(parsed.mcpServerOverrides["gh:server"].envVars).toEqual(["GITHUB_TOKEN"]);
     expect(parsed.mcpServerOverrides["gh:server"].credentialRef).toBe("c");
   });
@@ -123,5 +133,22 @@ describe("mcpServerOverrides (plugin MCP env/credential supplement)", () => {
 
   it("defaults to an empty record when absent", () => {
     expect(SettingsSchema.parse({}).mcpServerOverrides).toEqual({});
+  });
+
+  it("bounds MCP tool policy names and list length", () => {
+    expect(() =>
+      SettingsSchema.parse({
+        mcpServerOverrides: { "gh:server": { allowedTools: [""] } },
+      }),
+    ).toThrow();
+    expect(() =>
+      SettingsSchema.parse({
+        mcpServerOverrides: {
+          "gh:server": {
+            disabledTools: Array.from({ length: 257 }, (_, index) => `tool-${index}`),
+          },
+        },
+      }),
+    ).toThrow();
   });
 });

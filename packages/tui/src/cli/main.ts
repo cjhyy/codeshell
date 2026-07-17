@@ -16,7 +16,7 @@ import {
   getCurrentVersion,
   registerCapability,
 } from "@cjhyy/code-shell-core";
-import { CODING_CAPABILITY } from "@cjhyy/code-shell-capability-coding";
+import { CODING_CAPABILITY } from "@cjhyy/code-shell-capability-coding/capability";
 import { CHALK_COLORIZER } from "../utils/colorizer.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import type { SessionStatus } from "@cjhyy/code-shell-core";
