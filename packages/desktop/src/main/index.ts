@@ -98,6 +98,7 @@ import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
+import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -149,6 +150,7 @@ import {
 } from "./credentials-service.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import {
+  archiveDiskSession,
   cleanupAttachments,
   cleanupSessionAttachments,
   cleanupStaleQuickChatSessions,
@@ -1066,6 +1068,10 @@ async function createWindow(): Promise<BrowserWindow> {
       listWorkspaces: () => mobileOrchestrator.projectList(),
       listReusableSessions: async () => {
         const noWorkspaceCwd = resolveNoRepoCwd();
+        // No includeArchived: listDiskSessions default-filters archived rows, so
+        // auto-archived sessions leave the reuse-candidate pool automatically
+        // while completed-but-not-yet-archived sessions stay reusable. `status`
+        // rides along to the candidate description.
         const { sessions } = await listDiskSessions({ limit: 100 });
         return sessions
           .filter((session) => session.origin === "desktop")
@@ -1103,6 +1109,18 @@ async function createWindow(): Promise<BrowserWindow> {
       await aggregator.start();
       await Promise.all([petReceipts.load(), petWorkInbox.load()]);
       attention.start();
+      // Auto-archive completed work sessions idle for 7+ days, then force a full
+      // catalog rebuild. Rationale for the full pass: archiveDiskSession touches
+      // state.json → bumps the session's dir mtime → the incremental
+      // (mtime high-water) refresh would re-surface it at the front, yet
+      // listDiskSessions now default-filters archived rows, so the freshly
+      // archived session would be *dropped from the incremental page but never
+      // evicted from the held diskSessions Map* — a persistent ghost. A full
+      // rebuild repopulates the Map straight from the (archive-filtered)
+      // listDiskSessions result, so archived sessions cleanly disappear.
+      void runPetAutoArchive(aggregator).catch((error) => {
+        dlog("main", "pet.autoArchive.failed", { error: String(error) });
+      });
     })();
     disposePetIpc = registerPetIpc({
       ipcMain,
@@ -1122,6 +1140,39 @@ async function createWindow(): Promise<BrowserWindow> {
 
   await installAppMenu(win);
   return win;
+}
+
+/** Days of inactivity after which a completed work session is auto-archived. */
+const PET_AUTO_ARCHIVE_IDLE_DAYS = 7;
+
+/**
+ * One-shot auto-archival pass, run right after pet init. Pulls the full catalog
+ * (including already-archived rows so the policy can skip them), selects the
+ * completed sessions idle for 7+ days, writes their archival markers, and — if
+ * anything changed — forces a FULL catalog rebuild so the aggregator's held Map
+ * is repopulated from the archive-filtered listDiskSessions (no ghost rows).
+ */
+async function runPetAutoArchive(aggregator: PetStateAggregator): Promise<void> {
+  const { sessions } = await listDiskSessions({ limit: 1000, includeArchived: true });
+  const toArchive = selectSessionsToArchive(
+    sessions.map((s) => ({
+      engineSessionId: s.engineSessionId,
+      status: s.status,
+      updatedAt: s.updatedAt,
+      archivedAt: s.archivedAt,
+    })),
+    { now: Date.now(), idleDays: PET_AUTO_ARCHIVE_IDLE_DAYS },
+  );
+  if (toArchive.length === 0) return;
+  const now = Date.now();
+  for (const id of toArchive) {
+    await archiveDiskSession(id, now).catch((error) => {
+      dlog("main", "pet.autoArchive.write.failed", { id, error: String(error) });
+    });
+  }
+  // Full rebuild: archived sessions must be evicted from the held Map, not just
+  // absent from an incremental page (see the trigger comment in the pet init).
+  await aggregator.refreshCatalog(true, { full: true });
 }
 
 function petWidgetSurface(expanded: boolean): { width: number; height: number } {

@@ -514,6 +514,42 @@ describe("PetStateAggregator", () => {
     );
   });
 
+  test("a freshly archived session is evicted by a full refresh, not left as a ghost", async () => {
+    const bridge = new FakeBridge();
+    // "done" is a completed session held in the catalog; after auto-archive it
+    // is filtered out of the default listDiskSessions result (modeled by
+    // dropping it from the catalog). An INCREMENTAL refresh cannot observe the
+    // absence — it would leave "done" as a ghost — so the auto-archive trigger
+    // runs a FULL refresh, which rebuilds the held Map from disk truth.
+    const catalog = pagedCatalog([
+      disk("done", { status: "completed", updatedAt: 100 }),
+      disk("keep", { status: "active", updatedAt: 200 }),
+    ]);
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: catalog.list,
+      pageSize: 10,
+      now: () => 5_000,
+    });
+    await aggregator.start();
+    expect(aggregator.getSnapshot().sessions.map((s) => s.agentSessionId).sort()).toEqual([
+      "done",
+      "keep",
+    ]);
+
+    // Simulate the archive write: "done" now carries archivedAt and therefore
+    // disappears from the default-filtered catalog.
+    catalog.replace([disk("keep", { status: "active", updatedAt: 200 })]);
+
+    // Incremental alone would NOT drop "done" (no page ever reports its removal).
+    await aggregator.refreshCatalog(false);
+    expect(aggregator.getSnapshot().sessions.some((s) => s.agentSessionId === "done")).toBe(true);
+
+    // The full refresh the trigger issues after archiving evicts the ghost.
+    await aggregator.refreshCatalog(true, { full: true });
+    expect(aggregator.getSnapshot().sessions.map((s) => s.agentSessionId)).toEqual(["keep"]);
+  });
+
   test("incremental refresh does not miss a new session sharing the high-water mtime", async () => {
     const bridge = new FakeBridge();
     // "dup" shares mtime 200 with the already-held "b" but is not yet in the

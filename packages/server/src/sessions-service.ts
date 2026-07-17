@@ -306,3 +306,32 @@ export async function listDiskSessions(
     nextCursor: i < dirs.length && i > 0 ? encodeDiskSessionCursor(dirs[i - 1]!) : null,
   };
 }
+
+/**
+ * Set (number) or clear (undefined) a session's durable archival marker on
+ * disk, then atomically replace `state.json`. This is the main-process writer
+ * counterpart to `listDiskSessions`' `archivedAt` filter: main has no live
+ * Engine/SessionManager handle, so it mutates the same `state.json` the worker
+ * persists. The rest of the state is preserved verbatim; only `archivedAt` is
+ * added or removed. Unsafe ids and missing sessions throw.
+ */
+export async function archiveDiskSession(
+  id: string,
+  archivedAt: number | undefined,
+  baseDir: string = sessionsRoot(),
+): Promise<void> {
+  if (!SAFE_ID.test(id) || id === "." || id === "..") {
+    throw new Error(`archiveDiskSession: unsafe session id ${JSON.stringify(id)}`);
+  }
+  const stateFile = path.join(baseDir, id, "state.json");
+  const raw = await fs.readFile(stateFile, "utf8");
+  const state = JSON.parse(raw) as Record<string, unknown>;
+  if (archivedAt === undefined) {
+    delete state.archivedAt;
+  } else {
+    state.archivedAt = archivedAt;
+  }
+  const tmp = `${stateFile}.tmp-${process.pid}-${Math.random().toString(36).slice(2)}`;
+  await fs.writeFile(tmp, JSON.stringify(state), "utf8");
+  await fs.rename(tmp, stateFile);
+}
