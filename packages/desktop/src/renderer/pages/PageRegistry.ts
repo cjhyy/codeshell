@@ -1,5 +1,19 @@
-import type { ReactNode } from "react";
-import { KeyRound, Settings, UsersRound, Workflow, type LucideIcon } from "lucide-react";
+import {
+  createElement,
+  lazy,
+  type ComponentType,
+  type LazyExoticComponent,
+  type ReactNode,
+} from "react";
+import {
+  KeyRound,
+  PlayCircle,
+  ScrollText,
+  Settings,
+  UsersRound,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
 import type { ViewMode } from "../view";
 
 /**
@@ -56,6 +70,18 @@ const builtin = (entry: Omit<PageEntry, "owner">): PageEntry => ({
   owner: { kind: "builtin" },
 });
 
+// Migrated low-traffic pages stay off the chat startup path with the same
+// React.lazy idiom App.tsx used; the Suspense boundary lives in App.
+// Explicit prop typing so createElement's overloads resolve: the source
+// components take optional props via a default parameter, which lazy() +
+// createElement cannot infer on its own (JSX takes a different type path).
+const LogsView: LazyExoticComponent<ComponentType> = lazy(() =>
+  import("../logs/LogsView").then((module) => ({ default: module.LogsView })),
+);
+const RunsView: LazyExoticComponent<ComponentType<{ initialRunId?: string | null }>> = lazy(() =>
+  import("../runs/RunsView").then((module) => ({ default: module.RunsView })),
+);
+
 const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
   builtin({
     key: "digital_humans",
@@ -91,6 +117,21 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
       isActive: (mode) => mode === "settings_page" || mode === "project_config",
     },
     render: null,
+  }),
+  // Migrated low-traffic pages: render-only (reached via command palette /
+  // automation view), proving the registry render seam. Titles surface only
+  // in nav today, so they reuse the palette labels.
+  builtin({
+    key: "logs",
+    title: { kind: "i18n", key: "panels.palette.openLogs" },
+    icon: ScrollText,
+    render: () => createElement(LogsView),
+  }),
+  builtin({
+    key: "runs",
+    title: { kind: "i18n", key: "panels.palette.openRuns" },
+    icon: PlayCircle,
+    render: ({ runsInitialRunId }) => createElement(RunsView, { initialRunId: runsInitialRunId }),
   }),
 ];
 

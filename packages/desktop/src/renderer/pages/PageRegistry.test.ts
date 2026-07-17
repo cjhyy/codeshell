@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import type { ReactElement } from "react";
 import { PAGE_REGISTRY, PageRegistry, type PageEntry } from "./PageRegistry";
 
 describe("PageRegistry", () => {
@@ -79,5 +80,30 @@ describe("PageRegistry", () => {
     dispose();
     expect(notified).toBe(2);
     unsubscribe();
+  });
+});
+
+describe("migrated builtin pages", () => {
+  it("registers logs and runs as render-only pages (no nav item)", () => {
+    const logs = PAGE_REGISTRY.get("logs")!;
+    const runs = PAGE_REGISTRY.get("runs")!;
+    expect(logs.nav).toBeUndefined();
+    expect(runs.nav).toBeUndefined();
+    expect(logs.render).toBeFunction();
+    expect(runs.render).toBeFunction();
+    // The sidebar nav must not grow.
+    expect(PAGE_REGISTRY.navEntries().map((entry) => entry.key)).toEqual([
+      "digital_humans",
+      "automation",
+      "credentials",
+      "settings_page",
+    ]);
+  });
+
+  it("threads the runs deep-link through the render context", () => {
+    const element = PAGE_REGISTRY.get("runs")!.render!({
+      runsInitialRunId: "run-42",
+    }) as ReactElement<{ initialRunId?: string | null }>;
+    expect(element.props.initialRunId).toBe("run-42");
   });
 });
