@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const source = readFileSync(join(import.meta.dir, "DigitalHumansView.tsx"), "utf-8");
-const sidebar = readFileSync(join(import.meta.dir, "..", "Sidebar.tsx"), "utf-8");
+const pageRegistry = readFileSync(join(import.meta.dir, "..", "pages", "PageRegistry.ts"), "utf-8");
 const settings = readFileSync(join(import.meta.dir, "..", "settings", "SettingsPage.tsx"), "utf-8");
 const dhSection = readFileSync(
   join(import.meta.dir, "..", "settings", "DigitalHumansSection.tsx"),
@@ -20,7 +20,7 @@ const preloadTypes = readFileSync(
 
 describe("DigitalHumansView contract", () => {
   test("is a first-class market and library rather than a capabilities toggle", () => {
-    expect(sidebar).toContain('t("sidebar.digitalHumans")');
+    expect(pageRegistry).toContain('"sidebar.digitalHumans"');
     expect(source).toContain('value="market"');
     expect(source).toContain('value="mine"');
     expect(source).toContain("window.codeshell.installCatalogProfile");

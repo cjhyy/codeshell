@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 const source = readFileSync(join(import.meta.dir, "SettingsPage.tsx"), "utf-8");
 const sidebar = readFileSync(join(import.meta.dir, "..", "Sidebar.tsx"), "utf-8");
+const pageRegistry = readFileSync(join(import.meta.dir, "..", "pages", "PageRegistry.ts"), "utf-8");
 const view = readFileSync(join(import.meta.dir, "..", "view.ts"), "utf-8");
 
 describe("SettingsPage scope contract", () => {
@@ -38,7 +39,7 @@ describe("SettingsPage scope contract", () => {
   });
 
   test("settings is a first-class sidebar entry and the customize double-door is gone", () => {
-    expect(sidebar).toContain('t("sidebar.settings")');
+    expect(pageRegistry).toContain('"sidebar.settings"');
     expect(sidebar).not.toContain("onOpenCustomize");
     expect(view).toContain('"customize"'); // migration mapping keeps the literal
     expect(view).toContain("settings_page");

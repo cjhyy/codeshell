@@ -72,6 +72,7 @@ import {
 import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
 import { loadView, saveView, type ViewState } from "./view";
+import { PAGE_REGISTRY } from "./pages/PageRegistry";
 import type { DigitalHumanSelection } from "./digital-humans/types";
 import {
   DIGITAL_HUMAN_SELECTION_STORAGE_KEY,
@@ -125,12 +126,6 @@ const DigitalHumansView = React.lazy(() =>
 );
 const ApprovalsView = React.lazy(() =>
   import("./approvals/ApprovalsView").then((module) => ({ default: module.ApprovalsView })),
-);
-const LogsView = React.lazy(() =>
-  import("./logs/LogsView").then((module) => ({ default: module.LogsView })),
-);
-const RunsView = React.lazy(() =>
-  import("./runs/RunsView").then((module) => ({ default: module.RunsView })),
 );
 const AutomationView = React.lazy(() =>
   import("./automation/AutomationView").then((module) => ({ default: module.AutomationView })),
@@ -196,7 +191,7 @@ function App() {
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
     loadActiveProjectId(),
   );
-  const [view, setView] = useState<ViewState>(() => loadView());
+  const [view, setView] = useState<ViewState>(() => loadView((mode) => PAGE_REGISTRY.has(mode)));
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1834,6 +1829,16 @@ function App() {
   const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
   const isPetView = view.viewMode === "pet";
   const isChatView = view.viewMode === "chat";
+  // Re-render when pages register/unregister; builtin-only today, but the
+  // seam is what plugin pages will use.
+  React.useSyncExternalStore(
+    PAGE_REGISTRY.subscribe,
+    PAGE_REGISTRY.snapshot,
+    PAGE_REGISTRY.snapshot,
+  );
+  const registeredPageRender = !isPetView
+    ? (PAGE_REGISTRY.get(view.viewMode)?.render ?? null)
+    : null;
   const petPendingCount = surfaceablePendingCount;
   const petRunningCount =
     petState.projection?.sessions.filter((session) => session.runState === "running").length ?? 0;
@@ -1909,9 +1914,7 @@ function App() {
                 onNewConversationForProject={handleNewConversationForProject}
                 onNewConversation={handleNewConversation}
                 onOpenSearch={() => setSessionSearchOpen(true)}
-                onOpenAutomations={() => setViewMode("automation")}
-                onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                onOpenCredentials={() => setViewMode("credentials")}
+                onNavigate={setViewMode}
                 onOpenProjectConfig={(projectId) => {
                   setActiveProjectId(projectId);
                   setViewMode("project_config");
@@ -1963,6 +1966,10 @@ function App() {
                     onClearDigitalHumanSelection={() => setPetDigitalHumanSelection(null)}
                   />
                 </PetPage>
+              ) : registeredPageRender ? (
+                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
+                  {registeredPageRender({ runsInitialRunId })}
+                </React.Suspense>
               ) : view.viewMode === "approvals" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <ApprovalsView
@@ -1970,10 +1977,6 @@ function App() {
                     history={approvalHistory}
                     onDecide={decideEnvelope}
                   />
-                </React.Suspense>
-              ) : view.viewMode === "logs" ? (
-                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
-                  <LogsView />
                 </React.Suspense>
               ) : view.viewMode === "digital_humans" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
@@ -1993,10 +1996,6 @@ function App() {
                     activeProjectPath={activeProject?.path ?? null}
                     activeBucket={activeSessionId !== null ? activeBucket : null}
                   />
-                </React.Suspense>
-              ) : view.viewMode === "runs" ? (
-                <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
-                  <RunsView initialRunId={runsInitialRunId} />
                 </React.Suspense>
               ) : view.viewMode === "automation" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
 import { createHash, randomUUID } from "node:crypto";
 import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import type { AgentBridge } from "./agent-bridge.js";
 import type { PluginPanelProtocolResource } from "./plugin-panel-protocol.js";
 import { preparePluginPanel } from "./plugin-panel-protocol.js";
@@ -17,6 +17,7 @@ const MAX_CALLS_PER_WINDOW = 30;
 const RATE_WINDOW_MS = 10_000;
 const CALL_TIMEOUT_MS = 15_000;
 const STORAGE_QUOTA_BYTES = 256 * 1024;
+const MAX_NOTIFICATIONS_PER_WINDOW = 5;
 
 interface GuestBinding {
   guest: WebContents;
@@ -24,13 +25,18 @@ interface GuestBinding {
   resource: PluginPanelProtocolResource;
   context: PluginPanelHostContext;
   callTimes: number[];
+  notifyTimes: number[];
   bucket?: string;
+  /** Raw bound cwd, host-side only; context.cwd stays gated on context.workspace. */
+  cwd?: string;
 }
 
 export interface PluginPanelBridgeOptions {
   isTrustedHost(sender: WebContents): boolean;
   isWorkspaceTrusted(cwd: string): boolean;
   getAgentBridge(): AgentBridge | null;
+  /** Shows a system notification; injected so tests avoid Electron Notification. */
+  showNotification?(notification: { title: string; body: string }): boolean;
   limits?: Partial<{
     maxParamsBytes: number;
     maxResultBytes: number;
@@ -38,6 +44,7 @@ export interface PluginPanelBridgeOptions {
     rateWindowMs: number;
     callTimeoutMs: number;
     storageQuotaBytes: number;
+    maxNotificationsPerWindow: number;
   }>;
 }
 
@@ -103,6 +110,7 @@ export class PluginPanelBridge {
         apiVersion: PLUGIN_PANEL_API_VERSION,
       },
       callTimes: [],
+      notifyTimes: [],
     };
     this.guests.set(guest.id, binding);
     guest.once("destroyed", () => this.revokeGuest(guest.id));
@@ -173,6 +181,7 @@ export class PluginPanelBridge {
       throw new Error("invalid plugin panel context");
     }
     binding.bucket = input.bucket;
+    binding.cwd = typeof input.cwd === "string" && input.cwd.length > 0 ? input.cwd : undefined;
     binding.context = {
       panelId: binding.resource.descriptor.panelId,
       pluginId: binding.resource.descriptor.installKey,
@@ -254,6 +263,12 @@ export class PluginPanelBridge {
       case "agent.submitPrompt":
         this.requirePermission(binding, "agent.submitPrompt");
         return this.submitPrompt(binding, params);
+      case "workspace.info":
+        this.requirePermission(binding, "workspace.info");
+        return this.workspaceInfo(binding);
+      case "notifications.send":
+        this.requirePermission(binding, "notifications.send");
+        return this.sendNotification(binding, params);
       default:
         throw new Error(`unknown plugin panel method: ${method}`);
     }
@@ -409,5 +424,61 @@ export class PluginPanelBridge {
     });
     if (!result.ok) throw new Error(result.message);
     return result.result;
+  }
+
+  /** Read-only workspace metadata. Git branch is best-effort via .git/HEAD (no exec). */
+  private async workspaceInfo(binding: GuestBinding): Promise<unknown> {
+    const cwd = binding.cwd;
+    if (!cwd) return { name: null, root: null, trusted: false, gitBranch: null };
+    let gitBranch: string | null = null;
+    try {
+      const head = await readFile(join(cwd, ".git", "HEAD"), "utf-8");
+      const match = /^ref: refs\/heads\/(.+)$/m.exec(head.trim());
+      gitBranch = match ? match[1] : null;
+    } catch {
+      gitBranch = null;
+    }
+    return {
+      name: basename(cwd),
+      root: cwd,
+      trusted: this.options.isWorkspaceTrusted(cwd),
+      gitBranch,
+    };
+  }
+
+  private sendNotification(binding: GuestBinding, params: unknown): boolean {
+    const body = (params as { body?: unknown } | null)?.body;
+    const title = (params as { title?: unknown } | null)?.title;
+    if (typeof body !== "string" || body.trim().length === 0 || body.length > 500) {
+      throw new Error("notifications.send requires a non-empty body up to 500 characters");
+    }
+    if (
+      title !== undefined &&
+      (typeof title !== "string" || title.length === 0 || title.length > 80)
+    ) {
+      throw new Error("notifications.send title must be 1-80 characters");
+    }
+    const limits = this.options.limits;
+    const now = Date.now();
+    binding.notifyTimes = binding.notifyTimes.filter(
+      (time) => now - time < (limits?.rateWindowMs ?? RATE_WINDOW_MS),
+    );
+    if (
+      binding.notifyTimes.length >=
+      (limits?.maxNotificationsPerWindow ?? MAX_NOTIFICATIONS_PER_WINDOW)
+    ) {
+      throw new Error("plugin panel notification limit exceeded");
+    }
+    binding.notifyTimes.push(now);
+    const show = this.options.showNotification;
+    if (!show) throw new Error("system notifications are unavailable");
+    // The trusted panel title always prefixes the shown title so a plugin
+    // cannot impersonate the app or another plugin.
+    return show({
+      title: title
+        ? `${binding.resource.descriptor.title}: ${title}`
+        : binding.resource.descriptor.title,
+      body: body.trim(),
+    });
   }
 }
