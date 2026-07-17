@@ -23,7 +23,7 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { createRequire } from "node:module";
-import { addMarketplace } from "@cjhyy/code-shell-core";
+import { addMarketplace } from "@cjhyy/code-shell-core/internal";
 
 type SeedMarketplaceStatus = {
   checkedAt: string;

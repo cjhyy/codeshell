@@ -365,54 +365,7 @@ export { readInstalledPlugins } from "./plugins/installedPlugins.js";
 export type { EffectiveDisabledLists } from "./capability-control/disabled-lists.js";
 export type { InstalledPluginsV2 } from "./plugins/types.js";
 
-// ─── Plugin installer (CC + Codex) ───────────────────────────────
-export {
-  installPluginFromPath,
-  type InstallPluginFromPathOptions,
-} from "./plugins/installer/install.js";
-export { installPluginFromSource } from "./plugins/installer/installFromSource.js";
-export {
-  installPluginFromNpm,
-  resolveNpmPlugin,
-  downloadVerifiedNpmTarball,
-  NPM_PUBLIC_REGISTRY,
-  MAX_NPM_METADATA_BYTES,
-  type NpmPluginFetch,
-  type NpmPluginInstallOptions,
-  type ResolvedNpmPlugin,
-} from "./plugins/installer/installFromNpm.js";
-export {
-  extractNpmTar,
-  gunzipNpmTarball,
-  MAX_NPM_TARBALL_BYTES,
-  MAX_NPM_TAR_EXTRACTED_BYTES,
-  MAX_NPM_TAR_FILE_BYTES,
-  MAX_NPM_TAR_ENTRIES,
-  MAX_NPM_TAR_PATH_BYTES,
-  MAX_NPM_TAR_DEPTH,
-} from "./plugins/installer/npmTar.js";
-export {
-  installLocalPlugin,
-  installPluginFromArchive,
-} from "./plugins/installer/installFromArchive.js";
-export {
-  installReviewedLocalPlugin,
-  previewLocalPlugin,
-  LocalPluginReviewChangedError,
-  type LocalPluginHookPreview,
-  type LocalPluginAutomationTemplatePreview,
-  type LocalPluginInterfacePreview,
-  type LocalPluginMcpPreview,
-  type LocalPluginPreview,
-  type LocalPluginPreviewWarning,
-  type LocalPluginPreviewWarningKind,
-} from "./plugins/installer/preview.js";
-export {
-  parseSource,
-  parseNpmPluginSource,
-  type ParsedSource,
-} from "./plugins/installer/parseSource.js";
-export { detectPluginFormat } from "./plugins/installer/detectFormat.js";
+// ─── Plugin manifests, trust & catalog (runtime surface) ────────
 export {
   CodexPluginManifest,
   PluginPanelManifestEntry,
@@ -489,10 +442,6 @@ export {
   pluginInstallKey,
   removeInstallEntries,
 } from "./plugins/installedPlugins.js";
-export { uninstallPluginByName } from "./plugins/installer/uninstall.js";
-export { listInstalledPlugins, type PluginListRow } from "./plugins/installer/list.js";
-export { updatePluginByName, type UpdateResult } from "./plugins/installer/update.js";
-export { checkPluginUpdate, type UpdateCheck } from "./plugins/installer/checkUpdate.js";
 
 // ─── Run (Managed Agent Lifecycle) ──────────────────────────────
 
@@ -630,38 +579,8 @@ export {
 export { CostTracker, costTracker, installCostTracking } from "./cost-tracker.js";
 export { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 
-// ─── Onboarding ──────────────────────────────────────────────────
-
-export {
-  hasApiKey,
-  resolveApiKey,
-  appendOnboardingResult,
-  detectEnvKeys,
-  type OnboardingResult,
-} from "./onboarding.js";
-
-// ─── Updater ─────────────────────────────────────────────────────
-
-export {
-  getCurrentVersion,
-  checkForUpdate,
-  scheduleAutoInstallOnExit,
-  getUpdateAvailable,
-  getAutoUpdateDisabledReason,
-  type UpdateInfo,
-} from "./updater.js";
-
 // ─── Plugins ─────────────────────────────────────────────────────
 
-export { installPlugin, uninstallPlugin, listInstalled } from "./plugins/pluginInstaller.js";
-export {
-  addMarketplace,
-  refreshMarketplace,
-  removeMarketplace,
-  listMarketplaces,
-  loadMarketplace,
-} from "./plugins/marketplaceManager.js";
-export { parseMarketplaceInput, deriveMarketplaceName } from "./plugins/parseMarketplaceInput.js";
 export {
   expandPluginCommandBody,
   describePluginCommands,

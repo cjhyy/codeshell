@@ -4,23 +4,15 @@
  * string the slash command can pass to ctx.addStatus.
  */
 
-import {
-  parseMarketplaceInput,
-  deriveMarketplaceName,
-  SettingsManager,
-} from "@cjhyy/code-shell-core";
-import { addMarketplace, listMarketplaces, removeMarketplace } from "@cjhyy/code-shell-core";
+import { SettingsManager } from "@cjhyy/code-shell-core";
 import {
   approvePluginHooks,
   approvePluginMcp,
-  installPlugin,
   listPluginMcpTrust,
   listPluginHooks,
   reviewPluginHooks,
   revokePluginMcp,
   revokePluginHooks,
-  uninstallPlugin,
-  listInstalled,
   loadPluginAutomationTemplateContributions,
   instantiatePluginAutomationTemplate,
 } from "@cjhyy/code-shell-core";
@@ -29,6 +21,14 @@ import {
   computeEffectiveDisabledLists,
   cronScheduler,
   type CronScheduler,
+  parseMarketplaceInput,
+  deriveMarketplaceName,
+  addMarketplace,
+  listMarketplaces,
+  removeMarketplace,
+  installPlugin,
+  uninstallPlugin,
+  listInstalled,
 } from "@cjhyy/code-shell-core/internal";
 
 const USAGE = [

@@ -11,7 +11,7 @@ import { DogLogo } from "./DogLogo.js";
 import { KunLogo } from "./KunLogo.js";
 import { KunHead } from "./KunHead.js";
 import { BabyHand } from "./BabyHand.js";
-import { getCurrentVersion } from "@cjhyy/code-shell-core";
+import { getCurrentVersion } from "@cjhyy/code-shell-core/internal";
 
 // Logo selection: random from all four (or CODESHELL_LOGO env to force one)
 type LogoKind = "dog" | "kunhead" | "kunball" | "baby";

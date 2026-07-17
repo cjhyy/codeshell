@@ -18,7 +18,7 @@ import {
   type OnboardingResult,
   detectEnvKeys,
   appendOnboardingResult,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 import { saveArenaSettingsByKeys } from "@cjhyy/code-shell-arena";
 import type { ProviderConfig } from "@cjhyy/code-shell-core/internal";
 

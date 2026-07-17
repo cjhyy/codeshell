@@ -10,12 +10,8 @@ import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { resolveTaskFromArgOrStdin } from "./input/read-stdin.js";
 import { setup } from "../bootstrap/setup.js";
-import {
-  costTracker,
-  installCostTracking,
-  getCurrentVersion,
-  registerCapability,
-} from "@cjhyy/code-shell-core";
+import { costTracker, installCostTracking, registerCapability } from "@cjhyy/code-shell-core";
+import { getCurrentVersion } from "@cjhyy/code-shell-core/internal";
 import { CODING_CAPABILITY } from "@cjhyy/code-shell-capability-coding/capability";
 import { CHALK_COLORIZER } from "../utils/colorizer.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";

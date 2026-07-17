@@ -18,7 +18,8 @@ import * as publicApi from "./index.js";
 // The full pinned runtime surface of the /internal host entry. /internal is the
 // ONLY entry for these host-facing exports — index.ts no longer re-exports them
 // (export-surface convergence, 2026-07-15). Keep this list in sync with
-// index.internal.ts.
+// index.internal.ts. Host-assembly surfaces (installer/marketplace/onboarding/
+// updater) moved here in 0.8.
 const expectedRuntimeExportsByPartition = {
   utils: [
     "getGraphemeSegmenter",
@@ -171,6 +172,54 @@ const expectedRuntimeExportsByPartition = {
     "projectPlugins",
     "computeEffectiveDisabledLists",
   ],
+  hostAssembly: [
+    "installPluginFromPath",
+    "installPluginFromSource",
+    "installPluginFromNpm",
+    "resolveNpmPlugin",
+    "downloadVerifiedNpmTarball",
+    "NPM_PUBLIC_REGISTRY",
+    "MAX_NPM_METADATA_BYTES",
+    "extractNpmTar",
+    "gunzipNpmTarball",
+    "MAX_NPM_TARBALL_BYTES",
+    "MAX_NPM_TAR_EXTRACTED_BYTES",
+    "MAX_NPM_TAR_FILE_BYTES",
+    "MAX_NPM_TAR_ENTRIES",
+    "MAX_NPM_TAR_PATH_BYTES",
+    "MAX_NPM_TAR_DEPTH",
+    "installLocalPlugin",
+    "installPluginFromArchive",
+    "installReviewedLocalPlugin",
+    "previewLocalPlugin",
+    "LocalPluginReviewChangedError",
+    "parseSource",
+    "parseNpmPluginSource",
+    "detectPluginFormat",
+    "uninstallPluginByName",
+    "listInstalledPlugins",
+    "updatePluginByName",
+    "checkPluginUpdate",
+    "installPlugin",
+    "uninstallPlugin",
+    "listInstalled",
+    "addMarketplace",
+    "refreshMarketplace",
+    "removeMarketplace",
+    "listMarketplaces",
+    "loadMarketplace",
+    "parseMarketplaceInput",
+    "deriveMarketplaceName",
+    "hasApiKey",
+    "resolveApiKey",
+    "appendOnboardingResult",
+    "detectEnvKeys",
+    "getCurrentVersion",
+    "checkForUpdate",
+    "scheduleAutoInstallOnExit",
+    "getUpdateAvailable",
+    "getAutoUpdateDisabledReason",
+  ],
 } as const;
 
 const expectedRuntimeExports = Object.values(expectedRuntimeExportsByPartition).flat();
@@ -200,6 +249,16 @@ const hostOnlySamples = [
   "activateWorkspaceProfile",
   "CapabilityService",
   "computeEffectiveDisabledLists",
+  "installPluginFromPath",
+  "installPlugin",
+  "previewLocalPlugin",
+  "uninstallPluginByName",
+  "addMarketplace",
+  "parseMarketplaceInput",
+  "resolveApiKey",
+  "detectEnvKeys",
+  "getCurrentVersion",
+  "checkForUpdate",
 ] as const;
 
 // Runtime members of the /extension capability contract (coding/arena imports).

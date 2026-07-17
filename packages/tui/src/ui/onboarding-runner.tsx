@@ -9,7 +9,7 @@ import React from "react";
 import render, { type Instance } from "../render/root.js";
 import { ThemeProvider } from "./theme.js";
 import { OnboardingPrompt } from "./components/OnboardingPrompt.js";
-import type { OnboardingResult } from "@cjhyy/code-shell-core";
+import type { OnboardingResult } from "@cjhyy/code-shell-core/internal";
 
 export async function runInkOnboarding(): Promise<OnboardingResult | null> {
   // Keep the event loop alive until Ink's useInput effect calls stdin.ref().

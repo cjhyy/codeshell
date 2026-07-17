@@ -15,6 +15,7 @@
  * IPC layer can report a clear message.
  */
 
+import { invalidateSkillCache } from "@cjhyy/code-shell-core";
 import {
   listMarketplaces,
   loadMarketplace,
@@ -27,9 +28,8 @@ import {
   previewLocalPlugin,
   parseMarketplaceInput,
   deriveMarketplaceName,
-  invalidateSkillCache,
   type LocalPluginPreview,
-} from "@cjhyy/code-shell-core";
+} from "@cjhyy/code-shell-core/internal";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";

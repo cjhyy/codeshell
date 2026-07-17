@@ -241,3 +241,85 @@ export {
   projectPlugins,
 } from "./capability-control/project.js";
 export { computeEffectiveDisabledLists } from "./capability-control/disabled-lists.js";
+
+// ─── Host assembly: plugin installer / marketplace / onboarding / updater ──
+// Moved off the public root barrel in 0.8 (breaking): these are host
+// assembly surfaces (TUI/desktop install flows, self-update, first-run
+// onboarding), not part of the embeddable agent SDK. External embedders
+// should drive installs through their own host layer.
+
+export {
+  installPluginFromPath,
+  type InstallPluginFromPathOptions,
+} from "./plugins/installer/install.js";
+export { installPluginFromSource } from "./plugins/installer/installFromSource.js";
+export {
+  installPluginFromNpm,
+  resolveNpmPlugin,
+  downloadVerifiedNpmTarball,
+  NPM_PUBLIC_REGISTRY,
+  MAX_NPM_METADATA_BYTES,
+  type NpmPluginFetch,
+  type NpmPluginInstallOptions,
+  type ResolvedNpmPlugin,
+} from "./plugins/installer/installFromNpm.js";
+export {
+  extractNpmTar,
+  gunzipNpmTarball,
+  MAX_NPM_TARBALL_BYTES,
+  MAX_NPM_TAR_EXTRACTED_BYTES,
+  MAX_NPM_TAR_FILE_BYTES,
+  MAX_NPM_TAR_ENTRIES,
+  MAX_NPM_TAR_PATH_BYTES,
+  MAX_NPM_TAR_DEPTH,
+} from "./plugins/installer/npmTar.js";
+export {
+  installLocalPlugin,
+  installPluginFromArchive,
+} from "./plugins/installer/installFromArchive.js";
+export {
+  installReviewedLocalPlugin,
+  previewLocalPlugin,
+  LocalPluginReviewChangedError,
+  type LocalPluginHookPreview,
+  type LocalPluginAutomationTemplatePreview,
+  type LocalPluginInterfacePreview,
+  type LocalPluginMcpPreview,
+  type LocalPluginPreview,
+  type LocalPluginPreviewWarning,
+  type LocalPluginPreviewWarningKind,
+} from "./plugins/installer/preview.js";
+export {
+  parseSource,
+  parseNpmPluginSource,
+  type ParsedSource,
+} from "./plugins/installer/parseSource.js";
+export { detectPluginFormat } from "./plugins/installer/detectFormat.js";
+export { uninstallPluginByName } from "./plugins/installer/uninstall.js";
+export { listInstalledPlugins, type PluginListRow } from "./plugins/installer/list.js";
+export { updatePluginByName, type UpdateResult } from "./plugins/installer/update.js";
+export { checkPluginUpdate, type UpdateCheck } from "./plugins/installer/checkUpdate.js";
+export { installPlugin, uninstallPlugin, listInstalled } from "./plugins/pluginInstaller.js";
+export {
+  addMarketplace,
+  refreshMarketplace,
+  removeMarketplace,
+  listMarketplaces,
+  loadMarketplace,
+} from "./plugins/marketplaceManager.js";
+export { parseMarketplaceInput, deriveMarketplaceName } from "./plugins/parseMarketplaceInput.js";
+export {
+  hasApiKey,
+  resolveApiKey,
+  appendOnboardingResult,
+  detectEnvKeys,
+  type OnboardingResult,
+} from "./onboarding.js";
+export {
+  getCurrentVersion,
+  checkForUpdate,
+  scheduleAutoInstallOnExit,
+  getUpdateAvailable,
+  getAutoUpdateDisabledReason,
+  type UpdateInfo,
+} from "./updater.js";
