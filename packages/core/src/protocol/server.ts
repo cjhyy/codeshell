@@ -137,6 +137,9 @@ const COMPACT_STREAM_STRATEGIES = new Set<ContextCompactStreamEvent["strategy"]>
   "snip",
   "emergency",
   "compacted",
+  // Range archival (archive_range query) emits its boundary through this map;
+  // without "range" here it would be silently downgraded to "compacted".
+  "range",
 ]);
 
 function toCompactStreamStrategy(strategy: string): ContextCompactStreamEvent["strategy"] {
@@ -2483,6 +2486,77 @@ export class AgentServer {
 
   // ─── Query ──────────────────────────────────────────────────────
 
+  /**
+   * Resolve the Engine that owns a session-scoped query (compact, archive_range,
+   * …). With a chatManager: materialize a persisted-but-not-live session on
+   * demand, or borrow any live engine when no sessionId is given. Sends the
+   * appropriate error response and returns null when the session is
+   * closing/closed, unknown, or no engine is available; `label` names the query
+   * in the "no engine" message. Domain-neutral — no query-specific literals.
+   */
+  private async resolveEngineForSessionQuery(
+    req: RpcRequest,
+    sessionId: string | undefined,
+    fallbackEngine: Engine | null | undefined,
+    label: string,
+  ): Promise<Engine | null> {
+    let resolved: Engine | null | undefined = fallbackEngine;
+
+    if (this.chatManager) {
+      if (sessionId) {
+        if (this.chatManager.isUnavailable(sessionId)) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.SessionClosed,
+              `Session is closing or closed: ${sessionId}`,
+            ),
+          );
+          return null;
+        }
+        let session = this.chatManager.get(sessionId);
+        if (!session) {
+          const probeEngine = this.anyEngine();
+          if (!probeEngine?.sessionExistsOnDisk(sessionId)) {
+            this.transport.send(
+              createErrorResponse(
+                req.id,
+                ErrorCodes.SessionNotFound,
+                `Session not found: ${sessionId}`,
+              ),
+            );
+            return null;
+          }
+          try {
+            session = await this.chatManager.getOrCreate(sessionId, {
+              cwd: probeEngine.getSessionManager().readSessionMainRoot(sessionId),
+            } as any);
+          } catch (err: any) {
+            this.transport.send(
+              createErrorResponse(req.id, err.code ?? ErrorCodes.InternalError, err.message),
+            );
+            return null;
+          }
+        }
+        resolved = session.engine;
+      } else {
+        resolved = this.anyEngine();
+      }
+    }
+
+    if (!resolved) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InternalError,
+          `No engine available for ${label} query`,
+        ),
+      );
+      return null;
+    }
+    return resolved;
+  }
+
   private async handleQuery(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as QueryParams;
     // For query operations we prefer the legacyEngine; if absent borrow any
@@ -2601,60 +2675,13 @@ export class AgentServer {
           typeof params.sessionId === "string" && params.sessionId.length > 0
             ? params.sessionId
             : undefined;
-        let compactEngine: Engine | null | undefined = engine;
-
-        if (this.chatManager) {
-          if (compactSessionId) {
-            if (this.chatManager.isUnavailable(compactSessionId)) {
-              this.transport.send(
-                createErrorResponse(
-                  req.id,
-                  ErrorCodes.SessionClosed,
-                  `Session is closing or closed: ${compactSessionId}`,
-                ),
-              );
-              return;
-            }
-            let session = this.chatManager.get(compactSessionId);
-            if (!session) {
-              const probeEngine = this.anyEngine();
-              if (!probeEngine?.sessionExistsOnDisk(compactSessionId)) {
-                this.transport.send(
-                  createErrorResponse(
-                    req.id,
-                    ErrorCodes.SessionNotFound,
-                    `Session not found: ${compactSessionId}`,
-                  ),
-                );
-                return;
-              }
-              try {
-                session = await this.chatManager.getOrCreate(compactSessionId, {
-                  cwd: probeEngine.getSessionManager().readSessionMainRoot(compactSessionId),
-                } as any);
-              } catch (err: any) {
-                this.transport.send(
-                  createErrorResponse(req.id, err.code ?? ErrorCodes.InternalError, err.message),
-                );
-                return;
-              }
-            }
-            compactEngine = session.engine;
-          } else {
-            compactEngine = this.anyEngine();
-          }
-        }
-
-        if (!compactEngine) {
-          this.transport.send(
-            createErrorResponse(
-              req.id,
-              ErrorCodes.InternalError,
-              "No engine available for compact query",
-            ),
-          );
-          return;
-        }
+        const compactEngine = await this.resolveEngineForSessionQuery(
+          req,
+          compactSessionId,
+          engine,
+          "compact",
+        );
+        if (!compactEngine) return;
         try {
           const result = await compactEngine.forceCompact(compactSessionId);
           if (result.before > result.after) {
@@ -2672,6 +2699,59 @@ export class AgentServer {
           this.transport.send(
             createResponse(req.id, {
               type: "compact",
+              data: result,
+            }),
+          );
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
+        break;
+      }
+      case "archive_range": {
+        const archiveSessionId =
+          typeof params.sessionId === "string" && params.sessionId.length > 0
+            ? params.sessionId
+            : undefined;
+        const start = Number(params.start);
+        const end = Number(params.end);
+        if (!archiveSessionId || !Number.isFinite(start) || !Number.isFinite(end)) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InvalidParams,
+              "archive_range requires sessionId, start and end",
+            ),
+          );
+          return;
+        }
+        const archiveEngine = await this.resolveEngineForSessionQuery(
+          req,
+          archiveSessionId,
+          engine,
+          "archive_range",
+        );
+        if (!archiveEngine) return;
+        try {
+          const result = await archiveEngine.archiveTurnRange(archiveSessionId, { start, end });
+          if (result.before > result.after) {
+            const event = {
+              type: "context_compact",
+              // Range archival has its own tier; "range" must be in
+              // COMPACT_STREAM_STRATEGIES or it degrades to "compacted".
+              strategy: toCompactStreamStrategy("range"),
+              before: result.before,
+              after: result.after,
+            } satisfies StreamEvent;
+            this.notify(Methods.StreamEvent, {
+              sessionId: archiveSessionId,
+              event,
+            });
+          }
+          this.transport.send(
+            createResponse(req.id, {
+              type: "archive_range",
               data: result,
             }),
           );

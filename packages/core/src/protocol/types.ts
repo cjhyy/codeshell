@@ -369,6 +369,10 @@ export interface QueryParams {
   provider?: unknown;
   /** Used by model_add: the new model entry */
   model?: unknown;
+  /** Used by archive_range: half-open message-index window start (inclusive). */
+  start?: unknown;
+  /** Used by archive_range: half-open message-index window end (exclusive). */
+  end?: unknown;
 }
 
 export interface QueryResult {

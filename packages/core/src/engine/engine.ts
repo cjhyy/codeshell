@@ -3363,6 +3363,53 @@ export class Engine {
       this.compactedMessagesBySession.get(effectiveSessionId) ?? session.transcript.toMessages();
     const before = estimateTokens(sourceMessages);
 
+    const contextManager = await this.prepareContextManagerForSession(
+      effectiveSessionId,
+      session,
+      sourceMessages,
+      "force_compact",
+    );
+    // Manual /compact emits its UI boundary at the protocol layer from the
+    // final before/after result. Capture the tier here, but avoid reusing a
+    // stale run callback retained on lastContextManager, which could otherwise
+    // double-emit.
+    let compactStrategy: CompactStrategy | undefined;
+    contextManager.setOnCompact((info) => {
+      if (info.after < info.before) compactStrategy = info.strategy;
+    });
+
+    const compacted = await contextManager.forceSummarize(sourceMessages);
+    const after = estimateTokens(compacted);
+    this.compactedMessagesBySession.set(effectiveSessionId, compacted);
+    this.lastSessionId = effectiveSessionId;
+    this.lastMessages = compacted;
+    return {
+      before,
+      after,
+      strategy: after >= before ? "no compaction needed" : (compactStrategy ?? "compacted"),
+    };
+  }
+
+  /**
+   * Lazily build (or reuse) the ContextManager for a resumed session and wire a
+   * PRIMARY-model summarizeFn onto it. Shared by forceCompact and
+   * archiveTurnRange: both need a summarizer on a session that may have been
+   * resumed-but-never-run (so no run wired one), and both bill compaction usage
+   * against the session.
+   *
+   * The PRIMARY model is used deliberately — automatic background compaction
+   * routes to the cheap aux model, but a user-/host-initiated compaction or
+   * range archival is low-frequency and demands fidelity (a dropped decision =
+   * the conversation "forgets"). Client-construction failure is logged and
+   * swallowed so the caller degrades gracefully (forceSummarize falls back to
+   * snip/window; summarizeRange returns the input untouched).
+   */
+  private async prepareContextManagerForSession(
+    effectiveSessionId: string,
+    session: SessionBundle,
+    sourceMessages: Message[],
+    op: "force_compact" | "archive_range",
+  ): Promise<ContextManager> {
     let contextManager = this.lastContextManager;
     if (!contextManager || this.lastSessionId !== effectiveSessionId) {
       contextManager = new ContextManager({
@@ -3375,28 +3422,7 @@ export class Engine {
       contextManager.initReplacementStateFromMessages(sourceMessages);
       this.lastContextManager = contextManager;
     }
-    // Manual /compact emits its UI boundary at the protocol layer from the
-    // final before/after result. Capture the tier here, but avoid reusing a
-    // stale run callback retained on lastContextManager, which could otherwise
-    // double-emit.
-    let compactStrategy: CompactStrategy | undefined;
-    contextManager.setOnCompact((info) => {
-      if (info.after < info.before) compactStrategy = info.strategy;
-    });
 
-    // Manual /compact = maximum compaction NOW. The automatic ladder waits for
-    // compactAtRatio (0.85 * window), so on a 1M-window model an 800k text-only
-    // conversation sits under the gate and manage() only runs a no-op micro.
-    // Wire a summarizeFn (the run path does this per-run; a cold forceCompact on
-    // a resumed-but-never-run session has none) and call forceSummarize, which
-    // ignores the ratio gate and always summarizes (falling back to snip/window).
-    //
-    // Use the PRIMARY model, not the aux model. Automatic background compaction
-    // routes to aux to keep the high-frequency path cheap, but summarization is
-    // a high-fidelity task (drop a decision and the conversation "forgets"), and
-    // a manual /compact is a low-frequency, user-initiated request for quality.
-    // The aux model is sized for tiny outputs (titles, memory extraction), so
-    // downgrading the one compaction the user explicitly asked for is backwards.
     try {
       const primaryClient = await createLLMClient(this.config.llm, this.config.clientDefaults);
       Object.assign(
@@ -3420,21 +3446,52 @@ export class Engine {
       };
       contextManager.setSummarizeFn(this.buildSummarizeFn(primaryClient, recordCompactUsage));
     } catch (err) {
-      logger.warn("engine.force_compact_client_failed", {
+      logger.warn(`engine.${op}_client_failed`, {
         error: (err as Error).message,
       });
     }
 
-    const compacted = await contextManager.forceSummarize(sourceMessages);
-    const after = estimateTokens(compacted);
-    this.compactedMessagesBySession.set(effectiveSessionId, compacted);
+    return contextManager;
+  }
+
+  /**
+   * Archive a caller-chosen contiguous message-index window `[range.start,
+   * range.end)` of a session into a single anchored summary, leaving everything
+   * outside the window untouched, and cache the result so a later
+   * forceCompact/resume reads the archived history. This is a generic
+   * range-archival facade over ContextManager.summarizeRange — the caller
+   * decides which span to collapse (the range is a half-open message-index
+   * window, matching summarizeRange). Returns token stats before/after; equal
+   * before/after means the window was empty or the summary was rejected.
+   */
+  async archiveTurnRange(
+    sessionId: string,
+    range: { start: number; end: number },
+  ): Promise<{ before: number; after: number }> {
+    const effectiveSessionId = sessionId || this.lastSessionId;
+    if (!effectiveSessionId) return { before: 0, after: 0 };
+
+    const session = this.sessionManager.resume(effectiveSessionId);
+    const sourceMessages =
+      this.compactedMessagesBySession.get(effectiveSessionId) ?? session.transcript.toMessages();
+    const before = estimateTokens(sourceMessages);
+
+    const contextManager = await this.prepareContextManagerForSession(
+      effectiveSessionId,
+      session,
+      sourceMessages,
+      "archive_range",
+    );
+    // Range archival is initiated deliberately, not by a pressure heuristic;
+    // don't let a stale run callback retained on lastContextManager double-emit.
+    contextManager.setOnCompact(() => {});
+
+    const archived = await contextManager.summarizeRange(sourceMessages, range);
+    const after = estimateTokens(archived);
+    this.compactedMessagesBySession.set(effectiveSessionId, archived);
     this.lastSessionId = effectiveSessionId;
-    this.lastMessages = compacted;
-    return {
-      before,
-      after,
-      strategy: after >= before ? "no compaction needed" : (compactStrategy ?? "compacted"),
-    };
+    this.lastMessages = archived;
+    return { before, after };
   }
 
   private recordCacheReadDiagnostics(sessionId: string, sample: PromptCacheDiagnosticSample): void {
