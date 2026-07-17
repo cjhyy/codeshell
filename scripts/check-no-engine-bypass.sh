@@ -7,7 +7,8 @@
 # Direct `new Engine + await engine.run` bypasses TaskManager wiring,
 # status notifications, and the in-process running lock — three behaviors
 # that previously only worked from the REPL path. See P1 ADR
-# docs/architecture/14-engine-call-paths.md.
+# docs/archive/architecture/14-engine-call-paths.md (living description:
+# docs/architecture/04-protocol-and-sessions.md).
 #
 # Allowed sites:
 #   packages/core/src/engine/engine.ts       — Engine class itself + sub-agent spawn
@@ -60,7 +61,7 @@ if [ -n "$violations" ]; then
   echo "" >&2
   echo "All internal package-source engine instantiations must route through" >&2
   echo "createInProcessClient (or be in the engine.ts internal spawn path)." >&2
-  echo "See docs/architecture/14-engine-call-paths.md." >&2
+  echo "See docs/archive/architecture/14-engine-call-paths.md." >&2
   echo "" >&2
   echo "If your new site is legitimate, add it to scripts/check-no-engine-bypass.sh" >&2
   echo "and document the reason in your PR description." >&2
