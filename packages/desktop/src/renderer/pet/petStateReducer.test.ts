@@ -43,6 +43,28 @@ describe("petStateReducer", () => {
     expect(state.needsSnapshot).toBe(false);
   });
 
+  test("applies a work-memory-segments event onto the held projection", () => {
+    let state = petStateReducer(initialPetState, {
+      type: "snapshot-received",
+      snapshot: snapshot({ workMemorySegments: [] }),
+    });
+    state = petStateReducer(state, {
+      type: "projection-event",
+      event: {
+        kind: "work-memory-segments",
+        generation: 4,
+        version: 3,
+        observedAt: 1_100,
+        segments: [{ boundaryBeforeMessageId: "pet-a", brief: "未完成任务:\n- 重构 X" }],
+      },
+    });
+    expect(state.projection?.workMemorySegments).toEqual([
+      { boundaryBeforeMessageId: "pet-a", brief: "未完成任务:\n- 重构 X" },
+    ]);
+    expect(state.projection?.version).toBe(3);
+    expect(state.needsSnapshot).toBe(false);
+  });
+
   test("does not guess across gaps, generation mismatches or reset events", () => {
     const hydrated = petStateReducer(initialPetState, {
       type: "snapshot-received",

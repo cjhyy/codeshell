@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowUp, Sparkles, UserRound, UsersRound, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import dogIcon from "../assets/codeshell-dog-icon.png";
 import type { Message } from "../types";
 import { useT } from "../i18n";
@@ -15,23 +16,55 @@ import type { DigitalHumanSelection } from "../digital-humans/types";
 
 interface PetChatRow {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "segment-divider" | "work-memory";
   text: string;
   source?: string;
 }
 
-export function selectPetChatRows(messages: readonly Message[]): PetChatRow[] {
+/**
+ * A topic-segment boundary supplied by main: the id of the first chat message
+ * of a new segment, plus the optional carryover brief distilled from the
+ * closed segment's work memory. A boundary whose message id is absent from the
+ * current transcript is silently skipped (no divider, no card).
+ *
+ * `boundaryBeforeMessageId` is matched against a message's cross-process
+ * `clientMessageId` first (the only turn identity main can observe) and falls
+ * back to the renderer-local `id`.
+ */
+export interface PetChatSegmentBoundary {
+  boundaryBeforeMessageId: string;
+  brief?: string;
+}
+
+export function selectPetChatRows(
+  messages: readonly Message[],
+  segments: readonly PetChatSegmentBoundary[] = [],
+): PetChatRow[] {
+  const boundaries = new Map(segments.map((segment) => [segment.boundaryBeforeMessageId, segment]));
   return messages.flatMap<PetChatRow>((message) => {
     if (message.kind === "user" && message.text.trim()) {
       const channel = imGatewayChannelFromClientMessageId(message.clientMessageId);
-      return [
-        {
-          id: message.id,
-          role: "user" as const,
-          text: message.text.trim(),
-          ...(channel ? { source: IM_GATEWAY_CHANNEL_NAMES[channel] } : {}),
-        },
+      const userRow: PetChatRow = {
+        id: message.id,
+        role: "user" as const,
+        text: message.text.trim(),
+        ...(channel ? { source: IM_GATEWAY_CHANNEL_NAMES[channel] } : {}),
+      };
+      const boundary =
+        (message.clientMessageId ? boundaries.get(message.clientMessageId) : undefined) ??
+        boundaries.get(message.id);
+      if (!boundary) return [userRow];
+      const boundaryRows: PetChatRow[] = [
+        { id: `divider:${message.id}`, role: "segment-divider" as const, text: "" },
       ];
+      if (boundary.brief) {
+        boundaryRows.push({
+          id: `memory:${message.id}`,
+          role: "work-memory" as const,
+          text: boundary.brief,
+        });
+      }
+      return [...boundaryRows, userRow];
     }
     if (message.kind === "assistant") {
       const text = visiblePetAssistantText(message.text);
@@ -55,7 +88,11 @@ export function PetChatHost({
     usePetState();
   const [error, setError] = React.useState<string | null>(null);
   const endRef = React.useRef<HTMLDivElement>(null);
-  const rows = React.useMemo(() => selectPetChatRows(chatState.messages), [chatState.messages]);
+  const segments = state.projection?.workMemorySegments;
+  const rows = React.useMemo(
+    () => selectPetChatRows(chatState.messages, segments),
+    [chatState.messages, segments],
+  );
 
   React.useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
@@ -175,8 +212,41 @@ export function PetChatHost({
           </div>
         ) : (
           <div className="space-y-3.5">
-            {rows.map((row) =>
-              row.role === "user" ? (
+            {rows.map((row) => {
+              if (row.role === "segment-divider") {
+                return (
+                  <div key={row.id} className="flex items-center gap-3 py-1" aria-hidden="false">
+                    <span className="h-px flex-1 bg-border/60" />
+                    <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {t("pet.chat.segmentDivider")}
+                    </span>
+                    <span className="h-px flex-1 bg-border/60" />
+                  </div>
+                );
+              }
+              if (row.role === "work-memory") {
+                return (
+                  <Card
+                    key={row.id}
+                    className="bg-muted/40"
+                    role="note"
+                    aria-label={t("pet.chat.workMemoryTitle")}
+                  >
+                    <CardHeader className="p-3 pb-1.5">
+                      <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <Sparkles size={12} className="shrink-0 text-primary" aria-hidden="true" />
+                        {t("pet.chat.workMemoryTitle")}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0">
+                      <div className="whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">
+                        {row.text}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return row.role === "user" ? (
                 <div key={row.id} className="flex justify-end pl-10">
                   <div className="max-w-[88%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm leading-6 text-primary-foreground shadow-sm">
                     {row.source && (
@@ -201,8 +271,8 @@ export function PetChatHost({
                     <div className="whitespace-pre-wrap break-words">{row.text}</div>
                   </div>
                 </div>
-              ),
-            )}
+              );
+            })}
             {chatBusy && (
               <div className="flex items-start gap-2.5 pr-6">
                 <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10">

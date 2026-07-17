@@ -92,6 +92,8 @@ function applyProjectionEvent(
       };
     case "worker-state":
       return { ...next, workerState: event.state };
+    case "work-memory-segments":
+      return { ...next, workMemorySegments: event.segments };
   }
 }
 

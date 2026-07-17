@@ -326,6 +326,12 @@ export interface SessionState {
    * "key present && null" to tell a new top-level session apart from legacy.
    */
   parentSessionId?: string | null;
+  /**
+   * Durable archival timestamp (ms). Absent = not archived. Generic session
+   * lifecycle marker: list surfaces filter it out by default. Set/cleared via
+   * SessionManager.setSessionArchived.
+   */
+  archivedAt?: number;
   /** User-fork lineage; deliberately separate from sub-agent ownership. */
   forkedFrom?: SessionForkLineage;
   /**
@@ -646,7 +652,7 @@ export type StreamEvent =
   | { type: "tool_summary"; summary: string; toolCallIds?: string[]; agentId?: string }
   | {
       type: "context_compact";
-      strategy: "micro" | "summary" | "window" | "snip" | "emergency" | "compacted";
+      strategy: "micro" | "summary" | "window" | "snip" | "emergency" | "compacted" | "range";
       before: number;
       after: number;
       agentId?: string;

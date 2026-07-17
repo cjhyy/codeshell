@@ -25,6 +25,8 @@ import {
   applySummaryCompaction,
   applyToolResultBudget,
   extractAnchoredSummary,
+  buildAnchoredSummaryMessage,
+  extractReferencedFilePaths,
 } from "./compaction.js";
 import {
   type ContentReplacementState,
@@ -99,7 +101,7 @@ function defaultKeepRecent(maxTokens: number): number {
  */
 export type SummarizeFn = (prompt: string, signal?: AbortSignal) => Promise<string>;
 
-export type CompactStrategy = "micro" | "summary" | "window" | "snip" | "emergency";
+export type CompactStrategy = "micro" | "summary" | "window" | "snip" | "emergency" | "range";
 export type OnCompactFn = (info: {
   strategy: CompactStrategy;
   before: number;
@@ -688,6 +690,46 @@ export class ContextManager {
     }
 
     return result;
+  }
+
+  /**
+   * Generic range archival: summarize a caller-chosen contiguous index window
+   * `[range.start, range.end)` into a single anchored summary message, leaving
+   * everything outside the window untouched. Unlike manage()/forceSummarize,
+   * the window is caller-specified, not derived from a pressure heuristic — the
+   * caller decides which span to collapse. Returns the input unchanged when no
+   * summarizeFn is set, when the (clamped) window is empty, or when the summary
+   * is empty/too short. The emitted summary uses the same anchored marker the
+   * rolling-summary path reads, so a later compaction can merge-update it.
+   */
+  async summarizeRange(
+    messages: Message[],
+    range: { start: number; end: number },
+    opts: { signal?: AbortSignal } = {},
+  ): Promise<Message[]> {
+    const start = Math.max(0, Math.min(range.start, messages.length));
+    const end = Math.max(start, Math.min(range.end, messages.length));
+    if (!this.summarizeFn || end - start < 1) return messages;
+
+    const window = messages.slice(start, end);
+    // Feed a prior anchored summary back so the LLM merge-updates rather than
+    // re-summarizes from scratch, matching the rolling-summary behavior of
+    // trySummaryCompact().
+    const priorSummary = extractAnchoredSummary(messages) ?? this.lastSummary;
+    const prompt = buildSummarizationPrompt(window, priorSummary);
+    const summary = await this.summarizeFn(prompt, opts.signal);
+    if (!summary || summary.length <= 50) return messages;
+
+    this.lastSummary = summary;
+    const summaryMessage = buildAnchoredSummaryMessage(summary, {
+      ...(this.transcriptPath ? { transcriptPath: this.transcriptPath } : {}),
+      referencedFiles: extractReferencedFilePaths(window),
+    });
+    const before = this.estimateTokensHybrid(messages);
+    const out = [...messages.slice(0, start), summaryMessage, ...messages.slice(end)];
+    const after = this.estimateTokensHybrid(out);
+    this.onCompact?.({ strategy: "range", before, after });
+    return out;
   }
 
   /**

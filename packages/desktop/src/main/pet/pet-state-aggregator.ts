@@ -34,6 +34,12 @@ export interface DesktopPetSession {
 
 export type DesktopPendingDecision = Omit<PendingDecisionProjection, "owner" | "coreSessionId">;
 
+/** One message-keyed topic-segment boundary surfaced to the Mimi chat UI. */
+export interface DesktopPetWorkMemorySegment {
+  boundaryBeforeMessageId: string;
+  brief?: string;
+}
+
 export interface DesktopPetProjectionSnapshot {
   version: number;
   generation: number;
@@ -41,6 +47,13 @@ export interface DesktopPetProjectionSnapshot {
   sessions: DesktopPetSession[];
   pending: DesktopPendingDecision[];
   observedAt: number;
+  /**
+   * Topic-segment boundaries for the Mimi chat stream, keyed by the client
+   * message id of each segment's first turn (see DesktopPetWorkMemorySegment).
+   * Sourced from PetWorkMemoryStore via the `workMemorySegments` option; empty
+   * when no boundary-history provider is wired.
+   */
+  workMemorySegments: DesktopPetWorkMemorySegment[];
 }
 
 export interface PetNavigationRequest {
@@ -81,6 +94,7 @@ type DesktopPetProjectionEventInput =
   | { kind: "pending-upsert"; pending: DesktopPendingDecision }
   | { kind: "pending-remove"; sessionId: string; requestId: string }
   | { kind: "worker-state"; state: DesktopPetWorkerState }
+  | { kind: "work-memory-segments"; segments: DesktopPetWorkMemorySegment[] }
   | { kind: "reset" };
 
 export type DesktopPetProjectionEvent = DesktopPetEventBase & DesktopPetProjectionEventInput;
@@ -103,6 +117,13 @@ export interface PetStateAggregatorOptions {
   pageSize?: number;
   now?: () => number;
   onBackgroundError?: (operation: string, error: unknown) => void;
+  /**
+   * Reads the current message-keyed topic-segment boundaries from durable work
+   * memory (PetWorkMemoryStore.segmentBoundaries). Included verbatim in every
+   * snapshot so the Mimi chat UI can render segment dividers + brief cards; live
+   * changes are pushed via `notifyWorkMemorySegmentsChanged`. Omitted → empty.
+   */
+  workMemorySegments?: () => DesktopPetWorkMemorySegment[];
 }
 
 const MAX_TITLE_LENGTH = 160;
@@ -192,6 +213,11 @@ export class PetStateAggregator {
   private sourceVersion = 0;
   private version = 0;
   private observedAt = 0;
+  /**
+   * Largest disk mtime observed by the last catalog refresh. `undefined` until
+   * the first refresh, which forces that pass to be full.
+   */
+  private lastHighWaterMtime: number | undefined;
   private workerState: DesktopPetWorkerState = "unknown";
   private started = false;
   private unsubscribeBridge?: () => void;
@@ -274,7 +300,22 @@ export class PetStateAggregator {
         (a, b) => a.createdAt - b.createdAt || a.requestId.localeCompare(b.requestId),
       ),
       observedAt: this.observedAt,
+      workMemorySegments: this.options.workMemorySegments?.() ?? [],
     };
+  }
+
+  /**
+   * Push a fresh set of topic-segment boundaries to subscribers as a projection
+   * event, so a segment opened mid-session surfaces its divider without waiting
+   * for the next full snapshot fetch. Called after PetSegmentController records a
+   * new boundary.
+   */
+  notifyWorkMemorySegmentsChanged(): void {
+    this.observedAt = this.now();
+    this.emit({
+      kind: "work-memory-segments",
+      segments: this.options.workMemorySegments?.() ?? [],
+    });
   }
 
   subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void {
@@ -283,7 +324,8 @@ export class PetStateAggregator {
   }
 
   async resolveNavigation(request: PetNavigationRequest): Promise<PetNavigationResult> {
-    await this.refreshCatalog(false);
+    // Navigation must reflect deletions/soft-deletes, so rebuild from scratch.
+    await this.refreshCatalog(false, { full: true });
     const target = this.diskBindings.get(request.agentSessionId);
     if (!target) return { status: "not-found" };
 
@@ -306,14 +348,37 @@ export class PetStateAggregator {
     return { status: stale ? "stale" : "ok", target, pendingStatus };
   }
 
-  async refreshCatalog(emit = true): Promise<void> {
-    const next = new Map<string, DesktopPetSession>();
-    const nextBindings = new Map<string, PetNavigationTarget>();
-    let cursor: string | undefined;
+  /**
+   * Reconcile the durable catalog from disk. `listDiskSessions` serves sessions
+   * mtime-descending, so a refresh only needs to page the band whose mtime is at
+   * or above the previous high-water mark — everything below it is older and was
+   * already captured. Incremental refreshes therefore stop at the first session
+   * strictly below the watermark and upsert the rest onto the held catalog.
+   *
+   * Correctness notes:
+   * - Same-mtime newcomers: the stop is strict (`< watermark`), so the whole
+   *   band *at* the watermark is always re-paged. A brand-new session sharing the
+   *   watermark mtime whose id sorts after an already-held one is not skipped
+   *   (a `<=` stop would break on the held session and miss it).
+   * - Deletions / soft-deletes (archival flips a session out of the default
+   *   listing and bumps its mtime ahead): the mtime cursor cannot observe a
+   *   session that has left the listing, and incremental upserts never remove.
+   *   Delete-aware callers therefore pass `{ full: true }` to rebuild from
+   *   scratch; the first refresh (no watermark yet) is implicitly full.
+   */
+  async refreshCatalog(emit = true, opts: { full?: boolean } = {}): Promise<void> {
     const observedAt = this.now();
-    do {
+    const full = opts.full ?? this.lastHighWaterMtime === undefined;
+    const next = full ? new Map<string, DesktopPetSession>() : new Map(this.diskSessions);
+    const nextBindings = full ? new Map<string, PetNavigationTarget>() : new Map(this.diskBindings);
+    let newHighWater = full ? 0 : this.lastHighWaterMtime!;
+    let cursor: string | undefined;
+    pager: do {
       const page = await this.options.listDiskSessions({ limit: this.pageSize, cursor });
       for (const session of page.sessions) {
+        // Once we descend strictly below the prior high-water mark, every
+        // remaining session is older and already held: stop paging.
+        if (!full && session.updatedAt < this.lastHighWaterMtime!) break pager;
         next.set(session.engineSessionId, diskProjection(session, observedAt));
         nextBindings.set(session.engineSessionId, {
           uiSessionId: session.id,
@@ -324,6 +389,7 @@ export class PetStateAggregator {
           origin: session.origin,
           status: session.status,
         });
+        newHighWater = Math.max(newHighWater, session.updatedAt);
       }
       cursor = page.nextCursor ?? undefined;
     } while (cursor !== undefined);
@@ -331,6 +397,7 @@ export class PetStateAggregator {
     this.diskBindings.clear();
     for (const [sessionId, session] of next) this.diskSessions.set(sessionId, session);
     for (const [sessionId, target] of nextBindings) this.diskBindings.set(sessionId, target);
+    this.lastHighWaterMtime = newHighWater;
     this.observedAt = observedAt;
     if (emit) this.emit({ kind: "reset" });
   }
@@ -440,7 +507,9 @@ export class PetStateAggregator {
         const disk = this.diskSessions.get(delta.sessionId);
         if (disk) this.emit({ kind: "session-upsert", session: disk });
         else this.emit({ kind: "session-remove", sessionId: delta.sessionId });
-        void this.refreshCatalog().catch((error) => {
+        // A removal is only visible via a full rebuild; the mtime cursor cannot
+        // observe a session that has left the listing.
+        void this.refreshCatalog(true, { full: true }).catch((error) => {
           this.options.onBackgroundError?.("session-remove-refresh", error);
         });
         break;

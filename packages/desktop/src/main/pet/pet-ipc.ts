@@ -16,6 +16,7 @@ import {
 import { randomUUID } from "node:crypto";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
+export const PET_WORK_MEMORY_CHANNEL = "pet:get-work-memory";
 export const PET_EVENT_CHANNEL = "pet:projection-event";
 export const PET_OPEN_SESSION_CHANNEL = "pet:open-session";
 export const PET_DISPATCH_CHANNEL = "pet:dispatch";
@@ -59,6 +60,17 @@ export interface PetIpcWorkInbox {
   getSnapshot(): PetWorkInboxSnapshot;
   add(ids: readonly string[]): PetWorkInboxSnapshot;
   clear(): PetWorkInboxSnapshot;
+}
+
+/**
+ * Read-only view of the topic-segment / work-memory state the Mimi chat UI can
+ * surface. Backed by PetWorkMemoryStore. `segments` carries chat-message-keyed
+ * boundaries; it is empty until the store records a segment start's message id
+ * (see PetWorkMemorySegment) — the renderer skips unmatched boundaries.
+ */
+export interface PetIpcWorkMemory {
+  getActiveSegmentId(): string | null;
+  getSegments(): { boundaryBeforeMessageId: string; brief?: string }[];
 }
 
 function afterReady<T>(ready: Promise<void> | undefined, callback: () => T): T | Promise<T> {
@@ -193,12 +205,20 @@ export function registerPetIpc(options: {
   dispatcher?: PetIpcDispatcher;
   attention?: PetIpcAttention;
   workInbox?: PetIpcWorkInbox;
+  workMemory?: PetIpcWorkMemory;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
   options.ipcMain.handle(PET_SNAPSHOT_CHANNEL, (_event, ...args) => {
     if (args.length > 0) throw new Error("pet:getSnapshot does not accept arguments");
     return afterReady(options.ready, () => options.aggregator.getSnapshot());
+  });
+  options.ipcMain.handle(PET_WORK_MEMORY_CHANNEL, (_event, ...args) => {
+    if (args.length > 0) throw new Error("pet:get-work-memory does not accept arguments");
+    return afterReady(options.ready, () => ({
+      activeSegmentId: options.workMemory?.getActiveSegmentId() ?? null,
+      segments: options.workMemory?.getSegments() ?? [],
+    }));
   });
   options.ipcMain.handle(PET_OPEN_SESSION_CHANNEL, (_event, ...args) => {
     if (args.length !== 1) throw new Error("invalid navigation request");
@@ -298,6 +318,7 @@ export function registerPetIpc(options: {
     unsubscribe();
     unsubscribeAttention?.();
     options.ipcMain.removeHandler(PET_SNAPSHOT_CHANNEL);
+    options.ipcMain.removeHandler(PET_WORK_MEMORY_CHANNEL);
     options.ipcMain.removeHandler(PET_OPEN_SESSION_CHANNEL);
     if (options.dispatcher) options.ipcMain.removeHandler(PET_DISPATCH_CHANNEL);
     if (options.attention) {

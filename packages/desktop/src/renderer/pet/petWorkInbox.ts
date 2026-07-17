@@ -1,9 +1,10 @@
 import type { PetApi, PetWorkInboxSnapshot, PetWorkInboxUpdate } from "../../preload/types";
+import {
+  MAX_PET_WORK_INBOX_DISMISSED_ITEMS,
+  isPetWorkItemId,
+} from "../../shared/pet-work-item-id";
 
 const STORAGE_KEY = "codeshell.pet.work-inbox.dismissed.v1";
-const MAX_DISMISSED_ITEMS = 1_000;
-const WORK_ITEM_ID_PATTERN =
-  /^(?:pending|unfinished|optimization|completed|other|follow-up):[^\u0000\r\n]+$/;
 
 type PetWorkInboxPersistence = Pick<
   PetApi,
@@ -12,17 +13,9 @@ type PetWorkInboxPersistence = Pick<
 
 function normalizeIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return [
-    ...new Set(
-      value.filter(
-        (item): item is string =>
-          typeof item === "string" &&
-          item.length > 0 &&
-          item.length <= 512 &&
-          WORK_ITEM_ID_PATTERN.test(item),
-      ),
-    ),
-  ].slice(-MAX_DISMISSED_ITEMS);
+  return [...new Set(value.filter(isPetWorkItemId))].slice(
+    -MAX_PET_WORK_INBOX_DISMISSED_ITEMS,
+  );
 }
 
 function readLegacyIds(): string[] {

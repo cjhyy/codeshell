@@ -601,6 +601,111 @@ describe("PetDispatchService", () => {
     expect(task).not.toContain("secret-tail-aabbcc778899");
   });
 
+  test("injects the topic-segment carryover brief into the pet runtime context", async () => {
+    let runtimeContext = "";
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          runtimeContext = String(params.petRuntimeContext);
+          return { ok: true, result: { text: "hi" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      segmentController: {
+        beginTurn: async () => "未完成任务:\n- 重构 X",
+        onDelegationClosed: async () => {},
+      },
+    });
+
+    await service.dispatch({ type: "chat", message: "你好" });
+    expect(runtimeContext).toContain('"carryoverBrief"');
+    expect(runtimeContext).toContain("重构 X");
+  });
+
+  test("passes the turn's client message id to beginTurn so a boundary can key on it", async () => {
+    const beginTurnArgs: (string | undefined)[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: { requestWorker: async () => ({ ok: true, result: { text: "hi" } }) },
+      hostCwd: "/safe/pet",
+      segmentController: {
+        beginTurn: async (clientMessageId) => {
+          beginTurnArgs.push(clientMessageId);
+          return undefined;
+        },
+        onDelegationClosed: async () => {},
+      },
+    });
+
+    await service.dispatch({ type: "chat", message: "你好", clientMessageId: "client-turn-1" });
+    expect(beginTurnArgs).toEqual(["client-turn-1"]);
+  });
+
+  test("records a work-memory closure for each launched delegation", async () => {
+    const closures: Array<Record<string, unknown>> = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
+            (candidate) => candidate.name === "CodeShell",
+          )!;
+          return {
+            ok: true,
+            result: {
+              text: "已交给工作会话。",
+              petWorkDelegation: {
+                workspaceId: workspace.id,
+                objective: "修复 CodeShell 登录问题",
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      startWorkSession: async (delegation) => ({
+        sessionId: "pet-work-one",
+        cwd: delegation.workspacePath!,
+      }),
+      segmentController: {
+        beginTurn: async () => undefined,
+        onDelegationClosed: async (closure) => {
+          closures.push(closure as unknown as Record<string, unknown>);
+        },
+      },
+    });
+
+    await service.dispatch({
+      type: "chat",
+      message: "修复登录问题",
+      clientMessageId: "client-delegate",
+    });
+    // One closure recorded, no turnRange (range archival stays dormant).
+    expect(closures).toEqual([
+      {
+        objective: "修复 CodeShell 登录问题",
+        outcome: "completed",
+        workspace: "/work/codeshell",
+        sessionRef: "pet-work-one",
+      },
+    ]);
+    expect(closures[0]).not.toHaveProperty("turnRange");
+  });
+
   test("rejects direction, approval and arbitrary mutation commands", async () => {
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },

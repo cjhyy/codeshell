@@ -152,6 +152,8 @@ export interface DiskSessionMeta {
   origin: "desktop" | "automation";
   /** Normalized durable status for Pet/display consumers. */
   status?: "active" | "paused" | "completed" | "failed" | "cancelled";
+  /** Durable archival timestamp; absent = not archived. */
+  archivedAt?: number;
 }
 
 export interface ListDiskSessionsResult {
@@ -188,7 +190,7 @@ function decodeDiskSessionCursor(value: string | undefined): DiskSessionCursor |
  *   - non-empty   → sub-agent → filter out
  */
 export async function listDiskSessions(
-  opts: { limit: number; cursor?: string },
+  opts: { limit: number; cursor?: string; includeArchived?: boolean },
   baseDir: string = sessionsRoot(),
 ): Promise<ListDiskSessionsResult> {
   // Async fs throughout: this is an IPC handler on the Electron main thread
@@ -269,6 +271,13 @@ export async function listDiskSessions(
     // isNoRepoCwd. (deleted-project resurrection)
     const cwdStr = typeof state.cwd === "string" ? state.cwd : "";
     if (cwdStr && !(await pathExists(cwdStr))) continue;
+    // Archived sessions are hidden from the default catalog. Filtering happens
+    // before the push (like every other skip above), so the mtime cursor —
+    // derived from the dirs[] position, not from how many rows we kept — keeps
+    // advancing across archived rows: a page may return fewer than `limit`
+    // sessions, but no live session is skipped and the cursor never stalls.
+    const archivedAt = typeof state.archivedAt === "number" ? state.archivedAt : undefined;
+    if (archivedAt !== undefined && !opts.includeArchived) continue;
     sessions.push({
       id,
       engineSessionId: id,
@@ -289,10 +298,40 @@ export async function listDiskSessions(
             : typeof state.status === "string"
               ? "failed"
               : undefined,
+      ...(archivedAt !== undefined ? { archivedAt } : {}),
     });
   }
   return {
     sessions,
     nextCursor: i < dirs.length && i > 0 ? encodeDiskSessionCursor(dirs[i - 1]!) : null,
   };
+}
+
+/**
+ * Set (number) or clear (undefined) a session's durable archival marker on
+ * disk, then atomically replace `state.json`. This is the main-process writer
+ * counterpart to `listDiskSessions`' `archivedAt` filter: main has no live
+ * Engine/SessionManager handle, so it mutates the same `state.json` the worker
+ * persists. The rest of the state is preserved verbatim; only `archivedAt` is
+ * added or removed. Unsafe ids and missing sessions throw.
+ */
+export async function archiveDiskSession(
+  id: string,
+  archivedAt: number | undefined,
+  baseDir: string = sessionsRoot(),
+): Promise<void> {
+  if (!SAFE_ID.test(id) || id === "." || id === "..") {
+    throw new Error(`archiveDiskSession: unsafe session id ${JSON.stringify(id)}`);
+  }
+  const stateFile = path.join(baseDir, id, "state.json");
+  const raw = await fs.readFile(stateFile, "utf8");
+  const state = JSON.parse(raw) as Record<string, unknown>;
+  if (archivedAt === undefined) {
+    delete state.archivedAt;
+  } else {
+    state.archivedAt = archivedAt;
+  }
+  const tmp = `${stateFile}.tmp-${process.pid}-${Math.random().toString(36).slice(2)}`;
+  await fs.writeFile(tmp, JSON.stringify(state), "utf8");
+  await fs.rename(tmp, stateFile);
 }

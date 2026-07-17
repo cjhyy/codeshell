@@ -48,6 +48,27 @@ export interface PetPendingDecision {
   terminalAt?: number;
 }
 
+/**
+ * One topic-segment boundary surfaced to the Mimi chat UI: the client message
+ * id of the first turn of a new segment plus the optional carryover brief
+ * distilled from the segment that just closed. Rendered as a divider (+ an
+ * optional read-only work-memory card) immediately before that message.
+ *
+ * NOTE: this is only populated once main can map a segment start to a chat
+ * message id. The current work-memory store (Task 12) keeps a single active
+ * segment keyed by time with no message-id association, so this array is
+ * empty in practice; the renderer silently skips unmatched boundaries.
+ */
+export interface PetWorkMemorySegment {
+  boundaryBeforeMessageId: string;
+  brief?: string;
+}
+
+export interface PetWorkMemoryQuery {
+  activeSegmentId: string | null;
+  segments: PetWorkMemorySegment[];
+}
+
 export interface PetProjectionSnapshot {
   version: number;
   generation: number;
@@ -55,6 +76,8 @@ export interface PetProjectionSnapshot {
   sessions: PetSessionProjection[];
   pending: PetPendingDecision[];
   observedAt: number;
+  /** Topic-segment boundaries for the Mimi chat stream (see PetWorkMemorySegment). */
+  workMemorySegments?: PetWorkMemorySegment[];
 }
 
 export interface PetOpenSessionRequest {
@@ -188,11 +211,13 @@ export type PetProjectionEvent = PetProjectionEventBase &
     | { kind: "pending-upsert"; pending: PetPendingDecision }
     | { kind: "pending-remove"; sessionId: string; requestId: string }
     | { kind: "worker-state"; state: PetWorkerState }
+    | { kind: "work-memory-segments"; segments: PetWorkMemorySegment[] }
     | { kind: "reset" }
   );
 
 export interface PetApi {
   getSnapshot(): Promise<PetProjectionSnapshot>;
+  getWorkMemory(): Promise<PetWorkMemoryQuery>;
   onProjectionEvent(listener: (event: PetProjectionEvent) => void): () => void;
   openSession(request: PetOpenSessionRequest): Promise<PetOpenSessionResult>;
   dispatch(command: PetDispatchCommand): Promise<PetDispatchResult>;
@@ -223,6 +248,7 @@ export interface PetIpcRenderer {
 export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
   return {
     getSnapshot: () => ipcRenderer.invoke("pet:get-snapshot") as Promise<PetProjectionSnapshot>,
+    getWorkMemory: () => ipcRenderer.invoke("pet:get-work-memory") as Promise<PetWorkMemoryQuery>,
     openSession: (request) =>
       ipcRenderer.invoke("pet:open-session", request) as Promise<PetOpenSessionResult>,
     dispatch: (command) =>

@@ -98,6 +98,10 @@ import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
+import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
+import { PetSegmentController } from "./pet/pet-segment-controller.js";
+import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
+import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -149,6 +153,7 @@ import {
 } from "./credentials-service.js";
 import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import {
+  archiveDiskSession,
   cleanupAttachments,
   cleanupSessionAttachments,
   cleanupStaleQuickChatSessions,
@@ -1043,14 +1048,6 @@ async function createWindow(): Promise<BrowserWindow> {
         mobileRemote.broadcastRaw(line);
       }
     });
-    const aggregator = new PetStateAggregator({
-      bridge,
-      listDiskSessions,
-      onBackgroundError: (operation, error) => {
-        dlog("main", `pet.${operation}.failed`, { error: String(error) });
-      },
-    });
-    petStateAggregator = aggregator;
     const petMetadata = new PetMetadataStore(
       resolve(app.getPath("userData"), "pet", "metadata.json"),
     );
@@ -1058,14 +1055,52 @@ async function createWindow(): Promise<BrowserWindow> {
       bridge,
       noWorkspaceCwd: resolveNoRepoCwd(),
     });
+    const petWorkMemory = new PetWorkMemoryStore(
+      resolve(app.getPath("userData"), "pet", "work-memory.json"),
+    );
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions,
+      // Every snapshot carries the durable topic-segment boundary history so the
+      // Mimi chat UI can render segment dividers + brief cards; mid-session
+      // changes ride notifyWorkMemorySegmentsChanged (see beginTurn wrapper).
+      workMemorySegments: () => petWorkMemory.segmentBoundaries(),
+      onBackgroundError: (operation, error) => {
+        dlog("main", `pet.${operation}.failed`, { error: String(error) });
+      },
+    });
+    petStateAggregator = aggregator;
+    // The topic-segment controller is created inside petInitialization once the
+    // durable pet session id is known; until then the dispatch service holds a
+    // stable wrapper that no-ops (beginTurn → undefined; closure → nothing).
+    let petSegmentController: PetSegmentController | null = null;
     petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
+      segmentController: {
+        beginTurn: async (clientMessageId) => {
+          if (!petSegmentController) return undefined;
+          const before = petSegmentController.segmentBoundaries().length;
+          const brief = await petSegmentController.beginTurn(clientMessageId);
+          // A new boundary means the chat UI must gain a divider now, not on the
+          // next full snapshot fetch: push it through the projection channel.
+          if (petSegmentController.segmentBoundaries().length !== before) {
+            aggregator.notifyWorkMemorySegmentsChanged();
+          }
+          return brief;
+        },
+        onDelegationClosed: (closure) =>
+          petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
+      },
       listWorkspaces: () => mobileOrchestrator.projectList(),
       listReusableSessions: async () => {
         const noWorkspaceCwd = resolveNoRepoCwd();
+        // No includeArchived: listDiskSessions default-filters archived rows, so
+        // auto-archived sessions leave the reuse-candidate pool automatically
+        // while completed-but-not-yet-archived sessions stay reusable. `status`
+        // rides along to the candidate description.
         const { sessions } = await listDiskSessions({ limit: 100 });
         return sessions
           .filter((session) => session.origin === "desktop")
@@ -1101,8 +1136,42 @@ async function createWindow(): Promise<BrowserWindow> {
     petAttentionPolicy = attention;
     const petInitialization = (async () => {
       await aggregator.start();
-      await Promise.all([petReceipts.load(), petWorkInbox.load()]);
+      await Promise.all([petReceipts.load(), petWorkInbox.load(), petWorkMemory.load()]);
+      // Build the topic-segment controller now that the pet session id is
+      // resolved. Range archival rides the generic archive_range worker query;
+      // dispatch currently passes no turnRange, so it stays dormant.
+      const { petSessionId } = await petMetadata.ensure();
+      const petBridge = bridge;
+      petSegmentController = new PetSegmentController({
+        store: petWorkMemory,
+        petSessionId,
+        archiveRange: async (sessionId, range) => {
+          const response = await petBridge.requestWorker("agent/query", {
+            type: "archive_range",
+            sessionId,
+            start: range.start,
+            end: range.end,
+          });
+          if (!response.ok) throw new Error(response.message);
+          const data = (response.result as { data?: { before?: number; after?: number } })?.data;
+          return { before: data?.before ?? 0, after: data?.after ?? 0 };
+        },
+        now: Date.now,
+        idleMs: DEFAULT_SEGMENT_IDLE_MS,
+      });
       attention.start();
+      // Auto-archive completed work sessions idle for 7+ days, then force a full
+      // catalog rebuild. Rationale for the full pass: archiveDiskSession touches
+      // state.json → bumps the session's dir mtime → the incremental
+      // (mtime high-water) refresh would re-surface it at the front, yet
+      // listDiskSessions now default-filters archived rows, so the freshly
+      // archived session would be *dropped from the incremental page but never
+      // evicted from the held diskSessions Map* — a persistent ghost. A full
+      // rebuild repopulates the Map straight from the (archive-filtered)
+      // listDiskSessions result, so archived sessions cleanly disappear.
+      void runPetAutoArchive(aggregator).catch((error) => {
+        dlog("main", "pet.autoArchive.failed", { error: String(error) });
+      });
     })();
     disposePetIpc = registerPetIpc({
       ipcMain,
@@ -1110,6 +1179,14 @@ async function createWindow(): Promise<BrowserWindow> {
       dispatcher: petDispatchService,
       attention,
       workInbox: petWorkInbox,
+      // Read-only topic-segment view for the Mimi chat UI. `segments` carries
+      // the message-keyed boundary history (keyed by each segment's first-turn
+      // client message id); the renderer skips any boundary whose message id is
+      // absent from the current transcript.
+      workMemory: {
+        getActiveSegmentId: () => petWorkMemory.activeSegment()?.id ?? null,
+        getSegments: () => petWorkMemory.segmentBoundaries(),
+      },
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });
@@ -1122,6 +1199,39 @@ async function createWindow(): Promise<BrowserWindow> {
 
   await installAppMenu(win);
   return win;
+}
+
+/** Days of inactivity after which a completed work session is auto-archived. */
+const PET_AUTO_ARCHIVE_IDLE_DAYS = 7;
+
+/**
+ * One-shot auto-archival pass, run right after pet init. Pulls the full catalog
+ * (including already-archived rows so the policy can skip them), selects the
+ * completed sessions idle for 7+ days, writes their archival markers, and — if
+ * anything changed — forces a FULL catalog rebuild so the aggregator's held Map
+ * is repopulated from the archive-filtered listDiskSessions (no ghost rows).
+ */
+async function runPetAutoArchive(aggregator: PetStateAggregator): Promise<void> {
+  const { sessions } = await listDiskSessions({ limit: 1000, includeArchived: true });
+  const toArchive = selectSessionsToArchive(
+    sessions.map((s) => ({
+      engineSessionId: s.engineSessionId,
+      status: s.status,
+      updatedAt: s.updatedAt,
+      archivedAt: s.archivedAt,
+    })),
+    { now: Date.now(), idleDays: PET_AUTO_ARCHIVE_IDLE_DAYS },
+  );
+  if (toArchive.length === 0) return;
+  const now = Date.now();
+  for (const id of toArchive) {
+    await archiveDiskSession(id, now).catch((error) => {
+      dlog("main", "pet.autoArchive.write.failed", { id, error: String(error) });
+    });
+  }
+  // Full rebuild: archived sessions must be evicted from the held Map, not just
+  // absent from an incremental page (see the trigger comment in the pet init).
+  await aggregator.refreshCatalog(true, { full: true });
 }
 
 function petWidgetSurface(expanded: boolean): { width: number; height: number } {

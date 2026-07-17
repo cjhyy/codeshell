@@ -105,6 +105,21 @@ interface PetDispatchOptions {
   listDigitalHumans?(): Promise<Array<{ name: string; label: string; description?: string }>>;
   listDigitalHumanTeams?(): Promise<DigitalHumanTeam[]>;
   startWorkSession?(delegation: PetAutoDelegation): Promise<{ sessionId: string; cwd: string }>;
+  /**
+   * Topic-segment controller. beginTurn (before each chat turn) may return a
+   * carryover brief to inject into the runtime context; onDelegationClosed
+   * records a work-memory entry when a delegated Work Session launches.
+   */
+  segmentController?: {
+    beginTurn(clientMessageId?: string): Promise<string | undefined>;
+    onDelegationClosed(closure: {
+      objective: string;
+      outcome: "completed" | "pending-decided" | "failed";
+      workspace?: string;
+      sessionRef?: string;
+      turnRange?: { start: number; end: number };
+    }): Promise<void>;
+  };
 }
 
 const NO_WORKSPACE_ID = "no-workspace";
@@ -389,8 +404,17 @@ export class PetDispatchService {
             }`,
           });
         }
+        // Advance the topic-segment clock and, if a long-idle boundary was
+        // crossed, obtain a carryover brief (open tasks + recent conclusions)
+        // to inject as background continuity via the pet runtime context. The
+        // clientMessageId keys the new segment's boundary to this turn so the
+        // chat UI can render the divider before it (see PetSegmentController).
+        const carryoverBrief = await this.options.segmentController?.beginTurn(
+          command.clientMessageId,
+        );
         const world = {
           ...boundedWorld(snapshot),
+          ...(carryoverBrief ? { carryoverBrief } : {}),
           workspaces: petWorkspaces,
           reusableSessions: petReusableSessions,
           digitalHumans: selectedDigitalHumans,
@@ -549,6 +573,24 @@ export class PetDispatchService {
                   ? `Mimi failed to start the delegated Work Session: ${failureMessage}`
                   : `Mimi failed to start ${failures.length} delegated Work Sessions: ${failureMessage}`;
             }
+          }
+        }
+        // A delegation reaching a live Work Session is a work-session closure
+        // from Mimi's point of view: record it as a work-memory entry. No
+        // turnRange is passed — the chat return carries no reliable turn cursor,
+        // so range archival stays dormant (see PetSegmentController).
+        if (this.options.segmentController && delegations.length > 0) {
+          for (const started of delegations) {
+            await this.options.segmentController
+              .onDelegationClosed({
+                objective: started.task,
+                outcome: "completed",
+                ...(started.workspacePath ? { workspace: started.workspacePath } : {}),
+                sessionRef: started.sessionId,
+              })
+              .catch(() => {
+                // Work-memory persistence is best-effort; never fail the chat turn.
+              });
           }
         }
         const delegation = delegations[0];

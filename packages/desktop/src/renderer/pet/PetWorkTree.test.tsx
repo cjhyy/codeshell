@@ -5,62 +5,78 @@ import { PetWorkTree } from "./PetWorkTree";
 import type { PetWorkMap } from "./petWorkMap";
 
 const workMap: PetWorkMap = {
-  counts: { unfinished: 1, optimization: 1, completed: 1, other: 1 },
+  counts: { running: 1, pending: 0, "follow-up": 1, completed: 1, other: 1 },
   itemIds: {
-    unfinished: ["unfinished:one"],
-    optimization: ["optimization:one"],
+    running: ["running:one"],
+    pending: [],
+    "follow-up": ["follow-up:one"],
     completed: ["completed:one"],
     other: ["other:one"],
   },
   dismissedCount: 2,
   hiddenCount: 2,
+  unclassifiedCount: 0,
   groups: [
     {
       workspace: "codeshell",
       latestActivityAt: 3_000,
-      unfinished: [
+      buckets: [
         {
-          id: "unfinished:one",
-          kind: "unfinished",
-          state: "running",
-          workspace: "codeshell",
-          title: "修复 Pet 工作地图",
-          detail: "正在运行测试",
-          lastActivityAt: 3_000,
-          navigation: { agentSessionId: "session-secret-one" },
+          group: "running",
+          items: [
+            {
+              id: "running:one",
+              group: "running",
+              state: "running",
+              workspace: "codeshell",
+              title: "修复 Pet 工作地图",
+              detail: "正在运行测试",
+              lastActivityAt: 3_000,
+              navigation: { agentSessionId: "session-secret-one" },
+            },
+          ],
         },
-      ],
-      optimization: [
         {
-          id: "optimization:one",
-          kind: "optimization",
-          state: "optimization",
-          workspace: "codeshell",
-          title: "优化启动速度",
-          lastActivityAt: 2_000,
-          navigation: { agentSessionId: "session-secret-two" },
+          group: "follow-up",
+          items: [
+            {
+              id: "follow-up:one",
+              group: "follow-up",
+              state: "follow-up",
+              workspace: "codeshell",
+              title: "跟进启动速度",
+              lastActivityAt: 2_000,
+              navigation: { agentSessionId: "session-secret-two" },
+            },
+          ],
         },
-      ],
-      completed: [
         {
-          id: "completed:one",
-          kind: "completed",
-          state: "completed",
-          workspace: "codeshell",
-          title: "完成宠物拖动",
-          lastActivityAt: 1_000,
-          navigation: { agentSessionId: "session-secret-three" },
+          group: "completed",
+          items: [
+            {
+              id: "completed:one",
+              group: "completed",
+              state: "completed",
+              workspace: "codeshell",
+              title: "完成宠物拖动",
+              lastActivityAt: 1_000,
+              navigation: { agentSessionId: "session-secret-three" },
+            },
+          ],
         },
-      ],
-      other: [
         {
-          id: "other:one",
-          kind: "other",
-          state: "dormant",
-          workspace: "codeshell",
-          title: "普通历史工作",
-          lastActivityAt: 900,
-          navigation: { agentSessionId: "session-secret-four" },
+          group: "other",
+          items: [
+            {
+              id: "other:one",
+              group: "other",
+              state: "idle",
+              workspace: "codeshell",
+              title: "普通历史工作",
+              lastActivityAt: 900,
+              navigation: { agentSessionId: "session-secret-four" },
+            },
+          ],
         },
       ],
     },
@@ -92,15 +108,50 @@ describe("PetWorkTree", () => {
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('data-pet-work-drawer-content="open"');
     expect(html).toContain("codeshell");
-    expect(html).toContain("未完成");
-    expect(html).toContain("可优化");
-    expect(html).toContain("最近完成");
+    expect(html).toContain("进行中");
+    expect(html).toContain("待跟进");
+    expect(html).toContain("已完成");
     expect(html).toContain("其他");
     expect(html).toContain("清除已完成");
     expect(html).toContain("恢复隐藏项（2）");
-    expect(html).toContain('data-pet-work-dismiss="unfinished:one"');
+    expect(html).toContain('data-pet-work-dismiss="running:one"');
     expect(html).toContain("另有 2 项较早记录未展开");
     expect(html).not.toContain("工作会话");
     expect(html).not.toContain("session-secret");
   });
+});
+
+test("renders the other bucket and its i18n label without hiding items", () => {
+  const otherOnly: PetWorkMap = {
+    groups: [
+      {
+        workspace: "alpha",
+        buckets: [
+          {
+            group: "other" as const,
+            items: [
+              {
+                id: "other:x",
+                group: "other" as const,
+                state: "idle" as const,
+                workspace: "alpha",
+                title: "闲置会话",
+                lastActivityAt: 1,
+                navigation: { agentSessionId: "x" },
+              },
+            ],
+          },
+        ],
+        latestActivityAt: 1,
+      },
+    ],
+    counts: { running: 0, pending: 0, "follow-up": 0, completed: 0, other: 1 },
+    itemIds: { running: [], pending: [], "follow-up": [], completed: [], other: ["other:x"] },
+    dismissedCount: 0,
+    hiddenCount: 0,
+    unclassifiedCount: 0,
+  };
+  const html = renderToStaticMarkup(<PetWorkTree workMap={otherOnly} defaultOpen />);
+  expect(html).toContain("闲置会话");
+  expect(html).toContain("其他"); // pet.work.branch.other zh label
 });

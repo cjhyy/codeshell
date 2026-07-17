@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { listDiskSessions } from "./sessions-service";
+import { archiveDiskSession, listDiskSessions } from "./sessions-service";
 
 // Default origin "desktop" so existing fixtures are "should-show" sessions
 // (override per-test by passing `origin` in state). A fixture wanting NO origin
@@ -130,5 +130,96 @@ describe("listDiskSessions", () => {
 
   it("returns [] for a missing sessions dir", async () => {
     expect((await listDiskSessions({ limit: 10 }, path.join(dir, "nope"))).sessions).toEqual([]);
+  });
+
+  it("filters archived sessions by default and includes them on demand", async () => {
+    mkSession(dir, "live", { cwd: "/p", parentSessionId: null, status: "completed" }, 2000);
+    mkSession(
+      dir,
+      "gone",
+      { cwd: "/p", parentSessionId: null, status: "completed", archivedAt: 123 },
+      3000,
+    );
+
+    const dflt = await listDiskSessions({ limit: 50 }, dir);
+    expect(dflt.sessions.map((s) => s.id)).toEqual(["live"]);
+    expect(dflt.sessions[0]!.archivedAt).toBeUndefined();
+
+    const all = await listDiskSessions({ limit: 50, includeArchived: true }, dir);
+    expect(all.sessions.map((s) => s.id).sort()).toEqual(["gone", "live"]);
+    expect(all.sessions.find((s) => s.id === "gone")?.archivedAt).toBe(123);
+  });
+
+  it("paginates correctly while filtering archived sessions out by default", async () => {
+    // Interleave archived and live sessions across page boundaries. Default
+    // filtering must never skip a live session nor stall the cursor: walking
+    // all pages must surface exactly the live ones, newest first.
+    for (let i = 0; i < 6; i++) {
+      const archived = i % 2 === 0; // s0,s2,s4 archived; s1,s3,s5 live
+      mkSession(
+        dir,
+        `s${i}`,
+        {
+          cwd: "/p",
+          parentSessionId: null,
+          status: "completed",
+          ...(archived ? { archivedAt: 1 } : {}),
+        },
+        1000 + i * 1000,
+      );
+    }
+
+    const collected: string[] = [];
+    let cursor: string | null | undefined;
+    // Bound the loop so a pagination bug surfaces as a wrong result, not a hang.
+    for (let page = 0; page < 20; page++) {
+      const res = await listDiskSessions({ limit: 2, cursor: cursor ?? undefined }, dir);
+      collected.push(...res.sessions.map((s) => s.id));
+      cursor = res.nextCursor;
+      if (cursor === null) break;
+    }
+    expect(collected).toEqual(["s5", "s3", "s1"]);
+  });
+});
+
+describe("archiveDiskSession", () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "ds-archive-"));
+  });
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("writes archivedAt so the session drops out of the default catalog, then unarchives", async () => {
+    mkSession(dir, "work", { cwd: "/p", parentSessionId: null, status: "completed" }, 3000);
+
+    await archiveDiskSession("work", 456, dir);
+    // Preserved the rest of state.json.
+    const raw = JSON.parse(
+      fs.readFileSync(path.join(dir, "work", "state.json"), "utf8"),
+    ) as Record<string, unknown>;
+    expect(raw.archivedAt).toBe(456);
+    expect(raw.status).toBe("completed");
+    expect(raw.parentSessionId).toBe(null);
+
+    const dflt = await listDiskSessions({ limit: 50 }, dir);
+    expect(dflt.sessions.map((s) => s.id)).toEqual([]);
+    const all = await listDiskSessions({ limit: 50, includeArchived: true }, dir);
+    expect(all.sessions.find((s) => s.id === "work")?.archivedAt).toBe(456);
+
+    // Clearing the marker restores the session to the default catalog.
+    await archiveDiskSession("work", undefined, dir);
+    const reopened = JSON.parse(
+      fs.readFileSync(path.join(dir, "work", "state.json"), "utf8"),
+    ) as Record<string, unknown>;
+    expect("archivedAt" in reopened).toBe(false);
+    const afterUnarchive = await listDiskSessions({ limit: 50 }, dir);
+    expect(afterUnarchive.sessions.map((s) => s.id)).toEqual(["work"]);
+  });
+
+  it("rejects unsafe ids without touching the filesystem", async () => {
+    await expect(archiveDiskSession("../escape", 1, dir)).rejects.toThrow();
+    await expect(archiveDiskSession("missing", 1, dir)).rejects.toThrow();
   });
 });
