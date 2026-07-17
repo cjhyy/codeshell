@@ -114,8 +114,13 @@ to a real file inside the plugin root. Put entries in a dedicated directory when
 fonts, or images: the `csplugin://` host serves only the entry's containing tree. A root-level entry
 can load only itself.
 
-Supported icons are `panel`, `chart`, `table`, `activity`, and `plug`. A plugin can declare at most
-16 panels. Panel ids must be unique within one manifest.
+`icon` accepts the v1 semantic aliases (`panel`, `chart`, `table`) plus an explicit allowlist of
+kebab-case [lucide](https://lucide.dev) icon names (for example `bar-chart-3`, `layout-dashboard`,
+`git-branch`, `rocket`) — 87 validated names in total. The authoritative list is `PLUGIN_PANEL_ICONS`
+in `packages/core/src/plugins/installer/types.ts`, mirrored for the renderer as
+`PLUGIN_PANEL_ICON_NAMES` in `packages/desktop/src/shared/plugin-panels.ts`. Unknown names are
+rejected at install time, and `resolvePluginPanelIcon` falls back to the generic panel icon for
+anything stale. A plugin can declare at most 16 panels. Panel ids must be unique within one manifest.
 
 ## Sandbox
 
@@ -148,6 +153,8 @@ No capability is granted by default. Manifest permissions map to the following c
 | `storage`            | `storage.get`, `storage.set`, `storage.delete`; JSON-only, 256 KiB per panel.                                |
 | `external.open`      | `external.open`; HTTPS only and always asks the user first.                                                  |
 | `agent.submitPrompt` | `agent.submitPrompt`; requires `context.session`, uses that bound session, and is rejected while it is busy. |
+| `workspace.info`     | `workspace.info`; read-only workspace metadata: folder name, root path, trust state, and a best-effort git branch (read from `.git/HEAD`, never executed). |
+| `notifications.send` | `notifications.send`; shows a system notification. The panel's manifest title always prefixes the shown title (anti-spoofing), and sends are capped at 5 per rate window on top of the shared call limit. |
 
 The host, not guest input, supplies the plugin identity, session, workspace, visibility, theme, and
 locale. Calls are size-limited, rate-limited, time-bounded, and revoked when the panel is destroyed,
