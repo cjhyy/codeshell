@@ -131,4 +131,53 @@ describe("listDiskSessions", () => {
   it("returns [] for a missing sessions dir", async () => {
     expect((await listDiskSessions({ limit: 10 }, path.join(dir, "nope"))).sessions).toEqual([]);
   });
+
+  it("filters archived sessions by default and includes them on demand", async () => {
+    mkSession(dir, "live", { cwd: "/p", parentSessionId: null, status: "completed" }, 2000);
+    mkSession(
+      dir,
+      "gone",
+      { cwd: "/p", parentSessionId: null, status: "completed", archivedAt: 123 },
+      3000,
+    );
+
+    const dflt = await listDiskSessions({ limit: 50 }, dir);
+    expect(dflt.sessions.map((s) => s.id)).toEqual(["live"]);
+    expect(dflt.sessions[0]!.archivedAt).toBeUndefined();
+
+    const all = await listDiskSessions({ limit: 50, includeArchived: true }, dir);
+    expect(all.sessions.map((s) => s.id).sort()).toEqual(["gone", "live"]);
+    expect(all.sessions.find((s) => s.id === "gone")?.archivedAt).toBe(123);
+  });
+
+  it("paginates correctly while filtering archived sessions out by default", async () => {
+    // Interleave archived and live sessions across page boundaries. Default
+    // filtering must never skip a live session nor stall the cursor: walking
+    // all pages must surface exactly the live ones, newest first.
+    for (let i = 0; i < 6; i++) {
+      const archived = i % 2 === 0; // s0,s2,s4 archived; s1,s3,s5 live
+      mkSession(
+        dir,
+        `s${i}`,
+        {
+          cwd: "/p",
+          parentSessionId: null,
+          status: "completed",
+          ...(archived ? { archivedAt: 1 } : {}),
+        },
+        1000 + i * 1000,
+      );
+    }
+
+    const collected: string[] = [];
+    let cursor: string | null | undefined;
+    // Bound the loop so a pagination bug surfaces as a wrong result, not a hang.
+    for (let page = 0; page < 20; page++) {
+      const res = await listDiskSessions({ limit: 2, cursor: cursor ?? undefined }, dir);
+      collected.push(...res.sessions.map((s) => s.id));
+      cursor = res.nextCursor;
+      if (cursor === null) break;
+    }
+    expect(collected).toEqual(["s5", "s3", "s1"]);
+  });
 });

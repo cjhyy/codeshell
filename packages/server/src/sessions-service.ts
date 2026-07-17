@@ -152,6 +152,8 @@ export interface DiskSessionMeta {
   origin: "desktop" | "automation";
   /** Normalized durable status for Pet/display consumers. */
   status?: "active" | "paused" | "completed" | "failed" | "cancelled";
+  /** Durable archival timestamp; absent = not archived. */
+  archivedAt?: number;
 }
 
 export interface ListDiskSessionsResult {
@@ -188,7 +190,7 @@ function decodeDiskSessionCursor(value: string | undefined): DiskSessionCursor |
  *   - non-empty   → sub-agent → filter out
  */
 export async function listDiskSessions(
-  opts: { limit: number; cursor?: string },
+  opts: { limit: number; cursor?: string; includeArchived?: boolean },
   baseDir: string = sessionsRoot(),
 ): Promise<ListDiskSessionsResult> {
   // Async fs throughout: this is an IPC handler on the Electron main thread
@@ -269,6 +271,13 @@ export async function listDiskSessions(
     // isNoRepoCwd. (deleted-project resurrection)
     const cwdStr = typeof state.cwd === "string" ? state.cwd : "";
     if (cwdStr && !(await pathExists(cwdStr))) continue;
+    // Archived sessions are hidden from the default catalog. Filtering happens
+    // before the push (like every other skip above), so the mtime cursor —
+    // derived from the dirs[] position, not from how many rows we kept — keeps
+    // advancing across archived rows: a page may return fewer than `limit`
+    // sessions, but no live session is skipped and the cursor never stalls.
+    const archivedAt = typeof state.archivedAt === "number" ? state.archivedAt : undefined;
+    if (archivedAt !== undefined && !opts.includeArchived) continue;
     sessions.push({
       id,
       engineSessionId: id,
@@ -289,6 +298,7 @@ export async function listDiskSessions(
             : typeof state.status === "string"
               ? "failed"
               : undefined,
+      ...(archivedAt !== undefined ? { archivedAt } : {}),
     });
   }
   return {
