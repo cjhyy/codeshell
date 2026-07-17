@@ -22,8 +22,6 @@ import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import {
-  addTokenUsage,
-  addCumulativeUsage,
   cumulativeCacheHitRate,
   foldRunUsage,
   normalizeCumulativeUsageCounters,
@@ -89,7 +87,7 @@ import {
   type SessionStateFieldPatch,
   type GoalTerminalSaveOutcome,
 } from "../session/session-manager.js";
-import { ModelFacade } from "./model-facade.js";
+import { createRunUsageAccounting, wireRunModelFacade } from "./run-accounting.js";
 import { logger, runWithSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
 import { sanitizeTaskString } from "../logging/sanitize-messages.js";
@@ -1775,123 +1773,28 @@ export class Engine {
       // cannot run until turnLoop.run(), so definite assignment is intentional.
       // eslint-disable-next-line prefer-const
       let turnLoop!: TurnLoop;
-      let autoCompactionGoalTermination: ReturnType<TurnLoop["recordGoalJudgeUsage"]>;
-      let externalRunUsage: TokenUsage = {
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-        cacheReadTokens: 0,
-        cacheCreationTokens: 0,
-      };
-      let runAccountingFinalized = false;
-      Object.assign(
-        session.state,
-        normalizeCumulativeUsageCounters(session.state, session.state.tokenUsage),
-      );
-      const recordCumulativeUsage = (usage: TokenUsage): CumulativeUsageCounters => {
-        const next = addCumulativeUsage(session.state, usage);
-        Object.assign(session.state, next);
-        return next;
-      };
-      const recordExternalBilledUsage = (usage: TokenUsage): CumulativeUsageCounters => {
-        externalRunUsage = addTokenUsage(externalRunUsage, usage);
-        const cumulative = recordCumulativeUsage(usage);
-        autoCompactionGoalTermination = turnLoop.recordGoalJudgeUsage(usage);
-        if (runAccountingFinalized) {
-          try {
-            const latest = this.sessionManager.resume(sid).state;
-            const lateCumulative = addCumulativeUsage(latest, usage);
-            this.updatePersistedSessionState(sid, {
-              tokenUsage: addTokenUsage(latest.tokenUsage, usage),
-              ...lateCumulative,
-              ...(this.config.costStore
-                ? {
-                    costState: this.config.costStore.serialize() as Record<string, unknown>,
-                  }
-                : {}),
-            });
-          } catch (err) {
-            logger.warn("engine.late_usage_persist_failed", {
-              sessionId: sid,
-              error: err instanceof Error ? err.message : String(err),
-            });
-          }
-        }
-        return cumulative;
-      };
+      const accounting = createRunUsageAccounting({
+        session,
+        sid,
+        resumeState: (s) => this.sessionManager.resume(s).state,
+        updatePersistedSessionState: (s, patch) => this.updatePersistedSessionState(s, patch),
+        costStore: this.config.costStore,
+        recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
+      });
+      const { recordCumulativeUsage, recordExternalBilledUsage } = accounting;
       contextManager.setSummarizeFn(this.buildSummarizeFn(llmClient, recordExternalBilledUsage));
-
-      // Create components (requires resolved llmClient).
-      const modelFacade = new ModelFacade(llmClient, session.transcript);
-      const getRunUsage = () => {
-        const visible = modelFacade.getUsage();
-        return {
-          ...visible,
-          totalPromptTokens: visible.totalPromptTokens + externalRunUsage.promptTokens,
-          totalCompletionTokens: visible.totalCompletionTokens + externalRunUsage.completionTokens,
-          totalTokens: visible.totalTokens + externalRunUsage.totalTokens,
-          totalCacheReadTokens:
-            visible.totalCacheReadTokens + (externalRunUsage.cacheReadTokens ?? 0),
-          totalCacheCreationTokens:
-            visible.totalCacheCreationTokens + (externalRunUsage.cacheCreationTokens ?? 0),
-        };
-      };
-      const callPrimaryModel = modelFacade.call.bind(modelFacade);
-      modelFacade.call = async (...args: Parameters<ModelFacade["call"]>) => {
-        // A primary-model summary may itself exhaust the Goal budget. Do not
-        // issue the main turn request after that billed sub-call; return control
-        // to TurnLoop, whose existing post-response guard emits and persists the
-        // canonical goal_budget_exhausted termination.
-        if (autoCompactionGoalTermination) {
-          return {
-            text: "",
-            toolCalls: [],
-            stopReason: "stop",
-          };
-        }
-        return callPrimaryModel(...args);
-      };
+      const { modelFacade, getRunUsage } = wireRunModelFacade({
+        llmClient,
+        auxSummaryClient,
+        transcript: session.transcript,
+        accounting,
+      });
 
       // Session-cumulative usage baseline: the LLM client is recreated per run
       // (its getUsage() counts only THIS run), so to accumulate across runs we
       // capture the persisted total at run start and fold this run's usage onto
       // it (see foldRunUsage). Snapshot now, before any turn boundary fires.
       const usageBaseline: TokenUsage = { ...session.state.tokenUsage };
-
-      // Wire getOutputTokens for token budget tracking
-      modelFacade.getOutputTokens = () => {
-        const usage = getRunUsage();
-        return usage.totalCompletionTokens;
-      };
-
-      // Wire summarize for tool use summaries (uses lightweight call). Keep the
-      // request out of the foreground tracker while billing and reporting it to
-      // the owning session/Goal budget.
-      modelFacade.summarize = async (sysPrompt: string, userMsg: string, signal?: AbortSignal) => {
-        const resp = await auxSummaryClient.createMessage({
-          systemPrompt: sysPrompt,
-          messages: [{ role: "user", content: userMsg }],
-          tools: [],
-          maxTokens: 256,
-          signal,
-          billingEnabled: true,
-          requestVisible: false,
-          // Auxiliary call — see contextManager.setSummarizeFn above.
-          reasoning: { mode: "off" },
-        });
-        if (resp.usage) recordExternalBilledUsage(resp.usage);
-        logger.debug("summarize.call", {
-          sysPromptLen: sysPrompt.length,
-          userMsgLen: userMsg.length,
-          userMsgPreview: userMsg.slice(0, 300),
-          completionLen: resp.text.length,
-          completionPreview: resp.text.slice(0, 300),
-          stopReason: resp.stopReason,
-          promptTokens: resp.usage?.promptTokens,
-          completionTokens: resp.usage?.completionTokens,
-        });
-        return resp.text;
-      };
 
       const sessionDir = join(
         this.config.sessionStorageDir ?? sessionsRoot(),
@@ -2517,7 +2420,7 @@ export class Engine {
         session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
       }
       this.persistFinalRunState(session.state);
-      runAccountingFinalized = true;
+      accounting.markRunAccountingFinalized();
 
       // Hook: agent end
       await this.emitHook(
