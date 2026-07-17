@@ -116,13 +116,40 @@ describe("Mimi work inbox dismissal persistence", () => {
             throw new Error("write failed");
           },
         },
-        { action: "add", ids: ["unfinished:session-c"] },
-        new Set(["unfinished:session-c"]),
+        { action: "add", ids: ["running:session-c"] },
+        new Set(["running:session-c"]),
       ),
     ).toBeNull();
     expect(
       JSON.parse(localStorage.getItem("codeshell.pet.work-inbox.dismissed.v1") ?? "[]"),
-    ).toEqual(["unfinished:session-c"]);
+    ).toEqual(["running:session-c"]);
+  });
+
+  test("accepts every structured work group id (incl. running) and drops retired groups", () => {
+    expect(
+      normalizePetWorkInboxSnapshot({
+        revision: 3,
+        dismissedIds: [
+          "running:session-a",
+          "pending:session-b:req-1",
+          "follow-up:session-c",
+          "completed:session-d",
+          "other:session-e",
+          // Retired Task 1 groups must no longer pass the renderer boundary.
+          "unfinished:session-f",
+          "optimization:session-g",
+        ],
+      }),
+    ).toEqual({
+      revision: 3,
+      dismissedIds: [
+        "running:session-a",
+        "pending:session-b:req-1",
+        "follow-up:session-c",
+        "completed:session-d",
+        "other:session-e",
+      ],
+    });
   });
 
   test("filters malformed ids and rejects malformed snapshots at the renderer boundary", () => {

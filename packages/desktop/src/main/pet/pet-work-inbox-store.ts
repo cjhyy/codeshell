@@ -1,11 +1,14 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import {
+  MAX_PET_WORK_INBOX_DISMISSED_ITEMS,
+  MAX_PET_WORK_ITEM_ID_LENGTH,
+  isPetWorkItemId,
+} from "../../shared/pet-work-item-id.js";
 
-export const MAX_PET_WORK_INBOX_DISMISSED_ITEMS = 1_000;
-export const MAX_PET_WORK_ITEM_ID_LENGTH = 512;
-
-const PET_WORK_ITEM_ID_PATTERN =
-  /^(?:running|pending|follow-up|completed|other):[^\u0000\r\n]+$/;
+// Re-export the shared id contract so existing importers of this module keep working;
+// the pattern/limits live in shared/pet-work-item-id.ts to stay in sync with the renderer.
+export { MAX_PET_WORK_INBOX_DISMISSED_ITEMS, MAX_PET_WORK_ITEM_ID_LENGTH, isPetWorkItemId };
 
 export interface PetWorkInboxSnapshot {
   revision: number;
@@ -16,15 +19,6 @@ interface PetWorkInboxFile {
   version: 1;
   revision: number;
   dismissedIds: string[];
-}
-
-export function isPetWorkItemId(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length > 0 &&
-    value.length <= MAX_PET_WORK_ITEM_ID_LENGTH &&
-    PET_WORK_ITEM_ID_PATTERN.test(value)
-  );
 }
 
 function normalizeIds(value: unknown): string[] {
