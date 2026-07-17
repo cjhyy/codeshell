@@ -220,6 +220,59 @@ describe("PluginPanelBridge", () => {
     ).rejects.toThrow(/scope is not bound/);
   });
 
+  test("denies workspace.info when the panel has not declared the permission", async () => {
+    const bridge = new PluginPanelBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      getAgentBridge: () => null,
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(16);
+    bridge.registerGuest(
+      guest as any,
+      pluginPanelElectronMock.ownerWindow as any,
+      bridgeResource() as any,
+    );
+    await bindBridgeGuest(16);
+    await expect(
+      pluginPanelElectronMock.ipcHandlers.get("plugin-panel:call")!(
+        { sender: guest },
+        "workspace.info",
+        {},
+      ),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  test("denies notifications.send when the panel has not declared the permission", async () => {
+    const shown: { title: string; body: string }[] = [];
+    const bridge = new PluginPanelBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      getAgentBridge: () => null,
+      showNotification: (notification) => {
+        shown.push(notification);
+        return true;
+      },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(17);
+    bridge.registerGuest(
+      guest as any,
+      pluginPanelElectronMock.ownerWindow as any,
+      bridgeResource() as any,
+    );
+    await bindBridgeGuest(17);
+    await expect(
+      pluginPanelElectronMock.ipcHandlers.get("plugin-panel:call")!(
+        { sender: guest },
+        "notifications.send",
+        { body: "should not show" },
+      ),
+    ).rejects.toThrow(/permission denied/);
+    // Gating happens before the notification hook.
+    expect(shown).toEqual([]);
+  });
+
   test("enforces payload limits and revokes a destroyed guest", async () => {
     const bridge = new PluginPanelBridge({
       isTrustedHost: () => true,
