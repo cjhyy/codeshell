@@ -4,10 +4,11 @@ import type {
   PetProjectionSnapshotResult,
   PetSessionProjection,
 } from "@cjhyy/code-shell-core";
-import type { DiskSessionMeta, ListDiskSessionsResult } from "@cjhyy/code-shell-server";
+import type { DiskSessionMeta, ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
 import {
   PetStateAggregator,
   type AgentBridgePetEvent,
+  type DesktopPetProjectionEvent,
   type PetStateBridge,
 } from "./pet-state-aggregator";
 import { PetWorkerProjectionGeneration } from "./pet-worker-generation";
@@ -55,6 +56,7 @@ function workerSnapshot(
 class FakeBridge implements PetStateBridge {
   active = false;
   snapshot: PetProjectionSnapshotResult | null = null;
+  snapshotError: Error | null = null;
   snapshotRequests = 0;
   private listener?: (event: AgentBridgePetEvent) => void | Promise<void>;
 
@@ -64,6 +66,7 @@ class FakeBridge implements PetStateBridge {
 
   async requestPetProjectionSnapshot(): Promise<PetProjectionSnapshotResult | null> {
     this.snapshotRequests += 1;
+    if (this.snapshotError) throw this.snapshotError;
     return this.snapshot;
   }
 
@@ -96,6 +99,14 @@ function pagedCatalog(initial: DiskSessionMeta[]) {
     return { sessions: page, nextCursor: next < sessions.length ? String(next) : null };
   };
   return { list, replace: (next: DiskSessionMeta[]) => (sessions = next) };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
 }
 
 describe("PetStateAggregator", () => {
@@ -175,6 +186,113 @@ describe("PetStateAggregator", () => {
     expect(aggregator.getSnapshot().version).toBe(1);
   });
 
+  test("reconciles a finalizing live event with the current durable terminal state", async () => {
+    const bridge = new FakeBridge();
+    bridge.active = true;
+    bridge.snapshot = workerSnapshot(8, [live("one")]);
+    const catalog = pagedCatalog([disk("one", { status: "active" })]);
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: catalog.list,
+      now: () => 3_000,
+    });
+    await aggregator.start();
+    catalog.replace([disk("one", { status: "completed", updatedAt: 2_500 })]);
+    const events: DesktopPetProjectionEvent[] = [];
+    aggregator.subscribe((event) => events.push(event));
+
+    await bridge.emit({
+      kind: "delta",
+      delta: {
+        workerGeneration: 1,
+        version: 9,
+        observedAt: 2_600,
+        kind: "session-upsert",
+        session: live("one", {
+          runState: "idle",
+          phase: "finalizing",
+          summary: "turn closed",
+          lastActivityAt: 2_400,
+        }),
+      },
+    });
+
+    expect(events.at(-1)).toMatchObject({
+      kind: "session-upsert",
+      observedAt: 3_000,
+      session: {
+        title: "Disk one",
+        workspaceDisplayName: "one",
+        runState: "terminal",
+        phase: undefined,
+        terminal: { status: "completed", at: 2_500 },
+      },
+    });
+    expect(aggregator.getSnapshot().sessions[0]).toMatchObject({
+      runState: "terminal",
+      phase: undefined,
+      terminal: { status: "completed", at: 2_500 },
+    });
+  });
+
+  test("serializes deltas while an older finalizing event awaits disk reconciliation", async () => {
+    const bridge = new FakeBridge();
+    bridge.active = true;
+    bridge.snapshot = workerSnapshot(8, [live("one")]);
+    const finalizingRefreshStarted = deferred<void>();
+    const releaseFinalizingRefresh = deferred<ListDiskSessionsResult>();
+    let catalogCalls = 0;
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: async () => {
+        catalogCalls += 1;
+        if (catalogCalls === 1) return { sessions: [disk("one")], nextCursor: null };
+        finalizingRefreshStarted.resolve();
+        return releaseFinalizingRefresh.promise;
+      },
+    });
+    await aggregator.start();
+    const events: DesktopPetProjectionEvent[] = [];
+    aggregator.subscribe((event) => events.push(event));
+
+    const finalizing = bridge.emit({
+      kind: "delta",
+      delta: {
+        workerGeneration: 1,
+        version: 9,
+        observedAt: 3_000,
+        kind: "session-upsert",
+        session: live("one", { phase: "finalizing", summary: "closing" }),
+      },
+    });
+    await finalizingRefreshStarted.promise;
+    const newer = bridge.emit({
+      kind: "delta",
+      delta: {
+        workerGeneration: 1,
+        version: 10,
+        observedAt: 3_100,
+        kind: "session-upsert",
+        session: live("one", { phase: "tool", summary: "new turn" }),
+      },
+    });
+
+    // The newer delta is queued at the aggregator boundary, not emitted while
+    // version 9 is still awaiting its durable overlay.
+    await Promise.resolve();
+    expect(events).toEqual([]);
+    releaseFinalizingRefresh.resolve({ sessions: [disk("one")], nextCursor: null });
+    await Promise.all([finalizing, newer]);
+
+    expect(
+      events.map((event) => (event.kind === "session-upsert" ? event.session.phase : null)),
+    ).toEqual(["finalizing", "tool"]);
+    expect(aggregator.getSnapshot().sessions[0]).toMatchObject({
+      phase: "tool",
+      summary: "new turn",
+    });
+  });
+
   test("reconciles a new generation, discards old deltas and replaces live overlay", async () => {
     const bridge = new FakeBridge();
     bridge.active = true;
@@ -216,6 +334,48 @@ describe("PetStateAggregator", () => {
     expect(aggregator.getSnapshot().sessions.map((session) => session.agentSessionId)).toEqual([
       "new",
     ]);
+  });
+
+  test("fails a rejected live reconciliation closed instead of remaining reconciling", async () => {
+    const bridge = new FakeBridge();
+    bridge.active = true;
+    bridge.snapshotError = new Error("worker snapshot failed");
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: pagedCatalog([disk("one")]).list,
+      now: () => 4_000,
+    });
+
+    await expect(aggregator.start()).resolves.toBeUndefined();
+    expect(aggregator.getSnapshot()).toMatchObject({
+      workerState: "disconnected",
+      pending: [],
+      sessions: [
+        {
+          agentSessionId: "one",
+          runState: "unknown",
+          freshness: { workerState: "disconnected" },
+        },
+      ],
+    });
+
+    bridge.snapshotError = null;
+    bridge.snapshot = workerSnapshot(1, [live("one")]);
+    await bridge.emit({ kind: "lifecycle", state: "active" });
+    expect(aggregator.getSnapshot()).toMatchObject({
+      workerState: "active",
+      sessions: [{ agentSessionId: "one", runState: "running" }],
+    });
+
+    const events: DesktopPetProjectionEvent[] = [];
+    aggregator.subscribe((event) => events.push(event));
+    bridge.snapshotError = new Error("worker snapshot failed again");
+    await expect(bridge.emit({ kind: "lifecycle", state: "active" })).resolves.toBeUndefined();
+    expect(events.map((event) => event.kind)).toEqual(["worker-state", "reset"]);
+    expect(aggregator.getSnapshot()).toMatchObject({
+      workerState: "disconnected",
+      pending: [],
+    });
   });
 
   test("distinguishes normal reclaim from disconnect and fails pending closed", async () => {
@@ -266,6 +426,44 @@ describe("PetStateAggregator", () => {
     expect(aggregator.getSnapshot().sessions.map((session) => session.agentSessionId)).toEqual([
       "keep",
     ]);
+  });
+
+  test("observes a failed background refresh after session removal without rejecting the bridge", async () => {
+    const bridge = new FakeBridge();
+    bridge.active = true;
+    bridge.snapshot = workerSnapshot(8, [live("one")]);
+    let failRefresh = false;
+    const backgroundErrors: Array<{ operation: string; error: unknown }> = [];
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: async () => {
+        if (failRefresh) throw new Error("catalog unavailable");
+        return { sessions: [disk("one")], nextCursor: null };
+      },
+      onBackgroundError: (operation, error) => backgroundErrors.push({ operation, error }),
+    });
+    await aggregator.start();
+    failRefresh = true;
+
+    await expect(
+      bridge.emit({
+        kind: "delta",
+        delta: {
+          workerGeneration: 1,
+          version: 9,
+          observedAt: 3_000,
+          kind: "session-remove",
+          sessionId: "one",
+        },
+      }),
+    ).resolves.toBeUndefined();
+    await Promise.resolve();
+
+    expect(backgroundErrors).toHaveLength(1);
+    expect(backgroundErrors[0]).toMatchObject({
+      operation: "session-remove-refresh",
+      error: expect.objectContaining({ message: "catalog unavailable" }),
+    });
   });
 
   test("revalidates structured navigation against current disk and pending generations", async () => {

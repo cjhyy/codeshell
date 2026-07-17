@@ -164,6 +164,17 @@ export interface PetWidgetPosition {
   y: number;
 }
 
+export interface PetWorkInboxSnapshot {
+  revision: number;
+  dismissedIds: string[];
+}
+
+export type PetWorkInboxUpdate =
+  | { action: "add"; ids: string[] }
+  | {
+      action: "clear";
+    };
+
 interface PetProjectionEventBase {
   version: number;
   generation: number;
@@ -190,6 +201,9 @@ export interface PetApi {
   onAttentionEvent(listener: (event: PetAttentionEvent) => void): () => void;
   setActiveSession(sessionId: string | null): Promise<{ ok: true }>;
   markAttentionReceipt(keys: string[], state: "seen" | "dismissed"): Promise<{ ok: true }>;
+  getDismissedWorkItemIds(): Promise<PetWorkInboxSnapshot>;
+  updateDismissedWorkItemIds(update: PetWorkInboxUpdate): Promise<PetWorkInboxSnapshot>;
+  onDismissedWorkItemIdsChanged(listener: (snapshot: PetWorkInboxSnapshot) => void): () => void;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
   setWidgetExpanded(expanded: boolean): Promise<{ ok: true }>;
@@ -237,6 +251,19 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.invoke("pet:set-active-session", sessionId) as Promise<{ ok: true }>,
     markAttentionReceipt: (keys, state) =>
       ipcRenderer.invoke("pet:attention-receipt", { keys, state }) as Promise<{ ok: true }>,
+    getDismissedWorkItemIds: () =>
+      ipcRenderer.invoke("pet:work-inbox-dismissed-get") as Promise<PetWorkInboxSnapshot>,
+    updateDismissedWorkItemIds: (update) =>
+      ipcRenderer.invoke(
+        "pet:work-inbox-dismissed-update",
+        update,
+      ) as Promise<PetWorkInboxSnapshot>,
+    onDismissedWorkItemIdsChanged: (listener) => {
+      const handler = (_event: unknown, payload: unknown): void =>
+        listener(payload as PetWorkInboxSnapshot);
+      ipcRenderer.on("pet:work-inbox-dismissed-changed", handler);
+      return () => ipcRenderer.removeListener("pet:work-inbox-dismissed-changed", handler);
+    },
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>
       ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,

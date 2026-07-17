@@ -19,6 +19,13 @@ import {
   type PetState,
   type PetStateAction,
 } from "./petStateReducer";
+import {
+  bufferPetAttentionEvent,
+  bufferPetProjectionEvent,
+  PET_STREAM_BUFFER_LIMIT,
+  petSnapshotRetryDelay,
+  pushBoundedPetEvent,
+} from "./petReliability";
 
 export interface PetStateContextValue {
   state: PetState;
@@ -36,15 +43,12 @@ export interface PetStateContextValue {
 }
 
 export const PET_CHAT_BUCKET = "__codeshell_pet_chat__";
-const DEFAULT_SNAPSHOT_RETRY_DELAY = (attempt: number): number =>
-  Math.min(2_000, 250 * 2 ** Math.min(attempt, 3));
-
 const PetStateContext = React.createContext<PetStateContextValue | null>(null);
 
 export function PetStateProvider({
   children,
   api: apiOverride,
-  snapshotRetryDelay = DEFAULT_SNAPSHOT_RETRY_DELAY,
+  snapshotRetryDelay = petSnapshotRetryDelay,
 }: {
   children: React.ReactNode;
   api?: PetApi;
@@ -71,7 +75,7 @@ export function PetStateProvider({
     const unsubscribe = api.onProjectionEvent((event) => {
       if (!active) return;
       if (!hydrated) {
-        buffered.push(event);
+        bufferPetProjectionEvent(buffered, event);
         return;
       }
       dispatch({ type: "projection-event", event });
@@ -152,8 +156,7 @@ export function PetStateProvider({
     const receiveStream = (envelope: StreamEventEnvelope): void => {
       if (!active) return;
       if (!knownPetSessionId || !transcriptHydrated) {
-        bufferedStream.push(envelope);
-        if (bufferedStream.length > 500) bufferedStream.shift();
+        pushBoundedPetEvent(bufferedStream, envelope, PET_STREAM_BUFFER_LIMIT);
         return;
       }
       if (envelope.sessionId === knownPetSessionId) applyStream(envelope);
@@ -246,7 +249,7 @@ export function PetStateProvider({
     const unsubscribe = api.onAttentionEvent((event) => {
       if (!active) return;
       if (!hydrated) {
-        buffered.push(event);
+        bufferPetAttentionEvent(buffered, event);
         return;
       }
       applyEvent(event);

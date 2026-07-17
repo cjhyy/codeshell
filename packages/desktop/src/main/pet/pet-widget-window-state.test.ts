@@ -6,6 +6,7 @@ import {
   PET_WIDGET_EXPANDED_WIDTH,
   clampPetWidgetWindowPosition,
   defaultPetWidgetWindowPosition,
+  petWidgetWindowStatePath,
   sanitizePetWidgetWindowPosition,
   shouldSkipPetWidgetTaskbar,
 } from "./pet-widget-window-state";
@@ -55,5 +56,23 @@ describe("desktop Pet window position", () => {
     const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
     expect(mainSource).toContain("let petWidgetShouldBeVisible = false");
     expect(mainSource).toContain('ipcMain.handle("pet:widget-visible-get"');
+  });
+
+  test("serializes position saves and uses atomic temporary-file replacement", () => {
+    const source = readFileSync(join(import.meta.dir, "pet-widget-window-state.ts"), "utf8");
+    expect(source).toContain("let positionWriteQueue = Promise.resolve()");
+    expect(source).toContain('flag: "wx"');
+    expect(source).toContain("await fs.rename(temporary, file)");
+  });
+
+  test("stores widget state under the configured CodeShell home", () => {
+    const previous = process.env.CODE_SHELL_HOME;
+    process.env.CODE_SHELL_HOME = "/tmp/codeshell-widget-home";
+    try {
+      expect(petWidgetWindowStatePath()).toBe("/tmp/codeshell-widget-home/desktop/pet-widget.json");
+    } finally {
+      if (previous === undefined) delete process.env.CODE_SHELL_HOME;
+      else process.env.CODE_SHELL_HOME = previous;
+    }
   });
 });

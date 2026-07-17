@@ -5,7 +5,7 @@ import type {
   PetSessionProjection,
 } from "@cjhyy/code-shell-pet";
 import path from "node:path";
-import type { DiskSessionMeta, ListDiskSessionsResult } from "@cjhyy/code-shell-server";
+import type { DiskSessionMeta, ListDiskSessionsResult } from "@cjhyy/code-shell-server/storage";
 
 export type DesktopPetWorkerState =
   | "active"
@@ -102,6 +102,7 @@ export interface PetStateAggregatorOptions {
   listDiskSessions: (opts: { limit: number; cursor?: string }) => Promise<ListDiskSessionsResult>;
   pageSize?: number;
   now?: () => number;
+  onBackgroundError?: (operation: string, error: unknown) => void;
 }
 
 const MAX_TITLE_LENGTH = 160;
@@ -195,6 +196,14 @@ export class PetStateAggregator {
   private started = false;
   private unsubscribeBridge?: () => void;
   private reconcilePromise: Promise<void> | null = null;
+  /**
+   * AgentBridge deliberately does not await observers, so consecutive worker
+   * notifications may otherwise enter `handleBridgeEvent` concurrently. Some
+   * deltas (notably finalizing session updates) await disk reconciliation;
+   * serialize the whole stream so an older event can never be emitted after a
+   * newer one.
+   */
+  private bridgeEventQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: PetStateAggregatorOptions) {
     this.pageSize = options.pageSize ?? 100;
@@ -204,15 +213,27 @@ export class PetStateAggregator {
   async start(): Promise<void> {
     if (this.started) return;
     this.started = true;
+    let releaseStartupBarrier!: () => void;
+    const startupBarrier = new Promise<void>((resolve) => {
+      releaseStartupBarrier = resolve;
+    });
+    // Subscribe before the first await so no worker notification is lost, but
+    // hold delivery until the durable catalog and initial live snapshot form
+    // one coherent baseline.
+    this.bridgeEventQueue = this.bridgeEventQueue.then(() => startupBarrier);
     this.unsubscribeBridge = this.options.bridge.subscribePetProjection((event) =>
-      this.handleBridgeEvent(event),
+      this.enqueueBridgeEvent(event),
     );
-    await this.refreshCatalog(false);
-    if (this.options.bridge.hasLiveWorker()) {
-      await this.reconcileLive(false);
-    } else {
-      this.workerState = "reclaimed";
-      this.observedAt = this.now();
+    try {
+      await this.refreshCatalog(false);
+      if (this.options.bridge.hasLiveWorker()) {
+        await this.reconcileLive(false);
+      } else {
+        this.workerState = "reclaimed";
+        this.observedAt = this.now();
+      }
+    } finally {
+      releaseStartupBarrier();
     }
   }
 
@@ -225,12 +246,7 @@ export class PetStateAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot {
     const sessions = new Map(this.diskSessions);
     for (const [sessionId, session] of this.liveSessions) {
-      const durable = sessions.get(sessionId);
-      sessions.set(sessionId, {
-        ...session,
-        title: session.title ?? durable?.title,
-        workspaceDisplayName: session.workspaceDisplayName ?? durable?.workspaceDisplayName,
-      });
+      sessions.set(sessionId, this.withDurableOverlay(session));
     }
     if (this.workerState === "disconnected") {
       for (const [sessionId, session] of sessions) {
@@ -342,7 +358,15 @@ export class PetStateAggregator {
     }
     this.sourceVersion = delta.version;
     this.observedAt = delta.observedAt;
-    this.applyDelta(delta);
+    await this.applyDelta(delta);
+  }
+
+  private enqueueBridgeEvent(event: AgentBridgePetEvent): Promise<void> {
+    const pending = this.bridgeEventQueue.then(() => this.handleBridgeEvent(event));
+    // Keep the internal queue usable if one observer turn rejects. Return the
+    // original promise so AgentBridge can still report the actual failure.
+    this.bridgeEventQueue = pending.catch(() => undefined);
+    return pending;
   }
 
   private async reconcileLive(emit = true): Promise<void> {
@@ -357,7 +381,13 @@ export class PetStateAggregator {
     this.workerState = "reconciling";
     this.observedAt = this.now();
     if (emit) this.emit({ kind: "worker-state", state: "reconciling" });
-    const snapshot = await this.options.bridge.requestPetProjectionSnapshot();
+    let snapshot: PetProjectionSnapshotResult | null;
+    try {
+      snapshot = await this.options.bridge.requestPetProjectionSnapshot();
+    } catch {
+      this.applyWorkerLoss("disconnected", emit);
+      return;
+    }
     if (!snapshot) {
       this.applyWorkerLoss("disconnected", emit);
       return;
@@ -389,12 +419,20 @@ export class PetStateAggregator {
     if (emit) this.emit({ kind: "reset" });
   }
 
-  private applyDelta(delta: PetProjectionDelta): void {
+  private async applyDelta(delta: PetProjectionDelta): Promise<void> {
     switch (delta.kind) {
       case "session-upsert": {
         const session = safeSession(delta.session);
         this.liveSessions.set(session.agentSessionId, session);
-        this.emit({ kind: "session-upsert", session });
+        if (session.phase === "finalizing" && !session.terminal) {
+          try {
+            await this.refreshCatalog(false);
+          } catch {
+            // The live projection remains usable when durable reconciliation fails.
+          }
+          this.observedAt = Math.max(this.observedAt, delta.observedAt);
+        }
+        this.emit({ kind: "session-upsert", session: this.withDurableOverlay(session) });
         break;
       }
       case "session-remove": {
@@ -402,7 +440,9 @@ export class PetStateAggregator {
         const disk = this.diskSessions.get(delta.sessionId);
         if (disk) this.emit({ kind: "session-upsert", session: disk });
         else this.emit({ kind: "session-remove", sessionId: delta.sessionId });
-        void this.refreshCatalog();
+        void this.refreshCatalog().catch((error) => {
+          this.options.onBackgroundError?.("session-remove-refresh", error);
+        });
         break;
       }
       case "pending-upsert": {
@@ -428,6 +468,30 @@ export class PetStateAggregator {
         }
         break;
     }
+  }
+
+  private withDurableOverlay(session: DesktopPetSession): DesktopPetSession {
+    const durable = this.diskSessions.get(session.agentSessionId);
+    const reconciledTerminal =
+      !session.terminal &&
+      session.phase === "finalizing" &&
+      durable?.terminal &&
+      durable.lastActivityAt >= session.lastActivityAt
+        ? durable.terminal
+        : undefined;
+    return {
+      ...session,
+      title: session.title ?? durable?.title,
+      workspaceDisplayName: session.workspaceDisplayName ?? durable?.workspaceDisplayName,
+      ...(reconciledTerminal
+        ? {
+            runState: "terminal" as const,
+            phase: undefined,
+            terminal: reconciledTerminal,
+            lastActivityAt: Math.max(session.lastActivityAt, durable?.lastActivityAt ?? 0),
+          }
+        : {}),
+    };
   }
 
   private emit(event: DesktopPetProjectionEventInput): void {

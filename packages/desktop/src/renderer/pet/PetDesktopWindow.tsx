@@ -1,4 +1,4 @@
-import type { PetPeek, PetProjectionEvent } from "../../preload/types";
+import type { PetAttentionEvent, PetPeek } from "../../preload/types";
 import React from "react";
 import { useT } from "../i18n";
 import type { Message } from "../types";
@@ -6,10 +6,11 @@ import {
   IM_GATEWAY_CHANNEL_NAMES,
   imGatewayChannelFromClientMessageId,
 } from "../imGatewayChannels";
-import { initialPetState, petStateReducer } from "./petStateReducer";
 import { visiblePetAssistantText } from "./petChatRouting";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import { PetWidget } from "./PetWidget";
+import { bufferPetAttentionEvent } from "./petReliability";
+import { usePetProjectionState } from "./usePetProjectionState";
 import {
   PET_WIDGET_RECEIPTS_KEY,
   buildPetWidgetActivity,
@@ -57,7 +58,7 @@ export function PetDesktopWindow() {
   const { t } = useT();
   const api = window.codeshell.pet;
   const { petSessionId, chatState, chatDispatch, chatBusy, setChatBusy } = usePetState();
-  const [state, dispatch] = React.useReducer(petStateReducer, initialPetState);
+  const state = usePetProjectionState(api);
   const [workReceipts, setWorkReceipts] = React.useState<PetWidgetReceiptState | null>(() => {
     try {
       return parsePetWidgetReceiptState(localStorage.getItem(PET_WIDGET_RECEIPTS_KEY));
@@ -94,44 +95,6 @@ export function PetDesktopWindow() {
   }, [chatBusy, expanded, messages.length, messages.at(-1)?.text]);
 
   React.useEffect(() => {
-    let active = true;
-    let hydrated = false;
-    const buffered: PetProjectionEvent[] = [];
-    const applyEvent = (event: PetProjectionEvent): void => {
-      dispatch({ type: "projection-event", event });
-    };
-    const unsubscribe = api.onProjectionEvent((event) => {
-      if (!active) return;
-      if (!hydrated) {
-        buffered.push(event);
-        return;
-      }
-      applyEvent(event);
-    });
-    void api
-      .getSnapshot()
-      .then((snapshot) => {
-        if (!active) return;
-        dispatch({ type: "snapshot-received", snapshot });
-        hydrated = true;
-        for (const event of buffered) applyEvent(event);
-      })
-      .catch((error) => {
-        if (!active) return;
-        hydrated = true;
-        dispatch({
-          type: "snapshot-failed",
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-    return () => {
-      active = false;
-      buffered.length = 0;
-      unsubscribe();
-    };
-  }, [api, t]);
-
-  React.useEffect(() => {
     if (!state.projection || workReceipts) return;
     const initial = initialPetWidgetReceiptState(state.projection);
     setWorkReceipts(initial);
@@ -143,44 +106,18 @@ export function PetDesktopWindow() {
   }, [state.projection, workReceipts]);
 
   React.useEffect(() => {
-    if (!state.needsSnapshot) return;
-    let active = true;
-    void api
-      .getSnapshot()
-      .then((snapshot) => {
-        if (active) dispatch({ type: "snapshot-received", snapshot });
-      })
-      .catch((error) => {
-        if (!active) return;
-        dispatch({
-          type: "snapshot-failed",
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [api, state.needsSnapshot]);
-
-  React.useEffect(() => {
     let active = true;
     let hydrated = false;
-    const buffered: Array<{ kind: "count"; count: number } | { kind: "peek"; peek: PetPeek }> = [];
-    const applyAttention = (
-      event: { kind: "count"; count: number } | { kind: "peek"; peek: PetPeek },
-    ): void => {
+    const buffered: PetAttentionEvent[] = [];
+    const applyAttention = (event: PetAttentionEvent): void => {
       if (event.kind === "count") return;
       setNotice({ title: event.peek.title, detail: event.peek.detail, peek: event.peek });
       showPanel();
     };
     const unsubscribe = api.onAttentionEvent((event) => {
       if (!active) return;
-      const normalized =
-        event.kind === "count"
-          ? ({ kind: "count", count: event.surfaceablePendingCount } as const)
-          : ({ kind: "peek", peek: event.peek } as const);
-      if (!hydrated) buffered.push(normalized);
-      else applyAttention(normalized);
+      if (!hydrated) bufferPetAttentionEvent(buffered, event);
+      else applyAttention(event);
     });
     void api
       .getAttentionSnapshot()

@@ -20,7 +20,7 @@ function session(
 }
 
 describe("buildPetWorkMap", () => {
-  test("groups actionable, optimization and completed work while hiding ambiguous old sessions", () => {
+  test("groups by structured state and keeps ambiguous sessions visible under Other", () => {
     const pending: PetPendingDecision = {
       agentSessionId: "needs-user",
       requestId: "request-one",
@@ -40,12 +40,12 @@ describe("buildPetWorkMap", () => {
           summary: "正在运行测试",
           lastActivityAt: 5_000,
         }),
-        session("optimization", {
+        session("keyword-optimization", {
           title: "优化 session 加载性能",
           workspaceDisplayName: "desktop",
           lastActivityAt: 3_000,
         }),
-        session("follow-up", {
+        session("keyword-follow-up", {
           title: "登录流程",
           summary: "下一步需要确认异常场景",
           lastActivityAt: 2_800,
@@ -69,21 +69,21 @@ describe("buildPetWorkMap", () => {
       [pending],
     );
 
-    expect(map.counts).toEqual({ unfinished: 3, optimization: 1, completed: 2 });
+    expect(map.counts).toEqual({ unfinished: 2, optimization: 0, completed: 2, other: 3 });
     expect(map.dismissedCount).toBe(0);
-    expect(map.unclassifiedCount).toBe(1);
     expect(map.groups.map((group) => group.workspace)).toEqual(["codeshell", "desktop"]);
     expect(map.groups[0]?.unfinished.map((item) => item.title)).toEqual([
       "修复 Pet 显示",
       "确认发布范围",
-      "登录流程",
     ]);
-    expect(map.groups[0]?.unfinished[2]?.state).toBe("follow-up");
     expect(map.groups[0]?.unfinished[1]?.navigation).toMatchObject({
       agentSessionId: "needs-user",
       requestId: "request-one",
       routeGeneration: 3,
     });
+    expect(map.groups[0]?.other.map((item) => item.title)).toEqual(["登录流程", "旧对话"]);
+    expect(map.groups[1]?.other.map((item) => item.title)).toEqual(["优化 session 加载性能"]);
+    expect(map.itemIds.optimization).toEqual([]);
   });
 
   test("filters dismissed rows before counts and display limits are applied", () => {
@@ -100,7 +100,7 @@ describe("buildPetWorkMap", () => {
       { dismissedIds: new Set(["completed:completed"]) },
     );
 
-    expect(map.counts).toEqual({ unfinished: 1, optimization: 0, completed: 0 });
+    expect(map.counts).toEqual({ unfinished: 1, optimization: 0, completed: 0, other: 0 });
     expect(map.dismissedCount).toBe(1);
     expect(map.itemIds.completed).toEqual([]);
     expect(map.groups[0]?.completed).toEqual([]);
@@ -119,8 +119,7 @@ describe("buildPetWorkMap", () => {
       { excludedSessionIds: new Set(["archived-completed"]) },
     );
 
-    expect(map.counts).toEqual({ unfinished: 1, optimization: 0, completed: 0 });
+    expect(map.counts).toEqual({ unfinished: 1, optimization: 0, completed: 0, other: 0 });
     expect(map.groups.flatMap((group) => group.completed)).toEqual([]);
-    expect(map.unclassifiedCount).toBe(0);
   });
 });

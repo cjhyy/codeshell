@@ -5,15 +5,15 @@ import { PetWorkTree } from "./PetWorkTree";
 import type { PetWorkMap } from "./petWorkMap";
 
 const workMap: PetWorkMap = {
-  counts: { unfinished: 1, optimization: 1, completed: 1 },
+  counts: { unfinished: 1, optimization: 1, completed: 1, other: 1 },
   itemIds: {
     unfinished: ["unfinished:one"],
     optimization: ["optimization:one"],
     completed: ["completed:one"],
+    other: ["other:one"],
   },
   dismissedCount: 2,
   hiddenCount: 2,
-  unclassifiedCount: 7,
   groups: [
     {
       workspace: "codeshell",
@@ -52,6 +52,17 @@ const workMap: PetWorkMap = {
           navigation: { agentSessionId: "session-secret-three" },
         },
       ],
+      other: [
+        {
+          id: "other:one",
+          kind: "other",
+          state: "dormant",
+          workspace: "codeshell",
+          title: "普通历史工作",
+          lastActivityAt: 900,
+          navigation: { agentSessionId: "session-secret-four" },
+        },
+      ],
     },
   ],
 };
@@ -63,7 +74,7 @@ describe("PetWorkTree", () => {
     expect(html).toContain('data-pet-work-drawer="toggle"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain("工作收件箱");
-    expect(html).toContain("3 项");
+    expect(html).toContain("4 项");
     expect(html).not.toContain('data-pet-work-drawer-content="open"');
     expect(html).not.toContain("codeshell");
   });
@@ -84,10 +95,10 @@ describe("PetWorkTree", () => {
     expect(html).toContain("未完成");
     expect(html).toContain("可优化");
     expect(html).toContain("最近完成");
+    expect(html).toContain("其他");
     expect(html).toContain("清除已完成");
     expect(html).toContain("恢复隐藏项（2）");
     expect(html).toContain('data-pet-work-dismiss="unfinished:one"');
-    expect(html).toContain("7 条旧记录没有明确结论，已收起");
     expect(html).toContain("另有 2 项较早记录未展开");
     expect(html).not.toContain("工作会话");
     expect(html).not.toContain("session-secret");

@@ -11,7 +11,7 @@ import type {
   DigitalHumanTeam,
   PetDigitalHumanOption,
 } from "@cjhyy/code-shell-pet";
-import type { InputAttachmentMeta } from "@cjhyy/code-shell-server";
+import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -444,11 +444,10 @@ export class PetDispatchService {
         }
         const selectedDigitalHumanIds = new Set(selectedDigitalHumans.map((human) => human.id));
         if (
-          workDelegations.some(
-            (entry) =>
-              selectedDigitalHumanIds.size > 0
-                ? !entry.digitalHumanId || !selectedDigitalHumanIds.has(entry.digitalHumanId)
-                : entry.digitalHumanId !== undefined,
+          workDelegations.some((entry) =>
+            selectedDigitalHumanIds.size > 0
+              ? !entry.digitalHumanId || !selectedDigitalHumanIds.has(entry.digitalHumanId)
+              : entry.digitalHumanId !== undefined,
           )
         ) {
           return {

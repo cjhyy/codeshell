@@ -6,6 +6,13 @@ import type {
 } from "./pet-state-aggregator.js";
 import type { PetDispatchCommand, PetDispatchResult } from "./pet-dispatch-service.js";
 import type { PetAttentionEvent, PetAttentionSnapshot } from "./pet-attention-policy.js";
+import { WORKSPACE_PROFILE_NAME_RE } from "@cjhyy/code-shell-core";
+import { DIGITAL_HUMAN_TEAM_ID_RE } from "@cjhyy/code-shell-pet";
+import {
+  isPetWorkItemId,
+  MAX_PET_WORK_INBOX_DISMISSED_ITEMS,
+  type PetWorkInboxSnapshot,
+} from "./pet-work-inbox-store.js";
 import { randomUUID } from "node:crypto";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
@@ -17,6 +24,9 @@ export const PET_ATTENTION_EVENT_CHANNEL = "pet:attention-event";
 export const PET_ACTIVE_SESSION_CHANNEL = "pet:set-active-session";
 export const PET_ATTENTION_RECEIPT_CHANNEL = "pet:attention-receipt";
 export const PET_CHAT_EVENT_CHANNEL = "pet:chat-event";
+export const PET_WORK_INBOX_SNAPSHOT_CHANNEL = "pet:work-inbox-dismissed-get";
+export const PET_WORK_INBOX_UPDATE_CHANNEL = "pet:work-inbox-dismissed-update";
+export const PET_WORK_INBOX_EVENT_CHANNEL = "pet:work-inbox-dismissed-changed";
 
 export interface PetIpcAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot;
@@ -43,6 +53,12 @@ export interface PetIpcAttention {
   subscribe(listener: (event: PetAttentionEvent) => void): () => void;
   setActiveSession(sessionId: string | null): void;
   markReceipts(keys: readonly string[], state: "seen" | "dismissed"): void;
+}
+
+export interface PetIpcWorkInbox {
+  getSnapshot(): PetWorkInboxSnapshot;
+  add(ids: readonly string[]): PetWorkInboxSnapshot;
+  clear(): PetWorkInboxSnapshot;
 }
 
 function afterReady<T>(ready: Promise<void> | undefined, callback: () => T): T | Promise<T> {
@@ -98,7 +114,9 @@ function parseDispatchCommand(value: unknown): PetDispatchCommand {
             key !== "type" &&
             key !== "message" &&
             key !== "clientMessageId" &&
-            key !== "preferredProjectPath",
+            key !== "preferredProjectPath" &&
+            key !== "digitalHumanId" &&
+            key !== "digitalHumanTeamId",
         ) ||
         typeof record.message !== "string" ||
         !record.message.trim() ||
@@ -107,7 +125,14 @@ function parseDispatchCommand(value: unknown): PetDispatchCommand {
         (record.preferredProjectPath !== undefined &&
           (typeof record.preferredProjectPath !== "string" ||
             !record.preferredProjectPath.trim() ||
-            record.preferredProjectPath.length > 4_096))
+            record.preferredProjectPath.length > 4_096)) ||
+        (record.digitalHumanId !== undefined &&
+          (typeof record.digitalHumanId !== "string" ||
+            !WORKSPACE_PROFILE_NAME_RE.test(record.digitalHumanId))) ||
+        (record.digitalHumanTeamId !== undefined &&
+          (typeof record.digitalHumanTeamId !== "string" ||
+            !DIGITAL_HUMAN_TEAM_ID_RE.test(record.digitalHumanTeamId))) ||
+        (record.digitalHumanId !== undefined && record.digitalHumanTeamId !== undefined)
       ) {
         throw new Error("invalid pet command");
       }
@@ -119,6 +144,12 @@ function parseDispatchCommand(value: unknown): PetDispatchCommand {
           : {}),
         ...(typeof record.preferredProjectPath === "string"
           ? { preferredProjectPath: record.preferredProjectPath }
+          : {}),
+        ...(typeof record.digitalHumanId === "string"
+          ? { digitalHumanId: record.digitalHumanId }
+          : {}),
+        ...(typeof record.digitalHumanTeamId === "string"
+          ? { digitalHumanTeamId: record.digitalHumanTeamId }
           : {}),
       };
     case "open_session":
@@ -132,12 +163,36 @@ function parseDispatchCommand(value: unknown): PetDispatchCommand {
   }
 }
 
+function parseWorkInboxUpdate(
+  value: unknown,
+): { action: "add"; ids: string[] } | { action: "clear" } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalid work inbox update");
+  }
+  const record = value as Record<string, unknown>;
+  if (record.action === "clear") {
+    if (Object.keys(record).length !== 1) throw new Error("invalid work inbox update");
+    return { action: "clear" };
+  }
+  if (
+    record.action !== "add" ||
+    Object.keys(record).some((key) => key !== "action" && key !== "ids") ||
+    !Array.isArray(record.ids) ||
+    record.ids.length > MAX_PET_WORK_INBOX_DISMISSED_ITEMS ||
+    record.ids.some((id) => !isPetWorkItemId(id))
+  ) {
+    throw new Error("invalid work inbox update");
+  }
+  return { action: "add", ids: record.ids as string[] };
+}
+
 export function registerPetIpc(options: {
   ipcMain: PetIpcMainLike;
   aggregator: PetIpcAggregator;
   windows: () => readonly PetIpcWindowLike[];
   dispatcher?: PetIpcDispatcher;
   attention?: PetIpcAttention;
+  workInbox?: PetIpcWorkInbox;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
@@ -208,6 +263,27 @@ export function registerPetIpc(options: {
       });
     });
   }
+  if (options.workInbox) {
+    options.ipcMain.handle(PET_WORK_INBOX_SNAPSHOT_CHANNEL, (_event, ...args) => {
+      if (args.length !== 0) throw new Error("work inbox snapshot does not accept arguments");
+      return afterReady(options.ready, () => options.workInbox!.getSnapshot());
+    });
+    options.ipcMain.handle(PET_WORK_INBOX_UPDATE_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1) throw new Error("invalid work inbox update");
+      const update = parseWorkInboxUpdate(args[0]);
+      return afterReady(options.ready, () => {
+        const snapshot =
+          update.action === "clear"
+            ? options.workInbox!.clear()
+            : options.workInbox!.add(update.ids);
+        for (const window of options.windows()) {
+          if (!window.isDestroyed())
+            window.webContents.send(PET_WORK_INBOX_EVENT_CHANNEL, snapshot);
+        }
+        return snapshot;
+      });
+    });
+  }
   const unsubscribe = options.aggregator.subscribe((event) => {
     for (const window of options.windows()) {
       if (!window.isDestroyed()) window.webContents.send(PET_EVENT_CHANNEL, event);
@@ -228,6 +304,10 @@ export function registerPetIpc(options: {
       options.ipcMain.removeHandler(PET_ATTENTION_SNAPSHOT_CHANNEL);
       options.ipcMain.removeHandler(PET_ACTIVE_SESSION_CHANNEL);
       options.ipcMain.removeHandler(PET_ATTENTION_RECEIPT_CHANNEL);
+    }
+    if (options.workInbox) {
+      options.ipcMain.removeHandler(PET_WORK_INBOX_SNAPSHOT_CHANNEL);
+      options.ipcMain.removeHandler(PET_WORK_INBOX_UPDATE_CHANNEL);
     }
   };
 }

@@ -16,6 +16,7 @@ export const delegateWorkToolDef: ToolDefinition = {
     "workspace_id must be copied exactly from the available Workspace list.",
   inputSchema: {
     type: "object",
+    additionalProperties: false,
     properties: {
       workspace_id: {
         type: "string",
@@ -53,14 +54,16 @@ function visibleReusableSessions(ctx: ToolVisibilityContext): readonly PetReusab
 
 function visibleDigitalHumans(ctx: ToolVisibilityContext): readonly PetDigitalHumanOption[] {
   const digitalHumans = ctx.profileMeta?.petDigitalHumans;
-  return Array.isArray(digitalHumans)
-    ? (digitalHumans as readonly PetDigitalHumanOption[])
-    : [];
+  return Array.isArray(digitalHumans) ? (digitalHumans as readonly PetDigitalHumanOption[]) : [];
 }
 
 /** Available only when the active run profile published at least one Workspace. */
 export function delegateWorkAvailability(ctx: ToolVisibilityContext): boolean {
-  return visibleWorkspaces(ctx).length > 0;
+  return ctx.behaviorProfile === "pet" && visibleWorkspaces(ctx).length > 0;
+}
+
+function inlineDisplay(value: string, maximum: number): string {
+  return value.replace(/\s+/gu, " ").trim().slice(0, maximum);
 }
 
 /** Rewrite the static def with the run's closed workspace_id enum + listing. */
@@ -88,7 +91,9 @@ export function delegateWorkToolDefFor(
     ? available
         .map(
           (workspace) =>
-            `- ${workspace.id}: ${workspace.name}${workspace.description ? ` — ${workspace.description}` : ""}`,
+            `- ${JSON.stringify(workspace.id)}: ${inlineDisplay(workspace.name, 256)}${
+              workspace.description ? ` — ${inlineDisplay(workspace.description, 4_096)}` : ""
+            }`,
         )
         .join("\n")
     : "- (no Workspace is currently available)";
@@ -96,8 +101,8 @@ export function delegateWorkToolDefFor(
     ? sessions
         .map(
           (session) =>
-            `- ${session.id}: ${session.name} (Workspace ${session.workspaceId})${
-              session.description ? ` — ${session.description}` : ""
+            `- ${JSON.stringify(session.id)}: ${inlineDisplay(session.name, 256)} (Workspace ${JSON.stringify(session.workspaceId)})${
+              session.description ? ` — ${inlineDisplay(session.description, 4_096)}` : ""
             }`,
         )
         .join("\n")
@@ -106,7 +111,9 @@ export function delegateWorkToolDefFor(
     ? humans
         .map(
           (human) =>
-            `- ${human.id}: ${human.name}${human.description ? ` — ${human.description}` : ""}`,
+            `- ${JSON.stringify(human.id)}: ${inlineDisplay(human.name, 256)}${
+              human.description ? ` — ${inlineDisplay(human.description, 4_096)}` : ""
+            }`,
         )
         .join("\n")
     : "- (no digital human was selected; omit digital_human_id)";
@@ -142,8 +149,7 @@ export function delegateWorkToolDefFor(
               digital_human_id: {
                 type: "string",
                 enum: humans.map((human) => human.id),
-                description:
-                  "Required exact id from the selected digital-human/team member list.",
+                description: "Required exact id from the selected digital-human/team member list.",
               },
             }
           : {}),
@@ -161,12 +167,14 @@ export async function delegateWorkTool(
   ctx?: ToolContext,
 ): Promise<string> {
   const services = ctx?.runScopedServices as Partial<PetRunScopedServices> | undefined;
-  if (
-    !services?.requestPetWorkDelegation ||
-    !services.petWorkspaces ||
-    !services.petReusableSessions ||
-    !services.petDigitalHumans
-  ) {
+  const workspaces = Array.isArray(services?.petWorkspaces) ? services.petWorkspaces : undefined;
+  const reusableSessions = Array.isArray(services?.petReusableSessions)
+    ? services.petReusableSessions
+    : undefined;
+  const digitalHumans = Array.isArray(services?.petDigitalHumans)
+    ? services.petDigitalHumans
+    : undefined;
+  if (!services?.requestPetWorkDelegation || !workspaces || !reusableSessions || !digitalHumans) {
     return "Error: DelegateWork is available only in a Mimi manager turn.";
   }
   const workspaceId = typeof args.workspace_id === "string" ? args.workspace_id.trim() : "";
@@ -178,12 +186,12 @@ export async function delegateWorkTool(
   if (!objective) return "Error: objective is required.";
   if (objective.length > 8_000) return "Error: objective is too long (maximum 8000 characters).";
 
-  const workspace = services.petWorkspaces.find((candidate) => candidate.id === workspaceId);
+  const workspace = workspaces.find((candidate) => candidate?.id === workspaceId);
   if (!workspace) {
     return `Error: unknown workspace_id ${JSON.stringify(workspaceId)}. Copy one exact id from the available Workspace list.`;
   }
   const reusableSession = reusableSessionId
-    ? services.petReusableSessions.find((candidate) => candidate.id === reusableSessionId)
+    ? reusableSessions.find((candidate) => candidate?.id === reusableSessionId)
     : undefined;
   if (reusableSessionId && !reusableSession) {
     return `Error: unknown session_id ${JSON.stringify(reusableSessionId)}. Copy one exact id from the reusable Session list or omit session_id.`;
@@ -192,9 +200,9 @@ export async function delegateWorkTool(
     return "Error: session_id does not belong to workspace_id.";
   }
   const digitalHuman = digitalHumanId
-    ? services.petDigitalHumans.find((candidate) => candidate.id === digitalHumanId)
+    ? digitalHumans.find((candidate) => candidate?.id === digitalHumanId)
     : undefined;
-  if (services.petDigitalHumans.length > 0 && !digitalHumanId) {
+  if (digitalHumans.length > 0 && !digitalHumanId) {
     return "Error: digital_human_id is required for the selected digital human or team.";
   }
   if (digitalHumanId && !digitalHuman) {

@@ -27,4 +27,17 @@ describe("digital-human team", () => {
       expect(() => parseDigitalHumanTeam(input)).toThrow();
     }
   });
+
+  test("rejects member ids that cannot name a digital-human profile", () => {
+    for (const member of ["Uppercase", "../escape", "white space", "x".repeat(65)]) {
+      expect(() =>
+        parseDigitalHumanTeam({
+          id: "invalid-member",
+          name: "Invalid member",
+          members: ["valid", member],
+          mode: "divide",
+        }),
+      ).toThrow("digital-human team members must be unique valid ids");
+    }
+  });
 });

@@ -1,15 +1,17 @@
 import type { PetPendingDecision, PetSessionProjection } from "../../preload/types";
 
-export type PetWorkKind = "unfinished" | "optimization" | "completed";
+export type PetWorkKind = "unfinished" | "optimization" | "completed" | "other";
 export type PetWorkState =
   | "needs-action"
-  | "follow-up"
   | "running"
   | "queued"
   | "failed"
   | "cancelled"
   | "optimization"
-  | "completed";
+  | "completed"
+  | "idle"
+  | "dormant"
+  | "unknown";
 
 export interface PetWorkItem {
   id: string;
@@ -31,6 +33,7 @@ export interface PetWorkspaceWorkGroup {
   unfinished: PetWorkItem[];
   optimization: PetWorkItem[];
   completed: PetWorkItem[];
+  other: PetWorkItem[];
   latestActivityAt: number;
 }
 
@@ -40,29 +43,19 @@ export interface PetWorkMap {
   itemIds: Record<PetWorkKind, string[]>;
   dismissedCount: number;
   hiddenCount: number;
-  unclassifiedCount: number;
 }
 
 const DISPLAY_LIMITS: Record<PetWorkKind, number> = {
   unfinished: 16,
   optimization: 10,
   completed: 8,
+  other: 16,
 };
-
-const OPTIMIZATION_PATTERN =
-  /(?:优化|改进|改善|重构|性能|体验|技术债|可维护|refactor|optimi[sz]|improve|tech(?:nical)? debt)/i;
-const COMPLETED_PATTERN = /(?:本轮已完成|已经完成|处理完成|completed|finished|done)/i;
-const FOLLOW_UP_PATTERN =
-  /(?:下一步|仍需|还需|需要继续|待处理|待完成|未完成|请确认|请提供|等待(?:你|用户)|需(?:你|用户)|\btodo\b|follow[ -]?up|remaining|needs? (?:input|confirmation|work))/i;
-
-function textOf(session: PetSessionProjection): string {
-  return `${session.title ?? ""}\n${session.summary ?? ""}`;
-}
 
 function itemFromSession(
   session: PetSessionProjection,
   pending: PetPendingDecision | undefined,
-): PetWorkItem | null {
+): PetWorkItem {
   const base = {
     workspace: session.workspaceDisplayName,
     title: session.title ?? session.workspaceDisplayName ?? session.agentSessionId.slice(-8),
@@ -111,10 +104,7 @@ function itemFromSession(
       detail: session.summary,
     };
   }
-  if (
-    session.terminal?.status === "completed" ||
-    (session.runState === "idle" && COMPLETED_PATTERN.test(session.summary ?? ""))
-  ) {
+  if (session.terminal?.status === "completed") {
     return {
       ...base,
       id: `completed:${session.agentSessionId}`,
@@ -123,25 +113,15 @@ function itemFromSession(
       detail: session.summary,
     };
   }
-  if (OPTIMIZATION_PATTERN.test(textOf(session))) {
-    return {
-      ...base,
-      id: `optimization:${session.agentSessionId}`,
-      kind: "optimization",
-      state: "optimization",
-      detail: session.summary,
-    };
-  }
-  if (FOLLOW_UP_PATTERN.test(textOf(session))) {
-    return {
-      ...base,
-      id: `follow-up:${session.agentSessionId}`,
-      kind: "unfinished",
-      state: "follow-up",
-      detail: session.summary,
-    };
-  }
-  return null;
+  const state: Extract<PetWorkState, "idle" | "dormant" | "unknown"> =
+    session.runState === "idle" ? "idle" : session.runState === "dormant" ? "dormant" : "unknown";
+  return {
+    ...base,
+    id: `other:${session.agentSessionId}`,
+    kind: "other",
+    state,
+    detail: session.summary,
+  };
 }
 
 function pendingWithoutSession(pending: PetPendingDecision): PetWorkItem {
@@ -161,10 +141,10 @@ function pendingWithoutSession(pending: PetPendingDecision): PetWorkItem {
 }
 
 /**
- * Presentation-only projection. It deliberately omits dormant/idle sessions
- * without an explicit outcome so the Pet never pretends that inactivity means
- * either complete or unfinished. Those records are counted as unclassified
- * until the future structured work-item tools provide an authoritative state.
+ * Presentation-only projection based exclusively on structured projection
+ * fields. Titles and summaries are display data, never classification input.
+ * Sessions without an authoritative actionable/terminal state remain visible
+ * under Other instead of disappearing behind a heuristic.
  */
 export function buildPetWorkMap(
   sessions: readonly PetSessionProjection[],
@@ -183,12 +163,10 @@ export function buildPetWorkMap(
   }
 
   const classified: PetWorkItem[] = [];
-  let unclassifiedCount = 0;
   for (const session of sessions) {
     if (options.excludedSessionIds?.has(session.agentSessionId)) continue;
     const item = itemFromSession(session, pendingBySession.get(session.agentSessionId));
-    if (item) classified.push(item);
-    else unclassifiedCount += 1;
+    classified.push(item);
   }
   for (const decision of pending) {
     if (options.excludedSessionIds?.has(decision.agentSessionId)) continue;
@@ -202,13 +180,15 @@ export function buildPetWorkMap(
     unfinished: included.filter((item) => item.kind === "unfinished").length,
     optimization: included.filter((item) => item.kind === "optimization").length,
     completed: included.filter((item) => item.kind === "completed").length,
+    other: included.filter((item) => item.kind === "other").length,
   };
   const itemIds: Record<PetWorkKind, string[]> = {
     unfinished: included.filter((item) => item.kind === "unfinished").map((item) => item.id),
     optimization: included.filter((item) => item.kind === "optimization").map((item) => item.id),
     completed: included.filter((item) => item.kind === "completed").map((item) => item.id),
+    other: included.filter((item) => item.kind === "other").map((item) => item.id),
   };
-  const visible = (["unfinished", "optimization", "completed"] as const).flatMap((kind) =>
+  const visible = (["unfinished", "optimization", "completed", "other"] as const).flatMap((kind) =>
     included.filter((item) => item.kind === kind).slice(0, DISPLAY_LIMITS[kind]),
   );
   const groupsByWorkspace = new Map<string, PetWorkspaceWorkGroup>();
@@ -219,6 +199,7 @@ export function buildPetWorkMap(
       unfinished: [],
       optimization: [],
       completed: [],
+      other: [],
       latestActivityAt: 0,
     };
     group[item.kind].push(item);
@@ -234,6 +215,5 @@ export function buildPetWorkMap(
     itemIds,
     dismissedCount,
     hiddenCount: included.length - visible.length,
-    unclassifiedCount,
   };
 }

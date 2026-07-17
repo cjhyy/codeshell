@@ -142,6 +142,62 @@ describe("registerPetIpc", () => {
     );
   });
 
+  test("passes a validated digital-human or team selection through the IPC boundary", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const received: unknown[] = [];
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      dispatcher: {
+        dispatch: async (command) => {
+          received.push(command);
+          return { ok: true, type: "chat", petSessionId: "pet-one", result: {} };
+        },
+      },
+      windows: () => [],
+    });
+    const dispatch = handlers.get("pet:dispatch")!;
+
+    await dispatch({}, { type: "chat", message: "research", digitalHumanId: "researcher" });
+    await dispatch({}, { type: "chat", message: "ship it", digitalHumanTeamId: "delivery-team" });
+
+    expect(received).toEqual([
+      {
+        type: "chat",
+        message: "research",
+        digitalHumanId: "researcher",
+        clientMessageId: expect.stringMatching(/^pet-/),
+      },
+      {
+        type: "chat",
+        message: "ship it",
+        digitalHumanTeamId: "delivery-team",
+        clientMessageId: expect.stringMatching(/^pet-/),
+      },
+    ]);
+    expect(() =>
+      dispatch(
+        {},
+        {
+          type: "chat",
+          message: "ambiguous",
+          digitalHumanId: "researcher",
+          digitalHumanTeamId: "delivery-team",
+        },
+      ),
+    ).toThrow("invalid pet command");
+    expect(() =>
+      dispatch({}, { type: "chat", message: "escape", digitalHumanId: "../profile" }),
+    ).toThrow("invalid pet command");
+  });
+
   test("accepts only a structured navigation request and delegates revalidation", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     let received: unknown;
@@ -206,5 +262,67 @@ describe("registerPetIpc", () => {
     resolveReady?.();
     expect(await pending).toEqual(snapshot());
     expect(snapshotReads).toBe(1);
+  });
+
+  test("mutates work inbox dismissal state in main and broadcasts the authoritative revision", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const sent: Array<[string, unknown]> = [];
+    let state = { revision: 4, dismissedIds: ["completed:session-a"] };
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      workInbox: {
+        getSnapshot: () => state,
+        add: (ids) =>
+          (state = {
+            revision: state.revision + 1,
+            dismissedIds: [...new Set([...state.dismissedIds, ...ids])],
+          }),
+        clear: () => (state = { revision: state.revision + 1, dismissedIds: [] }),
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    expect(await handlers.get("pet:work-inbox-dismissed-get")?.({})).toEqual(state);
+    expect(
+      await handlers.get("pet:work-inbox-dismissed-update")?.(
+        {},
+        { action: "add", ids: ["other:session-b"] },
+      ),
+    ).toEqual({
+      revision: 5,
+      dismissedIds: ["completed:session-a", "other:session-b"],
+    });
+    expect(
+      await handlers.get("pet:work-inbox-dismissed-update")?.({}, { action: "clear" }),
+    ).toEqual({ revision: 6, dismissedIds: [] });
+    expect(sent).toEqual([
+      [
+        "pet:work-inbox-dismissed-changed",
+        { revision: 5, dismissedIds: ["completed:session-a", "other:session-b"] },
+      ],
+      ["pet:work-inbox-dismissed-changed", { revision: 6, dismissedIds: [] }],
+    ]);
+    expect(() =>
+      handlers.get("pet:work-inbox-dismissed-update")?.({}, { action: "add", ids: ["unscoped"] }),
+    ).toThrow("invalid work inbox update");
+    expect(() =>
+      handlers.get("pet:work-inbox-dismissed-update")?.(
+        {},
+        { action: "clear", ids: ["completed:session-a"] },
+      ),
+    ).toThrow("invalid work inbox update");
   });
 });

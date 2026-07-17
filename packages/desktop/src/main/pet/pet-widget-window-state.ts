@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
-import * as os from "node:os";
 import * as path from "node:path";
+import { randomUUID } from "node:crypto";
+import { codeShellHome } from "@cjhyy/code-shell-core";
 
 export const PET_WIDGET_WINDOW_SIZE = 112;
 export const PET_WIDGET_WINDOW_MARGIN = 12;
@@ -23,7 +24,11 @@ export function shouldSkipPetWidgetTaskbar(platform: NodeJS.Platform): boolean {
   return platform !== "darwin";
 }
 
-const FILE = path.join(os.homedir(), ".code-shell", "desktop", "pet-widget.json");
+let positionWriteQueue = Promise.resolve();
+
+export function petWidgetWindowStatePath(): string {
+  return path.join(codeShellHome(), "desktop", "pet-widget.json");
+}
 
 export function sanitizePetWidgetWindowPosition(value: unknown): PetWidgetWindowPosition | null {
   if (!value || typeof value !== "object") return null;
@@ -74,20 +79,34 @@ export function defaultPetWidgetWindowPosition(
 }
 
 export async function loadPetWidgetWindowPosition(): Promise<PetWidgetWindowPosition | null> {
+  const file = petWidgetWindowStatePath();
   try {
-    return sanitizePetWidgetWindowPosition(JSON.parse(await fs.readFile(FILE, "utf8")));
+    return sanitizePetWidgetWindowPosition(JSON.parse(await fs.readFile(file, "utf8")));
   } catch {
     return null;
   }
 }
 
-export async function savePetWidgetWindowPosition(
-  position: PetWidgetWindowPosition,
-): Promise<void> {
-  try {
-    await fs.mkdir(path.dirname(FILE), { recursive: true });
-    await fs.writeFile(FILE, JSON.stringify(position, null, 2), "utf8");
-  } catch {
-    // Best effort: the current desktop window can still be dragged.
-  }
+export function savePetWidgetWindowPosition(position: PetWidgetWindowPosition): Promise<void> {
+  const snapshot = sanitizePetWidgetWindowPosition(position);
+  if (!snapshot) return Promise.resolve();
+  const write = positionWriteQueue.then(async () => {
+    const file = petWidgetWindowStatePath();
+    await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
+    const temporary = `${file}.tmp-${process.pid}-${randomUUID()}`;
+    try {
+      await fs.writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, {
+        encoding: "utf8",
+        flag: "wx",
+        mode: 0o600,
+      });
+      await fs.rename(temporary, file);
+    } finally {
+      await fs.rm(temporary, { force: true });
+    }
+  });
+  // Preserve call order even when one best-effort write fails. The returned
+  // promise also resolves so drag/close paths never surface persistence errors.
+  positionWriteQueue = write.catch(() => {});
+  return write.catch(() => {});
 }

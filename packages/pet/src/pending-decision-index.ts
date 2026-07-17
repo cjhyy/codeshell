@@ -6,6 +6,7 @@ import {
 } from "./types.js";
 
 const MAX_TITLE_LENGTH = 80;
+const MAX_TERMINAL_DECISIONS = 256;
 
 export function safePendingTitle(value: string): string {
   const redacted = value
@@ -60,7 +61,7 @@ export class PendingDecisionIndex {
       workerGeneration: metadata.workerGeneration,
       kind: metadata.kind,
       title: projectedTitle(metadata),
-      toolName: metadata.toolName,
+      toolName: metadata.toolName ? safeToolName(metadata.toolName) : undefined,
       riskLevel: metadata.riskLevel,
       createdAt: metadata.createdAt,
       expiresAt: metadata.expiresAt,
@@ -84,6 +85,7 @@ export class PendingDecisionIndex {
       status: transition.status,
       terminalAt: transition.terminalAt,
     });
+    this.pruneTerminalEntries();
     return true;
   }
 
@@ -102,6 +104,7 @@ export class PendingDecisionIndex {
         terminalAt: observedAt,
       });
     }
+    this.pruneTerminalEntries();
   }
 
   get(sessionId: string, requestId: string): PendingDecisionProjection | undefined {
@@ -122,5 +125,18 @@ export class PendingDecisionIndex {
 
   pendingSnapshot(): PendingDecisionProjection[] {
     return this.snapshot().filter((entry) => entry.status === "pending");
+  }
+
+  private pruneTerminalEntries(): void {
+    const terminal = [...this.entries.entries()]
+      .filter(([, entry]) => entry.status !== "pending")
+      .sort(
+        ([, a], [, b]) =>
+          (a.terminalAt ?? a.createdAt) - (b.terminalAt ?? b.createdAt) ||
+          a.createdAt - b.createdAt,
+      );
+    for (const [entryKey] of terminal.slice(0, -MAX_TERMINAL_DECISIONS)) {
+      this.entries.delete(entryKey);
+    }
   }
 }

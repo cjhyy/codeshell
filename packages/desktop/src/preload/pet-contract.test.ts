@@ -19,6 +19,16 @@ describe("Pet preload contract", () => {
         if (channel === "pet:get-attention") return { surfaceablePendingCount: 2 };
         if (channel === "pet:set-active-session") return { ok: true };
         if (channel === "pet:attention-receipt") return { ok: true };
+        if (channel === "pet:work-inbox-dismissed-get") {
+          return { revision: 2, dismissedIds: ["completed:session-a"] };
+        }
+        if (channel === "pet:work-inbox-dismissed-update") {
+          expect(payload).toEqual({ action: "add", ids: ["other:session-b"] });
+          return {
+            revision: 3,
+            dismissedIds: ["completed:session-a", "other:session-b"],
+          };
+        }
         if (channel === "pet:widget-visible-get") return false;
         if (channel === "pet:widget-visible") return { ok: true };
         if (channel === "pet:widget-expanded") return { ok: true };
@@ -91,6 +101,31 @@ describe("Pet preload contract", () => {
     expect(await api.getAttentionSnapshot()).toEqual({ surfaceablePendingCount: 2 });
     expect(await api.setActiveSession("work-a")).toEqual({ ok: true });
     expect(await api.markAttentionReceipt(["receipt"], "dismissed")).toEqual({ ok: true });
+    expect(await api.getDismissedWorkItemIds()).toEqual({
+      revision: 2,
+      dismissedIds: ["completed:session-a"],
+    });
+    expect(
+      await api.updateDismissedWorkItemIds({
+        action: "add",
+        ids: ["other:session-b"],
+      }),
+    ).toEqual({
+      revision: 3,
+      dismissedIds: ["completed:session-a", "other:session-b"],
+    });
+    const inboxSnapshots: number[] = [];
+    const offInbox = api.onDismissedWorkItemIdsChanged((value) =>
+      inboxSnapshots.push(value.revision),
+    );
+    for (const handler of handlers.get("pet:work-inbox-dismissed-changed") ?? []) {
+      handler({}, { revision: 4, dismissedIds: [] });
+    }
+    offInbox();
+    for (const handler of handlers.get("pet:work-inbox-dismissed-changed") ?? []) {
+      handler({}, { revision: 5, dismissedIds: [] });
+    }
+    expect(inboxSnapshots).toEqual([4]);
     expect(await api.getWidgetVisibility()).toBe(false);
     expect(await api.setWidgetVisible(true)).toEqual({ ok: true });
     expect(await api.setWidgetExpanded(true)).toEqual({ ok: true });

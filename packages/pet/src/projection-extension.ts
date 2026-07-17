@@ -30,190 +30,6 @@ import {
 /** Session kinds owned by the pet domain — hidden from generic session lists. */
 export const PET_HIDDEN_SESSION_KINDS: readonly string[] = ["pet"];
 
-function validateRuntimeContext(value: unknown, label: string): string | null {
-  if (typeof value !== "string" || value.length > 32_768) {
-    return `${label} must be bounded JSON`;
-  }
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return `${label} must be a JSON object`;
-    }
-  } catch {
-    return `${label} must be valid JSON`;
-  }
-  return null;
-}
-
-function validateWorkspaces(value: unknown, label: string): string | null {
-  if (!Array.isArray(value) || value.length > 64) {
-    return `${label} must be a bounded array`;
-  }
-  const ids = new Set<string>();
-  for (const entry of value) {
-    const workspace = entry as {
-      id?: unknown;
-      name?: unknown;
-      description?: unknown;
-    } | null;
-    if (
-      !workspace ||
-      typeof workspace !== "object" ||
-      typeof workspace.id !== "string" ||
-      !workspace.id.trim() ||
-      workspace.id.length > 128 ||
-      typeof workspace.name !== "string" ||
-      !workspace.name.trim() ||
-      workspace.name.length > 256 ||
-      (workspace.description !== undefined &&
-        (typeof workspace.description !== "string" || workspace.description.length > 4_096)) ||
-      ids.has(workspace.id)
-    ) {
-      return `${label} contains an invalid or duplicate Workspace`;
-    }
-    ids.add(workspace.id);
-  }
-  return null;
-}
-
-function validateReusableSessions(value: unknown, label: string): string | null {
-  if (!Array.isArray(value) || value.length > 32) {
-    return `${label} must be a bounded array`;
-  }
-  const ids = new Set<string>();
-  for (const entry of value) {
-    const session = entry as {
-      id?: unknown;
-      workspaceId?: unknown;
-      name?: unknown;
-      description?: unknown;
-    } | null;
-    if (
-      !session ||
-      typeof session !== "object" ||
-      typeof session.id !== "string" ||
-      !session.id.trim() ||
-      session.id.length > 128 ||
-      typeof session.workspaceId !== "string" ||
-      !session.workspaceId.trim() ||
-      session.workspaceId.length > 128 ||
-      typeof session.name !== "string" ||
-      !session.name.trim() ||
-      session.name.length > 256 ||
-      (session.description !== undefined &&
-        (typeof session.description !== "string" || session.description.length > 4_096)) ||
-      ids.has(session.id)
-    ) {
-      return `${label} contains an invalid or duplicate reusable Session`;
-    }
-    ids.add(session.id);
-  }
-  return null;
-}
-
-function validateDigitalHumans(value: unknown, label: string): string | null {
-  if (!Array.isArray(value) || value.length > 8) return `${label} must be a bounded array`;
-  const ids = new Set<string>();
-  for (const entry of value) {
-    const human = entry as { id?: unknown; name?: unknown; description?: unknown } | null;
-    if (
-      !human ||
-      typeof human !== "object" ||
-      typeof human.id !== "string" ||
-      !human.id.trim() ||
-      human.id.length > 128 ||
-      typeof human.name !== "string" ||
-      !human.name.trim() ||
-      human.name.length > 256 ||
-      (human.description !== undefined &&
-        (typeof human.description !== "string" || human.description.length > 4_096)) ||
-      ids.has(human.id)
-    ) {
-      return `${label} contains an invalid or duplicate digital human`;
-    }
-    ids.add(human.id);
-  }
-  return null;
-}
-
-/**
- * Pet-specific agent/run params validation. This validator owns only Pet
- * requests: other extension modes and kinds must pass through untouched. For
- * Pet runs it validates the effective generic profileParams values using the
- * same precedence as Engine (canonical keys override deprecated aliases).
- */
-export function validatePetRunParams(params: Record<string, unknown>): string | null {
-  const hasLegacyRuntimeContext = params.petRuntimeContext !== undefined;
-  const hasLegacyWorkspaces = params.petWorkspaces !== undefined;
-  const isPetRequest =
-    params.behaviorMode === "pet" ||
-    params.kind === "pet" ||
-    hasLegacyRuntimeContext ||
-    hasLegacyWorkspaces;
-  if (!isPetRequest) return null;
-
-  if (hasLegacyRuntimeContext && (params.behaviorMode !== "pet" || params.kind !== "pet")) {
-    return "petRuntimeContext requires behaviorMode=pet and kind=pet";
-  }
-  if (hasLegacyWorkspaces && (params.behaviorMode !== "pet" || params.kind !== "pet")) {
-    return "petWorkspaces requires behaviorMode=pet and kind=pet";
-  }
-
-  const profileParams =
-    params.profileParams &&
-    typeof params.profileParams === "object" &&
-    !Array.isArray(params.profileParams)
-      ? (params.profileParams as Record<string, unknown>)
-      : undefined;
-  const hasCanonicalRuntimeContext =
-    profileParams !== undefined &&
-    Object.prototype.hasOwnProperty.call(profileParams, "runtimeContext");
-  const hasCanonicalWorkspaces =
-    profileParams !== undefined &&
-    Object.prototype.hasOwnProperty.call(profileParams, "workspaces");
-  const hasCanonicalReusableSessions =
-    profileParams !== undefined &&
-    Object.prototype.hasOwnProperty.call(profileParams, "reusableSessions");
-  const hasCanonicalDigitalHumans =
-    profileParams !== undefined &&
-    Object.prototype.hasOwnProperty.call(profileParams, "digitalHumans");
-
-  const runtimeContext = hasCanonicalRuntimeContext
-    ? profileParams.runtimeContext
-    : params.petRuntimeContext;
-  if (runtimeContext !== undefined) {
-    const error = validateRuntimeContext(
-      runtimeContext,
-      hasCanonicalRuntimeContext ? "profileParams.runtimeContext" : "petRuntimeContext",
-    );
-    if (error) return error;
-  }
-
-  const workspaces = hasCanonicalWorkspaces ? profileParams.workspaces : params.petWorkspaces;
-  if (workspaces !== undefined) {
-    const error = validateWorkspaces(
-      workspaces,
-      hasCanonicalWorkspaces ? "profileParams.workspaces" : "petWorkspaces",
-    );
-    if (error) return error;
-  }
-  if (hasCanonicalReusableSessions) {
-    const error = validateReusableSessions(
-      profileParams.reusableSessions,
-      "profileParams.reusableSessions",
-    );
-    if (error) return error;
-  }
-  if (hasCanonicalDigitalHumans) {
-    const error = validateDigitalHumans(
-      profileParams.digitalHumans,
-      "profileParams.digitalHumans",
-    );
-    if (error) return error;
-  }
-  return null;
-}
-
 /**
  * Build the pet projection observer. All former AgentServer pet state and
  * methods live here, keyed off the domain-neutral host surface.
@@ -264,7 +80,9 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
     const pendingDecisionCount = pendingDecisionIndex
       .pendingSnapshot()
       .filter((entry) => entry.agentSessionId === sessionId).length;
-    const runState = live.busy ? "running" : live.queueDepth > 0 ? "queued" : "idle";
+    const liveRunState = live.busy ? "running" : live.queueDepth > 0 ? "queued" : "idle";
+    const terminal = liveRunState === "idle" ? indexed?.terminal : undefined;
+    const runState = terminal ? "terminal" : liveRunState;
     return {
       owner: LOCAL_PET_OWNER,
       agentSessionId: sessionId,
@@ -280,9 +98,9 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
             : `等待用户决定（${pendingDecisionCount}）`
           : (indexed?.summary ?? (runState === "running" ? "运行中" : undefined)),
       queueDepth: live.queueDepth,
-      lastActivityAt: live.lastActivityAt,
+      lastActivityAt: Math.max(live.lastActivityAt, indexed?.lastActivityAt ?? 0),
       pendingDecisionCount,
-      terminal: runState === "idle" ? undefined : indexed?.terminal,
+      terminal,
       freshness: { source: "live-snapshot", observedAt, workerState: "active" },
     };
   };
@@ -443,7 +261,13 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
       transitionPendingDecision(metadata, status as Exclude<PendingDecisionStatus, "pending">);
     },
     onSessionClosed: (sessionId) => {
+      const observedAt = Date.now();
       petCatalog.delete(sessionId);
+      petSessionIndex.replaceCatalog({
+        owner: LOCAL_PET_OWNER,
+        sessions: [...petCatalog.values()],
+        observedAt,
+      });
       emitPetSessionRemove(sessionId);
     },
     onServerClose: () => {

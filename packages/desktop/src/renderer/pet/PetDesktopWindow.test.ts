@@ -31,5 +31,8 @@ describe("Pet desktop mini chat", () => {
     expect(source).toContain("autoExpandedWorkRef.current || workActivity.items.length === 0");
     expect(source).toContain("autoExpandedWorkRef.current = true");
     expect(source.slice(attentionStart, attentionEnd)).toContain("showPanel()");
+    expect(source).toContain("const state = usePetProjectionState(api)");
+    expect(source).toContain("bufferPetAttentionEvent(buffered, event)");
+    expect(source).not.toContain("void api.getSnapshot()");
   });
 });

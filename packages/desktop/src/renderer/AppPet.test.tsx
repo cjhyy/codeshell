@@ -45,6 +45,14 @@ describe("App Pet lifecycle boundaries", () => {
     expect(petSource).toContain("digitalHumanId");
   });
 
+  test("persists, validates, and synchronizes the Pet digital-human selection", () => {
+    expect(appSource).toContain("loadDigitalHumanSelection()");
+    expect(appSource).toContain("saveDigitalHumanSelection(petDigitalHumanSelection)");
+    expect(appSource).toContain('window.addEventListener("storage", onStorage)');
+    expect(appSource).toContain("window.codeshell.listProfiles()");
+    expect(appSource).toContain("window.codeshell.listDigitalHumanTeams()");
+  });
+
   test("opens the Pet page only from explicit entry or peek action wiring", () => {
     const openCalls = appSource.match(/viewMode: "pet"/g) ?? [];
     expect(openCalls).toHaveLength(2);

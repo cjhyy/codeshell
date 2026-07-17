@@ -159,4 +159,60 @@ describe("PendingDecisionIndex", () => {
       terminalAt: 200,
     });
   });
+
+  test("sanitizes tool names even when an alternate host skips core normalization", () => {
+    const index = new PendingDecisionIndex();
+    index.created({
+      sessionId: "session-a",
+      requestId: "unsafe-tool",
+      workerGeneration: 1,
+      kind: "tool_approval",
+      title: "raw title",
+      toolName: "Bash\nsecret-token-123456",
+      createdAt: 100,
+      surfaceable: true,
+    });
+
+    expect(index.get("session-a", "unsafe-tool")).toMatchObject({
+      title: "等待批准 工具",
+      toolName: "工具",
+    });
+    expect(JSON.stringify(index.snapshot())).not.toContain("secret-token");
+  });
+
+  test("keeps every pending decision but bounds terminal history for long-lived workers", () => {
+    const index = new PendingDecisionIndex();
+    for (let i = 0; i < 300; i += 1) {
+      const requestId = `request-${i}`;
+      index.created({
+        sessionId: "session-a",
+        requestId,
+        workerGeneration: 1,
+        kind: "ask_user",
+        title: "question",
+        createdAt: i,
+        surfaceable: true,
+      });
+      index.transition({
+        sessionId: "session-a",
+        requestId,
+        status: "resolved",
+        terminalAt: 1_000 + i,
+      });
+    }
+    index.created({
+      sessionId: "session-a",
+      requestId: "still-pending",
+      workerGeneration: 1,
+      kind: "ask_user",
+      title: "question",
+      createdAt: 2_000,
+      surfaceable: true,
+    });
+
+    expect(index.snapshot()).toHaveLength(257);
+    expect(index.get("session-a", "request-0")).toBeUndefined();
+    expect(index.get("session-a", "request-299")?.status).toBe("resolved");
+    expect(index.get("session-a", "still-pending")?.status).toBe("pending");
+  });
 });

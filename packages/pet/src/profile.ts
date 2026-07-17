@@ -1,11 +1,7 @@
 /**
  * The desktop Pet (Mimi) manager behavior, expressed as a generic
- * RunBehaviorProfile. This is the ONLY place in core that defines pet
- * behavior semantics — engine.ts, run-types.ts, dynamic-tool-defs.ts and the
- * tool-system apply it purely through the profile registry. Core registers
- * this profile by default for now; when the pet domain moves out to
- * packages/pet, hosts will register it via EngineConfig.behaviorProfiles /
- * ExtensionModule.behaviorProfiles instead.
+ * RunBehaviorProfile. Pet semantics stay in this package; core applies them
+ * only through the extension profile registry.
  */
 import type { RunBehaviorProfile } from "@cjhyy/code-shell-core/extension";
 import {
@@ -16,6 +12,7 @@ import {
   type PetReusableSessionOption,
   type PetWorkspaceOption,
 } from "./delegation.js";
+import { petRunOptionsFrom } from "./run-params.js";
 
 export const PET_SYSTEM_PROMPT = `# Local Mimi Manager Boundary
 
@@ -44,30 +41,6 @@ export interface PetRunScopedServices {
   requestPetWorkDelegation: (request: PetWorkDelegation) => PetWorkDelegationDecision;
 }
 
-function workspacesFrom(
-  profileParams: Readonly<Record<string, unknown>>,
-): readonly PetWorkspaceOption[] {
-  return Array.isArray(profileParams.workspaces)
-    ? (profileParams.workspaces as readonly PetWorkspaceOption[])
-    : [];
-}
-
-function reusableSessionsFrom(
-  profileParams: Readonly<Record<string, unknown>>,
-): readonly PetReusableSessionOption[] {
-  return Array.isArray(profileParams.reusableSessions)
-    ? (profileParams.reusableSessions as readonly PetReusableSessionOption[])
-    : [];
-}
-
-function digitalHumansFrom(
-  profileParams: Readonly<Record<string, unknown>>,
-): readonly PetDigitalHumanOption[] {
-  return Array.isArray(profileParams.digitalHumans)
-    ? (profileParams.digitalHumans as readonly PetDigitalHumanOption[])
-    : [];
-}
-
 export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
   id: "pet",
   systemPromptAppend: PET_SYSTEM_PROMPT,
@@ -78,17 +51,21 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
   runtimeContextTag: "pet-world",
   runtimeContextHeading: "# Trusted Pet Runtime Context (non-durable)",
   activateForSessionKinds: ["pet"],
-  buildVisibilityMeta: (profileParams) => ({
-    petWorkspaces: workspacesFrom(profileParams),
-    petReusableSessions: reusableSessionsFrom(profileParams),
-    petDigitalHumans: digitalHumansFrom(profileParams),
-  }),
+  buildVisibilityMeta: (profileParams) => {
+    const options = petRunOptionsFrom(profileParams);
+    return {
+      petWorkspaces: options.workspaces,
+      petReusableSessions: options.reusableSessions,
+      petDigitalHumans: options.digitalHumans,
+    };
+  },
   createRunServices: ({ profileParams, reportResult }) => {
     const delegated: PetWorkDelegation[] = [];
-    const digitalHumans = digitalHumansFrom(profileParams);
+    const options = petRunOptionsFrom(profileParams);
+    const digitalHumans = options.digitalHumans;
     const services: PetRunScopedServices = {
-      petWorkspaces: workspacesFrom(profileParams),
-      petReusableSessions: reusableSessionsFrom(profileParams),
+      petWorkspaces: options.workspaces,
+      petReusableSessions: options.reusableSessions,
       petDigitalHumans: digitalHumans,
       requestPetWorkDelegation: (request) => {
         if (digitalHumans.length === 0 && delegated.length > 0) {
@@ -99,7 +76,10 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
             return { ok: false, error: "the selected team has no unassigned member slot" };
           }
           if (delegated.some((entry) => entry.digitalHumanId === request.digitalHumanId)) {
-            return { ok: false, error: "each selected digital human can receive one assignment per turn" };
+            return {
+              ok: false,
+              error: "each selected digital human can receive one assignment per turn",
+            };
           }
         }
         delegated.push(request);

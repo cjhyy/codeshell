@@ -20,11 +20,8 @@ import {
   rewriteDelegateWorkDef,
 } from "./delegate-work.js";
 import { PET_BEHAVIOR_PROFILE } from "./profile.js";
-import {
-  createPetProjectionObserver,
-  PET_HIDDEN_SESSION_KINDS,
-  validatePetRunParams,
-} from "./projection-extension.js";
+import { createPetProjectionObserver, PET_HIDDEN_SESSION_KINDS } from "./projection-extension.js";
+import { validatePetRunParams } from "./run-params.js";
 
 export function createPetCapability(): ExtensionModule {
   return {

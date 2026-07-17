@@ -2,6 +2,7 @@ import React from "react";
 import {
   CheckCircle2,
   ChevronDown,
+  CircleEllipsis,
   CircleDot,
   FolderKanban,
   Inbox,
@@ -17,24 +18,28 @@ import type { PetWorkItem, PetWorkKind, PetWorkMap } from "./petWorkMap";
 
 const STATE_DOT: Record<PetWorkItem["state"], string> = {
   "needs-action": "bg-status-warn",
-  "follow-up": "bg-status-warn",
   running: "bg-status-running animate-pulse motion-reduce:animate-none",
   queued: "bg-status-running",
   failed: "bg-status-err",
   cancelled: "bg-muted-foreground",
   optimization: "bg-status-running",
   completed: "bg-status-ok",
+  idle: "bg-muted-foreground",
+  dormant: "bg-muted-foreground",
+  unknown: "bg-status-warn",
 };
 
 const STATE_BADGE: Record<PetWorkItem["state"], string> = {
   "needs-action": "bg-status-warn/10 text-status-warn",
-  "follow-up": "bg-status-warn/10 text-status-warn",
   running: "bg-status-running/10 text-status-running",
   queued: "bg-status-running/10 text-status-running",
   failed: "bg-status-err/10 text-status-err",
   cancelled: "bg-muted text-muted-foreground",
   optimization: "bg-status-running/10 text-status-running",
   completed: "bg-status-ok/10 text-status-ok",
+  idle: "bg-muted text-muted-foreground",
+  dormant: "bg-muted text-muted-foreground",
+  unknown: "bg-status-warn/10 text-status-warn",
 };
 
 const BRANCH_META: Record<PetWorkKind, { Icon: LucideIcon; icon: string; count: string }> = {
@@ -52,6 +57,11 @@ const BRANCH_META: Record<PetWorkKind, { Icon: LucideIcon; icon: string; count: 
     Icon: CheckCircle2,
     icon: "bg-status-ok/10 text-status-ok",
     count: "bg-status-ok/10 text-status-ok",
+  },
+  other: {
+    Icon: CircleEllipsis,
+    icon: "bg-muted text-muted-foreground",
+    count: "bg-muted text-muted-foreground",
   },
 };
 
@@ -177,7 +187,11 @@ export function PetWorkTree({
   const hasVisibleWork = workMap.groups.length > 0;
   const visibleItemCount = workMap.groups.reduce(
     (count, group) =>
-      count + group.unfinished.length + group.optimization.length + group.completed.length,
+      count +
+      group.unfinished.length +
+      group.optimization.length +
+      group.completed.length +
+      group.other.length,
     0,
   );
   const drawerSubtitle =
@@ -273,7 +287,10 @@ export function PetWorkTree({
             <ul className="space-y-3">
               {workMap.groups.map((group) => {
                 const itemCount =
-                  group.unfinished.length + group.optimization.length + group.completed.length;
+                  group.unfinished.length +
+                  group.optimization.length +
+                  group.completed.length +
+                  group.other.length;
                 return (
                   <li
                     key={group.workspace ?? "__unassigned__"}
@@ -309,6 +326,12 @@ export function PetWorkTree({
                         onOpen={onOpen}
                         onDismiss={onDismiss}
                       />
+                      <WorkBranch
+                        kind="other"
+                        items={group.other}
+                        onOpen={onOpen}
+                        onDismiss={onDismiss}
+                      />
                     </div>
                   </li>
                 );
@@ -325,17 +348,11 @@ export function PetWorkTree({
               <p className="max-w-sm text-sm leading-6 text-muted-foreground">{drawerSubtitle}</p>
             </div>
           )}
-          {(workMap.unclassifiedCount > 0 || workMap.hiddenCount > 0) &&
-            emptyState !== "loading" && (
-              <div className="mt-3 rounded-xl bg-muted/45 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
-                {workMap.unclassifiedCount > 0 && (
-                  <p>{t("pet.work.unclassified", { count: workMap.unclassifiedCount })}</p>
-                )}
-                {workMap.hiddenCount > 0 && (
-                  <p>{t("pet.work.hidden", { count: workMap.hiddenCount })}</p>
-                )}
-              </div>
-            )}
+          {workMap.hiddenCount > 0 && emptyState !== "loading" && (
+            <div className="mt-3 rounded-xl bg-muted/45 px-3 py-2 text-[11px] leading-5 text-muted-foreground">
+              <p>{t("pet.work.hidden", { count: workMap.hiddenCount })}</p>
+            </div>
+          )}
         </div>
       )}
     </section>

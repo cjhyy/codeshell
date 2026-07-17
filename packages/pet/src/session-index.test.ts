@@ -250,4 +250,28 @@ describe("SessionIndex", () => {
     });
     expect(index.list().map((session) => session.agentSessionId)).toEqual(["work-a"]);
   });
+
+  test("does not retain live state after catalog removal and same-id recreation", () => {
+    const index = new SessionIndex();
+    index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 100 });
+    index.applyStreamEvent({
+      sessionId: "work-a",
+      generation: 1,
+      version: 1,
+      observedAt: 200,
+      event: { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } },
+    });
+    expect(index.get("work-a")?.phase).toBe("tool");
+
+    index.replaceCatalog({ owner: "local-user", sessions: [], observedAt: 210 });
+    expect(index.get("work-a")).toBeUndefined();
+
+    index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 220 });
+    expect(index.get("work-a")).toMatchObject({
+      runState: "dormant",
+      pendingDecisionCount: 0,
+    });
+    expect(index.get("work-a")?.phase).toBeUndefined();
+    expect(index.get("work-a")?.summary).toBeUndefined();
+  });
 });

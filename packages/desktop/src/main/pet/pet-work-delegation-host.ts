@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import { injectMobileRunAndAwaitAcceptance, type MobileRunBridge } from "@cjhyy/code-shell-server";
+import {
+  injectMobileRunAndAwaitAcceptance,
+  type MobileRunBridge,
+} from "@cjhyy/code-shell-server/mobile-remote";
 import type { PetAutoDelegation } from "./pet-dispatch-service.js";
 
 export interface PetWorkDelegationLaunch {
