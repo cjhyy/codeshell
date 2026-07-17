@@ -1048,14 +1048,6 @@ async function createWindow(): Promise<BrowserWindow> {
         mobileRemote.broadcastRaw(line);
       }
     });
-    const aggregator = new PetStateAggregator({
-      bridge,
-      listDiskSessions,
-      onBackgroundError: (operation, error) => {
-        dlog("main", `pet.${operation}.failed`, { error: String(error) });
-      },
-    });
-    petStateAggregator = aggregator;
     const petMetadata = new PetMetadataStore(
       resolve(app.getPath("userData"), "pet", "metadata.json"),
     );
@@ -1066,6 +1058,18 @@ async function createWindow(): Promise<BrowserWindow> {
     const petWorkMemory = new PetWorkMemoryStore(
       resolve(app.getPath("userData"), "pet", "work-memory.json"),
     );
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions,
+      // Every snapshot carries the durable topic-segment boundary history so the
+      // Mimi chat UI can render segment dividers + brief cards; mid-session
+      // changes ride notifyWorkMemorySegmentsChanged (see beginTurn wrapper).
+      workMemorySegments: () => petWorkMemory.segmentBoundaries(),
+      onBackgroundError: (operation, error) => {
+        dlog("main", `pet.${operation}.failed`, { error: String(error) });
+      },
+    });
+    petStateAggregator = aggregator;
     // The topic-segment controller is created inside petInitialization once the
     // durable pet session id is known; until then the dispatch service holds a
     // stable wrapper that no-ops (beginTurn → undefined; closure → nothing).
@@ -1076,7 +1080,17 @@ async function createWindow(): Promise<BrowserWindow> {
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
       segmentController: {
-        beginTurn: () => petSegmentController?.beginTurn() ?? Promise.resolve(undefined),
+        beginTurn: async (clientMessageId) => {
+          if (!petSegmentController) return undefined;
+          const before = petSegmentController.segmentBoundaries().length;
+          const brief = await petSegmentController.beginTurn(clientMessageId);
+          // A new boundary means the chat UI must gain a divider now, not on the
+          // next full snapshot fetch: push it through the projection channel.
+          if (petSegmentController.segmentBoundaries().length !== before) {
+            aggregator.notifyWorkMemorySegmentsChanged();
+          }
+          return brief;
+        },
         onDelegationClosed: (closure) =>
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
@@ -1165,13 +1179,13 @@ async function createWindow(): Promise<BrowserWindow> {
       dispatcher: petDispatchService,
       attention,
       workInbox: petWorkInbox,
-      // Read-only topic-segment view for the Mimi chat UI. The store keeps a
-      // single time-keyed active segment with no chat-message-id association, so
-      // `segments` (message-keyed boundaries) is empty until the store records a
-      // segment start's message id; the renderer skips unmatched boundaries.
+      // Read-only topic-segment view for the Mimi chat UI. `segments` carries
+      // the message-keyed boundary history (keyed by each segment's first-turn
+      // client message id); the renderer skips any boundary whose message id is
+      // absent from the current transcript.
       workMemory: {
         getActiveSegmentId: () => petWorkMemory.activeSegment()?.id ?? null,
-        getSegments: () => [],
+        getSegments: () => petWorkMemory.segmentBoundaries(),
       },
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,

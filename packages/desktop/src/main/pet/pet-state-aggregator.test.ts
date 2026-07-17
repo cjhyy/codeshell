@@ -532,10 +532,12 @@ describe("PetStateAggregator", () => {
       now: () => 5_000,
     });
     await aggregator.start();
-    expect(aggregator.getSnapshot().sessions.map((s) => s.agentSessionId).sort()).toEqual([
-      "done",
-      "keep",
-    ]);
+    expect(
+      aggregator
+        .getSnapshot()
+        .sessions.map((s) => s.agentSessionId)
+        .sort(),
+    ).toEqual(["done", "keep"]);
 
     // Simulate the archive write: "done" now carries archivedAt and therefore
     // disappears from the default-filtered catalog.
@@ -665,5 +667,39 @@ describe("PetStateAggregator", () => {
         generation: 1,
       }),
     ).toEqual({ status: "not-found" });
+  });
+
+  test("carries the work-memory boundary history in every snapshot and pushes live changes", async () => {
+    const bridge = new FakeBridge();
+    const catalog = pagedCatalog([disk("one")]);
+    let boundaries: { boundaryBeforeMessageId: string; brief?: string }[] = [];
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: catalog.list,
+      now: () => 3_000,
+      workMemorySegments: () => boundaries,
+    });
+    await aggregator.start();
+
+    // Empty until the store records a boundary.
+    expect(aggregator.getSnapshot().workMemorySegments).toEqual([]);
+
+    const events: DesktopPetProjectionEvent[] = [];
+    aggregator.subscribe((event) => events.push(event));
+
+    // A new segment opens: the provider now yields one boundary, and the
+    // aggregator both reflects it in the next snapshot and pushes it live.
+    boundaries = [{ boundaryBeforeMessageId: "pet-a", brief: "未完成任务:\n- 重构 X" }];
+    aggregator.notifyWorkMemorySegmentsChanged();
+
+    expect(aggregator.getSnapshot().workMemorySegments).toEqual([
+      { boundaryBeforeMessageId: "pet-a", brief: "未完成任务:\n- 重构 X" },
+    ]);
+    const pushed = events.find((event) => event.kind === "work-memory-segments");
+    expect(pushed).toBeDefined();
+    expect(pushed).toMatchObject({
+      kind: "work-memory-segments",
+      segments: [{ boundaryBeforeMessageId: "pet-a", brief: "未完成任务:\n- 重构 X" }],
+    });
   });
 });

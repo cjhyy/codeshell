@@ -211,6 +211,7 @@ export type PetProjectionEvent = PetProjectionEventBase &
     | { kind: "pending-upsert"; pending: PetPendingDecision }
     | { kind: "pending-remove"; sessionId: string; requestId: string }
     | { kind: "worker-state"; state: PetWorkerState }
+    | { kind: "work-memory-segments"; segments: PetWorkMemorySegment[] }
     | { kind: "reset" }
   );
 

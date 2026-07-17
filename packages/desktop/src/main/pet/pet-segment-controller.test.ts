@@ -7,7 +7,7 @@ const HOUR = 60 * 60 * 1000;
 
 class FakePetWorkMemoryStore implements PetWorkMemoryStoreLike {
   appended: PetWorkMemoryEntry[] = [];
-  private segment: PetTopicSegment | undefined;
+  opened: PetTopicSegment[] = [];
   private last = 0;
 
   seed(input: { lastInteractionAt: number; entries: PetWorkMemoryEntry[] }): void {
@@ -18,7 +18,15 @@ class FakePetWorkMemoryStore implements PetWorkMemoryStoreLike {
     return this.appended;
   }
   activeSegment(): PetTopicSegment | undefined {
-    return this.segment;
+    return this.opened.at(-1);
+  }
+  segmentBoundaries(): { boundaryBeforeMessageId: string; brief?: string }[] {
+    return this.opened
+      .filter((segment) => typeof segment.boundaryBeforeMessageId === "string")
+      .map((segment) => ({
+        boundaryBeforeMessageId: segment.boundaryBeforeMessageId!,
+        ...(segment.brief ? { brief: segment.brief } : {}),
+      }));
   }
   lastInteractionAt(): number {
     return this.last;
@@ -26,8 +34,8 @@ class FakePetWorkMemoryStore implements PetWorkMemoryStoreLike {
   async append(entry: PetWorkMemoryEntry): Promise<void> {
     this.appended.push(entry);
   }
-  async setSegment(segment: PetTopicSegment): Promise<void> {
-    this.segment = segment;
+  async openSegment(segment: PetTopicSegment): Promise<void> {
+    this.opened.push(segment);
   }
   async setLastInteractionAt(at: number): Promise<void> {
     this.last = at;
@@ -103,11 +111,49 @@ describe("PetSegmentController", () => {
       now: () => 13 * HOUR,
       idleMs: 12 * HOUR,
     });
-    const brief = await controller.beginTurn();
+    const brief = await controller.beginTurn("pet-msg-1");
     expect(brief).toContain("重构 X");
     // A fresh segment must have been opened and the interaction clock advanced.
     expect(store.activeSegment()).toBeDefined();
     expect(store.lastInteractionAt()).toBe(13 * HOUR);
+    // The boundary is keyed to the message id of the turn that opened the
+    // segment, carrying the same brief that was injected as continuity.
+    expect(store.activeSegment()?.boundaryBeforeMessageId).toBe("pet-msg-1");
+    expect(store.segmentBoundaries()).toEqual([{ boundaryBeforeMessageId: "pet-msg-1", brief }]);
+  });
+
+  test("each long-idle turn opens a distinct message-keyed boundary", async () => {
+    const store = new FakePetWorkMemoryStore();
+    let now = 0;
+    const controller = new PetSegmentController({
+      store,
+      petSessionId: "pet-1",
+      archiveRange: async () => ({ before: 0, after: 0 }),
+      now: () => now,
+      idleMs: 12 * HOUR,
+    });
+    now = 13 * HOUR;
+    await controller.beginTurn("pet-a");
+    now = 13 * HOUR + 13 * HOUR;
+    await controller.beginTurn("pet-b");
+    expect(store.segmentBoundaries()).toEqual([
+      { boundaryBeforeMessageId: "pet-a" },
+      { boundaryBeforeMessageId: "pet-b" },
+    ]);
+  });
+
+  test("a segment opened without a message id records no UI boundary", async () => {
+    const store = new FakePetWorkMemoryStore();
+    const controller = new PetSegmentController({
+      store,
+      petSessionId: "pet-1",
+      archiveRange: async () => ({ before: 0, after: 0 }),
+      now: () => 13 * HOUR,
+      idleMs: 12 * HOUR,
+    });
+    await controller.beginTurn();
+    expect(store.activeSegment()).toBeDefined();
+    expect(store.segmentBoundaries()).toEqual([]);
   });
 
   test("no new segment within the idle window: no brief, clock still advances", async () => {
@@ -123,9 +169,10 @@ describe("PetSegmentController", () => {
       now: () => 13 * HOUR,
       idleMs: 12 * HOUR,
     });
-    const brief = await controller.beginTurn();
+    const brief = await controller.beginTurn("pet-msg-1");
     expect(brief).toBeUndefined();
     expect(store.activeSegment()).toBeUndefined();
     expect(store.lastInteractionAt()).toBe(13 * HOUR);
+    expect(store.segmentBoundaries()).toEqual([]);
   });
 });

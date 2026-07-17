@@ -4,12 +4,22 @@ import { dirname } from "node:path";
 import type { PetTopicSegment, PetWorkMemoryEntry } from "@cjhyy/code-shell-pet";
 
 const MAX_ENTRIES = 1_000;
+const MAX_SEGMENTS = 50;
 
 interface PersistedWorkMemory {
   version: 1;
   lastInteractionAt: number;
+  /** Legacy single active segment (pre-boundary-history). Still read on load. */
   activeSegment?: PetTopicSegment;
+  /** Topic-segment boundary history, oldest → newest (the last is active). */
+  segments?: PetTopicSegment[];
   entries: PetWorkMemoryEntry[];
+}
+
+/** One message-keyed boundary surfaced to the Mimi chat UI. */
+export interface PetSegmentBoundary {
+  boundaryBeforeMessageId: string;
+  brief?: string;
 }
 
 function isEntry(value: unknown): value is PetWorkMemoryEntry {
@@ -35,14 +45,15 @@ function isSegment(value: unknown): value is PetTopicSegment {
  * Durable per-segment work memory for the Mimi main conversation.
  *
  * Stores the distilled work-memory entries (one per closed delegation), the
- * currently active topic segment, and the last-interaction timestamp used to
- * detect long-idle segment boundaries. Writes go through an atomic
- * temp-file + rename (same discipline as PetReceiptStore); reads tolerate a
- * missing or corrupt file by starting empty.
+ * topic-segment boundary history (each keyed by the client message id of the
+ * segment's first chat turn), and the last-interaction timestamp used to detect
+ * long-idle segment boundaries. Writes go through an atomic temp-file + rename
+ * (same discipline as PetReceiptStore); reads tolerate a missing or corrupt
+ * file by starting empty.
  */
 export class PetWorkMemoryStore {
   private entriesList: PetWorkMemoryEntry[] = [];
-  private segment: PetTopicSegment | undefined;
+  private segments: PetTopicSegment[] = [];
   private last = 0;
   private writeQueue = Promise.resolve();
 
@@ -53,17 +64,20 @@ export class PetWorkMemoryStore {
 
   async load(): Promise<void> {
     try {
-      const parsed = JSON.parse(await readFile(this.filePath, "utf8")) as Partial<
-        PersistedWorkMemory
-      >;
+      const parsed = JSON.parse(
+        await readFile(this.filePath, "utf8"),
+      ) as Partial<PersistedWorkMemory>;
       if (Array.isArray(parsed.entries)) {
         this.entriesList = parsed.entries.filter(isEntry).slice(-MAX_ENTRIES);
       }
       if (typeof parsed.lastInteractionAt === "number") {
         this.last = parsed.lastInteractionAt;
       }
-      if (isSegment(parsed.activeSegment)) {
-        this.segment = parsed.activeSegment;
+      if (Array.isArray(parsed.segments)) {
+        this.segments = parsed.segments.filter(isSegment).slice(-MAX_SEGMENTS);
+      } else if (isSegment(parsed.activeSegment)) {
+        // Migrate a legacy single active segment into the boundary history.
+        this.segments = [parsed.activeSegment];
       }
     } catch {
       // Missing/corrupt work memory means continuity resets to empty — never fatal.
@@ -75,7 +89,21 @@ export class PetWorkMemoryStore {
   }
 
   activeSegment(): PetTopicSegment | undefined {
-    return this.segment;
+    return this.segments.at(-1);
+  }
+
+  /**
+   * Message-keyed topic-segment boundaries surfaced to the Mimi chat UI, oldest
+   * → newest. Only segments that captured a chat message id appear here; a
+   * legacy/time-only segment (no `boundaryBeforeMessageId`) renders no boundary.
+   */
+  segmentBoundaries(): PetSegmentBoundary[] {
+    return this.segments
+      .filter((segment) => typeof segment.boundaryBeforeMessageId === "string")
+      .map((segment) => ({
+        boundaryBeforeMessageId: segment.boundaryBeforeMessageId!,
+        ...(segment.brief ? { brief: segment.brief } : {}),
+      }));
   }
 
   lastInteractionAt(): number {
@@ -88,8 +116,13 @@ export class PetWorkMemoryStore {
     return this.enqueuePersist();
   }
 
-  async setSegment(segment: PetTopicSegment): Promise<void> {
-    this.segment = segment;
+  /**
+   * Open a new topic segment, appending it to the boundary history (capped at
+   * MAX_SEGMENTS, most recent kept). The newest segment is the active one.
+   */
+  async openSegment(segment: PetTopicSegment): Promise<void> {
+    this.segments.push(segment);
+    while (this.segments.length > MAX_SEGMENTS) this.segments.shift();
     return this.enqueuePersist();
   }
 
@@ -106,7 +139,7 @@ export class PetWorkMemoryStore {
     const snapshot: PersistedWorkMemory = {
       version: 1,
       lastInteractionAt: this.last,
-      ...(this.segment ? { activeSegment: this.segment } : {}),
+      ...(this.segments.length > 0 ? { segments: [...this.segments] } : {}),
       entries: [...this.entriesList],
     };
     this.writeQueue = this.writeQueue.then(() => this.persist(snapshot)).catch(() => {});

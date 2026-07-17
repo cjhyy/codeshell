@@ -11,9 +11,10 @@ import {
 export interface PetWorkMemoryStoreLike {
   entries(): PetWorkMemoryEntry[];
   activeSegment(): PetTopicSegment | undefined;
+  segmentBoundaries(): { boundaryBeforeMessageId: string; brief?: string }[];
   lastInteractionAt(): number;
   append(entry: PetWorkMemoryEntry): Promise<void>;
-  setSegment(segment: PetTopicSegment): Promise<void>;
+  openSegment(segment: PetTopicSegment): Promise<void>;
   setLastInteractionAt(at: number): Promise<void>;
 }
 
@@ -81,7 +82,14 @@ export class PetSegmentController {
     }
   }
 
-  async beginTurn(): Promise<string | undefined> {
+  /**
+   * Called before each Mimi chat turn. `clientMessageId` is the cross-process
+   * id of the turn being sent — the only turn identity main can observe (the
+   * renderer-local Message.id is invisible here). When a long-idle boundary is
+   * crossed we open a fresh segment keyed to that id so the chat UI can render a
+   * divider (+ optional brief card) immediately before the turn.
+   */
+  async beginTurn(clientMessageId?: string): Promise<string | undefined> {
     const now = this.options.now();
     const openNew = shouldStartNewSegment({
       lastInteractionAt: this.options.store.lastInteractionAt(),
@@ -93,9 +101,20 @@ export class PetSegmentController {
       return undefined;
     }
     const brief = this.buildBrief();
-    await this.options.store.setSegment({ id: `seg-${randomUUID()}`, startedAt: now });
+    const briefText = brief.length > 0 ? brief : undefined;
+    await this.options.store.openSegment({
+      id: `seg-${randomUUID()}`,
+      startedAt: now,
+      ...(clientMessageId ? { boundaryBeforeMessageId: clientMessageId } : {}),
+      ...(briefText ? { brief: briefText } : {}),
+    });
     await this.options.store.setLastInteractionAt(now);
-    return brief.length > 0 ? brief : undefined;
+    return briefText;
+  }
+
+  /** Message-keyed topic-segment boundaries for the Mimi chat UI (oldest → newest). */
+  segmentBoundaries(): { boundaryBeforeMessageId: string; brief?: string }[] {
+    return this.options.store.segmentBoundaries();
   }
 
   /** Distill open tasks + recent conclusions from stored work memory. */

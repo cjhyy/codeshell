@@ -111,7 +111,7 @@ interface PetDispatchOptions {
    * records a work-memory entry when a delegated Work Session launches.
    */
   segmentController?: {
-    beginTurn(): Promise<string | undefined>;
+    beginTurn(clientMessageId?: string): Promise<string | undefined>;
     onDelegationClosed(closure: {
       objective: string;
       outcome: "completed" | "pending-decided" | "failed";
@@ -406,8 +406,12 @@ export class PetDispatchService {
         }
         // Advance the topic-segment clock and, if a long-idle boundary was
         // crossed, obtain a carryover brief (open tasks + recent conclusions)
-        // to inject as background continuity via the pet runtime context.
-        const carryoverBrief = await this.options.segmentController?.beginTurn();
+        // to inject as background continuity via the pet runtime context. The
+        // clientMessageId keys the new segment's boundary to this turn so the
+        // chat UI can render the divider before it (see PetSegmentController).
+        const carryoverBrief = await this.options.segmentController?.beginTurn(
+          command.clientMessageId,
+        );
         const world = {
           ...boundedWorld(snapshot),
           ...(carryoverBrief ? { carryoverBrief } : {}),

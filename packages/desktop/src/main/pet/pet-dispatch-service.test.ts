@@ -627,6 +627,29 @@ describe("PetDispatchService", () => {
     expect(runtimeContext).toContain("重构 X");
   });
 
+  test("passes the turn's client message id to beginTurn so a boundary can key on it", async () => {
+    const beginTurnArgs: (string | undefined)[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: { requestWorker: async () => ({ ok: true, result: { text: "hi" } }) },
+      hostCwd: "/safe/pet",
+      segmentController: {
+        beginTurn: async (clientMessageId) => {
+          beginTurnArgs.push(clientMessageId);
+          return undefined;
+        },
+        onDelegationClosed: async () => {},
+      },
+    });
+
+    await service.dispatch({ type: "chat", message: "你好", clientMessageId: "client-turn-1" });
+    expect(beginTurnArgs).toEqual(["client-turn-1"]);
+  });
+
   test("records a work-memory closure for each launched delegation", async () => {
     const closures: Array<Record<string, unknown>> = [];
     const service = new PetDispatchService({

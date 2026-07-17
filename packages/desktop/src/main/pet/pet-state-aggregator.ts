@@ -34,6 +34,12 @@ export interface DesktopPetSession {
 
 export type DesktopPendingDecision = Omit<PendingDecisionProjection, "owner" | "coreSessionId">;
 
+/** One message-keyed topic-segment boundary surfaced to the Mimi chat UI. */
+export interface DesktopPetWorkMemorySegment {
+  boundaryBeforeMessageId: string;
+  brief?: string;
+}
+
 export interface DesktopPetProjectionSnapshot {
   version: number;
   generation: number;
@@ -41,6 +47,13 @@ export interface DesktopPetProjectionSnapshot {
   sessions: DesktopPetSession[];
   pending: DesktopPendingDecision[];
   observedAt: number;
+  /**
+   * Topic-segment boundaries for the Mimi chat stream, keyed by the client
+   * message id of each segment's first turn (see DesktopPetWorkMemorySegment).
+   * Sourced from PetWorkMemoryStore via the `workMemorySegments` option; empty
+   * when no boundary-history provider is wired.
+   */
+  workMemorySegments: DesktopPetWorkMemorySegment[];
 }
 
 export interface PetNavigationRequest {
@@ -81,6 +94,7 @@ type DesktopPetProjectionEventInput =
   | { kind: "pending-upsert"; pending: DesktopPendingDecision }
   | { kind: "pending-remove"; sessionId: string; requestId: string }
   | { kind: "worker-state"; state: DesktopPetWorkerState }
+  | { kind: "work-memory-segments"; segments: DesktopPetWorkMemorySegment[] }
   | { kind: "reset" };
 
 export type DesktopPetProjectionEvent = DesktopPetEventBase & DesktopPetProjectionEventInput;
@@ -103,6 +117,13 @@ export interface PetStateAggregatorOptions {
   pageSize?: number;
   now?: () => number;
   onBackgroundError?: (operation: string, error: unknown) => void;
+  /**
+   * Reads the current message-keyed topic-segment boundaries from durable work
+   * memory (PetWorkMemoryStore.segmentBoundaries). Included verbatim in every
+   * snapshot so the Mimi chat UI can render segment dividers + brief cards; live
+   * changes are pushed via `notifyWorkMemorySegmentsChanged`. Omitted → empty.
+   */
+  workMemorySegments?: () => DesktopPetWorkMemorySegment[];
 }
 
 const MAX_TITLE_LENGTH = 160;
@@ -279,7 +300,22 @@ export class PetStateAggregator {
         (a, b) => a.createdAt - b.createdAt || a.requestId.localeCompare(b.requestId),
       ),
       observedAt: this.observedAt,
+      workMemorySegments: this.options.workMemorySegments?.() ?? [],
     };
+  }
+
+  /**
+   * Push a fresh set of topic-segment boundaries to subscribers as a projection
+   * event, so a segment opened mid-session surfaces its divider without waiting
+   * for the next full snapshot fetch. Called after PetSegmentController records a
+   * new boundary.
+   */
+  notifyWorkMemorySegmentsChanged(): void {
+    this.observedAt = this.now();
+    this.emit({
+      kind: "work-memory-segments",
+      segments: this.options.workMemorySegments?.() ?? [],
+    });
   }
 
   subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void {

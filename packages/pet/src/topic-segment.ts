@@ -26,6 +26,16 @@ export interface PetTopicSegment {
   startedAt: number;
   /** Inclusive transcript event id where this segment begins, for range archival. */
   startEventId?: string;
+  /**
+   * Client message id of the first Mimi chat turn of this segment. This is the
+   * stable, cross-process identity of the turn the divider renders before —
+   * unlike the renderer-local Message.id, which main can never observe. Absent
+   * for a legacy/time-only segment that opened with no chat turn to key on; such
+   * a segment surfaces no UI boundary.
+   */
+  boundaryBeforeMessageId?: string;
+  /** Carryover brief distilled from the segment that just closed (see buildCarryoverBrief). */
+  brief?: string;
 }
 
 /** Long-idle boundary: a new segment starts on the first message after idleMs. */

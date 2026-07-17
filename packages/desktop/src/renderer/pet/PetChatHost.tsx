@@ -26,6 +26,10 @@ interface PetChatRow {
  * of a new segment, plus the optional carryover brief distilled from the
  * closed segment's work memory. A boundary whose message id is absent from the
  * current transcript is silently skipped (no divider, no card).
+ *
+ * `boundaryBeforeMessageId` is matched against a message's cross-process
+ * `clientMessageId` first (the only turn identity main can observe) and falls
+ * back to the renderer-local `id`.
  */
 export interface PetChatSegmentBoundary {
   boundaryBeforeMessageId: string;
@@ -46,7 +50,9 @@ export function selectPetChatRows(
         text: message.text.trim(),
         ...(channel ? { source: IM_GATEWAY_CHANNEL_NAMES[channel] } : {}),
       };
-      const boundary = boundaries.get(message.id);
+      const boundary =
+        (message.clientMessageId ? boundaries.get(message.clientMessageId) : undefined) ??
+        boundaries.get(message.id);
       if (!boundary) return [userRow];
       const boundaryRows: PetChatRow[] = [
         { id: `divider:${message.id}`, role: "segment-divider" as const, text: "" },

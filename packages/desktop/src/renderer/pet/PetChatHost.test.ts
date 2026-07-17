@@ -97,4 +97,25 @@ describe("PetChatHost", () => {
     );
     expect(rows.map((r) => r.role)).toEqual(["user"]);
   });
+
+  test("matches a boundary against the cross-process clientMessageId, not the local id", () => {
+    // Main only ever knows the clientMessageId (the renderer-local Message.id is
+    // invisible to it), so a production boundary keys on clientMessageId while
+    // the transcript row carries a different freshId. The divider must still land.
+    const rows = selectPetChatRows(
+      [
+        { kind: "assistant", id: "a0", text: "上一段", done: true },
+        { kind: "user", id: "user-local-1", text: "新话题", clientMessageId: "pet-abc" },
+        { kind: "assistant", id: "a1", text: "好的", done: true },
+      ],
+      [{ boundaryBeforeMessageId: "pet-abc", brief: "未完成任务:\n- 重构 X" }],
+    );
+    const kinds = rows.map((r) => r.role);
+    expect(kinds).toContain("segment-divider");
+    expect(kinds).toContain("work-memory");
+    const dividerIdx = rows.findIndex((r) => r.role === "segment-divider");
+    const userIdx = rows.findIndex((r) => r.id === "user-local-1");
+    expect(dividerIdx).toBeLessThan(userIdx);
+    expect(rows.find((r) => r.role === "work-memory")?.text).toContain("重构 X");
+  });
 });
