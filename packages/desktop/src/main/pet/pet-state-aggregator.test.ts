@@ -85,7 +85,15 @@ class FakeBridge implements PetStateBridge {
 }
 
 function pagedCatalog(initial: DiskSessionMeta[]) {
-  let sessions = initial;
+  // Mirror listDiskSessions: the on-disk catalog is served mtime-descending
+  // (ties broken by id), which is the ordering the incremental cursor relies on.
+  const sort = (rows: DiskSessionMeta[]) =>
+    [...rows].sort(
+      (a, b) => b.updatedAt - a.updatedAt || a.engineSessionId.localeCompare(b.engineSessionId),
+    );
+  let sessions = sort(initial);
+  const callArgs: Array<{ limit: number; cursor?: string }> = [];
+  const readSessionIds: string[] = [];
   const list = async ({
     limit,
     cursor,
@@ -93,12 +101,19 @@ function pagedCatalog(initial: DiskSessionMeta[]) {
     limit: number;
     cursor?: string;
   }): Promise<ListDiskSessionsResult> => {
+    callArgs.push({ limit, cursor });
     const start = cursor ? Number(cursor) : 0;
     const page = sessions.slice(start, start + limit);
+    for (const session of page) readSessionIds.push(session.engineSessionId);
     const next = start + page.length;
     return { sessions: page, nextCursor: next < sessions.length ? String(next) : null };
   };
-  return { list, replace: (next: DiskSessionMeta[]) => (sessions = next) };
+  return {
+    list,
+    replace: (next: DiskSessionMeta[]) => (sessions = sort(next)),
+    callArgs,
+    readSessionIds,
+  };
 }
 
 function deferred<T>() {
@@ -421,11 +436,105 @@ describe("PetStateAggregator", () => {
     await aggregator.start();
     catalog.replace([disk("keep")]);
 
-    await aggregator.refreshCatalog();
+    // A full refresh is the delete-aware path: the mtime cursor cannot observe a
+    // vanished session on its own, so removals are reconciled by rebuilding.
+    await aggregator.refreshCatalog(true, { full: true });
 
     expect(aggregator.getSnapshot().sessions.map((session) => session.agentSessionId)).toEqual([
       "keep",
     ]);
+  });
+
+  test("incremental refresh only pages sessions newer than the last high-water mark", async () => {
+    const bridge = new FakeBridge();
+    // Three sessions at the low end (100) live in a later page; only the newest
+    // matters after the first refresh establishes the high-water mark.
+    const catalog = pagedCatalog([
+      disk("a1", { updatedAt: 100 }),
+      disk("a2", { updatedAt: 100 }),
+      disk("b", { updatedAt: 200 }),
+    ]);
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: catalog.list,
+      pageSize: 1,
+      now: () => 5_000,
+    });
+    await aggregator.start();
+    catalog.callArgs.length = 0; // reset the recorded (limit,cursor) calls
+    catalog.readSessionIds.length = 0;
+
+    catalog.replace([
+      disk("a1", { updatedAt: 100 }),
+      disk("a2", { updatedAt: 100 }),
+      disk("b", { updatedAt: 200 }),
+      disk("c", { updatedAt: 300 }),
+    ]);
+    await aggregator.refreshCatalog(false);
+
+    // Incremental refresh pages c (300) and b (200), then fetches the first
+    // older page (a1 at 100 < 200) only to detect the boundary and halt. The
+    // remaining older page holding a2 is never fetched.
+    expect(aggregator.getSnapshot().sessions.some((s) => s.agentSessionId === "c")).toBe(true);
+    expect(catalog.readSessionIds).not.toContain("a2");
+    // The older sessions are retained from the prior refresh rather than rebuilt.
+    expect(aggregator.getSnapshot().sessions.map((s) => s.agentSessionId)).toEqual([
+      "a1",
+      "a2",
+      "b",
+      "c",
+    ]);
+    // A full pass would have fetched all four pages; incremental stops earlier.
+    expect(catalog.callArgs.length).toBeLessThan(4);
+  });
+
+  test("a session that jumps ahead in mtime (e.g. archival) is re-read incrementally", async () => {
+    const bridge = new FakeBridge();
+    const catalog = pagedCatalog([disk("a", { updatedAt: 100 }), disk("b", { updatedAt: 200 })]);
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: catalog.list,
+      pageSize: 10,
+      now: () => 5_000,
+    });
+    await aggregator.start();
+    catalog.readSessionIds.length = 0;
+
+    // "a" is rewritten (its mtime jumps past the prior high-water 200): it now
+    // sorts to the front and its updated title must be picked up incrementally.
+    catalog.replace([
+      disk("a", { updatedAt: 300, title: "archived a" }),
+      disk("b", { updatedAt: 200 }),
+    ]);
+    await aggregator.refreshCatalog(false);
+
+    expect(catalog.readSessionIds).toContain("a");
+    expect(aggregator.getSnapshot().sessions.find((s) => s.agentSessionId === "a")?.title).toBe(
+      "archived a",
+    );
+  });
+
+  test("incremental refresh does not miss a new session sharing the high-water mtime", async () => {
+    const bridge = new FakeBridge();
+    // "dup" shares mtime 200 with the already-held "b" but is not yet in the
+    // catalog: <= high-water alone must not stop paging when the id is unseen.
+    const catalog = pagedCatalog([disk("a", { updatedAt: 100 }), disk("b", { updatedAt: 200 })]);
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: catalog.list,
+      pageSize: 1,
+      now: () => 5_000,
+    });
+    await aggregator.start();
+
+    catalog.replace([
+      disk("a", { updatedAt: 100 }),
+      disk("b", { updatedAt: 200 }),
+      disk("dup", { updatedAt: 200 }),
+    ]);
+    await aggregator.refreshCatalog(false);
+
+    expect(aggregator.getSnapshot().sessions.some((s) => s.agentSessionId === "dup")).toBe(true);
   });
 
   test("observes a failed background refresh after session removal without rejecting the bridge", async () => {
