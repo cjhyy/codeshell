@@ -991,6 +991,47 @@ export function extractAnchoredSummary(messages: Message[]): string | undefined 
 }
 
 /**
+ * Build the single anchored-summary message that replaces a compacted span.
+ * Emits the same `<anchored-summary>` marker `extractAnchoredSummary` reads, so
+ * a later compaction pass can feed it back for a rolling merge-update. The
+ * optional referenced-file list points the model at paths it may want to Read
+ * back; the transcript path lets it recover exact detail on demand. Shared by
+ * applySummaryCompaction (recency-window compaction) and any caller that
+ * collapses a specific span into one summary, keeping the marker format
+ * identical across both.
+ */
+export function buildAnchoredSummaryMessage(
+  summary: string,
+  options: { transcriptPath?: string; referencedFiles?: string[] } = {},
+): Message {
+  const { transcriptPath, referencedFiles = [] } = options;
+
+  let body =
+    `This session is being continued from a previous conversation that ran out of context. ` +
+    `The summary below covers the earlier portion of the conversation.\n\n` +
+    `${ANCHORED_OPEN}\n${summary}\n${ANCHORED_CLOSE}`;
+
+  if (transcriptPath) {
+    body +=
+      `\n\nIf you need specific details from before compaction (like exact code snippets, ` +
+      `error messages, or content you generated), read the full transcript at: ${transcriptPath}`;
+  }
+
+  if (referencedFiles.length > 0) {
+    body +=
+      `\n\nFiles referenced before compaction (use Read tool if you need their current content):\n` +
+      referencedFiles.map((f) => `- ${f}`).join("\n");
+  }
+
+  body += `\n\nRecent messages are preserved verbatim below. Continue from where you left off.`;
+
+  return {
+    role: "user",
+    content: `<system-reminder>${body}</system-reminder>`,
+  };
+}
+
+/**
  * Apply LLM-generated summary compaction (hybrid mode).
  *
  * Instead of eagerly restoring file contents (wastes tokens), gives the
@@ -1017,29 +1058,10 @@ export function applySummaryCompaction(
   // Extract file paths (not contents) that were referenced before compaction
   const referencedFiles = extractReferencedFilePaths(compactedMessages);
 
-  let body =
-    `This session is being continued from a previous conversation that ran out of context. ` +
-    `The summary below covers the earlier portion of the conversation.\n\n` +
-    `${ANCHORED_OPEN}\n${summary}\n${ANCHORED_CLOSE}`;
-
-  if (transcriptPath) {
-    body +=
-      `\n\nIf you need specific details from before compaction (like exact code snippets, ` +
-      `error messages, or content you generated), read the full transcript at: ${transcriptPath}`;
-  }
-
-  if (referencedFiles.length > 0) {
-    body +=
-      `\n\nFiles referenced before compaction (use Read tool if you need their current content):\n` +
-      referencedFiles.map((f) => `- ${f}`).join("\n");
-  }
-
-  body += `\n\nRecent messages are preserved verbatim below. Continue from where you left off.`;
-
-  const summaryMsg: Message = {
-    role: "user",
-    content: `<system-reminder>${body}</system-reminder>`,
-  };
+  const summaryMsg = buildAnchoredSummaryMessage(summary, {
+    ...(transcriptPath ? { transcriptPath } : {}),
+    referencedFiles,
+  });
 
   return [first, summaryMsg, ...recent];
 }
