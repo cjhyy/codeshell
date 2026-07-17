@@ -18,11 +18,7 @@ import {
   queryExtensionModules,
   registerExtensionModules,
 } from "../tool-system/capability-module.js";
-import { ToolExecutor } from "../tool-system/executor.js";
-import { InvestigationGuard } from "../tool-system/investigation-guard.js";
-import { TaskGuard } from "../tool-system/task-guard.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
-import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import {
@@ -53,7 +49,6 @@ import {
   notificationQueue,
   buildNotificationMessage,
 } from "../tool-system/builtin/agent-notifications.js";
-import { PermissionClassifier, InteractiveApprovalBackend } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
@@ -83,7 +78,6 @@ import {
   serializeContextPackageMessages,
   clampContextRatios as clampContextRatiosImpl,
 } from "../context/compaction.js";
-import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
 import { PromptComposer } from "../prompt/composer.js";
 import {
   isEphemeralSessionState,
@@ -103,15 +97,10 @@ import { sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import {
-  buildMcpToolPolicies,
-  isRegisteredMcpToolAllowed,
-} from "../tool-system/mcp-tool-policy.js";
 import { SettingsManager, userHome } from "../settings/manager.js";
 import { getCredentialAccess } from "../credentials/access.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import {
-  isFeatureEnabled,
   resolveFeatureFlags,
   type FeatureFlagName,
   type FeatureFlagOverrides,
@@ -162,6 +151,12 @@ import { PermissionController } from "./permission-controller.js";
 import { buildPromptComposerConfig } from "./run-setup.js";
 import { resolveRunWorkspace } from "./run-workspace.js";
 import { openRunSession } from "./run-session-open.js";
+import {
+  buildRunToolContext,
+  buildRunPermissionPipeline,
+  connectRunMcp,
+  assembleRunToolDefs,
+} from "./run-tooling.js";
 import { join } from "node:path";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { InputAttachmentMeta } from "../types.js";
@@ -1382,48 +1377,26 @@ export class Engine {
       cwd,
     });
 
-    // sessionId is filled in after the session bundle is resolved below
-    // (the session may be cold-started or resumed). Until then this is
-    // intentionally shaped as a mutable local; we treat it as immutable
-    // after the assignment.
-    const toolCtx: ToolContext = {
-      ...this.buildToolContext(cwd, sessionProfileOverrides, profileMemoryDir),
-      approvalRouter: options?.approvalRouter ?? this.config.approvalRouter,
-      permissionMode: runPermissionMode,
-      planMode: runPlanMode,
+    const toolCtx: ToolContext = buildRunToolContext({
+      base: this.buildToolContext(cwd, sessionProfileOverrides, profileMemoryDir),
+      options,
+      configApprovalRouter: this.config.approvalRouter,
+      runPermissionMode,
+      runPlanMode,
       subAgentSpawner,
       agentDefinitions: this.getAgentDefinitions(cwd, sessionProfileOverrides),
-      // Stamp the resolved network policy onto the backend the tools see so
-      // Bash can surface "网络 deny" on its result. Shallow-copy (don't mutate
-      // the cached backend) — `wrap`/`hintForBlockedOutput` are plain function
-      // properties and survive the spread. Off keeps network undefined.
       sandbox:
         sandboxBackend.name === "off"
           ? sandboxBackend
           : { ...sandboxBackend, network: sandboxConfig.network },
       cwd,
       shellEnv: this.runEnvironmentResolver.readShellEnv(cwd),
-      // TodoWrite reads this to push task_update events independently
-      // of its return value, so the UI's pinned task panel refreshes
-      // immediately rather than after the LLM next surfaces the
-      // snapshot. wrappedOnStream snoops the same channel to keep
-      // latestTodos current for TaskGuard.
-      streamCallback: options?.onStream,
-      setCwd(nextCwd: string) {
-        toolCtx.cwd = nextCwd;
+      profile,
+      profileParams,
+      reportResult: (key, value) => {
+        (profileReportedResults ??= {})[key] = value;
       },
-    };
-    if (profile?.allowedToolNames) {
-      toolCtx.allowedToolNames = profile.allowedToolNames;
-    }
-    if (profile?.createRunServices) {
-      toolCtx.runScopedServices = profile.createRunServices({
-        profileParams,
-        reportResult: (key, value) => {
-          (profileReportedResults ??= {})[key] = value;
-        },
-      });
-    }
+    });
 
     logger.info("engine.run", {
       task: taskText.slice(0, 200),
@@ -1655,64 +1628,30 @@ export class Engine {
       void llmClientPromise.catch(() => {});
 
       const mode = runPermissionMode;
-      const { rules: defaultRules, backend: approvalBackend } = this.permissionController.build(
+      const { toolExecutor } = buildRunPermissionPipeline({
+        permissionController: this.permissionController,
         mode,
         cwd,
-        toolCtx.approvalRouter,
-      );
-
-      const permission = new PermissionClassifier(defaultRules, mode, approvalBackend);
-      permission.setApprovalStateListener((waiting, toolName) => {
-        options?.onAgentProgress?.({
-          type: "phase",
-          phase: waiting ? "waiting-permission" : "tool",
-          toolName,
-        });
+        approvalRouter: toolCtx.approvalRouter,
+        sessionId: session.state.sessionId,
+        toolRegistry: this.toolRegistry,
+        hooks: this.hooks,
+        toolCtx,
+        signal: options?.signal,
+        readOnlySession: this.config.readOnlySession === true,
+        headless: this.config.headless === true,
+        getLatestTodos: () => latestTodos,
+        onApprovalPhase: (waiting, toolName) => {
+          options?.onAgentProgress?.({
+            type: "phase",
+            phase: waiting ? "waiting-permission" : "tool",
+            toolName,
+          });
+        },
+        emitNotificationHook: (payload) => {
+          void this.emitHook("notification", payload);
+        },
       });
-      // Surface approval waits on the notification hook (fire-and-forget, like
-      // background-agent terminal states) so plugins / settings hooks can ping
-      // the user while a decision is pending.
-      permission.setApprovalEventListener((event) => {
-        void this.emitHook("notification", {
-          kind: event.phase === "requested" ? "approval_requested" : "approval_resolved",
-          toolName: event.toolName,
-          riskLevel: event.riskLevel,
-          ...(event.approved !== undefined ? { approved: event.approved } : {}),
-          ...(event.sessionId ? { sessionId: event.sessionId } : {}),
-        });
-      });
-      this.permissionController.attach(permission, toolCtx.approvalRouter);
-
-      // If the backend is the interactive one, wire it for project-scope
-      // persistence: it needs cwd to find settings.local.json, and a callback
-      // to apply newly-saved rules to the live classifier so subsequent calls
-      // in this same session don't re-prompt. Headless/auto backends skip
-      // this — they don't prompt, so there are no project rules to persist.
-      if (approvalBackend instanceof InteractiveApprovalBackend) {
-        approvalBackend.setSessionContext(session.state.sessionId, {
-          cwd,
-          onProjectRules: (rules) => {
-            // Prepend the *full* accumulated list of session-saved project rules
-            // so user approvals win over defaults and earlier approvals aren't
-            // dropped when later ones come in.
-            permission.reconfigure(mode, approvalBackend, [...rules, ...defaultRules]);
-          },
-        });
-      }
-
-      const toolExecutor = new ToolExecutor(this.toolRegistry, permission, this.hooks);
-      const investigationGuard = new InvestigationGuard();
-      if (this.config.readOnlySession) {
-        investigationGuard.setPolicy("read-only-review");
-      } else if (this.config.headless) {
-        investigationGuard.setSoftMode(true);
-      }
-      toolExecutor.setInvestigationGuard(investigationGuard);
-      toolExecutor.setTaskGuard(new TaskGuard(() => latestTodos));
-
-      // Wire abort signal for cascading cancellation + per-Engine ToolContext
-      toolExecutor.setSignal(options?.signal);
-      toolExecutor.setContext(toolCtx);
 
       const visibilityExplicitGoal = normalizeGoal(options?.goal);
       const visibilityLifecycle = session.state.goalLifecycle;
@@ -1760,29 +1699,22 @@ export class Engine {
         }),
       );
 
-      // Connect MCP servers (if configured and not already connected).
-      // B1: prefer the Runtime-owned MCPManager so all sessions in a
-      // worker share one set of connections. Falling back to a
-      // per-Engine instance keeps the null-runtime path (tests, ad-hoc
-      // scripts) working.
       const mcpServers = this.config.mcpServers ?? {};
       const mcpDisabled = profile?.disableMcp === true;
-      if (!mcpDisabled && Object.keys(mcpServers).length > 0 && !this.mcpManager) {
-        if (this.runtime) {
-          this.mcpManager = this.runtime.mcpPool;
-        } else {
-          this.mcpManager = new MCPManager(this.toolRegistry);
-        }
-        await this.mcpManager.connectAll(mcpServers, this, (event) => {
-          // Fire-and-forget onto the notification hook: hosts/plugins learn
-          // about MCP availability changes without polling the pool.
-          void this.emitHook("notification", {
-            kind: event.type,
-            server: event.server,
-            ...(event.error ? { error: event.error } : {}),
-          });
-        });
-      }
+      await connectRunMcp({
+        mcpServers,
+        mcpDisabled,
+        getManager: () => this.mcpManager,
+        setManager: (m) => {
+          this.mcpManager = m;
+        },
+        runtimePool: this.runtime?.mcpPool,
+        toolRegistry: this.toolRegistry,
+        engineForConnect: this,
+        emitNotificationHook: (payload) => {
+          void this.emitHook("notification", payload);
+        },
+      });
 
       // Parallelize slow initialization:
       //   1. createLLMClient — network handshake (started earlier)
@@ -1802,129 +1734,27 @@ export class Engine {
       // the toolDefs the model sees when its credential isn't configured for this
       // cwd. Recomputed every message, so configuring a key takes effect on the
       // NEXT message without a restart. Tools with no guard entry are always kept.
-      const guardCwd = toolCtx.cwd;
-      const profileMeta = profile?.buildVisibilityMeta?.(profileParams);
-      const toolVisibility = {
-        cwd: guardCwd,
-        hasGoal: hasRunnableGoal,
+      const toolDefs = assembleRunToolDefs({
+        toolRegistry: this.toolRegistry,
+        toolCtx,
+        guardCwd: toolCtx.cwd,
+        hasRunnableGoal,
         settingsScope: this.config.settingsScope ?? "project",
-        host: this.config.builtinToolHost,
+        builtinToolHost: this.config.builtinToolHost,
         isSubAgent: this.config.isSubAgent === true,
-        behaviorProfile: profile?.id ?? options?.behaviorMode,
-        ...(profileMeta ? { profileMeta } : {}),
-      };
-      toolCtx.toolVisibility = toolVisibility;
-      // #7: per-turn project builtin override. The toolRegistry's builtin tool
-      // SET is ctor-frozen (and may be shared via runtime), so a mid-session
-      // project override of a builtin can't rebuild the registry. But the tool
-      // LIST handed to the LLM is assembled fresh every turn, so we apply the
-      // override here: a builtin marked `off` for this cwd is HIDDEN from the
-      // turn's tool list (matching how skills/plugins/agents `off` apply
-      // mid-session via readDisabledLists). `on`/`inherit` keep whatever the
-      // registry already has — we can't re-add a tool the frozen registry omits,
-      // but `on` for a tool already present is a no-op (it stays). This makes a
-      // builtin toggle take effect on the NEXT message, like other capability
-      // kinds, without touching the registry.
-      const builtinOverride = this.readBuiltinOverride(guardCwd, sessionProfileOverrides);
-      // Turn `off` from a prompt-visibility filter into a real execution gate:
-      // collect the builtin tool names the override marks `off` and hand them to
-      // the executor (via the shared toolCtx the executor already holds a
-      // reference to, set at setContext above) so it rejects a call to a hidden
-      // builtin instead of running it from the still-populated registry.
-      if (builtinOverride) {
-        const registryNames = new Set(this.toolRegistry.getToolDefinitions().map((t) => t.name));
-        const disabledBuiltins = new Set(
-          Object.keys(builtinOverride).filter(
-            (name) => builtinOverride[name] === "off" && registryNames.has(name),
-          ),
-        );
-        toolCtx.disabledBuiltins = disabledBuiltins;
-      }
-      // MCP tool exposure is per-SESSION even though the pool/registry are
-      // worker-shared (B1): a server connected by another project's session
-      // registers its tools into the SHARED registry, and without this filter
-      // they leaked into every session (e.g. chrome-devtools tools showing up
-      // in a project that never enabled the plugin). Keep an MCP tool only when
-      // its server is in THIS session's merged config.mcpServers — which
-      // already folds the project's capabilityOverrides. Gated on the config
-      // being present: engines without one (sub-agents, bare tests) have no
-      // MCP tools in their private registries anyway.
-      const allowedMcpServers = new Set(
-        mcpDisabled
-          ? []
-          : Object.entries(this.config.mcpServers ?? {})
-              .filter(([, c]) => c.enabled !== false)
-              .map(([n]) => n),
-      );
-      toolCtx.allowedMcpServers = allowedMcpServers;
-      const mcpToolPolicies = buildMcpToolPolicies(this.config.mcpServers ?? {});
-      toolCtx.mcpToolPolicies = mcpToolPolicies;
-      const mcpVisible = (toolName: string): boolean => {
-        const reg = this.toolRegistry.getTool(toolName) as {
-          source?: string;
-          serverName?: string;
-          mcpToolName?: string;
-        } | null;
-        return (
-          reg?.source !== "mcp" ||
-          (allowedMcpServers.has(reg?.serverName ?? "") &&
-            isRegisteredMcpToolAllowed(
-              {
-                source: "mcp",
-                serverName: reg?.serverName,
-                mcpToolName: reg?.mcpToolName,
-              },
-              mcpToolPolicies,
-            ))
-        );
-      };
-      // Feature-flag visibility: a builtin mapped in TOOL_FEATURE_FLAGS is
-      // hidden when its flag resolves to false (default-on flags only hide when
-      // explicitly disabled, so zero regression out of the box). Read once per
-      // turn so flipping a flag in settings takes effect on the NEXT message,
-      // like the other capability kinds.
-      const featureFlags = this.readFeatureFlags();
-      const allToolDefs = applyBuiltinOverrideVisibility(
-        this.toolRegistry.getToolDefinitions(),
-        builtinOverride,
-      )
-        .filter((t) => mcpVisible(t.name))
-        .filter((t) => {
-          const guard = this.toolGuards.get(t.name);
-          return guard ? guard(toolVisibility) : true;
-        })
-        .filter((t) => {
-          const flag = TOOL_FEATURE_FLAGS.get(t.name);
-          return flag ? isFeatureEnabled(featureFlags, flag) : true;
-        })
-        // Dynamic per-engine bits the static defs can't carry: the Agent tool's
-        // agent_type enum + listing, and the image/video provider names. See
-        // applyDynamicToolDef — forwarding only the Agent description (dropping
-        // its rebuilt inputSchema) used to strip the agent_type enum, so the
-        // model omitted agent_type and configured roles never applied.
-        // A builtin's own exposure.rewriteDefinition (run-scoped rewrites like
-        // DelegateWork's closed workspace enum) applies first.
-        .map((t) => {
-          const rewrite = this.toolRewriters.get(t.name);
-          return applyDynamicToolDef(
-            rewrite ? rewrite(t, toolVisibility) : t,
-            toolCtx.agentDefinitions,
-            guardCwd,
-          );
-        });
-
-      // In plan mode, only expose read-only/planning tools so the model won't
-      // attempt writes. Shared with executor.ts's execution gate via
-      // PLAN_MODE_ALLOWED_TOOLS so what the model SEES and what the executor
-      // RUNS can't drift apart. (Bash is in the set; the executor additionally
-      // gates Bash to read-only commands at call time.)
-      const profileAllowedToolNames = profile?.allowedToolNames;
-      const profileToolDefs = profileAllowedToolNames
-        ? allToolDefs.filter((tool) => profileAllowedToolNames.has(tool.name))
-        : allToolDefs;
-      const toolDefs = runPlanMode
-        ? profileToolDefs.filter((t) => PLAN_MODE_ALLOWED_TOOLS.has(t.name))
-        : profileToolDefs;
+        behaviorProfileId: profile?.id ?? options?.behaviorMode,
+        profileMeta: profile?.buildVisibilityMeta?.(profileParams),
+        builtinOverride: this.readBuiltinOverride(toolCtx.cwd, sessionProfileOverrides),
+        mcpServers: this.config.mcpServers ?? {},
+        mcpDisabled,
+        featureFlags: this.readFeatureFlags(),
+        toolGuards: this.toolGuards,
+        toolRewriters: this.toolRewriters,
+        toolFeatureFlags: TOOL_FEATURE_FLAGS,
+        applyBuiltinOverrideVisibility,
+        profileAllowedToolNames: profile?.allowedToolNames,
+        runPlanMode,
+      });
 
       const [llmClient, baseSystemPrompt, dynamicContextMsg] = await Promise.all([
         llmClientPromise,
