@@ -30,3 +30,4 @@ export {
   rewriteDelegateWorkDef,
 } from "./delegate-work.js";
 export { createPetCapability } from "./capability.js";
+export * from "./topic-segment.js";
