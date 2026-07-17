@@ -101,7 +101,10 @@ interface Module {
   label: string;
   Icon: React.ComponentType<{ className?: string; size?: number }>;
   /** Which scopes this module can render in. Defaults to user-only. */
-  scopes?: SettingsScopeKind[];
+  scopes?: readonly SettingsScopeKind[];
+  /** Draft-heavy editors keep their existing guarded scope picker until the
+   * settings-wide dirty-state registry exists. */
+  scopeControl?: "page" | "internal";
 }
 
 interface ModuleGroup {
@@ -111,22 +114,48 @@ interface ModuleGroup {
 }
 
 export function moduleSupportsScope(
-  module: { scopes?: SettingsScopeKind[] },
+  module: { scopes?: readonly SettingsScopeKind[] },
   scope: SettingsScope,
 ): boolean {
   return (module.scopes ?? ["user"]).includes(scope.kind);
 }
 
+export function moduleUsesPageScope(module: { scopeControl?: "page" | "internal" }): boolean {
+  return module.scopeControl !== "internal";
+}
+
 const SETTINGS_LAST_MODULE_KEY = "codeshell:settings:last-module";
 
-function storedModuleId(modules: Module[]): ModuleId {
-  if (typeof window === "undefined") return "general";
+function moduleStorageKey(scope: SettingsScopeKind): string {
+  return `${SETTINGS_LAST_MODULE_KEY}:${scope}`;
+}
+
+function storedModuleId(modules: Module[], scope: SettingsScopeKind): ModuleId | undefined {
+  if (typeof window === "undefined") return undefined;
   try {
-    const stored = window.localStorage.getItem(SETTINGS_LAST_MODULE_KEY);
-    return modules.some(({ id }) => id === stored) ? (stored as ModuleId) : "general";
+    // The unscoped key is a one-time compatibility fallback for users who
+    // opened Settings before scope-aware navigation existed. It represented
+    // the old global-only page, so never reuse it as a project preference.
+    const stored =
+      window.localStorage.getItem(moduleStorageKey(scope)) ??
+      (scope === "user" ? window.localStorage.getItem(SETTINGS_LAST_MODULE_KEY) : null);
+    return modules.some(({ id }) => id === stored) ? (stored as ModuleId) : undefined;
   } catch {
-    return "general";
+    return undefined;
   }
+}
+
+export function preferredModuleForScope<Id extends string>(
+  modules: ReadonlyArray<{ id: Id; scopes?: readonly SettingsScopeKind[] }>,
+  current: Id,
+  scope: SettingsScope,
+  remembered?: Id,
+): Id {
+  const currentModule = modules.find((module) => module.id === current);
+  if (currentModule && moduleSupportsScope(currentModule, scope)) return current;
+  const rememberedModule = modules.find((module) => module.id === remembered);
+  if (rememberedModule && moduleSupportsScope(rememberedModule, scope)) return rememberedModule.id;
+  return modules.find((module) => moduleSupportsScope(module, scope))?.id ?? current;
 }
 
 export function matchesSettingsModule(query: string, label: string, groupTitle: string): boolean {
@@ -198,11 +227,26 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
     {
       title: t("settingsX.page.groupExtend"),
       modules: [
-        { id: "capabilities", label: t("settingsX.page.capabilities"), Icon: Layers },
+        {
+          id: "capabilities",
+          label: t("settingsX.page.capabilities"),
+          Icon: Layers,
+          scopes: ["user", "project"],
+        },
         { id: "mcp", label: t("settingsX.page.mcp"), Icon: Plug, scopes: ["user", "project"] },
         { id: "plugins-skills", label: t("settingsX.page.plugins"), Icon: Puzzle },
-        { id: "agents", label: t("settingsX.page.agents"), Icon: Bot },
-        { id: "hooks", label: t("settingsX.page.hooks"), Icon: Webhook },
+        {
+          id: "agents",
+          label: t("settingsX.page.agents"),
+          Icon: Bot,
+          scopeControl: "internal",
+        },
+        {
+          id: "hooks",
+          label: t("settingsX.page.hooks"),
+          Icon: Webhook,
+          scopes: ["user", "project"],
+        },
       ],
     },
     {
@@ -221,8 +265,18 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
           scopes: ["user", "project"],
         },
         { id: "git", label: "Git", Icon: GitBranch },
-        { id: "environment", label: t("settingsX.page.environment"), Icon: Terminal },
-        { id: "sandbox", label: t("settingsX.page.sandbox"), Icon: ShieldCheck },
+        {
+          id: "environment",
+          label: t("settingsX.page.environment"),
+          Icon: Terminal,
+          scopeControl: "internal",
+        },
+        {
+          id: "sandbox",
+          label: t("settingsX.page.sandbox"),
+          Icon: ShieldCheck,
+          scopeControl: "internal",
+        },
         { id: "conversation", label: t("settingsX.page.conversation"), Icon: MessageSquare },
         { id: "context", label: t("settingsX.page.context"), Icon: Gauge },
         { id: "mobile-remote", label: t("settingsX.page.mobileRemote"), Icon: Smartphone },
@@ -283,26 +337,27 @@ export function SettingsPage({
     const initialScope: SettingsScope = initialProjectPath
       ? { kind: "project", path: initialProjectPath }
       : { kind: "user" };
-    const stored = storedModuleId(MODULES);
-    const storedModule = MODULES.find(({ id }) => id === stored);
-    if (storedModule && moduleSupportsScope(storedModule, initialScope)) return stored;
-    return MODULES.find((module) => moduleSupportsScope(module, initialScope))?.id ?? stored;
+    const fallback: ModuleId = initialScope.kind === "project" ? "project-overview" : "general";
+    return preferredModuleForScope(
+      MODULES,
+      storedModuleId(MODULES, initialScope.kind) ?? fallback,
+      initialScope,
+    );
   });
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const [scopeState, setScopeState] = useState<SettingsScope>(() =>
     initialProjectPath ? { kind: "project", path: initialProjectPath } : { kind: "user" },
   );
-  // The selected project disappeared (removed from tracked list) → fall back to global.
-  useEffect(() => {
-    if (scopeState.kind === "project" && !projects.some((p) => p.path === scopeState.path)) {
-      setScopeState({ kind: "user" });
-    }
-  }, [projects, scopeState]);
   const scope: "user" | "project" = scopeState.kind;
   const scopeProjectPath = scopeState.kind === "project" ? scopeState.path : null;
+  const scopeProject =
+    scopeState.kind === "project"
+      ? (projects.find((project) => project.path === scopeState.path) ?? null)
+      : null;
   const showTrafficLightGutter = isMac && !isFullscreen;
   const activeModule = MODULES.find((module) => module.id === active) ?? MODULES[0];
+  const activeUsesPageScope = activeModule ? moduleUsesPageScope(activeModule) : true;
   const activeGroup =
     MODULE_GROUPS.find((group) => group.modules.some((module) => module.id === active))?.title ??
     "";
@@ -319,23 +374,34 @@ export function SettingsPage({
     [MODULE_GROUPS, query, scopeState],
   );
   const resultCount = filteredGroups.reduce((count, group) => count + group.modules.length, 0);
+  // A section's local drafts, cached snapshots, probes, and in-flight loads
+  // belong to one concrete settings target. Remount on scope/project changes
+  // so state from project A cannot flash or save into project B.
+  const contentTargetKey =
+    scopeState.kind === "project" ? `project:${scopeState.path}:${active}` : `user:${active}`;
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(SETTINGS_LAST_MODULE_KEY, active);
+      window.localStorage.setItem(moduleStorageKey(scopeState.kind), active);
     } catch {
       // Storage can be disabled; settings navigation still works in-memory.
     }
-  }, [active]);
+  }, [active, scopeState.kind]);
 
-  // Scope switch can leave a module active that the new scope doesn't
-  // support → jump to the first module available in that scope.
+  // Defensive fallback for externally-driven scope changes. Normal picker
+  // changes use changeScope() below, which updates scope + module together.
   useEffect(() => {
     if (activeModule && !moduleSupportsScope(activeModule, scopeState)) {
-      const first = MODULES.find((module) => moduleSupportsScope(module, scopeState));
-      if (first) setActive(first.id);
+      setActive(
+        preferredModuleForScope(
+          MODULES,
+          active,
+          scopeState,
+          storedModuleId(MODULES, scopeState.kind),
+        ),
+      );
     }
-  }, [scopeState, activeModule, MODULES]);
+  }, [scopeState, activeModule, active, MODULES]);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -353,6 +419,25 @@ export function SettingsPage({
     setQuery("");
   };
 
+  const changeScope = (next: SettingsScope) => {
+    setActive((current) =>
+      preferredModuleForScope(MODULES, current, next, storedModuleId(MODULES, next.kind)),
+    );
+    setScopeState(next);
+    setQuery("");
+  };
+
+  // The selected project disappeared (removed from tracked list) → fall back
+  // to global and restore the user's last global module in the same render.
+  useEffect(() => {
+    if (scopeState.kind === "project" && !projects.some((p) => p.path === scopeState.path)) {
+      changeScope({ kind: "user" });
+    }
+    // changeScope intentionally omitted: it is render-local and this effect is
+    // driven only by project membership / selected scope.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects, scopeState]);
+
   const mobileOptions = MODULE_GROUPS.map((group) => ({
     label: group.title || t("settingsX.page.settings"),
     options: group.modules
@@ -363,8 +448,16 @@ export function SettingsPage({
   // "__user__" shares the string domain with project paths, which is safe:
   // project values are absolute filesystem paths, so they can never equal it.
   const scopeOptions = [
-    { value: "__user__", label: t("settingsX.page.scopeSwitchGlobal") },
-    ...projects.map((project) => ({ value: project.path, label: projectLabel(project) })),
+    {
+      value: "__user__",
+      label: t("settingsX.page.scopeSwitchGlobal"),
+      description: t("settingsX.page.globalScopeOptionHint"),
+    },
+    ...projects.map((project) => ({
+      value: project.path,
+      label: projectLabel(project),
+      description: project.path,
+    })),
   ];
 
   return (
@@ -497,27 +590,45 @@ export function SettingsPage({
                     {activeGroup}
                   </span>
                 ) : null}
-                <SimpleSelect<string>
-                  value={scopeState.kind === "user" ? "__user__" : scopeState.path}
-                  options={scopeOptions}
-                  size="sm"
-                  ariaLabel={t("settingsX.page.scopeSwitcher")}
-                  onChange={(value) =>
-                    setScopeState(
-                      value === "__user__" ? { kind: "user" } : { kind: "project", path: value },
-                    )
-                  }
-                />
+                {activeUsesPageScope ? (
+                  <SimpleSelect<string>
+                    value={scopeState.kind === "user" ? "__user__" : scopeState.path}
+                    options={scopeOptions}
+                    size="sm"
+                    ariaLabel={t("settingsX.page.scopeSwitcher")}
+                    className="w-auto min-w-44 max-w-full max-[720px]:w-full"
+                    onChange={(value) =>
+                      changeScope(
+                        value === "__user__" ? { kind: "user" } : { kind: "project", path: value },
+                      )
+                    }
+                  />
+                ) : (
+                  <span className="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">
+                    {t("settingsX.page.scopeManagedInSection")}
+                  </span>
+                )}
               </div>
               <h1 className="text-xl font-semibold tracking-tight">{activeModule?.label}</h1>
-              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-                {scopeState.kind === "project"
-                  ? t("settingsX.page.projectScopeHint")
-                  : t("settingsX.page.globalScopeHint")}
-              </p>
+              {activeUsesPageScope ? (
+                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                  {scopeState.kind === "project"
+                    ? t("settingsX.page.projectScopeHint")
+                    : t("settingsX.page.globalScopeHint")}
+                </p>
+              ) : null}
+              {activeUsesPageScope && scopeProjectPath ? (
+                <p
+                  className="mt-1 truncate font-mono text-xs text-muted-foreground"
+                  title={scopeProjectPath}
+                >
+                  {scopeProject ? `${projectLabel(scopeProject)} · ` : ""}
+                  {scopeProjectPath}
+                </p>
+              ) : null}
             </div>
 
-            <div className="flex flex-col gap-6">
+            <div key={contentTargetKey} className="flex flex-col gap-6">
               {active === "project-overview" && (
                 <ProjectOverviewSection
                   modules={MODULES.filter(
@@ -583,30 +694,36 @@ export function SettingsPage({
               {active === "shortcuts" && <ShortcutsSection />}
               {active === "capabilities" && (
                 <CapabilitiesOverviewSection
-                  projects={projects}
-                  onNavigateToKind={(kind) => {
-                    const target: Record<string, ModuleId> = {
-                      mcp: "mcp",
-                      skill: "plugins-skills",
-                      plugin: "plugins-skills",
-                      agent: "agents",
-                    };
-                    const next = target[kind];
-                    if (next) selectModule(next);
-                  }}
+                  scope={scope}
+                  projectPath={scopeProjectPath}
+                  projectLabel={scopeProject ? projectLabel(scopeProject) : undefined}
+                  onNavigateToKind={
+                    scope === "user"
+                      ? (kind) => {
+                          const target: Record<string, ModuleId> = {
+                            mcp: "mcp",
+                            skill: "plugins-skills",
+                            plugin: "plugins-skills",
+                            agent: "agents",
+                          };
+                          const next = target[kind];
+                          if (next) selectModule(next);
+                        }
+                      : undefined
+                  }
                 />
               )}
               {active === "mcp" && (
-                // Two distinct paths: activeProjectPath stays the APP's active
-                // project (runtime-effective plugin folding), while the scope
-                // switcher only decides which settings file is edited.
+                // Keep the active app project available for global-scope
+                // runtime preview, while settingsProjectPath identifies the
+                // selected project when editing project scope.
                 <McpSection
                   scope={scope}
                   activeProjectPath={activeProjectPath}
                   settingsProjectPath={scopeProjectPath}
                 />
               )}
-              {active === "hooks" && <HooksSection projects={projects} />}
+              {active === "hooks" && <HooksSection scope={scope} projectPath={scopeProjectPath} />}
               {active === "connections" && (
                 <ConnectionsSection
                   scope={scope}

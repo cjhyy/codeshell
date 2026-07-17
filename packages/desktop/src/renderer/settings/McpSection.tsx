@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
-import type { McpProbeResult, McpServerProbeInput } from "../../preload/types";
+import type { McpProbeResult, McpServerProbeInput, PluginMcpTrustEntry } from "../../preload/types";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,12 +35,15 @@ interface McpServer {
   credentialRef?: string;
   /** Codex-style toggle. Absent/true = on; only false disables. */
   enabled?: boolean;
+  /** Exact raw MCP tool-name policy. Deny is applied after allow. */
+  allowedTools?: string[];
+  disabledTools?: string[];
   source?: "settings" | "plugin";
   editable?: boolean;
   /** Plugin server whose OWNER plugin is disabled — listed but inert
    *  (装了就展示;引擎不会连接它,启用插件才生效). */
   pluginDisabled?: boolean;
-  /** Plugin server that currently carries a user env/credential override
+  /** Plugin server that currently carries a user policy/env/credential override
    *  (settings.mcpServerOverrides). UI-only flag from mcp:listMerged. */
   hasOverride?: boolean;
 }
@@ -48,6 +51,9 @@ interface McpServer {
 /** Fields a user may supplement onto a plugin MCP server (mirror of core
  *  MCPServerOverride). command/args/url/transport are intentionally absent. */
 const MCP_OVERRIDE_FIELDS = [
+  "enabled",
+  "allowedTools",
+  "disabledTools",
   "env",
   "envVars",
   "credentialRef",
@@ -59,8 +65,18 @@ export function isEditableMcpServer(s: McpServer): boolean {
   return s.editable !== false && s.source !== "plugin";
 }
 
+export function isToggleableMcpServer(s: McpServer): boolean {
+  return !s.pluginDisabled && (isEditableMcpServer(s) || s.source === "plugin");
+}
+
 export function persistableMcpServers(servers: McpServer[]): McpServer[] {
   return servers.filter(isEditableMcpServer);
+}
+
+export function visiblePluginMcpTrustEntries(
+  entries: PluginMcpTrustEntry[],
+): PluginMcpTrustEntry[] {
+  return entries.filter((entry) => entry.status !== "none");
 }
 
 /**
@@ -142,12 +158,12 @@ function broadcastSettingsChanged(): void {
 
 interface Props {
   scope: "user" | "project";
-  /** The APP's active project — used only to fold runtime-effective plugin
-   *  state (capabilityOverrides), never as the settings write target. */
+  /** The app's active project. User scope uses it to preview the runtime-
+   *  effective plugin state; project scope uses settingsProjectPath instead. */
   activeProjectPath: string | null;
   /** Which project's settings file to read/write when scope === "project".
-   *  Defaults to activeProjectPath so existing call sites (SettingsView /
-   *  ManagePage), where both are the same project, are unchanged. */
+   *  Defaults to activeProjectPath for call sites such as ManagePage, where
+   *  the active and edited project are the same. */
   settingsProjectPath?: string | null;
 }
 
@@ -159,6 +175,16 @@ type EditState =
   // saved to the global mcpServerOverrides layer (not mcpServers).
   | { kind: "override"; original: string };
 
+export function mcpEffectiveProjectPath(
+  scope: "user" | "project",
+  settingsProjectPath: string | null | undefined,
+  activeProjectPath: string | null,
+): string | undefined {
+  return scope === "project"
+    ? (settingsProjectPath ?? activeProjectPath ?? undefined)
+    : (activeProjectPath ?? undefined);
+}
+
 export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Props) {
   const [servers, setServers] = useState<McpServer[]>([]);
   const [probes, setProbes] = useState<Record<string, McpProbeResult>>({});
@@ -167,7 +193,10 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
   const [edit, setEdit] = useState<EditState>({ kind: "closed" });
   const [toolsViewer, setToolsViewer] = useState<McpProbeResult | null>(null);
   const [errorDetailFor, setErrorDetailFor] = useState<McpProbeResult | null>(null);
+  const [pluginMcpTrust, setPluginMcpTrust] = useState<PluginMcpTrustEntry[]>([]);
+  const [pluginTrustAction, setPluginTrustAction] = useState<string | null>(null);
   const confirm = useConfirm();
+  const toast = useToast();
   const { t } = useT();
 
   const projectPath =
@@ -183,24 +212,21 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
       const merged = await window.codeshell.listMergedMcpServers(
         settingsRecordOf(s.mcpServers),
         disabledPlugins,
-        // pluginDisabled is a RUNTIME-effective flag, not "which settings file
-        // am I editing" — always fold the ACTIVE repo's capabilityOverrides
-        // (能力总览 project on/off), even while viewing the 用户(全局) scope
-        // or another project's scope (settingsProjectPath). Otherwise a
-        // project-enabled plugin's MCP shows 关闭 in the global view while the
-        // session is actually connecting it (user-confusing). That's why the
-        // two paths are separate props: `projectPath` above targets the
-        // settings file being edited; `activeProjectPath` here mirrors what
-        // the running session actually loads.
-        activeProjectPath ?? undefined,
+        // Global scope previews the active session's effective plugin state.
+        // Project scope must preview the SELECTED project instead; otherwise
+        // editing project B while project A is active shows A's on/off badges
+        // under B's settings header.
+        mcpEffectiveProjectPath(scope, settingsProjectPath, activeProjectPath),
       );
+      const trust = await window.codeshell.listPluginMcpTrust();
       const list = mcpServersFromSettings(merged);
       setServers(list);
+      setPluginMcpTrust(visiblePluginMcpTrustEntries(trust));
       void runProbe(list, false);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
-  }, [scope, projectPath, activeProjectPath]);
+  }, [scope, projectPath, settingsProjectPath, activeProjectPath]);
 
   const runProbe = useCallback(async (list: McpServer[], force: boolean) => {
     // Disabled servers are never connected by the engine, so probing them
@@ -271,8 +297,33 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
   };
 
   const toggleServer = async (s: McpServer) => {
-    if (!isEditableMcpServer(s)) return;
+    if (!isToggleableMcpServer(s)) return;
     const nextEnabled = !isEnabled(s);
+    if (s.source === "plugin") {
+      const updated = servers.map((x) =>
+        x.name === s.name ? { ...x, enabled: nextEnabled, hasOverride: true } : x,
+      );
+      await window.codeshell.updateSettings(
+        "user",
+        { mcpServerOverrides: { [s.name]: { enabled: nextEnabled } } },
+        undefined,
+      );
+      setServers(updated);
+      broadcastSettingsChanged();
+      if (!nextEnabled) {
+        await window.codeshell.invalidateMcpProbeCache(s.name);
+        setProbes((prev) => {
+          const { [s.name]: _, ...rest } = prev;
+          return rest;
+        });
+      } else {
+        void runProbe(
+          updated.filter((x) => x.name === s.name),
+          true,
+        );
+      }
+      return;
+    }
     // Persist just this server's full config with the flipped flag. We write
     // the whole entry (not a partial) because updateSettings merges records
     // key-by-key but replaces a server entry wholesale.
@@ -383,6 +434,27 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
     }
   };
 
+  const changePluginTrust = async (entry: PluginMcpTrustEntry, action: "approve" | "revoke") => {
+    setPluginTrustAction(`${action}:${entry.installKey}`);
+    try {
+      if (action === "approve") await window.codeshell.approvePluginMcp(entry.installKey);
+      else await window.codeshell.revokePluginMcp(entry.installKey);
+      broadcastSettingsChanged();
+      await load();
+      toast({
+        message:
+          action === "approve"
+            ? t("settingsX.mcp.pluginTrustApprovedToast", { plugin: entry.plugin })
+            : t("settingsX.mcp.pluginTrustRevokedToast", { plugin: entry.plugin }),
+        variant: "success",
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setPluginTrustAction(null);
+    }
+  };
+
   return (
     <section className="mb-6 flex flex-col gap-3">
       <header className="flex items-start justify-between gap-4">
@@ -413,10 +485,70 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
         <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>
       )}
 
-      {servers.length === 0 && edit.kind === "closed" && (
+      {servers.length === 0 && pluginMcpTrust.length === 0 && edit.kind === "closed" && (
         <div className="rounded-md border border-dashed p-4 text-sm">
           <div className="font-medium text-foreground">{t("settingsX.mcp.emptyTitle")}</div>
           <div className="mt-1 text-sm text-muted-foreground">{t("settingsX.mcp.emptyDesc")}</div>
+        </div>
+      )}
+
+      {pluginMcpTrust.length > 0 && (
+        <div className="grid gap-2">
+          {pluginMcpTrust.map((entry, index) => (
+            <article
+              key={`${entry.installKey}:${entry.serverNames.join(",")}:${index}`}
+              className={cn(
+                "rounded-md border p-3",
+                entry.status === "changed"
+                  ? "border-status-err/50 bg-status-err/5"
+                  : entry.status === "pending"
+                    ? "border-status-warn/50 bg-status-warn/5"
+                    : "bg-muted/20",
+              )}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium">
+                    {t("settingsX.mcp.pluginTrustTitle", { plugin: entry.plugin })}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {t(`settingsX.mcp.pluginTrust.${entry.status}`, {
+                      count: entry.serverNames.length,
+                    })}
+                  </div>
+                  <div className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+                    {entry.serverNames.map((name) => `${entry.plugin}:${name}`).join(", ")}
+                  </div>
+                </div>
+                {entry.status === "pending" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="solid"
+                    disabled={pluginTrustAction !== null}
+                    onClick={() => void changePluginTrust(entry, "approve")}
+                  >
+                    {pluginTrustAction === `approve:${entry.installKey}`
+                      ? t("settingsX.mcp.pluginTrustSaving")
+                      : t("settingsX.mcp.pluginTrustApprove")}
+                  </Button>
+                )}
+                {(entry.status === "approved" || entry.status === "legacy") && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pluginTrustAction !== null}
+                    onClick={() => void changePluginTrust(entry, "revoke")}
+                  >
+                    {pluginTrustAction === `revoke:${entry.installKey}`
+                      ? t("settingsX.mcp.pluginTrustSaving")
+                      : t("settingsX.mcp.pluginTrustRevoke")}
+                  </Button>
+                )}
+              </div>
+            </article>
+          ))}
         </div>
       )}
 
@@ -534,6 +666,7 @@ function McpCard({
     : (server.url ?? "");
   const enabled = isEnabled(server);
   const editable = isEditableMcpServer(server);
+  const toggleable = isToggleableMcpServer(server);
   const authIssue = isHttpAuthProbeError(server, probe);
   // Owning plugin name (TODO 6.2) — see ownerPluginOf.
   const ownerPlugin = ownerPluginOf(server);
@@ -549,10 +682,10 @@ function McpCard({
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Switch
             checked={enabled}
-            onCheckedChange={editable ? onToggle : undefined}
-            disabled={!editable}
+            onCheckedChange={toggleable ? onToggle : undefined}
+            disabled={!toggleable}
             title={
-              editable
+              toggleable
                 ? enabled
                   ? t("settingsX.mcp.disableThis")
                   : t("settingsX.mcp.enableThis")
@@ -700,6 +833,16 @@ function McpCard({
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {server.allowedTools !== undefined && (
+          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+            {t("settingsX.mcp.allowedToolsBadge", { count: server.allowedTools.length })}
+          </span>
+        )}
+        {Boolean(server.disabledTools?.length) && (
+          <span className="rounded bg-status-warn/10 px-1.5 py-0.5 text-[10px] text-status-warn">
+            {t("settingsX.mcp.disabledToolsBadge", { count: server.disabledTools!.length })}
+          </span>
+        )}
         {probe?.status === "ok" && (
           <Button
             type="button"
@@ -871,6 +1014,10 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
   const [headersText, setHeadersText] = useState(envOrHeadersToText(initial?.headers, ": "));
   const [bearerEnvVar, setBearerEnvVar] = useState(initial?.bearerTokenEnvVar ?? "");
   const [credentialRef, setCredentialRef] = useState(initial?.credentialRef ?? "");
+  const [allowedToolsText, setAllowedToolsText] = useState(envNamesToText(initial?.allowedTools));
+  const [disabledToolsText, setDisabledToolsText] = useState(
+    envNamesToText(initial?.disabledTools),
+  );
   const [credentials, setCredentials] = useState<MaskedCredentialView[]>([]);
   const [envHeadersText, setEnvHeadersText] = useState(
     envOrHeadersToText(initial?.envHeaders, ": "),
@@ -885,7 +1032,9 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
       Boolean(initial?.headers && Object.keys(initial.headers).length) ||
       Boolean(initial?.bearerTokenEnvVar) ||
       Boolean(initial?.credentialRef) ||
-      Boolean(initial?.envHeaders && Object.keys(initial.envHeaders).length),
+      Boolean(initial?.envHeaders && Object.keys(initial.envHeaders).length) ||
+      initial?.allowedTools !== undefined ||
+      Boolean(initial?.disabledTools?.length),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
   const [oauthBusy, setOAuthBusy] = useState(false);
@@ -1043,11 +1192,15 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
     let envVars: string[] | undefined;
     let headers: Record<string, string> | undefined;
     let envHeaders: Record<string, string> | undefined;
+    let allowedTools: string[] | undefined;
+    let disabledTools: string[] | undefined;
     try {
       env = parseKeyValueLines(envText);
       envVars = parseEnvNames(forwardEnvVarsText);
       headers = parseKeyValueLines(headersText);
       envHeaders = parseKeyValueLines(envHeadersText);
+      allowedTools = parseToolNames(allowedToolsText);
+      disabledTools = parseToolNames(disabledToolsText);
     } catch (e) {
       return setValidationError(
         t("settingsX.mcp.advParseFailed", { message: (e as Error).message }),
@@ -1075,6 +1228,9 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
       ? {
           name: trimmedName,
           transport,
+          enabled: initial?.enabled,
+          allowedTools,
+          disabledTools,
           ...(isStdio
             ? {
                 env: env && Object.keys(env).length ? env : undefined,
@@ -1089,6 +1245,8 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
       : {
           name: trimmedName,
           transport,
+          allowedTools,
+          disabledTools,
           ...(isStdio
             ? {
                 command: command.trim(),
@@ -1205,6 +1363,36 @@ function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: 
 
       {showAdvanced && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 ">
+          <div className="border-t pt-3 md:col-span-2">
+            <div className="text-sm font-medium text-foreground">
+              {t("settingsX.mcp.toolPolicyTitle")}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("settingsX.mcp.toolPolicyDesc")}
+            </p>
+          </div>
+          <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
+            <span>{t("settingsX.mcp.allowedToolsLabel")}</span>
+            <Textarea
+              value={allowedToolsText}
+              onChange={(event) => setAllowedToolsText(event.target.value)}
+              placeholder={"search\nread_document"}
+            />
+            <span className="text-xs text-muted-foreground">
+              {t("settingsX.mcp.allowedToolsHint")}
+            </span>
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
+            <span>{t("settingsX.mcp.disabledToolsLabel")}</span>
+            <Textarea
+              value={disabledToolsText}
+              onChange={(event) => setDisabledToolsText(event.target.value)}
+              placeholder={"delete\npublish"}
+            />
+            <span className="text-xs text-muted-foreground">
+              {t("settingsX.mcp.disabledToolsHint")}
+            </span>
+          </label>
           {isStdio && (
             <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
               <span>{t("settingsX.mcp.envVarsLabel")}</span>
@@ -1582,6 +1770,26 @@ function parseEnvNames(text: string): string[] {
     }
   }
   return out;
+}
+
+function parseToolNames(text: string): string[] | undefined {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    if (line.length > 256 || line.includes("\0") || /\s/.test(line)) {
+      throw new Error(translate(loadUILanguage(), "settingsX.mcp.toolNameInvalidLine", { line }));
+    }
+    if (!seen.has(line)) {
+      out.push(line);
+      seen.add(line);
+    }
+    if (out.length > 256) {
+      throw new Error(translate(loadUILanguage(), "settingsX.mcp.tooManyToolNames"));
+    }
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 /** Minimal shell-like splitter — supports quoted segments. */

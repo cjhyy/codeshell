@@ -132,6 +132,38 @@ export const extensions = {
         overwriteTitle: "覆盖升级?",
         overwriteConfirm: "已安装同名插件「{name}」。继续将覆盖升级为本次导入的版本。",
         overwriteConfirmLabel: "覆盖升级",
+        reviewTitle: "安装前审查",
+        reviewDescription:
+          "以下内容由 Core 按正式安装规则解析。确认后才会写入插件目录和安装注册表。",
+        reviewNoVersion: "未声明版本",
+        reviewAlreadyInstalled:
+          "本机已安装该插件（当前版本：{version}）。确认审查后还会再次询问是否覆盖。",
+        reviewSkills: "Skills",
+        reviewCommands: "Commands",
+        reviewAgents: "Agents",
+        reviewHooks: "Hooks",
+        reviewMcp: "MCP servers",
+        reviewPanels: "面板与权限",
+        reviewAutomations: "定时任务模板",
+        reviewExternalLinks: "外部链接",
+        reviewMedia: "媒体声明",
+        reviewNone: "无",
+        reviewMatcher: "matcher: {matcher}",
+        reviewPermissions: "权限：{permissions}",
+        reviewNoPermissions: "无 bridge 权限",
+        reviewCancel: "取消",
+        reviewInstall: "确认并安装",
+        reviewWarnings: {
+          "executable-hooks":
+            "包含 {count} 个可执行 shell Hook。安装后默认等待单独授权，未授权前不会执行。",
+          "stdio-mcp": "包含 {count} 个 stdio MCP server，可启动本地进程。安装后默认等待单独授权。",
+          "network-mcp": "包含 {count} 个网络 MCP server，可连接远程服务。安装后默认等待单独授权。",
+          "panel-permissions": "有 {count} 个面板申请 CodeShell bridge 权限，请核对下方权限列表。",
+          "automation-templates":
+            "包含 {count} 个定时任务模板。安装不会创建任务；之后仍需由你明确确认实例化。",
+          "external-links": "声明了 {count} 个外部 HTTPS 链接。",
+          media: "声明了 {count} 个图标、Logo 或截图资源；文件已经过类型、大小和尺寸校验。",
+        },
       },
       skills: {
         noMatch: "没有匹配的 skill",
@@ -166,6 +198,102 @@ export const extensions = {
         panelsTitle: "面板({count})",
         panelPermissions: "权限：{permissions}",
         panelNoPermissions: "无 bridge 权限",
+        automationTemplatesTitle: "定时任务模板（{count}）",
+        automationUseTemplate: "使用模板",
+        automationPromptLabel: "将执行的完整提示",
+        automationConfirmTitle: "创建定时任务？",
+        automationConfirmMessage:
+          "将创建“{name}”，计划：{schedule}，权限：{permission}，工作区：{workspace}。插件安装本身不会自动创建任务。",
+        automationCreate: "创建任务",
+        automationCreatedToast: "已从插件模板创建“{name}”",
+        automationCreateFailed: "创建定时任务失败：{error}",
+        automationPermission: {
+          "read-only": "只读",
+          "workspace-write": "可写当前工作区",
+          full: "完整权限",
+        },
+        automationWorkspace: {
+          current: "当前项目",
+          none: "无项目",
+        },
+        starterPromptsTitle: "推荐提示",
+        starterPromptUse: "放入对话框",
+        starterPromptAddedToast: "已放入当前对话草稿，检查后再发送",
+        screenshotsTitle: "截图（{count}）",
+        screenshotAlt: "插件截图 {index}",
+        website: "网站",
+        privacyPolicy: "隐私政策",
+        termsOfService: "服务条款",
+        legalOpenFailed: "无法在系统浏览器中打开此链接",
+        approveHooks: "授权并启用",
+        revokeHooks: "撤销授权",
+        hookApprovalApprovedToast: "已授权此插件的当前 Hook 定义",
+        hookApprovalRevokedToast: "已撤销此插件的 Hook 授权",
+        hookApprovalFailed: "Hook 授权操作失败：{error}",
+        hookDiffTitle: "逐项 Hook 变更审查",
+        hookDiffBaseline: "以下内容与上一次明确授权的 Hook 定义比较。",
+        hookDiffNoBaseline: "这是首次授权；下面每个命令都视为新增。",
+        hookDiffMatcher: "matcher: {matcher}",
+        hookDiffAll: "全部",
+        hookDiffChange: {
+          added: "新增",
+          removed: "移除",
+          changed: "变更",
+          unchanged: "未变",
+        },
+        approveMcp: "授权并连接",
+        revokeMcp: "撤销连接授权",
+        mcpApprovalApprovedToast: "已授权此插件的当前 MCP 配置",
+        mcpApprovalRevokedToast: "已撤销此插件的 MCP 连接授权",
+        mcpApprovalFailed: "MCP 授权操作失败：{error}",
+        mcpApproval: {
+          approved: {
+            title: "插件 MCP 已授权",
+            description: "当前 {count} 个 MCP server 可在运行时启动进程或建立远程连接。",
+          },
+          pending: {
+            title: "插件 MCP 等待授权",
+            description: "这 {count} 个外部进程/远程连接在明确授权前不会启动或连接。",
+          },
+          changed: {
+            title: "插件 MCP 安装后发生变化",
+            description: "连接已阻止。请更新或重新安装插件，再审查并授权新的摘要。",
+          },
+          legacy: {
+            title: "插件 MCP 旧安装兼容模式",
+            description: "此安装早于 MCP 摘要授权机制，当前仍允许连接；可撤销以改为默认阻止。",
+          },
+        },
+        hookApproval: {
+          approved: {
+            title: "Hook 已授权",
+            description: "当前安装摘要与已授权摘要一致；Hook 可在新会话中执行。",
+          },
+          pending: {
+            title: "Hook 等待授权",
+            description: "插件的其他能力仍可使用，但这些 shell Hook 在明确授权前不会执行。",
+          },
+          changed: {
+            title: "Hook 安装后发生变化",
+            description: "执行已阻止。请更新或重新安装插件，再审查并授权新的摘要。",
+          },
+          legacy: {
+            title: "旧安装兼容模式",
+            description: "此安装早于 Hook 摘要授权机制，当前仍允许执行；可撤销以改为默认阻止。",
+          },
+        },
+        hookApprovalLabel: {
+          approved: "已授权",
+          pending: "待授权，已阻止",
+          changed: "已变更，已阻止",
+          legacy: "旧安装兼容",
+          none: "无可执行 Hook",
+        },
+        hookIntegrity: {
+          verified: "已验证",
+          changed: "安装后已变更，未执行",
+          legacy: "旧安装，未校验",
+        },
       },
       batch: {
         updatedN: "已更新 {count} 个",
@@ -634,6 +762,42 @@ export const extensions = {
         overwriteConfirm:
           'A plugin named "{name}" is already installed. Continuing will overwrite it with the imported version.',
         overwriteConfirmLabel: "Overwrite",
+        reviewTitle: "Review before installation",
+        reviewDescription:
+          "Core parsed this source with the real installation rules. No plugin directory or registry is changed until you confirm.",
+        reviewNoVersion: "No declared version",
+        reviewAlreadyInstalled:
+          "This plugin is already installed (current version: {version}). After this review, overwrite requires a second confirmation.",
+        reviewSkills: "Skills",
+        reviewCommands: "Commands",
+        reviewAgents: "Agents",
+        reviewHooks: "Hooks",
+        reviewMcp: "MCP servers",
+        reviewPanels: "Panels and permissions",
+        reviewAutomations: "Scheduled task templates",
+        reviewExternalLinks: "External links",
+        reviewMedia: "Media declarations",
+        reviewNone: "None",
+        reviewMatcher: "matcher: {matcher}",
+        reviewPermissions: "Permissions: {permissions}",
+        reviewNoPermissions: "No bridge permissions",
+        reviewCancel: "Cancel",
+        reviewInstall: "Confirm and install",
+        reviewWarnings: {
+          "executable-hooks":
+            "Contains {count} executable shell hooks. They remain blocked until separately approved after installation.",
+          "stdio-mcp":
+            "Contains {count} stdio MCP servers that can start local processes. They require separate approval after installation.",
+          "network-mcp":
+            "Contains {count} network MCP servers that can contact remote services. They require separate approval after installation.",
+          "panel-permissions":
+            "{count} panels request CodeShell bridge permissions. Review the permission lists below.",
+          "automation-templates":
+            "Contains {count} scheduled task templates. Installation creates no jobs; each template still requires explicit confirmation.",
+          "external-links": "Declares {count} external HTTPS links.",
+          media:
+            "Declares {count} icon, logo, or screenshot assets. File type, size, and dimensions were validated.",
+        },
       },
       skills: {
         noMatch: "No matching skill",
@@ -669,6 +833,111 @@ export const extensions = {
         panelsTitle: "Panels ({count})",
         panelPermissions: "Permissions: {permissions}",
         panelNoPermissions: "No bridge permissions",
+        automationTemplatesTitle: "Scheduled task templates ({count})",
+        automationUseTemplate: "Use template",
+        automationPromptLabel: "Exact prompt to run",
+        automationConfirmTitle: "Create scheduled task?",
+        automationConfirmMessage:
+          'Create "{name}" with schedule {schedule}, permission {permission}, and workspace {workspace}. Installing the plugin itself never creates jobs.',
+        automationCreate: "Create task",
+        automationCreatedToast: 'Created "{name}" from the plugin template',
+        automationCreateFailed: "Could not create the scheduled task: {error}",
+        automationPermission: {
+          "read-only": "Read only",
+          "workspace-write": "Current workspace write",
+          full: "Full permission",
+        },
+        automationWorkspace: {
+          current: "Current project",
+          none: "No project",
+        },
+        starterPromptsTitle: "Starter prompts",
+        starterPromptUse: "Use in chat",
+        starterPromptAddedToast: "Added to the current draft. Review it before sending.",
+        screenshotsTitle: "Screenshots ({count})",
+        screenshotAlt: "Plugin screenshot {index}",
+        website: "Website",
+        privacyPolicy: "Privacy policy",
+        termsOfService: "Terms of service",
+        legalOpenFailed: "Could not open this link in the system browser",
+        approveHooks: "Approve and enable",
+        revokeHooks: "Revoke approval",
+        hookApprovalApprovedToast: "Approved this plugin's current hook definition",
+        hookApprovalRevokedToast: "Revoked this plugin's hook approval",
+        hookApprovalFailed: "Hook approval action failed: {error}",
+        hookDiffTitle: "Per-hook change review",
+        hookDiffBaseline:
+          "The entries below are compared with the last explicitly approved hook definition.",
+        hookDiffNoBaseline: "This is the first approval; every command below is new.",
+        hookDiffMatcher: "matcher: {matcher}",
+        hookDiffAll: "all",
+        hookDiffChange: {
+          added: "Added",
+          removed: "Removed",
+          changed: "Changed",
+          unchanged: "Unchanged",
+        },
+        approveMcp: "Approve and connect",
+        revokeMcp: "Revoke connection approval",
+        mcpApprovalApprovedToast: "Approved this plugin's current MCP configuration",
+        mcpApprovalRevokedToast: "Revoked this plugin's MCP connection approval",
+        mcpApprovalFailed: "MCP approval action failed: {error}",
+        mcpApproval: {
+          approved: {
+            title: "Plugin MCP approved",
+            description:
+              "The current {count} MCP server(s) may start processes or make remote connections.",
+          },
+          pending: {
+            title: "Plugin MCP pending approval",
+            description:
+              "These {count} external process / remote connection(s) stay blocked until explicitly approved.",
+          },
+          changed: {
+            title: "Plugin MCP changed after installation",
+            description:
+              "Connections are blocked. Update or reinstall the plugin, then review and approve the new digest.",
+          },
+          legacy: {
+            title: "Plugin MCP legacy compatibility mode",
+            description:
+              "This install predates MCP approval digests and is still allowed; revoke it to switch to fail-closed behavior.",
+          },
+        },
+        hookApproval: {
+          approved: {
+            title: "Hooks approved",
+            description:
+              "The installed digest matches the approved digest; hooks may run in new sessions.",
+          },
+          pending: {
+            title: "Hooks pending approval",
+            description:
+              "Other plugin capabilities remain available, but these shell hooks cannot run until explicitly approved.",
+          },
+          changed: {
+            title: "Hooks changed after installation",
+            description:
+              "Execution is blocked. Update or reinstall the plugin, then review and approve the new digest.",
+          },
+          legacy: {
+            title: "Legacy compatibility mode",
+            description:
+              "This install predates hook approval digests and is still allowed; revoke it to switch to fail-closed behavior.",
+          },
+        },
+        hookApprovalLabel: {
+          approved: "Approved",
+          pending: "Pending; blocked",
+          changed: "Changed; blocked",
+          legacy: "Legacy allowed",
+          none: "No executable hooks",
+        },
+        hookIntegrity: {
+          verified: "Verified",
+          changed: "Changed after install; blocked",
+          legacy: "Legacy install; unchecked",
+        },
       },
       batch: {
         updatedN: "Updated {count}",

@@ -7,7 +7,8 @@ export const automation = {
         title: "自动化",
         jobCount: "{count} 个任务",
         create: "新建自动化",
-        empty: "还没有自动化任务。点击「新建自动化」,用对话告诉它你想定时做什么、何时运行 —— 不用填 cron 语法。",
+        empty:
+          "还没有自动化任务。点击「新建自动化」,用对话告诉它你想定时做什么、何时运行 —— 不用填 cron 语法。",
         active: "活跃",
         paused: "暂停",
         runCount: "{count} 次",
@@ -46,6 +47,8 @@ export const automation = {
         noJumpableSession: "这个任务还没有可跳转的历史 session。",
         sessionView: "查看",
         resumeBadge: "续接对话",
+        pluginTemplateBadge: "来自插件模板",
+        templateSource: "模板来源",
         boundConversation: "绑定的对话",
         boundNotFound: "绑定的对话尚未运行过",
         openConversation: "打开对话",
@@ -205,7 +208,8 @@ export const automation = {
         title: "Automation",
         jobCount: "{count} jobs",
         create: "New automation",
-        empty: "No automation jobs yet. Click \"New automation\" and tell it in conversation what to do on a schedule and when to run — no cron syntax needed.",
+        empty:
+          'No automation jobs yet. Click "New automation" and tell it in conversation what to do on a schedule and when to run — no cron syntax needed.',
         active: "Active",
         paused: "Paused",
         runCount: "{count} runs",
@@ -243,6 +247,8 @@ export const automation = {
         noJumpableSession: "This job has no past sessions to open yet.",
         sessionView: "View",
         resumeBadge: "Resumes chat",
+        pluginTemplateBadge: "From plugin template",
+        templateSource: "Template source",
         boundConversation: "Bound conversation",
         boundNotFound: "Bound conversation hasn't run yet",
         openConversation: "Open conversation",
@@ -303,7 +309,8 @@ export const automation = {
         noProject: "No project (conversation)",
       },
       transcript: {
-        agentInterrupted: "Agent received no completion event (the process may have restarted or been interrupted)",
+        agentInterrupted:
+          "Agent received no completion event (the process may have restarted or been interrupted)",
       },
       runs: {
         loading: "Loading…",

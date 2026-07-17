@@ -26,6 +26,7 @@ import { ArrowLeft } from "lucide-react";
 import { useT } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
+import { useTargetedDebouncedSave } from "./useTargetedDebouncedSave";
 
 interface ScopedProps {
   scope: "user" | "project";
@@ -54,60 +55,6 @@ function saveMobileRemoteMode(mode: MobileRemoteMode): void {
 }
 
 /**
- * Auto-save hook for free-text settings fields.
- *
- * Debounces writes (default 600ms) while typing, and exposes a `flush` to save
- * immediately on blur — so a quick tab-away never loses the last keystrokes.
- * The whole personalization tab auto-saves; no Save buttons (a Switch toggles
- * instantly, text persists on pause/blur).
- */
-function useDebouncedSave(persist: (value: string) => Promise<void> | void, delay = 600) {
-  const persistRef = useRef(persist);
-  persistRef.current = persist;
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pending = useRef<string | null>(null);
-
-  const flush = useCallback(() => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-    if (pending.current !== null) {
-      const value = pending.current;
-      pending.current = null;
-      void persistRef.current(value);
-    }
-  }, []);
-
-  const schedule = useCallback(
-    (value: string) => {
-      pending.current = value;
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        timer.current = null;
-        const v = pending.current;
-        pending.current = null;
-        if (v !== null) void persistRef.current(v);
-      }, delay);
-    },
-    [delay],
-  );
-
-  const cancel = useCallback(() => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-    pending.current = null;
-  }, []);
-
-  // Flush any pending write on unmount (e.g. switching tabs/scopes).
-  useEffect(() => () => flush(), [flush]);
-
-  return { schedule, flush, cancel };
-}
-
-/**
  * Settings → 自定义指令.
  *
  * One large textarea mapping to the agent's `appendSystemPrompt` — extra
@@ -124,20 +71,25 @@ export function PersonalizationSection({ scope, activeProjectPath }: ScopedProps
   const { t } = useT();
 
   const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const targetKey = `${scope}:${projectPath ?? ""}:personalization`;
+  const loadGeneration = useRef(0);
 
-  const { schedule, flush } = useDebouncedSave((value) =>
+  const { schedule, flush } = useTargetedDebouncedSave(targetKey, (value: string) =>
     writeSettings(scope, { agent: { appendSystemPrompt: value } }, projectPath),
   );
 
-  const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
-    const agent = objectOf(s.agent);
-    setInstructions(stringOf(agent.appendSystemPrompt));
-  };
-
   useEffect(() => {
-    void load();
-  }, [scope, activeProjectPath]);
+    const generation = ++loadGeneration.current;
+    void (async () => {
+      const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+      if (loadGeneration.current !== generation) return;
+      const agent = objectOf(s.agent);
+      setInstructions(stringOf(agent.appendSystemPrompt));
+    })();
+    return () => {
+      if (loadGeneration.current === generation) loadGeneration.current += 1;
+    };
+  }, [scope, projectPath]);
 
   return (
     <section className="flex flex-col gap-3">
@@ -182,24 +134,32 @@ export function ResponsePrefsSection({ scope, activeProjectPath }: ScopedProps) 
   profileRef.current = profile;
   const { t } = useT();
   const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
+  const targetKey = `${scope}:${projectPath ?? ""}:response-prefs`;
+  const loadGeneration = useRef(0);
 
-  const { schedule, flush } = useDebouncedSave(() =>
-    writeSettings(
-      scope,
-      { agent: { responseLanguage: languageRef.current, userProfile: profileRef.current } },
-      projectPath,
-    ),
+  const { schedule, flush } = useTargetedDebouncedSave(
+    targetKey,
+    (value: { language: string; profile: string }) =>
+      writeSettings(
+        scope,
+        { agent: { responseLanguage: value.language, userProfile: value.profile } },
+        projectPath,
+      ),
   );
 
-  const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
-    const agent = objectOf(s.agent);
-    setLanguage(stringOf(agent.responseLanguage));
-    setProfile(stringOf(agent.userProfile));
-  };
   useEffect(() => {
-    void load();
-  }, [scope, activeProjectPath]);
+    const generation = ++loadGeneration.current;
+    void (async () => {
+      const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+      if (loadGeneration.current !== generation) return;
+      const agent = objectOf(s.agent);
+      setLanguage(stringOf(agent.responseLanguage));
+      setProfile(stringOf(agent.userProfile));
+    })();
+    return () => {
+      if (loadGeneration.current === generation) loadGeneration.current += 1;
+    };
+  }, [scope, projectPath]);
 
   return (
     <section className="flex flex-col gap-3">
@@ -212,8 +172,9 @@ export function ResponsePrefsSection({ scope, activeProjectPath }: ScopedProps) 
       <Input
         value={language}
         onChange={(e) => {
-          setLanguage(e.target.value);
-          schedule(e.target.value);
+          const next = e.target.value;
+          setLanguage(next);
+          schedule({ language: next, profile: profileRef.current });
         }}
         onBlur={flush}
         placeholder={t("settingsX.adv.responseLangPlaceholder")}
@@ -221,8 +182,9 @@ export function ResponsePrefsSection({ scope, activeProjectPath }: ScopedProps) 
       <Textarea
         value={profile}
         onChange={(e) => {
-          setProfile(e.target.value);
-          schedule(e.target.value);
+          const next = e.target.value;
+          setProfile(next);
+          schedule({ language: languageRef.current, profile: next });
         }}
         onBlur={flush}
         placeholder={t("settingsX.adv.userProfilePlaceholder")}
@@ -343,59 +305,6 @@ export function ShortcutsSection() {
   );
 }
 
-/**
- * Hooks are maintained at TWO levels — global (user, `~/.code-shell/
- * settings.json`) and per project (`<repo>/.code-shell/settings.json`).
- * Core's SettingsManager CONCATENATES `hooks` across layers (user first,
- * project after), so a global hook runs in every project alongside that
- * project's own hooks (mirrors Claude Code's user-level hooks). The page
- * first shows a "全局" row plus the project list (reusing the sidebar
- * `projects`); picking one drills into that level's hooks.
- */
-export function HooksSection({ projects }: { projects: TrackedProject[] }) {
-  // undefined = picker; null = global (user level); string = project cwd.
-  const [selected, setSelected] = useState<string | null | undefined>(undefined);
-  const { t } = useT();
-  const selectedProject =
-    typeof selected === "string" ? (projects.find((r) => r.path === selected) ?? null) : null;
-
-  if (selected === undefined) {
-    return (
-      <section className="mb-6 flex flex-col gap-3">
-        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
-          {t("settingsX.adv.hooksTitle")}
-        </h3>
-        <p className="m-0 text-xs text-muted-foreground">{t("settingsX.adv.hooksDesc")}</p>
-        <ProjectPicker projects={projects} includeGlobal onSelect={(path) => setSelected(path)} />
-      </section>
-    );
-  }
-
-  return (
-    <section className="mb-6 flex flex-col gap-3">
-      <div className="mb-2 flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1 px-2 text-muted-foreground"
-          onClick={() => setSelected(undefined)}
-        >
-          <ArrowLeft size={14} />
-          <span>{t("settingsX.adv.backToList")}</span>
-        </Button>
-        <span className="truncate text-sm font-medium text-foreground">
-          {selected === null
-            ? t("settingsX.adv.globalAllProjects")
-            : selectedProject
-              ? projectLabel(selectedProject)
-              : selected}
-        </span>
-      </div>
-      <ProjectHooksEditor cwd={selected} />
-    </section>
-  );
-}
-
 /** Hook event names a user can pick for a hand-written hook. Aligned with the
  *  events plugin hooks map to (core EVENT_NAME_MAP), plus the engine's own
  *  lifecycle events that settings hooks can legitimately register. */
@@ -409,6 +318,54 @@ const HOOK_EVENT_OPTIONS: { value: string; labelKey: string }[] = [
   { value: "notification", labelKey: "settingsX.adv.hookEvtNotification" },
 ];
 
+interface HookDraft {
+  event: string;
+  command: string;
+}
+
+export function hookDraftKey(scope: "user" | "project", projectPath: string | null): string {
+  return scope === "project" ? (projectPath ?? "") : "__user__";
+}
+
+/**
+ * Hooks are maintained at TWO levels — global (user, `~/.code-shell/
+ * settings.json`) and per project (`<project>/.code-shell/settings.json`).
+ * SettingsPage owns the scope picker; this section renders only that selected
+ * level. New-hook drafts stay isolated per scope so a command typed globally
+ * cannot be carried into a project's settings (or vice versa).
+ */
+export function HooksSection({
+  scope,
+  projectPath,
+}: {
+  scope: "user" | "project";
+  projectPath: string | null;
+}) {
+  const { t } = useT();
+  const key = hookDraftKey(scope, projectPath);
+  const [drafts, setDrafts] = useState<Record<string, HookDraft>>({});
+  const draft = drafts[key] ?? {
+    event: HOOK_EVENT_OPTIONS[0]!.value,
+    command: "",
+  };
+  const setDraft = (next: HookDraft) => {
+    setDrafts((current) => ({ ...current, [key]: next }));
+  };
+
+  if (scope === "project" && !projectPath) return null;
+  return (
+    <section className="mb-6 flex flex-col gap-3">
+      <p className="m-0 text-xs text-muted-foreground">{t("settingsX.adv.hooksDesc")}</p>
+      <ProjectHooksEditor
+        key={key}
+        cwd={scope === "project" ? projectPath : null}
+        draft={draft}
+        onDraftChange={setDraft}
+      />
+    </section>
+  );
+}
+
 /**
  * Hook 管理页 for ONE level — a project (`cwd` set) or the global user level
  * (`cwd === null`). Shows that level's hand-written hooks (with a per-entry
@@ -419,17 +376,24 @@ const HOOK_EVENT_OPTIONS: { value: string; labelKey: string }[] = [
  * global view lists them read-only. A project view also lists the global
  * hooks read-only, since both layers run together.
  */
-function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
+function ProjectHooksEditor({
+  cwd,
+  draft,
+  onDraftChange,
+}: {
+  cwd: string | null;
+  draft: HookDraft;
+  onDraftChange: (draft: HookDraft) => void;
+}) {
   const isGlobal = cwd === null;
   const scope = isGlobal ? ("user" as const) : ("project" as const);
   const [hooks, setHooks] = useState<Array<Record<string, unknown>>>([]);
   const [globalHooks, setGlobalHooks] = useState<Array<Record<string, unknown>>>([]);
   const [pluginHooks, setPluginHooks] = useState<PluginHookEntry[]>([]);
   const [hookOverrides, setHookOverrides] = useState<Record<string, unknown>>({});
-  const [event, setEvent] = useState<string>(HOOK_EVENT_OPTIONS[0]!.value);
-  const [command, setCommand] = useState("");
   const [error, setError] = useState<string | null>(null);
   const { t } = useT();
+  const { event, command } = draft;
   const hookEventOptions = HOOK_EVENT_OPTIONS.map((o) => ({
     value: o.value,
     label: t(o.labelKey as Parameters<typeof t>[0]),
@@ -478,7 +442,7 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
       return;
     }
     await persist([...hooks, { event, command: cmd }]);
-    setCommand("");
+    onDraftChange({ event, command: "" });
   };
 
   /** Per-entry enable switch — `disabled: true` keeps the entry in the file
@@ -603,11 +567,15 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
         <span className="text-sm text-muted-foreground">{t("settingsX.adv.addHook")}</span>
         <div className="flex items-end gap-2">
           <div className="w-56 shrink-0">
-            <Select value={event} onChange={setEvent} options={hookEventOptions} />
+            <Select
+              value={event}
+              onChange={(nextEvent) => onDraftChange({ ...draft, event: nextEvent })}
+              options={hookEventOptions}
+            />
           </div>
           <Input
             value={command}
-            onChange={(e) => setCommand(e.target.value)}
+            onChange={(e) => onDraftChange({ ...draft, command: e.target.value })}
             placeholder={t("settingsX.adv.hookCmdPlaceholder")}
             className="font-mono text-sm"
             onKeyDown={(e) => {
@@ -632,7 +600,8 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
           <ul className="flex flex-col gap-1">
             {pluginHooks.map((h, i) => {
               const overrideOff = hookOverrides[h.key] === "off";
-              const off = h.disabled || overrideOff;
+              const trustBlocked = h.approval === "pending" || h.approval === "changed";
+              const off = h.disabled || overrideOff || trustBlocked;
               return (
                 <li
                   className={cn(
@@ -651,10 +620,27 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
                     {t("settingsX.adv.providedByPluginShort", { plugin: h.plugin })}
                     {h.disabled ? t("settingsX.adv.pluginDisabledSuffix") : ""}
                   </span>
+                  <span
+                    className={cn(
+                      "shrink-0 text-[10px]",
+                      h.approval === "approved" && "text-status-ok",
+                      h.approval === "legacy" && "text-status-warn",
+                      h.approval === "pending" && "text-status-warn",
+                      h.approval === "changed" && "text-status-err",
+                    )}
+                  >
+                    {h.approval === "approved"
+                      ? t("settingsX.adv.hookApprovalApproved")
+                      : h.approval === "pending"
+                        ? t("settingsX.adv.hookApprovalPending")
+                        : h.approval === "changed"
+                          ? t("settingsX.adv.hookApprovalChanged")
+                          : t("settingsX.adv.hookApprovalLegacy")}
+                  </span>
                   {!isGlobal && (
                     <Switch
                       checked={!off}
-                      disabled={h.disabled}
+                      disabled={h.disabled || trustBlocked}
                       onCheckedChange={(checked) => void togglePluginHook(h, checked)}
                       aria-label={
                         off
@@ -744,7 +730,9 @@ export function GitSection() {
     schedule: scheduleGitPath,
     flush: flushGitPath,
     cancel: cancelGitPath,
-  } = useDebouncedSave((value) => writeSettings("user", { git: { path: value } }));
+  } = useTargetedDebouncedSave("user:git-path", (value: string) =>
+    writeSettings("user", { git: { path: value } }),
+  );
 
   const applyDetectedGitPath = async (path: string | undefined): Promise<void> => {
     const detected = path?.trim();

@@ -6,6 +6,7 @@ export const chat = {
       composer: {
         placeholderBusy: "要求后续变更",
         placeholderCompacting: "正在压缩上下文…",
+        placeholderExpandingCommand: "正在展开插件命令…",
         placeholderIdle: "可向 agent 询问任何事。输入 @ 使用插件或提及文件",
         visionUnsupportedSend: "当前模型不支持图片输入。请切换到支持视觉的模型，或先移除图片。",
         visionUnsupportedTitle: "当前模型不支持图片",
@@ -83,6 +84,10 @@ export const chat = {
         noMatch: "没有匹配的命令",
         compactTitle: "压缩上下文",
         compactDescription: "立即整理当前会话上下文",
+        pluginProvidedBy: "由插件 {plugin} 提供",
+        pluginExpanded: "插件命令已展开到输入框，请检查后再发送。",
+        pluginExpandUnavailable: "当前版本无法展开插件命令，请重启 CodeShell 后重试。",
+        pluginExpandFailed: "插件命令展开失败：{error}",
       },
       queue: {
         heading: "后续变更",
@@ -231,6 +236,7 @@ export const chat = {
       composer: {
         placeholderBusy: "Request a follow-up change",
         placeholderCompacting: "Compacting context…",
+        placeholderExpandingCommand: "Expanding plugin command…",
         placeholderIdle: "Ask the agent anything. Type @ to use a skill or mention a file",
         visionUnsupportedSend:
           "The current model does not accept image input. Switch to a vision-capable model, or remove the images first.",
@@ -315,6 +321,11 @@ export const chat = {
         noMatch: "No matching commands",
         compactTitle: "Compact context",
         compactDescription: "Compact this conversation now",
+        pluginProvidedBy: "Provided by the {plugin} plugin",
+        pluginExpanded: "Plugin command expanded into the composer. Review it before sending.",
+        pluginExpandUnavailable:
+          "Plugin command expansion is unavailable. Restart CodeShell and try again.",
+        pluginExpandFailed: "Failed to expand plugin command: {error}",
       },
       queue: {
         heading: "Follow-up changes",

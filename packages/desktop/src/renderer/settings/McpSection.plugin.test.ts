@@ -2,10 +2,13 @@ import { describe, expect, it } from "bun:test";
 import {
   isEditableMcpServer,
   isHttpMcpAuthConfigured,
+  isToggleableMcpServer,
   inferHttpAuthMode,
+  mcpEffectiveProjectPath,
   mcpServersFromSettings,
   persistableMcpServers,
   ownerPluginOf,
+  visiblePluginMcpTrustEntries,
 } from "./McpSection";
 
 describe("plugin MCP servers in settings UI", () => {
@@ -15,6 +18,17 @@ describe("plugin MCP servers in settings UI", () => {
       false,
     );
     expect(isEditableMcpServer({ name: "readonly", command: "npx", editable: false })).toBe(false);
+  });
+
+  it("allows per-server toggles without making plugin identity fields editable", () => {
+    expect(isToggleableMcpServer({ name: "plug:server", source: "plugin" })).toBe(true);
+    expect(
+      isToggleableMcpServer({
+        name: "plug:server",
+        source: "plugin",
+        pluginDisabled: true,
+      }),
+    ).toBe(false);
   });
 
   it("does not persist plugin-provided servers back into settings", () => {
@@ -29,12 +43,25 @@ describe("plugin MCP servers in settings UI", () => {
   it("parses merged MCP records with source metadata", () => {
     const out = mcpServersFromSettings({
       local: { command: "npx", source: "settings", editable: true },
-      "plug:server": { command: "tool", source: "plugin", editable: false },
+      "plug:server": {
+        command: "tool",
+        source: "plugin",
+        editable: false,
+        allowedTools: ["search"],
+        disabledTools: ["delete"],
+      },
     });
 
     expect(out).toEqual([
       { name: "local", command: "npx", source: "settings", editable: true },
-      { name: "plug:server", command: "tool", source: "plugin", editable: false },
+      {
+        name: "plug:server",
+        command: "tool",
+        source: "plugin",
+        editable: false,
+        allowedTools: ["search"],
+        disabledTools: ["delete"],
+      },
     ]);
   });
 
@@ -64,5 +91,36 @@ describe("plugin MCP servers in settings UI", () => {
     expect(
       inferHttpAuthMode({ credentialRef: "plain-token" }, [{ id: "plain-token", type: "token" }]),
     ).toBe("bearer");
+  });
+
+  it("folds plugin capability state for the project being edited", () => {
+    expect(mcpEffectiveProjectPath("project", "/selected", "/active")).toBe("/selected");
+    expect(mcpEffectiveProjectPath("user", null, "/active")).toBe("/active");
+  });
+
+  it("shows actionable plugin MCP trust states while hiding MCP-free installs", () => {
+    expect(
+      visiblePluginMcpTrustEntries([
+        {
+          installKey: "pending@local",
+          plugin: "pending",
+          serverNames: ["server"],
+          status: "pending",
+        },
+        {
+          installKey: "empty@local",
+          plugin: "empty",
+          serverNames: [],
+          status: "none",
+        },
+      ]),
+    ).toEqual([
+      {
+        installKey: "pending@local",
+        plugin: "pending",
+        serverNames: ["server"],
+        status: "pending",
+      },
+    ]);
   });
 });

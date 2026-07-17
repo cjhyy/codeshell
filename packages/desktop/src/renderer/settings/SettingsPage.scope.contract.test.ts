@@ -50,4 +50,15 @@ describe("SettingsPage scope contract", () => {
     expect(module).toContain("DataSourceCatalogSection");
     expect(module).toContain("DataSourcesSection");
   });
+
+  test("hooks follows the page-level scope instead of rendering a second project picker", () => {
+    expect(source).toContain('id: "hooks"');
+    expect(source).toContain("<HooksSection scope={scope} projectPath={scopeProjectPath}");
+  });
+
+  test("draft-heavy editors mark their scope as internally managed", () => {
+    expect(source).toContain('scopeControl: "internal"');
+    expect(source).toContain("moduleUsesPageScope");
+    expect(source).toContain("scopeManagedInSection");
+  });
 });
