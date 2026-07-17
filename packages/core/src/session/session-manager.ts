@@ -745,6 +745,28 @@ export class SessionManager {
     return this.updateSessionState(sessionId, { workspace });
   }
 
+  /** Read the durable archival timestamp; undefined = not archived / unprovable. */
+  readSessionArchivedAt(sessionId: string): number | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+    } catch {
+      return undefined;
+    }
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) return undefined;
+    try {
+      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+      return typeof state.archivedAt === "number" ? state.archivedAt : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Set (number) or clear (undefined) the durable archival marker. */
+  setSessionArchived(sessionId: string, archivedAt: number | undefined): number {
+    return this.updateSessionState(sessionId, { archivedAt });
+  }
+
   recordWorkspaceHandoff(
     sessionId: string,
     from: SessionWorkspace | undefined,
