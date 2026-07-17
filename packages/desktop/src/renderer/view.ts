@@ -1,16 +1,25 @@
-export type ViewMode =
-  | "chat"
-  | "pet" // first-class Pet workspace; never layered over chat
-  | "digital_humans" // market, installed digital humans, and Pet-led teams
-  | "sessions"
-  | "approvals"
-  | "runs"
-  | "automation" // scheduled automation jobs (cron) — list + detail + create
-  | "settings" // legacy modal route — kept for routing back-compat
-  | "settings_page" // full-screen Settings page (new in batch E)
-  | "project_config" // full-screen settings for one tracked project
-  | "credentials" // full-screen 凭证 (cookie + token + link) view
-  | "logs";
+/**
+ * Built-in full-screen routes. The union is intentionally open: registered
+ * pages (renderer/pages/PageRegistry.ts) contribute additional string keys,
+ * so persisted state and setViewMode accept both.
+ */
+export const BUILTIN_VIEW_MODES = [
+  "chat",
+  "pet", // first-class Pet workspace; never layered over chat
+  "digital_humans", // market, installed digital humans, and Pet-led teams
+  "sessions",
+  "approvals",
+  "runs",
+  "automation", // scheduled automation jobs (cron) — list + detail + create
+  "settings_page", // full-screen Settings page
+  "project_config", // full-screen settings for one tracked project
+  "credentials", // full-screen 凭证 (cookie + token + link) view
+  "logs",
+] as const;
+
+export type BuiltinViewMode = (typeof BUILTIN_VIEW_MODES)[number];
+/** Builtin literals keep autocomplete; registry page keys ride the open half. */
+export type ViewMode = BuiltinViewMode | (string & {});
 
 /**
  * The side panel area lives alongside chat (not a full-screen ViewMode). It's
@@ -36,32 +45,27 @@ const DEFAULT: ViewState = {
   inspectorCollapsed: false,
 };
 
-const VALID_MODES: ReadonlySet<ViewMode> = new Set([
-  "chat",
-  "pet",
-  "digital_humans",
-  "sessions",
-  "approvals",
-  "runs",
-  "automation",
-  "settings",
-  "settings_page",
-  "project_config",
-  "credentials",
-  "logs",
-]);
+const BUILTIN_MODES: ReadonlySet<string> = new Set(BUILTIN_VIEW_MODES);
 
-export function loadView(): ViewState {
+export function loadView(isRegisteredPage?: (mode: string) => boolean): ViewState {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
     const merged = { ...DEFAULT, ...(JSON.parse(raw) as Partial<ViewState>) };
-    // Legacy route: the standalone 扩展 view merged into Settings (双门收口).
-    if ((merged.viewMode as string) === "customize") merged.viewMode = "settings_page";
+    // Legacy routes: the standalone 扩展 view ("customize") and the old
+    // settings modal route ("settings") both merged into the full-screen
+    // Settings page. Keep these as quoted literals — the settings contract
+    // test asserts view.ts still contains '"customize"'.
+    if (merged.viewMode === "customize" || merged.viewMode === "settings") {
+      merged.viewMode = "settings_page";
+    }
     // Old builds persisted panel kinds (files/browser/review/terminal) as
-    // ViewModes; those are now dock tabs, not full-screen views. Fall back to
-    // chat so a stale value doesn't leave the user on a blank/unknown view.
-    if (!VALID_MODES.has(merged.viewMode)) merged.viewMode = "chat";
+    // ViewModes; those are now dock tabs, not full-screen views. Anything that
+    // is neither builtin nor a registered page falls back to chat so a stale
+    // value doesn't leave the user on a blank/unknown view.
+    if (!BUILTIN_MODES.has(merged.viewMode) && !isRegisteredPage?.(merged.viewMode)) {
+      merged.viewMode = "chat";
+    }
     return merged;
   } catch {
     return DEFAULT;

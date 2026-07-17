@@ -9,7 +9,6 @@ const viewSource = readFileSync(join(rendererRoot, "view.ts"), "utf8");
 
 describe("project config navigation", () => {
   test("persists project_config as a valid first-class view", () => {
-    expect(viewSource).toContain('| "project_config"');
     expect(viewSource).toContain('"project_config",');
   });
 

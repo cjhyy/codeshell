@@ -62,7 +62,6 @@ describe("App Pet lifecycle boundaries", () => {
   });
 
   test("Pet is a persisted first-class page and never an overlay over chat", () => {
-    expect(viewSource).toContain('| "pet"');
     expect(viewSource).toContain('"pet",');
     expect(petSource).toContain('data-pet-page="standalone"');
     expect(appSource).toContain('const isPetView = view.viewMode === "pet"');
