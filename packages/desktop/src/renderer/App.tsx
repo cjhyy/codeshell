@@ -1909,9 +1909,7 @@ function App() {
                 onNewConversationForProject={handleNewConversationForProject}
                 onNewConversation={handleNewConversation}
                 onOpenSearch={() => setSessionSearchOpen(true)}
-                onOpenAutomations={() => setViewMode("automation")}
-                onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                onOpenCredentials={() => setViewMode("credentials")}
+                onNavigate={setViewMode}
                 onOpenProjectConfig={(projectId) => {
                   setActiveProjectId(projectId);
                   setViewMode("project_config");

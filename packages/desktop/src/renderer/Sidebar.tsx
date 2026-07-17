@@ -1,10 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   MessageSquare,
   Search,
-  Settings as SettingsIcon,
-  Workflow,
-  KeyRound,
   Folder,
   FolderOpen,
   Plus,
@@ -13,7 +10,6 @@ import {
   Archive,
   Clock,
   Loader2,
-  UsersRound,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -24,6 +20,7 @@ import { copyText } from "./lib/clipboard";
 import { SettingsMenu } from "./settings/SettingsMenu";
 import { SidebarUpdaterButton } from "./updater/UpdaterBanner";
 import type { ViewMode } from "./view";
+import { PAGE_REGISTRY, pageEntryTitle } from "./pages/PageRegistry";
 import { projectLabel, sortProjects, type TrackedProject } from "./projects";
 import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "./transcripts";
 import type { SessionStatus } from "./sessionStatus";
@@ -60,9 +57,8 @@ interface SidebarProps {
 
   onNewConversation: () => void;
   onOpenSearch: () => void;
-  onOpenAutomations: () => void;
-  onOpenDigitalHumans: () => void;
-  onOpenCredentials: () => void;
+  /** Navigate to a registry page's target view (sidebar first-level nav). */
+  onNavigate: (mode: ViewMode) => void;
   onOpenProjectConfig: (id: string) => void;
   onOpenSettingsPage: () => void;
   onOpenPetPage: () => void;
@@ -107,9 +103,7 @@ export function Sidebar({
   onNewConversationForProject,
   onNewConversation,
   onOpenSearch,
-  onOpenAutomations,
-  onOpenDigitalHumans,
-  onOpenCredentials,
+  onNavigate,
   onOpenProjectConfig,
   onOpenSettingsPage,
   onOpenPetPage,
@@ -126,6 +120,10 @@ export function Sidebar({
   const confirm = useConfirm();
   const prompt = usePrompt();
   const toast = useToast();
+
+  // Re-render when pages register/unregister (same idiom as panels/PanelArea.tsx:158).
+  useSyncExternalStore(PAGE_REGISTRY.subscribe, PAGE_REGISTRY.snapshot, PAGE_REGISTRY.snapshot);
+  const navPages = PAGE_REGISTRY.navEntries();
 
   // Pin sort (sortProjects: pinned first, then by addedAt asc).
   const orderedProjects = useMemo(() => sortProjects(projects), [projects]);
@@ -262,34 +260,18 @@ export function Sidebar({
           onClick={onOpenSearch}
           active={false}
         />
-        <SidebarItem
-          label={t("sidebar.digitalHumans")}
-          Icon={UsersRound}
-          onClick={onOpenDigitalHumans}
-          active={viewMode === "digital_humans"}
-        />
-        {/* NOTE: this row used to carry the GLOBAL pending-approvals badge (a
-            Phase-9 IA leftover) — approvals have nothing to do with 自动化 and
-            the misplaced dot confused users. The per-session asking dot + the
-            dock icon badge (setBadgeCount) already cover location + count. */}
-        <SidebarItem
-          label={t("sidebar.automation")}
-          Icon={Workflow}
-          onClick={onOpenAutomations}
-          active={viewMode === "runs"}
-        />
-        <SidebarItem
-          label={t("sidebar.credentials")}
-          Icon={KeyRound}
-          onClick={onOpenCredentials}
-          active={viewMode === "credentials"}
-        />
-        <SidebarItem
-          label={t("sidebar.settings")}
-          Icon={SettingsIcon}
-          onClick={onOpenSettingsPage}
-          active={viewMode === "settings_page" || viewMode === "project_config"}
-        />
+        {/* NOTE: this list used to be hardcoded; the GLOBAL pending-approvals
+            badge history note from the automation item still applies — the
+            per-session asking dot + dock badge (setBadgeCount) cover it. */}
+        {navPages.map((entry) => (
+          <SidebarItem
+            key={entry.key}
+            label={pageEntryTitle(entry, (key) => t(key as never))}
+            Icon={entry.icon}
+            onClick={() => onNavigate(entry.nav!.target)}
+            active={entry.nav!.isActive(viewMode)}
+          />
+        ))}
       </nav>
 
       <div className="flex min-h-0 flex-1 flex-col">
