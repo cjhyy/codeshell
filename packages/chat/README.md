@@ -32,6 +32,29 @@ await chat.run(shutdown.signal);
 
 第三方也可以实现 `ChannelAdapter` 接入新平台，或用 middleware 接自己的 Agent、Webhook、工单系统与自动化服务。
 
+配置驱动的 host 应使用异步工厂；它只会动态加载实际选择的平台模块：
+
+```ts
+import { createChannelAdapterAsync } from "@cjhyy/code-shell-chat/factory";
+
+const telegram = await createChannelAdapterAsync({
+  channel: "telegram",
+  botToken: process.env.TELEGRAM_BOT_TOKEN!,
+  apiBaseUrl: "https://api.telegram.org",
+  allowedTargetIds: [process.env.TELEGRAM_CHAT_ID!],
+  allowedUserIds: [],
+});
+```
+
+旧的同步 `createChannelAdapter()` 继续兼容，但返回的是首次 `run`、`send` 或 webhook 请求时
+才加载具体平台的轻量代理。内置 CLI 和 Desktop 已使用异步入口，因此启动阶段会直接报告所选
+adapter 的模块加载或构造错误。
+
+当前各平台 SDK 仍是默认依赖：动态加载减少的是未启用平台的模块求值、副作用和启动开销，
+不是安装体积。暂不改成 peer/optional dependency，是为了保证标准 `bun add
+@cjhyy/code-shell-chat` 和内置 CLI 安装后仍可直接启用任一支持渠道；后续若拆独立 adapter
+包，需要同时提供安装检测和明确的按渠道安装指引。
+
 ## CodeShell integration
 
 包内置了可选的 `@cjhyy/code-shell-chat/codeshell` integration 和 `code-shell-chat` CLI。
@@ -210,8 +233,9 @@ export CODE_SHELL_DISCORD_ALLOWED_CHANNEL_IDS='channel-1,channel-2'
 export CODE_SHELL_DISCORD_ALLOWED_USER_IDS='owner-user-id'
 ```
 
-也可用 `CODE_SHELL_IM_GATEWAY_CONFIG` 指定配置路径。完整环境变量名以
-[`src/config.ts`](./src/config.ts) 为准。
+也可用 `CODE_SHELL_IM_GATEWAY_CONFIG` 指定配置路径。完整环境变量名以仓库中的
+[`packages/chat/src/config.ts`](https://github.com/cjhyy/codeshell/blob/main/packages/chat/src/config.ts)
+为准。
 
 ### Webhook 渠道
 

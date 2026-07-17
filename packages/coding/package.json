@@ -10,6 +10,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./capability": {
+      "types": "./dist/index.capability.d.ts",
+      "import": "./dist/index.capability.js"
+    },
+    "./git": {
+      "types": "./dist/index.git.d.ts",
+      "import": "./dist/index.git.js"
+    },
+    "./orchestration": {
+      "types": "./dist/index.orchestration.d.ts",
+      "import": "./dist/index.orchestration.js"
+    },
     "./bin/agent-server-stdio": "./dist/bin/agent-server-stdio.js"
   },
   "files": [
@@ -17,7 +29,7 @@
     "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && bun run copy-assets",
+    "build": "bun run clean && tsc -p tsconfig.json && bun run copy-assets",
     "copy-assets": "node ../../scripts/copy-assets.mjs dist/prompt src/prompt/*.md && node ../../scripts/copy-assets.mjs dist/tools/apply-patch src/tools/apply-patch/NOTICE.md src/tools/apply-patch/LICENSE-codex",
     "dev": "bun run copy-assets && tsc -p tsconfig.json --watch --preserveWatchOutput",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
@@ -27,6 +39,15 @@
   },
   "engines": {
     "node": ">=20.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/coding"
+  },
+  "homepage": "https://github.com/cjhyy/codeshell/tree/main/packages/coding#readme",
+  "bugs": {
+    "url": "https://github.com/cjhyy/codeshell/issues"
   },
   "license": "MIT",
   "publishConfig": {

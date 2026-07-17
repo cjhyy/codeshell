@@ -88,7 +88,7 @@ describe("coding capability runtime", () => {
     });
     await tracker.onStreamEvent({
       type: "tool_result",
-      result: { id: "notebook", result: "ok", isError: false },
+      result: { id: "notebook", toolName: "NotebookEdit", result: "ok", isError: false },
     });
     await tracker.onStreamEvent({
       type: "tool_use_start",
@@ -96,7 +96,7 @@ describe("coding capability runtime", () => {
     });
     await tracker.onStreamEvent({
       type: "tool_result",
-      result: { id: "commit", result: "ok", isError: false },
+      result: { id: "commit", toolName: "Bash", result: "ok", isError: false },
     });
 
     expect(refs.map((ref) => ref.locator)).toEqual(["lab.ipynb", "git:HEAD"]);

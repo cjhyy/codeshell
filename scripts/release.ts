@@ -6,9 +6,10 @@
  *
  * Why this exists
  * ---------------
- * The release depends on package.json's `version` in SEVEN places
- * (root + cdp/core/coding/tui/desktop/chat), the public core `VERSION` export, and the
- * workspace version references in `bun.lock`.
+ * The release depends on every workspace package.json `version`, the public
+ * core `VERSION` export, and the workspace version references in `bun.lock`.
+ * The shared release declaration keeps this helper, CI verification, tarball
+ * audit, and npm publish order on one package set.
  * electron-builder names its artifacts and writes latest-*.yml from
  * package.json's version — NOT the git tag. Two real incidents came from doing
  * this by hand:
@@ -23,12 +24,15 @@
  * -----
  *   bun run scripts/release.ts 0.6.0-beta.1        # explicit beta version
  *   bun run scripts/release.ts --bump beta         # auto-increment beta number
- *   bun run scripts/release.ts 0.6.0-rc.11          # bump + commit (dry: no push)
+ *   bun run scripts/release.ts 0.6.0-rc.11          # bump + local commit
+ *   bun run scripts/release.ts 0.6.0-rc.11 --dry-run # verify and preview only
  *   bun run scripts/release.ts --bump rc            # auto-increment the rc number
  *   bun run scripts/release.ts 0.6.0-rc.11 --push   # also push main + tag → CI
  *
  * Flags:
  *   --push        after committing, push main and push an annotated tag v<version>.
+ *   --dry-run     verify the current release state and print the planned bump;
+ *                 do not edit, install, stage, commit, tag, or push.
  *   --bump <part> compute the next version instead of passing it explicitly.
  *                 part ∈ { beta, rc, patch, minor, major }.
  *                 `beta`/`rc` bump or append -beta.N/-rc.N.
@@ -42,16 +46,11 @@ import { $ } from "bun";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { RELEASE_PACKAGES, packageManifestPath } from "./package-release-audit-config";
+import { verifyReleaseVersions } from "./verify-release-versions";
+
 const ROOT = resolve(import.meta.dir, "..");
-const PKG_FILES = [
-  "package.json",
-  "packages/cdp/package.json",
-  "packages/core/package.json",
-  "packages/coding/package.json",
-  "packages/tui/package.json",
-  "packages/desktop/package.json",
-  "packages/chat/package.json",
-] as const;
+const PKG_FILES = RELEASE_PACKAGES.map(packageManifestPath);
 const LOCKFILE = "bun.lock";
 const CORE_VERSION_FILE = "packages/core/src/index.ts";
 const VERSION_RE = /^(\d+)\.(\d+)\.(\d+)(?:-(rc|beta)\.(\d+))?$/;
@@ -67,11 +66,15 @@ function readVersion(rel: string): string {
   return JSON.parse(readFileSync(resolve(ROOT, rel), "utf8")).version;
 }
 
-function readCoreVersion(): string {
-  const text = readFileSync(resolve(ROOT, CORE_VERSION_FILE), "utf8");
-  const match = text.match(CORE_VERSION_RE);
-  if (!match) die(`could not find VERSION export in ${CORE_VERSION_FILE}`);
-  return match[1];
+function rewriteManifestVersion(rel: string, current: string, target: string): void {
+  const path = resolve(ROOT, rel);
+  const before = readFileSync(path, "utf8");
+  const versionField = /^(\s*"version"\s*:\s*")([^"]+)(")/m;
+  const found = before.match(versionField)?.[2];
+  if (found !== current) {
+    die(`${rel} version is ${found ?? "<missing>"}, expected ${current}`);
+  }
+  writeFileSync(path, before.replace(versionField, `$1${target}$3`));
 }
 
 /** Compute the next version from the current one for `--bump <part>`. */
@@ -102,6 +105,7 @@ function computeBump(current: string, part: string): string {
 // ── parse args ────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
 const push = argv.includes("--push");
+const dryRun = argv.includes("--dry-run");
 const allowDirty = argv.includes("--allow-dirty");
 const bumpIdx = argv.indexOf("--bump");
 const bumpValueIdx = bumpIdx === -1 ? -1 : bumpIdx + 1;
@@ -123,13 +127,27 @@ if (!VERSION_RE.test(target)) {
   die(`version "${target}" is not ${VERSION_FORMAT}`);
 }
 if (target === current) die(`version is already ${target} — nothing to bump`);
+if (dryRun && push) die("--dry-run cannot be combined with --push");
 
 console.log(`\x1b[36m→ ${current}  →  ${target}\x1b[0m`);
 
 // ── clean-tree check ────────────────────────────────────────────────────────
 const status = (await $`git status --porcelain`.cwd(ROOT).text()).trim();
-if (status && !allowDirty) {
+if (status && !allowDirty && !dryRun) {
   die(`working tree not clean — commit/stash first, or pass --allow-dirty:\n${status}`);
+}
+
+try {
+  verifyReleaseVersions(current, ROOT);
+} catch (error) {
+  die(error instanceof Error ? error.message : String(error));
+}
+
+if (dryRun) {
+  console.log(
+    `\x1b[32m✓ dry run: would update ${PKG_FILES.length} package manifests, bun.lock, and core VERSION to ${target}\x1b[0m`,
+  );
+  process.exit(0);
 }
 
 // ── rewrite versions ────────────────────────────────────────────────────────
@@ -144,24 +162,22 @@ if (coreVersion !== current) {
   );
 }
 
-for (const rel of [...PKG_FILES, LOCKFILE]) {
-  const p = resolve(ROOT, rel);
-  const before = readFileSync(p, "utf8");
-  // package.json: the version only appears as the top-level "version" field and
-  // as workspace dep refs — all are the exact current version string. bun.lock:
-  // same literal. A global literal replace is correct because prerelease strings
-  // only ever appear as this project's own version in these files.
-  const after = before.replaceAll(current, target);
-  if (after !== before) writeFileSync(p, after);
-}
+for (const rel of PKG_FILES) rewriteManifestVersion(rel, current, target);
 
 const coreAfter = coreBefore.replace(CORE_VERSION_RE, `export const VERSION = "${target}";`);
 if (coreAfter !== coreBefore) writeFileSync(coreVersionPath, coreAfter);
 
+// Let Bun update only workspace metadata and any generated own-package specs.
+// A literal replace across bun.lock is unsafe: third-party packages may happen
+// to use the same version number as CodeShell.
+await $`bun install --lockfile-only --ignore-scripts`.cwd(ROOT);
+
 // ── verify consistency (the whole point) ────────────────────────────────────
-const bad = PKG_FILES.filter((f) => readVersion(f) !== target);
-if (bad.length) die(`version rewrite failed for: ${bad.join(", ")}`);
-if (readCoreVersion() !== target) die(`${CORE_VERSION_FILE} VERSION rewrite failed`);
+try {
+  verifyReleaseVersions(target, ROOT);
+} catch (error) {
+  die(error instanceof Error ? error.message : String(error));
+}
 console.log(
   `\x1b[32m✓ all ${PKG_FILES.length} package.json + bun.lock + core VERSION now ${target}\x1b[0m`,
 );
@@ -173,7 +189,7 @@ console.log(`\x1b[32m✓ committed "chore: release ${target}"\x1b[0m`);
 
 if (!push) {
   console.log(
-    `\nDry run (no --push). Review, then:\n` +
+    `\nLocal release commit created (no --push). Review, then:\n` +
       `  git push origin main\n` +
       `  git tag -a v${target} -m "release ${target}" && git push origin v${target}\n`,
   );

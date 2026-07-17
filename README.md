@@ -240,9 +240,16 @@ Design principles:
 packages/
 ├── core/      # Domain-agnostic engine, context, MCP, hooks, sessions, runs, memory
 ├── coding/    # Coding capability pack: tools, git/worktrees, LSP, review, prompt/presets
+├── arena/     # Optional multi-model Arena capability
+├── pet/       # Mimi behavior, DelegateWork, projection protocol, digital-human teams
+├── server/    # Headless HTTP/WebSocket host, rooms, uploads, mobile remote
+├── web/       # Browser-safe remote client state and SPA
 ├── tui/       # Terminal CLI, Ink-based UI, renderer, commands, approvals
 ├── desktop/   # Electron desktop client + agent worker bridge + mobile remote app
-└── cdp/       # Environment-agnostic CDP browser-action layer (no Playwright)
+├── cdp/       # Environment-agnostic CDP browser-action layer (no Playwright)
+└── chat/      # Standalone multi-channel chat gateway + optional CodeShell adapter
+
+package.json   # @cjhyy/code-shell compatibility meta package
 
 assets/       # README / product images (mascot, promo hero, Playwright desktop screenshots)
 
@@ -281,7 +288,10 @@ bun run build
 ## Further reading
 
 - [Plugin panels v1](docs/plugin-panels.md)
-
+- [Video editor reference plugin](examples/plugins/video-editor/README.md)
+- [Package boundaries & Pet split rationale](docs/architecture/12-package-boundaries-and-release-units.md)
+- [Plugin parity matrix](docs/architecture/13-plugin-parity-and-video-editor.md)
+- [Digital humans & Pet architecture](docs/architecture/14-digital-human-and-pet.md)
 - [Architecture & feature inventory](docs/architecture/README.md)
 - [Roadmap & TODO](docs/todo/README.md)
 - [Prior architecture documentation set (archived, pending rewrite)](docs/archive/architecture/README.md)

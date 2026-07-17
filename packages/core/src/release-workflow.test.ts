@@ -15,67 +15,31 @@ function needs(jobConfig: any): string[] {
   return [];
 }
 
-function packageDir(packageJsonPath: string): string {
-  if (packageJsonPath === "package.json") return ".";
-  return packageJsonPath.replace(/\/package\.json$/, "");
-}
-
-function packageJsonRefsFromVersionCheck(): string[] {
-  const verifyRun = String(
-    job("verify-version").steps.find((step: any) => step.name === "assert version == tag")?.run ??
-      "",
-  );
-  const matches = Array.from(
-    verifyRun.matchAll(/(?:^|\s)(package\.json|packages\/[^/\s]+\/package\.json)/g),
-  );
-  return Array.from(new Set(matches.map((match) => match[1]!)));
-}
-
-function publishedPackageDirs(): Set<string> {
-  const publishRun = String(
-    job("npm-publish").steps.find((step: any) => String(step.name ?? "").startsWith("publish"))
-      ?.run ?? "",
-  );
-  const dirs = new Set<string>();
-  for (const line of publishRun.split("\n").map((value) => value.trim())) {
-    if (!line.startsWith("bun publish")) continue;
-    const cwd = line.match(/--cwd\s+([^\s]+)/)?.[1];
-    dirs.add(cwd ?? ".");
-  }
-  return dirs;
-}
-
 describe("release workflow guards", () => {
   test("npm publish is gated by tag/package version verification for every release package", () => {
     expect(needs(job("npm-publish"))).toContain("verify-version");
+    expect(needs(job("npm-publish"))).toContain("package-release-smoke");
 
     const verifyRun = String(
       job("verify-version").steps.find((step: any) => step.name === "assert version == tag")?.run ??
         "",
     );
-
-    expect(verifyRun).toContain("package.json");
-    expect(verifyRun).toContain("packages/cdp/package.json");
-    expect(verifyRun).toContain("packages/core/package.json");
-    expect(verifyRun).toContain("packages/coding/package.json");
-    expect(verifyRun).toContain("packages/tui/package.json");
-    expect(verifyRun).toContain("packages/desktop/package.json");
+    const verifierSource = readFileSync("scripts/verify-release-versions.ts", "utf8");
+    expect(verifyRun).toContain("scripts/verify-release-versions.ts");
+    expect(verifierSource).toContain("RELEASE_PACKAGES.map(packageManifestPath)");
+    expect(verifierSource).toContain("discoverWorkspaceManifestPaths");
   });
 
-  test("version-checked npm packages are published unless explicitly private", () => {
-    const published = publishedPackageDirs();
-    const mismatches: string[] = [];
-
-    for (const packageJsonPath of packageJsonRefsFromVersionCheck()) {
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as any;
-      const dir = packageDir(packageJsonPath);
-      if (packageJson.private === true) continue;
-      if (!published.has(dir)) {
-        mismatches.push(`${packageJson.name} is version-checked and public but not published`);
-      }
-    }
-
-    expect(mismatches).toEqual([]);
+  test("npm publish delegates to the centralized public package declaration", () => {
+    const publishRun = String(
+      job("npm-publish").steps.find((step: any) => String(step.name ?? "").startsWith("publish"))
+        ?.run ?? "",
+    );
+    const publisherSource = readFileSync("scripts/publish-release-packages.ts", "utf8");
+    expect(publishRun).toContain("scripts/publish-release-packages.ts");
+    expect(publishRun).toContain("--execute");
+    expect(publisherSource).toContain("PUBLIC_RELEASE_PACKAGES.map");
+    expect(publisherSource).toContain("verifyReleaseVersions(rootVersion)");
   });
 
   test("release write permissions are isolated to the GitHub Release job", () => {

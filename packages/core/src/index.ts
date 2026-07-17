@@ -366,18 +366,59 @@ export type { EffectiveDisabledLists } from "./capability-control/disabled-lists
 export type { InstalledPluginsV2 } from "./plugins/types.js";
 
 // ─── Plugin installer (CC + Codex) ───────────────────────────────
-export { installPluginFromPath } from "./plugins/installer/install.js";
+export {
+  installPluginFromPath,
+  type InstallPluginFromPathOptions,
+} from "./plugins/installer/install.js";
 export { installPluginFromSource } from "./plugins/installer/installFromSource.js";
+export {
+  installPluginFromNpm,
+  resolveNpmPlugin,
+  downloadVerifiedNpmTarball,
+  NPM_PUBLIC_REGISTRY,
+  MAX_NPM_METADATA_BYTES,
+  type NpmPluginFetch,
+  type NpmPluginInstallOptions,
+  type ResolvedNpmPlugin,
+} from "./plugins/installer/installFromNpm.js";
+export {
+  extractNpmTar,
+  gunzipNpmTarball,
+  MAX_NPM_TARBALL_BYTES,
+  MAX_NPM_TAR_EXTRACTED_BYTES,
+  MAX_NPM_TAR_FILE_BYTES,
+  MAX_NPM_TAR_ENTRIES,
+  MAX_NPM_TAR_PATH_BYTES,
+  MAX_NPM_TAR_DEPTH,
+} from "./plugins/installer/npmTar.js";
 export {
   installLocalPlugin,
   installPluginFromArchive,
 } from "./plugins/installer/installFromArchive.js";
-export { parseSource, type ParsedSource } from "./plugins/installer/parseSource.js";
+export {
+  installReviewedLocalPlugin,
+  previewLocalPlugin,
+  LocalPluginReviewChangedError,
+  type LocalPluginHookPreview,
+  type LocalPluginAutomationTemplatePreview,
+  type LocalPluginInterfacePreview,
+  type LocalPluginMcpPreview,
+  type LocalPluginPreview,
+  type LocalPluginPreviewWarning,
+  type LocalPluginPreviewWarningKind,
+} from "./plugins/installer/preview.js";
+export {
+  parseSource,
+  parseNpmPluginSource,
+  type ParsedSource,
+} from "./plugins/installer/parseSource.js";
 export { detectPluginFormat } from "./plugins/installer/detectFormat.js";
 export {
   CodexPluginManifest,
   PluginPanelManifestEntry,
   PluginPanelsManifest,
+  PluginAutomationTemplate,
+  PluginAutomationsManifest,
   CanonicalPluginManifest,
   CANONICAL_PLUGIN_MANIFEST_FILE,
   PLUGIN_PANEL_PERMISSIONS,
@@ -386,6 +427,8 @@ export {
   PluginInstallError,
   type PluginPanelManifestEntry as PluginPanelManifestEntryData,
   type PluginPanelsManifest as PluginPanelsManifestData,
+  type PluginAutomationTemplate as PluginAutomationTemplateData,
+  type PluginAutomationsManifest as PluginAutomationsManifestData,
   type CanonicalPluginManifest as CanonicalPluginManifestData,
 } from "./plugins/installer/types.js";
 export {
@@ -393,18 +436,53 @@ export {
   readCanonicalPluginManifest,
   type NormalizePluginManifestOptions,
 } from "./plugins/installer/normalizeManifest.js";
-export { mergePluginMcpServers } from "./plugins/installer/loadPluginMcp.js";
+export { mergePluginMcpServers, readPluginMcp } from "./plugins/installer/loadPluginMcp.js";
+export {
+  approvePluginMcp,
+  listPluginMcpTrust,
+  revokePluginMcp,
+  type PluginMcpApprovalResult,
+  type PluginMcpTrustEntry,
+} from "./plugins/pluginMcpApproval.js";
+export {
+  pluginMcpApprovalState,
+  type PluginMcpApprovalState,
+} from "./plugins/pluginMcpIntegrity.js";
 export { pluginsRoot } from "./plugins/installer/paths.js";
 export { resolveSafePluginPath } from "./plugins/pluginInstaller.js";
 export { listPluginHooks, pluginHookKey, type PluginHookEntry } from "./plugins/loadPluginHooks.js";
-export { describePluginContent, type PluginContentInventory } from "./plugins/pluginContent.js";
+export {
+  approvePluginHooks,
+  reviewPluginHooks,
+  revokePluginHooks,
+  type PluginHookApprovalResult,
+  type PluginHookReview,
+  type PluginHookReviewDiffItem,
+} from "./plugins/pluginHookApproval.js";
+export {
+  pluginHookApprovalState,
+  type PluginHookApprovalState,
+} from "./plugins/pluginHookIntegrity.js";
+export {
+  describePluginContent,
+  type PluginAutomationTemplateDescriptor,
+  type PluginContentInventory,
+} from "./plugins/pluginContent.js";
 export {
   loadPluginCatalog,
+  loadPluginAutomationTemplateContributions,
   loadPluginPanelContributions,
+  pluginAutomationTemplateRevision,
   type LoadPluginCatalogOptions,
+  type PluginAutomationTemplateContribution,
   type PluginCatalogEntry,
   type PluginPanelContribution,
 } from "./plugins/pluginCatalog.js";
+export {
+  instantiatePluginAutomationTemplate,
+  MAX_PLUGIN_AUTOMATIONS,
+  type InstantiatePluginAutomationTemplateOptions,
+} from "./plugins/pluginAutomationTemplates.js";
 export { pluginAgentDirs } from "./plugins/installer/loadPluginAgents.js";
 export {
   appendInstallEntry,
@@ -547,7 +625,6 @@ export {
   getDefaultCredentialCipher,
 } from "./credentials/index.js";
 
-
 // ─── Cost Tracker ────────────────────────────────────────────────
 
 export { CostTracker, costTracker, installCostTracking } from "./cost-tracker.js";
@@ -574,8 +651,6 @@ export {
   type UpdateInfo,
 } from "./updater.js";
 
-
-
 // ─── Plugins ─────────────────────────────────────────────────────
 
 export { installPlugin, uninstallPlugin, listInstalled } from "./plugins/pluginInstaller.js";
@@ -587,13 +662,20 @@ export {
   loadMarketplace,
 } from "./plugins/marketplaceManager.js";
 export { parseMarketplaceInput, deriveMarketplaceName } from "./plugins/parseMarketplaceInput.js";
-export { scanPluginCommands, type PluginCommand } from "./plugins/pluginCommandsLoader.js";
-
+export {
+  expandPluginCommandBody,
+  describePluginCommands,
+  scanPluginCommands,
+  MAX_PLUGIN_COMMAND_FILE_BYTES,
+  MAX_PLUGIN_COMMAND_ARGUMENT_CHARS,
+  MAX_PLUGIN_COMMAND_EXPANDED_CHARS,
+  type PluginCommand,
+  type PluginCommandDescriptor,
+} from "./plugins/pluginCommandsLoader.js";
 
 // ─── Data ────────────────────────────────────────────────────────
 
 export { syncOpenRouterCatalog, getOpenRouterSnapshot } from "./data/openrouter-sync.js";
-
 
 // ─── External agent config (Mobile Web Remote Rooms) ─────────────
 // Resolves the externalAgents settings block (notably claudeCode.trustedWorkspaces),

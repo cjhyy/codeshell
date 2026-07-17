@@ -27,6 +27,7 @@
     "smoke": "bun run build && bun run --cwd packages/desktop build && bun run --cwd packages/desktop smoke",
     "test:core-exports": "bun run --filter '@cjhyy/code-shell-core' build && node scripts/smoke-core-exports.mjs",
     "test:core-harness": "bun run --filter '@cjhyy/code-shell-core' build && node scripts/smoke-core-harness.mjs",
+    "test:package-release": "bun run scripts/package-release-smoke.ts",
     "test:watch": "bun test --watch",
     "bench:render": "bun run bench/render-tail.bench.ts && bun run bench/render-streaming.bench.ts && bun run bench/render-spinner.bench.ts && bun run bench/render-wheel.bench.ts",
     "typecheck": "bun run --filter '@cjhyy/code-shell-chat' typecheck && tsc --noEmit",
@@ -35,8 +36,6 @@
     "format": "prettier --write 'packages/**/*.ts'"
   },
   "dependencies": {
-    "@cjhyy/code-shell-capability-coding": "workspace:*",
-    "@cjhyy/code-shell-arena": "workspace:*",
     "@cjhyy/code-shell-core": "workspace:*",
     "@cjhyy/code-shell-tui": "workspace:*"
   },

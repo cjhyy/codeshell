@@ -12,6 +12,7 @@ export * from "./types.js";
 export * from "./delegation.js";
 export * from "./team.js";
 export * from "./protocol.js";
+export { petRunOptionsFrom, validatePetRunParams, type PetRunOptions } from "./run-params.js";
 export { SessionIndex } from "./session-index.js";
 export { PendingDecisionIndex, safePendingTitle } from "./pending-decision-index.js";
 export {
@@ -20,11 +21,7 @@ export {
   PET_ALLOWED_TOOL_NAMES,
   type PetRunScopedServices,
 } from "./profile.js";
-export {
-  createPetProjectionObserver,
-  validatePetRunParams,
-  PET_HIDDEN_SESSION_KINDS,
-} from "./projection-extension.js";
+export { createPetProjectionObserver, PET_HIDDEN_SESSION_KINDS } from "./projection-extension.js";
 export {
   delegateWorkToolDef,
   delegateWorkToolDefFor,

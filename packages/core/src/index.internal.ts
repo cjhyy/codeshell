@@ -93,6 +93,7 @@ export {
   cronScheduler,
   type CronJob,
   type CronPermissionLevel,
+  type CronTemplateSource,
   type CreateJobOptions,
   type UpdateJobPatch,
   CronStore,
@@ -106,6 +107,7 @@ export {
   isCronExpression,
   parseCronExpression,
   nextCronTime,
+  validateSchedule,
   type ParsedCron,
   resolveWritePolicy,
   wrapUntrustedInput,
@@ -217,6 +219,7 @@ export { resolveEffectiveSourceAccess } from "./sources/resolve.js";
 export { defaultCredentialStatus } from "./sources/credential-status.js";
 export { buildSourcesContextSummary } from "./sources/context-summary.js";
 export {
+  deleteWorkspaceProfile,
   listWorkspaceProfiles,
   readWorkspaceProfile,
   saveWorkspaceProfile,

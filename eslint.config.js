@@ -11,6 +11,22 @@ const coreSrcRoot = packageRoot("packages", "core", "src");
 const tuiRoot = packageRoot("packages", "tui");
 const desktopRendererRoot = packageRoot("packages", "desktop", "src", "renderer");
 const coreRoot = packageRoot("packages", "core");
+const workspacePackageRoots = [
+  "core",
+  "coding",
+  "arena",
+  "pet",
+  "server",
+  "web",
+  "tui",
+  "chat",
+  "cdp",
+  "desktop",
+].map((name) => packageRoot("packages", name));
+const capabilityPackageRoots = ["coding", "arena", "pet"].map((name) => ({
+  name,
+  root: packageRoot("packages", name),
+}));
 
 function isInsideRoot(filename, root) {
   if (!filename || filename.startsWith("<")) return false;
@@ -28,33 +44,87 @@ function matchesPackage(specifier, packageNames) {
   return packageNames.some((name) => specifier === name || specifier.startsWith(`${name}/`));
 }
 
+function isCodeShellPackage(specifier) {
+  return specifier === "@cjhyy/code-shell" || specifier.startsWith("@cjhyy/code-shell-");
+}
+
+const rendererBrowserSafeRuntimeImports = new Set([
+  "@cjhyy/code-shell-core/browser/plugin-runtime",
+]);
+
 const codeshellBoundaryImportsRule = {
   meta: {
     type: "problem",
     messages: {
       coreToTui: "core must not import tui",
+      corePackageImport:
+        "core source must use relative self-imports and must not depend on another CodeShell workspace package",
+      capabilityToCoreEntry:
+        "capability packages must import core through @cjhyy/code-shell-core/extension",
+      capabilityToWorkspace:
+        "capability packages must not depend on another CodeShell product or host package",
       rendererToCodeshell:
         "renderer must not import codeshell packages at runtime — talk to main via window.codeShell.* (type-only imports are allowed)",
     },
   },
   create(context) {
     const filename = context.filename ?? context.getFilename();
+    const capabilityPackage = capabilityPackageRoots.find(({ root }) =>
+      isInsideRoot(filename, root),
+    );
+    const isTestFile = /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(filename);
 
     function check(node, specifier, isTypeOnly) {
       if (typeof specifier !== "string") return;
 
       if (isInsideRoot(filename, coreSrcRoot)) {
+        const isCoreSelfImport =
+          specifier === "@cjhyy/code-shell-core" || specifier.startsWith("@cjhyy/code-shell-core/");
         if (
           matchesPackage(specifier, ["@cjhyy/code-shell-tui"]) ||
           resolvesInsideRoot(filename, specifier, tuiRoot)
         ) {
           context.report({ node, messageId: "coreToTui" });
+        } else if (
+          (isCodeShellPackage(specifier) && !(isTestFile && isCoreSelfImport)) ||
+          (specifier.startsWith(".") &&
+            workspacePackageRoots.some(
+              (root) => root !== coreRoot && resolvesInsideRoot(filename, specifier, root),
+            ))
+        ) {
+          context.report({ node, messageId: "corePackageImport" });
+        }
+        return;
+      }
+
+      if (capabilityPackage && !isTestFile) {
+        const isCodingWorkerCompositionEntry =
+          capabilityPackage.name === "coding" &&
+          filename.endsWith("/packages/coding/src/bin/agent-server-stdio.ts") &&
+          specifier === "@cjhyy/code-shell-core/bin/agent-server-stdio";
+        if (
+          (specifier === "@cjhyy/code-shell-core" ||
+            specifier.startsWith("@cjhyy/code-shell-core/")) &&
+          specifier !== "@cjhyy/code-shell-core/extension" &&
+          !isCodingWorkerCompositionEntry
+        ) {
+          context.report({ node, messageId: "capabilityToCoreEntry" });
+        } else if (
+          (isCodeShellPackage(specifier) && !specifier.startsWith("@cjhyy/code-shell-core")) ||
+          (specifier.startsWith(".") &&
+            workspacePackageRoots.some(
+              (root) =>
+                root !== capabilityPackage.root && resolvesInsideRoot(filename, specifier, root),
+            ))
+        ) {
+          context.report({ node, messageId: "capabilityToWorkspace" });
         }
         return;
       }
 
       if (isInsideRoot(filename, desktopRendererRoot)) {
         if (isTypeOnly) return;
+        if (rendererBrowserSafeRuntimeImports.has(specifier)) return;
         if (
           matchesPackage(specifier, [
             "@cjhyy/code-shell-core",
@@ -75,6 +145,12 @@ const codeshellBoundaryImportsRule = {
       },
       ImportExpression(node) {
         check(node, node.source?.value, false);
+      },
+      ExportNamedDeclaration(node) {
+        if (node.source) check(node, node.source.value, node.exportKind === "type");
+      },
+      ExportAllDeclaration(node) {
+        check(node, node.source?.value, node.exportKind === "type");
       },
     };
   },
@@ -149,19 +225,25 @@ export default [
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": ["warn", {
-        argsIgnorePattern: "^_",
-        varsIgnorePattern: "^_",
-        caughtErrorsIgnorePattern: "^_",
-      }],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
       "@typescript-eslint/no-empty-object-type": "off",
-      "@typescript-eslint/ban-ts-comment": ["warn", {
-        "ts-expect-error": "allow-with-description",
-        "ts-ignore": true,
-        "ts-nocheck": true,
-        "ts-check": false,
-        minimumDescriptionLength: 3,
-      }],
+      "@typescript-eslint/ban-ts-comment": [
+        "warn",
+        {
+          "ts-expect-error": "allow-with-description",
+          "ts-ignore": true,
+          "ts-nocheck": true,
+          "ts-check": false,
+          minimumDescriptionLength: 3,
+        },
+      ],
       "@typescript-eslint/no-require-imports": "warn",
       "@typescript-eslint/no-unused-expressions": "warn",
       "@typescript-eslint/no-this-alias": "warn",
@@ -177,47 +259,62 @@ export default [
   {
     files: ["packages/core/src/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", {
-        patterns: [
-          {
-            group: ["@cjhyy/code-shell-tui", "@cjhyy/code-shell-tui/*"],
-            message: "core must not import tui"
-          },
-          {
-            group: ["**/packages/tui/**"],
-            message: "core must not import tui (relative path)"
-          }
-        ]
-      }],
-      "custom-rules/codeshell-boundary-imports": "error"
-    }
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@cjhyy/code-shell-tui", "@cjhyy/code-shell-tui/*"],
+              message: "core must not import tui",
+            },
+            {
+              group: ["**/packages/tui/**"],
+              message: "core must not import tui (relative path)",
+            },
+          ],
+        },
+      ],
+      "custom-rules/codeshell-boundary-imports": "error",
+    },
+  },
+  {
+    files: [
+      "packages/coding/src/**/*.{ts,tsx}",
+      "packages/arena/src/**/*.{ts,tsx}",
+      "packages/pet/src/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "custom-rules/codeshell-boundary-imports": "error",
+    },
   },
   {
     files: ["packages/desktop/src/renderer/**/*.{ts,tsx}"],
     rules: {
-      // The renderer must not take a RUNTIME dependency on the codeshell
-      // packages — it talks to main via window.codeShell.*. Type-only
-      // imports are erased at compile time (no runtime edge), so they're
-      // allowed: the renderer can share core's StreamEvent/TaskInfo shapes
-      // without bundling core. Use @typescript-eslint's variant for
-      // allowTypeImports and turn the base rule off so they don't conflict.
+      // The renderer talks to main via window.codeShell.* and may runtime-
+      // import only explicitly reviewed browser-safe entries. Type-only
+      // imports are erased, so renderer code may still share core contracts.
+      // Use @typescript-eslint's variant for allowTypeImports.
       "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": ["error", {
-        patterns: [
-          {
-            group: [
-              "@cjhyy/code-shell-core",
-              "@cjhyy/code-shell-core/*",
-              "@cjhyy/code-shell-tui",
-              "@cjhyy/code-shell-tui/*",
-              "@cjhyy/code-shell"
-            ],
-            allowTypeImports: true,
-            message: "renderer must not import codeshell packages at runtime — talk to main via window.codeShell.* (type-only imports are allowed)"
-          }
-        ]
-      }],
-      "custom-rules/codeshell-boundary-imports": "error"
-    }
-  }
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^@cjhyy/code-shell-core(?:$|/(?!browser/plugin-runtime$).+)",
+              allowTypeImports: true,
+              message:
+                "renderer may runtime-import only reviewed core browser entry points; use window.codeShell.* for host capabilities",
+            },
+            {
+              group: ["@cjhyy/code-shell-tui", "@cjhyy/code-shell-tui/*", "@cjhyy/code-shell"],
+              allowTypeImports: true,
+              message:
+                "renderer must not import codeshell packages at runtime — talk to main via window.codeShell.* (type-only imports are allowed)",
+            },
+          ],
+        },
+      ],
+      "custom-rules/codeshell-boundary-imports": "error",
+    },
+  },
 ];

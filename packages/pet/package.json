@@ -9,17 +9,41 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./capability": {
+      "types": "./dist/index.capability.d.ts",
+      "import": "./dist/index.capability.js"
+    },
+    "./protocol": {
+      "types": "./dist/index.protocol.d.ts",
+      "import": "./dist/index.protocol.js"
+    },
+    "./team": {
+      "types": "./dist/index.team.d.ts",
+      "import": "./dist/index.team.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "bun run clean && tsc -p tsconfig.json",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/pet"
+  },
+  "homepage": "https://github.com/cjhyy/codeshell/tree/main/packages/pet#readme",
+  "bugs": {
+    "url": "https://github.com/cjhyy/codeshell/issues"
   },
   "publishConfig": {
     "access": "public"

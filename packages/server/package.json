@@ -9,6 +9,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./storage": {
+      "types": "./dist/index.storage.d.ts",
+      "import": "./dist/index.storage.js"
+    },
+    "./worker": {
+      "types": "./dist/index.worker.d.ts",
+      "import": "./dist/index.worker.js"
+    },
+    "./mobile-remote": {
+      "types": "./dist/index.mobile-remote.d.ts",
+      "import": "./dist/index.mobile-remote.js"
+    },
+    "./serve": {
+      "types": "./dist/index.serve.d.ts",
+      "import": "./dist/index.serve.js"
     }
   },
   "bin": {
@@ -18,17 +34,27 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "bun run clean && tsc -p tsconfig.json",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@cjhyy/code-shell-capability-coding": "workspace:*",
     "@cjhyy/code-shell-core": "workspace:*",
     "@cjhyy/code-shell-web": "workspace:*",
+    "@types/ws": "^8.18.1",
     "ws": "^8.21.0"
   },
-  "devDependencies": {
-    "@types/ws": "^8.18.1"
+  "engines": {
+    "node": ">=20.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/server"
+  },
+  "homepage": "https://github.com/cjhyy/codeshell/tree/main/packages/server#readme",
+  "bugs": {
+    "url": "https://github.com/cjhyy/codeshell/issues"
   },
   "publishConfig": {
     "access": "public"

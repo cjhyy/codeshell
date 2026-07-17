@@ -17,10 +17,7 @@ Requires Node ≥ 20.10 and an ESM-capable runtime.
 ## Quickstart
 
 ```ts
-import {
-  Engine,
-  HeadlessApprovalBackend,
-} from "@cjhyy/code-shell-core";
+import { Engine, HeadlessApprovalBackend } from "@cjhyy/code-shell-core";
 
 const engine = new Engine({
   llm: {
@@ -37,9 +34,7 @@ const engine = new Engine({
   headless: true,
 });
 
-const result = await engine.run(
-  "list files in this directory and summarise their purpose",
-);
+const result = await engine.run("list files in this directory and summarise their purpose");
 
 console.log(result.text);
 console.log("turns:", result.turnCount, "reason:", result.reason);
@@ -60,7 +55,9 @@ Restrict the tool set:
 
 ```ts
 new Engine({
-  llm: { /* … */ },
+  llm: {
+    /* … */
+  },
   // Whitelist — only these built-in tools are registered.
   enabledBuiltinTools: ["Read", "Glob", "Grep", "WebFetch"],
   // Or blacklist — registers every built-in except these.
@@ -93,11 +90,7 @@ Direct `new Engine(...)` still works for advanced cases — but the
 protocol-mediated path is what we test, document, and avoid breaking.
 
 ```ts
-import {
-  createServer,
-  createClient,
-  createInProcessTransport,
-} from "@cjhyy/code-shell-core";
+import { createServer, createClient, createInProcessTransport } from "@cjhyy/code-shell-core";
 
 const [serverT, clientT] = createInProcessTransport();
 const handle = createServer({
@@ -123,6 +116,16 @@ For an out-of-process worker, swap `createInProcessTransport()` for a
 `StdioTransport` pair. The factory accepts any `Transport`, so a future
 `IpcAdapter` will compose without changing the call shape.
 
+Browser UI hosts that only need the trusted plugin lifecycle coordinator should
+use the audited browser-safe subpath:
+
+```ts
+import { PluginLifecycleRuntime } from "@cjhyy/code-shell-core/browser/plugin-runtime";
+```
+
+This entry contains no Engine, filesystem, process or Electron dependency.
+`@cjhyy/code-shell-core/plugin-runtime` remains available for compatibility.
+
 `StreamEvent` includes `background_agent_completed` (B2.2) so embedders
 that don't poll `notificationQueue` still observe sub-agent finish/fail
 results. `client.onBackgroundAgentCompleted((sessionId, event) => …)` is
@@ -133,16 +136,16 @@ the typed entry point; events also flow through the catch-all
 
 These exports are covered by the stability promise:
 
-| Area | Stable exports |
-| --- | --- |
-| Factories | `createServer`, `createClient`, `createInProcessTransport`, `StdioTransport` |
-| Server/client | `AgentServer`, `AgentClient` (direct use is supported but `createServer/Client` preferred) |
-| Engine | `Engine`, `EngineConfig`, `EngineRuntime`, `ChatSessionManager` |
-| Protocol types | `Methods`, `ErrorCodes`, `RpcMessage`, `RunResult`, `StreamEvent`, `StreamCallback`, `BackgroundAgentCompletedEvent` |
-| LLM | `LLMConfig`, `LLMResponse`, `ModelPool`, `createLLMClient`, `registerProvider` |
-| Tool authoring | `ToolDefinition`, `ToolCall`, `ToolResult`, `RegisteredTool`, `BUILTIN_TOOLS`, `HookContext`, `HookResult` |
-| Permissions | `PermissionClassifier`, `HeadlessApprovalBackend`, `AutoApprovalBackend`, `ApprovalBackend`, `PermissionMode`, `PermissionRule` |
-| Errors | `FrameworkError` + subclasses (`LLMError`, `ToolError`, `PermissionDeniedError`, …) |
+| Area           | Stable exports                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Factories      | `createServer`, `createClient`, `createInProcessTransport`, `StdioTransport`                                                    |
+| Server/client  | `AgentServer`, `AgentClient` (direct use is supported but `createServer/Client` preferred)                                      |
+| Engine         | `Engine`, `EngineConfig`, `EngineRuntime`, `ChatSessionManager`                                                                 |
+| Protocol types | `Methods`, `ErrorCodes`, `RpcMessage`, `RunResult`, `StreamEvent`, `StreamCallback`, `BackgroundAgentCompletedEvent`            |
+| LLM            | `LLMConfig`, `LLMResponse`, `ModelPool`, `createLLMClient`, `registerProvider`                                                  |
+| Tool authoring | `ToolDefinition`, `ToolCall`, `ToolResult`, `RegisteredTool`, `BUILTIN_TOOLS`, `HookContext`, `HookResult`                      |
+| Permissions    | `PermissionClassifier`, `HeadlessApprovalBackend`, `AutoApprovalBackend`, `ApprovalBackend`, `PermissionMode`, `PermissionRule` |
+| Errors         | `FrameworkError` + subclasses (`LLMError`, `ToolError`, `PermissionDeniedError`, …)                                             |
 
 ### Treat as internal
 

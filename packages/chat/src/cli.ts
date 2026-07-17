@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import qrcode from "qrcode-terminal";
-import { createChannelAdapter } from "./adapter-factory.js";
+import { createChannelAdapterAsync } from "./adapter-factory.js";
 import {
   ChatGateway,
   createAllowlistMiddleware,
@@ -52,8 +52,10 @@ async function main(args = process.argv.slice(2)): Promise<void> {
   process.once("SIGTERM", stop);
   try {
     const desktop = new DesktopControlClient(config.desktop);
-    const adapters = config.channels.map((channel) =>
-      createChannelAdapter(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),
+    const adapters = await Promise.all(
+      config.channels.map((channel) =>
+        createChannelAdapterAsync(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),
+      ),
     );
     const gateway = new ChatGateway({
       adapters,
@@ -128,8 +130,10 @@ async function runCanary(args: string[]): Promise<void> {
   const lease = acquireGatewayInstanceLock(config.runtime.lockPath, "code-shell-chat canary");
   try {
     const result = await runPlatformCanary({
-      adapters: config.channels.map((channel) =>
-        createChannelAdapter(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),
+      adapters: await Promise.all(
+        config.channels.map((channel) =>
+          createChannelAdapterAsync(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),
+        ),
       ),
       allowlists: Object.fromEntries(
         config.channels.map((channel) => [

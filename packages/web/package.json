@@ -17,7 +17,7 @@
     "dist-app"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && vite build",
+    "build": "bun run clean && tsc -p tsconfig.json && vite build",
     "build:app": "vite build",
     "dev:app": "vite dev",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\""
@@ -35,6 +35,18 @@
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "vite": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/web"
+  },
+  "homepage": "https://github.com/cjhyy/codeshell/tree/main/packages/web#readme",
+  "bugs": {
+    "url": "https://github.com/cjhyy/codeshell/issues"
   },
   "publishConfig": {
     "access": "public"

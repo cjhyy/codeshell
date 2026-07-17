@@ -5,8 +5,6 @@
     "": {
       "name": "@cjhyy/code-shell",
       "dependencies": {
-        "@cjhyy/code-shell-arena": "workspace:*",
-        "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
         "@cjhyy/code-shell-tui": "workspace:*",
       },
@@ -170,10 +168,8 @@
         "@cjhyy/code-shell-capability-coding": "workspace:*",
         "@cjhyy/code-shell-core": "workspace:*",
         "@cjhyy/code-shell-web": "workspace:*",
-        "ws": "^8.21.0",
-      },
-      "devDependencies": {
         "@types/ws": "^8.18.1",
+        "ws": "^8.21.0",
       },
     },
     "packages/tui": {

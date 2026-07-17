@@ -18,6 +18,10 @@
       "types": "./dist/plugins/runtime.d.ts",
       "import": "./dist/plugins/runtime.js"
     },
+    "./browser/plugin-runtime": {
+      "types": "./dist/plugins/runtime.d.ts",
+      "import": "./dist/plugins/runtime.js"
+    },
     "./extension": {
       "types": "./dist/index.extension.d.ts",
       "import": "./dist/index.extension.js"
@@ -33,7 +37,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && bun run copy-assets",
+    "build": "bun run clean && tsc -p tsconfig.json && bun run copy-assets",
     "copy-assets": "node ../../scripts/copy-assets.mjs dist/prompt/sections src/prompt/sections/*.md && node ../../scripts/copy-assets.mjs dist/data src/data/*.json",
     "dev": "bun run copy-assets && tsc -p tsconfig.json --watch --preserveWatchOutput",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
