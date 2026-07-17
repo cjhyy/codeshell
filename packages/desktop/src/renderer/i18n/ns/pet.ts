@@ -114,6 +114,8 @@ export const pet = {
         autoRoute: "自动判断直接回复，或在合适的 Workspace 新建 Session 执行。",
         placeholder: "描述问题、目标或需要跟进的工作…",
         send: "发送",
+        segmentDivider: "新话题",
+        workMemoryTitle: "上一段纪要",
       },
       peek: {
         close: "关闭提醒",
@@ -262,6 +264,8 @@ export const pet = {
           "Mimi replies directly or starts a session in the appropriate workspace automatically.",
         placeholder: "Describe a problem, goal, or follow-up…",
         send: "Send",
+        segmentDivider: "New topic",
+        workMemoryTitle: "Previous segment recap",
       },
       peek: {
         close: "Dismiss notification",

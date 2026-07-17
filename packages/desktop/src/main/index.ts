@@ -1165,6 +1165,14 @@ async function createWindow(): Promise<BrowserWindow> {
       dispatcher: petDispatchService,
       attention,
       workInbox: petWorkInbox,
+      // Read-only topic-segment view for the Mimi chat UI. The store keeps a
+      // single time-keyed active segment with no chat-message-id association, so
+      // `segments` (message-keyed boundaries) is empty until the store records a
+      // segment start's message id; the renderer skips unmatched boundaries.
+      workMemory: {
+        getActiveSegmentId: () => petWorkMemory.activeSegment()?.id ?? null,
+        getSegments: () => [],
+      },
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });
