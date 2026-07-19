@@ -74,21 +74,6 @@ describe("validatePetRunParams", () => {
     ).toBe("profileParams.reusableSessions contains a Session outside the closed Workspace set");
   });
 
-  test("rejects malformed canonical digital humans", () => {
-    expect(
-      validatePetRunParams({
-        behaviorMode: "pet",
-        kind: "pet",
-        profileParams: {
-          digitalHumans: [
-            { id: "duplicate", name: "One" },
-            { id: "duplicate", name: "Two" },
-          ],
-        },
-      }),
-    ).toBe("profileParams.digitalHumans contains an invalid or duplicate digital human");
-  });
-
   test("rejects contradictory Pet identity and leading/trailing opaque ids", () => {
     expect(validatePetRunParams({ behaviorMode: "pet", kind: "work" })).toBe(
       "behaviorMode=pet requires kind=pet",
@@ -124,7 +109,6 @@ describe("Pet behavior profile inputs", () => {
         },
       ],
       reusableSessions: [],
-      digitalHumans: [],
     });
     expect(Object.isFrozen(options)).toBe(true);
     expect(Object.isFrozen(options.workspaces)).toBe(true);
@@ -135,13 +119,11 @@ describe("Pet behavior profile inputs", () => {
     const profileParams = {
       workspaces: [{ id: "workspace-a", name: "Alpha" }],
       reusableSessions: [{ id: "orphan", workspaceId: "workspace-b", name: "Must not leak" }],
-      digitalHumans: [null],
     };
 
     expect(PET_BEHAVIOR_PROFILE.buildVisibilityMeta?.(profileParams)).toEqual({
       petWorkspaces: [],
       petReusableSessions: [],
-      petDigitalHumans: [],
     });
   });
 });

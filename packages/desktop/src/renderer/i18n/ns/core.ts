@@ -122,6 +122,7 @@ export const core = {
       sessionAsking: "待输入",
       sessionUnread: "未读",
       automationLabel: "自动化",
+      worktreeBranch: "工作树分支：{branch}",
     },
     settings: {
       general: {
@@ -247,6 +248,7 @@ export const core = {
       sessionAsking: "Awaiting input",
       sessionUnread: "Unread",
       automationLabel: "Automation",
+      worktreeBranch: "Worktree branch: {branch}",
     },
     settings: {
       general: {

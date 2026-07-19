@@ -23,7 +23,8 @@ import { bucketKey, type SessionIndex } from "./transcripts";
  *
  * Priority:
  *   1. Live route table (fast path, populated on send / session_started).
- *   2. Reverse lookup in session indices by engineSessionId (survives remount).
+ *   2. Reverse lookup in session indices by engineSessionId, or by the UI
+ *      Session id before its first run has persisted an engineSessionId.
  *   3. The soft runningBucket hint (legacy / pre-bind events with empty id).
  *   4. null — genuinely unknown; the caller drops the event.
  */
@@ -39,7 +40,7 @@ export function resolveBucket(
 
     for (const [projectBucketSegment, index] of Object.entries(sessionIndices)) {
       for (const s of index.sessions) {
-        if (s.engineSessionId === sessionId) {
+        if (s.engineSessionId === sessionId || (!s.engineSessionId && s.id === sessionId)) {
           return bucketKey(projectBucketSegment, s.id);
         }
       }

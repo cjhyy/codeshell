@@ -37,7 +37,7 @@ see [`docs/todo/`](../todo/README.md).
 | 11  | [Feature Inventory](11-feature-inventory.md)                                                | Flat breadth map — 179 capabilities across desktop main / renderer / TUI              |
 | 12  | [Package Boundaries & Release Units](12-package-boundaries-and-release-units.md)            | Monorepo dependency direction, Pet split rationale, exports and publish boundaries    |
 | 13  | [Plugin Parity & Video Editor](13-plugin-parity-and-video-editor.md)                        | Codex compatibility matrix, remaining gaps, and the video-editor reference plugin     |
-| 14  | [Digital Humans & Pet](14-digital-human-and-pet.md)                                         | Profile/team lifecycle, Pet projection, persistence, recovery and security boundaries |
+| 14  | [Digital Humans, Sessions & Pet](14-digital-human-and-pet.md)                               | Session binding, long-term memory, cross-Session messages, and the Pet independence boundary |
 
 ## Reference
 

@@ -96,11 +96,6 @@ export const settingsNs = {
         clearSearch: "清除搜索",
         searchResults: "找到 {count} 项设置",
         noSearchResults: "没有匹配的设置",
-        globalScopeHint: "这里的默认设置对所有项目生效；如需单独覆盖，请在上方选择一个项目。",
-        globalScopeOptionHint: "所有项目继承的默认设置",
-        scopeSwitcher: "配置范围",
-        scopeManagedInSection: "在本页选择配置范围",
-        scopeSwitchGlobal: "全局",
         projectScopeHint: "以下设置仅作用于所选项目，覆盖全局默认值。",
       },
       projectOverview: {
@@ -901,12 +896,6 @@ export const settingsNs = {
         clearSearch: "Clear search",
         searchResults: "{count} settings found",
         noSearchResults: "No matching settings",
-        globalScopeHint:
-          "These defaults apply to every project. Select a project above to add project-specific overrides.",
-        globalScopeOptionHint: "Defaults inherited by every project",
-        scopeSwitcher: "Configuration scope",
-        scopeManagedInSection: "Choose the configuration scope on this page",
-        scopeSwitchGlobal: "Global",
         projectScopeHint:
           "These settings apply only to the selected project and override global defaults.",
       },

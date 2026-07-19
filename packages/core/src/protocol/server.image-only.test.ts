@@ -42,6 +42,7 @@ function makeEngine() {
     setAskUser() {},
     setBrowserBridge() {},
     setInjectCredential() {},
+    setSessionMessageRouter() {},
     setPlanMode() {},
     async run(task: string, options?: EngineRunOptions): Promise<EngineResult> {
       calls.push({ task, options });

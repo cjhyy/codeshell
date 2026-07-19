@@ -115,21 +115,29 @@ export function SessionStatusSection({
   emptyState = "empty",
   now = Date.now(),
   onOpen,
+  showHeading = true,
 }: {
   sessions: readonly PetSessionProjection[];
   emptyState?: PetSessionEmptyState;
   now?: number;
   onOpen?: (session: PetSessionProjection) => void;
+  showHeading?: boolean;
 }) {
   const { t } = useT();
   return (
-    <section aria-labelledby="pet-session-heading" className="min-w-0">
-      <h3
-        id="pet-session-heading"
-        className="px-2 py-1 text-xs font-semibold text-muted-foreground"
-      >
-        {t("pet.session.title")}
-      </h3>
+    <section
+      aria-labelledby={showHeading ? "pet-session-heading" : undefined}
+      aria-label={showHeading ? undefined : t("pet.session.title")}
+      className="min-w-0"
+    >
+      {showHeading && (
+        <h3
+          id="pet-session-heading"
+          className="px-2 py-1 text-xs font-semibold text-muted-foreground"
+        >
+          {t("pet.session.title")}
+        </h3>
+      )}
       {sessions.length > 0 ? (
         <ul className="divide-y-0" data-density="compact-list">
           {sessions.map((session) => (

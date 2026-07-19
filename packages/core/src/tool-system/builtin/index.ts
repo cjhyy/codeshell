@@ -102,6 +102,11 @@ import {
 } from "./browser-tools.js";
 import { panelToolDef, panelTool } from "./panel.js";
 import {
+  sendMessageToSessionToolDef,
+  sendMessageToSessionTool,
+  rewriteSendMessageToSessionToolDefinition,
+} from "./send-message-to-session.js";
+import {
   useCredentialToolDef,
   useCredentialBuiltinTool,
 } from "../../credentials/use-credential-tool.js";
@@ -889,6 +894,27 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     exposure: expose(GENERAL_TAGS, {
       defaultPermissionRules: allow(panelToolDef.name),
       availability: (ctx) => ctx.host === "desktop" && ctx.isSubAgent !== true,
+    }),
+  },
+  // Cross-Session coordination is one ordinary message send. The host supplies
+  // a closed same-project target set and queues the message as the target's
+  // next user turn.
+  {
+    definition: {
+      ...sendMessageToSessionToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: sendMessageToSessionTool,
+    exposure: expose(HARNESS_TAGS, {
+      defaultPermissionRules: allow(sendMessageToSessionToolDef.name),
+      availability: (ctx) =>
+        ctx.isSubAgent !== true &&
+        ctx.behaviorProfile !== "quickChatRestricted" &&
+        (ctx.sessionMessageTargets?.length ?? 0) > 0,
+      rewriteDefinition: rewriteSendMessageToSessionToolDefinition,
     }),
   },
   // ─── Credentials: AI 取用已存凭证(token/link/cookie) ──────────

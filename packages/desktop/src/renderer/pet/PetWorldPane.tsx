@@ -7,6 +7,7 @@ import type {
 import React from "react";
 import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
+import { PetLongTaskSection } from "./PetLongTaskSection";
 import {
   loadDismissedPetWorkItemIds,
   newerPetWorkInboxSnapshot,
@@ -131,7 +132,7 @@ export function PetWorldPane({
   return (
     <section
       data-pet-world-pane="deterministic"
-      className="mimi-surface flex max-h-full flex-col self-start overflow-hidden rounded-3xl"
+      className="mimi-surface @container/work-pane flex flex-col self-stretch overflow-visible rounded-3xl @min-[1100px]/pet-page:col-start-2 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:max-h-full @min-[1100px]/pet-page:self-start @min-[1100px]/pet-page:overflow-hidden"
     >
       <PetOverviewHeader
         runningCount={workMap.counts.running}
@@ -143,8 +144,18 @@ export function PetWorldPane({
         reconciling={status === "reconciling"}
         retrying={status === "error"}
       />
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 min-[1440px]:p-5">
-        <div ref={pendingRef} tabIndex={-1} className="outline-none">
+      <div className="min-h-0 flex-1 overflow-visible p-3.5 @min-[1100px]/pet-page:overflow-y-auto">
+        <div ref={pendingRef} tabIndex={-1} className="space-y-3 outline-none">
+          <PetLongTaskSection
+            onOpenSession={(sessionId) => {
+              if (!projection) return;
+              onNavigate?.({
+                agentSessionId: sessionId,
+                snapshotVersion: projection.version,
+                generation: projection.generation,
+              });
+            }}
+          />
           <PetWorkTree
             workMap={workMap}
             emptyState={selected.emptyState}

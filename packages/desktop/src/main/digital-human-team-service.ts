@@ -12,12 +12,12 @@ import {
 import { randomUUID } from "node:crypto";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { codeShellHome } from "@cjhyy/code-shell-core";
-import { listWorkspaceProfiles, readWorkspaceProfile } from "@cjhyy/code-shell-core/internal";
+import { listWorkspaceProfiles } from "@cjhyy/code-shell-core/internal";
 import {
   DIGITAL_HUMAN_TEAM_ID_RE,
   parseDigitalHumanTeam,
   type DigitalHumanTeam,
-} from "@cjhyy/code-shell-pet";
+} from "../shared/digital-human-team.js";
 
 export function digitalHumanTeamsRoot(): string {
   return join(codeShellHome(), "digital-human-teams");
@@ -148,12 +148,4 @@ export function deleteDigitalHumanTeam(id: string): void {
   if (!DIGITAL_HUMAN_TEAM_ID_RE.test(id)) throw new Error("invalid digital-human team id");
   const dir = checkedTeamDirectory(id);
   if (dir) rmSync(dir, { recursive: true, force: true });
-}
-
-/** Resolve and validate the closed member set before handing it to Pet. */
-export function resolveDigitalHumanTeam(id: string): DigitalHumanTeam | undefined {
-  const team = readDigitalHumanTeam(id);
-  if (!team) return undefined;
-  if (team.members.some((member) => !readWorkspaceProfile(member))) return undefined;
-  return team;
 }

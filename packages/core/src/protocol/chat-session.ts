@@ -6,6 +6,7 @@ import { isAbortError } from "../llm/client-base.js";
 import type { InputAttachmentMeta, PendingApprovalMetadata } from "./types.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
+import type { SessionMessageTarget } from "../session/session-message.js";
 import type { LegacyPetWorkspaceOption } from "../types.js";
 import { isSameGoalInstance, type GoalConfig } from "../goal/lifecycle.js";
 
@@ -46,6 +47,8 @@ export interface TurnOpts {
   profileParams?: Record<string, unknown>;
   /** Digital human to bind durably to this Work Session. */
   workspaceProfile?: string;
+  /** Closed same-project Session catalog available to SendMessageToSession. */
+  sessionMessageTargets?: readonly SessionMessageTarget[];
   /** @deprecated Compat alias for `profileParams.runtimeContext`. */
   petRuntimeContext?: string;
   /** @deprecated Compat alias for `profileParams.workspaces`. */
@@ -383,6 +386,7 @@ export class ChatSession {
         behaviorMode: next.opts.behaviorMode,
         profileParams: next.opts.profileParams,
         workspaceProfile: next.opts.workspaceProfile,
+        sessionMessageTargets: next.opts.sessionMessageTargets,
         petRuntimeContext: next.opts.petRuntimeContext,
         petWorkspaces: next.opts.petWorkspaces,
         kind: next.opts.kind,

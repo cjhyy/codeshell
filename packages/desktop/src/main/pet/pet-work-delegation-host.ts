@@ -86,7 +86,10 @@ export class PetWorkDelegationHost {
         cwd,
         clientMessageId: workClientMessageId,
         permissionMode: "default",
-        ...(delegation.digitalHumanId ? { workspaceProfile: delegation.digitalHumanId } : {}),
+        // A delegated Work Session is a real persistent Goal, not a one-turn
+        // fire-and-forget chat. Core drives it until verified complete; the Pet
+        // coordinator owns pause/resume/retry and durable task bookkeeping.
+        goal: delegation.goalObjective ?? delegation.task,
         ...(delegation.targetSessionId ? { requireExisting: true } : {}),
       },
     });

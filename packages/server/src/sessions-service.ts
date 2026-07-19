@@ -154,6 +154,8 @@ export interface DiskSessionMeta {
   status?: "active" | "paused" | "completed" | "failed" | "cancelled";
   /** Durable archival timestamp; absent = not archived. */
   archivedAt?: number;
+  /** Workspace profile/digital human bound to this Session. */
+  workspaceProfile?: string;
 }
 
 export interface ListDiskSessionsResult {
@@ -299,6 +301,9 @@ export async function listDiskSessions(
               ? "failed"
               : undefined,
       ...(archivedAt !== undefined ? { archivedAt } : {}),
+      ...(typeof state.workspaceProfile === "string" && state.workspaceProfile
+        ? { workspaceProfile: state.workspaceProfile }
+        : {}),
     });
   }
   return {

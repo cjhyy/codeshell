@@ -58,6 +58,24 @@ async function openSettings(win) {
   const settings = win.getByRole("button", { name: /设置|Settings/i }).last();
   await settings.waitFor({ state: "visible", timeout: 20_000 });
   await settings.click();
+  const menu = win.getByRole("menu");
+  await menu.waitFor({ state: "visible", timeout: 10_000 });
+  const menuLabels = await menu.getByRole("menuitem").allTextContents();
+  assert(
+    /打开设置|Open settings/i.test(menuLabels.at(-1) ?? ""),
+    "Open settings is not the last menu action",
+  );
+  const language = menu.getByRole("menuitem", { name: /切换语言|Switch language/i });
+  await language.hover();
+  assert(
+    (await win.getByRole("menuitemradio").count()) === 0,
+    "Language submenu opened from hover instead of an explicit click",
+  );
+  await language.click();
+  await win.getByRole("menuitemradio").first().waitFor({ state: "visible", timeout: 10_000 });
+  await screenshot(win, "settings-menu-language.png");
+  await language.click();
+  await win.getByRole("menuitemradio").first().waitFor({ state: "hidden", timeout: 10_000 });
   const open = win.getByText(/打开设置|Open settings/i).first();
   if (await open.isVisible().catch(() => false)) await open.click();
   await win.waitForFunction(() => {
@@ -74,12 +92,32 @@ async function openSettings(win) {
     .waitFor({ state: "visible", timeout: 20_000 });
 }
 
-async function chooseScope(win, name) {
-  const picker = win.getByRole("combobox", { name: /配置范围|Configuration scope/i });
-  await picker.click();
-  const option = win.getByRole("option", { name });
-  await option.waitFor({ state: "visible", timeout: 10_000 });
-  await option.click();
+async function openProjectSettings(win) {
+  await win.getByRole("button", { name: /返回应用|Back to app/i }).click();
+  await win.waitForFunction(() => {
+    try {
+      return JSON.parse(localStorage.getItem("codeshell.view") || "{}").viewMode === "chat";
+    } catch {
+      return false;
+    }
+  });
+  const project = win.getByText(basename(projectPath), { exact: true });
+  assert((await project.count()) === 1, "Seeded project entry is not unique");
+  await project.click({ button: "right" });
+  const open = win.getByRole("menuitem", { name: /项目配置|Project configuration/i });
+  await open.waitFor({ state: "visible", timeout: 10_000 });
+  await open.click();
+  await win.waitForFunction(() => {
+    try {
+      return (
+        JSON.parse(localStorage.getItem("codeshell.view") || "{}").viewMode === "project_config"
+      );
+    } catch {
+      return false;
+    }
+  });
+  const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
+  if (await viewOnly.isVisible().catch(() => false)) await viewOnly.click();
 }
 
 async function assertNoHorizontalOverflow(win, label) {
@@ -140,6 +178,10 @@ try {
   await openSettings(win);
 
   await win.getByRole("heading", { name: /常规|General/i }).waitFor({ state: "visible" });
+  assert(
+    (await win.getByRole("combobox", { name: /配置范围|Configuration scope/i }).count()) === 0,
+    "Ordinary settings still rendered a page-wide project scope picker",
+  );
   await win
     .getByText(/扩展能力|Extensions/i)
     .first()
@@ -162,7 +204,7 @@ try {
 
   await win.getByRole("button", { name: /外观|Appearance/i }).click();
   await win.getByRole("heading", { name: /外观|Appearance/i }).waitFor({ state: "visible" });
-  await chooseScope(win, /settings-project/i);
+  await openProjectSettings(win);
   await win
     .getByRole("heading", { name: /项目概览|Project overview/i })
     .waitFor({ state: "visible", timeout: 10_000 });

@@ -87,6 +87,20 @@ describe("PetDispatchService", () => {
         },
       },
       hostCwd: "/safe/pet",
+      longTasks: {
+        context: () => ({
+          version: 1,
+          active: [
+            {
+              taskId: "pet-task-one",
+              objective: "Ship the release",
+              status: "running",
+              sessionId: "work-a",
+            },
+          ],
+          recent: [],
+        }),
+      },
       listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
     });
 
@@ -95,6 +109,7 @@ describe("PetDispatchService", () => {
         type: "chat",
         message: "What is running?",
         clientMessageId: "im:one",
+        model: "fast-model",
         source: { kind: "im-gateway", channel: "telegram" },
         attachments: [
           {
@@ -120,6 +135,7 @@ describe("PetDispatchService", () => {
         kind: "pet",
         permissionMode: "default",
         clientMessageId: "im:one",
+        model: "fast-model",
         attachments: [{ id: "att-one", origin: "im-gateway" }],
       },
     });
@@ -127,6 +143,7 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.task)).not.toContain("<pet-world>");
     expect(String(request?.params.task)).not.toContain("requestId");
     expect(String(request?.params.petRuntimeContext)).toContain('"runState":"running"');
+    expect(String(request?.params.petRuntimeContext)).toContain('"taskId":"pet-task-one"');
     expect(String(request?.params.petRuntimeContext)).toContain(
       '"currentMessageSource":{"kind":"im-gateway","channel":"telegram"}',
     );
@@ -193,94 +210,6 @@ describe("PetDispatchService", () => {
         workspacePath: "/work/codeshell",
       },
     ]);
-  });
-
-  test("launches a selected digital-human team as parallel profile-bound Sessions", async () => {
-    const starts: Array<Record<string, unknown>> = [];
-    const service = new PetDispatchService({
-      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
-      aggregator: {
-        getSnapshot: () => snapshot,
-        resolveNavigation: async () => ({ status: "not-found" }),
-      },
-      worker: {
-        requestWorker: async (_method, params) => {
-          const profileParams = params.profileParams as {
-            workspaces: Array<{ id: string; name: string }>;
-            digitalHumans: Array<{ id: string; name: string }>;
-          };
-          const workspace = profileParams.workspaces.find(
-            (candidate) => candidate.name === "CodeShell",
-          )!;
-          return {
-            ok: true,
-            result: {
-              text: "团队已并行派出。",
-              extensions: {
-                pet: {
-                  workDelegations: profileParams.digitalHumans.map((human) => ({
-                    workspaceId: workspace.id,
-                    digitalHumanId: human.id,
-                    objective: human.id === "researcher" ? "研究现有实现" : "独立准备实现方案",
-                  })),
-                },
-              },
-            },
-          };
-        },
-      },
-      hostCwd: "/safe/pet",
-      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
-      listDigitalHumans: async () => [
-        { name: "researcher", label: "研究员", description: "研究问题" },
-        { name: "developer", label: "开发者", description: "实现功能" },
-      ],
-      listDigitalHumanTeams: async () => [
-        {
-          id: "build-team",
-          name: "构建小队",
-          members: ["researcher", "developer"],
-          mode: "divide",
-        },
-      ],
-      startWorkSession: async (delegation) => {
-        starts.push(delegation as unknown as Record<string, unknown>);
-        return {
-          sessionId: `work-${String(delegation.digitalHumanId)}`,
-          cwd: delegation.workspacePath!,
-        };
-      },
-    });
-
-    const result = await service.dispatch({
-      type: "chat",
-      message: "分析并实现这个功能",
-      clientMessageId: "client-team",
-      preferredProjectPath: "/work/codeshell",
-      digitalHumanTeamId: "build-team",
-    });
-
-    expect(result).toMatchObject({
-      ok: true,
-      type: "chat",
-      delegations: [
-        { digitalHumanId: "researcher", sessionId: "work-researcher" },
-        { digitalHumanId: "developer", sessionId: "work-developer" },
-      ],
-    });
-    expect(starts).toEqual([
-      expect.objectContaining({
-        digitalHumanId: "researcher",
-        task: "研究现有实现",
-        workspacePath: "/work/codeshell",
-      }),
-      expect.objectContaining({
-        digitalHumanId: "developer",
-        task: "独立准备实现方案",
-        workspacePath: "/work/codeshell",
-      }),
-    ]);
-    expect(starts[0]?.clientMessageId).not.toBe(starts[1]?.clientMessageId);
   });
 
   test("offers a bounded reusable Session set and resumes only the selected host entry", async () => {
@@ -650,7 +579,7 @@ describe("PetDispatchService", () => {
     expect(beginTurnArgs).toEqual(["client-turn-1"]);
   });
 
-  test("records a work-memory closure for each launched delegation", async () => {
+  test("does not record launch acceptance as a completed work-memory closure", async () => {
     const closures: Array<Record<string, unknown>> = [];
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
@@ -694,16 +623,9 @@ describe("PetDispatchService", () => {
       message: "修复登录问题",
       clientMessageId: "client-delegate",
     });
-    // One closure recorded, no turnRange (range archival stays dormant).
-    expect(closures).toEqual([
-      {
-        objective: "修复 CodeShell 登录问题",
-        outcome: "completed",
-        workspace: "/work/codeshell",
-        sessionRef: "pet-work-one",
-      },
-    ]);
-    expect(closures[0]).not.toHaveProperty("turnRange");
+    // PetLongTaskCoordinator records a closure only after the real worker
+    // completion/failure/cancellation signal, never at launch acceptance.
+    expect(closures).toEqual([]);
   });
 
   test("rejects direction, approval and arbitrary mutation commands", async () => {

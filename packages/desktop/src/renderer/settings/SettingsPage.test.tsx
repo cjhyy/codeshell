@@ -17,7 +17,7 @@ describe("SettingsPage", () => {
     expect(matchesSettingsModule("主题", "外观", "")).toBe(false);
   });
 
-  test("renders searchable desktop navigation and a compact mobile picker", () => {
+  test("renders ordinary settings without a project scope control", () => {
     const html = renderToStaticMarkup(
       <SettingsPage
         activeProjectPath={null}
@@ -33,8 +33,29 @@ describe("SettingsPage", () => {
 
     expect(html).toContain("搜索设置");
     expect(html).toContain('aria-label="设置导航"');
-    expect(html).toContain("w-auto min-w-44 max-w-full");
-    expect(html).toContain("这里的默认设置对所有项目生效");
+    expect(html).not.toContain("配置范围");
+    expect(html).not.toContain("项目级覆盖");
+  });
+
+  test("opens project settings only when entered with a concrete project", () => {
+    const html = renderToStaticMarkup(
+      <SettingsPage
+        activeProjectPath={null}
+        initialProjectPath="/repo"
+        projects={[{ id: "repo", path: "/repo", name: "repo", addedAt: 1, pinned: false }]}
+        sessionIndices={{}}
+        onRestoreArchivedSession={() => undefined}
+        onDeleteArchivedSession={() => undefined}
+        isMac={false}
+        isFullscreen={false}
+        onBack={() => undefined}
+      />,
+    );
+
+    expect(html).not.toContain("配置范围");
+    expect(html).toContain(">项目概览</h1>");
+    expect(html).toContain("以下设置仅作用于所选项目");
+    expect(html).toContain("/repo");
   });
 
   test("keeps the current module when it supports the next scope", () => {

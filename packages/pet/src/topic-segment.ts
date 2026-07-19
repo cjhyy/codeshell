@@ -14,6 +14,8 @@
 
 export interface PetWorkMemoryEntry {
   segmentId: string;
+  /** Optional durable identity used to make closure delivery replay-safe. */
+  dedupeKey?: string;
   objective: string;
   outcome: "completed" | "pending-decided" | "failed";
   workspace?: string;

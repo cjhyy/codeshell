@@ -38,6 +38,7 @@ import {
   projectBucketSegment as projectBucketSegmentFor,
   migrateBucketOverride,
   migrateProjectBucketOverrides,
+  setSessionWorkspaceProfileLocal,
   type SessionIndex,
 } from "./transcripts";
 import { resolveAttachmentSessionId } from "./attachmentSession";
@@ -73,14 +74,6 @@ import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
 import { loadView, saveView, type ViewState } from "./view";
 import { PAGE_REGISTRY } from "./pages/PageRegistry";
-import type { DigitalHumanSelection } from "./digital-humans/types";
-import {
-  DIGITAL_HUMAN_SELECTION_STORAGE_KEY,
-  digitalHumanSelectionsEqual,
-  loadDigitalHumanSelection,
-  parseStoredDigitalHumanSelection,
-  saveDigitalHumanSelection,
-} from "./digital-humans/selectionStorage";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -133,7 +126,6 @@ const AutomationView = React.lazy(() =>
 const SessionPanelDock = React.lazy(() =>
   import("./app/SessionPanelDock").then((module) => ({ default: module.SessionPanelDock })),
 );
-
 // Bucket key for sessions without a project — re-exported from transcripts.
 // We use NO_REPO_KEY everywhere instead of a local const so the renderer
 // and the persistence layer can't drift apart. `bucketKey`/`projectBucketSegment` are
@@ -165,8 +157,6 @@ function App() {
   } = useOptionalPetState();
   // Pet visibility is process-scoped and mirrored by the desktop host.
   const [petWidgetVisible, setPetWidgetVisible] = useState(false);
-  const [petDigitalHumanSelection, setPetDigitalHumanSelection] =
-    useState<DigitalHumanSelection | null>(() => loadDigitalHumanSelection());
   const [transcripts, dispatch] = useReducer(transcriptsReducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -188,6 +178,9 @@ function App() {
   // Not persisted — purely a live "did something finish off-screen" hint.
   const [unreadBuckets, setUnreadBuckets] = useState<Set<string>>(() => new Set());
   const [projects, setProjects] = useState<TrackedProject[]>(() => loadProjects());
+  const [sessionWorkspaceProfiles, setSessionWorkspaceProfiles] = useState<
+    Array<{ name: string; label: string }>
+  >([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
     loadActiveProjectId(),
   );
@@ -295,61 +288,6 @@ function App() {
   const activeBucketRef = useRef(activeBucket);
   activeBucketRef.current = activeBucket;
   quickChatSessionsRef.current = quickChatSessions;
-  useEffect(() => {
-    saveDigitalHumanSelection(petDigitalHumanSelection);
-  }, [petDigitalHumanSelection]);
-  useEffect(() => {
-    const onStorage = (event: StorageEvent) => {
-      if (event.key !== DIGITAL_HUMAN_SELECTION_STORAGE_KEY) return;
-      const next = parseStoredDigitalHumanSelection(event.newValue);
-      setPetDigitalHumanSelection((current) =>
-        digitalHumanSelectionsEqual(current, next) ? current : next,
-      );
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-  useEffect(() => {
-    const selection = petDigitalHumanSelection;
-    if (!selection) return;
-    let active = true;
-    const refresh =
-      selection.kind === "single"
-        ? window.codeshell.listProfiles().then((profiles) => {
-            const profile = profiles.find((entry) => entry.name === selection.id);
-            return profile
-              ? ({ kind: "single", id: profile.name, label: profile.label } as const)
-              : null;
-          })
-        : window.codeshell.listDigitalHumanTeams().then((teams) => {
-            const team = teams.find((entry) => entry.id === selection.id);
-            return team
-              ? ({
-                  kind: "team",
-                  id: team.id,
-                  label: team.name,
-                  members: [...team.members],
-                  mode: team.mode,
-                } as const)
-              : null;
-          });
-    void refresh
-      .then((next) => {
-        if (!active) return;
-        setPetDigitalHumanSelection((current) => {
-          if (!current || current.kind !== selection.kind || current.id !== selection.id) {
-            return current;
-          }
-          return digitalHumanSelectionsEqual(current, next) ? current : next;
-        });
-      })
-      .catch(() => {
-        // A transient library read failure must not discard the user's choice.
-      });
-    return () => {
-      active = false;
-    };
-  }, [petDigitalHumanSelection]);
   useEffect(() => {
     if (!activeSessionId) return;
     window.codeshell.registerBrowserSessionBucket({
@@ -486,6 +424,32 @@ function App() {
   const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(() => null);
   const defaultPermissionModeRef = useRef<PermissionMode | null>(null);
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeProject?.path) {
+      setSessionWorkspaceProfiles([]);
+      return;
+    }
+    const listProfiles = window.codeshell.listProfiles;
+    if (typeof listProfiles !== "function") {
+      setSessionWorkspaceProfiles([]);
+      return;
+    }
+    void listProfiles(activeProject.path)
+      .then((profiles) => {
+        if (cancelled) return;
+        setSessionWorkspaceProfiles(
+          profiles.map((profile) => ({ name: profile.name, label: profile.label })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setSessionWorkspaceProfiles([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject?.path, view.viewMode]);
 
   // A persisted project-config route can outlive a removed project. Fail back
   // to chat instead of leaving a full-page overlay with no project to render.
@@ -1544,11 +1508,63 @@ function App() {
     }, 0);
   }, [state.messages, searchQuery]);
 
-  const sessionTitleForTop = (() => {
+  const activeSessionSummary = (() => {
     const idx = sessionIndices[activeProjectBucketSegment];
-    const s = idx?.sessions.find((x) => x.id === activeSessionId);
-    return s?.title ?? null;
+    return idx?.sessions.find((session) => session.id === activeSessionId) ?? null;
   })();
+  const sessionTitleForTop = activeSessionSummary?.title ?? null;
+
+  const handleSessionWorkspaceProfileChange = useCallback(
+    async (profileName: string): Promise<void> => {
+      if (!activeProjectId || !activeSessionSummary || busy) return;
+      const previousProfile = activeSessionSummary.workspaceProfile;
+      if (previousProfile === profileName) return;
+      const next = setSessionWorkspaceProfileLocal(
+        activeProjectId,
+        activeSessionSummary.id,
+        profileName,
+      );
+      setSessionIndices((current) => ({
+        ...current,
+        [activeProjectBucketSegment]: next,
+      }));
+      try {
+        await window.codeshell.setSessionWorkspaceProfile(
+          activeSessionSummary.engineSessionId ?? activeSessionSummary.id,
+          profileName,
+        );
+        const label =
+          sessionWorkspaceProfiles.find((profile) => profile.name === profileName)?.label ??
+          profileName;
+        toast({ message: t("digitalHumans.sessionBinding.switched", { name: label }) });
+      } catch (error) {
+        const rolledBack = setSessionWorkspaceProfileLocal(
+          activeProjectId,
+          activeSessionSummary.id,
+          previousProfile,
+        );
+        setSessionIndices((current) => ({
+          ...current,
+          [activeProjectBucketSegment]: rolledBack,
+        }));
+        toast({
+          message: t("digitalHumans.sessionBinding.failed", {
+            message: error instanceof Error ? error.message : String(error),
+          }),
+          variant: "error",
+        });
+      }
+    },
+    [
+      activeProjectBucketSegment,
+      activeProjectId,
+      activeSessionSummary,
+      busy,
+      sessionWorkspaceProfiles,
+      t,
+      toast,
+    ],
+  );
 
   // Live-activity summary for the TopBar status popover. Recomputed
   // whenever messages change — cheap (single pass from the most
@@ -1855,6 +1871,12 @@ function App() {
             projectPath={isPetView ? null : (activeProject?.path ?? null)}
             sessionId={isPetView ? null : engineSessionIdForActive()}
             sessionTitle={isPetView ? null : sessionTitleForTop}
+            workspaceProfile={isPetView ? null : activeSessionSummary?.workspaceProfile}
+            workspaceProfiles={isPetView ? [] : sessionWorkspaceProfiles}
+            workspaceProfileSwitchDisabled={busy || !isChatView}
+            onWorkspaceProfileChange={(profileName) => {
+              void handleSessionWorkspaceProfileChange(profileName);
+            }}
             busy={isPetView ? false : busy}
             sidebarCollapsed={view.sidebarCollapsed}
             onToggleSidebar={toggleSidebar}
@@ -1962,8 +1984,9 @@ function App() {
                   />
                   <PetChatHost
                     defaultProjectPath={activeProject?.path ?? null}
-                    digitalHumanSelection={petDigitalHumanSelection}
-                    onClearDigitalHumanSelection={() => setPetDigitalHumanSelection(null)}
+                    defaultModelKey={defaultActiveModelKey}
+                    modelOptions={modelOptions}
+                    onOpenSession={(request) => void handleOpenPetTarget(request)}
                   />
                 </PetPage>
               ) : registeredPageRender ? (
@@ -1982,12 +2005,43 @@ function App() {
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <DigitalHumansView
                     activeProjectPath={activeProject?.path ?? null}
-                    currentSelection={petDigitalHumanSelection}
-                    onUse={(selection) => {
-                      setPetDigitalHumanSelection(selection);
-                      openPetPage();
+                    onUse={(selection, starterPrompt) => {
+                      if (!activeProjectId || !activeProject) {
+                        toast({ message: t("digitalHumans.pickProject"), variant: "error" });
+                        return;
+                      }
+                      const members =
+                        selection.kind === "single" ? [selection.id] : selection.members;
+                      if (members.length === 0) return;
+                      let activeCreatedId: string | null = null;
+                      let latestIndex: SessionIndex | null = null;
+                      members.forEach((profileName, index) => {
+                        const title =
+                          selection.kind === "single"
+                            ? selection.label
+                            : `${selection.label} · ${profileName}`;
+                        const created = createSession(activeProjectId, title, {
+                          activate: index === 0,
+                          workspaceProfile: profileName,
+                        });
+                        if (index === 0) activeCreatedId = created.sessionId;
+                        latestIndex = created.index;
+                      });
+                      if (!activeCreatedId || !latestIndex) return;
+                      const bucket = bucketKey(activeProjectId, activeCreatedId);
+                      activeBucketRef.current = bucket;
+                      setSessionIndices((previous) => ({
+                        ...previous,
+                        [projectBucketSegmentFor(activeProjectId)]: latestIndex!,
+                      }));
+                      if (starterPrompt) {
+                        setComposerDrafts((previous) => ({
+                          ...previous,
+                          [bucket]: { text: starterPrompt, attachments: EMPTY_ATTACHMENTS },
+                        }));
+                      }
+                      setViewMode("chat");
                     }}
-                    onClearSelection={() => setPetDigitalHumanSelection(null)}
                   />
                 </React.Suspense>
               ) : view.viewMode === "credentials" ? (

@@ -29,6 +29,13 @@ describe("Pet preload contract", () => {
             dismissedIds: ["completed:session-a", "other:session-b"],
           };
         }
+        if (channel === "pet:long-tasks-get") {
+          return { revision: 1, observedAt: 5, tasks: [] };
+        }
+        if (channel === "pet:long-task-control") {
+          expect(payload).toEqual({ taskId: "pet-task-0123456789abcdef01234567", action: "pause" });
+          return { ok: false, code: "not-found", message: "gone" };
+        }
         if (channel === "pet:widget-visible-get") return false;
         if (channel === "pet:widget-visible") return { ok: true };
         if (channel === "pet:widget-expanded") return { ok: true };
@@ -126,6 +133,20 @@ describe("Pet preload contract", () => {
       handler({}, { revision: 5, dismissedIds: [] });
     }
     expect(inboxSnapshots).toEqual([4]);
+    expect(await api.getLongTasks?.()).toEqual({ revision: 1, observedAt: 5, tasks: [] });
+    expect(
+      await api.controlLongTask?.({
+        taskId: "pet-task-0123456789abcdef01234567",
+        action: "pause",
+      }),
+    ).toEqual({ ok: false, code: "not-found", message: "gone" });
+    const taskRevisions: number[] = [];
+    const offTasks = api.onLongTasksChanged?.((value) => taskRevisions.push(value.revision));
+    for (const handler of handlers.get("pet:long-tasks-changed") ?? []) {
+      handler({}, { revision: 2, observedAt: 6, tasks: [] });
+    }
+    offTasks?.();
+    expect(taskRevisions).toEqual([2]);
     expect(await api.getWidgetVisibility()).toBe(false);
     expect(await api.setWidgetVisible(true)).toEqual({ ok: true });
     expect(await api.setWidgetExpanded(true)).toEqual({ ok: true });

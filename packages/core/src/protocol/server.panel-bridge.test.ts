@@ -39,6 +39,7 @@ describe("AgentServer panel bridge", () => {
       setPlanMode() {},
       setBrowserBridge() {},
       setInjectCredential() {},
+      setSessionMessageRouter() {},
       setPanelBridge(bridge: PanelHostBridge | undefined) {
         panelBridge = bridge;
       },

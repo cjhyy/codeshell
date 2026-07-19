@@ -14,7 +14,10 @@ import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import { TaskGuard } from "../tool-system/task-guard.js";
 import { PermissionClassifier, InteractiveApprovalBackend } from "../tool-system/permission.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import { buildMcpToolPolicies, isRegisteredMcpToolAllowed } from "../tool-system/mcp-tool-policy.js";
+import {
+  buildMcpToolPolicies,
+  isRegisteredMcpToolAllowed,
+} from "../tool-system/mcp-tool-policy.js";
 import type { ToolRegistry } from "../tool-system/registry.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
@@ -232,6 +235,9 @@ export function assembleRunToolDefs(args: {
     host: args.builtinToolHost,
     isSubAgent: args.isSubAgent,
     behaviorProfile: args.behaviorProfileId,
+    ...(toolCtx.sessionMessages?.targets.length
+      ? { sessionMessageTargets: toolCtx.sessionMessages.targets }
+      : {}),
     ...(profileMeta ? { profileMeta } : {}),
   };
   toolCtx.toolVisibility = toolVisibility;
@@ -305,10 +311,8 @@ export function assembleRunToolDefs(args: {
   // turn so flipping a flag in settings takes effect on the NEXT message,
   // like the other capability kinds.
   const featureFlags = args.featureFlags;
-  const allToolDefs = args.applyBuiltinOverrideVisibility(
-    args.toolRegistry.getToolDefinitions(),
-    builtinOverride,
-  )
+  const allToolDefs = args
+    .applyBuiltinOverrideVisibility(args.toolRegistry.getToolDefinitions(), builtinOverride)
     .filter((t) => mcpVisible(t.name))
     .filter((t) => {
       const guard = args.toolGuards.get(t.name);

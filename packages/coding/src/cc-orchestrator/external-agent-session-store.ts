@@ -53,6 +53,13 @@ export function defaultExternalAgentSessionStorePath(): string {
 export class ExternalAgentSessionStore {
   constructor(private readonly file = defaultExternalAgentSessionStorePath()) {}
 
+  /** Snapshot all known bindings. Returned objects are detached from the
+   *  persisted array so read-only consumers (for example room discovery) can
+   *  correlate worktree sessions without gaining a mutation path. */
+  list(): ExternalAgentSessionBinding[] {
+    return this.load().map((binding) => ({ ...binding }));
+  }
+
   get(cli: ExternalAgentCli, sessionId: string): ExternalAgentSessionBinding | undefined {
     if (!sessionId) return undefined;
     return this.load().find((s) => s.cli === cli && s.sessionId === sessionId);

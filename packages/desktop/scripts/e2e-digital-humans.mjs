@@ -138,8 +138,44 @@ try {
     .getByRole("heading", { level: 1, name: /数字人|Digital humans/i })
     .waitFor({ state: "visible", timeout: 20_000 });
   await win.getByRole("tab", { name: /数字人广场|Market/i }).waitFor({ state: "visible" });
+  await win
+    .getByRole("heading", { name: /精选场景|Featured scenarios/i })
+    .waitFor({ state: "visible" });
   await assertNoHorizontalOverflow(win, "digital-human market");
   await screenshot(win, "digital-humans-market.png");
+
+  const productResearcherCard = win.locator('[data-digital-human-card="product-researcher"]');
+  await productResearcherCard.getByRole("button", { name: /查看详情|View details/i }).click();
+  const detailDialog = win.getByRole("dialog");
+  await detailDialog.waitFor({ state: "visible" });
+  await detailDialog
+    .getByRole("heading", { name: /产品研究员|Product Researcher/i })
+    .waitFor({ state: "visible" });
+  await win.waitForTimeout(250);
+  await screenshot(win, "digital-human-detail.png");
+  const starterPrompt = "分析这个产品方向的目标用户、核心痛点和现有替代方案";
+  await win.getByRole("button", { name: starterPrompt, exact: true }).click();
+  const petDraft = win.locator('[data-pet-manager-chat="true"] textarea');
+  await petDraft.waitFor({ state: "visible", timeout: 20_000 });
+  assert((await petDraft.inputValue()) === starterPrompt, "sample task did not prefill Pet chat");
+
+  await navButton.click();
+  await win.getByRole("tab", { name: /数字人广场|Market/i }).waitFor({ state: "visible" });
+  await win.getByTestId("digital-human-market-teams").click();
+  const deliveryTeamCard = win.locator('[data-curated-team-card="software-delivery-squad"]');
+  await deliveryTeamCard.waitFor({ state: "visible" });
+  await deliveryTeamCard.getByRole("button", { name: /查看详情|View details/i }).click();
+  await win.getByText(/Pet 统筹|Pet coordinates/i, { exact: true }).waitFor({ state: "visible" });
+  const teamStarterPrompt = "把这个需求从范围澄清、开发实现到质量验收完整交付";
+  await win.getByRole("button", { name: teamStarterPrompt, exact: true }).click();
+  await petDraft.waitFor({ state: "visible", timeout: 20_000 });
+  assert(
+    (await petDraft.inputValue()) === teamStarterPrompt,
+    "team sample task did not prefill Pet chat",
+  );
+
+  await navButton.click();
+  await win.getByRole("tab", { name: /数字人广场|Market/i }).waitFor({ state: "visible" });
 
   await win.getByRole("tab", { name: /我的数字人|My digital humans/i }).click();
   await win.getByText("Research Analyst", { exact: true }).waitFor({ state: "visible" });
@@ -160,6 +196,7 @@ try {
 
   await win.getByRole("tab", { name: /数字人团队|Teams/i }).click();
   await win.getByText("Research & Review", { exact: true }).waitFor({ state: "visible" });
+  await win.getByText("软件交付团队", { exact: true }).waitFor({ state: "visible" });
   await win.getByText("Research Analyst", { exact: true }).waitFor({ state: "visible" });
   await win.getByText("Critical Reviewer", { exact: true }).waitFor({ state: "visible" });
   await assertNoHorizontalOverflow(win, "digital-human teams");
@@ -177,6 +214,13 @@ try {
   ]) {
     await win.getByRole("tab", { name: tabName }).waitFor({ state: "visible" });
   }
+  await win.getByRole("tab", { name: /数字人广场|Market/i }).click();
+  await win
+    .getByRole("heading", { name: /精选场景|Featured scenarios/i })
+    .waitFor({ state: "visible" });
+  await assertNoHorizontalOverflow(win, "digital-human market narrow layout");
+  await screenshot(win, "digital-humans-market-mobile.png");
+  await win.getByRole("tab", { name: /数字人团队|Teams/i }).click();
   await win.getByText("Research & Review", { exact: true }).waitFor({ state: "visible" });
   await assertNoHorizontalOverflow(win, "digital-human narrow layout");
   await screenshot(win, "digital-humans-mobile.png");

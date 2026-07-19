@@ -125,6 +125,26 @@ function deferred<T>() {
 }
 
 describe("PetStateAggregator", () => {
+  test("periodically refreshes the durable work catalog and observes external changes", async () => {
+    const bridge = new FakeBridge();
+    const catalog = pagedCatalog([disk("one")]);
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: catalog.list,
+      catalogRefreshIntervalMs: 5,
+      now: () => 3_000,
+    });
+
+    await aggregator.start();
+    catalog.replace([disk("two", { updatedAt: 2_000 })]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(aggregator.getSnapshot().sessions.map((session) => session.agentSessionId)).toEqual([
+      "two",
+    ]);
+    aggregator.stop();
+  });
+
   test("reads every disk page without spawning a worker and exposes only display workspace names", async () => {
     const bridge = new FakeBridge();
     const catalog = pagedCatalog([

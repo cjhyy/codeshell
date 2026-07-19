@@ -233,10 +233,10 @@ export class RoomManager {
    *  Holds the raw tool input so respondApproval can bake the user's answer into
    *  the `answers` record the CLI expects. Cleared on response. */
   private pendingAskUser = new Map<string, unknown>();
-  private pendingTranscriptAttachments = new Map<
-    string,
-    Array<{ text: string; attachments: NonNullable<RoomMessage["attachments"]> }>
-  >();
+  /** User turns are echoed immediately for responsive room UX. When a
+   * transcript follower later sees the same CLI-written user line, this queue
+   * suppresses that duplicate. */
+  private pendingTranscriptUserEchoes = new Map<string, Array<{ text: string; ts: number }>>();
   private now: () => number;
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
@@ -408,14 +408,16 @@ export class RoomManager {
     for (const message of messages) {
       if (message.from === "user" && typeof message.text === "string") {
         const text = stripRoomAttachmentBlock(message.text);
-        const pending = this.pendingTranscriptAttachments.get(id);
-        const matched = pending?.[0]?.text === text ? pending.shift() : undefined;
-        if (pending?.length === 0) this.pendingTranscriptAttachments.delete(id);
-        this.append(id, {
-          ...message,
-          text,
-          ...(matched ? { attachments: matched.attachments } : {}),
-        });
+        const pending = this.pendingTranscriptUserEchoes.get(id);
+        const cutoff = this.now() - 60_000;
+        while (pending?.length && pending[0]!.ts < cutoff) pending.shift();
+        const matched = pending?.[0]?.text === text;
+        if (matched) pending!.shift();
+        if (pending?.length === 0) this.pendingTranscriptUserEchoes.delete(id);
+        // `send` already persisted and broadcast this exact user turn. The
+        // transcript remains authoritative for agent/tool output, but must not
+        // render a second copy of the prompt.
+        if (!matched) this.append(id, { ...message, text });
       } else {
         this.append(id, message);
       }
@@ -667,20 +669,16 @@ export class RoomManager {
     this.open(id);
     const summaries = roomAttachmentSummary(attachments);
     const agentText = roomTurnText(displayText, attachments);
-    // A transcript-followed room will observe this same user turn in the CLI's
-    // JSONL. Let that single source append it, otherwise the UI gets two user
-    // bubbles (immediate room echo + transcript tail).
-    if (!this.transcriptFollowedRooms.has(id)) {
-      this.append(id, {
-        from: "user",
-        type: "text",
-        text: displayText,
-        ...(summaries.length ? { attachments: summaries } : {}),
-      });
-    } else if (summaries.length) {
-      const pending = this.pendingTranscriptAttachments.get(id) ?? [];
-      pending.push({ text: displayText, attachments: summaries });
-      this.pendingTranscriptAttachments.set(id, pending);
+    this.append(id, {
+      from: "user",
+      type: "text",
+      text: displayText,
+      ...(summaries.length ? { attachments: summaries } : {}),
+    });
+    if (this.transcriptFollowedRooms.has(id)) {
+      const pending = this.pendingTranscriptUserEchoes.get(id) ?? [];
+      pending.push({ text: displayText, ts: this.now() });
+      this.pendingTranscriptUserEchoes.set(id, pending);
     }
     return this.agents.get(id)?.send(agentText) ?? false;
   }
@@ -689,7 +687,7 @@ export class RoomManager {
     this.agents.get(id)?.stop();
     this.agents.delete(id);
     this.clearPendingAskUser(id);
-    this.pendingTranscriptAttachments.delete(id);
+    this.pendingTranscriptUserEchoes.delete(id);
     this.opts.onRoomEnded?.(id);
   }
 
@@ -698,7 +696,7 @@ export class RoomManager {
     for (const agent of this.agents.values()) agent.stop();
     this.agents.clear();
     this.pendingAskUser.clear();
-    this.pendingTranscriptAttachments.clear();
+    this.pendingTranscriptUserEchoes.clear();
     for (const id of ids) this.opts.onRoomEnded?.(id);
     this.transcriptFollowedRooms.clear();
   }

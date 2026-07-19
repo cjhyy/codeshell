@@ -32,6 +32,7 @@ function makeEngine(): Engine {
     setAskUser() {},
     setBrowserBridge() {},
     setInjectCredential() {},
+    setSessionMessageRouter() {},
     isHeadless: () => false,
   } as unknown as Engine;
 }

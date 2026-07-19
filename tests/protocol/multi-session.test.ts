@@ -32,6 +32,7 @@ function makeManager(maxSessions = 8) {
       setAskUser: (_fn: any) => {},
       setBrowserBridge: (_bridge: any) => {},
       setInjectCredential: (_fn: any) => {},
+      setSessionMessageRouter: (_router: any) => {},
       isHeadless: () => false,
       run: async (task: string, opts: any) => {
         opts.onStream?.({ type: "text_delta", text: `t:${task}` });

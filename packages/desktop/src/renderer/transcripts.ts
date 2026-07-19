@@ -90,6 +90,8 @@ export interface SessionSummary {
    * '新对话' resume the previous chat's context.
    */
   engineSessionId?: string;
+  /** Current, switchable digital-human identity for this project Session. */
+  workspaceProfile?: string;
   /** "automation" when imported from a cron run; absent for manual chats. */
   source?: "automation";
   /** RunStore run id, when source === "automation" — used for unified delete. */
@@ -629,6 +631,8 @@ export const migrateRepoSessionBucket = migrateProjectSessionBucket;
 export interface CreateSessionOptions {
   /** Defaults to true. Background producers such as Mimi must not steal the active chat. */
   activate?: boolean;
+  /** Bind the new Session to one workspace profile/digital human. */
+  workspaceProfile?: string;
 }
 
 /** Create a new session under `projectId`, active by default. */
@@ -645,6 +649,7 @@ export function createSession(
     title: title?.trim() ? title.trim() : DEFAULT_SESSION_TITLE,
     createdAt: now,
     updatedAt: now,
+    ...(options.workspaceProfile ? { workspaceProfile: options.workspaceProfile } : {}),
   };
   const next: SessionIndex = {
     sessions: [summary, ...idx.sessions],
@@ -792,6 +797,26 @@ export function renameSessionLocal(
           }
         : s,
     ),
+  };
+  saveSessionIndex(projectId, next);
+  return next;
+}
+
+/** Switch the digital human used by future turns without replacing Session history. */
+export function setSessionWorkspaceProfileLocal(
+  projectId: string | null,
+  sessionId: string,
+  workspaceProfile: string | undefined,
+): SessionIndex {
+  const idx = loadSessionIndex(projectId);
+  const next: SessionIndex = {
+    ...idx,
+    sessions: idx.sessions.map((session) => {
+      if (session.id !== sessionId) return session;
+      if (workspaceProfile) return { ...session, workspaceProfile, updatedAt: Date.now() };
+      const { workspaceProfile: _previous, ...unbound } = session;
+      return { ...unbound, updatedAt: Date.now() };
+    }),
   };
   saveSessionIndex(projectId, next);
   return next;

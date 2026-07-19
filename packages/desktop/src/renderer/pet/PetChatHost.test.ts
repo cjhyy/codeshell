@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { selectPetChatRows } from "./PetChatHost";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { PetDelegationCard, petDelegationDisplayState, selectPetChatRows } from "./PetChatHost";
 
 describe("PetChatHost", () => {
   test("shows only the manager conversation and hides execution events", () => {
@@ -33,6 +35,62 @@ describe("PetChatHost", () => {
         { kind: "assistant", id: "a1", text: "准备派发\n<!--PET:AU", done: false },
       ]),
     ).toEqual([{ id: "a1", role: "assistant", text: "准备派发" }]);
+  });
+
+  test("places a structured delegation receipt after the matching assistant reply", () => {
+    const rows = selectPetChatRows(
+      [
+        {
+          kind: "user",
+          id: "u1",
+          text: "继续下载",
+          clientMessageId: "pet-turn-1",
+        },
+        { kind: "assistant", id: "a1", text: "已派出。", done: true },
+      ],
+      [],
+      [
+        {
+          originClientMessageId: "pet-turn-1",
+          createdAt: 1,
+          delegations: [
+            {
+              clientMessageId: "pet-turn-1",
+              task: "继续下载 mimi-test-videos",
+              workspacePath: "/work/codeshell",
+              sessionId: "session-work-1",
+              reusedSession: false,
+            },
+          ],
+        },
+      ],
+    );
+
+    expect(rows.map((row) => row.role)).toEqual(["user", "assistant", "delegation"]);
+    expect(rows.at(-1)?.delegation).toMatchObject({
+      sessionId: "session-work-1",
+      task: "继续下载 mimi-test-videos",
+    });
+  });
+
+  test("keeps automatic context compaction as an explicit history boundary", () => {
+    expect(
+      selectPetChatRows([
+        { kind: "user", id: "u1", text: "old question" },
+        {
+          kind: "context_boundary",
+          id: "ctx1",
+          strategy: "summary",
+          before: 12_000,
+          after: 1_500,
+        },
+        { kind: "user", id: "u2", text: "new question" },
+      ]),
+    ).toEqual([
+      { id: "u1", role: "user", text: "old question" },
+      { id: "ctx1", role: "history-boundary", text: "", before: 12_000, after: 1_500 },
+      { id: "u2", role: "user", text: "new question" },
+    ]);
   });
 
   test("labels user messages received from an IM gateway channel", () => {
@@ -117,5 +175,53 @@ describe("PetChatHost", () => {
     const userIdx = rows.findIndex((r) => r.id === "user-local-1");
     expect(dividerIdx).toBeLessThan(userIdx);
     expect(rows.find((r) => r.role === "work-memory")?.text).toContain("重构 X");
+  });
+});
+
+describe("PetDelegationCard", () => {
+  test("shows dispatch proof, live status, and a clickable Session affordance", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(PetDelegationCard, {
+        delegation: {
+          clientMessageId: "pet-turn-1",
+          task: "继续下载 mimi-test-videos",
+          workspacePath: "/work/codeshell",
+          sessionId: "secret-session-id",
+          reusedSession: false,
+        },
+        session: {
+          agentSessionId: "secret-session-id",
+          title: "mimi-test-videos",
+          workspaceDisplayName: "codeshell",
+          runState: "running",
+          queueDepth: 0,
+          lastActivityAt: 1,
+          pendingDecisionCount: 0,
+          freshness: { source: "live-event", observedAt: 1, workerState: "active" },
+        },
+        onOpen: () => {},
+      }),
+    );
+
+    expect(html).toContain('data-pet-delegation-card="true"');
+    expect(html).toContain("已派出 Session");
+    expect(html).toContain("执行中");
+    expect(html).toContain("打开 Session");
+    expect(html).not.toContain("secret-session-id");
+    expect(html).not.toContain("<button disabled");
+  });
+
+  test("maps terminal outcomes to their explicit card state", () => {
+    expect(
+      petDelegationDisplayState({
+        agentSessionId: "failed",
+        runState: "terminal",
+        queueDepth: 0,
+        lastActivityAt: 1,
+        pendingDecisionCount: 0,
+        terminal: { status: "failed", at: 1 },
+        freshness: { source: "disk", observedAt: 1, workerState: "reclaimed" },
+      }),
+    ).toBe("failed");
   });
 });

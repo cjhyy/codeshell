@@ -39,18 +39,17 @@ describe("App Pet lifecycle boundaries", () => {
     expect(petSource).not.toContain('type: "evict"');
   });
 
-  test("lets the Digital Human Center select a Pet-led team without adding approval powers", () => {
-    expect(appSource).toContain("petDigitalHumanSelection");
-    expect(petSource).toContain("digitalHumanTeamId");
-    expect(petSource).toContain("digitalHumanId");
+  test("starts profile-bound project Sessions directly from the Digital Human Center", () => {
+    expect(appSource).toContain("createSession(activeProjectId, title");
+    expect(appSource).toContain("workspaceProfile: profileName");
+    expect(appSource).not.toContain("petDigitalHumanSelection");
   });
 
-  test("persists, validates, and synchronizes the Pet digital-human selection", () => {
-    expect(appSource).toContain("loadDigitalHumanSelection()");
-    expect(appSource).toContain("saveDigitalHumanSelection(petDigitalHumanSelection)");
-    expect(appSource).toContain('window.addEventListener("storage", onStorage)');
-    expect(appSource).toContain("window.codeshell.listProfiles()");
-    expect(appSource).toContain("window.codeshell.listDigitalHumanTeams()");
+  test("keeps Pet independent from digital-human identity and team routing", () => {
+    expect(appSource).not.toContain("loadDigitalHumanSelection()");
+    expect(appSource).not.toContain("saveDigitalHumanSelection(");
+    expect(petSource).not.toContain("digitalHumanTeamId");
+    expect(petSource).not.toContain("digitalHumanId");
   });
 
   test("opens the Pet page only from explicit entry or peek action wiring", () => {
@@ -98,6 +97,18 @@ describe("App Pet lifecycle boundaries", () => {
     expect(settingsMenuSource).toContain("onTogglePetWidget");
     expect(settingsMenuSource).toContain('"pet.widget.hide"');
     expect(settingsMenuSource).toContain('"pet.widget.show"');
+  });
+
+  test("opens language explicitly and keeps the full settings entry last", () => {
+    const petToggleIndex = settingsMenuSource.indexOf('"pet.widget.hide"');
+    const languageIndex = settingsMenuSource.indexOf('t("settingsX.menu.switchLanguage")');
+    const openSettingsIndex = settingsMenuSource.indexOf('t("settingsX.menu.openSettings")');
+    expect(settingsMenuSource).not.toContain("onMouseEnter");
+    expect(settingsMenuSource).not.toContain("onFocus");
+    expect(settingsMenuSource).toContain("toggleSubmenu(event.currentTarget)");
+    expect(petToggleIndex).toBeGreaterThan(-1);
+    expect(languageIndex).toBeGreaterThan(petToggleIndex);
+    expect(openSettingsIndex).toBeGreaterThan(languageIndex);
   });
 
   test("starts the desktop Pet hidden until the user explicitly toggles it", () => {

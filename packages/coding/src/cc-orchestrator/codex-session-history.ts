@@ -10,6 +10,7 @@ import {
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { HistoryMessage, SessionTailEvent } from "./session-history.js";
+import { codexUserText } from "./codex-user-text.js";
 
 /**
  * Read the last `limit` user/assistant messages from a codex CLI session,
@@ -27,8 +28,8 @@ import type { HistoryMessage, SessionTailEvent } from "./session-history.js";
  *   - {type:"response_item", payload:{type:"function_call", name, arguments}}   → tool
  *   - {type:"response_item", payload:{type:"custom_tool_call", name, input}}    → tool
  *
- * `developer`-role messages (environment/system injections) and the leading
- * `<environment_context>` user wrapper are skipped, mirroring discovery.
+ * `developer`-role messages and host-injected plugin/AGENTS/environment user
+ * parts are skipped, while real input parts beside them remain visible.
  */
 /** Read recent Codex CLI history for the coding host. */
 export function readCodexRecentHistory(
@@ -70,8 +71,8 @@ export function parseCodexRecentHistory(
     if (!p) continue;
 
     if (p.type === "message" && (p.role === "user" || p.role === "assistant")) {
-      const t = textOf(p.content).trim();
-      if (!t || t.startsWith("<environment_context>")) continue;
+      const t = (p.role === "user" ? codexUserText(p.content) : textOf(p.content)).trim();
+      if (!t) continue;
       all.push({ role: p.role, text: t });
     } else if (p.type === "function_call" || p.type === "custom_tool_call") {
       const tool = {
@@ -110,8 +111,8 @@ export function parseCodexTranscriptLine(line: string): SessionTailEvent[] {
   if (d?.type !== "response_item" || !d.payload) return [];
   const p = d.payload;
   if (p.type === "message" && (p.role === "user" || p.role === "assistant")) {
-    const text = textOf(p.content).trim();
-    if (!text || text.startsWith("<environment_context>")) return [];
+    const text = (p.role === "user" ? codexUserText(p.content) : textOf(p.content)).trim();
+    if (!text) return [];
     return [{ type: p.role === "user" ? "user" : "assistant", text }];
   }
   if (p.type === "function_call" || p.type === "custom_tool_call") {

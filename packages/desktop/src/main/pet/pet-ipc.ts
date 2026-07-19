@@ -6,8 +6,11 @@ import type {
 } from "./pet-state-aggregator.js";
 import type { PetDispatchCommand, PetDispatchResult } from "./pet-dispatch-service.js";
 import type { PetAttentionEvent, PetAttentionSnapshot } from "./pet-attention-policy.js";
-import { WORKSPACE_PROFILE_NAME_RE } from "@cjhyy/code-shell-core";
-import { DIGITAL_HUMAN_TEAM_ID_RE } from "@cjhyy/code-shell-pet";
+import {
+  type PetLongTaskControlRequest,
+  type PetLongTaskControlResult,
+  type PetLongTaskSnapshot,
+} from "@cjhyy/code-shell-pet";
 import {
   isPetWorkItemId,
   MAX_PET_WORK_INBOX_DISMISSED_ITEMS,
@@ -28,6 +31,9 @@ export const PET_CHAT_EVENT_CHANNEL = "pet:chat-event";
 export const PET_WORK_INBOX_SNAPSHOT_CHANNEL = "pet:work-inbox-dismissed-get";
 export const PET_WORK_INBOX_UPDATE_CHANNEL = "pet:work-inbox-dismissed-update";
 export const PET_WORK_INBOX_EVENT_CHANNEL = "pet:work-inbox-dismissed-changed";
+export const PET_LONG_TASK_SNAPSHOT_CHANNEL = "pet:long-tasks-get";
+export const PET_LONG_TASK_CONTROL_CHANNEL = "pet:long-task-control";
+export const PET_LONG_TASK_EVENT_CHANNEL = "pet:long-tasks-changed";
 
 export interface PetIpcAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot;
@@ -60,6 +66,12 @@ export interface PetIpcWorkInbox {
   getSnapshot(): PetWorkInboxSnapshot;
   add(ids: readonly string[]): PetWorkInboxSnapshot;
   clear(): PetWorkInboxSnapshot;
+}
+
+export interface PetIpcLongTasks {
+  getSnapshot(): PetLongTaskSnapshot;
+  control(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
+  subscribe(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
 }
 
 /**
@@ -126,25 +138,23 @@ function parseDispatchCommand(value: unknown): PetDispatchCommand {
             key !== "type" &&
             key !== "message" &&
             key !== "clientMessageId" &&
-            key !== "preferredProjectPath" &&
-            key !== "digitalHumanId" &&
-            key !== "digitalHumanTeamId",
+            key !== "model" &&
+            key !== "preferredProjectPath",
         ) ||
         typeof record.message !== "string" ||
         !record.message.trim() ||
         (record.clientMessageId !== undefined &&
           (typeof record.clientMessageId !== "string" || !record.clientMessageId.trim())) ||
+        (record.model !== undefined &&
+          (typeof record.model !== "string" ||
+            !record.model.trim() ||
+            record.model !== record.model.trim() ||
+            record.model.length > 256 ||
+            /[\u0000-\u001f\u007f]/u.test(record.model))) ||
         (record.preferredProjectPath !== undefined &&
           (typeof record.preferredProjectPath !== "string" ||
             !record.preferredProjectPath.trim() ||
-            record.preferredProjectPath.length > 4_096)) ||
-        (record.digitalHumanId !== undefined &&
-          (typeof record.digitalHumanId !== "string" ||
-            !WORKSPACE_PROFILE_NAME_RE.test(record.digitalHumanId))) ||
-        (record.digitalHumanTeamId !== undefined &&
-          (typeof record.digitalHumanTeamId !== "string" ||
-            !DIGITAL_HUMAN_TEAM_ID_RE.test(record.digitalHumanTeamId))) ||
-        (record.digitalHumanId !== undefined && record.digitalHumanTeamId !== undefined)
+            record.preferredProjectPath.length > 4_096))
       ) {
         throw new Error("invalid pet command");
       }
@@ -154,14 +164,9 @@ function parseDispatchCommand(value: unknown): PetDispatchCommand {
         ...(typeof record.clientMessageId === "string"
           ? { clientMessageId: record.clientMessageId }
           : {}),
+        ...(typeof record.model === "string" ? { model: record.model } : {}),
         ...(typeof record.preferredProjectPath === "string"
           ? { preferredProjectPath: record.preferredProjectPath }
-          : {}),
-        ...(typeof record.digitalHumanId === "string"
-          ? { digitalHumanId: record.digitalHumanId }
-          : {}),
-        ...(typeof record.digitalHumanTeamId === "string"
-          ? { digitalHumanTeamId: record.digitalHumanTeamId }
           : {}),
       };
     case "open_session":
@@ -198,6 +203,25 @@ function parseWorkInboxUpdate(
   return { action: "add", ids: record.ids as string[] };
 }
 
+function parseLongTaskControl(value: unknown): PetLongTaskControlRequest {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalid Pet long-task control");
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some((key) => key !== "taskId" && key !== "action") ||
+    typeof record.taskId !== "string" ||
+    !/^pet-task-[a-f0-9]{24}$/u.test(record.taskId) ||
+    (record.action !== "pause" &&
+      record.action !== "resume" &&
+      record.action !== "retry" &&
+      record.action !== "cancel")
+  ) {
+    throw new Error("invalid Pet long-task control");
+  }
+  return { taskId: record.taskId, action: record.action };
+}
+
 export function registerPetIpc(options: {
   ipcMain: PetIpcMainLike;
   aggregator: PetIpcAggregator;
@@ -206,6 +230,7 @@ export function registerPetIpc(options: {
   attention?: PetIpcAttention;
   workInbox?: PetIpcWorkInbox;
   workMemory?: PetIpcWorkMemory;
+  longTasks?: PetIpcLongTasks;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
@@ -245,6 +270,23 @@ export function registerPetIpc(options: {
           if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, event);
         }
         const result = await options.dispatcher!.dispatch(command);
+        if (result.ok && result.type === "chat") {
+          const delegations = result.delegations ?? (result.delegation ? [result.delegation] : []);
+          if (delegations.length > 0) {
+            const delegationEvent = {
+              kind: "delegation-started" as const,
+              originClientMessageId:
+                command.clientMessageId ?? delegations[0]?.clientMessageId ?? randomUUID(),
+              delegations,
+              createdAt: Date.now(),
+            };
+            for (const window of options.windows()) {
+              if (!window.isDestroyed()) {
+                window.webContents.send(PET_CHAT_EVENT_CHANNEL, delegationEvent);
+              }
+            }
+          }
+        }
         return result;
       });
     });
@@ -304,6 +346,17 @@ export function registerPetIpc(options: {
       });
     });
   }
+  if (options.longTasks) {
+    options.ipcMain.handle(PET_LONG_TASK_SNAPSHOT_CHANNEL, (_event, ...args) => {
+      if (args.length !== 0) throw new Error("Pet long-task snapshot does not accept arguments");
+      return afterReady(options.ready, () => options.longTasks!.getSnapshot());
+    });
+    options.ipcMain.handle(PET_LONG_TASK_CONTROL_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1) throw new Error("invalid Pet long-task control");
+      const request = parseLongTaskControl(args[0]);
+      return afterReady(options.ready, () => options.longTasks!.control(request));
+    });
+  }
   const unsubscribe = options.aggregator.subscribe((event) => {
     for (const window of options.windows()) {
       if (!window.isDestroyed()) window.webContents.send(PET_EVENT_CHANNEL, event);
@@ -314,9 +367,15 @@ export function registerPetIpc(options: {
       if (!window.isDestroyed()) window.webContents.send(PET_ATTENTION_EVENT_CHANNEL, event);
     }
   });
+  const unsubscribeLongTasks = options.longTasks?.subscribe((snapshot) => {
+    for (const window of options.windows()) {
+      if (!window.isDestroyed()) window.webContents.send(PET_LONG_TASK_EVENT_CHANNEL, snapshot);
+    }
+  });
   return () => {
     unsubscribe();
     unsubscribeAttention?.();
+    unsubscribeLongTasks?.();
     options.ipcMain.removeHandler(PET_SNAPSHOT_CHANNEL);
     options.ipcMain.removeHandler(PET_WORK_MEMORY_CHANNEL);
     options.ipcMain.removeHandler(PET_OPEN_SESSION_CHANNEL);
@@ -329,6 +388,10 @@ export function registerPetIpc(options: {
     if (options.workInbox) {
       options.ipcMain.removeHandler(PET_WORK_INBOX_SNAPSHOT_CHANNEL);
       options.ipcMain.removeHandler(PET_WORK_INBOX_UPDATE_CHANNEL);
+    }
+    if (options.longTasks) {
+      options.ipcMain.removeHandler(PET_LONG_TASK_SNAPSHOT_CHANNEL);
+      options.ipcMain.removeHandler(PET_LONG_TASK_CONTROL_CHANNEL);
     }
   };
 }

@@ -3,6 +3,8 @@ import type { WorkspaceProfile } from "@cjhyy/code-shell-core";
 export interface DigitalHumanCatalogEntry extends WorkspaceProfile {
   category: "product" | "design" | "engineering" | "quality";
   tags: string[];
+  samplePrompts: string[];
+  usageCount: number;
 }
 
 /** Bundled starter catalog. Remote marketplaces can implement the same read model later. */
@@ -13,6 +15,12 @@ export const DIGITAL_HUMAN_CATALOG: readonly DigitalHumanCatalogEntry[] = [
     description: "澄清目标、研究用户与竞品，把模糊想法整理成可验证的产品判断。",
     category: "product",
     tags: ["调研", "需求", "竞品"],
+    samplePrompts: [
+      "分析这个产品方向的目标用户、核心痛点和现有替代方案",
+      "帮我做一份竞品研究，并明确事实、判断与待验证假设",
+      "把这个模糊想法整理成可验证的产品机会清单",
+    ],
+    usageCount: 12800,
     basePreset: "general",
     plugins: [],
     skills: [],
@@ -24,11 +32,39 @@ export const DIGITAL_HUMAN_CATALOG: readonly DigitalHumanCatalogEntry[] = [
     version: "0.1.0",
   },
   {
+    name: "product-manager",
+    label: "产品经理",
+    description: "把业务目标转成范围清晰、可排期、可验收的产品方案与任务计划。",
+    category: "product",
+    tags: ["规划", "PRD", "验收"],
+    samplePrompts: [
+      "把这份业务需求整理成一版可评审的 PRD",
+      "为这个功能定义范围、用户流程和验收标准",
+      "把目标拆成两周内可交付的产品迭代计划",
+    ],
+    usageCount: 9600,
+    basePreset: "general",
+    plugins: [],
+    skills: [],
+    mcp: [],
+    agents: [],
+    mainInstruction:
+      "你是产品经理。先澄清目标、用户与约束，再定义范围、流程、优先级和验收标准；避免用功能清单代替问题判断。",
+    portableMemory: true,
+    version: "0.1.0",
+  },
+  {
     name: "experience-designer",
     label: "体验设计师",
     description: "把任务流程转成清晰的信息架构、交互方案和可交付界面说明。",
     category: "design",
     tags: ["UX", "交互", "界面"],
+    samplePrompts: [
+      "梳理这个功能的用户路径、信息架构和关键状态",
+      "评审这个页面，找出认知负担和操作断点",
+      "把需求转成包含异常状态的交互说明",
+    ],
+    usageCount: 8400,
     basePreset: "general",
     plugins: [],
     skills: [],
@@ -40,11 +76,39 @@ export const DIGITAL_HUMAN_CATALOG: readonly DigitalHumanCatalogEntry[] = [
     version: "0.1.0",
   },
   {
+    name: "content-strategist",
+    label: "内容策划师",
+    description: "从受众与传播目标出发，规划内容结构、表达节奏和多渠道交付方案。",
+    category: "design",
+    tags: ["内容", "叙事", "传播"],
+    samplePrompts: [
+      "围绕这个主题规划一组有统一叙事的内容选题",
+      "把这份资料改写成适合不同渠道发布的内容方案",
+      "为产品发布设计内容节奏、信息层级和行动引导",
+    ],
+    usageCount: 7100,
+    basePreset: "general",
+    plugins: [],
+    skills: [],
+    mcp: [],
+    agents: [],
+    mainInstruction:
+      "你是内容策划师。先明确受众、目标和渠道，再设计信息结构、叙事节奏与行动引导；所有表达都要服务于清晰的传播目标。",
+    portableMemory: true,
+    version: "0.1.0",
+  },
+  {
     name: "software-builder",
     label: "软件开发者",
     description: "阅读现有代码、实施功能、编写测试，并用可复现的验证结果交付。",
     category: "engineering",
     tags: ["开发", "测试", "交付"],
+    samplePrompts: [
+      "阅读这个项目并实现需求，补齐测试后给出验证结果",
+      "定位这个问题的根因并完成最小安全修复",
+      "把这份技术方案拆成可并行实施的工程任务",
+    ],
+    usageCount: 15300,
     basePreset: "terminal-coding",
     plugins: [],
     skills: [],
@@ -56,11 +120,39 @@ export const DIGITAL_HUMAN_CATALOG: readonly DigitalHumanCatalogEntry[] = [
     version: "0.1.0",
   },
   {
+    name: "data-analyst",
+    label: "数据分析师",
+    description: "从数据中识别趋势、异常和关键驱动因素，产出可执行的业务结论。",
+    category: "engineering",
+    tags: ["数据", "可视化", "洞察"],
+    samplePrompts: [
+      "分析这份数据的趋势、异常和可能原因",
+      "搭建一套能支持业务决策的核心指标框架",
+      "把分析结果整理成带图表与行动建议的报告",
+    ],
+    usageCount: 11200,
+    basePreset: "general",
+    plugins: [],
+    skills: [],
+    mcp: [],
+    agents: [],
+    mainInstruction:
+      "你是数据分析师。先核对口径、完整性与偏差，再分析趋势、异常和驱动因素；结论必须对应证据，并给出可执行建议。",
+    portableMemory: true,
+    version: "0.1.0",
+  },
+  {
     name: "quality-reviewer",
     label: "质量审阅员",
     description: "独立检查方案和实现，寻找缺陷、边界条件、回归与不可验证的假设。",
     category: "quality",
     tags: ["评审", "测试", "风险"],
+    samplePrompts: [
+      "独立评审这份方案，按风险排序列出关键问题",
+      "为这个功能设计覆盖正常与异常路径的测试计划",
+      "检查这次改动可能造成的回归和不可验证假设",
+    ],
+    usageCount: 6900,
     basePreset: "general",
     plugins: [],
     skills: [],
@@ -68,6 +160,28 @@ export const DIGITAL_HUMAN_CATALOG: readonly DigitalHumanCatalogEntry[] = [
     agents: [],
     mainInstruction:
       "你是质量审阅员。独立核对需求、实现和证据，优先报告会导致错误结果、数据损坏或回归的问题，并给出最小复现与修复建议。",
+    portableMemory: true,
+    version: "0.1.0",
+  },
+  {
+    name: "security-reviewer",
+    label: "安全审阅员",
+    description: "识别权限、数据流、依赖与操作边界中的安全风险，并给出可落地的缓解方案。",
+    category: "quality",
+    tags: ["安全", "权限", "合规"],
+    samplePrompts: [
+      "评审这个方案的数据流、权限边界和潜在攻击面",
+      "检查这次改动是否引入敏感信息泄露风险",
+      "为这个工作流制定最小权限与审计方案",
+    ],
+    usageCount: 5200,
+    basePreset: "general",
+    plugins: [],
+    skills: [],
+    mcp: [],
+    agents: [],
+    mainInstruction:
+      "你是安全审阅员。围绕资产、信任边界、数据流和最小权限进行审查；风险要给出可复现路径、影响范围与优先级明确的缓解措施。",
     portableMemory: true,
     version: "0.1.0",
   },

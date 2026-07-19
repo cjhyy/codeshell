@@ -1,10 +1,9 @@
 /**
  * Run-workspace resolution — the pre-session phase of Engine.runExclusive:
- * pins session kind + workspace profile against persisted state, resolves the
- * behavior profile / permission mode / plan mode, resolves workspace resume
- * (with its two early-return shapes) and the effective cwd. Pure of Engine —
- * everything arrives via the args object (run-setup.ts / run-image-input.ts
- * style).
+ * pins session kind, resolves the switchable work-Session profile binding,
+ * behavior profile / permission mode / plan mode, workspace resume (with its
+ * two early-return shapes), and the effective cwd. Pure of Engine — everything
+ * arrives via the args object (run-setup.ts / run-image-input.ts style).
  */
 import type { SessionKind } from "../types.js";
 import type { SessionManager } from "../session/session-manager.js";
@@ -80,16 +79,10 @@ export async function resolveRunWorkspace(args: {
     options?.sessionId && args.sessionManager.exists(options.sessionId)
       ? args.sessionManager.readSessionWorkspaceProfile(options.sessionId)
       : undefined;
-  if (
-    persistedWorkspaceProfile &&
-    options?.workspaceProfile &&
-    persistedWorkspaceProfile !== options.workspaceProfile
-  ) {
-    throw new Error(
-      `session workspace profile mismatch: persisted ${persistedWorkspaceProfile}, requested ${options.workspaceProfile}`,
-    );
-  }
   const sessionWorkspaceProfile = options?.workspaceProfile ?? persistedWorkspaceProfile;
+  if (sessionKind !== "work" && sessionWorkspaceProfile) {
+    throw new Error(`session kind ${sessionKind} cannot bind a workspace profile`);
+  }
   const profile = args.resolveBehaviorProfile(sessionKind, options?.behaviorMode);
   // Normalize per-run profile parameters. The legacy pet-named run options
   // fold into the generic bag (runtimeContext / workspaces) so existing

@@ -51,6 +51,7 @@ function makeAskingEngine(sessionId: string, goal?: { objective: string }) {
     setPlanMode() {},
     setBrowserBridge() {},
     setInjectCredential() {},
+    setSessionMessageRouter() {},
     isHeadless: () => false,
     getGoal: () => goal,
     async run(): Promise<EngineResult> {

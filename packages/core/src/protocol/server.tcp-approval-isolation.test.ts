@@ -52,6 +52,7 @@ function makeApprovalEngine(decisions: Array<{ sessionId: string; approved: bool
     setPlanMode() {},
     setBrowserBridge() {},
     setInjectCredential() {},
+    setSessionMessageRouter() {},
     isHeadless: () => false,
     async run(
       _task: string,

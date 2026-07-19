@@ -16,10 +16,10 @@ export function PetPage({ children }: PetPageProps) {
     <section
       data-pet-page="standalone"
       aria-label={t("pet.overview.regionLabel")}
-      className="mimi-page-shell relative flex h-full min-w-0 flex-1 flex-col overflow-hidden"
+      className="mimi-page-shell @container/pet-page relative flex h-full min-w-0 flex-1 flex-col overflow-hidden"
     >
       <h1 className="sr-only">{t("pet.overview.title")}</h1>
-      <div className="mx-auto grid min-h-0 w-full max-w-[1680px] flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 min-[1100px]:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.85fr)] min-[1100px]:overflow-hidden min-[1440px]:gap-5 min-[1440px]:p-5">
+      <div className="mx-auto grid min-h-0 w-full max-w-[1680px] flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 @min-[1100px]/pet-page:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] @min-[1100px]/pet-page:overflow-hidden @min-[1440px]/pet-page:gap-5 @min-[1440px]/pet-page:p-5">
         {children}
       </div>
     </section>

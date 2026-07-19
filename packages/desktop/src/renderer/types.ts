@@ -587,6 +587,9 @@ export function applyStreamEvent(
   now: MessageClock = Date.now,
 ): MessagesReducerState {
   switch (event.type) {
+    case "session_user_message":
+      return appendUserMessage(state, event.text, now());
+
     case "session_started": {
       // Ignore event.promptTokens here: on resume, core reports the
       // *theoretical* size of the entire transcript file (byte/4

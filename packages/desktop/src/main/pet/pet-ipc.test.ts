@@ -17,6 +17,64 @@ function snapshot(): DesktopPetProjectionSnapshot {
 }
 
 describe("registerPetIpc", () => {
+  test("exposes validated durable long-task snapshots, controls, and updates", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const sent: Array<[string, unknown]> = [];
+    let taskListener:
+      | ((snapshot: { revision: number; observedAt: number; tasks: [] }) => void)
+      | undefined;
+    let controlled: unknown;
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      longTasks: {
+        getSnapshot: () => ({ revision: 3, observedAt: 30, tasks: [] }),
+        control: async (request) => {
+          controlled = request;
+          return { ok: false, code: "not-found", message: "gone" };
+        },
+        subscribe: (listener) => {
+          taskListener = listener as typeof taskListener;
+          return () => {};
+        },
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    expect(await handlers.get("pet:long-tasks-get")?.({})).toEqual({
+      revision: 3,
+      observedAt: 30,
+      tasks: [],
+    });
+    expect(
+      await handlers.get("pet:long-task-control")?.(
+        {},
+        { taskId: "pet-task-0123456789abcdef01234567", action: "pause" },
+      ),
+    ).toMatchObject({ ok: false, code: "not-found" });
+    expect(controlled).toEqual({
+      taskId: "pet-task-0123456789abcdef01234567",
+      action: "pause",
+    });
+    expect(() =>
+      handlers.get("pet:long-task-control")?.({}, { taskId: "../../bad", action: "cancel" }),
+    ).toThrow("invalid Pet long-task control");
+    taskListener?.({ revision: 4, observedAt: 40, tasks: [] });
+    expect(sent).toEqual([["pet:long-tasks-changed", { revision: 4, observedAt: 40, tasks: [] }]]);
+  });
+
   test("exposes only the bounded snapshot schema and rejects command payloads", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const ipc = {
@@ -142,7 +200,63 @@ describe("registerPetIpc", () => {
     );
   });
 
-  test("passes a validated digital-human or team selection through the IPC boundary", async () => {
+  test("broadcasts a structured Session receipt after delegated work starts", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const sent: Array<[string, unknown]> = [];
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      dispatcher: {
+        dispatch: async () => ({
+          ok: true,
+          type: "chat",
+          petSessionId: "pet-one",
+          result: {},
+          delegation: {
+            clientMessageId: "client-one",
+            task: "continue downloading",
+            workspacePath: "/work/project",
+            sessionId: "work-session",
+            reusedSession: false,
+          },
+        }),
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    await handlers.get("pet:dispatch")?.(
+      {},
+      { type: "chat", message: "continue", clientMessageId: "client-one" },
+    );
+
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toEqual([
+      "pet:chat-event",
+      expect.objectContaining({ kind: "user-submitted", clientMessageId: "client-one" }),
+    ]);
+    expect(sent[1]).toEqual([
+      "pet:chat-event",
+      expect.objectContaining({
+        kind: "delegation-started",
+        originClientMessageId: "client-one",
+        delegations: [expect.objectContaining({ sessionId: "work-session" })],
+      }),
+    ]);
+  });
+
+  test("rejects legacy digital-human routing keys at the Pet IPC boundary", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const received: unknown[] = [];
     registerPetIpc({
@@ -165,37 +279,46 @@ describe("registerPetIpc", () => {
     });
     const dispatch = handlers.get("pet:dispatch")!;
 
-    await dispatch({}, { type: "chat", message: "research", digitalHumanId: "researcher" });
-    await dispatch({}, { type: "chat", message: "ship it", digitalHumanTeamId: "delivery-team" });
+    expect(() =>
+      dispatch({}, { type: "chat", message: "research", digitalHumanId: "researcher" }),
+    ).toThrow("invalid pet command");
+    expect(() =>
+      dispatch({}, { type: "chat", message: "ship it", digitalHumanTeamId: "delivery-team" }),
+    ).toThrow("invalid pet command");
+    expect(received).toEqual([]);
+  });
 
-    expect(received).toEqual([
-      {
-        type: "chat",
-        message: "research",
-        digitalHumanId: "researcher",
-        clientMessageId: expect.stringMatching(/^pet-/),
+  test("passes a bounded Pet model selection through the IPC boundary", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    let received: unknown;
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
       },
-      {
-        type: "chat",
-        message: "ship it",
-        digitalHumanTeamId: "delivery-team",
-        clientMessageId: expect.stringMatching(/^pet-/),
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
       },
-    ]);
-    expect(() =>
-      dispatch(
-        {},
-        {
-          type: "chat",
-          message: "ambiguous",
-          digitalHumanId: "researcher",
-          digitalHumanTeamId: "delivery-team",
+      dispatcher: {
+        dispatch: async (command) => {
+          received = command;
+          return { ok: true, type: "chat", petSessionId: "pet-one", result: {} };
         },
-      ),
-    ).toThrow("invalid pet command");
-    expect(() =>
-      dispatch({}, { type: "chat", message: "escape", digitalHumanId: "../profile" }),
-    ).toThrow("invalid pet command");
+      },
+      windows: () => [],
+    });
+    const dispatch = handlers.get("pet:dispatch")!;
+
+    await dispatch({}, { type: "chat", message: "hello", model: "fast-model" });
+    expect(received).toMatchObject({ type: "chat", message: "hello", model: "fast-model" });
+    expect(() => dispatch({}, { type: "chat", message: "hello", model: "bad\nmodel" })).toThrow(
+      "invalid pet command",
+    );
+    expect(() => dispatch({}, { type: "chat", message: "hello", model: " padded " })).toThrow(
+      "invalid pet command",
+    );
   });
 
   test("accepts only a structured navigation request and delegates revalidation", async () => {

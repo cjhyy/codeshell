@@ -40,6 +40,7 @@ function makeFakeEngine(slice: EngineConfigSlice, runs: EngineConfigSlice[]) {
     setAskUser() {},
     setBrowserBridge() {},
     setInjectCredential() {},
+    setSessionMessageRouter() {},
     isHeadless: () => false,
     sessionExistsOnDisk: () => false,
     async run(): Promise<EngineResult> {

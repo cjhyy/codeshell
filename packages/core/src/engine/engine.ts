@@ -73,6 +73,8 @@ import {
 import { PromptComposer } from "../prompt/composer.js";
 import {
   SessionManager,
+  assertSafeSessionId,
+  isEphemeralSessionState,
   sessionsRoot,
   type ForkSessionOptions,
   type ForkSessionResult,
@@ -81,6 +83,7 @@ import {
   type SessionStateFieldPatch,
   type GoalTerminalSaveOutcome,
 } from "../session/session-manager.js";
+import type { SessionMessageRouter, SessionMessageTarget } from "../session/session-message.js";
 import { createRunUsageAccounting, wireRunModelFacade } from "./run-accounting.js";
 import { logger, runWithSid } from "../logging/logger.js";
 import { recordSessionStart } from "../logging/session-recorder.js";
@@ -302,6 +305,7 @@ export class Engine {
   private readonly capabilityDynamicContextProviders: readonly CapabilityDynamicContextProvider[];
   private hooks: HookRegistry;
   private sessionManager: SessionManager;
+  private sessionMessageRouter: SessionMessageRouter | undefined;
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
   /**
@@ -698,7 +702,6 @@ export class Engine {
         .map((capability) => capability.sessionWorkspace)
         .find((candidate) => candidate !== undefined),
     );
-
     // Initialize model pool — prefer runtime's shared pool, fall back to self-constructed.
     this.modelPool = config.runtime?.modelPool ?? new ModelPool();
     this.auxiliaryPipeline = new AuxiliaryPipeline({
@@ -918,6 +921,11 @@ export class Engine {
     bridge: import("../tool-system/panel-bridge.js").PanelHostBridge | undefined,
   ): void {
     this.config.panelBridge = bridge;
+  }
+
+  /** Inject the host router used by SendMessageToSession. */
+  setSessionMessageRouter(router: SessionMessageRouter | undefined): void {
+    this.sessionMessageRouter = router;
   }
 
   /**
@@ -1376,10 +1384,14 @@ export class Engine {
         : undefined,
     });
     if (!openedResult.ok) return openedResult.result;
-    const { messages, freshImageMessage, resumedFromDisk, claimClientMessageId, releaseClientMessageId } =
-      openedResult.opened;
+    const {
+      messages,
+      freshImageMessage,
+      resumedFromDisk,
+      claimClientMessageId,
+      releaseClientMessageId,
+    } = openedResult.opened;
     session = openedResult.opened.session;
-
     this.stampRunToolContext(toolCtx, session, options);
     const sessionRun = runWithSid(session.state.sessionId, async () => {
       const hookMessages = await this.runSessionStartHooks({
@@ -1394,20 +1406,19 @@ export class Engine {
       });
 
       const sid = session.state.sessionId;
-      const { contextManager, llmClientPromise, toolExecutor } =
-        this.wireRunContextAndPermission({
-          session,
-          sid,
-          options,
-          cwd,
-          toolCtx,
-          runPermissionMode,
-          messages,
-          getLatestTodos: () => latestTodos,
-          setLatestTodos: (todos) => {
-            latestTodos = todos;
-          },
-        });
+      const { contextManager, llmClientPromise, toolExecutor } = this.wireRunContextAndPermission({
+        session,
+        sid,
+        options,
+        cwd,
+        toolCtx,
+        runPermissionMode,
+        messages,
+        getLatestTodos: () => latestTodos,
+        setLatestTodos: (todos) => {
+          latestTodos = todos;
+        },
+      });
 
       const { promptComposer, toolDefs } = await this.wireRunTooling({
         options,
@@ -1525,13 +1536,14 @@ export class Engine {
         getProfileReportedResults: () => profileReportedResults,
       });
     });
-    return Promise.resolve(sessionRun).catch((err): EngineResult =>
-      buildRunFailureResult({
-        err,
-        session,
-        options,
-        persistFinalRunState: (state) => this.persistFinalRunState(state),
-      }),
+    return Promise.resolve(sessionRun).catch(
+      (err): EngineResult =>
+        buildRunFailureResult({
+          err,
+          session,
+          options,
+          persistFinalRunState: (state) => this.persistFinalRunState(state),
+        }),
     );
   }
 
@@ -1734,6 +1746,74 @@ export class Engine {
         persistedRevision ??
         this.sessionManager.setSessionWorkspace(session.state.sessionId, workspace);
       Object.assign(session.state, { workspace, stateRevision });
+    };
+    if (
+      this.config.isSubAgent !== true &&
+      session.state.kind === "work" &&
+      !isEphemeralSessionState(session.state)
+    ) {
+      this.attachSessionMessageService(toolCtx, session, options);
+    }
+  }
+
+  /** Attach a closed-set, host-routed Session message sender to this run. */
+  private attachSessionMessageService(
+    toolCtx: ToolContext,
+    session: SessionBundle,
+    options: EngineRunOptions | undefined,
+  ): void {
+    const sourceSessionId = session.state.sessionId;
+    const sourceRoot = this.sessionManager.readSessionMainRoot(sourceSessionId);
+    if (!sourceRoot) return;
+
+    if (!this.sessionMessageRouter) return;
+    const catalog: SessionMessageTarget[] = [];
+    const seen = new Set<string>();
+    const rawTargets: unknown[] = Array.isArray(options?.sessionMessageTargets)
+      ? [...options.sessionMessageTargets]
+      : [];
+    for (const raw of rawTargets.slice(0, 100)) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+      const candidate = raw as Record<string, unknown>;
+      const sessionId = typeof candidate.sessionId === "string" ? candidate.sessionId : "";
+      try {
+        assertSafeSessionId(sessionId);
+      } catch {
+        continue;
+      }
+      if (seen.has(sessionId)) continue;
+      if (candidate.workspaceRoot !== sourceRoot) continue;
+      const title = typeof candidate.title === "string" ? candidate.title.trim() : "";
+      if (!title || title.length > 512) continue;
+      const workspaceProfile =
+        typeof candidate.workspaceProfile === "string"
+          ? candidate.workspaceProfile.trim().slice(0, 256)
+          : "";
+      seen.add(sessionId);
+      catalog.push({
+        sessionId,
+        title,
+        workspaceRoot: sourceRoot,
+        ...(workspaceProfile ? { workspaceProfile } : {}),
+      });
+    }
+
+    const targets = catalog.filter((target) => target.sessionId !== sourceSessionId);
+    toolCtx.sessionMessages = {
+      targets,
+      send: async ({ targetSessionId, message }) => {
+        const target = targets.find((candidate) => candidate.sessionId === targetSessionId);
+        if (!target) throw new Error("target Session is not in the host-authorized project list");
+        if (!message.trim()) throw new Error("message is required");
+        if (message.length > 48_000) throw new Error("message exceeds 48000 characters");
+        await this.sessionMessageRouter!({
+          sourceSessionId,
+          target,
+          message,
+          catalog,
+        });
+        return target;
+      },
     };
   }
 
@@ -2120,9 +2200,7 @@ export class Engine {
       sessionDir,
       cwd,
       getTurnSeq: () => session.state.turnSeq,
-      contributions: this.capabilities.flatMap((capability) => [
-        ...(capability.fileHistory ?? []),
-      ]),
+      contributions: this.capabilities.flatMap((capability) => [...(capability.fileHistory ?? [])]),
     });
 
     // Hook: agent start
@@ -2373,7 +2451,10 @@ export class Engine {
     profileMemoryDir: string | undefined;
     sessionProfileOverrides: import("./run-setup.js").RunProfileState["sessionProfileOverrides"];
     runPlanMode: boolean;
-  }): Promise<{ promptComposer: PromptComposer; toolDefs: import("../types.js").ToolDefinition[] }> {
+  }): Promise<{
+    promptComposer: PromptComposer;
+    toolDefs: import("../types.js").ToolDefinition[];
+  }> {
     const {
       options,
       session,
@@ -2726,10 +2807,7 @@ export class Engine {
             sessionCacheCreationTokens: cumulative.cumulativeCacheCreationTokens,
           });
           if (this.config.costStore) {
-            session.state.costState = this.config.costStore.serialize() as Record<
-              string,
-              unknown
-            >;
+            session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
           }
           this.persistRunProgress(session.state);
         },

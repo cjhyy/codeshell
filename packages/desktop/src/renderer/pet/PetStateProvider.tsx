@@ -1,6 +1,10 @@
 import type {
   PetApi,
   PetAttentionEvent,
+  PetDelegationReceiptGroup,
+  PetLongTaskControlAction,
+  PetLongTaskControlResult,
+  PetLongTaskSnapshot,
   PetPeek,
   PetProjectionEvent,
   StreamEventEnvelope,
@@ -37,6 +41,14 @@ export interface PetStateContextValue {
   setChatBusy: React.Dispatch<React.SetStateAction<boolean>>;
   chatModelKey: string | null;
   setChatModelKey: React.Dispatch<React.SetStateAction<string | null>>;
+  delegationReceipts: PetDelegationReceiptGroup[];
+  longTasks: PetLongTaskSnapshot;
+  longTaskBusyIds: ReadonlySet<string>;
+  longTaskError: string | null;
+  controlLongTask: (
+    taskId: string,
+    action: PetLongTaskControlAction,
+  ) => Promise<PetLongTaskControlResult>;
   surfaceablePendingCount: number;
   peeks: PetPeek[];
   removePeek: (id: string) => void;
@@ -59,6 +71,16 @@ export function PetStateProvider({
   const [petSessionId, setPetSessionId] = React.useState<string | null>(null);
   const [chatBusy, setChatBusy] = React.useState(false);
   const [chatModelKey, setChatModelKey] = React.useState<string | null>(null);
+  const [delegationReceipts, setDelegationReceipts] = React.useState<PetDelegationReceiptGroup[]>(
+    [],
+  );
+  const [longTasks, setLongTasks] = React.useState<PetLongTaskSnapshot>({
+    revision: 0,
+    observedAt: 0,
+    tasks: [],
+  });
+  const [longTaskBusyIds, setLongTaskBusyIds] = React.useState<Set<string>>(() => new Set());
+  const [longTaskError, setLongTaskError] = React.useState<string | null>(null);
   const [surfaceablePendingCount, setSurfaceablePendingCount] = React.useState(0);
   const [peeks, setPeeks] = React.useState<PetPeek[]>([]);
   const [chatTranscripts, chatDispatch] = React.useReducer(
@@ -221,15 +243,88 @@ export function PetStateProvider({
   React.useEffect(() => {
     if (!api.onChatEvent) return;
     return api.onChatEvent((event) => {
-      if (event.kind !== "user-submitted") return;
-      chatDispatch({
-        type: "user_message",
-        bucket: PET_CHAT_BUCKET,
-        text: event.message,
-        clientMessageId: event.clientMessageId,
+      if (event.kind === "user-submitted") {
+        chatDispatch({
+          type: "user_message",
+          bucket: PET_CHAT_BUCKET,
+          text: event.message,
+          clientMessageId: event.clientMessageId,
+        });
+        return;
+      }
+      setDelegationReceipts((current) => {
+        const next = current.filter(
+          (receipt) => receipt.originClientMessageId !== event.originClientMessageId,
+        );
+        next.push(event);
+        return next.slice(-100);
       });
     });
   }, [api]);
+
+  React.useEffect(() => {
+    if (!api.getLongTasks || !api.onLongTasksChanged) return;
+    let active = true;
+    let hydrated = false;
+    let buffered: PetLongTaskSnapshot | null = null;
+    const apply = (snapshot: PetLongTaskSnapshot) => {
+      if (!active) return;
+      setLongTasks((current) => (snapshot.revision >= current.revision ? snapshot : current));
+      setLongTaskError(null);
+    };
+    const unsubscribe = api.onLongTasksChanged((snapshot) => {
+      if (!hydrated) {
+        if (!buffered || snapshot.revision > buffered.revision) buffered = snapshot;
+        return;
+      }
+      apply(snapshot);
+    });
+    void api
+      .getLongTasks()
+      .then((snapshot) => {
+        if (!active) return;
+        apply(snapshot);
+        hydrated = true;
+        if (buffered) apply(buffered);
+        buffered = null;
+      })
+      .catch((error) => {
+        if (!active) return;
+        hydrated = true;
+        setLongTaskError(error instanceof Error ? error.message : String(error));
+      });
+    return () => {
+      active = false;
+      buffered = null;
+      unsubscribe();
+    };
+  }, [api]);
+
+  const controlLongTask = React.useCallback(
+    async (taskId: string, action: PetLongTaskControlAction): Promise<PetLongTaskControlResult> => {
+      if (!api.controlLongTask) {
+        return { ok: false, code: "worker-error", message: "Pet task control is unavailable" };
+      }
+      setLongTaskBusyIds((current) => new Set(current).add(taskId));
+      setLongTaskError(null);
+      try {
+        const result = await api.controlLongTask({ taskId, action });
+        if (!result.ok) setLongTaskError(result.message);
+        return result;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setLongTaskError(message);
+        return { ok: false, code: "worker-error", message };
+      } finally {
+        setLongTaskBusyIds((current) => {
+          const next = new Set(current);
+          next.delete(taskId);
+          return next;
+        });
+      }
+    },
+    [api],
+  );
 
   React.useEffect(() => {
     let active = true;
@@ -291,11 +386,29 @@ export function PetStateProvider({
       setChatBusy,
       chatModelKey,
       setChatModelKey,
+      delegationReceipts,
+      longTasks,
+      longTaskBusyIds,
+      longTaskError,
+      controlLongTask,
       surfaceablePendingCount,
       peeks,
       removePeek: (id: string) => setPeeks((current) => current.filter((peek) => peek.id !== id)),
     }),
-    [state, petSessionId, chatState, chatBusy, chatModelKey, surfaceablePendingCount, peeks],
+    [
+      state,
+      petSessionId,
+      chatState,
+      chatBusy,
+      chatModelKey,
+      delegationReceipts,
+      longTasks,
+      longTaskBusyIds,
+      longTaskError,
+      controlLongTask,
+      surfaceablePendingCount,
+      peeks,
+    ],
   );
   return <PetStateContext.Provider value={value}>{children}</PetStateContext.Provider>;
 }
@@ -321,6 +434,15 @@ const INERT_PET_CONTEXT: PetStateContextValue = {
   setChatBusy: () => {},
   chatModelKey: null,
   setChatModelKey: () => {},
+  delegationReceipts: [],
+  longTasks: { revision: 0, observedAt: 0, tasks: [] },
+  longTaskBusyIds: new Set(),
+  longTaskError: null,
+  controlLongTask: async () => ({
+    ok: false,
+    code: "worker-error",
+    message: "Pet task control is unavailable",
+  }),
   surfaceablePendingCount: 0,
   peeks: [],
   removePeek: () => {},

@@ -165,6 +165,7 @@ export function useRunController({
       bucket?: string;
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
+      workspaceProfile?: string;
       displayText?: string;
     } = {},
   ): Promise<void> => {
@@ -267,12 +268,46 @@ export function useRunController({
       goal?: string;
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
+      workspaceProfile?: string;
+      sessionMessageTargets?: Array<{
+        sessionId: string;
+        title: string;
+        workspaceRoot: string;
+        workspaceProfile?: string;
+      }>;
     } = {
       sessionId: engineSessionId,
       bucket,
       browserPartition: browserPartitionForBucket(bucket),
       clientMessageId,
+      ...(summary?.workspaceProfile ? { workspaceProfile: summary.workspaceProfile } : {}),
     };
+    if (targetProject) {
+      const projectSessions =
+        sessionIndices[projectBucketSegment]?.sessions ??
+        loadSessionIndex(targetProjectId).sessions;
+      const sessionMessageTargets = projectSessions
+        .filter((candidate) => !candidate.archived)
+        .map((candidate) => ({
+          sessionId: candidate.engineSessionId ?? candidate.id,
+          title: candidate.title,
+          workspaceRoot: targetProject.path,
+          ...(candidate.workspaceProfile ? { workspaceProfile: candidate.workspaceProfile } : {}),
+        }));
+      // A newly-solidified draft may not be present in the React snapshot yet.
+      // Include it so a target Session can immediately message the source back.
+      if (!sessionMessageTargets.some((candidate) => candidate.sessionId === engineSessionId)) {
+        sessionMessageTargets.push({
+          sessionId: engineSessionId,
+          title: summary?.title || titleFromWire(displayText),
+          workspaceRoot: targetProject.path,
+          ...(summary?.workspaceProfile ? { workspaceProfile: summary.workspaceProfile } : {}),
+        });
+      }
+      if (sessionMessageTargets.length > 0) {
+        opts.sessionMessageTargets = sessionMessageTargets;
+      }
+    }
     window.codeshell.registerBrowserSessionBucket({
       sessionId: engineSessionId,
       bucket,

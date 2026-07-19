@@ -35,6 +35,7 @@ function makeFakeEngine(existsOnDisk: boolean) {
     setAskUser() {},
     setBrowserBridge() {},
     setInjectCredential() {},
+    setSessionMessageRouter() {},
     setPlanMode() {},
     isHeadless: () => false,
     sessionExistsOnDisk: () => existsOnDisk,

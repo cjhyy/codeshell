@@ -1,4 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   MessageSquare,
   Search,
@@ -9,6 +16,7 @@ import {
   PenSquare,
   Archive,
   Clock,
+  GitBranch,
   Loader2,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
@@ -29,6 +37,7 @@ import { PetSidebarEntry } from "./pet/PetSidebarEntry";
 import { compactSidebarSessions } from "./sidebarSessionVisibility";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { SessionWorkspace } from "../preload/types";
 
 interface SidebarProps {
   projects: TrackedProject[];
@@ -79,6 +88,12 @@ type MenuTarget =
   | { kind: "project"; x: number; y: number; project: TrackedProject }
   | { kind: "session"; x: number; y: number; projectId: string | null; session: SessionSummary };
 
+type WorkspaceChangeEvent = {
+  sessionId: string;
+  workspace?: SessionWorkspace;
+  mainRoot?: string;
+};
+
 export function Sidebar({
   projects,
   sessions,
@@ -116,6 +131,7 @@ export function Sidebar({
 }: SidebarProps) {
   const { t } = useT();
   const [menu, setMenu] = useState<MenuTarget | null>(null);
+  const [workspaceChange, setWorkspaceChange] = useState<WorkspaceChangeEvent | null>(null);
   const closeMenu = (): void => setMenu(null);
   const confirm = useConfirm();
   const prompt = usePrompt();
@@ -127,6 +143,14 @@ export function Sidebar({
 
   // Pin sort (sortProjects: pinned first, then by addedAt asc).
   const orderedProjects = useMemo(() => sortProjects(projects), [projects]);
+
+  // Keep one workspace listener for the whole sidebar. Project groups use the
+  // event to refresh only the visible session row that changed.
+  useEffect(() => {
+    const subscribe = window.codeshell.onWorkspaceChanged;
+    if (typeof subscribe !== "function") return;
+    return subscribe((event) => setWorkspaceChange(event));
+  }, []);
 
   // No-repo conversations live under the bottom 对话 section.
   const noRepoIndex = sessions[NO_REPO_KEY];
@@ -341,6 +365,7 @@ export function Sidebar({
                 });
               }}
               onArchiveSession={(sid) => onArchiveSession(project.id, sid, true)}
+              workspaceChange={workspaceChange}
             />
           ))}
 
@@ -446,6 +471,89 @@ function SidebarItem({
   );
 }
 
+export function worktreeBranchOf(workspace: SessionWorkspace | undefined): string | undefined {
+  return workspace?.kind === "worktree" ? workspace.worktree?.branch : undefined;
+}
+
+export function sessionRowHoverTitle(
+  title: string,
+  worktreeBranch: string | undefined,
+  branchDescription: string | undefined,
+): string {
+  return worktreeBranch && branchDescription ? `${title}\n${branchDescription}` : title;
+}
+
+function useVisibleWorktreeBranches(
+  projectPath: string,
+  sessions: SessionSummary[],
+  workspaceChange: WorkspaceChangeEvent | null,
+): Record<string, string> {
+  const requestVersions = useRef(new Map<string, number>());
+  const [branches, setBranches] = useState<Record<string, string>>({});
+  const engineSessionIds = useMemo(
+    () => sessions.flatMap((session) => (session.engineSessionId ? [session.engineSessionId] : [])),
+    [sessions],
+  );
+
+  const commitWorkspace = useCallback((sessionId: string, workspace: SessionWorkspace) => {
+    const branch = worktreeBranchOf(workspace);
+    setBranches((current) => {
+      if (branch && current[sessionId] === branch) return current;
+      if (!branch && current[sessionId] === undefined) return current;
+      const next = { ...current };
+      if (branch) next[sessionId] = branch;
+      else delete next[sessionId];
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const visible = new Set(engineSessionIds);
+    setBranches((current) =>
+      Object.fromEntries(Object.entries(current).filter(([sessionId]) => visible.has(sessionId))),
+    );
+
+    for (const sessionId of engineSessionIds) {
+      const version = (requestVersions.current.get(sessionId) ?? 0) + 1;
+      requestVersions.current.set(sessionId, version);
+      void window.codeshell
+        .getSessionWorkspace(sessionId, projectPath)
+        .then((workspace) => {
+          if (cancelled || requestVersions.current.get(sessionId) !== version) return;
+          commitWorkspace(sessionId, workspace);
+        })
+        .catch(() => {
+          // Legacy/missing engine sessions simply have no worktree marker.
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [commitWorkspace, engineSessionIds, projectPath]);
+
+  useEffect(() => {
+    if (!workspaceChange || !engineSessionIds.includes(workspaceChange.sessionId)) return;
+    const { sessionId, workspace } = workspaceChange;
+    const version = (requestVersions.current.get(sessionId) ?? 0) + 1;
+    requestVersions.current.set(sessionId, version);
+    if (workspace) {
+      commitWorkspace(sessionId, workspace);
+      return;
+    }
+    void window.codeshell
+      .getSessionWorkspace(sessionId, projectPath)
+      .then((next) => {
+        if (requestVersions.current.get(sessionId) !== version) return;
+        commitWorkspace(sessionId, next);
+      })
+      .catch(() => {});
+  }, [commitWorkspace, engineSessionIds, projectPath, workspaceChange]);
+
+  return branches;
+}
+
 function ProjectGroup({
   project,
   index,
@@ -461,6 +569,7 @@ function ProjectGroup({
   onProjectContextMenu,
   onSessionContextMenu,
   onArchiveSession,
+  workspaceChange,
 }: {
   project: TrackedProject;
   index: SessionIndex | undefined;
@@ -476,6 +585,7 @@ function ProjectGroup({
   onProjectContextMenu: (e: React.MouseEvent) => void;
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
   onArchiveSession: (sid: string) => void;
+  workspaceChange: WorkspaceChangeEvent | null;
 }) {
   const { t } = useT();
   const [showMore, setShowMore] = useState(false);
@@ -494,6 +604,12 @@ function ProjectGroup({
     [activeSessionId, isActiveProject, live, showMore],
   );
   const hiddenLiveCount = Math.max(0, live.length - visibleLive.length);
+  const workspaceSessions = useMemo(() => (collapsed ? [] : visibleLive), [collapsed, visibleLive]);
+  const worktreeBranches = useVisibleWorktreeBranches(
+    project.path,
+    workspaceSessions,
+    workspaceChange,
+  );
 
   return (
     <div className="mb-1">
@@ -570,6 +686,9 @@ function ProjectGroup({
                   s={s}
                   isActive={isActiveProject && activeSessionId === s.id}
                   status={statusFor(s.id)}
+                  worktreeBranch={
+                    s.engineSessionId ? worktreeBranches[s.engineSessionId] : undefined
+                  }
                   showKbd={isActiveProject && i < 5}
                   kbdIndex={i + 1}
                   onClick={() => onSelectSession(s.id)}
@@ -649,6 +768,7 @@ function SessionRow({
   s,
   isActive,
   status,
+  worktreeBranch,
   showKbd,
   kbdIndex,
   onClick,
@@ -658,6 +778,7 @@ function SessionRow({
   s: SessionSummary;
   isActive: boolean;
   status?: SessionStatus;
+  worktreeBranch?: string;
   showKbd: boolean;
   kbdIndex: number;
   onClick: () => void;
@@ -704,7 +825,11 @@ function SessionRow({
           setConfirming(false);
         }
       }}
-      title={s.title}
+      title={sessionRowHoverTitle(
+        s.title,
+        worktreeBranch,
+        worktreeBranch ? t("sidebar.worktreeBranch", { branch: worktreeBranch }) : undefined,
+      )}
     >
       <Button
         type="button"
@@ -718,6 +843,12 @@ function SessionRow({
           <Clock
             className="h-3 w-3 shrink-0 text-muted-foreground"
             aria-label={t("sidebar.automationLabel")}
+          />
+        )}
+        {worktreeBranch && (
+          <GitBranch
+            className="h-3 w-3 shrink-0 text-primary"
+            aria-label={t("sidebar.worktreeBranch", { branch: worktreeBranch })}
           />
         )}
         <span className="flex-1 truncate text-left">{s.title}</span>

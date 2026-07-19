@@ -170,6 +170,17 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
   };
 
   switch (type) {
+    case "session_user_message": {
+      const [id, s2] = freshId("u");
+      return {
+        ...s2,
+        items: [
+          ...s2.items,
+          { kind: "user", id, text: typeof event.text === "string" ? event.text : "" },
+        ],
+      };
+    }
+
     case "stream_request_start": {
       // Open a fresh assistant message (for THIS agent) to accumulate text into.
       const key = agentKey(event);

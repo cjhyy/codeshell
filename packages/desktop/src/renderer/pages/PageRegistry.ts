@@ -111,11 +111,6 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "settings_page",
     title: { kind: "i18n", key: "sidebar.settings" },
     icon: Settings,
-    nav: {
-      order: 30,
-      target: "settings_page",
-      isActive: (mode) => mode === "settings_page" || mode === "project_config",
-    },
     render: null,
   }),
   // Migrated low-traffic pages: render-only (reached via command palette /

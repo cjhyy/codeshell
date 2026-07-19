@@ -24,7 +24,9 @@ import {
   MAX_PROFILE_DEFINITION_IMPORT_BYTES,
   previewProfileDefinitionImport,
   saveProfile,
+  setSessionWorkspaceProfile,
 } from "./profiles-service.js";
+import { SessionManager } from "@cjhyy/code-shell-core";
 
 let home: string;
 let cwd: string;
@@ -84,10 +86,27 @@ describe("desktop profiles service", () => {
     expect(listProfiles()[0]).toMatchObject({ name: "seedance", active: false });
   });
 
+  test("switches an existing Session digital human and tolerates a planned Session", () => {
+    const sessions = new SessionManager();
+    sessions.create(cwd, "test-model", "test-provider", "switchable-session");
+
+    expect(setSessionWorkspaceProfile("switchable-session", "seedance")).toEqual({
+      persisted: true,
+    });
+    expect(sessions.readSessionState("switchable-session")?.workspaceProfile).toBe("seedance");
+    expect(setSessionWorkspaceProfile("planned-ui-session", "seedance")).toEqual({
+      persisted: false,
+    });
+    expect(() => setSessionWorkspaceProfile("switchable-session", "missing-profile")).toThrow(
+      /does not exist/,
+    );
+  });
+
   test("installs a starter digital human from the local catalog", () => {
-    expect(
-      listProfileCatalog().find((entry) => entry.name === "product-researcher")?.installed,
-    ).toBe(false);
+    const entry = listProfileCatalog().find((candidate) => candidate.name === "product-researcher");
+    expect(entry?.installed).toBe(false);
+    expect(entry?.samplePrompts.length).toBeGreaterThanOrEqual(2);
+    expect(entry?.usageCount).toBeGreaterThan(0);
     installCatalogProfile("product-researcher");
     expect(listProfiles().some((entry) => entry.name === "product-researcher")).toBe(true);
     expect(
@@ -373,7 +392,7 @@ describe("desktop profiles service", () => {
     expect(listProfiles().some((profile) => profile.name === "seedance")).toBe(true);
   });
 
-  test("rejects deletion while a durable Session is pinned to the profile", () => {
+  test("rejects deletion while a durable Session is still bound to the profile", () => {
     const sessionDir = join(home, "sessions", "session-pinned");
     mkdirSync(sessionDir, { recursive: true });
     writeFileSync(join(sessionDir, "state.json"), JSON.stringify({ workspaceProfile: "seedance" }));

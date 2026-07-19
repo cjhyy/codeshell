@@ -31,6 +31,7 @@ function isEntry(value: unknown): value is PetWorkMemoryEntry {
     (record.outcome === "completed" ||
       record.outcome === "pending-decided" ||
       record.outcome === "failed") &&
+    (record.dedupeKey === undefined || typeof record.dedupeKey === "string") &&
     typeof record.at === "number"
   );
 }
@@ -56,6 +57,7 @@ export class PetWorkMemoryStore {
   private segments: PetTopicSegment[] = [];
   private last = 0;
   private writeQueue = Promise.resolve();
+  private mutationQueue = Promise.resolve();
 
   constructor(
     private readonly filePath: string,
@@ -111,9 +113,22 @@ export class PetWorkMemoryStore {
   }
 
   async append(entry: PetWorkMemoryEntry): Promise<void> {
-    this.entriesList.push(entry);
-    while (this.entriesList.length > MAX_ENTRIES) this.entriesList.shift();
-    return this.enqueuePersist();
+    return this.enqueueMutation(async () => {
+      if (
+        entry.dedupeKey &&
+        this.entriesList.some((existing) => existing.dedupeKey === entry.dedupeKey)
+      ) {
+        return;
+      }
+      const previous = this.entriesList;
+      this.entriesList = [...this.entriesList, entry].slice(-MAX_ENTRIES);
+      try {
+        await this.enqueuePersist();
+      } catch (error) {
+        this.entriesList = previous;
+        throw error;
+      }
+    });
   }
 
   /**
@@ -121,18 +136,39 @@ export class PetWorkMemoryStore {
    * MAX_SEGMENTS, most recent kept). The newest segment is the active one.
    */
   async openSegment(segment: PetTopicSegment): Promise<void> {
-    this.segments.push(segment);
-    while (this.segments.length > MAX_SEGMENTS) this.segments.shift();
-    return this.enqueuePersist();
+    return this.enqueueMutation(async () => {
+      const previous = this.segments;
+      this.segments = [...this.segments, segment].slice(-MAX_SEGMENTS);
+      try {
+        await this.enqueuePersist();
+      } catch (error) {
+        this.segments = previous;
+        throw error;
+      }
+    });
   }
 
   async setLastInteractionAt(at: number): Promise<void> {
-    this.last = at;
-    return this.enqueuePersist();
+    return this.enqueueMutation(async () => {
+      const previous = this.last;
+      this.last = at;
+      try {
+        await this.enqueuePersist();
+      } catch (error) {
+        this.last = previous;
+        throw error;
+      }
+    });
   }
 
   flush(): Promise<void> {
-    return this.writeQueue;
+    return Promise.all([this.mutationQueue, this.writeQueue]).then(() => undefined);
+  }
+
+  private enqueueMutation(operation: () => Promise<void>): Promise<void> {
+    const pending = this.mutationQueue.then(operation);
+    this.mutationQueue = pending.catch(() => undefined);
+    return pending;
   }
 
   private enqueuePersist(): Promise<void> {
@@ -142,8 +178,9 @@ export class PetWorkMemoryStore {
       ...(this.segments.length > 0 ? { segments: [...this.segments] } : {}),
       entries: [...this.entriesList],
     };
-    this.writeQueue = this.writeQueue.then(() => this.persist(snapshot)).catch(() => {});
-    return this.writeQueue;
+    const persisted = this.writeQueue.then(() => this.persist(snapshot));
+    this.writeQueue = persisted.catch(() => undefined);
+    return persisted;
   }
 
   private async persist(snapshot: PersistedWorkMemory): Promise<void> {

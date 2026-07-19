@@ -30,7 +30,7 @@ Pet/Mimi behavior live in physical packages that depend on
 | `core`    | Engine, protocol, tools, settings, sessions, runtime mechanisms  | Stable `.`, capability `/extension`, in-repo host `/internal` |
 | `coding`  | Coding/git/LSP/worktree capability and coding worker entry       | Depends on core extension contract                            |
 | `arena`   | Multi-model Arena capability and algorithms                      | Depends on core extension contract                            |
-| `pet`     | Mimi behavior, DelegateWork, Pet projection, digital-human teams | Depends on core extension contract                            |
+| `pet`     | Mimi behavior, generic DelegateWork, Pet projection and long-task state | Depends on core extension contract                       |
 | `server`  | Pure-Node remote transports, rooms, uploads, headless serve host | Host/service layer; currently also composes coding + web      |
 | `web`     | Browser-safe remote client state/reducers and SPA                | Type-only core protocol use; React peer                       |
 | `tui`     | Commander CLI, Ink REPL, headless run, custom renderer           | In-repo host over core + coding + Arena                       |
@@ -106,7 +106,7 @@ The current run path is:
 | 11  | [Feature inventory](11-feature-inventory.md)                                                | Flat capability map across desktop, TUI and supporting packages                              |
 | 12  | [Package boundaries](12-package-boundaries-and-release-units.md)                            | Dependency direction, Pet split rationale, exports and publish units                         |
 | 13  | [Plugin parity & video editor](13-plugin-parity-and-video-editor.md)                        | Codex compatibility, trust gates, remaining ecosystem gaps and the reference video plugin    |
-| 14  | [Digital humans & Pet](14-digital-human-and-pet.md)                                         | Profile/team lifecycle, durable Pet read models, attention, deletion and recovery            |
+| 14  | [Digital humans, Sessions & Pet](14-digital-human-and-pet.md)                               | Profile binding, memory, cross-Session messages, skill layering, and Pet independence         |
 
 ## Cross-cutting: settings, onboarding, disk layout
 

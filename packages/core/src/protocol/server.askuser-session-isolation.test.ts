@@ -51,6 +51,7 @@ function makeAskingEngine(sessionId: string) {
     setPlanMode() {},
     setBrowserBridge() {},
     setInjectCredential() {},
+    setSessionMessageRouter() {},
     isHeadless: () => false,
     async run(): Promise<EngineResult> {
       state.answer = await state.askUser!(`question for ${sessionId}`);

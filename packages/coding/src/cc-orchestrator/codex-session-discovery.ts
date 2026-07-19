@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import type { DiscoveredSession, DiscoverOptions } from "./session-discovery.js";
 import { selectRecentStats } from "./session-discovery.js";
+import { codexUserText } from "./codex-user-text.js";
 
 /**
  * Discover codex CLI sessions for a given `cwd`, mirroring the claude-side
@@ -29,8 +30,22 @@ export function discoverCodexSessions(
   codexHome = join(homedir(), ".codex"),
   opts: DiscoverOptions = {},
 ): DiscoveredSession[] {
+  return discoverCodexSessionsForCwds([cwd], codexHome, opts);
+}
+
+/** Discover several cwd buckets in one rollout walk. This matters for the
+ * room list: a CodeShell project and the worktrees delegated from it are one
+ * user-visible scope, while Codex stores all of them in a single global tree. */
+export function discoverCodexSessionsForCwds(
+  cwds: readonly string[],
+  codexHome = join(homedir(), ".codex"),
+  opts: DiscoverOptions = {},
+  accept?: (session: { sessionId: string; cwd: string }) => boolean,
+): DiscoveredSession[] {
   const root = join(codexHome, "sessions");
   if (!existsSync(root)) return [];
+  const cwdSet = new Set(cwds);
+  if (cwdSet.size === 0) return [];
 
   // Cheap pass: stat every rollout (no read). Apply the recency window here so
   // the meta read (first line) only runs on in-window files. The limit can't be
@@ -58,9 +73,11 @@ export function discoverCodexSessions(
     } catch {
       continue;
     }
-    if (!meta || !meta.id || meta.cwd !== cwd) continue;
+    if (!meta || !meta.id || !meta.cwd || !cwdSet.has(meta.cwd)) continue;
+    if (accept && !accept({ sessionId: meta.id, cwd: meta.cwd })) continue;
     out.push({
       sessionId: meta.id,
+      cwd: meta.cwd,
       firstMessage: readFirstUserMessage(s.file),
       lastModified: s.mtimeMs,
       messageCount: 0, // not tracked for codex (would need a full scan); UI shows time + title.
@@ -72,8 +89,16 @@ export function discoverCodexSessions(
 /** Count codex sessions for `cwd` (reads first-line meta of every rollout; no
  *  window). Used so the UI knows whether a bounded list left older ones hidden. */
 export function countCodexSessions(cwd: string, codexHome = join(homedir(), ".codex")): number {
+  return countCodexSessionsForCwds([cwd], codexHome);
+}
+
+export function countCodexSessionsForCwds(
+  cwds: readonly string[],
+  codexHome = join(homedir(), ".codex"),
+): number {
   const root = join(codexHome, "sessions");
   if (!existsSync(root)) return 0;
+  const cwdSet = new Set(cwds);
   let n = 0;
   for (const file of walkRollouts(root)) {
     let meta: { id?: string; cwd?: string } | undefined;
@@ -82,7 +107,7 @@ export function countCodexSessions(cwd: string, codexHome = join(homedir(), ".co
     } catch {
       continue;
     }
-    if (meta && meta.id && meta.cwd === cwd) n++;
+    if (meta && meta.id && meta.cwd && cwdSet.has(meta.cwd)) n++;
   }
   return n;
 }
@@ -139,8 +164,9 @@ function readSessionMeta(file: string): { id?: string; cwd?: string } | undefine
  * messages look like:
  *   {type:"response_item", payload:{type:"message", role:"user",
  *      content:[{type:"input_text", text}]}}
- * The very first user message is usually an `<environment_context>` injection
- * (analogous to claude's `<local-command-caveat>`); skip those wrappers.
+ * A user message can contain several parts: host-injected plugin/AGENTS/env
+ * context followed by the actual prompt. `codexUserText` drops the injected
+ * parts without discarding the prompt beside them.
  *
  * Reads a bounded prefix of the file rather than the whole thing.
  */
@@ -169,15 +195,8 @@ function readFirstUserMessage(file: string, maxBytes = 1 << 20): string {
     }
     const p = d?.payload;
     if (d?.type !== "response_item" || p?.type !== "message" || p?.role !== "user") continue;
-    const content = p.content;
-    const text = Array.isArray(content)
-      ? content.map((c: any) => (typeof c?.text === "string" ? c.text : "")).join("")
-      : typeof content === "string"
-        ? content
-        : "";
-    const t = text.trim();
+    const t = codexUserText(p.content).trim();
     if (!t) continue;
-    if (t.startsWith("<environment_context>")) continue;
     return t.slice(0, 200);
   }
   return "";

@@ -1,4 +1,4 @@
-import type { DigitalHumanTeamMode } from "@cjhyy/code-shell-pet";
+import type { DigitalHumanTeamMode } from "../../shared/digital-human-team";
 
 /**
  * Mirrors core's WorkspaceProfile persistence boundary. Renderer code cannot
@@ -58,5 +58,19 @@ export interface DigitalHumanSkillEntry {
 export interface DigitalHumanCatalogEntry extends Omit<DigitalHumanProfileEntry, "active"> {
   category: "product" | "design" | "engineering" | "quality";
   tags: string[];
+  samplePrompts: string[];
+  usageCount: number;
   installed: boolean;
+}
+
+export interface CuratedDigitalHumanTeam {
+  id: string;
+  name: string;
+  description: string;
+  category: DigitalHumanCatalogEntry["category"];
+  tags: string[];
+  members: string[];
+  mode: DigitalHumanTeamMode;
+  samplePrompts: string[];
+  usageCount: number;
 }

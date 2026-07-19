@@ -115,6 +115,8 @@ export interface PetStateAggregatorOptions {
   bridge: PetStateBridge;
   listDiskSessions: (opts: { limit: number; cursor?: string }) => Promise<ListDiskSessionsResult>;
   pageSize?: number;
+  /** Full durable-catalog reconciliation cadence. Set to 0 to disable. */
+  catalogRefreshIntervalMs?: number;
   now?: () => number;
   onBackgroundError?: (operation: string, error: unknown) => void;
   /**
@@ -208,6 +210,7 @@ export class PetStateAggregator {
   private readonly pending = new Map<string, DesktopPendingDecision>();
   private readonly listeners = new Set<(event: DesktopPetProjectionEvent) => void>();
   private readonly pageSize: number;
+  private readonly catalogRefreshIntervalMs: number;
   private readonly now: () => number;
   private generation = 0;
   private sourceVersion = 0;
@@ -222,6 +225,8 @@ export class PetStateAggregator {
   private started = false;
   private unsubscribeBridge?: () => void;
   private reconcilePromise: Promise<void> | null = null;
+  private catalogRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private periodicCatalogRefreshRunning = false;
   /**
    * AgentBridge deliberately does not await observers, so consecutive worker
    * notifications may otherwise enter `handleBridgeEvent` concurrently. Some
@@ -233,6 +238,7 @@ export class PetStateAggregator {
 
   constructor(private readonly options: PetStateAggregatorOptions) {
     this.pageSize = options.pageSize ?? 100;
+    this.catalogRefreshIntervalMs = options.catalogRefreshIntervalMs ?? 30_000;
     this.now = options.now ?? Date.now;
   }
 
@@ -261,11 +267,29 @@ export class PetStateAggregator {
     } finally {
       releaseStartupBarrier();
     }
+    if (this.catalogRefreshIntervalMs > 0) {
+      this.catalogRefreshTimer = setInterval(() => {
+        if (this.periodicCatalogRefreshRunning) return;
+        this.periodicCatalogRefreshRunning = true;
+        // A full pass also observes sessions archived/deleted outside this
+        // worker; incremental high-water refreshes cannot see an absence.
+        void this.refreshCatalog(true, { full: true })
+          .catch((error) => this.options.onBackgroundError?.("periodic-catalog-refresh", error))
+          .finally(() => {
+            this.periodicCatalogRefreshRunning = false;
+          });
+      }, this.catalogRefreshIntervalMs);
+      (
+        this.catalogRefreshTimer as ReturnType<typeof setInterval> & { unref?: () => void }
+      ).unref?.();
+    }
   }
 
   stop(): void {
     this.unsubscribeBridge?.();
     this.unsubscribeBridge = undefined;
+    if (this.catalogRefreshTimer) clearInterval(this.catalogRefreshTimer);
+    this.catalogRefreshTimer = null;
     this.started = false;
   }
 

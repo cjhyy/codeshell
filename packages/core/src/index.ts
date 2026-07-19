@@ -275,6 +275,12 @@ export {
 export { diffLines, renderDiffPreview, type DiffLine } from "./session/simple-diff.js";
 export { MemoryManager } from "./session/memory.js";
 export type { MemoryEntry, MemoryOrigin, MemoryScope } from "./session/memory.js";
+export type {
+  RouteSessionMessageInput,
+  SessionMessageRouter,
+  SessionMessageTarget,
+  SessionMessageToolService,
+} from "./session/session-message.js";
 export {
   runDreamConsolidation,
   type DreamConsolidationInput,

@@ -180,16 +180,20 @@ describe("RoomManager", () => {
     expect(roomTurnText("look", [attachment])).toStartWith("look\n<codeshell-image-attachments>");
   });
 
-  test("transcript-followed rooms use the tail as the single visible output source", () => {
+  test("transcript-followed rooms echo input immediately and dedupe the later transcript line", () => {
     const { mgr, agents } = makeManager();
     const room = mgr.createRoom({ cwd: "/repo" });
     mgr.beginTranscriptFollow(room.id);
 
-    // send still reaches the resident process, but its immediate user echo and
-    // stdout events are suppressed while the transcript follower owns output.
+    // Input is visible immediately even if the external CLI is slow to append
+    // its transcript. Resident stdout remains suppressed while the follower
+    // owns agent/tool output.
     expect(mgr.send(room.id, "hello")).toBe(true);
     expect(agents[0]?.sent).toEqual(["hello"]);
-    expect(mgr.getMessages(room.id).map((message) => message.type)).toEqual(["room_created"]);
+    expect(mgr.getMessages(room.id).map((message) => message.type)).toEqual([
+      "room_created",
+      "text",
+    ]);
 
     mgr.ingestTranscriptMessages(room.id, [
       { from: "user", type: "text", text: "hello" },

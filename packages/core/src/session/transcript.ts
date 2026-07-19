@@ -269,10 +269,12 @@ export class Transcript {
           break;
         }
         case "context_transfer": {
-          const { summary } = event.data as { summary: string };
+          const { summary, handoffId } = event.data as { summary: string; handoffId?: string };
           messages.push({
             role: "user",
-            content: `<system-reminder>Background context transferred from a selected conversation range:\n${summary}</system-reminder>`,
+            content: handoffId
+              ? `<system-reminder>Session handoff received:\n${summary}</system-reminder>`
+              : `<system-reminder>Background context transferred from a selected conversation range:\n${summary}</system-reminder>`,
           });
           break;
         }
@@ -470,10 +472,12 @@ export class Transcript {
           break;
         }
         case "context_transfer": {
-          const { summary } = event.data as { summary: string };
+          const { summary, handoffId } = event.data as { summary: string; handoffId?: string };
           messages.push({
             role: "user",
-            content: `<system-reminder>Background context transferred from a selected conversation range:\n${summary}</system-reminder>`,
+            content: handoffId
+              ? `<system-reminder>Session handoff received:\n${summary}</system-reminder>`
+              : `<system-reminder>Background context transferred from a selected conversation range:\n${summary}</system-reminder>`,
           });
           break;
         }

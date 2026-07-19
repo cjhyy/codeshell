@@ -75,11 +75,40 @@ describe("resolveBucket", () => {
   it("matches legacy sessions where engineSessionId !== uiSessionId", () => {
     const indices: Record<string, SessionIndex> = {
       repoA: idx([
-        { id: "ui-old", title: "t", createdAt: 0, updatedAt: 0, engineSessionId: "legacy-engine-id" },
+        {
+          id: "ui-old",
+          title: "t",
+          createdAt: 0,
+          updatedAt: 0,
+          engineSessionId: "legacy-engine-id",
+        },
       ]),
     };
     const result = resolveBucket("legacy-engine-id", new Map(), indices, null);
     expect(result).toBe("repoA::ui-old");
+  });
+
+  it("routes the first automatic turn of a Session that has no engineSessionId yet", () => {
+    const indices: Record<string, SessionIndex> = {
+      repoA: idx([{ id: "ui-planned", title: "UI design", createdAt: 0, updatedAt: 0 }]),
+    };
+    const result = resolveBucket("ui-planned", new Map(), indices, null);
+    expect(result).toBe("repoA::ui-planned");
+  });
+
+  it("does not fall back to the UI id after a distinct engineSessionId is bound", () => {
+    const indices: Record<string, SessionIndex> = {
+      repoA: idx([
+        {
+          id: "ui-old",
+          title: "legacy",
+          createdAt: 0,
+          updatedAt: 0,
+          engineSessionId: "engine-authoritative",
+        },
+      ]),
+    };
+    expect(resolveBucket("ui-old", new Map(), indices, null)).toBeNull();
   });
 
   it("returns null when the sessionId is unknown everywhere (drop is correct)", () => {
@@ -148,10 +177,7 @@ describe("findAskUserOrigin", () => {
   it("ignores non-ask_user messages sharing the requestId field", () => {
     const transcripts = {
       "repoA::ui-1": {
-        messages: [
-          { kind: "tool", requestId: "req-1" },
-          ask("req-1", "eng-1"),
-        ],
+        messages: [{ kind: "tool", requestId: "req-1" }, ask("req-1", "eng-1")],
       },
     };
     expect(findAskUserOrigin(transcripts, "req-1")).toEqual({

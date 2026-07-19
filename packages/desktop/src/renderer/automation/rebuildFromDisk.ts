@@ -15,6 +15,7 @@ export interface DiskSessionMeta {
   updatedAt: number;
   /** Session origin from disk; "automation" sessions get the ⚙ source mark. */
   origin?: "desktop" | "automation";
+  workspaceProfile?: string;
 }
 
 export interface RebuildDeps {
@@ -48,6 +49,7 @@ export function planDiskRebuild(
       createdAt: s.updatedAt,
       updatedAt: s.updatedAt,
       engineSessionId: s.engineSessionId,
+      ...(s.workspaceProfile ? { workspaceProfile: s.workspaceProfile } : {}),
       // automation sessions carry the ⚙ source mark; desktop leaves it absent.
       ...(s.origin === "automation" ? { source: "automation" as const } : {}),
     };

@@ -44,6 +44,7 @@ interface Props {
   profile?: DigitalHumanProfileEntry;
   existingIds: string[];
   skills: DigitalHumanSkillEntry[];
+  projectSkills?: DigitalHumanSkillEntry[];
   busy: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (profile: Omit<DigitalHumanProfileEntry, "active">) => void;
@@ -54,6 +55,7 @@ export function DigitalHumanEditorDialog({
   profile,
   existingIds,
   skills,
+  projectSkills = [],
   busy,
   onOpenChange,
   onSave,
@@ -404,6 +406,23 @@ export function DigitalHumanEditorDialog({
                   })}
                 </div>
               )}
+              {projectSkills.length > 0 ? (
+                <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                  <p className="text-xs font-medium">
+                    {t("digitalHumans.editor.projectSkillsTitle")}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {t("digitalHumans.editor.projectSkillsDescription")}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {projectSkills.map((skill) => (
+                      <Badge key={skill.name} variant="secondary">
+                        {skill.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </section>
           </div>
 

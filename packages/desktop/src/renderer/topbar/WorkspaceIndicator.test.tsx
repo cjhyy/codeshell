@@ -536,6 +536,46 @@ describe("WorkspaceIndicator", () => {
     expect(branchCalls).toBe(2);
   });
 
+  test("can render an icon-only title-bar trigger with the branch on hover", async () => {
+    ensureMiniDom();
+    const worktree: SessionWorkspace = {
+      root: "/repo/.worktrees/feature",
+      kind: "worktree",
+      worktree: {
+        path: "/repo/.worktrees/feature",
+        branch: "worktree/feature-session",
+        baseRef: "main",
+        createdBy: "codeshell",
+      },
+    };
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+      getSessionWorkspace: async () => worktree,
+      listSessionWorktrees: async () => ({ current: worktree, mainRoot: "/repo", worktrees: [] }),
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator
+          sessionId="session"
+          projectPath="/repo"
+          projectName="repo"
+          includeProjectNameInLabel={false}
+          iconOnly
+        />,
+      );
+      await flushMicrotasks();
+    });
+
+    const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+    expect(trigger).not.toBeNull();
+    expect(textOf(trigger)).not.toContain("worktree/feature-session");
+    expect(reactPropsOf(trigger).title).toBe("⑃ worktree/feature-session");
+    expect(reactPropsOf(trigger)["aria-label"]).toContain("worktree/feature-session");
+  });
+
   test("groups main, managed, and external worktrees in the switcher", async () => {
     ensureMiniDom();
     const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
@@ -1169,5 +1209,33 @@ describe("TopBar workspace label", () => {
     expect(html).toContain('data-context-action="open"');
     expect(html).toContain('aria-label="选择上下文"');
     expect(html).not.toContain(">选择上下文<");
+  });
+
+  test("renders the current Session digital human as a switcher", () => {
+    const html = renderToStaticMarkup(
+      <TopBar
+        projectName="codeshell"
+        projectPath="/repo/codeshell"
+        sessionId="session"
+        sessionTitle="Checkout"
+        workspaceProfile="product-manager"
+        workspaceProfiles={[
+          { name: "product-manager", label: "产品经理" },
+          { name: "ui-designer", label: "UI 设计师" },
+        ]}
+        onWorkspaceProfileChange={() => {}}
+        busy={false}
+        sidebarCollapsed={false}
+        onToggleSidebar={() => {}}
+        panelOpen={false}
+        onTogglePanel={() => {}}
+        isMac={false}
+        isFullscreen={false}
+      />,
+    );
+
+    expect(html).toContain('data-session-profile-switch="true"');
+    expect(html).toContain('value="product-manager" selected=""');
+    expect(html).toContain("UI 设计师");
   });
 });

@@ -205,7 +205,7 @@ export function PetWorkTree({
     <section
       data-pet-work-tree="workspace-work-map"
       aria-labelledby="pet-work-tree-heading"
-      className="rounded-2xl border border-border/60 bg-background/45 p-1.5"
+      className="rounded-2xl border border-border/60 bg-background/45 p-1"
     >
       <h3>
         <button
@@ -213,11 +213,11 @@ export function PetWorkTree({
           data-pet-work-drawer="toggle"
           aria-expanded={drawerOpen}
           aria-controls={drawerId}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-muted/55"
+          className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-muted/55"
           onClick={() => setDrawerOpen((current) => !current)}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Inbox size={18} aria-hidden="true" />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Inbox size={16} aria-hidden="true" />
           </span>
           <span className="min-w-0 flex-1">
             <span id="pet-work-tree-heading" className="block text-sm font-semibold tracking-tight">

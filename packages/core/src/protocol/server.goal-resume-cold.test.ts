@@ -82,6 +82,7 @@ describe("AgentServer cold Goal resume", () => {
           setAskUser() {},
           setBrowserBridge() {},
           setInjectCredential() {},
+          setSessionMessageRouter() {},
           async run(task: string, opts: { injected?: boolean }): Promise<EngineResult> {
             runs.push({ task, configuredCwd: slice.cwd, injected: opts.injected });
             return result(sessionId);

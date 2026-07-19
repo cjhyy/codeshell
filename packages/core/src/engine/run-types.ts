@@ -5,6 +5,7 @@ import type { GoalConfig } from "../goal/lifecycle.js";
 import type { EngineConfig, EngineResult } from "./types.js";
 import type { LiveChildState } from "../tool-system/builtin/agent-registry.js";
 import type { LegacyPetWorkspaceOption } from "../types.js";
+import type { SessionMessageTarget } from "../session/session-message.js";
 
 /**
  * Open string id naming a registered {@link RunBehaviorProfile}. The literal
@@ -97,6 +98,12 @@ export interface EngineRunOptions {
   profileParams?: Record<string, unknown>;
   /** Digital human bound to this Work Session; persisted on first use. */
   workspaceProfile?: string;
+  /**
+   * Host-authorized Sessions in the same project that this run may message.
+   * The Engine validates the closed set against the source workspace
+   * before exposing it to the model.
+   */
+  sessionMessageTargets?: readonly SessionMessageTarget[];
   /**
    * @deprecated Compat alias for `profileParams.runtimeContext` — bounded host
    * Pet world JSON; model-visible for this run, never persisted.

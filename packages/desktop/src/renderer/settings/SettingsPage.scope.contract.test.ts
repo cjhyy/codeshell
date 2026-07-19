@@ -8,10 +8,12 @@ const pageRegistry = readFileSync(join(import.meta.dir, "..", "pages", "PageRegi
 const view = readFileSync(join(import.meta.dir, "..", "view.ts"), "utf-8");
 
 describe("SettingsPage scope contract", () => {
-  test("scope is page state with a header switcher, not a hardcoded user constant", () => {
+  test("scope comes from the settings entry context, not a page-wide picker", () => {
     expect(source).not.toContain('const scope = "user" as const');
     expect(source).toContain("SettingsScope");
-    expect(source).toContain("scopeOptions");
+    expect(source).toContain("initialProjectPath");
+    expect(source).not.toContain("scopeOptions");
+    expect(source).not.toContain("scopeSwitcher");
   });
 
   test("modules declare supported scopes and the nav filters by the active scope", () => {
@@ -60,6 +62,6 @@ describe("SettingsPage scope contract", () => {
   test("draft-heavy editors mark their scope as internally managed", () => {
     expect(source).toContain('scopeControl: "internal"');
     expect(source).toContain("moduleUsesPageScope");
-    expect(source).toContain("scopeManagedInSection");
+    expect(source).toContain('activeUsesPageScope && scopeState.kind === "project"');
   });
 });

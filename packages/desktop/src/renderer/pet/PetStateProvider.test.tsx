@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { PetApi, PetProjectionEvent, PetProjectionSnapshot } from "../../preload/types";
+import type {
+  PetApi,
+  PetLongTaskSnapshot,
+  PetProjectionEvent,
+  PetProjectionSnapshot,
+} from "../../preload/types";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
@@ -17,6 +22,84 @@ function snapshot(version = 0): PetProjectionSnapshot {
 }
 
 describe("PetStateProvider", () => {
+  test("hydrates durable long tasks, applies revisions, and exposes controls", async () => {
+    ensureMiniDom();
+    let taskListener: ((snapshot: PetLongTaskSnapshot) => void) | undefined;
+    const task = {
+      schemaVersion: 1 as const,
+      id: "pet-task-0123456789abcdef01234567",
+      originClientMessageId: "message-1",
+      objective: "Finish the migration",
+      workspacePath: "/work/app",
+      sessionId: "session-1",
+      status: "running" as const,
+      phase: "executing" as const,
+      attempt: 1,
+      revision: 2,
+      createdAt: 10,
+      updatedAt: 20,
+      artifacts: [],
+      events: [],
+    };
+    const api: PetApi = {
+      getSnapshot: async () => snapshot(),
+      onProjectionEvent: () => () => {},
+      openSession: async () => ({ status: "not-found" }),
+      dispatch: async () => ({ ok: false, code: "invalid-command" }),
+      getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+      onAttentionEvent: () => () => {},
+      setActiveSession: async () => ({ ok: true }),
+      markAttentionReceipt: async () => ({ ok: true }),
+      getLongTasks: async () => ({ revision: 1, observedAt: 20, tasks: [task] }),
+      onLongTasksChanged: (listener) => {
+        taskListener = listener;
+        return () => {
+          if (taskListener === listener) taskListener = undefined;
+        };
+      },
+      controlLongTask: async ({ action }) => ({
+        ok: true,
+        task: { ...task, status: action === "pause" ? "paused" : task.status },
+      }),
+    };
+    let latest: ReturnType<typeof usePetState> | undefined;
+    function Consumer() {
+      latest = usePetState();
+      return null;
+    }
+    const root = createRoot(document.createElement("div"));
+    await act(async () => {
+      root.render(
+        <PetStateProvider api={api}>
+          <Consumer />
+        </PetStateProvider>,
+      );
+      await flushMicrotasks();
+    });
+    expect(latest?.longTasks.tasks[0]?.status).toBe("running");
+    await act(async () => {
+      taskListener?.({
+        revision: 2,
+        observedAt: 30,
+        tasks: [{ ...task, status: "waiting", waitingFor: "Approve Bash" }],
+      });
+    });
+    expect(latest?.longTasks.tasks[0]).toMatchObject({
+      status: "waiting",
+      waitingFor: "Approve Bash",
+    });
+    let controlResult:
+      | Awaited<ReturnType<NonNullable<typeof latest>["controlLongTask"]>>
+      | undefined;
+    await act(async () => {
+      controlResult = await latest?.controlLongTask(task.id, "pause");
+      await flushMicrotasks();
+    });
+    expect(controlResult).toMatchObject({ ok: true });
+    await act(async () => root.unmount());
+    expect(taskListener).toBeUndefined();
+  });
+
   test("does not let a stale attention snapshot overwrite the live PendingDecisionIndex count", async () => {
     ensureMiniDom();
     let resolveAttentionSnapshot:
@@ -439,6 +522,27 @@ describe("PetStateProvider", () => {
         (message) => message.kind === "user" && message.clientMessageId === "shared-submit",
       ),
     ).toHaveLength(1);
+    await act(async () => {
+      const event = {
+        kind: "delegation-started" as const,
+        originClientMessageId: "shared-submit",
+        createdAt: 4,
+        delegations: [
+          {
+            clientMessageId: "shared-submit",
+            task: "run the work",
+            workspacePath: "/work/project",
+            sessionId: "work-session",
+            reusedSession: false,
+          },
+        ],
+      };
+      chatListener?.(event);
+      chatListener?.(event);
+    });
+    expect(latest?.delegationReceipts).toEqual([
+      expect.objectContaining({ originClientMessageId: "shared-submit" }),
+    ]);
     await act(async () => {
       streamListener?.({ sessionId: "work-one", event: { type: "stream_request_start" } });
       streamListener?.({ sessionId: "pet-one", event: { type: "stream_request_start" } });

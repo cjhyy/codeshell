@@ -1,7 +1,7 @@
 import React, { memo, useState, useRef, useEffect } from "react";
 import { StatusDot } from "./ui/StatusDot";
 import { IconButton } from "./ui/IconButton";
-import { Forward, PanelLeft, PanelRight } from "lucide-react";
+import { Forward, PanelLeft, PanelRight, UserRound } from "lucide-react";
 import { StatusPopover } from "./topbar/StatusPopover";
 import { WorkspaceIndicator } from "./topbar/WorkspaceIndicator";
 import type { LiveActivity } from "./topbar/liveActivity";
@@ -14,6 +14,10 @@ interface Props {
   projectPath?: string | null;
   sessionId?: string | null;
   sessionTitle: string | null;
+  workspaceProfile?: string | null;
+  workspaceProfiles?: ReadonlyArray<{ name: string; label: string }>;
+  workspaceProfileSwitchDisabled?: boolean;
+  onWorkspaceProfileChange?: (profileName: string) => void;
   busy: boolean;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
@@ -68,6 +72,10 @@ function TopBarImpl({
   projectPath,
   sessionId,
   sessionTitle,
+  workspaceProfile,
+  workspaceProfiles = [],
+  workspaceProfileSwitchDisabled = false,
+  onWorkspaceProfileChange,
   busy,
   sidebarCollapsed,
   onToggleSidebar,
@@ -120,6 +128,7 @@ function TopBarImpl({
               projectName={projectName}
               sessionBusy={busy}
               includeProjectNameInLabel={false}
+              iconOnly
             />
           </span>
         )}
@@ -131,6 +140,40 @@ function TopBarImpl({
         {sessionTitle && (
           <span className="min-w-0 truncate text-muted-foreground" title={sessionTitle}>
             {sessionTitle}
+          </span>
+        )}
+        {(workspaceProfile || (sessionId && workspaceProfiles.length > 0)) && (
+          <span
+            className="flex shrink-0 items-center gap-1 rounded-full border border-primary/30 px-2 py-0.5 text-[11px] text-primary"
+            title={t("digitalHumans.sessionBinding.description")}
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          >
+            <UserRound size={11} />
+            {onWorkspaceProfileChange && workspaceProfiles.length > 0 ? (
+              <select
+                data-session-profile-switch="true"
+                aria-label={t("digitalHumans.sessionBinding.label")}
+                className="max-w-36 cursor-pointer bg-transparent text-[11px] font-medium text-primary outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                value={workspaceProfile ?? ""}
+                disabled={workspaceProfileSwitchDisabled}
+                onChange={(event) => onWorkspaceProfileChange(event.target.value)}
+              >
+                <option value="" disabled>
+                  {t("digitalHumans.sessionBinding.pick")}
+                </option>
+                {workspaceProfile &&
+                !workspaceProfiles.some((profile) => profile.name === workspaceProfile) ? (
+                  <option value={workspaceProfile}>{workspaceProfile}</option>
+                ) : null}
+                {workspaceProfiles.map((profile) => (
+                  <option key={profile.name} value={profile.name}>
+                    {profile.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              workspaceProfile
+            )}
           </span>
         )}
       </div>

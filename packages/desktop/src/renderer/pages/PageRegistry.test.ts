@@ -3,13 +3,13 @@ import type { ReactElement } from "react";
 import { PAGE_REGISTRY, PageRegistry, type PageEntry } from "./PageRegistry";
 
 describe("PageRegistry", () => {
-  it("pins the builtin sidebar nav in the historical order", () => {
-    // Exactly today's Sidebar.tsx order: 数字人 → 自动化 → 凭证 → 设置.
+  it("pins the builtin sidebar nav in product order", () => {
+    // Settings remains reachable from the fixed footer menu, so it is not
+    // duplicated in the first-level navigation.
     expect(PAGE_REGISTRY.navEntries().map((entry) => entry.key)).toEqual([
       "digital_humans",
       "automation",
       "credentials",
-      "settings_page",
     ]);
   });
 
@@ -19,7 +19,6 @@ describe("PageRegistry", () => {
       { kind: "i18n", key: "sidebar.digitalHumans" },
       { kind: "i18n", key: "sidebar.automation" },
       { kind: "i18n", key: "sidebar.credentials" },
-      { kind: "i18n", key: "sidebar.settings" },
     ]);
   });
 
@@ -29,11 +28,12 @@ describe("PageRegistry", () => {
     expect(automation.nav!.isActive("runs")).toBe(true);
     expect(automation.nav!.isActive("automation")).toBe(false);
     expect(automation.nav!.target).toBe("automation");
+  });
 
+  it("keeps settings routable without duplicating it in first-level nav", () => {
     const settings = PAGE_REGISTRY.get("settings_page")!;
-    expect(settings.nav!.isActive("settings_page")).toBe(true);
-    expect(settings.nav!.isActive("project_config")).toBe(true);
-    expect(settings.nav!.isActive("chat")).toBe(false);
+    expect(settings.nav).toBeUndefined();
+    expect(PAGE_REGISTRY.has("settings_page")).toBe(true);
   });
 
   it("marks unmigrated builtins as legacy-rendered", () => {
@@ -96,7 +96,6 @@ describe("migrated builtin pages", () => {
       "digital_humans",
       "automation",
       "credentials",
-      "settings_page",
     ]);
   });
 

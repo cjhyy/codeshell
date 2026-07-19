@@ -18,6 +18,7 @@ function makeEngine(sessionId: string, kind: "work" | "pet" = "work"): Engine {
     setAskUser() {},
     setBrowserBridge() {},
     setInjectCredential() {},
+    setSessionMessageRouter() {},
     isHeadless: () => false,
     getSessionManager: () => ({ readSessionKind: () => kind }),
     async run(_task: string, options?: any): Promise<EngineResult> {

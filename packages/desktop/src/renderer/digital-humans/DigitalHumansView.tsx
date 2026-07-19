@@ -1,20 +1,29 @@
 import React from "react";
 import {
+  ArrowRight,
   Brain,
+  Briefcase,
   Check,
+  ChevronRight,
+  Code2,
   Download,
+  Eye,
   GitFork,
   Loader2,
+  MessageSquareText,
+  Palette,
   Pencil,
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   Sparkles,
   Trash2,
   Upload,
+  UserRound,
   UsersRound,
 } from "lucide-react";
-import type { DigitalHumanTeam, DigitalHumanTeamMode } from "@cjhyy/code-shell-pet";
+import type { DigitalHumanTeam, DigitalHumanTeamMode } from "../../shared/digital-human-team";
 import type { DigitalHumanProfileImportPreview } from "../../shared/digital-human-profile-transfer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,18 +51,19 @@ import { useT } from "../i18n";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
 import { DigitalHumanEditorDialog } from "./DigitalHumanEditorDialog";
+import { DigitalHumanMemoryDialog } from "./DigitalHumanMemoryDialog";
 import type {
   DigitalHumanCatalogEntry,
   DigitalHumanProfileEntry,
   DigitalHumanSelection,
+  CuratedDigitalHumanTeam,
 } from "./types";
+import { CURATED_DIGITAL_HUMAN_TEAMS, profileSamplePrompts } from "./marketplace";
 import { useDigitalHumanOperations, useDigitalHumansLibrary } from "./useDigitalHumansLibrary";
 
 interface Props {
   activeProjectPath: string | null;
-  currentSelection?: DigitalHumanSelection | null;
-  onUse: (selection: DigitalHumanSelection) => void;
-  onClearSelection?: () => void;
+  onUse: (selection: DigitalHumanSelection, starterPrompt?: string) => void;
   confirmDelete?: (request: DigitalHumanDeleteRequest) => Promise<boolean>;
 }
 
@@ -64,6 +74,21 @@ export interface DigitalHumanDeleteRequest {
   clearsCurrentSelection: boolean;
   clearsProjectDefault: boolean;
 }
+
+type DigitalHumanCategory = DigitalHumanCatalogEntry["category"];
+type MarketKind = "single" | "team";
+type DigitalHumanDetail =
+  | { kind: "catalog"; entry: DigitalHumanCatalogEntry }
+  | { kind: "profile"; profile: DigitalHumanProfileEntry }
+  | { kind: "team"; team: DigitalHumanTeam }
+  | { kind: "curated-team"; team: CuratedDigitalHumanTeam };
+
+const DIGITAL_HUMAN_CATEGORIES: readonly DigitalHumanCategory[] = [
+  "product",
+  "design",
+  "engineering",
+  "quality",
+];
 
 function capabilityCount(profile: DigitalHumanProfileEntry): number {
   return (
@@ -77,9 +102,7 @@ function modeKey(mode: DigitalHumanTeamMode): "auto" | "divide" | "compare" {
 
 export function DigitalHumansView({
   activeProjectPath,
-  currentSelection,
   onUse,
-  onClearSelection,
   confirmDelete,
 }: Props) {
   const { t } = useT();
@@ -89,8 +112,12 @@ export function DigitalHumansView({
     useDigitalHumansLibrary(activeProjectPath);
   const operations = useDigitalHumanOperations(refresh);
   const [query, setQuery] = React.useState("");
+  const [marketKind, setMarketKind] = React.useState<MarketKind>("single");
+  const [marketCategory, setMarketCategory] = React.useState<DigitalHumanCategory | "all">("all");
+  const [detail, setDetail] = React.useState<DigitalHumanDetail | null>(null);
   const [teamEditor, setTeamEditor] = React.useState<{ team?: DigitalHumanTeam } | null>(null);
   const [editor, setEditor] = React.useState<{ profile?: DigitalHumanProfileEntry } | null>(null);
+  const [memoryProfile, setMemoryProfile] = React.useState<DigitalHumanProfileEntry | null>(null);
   const [importPreview, setImportPreview] = React.useState<DigitalHumanProfileImportPreview | null>(
     null,
   );
@@ -125,10 +152,24 @@ export function DigitalHumansView({
       value.toLocaleLowerCase().includes(normalizedQuery),
     );
   const profileByName = new Map(profiles.map((profile) => [profile.name, profile]));
-  const visibleCatalog = catalog.filter(matches);
+  const visibleCatalog = catalog.filter(
+    (entry) =>
+      (marketCategory === "all" || entry.category === marketCategory) &&
+      (matches(entry) ||
+        entry.tags.some((tag) => tag.toLocaleLowerCase().includes(normalizedQuery))),
+  );
   const visibleProfiles = profiles.filter(matches);
   const visibleTeams = teams.filter((team) =>
     matches({ name: team.id, label: team.name, description: team.description }),
+  );
+  const catalogByName = new Map(catalog.map((entry) => [entry.name, entry]));
+  const visibleCuratedTeams = CURATED_DIGITAL_HUMAN_TEAMS.filter(
+    (team) =>
+      (marketCategory === "all" || team.category === marketCategory) &&
+      (!normalizedQuery ||
+        [team.id, team.name, team.description, ...team.tags, ...team.members].some((value) =>
+          value.toLocaleLowerCase().includes(normalizedQuery),
+        )),
   );
 
   const requestDelete = async (request: DigitalHumanDeleteRequest): Promise<boolean> => {
@@ -150,8 +191,7 @@ export function DigitalHumansView({
   };
 
   const deleteProfileEntry = async (profile: DigitalHumanProfileEntry) => {
-    const clearsCurrentSelection =
-      currentSelection?.kind === "single" && currentSelection.id === profile.name;
+    const clearsCurrentSelection = false;
     const accepted = await requestDelete({
       kind: "profile",
       id: profile.name,
@@ -160,7 +200,7 @@ export function DigitalHumansView({
       clearsProjectDefault: profile.active,
     });
     if (!accepted) return;
-    const deleted = await run(
+    await run(
       `delete-profile:${profile.name}`,
       () =>
         window.codeshell.deleteProfile(profile.name, {
@@ -169,12 +209,10 @@ export function DigitalHumansView({
         }),
       { name: profile.label },
     );
-    if (deleted && clearsCurrentSelection) onClearSelection?.();
   };
 
   const deleteTeamEntry = async (team: DigitalHumanTeam) => {
-    const clearsCurrentSelection =
-      currentSelection?.kind === "team" && currentSelection.id === team.id;
+    const clearsCurrentSelection = false;
     const accepted = await requestDelete({
       kind: "team",
       id: team.id,
@@ -183,12 +221,11 @@ export function DigitalHumansView({
       clearsProjectDefault: false,
     });
     if (!accepted) return;
-    const deleted = await run(
+    await run(
       `delete-team:${team.id}`,
       () => window.codeshell.deleteDigitalHumanTeam(team.id),
       { name: team.name },
     );
-    if (deleted && clearsCurrentSelection) onClearSelection?.();
   };
 
   const pickProfileDefinitionImport = async () => {
@@ -303,6 +340,113 @@ export function DigitalHumansView({
     }
   };
 
+  const launchCatalogEntry = async (
+    entry: DigitalHumanCatalogEntry,
+    starterPrompt?: string,
+  ): Promise<void> => {
+    if (!entry.installed) {
+      const installed = await run(
+        `install:${entry.name}`,
+        () => window.codeshell.installCatalogProfile(entry.name),
+        {
+          name: entry.label,
+          successMessage: t("digitalHumans.installDone", { name: entry.label }),
+        },
+      );
+      if (!installed) return;
+    }
+    onUse({ kind: "single", id: entry.name, label: entry.label }, starterPrompt);
+  };
+
+  const launchCuratedTeam = async (
+    blueprint: CuratedDigitalHumanTeam,
+    starterPrompt?: string,
+  ): Promise<void> => {
+    const existingTeam = teams.find((team) => team.id === blueprint.id);
+    if (existingTeam) {
+      onUse(
+        {
+          kind: "team",
+          id: existingTeam.id,
+          label: existingTeam.name,
+          members: existingTeam.members,
+          mode: existingTeam.mode,
+        },
+        starterPrompt,
+      );
+      return;
+    }
+
+    const installed = await run(
+      `install-team:${blueprint.id}`,
+      async () => {
+        for (const member of blueprint.members) {
+          const entry = catalogByName.get(member);
+          if (!entry) throw new Error(`Missing bundled digital human: ${member}`);
+          if (!entry.installed) await window.codeshell.installCatalogProfile(member);
+        }
+        await window.codeshell.saveDigitalHumanTeam({
+          id: blueprint.id,
+          name: blueprint.name,
+          description: blueprint.description,
+          members: [...blueprint.members],
+          mode: blueprint.mode,
+        });
+      },
+      {
+        name: blueprint.name,
+        successMessage: t("digitalHumans.team.installDone", { name: blueprint.name }),
+      },
+    );
+    if (!installed) return;
+    onUse(
+      {
+        kind: "team",
+        id: blueprint.id,
+        label: blueprint.name,
+        members: [...blueprint.members],
+        mode: blueprint.mode,
+      },
+      starterPrompt,
+    );
+  };
+
+  const launchDetail = (starterPrompt?: string): void => {
+    if (!detail) return;
+    if (detail.kind === "catalog") {
+      void launchCatalogEntry(detail.entry, starterPrompt);
+      return;
+    }
+    if (detail.kind === "curated-team") {
+      void launchCuratedTeam(detail.team, starterPrompt);
+      return;
+    }
+    if (detail.kind === "profile") {
+      onUse(
+        { kind: "single", id: detail.profile.name, label: detail.profile.label },
+        starterPrompt,
+      );
+      return;
+    }
+    onUse(
+      {
+        kind: "team",
+        id: detail.team.id,
+        label: detail.team.name,
+        members: detail.team.members,
+        mode: detail.team.mode,
+      },
+      starterPrompt,
+    );
+  };
+
+  const detailBusy =
+    detail?.kind === "catalog"
+      ? operations.isBusy(`install:${detail.entry.name}`)
+      : detail?.kind === "curated-team"
+        ? operations.isBusy(`install-team:${detail.team.id}`)
+        : false;
+
   return (
     <section className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background">
       <header className="border-b border-border/70 px-6 py-5">
@@ -392,41 +536,122 @@ export function DigitalHumansView({
                 </div>
               ) : null}
               <Tabs defaultValue="market">
-                <TabsList>
+                <TabsList className="mb-1">
                   <TabsTrigger value="market">{t("digitalHumans.tabs.market")}</TabsTrigger>
                   <TabsTrigger value="mine">{t("digitalHumans.tabs.mine")}</TabsTrigger>
                   <TabsTrigger value="teams">{t("digitalHumans.tabs.teams")}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="market" className="mt-5">
-                  <div className="mb-4 flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-                    <Sparkles size={14} className="shrink-0 text-primary" aria-hidden="true" />
-                    {t("digitalHumans.marketHint")}
+                  {!normalizedQuery && marketCategory === "all" ? (
+                    <FeaturedScenes
+                      catalog={catalog}
+                      onSelectCategory={(category) => {
+                        setMarketKind("single");
+                        setMarketCategory(category);
+                      }}
+                    />
+                  ) : null}
+
+                  <div className="mt-6 flex flex-col gap-4">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-base font-semibold tracking-tight">
+                            {t("digitalHumans.market.browseTitle")}
+                          </h2>
+                          <Badge variant="secondary">
+                            {marketKind === "single"
+                              ? visibleCatalog.length
+                              : visibleCuratedTeams.length}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {t("digitalHumans.market.browseDescription")}
+                        </p>
+                      </div>
+                      <div className="flex rounded-md border border-border/80 bg-muted/30 p-0.5">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={marketKind === "single" ? "secondary" : "ghost"}
+                          className="h-7"
+                          onClick={() => setMarketKind("single")}
+                        >
+                          <UserRound size={13} aria-hidden="true" />
+                          {t("digitalHumans.market.singles")}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={marketKind === "team" ? "secondary" : "ghost"}
+                          className="h-7"
+                          onClick={() => setMarketKind("team")}
+                          data-testid="digital-human-market-teams"
+                        >
+                          <UsersRound size={13} aria-hidden="true" />
+                          {t("digitalHumans.market.groups")}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div
+                      className="flex flex-wrap gap-1.5"
+                      aria-label={t("digitalHumans.market.categoryLabel")}
+                    >
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={marketCategory === "all" ? "secondary" : "ghost"}
+                        className="h-7 rounded-full px-3"
+                        onClick={() => setMarketCategory("all")}
+                      >
+                        {t("digitalHumans.market.category.all")}
+                      </Button>
+                      {DIGITAL_HUMAN_CATEGORIES.map((category) => (
+                        <Button
+                          key={category}
+                          type="button"
+                          size="sm"
+                          variant={marketCategory === category ? "secondary" : "ghost"}
+                          className="h-7 rounded-full px-3"
+                          onClick={() => setMarketCategory(category)}
+                        >
+                          {t(`digitalHumans.market.category.${category}`)}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
-                  {visibleCatalog.length === 0 ? (
+
+                  {marketKind === "single" ? (
+                    visibleCatalog.length === 0 ? (
+                      <SearchEmptyState />
+                    ) : (
+                      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {visibleCatalog.map((entry) => (
+                          <CatalogCard
+                            key={entry.name}
+                            entry={entry}
+                            busy={operations.isBusy(`install:${entry.name}`)}
+                            onDetails={() => setDetail({ kind: "catalog", entry })}
+                            onLaunch={() => void launchCatalogEntry(entry)}
+                          />
+                        ))}
+                      </div>
+                    )
+                  ) : visibleCuratedTeams.length === 0 ? (
                     <SearchEmptyState />
                   ) : (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {visibleCatalog.map((entry) => (
-                        <CatalogCard
-                          key={entry.name}
-                          entry={entry}
-                          busy={operations.isBusy(`install:${entry.name}`)}
-                          onInstall={() =>
-                            void run(
-                              `install:${entry.name}`,
-                              () => window.codeshell.installCatalogProfile(entry.name),
-                              {
-                                name: entry.label,
-                                successMessage: t("digitalHumans.installDone", {
-                                  name: entry.label,
-                                }),
-                              },
-                            )
-                          }
-                          onUse={() =>
-                            onUse({ kind: "single", id: entry.name, label: entry.label })
-                          }
+                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {visibleCuratedTeams.map((team) => (
+                        <CuratedTeamCard
+                          key={team.id}
+                          team={team}
+                          catalogByName={catalogByName}
+                          installed={teams.some((candidate) => candidate.id === team.id)}
+                          busy={operations.isBusy(`install-team:${team.id}`)}
+                          onDetails={() => setDetail({ kind: "curated-team", team })}
+                          onLaunch={() => void launchCuratedTeam(team)}
                         />
                       ))}
                     </div>
@@ -457,7 +682,9 @@ export function DigitalHumansView({
                           onUse={() =>
                             onUse({ kind: "single", id: profile.name, label: profile.label })
                           }
+                          onDetails={() => setDetail({ kind: "profile", profile })}
                           onEdit={() => setEditor({ profile })}
+                          onMemory={() => setMemoryProfile(profile)}
                           onExport={() => void exportProfileEntry(profile)}
                           onDelete={() => void deleteProfileEntry(profile)}
                           onToggleDefault={() => {
@@ -535,6 +762,7 @@ export function DigitalHumansView({
                               mode: team.mode,
                             })
                           }
+                          onDetails={() => setDetail({ kind: "team", team })}
                           onEdit={() => setTeamEditor({ team })}
                           onDelete={() => void deleteTeamEntry(team)}
                         />
@@ -552,7 +780,8 @@ export function DigitalHumansView({
         open={editor !== null}
         profile={editor?.profile}
         existingIds={profiles.map((profile) => profile.name)}
-        skills={availableSkills}
+        skills={availableSkills.filter((skill) => skill.source !== "project")}
+        projectSkills={availableSkills.filter((skill) => skill.source === "project")}
         busy={operations.isBusy("save-profile")}
         onOpenChange={(open) => {
           if (!open) setEditor(null);
@@ -567,6 +796,13 @@ export function DigitalHumansView({
         }}
       />
 
+      <DigitalHumanMemoryDialog
+        profile={memoryProfile}
+        onOpenChange={(open) => {
+          if (!open) setMemoryProfile(null);
+        }}
+      />
+
       <ProfileDefinitionImportDialog
         preview={importPreview}
         busy={importPreview ? operations.isBusy(`import-profile:${importPreview.name}`) : false}
@@ -574,6 +810,18 @@ export function DigitalHumansView({
           if (!open) setImportPreview(null);
         }}
         onImport={() => void commitProfileDefinitionImport()}
+      />
+
+      <DigitalHumanDetailDialog
+        detail={detail}
+        profiles={profiles}
+        catalog={catalog}
+        teams={teams}
+        busy={detailBusy}
+        onOpenChange={(open) => {
+          if (!open) setDetail(null);
+        }}
+        onLaunch={(starterPrompt) => launchDetail(starterPrompt)}
       />
 
       <TeamDialog
@@ -710,49 +958,267 @@ function ProfileDefinitionImportDialog({
   );
 }
 
-function CatalogCard({
-  entry,
-  busy,
-  onInstall,
-  onUse,
+function categoryIcon(category: DigitalHumanCategory, size = 17) {
+  const props = { size, "aria-hidden": true as const };
+  if (category === "product") return <Briefcase {...props} />;
+  if (category === "design") return <Palette {...props} />;
+  if (category === "engineering") return <Code2 {...props} />;
+  return <ShieldCheck {...props} />;
+}
+
+function categoryTone(category: DigitalHumanCategory): string {
+  if (category === "product") return "bg-primary/10 text-primary";
+  if (category === "design") return "bg-status-warn/10 text-status-warn";
+  if (category === "engineering") return "bg-status-running/10 text-status-running";
+  return "bg-status-ok/10 text-status-ok";
+}
+
+function initials(label: string): string {
+  const words = label.trim().split(/\s+/).filter(Boolean);
+  if (words.length > 1)
+    return words
+      .slice(0, 2)
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
+  return label.trim().slice(0, 2).toUpperCase();
+}
+
+function formatUsageCount(value: number): string {
+  return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(
+    value,
+  );
+}
+
+function DigitalHumanAvatar({
+  id,
+  label,
+  category,
+  team = false,
+  className,
 }: {
-  entry: DigitalHumanCatalogEntry;
-  busy: boolean;
-  onInstall: () => void;
-  onUse: () => void;
+  id: string;
+  label: string;
+  category?: DigitalHumanCategory;
+  team?: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold",
+        category ? categoryTone(category) : "bg-muted text-muted-foreground",
+        className,
+      )}
+      data-digital-human-avatar={id}
+      aria-hidden="true"
+    >
+      {team ? <UsersRound size={18} /> : initials(label)}
+    </span>
+  );
+}
+
+function FeaturedScenes({
+  catalog,
+  onSelectCategory,
+}: {
+  catalog: DigitalHumanCatalogEntry[];
+  onSelectCategory: (category: DigitalHumanCategory) => void;
 }) {
   const { t } = useT();
   return (
-    <Card className="flex min-h-56 flex-col">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <CardTitle className="text-base">{entry.label}</CardTitle>
-          {entry.installed ? (
-            <Badge variant="success">
-              <Check size={11} className="mr-1" aria-hidden="true" />
-              {t("digitalHumans.installed")}
-            </Badge>
-          ) : null}
+    <section aria-labelledby="digital-human-featured-scenes">
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div>
+          <h2 id="digital-human-featured-scenes" className="text-base font-semibold tracking-tight">
+            {t("digitalHumans.market.featuredTitle")}
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("digitalHumans.market.featuredDescription")}
+          </p>
         </div>
-        <p className="text-sm leading-5 text-muted-foreground">{entry.description}</p>
+        <Sparkles size={17} className="text-primary" aria-hidden="true" />
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {DIGITAL_HUMAN_CATEGORIES.map((category) => {
+          const entries = catalog.filter((entry) => entry.category === category).slice(0, 2);
+          return (
+            <Button
+              key={category}
+              type="button"
+              variant="outline"
+              className="group h-auto min-h-32 items-stretch justify-start overflow-hidden p-0 text-left"
+              onClick={() => onSelectCategory(category)}
+            >
+              <span className="flex w-full flex-col">
+                <span className={cn("flex items-center gap-2 px-4 py-3", categoryTone(category))}>
+                  {categoryIcon(category, 16)}
+                  <span className="font-semibold">
+                    {t(`digitalHumans.market.scene.${category}.title`)}
+                  </span>
+                  <ArrowRight
+                    size={14}
+                    className="ml-auto transition-transform group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </span>
+                <span className="flex flex-1 flex-col gap-1.5 px-4 py-3">
+                  {entries.map((entry) => (
+                    <span key={entry.name} className="flex min-w-0 items-center gap-2 text-xs">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
+                      <span className="truncate">{entry.label}</span>
+                    </span>
+                  ))}
+                </span>
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CatalogCard({
+  entry,
+  busy,
+  onDetails,
+  onLaunch,
+}: {
+  entry: DigitalHumanCatalogEntry;
+  busy: boolean;
+  onDetails: () => void;
+  onLaunch: () => void;
+}) {
+  const { t } = useT();
+  return (
+    <Card
+      className="group flex min-h-52 flex-col transition-colors hover:border-primary/30"
+      data-digital-human-card={entry.name}
+    >
+      <CardHeader className="pb-3">
+        <div className="flex items-start gap-3">
+          <DigitalHumanAvatar id={entry.name} label={entry.label} category={entry.category} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <CardTitle className="truncate text-sm">{entry.label}</CardTitle>
+              {entry.installed ? (
+                <Badge variant="success" className="shrink-0">
+                  <Check size={11} className="mr-1" aria-hidden="true" />
+                  {t("digitalHumans.installed")}
+                </Badge>
+              ) : null}
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {t(`digitalHumans.market.category.${entry.category}`)} ·{" "}
+              {formatUsageCount(entry.usageCount)} {t("digitalHumans.market.uses")}
+            </p>
+          </div>
+        </div>
+        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+          {entry.description}
+        </p>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5">
+      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5 pb-3">
         {entry.tags.map((tag) => (
           <Badge key={tag} variant="secondary">
             {tag}
           </Badge>
         ))}
       </CardContent>
-      <CardFooter className="gap-2">
-        {entry.installed ? (
-          <Button size="sm" onClick={onUse}>
-            {t("digitalHumans.use")}
-          </Button>
-        ) : (
-          <Button size="sm" onClick={onInstall} disabled={busy}>
-            {busy ? t("digitalHumans.installing") : t("digitalHumans.install")}
-          </Button>
-        )}
+      <CardFooter className="justify-between gap-2 border-t border-border/60 pt-3">
+        <Button size="sm" variant="ghost" className="px-2" onClick={onDetails}>
+          {t("digitalHumans.market.details")}
+          <ChevronRight size={13} aria-hidden="true" />
+        </Button>
+        <Button size="sm" onClick={onLaunch} disabled={busy}>
+          <Sparkles size={13} aria-hidden="true" />
+          {busy
+            ? t("digitalHumans.installing")
+            : entry.installed
+              ? t("digitalHumans.summon")
+              : t("digitalHumans.installAndSummon")}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function CuratedTeamCard({
+  team,
+  catalogByName,
+  installed,
+  busy,
+  onDetails,
+  onLaunch,
+}: {
+  team: CuratedDigitalHumanTeam;
+  catalogByName: Map<string, DigitalHumanCatalogEntry>;
+  installed: boolean;
+  busy: boolean;
+  onDetails: () => void;
+  onLaunch: () => void;
+}) {
+  const { t } = useT();
+  return (
+    <Card
+      className="group flex min-h-60 flex-col transition-colors hover:border-primary/30"
+      data-curated-team-card={team.id}
+    >
+      <CardHeader className="pb-3">
+        <div className="flex items-start gap-3">
+          <DigitalHumanAvatar id={team.id} label={team.name} category={team.category} team />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <CardTitle className="truncate text-sm">{team.name}</CardTitle>
+              {installed ? <Badge variant="success">{t("digitalHumans.installed")}</Badge> : null}
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {team.members.length} {t("digitalHumans.market.members")} ·{" "}
+              {formatUsageCount(team.usageCount)} {t("digitalHumans.market.uses")}
+            </p>
+          </div>
+        </div>
+        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+          {team.description}
+        </p>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-3 pb-3">
+        <div className="flex -space-x-1.5" aria-label={t("digitalHumans.team.members")}>
+          {team.members.map((member) => {
+            const entry = catalogByName.get(member);
+            return (
+              <DigitalHumanAvatar
+                key={member}
+                id={member}
+                label={entry?.label ?? member}
+                category={entry?.category}
+                className="h-8 w-8 rounded-lg border-2 border-card text-[10px]"
+              />
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {team.tags.map((tag) => (
+            <Badge key={tag} variant="secondary">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      </CardContent>
+      <CardFooter className="justify-between gap-2 border-t border-border/60 pt-3">
+        <Button size="sm" variant="ghost" className="px-2" onClick={onDetails}>
+          {t("digitalHumans.market.details")}
+          <ChevronRight size={13} aria-hidden="true" />
+        </Button>
+        <Button size="sm" onClick={onLaunch} disabled={busy}>
+          <Sparkles size={13} aria-hidden="true" />
+          {busy
+            ? t("digitalHumans.installing")
+            : installed
+              ? t("digitalHumans.summonTeam")
+              : t("digitalHumans.installAndSummonTeam")}
+        </Button>
       </CardFooter>
     </Card>
   );
@@ -763,7 +1229,9 @@ function ProfileCard({
   hasProject,
   busy,
   onUse,
+  onDetails,
   onEdit,
+  onMemory,
   onExport,
   onDelete,
   onToggleDefault,
@@ -772,7 +1240,9 @@ function ProfileCard({
   hasProject: boolean;
   busy: boolean;
   onUse: () => void;
+  onDetails: () => void;
   onEdit: () => void;
+  onMemory: () => void;
   onExport: () => void;
   onDelete: () => void;
   onToggleDefault: () => void;
@@ -780,17 +1250,29 @@ function ProfileCard({
   const { t } = useT();
   const count = capabilityCount(profile);
   return (
-    <Card className="flex min-h-56 flex-col">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <CardTitle className="text-base">{profile.label}</CardTitle>
-          {profile.active ? <Badge variant="accent">{t("digitalHumans.current")}</Badge> : null}
+    <Card className="flex min-h-64 flex-col transition-colors hover:border-primary/30">
+      <CardHeader className="pb-3">
+        <div className="flex items-start gap-3">
+          <DigitalHumanAvatar id={profile.name} label={profile.label} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <CardTitle className="truncate text-sm">{profile.label}</CardTitle>
+              {profile.active ? (
+                <Badge variant="accent" className="shrink-0">
+                  {t("digitalHumans.current")}
+                </Badge>
+              ) : null}
+            </div>
+            <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+              {profile.name}
+            </p>
+          </div>
         </div>
-        <p className="text-sm leading-5 text-muted-foreground">
+        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
           {profile.description ?? t("digitalHumans.noDescription")}
         </p>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5">
+      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5 pb-3">
         <Badge variant="secondary">{profile.basePreset}</Badge>
         {count > 0 ? (
           <Badge variant="secondary">{t("digitalHumans.capabilityCount", { count })}</Badge>
@@ -799,30 +1281,51 @@ function ProfileCard({
           <Badge variant="secondary">{t("digitalHumans.portableMemory")}</Badge>
         ) : null}
       </CardContent>
-      <CardFooter className="flex-col items-stretch gap-3">
-        <div className="flex items-center gap-2">
+      <CardFooter className="flex-col items-stretch gap-3 border-t border-border/60 pt-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="ghost" className="px-2" onClick={onDetails} disabled={busy}>
+            {t("digitalHumans.market.details")}
+            <ChevronRight size={13} aria-hidden="true" />
+          </Button>
           <Button
             size="sm"
-            className="min-w-0 flex-1"
+            className="min-w-28 flex-1"
             onClick={onUse}
             disabled={busy}
             title={t("digitalHumans.useHint")}
           >
-            {t("digitalHumans.use")}
-          </Button>
-          <Button size="sm" variant="outline" onClick={onEdit} disabled={busy}>
-            <Pencil size={13} aria-hidden="true" />
-            {t("digitalHumans.editor.edit")}
+            <Sparkles size={13} aria-hidden="true" />
+            {t("digitalHumans.summon")}
           </Button>
           <Button
-            size="sm"
+            size="icon"
+            variant="outline"
+            onClick={onMemory}
+            disabled={busy}
+            title={t("digitalHumans.memory.button")}
+          >
+            <Brain size={13} aria-hidden="true" />
+            <span className="sr-only">{t("digitalHumans.memory.button")}</span>
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={onEdit}
+            disabled={busy}
+            title={t("digitalHumans.editor.edit")}
+          >
+            <Pencil size={13} aria-hidden="true" />
+            <span className="sr-only">{t("digitalHumans.editor.edit")}</span>
+          </Button>
+          <Button
+            size="icon"
             variant="outline"
             onClick={onExport}
             disabled={busy}
             title={t("digitalHumans.transfer.exportDefinitionHint")}
           >
             <Download size={13} aria-hidden="true" />
-            {t("digitalHumans.transfer.exportDefinition")}
+            <span className="sr-only">{t("digitalHumans.transfer.exportDefinition")}</span>
           </Button>
           <Button
             size="icon"
@@ -835,7 +1338,7 @@ function ProfileCard({
             <Trash2 size={14} aria-hidden="true" />
           </Button>
         </div>
-        <div className="flex items-end justify-between gap-3 border-t border-border/70 pt-3">
+        <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 space-y-0.5">
             <p className="text-xs font-medium text-foreground">
               {t("digitalHumans.projectDefaultLabel")}
@@ -868,6 +1371,7 @@ function TeamCard({
   memberLabels,
   busy,
   onUse,
+  onDetails,
   onEdit,
   onDelete,
 }: {
@@ -875,32 +1379,47 @@ function TeamCard({
   memberLabels: string[];
   busy: boolean;
   onUse: () => void;
+  onDetails: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const { t } = useT();
   return (
-    <Card className="flex min-h-52 flex-col">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <CardTitle className="text-base">{team.name}</CardTitle>
-          <Badge variant="info">{t(`digitalHumans.team.mode.${modeKey(team.mode)}`)}</Badge>
+    <Card className="flex min-h-60 flex-col transition-colors hover:border-primary/30">
+      <CardHeader className="pb-3">
+        <div className="flex items-start gap-3">
+          <DigitalHumanAvatar id={team.id} label={team.name} team />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <CardTitle className="truncate text-sm">{team.name}</CardTitle>
+              <Badge variant="info" className="shrink-0">
+                {t(`digitalHumans.team.mode.${modeKey(team.mode)}`)}
+              </Badge>
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {memberLabels.length} {t("digitalHumans.market.members")}
+            </p>
+          </div>
         </div>
-        <p className="text-sm leading-5 text-muted-foreground">
+        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
           {team.description ?? t("digitalHumans.team.defaultDescription")}
         </p>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5">
+      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5 pb-3">
         {memberLabels.map((label) => (
           <Badge key={label} variant="secondary">
             {label}
           </Badge>
         ))}
       </CardContent>
-      <CardFooter className="flex-wrap justify-between gap-2">
-        <Button size="sm" onClick={onUse} disabled={busy}>
+      <CardFooter className="flex-wrap justify-between gap-2 border-t border-border/60 pt-3">
+        <Button size="sm" variant="ghost" className="px-2" onClick={onDetails} disabled={busy}>
+          {t("digitalHumans.market.details")}
+          <ChevronRight size={13} aria-hidden="true" />
+        </Button>
+        <Button size="sm" className="min-w-28 flex-1" onClick={onUse} disabled={busy}>
           <Sparkles size={14} aria-hidden="true" />
-          {t("digitalHumans.team.use")}
+          {t("digitalHumans.summonTeam")}
         </Button>
         <div className="flex items-center gap-1">
           <Button size="sm" variant="outline" onClick={onEdit} disabled={busy}>
@@ -920,6 +1439,295 @@ function TeamCard({
         </div>
       </CardFooter>
     </Card>
+  );
+}
+
+function DigitalHumanDetailDialog({
+  detail,
+  profiles,
+  catalog,
+  teams,
+  busy,
+  onOpenChange,
+  onLaunch,
+}: {
+  detail: DigitalHumanDetail | null;
+  profiles: DigitalHumanProfileEntry[];
+  catalog: DigitalHumanCatalogEntry[];
+  teams: DigitalHumanTeam[];
+  busy: boolean;
+  onOpenChange: (open: boolean) => void;
+  onLaunch: (starterPrompt?: string) => void;
+}) {
+  const { t } = useT();
+  if (!detail) return null;
+
+  const installedTeam =
+    detail.kind === "curated-team" ? teams.find((team) => team.id === detail.team.id) : undefined;
+  const view = (() => {
+    if (detail.kind === "catalog") {
+      return {
+        id: detail.entry.name,
+        label: detail.entry.label,
+        description: detail.entry.description ?? t("digitalHumans.noDescription"),
+        category: detail.entry.category as DigitalHumanCategory | undefined,
+        tags: detail.entry.tags,
+        prompts: detail.entry.samplePrompts,
+        usageCount: detail.entry.usageCount as number | undefined,
+        installed: detail.entry.installed,
+        team: false,
+        members: [] as string[],
+        method: detail.entry.mainInstruction,
+        capabilityCount: capabilityCount({ ...detail.entry, active: false }),
+      };
+    }
+    if (detail.kind === "profile") {
+      return {
+        id: detail.profile.name,
+        label: detail.profile.label,
+        description: detail.profile.description ?? t("digitalHumans.noDescription"),
+        category: undefined,
+        tags: [
+          detail.profile.basePreset,
+          ...detail.profile.skills.slice(0, 3),
+          ...(detail.profile.portableMemory ? [t("digitalHumans.portableMemory")] : []),
+        ],
+        prompts: profileSamplePrompts(detail.profile),
+        usageCount: undefined,
+        installed: true,
+        team: false,
+        members: [] as string[],
+        method: detail.profile.mainInstruction,
+        capabilityCount: capabilityCount(detail.profile),
+      };
+    }
+    if (detail.kind === "curated-team") {
+      return {
+        id: detail.team.id,
+        label: installedTeam?.name ?? detail.team.name,
+        description: installedTeam?.description ?? detail.team.description,
+        category: detail.team.category as DigitalHumanCategory | undefined,
+        tags: detail.team.tags,
+        prompts: detail.team.samplePrompts,
+        usageCount: detail.team.usageCount as number | undefined,
+        installed: Boolean(installedTeam),
+        team: true,
+        members: installedTeam?.members ?? detail.team.members,
+        method: t(
+          `digitalHumans.team.modeDescription.${modeKey(installedTeam?.mode ?? detail.team.mode)}`,
+        ),
+        capabilityCount: 0,
+      };
+    }
+    return {
+      id: detail.team.id,
+      label: detail.team.name,
+      description: detail.team.description ?? t("digitalHumans.team.defaultDescription"),
+      category: undefined,
+      tags: [t(`digitalHumans.team.mode.${modeKey(detail.team.mode)}`)],
+      prompts: [
+        t("digitalHumans.detail.teamPrompt", { name: detail.team.name }),
+        t("digitalHumans.detail.teamReviewPrompt", { name: detail.team.name }),
+      ],
+      usageCount: undefined,
+      installed: true,
+      team: true,
+      members: detail.team.members,
+      method: t(`digitalHumans.team.modeDescription.${modeKey(detail.team.mode)}`),
+      capabilityCount: 0,
+    };
+  })();
+
+  const profileById = new Map(profiles.map((profile) => [profile.name, profile]));
+  const catalogById = new Map(catalog.map((entry) => [entry.name, entry]));
+  const memberEntries = view.members.map((id) => ({
+    id,
+    label: profileById.get(id)?.label ?? catalogById.get(id)?.label ?? id,
+    category: catalogById.get(id)?.category,
+  }));
+  const primaryLabel = view.team
+    ? view.installed
+      ? t("digitalHumans.summonTeam")
+      : t("digitalHumans.installAndSummonTeam")
+    : view.installed
+      ? t("digitalHumans.summon")
+      : t("digitalHumans.installAndSummon");
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!busy) onOpenChange(open);
+      }}
+    >
+      <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto p-0">
+        <div className="border-b border-border/70 bg-muted/20 px-6 py-5 pr-12">
+          <DialogHeader>
+            <div className="flex items-start gap-4">
+              <DigitalHumanAvatar
+                id={view.id}
+                label={view.label}
+                category={view.category}
+                team={view.team}
+                className="h-14 w-14 rounded-2xl text-sm"
+              />
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="flex flex-wrap items-center gap-2 text-xl">
+                  {view.label}
+                  <Badge variant={view.team ? "info" : "secondary"}>
+                    {view.team ? t("digitalHumans.market.group") : t("digitalHumans.market.single")}
+                  </Badge>
+                </DialogTitle>
+                <DialogDescription className="mt-1.5 flex flex-wrap items-center gap-2">
+                  {view.category ? (
+                    <span>{t(`digitalHumans.market.category.${view.category}`)}</span>
+                  ) : null}
+                  {view.usageCount !== undefined ? (
+                    <span>
+                      {formatUsageCount(view.usageCount)} {t("digitalHumans.market.uses")}
+                    </span>
+                  ) : null}
+                  {view.installed ? (
+                    <span className="inline-flex items-center gap-1 text-status-ok">
+                      <Check size={12} aria-hidden="true" />
+                      {t("digitalHumans.installed")}
+                    </span>
+                  ) : null}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
+
+        <div className="space-y-6 px-6 pb-1 pt-5">
+          <section>
+            <h3 className="text-sm font-semibold">{t("digitalHumans.detail.capabilityIntro")}</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{view.description}</p>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold">{t("digitalHumans.detail.strengths")}</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {view.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="px-2.5 py-1">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </section>
+
+          {view.team ? (
+            <section>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">{t("digitalHumans.detail.teamMembers")}</h3>
+                <Badge variant="accent">{t("digitalHumans.detail.petLeads")}</Badge>
+              </div>
+              <div className="mt-2 divide-y divide-border/60 rounded-lg border border-border/70">
+                {memberEntries.map((member) => (
+                  <div key={member.id} className="flex items-center gap-3 px-3 py-2.5">
+                    <DigitalHumanAvatar
+                      id={member.id}
+                      label={member.label}
+                      category={member.category}
+                      className="h-8 w-8 rounded-lg text-[10px]"
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {member.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {t("digitalHumans.detail.memberRole")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">{view.method}</p>
+            </section>
+          ) : (
+            <section>
+              <h3 className="text-sm font-semibold">{t("digitalHumans.detail.workMethod")}</h3>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <DetailPrinciple
+                  Icon={UserRound}
+                  title={t("digitalHumans.detail.role")}
+                  description={t("digitalHumans.detail.roleDescription")}
+                />
+                <DetailPrinciple
+                  Icon={Eye}
+                  title={t("digitalHumans.detail.method")}
+                  description={view.method || t("digitalHumans.detail.methodDescription")}
+                />
+                <DetailPrinciple
+                  Icon={Code2}
+                  title={t("digitalHumans.detail.tools")}
+                  description={
+                    view.capabilityCount > 0
+                      ? t("digitalHumans.detail.toolsDescription", {
+                          count: view.capabilityCount,
+                        })
+                      : t("digitalHumans.detail.toolsEmptyDescription")
+                  }
+                />
+              </div>
+            </section>
+          )}
+
+          <section>
+            <div className="flex items-center gap-2">
+              <MessageSquareText size={15} className="text-primary" aria-hidden="true" />
+              <h3 className="text-sm font-semibold">{t("digitalHumans.detail.tryTasks")}</h3>
+            </div>
+            <div className="mt-2 space-y-2">
+              {view.prompts.map((prompt) => (
+                <Button
+                  key={prompt}
+                  type="button"
+                  variant="outline"
+                  className="h-auto w-full justify-between gap-4 whitespace-normal px-3 py-2.5 text-left"
+                  onClick={() => onLaunch(prompt)}
+                  disabled={busy}
+                >
+                  <span className="line-clamp-2 flex-1 text-sm font-normal leading-5">
+                    {prompt}
+                  </span>
+                  <ChevronRight size={14} className="shrink-0" aria-hidden="true" />
+                </Button>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="sticky bottom-0 border-t border-border/70 bg-background p-4">
+          <Button className="w-full" size="lg" onClick={() => onLaunch()} disabled={busy}>
+            {busy ? (
+              <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Sparkles size={15} aria-hidden="true" />
+            )}
+            {busy ? t("digitalHumans.installing") : primaryLabel}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailPrinciple({
+  Icon,
+  title,
+  description,
+}: {
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icon size={14} aria-hidden="true" />
+      </span>
+      <p className="mt-2 text-xs font-semibold">{title}</p>
+      <p className="mt-1 line-clamp-3 text-xs leading-5 text-muted-foreground">{description}</p>
+    </div>
   );
 }
 

@@ -1,17 +1,50 @@
+import type {
+  PetLongTask,
+  PetLongTaskControlAction,
+  PetLongTaskControlRequest,
+  PetLongTaskControlResult,
+  PetLongTaskSnapshot,
+} from "@cjhyy/code-shell-pet";
+
+export type {
+  PetLongTask,
+  PetLongTaskControlAction,
+  PetLongTaskControlRequest,
+  PetLongTaskControlResult,
+  PetLongTaskSnapshot,
+};
+
 export type PetWorkerState = "active" | "reclaimed" | "disconnected" | "reconciling" | "unknown";
 
-export type PetChatEvent = {
-  kind: "user-submitted";
+export interface PetDelegationReceipt {
   clientMessageId: string;
-  message: string;
+  task: string;
+  workspacePath: string | null;
+  sessionId: string;
+  taskId?: string;
+  reusedSession: boolean;
+}
+
+export interface PetDelegationReceiptGroup {
+  originClientMessageId: string;
+  delegations: PetDelegationReceipt[];
   createdAt: number;
-  origin?: {
-    channel: string;
-    target: string;
-    senderId: string;
-    messageId?: string;
-  };
-};
+}
+
+export type PetChatEvent =
+  | {
+      kind: "user-submitted";
+      clientMessageId: string;
+      message: string;
+      createdAt: number;
+      origin?: {
+        channel: string;
+        target: string;
+        senderId: string;
+        messageId?: string;
+      };
+    }
+  | ({ kind: "delegation-started" } & PetDelegationReceiptGroup);
 
 export type PetSessionRunState = "dormant" | "idle" | "queued" | "running" | "terminal" | "unknown";
 
@@ -114,9 +147,8 @@ export type PetDispatchCommand =
       type: "chat";
       message: string;
       clientMessageId?: string;
+      model?: string;
       preferredProjectPath?: string;
-      digitalHumanId?: string;
-      digitalHumanTeamId?: string;
     };
 
 export type PetDispatchResult =
@@ -145,22 +177,8 @@ export type PetDispatchResult =
       type: "chat";
       petSessionId: string;
       result: unknown;
-      delegation?: {
-        clientMessageId: string;
-        task: string;
-        workspacePath: string | null;
-        digitalHumanId?: string;
-        sessionId: string;
-        reusedSession: boolean;
-      };
-      delegations?: Array<{
-        clientMessageId: string;
-        task: string;
-        workspacePath: string | null;
-        digitalHumanId?: string;
-        sessionId: string;
-        reusedSession: boolean;
-      }>;
+      delegation?: PetDelegationReceipt;
+      delegations?: PetDelegationReceipt[];
       delegationError?: string;
     };
 
@@ -229,6 +247,9 @@ export interface PetApi {
   getDismissedWorkItemIds(): Promise<PetWorkInboxSnapshot>;
   updateDismissedWorkItemIds(update: PetWorkInboxUpdate): Promise<PetWorkInboxSnapshot>;
   onDismissedWorkItemIdsChanged(listener: (snapshot: PetWorkInboxSnapshot) => void): () => void;
+  getLongTasks?(): Promise<PetLongTaskSnapshot>;
+  controlLongTask?(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
+  onLongTasksChanged?(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
   setWidgetExpanded(expanded: boolean): Promise<{ ok: true }>;
@@ -289,6 +310,15 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
         listener(payload as PetWorkInboxSnapshot);
       ipcRenderer.on("pet:work-inbox-dismissed-changed", handler);
       return () => ipcRenderer.removeListener("pet:work-inbox-dismissed-changed", handler);
+    },
+    getLongTasks: () => ipcRenderer.invoke("pet:long-tasks-get") as Promise<PetLongTaskSnapshot>,
+    controlLongTask: (request) =>
+      ipcRenderer.invoke("pet:long-task-control", request) as Promise<PetLongTaskControlResult>,
+    onLongTasksChanged: (listener) => {
+      const handler = (_event: unknown, payload: unknown): void =>
+        listener(payload as PetLongTaskSnapshot);
+      ipcRenderer.on("pet:long-tasks-changed", handler);
+      return () => ipcRenderer.removeListener("pet:long-tasks-changed", handler);
     },
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>

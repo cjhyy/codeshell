@@ -18,6 +18,9 @@ describe("PetPage", () => {
     expect(html).not.toContain('aria-label="关闭 Mimi 概览"');
     expect(html).toContain("world pane");
     expect(html).toContain("chat slot");
-    expect(html).toContain("grid-cols-[minmax(0,1.35fr)_minmax(360px,0.85fr)]");
+    expect(html).toContain("@container/pet-page");
+    expect(html).toContain(
+      "@min-[1100px]/pet-page:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]",
+    );
   });
 });

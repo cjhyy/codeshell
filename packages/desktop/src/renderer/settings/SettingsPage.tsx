@@ -445,21 +445,6 @@ export function SettingsPage({
       .map((module) => ({ value: module.id, label: module.label })),
   })).filter((group) => group.options.length > 0);
 
-  // "__user__" shares the string domain with project paths, which is safe:
-  // project values are absolute filesystem paths, so they can never equal it.
-  const scopeOptions = [
-    {
-      value: "__user__",
-      label: t("settingsX.page.scopeSwitchGlobal"),
-      description: t("settingsX.page.globalScopeOptionHint"),
-    },
-    ...projects.map((project) => ({
-      value: project.path,
-      label: projectLabel(project),
-      description: project.path,
-    })),
-  ];
-
   return (
     <div className="h-full bg-background">
       <div className="flex h-full max-[720px]:flex-col">
@@ -562,59 +547,39 @@ export function SettingsPage({
           ) : null}
         </nav>
 
-        <div className="hidden shrink-0 border-b border-border bg-card px-3 py-2 max-[720px]:flex max-[720px]:items-center max-[720px]:gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0"
-            aria-label={t("settingsX.page.back")}
-            onClick={onBack}
-          >
-            <ArrowLeft className="size-4" aria-hidden />
-          </Button>
-          <SimpleSelect<ModuleId>
-            value={active}
-            options={mobileOptions}
-            ariaLabel={t("settingsX.page.settingsNav")}
-            className="min-w-0 flex-1"
-            onChange={selectModule}
-          />
+        <div className="hidden shrink-0 border-b border-border bg-card px-3 py-2 max-[720px]:flex max-[720px]:flex-col max-[720px]:gap-2">
+          <div className="flex w-full items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              aria-label={t("settingsX.page.back")}
+              onClick={onBack}
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+            </Button>
+            <SimpleSelect<ModuleId>
+              value={active}
+              options={mobileOptions}
+              ariaLabel={t("settingsX.page.settingsNav")}
+              className="min-w-0 flex-1"
+              onChange={selectModule}
+            />
+          </div>
         </div>
 
         <main className="min-w-0 flex-1 overflow-y-auto px-8 pb-10 pt-8 max-[720px]:px-4 max-[720px]:pt-5">
           <div className="mx-auto w-full max-w-5xl">
             <div className="mb-6 border-b border-border pb-4">
-              <div className="mb-1 flex flex-wrap items-center gap-2">
-                {activeGroup ? (
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {activeGroup}
-                  </span>
-                ) : null}
-                {activeUsesPageScope ? (
-                  <SimpleSelect<string>
-                    value={scopeState.kind === "user" ? "__user__" : scopeState.path}
-                    options={scopeOptions}
-                    size="sm"
-                    ariaLabel={t("settingsX.page.scopeSwitcher")}
-                    className="w-auto min-w-44 max-w-full max-[720px]:w-full"
-                    onChange={(value) =>
-                      changeScope(
-                        value === "__user__" ? { kind: "user" } : { kind: "project", path: value },
-                      )
-                    }
-                  />
-                ) : (
-                  <span className="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground">
-                    {t("settingsX.page.scopeManagedInSection")}
-                  </span>
-                )}
-              </div>
+              {activeGroup ? (
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {activeGroup}
+                </p>
+              ) : null}
               <h1 className="text-xl font-semibold tracking-tight">{activeModule?.label}</h1>
-              {activeUsesPageScope ? (
-                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-                  {scopeState.kind === "project"
-                    ? t("settingsX.page.projectScopeHint")
-                    : t("settingsX.page.globalScopeHint")}
+              {activeUsesPageScope && scopeState.kind === "project" ? (
+                <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+                  {t("settingsX.page.projectScopeHint")}
                 </p>
               ) : null}
               {activeUsesPageScope && scopeProjectPath ? (

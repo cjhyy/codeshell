@@ -43,6 +43,32 @@ describe("PetWorkMemoryStore", () => {
     }
   });
 
+  test("deduplicates replayed terminal closures across reloads", async () => {
+    const root = await mkdtemp(join(tmpdir(), "cs-pet-mem-"));
+    try {
+      const filePath = join(root, "pet", "work-memory.json");
+      const entry = {
+        segmentId: "s1",
+        dedupeKey: "task-1:1:completed",
+        objective: "Ship the task",
+        outcome: "completed" as const,
+        at: 5,
+      };
+      const store = new PetWorkMemoryStore(filePath, () => 5);
+      await store.load();
+      await store.append(entry);
+      await store.append({ ...entry, at: 6 });
+      expect(store.entries()).toHaveLength(1);
+
+      const reopened = new PetWorkMemoryStore(filePath, () => 7);
+      await reopened.load();
+      await reopened.append({ ...entry, at: 7 });
+      expect(reopened.entries()).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test("caps stored entries at 1000, keeping the most recent", async () => {
     const root = await mkdtemp(join(tmpdir(), "cs-pet-mem-"));
     try {
@@ -152,6 +178,27 @@ describe("PetWorkMemoryStore", () => {
       await store.load(); // must not throw even though the parent dir is absent
       expect(store.entries()).toHaveLength(0);
       expect(store.activeSegment()).toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("does not acknowledge an entry when its durable write fails", async () => {
+    const root = await mkdtemp(join(tmpdir(), "cs-pet-mem-"));
+    try {
+      const blockingFile = join(root, "not-a-directory");
+      await writeFile(blockingFile, "block mkdir", "utf8");
+      const store = new PetWorkMemoryStore(join(blockingFile, "work-memory.json"), () => 5);
+      await expect(
+        store.append({
+          segmentId: "s1",
+          dedupeKey: "task-1:1:completed",
+          objective: "Must persist",
+          outcome: "completed",
+          at: 5,
+        }),
+      ).rejects.toThrow();
+      expect(store.entries()).toEqual([]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -314,6 +314,30 @@ export function deactivateProfile(cwd: string): void {
   deactivateWorkspaceProfile(settings, cwd);
 }
 
+/**
+ * Rebind one existing work Session to another digital human. UI-only Sessions
+ * do not have a core directory until their first run, so absence is a normal
+ * `persisted: false` result; the renderer's Session index remains authoritative
+ * until Engine materializes it with the same workspaceProfile.
+ */
+export function setSessionWorkspaceProfile(
+  sessionId: string,
+  profileName: string,
+): { persisted: boolean } {
+  if (!WORKSPACE_PROFILE_NAME_RE.test(profileName) || !readWorkspaceProfile(profileName)) {
+    throw new Error(`Digital human "${profileName}" does not exist`);
+  }
+  const sessions = new SessionManager();
+  if (!sessions.exists(sessionId)) return { persisted: false };
+  const state = sessions.readSessionState(sessionId);
+  if (!state) return { persisted: false };
+  const persisted = sessions.saveStateOrUpdateFields(state, {
+    workspaceProfile: profileName,
+  });
+  if (!persisted) throw new Error(`Could not switch digital human for Session ${sessionId}`);
+  return { persisted: true };
+}
+
 export type ProfileCatalogEntry = DigitalHumanCatalogEntry & { installed: boolean };
 
 export function listProfileCatalog(): ProfileCatalogEntry[] {
@@ -326,7 +350,13 @@ export function listProfileCatalog(): ProfileCatalogEntry[] {
 export function installCatalogProfile(name: string): void {
   const entry = DIGITAL_HUMAN_CATALOG.find((candidate) => candidate.name === name);
   if (!entry) throw new Error(`Unknown digital human catalog entry "${name}"`);
-  const { category: _category, tags: _tags, ...profile } = entry;
+  const {
+    category: _category,
+    tags: _tags,
+    samplePrompts: _samplePrompts,
+    usageCount: _usageCount,
+    ...profile
+  } = entry;
   saveWorkspaceProfile(profile);
 }
 
@@ -361,7 +391,7 @@ export function deleteProfile(name: string, options: DeleteProfileOptions = {}):
   const referencingSessions = new SessionManager().findSessionIdsByWorkspaceProfile(name, 6);
   if (referencingSessions.length > 0) {
     throw new Error(
-      `Digital human "${name}" is pinned by existing Session${
+      `Digital human "${name}" is still bound to existing Session${
         referencingSessions.length > 1 ? "s" : ""
       }: ${referencingSessions.join(", ")}. Delete those Sessions before deleting the profile.`,
     );

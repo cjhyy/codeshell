@@ -1,13 +1,8 @@
-import {
-  type PetDigitalHumanOption,
-  type PetReusableSessionOption,
-  type PetWorkspaceOption,
-} from "./delegation.js";
+import { type PetReusableSessionOption, type PetWorkspaceOption } from "./delegation.js";
 
 const MAX_RUNTIME_CONTEXT_LENGTH = 32_768;
 const MAX_WORKSPACES = 64;
 const MAX_REUSABLE_SESSIONS = 32;
-const MAX_DIGITAL_HUMANS = 8;
 const MAX_ID_LENGTH = 128;
 const MAX_NAME_LENGTH = 256;
 const MAX_DESCRIPTION_LENGTH = 4_096;
@@ -16,7 +11,6 @@ const CONTROL_CHARACTER_RE = /[\u0000-\u001f\u007f]/u;
 export interface PetRunOptions {
   workspaces: readonly PetWorkspaceOption[];
   reusableSessions: readonly PetReusableSessionOption[];
-  digitalHumans: readonly PetDigitalHumanOption[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -92,34 +86,13 @@ function parseReusableSessions(value: unknown): PetReusableSessionOption[] | und
   return result;
 }
 
-function parseDigitalHumans(value: unknown): PetDigitalHumanOption[] | undefined {
-  if (!Array.isArray(value) || value.length > MAX_DIGITAL_HUMANS) return undefined;
-  const ids = new Set<string>();
-  const result: PetDigitalHumanOption[] = [];
-  for (const entry of value) {
-    if (!isRecord(entry) || !validOpaqueId(entry.id) || ids.has(entry.id)) return undefined;
-    const name = normalizedName(entry.name);
-    const description = normalizedDescription(entry.description);
-    if (!name || description === null) return undefined;
-    ids.add(entry.id);
-    result.push({
-      id: entry.id,
-      name,
-      ...(description ? { description } : {}),
-    });
-  }
-  return result;
-}
-
 function freezeOptions(options: {
   workspaces: PetWorkspaceOption[];
   reusableSessions: PetReusableSessionOption[];
-  digitalHumans: PetDigitalHumanOption[];
 }): PetRunOptions {
   return Object.freeze({
     workspaces: Object.freeze(options.workspaces.map((entry) => Object.freeze(entry))),
     reusableSessions: Object.freeze(options.reusableSessions.map((entry) => Object.freeze(entry))),
-    digitalHumans: Object.freeze(options.digitalHumans.map((entry) => Object.freeze(entry))),
   });
 }
 
@@ -134,7 +107,6 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
   const empty = freezeOptions({
     workspaces: [],
     reusableSessions: [],
-    digitalHumans: [],
   });
   const workspaces =
     profileParams.workspaces === undefined ? [] : parseWorkspaces(profileParams.workspaces);
@@ -142,17 +114,12 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
     profileParams.reusableSessions === undefined
       ? []
       : parseReusableSessions(profileParams.reusableSessions);
-  const digitalHumans =
-    profileParams.digitalHumans === undefined
-      ? []
-      : parseDigitalHumans(profileParams.digitalHumans);
-  if (!workspaces || !reusableSessions || !digitalHumans) return empty;
+  if (!workspaces || !reusableSessions) return empty;
   const workspaceIds = new Set(workspaces.map((workspace) => workspace.id));
   if (reusableSessions.some((session) => !workspaceIds.has(session.workspaceId))) return empty;
   return freezeOptions({
     workspaces,
     reusableSessions,
-    digitalHumans,
   });
 }
 
@@ -214,9 +181,6 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
   const hasCanonicalReusableSessions =
     profileParams !== undefined &&
     Object.prototype.hasOwnProperty.call(profileParams, "reusableSessions");
-  const hasCanonicalDigitalHumans =
-    profileParams !== undefined &&
-    Object.prototype.hasOwnProperty.call(profileParams, "digitalHumans");
 
   const runtimeContext = hasCanonicalRuntimeContext
     ? profileParams.runtimeContext
@@ -246,8 +210,5 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
     }
   }
 
-  if (hasCanonicalDigitalHumans && !parseDigitalHumans(profileParams.digitalHumans)) {
-    return "profileParams.digitalHumans contains an invalid or duplicate digital human";
-  }
   return null;
 }

@@ -11,6 +11,11 @@ export function encodeCwd(cwd: string): string {
 /** Session discovered from an external coding CLI. */
 export interface DiscoveredSession {
   sessionId: string;
+  /** The cwd recorded by the external CLI for this session. Consumers must
+   *  open/resume the session with this path instead of assuming the currently
+   *  selected CodeShell project has the same cwd (DriveAgent worktrees often
+   *  do not). */
+  cwd: string;
   firstMessage: string;
   lastModified: number;
   messageCount: number;
@@ -140,6 +145,7 @@ export function discoverSessions(
     }
     out.push({
       sessionId: s.sessionId,
+      cwd,
       firstMessage: firstUserMessage(lines),
       lastModified: s.mtimeMs,
       messageCount: countUserMessages(lines),

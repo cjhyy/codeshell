@@ -1,5 +1,5 @@
 import React from "react";
-import type { DigitalHumanTeam } from "@cjhyy/code-shell-pet";
+import type { DigitalHumanTeam } from "../../shared/digital-human-team";
 import type {
   DigitalHumanCatalogEntry,
   DigitalHumanProfileEntry,

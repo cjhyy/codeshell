@@ -24,6 +24,14 @@ const userItem = (text: string) => ({
   type: "response_item",
   payload: { type: "message", role: "user", content: [{ type: "input_text", text }] },
 });
+const multipartUserItem = (texts: string[]) => ({
+  type: "response_item",
+  payload: {
+    type: "message",
+    role: "user",
+    content: texts.map((text) => ({ type: "input_text", text })),
+  },
+});
 const assistantItem = (text: string) => ({
   type: "response_item",
   payload: { type: "message", role: "assistant", content: [{ type: "output_text", text }] },
@@ -56,6 +64,34 @@ describe("readCodexRecentHistory", () => {
     expect(r.hasMore).toBe(true);
     // 2 user (env_context skipped) + 2 assistant = 4 real messages
     expect(r.totalCount).toBe(4);
+  });
+
+  it("keeps the real input when Codex stores it beside injected context parts", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const cwd = "/tmp/proj";
+    const id = "id-multipart-user";
+    writeRollout(home, "2026/06/24", `rollout-${id}.jsonl`, [
+      metaLine(id, cwd),
+      multipartUserItem([
+        "<recommended_plugins>hidden</recommended_plugins>",
+        "# AGENTS.md instructions for /tmp/proj\n<INSTRUCTIONS>hidden</INSTRUCTIONS>",
+        "<environment_context><cwd>/tmp/proj</cwd></environment_context>",
+        "真正的用户输入",
+      ]),
+      assistantItem("收到"),
+    ]);
+
+    expect(readCodexRecentHistory(cwd, id, 10, home).messages).toEqual([
+      { role: "user", text: "真正的用户输入" },
+      { role: "assistant", text: "收到" },
+    ]);
+    expect(
+      parseCodexTranscriptLine(
+        JSON.stringify(
+          multipartUserItem(["<environment_context>hidden</environment_context>", "live prompt"]),
+        ),
+      ),
+    ).toEqual([{ type: "user", text: "live prompt" }]);
   });
 
   it("captures function_call and custom_tool_call as tool summaries", () => {

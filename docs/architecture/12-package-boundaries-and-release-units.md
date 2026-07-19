@@ -111,7 +111,8 @@ Its four responsibilities move together:
 - `projection-extension.ts`, `session-index.ts` and
   `pending-decision-index.ts` maintain Pet's cross-session read model and
   protocol notifications.
-- `team.ts` and the delegation types define Pet-led digital-human teams.
+- delegation types define only bounded Workspace and reusable-Session choices;
+  digital-human team templates are Desktop-owned and do not route through Pet.
 
 Core supplies the generic mechanisms these responsibilities need:
 `RunBehaviorProfile`, extension tools, run parameter validation, protocol
@@ -134,13 +135,14 @@ force core releases for Pet-only iteration.
 
 ### Is Pet over-split?
 
-No. `pet` is small and internally cohesive. Splitting projection, delegation
-and teams into separate npm packages now would create multiple manifests,
-versioning decisions and cross-package tests for code that is released and
-consumed together.
+No. `pet` is small and internally cohesive. Splitting projection and delegation
+into separate npm packages now would create multiple manifests, versioning
+decisions and cross-package tests for code that is released and consumed
+together. Digital-human team templates are now Desktop-owned; `/team` remains
+only as a source-compatible legacy contract.
 
-The package keeps its compatibility root and now exposes three focused stable
-subpaths:
+The package keeps its compatibility root, exposes two focused runtime subpaths,
+and temporarily retains one legacy data-contract subpath:
 
 ```jsonc
 {
@@ -165,16 +167,16 @@ subpaths:
 }
 ```
 
-Hosts that only store or render a `DigitalHumanTeam` should import
-`@cjhyy/code-shell-pet/team`; the worker should import
-`@cjhyy/code-shell-pet/capability`; bridges should take snapshot/delta contracts
-from `/protocol`. The root remains for existing consumers and the current
-dynamic capability loader. Source aliases are exact rather than wildcarded, so
-in-repo consumers cannot accidentally turn an internal Pet module into a
+The worker should import `@cjhyy/code-shell-pet/capability`; bridges should take
+snapshot/delta contracts from `/protocol`. Desktop stores and renders teams with
+its own shared digital-human contract. `/team` and the root export remain for
+existing consumers and the current dynamic capability loader, but new code must
+not use them to route Pet work. Source aliases are exact rather than wildcarded,
+so in-repo consumers cannot accidentally turn an internal Pet module into a
 de-facto public subpath.
 
-Only create a separate team/catalog package if that model gains non-Pet
-consumers or an independent release cadence.
+Only create a separate team/catalog package if the Desktop-owned model gains
+non-Desktop consumers or an independent release cadence.
 
 ## Findings
 

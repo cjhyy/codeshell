@@ -15,6 +15,7 @@ import {
   saveSessionIndex,
   saveTranscript,
   setActiveSession,
+  setSessionWorkspaceProfileLocal,
 } from "./transcripts";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem" | "clear">;
@@ -232,6 +233,33 @@ describe("transcript snapshot cursor persistence", () => {
       "current",
     ]);
     expect(loadSessionIndex("repo-a").activeSessionId).toBe("current");
+  });
+
+  it("switches a Session digital human without replacing its history identity", () => {
+    saveSessionIndex("repo-a", {
+      activeSessionId: "work",
+      sessions: [
+        {
+          id: "work",
+          engineSessionId: "engine-work",
+          title: "Checkout PRD",
+          workspaceProfile: "product-manager",
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    });
+
+    const next = setSessionWorkspaceProfileLocal("repo-a", "work", "ui-designer");
+
+    expect(next.activeSessionId).toBe("work");
+    expect(next.sessions[0]).toMatchObject({
+      id: "work",
+      engineSessionId: "engine-work",
+      title: "Checkout PRD",
+      workspaceProfile: "ui-designer",
+    });
+    expect(loadSessionIndex("repo-a").sessions[0]?.workspaceProfile).toBe("ui-designer");
   });
 
   it("hydrates context_transfer as a background package card", () => {

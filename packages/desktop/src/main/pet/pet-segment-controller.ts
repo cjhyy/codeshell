@@ -36,6 +36,8 @@ export interface PetSegmentControllerOptions {
 }
 
 export interface PetDelegationClosure {
+  /** Stable across crash replay; the work-memory store suppresses duplicates. */
+  dedupeKey?: string;
   objective: string;
   outcome: PetWorkMemoryEntry["outcome"];
   workspace?: string;
@@ -70,6 +72,7 @@ export class PetSegmentController {
     await this.options.store.append(
       buildWorkMemoryEntry({
         segmentId,
+        ...(closure.dedupeKey ? { dedupeKey: closure.dedupeKey } : {}),
         objective: closure.objective,
         outcome: closure.outcome,
         ...(closure.workspace ? { workspace: closure.workspace } : {}),

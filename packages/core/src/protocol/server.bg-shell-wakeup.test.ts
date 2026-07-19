@@ -76,6 +76,7 @@ function makeRehydratableEngineFactory(
       setAskUser() {},
       setBrowserBridge() {},
       setInjectCredential() {},
+      setSessionMessageRouter() {},
       setPlanMode() {},
       isHeadless: () => false,
       sessionExistsOnDisk: (sessionId: string) =>

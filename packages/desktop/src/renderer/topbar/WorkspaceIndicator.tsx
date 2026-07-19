@@ -35,6 +35,8 @@ interface Props {
   projectName: string | null;
   sessionBusy?: boolean;
   includeProjectNameInLabel?: boolean;
+  /** Keep branch/worktree details out of the title bar; expose them on hover. */
+  iconOnly?: boolean;
 }
 
 interface CleanupConfirm {
@@ -129,6 +131,7 @@ export function WorkspaceIndicator({
   projectName,
   sessionBusy = false,
   includeProjectNameInLabel = true,
+  iconOnly = false,
 }: Props) {
   const { t } = useT();
   const toast = useToast();
@@ -443,13 +446,17 @@ export function WorkspaceIndicator({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="no-drag inline-flex h-7 max-w-[320px] items-center gap-1.5 rounded-sm px-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
+            className={cn(
+              "no-drag inline-flex h-7 items-center rounded-sm text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25",
+              iconOnly ? "w-7 justify-center" : "max-w-[320px] gap-1.5 px-2",
+            )}
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-            title={t("topbar.workspace.openSwitcher")}
+            title={iconOnly ? label : t("topbar.workspace.openSwitcher")}
+            aria-label={iconOnly ? `${t("topbar.workspace.openSwitcher")}: ${label}` : undefined}
             aria-busy={isLoading}
           >
             <GitBranch className="h-3.5 w-3.5 shrink-0" />
-            <span className="min-w-0 truncate">{label}</span>
+            {!iconOnly && <span className="min-w-0 truncate">{label}</span>}
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[520px] max-w-[calc(100vw-2rem)] p-0">

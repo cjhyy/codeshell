@@ -98,6 +98,15 @@ export type { QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 
 const require = createRequire(import.meta.url);
 const agentEntry = require.resolve("@cjhyy/code-shell-capability-coding/bin/agent-server-stdio");
+// Resolve host-owned capabilities from the desktop package before spawning the
+// worker. In a workspace install Node dereferences the coding/core symlinks, so
+// a dynamic import performed from packages/core cannot see dependencies that
+// are linked only under packages/desktop/node_modules (Pet is one of them).
+// Passing absolute import URLs keeps development and packaged resolution
+// identical and prevents a silently skipped capability from surfacing later as
+// `unknown behavior profile: pet`.
+const arenaCapabilityModule = import.meta.resolve("@cjhyy/code-shell-arena");
+const petCapabilityModule = import.meta.resolve("@cjhyy/code-shell-pet/capability");
 
 function normalizeCredentialResolveParams(params: Record<string, unknown> | undefined): {
   cwd?: string;
@@ -213,8 +222,8 @@ export class AgentBridge implements PetStateBridge {
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
         CODE_SHELL_CAPABILITY_MODULES:
-          "@cjhyy/code-shell-arena#createArenaCapability," +
-          "@cjhyy/code-shell-pet#createPetCapability",
+          `${arenaCapabilityModule}#createArenaCapability,` +
+          `${petCapabilityModule}#createPetCapability`,
       }),
       fallbackCwd: resolveNoRepoCwd,
       log: (event, data) => dlog("bridge", event, data),

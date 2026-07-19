@@ -33,6 +33,23 @@ describe("transcriptsReducer pending steer bubbles", () => {
     expect(assistant).toMatchObject({ kind: "assistant", text: "hello" });
   });
 
+  it("renders a host-queued Session message as an ordinary user bubble", () => {
+    const map = transcriptsReducer(
+      {},
+      {
+        type: "stream",
+        bucket: "project::ui",
+        event: { type: "session_user_message", text: "Read docs/prd.md and design the UI." },
+      },
+    );
+
+    expect(map["project::ui"].messages).toHaveLength(1);
+    expect(map["project::ui"].messages[0]).toMatchObject({
+      kind: "user",
+      text: "Read docs/prd.md and design the UI.",
+    });
+  });
+
   it("does not move snapshotSeq backwards for an older stream batch", () => {
     let map: TranscriptsMap = {
       b: { ...INITIAL_STATE, snapshotSeq: 12 },

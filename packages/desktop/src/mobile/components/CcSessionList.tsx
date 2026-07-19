@@ -40,7 +40,11 @@ export function CcSessionList({
   // Tapping a session opens the permission-mode picker first (mirrors the desktop
   // CCRoomView flow), then onOpen with the chosen mode — instead of silently
   // hard-coding "default".
-  const [picking, setPicking] = useState<{ sessionId: string; label: string } | null>(null);
+  const [picking, setPicking] = useState<{
+    sessionId: string;
+    label: string;
+    cwd: string;
+  } | null>(null);
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="mobile-side-header flex flex-col gap-2 px-3 py-3">
@@ -96,7 +100,11 @@ export function CcSessionList({
                 <button
                   type="button"
                   onClick={() =>
-                    setPicking({ sessionId: s.sessionId, label: s.firstMessage || s.sessionId })
+                    setPicking({
+                      sessionId: s.sessionId,
+                      label: s.firstMessage || s.sessionId,
+                      cwd: s.cwd || cwd,
+                    })
                   }
                   className={cn(
                     "mobile-list-item flex w-full min-w-0 flex-col gap-1 rounded-lg px-3 py-2.5 text-left",
@@ -113,6 +121,11 @@ export function CcSessionList({
                       {relativeTime(s.lastModified, Date.now(), lang)}
                     </span>
                   </div>
+                  {s.cwd && s.cwd !== cwd && (
+                    <span className="w-full truncate text-[11px] text-muted-foreground">
+                      {s.cwd}
+                    </span>
+                  )}
                 </button>
               </li>
             ))}
@@ -124,8 +137,9 @@ export function CcSessionList({
           sessionLabel={picking.label}
           onPick={(mode) => {
             const sid = picking.sessionId;
+            const sessionCwd = picking.cwd;
             setPicking(null);
-            onOpen(sid, cwd, mode);
+            onOpen(sid, sessionCwd, mode);
           }}
           onCancel={() => setPicking(null)}
         />

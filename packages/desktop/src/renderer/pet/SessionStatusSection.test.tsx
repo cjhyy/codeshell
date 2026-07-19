@@ -68,6 +68,16 @@ describe("SessionStatusSection", () => {
     expect(html).not.toContain("tool output");
   });
 
+  test("can render as the heading-free global list inside the standalone Pet window", () => {
+    const html = renderToStaticMarkup(
+      <SessionStatusSection sessions={[session()]} showHeading={false} />,
+    );
+
+    expect(html).toContain("Build the desktop pet overview");
+    expect(html).toContain('aria-label="工作会话"');
+    expect(html).not.toContain("<h3");
+  });
+
   test("has distinct empty, reclaimed, disconnected, stale, error and reconciling language", () => {
     const states = ["empty", "reclaimed", "disconnected", "stale", "error", "reconciling"] as const;
     const expected = [

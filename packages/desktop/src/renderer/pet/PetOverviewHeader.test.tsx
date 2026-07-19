@@ -21,6 +21,16 @@ function findElement(node: unknown, tagName: string): any {
   return undefined;
 }
 
+function findElementByProp(node: unknown, prop: string): any {
+  const current = node as { childNodes?: unknown[] };
+  if (reactPropsOf(current)[prop] !== undefined) return current;
+  for (const child of current.childNodes ?? []) {
+    const found = findElementByProp(child, prop);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 function textOf(node: unknown): string {
   const current = node as { data?: string; textContent?: string; childNodes?: unknown[] };
   if (current.data !== undefined) return current.data;
@@ -40,6 +50,7 @@ describe("PetOverviewHeader", () => {
       />,
     );
     expect(html).toContain("Mimi 工作台");
+    expect(html).toContain("shrink-0 border-b");
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('data-pet-overview-stat="running"');
     expect(html).not.toContain('data-pet-overview-stat="pending"');
@@ -49,6 +60,28 @@ describe("PetOverviewHeader", () => {
 
   test("reveals deterministic counts and freshness when clicked", async () => {
     ensureMiniDom();
+    const testWindow = window as unknown as Record<string, any>;
+    testWindow.innerWidth = 900;
+    testWindow.innerHeight = 820;
+    testWindow.requestAnimationFrame = () => 1;
+    testWindow.cancelAnimationFrame = () => {};
+    const elementPrototype = testWindow.HTMLElement.prototype as Record<string, any>;
+    elementPrototype.getBoundingClientRect = () => ({
+      top: 60,
+      bottom: 90,
+      left: 600,
+      right: 760,
+      width: 160,
+      height: 30,
+    });
+    Object.defineProperty(elementPrototype, "offsetWidth", {
+      configurable: true,
+      get: () => 352,
+    });
+    Object.defineProperty(elementPrototype, "offsetHeight", {
+      configurable: true,
+      get: () => 128,
+    });
     const container = document.createElement("div") as unknown as HTMLElement;
     const root = createRoot(container);
     await act(async () => {
@@ -70,10 +103,14 @@ describe("PetOverviewHeader", () => {
     });
 
     expect(reactPropsOf(button)["aria-expanded"]).toBe(true);
-    expect(textOf(container)).toContain("进行中2");
-    expect(textOf(container)).toContain("待决策1");
-    expect(textOf(container)).toContain("待跟进3");
-    expect(textOf(container)).toContain("1 分钟前更新");
+    expect(textOf(container)).not.toContain("进行中2");
+    expect(textOf(document.body)).toContain("进行中2");
+    expect(textOf(document.body)).toContain("待决策1");
+    expect(textOf(document.body)).toContain("待跟进3");
+    expect(textOf(document.body)).toContain("1 分钟前更新");
+    const details = findElementByProp(document.body, "data-pet-overview-popover");
+    expect(details).toBeTruthy();
+    expect(details.parentNode).toBe(document.body);
     await act(async () => root.unmount());
   });
 

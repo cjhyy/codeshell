@@ -43,6 +43,8 @@ export type ApprovalPathScope = "file" | "dir" | "tool";
 /** Mirror of core DiscoveredSession (mobile-remote can't import core). */
 export interface CcDiscoveredSession {
   sessionId: string;
+  /** External CLI's authoritative cwd. Older hosts may omit it. */
+  cwd?: string;
   firstMessage: string;
   lastModified: number;
   messageCount: number;

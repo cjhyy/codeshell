@@ -41,6 +41,7 @@ function makeWorkspaceBridgeEngine() {
     setPlanMode() {},
     setBrowserBridge() {},
     setInjectCredential() {},
+    setSessionMessageRouter() {},
     setWorkspaceBridge(bridge: WorkspaceBridge | undefined) {
       state.workspaceBridge = bridge;
     },
@@ -118,6 +119,7 @@ describe("AgentServer workspace bridge", () => {
       setPlanMode() {},
       setBrowserBridge() {},
       setInjectCredential() {},
+      setSessionMessageRouter() {},
       isHeadless: () => false,
       releaseSessionWorkspace(sessionId: string) {
         released.push(sessionId);
@@ -169,6 +171,7 @@ describe("AgentServer workspace bridge", () => {
       setPlanMode() {},
       setBrowserBridge() {},
       setInjectCredential() {},
+      setSessionMessageRouter() {},
       isHeadless: () => false,
       setSessionWorkspace(sessionId: string, workspace: unknown) {
         updates.push({ sessionId, workspace });

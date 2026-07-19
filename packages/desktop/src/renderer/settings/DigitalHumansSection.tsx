@@ -159,7 +159,8 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
         open={editorOpen}
         profile={editing}
         existingIds={profiles.map((profile) => profile.name)}
-        skills={skills}
+        skills={skills.filter((skill) => skill.source !== "project")}
+        projectSkills={skills.filter((skill) => skill.source === "project")}
         busy={busy}
         onOpenChange={setEditorOpen}
         onSave={(profile) => void save(profile)}

@@ -43,6 +43,7 @@ import type {
   DigitalHumanProfileImportCommitResult,
   DigitalHumanProfileImportPickResult,
 } from "../shared/digital-human-profile-transfer";
+import type { DigitalHumanTeam } from "../shared/digital-human-team";
 
 export type {
   PluginPanelBindInput,
@@ -64,6 +65,8 @@ export type {
 export type {
   PetApi,
   PetChatEvent,
+  PetDelegationReceipt,
+  PetDelegationReceiptGroup,
   PetAttentionEvent,
   PetAttentionSnapshot,
   PetDispatchCommand,
@@ -80,6 +83,11 @@ export type {
   PetWidgetPosition,
   PetWorkInboxSnapshot,
   PetWorkInboxUpdate,
+  PetLongTask,
+  PetLongTaskControlAction,
+  PetLongTaskControlRequest,
+  PetLongTaskControlResult,
+  PetLongTaskSnapshot,
 } from "./pet-api";
 
 export type { SessionWorkspace, SessionForkLineage };
@@ -398,7 +406,7 @@ export interface TurnUndoResult {
   ok: boolean;
 }
 
-export type MemoryLevel = "user" | "project";
+export type MemoryLevel = "user" | "project" | "profile";
 export type MemoryScope = "user" | "dream" | "pending";
 export type MemoryType = "user" | "feedback" | "project" | "reference";
 
@@ -442,6 +450,7 @@ export interface SaveMemoryInput {
   type: MemoryType;
   content: string;
   cwd?: string;
+  profileName?: string;
   pinned?: boolean;
   id?: string;
   origin?: "auto" | "manual" | "dream";
@@ -809,6 +818,15 @@ export interface CodeshellApi {
       attachments?: InputAttachmentMeta[];
       planMode?: boolean;
       behaviorMode?: "quickChatRestricted";
+      /** Bind this Session to a workspace profile/digital human. */
+      workspaceProfile?: string;
+      /** Closed same-project Session choices available to SendMessageToSession. */
+      sessionMessageTargets?: Array<{
+        sessionId: string;
+        title: string;
+        workspaceRoot: string;
+        workspaceProfile?: string;
+      }>;
       /**
        * Goal mode: when set, the engine runs loop-until-done — on each
        * natural completion a GoalStopHook judges whether this goal is met
@@ -1275,13 +1293,19 @@ export interface CodeshellApi {
    * level="user" returns entries from ~/.code-shell/memory/<scope>;
    * level="project" scopes under the given cwd's project memory dir.
    */
-  listMemory(level: MemoryLevel, scope: MemoryScope, cwd?: string): Promise<RendererMemoryEntry[]>;
+  listMemory(
+    level: MemoryLevel,
+    scope: MemoryScope,
+    cwd?: string,
+    profileName?: string,
+  ): Promise<RendererMemoryEntry[]>;
   /** Read one memory entry's full content. Returns null if not found. */
   readMemory(
     level: MemoryLevel,
     scope: MemoryScope,
     name: string,
     cwd?: string,
+    profileName?: string,
   ): Promise<RendererMemoryEntryFull | null>;
   /** Create or overwrite a memory entry. Returns the file slug. */
   saveMemory(input: SaveMemoryInput): Promise<string>;
@@ -1291,6 +1315,7 @@ export interface CodeshellApi {
     scope: MemoryScope,
     name: string,
     cwd?: string,
+    profileName?: string,
   ): Promise<boolean>;
   /** 审批门: list global memories auto-extracted as "global" awaiting approval
    *  (full content included so the panel shows it inline). */
@@ -1312,8 +1337,10 @@ export interface CodeshellApi {
    * promise resolves when consolidation finishes. `summary` is the LLM's
    * one-paragraph description of what it changed.
    */
-  runDream(level: MemoryLevel, cwd?: string): Promise<{ ran: boolean; summary: string }>;
-
+  runDream(
+    level: Exclude<MemoryLevel, "profile">,
+    cwd?: string,
+  ): Promise<{ ran: boolean; summary: string }>;
   // Phase 5 — settings / sessions / logs.
   /**
    * Authoritative no-repo conversation cwd (~/.code-shell/no-repo) resolved by
@@ -1354,6 +1381,7 @@ export interface CodeshellApi {
       title: string;
       updatedAt: number;
       origin: "desktop" | "automation";
+      workspaceProfile?: string;
     }>;
     nextCursor: string | null;
   }>;
@@ -1448,6 +1476,11 @@ export interface CodeshellApi {
   >;
   activateProfile(cwd: string, name: string): Promise<void>;
   deactivateProfile(cwd: string): Promise<void>;
+  /** Rebind a project Session to another digital human. */
+  setSessionWorkspaceProfile(
+    sessionId: string,
+    profileName: string,
+  ): Promise<{ persisted: boolean }>;
   listProfileCatalog(): Promise<
     Array<{
       name: string;
@@ -1463,6 +1496,8 @@ export interface CodeshellApi {
       version?: string;
       category: "product" | "design" | "engineering" | "quality";
       tags: string[];
+      samplePrompts: string[];
+      usageCount: number;
       installed: boolean;
     }>
   >;
@@ -1477,10 +1512,8 @@ export interface CodeshellApi {
     name: string,
     options?: { cwd?: string; clearActiveProject?: boolean },
   ): Promise<void>;
-  listDigitalHumanTeams(): Promise<import("@cjhyy/code-shell-pet").DigitalHumanTeam[]>;
-  saveDigitalHumanTeam(
-    team: import("@cjhyy/code-shell-pet").DigitalHumanTeam,
-  ): Promise<import("@cjhyy/code-shell-pet").DigitalHumanTeam>;
+  listDigitalHumanTeams(): Promise<DigitalHumanTeam[]>;
+  saveDigitalHumanTeam(team: DigitalHumanTeam): Promise<DigitalHumanTeam>;
   deleteDigitalHumanTeam(id: string): Promise<void>;
   /** Force context compaction for a live engine session. */
   compactSession(

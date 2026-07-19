@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Zap, Image } from "lucide-react";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 import { useT } from "../i18n/I18nProvider";
@@ -29,9 +30,14 @@ interface Props {
   options: ModelOption[];
   onSelect: (opt: ModelOption) => void;
   disabled?: boolean;
+  /**
+   * Render the fixed-position menu outside ancestors that establish their own
+   * containing block (for example a backdrop-filter surface).
+   */
+  portal?: boolean;
 }
 
-export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
+export function ModelPill({ activeKey, options, onSelect, disabled, portal = false }: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -45,7 +51,9 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -63,6 +71,55 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
 
   const active = options.find((o) => o.key === activeKey) ?? null;
   const label = active?.label ?? activeKey ?? t("chat.model.select");
+  const popover = open ? (
+    <ul
+      ref={popoverRef}
+      style={popoverStyle}
+      className="cs-popup-surface max-h-[min(20rem,calc(100vh-20px))] w-72 max-w-[calc(100vw-20px)] overflow-y-auto rounded-md p-1"
+      role="listbox"
+      aria-label={t("chat.model.select")}
+    >
+      {options.length === 0 ? (
+        <li className="px-2 py-1.5 text-sm text-muted-foreground">
+          {t("chat.model.noModels")}
+        </li>
+      ) : (
+        options.map((o) => (
+          <li key={o.key} role="none">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              role="option"
+              aria-selected={o.key === activeKey}
+              data-model-key={o.key}
+              className={cn(
+                "cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal",
+                o.key === activeKey && "bg-accent",
+              )}
+              onClick={() => {
+                onSelect(o);
+                setOpen(false);
+                anchorRef.current?.focus();
+              }}
+            >
+              <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                {o.provider}
+              </span>
+              <span className="flex-1 truncate text-left">{o.label}</span>
+              {o.supportsVision && (
+                <Image
+                  size={11}
+                  aria-label={t("chat.model.visionSupported")}
+                  className="opacity-60"
+                />
+              )}
+            </Button>
+          </li>
+        ))
+      )}
+    </ul>
+  ) : null;
 
   return (
     <div className="relative" ref={ref}>
@@ -90,55 +147,7 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
           aria-hidden="true"
         />
       </Button>
-      {open && (
-        <ul
-          ref={popoverRef}
-          style={popoverStyle}
-          className="cs-popup-surface max-h-[min(20rem,calc(100vh-20px))] w-72 overflow-y-auto rounded-md p-1"
-          role="listbox"
-          aria-label={t("chat.model.select")}
-        >
-          {options.length === 0 ? (
-            <li className="px-2 py-1.5 text-sm text-muted-foreground">
-              {t("chat.model.noModels")}
-            </li>
-          ) : (
-            options.map((o) => (
-              <li key={o.key} role="none">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  role="option"
-                  aria-selected={o.key === activeKey}
-                  data-model-key={o.key}
-                  className={cn(
-                    "cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal",
-                    o.key === activeKey && "bg-accent",
-                  )}
-                  onClick={() => {
-                    onSelect(o);
-                    setOpen(false);
-                    anchorRef.current?.focus();
-                  }}
-                >
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                    {o.provider}
-                  </span>
-                  <span className="flex-1 truncate text-left">{o.label}</span>
-                  {o.supportsVision && (
-                    <Image
-                      size={11}
-                      aria-label={t("chat.model.visionSupported")}
-                      className="opacity-60"
-                    />
-                  )}
-                </Button>
-              </li>
-            ))
-          )}
-        </ul>
-      )}
+      {portal && popover ? createPortal(popover, document.body) : popover}
     </div>
   );
 }

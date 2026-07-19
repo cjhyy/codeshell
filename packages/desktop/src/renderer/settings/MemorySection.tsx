@@ -131,6 +131,7 @@ export function buildEditDraft(
   level: MemoryLevel,
   scope: MemoryScope,
   cwd?: string,
+  profileName?: string,
 ): SaveMemoryInput {
   return {
     id: selected.id,
@@ -141,6 +142,7 @@ export function buildEditDraft(
     type: selected.type,
     content: selected.content,
     cwd,
+    profileName,
     pinned: selected.pinned,
     origin: scope === "user" ? "manual" : selected.origin,
   };
@@ -152,6 +154,7 @@ export function buildPinSaveInput(
   level: MemoryLevel,
   scope: MemoryScope,
   cwd?: string,
+  profileName?: string,
 ): SaveMemoryInput {
   return {
     id: full.id,
@@ -162,6 +165,7 @@ export function buildPinSaveInput(
     type: full.type,
     content: full.content,
     cwd,
+    profileName,
     pinned,
     origin: full.origin,
   };
@@ -243,20 +247,31 @@ export function MemorySection({ projects }: Props) {
             : t("settingsX.memory.levelGlobal")}
         </span>
       </div>
-      <ProjectMemoryView level={target.level} cwd={target.cwd} />
+      <MemoryStoreView level={target.level} cwd={target.cwd} />
     </section>
   );
 }
 
 /** Entry list + editor + Dream button for one memory store (level + cwd). */
-function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string }) {
+export function MemoryStoreView({
+  level,
+  cwd,
+  profileName,
+}: {
+  level: MemoryLevel;
+  cwd?: string;
+  profileName?: string;
+}) {
   const confirm = useConfirm();
   const { t } = useT();
   const [scope, setScope] = useState<MemoryScope>("user");
   // Seed from the last-loaded snapshot (settingsCache) so a remount (tab
   // switch) renders the list synchronously instead of an empty-state flash.
   const [entries, setEntries] = useState<RendererMemoryEntry[]>(
-    () => cacheGet<RendererMemoryEntry[]>(`memory:${level}:user:${cwd ?? ""}`) ?? [],
+    () =>
+      cacheGet<RendererMemoryEntry[]>(
+        `memory:${level}:user:${cwd ?? ""}:${profileName ?? ""}`,
+      ) ?? [],
   );
   const [selected, setSelected] = useState<RendererMemoryEntryFull | null>(null);
   const [drafting, setDrafting] = useState(false);
@@ -284,15 +299,15 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     setLoading(true);
     setError(null);
     try {
-      const list = await window.codeshell.listMemory(level, scope, cwd);
+      const list = await window.codeshell.listMemory(level, scope, cwd, profileName);
       setEntries(list);
-      cacheSet(`memory:${level}:${scope}:${cwd ?? ""}`, list);
+      cacheSet(`memory:${level}:${scope}:${cwd ?? ""}:${profileName ?? ""}`, list);
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
     } finally {
       setLoading(false);
     }
-  }, [level, scope, cwd]);
+  }, [level, scope, cwd, profileName]);
 
   useEffect(() => {
     void refresh();
@@ -346,7 +361,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     setError(null);
     setDrafting(false);
     try {
-      const e = await window.codeshell.readMemory(level, scope, name, cwd);
+      const e = await window.codeshell.readMemory(level, scope, name, cwd, profileName);
       setSelected(e);
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
@@ -364,13 +379,14 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
       type: level === "project" ? "project" : "user",
       content: "",
       cwd,
+      profileName,
     });
   };
 
   const startEdit = (): void => {
     if (!selected) return;
     setDrafting(true);
-    setDraft(buildEditDraft(selected, level, scope, cwd));
+    setDraft(buildEditDraft(selected, level, scope, cwd, profileName));
   };
 
   const saveDraft = async (): Promise<void> => {
@@ -386,6 +402,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
         level,
         scope,
         cwd,
+        profileName,
         origin: scope === "user" ? "manual" : draft.origin,
       };
       await window.codeshell.saveMemory(payload);
@@ -407,7 +424,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     });
     if (!ok) return;
     try {
-      await window.codeshell.deleteMemory(level, scope, name, cwd);
+      await window.codeshell.deleteMemory(level, scope, name, cwd, profileName);
       if (selected?.name === name) setSelected(null);
       await refresh();
     } catch (e: unknown) {
@@ -416,6 +433,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   };
 
   const runDream = async (): Promise<void> => {
+    if (level === "profile") return;
     setDreaming(true);
     setError(null);
     setNotice(null);
@@ -488,7 +506,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     setError(null);
     try {
       for (const e of selectedEntries) {
-        await window.codeshell.deleteMemory(level, scope, e.name, cwd);
+        await window.codeshell.deleteMemory(level, scope, e.name, cwd, profileName);
       }
       setSelected(null);
       setCleanupReviewOpen(false);
@@ -507,9 +525,11 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   const togglePin = async (entry: RendererMemoryEntry): Promise<void> => {
     setError(null);
     try {
-      const full = await window.codeshell.readMemory(level, scope, entry.name, cwd);
+      const full = await window.codeshell.readMemory(level, scope, entry.name, cwd, profileName);
       if (!full) return;
-      await window.codeshell.saveMemory(buildPinSaveInput(full, !entry.pinned, level, scope, cwd));
+      await window.codeshell.saveMemory(
+        buildPinSaveInput(full, !entry.pinned, level, scope, cwd, profileName),
+      );
       await refresh();
       if (selected?.name === entry.name) await openEntry(entry.name);
     } catch (e: unknown) {
@@ -559,7 +579,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
               <span>{t("settingsX.memory.cleanupAuto", { count: defaultCleanupCount })}</span>
             </Button>
           )}
-          {scope === "dream" && (
+          {level !== "profile" && scope === "dream" && (
             <Button
               type="button"
               variant="ghost"

@@ -23,6 +23,7 @@ import type {
   SessionWorkspace,
 } from "../types.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
+import type { SessionMessageTarget } from "../session/session-message.js";
 
 export type PendingApprovalKind = "tool_approval" | "ask_user" | "internal";
 
@@ -144,6 +145,8 @@ export interface RunParams {
   profileParams?: Record<string, unknown>;
   /** Digital human to bind to this Work Session. */
   workspaceProfile?: string;
+  /** Closed same-project Session catalog available to SendMessageToSession. */
+  sessionMessageTargets?: SessionMessageTarget[];
   /**
    * Host-built bounded Pet world JSON for this invocation. It is delivered as
    * non-durable system context and must never be appended to the user task or

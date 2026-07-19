@@ -372,6 +372,12 @@ test("session_title 更新标题", () => {
   expect(s.title).toBe("重构手机 UI");
 });
 
+test("session_user_message 显示目标 Session 的普通用户消息", () => {
+  const s = feed([ev({ type: "session_user_message", text: "根据 PRD 设计 UI" }, "ui")]);
+  expect(s.items).toHaveLength(1);
+  expect(s.items[0]).toMatchObject({ kind: "user", text: "根据 PRD 设计 UI" });
+});
+
 test("bare event(history 回放)也被消费", () => {
   const s = feed([{ type: "text_delta", text: "回放" }]);
   expect(asst(s).text).toBe("回放");

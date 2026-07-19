@@ -205,6 +205,8 @@ export interface ToolVisibilityContext {
   host?: string;
   isSubAgent?: boolean;
   behaviorProfile?: string;
+  /** Host-authorized targets available to the cross-Session messaging builtin. */
+  sessionMessageTargets?: readonly import("../session/session-message.js").SessionMessageTarget[];
   /**
    * Per-run metadata produced by the active behavior profile's
    * buildVisibilityMeta. Availability guards / definition rewriters that share
@@ -324,6 +326,8 @@ export interface ToolContext {
    * narrow context, or standalone tool tests. (B2 — Gate 1, standard §S3.)
    */
   sessionId?: string;
+  /** Engine-owned, run-scoped cross-Session message sender. */
+  sessionMessages?: import("../session/session-message.js").SessionMessageToolService;
   /** Stable id of the real user turn that owns async work launched here. */
   originClientMessageId?: string;
   /**

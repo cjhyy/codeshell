@@ -79,6 +79,7 @@ describe("PetWorkDelegationHost", () => {
         sessionId: first.sessionId,
         cwd: "/work/mimi-test-videos",
         permissionMode: "default",
+        goal: "下载视频到本地",
       },
     });
     expect(fake.reserved).toEqual([[first.sessionId, "/work/mimi-test-videos"]]);
@@ -86,26 +87,6 @@ describe("PetWorkDelegationHost", () => {
       expect.objectContaining({ sessionId: first.sessionId, prompt: "下载视频到本地" }),
     ]);
     expect(fake.forgotten).toEqual([]);
-  });
-
-  test("passes the selected digital human as a durable session profile", async () => {
-    const fake = fakeBridge();
-    const host = new PetWorkDelegationHost({
-      bridge: fake.bridge,
-      noWorkspaceCwd: "/safe/no-repo",
-    });
-
-    await host.start({
-      clientMessageId: "pet:profile",
-      task: "研究现有实现",
-      workspacePath: "/work/codeshell",
-      digitalHumanId: "researcher",
-    });
-
-    expect(JSON.parse(fake.lines[0]!)).toMatchObject({
-      method: "agent/run",
-      params: { workspaceProfile: "researcher" },
-    });
   });
 
   test("fails the delegation and releases its reservation when the worker rejects it", async () => {

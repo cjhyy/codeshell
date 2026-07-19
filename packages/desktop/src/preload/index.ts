@@ -415,6 +415,13 @@ contextBridge.exposeInMainWorld("codeshell", {
       permissionMode?: string;
       planMode?: boolean;
       behaviorMode?: "quickChatRestricted";
+      workspaceProfile?: string;
+      sessionMessageTargets?: Array<{
+        sessionId: string;
+        title: string;
+        workspaceRoot: string;
+        workspaceProfile?: string;
+      }>;
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
     } & Record<string, unknown>,
@@ -826,13 +833,13 @@ contextBridge.exposeInMainWorld("codeshell", {
   turnUndoState: (sessionId: string) => ipcRenderer.invoke("files:turnUndoState", sessionId),
   undoTurn: (sessionId: string) => ipcRenderer.invoke("files:undoTurn", sessionId),
   redoTurn: (sessionId: string) => ipcRenderer.invoke("files:redoTurn", sessionId),
-  listMemory: (level: string, scope: string, cwd?: string) =>
-    ipcRenderer.invoke("memory:list", level, scope, cwd),
-  readMemory: (level: string, scope: string, name: string, cwd?: string) =>
-    ipcRenderer.invoke("memory:read", level, scope, name, cwd),
+  listMemory: (level: string, scope: string, cwd?: string, profileName?: string) =>
+    ipcRenderer.invoke("memory:list", level, scope, cwd, profileName),
+  readMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
+    ipcRenderer.invoke("memory:read", level, scope, name, cwd, profileName),
   saveMemory: (input: Record<string, unknown>) => ipcRenderer.invoke("memory:save", input),
-  deleteMemory: (level: string, scope: string, name: string, cwd?: string) =>
-    ipcRenderer.invoke("memory:delete", level, scope, name, cwd),
+  deleteMemory: (level: string, scope: string, name: string, cwd?: string, profileName?: string) =>
+    ipcRenderer.invoke("memory:delete", level, scope, name, cwd, profileName),
   // 审批门 (pending global memories)
   listPendingMemory: () => ipcRenderer.invoke("memory:pending:list"),
   approvePendingMemory: (name: string) => ipcRenderer.invoke("memory:pending:approve", name),
@@ -991,6 +998,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   activateProfile: (cwd: string, name: string) =>
     ipcRenderer.invoke("profiles:activate", cwd, name),
   deactivateProfile: (cwd: string) => ipcRenderer.invoke("profiles:deactivate", cwd),
+  setSessionWorkspaceProfile: (sessionId: string, profileName: string) =>
+    ipcRenderer.invoke("profiles:setSession", sessionId, profileName),
   listProfileCatalog: () => ipcRenderer.invoke("profiles:catalog"),
   installCatalogProfile: (name: string) => ipcRenderer.invoke("profiles:install", name),
   saveProfile: (profile: import("@cjhyy/code-shell-core").WorkspaceProfile) =>
@@ -1003,7 +1012,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   deleteProfile: (name: string, options?: { cwd?: string; clearActiveProject?: boolean }) =>
     ipcRenderer.invoke("profiles:delete", name, options),
   listDigitalHumanTeams: () => ipcRenderer.invoke("digital-human-teams:list"),
-  saveDigitalHumanTeam: (team: import("@cjhyy/code-shell-pet").DigitalHumanTeam) =>
+  saveDigitalHumanTeam: (team: import("../shared/digital-human-team").DigitalHumanTeam) =>
     ipcRenderer.invoke("digital-human-teams:save", team),
   deleteDigitalHumanTeam: (id: string) => ipcRenderer.invoke("digital-human-teams:delete", id),
   uninstallPlugin: (pluginName: string, marketplaceName: string) =>

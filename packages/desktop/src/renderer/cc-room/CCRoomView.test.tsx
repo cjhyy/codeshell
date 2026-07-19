@@ -15,6 +15,19 @@ mock.module("./CCConversationView", () => ({
 
 mock.module("./QuotaPanel", () => ({ QuotaPanel: () => null }));
 
+mock.module("@/components/ui/dialog", () => ({
+  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
+    open ? React.createElement("div", null, children) : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", null, children),
+  DialogHeader: ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", null, children),
+  DialogTitle: ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", null, children),
+  DialogDescription: ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", null, children),
+}));
+
 const { CCRoomView } = await import("./CCRoomView");
 
 let root: Root | null = null;
@@ -25,6 +38,20 @@ function findElements(node: unknown, tagName: string): unknown[] {
     ...(current.tagName === tagName ? [current] : []),
     ...(current.childNodes ?? []).flatMap((child) => findElements(child, tagName)),
   ];
+}
+
+function reactPropsOf(node: unknown): Record<string, any> {
+  const key = Object.keys(node as object).find((candidate) =>
+    candidate.startsWith("__reactProps$"),
+  );
+  return key ? ((node as Record<string, any>)[key] ?? {}) : {};
+}
+
+function childText(value: unknown): string {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (Array.isArray(value)) return value.map(childText).join("");
+  if (React.isValidElement(value)) return childText(value.props.children);
+  return "";
 }
 
 afterEach(async () => {
@@ -39,6 +66,68 @@ afterEach(async () => {
 });
 
 describe("CCRoomView DriveAgent deep links", () => {
+  test("opens a listed delegated session with that session's own cwd", async () => {
+    ensureMiniDom();
+    const opened: Array<[string, string, string, string]> = [];
+    Object.assign(window, {
+      codeshell: {
+        ccRoom: {
+          probe: async () => ({ available: true }),
+          codexProbe: async () => ({ available: true }),
+          listSessions: async () => ({
+            sessions: [
+              {
+                sessionId: "delegated-session",
+                cwd: "/repo/.worktrees/delegated",
+                firstMessage: "delegated prompt",
+                lastModified: Date.now(),
+                messageCount: 1,
+              },
+            ],
+            total: 1,
+          }),
+          listCodexSessions: async () => ({ sessions: [], total: 0 }),
+          openSession: async (sessionId: string, cwd: string, mode: string, kind: string) => {
+            opened.push([sessionId, cwd, mode, kind]);
+            return { roomId: "room_delegated", status: "running" };
+          },
+        },
+      },
+    });
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(<CCRoomView cwd="/repo/main" />);
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    const sessionCard = findElements(container, "DIV").find((node) =>
+      String(reactPropsOf(node).className ?? "").includes("cursor-pointer"),
+    );
+    expect(sessionCard).toBeDefined();
+    await act(async () => {
+      reactPropsOf(sessionCard).onClick();
+      await flushMicrotasks();
+    });
+
+    const defaultButton = findElements(document.body, "BUTTON").find(
+      (node) => childText(reactPropsOf(node).children) === "default",
+    );
+    expect(defaultButton).toBeDefined();
+    await act(async () => {
+      reactPropsOf(defaultButton).onClick();
+      await flushMicrotasks();
+    });
+
+    expect(opened).toEqual([
+      ["delegated-session", "/repo/.worktrees/delegated", "default", "claude-code"],
+    ]);
+    expect(conversationProps).toMatchObject({ cwd: "/repo/.worktrees/delegated" });
+  });
+
   test("opens each request nonce once with the linked cwd, CLI kind, and preserved mode", async () => {
     ensureMiniDom();
     const opened: Array<[string, string, string]> = [];

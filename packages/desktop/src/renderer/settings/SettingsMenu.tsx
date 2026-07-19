@@ -28,7 +28,9 @@ const LANGUAGES: UILanguage[] = ["zh", "en"];
  * Bottom-left settings entry.
  *
  * Clicking opens an upward popover with navigation, Pet visibility and
- * language controls. Language reveals a cascading submenu on the right.
+ * language controls. Language reveals a cascading submenu on the right after
+ * an explicit click, so merely moving the pointer across it cannot leave the
+ * submenu stuck open.
  *
  * The submenu is `position: fixed` and anchored to the hovered item's
  * bounding rect, so it escapes the sidebar's `overflow: hidden` instead
@@ -77,6 +79,14 @@ export function SettingsMenu({
     setSubmenu({ left: Math.max(8, left), bottom: window.innerHeight - r.bottom - 4 });
   };
 
+  const toggleSubmenu = (element: HTMLElement): void => {
+    if (submenu) {
+      setSubmenu(null);
+      return;
+    }
+    openSubmenu(element);
+  };
+
   const chooseLanguage = (next: UILanguage): void => {
     setLang(next);
     saveUILanguage(next);
@@ -110,24 +120,6 @@ export function SettingsMenu({
               role="menuitem"
               variant="ghost"
               size="sm"
-              className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-medium text-primary"
-              onClick={() => {
-                setOpen(false);
-                onOpenSettingsPage();
-              }}
-            >
-              <SettingsIcon size={13} />
-              <span>{t("settingsX.menu.openSettings")}</span>
-              <ArrowRight size={11} className="ml-auto text-muted-foreground" />
-            </Button>
-          </li>
-          <li role="separator" className="my-1 h-px bg-border" />
-          <li role="none">
-            <Button
-              type="button"
-              role="menuitem"
-              variant="ghost"
-              size="sm"
               className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal"
               onClick={() => {
                 onTogglePetWidget();
@@ -147,12 +139,29 @@ export function SettingsMenu({
               className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal"
               aria-haspopup="menu"
               aria-expanded={submenu !== null}
-              onMouseEnter={(event) => openSubmenu(event.currentTarget)}
-              onFocus={(event) => openSubmenu(event.currentTarget)}
+              onClick={(event) => toggleSubmenu(event.currentTarget)}
             >
               <Globe size={13} />
               <span>{t("settingsX.menu.switchLanguage")}</span>
               <ChevronRight size={12} className="ml-auto text-muted-foreground" />
+            </Button>
+          </li>
+          <li role="separator" className="my-1 h-px bg-border" />
+          <li role="none">
+            <Button
+              type="button"
+              role="menuitem"
+              variant="ghost"
+              size="sm"
+              className="cs-menu-item h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-medium text-primary"
+              onClick={() => {
+                setOpen(false);
+                onOpenSettingsPage();
+              }}
+            >
+              <SettingsIcon size={13} />
+              <span>{t("settingsX.menu.openSettings")}</span>
+              <ArrowRight size={11} className="ml-auto text-muted-foreground" />
             </Button>
           </li>
         </ul>

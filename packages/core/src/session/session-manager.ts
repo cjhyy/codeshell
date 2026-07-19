@@ -644,7 +644,7 @@ export class SessionManager {
   }
 
   /**
-   * Find durable Sessions pinned to one digital-human profile without loading
+   * Find durable Sessions currently bound to one digital-human profile without loading
    * transcripts. Used by profile deletion guards so a reusable/historical
    * Session cannot be left permanently unresumable.
    */
@@ -1068,6 +1068,32 @@ export class SessionManager {
     Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));
 
     return { state, transcript };
+  }
+
+  /**
+   * Return the exact persistence directory owned by this manager.
+   *
+   * Cross-session sidecars (for example versioned handoffs) use this to stay
+   * inside an identity/custom-data-root boundary instead of falling back to
+   * the process-global default sessions directory.
+   */
+  getStorageDir(): string {
+    return this.sessionsDir;
+  }
+
+  /**
+   * Read one durable session state without changing its lifecycle status.
+   * `resume()` intentionally marks the returned in-memory state active; host
+   * coordination code needs a read-only snapshot for completed cursors and
+   * workspace/profile metadata.
+   */
+  readSessionState(sessionId: string): SessionState | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+      return structuredClone(this.readPersistedState(sessionId));
+    } catch {
+      return undefined;
+    }
   }
 
   /**

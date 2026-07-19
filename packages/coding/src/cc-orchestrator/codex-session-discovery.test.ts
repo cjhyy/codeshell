@@ -50,6 +50,27 @@ describe("discoverCodexSessions", () => {
     expect(got[0].firstMessage).toBe("看看样式 还有没有遗漏的地方");
   });
 
+  it("uses the real input part as the title instead of injected host context", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const cwd = "/tmp/myproj";
+    writeRollout(home, "2026/06/24", "rollout-context-title.jsonl", [
+      metaLine("id-context-title", cwd, "2026-06-24T03:31:03.000Z"),
+      {
+        type: "response_item",
+        payload: {
+          type: "message",
+          role: "user",
+          content: [
+            { type: "input_text", text: "<environment_context>hidden</environment_context>" },
+            { type: "input_text", text: "修复房间输入显示" },
+          ],
+        },
+      },
+    ]);
+
+    expect(discoverCodexSessions(cwd, home)[0]?.firstMessage).toBe("修复房间输入显示");
+  });
+
   it("filters out sessions whose session_meta.cwd differs", () => {
     const home = mkdtempSync(join(tmpdir(), "codex-home-"));
     writeRollout(home, "2026/06/24", "rollout-a.jsonl", [

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -38,6 +39,7 @@ const CLI_KINDS: CliKind[] = ["claude-code", "codex"];
 
 interface DiscoveredSession {
   sessionId: string;
+  cwd?: string;
   firstMessage: string;
   lastModified: number;
   messageCount: number;
@@ -80,6 +82,8 @@ export function CCRoomView({
   // shown and not expanded, offer "load more" (TODO room-list convergence).
   const [total, setTotal] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
   const [conv, setConv] = useState<{
     roomId: string;
     sessionId: string;
@@ -87,7 +91,7 @@ export function CCRoomView({
     cwd: string;
     cliKind: CliKind;
   } | null>(null);
-  const [picking, setPicking] = useState<{ sessionId: string } | null>(null);
+  const [picking, setPicking] = useState<{ sessionId: string; cwd: string } | null>(null);
   const lastOpenRequestNonceRef = useRef(-1);
   const pendingOpenRequestRef = useRef<OpenCliSessionRequest | null>(null);
   const probeSequenceRef = useRef(0);
@@ -196,11 +200,11 @@ export function CCRoomView({
       if (!cwd || !picking) return;
       const { roomId } = await window.codeshell.ccRoom.openSession(
         picking.sessionId,
-        cwd,
+        picking.cwd,
         mode,
         cliKind,
       );
-      setConv({ roomId, sessionId: picking.sessionId, mode, cwd, cliKind });
+      setConv({ roomId, sessionId: picking.sessionId, mode, cwd: picking.cwd, cliKind });
       setPicking(null);
     },
     [cwd, picking, cliKind],
@@ -219,19 +223,32 @@ export function CCRoomView({
           : window.codeshell.ccRoom.listSessions(cwd, all);
       const sequence = listSequenceRef.current + 1;
       listSequenceRef.current = sequence;
+      setRefreshing(true);
       const requestKind = cliKind;
       const requestCwd = cwd;
-      void list.then((res) => {
-        if (
-          listSequenceRef.current !== sequence ||
-          requestKind !== cliKindRef.current ||
-          requestCwd !== cwdRef.current
-        ) {
-          return;
-        }
-        setSessions(res.sessions);
-        setTotal(res.total);
-      });
+      void list
+        .then((res) => {
+          if (
+            listSequenceRef.current !== sequence ||
+            requestKind !== cliKindRef.current ||
+            requestCwd !== cwdRef.current
+          ) {
+            return;
+          }
+          setSessions(res.sessions);
+          setTotal(res.total);
+          setLastRefreshedAt(Date.now());
+        })
+        .catch((error) => {
+          if (listSequenceRef.current !== sequence) return;
+          toastRef.current({
+            message: `刷新 ${CLI_LABEL[requestKind]} 会话失败：${error instanceof Error ? error.message : String(error)}`,
+            variant: "error",
+          });
+        })
+        .finally(() => {
+          if (listSequenceRef.current === sequence) setRefreshing(false);
+        });
     },
     [cwd, cliKind],
   );
@@ -239,6 +256,17 @@ export function CCRoomView({
   useEffect(() => {
     if (avail?.available) refresh();
   }, [avail?.available, refresh]);
+
+  useEffect(() => {
+    if (!active || !avail?.available || conv) return;
+    const refreshVisibleList = () => refresh(expanded);
+    const timer = setInterval(refreshVisibleList, 10_000);
+    window.addEventListener("focus", refreshVisibleList);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refreshVisibleList);
+    };
+  }, [active, avail?.available, conv, expanded, refresh]);
 
   const label = CLI_LABEL[cliKind];
 
@@ -272,7 +300,10 @@ export function CCRoomView({
         cliKind={conv.cliKind}
         cliLabel={CLI_LABEL[conv.cliKind]}
         active={active}
-        onBack={() => setConv(null)}
+        onBack={() => {
+          setConv(null);
+          refresh(expanded);
+        }}
       />
     );
   }
@@ -320,14 +351,30 @@ export function CCRoomView({
         <div className="flex shrink-0 items-center gap-2">
           <QuotaPanel which={cliKind === "codex" ? "codex" : "claude"} />
           <Button
+            variant="ghost"
+            size="sm"
+            disabled={!cwd || refreshing}
+            aria-label="刷新会话"
+            title="立即刷新会话"
+            onClick={() => refresh(expanded)}
+          >
+            <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
+          <Button
             size="sm"
             disabled={!cwd}
             title="新开 session"
-            onClick={() => setPicking({ sessionId: "" })}
+            onClick={() => cwd && setPicking({ sessionId: "", cwd })}
           >
             新开 session
           </Button>
         </div>
+      </div>
+
+      <div className="-mt-2 text-xs text-muted-foreground">
+        {lastRefreshedAt
+          ? `每 10 秒自动刷新 · 更新于 ${new Date(lastRefreshedAt).toLocaleTimeString()}`
+          : "正在读取会话…"}
       </div>
 
       {/* Sessions */}
@@ -339,7 +386,7 @@ export function CCRoomView({
             <Card
               key={s.sessionId}
               className="flex cursor-pointer items-center justify-between gap-3 p-3 hover:bg-accent"
-              onClick={() => setPicking({ sessionId: s.sessionId })}
+              onClick={() => setPicking({ sessionId: s.sessionId, cwd: s.cwd || cwd || "" })}
             >
               <div className="min-w-0">
                 <div className="truncate font-medium">{s.firstMessage || "(无消息)"}</div>
@@ -348,6 +395,11 @@ export function CCRoomView({
                   {s.messageCount > 0 && <span>{s.messageCount} 条消息 · </span>}
                   {new Date(s.lastModified).toLocaleString()}
                 </div>
+                {s.cwd && s.cwd !== cwd && (
+                  <div className="truncate text-xs text-muted-foreground" title={s.cwd}>
+                    派出目录 · {s.cwd}
+                  </div>
+                )}
               </div>
               <code className="shrink-0 text-xs text-muted-foreground">
                 {s.sessionId.slice(0, 8)}

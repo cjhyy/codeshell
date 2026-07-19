@@ -43,6 +43,7 @@ import { diskDefaultsFrom } from "../engine/engine.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { isProtectedSettingKey, SettingsManager } from "../settings/manager.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
+import type { RouteSessionMessageInput } from "../session/session-message.js";
 import {
   type ApprovalRouteTarget,
   type ApprovalRouter,
@@ -669,12 +670,73 @@ export class AgentServer {
     session.engine.setInjectCredential((credentialId, credentialScope) =>
       this.requestCredentialInjectForSession(session, sid, credentialId, credentialScope),
     );
+    session.engine.setSessionMessageRouter((input) => this.routeSessionMessage(input));
     if (this.workspaceBridgeEnabled && typeof session.engine.setWorkspaceBridge === "function") {
       session.engine.setWorkspaceBridge(this.makeWorkspaceBridge(session, sid));
     }
     if (this.panelBridgeEnabled && typeof session.engine.setPanelBridge === "function") {
       session.engine.setPanelBridge(this.makePanelBridge(session, sid));
     }
+  }
+
+  /** Queue a model-sent message as an ordinary user turn in another Session. */
+  private async routeSessionMessage(input: RouteSessionMessageInput): Promise<void> {
+    const manager = this.chatManager;
+    if (!manager) throw new Error("cross-Session messaging requires a multi-session host");
+    const targetId = input.target.sessionId;
+    if (manager.isUnavailable(targetId)) {
+      throw new Error(`target Session is closing or closed: ${targetId}`);
+    }
+    const sourceSlice = this.lastSliceBySession.get(input.sourceSessionId);
+    const targetSlice = {
+      cwd: input.target.workspaceRoot,
+      projectTrusted: sourceSlice?.projectTrusted ?? false,
+    } as EngineConfigSlice;
+    const targetAlreadyExists = manager.sessionExistsOnDisk(targetId, targetSlice);
+    const targetSession = await manager.getOrCreate(targetId, targetSlice);
+    const approvalRegistration = this.approvalRouter.register(targetId, this.connectionId);
+    if (!approvalRegistration.ok) {
+      throw new Error(`target Session ${targetId} is owned by another connection`);
+    }
+    this.rememberSessionSlice(targetId, targetSlice);
+    this.observeSessionAttached(targetId, targetSession.lastActivityAt);
+    this.wireInteractiveSession(targetSession, targetId);
+
+    const userMessageEvent = {
+      type: "session_user_message",
+      text: input.message,
+    } satisfies StreamEvent;
+    this.observeSessionStream(targetId, userMessageEvent);
+    this.notify(Methods.StreamEvent, { sessionId: targetId, event: userMessageEvent });
+    const run = targetSession.enqueueTurn(input.message, {
+      cwd: input.target.workspaceRoot,
+      // A planned Session needs its renderer-selected initial profile. Once a
+      // Session exists, omitting this field makes Engine use the target's own
+      // persisted binding, so a stale source catalog cannot switch it back.
+      workspaceProfile: targetAlreadyExists ? undefined : input.target.workspaceProfile,
+      sessionMessageTargets: input.catalog,
+      onStream: (event: StreamEvent) => {
+        this.observeSessionStream(targetId, event);
+        this.notify(Methods.StreamEvent, { sessionId: targetId, event });
+      },
+      approvalRouter: this.approvalRouter,
+    });
+    void run
+      .then(() => this.maybeWakeIdleSession(targetId))
+      .catch((error) => {
+        logger.warn("session_message.turn_failed", {
+          sourceSessionId: input.sourceSessionId,
+          targetSessionId: targetId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        this.notify(Methods.StreamEvent, {
+          sessionId: targetId,
+          event: {
+            type: "error",
+            error: error instanceof Error ? error.message : "cross-Session message failed",
+          },
+        });
+      });
   }
 
   // ─── Request Dispatch ───────────────────────────────────────────
@@ -1335,6 +1397,7 @@ export class AgentServer {
         behaviorMode: params.behaviorMode,
         profileParams: params.profileParams,
         workspaceProfile: params.workspaceProfile,
+        sessionMessageTargets: params.sessionMessageTargets,
         petRuntimeContext: params.petRuntimeContext,
         petWorkspaces: params.petWorkspaces,
         kind: params.kind,
@@ -1478,6 +1541,7 @@ export class AgentServer {
         behaviorMode: params.behaviorMode,
         profileParams: params.profileParams,
         workspaceProfile: params.workspaceProfile,
+        sessionMessageTargets: params.sessionMessageTargets,
         petRuntimeContext: params.petRuntimeContext,
         petWorkspaces: params.petWorkspaces,
         kind: params.kind,

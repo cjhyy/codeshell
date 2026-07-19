@@ -49,6 +49,12 @@ describe("PetWorldPane", () => {
     expect(html).not.toContain("工作会话");
     expect(html).not.toContain("待你决定");
     expect(html).toContain('data-pet-world-pane="deterministic"');
+    expect(html).toContain("self-stretch overflow-visible");
+    expect(html).toContain("@container/work-pane");
+    expect(html).toContain("@min-[1100px]/pet-page:col-start-2");
+    expect(html).toContain("@min-[1100px]/pet-page:row-start-1");
+    expect(html).toContain("@min-[1100px]/pet-page:overflow-hidden");
+    expect(html).toContain("@min-[1100px]/pet-page:overflow-y-auto");
   });
 
   test("keeps a dedicated loading state without occupying the chat pane", () => {

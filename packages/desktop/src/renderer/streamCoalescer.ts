@@ -55,6 +55,7 @@ export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) 
 
   function isHardBoundary(event: StreamEvent): boolean {
     switch (event.type) {
+      case "session_user_message":
       case "stream_request_start":
       case "assistant_message":
       case "turn_complete":

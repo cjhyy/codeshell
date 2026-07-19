@@ -46,6 +46,10 @@ describe("ExternalAgentSessionStore", () => {
       const b = new ExternalAgentSessionStore(file);
       expect(b.get("claude", "S1")?.cwd).toBe("/repo/a");
       expect(b.get("codex", "S1")?.cwd).toBe("/repo/b");
+      expect(b.list().map(({ cli, sessionId, cwd }) => ({ cli, sessionId, cwd }))).toEqual([
+        { cli: "claude", sessionId: "S1", cwd: "/repo/a" },
+        { cli: "codex", sessionId: "S1", cwd: "/repo/b" },
+      ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

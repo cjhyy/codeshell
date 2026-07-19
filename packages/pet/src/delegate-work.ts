@@ -1,12 +1,14 @@
-import type { ToolDefinition } from "@cjhyy/code-shell-core/extension";
+import type {
+  ToolContext,
+  ToolDefinition,
+  ToolVisibilityContext,
+} from "@cjhyy/code-shell-core/extension";
 import {
   DELEGATE_WORK_TOOL_NAME,
-  type PetDigitalHumanOption,
   type PetReusableSessionOption,
   type PetWorkspaceOption,
 } from "./delegation.js";
 import type { PetRunScopedServices } from "./profile.js";
-import type { ToolContext, ToolVisibilityContext } from "@cjhyy/code-shell-core/extension";
 
 export const delegateWorkToolDef: ToolDefinition = {
   name: DELEGATE_WORK_TOOL_NAME,
@@ -24,24 +26,17 @@ export const delegateWorkToolDef: ToolDefinition = {
       },
       objective: {
         type: "string",
-        description:
-          "Self-contained execution objective for the new Work Session, preserving the user's intent.",
+        description: "Self-contained objective for the Work Session.",
       },
       session_id: {
         type: "string",
-        description:
-          "Optional exact opaque id from the reusable Session list. Omit to create a new Session.",
-      },
-      digital_human_id: {
-        type: "string",
-        description: "Exact digital-human id from the selected individual or team member list.",
+        description: "Optional exact id from the reusable Session list.",
       },
     },
     required: ["workspace_id", "objective"],
   },
 };
 
-/** Workspaces published for this run by the pet profile's buildVisibilityMeta. */
 function visibleWorkspaces(ctx: ToolVisibilityContext): readonly PetWorkspaceOption[] {
   const workspaces = ctx.profileMeta?.petWorkspaces;
   return Array.isArray(workspaces) ? (workspaces as readonly PetWorkspaceOption[]) : [];
@@ -52,12 +47,6 @@ function visibleReusableSessions(ctx: ToolVisibilityContext): readonly PetReusab
   return Array.isArray(sessions) ? (sessions as readonly PetReusableSessionOption[]) : [];
 }
 
-function visibleDigitalHumans(ctx: ToolVisibilityContext): readonly PetDigitalHumanOption[] {
-  const digitalHumans = ctx.profileMeta?.petDigitalHumans;
-  return Array.isArray(digitalHumans) ? (digitalHumans as readonly PetDigitalHumanOption[]) : [];
-}
-
-/** Available only when the active run profile published at least one Workspace. */
 export function delegateWorkAvailability(ctx: ToolVisibilityContext): boolean {
   return ctx.behaviorProfile === "pet" && visibleWorkspaces(ctx).length > 0;
 }
@@ -66,28 +55,21 @@ function inlineDisplay(value: string, maximum: number): string {
   return value.replace(/\s+/gu, " ").trim().slice(0, maximum);
 }
 
-/** Rewrite the static def with the run's closed workspace_id enum + listing. */
 export function rewriteDelegateWorkDef(
   def: ToolDefinition,
   ctx: ToolVisibilityContext,
 ): ToolDefinition {
-  const dynamic = delegateWorkToolDefFor(
-    visibleWorkspaces(ctx),
-    visibleReusableSessions(ctx),
-    visibleDigitalHumans(ctx),
-  );
+  const dynamic = delegateWorkToolDefFor(visibleWorkspaces(ctx), visibleReusableSessions(ctx));
   return { ...def, description: dynamic.description, inputSchema: dynamic.inputSchema };
 }
 
 export function delegateWorkToolDefFor(
   workspaces: readonly PetWorkspaceOption[] | undefined,
   reusableSessions: readonly PetReusableSessionOption[] | undefined = [],
-  digitalHumans: readonly PetDigitalHumanOption[] | undefined = [],
 ): ToolDefinition {
   const available = workspaces ?? [];
   const sessions = reusableSessions ?? [];
-  const humans = digitalHumans ?? [];
-  const listing = available.length
+  const workspaceListing = available.length
     ? available
         .map(
           (workspace) =>
@@ -107,24 +89,11 @@ export function delegateWorkToolDefFor(
         )
         .join("\n")
     : "- (no existing Session is currently eligible for reuse; omit session_id)";
-  const humanListing = humans.length
-    ? humans
-        .map(
-          (human) =>
-            `- ${JSON.stringify(human.id)}: ${inlineDisplay(human.name, 256)}${
-              human.description ? ` — ${inlineDisplay(human.description, 4_096)}` : ""
-            }`,
-        )
-        .join("\n")
-    : "- (no digital human was selected; omit digital_human_id)";
-  const {
-    session_id: _unboundedSessionId,
-    digital_human_id: _unboundedDigitalHumanId,
-    ...baseProperties
-  } = delegateWorkToolDef.inputSchema.properties as Record<string, unknown>;
+  const { session_id: _sessionId, ...baseProperties } = delegateWorkToolDef.inputSchema
+    .properties as Record<string, unknown>;
   return {
     ...delegateWorkToolDef,
-    description: `${delegateWorkToolDef.description}\n\nAvailable Workspaces:\n${listing}\n\nSelected digital humans:\n${humanListing}\n\nReusable Sessions:\n${sessionListing}`,
+    description: `${delegateWorkToolDef.description}\n\nAvailable Workspaces:\n${workspaceListing}\n\nReusable Sessions:\n${sessionListing}`,
     inputSchema: {
       ...delegateWorkToolDef.inputSchema,
       properties: {
@@ -139,25 +108,11 @@ export function delegateWorkToolDefFor(
               session_id: {
                 type: "string",
                 enum: sessions.map((session) => session.id),
-                description:
-                  "Optional exact opaque id from the reusable Session list. It must belong to workspace_id. Omit to create a new Session.",
-              },
-            }
-          : {}),
-        ...(humans.length > 0
-          ? {
-              digital_human_id: {
-                type: "string",
-                enum: humans.map((human) => human.id),
-                description: "Required exact id from the selected digital-human/team member list.",
+                description: "Optional exact id from the reusable Session list.",
               },
             }
           : {}),
       },
-      required: [
-        ...((delegateWorkToolDef.inputSchema.required as string[] | undefined) ?? []),
-        ...(humans.length > 0 ? ["digital_human_id"] : []),
-      ],
     },
   };
 }
@@ -171,17 +126,12 @@ export async function delegateWorkTool(
   const reusableSessions = Array.isArray(services?.petReusableSessions)
     ? services.petReusableSessions
     : undefined;
-  const digitalHumans = Array.isArray(services?.petDigitalHumans)
-    ? services.petDigitalHumans
-    : undefined;
-  if (!services?.requestPetWorkDelegation || !workspaces || !reusableSessions || !digitalHumans) {
+  if (!services?.requestPetWorkDelegation || !workspaces || !reusableSessions) {
     return "Error: DelegateWork is available only in a Mimi manager turn.";
   }
   const workspaceId = typeof args.workspace_id === "string" ? args.workspace_id.trim() : "";
   const objective = typeof args.objective === "string" ? args.objective.trim() : "";
   const reusableSessionId = typeof args.session_id === "string" ? args.session_id.trim() : "";
-  const digitalHumanId =
-    typeof args.digital_human_id === "string" ? args.digital_human_id.trim() : "";
   if (!workspaceId) return "Error: workspace_id is required.";
   if (!objective) return "Error: objective is required.";
   if (objective.length > 8_000) return "Error: objective is too long (maximum 8000 characters).";
@@ -199,24 +149,13 @@ export async function delegateWorkTool(
   if (reusableSession && reusableSession.workspaceId !== workspaceId) {
     return "Error: session_id does not belong to workspace_id.";
   }
-  const digitalHuman = digitalHumanId
-    ? digitalHumans.find((candidate) => candidate?.id === digitalHumanId)
-    : undefined;
-  if (digitalHumans.length > 0 && !digitalHumanId) {
-    return "Error: digital_human_id is required for the selected digital human or team.";
-  }
-  if (digitalHumanId && !digitalHuman) {
-    return `Error: unknown digital_human_id ${JSON.stringify(digitalHumanId)}. Copy one exact id from the selected digital-human list.`;
-  }
   const decision = services.requestPetWorkDelegation({
     workspaceId,
     objective,
-    ...(digitalHuman ? { digitalHumanId: digitalHuman.id } : {}),
     ...(reusableSession ? { reusableSessionId: reusableSession.id } : {}),
   });
   if (!decision.ok) return `Error: ${decision.error ?? "work delegation was rejected"}`;
-  const assignee = digitalHuman ? ` with digital human ${digitalHuman.name}` : "";
   return reusableSession
-    ? `Delegation accepted for existing Session ${reusableSession.name} in Workspace ${workspace.name}${assignee}.`
-    : `Delegation accepted for a new Session in Workspace ${workspace.name}${assignee}.`;
+    ? `Delegation accepted for existing Session ${reusableSession.name} in Workspace ${workspace.name}.`
+    : `Delegation accepted for a new Session in Workspace ${workspace.name}.`;
 }

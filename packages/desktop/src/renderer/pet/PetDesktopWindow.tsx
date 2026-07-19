@@ -1,15 +1,13 @@
-import type { PetAttentionEvent, PetPeek } from "../../preload/types";
+import type { PetAttentionEvent, PetDelegationReceiptGroup, PetPeek } from "../../preload/types";
 import React from "react";
 import { useT } from "../i18n";
 import type { Message } from "../types";
-import {
-  IM_GATEWAY_CHANNEL_NAMES,
-  imGatewayChannelFromClientMessageId,
-} from "../imGatewayChannels";
-import { visiblePetAssistantText } from "./petChatRouting";
+import { PetDelegationCard, selectPetChatRows, type PetChatRow } from "./PetChatHost";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import { PetWidget } from "./PetWidget";
+import { SessionStatusSection } from "./SessionStatusSection";
 import { bufferPetAttentionEvent } from "./petReliability";
+import { selectPetOverview } from "./petSelectors";
 import { usePetProjectionState } from "./usePetProjectionState";
 import {
   PET_WIDGET_RECEIPTS_KEY,
@@ -34,30 +32,34 @@ export interface MiniChatMessage {
 }
 
 export function selectMiniChatMessages(messages: readonly Message[]): MiniChatMessage[] {
-  return messages.flatMap<MiniChatMessage>((message) => {
-    if (message.kind === "user" && message.text.trim()) {
-      const channel = imGatewayChannelFromClientMessageId(message.clientMessageId);
-      return [
-        {
-          id: message.id,
-          role: "user" as const,
-          text: message.text.trim(),
-          ...(channel ? { source: IM_GATEWAY_CHANNEL_NAMES[channel] } : {}),
-        },
-      ];
-    }
-    if (message.kind === "assistant") {
-      const text = visiblePetAssistantText(message.text);
-      return text ? [{ id: message.id, role: "assistant" as const, text }] : [];
-    }
-    return [];
-  });
+  return selectMiniChatRows(messages).flatMap<MiniChatMessage>((row) =>
+    row.role === "user" || row.role === "assistant"
+      ? [
+          {
+            id: row.id,
+            role: row.role,
+            text: row.text,
+            ...(row.source ? { source: row.source } : {}),
+          },
+        ]
+      : [],
+  );
+}
+
+export function selectMiniChatRows(
+  messages: readonly Message[],
+  delegationReceipts: readonly PetDelegationReceiptGroup[] = [],
+): PetChatRow[] {
+  return selectPetChatRows(messages, [], delegationReceipts).filter(
+    (row) => row.role === "user" || row.role === "assistant" || row.role === "delegation",
+  );
 }
 
 export function PetDesktopWindow() {
   const { t } = useT();
   const api = window.codeshell.pet;
-  const { petSessionId, chatState, chatDispatch, chatBusy, setChatBusy } = usePetState();
+  const { petSessionId, chatState, chatDispatch, chatBusy, setChatBusy, delegationReceipts } =
+    usePetState();
   const state = usePetProjectionState(api);
   const [workReceipts, setWorkReceipts] = React.useState<PetWidgetReceiptState | null>(() => {
     try {
@@ -73,7 +75,10 @@ export function PetDesktopWindow() {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const conversationEndRef = React.useRef<HTMLDivElement>(null);
   const autoExpandedWorkRef = React.useRef(false);
-  const messages = React.useMemo(() => selectMiniChatMessages(chatState.messages), [chatState]);
+  const chatRows = React.useMemo(
+    () => selectMiniChatRows(chatState.messages, delegationReceipts),
+    [chatState.messages, delegationReceipts],
+  );
 
   const showPanel = React.useCallback((): void => {
     setExpanded(true);
@@ -92,7 +97,7 @@ export function PetDesktopWindow() {
   React.useEffect(() => {
     if (!expanded) return;
     conversationEndRef.current?.scrollIntoView({ block: "end" });
-  }, [chatBusy, expanded, messages.length, messages.at(-1)?.text]);
+  }, [chatBusy, chatRows.length, chatRows.at(-1)?.text, expanded]);
 
   React.useEffect(() => {
     if (!state.projection || workReceipts) return;
@@ -154,6 +159,9 @@ export function PetDesktopWindow() {
     try {
       const result = await api.dispatch({ type: "chat", message, clientMessageId });
       if (!result.ok) throw new Error(result.message ?? t("pet.chat.failed"));
+      if (result.type === "chat" && result.delegationError) {
+        throw new Error(result.delegationError);
+      }
     } catch (error) {
       setChatError(error instanceof Error ? error.message : t("pet.chat.failed"));
     } finally {
@@ -164,6 +172,10 @@ export function PetDesktopWindow() {
   const workActivity = React.useMemo(
     () => buildPetWidgetActivity(state.projection, workReceipts),
     [state.projection, workReceipts],
+  );
+  const globalOverview = React.useMemo(
+    () => selectPetOverview(state.projection, state.status),
+    [state.projection, state.status],
   );
 
   React.useEffect(() => {
@@ -176,15 +188,16 @@ export function PetDesktopWindow() {
     notice?.peek?.action.type === "open_session" ? notice.peek.action.target.agentSessionId : null;
   const noticeAlreadyListed =
     noticeSessionId !== null &&
-    workActivity.items.some((item) => item.agentSessionId === noticeSessionId);
+    globalOverview.sessions.some((session) => session.agentSessionId === noticeSessionId);
 
-  const openWorkItem = (item: (typeof workActivity.items)[number]): void => {
+  const openSession = (sessionId: string): void => {
     const projection = state.projection;
     if (!projection) return;
-    if (item.kind === "completed") {
+    const activityItem = workActivity.items.find((item) => item.agentSessionId === sessionId);
+    if (activityItem?.kind === "completed") {
       setWorkReceipts((current) => {
         if (!current) return current;
-        const next = markPetWidgetCompletionSeen(current, item.key);
+        const next = markPetWidgetCompletionSeen(current, activityItem.key);
         try {
           localStorage.setItem(PET_WIDGET_RECEIPTS_KEY, JSON.stringify(next));
         } catch {
@@ -194,12 +207,23 @@ export function PetDesktopWindow() {
       });
     }
     void api.openWidgetOverview({
-      agentSessionId: item.agentSessionId,
+      agentSessionId: sessionId,
       snapshotVersion: projection.version,
       generation: projection.generation,
-      ...(item.requestId ? { requestId: item.requestId } : {}),
-      ...(item.routeGeneration !== undefined ? { routeGeneration: item.routeGeneration } : {}),
+      ...(activityItem?.requestId ? { requestId: activityItem.requestId } : {}),
+      ...(activityItem?.routeGeneration !== undefined
+        ? { routeGeneration: activityItem.routeGeneration }
+        : {}),
     });
+  };
+
+  const openDelegation = (sessionId: string): void => {
+    const projection = state.projection;
+    if (!projection) {
+      void api.openWidgetOverview();
+      return;
+    }
+    openSession(sessionId);
   };
 
   return (
@@ -232,61 +256,23 @@ export function PetDesktopWindow() {
           </header>
 
           <div className="min-h-0 flex-1 space-y-2 overflow-auto p-2 text-xs">
-            <section className="rounded-xl border border-border/70 bg-muted/30 p-1.5">
+            <section
+              data-pet-global-session-list="true"
+              className="rounded-xl border border-border/70 bg-muted/30 p-1.5"
+            >
               <div className="flex items-center justify-between px-1.5 pb-1 text-[11px] font-medium text-muted-foreground">
                 <span>{t("pet.widget.workTitle")}</span>
-                <span className="tabular-nums">{workActivity.badgeCount}</span>
+                <span className="tabular-nums">{globalOverview.sessions.length}</span>
               </div>
-              {workActivity.items.length > 0 ? (
-                <div className="space-y-0.5">
-                  {workActivity.items.slice(0, 4).map((item) => (
-                    <button
-                      type="button"
-                      key={item.key}
-                      className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-background"
-                      onClick={() => openWorkItem(item)}
-                    >
-                      <span
-                        className={
-                          "mt-1.5 h-2 w-2 shrink-0 rounded-full " +
-                          (item.kind === "completed"
-                            ? "bg-status-ok"
-                            : item.kind === "needs-action"
-                              ? "bg-status-warn"
-                              : "animate-pulse bg-status-running motion-reduce:animate-none")
-                        }
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="min-w-0 flex-1 truncate font-medium">{item.title}</span>
-                          <span className="shrink-0 text-[10px] text-muted-foreground">
-                            {t(`pet.widget.workState.${item.kind}`)}
-                          </span>
-                        </span>
-                        {item.detail && (
-                          <span className="mt-0.5 block line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                            {item.detail}
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="px-2 py-2 text-[11px] text-muted-foreground">
-                  {t("pet.widget.workEmpty")}
-                </p>
-              )}
-              {workActivity.items.length > 4 && (
-                <button
-                  type="button"
-                  className="w-full px-2 py-1 text-left text-[11px] text-primary hover:underline"
-                  onClick={() => void api.openWidgetOverview()}
-                >
-                  {t("pet.widget.workMore", { count: workActivity.items.length - 4 })}
-                </button>
-              )}
+              <p className="px-1.5 pb-1 text-[10px] leading-4 text-muted-foreground">
+                {t("pet.widget.workScope")}
+              </p>
+              <SessionStatusSection
+                sessions={globalOverview.sessions}
+                emptyState={globalOverview.emptyState}
+                showHeading={false}
+                onOpen={(session) => openSession(session.agentSessionId)}
+              />
             </section>
             {notice && !noticeAlreadyListed && (
               <button
@@ -309,21 +295,33 @@ export function PetDesktopWindow() {
                 </span>
               </button>
             )}
-            {messages.slice(-6).map((message) => (
-              <div
-                key={message.id}
-                className={
-                  message.role === "user"
-                    ? "ml-6 rounded-lg bg-primary px-2.5 py-1.5 text-primary-foreground"
-                    : "mr-6 rounded-lg bg-muted px-2.5 py-1.5"
-                }
-              >
-                {message.source && (
-                  <div className="mb-0.5 text-[9px] font-medium opacity-70">{message.source}</div>
-                )}
-                <p>{message.text}</p>
-              </div>
-            ))}
+            {chatRows.slice(-6).map((row) =>
+              row.role === "delegation" && row.delegation ? (
+                <PetDelegationCard
+                  key={row.id}
+                  compact
+                  delegation={row.delegation}
+                  session={state.projection?.sessions.find(
+                    (session) => session.agentSessionId === row.delegation?.sessionId,
+                  )}
+                  onOpen={() => openDelegation(row.delegation!.sessionId)}
+                />
+              ) : (
+                <div
+                  key={row.id}
+                  className={
+                    row.role === "user"
+                      ? "ml-6 rounded-lg bg-primary px-2.5 py-1.5 text-primary-foreground"
+                      : "mr-6 rounded-lg bg-muted px-2.5 py-1.5"
+                  }
+                >
+                  {row.source && (
+                    <div className="mb-0.5 text-[9px] font-medium opacity-70">{row.source}</div>
+                  )}
+                  <p>{row.text}</p>
+                </div>
+              ),
+            )}
             {chatBusy && <p className="text-muted-foreground">{t("pet.widget.replying")}</p>}
             {chatError && <p className="text-status-err">{chatError}</p>}
             <div ref={conversationEndRef} />

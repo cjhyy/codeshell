@@ -68,7 +68,7 @@ afterEach(() => {
 });
 
 describe("session-bound workspace profile", () => {
-  test("persists the digital human and reuses its instruction on later turns", async () => {
+  test("persists and switches the digital human without replacing the Session", async () => {
     const root = mkdtempSync(join(tmpdir(), "cs-session-profile-"));
     dirs.push(root);
     process.env.CODE_SHELL_HOME = join(root, "home");
@@ -83,6 +83,17 @@ describe("session-bound workspace profile", () => {
       mainInstruction: "SESSION_PROFILE_MARKER",
       portableMemory: false,
     });
+    saveWorkspaceProfile({
+      name: "designer",
+      label: "设计师",
+      basePreset: "general",
+      plugins: [],
+      skills: [],
+      mcp: [],
+      agents: [],
+      mainInstruction: "DESIGNER_PROFILE_MARKER",
+      portableMemory: false,
+    });
     const engine = new Engine({
       llm: { provider, model: `profile-${Date.now()}`, apiKey: "test" } as never,
       cwd: root,
@@ -95,10 +106,13 @@ describe("session-bound workspace profile", () => {
 
     await engine.run("first", { sessionId: "profile-work", workspaceProfile: "researcher" });
     await engine.run("second", { sessionId: "profile-work" });
+    await engine.run("switch", { sessionId: "profile-work", workspaceProfile: "designer" });
+    await engine.run("after switch", { sessionId: "profile-work" });
 
     expect(prompts.filter((prompt) => prompt.includes("SESSION_PROFILE_MARKER"))).toHaveLength(2);
+    expect(prompts.filter((prompt) => prompt.includes("DESIGNER_PROFILE_MARKER"))).toHaveLength(2);
     expect(engine.getSessionManager().resume("profile-work").state.workspaceProfile).toBe(
-      "researcher",
+      "designer",
     );
   }, 15_000);
 

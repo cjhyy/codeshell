@@ -11,6 +11,12 @@ const dhSection = readFileSync(
 );
 const editor = readFileSync(join(import.meta.dir, "DigitalHumanEditorDialog.tsx"), "utf-8");
 const libraryHook = readFileSync(join(import.meta.dir, "useDigitalHumansLibrary.ts"), "utf-8");
+const app = readFileSync(join(import.meta.dir, "..", "App.tsx"), "utf-8");
+const topBar = readFileSync(join(import.meta.dir, "..", "TopBar.tsx"), "utf-8");
+const runController = readFileSync(
+  join(import.meta.dir, "..", "app", "useRunController.ts"),
+  "utf-8",
+);
 const main = readFileSync(join(import.meta.dir, "..", "..", "main", "index.ts"), "utf-8");
 const preload = readFileSync(join(import.meta.dir, "..", "..", "preload", "index.ts"), "utf-8");
 const preloadTypes = readFileSync(
@@ -32,11 +38,21 @@ describe("DigitalHumansView contract", () => {
     expect(dhSection).toContain("<ProfileSection");
   });
 
-  test("creates Pet-led teams with both parallel modes", () => {
+  test("creates Session-based teams with both collaboration modes", () => {
     expect(source).toContain('value="divide"');
     expect(source).toContain('value="compare"');
     expect(source).toContain("saveDigitalHumanTeam");
     expect(source).toContain('kind: "team"');
+  });
+
+  test("supports the discover-detail-sample-summon journey", () => {
+    expect(source).toContain("FeaturedScenes");
+    expect(source).toContain("CuratedTeamCard");
+    expect(source).toContain("DigitalHumanDetailDialog");
+    expect(source).toContain("samplePrompts");
+    expect(source).toContain("installAndSummon");
+    expect(app).toContain("workspaceProfile: profileName");
+    expect(app).toContain("setComposerDrafts");
   });
 
   test("creates and edits a digital human with installed Skill assignment", () => {
@@ -46,8 +62,29 @@ describe("DigitalHumansView contract", () => {
     expect(libraryHook).toContain("api.listSkills");
     expect(editor).toContain("profile?.skills");
     expect(editor).toContain("selectedSkills");
+    expect(editor).toContain("projectSkillsDescription");
+    expect(source).toContain('skill.source !== "project"');
     expect(source).toContain('t("digitalHumans.editor.create")');
     expect(source).toContain('t("digitalHumans.editor.edit")');
+  });
+
+  test("owns long-term memory and model-driven Session messaging outside Pet", () => {
+    expect(source).toContain("DigitalHumanMemoryDialog");
+    expect(runController).toContain("sessionMessageTargets");
+    expect(app).not.toContain("petDigitalHumanSelection");
+  });
+
+  test("keeps cross-Session messaging as a tool instead of exposing product UI", () => {
+    expect(app).not.toContain("SessionHandoffDialog");
+    expect(topBar).not.toContain("data-handoff-action");
+    expect(topBar).not.toContain("onOpenHandoff");
+  });
+
+  test("lets an existing project Session switch its digital human", () => {
+    expect(app).toContain("setSessionWorkspaceProfileLocal");
+    expect(app).toContain("window.codeshell.setSessionWorkspaceProfile");
+    expect(main).toContain('"profiles:setSession"');
+    expect(preload).toContain("setSessionWorkspaceProfile");
   });
 
   test("uses only the product term digital human", () => {

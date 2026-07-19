@@ -71,12 +71,10 @@ import {
 import {
   CC_COST_GUARD_PROMPT,
   checkQuota,
-  countCodexSessions,
-  countSessions,
+  countRelatedSessions,
   DEFAULT_DISCOVER_LIMIT,
   DEFAULT_DISCOVER_SINCE_MS,
-  discoverCodexSessions,
-  discoverSessions,
+  discoverRelatedSessions,
   probeClaudeCli,
   probeCodexCli,
   readCodexRecentHistory,
@@ -100,6 +98,8 @@ import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
 import { PetSegmentController } from "./pet/pet-segment-controller.js";
+import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
+import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -314,6 +314,7 @@ import {
   listProfiles,
   previewProfileDefinitionImport,
   saveProfile,
+  setSessionWorkspaceProfile,
 } from "./profiles-service.js";
 import {
   deleteDigitalHumanTeam,
@@ -455,6 +456,9 @@ let petStateAggregator: PetStateAggregator | null = null;
 let petDispatchService: PetDispatchService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
+let petLongTaskStore: PetLongTaskStore | null = null;
+let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
+let unsubscribePetLongTaskStream: (() => void) | null = null;
 let disposePetIpc: (() => void) | null = null;
 let mcpOAuthService: McpOAuthService | null = null;
 let cspInstalled = false;
@@ -1074,6 +1078,36 @@ async function createWindow(): Promise<BrowserWindow> {
     // durable pet session id is known; until then the dispatch service holds a
     // stable wrapper that no-ops (beginTurn → undefined; closure → nothing).
     let petSegmentController: PetSegmentController | null = null;
+    const longTaskStore = new PetLongTaskStore(
+      resolve(app.getPath("userData"), "pet", "long-tasks.json"),
+    );
+    petLongTaskStore = longTaskStore;
+    const longTaskCoordinator = new PetLongTaskCoordinator({
+      store: longTaskStore,
+      projection: aggregator,
+      worker: bridge,
+      launcher: petWorkDelegationHost,
+      onTaskClosed: async (task) => {
+        if (!petSegmentController) throw new Error("Pet work-memory sink is not ready");
+        await petSegmentController.onDelegationClosed({
+          dedupeKey: `${task.id}:${task.attempt}:${task.status}`,
+          objective: task.objective,
+          outcome: task.status === "completed" ? "completed" : "failed",
+          ...(task.workspacePath ? { workspace: task.workspacePath } : {}),
+          sessionRef: task.sessionId,
+        });
+      },
+      onBackgroundError: (operation, error) => {
+        dlog("main", `pet.longTask.${operation}.failed`, { error: String(error) });
+      },
+    });
+    petLongTaskCoordinator = longTaskCoordinator;
+    unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {
+      if (!snapshotEntry) return;
+      void longTaskCoordinator
+        .observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event)
+        .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) }));
+    });
     petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator,
@@ -1094,6 +1128,7 @@ async function createWindow(): Promise<BrowserWindow> {
         onDelegationClosed: (closure) =>
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
+      longTasks: longTaskCoordinator,
       listWorkspaces: () => mobileOrchestrator.projectList(),
       listReusableSessions: async () => {
         const noWorkspaceCwd = resolveNoRepoCwd();
@@ -1115,12 +1150,7 @@ async function createWindow(): Promise<BrowserWindow> {
             status: session.status,
           }));
       },
-      listDigitalHumans: async () => listProfiles(),
-      listDigitalHumanTeams: async () =>
-        listDigitalHumanTeams({
-          onInvalidTeam: (issue) => dlog("main", "digital_human_team.invalid", { ...issue }),
-        }),
-      startWorkSession: (delegation) => petWorkDelegationHost.start(delegation),
+      startWorkSession: (delegation) => longTaskCoordinator.startDelegation(delegation),
     });
     const petReceipts = new PetReceiptStore(
       resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
@@ -1159,6 +1189,10 @@ async function createWindow(): Promise<BrowserWindow> {
         now: Date.now,
         idleMs: DEFAULT_SEGMENT_IDLE_MS,
       });
+      // Load/reconcile durable long tasks only after both the session projection
+      // and work-memory closure sink are ready. Running tasks left idle by a
+      // previous process are marked interrupted and remain resumable.
+      await longTaskCoordinator.start();
       attention.start();
       // Auto-archive completed work sessions idle for 7+ days, then force a full
       // catalog rebuild. Rationale for the full pass: archiveDiskSession touches
@@ -1186,6 +1220,11 @@ async function createWindow(): Promise<BrowserWindow> {
       workMemory: {
         getActiveSegmentId: () => petWorkMemory.activeSegment()?.id ?? null,
         getSegments: () => petWorkMemory.segmentBoundaries(),
+      },
+      longTasks: {
+        getSnapshot: () => longTaskStore.getSnapshot(),
+        control: (request) => longTaskCoordinator.control(request),
+        subscribe: (listener) => longTaskStore.subscribe(listener),
       },
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
@@ -1903,6 +1942,15 @@ ipcMain.handle("profiles:deactivate", async (_e, cwd: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("profiles:deactivate requires cwd");
   deactivateProfile(cwd);
 });
+ipcMain.handle("profiles:setSession", async (_e, sessionId: unknown, profileName: unknown) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("profiles:setSession requires sessionId");
+  }
+  if (typeof profileName !== "string" || !profileName) {
+    throw new Error("profiles:setSession requires profileName");
+  }
+  return setSessionWorkspaceProfile(sessionId, profileName);
+});
 ipcMain.handle("profiles:catalog", async () => listProfileCatalog());
 ipcMain.handle("profiles:install", async (_e, name: string) => {
   if (typeof name !== "string" || !name) throw new Error("profiles:install requires name");
@@ -1985,7 +2033,7 @@ ipcMain.handle("digital-human-teams:list", async () =>
   }),
 );
 ipcMain.handle("digital-human-teams:save", async (_e, team: unknown) =>
-  saveDigitalHumanTeam(team as import("@cjhyy/code-shell-pet").DigitalHumanTeam),
+  saveDigitalHumanTeam(team as Parameters<typeof saveDigitalHumanTeam>[0]),
 );
 ipcMain.handle("digital-human-teams:delete", async (_e, id: string) => {
   if (typeof id !== "string" || !id) throw new Error("digital-human-teams:delete requires id");
@@ -3095,11 +3143,15 @@ ipcMain.handle("ccRoom:codexProbe", async (_e, force?: boolean) => probeCodexCli
 // (the "load more" path). `total` lets the UI show how many are hidden.
 ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => {
   const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-  return { sessions: discoverSessions(cwd, undefined, opts), total: countSessions(cwd) };
+  const sessions = discoverRelatedSessions("claude", cwd, opts);
+  const total = all ? sessions.length : countRelatedSessions("claude", cwd);
+  return { sessions, total };
 });
 ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
   const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
-  return { sessions: discoverCodexSessions(cwd, undefined, opts), total: countCodexSessions(cwd) };
+  const sessions = discoverRelatedSessions("codex", cwd, opts);
+  const total = all ? sessions.length : countRelatedSessions("codex", cwd);
+  return { sessions, total };
 });
 ipcMain.handle(
   "ccRoom:openSession",
@@ -3795,7 +3847,7 @@ ipcMain.handle(
   },
 );
 
-const VALID_MEMORY_LEVELS = new Set<MemoryLevel>(["user", "project"]);
+const VALID_MEMORY_LEVELS = new Set<MemoryLevel>(["user", "project", "profile"]);
 const VALID_MEMORY_SCOPES = new Set<MemoryScope>(["user", "dream"]);
 
 function validateMemoryArgs(
@@ -3803,7 +3855,7 @@ function validateMemoryArgs(
   scope: unknown,
 ): { level: MemoryLevel; scope: MemoryScope } {
   if (typeof level !== "string" || !VALID_MEMORY_LEVELS.has(level as MemoryLevel)) {
-    throw new Error(`memory level must be "user" or "project", got ${String(level)}`);
+    throw new Error(`memory level must be "user", "project", or "profile", got ${String(level)}`);
   }
   if (typeof scope !== "string" || !VALID_MEMORY_SCOPES.has(scope as MemoryScope)) {
     throw new Error(`memory scope must be "user" or "dream", got ${String(scope)}`);
@@ -3811,17 +3863,31 @@ function validateMemoryArgs(
   return { level: level as MemoryLevel, scope: scope as MemoryScope };
 }
 
-ipcMain.handle("memory:list", async (_e, level: unknown, scope: unknown, cwd?: string) => {
-  const v = validateMemoryArgs(level, scope);
-  return listMemory(v.level, v.scope, typeof cwd === "string" ? cwd : undefined);
-});
+ipcMain.handle(
+  "memory:list",
+  async (_e, level: unknown, scope: unknown, cwd?: string, profileName?: string) => {
+    const v = validateMemoryArgs(level, scope);
+    return listMemory(
+      v.level,
+      v.scope,
+      typeof cwd === "string" ? cwd : undefined,
+      typeof profileName === "string" ? profileName : undefined,
+    );
+  },
+);
 
 ipcMain.handle(
   "memory:read",
-  async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string) => {
+  async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string, profileName?: string) => {
     const v = validateMemoryArgs(level, scope);
     if (typeof name !== "string" || !name) throw new Error("memory name required");
-    return readMemory(v.level, v.scope, name, typeof cwd === "string" ? cwd : undefined);
+    return readMemory(
+      v.level,
+      v.scope,
+      name,
+      typeof cwd === "string" ? cwd : undefined,
+      typeof profileName === "string" ? profileName : undefined,
+    );
   },
 );
 
@@ -3833,10 +3899,16 @@ ipcMain.handle("memory:save", async (_e, input: SaveMemoryInput) => {
 
 ipcMain.handle(
   "memory:delete",
-  async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string) => {
+  async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string, profileName?: string) => {
     const v = validateMemoryArgs(level, scope);
     if (typeof name !== "string" || !name) throw new Error("memory name required");
-    return deleteMemory(v.level, v.scope, name, typeof cwd === "string" ? cwd : undefined);
+    return deleteMemory(
+      v.level,
+      v.scope,
+      name,
+      typeof cwd === "string" ? cwd : undefined,
+      typeof profileName === "string" ? profileName : undefined,
+    );
   },
 );
 
@@ -4070,10 +4142,16 @@ app.on("before-quit", (event) => {
   petStateAggregator?.stop();
   petStateAggregator = null;
   petDispatchService = null;
+  petLongTaskCoordinator?.stop();
+  petLongTaskCoordinator = null;
+  unsubscribePetLongTaskStream?.();
+  unsubscribePetLongTaskStream = null;
   petAttentionPolicy?.stop();
   petAttentionPolicy = null;
   const petWorkInboxFlush = petWorkInboxStore?.flush();
   petWorkInboxStore = null;
+  const petLongTaskFlush = petLongTaskStore?.flush();
+  petLongTaskStore = null;
   disposePetIpc?.();
   disposePetIpc = null;
   automationHandle?.stop();
@@ -4088,6 +4166,7 @@ app.on("before-quit", (event) => {
       mobileRemote.stop(),
       gatewayControlServer?.stop(),
       petWorkInboxFlush,
+      petLongTaskFlush,
     ]);
     gatewayControlServer = undefined;
     await mobileUploads.dispose();

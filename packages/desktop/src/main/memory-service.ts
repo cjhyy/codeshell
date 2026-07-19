@@ -7,9 +7,11 @@
  * them through MemoryManager instances created here in the main
  * process. We honour both axes:
  *
- *   - level: "user" (no projectDir → ~/.code-shell/memory/<scope>) or
+ *   - level: "user" (no projectDir → ~/.code-shell/memory/<scope>),
  *            "project" (projectDir set to the active repo path →
- *            ~/.code-shell/projects/<hash>/memory/<scope>).
+ *            ~/.code-shell/projects/<hash>/memory/<scope>), or
+ *            "profile" (digital-human-owned →
+ *            ~/.code-shell/profiles/<name>/memory/<scope>).
  *   - scope: "user" (manual entries) or "dream" (auto-consolidated).
  *
  * "user" + level=user is the common case the user interacts with;
@@ -19,8 +21,9 @@
  */
 
 import { MemoryManager, type MemoryEntry, type MemoryScope } from "@cjhyy/code-shell-core";
+import { readWorkspaceProfile, workspaceProfileDir } from "@cjhyy/code-shell-core/internal";
 
-export type MemoryLevel = "user" | "project";
+export type MemoryLevel = "user" | "project" | "profile";
 
 export interface RendererMemoryEntry {
   name: string;
@@ -29,6 +32,7 @@ export interface RendererMemoryEntry {
   fileName: string;
   scope: MemoryScope;
   level: MemoryLevel;
+  profileName?: string;
   pinned?: boolean;
   id?: string;
   origin?: "auto" | "manual" | "dream";
@@ -48,7 +52,19 @@ export interface RendererMemoryEntry {
   promotionStatus?: MemoryEntry["promotionStatus"];
 }
 
-function mm(level: MemoryLevel, scope: MemoryScope, cwd?: string): MemoryManager {
+function mm(
+  level: MemoryLevel,
+  scope: MemoryScope,
+  cwd?: string,
+  profileName?: string,
+): MemoryManager {
+  if (level === "profile") {
+    if (!profileName) throw new Error("profile memory requires profileName");
+    if (!readWorkspaceProfile(profileName)) {
+      throw new Error(`workspace profile ${profileName} does not exist`);
+    }
+    return new MemoryManager({ baseDir: workspaceProfileDir(profileName), scope });
+  }
   if (level === "project") {
     if (!cwd) throw new Error("project memory requires cwd");
     return new MemoryManager({ projectDir: cwd, scope });
@@ -60,8 +76,9 @@ export function listMemory(
   level: MemoryLevel,
   scope: MemoryScope,
   cwd?: string,
+  profileName?: string,
 ): RendererMemoryEntry[] {
-  const entries = mm(level, scope, cwd).loadAll();
+  const entries = mm(level, scope, cwd, profileName).loadAll();
   return entries.map((e) => ({
     name: e.name,
     description: e.description,
@@ -69,6 +86,7 @@ export function listMemory(
     fileName: e.fileName,
     scope: e.scope,
     level,
+    ...(profileName ? { profileName } : {}),
     pinned: e.pinned,
     id: e.id,
     origin: e.origin,
@@ -92,8 +110,9 @@ export function readMemory(
   scope: MemoryScope,
   name: string,
   cwd?: string,
+  profileName?: string,
 ): (RendererMemoryEntry & { content: string }) | null {
-  const entries = mm(level, scope, cwd).loadAll();
+  const entries = mm(level, scope, cwd, profileName).loadAll();
   const e = entries.find((x) => x.id === name || x.name === name || x.fileName === name);
   if (!e) return null;
   return {
@@ -103,6 +122,7 @@ export function readMemory(
     fileName: e.fileName,
     scope: e.scope,
     level,
+    ...(profileName ? { profileName } : {}),
     content: e.content,
     pinned: e.pinned,
     id: e.id,
@@ -130,13 +150,14 @@ export interface SaveMemoryInput {
   type: MemoryEntry["type"];
   content: string;
   cwd?: string;
+  profileName?: string;
   pinned?: boolean;
   id?: string;
   origin?: "auto" | "manual" | "dream";
 }
 
 export function saveMemory(input: SaveMemoryInput): string {
-  return mm(input.level, input.scope, input.cwd).save({
+  return mm(input.level, input.scope, input.cwd, input.profileName).save({
     id: input.id,
     name: input.name,
     description: input.description,
@@ -152,8 +173,9 @@ export function deleteMemory(
   scope: MemoryScope,
   name: string,
   cwd?: string,
+  profileName?: string,
 ): boolean {
-  return mm(level, scope, cwd).delete(name);
+  return mm(level, scope, cwd, profileName).delete(name);
 }
 
 // ─── Pending (审批门) ────────────────────────────────────────────────────────

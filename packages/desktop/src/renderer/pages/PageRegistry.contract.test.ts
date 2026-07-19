@@ -28,12 +28,13 @@ describe("PageRegistry contract", () => {
     expect(sidebar).not.toContain('t("sidebar.credentials")');
   });
 
-  test("nav labels and the settings double-active predicate live in the registry", () => {
+  test("nav labels live in the registry while settings stays footer-only", () => {
     expect(registry).toContain('"sidebar.digitalHumans"');
     expect(registry).toContain('"sidebar.automation"');
     expect(registry).toContain('"sidebar.credentials"');
     expect(registry).toContain('"sidebar.settings"');
-    expect(registry).toContain('mode === "settings_page" || mode === "project_config"');
+    expect(registry).not.toContain('target: "settings_page"');
+    expect(sidebar).toContain("SettingsMenu");
   });
 
   test("pet entry and the action items stay outside the registry", () => {

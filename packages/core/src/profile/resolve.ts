@@ -1,9 +1,8 @@
 /**
  * “当前激活的是谁 + 它的活字段”的唯一入口。除 overrides 折叠
  * （读 settings 持久化快照，见 overlay.ts）之外，任何代码不得自行读
- * profile.active 拼路径 —— 后续加 per-session 绑定时只改这里。
- * sessionProfile 本期恒为 undefined（预留缝，与 pet 的 behaviorMode
- * 同样走 RunParams 的模式在第二阶段接入）。
+ * profile.active 拼路径。Session 绑定的 profile 显式优先于项目默认，
+ * 让同一项目内的 PM / UI / 工程 Session 可以各自持有稳定数字人身份。
  */
 import { logger } from "../logging/logger.js";
 import type { SettingsManager } from "../settings/manager.js";
@@ -12,7 +11,7 @@ import { readWorkspaceProfile } from "./store.js";
 import type { WorkspaceProfile } from "./types.js";
 
 export interface ResolveActiveWorkspaceProfileInput {
-  /** 未来 per-session 绑定的入口；本期调用方一律不传。 */
+  /** Session-bound digital-human profile; wins over the project default. */
   sessionProfile?: string;
   cwd: string;
   settings: SettingsManager;
