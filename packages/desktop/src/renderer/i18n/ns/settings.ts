@@ -154,6 +154,12 @@ export const settingsNs = {
         edit: "编辑",
         empty: "还没有数字人，点击「新建」或从市场安装。",
         skillsLoadFailed: "技能列表加载失败：{message}",
+        externalSessionsTitle: "外部 CLI 会话",
+        externalSessionsSubtitle: "在 Pet 全局视图显示本机其他 CLI 工具的会话状态。默认关闭。",
+        codexLabel: "在 Pet 全局视图显示 Codex CLI/App 会话",
+        codexDesc: "开启后 CodeShell 会读取本机 ~/.codex 下的会话记录以显示状态；关闭则完全不读取。",
+        claudeLabel: "在 Pet 全局视图显示 Claude Code 会话",
+        claudeDesc: "开启后 CodeShell 会读取本机 ~/.claude 下的会话记录以显示状态；关闭则完全不读取。",
       },
       dataSources: {
         globalHint: "这里管理全局连接目录；把数据源授权给某个项目请切换到项目范围。",
@@ -958,6 +964,15 @@ export const settingsNs = {
         edit: "Edit",
         empty: "No digital humans yet — create one or install from the market.",
         skillsLoadFailed: "Failed to load skills: {message}",
+        externalSessionsTitle: "External CLI sessions",
+        externalSessionsSubtitle:
+          "Show sessions from other local CLI tools in the Pet global view. Off by default.",
+        codexLabel: "Show Codex CLI/App sessions in the Pet global view",
+        codexDesc:
+          "When on, CodeShell reads local session records under ~/.codex to show their status; when off, it reads nothing.",
+        claudeLabel: "Show Claude Code sessions in the Pet global view",
+        claudeDesc:
+          "When on, CodeShell reads local session records under ~/.claude to show their status; when off, it reads nothing.",
       },
       dataSources: {
         globalHint:

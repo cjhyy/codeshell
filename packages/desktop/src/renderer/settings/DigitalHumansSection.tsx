@@ -1,11 +1,14 @@
 import React from "react";
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useT } from "../i18n";
 import { useToast } from "../ui/ToastProvider";
 import { DigitalHumanEditorDialog } from "../digital-humans/DigitalHumanEditorDialog";
 import type { DigitalHumanProfileEntry, DigitalHumanSkillEntry } from "../digital-humans/types";
 import { ProfileSection } from "./ProfileSection";
+import { writeSettings } from "../settingsBus";
+import { useRefreshOnSettingsChange } from "./useSettingsResource";
 
 interface Props {
   scope: "user" | "project";
@@ -165,6 +168,122 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
         onOpenChange={setEditorOpen}
         onSave={(profile) => void save(profile)}
       />
+      <PetExternalSessionsToggles />
     </section>
+  );
+}
+
+export interface PetSettings {
+  showExternalCodexSessions?: boolean;
+  showExternalClaudeSessions?: boolean;
+  [key: string]: unknown;
+}
+
+function petOf(v: unknown): PetSettings {
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as PetSettings) : {};
+}
+
+/**
+ * Compute the `pet` subtree to write when one external-session toggle flips.
+ * Spreads the current subtree so the other toggle's value is preserved even if
+ * the settings backend ever switched to a shallow merge.
+ */
+export function nextPetPatch(
+  current: PetSettings,
+  key: "showExternalCodexSessions" | "showExternalClaudeSessions",
+  next: boolean,
+): PetSettings {
+  return { ...current, [key]: next };
+}
+
+/**
+ * Two global (user-scope) toggles that opt Pet's global view into reading
+ * external CLI session records (~/.codex, ~/.claude). Default off. Writing the
+ * user-scope `pet` subtree fires the settings-changed event; main's
+ * `settings:set` handler hot-tunes the external-session adapters when the patch
+ * touches `pet`.
+ *
+ * The whole `pet` subtree is spread on write so toggling one switch never drops
+ * the other's current value. (main's writeSettings deep-merges the patch, so
+ * this is belt-and-suspenders, but it keeps the write self-describing.)
+ */
+export function PetExternalSessionsToggles() {
+  const { t } = useT();
+  const [pet, setPet] = React.useState<PetSettings>({});
+  // Mirror the latest committed pet subtree so setToggle computes the optimistic
+  // patch and its rollback base from live truth, not a render-time closure. This
+  // is what makes toggling both switches within one render frame safe (the 2nd
+  // click builds on the 1st) and keeps a failed write from reverting to a stale
+  // snapshot.
+  const petRef = React.useRef<PetSettings>(pet);
+  petRef.current = pet;
+
+  const load = React.useCallback(async () => {
+    const s = (await window.codeshell.getSettings("user")) ?? {};
+    setPet(petOf((s as Record<string, unknown>).pet));
+  }, []);
+
+  useRefreshOnSettingsChange(() => void load(), [load]);
+
+  const codex = pet.showExternalCodexSessions ?? false;
+  const claude = pet.showExternalClaudeSessions ?? false;
+
+  const setToggle = async (
+    key: "showExternalCodexSessions" | "showExternalClaudeSessions",
+    next: boolean,
+  ) => {
+    const prev = petRef.current;
+    const optimistic = nextPetPatch(prev, key, next);
+    petRef.current = optimistic;
+    setPet(optimistic);
+    try {
+      await writeSettings("user", { pet: optimistic });
+    } catch {
+      // Revert to the value observed before this toggle; the settings-changed
+      // listener re-loads truth anyway.
+      petRef.current = prev;
+      setPet(prev);
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border border-border bg-background p-4">
+      <div>
+        <h3 className="text-sm font-medium text-foreground">
+          {t("settingsX.digitalHumans.externalSessionsTitle")}
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          {t("settingsX.digitalHumans.externalSessionsSubtitle")}
+        </p>
+      </div>
+      <label className="flex items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block text-sm text-foreground">
+            {t("settingsX.digitalHumans.codexLabel")}
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            {t("settingsX.digitalHumans.codexDesc")}
+          </span>
+        </span>
+        <Switch
+          checked={codex}
+          onCheckedChange={(next) => void setToggle("showExternalCodexSessions", next)}
+        />
+      </label>
+      <label className="flex items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block text-sm text-foreground">
+            {t("settingsX.digitalHumans.claudeLabel")}
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            {t("settingsX.digitalHumans.claudeDesc")}
+          </span>
+        </span>
+        <Switch
+          checked={claude}
+          onCheckedChange={(next) => void setToggle("showExternalClaudeSessions", next)}
+        />
+      </label>
+    </div>
   );
 }
