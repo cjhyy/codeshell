@@ -152,3 +152,17 @@ describe("mcpServerOverrides (plugin MCP user policy and credentials)", () => {
     ).toThrow();
   });
 });
+
+describe("pet settings (Mimi global-view external-session visibility)", () => {
+  it("pet external-session toggles default to false and validate booleans", () => {
+    const parsed = SettingsSchema.parse({});
+    expect(parsed.pet).toEqual({
+      showExternalCodexSessions: false,
+      showExternalClaudeSessions: false,
+    });
+    expect(
+      SettingsSchema.parse({ pet: { showExternalCodexSessions: true } }).pet
+        ?.showExternalCodexSessions,
+    ).toBe(true);
+  });
+});

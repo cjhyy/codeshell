@@ -111,6 +111,21 @@ export const SettingsSchema = z
     autoUpdates: z.boolean().default(true),
 
     /**
+     * Pet (Mimi) global-view preferences.
+     */
+    pet: z
+      .object({
+        /**
+         * Show external Codex CLI/App sessions in the Pet global view. When off,
+         * the host does not scan or tail Codex session files at all. Default off.
+         */
+        showExternalCodexSessions: z.boolean().default(false),
+        /** Same, for external Claude Code CLI sessions. Default off. */
+        showExternalClaudeSessions: z.boolean().default(false),
+      })
+      .default({}),
+
+    /**
      * Image generation is a general capability, decoupled from LLM providers
      * (TODO 7.1): a vendor may use different keys/endpoints/models for chat vs
      * image, and image vendors (Gemini, and later 国内 模型) don't fit the LLM
