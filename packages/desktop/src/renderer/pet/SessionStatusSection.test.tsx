@@ -78,6 +78,53 @@ describe("SessionStatusSection", () => {
     expect(html).not.toContain("<h3");
   });
 
+  test("external codex session renders badge and is not clickable", () => {
+    const html = renderToStaticMarkup(
+      <SessionStatusSection
+        sessions={[
+          session({
+            agentSessionId: "thread-a",
+            external: { cli: "codex", cwd: "/tmp/proj-a" },
+            freshness: { source: "external-tail", observedAt: 2_000, workerState: "active" },
+          } as Partial<PetSessionProjection>),
+        ]}
+        now={3_000}
+        onOpen={() => {}}
+      />,
+    );
+    expect(html).toContain("codex"); // 徽章
+    expect(html).toMatch(/<button[^>]*\sdisabled=/); // 外部会话不可点击
+    expect(html).toContain("暂不支持在 CodeShell 内打开");
+  });
+
+  test("external claude session renders claude badge", () => {
+    const html = renderToStaticMarkup(
+      <SessionStatusSection
+        sessions={[
+          session({
+            agentSessionId: "sess-x",
+            external: { cli: "claude", cwd: "/tmp/proj-x" },
+          } as Partial<PetSessionProjection>),
+        ]}
+        now={3_000}
+        onOpen={() => {}}
+      />,
+    );
+    expect(html).toContain("claude");
+    expect(html).toMatch(/<button[^>]*\sdisabled=/);
+  });
+
+  test("local session stays clickable (no disabled, no badge)", () => {
+    const html = renderToStaticMarkup(
+      <SessionStatusSection
+        sessions={[session({ agentSessionId: "local-1" })]}
+        now={3_000}
+        onOpen={() => {}}
+      />,
+    );
+    expect(html).not.toMatch(/<button[^>]*\sdisabled=/);
+  });
+
   test("has distinct empty, reclaimed, disconnected, stale, error and reconciling language", () => {
     const states = ["empty", "reclaimed", "disconnected", "stale", "error", "reconciling"] as const;
     const expected = [

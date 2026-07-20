@@ -134,6 +134,7 @@ export const pet = {
         minutesAgo: "{count} 分钟前",
         hoursAgo: "{count} 小时前",
         daysAgo: "{count} 天前",
+        externalNoNav: "外部会话（由 Codex/Claude CLI 管理），暂不支持在 CodeShell 内打开",
       },
       pending: {
         title: "待你决定",

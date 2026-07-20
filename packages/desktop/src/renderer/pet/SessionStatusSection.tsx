@@ -67,13 +67,19 @@ function SessionRow({
   const summary = bounded(session.summary, 120);
   const shortId = session.agentSessionId.slice(-8);
   const animated = state === "running" ? " animate-pulse motion-reduce:animate-none" : "";
+  const external = session.external;
+  const navigable = !external;
 
   return (
     <li className="border-b border-border/60 last:border-b-0">
       <button
         type="button"
-        className="flex w-full min-w-0 items-start gap-2 px-2 py-2 text-left hover:bg-muted/50"
-        onClick={() => onOpen?.(session)}
+        disabled={!navigable}
+        title={navigable ? undefined : t("pet.session.externalNoNav")}
+        className={`flex w-full min-w-0 items-start gap-2 px-2 py-2 text-left disabled:opacity-70 ${
+          navigable ? "hover:bg-muted/50" : "cursor-default"
+        }`}
+        onClick={() => navigable && onOpen?.(session)}
       >
         <span
           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${STATE_TONE[state]}${animated}`}
@@ -84,6 +90,11 @@ function SessionRow({
             <span className="min-w-0 flex-1 truncate font-medium" title={session.title}>
               {title}
             </span>
+            {external && (
+              <span className="shrink-0 rounded border border-border px-1 text-[10px] uppercase text-muted-foreground">
+                {external.cli}
+              </span>
+            )}
             <span className="shrink-0 text-xs text-muted-foreground">{stateLabel}</span>
           </div>
           <div className="flex min-w-0 gap-1 text-xs text-muted-foreground">
