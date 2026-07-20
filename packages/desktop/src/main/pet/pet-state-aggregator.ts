@@ -370,6 +370,16 @@ export class PetStateAggregator {
     this.emit({ kind: "session-remove", sessionId: agentSessionId });
   }
 
+  /** Drop every external session pushed by a given CLI (used when a toggle
+   *  turns that CLI off). Collects ids first to avoid mutating during iteration. */
+  removeExternalSessionsByCli(cli: "codex" | "claude"): void {
+    const ids: string[] = [];
+    for (const [id, session] of this.externalSessions) {
+      if (session.external?.cli === cli) ids.push(id);
+    }
+    for (const id of ids) this.removeExternalSession(id);
+  }
+
   async resolveNavigation(request: PetNavigationRequest): Promise<PetNavigationResult> {
     // Navigation must reflect deletions/soft-deletes, so rebuild from scratch.
     await this.refreshCatalog(false, { full: true });

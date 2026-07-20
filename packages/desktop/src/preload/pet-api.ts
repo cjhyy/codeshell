@@ -59,8 +59,10 @@ export interface PetSessionProjection {
   lastActivityAt: number;
   pendingDecisionCount: number;
   terminal?: { status: "completed" | "failed" | "cancelled"; at: number };
+  /** Present on sessions observed from an external CLI (Codex/Claude). */
+  external?: { cli: "codex" | "claude"; cwd?: string };
   freshness: {
-    source: "disk" | "live-snapshot" | "live-event";
+    source: "disk" | "live-snapshot" | "live-event" | "external-tail";
     observedAt: number;
     workerState: PetWorkerState;
   };

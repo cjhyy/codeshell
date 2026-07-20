@@ -816,4 +816,25 @@ describe("external session source", () => {
     expect(ids).toContain("thread-a");
     aggregator.stop();
   });
+
+  test("removeExternalSessionsByCli drops only that CLI's external sessions", async () => {
+    const bridge: PetStateBridge = {
+      hasLiveWorker: () => false,
+      requestPetProjectionSnapshot: async () => null,
+      subscribePetProjection: () => () => {},
+    };
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: async () => ({ sessions: [], nextCursor: null }),
+      catalogRefreshIntervalMs: 0,
+    });
+    await aggregator.start();
+    aggregator.upsertExternalSession({ ...externalSession("codex-1"), external: { cli: "codex" } });
+    aggregator.upsertExternalSession({ ...externalSession("claude-1"), external: { cli: "claude" } });
+    aggregator.removeExternalSessionsByCli("codex");
+    const ids = aggregator.getSnapshot().sessions.map((s) => s.agentSessionId);
+    expect(ids).not.toContain("codex-1");
+    expect(ids).toContain("claude-1");
+    aggregator.stop();
+  });
 });

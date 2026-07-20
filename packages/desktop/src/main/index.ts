@@ -74,7 +74,11 @@ import {
   countRelatedSessions,
   DEFAULT_DISCOVER_LIMIT,
   DEFAULT_DISCOVER_SINCE_MS,
+  discoverRecentClaudeSessions,
+  discoverRecentCodexSessions,
   discoverRelatedSessions,
+  parseClaudeTranscriptLine,
+  parseCodexTranscriptLine,
   probeClaudeCli,
   probeCodexCli,
   readCodexRecentHistory,
@@ -89,6 +93,7 @@ import {
 } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
+import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { PetDispatchService } from "./pet/pet-dispatch-service.js";
@@ -453,6 +458,8 @@ const imGatewayService = new ImGatewayService({
 });
 registerImGatewayIpc(ipcMain, imGatewayService);
 let petStateAggregator: PetStateAggregator | null = null;
+const petExternalAdapters = new Map<ExternalCli, ExternalSessionAdapter>();
+let reconcileExternalAdapters: ((settings: Record<string, unknown>) => void) | null = null;
 let petDispatchService: PetDispatchService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
@@ -1074,6 +1081,63 @@ async function createWindow(): Promise<BrowserWindow> {
       },
     });
     petStateAggregator = aggregator;
+
+    // Toggle-driven external-CLI session adapters (Codex / Claude). Each CLI
+    // gets at most one adapter; enabling starts it, disabling stops it and drops
+    // any cards it pushed. reconcile is exposed at module scope so settings:set
+    // can re-tune on a live toggle change.
+    const externalCliConfig = {
+      codex: {
+        discover: () => discoverRecentCodexSessions({ sinceMs: 24 * 60 * 60_000, limit: 50 }),
+        parseLine: parseCodexTranscriptLine,
+        enabled: (s: Record<string, unknown>) =>
+          Boolean(
+            (s.pet as { showExternalCodexSessions?: boolean } | undefined)
+              ?.showExternalCodexSessions,
+          ),
+      },
+      claude: {
+        discover: () => discoverRecentClaudeSessions({ sinceMs: 24 * 60 * 60_000, limit: 50 }),
+        parseLine: parseClaudeTranscriptLine,
+        enabled: (s: Record<string, unknown>) =>
+          Boolean(
+            (s.pet as { showExternalClaudeSessions?: boolean } | undefined)
+              ?.showExternalClaudeSessions,
+          ),
+      },
+    } satisfies Record<
+      ExternalCli,
+      {
+        discover: () => ReturnType<typeof discoverRecentCodexSessions>;
+        parseLine: (line: string) => ReturnType<typeof parseCodexTranscriptLine>;
+        enabled: (s: Record<string, unknown>) => boolean;
+      }
+    >;
+
+    const reconcile = (settings: Record<string, unknown>): void => {
+      for (const cli of ["codex", "claude"] as const) {
+        const want = externalCliConfig[cli].enabled(settings);
+        const running = petExternalAdapters.get(cli);
+        if (want && !running) {
+          const adapter = new ExternalSessionAdapter({
+            cli,
+            discover: externalCliConfig[cli].discover,
+            parseLine: externalCliConfig[cli].parseLine,
+            sink: aggregator,
+            onBackgroundError: (operation, error) =>
+              dlog("main", `pet.external.${cli}.${operation}.failed`, { error: String(error) }),
+          });
+          petExternalAdapters.set(cli, adapter);
+          adapter.start();
+        } else if (!want && running) {
+          running.stop();
+          petExternalAdapters.delete(cli);
+          aggregator.removeExternalSessionsByCli(cli);
+        }
+      }
+    };
+    reconcileExternalAdapters = reconcile;
+
     // The topic-segment controller is created inside petInitialization once the
     // durable pet session id is known; until then the dispatch service holds a
     // stable wrapper that no-ops (beginTurn → undefined; closure → nothing).
@@ -1166,6 +1230,7 @@ async function createWindow(): Promise<BrowserWindow> {
     petAttentionPolicy = attention;
     const petInitialization = (async () => {
       await aggregator.start();
+      reconcile(((await readSettings("user").catch(() => null)) ?? {}) as Record<string, unknown>);
       await Promise.all([petReceipts.load(), petWorkInbox.load(), petWorkMemory.load()]);
       // Build the topic-segment controller now that the pet session id is
       // resolved. Range archival rides the generic archive_range worker query;
@@ -3840,6 +3905,13 @@ ipcMain.handle(
     await writeSettings(scope, patch, projectPath);
     // git.path may have changed — re-apply to core's git resolver immediately.
     if ("git" in patch) void applyGitPathFromSettings();
+    // pet.showExternal*Sessions toggles may have changed — re-tune the external
+    // adapters. patch is partial, so re-read the full user scope for state.
+    if ("pet" in patch && scope === "user") {
+      const settings = ((await readSettings("user").catch(() => null)) ??
+        {}) as Record<string, unknown>;
+      reconcileExternalAdapters?.(settings);
+    }
     if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
       for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
       broadcastPluginCommandsChanged(mainWindows);
@@ -4141,6 +4213,9 @@ app.on("before-quit", (event) => {
   bridge?.kill();
   petStateAggregator?.stop();
   petStateAggregator = null;
+  for (const adapter of petExternalAdapters.values()) adapter.stop();
+  petExternalAdapters.clear();
+  reconcileExternalAdapters = null;
   petDispatchService = null;
   petLongTaskCoordinator?.stop();
   petLongTaskCoordinator = null;
