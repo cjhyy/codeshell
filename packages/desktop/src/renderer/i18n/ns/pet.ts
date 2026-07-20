@@ -351,6 +351,12 @@ export const pet = {
           error: "Sessions are temporarily unavailable; retrying",
           reconciling: "Reconciling; sessions will update shortly",
         },
+        externalNoNav: "External session (managed by the Codex/Claude CLI); cannot be opened inside CodeShell",
+        risk: {
+          high: "High risk",
+          medium: "Medium risk",
+          low: "Low risk",
+        },
         justNow: "Just now",
         minutesAgo: "{count}m ago",
         hoursAgo: "{count}h ago",

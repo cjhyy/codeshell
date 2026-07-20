@@ -127,14 +127,6 @@ export function discoverRecentCodexSessions(
 ): RecentCodexSession[] {
   const root = join(codexHome, "sessions");
   if (!existsSync(root)) return [];
-  const stats: { file: string; mtimeMs: number }[] = [];
-  for (const file of walkRollouts(root)) {
-    try {
-      stats.push({ file, mtimeMs: statSync(file).mtimeMs });
-    } catch {
-      continue;
-    }
-  }
   const windowed = selectRecentStats(statAllRollouts(root), {
     sinceMs: opts.sinceMs,
     now: opts.now,
