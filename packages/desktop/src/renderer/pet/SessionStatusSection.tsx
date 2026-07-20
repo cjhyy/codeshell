@@ -1,4 +1,4 @@
-import type { PetSessionProjection } from "../../preload/types";
+import type { PetPendingDecision, PetSessionProjection } from "../../preload/types";
 import React from "react";
 import { useT, type TFunction } from "../i18n";
 
@@ -30,6 +30,30 @@ const STATE_TONE: Record<PetSessionDisplayState, string> = {
   unknown: "bg-muted-foreground text-muted-foreground",
 };
 
+const RISK_ORDER = { high: 3, medium: 2, low: 1 } as const;
+
+const RISK_TONE: Record<"high" | "medium" | "low", string> = {
+  high: "bg-status-err/15 text-status-err",
+  medium: "bg-status-warn/15 text-status-warn",
+  low: "bg-muted text-muted-foreground",
+};
+
+/** Highest-risk pending decision for one session (undefined when none pending). */
+export function highestPendingRisk(
+  pending: readonly PetPendingDecision[] | undefined,
+  agentSessionId: string,
+): { level: "high" | "medium" | "low"; toolName?: string } | undefined {
+  let best: { level: "high" | "medium" | "low"; toolName?: string } | undefined;
+  for (const decision of pending ?? []) {
+    if (decision.agentSessionId !== agentSessionId || decision.status !== "pending") continue;
+    const level = decision.riskLevel ?? "low";
+    if (!best || RISK_ORDER[level] > RISK_ORDER[best.level]) {
+      best = { level, ...(decision.toolName ? { toolName: decision.toolName } : {}) };
+    }
+  }
+  return best;
+}
+
 export function sessionDisplayState(session: PetSessionProjection): PetSessionDisplayState {
   if (session.phase === "waiting-decision" || session.pendingDecisionCount > 0) return "waiting";
   return session.runState;
@@ -54,10 +78,12 @@ function SessionRow({
   session,
   now,
   onOpen,
+  risk,
 }: {
   session: PetSessionProjection;
   now: number;
   onOpen?: (session: PetSessionProjection) => void;
+  risk?: { level: "high" | "medium" | "low"; toolName?: string };
 }) {
   const { t } = useT();
   const state = sessionDisplayState(session);
@@ -95,6 +121,12 @@ function SessionRow({
                 {external.cli}
               </span>
             )}
+            {state === "waiting" && risk && (
+              <span className={`shrink-0 rounded px-1 text-[10px] ${RISK_TONE[risk.level]}`}>
+                {t(`pet.session.risk.${risk.level}`)}
+                {risk.toolName ? ` · ${risk.toolName}` : ""}
+              </span>
+            )}
             <span className="shrink-0 text-xs text-muted-foreground">{stateLabel}</span>
           </div>
           <div className="flex min-w-0 gap-1 text-xs text-muted-foreground">
@@ -123,12 +155,14 @@ function SessionRow({
 
 export function SessionStatusSection({
   sessions,
+  pending,
   emptyState = "empty",
   now = Date.now(),
   onOpen,
   showHeading = true,
 }: {
   sessions: readonly PetSessionProjection[];
+  pending?: readonly PetPendingDecision[];
   emptyState?: PetSessionEmptyState;
   now?: number;
   onOpen?: (session: PetSessionProjection) => void;
@@ -152,7 +186,13 @@ export function SessionStatusSection({
       {sessions.length > 0 ? (
         <ul className="divide-y-0" data-density="compact-list">
           {sessions.map((session) => (
-            <SessionRow key={session.agentSessionId} session={session} now={now} onOpen={onOpen} />
+            <SessionRow
+              key={session.agentSessionId}
+              session={session}
+              now={now}
+              onOpen={onOpen}
+              risk={highestPendingRisk(pending, session.agentSessionId)}
+            />
           ))}
         </ul>
       ) : emptyState === "loading" ? (

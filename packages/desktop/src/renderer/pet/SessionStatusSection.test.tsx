@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { PetSessionProjection } from "@cjhyy/code-shell-pet";
+import type { PetPendingDecision, PetSessionProjection } from "@cjhyy/code-shell-pet";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { SessionStatusSection, sessionDisplayState } from "./SessionStatusSection";
+import { highestPendingRisk, SessionStatusSection, sessionDisplayState } from "./SessionStatusSection";
 
 function session(overrides: Partial<PetSessionProjection> = {}): PetSessionProjection {
   return {
@@ -20,7 +20,74 @@ function session(overrides: Partial<PetSessionProjection> = {}): PetSessionProje
   };
 }
 
+function pendingDecision(overrides: Partial<PetPendingDecision> = {}): PetPendingDecision {
+  return {
+    agentSessionId: "agent-session-12345678",
+    requestId: "req-1",
+    workerGeneration: 1,
+    kind: "tool_approval",
+    title: "等待批准 Bash",
+    toolName: "Bash",
+    riskLevel: "high",
+    createdAt: 1_000,
+    status: "pending",
+    ...overrides,
+  };
+}
+
 describe("SessionStatusSection", () => {
+  test("waiting session shows the highest pending risk with tool name", () => {
+    const html = renderToStaticMarkup(
+      <SessionStatusSection
+        sessions={[session({ pendingDecisionCount: 2, phase: "waiting-decision" })]}
+        pending={[
+          pendingDecision({ requestId: "req-1", riskLevel: "low", toolName: "Read" }),
+          pendingDecision({ requestId: "req-2", riskLevel: "high", toolName: "Bash" }),
+        ]}
+        now={3_000}
+      />,
+    );
+    expect(html).toContain("高风险");
+    expect(html).toContain("Bash");
+  });
+
+  test("waiting session with no matching pending shows no risk badge", () => {
+    const html = renderToStaticMarkup(
+      <SessionStatusSection
+        sessions={[session({ agentSessionId: "s1", pendingDecisionCount: 1, phase: "waiting-decision" })]}
+        pending={[pendingDecision({ agentSessionId: "other-session", riskLevel: "high" })]}
+        now={3_000}
+      />,
+    );
+    expect(html).not.toContain("高风险");
+    expect(html).not.toContain("中风险");
+    expect(html).not.toContain("低风险");
+  });
+
+  test("non-waiting session does not show a risk badge even with matching pending", () => {
+    const html = renderToStaticMarkup(
+      <SessionStatusSection
+        sessions={[session({ agentSessionId: "s2", runState: "running", pendingDecisionCount: 0 })]}
+        pending={[pendingDecision({ agentSessionId: "s2", riskLevel: "high" })]}
+        now={3_000}
+      />,
+    );
+    expect(html).not.toContain("高风险");
+  });
+
+  test("highestPendingRisk ignores other sessions and non-pending decisions", () => {
+    expect(
+      highestPendingRisk(
+        [
+          pendingDecision({ agentSessionId: "other", riskLevel: "high" }),
+          pendingDecision({ requestId: "req-3", status: "resolved", riskLevel: "high" }),
+          pendingDecision({ requestId: "req-4", riskLevel: "medium", toolName: "Edit" }),
+        ],
+        "agent-session-12345678",
+      ),
+    ).toEqual({ level: "medium", toolName: "Edit" });
+  });
+
   test("maps every display state and only animates running", () => {
     expect(sessionDisplayState(session({ runState: "running", phase: "waiting-decision" }))).toBe(
       "waiting",

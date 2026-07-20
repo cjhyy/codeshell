@@ -135,6 +135,11 @@ export const pet = {
         hoursAgo: "{count} 小时前",
         daysAgo: "{count} 天前",
         externalNoNav: "外部会话（由 Codex/Claude CLI 管理），暂不支持在 CodeShell 内打开",
+        risk: {
+          high: "高风险",
+          medium: "中风险",
+          low: "低风险",
+        },
       },
       pending: {
         title: "待你决定",

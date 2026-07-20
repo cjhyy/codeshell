@@ -269,6 +269,7 @@ export function PetDesktopWindow() {
               </p>
               <SessionStatusSection
                 sessions={globalOverview.sessions}
+                pending={globalOverview.pending}
                 emptyState={globalOverview.emptyState}
                 showHeading={false}
                 onOpen={(session) => openSession(session.agentSessionId)}
