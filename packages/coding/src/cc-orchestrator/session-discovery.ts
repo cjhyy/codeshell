@@ -1,4 +1,12 @@
-import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  statSync,
+  existsSync,
+  openSync,
+  readSync,
+  closeSync,
+} from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -19,6 +27,16 @@ export interface DiscoveredSession {
   firstMessage: string;
   lastModified: number;
   messageCount: number;
+}
+
+/** A session discovered globally from an external CLI's own storage, with the
+ *  file path so the Pet adapter can tail it. Shared by codex + claude paths. */
+export interface RecentExternalSession {
+  sessionId: string;
+  cwd: string;
+  file: string;
+  lastModified: number;
+  firstMessage: string;
 }
 
 /**
@@ -150,6 +168,71 @@ export function discoverSessions(
       lastModified: s.mtimeMs,
       messageCount: countUserMessages(lines),
     });
+  }
+  return out;
+}
+
+/** Read up to maxBytes of a file as UTF-8 (may span many lines), without
+ *  loading the whole transcript. Newlines are preserved so callers can split. */
+function readBoundedPrefix(file: string, maxBytes: number): string {
+  const fd = openSync(file, "r");
+  try {
+    const buf = Buffer.alloc(maxBytes);
+    const n = readSync(fd, buf, 0, maxBytes, 0);
+    return buf.toString("utf-8", 0, n);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * Discover ALL recent Claude Code sessions across every project dir. Claude
+ * encodes cwd into the dir name lossily (encodeCwd), so the real cwd comes from
+ * the session file's first-line `cwd` field. Bounded strategy mirrors codex:
+ * stat every file, apply the recency window, then read a single bounded prefix
+ * of each surviving file — its first line yields `cwd`, and the same text is
+ * scanned (multi-line) for the first real user message (the card title).
+ */
+export function discoverRecentClaudeSessions(
+  opts: DiscoverOptions = {},
+  claudeHome = join(homedir(), ".claude"),
+): RecentExternalSession[] {
+  const projects = claudeProjectsDir(claudeHome);
+  if (!existsSync(projects)) return [];
+  const stats: { file: string; sessionId: string; mtimeMs: number }[] = [];
+  for (const projectDir of readdirSync(projects)) {
+    const dir = join(projects, projectDir);
+    let dirStat;
+    try {
+      dirStat = statSync(dir);
+    } catch {
+      continue;
+    }
+    if (!dirStat.isDirectory()) continue;
+    for (const entry of listSessionStats(dir)) {
+      stats.push({ file: entry.file, sessionId: entry.sessionId, mtimeMs: entry.mtimeMs });
+    }
+  }
+  const windowed = selectRecentStats(stats, { sinceMs: opts.sinceMs, now: opts.now });
+  const limit = opts.limit && opts.limit > 0 ? opts.limit : Infinity;
+  const out: RecentExternalSession[] = [];
+  for (const s of windowed) {
+    if (out.length >= limit) break;
+    let cwd: string | undefined;
+    let firstMessage = "";
+    try {
+      const lines = readBoundedPrefix(s.file, 1 << 20).split("\n");
+      // cwd is recorded on the first line (encodeCwd is lossy, so the dir name
+      // can't be reversed). Scan later lines for the first real user message.
+      const first = lines[0]?.trim();
+      const parsed = first ? (JSON.parse(first) as { cwd?: string }) : undefined;
+      cwd = typeof parsed?.cwd === "string" ? parsed.cwd : undefined;
+      firstMessage = firstUserMessage(lines);
+    } catch {
+      continue;
+    }
+    if (!cwd) continue;
+    out.push({ sessionId: s.sessionId, cwd, file: s.file, lastModified: s.mtimeMs, firstMessage });
   }
   return out;
 }

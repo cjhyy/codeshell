@@ -1,7 +1,11 @@
 import { readdirSync, statSync, existsSync, openSync, readSync, closeSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import type { DiscoveredSession, DiscoverOptions } from "./session-discovery.js";
+import type {
+  DiscoveredSession,
+  DiscoverOptions,
+  RecentExternalSession,
+} from "./session-discovery.js";
 import { selectRecentStats } from "./session-discovery.js";
 import { codexUserText } from "./codex-user-text.js";
 
@@ -106,14 +110,9 @@ export function countCodexSessionsForCwds(
 }
 
 /** One Codex session discovered globally (no cwd filter), for the Pet
- *  external-session adapter. `file` is the newest rollout for this thread. */
-export interface RecentCodexSession {
-  sessionId: string;
-  cwd: string;
-  file: string;
-  lastModified: number;
-  firstMessage: string;
-}
+ *  external-session adapter. `file` is the newest rollout for this thread.
+ *  Alias of the shared shape so codex + claude paths stay isomorphic. */
+export type RecentCodexSession = RecentExternalSession;
 
 /**
  * Discover ALL recent codex sessions regardless of cwd. Same bounded-read

@@ -7,7 +7,21 @@ import {
   discoverSessions,
   countSessions,
   selectRecentStats,
+  discoverRecentClaudeSessions,
 } from "./session-discovery.js";
+
+function writeClaudeSession(
+  claudeHome: string,
+  cwd: string,
+  sessionId: string,
+  lines: unknown[],
+): string {
+  const dir = join(claudeHome, "projects", cwd.replace(/[^A-Za-z0-9]/g, "-"));
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `${sessionId}.jsonl`);
+  writeFileSync(file, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+  return file;
+}
 
 describe("encodeCwd", () => {
   it("replaces each non-alphanumeric char with a dash (incl. leading slash)", () => {
@@ -117,5 +131,67 @@ describe("discoverSessions bounding", () => {
   it("no opts = unbounded (back-compat)", () => {
     const { cwd, home } = seed(25);
     expect(discoverSessions(cwd, home)).toHaveLength(25);
+  });
+});
+
+describe("discoverRecentClaudeSessions", () => {
+  it("walks all project dirs, reads real cwd from the first line, newest first", () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-home-"));
+    writeClaudeSession(home, "/Users/me/proj-a", "sess-a", [
+      { type: "user", cwd: "/Users/me/proj-a", message: { role: "user", content: "fix bug" } },
+    ]);
+    const fileB = writeClaudeSession(home, "/Users/me/proj-b", "sess-b", [
+      { type: "user", cwd: "/Users/me/proj-b", message: { role: "user", content: "write docs" } },
+    ]);
+    const now = Date.now();
+    utimesSync(fileB, new Date(now), new Date(now));
+
+    const sessions = discoverRecentClaudeSessions({}, home);
+    const b = sessions.find((s) => s.sessionId === "sess-b");
+    expect(b?.cwd).toBe("/Users/me/proj-b");
+    expect(b?.file.endsWith("sess-b.jsonl")).toBe(true);
+    expect(b?.firstMessage).toBe("write docs");
+    expect(sessions.map((s) => s.sessionId)).toContain("sess-a");
+  });
+
+  it("reads the first real user message from a later line (first line is meta)", () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-home-"));
+    // Realistic transcript: first line is a non-user meta record carrying cwd;
+    // the real user message is several lines later (after mode/caveat noise).
+    writeClaudeSession(home, "/Users/me/proj-d", "sess-d", [
+      { type: "mode", cwd: "/Users/me/proj-d", sessionId: "sess-d" },
+      {
+        type: "user",
+        cwd: "/Users/me/proj-d",
+        message: { role: "user", content: "<local-command-caveat>noise" },
+      },
+      {
+        type: "user",
+        cwd: "/Users/me/proj-d",
+        message: { role: "user", content: "refactor the parser" },
+      },
+      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "ok" }] } },
+    ]);
+
+    const sessions = discoverRecentClaudeSessions({}, home);
+    const d = sessions.find((s) => s.sessionId === "sess-d");
+    expect(d?.cwd).toBe("/Users/me/proj-d");
+    expect(d?.firstMessage).toBe("refactor the parser");
+  });
+
+  it("honors sinceMs and skips files whose first line lacks cwd", () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const old = writeClaudeSession(home, "/Users/me/proj-a", "sess-old", [
+      { type: "user", cwd: "/Users/me/proj-a", message: { role: "user", content: "old" } },
+    ]);
+    writeClaudeSession(home, "/Users/me/proj-c", "sess-nocwd", [
+      { type: "summary", summary: "no cwd here" },
+    ]);
+    const past = Date.now() - 48 * 60 * 60_000;
+    utimesSync(old, new Date(past), new Date(past));
+
+    const sessions = discoverRecentClaudeSessions({ sinceMs: 24 * 60 * 60_000 }, home);
+    expect(sessions.some((s) => s.sessionId === "sess-old")).toBe(false);
+    expect(sessions.some((s) => s.sessionId === "sess-nocwd")).toBe(false);
   });
 });
