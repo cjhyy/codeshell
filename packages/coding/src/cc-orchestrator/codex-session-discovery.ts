@@ -51,17 +51,10 @@ export function discoverCodexSessionsForCwds(
   // the meta read (first line) only runs on in-window files. The limit can't be
   // applied yet — we don't know which files match `cwd` until we read the meta,
   // so we'd otherwise drop matching-but-not-yet-seen sessions.
-  const stats: { file: string; mtimeMs: number }[] = [];
-  for (const file of walkRollouts(root)) {
-    let st;
-    try {
-      st = statSync(file);
-    } catch {
-      continue;
-    }
-    stats.push({ file, mtimeMs: st.mtimeMs });
-  }
-  const windowed = selectRecentStats(stats, { sinceMs: opts.sinceMs, now: opts.now });
+  const windowed = selectRecentStats(statAllRollouts(root), {
+    sinceMs: opts.sinceMs,
+    now: opts.now,
+  });
 
   const limit = opts.limit && opts.limit > 0 ? opts.limit : Infinity;
   const out: DiscoveredSession[] = [];
@@ -110,6 +103,76 @@ export function countCodexSessionsForCwds(
     if (meta && meta.id && meta.cwd && cwdSet.has(meta.cwd)) n++;
   }
   return n;
+}
+
+/** One Codex session discovered globally (no cwd filter), for the Pet
+ *  external-session adapter. `file` is the newest rollout for this thread. */
+export interface RecentCodexSession {
+  sessionId: string;
+  cwd: string;
+  file: string;
+  lastModified: number;
+  firstMessage: string;
+}
+
+/**
+ * Discover ALL recent codex sessions regardless of cwd. Same bounded-read
+ * strategy as `discoverCodexSessionsForCwds` (stat pass → recency window →
+ * first-line meta), plus per-thread dedup: a resumed thread appends a NEW
+ * rollout file with the same session_meta id, so keep only the newest file
+ * (windowed list is already mtime-descending — first hit wins).
+ */
+export function discoverRecentCodexSessions(
+  opts: DiscoverOptions = {},
+  codexHome = join(homedir(), ".codex"),
+): RecentCodexSession[] {
+  const root = join(codexHome, "sessions");
+  if (!existsSync(root)) return [];
+  const stats: { file: string; mtimeMs: number }[] = [];
+  for (const file of walkRollouts(root)) {
+    try {
+      stats.push({ file, mtimeMs: statSync(file).mtimeMs });
+    } catch {
+      continue;
+    }
+  }
+  const windowed = selectRecentStats(statAllRollouts(root), {
+    sinceMs: opts.sinceMs,
+    now: opts.now,
+  });
+  const limit = opts.limit && opts.limit > 0 ? opts.limit : Infinity;
+  const out = new Map<string, RecentCodexSession>();
+  for (const s of windowed) {
+    if (out.size >= limit) break;
+    let meta: { id?: string; cwd?: string } | undefined;
+    try {
+      meta = readSessionMeta(s.file);
+    } catch {
+      continue;
+    }
+    if (!meta?.id || !meta.cwd || out.has(meta.id)) continue;
+    out.set(meta.id, {
+      sessionId: meta.id,
+      cwd: meta.cwd,
+      file: s.file,
+      lastModified: s.mtimeMs,
+      firstMessage: readFirstUserMessage(s.file),
+    });
+  }
+  return [...out.values()];
+}
+
+/** Stat every rollout under <root>/sessions, skipping unreadable files. */
+function statAllRollouts(root: string): { file: string; mtimeMs: number }[] {
+  const stats: { file: string; mtimeMs: number }[] = [];
+  for (const file of walkRollouts(root)) {
+    try {
+      stats.push({ file, mtimeMs: statSync(file).mtimeMs });
+    } catch {
+      continue;
+    }
+  }
+  return stats;
 }
 
 /** Recursively yield every `rollout-*.jsonl` file under `root`. */

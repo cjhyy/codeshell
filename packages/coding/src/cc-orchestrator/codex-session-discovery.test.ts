@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { discoverCodexSessions } from "./codex-session-discovery.js";
@@ -134,5 +134,49 @@ describe("discoverCodexSessions", () => {
     expect(got).toHaveLength(1);
     expect(got[0].sessionId).toBe("id-only");
     expect(got[0].firstMessage).toBe("");
+  });
+});
+
+import { discoverRecentCodexSessions } from "./codex-session-discovery.js";
+
+describe("discoverRecentCodexSessions", () => {
+  it("returns recent sessions across all cwds with file path, newest first", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    writeRollout(home, "2026/07/19", "rollout-a.jsonl", [
+      metaLine("thread-a", "/tmp/proj-a", "2026-07-19T10:00:00Z"),
+      userItem("fix the login bug"),
+    ]);
+    writeRollout(home, "2026/07/20", "rollout-b.jsonl", [
+      metaLine("thread-b", "/tmp/proj-b", "2026-07-20T10:00:00Z"),
+      userItem("write release notes"),
+    ]);
+
+    const sessions = discoverRecentCodexSessions({}, home);
+    expect(sessions.map((s) => s.sessionId)).toEqual(["thread-b", "thread-a"]);
+    expect(sessions[0]!.cwd).toBe("/tmp/proj-b");
+    expect(sessions[0]!.file.endsWith("rollout-b.jsonl")).toBe(true);
+    expect(sessions[0]!.firstMessage).toBe("write release notes");
+    expect(sessions[0]!.lastModified).toBeGreaterThan(0);
+  });
+
+  it("dedupes by sessionId keeping the newest rollout, honors sinceMs, skips broken files", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    writeRollout(home, "2026/07/18", "rollout-old.jsonl", [
+      metaLine("thread-a", "/tmp/proj-a", "2026-07-18T10:00:00Z"),
+      userItem("first attempt"),
+    ]);
+    writeRollout(home, "2026/07/20", "rollout-new.jsonl", [
+      metaLine("thread-a", "/tmp/proj-a", "2026-07-20T10:00:00Z"),
+      userItem("resumed"),
+    ]);
+    const brokenDir = join(home, "sessions", "2026", "07", "20");
+    writeFileSync(join(brokenDir, "rollout-broken.jsonl"), "not-json\n");
+    const oldFile = join(home, "sessions", "2026", "07", "18", "rollout-old.jsonl");
+    const past = Date.now() - 48 * 60 * 60_000;
+    utimesSync(oldFile, new Date(past), new Date(past));
+
+    const sessions = discoverRecentCodexSessions({ sinceMs: 24 * 60 * 60_000 }, home);
+    expect(sessions.map((s) => s.sessionId)).toEqual(["thread-a"]);
+    expect(sessions[0]!.file.endsWith("rollout-new.jsonl")).toBe(true);
   });
 });
