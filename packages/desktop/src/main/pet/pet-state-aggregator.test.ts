@@ -723,3 +723,97 @@ describe("PetStateAggregator", () => {
     });
   });
 });
+
+function externalSession(id: string): Parameters<PetStateAggregator["upsertExternalSession"]>[0] {
+  return {
+    agentSessionId: id,
+    title: `Codex ${id}`,
+    workspaceDisplayName: "proj-a",
+    runState: "running",
+    phase: "tool",
+    summary: "正在运行 Bash",
+    queueDepth: 0,
+    lastActivityAt: 5_000,
+    pendingDecisionCount: 0,
+    external: { cli: "codex", cwd: "/tmp/proj-a" },
+    freshness: { source: "external-tail", observedAt: 5_000, workerState: "active" },
+  };
+}
+
+describe("external session source", () => {
+  test("upsert/remove merge into snapshot and emit projection events", async () => {
+    const bridge: PetStateBridge = {
+      hasLiveWorker: () => false,
+      requestPetProjectionSnapshot: async () => null,
+      subscribePetProjection: () => () => {},
+    };
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: async () => ({ sessions: [], nextCursor: null }),
+      catalogRefreshIntervalMs: 0,
+    });
+    await aggregator.start();
+    const events: DesktopPetProjectionEvent[] = [];
+    aggregator.subscribe((event) => events.push(event));
+
+    aggregator.upsertExternalSession(externalSession("thread-a"));
+    expect(events.at(-1)).toMatchObject({ kind: "session-upsert" });
+    const snapshot = aggregator.getSnapshot();
+    const found = snapshot.sessions.find((s) => s.agentSessionId === "thread-a");
+    expect(found?.external?.cli).toBe("codex");
+    expect(found?.runState).toBe("running");
+
+    aggregator.removeExternalSession("thread-a");
+    expect(events.at(-1)).toMatchObject({ kind: "session-remove", sessionId: "thread-a" });
+    expect(
+      aggregator.getSnapshot().sessions.some((s) => s.agentSessionId === "thread-a"),
+    ).toBe(false);
+    aggregator.stop();
+  });
+
+  test("worker disconnect does not overwrite external sessions to unknown", async () => {
+    let emitLifecycle: ((event: AgentBridgePetEvent) => void) | undefined;
+    const bridge: PetStateBridge = {
+      hasLiveWorker: () => false,
+      requestPetProjectionSnapshot: async () => null,
+      subscribePetProjection: (listener) => {
+        emitLifecycle = listener;
+        return () => {};
+      },
+    };
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: async () => ({ sessions: [], nextCursor: null }),
+      catalogRefreshIntervalMs: 0,
+    });
+    await aggregator.start();
+    aggregator.upsertExternalSession(externalSession("thread-a"));
+    emitLifecycle!({ kind: "lifecycle", state: "disconnected" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const found = aggregator
+      .getSnapshot()
+      .sessions.find((s) => s.agentSessionId === "thread-a");
+    expect(found?.runState).toBe("running");
+    expect(found?.freshness.workerState).toBe("active");
+    aggregator.stop();
+  });
+
+  test("external and disk sessions coexist in the snapshot", async () => {
+    const bridge: PetStateBridge = {
+      hasLiveWorker: () => false,
+      requestPetProjectionSnapshot: async () => null,
+      subscribePetProjection: () => () => {},
+    };
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: async () => ({ sessions: [disk("local-1")], nextCursor: null }),
+      catalogRefreshIntervalMs: 0,
+    });
+    await aggregator.start();
+    aggregator.upsertExternalSession(externalSession("thread-a"));
+    const ids = aggregator.getSnapshot().sessions.map((s) => s.agentSessionId);
+    expect(ids).toContain("local-1");
+    expect(ids).toContain("thread-a");
+    aggregator.stop();
+  });
+});

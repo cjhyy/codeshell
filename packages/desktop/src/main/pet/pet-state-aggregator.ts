@@ -25,8 +25,11 @@ export interface DesktopPetSession {
   lastActivityAt: number;
   pendingDecisionCount: number;
   terminal?: PetSessionProjection["terminal"];
+  /** Present on sessions observed from an external CLI's own storage
+   *  (Codex/Claude rollouts), not from our worker. */
+  external?: { cli: "codex" | "claude"; cwd?: string };
   freshness: {
-    source: PetSessionProjection["freshness"]["source"];
+    source: PetSessionProjection["freshness"]["source"] | "external-tail";
     observedAt: number;
     workerState: DesktopPetWorkerState;
   };
@@ -207,6 +210,7 @@ export class PetStateAggregator {
   private readonly diskSessions = new Map<string, DesktopPetSession>();
   private readonly diskBindings = new Map<string, PetNavigationTarget>();
   private readonly liveSessions = new Map<string, DesktopPetSession>();
+  private readonly externalSessions = new Map<string, DesktopPetSession>();
   private readonly pending = new Map<string, DesktopPendingDecision>();
   private readonly listeners = new Set<(event: DesktopPetProjectionEvent) => void>();
   private readonly pageSize: number;
@@ -313,6 +317,11 @@ export class PetStateAggregator {
         });
       }
     }
+    // External-CLI sessions merge in after the disconnected overlay so worker
+    // loss never rewrites them to `unknown` — they do not depend on the worker.
+    for (const [sessionId, session] of this.externalSessions) {
+      sessions.set(sessionId, session);
+    }
     return {
       version: this.version,
       generation: this.generation,
@@ -345,6 +354,20 @@ export class PetStateAggregator {
   subscribe(listener: (event: DesktopPetProjectionEvent) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /** External-CLI source (Codex/Claude adapters). Independent of the worker:
+   *  lifecycle loss must not clear or overlay these. */
+  upsertExternalSession(session: DesktopPetSession): void {
+    this.externalSessions.set(session.agentSessionId, session);
+    this.observedAt = this.now();
+    this.emit({ kind: "session-upsert", session });
+  }
+
+  removeExternalSession(agentSessionId: string): void {
+    if (!this.externalSessions.delete(agentSessionId)) return;
+    this.observedAt = this.now();
+    this.emit({ kind: "session-remove", sessionId: agentSessionId });
   }
 
   async resolveNavigation(request: PetNavigationRequest): Promise<PetNavigationResult> {
