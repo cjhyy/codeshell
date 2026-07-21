@@ -1,4 +1,6 @@
-import type { ChannelAdapter } from "./channel.js";
+import { lstat, readFile } from "node:fs/promises";
+import { isAbsolute } from "node:path";
+import type { ChannelAdapter, OutgoingAttachment } from "./channel.js";
 import type { GatewayNotificationTarget } from "./config.js";
 import type { DesktopEventContext } from "./desktop-control-client.js";
 import type { DesktopControlEvent } from "./protocol.js";
@@ -7,6 +9,7 @@ import type { DesktopControlEvent } from "./protocol.js";
 // 4,096-character cap. A single conservative relay limit makes every adapter
 // safe without letting product events depend on channel-specific truncation.
 const MAX_NOTIFICATION_CHUNK_LENGTH = 1_800;
+const MAX_OUTGOING_IMAGE_BYTES = 10 * 1024 * 1024;
 
 /** Split without breaking UTF-16 surrogate pairs; prefer readable line/word boundaries. */
 export function splitNotificationText(
@@ -51,12 +54,14 @@ export function createDesktopNotificationHandler(
   const adapterByChannel = new Map(adapters.map((adapter) => [adapter.channel, adapter]));
   let currentEvent = "";
   let deliveredChunks = new Map<string, number>();
+  let deliveredAttachments = new Set<string>();
 
   return async (event, context) => {
     const eventKey = `${context.streamId}:${event.id}`;
     if (eventKey !== currentEvent) {
       currentEvent = eventKey;
       deliveredChunks = new Map<string, number>();
+      deliveredAttachments = new Set<string>();
     }
 
     const eventTargets = event.target ? [event.target] : targets;
@@ -76,6 +81,15 @@ export function createDesktopNotificationHandler(
           chunkIndex += 1;
           deliveredChunks.set(targetKey, chunkIndex);
         }
+        if (
+          event.attachments?.length &&
+          adapter.supportsOutgoingAttachments &&
+          !deliveredAttachments.has(targetKey)
+        ) {
+          const attachments = await materializeEventAttachments(event.attachments);
+          await adapter.send(target, { text: "", attachments });
+          deliveredAttachments.add(targetKey);
+        }
       }),
     );
     const failures = results
@@ -85,4 +99,34 @@ export function createDesktopNotificationHandler(
       throw new AggregateError(failures, `Desktop event ${eventKey} notification failed`);
     }
   };
+}
+
+async function materializeEventAttachments(
+  attachments: NonNullable<DesktopControlEvent["attachments"]>,
+): Promise<OutgoingAttachment[]> {
+  const output: OutgoingAttachment[] = [];
+  for (const attachment of attachments.slice(0, 4)) {
+    if (
+      attachment.kind !== "image" ||
+      !isAbsolute(attachment.path) ||
+      !attachment.mimeType.startsWith("image/") ||
+      !Number.isSafeInteger(attachment.size) ||
+      attachment.size < 1 ||
+      attachment.size > MAX_OUTGOING_IMAGE_BYTES
+    ) {
+      throw new Error("Desktop completion attachment metadata is invalid");
+    }
+    const info = await lstat(attachment.path);
+    if (info.isSymbolicLink() || !info.isFile() || info.size !== attachment.size) {
+      throw new Error("Desktop completion attachment changed before delivery");
+    }
+    const data = await readFile(attachment.path);
+    output.push({
+      kind: "image",
+      name: attachment.name.slice(0, 255) || "generated-image",
+      mimeType: attachment.mimeType,
+      data,
+    });
+  }
+  return output;
 }

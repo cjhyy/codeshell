@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LLMClientBase } from "../llm/client-base.js";
@@ -100,7 +100,7 @@ function imageBlocks(messages: Message[]): ContentBlock[] {
 }
 
 describe("Engine structured image attachment vision gate", () => {
-  it("rejects structured image attachments for non-vision models before LLM call", async () => {
+  it("degrades structured image attachments to path metadata for non-vision models", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "engine-structured-image-gate-"));
     const model = `${fakeProvider}-nonvision-${Date.now()}-${Math.random()}`;
     const scenario = { calls: [] as Message[][] };
@@ -115,9 +115,24 @@ describe("Engine structured image attachment vision gate", () => {
         attachments: [attachment],
       });
 
-      expect(result.reason).toBe("image_error");
-      expect(result.text).toContain("does not accept image input");
-      expect(scenario.calls).toHaveLength(0);
+      expect(result.reason).toBe("completed");
+      expect(result.text).toBe("ok");
+      expect(scenario.calls.length).toBeGreaterThan(0);
+      expect(scenario.calls.flatMap((call) => imageBlocks(call))).toHaveLength(0);
+      const textMessages = scenario.calls
+        .flatMap((call) =>
+          call.flatMap((message) =>
+            typeof message.content === "string"
+              ? [message.content]
+              : message.content
+                  .map((block) => (block.type === "text" ? block.text : ""))
+                  .filter(Boolean),
+          ),
+        )
+        .join("\n");
+      expect(textMessages).toContain('<attached-file path=".code-shell/attachments/sid/shot.png">');
+      expect(textMessages).toContain(`absolutePath: ${realpathSync(attachment.absPath!)}`);
+      expect(textMessages).toContain("mime: image/png");
     } finally {
       scenarios.delete(model);
       rmSync(cwd, { recursive: true, force: true });

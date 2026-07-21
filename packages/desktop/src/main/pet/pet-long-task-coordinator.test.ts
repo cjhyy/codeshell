@@ -184,6 +184,28 @@ describe("PetLongTaskCoordinator", () => {
     });
     expect(h.store.get(launch.taskId)?.summary).toBe("Implementation done; running final checks.");
 
+    h.projection.emit({
+      kind: "session-upsert",
+      version: 2,
+      generation: 1,
+      observedAt: 2_100,
+      session: {
+        agentSessionId: launch.sessionId,
+        runState: "running",
+        phase: "executing",
+        summary: "模型处理中",
+        queueDepth: 0,
+        lastActivityAt: 2_100,
+        pendingDecisionCount: 0,
+        freshness: { source: "live-event", observedAt: 2_100, workerState: "active" },
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      summary: "模型处理中",
+      resultSummary: "Implementation done; running final checks.",
+    });
+
     h.tick(3_000);
     await h.coordinator.observeSessionEvent(launch.sessionId, {
       type: "goal_progress",
@@ -219,6 +241,31 @@ describe("PetLongTaskCoordinator", () => {
     });
     await Promise.resolve();
     expect(h.closed).toHaveLength(1);
+  });
+
+  test("records a successful generated-image tool result as a deliverable artifact", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-generated-image",
+      task: "Generate a comic image",
+      workspacePath: "/work/app",
+    });
+
+    h.tick(2_000);
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "tool_result",
+      result: {
+        id: "tool-1",
+        toolName: "GenerateImage",
+        result: "Image generated successfully and saved to /work/app/comic.png",
+      },
+    });
+
+    expect(h.store.get(launch.taskId)?.artifacts).toContainEqual({
+      kind: "file",
+      label: "Generated image",
+      reference: "/work/app/comic.png",
+    });
   });
 
   test("does not confuse a generic completed turn with a verified Goal outcome", async () => {
@@ -266,7 +313,7 @@ describe("PetLongTaskCoordinator", () => {
     });
     expect(h.closed).toEqual([{ id: launch.taskId, status: "completed" }]);
 
-    const cleared = await h.coordinator.clearCompleted();
+    const cleared = await h.coordinator.clearTerminal();
     expect(cleared.tasks).toEqual([]);
     expect(h.store.get(launch.taskId)).toBeUndefined();
   });
@@ -524,6 +571,8 @@ describe("PetLongTaskCoordinator", () => {
       { id: launch.taskId, status: "failed" },
       { id: launch.taskId, status: "cancelled" },
     ]);
+    const cleared = await h.coordinator.clearTerminalTask(launch.taskId);
+    expect(cleared.tasks).toEqual([]);
   });
 
   test("persists core Goal pause and wakes it in place when the worker is live", async () => {

@@ -101,10 +101,11 @@ export async function prepareRunImageInput(args: {
     parsedTask = {
       text: [parsedTask.text, attachmentContext.text].filter(Boolean).join("\n\n"),
       images: [...parsedTask.images, ...attachmentContext.images],
-      hasImages:
-        parsedTask.hasImages ||
-        attachmentContext.images.length > 0 ||
-        attachmentContext.hasStructuredImageAttachments,
+      // A structured image attachment can intentionally degrade to textual
+      // metadata when the selected model has no vision support. Only actual
+      // image bytes require the vision gate below; the on-disk path remains
+      // useful to file-oriented tools and delegated Work Sessions.
+      hasImages: parsedTask.hasImages || attachmentContext.images.length > 0,
     };
   }
 

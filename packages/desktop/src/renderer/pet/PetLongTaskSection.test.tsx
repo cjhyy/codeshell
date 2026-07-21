@@ -4,8 +4,9 @@ import type { PetLongTask } from "../../preload/types";
 import { DialogProvider } from "../ui/DialogProvider";
 import {
   isLongTaskDetailCollapsible,
+  isLongTaskClearable,
+  PetLongTaskBulkCleanupButton,
   PetLongTaskCard,
-  PetLongTaskCleanupButton,
 } from "./PetLongTaskSection";
 
 function task(status: PetLongTask["status"]): PetLongTask {
@@ -86,15 +87,35 @@ describe("PetLongTaskCard", () => {
     expect(html).not.toContain("展开完整结果");
   });
 
-  test("offers a confirmed bulk cleanup for completed task records", () => {
+  test("offers a confirmed bulk cleanup for ended task records", () => {
     const html = renderToStaticMarkup(
       <DialogProvider>
-        <PetLongTaskCleanupButton count={6} busy={false} onClear={async () => true} />
+        <PetLongTaskBulkCleanupButton count={6} busy={false} onClear={async () => true} />
       </DialogProvider>,
     );
 
-    expect(html).toContain('data-pet-long-task-cleanup="completed"');
-    expect(html).toContain("清理已完成（6）");
+    expect(html).toContain('data-pet-long-task-cleanup="terminal"');
+    expect(html).toContain("清理已结束（6）");
     expect(html).not.toContain('disabled=""');
+  });
+
+  test("offers an individual cleanup on every ended task state", () => {
+    for (const status of ["completed", "failed", "cancelled"] as const) {
+      const ended = task(status);
+      expect(isLongTaskClearable(ended)).toBe(true);
+      const html = renderToStaticMarkup(
+        <DialogProvider>
+          <PetLongTaskCard
+            task={ended}
+            busy={false}
+            onControl={() => {}}
+            onClear={async () => true}
+          />
+        </DialogProvider>,
+      );
+      expect(html).toContain(`data-pet-long-task-clear="${ended.id}"`);
+      expect(html).toContain("清理记录");
+    }
+    expect(isLongTaskClearable(task("running"))).toBe(false);
   });
 });

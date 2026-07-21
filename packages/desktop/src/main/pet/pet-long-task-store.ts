@@ -143,10 +143,10 @@ export class PetLongTaskStore {
     });
   }
 
-  async clearCompleted(): Promise<PetLongTaskSnapshot> {
+  async clearTerminal(): Promise<PetLongTaskSnapshot> {
     return this.enqueueMutation(async () => {
       const removable = [...this.tasks.values()].filter(
-        (task) => task.status === "completed" && task.closureRecordedAt !== undefined,
+        (task) => !isActive(task) && task.closureRecordedAt !== undefined,
       );
       if (removable.length === 0) return this.getSnapshot();
       const beforeRevision = this.revision;
@@ -156,6 +156,29 @@ export class PetLongTaskStore {
         await this.changed();
       } catch (error) {
         for (const task of removable) this.tasks.set(task.id, task);
+        this.revision = beforeRevision;
+        this.observedAt = beforeObservedAt;
+        throw error;
+      }
+      return this.getSnapshot();
+    });
+  }
+
+  async removeTerminal(taskId: string): Promise<PetLongTaskSnapshot> {
+    return this.enqueueMutation(async () => {
+      const task = this.tasks.get(taskId);
+      if (!task) throw new Error(`Unknown Pet long task: ${taskId}`);
+      if (isActive(task)) throw new Error("Only ended Pet long tasks can be cleared");
+      if (task.closureRecordedAt === undefined) {
+        throw new Error("The Pet long task is still finalizing");
+      }
+      const beforeRevision = this.revision;
+      const beforeObservedAt = this.observedAt;
+      this.tasks.delete(taskId);
+      try {
+        await this.changed();
+      } catch (error) {
+        this.tasks.set(taskId, task);
         this.revision = beforeRevision;
         this.observedAt = beforeObservedAt;
         throw error;

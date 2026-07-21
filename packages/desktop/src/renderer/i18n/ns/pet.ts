@@ -86,11 +86,15 @@ export const pet = {
         history: "事件记录",
         expandResult: "展开完整结果",
         collapseResult: "收起结果",
-        clearCompleted: "清理已完成（{count}）",
-        clearCompletedTitle: "清理已完成任务？",
-        clearCompletedConfirm:
-          "将永久清理 {count} 条已完成的长程任务记录。对应的工作会话不会被删除。",
-        clearCompletedAction: "清理",
+        clearTerminal: "清理已结束（{count}）",
+        clearTerminalTitle: "清理已结束任务？",
+        clearTerminalConfirm:
+          "将永久清理 {count} 条已完成、已取消或失败的长程任务记录。对应的工作会话不会被删除。",
+        clearTask: "清理记录",
+        clearTaskAria: "清理任务记录：{title}",
+        clearTaskTitle: "清理这条任务记录？",
+        clearTaskConfirm: "这条已结束的长程任务记录将被永久清理。对应的工作会话不会被删除。",
+        clearAction: "清理",
         status: {
           queued: "排队中",
           running: "执行中",
@@ -122,6 +126,7 @@ export const pet = {
           paused: "任务暂停",
           resumed: "恢复执行",
           retrying: "开始重试",
+          artifact: "记录任务产物",
           checkpoint: "保存检查点",
           "verification-changed": "完成判定方式已切换",
           interrupted: "执行中断",
@@ -333,11 +338,16 @@ export const pet = {
         history: "Event history",
         expandResult: "Expand full result",
         collapseResult: "Collapse result",
-        clearCompleted: "Clear completed ({count})",
-        clearCompletedTitle: "Clear completed tasks?",
-        clearCompletedConfirm:
-          "This permanently clears {count} completed long-task records. Their work sessions will not be deleted.",
-        clearCompletedAction: "Clear",
+        clearTerminal: "Clear ended ({count})",
+        clearTerminalTitle: "Clear ended tasks?",
+        clearTerminalConfirm:
+          "This permanently clears {count} completed, cancelled, or failed long-task records. Their work sessions will not be deleted.",
+        clearTask: "Clear record",
+        clearTaskAria: "Clear task record: {title}",
+        clearTaskTitle: "Clear this task record?",
+        clearTaskConfirm:
+          "This ended long-task record will be permanently cleared. Its work session will not be deleted.",
+        clearAction: "Clear",
         status: {
           queued: "Queued",
           running: "Running",
@@ -369,6 +379,7 @@ export const pet = {
           paused: "Task paused",
           resumed: "Execution resumed",
           retrying: "Retry started",
+          artifact: "Artifact recorded",
           checkpoint: "Checkpoint saved",
           "verification-changed": "Completion policy changed",
           interrupted: "Execution interrupted",

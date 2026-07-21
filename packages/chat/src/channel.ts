@@ -33,12 +33,22 @@ export interface OutgoingMessage {
     text: string;
     url: string;
   };
+  /** Materialized outbound media bytes. Adapters may support a bounded subset. */
+  attachments?: readonly OutgoingAttachment[];
+}
+
+export interface OutgoingAttachment {
+  kind: ChatAttachmentKind;
+  name: string;
+  mimeType: string;
+  data: Uint8Array;
 }
 
 export type ChannelMessageHandler = (message: ChannelMessage) => Promise<void>;
 
 export interface ChannelAdapter {
   readonly channel: string;
+  readonly supportsOutgoingAttachments?: boolean;
   run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void>;
   send(target: string, message: OutgoingMessage): Promise<void>;
 }

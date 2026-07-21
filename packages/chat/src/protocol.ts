@@ -21,8 +21,18 @@ export interface DesktopControlEvent {
   text: string;
   title?: string;
   button?: { text: string; url: string };
+  attachments?: DesktopControlEventAttachment[];
   /** One originating IM conversation; bypasses general notification targets. */
   target?: { channel: string; target: string };
+}
+
+export interface DesktopControlEventAttachment {
+  kind: "image";
+  name: string;
+  mimeType: string;
+  size: number;
+  /** Validated local path on the same host as the loopback gateway. */
+  path: string;
 }
 
 export interface DesktopControlEventPage {

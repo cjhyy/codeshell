@@ -7,6 +7,8 @@
  * semantics without teaching core about Pet.
  */
 
+import type { PetWorkExecutionBackend } from "./delegation.js";
+
 export const PET_LONG_TASK_SCHEMA_VERSION = 1 as const;
 export const MAX_PET_LONG_TASK_EVENTS = 120;
 export const MAX_PET_LONG_TASK_SUMMARY_LENGTH = 8_000;
@@ -52,6 +54,7 @@ export type PetLongTaskEventKind =
   | "paused"
   | "resumed"
   | "retrying"
+  | "artifact"
   | "checkpoint"
   | "verification-changed"
   | "interrupted"
@@ -81,6 +84,8 @@ export interface PetLongTask {
   objective: string;
   workspacePath: string | null;
   sessionId: string;
+  /** Explicit external execution backend, when the user required one. */
+  executionBackend?: PetWorkExecutionBackend;
   /** Ordinary final response, or persistent Goal verdict, required for closure. */
   verificationMode: PetLongTaskVerificationMode;
   completionTarget?: PetLongTaskCompletionTarget;
@@ -98,6 +103,8 @@ export interface PetLongTask {
   closureRecordedAt?: number;
   /** Durable Mimi closure decision, persisted before any continuation side effect. */
   closureDecision?: PetLongTaskClosureDecision;
+  /** Latest assistant-authored result/checkpoint, kept separate from UI progress text. */
+  resultSummary?: string;
   summary?: string;
   waitingFor?: string;
   nextAction?: string;
@@ -110,6 +117,7 @@ export interface PetLongTaskContinuationDecision {
   clientMessageId: string;
   objective: string;
   workspacePath: string | null;
+  executionBackend?: PetWorkExecutionBackend;
 }
 
 export interface PetLongTaskClosureDecision {
@@ -143,6 +151,7 @@ export interface CreatePetLongTaskInput {
   objective: string;
   workspacePath: string | null;
   sessionId: string;
+  executionBackend?: PetWorkExecutionBackend;
   verificationMode?: PetLongTaskVerificationMode;
   completionTarget?: PetLongTaskCompletionTarget;
   continuationDepth?: number;
@@ -156,6 +165,7 @@ export type PetLongTaskTransition =
   | { kind: "paused"; at: number; reason?: string }
   | { kind: "resumed"; at: number; message?: string }
   | { kind: "retrying"; at: number; reason?: string }
+  | { kind: "artifact"; at: number; artifacts: PetLongTaskArtifact[] }
   | {
       kind: "checkpoint";
       at: number;
@@ -290,6 +300,7 @@ export function createPetLongTask(input: CreatePetLongTaskInput): PetLongTask {
     objective,
     workspacePath: workspacePath ?? null,
     sessionId,
+    ...(input.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
     verificationMode: input.verificationMode === "goal" ? "goal" : "turn",
     ...(completionTarget ? { completionTarget } : {}),
     ...(continuationDepth > 0 ? { continuationDepth } : {}),
@@ -467,9 +478,22 @@ export function transitionPetLongTask(
         nextAction: next.nextAction,
       };
       break;
+    case "artifact":
+      Object.assign(next, {
+        artifacts: mergeArtifacts(current.artifacts, transition.artifacts),
+      });
+      event = {
+        kind: transition.kind,
+        at: transition.at,
+        phase: next.phase,
+        message: "Work session produced an artifact",
+        artifacts: transition.artifacts,
+      };
+      break;
     case "checkpoint":
       Object.assign(next, {
         summary: bounded(transition.summary, MAX_PET_LONG_TASK_SUMMARY_LENGTH),
+        resultSummary: bounded(transition.summary, MAX_PET_LONG_TASK_SUMMARY_LENGTH),
         nextAction: bounded(transition.nextAction, 500) ?? current.nextAction,
         artifacts: mergeArtifacts(current.artifacts, transition.artifacts),
       });
@@ -509,15 +533,15 @@ export function transitionPetLongTask(
         nextAction: next.nextAction,
       };
       break;
-    case "completed":
+    case "completed": {
+      const resultSummary =
+        bounded(transition.summary, MAX_PET_LONG_TASK_SUMMARY_LENGTH) ?? current.resultSummary;
       Object.assign(next, {
         status: "completed",
         phase: "finalizing",
         completedAt: transition.at,
-        summary:
-          bounded(transition.summary, MAX_PET_LONG_TASK_SUMMARY_LENGTH) ??
-          current.summary ??
-          "Objective completed",
+        ...(resultSummary ? { resultSummary } : {}),
+        summary: resultSummary ?? current.summary ?? "Objective completed",
         waitingFor: undefined,
         nextAction: undefined,
         lastError: undefined,
@@ -531,6 +555,7 @@ export function transitionPetLongTask(
         artifacts: transition.artifacts,
       };
       break;
+    }
     case "failed":
       Object.assign(next, {
         status: "failed",
@@ -577,6 +602,9 @@ export function transitionPetLongTask(
               typeof continuation.workspacePath === "string"
                 ? continuation.workspacePath.slice(0, 4_096)
                 : null,
+            ...(continuation.executionBackend === "codex"
+              ? { executionBackend: "codex" as const }
+              : {}),
           }
         : undefined;
       if (
@@ -678,6 +706,7 @@ function isEventKind(value: unknown): value is PetLongTaskEventKind {
       "paused",
       "resumed",
       "retrying",
+      "artifact",
       "checkpoint",
       "verification-changed",
       "interrupted",
@@ -761,6 +790,9 @@ function parseClosureDecision(value: unknown): PetLongTaskClosureDecision | unde
         typeof candidate.workspacePath === "string"
           ? candidate.workspacePath.slice(0, 4_096)
           : null,
+      ...(candidate.executionBackend === "codex"
+        ? { executionBackend: "codex" as const }
+        : {}),
     };
   }
   let launch: PetLongTaskClosureDecision["launch"];
@@ -844,6 +876,7 @@ export function parsePetLongTask(value: unknown): PetLongTask | null {
     workspacePath:
       typeof record.workspacePath === "string" ? record.workspacePath.slice(0, 4_096) : null,
     sessionId: record.sessionId.slice(0, 256),
+    ...(record.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
     // Rows written before verificationMode existed were all launched with a
     // forced Goal. Preserve that meaning while new rows default to turn mode.
     verificationMode: record.verificationMode === "turn" ? "turn" : "goal",
@@ -861,6 +894,9 @@ export function parsePetLongTask(value: unknown): PetLongTask | null {
       ? { closureRecordedAt: record.closureRecordedAt }
       : {}),
     ...(closureDecision ? { closureDecision } : {}),
+    ...(typeof record.resultSummary === "string"
+      ? { resultSummary: record.resultSummary.slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH) }
+      : {}),
     ...(typeof record.summary === "string"
       ? { summary: record.summary.slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH) }
       : {}),
@@ -939,7 +975,8 @@ export function buildPetLongTaskContext(tasks: readonly PetLongTask[]): PetLongT
 }
 
 export function petLongTaskResumePrompt(task: PetLongTask): string {
-  const checkpoint = task.summary ? `\nLatest durable checkpoint: ${task.summary}` : "";
+  const durableCheckpoint = task.resultSummary ?? task.summary;
+  const checkpoint = durableCheckpoint ? `\nLatest durable checkpoint: ${durableCheckpoint}` : "";
   const next = task.nextAction ? `\nExpected next action: ${task.nextAction}` : "";
   return (
     `Resume the existing long-running task. Preserve prior work in this session, inspect the current state, ` +

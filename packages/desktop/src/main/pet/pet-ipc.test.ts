@@ -24,6 +24,7 @@ describe("registerPetIpc", () => {
       | ((snapshot: { revision: number; observedAt: number; tasks: [] }) => void)
       | undefined;
     let controlled: unknown;
+    let clearedTaskId: string | undefined;
     registerPetIpc({
       ipcMain: {
         handle: (channel, handler) => handlers.set(channel, handler),
@@ -40,7 +41,11 @@ describe("registerPetIpc", () => {
           controlled = request;
           return { ok: false, code: "not-found", message: "gone" };
         },
-        clearCompleted: async () => ({ revision: 4, observedAt: 40, tasks: [] }),
+        clearTerminal: async () => ({ revision: 4, observedAt: 40, tasks: [] }),
+        clearTask: async (taskId) => {
+          clearedTaskId = taskId;
+          return { revision: 5, observedAt: 50, tasks: [] };
+        },
         subscribe: (listener) => {
           taskListener = listener as typeof taskListener;
           return () => {};
@@ -69,13 +74,23 @@ describe("registerPetIpc", () => {
       taskId: "pet-task-0123456789abcdef01234567",
       action: "pause",
     });
-    expect(await handlers.get("pet:long-tasks-clear-completed")?.({})).toEqual({
+    expect(await handlers.get("pet:long-tasks-clear-terminal")?.({})).toEqual({
       revision: 4,
       observedAt: 40,
       tasks: [],
     });
-    expect(() => handlers.get("pet:long-tasks-clear-completed")?.({}, { all: true })).toThrow(
+    expect(() => handlers.get("pet:long-tasks-clear-terminal")?.({}, { all: true })).toThrow(
       "does not accept arguments",
+    );
+    expect(
+      await handlers.get("pet:long-task-clear")?.(
+        {},
+        { taskId: "pet-task-0123456789abcdef01234567" },
+      ),
+    ).toEqual({ revision: 5, observedAt: 50, tasks: [] });
+    expect(clearedTaskId).toBe("pet-task-0123456789abcdef01234567");
+    expect(() => handlers.get("pet:long-task-clear")?.({}, { taskId: "../../bad" })).toThrow(
+      "invalid Pet long-task cleanup",
     );
     expect(() =>
       handlers.get("pet:long-task-control")?.({}, { taskId: "../../bad", action: "cancel" }),

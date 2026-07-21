@@ -86,6 +86,7 @@ describe("channel adapter factory", () => {
     });
 
     expect(loadCount).toBe(0);
+    expect(adapter.supportsOutgoingAttachments).toBe(true);
     await Promise.all([
       adapter.send("chat-1", { text: "one" }),
       adapter.send("chat-2", { text: "two" }),

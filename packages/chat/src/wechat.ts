@@ -1,4 +1,4 @@
-import { createDecipheriv, randomBytes, randomUUID } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
 import type {
   ChatAttachment,
   ChannelAdapter,
@@ -30,6 +30,7 @@ const WECHAT_CDN_BASE_URL = "https://novac2c.cdn.weixin.qq.com/c2c";
 interface WechatCdnMedia {
   encrypt_query_param?: string;
   aes_key?: string;
+  encrypt_type?: number;
   full_url?: string;
 }
 
@@ -37,6 +38,7 @@ interface WechatImageItem {
   media?: WechatCdnMedia;
   aeskey?: string;
   url?: string;
+  mid_size?: number;
 }
 
 interface WechatVoiceItem {
@@ -92,6 +94,11 @@ interface BasicResponse {
   errmsg?: string;
 }
 
+interface GetUploadUrlResponse extends BasicResponse {
+  upload_full_url?: string;
+  upload_param?: string;
+}
+
 export interface WechatAdapterConfig {
   accountId: string;
   token: string;
@@ -114,6 +121,7 @@ export interface WechatAdapterOptions {
 /** Personal WeChat ClawBot adapter using Tencent's documented iLink Bot HTTP protocol. */
 export class WechatAdapter implements ChannelAdapter {
   readonly channel = "wechat";
+  readonly supportsOutgoingAttachments = true;
   private readonly fetchFn: typeof fetch;
   private readonly sleepFn: NonNullable<WechatAdapterOptions["sleep"]>;
   private readonly log: NonNullable<WechatAdapterOptions["log"]>;
@@ -215,6 +223,13 @@ export class WechatAdapter implements ChannelAdapter {
     const text = message.button
       ? `${message.text}\n\n${message.button.text}: ${message.button.url}`
       : message.text;
+    const itemList: WechatMessageItem[] = [];
+    if (text) itemList.push({ type: ITEM_TYPE_TEXT, text_item: { text } });
+    for (const attachment of (message.attachments ?? []).slice(0, 4)) {
+      if (attachment.kind !== "image") continue;
+      itemList.push(await this.uploadImage(target, attachment));
+    }
+    if (itemList.length === 0) return;
     const response = await this.post<BasicResponse>(
       "ilink/bot/sendmessage",
       {
@@ -224,7 +239,7 @@ export class WechatAdapter implements ChannelAdapter {
           client_id: `code-shell-chat-${randomUUID()}`,
           message_type: MESSAGE_TYPE_BOT,
           message_state: MESSAGE_STATE_FINISH,
-          item_list: [{ type: ITEM_TYPE_TEXT, text_item: { text } }],
+          item_list: itemList,
           context_token: this.state.contextTokens?.[target],
         },
         base_info: this.baseInfo(),
@@ -234,6 +249,65 @@ export class WechatAdapter implements ChannelAdapter {
     if (response.ret && response.ret !== 0) {
       throw new Error(`微信发送失败：${response.errmsg ?? `ret=${response.ret}`}`);
     }
+  }
+
+  private async uploadImage(
+    target: string,
+    attachment: NonNullable<OutgoingMessage["attachments"]>[number],
+  ): Promise<WechatMessageItem> {
+    if (
+      !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(attachment.mimeType) ||
+      attachment.data.byteLength < 1 ||
+      attachment.data.byteLength > 10 * 1024 * 1024
+    ) {
+      throw new Error("微信待发送图片的类型或大小不受支持");
+    }
+    const plaintext = Buffer.from(attachment.data);
+    const filekey = randomBytes(16).toString("hex");
+    const key = randomBytes(16);
+    const keyHex = key.toString("hex");
+    const cipher = createCipheriv("aes-128-ecb", key, null);
+    cipher.setAutoPadding(true);
+    const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+    const upload = await this.post<GetUploadUrlResponse>(
+      "ilink/bot/getuploadurl",
+      {
+        filekey,
+        media_type: 1,
+        to_user_id: target,
+        rawsize: plaintext.byteLength,
+        rawfilemd5: createHash("md5").update(plaintext).digest("hex"),
+        filesize: ciphertext.byteLength,
+        no_need_thumb: true,
+        aeskey: keyHex,
+        base_info: this.baseInfo(),
+      },
+      15_000,
+    );
+    if (upload.ret && upload.ret !== 0) {
+      throw new Error(`微信获取图片上传地址失败：${upload.errmsg ?? `ret=${upload.ret}`}`);
+    }
+    const uploadUrl = resolveWechatCdnUploadUrl(upload, filekey);
+    const response = await this.fetchFn(uploadUrl, {
+      method: "POST",
+      headers: { "content-type": "application/octet-stream" },
+      body: new Uint8Array(ciphertext),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) throw new Error(`微信图片上传失败（HTTP ${response.status}）`);
+    const encryptedQueryParam = response.headers.get("x-encrypted-param")?.trim();
+    if (!encryptedQueryParam) throw new Error("微信图片上传响应缺少下载参数");
+    return {
+      type: ITEM_TYPE_IMAGE,
+      image_item: {
+        media: {
+          encrypt_query_param: encryptedQueryParam,
+          aes_key: Buffer.from(keyHex).toString("base64"),
+          encrypt_type: 1,
+        },
+        mid_size: ciphertext.byteLength,
+      },
+    };
   }
 
   private normalizeInbound(raw: WechatWireMessage): ChannelMessage | undefined {
@@ -423,6 +497,20 @@ function resolveWechatCdnUrl(media: WechatCdnMedia): string {
   if (!raw) throw new Error("微信附件缺少 CDN 下载参数");
   const url = new URL(raw);
   if (url.protocol !== "https:") throw new Error("微信附件 CDN 地址必须使用 HTTPS");
+  return url.toString();
+}
+
+function resolveWechatCdnUploadUrl(upload: GetUploadUrlResponse, filekey: string): string {
+  const raw = upload.upload_full_url?.trim()
+    ? upload.upload_full_url
+    : upload.upload_param
+      ? `${WECHAT_CDN_BASE_URL}/upload?encrypted_query_param=${encodeURIComponent(upload.upload_param)}&filekey=${encodeURIComponent(filekey)}`
+      : "";
+  if (!raw) throw new Error("微信服务未返回图片上传地址");
+  const url = new URL(raw);
+  if (url.protocol !== "https:" || url.hostname !== "novac2c.cdn.weixin.qq.com") {
+    throw new Error("微信图片上传地址不是受信任的 CDN HTTPS 地址");
+  }
   return url.toString();
 }
 

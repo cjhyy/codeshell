@@ -36,9 +36,13 @@ describe("Pet preload contract", () => {
           expect(payload).toEqual({ taskId: "pet-task-0123456789abcdef01234567", action: "pause" });
           return { ok: false, code: "not-found", message: "gone" };
         }
-        if (channel === "pet:long-tasks-clear-completed") {
+        if (channel === "pet:long-tasks-clear-terminal") {
           expect(payload).toBeUndefined();
           return { revision: 2, observedAt: 6, tasks: [] };
+        }
+        if (channel === "pet:long-task-clear") {
+          expect(payload).toEqual({ taskId: "pet-task-0123456789abcdef01234567" });
+          return { revision: 3, observedAt: 7, tasks: [] };
         }
         if (channel === "pet:widget-visible-get") return false;
         if (channel === "pet:widget-visible") return { ok: true };
@@ -145,9 +149,14 @@ describe("Pet preload contract", () => {
         action: "pause",
       }),
     ).toEqual({ ok: false, code: "not-found", message: "gone" });
-    expect(await api.clearCompletedLongTasks?.()).toEqual({
+    expect(await api.clearTerminalLongTasks?.()).toEqual({
       revision: 2,
       observedAt: 6,
+      tasks: [],
+    });
+    expect(await api.clearLongTask?.("pet-task-0123456789abcdef01234567")).toEqual({
+      revision: 3,
+      observedAt: 7,
       tasks: [],
     });
     const taskRevisions: number[] = [];

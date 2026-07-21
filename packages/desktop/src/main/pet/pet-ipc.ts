@@ -33,7 +33,8 @@ export const PET_WORK_INBOX_UPDATE_CHANNEL = "pet:work-inbox-dismissed-update";
 export const PET_WORK_INBOX_EVENT_CHANNEL = "pet:work-inbox-dismissed-changed";
 export const PET_LONG_TASK_SNAPSHOT_CHANNEL = "pet:long-tasks-get";
 export const PET_LONG_TASK_CONTROL_CHANNEL = "pet:long-task-control";
-export const PET_LONG_TASK_CLEAR_COMPLETED_CHANNEL = "pet:long-tasks-clear-completed";
+export const PET_LONG_TASK_CLEAR_TERMINAL_CHANNEL = "pet:long-tasks-clear-terminal";
+export const PET_LONG_TASK_CLEAR_ONE_CHANNEL = "pet:long-task-clear";
 export const PET_LONG_TASK_EVENT_CHANNEL = "pet:long-tasks-changed";
 
 export interface PetIpcAggregator {
@@ -72,7 +73,8 @@ export interface PetIpcWorkInbox {
 export interface PetIpcLongTasks {
   getSnapshot(): PetLongTaskSnapshot;
   control(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
-  clearCompleted(): Promise<PetLongTaskSnapshot>;
+  clearTerminal(): Promise<PetLongTaskSnapshot>;
+  clearTask(taskId: string): Promise<PetLongTaskSnapshot>;
   subscribe(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
 }
 
@@ -224,6 +226,21 @@ function parseLongTaskControl(value: unknown): PetLongTaskControlRequest {
   return { taskId: record.taskId, action: record.action };
 }
 
+function parseLongTaskClear(value: unknown): string {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalid Pet long-task cleanup");
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some((key) => key !== "taskId") ||
+    typeof record.taskId !== "string" ||
+    !/^pet-task-[a-f0-9]{24}$/u.test(record.taskId)
+  ) {
+    throw new Error("invalid Pet long-task cleanup");
+  }
+  return record.taskId;
+}
+
 export function registerPetIpc(options: {
   ipcMain: PetIpcMainLike;
   aggregator: PetIpcAggregator;
@@ -358,11 +375,16 @@ export function registerPetIpc(options: {
       const request = parseLongTaskControl(args[0]);
       return afterReady(options.ready, () => options.longTasks!.control(request));
     });
-    options.ipcMain.handle(PET_LONG_TASK_CLEAR_COMPLETED_CHANNEL, (_event, ...args) => {
+    options.ipcMain.handle(PET_LONG_TASK_CLEAR_TERMINAL_CHANNEL, (_event, ...args) => {
       if (args.length !== 0) {
-        throw new Error("Pet completed long-task cleanup does not accept arguments");
+        throw new Error("Pet ended long-task cleanup does not accept arguments");
       }
-      return afterReady(options.ready, () => options.longTasks!.clearCompleted());
+      return afterReady(options.ready, () => options.longTasks!.clearTerminal());
+    });
+    options.ipcMain.handle(PET_LONG_TASK_CLEAR_ONE_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1) throw new Error("invalid Pet long-task cleanup");
+      const taskId = parseLongTaskClear(args[0]);
+      return afterReady(options.ready, () => options.longTasks!.clearTask(taskId));
     });
   }
   const unsubscribe = options.aggregator.subscribe((event) => {
@@ -400,7 +422,8 @@ export function registerPetIpc(options: {
     if (options.longTasks) {
       options.ipcMain.removeHandler(PET_LONG_TASK_SNAPSHOT_CHANNEL);
       options.ipcMain.removeHandler(PET_LONG_TASK_CONTROL_CHANNEL);
-      options.ipcMain.removeHandler(PET_LONG_TASK_CLEAR_COMPLETED_CHANNEL);
+      options.ipcMain.removeHandler(PET_LONG_TASK_CLEAR_TERMINAL_CHANNEL);
+      options.ipcMain.removeHandler(PET_LONG_TASK_CLEAR_ONE_CHANNEL);
     }
   };
 }

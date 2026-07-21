@@ -52,7 +52,8 @@ export interface PetStateContextValue {
     taskId: string,
     action: PetLongTaskControlAction,
   ) => Promise<PetLongTaskControlResult>;
-  clearCompletedLongTasks: () => Promise<boolean>;
+  clearTerminalLongTasks: () => Promise<boolean>;
+  clearLongTask: (taskId: string) => Promise<boolean>;
   surfaceablePendingCount: number;
   peeks: PetPeek[];
   removePeek: (id: string) => void;
@@ -386,15 +387,15 @@ export function PetStateProvider({
     [api],
   );
 
-  const clearCompletedLongTasks = React.useCallback(async (): Promise<boolean> => {
-    if (!api.clearCompletedLongTasks) {
-      setLongTaskError("Completed Pet task cleanup is unavailable");
+  const clearTerminalLongTasks = React.useCallback(async (): Promise<boolean> => {
+    if (!api.clearTerminalLongTasks) {
+      setLongTaskError("Ended Pet task cleanup is unavailable");
       return false;
     }
     setLongTaskCleanupBusy(true);
     setLongTaskError(null);
     try {
-      const snapshot = await api.clearCompletedLongTasks();
+      const snapshot = await api.clearTerminalLongTasks();
       setLongTasks((current) => (snapshot.revision >= current.revision ? snapshot : current));
       return true;
     } catch (error) {
@@ -404,6 +405,32 @@ export function PetStateProvider({
       setLongTaskCleanupBusy(false);
     }
   }, [api]);
+
+  const clearLongTask = React.useCallback(
+    async (taskId: string): Promise<boolean> => {
+      if (!api.clearLongTask) {
+        setLongTaskError("Pet task cleanup is unavailable");
+        return false;
+      }
+      setLongTaskBusyIds((current) => new Set(current).add(taskId));
+      setLongTaskError(null);
+      try {
+        const snapshot = await api.clearLongTask(taskId);
+        setLongTasks((current) => (snapshot.revision >= current.revision ? snapshot : current));
+        return true;
+      } catch (error) {
+        setLongTaskError(error instanceof Error ? error.message : String(error));
+        return false;
+      } finally {
+        setLongTaskBusyIds((current) => {
+          const next = new Set(current);
+          next.delete(taskId);
+          return next;
+        });
+      }
+    },
+    [api],
+  );
 
   React.useEffect(() => {
     let active = true;
@@ -471,7 +498,8 @@ export function PetStateProvider({
       longTaskCleanupBusy,
       longTaskError,
       controlLongTask,
-      clearCompletedLongTasks,
+      clearTerminalLongTasks,
+      clearLongTask,
       surfaceablePendingCount,
       peeks,
       removePeek: (id: string) => setPeeks((current) => current.filter((peek) => peek.id !== id)),
@@ -488,7 +516,8 @@ export function PetStateProvider({
       longTaskCleanupBusy,
       longTaskError,
       controlLongTask,
-      clearCompletedLongTasks,
+      clearTerminalLongTasks,
+      clearLongTask,
       surfaceablePendingCount,
       peeks,
     ],
@@ -527,7 +556,8 @@ const INERT_PET_CONTEXT: PetStateContextValue = {
     code: "worker-error",
     message: "Pet task control is unavailable",
   }),
-  clearCompletedLongTasks: async () => false,
+  clearTerminalLongTasks: async () => false,
+  clearLongTask: async () => false,
   surfaceablePendingCount: 0,
   peeks: [],
   removePeek: () => {},

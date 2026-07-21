@@ -3,6 +3,7 @@ import {
   buildPetLongTaskContext,
   petLongTaskResumePrompt,
   type PetLongTask,
+  type PetLongTaskArtifact,
   type PetLongTaskClosureDecision,
   type PetLongTaskContinuationDecision,
   type PetLongTaskContext,
@@ -82,6 +83,23 @@ function extractText(value: unknown): string | undefined {
     .replace(/\s+/gu, " ")
     .trim();
   return text ? text.slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH) : undefined;
+}
+
+function generatedImageArtifacts(value: unknown): PetLongTaskArtifact[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const event = value as Record<string, unknown>;
+  const result = event.result;
+  if (!result || typeof result !== "object" || Array.isArray(result)) return [];
+  const record = result as Record<string, unknown>;
+  if (record.toolName !== "GenerateImage" || record.isError === true || record.error) return [];
+  const output = [record.transcriptResult, record.displayResult, record.result].find(
+    (candidate): candidate is string => typeof candidate === "string" && candidate.length > 0,
+  );
+  if (!output) return [];
+  const match = /\bsaved to\s+(.+?)(?:\r?\n|$)/iu.exec(output);
+  const reference = match?.[1]?.trim().replace(/^`|`$/gu, "");
+  if (!reference || !/\.(?:png|jpe?g|gif|webp)$/iu.test(reference)) return [];
+  return [{ kind: "file", label: "Generated image", reference: reference.slice(0, 2_048) }];
 }
 
 function safeToolName(event: Record<string, unknown>): string {
@@ -224,12 +242,18 @@ export class PetLongTaskCoordinator {
     }
   }
 
-  async clearCompleted(): Promise<PetLongTaskSnapshot> {
-    const completed = this.options.store
-      .getSnapshot()
-      .tasks.filter((task) => task.status === "completed");
-    await Promise.all(completed.map((task) => this.notifyClosed(task)));
-    return this.options.store.clearCompleted();
+  async clearTerminal(): Promise<PetLongTaskSnapshot> {
+    const terminal = this.options.store.getSnapshot().tasks.filter((task) => isTerminal(task));
+    await Promise.all(terminal.map((task) => this.notifyClosed(task)));
+    return this.options.store.clearTerminal();
+  }
+
+  async clearTerminalTask(taskId: string): Promise<PetLongTaskSnapshot> {
+    const task = this.options.store.get(taskId);
+    if (!task) throw new Error("The Pet long task no longer exists");
+    if (!isTerminal(task)) throw new Error("Only ended Pet long tasks can be cleared");
+    await this.notifyClosed(task);
+    return this.options.store.removeTerminal(taskId);
   }
 
   /** Observe the exact, top-level session stream retained by AgentBridge. */
@@ -251,6 +275,13 @@ export class PetLongTaskCoordinator {
       case "context_compact":
         await this.recordProgress(task, at, "Compacting context for continued work");
         return;
+      case "tool_result": {
+        const artifacts = generatedImageArtifacts(event);
+        if (artifacts.length > 0) {
+          await this.options.store.transition(task.id, { kind: "artifact", at, artifacts });
+        }
+        return;
+      }
       case "assistant_message": {
         const summary = extractText(event.message);
         if (summary) {
@@ -272,7 +303,10 @@ export class PetLongTaskCoordinator {
           const completed = await this.options.store.transition(task.id, {
             kind: "completed",
             at,
-            summary: current.summary ?? "The long-running objective was verified complete",
+            summary:
+              current.resultSummary ??
+              current.summary ??
+              "The long-running objective was verified complete",
             artifacts: [
               { kind: "result", label: "Completed work session", reference: current.sessionId },
             ],
@@ -341,7 +375,6 @@ export class PetLongTaskCoordinator {
             const completed = await this.options.store.transition(task.id, {
               kind: "completed",
               at,
-              summary: current.summary ?? "The Work Session completed normally",
               artifacts: [
                 { kind: "result", label: "Completed work session", reference: current.sessionId },
               ],
@@ -451,7 +484,6 @@ export class PetLongTaskCoordinator {
           const completed = await this.options.store.transition(task.id, {
             kind: "completed",
             at: event.session.terminal.at,
-            summary: task.summary ?? "The Work Session completed normally",
             artifacts: [
               { kind: "result", label: "Completed work session", reference: task.sessionId },
             ],

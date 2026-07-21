@@ -255,11 +255,14 @@ function readModuleExport<T>(loaded: unknown, channel: ChannelName, exportName: 
 
 class LazyChannelAdapter implements ChannelAdapter {
   private adapterPromise?: Promise<ChannelAdapter>;
+  readonly supportsOutgoingAttachments: boolean;
 
   constructor(
     readonly channel: string,
     private readonly loader: () => Promise<ChannelAdapter>,
-  ) {}
+  ) {
+    this.supportsOutgoingAttachments = channel === "telegram" || channel === "wechat";
+  }
 
   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
     const adapter = await this.load();

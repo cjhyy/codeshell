@@ -131,26 +131,43 @@ describe("Pet long-task state machine", () => {
     expect(late).toBe(cancelled);
   });
 
-  test("ignores stale progress so a final assistant checkpoint remains the completion summary", () => {
+  test("keeps the final assistant result when a newer projection reports model processing", () => {
     const running = transitionPetLongTask(created(), { kind: "started", at: 200 });
     const checkpoint = transitionPetLongTask(running, {
       kind: "checkpoint",
       at: 500,
       summary: "Final result with the verified file path",
     });
-    const staleProjection = transitionPetLongTask(checkpoint, {
+    const processingProjection = transitionPetLongTask(checkpoint, {
       kind: "progress",
-      at: 490,
+      at: 510,
       phase: "executing",
       summary: "模型处理中",
     });
-    const completed = transitionPetLongTask(staleProjection, {
+    const completed = transitionPetLongTask(processingProjection, {
       kind: "completed",
       at: 600,
     });
 
-    expect(staleProjection).toBe(checkpoint);
+    expect(processingProjection.summary).toBe("模型处理中");
+    expect(processingProjection.resultSummary).toBe("Final result with the verified file path");
     expect(completed.summary).toBe("Final result with the verified file path");
+  });
+
+  test("records generated artifacts independently from progress", () => {
+    const running = transitionPetLongTask(created(), { kind: "started", at: 200 });
+    const recorded = transitionPetLongTask(running, {
+      kind: "artifact",
+      at: 300,
+      artifacts: [{ kind: "file", label: "Generated image", reference: "/work/app/comic.png" }],
+    });
+
+    expect(recorded.artifacts).toContainEqual({
+      kind: "file",
+      label: "Generated image",
+      reference: "/work/app/comic.png",
+    });
+    expect(recorded.events.at(-1)?.kind).toBe("artifact");
   });
 
   test("retry reopens a failed task and preserves durable history", () => {

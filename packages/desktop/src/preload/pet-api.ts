@@ -252,7 +252,8 @@ export interface PetApi {
   onDismissedWorkItemIdsChanged(listener: (snapshot: PetWorkInboxSnapshot) => void): () => void;
   getLongTasks?(): Promise<PetLongTaskSnapshot>;
   controlLongTask?(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
-  clearCompletedLongTasks?(): Promise<PetLongTaskSnapshot>;
+  clearTerminalLongTasks?(): Promise<PetLongTaskSnapshot>;
+  clearLongTask?(taskId: string): Promise<PetLongTaskSnapshot>;
   onLongTasksChanged?(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
@@ -320,8 +321,10 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
     getLongTasks: () => ipcRenderer.invoke("pet:long-tasks-get") as Promise<PetLongTaskSnapshot>,
     controlLongTask: (request) =>
       ipcRenderer.invoke("pet:long-task-control", request) as Promise<PetLongTaskControlResult>,
-    clearCompletedLongTasks: () =>
-      ipcRenderer.invoke("pet:long-tasks-clear-completed") as Promise<PetLongTaskSnapshot>,
+    clearTerminalLongTasks: () =>
+      ipcRenderer.invoke("pet:long-tasks-clear-terminal") as Promise<PetLongTaskSnapshot>,
+    clearLongTask: (taskId) =>
+      ipcRenderer.invoke("pet:long-task-clear", { taskId }) as Promise<PetLongTaskSnapshot>,
     onLongTasksChanged: (listener) => {
       const handler = (_event: unknown, payload: unknown): void =>
         listener(payload as PetLongTaskSnapshot);

@@ -55,6 +55,10 @@ function taskActions(task: PetLongTask): PetLongTaskControlAction[] {
   }
 }
 
+export function isLongTaskClearable(task: PetLongTask): boolean {
+  return task.status === "completed" || task.status === "failed" || task.status === "cancelled";
+}
+
 const ACTION_ICON = {
   pause: Pause,
   resume: Play,
@@ -67,11 +71,13 @@ export function PetLongTaskCard({
   busy,
   onOpenSession,
   onControl,
+  onClear,
 }: {
   task: PetLongTask;
   busy: boolean;
   onOpenSession?: (sessionId: string) => void;
   onControl: (taskId: string, action: PetLongTaskControlAction) => void;
+  onClear?: (taskId: string) => Promise<boolean>;
 }) {
   const { t } = useT();
   const [historyOpen, setHistoryOpen] = React.useState(false);
@@ -229,6 +235,9 @@ export function PetLongTaskCard({
             </button>
           );
         })}
+        {isLongTaskClearable(task) && onClear && (
+          <PetLongTaskClearButton task={task} busy={busy} onClear={onClear} />
+        )}
       </div>
 
       {historyOpen && (
@@ -262,13 +271,14 @@ export function PetLongTaskSection({
     longTaskCleanupBusy,
     longTaskError,
     controlLongTask,
-    clearCompletedLongTasks,
+    clearTerminalLongTasks,
+    clearLongTask,
   } = useOptionalPetState();
   const activeCount = longTasks.tasks.filter(
     (task) =>
       task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled",
   ).length;
-  const completedCount = longTasks.tasks.filter((task) => task.status === "completed").length;
+  const terminalCount = longTasks.tasks.filter(isLongTaskClearable).length;
   const [open, setOpen] = React.useState(activeCount > 0);
   React.useEffect(() => {
     if (activeCount > 0) setOpen(true);
@@ -309,12 +319,12 @@ export function PetLongTaskSection({
       </h3>
       {open && (
         <div className="space-y-2 px-1.5 pb-1.5 pt-2">
-          {completedCount > 0 && (
+          {terminalCount > 0 && (
             <div className="flex justify-end px-1">
-              <PetLongTaskCleanupButton
-                count={completedCount}
+              <PetLongTaskBulkCleanupButton
+                count={terminalCount}
                 busy={longTaskCleanupBusy}
-                onClear={clearCompletedLongTasks}
+                onClear={clearTerminalLongTasks}
               />
             </div>
           )}
@@ -330,6 +340,7 @@ export function PetLongTaskSection({
               busy={longTaskBusyIds.has(task.id)}
               onOpenSession={onOpenSession}
               onControl={(taskId, action) => void controlLongTask(taskId, action)}
+              onClear={clearLongTask}
             />
           ))}
         </div>
@@ -338,7 +349,7 @@ export function PetLongTaskSection({
   );
 }
 
-export function PetLongTaskCleanupButton({
+export function PetLongTaskBulkCleanupButton({
   count,
   busy,
   onClear,
@@ -351,9 +362,9 @@ export function PetLongTaskCleanupButton({
   const confirm = useConfirm();
   const clear = async (): Promise<void> => {
     const approved = await confirm({
-      title: t("pet.longTask.clearCompletedTitle"),
-      message: t("pet.longTask.clearCompletedConfirm", { count }),
-      confirmLabel: t("pet.longTask.clearCompletedAction"),
+      title: t("pet.longTask.clearTerminalTitle"),
+      message: t("pet.longTask.clearTerminalConfirm", { count }),
+      confirmLabel: t("pet.longTask.clearAction"),
       destructive: true,
     });
     if (approved) await onClear();
@@ -361,7 +372,7 @@ export function PetLongTaskCleanupButton({
   return (
     <button
       type="button"
-      data-pet-long-task-cleanup="completed"
+      data-pet-long-task-cleanup="terminal"
       disabled={busy}
       className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition hover:bg-status-err/8 hover:text-status-err disabled:opacity-50"
       onClick={() => void clear()}
@@ -371,7 +382,46 @@ export function PetLongTaskCleanupButton({
       ) : (
         <Trash2 size={12} aria-hidden="true" />
       )}
-      {t("pet.longTask.clearCompleted", { count })}
+      {t("pet.longTask.clearTerminal", { count })}
+    </button>
+  );
+}
+
+export function PetLongTaskClearButton({
+  task,
+  busy,
+  onClear,
+}: {
+  task: PetLongTask;
+  busy: boolean;
+  onClear: (taskId: string) => Promise<boolean>;
+}) {
+  const { t } = useT();
+  const confirm = useConfirm();
+  const clear = async (): Promise<void> => {
+    const approved = await confirm({
+      title: t("pet.longTask.clearTaskTitle"),
+      message: t("pet.longTask.clearTaskConfirm"),
+      confirmLabel: t("pet.longTask.clearAction"),
+      destructive: true,
+    });
+    if (approved) await onClear(task.id);
+  };
+  return (
+    <button
+      type="button"
+      data-pet-long-task-clear={task.id}
+      disabled={busy}
+      aria-label={t("pet.longTask.clearTaskAria", { title: task.objective })}
+      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] text-muted-foreground transition hover:bg-status-err/8 hover:text-status-err disabled:opacity-50"
+      onClick={() => void clear()}
+    >
+      {busy ? (
+        <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+      ) : (
+        <Trash2 size={12} aria-hidden="true" />
+      )}
+      {t("pet.longTask.clearTask")}
     </button>
   );
 }

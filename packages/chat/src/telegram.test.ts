@@ -47,6 +47,37 @@ describe("TelegramAdapter", () => {
     expect(body.reply_markup.inline_keyboard[0][0].url).toContain("pairing=x");
   });
 
+  test("sends generated images through Telegram sendPhoto", async () => {
+    let endpoint = "";
+    let form: FormData | undefined;
+    const adapter = new TelegramAdapter(baseConfig(), {
+      fetch: async (url, init) => {
+        endpoint = String(url);
+        form = init?.body as FormData;
+        return Response.json({ ok: true, result: {} });
+      },
+    });
+
+    await adapter.send("123", {
+      text: "",
+      attachments: [
+        {
+          kind: "image",
+          name: "comic.png",
+          mimeType: "image/png",
+          data: Uint8Array.from([1, 2, 3]),
+        },
+      ],
+    });
+
+    expect(endpoint).toEndWith("/botsecret/sendPhoto");
+    expect(form?.get("chat_id")).toBe("123");
+    const photo = form?.get("photo") as File;
+    expect(photo.name).toBe("comic.png");
+    expect(photo.type).toBe("image/png");
+    expect(new Uint8Array(await photo.arrayBuffer())).toEqual(Uint8Array.from([1, 2, 3]));
+  });
+
   test("redacts the bot token from polling failures", async () => {
     const abort = new AbortController();
     const logs: string[] = [];
