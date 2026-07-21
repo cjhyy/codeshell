@@ -1,4 +1,5 @@
 import React from "react";
+import { Trash2 } from "lucide-react";
 import type { CatalogEntry } from "../../preload/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export interface ConnectionInstanceCardProps {
   onToggleShowKey: (id: string) => void;
   onSaveInstance: (id: string) => Promise<void>;
   onRemoveInstance: (id: string) => Promise<void>;
+  onRemoveCredential: (id: string) => Promise<void>;
   onSetDefault: (id: string) => void;
 }
 
@@ -42,12 +44,17 @@ export function ConnectionInstanceCard({
   onToggleShowKey,
   onSaveInstance,
   onRemoveInstance,
+  onRemoveCredential,
   onSetDefault,
 }: ConnectionInstanceCardProps) {
   const { t } = useT();
   const preset = entry?.modelPresets?.find((p) => p.value === inst.model);
   const credChoices = credentialCandidates(credentials, inst.catalogId, catalog);
   const boundCred = credentials.find((c) => c.id === inst.credentialId);
+  const displayedCredChoices =
+    boundCred && !credChoices.some((credential) => credential.id === boundCred.id)
+      ? [boundCred, ...credChoices]
+      : credChoices;
 
   return (
     <ConnCard isDefault={isDefault}>
@@ -88,23 +95,37 @@ export function ConnectionInstanceCard({
 
       {entry?.needsKey !== false && (
         <>
-          {credChoices.length > 0 && (
+          {(displayedCredChoices.length > 0 || boundCred) && (
             <ConnField
               label={t("settingsX.textConn.fieldCredential")}
               hint={t("settingsX.textConn.credentialHint")}
             >
-              <SimpleSelect
-                value={inst.credentialId ?? ""}
-                onChange={(v) => onPatch(inst.id, { credentialId: v || undefined })}
-                options={[
-                  ...credChoices.map((c) => ({
-                    value: c.id,
-                    label: credentialLabel(c, entry?.displayName),
-                  })),
-                  { value: "", label: t("settingsX.textConn.newKey") },
-                ]}
-                placeholder={t("settingsX.textConn.pickCredential")}
-              />
+              <div className="flex min-w-0 items-center gap-2">
+                <SimpleSelect
+                  className="min-w-0 flex-1"
+                  value={inst.credentialId ?? ""}
+                  onChange={(v) => onPatch(inst.id, { credentialId: v || undefined })}
+                  options={[
+                    ...displayedCredChoices.map((c) => ({
+                      value: c.id,
+                      label: credentialLabel(c, entry?.displayName),
+                    })),
+                    { value: "", label: t("settingsX.textConn.newKey") },
+                  ]}
+                  placeholder={t("settingsX.textConn.pickCredential")}
+                />
+                {boundCred && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 text-muted-foreground hover:text-status-err"
+                    onClick={() => void onRemoveCredential(boundCred.id)}
+                  >
+                    <Trash2 />
+                    {t("settingsX.textConn.deleteCredential")}
+                  </Button>
+                )}
+              </div>
             </ConnField>
           )}
           {!inst.credentialId && (

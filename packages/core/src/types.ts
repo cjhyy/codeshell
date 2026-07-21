@@ -288,6 +288,11 @@ export interface SessionState {
    */
   contextUsageAnchor?: ContextUsageAnchor;
   /**
+   * Exceptional boundary for the most recently persisted completed run.
+   * Absent means `status === "completed"` is an ordinary final answer.
+   */
+  lastCompletionKind?: TurnCompletionKind;
+  /**
    * Monotonic prompt-cache counters for the whole session. These only increase
    * from session start and are separate from the resettable tokenUsage window.
    * Optional on legacy state.json files; SessionManager normalizes them on load.
@@ -526,6 +531,14 @@ export type PromptTokenSource =
 
 export type PromptTokenConfidence = "high" | "medium" | "low";
 
+/**
+ * Why a syntactically completed engine run did not finish its logical task.
+ * Absent means the model reached an ordinary final response. Consumers that
+ * manage durable work can use this to avoid treating an async handoff or a
+ * Goal-control boundary as objective completion.
+ */
+export type TurnCompletionKind = "background_wait" | "goal_control_stop" | "limit_stop";
+
 export type StreamEvent =
   // Emitted once per run() as soon as the Engine has resolved the session
   // id (resume vs. create). Lets the client know the authoritative sid
@@ -563,7 +576,12 @@ export type StreamEvent =
     }
   | { type: "tool_result"; result: ToolResult; agentId?: string }
   | { type: "assistant_message"; message: Message; messageId?: string; agentId?: string }
-  | { type: "turn_complete"; reason: TerminalReason; agentId?: string }
+  | {
+      type: "turn_complete";
+      reason: TerminalReason;
+      completionKind?: TurnCompletionKind;
+      agentId?: string;
+    }
   // Goal mode visibility: emitted each time the goal judge re-prompts the
   // model ("not_met", carries the judge's `gaps` + the running round count),
   // when the goal is finally judged complete ("met", round = total rounds),

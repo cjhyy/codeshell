@@ -159,9 +159,22 @@ describe("PetLongTaskCoordinator", () => {
     const launch = await h.coordinator.startDelegation({
       clientMessageId: "message-1",
       task: "Implement and verify the feature",
+      goalObjective: "Implement and verify the feature",
       workspacePath: "/work/app",
+      completionTarget: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "owner-conversation",
+      },
+      continuationDepth: 1,
     });
     expect(h.store.get(launch.taskId)?.status).toBe("running");
+    expect(h.store.get(launch.taskId)?.completionTarget).toEqual({
+      kind: "im-gateway",
+      channel: "wechat",
+      target: "owner-conversation",
+    });
+    expect(h.store.get(launch.taskId)?.continuationDepth).toBe(1);
     expect(h.closed).toEqual([]);
 
     h.tick(2_000);
@@ -213,6 +226,7 @@ describe("PetLongTaskCoordinator", () => {
     const launch = await h.coordinator.startDelegation({
       clientMessageId: "message-unverified-stop",
       task: "Finish the objective, not merely one turn",
+      goalObjective: "Finish the objective, not merely one turn",
       workspacePath: "/work/app",
     });
     h.tick(2_000);
@@ -227,11 +241,180 @@ describe("PetLongTaskCoordinator", () => {
     expect(h.closed).toEqual([]);
   });
 
+  test("closes an ordinary Work Session without requiring a Goal", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-ordinary-completion",
+      task: "Inspect the log and report the cause",
+      workspacePath: "/work/app",
+    });
+    expect(h.store.get(launch.taskId)?.verificationMode).toBe("turn");
+
+    h.tick(2_000);
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "assistant_message",
+      message: { role: "assistant", content: "The cause is confirmed." },
+    });
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "turn_complete",
+      reason: "completed",
+    });
+
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "completed",
+      summary: "The cause is confirmed.",
+    });
+    expect(h.closed).toEqual([{ id: launch.taskId, status: "completed" }]);
+  });
+
+  test("recovers a missed ordinary completion from the durable projection", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-recovered-turn-completion",
+      task: "Inspect the durable result",
+      workspacePath: "/work/app",
+    });
+    h.coordinator.stop();
+    await h.store.flush();
+
+    const closed: string[] = [];
+    const recoveredStore = new PetLongTaskStore(join(h.root, "tasks.json"), () => 3_000);
+    const recovered = new PetLongTaskCoordinator({
+      store: recoveredStore,
+      projection: fakeProjection({
+        ...emptySnapshot(),
+        observedAt: 2_000,
+        sessions: [
+          {
+            agentSessionId: launch.sessionId,
+            runState: "terminal",
+            queueDepth: 0,
+            lastActivityAt: 2_000,
+            pendingDecisionCount: 0,
+            terminal: { status: "completed", at: 2_000 },
+            freshness: { source: "disk", observedAt: 2_000, workerState: "reclaimed" },
+          },
+        ],
+      }),
+      worker: {
+        hasLiveWorker: () => false,
+        requestWorker: async () => ({ ok: false as const, message: "no worker" }),
+      },
+      launcher: {
+        start: async () => ({ sessionId: launch.sessionId, cwd: "/work/app" }),
+      },
+      now: () => 3_000,
+      onTaskClosed: async (task) => {
+        closed.push(task.id);
+      },
+    });
+
+    await recovered.start();
+
+    expect(recoveredStore.get(launch.taskId)).toMatchObject({
+      status: "completed",
+      closureRecordedAt: 3_000,
+    });
+    expect(closed).toEqual([launch.taskId]);
+    recovered.stop();
+  });
+
+  test("waits for a background notification instead of closing the task", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-background-wait",
+      task: "Delegate the implementation and report its result",
+      workspacePath: "/work/app",
+    });
+
+    h.tick(2_000);
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "turn_complete",
+      reason: "completed",
+      completionKind: "background_wait",
+    });
+
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "interrupted",
+      waitingFor: "The work session yielded until its background result notification arrives",
+    });
+    expect(h.closed).toEqual([]);
+  });
+
+  test("does not report a run-limit stop as ordinary completion", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-limit-stop",
+      task: "Finish within the run budget",
+      workspacePath: "/work/app",
+    });
+
+    h.tick(2_000);
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "turn_complete",
+      reason: "completed",
+      completionKind: "limit_stop",
+    });
+
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "interrupted",
+      waitingFor: "The work session reached its run limit before a final response",
+    });
+    expect(h.closed).toEqual([]);
+  });
+
+  test("continues and reports completion after an explicit Goal clear", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-goal-clear",
+      task: "Finish the delegated implementation",
+      goalObjective: "Finish the delegated implementation",
+      workspacePath: "/work/app",
+    });
+
+    h.tick(2_000);
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "goal_cleared",
+      goalId: "goal-1",
+      revision: 2,
+    });
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "turn_complete",
+      reason: "completed",
+      completionKind: "goal_control_stop",
+    });
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "interrupted",
+      verificationMode: "turn",
+    });
+
+    h.tick(3_000);
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "stream_request_start",
+      turnNumber: 2,
+    });
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "assistant_message",
+      message: { role: "assistant", content: "The delegated work finished successfully." },
+    });
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "turn_complete",
+      reason: "completed",
+    });
+
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "completed",
+      summary: "The delegated work finished successfully.",
+    });
+    expect(h.closed).toEqual([{ id: launch.taskId, status: "completed" }]);
+  });
+
   test("records Goal exhaustion as a retryable failure, never success", async () => {
     const h = await harness();
     const launch = await h.coordinator.startDelegation({
       clientMessageId: "message-exhausted",
       task: "Finish within the continuation budget",
+      goalObjective: "Finish within the continuation budget",
       workspacePath: "/work/app",
     });
     h.tick(2_000);
@@ -296,6 +479,7 @@ describe("PetLongTaskCoordinator", () => {
     const launch = await h.coordinator.startDelegation({
       clientMessageId: "message-control",
       task: "Finish a long migration",
+      goalObjective: "Finish a long migration",
       workspacePath: "/work/app",
     });
     const paused = await h.coordinator.control({ taskId: launch.taskId, action: "pause" });
@@ -313,6 +497,7 @@ describe("PetLongTaskCoordinator", () => {
     const launch = await h.coordinator.startDelegation({
       clientMessageId: "message-retry-cancel",
       task: "Finish a recoverable migration",
+      goalObjective: "Finish a recoverable migration",
       workspacePath: "/work/app",
     });
     h.tick(2_000);
@@ -389,6 +574,7 @@ describe("PetLongTaskCoordinator", () => {
     const launch = await coordinator.startDelegation({
       clientMessageId: "message-live-goal",
       task: "Finish the live goal",
+      goalObjective: "Finish the live goal",
       workspacePath: "/work/app",
     });
     expect((await coordinator.control({ taskId: launch.taskId, action: "pause" })).ok).toBe(true);

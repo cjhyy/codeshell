@@ -258,6 +258,11 @@ export async function finalizeRunSuccess(args: {
   options?.onAgentProgress?.({ type: "phase", phase: "finalizing" });
   session.state.turnCount = turnCount;
   session.state.status = result.reason;
+  if (result.reason === "completed" && result.completionKind) {
+    session.state.lastCompletionKind = result.completionKind;
+  } else {
+    delete session.state.lastCompletionKind;
+  }
   if (result.reason === "completed") {
     session.state.completedSnapshotVersion = 1;
     if (!transcriptFlushFailed) {
@@ -285,7 +290,11 @@ export async function finalizeRunSuccess(args: {
   );
 
   // Emit completion
-  options?.onStream?.({ type: "turn_complete", reason: result.reason });
+  options?.onStream?.({
+    type: "turn_complete",
+    reason: result.reason,
+    ...(result.completionKind ? { completionKind: result.completionKind } : {}),
+  });
 
   // Structured results the active profile's run services reported, keyed
   // by profile id. petWorkDelegation stays as a compat mirror of
@@ -328,6 +337,7 @@ export function buildRunFailureResult(args: {
   // therefore need the same terminal lifecycle treatment as turn-loop errors.
   const error = formatFriendlyError(err);
   session.state.status = "model_error";
+  delete session.state.lastCompletionKind;
   args.persistFinalRunState(session.state);
   session.transcript.appendError(error, { phase: "initialization" });
   logger.error("engine.run_lifecycle_failed", {

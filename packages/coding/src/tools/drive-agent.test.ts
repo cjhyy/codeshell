@@ -193,6 +193,29 @@ describe("DriveAgent tool", () => {
     await tool({ prompt: "p", cwd: "/x", background: false, __signal: controller.signal } as any);
     expect(seen?.aborted).toBe(true);
   });
+
+  it("requests a run yield after launching notification-backed background work", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-yield-"));
+    try {
+      let yielded: string | undefined;
+      const tool = makeDriveAgentTool(() => new Promise<any>(() => {}));
+      const output = await tool(
+        { prompt: "finish in background", cwd: tmp } as any,
+        {
+          cwd: tmp,
+          sessionId: "S-YIELD",
+          runYield: { request: (reason: string) => (yielded = reason), consume: () => undefined },
+        } as any,
+      );
+
+      expect(output).toContain("无需轮询");
+      expect(yielded).toBe("background_notification");
+    } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("DriveClaudeCode alias (back-compat)", () => {

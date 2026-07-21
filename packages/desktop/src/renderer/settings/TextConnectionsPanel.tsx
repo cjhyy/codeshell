@@ -56,6 +56,7 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
     setConnectionKey,
     saveInstance,
     removeInstance,
+    removeCredential,
     setAux,
     setDefaultInstance,
     toggleShowKey,
@@ -135,6 +136,7 @@ export function TextConnectionsPanel({ scope, activeProjectPath, tag = "text", t
               onToggleShowKey={toggleShowKey}
               onSaveInstance={saveInstance}
               onRemoveInstance={removeInstance}
+              onRemoveCredential={removeCredential}
               onSetDefault={setDefaultInstance}
             />
           ))}

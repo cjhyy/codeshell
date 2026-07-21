@@ -13,6 +13,7 @@ import {
   uniqueInstanceId,
   credentialCandidates,
   credentialLabel,
+  removeCredentialAndReferences,
   catalogModelOptions,
   type ModelInstance,
   type Credential,
@@ -78,10 +79,7 @@ describe("buildTextInstance", () => {
       description: "x",
       defaultBaseUrl: "https://api.deepseek.com/v1",
       defaultModel: "deepseek-v4-flash",
-      modelPresets: [
-        { value: "deepseek-v4-flash" },
-        { value: "deepseek-v4-pro" },
-      ],
+      modelPresets: [{ value: "deepseek-v4-flash" }, { value: "deepseek-v4-pro" }],
     };
     const inst = buildTextInstance(DEEPSEEK, "deepseek-v4-pro", new Set(["deepseek"]));
     expect(inst).toMatchObject({
@@ -156,10 +154,102 @@ describe("credentialCandidates", () => {
     expect(cands.some((c) => c.id === "anth-acct")).toBe(false);
   });
 
+  test("does not share credentials across different endpoint origins", () => {
+    const catalog: CatalogEntry[] = [
+      OPENAI,
+      {
+        id: "misclassified-openrouter-kimi",
+        tag: "text",
+        adapterKind: "openai",
+        protocol: "openai-compat",
+        displayName: "Kimi via OpenRouter",
+        description: "x",
+        defaultBaseUrl: "https://openrouter.ai/api/v1",
+      },
+    ];
+
+    expect(credentialCandidates(creds, "misclassified-openrouter-kimi", catalog)).toEqual([]);
+  });
+
+  test("shares an OpenRouter credential with another OpenRouter catalog entry", () => {
+    const catalog: CatalogEntry[] = [
+      {
+        id: "openrouter",
+        tag: "text",
+        adapterKind: "openrouter",
+        protocol: "openai-compat",
+        displayName: "OpenRouter",
+        description: "x",
+        defaultBaseUrl: "https://openrouter.ai/api/v1",
+      },
+      {
+        id: "openrouter-kimi",
+        tag: "text",
+        adapterKind: "openrouter",
+        protocol: "openai-compat",
+        displayName: "Kimi via OpenRouter",
+        description: "x",
+        defaultBaseUrl: "https://openrouter.ai/api/v1",
+      },
+    ];
+    const openrouterCred: Credential = {
+      id: "openrouter-acct",
+      catalogId: "openrouter",
+      apiKey: "sk-or-1",
+    };
+
+    expect(
+      credentialCandidates([openrouterCred], "openrouter-kimi", catalog).map((c) => c.id),
+    ).toEqual(["openrouter-acct"]);
+  });
+
   test("without catalog: falls back to exact catalogId (no accidental over-sharing)", () => {
     // openai-transcribe with no catalog → can't resolve adapterKind → exact match
     // only, so it sees no "openai"-catalogId creds (safe default).
     expect(credentialCandidates(creds, "openai-transcribe")).toEqual([]);
+  });
+});
+
+describe("removeCredentialAndReferences", () => {
+  test("deletes one credential and detaches every shared connection", () => {
+    const credentials: Credential[] = [
+      { id: "shared", catalogId: "openrouter", apiKey: "sk-shared" },
+      { id: "keep", catalogId: "openai", apiKey: "sk-keep" },
+    ];
+    const connections: ModelInstance[] = [
+      {
+        id: "a",
+        catalogId: "openrouter",
+        tag: "text",
+        model: "model-a",
+        credentialId: "shared",
+      },
+      {
+        id: "b",
+        catalogId: "openrouter",
+        tag: "text",
+        model: "model-b",
+        credentialId: "shared",
+      },
+      {
+        id: "c",
+        catalogId: "openai",
+        tag: "text",
+        model: "model-c",
+        credentialId: "keep",
+      },
+    ];
+
+    const result = removeCredentialAndReferences(credentials, connections, "shared");
+    expect(result.credentials.map((credential) => credential.id)).toEqual(["keep"]);
+    expect(result.affectedConnectionIds).toEqual(["a", "b"]);
+    expect(result.connections.map((connection) => connection.credentialId)).toEqual([
+      undefined,
+      undefined,
+      "keep",
+    ]);
+    expect(credentials).toHaveLength(2);
+    expect(connections[0]?.credentialId).toBe("shared");
   });
 });
 
@@ -186,7 +276,12 @@ describe("catalogModelOptions", () => {
     description: "x",
     defaultBaseUrl: "https://api.deepseek.com",
     modelPresets: [
-      { value: "deepseek-v4-flash", label: "V4 Flash", maxContextTokens: 128000, supportsVision: true },
+      {
+        value: "deepseek-v4-flash",
+        label: "V4 Flash",
+        maxContextTokens: 128000,
+        supportsVision: true,
+      },
     ],
   };
   const conns: ModelInstance[] = [

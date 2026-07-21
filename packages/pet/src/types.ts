@@ -1,4 +1,9 @@
-import type { SessionOrigin, SessionStatus, StreamEvent } from "@cjhyy/code-shell-core/extension";
+import type {
+  SessionOrigin,
+  SessionStatus,
+  StreamEvent,
+  TurnCompletionKind,
+} from "@cjhyy/code-shell-core/extension";
 
 export const LOCAL_PET_OWNER = "local-user" as const;
 export type PetOwnerId = typeof LOCAL_PET_OWNER;
@@ -32,6 +37,8 @@ export interface PetSessionProjection {
   queueDepth: number;
   lastActivityAt: number;
   pendingDecisionCount: number;
+  /** Exceptional completed-run boundary that is waiting for recovery/continuation. */
+  completionKind?: TurnCompletionKind;
   terminal?: { status: PetTerminalStatus; at: number };
   freshness: PetProjectionFreshness;
 }
@@ -46,6 +53,7 @@ export interface PetCatalogSession {
   ephemeral?: boolean;
   parentSessionId?: string | null;
   status?: SessionStatus;
+  completionKind?: TurnCompletionKind;
 }
 
 export interface PetOwnerScopedCatalog {

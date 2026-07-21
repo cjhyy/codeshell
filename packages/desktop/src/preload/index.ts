@@ -26,6 +26,7 @@ import type {
   PluginHookApprovalResult,
   PluginMcpApprovalResult,
 } from "./types";
+import { forwardAgentSideEffectEvent } from "./agent-side-effect-events";
 
 /** One background shell as surfaced to the dock panel (TODO 3.2). Mirrors core
  *  BgShell's public shape; renderer-local since the renderer can't import core. */
@@ -246,6 +247,13 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   // Notification: has method
   const method = msg.method as string | undefined;
   const params = msg.params as Record<string, unknown> | undefined;
+  if (
+    forwardAgentSideEffectEvent(method, (eventName) => {
+      window.dispatchEvent(new Event(eventName));
+    })
+  ) {
+    return;
+  }
   if (method === "agent/streamEvent") {
     // Multi-session wire format: `{ sessionId, event }` envelope. The
     // renderer routes by sessionId; legacy callers can ignore it.

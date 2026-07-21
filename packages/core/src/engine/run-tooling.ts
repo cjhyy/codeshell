@@ -44,6 +44,7 @@ export function buildRunToolContext(args: {
   reportResult: (key: string, value: unknown) => void;
 }): ToolContext {
   const { options, profile, profileParams } = args;
+  let pendingRunYield: import("../tool-system/context.js").ToolRunYieldReason | undefined;
   // sessionId is filled in after the session bundle is resolved below
   // (the session may be cold-started or resumed). Until then this is
   // intentionally shaped as a mutable local; we treat it as immutable
@@ -70,6 +71,19 @@ export function buildRunToolContext(args: {
     streamCallback: options?.onStream,
     setCwd(nextCwd: string) {
       toolCtx.cwd = nextCwd;
+    },
+    runYield: {
+      request(reason) {
+        pendingRunYield ??= reason;
+      },
+      peek() {
+        return pendingRunYield;
+      },
+      consume() {
+        const reason = pendingRunYield;
+        pendingRunYield = undefined;
+        return reason;
+      },
     },
   };
   if (profile?.allowedToolNames) {

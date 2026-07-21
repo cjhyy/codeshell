@@ -11,10 +11,18 @@ export interface DesktopControlDescriptor {
 export interface DesktopControlEvent {
   id: number;
   createdAt: number;
-  type: "tunnel.connected" | "tunnel.disconnected" | "tunnel.error";
+  type:
+    | "tunnel.connected"
+    | "tunnel.disconnected"
+    | "tunnel.error"
+    | "pet.task.completed"
+    | "pet.task.failed"
+    | "pet.task.cancelled";
   text: string;
   title?: string;
   button?: { text: string; url: string };
+  /** One originating IM conversation; bypasses general notification targets. */
+  target?: { channel: string; target: string };
 }
 
 export interface DesktopControlEventPage {

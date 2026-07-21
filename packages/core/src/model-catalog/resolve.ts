@@ -44,9 +44,43 @@ export interface ResolvedInstance {
   paramValues: Record<string, unknown>;
 }
 
+function endpointOrigin(baseUrl: string | undefined): string | undefined {
+  if (!baseUrl) return undefined;
+  try {
+    return new URL(baseUrl).origin.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * A credential may be shared by multiple catalog entries only when they refer
+ * to the same provider family AND endpoint origin. This preserves intentional
+ * sharing such as OpenAI text ↔ OpenAI Images/Transcribe while preventing an
+ * OpenAI account from being attached to an OpenRouter template merely because
+ * both speak the OpenAI-compatible protocol.
+ *
+ * An exact catalogId match remains authoritative: a credential can carry an
+ * explicit provider-specific baseUrl override for that catalog entry.
+ */
+export function isCredentialCompatible(
+  entry: CatalogEntry,
+  credential: Credential,
+  catalog: CatalogEntry[],
+  connectionBaseUrl?: string,
+): boolean {
+  if (credential.catalogId === entry.id) return true;
+  const credentialEntry = findCatalogEntry(catalog, credential.catalogId);
+  if (!credentialEntry || credentialEntry.adapterKind !== entry.adapterKind) return false;
+  const connectionOrigin = endpointOrigin(connectionBaseUrl ?? entry.defaultBaseUrl);
+  const credentialOrigin = endpointOrigin(credential.baseUrl ?? credentialEntry.defaultBaseUrl);
+  return Boolean(connectionOrigin && credentialOrigin && connectionOrigin === credentialOrigin);
+}
+
 /**
  * Resolve `inst` against the credential list (for its key) and `catalog`.
- * Returns null when the instance's catalogId resolves to no entry.
+ * Returns null when the instance's catalogId resolves to no entry or an
+ * explicitly referenced credential belongs to a different provider/endpoint.
  * baseUrl precedence: connection override → credential → catalog default.
  */
 export function resolveInstance(
@@ -57,9 +91,13 @@ export function resolveInstance(
   const entry = findCatalogEntry(catalog, inst.catalogId);
   if (!entry) return null;
 
-  const cred = inst.credentialId
+  const candidate = inst.credentialId
     ? credentials.find((c) => c.id === inst.credentialId)
     : undefined;
+  if (candidate && !isCredentialCompatible(entry, candidate, catalog, inst.baseUrl)) {
+    return null;
+  }
+  const cred = candidate;
   const preset = entry.modelPresets?.find((p) => p.value === inst.model);
 
   return {

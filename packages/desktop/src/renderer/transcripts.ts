@@ -81,6 +81,8 @@ export interface SessionSummary {
   /** True when the user has archived this session — hidden from the
    *  main list, accessible under a collapsed "已归档" group. */
   archived?: boolean;
+  /** Pinned sessions stay at the front of their project's sidebar list. */
+  pinned?: boolean;
   /**
    * Engine sessionId bound to this UI session. Empty until the first
    * agent/run for this UI session completes (or session_started fires).
@@ -725,11 +727,15 @@ export function upsertImportedSession(
     throw new Error("upsertImportedSession: summary must have engineSessionId");
   }
   const idx = loadSessionIndex(projectId);
+  const previous = idx.sessions.find(
+    (session) => summary.engineSessionId && session.engineSessionId === summary.engineSessionId,
+  );
+  const merged = previous?.pinned ? { ...summary, pinned: true } : summary;
   const without = idx.sessions.filter(
     (s) => !(summary.engineSessionId && s.engineSessionId === summary.engineSessionId),
   );
   const next: SessionIndex = {
-    sessions: [summary, ...without].sort((a, b) => b.updatedAt - a.updatedAt),
+    sessions: [merged, ...without].sort((a, b) => b.updatedAt - a.updatedAt),
     activeSessionId: idx.activeSessionId,
   };
   saveSessionIndex(projectId, next);
@@ -797,6 +803,26 @@ export function renameSessionLocal(
           }
         : s,
     ),
+  };
+  saveSessionIndex(projectId, next);
+  return next;
+}
+
+/** Pin or unpin a Session without changing its last-activity timestamp. */
+export function setSessionPinnedLocal(
+  projectId: string | null,
+  sessionId: string,
+  pinned: boolean,
+): SessionIndex {
+  const idx = loadSessionIndex(projectId);
+  const next: SessionIndex = {
+    ...idx,
+    sessions: idx.sessions.map((session) => {
+      if (session.id !== sessionId) return session;
+      if (pinned) return { ...session, pinned: true };
+      const { pinned: _previous, ...unpinned } = session;
+      return unpinned;
+    }),
   };
   saveSessionIndex(projectId, next);
   return next;

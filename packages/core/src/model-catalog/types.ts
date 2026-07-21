@@ -6,10 +6,10 @@
  * create a configured instance (stored in settings.imageGen/videoGen.providers[]).
  * Catalog = "能配哪些"; providers[] = "配了哪些". The two are decoupled.
  *
- * `adapterKind` reuses the existing adapter selectors ("openai"/"google"/"fal")
- * — the runtime getImageProvider/getVideoProvider switches and adapter classes
- * are unchanged; the catalog only declares which template points at which
- * already-wired adapter. `shape` is documentation/future only.
+ * For text entries, `adapterKind` is the provider/gateway capability identity
+ * ("openai"/"openrouter"/"deepseek"/…), while `protocol` selects the wire
+ * client. For image/video it remains the concrete runtime adapter selector
+ * ("openai"/"google"/"fal"). `shape` is documentation/future only.
  */
 
 import { z } from "zod";
@@ -75,7 +75,11 @@ export const catalogEntrySchema = z.object({
   id: z.string(),
   /** Which 连接 page group this lands in. (audio = speech-to-text / voice input.) */
   tag: z.enum(["text", "image", "video", "audio"]),
-  /** Runtime adapter selector — reuses existing "openai" | "anthropic" | "google" | "fal". */
+  /**
+   * Provider/gateway identity for text (distinct from `protocol`), or concrete
+   * runtime adapter for image/video. OpenRouter is `openrouter` even though its
+   * text protocol is `openai-compat`.
+   */
   adapterKind: z.string(),
   /** LLM client protocol (text entries). */
   protocol: z.enum(["openai-compat", "anthropic-style"]).optional(),
@@ -87,6 +91,13 @@ export const catalogEntrySchema = z.object({
   defaultModel: z.string().optional(),
   /** Whether this provider needs an API key (ollama/local = false). */
   needsKey: z.boolean().optional(),
+  /**
+   * How a user entry with the same id as a built-in provider contributes model
+   * presets. Absent/"replace" preserves the legacy full-override behavior;
+   * "merge" treats modelPresets as per-model additions/overrides keyed by
+   * `value`, so future built-in models remain visible.
+   */
+  modelPresetsMode: z.enum(["replace", "merge"]).optional(),
   modelPresets: z.array(modelPresetSchema).optional(),
   signupUrl: z.string().optional(),
   /** Whether the 连接 card offers a "测试" button (image=true, video=false). */

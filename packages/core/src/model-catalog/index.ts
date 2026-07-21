@@ -54,7 +54,21 @@ export function loadUserCatalog(): CatalogEntry[] {
 export function getMergedCatalog(): CatalogEntry[] {
   const byId = new Map<string, CatalogEntry>();
   for (const e of BUILTIN_CATALOG) byId.set(e.id, e);
-  for (const e of loadUserCatalog()) byId.set(e.id, e); // user overrides built-in
+  for (const userEntry of loadUserCatalog()) {
+    const base = byId.get(userEntry.id);
+    if (!base || userEntry.modelPresetsMode !== "merge") {
+      byId.set(userEntry.id, userEntry); // legacy/full user override
+      continue;
+    }
+
+    const presets = new Map((base.modelPresets ?? []).map((preset) => [preset.value, preset]));
+    for (const preset of userEntry.modelPresets ?? []) presets.set(preset.value, preset);
+    byId.set(userEntry.id, {
+      ...base,
+      ...userEntry,
+      modelPresets: [...presets.values()],
+    });
+  }
   return [...byId.values()];
 }
 

@@ -96,6 +96,26 @@ describe("listDiskSessions", () => {
     expect(sessions[0].title).toBe("no-sum");
   });
 
+  it("surfaces an exceptional completed-run boundary from durable state", async () => {
+    mkSession(
+      dir,
+      "background-wait",
+      {
+        cwd: "/p",
+        parentSessionId: null,
+        status: "completed",
+        lastCompletionKind: "background_wait",
+      },
+      1000,
+    );
+
+    expect((await listDiskSessions({ limit: 10 }, dir)).sessions[0]).toMatchObject({
+      id: "background-wait",
+      status: "completed",
+      completionKind: "background_wait",
+    });
+  });
+
   it("paginates with limit + cursor", async () => {
     for (let i = 0; i < 5; i++)
       mkSession(dir, `s${i}`, { cwd: "/p", parentSessionId: null }, 1000 + i * 1000);
@@ -196,9 +216,10 @@ describe("archiveDiskSession", () => {
 
     await archiveDiskSession("work", 456, dir);
     // Preserved the rest of state.json.
-    const raw = JSON.parse(
-      fs.readFileSync(path.join(dir, "work", "state.json"), "utf8"),
-    ) as Record<string, unknown>;
+    const raw = JSON.parse(fs.readFileSync(path.join(dir, "work", "state.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
     expect(raw.archivedAt).toBe(456);
     expect(raw.status).toBe("completed");
     expect(raw.parentSessionId).toBe(null);

@@ -110,7 +110,7 @@ describe("PetDispatchService", () => {
         message: "What is running?",
         clientMessageId: "im:one",
         model: "fast-model",
-        source: { kind: "im-gateway", channel: "telegram" },
+        source: { kind: "im-gateway", channel: "telegram", target: "owner-chat" },
         attachments: [
           {
             id: "att-one",
@@ -192,6 +192,7 @@ describe("PetDispatchService", () => {
         message: "修复登录问题",
         clientMessageId: "client-delegate",
         preferredProjectPath: "/work/codeshell",
+        source: { kind: "im-gateway", channel: "wechat", target: "owner-conversation" },
       }),
     ).toMatchObject({
       ok: true,
@@ -208,8 +209,302 @@ describe("PetDispatchService", () => {
         clientMessageId: "client-delegate",
         task: "修复 CodeShell 登录问题",
         workspacePath: "/work/codeshell",
+        completionTarget: {
+          kind: "im-gateway",
+          channel: "wechat",
+          target: "owner-conversation",
+        },
       },
     ]);
+  });
+
+  test("injects a durable Mimi completion decision and returns its proactive reply", async () => {
+    let request: { method: string; params: Record<string, unknown> } | undefined;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method, params) => {
+          request = { method, params };
+          return { ok: true, result: { text: "任务已完成，最终结果已经整理好了。" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      longTasks: { context: () => ({ version: 1, active: [], recent: [] }) },
+    });
+
+    const report = await service.reportLongTaskClosure({
+      schemaVersion: 1,
+      id: "pet-task-finished",
+      originClientMessageId: "im:wechat:one",
+      objective: "整理 CodeShell 待办事项",
+      workspacePath: "/work/codeshell",
+      sessionId: "pet-work-finished",
+      status: "completed",
+      phase: "finalizing",
+      attempt: 1,
+      revision: 3,
+      createdAt: 100,
+      updatedAt: 300,
+      completedAt: 300,
+      summary: "P0 是收口 Pet 外部 Session 接入。",
+      artifacts: [],
+      events: [],
+    });
+
+    expect(report).toEqual({
+      text: "任务已完成，最终结果已经整理好了。",
+      continued: false,
+    });
+    expect(request).toMatchObject({
+      method: "agent/run",
+      params: {
+        sessionId: "pet-one",
+        behaviorMode: "pet",
+        kind: "pet",
+        injected: true,
+        requireExisting: true,
+      },
+    });
+    expect(String(request?.params.clientMessageId)).toStartWith(
+      "pet-closure:pet-task-finished:1:completed:",
+    );
+    expect(String(request?.params.task)).toContain("Decide the next manager action");
+    expect(String(request?.params.petRuntimeContext)).toContain(
+      '"summary":"P0 是收口 Pet 外部 Session 接入。"',
+    );
+  });
+
+  test("lets Mimi continue completed work and carries the original notification route", async () => {
+    const starts: unknown[] = [];
+    const effects: string[] = [];
+    let durableDecision: Record<string, unknown> | undefined;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
+            (candidate) => candidate.name === "CodeShell",
+          )!;
+          return {
+            ok: true,
+            result: {
+              text: "第一步完成，我继续验证发布流程。",
+              extensions: {
+                pet: {
+                  workDelegation: {
+                    workspaceId: workspace.id,
+                    objective: "验证 CodeShell 发布流程并修复剩余问题",
+                  },
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      longTasks: {
+        context: () => ({ version: 1, active: [], recent: [] }),
+        recordClosureDecision: async (_taskId, decision) => {
+          effects.push("decision-persisted");
+          durableDecision = { ...decision, decidedAt: 301 };
+          return { closureDecision: durableDecision } as never;
+        },
+        recordContinuationStarted: async (_taskId, _key, launch) => {
+          effects.push("launch-persisted");
+          durableDecision = { ...durableDecision, launch: { ...launch, at: 302 } };
+          return { closureDecision: durableDecision } as never;
+        },
+      },
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      startWorkSession: async (delegation) => {
+        effects.push("session-started");
+        starts.push(delegation);
+        return { sessionId: "pet-work-next", cwd: delegation.workspacePath! };
+      },
+    });
+
+    const report = await service.reportLongTaskClosure({
+      schemaVersion: 1,
+      id: "pet-task-step-one",
+      originClientMessageId: "im:wechat:one",
+      objective: "完成 CodeShell 发布准备",
+      workspacePath: "/work/codeshell",
+      sessionId: "pet-work-step-one",
+      completionTarget: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "owner-conversation",
+      },
+      status: "completed",
+      phase: "finalizing",
+      attempt: 1,
+      revision: 3,
+      createdAt: 100,
+      updatedAt: 300,
+      completedAt: 300,
+      summary: "构建已经通过，但发布流程尚未验证。",
+      artifacts: [],
+      events: [],
+    });
+
+    expect(report).toMatchObject({
+      text: "第一步完成，我继续验证发布流程。",
+      continued: true,
+      delegation: { sessionId: "pet-work-next" },
+    });
+    expect(starts).toEqual([
+      {
+        clientMessageId: "pet-continuation:pet-task-step-one:1:completed",
+        task: "验证 CodeShell 发布流程并修复剩余问题",
+        workspacePath: "/work/codeshell",
+        completionTarget: {
+          kind: "im-gateway",
+          channel: "wechat",
+          target: "owner-conversation",
+        },
+        continuationDepth: 1,
+      },
+    ]);
+    expect(effects).toEqual(["decision-persisted", "session-started", "launch-persisted"]);
+  });
+
+  test("replays a persisted continuation decision without rerunning Mimi", async () => {
+    let workerCalls = 0;
+    let startCalls = 0;
+    let launchRecorded = false;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async () => {
+          workerCalls += 1;
+          return { ok: true, result: {} };
+        },
+      },
+      hostCwd: "/safe/pet",
+      longTasks: {
+        context: () => ({ version: 1, active: [], recent: [] }),
+        recordContinuationStarted: async (_taskId, _key, launch) => {
+          launchRecorded = true;
+          return {
+            closureDecision: {
+              key: "pet-task-replay:1:completed",
+              text: "继续验证发布流程。",
+              decidedAt: 300,
+              continuation: {
+                clientMessageId: "pet-continuation:pet-task-replay:1:completed",
+                objective: "验证发布流程",
+                workspacePath: "/work/codeshell",
+              },
+              launch: { ...launch, at: 301 },
+            },
+          } as never;
+        },
+      },
+      startWorkSession: async (delegation) => {
+        startCalls += 1;
+        expect(delegation.clientMessageId).toBe("pet-continuation:pet-task-replay:1:completed");
+        return { sessionId: "pet-work-replayed", cwd: "/work/codeshell" };
+      },
+    });
+
+    const report = await service.reportLongTaskClosure({
+      schemaVersion: 1,
+      id: "pet-task-replay",
+      originClientMessageId: "im:wechat:replay",
+      objective: "完成发布准备",
+      workspacePath: "/work/codeshell",
+      sessionId: "pet-work-original",
+      status: "completed",
+      phase: "finalizing",
+      attempt: 1,
+      revision: 4,
+      createdAt: 100,
+      updatedAt: 300,
+      completedAt: 300,
+      artifacts: [],
+      events: [],
+      closureDecision: {
+        key: "pet-task-replay:1:completed",
+        text: "继续验证发布流程。",
+        decidedAt: 300,
+        continuation: {
+          clientMessageId: "pet-continuation:pet-task-replay:1:completed",
+          objective: "验证发布流程",
+          workspacePath: "/work/codeshell",
+        },
+      },
+    });
+
+    expect(report).toMatchObject({
+      continued: true,
+      delegation: { sessionId: "pet-work-replayed" },
+    });
+    expect(workerCalls).toBe(0);
+    expect(startCalls).toBe(1);
+    expect(launchRecorded).toBe(true);
+  });
+
+  test("stops autonomous continuation at the bounded depth", async () => {
+    let started = false;
+    let exposedWorkspaces: unknown;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          exposedWorkspaces = params.petWorkspaces;
+          return { ok: true, result: { text: "自动续办已到上限，请你确认下一步。" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      startWorkSession: async () => {
+        started = true;
+        return { sessionId: "should-not-start", cwd: "/work/codeshell" };
+      },
+    });
+
+    const report = await service.reportLongTaskClosure({
+      schemaVersion: 1,
+      id: "pet-task-depth-three",
+      originClientMessageId: "pet-continuation:prior",
+      objective: "完成发布",
+      workspacePath: "/work/codeshell",
+      sessionId: "pet-work-depth-three",
+      continuationDepth: 3,
+      status: "completed",
+      phase: "finalizing",
+      attempt: 1,
+      revision: 3,
+      createdAt: 100,
+      updatedAt: 300,
+      completedAt: 300,
+      summary: "仍有一个可选优化。",
+      artifacts: [],
+      events: [],
+    });
+
+    expect(exposedWorkspaces).toEqual([]);
+    expect(started).toBe(false);
+    expect(report).toEqual({
+      text: "自动续办已到上限，请你确认下一步。",
+      continued: false,
+    });
   });
 
   test("offers a bounded reusable Session set and resumes only the selected host entry", async () => {

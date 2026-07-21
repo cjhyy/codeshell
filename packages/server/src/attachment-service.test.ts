@@ -23,6 +23,7 @@ import {
   stageImageDataUrl,
   stageFileBytes,
 } from "./attachment-service.js";
+import { probeImageBytes } from "./image-byte-probe.js";
 
 export const IMAGE_FIXTURES = {
   "image/png": Buffer.from(
@@ -159,6 +160,51 @@ describe("attachment-service", () => {
       });
       expect(meta.mime).toBe(mime);
       expect(meta.size).toBe(bytes.length);
+    }
+  });
+
+  test("strips bytes after JPEG EOI before staging while keeping strict probing", async () => {
+    const jpeg = IMAGE_FIXTURES["image/jpeg"];
+    const trailers = [
+      Buffer.from([0x00]),
+      Buffer.alloc(16),
+      jpeg,
+      Buffer.from("00000018667479706d703432", "hex"),
+    ];
+    const expectedSha256 = createHash("sha256").update(jpeg).digest("hex");
+
+    for (const [index, trailer] of trailers.entries()) {
+      const bytes = Buffer.concat([jpeg, trailer]);
+      expect(() => probeImageBytes("image/jpeg", bytes)).toThrow(
+        "invalid JPEG image structure: trailing bytes after EOI",
+      );
+
+      const meta = await stageImageBytes({
+        cwd,
+        sessionId: `jpeg-trailer-${index}`,
+        name: "photo.jpg",
+        mime: "image/jpeg",
+        bytes,
+        origin: "im-gateway",
+      });
+
+      expect(meta.size).toBe(jpeg.length);
+      expect(meta.sha256).toBe(expectedSha256);
+      expect(readFileSync(meta.absPath)).toEqual(jpeg);
+    }
+  });
+
+  test("does not strip trailing bytes from non-JPEG image formats", async () => {
+    for (const mime of ["image/png", "image/gif", "image/webp"] as const) {
+      await expect(
+        stageImageBytes({
+          cwd,
+          sessionId: `trailing-${mime.slice(mime.indexOf("/") + 1)}`,
+          mime,
+          bytes: Buffer.concat([IMAGE_FIXTURES[mime], Buffer.from([0x00])]),
+          origin: "im-gateway",
+        }),
+      ).rejects.toThrow(/invalid|mismatch/i);
     }
   });
 

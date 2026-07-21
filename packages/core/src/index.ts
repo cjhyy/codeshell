@@ -31,6 +31,7 @@ export type {
   TurnPhase,
   TurnResult,
   TerminalReason,
+  TurnCompletionKind,
   StreamEvent,
   StreamCallback,
   LLMConfig,

@@ -8,6 +8,7 @@ import { cacheGet, cacheSet } from "./settingsCache";
 import {
   buildInstance,
   credentialCandidates,
+  removeCredentialAndReferences,
   uniqueInstanceId,
   type Credential,
   type ModelInstance,
@@ -43,6 +44,7 @@ export interface UseModelConnectionsResult {
   setConnectionKey: (inst: ModelInstance, apiKey: string) => SetConnectionKeyResult;
   saveInstance: (id: string) => Promise<void>;
   removeInstance: (id: string) => Promise<void>;
+  removeCredential: (id: string) => Promise<void>;
   setAux: (id: string) => Promise<void>;
   setDefaultInstance: (id: string) => void;
   toggleShowKey: (id: string) => void;
@@ -218,6 +220,46 @@ export function useModelConnections(
     [confirm, credentials, defaultId, instances, persist, t, toast],
   );
 
+  const removeCredential = useCallback(
+    async (id: string) => {
+      const settings = ((await window.codeshell.getSettings(scope, projectPath)) ?? {}) as Record<
+        string,
+        unknown
+      >;
+      const allConnections = Array.isArray(settings.modelConnections)
+        ? (settings.modelConnections as ModelInstance[])
+        : [];
+      const allCredentials = Array.isArray(settings.credentials)
+        ? (settings.credentials as Credential[])
+        : [];
+      if (!allCredentials.some((credential) => credential.id === id)) return;
+      const next = removeCredentialAndReferences(allCredentials, allConnections, id);
+      const ok = await confirm({
+        message: t("settingsX.textConn.confirmRemoveCredentialMsg", { id }),
+        detail: t("settingsX.textConn.confirmRemoveCredentialDetail", {
+          count: next.affectedConnectionIds.length,
+        }),
+        destructive: true,
+      });
+      if (!ok) return;
+
+      await writeSettings(
+        scope,
+        { credentials: next.credentials, modelConnections: next.connections },
+        projectPath,
+      );
+      const mine = next.connections.filter((connection) => connection.tag === tag);
+      setCredentials(next.credentials);
+      setInstances(mine);
+      cacheSet(cacheKey, mine);
+      toast({
+        message: t("settingsX.textConn.toastCredentialRemoved", { id }),
+        variant: "success",
+      });
+    },
+    [cacheKey, confirm, projectPath, scope, t, tag, toast],
+  );
+
   const setDefaultInstance = useCallback(
     (id: string) => {
       const prevDefault = defaultId;
@@ -257,6 +299,7 @@ export function useModelConnections(
     setConnectionKey,
     saveInstance,
     removeInstance,
+    removeCredential,
     setAux,
     setDefaultInstance,
     toggleShowKey,

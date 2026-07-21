@@ -4,6 +4,12 @@ export interface ProbedImage {
   height: number;
 }
 
+export interface SanitizedImageBytes {
+  image: ProbedImage;
+  bytes: Buffer;
+  trailingBytes: number;
+}
+
 type SupportedImageMime = ProbedImage["mime"];
 
 const PNG_SIGNATURE = Buffer.from("89504e470d0a1a0a", "hex");
@@ -90,7 +96,12 @@ function probePng(buffer: Buffer): ProbedImage {
   return invalid("PNG", "missing IEND");
 }
 
-function probeJpeg(buffer: Buffer): ProbedImage {
+interface ProbedJpeg {
+  image: ProbedImage;
+  consumedBytes: number;
+}
+
+function probeJpeg(buffer: Buffer, allowTrailingBytes = false): ProbedJpeg {
   if (buffer.length < 16) invalid("JPEG", "truncated header");
   let offset = 2;
   let width = 0;
@@ -108,8 +119,13 @@ function probeJpeg(buffer: Buffer): ProbedImage {
       if (!width || !height || !sawScan || !sawQuantization || !sawEntropyTable) {
         invalid("JPEG", "missing frame, tables, or scan");
       }
-      if (offset !== buffer.length) invalid("JPEG", "trailing bytes after EOI");
-      return { mime: "image/jpeg", width, height };
+      if (offset !== buffer.length && !allowTrailingBytes) {
+        invalid("JPEG", "trailing bytes after EOI");
+      }
+      return {
+        image: { mime: "image/jpeg", width, height },
+        consumedBytes: offset,
+      };
     }
     if (marker === 0x00 || marker === 0xd8) invalid("JPEG", "invalid marker ordering");
     if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
@@ -154,6 +170,20 @@ function probeJpeg(buffer: Buffer): ProbedImage {
     offset = segmentEnd;
   }
   return invalid("JPEG", "missing EOI");
+}
+
+function validateImageInput(
+  declaredMime: string,
+  bytes: Uint8Array,
+): { buffer: Buffer; detected: SupportedImageMime } {
+  const buffer = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const mime = declaredMime === "image/jpg" ? "image/jpeg" : declaredMime;
+  const detected = detectMime(buffer);
+  if (!detected) throw new Error("image byte signature is not a supported image");
+  if (detected !== mime) {
+    throw new Error(`image MIME ${mime} does not match byte signature ${detected}`);
+  }
+  return { buffer, detected };
 }
 
 function skipGifSubBlocks(buffer: Buffer, start: number): number {
@@ -256,23 +286,41 @@ function probeWebp(buffer: Buffer): ProbedImage {
   return { mime: "image/webp", width, height };
 }
 
-/** Verify byte signature, bounded container structure, and declared MIME before staging. */
+/** Strictly verify byte signature, bounded container structure, and declared MIME. */
 export function probeImageBytes(declaredMime: string, bytes: Uint8Array): ProbedImage {
-  const buffer = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const mime = declaredMime === "image/jpg" ? "image/jpeg" : declaredMime;
-  const detected = detectMime(buffer);
-  if (!detected) throw new Error("image byte signature is not a supported image");
-  if (detected !== mime) {
-    throw new Error(`image MIME ${mime} does not match byte signature ${detected}`);
-  }
+  const { buffer, detected } = validateImageInput(declaredMime, bytes);
   switch (detected) {
     case "image/png":
       return probePng(buffer);
     case "image/jpeg":
-      return probeJpeg(buffer);
+      return probeJpeg(buffer).image;
     case "image/gif":
       return probeGif(buffer);
     case "image/webp":
       return probeWebp(buffer);
   }
+}
+
+/**
+ * Verify untrusted image bytes and remove data after a complete JPEG EOI marker.
+ * Other image formats remain strict, and the returned JPEG is probed again after truncation.
+ */
+export function sanitizeImageBytes(declaredMime: string, bytes: Uint8Array): SanitizedImageBytes {
+  const { buffer, detected } = validateImageInput(declaredMime, bytes);
+  if (detected !== "image/jpeg") {
+    return { image: probeImageBytes(declaredMime, buffer), bytes: buffer, trailingBytes: 0 };
+  }
+
+  const probed = probeJpeg(buffer, true);
+  const trailingBytes = buffer.length - probed.consumedBytes;
+  if (trailingBytes === 0) {
+    return { image: probed.image, bytes: buffer, trailingBytes };
+  }
+
+  const sanitized = buffer.subarray(0, probed.consumedBytes);
+  return {
+    image: probeImageBytes("image/jpeg", sanitized),
+    bytes: sanitized,
+    trailingBytes,
+  };
 }

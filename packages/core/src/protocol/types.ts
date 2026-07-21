@@ -107,6 +107,11 @@ export interface RunParams {
   /** Stable id for the user's submit intent; duplicate ids are idempotent. */
   clientMessageId?: string;
   /**
+   * Host-generated system reminder. Persisted with an injected marker so disk
+   * transcript readers hide it as a user bubble while retaining the assistant reply.
+   */
+  injected?: boolean;
+  /**
    * Working directory for this run. When omitted, the Engine uses its
    * configured cwd.
    */
@@ -542,6 +547,9 @@ export const Methods = {
    *  AskUserQuestion that timed out) so every client can dismiss its stale card
    *  without a user decision. Same envelope the desktop main broadcasts. */
   ApprovalResolved: "agent/approvalResolved",
+  /** A worker-side settings resource changed on disk and mounted clients
+   * should invalidate their cached settings/catalog reads. */
+  SettingsChanged: "agent/settingsChanged",
   PetProjectionDelta: "agent/petProjectionDelta",
   Status: "agent/status",
 } as const;

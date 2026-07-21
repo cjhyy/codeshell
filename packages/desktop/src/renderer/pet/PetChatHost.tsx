@@ -415,7 +415,7 @@ export function PetChatHost({
 
   return (
     <section
-      className="mimi-surface flex min-h-[520px] w-full flex-col overflow-hidden rounded-3xl @min-[1100px]/pet-page:col-start-1 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:min-h-0 @min-[1100px]/pet-page:max-w-[960px] @min-[1100px]/pet-page:justify-self-center"
+      className="mimi-surface flex min-h-[360px] w-full flex-col overflow-hidden rounded-3xl @min-[1100px]/pet-page:col-start-1 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:min-h-0 @min-[1100px]/pet-page:max-w-[960px] @min-[1100px]/pet-page:justify-self-center"
       aria-label={t("pet.chat.title")}
       data-pet-manager-chat="true"
       data-pet-auto-routing="true"

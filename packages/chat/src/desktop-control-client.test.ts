@@ -198,6 +198,36 @@ describe("DesktopControlClient", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test("aborts an in-flight Desktop event long poll when the watcher stops", async () => {
+    const abort = new AbortController();
+    let started!: () => void;
+    const requestStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let requestAborted = false;
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      fetch: async (_url, init) =>
+        await new Promise<Response>((_resolve, reject) => {
+          started();
+          const signal = init?.signal;
+          const rejectAbort = (): void => {
+            requestAborted = true;
+            reject(new DOMException("aborted", "AbortError"));
+          };
+          if (signal?.aborted) rejectAbort();
+          else signal?.addEventListener("abort", rejectAbort, { once: true });
+        }),
+    });
+
+    const watcher = client.watchEvents(abort.signal, async () => undefined);
+    await requestStarted;
+    abort.abort();
+    await watcher;
+
+    expect(requestAborted).toBe(true);
+  });
 });
 
 function baseConfig(): DesktopGatewayConfig {

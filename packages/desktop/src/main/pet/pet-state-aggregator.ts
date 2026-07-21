@@ -24,6 +24,7 @@ export interface DesktopPetSession {
   queueDepth: number;
   lastActivityAt: number;
   pendingDecisionCount: number;
+  completionKind?: PetSessionProjection["completionKind"];
   terminal?: PetSessionProjection["terminal"];
   freshness: {
     source: PetSessionProjection["freshness"]["source"];
@@ -139,13 +140,15 @@ function bounded(value: string | undefined, maximum: number): string | undefined
 function terminalFromDisk(
   status: DiskSessionMeta["status"],
   at: number,
+  completionKind?: DiskSessionMeta["completionKind"],
 ): DesktopPetSession["terminal"] {
+  if (completionKind) return undefined;
   if (!status || status === "active" || status === "paused") return undefined;
   return { status, at };
 }
 
 function diskProjection(session: DiskSessionMeta, observedAt: number): DesktopPetSession {
-  const terminal = terminalFromDisk(session.status, session.updatedAt);
+  const terminal = terminalFromDisk(session.status, session.updatedAt, session.completionKind);
   return {
     agentSessionId: session.engineSessionId,
     title: bounded(session.title, MAX_TITLE_LENGTH),
@@ -154,6 +157,15 @@ function diskProjection(session: DiskSessionMeta, observedAt: number): DesktopPe
     queueDepth: 0,
     lastActivityAt: session.updatedAt,
     pendingDecisionCount: 0,
+    completionKind: session.completionKind,
+    summary:
+      session.completionKind === "background_wait"
+        ? "等待后台结果"
+        : session.completionKind === "goal_control_stop"
+          ? "Goal 已停止"
+          : session.completionKind === "limit_stop"
+            ? "已到运行限制"
+            : undefined,
     terminal,
     freshness: { source: "disk", observedAt, workerState: "reclaimed" },
   };
@@ -170,6 +182,7 @@ function safeSession(session: PetSessionProjection): DesktopPetSession {
     queueDepth: Math.max(0, session.queueDepth),
     lastActivityAt: session.lastActivityAt,
     pendingDecisionCount: Math.max(0, session.pendingDecisionCount),
+    completionKind: session.completionKind,
     terminal: session.terminal,
     freshness: {
       source: session.freshness.source,
@@ -565,6 +578,13 @@ export class PetStateAggregator {
 
   private withDurableOverlay(session: DesktopPetSession): DesktopPetSession {
     const durable = this.diskSessions.get(session.agentSessionId);
+    const reconciledCompletionKind =
+      !session.completionKind &&
+      !session.terminal &&
+      durable?.completionKind &&
+      durable.lastActivityAt >= session.lastActivityAt
+        ? durable.completionKind
+        : undefined;
     const reconciledTerminal =
       !session.terminal &&
       session.phase === "finalizing" &&
@@ -576,6 +596,15 @@ export class PetStateAggregator {
       ...session,
       title: session.title ?? durable?.title,
       workspaceDisplayName: session.workspaceDisplayName ?? durable?.workspaceDisplayName,
+      ...(reconciledCompletionKind
+        ? {
+            runState: "idle" as const,
+            phase: undefined,
+            completionKind: reconciledCompletionKind,
+            summary: durable?.summary,
+            lastActivityAt: Math.max(session.lastActivityAt, durable?.lastActivityAt ?? 0),
+          }
+        : {}),
       ...(reconciledTerminal
         ? {
             runState: "terminal" as const,

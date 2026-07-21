@@ -2130,6 +2130,7 @@ export interface CatalogEntry {
   defaultBaseUrl: string;
   defaultModel?: string;
   needsKey?: boolean;
+  modelPresetsMode?: "replace" | "merge";
   modelPresets?: ModelPreset[];
   signupUrl?: string;
   test?: boolean;

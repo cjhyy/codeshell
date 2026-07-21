@@ -3,6 +3,8 @@ import {
   buildPetLongTaskContext,
   petLongTaskResumePrompt,
   type PetLongTask,
+  type PetLongTaskClosureDecision,
+  type PetLongTaskContinuationDecision,
   type PetLongTaskContext,
   type PetLongTaskControlRequest,
   type PetLongTaskControlResult,
@@ -17,6 +19,8 @@ import type {
   PetStateAggregator,
 } from "./pet-state-aggregator.js";
 import { PetLongTaskStore } from "./pet-long-task-store.js";
+
+const MAX_PET_LONG_TASK_SUMMARY_LENGTH = 8_000;
 
 interface PetLongTaskWorker {
   hasLiveWorker(): boolean;
@@ -76,7 +80,7 @@ function extractText(value: unknown): string | undefined {
     .join("\n")
     .replace(/\s+/gu, " ")
     .trim();
-  return text ? text.slice(0, 2_000) : undefined;
+  return text ? text.slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH) : undefined;
 }
 
 function safeToolName(event: Record<string, unknown>): string {
@@ -135,6 +139,32 @@ export class PetLongTaskCoordinator {
     return buildPetLongTaskContext(this.options.store.getSnapshot().tasks);
   }
 
+  async recordClosureDecision(
+    taskId: string,
+    decision: Pick<PetLongTaskClosureDecision, "key" | "text"> & {
+      continuation?: PetLongTaskContinuationDecision;
+    },
+  ): Promise<PetLongTask> {
+    return await this.options.store.transition(taskId, {
+      kind: "closure-decided",
+      at: this.now(),
+      ...decision,
+    });
+  }
+
+  async recordContinuationStarted(
+    taskId: string,
+    key: string,
+    launch: { sessionId: string; taskId?: string },
+  ): Promise<PetLongTask> {
+    return await this.options.store.transition(taskId, {
+      kind: "continuation-started",
+      at: this.now(),
+      key,
+      ...launch,
+    });
+  }
+
   async startDelegation(delegation: PetAutoDelegation): Promise<PetLongTaskLaunch> {
     const existing = this.options.store.findByOriginClientMessageId(delegation.clientMessageId);
     if (existing) {
@@ -152,6 +182,9 @@ export class PetLongTaskCoordinator {
       objective: delegation.task,
       workspacePath: delegation.workspacePath,
       sessionId,
+      verificationMode: delegation.goalObjective ? "goal" : "turn",
+      ...(delegation.completionTarget ? { completionTarget: delegation.completionTarget } : {}),
+      ...(delegation.continuationDepth ? { continuationDepth: delegation.continuationDepth } : {}),
       at: this.now(),
     });
     try {
@@ -159,7 +192,7 @@ export class PetLongTaskCoordinator {
       const running = await this.options.store.transition(task.id, {
         kind: "started",
         at: this.now(),
-        message: "The worker accepted the long-running goal",
+        message: "The worker accepted the long-running task",
       });
       return { ...launch, taskId: running.id };
     } catch (error) {
@@ -257,10 +290,56 @@ export class PetLongTaskCoordinator {
         }
         return;
       }
+      case "goal_cleared": {
+        if (task.verificationMode === "goal") {
+          await this.options.store.transition(task.id, {
+            kind: "verification-changed",
+            at,
+            mode: "turn",
+          });
+        }
+        return;
+      }
       case "turn_complete": {
         const current = this.options.store.get(task.id);
         if (!current || current.status === "paused" || current.status === "cancelled") return;
         if (event.reason === "completed") {
+          if (event.completionKind === "background_wait") {
+            await this.options.store.transition(task.id, {
+              kind: "interrupted",
+              at,
+              reason: "The work session yielded until its background result notification arrives",
+            });
+            return;
+          }
+          if (event.completionKind === "goal_control_stop") {
+            await this.options.store.transition(task.id, {
+              kind: "interrupted",
+              at,
+              reason: "Goal driving stopped; the durable Work Session can continue without it",
+            });
+            return;
+          }
+          if (event.completionKind === "limit_stop") {
+            await this.options.store.transition(task.id, {
+              kind: "interrupted",
+              at,
+              reason: "The work session reached its run limit before a final response",
+            });
+            return;
+          }
+          if (current.verificationMode === "turn") {
+            const completed = await this.options.store.transition(task.id, {
+              kind: "completed",
+              at,
+              summary: current.summary ?? "The Work Session completed normally",
+              artifacts: [
+                { kind: "result", label: "Completed work session", reference: current.sessionId },
+              ],
+            });
+            await this.notifyClosed(completed);
+            return;
+          }
           // Core also uses turn_complete(completed) when a Goal stops because
           // its judge prompt is too large or a continuation cap is reached.
           // Only goal_progress(met) is proof that the objective completed.
@@ -343,16 +422,42 @@ export class PetLongTaskCoordinator {
     if (event.kind !== "session-upsert") return;
     const task = this.options.store.activeForSession(event.session.agentSessionId);
     if (!task || task.status === "paused") return;
+    if (event.session.completionKind) {
+      const reason =
+        event.session.completionKind === "background_wait"
+          ? "The work session yielded until its background result notification arrives"
+          : event.session.completionKind === "goal_control_stop"
+            ? "Goal driving stopped; the durable Work Session can continue without it"
+            : "The work session reached its run limit before a final response";
+      await this.options.store.transition(task.id, {
+        kind: "interrupted",
+        at: event.observedAt,
+        reason,
+      });
+      return;
+    }
     if (event.session.terminal) {
       if (event.session.terminal.status === "completed") {
-        // The safe projection intentionally omits Goal verdict details. A
-        // generic completed Session therefore cannot prove a long task met its
-        // objective; the trusted goal_progress(met) stream closes it instead.
-        await this.options.store.transition(task.id, {
-          kind: "interrupted",
-          at: event.session.terminal.at,
-          reason: "The Session ended without a retained Goal-complete signal; verify or retry",
-        });
+        if (task.verificationMode === "turn") {
+          const completed = await this.options.store.transition(task.id, {
+            kind: "completed",
+            at: event.session.terminal.at,
+            summary: task.summary ?? "The Work Session completed normally",
+            artifacts: [
+              { kind: "result", label: "Completed work session", reference: task.sessionId },
+            ],
+          });
+          await this.notifyClosed(completed);
+        } else {
+          // The safe projection intentionally omits Goal verdict details. A
+          // generic completed Session therefore cannot prove a Goal task met
+          // its objective; the trusted goal_progress(met) stream closes it.
+          await this.options.store.transition(task.id, {
+            kind: "interrupted",
+            at: event.session.terminal.at,
+            reason: "The Session ended without a retained Goal-complete signal; verify or retry",
+          });
+        }
       } else if (event.session.terminal.status === "cancelled") {
         await this.options.store.transition(task.id, {
           kind: "interrupted",
@@ -402,7 +507,7 @@ export class PetLongTaskCoordinator {
         }
         continue;
       }
-      if (session.terminal) {
+      if (session.terminal || session.completionKind) {
         await this.observeProjectionEvent({
           kind: "session-upsert",
           session,
@@ -520,7 +625,7 @@ export class PetLongTaskCoordinator {
       await this.options.launcher.start({
         clientMessageId: `${task.originClientMessageId}:resume:${resumed.revision}`,
         task: petLongTaskResumePrompt(resumed),
-        goalObjective: resumed.objective,
+        ...(resumed.verificationMode === "goal" ? { goalObjective: resumed.objective } : {}),
         workspacePath: resumed.workspacePath,
         targetSessionId: resumed.sessionId,
       });
@@ -583,7 +688,7 @@ export class PetLongTaskCoordinator {
       await this.options.launcher.start({
         clientMessageId: `${task.originClientMessageId}:retry:${retrying.attempt}`,
         task: petLongTaskResumePrompt(retrying),
-        goalObjective: retrying.objective,
+        ...(retrying.verificationMode === "goal" ? { goalObjective: retrying.objective } : {}),
         workspacePath: retrying.workspacePath,
         targetSessionId: retrying.sessionId,
       });

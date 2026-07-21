@@ -52,12 +52,24 @@ const CATALOG: CatalogEntry[] = [
 const CREDS: Credential[] = [
   { id: "openai-acct", catalogId: "openai", apiKey: "sk-1" },
   { id: "anth-acct", catalogId: "anthropic", apiKey: "sk-2" },
+  {
+    id: "openrouter-acct",
+    catalogId: "openrouter",
+    apiKey: "sk-or-1",
+    baseUrl: "https://openrouter.ai/api/v1",
+  },
 ];
 
 describe("modelEntriesFromConnections", () => {
   test("maps a text connection to a ModelEntry keyed by instance id, key from credential", () => {
     const insts: ModelInstance[] = [
-      { id: "my-gpt5", catalogId: "openai", tag: "text", model: "gpt-5.5", credentialId: "openai-acct" },
+      {
+        id: "my-gpt5",
+        catalogId: "openai",
+        tag: "text",
+        model: "gpt-5.5",
+        credentialId: "openai-acct",
+      },
     ];
     const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
     expect(entries).toHaveLength(1);
@@ -71,7 +83,13 @@ describe("modelEntriesFromConnections", () => {
   test("only text connections become model-pool entries (image/video excluded)", () => {
     const insts: ModelInstance[] = [
       { id: "t", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct" },
-      { id: "img", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "openai-acct" },
+      {
+        id: "img",
+        catalogId: "openai-images",
+        tag: "image",
+        model: "gpt-image-2",
+        credentialId: "openai-acct",
+      },
     ];
     const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
     expect(entries.map((e) => e.key)).toEqual(["t"]);
@@ -80,7 +98,13 @@ describe("modelEntriesFromConnections", () => {
   test("protocol comes from the catalog entry (openai vs anthropic)", () => {
     const insts: ModelInstance[] = [
       { id: "o", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct" },
-      { id: "a", catalogId: "anthropic", tag: "text", model: "claude-opus-4-7", credentialId: "anth-acct" },
+      {
+        id: "a",
+        catalogId: "anthropic",
+        tag: "text",
+        model: "claude-opus-4-7",
+        credentialId: "anth-acct",
+      },
     ];
     const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
     expect(entries.find((e) => e.key === "o")!.provider).toBe("openai");
@@ -94,7 +118,7 @@ describe("modelEntriesFromConnections", () => {
         catalogId: "openrouter",
         tag: "text",
         model: "anthropic/claude-opus-4.8",
-        credentialId: "openai-acct",
+        credentialId: "openrouter-acct",
       },
     ];
     const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;
@@ -126,7 +150,14 @@ describe("modelEntriesFromConnections", () => {
 
   test("paramValues.reasoning enum → ModelEntry.reasoning effort", () => {
     const insts: ModelInstance[] = [
-      { id: "g", catalogId: "openai", tag: "text", model: "gpt-5.5", credentialId: "openai-acct", paramValues: { reasoning: "high" } },
+      {
+        id: "g",
+        catalogId: "openai",
+        tag: "text",
+        model: "gpt-5.5",
+        credentialId: "openai-acct",
+        paramValues: { reasoning: "high" },
+      },
     ];
     const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;
     expect(e.reasoning).toEqual({ mode: "effort", effort: "high" });
@@ -134,7 +165,14 @@ describe("modelEntriesFromConnections", () => {
 
   test("paramValues.reasoning number → ModelEntry.reasoning budget", () => {
     const insts: ModelInstance[] = [
-      { id: "c", catalogId: "anthropic", tag: "text", model: "claude-opus-4-7", credentialId: "anth-acct", paramValues: { reasoning: 8192 } },
+      {
+        id: "c",
+        catalogId: "anthropic",
+        tag: "text",
+        model: "claude-opus-4-7",
+        credentialId: "anth-acct",
+        paramValues: { reasoning: 8192 },
+      },
     ];
     const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;
     expect(e.reasoning).toEqual({ mode: "budget", budgetTokens: 8192 });
@@ -142,11 +180,25 @@ describe("modelEntriesFromConnections", () => {
 
   test("paramValues.reasoning boolean → ModelEntry.reasoning on/off", () => {
     const on: ModelInstance[] = [
-      { id: "d", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct", paramValues: { reasoning: true } },
+      {
+        id: "d",
+        catalogId: "openai",
+        tag: "text",
+        model: "gpt-4o",
+        credentialId: "openai-acct",
+        paramValues: { reasoning: true },
+      },
     ];
     expect(modelEntriesFromConnections(on, CREDS, CATALOG)[0]!.reasoning).toEqual({ mode: "on" });
     const off: ModelInstance[] = [
-      { id: "d", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct", paramValues: { reasoning: false } },
+      {
+        id: "d",
+        catalogId: "openai",
+        tag: "text",
+        model: "gpt-4o",
+        credentialId: "openai-acct",
+        paramValues: { reasoning: false },
+      },
     ];
     expect(modelEntriesFromConnections(off, CREDS, CATALOG)[0]!.reasoning).toEqual({ mode: "off" });
   });
@@ -165,7 +217,14 @@ describe("modelEntriesFromConnections", () => {
     // and validateSettings must accept it (effort is free-form, catalog-driven).
     for (const effort of ["xhigh", "max"]) {
       const insts: ModelInstance[] = [
-        { id: "g", catalogId: "openai", tag: "text", model: "gpt-5.5", credentialId: "openai-acct", paramValues: { reasoning: effort } },
+        {
+          id: "g",
+          catalogId: "openai",
+          tag: "text",
+          model: "gpt-5.5",
+          credentialId: "openai-acct",
+          paramValues: { reasoning: effort },
+        },
       ];
       const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;
       expect(e.reasoning).toEqual({ mode: "effort", effort });
@@ -186,29 +245,58 @@ describe("modelEntriesFromConnections", () => {
   });
 });
 
-const catalogP1 = [{
-  id: "zhipu-p1", tag: "text", adapterKind: "openai", protocol: "openai-compat",
-  defaultBaseUrl: "https://open.bigmodel.cn/api/paas/v4", defaultModel: "glm-5.2",
-  modelPresets: [{ value: "glm-5.2", label: "GLM-5.2", params: [
-    { name: "reasoning", control: "enum", wire: { field: "reasoning_effort" } },
-    { name: "thinking_type", control: "enum", wire: { field: "thinking.type" } },
-    { name: "temperature", control: "number", wire: { field: "temperature" } },
-    { name: "top_p", control: "number", wire: { field: "top_p" } },
-  ] }],
-}] as never;
-const credsP1 = [{ id: "z-key", catalogId: "zhipu-p1", apiKey: "k", baseUrl: "https://open.bigmodel.cn/api/paas/v4" }] as never;
+const catalogP1 = [
+  {
+    id: "zhipu-p1",
+    tag: "text",
+    adapterKind: "openai",
+    protocol: "openai-compat",
+    defaultBaseUrl: "https://open.bigmodel.cn/api/paas/v4",
+    defaultModel: "glm-5.2",
+    modelPresets: [
+      {
+        value: "glm-5.2",
+        label: "GLM-5.2",
+        params: [
+          { name: "reasoning", control: "enum", wire: { field: "reasoning_effort" } },
+          { name: "thinking_type", control: "enum", wire: { field: "thinking.type" } },
+          { name: "temperature", control: "number", wire: { field: "temperature" } },
+          { name: "top_p", control: "number", wire: { field: "top_p" } },
+        ],
+      },
+    ],
+  },
+] as never;
+const credsP1 = [
+  {
+    id: "z-key",
+    catalogId: "zhipu-p1",
+    apiKey: "k",
+    baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+  },
+] as never;
 
 describe("modelEntriesFromConnections flows non-reasoning params to extraBody", () => {
   it("maps paramValues to extraBody via wire.field; reasoning stays separate", () => {
-    const conns = [{ id: "z", catalogId: "zhipu-p1", tag: "text", model: "glm-5.2", credentialId: "z-key",
-      paramValues: { reasoning: "high", thinking_type: "enabled", temperature: 1, top_p: 0.95 } }] as never;
+    const conns = [
+      {
+        id: "z",
+        catalogId: "zhipu-p1",
+        tag: "text",
+        model: "glm-5.2",
+        credentialId: "z-key",
+        paramValues: { reasoning: "high", thinking_type: "enabled", temperature: 1, top_p: 0.95 },
+      },
+    ] as never;
     const [e] = modelEntriesFromConnections(conns, credsP1, catalogP1);
     expect(e.reasoning).toEqual({ mode: "effort", effort: "high" });
     expect(e.extraBody).toEqual({ thinking: { type: "enabled" }, temperature: 1, top_p: 0.95 });
     expect((e.extraBody as any)?.reasoning_effort).toBeUndefined();
   });
   it("no params → no extraBody", () => {
-    const conns = [{ id: "z2", catalogId: "zhipu-p1", tag: "text", model: "glm-5.2", credentialId: "z-key" }] as never;
+    const conns = [
+      { id: "z2", catalogId: "zhipu-p1", tag: "text", model: "glm-5.2", credentialId: "z-key" },
+    ] as never;
     const [e] = modelEntriesFromConnections(conns, credsP1, catalogP1);
     expect(e.extraBody).toBeUndefined();
   });

@@ -1,13 +1,12 @@
-import type { PetAttentionEvent, PetDelegationReceiptGroup, PetPeek } from "../../preload/types";
+import type { PetDelegationReceiptGroup } from "../../preload/types";
 import React from "react";
+import { Markdown } from "../Markdown";
 import { useT } from "../i18n";
 import type { Message } from "../types";
+import { PetActivityPreview } from "./PetActivityPreview";
 import { PetDelegationCard, selectPetChatRows, type PetChatRow } from "./PetChatHost";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import { PetWidget } from "./PetWidget";
-import { SessionStatusSection } from "./SessionStatusSection";
-import { bufferPetAttentionEvent } from "./petReliability";
-import { selectPetOverview } from "./petSelectors";
 import { usePetProjectionState } from "./usePetProjectionState";
 import {
   PET_WIDGET_RECEIPTS_KEY,
@@ -15,14 +14,11 @@ import {
   initialPetWidgetReceiptState,
   markPetWidgetCompletionSeen,
   parsePetWidgetReceiptState,
+  type PetWidgetActivityItem,
   type PetWidgetReceiptState,
 } from "./petWidgetActivity";
 
-interface MiniNotice {
-  title: string;
-  detail: string;
-  peek?: PetPeek;
-}
+type PetMiniPanel = "chat" | "activity" | null;
 
 export interface MiniChatMessage {
   id: string;
@@ -50,16 +46,38 @@ export function selectMiniChatRows(
   messages: readonly Message[],
   delegationReceipts: readonly PetDelegationReceiptGroup[] = [],
 ): PetChatRow[] {
-  return selectPetChatRows(messages, [], delegationReceipts).filter(
-    (row) => row.role === "user" || row.role === "assistant" || row.role === "delegation",
+  const rows = selectPetChatRows(messages, [], delegationReceipts);
+  let latestBoundary = -1;
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    if (rows[index]?.role !== "history-boundary") continue;
+    latestBoundary = index;
+    break;
+  }
+  return rows
+    .slice(latestBoundary + 1)
+    .filter((row) => row.role === "user" || row.role === "assistant" || row.role === "delegation");
+}
+
+export function PetMiniMarkdown({ text }: { text: string }) {
+  return (
+    <div className="[&>div]:!max-w-none [&>div]:!text-xs [&>div]:!leading-5 [&_p]:!my-0.5 [&_p:first-child]:!mt-0 [&_p:last-child]:!mb-0 [&_pre]:!my-1.5">
+      <Markdown text={text} />
+    </div>
   );
 }
 
 export function PetDesktopWindow() {
   const { t } = useT();
   const api = window.codeshell.pet;
-  const { petSessionId, chatState, chatDispatch, chatBusy, setChatBusy, delegationReceipts } =
-    usePetState();
+  const {
+    petSessionId,
+    chatState,
+    chatDispatch,
+    chatBusy,
+    setChatBusy,
+    delegationReceipts,
+    longTasks,
+  } = usePetState();
   const state = usePetProjectionState(api);
   const [workReceipts, setWorkReceipts] = React.useState<PetWidgetReceiptState | null>(() => {
     try {
@@ -68,36 +86,16 @@ export function PetDesktopWindow() {
       return null;
     }
   });
-  const [expanded, setExpanded] = React.useState(false);
-  const [notice, setNotice] = React.useState<MiniNotice | null>(null);
+  const [panel, setPanel] = React.useState<PetMiniPanel>(null);
+  const [activityListExpanded, setActivityListExpanded] = React.useState(false);
   const [draft, setDraft] = React.useState("");
   const [chatError, setChatError] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const conversationEndRef = React.useRef<HTMLDivElement>(null);
-  const autoExpandedWorkRef = React.useRef(false);
   const chatRows = React.useMemo(
     () => selectMiniChatRows(chatState.messages, delegationReceipts),
     [chatState.messages, delegationReceipts],
   );
-
-  const showPanel = React.useCallback((): void => {
-    setExpanded(true);
-    void api.setWidgetExpanded(true);
-  }, [api]);
-
-  const hidePanel = React.useCallback((): void => {
-    setExpanded(false);
-    void api.setWidgetExpanded(false);
-  }, [api]);
-
-  React.useEffect(() => {
-    if (expanded) inputRef.current?.focus();
-  }, [expanded]);
-
-  React.useEffect(() => {
-    if (!expanded) return;
-    conversationEndRef.current?.scrollIntoView({ block: "end" });
-  }, [chatBusy, chatRows.length, chatRows.at(-1)?.text, expanded]);
 
   React.useEffect(() => {
     if (!state.projection || workReceipts) return;
@@ -109,39 +107,6 @@ export function PetDesktopWindow() {
       // The badge still works for this renderer lifetime when storage is unavailable.
     }
   }, [state.projection, workReceipts]);
-
-  React.useEffect(() => {
-    let active = true;
-    let hydrated = false;
-    const buffered: PetAttentionEvent[] = [];
-    const applyAttention = (event: PetAttentionEvent): void => {
-      if (event.kind === "count") return;
-      setNotice({ title: event.peek.title, detail: event.peek.detail, peek: event.peek });
-      showPanel();
-    };
-    const unsubscribe = api.onAttentionEvent((event) => {
-      if (!active) return;
-      if (!hydrated) bufferPetAttentionEvent(buffered, event);
-      else applyAttention(event);
-    });
-    void api
-      .getAttentionSnapshot()
-      .then(() => {
-        if (!active) return;
-        hydrated = true;
-        for (const event of buffered) applyAttention(event);
-      })
-      .catch(() => {
-        if (!active) return;
-        hydrated = true;
-        for (const event of buffered) applyAttention(event);
-      });
-    return () => {
-      active = false;
-      buffered.length = 0;
-      unsubscribe();
-    };
-  }, [api, showPanel]);
 
   const sendChat = async (): Promise<void> => {
     const message = draft.trim();
@@ -170,42 +135,72 @@ export function PetDesktopWindow() {
   };
 
   const workActivity = React.useMemo(
-    () => buildPetWidgetActivity(state.projection, workReceipts),
-    [state.projection, workReceipts],
+    () => buildPetWidgetActivity(state.projection, workReceipts, longTasks),
+    [longTasks, state.projection, workReceipts],
   );
-  const globalOverview = React.useMemo(
-    () => selectPetOverview(state.projection, state.status),
-    [state.projection, state.status],
-  );
+
+  const toggleChatPanel = React.useCallback((): void => {
+    setPanel((current) => (current === "chat" ? null : "chat"));
+  }, []);
+
+  const toggleActivityPanel = React.useCallback((): void => {
+    setActivityListExpanded(false);
+    setPanel((current) => (current === "activity" ? null : "activity"));
+  }, []);
+
+  const closePanel = React.useCallback((): void => setPanel(null), []);
 
   React.useEffect(() => {
-    if (autoExpandedWorkRef.current || workActivity.items.length === 0) return;
-    autoExpandedWorkRef.current = true;
-    showPanel();
-  }, [showPanel, workActivity.items.length]);
+    void api.setWidgetSurface(panel ? "expanded" : "collapsed");
+  }, [api, panel]);
 
-  const noticeSessionId =
-    notice?.peek?.action.type === "open_session" ? notice.peek.action.target.agentSessionId : null;
-  const noticeAlreadyListed =
-    noticeSessionId !== null &&
-    globalOverview.sessions.some((session) => session.agentSessionId === noticeSessionId);
+  React.useEffect(() => {
+    if (panel === "activity" && workActivity.items.length === 0) setPanel(null);
+  }, [panel, workActivity.items.length]);
+
+  React.useEffect(() => {
+    if (panel !== "activity") setActivityListExpanded(false);
+  }, [panel]);
+
+  React.useEffect(() => {
+    if (panel === "chat") inputRef.current?.focus();
+  }, [panel]);
+
+  React.useEffect(() => {
+    if (panel !== "chat") return;
+    conversationEndRef.current?.scrollIntoView({ block: "end" });
+  }, [chatBusy, chatRows.length, chatRows.at(-1)?.text, panel]);
+
+  const markCompletionSeen = React.useCallback((item: PetWidgetActivityItem): void => {
+    if (item.kind !== "completed") return;
+    setWorkReceipts((current) => {
+      if (!current) return current;
+      const next = markPetWidgetCompletionSeen(current, item.key);
+      try {
+        localStorage.setItem(PET_WIDGET_RECEIPTS_KEY, JSON.stringify(next));
+      } catch {
+        // Keep the in-memory receipt even if persistence is unavailable.
+      }
+      return next;
+    });
+  }, []);
+
+  const dismissActivity = React.useCallback(
+    (item: PetWidgetActivityItem): void => {
+      if (item.kind === "completed") {
+        markCompletionSeen(item);
+        return;
+      }
+      closePanel();
+    },
+    [closePanel, markCompletionSeen],
+  );
 
   const openSession = (sessionId: string): void => {
     const projection = state.projection;
     if (!projection) return;
     const activityItem = workActivity.items.find((item) => item.agentSessionId === sessionId);
-    if (activityItem?.kind === "completed") {
-      setWorkReceipts((current) => {
-        if (!current) return current;
-        const next = markPetWidgetCompletionSeen(current, activityItem.key);
-        try {
-          localStorage.setItem(PET_WIDGET_RECEIPTS_KEY, JSON.stringify(next));
-        } catch {
-          // Keep the in-memory receipt even if persistence is unavailable.
-        }
-        return next;
-      });
-    }
+    if (activityItem) markCompletionSeen(activityItem);
     void api.openWidgetOverview({
       agentSessionId: sessionId,
       snapshotVersion: projection.version,
@@ -228,9 +223,10 @@ export function PetDesktopWindow() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-transparent">
-      {expanded && (
+      {panel === "chat" && (
         <section
           data-pet-mini-panel="open"
+          data-pet-mini-panel-content="chat"
           className="absolute left-1 top-1 flex h-[268px] w-[360px] flex-col overflow-hidden rounded-2xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur"
           aria-label={t("pet.widget.miniTitle")}
         >
@@ -247,8 +243,8 @@ export function PetDesktopWindow() {
               <button
                 type="button"
                 className="h-6 w-6 rounded-md text-muted-foreground hover:bg-muted"
-                onClick={hidePanel}
-                aria-label={t("pet.widget.collapse")}
+                onClick={closePanel}
+                aria-label={t("pet.widget.collapseChat")}
               >
                 ×
               </button>
@@ -256,44 +252,10 @@ export function PetDesktopWindow() {
           </header>
 
           <div className="min-h-0 flex-1 space-y-2 overflow-auto p-2 text-xs">
-            <section
-              data-pet-global-session-list="true"
-              className="rounded-xl border border-border/70 bg-muted/30 p-1.5"
-            >
-              <div className="flex items-center justify-between px-1.5 pb-1 text-[11px] font-medium text-muted-foreground">
-                <span>{t("pet.widget.workTitle")}</span>
-                <span className="tabular-nums">{globalOverview.sessions.length}</span>
-              </div>
-              <p className="px-1.5 pb-1 text-[10px] leading-4 text-muted-foreground">
-                {t("pet.widget.workScope")}
+            {chatRows.length === 0 && (
+              <p className="rounded-lg bg-muted px-2.5 py-2 text-muted-foreground">
+                {t("pet.chat.empty")}
               </p>
-              <SessionStatusSection
-                sessions={globalOverview.sessions}
-                emptyState={globalOverview.emptyState}
-                showHeading={false}
-                onOpen={(session) => openSession(session.agentSessionId)}
-              />
-            </section>
-            {notice && !noticeAlreadyListed && (
-              <button
-                type="button"
-                className="block w-full rounded-lg border border-primary/25 bg-primary/5 px-2.5 py-2 text-left hover:bg-primary/10"
-                onClick={() => {
-                  if (notice.peek) {
-                    void api.markAttentionReceipt(notice.peek.receiptKeys, "seen");
-                  }
-                  void api.openWidgetOverview(
-                    notice.peek?.action.type === "open_session"
-                      ? notice.peek.action.target
-                      : undefined,
-                  );
-                }}
-              >
-                <span className="block font-medium">{notice.title}</span>
-                <span className="mt-0.5 block line-clamp-3 text-muted-foreground">
-                  {notice.detail}
-                </span>
-              </button>
             )}
             {chatRows.slice(-6).map((row) =>
               row.role === "delegation" && row.delegation ? (
@@ -318,7 +280,11 @@ export function PetDesktopWindow() {
                   {row.source && (
                     <div className="mb-0.5 text-[9px] font-medium opacity-70">{row.source}</div>
                   )}
-                  <p>{row.text}</p>
+                  {row.role === "assistant" ? (
+                    <PetMiniMarkdown text={row.text} />
+                  ) : (
+                    <p>{row.text}</p>
+                  )}
                 </div>
               ),
             )}
@@ -353,12 +319,64 @@ export function PetDesktopWindow() {
         </section>
       )}
 
+      {panel === "activity" && (
+        <section
+          data-pet-activity-bubbles="true"
+          aria-label={t("pet.widget.activityBubbles")}
+          className="absolute bottom-[112px] right-1 flex max-h-[268px] w-[392px] flex-col gap-2 overflow-y-auto px-2 pb-2 pt-2"
+        >
+          {workActivity.items.length > 1 && !activityListExpanded ? (
+            <div
+              data-pet-activity-stack="collapsed"
+              data-pet-activity-stack-count={workActivity.items.length}
+              className="relative px-1 pb-1 pt-4"
+            >
+              {workActivity.items.length > 2 && (
+                <span
+                  className="absolute left-7 right-7 top-1 h-20 rounded-[28px] border border-border/25 bg-popover/55 shadow-sm backdrop-blur"
+                  aria-hidden="true"
+                />
+              )}
+              <span
+                className="absolute left-4 right-4 top-2.5 h-20 rounded-[28px] border border-border/40 bg-popover/75 shadow-sm backdrop-blur"
+                aria-hidden="true"
+              />
+              <div className="relative z-10">
+                <PetActivityPreview
+                  item={workActivity.items[0]}
+                  onOpen={() => setActivityListExpanded(true)}
+                  onDismiss={() => dismissActivity(workActivity.items[0])}
+                  actionLabel={`${t("pet.widget.expandSessions")}：${workActivity.items.length}`}
+                />
+                <span
+                  className="pointer-events-none absolute -bottom-1 right-5 rounded-full border border-border/50 bg-popover px-2 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground shadow-sm"
+                  aria-hidden="true"
+                >
+                  {workActivity.items.length}
+                </span>
+              </div>
+            </div>
+          ) : (
+            workActivity.items.map((item) => (
+              <PetActivityPreview
+                key={item.key}
+                item={item}
+                onOpen={() => openSession(item.agentSessionId)}
+                onDismiss={() => dismissActivity(item)}
+              />
+            ))
+          )}
+        </section>
+      )}
+
       <PetWidget
         runningCount={workActivity.runningCount}
         activityCount={workActivity.badgeCount}
         unreadCompletedCount={workActivity.unreadCompletedCount}
-        expanded={expanded}
-        onToggle={expanded ? hidePanel : showPanel}
+        chatExpanded={panel === "chat"}
+        activityExpanded={panel === "activity"}
+        onToggleChat={toggleChatPanel}
+        onToggleActivity={toggleActivityPanel}
         onClose={() => void api.setWidgetVisible(false)}
       />
     </div>

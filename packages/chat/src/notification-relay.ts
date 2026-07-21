@@ -3,6 +3,42 @@ import type { GatewayNotificationTarget } from "./config.js";
 import type { DesktopEventContext } from "./desktop-control-client.js";
 import type { DesktopControlEvent } from "./protocol.js";
 
+// Keep below Discord's 2,000-character content cap as well as Telegram's
+// 4,096-character cap. A single conservative relay limit makes every adapter
+// safe without letting product events depend on channel-specific truncation.
+const MAX_NOTIFICATION_CHUNK_LENGTH = 1_800;
+
+/** Split without breaking UTF-16 surrogate pairs; prefer readable line/word boundaries. */
+export function splitNotificationText(
+  text: string,
+  maximum = MAX_NOTIFICATION_CHUNK_LENGTH,
+): string[] {
+  if (!Number.isSafeInteger(maximum) || maximum < 2) {
+    throw new Error("Notification chunk length must be an integer of at least 2");
+  }
+  if (text.length <= maximum) return [text];
+  const chunks: string[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = Math.min(start + maximum, text.length);
+    if (end < text.length) {
+      const previous = text.charCodeAt(end - 1);
+      const next = text.charCodeAt(end);
+      if (previous >= 0xd800 && previous <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) {
+        end -= 1;
+      }
+      const minimumReadableBreak = start + Math.floor(maximum * 0.6);
+      const newline = text.lastIndexOf("\n", end - 1);
+      const space = text.lastIndexOf(" ", end - 1);
+      const readableBreak = Math.max(newline, space);
+      if (readableBreak >= minimumReadableBreak) end = readableBreak + 1;
+    }
+    chunks.push(text.slice(start, end));
+    start = end;
+  }
+  return chunks;
+}
+
 /**
  * Builds an at-least-once Desktop event sender. Successful targets are kept in
  * memory while a failed target is retried, so one unhealthy adapter does not
@@ -14,27 +50,32 @@ export function createDesktopNotificationHandler(
 ): (event: DesktopControlEvent, context: DesktopEventContext) => Promise<void> {
   const adapterByChannel = new Map(adapters.map((adapter) => [adapter.channel, adapter]));
   let currentEvent = "";
-  let delivered = new Set<string>();
+  let deliveredChunks = new Map<string, number>();
 
   return async (event, context) => {
     const eventKey = `${context.streamId}:${event.id}`;
     if (eventKey !== currentEvent) {
       currentEvent = eventKey;
-      delivered = new Set<string>();
+      deliveredChunks = new Map<string, number>();
     }
 
+    const eventTargets = event.target ? [event.target] : targets;
     const results = await Promise.allSettled(
-      targets.map(async ({ channel, target }) => {
+      eventTargets.map(async ({ channel, target }) => {
         const targetKey = `${channel}\0${target}`;
-        if (delivered.has(targetKey)) return;
         const adapter = adapterByChannel.get(channel);
         if (!adapter) throw new Error(`Notification adapter is unavailable: ${channel}`);
-        await adapter.send(target, {
-          text: event.text,
-          ...(event.title ? { title: event.title } : {}),
-          ...(event.button ? { button: event.button } : {}),
-        });
-        delivered.add(targetKey);
+        const chunks = splitNotificationText(event.text);
+        let chunkIndex = deliveredChunks.get(targetKey) ?? 0;
+        while (chunkIndex < chunks.length) {
+          await adapter.send(target, {
+            text: chunks[chunkIndex]!,
+            ...(chunkIndex === 0 && event.title ? { title: event.title } : {}),
+            ...(chunkIndex === chunks.length - 1 && event.button ? { button: event.button } : {}),
+          });
+          chunkIndex += 1;
+          deliveredChunks.set(targetKey, chunkIndex);
+        }
       }),
     );
     const failures = results

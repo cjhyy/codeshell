@@ -14,6 +14,17 @@ export function compactSidebarSessions<T extends { id: string }>(
   return [...compact.slice(0, Math.max(0, limit - 1)), active];
 }
 
+/** Pinned Sessions lead; each group keeps most-recent activity first. */
+export function sortSidebarSessions<T extends { pinned?: boolean; updatedAt: number }>(
+  sessions: readonly T[],
+): T[] {
+  return [...sessions].sort(
+    (left, right) =>
+      Number(Boolean(right.pinned)) - Number(Boolean(left.pinned)) ||
+      right.updatedAt - left.updatedAt,
+  );
+}
+
 /** Selecting from Mimi/search must reveal the owning project in the sidebar. */
 export function revealSidebarProject(
   collapsedProjects: Set<string>,

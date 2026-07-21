@@ -15,6 +15,7 @@ import type {
   LLMResponse,
   TokenUsage,
   ContextUsageAnchor,
+  TurnCompletionKind,
 } from "../types.js";
 import type { SteerItem } from "./steer-queue.js";
 import type { DirectionEnvelope } from "../tool-system/builtin/agent-notifications.js";
@@ -211,6 +212,10 @@ export interface TurnLoopDeps {
    * built-in judge closure; it is never added to the public on_stop context.
    */
   publishGoalJudgeContext?: (context: GoalJudgeRuntimeContext) => void;
+  /** Inspect a trusted tool's pending run yield without clearing it. */
+  peekToolRunYield?: () => import("../tool-system/context.js").ToolRunYieldReason | undefined;
+  /** Consume a trusted tool's request to yield until an async notification. */
+  consumeToolRunYield?: () => import("../tool-system/context.js").ToolRunYieldReason | undefined;
 }
 
 export interface TurnLoopResult {
@@ -221,6 +226,8 @@ export interface TurnLoopResult {
   goalTermination?: GoalTerminationReason;
   /** Stop-block round captured before the loop resets its per-approach counter. */
   goalTerminationRound?: number;
+  /** Exceptional completed-run boundary; absent means an ordinary final answer. */
+  completionKind?: TurnCompletionKind;
 }
 
 /**
@@ -743,7 +750,13 @@ export class TurnLoop {
    */
   async run(initialMessages: Message[]): Promise<TurnLoopResult> {
     const result = await this.runUnredacted(initialMessages);
-    return { ...result, messages: this.redactConsumedSensitiveToolResults(result.messages) };
+    return {
+      ...result,
+      ...(result.reason === "completed" && this.goalControlStopRequested
+        ? { completionKind: "goal_control_stop" as const }
+        : {}),
+      messages: this.redactConsumedSensitiveToolResults(result.messages),
+    };
   }
 
   private async runUnredacted(initialMessages: Message[]): Promise<TurnLoopResult> {
@@ -1248,6 +1261,21 @@ export class TurnLoop {
             continue;
           }
 
+          // A steer accepted while an async tool was launching must be
+          // answered before parking the run. Keep the tool's yield request
+          // pending across that extra model round, then park once the model
+          // has replied and there is still no background result to consume.
+          if (this.deps.consumeToolRunYield?.() === "background_notification") {
+            tlog.info("turn.background_notification_wait_after_steer", { cat: "turn" });
+            messages = this.redactConsumedSensitiveToolResults(messages);
+            return {
+              text: finalText,
+              reason: "completed",
+              messages,
+              completionKind: "background_wait",
+            };
+          }
+
           // on_stop seam: the model wants to stop. Give handlers (Goal mode)
           // a chance to BLOCK termination and keep the agent working. A
           // handler returning continueSession=true injects its messages and
@@ -1541,6 +1569,34 @@ export class TurnLoop {
         // the next model round-trip — large tool outputs can move it sharply.
         this.emitCtxFromMessages(messages);
 
+        // A trusted tool launched asynchronous work whose completion is routed
+        // back into this Session. End this run at the tool boundary instead of
+        // asking the model for another step with no new evidence; the queued
+        // completion notification will wake the Session and continue normally.
+        // This precedes complete_goal so a single batch cannot launch unfinished
+        // background work and simultaneously claim the enclosing Goal is done.
+        if (this.deps.peekToolRunYield?.() === "background_notification") {
+          // Close the current model turn before a queued steer re-drives it;
+          // interrupt-and-redrive swaps the turn signal at this boundary.
+          this.finalizeModelTurn();
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
+            continue;
+          }
+        }
+        if (
+          this.deps.peekToolRunYield?.() === "background_notification" &&
+          this.deps.consumeToolRunYield?.() === "background_notification"
+        ) {
+          tlog.info("turn.background_notification_wait", { cat: "turn" });
+          messages = this.redactConsumedSensitiveToolResults(messages);
+          return {
+            text: finalText,
+            reason: "completed",
+            messages,
+            completionKind: "background_wait",
+          };
+        }
+
         // Goal mode P0: explicit completion. If the model called complete_goal,
         // it has DECLARED the goal done — short-circuit to "completed" WITHOUT
         // running the judge hook. The tool's result is already in `messages`
@@ -1608,7 +1664,12 @@ export class TurnLoop {
             if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
               continue;
             }
-            return { text: finalText, reason: "completed", messages };
+            return {
+              text: finalText,
+              reason: "completed",
+              messages,
+              completionKind: "goal_control_stop",
+            };
           }
           tlog.warn("turn.goal_user_cancelled_persist_failed", { cat: "goal" });
           messages.push({
@@ -1642,7 +1703,12 @@ export class TurnLoop {
             continue;
           }
           messages = this.redactConsumedSensitiveToolResults(messages);
-          return { text: finalText, reason: "completed", messages };
+          return {
+            text: finalText,
+            reason: "completed",
+            messages,
+            completionKind: "limit_stop",
+          };
         }
         if (budgetDecision === "nudge") {
           messages.push({

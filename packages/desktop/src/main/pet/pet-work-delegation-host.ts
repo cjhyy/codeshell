@@ -86,10 +86,11 @@ export class PetWorkDelegationHost {
         cwd,
         clientMessageId: workClientMessageId,
         permissionMode: "default",
-        // A delegated Work Session is a real persistent Goal, not a one-turn
-        // fire-and-forget chat. Core drives it until verified complete; the Pet
-        // coordinator owns pause/resume/retry and durable task bookkeeping.
-        goal: delegation.goalObjective ?? delegation.task,
+        // Goal is opt-in. Ordinary Work Sessions can still use tools, span many
+        // model/tool steps, and resume from async notifications; forcing every
+        // loosely-worded delegation into persistent Goal mode caused ambiguous
+        // objectives to keep re-driving instead of returning a useful result.
+        ...(delegation.goalObjective ? { goal: delegation.goalObjective } : {}),
         ...(delegation.targetSessionId ? { requireExisting: true } : {}),
       },
     });

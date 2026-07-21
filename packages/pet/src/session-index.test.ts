@@ -163,6 +163,46 @@ describe("SessionIndex", () => {
     });
   });
 
+  test("keeps background-wait boundaries non-terminal across live and disk projection", () => {
+    const index = new SessionIndex();
+    index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 100 });
+    index.applyStreamEvent({
+      sessionId: "work-a",
+      generation: 1,
+      version: 1,
+      observedAt: 200,
+      event: {
+        type: "turn_complete",
+        reason: "completed",
+        completionKind: "background_wait",
+      },
+    });
+    expect(index.get("work-a")).toMatchObject({
+      runState: "idle",
+      completionKind: "background_wait",
+      summary: "等待后台结果",
+    });
+    expect(index.get("work-a")?.terminal).toBeUndefined();
+
+    const recovered = new SessionIndex();
+    recovered.replaceCatalog({
+      owner: "local-user",
+      observedAt: 300,
+      sessions: [
+        {
+          ...catalog[0]!,
+          status: "completed",
+          completionKind: "background_wait",
+        },
+      ],
+    });
+    expect(recovered.get("work-a")).toMatchObject({
+      runState: "dormant",
+      completionKind: "background_wait",
+    });
+    expect(recovered.get("work-a")?.terminal).toBeUndefined();
+  });
+
   test("builds safe bounded summaries without copying event payloads", () => {
     const index = new SessionIndex();
     index.replaceCatalog({ owner: "local-user", sessions: catalog, observedAt: 100 });

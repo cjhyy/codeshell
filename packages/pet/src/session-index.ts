@@ -52,7 +52,8 @@ function baseProjection(
   observedAt: number,
   workerState: PetWorkerState,
 ): PetSessionProjection {
-  const status = diskTerminalStatus(catalog.status);
+  const completionKind = catalog.status === "completed" ? catalog.completionKind : undefined;
+  const status = completionKind ? undefined : diskTerminalStatus(catalog.status);
   return {
     owner: LOCAL_PET_OWNER,
     agentSessionId: catalog.sessionId,
@@ -63,6 +64,15 @@ function baseProjection(
     queueDepth: 0,
     lastActivityAt: catalog.updatedAt,
     pendingDecisionCount: 0,
+    completionKind,
+    summary:
+      completionKind === "background_wait"
+        ? "等待后台结果"
+        : completionKind === "goal_control_stop"
+          ? "Goal 已停止"
+          : completionKind === "limit_stop"
+            ? "已到运行限制"
+            : undefined,
     terminal: status ? { status, at: catalog.updatedAt } : undefined,
     freshness: { source: "disk", observedAt, workerState },
   };
@@ -275,6 +285,7 @@ export class SessionIndex {
           runState: "running",
           phase: "model",
           summary: "模型处理中",
+          completionKind: undefined,
           terminal: undefined,
         };
       case "tool_use_start":
@@ -283,6 +294,7 @@ export class SessionIndex {
           runState: "running",
           phase: "tool",
           summary: `正在运行 ${safeToolName(event.toolCall.toolName)}`.slice(0, 64),
+          completionKind: undefined,
           terminal: undefined,
         };
       case "context_compact":
@@ -291,9 +303,27 @@ export class SessionIndex {
           runState: "running",
           phase: "compacting",
           summary: "正在整理上下文",
+          completionKind: undefined,
           terminal: undefined,
         };
       case "turn_complete": {
+        if (event.reason === "completed" && event.completionKind) {
+          return {
+            ...next,
+            runState: current.queueDepth > 0 ? "queued" : "idle",
+            phase: undefined,
+            summary:
+              current.queueDepth > 0
+                ? "队列中"
+                : event.completionKind === "background_wait"
+                  ? "等待后台结果"
+                  : event.completionKind === "goal_control_stop"
+                    ? "Goal 已停止"
+                    : "已到运行限制",
+            completionKind: event.completionKind,
+            terminal: undefined,
+          };
+        }
         const status = terminalStatus(event.reason);
         return {
           ...next,
@@ -305,6 +335,7 @@ export class SessionIndex {
               : status === "completed"
                 ? "本轮已完成"
                 : "运行已结束",
+          completionKind: undefined,
           terminal: current.queueDepth > 0 ? undefined : { status, at: observedAt },
         };
       }
@@ -314,6 +345,7 @@ export class SessionIndex {
           runState: "terminal",
           phase: "finalizing",
           summary: "运行失败",
+          completionKind: undefined,
           terminal: { status: "failed", at: observedAt },
         };
       default:

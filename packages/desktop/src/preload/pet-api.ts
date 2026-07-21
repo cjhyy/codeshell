@@ -58,6 +58,7 @@ export interface PetSessionProjection {
   queueDepth: number;
   lastActivityAt: number;
   pendingDecisionCount: number;
+  completionKind?: "background_wait" | "goal_control_stop" | "limit_stop";
   terminal?: { status: "completed" | "failed" | "cancelled"; at: number };
   freshness: {
     source: "disk" | "live-snapshot" | "live-event";
@@ -252,6 +253,8 @@ export interface PetApi {
   onLongTasksChanged?(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
+  setWidgetSurface(mode: "collapsed" | "expanded"): Promise<{ ok: true }>;
+  /** @deprecated Use setWidgetSurface to choose the widget's content surface. */
   setWidgetExpanded(expanded: boolean): Promise<{ ok: true }>;
   moveWidget(position: PetWidgetPosition): void;
   openWidgetOverview(target?: PetOpenSessionRequest): Promise<{ ok: true }>;
@@ -323,6 +326,8 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>
       ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,
+    setWidgetSurface: (mode) =>
+      ipcRenderer.invoke("pet:widget-surface", mode) as Promise<{ ok: true }>,
     setWidgetExpanded: (expanded) =>
       ipcRenderer.invoke("pet:widget-expanded", expanded) as Promise<{ ok: true }>,
     moveWidget: (position) => ipcRenderer.send("pet:widget-move", position),

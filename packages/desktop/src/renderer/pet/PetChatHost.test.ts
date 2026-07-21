@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PetDelegationCard, petDelegationDisplayState, selectPetChatRows } from "./PetChatHost";
@@ -35,6 +37,12 @@ describe("PetChatHost", () => {
         { kind: "assistant", id: "a1", text: "准备派发\n<!--PET:AU", done: false },
       ]),
     ).toEqual([{ id: "a1", role: "assistant", text: "准备派发" }]);
+  });
+
+  test("lets the manager chat shrink to its minimum before page scrolling begins", () => {
+    const source = readFileSync(join(import.meta.dir, "PetChatHost.tsx"), "utf8");
+    expect(source).toContain("min-h-[360px]");
+    expect(source).not.toContain("min-h-[520px]");
   });
 
   test("places a structured delegation receipt after the matching assistant reply", () => {

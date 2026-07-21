@@ -90,4 +90,42 @@ describe("agent/run model", () => {
     expect(err?.message).toBe("Model not found: missing");
     expect(calls).toEqual(["switch:missing"]);
   });
+
+  it("forwards host-injected completion turns without rendering a user bubble", async () => {
+    let injected: boolean | undefined;
+    const engine = {
+      isHeadless: () => true,
+      async run(_task: string, options: { injected?: boolean }): Promise<EngineResult> {
+        injected = options.injected;
+        return {
+          text: "completion delivered",
+          reason: "completed",
+          sessionId: "pet-one",
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 3,
+      method: "agent/run",
+      params: {
+        sessionId: "pet-one",
+        task: "<system-reminder>report completion</system-reminder>",
+        injected: true,
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(injected).toBe(true);
+    expect(t.sent.find((message) => message.id === 3)?.result?.text).toBe("completion delivered");
+  });
 });

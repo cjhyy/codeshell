@@ -98,7 +98,7 @@ export class DesktopControlClient {
     return this.request("POST", "/v1/pet/chat", 150_000, input);
   }
 
-  events(after = 0, waitMs = 25_000): Promise<DesktopControlEventPage> {
+  events(after = 0, waitMs = 25_000, signal?: AbortSignal): Promise<DesktopControlEventPage> {
     if (!Number.isSafeInteger(after) || after < 0 || waitMs < 0 || waitMs > 25_000) {
       throw new Error("invalid desktop event cursor");
     }
@@ -106,6 +106,8 @@ export class DesktopControlClient {
       "GET",
       `/v1/events?after=${after}&waitMs=${Math.floor(waitMs)}`,
       waitMs + 5_000,
+      undefined,
+      signal,
     );
   }
 
@@ -124,7 +126,7 @@ export class DesktopControlClient {
     let recovering = false;
     while (!signal.aborted) {
       try {
-        const page = await this.events(cursor);
+        const page = await this.events(cursor, 25_000, signal);
         if (streamId !== undefined && streamId !== page.streamId) {
           // Event ids are local to one Desktop process. Reset before reading
           // the replacement stream or a high old cursor could mask new events.
@@ -199,6 +201,7 @@ export class DesktopControlClient {
     path: string,
     timeoutMs: number,
     payload?: unknown,
+    signal?: AbortSignal,
   ): Promise<T> {
     let descriptor: DesktopControlDescriptor;
     try {
@@ -211,6 +214,9 @@ export class DesktopControlClient {
     }
 
     const controller = new AbortController();
+    const abortRequest = (): void => controller.abort();
+    if (signal?.aborted) controller.abort();
+    else signal?.addEventListener("abort", abortRequest, { once: true });
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     let response: Response;
     try {
@@ -229,6 +235,7 @@ export class DesktopControlClient {
       );
     } finally {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", abortRequest);
     }
 
     let body: any;

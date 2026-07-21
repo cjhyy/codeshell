@@ -1065,6 +1065,7 @@ export class SessionManager {
 
     state.kind = normalizedSessionKind(state.kind);
     state.status = "active";
+    delete state.lastCompletionKind;
     Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));
 
     return { state, transcript };

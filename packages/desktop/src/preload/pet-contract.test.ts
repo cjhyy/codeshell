@@ -38,6 +38,7 @@ describe("Pet preload contract", () => {
         }
         if (channel === "pet:widget-visible-get") return false;
         if (channel === "pet:widget-visible") return { ok: true };
+        if (channel === "pet:widget-surface") return { ok: true };
         if (channel === "pet:widget-expanded") return { ok: true };
         if (channel === "pet:widget-open-overview") return { ok: true };
         if (channel === "pet:dispatch") {
@@ -149,6 +150,7 @@ describe("Pet preload contract", () => {
     expect(taskRevisions).toEqual([2]);
     expect(await api.getWidgetVisibility()).toBe(false);
     expect(await api.setWidgetVisible(true)).toEqual({ ok: true });
+    expect(await api.setWidgetSurface("expanded")).toEqual({ ok: true });
     expect(await api.setWidgetExpanded(true)).toEqual({ ok: true });
     api.moveWidget({ x: 320, y: 180 });
     expect(ipc.sent).toEqual([{ channel: "pet:widget-move", payload: { x: 320, y: 180 } }]);

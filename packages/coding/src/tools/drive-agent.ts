@@ -1030,6 +1030,7 @@ export function makeDriveAgentTool(
         recordExternalFileChanges: ctx?.recordExternalFileChanges,
         originClientMessageId: ctx?.originClientMessageId,
       });
+      ctx?.runYield?.request("background_notification");
       return [
         resumeNote,
         `已在后台启动 ${cliName}（jobId ${tracked.jobId}）。完成后会通知你结果，无需轮询。`,
@@ -1070,6 +1071,7 @@ export function makeDriveAgentTool(
         recordExternalFileChanges: ctx?.recordExternalFileChanges,
         originClientMessageId: ctx?.originClientMessageId,
       });
+      ctx?.runYield?.request("background_notification");
       return [
         resumeNote,
         `${cliName} foreground run exceeded ${foregroundHandoffMs}ms; moved it to background (jobId ${tracked.jobId}). Completion will notify this session, so do not poll.`,

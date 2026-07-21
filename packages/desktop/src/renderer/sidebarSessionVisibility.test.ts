@@ -1,9 +1,29 @@
 import { describe, expect, test } from "bun:test";
-import { compactSidebarSessions, revealSidebarProject } from "./sidebarSessionVisibility";
+import {
+  compactSidebarSessions,
+  revealSidebarProject,
+  sortSidebarSessions,
+} from "./sidebarSessionVisibility";
 
 const sessions = Array.from({ length: 8 }, (_, index) => ({ id: `session-${index + 1}` }));
 
 describe("sidebar session visibility", () => {
+  test("keeps pinned Sessions ahead of newer unpinned Sessions", () => {
+    const ordered = sortSidebarSessions([
+      { id: "new", updatedAt: 30 },
+      { id: "pinned-old", updatedAt: 10, pinned: true },
+      { id: "pinned-new", updatedAt: 20, pinned: true },
+      { id: "middle", updatedAt: 25 },
+    ]);
+
+    expect(ordered.map((session) => session.id)).toEqual([
+      "pinned-new",
+      "pinned-old",
+      "new",
+      "middle",
+    ]);
+  });
+
   test("keeps an externally selected session visible inside the compact five-row list", () => {
     expect(
       compactSidebarSessions(sessions, "session-8", false, 5).map((session) => session.id),

@@ -318,6 +318,17 @@ export class ImGatewayService {
     };
   }
 
+  /**
+   * Start the configured gateway during Desktop boot. A fresh/disabled or
+   * incomplete config is intentionally a no-op so first launch and broken
+   * credentials never block the main window from opening.
+   */
+  async startConfiguredAtLaunch(): Promise<ImGatewayStatus> {
+    const current = this.status();
+    if (current.running || current.channels.length === 0) return current;
+    return await this.start();
+  }
+
   async start(): Promise<ImGatewayStatus> {
     if (this.active) return this.status();
     await this.stopDingTalkDiscovery();
@@ -416,27 +427,24 @@ export class ImGatewayService {
       };
       this.active = active;
       const gatewayTask = gateway.run(abort.signal);
-      const notificationTask =
-        config.notifications.length > 0
-          ? desktop.watchEvents(
-              abort.signal,
-              createDesktopNotificationHandler(adapters, config.notifications),
-              {
-                checkpointPath: config.runtime.eventCursorPath,
-                onError: (error) => {
-                  this.lastError = `Desktop 通知等待重试：${error instanceof Error ? error.message : String(error)}`;
-                  this.emitStatus();
-                },
-                onRecovered: () => {
-                  if (!this.lastError?.startsWith("Desktop 通知等待重试：")) return;
-                  this.lastError = undefined;
-                  this.emitStatus();
-                },
-              },
-            )
-          : new Promise<void>((resolveDone) =>
-              abort.signal.addEventListener("abort", () => resolveDone(), { once: true }),
-            );
+      // Keep the event stream active even when general broadcasts are disabled:
+      // a targeted Mimi completion must return to its exact originating chat.
+      const notificationTask = desktop.watchEvents(
+        abort.signal,
+        createDesktopNotificationHandler(adapters, config.notifications),
+        {
+          checkpointPath: config.runtime.eventCursorPath,
+          onError: (error) => {
+            this.lastError = `Desktop 通知等待重试：${error instanceof Error ? error.message : String(error)}`;
+            this.emitStatus();
+          },
+          onRecovered: () => {
+            if (!this.lastError?.startsWith("Desktop 通知等待重试：")) return;
+            this.lastError = undefined;
+            this.emitStatus();
+          },
+        },
+      );
       active.task = Promise.all([gatewayTask, notificationTask]).then(() => undefined);
       void active.task.then(
         () => this.onGatewaySettled(active, undefined),

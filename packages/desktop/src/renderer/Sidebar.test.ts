@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatRelative, sessionRowHoverTitle, worktreeBranchOf } from "./Sidebar";
+import { formatRelative, sessionHoverBranch, worktreeBranchOf } from "./Sidebar";
 
 describe("Sidebar relative time", () => {
   const now = Date.UTC(2026, 6, 16, 12, 0, 0);
@@ -29,13 +29,11 @@ describe("Sidebar worktree marker", () => {
     });
 
     expect(branch).toBe("worktree/feature-session");
-    expect(sessionRowHoverTitle("学习 Codex", branch, `工作树分支：${branch}`)).toBe(
-      "学习 Codex\n工作树分支：worktree/feature-session",
-    );
+    expect(sessionHoverBranch(branch, "main")).toBe("worktree/feature-session");
   });
 
-  test("keeps ordinary session titles unchanged", () => {
+  test("falls back to the project branch for ordinary Sessions", () => {
     expect(worktreeBranchOf({ root: "/repo", kind: "main" })).toBeUndefined();
-    expect(sessionRowHoverTitle("学习 Codex", undefined, undefined)).toBe("学习 Codex");
+    expect(sessionHoverBranch(undefined, "main")).toBe("main");
   });
 });

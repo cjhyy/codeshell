@@ -1150,6 +1150,7 @@ function App() {
     handleNewConversation,
     handleSelectSession,
     handleRenameSession,
+    handlePinSession,
     handleArchiveSession,
     handleDeleteSession,
     handleOpenAutomationRunSession,
@@ -1948,6 +1949,7 @@ function App() {
                   void loadDiskSessionCatalogPage(diskSessionCatalog.nextCursor ?? undefined)
                 }
                 onRenameSession={handleRenameSession}
+                onPinSession={handlePinSession}
                 onArchiveSession={handleArchiveSession}
                 onDeleteSession={handleDeleteSession}
                 activeProjectPath={activeProject?.path ?? null}

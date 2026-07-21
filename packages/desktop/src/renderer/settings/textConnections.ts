@@ -27,6 +27,32 @@ export interface ModelInstance {
   paramValues?: Record<string, unknown>;
 }
 
+export interface CredentialRemovalResult {
+  credentials: Credential[];
+  connections: ModelInstance[];
+  affectedConnectionIds: string[];
+}
+
+/** Remove one model credential and detach every connection that referenced it. */
+export function removeCredentialAndReferences(
+  credentials: Credential[],
+  connections: ModelInstance[],
+  credentialId: string,
+): CredentialRemovalResult {
+  const affectedConnectionIds = connections
+    .filter((connection) => connection.credentialId === credentialId)
+    .map((connection) => connection.id);
+  return {
+    credentials: credentials.filter((credential) => credential.id !== credentialId),
+    connections: connections.map((connection) =>
+      connection.credentialId === credentialId
+        ? { ...connection, credentialId: undefined }
+        : connection,
+    ),
+    affectedConnectionIds,
+  };
+}
+
 /** Pick the catalog id when free, else suffix `-2`, `-3`, … */
 export function uniqueInstanceId(base: string, taken: Set<string>): string {
   if (!taken.has(base)) return base;
@@ -36,15 +62,17 @@ export function uniqueInstanceId(base: string, taken: Set<string>): string {
 }
 
 function slugPart(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/^[~@]+/, "")
-    .split("/")
-    .filter(Boolean)
-    .pop()
-    ?.replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "model";
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/^[~@]+/, "")
+      .split("/")
+      .filter(Boolean)
+      .pop()
+      ?.replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "model"
+  );
 }
 
 function instanceIdBase(entry: CatalogEntry, model: string, taken: Set<string>): string {
@@ -132,12 +160,12 @@ export function catalogModelOptions(
 
 /**
  * Credentials usable for a given catalogId. A key belongs to one provider
- * ACCOUNT (adapterKind = openai/google/fal/…), and the same account key works
- * across that provider's model types — e.g. an OpenAI key configured for a text
- * model is equally valid for `openai-transcribe` (audio). So candidates are
- * scoped to the same *adapterKind*, not the exact catalogId. Without the catalog
- * (or if either side's adapterKind is unresolvable) we fall back to the old
- * exact-catalogId match so nothing silently over-shares.
+ * ACCOUNT, and the same account key works across that provider's model types —
+ * e.g. an OpenAI key configured for text also works for OpenAI Transcribe.
+ * Cross-catalog sharing therefore requires BOTH the same adapterKind and the
+ * same endpoint origin. Protocol compatibility alone is insufficient: an
+ * OpenRouter catalog must never inherit an api.openai.com credential merely
+ * because both endpoints speak the OpenAI-compatible wire format.
  *
  * This is why adding a voice connection used to show NO existing key even though
  * an OpenAI key was already saved: the old exact-catalogId filter never matched
@@ -148,13 +176,26 @@ export function credentialCandidates(
   catalogId: string,
   catalog?: CatalogEntry[],
 ): Credential[] {
-  const kindOf = (id: string): string | undefined =>
-    catalog?.find((e) => e.id === id)?.adapterKind;
-  const wantKind = kindOf(catalogId);
-  if (!wantKind) return credentials.filter((c) => c.catalogId === catalogId);
-  return credentials.filter(
-    (c) => c.catalogId === catalogId || kindOf(c.catalogId) === wantKind,
-  );
+  const entryOf = (id: string): CatalogEntry | undefined =>
+    catalog?.find((entry) => entry.id === id);
+  const target = entryOf(catalogId);
+  if (!target) return credentials.filter((credential) => credential.catalogId === catalogId);
+  const originOf = (baseUrl: string | undefined): string | undefined => {
+    if (!baseUrl) return undefined;
+    try {
+      return new URL(baseUrl).origin.toLowerCase();
+    } catch {
+      return undefined;
+    }
+  };
+  const targetOrigin = originOf(target.defaultBaseUrl);
+  return credentials.filter((credential) => {
+    if (credential.catalogId === catalogId) return true;
+    const source = entryOf(credential.catalogId);
+    if (!source || source.adapterKind !== target.adapterKind) return false;
+    const credentialOrigin = originOf(credential.baseUrl ?? source.defaultBaseUrl);
+    return Boolean(targetOrigin && credentialOrigin && targetOrigin === credentialOrigin);
+  });
 }
 
 /**
