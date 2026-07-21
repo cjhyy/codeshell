@@ -20,6 +20,22 @@ function session(
   };
 }
 
+function pending(
+  agentSessionId: string,
+  overrides: Partial<PetPendingDecision> = {},
+): PetPendingDecision {
+  return {
+    agentSessionId,
+    requestId: "r1",
+    workerGeneration: 1,
+    kind: "tool_approval",
+    title: agentSessionId,
+    createdAt: 4_000,
+    status: "pending",
+    ...overrides,
+  };
+}
+
 describe("buildPetWorkMap", () => {
   test("groups by structured state and keeps ambiguous sessions visible under Other", () => {
     const pending: PetPendingDecision = {
@@ -215,5 +231,44 @@ describe("buildPetWorkMap structured classification", () => {
     const groups = map.groups.flatMap((g) => g.buckets.map((b) => b.group));
     expect(groups).toContain("other");
     expect(groups).not.toContain("optimization");
+  });
+});
+
+describe("buildPetWorkMap external + risk tags", () => {
+  const findItem = (map: ReturnType<typeof buildPetWorkMap>, sessionId: string) =>
+    map.groups
+      .flatMap((g) => g.buckets)
+      .flatMap((b) => b.items)
+      .find((i) => i.navigation.agentSessionId === sessionId);
+
+  test("itemFromSession carries external cli tag", () => {
+    const map = buildPetWorkMap(
+      [session("s1", { external: { cli: "codex", cwd: "/tmp/p" }, runState: "running" })],
+      [],
+    );
+    expect(findItem(map, "s1")?.external).toEqual({ cli: "codex" });
+  });
+
+  test("itemFromSession carries pending risk level + tool name", () => {
+    const map = buildPetWorkMap(
+      [session("s2", { pendingDecisionCount: 1 })],
+      [pending("s2", { requestId: "r1", riskLevel: "high", toolName: "Bash" })],
+    );
+    expect(findItem(map, "s2")?.risk).toEqual({ level: "high", toolName: "Bash" });
+  });
+
+  test("local session without external/pending has no external/risk", () => {
+    const map = buildPetWorkMap([session("s3", { runState: "running" })], []);
+    expect(findItem(map, "s3")?.external).toBeUndefined();
+    expect(findItem(map, "s3")?.risk).toBeUndefined();
+  });
+
+  test("pendingWithoutSession carries risk level + tool name", () => {
+    const map = buildPetWorkMap(
+      [],
+      [pending("orphan", { requestId: "r9", riskLevel: "medium", toolName: "Write" })],
+    );
+    expect(findItem(map, "orphan")?.risk).toEqual({ level: "medium", toolName: "Write" });
+    expect(findItem(map, "orphan")?.external).toBeUndefined();
   });
 });

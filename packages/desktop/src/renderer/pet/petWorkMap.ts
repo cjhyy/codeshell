@@ -21,12 +21,23 @@ export interface PetWorkItem {
   title: string;
   detail?: string;
   lastActivityAt: number;
+  /** Present when this item is an external-CLI (Codex/Claude) session. */
+  external?: { cli: "codex" | "claude" };
+  /** Highest-risk pending decision summary for this item, when waiting. */
+  risk?: { level: "high" | "medium" | "low"; toolName?: string };
   navigation: {
     agentSessionId: string;
     requestId?: string;
     routeGeneration?: number;
   };
 }
+
+/** Shared Tailwind tone classes for a pending decision's risk level. */
+export const RISK_TONE: Record<"high" | "medium" | "low", string> = {
+  high: "bg-status-err/15 text-status-err",
+  medium: "bg-status-warn/15 text-status-warn",
+  low: "bg-muted text-muted-foreground",
+};
 
 export interface PetWorkBucket {
   group: PetWorkGroup;
@@ -116,6 +127,10 @@ function itemFromSession(
     lastActivityAt: pending
       ? Math.max(session.lastActivityAt, pending.createdAt)
       : session.lastActivityAt,
+    ...(session.external ? { external: { cli: session.external.cli } } : {}),
+    ...(pending?.riskLevel || pending?.toolName
+      ? { risk: { level: pending.riskLevel ?? "low", ...(pending.toolName ? { toolName: pending.toolName } : {}) } }
+      : {}),
     navigation: {
       agentSessionId: session.agentSessionId,
       requestId: pending?.requestId,
@@ -132,6 +147,9 @@ function pendingWithoutSession(pending: PetPendingDecision): PetWorkItem {
     title: pending.title,
     detail: pending.kind === "ask_user" ? "需要回答" : pending.toolName,
     lastActivityAt: pending.createdAt,
+    ...(pending.riskLevel || pending.toolName
+      ? { risk: { level: pending.riskLevel ?? "low", ...(pending.toolName ? { toolName: pending.toolName } : {}) } }
+      : {}),
     navigation: {
       agentSessionId: pending.agentSessionId,
       requestId: pending.requestId,

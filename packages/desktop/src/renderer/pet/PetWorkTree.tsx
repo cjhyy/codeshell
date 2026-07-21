@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useT } from "../i18n";
 import type { PetSessionEmptyState } from "./SessionStatusSection";
-import type { PetWorkGroup, PetWorkItem, PetWorkMap } from "./petWorkMap";
+import { RISK_TONE, type PetWorkGroup, type PetWorkItem, type PetWorkMap } from "./petWorkMap";
 
 const STATE_DOT: Record<PetWorkItem["state"], string> = {
   "needs-action": "bg-status-warn",
@@ -130,6 +130,19 @@ function WorkBranch({
                     >
                       {t(`pet.work.state.${item.state}`)}
                     </span>
+                    {item.external && (
+                      <span className="shrink-0 rounded border border-border px-1 text-[10px] uppercase text-muted-foreground">
+                        {item.external.cli}
+                      </span>
+                    )}
+                    {item.risk && (
+                      <span
+                        className={`shrink-0 rounded px-1 text-[10px] ${RISK_TONE[item.risk.level]}`}
+                      >
+                        {t(`pet.session.risk.${item.risk.level}`)}
+                        {item.risk.toolName ? ` · ${item.risk.toolName}` : ""}
+                      </span>
+                    )}
                   </span>
                   {item.detail && (
                     <span

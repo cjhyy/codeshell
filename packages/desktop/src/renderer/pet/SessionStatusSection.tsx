@@ -1,6 +1,7 @@
 import type { PetPendingDecision, PetSessionProjection } from "../../preload/types";
 import React from "react";
 import { useT, type TFunction } from "../i18n";
+import { RISK_TONE } from "./petWorkMap";
 
 export type PetSessionDisplayState =
   | "waiting"
@@ -31,12 +32,6 @@ const STATE_TONE: Record<PetSessionDisplayState, string> = {
 };
 
 const RISK_ORDER = { high: 3, medium: 2, low: 1 } as const;
-
-const RISK_TONE: Record<"high" | "medium" | "low", string> = {
-  high: "bg-status-err/15 text-status-err",
-  medium: "bg-status-warn/15 text-status-warn",
-  low: "bg-muted text-muted-foreground",
-};
 
 /** Highest-risk pending decision for one session (undefined when none pending). */
 export function highestPendingRisk(

@@ -121,6 +121,126 @@ describe("PetWorkTree", () => {
   });
 });
 
+test("renders external-CLI and risk badges on items that carry them", () => {
+  const badgeMap: PetWorkMap = {
+    groups: [
+      {
+        workspace: "codeshell",
+        latestActivityAt: 5_000,
+        buckets: [
+          {
+            group: "running" as const,
+            items: [
+              {
+                id: "running:ext",
+                group: "running" as const,
+                state: "running" as const,
+                workspace: "codeshell",
+                title: "外部会话",
+                lastActivityAt: 5_000,
+                external: { cli: "codex" as const },
+                navigation: { agentSessionId: "ext" },
+              },
+            ],
+          },
+          {
+            group: "pending" as const,
+            items: [
+              {
+                id: "pending:risk:r1",
+                group: "pending" as const,
+                state: "needs-action" as const,
+                workspace: "codeshell",
+                title: "待决策",
+                lastActivityAt: 4_000,
+                risk: { level: "high" as const, toolName: "Bash" },
+                navigation: { agentSessionId: "risk", requestId: "r1" },
+              },
+            ],
+          },
+          {
+            group: "other" as const,
+            items: [
+              {
+                id: "other:plain",
+                group: "other" as const,
+                state: "idle" as const,
+                workspace: "codeshell",
+                title: "普通会话",
+                lastActivityAt: 900,
+                navigation: { agentSessionId: "plain" },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    counts: { running: 1, pending: 1, "follow-up": 0, completed: 0, other: 1 },
+    itemIds: {
+      running: ["running:ext"],
+      pending: ["pending:risk:r1"],
+      "follow-up": [],
+      completed: [],
+      other: ["other:plain"],
+    },
+    dismissedCount: 0,
+    hiddenCount: 0,
+    unclassifiedCount: 0,
+  };
+  const html = renderToStaticMarkup(<PetWorkTree workMap={badgeMap} defaultOpen />);
+  expect(html).toContain("codex");
+  expect(html).toContain("高风险");
+  expect(html).toContain("Bash");
+  // The plain "other" item must not sprout a risk/external badge.
+  expect(html).not.toContain("claude");
+});
+
+test.each([
+  ["medium" as const, "中风险", "bg-status-warn/15 text-status-warn"],
+  ["low" as const, "低风险", "bg-muted text-muted-foreground"],
+])("renders the %s risk badge with its tone class", (level, label, tone) => {
+  const riskMap: PetWorkMap = {
+    groups: [
+      {
+        workspace: "codeshell",
+        latestActivityAt: 4_000,
+        buckets: [
+          {
+            group: "pending" as const,
+            items: [
+              {
+                id: "pending:risk:r1",
+                group: "pending" as const,
+                state: "needs-action" as const,
+                workspace: "codeshell",
+                title: "待决策",
+                lastActivityAt: 4_000,
+                risk: { level, toolName: "Write" },
+                navigation: { agentSessionId: "risk", requestId: "r1" },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    counts: { running: 0, pending: 1, "follow-up": 0, completed: 0, other: 0 },
+    itemIds: {
+      running: [],
+      pending: ["pending:risk:r1"],
+      "follow-up": [],
+      completed: [],
+      other: [],
+    },
+    dismissedCount: 0,
+    hiddenCount: 0,
+    unclassifiedCount: 0,
+  };
+  const html = renderToStaticMarkup(<PetWorkTree workMap={riskMap} defaultOpen />);
+  expect(html).toContain(label);
+  expect(html).toContain(tone);
+  expect(html).toContain("Write");
+});
+
 test("renders the other bucket and its i18n label without hiding items", () => {
   const otherOnly: PetWorkMap = {
     groups: [
