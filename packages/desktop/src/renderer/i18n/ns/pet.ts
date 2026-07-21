@@ -5,6 +5,21 @@ export const pet = {
         label: "Mimi",
         summary: "{pending} 项等你处理；{running} 项执行中",
       },
+      settings: {
+        open: "打开 Mimi 设置",
+        title: "Mimi 设置",
+        subtitle: "管理 Mimi 对话、桌面 Pet 与消息入口",
+        back: "返回 Mimi",
+        modelTitle: "Mimi 对话模型",
+        modelDescription: "只用于 Mimi 的管理对话；长程工作 Session 继续使用自己的默认模型。",
+        useAppDefault: "跟随应用默认",
+        followingAppDefault: "当前跟随应用默认模型",
+        widgetTitle: "桌面 Pet",
+        widgetDescription: "显示桌面悬浮 Mimi、工作动态和未读提醒。",
+        connectionsTitle: "消息连接",
+        connectionsDescription: "管理个人微信、Telegram 等连接到 Mimi 的渠道。",
+        manageConnections: "管理消息连接",
+      },
       overview: {
         title: "Mimi 工作台",
         subtitle: "把未完成、待处理和可优化的工作整理在一起",
@@ -69,6 +84,8 @@ export const pet = {
         artifacts: "任务产物",
         openSession: "打开工作会话",
         history: "事件记录",
+        expandResult: "展开完整结果",
+        collapseResult: "收起结果",
         status: {
           queued: "排队中",
           running: "执行中",
@@ -222,6 +239,23 @@ export const pet = {
         label: "Mimi",
         summary: "{pending} need you; {running} in progress",
       },
+      settings: {
+        open: "Open Mimi settings",
+        title: "Mimi settings",
+        subtitle: "Manage Mimi chat, the desktop Pet, and messaging entry points",
+        back: "Back to Mimi",
+        modelTitle: "Mimi chat model",
+        modelDescription:
+          "Used only for Mimi's manager chat. Long-running work Sessions keep their own default model.",
+        useAppDefault: "Use app default",
+        followingAppDefault: "Currently following the app default model",
+        widgetTitle: "Desktop Pet",
+        widgetDescription: "Show the floating Mimi, work activity, and unread alerts on desktop.",
+        connectionsTitle: "Messaging connections",
+        connectionsDescription:
+          "Manage Personal WeChat, Telegram, and other channels connected to Mimi.",
+        manageConnections: "Manage connections",
+      },
       overview: {
         title: "Mimi workspace",
         subtitle: "Unfinished, actionable, and improvable work in one place",
@@ -286,6 +320,8 @@ export const pet = {
         artifacts: "Task artifacts",
         openSession: "Open work session",
         history: "Event history",
+        expandResult: "Expand full result",
+        collapseResult: "Collapse result",
         status: {
           queued: "Queued",
           running: "Running",

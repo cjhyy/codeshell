@@ -33,6 +33,7 @@ export const PET_WORK_INBOX_UPDATE_CHANNEL = "pet:work-inbox-dismissed-update";
 export const PET_WORK_INBOX_EVENT_CHANNEL = "pet:work-inbox-dismissed-changed";
 export const PET_LONG_TASK_SNAPSHOT_CHANNEL = "pet:long-tasks-get";
 export const PET_LONG_TASK_CONTROL_CHANNEL = "pet:long-task-control";
+export const PET_LONG_TASK_CLEAR_COMPLETED_CHANNEL = "pet:long-tasks-clear-completed";
 export const PET_LONG_TASK_EVENT_CHANNEL = "pet:long-tasks-changed";
 
 export interface PetIpcAggregator {
@@ -71,6 +72,7 @@ export interface PetIpcWorkInbox {
 export interface PetIpcLongTasks {
   getSnapshot(): PetLongTaskSnapshot;
   control(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
+  clearCompleted(): Promise<PetLongTaskSnapshot>;
   subscribe(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
 }
 
@@ -356,6 +358,12 @@ export function registerPetIpc(options: {
       const request = parseLongTaskControl(args[0]);
       return afterReady(options.ready, () => options.longTasks!.control(request));
     });
+    options.ipcMain.handle(PET_LONG_TASK_CLEAR_COMPLETED_CHANNEL, (_event, ...args) => {
+      if (args.length !== 0) {
+        throw new Error("Pet completed long-task cleanup does not accept arguments");
+      }
+      return afterReady(options.ready, () => options.longTasks!.clearCompleted());
+    });
   }
   const unsubscribe = options.aggregator.subscribe((event) => {
     for (const window of options.windows()) {
@@ -392,6 +400,7 @@ export function registerPetIpc(options: {
     if (options.longTasks) {
       options.ipcMain.removeHandler(PET_LONG_TASK_SNAPSHOT_CHANNEL);
       options.ipcMain.removeHandler(PET_LONG_TASK_CONTROL_CHANNEL);
+      options.ipcMain.removeHandler(PET_LONG_TASK_CLEAR_COMPLETED_CHANNEL);
     }
   };
 }

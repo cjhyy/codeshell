@@ -72,7 +72,7 @@ describe("PetDispatchService", () => {
     expect(workerCalls).toBe(0);
   });
 
-  test("runs chat once through the global worker with the durable pet profile", async () => {
+  test("runs every channel through the persisted Mimi manager model", async () => {
     let request: { method: string; params: Record<string, unknown> } | undefined;
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
@@ -87,6 +87,7 @@ describe("PetDispatchService", () => {
         },
       },
       hostCwd: "/safe/pet",
+      managerModel: async () => "fast-model",
       longTasks: {
         context: () => ({
           version: 1,
@@ -109,7 +110,6 @@ describe("PetDispatchService", () => {
         type: "chat",
         message: "What is running?",
         clientMessageId: "im:one",
-        model: "fast-model",
         source: { kind: "im-gateway", channel: "telegram", target: "owner-chat" },
         attachments: [
           {

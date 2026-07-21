@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PetLongTask } from "../../preload/types";
-import { PetLongTaskCard } from "./PetLongTaskSection";
+import { isLongTaskDetailCollapsible, PetLongTaskCard } from "./PetLongTaskSection";
 
 function task(status: PetLongTask["status"]): PetLongTask {
   return {
@@ -46,5 +46,38 @@ describe("PetLongTaskCard", () => {
     );
     expect(html).toContain('data-pet-long-task-control="resume"');
     expect(html).toContain('data-pet-long-task-control="retry"');
+  });
+
+  test("renders markdown and collapses a long result by default", () => {
+    const completed = task("completed");
+    completed.summary =
+      "## 结论\n\n- 根因在 **JPEG 探针**\n- 调用 `probeJpeg()`\n\n" + "详细调查结果。".repeat(80);
+
+    const html = renderToStaticMarkup(
+      <PetLongTaskCard task={completed} busy={false} onControl={() => {}} />,
+    );
+
+    expect(html).toContain("结论</h2>");
+    expect(html).toContain("<strong>JPEG 探针</strong>");
+    expect(html).toContain("<code>probeJpeg()</code>");
+    expect(html).toContain('data-pet-long-task-detail="collapsed"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("展开完整结果");
+    expect(html).toContain("max-h-48");
+  });
+
+  test("keeps short results and user decisions fully visible", () => {
+    expect(isLongTaskDetailCollapsible("简短结果")).toBe(false);
+    expect(isLongTaskDetailCollapsible("详细结果".repeat(130))).toBe(true);
+
+    const waiting = task("waiting");
+    waiting.waitingFor = "# 请确认\n\n" + "这是一条很长的用户决策提示。".repeat(80);
+    const html = renderToStaticMarkup(
+      <PetLongTaskCard task={waiting} busy={false} onControl={() => {}} />,
+    );
+
+    expect(html).toContain("请确认</h1>");
+    expect(html).toContain('data-pet-long-task-detail="expanded"');
+    expect(html).not.toContain("展开完整结果");
   });
 });

@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronDown,
   FolderKanban,
+  Settings,
   Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import type {
   PetSessionProjection,
 } from "../../preload/types";
 import dogIcon from "../assets/codeshell-dog-icon.png";
+import { Markdown } from "../Markdown";
 import type { Message } from "../types";
 import { useT } from "../i18n";
 import {
@@ -241,6 +243,20 @@ export function PetDelegationCard({
   );
 }
 
+export function PetChatMarkdown({ text, compact = false }: { text: string; compact?: boolean }) {
+  return (
+    <div
+      className={
+        compact
+          ? "min-w-0 max-w-full break-words [&>div]:!max-w-none [&>div]:!text-xs [&>div]:!leading-5 [&>div]:!text-muted-foreground [&_p]:!my-1 [&_p:first-child]:!mt-0 [&_p:last-child]:!mb-0"
+          : "min-w-0 max-w-full break-words [&>div]:!max-w-none [&>div]:!text-sm [&>div]:!leading-6 [&_p]:!my-1 [&_p:first-child]:!mt-0 [&_p:last-child]:!mb-0"
+      }
+    >
+      <Markdown text={text} />
+    </div>
+  );
+}
+
 function PetChatRowView({
   row,
   session,
@@ -278,9 +294,7 @@ function PetChatRowView({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-0">
-          <div className="whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">
-            {row.text}
-          </div>
+          <PetChatMarkdown text={row.text} compact />
         </CardContent>
       </Card>
     );
@@ -310,7 +324,7 @@ function PetChatRowView({
         />
       </span>
       <div className="max-w-[88%] rounded-2xl rounded-tl-md border border-border/60 bg-background px-3.5 py-2.5 text-sm leading-6 shadow-sm">
-        <div className="whitespace-pre-wrap break-words">{row.text}</div>
+        <PetChatMarkdown text={row.text} />
       </div>
     </div>
   );
@@ -328,11 +342,13 @@ export function PetChatHost({
   defaultModelKey,
   modelOptions,
   onOpenSession,
+  onOpenSettings,
 }: {
   defaultProjectPath: string | null;
   defaultModelKey: string | null;
   modelOptions: ModelOption[];
   onOpenSession?: (request: PetOpenSessionRequest) => void;
+  onOpenSettings?: () => void;
 }) {
   const { t } = useT();
   const {
@@ -437,13 +453,26 @@ export function PetChatHost({
           <div className="text-sm font-semibold">{t("pet.chat.managerTitle")}</div>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">{t("pet.chat.subtitle")}</p>
         </div>
-        <ModelPill
-          activeKey={effectiveModelKey}
-          options={modelOptions}
-          onSelect={(option) => setChatModelKey(option.key)}
-          disabled={chatBusy || modelOptions.length === 0}
-          portal
-        />
+        <div className="flex shrink-0 items-center gap-2">
+          <ModelPill
+            activeKey={effectiveModelKey}
+            options={modelOptions}
+            onSelect={(option) => setChatModelKey(option.key)}
+            disabled={chatBusy || modelOptions.length === 0}
+            portal
+          />
+          {onOpenSettings && (
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              aria-label={t("pet.settings.open")}
+              title={t("pet.settings.open")}
+              onClick={onOpenSettings}
+            >
+              <Settings size={16} aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto bg-muted/15 px-4 py-5 @min-[1440px]/pet-page:px-5">

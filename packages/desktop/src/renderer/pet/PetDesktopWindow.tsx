@@ -1,4 +1,5 @@
-import type { PetDelegationReceiptGroup } from "../../preload/types";
+import type { PetDelegationReceiptGroup, PetLongTaskSnapshot } from "../../preload/types";
+import type { PetWorkMemorySegment } from "../../preload/pet-api";
 import React from "react";
 import { Markdown } from "../Markdown";
 import { useT } from "../i18n";
@@ -45,17 +46,55 @@ export function selectMiniChatMessages(messages: readonly Message[]): MiniChatMe
 export function selectMiniChatRows(
   messages: readonly Message[],
   delegationReceipts: readonly PetDelegationReceiptGroup[] = [],
+  segments: readonly PetWorkMemorySegment[] = [],
+  longTasks: PetLongTaskSnapshot | null = null,
+  workReceipts: PetWidgetReceiptState | null = null,
 ): PetChatRow[] {
-  const rows = selectPetChatRows(messages, [], delegationReceipts);
+  const visibleMessages = messagesAfterSeenCompletion(messages, longTasks, workReceipts);
+  const rows = selectPetChatRows(visibleMessages, segments, delegationReceipts);
   let latestBoundary = -1;
   for (let index = rows.length - 1; index >= 0; index -= 1) {
-    if (rows[index]?.role !== "history-boundary") continue;
+    if (rows[index]?.role !== "history-boundary" && rows[index]?.role !== "segment-divider") {
+      continue;
+    }
     latestBoundary = index;
     break;
   }
   return rows
     .slice(latestBoundary + 1)
     .filter((row) => row.role === "user" || row.role === "assistant" || row.role === "delegation");
+}
+
+function messagesAfterSeenCompletion(
+  messages: readonly Message[],
+  longTasks: PetLongTaskSnapshot | null,
+  workReceipts: PetWidgetReceiptState | null,
+): readonly Message[] {
+  if (!longTasks || !workReceipts) return messages;
+  const seenKeys = new Set(workReceipts.seenCompletionKeys);
+  const seenTaskIds = new Set(
+    longTasks.tasks.flatMap((task) => {
+      if (task.status !== "completed") return [];
+      const completedAt = task.completedAt ?? task.updatedAt;
+      const completionKey = `completed-task:${task.id}:${completedAt}`;
+      return completedAt <= workReceipts.baselineAt || seenKeys.has(completionKey) ? [task.id] : [];
+    }),
+  );
+  if (seenTaskIds.size === 0) return messages;
+
+  let latestSeenClosure = -1;
+  for (let index = 0; index < messages.length; index += 1) {
+    const message = messages[index];
+    if (message?.kind !== "user") continue;
+    const taskId = /^pet-closure:([^:]+):/u.exec(message.clientMessageId ?? "")?.[1];
+    if (taskId && seenTaskIds.has(taskId)) latestSeenClosure = index;
+  }
+  if (latestSeenClosure < 0) return messages;
+
+  for (let index = latestSeenClosure + 1; index < messages.length; index += 1) {
+    if (messages[index]?.kind === "user") return messages.slice(index);
+  }
+  return [];
 }
 
 export function PetMiniMarkdown({ text }: { text: string }) {
@@ -93,8 +132,15 @@ export function PetDesktopWindow() {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const conversationEndRef = React.useRef<HTMLDivElement>(null);
   const chatRows = React.useMemo(
-    () => selectMiniChatRows(chatState.messages, delegationReceipts),
-    [chatState.messages, delegationReceipts],
+    () =>
+      selectMiniChatRows(
+        chatState.messages,
+        delegationReceipts,
+        state.projection?.workMemorySegments ?? [],
+        longTasks,
+        workReceipts,
+      ),
+    [chatState.messages, delegationReceipts, longTasks, state.projection, workReceipts],
   );
 
   React.useEffect(() => {
@@ -107,6 +153,16 @@ export function PetDesktopWindow() {
       // The badge still works for this renderer lifetime when storage is unavailable.
     }
   }, [state.projection, workReceipts]);
+
+  React.useEffect(() => {
+    const syncReceipts = (event: StorageEvent): void => {
+      if (event.key !== PET_WIDGET_RECEIPTS_KEY) return;
+      const next = parsePetWidgetReceiptState(event.newValue);
+      if (next) setWorkReceipts(next);
+    };
+    window.addEventListener("storage", syncReceipts);
+    return () => window.removeEventListener("storage", syncReceipts);
+  }, []);
 
   const sendChat = async (): Promise<void> => {
     const message = draft.trim();

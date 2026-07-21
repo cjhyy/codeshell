@@ -9,6 +9,7 @@ import {
   buildPetWidgetActivity,
   initialPetWidgetReceiptState,
   markPetWidgetCompletionSeen,
+  markPetWidgetCompletionsSeen,
   parsePetWidgetReceiptState,
 } from "./petWidgetActivity";
 
@@ -123,6 +124,21 @@ describe("Pet widget work activity", () => {
     const remaining = buildPetWidgetActivity(value, seen);
     expect(remaining.items.map((item) => item.agentSessionId)).toEqual(["done-a"]);
     expect(remaining).toMatchObject({ unreadCompletedCount: 1, badgeCount: 1 });
+  });
+
+  test("marks only desktop-viewed completions and leaves live work counted", () => {
+    const value = snapshot([
+      session("running", { runState: "running", lastActivityAt: 500 }),
+      session("done-a", { runState: "terminal", terminal: { status: "completed", at: 300 } }),
+      session("done-b", { runState: "terminal", terminal: { status: "completed", at: 400 } }),
+    ]);
+    const initial = { baselineAt: 200, seenCompletionKeys: [] };
+    const viewed = markPetWidgetCompletionsSeen(initial, value, null, new Set(["done-a"]));
+    const remaining = buildPetWidgetActivity(value, viewed);
+
+    expect(viewed.seenCompletionKeys).toEqual(["completed:done-a:300"]);
+    expect(remaining.items.map((item) => item.agentSessionId)).toEqual(["running", "done-b"]);
+    expect(remaining).toMatchObject({ runningCount: 1, unreadCompletedCount: 1, badgeCount: 2 });
   });
 
   test("lets a durable completion replace a stale running Session projection", () => {

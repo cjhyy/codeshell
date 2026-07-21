@@ -43,6 +43,7 @@ describe("Pet desktop mini chat", () => {
     expect(source).toContain("chatRows.slice(-6).map");
     expect(source).toContain('panel === "chat"');
     expect(source).toContain("markPetWidgetCompletionSeen");
+    expect(source).toContain('window.addEventListener("storage", syncReceipts)');
     expect(source).toContain('if (item.kind !== "completed") return');
     expect(source).toContain('if (item.kind === "completed")');
     expect(source).toContain("closePanel()");
@@ -97,6 +98,115 @@ describe("Pet desktop mini chat", () => {
     ]);
 
     expect(rows.map((row) => row.id)).toEqual(["new-u", "new-a"]);
+  });
+
+  test("omits rows before the latest Mimi topic-segment boundary", () => {
+    const rows = selectMiniChatRows(
+      [
+        { kind: "user", id: "old-u", text: "旧话题", clientMessageId: "old-message" },
+        { kind: "assistant", id: "old-a", text: "旧回答", done: true },
+        { kind: "user", id: "new-u", text: "新话题", clientMessageId: "new-message" },
+        { kind: "assistant", id: "new-a", text: "新回答", done: true },
+      ],
+      [],
+      [{ boundaryBeforeMessageId: "new-message", brief: "上一段纪要" }],
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(["new-u", "new-a"]);
+  });
+
+  test("hides a seen completion closure and keeps only later conversation", () => {
+    const rows = selectMiniChatRows(
+      [
+        { kind: "user", id: "request", text: "查 JPEG", clientMessageId: "im:jpeg" },
+        { kind: "assistant", id: "accepted", text: "已派出", done: true },
+        {
+          kind: "user",
+          id: "closure",
+          text: "internal closure",
+          clientMessageId: "pet-closure:pet-task-jpeg:1:completed:nonce",
+        },
+        { kind: "assistant", id: "result", text: "JPEG 调查结果", done: true },
+        { kind: "user", id: "later-u", text: "新的问题", clientMessageId: "pet-later" },
+        { kind: "assistant", id: "later-a", text: "新的回答", done: true },
+      ],
+      [],
+      [],
+      {
+        revision: 1,
+        observedAt: 500,
+        tasks: [
+          {
+            schemaVersion: 1,
+            id: "pet-task-jpeg",
+            originClientMessageId: "im:jpeg",
+            objective: "查 JPEG",
+            workspacePath: "/work",
+            sessionId: "work-jpeg",
+            verificationMode: "turn",
+            status: "completed",
+            phase: "finalizing",
+            attempt: 1,
+            revision: 2,
+            createdAt: 100,
+            updatedAt: 300,
+            completedAt: 300,
+            artifacts: [],
+            events: [],
+          },
+        ],
+      },
+      { baselineAt: 50, seenCompletionKeys: ["completed-task:pet-task-jpeg:300"] },
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(["later-u", "later-a"]);
+  });
+
+  test("keeps an unread completion result visible", () => {
+    const messages: Message[] = [
+      {
+        kind: "user",
+        id: "closure",
+        text: "internal closure",
+        clientMessageId: "pet-closure:pet-task-new:1:completed:nonce",
+      },
+      { kind: "assistant", id: "result", text: "尚未查看的结果", done: true },
+    ];
+    const rows = selectMiniChatRows(
+      messages,
+      [],
+      [],
+      {
+        revision: 1,
+        observedAt: 500,
+        tasks: [
+          {
+            schemaVersion: 1,
+            id: "pet-task-new",
+            originClientMessageId: "im:new",
+            objective: "新任务",
+            workspacePath: "/work",
+            sessionId: "work-new",
+            verificationMode: "turn",
+            status: "completed",
+            phase: "finalizing",
+            attempt: 1,
+            revision: 2,
+            createdAt: 100,
+            updatedAt: 300,
+            completedAt: 300,
+            artifacts: [],
+            events: [],
+          },
+        ],
+      },
+      {
+        baselineAt: 50,
+        seenCompletionKeys: [],
+      },
+    );
+
+    expect(rows.map((row) => row.id)).toEqual(["closure", "result"]);
   });
 
   test("renders assistant markdown in the mini chat", () => {

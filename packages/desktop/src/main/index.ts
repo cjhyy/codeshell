@@ -102,6 +102,7 @@ import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
+import { petChatModelKeyFromSettings } from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -1171,6 +1172,8 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
+      managerModel: async () =>
+        petChatModelKeyFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {
         beginTurn: async (clientMessageId) => {
           if (!petSegmentController) return undefined;
@@ -1282,6 +1285,7 @@ async function createWindow(): Promise<BrowserWindow> {
       longTasks: {
         getSnapshot: () => longTaskStore.getSnapshot(),
         control: (request) => longTaskCoordinator.control(request),
+        clearCompleted: () => longTaskCoordinator.clearCompleted(),
         subscribe: (listener) => longTaskStore.subscribe(listener),
       },
       windows: () => BrowserWindow.getAllWindows(),

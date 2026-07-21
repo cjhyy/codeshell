@@ -3,7 +3,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PetDelegationCard, petDelegationDisplayState, selectPetChatRows } from "./PetChatHost";
+import {
+  PetChatMarkdown,
+  PetDelegationCard,
+  petDelegationDisplayState,
+  selectPetChatRows,
+} from "./PetChatHost";
 
 describe("PetChatHost", () => {
   test("shows only the manager conversation and hides execution events", () => {
@@ -37,6 +42,20 @@ describe("PetChatHost", () => {
         { kind: "assistant", id: "a1", text: "准备派发\n<!--PET:AU", done: false },
       ]),
     ).toEqual([{ id: "a1", role: "assistant", text: "准备派发" }]);
+  });
+
+  test("renders Mimi assistant content as sanitized GFM markdown", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(PetChatMarkdown, {
+        text: "## 结论\n\n- 已修复 **Markdown**\n- 调用 `render()`\n\n<script>alert(1)</script>",
+      }),
+    );
+
+    expect(html).toContain("结论</h2>");
+    expect(html).toContain("<li>已修复 <strong>Markdown</strong></li>");
+    expect(html).toContain("<code>render()</code>");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("**Markdown**");
   });
 
   test("lets the manager chat shrink to its minimum before page scrolling begins", () => {

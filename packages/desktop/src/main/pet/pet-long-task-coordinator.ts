@@ -9,6 +9,7 @@ import {
   type PetLongTaskControlRequest,
   type PetLongTaskControlResult,
   type PetLongTaskPhase,
+  type PetLongTaskSnapshot,
 } from "@cjhyy/code-shell-pet";
 import type { PetAutoDelegation } from "./pet-dispatch-service.js";
 import type { PetWorkDelegationLaunch } from "./pet-work-delegation-host.js";
@@ -108,7 +109,7 @@ export class PetLongTaskCoordinator {
   private unsubscribeProjection?: () => void;
   private started = false;
   private readonly lastProgressAt = new Map<string, number>();
-  private readonly closedNotifications = new Set<string>();
+  private readonly closedNotifications = new Map<string, Promise<void>>();
 
   constructor(private readonly options: PetLongTaskCoordinatorOptions) {
     this.now = options.now ?? Date.now;
@@ -221,6 +222,14 @@ export class PetLongTaskCoordinator {
       case "cancel":
         return this.cancel(task);
     }
+  }
+
+  async clearCompleted(): Promise<PetLongTaskSnapshot> {
+    const completed = this.options.store
+      .getSnapshot()
+      .tasks.filter((task) => task.status === "completed");
+    await Promise.all(completed.map((task) => this.notifyClosed(task)));
+    return this.options.store.clearCompleted();
   }
 
   /** Observe the exact, top-level session stream retained by AgentBridge. */
@@ -737,17 +746,22 @@ export class PetLongTaskCoordinator {
   private async notifyClosed(task: PetLongTask): Promise<void> {
     if (!isTerminal(task) || task.closureRecordedAt) return;
     const key = `${task.id}:${task.attempt}:${task.status}`;
-    if (this.closedNotifications.has(key)) return;
-    this.closedNotifications.add(key);
-    try {
-      await this.options.onTaskClosed?.(task);
-      await this.options.store.transition(task.id, {
-        kind: "closure-recorded",
-        at: this.now(),
-      });
-    } catch (error) {
-      this.closedNotifications.delete(key);
-      this.options.onBackgroundError?.("task-closed", error);
-    }
+    const existing = this.closedNotifications.get(key);
+    if (existing) return existing;
+    const operation = (async () => {
+      try {
+        await this.options.onTaskClosed?.(task);
+        await this.options.store.transition(task.id, {
+          kind: "closure-recorded",
+          at: this.now(),
+        });
+      } catch (error) {
+        this.options.onBackgroundError?.("task-closed", error);
+      } finally {
+        this.closedNotifications.delete(key);
+      }
+    })();
+    this.closedNotifications.set(key, operation);
+    await operation;
   }
 }

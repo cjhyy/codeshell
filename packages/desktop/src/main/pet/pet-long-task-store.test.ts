@@ -88,4 +88,48 @@ describe("PetLongTaskStore", () => {
     await reloaded.load();
     expect(reloaded.getSnapshot().tasks.map((entry) => entry.id)).toEqual([task.id]);
   });
+
+  test("atomically clears only completed tasks after their closure is recorded", async () => {
+    const { root, value } = await store();
+    const completed = await value.create({
+      id: "task-completed",
+      originClientMessageId: "message-completed",
+      objective: "Complete this",
+      workspacePath: "/work/app",
+      sessionId: "session-completed",
+      at: 100,
+    });
+    const finalizing = await value.create({
+      id: "task-finalizing",
+      originClientMessageId: "message-finalizing",
+      objective: "Still finalizing",
+      workspacePath: "/work/app",
+      sessionId: "session-finalizing",
+      at: 110,
+    });
+    const failed = await value.create({
+      id: "task-failed",
+      originClientMessageId: "message-failed",
+      objective: "Keep failed task",
+      workspacePath: "/work/app",
+      sessionId: "session-failed",
+      at: 120,
+    });
+    await value.transition(completed.id, { kind: "completed", at: 200, summary: "Done" });
+    await value.transition(completed.id, { kind: "closure-recorded", at: 210 });
+    await value.transition(finalizing.id, { kind: "completed", at: 220, summary: "Closing" });
+    await value.transition(failed.id, { kind: "failed", at: 230, error: "Keep me" });
+
+    const snapshot = await value.clearCompleted();
+
+    expect(snapshot.tasks.map((task) => task.id).sort()).toEqual([
+      "task-failed",
+      "task-finalizing",
+    ]);
+    const persisted = JSON.parse(await readFile(join(root, "tasks.json"), "utf8"));
+    expect(persisted.tasks.map((task: { id: string }) => task.id).sort()).toEqual([
+      "task-failed",
+      "task-finalizing",
+    ]);
+  });
 });

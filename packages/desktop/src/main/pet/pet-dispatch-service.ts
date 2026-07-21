@@ -118,6 +118,8 @@ interface PetDispatchOptions {
     ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
   };
   hostCwd: string;
+  /** Mimi manager model used when a channel does not provide an explicit override. */
+  managerModel?(): Promise<string | null>;
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
   listReusableSessions?(): Promise<PetReusableSessionCandidate[]>;
   startWorkSession?(
@@ -533,10 +535,13 @@ export class PetDispatchService {
           return { ok: false, code: "invalid-command" };
         }
         const metadata = await this.options.metadata.ensure();
-        const [listedWorkspaces, listedReusableSessions] = await Promise.all([
-          this.options.listWorkspaces?.() ?? [],
-          this.options.listReusableSessions?.() ?? [],
-        ]);
+        const [listedWorkspaces, listedReusableSessions, configuredManagerModel] =
+          await Promise.all([
+            this.options.listWorkspaces?.() ?? [],
+            this.options.listReusableSessions?.() ?? [],
+            this.options.managerModel?.() ?? null,
+          ]);
+        const managerModel = command.model ?? configuredManagerModel;
         const workspacePathById = new Map<string, string | null>([[NO_WORKSPACE_ID, null]]);
         const workspaceIdByPath = new Map<string, string>();
         const petWorkspaces: PetWorkspaceOption[] = [
@@ -632,7 +637,7 @@ export class PetDispatchService {
         const response = await this.options.worker.requestWorker("agent/run", {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),
-          ...(command.model ? { model: command.model } : {}),
+          ...(managerModel ? { model: managerModel } : {}),
           ...(attachments.length > 0 ? { attachments } : {}),
           petRuntimeContext: JSON.stringify(world),
           petWorkspaces,

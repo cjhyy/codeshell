@@ -143,6 +143,27 @@ export class PetLongTaskStore {
     });
   }
 
+  async clearCompleted(): Promise<PetLongTaskSnapshot> {
+    return this.enqueueMutation(async () => {
+      const removable = [...this.tasks.values()].filter(
+        (task) => task.status === "completed" && task.closureRecordedAt !== undefined,
+      );
+      if (removable.length === 0) return this.getSnapshot();
+      const beforeRevision = this.revision;
+      const beforeObservedAt = this.observedAt;
+      for (const task of removable) this.tasks.delete(task.id);
+      try {
+        await this.changed();
+      } catch (error) {
+        for (const task of removable) this.tasks.set(task.id, task);
+        this.revision = beforeRevision;
+        this.observedAt = beforeObservedAt;
+        throw error;
+      }
+      return this.getSnapshot();
+    });
+  }
+
   subscribe(listener: (snapshot: PetLongTaskSnapshot) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

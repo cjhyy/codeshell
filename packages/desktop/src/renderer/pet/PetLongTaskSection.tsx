@@ -12,7 +12,18 @@ import {
 } from "lucide-react";
 import type { PetLongTask, PetLongTaskControlAction } from "../../preload/types";
 import { useT } from "../i18n";
+import { Markdown } from "../Markdown";
 import { useOptionalPetState } from "./PetStateProvider";
+
+const LONG_DETAIL_COLLAPSE_CHARS = 480;
+const LONG_DETAIL_COLLAPSE_LINES = 8;
+
+export function isLongTaskDetailCollapsible(detail: string): boolean {
+  return (
+    detail.length > LONG_DETAIL_COLLAPSE_CHARS ||
+    detail.split(/\r?\n/u).length > LONG_DETAIL_COLLAPSE_LINES
+  );
+}
 
 const STATUS_STYLE: Record<PetLongTask["status"], string> = {
   queued: "bg-status-running/10 text-status-running",
@@ -62,9 +73,14 @@ export function PetLongTaskCard({
 }) {
   const { t } = useT();
   const [historyOpen, setHistoryOpen] = React.useState(false);
+  const [detailExpanded, setDetailExpanded] = React.useState(false);
   const actions = taskActions(task);
   const recentEvents = task.events.slice(-6).reverse();
   const detail = task.waitingFor ?? task.lastError ?? task.summary;
+  const detailCollapsible = Boolean(
+    detail && !task.waitingFor && isLongTaskDetailCollapsible(detail),
+  );
+  const detailCollapsed = detailCollapsible && !detailExpanded;
   return (
     <article
       data-pet-long-task={task.id}
@@ -89,15 +105,49 @@ export function PetLongTaskCard({
       </div>
 
       {detail && (
-        <p
+        <div
+          data-pet-long-task-detail={detailCollapsed ? "collapsed" : "expanded"}
           className={`mt-2 rounded-xl px-3 py-2 text-xs leading-5 ${
             task.waitingFor || task.lastError
               ? "bg-status-warn/8 text-foreground"
               : "bg-muted/55 text-muted-foreground"
           }`}
         >
-          {detail}
-        </p>
+          <div className="relative">
+            <div className={detailCollapsed ? "max-h-48 overflow-hidden" : undefined}>
+              <div
+                className={
+                  task.waitingFor || task.lastError
+                    ? "[&>div]:!max-w-none [&>div]:!text-xs [&>div]:!leading-5 [&>div]:!text-foreground [&_p]:!my-1.5 [&_p:first-child]:!mt-0 [&_p:last-child]:!mb-0"
+                    : "[&>div]:!max-w-none [&>div]:!text-xs [&>div]:!leading-5 [&>div]:!text-muted-foreground [&_p]:!my-1.5 [&_p:first-child]:!mt-0 [&_p:last-child]:!mb-0"
+                }
+              >
+                <Markdown text={detail} cwd={task.workspacePath} />
+              </div>
+            </div>
+            {detailCollapsed && (
+              <span
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-muted to-transparent"
+                aria-hidden="true"
+              />
+            )}
+          </div>
+          {detailCollapsible && (
+            <button
+              type="button"
+              aria-expanded={detailExpanded}
+              className="mt-1.5 flex w-full items-center justify-center gap-1.5 border-t border-border/45 pt-2 text-[11px] font-medium text-primary transition hover:text-primary/80"
+              onClick={() => setDetailExpanded((value) => !value)}
+            >
+              {t(detailExpanded ? "pet.longTask.collapseResult" : "pet.longTask.expandResult")}
+              <ChevronDown
+                size={12}
+                aria-hidden="true"
+                className={`transition-transform ${detailExpanded ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
+        </div>
       )}
       {task.nextAction && (
         <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">

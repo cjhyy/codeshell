@@ -73,6 +73,27 @@ export function markPetWidgetCompletionSeen(
   };
 }
 
+/**
+ * Mark the completed activity currently visible on a desktop surface as seen.
+ * Active/waiting work is deliberately ignored because its badge is a live-work
+ * count, not an unread receipt.
+ */
+export function markPetWidgetCompletionsSeen(
+  state: PetWidgetReceiptState,
+  snapshot: PetProjectionSnapshot,
+  longTasks: PetLongTaskSnapshot | null = null,
+  sessionIds?: ReadonlySet<string>,
+): PetWidgetReceiptState {
+  let next = state;
+  for (const item of buildPetWidgetActivity(snapshot, state, longTasks).items) {
+    if (item.kind !== "completed" || (sessionIds && !sessionIds.has(item.agentSessionId))) {
+      continue;
+    }
+    next = markPetWidgetCompletionSeen(next, item.key);
+  }
+  return next;
+}
+
 export function buildPetWidgetActivity(
   snapshot: PetProjectionSnapshot | null,
   receipts: PetWidgetReceiptState | null,
