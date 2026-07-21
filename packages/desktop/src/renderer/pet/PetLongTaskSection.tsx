@@ -9,10 +9,12 @@ import {
   Play,
   RotateCcw,
   Square,
+  Trash2,
 } from "lucide-react";
 import type { PetLongTask, PetLongTaskControlAction } from "../../preload/types";
 import { useT } from "../i18n";
 import { Markdown } from "../Markdown";
+import { useConfirm } from "../ui/DialogProvider";
 import { useOptionalPetState } from "./PetStateProvider";
 
 const LONG_DETAIL_COLLAPSE_CHARS = 480;
@@ -254,11 +256,19 @@ export function PetLongTaskSection({
   onOpenSession?: (sessionId: string) => void;
 }) {
   const { t } = useT();
-  const { longTasks, longTaskBusyIds, longTaskError, controlLongTask } = useOptionalPetState();
+  const {
+    longTasks,
+    longTaskBusyIds,
+    longTaskCleanupBusy,
+    longTaskError,
+    controlLongTask,
+    clearCompletedLongTasks,
+  } = useOptionalPetState();
   const activeCount = longTasks.tasks.filter(
     (task) =>
       task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled",
   ).length;
+  const completedCount = longTasks.tasks.filter((task) => task.status === "completed").length;
   const [open, setOpen] = React.useState(activeCount > 0);
   React.useEffect(() => {
     if (activeCount > 0) setOpen(true);
@@ -299,6 +309,15 @@ export function PetLongTaskSection({
       </h3>
       {open && (
         <div className="space-y-2 px-1.5 pb-1.5 pt-2">
+          {completedCount > 0 && (
+            <div className="flex justify-end px-1">
+              <PetLongTaskCleanupButton
+                count={completedCount}
+                busy={longTaskCleanupBusy}
+                onClear={clearCompletedLongTasks}
+              />
+            </div>
+          )}
           {longTaskError && (
             <p className="rounded-xl bg-status-err/10 px-3 py-2 text-xs text-status-err">
               {longTaskError}
@@ -316,5 +335,43 @@ export function PetLongTaskSection({
         </div>
       )}
     </section>
+  );
+}
+
+export function PetLongTaskCleanupButton({
+  count,
+  busy,
+  onClear,
+}: {
+  count: number;
+  busy: boolean;
+  onClear: () => Promise<boolean>;
+}) {
+  const { t } = useT();
+  const confirm = useConfirm();
+  const clear = async (): Promise<void> => {
+    const approved = await confirm({
+      title: t("pet.longTask.clearCompletedTitle"),
+      message: t("pet.longTask.clearCompletedConfirm", { count }),
+      confirmLabel: t("pet.longTask.clearCompletedAction"),
+      destructive: true,
+    });
+    if (approved) await onClear();
+  };
+  return (
+    <button
+      type="button"
+      data-pet-long-task-cleanup="completed"
+      disabled={busy}
+      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition hover:bg-status-err/8 hover:text-status-err disabled:opacity-50"
+      onClick={() => void clear()}
+    >
+      {busy ? (
+        <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+      ) : (
+        <Trash2 size={12} aria-hidden="true" />
+      )}
+      {t("pet.longTask.clearCompleted", { count })}
+    </button>
   );
 }

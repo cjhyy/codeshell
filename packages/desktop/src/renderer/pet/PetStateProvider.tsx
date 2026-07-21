@@ -31,11 +31,7 @@ import {
   petSnapshotRetryDelay,
   pushBoundedPetEvent,
 } from "./petReliability";
-import {
-  loadPetChatModelKey,
-  savePetChatModelKey,
-  type PetSettingsBridge,
-} from "./petPreferences";
+import { loadPetChatModelKey, savePetChatModelKey, type PetSettingsBridge } from "./petPreferences";
 
 export interface PetStateContextValue {
   state: PetState;
@@ -96,19 +92,20 @@ export function PetStateProvider({
   const [chatModelKey, setChatModelKeyState] = React.useState<string | null>(null);
   const chatModelKeyRef = React.useRef<string | null>(null);
   const chatModelPreferenceRevisionRef = React.useRef(0);
-  const setChatModelKey = React.useCallback<
-    React.Dispatch<React.SetStateAction<string | null>>
-  >((next) => {
-    const value = typeof next === "function" ? next(chatModelKeyRef.current) : next;
-    chatModelPreferenceRevisionRef.current += 1;
-    chatModelKeyRef.current = value;
-    setChatModelKeyState(value);
-    const bridge = settingsBridge();
-    if (!bridge) return;
-    void savePetChatModelKey(value, bridge).catch((error) =>
-      window.codeshell.log("pet.chat.model.write.failed", { error: String(error) }),
-    );
-  }, []);
+  const setChatModelKey = React.useCallback<React.Dispatch<React.SetStateAction<string | null>>>(
+    (next) => {
+      const value = typeof next === "function" ? next(chatModelKeyRef.current) : next;
+      chatModelPreferenceRevisionRef.current += 1;
+      chatModelKeyRef.current = value;
+      setChatModelKeyState(value);
+      const bridge = settingsBridge();
+      if (!bridge) return;
+      void savePetChatModelKey(value, bridge).catch((error) =>
+        window.codeshell.log("pet.chat.model.write.failed", { error: String(error) }),
+      );
+    },
+    [],
+  );
   const [delegationReceipts, setDelegationReceipts] = React.useState<PetDelegationReceiptGroup[]>(
     [],
   );

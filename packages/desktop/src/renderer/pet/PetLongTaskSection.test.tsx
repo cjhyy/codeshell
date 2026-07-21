@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PetLongTask } from "../../preload/types";
-import { isLongTaskDetailCollapsible, PetLongTaskCard } from "./PetLongTaskSection";
+import { DialogProvider } from "../ui/DialogProvider";
+import {
+  isLongTaskDetailCollapsible,
+  PetLongTaskCard,
+  PetLongTaskCleanupButton,
+} from "./PetLongTaskSection";
 
 function task(status: PetLongTask["status"]): PetLongTask {
   return {
@@ -79,5 +84,17 @@ describe("PetLongTaskCard", () => {
     expect(html).toContain("请确认</h1>");
     expect(html).toContain('data-pet-long-task-detail="expanded"');
     expect(html).not.toContain("展开完整结果");
+  });
+
+  test("offers a confirmed bulk cleanup for completed task records", () => {
+    const html = renderToStaticMarkup(
+      <DialogProvider>
+        <PetLongTaskCleanupButton count={6} busy={false} onClear={async () => true} />
+      </DialogProvider>,
+    );
+
+    expect(html).toContain('data-pet-long-task-cleanup="completed"');
+    expect(html).toContain("清理已完成（6）");
+    expect(html).not.toContain('disabled=""');
   });
 });

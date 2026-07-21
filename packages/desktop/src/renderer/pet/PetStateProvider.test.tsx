@@ -61,6 +61,7 @@ describe("PetStateProvider", () => {
         ok: true,
         task: { ...task, status: action === "pause" ? "paused" : task.status },
       }),
+      clearCompletedLongTasks: async () => ({ revision: 3, observedAt: 40, tasks: [] }),
     };
     let latest: ReturnType<typeof usePetState> | undefined;
     function Consumer() {
@@ -96,6 +97,12 @@ describe("PetStateProvider", () => {
       await flushMicrotasks();
     });
     expect(controlResult).toMatchObject({ ok: true });
+    await act(async () => {
+      expect(await latest?.clearCompletedLongTasks()).toBe(true);
+      await flushMicrotasks();
+    });
+    expect(latest?.longTasks.tasks).toEqual([]);
+    expect(latest?.longTaskCleanupBusy).toBe(false);
     await act(async () => root.unmount());
     expect(taskListener).toBeUndefined();
   });

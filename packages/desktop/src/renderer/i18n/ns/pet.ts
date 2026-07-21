@@ -86,6 +86,11 @@ export const pet = {
         history: "事件记录",
         expandResult: "展开完整结果",
         collapseResult: "收起结果",
+        clearCompleted: "清理已完成（{count}）",
+        clearCompletedTitle: "清理已完成任务？",
+        clearCompletedConfirm:
+          "将永久清理 {count} 条已完成的长程任务记录。对应的工作会话不会被删除。",
+        clearCompletedAction: "清理",
         status: {
           queued: "排队中",
           running: "执行中",
@@ -322,6 +327,11 @@ export const pet = {
         history: "Event history",
         expandResult: "Expand full result",
         collapseResult: "Collapse result",
+        clearCompleted: "Clear completed ({count})",
+        clearCompletedTitle: "Clear completed tasks?",
+        clearCompletedConfirm:
+          "This permanently clears {count} completed long-task records. Their work sessions will not be deleted.",
+        clearCompletedAction: "Clear",
         status: {
           queued: "Queued",
           running: "Running",

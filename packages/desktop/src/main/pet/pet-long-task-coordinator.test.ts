@@ -265,6 +265,10 @@ describe("PetLongTaskCoordinator", () => {
       summary: "The cause is confirmed.",
     });
     expect(h.closed).toEqual([{ id: launch.taskId, status: "completed" }]);
+
+    const cleared = await h.coordinator.clearCompleted();
+    expect(cleared.tasks).toEqual([]);
+    expect(h.store.get(launch.taskId)).toBeUndefined();
   });
 
   test("recovers a missed ordinary completion from the durable projection", async () => {
