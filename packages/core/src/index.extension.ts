@@ -15,6 +15,7 @@ export type {
   SessionStatus,
   StreamEvent,
   TerminalReason,
+  TurnCompletionKind,
   TokenUsage,
   ToolCall,
   ToolDefinition,
@@ -48,9 +49,7 @@ export type {
 // backgroundJobRegistry are process-level singletons — identity must
 // stay consistent across entry points).
 export type { SessionWorkspace } from "./types.js";
-export {
-  registerCapability,
-} from "./capabilities/index.js";
+export { registerCapability } from "./capabilities/index.js";
 export type {
   CapabilityArtifactDetector,
   CapabilityDynamicContextProvider,

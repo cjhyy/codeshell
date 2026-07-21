@@ -6,16 +6,24 @@
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §7.
  */
 import { describe, test, expect } from "bun:test";
-import { upsertCatalogEntry } from "./upsert.js";
+import { upsertCatalogEntry, upsertModelPreset } from "./upsert.js";
 import type { CatalogEntry } from "./types.js";
 
 const A: CatalogEntry = {
-  id: "prov-a", tag: "text", adapterKind: "openai", displayName: "A",
-  description: "x", defaultBaseUrl: "https://a/v1",
+  id: "prov-a",
+  tag: "text",
+  adapterKind: "openai",
+  displayName: "A",
+  description: "x",
+  defaultBaseUrl: "https://a/v1",
 };
 const B: CatalogEntry = {
-  id: "prov-b", tag: "text", adapterKind: "openai", displayName: "B",
-  description: "y", defaultBaseUrl: "https://b/v1",
+  id: "prov-b",
+  tag: "text",
+  adapterKind: "openai",
+  displayName: "B",
+  description: "y",
+  defaultBaseUrl: "https://b/v1",
 };
 
 describe("upsertCatalogEntry", () => {
@@ -42,5 +50,31 @@ describe("upsertCatalogEntry", () => {
     const input = [A];
     upsertCatalogEntry(input, B);
     expect(input).toEqual([A]);
+  });
+});
+
+describe("upsertModelPreset", () => {
+  test("appends a new model without changing existing presets", () => {
+    const existing = [{ value: "model-a", label: "A" }];
+    expect(upsertModelPreset(existing, { value: "model-b", label: "B" })).toEqual([
+      { value: "model-a", label: "A" },
+      { value: "model-b", label: "B" },
+    ]);
+    expect(existing).toEqual([{ value: "model-a", label: "A" }]);
+  });
+
+  test("updates an existing model by value without duplicating it", () => {
+    expect(
+      upsertModelPreset(
+        [
+          { value: "model-a", label: "Old" },
+          { value: "model-b", label: "B" },
+        ],
+        { value: "model-a", label: "New" },
+      ),
+    ).toEqual([
+      { value: "model-a", label: "New" },
+      { value: "model-b", label: "B" },
+    ]);
   });
 });

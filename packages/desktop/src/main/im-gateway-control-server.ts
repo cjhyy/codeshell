@@ -34,10 +34,17 @@ export interface GatewayControlServerOptions {
 }
 
 export interface GatewayControlEventInput {
-  type: "tunnel.connected" | "tunnel.disconnected" | "tunnel.error";
+  type:
+    | "tunnel.connected"
+    | "tunnel.disconnected"
+    | "tunnel.error"
+    | "pet.task.completed"
+    | "pet.task.failed"
+    | "pet.task.cancelled";
   text: string;
   title?: string;
   button?: { text: string; url: string };
+  target?: { channel: string; target: string };
 }
 
 export interface GatewayControlEvent extends GatewayControlEventInput {

@@ -40,6 +40,7 @@ describe("registerPetIpc", () => {
           controlled = request;
           return { ok: false, code: "not-found", message: "gone" };
         },
+        clearCompleted: async () => ({ revision: 4, observedAt: 40, tasks: [] }),
         subscribe: (listener) => {
           taskListener = listener as typeof taskListener;
           return () => {};
@@ -68,6 +69,14 @@ describe("registerPetIpc", () => {
       taskId: "pet-task-0123456789abcdef01234567",
       action: "pause",
     });
+    expect(await handlers.get("pet:long-tasks-clear-completed")?.({})).toEqual({
+      revision: 4,
+      observedAt: 40,
+      tasks: [],
+    });
+    expect(() => handlers.get("pet:long-tasks-clear-completed")?.({}, { all: true })).toThrow(
+      "does not accept arguments",
+    );
     expect(() =>
       handlers.get("pet:long-task-control")?.({}, { taskId: "../../bad", action: "cancel" }),
     ).toThrow("invalid Pet long-task control");

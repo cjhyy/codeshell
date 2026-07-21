@@ -327,6 +327,83 @@ describe("ImGatewayService", () => {
     }
   });
 
+  test("starts configured channels automatically at Desktop launch", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-autostart-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: {
+          botToken: "test-token",
+          allowedChatIds: ["owner-chat"],
+          allowedUserIds: [],
+        },
+        desktop: {
+          autoLaunch: false,
+          descriptorPath: join(root, "missing-desktop-control.json"),
+        },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+          adapterRestartBaseMs: 5,
+          adapterRestartMaxMs: 5,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    if (process.platform !== "win32") chmodSync(configPath, 0o600);
+    let factoryCalls = 0;
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (config) => {
+        factoryCalls += 1;
+        return {
+          channel: config.channel,
+          run: async (_handler, signal) => {
+            if (signal.aborted) return;
+            await new Promise<void>((resolveDone) =>
+              signal.addEventListener("abort", () => resolveDone(), { once: true }),
+            );
+          },
+          send: async () => undefined,
+        };
+      },
+    });
+
+    try {
+      expect(await service.startConfiguredAtLaunch()).toMatchObject({
+        running: true,
+        channels: ["telegram"],
+      });
+      expect(await service.startConfiguredAtLaunch()).toMatchObject({ running: true });
+      expect(factoryCalls).toBe(1);
+    } finally {
+      await service.dispose();
+    }
+  });
+
+  test("keeps launch non-blocking when no channel is configured", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-autostart-empty-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(configPath, JSON.stringify({ telegram: { enabled: false } }), { mode: 0o600 });
+    if (process.platform !== "win32") chmodSync(configPath, 0o600);
+    let factoryCalls = 0;
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async () => {
+        factoryCalls += 1;
+        throw new Error("disabled channels must not start");
+      },
+    });
+
+    expect(await service.startConfiguredAtLaunch()).toMatchObject({
+      running: false,
+      channels: [],
+    });
+    expect(factoryCalls).toBe(0);
+  });
+
   test("captures bounded message previews around replies", async () => {
     const activity: ImGatewayActivity[] = [];
     const sent: string[] = [];

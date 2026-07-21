@@ -17,6 +17,7 @@ import {
   renameSessionLocal,
   saveTranscript,
   setActiveSession,
+  setSessionPinnedLocal,
   upsertImportedSession,
   type SessionIndex,
   type SessionSummary,
@@ -232,6 +233,14 @@ export function useSessionNavigation({
     }));
   };
 
+  const pinSession = (projectId: string | null, sessionId: string, pinned: boolean): void => {
+    const next = setSessionPinnedLocal(projectId, sessionId, pinned);
+    setSessionIndices((prev) => ({
+      ...prev,
+      [projectBucketSegment(projectId)]: next,
+    }));
+  };
+
   const setSessionArchived = async (
     projectId: string | null,
     sessionId: string,
@@ -388,6 +397,7 @@ export function useSessionNavigation({
     handleNewConversation: () => resetDraft(activeProjectId, false),
     handleSelectSession: selectSession,
     handleRenameSession: renameSession,
+    handlePinSession: pinSession,
     handleArchiveSession: setSessionArchived,
     handleDeleteSession: deleteSession,
     handleOpenAutomationRunSession: openAutomationRunSession,

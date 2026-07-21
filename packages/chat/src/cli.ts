@@ -89,22 +89,17 @@ async function main(args = process.argv.slice(2)): Promise<void> {
       `[code-shell-chat] gateway 已启动：${config.channels.map(({ channel }) => channel).join(", ")}`,
     );
     const gatewayTask = gateway.run(shutdown.signal);
-    const notificationTask =
-      config.notifications.length > 0
-        ? desktop.watchEvents(
-            shutdown.signal,
-            createDesktopNotificationHandler(adapters, config.notifications),
-            {
-              checkpointPath: config.runtime.eventCursorPath,
-              onError: (error) =>
-                console.error(
-                  `[code-shell-chat] Desktop 通知等待重试：${error instanceof Error ? error.message : String(error)}`,
-                ),
-            },
-          )
-        : new Promise<void>((resolveDone) =>
-            shutdown.signal.addEventListener("abort", () => resolveDone(), { once: true }),
-          );
+    const notificationTask = desktop.watchEvents(
+      shutdown.signal,
+      createDesktopNotificationHandler(adapters, config.notifications),
+      {
+        checkpointPath: config.runtime.eventCursorPath,
+        onError: (error) =>
+          console.error(
+            `[code-shell-chat] Desktop 通知等待重试：${error instanceof Error ? error.message : String(error)}`,
+          ),
+      },
+    );
     await Promise.all([gatewayTask, notificationTask]);
   } finally {
     shutdown.abort();

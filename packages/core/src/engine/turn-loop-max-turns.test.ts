@@ -137,6 +137,28 @@ const summaryResp = (): LLMResponse => ({
 });
 
 describe("TurnLoop maxTurns ceiling (§4.3)", () => {
+  it("yields after an async tool handoff instead of issuing another model request", async () => {
+    const { deps, modelCalls } = makeDeps([toolResp(), summaryResp()]);
+    let pending = true;
+    deps.peekToolRunYield = () => (pending ? "background_notification" : undefined);
+    deps.consumeToolRunYield = () => {
+      if (!pending) return undefined;
+      pending = false;
+      return "background_notification";
+    };
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+    }).run([{ role: "user", content: "delegate it" }]);
+
+    expect(modelCalls()).toBe(1);
+    expect(result).toMatchObject({
+      reason: "completed",
+      completionKind: "background_wait",
+    });
+  });
+
   it("stops at maxTurns, makes a final summary call, returns reason 'max_turns'", async () => {
     const config: TurnLoopConfig = { maxTurns: 3, maxToolCallsPerTurn: 10 };
     // The model NEVER stops on its own — it asks for a tool on every one of the

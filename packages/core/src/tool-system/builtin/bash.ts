@@ -114,7 +114,9 @@ export async function bashTool(
   // (§难点5: that loop only looks at asyncAgentRegistry).
   if (args.run_in_background === true) {
     const backgroundResult = runInBackground(command, ctx);
-    return backgroundResult.startsWith("Error:") ? fail(backgroundResult) : mark(backgroundResult);
+    if (backgroundResult.startsWith("Error:")) return fail(backgroundResult);
+    ctx?.runYield?.request("background_notification");
+    return mark(backgroundResult);
   }
 
   // A6: lifecycle (spawn, kill cascade, IO drain, byte cap, abort/timeout)

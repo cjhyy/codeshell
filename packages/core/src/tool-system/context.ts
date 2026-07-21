@@ -225,6 +225,16 @@ export interface ExternalFileChangesRecord {
   originClientMessageId?: string;
 }
 
+export type ToolRunYieldReason = "background_notification";
+
+/** Run-scoped handoff from a trusted tool to the owning turn loop. */
+export interface ToolRunYieldController {
+  request(reason: ToolRunYieldReason): void;
+  /** Inspect without clearing so the loop can prioritize an accepted steer. */
+  peek?(): ToolRunYieldReason | undefined;
+  consume(): ToolRunYieldReason | undefined;
+}
+
 export interface ToolContext {
   /** Active working directory for this Engine. */
   cwd: string;
@@ -337,6 +347,12 @@ export interface ToolContext {
    * launched it has already returned.
    */
   recordExternalFileChanges?: (record: ExternalFileChangesRecord) => void;
+  /**
+   * A tool that launched asynchronous work can yield the current model loop.
+   * The completion notification will wake the same Session later, avoiding
+   * model-authored status polling while no new evidence can exist yet.
+   */
+  runYield?: ToolRunYieldController;
   /**
    * Skill names the user has hidden from the LLM (full namespaced names
    * for plugin skills, e.g. "docs:pdf"). The skill builtin tool uses

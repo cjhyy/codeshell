@@ -8,7 +8,14 @@ import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
 import { openPetTarget } from "./pet/petNavigation";
 import { PetChatHost } from "./pet/PetChatHost";
+import { PetSettingsPage } from "./pet/PetSettingsPage";
 import { PetPeekHost } from "./pet/PetPeekHost";
+import {
+  PET_WIDGET_RECEIPTS_KEY,
+  initialPetWidgetReceiptState,
+  markPetWidgetCompletionsSeen,
+  parsePetWidgetReceiptState,
+} from "./pet/petWidgetActivity";
 import { TopBar } from "./TopBar";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 import { summarizeLiveActivity } from "./topbar/liveActivity";
@@ -154,6 +161,9 @@ function App() {
     surfaceablePendingCount,
     peeks: petPeeks,
     removePeek,
+    longTasks: petLongTasks,
+    chatModelKey: petChatModelKey,
+    setChatModelKey: setPetChatModelKey,
   } = useOptionalPetState();
   // Pet visibility is process-scoped and mirrored by the desktop host.
   const [petWidgetVisible, setPetWidgetVisible] = useState(false);
@@ -857,6 +867,30 @@ function App() {
     // Keep the indicator lit so the user sees work is still happening. (#3)
     relayingBuckets.has(activeBucket);
 
+  const markViewedPetCompletions = useCallback(
+    (sessionId?: string): void => {
+      const projection = petState.projection;
+      if (!projection) return;
+      try {
+        const current =
+          parsePetWidgetReceiptState(localStorage.getItem(PET_WIDGET_RECEIPTS_KEY)) ??
+          initialPetWidgetReceiptState(projection);
+        const next = markPetWidgetCompletionsSeen(
+          current,
+          projection,
+          petLongTasks,
+          sessionId ? new Set([sessionId]) : undefined,
+        );
+        if (next !== current) {
+          localStorage.setItem(PET_WIDGET_RECEIPTS_KEY, JSON.stringify(next));
+        }
+      } catch {
+        // Receipt sync is best-effort; viewing the Session must still succeed.
+      }
+    },
+    [petLongTasks, petState.projection],
+  );
+
   const handleOpenPetTarget = async (request: PetOpenSessionRequest): Promise<void> => {
     await openPetTarget(window.codeshell.pet, request, {
       select: async (target) => {
@@ -868,6 +902,7 @@ function App() {
           updatedAt: target.updatedAt,
           origin: target.origin,
         });
+        markViewedPetCompletions(request.agentSessionId);
       },
       onStale: () => toast({ message: t("pet.navigation.stale"), variant: "default" }),
       onNotFound: () => toast({ message: t("pet.navigation.notFound"), variant: "error" }),
@@ -936,16 +971,17 @@ function App() {
     });
   }, []);
 
-  const togglePetWidget = (): void => {
+  const setPetWidgetVisibility = useCallback((next: boolean): void => {
     const pet = window.codeshell.pet;
     if (!pet) return;
-    const next = !petWidgetVisible;
     setPetWidgetVisible(next);
     void pet.setWidgetVisible(next).catch((error) => {
       setPetWidgetVisible((current) => (current === next ? !next : current));
       window.codeshell.log("pet.widget.visibility.failed", { error: String(error) });
     });
-  };
+  }, []);
+
+  const togglePetWidget = (): void => setPetWidgetVisibility(!petWidgetVisible);
 
   const { diskSessionCatalog, loadDiskSessionCatalogPage } = useAutomationSessionImport({
     sessionIndicesRef,
@@ -1150,6 +1186,7 @@ function App() {
     handleNewConversation,
     handleSelectSession,
     handleRenameSession,
+    handlePinSession,
     handleArchiveSession,
     handleDeleteSession,
     handleOpenAutomationRunSession,
@@ -1844,7 +1881,24 @@ function App() {
   // shared flag so the expensive session tree stays mounted but hidden.
   const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
   const isPetView = view.viewMode === "pet";
+  const isPetSettingsView = view.viewMode === "pet_settings";
+  const isPetSurface = isPetView || isPetSettingsView;
   const isChatView = view.viewMode === "chat";
+  useEffect(() => {
+    if (!isPetView) return;
+    const markIfVisible = (): void => {
+      if (document.visibilityState === "visible" && document.hasFocus()) {
+        markViewedPetCompletions();
+      }
+    };
+    markIfVisible();
+    window.addEventListener("focus", markIfVisible);
+    document.addEventListener("visibilitychange", markIfVisible);
+    return () => {
+      window.removeEventListener("focus", markIfVisible);
+      document.removeEventListener("visibilitychange", markIfVisible);
+    };
+  }, [isPetView, markViewedPetCompletions]);
   // Re-render when pages register/unregister; builtin-only today, but the
   // seam is what plugin pages will use.
   React.useSyncExternalStore(
@@ -1867,17 +1921,17 @@ function App() {
       >
         <div className="shrink-0">
           <TopBar
-            projectName={isPetView ? null : (activeProject?.name ?? null)}
-            projectPath={isPetView ? null : (activeProject?.path ?? null)}
-            sessionId={isPetView ? null : engineSessionIdForActive()}
-            sessionTitle={isPetView ? null : sessionTitleForTop}
-            workspaceProfile={isPetView ? null : activeSessionSummary?.workspaceProfile}
-            workspaceProfiles={isPetView ? [] : sessionWorkspaceProfiles}
+            projectName={isPetSurface ? null : (activeProject?.name ?? null)}
+            projectPath={isPetSurface ? null : (activeProject?.path ?? null)}
+            sessionId={isPetSurface ? null : engineSessionIdForActive()}
+            sessionTitle={isPetSurface ? null : sessionTitleForTop}
+            workspaceProfile={isPetSurface ? null : activeSessionSummary?.workspaceProfile}
+            workspaceProfiles={isPetSurface ? [] : sessionWorkspaceProfiles}
             workspaceProfileSwitchDisabled={busy || !isChatView}
             onWorkspaceProfileChange={(profileName) => {
               void handleSessionWorkspaceProfileChange(profileName);
             }}
-            busy={isPetView ? false : busy}
+            busy={isPetSurface ? false : busy}
             sidebarCollapsed={view.sidebarCollapsed}
             onToggleSidebar={toggleSidebar}
             panelOpen={activePanelState.open}
@@ -1891,14 +1945,14 @@ function App() {
             // but have no panel area, so also gate on the chat viewMode — otherwise
             // the toggle wrongly shows on those pages whenever a session is active.
             panelAvailable={activeSessionId !== null && isChatView}
-            statusAvailable={!isPetView}
+            statusAvailable={!isPetSurface}
             contextSelectionAvailable={
               activeSessionId !== null && isChatView && !busy && !awaitingHydration
             }
             onSelectContext={requestContextSelection}
-            activity={isPetView ? undefined : liveActivity}
-            tasks={isPetView ? null : latestTasks}
-            activeGoal={isPetView ? null : state.activeGoal}
+            activity={isPetSurface ? undefined : liveActivity}
+            tasks={isPetSurface ? null : latestTasks}
+            activeGoal={isPetSurface ? null : state.activeGoal}
             onUpdateGoal={handleUpdateGoal}
             onGoalPausedChange={handleGoalPausedChange}
             onDeleteGoal={handleDeleteGoal}
@@ -1948,6 +2002,7 @@ function App() {
                   void loadDiskSessionCatalogPage(diskSessionCatalog.nextCursor ?? undefined)
                 }
                 onRenameSession={handleRenameSession}
+                onPinSession={handlePinSession}
                 onArchiveSession={handleArchiveSession}
                 onDeleteSession={handleDeleteSession}
                 activeProjectPath={activeProject?.path ?? null}
@@ -1962,7 +2017,7 @@ function App() {
             <AppMainView
               lifecycle={isChatView ? lifecycle : null}
               searchLayer={
-                !isPetView ? (
+                !isPetSurface ? (
                   <SearchBar
                     open={searchOpen}
                     value={searchQuery}
@@ -1987,8 +2042,21 @@ function App() {
                     defaultModelKey={defaultActiveModelKey}
                     modelOptions={modelOptions}
                     onOpenSession={(request) => void handleOpenPetTarget(request)}
+                    onOpenSettings={() => setViewMode("pet_settings")}
                   />
                 </PetPage>
+              ) : isPetSettingsView ? (
+                <PetSettingsPage
+                  activeModelKey={petChatModelKey ?? defaultActiveModelKey}
+                  modelOptions={modelOptions}
+                  hasModelOverride={petChatModelKey !== null}
+                  widgetVisible={petWidgetVisible}
+                  onSelectModel={(option) => setPetChatModelKey(option.key)}
+                  onResetModel={() => setPetChatModelKey(null)}
+                  onWidgetVisibleChange={setPetWidgetVisibility}
+                  onOpenConnections={() => setViewMode("credentials")}
+                  onBack={openPetPage}
+                />
               ) : registeredPageRender ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   {registeredPageRender({ runsInitialRunId })}

@@ -9,6 +9,7 @@
 
 export const PET_LONG_TASK_SCHEMA_VERSION = 1 as const;
 export const MAX_PET_LONG_TASK_EVENTS = 120;
+export const MAX_PET_LONG_TASK_SUMMARY_LENGTH = 8_000;
 
 export type PetLongTaskStatus =
   | "queued"
@@ -27,11 +28,20 @@ export type PetLongTaskPhase =
   | "waiting-worker"
   | "finalizing";
 
+export type PetLongTaskVerificationMode = "turn" | "goal";
+
 export interface PetLongTaskArtifact {
   kind: "session" | "result" | "file" | "url";
   label: string;
   /** Opaque host reference. The Pet package never dereferences it. */
   reference: string;
+}
+
+/** Host-owned delivery route for a proactive completion receipt. */
+export interface PetLongTaskCompletionTarget {
+  kind: "im-gateway";
+  channel: string;
+  target: string;
 }
 
 export type PetLongTaskEventKind =
@@ -43,10 +53,13 @@ export type PetLongTaskEventKind =
   | "resumed"
   | "retrying"
   | "checkpoint"
+  | "verification-changed"
   | "interrupted"
   | "completed"
   | "failed"
   | "cancelled"
+  | "closure-decided"
+  | "continuation-started"
   | "closure-recorded";
 
 export interface PetLongTaskEvent {
@@ -68,6 +81,11 @@ export interface PetLongTask {
   objective: string;
   workspacePath: string | null;
   sessionId: string;
+  /** Ordinary final response, or persistent Goal verdict, required for closure. */
+  verificationMode: PetLongTaskVerificationMode;
+  completionTarget?: PetLongTaskCompletionTarget;
+  /** Number of terminal-result decisions Mimi has autonomously continued. */
+  continuationDepth?: number;
   status: PetLongTaskStatus;
   phase: PetLongTaskPhase;
   attempt: number;
@@ -78,12 +96,28 @@ export interface PetLongTask {
   completedAt?: number;
   /** The current attempt's terminal outcome reached durable Pet work memory. */
   closureRecordedAt?: number;
+  /** Durable Mimi closure decision, persisted before any continuation side effect. */
+  closureDecision?: PetLongTaskClosureDecision;
   summary?: string;
   waitingFor?: string;
   nextAction?: string;
   lastError?: string;
   artifacts: PetLongTaskArtifact[];
   events: PetLongTaskEvent[];
+}
+
+export interface PetLongTaskContinuationDecision {
+  clientMessageId: string;
+  objective: string;
+  workspacePath: string | null;
+}
+
+export interface PetLongTaskClosureDecision {
+  key: string;
+  text: string;
+  decidedAt: number;
+  continuation?: PetLongTaskContinuationDecision;
+  launch?: { sessionId: string; taskId?: string; at: number };
 }
 
 export interface PetLongTaskSnapshot {
@@ -109,6 +143,9 @@ export interface CreatePetLongTaskInput {
   objective: string;
   workspacePath: string | null;
   sessionId: string;
+  verificationMode?: PetLongTaskVerificationMode;
+  completionTarget?: PetLongTaskCompletionTarget;
+  continuationDepth?: number;
   at: number;
 }
 
@@ -126,6 +163,7 @@ export type PetLongTaskTransition =
       nextAction?: string;
       artifacts?: PetLongTaskArtifact[];
     }
+  | { kind: "verification-changed"; at: number; mode: PetLongTaskVerificationMode }
   | { kind: "interrupted"; at: number; reason: string }
   | {
       kind: "completed";
@@ -135,6 +173,20 @@ export type PetLongTaskTransition =
     }
   | { kind: "failed"; at: number; error: string; summary?: string }
   | { kind: "cancelled"; at: number; reason?: string }
+  | {
+      kind: "closure-decided";
+      at: number;
+      key: string;
+      text: string;
+      continuation?: PetLongTaskContinuationDecision;
+    }
+  | {
+      kind: "continuation-started";
+      at: number;
+      key: string;
+      sessionId: string;
+      taskId?: string;
+    }
   | { kind: "closure-recorded"; at: number };
 
 const TERMINAL = new Set<PetLongTaskStatus>(["completed", "failed", "cancelled"]);
@@ -143,6 +195,23 @@ function bounded(value: string | undefined, maximum: number): string | undefined
   const normalized = value?.replace(/\s+/gu, " ").trim();
   if (!normalized) return undefined;
   return normalized.length > maximum ? `${normalized.slice(0, maximum - 1)}…` : normalized;
+}
+
+function normalizeCompletionTarget(value: unknown): PetLongTaskCompletionTarget | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const channel = typeof record.channel === "string" ? record.channel.trim().toLowerCase() : "";
+  const target = typeof record.target === "string" ? record.target.trim() : "";
+  if (
+    record.kind !== "im-gateway" ||
+    !/^[a-z0-9_-]{1,32}$/u.test(channel) ||
+    !target ||
+    target.length > 4_096 ||
+    /[\u0000-\u001f\u007f]/u.test(target)
+  ) {
+    return undefined;
+  }
+  return { kind: "im-gateway", channel, target };
 }
 
 function normalizeArtifacts(
@@ -198,6 +267,13 @@ export function createPetLongTask(input: CreatePetLongTaskInput): PetLongTask {
     throw new Error("invalid Pet long-task identity or objective");
   }
   const workspacePath = input.workspacePath ? bounded(input.workspacePath, 4_096) : null;
+  const completionTarget = normalizeCompletionTarget(input.completionTarget);
+  const continuationDepth =
+    typeof input.continuationDepth === "number" &&
+    Number.isSafeInteger(input.continuationDepth) &&
+    input.continuationDepth > 0
+      ? input.continuationDepth
+      : 0;
   const created: PetLongTaskEvent = {
     id: `${id}:1`,
     sequence: 1,
@@ -214,6 +290,9 @@ export function createPetLongTask(input: CreatePetLongTaskInput): PetLongTask {
     objective,
     workspacePath: workspacePath ?? null,
     sessionId,
+    verificationMode: input.verificationMode === "goal" ? "goal" : "turn",
+    ...(completionTarget ? { completionTarget } : {}),
+    ...(continuationDepth > 0 ? { continuationDepth } : {}),
     status: "queued",
     phase: "planning",
     attempt: 1,
@@ -236,10 +315,36 @@ export function transitionPetLongTask(
   current: PetLongTask,
   transition: PetLongTaskTransition,
 ): PetLongTask {
+  if (transition.kind === "closure-decided" && current.closureDecision?.key === transition.key) {
+    return current;
+  }
+  if (
+    transition.kind === "continuation-started" &&
+    current.closureDecision?.key === transition.key &&
+    current.closureDecision.launch
+  ) {
+    return current;
+  }
+  // Stream and projection observations are handled on separate async paths.
+  // An older projection can therefore arrive after a newer assistant checkpoint;
+  // never let that stale progress erase the final result we will notify with.
+  if (
+    transition.at < current.updatedAt &&
+    (transition.kind === "started" ||
+      transition.kind === "progress" ||
+      transition.kind === "waiting" ||
+      transition.kind === "resumed" ||
+      transition.kind === "checkpoint" ||
+      transition.kind === "interrupted")
+  ) {
+    return current;
+  }
   if (
     TERMINAL.has(current.status) &&
     transition.kind !== "retrying" &&
     transition.kind !== "cancelled" &&
+    transition.kind !== "closure-decided" &&
+    transition.kind !== "continuation-started" &&
     transition.kind !== "closure-recorded"
   ) {
     return current;
@@ -247,6 +352,8 @@ export function transitionPetLongTask(
   if (
     current.status === "cancelled" &&
     transition.kind !== "retrying" &&
+    transition.kind !== "closure-decided" &&
+    transition.kind !== "continuation-started" &&
     transition.kind !== "closure-recorded"
   ) {
     return current;
@@ -281,7 +388,7 @@ export function transitionPetLongTask(
       Object.assign(next, {
         status: "running",
         phase: transition.phase,
-        summary: bounded(transition.summary, 2_000),
+        summary: bounded(transition.summary, MAX_PET_LONG_TASK_SUMMARY_LENGTH),
         waitingFor: undefined,
         nextAction: "Continue until the objective is verified complete",
       });
@@ -347,6 +454,7 @@ export function transitionPetLongTask(
         attempt: current.attempt + 1,
         completedAt: undefined,
         closureRecordedAt: undefined,
+        closureDecision: undefined,
         waitingFor: undefined,
         nextAction: "Retry from the existing work session and checkpoint",
         lastError: undefined,
@@ -361,7 +469,7 @@ export function transitionPetLongTask(
       break;
     case "checkpoint":
       Object.assign(next, {
-        summary: bounded(transition.summary, 2_000),
+        summary: bounded(transition.summary, MAX_PET_LONG_TASK_SUMMARY_LENGTH),
         nextAction: bounded(transition.nextAction, 500) ?? current.nextAction,
         artifacts: mergeArtifacts(current.artifacts, transition.artifacts),
       });
@@ -372,6 +480,18 @@ export function transitionPetLongTask(
         message: next.summary,
         nextAction: next.nextAction,
         artifacts: transition.artifacts,
+      };
+      break;
+    case "verification-changed":
+      Object.assign(next, { verificationMode: transition.mode });
+      event = {
+        kind: transition.kind,
+        at: transition.at,
+        phase: next.phase,
+        message:
+          transition.mode === "goal"
+            ? "Completion now requires a verified Goal verdict"
+            : "Completion now follows the ordinary Work Session result",
       };
       break;
     case "interrupted":
@@ -394,7 +514,10 @@ export function transitionPetLongTask(
         status: "completed",
         phase: "finalizing",
         completedAt: transition.at,
-        summary: bounded(transition.summary, 2_000) ?? current.summary ?? "Objective completed",
+        summary:
+          bounded(transition.summary, MAX_PET_LONG_TASK_SUMMARY_LENGTH) ??
+          current.summary ??
+          "Objective completed",
         waitingFor: undefined,
         nextAction: undefined,
         lastError: undefined,
@@ -413,7 +536,7 @@ export function transitionPetLongTask(
         status: "failed",
         phase: "finalizing",
         completedAt: transition.at,
-        summary: bounded(transition.summary, 2_000) ?? current.summary,
+        summary: bounded(transition.summary, MAX_PET_LONG_TASK_SUMMARY_LENGTH) ?? current.summary,
         waitingFor: undefined,
         nextAction: "Inspect the failure, then retry or cancel",
         lastError: bounded(transition.error, 2_000),
@@ -441,6 +564,72 @@ export function transitionPetLongTask(
         message: transition.reason ?? "Cancelled by user",
       };
       break;
+    case "closure-decided": {
+      const key = bounded(transition.key, 512);
+      const text = transition.text.trim().slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH);
+      if (!key || !text) return current;
+      const continuation = transition.continuation;
+      const normalizedContinuation = continuation
+        ? {
+            clientMessageId: continuation.clientMessageId.slice(0, 256),
+            objective: continuation.objective.trim().slice(0, 8_000),
+            workspacePath:
+              typeof continuation.workspacePath === "string"
+                ? continuation.workspacePath.slice(0, 4_096)
+                : null,
+          }
+        : undefined;
+      if (
+        normalizedContinuation &&
+        (!normalizedContinuation.clientMessageId || !normalizedContinuation.objective)
+      ) {
+        return current;
+      }
+      Object.assign(next, {
+        closureDecision: {
+          key,
+          text,
+          decidedAt: transition.at,
+          ...(normalizedContinuation ? { continuation: normalizedContinuation } : {}),
+        },
+      });
+      event = {
+        kind: transition.kind,
+        at: transition.at,
+        phase: current.phase,
+        message: normalizedContinuation
+          ? "Mimi recorded a durable continuation decision"
+          : "Mimi recorded a durable closure reply",
+      };
+      break;
+    }
+    case "continuation-started": {
+      if (
+        current.closureDecision?.key !== transition.key ||
+        !current.closureDecision.continuation
+      ) {
+        return current;
+      }
+      const sessionId = transition.sessionId.trim().slice(0, 256);
+      if (!sessionId) return current;
+      Object.assign(next, {
+        closureDecision: {
+          ...current.closureDecision,
+          launch: {
+            sessionId,
+            ...(transition.taskId ? { taskId: transition.taskId.slice(0, 128) } : {}),
+            at: transition.at,
+          },
+        },
+      });
+      event = {
+        kind: transition.kind,
+        at: transition.at,
+        phase: current.phase,
+        message: "The durable continuation task was started",
+      };
+      break;
+    }
     case "closure-recorded":
       Object.assign(next, { closureRecordedAt: transition.at });
       event = {
@@ -490,10 +679,13 @@ function isEventKind(value: unknown): value is PetLongTaskEventKind {
       "resumed",
       "retrying",
       "checkpoint",
+      "verification-changed",
       "interrupted",
       "completed",
       "failed",
       "cancelled",
+      "closure-decided",
+      "continuation-started",
       "closure-recorded",
     ].includes(value)
   );
@@ -530,6 +722,79 @@ function parseEvent(value: unknown): PetLongTaskEvent | null {
   };
 }
 
+function parseClosureDecision(value: unknown): PetLongTaskClosureDecision | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.key !== "string" ||
+    !record.key.trim() ||
+    typeof record.text !== "string" ||
+    !record.text.trim() ||
+    typeof record.decidedAt !== "number" ||
+    !Number.isFinite(record.decidedAt)
+  ) {
+    return undefined;
+  }
+  let continuation: PetLongTaskContinuationDecision | undefined;
+  if (record.continuation !== undefined) {
+    if (
+      !record.continuation ||
+      typeof record.continuation !== "object" ||
+      Array.isArray(record.continuation)
+    ) {
+      return undefined;
+    }
+    const candidate = record.continuation as Record<string, unknown>;
+    if (
+      typeof candidate.clientMessageId !== "string" ||
+      !candidate.clientMessageId.trim() ||
+      typeof candidate.objective !== "string" ||
+      !candidate.objective.trim() ||
+      (candidate.workspacePath !== null && typeof candidate.workspacePath !== "string")
+    ) {
+      return undefined;
+    }
+    continuation = {
+      clientMessageId: candidate.clientMessageId.slice(0, 256),
+      objective: candidate.objective.trim().slice(0, 8_000),
+      workspacePath:
+        typeof candidate.workspacePath === "string"
+          ? candidate.workspacePath.slice(0, 4_096)
+          : null,
+    };
+  }
+  let launch: PetLongTaskClosureDecision["launch"];
+  if (record.launch !== undefined) {
+    if (!record.launch || typeof record.launch !== "object" || Array.isArray(record.launch)) {
+      return undefined;
+    }
+    const candidate = record.launch as Record<string, unknown>;
+    if (
+      typeof candidate.sessionId !== "string" ||
+      !candidate.sessionId.trim() ||
+      typeof candidate.at !== "number" ||
+      !Number.isFinite(candidate.at) ||
+      (candidate.taskId !== undefined && typeof candidate.taskId !== "string")
+    ) {
+      return undefined;
+    }
+    launch = {
+      sessionId: candidate.sessionId.slice(0, 256),
+      ...(typeof candidate.taskId === "string" && candidate.taskId
+        ? { taskId: candidate.taskId.slice(0, 128) }
+        : {}),
+      at: candidate.at,
+    };
+  }
+  return {
+    key: record.key.trim().slice(0, 512),
+    text: record.text.trim().slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH),
+    decidedAt: record.decidedAt,
+    ...(continuation ? { continuation } : {}),
+    ...(launch ? { launch } : {}),
+  };
+}
+
 /** Defensive parser used by durable hosts. Invalid rows are dropped independently. */
 export function parsePetLongTask(value: unknown): PetLongTask | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -563,6 +828,14 @@ export function parsePetLongTask(value: unknown): PetLongTask | null {
         .filter((event): event is PetLongTaskEvent => event !== null)
         .slice(-MAX_PET_LONG_TASK_EVENTS)
     : [];
+  const completionTarget = normalizeCompletionTarget(record.completionTarget);
+  const continuationDepth =
+    typeof record.continuationDepth === "number" &&
+    Number.isSafeInteger(record.continuationDepth) &&
+    record.continuationDepth > 0
+      ? record.continuationDepth
+      : 0;
+  const closureDecision = parseClosureDecision(record.closureDecision);
   return {
     schemaVersion: PET_LONG_TASK_SCHEMA_VERSION,
     id: record.id.slice(0, 128),
@@ -571,6 +844,11 @@ export function parsePetLongTask(value: unknown): PetLongTask | null {
     workspacePath:
       typeof record.workspacePath === "string" ? record.workspacePath.slice(0, 4_096) : null,
     sessionId: record.sessionId.slice(0, 256),
+    // Rows written before verificationMode existed were all launched with a
+    // forced Goal. Preserve that meaning while new rows default to turn mode.
+    verificationMode: record.verificationMode === "turn" ? "turn" : "goal",
+    ...(completionTarget ? { completionTarget } : {}),
+    ...(continuationDepth > 0 ? { continuationDepth } : {}),
     status: record.status,
     phase: record.phase,
     attempt: record.attempt,
@@ -582,7 +860,10 @@ export function parsePetLongTask(value: unknown): PetLongTask | null {
     ...(typeof record.closureRecordedAt === "number"
       ? { closureRecordedAt: record.closureRecordedAt }
       : {}),
-    ...(typeof record.summary === "string" ? { summary: record.summary.slice(0, 2_000) } : {}),
+    ...(closureDecision ? { closureDecision } : {}),
+    ...(typeof record.summary === "string"
+      ? { summary: record.summary.slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH) }
+      : {}),
     ...(typeof record.waitingFor === "string"
       ? { waitingFor: record.waitingFor.slice(0, 500) }
       : {}),

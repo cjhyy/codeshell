@@ -29,7 +29,12 @@ import {
   type VideoProvider,
   type VideoProviderCreds,
 } from "./video-providers.js";
-import { getImageUploader, isHttpUrl, type ImageUploader, type UploaderCreds } from "./image-uploader.js";
+import {
+  getImageUploader,
+  isHttpUrl,
+  type ImageUploader,
+  type UploaderCreds,
+} from "./image-uploader.js";
 import { effectiveApiKey } from "./generate-image.js";
 import { getMergedCatalog, findCatalogEntry } from "../../model-catalog/index.js";
 import { genInstancesFromConnections } from "../../model-catalog/gen-connections.js";
@@ -111,16 +116,22 @@ export const generateVideoToolDef: ToolDefinition = {
         description: "Video provider kind to use. Defaults to the first configured video provider.",
       },
       model: { type: "string", description: "Video model id. Defaults to the provider's default." },
-      image: { type: "string", description: "Image URL (http/https) for image-to-video. When set, an image-to-video model is used." },
+      image: {
+        type: "string",
+        description:
+          "Image URL (http/https) for image-to-video. When set, an image-to-video model is used.",
+      },
       images: {
         type: "array",
         items: { type: "string" },
-        description: "Image URLs or local file paths for image/reference-to-video. 1 image → image-to-video; 2+ → reference-to-video (max 9). Local paths are auto-uploaded. Refer to them in prompt as @Image1, @Image2.",
+        description:
+          "Image URLs or local file paths for image/reference-to-video. 1 image → image-to-video; 2+ → reference-to-video (max 9). Local paths are auto-uploaded. Refer to them in prompt as @Image1, @Image2.",
       },
       videos: {
         type: "array",
         items: { type: "string" },
-        description: "Reference/continuation video URLs (http/https only — NOT local paths) for video extension. Forces reference-to-video (Seedance model required). Up to 3. Refer to them in prompt as @Video1, @Video2 (e.g. \"continue from @Video1\").",
+        description:
+          'Reference/continuation video URLs (http/https only — NOT local paths) for video extension. Forces reference-to-video (Seedance model required). Up to 3. Refer to them in prompt as @Video1, @Video2 (e.g. "continue from @Video1").',
       },
     },
     required: ["prompt"],
@@ -236,41 +247,54 @@ function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoPr
     ) as unknown as VideoInstance[];
     const def = (settings as { defaults?: { video?: string } }).defaults?.video;
     const usable = (p: VideoInstance): boolean => !!p.apiKey && getVideoProvider(p.kind) !== null;
-    const credsOf = (p: VideoInstance): VideoProviderCreds => ({ baseUrl: p.baseUrl, apiKey: p.apiKey! });
+    const credsOf = (p: VideoInstance): VideoProviderCreds => ({
+      baseUrl: p.baseUrl,
+      apiKey: p.apiKey!,
+    });
     if (preferKind) {
       const chosen = list.find((p) => (p.id === preferKind || p.kind === preferKind) && usable(p));
-      if (chosen) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+      if (chosen)
+        return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
       return null;
     }
     const preferred = def ? list.find((p) => p.id === def) : undefined;
     const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
-    if (chosen) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+    if (chosen)
+      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
     if (def || preferKind) return null;
   }
 
-  const videoGen = (settings as { videoGen?: { defaultProvider?: string; providers?: VideoInstance[] } }).videoGen;
+  const videoGen = (
+    settings as { videoGen?: { defaultProvider?: string; providers?: VideoInstance[] } }
+  ).videoGen;
   if (videoGen?.providers?.length) {
     const list = videoGen.providers;
     const usable = (p: VideoInstance): boolean =>
       !!effectiveApiKey(p, list) && getVideoProvider(p.kind) !== null;
-    const credsOf = (p: VideoInstance): VideoProviderCreds => ({ baseUrl: p.baseUrl, apiKey: effectiveApiKey(p, list)! });
+    const credsOf = (p: VideoInstance): VideoProviderCreds => ({
+      baseUrl: p.baseUrl,
+      apiKey: effectiveApiKey(p, list)!,
+    });
     if (preferKind) {
       const chosen = list.find((p) => (p.id === preferKind || p.kind === preferKind) && usable(p));
-      if (chosen) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+      if (chosen)
+        return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
       return null;
     }
     const preferred = videoGen.defaultProvider
       ? list.find((p) => p.id === videoGen.defaultProvider)
       : undefined;
     const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
-    if (chosen) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+    if (chosen)
+      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
     return null;
   }
   // Back-compat: scan legacy LLM providers[] for a video-capable kind. The
   // field was dropped from the schema; un-migrated settings.json still carry it
   // via .passthrough(), so read it through an inline cast.
   const legacyProviders =
-    (settings as { providers?: Array<{ kind: string; baseUrl: string; apiKey?: string }> }).providers ?? [];
+    (settings as { providers?: Array<{ kind: string; baseUrl: string; apiKey?: string }> })
+      .providers ?? [];
   const kinds = preferKind ? [preferKind] : VIDEO_PROVIDER_KINDS;
   for (const kind of kinds) {
     const provider = legacyProviders.find((p) => p.kind === kind);
@@ -281,7 +305,10 @@ function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoPr
   return null;
 }
 
-export function __resolveVideoProviderForTests(cwd: string, preferKind?: string): ResolvedVideoProvider | null {
+export function __resolveVideoProviderForTests(
+  cwd: string,
+  preferKind?: string,
+): ResolvedVideoProvider | null {
   return resolveVideoProvider(cwd, preferKind);
 }
 
@@ -297,9 +324,10 @@ export async function generateVideoTool(
   const sessionId = ctx?.sessionId;
   const preferKind = typeof args.provider === "string" && args.provider ? args.provider : undefined;
   const overrideModel = typeof args.model === "string" && args.model ? args.model : undefined;
-  const image = typeof args.image === "string" && args.image
-    ? __resolveLocalImageInputForTests(args.image, cwd)
-    : undefined;
+  const image =
+    typeof args.image === "string" && args.image
+      ? __resolveLocalImageInputForTests(args.image, cwd)
+      : undefined;
   const imagesArg = Array.isArray(args.images)
     ? (args.images as unknown[])
         .filter((x): x is string => typeof x === "string")
@@ -344,10 +372,24 @@ export async function generateVideoTool(
   // Normalize image inputs (local paths → uploaded URLs) before submit. The
   // provider only ever receives URLs and routes t2v/i2v/ref2v by count.
   const uploader = getImageUploader(kind) ?? getImageUploader("fal")!;
-  const norm = await __normalizeImagesForTests(imagesArg, image, uploader, { baseUrl: creds.baseUrl, apiKey: creds.apiKey }, ctx?.signal);
+  const norm = await __normalizeImagesForTests(
+    imagesArg,
+    image,
+    uploader,
+    { baseUrl: creds.baseUrl, apiKey: creds.apiKey },
+    ctx?.signal,
+  );
   if (!norm.ok) return `Error: ${norm.error}`;
 
-  const submit = await adapter.submit({ prompt, model, image: undefined, images: norm.urls, videos: videosArg, creds, signal: ctx?.signal });
+  const submit = await adapter.submit({
+    prompt,
+    model,
+    image: undefined,
+    images: norm.urls,
+    videos: videosArg,
+    creds,
+    signal: ctx?.signal,
+  });
   if (!submit.ok) {
     return `Error submitting video job: ${submit.error}`;
   }
@@ -402,6 +444,7 @@ export async function generateVideoTool(
       clearTimeout(totalTimer);
       ctx?.signal?.removeEventListener("abort", onTurnAbort);
     });
+  ctx?.runYield?.request("background_notification");
 
   return [
     `Video generation started in the background.`,

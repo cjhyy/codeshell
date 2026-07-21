@@ -22,5 +22,20 @@ describe("PetPage", () => {
     expect(html).toContain(
       "@min-[1100px]/pet-page:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]",
     );
+    expect(html).toContain("@min-[1100px]/pet-page:overflow-hidden");
+  });
+
+  test("shrinks the chat row before the single-column page needs to scroll", () => {
+    const html = renderToStaticMarkup(
+      <PetPage>
+        <div>work pane</div>
+        <div>chat pane</div>
+      </PetPage>,
+    );
+
+    expect(html).toContain("h-full min-w-0 flex-1 flex-col overflow-hidden");
+    expect(html).toContain("grid-rows-[auto_minmax(360px,1fr)]");
+    expect(html).toContain("@min-[1100px]/pet-page:grid-rows-1");
+    expect(html).toContain("@min-[1100px]/pet-page:overflow-hidden");
   });
 });

@@ -79,14 +79,31 @@ describe("PetWorkDelegationHost", () => {
         sessionId: first.sessionId,
         cwd: "/work/mimi-test-videos",
         permissionMode: "default",
-        goal: "下载视频到本地",
       },
     });
+    expect(JSON.parse(fake.lines[0]!).params).not.toHaveProperty("goal");
     expect(fake.reserved).toEqual([[first.sessionId, "/work/mimi-test-videos"]]);
     expect(fake.announcements).toEqual([
       expect.objectContaining({ sessionId: first.sessionId, prompt: "下载视频到本地" }),
     ]);
     expect(fake.forgotten).toEqual([]);
+  });
+
+  test("sets a persistent Goal only when the delegation explicitly requests it", async () => {
+    const fake = fakeBridge();
+    const host = new PetWorkDelegationHost({
+      bridge: fake.bridge,
+      noWorkspaceCwd: "/safe/no-repo",
+    });
+
+    await host.start({
+      clientMessageId: "pet:goal",
+      task: "Resume from the durable checkpoint",
+      goalObjective: "Finish and verify the migration",
+      workspacePath: "/work/app",
+    });
+
+    expect(JSON.parse(fake.lines[0]!).params.goal).toBe("Finish and verify the migration");
   });
 
   test("fails the delegation and releases its reservation when the worker rejects it", async () => {

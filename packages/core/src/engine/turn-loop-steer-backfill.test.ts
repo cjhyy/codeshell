@@ -109,6 +109,33 @@ const toolUse = (): LLMResponse => ({
 });
 
 describe("TurnLoop steer finalize backfill", () => {
+  it("answers a queued steer before parking for an async tool notification", async () => {
+    const { deps, modelMessages } = makeDeps([toolUse(), stop("answered after steer")], {
+      id: "steer-before-yield",
+      text: "include this update",
+    });
+    let pendingYield = true;
+    deps.peekToolRunYield = () => (pendingYield ? "background_notification" : undefined);
+    deps.consumeToolRunYield = () => {
+      if (!pendingYield) return undefined;
+      pendingYield = false;
+      return "background_notification";
+    };
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 3,
+      maxToolCallsPerTurn: 10,
+    }).run([{ role: "user", content: "start async work" }]);
+
+    expect(modelMessages).toHaveLength(2);
+    expect(modelMessages[1]).toContainEqual({ role: "user", content: "include this update" });
+    expect(result).toMatchObject({
+      text: "answered after steer",
+      reason: "completed",
+      completionKind: "background_wait",
+    });
+  });
+
   it("consumes steer queued during a tool batch before the next model call without splitting tool adjacency", async () => {
     const events: unknown[] = [];
     let responseIdx = 0;

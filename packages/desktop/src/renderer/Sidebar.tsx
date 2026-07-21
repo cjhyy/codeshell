@@ -1,11 +1,14 @@
 import React, {
   useCallback,
   useEffect,
+  useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   MessageSquare,
   Search,
@@ -18,6 +21,7 @@ import {
   Clock,
   GitBranch,
   Loader2,
+  Pin,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -34,7 +38,7 @@ import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "
 import type { SessionStatus } from "./sessionStatus";
 import { useT } from "./i18n";
 import { PetSidebarEntry } from "./pet/PetSidebarEntry";
-import { compactSidebarSessions } from "./sidebarSessionVisibility";
+import { compactSidebarSessions, sortSidebarSessions } from "./sidebarSessionVisibility";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { SessionWorkspace } from "../preload/types";
@@ -75,6 +79,7 @@ interface SidebarProps {
   onLoadMoreSessionHistory: () => void;
 
   onRenameSession: (projectId: string | null, sessionId: string, title: string) => void;
+  onPinSession: (projectId: string | null, sessionId: string, pinned: boolean) => void;
   onArchiveSession: (projectId: string | null, sessionId: string, archived: boolean) => void;
   onDeleteSession: (projectId: string | null, sessionId: string) => void;
 
@@ -125,6 +130,7 @@ export function Sidebar({
   onTogglePetWidget,
   onLoadMoreSessionHistory,
   onRenameSession,
+  onPinSession,
   onArchiveSession,
   onDeleteSession,
   viewMode,
@@ -154,7 +160,10 @@ export function Sidebar({
 
   // No-repo conversations live under the bottom 对话 section.
   const noRepoIndex = sessions[NO_REPO_KEY];
-  const noRepoSessions = noRepoIndex?.sessions.filter((s) => !s.archived) ?? [];
+  const noRepoSessions = useMemo(
+    () => sortSidebarSessions(noRepoIndex?.sessions.filter((s) => !s.archived) ?? []),
+    [noRepoIndex?.sessions],
+  );
 
   const projectMenu = (project: TrackedProject): ContextMenuItem[] => [
     {
@@ -221,6 +230,10 @@ export function Sidebar({
 
   const sessionMenu = (projectId: string | null, s: SessionSummary): ContextMenuItem[] => [
     {
+      label: s.pinned ? t("sidebar.unpinSession") : t("sidebar.pinSession"),
+      onClick: () => onPinSession(projectId, s.id, !s.pinned),
+    },
+    {
       label: t("sidebar.renameSession"),
       onClick: () => {
         void prompt({
@@ -266,7 +279,7 @@ export function Sidebar({
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card/40">
       <nav className="flex flex-col gap-0.5 p-2">
         <PetSidebarEntry
-          active={viewMode === "pet"}
+          active={viewMode === "pet" || viewMode === "pet_settings"}
           pendingCount={petPendingCount}
           runningCount={petRunningCount}
           onOpen={onOpenPetPage}
@@ -364,6 +377,7 @@ export function Sidebar({
                   session: s,
                 });
               }}
+              onPinSession={(sid, pinned) => onPinSession(project.id, sid, pinned)}
               onArchiveSession={(sid) => onArchiveSession(project.id, sid, true)}
               workspaceChange={workspaceChange}
             />
@@ -385,6 +399,7 @@ export function Sidebar({
                   session: s,
                 });
               }}
+              onPinSession={(sid, pinned) => onPinSession(null, sid, pinned)}
               onArchiveSession={(sid) => onArchiveSession(null, sid, true)}
             />
           )}
@@ -475,12 +490,46 @@ export function worktreeBranchOf(workspace: SessionWorkspace | undefined): strin
   return workspace?.kind === "worktree" ? workspace.worktree?.branch : undefined;
 }
 
-export function sessionRowHoverTitle(
-  title: string,
+export function sessionHoverBranch(
   worktreeBranch: string | undefined,
-  branchDescription: string | undefined,
-): string {
-  return worktreeBranch && branchDescription ? `${title}\n${branchDescription}` : title;
+  projectBranch: string | undefined,
+): string | undefined {
+  return worktreeBranch ?? projectBranch;
+}
+
+function useProjectBranch(projectPath: string): {
+  branch: string | undefined;
+  refresh: () => void;
+} {
+  const [branch, setBranch] = useState<string | undefined>();
+  const requestVersion = useRef(0);
+
+  const refresh = useCallback(() => {
+    const version = ++requestVersion.current;
+    void window.codeshell
+      .getGitStatus(projectPath)
+      .then((status) => {
+        if (requestVersion.current === version) setBranch(status.branch ?? undefined);
+      })
+      .catch(() => {
+        if (requestVersion.current === version) setBranch(undefined);
+      });
+  }, [projectPath]);
+
+  useEffect(() => {
+    refresh();
+    const onBranchesChanged = (event: Event) => {
+      const changedPath = (event as CustomEvent<{ cwd?: string }>).detail?.cwd;
+      if (!changedPath || changedPath === projectPath) refresh();
+    };
+    window.addEventListener("codeshell:git-branches-changed", onBranchesChanged);
+    return () => {
+      requestVersion.current += 1;
+      window.removeEventListener("codeshell:git-branches-changed", onBranchesChanged);
+    };
+  }, [projectPath, refresh]);
+
+  return { branch, refresh };
 }
 
 function useVisibleWorktreeBranches(
@@ -568,6 +617,7 @@ function ProjectGroup({
   onNewChat,
   onProjectContextMenu,
   onSessionContextMenu,
+  onPinSession,
   onArchiveSession,
   workspaceChange,
 }: {
@@ -584,6 +634,7 @@ function ProjectGroup({
   onNewChat: () => void;
   onProjectContextMenu: (e: React.MouseEvent) => void;
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
+  onPinSession: (sid: string, pinned: boolean) => void;
   onArchiveSession: (sid: string) => void;
   workspaceChange: WorkspaceChangeEvent | null;
 }) {
@@ -591,7 +642,7 @@ function ProjectGroup({
   const [showMore, setShowMore] = useState(false);
 
   const all = index?.sessions ?? [];
-  const live = useMemo(() => all.filter((s) => !s.archived), [all]);
+  const live = useMemo(() => sortSidebarSessions(all.filter((s) => !s.archived)), [all]);
 
   const visibleLive = useMemo(
     () =>
@@ -610,6 +661,7 @@ function ProjectGroup({
     workspaceSessions,
     workspaceChange,
   );
+  const { branch: projectBranch, refresh: refreshProjectBranch } = useProjectBranch(project.path);
 
   return (
     <div className="mb-1">
@@ -689,11 +741,18 @@ function ProjectGroup({
                   worktreeBranch={
                     s.engineSessionId ? worktreeBranches[s.engineSessionId] : undefined
                   }
+                  branch={sessionHoverBranch(
+                    s.engineSessionId ? worktreeBranches[s.engineSessionId] : undefined,
+                    projectBranch,
+                  )}
+                  folderName={project.name}
                   showKbd={isActiveProject && i < 5}
                   kbdIndex={i + 1}
                   onClick={() => onSelectSession(s.id)}
                   onContextMenu={(e) => onSessionContextMenu(e, s)}
+                  onPin={() => onPinSession(s.id, !s.pinned)}
                   onArchive={() => onArchiveSession(s.id)}
+                  onHover={refreshProjectBranch}
                 />
               ))}
               {hiddenLiveCount > 0 && !showMore && (
@@ -729,6 +788,7 @@ function NoRepoSection({
   statusFor,
   onSelectSession,
   onSessionContextMenu,
+  onPinSession,
   onArchiveSession,
 }: {
   sessions: SessionSummary[];
@@ -736,6 +796,7 @@ function NoRepoSection({
   statusFor: (sid: string) => SessionStatus | undefined;
   onSelectSession: (sid: string) => void;
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
+  onPinSession: (sid: string, pinned: boolean) => void;
   onArchiveSession: (sid: string) => void;
 }) {
   const { t } = useT();
@@ -752,10 +813,12 @@ function NoRepoSection({
             s={s}
             isActive={activeSessionId === s.id}
             status={statusFor(s.id)}
+            folderName={t("sidebar.unboundFolder")}
             showKbd={false}
             kbdIndex={0}
             onClick={() => onSelectSession(s.id)}
             onContextMenu={(e) => onSessionContextMenu(e, s)}
+            onPin={() => onPinSession(s.id, !s.pinned)}
             onArchive={() => onArchiveSession(s.id)}
           />
         ))}
@@ -764,34 +827,136 @@ function NoRepoSection({
   );
 }
 
+function SessionHoverCard({
+  id,
+  open,
+  anchorRef,
+  title,
+  relativeTime,
+  folderName,
+  branch,
+}: {
+  id: string;
+  open: boolean;
+  anchorRef: React.RefObject<HTMLElement | null>;
+  title: string;
+  relativeTime: string;
+  folderName: string;
+  branch?: string;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [style, setStyle] = useState<React.CSSProperties>({ visibility: "hidden" });
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setStyle({ visibility: "hidden" });
+      return;
+    }
+
+    let frame = 0;
+    const update = (): void => {
+      const anchor = anchorRef.current;
+      const card = cardRef.current;
+      if (!anchor || !card) return;
+      const rect = anchor.getBoundingClientRect();
+      const gap = 10;
+      const padding = 12;
+      const width = card.offsetWidth;
+      const height = card.offsetHeight;
+      const rightSide = rect.right + gap;
+      const left =
+        rightSide + width <= window.innerWidth - padding
+          ? rightSide
+          : Math.max(padding, rect.left - width - gap);
+      const top = Math.min(
+        Math.max(padding, rect.top - 6),
+        Math.max(padding, window.innerHeight - height - padding),
+      );
+      setStyle({ position: "fixed", left, top, zIndex: 50, visibility: "visible" });
+    };
+
+    update();
+    frame = window.requestAnimationFrame(update);
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [anchorRef, open]);
+
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      ref={cardRef}
+      id={id}
+      role="tooltip"
+      style={style}
+      className="w-60 animate-in rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg fade-in-0 zoom-in-95"
+    >
+      <div className="flex min-w-0 items-baseline gap-2">
+        <span className="min-w-0 flex-1 break-words text-sm font-semibold leading-5">{title}</span>
+        <span className="shrink-0 text-xs font-normal text-muted-foreground">{relativeTime}</span>
+      </div>
+      <div className="mt-2.5 space-y-1.5 text-xs">
+        <div className="flex min-w-0 items-center gap-2">
+          <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+          <span className="truncate">{folderName}</span>
+        </div>
+        {branch && (
+          <div className="flex min-w-0 items-center gap-2">
+            <GitBranch className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="truncate">{branch}</span>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function SessionRow({
   s,
   isActive,
   status,
   worktreeBranch,
+  branch,
+  folderName,
   showKbd,
   kbdIndex,
   onClick,
   onContextMenu,
+  onPin,
   onArchive,
+  onHover,
 }: {
   s: SessionSummary;
   isActive: boolean;
   status?: SessionStatus;
   worktreeBranch?: string;
+  branch?: string;
+  folderName: string;
   showKbd: boolean;
   kbdIndex: number;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
+  onPin?: () => void;
   onArchive?: () => void;
+  onHover?: () => void;
 }) {
   const { t, lang } = useT();
   const [confirming, setConfirming] = useState(false);
+  const [hoverCardOpen, setHoverCardOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rowRef = useRef<HTMLLIElement>(null);
+  const hoverCardId = useId();
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     };
   }, []);
 
@@ -811,111 +976,154 @@ function SessionRow({
     onArchive?.();
   };
 
+  const togglePin = (e: React.MouseEvent): void => {
+    e.stopPropagation();
+    onPin?.();
+  };
+
   return (
-    <li
-      className={cn(
-        "group flex items-center gap-1 rounded-md px-1 text-sm",
-        isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60",
-        s.archived && "opacity-60",
-      )}
-      onContextMenu={onContextMenu}
-      onMouseLeave={() => {
-        if (confirming) {
-          if (timerRef.current) clearTimeout(timerRef.current);
-          setConfirming(false);
-        }
-      }}
-      title={sessionRowHoverTitle(
-        s.title,
-        worktreeBranch,
-        worktreeBranch ? t("sidebar.worktreeBranch", { branch: worktreeBranch }) : undefined,
-      )}
-    >
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-7 min-w-0 flex-1 justify-start gap-1.5 px-1 font-normal hover:bg-transparent"
-        aria-current={isActive ? "page" : undefined}
-        onClick={onClick}
+    <>
+      <li
+        ref={rowRef}
+        aria-describedby={hoverCardOpen ? hoverCardId : undefined}
+        className={cn(
+          "group flex items-center gap-1 rounded-md px-1 text-sm",
+          isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60",
+          s.archived && "opacity-60",
+        )}
+        onContextMenu={onContextMenu}
+        onMouseEnter={() => {
+          if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+          hoverTimerRef.current = setTimeout(() => setHoverCardOpen(true), 350);
+          onHover?.();
+        }}
+        onFocus={onHover}
+        onMouseLeave={() => {
+          if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+          setHoverCardOpen(false);
+          if (confirming) {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            setConfirming(false);
+          }
+        }}
       >
-        {s.source === "automation" && (
-          <Clock
-            className="h-3 w-3 shrink-0 text-muted-foreground"
-            aria-label={t("sidebar.automationLabel")}
-          />
-        )}
-        {worktreeBranch && (
-          <GitBranch
-            className="h-3 w-3 shrink-0 text-primary"
-            aria-label={t("sidebar.worktreeBranch", { branch: worktreeBranch })}
-          />
-        )}
-        <span className="flex-1 truncate text-left">{s.title}</span>
-        {status === "running" ? (
-          <Loader2
-            className="h-3 w-3 shrink-0 animate-spin text-status-running"
-            aria-label={t("sidebar.sessionRunning")}
-          />
-        ) : status === "asking" ? (
-          <span
-            className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
-            aria-label={t("sidebar.sessionAsking")}
-            role="img"
-          />
-        ) : status === "unread" ? (
-          <span
-            className="h-2 w-2 shrink-0 rounded-full bg-primary"
-            aria-label={t("sidebar.sessionUnread")}
-            role="img"
-          />
-        ) : null}
-      </Button>
-      <span className="relative flex shrink-0 items-center">
-        {confirming ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-6 px-1.5 text-xs text-status-err hover:bg-background"
-            onClick={fireArchive}
-            aria-label={t("sidebar.confirmArchive")}
-            title={t("sidebar.confirmArchive")}
-          >
-            {t("common.confirm")}
-          </Button>
-        ) : (
-          <>
-            {/* Shortcut / relative-time badge sits in normal flow and defines
-                the slot width. */}
-            {showKbd ? (
-              <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
-                ⌘{kbdIndex}
-              </kbd>
-            ) : (
-              <span className="text-[10px] text-muted-foreground">
-                {formatRelative(s.updatedAt, lang)}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 min-w-0 flex-1 justify-start gap-1.5 px-1 font-normal hover:bg-transparent"
+          aria-current={isActive ? "page" : undefined}
+          onClick={onClick}
+        >
+          {s.source === "automation" && (
+            <Clock
+              className="h-3 w-3 shrink-0 text-muted-foreground"
+              aria-label={t("sidebar.automationLabel")}
+            />
+          )}
+          {worktreeBranch && (
+            <GitBranch
+              className="h-3 w-3 shrink-0 text-primary"
+              aria-label={t("sidebar.worktreeBranch", { branch: worktreeBranch })}
+            />
+          )}
+          <span className="flex-1 truncate text-left">{s.title}</span>
+          {s.pinned && (
+            <Pin
+              className="h-3 w-3 shrink-0 fill-current text-primary"
+              aria-label={t("sidebar.pinnedSession")}
+            />
+          )}
+          {status === "running" ? (
+            <Loader2
+              className="h-3 w-3 shrink-0 animate-spin text-status-running"
+              aria-label={t("sidebar.sessionRunning")}
+            />
+          ) : status === "asking" ? (
+            <span
+              className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
+              aria-label={t("sidebar.sessionAsking")}
+              role="img"
+            />
+          ) : status === "unread" ? (
+            <span
+              className="h-2 w-2 shrink-0 rounded-full bg-primary"
+              aria-label={t("sidebar.sessionUnread")}
+              role="img"
+            />
+          ) : null}
+        </Button>
+        <span className="relative flex shrink-0 items-center">
+          {confirming ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5 text-xs text-status-err hover:bg-background"
+              onClick={fireArchive}
+              aria-label={t("sidebar.confirmArchive")}
+              title={t("sidebar.confirmArchive")}
+            >
+              {t("common.confirm")}
+            </Button>
+          ) : (
+            <>
+              {/* Shortcut / relative-time badge sits in normal flow and defines
+                    the slot width. */}
+              {showKbd ? (
+                <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
+                  ⌘{kbdIndex}
+                </kbd>
+              ) : (
+                <span className="text-[10px] text-muted-foreground">
+                  {formatRelative(s.updatedAt, lang)}
+                </span>
+              )}
+              <span className="absolute right-0 z-10 flex bg-accent opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
+                {onPin && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "size-6 text-muted-foreground hover:bg-background",
+                      s.pinned && "text-primary",
+                    )}
+                    onClick={togglePin}
+                    aria-label={s.pinned ? t("sidebar.unpinSession") : t("sidebar.pinSession")}
+                    title={s.pinned ? t("sidebar.unpinSession") : t("sidebar.pinSession")}
+                  >
+                    <Pin size={12} className={s.pinned ? "fill-current" : undefined} />
+                  </Button>
+                )}
+                {onArchive && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-muted-foreground hover:bg-background"
+                    onClick={armConfirm}
+                    aria-label={t("common.archive")}
+                    title={t("common.archive")}
+                  >
+                    <Archive size={12} />
+                  </Button>
+                )}
               </span>
-            )}
-            {/* Archive action overlays the badge on hover (absolute, right-
-                anchored) so it covers the shortcut instead of pushing it. */}
-            {onArchive && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 size-6 bg-accent text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
-                onClick={armConfirm}
-                aria-label={t("common.archive")}
-                title={t("common.archive")}
-              >
-                <Archive size={12} />
-              </Button>
-            )}
-          </>
-        )}
-      </span>
-    </li>
+            </>
+          )}
+        </span>
+      </li>
+      <SessionHoverCard
+        id={hoverCardId}
+        open={hoverCardOpen}
+        anchorRef={rowRef}
+        title={s.title}
+        relativeTime={formatRelative(s.updatedAt, lang)}
+        folderName={folderName}
+        branch={branch}
+      />
+    </>
   );
 }
 

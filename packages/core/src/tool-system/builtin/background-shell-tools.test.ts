@@ -3,11 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BackgroundShellManager } from "../../runtime/background-shell.js";
-import {
-  bashOutputTool,
-  killShellTool,
-  listShellsTool,
-} from "./background-shell-tools.js";
+import { bashOutputTool, killShellTool, listShellsTool } from "./background-shell-tools.js";
 import { bashTool } from "./bash.js";
 
 function text(out: string | { result?: string; error?: string }): string {
@@ -50,14 +46,20 @@ function ctx(sessionId = "sessA"): ToolContext {
 
 describe("Bash run_in_background", () => {
   test("returns a shell_id and does not block", async () => {
-    const out = await bashTool(
-      { command: "sleep 100", run_in_background: true },
-      ctx(),
-    );
+    let yielded: string | undefined;
+    const context = ctx();
+    context.runYield = {
+      request: (reason) => {
+        yielded = reason;
+      },
+      consume: () => undefined,
+    };
+    const out = await bashTool({ command: "sleep 100", run_in_background: true }, context);
     expect(text(out)).toBeTypeOf("string");
     expect(text(out)).toContain("shell_id:");
     expect(text(out)).toMatch(/bg_/);
     expect(mgr.listForSession("sessA")).toHaveLength(1);
+    expect(yielded).toBe("background_notification");
   });
 
   test("automation context rejects run_in_background", async () => {

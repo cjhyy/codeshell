@@ -7,6 +7,7 @@ import {
   clampPetWidgetWindowPosition,
   defaultPetWidgetWindowPosition,
   petWidgetWindowStatePath,
+  petWidgetSurface,
   sanitizePetWidgetWindowPosition,
   shouldSkipPetWidgetTaskbar,
 } from "./pet-widget-window-state";
@@ -32,6 +33,14 @@ describe("desktop Pet window position", () => {
         height: PET_WIDGET_EXPANDED_HEIGHT,
       }),
     ).toEqual({ x: -1_140, y: 280 });
+  });
+
+  test("uses a compact default surface and only expands for requested content", () => {
+    expect(petWidgetSurface("collapsed")).toEqual({ width: 112, height: 112 });
+    expect(petWidgetSurface("expanded")).toEqual({
+      width: PET_WIDGET_EXPANDED_WIDTH,
+      height: PET_WIDGET_EXPANDED_HEIGHT,
+    });
   });
 
   test("rejects malformed persisted coordinates", () => {

@@ -3,7 +3,7 @@
  * Uses core's canonical session root so CODE_SHELL_HOME matches the worker.
  */
 
-import { sessionsRoot } from "@cjhyy/code-shell-core";
+import { sessionsRoot, type TurnCompletionKind } from "@cjhyy/code-shell-core";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
@@ -152,6 +152,8 @@ export interface DiskSessionMeta {
   origin: "desktop" | "automation";
   /** Normalized durable status for Pet/display consumers. */
   status?: "active" | "paused" | "completed" | "failed" | "cancelled";
+  /** Exceptional completed-run boundary; absent means a normal final answer. */
+  completionKind?: TurnCompletionKind;
   /** Durable archival timestamp; absent = not archived. */
   archivedAt?: number;
   /** Workspace profile/digital human bound to this Session. */
@@ -300,6 +302,12 @@ export async function listDiskSessions(
             : typeof state.status === "string"
               ? "failed"
               : undefined,
+      ...(state.status === "completed" &&
+      (state.lastCompletionKind === "background_wait" ||
+        state.lastCompletionKind === "goal_control_stop" ||
+        state.lastCompletionKind === "limit_stop")
+        ? { completionKind: state.lastCompletionKind }
+        : {}),
       ...(archivedAt !== undefined ? { archivedAt } : {}),
       ...(typeof state.workspaceProfile === "string" && state.workspaceProfile
         ? { workspaceProfile: state.workspaceProfile }

@@ -57,11 +57,23 @@ describe("GenerateVideo", () => {
     __setVideoProviderForTests(new FakeVideoProvider({ succeedAfterPolls: 1, bytes: "MP4DATA" }));
 
     const started = Date.now();
-    const out = (await generateVideoTool({ prompt: "a sunset", pollIntervalMs: 10 }, ctx())) as string;
+    let yielded: string | undefined;
+    const context = ctx();
+    context.runYield = {
+      request: (reason) => {
+        yielded = reason;
+      },
+      consume: () => undefined,
+    };
+    const out = (await generateVideoTool(
+      { prompt: "a sunset", pollIntervalMs: 10 },
+      context,
+    )) as string;
     const elapsed = Date.now() - started;
 
     expect(elapsed).toBeLessThan(200); // did NOT block on polling
     expect(out).toMatch(/background|started|notified/i);
+    expect(yielded).toBe("background_notification");
 
     await until(() => notificationQueue.getSnapshot("s-vid").length > 0);
     const notif = notificationQueue.getSnapshot("s-vid")[0];
@@ -72,7 +84,9 @@ describe("GenerateVideo", () => {
   });
 
   test("a failed job enqueues a failed notification (no file)", async () => {
-    __setVideoProviderForTests(new FakeVideoProvider({ failAfterPolls: 0, failMessage: "blocked by policy" }));
+    __setVideoProviderForTests(
+      new FakeVideoProvider({ failAfterPolls: 0, failMessage: "blocked by policy" }),
+    );
     const out = (await generateVideoTool({ prompt: "p", pollIntervalMs: 10 }, ctx())) as string;
     expect(out).toMatch(/background|started/i);
     await until(() => notificationQueue.getSnapshot("s-vid").length > 0);
@@ -169,7 +183,9 @@ describe("GenerateVideo", () => {
 
     await generateVideoTool({ prompt: "retain timed out URL", pollIntervalMs: 1 }, ctx());
 
-    await until(() => backgroundJobRegistry.get("video-download-timeout-url")?.status !== "running");
+    await until(
+      () => backgroundJobRegistry.get("video-download-timeout-url")?.status !== "running",
+    );
     const job = backgroundJobRegistry.get("video-download-timeout-url");
     expect(downloadSignal?.aborted).toBe(true);
     expect(job?.status).toBe("completed");

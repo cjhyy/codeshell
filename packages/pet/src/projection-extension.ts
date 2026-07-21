@@ -100,6 +100,7 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
       queueDepth: live.queueDepth,
       lastActivityAt: Math.max(live.lastActivityAt, indexed?.lastActivityAt ?? 0),
       pendingDecisionCount,
+      completionKind: liveRunState === "idle" ? indexed?.completionKind : undefined,
       terminal,
       freshness: { source: "live-snapshot", observedAt, workerState: "active" },
     };

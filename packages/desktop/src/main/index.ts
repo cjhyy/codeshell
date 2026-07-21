@@ -96,7 +96,7 @@ import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
-import { PetDispatchService } from "./pet/pet-dispatch-service.js";
+import { formatPetLongTaskClosureMessage, PetDispatchService } from "./pet/pet-dispatch-service.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
@@ -107,6 +107,7 @@ import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
 import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
+import { petChatModelKeyFromSettings } from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -347,15 +348,15 @@ import {
 import { loadRecents, pushRecent, loadProjects, setPinned, softDelete } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import {
-  PET_WIDGET_EXPANDED_HEIGHT,
-  PET_WIDGET_EXPANDED_WIDTH,
   PET_WIDGET_WINDOW_SIZE,
   clampPetWidgetWindowPosition,
   defaultPetWidgetWindowPosition,
   loadPetWidgetWindowPosition,
+  petWidgetSurface,
   sanitizePetWidgetWindowPosition,
   savePetWidgetWindowPosition,
   shouldSkipPetWidgetTaskbar,
+  type PetWidgetSurfaceMode,
 } from "./pet/pet-widget-window-state.js";
 import {
   getTrust,
@@ -412,7 +413,7 @@ const mainWindows = new Set<BrowserWindow>();
 let petWidgetWindow: BrowserWindow | null = null;
 let petWidgetWindowCreation: Promise<BrowserWindow> | null = null;
 let petWidgetShouldBeVisible = false;
-let petWidgetExpanded = false;
+let petWidgetSurfaceMode: PetWidgetSurfaceMode = "collapsed";
 let petWidgetPositionSaveTimer: ReturnType<typeof setTimeout> | null = null;
 let markPetIpcReady: (() => void) | null = null;
 const petIpcReady = new Promise<void>((resolveReady) => {
@@ -1160,6 +1161,64 @@ async function createWindow(): Promise<BrowserWindow> {
           ...(task.workspacePath ? { workspace: task.workspacePath } : {}),
           sessionRef: task.sessionId,
         });
+
+        let message = formatPetLongTaskClosureMessage(task);
+        let continued = false;
+        try {
+          if (petDispatchService) {
+            const report = await petDispatchService.reportLongTaskClosure(task);
+            message = report.text;
+            continued = report.continued;
+          }
+        } catch (error) {
+          // The deterministic fallback below still reaches the originating IM
+          // conversation and desktop notification when Mimi cannot compose a
+          // richer receipt (for example while the worker is restarting).
+          dlog("main", "pet.longTask.reply.failed", { error: String(error), taskId: task.id });
+        }
+
+        // A successful continuation is an internal manager hand-off. Mimi's
+        // injected reply remains visible in her durable desktop conversation,
+        // while the originating IM chat receives one push only when the chain
+        // finishes, needs a user decision, or cannot continue.
+        if (!continued) {
+          const completed = task.status === "completed";
+          const cancelled = task.status === "cancelled";
+          const title = completed
+            ? "Mimi 任务已完成"
+            : cancelled
+              ? "Mimi 任务已取消"
+              : "Mimi 任务执行失败";
+          gatewayControlServer?.publish({
+            type: completed
+              ? "pet.task.completed"
+              : cancelled
+                ? "pet.task.cancelled"
+                : "pet.task.failed",
+            title,
+            text: message,
+            ...(task.completionTarget
+              ? {
+                  target: {
+                    channel: task.completionTarget.channel,
+                    target: task.completionTarget.target,
+                  },
+                }
+              : {}),
+          });
+
+          try {
+            if (!BrowserWindow.getFocusedWindow() && Notification.isSupported()) {
+              new Notification({
+                title,
+                body: message.replace(/\s+/gu, " ").trim().slice(0, 180),
+              }).show();
+            }
+          } catch {
+            // Desktop notifications are best-effort; the durable Mimi reply and
+            // targeted IM receipt above remain the authoritative delivery paths.
+          }
+        }
       },
       onBackgroundError: (operation, error) => {
         dlog("main", `pet.longTask.${operation}.failed`, { error: String(error) });
@@ -1177,6 +1236,8 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
+      managerModel: async () =>
+        petChatModelKeyFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {
         beginTurn: async (clientMessageId) => {
           if (!petSegmentController) return undefined;
@@ -1289,6 +1350,7 @@ async function createWindow(): Promise<BrowserWindow> {
       longTasks: {
         getSnapshot: () => longTaskStore.getSnapshot(),
         control: (request) => longTaskCoordinator.control(request),
+        clearCompleted: () => longTaskCoordinator.clearCompleted(),
         subscribe: (listener) => longTaskStore.subscribe(listener),
       },
       windows: () => BrowserWindow.getAllWindows(),
@@ -1338,17 +1400,11 @@ async function runPetAutoArchive(aggregator: PetStateAggregator): Promise<void> 
   await aggregator.refreshCatalog(true, { full: true });
 }
 
-function petWidgetSurface(expanded: boolean): { width: number; height: number } {
-  return expanded
-    ? { width: PET_WIDGET_EXPANDED_WIDTH, height: PET_WIDGET_EXPANDED_HEIGHT }
-    : { width: PET_WIDGET_WINDOW_SIZE, height: PET_WIDGET_WINDOW_SIZE };
-}
-
 function petWindowOriginForAnchor(
   anchor: { x: number; y: number },
-  expanded: boolean,
+  mode: PetWidgetSurfaceMode,
 ): { x: number; y: number } {
-  const surface = petWidgetSurface(expanded);
+  const surface = petWidgetSurface(mode);
   return {
     x: anchor.x - (surface.width - PET_WIDGET_WINDOW_SIZE),
     y: anchor.y - (surface.height - PET_WIDGET_WINDOW_SIZE),
@@ -1357,9 +1413,9 @@ function petWindowOriginForAnchor(
 
 function petAnchorForWindowOrigin(
   origin: { x: number; y: number },
-  expanded: boolean,
+  mode: PetWidgetSurfaceMode,
 ): { x: number; y: number } {
-  const surface = petWidgetSurface(expanded);
+  const surface = petWidgetSurface(mode);
   return {
     x: origin.x + (surface.width - PET_WIDGET_WINDOW_SIZE),
     y: origin.y + (surface.height - PET_WIDGET_WINDOW_SIZE),
@@ -1368,18 +1424,18 @@ function petAnchorForWindowOrigin(
 
 function currentPetAnchor(win: BrowserWindow): { x: number; y: number } {
   const { x, y } = win.getBounds();
-  return petAnchorForWindowOrigin({ x, y }, petWidgetExpanded);
+  return petAnchorForWindowOrigin({ x, y }, petWidgetSurfaceMode);
 }
 
 function clampPetPositionToDisplay(
   position: { x: number; y: number },
-  expanded = petWidgetExpanded,
+  mode = petWidgetSurfaceMode,
 ): { x: number; y: number } {
   const display = screen.getDisplayNearestPoint({
     x: position.x + Math.round(PET_WIDGET_WINDOW_SIZE / 2),
     y: position.y + Math.round(PET_WIDGET_WINDOW_SIZE / 2),
   });
-  return clampPetWidgetWindowPosition(position, display.workArea, petWidgetSurface(expanded));
+  return clampPetWidgetWindowPosition(position, display.workArea, petWidgetSurface(mode));
 }
 
 function persistPetWidgetPosition(win: BrowserWindow): void {
@@ -1401,9 +1457,9 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
   const savedPosition = await loadPetWidgetWindowPosition();
   const primaryWorkArea = screen.getPrimaryDisplay().workArea;
   const anchor = savedPosition
-    ? clampPetPositionToDisplay(savedPosition, false)
+    ? clampPetPositionToDisplay(savedPosition, "collapsed")
     : defaultPetWidgetWindowPosition(primaryWorkArea);
-  const position = petWindowOriginForAnchor(anchor, false);
+  const position = petWindowOriginForAnchor(anchor, "collapsed");
   const win = new BrowserWindow({
     width: PET_WIDGET_WINDOW_SIZE,
     height: PET_WIDGET_WINDOW_SIZE,
@@ -1430,7 +1486,7 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
       sandbox: true,
     },
   });
-  petWidgetExpanded = false;
+  petWidgetSurfaceMode = "collapsed";
   petWidgetWindow = win;
   if (process.platform === "darwin") void app.dock?.show();
   win.setAlwaysOnTop(true, "floating");
@@ -1460,7 +1516,7 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
       petWidgetPositionSaveTimer = null;
     }
     if (petWidgetWindow === win) petWidgetWindow = null;
-    petWidgetExpanded = false;
+    petWidgetSurfaceMode = "collapsed";
   });
 
   const devUrl = process.env.VITE_DEV_URL;
@@ -1488,14 +1544,14 @@ function createPetWidgetWindow(): Promise<BrowserWindow> {
   return creation;
 }
 
-function setPetWidgetExpanded(expanded: boolean): void {
+function setPetWidgetSurfaceMode(mode: PetWidgetSurfaceMode): void {
   const win = petWidgetWindow;
-  if (!win || win.isDestroyed() || petWidgetExpanded === expanded) return;
+  if (!win || win.isDestroyed() || petWidgetSurfaceMode === mode) return;
   const anchor = currentPetAnchor(win);
-  const nextAnchor = clampPetPositionToDisplay(anchor, expanded);
-  const origin = petWindowOriginForAnchor(nextAnchor, expanded);
-  const surface = petWidgetSurface(expanded);
-  petWidgetExpanded = expanded;
+  const nextAnchor = clampPetPositionToDisplay(anchor, mode);
+  const origin = petWindowOriginForAnchor(nextAnchor, mode);
+  const surface = petWidgetSurface(mode);
+  petWidgetSurfaceMode = mode;
   win.setBounds({ ...origin, ...surface }, true);
 }
 
@@ -1707,7 +1763,11 @@ async function dispatchGatewayPetChat(
     message: request.message,
     ...(attachments.length > 0 ? { attachments } : {}),
     clientMessageId,
-    source: { kind: "im-gateway", channel: sourceChannel },
+    source: {
+      kind: "im-gateway",
+      channel: sourceChannel,
+      ...(request.origin ? { target: request.origin.target } : {}),
+    },
   });
   if (!result.ok) throw new Error(result.message ?? result.code);
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
@@ -1749,6 +1809,16 @@ app.whenReady().then(async () => {
   await gatewayControlServer.start().catch((error) => {
     gatewayControlServer = undefined;
     dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
+  });
+
+  // A configured Chat Gateway is part of the Desktop runtime, not a panel
+  // toggle. Start it on every owning app launch after the authenticated local
+  // control server is ready, so targeted Mimi completion receipts can flow
+  // even when the Link page is never opened. Invalid/fresh configs are a safe
+  // no-op; adapter/login failures are surfaced in status and logs without
+  // preventing the main window from opening.
+  await imGatewayService.startConfiguredAtLaunch().catch((error) => {
+    dlog("main", "im_gateway.autostart_failed", { error: String(error) });
   });
 
   const staleQuickChats = await runOwnedQuickChatStartupCleanup(
@@ -3430,16 +3500,26 @@ ipcMain.on("pet:widget-move", (event, rawPosition: unknown) => {
   if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
   const position = sanitizePetWidgetWindowPosition(rawPosition);
   if (!position) return;
-  const requestedAnchor = petAnchorForWindowOrigin(position, petWidgetExpanded);
+  const requestedAnchor = petAnchorForWindowOrigin(position, petWidgetSurfaceMode);
   const nextAnchor = clampPetPositionToDisplay(requestedAnchor);
-  const nextOrigin = petWindowOriginForAnchor(nextAnchor, petWidgetExpanded);
+  const nextOrigin = petWindowOriginForAnchor(nextAnchor, petWidgetSurfaceMode);
   win.setPosition(nextOrigin.x, nextOrigin.y, false);
 });
 
 ipcMain.handle("pet:widget-expanded", (event, expanded: unknown) => {
   if (typeof expanded !== "boolean") throw new Error("pet:widget-expanded requires boolean");
   if (petWidgetWindow && event.sender === petWidgetWindow.webContents) {
-    setPetWidgetExpanded(expanded);
+    setPetWidgetSurfaceMode(expanded ? "expanded" : "collapsed");
+  }
+  return { ok: true as const };
+});
+
+ipcMain.handle("pet:widget-surface", (event, mode: unknown) => {
+  if (mode !== "collapsed" && mode !== "expanded") {
+    throw new Error("pet:widget-surface requires collapsed or expanded");
+  }
+  if (petWidgetWindow && event.sender === petWidgetWindow.webContents) {
+    setPetWidgetSurfaceMode(mode);
   }
   return { ok: true as const };
 });

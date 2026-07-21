@@ -1,4 +1,9 @@
-import type { PetProjectionSnapshot, PetSessionProjection } from "../../preload/types";
+import type {
+  PetLongTask,
+  PetLongTaskSnapshot,
+  PetProjectionSnapshot,
+  PetSessionProjection,
+} from "../../preload/types";
 
 export const PET_WIDGET_RECEIPTS_KEY = "codeshell.pet.widget-work-receipts.v1";
 
@@ -68,9 +73,31 @@ export function markPetWidgetCompletionSeen(
   };
 }
 
+/**
+ * Mark the completed activity currently visible on a desktop surface as seen.
+ * Active/waiting work is deliberately ignored because its badge is a live-work
+ * count, not an unread receipt.
+ */
+export function markPetWidgetCompletionsSeen(
+  state: PetWidgetReceiptState,
+  snapshot: PetProjectionSnapshot,
+  longTasks: PetLongTaskSnapshot | null = null,
+  sessionIds?: ReadonlySet<string>,
+): PetWidgetReceiptState {
+  let next = state;
+  for (const item of buildPetWidgetActivity(snapshot, state, longTasks).items) {
+    if (item.kind !== "completed" || (sessionIds && !sessionIds.has(item.agentSessionId))) {
+      continue;
+    }
+    next = markPetWidgetCompletionSeen(next, item.key);
+  }
+  return next;
+}
+
 export function buildPetWidgetActivity(
   snapshot: PetProjectionSnapshot | null,
   receipts: PetWidgetReceiptState | null,
+  longTasks: PetLongTaskSnapshot | null = null,
 ): PetWidgetActivity {
   if (!snapshot || !receipts) {
     return { items: [], activeCount: 0, runningCount: 0, unreadCompletedCount: 0, badgeCount: 0 };
@@ -84,10 +111,95 @@ export function buildPetWidgetActivity(
   const seen = new Set(receipts.seenCompletionKeys);
   const items: PetWidgetActivityItem[] = [];
   const represented = new Set<string>();
+  const projectedSessionIds = new Set(snapshot.sessions.map((session) => session.agentSessionId));
+  const latestLongTaskBySession = new Map<string, PetLongTask>();
+  for (const task of longTasks?.tasks ?? []) {
+    const previous = latestLongTaskBySession.get(task.sessionId);
+    if (
+      !previous ||
+      task.updatedAt > previous.updatedAt ||
+      (task.updatedAt === previous.updatedAt && task.revision > previous.revision)
+    ) {
+      latestLongTaskBySession.set(task.sessionId, task);
+    }
+  }
   let runningCount = 0;
+
+  const appendLongTask = (task: PetLongTask, session?: PetSessionProjection): void => {
+    const title =
+      session?.title ?? session?.workspaceDisplayName ?? task.objective ?? task.sessionId.slice(-8);
+    const detail = task.waitingFor ?? task.lastError ?? task.summary;
+    switch (task.status) {
+      case "queued":
+      case "running":
+        runningCount += 1;
+        items.push({
+          key: `long-task:${task.id}:${task.revision}`,
+          agentSessionId: task.sessionId,
+          title,
+          detail,
+          kind: "working",
+          lastActivityAt: task.updatedAt,
+        });
+        return;
+      case "waiting":
+      case "paused":
+      case "interrupted":
+      case "failed":
+        items.push({
+          key: `long-task:${task.id}:${task.revision}`,
+          agentSessionId: task.sessionId,
+          title,
+          detail,
+          kind: "needs-action",
+          lastActivityAt: task.updatedAt,
+        });
+        return;
+      case "completed": {
+        const completedAt = task.completedAt ?? task.updatedAt;
+        const key = `completed-task:${task.id}:${completedAt}`;
+        if (completedAt > receipts.baselineAt && !seen.has(key)) {
+          items.push({
+            key,
+            agentSessionId: task.sessionId,
+            title,
+            detail,
+            kind: "completed",
+            lastActivityAt: completedAt,
+          });
+        }
+        return;
+      }
+      case "cancelled":
+        return;
+    }
+  };
 
   for (const session of snapshot.sessions) {
     const pending = pendingBySession.get(session.agentSessionId);
+    const longTask = latestLongTaskBySession.get(session.agentSessionId);
+    const terminalLongTask =
+      longTask?.status === "completed" ||
+      longTask?.status === "failed" ||
+      longTask?.status === "cancelled";
+    const staleBackgroundWait =
+      session.completionKind === "background_wait" || session.summary === "等待后台结果";
+    // The durable task journal is authoritative once it is at least as new as
+    // both the Session projection and its pending-decision projection. This
+    // prevents a missed/late Session delta from leaving a completed task stuck
+    // on the widget as “执行中 / 等待后台结果”. A normal Session metadata
+    // flush can land a few milliseconds after task closure, so that exact
+    // background-wait state is also treated as stale even when its timestamp is
+    // slightly newer.
+    if (
+      longTask &&
+      (longTask.updatedAt >= Math.max(session.lastActivityAt, pending?.createdAt ?? 0) ||
+        (terminalLongTask && staleBackgroundWait))
+    ) {
+      represented.add(session.agentSessionId);
+      appendLongTask(longTask, session);
+      continue;
+    }
     if (pending) {
       represented.add(session.agentSessionId);
       items.push({
@@ -126,6 +238,14 @@ export function buildPetWidgetActivity(
         lastActivityAt: session.terminal!.at,
       });
     }
+  }
+
+  // A durable long task can outlive catalog hydration or Session archival.
+  // Keep it visible even when the current projection has no matching row.
+  for (const task of latestLongTaskBySession.values()) {
+    if (projectedSessionIds.has(task.sessionId)) continue;
+    represented.add(task.sessionId);
+    appendLongTask(task);
   }
 
   for (const pending of snapshot.pending) {

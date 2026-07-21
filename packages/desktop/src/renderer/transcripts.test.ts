@@ -15,6 +15,7 @@ import {
   saveSessionIndex,
   saveTranscript,
   setActiveSession,
+  setSessionPinnedLocal,
   setSessionWorkspaceProfileLocal,
 } from "./transcripts";
 
@@ -260,6 +261,20 @@ describe("transcript snapshot cursor persistence", () => {
       workspaceProfile: "ui-designer",
     });
     expect(loadSessionIndex("repo-a").sessions[0]?.workspaceProfile).toBe("ui-designer");
+  });
+
+  it("persists Session pinning without changing last activity", () => {
+    saveSessionIndex("repo-a", {
+      activeSessionId: "work",
+      sessions: [{ id: "work", title: "Work", createdAt: 1, updatedAt: 2 }],
+    });
+
+    const pinned = setSessionPinnedLocal("repo-a", "work", true);
+    expect(pinned.sessions[0]).toMatchObject({ id: "work", pinned: true, updatedAt: 2 });
+
+    const unpinned = setSessionPinnedLocal("repo-a", "work", false);
+    expect(unpinned.sessions[0]?.pinned).toBeUndefined();
+    expect(loadSessionIndex("repo-a").sessions[0]?.updatedAt).toBe(2);
   });
 
   it("hydrates context_transfer as a background package card", () => {

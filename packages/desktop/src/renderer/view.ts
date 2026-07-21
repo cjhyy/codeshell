@@ -6,6 +6,7 @@
 export const BUILTIN_VIEW_MODES = [
   "chat",
   "pet", // first-class Pet workspace; never layered over chat
+  "pet_settings", // Mimi-only settings, separate from the global settings center
   "digital_humans", // market, installed digital humans, and Pet-led teams
   "sessions",
   "approvals",

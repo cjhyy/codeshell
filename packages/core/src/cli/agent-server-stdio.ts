@@ -39,8 +39,9 @@ import { SessionManager } from "../session/session-manager.js";
 import { validateSettings, type ValidatedSettings } from "../settings/schema.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
-import { createNotification } from "../protocol/types.js";
+import { createNotification, Methods } from "../protocol/types.js";
 import { setCronChangedSink } from "../tool-system/builtin/cron.js";
+import { setModelCatalogChangedSink } from "../tool-system/builtin/edit-model-catalog.js";
 import { SettingsManager, noRepoDir } from "../settings/manager.js";
 import { personalizationFrom } from "../settings/personalization.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
@@ -364,6 +365,13 @@ setDefaultCredentialAccess(createIpcCredentialAccess(stdioTransport));
 // store and (re)arms its scheduler — otherwise AI-created jobs never fire.
 setCronChangedSink(() => {
   stdioTransport.send(createNotification("agent/cronChanged", {}));
+});
+
+// EditModelCatalog writes in this worker process, while the mounted settings
+// and connection pages live in the desktop renderer. Notify them immediately
+// after a successful write instead of relying on a later turn_complete event.
+setModelCatalogChangedSink(() => {
+  stdioTransport.send(createNotification(Methods.SettingsChanged, {}));
 });
 
 // Disk-only active-goal reader for agent/goalGet. In worker mode there is no

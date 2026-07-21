@@ -65,6 +65,28 @@ describe("getMergedCatalog", () => {
     expect(merged.find((e) => e.id === "openai-images")?.displayName).toBe("OVERRIDDEN");
   });
 
+  test("merge-mode user entry adds and overrides models without hiding built-ins", () => {
+    const builtin = BUILTIN_CATALOG.find((entry) => entry.id === "openrouter")!;
+    const builtinModel = builtin.modelPresets![0]!;
+    writeUserCatalog([
+      {
+        ...builtin,
+        modelPresetsMode: "merge",
+        modelPresets: [
+          { ...builtinModel, label: "User label" },
+          { value: "moonshotai/kimi-k3", label: "Kimi K3" },
+        ],
+      },
+    ]);
+
+    const merged = getMergedCatalog().find((entry) => entry.id === "openrouter")!;
+    expect(merged.modelPresets).toHaveLength((builtin.modelPresets?.length ?? 0) + 1);
+    expect(merged.modelPresets?.find((preset) => preset.value === builtinModel.value)?.label).toBe(
+      "User label",
+    );
+    expect(merged.modelPresets?.some((preset) => preset.value === "moonshotai/kimi-k3")).toBe(true);
+  });
+
   test("invalid user file is ignored (built-in still works)", () => {
     writeUserCatalog([{ id: "bad", tag: "nope" }]);
     expect(loadUserCatalog()).toEqual([]);

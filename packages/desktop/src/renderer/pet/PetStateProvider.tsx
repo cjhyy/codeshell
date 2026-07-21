@@ -11,6 +11,7 @@ import type {
 } from "../../preload/types";
 import React from "react";
 import { foldTranscript } from "../automation/foldTranscript";
+import { writeSettings } from "../settingsBus";
 import {
   transcriptsReducer,
   type TranscriptsAction,
@@ -30,6 +31,7 @@ import {
   petSnapshotRetryDelay,
   pushBoundedPetEvent,
 } from "./petReliability";
+import { loadPetChatModelKey, savePetChatModelKey, type PetSettingsBridge } from "./petPreferences";
 
 export interface PetStateContextValue {
   state: PetState;
@@ -44,11 +46,13 @@ export interface PetStateContextValue {
   delegationReceipts: PetDelegationReceiptGroup[];
   longTasks: PetLongTaskSnapshot;
   longTaskBusyIds: ReadonlySet<string>;
+  longTaskCleanupBusy: boolean;
   longTaskError: string | null;
   controlLongTask: (
     taskId: string,
     action: PetLongTaskControlAction,
   ) => Promise<PetLongTaskControlResult>;
+  clearCompletedLongTasks: () => Promise<boolean>;
   surfaceablePendingCount: number;
   peeks: PetPeek[];
   removePeek: (id: string) => void;
@@ -56,6 +60,21 @@ export interface PetStateContextValue {
 
 export const PET_CHAT_BUCKET = "__codeshell_pet_chat__";
 const PetStateContext = React.createContext<PetStateContextValue | null>(null);
+
+function settingsBridge(): PetSettingsBridge | null {
+  const codeshell = window.codeshell;
+  if (
+    !codeshell ||
+    typeof codeshell.getSettings !== "function" ||
+    typeof codeshell.updateSettings !== "function"
+  ) {
+    return null;
+  }
+  return {
+    getSettings: (scope) => codeshell.getSettings(scope),
+    updateSettings: (scope, patch) => writeSettings(scope, patch),
+  };
+}
 
 export function PetStateProvider({
   children,
@@ -70,7 +89,23 @@ export function PetStateProvider({
   const [state, dispatch] = React.useReducer(petStateReducer, initialPetState);
   const [petSessionId, setPetSessionId] = React.useState<string | null>(null);
   const [chatBusy, setChatBusy] = React.useState(false);
-  const [chatModelKey, setChatModelKey] = React.useState<string | null>(null);
+  const [chatModelKey, setChatModelKeyState] = React.useState<string | null>(null);
+  const chatModelKeyRef = React.useRef<string | null>(null);
+  const chatModelPreferenceRevisionRef = React.useRef(0);
+  const setChatModelKey = React.useCallback<React.Dispatch<React.SetStateAction<string | null>>>(
+    (next) => {
+      const value = typeof next === "function" ? next(chatModelKeyRef.current) : next;
+      chatModelPreferenceRevisionRef.current += 1;
+      chatModelKeyRef.current = value;
+      setChatModelKeyState(value);
+      const bridge = settingsBridge();
+      if (!bridge) return;
+      void savePetChatModelKey(value, bridge).catch((error) =>
+        window.codeshell.log("pet.chat.model.write.failed", { error: String(error) }),
+      );
+    },
+    [],
+  );
   const [delegationReceipts, setDelegationReceipts] = React.useState<PetDelegationReceiptGroup[]>(
     [],
   );
@@ -80,6 +115,7 @@ export function PetStateProvider({
     tasks: [],
   });
   const [longTaskBusyIds, setLongTaskBusyIds] = React.useState<Set<string>>(() => new Set());
+  const [longTaskCleanupBusy, setLongTaskCleanupBusy] = React.useState(false);
   const [longTaskError, setLongTaskError] = React.useState<string | null>(null);
   const [surfaceablePendingCount, setSurfaceablePendingCount] = React.useState(0);
   const [peeks, setPeeks] = React.useState<PetPeek[]>([]);
@@ -87,6 +123,30 @@ export function PetStateProvider({
     transcriptsReducer,
     {} as TranscriptsMap,
   );
+
+  React.useEffect(() => {
+    let active = true;
+    const refresh = (): void => {
+      const bridge = settingsBridge();
+      if (!bridge) return;
+      const revision = chatModelPreferenceRevisionRef.current;
+      void loadPetChatModelKey(bridge)
+        .then((value) => {
+          if (!active || revision !== chatModelPreferenceRevisionRef.current) return;
+          chatModelKeyRef.current = value;
+          setChatModelKeyState(value);
+        })
+        .catch((error) =>
+          window.codeshell.log("pet.chat.model.read.failed", { error: String(error) }),
+        );
+    };
+    refresh();
+    window.addEventListener("codeshell:settings-changed", refresh);
+    return () => {
+      active = false;
+      window.removeEventListener("codeshell:settings-changed", refresh);
+    };
+  }, []);
 
   React.useEffect(() => {
     let active = true;
@@ -326,6 +386,25 @@ export function PetStateProvider({
     [api],
   );
 
+  const clearCompletedLongTasks = React.useCallback(async (): Promise<boolean> => {
+    if (!api.clearCompletedLongTasks) {
+      setLongTaskError("Completed Pet task cleanup is unavailable");
+      return false;
+    }
+    setLongTaskCleanupBusy(true);
+    setLongTaskError(null);
+    try {
+      const snapshot = await api.clearCompletedLongTasks();
+      setLongTasks((current) => (snapshot.revision >= current.revision ? snapshot : current));
+      return true;
+    } catch (error) {
+      setLongTaskError(error instanceof Error ? error.message : String(error));
+      return false;
+    } finally {
+      setLongTaskCleanupBusy(false);
+    }
+  }, [api]);
+
   React.useEffect(() => {
     let active = true;
     let hydrated = false;
@@ -389,8 +468,10 @@ export function PetStateProvider({
       delegationReceipts,
       longTasks,
       longTaskBusyIds,
+      longTaskCleanupBusy,
       longTaskError,
       controlLongTask,
+      clearCompletedLongTasks,
       surfaceablePendingCount,
       peeks,
       removePeek: (id: string) => setPeeks((current) => current.filter((peek) => peek.id !== id)),
@@ -404,8 +485,10 @@ export function PetStateProvider({
       delegationReceipts,
       longTasks,
       longTaskBusyIds,
+      longTaskCleanupBusy,
       longTaskError,
       controlLongTask,
+      clearCompletedLongTasks,
       surfaceablePendingCount,
       peeks,
     ],
@@ -437,12 +520,14 @@ const INERT_PET_CONTEXT: PetStateContextValue = {
   delegationReceipts: [],
   longTasks: { revision: 0, observedAt: 0, tasks: [] },
   longTaskBusyIds: new Set(),
+  longTaskCleanupBusy: false,
   longTaskError: null,
   controlLongTask: async () => ({
     ok: false,
     code: "worker-error",
     message: "Pet task control is unavailable",
   }),
+  clearCompletedLongTasks: async () => false,
   surfaceablePendingCount: 0,
   peeks: [],
   removePeek: () => {},

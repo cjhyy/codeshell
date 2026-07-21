@@ -277,13 +277,18 @@ export const settingsNs = {
         credentialHint: "多个连接可共用一把 key;删连接不会删凭证。",
         newKey: "填新 key…",
         pickCredential: "选择凭证",
+        deleteCredential: "删除凭证",
         toastAuxSet: "后台任务模型已设为 {id}",
         toastAuxFollow: "后台任务模型已跟随当前模型",
         toastAdded: "已添加 {id}",
         toastSaved: "已保存",
         toastRemoved: "已删除 {id}",
+        toastCredentialRemoved: "已删除凭证 {id}",
         confirmRemoveMsg: "删除连接 #{id}？",
         confirmRemoveDetail: "凭证(API key)不会被删除——它是独立的,其它连接仍可使用。",
+        confirmRemoveCredentialMsg: "删除凭证 #{id}？",
+        confirmRemoveCredentialDetail:
+          "将从 {count} 个模型连接中解除绑定。连接会保留，但需要重新选择或输入 API Key。",
       },
       catalog: {
         title: "模型模板",
@@ -1101,14 +1106,19 @@ export const settingsNs = {
           "Multiple connections can share one key; deleting a connection won't delete the credential.",
         newKey: "Enter a new key…",
         pickCredential: "Choose credential",
+        deleteCredential: "Delete credential",
         toastAuxSet: "Background-task model set to {id}",
         toastAuxFollow: "Background-task model now follows the current model",
         toastAdded: "Added {id}",
         toastSaved: "Saved",
         toastRemoved: "Removed {id}",
+        toastCredentialRemoved: "Removed credential {id}",
         confirmRemoveMsg: "Delete connection #{id}?",
         confirmRemoveDetail:
           "The credential (API key) won't be deleted — it's independent and other connections can still use it.",
+        confirmRemoveCredentialMsg: "Delete credential #{id}?",
+        confirmRemoveCredentialDetail:
+          "It will be detached from {count} model connection(s). The connections remain, but must select or enter an API key again.",
       },
       catalog: {
         title: "Model templates",

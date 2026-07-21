@@ -233,7 +233,7 @@ describe("TurnLoop goal lifecycle guardrails", () => {
       }),
     ]);
 
-    await new TurnLoop(deps, {
+    const result = await new TurnLoop(deps, {
       maxTurns: 2,
       maxToolCallsPerTurn: 10,
       goal: { objective: "finish", goalId: "goal-cancel" } as never,
@@ -242,6 +242,7 @@ describe("TurnLoop goal lifecycle guardrails", () => {
       },
     }).run([{ role: "user", content: "stop" }]);
 
+    expect(result.completionKind).toBe("goal_control_stop");
     expect(events).toContainEqual({ type: "goal_cleared", goalId: "goal-cancel" });
   });
 

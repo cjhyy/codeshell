@@ -14,11 +14,63 @@ function created() {
     objective: "Ship the feature and verify it end to end",
     workspacePath: "/work/app",
     sessionId: "session-1",
+    completionTarget: {
+      kind: "im-gateway",
+      channel: "wechat",
+      target: "owner-conversation",
+    },
+    continuationDepth: 2,
     at: 100,
   });
 }
 
 describe("Pet long-task state machine", () => {
+  test("persists a closure decision before its idempotent continuation launch", () => {
+    const created = createPetLongTask({
+      id: "task-closure",
+      originClientMessageId: "message-closure",
+      objective: "Finish the release",
+      workspacePath: "/work/app",
+      sessionId: "session-closure",
+      at: 100,
+    });
+    const completed = transitionPetLongTask(created, {
+      kind: "completed",
+      at: 200,
+      summary: "Implementation finished",
+    });
+    const decided = transitionPetLongTask(completed, {
+      kind: "closure-decided",
+      at: 210,
+      key: "task-closure:1:completed",
+      text: "Continuing with verification",
+      continuation: {
+        clientMessageId: "pet-continuation:task-closure:1:completed",
+        objective: "Verify the release",
+        workspacePath: "/work/app",
+      },
+    });
+    const launched = transitionPetLongTask(decided, {
+      kind: "continuation-started",
+      at: 220,
+      key: "task-closure:1:completed",
+      sessionId: "session-next",
+      taskId: "task-next",
+    });
+
+    expect(parsePetLongTask(JSON.parse(JSON.stringify(launched)))?.closureDecision).toEqual({
+      key: "task-closure:1:completed",
+      text: "Continuing with verification",
+      decidedAt: 210,
+      continuation: {
+        clientMessageId: "pet-continuation:task-closure:1:completed",
+        objective: "Verify the release",
+        workspacePath: "/work/app",
+      },
+      launch: { sessionId: "session-next", taskId: "task-next", at: 220 },
+    });
+  });
+
   test("tracks real lifecycle instead of treating launch acceptance as completion", () => {
     const queued = created();
     const running = transitionPetLongTask(queued, { kind: "started", at: 200 });
@@ -39,6 +91,7 @@ describe("Pet long-task state machine", () => {
     });
 
     expect(queued.status).toBe("queued");
+    expect(queued.verificationMode).toBe("turn");
     expect(running.status).toBe("running");
     expect(waiting).toMatchObject({
       status: "waiting",
@@ -76,6 +129,28 @@ describe("Pet long-task state machine", () => {
       summary: "stale worker completion",
     });
     expect(late).toBe(cancelled);
+  });
+
+  test("ignores stale progress so a final assistant checkpoint remains the completion summary", () => {
+    const running = transitionPetLongTask(created(), { kind: "started", at: 200 });
+    const checkpoint = transitionPetLongTask(running, {
+      kind: "checkpoint",
+      at: 500,
+      summary: "Final result with the verified file path",
+    });
+    const staleProjection = transitionPetLongTask(checkpoint, {
+      kind: "progress",
+      at: 490,
+      phase: "executing",
+      summary: "模型处理中",
+    });
+    const completed = transitionPetLongTask(staleProjection, {
+      kind: "completed",
+      at: 600,
+    });
+
+    expect(staleProjection).toBe(checkpoint);
+    expect(completed.summary).toBe("Final result with the verified file path");
   });
 
   test("retry reopens a failed task and preserves durable history", () => {
@@ -134,7 +209,19 @@ describe("Pet long-task state machine", () => {
     expect(parsed).toMatchObject({
       id: "pet-task-1",
       status: "queued",
+      completionTarget: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "owner-conversation",
+      },
+      continuationDepth: 2,
     });
     expect(parsed?.events).toHaveLength(1);
+  });
+
+  test("preserves forced-Goal semantics for rows written before verificationMode", () => {
+    const raw = JSON.parse(JSON.stringify(created()));
+    delete raw.verificationMode;
+    expect(parsePetLongTask(raw)?.verificationMode).toBe("goal");
   });
 });

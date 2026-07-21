@@ -58,6 +58,7 @@ export interface PetSessionProjection {
   queueDepth: number;
   lastActivityAt: number;
   pendingDecisionCount: number;
+  completionKind?: "background_wait" | "goal_control_stop" | "limit_stop";
   terminal?: { status: "completed" | "failed" | "cancelled"; at: number };
   /** Present on sessions observed from an external CLI (Codex/Claude). */
   external?: { cli: "codex" | "claude"; cwd?: string };
@@ -251,9 +252,12 @@ export interface PetApi {
   onDismissedWorkItemIdsChanged(listener: (snapshot: PetWorkInboxSnapshot) => void): () => void;
   getLongTasks?(): Promise<PetLongTaskSnapshot>;
   controlLongTask?(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult>;
+  clearCompletedLongTasks?(): Promise<PetLongTaskSnapshot>;
   onLongTasksChanged?(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
+  setWidgetSurface(mode: "collapsed" | "expanded"): Promise<{ ok: true }>;
+  /** @deprecated Use setWidgetSurface to choose the widget's content surface. */
   setWidgetExpanded(expanded: boolean): Promise<{ ok: true }>;
   moveWidget(position: PetWidgetPosition): void;
   openWidgetOverview(target?: PetOpenSessionRequest): Promise<{ ok: true }>;
@@ -316,6 +320,8 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
     getLongTasks: () => ipcRenderer.invoke("pet:long-tasks-get") as Promise<PetLongTaskSnapshot>,
     controlLongTask: (request) =>
       ipcRenderer.invoke("pet:long-task-control", request) as Promise<PetLongTaskControlResult>,
+    clearCompletedLongTasks: () =>
+      ipcRenderer.invoke("pet:long-tasks-clear-completed") as Promise<PetLongTaskSnapshot>,
     onLongTasksChanged: (listener) => {
       const handler = (_event: unknown, payload: unknown): void =>
         listener(payload as PetLongTaskSnapshot);
@@ -325,6 +331,8 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>
       ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,
+    setWidgetSurface: (mode) =>
+      ipcRenderer.invoke("pet:widget-surface", mode) as Promise<{ ok: true }>,
     setWidgetExpanded: (expanded) =>
       ipcRenderer.invoke("pet:widget-expanded", expanded) as Promise<{ ok: true }>,
     moveWidget: (position) => ipcRenderer.send("pet:widget-move", position),

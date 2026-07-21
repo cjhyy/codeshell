@@ -109,6 +109,9 @@ function runInputError(params: RunParams): string | null {
   if (params.task.trim().length === 0 && !hasAttachment) {
     return "task or a valid attachment is required";
   }
+  if (params.injected !== undefined && typeof params.injected !== "boolean") {
+    return "injected must be a boolean";
+  }
   if (
     params.behaviorMode !== undefined &&
     (typeof params.behaviorMode !== "string" || params.behaviorMode.length === 0)
@@ -1380,6 +1383,7 @@ export class AgentServer {
     try {
       const run = session.enqueueTurn(params.task, {
         cwd: params.cwd,
+        injected: params.injected === true,
         attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
         goal:
           typeof params.goal === "string" ||
@@ -1526,6 +1530,7 @@ export class AgentServer {
       const result = await this.legacyEngine!.run(params.task, {
         cwd: params.cwd,
         sessionId: params.sessionId,
+        injected: params.injected === true,
         signal: runController.signal,
         onStream: streamToClient,
         clientMessageId:

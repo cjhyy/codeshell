@@ -10,6 +10,17 @@ export const PET_WIDGET_EXPANDED_WIDTH = 400;
 // adjacent instead of stacking the pet on top of the composer.
 export const PET_WIDGET_EXPANDED_HEIGHT = 380;
 
+export type PetWidgetSurfaceMode = "collapsed" | "expanded";
+
+export function petWidgetSurface(mode: PetWidgetSurfaceMode): { width: number; height: number } {
+  switch (mode) {
+    case "expanded":
+      return { width: PET_WIDGET_EXPANDED_WIDTH, height: PET_WIDGET_EXPANDED_HEIGHT };
+    default:
+      return { width: PET_WIDGET_WINDOW_SIZE, height: PET_WIDGET_WINDOW_SIZE };
+  }
+}
+
 export interface PetWidgetWindowPosition {
   x: number;
   y: number;
@@ -45,7 +56,7 @@ export function clampPetWidgetWindowPosition(
     height: PET_WIDGET_WINDOW_SIZE,
   },
 ): PetWidgetWindowPosition {
-  // `position` is always the 112×112 pet anchor. An expanded speech bubble
+  // `position` is always the 112×112 pet anchor. Expanded chat/activity content
   // grows to its left/top, so keep enough room for the entire transparent
   // surface while still persisting one stable pet coordinate.
   const minX =
