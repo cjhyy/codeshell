@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ChannelAdapter } from "./channel.js";
 import { createDesktopNotificationHandler, splitNotificationText } from "./notification-relay.js";
 
@@ -94,6 +97,62 @@ describe("createDesktopNotificationHandler", () => {
     expect(sends.every((chunk) => chunk.length <= 1_800)).toBe(true);
     expect(sends.slice(0, 1).join("") + sends.slice(2).join("")).toBe(text);
     expect(sends).toHaveLength(deliveredChunks.length + 1);
+  });
+
+  test("retries a failed image without repeating the completed text receipt", async () => {
+    const root = await mkdtemp(join(tmpdir(), "notification-relay-"));
+    const imagePath = join(root, "generated.png");
+    const imageBytes = Uint8Array.from([137, 80, 78, 71]);
+    await writeFile(imagePath, imageBytes);
+    try {
+      const sends: Array<{ text: string; imageBytes?: number[] }> = [];
+      let failImageOnce = true;
+      const adapter: ChannelAdapter = {
+        channel: "wechat",
+        supportsOutgoingAttachments: true,
+        run: async () => undefined,
+        send: async (_target, message) => {
+          sends.push({
+            text: message.text,
+            ...(message.attachments ? { imageBytes: [...message.attachments[0]!.data] } : {}),
+          });
+          if (message.attachments && failImageOnce) {
+            failImageOnce = false;
+            throw new Error("temporary image failure");
+          }
+        },
+      };
+      const handle = createDesktopNotificationHandler([adapter], []);
+      const event = {
+        id: 11,
+        createdAt: 4,
+        type: "pet.task.completed" as const,
+        text: "漫画已经生成完成。",
+        target: { channel: "wechat", target: "owner" },
+        attachments: [
+          {
+            kind: "image" as const,
+            name: "generated.png",
+            mimeType: "image/png",
+            size: imageBytes.byteLength,
+            path: imagePath,
+          },
+        ],
+      };
+
+      await expect(handle(event, { streamId: "d".repeat(32) })).rejects.toThrow(
+        "notification failed",
+      );
+      await handle(event, { streamId: "d".repeat(32) });
+
+      expect(sends).toEqual([
+        { text: "漫画已经生成完成。" },
+        { text: "", imageBytes: [...imageBytes] },
+        { text: "", imageBytes: [...imageBytes] },
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   test("never splits an emoji surrogate pair", () => {

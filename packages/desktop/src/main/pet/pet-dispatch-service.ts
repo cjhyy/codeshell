@@ -10,6 +10,7 @@ import type {
   PetLongTaskContinuationDecision,
   PetLongTaskCompletionTarget,
   PetReusableSessionOption,
+  PetWorkExecutionBackend,
   PetWorkspaceOption,
   PetWorkDelegation,
 } from "@cjhyy/code-shell-pet";
@@ -19,6 +20,8 @@ export interface PetAutoDelegation {
   clientMessageId: string;
   task: string;
   workspacePath: string | null;
+  /** Explicit backend selected from DelegateWork; omitted means CodeShell. */
+  executionBackend?: PetWorkExecutionBackend;
   /** Existing host-validated Work Session to continue; absent means create. */
   targetSessionId?: string;
   /** Original durable Goal objective when `task` is a resume/recovery instruction. */
@@ -195,9 +198,17 @@ function parsePetWorkDelegation(value: unknown): PetWorkDelegation | null {
   ) {
     return null;
   }
+  if (
+    record.executionBackend !== undefined &&
+    record.executionBackend !== "codeshell" &&
+    record.executionBackend !== "codex"
+  ) {
+    return null;
+  }
   return {
     workspaceId: record.workspaceId.trim(),
     objective: record.objective.trim(),
+    ...(record.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
     ...(typeof record.reusableSessionId === "string"
       ? { reusableSessionId: record.reusableSessionId.trim() }
       : {}),
@@ -263,8 +274,8 @@ export function formatPetLongTaskClosureMessage(task: PetLongTask): string {
   const objective = task.objective.replace(/\s+/gu, " ").trim().slice(0, 500);
   const detail =
     task.status === "completed"
-      ? (task.summary ?? "").trim()
-      : (task.lastError ?? task.summary ?? "").trim();
+      ? (task.resultSummary ?? task.summary ?? "").trim()
+      : (task.lastError ?? task.resultSummary ?? task.summary ?? "").trim();
   const heading =
     task.status === "completed"
       ? `任务已完成：${objective}`
@@ -329,7 +340,9 @@ export class PetDispatchService {
         status: task.status,
         sessionId: task.sessionId,
         ...(task.workspacePath ? { workspace: task.workspacePath.slice(0, 500) } : {}),
-        ...(task.summary ? { summary: task.summary.slice(0, 8_000) } : {}),
+        ...((task.resultSummary ?? task.summary)
+          ? { summary: String(task.resultSummary ?? task.summary).slice(0, 8_000) }
+          : {}),
         ...(task.lastError ? { error: task.lastError.slice(0, 2_000) } : {}),
         artifacts: task.artifacts.slice(0, 12).map((artifact) => ({
           kind: artifact.kind,
@@ -403,6 +416,9 @@ export class PetDispatchService {
             clientMessageId: `pet-continuation:${task.id}:${task.attempt}:${task.status}`,
             objective: delegation.objective,
             workspacePath: workspacePathById.get(delegation.workspaceId) ?? null,
+            ...(delegation.executionBackend === "codex"
+              ? { executionBackend: "codex" as const }
+              : {}),
           };
         }
       }
@@ -449,6 +465,9 @@ export class PetDispatchService {
       clientMessageId: continuation.clientMessageId,
       task: continuation.objective,
       workspacePath: continuation.workspacePath,
+      ...(continuation.executionBackend === "codex"
+        ? { executionBackend: "codex" as const }
+        : {}),
       ...(task.completionTarget ? { completionTarget: task.completionTarget } : {}),
       continuationDepth: continuationDepth + 1,
     };
@@ -704,6 +723,9 @@ export class PetDispatchService {
                   : `${baseClientMessageId}:${index}:work`,
               task: entry.objective,
               workspacePath: workspacePathById.get(entry.workspaceId) ?? null,
+              ...(entry.executionBackend === "codex"
+                ? { executionBackend: "codex" as const }
+                : {}),
               ...(reusableSession ? { targetSessionId: reusableSession.sessionId } : {}),
               ...(command.source?.target
                 ? {
@@ -734,6 +756,9 @@ export class PetDispatchService {
                   clientMessageId: request.clientMessageId,
                   task: request.task,
                   workspacePath: request.workspacePath,
+                  ...(request.executionBackend === "codex"
+                    ? { executionBackend: "codex" as const }
+                    : {}),
                   sessionId: outcome.value.sessionId,
                   ...(outcome.value.taskId ? { taskId: outcome.value.taskId } : {}),
                   reusedSession: Boolean(request.targetSessionId),

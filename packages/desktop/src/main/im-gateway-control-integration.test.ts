@@ -3,10 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GatewayControlServer } from "./im-gateway-control-server.js";
-import {
-  DesktopControlClient,
-  type DesktopGatewayConfig,
-} from "@cjhyy/code-shell-chat/codeshell";
+import { DesktopControlClient, type DesktopGatewayConfig } from "@cjhyy/code-shell-chat/codeshell";
 
 const roots: string[] = [];
 
@@ -61,10 +58,26 @@ describe("desktop control protocol integration", () => {
       type: "tunnel.connected",
       text: "Tunnel ready",
       button: { text: "Open", url: "https://integration.trycloudflare.com" },
+      attachments: [
+        {
+          kind: "image",
+          name: "comic.png",
+          mimeType: "image/png",
+          size: 123,
+          path: "/tmp/comic.png",
+        },
+      ],
     });
     expect(await events).toMatchObject({
       cursor: 1,
-      events: [{ id: 1, type: "tunnel.connected", text: "Tunnel ready" }],
+      events: [
+        {
+          id: 1,
+          type: "tunnel.connected",
+          text: "Tunnel ready",
+          attachments: [{ kind: "image", path: "/tmp/comic.png" }],
+        },
+      ],
     });
     await client.close();
     expect(closes).toBe(1);

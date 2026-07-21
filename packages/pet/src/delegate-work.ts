@@ -28,6 +28,12 @@ export const delegateWorkToolDef: ToolDefinition = {
         type: "string",
         description: "Self-contained objective for the Work Session.",
       },
+      executor: {
+        type: "string",
+        enum: ["codeshell", "codex"],
+        description:
+          "Execution backend. Use 'codex' only when the user explicitly asks for OpenAI Codex/Codex CLI; do not merely write 'Codex' in objective. Omit or use 'codeshell' for a normal Work Session.",
+      },
       session_id: {
         type: "string",
         description: "Optional exact id from the reusable Session list.",
@@ -131,10 +137,14 @@ export async function delegateWorkTool(
   }
   const workspaceId = typeof args.workspace_id === "string" ? args.workspace_id.trim() : "";
   const objective = typeof args.objective === "string" ? args.objective.trim() : "";
+  const executor = args.executor === undefined ? "codeshell" : args.executor;
   const reusableSessionId = typeof args.session_id === "string" ? args.session_id.trim() : "";
   if (!workspaceId) return "Error: workspace_id is required.";
   if (!objective) return "Error: objective is required.";
   if (objective.length > 8_000) return "Error: objective is too long (maximum 8000 characters).";
+  if (executor !== "codeshell" && executor !== "codex") {
+    return `Error: unknown executor ${JSON.stringify(executor)}. Use "codeshell" or "codex".`;
+  }
 
   const workspace = workspaces.find((candidate) => candidate?.id === workspaceId);
   if (!workspace) {
@@ -152,10 +162,12 @@ export async function delegateWorkTool(
   const decision = services.requestPetWorkDelegation({
     workspaceId,
     objective,
+    ...(executor === "codex" ? { executionBackend: "codex" as const } : {}),
     ...(reusableSession ? { reusableSessionId: reusableSession.id } : {}),
   });
   if (!decision.ok) return `Error: ${decision.error ?? "work delegation was rejected"}`;
+  const backend = executor === "codex" ? " using external Codex" : "";
   return reusableSession
-    ? `Delegation accepted for existing Session ${reusableSession.name} in Workspace ${workspace.name}.`
-    : `Delegation accepted for a new Session in Workspace ${workspace.name}.`;
+    ? `Delegation accepted for existing Session ${reusableSession.name} in Workspace ${workspace.name}${backend}.`
+    : `Delegation accepted for a new Session in Workspace ${workspace.name}${backend}.`;
 }

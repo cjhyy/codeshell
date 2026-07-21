@@ -89,7 +89,7 @@ describe("PetLongTaskStore", () => {
     expect(reloaded.getSnapshot().tasks.map((entry) => entry.id)).toEqual([task.id]);
   });
 
-  test("atomically clears only completed tasks after their closure is recorded", async () => {
+  test("atomically clears all ended tasks after their closure is recorded", async () => {
     const { root, value } = await store();
     const completed = await value.create({
       id: "task-completed",
@@ -119,17 +119,40 @@ describe("PetLongTaskStore", () => {
     await value.transition(completed.id, { kind: "closure-recorded", at: 210 });
     await value.transition(finalizing.id, { kind: "completed", at: 220, summary: "Closing" });
     await value.transition(failed.id, { kind: "failed", at: 230, error: "Keep me" });
+    await value.transition(failed.id, { kind: "closure-recorded", at: 240 });
 
-    const snapshot = await value.clearCompleted();
+    const snapshot = await value.clearTerminal();
 
-    expect(snapshot.tasks.map((task) => task.id).sort()).toEqual([
-      "task-failed",
-      "task-finalizing",
-    ]);
+    expect(snapshot.tasks.map((task) => task.id)).toEqual(["task-finalizing"]);
     const persisted = JSON.parse(await readFile(join(root, "tasks.json"), "utf8"));
-    expect(persisted.tasks.map((task: { id: string }) => task.id).sort()).toEqual([
-      "task-failed",
-      "task-finalizing",
-    ]);
+    expect(persisted.tasks.map((task: { id: string }) => task.id)).toEqual(["task-finalizing"]);
+  });
+
+  test("removes one ended task without touching another", async () => {
+    const { value } = await store();
+    const first = await value.create({
+      id: "task-first",
+      originClientMessageId: "message-first",
+      objective: "First task",
+      workspacePath: null,
+      sessionId: "session-first",
+      at: 100,
+    });
+    const second = await value.create({
+      id: "task-second",
+      originClientMessageId: "message-second",
+      objective: "Second task",
+      workspacePath: null,
+      sessionId: "session-second",
+      at: 110,
+    });
+    await value.transition(first.id, { kind: "cancelled", at: 200 });
+    await value.transition(first.id, { kind: "closure-recorded", at: 210 });
+    await value.transition(second.id, { kind: "completed", at: 220 });
+    await value.transition(second.id, { kind: "closure-recorded", at: 230 });
+
+    const snapshot = await value.removeTerminal(first.id);
+
+    expect(snapshot.tasks.map((task) => task.id)).toEqual([second.id]);
   });
 });

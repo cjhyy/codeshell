@@ -44,7 +44,17 @@ export interface GatewayControlEventInput {
   text: string;
   title?: string;
   button?: { text: string; url: string };
+  attachments?: GatewayControlEventAttachment[];
   target?: { channel: string; target: string };
+}
+
+export interface GatewayControlEventAttachment {
+  kind: "image";
+  name: string;
+  mimeType: string;
+  size: number;
+  /** Validated local path consumed only by the owner-authenticated loopback gateway. */
+  path: string;
 }
 
 export interface GatewayControlEvent extends GatewayControlEventInput {

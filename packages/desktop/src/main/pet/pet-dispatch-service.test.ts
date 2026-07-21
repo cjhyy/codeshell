@@ -250,7 +250,8 @@ describe("PetDispatchService", () => {
       createdAt: 100,
       updatedAt: 300,
       completedAt: 300,
-      summary: "P0 是收口 Pet 外部 Session 接入。",
+      summary: "模型处理中",
+      resultSummary: "P0 是收口 Pet 外部 Session 接入。",
       artifacts: [],
       events: [],
     });
@@ -276,6 +277,7 @@ describe("PetDispatchService", () => {
     expect(String(request?.params.petRuntimeContext)).toContain(
       '"summary":"P0 是收口 Pet 外部 Session 接入。"',
     );
+    expect(String(request?.params.petRuntimeContext)).not.toContain('"summary":"模型处理中"');
   });
 
   test("lets Mimi continue completed work and carries the original notification route", async () => {

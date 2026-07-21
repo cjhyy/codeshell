@@ -1,5 +1,8 @@
 export const DELEGATE_WORK_TOOL_NAME = "DelegateWork";
 
+/** Execution backend selected explicitly by Mimi from the user's request. */
+export type PetWorkExecutionBackend = "codeshell" | "codex";
+
 /** Host-provided closed set visible to Mimi for one manager turn. */
 export interface PetWorkspaceOption {
   id: string;
@@ -20,6 +23,8 @@ export interface PetReusableSessionOption {
 export interface PetWorkDelegation {
   workspaceId: string;
   objective: string;
+  /** Omitted/CodeShell keeps the normal Work Session executor. */
+  executionBackend?: PetWorkExecutionBackend;
   /** Opaque id from the host-provided reusable Session set; absent means create. */
   reusableSessionId?: string;
 }

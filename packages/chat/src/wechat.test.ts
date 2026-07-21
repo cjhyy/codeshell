@@ -185,6 +185,72 @@ describe("personal WeChat ClawBot", () => {
       controller.abort();
     }, controller.signal);
   });
+
+  test("uploads encrypted generated images and sends the returned CDN media reference", async () => {
+    const requestedBodies: Record<string, any> = {};
+    let encryptedUpload = Buffer.alloc(0);
+    const adapter = new WechatAdapter(
+      { accountId: "abc-im-bot", token: "bot-secret" },
+      {
+        fetch: async (input, init) => {
+          const url = String(input);
+          if (url.endsWith("/ilink/bot/getuploadurl")) {
+            requestedBodies.getUploadUrl = JSON.parse(String(init?.body));
+            return Response.json({ ret: 0, upload_param: "upload-secret" });
+          }
+          if (url.startsWith("https://novac2c.cdn.weixin.qq.com/c2c/upload?")) {
+            encryptedUpload = Buffer.from(init?.body as Uint8Array);
+            return new Response(null, {
+              status: 200,
+              headers: { "x-encrypted-param": "download-secret" },
+            });
+          }
+          if (url.endsWith("/ilink/bot/sendmessage")) {
+            requestedBodies.sendMessage = JSON.parse(String(init?.body));
+            return Response.json({ ret: 0 });
+          }
+          throw new Error(`unexpected request: ${url}`);
+        },
+      },
+    );
+    const plaintext = Uint8Array.from([1, 2, 3, 4, 5]);
+
+    await adapter.send("owner-user", {
+      text: "",
+      attachments: [
+        {
+          kind: "image",
+          name: "comic.png",
+          mimeType: "image/png",
+          data: plaintext,
+        },
+      ],
+    });
+
+    expect(requestedBodies.getUploadUrl).toMatchObject({
+      media_type: 1,
+      to_user_id: "owner-user",
+      rawsize: plaintext.byteLength,
+      no_need_thumb: true,
+    });
+    expect(requestedBodies.getUploadUrl.rawfilemd5).toMatch(/^[a-f0-9]{32}$/);
+    expect(requestedBodies.getUploadUrl.aeskey).toMatch(/^[a-f0-9]{32}$/);
+    expect(encryptedUpload.byteLength).toBe(16);
+    expect(encryptedUpload.equals(Buffer.from(plaintext))).toBe(false);
+    expect(requestedBodies.sendMessage.msg.item_list).toEqual([
+      {
+        type: 2,
+        image_item: {
+          media: {
+            encrypt_query_param: "download-secret",
+            aes_key: Buffer.from(requestedBodies.getUploadUrl.aeskey).toString("base64"),
+            encrypt_type: 1,
+          },
+          mid_size: 16,
+        },
+      },
+    ]);
+  });
 });
 
 function memoryStore(initial: WechatAdapterState): WechatStateStore & {

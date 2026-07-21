@@ -1,5 +1,5 @@
 import { lstat, readFile, realpath, stat } from "node:fs/promises";
-import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export interface ImageReadContext {
   cwd?: string;
@@ -19,23 +19,42 @@ const IMG_MIME: Record<string, string> = {
 
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
-export async function readImageDataUrl(
+export interface ReadableImageFile {
+  path: string;
+  name: string;
+  mimeType: string;
+  size: number;
+}
+
+export async function inspectReadableImage(
   absPath: string,
   context: ImageReadContext = {},
-): Promise<string | null> {
+): Promise<ReadableImageFile | null> {
   try {
     if (typeof absPath !== "string" || !isAbsolute(absPath)) return null;
-    const mime = IMG_MIME[extname(absPath).toLowerCase()];
-    if (!mime) return null;
+    const mimeType = IMG_MIME[extname(absPath).toLowerCase()];
+    if (!mimeType) return null;
 
     const info = await lstat(absPath);
     if (info.isSymbolicLink() || !info.isFile() || info.size > MAX_IMAGE_BYTES) return null;
 
     const fileReal = await realpath(absPath);
     if (!(await isAllowedImagePath(fileReal, context))) return null;
+    return { path: fileReal, name: basename(fileReal), mimeType, size: info.size };
+  } catch {
+    return null;
+  }
+}
 
-    const buf = await readFile(fileReal);
-    return `data:${mime};base64,${buf.toString("base64")}`;
+export async function readImageDataUrl(
+  absPath: string,
+  context: ImageReadContext = {},
+): Promise<string | null> {
+  try {
+    const image = await inspectReadableImage(absPath, context);
+    if (!image) return null;
+    const buf = await readFile(image.path);
+    return `data:${image.mimeType};base64,${buf.toString("base64")}`;
   } catch {
     return null;
   }

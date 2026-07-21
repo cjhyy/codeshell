@@ -19,7 +19,7 @@ import {
 } from "electron";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { dirname, resolve, basename, extname, join } from "node:path";
+import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import {
   approvePluginHooks,
@@ -106,7 +106,7 @@ import { petChatModelKeyFromSettings } from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
-import { readImageDataUrl } from "./image-read-service.js";
+import { inspectReadableImage, readImageDataUrl } from "./image-read-service.js";
 import {
   bucketForSession,
   browserPartitionForBucket as registryPartitionForBucket,
@@ -191,6 +191,7 @@ import {
 } from "./mobile-remote-orchestrator.js";
 import {
   GatewayControlServer,
+  type GatewayControlEventAttachment,
   type MobileRemoteGatewayStatus,
   type MobileRemoteOpenResult,
   type PetChatControlRequest,
@@ -1125,6 +1126,28 @@ async function createWindow(): Promise<BrowserWindow> {
             : cancelled
               ? "Mimi 任务已取消"
               : "Mimi 任务执行失败";
+          const completionAttachments: GatewayControlEventAttachment[] = [];
+          if (completed && task.completionTarget) {
+            const taskCwd = task.workspacePath ?? resolveNoRepoCwd();
+            for (const artifact of task.artifacts) {
+              if (artifact.kind !== "file" || completionAttachments.length >= 4) continue;
+              const candidate = isAbsolute(artifact.reference)
+                ? artifact.reference
+                : resolve(taskCwd, artifact.reference);
+              const image = await inspectReadableImage(candidate, {
+                cwd: taskCwd,
+                sessionId: task.sessionId,
+              });
+              if (
+                !image ||
+                image.size > 10 * 1024 * 1024 ||
+                !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(image.mimeType)
+              ) {
+                continue;
+              }
+              completionAttachments.push({ kind: "image" as const, ...image });
+            }
+          }
           gatewayControlServer?.publish({
             type: completed
               ? "pet.task.completed"
@@ -1133,6 +1156,7 @@ async function createWindow(): Promise<BrowserWindow> {
                 : "pet.task.failed",
             title,
             text: message,
+            ...(completionAttachments.length > 0 ? { attachments: completionAttachments } : {}),
             ...(task.completionTarget
               ? {
                   target: {
@@ -1285,7 +1309,8 @@ async function createWindow(): Promise<BrowserWindow> {
       longTasks: {
         getSnapshot: () => longTaskStore.getSnapshot(),
         control: (request) => longTaskCoordinator.control(request),
-        clearCompleted: () => longTaskCoordinator.clearCompleted(),
+        clearTerminal: () => longTaskCoordinator.clearTerminal(),
+        clearTask: (taskId) => longTaskCoordinator.clearTerminalTask(taskId),
         subscribe: (listener) => longTaskStore.subscribe(listener),
       },
       windows: () => BrowserWindow.getAllWindows(),
