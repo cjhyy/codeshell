@@ -96,6 +96,15 @@ export function askUserPrompt(
  *  tier chosen at open is the only guardrail). */
 export type RoomKind = "claude-code" | "codex";
 
+/** Exact external-session identity proved by the host's transcript locator.
+ * RoomManager deliberately does not know CLI-specific transcript paths; the
+ * host resolves those paths and returns the identity read from disk. */
+export interface LinkedSessionTarget {
+  externalSessionId: string;
+  cwd: string;
+  kind: RoomKind;
+}
+
 export interface RoomMeta {
   id: string;
   name: string;
@@ -107,7 +116,13 @@ export interface RoomMeta {
   /** Session/thread id to resume: claude's session_id OR codex's thread_id.
    *  (Named claudeSessionId for back-compat with persisted room.json files.) */
   claudeSessionId?: string;
+  /** Persisted capability boundary for a room bound from an external CLI
+   * transcript. While set, ordinary open/send calls cannot start an agent;
+   * only takeOverLinkedSession may clear it after revalidating the tuple. */
+  linkedSessionMode?: "observe-only";
 }
+
+export type RoomOpenStatus = "running" | "missing" | "observing";
 
 export interface RoomMessage {
   seq: number;
@@ -194,6 +209,12 @@ export interface RoomAgentFactory {
 export interface RoomManagerOptions {
   rootDir: string; // <userData>/mobile-remote/rooms
   createAgent: RoomAgentFactory;
+  /** Locate an already-running external CLI transcript without starting a CLI.
+   * Returning null means the transcript is absent. The returned identity is
+   * checked again here so a stale or mismatched locator fails closed. */
+  resolveLinkedSession?: (
+    target: Readonly<LinkedSessionTarget>,
+  ) => LinkedSessionTarget | null | undefined;
   /** Called whenever a room gains a new persisted message (push to phone). */
   onMessage: (roomId: string, msg: RoomMessage) => void;
   /** Called when a room's resident agent requests tool-use approval. For
@@ -280,6 +301,7 @@ export class RoomManager {
     kind?: RoomKind;
     permissionMode?: RoomPermissionMode;
     claudeSessionId?: string;
+    linkedSessionMode?: "observe-only";
   }): RoomMeta {
     const id = `room_${this.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
     const meta: RoomMeta = {
@@ -291,6 +313,7 @@ export class RoomManager {
       createdAt: this.now(),
       lastActiveAt: this.now(),
       claudeSessionId: input.claudeSessionId,
+      linkedSessionMode: input.linkedSessionMode,
     };
     mkdirSync(this.roomDir(id), { recursive: true });
     writeFileSync(this.metaPath(id), JSON.stringify(meta, null, 2), "utf-8");
@@ -433,7 +456,7 @@ export class RoomManager {
     cwd: string,
     mode: RoomPermissionMode,
     kind: RoomKind = "claude-code",
-  ): { roomId: string; status: "running" | "missing" } {
+  ): { roomId: string; status: RoomOpenStatus } {
     // Reuse must match BOTH id and kind: a codex thread id and a claude session
     // id live in the same `claudeSessionId` field, so a bare id match could
     // otherwise hand back a claude room when a codex room was asked for.
@@ -465,10 +488,12 @@ export class RoomManager {
     return { roomId: meta.id, status };
   }
 
-  /**
-   * Open a room reached from an external-session link. Unlike openForSession,
-   * this never changes an existing room's permission mode: following a link is
-   * a view/navigation action, not permission escalation or downgrade.
+  /** Bind an external CLI transcript to a room for observation only.
+   *
+   * This method never creates or starts a resident agent. The host must first
+   * prove that an on-disk transcript exists for the exact kind + session id +
+   * cwd tuple. A missing locator, missing transcript, or mismatched identity
+   * fails closed before a room is created.
    */
   openLinkedSession(
     externalSessionId: string,
@@ -476,28 +501,103 @@ export class RoomManager {
     kind: RoomKind,
   ): {
     roomId: string;
-    status: "running" | "missing";
+    status: "observing" | "running";
     mode: RoomPermissionMode;
+    cwd: string;
   } {
-    if (!externalSessionId.trim() || !cwd.trim()) {
-      throw new Error("linked session id and cwd are required");
-    }
+    const target = this.requireLinkedSessionTarget({ externalSessionId, cwd, kind });
     const existing = this.listRooms().find(
-      (room) => room.claudeSessionId === externalSessionId && room.kind === kind,
+      (room) => room.claudeSessionId === target.externalSessionId && room.kind === target.kind,
     );
-    if (existing && resolve(existing.cwd) !== resolve(cwd)) {
+    if (existing && resolve(existing.cwd) !== target.cwd) {
       throw new Error("linked session cwd does not match the existing room");
     }
-    const meta =
-      existing ??
-      this.createRoom({
-        cwd,
-        kind,
+    const isRunning = existing ? this.isOpen(existing.id) : false;
+    let meta: RoomMeta;
+    if (existing) {
+      meta = {
+        ...existing,
+        cwd: target.cwd,
+        linkedSessionMode: isRunning ? existing.linkedSessionMode : "observe-only",
+      };
+      writeFileSync(this.metaPath(meta.id), JSON.stringify(meta, null, 2), "utf-8");
+    } else {
+      meta = this.createRoom({
+        cwd: target.cwd,
+        kind: target.kind,
         permissionMode: "default",
-        claudeSessionId: externalSessionId,
+        claudeSessionId: target.externalSessionId,
+        linkedSessionMode: "observe-only",
       });
-    const { status } = this.open(meta.id);
-    return { roomId: meta.id, status, mode: meta.permissionMode };
+    }
+    const status = isRunning ? "running" : "observing";
+    return { roomId: meta.id, status, mode: meta.permissionMode, cwd: meta.cwd };
+  }
+
+  /** Explicitly take control of a previously observed external CLI room.
+   * This is the linked-session operation that may create/start an agent. The
+   * external identity is revalidated at takeover time so stale links cannot
+   * silently start a different session. */
+  takeOverLinkedSession(
+    roomId: string,
+    externalSessionId: string,
+    cwd: string,
+    kind: RoomKind,
+  ): {
+    roomId: string;
+    status: "running";
+    mode: RoomPermissionMode;
+    cwd: string;
+  } {
+    const target = this.requireLinkedSessionTarget({ externalSessionId, cwd, kind });
+    const meta = this.getRoom(roomId);
+    if (
+      !meta ||
+      meta.claudeSessionId !== target.externalSessionId ||
+      meta.kind !== target.kind ||
+      resolve(meta.cwd) !== target.cwd
+    ) {
+      throw new Error("linked session does not match the requested room");
+    }
+    const controllableMeta: RoomMeta = {
+      ...meta,
+      cwd: target.cwd,
+      linkedSessionMode: undefined,
+    };
+    writeFileSync(this.metaPath(roomId), JSON.stringify(controllableMeta, null, 2), "utf-8");
+    const { status } = this.open(roomId);
+    if (status !== "running") {
+      throw new Error("linked session room is unavailable");
+    }
+    return { roomId, status, mode: controllableMeta.permissionMode, cwd: controllableMeta.cwd };
+  }
+
+  private requireLinkedSessionTarget(target: LinkedSessionTarget): LinkedSessionTarget {
+    if (
+      !target.externalSessionId.trim() ||
+      !target.cwd.trim() ||
+      (target.kind !== "claude-code" && target.kind !== "codex")
+    ) {
+      throw new Error("linked session id, cwd, and kind are required");
+    }
+
+    let resolvedTarget: LinkedSessionTarget | null | undefined;
+    try {
+      resolvedTarget = this.opts.resolveLinkedSession?.(target);
+    } catch {
+      throw new Error("linked session transcript is unavailable");
+    }
+    if (
+      !resolvedTarget ||
+      typeof resolvedTarget.externalSessionId !== "string" ||
+      typeof resolvedTarget.cwd !== "string" ||
+      resolvedTarget.externalSessionId !== target.externalSessionId ||
+      resolvedTarget.kind !== target.kind ||
+      resolve(resolvedTarget.cwd) !== resolve(target.cwd)
+    ) {
+      throw new Error("linked session transcript does not match the requested session");
+    }
+    return { ...target, cwd: resolve(resolvedTarget.cwd) };
   }
 
   /**
@@ -547,10 +647,12 @@ export class RoomManager {
     return true;
   }
 
-  /** Open a room: start its resident agent if not already running. */
-  open(id: string): { status: "running" | "missing" } {
+  /** Open a room: start its resident agent if not already running. Observe-only
+   * linked rooms fail closed until takeOverLinkedSession clears the boundary. */
+  open(id: string): { status: RoomOpenStatus } {
     const meta = this.getRoom(id);
     if (!meta) return { status: "missing" };
+    if (meta.linkedSessionMode === "observe-only") return { status: "observing" };
     if (!this.agents.has(id)) {
       const agent = this.opts.createAgent(meta, (event) => this.onAgentEvent(id, event));
       this.agents.set(id, agent);
@@ -666,7 +768,7 @@ export class RoomManager {
     if (!meta) return false;
     const displayText = text.trim();
     if (!displayText && attachments.length === 0) return false;
-    this.open(id);
+    if (this.open(id).status !== "running") return false;
     const summaries = roomAttachmentSummary(attachments);
     const agentText = roomTurnText(displayText, attachments);
     this.append(id, {

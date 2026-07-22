@@ -9,6 +9,7 @@ import {
   buildAskUserUpdatedInput,
   isValidRoomId,
   roomTurnText,
+  type LinkedSessionTarget,
   type RoomAgent,
   type RoomMessage,
 } from "./room-manager.js";
@@ -96,11 +97,17 @@ class FakeAgent implements RoomAgent {
   }
 }
 
-function makeManager() {
+function makeManager(options?: {
+  linkedSessions?: LinkedSessionTarget[];
+  resolveLinkedSession?: (
+    target: Readonly<LinkedSessionTarget>,
+  ) => LinkedSessionTarget | null | undefined;
+}) {
   dir = mkdtempSync(join(tmpdir(), "rooms-"));
   const pushed: { roomId: string; msg: RoomMessage }[] = [];
   const agents: FakeAgent[] = [];
   let clock = 1000;
+  const linkedSessions = options?.linkedSessions ?? [];
   const mgr = new RoomManager({
     rootDir: dir,
     now: () => clock++,
@@ -109,6 +116,15 @@ function makeManager() {
       agents.push(a);
       return a;
     },
+    resolveLinkedSession:
+      options?.resolveLinkedSession ??
+      ((target) =>
+        linkedSessions.find(
+          (candidate) =>
+            candidate.externalSessionId === target.externalSessionId &&
+            candidate.cwd === target.cwd &&
+            candidate.kind === target.kind,
+        )),
     onMessage: (roomId, msg) => pushed.push({ roomId, msg }),
   });
   return { mgr, pushed, agents };
@@ -341,37 +357,173 @@ describe("RoomManager", () => {
     expect(agents).toHaveLength(1); // reused, no respawn
   });
 
-  test("openLinkedSession creates a default room and reports its mode", () => {
-    const { mgr } = makeManager();
+  test("openLinkedSession observes an exact external transcript without starting an agent", () => {
+    const target: LinkedSessionTarget = {
+      externalSessionId: "thread-new",
+      cwd: "/tmp/p",
+      kind: "codex",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
     const linked = mgr.openLinkedSession("thread-new", "/tmp/p", "codex");
-    expect(linked.status).toBe("running");
+    expect(linked.status).toBe("observing");
     expect(linked.mode).toBe("default");
+    expect(linked.cwd).toBe("/tmp/p");
+    expect(agents).toHaveLength(0);
+    expect(mgr.isOpen(linked.roomId)).toBe(false);
     expect(mgr.getRoom(linked.roomId)).toMatchObject({
       cwd: "/tmp/p",
       kind: "codex",
       claudeSessionId: "thread-new",
       permissionMode: "default",
+      linkedSessionMode: "observe-only",
     });
   });
 
+  test("ordinary open and send cannot spawn through an observe-only linked room", () => {
+    const target: LinkedSessionTarget = {
+      externalSessionId: "thread-observe",
+      cwd: "/tmp/observe",
+      kind: "codex",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
+    const linked = mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
+    const messagesBeforeSend = mgr.getMessages(linked.roomId).length;
+
+    expect(mgr.open(linked.roomId)).toEqual({ status: "observing" });
+    expect(mgr.send(linked.roomId, "must not start")).toBe(false);
+    expect(agents).toHaveLength(0);
+    expect(mgr.getMessages(linked.roomId)).toHaveLength(messagesBeforeSend);
+    expect(mgr.getRoom(linked.roomId)?.linkedSessionMode).toBe("observe-only");
+  });
+
+  test("openLinkedSession returns and persists the canonical transcript cwd", () => {
+    const resolvedTarget: LinkedSessionTarget = {
+      externalSessionId: "thread-canonical",
+      cwd: "/tmp/project",
+      kind: "codex",
+    };
+    const { mgr, agents } = makeManager({ resolveLinkedSession: () => resolvedTarget });
+
+    const linked = mgr.openLinkedSession("thread-canonical", "/tmp/project/", "codex");
+    expect(linked.cwd).toBe("/tmp/project");
+    expect(mgr.getRoom(linked.roomId)?.cwd).toBe("/tmp/project");
+    expect(agents).toHaveLength(0);
+  });
+
+  test("takeOverLinkedSession is the only linked path that starts an agent, once", () => {
+    const target: LinkedSessionTarget = {
+      externalSessionId: "cc-linked",
+      cwd: "/tmp/p",
+      kind: "claude-code",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
+    const linked = mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
+    expect(agents).toHaveLength(0);
+
+    const takenOver = mgr.takeOverLinkedSession(
+      linked.roomId,
+      target.externalSessionId,
+      target.cwd,
+      target.kind,
+    );
+    expect(takenOver).toMatchObject({
+      roomId: linked.roomId,
+      status: "running",
+      mode: "default",
+      cwd: "/tmp/p",
+    });
+    expect(agents).toHaveLength(1);
+    expect(agents[0]?.running).toBe(true);
+    expect(mgr.getRoom(linked.roomId)?.linkedSessionMode).toBeUndefined();
+
+    mgr.takeOverLinkedSession(linked.roomId, target.externalSessionId, target.cwd, target.kind);
+    expect(agents).toHaveLength(1);
+  });
+
   test("openLinkedSession preserves an existing room mode and live agent", () => {
-    const { mgr, agents } = makeManager();
+    const target: LinkedSessionTarget = {
+      externalSessionId: "cc-linked",
+      cwd: "/tmp/p",
+      kind: "claude-code",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
     const existing = mgr.openForSession("cc-linked", "/tmp/p", "bypassPermissions");
     expect(agents).toHaveLength(1);
 
     const linked = mgr.openLinkedSession("cc-linked", "/tmp/p", "claude-code");
-    expect(linked).toMatchObject({ roomId: existing.roomId, mode: "bypassPermissions" });
+    expect(linked).toMatchObject({
+      roomId: existing.roomId,
+      status: "running",
+      mode: "bypassPermissions",
+    });
     expect(mgr.getRoom(existing.roomId)?.permissionMode).toBe("bypassPermissions");
     expect(agents).toHaveLength(1);
     expect(agents[0]?.running).toBe(true);
   });
 
-  test("openLinkedSession rejects a cwd mismatch for an existing external session", () => {
-    const { mgr } = makeManager();
-    mgr.openForSession("cc-linked", "/tmp/project-a", "default", "claude-code");
+  test("openLinkedSession fails closed for a missing transcript without creating a room", () => {
+    const { mgr, agents } = makeManager();
+    expect(() => mgr.openLinkedSession("missing", "/tmp/project", "codex")).toThrow(/transcript/i);
+    expect(mgr.listRooms()).toHaveLength(0);
+    expect(agents).toHaveLength(0);
+  });
+
+  test("openLinkedSession rejects mismatched transcript identity fields", () => {
+    const requested: LinkedSessionTarget = {
+      externalSessionId: "cc-linked",
+      cwd: "/tmp/project-a",
+      kind: "claude-code",
+    };
+    const mismatches: LinkedSessionTarget[] = [
+      { ...requested, externalSessionId: "other-session" },
+      { ...requested, cwd: "/tmp/project-b" },
+      { ...requested, kind: "codex" },
+    ];
+    let resolvedTarget = mismatches[0]!;
+    const { mgr, agents } = makeManager({ resolveLinkedSession: () => resolvedTarget });
+
+    for (const mismatch of mismatches) {
+      resolvedTarget = mismatch;
+      expect(() =>
+        mgr.openLinkedSession(requested.externalSessionId, requested.cwd, requested.kind),
+      ).toThrow(/does not match/i);
+      expect(mgr.listRooms()).toHaveLength(0);
+      expect(agents).toHaveLength(0);
+    }
+  });
+
+  test("openLinkedSession rejects a cwd mismatch for an existing external room", () => {
+    const target: LinkedSessionTarget = {
+      externalSessionId: "cc-linked",
+      cwd: "/tmp/project-b",
+      kind: "claude-code",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
+    mgr.createRoom({
+      cwd: "/tmp/project-a",
+      kind: "claude-code",
+      claudeSessionId: "cc-linked",
+    });
     expect(() => mgr.openLinkedSession("cc-linked", "/tmp/project-b", "claude-code")).toThrow(
       /cwd/i,
     );
+    expect(mgr.listRooms()).toHaveLength(1);
+    expect(agents).toHaveLength(0);
+  });
+
+  test("takeOverLinkedSession revalidates the exact room binding before starting an agent", () => {
+    const target: LinkedSessionTarget = {
+      externalSessionId: "thread-linked",
+      cwd: "/tmp/project",
+      kind: "codex",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
+    const linked = mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
+
+    expect(() =>
+      mgr.takeOverLinkedSession(linked.roomId, target.externalSessionId, "/tmp/other", target.kind),
+    ).toThrow(/transcript|match/i);
+    expect(agents).toHaveLength(0);
   });
 
   test("approval_request event persists an approval message and forwards to onApprovalRequest", () => {
