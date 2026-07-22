@@ -1,0 +1,19 @@
+$ electron .
+Error: Error: ENOENT: no such file or directory, open 'D:\project\ai\codeshell\node_modules\.bun\electron@33.4.11\node_modules\electron\dist\resources\app-update.yml'
+libpng warning: iCCP: known incorrect sRGB profile
+[agent] ϵͳ�Ҳ���ָ����·����
+D:\project\ai\codeshell\node_modules\.bun\node-pty@1.1.0\node_modules\node-pty\lib\conpty_console_list_agent.js:13
+var consoleProcessList = getConsoleProcessList(shellPid);
+                         ^
+
+Error: AttachConsole failed
+    at Object.<anonymous> (D:\project\ai\codeshell\node_modules\.bun\node-pty@1.1.0\node_modules\node-pty\lib\conpty_console_list_agent.js:13:26)
+    at Module._compile (node:internal/modules/cjs/loader:1484:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1564:10)
+    at Module.load (node:internal/modules/cjs/loader:1295:32)
+    at Module._load (node:internal/modules/cjs/loader:1111:12)
+    at c._load (node:electron/js2c/node_init:2:16955)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:188:12)
+    at node:internal/main/run_main_module:28:49
+
+Node.js v20.18.3

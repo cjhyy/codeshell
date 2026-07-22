@@ -32,6 +32,7 @@ import { classifyPath } from "./tool-cards/attachments";
 import { formatBytes } from "@/lib/utils";
 import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 import { pageAttribution } from "./browser/markerEcho";
+import { useTranslation } from "./i18n";
 
 interface Props {
   messages: Message[];
@@ -171,6 +172,7 @@ export function ChatView({
   onClearAnchors,
 }: Props) {
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
+  const { t } = useTranslation();
   const [historyCursor, setHistoryCursor] = useState(-1);
   const liveDraftStash = useRef<string>("");
   const [isComposing, setIsComposing] = useState(false);
@@ -262,8 +264,8 @@ export function ChatView({
   // It still disables side controls whose changes would be ambiguous mid-turn.
   const controlsDisabled = busy;
   const placeholder = busy
-    ? "要求后续变更"
-    : "可向 agent 询问任何事。输入 @ 使用插件或提及文件";
+    ? t("要求后续变更")
+    : t("可向 agent 询问任何事。输入 @ 使用插件或提及文件");
 
   const closeMention = (): void => {
     setMention(null);
@@ -631,20 +633,20 @@ export function ChatView({
                     <button
                       type="button"
                       className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-                      aria-label="打断当前轮，并把全部后续变更合并发送"
-                      title="打断当前轮，并把全部后续变更合并成一条立即发送"
+                      aria-label={t("打断当前轮，并把全部后续变更合并发送")}
+                      title={t("打断当前轮，并把全部后续变更合并成一条立即发送")}
                       onClick={onGuideQueuedInput}
                     >
                       <CornerDownRight size={12} />
-                      <span>全部引导</span>
+                      <span>{t("全部引导")}</span>
                     </button>
                   )}
                   {onClearQueuedInput && (
                     <button
                       type="button"
                       className="rounded-full p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                      aria-label="清除后续变更"
-                      title="清除后续变更"
+                      aria-label={t("清除后续变更")}
+                      title={t("清除后续变更")}
                       onClick={onClearQueuedInput}
                     >
                       <Trash2 size={14} />
@@ -898,11 +900,11 @@ export function ChatView({
                 <button
                   type="button"
                   className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                  aria-label="添加图片"
+                  aria-label={t("添加图片")}
                   title={
                     activeSupportsVision
-                      ? "添加图片（也支持拖拽 / 粘贴）"
-                      : "当前模型不支持图片；切换模型后即可上传"
+                      ? t("添加图片（也支持拖拽 / 粘贴）")
+                      : t("当前模型不支持图片；切换模型后即可上传")
                   }
                   onClick={() => fileInputRef.current?.click()}
                   disabled={busy}
@@ -932,8 +934,8 @@ export function ChatView({
                 <button
                   type="button"
                   className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                  aria-label="语音输入"
-                  title="语音输入 (尚未实现)"
+                  aria-label={t("语音输入")}
+                  title={t("语音输入 (尚未实现)")}
                   disabled
                 >
                   <Mic size={14} />
@@ -950,11 +952,11 @@ export function ChatView({
                       setAttachments([]);
                       setAttachmentError(null);
                     }}
-                    aria-label="引导"
-                    title="打断当前轮，并发送这条输入"
+                    aria-label={t("引导")}
+                    title={t("打断当前轮，并发送这条输入")}
                   >
                     <CornerDownRight size={13} />
-                    引导
+                    {t("引导")}
                   </button>
                 )}
                 {busy && (
@@ -962,7 +964,7 @@ export function ChatView({
                     type="button"
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
                     onClick={onStop}
-                    aria-label="停止"
+                    aria-label={t("停止")}
                   >
                     <Square size={14} fill="currentColor" />
                   </button>
@@ -976,7 +978,7 @@ export function ChatView({
                       (!draft.trim() && attachments.length === 0) ||
                       (attachments.length > 0 && !activeSupportsVision)
                     }
-                    aria-label="发送"
+                    aria-label={t("发送")}
                   >
                     <ArrowUp size={16} />
                   </button>
@@ -986,7 +988,7 @@ export function ChatView({
           </div>
           {queuedInputCount > 0 && queuedInputItems.length === 0 && (
             <div className="mt-1 text-xs text-muted-foreground">
-              已缓存 {queuedInputCount} 条，将在本轮结束后发送
+              {t("已缓存")} {queuedInputCount} {t("条，将在本轮结束后发送")}
             </div>
           )}
         </div>

@@ -19,6 +19,7 @@ import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
 import { truncateTitle } from "./ui/ConfirmDialog";
 import { useConfirm, usePrompt } from "./ui/DialogProvider";
 import { SettingsMenu } from "./settings/SettingsMenu";
+import { useTranslation } from "./i18n";
 import type { ViewMode } from "./view";
 import { repoLabel, sortRepos, type Repo } from "./repos";
 import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "./transcripts";
@@ -98,6 +99,7 @@ export function Sidebar({
   const closeMenu = (): void => setMenu(null);
   const confirm = useConfirm();
   const prompt = usePrompt();
+  const { t } = useTranslation();
 
   // Pin sort (sortRepos: pinned first, then by addedAt asc).
   const orderedRepos = useMemo(() => sortRepos(repos), [repos]);
@@ -108,48 +110,48 @@ export function Sidebar({
 
   const repoMenu = (repo: Repo): ContextMenuItem[] => [
     {
-      label: repo.pinned ? "取消置顶" : "置顶项目",
+      label: repo.pinned ? t("取消置顶") : t("置顶项目"),
       onClick: () => onPinRepo(repo.id, !repo.pinned),
     },
     {
-      label: "在「访达」中打开",
+      label: t("在「访达」中打开"),
       onClick: () => { void window.codeshell.revealInFinder(repo.path); },
     },
     {
-      label: "重命名项目…",
+      label: t("重命名项目…"),
       onClick: () => {
         void prompt({
-          title: "重命名项目",
-          message: "项目显示名称",
+          title: t("重命名项目"),
+          message: t("项目显示名称"),
           defaultValue: repoLabel(repo),
-        }).then((t) => {
-          if (t !== null && t.trim()) onRenameRepo(repo.id, t.trim());
+        }).then((v) => {
+          if (v !== null && v.trim()) onRenameRepo(repo.id, v.trim());
         });
       },
     },
     {
-      label: "归档对话",
+      label: t("归档对话"),
       onClick: () => {
         const live = sessions[repo.id]?.sessions.filter((s) => !s.archived).length ?? 0;
         if (live === 0) return;
         void confirm({
-          title: "归档项目对话",
-          message: `归档「${truncateTitle(repoLabel(repo), 24)}」下所有 ${live} 条未归档会话？`,
-          confirmLabel: "归档",
+          title: t("归档项目对话"),
+          message: `${t("归档")}「${truncateTitle(repoLabel(repo), 24)}」${live} ${t("条未归档会话？")}`,
+          confirmLabel: t("归档"),
         }).then((ok) => {
           if (ok) onArchiveAllSessions(repo.id);
         });
       },
     },
     {
-      label: "移除",
+      label: t("移除"),
       danger: true,
       onClick: () => {
         void confirm({
-          title: "从侧栏移除项目",
-          message: `确定从侧栏移除「${truncateTitle(repoLabel(repo), 24)}」吗？`,
-          detail: "本地会话保留 — 重新添加同一目录可恢复。",
-          confirmLabel: "移除",
+          title: t("从侧栏移除项目"),
+          message: `${t("移除")}「${truncateTitle(repoLabel(repo), 24)}」?`,
+          detail: t("本地会话保留 — 重新添加同一目录可恢复。"),
+          confirmLabel: t("移除"),
           destructive: true,
         }).then((ok) => {
           if (ok) onRemoveRepo(repo.id);
@@ -160,34 +162,34 @@ export function Sidebar({
 
   const sessionMenu = (repoId: string | null, s: SessionSummary): ContextMenuItem[] => [
     {
-      label: "重命名…",
+      label: t("重命名…"),
       onClick: () => {
         void prompt({
-          title: "重命名会话",
-          message: "会话标题",
+          title: t("重命名会话"),
+          message: t("会话标题"),
           defaultValue: s.title,
-        }).then((t) => {
-          if (t !== null && t.trim()) onRenameSession(repoId, s.id, t.trim());
+        }).then((v) => {
+          if (v !== null && v.trim()) onRenameSession(repoId, s.id, v.trim());
         });
       },
     },
     {
-      label: "复制 session ID",
+      label: t("复制 session ID"),
       onClick: () => {
         void navigator.clipboard.writeText(s.id);
       },
     },
     s.archived
-      ? { label: "恢复", onClick: () => onArchiveSession(repoId, s.id, false) }
-      : { label: "归档", onClick: () => onArchiveSession(repoId, s.id, true) },
+      ? { label: t("恢复"), onClick: () => onArchiveSession(repoId, s.id, false) }
+      : { label: t("归档"), onClick: () => onArchiveSession(repoId, s.id, true) },
     {
-      label: "删除",
+      label: t("删除"),
       danger: true,
       onClick: () => {
         void confirm({
-          title: "删除会话",
-          message: `确定删除会话「${truncateTitle(s.title, 28)}」吗？`,
-          confirmLabel: "删除",
+          title: t("删除会话"),
+          message: `${t("确定删除会话")}「${truncateTitle(s.title, 28)}」${t("吗？")}`,
+          confirmLabel: t("删除"),
           destructive: true,
         }).then((ok) => {
           if (ok) onDeleteSession(repoId, s.id);
@@ -199,10 +201,10 @@ export function Sidebar({
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card/40">
       <nav className="flex flex-col gap-0.5 p-2">
-        <SidebarItem label="新对话" Icon={MessageSquare} onClick={onNewConversation} active={false} />
-        <SidebarItem label="搜索" Icon={Search} onClick={onOpenSearch} active={false} />
+        <SidebarItem label={t("新对话")} Icon={MessageSquare} onClick={onNewConversation} active={false} />
+        <SidebarItem label={t("搜索")} Icon={Search} onClick={onOpenSearch} active={false} />
         <SidebarItem
-          label="扩展"
+          label={t("扩展")}
           Icon={Blocks}
           onClick={onOpenCustomize}
           active={viewMode === "customize"}
@@ -212,13 +214,13 @@ export function Sidebar({
             the misplaced dot confused users. The per-session asking dot + the
             dock icon badge (setBadgeCount) already cover location + count. */}
         <SidebarItem
-          label="自动化"
+          label={t("自动化")}
           Icon={Workflow}
           onClick={onOpenAutomations}
           active={viewMode === "runs"}
         />
         <SidebarItem
-          label="凭证"
+          label={t("凭证")}
           Icon={KeyRound}
           onClick={onOpenCredentials}
           active={viewMode === "credentials"}
@@ -227,13 +229,13 @@ export function Sidebar({
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between px-3 py-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">项目</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("项目")}</span>
           <button
             type="button"
             className="text-muted-foreground hover:text-foreground"
             onClick={onAddRepo}
-            aria-label="添加项目"
-            title="添加项目"
+            aria-label={t("添加项目")}
+            title={t("添加项目")}
           >
             <Plus size={16} strokeWidth={2.25} />
           </button>
@@ -241,7 +243,7 @@ export function Sidebar({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2">
           {orderedRepos.length === 0 && noRepoSessions.length === 0 && (
-            <div className="px-2 py-3 text-xs text-muted-foreground">点 + 添加你的第一个 repo</div>
+            <div className="px-2 py-3 text-xs text-muted-foreground">{t("点 + 添加你的第一个 repo")}</div>
           )}
           {orderedRepos.map((repo) => (
             <ProjectGroup
@@ -368,6 +370,7 @@ function ProjectGroup({
 
   const all = index?.sessions ?? [];
   const live = useMemo(() => all.filter((s) => !s.archived), [all]);
+  const { t } = useTranslation();
 
   const visibleLive = useMemo(
     () => (showMore ? live : live.slice(0, COMPACT_SESSION_LIMIT)),
@@ -394,12 +397,12 @@ function ProjectGroup({
           <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
         )}
         <span className="flex-1 truncate font-medium">{repoLabel(repo)}</span>
-        {repo.pinned && <span className="text-primary" title="已置顶">·</span>}
+        {repo.pinned && <span className="text-primary" title={t("已置顶")}>·</span>}
         <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
           <button
             className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
-            aria-label="更多"
-            title="更多"
+            aria-label={t("更多")}
+            title={t("更多")}
             onClick={(e) => {
               e.stopPropagation();
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -410,8 +413,8 @@ function ProjectGroup({
           </button>
           <button
             className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
-            aria-label={`在 ${repoLabel(repo)} 中开始新对话`}
-            title={`在 ${repoLabel(repo)} 中开始新对话`}
+            aria-label={t("在 ${0} 中开始新对话", repoLabel(repo))}
+            title={t("在 ${0} 中开始新对话", repoLabel(repo))}
             onClick={(e) => {
               e.stopPropagation();
               onNewChat();
@@ -444,7 +447,7 @@ function ProjectGroup({
                   className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-accent/60"
                   onClick={() => setShowMore(true)}
                 >
-                  <span>展开显示</span>
+                  <span>{t("展开显示")}</span>
                   <span className="text-muted-foreground">{hiddenLiveCount}</span>
                 </li>
               )}
@@ -476,10 +479,11 @@ function NoRepoSection({
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
   onArchiveSession: (sid: string) => void;
 }) {
+  const { t } = useTranslation();
   if (sessions.length === 0) return null;
   return (
     <div className="mt-2">
-      <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">对话</div>
+      <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("对话")}</div>
       <ul className="space-y-0.5">
         {sessions.map((s) => (
           <SessionRow
@@ -520,6 +524,7 @@ function SessionRow({
 }) {
   const [confirming, setConfirming] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     return () => {
@@ -561,24 +566,24 @@ function SessionRow({
       title={s.title}
     >
       {s.source === "automation" && (
-        <Clock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="自动化" />
+        <Clock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label={t("自动化")} />
       )}
       <span className="flex-1 truncate">{s.title}</span>
       {status === "running" ? (
         <Loader2
           className="h-3 w-3 shrink-0 animate-spin text-status-running"
-          aria-label="运行中"
+          aria-label={t("运行中")}
         />
       ) : status === "asking" ? (
         <span
           className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
-          aria-label="待输入"
+          aria-label={t("待输入")}
           role="img"
         />
       ) : status === "unread" ? (
         <span
           className="h-2 w-2 shrink-0 rounded-full bg-primary"
-          aria-label="未读"
+          aria-label={t("未读")}
           role="img"
         />
       ) : null}
@@ -587,10 +592,10 @@ function SessionRow({
           <button
             className="rounded px-1.5 text-xs text-status-err hover:bg-background"
             onClick={fireArchive}
-            aria-label="确认归档"
-            title="确认归档"
+            aria-label={t("确认归档")}
+            title={t("确认归档")}
           >
-            确认
+            {t("确认")}
           </button>
         ) : (
           <>

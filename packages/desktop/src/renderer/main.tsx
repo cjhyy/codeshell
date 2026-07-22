@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
 import { DialogProvider } from "./ui/DialogProvider";
 import { ToastProvider } from "./ui/ToastProvider";
+import { LanguageProvider } from "./i18n";
 import "./styles/tailwind.css";
 import { initTheme } from "./theme";
 import { BrowserPanel } from "./panels/BrowserPanel";
@@ -53,11 +54,13 @@ if (params.get("popout") === "browser") {
 } else {
   root.render(
     <React.StrictMode>
-      <DialogProvider>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
-      </DialogProvider>
+      <LanguageProvider>
+        <DialogProvider>
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        </DialogProvider>
+      </LanguageProvider>
     </React.StrictMode>,
   );
 }

@@ -6,7 +6,8 @@
   "type": "module",
   "main": "./out/main/index.mjs",
   "scripts": {
-    "postinstall": "bun run rebuild:native",
+    "postinstall": "bun run fix-deps && bun run rebuild:native",
+    "fix-deps": "bun run scripts/fix-deps.ts",
     "rebuild:native": "bun run scripts/rebuild-native.ts",
     "dev": "bun run scripts/dev.ts",
     "build": "bun run scripts/build.ts",

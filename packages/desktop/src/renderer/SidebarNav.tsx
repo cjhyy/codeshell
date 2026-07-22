@@ -11,6 +11,7 @@ import {
 } from "./ui/icons";
 import { Badge } from "./ui/Badge";
 import type { ViewMode } from "./view";
+import { useTranslation } from "./i18n";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,7 @@ const ITEMS: Item[] = [
 ];
 
 export function SidebarNav({ active, onSelect, badges = {} }: Props) {
+  const { t } = useTranslation();
   return (
     <nav className="flex flex-col gap-1">
       {ITEMS.map(({ id, label, Icon, badge }) => {
@@ -60,7 +62,7 @@ export function SidebarNav({ active, onSelect, badges = {} }: Props) {
             aria-current={active === id ? "page" : undefined}
           >
             <Icon size={14} />
-            <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+            <span className="min-w-0 flex-1 truncate text-left">{t(label)}</span>
             {count > 0 && <Badge count={count} />}
           </Button>
         );

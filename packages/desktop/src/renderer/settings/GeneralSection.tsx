@@ -12,6 +12,7 @@
  * as no-op switches.
  */
 import React, { useState } from "react";
+import { useTranslation } from "../i18n";
 import { PermissionSection } from "./PermissionSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 import {
@@ -22,12 +23,8 @@ import {
 } from "../uiLanguage";
 import { cn } from "@/lib/utils";
 
-const LANGUAGES: Array<{ id: UILanguage; description: string }> = [
-  { id: "zh", description: "界面使用中文" },
-  { id: "en", description: "Use English for the interface" },
-];
-
 function LanguageBlock() {
+  const { t } = useTranslation();
   const [lang, setLang] = useState<UILanguage>(() => loadUILanguage());
 
   const choose = (next: UILanguage): void => {
@@ -35,11 +32,16 @@ function LanguageBlock() {
     saveUILanguage(next);
   };
 
+  const LANGUAGES: Array<{ id: UILanguage; description: string }> = [
+    { id: "zh", description: t("界面使用中文") },
+    { id: "en", description: t("Use English for the interface") },
+  ];
+
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">语言</h3>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("语言")}</h3>
       <p className="m-0 text-xs text-muted-foreground">
-        应用界面语言。实际文案翻译仍在逐步完善中。
+        {t("应用界面语言。实际文案翻译仍在逐步完善中。")}
       </p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {LANGUAGES.map((item) => (

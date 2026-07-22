@@ -12,6 +12,7 @@ import {
   languageLabel,
   type UILanguage,
 } from "../uiLanguage";
+import { useTranslation } from "../i18n";
 
 interface Props {
   /** Switch to the full-page Settings view. */
@@ -34,6 +35,7 @@ const LANGUAGES: UILanguage[] = ["zh", "en"];
  * of being clipped by it (same approach as the project ContextMenu).
  */
 export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<UILanguage>(() => loadUILanguage());
   const [submenu, setSubmenu] = useState<{ left: number; top: number } | null>(null);
@@ -83,7 +85,7 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
     <div className="relative" ref={ref}>
       <button className={triggerClass} onClick={sidebarCollapsed ? onOpenSettingsPage : () => setOpen((o) => !o)}>
         <SettingsIcon size={14} className="shrink-0" />
-        <span className="truncate">设置</span>
+        <span className="truncate">{t("设置")}</span>
       </button>
       {open && (
         <ul className="absolute bottom-full left-0 z-40 mb-2 min-w-56 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
@@ -95,7 +97,7 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
             }}
           >
             <SettingsIcon size={13} />
-            <span>打开设置…</span>
+            <span>{t("打开设置…")}</span>
             <ArrowRight size={11} className="ml-auto text-muted-foreground" />
           </li>
           <li className="my-1 h-px bg-border" />
@@ -104,7 +106,7 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
             onMouseEnter={openSubmenu}
           >
             <Globe size={13} />
-            <span>切换语言</span>
+            <span>{t("切换语言")}</span>
             <ChevronRight size={12} className="ml-auto text-muted-foreground" />
           </li>
         </ul>
