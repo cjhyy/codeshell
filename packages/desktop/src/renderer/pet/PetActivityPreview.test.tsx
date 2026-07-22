@@ -63,4 +63,23 @@ describe("PetActivityPreview", () => {
     expect(working).toContain('data-pet-activity-dismiss="working:session-two"');
     expect(working).toContain("收起 Session 动态：仍在执行");
   });
+
+  test("disables a stale external card that has no complete locator", () => {
+    const html = renderToStaticMarkup(
+      <PetActivityPreview
+        item={{
+          key: "working:external",
+          agentSessionId: "external",
+          title: "外部工作",
+          kind: "working",
+          lastActivityAt: 100,
+          external: { cli: "codex" },
+        }}
+        onOpen={() => undefined}
+      />,
+    );
+
+    expect(html).toMatch(/<button[^>]*disabled=""/);
+    expect(html).toContain("外部会话定位信息不完整或 transcript 已不存在，无法打开");
+  });
 });

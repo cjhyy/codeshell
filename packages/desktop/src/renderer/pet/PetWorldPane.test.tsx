@@ -4,6 +4,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import { DialogProvider } from "../ui/DialogProvider";
 import { PetWorldPane } from "./PetWorldPane";
 
 const reclaimed: PetProjectionSnapshot = {
@@ -40,8 +41,12 @@ function textOf(node: unknown): string {
 
 describe("PetWorldPane", () => {
   test("shows an empty work map without exposing a raw session list", () => {
+    ensureMiniDom();
+    (window as unknown as Record<string, any>).codeshell = { pet: {} };
     const html = renderToStaticMarkup(
-      <PetWorldPane projection={reclaimed} status="ready" now={2_000} />,
+      <DialogProvider>
+        <PetWorldPane projection={reclaimed} status="ready" now={2_000} />
+      </DialogProvider>,
     );
 
     expect(html).toContain("目前没有工作记录");
@@ -58,20 +63,96 @@ describe("PetWorldPane", () => {
   });
 
   test("keeps a dedicated loading state without occupying the chat pane", () => {
+    ensureMiniDom();
+    (window as unknown as Record<string, any>).codeshell = { pet: {} };
     const html = renderToStaticMarkup(
-      <PetWorldPane projection={null} status="loading" now={2_000} />,
+      <DialogProvider>
+        <PetWorldPane projection={null} status="loading" now={2_000} />
+      </DialogProvider>,
     );
     expect(html).toContain("正在加载工作状态");
     expect(html).toContain("正在整理工作收件箱");
   });
 
   test("reports snapshot failure as retrying instead of looking freshly updated", () => {
+    ensureMiniDom();
+    (window as unknown as Record<string, any>).codeshell = { pet: {} };
     const html = renderToStaticMarkup(
-      <PetWorldPane projection={null} status="error" now={2_000} />,
+      <DialogProvider>
+        <PetWorldPane projection={null} status="error" now={2_000} />
+      </DialogProvider>,
     );
     expect(html).toContain("加载失败，正在重试");
     expect(html).toContain("暂时无法加载会话");
     expect(html).not.toContain("刚刚更新");
+  });
+
+  test("emits a structured external locator when an external work item is opened", async () => {
+    ensureMiniDom();
+    const projection: PetProjectionSnapshot = {
+      ...reclaimed,
+      sessions: [
+        {
+          agentSessionId: "thread-123",
+          runState: "running",
+          queueDepth: 0,
+          lastActivityAt: 1_500,
+          pendingDecisionCount: 0,
+          external: { cli: "codex", cwd: "/tmp/project" },
+          freshness: {
+            source: "external-tail",
+            observedAt: 1_500,
+            workerState: "active",
+          },
+        },
+      ],
+    };
+    const requests: unknown[] = [];
+    const testWindow = window as unknown as Record<string, any>;
+    const originalCodeshell = testWindow.codeshell;
+    testWindow.codeshell = {
+      pet: {
+        getDismissedWorkItemIds: async () => ({ revision: 1, dismissedIds: [] }),
+        updateDismissedWorkItemIds: async () => ({ revision: 1, dismissedIds: [] }),
+        onDismissedWorkItemIdsChanged: () => () => undefined,
+      },
+    };
+    const container = document.createElement("div") as unknown as HTMLElement;
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <DialogProvider>
+          <PetWorldPane
+            projection={projection}
+            status="ready"
+            now={2_000}
+            onNavigate={(request) => requests.push(request)}
+          />
+        </DialogProvider>,
+      );
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "data-pet-work-drawer")).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "data-pet-work-open")).onClick();
+      await flushMicrotasks();
+    });
+
+    expect(requests).toEqual([
+      {
+        agentSessionId: "thread-123",
+        external: { cli: "codex", cwd: "/tmp/project", sessionId: "thread-123" },
+        snapshotVersion: 1,
+        generation: 0,
+      },
+    ]);
+    await act(async () => root.unmount());
+    if (originalCodeshell === undefined) delete testWindow.codeshell;
+    else testWindow.codeshell = originalCodeshell;
   });
 
   test("does not let an equal-revision inbox event undo an optimistic dismissal", async () => {
@@ -118,7 +199,11 @@ describe("PetWorldPane", () => {
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<PetWorldPane projection={projection} status="ready" now={2_000} />);
+      root.render(
+        <DialogProvider>
+          <PetWorldPane projection={projection} status="ready" now={2_000} />
+        </DialogProvider>,
+      );
       await flushMicrotasks();
     });
     await act(async () => {

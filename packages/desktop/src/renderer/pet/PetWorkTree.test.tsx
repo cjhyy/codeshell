@@ -138,8 +138,14 @@ test("renders external-CLI and risk badges on items that carry them", () => {
                 workspace: "codeshell",
                 title: "外部会话",
                 lastActivityAt: 5_000,
-                external: { cli: "codex" as const },
-                navigation: { agentSessionId: "ext" },
+                external: {
+                  cli: "codex" as const,
+                  cwd: "/tmp/project",
+                },
+                navigation: {
+                  agentSessionId: "ext",
+                  external: { cli: "codex", cwd: "/tmp/project", sessionId: "thread-ext" },
+                },
               },
             ],
           },
@@ -193,6 +199,49 @@ test("renders external-CLI and risk badges on items that carry them", () => {
   expect(html).toContain("Bash");
   // The plain "other" item must not sprout a risk/external badge.
   expect(html).not.toContain("claude");
+});
+
+test("disables an external item whose locator is incomplete and explains why", () => {
+  const incomplete: PetWorkMap = {
+    groups: [
+      {
+        workspace: "codeshell",
+        latestActivityAt: 1,
+        buckets: [
+          {
+            group: "other",
+            items: [
+              {
+                id: "other:external",
+                group: "other",
+                state: "idle",
+                title: "已删除 transcript",
+                lastActivityAt: 1,
+                external: { cli: "claude" },
+                navigation: { agentSessionId: "external" },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    counts: { running: 0, pending: 0, "follow-up": 0, completed: 0, other: 1 },
+    itemIds: {
+      running: [],
+      pending: [],
+      "follow-up": [],
+      completed: [],
+      other: ["other:external"],
+    },
+    dismissedCount: 0,
+    hiddenCount: 0,
+    unclassifiedCount: 0,
+  };
+
+  const html = renderToStaticMarkup(<PetWorkTree workMap={incomplete} defaultOpen />);
+  expect(html).toMatch(
+    /<button[^>]*disabled=""[^>]*title="外部会话定位信息不完整或 transcript 已不存在，无法打开"/,
+  );
 });
 
 test.each([

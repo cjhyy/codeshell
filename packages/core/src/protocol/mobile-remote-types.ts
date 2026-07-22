@@ -247,7 +247,7 @@ export type MobileServerEvent =
   // ── Rooms ─────────────────────────────────────────────────────────────
   | { type: "room.list.ok"; rooms: RoomPublic[] }
   | { type: "room.projects.ok"; projects: MobileProjectMeta[] }
-  | { type: "room.opened"; roomId: string; status: "running" | "missing" }
+  | { type: "room.opened"; roomId: string; status: "running" | "missing" | "observing" }
   | { type: "room.message"; roomId: string; msg: unknown }
   | { type: "room.history.ok"; roomId: string; messages: unknown[]; latestSeq: number }
   | { type: "room.closed"; roomId: string }
@@ -279,7 +279,12 @@ export type MobileServerEvent =
       sessions: CcDiscoveredSession[];
       kind: "claude-code" | "codex";
     }
-  | { type: "ccRoom.opened"; roomId: string; sessionId: string; status: "running" | "missing" }
+  | {
+      type: "ccRoom.opened";
+      roomId: string;
+      sessionId: string;
+      status: "running" | "missing" | "observing";
+    }
   | {
       type: "ccRoom.transcriptSubscribed";
       roomId: string;

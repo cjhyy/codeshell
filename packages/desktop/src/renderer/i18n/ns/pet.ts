@@ -57,6 +57,7 @@ export const pet = {
         clearCompleted: "清除已完成",
         clearCompletedHint: "隐藏全部已完成工作，不会删除原 Session",
         restoreDismissed: "恢复隐藏项（{count}）",
+        externalUnavailable: "外部会话定位信息不完整或 transcript 已不存在，无法打开",
         branch: {
           running: "进行中",
           pending: "待决策",
@@ -199,6 +200,7 @@ export const pet = {
       navigation: {
         stale: "该请求已处理或状态已更新；已打开原会话",
         notFound: "原会话已不存在或不可打开",
+        externalUnavailable: "外部会话定位信息不完整，无法打开",
       },
       chat: {
         title: "和 Mimi 对话",
@@ -327,6 +329,8 @@ export const pet = {
         clearCompleted: "Clear completed",
         clearCompletedHint: "Hide all completed work without deleting the original sessions",
         restoreDismissed: "Restore hidden ({count})",
+        externalUnavailable:
+          "The external session locator is incomplete or its transcript no longer exists",
         branch: {
           running: "In progress",
           pending: "Needs decision",
@@ -450,7 +454,8 @@ export const pet = {
           error: "Sessions are temporarily unavailable; retrying",
           reconciling: "Reconciling; sessions will update shortly",
         },
-        externalNoNav: "External session (managed by the Codex/Claude CLI); cannot be opened inside CodeShell",
+        externalNoNav:
+          "External session (managed by the Codex/Claude CLI); cannot be opened inside CodeShell",
         risk: {
           high: "High risk",
           medium: "Medium risk",
@@ -471,6 +476,7 @@ export const pet = {
       navigation: {
         stale: "The request changed or was handled; opened the original session",
         notFound: "The original session no longer exists or cannot be opened",
+        externalUnavailable: "The external session locator is incomplete and cannot be opened",
       },
       chat: {
         title: "Chat with Mimi",

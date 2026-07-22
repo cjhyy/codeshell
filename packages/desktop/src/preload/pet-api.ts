@@ -48,6 +48,13 @@ export type PetChatEvent =
 
 export type PetSessionRunState = "dormant" | "idle" | "queued" | "running" | "terminal" | "unknown";
 
+/** Complete, fail-closed locator for opening an external CLI transcript. */
+export interface PetExternalSessionLocator {
+  cli: "codex" | "claude";
+  cwd: string;
+  sessionId: string;
+}
+
 export interface PetSessionProjection {
   agentSessionId: string;
   title?: string;
@@ -60,7 +67,9 @@ export interface PetSessionProjection {
   pendingDecisionCount: number;
   completionKind?: "background_wait" | "goal_control_stop" | "limit_stop";
   terminal?: { status: "completed" | "failed" | "cancelled"; at: number };
-  /** Present on sessions observed from an external CLI (Codex/Claude). */
+  /** Present on sessions observed from an external CLI (Codex/Claude).
+   * `agentSessionId` is the external session id; older/stale projections may
+   * lack cwd, in which case renderers must keep the row read-only. */
   external?: { cli: "codex" | "claude"; cwd?: string };
   freshness: {
     source: "disk" | "live-snapshot" | "live-event" | "external-tail";
@@ -122,6 +131,9 @@ export interface PetOpenSessionRequest {
   generation: number;
   requestId?: string;
   routeGeneration?: number;
+  /** When present, navigation targets the CC Room observer instead of the
+   * internal CodeShell session resolver. */
+  external?: PetExternalSessionLocator;
 }
 
 export interface PetNavigationTarget {

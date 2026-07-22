@@ -1,6 +1,7 @@
 import React from "react";
 import { Check, CircleAlert, LoaderCircle, X } from "lucide-react";
 import { useT } from "../i18n";
+import { petExternalSessionLocator } from "./petExternalSession";
 import type { PetWidgetActivityItem } from "./petWidgetActivity";
 
 export function PetActivityPreview({
@@ -16,6 +17,7 @@ export function PetActivityPreview({
 }) {
   const { t } = useT();
   const stateLabel = t(`pet.widget.workState.${item.kind}`);
+  const navigationDisabled = Boolean(item.external && !petExternalSessionLocator(item));
 
   return (
     <div
@@ -24,8 +26,10 @@ export function PetActivityPreview({
     >
       <button
         type="button"
-        className="flex min-h-20 w-full items-center gap-3 rounded-[inherit] border-0 bg-transparent px-5 py-3 text-left outline-none"
-        onClick={onOpen}
+        disabled={navigationDisabled}
+        title={navigationDisabled ? t("pet.work.externalUnavailable") : undefined}
+        className="flex min-h-20 w-full items-center gap-3 rounded-[inherit] border-0 bg-transparent px-5 py-3 text-left outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        onClick={() => !navigationDisabled && onOpen()}
         aria-label={actionLabel ?? t("pet.widget.previewAria", { title: item.title })}
       >
         <span className="min-w-0 flex-1">

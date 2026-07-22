@@ -21,6 +21,9 @@ export interface PetWidgetActivityItem {
   lastActivityAt: number;
   requestId?: string;
   routeGeneration?: number;
+  /** Raw external projection metadata is retained so the card can distinguish
+   * a complete locator from a stale/missing one and fail closed. */
+  external?: NonNullable<PetSessionProjection["external"]>;
 }
 
 export interface PetWidgetActivity {
@@ -129,6 +132,7 @@ export function buildPetWidgetActivity(
     const title =
       session?.title ?? session?.workspaceDisplayName ?? task.objective ?? task.sessionId.slice(-8);
     const detail = task.waitingFor ?? task.lastError ?? task.summary;
+    const external = session?.external ? { external: { ...session.external } } : {};
     switch (task.status) {
       case "queued":
       case "running":
@@ -140,6 +144,7 @@ export function buildPetWidgetActivity(
           detail,
           kind: "working",
           lastActivityAt: task.updatedAt,
+          ...external,
         });
         return;
       case "waiting":
@@ -153,6 +158,7 @@ export function buildPetWidgetActivity(
           detail,
           kind: "needs-action",
           lastActivityAt: task.updatedAt,
+          ...external,
         });
         return;
       case "completed": {
@@ -166,6 +172,7 @@ export function buildPetWidgetActivity(
             detail,
             kind: "completed",
             lastActivityAt: completedAt,
+            ...external,
           });
         }
         return;
@@ -176,6 +183,7 @@ export function buildPetWidgetActivity(
   };
 
   for (const session of snapshot.sessions) {
+    const external = session.external ? { external: { ...session.external } } : {};
     const pending = pendingBySession.get(session.agentSessionId);
     const longTask = latestLongTaskBySession.get(session.agentSessionId);
     const terminalLongTask =
@@ -211,6 +219,7 @@ export function buildPetWidgetActivity(
         lastActivityAt: Math.max(session.lastActivityAt, pending.createdAt),
         requestId: pending.requestId,
         routeGeneration: pending.routeGeneration,
+        ...external,
       });
       continue;
     }
@@ -224,6 +233,7 @@ export function buildPetWidgetActivity(
         detail: session.summary,
         kind: "working",
         lastActivityAt: session.lastActivityAt,
+        ...external,
       });
       continue;
     }
@@ -236,6 +246,7 @@ export function buildPetWidgetActivity(
         detail: session.summary,
         kind: "completed",
         lastActivityAt: session.terminal!.at,
+        ...external,
       });
     }
   }

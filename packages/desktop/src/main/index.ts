@@ -113,6 +113,11 @@ import { PetSegmentController } from "./pet/pet-segment-controller.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
+import {
+  openLinkedSessionFromIpc,
+  takeOverLinkedSessionFromIpc,
+} from "./cc-room/linked-session-ipc.js";
+import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
 import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
 import { petChatModelKeyFromSettings } from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -656,6 +661,7 @@ const approvalBridge = new ApprovalBridge({
 });
 const roomManager = new RoomManager({
   rootDir: resolve(app.getPath("userData"), "mobile-remote", "rooms"),
+  resolveLinkedSession: resolveLinkedSessionFromDisk,
   createAgent: (room, onEvent) =>
     room.kind === "codex"
       ? new CodexRoomAgent({
@@ -3426,16 +3432,18 @@ ipcMain.handle(
 );
 ipcMain.handle(
   "ccRoom:openLinkedSession",
-  async (_e, externalSessionId: unknown, cwd: unknown, kind: unknown) => {
-    if (typeof externalSessionId !== "string" || !externalSessionId.trim()) {
-      throw new Error("external session id is required");
-    }
-    if (typeof cwd !== "string" || !cwd.trim()) throw new Error("cwd is required");
-    if (kind !== "claude-code" && kind !== "codex") {
-      throw new Error("unsupported linked session kind");
-    }
-    return roomManager.openLinkedSession(externalSessionId, cwd, kind);
-  },
+  async (_e, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
+    openLinkedSessionFromIpc(roomManager, externalSessionId, cwd, kind),
+);
+ipcMain.handle(
+  "ccRoom:takeOverLinkedSession",
+  async (
+    _e,
+    roomId: unknown,
+    externalSessionId: unknown,
+    cwd: unknown,
+    kind: unknown,
+  ) => takeOverLinkedSessionFromIpc(roomManager, roomId, externalSessionId, cwd, kind),
 );
 const transcriptCleanupSenders = new Set<number>();
 ipcMain.handle(

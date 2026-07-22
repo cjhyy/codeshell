@@ -4,6 +4,7 @@ import { createPetApi, type PetProjectionEvent, type PetProjectionSnapshot } fro
 describe("Pet preload contract", () => {
   test("gets a snapshot and gives every subscriber an isolated removable listener", async () => {
     const handlers = new Map<string, Set<(event: unknown, payload: unknown) => void>>();
+    const invoked: Array<{ channel: string; payload: unknown }> = [];
     const snapshot: PetProjectionSnapshot = {
       version: 0,
       generation: 0,
@@ -15,6 +16,7 @@ describe("Pet preload contract", () => {
     const ipc = {
       sent: [] as Array<{ channel: string; payload: unknown }>,
       invoke: async (channel: string, payload?: unknown) => {
+        invoked.push({ channel, payload });
         if (channel === "pet:get-snapshot") return snapshot;
         if (channel === "pet:get-attention") return { surfaceablePendingCount: 2 };
         if (channel === "pet:set-active-session") return { ok: true };
@@ -173,6 +175,17 @@ describe("Pet preload contract", () => {
     api.moveWidget({ x: 320, y: 180 });
     expect(ipc.sent).toEqual([{ channel: "pet:widget-move", payload: { x: 320, y: 180 } }]);
     expect(await api.openWidgetOverview()).toEqual({ ok: true });
+    const externalTarget = {
+      agentSessionId: "thread-1",
+      snapshotVersion: 4,
+      generation: 2,
+      external: { cli: "codex" as const, cwd: "/tmp/project", sessionId: "thread-1" },
+    };
+    expect(await api.openWidgetOverview(externalTarget)).toEqual({ ok: true });
+    expect(invoked).toContainEqual({
+      channel: "pet:widget-open-overview",
+      payload: externalTarget,
+    });
     let overviewOpenCount = 0;
     const offOverview = api.onWidgetOpenOverview(() => {
       overviewOpenCount += 1;

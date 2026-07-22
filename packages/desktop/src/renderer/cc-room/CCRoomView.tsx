@@ -90,6 +90,7 @@ export function CCRoomView({
     mode: string;
     cwd: string;
     cliKind: CliKind;
+    status: "observing" | "running";
   } | null>(null);
   const [picking, setPicking] = useState<{ sessionId: string; cwd: string } | null>(null);
   const lastOpenRequestNonceRef = useRef(-1);
@@ -128,55 +129,69 @@ export function CCRoomView({
       pendingOpenRequestRef.current?.cliKind === cliKind ? pendingOpenRequestRef.current : null;
     const sequence = probeSequenceRef.current + 1;
     probeSequenceRef.current = sequence;
-    const force = probeForceRef.current;
-    probeForceRef.current = false;
     let cancelled = false;
-    let probeResolved = false;
     setAvail(null);
     setSessions([]);
     setExpanded(false);
-    void probeFor(cliKind, force)
-      .then(async (availability) => {
-        if (cancelled || probeSequenceRef.current !== sequence) return;
-        probeResolved = true;
-        setAvail(availability);
-        if (!linkedRequest) return;
-        if (!availability.available) {
-          if (pendingOpenRequestRef.current?.nonce === linkedRequest.nonce) {
-            pendingOpenRequestRef.current = null;
-          }
-          toastRef.current({
-            message: tRef.current("panels.room.cliUnavailable"),
-            variant: "error",
-          });
-          return;
-        }
-        const linked = await window.codeshell.ccRoom.openLinkedSession(
+
+    // A Pet/DriveAgent deep-link is a disk-only observe action. Do not run the
+    // normal availability probe here: production probes execute
+    // `claude/codex --version`, which would violate navigation's zero-process-
+    // spawn contract before the user explicitly chooses takeover.
+    if (linkedRequest) {
+      void window.codeshell.ccRoom
+        .openLinkedSession(
           linkedRequest.externalSessionId,
           linkedRequest.cwd,
           linkedRequest.cliKind,
-        );
-        if (
-          cancelled ||
-          probeSequenceRef.current !== sequence ||
-          pendingOpenRequestRef.current?.nonce !== linkedRequest.nonce
-        ) {
-          return;
-        }
-        pendingOpenRequestRef.current = null;
-        setConv({
-          roomId: linked.roomId,
-          sessionId: linkedRequest.externalSessionId,
-          mode: linked.mode,
-          cwd: linkedRequest.cwd,
-          cliKind: linkedRequest.cliKind,
+        )
+        .then((linked) => {
+          if (
+            cancelled ||
+            probeSequenceRef.current !== sequence ||
+            pendingOpenRequestRef.current?.nonce !== linkedRequest.nonce
+          ) {
+            return;
+          }
+          pendingOpenRequestRef.current = null;
+          setConv({
+            roomId: linked.roomId,
+            sessionId: linkedRequest.externalSessionId,
+            mode: linked.mode,
+            cwd: linked.cwd,
+            cliKind: linkedRequest.cliKind,
+            status: linked.status,
+          });
+        })
+        .catch((error) => {
+          if (cancelled || probeSequenceRef.current !== sequence) return;
+          if (pendingOpenRequestRef.current?.nonce === linkedRequest.nonce) {
+            pendingOpenRequestRef.current = null;
+          }
+          setAvail({ available: false });
+          toastRef.current({
+            message: tRef.current("panels.room.openLinkedFailed", {
+              error: error instanceof Error ? error.message : String(error),
+            }),
+            variant: "error",
+          });
         });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const force = probeForceRef.current;
+    probeForceRef.current = false;
+    let probeResolved = false;
+    void probeFor(cliKind, force)
+      .then((availability) => {
+        if (cancelled || probeSequenceRef.current !== sequence) return;
+        probeResolved = true;
+        setAvail(availability);
       })
       .catch((error) => {
         if (cancelled || probeSequenceRef.current !== sequence) return;
-        if (pendingOpenRequestRef.current?.nonce === linkedRequest?.nonce) {
-          pendingOpenRequestRef.current = null;
-        }
         if (!probeResolved) setAvail({ available: false });
         toastRef.current({
           message: tRef.current("panels.room.openLinkedFailed", {
@@ -204,7 +219,14 @@ export function CCRoomView({
         mode,
         cliKind,
       );
-      setConv({ roomId, sessionId: picking.sessionId, mode, cwd: picking.cwd, cliKind });
+      setConv({
+        roomId,
+        sessionId: picking.sessionId,
+        mode,
+        cwd: picking.cwd,
+        cliKind,
+        status: "running",
+      });
       setPicking(null);
     },
     [cwd, picking, cliKind],
@@ -300,9 +322,41 @@ export function CCRoomView({
         cliKind={conv.cliKind}
         cliLabel={CLI_LABEL[conv.cliKind]}
         active={active}
+        observing={conv.status === "observing"}
+        onTakeOver={async () => {
+          try {
+            const takenOver = await window.codeshell.ccRoom.takeOverLinkedSession(
+              conv.roomId,
+              conv.sessionId,
+              conv.cwd,
+              conv.cliKind,
+            );
+            setConv((current) =>
+              current?.roomId === conv.roomId
+                ? {
+                    ...current,
+                    status: "running",
+                    mode: takenOver.mode,
+                    cwd: takenOver.cwd,
+                  }
+                : current,
+            );
+          } catch (error) {
+            toast({
+              message: t("panels.room.takeOverFailed", {
+                error: error instanceof Error ? error.message : String(error),
+              }),
+              variant: "error",
+            });
+            throw error;
+          }
+        }}
         onBack={() => {
           setConv(null);
-          refresh(expanded);
+          // The linked path deliberately skipped availability probing. Once
+          // the user leaves that observer, re-enter the ordinary CC Room flow
+          // so the list does not remain behind an unresolved availability gate.
+          requestProbe();
         }}
       />
     );

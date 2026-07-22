@@ -9,6 +9,7 @@ import { PetDelegationCard, selectPetChatRows, type PetChatRow } from "./PetChat
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import { PetWidget } from "./PetWidget";
 import { usePetProjectionState } from "./usePetProjectionState";
+import { petExternalSessionLocator } from "./petExternalSession";
 import {
   PET_WIDGET_RECEIPTS_KEY,
   buildPetWidgetActivity,
@@ -257,6 +258,8 @@ export function PetDesktopWindow() {
     if (!projection) return;
     const activityItem = workActivity.items.find((item) => item.agentSessionId === sessionId);
     if (activityItem) markCompletionSeen(activityItem);
+    const external = activityItem ? petExternalSessionLocator(activityItem) : null;
+    if (activityItem?.external && !external) return;
     void api.openWidgetOverview({
       agentSessionId: sessionId,
       snapshotVersion: projection.version,
@@ -265,6 +268,7 @@ export function PetDesktopWindow() {
       ...(activityItem?.routeGeneration !== undefined
         ? { routeGeneration: activityItem.routeGeneration }
         : {}),
+      ...(external ? { external } : {}),
     });
   };
 

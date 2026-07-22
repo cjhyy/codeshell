@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 import type { PetPendingDecision, PetSessionProjection } from "@cjhyy/code-shell-pet";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { highestPendingRisk, SessionStatusSection, sessionDisplayState } from "./SessionStatusSection";
+import {
+  highestPendingRisk,
+  SessionStatusSection,
+  sessionDisplayState,
+} from "./SessionStatusSection";
 
 function session(overrides: Partial<PetSessionProjection> = {}): PetSessionProjection {
   return {
@@ -54,7 +58,9 @@ describe("SessionStatusSection", () => {
   test("waiting session with no matching pending shows no risk badge", () => {
     const html = renderToStaticMarkup(
       <SessionStatusSection
-        sessions={[session({ agentSessionId: "s1", pendingDecisionCount: 1, phase: "waiting-decision" })]}
+        sessions={[
+          session({ agentSessionId: "s1", pendingDecisionCount: 1, phase: "waiting-decision" }),
+        ]}
         pending={[pendingDecision({ agentSessionId: "other-session", riskLevel: "high" })]}
         now={3_000}
       />,
@@ -145,7 +151,7 @@ describe("SessionStatusSection", () => {
     expect(html).not.toContain("<h3");
   });
 
-  test("external codex session renders badge and is not clickable", () => {
+  test("external codex session with a complete locator renders a clickable badge", () => {
     const html = renderToStaticMarkup(
       <SessionStatusSection
         sessions={[
@@ -160,8 +166,7 @@ describe("SessionStatusSection", () => {
       />,
     );
     expect(html).toContain("codex"); // 徽章
-    expect(html).toMatch(/<button[^>]*\sdisabled=/); // 外部会话不可点击
-    expect(html).toContain("暂不支持在 CodeShell 内打开");
+    expect(html).not.toMatch(/<button[^>]*\sdisabled=/);
   });
 
   test("external claude session renders claude badge", () => {
@@ -170,7 +175,7 @@ describe("SessionStatusSection", () => {
         sessions={[
           session({
             agentSessionId: "sess-x",
-            external: { cli: "claude", cwd: "/tmp/proj-x" },
+            external: { cli: "claude" },
           } as Partial<PetSessionProjection>),
         ]}
         now={3_000}
@@ -179,6 +184,7 @@ describe("SessionStatusSection", () => {
     );
     expect(html).toContain("claude");
     expect(html).toMatch(/<button[^>]*\sdisabled=/);
+    expect(html).toContain("外部会话定位信息不完整或 transcript 已不存在，无法打开");
   });
 
   test("local session stays clickable (no disabled, no badge)", () => {

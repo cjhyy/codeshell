@@ -166,6 +166,7 @@ export function PetWorldPane({
             onRestoreDismissed={restoreDismissed}
             onOpen={(item) => {
               if (!projection) return;
+              if (item.external && !item.navigation.external) return;
               onNavigate?.({
                 ...item.navigation,
                 snapshotVersion: projection.version,

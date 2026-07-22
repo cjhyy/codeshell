@@ -241,12 +241,34 @@ describe("buildPetWorkMap external + risk tags", () => {
       .flatMap((b) => b.items)
       .find((i) => i.navigation.agentSessionId === sessionId);
 
-  test("itemFromSession carries external cli tag", () => {
+  test("itemFromSession retains the complete external locator for structured navigation", () => {
     const map = buildPetWorkMap(
-      [session("s1", { external: { cli: "codex", cwd: "/tmp/p" }, runState: "running" })],
+      [
+        session("s1", {
+          external: { cli: "codex", cwd: "/tmp/p" },
+          runState: "running",
+        }),
+      ],
       [],
     );
-    expect(findItem(map, "s1")?.external).toEqual({ cli: "codex" });
+    expect(findItem(map, "s1")?.external).toEqual({
+      cli: "codex",
+      cwd: "/tmp/p",
+    });
+    expect(findItem(map, "s1")?.navigation.external).toEqual({
+      cli: "codex",
+      cwd: "/tmp/p",
+      sessionId: "s1",
+    });
+  });
+
+  test("external item with an incomplete locator remains tagged but has no navigation target", () => {
+    const map = buildPetWorkMap(
+      [session("s1", { external: { cli: "codex" }, runState: "running" })],
+      [],
+    );
+    expect(findItem(map, "s1")?.external?.cli).toBe("codex");
+    expect(findItem(map, "s1")?.navigation.external).toBeUndefined();
   });
 
   test("itemFromSession carries pending risk level + tool name", () => {

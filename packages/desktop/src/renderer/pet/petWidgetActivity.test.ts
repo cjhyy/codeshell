@@ -97,6 +97,21 @@ describe("Pet widget work activity", () => {
     expect(activity.items[0]).toMatchObject({ kind: "needs-action", requestId: "ask-1" });
   });
 
+  test("retains external locator metadata on global activity cards", () => {
+    const value = snapshot([
+      session("external", {
+        runState: "running",
+        external: { cli: "claude", cwd: "/tmp/project" },
+      }),
+    ]);
+
+    const activity = buildPetWidgetActivity(value, { baselineAt: 200, seenCompletionKeys: [] });
+    expect(activity.items[0]?.external).toEqual({
+      cli: "claude",
+      cwd: "/tmp/project",
+    });
+  });
+
   test("clears an unread completion only after that completion row is seen", () => {
     const value = snapshot([
       session("done", { runState: "terminal", terminal: { status: "completed", at: 300 } }),

@@ -11,7 +11,13 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/Markdown";
-import { reduceStream, initialChatState, type ChatItem, type ChatState } from "@cjhyy/code-shell-web";
+import { useT } from "../i18n/I18nProvider";
+import {
+  reduceStream,
+  initialChatState,
+  type ChatItem,
+  type ChatState,
+} from "@cjhyy/code-shell-web";
 import { roomMsgToEvent, ccHistoryToEvents } from "@cjhyy/code-shell-web";
 
 /**
@@ -79,6 +85,8 @@ export function CCConversationView({
   cliKind = "claude-code",
   cliLabel = "Claude Code",
   active = true,
+  observing = false,
+  onTakeOver,
   onBack,
 }: {
   roomId: string;
@@ -96,11 +104,17 @@ export function CCConversationView({
   /** PanelArea keeps inactive tabs mounted. Only the visible tab owns a main-
    * process transcript subscription; switching tabs tears it down. */
   active?: boolean;
+  /** Observe-only linked rooms tail transcript history but cannot send until
+   * the user explicitly takes over the exact external session. */
+  observing?: boolean;
+  onTakeOver?: () => Promise<void>;
   onBack: () => void;
 }) {
+  const { t } = useT();
   const [chat, dispatch] = useReducer(chatReducer, undefined, initialChatState);
   const [pending, setPending] = useState<ApprovalReq[]>([]);
   const [input, setInput] = useState("");
+  const [takingOver, setTakingOver] = useState(false);
 
   // Approval delivery is independent of transcript tailing. PanelArea keeps
   // inactive tabs mounted, so retain these lightweight listeners and do not
@@ -217,14 +231,26 @@ export function CCConversationView({
 
   const send = useCallback(() => {
     const t = input.trim();
-    if (!t) return;
+    if (!t || observing) return;
     // NO local echo: RoomManager.send persists the user line and broadcasts it
     // back as a `room.message`, which onRoomMessage folds into the feed. Echoing
     // locally too would render the user bubble twice (the desktop "1 条消息变 2
     // 条" bug). The broadcast round-trips over loopback ~instantly.
     void window.codeshell.ccRoom.send(roomId, t);
     setInput("");
-  }, [input, roomId]);
+  }, [input, observing, roomId]);
+
+  const takeOver = useCallback(async () => {
+    if (!onTakeOver || takingOver) return;
+    setTakingOver(true);
+    try {
+      await onTakeOver();
+    } catch {
+      // The owner surfaces a translated toast; retain observe-only state.
+    } finally {
+      setTakingOver(false);
+    }
+  }, [onTakeOver, takingOver]);
 
   const resolve = useCallback(
     (
@@ -252,6 +278,24 @@ export function CCConversationView({
         </Button>
       </div>
 
+      {observing && (
+        <div
+          data-cc-room-state="observing"
+          className="flex items-center justify-between gap-3 border-b border-border bg-muted/35 px-3 py-2"
+        >
+          <p className="text-xs text-muted-foreground">{t("panels.room.observingDescription")}</p>
+          <Button
+            type="button"
+            data-cc-room-takeover="true"
+            size="sm"
+            disabled={takingOver || !onTakeOver}
+            onClick={() => void takeOver()}
+          >
+            {takingOver ? t("panels.room.takingOver") : t("panels.room.takeOver")}
+          </Button>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto p-4">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
           {chat.items.length === 0 ? (
@@ -269,8 +313,10 @@ export function CCConversationView({
 
       <div className="flex gap-2 border-t border-border p-2">
         <Input
+          data-cc-room-composer="true"
           className="flex-1"
           value={input}
+          disabled={observing}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -278,9 +324,9 @@ export function CCConversationView({
               send();
             }
           }}
-          placeholder={`发消息给 ${cliLabel}…`}
+          placeholder={observing ? t("panels.room.observingComposer") : `发消息给 ${cliLabel}…`}
         />
-        <Button size="sm" onClick={send}>
+        <Button size="sm" disabled={observing} onClick={send}>
           发送
         </Button>
       </div>

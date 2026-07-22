@@ -83,7 +83,12 @@ export const panels = {
       room: {
         cliUnavailable: "未检测到对应的 Claude Code / Codex CLI",
         openLinkedFailed: "无法打开外部会话：{error}",
+        takeOverFailed: "无法接管外部会话：{error}",
         ownerSessionUnavailable: "无法定位此任务所属的会话",
+        observingDescription: "正在只读查看外部 CLI 对话；继续前需要明确接管。",
+        observingComposer: "只读查看中；接管后才能发送消息",
+        takeOver: "继续对话 / 接管",
+        takingOver: "正在接管…",
       },
       quickChat: {
         title: "快聊",
@@ -311,7 +316,13 @@ export const panels = {
       room: {
         cliUnavailable: "The corresponding Claude Code / Codex CLI is unavailable",
         openLinkedFailed: "Could not open the external session: {error}",
+        takeOverFailed: "Could not take over the external session: {error}",
         ownerSessionUnavailable: "The session that owns this task could not be located",
+        observingDescription:
+          "Viewing this external CLI conversation read-only. Explicit takeover is required to continue.",
+        observingComposer: "Read-only; take over before sending a message",
+        takeOver: "Continue / Take over",
+        takingOver: "Taking over…",
       },
       quickChat: {
         title: "Quick Chat",

@@ -2,6 +2,7 @@ import type { PetPendingDecision, PetSessionProjection } from "../../preload/typ
 import React from "react";
 import { useT, type TFunction } from "../i18n";
 import { RISK_TONE } from "./petWorkMap";
+import { petExternalSessionLocator } from "./petExternalSession";
 
 export type PetSessionDisplayState =
   | "waiting"
@@ -89,14 +90,14 @@ function SessionRow({
   const shortId = session.agentSessionId.slice(-8);
   const animated = state === "running" ? " animate-pulse motion-reduce:animate-none" : "";
   const external = session.external;
-  const navigable = !external;
+  const navigable = !external || Boolean(petExternalSessionLocator(session));
 
   return (
     <li className="border-b border-border/60 last:border-b-0">
       <button
         type="button"
         disabled={!navigable}
-        title={navigable ? undefined : t("pet.session.externalNoNav")}
+        title={navigable ? undefined : t("pet.work.externalUnavailable")}
         className={`flex w-full min-w-0 items-start gap-2 px-2 py-2 text-left disabled:opacity-70 ${
           navigable ? "hover:bg-muted/50" : "cursor-default"
         }`}

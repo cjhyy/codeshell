@@ -1,4 +1,9 @@
-import type { PetPendingDecision, PetSessionProjection } from "../../preload/types";
+import type {
+  PetExternalSessionLocator,
+  PetPendingDecision,
+  PetSessionProjection,
+} from "../../preload/types";
+import { petExternalSessionLocator } from "./petExternalSession";
 
 /** Structured work group derived from projection state, never from title/summary text. */
 export type PetWorkGroup = "running" | "pending" | "follow-up" | "completed" | "other";
@@ -22,13 +27,14 @@ export interface PetWorkItem {
   detail?: string;
   lastActivityAt: number;
   /** Present when this item is an external-CLI (Codex/Claude) session. */
-  external?: { cli: "codex" | "claude" };
+  external?: NonNullable<PetSessionProjection["external"]>;
   /** Highest-risk pending decision summary for this item, when waiting. */
   risk?: { level: "high" | "medium" | "low"; toolName?: string };
   navigation: {
     agentSessionId: string;
     requestId?: string;
     routeGeneration?: number;
+    external?: PetExternalSessionLocator;
   };
 }
 
@@ -113,6 +119,7 @@ function itemFromSession(
   pending: PetPendingDecision | undefined,
 ): PetWorkItem {
   const { group, state } = classify(session, pending);
+  const externalLocator = petExternalSessionLocator(session);
   const idPrefix =
     group === "pending"
       ? `pending:${session.agentSessionId}:${pending?.requestId ?? "self"}`
@@ -127,14 +134,20 @@ function itemFromSession(
     lastActivityAt: pending
       ? Math.max(session.lastActivityAt, pending.createdAt)
       : session.lastActivityAt,
-    ...(session.external ? { external: { cli: session.external.cli } } : {}),
+    ...(session.external ? { external: { ...session.external } } : {}),
     ...(pending?.riskLevel || pending?.toolName
-      ? { risk: { level: pending.riskLevel ?? "low", ...(pending.toolName ? { toolName: pending.toolName } : {}) } }
+      ? {
+          risk: {
+            level: pending.riskLevel ?? "low",
+            ...(pending.toolName ? { toolName: pending.toolName } : {}),
+          },
+        }
       : {}),
     navigation: {
       agentSessionId: session.agentSessionId,
       requestId: pending?.requestId,
       routeGeneration: pending?.routeGeneration,
+      ...(externalLocator ? { external: externalLocator } : {}),
     },
   };
 }
@@ -148,7 +161,12 @@ function pendingWithoutSession(pending: PetPendingDecision): PetWorkItem {
     detail: pending.kind === "ask_user" ? "需要回答" : pending.toolName,
     lastActivityAt: pending.createdAt,
     ...(pending.riskLevel || pending.toolName
-      ? { risk: { level: pending.riskLevel ?? "low", ...(pending.toolName ? { toolName: pending.toolName } : {}) } }
+      ? {
+          risk: {
+            level: pending.riskLevel ?? "low",
+            ...(pending.toolName ? { toolName: pending.toolName } : {}),
+          },
+        }
       : {}),
     navigation: {
       agentSessionId: pending.agentSessionId,

@@ -296,6 +296,7 @@ function App() {
   >({});
   const quickChatSessionsRef = useRef<Record<string, QuickChatSessionRef>>({});
   const activeBucketRef = useRef(activeBucket);
+  const petExternalOpenNonceRef = useRef(0);
   activeBucketRef.current = activeBucket;
   quickChatSessionsRef.current = quickChatSessions;
   useEffect(() => {
@@ -892,6 +893,30 @@ function App() {
   );
 
   const handleOpenPetTarget = async (request: PetOpenSessionRequest): Promise<void> => {
+    if (request.external) {
+      const { cli, cwd, sessionId } = request.external;
+      if ((cli !== "claude" && cli !== "codex") || !cwd.trim() || !sessionId.trim()) {
+        toast({ message: t("pet.navigation.externalUnavailable"), variant: "error" });
+        return;
+      }
+      const nonce = petExternalOpenNonceRef.current + 1;
+      petExternalOpenNonceRef.current = nonce;
+      updatePanelBucket(activeBucketRef.current, (state) => ({
+        ...state,
+        open: true,
+        openCliSession: {
+          nonce,
+          externalSessionId: sessionId,
+          cliKind: cli === "claude" ? "claude-code" : "codex",
+          cwd,
+        },
+        requestNonce: state.requestNonce + 1,
+        requestKind: "ccRoom",
+      }));
+      setView((current) => ({ ...current, viewMode: "chat", sidebarCollapsed: false }));
+      markViewedPetCompletions(request.agentSessionId);
+      return;
+    }
     await openPetTarget(window.codeshell.pet, request, {
       select: async (target) => {
         await handleOpenAutomationDiskSession({

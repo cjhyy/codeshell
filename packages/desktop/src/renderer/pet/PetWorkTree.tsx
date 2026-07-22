@@ -103,72 +103,78 @@ function WorkBranch({
         />
       </summary>
       <ul className="space-y-1 px-1 pb-2 pt-0.5">
-        {items.map((item) => (
-          <li key={item.id}>
-            <div className="group/item flex min-w-0 items-start rounded-xl border border-transparent bg-background/45 transition hover:border-border/65 hover:bg-background hover:shadow-sm">
-              <button
-                type="button"
-                className="flex min-w-0 flex-1 items-start gap-2.5 rounded-l-xl px-3 py-2.5 text-left"
-                onClick={() => onOpen?.(item)}
-              >
-                <span className="relative mt-1.5 flex h-2.5 w-2.5 shrink-0 items-center justify-center">
-                  <span
-                    className={`h-2 w-2 rounded-full ${STATE_DOT[item.state]}`}
-                    aria-hidden="true"
-                  />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex min-w-0 items-start gap-2">
+        {items.map((item) => {
+          const navigationDisabled = Boolean(item.external && !item.navigation.external);
+          return (
+            <li key={item.id}>
+              <div className="group/item flex min-w-0 items-start rounded-xl border border-transparent bg-background/45 transition hover:border-border/65 hover:bg-background hover:shadow-sm">
+                <button
+                  type="button"
+                  data-pet-work-open={item.id}
+                  disabled={navigationDisabled}
+                  title={navigationDisabled ? t("pet.work.externalUnavailable") : undefined}
+                  className="flex min-w-0 flex-1 items-start gap-2.5 rounded-l-xl px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => !navigationDisabled && onOpen?.(item)}
+                >
+                  <span className="relative mt-1.5 flex h-2.5 w-2.5 shrink-0 items-center justify-center">
                     <span
-                      className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
-                      title={item.title}
-                    >
-                      {item.title}
-                    </span>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${STATE_BADGE[item.state]}`}
-                    >
-                      {t(`pet.work.state.${item.state}`)}
-                    </span>
-                    {item.external && (
-                      <span className="shrink-0 rounded border border-border px-1 text-[10px] uppercase text-muted-foreground">
-                        {item.external.cli}
-                      </span>
-                    )}
-                    {item.risk && (
+                      className={`h-2 w-2 rounded-full ${STATE_DOT[item.state]}`}
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex min-w-0 items-start gap-2">
                       <span
-                        className={`shrink-0 rounded px-1 text-[10px] ${RISK_TONE[item.risk.level]}`}
+                        className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
+                        title={item.title}
                       >
-                        {t(`pet.session.risk.${item.risk.level}`)}
-                        {item.risk.toolName ? ` · ${item.risk.toolName}` : ""}
+                        {item.title}
+                      </span>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${STATE_BADGE[item.state]}`}
+                      >
+                        {t(`pet.work.state.${item.state}`)}
+                      </span>
+                      {item.external && (
+                        <span className="shrink-0 rounded border border-border px-1 text-[10px] uppercase text-muted-foreground">
+                          {item.external.cli}
+                        </span>
+                      )}
+                      {item.risk && (
+                        <span
+                          className={`shrink-0 rounded px-1 text-[10px] ${RISK_TONE[item.risk.level]}`}
+                        >
+                          {t(`pet.session.risk.${item.risk.level}`)}
+                          {item.risk.toolName ? ` · ${item.risk.toolName}` : ""}
+                        </span>
+                      )}
+                    </span>
+                    {item.detail && (
+                      <span
+                        className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground"
+                        title={item.detail}
+                      >
+                        {item.detail}
                       </span>
                     )}
                   </span>
-                  {item.detail && (
-                    <span
-                      className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground"
-                      title={item.detail}
-                    >
-                      {item.detail}
-                    </span>
-                  )}
-                </span>
-              </button>
-              {onDismiss && (
-                <button
-                  type="button"
-                  data-pet-work-dismiss={item.id}
-                  aria-label={t("pet.work.dismissItemAria", { title: item.title })}
-                  title={t("pet.work.dismissItemHint")}
-                  className="mr-1 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 opacity-70 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/item:opacity-100"
-                  onClick={() => onDismiss(item)}
-                >
-                  <X size={14} aria-hidden="true" />
                 </button>
-              )}
-            </div>
-          </li>
-        ))}
+                {onDismiss && (
+                  <button
+                    type="button"
+                    data-pet-work-dismiss={item.id}
+                    aria-label={t("pet.work.dismissItemAria", { title: item.title })}
+                    title={t("pet.work.dismissItemHint")}
+                    className="mr-1 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 opacity-70 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/item:opacity-100"
+                    onClick={() => onDismiss(item)}
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </details>
   );

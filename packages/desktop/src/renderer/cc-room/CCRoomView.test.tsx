@@ -131,16 +131,38 @@ describe("CCRoomView DriveAgent deep links", () => {
   test("opens each request nonce once with the linked cwd, CLI kind, and preserved mode", async () => {
     ensureMiniDom();
     const opened: Array<[string, string, string]> = [];
+    const takeovers: Array<[string, string, string, string]> = [];
+    let probeCalls = 0;
     Object.assign(window, {
       codeshell: {
         ccRoom: {
-          probe: async () => ({ available: true }),
-          codexProbe: async () => ({ available: true }),
+          probe: async () => {
+            probeCalls += 1;
+            return { available: true };
+          },
+          codexProbe: async () => {
+            probeCalls += 1;
+            return { available: true };
+          },
           listSessions: async () => ({ sessions: [], total: 0 }),
           listCodexSessions: async () => ({ sessions: [], total: 0 }),
           openLinkedSession: async (sessionId: string, cwd: string, kind: string) => {
             opened.push([sessionId, cwd, kind]);
-            return { roomId: "room_1_abcdef", status: "running", mode: "acceptEdits" };
+            return {
+              roomId: "room_1_abcdef",
+              status: "observing",
+              mode: "acceptEdits",
+              cwd: "/repo/canonical-worktree",
+            };
+          },
+          takeOverLinkedSession: async (
+            roomId: string,
+            sessionId: string,
+            cwd: string,
+            kind: string,
+          ) => {
+            takeovers.push([roomId, sessionId, cwd, kind]);
+            return { roomId, status: "running", mode: "acceptEdits", cwd };
           },
         },
       },
@@ -172,14 +194,23 @@ describe("CCRoomView DriveAgent deep links", () => {
     };
 
     await render();
+    expect(probeCalls).toBe(0);
     expect(opened).toEqual([["thread-1", "/repo/worktree", "codex"]]);
     expect(conversationProps).toMatchObject({
       roomId: "room_1_abcdef",
-      cwd: "/repo/worktree",
+      cwd: "/repo/canonical-worktree",
       sessionId: "thread-1",
       mode: "acceptEdits",
       cliKind: "codex",
+      observing: true,
     });
+
+    await act(async () => {
+      await (conversationProps?.onTakeOver as () => Promise<void>)();
+      await flushMicrotasks();
+    });
+    expect(takeovers).toEqual([["room_1_abcdef", "thread-1", "/repo/canonical-worktree", "codex"]]);
+    expect(conversationProps).toMatchObject({ observing: false });
 
     await render();
     expect(opened).toHaveLength(1);
@@ -201,7 +232,7 @@ describe("CCRoomView DriveAgent deep links", () => {
           listCodexSessions: async () => ({ sessions: [], total: 0 }),
           openLinkedSession: async (sessionId: string) => {
             opened.push(sessionId);
-            return { roomId: "room_1_abcdef", status: "running", mode: "default" };
+            return { roomId: "room_1_abcdef", status: "observing", mode: "default", cwd: "/repo" };
           },
         },
       },
@@ -241,12 +272,8 @@ describe("CCRoomView DriveAgent deep links", () => {
   test("ignores a late Claude probe after a Codex deep link opens", async () => {
     ensureMiniDom();
     let resolveClaude!: (value: { available: boolean }) => void;
-    let resolveCodex!: (value: { available: boolean }) => void;
     const claudeProbe = new Promise<{ available: boolean }>((resolve) => {
       resolveClaude = resolve;
-    });
-    const codexProbe = new Promise<{ available: boolean }>((resolve) => {
-      resolveCodex = resolve;
     });
     let claudeCalls = 0;
     let codexCalls = 0;
@@ -260,13 +287,13 @@ describe("CCRoomView DriveAgent deep links", () => {
           },
           codexProbe: () => {
             codexCalls += 1;
-            return codexProbe;
+            return Promise.resolve({ available: true });
           },
           listSessions: async () => ({ sessions: [], total: 0 }),
           listCodexSessions: async () => ({ sessions: [], total: 0 }),
           openLinkedSession: async (sessionId: string) => {
             opened.push(sessionId);
-            return { roomId: "room_codex", status: "running", mode: "default" };
+            return { roomId: "room_codex", status: "observing", mode: "default", cwd: "/repo" };
           },
         },
       },
@@ -288,10 +315,6 @@ describe("CCRoomView DriveAgent deep links", () => {
         <CCRoomView cwd="/repo" openRequest={request} onOpenRequestConsumed={() => undefined} />,
       );
       await flushMicrotasks();
-    });
-    await act(async () => {
-      resolveCodex({ available: true });
-      await flushMicrotasks();
       await flushMicrotasks();
     });
     expect(opened).toEqual(["codex-thread"]);
@@ -303,16 +326,18 @@ describe("CCRoomView DriveAgent deep links", () => {
     });
     expect(conversationProps).toMatchObject({ roomId: "room_codex", cliKind: "codex" });
     expect(claudeCalls).toBe(1);
-    expect(codexCalls).toBe(1);
+    expect(codexCalls).toBe(0);
   });
 
-  test("leaves the loading state and never opens a linked room when the CLI probe rejects", async () => {
+  test("opens a linked room without invoking a rejecting CLI probe", async () => {
     ensureMiniDom();
     let openCalls = 0;
+    let probeCalls = 0;
     Object.assign(window, {
       codeshell: {
         ccRoom: {
           probe: async () => {
+            probeCalls += 1;
             throw new Error("probe failed");
           },
           codexProbe: async () => ({ available: true }),
@@ -320,7 +345,7 @@ describe("CCRoomView DriveAgent deep links", () => {
           listCodexSessions: async () => ({ sessions: [], total: 0 }),
           openLinkedSession: async () => {
             openCalls += 1;
-            return { roomId: "room_never", status: "running", mode: "default" };
+            return { roomId: "room_never", status: "observing", mode: "default", cwd: "/repo" };
           },
         },
       },
@@ -344,8 +369,12 @@ describe("CCRoomView DriveAgent deep links", () => {
       await flushMicrotasks();
     });
 
-    expect(openCalls).toBe(0);
-    // CLI switch (2) + retry button (1). The loading state has only the switch.
-    expect(findElements(container, "BUTTON")).toHaveLength(3);
+    expect(probeCalls).toBe(0);
+    expect(openCalls).toBe(1);
+    expect(conversationProps).toMatchObject({
+      roomId: "room_never",
+      sessionId: "claude-thread",
+      observing: true,
+    });
   });
 });

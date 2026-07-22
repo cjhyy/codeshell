@@ -71,6 +71,7 @@ export type {
   PetAttentionSnapshot,
   PetDispatchCommand,
   PetDispatchResult,
+  PetExternalSessionLocator,
   PetPendingDecision,
   PetNavigationTarget,
   PetOpenSessionRequest,
@@ -1863,7 +1864,7 @@ export interface CodeshellApi {
       kind?: "claude-code" | "codex";
       permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
     }): Promise<RoomPublic>;
-    open(roomId: string): Promise<{ status: "running" | "missing" }>;
+    open(roomId: string): Promise<{ status: "running" | "missing" | "observing" }>;
     close(roomId: string): Promise<void>;
     send(roomId: string, text: string): Promise<boolean>;
     history(roomId: string, sinceSeq?: number): Promise<RoomMessageWire[]>;
@@ -1899,8 +1900,20 @@ export interface CodeshellApi {
       kind: "claude-code" | "codex",
     ): Promise<{
       roomId: string;
-      status: "running" | "missing";
+      status: "observing" | "running";
       mode: "default" | "acceptEdits" | "bypassPermissions";
+      cwd: string;
+    }>;
+    takeOverLinkedSession(
+      roomId: string,
+      externalSessionId: string,
+      cwd: string,
+      kind: "claude-code" | "codex",
+    ): Promise<{
+      roomId: string;
+      status: "running";
+      mode: "default" | "acceptEdits" | "bypassPermissions";
+      cwd: string;
     }>;
     send(roomId: string, text: string): Promise<boolean>;
     respondApproval(roomId: string, requestId: string, decision: unknown): Promise<boolean>;
