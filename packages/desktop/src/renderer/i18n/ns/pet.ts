@@ -110,6 +110,9 @@ export const pet = {
         clearTaskTitle: "清理这条任务记录？",
         clearTaskConfirm: "这条已结束的长程任务记录将被永久清理。对应的工作会话不会被删除。",
         clearAction: "清理",
+        cancelTaskTitle: "取消这个任务？",
+        cancelTaskConfirm: "「{title}」将停止执行。已产生的会话内容会保留，之后仍可重新发起。",
+        cancelAction: "取消任务",
         status: {
           queued: "排队中",
           running: "执行中",
@@ -378,6 +381,10 @@ export const pet = {
         clearTaskConfirm:
           "This ended long-task record will be permanently cleared. Its work session will not be deleted.",
         clearAction: "Clear",
+        cancelTaskTitle: "Cancel this task?",
+        cancelTaskConfirm:
+          "“{title}” will stop running. Produced session content is kept and the task can be started again later.",
+        cancelAction: "Cancel task",
         status: {
           queued: "Queued",
           running: "Running",

@@ -80,9 +80,24 @@ export function PetLongTaskCard({
   onClear?: (taskId: string) => Promise<boolean>;
 }) {
   const { t } = useT();
+  const confirm = useConfirm();
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [detailExpanded, setDetailExpanded] = React.useState(false);
   const actions = taskActions(task);
+  // Cancel stops a possibly hours-long run; a stray click must not be enough,
+  // matching the confirmation the clear/cleanup buttons already require.
+  const control = async (action: PetLongTaskControlAction): Promise<void> => {
+    if (action === "cancel") {
+      const approved = await confirm({
+        title: t("pet.longTask.cancelTaskTitle"),
+        message: t("pet.longTask.cancelTaskConfirm", { title: task.objective }),
+        confirmLabel: t("pet.longTask.cancelAction"),
+        destructive: true,
+      });
+      if (!approved) return;
+    }
+    onControl(task.id, action);
+  };
   const recentEvents = task.events.slice(-6).reverse();
   const detail = task.waitingFor ?? task.lastError ?? task.summary;
   const detailCollapsible = Boolean(
@@ -224,7 +239,7 @@ export function PetLongTaskCard({
                   ? "text-status-err hover:bg-status-err/10"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
-              onClick={() => onControl(task.id, action)}
+              onClick={() => void control(action)}
             >
               {busy ? (
                 <Loader2 size={12} className="animate-spin motion-reduce:animate-none" />
