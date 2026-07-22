@@ -500,11 +500,12 @@ export class PetLongTaskCoordinator {
           });
         }
       } else if (event.session.terminal.status === "cancelled") {
-        await this.options.store.transition(task.id, {
-          kind: "interrupted",
+        const cancelled = await this.options.store.transition(task.id, {
+          kind: "cancelled",
           at: event.session.terminal.at,
           reason: "The work session was stopped before completion",
         });
+        await this.notifyClosed(cancelled);
       } else {
         const failed = await this.options.store.transition(task.id, {
           kind: "failed",

@@ -370,6 +370,60 @@ describe("PetLongTaskCoordinator", () => {
     recovered.stop();
   });
 
+  test.each([
+    { projectionStatus: "completed" as const, expectedStatus: "completed" as const },
+    { projectionStatus: "failed" as const, expectedStatus: "failed" as const },
+    { projectionStatus: "cancelled" as const, expectedStatus: "cancelled" as const },
+  ])(
+    "moves a launched task from running to $expectedStatus on a real projection terminal",
+    async ({ projectionStatus, expectedStatus }) => {
+      const h = await harness();
+      const launch = await h.coordinator.startDelegation({
+        clientMessageId: `message-projection-${projectionStatus}`,
+        task: `Reach a real ${projectionStatus} terminal`,
+        workspacePath: "/work/app",
+      });
+      expect(h.store.get(launch.taskId)?.status).toBe("running");
+      expect(h.closed).toEqual([]);
+
+      h.tick(3_000);
+      h.projection.emit({
+        kind: "session-upsert",
+        version: 2,
+        generation: 1,
+        observedAt: 2_000,
+        session: {
+          agentSessionId: launch.sessionId,
+          runState: "terminal",
+          summary: projectionStatus === "failed" ? "Projection reported a failure" : undefined,
+          queueDepth: 0,
+          lastActivityAt: 2_000,
+          pendingDecisionCount: 0,
+          terminal: { status: projectionStatus, at: 2_000 },
+          freshness: { source: "live-event", observedAt: 2_000, workerState: "active" },
+        },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const terminal = h.store.get(launch.taskId);
+      expect(terminal).toMatchObject({
+        status: expectedStatus,
+        completedAt: 2_000,
+        closureRecordedAt: 3_000,
+      });
+      expect(terminal?.events.map((event) => event.kind)).toEqual([
+        "created",
+        "started",
+        expectedStatus,
+        "closure-recorded",
+      ]);
+      if (expectedStatus === "failed") {
+        expect(terminal?.lastError).toBe("Projection reported a failure");
+      }
+      expect(h.closed).toEqual([{ id: launch.taskId, status: expectedStatus }]);
+    },
+  );
+
   test("waits for a background notification instead of closing the task", async () => {
     const h = await harness();
     const launch = await h.coordinator.startDelegation({
@@ -493,6 +547,10 @@ describe("PetLongTaskCoordinator", () => {
       task: "Deploy the app",
       workspacePath: "/work/app",
     });
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "assistant_message",
+      message: { role: "assistant", content: "Deployment is prepared and awaiting approval." },
+    });
     h.projection.emit({
       kind: "pending-upsert",
       version: 2,
@@ -512,6 +570,12 @@ describe("PetLongTaskCoordinator", () => {
     expect(h.store.get(launch.taskId)).toMatchObject({
       status: "waiting",
       waitingFor: "Approve deployment",
+    });
+    expect(h.coordinator.context().active[0]).toMatchObject({
+      taskId: launch.taskId,
+      summary: "Deployment is prepared and awaiting approval.",
+      waitingFor: "Approve deployment",
+      nextAction: "Open the work session and resolve the pending decision",
     });
     h.projection.emit({
       kind: "pending-remove",
