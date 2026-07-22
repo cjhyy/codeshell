@@ -91,6 +91,24 @@ async function harness(snapshot = emptySnapshot()) {
   };
 }
 
+function waitForTaskClosure(store: PetLongTaskStore, taskId: string): Promise<void> {
+  if (store.get(taskId)?.closureRecordedAt !== undefined) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let unsubscribe: (() => void) | undefined;
+    const timeout = setTimeout(() => {
+      unsubscribe?.();
+      reject(new Error(`Timed out waiting for task closure: ${taskId}`));
+    }, 4_000);
+    unsubscribe = store.subscribe((snapshot) => {
+      const task = snapshot.tasks.find((candidate) => candidate.id === taskId);
+      if (task?.closureRecordedAt === undefined) return;
+      clearTimeout(timeout);
+      unsubscribe?.();
+      resolve();
+    });
+  });
+}
+
 describe("PetLongTaskCoordinator", () => {
   test("replays an unacknowledged terminal closure once after restart", async () => {
     const root = await mkdtemp(join(tmpdir(), "pet-long-task-coordinator-"));
@@ -387,6 +405,7 @@ describe("PetLongTaskCoordinator", () => {
       expect(h.closed).toEqual([]);
 
       h.tick(3_000);
+      const closed = waitForTaskClosure(h.store, launch.taskId);
       h.projection.emit({
         kind: "session-upsert",
         version: 2,
@@ -403,7 +422,7 @@ describe("PetLongTaskCoordinator", () => {
           freshness: { source: "live-event", observedAt: 2_000, workerState: "active" },
         },
       });
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await closed;
 
       const terminal = h.store.get(launch.taskId);
       expect(terminal).toMatchObject({
