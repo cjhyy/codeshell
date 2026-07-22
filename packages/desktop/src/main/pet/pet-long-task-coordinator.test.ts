@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import type { PetLongTaskStatus } from "@cjhyy/code-shell-pet";
 import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
@@ -102,6 +103,32 @@ function waitForTaskClosure(store: PetLongTaskStore, taskId: string): Promise<vo
     unsubscribe = store.subscribe((snapshot) => {
       const task = snapshot.tasks.find((candidate) => candidate.id === taskId);
       if (task?.closureRecordedAt === undefined) return;
+      clearTimeout(timeout);
+      unsubscribe?.();
+      resolve();
+    });
+  });
+}
+
+function waitForTaskStatus(
+  store: PetLongTaskStore,
+  taskId: string,
+  expectedStatus: PetLongTaskStatus,
+): Promise<void> {
+  if (store.get(taskId)?.status === expectedStatus) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let unsubscribe: (() => void) | undefined;
+    const timeout = setTimeout(() => {
+      unsubscribe?.();
+      reject(
+        new Error(
+          `Timed out waiting for task status ${expectedStatus}: ${taskId} (current=${store.get(taskId)?.status ?? "missing"})`,
+        ),
+      );
+    }, 4_000);
+    unsubscribe = store.subscribe((snapshot) => {
+      const task = snapshot.tasks.find((candidate) => candidate.id === taskId);
+      if (task?.status !== expectedStatus) return;
       clearTimeout(timeout);
       unsubscribe?.();
       resolve();
@@ -585,7 +612,7 @@ describe("PetLongTaskCoordinator", () => {
         status: "pending",
       },
     });
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await waitForTaskStatus(h.store, launch.taskId, "waiting");
     expect(h.store.get(launch.taskId)).toMatchObject({
       status: "waiting",
       waitingFor: "Approve deployment",
@@ -604,7 +631,7 @@ describe("PetLongTaskCoordinator", () => {
       sessionId: launch.sessionId,
       requestId: "request-1",
     });
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await waitForTaskStatus(h.store, launch.taskId, "running");
     expect(h.store.get(launch.taskId)?.status).toBe("running");
   });
 
