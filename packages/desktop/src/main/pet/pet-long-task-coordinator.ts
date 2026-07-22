@@ -55,6 +55,21 @@ function isTerminal(task: PetLongTask): boolean {
   return task.status === "completed" || task.status === "failed" || task.status === "cancelled";
 }
 
+/**
+ * One authoritative completionKind → interruption reason mapping shared by the
+ * worker-stream and projection observation paths, so the two can never drift.
+ */
+function interruptReasonForCompletionKind(kind: string): string {
+  switch (kind) {
+    case "background_wait":
+      return "The work session yielded until its background result notification arrives";
+    case "goal_control_stop":
+      return "Goal driving stopped; the durable Work Session can continue without it";
+    default:
+      return "The work session reached its run limit before a final response";
+  }
+}
+
 function isControllable(task: PetLongTask): boolean {
   return !isTerminal(task);
 }
@@ -347,27 +362,15 @@ export class PetLongTaskCoordinator {
         const current = this.options.store.get(task.id);
         if (!current || current.status === "paused" || current.status === "cancelled") return;
         if (event.reason === "completed") {
-          if (event.completionKind === "background_wait") {
+          if (
+            event.completionKind === "background_wait" ||
+            event.completionKind === "goal_control_stop" ||
+            event.completionKind === "limit_stop"
+          ) {
             await this.options.store.transition(task.id, {
               kind: "interrupted",
               at,
-              reason: "The work session yielded until its background result notification arrives",
-            });
-            return;
-          }
-          if (event.completionKind === "goal_control_stop") {
-            await this.options.store.transition(task.id, {
-              kind: "interrupted",
-              at,
-              reason: "Goal driving stopped; the durable Work Session can continue without it",
-            });
-            return;
-          }
-          if (event.completionKind === "limit_stop") {
-            await this.options.store.transition(task.id, {
-              kind: "interrupted",
-              at,
-              reason: "The work session reached its run limit before a final response",
+              reason: interruptReasonForCompletionKind(event.completionKind),
             });
             return;
           }
@@ -465,16 +468,10 @@ export class PetLongTaskCoordinator {
     const task = this.options.store.activeForSession(event.session.agentSessionId);
     if (!task || task.status === "paused") return;
     if (event.session.completionKind) {
-      const reason =
-        event.session.completionKind === "background_wait"
-          ? "The work session yielded until its background result notification arrives"
-          : event.session.completionKind === "goal_control_stop"
-            ? "Goal driving stopped; the durable Work Session can continue without it"
-            : "The work session reached its run limit before a final response";
       await this.options.store.transition(task.id, {
         kind: "interrupted",
         at: event.observedAt,
-        reason,
+        reason: interruptReasonForCompletionKind(event.session.completionKind),
       });
       return;
     }
