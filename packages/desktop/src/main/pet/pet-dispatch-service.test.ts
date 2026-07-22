@@ -219,6 +219,90 @@ describe("PetDispatchService", () => {
     ]);
   });
 
+  test("propagates Codex, defaults to CodeShell, and rejects an unknown worker backend", async () => {
+    const starts: Array<Record<string, unknown>> = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
+            (candidate) => candidate.name === "CodeShell",
+          )!;
+          const task = String(params.task);
+          return {
+            ok: true,
+            result: {
+              text: "delegated",
+              extensions: {
+                pet: {
+                  workDelegation: {
+                    workspaceId: workspace.id,
+                    objective: task,
+                    ...(task === "use Codex"
+                      ? { executionBackend: "codex" }
+                      : task === "invalid backend"
+                        ? { executionBackend: "claude" }
+                        : {}),
+                  },
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      startWorkSession: async (delegation) => {
+        starts.push(delegation as unknown as Record<string, unknown>);
+        return {
+          sessionId: `pet-work-${starts.length}`,
+          cwd: delegation.workspacePath!,
+        };
+      },
+    });
+
+    const codex = await service.dispatch({
+      type: "chat",
+      message: "use Codex",
+      clientMessageId: "client-codex",
+    });
+    expect(codex).toMatchObject({
+      ok: true,
+      type: "chat",
+      delegation: { executionBackend: "codex", sessionId: "pet-work-1" },
+    });
+    expect(starts[0]).toMatchObject({
+      task: "use Codex",
+      executionBackend: "codex",
+    });
+
+    const codeShell = await service.dispatch({
+      type: "chat",
+      message: "normal work",
+      clientMessageId: "client-codeshell",
+    });
+    expect(codeShell).toMatchObject({
+      ok: true,
+      type: "chat",
+      delegation: { sessionId: "pet-work-2" },
+    });
+    expect(codeShell).not.toHaveProperty("delegation.executionBackend");
+    expect(starts[1]).not.toHaveProperty("executionBackend");
+
+    const invalid = await service.dispatch({
+      type: "chat",
+      message: "invalid backend",
+      clientMessageId: "client-invalid",
+    });
+    expect(invalid).toMatchObject({ ok: true, type: "chat", result: { text: "delegated" } });
+    expect(invalid).not.toHaveProperty("delegation");
+    expect(starts).toHaveLength(2);
+  });
+
   test("injects a durable Mimi completion decision and returns its proactive reply", async () => {
     let request: { method: string; params: Record<string, unknown> } | undefined;
     const service = new PetDispatchService({

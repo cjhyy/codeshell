@@ -4,7 +4,7 @@ import type {
   PetNavigationResult,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
-import { isPetHostActionRequest } from "@cjhyy/code-shell-pet";
+import { isPetHostActionRequest, isPetWorkExecutionBackend } from "@cjhyy/code-shell-pet";
 import type {
   PetLongTask,
   PetLongTaskClosureDecision,
@@ -295,8 +295,7 @@ function parsePetWorkDelegation(value: unknown): PetWorkDelegation | null {
   }
   if (
     record.executionBackend !== undefined &&
-    record.executionBackend !== "codeshell" &&
-    record.executionBackend !== "codex"
+    !isPetWorkExecutionBackend(record.executionBackend)
   ) {
     return null;
   }

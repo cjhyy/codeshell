@@ -1,7 +1,14 @@
 export const DELEGATE_WORK_TOOL_NAME = "DelegateWork";
 
+/** Closed set of execution backends; extend here and every schema/validation follows. */
+export const PET_WORK_EXECUTION_BACKENDS = ["codeshell", "codex"] as const;
+
 /** Execution backend selected explicitly by Mimi from the user's request. */
-export type PetWorkExecutionBackend = "codeshell" | "codex";
+export type PetWorkExecutionBackend = (typeof PET_WORK_EXECUTION_BACKENDS)[number];
+
+export function isPetWorkExecutionBackend(value: unknown): value is PetWorkExecutionBackend {
+  return (PET_WORK_EXECUTION_BACKENDS as readonly unknown[]).includes(value);
+}
 
 /** Host-provided closed set visible to Mimi for one manager turn. */
 export interface PetWorkspaceOption {

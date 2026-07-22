@@ -5,6 +5,8 @@ import type {
 } from "@cjhyy/code-shell-core/extension";
 import {
   DELEGATE_WORK_TOOL_NAME,
+  isPetWorkExecutionBackend,
+  PET_WORK_EXECUTION_BACKENDS,
   type PetReusableSessionOption,
   type PetWorkspaceOption,
 } from "./delegation.js";
@@ -30,7 +32,7 @@ export const delegateWorkToolDef: ToolDefinition = {
       },
       executor: {
         type: "string",
-        enum: ["codeshell", "codex"],
+        enum: [...PET_WORK_EXECUTION_BACKENDS],
         description:
           "Execution backend. Use 'codex' only when the user explicitly asks for OpenAI Codex/Codex CLI; do not merely write 'Codex' in objective. Omit or use 'codeshell' for a normal Work Session.",
       },
@@ -142,8 +144,10 @@ export async function delegateWorkTool(
   if (!workspaceId) return "Error: workspace_id is required.";
   if (!objective) return "Error: objective is required.";
   if (objective.length > 8_000) return "Error: objective is too long (maximum 8000 characters).";
-  if (executor !== "codeshell" && executor !== "codex") {
-    return `Error: unknown executor ${JSON.stringify(executor)}. Use "codeshell" or "codex".`;
+  if (!isPetWorkExecutionBackend(executor)) {
+    return `Error: unknown executor ${JSON.stringify(executor)}. Use ${PET_WORK_EXECUTION_BACKENDS.map(
+      (backend) => JSON.stringify(backend),
+    ).join(" or ")}.`;
   }
 
   const workspace = workspaces.find((candidate) => candidate?.id === workspaceId);
