@@ -21,12 +21,12 @@ function makeTransport() {
 
 describe("AgentServer cross-Session message routing", () => {
   test("enqueues the text as the target Session's ordinary user turn", async () => {
-    let received: { task: string; options: EngineRunOptions } | undefined;
+    const received: Array<{ task: string; options: EngineRunOptions }> = [];
     const engine = {
       isHeadless: () => true,
       sessionExistsOnDisk: () => false,
       async run(task: string, options: EngineRunOptions): Promise<EngineResult> {
-        received = { task, options };
+        received.push({ task, options });
         return {
           text: "done",
           reason: "completed",
@@ -67,11 +67,11 @@ describe("AgentServer cross-Session message routing", () => {
       ).routeSessionMessage(input);
       await manager.get("ui")?.settled;
 
-      expect(received?.task).toBe(message);
-      expect(received?.options.sessionId).toBe("ui");
-      expect(received?.options.workspaceProfile).toBe("designer");
-      expect(received?.options.sessionMessageTargets).toBe(catalog);
-      expect(received?.options.injected).toBeUndefined();
+      expect(received[0]?.task).toBe(message);
+      expect(received[0]?.options.sessionId).toBe("ui");
+      expect(received[0]?.options.workspaceProfile).toBe("designer");
+      expect(received[0]?.options.sessionMessageTargets).toBe(catalog);
+      expect(received[0]?.options.injected).toBeUndefined();
       expect(manager.get("ui")?.isBusy()).toBe(false);
       expect(transport.sent).toContainEqual({
         jsonrpc: "2.0",
@@ -82,15 +82,14 @@ describe("AgentServer cross-Session message routing", () => {
         },
       });
 
-      received = undefined;
       await (
         server as unknown as {
           routeSessionMessage(value: RouteSessionMessageInput): Promise<void>;
         }
       ).routeSessionMessage({ ...input, message: "follow-up" });
       await manager.get("ui")?.settled;
-      expect(received?.task).toBe("follow-up");
-      expect(received?.options.workspaceProfile).toBeUndefined();
+      expect(received[1]?.task).toBe("follow-up");
+      expect(received[1]?.options.workspaceProfile).toBeUndefined();
     } finally {
       server.close();
     }

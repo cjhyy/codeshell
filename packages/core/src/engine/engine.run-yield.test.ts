@@ -12,7 +12,7 @@ import { Engine } from "./engine.js";
 
 /** Per-test provider whose call #1 requests YieldTool; every later call is a
  *  plain final answer. A closure counter keeps tests isolated from each other. */
-function registerYieldProvider(name: string): { provider: string; calls: () => number } {
+function registerYieldProvider(name: string): { provider: string } {
   let count = 0;
   class RunYieldClient extends LLMClientBase {
     protected initClient(): void {}
