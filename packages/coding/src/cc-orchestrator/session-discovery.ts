@@ -7,7 +7,7 @@ import {
   readSync,
   closeSync,
 } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
 
 /** Encode a cwd to claude's project dir name: every non-[A-Za-z0-9] char → '-'.
@@ -37,6 +37,86 @@ export interface RecentExternalSession {
   file: string;
   lastModified: number;
   firstMessage: string;
+}
+
+/** One registered CodeShell project root and its effective visibility. */
+export interface ExternalSessionProjectRoot {
+  cwd: string;
+  enabled: boolean;
+}
+
+/**
+ * Source-level discovery scope. Registered roots use longest-ancestor matching;
+ * sessions outside every registered root follow includeUnregistered (the user
+ * global baseline).
+ */
+export interface ExternalSessionDiscoveryScope {
+  includeUnregistered: boolean;
+  projectRoots: readonly ExternalSessionProjectRoot[];
+}
+
+/** Resolve aliases such as a trailing slash before comparing project roots. */
+export function normalizeExternalSessionCwd(cwd: string): string {
+  return resolve(cwd);
+}
+
+function isWithinRoot(cwd: string, root: string): boolean {
+  const child = relative(root, cwd);
+  return child === "" || (!child.startsWith("..") && !isAbsolute(child));
+}
+
+/** Pick the most specific registered ancestor for a session cwd. */
+export function externalSessionProjectRootFor(
+  cwd: string,
+  roots: readonly ExternalSessionProjectRoot[],
+): ExternalSessionProjectRoot | undefined {
+  const normalizedCwd = normalizeExternalSessionCwd(cwd);
+  let best: ExternalSessionProjectRoot | undefined;
+  for (const candidate of roots) {
+    const normalizedRoot = normalizeExternalSessionCwd(candidate.cwd);
+    if (!isWithinRoot(normalizedCwd, normalizedRoot)) continue;
+    if (!best || normalizedRoot.length > normalizeExternalSessionCwd(best.cwd).length) {
+      best = { ...candidate, cwd: normalizedRoot };
+    }
+  }
+  return best;
+}
+
+/** Apply a discovery scope to one real cwd. */
+export function externalSessionCwdEnabled(
+  cwd: string,
+  scope?: ExternalSessionDiscoveryScope,
+): boolean {
+  if (!scope) return true;
+  return (
+    externalSessionProjectRootFor(cwd, scope.projectRoots)?.enabled ?? scope.includeUnregistered
+  );
+}
+
+/**
+ * Cheap Claude-directory prefilter. Because encodeCwd is lossy, true only means
+ * "this directory may contain an enabled cwd". The real cwd identity is always
+ * checked before transcript content is read.
+ */
+export function claudeProjectDirEnabled(
+  encodedProjectDir: string,
+  scope?: ExternalSessionDiscoveryScope,
+): boolean {
+  if (!scope) return true;
+  // With an enabled unregistered baseline, an encoded name can never prove a
+  // directory is disabled: `/work/repo-other` looks like a descendant of
+  // `/work/repo`, and `/foo-bar` collides exactly with `/foo/bar`. Probe only
+  // the small identity prefix and decide from the real cwd later.
+  if (scope.includeUnregistered) return true;
+  return scope.projectRoots.some((candidate) => {
+    if (!candidate.enabled) return false;
+    const normalizedRoot = normalizeExternalSessionCwd(candidate.cwd);
+    const exact = encodeCwd(normalizedRoot);
+    const descendantPrefix = encodeCwd(
+      normalizedRoot.endsWith(sep) ? normalizedRoot : `${normalizedRoot}${sep}`,
+    );
+    return encodedProjectDir === exact || encodedProjectDir.startsWith(descendantPrefix);
+  });
 }
 
 /**
@@ -186,21 +266,70 @@ function readBoundedPrefix(file: string, maxBytes: number): string {
 }
 
 /**
+ * Read only enough of the first line to recover Claude's top-level cwd
+ * identity. The field precedes message content in Claude's records; if a
+ * nonstandard record puts it after a large payload, fail closed instead of
+ * reading transcript content merely to classify visibility.
+ */
+function readSessionIdentityCwd(file: string, maxBytes = 4 * 1024): string | undefined {
+  const fd = openSync(file, "r");
+  try {
+    const buffer = Buffer.alloc(maxBytes);
+    let total = 0;
+    while (total < maxBytes) {
+      const read = readSync(fd, buffer, total, Math.min(256, maxBytes - total), total);
+      if (read === 0) return undefined;
+      total += read;
+      const text = buffer.subarray(0, total).toString("utf-8");
+      const newline = text.indexOf("\n");
+      const firstLine = newline >= 0 ? text.slice(0, newline) : text;
+      const cwdIndex = firstLine.indexOf('"cwd"');
+      const messageIndex = firstLine.indexOf('"message"');
+      if (messageIndex >= 0 && (cwdIndex < 0 || cwdIndex > messageIndex)) return undefined;
+      if (cwdIndex < 0) {
+        if (newline >= 0) return undefined;
+        continue;
+      }
+      const match = firstLine.slice(cwdIndex).match(/^"cwd"\s*:\s*("(?:\\.|[^"\\])*")/);
+      if (!match) continue;
+      try {
+        const cwd = JSON.parse(match[1]!) as unknown;
+        return typeof cwd === "string" ? cwd : undefined;
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+export interface ClaudeSessionDiscoveryDiagnostics {
+  /** Called immediately before the 1 MiB title/content prefix is read. */
+  onContentRead?: (file: string) => void;
+}
+
+/**
  * Discover ALL recent Claude Code sessions across every project dir. Claude
  * encodes cwd into the dir name lossily (encodeCwd), so the real cwd comes from
- * the session file's first-line `cwd` field. Bounded strategy mirrors codex:
- * stat every file, apply the recency window, then read a single bounded prefix
- * of each surviving file — its first line yields `cwd`, and the same text is
- * scanned (multi-line) for the first real user message (the card title).
+ * the session file's first-line `cwd` field. After the stat/recency pass, read a
+ * small identity prefix first and apply scope. Only enabled identities receive
+ * the larger bounded content read used to find the card title.
  */
 export function discoverRecentClaudeSessions(
   opts: DiscoverOptions = {},
   claudeHome = join(homedir(), ".claude"),
+  scope?: ExternalSessionDiscoveryScope,
+  diagnostics?: ClaudeSessionDiscoveryDiagnostics,
 ): RecentExternalSession[] {
   const projects = claudeProjectsDir(claudeHome);
   if (!existsSync(projects)) return [];
   const stats: { file: string; sessionId: string; mtimeMs: number }[] = [];
   for (const projectDir of readdirSync(projects)) {
+    // Skip directories that cannot contain an enabled root. Ambiguous lossy
+    // names proceed only to the small per-file identity read below.
+    if (!claudeProjectDirEnabled(projectDir, scope)) continue;
     const dir = join(projects, projectDir);
     let dirStat;
     try {
@@ -219,19 +348,19 @@ export function discoverRecentClaudeSessions(
   for (const s of windowed) {
     if (out.length >= limit) break;
     let cwd: string | undefined;
-    let firstMessage = "";
     try {
-      const lines = readBoundedPrefix(s.file, 1 << 20).split("\n");
-      // cwd is recorded on the first line (encodeCwd is lossy, so the dir name
-      // can't be reversed). Scan later lines for the first real user message.
-      const first = lines[0]?.trim();
-      const parsed = first ? (JSON.parse(first) as { cwd?: string }) : undefined;
-      cwd = typeof parsed?.cwd === "string" ? parsed.cwd : undefined;
-      firstMessage = firstUserMessage(lines);
+      cwd = readSessionIdentityCwd(s.file);
     } catch {
       continue;
     }
-    if (!cwd) continue;
+    if (!cwd || !externalSessionCwdEnabled(cwd, scope)) continue;
+    let firstMessage = "";
+    try {
+      diagnostics?.onContentRead?.(s.file);
+      firstMessage = firstUserMessage(readBoundedPrefix(s.file, 1 << 20).split("\n"));
+    } catch {
+      continue;
+    }
     out.push({ sessionId: s.sessionId, cwd, file: s.file, lastModified: s.mtimeMs, firstMessage });
   }
   return out;

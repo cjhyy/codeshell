@@ -6,8 +6,11 @@ import {
   encodeCwd,
   discoverSessions,
   countSessions,
+  claudeProjectDirEnabled,
   selectRecentStats,
   discoverRecentClaudeSessions,
+  externalSessionCwdEnabled,
+  externalSessionProjectRootFor,
 } from "./session-discovery.js";
 
 function writeClaudeSession(
@@ -31,6 +34,48 @@ describe("encodeCwd", () => {
     expect(encodeCwd("/Users/admin/Documents/个人学习/代码学习/codeshell")).toBe(
       "-Users-admin-Documents-----------codeshell",
     );
+  });
+});
+
+describe("external session project scope", () => {
+  const scope = {
+    includeUnregistered: false,
+    projectRoots: [
+      { cwd: "/work/repo/", enabled: false },
+      { cwd: "/work/repo/packages/app/", enabled: true },
+    ],
+  };
+
+  it("normalizes trailing slashes and uses the longest ancestor", () => {
+    expect(
+      externalSessionProjectRootFor("/work/repo/packages/app/src", scope.projectRoots),
+    ).toEqual({ cwd: "/work/repo/packages/app", enabled: true });
+    expect(externalSessionCwdEnabled("/work/repo/packages/app/src", scope)).toBe(true);
+    expect(externalSessionCwdEnabled("/work/repo/packages/other", scope)).toBe(false);
+  });
+
+  it("rejects a disabled Claude root before its project directory is probed", () => {
+    expect(claudeProjectDirEnabled(encodeCwd("/work/repo/other"), scope)).toBe(false);
+    expect(claudeProjectDirEnabled(encodeCwd("/work/repo/packages/app/src"), scope)).toBe(true);
+  });
+
+  it("treats lossy sibling/collision names as identity probes, not visibility decisions", () => {
+    expect(
+      claudeProjectDirEnabled(encodeCwd("/work/repo-other"), {
+        includeUnregistered: true,
+        projectRoots: [{ cwd: "/work/repo", enabled: false }],
+      }),
+    ).toBe(true);
+    expect(encodeCwd("/foo-bar")).toBe(encodeCwd("/foo/bar"));
+    expect(
+      claudeProjectDirEnabled(encodeCwd("/foo-bar"), {
+        includeUnregistered: false,
+        projectRoots: [
+          { cwd: "/foo-bar", enabled: false },
+          { cwd: "/foo/bar", enabled: true },
+        ],
+      }),
+    ).toBe(true);
   });
 });
 
@@ -170,7 +215,10 @@ describe("discoverRecentClaudeSessions", () => {
         cwd: "/Users/me/proj-d",
         message: { role: "user", content: "refactor the parser" },
       },
-      { type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "ok" }] } },
+      {
+        type: "assistant",
+        message: { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      },
     ]);
 
     const sessions = discoverRecentClaudeSessions({}, home);
@@ -193,5 +241,79 @@ describe("discoverRecentClaudeSessions", () => {
     const sessions = discoverRecentClaudeSessions({ sinceMs: 24 * 60 * 60_000 }, home);
     expect(sessions.some((s) => s.sessionId === "sess-old")).toBe(false);
     expect(sessions.some((s) => s.sessionId === "sess-nocwd")).toBe(false);
+  });
+
+  it("applies project scope before the result limit and excludes disabled roots", () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const enabled = "/Users/me/proj-a";
+    const disabled = "/Users/me/proj-b";
+    writeClaudeSession(home, enabled, "sess-enabled", [
+      { type: "user", cwd: `${enabled}/packages/app`, message: { content: "keep" } },
+    ]);
+    const disabledFile = writeClaudeSession(home, disabled, "sess-disabled", [
+      { type: "user", cwd: disabled, message: { content: "drop" } },
+    ]);
+    const now = Date.now();
+    utimesSync(disabledFile, new Date(now + 1_000), new Date(now + 1_000));
+
+    const sessions = discoverRecentClaudeSessions({ limit: 1 }, home, {
+      includeUnregistered: false,
+      projectRoots: [
+        { cwd: `${enabled}/`, enabled: true },
+        { cwd: `${disabled}/`, enabled: false },
+      ],
+    });
+    expect(sessions.map((session) => session.sessionId)).toEqual(["sess-enabled"]);
+  });
+
+  it("keeps an enabled sibling of a disabled prefix and never content-reads the disabled root", () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const disabledFile = writeClaudeSession(home, "/work/repo", "sess-disabled", [
+      { type: "user", cwd: "/work/repo", message: { content: "private" } },
+    ]);
+    const siblingFile = writeClaudeSession(home, "/work/repo-other", "sess-sibling", [
+      { type: "user", cwd: "/work/repo-other", message: { content: "visible" } },
+    ]);
+    const contentReads: string[] = [];
+
+    const sessions = discoverRecentClaudeSessions(
+      {},
+      home,
+      {
+        includeUnregistered: true,
+        projectRoots: [{ cwd: "/work/repo", enabled: false }],
+      },
+      { onContentRead: (file) => contentReads.push(file) },
+    );
+    expect(sessions.map((session) => session.sessionId)).toEqual(["sess-sibling"]);
+    expect(contentReads).toEqual([siblingFile]);
+    expect(contentReads).not.toContain(disabledFile);
+  });
+
+  it("uses real cwd identity for exact encodeCwd collisions before reading content", () => {
+    const home = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const disabledFile = writeClaudeSession(home, "/foo-bar", "sess-disabled", [
+      { type: "user", cwd: "/foo-bar", message: { content: "private" } },
+    ]);
+    const enabledFile = writeClaudeSession(home, "/foo/bar", "sess-enabled", [
+      { type: "user", cwd: "/foo/bar", message: { content: "visible" } },
+    ]);
+    const contentReads: string[] = [];
+
+    const sessions = discoverRecentClaudeSessions(
+      {},
+      home,
+      {
+        includeUnregistered: false,
+        projectRoots: [
+          { cwd: "/foo-bar", enabled: false },
+          { cwd: "/foo/bar", enabled: true },
+        ],
+      },
+      { onContentRead: (file) => contentReads.push(file) },
+    );
+    expect(sessions.map((session) => session.sessionId)).toEqual(["sess-enabled"]);
+    expect(contentReads).toEqual([enabledFile]);
+    expect(contentReads).not.toContain(disabledFile);
   });
 });

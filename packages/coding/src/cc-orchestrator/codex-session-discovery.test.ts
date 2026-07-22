@@ -179,4 +179,28 @@ describe("discoverRecentCodexSessions", () => {
     expect(sessions.map((s) => s.sessionId)).toEqual(["thread-a"]);
     expect(sessions[0]!.file.endsWith("rollout-new.jsonl")).toBe(true);
   });
+
+  it("applies project scope before the result limit and maps nested cwd to its root", () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    writeRollout(home, "2026/07/19", "rollout-enabled.jsonl", [
+      metaLine("thread-enabled", "/tmp/proj-a/packages/app", "2026-07-19T10:00:00Z"),
+      userItem("keep"),
+    ]);
+    const disabledFile = join(home, "sessions", "2026", "07", "20", "rollout-disabled.jsonl");
+    writeRollout(home, "2026/07/20", "rollout-disabled.jsonl", [
+      metaLine("thread-disabled", "/tmp/proj-b", "2026-07-20T10:00:00Z"),
+      userItem("drop"),
+    ]);
+    const now = Date.now();
+    utimesSync(disabledFile, new Date(now + 1_000), new Date(now + 1_000));
+
+    const sessions = discoverRecentCodexSessions({ limit: 1 }, home, {
+      includeUnregistered: false,
+      projectRoots: [
+        { cwd: "/tmp/proj-a/", enabled: true },
+        { cwd: "/tmp/proj-b/", enabled: false },
+      ],
+    });
+    expect(sessions.map((session) => session.sessionId)).toEqual(["thread-enabled"]);
+  });
 });

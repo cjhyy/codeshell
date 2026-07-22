@@ -59,6 +59,8 @@ export const CapabilityOverridesSchema = z
     agents: z.record(CapabilityOverrideSchema).optional(),
     mcp: z.record(CapabilityOverrideSchema).optional(),
     builtin: z.record(CapabilityOverrideSchema).optional(),
+    /** Per-project Pet capability preferences layered over the user baseline. */
+    pet: z.record(CapabilityOverrideSchema).optional(),
     /**
      * Per-hook overlay for PLUGIN-provided hooks, keyed by
      * `pluginHookKey()` (`<plugin>:<RawEvent>:<command>`). Finer-grained

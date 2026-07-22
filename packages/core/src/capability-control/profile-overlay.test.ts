@@ -9,13 +9,24 @@ describe("mergeCapabilityOverrides", () => {
   test("user layer wins per key; unique keys from both survive", () => {
     expect(
       mergeCapabilityOverrides(
-        { plugins: { a: "on", b: "on" }, skills: { s: "on" } },
-        { plugins: { a: "off" }, agents: { g: "off" } },
+        {
+          plugins: { a: "on", b: "on" },
+          skills: { s: "on" },
+          pet: { showExternalCodexSessions: "on" },
+        },
+        {
+          plugins: { a: "off" },
+          agents: { g: "off" },
+          pet: { showExternalClaudeSessions: "off" },
+        },
       ),
     ).toEqual({
       plugins: { a: "off", b: "on" },
       skills: { s: "on" },
       agents: { g: "off" },
+      pet: {
+        showExternalClaudeSessions: "off",
+      },
     });
   });
 
@@ -27,6 +38,21 @@ describe("mergeCapabilityOverrides", () => {
       skills: { x: "on" },
     });
     expect(mergeCapabilityOverrides(undefined, undefined)).toBeUndefined();
+  });
+
+  test("portable profile pet visibility is ignored; direct project pet override survives", () => {
+    expect(
+      mergeCapabilityOverrides(
+        { pet: { showExternalCodexSessions: "on" } },
+        { pet: { showExternalClaudeSessions: "off" } },
+      ),
+    ).toEqual({ pet: { showExternalClaudeSessions: "off" } });
+    expect(
+      mergeCapabilityOverrides({ pet: { showExternalCodexSessions: "on" } }, undefined),
+    ).toBeUndefined();
+    expect(
+      mergeCapabilityOverrides(undefined, { pet: { showExternalCodexSessions: "on" } }),
+    ).toEqual({ pet: { showExternalCodexSessions: "on" } });
   });
 });
 

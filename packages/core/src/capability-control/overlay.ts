@@ -15,7 +15,7 @@ import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema
 import type { SettingsManager } from "../settings/manager.js";
 import type { CapabilityDescriptor } from "./types.js";
 
-/** Buckets in capabilityOverrides: "skills" | "plugins" | "agents" | "mcp" | "builtin". */
+/** Buckets in capabilityOverrides. */
 export type OverrideBucket = keyof NonNullable<CapabilityOverrides>;
 
 /** Apply a tri-state override to a baseline. inherit/garbage → baseline. */
@@ -149,23 +149,30 @@ export function effectiveBuiltinLists(
   };
 }
 
-const OVERRIDE_BUCKETS = ["skills", "plugins", "agents", "mcp", "builtin", "pluginHooks"] as const;
+const PROFILE_MERGED_OVERRIDE_BUCKETS = [
+  "skills",
+  "plugins",
+  "agents",
+  "mcp",
+  "builtin",
+  "pluginHooks",
+] as const;
 
 /**
  * 合并两层三态 overlay：`top`（用户手写 capabilityOverrides）按 key 赢过
- * `base`（profile.overrides 快照）。空结果收敛为 undefined。
+ * `base`（profile.overrides 快照）。Pet visibility 属于 host/project 策略，
+ * 不可由 portable profile 注入；只保留 top 的直接项目设置。
  */
 export function mergeCapabilityOverrides(
   base: CapabilityOverrides | undefined,
   top: CapabilityOverrides | undefined,
 ): CapabilityOverrides | undefined {
-  if (!base) return top;
-  if (!top) return base;
   const merged: NonNullable<CapabilityOverrides> = {};
-  for (const bucket of OVERRIDE_BUCKETS) {
-    const combined = { ...(base[bucket] ?? {}), ...(top[bucket] ?? {}) };
+  for (const bucket of PROFILE_MERGED_OVERRIDE_BUCKETS) {
+    const combined = { ...(base?.[bucket] ?? {}), ...(top?.[bucket] ?? {}) };
     if (Object.keys(combined).length > 0) merged[bucket] = combined;
   }
+  if (top?.pet && Object.keys(top.pet).length > 0) merged.pet = { ...top.pet };
   return Object.keys(merged).length > 0 ? merged : undefined;
 }
 

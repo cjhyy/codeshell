@@ -3,7 +3,10 @@ import { mkdirSync, mkdtempSync, appendFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { RecentExternalSession } from "@cjhyy/code-shell-capability-coding/orchestration";
-import { parseCodexTranscriptLine, parseClaudeTranscriptLine } from "@cjhyy/code-shell-capability-coding/orchestration";
+import {
+  parseCodexTranscriptLine,
+  parseClaudeTranscriptLine,
+} from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { DesktopPetSession } from "./pet-state-aggregator";
 import { ExternalSessionAdapter, type ExternalPetSessionSink } from "./external-session-adapter";
 
@@ -16,7 +19,10 @@ function codexTaskComplete(): string {
   return JSON.stringify({ type: "event_msg", payload: { type: "task_complete" } }) + "\n";
 }
 
-function recordingSink(): ExternalPetSessionSink & { upserts: DesktopPetSession[]; removals: string[] } {
+function recordingSink(): ExternalPetSessionSink & {
+  upserts: DesktopPetSession[];
+  removals: string[];
+} {
   const upserts: DesktopPetSession[] = [];
   const removals: string[] = [];
   return {
@@ -30,7 +36,10 @@ function recordingSink(): ExternalPetSessionSink & { upserts: DesktopPetSession[
 function makeRollout(dir: string, name: string, threadId: string, cwd: string): string {
   mkdirSync(dir, { recursive: true });
   const file = join(dir, name);
-  writeFileSync(file, JSON.stringify({ type: "session_meta", payload: { id: threadId, cwd } }) + "\n");
+  writeFileSync(
+    file,
+    JSON.stringify({ type: "session_meta", payload: { id: threadId, cwd } }) + "\n",
+  );
   return file;
 }
 
@@ -40,24 +49,39 @@ describe("ExternalSessionAdapter", () => {
     const file = makeRollout(join(home, "s"), "rollout-a.jsonl", "thread-a", "/tmp/proj-a");
     let now = 10_000;
     const meta: RecentExternalSession = {
-      sessionId: "thread-a", cwd: "/tmp/proj-a", file, lastModified: now, firstMessage: "fix login",
+      sessionId: "thread-a",
+      cwd: "/tmp/proj-a",
+      file,
+      lastModified: now,
+      firstMessage: "fix login",
     };
     const sink = recordingSink();
     const adapter = new ExternalSessionAdapter({
-      cli: "codex", parseLine: parseCodexTranscriptLine, sink,
-      discover: () => [meta], scanIntervalMs: 0, now: () => now,
+      cli: "codex",
+      parseLine: parseCodexTranscriptLine,
+      sink,
+      discover: () => [meta],
+      scanIntervalMs: 0,
+      now: () => now,
     });
     await adapter.scanOnce();
     expect(sink.upserts.at(-1)).toMatchObject({
-      agentSessionId: "thread-a", title: "fix login", workspaceDisplayName: "proj-a",
-      runState: "running", external: { cli: "codex", cwd: "/tmp/proj-a" },
+      agentSessionId: "thread-a",
+      title: "fix login",
+      workspaceDisplayName: "proj-a",
+      runState: "running",
+      external: { cli: "codex", cwd: "/tmp/proj-a" },
       freshness: { source: "external-tail" },
     });
 
     appendFileSync(file, codexLine({ type: "function_call", name: "shell", arguments: "{}" }));
     now = 11_000;
     adapter.pollOnce();
-    expect(sink.upserts.at(-1)).toMatchObject({ agentSessionId: "thread-a", runState: "running", phase: "tool" });
+    expect(sink.upserts.at(-1)).toMatchObject({
+      agentSessionId: "thread-a",
+      runState: "running",
+      phase: "tool",
+    });
 
     const count = sink.upserts.length;
     adapter.pollOnce();
@@ -71,12 +95,25 @@ describe("ExternalSessionAdapter", () => {
     let now = 10_000;
     const sink = recordingSink();
     const adapter = new ExternalSessionAdapter({
-      cli: "codex", parseLine: parseCodexTranscriptLine, sink,
-      discover: () => [{ sessionId: "thread-b", cwd: "/tmp/proj-b", file, lastModified: now, firstMessage: "" }],
-      scanIntervalMs: 0, quietMs: 90_000, now: () => now,
+      cli: "codex",
+      parseLine: parseCodexTranscriptLine,
+      sink,
+      discover: () => [
+        { sessionId: "thread-b", cwd: "/tmp/proj-b", file, lastModified: now, firstMessage: "" },
+      ],
+      scanIntervalMs: 0,
+      quietMs: 90_000,
+      now: () => now,
     });
     await adapter.scanOnce();
-    appendFileSync(file, codexLine({ type: "message", role: "assistant", content: [{ type: "output_text", text: "done" }] }));
+    appendFileSync(
+      file,
+      codexLine({
+        type: "message",
+        role: "assistant",
+        content: [{ type: "output_text", text: "done" }],
+      }),
+    );
     adapter.pollOnce();
     expect(sink.upserts.at(-1)!.runState).toBe("running");
     appendFileSync(file, codexTaskComplete());
@@ -91,9 +128,15 @@ describe("ExternalSessionAdapter", () => {
     let now = 10_000;
     const sink = recordingSink();
     const adapter = new ExternalSessionAdapter({
-      cli: "codex", parseLine: parseCodexTranscriptLine, sink,
-      discover: () => [{ sessionId: "thread-d", cwd: "/tmp/proj-d", file, lastModified: now, firstMessage: "" }],
-      scanIntervalMs: 0, quietMs: 90_000, now: () => now,
+      cli: "codex",
+      parseLine: parseCodexTranscriptLine,
+      sink,
+      discover: () => [
+        { sessionId: "thread-d", cwd: "/tmp/proj-d", file, lastModified: now, firstMessage: "" },
+      ],
+      scanIntervalMs: 0,
+      quietMs: 90_000,
+      now: () => now,
     });
     await adapter.scanOnce();
     expect(sink.upserts.at(-1)!.runState).toBe("running"); // seeded running (fresh mtime)
@@ -111,8 +154,12 @@ describe("ExternalSessionAdapter", () => {
     ];
     const sink = recordingSink();
     const adapter = new ExternalSessionAdapter({
-      cli: "codex", parseLine: parseCodexTranscriptLine, sink,
-      discover: () => metas, scanIntervalMs: 0, now: () => 10_000,
+      cli: "codex",
+      parseLine: parseCodexTranscriptLine,
+      sink,
+      discover: () => metas,
+      scanIntervalMs: 0,
+      now: () => 10_000,
     });
     await adapter.scanOnce();
     metas.length = 0;
@@ -121,22 +168,85 @@ describe("ExternalSessionAdapter", () => {
     adapter.stop();
   });
 
+  test("filters a disabled project before registering or tailing its transcript", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-adapter-"));
+    const file = makeRollout(
+      join(home, "s"),
+      "rollout-filtered.jsonl",
+      "thread-filtered",
+      "/tmp/filtered",
+    );
+    let enabled = false;
+    const sink = recordingSink();
+    const adapter = new ExternalSessionAdapter({
+      cli: "codex",
+      parseLine: parseCodexTranscriptLine,
+      sink,
+      discover: () => [
+        {
+          sessionId: "thread-filtered",
+          cwd: "/tmp/filtered",
+          file,
+          lastModified: 10_000,
+          firstMessage: "hidden",
+        },
+      ],
+      includeSession: () => enabled,
+      scanIntervalMs: 0,
+      now: () => 10_000,
+    });
+
+    await adapter.scanOnce();
+    appendFileSync(file, codexLine({ type: "function_call", name: "shell", arguments: "{}" }));
+    adapter.pollOnce();
+    expect(sink.upserts).toEqual([]);
+
+    enabled = true;
+    await adapter.scanOnce();
+    expect(sink.upserts).toHaveLength(1);
+    enabled = false;
+    await adapter.scanOnce();
+    expect(sink.removals).toEqual(["thread-filtered"]);
+    adapter.stop();
+  });
+
   test("claude cli dispatch: tool_use flips phase to tool with claude tag", async () => {
     const home = mkdtempSync(join(tmpdir(), "claude-adapter-"));
     const dir = join(home, "proj");
     mkdirSync(dir, { recursive: true });
     const file = join(dir, "sess-x.jsonl");
-    writeFileSync(file, JSON.stringify({ type: "user", cwd: "/tmp/proj-x", message: { role: "user", content: "hi" } }) + "\n");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        type: "user",
+        cwd: "/tmp/proj-x",
+        message: { role: "user", content: "hi" },
+      }) + "\n",
+    );
     let now = 10_000;
     const sink = recordingSink();
     const adapter = new ExternalSessionAdapter({
-      cli: "claude", parseLine: parseClaudeTranscriptLine, sink,
-      discover: () => [{ sessionId: "sess-x", cwd: "/tmp/proj-x", file, lastModified: now, firstMessage: "hi" }],
-      scanIntervalMs: 0, now: () => now,
+      cli: "claude",
+      parseLine: parseClaudeTranscriptLine,
+      sink,
+      discover: () => [
+        { sessionId: "sess-x", cwd: "/tmp/proj-x", file, lastModified: now, firstMessage: "hi" },
+      ],
+      scanIntervalMs: 0,
+      now: () => now,
     });
     await adapter.scanOnce();
-    expect(sink.upserts.at(-1)).toMatchObject({ agentSessionId: "sess-x", external: { cli: "claude" } });
-    appendFileSync(file, JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use", id: "t1", name: "Bash", input: {} }] } }) + "\n");
+    expect(sink.upserts.at(-1)).toMatchObject({
+      agentSessionId: "sess-x",
+      external: { cli: "claude" },
+    });
+    appendFileSync(
+      file,
+      JSON.stringify({
+        type: "assistant",
+        message: { content: [{ type: "tool_use", id: "t1", name: "Bash", input: {} }] },
+      }) + "\n",
+    );
     now = 11_000;
     adapter.pollOnce();
     expect(sink.upserts.at(-1)).toMatchObject({ agentSessionId: "sess-x", phase: "tool" });
@@ -145,21 +255,42 @@ describe("ExternalSessionAdapter", () => {
 
   test("a multibyte UTF-8 char split across two drains is not corrupted", async () => {
     const home = mkdtempSync(join(tmpdir(), "codex-adapter-"));
-    const file = makeRollout(join(home, "s"), "rollout-utf8.jsonl", "thread-utf8", "/tmp/proj-utf8");
+    const file = makeRollout(
+      join(home, "s"),
+      "rollout-utf8.jsonl",
+      "thread-utf8",
+      "/tmp/proj-utf8",
+    );
     let now = 10_000;
     const sink = recordingSink();
     const adapter = new ExternalSessionAdapter({
-      cli: "codex", parseLine: parseCodexTranscriptLine, sink,
-      discover: () => [{ sessionId: "thread-utf8", cwd: "/tmp/proj-utf8", file, lastModified: now, firstMessage: "" }],
-      scanIntervalMs: 0, now: () => now,
+      cli: "codex",
+      parseLine: parseCodexTranscriptLine,
+      sink,
+      discover: () => [
+        {
+          sessionId: "thread-utf8",
+          cwd: "/tmp/proj-utf8",
+          file,
+          lastModified: now,
+          firstMessage: "",
+        },
+      ],
+      scanIntervalMs: 0,
+      now: () => now,
     });
     await adapter.scanOnce();
 
     // Full message line whose text contains multibyte (CJK) characters.
-    const line = JSON.stringify({
-      type: "response_item",
-      payload: { type: "message", role: "assistant", content: [{ type: "output_text", text: "处理中文" }] },
-    }) + "\n";
+    const line =
+      JSON.stringify({
+        type: "response_item",
+        payload: {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: "处理中文" }],
+        },
+      }) + "\n";
     const bytes = Buffer.from(line, "utf-8");
     // Split the byte stream mid-multibyte-char: cut inside the first CJK char's
     // 3-byte sequence (the JSON prefix is ASCII, so an offset past it but before
@@ -187,9 +318,20 @@ describe("ExternalSessionAdapter", () => {
     let now = 10_000;
     const sink = recordingSink();
     const adapter = new ExternalSessionAdapter({
-      cli: "codex", parseLine: parseCodexTranscriptLine, sink,
-      discover: () => [{ sessionId: "thread-big", cwd: "/tmp/proj-big", file, lastModified: now, firstMessage: "" }],
-      scanIntervalMs: 0, now: () => now,
+      cli: "codex",
+      parseLine: parseCodexTranscriptLine,
+      sink,
+      discover: () => [
+        {
+          sessionId: "thread-big",
+          cwd: "/tmp/proj-big",
+          file,
+          lastModified: now,
+          firstMessage: "",
+        },
+      ],
+      scanIntervalMs: 0,
+      now: () => now,
     });
     await adapter.scanOnce();
 

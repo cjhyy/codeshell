@@ -20,10 +20,12 @@ describe("capabilityOverrides", () => {
         plugins: { superpowers: "off" },
         agents: { "my-agent": "on" },
         mcp: { playwright: "off" },
+        pet: { showExternalCodexSessions: "on" },
       },
     });
     expect(parsed.capabilityOverrides?.skills?.helper).toBe("on");
     expect(parsed.capabilityOverrides?.mcp?.playwright).toBe("off");
+    expect(parsed.capabilityOverrides?.pet?.showExternalCodexSessions).toBe("on");
   });
 
   it("absent capabilityOverrides stays undefined (zero-regression)", () => {

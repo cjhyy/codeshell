@@ -156,10 +156,20 @@ export const settingsNs = {
         skillsLoadFailed: "技能列表加载失败：{message}",
         externalSessionsTitle: "外部 CLI 会话",
         externalSessionsSubtitle: "在 Pet 全局视图显示本机其他 CLI 工具的会话状态。默认关闭。",
+        externalSessionsProjectSubtitle:
+          "单独覆盖本项目的外部 CLI 会话可见性；未覆盖时跟随全局设置。",
+        projectOverride: "本项目已覆盖全局设置",
+        projectInherit: "跟随全局（当前{state}）",
+        enabled: "开启",
+        disabled: "关闭",
+        resetCodexOverride: "Codex 会话改为跟随全局",
+        resetClaudeOverride: "Claude Code 会话改为跟随全局",
         codexLabel: "在 Pet 全局视图显示 Codex CLI/App 会话",
-        codexDesc: "开启后 CodeShell 会读取本机 ~/.codex 下的会话记录以显示状态；关闭则完全不读取。",
+        codexDesc:
+          "开启后 CodeShell 会读取本机 ~/.codex 下的会话记录以显示状态；关闭则完全不读取。",
         claudeLabel: "在 Pet 全局视图显示 Claude Code 会话",
-        claudeDesc: "开启后 CodeShell 会读取本机 ~/.claude 下的会话记录以显示状态；关闭则完全不读取。",
+        claudeDesc:
+          "开启后 CodeShell 会读取本机 ~/.claude 下的会话记录以显示状态；关闭则完全不读取。",
       },
       dataSources: {
         globalHint: "这里管理全局连接目录；把数据源授权给某个项目请切换到项目范围。",
@@ -972,6 +982,14 @@ export const settingsNs = {
         externalSessionsTitle: "External CLI sessions",
         externalSessionsSubtitle:
           "Show sessions from other local CLI tools in the Pet global view. Off by default.",
+        externalSessionsProjectSubtitle:
+          "Override external CLI session visibility for this project, or leave it following the global setting.",
+        projectOverride: "This project overrides the global setting",
+        projectInherit: "Following global (currently {state})",
+        enabled: "on",
+        disabled: "off",
+        resetCodexOverride: "Make Codex sessions follow global",
+        resetClaudeOverride: "Make Claude Code sessions follow global",
         codexLabel: "Show Codex CLI/App sessions in the Pet global view",
         codexDesc:
           "When on, CodeShell reads local session records under ~/.codex to show their status; when off, it reads nothing.",

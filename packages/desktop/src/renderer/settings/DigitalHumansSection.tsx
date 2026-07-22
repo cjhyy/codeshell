@@ -1,5 +1,5 @@
 import React from "react";
-import { ExternalLink, Pencil, Plus } from "lucide-react";
+import { ExternalLink, Pencil, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useT } from "../i18n";
@@ -72,7 +72,12 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
 
   if (scope === "project") {
     if (!projectPath) return null;
-    return <ProfileSection cwd={projectPath} />;
+    return (
+      <div className="space-y-4">
+        <ProfileSection cwd={projectPath} />
+        <PetExternalSessionsToggles scope="project" projectPath={projectPath} />
+      </div>
+    );
   }
 
   const save = async (profile: Omit<DigitalHumanProfileEntry, "active">) => {
@@ -168,7 +173,7 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
         onOpenChange={setEditorOpen}
         onSave={(profile) => void save(profile)}
       />
-      <PetExternalSessionsToggles />
+      <PetExternalSessionsToggles scope="user" />
     </section>
   );
 }
@@ -178,6 +183,12 @@ export interface PetSettings {
   showExternalClaudeSessions?: boolean;
   [key: string]: unknown;
 }
+
+export type PetExternalSessionKey = "showExternalCodexSessions" | "showExternalClaudeSessions";
+export type PetExternalSessionOverride = "on" | "off";
+type PetExternalSessionOverrides = Partial<
+  Record<PetExternalSessionKey, PetExternalSessionOverride>
+>;
 
 function petOf(v: unknown): PetSettings {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as PetSettings) : {};
@@ -190,26 +201,70 @@ function petOf(v: unknown): PetSettings {
  */
 export function nextPetPatch(
   current: PetSettings,
-  key: "showExternalCodexSessions" | "showExternalClaudeSessions",
+  key: PetExternalSessionKey,
   next: boolean,
 ): PetSettings {
   return { ...current, [key]: next };
 }
 
+function projectPetOverridesOf(settings: unknown): PetExternalSessionOverrides {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return {};
+  const capabilityOverrides = (settings as Record<string, unknown>).capabilityOverrides;
+  if (!capabilityOverrides || typeof capabilityOverrides !== "object") return {};
+  const pet = (capabilityOverrides as Record<string, unknown>).pet;
+  if (!pet || typeof pet !== "object" || Array.isArray(pet)) return {};
+  const raw = pet as Record<string, unknown>;
+  return {
+    ...(raw.showExternalCodexSessions === "on" || raw.showExternalCodexSessions === "off"
+      ? { showExternalCodexSessions: raw.showExternalCodexSessions }
+      : {}),
+    ...(raw.showExternalClaudeSessions === "on" || raw.showExternalClaudeSessions === "off"
+      ? { showExternalClaudeSessions: raw.showExternalClaudeSessions }
+      : {}),
+  };
+}
+
+export function nextPetProjectOverridePatch(
+  key: PetExternalSessionKey,
+  next: boolean | "inherit",
+): Record<string, unknown> {
+  return {
+    capabilityOverrides: {
+      pet: { [key]: next === "inherit" ? null : next ? "on" : "off" },
+    },
+  };
+}
+
+function effectivePetToggle(
+  pet: PetSettings,
+  overrides: PetExternalSessionOverrides,
+  key: PetExternalSessionKey,
+): boolean {
+  const override = overrides[key];
+  if (override === "on") return true;
+  if (override === "off") return false;
+  return pet[key] ?? false;
+}
+
 /**
- * Two global (user-scope) toggles that opt Pet's global view into reading
- * external CLI session records (~/.codex, ~/.claude). Default off. Writing the
- * user-scope `pet` subtree fires the settings-changed event; main's
- * `settings:set` handler hot-tunes the external-session adapters when the patch
- * touches `pet`.
+ * Two scope-aware toggles that opt Pet's global view into reading external CLI
+ * session records (~/.codex, ~/.claude). User scope writes the global baseline;
+ * project scope writes capabilityOverrides.pet on/off and may reset to inherit.
  *
  * The whole `pet` subtree is spread on write so toggling one switch never drops
  * the other's current value. (main's writeSettings deep-merges the patch, so
  * this is belt-and-suspenders, but it keeps the write self-describing.)
  */
-export function PetExternalSessionsToggles() {
+export function PetExternalSessionsToggles({
+  scope = "user",
+  projectPath,
+}: {
+  scope?: "user" | "project";
+  projectPath?: string | null;
+}) {
   const { t } = useT();
   const [pet, setPet] = React.useState<PetSettings>({});
+  const [overrides, setOverrides] = React.useState<PetExternalSessionOverrides>({});
   // Mirror the latest committed pet subtree so setToggle computes the optimistic
   // patch and its rollback base from live truth, not a render-time closure. This
   // is what makes toggling both switches within one render frame safe (the 2nd
@@ -217,21 +272,43 @@ export function PetExternalSessionsToggles() {
   // snapshot.
   const petRef = React.useRef<PetSettings>(pet);
   petRef.current = pet;
+  const overridesRef = React.useRef<PetExternalSessionOverrides>(overrides);
+  overridesRef.current = overrides;
 
   const load = React.useCallback(async () => {
-    const s = (await window.codeshell.getSettings("user")) ?? {};
-    setPet(petOf((s as Record<string, unknown>).pet));
-  }, []);
+    if (scope === "project" && projectPath) {
+      const [userSettings, projectSettings] = await Promise.all([
+        window.codeshell.getSettings("user"),
+        window.codeshell.getSettings("project", projectPath),
+      ]);
+      setPet(petOf((userSettings as Record<string, unknown> | null)?.pet));
+      setOverrides(projectPetOverridesOf(projectSettings));
+      return;
+    }
+    const settings = (await window.codeshell.getSettings("user")) ?? {};
+    setPet(petOf((settings as Record<string, unknown>).pet));
+    setOverrides({});
+  }, [projectPath, scope]);
 
   useRefreshOnSettingsChange(() => void load(), [load]);
 
-  const codex = pet.showExternalCodexSessions ?? false;
-  const claude = pet.showExternalClaudeSessions ?? false;
+  const codex = effectivePetToggle(pet, overrides, "showExternalCodexSessions");
+  const claude = effectivePetToggle(pet, overrides, "showExternalClaudeSessions");
 
-  const setToggle = async (
-    key: "showExternalCodexSessions" | "showExternalClaudeSessions",
-    next: boolean,
-  ) => {
+  const setToggle = async (key: PetExternalSessionKey, next: boolean) => {
+    if (scope === "project" && projectPath) {
+      const prev = overridesRef.current;
+      const optimistic = { ...prev, [key]: next ? "on" : "off" } as const;
+      overridesRef.current = optimistic;
+      setOverrides(optimistic);
+      try {
+        await writeSettings("project", nextPetProjectOverridePatch(key, next), projectPath);
+      } catch {
+        overridesRef.current = prev;
+        setOverrides(prev);
+      }
+      return;
+    }
     const prev = petRef.current;
     const optimistic = nextPetPatch(prev, key, next);
     petRef.current = optimistic;
@@ -246,6 +323,31 @@ export function PetExternalSessionsToggles() {
     }
   };
 
+  const resetOverride = async (key: PetExternalSessionKey) => {
+    if (scope !== "project" || !projectPath || !overridesRef.current[key]) return;
+    const prev = overridesRef.current;
+    const optimistic = { ...prev };
+    delete optimistic[key];
+    overridesRef.current = optimistic;
+    setOverrides(optimistic);
+    try {
+      await writeSettings("project", nextPetProjectOverridePatch(key, "inherit"), projectPath);
+    } catch {
+      overridesRef.current = prev;
+      setOverrides(prev);
+    }
+  };
+
+  const scopeHint = (key: PetExternalSessionKey) => {
+    const override = overrides[key];
+    if (override) return t("settingsX.digitalHumans.projectOverride");
+    return t("settingsX.digitalHumans.projectInherit", {
+      state: pet[key]
+        ? t("settingsX.digitalHumans.enabled")
+        : t("settingsX.digitalHumans.disabled"),
+    });
+  };
+
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-4">
       <div>
@@ -253,10 +355,14 @@ export function PetExternalSessionsToggles() {
           {t("settingsX.digitalHumans.externalSessionsTitle")}
         </h3>
         <p className="text-xs text-muted-foreground">
-          {t("settingsX.digitalHumans.externalSessionsSubtitle")}
+          {t(
+            scope === "project"
+              ? "settingsX.digitalHumans.externalSessionsProjectSubtitle"
+              : "settingsX.digitalHumans.externalSessionsSubtitle",
+          )}
         </p>
       </div>
-      <label className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <span className="min-w-0">
           <span className="block text-sm text-foreground">
             {t("settingsX.digitalHumans.codexLabel")}
@@ -264,13 +370,32 @@ export function PetExternalSessionsToggles() {
           <span className="block text-xs text-muted-foreground">
             {t("settingsX.digitalHumans.codexDesc")}
           </span>
+          {scope === "project" ? (
+            <span className="block text-xs text-muted-foreground">
+              {scopeHint("showExternalCodexSessions")}
+            </span>
+          ) : null}
         </span>
-        <Switch
-          checked={codex}
-          onCheckedChange={(next) => void setToggle("showExternalCodexSessions", next)}
-        />
-      </label>
-      <label className="flex items-start justify-between gap-3">
+        <span className="flex shrink-0 items-center gap-1">
+          {scope === "project" && overrides.showExternalCodexSessions ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2"
+              aria-label={t("settingsX.digitalHumans.resetCodexOverride")}
+              onClick={() => void resetOverride("showExternalCodexSessions")}
+            >
+              <RotateCcw className="size-3.5" aria-hidden />
+            </Button>
+          ) : null}
+          <Switch
+            aria-label={t("settingsX.digitalHumans.codexLabel")}
+            checked={codex}
+            onCheckedChange={(next) => void setToggle("showExternalCodexSessions", next)}
+          />
+        </span>
+      </div>
+      <div className="flex items-start justify-between gap-3">
         <span className="min-w-0">
           <span className="block text-sm text-foreground">
             {t("settingsX.digitalHumans.claudeLabel")}
@@ -278,12 +403,31 @@ export function PetExternalSessionsToggles() {
           <span className="block text-xs text-muted-foreground">
             {t("settingsX.digitalHumans.claudeDesc")}
           </span>
+          {scope === "project" ? (
+            <span className="block text-xs text-muted-foreground">
+              {scopeHint("showExternalClaudeSessions")}
+            </span>
+          ) : null}
         </span>
-        <Switch
-          checked={claude}
-          onCheckedChange={(next) => void setToggle("showExternalClaudeSessions", next)}
-        />
-      </label>
+        <span className="flex shrink-0 items-center gap-1">
+          {scope === "project" && overrides.showExternalClaudeSessions ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2"
+              aria-label={t("settingsX.digitalHumans.resetClaudeOverride")}
+              onClick={() => void resetOverride("showExternalClaudeSessions")}
+            >
+              <RotateCcw className="size-3.5" aria-hidden />
+            </Button>
+          ) : null}
+          <Switch
+            aria-label={t("settingsX.digitalHumans.claudeLabel")}
+            checked={claude}
+            onCheckedChange={(next) => void setToggle("showExternalClaudeSessions", next)}
+          />
+        </span>
+      </div>
     </div>
   );
 }

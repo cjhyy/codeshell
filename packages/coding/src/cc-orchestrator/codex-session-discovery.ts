@@ -4,9 +4,10 @@ import { homedir } from "node:os";
 import type {
   DiscoveredSession,
   DiscoverOptions,
+  ExternalSessionDiscoveryScope,
   RecentExternalSession,
 } from "./session-discovery.js";
-import { selectRecentStats } from "./session-discovery.js";
+import { externalSessionCwdEnabled, selectRecentStats } from "./session-discovery.js";
 import { codexUserText } from "./codex-user-text.js";
 
 /**
@@ -124,6 +125,7 @@ export type RecentCodexSession = RecentExternalSession;
 export function discoverRecentCodexSessions(
   opts: DiscoverOptions = {},
   codexHome = join(homedir(), ".codex"),
+  scope?: ExternalSessionDiscoveryScope,
 ): RecentCodexSession[] {
   const root = join(codexHome, "sessions");
   if (!existsSync(root)) return [];
@@ -137,11 +139,17 @@ export function discoverRecentCodexSessions(
     if (out.size >= limit) break;
     let meta: { id?: string; cwd?: string } | undefined;
     try {
+      // Codex stores every cwd in one date-partitioned tree, so the bounded
+      // first-line session_meta is the earliest possible project boundary.
+      // Apply scope immediately here: a disabled root is never title/content
+      // probed, returned to the adapter, or tailed.
       meta = readSessionMeta(s.file);
     } catch {
       continue;
     }
-    if (!meta?.id || !meta.cwd || out.has(meta.id)) continue;
+    if (!meta?.id || !meta.cwd || out.has(meta.id) || !externalSessionCwdEnabled(meta.cwd, scope)) {
+      continue;
+    }
     out.set(meta.id, {
       sessionId: meta.id,
       cwd: meta.cwd,

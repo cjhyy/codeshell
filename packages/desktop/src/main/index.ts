@@ -84,6 +84,7 @@ import {
   readCodexRecentHistory,
   readRecentHistory,
   resolveQuotaCredentials,
+  type ExternalSessionDiscoveryScope,
   type QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import { CODING_CAPABILITY } from "@cjhyy/code-shell-capability-coding/capability";
@@ -94,6 +95,10 @@ import {
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
+import {
+  ExternalSessionVisibilityController,
+  touchesExternalSessionVisibility,
+} from "./pet/external-session-visibility.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { formatPetLongTaskClosureMessage, PetDispatchService } from "./pet/pet-dispatch-service.js";
@@ -462,8 +467,8 @@ const imGatewayService = new ImGatewayService({
 });
 registerImGatewayIpc(ipcMain, imGatewayService);
 let petStateAggregator: PetStateAggregator | null = null;
-const petExternalAdapters = new Map<ExternalCli, ExternalSessionAdapter>();
-let reconcileExternalAdapters: ((settings: Record<string, unknown>) => void) | null = null;
+let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
+let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
@@ -1086,61 +1091,64 @@ async function createWindow(): Promise<BrowserWindow> {
     });
     petStateAggregator = aggregator;
 
-    // Toggle-driven external-CLI session adapters (Codex / Claude). Each CLI
-    // gets at most one adapter; enabling starts it, disabling stops it and drops
-    // any cards it pushed. reconcile is exposed at module scope so settings:set
-    // can re-tune on a live toggle change.
+    // Toggle-driven external-CLI session adapters (Codex / Claude). The
+    // controller folds each session cwd's capabilityOverrides.pet over the
+    // user baseline, and keeps a disabled source entirely unconstructed.
     const externalCliConfig = {
       codex: {
-        discover: () => discoverRecentCodexSessions({ sinceMs: 24 * 60 * 60_000, limit: 50 }),
-        parseLine: parseCodexTranscriptLine,
-        enabled: (s: Record<string, unknown>) =>
-          Boolean(
-            (s.pet as { showExternalCodexSessions?: boolean } | undefined)
-              ?.showExternalCodexSessions,
+        discover: (scope: ExternalSessionDiscoveryScope) =>
+          discoverRecentCodexSessions(
+            { sinceMs: 24 * 60 * 60_000, limit: 50 },
+            undefined,
+            scope,
           ),
+        parseLine: parseCodexTranscriptLine,
       },
       claude: {
-        discover: () => discoverRecentClaudeSessions({ sinceMs: 24 * 60 * 60_000, limit: 50 }),
-        parseLine: parseClaudeTranscriptLine,
-        enabled: (s: Record<string, unknown>) =>
-          Boolean(
-            (s.pet as { showExternalClaudeSessions?: boolean } | undefined)
-              ?.showExternalClaudeSessions,
+        discover: (scope: ExternalSessionDiscoveryScope) =>
+          discoverRecentClaudeSessions(
+            { sinceMs: 24 * 60 * 60_000, limit: 50 },
+            undefined,
+            scope,
           ),
+        parseLine: parseClaudeTranscriptLine,
       },
     } satisfies Record<
       ExternalCli,
       {
-        discover: () => ReturnType<typeof discoverRecentCodexSessions>;
+        discover: (
+          scope: ExternalSessionDiscoveryScope,
+        ) => ReturnType<typeof discoverRecentCodexSessions>;
         parseLine: (line: string) => ReturnType<typeof parseCodexTranscriptLine>;
-        enabled: (s: Record<string, unknown>) => boolean;
       }
     >;
 
-    const reconcile = (settings: Record<string, unknown>): void => {
-      for (const cli of ["codex", "claude"] as const) {
-        const want = externalCliConfig[cli].enabled(settings);
-        const running = petExternalAdapters.get(cli);
-        if (want && !running) {
-          const adapter = new ExternalSessionAdapter({
-            cli,
-            discover: externalCliConfig[cli].discover,
-            parseLine: externalCliConfig[cli].parseLine,
-            sink: aggregator,
-            onBackgroundError: (operation, error) =>
-              dlog("main", `pet.external.${cli}.${operation}.failed`, { error: String(error) }),
-          });
-          petExternalAdapters.set(cli, adapter);
-          adapter.start();
-        } else if (!want && running) {
-          running.stop();
-          petExternalAdapters.delete(cli);
-          aggregator.removeExternalSessionsByCli(cli);
-        }
-      }
-    };
-    reconcileExternalAdapters = reconcile;
+    const externalVisibility = new ExternalSessionVisibilityController({
+      readUserSettings: () =>
+        new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user") as Record<
+          string,
+          unknown
+        >,
+      readProjectSettings: (cwd) =>
+        new SettingsManager(cwd, "full").getForScope("project", cwd) as Record<string, unknown>,
+      listProjectCwds: async () =>
+        (await mobileOrchestrator.projectList()).map((project) => project.path),
+      createAdapter: (cli, getDiscoveryScope, includeSession) =>
+        new ExternalSessionAdapter({
+          cli,
+          discover: () => externalCliConfig[cli].discover(getDiscoveryScope()),
+          parseLine: externalCliConfig[cli].parseLine,
+          includeSession,
+          sink: aggregator,
+          onBackgroundError: (operation, error) =>
+            dlog("main", `pet.external.${cli}.${operation}.failed`, { error: String(error) }),
+        }),
+      onSourceDisabled: (cli) => aggregator.removeExternalSessionsByCli(cli),
+      onReconcileError: (cli, error) =>
+        dlog("main", `pet.external.${cli}.reconcile.failed`, { error: String(error) }),
+    });
+    petExternalVisibilityController = externalVisibility;
+    reconcileExternalAdapters = () => externalVisibility.reconcile();
 
     // The topic-segment controller is created inside petInitialization once the
     // durable pet session id is known; until then the dispatch service holds a
@@ -1389,7 +1397,7 @@ async function createWindow(): Promise<BrowserWindow> {
     petAttentionPolicy = attention;
     const petInitialization = (async () => {
       await aggregator.start();
-      reconcile(((await readSettings("user").catch(() => null)) ?? {}) as Record<string, unknown>);
+      await externalVisibility.reconcile();
       await Promise.all([petReceipts.load(), petWorkInbox.load(), petWorkMemory.load()]);
       // Build the topic-segment controller now that the pet session id is
       // resolved. Range archival rides the generic archive_range worker query;
@@ -4103,12 +4111,9 @@ ipcMain.handle(
     await writeSettings(scope, patch, projectPath);
     // git.path may have changed — re-apply to core's git resolver immediately.
     if ("git" in patch) void applyGitPathFromSettings();
-    // pet.showExternal*Sessions toggles may have changed — re-tune the external
-    // adapters. patch is partial, so re-read the full user scope for state.
-    if ("pet" in patch && scope === "user") {
-      const settings = ((await readSettings("user").catch(() => null)) ??
-        {}) as Record<string, unknown>;
-      reconcileExternalAdapters?.(settings);
+    // Re-tune immediately for both the user baseline and per-project override.
+    if (touchesExternalSessionVisibility(scope, patch)) {
+      await reconcileExternalAdapters?.();
     }
     if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
       for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
@@ -4411,8 +4416,8 @@ app.on("before-quit", (event) => {
   bridge?.kill();
   petStateAggregator?.stop();
   petStateAggregator = null;
-  for (const adapter of petExternalAdapters.values()) adapter.stop();
-  petExternalAdapters.clear();
+  petExternalVisibilityController?.shutdown();
+  petExternalVisibilityController = null;
   reconcileExternalAdapters = null;
   petDispatchService = null;
   petLongTaskCoordinator?.stop();

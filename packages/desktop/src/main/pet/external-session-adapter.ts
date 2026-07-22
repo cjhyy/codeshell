@@ -1,4 +1,12 @@
-import { closeSync, openSync, readSync, statSync, unwatchFile, watchFile, type Stats } from "node:fs";
+import {
+  closeSync,
+  openSync,
+  readSync,
+  statSync,
+  unwatchFile,
+  watchFile,
+  type Stats,
+} from "node:fs";
 import { basename } from "node:path";
 import type {
   RecentExternalSession,
@@ -24,6 +32,8 @@ export interface ExternalSessionAdapterOptions {
   parseLine: (line: string) => SessionTailEvent[];
   sink: ExternalPetSessionSink;
   discover: () => RecentExternalSession[];
+  /** Filter before a discovered record is registered or tailed. */
+  includeSession?: (session: RecentExternalSession) => boolean;
   scanIntervalMs?: number;
   liveWindowMs?: number;
   quietMs?: number;
@@ -116,10 +126,22 @@ export class ExternalSessionAdapter {
     // Guards against reentrancy if scanOnce ever gains an await.
     this.scanning = true;
     try {
+      // Re-check records already being tailed before touching the discovery
+      // source. A hot project-off write therefore detaches its watchers first,
+      // even when another project keeps this CLI's adapter alive.
+      if (this.options.includeSession) {
+        for (const [sessionId, record] of this.records) {
+          if (this.options.includeSession(record.meta)) continue;
+          this.unwatch(record);
+          this.records.delete(sessionId);
+          this.options.sink.removeExternalSession(sessionId);
+        }
+      }
       const discovered = this.options.discover();
       const now = this.now();
       const seen = new Set<string>();
       for (const meta of discovered) {
+        if (this.options.includeSession && !this.options.includeSession(meta)) continue;
         seen.add(meta.sessionId);
         let record = this.records.get(meta.sessionId);
         if (!record) {
