@@ -1,6 +1,6 @@
 # 14 · Digital Humans, Sessions, and Pet
 
-> Current architecture as of 2026-07-18. Digital-human work is Session-owned;
+> Current architecture as of 2026-07-22. Digital-human work is Session-owned;
 > Pet is an independent optional manager surface and is not part of the
 > digital-human execution path.
 
@@ -50,21 +50,40 @@ digital human or team.
 
 ## Long-term memory
 
-The three stores have distinct ownership:
+The four stores have distinct ownership:
 
 | Level         | Location                                  | Owner                                 |
 | ------------- | ----------------------------------------- | ------------------------------------- |
 | Global        | `CODE_SHELL_HOME/memory/`                 | user across all projects and profiles |
 | Digital human | `CODE_SHELL_HOME/profiles/<name>/memory/` | one profile across project Sessions   |
 | Project       | `CODE_SHELL_HOME/projects/<hash>/memory/` | one project, independent of profile   |
+| Pet / Mimi    | Electron `userData/pet/memories.json`     | Mimi across Pet manager conversations |
 
 The digital-human card opens its profile memory store directly. Entries can be
 listed, created, edited, pinned, and soft-deleted. They are injected only when
 the profile has `portableMemory: true`.
 
-Core memory resolution remains global → profile → project, with the more
-specific project layer closest to the current task. The editor does not copy
-project Skills or project memory into a profile.
+Core memory resolution still covers only the first three rows: global →
+profile → project, with the more specific project layer closest to the
+current task. The editor does not copy project Skills or project memory into a
+profile. Pet memory is a separate Desktop-hosted manager store and never enters
+that Core resolution chain.
+
+## Pet / Mimi memory
+
+Desktop main owns the durable `PetMemoryStore`. It accepts at most 200 entries,
+normalizes each entry to at most 2,000 characters, serializes mutations, and
+writes a temporary owner-only file before atomically replacing the store. Each
+entry records its `user` or `mimi` source plus creation and update times. The Pet
+IPC and `PetMemorySection` expose the same store for listing, adding, editing,
+and removing entries; Mimi's `Memory` host action uses it for `remember`,
+`update`, and `forget`.
+
+Before every ordinary Mimi manager turn, Desktop reads the store and puts the
+newest bounded subset into the trusted `runtimeContext`. The tool therefore
+sees the same entry IDs and text that the user can manage in the Pet UI. A
+Memory-tool mutation is persisted by Desktop only after Mimi's turn; it is not
+a profile-memory write and does not attach a digital human to the Pet Session.
 
 ## Cross-Session messages
 
@@ -88,19 +107,74 @@ context event, or manual Handoff UI. The sent text simply appears as a user
 message in the target Session. If the source later learns something new, it
 calls the tool again and sends another message, just as a person would.
 
+## Pet host-action envelopes
+
+Mimi tools that need Desktop-owned capabilities do not perform those side
+effects inside the worker. For each turn, Desktop derives the supported action
+kinds from its executor registry and sends them in `profileParams.hostActions`;
+the Pet profile parses that closed list as `hostActionKinds` and exposes only
+the matching tools. The current envelope kinds are `mobileRemote`,
+`longTaskControl`, `memory`, and `replyAttachments` (the last is enabled only
+for a supported IM turn).
+
+A matching tool validates its input and records one `{ kind, payload }` request
+through the run-scoped Pet service. The behavior profile reports the accumulated
+requests under `RunResult.extensions.pet.hostActions`; tool acceptance means
+only that the request was recorded, never that the side effect succeeded. Only
+one request of each kind is accepted in a turn.
+
+The worker response crosses a process boundary, so `PetDispatchService`
+validates the exact envelope and each kind-specific payload again, rejects
+undeclared or duplicate kinds, and executes accepted requests through the
+Desktop registry only after `agent/run` returns. Execution failures are
+non-fatal to Mimi's generated reply and are returned as structured outcomes.
+For IM chat, `host-action-reply.ts` appends the real success or error after
+execution; opening mobile remote can also attach a host-generated pairing QR.
+This preserves the boundary between Mimi promising an operation during her
+turn and the host confirming what actually happened afterward.
+
+## Pet state aggregation and external CLI Sessions
+
+Desktop main's `PetStateAggregator` builds one bounded projection from three
+independent sources:
+
+1. The durable CodeShell Session catalog supplies all disk-backed Sessions and
+   navigation bindings.
+2. The live worker supplies an initial snapshot plus versioned Session/pending
+   deltas. Live state overlays the matching durable row; durable completion or
+   terminal state can reconcile a finalizing live row.
+3. Per-CLI `ExternalSessionAdapter` instances discover Codex and Claude session
+   files and tail recent transcripts. They reduce appended events to metadata
+   only: a bounded title, run state, model/tool phase, tool name, timestamps,
+   CLI kind, and cwd.
+
+Worker generations and delta versions are reconciled before events are
+published. If the worker is reclaimed or disconnected, live state and pending
+decisions are cleared and durable Sessions remain as the recovery baseline;
+external CLI rows remain intact because they do not depend on that worker.
+External adapters never copy the full transcript, tool arguments/results, file
+contents, approval state, or queue state into the Pet projection. Their two
+global settings default off; disabling one stops discovery and tailing at the
+source and removes that CLI's projected rows. External rows are visible in
+Pet, but currently have no CodeShell disk navigation binding, so their cards do
+not open a Session yet.
+
 ## Package ownership
 
-| Layer            | Owns                                                                                           |
-| ---------------- | ---------------------------------------------------------------------------------------------- |
-| Core             | profile schema/store, Session binding, profile memory injection, Session message tool/router   |
-| Desktop main     | profile/team persistence and memory access                                                      |
-| Desktop renderer | library/editor, direct Session creation, memory studio, closed same-project Session catalog    |
-| Pet package      | Mimi prompt, bounded projection, generic `DelegateWork`, Pet long-task state                   |
+| Layer            | Owns                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------- |
+| Core             | profile schema/store, Session binding, profile memory injection, Session message tool/router                    |
+| Desktop main     | profile/team persistence, memory access, Pet state aggregation, host-action execution, and durable Mimi memory  |
+| Desktop renderer | library/editor, direct Session creation, memory studios, closed same-project Session catalog, and Pet memory UI |
+| Pet package      | Mimi prompt, projection contract, generic `DelegateWork`, host-action envelopes/tools, and Pet long-task state  |
 
 The Desktop team schema lives under `packages/desktop/src/shared`, not in Pet.
-The Pet runtime accepts only Workspace and reusable-Session selectors. Its IPC,
-run parameters, delegation result, long-task ledger, and launch host contain no
-digital-human routing field.
+The Pet runtime accepts closed Workspace and reusable-Session selectors, a
+bounded JSON `runtimeContext`, and the host-declared `hostActionKinds` (carried
+canonically as `profileParams.hostActions`). These inputs control delegation,
+trusted world state, and host-action tool visibility respectively. Its IPC, run
+parameters, delegation result, long-task ledger, and launch host still contain
+no digital-human routing field.
 
 ## Security and recovery boundaries
 
@@ -120,7 +194,13 @@ digital-human routing field.
 - `packages/core/src/engine/engine.ts`
 - `packages/core/src/protocol/server.ts`
 - `packages/desktop/src/main/memory-service.ts`
+- `packages/desktop/src/main/pet/pet-state-aggregator.ts`
+- `packages/desktop/src/main/pet/external-session-adapter.ts`
+- `packages/desktop/src/main/pet/pet-dispatch-service.ts`
+- `packages/desktop/src/main/pet/host-action-reply.ts`
+- `packages/desktop/src/main/pet/pet-memory-store.ts`
 - `packages/desktop/src/renderer/digital-humans/DigitalHumanMemoryDialog.tsx`
 - `packages/desktop/src/renderer/app/useRunController.ts`
 - `packages/desktop/src/renderer/streamRouting.ts`
 - `packages/pet/src/delegate-work.ts`
+- `packages/pet/src/host-actions.ts`
