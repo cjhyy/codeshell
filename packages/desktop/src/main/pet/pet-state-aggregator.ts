@@ -308,6 +308,9 @@ export class PetStateAggregator {
     if (this.catalogRefreshTimer) clearInterval(this.catalogRefreshTimer);
     this.catalogRefreshTimer = null;
     this.started = false;
+    // Sessions edited while stopped keep mtimes below the old high-water mark;
+    // forget it so the next start() performs a full catalog pass again.
+    this.lastHighWaterMtime = undefined;
   }
 
   getSnapshot(): DesktopPetProjectionSnapshot {
