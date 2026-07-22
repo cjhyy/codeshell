@@ -12,8 +12,18 @@ import { useConfirm } from "../ui/DialogProvider";
  * and her Memory tool, so what the user sees here is exactly what Mimi knows.
  */
 export function PetMemorySection() {
+  const confirmRemoval = useConfirm();
+  return <PetMemorySectionContent confirmRemoval={confirmRemoval} />;
+}
+
+/** Interaction body split from the dialog hook so renderer tests can exercise
+ * the real edit/delete flows without depending on Radix portal emulation. */
+export function PetMemorySectionContent({
+  confirmRemoval,
+}: {
+  confirmRemoval: ReturnType<typeof useConfirm>;
+}) {
   const { t } = useT();
-  const confirm = useConfirm();
   const api = window.codeshell.pet;
   const [entries, setEntries] = React.useState<PetMemoryEntry[] | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -73,7 +83,7 @@ export function PetMemorySection() {
     });
 
   const remove = async (entry: PetMemoryEntry): Promise<void> => {
-    const approved = await confirm({
+    const approved = await confirmRemoval({
       title: t("pet.memory.deleteTitle"),
       message: t("pet.memory.deleteConfirm", { text: entry.text.slice(0, 80) }),
       confirmLabel: t("pet.memory.delete"),

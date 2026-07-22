@@ -81,6 +81,16 @@ export class PetMemoryStore {
     return this.mutate((entries) => {
       const normalized = normalizeText(text);
       const at = this.now();
+      const equivalent = findEquivalentEntry(entries, normalized);
+      if (equivalent) {
+        const entry: PetMemoryEntry = {
+          ...equivalent,
+          text: normalized,
+          updatedAt: Math.max(at, equivalent.updatedAt + 1),
+        };
+        entries.set(entry.id, entry);
+        return entry;
+      }
       const entry: PetMemoryEntry = {
         id: `mem-${randomUUID()}`,
         text: normalized,
@@ -181,6 +191,68 @@ function normalizeText(text: string): string {
     throw new Error(`memory text is too long (maximum ${MAX_MEMORY_TEXT_LENGTH} characters)`);
   }
   return normalized;
+}
+
+/**
+ * Find a conservatively equivalent memory without relying on a model or locale.
+ * Only exact canonical matches are eligible: the canonicalizer removes framing
+ * and applies a small set of high-confidence aliases. Generic fuzzy similarity
+ * is intentionally excluded because a single changed project, path, or number
+ * can be the entire durable fact even when the surrounding long text is equal.
+ */
+function findEquivalentEntry(
+  entries: ReadonlyMap<string, PetMemoryEntry>,
+  text: string,
+): PetMemoryEntry | undefined {
+  const incoming = canonicalMemoryText(text);
+  if (!incoming) return undefined;
+  let best: PetMemoryEntry | undefined;
+  for (const entry of entries.values()) {
+    if (canonicalMemoryText(entry.text) !== incoming) continue;
+    if (
+      !best ||
+      entry.updatedAt > best.updatedAt ||
+      (entry.updatedAt === best.updatedAt && entry.id < best.id)
+    ) {
+      best = entry;
+    }
+  }
+  return best;
+}
+
+const MEMORY_PHRASE_ALIASES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/(?:不太|不)(?:喜欢|喜爱|偏爱|偏好)|(?:讨厌|厌恶)/gu, " 不偏好 "],
+  [/(?<!不)(?:更)?(?:喜欢|喜爱|偏爱|偏好)|(?:倾向于)/gu, " 偏好 "],
+  [/(?:暗黑|黑暗|深色|暗色)(?:的)?(?:主题|模式)/gu, " 暗色主题 "],
+  [/(?:固定在|固定于)/gu, " 固定于 "],
+  [/\b(?:does\s+not|doesn't|do\s+not|don't)\s+(?:like|prefer)\b/giu, " not prefer "],
+  [/\b(?:dislikes?|hates?)\b/giu, " not prefer "],
+  [/\b(?:likes?|prefers?|favou?rs?)\b/giu, " prefer "],
+  [/\bdark\s+(?:mode|theme)\b/giu, " dark theme "],
+];
+
+function canonicalMemoryText(text: string): string {
+  let canonical = text.normalize("NFKC").replace(/[’‘]/gu, "'").trim();
+  canonical = canonical
+    .replace(
+      /^(?:(?:请\s*)?(?:帮我\s*)?(?:记住|记得)(?:一下)?(?:这件事)?|(?:please\s+)?(?:remember|note)(?:\s+that)?)\s*(?:[:：,，]\s*)?/iu,
+      "",
+    )
+    .replace(/^(?:用户|我)(?:的)?\s*/u, "")
+    .replace(/^(?:the\s+)?user(?:'s)?\s+/iu, "")
+    .replace(/^(?:i|my)\s+/iu, "");
+  for (const [pattern, replacement] of MEMORY_PHRASE_ALIASES) {
+    canonical = canonical.replace(pattern, replacement);
+  }
+  canonical = canonical
+    .replace(/(?:非常|十分|很|通常)(?=偏好)/gu, "")
+    .replace(/偏好\s*(?:使用|采用)\s*/gu, "偏好 ")
+    .replace(/\b(?:really|generally)\s+(?=prefer\b)/giu, "")
+    .replace(/\bprefer\s+(?:using|to\s+use)\b/giu, " prefer ")
+    .replace(/[。！？!?；;]+$/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return canonical;
 }
 
 function parseEntry(value: unknown): PetMemoryEntry | null {

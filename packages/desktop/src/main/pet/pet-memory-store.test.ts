@@ -59,6 +59,120 @@ describe("PetMemoryStore", () => {
     });
   });
 
+  test("updates an equivalent memory instead of adding a synonym duplicate", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path, {
+        now: (() => {
+          let tick = 10;
+          return () => ++tick;
+        })(),
+      });
+      await store.load();
+
+      const original = await store.remember("用户喜欢使用暗色主题。", "user");
+      const remembered = await store.remember("请记住：我偏爱深色模式", "mimi");
+
+      expect(store.list()).toHaveLength(1);
+      expect(remembered).toMatchObject({
+        id: original.id,
+        createdAt: original.createdAt,
+        source: "user",
+        text: "请记住：我偏爱深色模式",
+      });
+      expect(remembered.updatedAt).toBeGreaterThan(original.updatedAt);
+    });
+  });
+
+  test("uses conservative canonical matching and never folds distinct short facts or polarity", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path);
+      await store.load();
+
+      await store.remember("喜欢猫", "user");
+      await store.remember("喜欢狗", "user");
+      await store.remember("用户喜欢在所有项目中使用暗色主题", "mimi");
+      await store.remember("用户不喜欢在所有项目中使用暗色主题", "mimi");
+
+      expect(store.list()).toHaveLength(4);
+    });
+  });
+
+  test("updates a long equivalent fact through a high-confidence wording alias", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path);
+      await store.load();
+
+      const original = await store.remember("默认工作目录固定在 /projects/codeshell", "user");
+      const updated = await store.remember("默认工作目录固定于 /projects/codeshell", "mimi");
+
+      expect(store.list()).toHaveLength(1);
+      expect(updated.id).toBe(original.id);
+      expect(updated.source).toBe("user");
+    });
+  });
+
+  test("does not merge long facts when only the project, path, or number differs", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path);
+      await store.load();
+
+      const distinctFacts = [
+        "项目甲的生产发布统一使用蓝绿部署，并在完成后保留完整验证报告",
+        "项目乙的生产发布统一使用蓝绿部署，并在完成后保留完整验证报告",
+        "项目甲的默认工作目录固定在 /workspace/alpha/codeshell，并且统一使用 Bun 构建",
+        "项目甲的默认工作目录固定在 /workspace/beta/codeshell，并且统一使用 Bun 构建",
+        "项目甲每次并发任务上限固定为 12 个，同时保留两次失败重试",
+        "项目甲每次并发任务上限固定为 13 个，同时保留两次失败重试",
+      ];
+      for (const fact of distinctFacts) await store.remember(fact, "mimi");
+
+      expect(store.list()).toHaveLength(distinctFacts.length);
+      expect(new Set(store.list().map((entry) => entry.text))).toEqual(new Set(distinctFacts));
+    });
+  });
+
+  test("preserves semantic punctuation inside paths, identifiers, and numeric values", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path);
+      await store.load();
+
+      const distinctFacts = [
+        "项目甲的工具目录固定在 /workspace/foo-bar，并且只从该目录加载配置",
+        "项目甲的工具目录固定在 /workspace/foo/bar，并且只从该目录加载配置",
+        "Windows 构建缓存固定在 C:\\workspace\\foo-bar，并保留最近三次结果",
+        "Windows 构建缓存固定在 C:\\workspace\\foo\\bar，并保留最近三次结果",
+        "发布流水线使用标识符 release_candidate-1，并在生产环境中保持稳定",
+        "发布流水线使用标识符 release-candidate-1，并在生产环境中保持稳定",
+        "发布流水线的最低版本固定为 1.20，并拒绝更早的客户端",
+        "发布流水线的最低版本固定为 120，并拒绝更早的客户端",
+      ];
+      for (const fact of distinctFacts) await store.remember(fact, "mimi");
+
+      expect(store.list()).toHaveLength(distinctFacts.length);
+      expect(new Set(store.list().map((entry) => entry.text))).toEqual(new Set(distinctFacts));
+    });
+  });
+
+  test("deduplicates equivalent concurrent remembers inside the serialized mutation", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path);
+      await store.load();
+
+      const results = await Promise.all(
+        Array.from({ length: 20 }, (_, index) =>
+          store.remember(
+            index % 2 === 0 ? "用户喜欢使用暗色主题" : "请记住：我偏爱深色模式",
+            index % 2 === 0 ? "user" : "mimi",
+          ),
+        ),
+      );
+
+      expect(store.list()).toHaveLength(1);
+      expect(new Set(results.map((entry) => entry.id)).size).toBe(1);
+      expect(store.list()[0]?.source).toBe("user");
+    });
+  });
+
   test("rejects invalid input and unknown ids", async () => {
     await withStore(async (path) => {
       const store = new PetMemoryStore(path);
