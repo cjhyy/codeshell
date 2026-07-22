@@ -29,6 +29,31 @@ export {
   delegateWorkAvailability,
   rewriteDelegateWorkDef,
 } from "./delegate-work.js";
+export {
+  MOBILE_REMOTE_TOOL_NAME,
+  mobileRemoteToolDef,
+  mobileRemoteTool,
+  mobileRemoteAvailability,
+  type PetMobileRemoteAction,
+  type PetMobileRemoteRequest,
+  type PetMobileRemoteDecision,
+} from "./mobile-remote.js";
+export {
+  PET_HOST_ACTION_KINDS,
+  isPetHostActionKind,
+  isPetHostActionRequest,
+  CONTROL_LONG_TASK_TOOL_NAME,
+  MEMORY_TOOL_NAME,
+  controlLongTaskToolDef,
+  controlLongTaskTool,
+  controlLongTaskAvailability,
+  memoryToolDef,
+  memoryTool,
+  memoryAvailability,
+  type PetHostActionKind,
+  type PetHostActionRequest,
+  type PetHostActionDecision,
+} from "./host-actions.js";
 export { createPetCapability } from "./capability.js";
 export * from "./topic-segment.js";
 export * from "./long-task.js";

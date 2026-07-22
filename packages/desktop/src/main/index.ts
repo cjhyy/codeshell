@@ -97,6 +97,8 @@ import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import { formatPetLongTaskClosureMessage, PetDispatchService } from "./pet/pet-dispatch-service.js";
+import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
+import { PetMemoryStore } from "./pet/pet-memory-store.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
@@ -1148,6 +1150,12 @@ async function createWindow(): Promise<BrowserWindow> {
       resolve(app.getPath("userData"), "pet", "long-tasks.json"),
     );
     petLongTaskStore = longTaskStore;
+    const petMemoryStoreInstance = new PetMemoryStore(
+      resolve(app.getPath("userData"), "pet", "memories.json"),
+    );
+    void petMemoryStoreInstance
+      .load()
+      .catch((error) => dlog("main", "pet.memory.load.failed", { error: String(error) }));
     const longTaskCoordinator = new PetLongTaskCoordinator({
       store: longTaskStore,
       projection: aggregator,
@@ -1278,6 +1286,72 @@ async function createWindow(): Promise<BrowserWindow> {
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
       longTasks: longTaskCoordinator,
+      // Atomic CodeShell capabilities Mimi may request via her host-action
+      // tools; each runs only after her turn, and the real outcome is folded
+      // into the reply. The key set gates which tools the worker exposes.
+      hostActions: {
+        mobileRemote: async (payload) => {
+          if (payload.action === "close") {
+            await stopMobileRemote();
+            return { action: "close" };
+          }
+          if (payload.action !== "open") throw new Error("invalid mobile-remote request");
+          const opened = await startMobileRemote({ mode: "tunnel" });
+          return {
+            action: "open",
+            url: opened.url,
+            pairingUrl: opened.pairingUrl,
+            expiresAt: opened.expiresAt,
+          };
+        },
+        longTaskControl: async (payload) => {
+          const taskId = typeof payload.taskId === "string" ? payload.taskId : "";
+          const action = payload.action;
+          if (
+            !taskId ||
+            (action !== "pause" && action !== "resume" && action !== "retry" && action !== "cancel")
+          ) {
+            throw new Error("invalid long-task control request");
+          }
+          const controlled = await longTaskCoordinator.control({ taskId, action });
+          if (!controlled.ok) throw new Error(controlled.message);
+          return { action, objective: controlled.task.objective, status: controlled.task.status };
+        },
+        memory: async (payload) => {
+          const action = payload.action;
+          const text = typeof payload.text === "string" ? payload.text : "";
+          const memoryId = typeof payload.memoryId === "string" ? payload.memoryId : "";
+          if (action === "remember") {
+            const entry = await petMemoryStoreInstance.remember(text, "mimi");
+            return { action, id: entry.id };
+          }
+          if (action === "update") {
+            const entry = await petMemoryStoreInstance.update(memoryId, text);
+            return { action, id: entry.id };
+          }
+          if (action === "forget") {
+            const entry = await petMemoryStoreInstance.forget(memoryId);
+            return { action, id: entry.id };
+          }
+          throw new Error("invalid memory action");
+        },
+      },
+      worldContext: async () => {
+        await petMemoryStoreInstance.load();
+        const remote = getMobileRemoteGatewayStatus();
+        return {
+          memories: petMemoryStoreInstance
+            .list()
+            .slice(0, 24)
+            .map(({ id, text, source, updatedAt }) => ({ id, text, source, updatedAt })),
+          mobileRemote: {
+            running: remote.running,
+            tunnelConnected: remote.tunnelConnected,
+            passcodeSet: remote.passcodeSet,
+            ...(remote.url ? { url: remote.url } : {}),
+          },
+        };
+      },
       listWorkspaces: () => mobileOrchestrator.projectList(),
       listReusableSessions: async () => {
         const noWorkspaceCwd = resolveNoRepoCwd();
@@ -1377,6 +1451,16 @@ async function createWindow(): Promise<BrowserWindow> {
         clearTerminal: () => longTaskCoordinator.clearTerminal(),
         clearTask: (taskId) => longTaskCoordinator.clearTerminalTask(taskId),
         subscribe: (listener) => longTaskStore.subscribe(listener),
+      },
+      memories: {
+        list: async () => {
+          await petMemoryStoreInstance.load();
+          return petMemoryStoreInstance.list();
+        },
+        remember: (text) => petMemoryStoreInstance.remember(text, "user"),
+        update: (id, text) => petMemoryStoreInstance.update(id, text),
+        forget: (id) => petMemoryStoreInstance.forget(id),
+        subscribe: (listener) => petMemoryStoreInstance.subscribe(listener),
       },
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
@@ -1798,10 +1882,19 @@ async function dispatchGatewayPetChat(
   if (result.type !== "chat") throw new Error("Mimi Pet 返回了非聊天结果");
   await markAttachmentsSent(cwd, sessionId, attachments).catch(() => undefined);
   const worker = result.result as { text?: unknown; reason?: unknown } | undefined;
+  // Host-executed action outcomes (real tunnel address + pairing QR, task
+  // state changes, memory confirmations) are appended here so the IM reply
+  // carries what Mimi could only promise during her turn.
+  const enriched = await enrichPetChatReplyWithHostActions(
+    typeof worker?.text === "string" ? worker.text : "",
+    result.hostActions,
+    { qrDir: resolve(app.getPath("userData"), "pet", "qr") },
+  );
   return {
-    text: typeof worker?.text === "string" ? worker.text : "",
+    text: enriched.text,
     petSessionId: result.petSessionId,
     ...(typeof worker?.reason === "string" ? { reason: worker.reason } : {}),
+    ...(enriched.attachments.length > 0 ? { attachments: enriched.attachments } : {}),
   };
 }
 

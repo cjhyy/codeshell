@@ -19,6 +19,19 @@ import {
   delegateWorkToolDef,
   rewriteDelegateWorkDef,
 } from "./delegate-work.js";
+import {
+  mobileRemoteAvailability,
+  mobileRemoteTool,
+  mobileRemoteToolDef,
+} from "./mobile-remote.js";
+import {
+  controlLongTaskAvailability,
+  controlLongTaskTool,
+  controlLongTaskToolDef,
+  memoryAvailability,
+  memoryTool,
+  memoryToolDef,
+} from "./host-actions.js";
 import { PET_BEHAVIOR_PROFILE } from "./profile.js";
 import { createPetProjectionObserver, PET_HIDDEN_SESSION_KINDS } from "./projection-extension.js";
 import { validatePetRunParams } from "./run-params.js";
@@ -48,6 +61,51 @@ export function createPetCapability(): ExtensionModule {
           defaultPermissionRules: [{ tool: delegateWorkToolDef.name, decision: "allow" }],
           availability: delegateWorkAvailability,
           rewriteDefinition: rewriteDelegateWorkDef,
+        },
+      },
+      {
+        definition: {
+          ...mobileRemoteToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: mobileRemoteTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: mobileRemoteToolDef.name, decision: "allow" }],
+          availability: mobileRemoteAvailability,
+        },
+      },
+      {
+        definition: {
+          ...controlLongTaskToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: controlLongTaskTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: controlLongTaskToolDef.name, decision: "allow" }],
+          availability: controlLongTaskAvailability,
+        },
+      },
+      {
+        definition: {
+          ...memoryToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: memoryTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: memoryToolDef.name, decision: "allow" }],
+          availability: memoryAvailability,
         },
       },
     ],

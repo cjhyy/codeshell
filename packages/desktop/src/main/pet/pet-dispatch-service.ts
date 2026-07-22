@@ -4,6 +4,7 @@ import type {
   PetNavigationResult,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
+import { isPetHostActionRequest } from "@cjhyy/code-shell-pet";
 import type {
   PetLongTask,
   PetLongTaskClosureDecision,
@@ -57,6 +58,20 @@ export interface PetReusableSessionCandidate {
   status?: "active" | "paused" | "completed" | "failed" | "cancelled";
 }
 
+/** Host-side executor for one Mimi host-action kind; throws to signal failure. */
+export type PetHostActionExecutor = (
+  payload: Record<string, unknown>,
+) => Promise<Record<string, unknown>>;
+
+/** Outcome of executing one host action Mimi requested this turn. */
+export interface PetHostActionExecution {
+  kind: string;
+  payload: Record<string, unknown>;
+  ok: boolean;
+  result?: Record<string, unknown>;
+  error?: string;
+}
+
 export type PetDispatchCommand =
   | { type: "get_global_status" }
   | { type: "list_pending" }
@@ -106,6 +121,8 @@ export type PetDispatchResult =
        * only records the delegation side effect that failed.
        */
       delegationError?: string;
+      /** Present when Mimi requested host actions this turn; one outcome each. */
+      hostActions?: PetHostActionExecution[];
     };
 
 interface PetDispatchOptions {
@@ -128,6 +145,14 @@ interface PetDispatchOptions {
   startWorkSession?(
     delegation: PetAutoDelegation,
   ): Promise<{ sessionId: string; cwd: string; taskId?: string }>;
+  /**
+   * Atomic CodeShell capabilities executed on Mimi's behalf after her turn,
+   * keyed by host-action kind (e.g. mobileRemote, longTaskControl, memory).
+   * The key set is declared to the worker so only wired tools become visible.
+   */
+  hostActions?: Record<string, PetHostActionExecutor>;
+  /** Extra bounded world fields (memories, tunnel status, ...) for each turn. */
+  worldContext?(): Promise<Record<string, unknown>> | Record<string, unknown>;
   /**
    * Topic-segment controller. beginTurn (before each chat turn) may return a
    * carryover brief to inject into the runtime context; onDelegationClosed
@@ -162,6 +187,76 @@ interface PetDispatchOptions {
 
 const NO_WORKSPACE_ID = "no-workspace";
 const MAX_AUTONOMOUS_CONTINUATION_DEPTH = 3;
+const MAX_PET_RUNTIME_CONTEXT_LENGTH = 32_768;
+const OMIT_JSON_VALUE = Symbol("omit-json-value");
+
+/**
+ * Keep the final serialized runtime context inside the Pet protocol limit.
+ * Values are retained in insertion order; arrays therefore keep only a valid
+ * prefix (the memory store is newest-first), while oversized strings/objects
+ * are recursively shortened instead of rejecting the whole manager turn.
+ */
+function stringifyBoundedPetWorld(world: Readonly<Record<string, unknown>>): string {
+  const bounded: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(world)) {
+    if (value === undefined) continue;
+    const fitted = fitJsonValue(value, (candidate) =>
+      jsonFits({ ...bounded, [key]: candidate }, MAX_PET_RUNTIME_CONTEXT_LENGTH),
+    );
+    if (fitted !== OMIT_JSON_VALUE) bounded[key] = fitted;
+  }
+  return JSON.stringify(bounded);
+}
+
+function fitJsonValue(
+  value: unknown,
+  fits: (candidate: unknown) => boolean,
+): unknown | typeof OMIT_JSON_VALUE {
+  if (fits(value)) return value;
+  if (typeof value === "string") {
+    let low = 0;
+    let high = value.length;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (fits(value.slice(0, middle))) low = middle;
+      else high = middle - 1;
+    }
+    return fits(value.slice(0, low)) ? value.slice(0, low) : OMIT_JSON_VALUE;
+  }
+  if (Array.isArray(value)) {
+    const result: unknown[] = [];
+    for (const entry of value) {
+      if (!fits([...result, entry])) break;
+      result.push(entry);
+    }
+    return fits(result) ? result : OMIT_JSON_VALUE;
+  }
+  if (value && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    let entries: [string, unknown][];
+    try {
+      entries = Object.entries(value);
+    } catch {
+      return OMIT_JSON_VALUE;
+    }
+    for (const [key, entry] of entries) {
+      if (entry === undefined) continue;
+      const fitted = fitJsonValue(entry, (candidate) => fits({ ...result, [key]: candidate }));
+      if (fitted !== OMIT_JSON_VALUE) result[key] = fitted;
+    }
+    return fits(result) ? result : OMIT_JSON_VALUE;
+  }
+  return OMIT_JSON_VALUE;
+}
+
+function jsonFits(value: unknown, maximum: number): boolean {
+  try {
+    const serialized = JSON.stringify(value);
+    return typeof serialized === "string" && serialized.length <= maximum;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Trailing separators must not split one workspace into two ids: the tracked
@@ -237,6 +332,35 @@ function readPetWorkDelegations(result: unknown): PetWorkDelegation[] {
     petResults?.workDelegation ?? (result as { petWorkDelegation?: unknown }).petWorkDelegation;
   const parsed = parsePetWorkDelegation(delegation);
   return parsed ? [parsed] : [];
+}
+
+function readPetHostActionRequests(
+  result: unknown,
+  allowedKinds: ReadonlySet<string>,
+): Array<{ kind: string; payload: Record<string, unknown> }> {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return [];
+  const extensions = (result as { extensions?: unknown }).extensions;
+  const petExtension =
+    extensions && typeof extensions === "object" && !Array.isArray(extensions)
+      ? (extensions as { pet?: unknown }).pet
+      : undefined;
+  const reported =
+    petExtension && typeof petExtension === "object" && !Array.isArray(petExtension)
+      ? (petExtension as { hostActions?: unknown }).hostActions
+      : undefined;
+  if (!Array.isArray(reported) || reported.length > 8) return [];
+  const requests: Array<{ kind: string; payload: Record<string, unknown> }> = [];
+  const seenKinds = new Set<string>();
+  for (const entry of reported) {
+    if (!isPetHostActionRequest(entry)) return [];
+    const { kind, payload } = entry;
+    if (!allowedKinds.has(kind) || seenKinds.has(kind)) {
+      return [];
+    }
+    seenKinds.add(kind);
+    requests.push({ kind, payload: payload as Record<string, unknown> });
+  }
+  return requests;
 }
 
 function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<string, unknown> {
@@ -351,7 +475,7 @@ export class PetDispatchService {
         })),
         completedAt: task.completedAt ?? task.updatedAt,
       };
-      const runtimeContext = JSON.stringify({
+      const runtimeContext = stringifyBoundedPetWorld({
         version: snapshot.version,
         generation: snapshot.generation,
         observedAt: snapshot.observedAt,
@@ -465,9 +589,7 @@ export class PetDispatchService {
       clientMessageId: continuation.clientMessageId,
       task: continuation.objective,
       workspacePath: continuation.workspacePath,
-      ...(continuation.executionBackend === "codex"
-        ? { executionBackend: "codex" as const }
-        : {}),
+      ...(continuation.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
       ...(task.completionTarget ? { completionTarget: task.completionTarget } : {}),
       continuationDepth: continuationDepth + 1,
     };
@@ -638,12 +760,36 @@ export class PetDispatchService {
         const carryoverBrief = await this.options.segmentController?.beginTurn(
           command.clientMessageId,
         );
+        // Read host extras once; canonical projection keys are reserved below
+        // so an extension cannot shadow trusted session state.
+        const worldExtras = (await this.options.worldContext?.()) ?? {};
+        // Desktop renderers currently persist/display the model stream, not
+        // the post-turn host outcome. Do not expose action tools there: a turn
+        // must never execute a side effect while only displaying "accepted".
+        const hostActionKinds =
+          command.source?.kind === "im-gateway"
+            ? Object.keys(this.options.hostActions ?? {}).sort()
+            : [];
+        const projectionWorld = boundedWorld(snapshot);
+        const reservedWorldKeys = new Set([
+          ...Object.keys(projectionWorld),
+          "carryoverBrief",
+          "longTasks",
+          "workspaces",
+          "reusableSessions",
+          "currentMessageSource",
+        ]);
+        const remainingWorldExtras = Object.fromEntries(
+          Object.entries(worldExtras)
+            .filter(([key]) => key !== "memories" && key !== "mobileRemote")
+            .filter(([key]) => !reservedWorldKeys.has(key))
+            .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
+        );
         const world = {
-          ...boundedWorld(snapshot),
-          ...(carryoverBrief ? { carryoverBrief } : {}),
-          ...(this.options.longTasks ? { longTasks: this.options.longTasks.context() } : {}),
-          workspaces: petWorkspaces,
-          reusableSessions: petReusableSessions,
+          version: projectionWorld.version,
+          generation: projectionWorld.generation,
+          observedAt: projectionWorld.observedAt,
+          workerState: projectionWorld.workerState,
           ...(command.source
             ? {
                 currentMessageSource: {
@@ -652,18 +798,34 @@ export class PetDispatchService {
                 },
               }
             : {}),
+          // Memory is newest-first and gets a deterministic budget before the
+          // noisier projection arrays. At maximum store state, older entries
+          // are the first data omitted by stringifyBoundedPetWorld.
+          ...(worldExtras.memories !== undefined ? { memories: worldExtras.memories } : {}),
+          ...(worldExtras.mobileRemote !== undefined
+            ? { mobileRemote: worldExtras.mobileRemote }
+            : {}),
+          ...(this.options.longTasks ? { longTasks: this.options.longTasks.context() } : {}),
+          sessions: projectionWorld.sessions,
+          pending: projectionWorld.pending,
+          ...(carryoverBrief ? { carryoverBrief } : {}),
+          workspaces: petWorkspaces,
+          reusableSessions: petReusableSessions,
+          ...remainingWorldExtras,
         };
+        const runtimeContext = stringifyBoundedPetWorld(world);
         const response = await this.options.worker.requestWorker("agent/run", {
           sessionId: metadata.petSessionId,
           task: command.message.trim(),
           ...(managerModel ? { model: managerModel } : {}),
           ...(attachments.length > 0 ? { attachments } : {}),
-          petRuntimeContext: JSON.stringify(world),
+          petRuntimeContext: runtimeContext,
           petWorkspaces,
           profileParams: {
-            runtimeContext: JSON.stringify(world),
+            runtimeContext,
             workspaces: petWorkspaces,
             reusableSessions: petReusableSessions,
+            ...(hostActionKinds.length > 0 ? { hostActions: hostActionKinds } : {}),
           },
           cwd: this.options.hostCwd,
           behaviorMode: "pet",
@@ -723,9 +885,7 @@ export class PetDispatchService {
                   : `${baseClientMessageId}:${index}:work`,
               task: entry.objective,
               workspacePath: workspacePathById.get(entry.workspaceId) ?? null,
-              ...(entry.executionBackend === "codex"
-                ? { executionBackend: "codex" as const }
-                : {}),
+              ...(entry.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
               ...(reusableSession ? { targetSessionId: reusableSession.sessionId } : {}),
               ...(command.source?.target
                 ? {
@@ -781,6 +941,12 @@ export class PetDispatchService {
             }
           }
         }
+        // Host actions Mimi requested (mobile remote, long-task control,
+        // memory, ...) run only after her turn; failures stay non-fatal so the
+        // reply survives and carries each real outcome instead.
+        const hostActions = await this.executeHostActions(
+          readPetHostActionRequests(response.result, new Set(hostActionKinds)),
+        );
         // Launch acceptance is not task completion. PetLongTaskCoordinator owns
         // the real terminal signal and records work memory only after a worker
         // completion/failure/cancellation event is observed.
@@ -793,10 +959,34 @@ export class PetDispatchService {
           ...(delegation ? { delegation } : {}),
           ...(delegations.length > 1 ? { delegations } : {}),
           ...(delegationError ? { delegationError } : {}),
+          ...(hostActions.length > 0 ? { hostActions } : {}),
         };
       }
       default:
         return { ok: false, code: "unsupported-in-phase-1" };
     }
+  }
+
+  private async executeHostActions(
+    requests: Array<{ kind: string; payload: Record<string, unknown> }>,
+  ): Promise<PetHostActionExecution[]> {
+    const executions: PetHostActionExecution[] = [];
+    for (const request of requests) {
+      const executor = this.options.hostActions?.[request.kind];
+      if (!executor) {
+        executions.push({ ...request, ok: false, error: "host action is unavailable" });
+        continue;
+      }
+      try {
+        executions.push({ ...request, ok: true, result: await executor(request.payload) });
+      } catch (error) {
+        executions.push({
+          ...request,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    return executions;
   }
 }

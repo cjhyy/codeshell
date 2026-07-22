@@ -8,6 +8,7 @@ import React from "react";
 import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
 import { PetLongTaskSection } from "./PetLongTaskSection";
+import { PetMemorySection } from "./PetMemorySection";
 import {
   loadDismissedPetWorkItemIds,
   newerPetWorkInboxSnapshot,
@@ -172,6 +173,7 @@ export function PetWorldPane({
               });
             }}
           />
+          <PetMemorySection />
         </div>
       </div>
     </section>

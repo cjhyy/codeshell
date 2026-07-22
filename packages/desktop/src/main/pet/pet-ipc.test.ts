@@ -17,6 +17,86 @@ function snapshot(): DesktopPetProjectionSnapshot {
 }
 
 describe("registerPetIpc", () => {
+  test("exposes validated memory CRUD and broadcasts persisted snapshots", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const sent: Array<[string, unknown]> = [];
+    let memoryListener: (() => void) | undefined;
+    let entries = [
+      { id: "mem-1", text: "before", source: "user" as const, createdAt: 1, updatedAt: 1 },
+    ];
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      memories: {
+        list: async () => entries,
+        remember: async (text) => {
+          const entry = {
+            id: "mem-2",
+            text,
+            source: "user" as const,
+            createdAt: 2,
+            updatedAt: 2,
+          };
+          entries = [entry, ...entries];
+          return entry;
+        },
+        update: async (id, text) => {
+          const previous = entries.find((entry) => entry.id === id)!;
+          const updated = { ...previous, text, updatedAt: 3 };
+          entries = entries.map((entry) => (entry.id === id ? updated : entry));
+          return updated;
+        },
+        forget: async (id) => {
+          const removed = entries.find((entry) => entry.id === id)!;
+          entries = entries.filter((entry) => entry.id !== id);
+          return removed;
+        },
+        subscribe: (listener) => {
+          memoryListener = listener;
+          return () => {};
+        },
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    expect(await handlers.get("pet:memories-get")?.({})).toEqual(entries);
+    expect(await handlers.get("pet:memory-add")?.({}, "new memory")).toMatchObject({
+      id: "mem-2",
+      text: "new memory",
+    });
+    expect(
+      await handlers.get("pet:memory-update")?.({}, { id: "mem-1", text: "after" }),
+    ).toMatchObject({
+      id: "mem-1",
+      text: "after",
+    });
+    expect(await handlers.get("pet:memory-remove")?.({}, "mem-2")).toMatchObject({ id: "mem-2" });
+    expect(() => handlers.get("pet:memories-get")?.({}, true)).toThrow("does not accept arguments");
+    expect(() => handlers.get("pet:memory-add")?.({}, { text: "bad" })).toThrow(
+      "invalid Pet memory text",
+    );
+    expect(() => handlers.get("pet:memory-update")?.({}, { id: "mem-1" })).toThrow(
+      "invalid Pet memory update",
+    );
+    expect(() => handlers.get("pet:memory-remove")?.({}, 42)).toThrow("invalid Pet memory id");
+
+    memoryListener?.();
+    await Promise.resolve();
+    expect(sent).toEqual([["pet:memories-changed", entries]]);
+  });
+
   test("exposes validated durable long-task snapshots, controls, and updates", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const sent: Array<[string, unknown]> = [];

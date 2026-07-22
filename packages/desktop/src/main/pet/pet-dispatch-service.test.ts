@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { validatePetRunParams } from "@cjhyy/code-shell-pet";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator";
 import { PetDispatchService } from "./pet-dispatch-service";
 
@@ -940,5 +941,370 @@ describe("PetDispatchService", () => {
       ok: false,
       code: "unsupported-in-phase-1",
     });
+  });
+
+  test("declares host-action kinds for IM and keeps world extras available", async () => {
+    let params: Record<string, unknown> | undefined;
+    const makeService = (withHostActions: boolean) =>
+      new PetDispatchService({
+        metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+        aggregator: {
+          getSnapshot: () => snapshot,
+          resolveNavigation: async () => ({ status: "not-found" }),
+        },
+        worker: {
+          requestWorker: async (_method, requestParams) => {
+            params = requestParams;
+            return { ok: true, result: { text: "ok" } };
+          },
+        },
+        hostCwd: "/safe/pet",
+        ...(withHostActions
+          ? {
+              hostActions: {
+                mobileRemote: async () => ({}),
+                memory: async () => ({}),
+              },
+              worldContext: async () => ({
+                memories: [{ id: "mem-1", text: "喜欢暗色主题" }],
+                mobileRemote: { running: true },
+              }),
+            }
+          : {}),
+      });
+
+    await makeService(true).dispatch({ type: "chat", message: "desktop" });
+    expect((params?.profileParams as Record<string, unknown>).hostActions).toBeUndefined();
+
+    await makeService(true).dispatch({
+      type: "chat",
+      message: "im",
+      source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+    });
+    expect((params?.profileParams as Record<string, unknown>).hostActions).toEqual([
+      "memory",
+      "mobileRemote",
+    ]);
+    const world = JSON.parse(
+      (params?.profileParams as Record<string, string>).runtimeContext,
+    ) as Record<string, unknown>;
+    expect(world.memories).toEqual([{ id: "mem-1", text: "喜欢暗色主题" }]);
+    expect(world.mobileRemote).toEqual({ running: true });
+
+    await makeService(false).dispatch({ type: "chat", message: "hi" });
+    expect((params?.profileParams as Record<string, unknown>).hostActions).toBeUndefined();
+  });
+
+  test("bounds maximum Mimi memory state inside the final Pet protocol runtime JSON", async () => {
+    let params: Record<string, unknown> | undefined;
+    const memories = Array.from({ length: 24 }, (_, index) => ({
+      id: `mem-${index}`,
+      text: `${index}:`.padEnd(2_000, String(index % 10)),
+      source: index % 2 === 0 ? "user" : "mimi",
+      updatedAt: 10_000 - index,
+    }));
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, requestParams) => {
+          params = requestParams;
+          const validationError = validatePetRunParams(requestParams);
+          return validationError
+            ? { ok: false as const, message: validationError }
+            : { ok: true as const, result: { text: "accepted" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      worldContext: async () => ({
+        memories,
+        mobileRemote: { running: true },
+        oversizedExtra: "x".repeat(50_000),
+      }),
+    });
+
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "remember what matters",
+        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+      }),
+    ).toMatchObject({ ok: true, type: "chat" });
+    const runtimeContext = String(
+      (params?.profileParams as Record<string, unknown>).runtimeContext,
+    );
+    expect(runtimeContext.length).toBeLessThanOrEqual(32_768);
+    expect(params?.petRuntimeContext).toBe(runtimeContext);
+    expect(validatePetRunParams(params ?? {})).toBeNull();
+    const world = JSON.parse(runtimeContext) as { memories?: typeof memories };
+    expect(world.memories?.[0]).toEqual(memories[0]);
+    expect(world.memories?.length).toBeGreaterThan(1);
+    expect(world.memories?.length).toBeLessThan(24);
+  });
+
+  test("executes reported host actions after the turn and returns their outcomes", async () => {
+    const executed: Array<{ kind: string; payload: Record<string, unknown> }> = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async () => ({
+          ok: true,
+          result: {
+            text: "我去打开手机遥控并记住这一点。",
+            extensions: {
+              pet: {
+                hostActions: [
+                  { kind: "mobileRemote", payload: { action: "open" } },
+                  { kind: "memory", payload: { action: "remember", text: "喜欢暗色" } },
+                ],
+              },
+            },
+          },
+        }),
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        mobileRemote: async (payload) => {
+          executed.push({ kind: "mobileRemote", payload });
+          return {
+            action: payload.action,
+            url: "https://demo.trycloudflare.com",
+            pairingUrl: "https://demo.trycloudflare.com/mobile?pairing=x",
+            expiresAt: 99,
+          };
+        },
+        memory: async (payload) => {
+          executed.push({ kind: "memory", payload });
+          return { action: payload.action, id: "mem-9" };
+        },
+      },
+    });
+
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "给我手机遥控",
+        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+      }),
+    ).toMatchObject({
+      ok: true,
+      type: "chat",
+      hostActions: [
+        {
+          kind: "mobileRemote",
+          ok: true,
+          result: { action: "open", url: "https://demo.trycloudflare.com", expiresAt: 99 },
+        },
+        { kind: "memory", ok: true, result: { action: "remember", id: "mem-9" } },
+      ],
+    });
+    expect(executed).toHaveLength(2);
+  });
+
+  test("drops the whole host-action envelope when any entry is malformed or duplicated", async () => {
+    const envelopes: unknown[][] = [
+      [{ kind: "mobileRemote", payload: { action: "destroy" } }],
+      [{ kind: "memory", payload: { action: "forget", memoryId: "" } }],
+      [{ kind: "unknown", payload: {} }],
+      [
+        { kind: "mobileRemote", payload: { action: "open" } },
+        { kind: "mobileRemote", payload: { action: "close" } },
+      ],
+      [
+        { kind: "mobileRemote", payload: { action: "open" } },
+        { kind: "memory", payload: { action: "remember", text: "ok" }, extra: true },
+      ],
+    ];
+    let envelopeIndex = 0;
+    const executed: string[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async () => ({
+          ok: true,
+          result: {
+            text: "ok",
+            extensions: { pet: { hostActions: envelopes[envelopeIndex++] } },
+          },
+        }),
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        mobileRemote: async () => {
+          executed.push("mobileRemote");
+          return {};
+        },
+        memory: async () => {
+          executed.push("memory");
+          return {};
+        },
+      },
+    });
+
+    for (const _envelope of envelopes) {
+      const result = await service.dispatch({
+        type: "chat",
+        message: "host action",
+        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+      });
+      expect(result).not.toHaveProperty("hostActions");
+    }
+    expect(executed).toEqual([]);
+  });
+
+  test("continues executing later host actions after one executor fails", async () => {
+    const executed: string[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async () => ({
+          ok: true,
+          result: {
+            text: "ok",
+            extensions: {
+              pet: {
+                hostActions: [
+                  { kind: "memory", payload: { action: "remember", text: "prefers dark" } },
+                  {
+                    kind: "longTaskControl",
+                    payload: { taskId: "pet-task-1", action: "cancel" },
+                  },
+                ],
+              },
+            },
+          },
+        }),
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        memory: async () => {
+          executed.push("memory");
+          throw new Error("disk full");
+        },
+        longTaskControl: async () => {
+          executed.push("longTaskControl");
+          return { action: "cancel" };
+        },
+      },
+    });
+
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "remember and cancel",
+        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+      }),
+    ).toMatchObject({
+      ok: true,
+      type: "chat",
+      hostActions: [
+        { kind: "memory", ok: false, error: "disk full" },
+        { kind: "longTaskControl", ok: true, result: { action: "cancel" } },
+      ],
+    });
+    expect(executed).toEqual(["memory", "longTaskControl"]);
+  });
+
+  test("keeps the chat reply when a host action fails or its kind is not wired", async () => {
+    const makeService = (withHostActions: boolean) =>
+      new PetDispatchService({
+        metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+        aggregator: {
+          getSnapshot: () => snapshot,
+          resolveNavigation: async () => ({ status: "not-found" }),
+        },
+        worker: {
+          requestWorker: async () => ({
+            ok: true,
+            result: {
+              text: "我去关闭隧道。",
+              extensions: {
+                pet: { hostActions: [{ kind: "mobileRemote", payload: { action: "close" } }] },
+              },
+            },
+          }),
+        },
+        hostCwd: "/safe/pet",
+        ...(withHostActions
+          ? {
+              hostActions: {
+                mobileRemote: async () => {
+                  throw new Error("cloudflared exited");
+                },
+              },
+            }
+          : {}),
+      });
+
+    expect(
+      await makeService(true).dispatch({
+        type: "chat",
+        message: "关闭隧道",
+        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+      }),
+    ).toMatchObject({
+      ok: true,
+      type: "chat",
+      hostActions: [{ kind: "mobileRemote", ok: false, error: "cloudflared exited" }],
+    });
+    const withoutRegistry = await makeService(false).dispatch({
+      type: "chat",
+      message: "关闭隧道",
+    });
+    expect(withoutRegistry).toMatchObject({ ok: true, type: "chat" });
+    expect(withoutRegistry).not.toHaveProperty("hostActions");
+  });
+
+  test("does not execute a reported host action for a desktop Pet turn", async () => {
+    let executed = 0;
+    let declared: unknown;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, requestParams) => {
+          declared = (requestParams.profileParams as Record<string, unknown>).hostActions;
+          return {
+            ok: true,
+            result: {
+              text: "request accepted",
+              extensions: {
+                pet: { hostActions: [{ kind: "mobileRemote", payload: { action: "open" } }] },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        mobileRemote: async () => {
+          executed += 1;
+          return { action: "open" };
+        },
+      },
+    });
+
+    const result = await service.dispatch({ type: "chat", message: "desktop request" });
+    expect(declared).toBeUndefined();
+    expect(executed).toBe(0);
+    expect(result).not.toHaveProperty("hostActions");
   });
 });

@@ -1,4 +1,5 @@
 import { type PetReusableSessionOption, type PetWorkspaceOption } from "./delegation.js";
+import { isPetHostActionKind, type PetHostActionKind } from "./host-actions.js";
 
 const MAX_RUNTIME_CONTEXT_LENGTH = 32_768;
 const MAX_WORKSPACES = 64;
@@ -11,6 +12,8 @@ const CONTROL_CHARACTER_RE = /[\u0000-\u001f\u007f]/u;
 export interface PetRunOptions {
   workspaces: readonly PetWorkspaceOption[];
   reusableSessions: readonly PetReusableSessionOption[];
+  /** Host-action kinds the host declared it can execute this turn. */
+  hostActionKinds: readonly PetHostActionKind[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -89,11 +92,25 @@ function parseReusableSessions(value: unknown): PetReusableSessionOption[] | und
 function freezeOptions(options: {
   workspaces: PetWorkspaceOption[];
   reusableSessions: PetReusableSessionOption[];
+  hostActionKinds: PetHostActionKind[];
 }): PetRunOptions {
   return Object.freeze({
     workspaces: Object.freeze(options.workspaces.map((entry) => Object.freeze(entry))),
     reusableSessions: Object.freeze(options.reusableSessions.map((entry) => Object.freeze(entry))),
+    hostActionKinds: Object.freeze(options.hostActionKinds),
   });
+}
+
+/** Fail closed: any non-array or unknown/duplicate kind hides every host-action tool. */
+function parseHostActionKinds(value: unknown): PetHostActionKind[] | undefined {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 16) return undefined;
+  const kinds: PetHostActionKind[] = [];
+  for (const entry of value) {
+    if (!isPetHostActionKind(entry) || kinds.includes(entry)) return undefined;
+    kinds.push(entry);
+  }
+  return kinds;
 }
 
 /**
@@ -104,9 +121,11 @@ function freezeOptions(options: {
  * profile directly without crossing the protocol validator.
  */
 export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown>>): PetRunOptions {
+  const hostActionKinds = parseHostActionKinds(profileParams.hostActions) ?? [];
   const empty = freezeOptions({
     workspaces: [],
     reusableSessions: [],
+    hostActionKinds,
   });
   const workspaces =
     profileParams.workspaces === undefined ? [] : parseWorkspaces(profileParams.workspaces);
@@ -120,6 +139,7 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
   return freezeOptions({
     workspaces,
     reusableSessions,
+    hostActionKinds,
   });
 }
 
@@ -181,6 +201,9 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
   const hasCanonicalReusableSessions =
     profileParams !== undefined &&
     Object.prototype.hasOwnProperty.call(profileParams, "reusableSessions");
+  const hasCanonicalHostActions =
+    profileParams !== undefined &&
+    Object.prototype.hasOwnProperty.call(profileParams, "hostActions");
 
   const runtimeContext = hasCanonicalRuntimeContext
     ? profileParams.runtimeContext
@@ -208,6 +231,10 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
     if (parsedReusableSessions.some((session) => !workspaceIds.has(session.workspaceId))) {
       return "profileParams.reusableSessions contains a Session outside the closed Workspace set";
     }
+  }
+
+  if (hasCanonicalHostActions && !parseHostActionKinds(profileParams.hostActions)) {
+    return "profileParams.hostActions contains an invalid or duplicate host-action kind";
   }
 
   return null;

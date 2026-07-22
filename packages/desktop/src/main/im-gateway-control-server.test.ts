@@ -120,7 +120,19 @@ describe("GatewayControlServer", () => {
       pairingUrl: async () => ({ pairingUrl: "https://demo.test/mobile", expiresAt: 1000 }),
       petChat: async (request) => {
         observed = request;
-        return { text: "done", petSessionId: "pet-1" };
+        return {
+          text: "done",
+          petSessionId: "pet-1",
+          attachments: [
+            {
+              kind: "image",
+              name: "pairing-qr.png",
+              mimeType: "image/png",
+              size: 4,
+              path: join(root, "pairing-qr.png"),
+            },
+          ],
+        };
       },
     });
     const descriptor = await server.start();
@@ -136,7 +148,11 @@ describe("GatewayControlServer", () => {
       }),
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ text: "done", petSessionId: "pet-1" });
+    expect(await response.json()).toMatchObject({
+      text: "done",
+      petSessionId: "pet-1",
+      attachments: [{ name: "pairing-qr.png", path: join(root, "pairing-qr.png") }],
+    });
     expect(observed).toMatchObject({ message: "inspect", attachments: [{ id: "a" }] });
 
     const invalid = await fetch(`${descriptor.baseUrl}/v1/pet/chat`, {

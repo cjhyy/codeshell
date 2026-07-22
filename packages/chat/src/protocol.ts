@@ -86,4 +86,6 @@ export interface PetChatResult {
   text: string;
   petSessionId: string;
   reason?: string;
+  /** Host-produced reply attachments; same host-local path shape as event attachments. */
+  attachments?: DesktopControlEventAttachment[];
 }

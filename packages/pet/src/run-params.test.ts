@@ -86,6 +86,30 @@ describe("validatePetRunParams", () => {
       }),
     ).toBe("profileParams.workspaces contains an invalid or duplicate Workspace");
   });
+
+  test("rejects malformed or duplicate host-action capability declarations", () => {
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { hostActions: ["mobileRemote", "memory"] },
+      }),
+    ).toBeNull();
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { hostActions: ["mobileRemote", "mobileRemote"] },
+      }),
+    ).toBe("profileParams.hostActions contains an invalid or duplicate host-action kind");
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { hostActions: ["shell"] },
+      }),
+    ).toBe("profileParams.hostActions contains an invalid or duplicate host-action kind");
+  });
 });
 
 describe("Pet behavior profile inputs", () => {
@@ -109,6 +133,7 @@ describe("Pet behavior profile inputs", () => {
         },
       ],
       reusableSessions: [],
+      hostActionKinds: [],
     });
     expect(Object.isFrozen(options)).toBe(true);
     expect(Object.isFrozen(options.workspaces)).toBe(true);
@@ -124,6 +149,10 @@ describe("Pet behavior profile inputs", () => {
     expect(PET_BEHAVIOR_PROFILE.buildVisibilityMeta?.(profileParams)).toEqual({
       petWorkspaces: [],
       petReusableSessions: [],
+      petHostActionKinds: [],
     });
+    expect(
+      PET_BEHAVIOR_PROFILE.buildVisibilityMeta?.({ hostActions: ["mobileRemote", "shell"] }),
+    ).toMatchObject({ petHostActionKinds: [] });
   });
 });

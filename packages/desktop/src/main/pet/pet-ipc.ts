@@ -16,6 +16,7 @@ import {
   MAX_PET_WORK_INBOX_DISMISSED_ITEMS,
   type PetWorkInboxSnapshot,
 } from "./pet-work-inbox-store.js";
+import type { PetMemoryEntry } from "./pet-memory-store.js";
 import { randomUUID } from "node:crypto";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
@@ -36,6 +37,11 @@ export const PET_LONG_TASK_CONTROL_CHANNEL = "pet:long-task-control";
 export const PET_LONG_TASK_CLEAR_TERMINAL_CHANNEL = "pet:long-tasks-clear-terminal";
 export const PET_LONG_TASK_CLEAR_ONE_CHANNEL = "pet:long-task-clear";
 export const PET_LONG_TASK_EVENT_CHANNEL = "pet:long-tasks-changed";
+export const PET_MEMORY_LIST_CHANNEL = "pet:memories-get";
+export const PET_MEMORY_ADD_CHANNEL = "pet:memory-add";
+export const PET_MEMORY_UPDATE_CHANNEL = "pet:memory-update";
+export const PET_MEMORY_REMOVE_CHANNEL = "pet:memory-remove";
+export const PET_MEMORY_EVENT_CHANNEL = "pet:memories-changed";
 
 export interface PetIpcAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot;
@@ -76,6 +82,15 @@ export interface PetIpcLongTasks {
   clearTerminal(): Promise<PetLongTaskSnapshot>;
   clearTask(taskId: string): Promise<PetLongTaskSnapshot>;
   subscribe(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
+}
+
+/** Session-like ergonomics for Mimi's durable memory: list, add, edit, remove. */
+export interface PetIpcMemories {
+  list(): Promise<PetMemoryEntry[]>;
+  remember(text: string): Promise<PetMemoryEntry>;
+  update(id: string, text: string): Promise<PetMemoryEntry>;
+  forget(id: string): Promise<PetMemoryEntry>;
+  subscribe(listener: () => void): () => void;
 }
 
 /**
@@ -250,6 +265,7 @@ export function registerPetIpc(options: {
   workInbox?: PetIpcWorkInbox;
   workMemory?: PetIpcWorkMemory;
   longTasks?: PetIpcLongTasks;
+  memories?: PetIpcMemories;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
@@ -387,6 +403,47 @@ export function registerPetIpc(options: {
       return afterReady(options.ready, () => options.longTasks!.clearTask(taskId));
     });
   }
+  if (options.memories) {
+    options.ipcMain.handle(PET_MEMORY_LIST_CHANNEL, (_event, ...args) => {
+      if (args.length !== 0) throw new Error("Pet memory list does not accept arguments");
+      return afterReady(options.ready, () => options.memories!.list());
+    });
+    options.ipcMain.handle(PET_MEMORY_ADD_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1 || typeof args[0] !== "string") {
+        throw new Error("invalid Pet memory text");
+      }
+      const text = args[0];
+      return afterReady(options.ready, () => options.memories!.remember(text));
+    });
+    options.ipcMain.handle(PET_MEMORY_UPDATE_CHANNEL, (_event, ...args) => {
+      const payload = args[0] as { id?: unknown; text?: unknown } | undefined;
+      if (
+        args.length !== 1 ||
+        !payload ||
+        typeof payload !== "object" ||
+        typeof payload.id !== "string" ||
+        typeof payload.text !== "string"
+      ) {
+        throw new Error("invalid Pet memory update");
+      }
+      const { id, text } = payload as { id: string; text: string };
+      return afterReady(options.ready, () => options.memories!.update(id, text));
+    });
+    options.ipcMain.handle(PET_MEMORY_REMOVE_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1 || typeof args[0] !== "string") {
+        throw new Error("invalid Pet memory id");
+      }
+      const id = args[0];
+      return afterReady(options.ready, () => options.memories!.forget(id));
+    });
+  }
+  const unsubscribeMemories = options.memories?.subscribe(() => {
+    void Promise.resolve(options.memories!.list()).then((entries) => {
+      for (const window of options.windows()) {
+        if (!window.isDestroyed()) window.webContents.send(PET_MEMORY_EVENT_CHANNEL, entries);
+      }
+    });
+  });
   const unsubscribe = options.aggregator.subscribe((event) => {
     for (const window of options.windows()) {
       if (!window.isDestroyed()) window.webContents.send(PET_EVENT_CHANNEL, event);
@@ -406,6 +463,7 @@ export function registerPetIpc(options: {
     unsubscribe();
     unsubscribeAttention?.();
     unsubscribeLongTasks?.();
+    unsubscribeMemories?.();
     options.ipcMain.removeHandler(PET_SNAPSHOT_CHANNEL);
     options.ipcMain.removeHandler(PET_WORK_MEMORY_CHANNEL);
     options.ipcMain.removeHandler(PET_OPEN_SESSION_CHANNEL);
@@ -424,6 +482,12 @@ export function registerPetIpc(options: {
       options.ipcMain.removeHandler(PET_LONG_TASK_CONTROL_CHANNEL);
       options.ipcMain.removeHandler(PET_LONG_TASK_CLEAR_TERMINAL_CHANNEL);
       options.ipcMain.removeHandler(PET_LONG_TASK_CLEAR_ONE_CHANNEL);
+    }
+    if (options.memories) {
+      options.ipcMain.removeHandler(PET_MEMORY_LIST_CHANNEL);
+      options.ipcMain.removeHandler(PET_MEMORY_ADD_CHANNEL);
+      options.ipcMain.removeHandler(PET_MEMORY_UPDATE_CHANNEL);
+      options.ipcMain.removeHandler(PET_MEMORY_REMOVE_CHANNEL);
     }
   };
 }

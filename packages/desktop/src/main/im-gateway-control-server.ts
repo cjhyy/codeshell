@@ -88,6 +88,8 @@ export interface PetChatControlResult {
   text: string;
   petSessionId: string;
   reason?: string;
+  /** Host-produced reply attachments for attachment-capable channels. */
+  attachments?: GatewayControlEventAttachment[];
 }
 
 export interface DesktopControlDescriptor {

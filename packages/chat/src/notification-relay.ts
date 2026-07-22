@@ -101,7 +101,12 @@ export function createDesktopNotificationHandler(
   };
 }
 
-async function materializeEventAttachments(
+/**
+ * Read validated host-local attachments from disk into outgoing bytes.
+ * Shared by desktop event relay and synchronous Mimi chat replies; throws when
+ * metadata is invalid or the file changed between publication and delivery.
+ */
+export async function materializeEventAttachments(
   attachments: NonNullable<DesktopControlEvent["attachments"]>,
 ): Promise<OutgoingAttachment[]> {
   const output: OutgoingAttachment[] = [];

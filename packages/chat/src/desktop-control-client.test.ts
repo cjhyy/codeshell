@@ -100,7 +100,19 @@ describe("DesktopControlClient", () => {
             onlineDeviceCount: 0,
           });
         }
-        return Response.json({ text: "pet reply", petSessionId: "pet-1" });
+        return Response.json({
+          text: "pet reply",
+          petSessionId: "pet-1",
+          attachments: [
+            {
+              kind: "image",
+              name: "pairing-qr.png",
+              mimeType: "image/png",
+              size: 4,
+              path: "/host/pairing-qr.png",
+            },
+          ],
+        });
       },
     });
     const result = await client.petChat({
@@ -108,6 +120,10 @@ describe("DesktopControlClient", () => {
       attachments: [{ id: "a", kind: "file", name: "a.txt", size: 2, dataBase64: "aGk=" }],
     });
     expect(result.text).toBe("pet reply");
+    expect(result.attachments?.[0]).toMatchObject({
+      name: "pairing-qr.png",
+      path: "/host/pairing-qr.png",
+    });
     expect(observed?.url).toEndWith("/v1/pet/chat");
     expect(JSON.parse(String(observed?.init?.body))).toMatchObject({
       message: "inspect",

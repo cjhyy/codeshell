@@ -219,6 +219,15 @@ export type PetWorkInboxUpdate =
       action: "clear";
     };
 
+/** One durable Mimi memory entry; editable from the UI and from Mimi's Memory tool. */
+export interface PetMemoryEntry {
+  id: string;
+  text: string;
+  source: "user" | "mimi";
+  createdAt: number;
+  updatedAt: number;
+}
+
 interface PetProjectionEventBase {
   version: number;
   generation: number;
@@ -255,6 +264,11 @@ export interface PetApi {
   clearTerminalLongTasks?(): Promise<PetLongTaskSnapshot>;
   clearLongTask?(taskId: string): Promise<PetLongTaskSnapshot>;
   onLongTasksChanged?(listener: (snapshot: PetLongTaskSnapshot) => void): () => void;
+  listMemories?(): Promise<PetMemoryEntry[]>;
+  addMemory?(text: string): Promise<PetMemoryEntry>;
+  updateMemory?(id: string, text: string): Promise<PetMemoryEntry>;
+  removeMemory?(id: string): Promise<PetMemoryEntry>;
+  onMemoriesChanged?(listener: (entries: PetMemoryEntry[]) => void): () => void;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
   setWidgetSurface(mode: "collapsed" | "expanded"): Promise<{ ok: true }>;
@@ -330,6 +344,17 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
         listener(payload as PetLongTaskSnapshot);
       ipcRenderer.on("pet:long-tasks-changed", handler);
       return () => ipcRenderer.removeListener("pet:long-tasks-changed", handler);
+    },
+    listMemories: () => ipcRenderer.invoke("pet:memories-get") as Promise<PetMemoryEntry[]>,
+    addMemory: (text) => ipcRenderer.invoke("pet:memory-add", text) as Promise<PetMemoryEntry>,
+    updateMemory: (id, text) =>
+      ipcRenderer.invoke("pet:memory-update", { id, text }) as Promise<PetMemoryEntry>,
+    removeMemory: (id) => ipcRenderer.invoke("pet:memory-remove", id) as Promise<PetMemoryEntry>,
+    onMemoriesChanged: (listener) => {
+      const handler = (_event: unknown, payload: unknown): void =>
+        listener(payload as PetMemoryEntry[]);
+      ipcRenderer.on("pet:memories-changed", handler);
+      return () => ipcRenderer.removeListener("pet:memories-changed", handler);
     },
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>

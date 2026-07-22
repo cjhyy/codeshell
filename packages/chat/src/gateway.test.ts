@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { ChatGateway, createAllowlistMiddleware } from "./chat-gateway.js";
 import type { ChannelAdapter, ChannelMessage, OutgoingMessage } from "./channel.js";
 import { DesktopControlUnavailableError } from "./desktop-control-client.js";
@@ -17,11 +20,71 @@ describe("CodeShell remote command integration", () => {
     expect(parseGatewayCommand("hello")).toBe("unsupported");
   });
 
-  test("accepts explicit natural-language control prompts but leaves ambiguous chat to Pet", () => {
-    expect(parseGatewayIntent("帮我开一下手机遥控")).toBe("open");
-    expect(parseGatewayIntent("请关闭公网入口")).toBe("close");
-    expect(parseGatewayIntent("看看手机遥控状态")).toBe("status");
-    expect(parseGatewayIntent("为什么要打开手机遥控？")).toBe("unsupported");
+  test("routes every natural-language message to Mimi; only slash commands short-circuit", () => {
+    expect(parseGatewayIntent("/open")).toBe("open");
+    expect(parseGatewayIntent("/close")).toBe("close");
+    expect(parseGatewayIntent("/status")).toBe("status");
+    // Natural language is Mimi's job (MobileRemote tool), never regex-matched here.
+    expect(parseGatewayIntent("帮我开一下手机遥控")).toBe("unsupported");
+    expect(parseGatewayIntent("给我手机遥控地址")).toBe("unsupported");
+    expect(parseGatewayIntent("请关闭公网入口")).toBe("unsupported");
+    expect(parseGatewayIntent("看看手机遥控状态")).toBe("unsupported");
+    expect(parseGatewayIntent("open the mobile remote")).toBe("unsupported");
+  });
+
+  test("open reply attaches a pairing QR image when the adapter supports attachments", async () => {
+    const adapter = fakeAdapter({ supportsOutgoingAttachments: true });
+    const pairingUrl = "https://demo.trycloudflare.com/mobile?pairing=one-time";
+    const gateway = new ChatGateway({ adapters: [adapter] });
+    gateway.use(
+      createCodeShellRemoteCommands({
+        desktop: {
+          open: async () => ({
+            url: "https://demo.trycloudflare.com",
+            pairingUrl,
+            expiresAt: Date.now() + 600_000,
+            mode: "tunnel",
+          }),
+          close: async () => undefined,
+          status: async () => {
+            throw new Error("unexpected");
+          },
+        },
+      }),
+    );
+
+    await gateway.dispatch(adapter, message("/open"));
+    const attachment = adapter.replies[0]?.message.attachments?.[0];
+    expect(attachment?.kind).toBe("image");
+    expect(attachment?.mimeType).toBe("image/png");
+    // PNG magic bytes prove a real image was rendered from the pairing URL.
+    expect(attachment && attachment.data[0]).toBe(0x89);
+    expect(attachment && attachment.data[1]).toBe(0x50);
+    expect(adapter.replies[0]?.message.button?.url).toBe(pairingUrl);
+  });
+
+  test("open reply stays text-only when the adapter cannot send attachments", async () => {
+    const adapter = fakeAdapter();
+    const gateway = new ChatGateway({ adapters: [adapter] });
+    gateway.use(
+      createCodeShellRemoteCommands({
+        desktop: {
+          open: async () => ({
+            url: "https://demo.trycloudflare.com",
+            pairingUrl: "https://demo.trycloudflare.com/mobile?pairing=x",
+            expiresAt: Date.now() + 600_000,
+            mode: "tunnel",
+          }),
+          close: async () => undefined,
+          status: async () => {
+            throw new Error("unexpected");
+          },
+        },
+      }),
+    );
+
+    await gateway.dispatch(adapter, message("/open"));
+    expect(adapter.replies[0]?.message.attachments).toBeUndefined();
   });
 
   test("drops non-allowlisted senders before invoking CodeShell", async () => {
@@ -142,18 +205,181 @@ describe("CodeShell remote command integration", () => {
     expect(observed.origin).toMatchObject({ channel: "telegram", senderId: "user-1" });
     expect(adapter.replies[0]?.message.text).toBe("看到了图片");
   });
+
+  test("delivers image attachments from the Mimi result back to the channel", async () => {
+    const root = await mkdtemp(join(tmpdir(), "gateway-pet-reply-"));
+    try {
+      const imageBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
+      const imagePath = join(root, "pairing-qr.png");
+      await writeFile(imagePath, imageBytes);
+      const adapter = fakeAdapter({ supportsOutgoingAttachments: true });
+      const gateway = new ChatGateway({ adapters: [adapter] });
+      gateway.use(
+        createMimiPetChat({
+          desktop: {
+            petChat: async () => ({
+              text: "隧道已开启",
+              petSessionId: "pet-1",
+              attachments: [
+                {
+                  kind: "image" as const,
+                  name: "pairing-qr.png",
+                  mimeType: "image/png",
+                  size: imageBytes.byteLength,
+                  path: imagePath,
+                },
+              ],
+            }),
+          },
+        }),
+      );
+
+      await gateway.dispatch(adapter, message("打开手机遥控隧道"));
+      expect(adapter.replies).toHaveLength(1);
+      expect(adapter.replies[0]?.message.text).toBe("隧道已开启");
+      const attachment = adapter.replies[0]?.message.attachments?.[0];
+      expect(attachment?.name).toBe("pairing-qr.png");
+      expect(Buffer.from(attachment?.data ?? []).equals(imageBytes)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("replays the complete enriched reply after adapter.send fails without rerunning Mimi", async () => {
+    const root = await mkdtemp(join(tmpdir(), "gateway-pet-retry-"));
+    try {
+      const imageBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 9, 8, 7, 6]);
+      const imagePath = join(root, "pairing-qr.png");
+      await writeFile(imagePath, imageBytes);
+      let petCalls = 0;
+      let sendCalls = 0;
+      const delivered: OutgoingMessage[] = [];
+      const adapter: ChannelAdapter = {
+        channel: "telegram",
+        supportsOutgoingAttachments: true,
+        run: async () => undefined,
+        send: async (_target, outgoing) => {
+          sendCalls += 1;
+          if (sendCalls === 1) throw new Error("temporary adapter failure");
+          delivered.push(outgoing);
+        },
+      };
+      const gateway = new ChatGateway({ adapters: [adapter] });
+      gateway.use(
+        createMimiPetChat({
+          desktop: {
+            petChat: async () => {
+              petCalls += 1;
+              return {
+                text: "公网隧道已开启：https://demo.trycloudflare.com",
+                petSessionId: "pet-1",
+                attachments: [
+                  {
+                    kind: "image" as const,
+                    name: "pairing-qr.png",
+                    mimeType: "image/png",
+                    size: imageBytes.byteLength,
+                    path: imagePath,
+                  },
+                ],
+              };
+            },
+          },
+        }),
+      );
+      const stableMessage = { ...message("打开手机遥控"), messageId: "platform-message-1" };
+
+      await expect(gateway.dispatch(adapter, stableMessage)).rejects.toThrow(
+        "temporary adapter failure",
+      );
+      // The host-local attachment may disappear before DeliveryQueue retries;
+      // replay uses the already materialized bytes, not the path again.
+      await rm(imagePath);
+      await gateway.dispatch(adapter, stableMessage);
+
+      expect(petCalls).toBe(1);
+      expect(sendCalls).toBe(2);
+      expect(delivered).toHaveLength(1);
+      expect(delivered[0]?.text).toContain("https://demo.trycloudflare.com");
+      expect(delivered[0]?.attachments?.[0]).toMatchObject({
+        kind: "image",
+        name: "pairing-qr.png",
+        mimeType: "image/png",
+      });
+      expect(Buffer.from(delivered[0]?.attachments?.[0]?.data ?? []).equals(imageBytes)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps the text reply and rejects a relative host attachment path", async () => {
+    const adapter = fakeAdapter({ supportsOutgoingAttachments: true });
+    const gateway = new ChatGateway({ adapters: [adapter] });
+    gateway.use(
+      createMimiPetChat({
+        desktop: {
+          petChat: async () => ({
+            text: "回复文本",
+            petSessionId: "pet-1",
+            attachments: [
+              {
+                kind: "image" as const,
+                name: "missing.png",
+                mimeType: "image/png",
+                size: 8,
+                path: "relative/missing.png",
+              },
+            ],
+          }),
+        },
+      }),
+    );
+
+    await gateway.dispatch(adapter, message("hi"));
+    expect(adapter.replies[0]?.message.text).toBe("回复文本");
+    expect(adapter.replies[0]?.message.attachments).toBeUndefined();
+  });
+
+  test("skips result attachments silently when the adapter cannot send them", async () => {
+    const adapter = fakeAdapter();
+    const gateway = new ChatGateway({ adapters: [adapter] });
+    gateway.use(
+      createMimiPetChat({
+        desktop: {
+          petChat: async () => ({
+            text: "文本",
+            petSessionId: "pet-1",
+            attachments: [
+              {
+                kind: "image" as const,
+                name: "any.png",
+                mimeType: "image/png",
+                size: 8,
+                path: join(tmpdir(), "unused.png"),
+              },
+            ],
+          }),
+        },
+      }),
+    );
+
+    await gateway.dispatch(adapter, message("hi"));
+    expect(adapter.replies[0]?.message.text).toBe("文本");
+    expect(adapter.replies[0]?.message.attachments).toBeUndefined();
+  });
 });
 
 function message(text: string): ChannelMessage {
   return { channel: "telegram", target: "chat-1", senderId: "user-1", text };
 }
 
-function fakeAdapter(): ChannelAdapter & {
+function fakeAdapter(options: { supportsOutgoingAttachments?: boolean } = {}): ChannelAdapter & {
   replies: Array<{ target: string; message: OutgoingMessage }>;
 } {
   const replies: Array<{ target: string; message: OutgoingMessage }> = [];
   return {
     channel: "telegram",
+    ...(options.supportsOutgoingAttachments ? { supportsOutgoingAttachments: true } : {}),
     replies,
     run: async () => undefined,
     send: async (target, outgoing) => void replies.push({ target, message: outgoing }),
