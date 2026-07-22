@@ -187,7 +187,7 @@ describe("PetMemoryStore", () => {
 
   test("caps stored entries, dropping the oldest", async () => {
     await withStore(async (path) => {
-      const store = new PetMemoryStore(path, { maxEntries: 3 });
+      const store = new PetMemoryStore(path, { maxEntries: 3, now: () => 1_000 });
       await store.load();
       for (let index = 0; index < 5; index += 1) {
         await store.remember(`memory-${index}`, "mimi");
@@ -195,6 +195,47 @@ describe("PetMemoryStore", () => {
       expect(store.list().map((entry) => entry.text)).toEqual(["memory-4", "memory-3", "memory-2"]);
       const raw = JSON.parse(await readFile(path, "utf-8")) as { entries: unknown[] };
       expect(raw.entries).toHaveLength(3);
+    });
+  });
+
+  test("keeps same-millisecond mutations newest-first across reload and concurrent calls", async () => {
+    await withStore(async (path) => {
+      const fixedNow = () => 1_000;
+      const store = new PetMemoryStore(path, { maxEntries: 3, now: fixedNow });
+      await store.load();
+
+      const first = await store.remember("first", "user");
+      const second = await store.remember("second", "user");
+      const third = await store.remember("third", "user");
+      expect([first.updatedAt, second.updatedAt, third.updatedAt]).toEqual([1_000, 1_001, 1_002]);
+
+      const refreshedFirst = await store.update(first.id, "first refreshed");
+      expect(refreshedFirst.updatedAt).toBe(1_003);
+      expect(store.list().map((entry) => entry.text)).toEqual([
+        "first refreshed",
+        "third",
+        "second",
+      ]);
+
+      await store.remember("fourth", "mimi");
+      expect(store.list().map((entry) => entry.text)).toEqual([
+        "fourth",
+        "first refreshed",
+        "third",
+      ]);
+
+      const reloaded = new PetMemoryStore(path, { maxEntries: 3, now: fixedNow });
+      await reloaded.load();
+      const [fifth, sixth] = await Promise.all([
+        reloaded.remember("fifth", "mimi"),
+        reloaded.remember("sixth", "mimi"),
+      ]);
+      expect([fifth.updatedAt, sixth.updatedAt]).toEqual([1_005, 1_006]);
+      expect(reloaded.list().map((entry) => entry.text)).toEqual(["sixth", "fifth", "fourth"]);
+
+      const reloadedAgain = new PetMemoryStore(path, { maxEntries: 3, now: fixedNow });
+      await reloadedAgain.load();
+      expect(reloadedAgain.list().map((entry) => entry.text)).toEqual(["sixth", "fifth", "fourth"]);
     });
   });
 

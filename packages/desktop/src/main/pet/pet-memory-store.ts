@@ -80,13 +80,13 @@ export class PetMemoryStore {
   remember(text: string, source: PetMemorySource): Promise<PetMemoryEntry> {
     return this.mutate((entries) => {
       const normalized = normalizeText(text);
-      const at = this.now();
+      const at = nextMutationTime(entries, this.now());
       const equivalent = findEquivalentEntry(entries, normalized);
       if (equivalent) {
         const entry: PetMemoryEntry = {
           ...equivalent,
           text: normalized,
-          updatedAt: Math.max(at, equivalent.updatedAt + 1),
+          updatedAt: at,
         };
         entries.set(entry.id, entry);
         return entry;
@@ -111,7 +111,7 @@ export class PetMemoryStore {
       const entry: PetMemoryEntry = {
         ...existing,
         text: normalizeText(text),
-        updatedAt: Math.max(this.now(), existing.updatedAt + 1),
+        updatedAt: nextMutationTime(entries, this.now()),
       };
       entries.set(id, entry);
       return entry;
@@ -175,6 +175,19 @@ export class PetMemoryStore {
 
 function sortedEntries(entries: ReadonlyMap<string, PetMemoryEntry>): PetMemoryEntry[] {
   return [...entries.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/**
+ * `updatedAt` doubles as the durable mutation order. Wall clocks can have
+ * millisecond precision, move backwards, or be fixed by a caller, so every
+ * successful mutation advances beyond the newest stored entry. Because the
+ * value is persisted, a reloaded store continues the same order; because
+ * mutations are serialized, concurrent callers cannot receive the same tick.
+ */
+function nextMutationTime(entries: ReadonlyMap<string, PetMemoryEntry>, now: number): number {
+  let latest = Number.NEGATIVE_INFINITY;
+  for (const entry of entries.values()) latest = Math.max(latest, entry.updatedAt);
+  return latest === Number.NEGATIVE_INFINITY ? now : Math.max(now, latest + 1);
 }
 
 function trimEntries(entries: Map<string, PetMemoryEntry>, maximum: number): void {
