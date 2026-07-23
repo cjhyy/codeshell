@@ -124,6 +124,7 @@ import {
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
 import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
+import { listWorkSessionsOnDisk, sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import { petChatModelKeyFromSettings } from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
@@ -1405,6 +1406,21 @@ async function createWindow(): Promise<BrowserWindow> {
       },
       listWorkspaces: () => mobileOrchestrator.projectList(),
       replyAttachmentRoots: knownReplyAttachmentCwds,
+      // Second-chance lookup for a DelegateWork selector Mimi found via the
+      // read-only Sessions tool: same opaque selector convention, resolved
+      // against the on-disk catalog. PetDispatchService re-applies every
+      // fail-closed check before the candidate is accepted.
+      resolveReusableSessionBySelector: async (selectorId) => {
+        const sessions = await listWorkSessionsOnDisk(sessionsRoot(), { limit: 500 });
+        const match = sessions.find((s) => sessionSelectorId(s.sessionId) === selectorId);
+        if (!match) return null;
+        return {
+          sessionId: match.sessionId,
+          workspacePath: match.cwd,
+          title: match.title,
+          updatedAt: match.updatedAt,
+        };
+      },
       listReusableSessions: async () => {
         const noWorkspaceCwd = resolveNoRepoCwd();
         // No includeArchived: listDiskSessions default-filters archived rows, so

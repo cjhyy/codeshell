@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { BUILTIN_CHANNEL_CAPABILITIES } from "@cjhyy/code-shell-chat";
 import { validatePetRunParams } from "@cjhyy/code-shell-pet";
+import { sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator";
 import { boundedWorld, PetDispatchService } from "./pet-dispatch-service";
 
@@ -1003,6 +1004,149 @@ describe("PetDispatchService", () => {
     });
 
     expect(await service.dispatch({ type: "chat", message: "继续登录修复" })).toEqual({
+      ok: false,
+      code: "worker-error",
+      message: "Mimi returned a Session outside the host-provided reusable set",
+    });
+    expect(started).toBe(false);
+  });
+
+  test("chat resolves an off-list reusable selector through the resolver and reuses it", async () => {
+    const starts: unknown[] = [];
+    const resolverCalls: string[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
+            (candidate) => candidate.name === "CodeShell",
+          )!;
+          return {
+            ok: true,
+            result: {
+              text: "继续那个旧会话。",
+              extensions: {
+                pet: {
+                  workDelegation: {
+                    workspaceId: workspace.id,
+                    // Mimi found this Session via the read-only Sessions tool;
+                    // it is not in the turn's injected reusable set.
+                    reusableSessionId: sessionSelectorId("old-session"),
+                    objective: "继续旧会话的修复工作",
+                  },
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      resolveReusableSessionBySelector: async (selectorId) => {
+        resolverCalls.push(selectorId);
+        return {
+          sessionId: "old-session",
+          workspacePath: "/work/codeshell",
+          title: "old",
+          updatedAt: 1,
+        };
+      },
+      startWorkSession: async (delegation) => {
+        starts.push(delegation);
+        return { sessionId: delegation.targetSessionId!, cwd: delegation.workspacePath! };
+      },
+    });
+
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "继续那个旧会话",
+        clientMessageId: "client-resolver",
+      }),
+    ).toMatchObject({
+      ok: true,
+      type: "chat",
+      delegation: { sessionId: "old-session", reusedSession: true },
+    });
+    expect(resolverCalls).toEqual([sessionSelectorId("old-session")]);
+    expect(starts).toEqual([
+      expect.objectContaining({
+        targetSessionId: "old-session",
+        workspacePath: "/work/codeshell",
+        task: "继续旧会话的修复工作",
+      }),
+    ]);
+  });
+
+  test("chat still rejects when the resolver misses or workspace mismatches", async () => {
+    let started = false;
+    const makeService = (
+      resolve: (selectorId: string) => Promise<{
+        sessionId: string;
+        workspacePath: string | null;
+        title: string;
+        updatedAt: number;
+      } | null>,
+    ) =>
+      new PetDispatchService({
+        metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+        aggregator: {
+          getSnapshot: () => snapshot,
+          resolveNavigation: async () => ({ status: "not-found" }),
+        },
+        worker: {
+          requestWorker: async (_method, params) => {
+            const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
+              (candidate) => candidate.name === "CodeShell",
+            )!;
+            return {
+              ok: true,
+              result: {
+                extensions: {
+                  pet: {
+                    workDelegation: {
+                      workspaceId: workspace.id,
+                      reusableSessionId: sessionSelectorId("old-session"),
+                      objective: "do not run this",
+                    },
+                  },
+                },
+              },
+            };
+          },
+        },
+        hostCwd: "/safe/pet",
+        listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+        resolveReusableSessionBySelector: resolve,
+        startWorkSession: async () => {
+          started = true;
+          return { sessionId: "bad", cwd: "/work/codeshell" };
+        },
+      });
+
+    // (a) The resolver finds nothing on disk: same fail-closed rejection.
+    expect(
+      await makeService(async () => null).dispatch({ type: "chat", message: "继续旧会话" }),
+    ).toEqual({
+      ok: false,
+      code: "worker-error",
+      message: "Mimi returned a Session outside the host-provided reusable set",
+    });
+
+    // (b) The resolved Session lives in a different workspace than the one
+    // Mimi selected: the candidate must not silently switch workspaces.
+    expect(
+      await makeService(async () => ({
+        sessionId: "old-session",
+        workspacePath: "/repo/b",
+        title: "old",
+        updatedAt: 1,
+      })).dispatch({ type: "chat", message: "继续旧会话" }),
+    ).toEqual({
       ok: false,
       code: "worker-error",
       message: "Mimi returned a Session outside the host-provided reusable set",

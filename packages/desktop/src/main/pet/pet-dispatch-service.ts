@@ -6,6 +6,7 @@ import type {
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator.js";
 import { isPetHostActionRequest, isPetWorkExecutionBackend } from "@cjhyy/code-shell-pet";
+import { sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import type {
   PetLongTask,
   PetLongTaskClosureDecision,
@@ -189,6 +190,16 @@ interface PetDispatchOptions {
   managerModel?(): Promise<string | null>;
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
   listReusableSessions?(): Promise<PetReusableSessionCandidate[]>;
+  /**
+   * Second-chance lookup for a DelegateWork reusable-Session selector outside
+   * the turn's injected <=32 option list (e.g. one Mimi found via the
+   * read-only Sessions tool). Fail-closed: null/throw keeps the existing
+   * rejection, and a resolved candidate still passes every host check
+   * (not Mimi's own session, not busy, workspace must match the delegation).
+   */
+  resolveReusableSessionBySelector?(
+    selectorId: string,
+  ): Promise<PetReusableSessionCandidate | null>;
   /** Absolute roots the host accepts for explicit outbound attachment replies. */
   replyAttachmentRoots?(): Promise<string[]>;
   startWorkSession?(
@@ -414,9 +425,12 @@ function workspaceIdForPath(path: string): string {
   return `workspace-${createHash("sha256").update(path).digest("hex").slice(0, 16)}`;
 }
 
-function reusableSessionId(sessionId: string): string {
-  return `session-${createHash("sha256").update(sessionId).digest("hex").slice(0, 20)}`;
-}
+/**
+ * Reusable-Session selectors are the shared disclosure convention, so the ids
+ * Mimi reads from the Sessions tool and the ids this host injects/validates
+ * can never drift apart.
+ */
+const reusableSessionId = sessionSelectorId;
 
 function parsePetWorkDelegation(value: unknown): PetWorkDelegation | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -1252,12 +1266,32 @@ export class PetDispatchService {
             message: "Mimi returned a Workspace outside the host-provided list",
           };
         }
-        const resolvedDelegations = workDelegations.map((entry) => ({
-          entry,
-          reusableSession: entry.reusableSessionId
-            ? reusableSessionById.get(entry.reusableSessionId)
-            : undefined,
-        }));
+        const resolvedDelegations = await Promise.all(
+          workDelegations.map(async (entry) => {
+            let reusableSession = entry.reusableSessionId
+              ? reusableSessionById.get(entry.reusableSessionId)
+              : undefined;
+            if (!reusableSession && entry.reusableSessionId) {
+              const resolved = await this.options
+                .resolveReusableSessionBySelector?.(entry.reusableSessionId)
+                .catch(() => null);
+              if (
+                resolved &&
+                resolved.sessionId !== metadata.petSessionId &&
+                !unavailableSessionIds.has(resolved.sessionId)
+              ) {
+                const workspaceId =
+                  resolved.workspacePath === null
+                    ? NO_WORKSPACE_ID
+                    : workspaceIdByPath.get(normalizeWorkspacePath(resolved.workspacePath));
+                if (workspaceId === entry.workspaceId) {
+                  reusableSession = { ...resolved, workspaceId };
+                }
+              }
+            }
+            return { entry, reusableSession };
+          }),
+        );
         if (
           resolvedDelegations.some(
             ({ entry, reusableSession }) => entry.reusableSessionId && !reusableSession,
