@@ -1082,7 +1082,7 @@ describe("PetDispatchService", () => {
     ]);
   });
 
-  test("chat still rejects when the resolver misses or workspace mismatches", async () => {
+  test("chat still rejects when the resolver misses, throws, or returns an ineligible session", async () => {
     let started = false;
     const makeService = (
       resolve: (selectorId: string) => Promise<{
@@ -1144,6 +1144,46 @@ describe("PetDispatchService", () => {
         sessionId: "old-session",
         workspacePath: "/repo/b",
         title: "old",
+        updatedAt: 1,
+      })).dispatch({ type: "chat", message: "继续旧会话" }),
+    ).toEqual({
+      ok: false,
+      code: "worker-error",
+      message: "Mimi returned a Session outside the host-provided reusable set",
+    });
+
+    // (c) A resolver crash is swallowed into the same fail-closed rejection.
+    expect(
+      await makeService(async () => {
+        throw new Error("disk exploded");
+      }).dispatch({ type: "chat", message: "继续旧会话" }),
+    ).toEqual({
+      ok: false,
+      code: "worker-error",
+      message: "Mimi returned a Session outside the host-provided reusable set",
+    });
+
+    // (d) The resolver must not hand Mimi her own manager session.
+    expect(
+      await makeService(async () => ({
+        sessionId: "pet-one",
+        workspacePath: "/work/codeshell",
+        title: "mimi herself",
+        updatedAt: 1,
+      })).dispatch({ type: "chat", message: "继续旧会话" }),
+    ).toEqual({
+      ok: false,
+      code: "worker-error",
+      message: "Mimi returned a Session outside the host-provided reusable set",
+    });
+
+    // (e) A busy session (running/queued/pending decision — "work-a" is
+    // running in the snapshot) stays unavailable even when resolved.
+    expect(
+      await makeService(async () => ({
+        sessionId: "work-a",
+        workspacePath: "/work/codeshell",
+        title: "busy work",
         updatedAt: 1,
       })).dispatch({ type: "chat", message: "继续旧会话" }),
     ).toEqual({

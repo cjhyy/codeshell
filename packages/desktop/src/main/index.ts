@@ -124,7 +124,7 @@ import {
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
 import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
-import { listWorkSessionsOnDisk, sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
+import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
 import { petChatModelKeyFromSettings } from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
@@ -1263,12 +1263,16 @@ async function createWindow(): Promise<BrowserWindow> {
         .observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event)
         .catch((error) => dlog("main", "pet.longTask.stream.failed", { error: String(error) }));
     });
+    // One root for both the Sessions disclosure tool and the resume resolver,
+    // so the directory Mimi reads and the one selectors resolve against can
+    // never drift apart.
+    const petSessionsRootDir = sessionsRoot();
     petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
-      sessionsRootDir: sessionsRoot(),
+      sessionsRootDir: petSessionsRootDir,
       managerModel: async () =>
         petChatModelKeyFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {
@@ -1408,19 +1412,9 @@ async function createWindow(): Promise<BrowserWindow> {
       replyAttachmentRoots: knownReplyAttachmentCwds,
       // Second-chance lookup for a DelegateWork selector Mimi found via the
       // read-only Sessions tool: same opaque selector convention, resolved
-      // against the on-disk catalog. PetDispatchService re-applies every
-      // fail-closed check before the candidate is accepted.
-      resolveReusableSessionBySelector: async (selectorId) => {
-        const sessions = await listWorkSessionsOnDisk(sessionsRoot(), { limit: 500 });
-        const match = sessions.find((s) => sessionSelectorId(s.sessionId) === selectorId);
-        if (!match) return null;
-        return {
-          sessionId: match.sessionId,
-          workspacePath: match.cwd,
-          title: match.title,
-          updatedAt: match.updatedAt,
-        };
-      },
+      // against the on-disk catalog with the same pool boundaries as
+      // listReusableSessions (desktop origin, not archived).
+      resolveReusableSessionBySelector: createReusableSessionResolver(petSessionsRootDir),
       listReusableSessions: async () => {
         const noWorkspaceCwd = resolveNoRepoCwd();
         // No includeArchived: listDiskSessions default-filters archived rows, so

@@ -194,7 +194,9 @@ interface PetDispatchOptions {
    * Second-chance lookup for a DelegateWork reusable-Session selector outside
    * the turn's injected <=32 option list (e.g. one Mimi found via the
    * read-only Sessions tool). Fail-closed: null/throw keeps the existing
-   * rejection, and a resolved candidate still passes every host check
+   * rejection. The implementation owns the pool boundaries the in-list
+   * listReusableSessions path applies (desktop origin, not archived); this
+   * service re-checks only its per-turn constraints on the resolved candidate
    * (not Mimi's own session, not busy, workspace must match the delegation).
    */
   resolveReusableSessionBySelector?(
