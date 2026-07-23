@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
+import { parseContentQuery, resolveContentMatch } from "./sessionContentSearch";
 
 interface Props {
   open: boolean;
@@ -26,10 +27,6 @@ interface Hit {
   session: SessionSummary;
 }
 
-/** Content-search mode is entered by prefixing the query with '>'. */
-const CONTENT_PREFIX = ">";
-/** Minimum term length before we issue a content search. */
-const MIN_CONTENT_TERM = 2;
 const CONTENT_DEBOUNCE_MS = 300;
 
 /**
@@ -68,9 +65,11 @@ export function SessionSearchModal({
   // Monotonic guard so a slow earlier query can't overwrite a newer result.
   const contentSeqRef = useRef(0);
 
-  const contentMode = filter.startsWith(CONTENT_PREFIX);
-  const contentTerm = contentMode ? filter.slice(CONTENT_PREFIX.length).replace(/^\s+/, "") : "";
-  const contentTermReady = contentMode && contentTerm.length >= MIN_CONTENT_TERM;
+  const {
+    contentMode,
+    term: contentTerm,
+    ready: contentTermReady,
+  } = parseContentQuery(filter);
 
   useEffect(() => {
     if (!open) return;
@@ -170,20 +169,12 @@ export function SessionSearchModal({
   // session (engineSessionId or id) so we can reuse the exact title-mode open
   // path (onPick expects the local session id + its project).
   const pickContent = (match: SessionContentSearchMatch): void => {
-    for (const projectId of [null, ...projects.map((p) => p.id)]) {
-      const idx = sessions[projectId ?? NO_REPO_KEY];
-      if (!idx) continue;
-      const local = idx.sessions.find(
-        (s) => !s.archived && (s.engineSessionId === match.sessionId || s.id === match.sessionId),
-      );
-      if (local) {
-        onPick(projectId, local.id);
-        onClose();
-        return;
-      }
-    }
+    const resolved = resolveContentMatch(match, projects, sessions);
     // No in-memory session maps to this engine id (disk-only). The title-mode
     // open path can't reach it; leave the modal open so the user can retry.
+    if (!resolved) return;
+    onPick(resolved.projectId, resolved.sessionId);
+    onClose();
   };
 
   const onEnter = (): void => {
