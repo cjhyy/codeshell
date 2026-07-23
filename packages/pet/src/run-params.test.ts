@@ -110,6 +110,95 @@ describe("validatePetRunParams", () => {
       }),
     ).toBe("profileParams.hostActions contains an invalid or duplicate host-action kind");
   });
+
+  test("accepts only a bounded GatewayReply route paired with its host action", () => {
+    const gatewayReply = {
+      button: "native",
+      attachments: ["image", "file", "audio", "video"],
+      maxTextLength: 8_000,
+      maxAttachments: 4,
+      maxAttachmentBytes: 10 * 1024 * 1024,
+    };
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { hostActions: ["gatewayReply"], gatewayReply },
+      }),
+    ).toBeNull();
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { hostActions: ["gatewayReply"] },
+      }),
+    ).toBe("the gatewayReply host action requires profileParams.gatewayReply");
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { gatewayReply },
+      }),
+    ).toBe("profileParams.gatewayReply requires the gatewayReply host action");
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: {
+          hostActions: ["gatewayReply"],
+          gatewayReply: { ...gatewayReply, attachments: ["archive"] },
+        },
+      }),
+    ).toBe("profileParams.gatewayReply contains an invalid Gateway route capability");
+  });
+
+  test("accepts only a bounded Gateway discovery catalog containing the current channel", () => {
+    const gateway = {
+      currentChannel: "teams",
+      channels: [
+        {
+          channel: "teams",
+          capabilities: {
+            inbound: { text: true, attachments: ["image", "file", "audio", "video"] },
+            outbound: {
+              text: true,
+              maxTextLength: 8_000,
+              button: "link",
+              attachments: ["image"],
+              maxAttachments: 4,
+              maxAttachmentBytes: 1024 * 1024,
+            },
+          },
+        },
+        {
+          channel: "line",
+          capabilities: {
+            inbound: { text: true, attachments: ["image", "file", "audio", "video"] },
+            outbound: {
+              text: true,
+              maxTextLength: 8_000,
+              button: "native",
+              attachments: [],
+            },
+          },
+        },
+      ],
+    };
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { gateway },
+      }),
+    ).toBeNull();
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { gateway: { ...gateway, currentChannel: "slack" } },
+      }),
+    ).toBe("profileParams.gateway contains an invalid Gateway capability catalog");
+  });
 });
 
 describe("Pet behavior profile inputs", () => {
@@ -140,6 +229,54 @@ describe("Pet behavior profile inputs", () => {
     expect(Object.isFrozen(options.workspaces[0])).toBe(true);
   });
 
+  test("publishes the immutable GatewayReply route to tool visibility and run services", () => {
+    const gateway = {
+      currentChannel: "teams",
+      channels: [
+        {
+          channel: "teams",
+          capabilities: {
+            inbound: { text: true, attachments: ["image", "file", "audio", "video"] },
+            outbound: {
+              text: true,
+              maxTextLength: 8_000,
+              button: "link",
+              attachments: ["image"],
+              maxAttachments: 4,
+              maxAttachmentBytes: 1024 * 1024,
+            },
+          },
+        },
+      ],
+    };
+    const profileParams = {
+      hostActions: ["gatewayReply"],
+      gateway,
+      gatewayReply: {
+        button: "link",
+        attachments: ["image"],
+        maxTextLength: 8_000,
+        maxAttachments: 2,
+        maxAttachmentBytes: 1_024,
+      },
+    };
+    expect(PET_BEHAVIOR_PROFILE.buildVisibilityMeta?.(profileParams)).toMatchObject({
+      petHostActionKinds: ["gatewayReply"],
+      petGateway: gateway,
+      petGatewayReply: profileParams.gatewayReply,
+    });
+    const services = PET_BEHAVIOR_PROFILE.createRunServices?.({
+      profileParams,
+      reportResult: () => undefined,
+    });
+    expect(services).toMatchObject({
+      petGateway: gateway,
+      petGatewayReply: profileParams.gatewayReply,
+    });
+    expect(Object.isFrozen((services as { petGateway: unknown }).petGateway)).toBe(true);
+    expect(Object.isFrozen((services as { petGatewayReply: unknown }).petGatewayReply)).toBe(true);
+  });
+
   test("fails closed before exposing malformed direct Engine-hosted profile params", () => {
     const profileParams = {
       workspaces: [{ id: "workspace-a", name: "Alpha" }],
@@ -153,6 +290,9 @@ describe("Pet behavior profile inputs", () => {
     });
     expect(
       PET_BEHAVIOR_PROFILE.buildVisibilityMeta?.({ hostActions: ["mobileRemote", "shell"] }),
+    ).toMatchObject({ petHostActionKinds: [] });
+    expect(
+      PET_BEHAVIOR_PROFILE.buildVisibilityMeta?.({ hostActions: ["gatewayReply"] }),
     ).toMatchObject({ petHostActionKinds: [] });
   });
 });

@@ -518,9 +518,14 @@ export class RoomManager {
       meta = {
         ...existing,
         cwd: target.cwd,
-        linkedSessionMode: isRunning ? existing.linkedSessionMode : "observe-only",
       };
-      writeFileSync(this.metaPath(meta.id), JSON.stringify(meta, null, 2), "utf-8");
+      // Navigation must not turn an ordinary dormant room into a permanently
+      // observe-only room. Existing linked rooms keep their boundary; ordinary
+      // rooms are observed transiently and remain writable through the normal
+      // open flow.
+      if (meta.cwd !== existing.cwd) {
+        writeFileSync(this.metaPath(meta.id), JSON.stringify(meta, null, 2), "utf-8");
+      }
     } else {
       meta = this.createRoom({
         cwd: target.cwd,
@@ -562,6 +567,10 @@ export class RoomManager {
     const controllableMeta: RoomMeta = {
       ...meta,
       cwd: target.cwd,
+      // Observe-only navigation never asks the user to approve a stored
+      // permission mode. A prior bypassPermissions value must not be inherited
+      // silently when takeover starts a new process.
+      permissionMode: "default",
       linkedSessionMode: undefined,
     };
     writeFileSync(this.metaPath(roomId), JSON.stringify(controllableMeta, null, 2), "utf-8");

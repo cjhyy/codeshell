@@ -12,6 +12,13 @@ export * from "./types.js";
 export * from "./delegation.js";
 export * from "./team.js";
 export * from "./protocol.js";
+export {
+  REPORT_TO_MIMI_TOOL_NAME,
+  reportToMimiToolDef,
+  reportToMimiTool,
+  reportToMimiAvailability,
+  type PetReportToMimiSink,
+} from "./report-to-mimi.js";
 export { petRunOptionsFrom, validatePetRunParams, type PetRunOptions } from "./run-params.js";
 export { SessionIndex } from "./session-index.js";
 export { PendingDecisionIndex, safePendingTitle } from "./pending-decision-index.js";
@@ -39,10 +46,22 @@ export {
   type PetMobileRemoteDecision,
 } from "./mobile-remote.js";
 export {
+  GATEWAY_TOOL_NAME,
+  gatewayToolDef,
+  gatewayTool,
+  gatewayAvailability,
+  parsePetGatewayCatalog,
+  type PetGatewayAttachmentKind,
+  type PetGatewayChannelCapabilities,
+  type PetGatewayChannel,
+  type PetGatewayCatalog,
+} from "./gateway.js";
+export {
   PET_HOST_ACTION_KINDS,
   isPetHostActionKind,
   isPetHostActionRequest,
   CONTROL_LONG_TASK_TOOL_NAME,
+  GATEWAY_REPLY_TOOL_NAME,
   MEMORY_TOOL_NAME,
   controlLongTaskToolDef,
   controlLongTaskTool,
@@ -50,6 +69,12 @@ export {
   memoryToolDef,
   memoryTool,
   memoryAvailability,
+  gatewayReplyToolDef,
+  gatewayReplyTool,
+  gatewayReplyAvailability,
+  rewriteGatewayReplyDef,
+  type PetGatewayReplyAttachmentKind,
+  type PetGatewayReplyCapability,
   type PetHostActionKind,
   type PetHostActionRequest,
   type PetHostActionDecision,

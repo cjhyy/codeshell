@@ -70,6 +70,46 @@ describe("webhook adapters", () => {
     expect(handled).toBe(false);
   });
 
+  test("LINE exposes image content lazily after webhook admission", async () => {
+    const body = Buffer.from(
+      JSON.stringify({
+        events: [
+          {
+            type: "message",
+            source: { userId: "user-1" },
+            message: { id: "image-1", type: "image" },
+          },
+        ],
+      }),
+    );
+    const signature = createHmac("sha256", "line-secret").update(body).digest("base64");
+    let downloads = 0;
+    const adapter = new LineAdapter(
+      {
+        channelSecret: "line-secret",
+        channelAccessToken: "line-token",
+      },
+      async (_url, init) => {
+        downloads += 1;
+        expect(new Headers(init?.headers).get("authorization")).toBe("Bearer line-token");
+        return new Response(Uint8Array.from([7, 8, 9]));
+      },
+    );
+    const messages: ChannelMessage[] = [];
+
+    await adapter.handleWebhook(
+      fakeRequest(body, "POST", "/webhooks/line", { "x-line-signature": signature }),
+      fakeResponse().value,
+      async (message) => void messages.push(message),
+      2_048,
+    );
+
+    expect(messages[0]).toMatchObject({ text: "", attachments: [{ kind: "image" }] });
+    expect(downloads).toBe(0);
+    expect(await messages[0]!.attachments![0]!.load()).toEqual(Uint8Array.from([7, 8, 9]));
+    expect(downloads).toBe(1);
+  });
+
   test("WhatsApp verifies Meta's challenge token", async () => {
     const adapter = new WhatsAppAdapter(baseWhatsAppConfig());
     const response = fakeResponse();
@@ -100,6 +140,92 @@ describe("webhook adapters", () => {
 
     expect(requestBody.interactive.type).toBe("cta_url");
     expect(requestBody.interactive.action.parameters.url).toBe("https://pair.example/#token");
+  });
+
+  test("WhatsApp lazily resolves inbound media IDs through Graph", async () => {
+    const body = Buffer.from(
+      JSON.stringify({
+        entry: [
+          {
+            changes: [
+              {
+                value: {
+                  messages: [
+                    {
+                      id: "wamid-1",
+                      from: "8613800000000",
+                      type: "image",
+                      image: { id: "media-1", mime_type: "image/jpeg", caption: "look" },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const signature = `sha256=${createHmac("sha256", "wa-app-secret").update(body).digest("hex")}`;
+    const requests: string[] = [];
+    const adapter = new WhatsAppAdapter(baseWhatsAppConfig(), async (url, init) => {
+      requests.push(String(url));
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer wa-token");
+      if (
+        String(url).startsWith("https://graph.facebook.com/") &&
+        String(url).endsWith("/media-1")
+      ) {
+        return Response.json({ url: "https://lookaside.example/media-1" });
+      }
+      return new Response(Uint8Array.from([4, 5, 6]));
+    });
+    const messages: ChannelMessage[] = [];
+
+    await adapter.handleWebhook(
+      fakeRequest(body, "POST", "/webhooks/whatsapp", {
+        "x-hub-signature-256": signature,
+      }),
+      fakeResponse().value,
+      async (message) => void messages.push(message),
+      4_096,
+    );
+
+    expect(messages[0]).toMatchObject({
+      text: "look",
+      attachments: [{ id: "media-1", kind: "image" }],
+    });
+    expect(requests).toHaveLength(0);
+    expect(await messages[0]!.attachments![0]!.load()).toEqual(Uint8Array.from([4, 5, 6]));
+    expect(requests).toHaveLength(2);
+  });
+
+  test("WhatsApp uploads and sends an outbound document", async () => {
+    const calls: Array<{ url: string; body: unknown }> = [];
+    const adapter = new WhatsAppAdapter(baseWhatsAppConfig(), async (url, init) => {
+      calls.push({ url: String(url), body: init?.body });
+      return String(url).endsWith("/media")
+        ? Response.json({ id: "uploaded-1" })
+        : Response.json({ messages: [{ id: "sent-1" }] });
+    });
+
+    await adapter.send("8613800000000", {
+      text: "report",
+      attachments: [
+        {
+          kind: "file",
+          name: "report.pdf",
+          mimeType: "application/pdf",
+          data: Uint8Array.from([1, 2]),
+        },
+      ],
+    });
+
+    expect(calls[0]?.url).toEndWith("/media");
+    expect(calls[0]?.body).toBeInstanceOf(FormData);
+    const sent = JSON.parse(String(calls[1]?.body));
+    expect(sent).toMatchObject({
+      type: "document",
+      document: { id: "uploaded-1", filename: "report.pdf", caption: "report" },
+    });
   });
 });
 

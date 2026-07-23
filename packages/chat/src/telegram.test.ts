@@ -78,6 +78,61 @@ describe("TelegramAdapter", () => {
     expect(new Uint8Array(await photo.arrayBuffer())).toEqual(Uint8Array.from([1, 2, 3]));
   });
 
+  test("sends ordinary files through Telegram sendDocument", async () => {
+    let endpoint = "";
+    let form: FormData | undefined;
+    const adapter = new TelegramAdapter(baseConfig(), {
+      fetch: async (url, init) => {
+        endpoint = String(url);
+        form = init?.body as FormData;
+        return Response.json({ ok: true, result: {} });
+      },
+    });
+
+    await adapter.send("123", {
+      text: "",
+      attachments: [
+        {
+          kind: "file",
+          name: "report.pdf",
+          mimeType: "application/pdf",
+          data: Uint8Array.from([4, 5, 6]),
+        },
+      ],
+    });
+
+    expect(endpoint).toEndWith("/botsecret/sendDocument");
+    const document = form?.get("document") as File;
+    expect(document.name).toBe("report.pdf");
+    expect(document.type).toBe("application/pdf");
+  });
+
+  test.each([
+    ["audio", "audio/mpeg", "song.mp3", "sendAudio", "audio"],
+    ["video", "video/mp4", "clip.mp4", "sendVideo", "video"],
+  ] as const)(
+    "sends %s attachments through Telegram native media",
+    async (kind, mimeType, name, method, field) => {
+      let endpoint = "";
+      let form: FormData | undefined;
+      const adapter = new TelegramAdapter(baseConfig(), {
+        fetch: async (url, init) => {
+          endpoint = String(url);
+          form = init?.body as FormData;
+          return Response.json({ ok: true, result: {} });
+        },
+      });
+
+      await adapter.send("123", {
+        text: "",
+        attachments: [{ kind, name, mimeType, data: Uint8Array.from([1, 2]) }],
+      });
+
+      expect(endpoint).toEndWith(`/botsecret/${method}`);
+      expect((form?.get(field) as File).name).toBe(name);
+    },
+  );
+
   test("redacts the bot token from polling failures", async () => {
     const abort = new AbortController();
     const logs: string[] = [];

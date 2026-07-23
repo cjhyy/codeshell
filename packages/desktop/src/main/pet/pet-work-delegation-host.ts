@@ -66,6 +66,11 @@ export class PetWorkDelegationHost {
   }
 
   private async startOnce(delegation: PetAutoDelegation): Promise<PetWorkDelegationLaunch> {
+    if (delegation.executionBackend === "codex") {
+      throw new Error(
+        "The external Codex execution backend is not supported; CodeShell substitution was refused",
+      );
+    }
     const sessionId =
       delegation.targetSessionId ?? petDelegationSessionId(delegation.clientMessageId);
     const cwd = delegation.workspacePath ?? this.options.noWorkspaceCwd;
@@ -85,6 +90,9 @@ export class PetWorkDelegationHost {
         sessionId,
         cwd,
         clientMessageId: workClientMessageId,
+        // Delegation does not grant Mimi authority to bypass the user's normal
+        // permission and sensitive-path boundaries. A run that needs approval
+        // remains visible as waiting instead of silently receiving full access.
         permissionMode: "default",
         // Goal is opt-in. Ordinary Work Sessions can still use tools, span many
         // model/tool steps, and resume from async notifications; forcing every

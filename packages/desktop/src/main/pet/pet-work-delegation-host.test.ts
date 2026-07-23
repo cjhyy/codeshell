@@ -89,6 +89,24 @@ describe("PetWorkDelegationHost", () => {
     expect(fake.forgotten).toEqual([]);
   });
 
+  test("rejects unsupported Codex execution instead of substituting CodeShell", async () => {
+    const fake = fakeBridge();
+    const host = new PetWorkDelegationHost({
+      bridge: fake.bridge,
+      noWorkspaceCwd: "/safe/no-repo",
+    });
+
+    await expect(
+      host.start({
+        clientMessageId: "message-codex",
+        task: "Run with Codex",
+        workspacePath: "/work/app",
+        executionBackend: "codex",
+      }),
+    ).rejects.toThrow("CodeShell substitution was refused");
+    expect(fake.lines).toEqual([]);
+  });
+
   test("sets a persistent Goal only when the delegation explicitly requests it", async () => {
     const fake = fakeBridge();
     const host = new PetWorkDelegationHost({

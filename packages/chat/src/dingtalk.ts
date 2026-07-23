@@ -5,6 +5,7 @@ import type {
   ChannelMessageHandler,
   OutgoingMessage,
 } from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
 import { dispatchSafely, waitForAbort } from "./lifecycle.js";
 
 export interface DingTalkAdapterConfig {
@@ -53,6 +54,7 @@ export function parseDingTalkTextMessage(
 
 export class DingTalkAdapter implements ChannelAdapter {
   readonly channel = "dingtalk";
+  readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.dingtalk;
   private readonly client: DWClient;
   private readonly onConnected?: () => void;
   private readonly responseUrls = new Map<string, string>();

@@ -16,7 +16,7 @@ import {
 import type { ModelOption } from "../chat/ModelPill";
 import type { PermissionMode } from "../chat/PermissionPill";
 import type { OpenCliSessionEventDetail } from "../cc-room/types";
-import { resolveOpenCliSessionBucket } from "../cc-room/openCliSession";
+import { nextOpenCliSessionNonce, resolveOpenCliSessionBucket } from "../cc-room/openCliSession";
 import {
   makeQuickChatCreationNonce,
   makeQuickChatSessionId,
@@ -132,7 +132,6 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
   // manually-opened Files tab reads it as already-handled and won't replay the
   // old file) WITHOUT the timing race the old setTimeout(0) flip had.
   const openUrlNonceRef = useRef<number>(0);
-  const openCliSessionNonceRef = useRef<number>(0);
   // Comment anchors pinned from the panels (diff line / browser element / file
   // line). They show as chips above the composer and ride along with the next
   // message. Panels push them via the "codeshell:add-anchor" window event.
@@ -794,8 +793,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
         });
         return;
       }
-      const nonce = openCliSessionNonceRef.current + 1;
-      openCliSessionNonceRef.current = nonce;
+      const nonce = nextOpenCliSessionNonce();
       updatePanelBucket(targetBucket, (state) => ({
         ...state,
         open: true,

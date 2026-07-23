@@ -18,7 +18,9 @@ import type {
   ChatCommandDefinition,
   OutgoingMessage,
 } from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
 import { dispatchSafely, waitForAbort } from "./lifecycle.js";
+import { mediaKind, outgoingAttachments, remoteAttachment } from "./media.js";
 
 export interface DiscordAdapterConfig {
   botToken: string;
@@ -26,22 +28,26 @@ export interface DiscordAdapterConfig {
 
 export interface DiscordAdapterOptions {
   commands?: readonly ChatCommandDefinition[];
+  fetch?: typeof fetch;
 }
 
 export class DiscordAdapter implements ChannelAdapter {
   readonly channel = "discord";
+  readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.discord;
   private readonly client: Client;
   private readonly interactionContext = new AsyncLocalStorage<{
     interaction: ChatInputCommandInteraction;
     replied: boolean;
   }>();
   private readonly commands: readonly ChatCommandDefinition[];
+  private readonly fetchFn: typeof fetch;
 
   constructor(
     private readonly config: DiscordAdapterConfig,
     options: DiscordAdapterOptions = {},
   ) {
     this.commands = options.commands ?? [];
+    this.fetchFn = options.fetch ?? fetch;
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
@@ -55,13 +61,25 @@ export class DiscordAdapter implements ChannelAdapter {
 
   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
     const onMessage = (message: Message) => {
-      if (message.author.bot || !message.content) return;
+      if (message.author.bot || (!message.content && message.attachments.size === 0)) return;
+      const attachments = message.attachments.map((attachment) =>
+        remoteAttachment({
+          id: attachment.id,
+          kind: mediaKind(attachment.contentType ?? undefined, attachment.name),
+          name: attachment.name,
+          mimeType: attachment.contentType ?? undefined,
+          size: attachment.size,
+          url: attachment.url,
+          fetch: this.fetchFn,
+        }),
+      );
       void dispatchSafely(handler, {
         channel: this.channel,
         target: message.channelId,
         senderId: message.author.id,
         text: message.content,
         messageId: message.id,
+        ...(attachments.length > 0 ? { attachments } : {}),
       });
     };
     const onInteraction = (interaction: Interaction) => {
@@ -129,9 +147,22 @@ export class DiscordAdapter implements ChannelAdapter {
 function toDiscordPayload(message: OutgoingMessage): {
   content: string;
   components?: Array<ActionRowBuilder<ButtonBuilder>>;
+  files?: Array<{ attachment: Buffer; name: string }>;
 } {
+  const attachments = outgoingAttachments(
+    message,
+    BUILTIN_CHANNEL_CAPABILITIES.discord.outbound.attachments,
+  );
   return {
     content: message.text,
+    ...(attachments.length > 0
+      ? {
+          files: attachments.map((attachment) => ({
+            attachment: Buffer.from(attachment.data),
+            name: attachment.name,
+          })),
+        }
+      : {}),
     ...(message.button
       ? {
           components: [

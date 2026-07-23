@@ -4,19 +4,34 @@ import {
   CONTROL_LONG_TASK_TOOL_NAME,
   controlLongTaskAvailability,
   controlLongTaskTool,
+  GATEWAY_REPLY_TOOL_NAME,
+  gatewayReplyAvailability,
+  gatewayReplyTool,
+  gatewayReplyToolDef,
   isPetHostActionRequest,
   MEMORY_TOOL_NAME,
   memoryAvailability,
   memoryTool,
+  rewriteGatewayReplyDef,
 } from "./host-actions.js";
 import { mobileRemoteAvailability, mobileRemoteTool } from "./mobile-remote.js";
-import { PET_ALLOWED_TOOL_NAMES, PET_BEHAVIOR_PROFILE } from "./profile.js";
+import { GATEWAY_TOOL_NAME } from "./gateway.js";
+import { PET_ALLOWED_TOOL_NAMES, PET_BEHAVIOR_PROFILE, PET_SYSTEM_PROMPT } from "./profile.js";
 
-function context() {
+const richGatewayReply = {
+  button: "native" as const,
+  attachments: ["image", "file", "audio", "video"] as const,
+  maxTextLength: 8_000,
+  maxAttachments: 4,
+  maxAttachmentBytes: 10 * 1024 * 1024,
+};
+
+function context(gatewayReply = richGatewayReply) {
   const recorded: Array<{ kind: string; payload: Record<string, unknown> }> = [];
   const kinds = new Set<string>();
   const ctx = {
     runScopedServices: {
+      petGatewayReply: gatewayReply,
       requestPetHostAction: (request: { kind: string; payload: Record<string, unknown> }) => {
         if (kinds.has(request.kind)) {
           return {
@@ -102,6 +117,90 @@ describe("Memory tool", () => {
   });
 });
 
+describe("GatewayReply tool", () => {
+  test("records one complete text, button, and attachment reply", async () => {
+    const { ctx, recorded } = context();
+    expect(
+      await gatewayReplyTool(
+        {
+          text: "结果好了",
+          button: { text: "打开结果", url: "https://example.test/result" },
+          attachment_paths: ["/work/app/comic.png", "/work/app/report.pdf"],
+        },
+        ctx,
+      ),
+    ).toContain("ACCEPTED EXACTLY ONCE — NOT SENT YET");
+    expect(recorded).toEqual([
+      {
+        kind: "gatewayReply",
+        payload: {
+          text: "结果好了",
+          button: { text: "打开结果", url: "https://example.test/result" },
+          attachmentPaths: ["/work/app/comic.png", "/work/app/report.pdf"],
+        },
+      },
+    ]);
+  });
+
+  test("rejects invalid inputs and attachments outside the declared route capability", async () => {
+    const invalid = context();
+    expect(await gatewayReplyTool({ text: "", attachment_paths: [] }, invalid.ctx)).toContain(
+      "Error",
+    );
+    expect(
+      await gatewayReplyTool(
+        { text: "x", attachment_paths: ["/work/a.png", "/work/a.png"] },
+        invalid.ctx,
+      ),
+    ).toContain("Error");
+    expect(
+      await gatewayReplyTool(
+        { text: "x", button: { text: "bad", url: "javascript:alert(1)" } },
+        invalid.ctx,
+      ),
+    ).toContain("Error");
+    expect(invalid.recorded).toEqual([]);
+
+    const textOnly = context({
+      button: "link",
+      attachments: [] as const,
+      maxTextLength: 8_000,
+      maxAttachments: 4,
+      maxAttachmentBytes: 10 * 1024 * 1024,
+    });
+    expect(
+      await gatewayReplyTool(
+        { text: "x", attachment_paths: ["/work/app/comic.png"] },
+        textOnly.ctx,
+      ),
+    ).toContain("cannot send attachments");
+    expect(textOnly.recorded).toEqual([]);
+  });
+
+  test("rewrites the visible schema to the exact Gateway route", () => {
+    const rich = rewriteGatewayReplyDef(gatewayReplyToolDef, {
+      profileMeta: { petGatewayReply: richGatewayReply },
+    } as never);
+    expect(rich.inputSchema.properties).toHaveProperty("attachment_paths");
+    expect(rich.description).toContain("native channel button");
+    expect(rich.description).toContain("image/file/audio/video");
+
+    const textOnly = rewriteGatewayReplyDef(gatewayReplyToolDef, {
+      profileMeta: {
+        petGatewayReply: {
+          button: "link",
+          attachments: [],
+          maxTextLength: 8_000,
+          maxAttachments: 4,
+          maxAttachmentBytes: 10 * 1024 * 1024,
+        },
+      },
+    } as never);
+    expect(textOnly.inputSchema.properties).not.toHaveProperty("attachment_paths");
+    expect(textOnly.description).toContain("does not accept outgoing attachments");
+  });
+});
+
 describe("host-action availability", () => {
   const meta = (kinds: string[]) =>
     ({
@@ -118,6 +217,8 @@ describe("host-action availability", () => {
     expect(controlLongTaskAvailability(meta([]))).toBe(false);
     expect(memoryAvailability(meta(["memory"]))).toBe(true);
     expect(memoryAvailability(meta(["mobileRemote", "longTaskControl"]))).toBe(false);
+    expect(gatewayReplyAvailability(meta(["gatewayReply"]))).toBe(true);
+    expect(gatewayReplyAvailability(meta(["memory"]))).toBe(false);
   });
 });
 
@@ -138,6 +239,15 @@ describe("host-action envelope validation", () => {
         payload: { action: "update", memoryId: "mem-1", text: "new text" },
       }),
     ).toBe(true);
+    expect(
+      isPetHostActionRequest({
+        kind: "gatewayReply",
+        payload: {
+          text: "给你",
+          attachmentPaths: ["/work/comic.png", "/work/report.pdf"],
+        },
+      }),
+    ).toBe(true);
 
     expect(isPetHostActionRequest({ kind: "mobileRemote", payload: { action: "destroy" } })).toBe(
       false,
@@ -156,6 +266,12 @@ describe("host-action envelope validation", () => {
     ).toBe(false);
     expect(
       isPetHostActionRequest({
+        kind: "gatewayReply",
+        payload: { text: "给你", attachmentPaths: ["/work/comic.png", "/work/comic.png"] },
+      }),
+    ).toBe(false);
+    expect(
+      isPetHostActionRequest({
         kind: "memory",
         payload: { action: "forget", memoryId: "mem-1", text: "unexpected" },
       }),
@@ -170,9 +286,20 @@ describe("host-action envelope validation", () => {
 });
 
 describe("pet profile host-action integration", () => {
+  test("tells Mimi that host-mediated attachment replies are real channel sends", () => {
+    expect(PET_SYSTEM_PROMPT).toContain("you MUST call GatewayReply exactly once");
+    expect(PET_SYSTEM_PROMPT).toContain("two progressive tool levels");
+    expect(PET_SYSTEM_PROMPT).toContain('action="search"');
+    expect(PET_SYSTEM_PROMPT).toContain('action="describe"');
+    expect(PET_SYSTEM_PROMPT).toContain("Never claim a listed Gateway capability is unavailable");
+    expect(PET_SYSTEM_PROMPT).toContain("Do not substitute a localhost link");
+  });
+
   test("allowlists the tools and reports one bounded request per kind per turn", () => {
     expect(PET_ALLOWED_TOOL_NAMES.has(CONTROL_LONG_TASK_TOOL_NAME)).toBe(true);
     expect(PET_ALLOWED_TOOL_NAMES.has(MEMORY_TOOL_NAME)).toBe(true);
+    expect(PET_ALLOWED_TOOL_NAMES.has(GATEWAY_TOOL_NAME)).toBe(true);
+    expect(PET_ALLOWED_TOOL_NAMES.has(GATEWAY_REPLY_TOOL_NAME)).toBe(true);
 
     const reported: Array<{ key: string; value: unknown }> = [];
     const services = PET_BEHAVIOR_PROFILE.createRunServices!({

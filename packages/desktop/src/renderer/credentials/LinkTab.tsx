@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "../ui/ToastProvider";
-import { useT } from "../i18n/I18nProvider";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 import { IM_GATEWAY_CHANNEL_NAMES } from "../imGatewayChannels";
 import { LINK_CATALOG, type LinkIntegration } from "./link-catalog";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
@@ -31,6 +31,7 @@ import { DataSourceCatalogSection } from "./DataSourceCatalogSection";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
 import type {
   ImGatewayChannel,
+  ImGatewayChannelCapabilities,
   ImGatewayChannelStatus,
   ImGatewayStatus,
   ImGatewayUiEvent,
@@ -102,6 +103,29 @@ const CHANNEL_STATE_CLASS: Record<ImGatewayChannelStatus["state"], string> = {
   running: "bg-status-ok/10 text-status-ok",
   retrying: "bg-status-err/10 text-status-err",
 };
+
+function gatewayCapabilityLabels(
+  capabilities: ImGatewayChannelCapabilities,
+  t: TFunction,
+): { inbound: string; outbound: string } {
+  const attachmentLabel = (kind: ImGatewayChannelCapabilities["inbound"]["attachments"][number]) =>
+    t(`ext.link.gatewayCapability.${kind}`);
+  return {
+    inbound: [
+      t("ext.link.gatewayCapability.text"),
+      ...capabilities.inbound.attachments.map(attachmentLabel),
+    ].join("、"),
+    outbound: [
+      t("ext.link.gatewayCapability.text"),
+      t(
+        capabilities.outbound.button === "native"
+          ? "ext.link.gatewayCapability.buttonNative"
+          : "ext.link.gatewayCapability.buttonLink",
+      ),
+      ...capabilities.outbound.attachments.map(attachmentLabel),
+    ].join("、"),
+  };
+}
 
 type IntegrationFilter = "all" | "connected" | "available";
 
@@ -685,6 +709,9 @@ function ChatGatewayCard() {
             <div className="grid gap-px bg-border/60 sm:grid-cols-2">
               {channelStatuses.map((channelStatus) => {
                 const guide = CHANNEL_GUIDES[channelStatus.channel];
+                const capabilityLabels = channelStatus.capabilities
+                  ? gatewayCapabilityLabels(channelStatus.capabilities, t)
+                  : undefined;
                 return (
                   <div key={channelStatus.channel} className="min-w-0 bg-card px-3 py-2.5">
                     <div className="flex items-center justify-between gap-2">
@@ -703,6 +730,28 @@ function ChatGatewayCard() {
                     <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted-foreground">
                       {t(`ext.link.gatewaySetup.${channelStatus.channel}`)}
                     </p>
+                    {capabilityLabels && (
+                      <div className="mt-1.5 space-y-0.5 text-[10px] leading-4 text-muted-foreground">
+                        <p>
+                          <span className="font-medium text-foreground/75">
+                            {t("ext.link.gatewayCapability.inbound")}：
+                          </span>
+                          {capabilityLabels.inbound}
+                        </p>
+                        <p>
+                          <span className="font-medium text-foreground/75">
+                            {t("ext.link.gatewayCapability.outbound")}：
+                          </span>
+                          {capabilityLabels.outbound}
+                        </p>
+                        <p>
+                          <span className="font-medium text-foreground/75">
+                            {t("ext.link.gatewayCapability.tool")}：
+                          </span>
+                          <code>GatewayReply</code>
+                        </p>
+                      </div>
+                    )}
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
                       <span className="rounded bg-muted px-1.5 py-0.5">
                         {t(`ext.link.gatewayTransport.${guide.transport}`)}

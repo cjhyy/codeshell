@@ -42,7 +42,7 @@ describe("PetMemoryStore", () => {
     });
   });
 
-  test("persists across reloads and survives malformed disk state", async () => {
+  test("persists across reloads and fails closed on malformed disk state", async () => {
     await withStore(async (path) => {
       const store = new PetMemoryStore(path);
       await store.load();
@@ -54,8 +54,37 @@ describe("PetMemoryStore", () => {
 
       const broken = new PetMemoryStore(path);
       await Bun.write(path, "{not json");
-      await broken.load();
+      await expect(broken.load()).rejects.toThrow();
       expect(broken.list()).toEqual([]);
+      await expect(broken.remember("must not overwrite", "mimi")).rejects.toThrow();
+      expect(await readFile(path, "utf-8")).toBe("{not json");
+    });
+  });
+
+  test("retries a transient read failure and never stages an empty overwrite", async () => {
+    await withStore(async (path) => {
+      const durable = {
+        version: 1,
+        entries: [{ id: "mem-old", text: "existing", source: "user", createdAt: 1, updatedAt: 1 }],
+      };
+      await writeFile(path, JSON.stringify(durable));
+      const before = await readFile(path, "utf-8");
+      let reads = 0;
+      const store = new PetMemoryStore(path, {
+        readFile: async (target) => {
+          reads += 1;
+          if (reads === 1) {
+            throw Object.assign(new Error("simulated transient EIO"), { code: "EIO" });
+          }
+          return await readFile(target, "utf-8");
+        },
+      });
+
+      await expect(store.remember("new", "mimi")).rejects.toThrow("transient EIO");
+      expect(await readFile(path, "utf-8")).toBe(before);
+      await store.remember("new", "mimi");
+      expect(store.list().map((entry) => entry.text)).toEqual(["new", "existing"]);
+      expect(reads).toBe(2);
     });
   });
 
@@ -77,9 +106,9 @@ describe("PetMemoryStore", () => {
         id: original.id,
         createdAt: original.createdAt,
         source: "user",
-        text: "请记住：我偏爱深色模式",
+        text: "用户喜欢使用暗色主题。",
       });
-      expect(remembered.updatedAt).toBeGreaterThan(original.updatedAt);
+      expect(remembered.updatedAt).toBe(original.updatedAt);
     });
   });
 
@@ -108,6 +137,18 @@ describe("PetMemoryStore", () => {
       expect(store.list()).toHaveLength(1);
       expect(updated.id).toBe(original.id);
       expect(updated.source).toBe("user");
+    });
+  });
+
+  test("upgrades an equivalent Mimi entry to user ownership", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path);
+      await store.load();
+      const inferred = await store.remember("默认工作目录固定在 /projects/codeshell", "mimi");
+      const confirmed = await store.remember("默认工作目录固定于 /projects/codeshell", "user");
+
+      expect(confirmed).toMatchObject({ id: inferred.id, source: "user" });
+      expect(store.list()).toHaveLength(1);
     });
   });
 
@@ -198,6 +239,25 @@ describe("PetMemoryStore", () => {
     });
   });
 
+  test("Mimi evicts only Mimi entries and cannot displace a user-only library", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path, { maxEntries: 3, now: () => 1_000 });
+      await store.load();
+      await store.remember("user-one", "user");
+      await store.remember("mimi-old", "mimi");
+      await store.remember("user-two", "user");
+      await store.remember("mimi-new", "mimi");
+      expect(store.list().map((entry) => entry.text)).toEqual(["mimi-new", "user-two", "user-one"]);
+
+      await store.forget(store.list().find((entry) => entry.text === "mimi-new")!.id);
+      await store.remember("user-three", "user");
+      await expect(store.remember("mimi-blocked", "mimi")).rejects.toThrow(
+        "full of user-authored entries",
+      );
+      expect(store.list().map((entry) => entry.text)).not.toContain("mimi-blocked");
+    });
+  });
+
   test("keeps same-millisecond mutations newest-first across reload and concurrent calls", async () => {
     await withStore(async (path) => {
       const fixedNow = () => 1_000;
@@ -205,8 +265,8 @@ describe("PetMemoryStore", () => {
       await store.load();
 
       const first = await store.remember("first", "user");
-      const second = await store.remember("second", "user");
-      const third = await store.remember("third", "user");
+      const second = await store.remember("second", "mimi");
+      const third = await store.remember("third", "mimi");
       expect([first.updatedAt, second.updatedAt, third.updatedAt]).toEqual([1_000, 1_001, 1_002]);
 
       const refreshedFirst = await store.update(first.id, "first refreshed");
@@ -231,11 +291,19 @@ describe("PetMemoryStore", () => {
         reloaded.remember("sixth", "mimi"),
       ]);
       expect([fifth.updatedAt, sixth.updatedAt]).toEqual([1_005, 1_006]);
-      expect(reloaded.list().map((entry) => entry.text)).toEqual(["sixth", "fifth", "fourth"]);
+      expect(reloaded.list().map((entry) => entry.text)).toEqual([
+        "sixth",
+        "fifth",
+        "first refreshed",
+      ]);
 
       const reloadedAgain = new PetMemoryStore(path, { maxEntries: 3, now: fixedNow });
       await reloadedAgain.load();
-      expect(reloadedAgain.list().map((entry) => entry.text)).toEqual(["sixth", "fifth", "fourth"]);
+      expect(reloadedAgain.list().map((entry) => entry.text)).toEqual([
+        "sixth",
+        "fifth",
+        "first refreshed",
+      ]);
     });
   });
 

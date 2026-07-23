@@ -54,6 +54,15 @@ export type PetProjectionDelta =
 
 export type PetProjectionSnapshotResult = PetProjectionSnapshot;
 
+/** Any Session → host report routed to Mimi without revealing her hidden Session id. */
+export interface PetReportToMimiEvent {
+  reportId: string;
+  sessionId: string;
+  message: string;
+  attachmentPaths?: string[];
+  createdAt: number;
+}
+
 /**
  * Wire method names, kept byte-identical to the pre-extraction core protocol
  * so the desktop bridge (which intercepts by name) needs no changes. Core's
@@ -61,3 +70,4 @@ export type PetProjectionSnapshotResult = PetProjectionSnapshot;
  */
 export const PET_PROJECTION_DELTA_METHOD = "agent/petProjectionDelta";
 export const GET_PET_PROJECTION_SNAPSHOT_METHOD = "agent/getPetProjectionSnapshot";
+export const PET_REPORT_TO_MIMI_METHOD = "agent/petReportToMimi";

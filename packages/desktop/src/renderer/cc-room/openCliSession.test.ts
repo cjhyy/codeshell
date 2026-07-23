@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolveOpenCliSessionBucket } from "./openCliSession";
+import { nextOpenCliSessionNonce, resolveOpenCliSessionBucket } from "./openCliSession";
 
 describe("resolveOpenCliSessionBucket", () => {
   test("routes all-session background jobs to their owner bucket", () => {
@@ -20,5 +20,13 @@ describe("resolveOpenCliSessionBucket", () => {
 
   test("returns null instead of contaminating the active bucket when owner is unknown", () => {
     expect(resolveOpenCliSessionBucket("missing-engine", new Map(), {})).toBeNull();
+  });
+});
+
+describe("nextOpenCliSessionNonce", () => {
+  test("shares one monotonic sequence across navigation producers", () => {
+    const petNavigation = nextOpenCliSessionNonce();
+    const driveAgentNavigation = nextOpenCliSessionNonce();
+    expect(driveAgentNavigation).toBe(petNavigation + 1);
   });
 });

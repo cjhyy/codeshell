@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/Markdown";
 import { useT } from "../i18n/I18nProvider";
+import { useToast } from "../ui/ToastProvider";
 import {
   reduceStream,
   initialChatState,
@@ -111,6 +112,7 @@ export function CCConversationView({
   onBack: () => void;
 }) {
   const { t } = useT();
+  const toast = useToast();
   const [chat, dispatch] = useReducer(chatReducer, undefined, initialChatState);
   const [pending, setPending] = useState<ApprovalReq[]>([]);
   const [input, setInput] = useState("");
@@ -229,16 +231,29 @@ export function CCConversationView({
     };
   }, [active, roomId, cwd, sessionId, cliKind]);
 
-  const send = useCallback(() => {
-    const t = input.trim();
-    if (!t || observing) return;
+  const send = useCallback(async () => {
+    const text = input.trim();
+    if (!text || observing) return;
     // NO local echo: RoomManager.send persists the user line and broadcasts it
     // back as a `room.message`, which onRoomMessage folds into the feed. Echoing
     // locally too would render the user bubble twice (the desktop "1 条消息变 2
     // 条" bug). The broadcast round-trips over loopback ~instantly.
-    void window.codeshell.ccRoom.send(roomId, t);
-    setInput("");
-  }, [input, observing, roomId]);
+    try {
+      const sent = await window.codeshell.ccRoom.send(roomId, text);
+      if (!sent) {
+        toast({ message: t("panels.room.sendFailed"), variant: "error" });
+        return;
+      }
+      setInput("");
+    } catch (error) {
+      toast({
+        message: t("panels.room.sendFailedWithReason", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+        variant: "error",
+      });
+    }
+  }, [input, observing, roomId, t, toast]);
 
   const takeOver = useCallback(async () => {
     if (!onTakeOver || takingOver) return;
@@ -321,12 +336,12 @@ export function CCConversationView({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              send();
+              void send();
             }
           }}
           placeholder={observing ? t("panels.room.observingComposer") : `发消息给 ${cliLabel}…`}
         />
-        <Button size="sm" disabled={observing} onClick={send}>
+        <Button size="sm" disabled={observing} onClick={() => void send()}>
           发送
         </Button>
       </div>

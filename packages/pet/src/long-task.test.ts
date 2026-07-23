@@ -18,6 +18,8 @@ function created() {
       kind: "im-gateway",
       channel: "wechat",
       target: "owner-conversation",
+      replyButton: "link",
+      replyAttachmentKinds: ["image", "file"],
     },
     continuationDepth: 2,
     at: 100,
@@ -44,6 +46,8 @@ describe("Pet long-task state machine", () => {
       at: 210,
       key: "task-closure:1:completed",
       text: "Continuing with verification",
+      replyButton: { text: "Open report", url: "https://example.test/report" },
+      replyAttachmentPaths: ["/work/app/release notes.pdf"],
       continuation: {
         clientMessageId: "pet-continuation:task-closure:1:completed",
         objective: "Verify the release",
@@ -62,6 +66,8 @@ describe("Pet long-task state machine", () => {
       key: "task-closure:1:completed",
       text: "Continuing with verification",
       decidedAt: 210,
+      replyButton: { text: "Open report", url: "https://example.test/report" },
+      replyAttachmentPaths: ["/work/app/release notes.pdf"],
       continuation: {
         clientMessageId: "pet-continuation:task-closure:1:completed",
         objective: "Verify the release",
@@ -189,6 +195,34 @@ describe("Pet long-task state machine", () => {
     expect(retrying.events.at(-1)?.kind).toBe("retrying");
   });
 
+  test("fences a terminal event older than current progress or retry attempt", () => {
+    const running = transitionPetLongTask(
+      transitionPetLongTask(created(), { kind: "started", at: 200 }),
+      { kind: "progress", at: 300, phase: "executing", summary: "new attempt is live" },
+    );
+    const staleCompletion = transitionPetLongTask(running, {
+      kind: "completed",
+      at: 250,
+      summary: "old disk terminal",
+    });
+    expect(staleCompletion).toBe(running);
+
+    const failed = transitionPetLongTask(running, {
+      kind: "failed",
+      at: 400,
+      error: "retryable",
+    });
+    const retrying = transitionPetLongTask(failed, { kind: "retrying", at: 500 });
+    expect(retrying.startedAt).toBeUndefined();
+    const retried = transitionPetLongTask(retrying, { kind: "started", at: 600 });
+    const replayedFailure = transitionPetLongTask(retried, {
+      kind: "failed",
+      at: 400,
+      error: "old attempt failed",
+    });
+    expect(replayedFailure).toBe(retried);
+  });
+
   test("builds bounded manager context and resume prompt", () => {
     const active = transitionPetLongTask(created(), {
       kind: "checkpoint",
@@ -205,7 +239,12 @@ describe("Pet long-task state machine", () => {
         sessionId: "session-2",
         at: 50,
       }),
-      { kind: "completed", at: 150, summary: "Done" },
+      {
+        kind: "completed",
+        at: 150,
+        summary: "Done",
+        artifacts: [{ kind: "file", label: "Comic", reference: "/work/comic.png" }],
+      },
     );
     const context = buildPetLongTaskContext([completed, active]);
     expect(context.active[0]).toMatchObject({
@@ -214,7 +253,12 @@ describe("Pet long-task state machine", () => {
       summary: "Implementation is half done",
       nextAction: "Run integration tests",
     });
-    expect(context.recent[0]).toMatchObject({ taskId: "pet-task-2", status: "completed" });
+    expect(context.recent[0]).toMatchObject({
+      taskId: "pet-task-2",
+      status: "completed",
+      sessionId: "session-2",
+      artifacts: [{ kind: "file", label: "Comic", reference: "/work/comic.png" }],
+    });
     expect(petLongTaskResumePrompt(active)).toContain("Latest durable checkpoint");
   });
 
@@ -230,6 +274,8 @@ describe("Pet long-task state machine", () => {
         kind: "im-gateway",
         channel: "wechat",
         target: "owner-conversation",
+        replyButton: "link",
+        replyAttachmentKinds: ["image", "file"],
       },
       continuationDepth: 2,
     });

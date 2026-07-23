@@ -15,6 +15,7 @@ export const mobile = {
         deviceFallback: "设备",
         logoutAria: "退出登录",
         permission: "权限",
+        ccRoomObserving: "此会话当前为只读查看；请在桌面端明确接管后再发送消息。",
       },
       approval: {
         risk: {
@@ -92,6 +93,7 @@ export const mobile = {
         roomError: "会话错误",
         goalExtendFailed: "延长目标失败",
         ccRoomOpenFailed: "cc 会话无法打开",
+        ccRoomObserving: "此 CC 会话当前为只读查看，消息未发送",
         attachmentSendFailed: "图片发送失败：{error}",
       },
       permissionMode: {
@@ -173,6 +175,8 @@ export const mobile = {
         deviceFallback: "Device",
         logoutAria: "Log out",
         permission: "Permission",
+        ccRoomObserving:
+          "This session is read-only. Take it over explicitly on desktop before sending messages.",
       },
       approval: {
         risk: {
@@ -251,6 +255,7 @@ export const mobile = {
         roomError: "Session error",
         goalExtendFailed: "Failed to extend goal",
         ccRoomOpenFailed: "Could not open cc session",
+        ccRoomObserving: "This CC session is read-only; the message was not sent",
         attachmentSendFailed: "Could not send images: {error}",
       },
       permissionMode: {

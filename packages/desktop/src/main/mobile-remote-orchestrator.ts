@@ -340,8 +340,13 @@ export class MobileRemoteOrchestrator {
     permissionMode: "default" | "acceptEdits" | "bypassPermissions";
     createdAt: number;
     lastActiveAt: number;
+    linkedSessionMode?: "observe-only";
   }): RoomPublic {
-    return { ...room, open: this.deps.roomManager.isOpen(room.id) };
+    return {
+      ...room,
+      open: this.deps.roomManager.isOpen(room.id),
+      observing: room.linkedSessionMode === "observe-only",
+    };
   }
 
   roomMatchesTranscript(

@@ -245,6 +245,7 @@ export function assembleRunToolDefs(args: {
   const toolVisibility = {
     cwd: guardCwd,
     hasGoal: args.hasRunnableGoal,
+    ...(toolCtx.sessionId ? { sessionId: toolCtx.sessionId } : {}),
     settingsScope: args.settingsScope,
     host: args.builtinToolHost,
     isSubAgent: args.isSubAgent,

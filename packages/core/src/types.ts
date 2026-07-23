@@ -182,6 +182,10 @@ export type TranscriptEventType =
   // summary as the live background_agent_completed stream event.
   | "external_file_changes"
   | "turn_boundary"
+  // Durable response receipt for a host-supplied clientMessageId. It is never
+  // added to model context; duplicate submits replay the original EngineResult
+  // instead of returning a synthetic empty response.
+  | "run_result"
   | "goal_progress"
   // User interrupted the in-flight turn (pressed Stop). Persisted so a resume
   // can rebuild the renderer's "stopped" marker — without it the interrupted

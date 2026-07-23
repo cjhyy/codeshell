@@ -2,7 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { inspectReadableImage, readImageDataUrl } from "./image-read-service.js";
+import {
+  inspectReadableImage,
+  inspectReadableReplyAttachment,
+  readImageDataUrl,
+} from "./image-read-service.js";
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
@@ -73,5 +77,49 @@ describe("image-read-service", () => {
     writeFileSync(file, PNG);
 
     expect(await readImageDataUrl(file)).toBeNull();
+  });
+
+  test("classifies safe outbound image, file, audio, and video inside the workspace", async () => {
+    const cwd = tempRoot("cs-reply-cwd-");
+    const image = join(cwd, "comic.png");
+    const file = join(cwd, "report.pdf");
+    const audio = join(cwd, "voice.opus");
+    const video = join(cwd, "clip.mp4");
+    writeFileSync(image, PNG);
+    writeFileSync(file, "%PDF-test");
+    writeFileSync(audio, "audio");
+    writeFileSync(video, "video");
+
+    expect(await inspectReadableReplyAttachment(image, { cwd })).toMatchObject({
+      kind: "image",
+      name: "comic.png",
+      mimeType: "image/png",
+    });
+    expect(await inspectReadableReplyAttachment(file, { cwd })).toMatchObject({
+      kind: "file",
+      name: "report.pdf",
+      mimeType: "application/pdf",
+    });
+    expect(await inspectReadableReplyAttachment(audio, { cwd })).toMatchObject({
+      kind: "audio",
+      name: "voice.opus",
+      mimeType: "audio/ogg",
+    });
+    expect(await inspectReadableReplyAttachment(video, { cwd })).toMatchObject({
+      kind: "video",
+      name: "clip.mp4",
+      mimeType: "video/mp4",
+    });
+  });
+
+  test("rejects sensitive outbound files even when they are inside the workspace", async () => {
+    const cwd = tempRoot("cs-reply-cwd-");
+    const envFile = join(cwd, ".env");
+    const credentialFile = join(cwd, "credentials.json");
+    writeFileSync(envFile, "SECRET=one");
+    writeFileSync(credentialFile, "{}");
+
+    expect(await inspectReadableReplyAttachment(envFile, { cwd })).toBeNull();
+    expect(await inspectReadableReplyAttachment(credentialFile, { cwd })).toBeNull();
   });
 });

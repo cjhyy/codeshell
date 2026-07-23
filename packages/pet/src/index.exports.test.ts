@@ -21,6 +21,7 @@ describe("Pet package public entry contracts", () => {
       "GET_PET_PROJECTION_SNAPSHOT_METHOD",
       "LOCAL_PET_OWNER",
       "PET_PROJECTION_DELTA_METHOD",
+      "PET_REPORT_TO_MIMI_METHOD",
     ]);
     expect(Object.keys(teamApi).sort()).toEqual([
       "DIGITAL_HUMAN_ID_RE",
@@ -30,6 +31,7 @@ describe("Pet package public entry contracts", () => {
 
     expect(capabilityApi.createPetCapability).toBe(rootApi.createPetCapability);
     expect(protocolApi.PET_PROJECTION_DELTA_METHOD).toBe(rootApi.PET_PROJECTION_DELTA_METHOD);
+    expect(protocolApi.PET_REPORT_TO_MIMI_METHOD).toBe(rootApi.PET_REPORT_TO_MIMI_METHOD);
     expect(protocolApi.GET_PET_PROJECTION_SNAPSHOT_METHOD).toBe(
       rootApi.GET_PET_PROJECTION_SNAPSHOT_METHOD,
     );

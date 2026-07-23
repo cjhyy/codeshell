@@ -461,6 +461,51 @@ describe("RoomManager", () => {
     expect(agents[0]?.running).toBe(true);
   });
 
+  test("openLinkedSession does not persistently downgrade an ordinary idle room", () => {
+    const target: LinkedSessionTarget = {
+      externalSessionId: "cc-idle",
+      cwd: "/tmp/p",
+      kind: "claude-code",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
+    const existing = mgr.createRoom({
+      cwd: target.cwd,
+      kind: target.kind,
+      permissionMode: "default",
+      claudeSessionId: target.externalSessionId,
+    });
+
+    expect(mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind)).toMatchObject({
+      roomId: existing.id,
+      status: "observing",
+    });
+    expect(mgr.getRoom(existing.id)?.linkedSessionMode).toBeUndefined();
+    expect(mgr.open(existing.id)).toEqual({ status: "running" });
+    expect(agents).toHaveLength(1);
+  });
+
+  test("takeover never inherits a stored bypassPermissions mode silently", () => {
+    const target: LinkedSessionTarget = {
+      externalSessionId: "cc-risky-idle",
+      cwd: "/tmp/p",
+      kind: "claude-code",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
+    const existing = mgr.createRoom({
+      cwd: target.cwd,
+      kind: target.kind,
+      permissionMode: "bypassPermissions",
+      claudeSessionId: target.externalSessionId,
+    });
+    mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
+
+    expect(
+      mgr.takeOverLinkedSession(existing.id, target.externalSessionId, target.cwd, target.kind),
+    ).toMatchObject({ status: "running", mode: "default" });
+    expect(mgr.getRoom(existing.id)?.permissionMode).toBe("default");
+    expect(agents).toHaveLength(1);
+  });
+
   test("openLinkedSession fails closed for a missing transcript without creating a room", () => {
     const { mgr, agents } = makeManager();
     expect(() => mgr.openLinkedSession("missing", "/tmp/project", "codex")).toThrow(/transcript/i);

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { BUILTIN_CHANNEL_CAPABILITIES } from "@cjhyy/code-shell-chat";
 import { validatePetRunParams } from "@cjhyy/code-shell-pet";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator";
 import { PetDispatchService } from "./pet-dispatch-service";
@@ -32,6 +33,31 @@ const snapshot: DesktopPetProjectionSnapshot = {
       status: "pending",
     },
   ],
+};
+
+const textOnlyChannelCapabilities = {
+  inbound: { text: true as const, attachments: [] },
+  outbound: {
+    text: true as const,
+    maxTextLength: 8_000,
+    button: "link" as const,
+    attachments: [],
+  },
+};
+
+const richChannelCapabilities = {
+  inbound: {
+    text: true as const,
+    maxTextLength: 8_000,
+    attachments: ["image", "file", "audio", "video"] as const,
+  },
+  outbound: {
+    text: true as const,
+    button: "native" as const,
+    attachments: ["image", "file"] as const,
+    maxAttachments: 4,
+    maxAttachmentBytes: 10 * 1024 * 1024,
+  },
 };
 
 describe("PetDispatchService", () => {
@@ -111,7 +137,12 @@ describe("PetDispatchService", () => {
         type: "chat",
         message: "What is running?",
         clientMessageId: "im:one",
-        source: { kind: "im-gateway", channel: "telegram", target: "owner-chat" },
+        source: {
+          kind: "im-gateway",
+          channel: "telegram",
+          target: "owner-chat",
+          capabilities: textOnlyChannelCapabilities,
+        },
         attachments: [
           {
             id: "att-one",
@@ -193,7 +224,12 @@ describe("PetDispatchService", () => {
         message: "修复登录问题",
         clientMessageId: "client-delegate",
         preferredProjectPath: "/work/codeshell",
-        source: { kind: "im-gateway", channel: "wechat", target: "owner-conversation" },
+        source: {
+          kind: "im-gateway",
+          channel: "wechat",
+          target: "owner-conversation",
+          capabilities: textOnlyChannelCapabilities,
+        },
       }),
     ).toMatchObject({
       ok: true,
@@ -214,6 +250,7 @@ describe("PetDispatchService", () => {
           kind: "im-gateway",
           channel: "wechat",
           target: "owner-conversation",
+          replyButton: "link",
         },
       },
     ]);
@@ -363,6 +400,146 @@ describe("PetDispatchService", () => {
       '"summary":"P0 是收口 Pet 外部 Session 接入。"',
     );
     expect(String(request?.params.petRuntimeContext)).not.toContain('"summary":"模型处理中"');
+  });
+
+  test("executes only Mimi's explicit closure attachment request and replays that intent", async () => {
+    const imagePath = "/work/codeshell/generated/latest-comic.png";
+    let workerCalls = 0;
+    let request: { method: string; params: Record<string, unknown> } | undefined;
+    let durableDecision:
+      | {
+          key: string;
+          text: string;
+          decidedAt: number;
+          replyAttachmentPaths?: string[];
+        }
+      | undefined;
+    const executed: Record<string, unknown>[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method, params) => {
+          workerCalls += 1;
+          request = { method, params };
+          return {
+            ok: true,
+            result: {
+              text: "找到了，我来附上图片。",
+              extensions: {
+                pet: {
+                  hostActions: [
+                    {
+                      kind: "gatewayReply",
+                      payload: { text: "找到了，我来附上图片。", attachmentPaths: [imagePath] },
+                    },
+                  ],
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      replyAttachmentRoots: async () => ["/Users/admin/Downloads"],
+      hostActions: {
+        gatewayReply: async (payload) => {
+          executed.push(payload);
+          return {
+            text: payload.text,
+            attachments: [
+              {
+                kind: "image",
+                name: "latest-comic.png",
+                mimeType: "image/png",
+                size: 123,
+                path: imagePath,
+              },
+            ],
+          };
+        },
+      },
+      longTasks: {
+        context: () => ({ version: 1, active: [], recent: [] }),
+        recordClosureDecision: async (_taskId, decision) => {
+          durableDecision = { ...decision, decidedAt: 301 };
+          return { closureDecision: durableDecision } as never;
+        },
+      },
+    });
+    const task = {
+      schemaVersion: 1 as const,
+      id: "pet-task-found-image",
+      originClientMessageId: "im:wechat:image",
+      objective: "找到最近生成的小狗漫画并发给我",
+      workspacePath: "/work/codeshell",
+      sessionId: "pet-work-found-image",
+      completionTarget: {
+        kind: "im-gateway" as const,
+        channel: "wechat",
+        target: "owner-conversation",
+        replyButton: "link" as const,
+        replyAttachmentKinds: ["image", "file"] as const,
+      },
+      status: "completed" as const,
+      phase: "finalizing" as const,
+      attempt: 1,
+      revision: 3,
+      createdAt: 100,
+      updatedAt: 300,
+      completedAt: 300,
+      resultSummary: `候选图片：${imagePath}`,
+      artifacts: [],
+      events: [],
+    };
+
+    const report = await service.reportLongTaskClosure(task);
+
+    expect((request?.params.profileParams as Record<string, unknown>).hostActions).toEqual([
+      "gatewayReply",
+    ]);
+    expect(String(request?.params.petRuntimeContext)).toContain(
+      '"currentMessageSource":{"kind":"im-gateway","channel":"wechat"}',
+    );
+    expect(String(request?.params.petRuntimeContext)).toContain(
+      '"currentMessageCapabilities":{"gatewayReply":{"tool":"GatewayReply","destination":"current originating IM conversation","allowedRoots":["/safe/pet","/Users/admin/Downloads"]}}',
+    );
+    expect((request?.params.profileParams as Record<string, unknown>).gateway).toBeUndefined();
+    expect(String(request?.params.task)).toContain("MUST call GatewayReply exactly once");
+    expect(String(request?.params.task)).toContain(
+      "Never say you lack the declared Gateway capability",
+    );
+    expect(String(request?.params.task)).toContain("substitute a localhost link");
+    expect(durableDecision?.replyAttachmentPaths).toEqual([imagePath]);
+    expect(report).toMatchObject({
+      text: "找到了，我来附上图片。",
+      continued: false,
+      hostActions: [
+        {
+          kind: "gatewayReply",
+          payload: { text: "找到了，我来附上图片。", attachmentPaths: [imagePath] },
+          ok: true,
+          result: {
+            text: "找到了，我来附上图片。",
+            attachments: [{ kind: "image", path: imagePath }],
+          },
+        },
+      ],
+    });
+
+    const replay = await service.reportLongTaskClosure({
+      ...task,
+      closureDecision: durableDecision as never,
+    });
+    expect(replay).toMatchObject({ continued: false, hostActions: [{ ok: true }] });
+    expect(workerCalls).toBe(1);
+    expect(executed).toEqual([
+      { text: "找到了，我来附上图片。", attachmentPaths: [imagePath] },
+      { text: "找到了，我来附上图片。", attachmentPaths: [imagePath] },
+    ]);
   });
 
   test("lets Mimi continue completed work and carries the original notification route", async () => {
@@ -1063,7 +1240,12 @@ describe("PetDispatchService", () => {
     await makeService(true).dispatch({
       type: "chat",
       message: "im",
-      source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+      source: {
+        kind: "im-gateway",
+        channel: "telegram",
+        target: "owner",
+        capabilities: textOnlyChannelCapabilities,
+      },
     });
     expect((params?.profileParams as Record<string, unknown>).hostActions).toEqual([
       "memory",
@@ -1114,7 +1296,12 @@ describe("PetDispatchService", () => {
       await service.dispatch({
         type: "chat",
         message: "remember what matters",
-        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+        source: {
+          kind: "im-gateway",
+          channel: "telegram",
+          target: "owner",
+          capabilities: textOnlyChannelCapabilities,
+        },
       }),
     ).toMatchObject({ ok: true, type: "chat" });
     const runtimeContext = String(
@@ -1127,6 +1314,240 @@ describe("PetDispatchService", () => {
     expect(world.memories?.[0]).toEqual(memories[0]);
     expect(world.memories?.length).toBeGreaterThan(1);
     expect(world.memories?.length).toBeLessThan(24);
+  });
+
+  test("exposes progressive Gateway discovery plus one exact current-route GatewayReply", async () => {
+    const declared: unknown[] = [];
+    const contexts: Array<Record<string, unknown>> = [];
+    const profiles: Array<Record<string, unknown>> = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, requestParams) => {
+          const profile = requestParams.profileParams as Record<string, unknown>;
+          profiles.push(profile);
+          declared.push(profile.hostActions);
+          contexts.push(JSON.parse(String(profile.runtimeContext)) as Record<string, unknown>);
+          return { ok: true, result: { text: "ok" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      replyAttachmentRoots: async () => ["/Users/admin/Downloads"],
+      hostActions: {
+        gatewayReply: async (payload) => ({ text: payload.text }),
+      },
+    });
+
+    await service.dispatch({ type: "chat", message: "desktop" });
+    const enabledChannels = Object.entries(BUILTIN_CHANNEL_CAPABILITIES).map(
+      ([channel, capabilities]) => ({ channel, capabilities }),
+    );
+    for (const { channel, capabilities } of enabledChannels) {
+      await service.dispatch({
+        type: "chat",
+        message: channel,
+        source: {
+          kind: "im-gateway",
+          channel,
+          target: "owner",
+          capabilities,
+          channels: enabledChannels,
+        },
+      });
+    }
+
+    expect(declared).toEqual([
+      undefined,
+      ...Object.keys(BUILTIN_CHANNEL_CAPABILITIES).map(() => ["gatewayReply"]),
+    ]);
+    expect(contexts[0]).not.toHaveProperty("currentMessageCapabilities");
+    const channelEntries = Object.entries(BUILTIN_CHANNEL_CAPABILITIES);
+    for (const [index, [channel, capabilities]] of channelEntries.entries()) {
+      expect(contexts[index + 1]?.currentMessageCapabilities).toEqual({
+        gateway: {
+          tool: "Gateway",
+          discovery: ["search", "describe"],
+        },
+        gatewayReply: {
+          tool: "GatewayReply",
+          destination: "current IM conversation",
+          allowedRoots: ["/safe/pet", "/Users/admin/Downloads"],
+        },
+      });
+      expect(profiles[index + 1]?.gatewayReply).toEqual({
+        button: capabilities.outbound.button,
+        attachments: capabilities.outbound.attachments,
+        maxTextLength: capabilities.outbound.maxTextLength,
+        maxAttachments: capabilities.outbound.maxAttachments ?? 4,
+        maxAttachmentBytes: capabilities.outbound.maxAttachmentBytes ?? 10 * 1024 * 1024,
+      });
+      expect(profiles[index + 1]?.gateway).toMatchObject({
+        currentChannel: channel,
+        channels: enabledChannels,
+      });
+      const validationError = validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: profiles[index + 1],
+      });
+      if (validationError) {
+        throw new Error(
+          `${channel}: ${validationError}; ${JSON.stringify(profiles[index + 1]?.gatewayReply)}`,
+        );
+      }
+    }
+    const whatsappContext =
+      contexts[channelEntries.findIndex(([channel]) => channel === "whatsapp") + 1];
+    expect(whatsappContext?.currentMessageCapabilities).toEqual({
+      gateway: {
+        tool: "Gateway",
+        discovery: ["search", "describe"],
+      },
+      gatewayReply: {
+        tool: "GatewayReply",
+        destination: "current IM conversation",
+        allowedRoots: ["/safe/pet", "/Users/admin/Downloads"],
+      },
+    });
+    const telegramContext =
+      contexts[channelEntries.findIndex(([channel]) => channel === "telegram") + 1];
+    expect(telegramContext?.currentMessageCapabilities).toEqual({
+      gateway: {
+        tool: "Gateway",
+        discovery: ["search", "describe"],
+      },
+      gatewayReply: {
+        tool: "GatewayReply",
+        destination: "current IM conversation",
+        allowedRoots: ["/safe/pet", "/Users/admin/Downloads"],
+      },
+    });
+    const telegramProfile =
+      profiles[channelEntries.findIndex(([channel]) => channel === "telegram") + 1];
+    expect(telegramProfile?.gatewayReply).toMatchObject({
+      button: "native",
+      attachments: ["image", "file", "audio", "video"],
+    });
+  });
+
+  test("executes GatewayReply as one capability-gated text, button, and attachment tool", async () => {
+    const imagePath = "/safe/pet/result.png";
+    const executed: Record<string, unknown>[] = [];
+    let includeAttachment = true;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async () => ({
+          ok: true,
+          result: {
+            text: "model compatibility fallback",
+            extensions: {
+              pet: {
+                hostActions: [
+                  {
+                    kind: "gatewayReply",
+                    payload: {
+                      text: "完整回复",
+                      button: { text: "打开", url: "https://example.test/result" },
+                      ...(includeAttachment ? { attachmentPaths: [imagePath] } : {}),
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        }),
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        gatewayReply: async (payload) => {
+          executed.push(payload);
+          return {
+            text: payload.text,
+            button: payload.button,
+            ...(Array.isArray(payload.attachmentPaths)
+              ? {
+                  attachments: [
+                    {
+                      kind: "image",
+                      name: "result.png",
+                      mimeType: "image/png",
+                      size: 123,
+                      path: imagePath,
+                    },
+                  ],
+                }
+              : {}),
+          };
+        },
+      },
+    });
+
+    const rich = await service.dispatch({
+      type: "chat",
+      message: "给我结果",
+      source: {
+        kind: "im-gateway",
+        channel: "telegram",
+        target: "owner",
+        capabilities: richChannelCapabilities,
+      },
+    });
+    expect(rich).toMatchObject({
+      ok: true,
+      hostActions: [
+        {
+          kind: "gatewayReply",
+          ok: true,
+          result: {
+            text: "完整回复",
+            button: { text: "打开", url: "https://example.test/result" },
+            attachments: [{ kind: "image", path: imagePath }],
+          },
+        },
+      ],
+    });
+
+    const textOnly = await service.dispatch({
+      type: "chat",
+      message: "给我结果",
+      source: {
+        kind: "im-gateway",
+        channel: "whatsapp",
+        target: "owner",
+        capabilities: textOnlyChannelCapabilities,
+      },
+    });
+    expect(textOnly).toMatchObject({
+      ok: true,
+      hostActions: [{ kind: "gatewayReply", ok: false, error: "Gateway 渠道不支持所请求的附件" }],
+    });
+    expect(executed).toHaveLength(1);
+
+    includeAttachment = false;
+    const textAndButton = await service.dispatch({
+      type: "chat",
+      message: "只发链接",
+      source: {
+        kind: "im-gateway",
+        channel: "whatsapp",
+        target: "owner",
+        capabilities: textOnlyChannelCapabilities,
+      },
+    });
+    expect(textAndButton).toMatchObject({
+      ok: true,
+      hostActions: [{ kind: "gatewayReply", ok: true, result: { text: "完整回复" } }],
+    });
+    expect(executed).toHaveLength(2);
   });
 
   test("executes reported host actions after the turn and returns their outcomes", async () => {
@@ -1175,7 +1596,12 @@ describe("PetDispatchService", () => {
       await service.dispatch({
         type: "chat",
         message: "给我手机遥控",
-        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+        source: {
+          kind: "im-gateway",
+          channel: "telegram",
+          target: "owner",
+          capabilities: textOnlyChannelCapabilities,
+        },
       }),
     ).toMatchObject({
       ok: true,
@@ -1240,7 +1666,12 @@ describe("PetDispatchService", () => {
       const result = await service.dispatch({
         type: "chat",
         message: "host action",
-        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+        source: {
+          kind: "im-gateway",
+          channel: "telegram",
+          target: "owner",
+          capabilities: textOnlyChannelCapabilities,
+        },
       });
       expect(result).not.toHaveProperty("hostActions");
     }
@@ -1291,7 +1722,12 @@ describe("PetDispatchService", () => {
       await service.dispatch({
         type: "chat",
         message: "remember and cancel",
-        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+        source: {
+          kind: "im-gateway",
+          channel: "telegram",
+          target: "owner",
+          capabilities: textOnlyChannelCapabilities,
+        },
       }),
     ).toMatchObject({
       ok: true,
@@ -1339,7 +1775,12 @@ describe("PetDispatchService", () => {
       await makeService(true).dispatch({
         type: "chat",
         message: "关闭隧道",
-        source: { kind: "im-gateway", channel: "telegram", target: "owner" },
+        source: {
+          kind: "im-gateway",
+          channel: "telegram",
+          target: "owner",
+          capabilities: textOnlyChannelCapabilities,
+        },
       }),
     ).toMatchObject({
       ok: true,
@@ -1352,6 +1793,164 @@ describe("PetDispatchService", () => {
     });
     expect(withoutRegistry).toMatchObject({ ok: true, type: "chat" });
     expect(withoutRegistry).not.toHaveProperty("hostActions");
+  });
+
+  test("routes an explicit Work Session report through one injected Mimi GatewayReply", async () => {
+    const imagePath = "/Users/admin/Downloads/pet-comic-v2.png";
+    let request: { method: string; params: Record<string, unknown> } | undefined;
+    const executed: Record<string, unknown>[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method, params) => {
+          request = { method, params };
+          return {
+            ok: true,
+            result: {
+              text: "internal acknowledgement",
+              extensions: {
+                pet: {
+                  hostActions: [
+                    {
+                      kind: "gatewayReply",
+                      payload: {
+                        text: "漫画已经生成，我发给你了。",
+                        attachmentPaths: [imagePath],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      replyAttachmentRoots: async () => ["/Users/admin/Downloads"],
+      hostActions: {
+        gatewayReply: async (payload) => {
+          executed.push(payload);
+          return {
+            text: payload.text,
+            attachments: [
+              {
+                kind: "image",
+                name: "pet-comic-v2.png",
+                mimeType: "image/png",
+                size: 123,
+                path: imagePath,
+              },
+            ],
+          };
+        },
+      },
+    });
+    const task = {
+      id: "pet-task-report",
+      objective: "生成漫画并通过微信发回",
+      sessionId: "pet-work-806bb2404fc122889366de82",
+      completionTarget: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "owner-conversation",
+        replyButton: "link",
+        replyAttachmentKinds: ["image"],
+      },
+    } as never;
+
+    const result = await service.reportSessionMessage(
+      {
+        sourceSessionId: "pet-work-806bb2404fc122889366de82",
+        reportId: "a".repeat(32),
+        message: "图片已生成",
+        attachmentPaths: [imagePath],
+      },
+      task,
+    );
+
+    expect(request?.method).toBe("agent/run");
+    expect(request?.params).toMatchObject({
+      sessionId: "pet-one",
+      behaviorMode: "pet",
+      kind: "pet",
+      injected: true,
+      requireExisting: true,
+      clientMessageId: `pet-report:${"a".repeat(32)}`,
+    });
+    expect(String(request?.params.task)).toContain("call GatewayReply exactly once");
+    expect(String(request?.params.task)).toContain("Do not search for a Mimi Session id");
+    expect(String(request?.params.petRuntimeContext)).toContain(
+      '"sessionReport":{"reportId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"',
+    );
+    expect(String(request?.params.petRuntimeContext)).not.toContain("owner-conversation");
+    expect(executed).toEqual([
+      {
+        text: "漫画已经生成，我发给你了。",
+        attachmentPaths: [imagePath],
+      },
+    ]);
+    expect(result).toMatchObject({
+      text: "漫画已经生成，我发给你了。",
+      routedToOrigin: true,
+      hostActions: [
+        {
+          kind: "gatewayReply",
+          ok: true,
+          result: { attachments: [{ kind: "image", path: imagePath }] },
+        },
+      ],
+    });
+  });
+
+  test("delivers a report from an ordinary Session to Mimi without inventing an IM route", async () => {
+    let request: { method: string; params: Record<string, unknown> } | undefined;
+    let executed = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method, params) => {
+          request = { method, params };
+          return {
+            ok: true,
+            result: { text: "收到普通 Session 的报告，我会继续跟进。" },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        gatewayReply: async () => {
+          executed += 1;
+          return { text: "must not run" };
+        },
+      },
+    });
+
+    const result = await service.reportSessionMessage({
+      sourceSessionId: "ordinary-session",
+      reportId: "b".repeat(32),
+      message: "代码审查完成，没有阻塞项。",
+    });
+
+    expect(request?.method).toBe("agent/run");
+    expect(String(request?.params.task)).toContain("No external reply route is attached");
+    expect(String(request?.params.petRuntimeContext)).toContain(
+      '"sessionReport":{"reportId":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","sourceSessionId":"ordinary-session"',
+    );
+    expect(String(request?.params.petRuntimeContext)).not.toContain("currentMessageSource");
+    expect(request?.params.profileParams).not.toHaveProperty("hostActions");
+    expect(executed).toBe(0);
+    expect(result).toEqual({
+      text: "收到普通 Session 的报告，我会继续跟进。",
+      routedToOrigin: false,
+    });
   });
 
   test("does not execute a reported host action for a desktop Pet turn", async () => {

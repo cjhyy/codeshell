@@ -1,3 +1,5 @@
+import type { ChannelCapabilities } from "./channel.js";
+
 export const DESKTOP_CONTROL_PROTOCOL_VERSION = 1;
 
 export interface DesktopControlDescriptor {
@@ -17,7 +19,8 @@ export interface DesktopControlEvent {
     | "tunnel.error"
     | "pet.task.completed"
     | "pet.task.failed"
-    | "pet.task.cancelled";
+    | "pet.task.cancelled"
+    | "pet.task.reported";
   text: string;
   title?: string;
   button?: { text: string; url: string };
@@ -27,7 +30,7 @@ export interface DesktopControlEvent {
 }
 
 export interface DesktopControlEventAttachment {
-  kind: "image";
+  kind: PetChatAttachmentKind;
   name: string;
   mimeType: string;
   size: number;
@@ -79,13 +82,24 @@ export interface PetChatRequest {
     target: string;
     senderId: string;
     messageId?: string;
+    /** Adapter-declared implementation capabilities for this exact route. */
+    capabilities: ChannelCapabilities;
+    /** Enabled adapters in this Gateway process, without credentials or target ids. */
+    channels?: PetChatGatewayChannel[];
   };
+}
+
+export interface PetChatGatewayChannel {
+  channel: string;
+  capabilities: ChannelCapabilities;
 }
 
 export interface PetChatResult {
   text: string;
   petSessionId: string;
   reason?: string;
+  /** GatewayReply URL action; rendered natively or as a labelled link by the adapter. */
+  button?: { text: string; url: string };
   /** Host-produced reply attachments; same host-local path shape as event attachments. */
   attachments?: DesktopControlEventAttachment[];
 }

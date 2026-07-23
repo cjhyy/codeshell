@@ -1,7 +1,20 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { ChannelMessageHandler, OutgoingMessage, WebhookChannelAdapter } from "./channel.js";
+import type {
+  ChannelMessageHandler,
+  ChatAttachment,
+  ChatAttachmentKind,
+  OutgoingMessage,
+  WebhookChannelAdapter,
+} from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
 import { waitForAbort } from "./lifecycle.js";
+import {
+  downloadRemoteAttachment,
+  OutgoingDeliveryTracker,
+  outgoingAttachments,
+  safeAttachmentName,
+} from "./media.js";
 import { readRequestBody, sendResponse } from "./webhook.js";
 
 export interface WhatsAppAdapterConfig {
@@ -16,16 +29,33 @@ interface WhatsAppWebhookBody {
   entry?: Array<{
     changes?: Array<{
       value?: {
-        messages?: Array<{ id?: string; from?: string; type?: string; text?: { body?: string } }>;
+        messages?: Array<{
+          id?: string;
+          from?: string;
+          type?: string;
+          text?: { body?: string };
+          image?: WhatsAppMedia;
+          audio?: WhatsAppMedia;
+          video?: WhatsAppMedia;
+          document?: WhatsAppMedia & { filename?: string };
+        }>;
       };
     }>;
   }>;
 }
 
+interface WhatsAppMedia {
+  id?: string;
+  mime_type?: string;
+  caption?: string;
+}
+
 export class WhatsAppAdapter implements WebhookChannelAdapter {
   readonly channel = "whatsapp";
+  readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.whatsapp;
   readonly webhookPath = "/webhooks/whatsapp";
   private readonly config: Required<WhatsAppAdapterConfig>;
+  private readonly delivery = new OutgoingDeliveryTracker();
 
   constructor(
     config: WhatsAppAdapterConfig,
@@ -66,19 +96,22 @@ export class WhatsAppAdapter implements WebhookChannelAdapter {
     }
     const messages = (body.entry ?? []).flatMap((entry) =>
       (entry.changes ?? []).flatMap((change) =>
-        (change.value?.messages ?? []).flatMap((message) =>
-          message.type === "text" && message.from && message.text?.body
-            ? [
-                {
-                  channel: this.channel,
-                  target: message.from,
-                  senderId: message.from,
-                  text: message.text.body,
-                  ...(message.id ? { messageId: message.id } : {}),
-                },
-              ]
-            : [],
-        ),
+        (change.value?.messages ?? []).flatMap((message) => {
+          if (!message.from) return [];
+          const media = this.inboundMedia(message);
+          const text = message.text?.body ?? media?.caption ?? "";
+          if (!text && !media?.attachment) return [];
+          return [
+            {
+              channel: this.channel,
+              target: message.from,
+              senderId: message.from,
+              text,
+              ...(message.id ? { messageId: message.id } : {}),
+              ...(media?.attachment ? { attachments: [media.attachment] } : {}),
+            },
+          ];
+        }),
       ),
     );
     await Promise.all(messages.map((message) => handler(message)));
@@ -86,6 +119,48 @@ export class WhatsAppAdapter implements WebhookChannelAdapter {
   }
 
   async send(target: string, message: OutgoingMessage): Promise<void> {
+    const attachments = outgoingAttachments(message, this.capabilities.outbound.attachments);
+    if (attachments.length > 0) {
+      await this.delivery.run(message, async () => {
+        const uploaded = await Promise.all(
+          attachments.map(async (attachment) => ({
+            attachment,
+            mediaId: await this.uploadMedia(attachment),
+          })),
+        );
+        let textAssigned = false;
+        const steps: Array<() => Promise<void>> = [];
+        if (message.button || (message.text && uploaded[0]?.attachment.kind === "audio")) {
+          steps.push(() => this.postPayload(this.textPayload(target, message)));
+          textAssigned = true;
+        }
+        for (const [index, item] of uploaded.entries()) {
+          const kind = item.attachment.kind === "file" ? "document" : item.attachment.kind;
+          const media: Record<string, unknown> = { id: item.mediaId };
+          if (!textAssigned && index === 0 && message.text && kind !== "audio") {
+            media.caption = message.text;
+            textAssigned = true;
+          }
+          if (kind === "document") media.filename = item.attachment.name;
+          const payload = {
+            messaging_product: "whatsapp",
+            to: target,
+            type: kind,
+            [kind]: media,
+          };
+          steps.push(() => this.postPayload(payload));
+        }
+        if (!textAssigned && message.text) {
+          steps.push(() => this.postPayload(this.textPayload(target, message)));
+        }
+        return steps;
+      });
+      return;
+    }
+    await this.postPayload(this.textPayload(target, message));
+  }
+
+  private textPayload(target: string, message: OutgoingMessage): Record<string, unknown> {
     const payload = message.button
       ? {
           messaging_product: "whatsapp",
@@ -106,6 +181,10 @@ export class WhatsAppAdapter implements WebhookChannelAdapter {
           type: "text",
           text: { body: message.text },
         };
+    return payload;
+  }
+
+  private async postPayload(payload: Record<string, unknown>): Promise<void> {
     const response = await this.fetchFn(
       `https://graph.facebook.com/${this.config.apiVersion}/${this.config.phoneNumberId}/messages`,
       {
@@ -119,6 +198,87 @@ export class WhatsAppAdapter implements WebhookChannelAdapter {
       },
     );
     if (!response.ok) throw new Error(`WhatsApp 发送失败（HTTP ${response.status}）`);
+  }
+
+  private async uploadMedia(
+    attachment: NonNullable<OutgoingMessage["attachments"]>[number],
+  ): Promise<string> {
+    const form = new FormData();
+    form.set("messaging_product", "whatsapp");
+    form.set(
+      "file",
+      new Blob([new Uint8Array(attachment.data)], { type: attachment.mimeType }),
+      safeAttachmentName(attachment.name),
+    );
+    const response = await this.fetchFn(
+      `https://graph.facebook.com/${this.config.apiVersion}/${this.config.phoneNumberId}/media`,
+      {
+        method: "POST",
+        headers: { authorization: `Bearer ${this.config.accessToken}` },
+        body: form,
+        signal: AbortSignal.timeout(30_000),
+      },
+    );
+    const body = (await response.json().catch(() => ({}))) as {
+      id?: string;
+      error?: { message?: string };
+    };
+    if (!response.ok || !body.id) {
+      throw new Error(body.error?.message ?? `WhatsApp 媒体上传失败（HTTP ${response.status}）`);
+    }
+    return body.id;
+  }
+
+  private inboundMedia(message: {
+    type?: string;
+    image?: WhatsAppMedia;
+    audio?: WhatsAppMedia;
+    video?: WhatsAppMedia;
+    document?: WhatsAppMedia & { filename?: string };
+  }): { caption?: string; attachment: ChatAttachment } | undefined {
+    const kindByType: Record<string, ChatAttachmentKind> = {
+      image: "image",
+      audio: "audio",
+      video: "video",
+      document: "file",
+    };
+    const kind = message.type ? kindByType[message.type] : undefined;
+    if (!kind) return undefined;
+    const media = message[message.type as "image" | "audio" | "video" | "document"];
+    if (!media?.id) return undefined;
+    const mediaId = media.id;
+    const name = safeAttachmentName(
+      "filename" in media ? media.filename : undefined,
+      `whatsapp-${mediaId}${kind === "image" ? ".jpg" : kind === "video" ? ".mp4" : ""}`,
+    );
+    return {
+      caption: media.caption,
+      attachment: {
+        id: mediaId,
+        kind,
+        name,
+        ...(media.mime_type ? { mimeType: media.mime_type } : {}),
+        load: (signal) => this.downloadMedia(mediaId, signal),
+      },
+    };
+  }
+
+  private async downloadMedia(mediaId: string, signal?: AbortSignal): Promise<Uint8Array> {
+    const metadataResponse = await this.fetchFn(
+      `https://graph.facebook.com/${this.config.apiVersion}/${encodeURIComponent(mediaId)}`,
+      {
+        headers: { authorization: `Bearer ${this.config.accessToken}` },
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(15_000)])
+          : AbortSignal.timeout(15_000),
+      },
+    );
+    const metadata = (await metadataResponse.json().catch(() => ({}))) as { url?: string };
+    if (!metadataResponse.ok || !metadata.url) throw new Error("WhatsApp 媒体下载地址不可用");
+    return downloadRemoteAttachment(this.fetchFn, metadata.url, {
+      headers: { authorization: `Bearer ${this.config.accessToken}` },
+      ...(signal ? { signal } : {}),
+    });
   }
 
   private handleVerification(request: IncomingMessage, response: ServerResponse): void {

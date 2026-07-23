@@ -123,6 +123,7 @@ describe("GatewayControlServer", () => {
         return {
           text: "done",
           petSessionId: "pet-1",
+          button: { text: "Open", url: "https://example.test/result" },
           attachments: [
             {
               kind: "image",
@@ -136,6 +137,32 @@ describe("GatewayControlServer", () => {
       },
     });
     const descriptor = await server.start();
+    const telegramCapabilities = {
+      inbound: {
+        text: true as const,
+        attachments: ["image", "file", "audio", "video"] as const,
+      },
+      outbound: {
+        text: true as const,
+        maxTextLength: 8_000,
+        button: "native" as const,
+        attachments: ["image", "file"] as const,
+        maxAttachments: 4,
+        maxAttachmentBytes: 10 * 1024 * 1024,
+      },
+    };
+    const lineCapabilities = {
+      inbound: {
+        text: true as const,
+        attachments: ["image", "file", "audio", "video"] as const,
+      },
+      outbound: {
+        text: true as const,
+        maxTextLength: 8_000,
+        button: "native" as const,
+        attachments: [] as const,
+      },
+    };
     const response = await fetch(`${descriptor.baseUrl}/v1/pet/chat`, {
       method: "POST",
       headers: {
@@ -145,15 +172,76 @@ describe("GatewayControlServer", () => {
       body: JSON.stringify({
         message: "inspect",
         attachments: [{ id: "a", kind: "file", size: 2, dataBase64: "aGk=" }],
+        origin: {
+          channel: "telegram",
+          target: "owner-chat",
+          senderId: "owner",
+          capabilities: telegramCapabilities,
+          channels: [
+            { channel: "telegram", capabilities: telegramCapabilities },
+            { channel: "line", capabilities: lineCapabilities },
+          ],
+        },
       }),
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       text: "done",
       petSessionId: "pet-1",
+      button: { text: "Open", url: "https://example.test/result" },
       attachments: [{ name: "pairing-qr.png", path: join(root, "pairing-qr.png") }],
     });
+    expect(observed).toMatchObject({
+      origin: {
+        channel: "telegram",
+        capabilities: {
+          outbound: { maxTextLength: 8_000, attachments: ["image", "file"] },
+        },
+        channels: [
+          { channel: "telegram", capabilities: telegramCapabilities },
+          { channel: "line", capabilities: lineCapabilities },
+        ],
+      },
+    });
     expect(observed).toMatchObject({ message: "inspect", attachments: [{ id: "a" }] });
+
+    const invalidCatalog = await fetch(`${descriptor.baseUrl}/v1/pet/chat`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${descriptor.token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        message: "inspect",
+        origin: {
+          channel: "telegram",
+          target: "owner-chat",
+          senderId: "owner",
+          capabilities: telegramCapabilities,
+          channels: [{ channel: "line", capabilities: lineCapabilities }],
+        },
+      }),
+    });
+    expect(invalidCatalog.status).toBe(400);
+
+    const contradictoryCatalog = await fetch(`${descriptor.baseUrl}/v1/pet/chat`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${descriptor.token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        message: "inspect",
+        origin: {
+          channel: "telegram",
+          target: "owner-chat",
+          senderId: "owner",
+          capabilities: telegramCapabilities,
+          channels: [{ channel: "telegram", capabilities: lineCapabilities }],
+        },
+      }),
+    });
+    expect(contradictoryCatalog.status).toBe(400);
 
     const invalid = await fetch(`${descriptor.baseUrl}/v1/pet/chat`, {
       method: "POST",

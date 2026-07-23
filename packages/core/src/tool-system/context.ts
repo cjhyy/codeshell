@@ -201,6 +201,8 @@ export interface SubAgentSpawnResult {
 export interface ToolVisibilityContext {
   cwd: string;
   hasGoal: boolean;
+  /** Resolved Session identity for per-session extension-tool visibility. */
+  sessionId?: string;
   settingsScope?: import("../settings/manager.js").SettingsScope;
   host?: string;
   isSubAgent?: boolean;

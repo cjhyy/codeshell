@@ -66,7 +66,12 @@ export async function handleCcRoomEvent(
         mode,
         event.kind ?? "claude-code",
       );
-      reply({ type: "ccRoom.opened", roomId, sessionId: event.sessionId, status });
+      reply({
+        type: "ccRoom.opened",
+        roomId,
+        sessionId: event.sessionId,
+        status,
+      });
       return;
     }
     if (event.type === "ccRoom.subscribeTranscript") {

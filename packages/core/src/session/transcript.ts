@@ -7,6 +7,7 @@ import { appendFileSync, readFileSync, existsSync, mkdirSync, writeFileSync } fr
 import { dirname } from "node:path";
 import { nanoid } from "nanoid";
 import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from "../types.js";
+import type { EngineResult } from "../engine/types.js";
 import { logger } from "../logging/logger.js";
 
 type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
@@ -140,6 +141,27 @@ export class Transcript {
 
   hasClientMessageId(clientMessageId: string): boolean {
     return this.findMessageByClientId(clientMessageId) !== undefined;
+  }
+
+  /**
+   * Persist the exact response associated with one idempotent submit. The
+   * receipt stays outside toMessages(), so replay support does not change the
+   * model's conversation history.
+   */
+  appendRunResult(clientMessageId: string, result: EngineResult): TranscriptEvent {
+    return this.append("run_result", { clientMessageId, result });
+  }
+
+  /** Return the newest valid durable response for an idempotent submit. */
+  findRunResultByClientMessageId(clientMessageId: string): EngineResult | undefined {
+    for (let index = this.events.length - 1; index >= 0; index -= 1) {
+      const event = this.events[index]!;
+      if (event.type !== "run_result" || event.data.clientMessageId !== clientMessageId) continue;
+      const result = event.data.result;
+      if (!isEngineResultReceipt(result)) return undefined;
+      return result;
+    }
+    return undefined;
   }
 
   appendToolUse(
@@ -278,7 +300,7 @@ export class Transcript {
           });
           break;
         }
-        // turn_boundary, session_meta, file_history, plan_operation, error
+        // turn_boundary, run_result, session_meta, file_history, plan_operation, error
         // are not included in LLM messages
       }
     }
@@ -545,6 +567,23 @@ export class Transcript {
 
     return transcript;
   }
+}
+
+function isEngineResultReceipt(value: unknown): value is EngineResult {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const result = value as Partial<EngineResult>;
+  const usage = result.usage;
+  return (
+    typeof result.text === "string" &&
+    typeof result.reason === "string" &&
+    typeof result.sessionId === "string" &&
+    typeof result.turnCount === "number" &&
+    Number.isSafeInteger(result.turnCount) &&
+    Boolean(usage) &&
+    typeof usage?.promptTokens === "number" &&
+    typeof usage?.completionTokens === "number" &&
+    typeof usage?.totalTokens === "number"
+  );
 }
 
 function validateSelectedToolPairs(events: readonly TranscriptEvent[]): void {

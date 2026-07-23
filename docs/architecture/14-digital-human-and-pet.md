@@ -114,8 +114,9 @@ effects inside the worker. For each turn, Desktop derives the supported action
 kinds from its executor registry and sends them in `profileParams.hostActions`;
 the Pet profile parses that closed list as `hostActionKinds` and exposes only
 the matching tools. The current envelope kinds are `mobileRemote`,
-`longTaskControl`, `memory`, and `replyAttachments` (the last is enabled only
-for a supported IM turn).
+`longTaskControl`, `memory`, and `gatewayReply`. `gatewayReply` is enabled for
+every IM turn and owns the complete outbound text, optional URL button, and
+optional image/file paths in one tool request.
 
 A matching tool validates its input and records one `{ kind, payload }` request
 through the run-scoped Pet service. The behavior profile reports the accumulated
@@ -128,6 +129,58 @@ validates the exact envelope and each kind-specific payload again, rejects
 undeclared or duplicate kinds, and executes accepted requests through the
 Desktop registry only after `agent/run` returns. Execution failures are
 non-fatal to Mimi's generated reply and are returned as structured outcomes.
+
+For a durable long-task closure, `gatewayReply` follows the same explicit tool
+path. The closure decision stores the validated reply text, optional button,
+and attachment paths so a crash can replay delivery without rerunning her
+turn. Entries in the task artifact ledger never trigger an outgoing attachment
+by themselves.
+Every enabled Gateway adapter publishes a JSON-safe directional capability
+contract. Chat forwards a bounded catalog of channel names and capabilities to
+Desktop, without credentials, allowlists, or target identifiers. Pet exposes
+that catalog progressively through the read-only `Gateway` tool:
+`search` queries only the channels granted to the current turn and returns
+compact names, while `describe` returns one exact inbound/outbound contract.
+The catalog is rebuilt for every incoming message from that Gateway process's
+current adapter set, rather than retained as a global or cross-session index.
+
+The side-effecting second level is `GatewayReply`. It is intentionally bound to
+the current originating conversation rather than accepting a channel or target.
+Desktop derives its per-turn button mode, attachment kinds, count/byte limits,
+and allowed absolute roots (tracked workspaces, no-repo, and the user's
+Downloads directory) from the current adapter. The tool definition is rewritten
+per turn, so attachment arguments do not appear on text-only routes. Mimi can
+reply with routine text directly, but queries `Gateway` first when rich-media
+support is uncertain or another enabled channel is being discussed. It never
+branches on channel names. `GatewayReply` rejects tilde or relative paths before
+recording a request. Its result is deliberately `PENDING`, while post-turn host
+enrichment and the Gateway own the only authoritative success or failure
+wording.
+
+This is a bounded two-level variant of
+[Hermes Agent Tool Search](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-search):
+the catalog is rebuilt from the live per-turn adapter set and cannot reveal
+capabilities outside that granted set. Mimi folds Hermes's search and describe
+discovery steps into the read-only `Gateway` meta-tool, then keeps its single
+current-route `GatewayReply` execution primitive direct. This preserves two
+tool levels without adding a separate generic call bridge or another model
+round trip.
+Platform media stays at the Gateway edge. Adapters normalize inbound image,
+file, audio, and video references into lazy attachments; bytes are fetched only
+after sender/target policy admission and pass through shared count, size, total,
+timeout, MIME, and filename checks. Outbound attachments use native platform
+uploads where the configured credential path supports them. A capability is
+not advertised merely because the upstream platform has a theoretical API:
+LINE remains inbound-media-only until a public HTTPS media store is configured,
+and DingTalk Stream session webhooks remain text/card-only without a separate
+OpenAPI media transport.
+
+One logical reply can require several platform requests. The Gateway caches the
+materialized reply before the first send, resumes at the failed text chunk, and
+adapters track completed text/media sub-steps for same-process retries. This is
+an at-least-once boundary: if a platform accepted a request but lost its
+acknowledgement, the ambiguous sub-step may still be repeated, but Pet and
+already acknowledged sub-steps are not rerun.
 For IM chat, `host-action-reply.ts` appends the real success or error after
 execution; opening mobile remote can also attach a host-generated pairing QR.
 This preserves the boundary between Mimi promising an operation during her

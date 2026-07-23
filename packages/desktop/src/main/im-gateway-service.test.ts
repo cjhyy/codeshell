@@ -77,10 +77,18 @@ describe("ImGatewayService", () => {
     expect(status.channelStatuses.find(({ channel }) => channel === "telegram")).toMatchObject({
       enabled: true,
       state: "ready",
+      capabilities: {
+        inbound: { attachments: ["image", "file", "audio", "video"] },
+        outbound: { button: "native", attachments: ["image", "file"] },
+      },
     });
     expect(status.channelStatuses.find(({ channel }) => channel === "wechat")).toMatchObject({
       enabled: false,
       state: "disabled",
+      capabilities: {
+        inbound: { attachments: ["image", "file", "audio", "video"] },
+        outbound: { button: "link", attachments: ["image", "file"] },
+      },
     });
     expect(status.error).toBeUndefined();
     expect(JSON.stringify(status)).not.toContain("secret-token");

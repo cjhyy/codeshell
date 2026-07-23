@@ -153,4 +153,63 @@ describe("CCConversationView transcript ownership", () => {
     expect(takeovers).toBe(1);
     expect(sends).toBe(0);
   });
+
+  test("keeps the draft when RoomManager rejects a send", async () => {
+    ensureMiniDom();
+    let sends = 0;
+    const off = () => undefined;
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      ccRoom: {
+        onApprovalRequest: () => off,
+        onApprovalResolved: () => off,
+        onRoomMessage: () => off,
+        subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
+        unsubscribeTranscript: async () => undefined,
+        roomHistory: async () => [],
+        readHistory: async () => ({ messages: [] }),
+        readCodexHistory: async () => ({ messages: [] }),
+        send: async () => {
+          sends += 1;
+          return false;
+        },
+        respondApproval: async () => undefined,
+      },
+    };
+
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <CCConversationView
+          roomId="room-rejected"
+          cwd="/repo"
+          sessionId="thread-rejected"
+          mode="default"
+          onBack={() => undefined}
+        />,
+      );
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "data-cc-room-composer")).onChange({
+        target: { value: "keep this draft" },
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "data-cc-room-composer")).onKeyDown({
+        key: "Enter",
+        shiftKey: false,
+        preventDefault() {},
+      });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(sends).toBe(1);
+    expect(reactPropsOf(findElementByProp(container, "data-cc-room-composer")).value).toBe(
+      "keep this draft",
+    );
+  });
 });

@@ -40,7 +40,8 @@ export interface GatewayControlEventInput {
     | "tunnel.error"
     | "pet.task.completed"
     | "pet.task.failed"
-    | "pet.task.cancelled";
+    | "pet.task.cancelled"
+    | "pet.task.reported";
   text: string;
   title?: string;
   button?: { text: string; url: string };
@@ -49,7 +50,7 @@ export interface GatewayControlEventInput {
 }
 
 export interface GatewayControlEventAttachment {
-  kind: "image";
+  kind: PetChatControlAttachmentKind;
   name: string;
   mimeType: string;
   size: number;
@@ -81,6 +82,28 @@ export interface PetChatControlRequest {
     target: string;
     senderId: string;
     messageId?: string;
+    capabilities: PetChatControlChannelCapabilities;
+    channels?: PetChatControlGatewayChannel[];
+  };
+}
+
+export interface PetChatControlGatewayChannel {
+  channel: string;
+  capabilities: PetChatControlChannelCapabilities;
+}
+
+export interface PetChatControlChannelCapabilities {
+  inbound: {
+    text: true;
+    attachments: PetChatControlAttachmentKind[];
+  };
+  outbound: {
+    text: true;
+    maxTextLength?: number;
+    button: "native" | "link";
+    attachments: PetChatControlAttachmentKind[];
+    maxAttachments?: number;
+    maxAttachmentBytes?: number;
   };
 }
 
@@ -88,6 +111,7 @@ export interface PetChatControlResult {
   text: string;
   petSessionId: string;
   reason?: string;
+  button?: { text: string; url: string };
   /** Host-produced reply attachments for attachment-capable channels. */
   attachments?: GatewayControlEventAttachment[];
 }
@@ -414,18 +438,179 @@ function parseOrigin(value: unknown): PetChatControlRequest["origin"] | undefine
   }
   const record = value as Record<string, unknown>;
   if (
+    Object.keys(record).some(
+      (key) =>
+        key !== "channel" &&
+        key !== "target" &&
+        key !== "senderId" &&
+        key !== "messageId" &&
+        key !== "capabilities" &&
+        key !== "channels",
+    ) ||
     typeof record.channel !== "string" ||
+    !/^[a-z0-9][a-z0-9_-]{0,31}$/u.test(record.channel) ||
     typeof record.target !== "string" ||
     typeof record.senderId !== "string" ||
-    (record.messageId !== undefined && typeof record.messageId !== "string")
+    (record.messageId !== undefined && typeof record.messageId !== "string") ||
+    (record.channels !== undefined && !Array.isArray(record.channels)) ||
+    record.capabilities === undefined
   ) {
     throw new GatewayControlRequestError("invalid message origin");
   }
+  const capabilities = parseChannelCapabilities(record.capabilities);
+  const channels = parseGatewayChannels(record.channels, record.channel, capabilities);
   return {
     channel: record.channel,
     target: record.target,
     senderId: record.senderId,
     ...(record.messageId ? { messageId: record.messageId } : {}),
+    capabilities,
+    ...(channels ? { channels } : {}),
+  };
+}
+
+function parseGatewayChannels(
+  value: unknown,
+  currentChannel: string,
+  currentCapabilities: PetChatControlChannelCapabilities,
+): PetChatControlGatewayChannel[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length < 1 || value.length > 32) {
+    throw new GatewayControlRequestError("invalid Gateway channel catalog");
+  }
+  const seen = new Set<string>();
+  const channels = value.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new GatewayControlRequestError("invalid Gateway channel catalog");
+    }
+    const record = entry as Record<string, unknown>;
+    if (
+      Object.keys(record).some((key) => key !== "channel" && key !== "capabilities") ||
+      typeof record.channel !== "string" ||
+      !/^[a-z0-9][a-z0-9_-]{0,31}$/u.test(record.channel) ||
+      record.capabilities === undefined ||
+      seen.has(record.channel)
+    ) {
+      throw new GatewayControlRequestError("invalid Gateway channel catalog");
+    }
+    seen.add(record.channel);
+    const capabilities = parseChannelCapabilities(record.capabilities);
+    if (
+      record.channel === currentChannel &&
+      !sameChannelCapabilities(capabilities, currentCapabilities)
+    ) {
+      throw new GatewayControlRequestError(
+        "Gateway channel catalog contradicts the current route capability",
+      );
+    }
+    return {
+      channel: record.channel,
+      capabilities: record.channel === currentChannel ? currentCapabilities : capabilities,
+    };
+  });
+  if (!seen.has(currentChannel)) {
+    throw new GatewayControlRequestError("Gateway channel catalog omits the current route");
+  }
+  return channels;
+}
+
+function sameChannelCapabilities(
+  left: PetChatControlChannelCapabilities,
+  right: PetChatControlChannelCapabilities,
+): boolean {
+  return (
+    left.inbound.attachments.join("\0") === right.inbound.attachments.join("\0") &&
+    left.outbound.maxTextLength === right.outbound.maxTextLength &&
+    left.outbound.button === right.outbound.button &&
+    left.outbound.attachments.join("\0") === right.outbound.attachments.join("\0") &&
+    left.outbound.maxAttachments === right.outbound.maxAttachments &&
+    left.outbound.maxAttachmentBytes === right.outbound.maxAttachmentBytes
+  );
+}
+
+function parseChannelCapabilities(value: unknown): PetChatControlChannelCapabilities {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new GatewayControlRequestError("invalid channel capabilities");
+  }
+  const record = value as Record<string, unknown>;
+  const inbound = parseCapabilityDirection(record.inbound, false);
+  const outbound = parseCapabilityDirection(record.outbound, true);
+  return {
+    inbound: { text: true, attachments: inbound.attachments },
+    outbound: {
+      text: true,
+      ...(outbound.maxTextLength === undefined ? {} : { maxTextLength: outbound.maxTextLength }),
+      button: outbound.button!,
+      attachments: outbound.attachments,
+      ...(outbound.maxAttachments === undefined ? {} : { maxAttachments: outbound.maxAttachments }),
+      ...(outbound.maxAttachmentBytes === undefined
+        ? {}
+        : { maxAttachmentBytes: outbound.maxAttachmentBytes }),
+    },
+  };
+}
+
+function parseCapabilityDirection(
+  value: unknown,
+  outbound: boolean,
+): {
+  attachments: PetChatControlAttachmentKind[];
+  button?: "native" | "link";
+  maxTextLength?: number;
+  maxAttachments?: number;
+  maxAttachmentBytes?: number;
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new GatewayControlRequestError("invalid channel capabilities");
+  }
+  const record = value as Record<string, unknown>;
+  const allowedKeys = outbound
+    ? new Set([
+        "text",
+        "attachments",
+        "button",
+        "maxTextLength",
+        "maxAttachments",
+        "maxAttachmentBytes",
+      ])
+    : new Set(["text", "attachments"]);
+  if (
+    Object.keys(record).some((key) => !allowedKeys.has(key)) ||
+    record.text !== true ||
+    !Array.isArray(record.attachments) ||
+    record.attachments.length > 4 ||
+    !record.attachments.every((kind) =>
+      ["image", "file", "audio", "video"].includes(String(kind)),
+    ) ||
+    new Set(record.attachments).size !== record.attachments.length ||
+    (outbound && record.button !== "native" && record.button !== "link") ||
+    (!outbound && record.button !== undefined) ||
+    (record.maxTextLength !== undefined &&
+      (!outbound ||
+        !Number.isSafeInteger(record.maxTextLength) ||
+        Number(record.maxTextLength) < 1 ||
+        Number(record.maxTextLength) > 8_000)) ||
+    (record.maxAttachments !== undefined &&
+      (!outbound ||
+        !Number.isSafeInteger(record.maxAttachments) ||
+        Number(record.maxAttachments) < 1 ||
+        Number(record.maxAttachments) > 4)) ||
+    (record.maxAttachmentBytes !== undefined &&
+      (!outbound ||
+        !Number.isSafeInteger(record.maxAttachmentBytes) ||
+        Number(record.maxAttachmentBytes) < 1 ||
+        Number(record.maxAttachmentBytes) > 10 * 1024 * 1024))
+  ) {
+    throw new GatewayControlRequestError("invalid channel capabilities");
+  }
+  return {
+    attachments: record.attachments as PetChatControlAttachmentKind[],
+    ...(outbound ? { button: record.button as "native" | "link" } : {}),
+    ...(typeof record.maxTextLength === "number" ? { maxTextLength: record.maxTextLength } : {}),
+    ...(typeof record.maxAttachments === "number" ? { maxAttachments: record.maxAttachments } : {}),
+    ...(typeof record.maxAttachmentBytes === "number"
+      ? { maxAttachmentBytes: record.maxAttachmentBytes }
+      : {}),
   };
 }
 

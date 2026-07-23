@@ -318,6 +318,8 @@ export interface RoomPublic {
   createdAt: number;
   lastActiveAt: number;
   open: boolean;
+  /** True when the room is bound for transcript observation and cannot send. */
+  observing: boolean;
 }
 
 /** A desktop session the phone can see + drive (from listDiskSessions). */

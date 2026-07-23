@@ -23,6 +23,7 @@ import type {
 import { PetLongTaskStore } from "./pet-long-task-store.js";
 
 const MAX_PET_LONG_TASK_SUMMARY_LENGTH = 8_000;
+const PROJECTION_LAUNCH_GRACE_MS = 2_000;
 
 interface PetLongTaskWorker {
   hasLiveWorker(): boolean;
@@ -74,6 +75,20 @@ function isControllable(task: PetLongTask): boolean {
   return !isTerminal(task);
 }
 
+/** Earliest timestamp that can belong to the current retry/reuse attempt. */
+function currentAttemptStartedAt(task: PetLongTask): number {
+  const retryAt = [...task.events].reverse().find((event) => event.kind === "retrying")?.at;
+  return Math.max(task.createdAt, retryAt ?? task.createdAt, task.startedAt ?? task.createdAt);
+}
+
+function projectionPredatesCurrentAttempt(
+  task: PetLongTask,
+  session: DesktopPetProjectionSnapshot["sessions"][number],
+): boolean {
+  const sessionAt = session.terminal?.at ?? session.lastActivityAt;
+  return sessionAt < currentAttemptStartedAt(task);
+}
+
 function topLevelEvent(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const event = value as Record<string, unknown>;
@@ -111,10 +126,11 @@ function generatedImageArtifacts(value: unknown): PetLongTaskArtifact[] {
     (candidate): candidate is string => typeof candidate === "string" && candidate.length > 0,
   );
   if (!output) return [];
-  const match = /\bsaved to\s+(.+?)(?:\r?\n|$)/iu.exec(output);
+  const match = /\bsaved to\s+([^\r\n]+?\.(?:png|jpe?g|gif|webp))(?=$|\s)/iu.exec(output);
   const reference = match?.[1]?.trim().replace(/^`|`$/gu, "");
-  if (!reference || !/\.(?:png|jpe?g|gif|webp)$/iu.test(reference)) return [];
-  return [{ kind: "file", label: "Generated image", reference: reference.slice(0, 2_048) }];
+  return reference
+    ? [{ kind: "file", label: "Generated image", reference: reference.slice(0, 2_048) }]
+    : [];
 }
 
 function safeToolName(event: Record<string, unknown>): string {
@@ -176,6 +192,8 @@ export class PetLongTaskCoordinator {
   async recordClosureDecision(
     taskId: string,
     decision: Pick<PetLongTaskClosureDecision, "key" | "text"> & {
+      replyAttachmentPaths?: string[];
+      replyButton?: { text: string; url: string };
       continuation?: PetLongTaskContinuationDecision;
     },
   ): Promise<PetLongTask> {
@@ -467,6 +485,10 @@ export class PetLongTaskCoordinator {
     if (event.kind !== "session-upsert") return;
     const task = this.options.store.activeForSession(event.session.agentSessionId);
     if (!task || task.status === "paused") return;
+    // Disk reconciliation can replay the terminal/completion marker of a
+    // previous attempt that reused this Session. It is historical evidence,
+    // not the outcome of the current launch.
+    if (projectionPredatesCurrentAttempt(task, event.session)) return;
     if (event.session.completionKind) {
       await this.options.store.transition(task.id, {
         kind: "interrupted",
@@ -537,15 +559,27 @@ export class PetLongTaskCoordinator {
       if (task.status === "paused") continue;
       const session = sessions.get(task.sessionId);
       if (!session) {
+        const attemptStartedAt = currentAttemptStartedAt(task);
+        const observedAt = snapshot.observedAt || this.now();
+        // Launcher acceptance and projection publication are separate async
+        // paths. A reset in that short gap must not manufacture an interrupted
+        // event before the new Session has had a chance to appear.
+        if (
+          task.status === "queued" ||
+          observedAt - attemptStartedAt < PROJECTION_LAUNCH_GRACE_MS
+        ) {
+          continue;
+        }
         if (task.status !== "interrupted") {
           await this.options.store.transition(task.id, {
             kind: "interrupted",
-            at: snapshot.observedAt || this.now(),
+            at: observedAt,
             reason: "The durable work session is not currently live",
           });
         }
         continue;
       }
+      if (projectionPredatesCurrentAttempt(task, session)) continue;
       if (session.terminal || session.completionKind) {
         await this.observeProjectionEvent({
           kind: "session-upsert",
@@ -756,15 +790,34 @@ export class PetLongTaskCoordinator {
     if (task.status === "cancelled" || task.status === "completed") {
       return { ok: false, code: "invalid-state", message: "This task is already closed" };
     }
+    const hadLiveWorker = this.options.worker.hasLiveWorker();
+    if (hadLiveWorker) {
+      try {
+        const outcome = await this.options.worker.requestWorker(
+          "agent/cancel",
+          { sessionId: task.sessionId },
+          15_000,
+        );
+        if (!outcome.ok) throw new Error(outcome.message);
+      } catch (error) {
+        this.options.onBackgroundError?.("cancel-run", error);
+        return {
+          ok: false,
+          code: "worker-error",
+          message: `The task is still running because cancellation failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        };
+      }
+    }
+    // Commit the ledger terminal only after a live worker acknowledges cancel.
+    // With no live worker there is no in-memory run to orphan.
     const cancelled = await this.options.store.transition(task.id, {
       kind: "cancelled",
       at: this.now(),
       reason: "Cancelled by user",
     });
-    if (this.options.worker.hasLiveWorker()) {
-      await this.options.worker
-        .requestWorker("agent/cancel", { sessionId: cancelled.sessionId }, 15_000)
-        .catch((error) => this.options.onBackgroundError?.("cancel-run", error));
+    if (hadLiveWorker) {
       await this.options.worker
         .requestWorker("agent/goalClear", { sessionId: cancelled.sessionId }, 10_000)
         .catch((error) => this.options.onBackgroundError?.("cancel-goal", error));

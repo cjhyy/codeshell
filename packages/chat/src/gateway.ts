@@ -1,12 +1,20 @@
 import type { ChatMiddleware } from "./chat-gateway.js";
-import type { ChannelMessage, OutgoingAttachment, OutgoingMessage } from "./channel.js";
+import {
+  channelCapabilities,
+  supportsOutgoingAttachment,
+  type ChannelCapabilities,
+  type ChannelAdapter,
+  type ChannelMessage,
+  type OutgoingAttachment,
+  type OutgoingMessage,
+} from "./channel.js";
 import { materializeChatAttachments } from "./attachments.js";
 import {
   DesktopControlOperationError,
   DesktopControlUnavailableError,
   type DesktopControlClient,
 } from "./desktop-control-client.js";
-import { materializeEventAttachments } from "./notification-relay.js";
+import { materializeEventAttachments, splitNotificationText } from "./notification-relay.js";
 
 export interface CodeShellRemoteCommandsOptions {
   desktop: Pick<DesktopControlClient, "open" | "close" | "status">;
@@ -14,12 +22,15 @@ export interface CodeShellRemoteCommandsOptions {
 
 export interface MimiPetChatOptions {
   desktop: Pick<DesktopControlClient, "petChat">;
+  /** Enabled adapters whose declared capabilities back first-level Gateway discovery. */
+  channels?: readonly ChannelAdapter[];
 }
 
 const MIMI_REPLY_CACHE_MAX_ENTRIES = 2_048;
 
 interface MimiCachedReply {
-  outgoing: Promise<OutgoingMessage>;
+  outgoing: Promise<OutgoingMessage[]>;
+  nextSendIndex: number;
   activeSends: number;
   sendFailed: boolean;
 }
@@ -43,7 +54,7 @@ export function createCodeShellRemoteCommands(
     try {
       if (command === "open") {
         const opened = await options.desktop.open();
-        const qr = adapter.supportsOutgoingAttachments
+        const qr = supportsOutgoingAttachment(adapter, "image")
           ? await renderPairingQrAttachment(opened.pairingUrl)
           : undefined;
         await reply({
@@ -112,17 +123,19 @@ export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {
   // first send so retrying cannot re-run Mimi or any already-executed host
   // action. Failed desktop/materialization work is evicted and remains retryable.
   const replies = new Map<string, MimiCachedReply>();
+  const configuredChannels = options.channels ?? [];
   return async ({ message, adapter, reply }) => {
     if (!message.text.trim() && !message.attachments?.length) return;
     const cacheKey = mimiReplyCacheKey(message);
     let cacheEntry: MimiCachedReply | undefined;
-    let outgoing: OutgoingMessage;
+    let outgoing: OutgoingMessage[];
     try {
       if (!cacheKey) {
-        outgoing = await buildMimiOutgoingReply(
+        outgoing = await buildMimiOutgoingReplies(
           options,
           message,
-          Boolean(adapter.supportsOutgoingAttachments),
+          channelCapabilities(adapter),
+          configuredChannels,
         );
       } else {
         const cached = replies.get(cacheKey);
@@ -133,13 +146,15 @@ export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {
           cacheEntry = cached;
           outgoing = await cached.outgoing;
         } else {
-          const pending = buildMimiOutgoingReply(
+          const pending = buildMimiOutgoingReplies(
             options,
             message,
-            Boolean(adapter.supportsOutgoingAttachments),
+            channelCapabilities(adapter),
+            configuredChannels,
           );
           const entry: MimiCachedReply = {
             outgoing: pending,
+            nextSendIndex: 0,
             activeSends: 0,
             sendFailed: false,
           };
@@ -177,7 +192,12 @@ export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {
       cacheEntry.activeSends += 1;
     }
     try {
-      await reply(outgoing);
+      let index = cacheEntry?.nextSendIndex ?? 0;
+      while (index < outgoing.length) {
+        await reply(outgoing[index]!);
+        index += 1;
+        if (cacheEntry) cacheEntry.nextSendIndex = index;
+      }
     } catch (error) {
       if (cacheEntry) cacheEntry.sendFailed = true;
       throw error;
@@ -199,11 +219,12 @@ export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {
   };
 }
 
-async function buildMimiOutgoingReply(
+async function buildMimiOutgoingReplies(
   options: MimiPetChatOptions,
   message: ChannelMessage,
-  supportsOutgoingAttachments: boolean,
-): Promise<OutgoingMessage> {
+  capabilities: ChannelCapabilities,
+  configuredChannels: readonly ChannelAdapter[],
+): Promise<OutgoingMessage[]> {
   const attachments = await materializeChatAttachments(message.attachments);
   const result = await options.desktop.petChat({
     message: message.text,
@@ -213,20 +234,74 @@ async function buildMimiOutgoingReply(
       target: message.target,
       senderId: message.senderId,
       ...(message.messageId ? { messageId: message.messageId } : {}),
+      capabilities,
+      channels: gatewayChannelCatalog(message.channel, capabilities, configuredChannels),
     },
   });
-  const outgoing: OutgoingMessage = {
-    text: result.text || "Mimi Pet 已处理，但没有返回文字内容。",
-  };
-  if (result.attachments?.length && supportsOutgoingAttachments) {
+  const chunks = splitNotificationText(result.text || "Mimi Pet 已处理，但没有返回文字内容。");
+  const outgoing = chunks.map((text): OutgoingMessage => ({ text }));
+  const last = outgoing.at(-1)!;
+  const button = normalizePetReplyButton(result.button);
+  if (button) last.button = button;
+  if (result.attachments?.length && capabilities.outbound.attachments.length > 0) {
     try {
-      const materialized = await materializeEventAttachments(result.attachments);
-      if (materialized.length > 0) outgoing.attachments = materialized;
+      const supported = result.attachments.filter((attachment) =>
+        capabilities.outbound.attachments.includes(attachment.kind),
+      );
+      const materialized = await materializeEventAttachments(supported);
+      if (materialized.length > 0) last.attachments = materialized;
     } catch {
       // A stale or invalid host file must not drop Mimi's text reply.
     }
   }
   return outgoing;
+}
+
+function gatewayChannelCatalog(
+  currentChannel: string,
+  currentCapabilities: ChannelCapabilities,
+  adapters: readonly ChannelAdapter[],
+): Array<{ channel: string; capabilities: ChannelCapabilities }> {
+  const channels = new Map<string, ChannelCapabilities>();
+  for (const adapter of adapters) {
+    if (!channels.has(adapter.channel)) {
+      channels.set(adapter.channel, channelCapabilities(adapter));
+    }
+  }
+  if (!channels.has(currentChannel) && channels.size >= 32) {
+    channels.delete([...channels.keys()].at(-1)!);
+  }
+  // The exact adapter that admitted this message is authoritative when several
+  // accounts or compatibility adapters share one channel name.
+  channels.set(currentChannel, currentCapabilities);
+  return [...channels].slice(0, 32).map(([channel, declared]) => ({
+    channel,
+    capabilities: declared,
+  }));
+}
+
+function normalizePetReplyButton(value: unknown): OutgoingMessage["button"] | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some((key) => key !== "text" && key !== "url") ||
+    typeof record.text !== "string" ||
+    !record.text.trim() ||
+    record.text.length > 80 ||
+    /[\u0000-\u001f\u007f]/u.test(record.text) ||
+    typeof record.url !== "string" ||
+    record.url.length > 2_048 ||
+    record.url !== record.url.trim()
+  ) {
+    return undefined;
+  }
+  try {
+    const url = new URL(record.url);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
+  } catch {
+    return undefined;
+  }
+  return { text: record.text.trim(), url: record.url };
 }
 
 function mimiReplyCacheKey(message: ChannelMessage): string | undefined {

@@ -213,7 +213,7 @@ export function CCRoomView({
   const openWithMode = useCallback(
     async (mode: "default" | "acceptEdits" | "bypassPermissions") => {
       if (!cwd || !picking) return;
-      const { roomId } = await window.codeshell.ccRoom.openSession(
+      const { roomId, status } = await window.codeshell.ccRoom.openSession(
         picking.sessionId,
         picking.cwd,
         mode,
@@ -225,7 +225,7 @@ export function CCRoomView({
         mode,
         cwd: picking.cwd,
         cliKind,
-        status: "running",
+        status: status === "observing" ? "observing" : "running",
       });
       setPicking(null);
     },

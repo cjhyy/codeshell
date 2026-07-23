@@ -1,7 +1,9 @@
 import { SocketModeClient } from "@slack/socket-mode";
 import { WebClient } from "@slack/web-api";
 import type { ChannelAdapter, ChannelMessageHandler, OutgoingMessage } from "./channel.js";
-import { dispatchSafely, waitForAbort } from "./lifecycle.js";
+import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
+import { dispatchSafely, formatOutgoingMarkdown, waitForAbort } from "./lifecycle.js";
+import { mediaKind, outgoingAttachments, remoteAttachment } from "./media.js";
 
 export interface SlackAdapterConfig {
   botToken: string;
@@ -10,12 +12,17 @@ export interface SlackAdapterConfig {
 
 export class SlackAdapter implements ChannelAdapter {
   readonly channel = "slack";
+  readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.slack;
   private readonly socket: SocketModeClient;
   private readonly web: WebClient;
+  private readonly botToken: string;
+  private readonly fetchFn: typeof fetch;
 
-  constructor(config: SlackAdapterConfig) {
+  constructor(config: SlackAdapterConfig, fetchFn: typeof fetch = fetch) {
     this.socket = new SocketModeClient({ appToken: config.appToken });
     this.web = new WebClient(config.botToken);
+    this.botToken = config.botToken;
+    this.fetchFn = fetchFn;
   }
 
   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
@@ -24,10 +31,31 @@ export class SlackAdapter implements ChannelAdapter {
         event?.type !== "message" ||
         typeof event.channel !== "string" ||
         typeof event.user !== "string" ||
-        typeof event.text !== "string" ||
         event.bot_id ||
-        event.subtype
+        (event.subtype && event.subtype !== "file_share")
       ) {
+        await ack();
+        return;
+      }
+      const files = Array.isArray(event.files) ? (event.files as SlackFile[]) : [];
+      const attachments = files.flatMap((file) => {
+        const url = file.url_private_download ?? file.url_private;
+        if (!file.id || !url) return [];
+        return [
+          remoteAttachment({
+            id: file.id,
+            kind: mediaKind(file.mimetype, file.name),
+            name: file.name,
+            mimeType: file.mimetype,
+            size: file.size,
+            url,
+            headers: { authorization: `Bearer ${this.botToken}` },
+            fetch: this.fetchFn,
+          }),
+        ];
+      });
+      const text = typeof event.text === "string" ? event.text : "";
+      if (!text && attachments.length === 0) {
         await ack();
         return;
       }
@@ -39,10 +67,11 @@ export class SlackAdapter implements ChannelAdapter {
         channel: this.channel,
         target: event.channel,
         senderId: event.user,
-        text: event.text,
+        text,
         ...(event.client_msg_id || event.ts
           ? { messageId: String(event.client_msg_id ?? event.ts) }
           : {}),
+        ...(attachments.length > 0 ? { attachments } : {}),
       });
       await ack();
     };
@@ -79,6 +108,20 @@ export class SlackAdapter implements ChannelAdapter {
   }
 
   async send(target: string, message: OutgoingMessage): Promise<void> {
+    const attachments = outgoingAttachments(message, this.capabilities.outbound.attachments);
+    if (attachments.length > 0) {
+      // Slack's v2 upload can publish all files and the comment atomically,
+      // avoiding a text-first partial send that would duplicate on retry.
+      await this.web.filesUploadV2({
+        channel_id: target,
+        initial_comment: formatOutgoingMarkdown(message.text, message.button),
+        file_uploads: attachments.map((attachment) => ({
+          file: Buffer.from(attachment.data),
+          filename: attachment.name,
+        })),
+      });
+      return;
+    }
     await this.web.chat.postMessage({
       channel: target,
       text: message.text,
@@ -101,4 +144,13 @@ export class SlackAdapter implements ChannelAdapter {
         : {}),
     });
   }
+}
+
+interface SlackFile {
+  id?: string;
+  name?: string;
+  mimetype?: string;
+  size?: number;
+  url_private?: string;
+  url_private_download?: string;
 }

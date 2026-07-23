@@ -101,7 +101,11 @@ import {
 } from "./pet/external-session-visibility.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
-import { formatPetLongTaskClosureMessage, PetDispatchService } from "./pet/pet-dispatch-service.js";
+import {
+  formatPetLongTaskClosureMessage,
+  PetDispatchService,
+  type PetHostActionExecution,
+} from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
@@ -123,7 +127,7 @@ import { petChatModelKeyFromSettings } from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
-import { inspectReadableImage, readImageDataUrl } from "./image-read-service.js";
+import { inspectReadableReplyAttachment, readImageDataUrl } from "./image-read-service.js";
 import {
   bucketForSession,
   browserPartitionForBucket as registryPartitionForBucket,
@@ -480,6 +484,7 @@ let petWorkInboxStore: PetWorkInboxStore | null = null;
 let petLongTaskStore: PetLongTaskStore | null = null;
 let petLongTaskCoordinator: PetLongTaskCoordinator | null = null;
 let unsubscribePetLongTaskStream: (() => void) | null = null;
+let unsubscribePetReportStream: (() => void) | null = null;
 let disposePetIpc: (() => void) | null = null;
 let mcpOAuthService: McpOAuthService | null = null;
 let cspInstalled = false;
@@ -1103,20 +1108,12 @@ async function createWindow(): Promise<BrowserWindow> {
     const externalCliConfig = {
       codex: {
         discover: (scope: ExternalSessionDiscoveryScope) =>
-          discoverRecentCodexSessions(
-            { sinceMs: 24 * 60 * 60_000, limit: 50 },
-            undefined,
-            scope,
-          ),
+          discoverRecentCodexSessions({ sinceMs: 24 * 60 * 60_000, limit: 50 }, undefined, scope),
         parseLine: parseCodexTranscriptLine,
       },
       claude: {
         discover: (scope: ExternalSessionDiscoveryScope) =>
-          discoverRecentClaudeSessions(
-            { sinceMs: 24 * 60 * 60_000, limit: 50 },
-            undefined,
-            scope,
-          ),
+          discoverRecentClaudeSessions({ sinceMs: 24 * 60 * 60_000, limit: 50 }, undefined, scope),
         parseLine: parseClaudeTranscriptLine,
       },
     } satisfies Record<
@@ -1187,11 +1184,13 @@ async function createWindow(): Promise<BrowserWindow> {
 
         let message = formatPetLongTaskClosureMessage(task);
         let continued = false;
+        let closureHostActions: PetHostActionExecution[] | undefined;
         try {
           if (petDispatchService) {
             const report = await petDispatchService.reportLongTaskClosure(task);
             message = report.text;
             continued = report.continued;
+            closureHostActions = report.hostActions;
           }
         } catch (error) {
           // The deterministic fallback below still reaches the originating IM
@@ -1212,28 +1211,12 @@ async function createWindow(): Promise<BrowserWindow> {
             : cancelled
               ? "Mimi 任务已取消"
               : "Mimi 任务执行失败";
-          const completionAttachments: GatewayControlEventAttachment[] = [];
-          if (completed && task.completionTarget) {
-            const taskCwd = task.workspacePath ?? resolveNoRepoCwd();
-            for (const artifact of task.artifacts) {
-              if (artifact.kind !== "file" || completionAttachments.length >= 4) continue;
-              const candidate = isAbsolute(artifact.reference)
-                ? artifact.reference
-                : resolve(taskCwd, artifact.reference);
-              const image = await inspectReadableImage(candidate, {
-                cwd: taskCwd,
-                sessionId: task.sessionId,
-              });
-              if (
-                !image ||
-                image.size > 10 * 1024 * 1024 ||
-                !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(image.mimeType)
-              ) {
-                continue;
-              }
-              completionAttachments.push({ kind: "image" as const, ...image });
-            }
-          }
+          const enriched = await enrichPetChatReplyWithHostActions(message, closureHostActions, {
+            qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+            attachmentKinds: task.completionTarget?.replyAttachmentKinds,
+          });
+          message = enriched.text;
+          const completionAttachments = enriched.attachments;
           gatewayControlServer?.publish({
             type: completed
               ? "pet.task.completed"
@@ -1242,6 +1225,7 @@ async function createWindow(): Promise<BrowserWindow> {
                 : "pet.task.failed",
             title,
             text: message,
+            ...(enriched.button ? { button: enriched.button } : {}),
             ...(completionAttachments.length > 0 ? { attachments: completionAttachments } : {}),
             ...(task.completionTarget
               ? {
@@ -1336,8 +1320,17 @@ async function createWindow(): Promise<BrowserWindow> {
           const text = typeof payload.text === "string" ? payload.text : "";
           const memoryId = typeof payload.memoryId === "string" ? payload.memoryId : "";
           if (action === "remember") {
+            const before = new Map(
+              petMemoryStoreInstance.list().map((entry) => [entry.id, entry] as const),
+            );
             const entry = await petMemoryStoreInstance.remember(text, "mimi");
-            return { action, id: entry.id };
+            const previous = before.get(entry.id);
+            const unchanged =
+              previous !== undefined &&
+              previous.text === entry.text &&
+              previous.source === entry.source &&
+              previous.updatedAt === entry.updatedAt;
+            return { action, id: entry.id, ...(unchanged ? { unchanged: true } : {}) };
           }
           if (action === "update") {
             const entry = await petMemoryStoreInstance.update(memoryId, text);
@@ -1349,15 +1342,57 @@ async function createWindow(): Promise<BrowserWindow> {
           }
           throw new Error("invalid memory action");
         },
+        gatewayReply: async (payload) => {
+          const text = typeof payload.text === "string" ? payload.text.trim() : "";
+          const button = payload.button;
+          const paths = Array.isArray(payload.attachmentPaths) ? payload.attachmentPaths : [];
+          if (
+            paths.length > 4 ||
+            !paths.every((path) => typeof path === "string") ||
+            !text ||
+            (button !== undefined &&
+              (!button ||
+                typeof button !== "object" ||
+                Array.isArray(button) ||
+                typeof (button as Record<string, unknown>).text !== "string" ||
+                typeof (button as Record<string, unknown>).url !== "string"))
+          ) {
+            throw new Error("invalid Gateway reply request");
+          }
+          const attachments: GatewayControlEventAttachment[] = [];
+          for (const path of paths as string[]) {
+            const attachment = await inspectKnownReplyAttachment(path);
+            if (!attachment) {
+              throw new Error(
+                `附件不在允许的附件目录内、属于敏感文件、格式无效或超过 10 MB：${path}`,
+              );
+            }
+            attachments.push(attachment);
+          }
+          return {
+            text,
+            ...(button ? { button } : {}),
+            ...(attachments.length > 0 ? { attachments } : {}),
+          };
+        },
       },
       worldContext: async () => {
         await petMemoryStoreInstance.load();
         const remote = getMobileRemoteGatewayStatus();
+        const allMemories = petMemoryStoreInstance.list();
+        const visibleMemories = allMemories.slice(0, 24);
         return {
-          memories: petMemoryStoreInstance
-            .list()
-            .slice(0, 24)
-            .map(({ id, text, source, updatedAt }) => ({ id, text, source, updatedAt })),
+          memories: visibleMemories.map(({ id, text, source, updatedAt }) => ({
+            id,
+            text,
+            source,
+            updatedAt,
+          })),
+          memoryWindow: {
+            visibleCount: visibleMemories.length,
+            totalCount: allMemories.length,
+            truncated: visibleMemories.length < allMemories.length,
+          },
           mobileRemote: {
             running: remote.running,
             tunnelConnected: remote.tunnelConnected,
@@ -1367,6 +1402,7 @@ async function createWindow(): Promise<BrowserWindow> {
         };
       },
       listWorkspaces: () => mobileOrchestrator.projectList(),
+      replyAttachmentRoots: knownReplyAttachmentCwds,
       listReusableSessions: async () => {
         const noWorkspaceCwd = resolveNoRepoCwd();
         // No includeArchived: listDiskSessions default-filters archived rows, so
@@ -1388,6 +1424,74 @@ async function createWindow(): Promise<BrowserWindow> {
           }));
       },
       startWorkSession: (delegation) => longTaskCoordinator.startDelegation(delegation),
+    });
+    const processingPetReports = new Set<string>();
+    const deliveredPetReports = new Set<string>();
+    unsubscribePetReportStream = bridge.subscribePetReports(async (event) => {
+      if (processingPetReports.has(event.reportId) || deliveredPetReports.has(event.reportId)) {
+        return;
+      }
+      processingPetReports.add(event.reportId);
+      try {
+        const task = longTaskStore.latestForSession(event.sessionId);
+        if (!petDispatchService) throw new Error("Mimi dispatch service is unavailable");
+        const report = await petDispatchService.reportSessionMessage(
+          {
+            sourceSessionId: event.sessionId,
+            reportId: event.reportId,
+            message: event.message,
+            ...(event.attachmentPaths ? { attachmentPaths: event.attachmentPaths } : {}),
+          },
+          task,
+        );
+        if (report.routedToOrigin) {
+          const completionTarget = task?.completionTarget;
+          const gateway = gatewayControlServer;
+          if (!gateway || !completionTarget) {
+            throw new Error("The originating IM Gateway route is unavailable");
+          }
+          const enriched = await enrichPetChatReplyWithHostActions(
+            report.text,
+            report.hostActions,
+            {
+              qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+              attachmentKinds: completionTarget.replyAttachmentKinds,
+            },
+          );
+          gateway.publish({
+            type: "pet.task.reported",
+            title: "Mimi 工作更新",
+            text: enriched.text,
+            ...(enriched.button ? { button: enriched.button } : {}),
+            ...(enriched.attachments.length > 0 ? { attachments: enriched.attachments } : {}),
+            target: {
+              channel: completionTarget.channel,
+              target: completionTarget.target,
+            },
+          });
+        }
+        deliveredPetReports.add(event.reportId);
+        if (deliveredPetReports.size > 1_000) {
+          const oldest = deliveredPetReports.values().next().value;
+          if (oldest) deliveredPetReports.delete(oldest);
+        }
+        dlog("main", "pet.report.delivered_to_mimi", {
+          reportId: event.reportId,
+          sourceSessionId: event.sessionId,
+          routedToOrigin: report.routedToOrigin,
+          ...(task ? { taskId: task.id } : {}),
+          attachmentCount: event.attachmentPaths?.length ?? 0,
+        });
+      } catch (error) {
+        dlog("main", "pet.report.failed", {
+          reportId: event.reportId,
+          sessionId: event.sessionId,
+          error: String(error),
+        });
+        throw error;
+      } finally {
+        processingPetReports.delete(event.reportId);
+      }
     });
     const petReceipts = new PetReceiptStore(
       resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
@@ -1809,6 +1913,21 @@ async function knownAttachmentCwds(): Promise<string[]> {
   return [...out];
 }
 
+async function knownReplyAttachmentCwds(): Promise<string[]> {
+  return [...new Set([...(await knownAttachmentCwds()), join(userHome(), "Downloads")])];
+}
+
+async function inspectKnownReplyAttachment(
+  path: string,
+): Promise<GatewayControlEventAttachment | null> {
+  if (!isAbsolute(path)) return null;
+  for (const cwd of await knownReplyAttachmentCwds()) {
+    const attachment = await inspectReadableReplyAttachment(path, { cwd });
+    if (attachment) return attachment;
+  }
+  return null;
+}
+
 async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
   for (const cwd of await knownAttachmentCwds()) {
     if (sessionId) {
@@ -1889,6 +2008,11 @@ async function dispatchGatewayPetChat(
     source: {
       kind: "im-gateway",
       channel: sourceChannel,
+      capabilities: request.origin?.capabilities ?? {
+        inbound: { text: true, attachments: [] },
+        outbound: { text: true, button: "link", attachments: [] },
+      },
+      ...(request.origin?.channels ? { channels: request.origin.channels } : {}),
       ...(request.origin ? { target: request.origin.target } : {}),
     },
   });
@@ -1902,12 +2026,19 @@ async function dispatchGatewayPetChat(
   const enriched = await enrichPetChatReplyWithHostActions(
     typeof worker?.text === "string" ? worker.text : "",
     result.hostActions,
-    { qrDir: resolve(app.getPath("userData"), "pet", "qr") },
+    {
+      qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+      attachmentKinds: request.origin?.capabilities.outbound.attachments.filter(
+        (kind): kind is "image" | "file" | "audio" | "video" =>
+          ["image", "file", "audio", "video"].includes(kind),
+      ),
+    },
   );
   return {
     text: enriched.text,
     petSessionId: result.petSessionId,
     ...(typeof worker?.reason === "string" ? { reason: worker.reason } : {}),
+    ...(enriched.button ? { button: enriched.button } : {}),
     ...(enriched.attachments.length > 0 ? { attachments: enriched.attachments } : {}),
   };
 }
@@ -3437,13 +3568,8 @@ ipcMain.handle(
 );
 ipcMain.handle(
   "ccRoom:takeOverLinkedSession",
-  async (
-    _e,
-    roomId: unknown,
-    externalSessionId: unknown,
-    cwd: unknown,
-    kind: unknown,
-  ) => takeOverLinkedSessionFromIpc(roomManager, roomId, externalSessionId, cwd, kind),
+  async (_e, roomId: unknown, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
+    takeOverLinkedSessionFromIpc(roomManager, roomId, externalSessionId, cwd, kind),
 );
 const transcriptCleanupSenders = new Set<number>();
 ipcMain.handle(
@@ -4432,6 +4558,8 @@ app.on("before-quit", (event) => {
   petLongTaskCoordinator = null;
   unsubscribePetLongTaskStream?.();
   unsubscribePetLongTaskStream = null;
+  unsubscribePetReportStream?.();
+  unsubscribePetReportStream = null;
   petAttentionPolicy?.stop();
   petAttentionPolicy = null;
   const petWorkInboxFlush = petWorkInboxStore?.flush();

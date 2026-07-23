@@ -10,6 +10,7 @@ import { openPetTarget } from "./pet/petNavigation";
 import { PetChatHost } from "./pet/PetChatHost";
 import { PetSettingsPage } from "./pet/PetSettingsPage";
 import { PetPeekHost } from "./pet/PetPeekHost";
+import { nextOpenCliSessionNonce } from "./cc-room/openCliSession";
 import {
   PET_WIDGET_RECEIPTS_KEY,
   initialPetWidgetReceiptState,
@@ -296,7 +297,6 @@ function App() {
   >({});
   const quickChatSessionsRef = useRef<Record<string, QuickChatSessionRef>>({});
   const activeBucketRef = useRef(activeBucket);
-  const petExternalOpenNonceRef = useRef(0);
   activeBucketRef.current = activeBucket;
   quickChatSessionsRef.current = quickChatSessions;
   useEffect(() => {
@@ -899,8 +899,7 @@ function App() {
         toast({ message: t("pet.navigation.externalUnavailable"), variant: "error" });
         return;
       }
-      const nonce = petExternalOpenNonceRef.current + 1;
-      petExternalOpenNonceRef.current = nonce;
+      const nonce = nextOpenCliSessionNonce();
       updatePanelBucket(activeBucketRef.current, (state) => ({
         ...state,
         open: true,

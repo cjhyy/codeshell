@@ -8,7 +8,9 @@ import {
   TurnContext,
 } from "botbuilder";
 import type { ChannelMessageHandler, OutgoingMessage, WebhookChannelAdapter } from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
 import { formatOutgoingMarkdown, waitForAbort } from "./lifecycle.js";
+import { mediaKind, outgoingAttachments, remoteAttachment, safeAttachmentName } from "./media.js";
 import { readRequestBody, sendResponse } from "./webhook.js";
 
 export interface TeamsAdapterConfig {
@@ -21,6 +23,7 @@ export interface TeamsAdapterConfig {
 
 export class TeamsAdapter implements WebhookChannelAdapter {
   readonly channel = "teams";
+  readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.teams;
   readonly webhookPath = "/webhooks/teams";
   private readonly adapter: CloudAdapter;
   private readonly appId: string;
@@ -73,9 +76,48 @@ export class TeamsAdapter implements WebhookChannelAdapter {
         const activity = context.activity;
         const target = activity.conversation?.id;
         const senderId = activity.from?.id;
-        if (activity.type !== ActivityTypes.Message || !target || !senderId || !activity.text)
-          return;
-        const text = TurnContext.removeRecipientMention(activity).trim() || activity.text;
+        if (activity.type !== ActivityTypes.Message || !target || !senderId) return;
+        const text = activity.text
+          ? TurnContext.removeRecipientMention(activity).trim() || activity.text
+          : "";
+        const attachments = (activity.attachments ?? []).flatMap((attachment, index) => {
+          const contentType = attachment.contentType?.toLowerCase() ?? "";
+          if (
+            contentType.startsWith("application/vnd.microsoft.card.") ||
+            contentType === "text/html"
+          ) {
+            return [];
+          }
+          const downloadInfo =
+            contentType === "application/vnd.microsoft.teams.file.download.info" &&
+            attachment.content &&
+            typeof attachment.content === "object"
+              ? (attachment.content as {
+                  downloadUrl?: string;
+                  fileType?: string;
+                  uniqueId?: string;
+                })
+              : undefined;
+          const url = downloadInfo?.downloadUrl ?? attachment.contentUrl;
+          if (!url) return [];
+          const mimeType =
+            downloadInfo?.fileType && downloadInfo.fileType.includes("/")
+              ? downloadInfo.fileType
+              : contentType === "application/vnd.microsoft.teams.file.download.info"
+                ? undefined
+                : attachment.contentType;
+          const id = downloadInfo?.uniqueId ?? `${activity.id ?? target}:${index}`;
+          return [
+            remoteAttachment({
+              id,
+              kind: mediaKind(mimeType, attachment.name),
+              name: safeAttachmentName(attachment.name, `teams-${id}`),
+              mimeType,
+              url,
+            }),
+          ];
+        });
+        if (!text && attachments.length === 0) return;
         this.references.set(target, TurnContext.getConversationReference(activity));
         this.saveReferences();
         this.contexts.set(target, context);
@@ -86,6 +128,7 @@ export class TeamsAdapter implements WebhookChannelAdapter {
             senderId,
             text,
             ...(activity.id ? { messageId: activity.id } : {}),
+            ...(attachments.length > 0 ? { attachments } : {}),
           });
         } finally {
           this.contexts.delete(target);
@@ -97,14 +140,29 @@ export class TeamsAdapter implements WebhookChannelAdapter {
   async send(target: string, message: OutgoingMessage): Promise<void> {
     const context = this.contexts.get(target);
     const text = formatOutgoingMarkdown(message.text, message.button);
+    const outgoing = outgoingAttachments(message, this.capabilities.outbound.attachments);
+    const maximum = this.capabilities.outbound.maxAttachmentBytes ?? 1024 * 1024;
+    if (outgoing.some((attachment) => attachment.data.byteLength > maximum)) {
+      throw new Error(`Teams 内联图片不能超过 ${maximum} 字节`);
+    }
+    const attachments = outgoing.map((attachment) => ({
+      contentType: attachment.mimeType,
+      contentUrl: `data:${attachment.mimeType};base64,${Buffer.from(attachment.data).toString("base64")}`,
+      name: safeAttachmentName(attachment.name),
+    }));
+    const activity = {
+      type: ActivityTypes.Message,
+      text,
+      ...(attachments.length > 0 ? { attachments } : {}),
+    };
     if (context) {
-      await context.sendActivity(text);
+      await context.sendActivity(activity);
       return;
     }
     const reference = this.references.get(target);
     if (!reference) throw new Error(`Teams 会话 ${target} 尚无 conversation reference`);
     await this.adapter.continueConversationAsync(this.appId, reference, async (turn) => {
-      await turn.sendActivity(text);
+      await turn.sendActivity(activity);
     });
   }
 

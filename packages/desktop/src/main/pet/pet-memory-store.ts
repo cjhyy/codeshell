@@ -18,6 +18,8 @@ export interface PetMemoryEntry {
 interface PetMemoryStoreOptions {
   now?: () => number;
   maxEntries?: number;
+  /** Test seam for transient read failures. */
+  readFile?: (path: string) => Promise<string>;
   /** Test seam for exercising a failed atomic replace without corrupting the target file. */
   replaceFile?: (temporaryPath: string, targetPath: string) => Promise<void>;
 }
@@ -34,6 +36,7 @@ export class PetMemoryStore {
   private readonly listeners = new Set<() => void>();
   private readonly now: () => number;
   private readonly maxEntries: number;
+  private readonly readTextFile: (path: string) => Promise<string>;
   private readonly replaceFile: (temporaryPath: string, targetPath: string) => Promise<void>;
   private mutationQueue: Promise<unknown> = Promise.resolve();
   private loadPromise: Promise<void> | undefined;
@@ -48,28 +51,46 @@ export class PetMemoryStore {
       throw new Error("Pet memory maxEntries must be a positive integer");
     }
     this.maxEntries = Math.min(requestedMaxEntries, DEFAULT_MAX_ENTRIES);
+    this.readTextFile = options.readFile ?? ((path) => readFile(path, "utf-8"));
     this.replaceFile = options.replaceFile ?? rename;
   }
 
   /** Idempotent; every mutation awaits it so a write can never clobber unloaded disk state. */
   load(): Promise<void> {
-    this.loadPromise ??= this.doLoad();
+    if (!this.loadPromise) {
+      const attempt = this.doLoad();
+      this.loadPromise = attempt;
+      // A transient EIO/EACCES must not become a permanently cached empty
+      // store. Clear only this failed attempt so a later load/mutation retries.
+      void attempt.catch(() => {
+        if (this.loadPromise === attempt) this.loadPromise = undefined;
+      });
+    }
     return this.loadPromise;
   }
 
   private async doLoad(): Promise<void> {
+    let text: string;
     try {
-      const raw = JSON.parse(await readFile(this.path, "utf-8")) as { entries?: unknown };
-      const loaded = new Map<string, PetMemoryEntry>();
-      for (const candidate of Array.isArray(raw.entries) ? raw.entries : []) {
-        const entry = parseEntry(candidate);
-        if (entry) loaded.set(entry.id, entry);
+      text = await this.readTextFile(this.path);
+    } catch (error) {
+      if (isNodeErrorCode(error, "ENOENT")) {
+        this.replaceEntries(new Map());
+        return;
       }
-      trimEntries(loaded, this.maxEntries);
-      this.replaceEntries(loaded);
-    } catch {
-      // Missing or corrupt file: start empty; the next mutation rewrites it.
+      throw error;
     }
+    // Corrupt JSON is not equivalent to a missing library. Rejecting keeps all
+    // mutations fail-closed until the file is repaired instead of overwriting
+    // it from an empty staged map.
+    const raw = JSON.parse(text) as { entries?: unknown };
+    const loaded = new Map<string, PetMemoryEntry>();
+    for (const candidate of Array.isArray(raw.entries) ? raw.entries : []) {
+      const entry = parseEntry(candidate);
+      if (entry) loaded.set(entry.id, entry);
+    }
+    trimEntries(loaded, this.maxEntries);
+    this.replaceEntries(loaded);
   }
 
   /** Newest-first (by updatedAt) bounded snapshot. */
@@ -83,13 +104,29 @@ export class PetMemoryStore {
       const at = nextMutationTime(entries, this.now());
       const equivalent = findEquivalentEntry(entries, normalized);
       if (equivalent) {
+        // Mimi may recognize a user-authored memory, but must not rewrite its
+        // wording or ownership merely by calling remember with a paraphrase.
+        if (source === "mimi" && equivalent.source === "user") return equivalent;
         const entry: PetMemoryEntry = {
           ...equivalent,
           text: normalized,
+          // An explicit user write upgrades an equivalent Mimi inference to
+          // user ownership so later Mimi capacity pressure cannot evict it.
+          ...(source === "user" ? { source: "user" as const } : {}),
           updatedAt: at,
         };
         entries.set(entry.id, entry);
         return entry;
+      }
+      if (entries.size >= this.maxEntries) {
+        const evictable =
+          oldestMimiEntry(entries) ?? (source === "user" ? oldestEntry(entries) : undefined);
+        if (!evictable) {
+          throw new Error(
+            "Mimi memory is full of user-authored entries; remove one explicitly before adding another",
+          );
+        }
+        entries.delete(evictable.id);
       }
       const entry: PetMemoryEntry = {
         id: `mem-${randomUUID()}`,
@@ -99,7 +136,6 @@ export class PetMemoryStore {
         updatedAt: at,
       };
       entries.set(entry.id, entry);
-      trimEntries(entries, this.maxEntries);
       return entry;
     });
   }
@@ -193,8 +229,31 @@ function nextMutationTime(entries: ReadonlyMap<string, PetMemoryEntry>, now: num
 function trimEntries(entries: Map<string, PetMemoryEntry>, maximum: number): void {
   const overflow = entries.size - maximum;
   if (overflow <= 0) return;
-  const oldest = [...entries.values()].sort((a, b) => a.updatedAt - b.updatedAt).slice(0, overflow);
+  const oldest = [...entries.values()]
+    .sort((a, b) => {
+      if (a.source !== b.source) return a.source === "mimi" ? -1 : 1;
+      return a.updatedAt - b.updatedAt;
+    })
+    .slice(0, overflow);
   for (const entry of oldest) entries.delete(entry.id);
+}
+
+function oldestMimiEntry(entries: ReadonlyMap<string, PetMemoryEntry>): PetMemoryEntry | undefined {
+  return [...entries.values()]
+    .filter((entry) => entry.source === "mimi")
+    .sort((a, b) => a.updatedAt - b.updatedAt || a.id.localeCompare(b.id))[0];
+}
+
+function oldestEntry(entries: ReadonlyMap<string, PetMemoryEntry>): PetMemoryEntry | undefined {
+  return [...entries.values()].sort(
+    (a, b) => a.updatedAt - b.updatedAt || a.id.localeCompare(b.id),
+  )[0];
+}
+
+function isNodeErrorCode(error: unknown, code: string): boolean {
+  return (
+    error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === code
+  );
 }
 
 function normalizeText(text: string): string {

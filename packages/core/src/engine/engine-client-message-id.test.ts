@@ -32,7 +32,12 @@ class FakeClientMessageIdClient extends LLMClientBase {
 
 registerProvider(fakeProvider, FakeClientMessageIdClient);
 
-function makeEngine(): { engine: Engine; dir: string; scenario: { calls: Message[][] }; model: string } {
+function makeEngine(): {
+  engine: Engine;
+  dir: string;
+  scenario: { calls: Message[][] };
+  model: string;
+} {
   const dir = mkdtempSync(join(tmpdir(), "engine-client-message-id-"));
   const model = `${fakeProvider}-${Date.now()}-${Math.random()}`;
   const scenario = { calls: [] };
@@ -52,15 +57,22 @@ function countExactText(messages: Message[], text: string): number {
 }
 
 describe("Engine clientMessageId submit idempotency", () => {
-  it("does not execute a duplicate submit with the same clientMessageId", async () => {
+  it("replays a duplicate submit result after an engine restart", async () => {
     const { engine, dir, scenario, model } = makeEngine();
     try {
-      await engine.run("do once", {
+      const first = await engine.run("do once", {
         sessionId: "s-submit-id",
         cwd: dir,
         clientMessageId: "client-submit-1",
       });
-      await engine.run("do once retry", {
+      const restarted = new Engine({
+        llm: { provider: fakeProvider, model, apiKey: "test" } as never,
+        cwd: dir,
+        sessionStorageDir: join(dir, "sessions"),
+        headless: true,
+      });
+      (restarted as any).hooks.clear();
+      const replayed = await restarted.run("do once retry", {
         sessionId: "s-submit-id",
         cwd: dir,
         clientMessageId: "client-submit-1",
@@ -69,6 +81,7 @@ describe("Engine clientMessageId submit idempotency", () => {
       expect(scenario.calls).toHaveLength(1);
       expect(countExactText(scenario.calls[0]!, "do once")).toBe(1);
       expect(countExactText(scenario.calls[0]!, "do once retry")).toBe(0);
+      expect(replayed).toEqual(first);
     } finally {
       scenarios.delete(model);
       rmSync(dir, { recursive: true, force: true });

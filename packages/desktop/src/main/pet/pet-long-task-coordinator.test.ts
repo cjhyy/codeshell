@@ -210,6 +210,7 @@ describe("PetLongTaskCoordinator", () => {
         kind: "im-gateway",
         channel: "wechat",
         target: "owner-conversation",
+        replyAttachmentKinds: ["image", "file"],
       },
       continuationDepth: 1,
     });
@@ -218,6 +219,7 @@ describe("PetLongTaskCoordinator", () => {
       kind: "im-gateway",
       channel: "wechat",
       target: "owner-conversation",
+      replyAttachmentKinds: ["image", "file"],
     });
     expect(h.store.get(launch.taskId)?.continuationDepth).toBe(1);
     expect(h.closed).toEqual([]);
@@ -311,6 +313,28 @@ describe("PetLongTaskCoordinator", () => {
       label: "Generated image",
       reference: "/work/app/comic.png",
     });
+  });
+
+  test("does not promote a path from a generic tool result into a sendable artifact", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-found-image",
+      task: "Find the latest generated comic",
+      workspacePath: "/work/app",
+    });
+
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "tool_result",
+      result: {
+        id: "tool-find",
+        toolName: "Bash",
+        result: "/work/app/.code-shell/generated_images/latest comic.png\n",
+      },
+    });
+
+    expect(h.store.get(launch.taskId)?.artifacts).toEqual([
+      { kind: "session", label: "Work session", reference: launch.sessionId },
+    ]);
   });
 
   test("does not confuse a generic completed turn with a verified Goal outcome", async () => {
@@ -683,6 +707,117 @@ describe("PetLongTaskCoordinator", () => {
     ]);
     const cleared = await h.coordinator.clearTerminalTask(launch.taskId);
     expect(cleared.tasks).toEqual([]);
+  });
+
+  test("ignores an old terminal replay after retrying the same Session", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-retry-fence",
+      task: "Retry without replaying the old failure",
+      workspacePath: "/work/app",
+    });
+    h.tick(2_000);
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "error",
+      error: "attempt one failed",
+    });
+    h.tick(3_000);
+    const retried = await h.coordinator.control({ taskId: launch.taskId, action: "retry" });
+    expect(retried.ok && retried.task).toMatchObject({ status: "running", attempt: 2 });
+
+    h.projection.emit({
+      kind: "session-upsert",
+      version: 2,
+      generation: 1,
+      observedAt: 3_100,
+      session: {
+        agentSessionId: launch.sessionId,
+        runState: "terminal",
+        queueDepth: 0,
+        lastActivityAt: 2_000,
+        pendingDecisionCount: 0,
+        terminal: { status: "failed", at: 2_000 },
+        freshness: { source: "disk", observedAt: 3_100, workerState: "reclaimed" },
+      },
+    });
+    await Bun.sleep(10);
+
+    expect(h.store.get(launch.taskId)).toMatchObject({ status: "running", attempt: 2 });
+    expect(h.closed).toEqual([{ id: launch.taskId, status: "failed" }]);
+  });
+
+  test("ignores a dormant Session terminal older than a fresh reuse attempt", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "message-reuse-fence",
+      task: "Continue the dormant Session",
+      workspacePath: "/work/app",
+      targetSessionId: "dormant-session",
+    });
+    h.projection.emit({
+      kind: "session-upsert",
+      version: 2,
+      generation: 1,
+      observedAt: 1_100,
+      session: {
+        agentSessionId: launch.sessionId,
+        runState: "terminal",
+        queueDepth: 0,
+        lastActivityAt: 900,
+        pendingDecisionCount: 0,
+        terminal: { status: "completed", at: 900 },
+        freshness: { source: "disk", observedAt: 1_100, workerState: "reclaimed" },
+      },
+    });
+    h.projection.emit({
+      kind: "reset",
+      version: 3,
+      generation: 1,
+      observedAt: 1_100,
+    });
+    await Bun.sleep(10);
+
+    expect(h.store.get(launch.taskId)).toMatchObject({ status: "running", attempt: 1 });
+    expect(h.store.get(launch.taskId)?.events.map((event) => event.kind)).toEqual([
+      "created",
+      "started",
+    ]);
+    expect(h.closed).toEqual([]);
+  });
+
+  test("leaves the ledger running when a live worker rejects cancellation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pet-long-task-cancel-failure-"));
+    roots.push(root);
+    const store = new PetLongTaskStore(join(root, "tasks.json"), () => 1_000);
+    const errors: string[] = [];
+    const coordinator = new PetLongTaskCoordinator({
+      store,
+      projection: fakeProjection(),
+      worker: {
+        hasLiveWorker: () => true,
+        requestWorker: async (method) =>
+          method === "agent/cancel"
+            ? { ok: false as const, message: "worker refused cancel" }
+            : { ok: true as const, result: {} },
+      },
+      launcher: {
+        start: async () => ({ sessionId: "cancel-failure-session", cwd: "/work/app" }),
+      },
+      now: () => 1_000,
+      onBackgroundError: (_operation, error) => errors.push(String(error)),
+    });
+    await coordinator.start();
+    const launch = await coordinator.startDelegation({
+      clientMessageId: "message-cancel-failure",
+      task: "Keep running if cancel fails",
+      workspacePath: "/work/app",
+      targetSessionId: "cancel-failure-session",
+    });
+
+    const result = await coordinator.control({ taskId: launch.taskId, action: "cancel" });
+    expect(result).toMatchObject({ ok: false, code: "worker-error" });
+    expect(store.get(launch.taskId)?.status).toBe("running");
+    expect(errors[0]).toContain("worker refused cancel");
   });
 
   test("persists core Goal pause and wakes it in place when the worker is live", async () => {

@@ -40,7 +40,12 @@ import {
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
 import { Methods, SessionManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
-import type { PetProjectionDelta, PetProjectionSnapshotResult } from "@cjhyy/code-shell-pet";
+import {
+  PET_REPORT_TO_MIMI_METHOD,
+  type PetProjectionDelta,
+  type PetProjectionSnapshotResult,
+  type PetReportToMimiEvent,
+} from "@cjhyy/code-shell-pet";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { resolveCookieCredentialForBrowser } from "./credential-action.js";
 import {
@@ -76,6 +81,7 @@ import type {
   AgentPanelHostResponse,
   AgentPanelHostResult,
 } from "../shared/agent-panels.js";
+import { parsePetReportToMimiEvent } from "./pet/pet-report-event.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -196,6 +202,9 @@ export class AgentBridge implements PetStateBridge {
   private readonly petProjectionObservers = new Set<
     (event: AgentBridgePetEvent) => void | Promise<void>
   >();
+  private readonly petReportObservers = new Set<
+    (event: PetReportToMimiEvent) => void | Promise<void>
+  >();
   private petSnapshotRequestId = 0;
   private petHostRequestId = 0;
   private readonly petWorkerGeneration = new PetWorkerProjectionGeneration();
@@ -305,6 +314,9 @@ export class AgentBridge implements PetStateBridge {
     // is consumed here so core-shaped payloads never leak through the generic
     // renderer agent:msg channel.
     if (this.routePetProjectionLine(line)) return;
+    // Any Session may explicitly report to Mimi. Keep the hidden Pet session
+    // and any host-owned originating route out of the renderer protocol.
+    if (this.routePetReportLine(line)) return;
     const quickChatForkSettlement = this.quickChatForkRouter?.routeWorkerResponse(line) ?? null;
     let summary: Record<string, unknown> = { raw: previewLine(line) };
     try {
@@ -831,6 +843,37 @@ export class AgentBridge implements PetStateBridge {
     }
   }
 
+  private routePetReportLine(line: string): boolean {
+    let message: { method?: string; params?: unknown };
+    try {
+      message = JSON.parse(line) as typeof message;
+    } catch {
+      return false;
+    }
+    if (message.method !== PET_REPORT_TO_MIMI_METHOD) return false;
+    const event = parsePetReportToMimiEvent(message.params);
+    if (!event) {
+      dlog("bridge", "pet_report.invalid", {});
+      return true;
+    }
+    for (const observer of this.petReportObservers) {
+      try {
+        void Promise.resolve(observer(event)).catch((error) =>
+          dlog("bridge", "pet_report.observer_failed", {
+            reportId: event.reportId,
+            error: String(error),
+          }),
+        );
+      } catch (error) {
+        dlog("bridge", "pet_report.observer_failed", {
+          reportId: event.reportId,
+          error: String(error),
+        });
+      }
+    }
+    return true;
+  }
+
   hasLiveWorker(): boolean {
     return this.core.hasLiveWorker();
   }
@@ -856,6 +899,11 @@ export class AgentBridge implements PetStateBridge {
   ): () => void {
     this.petProjectionObservers.add(observer);
     return () => this.petProjectionObservers.delete(observer);
+  }
+
+  subscribePetReports(observer: (event: PetReportToMimiEvent) => void | Promise<void>): () => void {
+    this.petReportObservers.add(observer);
+    return () => this.petReportObservers.delete(observer);
   }
 
   async requestWorker(

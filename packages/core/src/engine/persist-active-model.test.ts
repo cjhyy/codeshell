@@ -19,11 +19,28 @@ describe("switchModel persists defaults.text", () => {
       JSON.stringify(
         {
           credentials: [
-            { id: "ds-key", catalogId: "deepseek", apiKey: "k", baseUrl: "https://api.deepseek.com/v1" },
+            {
+              id: "ds-key",
+              catalogId: "deepseek",
+              apiKey: "k",
+              baseUrl: "https://api.deepseek.com/v1",
+            },
           ],
           modelConnections: [
-            { id: "ds", catalogId: "deepseek", tag: "text", model: "deepseek-v4-flash", credentialId: "ds-key" },
-            { id: "ds2", catalogId: "deepseek", tag: "text", model: "deepseek-v4-pro", credentialId: "ds-key" },
+            {
+              id: "ds",
+              catalogId: "deepseek",
+              tag: "text",
+              model: "deepseek-v4-flash",
+              credentialId: "ds-key",
+            },
+            {
+              id: "ds2",
+              catalogId: "deepseek",
+              tag: "text",
+              model: "deepseek-v4-pro",
+              credentialId: "ds-key",
+            },
           ],
           defaults: { text: "ds" },
         },
@@ -55,5 +72,23 @@ describe("switchModel persists defaults.text", () => {
     expect(s.defaults.text).toBe("ds2");
     expect(s.activeKey).toBeUndefined();
     expect(s.model).toBeUndefined();
+  });
+
+  it("leaves defaults.text untouched when persist is false (per-session switch)", async () => {
+    const { Engine } = await import("./engine.js");
+    const engine = new Engine({
+      llm: {
+        provider: "openai",
+        model: "deepseek-v4-flash",
+        apiKey: "k",
+        baseUrl: "https://api.deepseek.com/v1",
+      },
+      cwd: process.cwd(),
+      settingsScope: "full",
+    });
+    const entry = engine.switchModel("ds2", { persist: false });
+    expect(entry.key).toBe("ds2");
+    const s = JSON.parse(readFileSync(join(home, ".code-shell", "settings.json"), "utf-8"));
+    expect(s.defaults.text).toBe("ds");
   });
 });

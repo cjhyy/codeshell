@@ -326,7 +326,10 @@ export class ChatSession {
    * path and the deferred run-boundary path.
    */
   private applyModelSwitch(key: string): ModelEntry {
-    const entry = this.engine.switchModel(key);
+    // persist: false — a per-session switch must not become the global boot
+    // default (settings.defaults.text); only explicit default-model changes
+    // (legacy single-engine path, TUI /model) persist.
+    const entry = this.engine.switchModel(key, { persist: false });
     this.engine.resetSessionUsage(this.id);
     return entry;
   }

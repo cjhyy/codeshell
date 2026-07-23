@@ -251,6 +251,168 @@ describe("personal WeChat ClawBot", () => {
       },
     ]);
   });
+
+  test("uploads generic files with media_type FILE and sends a file item", async () => {
+    const requestedBodies: Record<string, any> = {};
+    const sentBodies: Record<string, any>[] = [];
+    const adapter = new WechatAdapter(
+      { accountId: "abc-im-bot", token: "bot-secret" },
+      {
+        fetch: async (input, init) => {
+          const url = String(input);
+          if (url.endsWith("/ilink/bot/getuploadurl")) {
+            requestedBodies.getUploadUrl = JSON.parse(String(init?.body));
+            return Response.json({ ret: 0, upload_param: "upload-file" });
+          }
+          if (url.startsWith("https://novac2c.cdn.weixin.qq.com/c2c/upload?")) {
+            return new Response(null, {
+              status: 200,
+              headers: { "x-encrypted-param": "download-file" },
+            });
+          }
+          if (url.endsWith("/ilink/bot/sendmessage")) {
+            sentBodies.push(JSON.parse(String(init?.body)));
+            return Response.json({ ret: 0 });
+          }
+          throw new Error(`unexpected request: ${url}`);
+        },
+      },
+    );
+    const plaintext = Uint8Array.from([10, 20, 30]);
+
+    await adapter.send("owner-user", {
+      text: "报告在附件中",
+      attachments: [
+        {
+          kind: "file",
+          name: "report.pdf",
+          mimeType: "application/pdf",
+          data: plaintext,
+        },
+      ],
+    });
+
+    expect(requestedBodies.getUploadUrl).toMatchObject({
+      media_type: 3,
+      to_user_id: "owner-user",
+      rawsize: plaintext.byteLength,
+      no_need_thumb: true,
+    });
+    expect(sentBodies).toHaveLength(2);
+    expect(sentBodies.map((body) => body.msg.item_list)).toEqual([
+      [{ type: 1, text_item: { text: "报告在附件中" } }],
+      [
+        {
+          type: 4,
+          file_item: {
+            media: {
+              encrypt_query_param: "download-file",
+              aes_key: Buffer.from(requestedBodies.getUploadUrl.aeskey).toString("base64"),
+              encrypt_type: 1,
+            },
+            file_name: "report.pdf",
+            len: String(plaintext.byteLength),
+          },
+        },
+      ],
+    ]);
+  });
+
+  test("uploads video with the native WeChat video item shape", async () => {
+    const bodies: Record<string, any> = {};
+    const adapter = new WechatAdapter(
+      { accountId: "abc-im-bot", token: "bot-secret" },
+      {
+        fetch: async (input, init) => {
+          const url = String(input);
+          if (url.endsWith("/ilink/bot/getuploadurl")) {
+            bodies.upload = JSON.parse(String(init?.body));
+            return Response.json({ ret: 0, upload_param: "upload-video" });
+          }
+          if (url.startsWith("https://novac2c.cdn.weixin.qq.com/c2c/upload?")) {
+            return new Response(null, {
+              status: 200,
+              headers: { "x-encrypted-param": "download-video" },
+            });
+          }
+          if (url.endsWith("/ilink/bot/sendmessage")) {
+            bodies.send = JSON.parse(String(init?.body));
+            return Response.json({ ret: 0 });
+          }
+          throw new Error(`unexpected request: ${url}`);
+        },
+      },
+    );
+
+    await adapter.send("owner-user", {
+      text: "",
+      attachments: [
+        {
+          kind: "video",
+          name: "clip.mp4",
+          mimeType: "video/mp4",
+          data: Uint8Array.from([1, 2, 3]),
+        },
+      ],
+    });
+
+    expect(bodies.upload.media_type).toBe(2);
+    expect(bodies.send.msg.item_list[0]).toMatchObject({
+      type: 5,
+      video_item: {
+        media: { encrypt_query_param: "download-video", encrypt_type: 1 },
+        video_size: 16,
+        play_length: 0,
+      },
+    });
+    expect(bodies.send.msg.item_list[0].video_item.video_md5).toMatch(/^[a-f0-9]{32}$/);
+  });
+
+  test("retries a failed media sub-step without duplicating delivered text", async () => {
+    let uploadAttempts = 0;
+    const sentItems: any[] = [];
+    const adapter = new WechatAdapter(
+      { accountId: "abc-im-bot", token: "bot-secret" },
+      {
+        fetch: async (input, init) => {
+          const url = String(input);
+          if (url.endsWith("/ilink/bot/sendmessage")) {
+            sentItems.push(JSON.parse(String(init?.body)).msg.item_list[0]);
+            return Response.json({ ret: 0 });
+          }
+          if (url.endsWith("/ilink/bot/getuploadurl")) {
+            uploadAttempts += 1;
+            if (uploadAttempts === 1) throw new Error("temporary upload failure");
+            return Response.json({ ret: 0, upload_param: "retry-upload" });
+          }
+          if (url.startsWith("https://novac2c.cdn.weixin.qq.com/c2c/upload?")) {
+            return new Response(null, {
+              status: 200,
+              headers: { "x-encrypted-param": "retry-download" },
+            });
+          }
+          throw new Error(`unexpected request: ${url}`);
+        },
+      },
+    );
+    const message = {
+      text: "caption",
+      attachments: [
+        {
+          kind: "file" as const,
+          name: "report.pdf",
+          mimeType: "application/pdf",
+          data: Uint8Array.from([1]),
+        },
+      ],
+    };
+
+    await expect(adapter.send("owner-user", message)).rejects.toThrow("temporary upload failure");
+    await adapter.send("owner-user", message);
+
+    expect(sentItems.filter((item) => item.type === 1)).toHaveLength(1);
+    expect(sentItems.filter((item) => item.type === 4)).toHaveLength(1);
+  });
 });
 
 function memoryStore(initial: WechatAdapterState): WechatStateStore & {

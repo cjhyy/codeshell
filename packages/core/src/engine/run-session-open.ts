@@ -103,6 +103,16 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
     // Append new user message
     const userMsg: Message = { role: "user", content: args.userMessageContent };
     if (!claimClientMessageId(session, options?.clientMessageId, "submit")) {
+      const replayed = options?.clientMessageId
+        ? session.transcript.findRunResultByClientMessageId(options.clientMessageId)
+        : undefined;
+      if (replayed) {
+        logger.info("engine.client_message.result_replayed", {
+          sessionId: session.state.sessionId,
+          clientMessageId: options?.clientMessageId,
+        });
+        return { ok: false, result: replayed };
+      }
       const usage = session.state.tokenUsage ?? {
         promptTokens: 0,
         completionTokens: 0,

@@ -194,4 +194,31 @@ describe("ExternalSessionVisibilityController", () => {
     expect(include?.(session("/work/repo/packages/other"))).toBe(false);
     controller.shutdown();
   });
+
+  test("does not block settings reconciliation on a full adapter scan", async () => {
+    let releaseScan: (() => void) | undefined;
+    let scans = 0;
+    const controller = new ExternalSessionVisibilityController({
+      readUserSettings: () => ({ pet: { showExternalCodexSessions: true } }),
+      readProjectSettings: () => ({}),
+      listProjectCwds: async () => ["/work/a"],
+      createAdapter: () => ({
+        start() {},
+        stop() {},
+        scanOnce: () => {
+          scans += 1;
+          return new Promise<void>((resolve) => {
+            releaseScan = resolve;
+          });
+        },
+      }),
+    });
+    await controller.reconcile();
+
+    const reconciled = controller.reconcile();
+    await reconciled;
+    expect(scans).toBe(1);
+    releaseScan?.();
+    controller.shutdown();
+  });
 });

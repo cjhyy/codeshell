@@ -1,6 +1,7 @@
 export * from "./chat-gateway.js";
 export * from "./channel.js";
 export * from "./attachments.js";
+export * from "./media.js";
 export * from "./lifecycle.js";
 export * from "./webhook.js";
 export * from "./delivery-queue.js";

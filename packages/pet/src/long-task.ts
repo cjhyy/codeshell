@@ -44,7 +44,13 @@ export interface PetLongTaskCompletionTarget {
   kind: "im-gateway";
   channel: string;
   target: string;
+  /** How this route renders a GatewayReply URL action. */
+  replyButton?: "native" | "link";
+  /** Host-mediated attachment kinds supported by the originating route. */
+  replyAttachmentKinds?: PetReplyAttachmentKind[];
 }
+
+export type PetReplyAttachmentKind = "image" | "file" | "audio" | "video";
 
 export type PetLongTaskEventKind =
   | "created"
@@ -124,6 +130,10 @@ export interface PetLongTaskClosureDecision {
   key: string;
   text: string;
   decidedAt: number;
+  /** Explicit GatewayReply attachment intent from Mimi's closure turn. */
+  replyAttachmentPaths?: string[];
+  /** Optional GatewayReply URL action, persisted for idempotent replay. */
+  replyButton?: { text: string; url: string };
   continuation?: PetLongTaskContinuationDecision;
   launch?: { sessionId: string; taskId?: string; at: number };
 }
@@ -188,6 +198,8 @@ export type PetLongTaskTransition =
       at: number;
       key: string;
       text: string;
+      replyAttachmentPaths?: string[];
+      replyButton?: { text: string; url: string };
       continuation?: PetLongTaskContinuationDecision;
     }
   | {
@@ -207,6 +219,42 @@ function bounded(value: string | undefined, maximum: number): string | undefined
   return normalized.length > maximum ? `${normalized.slice(0, maximum - 1)}…` : normalized;
 }
 
+function normalizeReplyAttachmentPaths(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 4) return undefined;
+  const paths: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string") return undefined;
+    const path = entry.trim();
+    if (!path || path.length > 4_096 || /[\u0000-\u001f\u007f]/u.test(path)) return undefined;
+    paths.push(path);
+  }
+  return new Set(paths).size === paths.length ? paths : undefined;
+}
+
+function normalizeReplyButton(value: unknown): { text: string; url: string } | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some((key) => key !== "text" && key !== "url") ||
+    typeof record.text !== "string" ||
+    !record.text.trim() ||
+    record.text.length > 80 ||
+    /[\u0000-\u001f\u007f]/u.test(record.text) ||
+    typeof record.url !== "string" ||
+    record.url.length > 2_048 ||
+    record.url !== record.url.trim()
+  ) {
+    return undefined;
+  }
+  try {
+    const url = new URL(record.url);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
+  } catch {
+    return undefined;
+  }
+  return { text: record.text.trim(), url: record.url };
+}
+
 function normalizeCompletionTarget(value: unknown): PetLongTaskCompletionTarget | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
@@ -221,7 +269,25 @@ function normalizeCompletionTarget(value: unknown): PetLongTaskCompletionTarget 
   ) {
     return undefined;
   }
-  return { kind: "im-gateway", channel, target };
+  const replyAttachmentKinds =
+    Array.isArray(record.replyAttachmentKinds) &&
+    record.replyAttachmentKinds.length <= 4 &&
+    record.replyAttachmentKinds.every((kind) =>
+      ["image", "file", "audio", "video"].includes(String(kind)),
+    )
+      ? ([...new Set(record.replyAttachmentKinds)] as PetReplyAttachmentKind[])
+      : [];
+  const replyButton =
+    record.replyButton === "native" || record.replyButton === "link"
+      ? record.replyButton
+      : undefined;
+  return {
+    kind: "im-gateway",
+    channel,
+    target,
+    ...(replyButton ? { replyButton } : {}),
+    ...(replyAttachmentKinds.length > 0 ? { replyAttachmentKinds } : {}),
+  };
 }
 
 function normalizeArtifacts(
@@ -346,7 +412,10 @@ export function transitionPetLongTask(
       transition.kind === "waiting" ||
       transition.kind === "resumed" ||
       transition.kind === "checkpoint" ||
-      transition.kind === "interrupted")
+      transition.kind === "interrupted" ||
+      transition.kind === "completed" ||
+      transition.kind === "failed" ||
+      transition.kind === "cancelled")
   ) {
     return current;
   }
@@ -463,6 +532,10 @@ export function transitionPetLongTask(
         status: "queued",
         phase: "planning",
         attempt: current.attempt + 1,
+        // A retry is a new attempt in the same durable Session. Keeping the
+        // previous attempt's start time would let an old projection terminal
+        // pass the new attempt's time fence.
+        startedAt: undefined,
         completedAt: undefined,
         closureRecordedAt: undefined,
         closureDecision: undefined,
@@ -593,6 +666,10 @@ export function transitionPetLongTask(
       const key = bounded(transition.key, 512);
       const text = transition.text.trim().slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH);
       if (!key || !text) return current;
+      const replyAttachmentPaths = normalizeReplyAttachmentPaths(transition.replyAttachmentPaths);
+      if (transition.replyAttachmentPaths !== undefined && !replyAttachmentPaths) return current;
+      const replyButton = normalizeReplyButton(transition.replyButton);
+      if (transition.replyButton !== undefined && !replyButton) return current;
       const continuation = transition.continuation;
       const normalizedContinuation = continuation
         ? {
@@ -618,6 +695,8 @@ export function transitionPetLongTask(
           key,
           text,
           decidedAt: transition.at,
+          ...(replyAttachmentPaths ? { replyAttachmentPaths } : {}),
+          ...(replyButton ? { replyButton } : {}),
           ...(normalizedContinuation ? { continuation: normalizedContinuation } : {}),
         },
       });
@@ -764,6 +843,10 @@ function parseClosureDecision(value: unknown): PetLongTaskClosureDecision | unde
   ) {
     return undefined;
   }
+  const replyAttachmentPaths = normalizeReplyAttachmentPaths(record.replyAttachmentPaths);
+  if (record.replyAttachmentPaths !== undefined && !replyAttachmentPaths) return undefined;
+  const replyButton = normalizeReplyButton(record.replyButton);
+  if (record.replyButton !== undefined && !replyButton) return undefined;
   let continuation: PetLongTaskContinuationDecision | undefined;
   if (record.continuation !== undefined) {
     if (
@@ -790,9 +873,7 @@ function parseClosureDecision(value: unknown): PetLongTaskClosureDecision | unde
         typeof candidate.workspacePath === "string"
           ? candidate.workspacePath.slice(0, 4_096)
           : null,
-      ...(candidate.executionBackend === "codex"
-        ? { executionBackend: "codex" as const }
-        : {}),
+      ...(candidate.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
     };
   }
   let launch: PetLongTaskClosureDecision["launch"];
@@ -822,6 +903,8 @@ function parseClosureDecision(value: unknown): PetLongTaskClosureDecision | unde
     key: record.key.trim().slice(0, 512),
     text: record.text.trim().slice(0, MAX_PET_LONG_TASK_SUMMARY_LENGTH),
     decidedAt: record.decidedAt,
+    ...(replyAttachmentPaths ? { replyAttachmentPaths } : {}),
+    ...(replyButton ? { replyButton } : {}),
     ...(continuation ? { continuation } : {}),
     ...(launch ? { launch } : {}),
   };
@@ -935,8 +1018,11 @@ export interface PetLongTaskContext {
     taskId: string;
     objective: string;
     status: "completed" | "failed" | "cancelled";
+    sessionId: string;
+    workspace?: string;
     updatedAt: number;
     summary?: string;
+    artifacts?: PetLongTaskArtifact[];
   }>;
 }
 
@@ -968,8 +1054,18 @@ export function buildPetLongTaskContext(tasks: readonly PetLongTask[]): PetLongT
       taskId: task.id,
       objective: task.objective.slice(0, 500),
       status: task.status,
+      sessionId: task.sessionId,
+      ...(task.workspacePath ? { workspace: task.workspacePath.slice(0, 500) } : {}),
       updatedAt: task.updatedAt,
       ...(task.summary ? { summary: task.summary.slice(0, 800) } : {}),
+      ...(task.artifacts.some((artifact) => artifact.kind === "file")
+        ? {
+            artifacts: task.artifacts
+              .filter((artifact) => artifact.kind === "file")
+              .slice(0, 8)
+              .map((artifact) => ({ ...artifact })),
+          }
+        : {}),
     }));
   return { version: 1, active, recent };
 }

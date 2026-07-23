@@ -1,3 +1,11 @@
+let openCliSessionNonce = 0;
+
+/** Shared renderer-wide nonce source for every CC Room navigation producer. */
+export function nextOpenCliSessionNonce(): number {
+  openCliSessionNonce += 1;
+  return openCliSessionNonce;
+}
+
 export function resolveOpenCliSessionBucket(
   sourceSessionId: string,
   engineToBucket: ReadonlyMap<string, string>,

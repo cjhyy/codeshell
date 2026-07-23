@@ -176,8 +176,9 @@ export class ExternalSessionVisibilityController {
         this.options.onSourceDisabled?.(cli);
       } else if (sourceEnabled && running) {
         // Apply a project override immediately instead of waiting for the next
-        // periodic scan. scanOnce also purges records that just became hidden.
-        await running.scanOnce().catch((error) => this.options.onReconcileError?.(cli, error));
+        // periodic scan. scanOnce also purges records that just became hidden,
+        // but a settings:set IPC must not wait for a full ~/.codex scan.
+        void running.scanOnce().catch((error) => this.options.onReconcileError?.(cli, error));
       }
     }
   }

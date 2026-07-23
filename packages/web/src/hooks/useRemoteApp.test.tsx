@@ -515,6 +515,63 @@ describe("useRemoteApp approval replay", () => {
 });
 
 describe("useRemoteApp cc transcript streaming", () => {
+  test("marks an observing room read-only and refuses phone sends", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+      ws.message({
+        type: "room.list.ok",
+        rooms: [
+          {
+            id: "room-observe",
+            name: "Observed CC",
+            cwd: "/repo",
+            kind: "codex",
+            permissionMode: "default",
+            createdAt: 1,
+            lastActiveAt: 1,
+            open: false,
+            observing: true,
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectProject("/repo");
+      hook.result.current.openCcSession("thread-observe", "/repo", "default");
+      ws.message({
+        type: "ccRoom.opened",
+        roomId: "room-observe",
+        sessionId: "thread-observe",
+        status: "observing",
+      });
+      await flushMicrotasks();
+    });
+
+    expect(hook.result.current.activeRoom).toMatchObject({
+      id: "room-observe",
+      observing: true,
+    });
+    let sent = true;
+    await act(async () => {
+      sent = await hook.result.current.sendChat({ text: "must not disappear", attachments: [] });
+      await flushMicrotasks();
+    });
+    expect(sent).toBe(false);
+    expect(hook.result.current.notice).toContain("只读");
+    expect(ws.sent.map((payload) => JSON.parse(payload))).not.toContainEqual(
+      expect.objectContaining({ type: "room.send", roomId: "room-observe" }),
+    );
+
+    await hook.unmount();
+  });
+
   test("subscribes after opening, applies snapshot+seq catchup, and unsubscribes on leave", async () => {
     setupBrowser();
     const hook = await renderHook(() => useRemoteApp());

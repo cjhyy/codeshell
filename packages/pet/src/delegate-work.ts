@@ -6,11 +6,14 @@ import type {
 import {
   DELEGATE_WORK_TOOL_NAME,
   isPetWorkExecutionBackend,
-  PET_WORK_EXECUTION_BACKENDS,
   type PetReusableSessionOption,
   type PetWorkspaceOption,
 } from "./delegation.js";
 import type { PetRunScopedServices } from "./profile.js";
+
+// Keep the wire/domain type forward-compatible with persisted "codex"
+// decisions, but advertise only backends the current host actually launches.
+const SUPPORTED_DELEGATE_WORK_BACKENDS = ["codeshell"] as const;
 
 export const delegateWorkToolDef: ToolDefinition = {
   name: DELEGATE_WORK_TOOL_NAME,
@@ -32,9 +35,9 @@ export const delegateWorkToolDef: ToolDefinition = {
       },
       executor: {
         type: "string",
-        enum: [...PET_WORK_EXECUTION_BACKENDS],
+        enum: [...SUPPORTED_DELEGATE_WORK_BACKENDS],
         description:
-          "Execution backend. Use 'codex' only when the user explicitly asks for OpenAI Codex/Codex CLI; do not merely write 'Codex' in objective. Omit or use 'codeshell' for a normal Work Session.",
+          "Execution backend. Omit or use 'codeshell' for a normal Work Session. External Codex execution is not supported by this host and must never be substituted silently.",
       },
       session_id: {
         type: "string",
@@ -144,8 +147,11 @@ export async function delegateWorkTool(
   if (!workspaceId) return "Error: workspace_id is required.";
   if (!objective) return "Error: objective is required.";
   if (objective.length > 8_000) return "Error: objective is too long (maximum 8000 characters).";
+  if (executor === "codex") {
+    return "Error: the external Codex execution backend is not supported yet; do not substitute a CodeShell Work Session.";
+  }
   if (!isPetWorkExecutionBackend(executor)) {
-    return `Error: unknown executor ${JSON.stringify(executor)}. Use ${PET_WORK_EXECUTION_BACKENDS.map(
+    return `Error: unknown executor ${JSON.stringify(executor)}. Use ${SUPPORTED_DELEGATE_WORK_BACKENDS.map(
       (backend) => JSON.stringify(backend),
     ).join(" or ")}.`;
   }
@@ -170,8 +176,7 @@ export async function delegateWorkTool(
     ...(reusableSession ? { reusableSessionId: reusableSession.id } : {}),
   });
   if (!decision.ok) return `Error: ${decision.error ?? "work delegation was rejected"}`;
-  const backend = executor === "codex" ? " using external Codex" : "";
   return reusableSession
-    ? `Delegation accepted for existing Session ${reusableSession.name} in Workspace ${workspace.name}${backend}.`
-    : `Delegation accepted for a new Session in Workspace ${workspace.name}${backend}.`;
+    ? `Delegation accepted for existing Session ${reusableSession.name} in Workspace ${workspace.name}.`
+    : `Delegation accepted for a new Session in Workspace ${workspace.name}.`;
 }

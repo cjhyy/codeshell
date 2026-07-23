@@ -12,11 +12,13 @@ import type { Engine, EngineResult } from "../engine/engine.js";
 function fakeEngine(models?: string[]): {
   engine: Engine;
   switched: string[];
+  switchedOpts: Array<{ persist?: boolean } | undefined>;
   resetUsage: string[];
   release: () => void;
   runStarted: Promise<void>;
 } {
   const switched: string[] = [];
+  const switchedOpts: Array<{ persist?: boolean } | undefined> = [];
   const resetUsage: string[] = [];
   let releaseRun!: () => void;
   let signalStarted!: () => void;
@@ -24,8 +26,9 @@ function fakeEngine(models?: string[]): {
   const gate = new Promise<void>((r) => (releaseRun = r));
 
   const engine = {
-    switchModel(key: string) {
+    switchModel(key: string, opts?: { persist?: boolean }) {
       switched.push(key);
+      switchedOpts.push(opts);
       return { key, model: key } as never;
     },
     resetSessionUsage(sessionId: string) {
@@ -34,8 +37,7 @@ function fakeEngine(models?: string[]): {
     getModelPool: () => {
       const pool = models ? new Set(models) : null;
       return {
-        get: (key: string) =>
-          pool && !pool.has(key) ? undefined : ({ key, model: key } as never),
+        get: (key: string) => (pool && !pool.has(key) ? undefined : ({ key, model: key } as never)),
       };
     },
     async run(): Promise<EngineResult> {
@@ -51,7 +53,7 @@ function fakeEngine(models?: string[]): {
     },
   } as unknown as Engine;
 
-  return { engine, switched, resetUsage, release: releaseRun, runStarted };
+  return { engine, switched, switchedOpts, resetUsage, release: releaseRun, runStarted };
 }
 
 describe("ChatSession.requestModelSwitch", () => {
@@ -60,6 +62,24 @@ describe("ChatSession.requestModelSwitch", () => {
     const session = new ChatSession({ id: "s", engine });
     session.requestModelSwitch("haiku");
     expect(switched).toEqual(["haiku"]);
+  });
+
+  it("never persists the switch as the global default model", async () => {
+    // A per-session switch (e.g. the Pet manager passing its own chatModelKey
+    // on every agent/run) must not overwrite settings.defaults.text — that
+    // field is the user's boot default for every future session.
+    const { engine, switchedOpts, release, runStarted } = fakeEngine();
+    const session = new ChatSession({ id: "s", engine });
+    session.requestModelSwitch("haiku");
+    expect(switchedOpts).toEqual([{ persist: false }]);
+
+    const turn = session.enqueueTurn("do work", {});
+    await runStarted;
+    session.requestModelSwitch("gpt");
+    release();
+    await turn;
+    // The deferred run-boundary path must not persist either.
+    expect(switchedOpts).toEqual([{ persist: false }, { persist: false }]);
   });
 
   it("resets session cumulative usage on an idle switch", () => {

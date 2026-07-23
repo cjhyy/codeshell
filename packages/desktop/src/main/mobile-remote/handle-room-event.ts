@@ -88,7 +88,11 @@ export async function handleRoomEvent(
         type: "room.list.ok",
         rooms: ctx.roomManager.listRooms().map((r) => ctx.roomToPublic(r)),
       });
-      ctx.remote.broadcast({ type: "room.opened", roomId: room.id, status: opened.status });
+      ctx.remote.broadcast({
+        type: "room.opened",
+        roomId: room.id,
+        status: opened.status,
+      });
       return;
     }
     if (event.type === "room.open") {

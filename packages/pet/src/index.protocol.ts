@@ -7,8 +7,10 @@
 export {
   GET_PET_PROJECTION_SNAPSHOT_METHOD,
   PET_PROJECTION_DELTA_METHOD,
+  PET_REPORT_TO_MIMI_METHOD,
   type PetProjectionDelta,
   type PetProjectionSnapshotResult,
+  type PetReportToMimiEvent,
 } from "./protocol.js";
 export {
   LOCAL_PET_OWNER,

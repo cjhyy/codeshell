@@ -5,7 +5,7 @@ import {
   delegateWorkTool,
   delegateWorkToolDefFor,
 } from "./delegate-work.js";
-import { PET_WORK_EXECUTION_BACKENDS, type PetWorkDelegation } from "./delegation.js";
+import type { PetWorkDelegation } from "./delegation.js";
 
 const WORKSPACES = [
   { id: "workspace-a", name: "Alpha", description: "/work/alpha" },
@@ -49,7 +49,7 @@ describe("DelegateWork", () => {
     ).toEqual(["session-alpha-login"]);
     expect(
       (definition.inputSchema.properties as Record<string, { enum?: string[] }>).executor?.enum,
-    ).toEqual([...PET_WORK_EXECUTION_BACKENDS]);
+    ).toEqual(["codeshell"]);
     expect(delegateWorkToolDefFor(WORKSPACES).inputSchema.properties).not.toHaveProperty(
       "session_id",
     );
@@ -62,7 +62,7 @@ describe("DelegateWork", () => {
     expect(recorded).toEqual([{ workspaceId: "workspace-b", objective: "fix the login flow" }]);
   });
 
-  test("defaults to CodeShell, propagates explicit Codex, and rejects unknown executors", async () => {
+  test("defaults to CodeShell and rejects unsupported Codex without substitution", async () => {
     const defaultRun = context();
     expect(
       await delegateWorkTool(
@@ -87,14 +87,8 @@ describe("DelegateWork", () => {
         { workspace_id: "workspace-b", objective: "run in Codex", executor: "codex" },
         codexRun.ctx,
       ),
-    ).toContain("external Codex");
-    expect(codexRun.recorded).toEqual([
-      {
-        workspaceId: "workspace-b",
-        objective: "run in Codex",
-        executionBackend: "codex",
-      },
-    ]);
+    ).toContain("not supported yet");
+    expect(codexRun.recorded).toEqual([]);
 
     const invalidRun = context();
     expect(

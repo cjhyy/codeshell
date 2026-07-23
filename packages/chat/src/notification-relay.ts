@@ -1,6 +1,6 @@
 import { lstat, readFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
-import type { ChannelAdapter, OutgoingAttachment } from "./channel.js";
+import { channelCapabilities, type ChannelAdapter, type OutgoingAttachment } from "./channel.js";
 import type { GatewayNotificationTarget } from "./config.js";
 import type { DesktopEventContext } from "./desktop-control-client.js";
 import type { DesktopControlEvent } from "./protocol.js";
@@ -9,7 +9,7 @@ import type { DesktopControlEvent } from "./protocol.js";
 // 4,096-character cap. A single conservative relay limit makes every adapter
 // safe without letting product events depend on channel-specific truncation.
 const MAX_NOTIFICATION_CHUNK_LENGTH = 1_800;
-const MAX_OUTGOING_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_OUTGOING_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 /** Split without breaking UTF-16 surrogate pairs; prefer readable line/word boundaries. */
 export function splitNotificationText(
@@ -70,23 +70,45 @@ export function createDesktopNotificationHandler(
         const targetKey = `${channel}\0${target}`;
         const adapter = adapterByChannel.get(channel);
         if (!adapter) throw new Error(`Notification adapter is unavailable: ${channel}`);
+        const capabilities = channelCapabilities(adapter);
+        const supportedEventAttachments = (event.attachments ?? []).filter((attachment) =>
+          capabilities.outbound.attachments.includes(attachment.kind),
+        );
         const chunks = splitNotificationText(event.text);
+        // Attachments ride on the final text chunk so a completion receipt is
+        // one IM message, not text followed by a bare image. Materialize them
+        // up front, but never let a bad file block the text: on failure the
+        // chunks still go out and the error is rethrown afterwards.
+        const wantsAttachments = Boolean(
+          supportedEventAttachments.length > 0 && !deliveredAttachments.has(targetKey),
+        );
+        let attachments: OutgoingAttachment[] = [];
+        let attachmentError: unknown;
+        if (wantsAttachments) {
+          try {
+            attachments = await materializeEventAttachments(supportedEventAttachments);
+          } catch (error) {
+            attachmentError = error;
+          }
+        }
         let chunkIndex = deliveredChunks.get(targetKey) ?? 0;
         while (chunkIndex < chunks.length) {
+          const isLast = chunkIndex === chunks.length - 1;
           await adapter.send(target, {
             text: chunks[chunkIndex]!,
             ...(chunkIndex === 0 && event.title ? { title: event.title } : {}),
-            ...(chunkIndex === chunks.length - 1 && event.button ? { button: event.button } : {}),
+            ...(isLast && event.button ? { button: event.button } : {}),
+            ...(isLast && attachments.length > 0 ? { attachments } : {}),
           });
           chunkIndex += 1;
           deliveredChunks.set(targetKey, chunkIndex);
+          if (isLast && attachments.length > 0) deliveredAttachments.add(targetKey);
         }
-        if (
-          event.attachments?.length &&
-          adapter.supportsOutgoingAttachments &&
-          !deliveredAttachments.has(targetKey)
-        ) {
-          const attachments = await materializeEventAttachments(event.attachments);
+        if (attachmentError) throw attachmentError;
+        // Retry path: every chunk already went out on a previous attempt (for
+        // example when materialization failed after the text was delivered) —
+        // the attachments still owe a standalone delivery.
+        if (wantsAttachments && attachments.length > 0 && !deliveredAttachments.has(targetKey)) {
           await adapter.send(target, { text: "", attachments });
           deliveredAttachments.add(targetKey);
         }
@@ -112,12 +134,18 @@ export async function materializeEventAttachments(
   const output: OutgoingAttachment[] = [];
   for (const attachment of attachments.slice(0, 4)) {
     if (
-      attachment.kind !== "image" ||
+      !["image", "file", "audio", "video"].includes(attachment.kind) ||
       !isAbsolute(attachment.path) ||
-      !attachment.mimeType.startsWith("image/") ||
+      (attachment.kind === "image"
+        ? !attachment.mimeType.startsWith("image/")
+        : attachment.kind === "audio"
+          ? !attachment.mimeType.startsWith("audio/")
+          : attachment.kind === "video"
+            ? !attachment.mimeType.startsWith("video/")
+            : !attachment.mimeType.trim()) ||
       !Number.isSafeInteger(attachment.size) ||
       attachment.size < 1 ||
-      attachment.size > MAX_OUTGOING_IMAGE_BYTES
+      attachment.size > MAX_OUTGOING_ATTACHMENT_BYTES
     ) {
       throw new Error("Desktop completion attachment metadata is invalid");
     }
@@ -127,8 +155,16 @@ export async function materializeEventAttachments(
     }
     const data = await readFile(attachment.path);
     output.push({
-      kind: "image",
-      name: attachment.name.slice(0, 255) || "generated-image",
+      kind: attachment.kind,
+      name:
+        attachment.name.slice(0, 255) ||
+        (attachment.kind === "image"
+          ? "generated-image"
+          : attachment.kind === "audio"
+            ? "audio"
+            : attachment.kind === "video"
+              ? "video"
+              : "attachment"),
       mimeType: attachment.mimeType,
       data,
     });

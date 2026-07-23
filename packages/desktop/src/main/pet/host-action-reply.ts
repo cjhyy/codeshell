@@ -10,6 +10,7 @@ const HOST_ACTION_LABELS: Record<string, string> = {
   mobileRemote: "手机遥控",
   longTaskControl: "长程任务",
   memory: "记忆",
+  gatewayReply: "Gateway 回复",
 };
 
 const LONG_TASK_ACTION_LABELS: Record<string, string> = {
@@ -27,6 +28,7 @@ const MEMORY_ACTION_LABELS: Record<string, string> = {
 
 export interface HostActionReplyEnrichment {
   text: string;
+  button?: { text: string; url: string };
   attachments: GatewayControlEventAttachment[];
 }
 
@@ -39,32 +41,114 @@ export interface HostActionReplyEnrichment {
 export async function enrichPetChatReplyWithHostActions(
   baseText: string,
   executions: readonly PetHostActionExecution[] | undefined,
-  options: { qrDir: string },
+  options: {
+    qrDir: string;
+    attachmentKinds?: readonly ("image" | "file" | "audio" | "video")[];
+  },
 ): Promise<HostActionReplyEnrichment> {
   if (!executions?.length) return { text: baseText.trim(), attachments: [] };
 
+  const attachmentKinds = options.attachmentKinds ?? ["image", "file", "audio", "video"];
   const lines: string[] = [];
   const attachments: GatewayControlEventAttachment[] = [];
+  let gatewayReplyText: string | undefined;
+  let gatewayReplyButton: { text: string; url: string } | undefined;
+  let gatewayReplyFailed = false;
   for (const execution of executions) {
     if (!execution.ok) {
+      if (execution.kind === "gatewayReply") gatewayReplyFailed = true;
       const label = HOST_ACTION_LABELS[execution.kind] ?? execution.kind;
-      lines.push(`${label}操作失败：${execution.error ?? "未知错误"}`);
+      lines.push(
+        execution.kind === "gatewayReply"
+          ? `Gateway 回复未发送：${execution.error ?? "未知错误"}`
+          : `${label}操作失败：${execution.error ?? "未知错误"}`,
+      );
       continue;
     }
     if (execution.kind === "mobileRemote") {
-      const rendered = await renderMobileRemoteLines(execution, options.qrDir);
+      const rendered = await renderMobileRemoteLines(
+        execution,
+        options.qrDir,
+        attachmentKinds.includes("image"),
+      );
       lines.push(...rendered.lines);
       attachments.push(...rendered.attachments);
     } else if (execution.kind === "longTaskControl") {
       lines.push(renderLongTaskLine(execution));
     } else if (execution.kind === "memory") {
-      lines.push(renderMemoryLine(execution));    }
+      lines.push(renderMemoryLine(execution));
+    } else if (execution.kind === "gatewayReply") {
+      const rendered = renderGatewayReply(execution, attachmentKinds);
+      if (!rendered) {
+        gatewayReplyFailed = true;
+        lines.push("Gateway 回复未发送：宿主返回了无效结果。");
+      } else {
+        gatewayReplyText = rendered.text;
+        gatewayReplyButton = rendered.button;
+        attachments.push(...rendered.attachments);
+      }
+    }
   }
 
   const appended = lines.join("\n");
-  const trimmed = baseText.trim();
+  // The model only sees that its request was recorded; actual file validation
+  // runs after its turn. If validation fails, discard any premature "sent"
+  // claim and return the authoritative host failure instead.
+  const trimmed = gatewayReplyFailed ? "" : (gatewayReplyText ?? baseText.trim());
   return {
     text: appended ? (trimmed ? `${trimmed}\n\n${appended}` : appended) : trimmed,
+    ...(!gatewayReplyFailed && gatewayReplyButton ? { button: gatewayReplyButton } : {}),
+    attachments,
+  };
+}
+
+function renderGatewayReply(
+  execution: PetHostActionExecution,
+  supportedKinds: readonly ("image" | "file" | "audio" | "video")[],
+):
+  | {
+      text: string;
+      button?: { text: string; url: string };
+      attachments: GatewayControlEventAttachment[];
+    }
+  | undefined {
+  const text = typeof execution.result?.text === "string" ? execution.result.text.trim() : "";
+  if (!text) return undefined;
+  const rawButton = execution.result?.button;
+  const button =
+    rawButton && typeof rawButton === "object" && !Array.isArray(rawButton)
+      ? (rawButton as Record<string, unknown>)
+      : undefined;
+  if (
+    button &&
+    (typeof button.text !== "string" ||
+      !button.text.trim() ||
+      typeof button.url !== "string" ||
+      !button.url.trim())
+  ) {
+    return undefined;
+  }
+  const candidates = execution.result?.attachments;
+  const attachments = (Array.isArray(candidates) ? candidates : []).filter(
+    (candidate): candidate is GatewayControlEventAttachment =>
+      Boolean(candidate) &&
+      typeof candidate === "object" &&
+      !Array.isArray(candidate) &&
+      ["image", "file", "audio", "video"].includes(
+        String((candidate as { kind?: unknown }).kind),
+      ) &&
+      typeof (candidate as { path?: unknown }).path === "string" &&
+      typeof (candidate as { name?: unknown }).name === "string" &&
+      typeof (candidate as { mimeType?: unknown }).mimeType === "string" &&
+      typeof (candidate as { size?: unknown }).size === "number" &&
+      Number.isSafeInteger((candidate as { size: number }).size) &&
+      supportedKinds.includes((candidate as { kind: "image" | "file" | "audio" | "video" }).kind),
+  );
+  if (Array.isArray(execution.payload.attachmentPaths) && attachments.length === 0)
+    return undefined;
+  return {
+    text,
+    ...(button ? { button: { text: String(button.text), url: String(button.url) } } : {}),
     attachments,
   };
 }
@@ -72,6 +156,7 @@ export async function enrichPetChatReplyWithHostActions(
 async function renderMobileRemoteLines(
   execution: PetHostActionExecution,
   qrDir: string,
+  renderQr: boolean,
 ): Promise<{ lines: string[]; attachments: GatewayControlEventAttachment[] }> {
   if (execution.payload.action === "close") {
     return { lines: ["公网隧道已关闭。"], attachments: [] };
@@ -84,7 +169,7 @@ async function renderMobileRemoteLines(
     ...(pairingUrl ? [`配对入口（10 分钟内有效）：${pairingUrl}`] : []),
   ];
   const attachments: GatewayControlEventAttachment[] = [];
-  if (pairingUrl) {
+  if (pairingUrl && renderQr) {
     const qr = await renderPairingQrFile(pairingUrl, qrDir);
     if (qr) {
       attachments.push(qr);
@@ -107,6 +192,9 @@ function renderLongTaskLine(execution: PetHostActionExecution): string {
 
 function renderMemoryLine(execution: PetHostActionExecution): string {
   const action = String(execution.payload.action ?? "");
+  if (action === "remember" && execution.result?.unchanged === true) {
+    return "已有等价的用户记忆，已保留原文。";
+  }
   return MEMORY_ACTION_LABELS[action] ?? "记忆已更新。";
 }
 

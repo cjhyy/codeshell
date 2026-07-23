@@ -113,8 +113,13 @@ export function App() {
               app.activeRoom ? t("mobile.app.loadingCcSession") : t("mobile.app.loadingSession")
             }
           />
+          {app.activeRoom?.observing && (
+            <div className="border-t border-border/70 bg-muted/45 px-3 py-2 text-xs text-muted-foreground">
+              {t("mobile.app.ccRoomObserving")}
+            </div>
+          )}
           <Composer
-            disabled={app.status !== "online"}
+            disabled={app.status !== "online" || app.activeRoom?.observing === true}
             running={app.chat.run === "running" || app.chat.run === "waiting"}
             onSend={app.sendChat}
             onStop={app.stopRun}

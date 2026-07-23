@@ -3,7 +3,11 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ChannelAdapter } from "./channel.js";
-import { createDesktopNotificationHandler, splitNotificationText } from "./notification-relay.js";
+import {
+  createDesktopNotificationHandler,
+  materializeEventAttachments,
+  splitNotificationText,
+} from "./notification-relay.js";
 
 describe("createDesktopNotificationHandler", () => {
   test("retries only failed targets for the same event", async () => {
@@ -99,14 +103,13 @@ describe("createDesktopNotificationHandler", () => {
     expect(sends).toHaveLength(deliveredChunks.length + 1);
   });
 
-  test("retries a failed image without repeating the completed text receipt", async () => {
+  test("delivers the image together with the final text chunk in one message", async () => {
     const root = await mkdtemp(join(tmpdir(), "notification-relay-"));
     const imagePath = join(root, "generated.png");
     const imageBytes = Uint8Array.from([137, 80, 78, 71]);
     await writeFile(imagePath, imageBytes);
     try {
       const sends: Array<{ text: string; imageBytes?: number[] }> = [];
-      let failImageOnce = true;
       const adapter: ChannelAdapter = {
         channel: "wechat",
         supportsOutgoingAttachments: true,
@@ -116,10 +119,6 @@ describe("createDesktopNotificationHandler", () => {
             text: message.text,
             ...(message.attachments ? { imageBytes: [...message.attachments[0]!.data] } : {}),
           });
-          if (message.attachments && failImageOnce) {
-            failImageOnce = false;
-            throw new Error("temporary image failure");
-          }
         },
       };
       const handle = createDesktopNotificationHandler([adapter], []);
@@ -140,15 +139,117 @@ describe("createDesktopNotificationHandler", () => {
         ],
       };
 
-      await expect(handle(event, { streamId: "d".repeat(32) })).rejects.toThrow(
-        "notification failed",
-      );
       await handle(event, { streamId: "d".repeat(32) });
 
+      expect(sends).toEqual([{ text: "漫画已经生成完成。", imageBytes: [...imageBytes] }]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("retries a failed final chunk+image without repeating delivered chunks", async () => {
+    const root = await mkdtemp(join(tmpdir(), "notification-relay-"));
+    const imagePath = join(root, "generated.png");
+    const imageBytes = Uint8Array.from([137, 80, 78, 71]);
+    await writeFile(imagePath, imageBytes);
+    try {
+      const sends: Array<{ text: string; hasImage: boolean }> = [];
+      let failCombinedOnce = true;
+      const adapter: ChannelAdapter = {
+        channel: "wechat",
+        supportsOutgoingAttachments: true,
+        run: async () => undefined,
+        send: async (_target, message) => {
+          sends.push({ text: message.text, hasImage: Boolean(message.attachments?.length) });
+          if (message.attachments && failCombinedOnce) {
+            failCombinedOnce = false;
+            throw new Error("temporary image failure");
+          }
+        },
+      };
+      const handle = createDesktopNotificationHandler([adapter], []);
+      const text = `${"前".repeat(1_900)}\n漫画已经生成完成。`;
+      const event = {
+        id: 12,
+        createdAt: 5,
+        type: "pet.task.completed" as const,
+        text,
+        target: { channel: "wechat", target: "owner" },
+        attachments: [
+          {
+            kind: "image" as const,
+            name: "generated.png",
+            mimeType: "image/png",
+            size: imageBytes.byteLength,
+            path: imagePath,
+          },
+        ],
+      };
+
+      await expect(handle(event, { streamId: "e".repeat(32) })).rejects.toThrow(
+        "notification failed",
+      );
+      await handle(event, { streamId: "e".repeat(32) });
+
+      const chunks = splitNotificationText(text);
+      expect(chunks.length).toBe(2);
+      // Chunk 1 delivered once; the combined final chunk+image send is the only
+      // part retried.
       expect(sends).toEqual([
-        { text: "漫画已经生成完成。" },
-        { text: "", imageBytes: [...imageBytes] },
-        { text: "", imageBytes: [...imageBytes] },
+        { text: chunks[0]!, hasImage: false },
+        { text: chunks[1]!, hasImage: true },
+        { text: chunks[1]!, hasImage: true },
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("still delivers the text when the attachment fails to materialize, then sends the image alone once it is valid", async () => {
+    const root = await mkdtemp(join(tmpdir(), "notification-relay-"));
+    const imagePath = join(root, "generated.png");
+    const imageBytes = Uint8Array.from([137, 80, 78, 71]);
+    // Published size says 4 bytes but write only 3 → materialization fails.
+    await writeFile(imagePath, imageBytes.slice(0, 3));
+    try {
+      const sends: Array<{ text: string; hasImage: boolean }> = [];
+      const adapter: ChannelAdapter = {
+        channel: "wechat",
+        supportsOutgoingAttachments: true,
+        run: async () => undefined,
+        send: async (_target, message) => {
+          sends.push({ text: message.text, hasImage: Boolean(message.attachments?.length) });
+        },
+      };
+      const handle = createDesktopNotificationHandler([adapter], []);
+      const event = {
+        id: 13,
+        createdAt: 6,
+        type: "pet.task.completed" as const,
+        text: "漫画已经生成完成。",
+        target: { channel: "wechat", target: "owner" },
+        attachments: [
+          {
+            kind: "image" as const,
+            name: "generated.png",
+            mimeType: "image/png",
+            size: imageBytes.byteLength,
+            path: imagePath,
+          },
+        ],
+      };
+
+      await expect(handle(event, { streamId: "f".repeat(32) })).rejects.toThrow(
+        "notification failed",
+      );
+      // The file is restored to its published size; the retry must not repeat
+      // the already-delivered text.
+      await writeFile(imagePath, imageBytes);
+      await handle(event, { streamId: "f".repeat(32) });
+
+      expect(sends).toEqual([
+        { text: "漫画已经生成完成。", hasImage: false },
+        { text: "", hasImage: true },
       ]);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -166,5 +267,64 @@ describe("createDesktopNotificationHandler", () => {
         return !(first >= 0xdc00 && first <= 0xdfff) && !(last >= 0xd800 && last <= 0xdbff);
       }),
     ).toBe(true);
+  });
+
+  test("rejects relative paths and files whose size changed before IM delivery", async () => {
+    await expect(
+      materializeEventAttachments([
+        {
+          kind: "image",
+          name: "relative.png",
+          mimeType: "image/png",
+          size: 4,
+          path: "relative.png",
+        },
+      ]),
+    ).rejects.toThrow("metadata is invalid");
+
+    const root = await mkdtemp(join(tmpdir(), "notification-relay-invalid-"));
+    const path = join(root, "changed.png");
+    try {
+      await writeFile(path, Uint8Array.from([137, 80, 78, 71]));
+      await expect(
+        materializeEventAttachments([
+          {
+            kind: "image",
+            name: "changed.png",
+            mimeType: "image/png",
+            size: 3,
+            path,
+          },
+        ]),
+      ).rejects.toThrow("changed before delivery");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("materializes a validated host-local file attachment", async () => {
+    const root = await mkdtemp(join(tmpdir(), "notification-relay-file-"));
+    const path = join(root, "report.pdf");
+    const bytes = Uint8Array.from([37, 80, 68, 70]);
+    try {
+      await writeFile(path, bytes);
+      const [attachment] = await materializeEventAttachments([
+        {
+          kind: "file",
+          name: "report.pdf",
+          mimeType: "application/pdf",
+          size: bytes.byteLength,
+          path,
+        },
+      ]);
+      expect(attachment).toMatchObject({
+        kind: "file",
+        name: "report.pdf",
+        mimeType: "application/pdf",
+      });
+      expect(attachment?.data).toEqual(bytes);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

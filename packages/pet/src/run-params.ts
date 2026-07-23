@@ -1,5 +1,10 @@
 import { type PetReusableSessionOption, type PetWorkspaceOption } from "./delegation.js";
-import { isPetHostActionKind, type PetHostActionKind } from "./host-actions.js";
+import {
+  isPetHostActionKind,
+  type PetGatewayReplyCapability,
+  type PetHostActionKind,
+} from "./host-actions.js";
+import { parsePetGatewayCatalog, type PetGatewayCatalog } from "./gateway.js";
 
 const MAX_RUNTIME_CONTEXT_LENGTH = 32_768;
 const MAX_WORKSPACES = 64;
@@ -14,6 +19,10 @@ export interface PetRunOptions {
   reusableSessions: readonly PetReusableSessionOption[];
   /** Host-action kinds the host declared it can execute this turn. */
   hostActionKinds: readonly PetHostActionKind[];
+  /** Exact outbound route contract backing GatewayReply for this turn. */
+  gatewayReply?: PetGatewayReplyCapability;
+  /** Adapter-owned first-level discovery catalog backing the Gateway tool. */
+  gateway?: PetGatewayCatalog;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -93,11 +102,15 @@ function freezeOptions(options: {
   workspaces: PetWorkspaceOption[];
   reusableSessions: PetReusableSessionOption[];
   hostActionKinds: PetHostActionKind[];
+  gatewayReply?: PetGatewayReplyCapability;
+  gateway?: PetGatewayCatalog;
 }): PetRunOptions {
   return Object.freeze({
     workspaces: Object.freeze(options.workspaces.map((entry) => Object.freeze(entry))),
     reusableSessions: Object.freeze(options.reusableSessions.map((entry) => Object.freeze(entry))),
     hostActionKinds: Object.freeze(options.hostActionKinds),
+    ...(options.gatewayReply ? { gatewayReply: options.gatewayReply } : {}),
+    ...(options.gateway ? { gateway: options.gateway } : {}),
   });
 }
 
@@ -113,6 +126,50 @@ function parseHostActionKinds(value: unknown): PetHostActionKind[] | undefined {
   return kinds;
 }
 
+function parseGatewayReplyCapability(value: unknown): PetGatewayReplyCapability | undefined {
+  if (!isRecord(value)) return undefined;
+  if (
+    Object.keys(value).some(
+      (key) =>
+        key !== "button" &&
+        key !== "attachments" &&
+        key !== "maxTextLength" &&
+        key !== "maxAttachments" &&
+        key !== "maxAttachmentBytes",
+    ) ||
+    (value.button !== "native" && value.button !== "link") ||
+    !Array.isArray(value.attachments) ||
+    value.attachments.length > 4 ||
+    !value.attachments.every((kind) =>
+      ["image", "file", "audio", "video"].includes(String(kind)),
+    ) ||
+    new Set(value.attachments).size !== value.attachments.length ||
+    !Number.isSafeInteger(value.maxTextLength) ||
+    Number(value.maxTextLength) < 1 ||
+    Number(value.maxTextLength) > 8_000 ||
+    !Number.isSafeInteger(value.maxAttachments) ||
+    Number(value.maxAttachments) < 1 ||
+    Number(value.maxAttachments) > 4 ||
+    !Number.isSafeInteger(value.maxAttachmentBytes) ||
+    Number(value.maxAttachmentBytes) < 1 ||
+    Number(value.maxAttachmentBytes) > 10 * 1024 * 1024
+  ) {
+    return undefined;
+  }
+  return Object.freeze({
+    button: value.button,
+    attachments: Object.freeze([...value.attachments]) as readonly (
+      | "image"
+      | "file"
+      | "audio"
+      | "video"
+    )[],
+    maxTextLength: Number(value.maxTextLength),
+    maxAttachments: Number(value.maxAttachments),
+    maxAttachmentBytes: Number(value.maxAttachmentBytes),
+  });
+}
+
 /**
  * Build an immutable, bounded per-turn snapshot for the Pet behavior profile.
  *
@@ -121,11 +178,22 @@ function parseHostActionKinds(value: unknown): PetHostActionKind[] | undefined {
  * profile directly without crossing the protocol validator.
  */
 export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown>>): PetRunOptions {
-  const hostActionKinds = parseHostActionKinds(profileParams.hostActions) ?? [];
+  const declaredHostActionKinds = parseHostActionKinds(profileParams.hostActions) ?? [];
+  const gatewayReply =
+    profileParams.gatewayReply === undefined
+      ? undefined
+      : parseGatewayReplyCapability(profileParams.gatewayReply);
+  const gateway =
+    profileParams.gateway === undefined ? undefined : parsePetGatewayCatalog(profileParams.gateway);
+  const hostActionKinds = declaredHostActionKinds.filter(
+    (kind) => kind !== "gatewayReply" || gatewayReply !== undefined,
+  );
   const empty = freezeOptions({
     workspaces: [],
     reusableSessions: [],
     hostActionKinds,
+    ...(gatewayReply ? { gatewayReply } : {}),
+    ...(gateway ? { gateway } : {}),
   });
   const workspaces =
     profileParams.workspaces === undefined ? [] : parseWorkspaces(profileParams.workspaces);
@@ -140,6 +208,8 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
     workspaces,
     reusableSessions,
     hostActionKinds,
+    ...(gatewayReply ? { gatewayReply } : {}),
+    ...(gateway ? { gateway } : {}),
   });
 }
 
@@ -204,6 +274,11 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
   const hasCanonicalHostActions =
     profileParams !== undefined &&
     Object.prototype.hasOwnProperty.call(profileParams, "hostActions");
+  const hasCanonicalGatewayReply =
+    profileParams !== undefined &&
+    Object.prototype.hasOwnProperty.call(profileParams, "gatewayReply");
+  const hasCanonicalGateway =
+    profileParams !== undefined && Object.prototype.hasOwnProperty.call(profileParams, "gateway");
 
   const runtimeContext = hasCanonicalRuntimeContext
     ? profileParams.runtimeContext
@@ -235,6 +310,19 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
 
   if (hasCanonicalHostActions && !parseHostActionKinds(profileParams.hostActions)) {
     return "profileParams.hostActions contains an invalid or duplicate host-action kind";
+  }
+  const parsedHostActionKinds = parseHostActionKinds(profileParams?.hostActions) ?? [];
+  if (parsedHostActionKinds.includes("gatewayReply") && !hasCanonicalGatewayReply) {
+    return "the gatewayReply host action requires profileParams.gatewayReply";
+  }
+  if (hasCanonicalGatewayReply && !parseGatewayReplyCapability(profileParams.gatewayReply)) {
+    return "profileParams.gatewayReply contains an invalid Gateway route capability";
+  }
+  if (hasCanonicalGatewayReply && !parsedHostActionKinds.includes("gatewayReply")) {
+    return "profileParams.gatewayReply requires the gatewayReply host action";
+  }
+  if (hasCanonicalGateway && !parsePetGatewayCatalog(profileParams.gateway)) {
+    return "profileParams.gateway contains an invalid Gateway capability catalog";
   }
 
   return null;

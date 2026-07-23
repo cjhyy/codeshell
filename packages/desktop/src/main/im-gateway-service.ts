@@ -5,12 +5,14 @@ import type { IpcMain } from "electron";
 import { CredentialStore, type Credential } from "@cjhyy/code-shell-core";
 import {
   acquireGatewayInstanceLock,
+  BUILTIN_CHANNEL_CAPABILITIES,
   ChatGateway,
   createAllowlistMiddleware,
   createDesktopNotificationHandler,
   createRateLimitMiddleware,
   type AdapterRuntimeState,
   type ChannelAdapter,
+  type ChannelCapabilities,
   type ChannelMessage,
   type ChatCommandDefinition,
   type ChatMiddleware,
@@ -59,6 +61,7 @@ export const IM_GATEWAY_CHANNELS: readonly ImGatewayChannel[] = [
 
 export interface ImGatewayChannelStatus {
   channel: ImGatewayChannel;
+  capabilities: ChannelCapabilities;
   enabled: boolean;
   state: "disabled" | "needs-config" | "ready" | "starting" | "running" | "retrying";
   attempts?: number;
@@ -276,22 +279,23 @@ export class ImGatewayService {
     for (const channel of channels) rawEnabled.add(channel);
     const activeChannels = new Set(this.active?.channels ?? []);
     const channelStatuses = IM_GATEWAY_CHANNELS.map((channel): ImGatewayChannelStatus => {
+      const base = { channel, capabilities: BUILTIN_CHANNEL_CAPABILITIES[channel] };
       const enabled = rawEnabled.has(channel);
-      if (!enabled) return { channel, enabled: false, state: "disabled" };
+      if (!enabled) return { ...base, enabled: false, state: "disabled" };
       if (configError && !this.active) {
-        return { channel, enabled: true, state: "needs-config", error: configError };
+        return { ...base, enabled: true, state: "needs-config", error: configError };
       }
-      if (!this.active) return { channel, enabled: true, state: "ready" };
+      if (!this.active) return { ...base, enabled: true, state: "ready" };
       if (!activeChannels.has(channel)) {
         return configError
-          ? { channel, enabled: true, state: "needs-config", error: configError }
-          : { channel, enabled: true, state: "ready" };
+          ? { ...base, enabled: true, state: "needs-config", error: configError }
+          : { ...base, enabled: true, state: "ready" };
       }
       const runtime = this.adapterStates.get(channel);
-      if (!runtime) return { channel, enabled: true, state: "starting" };
+      if (!runtime) return { ...base, enabled: true, state: "starting" };
       if (runtime.state === "backoff") {
         return {
-          channel,
+          ...base,
           enabled: true,
           state: "retrying",
           attempts: runtime.attempts,
@@ -299,7 +303,7 @@ export class ImGatewayService {
         };
       }
       return {
-        channel,
+        ...base,
         enabled: true,
         state: runtime.state === "running" ? "running" : "starting",
         attempts: runtime.attempts,
@@ -415,7 +419,7 @@ export class ImGatewayService {
       gateway.use(createRateLimitMiddleware(config.runtime.maxMessagesPerUserPerMinute));
       gateway.use(createImGatewayActivityMiddleware((activity) => this.recordActivity(activity)));
       gateway.use(createCodeShellRemoteCommands({ desktop }));
-      gateway.use(createMimiPetChat({ desktop }));
+      gateway.use(createMimiPetChat({ desktop, channels: adapters }));
 
       this.lastError = undefined;
       const active: ActiveGateway = {

@@ -84,6 +84,8 @@ export const panels = {
         cliUnavailable: "未检测到对应的 Claude Code / Codex CLI",
         openLinkedFailed: "无法打开外部会话：{error}",
         takeOverFailed: "无法接管外部会话：{error}",
+        sendFailed: "消息未发送；会话当前不可写，请刷新或重新接管。",
+        sendFailedWithReason: "消息未发送：{error}",
         ownerSessionUnavailable: "无法定位此任务所属的会话",
         observingDescription: "正在只读查看外部 CLI 对话；继续前需要明确接管。",
         observingComposer: "只读查看中；接管后才能发送消息",
@@ -317,6 +319,9 @@ export const panels = {
         cliUnavailable: "The corresponding Claude Code / Codex CLI is unavailable",
         openLinkedFailed: "Could not open the external session: {error}",
         takeOverFailed: "Could not take over the external session: {error}",
+        sendFailed:
+          "Message was not sent; the session is not writable. Refresh or take over again.",
+        sendFailedWithReason: "Message was not sent: {error}",
         ownerSessionUnavailable: "The session that owns this task could not be located",
         observingDescription:
           "Viewing this external CLI conversation read-only. Explicit takeover is required to continue.",

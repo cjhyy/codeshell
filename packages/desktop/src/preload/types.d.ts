@@ -716,8 +716,27 @@ export type ImGatewayChannel =
   | "whatsapp"
   | "teams";
 
+export type ImGatewayAttachmentKind = "image" | "file" | "audio" | "video";
+
+export interface ImGatewayChannelCapabilities {
+  inbound: {
+    text: true;
+    attachments: readonly ImGatewayAttachmentKind[];
+  };
+  outbound: {
+    text: true;
+    maxTextLength?: number;
+    button: "native" | "link";
+    attachments: readonly ImGatewayAttachmentKind[];
+    maxAttachments?: number;
+    maxAttachmentBytes?: number;
+  };
+}
+
 export interface ImGatewayChannelStatus {
   channel: ImGatewayChannel;
+  /** Always supplied by current Gateway builds; optional for an older running main process. */
+  capabilities?: ImGatewayChannelCapabilities;
   enabled: boolean;
   state: "disabled" | "needs-config" | "ready" | "starting" | "running" | "retrying";
   attempts?: number;
@@ -1893,7 +1912,7 @@ export interface CodeshellApi {
       cwd: string,
       mode: string,
       kind?: "claude-code" | "codex",
-    ): Promise<{ roomId: string }>;
+    ): Promise<{ roomId: string; status: "running" | "missing" | "observing" }>;
     openLinkedSession(
       externalSessionId: string,
       cwd: string,
@@ -2005,6 +2024,7 @@ export interface RoomPublic {
   createdAt: number;
   lastActiveAt: number;
   open: boolean;
+  observing: boolean;
 }
 
 export interface RoomMessageWire {

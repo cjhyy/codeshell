@@ -1,7 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
+  BUILTIN_CHANNEL_CAPABILITIES,
   isWebhookChannelAdapter,
   type ChannelAdapter,
+  type ChannelCapabilities,
   type ChannelMessageHandler,
   type ChatCommandDefinition,
   type OutgoingMessage,
@@ -255,13 +257,16 @@ function readModuleExport<T>(loaded: unknown, channel: ChannelName, exportName: 
 
 class LazyChannelAdapter implements ChannelAdapter {
   private adapterPromise?: Promise<ChannelAdapter>;
+  readonly capabilities: ChannelCapabilities;
   readonly supportsOutgoingAttachments: boolean;
 
   constructor(
     readonly channel: string,
     private readonly loader: () => Promise<ChannelAdapter>,
   ) {
-    this.supportsOutgoingAttachments = channel === "telegram" || channel === "wechat";
+    this.capabilities =
+      BUILTIN_CHANNEL_CAPABILITIES[channel as keyof typeof BUILTIN_CHANNEL_CAPABILITIES];
+    this.supportsOutgoingAttachments = this.capabilities.outbound.attachments.length > 0;
   }
 
   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {

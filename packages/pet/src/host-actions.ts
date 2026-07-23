@@ -11,11 +11,13 @@ import type {
   ToolDefinition,
   ToolVisibilityContext,
 } from "@cjhyy/code-shell-core/extension";
+import { isAbsolute } from "node:path";
 
 export const PET_HOST_ACTION_KINDS = [
   "mobileRemote",
   "longTaskControl",
   "memory",
+  "gatewayReply",
 ] as const;
 export type PetHostActionKind = (typeof PET_HOST_ACTION_KINDS)[number];
 
@@ -37,7 +39,23 @@ export type PetHostActionService = (request: PetHostActionRequest) => PetHostAct
 
 const MAX_MEMORY_TEXT_LENGTH = 2_000;
 const MAX_HOST_ACTION_ID_LENGTH = 128;
+const MAX_GATEWAY_REPLY_TEXT_LENGTH = 8_000;
+const MAX_GATEWAY_BUTTON_TEXT_LENGTH = 80;
+const MAX_GATEWAY_BUTTON_URL_LENGTH = 2_048;
+const MAX_GATEWAY_ATTACHMENT_PATH_LENGTH = 4_096;
+const MAX_GATEWAY_ATTACHMENTS = 4;
 const CONTROL_CHARACTER_RE = /[\u0000-\u001f\u007f]/u;
+
+export type PetGatewayReplyAttachmentKind = "image" | "file" | "audio" | "video";
+
+/** Trusted per-route limits used to rewrite and execute the GatewayReply tool. */
+export interface PetGatewayReplyCapability {
+  button: "native" | "link";
+  attachments: readonly PetGatewayReplyAttachmentKind[];
+  maxTextLength: number;
+  maxAttachments: number;
+  maxAttachmentBytes: number;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -56,6 +74,62 @@ function isOpaqueId(value: unknown): value is string {
     value.length <= MAX_HOST_ACTION_ID_LENGTH &&
     value === value.trim() &&
     !CONTROL_CHARACTER_RE.test(value)
+  );
+}
+
+function isGatewayAttachmentPath(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    isAbsolute(value) &&
+    value.length > 0 &&
+    value.length <= MAX_GATEWAY_ATTACHMENT_PATH_LENGTH &&
+    value === value.trim() &&
+    !CONTROL_CHARACTER_RE.test(value)
+  );
+}
+
+function isGatewayButton(value: unknown): value is { text: string; url: string } {
+  if (!isRecord(value) || !hasExactKeys(value, ["text", "url"])) return false;
+  if (
+    typeof value.text !== "string" ||
+    !value.text.trim() ||
+    value.text.length > MAX_GATEWAY_BUTTON_TEXT_LENGTH ||
+    CONTROL_CHARACTER_RE.test(value.text) ||
+    typeof value.url !== "string" ||
+    value.url.length > MAX_GATEWAY_BUTTON_URL_LENGTH ||
+    value.url !== value.url.trim() ||
+    CONTROL_CHARACTER_RE.test(value.url)
+  ) {
+    return false;
+  }
+  try {
+    const url = new URL(value.url);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function isGatewayReplyPayload(value: Record<string, unknown>): boolean {
+  const keys = Object.keys(value);
+  if (
+    keys.length < 1 ||
+    keys.some((key) => key !== "text" && key !== "button" && key !== "attachmentPaths") ||
+    typeof value.text !== "string" ||
+    !value.text.trim() ||
+    value.text.length > MAX_GATEWAY_REPLY_TEXT_LENGTH ||
+    CONTROL_CHARACTER_RE.test(value.text.replaceAll("\n", "").replaceAll("\t", "")) ||
+    (value.button !== undefined && !isGatewayButton(value.button))
+  ) {
+    return false;
+  }
+  if (value.attachmentPaths === undefined) return true;
+  return (
+    Array.isArray(value.attachmentPaths) &&
+    value.attachmentPaths.length > 0 &&
+    value.attachmentPaths.length <= MAX_GATEWAY_ATTACHMENTS &&
+    value.attachmentPaths.every(isGatewayAttachmentPath) &&
+    new Set(value.attachmentPaths).size === value.attachmentPaths.length
   );
 }
 
@@ -79,7 +153,9 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
       isOpaqueId(payload.taskId) &&
       (LONG_TASK_ACTIONS as readonly unknown[]).includes(payload.action)
     );
-  }  if (payload.action === "remember") {
+  }
+  if (value.kind === "gatewayReply") return isGatewayReplyPayload(payload);
+  if (payload.action === "remember") {
     return (
       hasExactKeys(payload, ["action", "text"]) &&
       typeof payload.text === "string" &&
@@ -117,6 +193,154 @@ export function hostActionService(ctx?: ToolContext): PetHostActionService | und
   return typeof services?.requestPetHostAction === "function"
     ? services.requestPetHostAction
     : undefined;
+}
+
+// ---------------------------------------------------------------------------
+// GatewayReply
+// ---------------------------------------------------------------------------
+
+export const GATEWAY_REPLY_TOOL_NAME = "GatewayReply";
+
+export const gatewayReplyToolDef: ToolDefinition = {
+  name: GATEWAY_REPLY_TOOL_NAME,
+  description:
+    "Deliver the current reply through the originating Chat Gateway route. This is the only tool " +
+    "that owns IM reply text, optional URL buttons, and optional existing local image/file/audio/video " +
+    "attachments. The host and Gateway validate the exact route capability after the turn. " +
+    "Use only attachment paths supplied by the user or trusted runtime context; never invent one. " +
+    "Tool acceptance is pending, not delivery, so do not repeat the reply in assistant text or " +
+    "claim that it was sent.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      text: {
+        type: "string",
+        minLength: 1,
+        maxLength: MAX_GATEWAY_REPLY_TEXT_LENGTH,
+        description: "The complete user-facing reply to deliver to the current IM conversation.",
+      },
+      button: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          text: { type: "string", minLength: 1, maxLength: MAX_GATEWAY_BUTTON_TEXT_LENGTH },
+          url: {
+            type: "string",
+            minLength: 1,
+            maxLength: MAX_GATEWAY_BUTTON_URL_LENGTH,
+            description: "An absolute http(s) URL.",
+          },
+        },
+        required: ["text", "url"],
+      },
+      attachment_paths: {
+        type: "array",
+        minItems: 1,
+        maxItems: MAX_GATEWAY_ATTACHMENTS,
+        uniqueItems: true,
+        items: {
+          type: "string",
+          minLength: 1,
+          maxLength: MAX_GATEWAY_ATTACHMENT_PATH_LENGTH,
+          description: "Exact absolute local path from trusted context or the user's message.",
+        },
+      },
+    },
+    required: ["text"],
+  },
+};
+
+export const gatewayReplyAvailability = hostActionAvailability("gatewayReply");
+
+function gatewayReplyCapability(ctx?: ToolContext): PetGatewayReplyCapability | undefined {
+  const services = ctx?.runScopedServices as
+    | { petGatewayReply?: PetGatewayReplyCapability }
+    | undefined;
+  return services?.petGatewayReply;
+}
+
+function gatewayReplyCapabilityFromVisibility(
+  ctx: ToolVisibilityContext,
+): PetGatewayReplyCapability | undefined {
+  const value = ctx.profileMeta?.petGatewayReply;
+  if (!isRecord(value)) return undefined;
+  return value as unknown as PetGatewayReplyCapability;
+}
+
+export function rewriteGatewayReplyDef(
+  def: ToolDefinition,
+  ctx: ToolVisibilityContext,
+): ToolDefinition {
+  const capability = gatewayReplyCapabilityFromVisibility(ctx);
+  if (!capability) return def;
+  const properties = gatewayReplyToolDef.inputSchema.properties as Record<string, unknown>;
+  const { attachment_paths: attachmentPaths, ...textAndButton } = properties;
+  const textProperty = textAndButton.text as Record<string, unknown>;
+  const attachmentDescription = capability.attachments.length
+    ? ` This route also accepts ${capability.attachments.join("/")} attachments (maximum ${capability.maxAttachments}, ${capability.maxAttachmentBytes} bytes each).`
+    : " This route does not accept outgoing attachments.";
+  return {
+    ...def,
+    description:
+      `${gatewayReplyToolDef.description} The button is rendered as a ${capability.button === "native" ? "native channel button" : "labelled text link"}.` +
+      attachmentDescription,
+    inputSchema: {
+      ...gatewayReplyToolDef.inputSchema,
+      properties: {
+        ...textAndButton,
+        text: { ...textProperty, maxLength: capability.maxTextLength },
+        ...(capability.attachments.length > 0 && attachmentPaths
+          ? {
+              attachment_paths: {
+                ...(attachmentPaths as Record<string, unknown>),
+                maxItems: capability.maxAttachments,
+              },
+            }
+          : {}),
+      },
+    },
+  };
+}
+
+export async function gatewayReplyTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
+  const request = hostActionService(ctx);
+  const capability = gatewayReplyCapability(ctx);
+  if (!request || !capability) {
+    return "Error: GatewayReply is available only in a Mimi turn originating from Chat Gateway.";
+  }
+  const text = typeof args.text === "string" ? args.text.trim() : "";
+  const button = args.button;
+  const attachmentPaths = args.attachment_paths;
+  const payload: Record<string, unknown> = {
+    text,
+    ...(button === undefined ? {} : { button }),
+    ...(attachmentPaths === undefined ? {} : { attachmentPaths }),
+  };
+  if (!isGatewayReplyPayload(payload)) {
+    return "Error: GatewayReply requires bounded text, an optional valid http(s) button, and optional unique absolute attachment_paths.";
+  }
+  if (text.length > capability.maxTextLength) {
+    return `Error: the current Gateway route accepts at most ${capability.maxTextLength} text characters.`;
+  }
+  if (Array.isArray(attachmentPaths)) {
+    if (capability.attachments.length === 0) {
+      return "Error: the current Gateway route cannot send attachments.";
+    }
+    if (attachmentPaths.length > capability.maxAttachments) {
+      return `Error: the current Gateway route accepts at most ${capability.maxAttachments} attachments.`;
+    }
+  }
+  const decision = request({ kind: "gatewayReply", payload });
+  if (!decision.ok) return `Error: ${decision.error ?? "Gateway reply was rejected"}`;
+  return (
+    "ACCEPTED EXACTLY ONCE — NOT SENT YET. The Gateway reply was recorded for host validation " +
+    "after this turn. End the turn now with only a short internal acknowledgement; do not call " +
+    "GatewayReply again, repeat the user-facing reply, or claim sent, attached, or delivered."
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -188,10 +412,12 @@ export const memoryToolDef: ToolDefinition = {
   name: MEMORY_TOOL_NAME,
   description:
     "Maintain Mimi's durable memory of the user: stable preferences, facts, and standing " +
-    "instructions worth keeping across conversations. Stored memories appear in the runtime " +
-    "context with their ids. remember adds a new entry; update rewrites one existing entry by " +
+    "instructions worth keeping across conversations. The newest bounded memory window appears " +
+    "in runtime context with ids; memoryWindow reports whether older entries are omitted. " +
+    "remember adds a new entry; update rewrites one visible existing entry by " +
     "memory_id; forget removes one entry by memory_id. Never store secrets, passwords, or " +
-    "one-off conversational details. The host applies the change after this turn.",
+    "one-off conversational details. Do not invent an id for an omitted older entry; ask the user " +
+    "to manage it in Memory settings. The host applies the change after this turn.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
@@ -203,7 +429,8 @@ export const memoryToolDef: ToolDefinition = {
       },
       memory_id: {
         type: "string",
-        description: "Exact id from the memories list in the runtime context (update/forget).",
+        description:
+          "Exact id from the visible memories window in runtime context (update/forget).",
       },
       text: {
         type: "string",

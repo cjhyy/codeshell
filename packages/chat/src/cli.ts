@@ -83,7 +83,7 @@ async function main(args = process.argv.slice(2)): Promise<void> {
     );
     gateway.use(createRateLimitMiddleware(config.runtime.maxMessagesPerUserPerMinute));
     gateway.use(createCodeShellRemoteCommands({ desktop }));
-    gateway.use(createMimiPetChat({ desktop }));
+    gateway.use(createMimiPetChat({ desktop, channels: adapters }));
 
     console.log(
       `[code-shell-chat] gateway 已启动：${config.channels.map(({ channel }) => channel).join(", ")}`,

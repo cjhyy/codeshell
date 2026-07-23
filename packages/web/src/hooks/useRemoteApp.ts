@@ -182,6 +182,8 @@ export function useRemoteApp(): RemoteApp {
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
   const [activeSessionCwd, setActiveSessionCwd] = useState<string | null | undefined>();
   const [rooms, setRooms] = useState<RoomPublic[]>([]);
+  const roomsRef = useRef<RoomPublic[]>(rooms);
+  roomsRef.current = rooms;
   const [projects, setProjects] = useState<MobileProjectMeta[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | undefined>();
   // activeRoomId via ref so socket callbacks see the latest value.
@@ -688,6 +690,20 @@ export function useRemoteApp(): RemoteApp {
             });
           }
           setActiveRoomId(event.roomId);
+          setRooms((previous) =>
+            previous.map((room) =>
+              room.id === event.roomId
+                ? {
+                    ...room,
+                    open: event.status === "running",
+                    observing: event.status === "observing",
+                  }
+                : room,
+            ),
+          );
+          // Refresh metadata even when this room was created after the last
+          // room.list snapshot, so the mobile view can display read-only state.
+          sendRef.current?.({ type: "room.list" });
           ccHistorySessionRef.current = event.sessionId;
           ccHistoryCwdRef.current =
             pendingCcOpenCwdsRef.current.get(event.sessionId) ??
@@ -956,6 +972,10 @@ export function useRemoteApp(): RemoteApp {
         globalThis.crypto?.randomUUID?.() ??
         `mobile-message-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       let attachments;
+      if (roomId && roomsRef.current.find((room) => room.id === roomId)?.observing) {
+        setNotice(t("mobile.notice.ccRoomObserving"));
+        return false;
+      }
       try {
         attachments = await prepareMobileAttachments(input.attachments, {
           beginUpload: (metadata) => beginMobileUpload(metadata, connectionGeneration),

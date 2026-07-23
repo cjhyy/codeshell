@@ -168,7 +168,51 @@ describe("resolveLinkedSessionFromDisk", () => {
 
     expect(
       manager.takeOverLinkedSession(linked.roomId, "claude-live", "/tmp/project", "claude-code"),
-    ).toMatchObject({ status: "running", cwd: "/tmp/project" });
+    ).toMatchObject({ status: "running", cwd: "/tmp/project", mode: "default" });
+    expect(starts).toBe(1);
+
+    manager.close(linked.roomId);
+    const observedAgain = manager.openLinkedSession("claude-live", "/tmp/project", "claude-code");
+    expect(observedAgain.status).toBe("observing");
+    expect(manager.getRoom(linked.roomId)?.linkedSessionMode).toBeUndefined();
+    expect(manager.open(linked.roomId)).toEqual({ status: "running" });
+    expect(starts).toBe(2);
+  });
+
+  test("takeover drops an inherited bypass mode to the safe default", () => {
+    const root = fixtureRoot();
+    const claudeHome = join(root, "claude");
+    writeClaudeSession(claudeHome, "/tmp/risky-project", "claude-risky");
+    let starts = 0;
+    const manager = new RoomManager({
+      rootDir: join(root, "rooms"),
+      resolveLinkedSession: (target) =>
+        resolveLinkedSessionFromDisk(target, { claudeHome, codexHome: join(root, "codex") }),
+      createAgent: () => ({
+        start: () => {
+          starts += 1;
+        },
+        send: () => true,
+        isRunning: () => false,
+        stop: () => {},
+      }),
+      onMessage: () => {},
+    });
+    const room = manager.createRoom({
+      cwd: "/tmp/risky-project",
+      kind: "claude-code",
+      permissionMode: "bypassPermissions",
+      claudeSessionId: "claude-risky",
+    });
+
+    expect(
+      manager.openLinkedSession("claude-risky", "/tmp/risky-project", "claude-code"),
+    ).toMatchObject({ status: "observing", mode: "bypassPermissions" });
+    expect(manager.getRoom(room.id)?.linkedSessionMode).toBeUndefined();
+    expect(
+      manager.takeOverLinkedSession(room.id, "claude-risky", "/tmp/risky-project", "claude-code"),
+    ).toMatchObject({ status: "running", mode: "default" });
+    expect(manager.getRoom(room.id)?.permissionMode).toBe("default");
     expect(starts).toBe(1);
   });
 });

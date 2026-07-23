@@ -1517,7 +1517,7 @@ export class Engine {
         // dropped here or it stacks duplicates that re-snapshot on every tool.
         fileHistoryHook.dispose();
       }
-      return await this.finalizeRun({
+      const finalized = await this.finalizeRun({
         session,
         result,
         firstGoalTermination,
@@ -1535,16 +1535,41 @@ export class Engine {
         profile,
         getProfileReportedResults: () => profileReportedResults,
       });
+      if (options?.clientMessageId) {
+        this.appendClientRunReceipt(session, options.clientMessageId, finalized);
+      }
+      return finalized;
     });
-    return Promise.resolve(sessionRun).catch(
-      (err): EngineResult =>
-        buildRunFailureResult({
-          err,
-          session,
-          options,
-          persistFinalRunState: (state) => this.persistFinalRunState(state),
-        }),
-    );
+    return Promise.resolve(sessionRun).catch((err): EngineResult => {
+      const failed = buildRunFailureResult({
+        err,
+        session,
+        options,
+        persistFinalRunState: (state) => this.persistFinalRunState(state),
+      });
+      if (options?.clientMessageId) {
+        this.appendClientRunReceipt(session, options.clientMessageId, failed);
+      }
+      return failed;
+    });
+  }
+
+  /** A receipt write failure must not turn an already finalized model result
+   * into a second synthetic failure (or reject the Engine.run contract). */
+  private appendClientRunReceipt(
+    session: SessionBundle,
+    clientMessageId: string,
+    result: EngineResult,
+  ): void {
+    try {
+      session.transcript.appendRunResult(clientMessageId, result);
+    } catch (error) {
+      logger.warn("engine.client_message.receipt_persist_failed", {
+        sessionId: session.state.sessionId,
+        clientMessageId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   /**
@@ -2875,14 +2900,17 @@ export class Engine {
    * only live in memory and every restart reverts to the previously persisted
    * defaults.text.
    */
-  switchModel(key: string): ModelEntry {
+  switchModel(key: string, opts?: { persist?: boolean }): ModelEntry {
     const entry = this.modelPool.switch(key);
     // LLMConfig is pure model identity now — rotate it wholesale. Cross-model
     // runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) live on
     // this.config.clientDefaults and survive the switch untouched.
     const nextLlm = this.modelPool.toLLMConfig(entry);
     this.config = { ...this.config, llm: nextLlm };
-    this.persistActiveModel(entry);
+    // persist: false is the per-session path (ChatSession) — switching one
+    // session's model must not rewrite settings.defaults.text, the boot
+    // default every future session inherits.
+    if (opts?.persist !== false) this.persistActiveModel(entry);
     return entry;
   }
 

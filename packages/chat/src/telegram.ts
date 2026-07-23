@@ -5,6 +5,8 @@ import type {
   ChannelMessageHandler,
   OutgoingMessage,
 } from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
+import { OutgoingDeliveryTracker, outgoingAttachments } from "./media.js";
 
 export interface TelegramAdapterConfig {
   botToken: string;
@@ -64,6 +66,8 @@ export interface TelegramAdapterOptions {
 
 export class TelegramAdapter implements ChannelAdapter {
   readonly channel = "telegram";
+  readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.telegram;
+  private readonly delivery = new OutgoingDeliveryTracker();
   readonly supportsOutgoingAttachments = true;
   private readonly fetchFn: typeof fetch;
   private readonly sleepFn: (ms: number, signal: AbortSignal) => Promise<void>;
@@ -144,45 +148,46 @@ export class TelegramAdapter implements ChannelAdapter {
   }
 
   async send(target: string, message: OutgoingMessage): Promise<void> {
-    if (message.text || message.button) {
-      await this.call(
-        "sendMessage",
-        {
-          chat_id: target,
-          text: message.text,
-          ...(message.button
-            ? {
-                reply_markup: {
-                  inline_keyboard: [[{ text: message.button.text, url: message.button.url }]],
+    const attachments = outgoingAttachments(message, this.capabilities.outbound.attachments);
+    await this.delivery.run(message, () => [
+      ...(message.text || message.button
+        ? [
+            () =>
+              this.call(
+                "sendMessage",
+                {
+                  chat_id: target,
+                  text: message.text,
+                  ...(message.button
+                    ? {
+                        reply_markup: {
+                          inline_keyboard: [
+                            [{ text: message.button.text, url: message.button.url }],
+                          ],
+                        },
+                      }
+                    : {}),
                 },
-              }
-            : {}),
-        },
-        AbortSignal.timeout(15_000),
-      );
-    }
-    for (const attachment of (message.attachments ?? []).slice(0, 4)) {
-      if (attachment.kind !== "image") continue;
-      if (
-        !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(attachment.mimeType) ||
-        attachment.data.byteLength < 1 ||
-        attachment.data.byteLength > 10 * 1024 * 1024
-      ) {
-        throw new Error("Telegram 待发送图片的类型或大小不受支持");
-      }
-      const media =
-        attachment.mimeType === "image/gif"
-          ? { method: "sendAnimation", field: "animation" }
-          : attachment.mimeType === "image/webp"
-            ? { method: "sendDocument", field: "document" }
-            : { method: "sendPhoto", field: "photo" };
-      const form = new FormData();
-      const bytes = new Uint8Array(attachment.data.byteLength);
-      bytes.set(attachment.data);
-      form.set("chat_id", target);
-      form.set(media.field, new Blob([bytes], { type: attachment.mimeType }), attachment.name);
-      await this.callMultipart(media.method, form, AbortSignal.timeout(30_000));
-    }
+                AbortSignal.timeout(15_000),
+              ).then(() => undefined),
+          ]
+        : []),
+      ...attachments.map((attachment) => async () => {
+        if (
+          attachment.kind === "image" &&
+          !["image/png", "image/jpeg", "image/gif", "image/webp"].includes(attachment.mimeType)
+        ) {
+          throw new Error("Telegram 待发送图片的类型不受支持");
+        }
+        const media = telegramOutboundMethod(attachment.kind, attachment.mimeType);
+        const form = new FormData();
+        const bytes = new Uint8Array(attachment.data.byteLength);
+        bytes.set(attachment.data);
+        form.set("chat_id", target);
+        form.set(media.field, new Blob([bytes], { type: attachment.mimeType }), attachment.name);
+        await this.callMultipart(media.method, form, AbortSignal.timeout(30_000));
+      }),
+    ]);
   }
 
   private async call<T>(method: string, body: unknown, signal: AbortSignal): Promise<T> {
@@ -235,6 +240,17 @@ export class TelegramAdapter implements ChannelAdapter {
   private redact(message: string): string {
     return message.split(this.config.botToken).join("[REDACTED]");
   }
+}
+
+function telegramOutboundMethod(kind: string, mimeType: string): { method: string; field: string } {
+  if (kind === "audio") return { method: "sendAudio", field: "audio" };
+  if (kind === "video") return { method: "sendVideo", field: "video" };
+  if (kind === "file" || mimeType === "image/webp") {
+    return { method: "sendDocument", field: "document" };
+  }
+  return mimeType === "image/gif"
+    ? { method: "sendAnimation", field: "animation" }
+    : { method: "sendPhoto", field: "photo" };
 }
 
 function isStale(update: TelegramUpdate, now: number, maxAgeMs: number): boolean {

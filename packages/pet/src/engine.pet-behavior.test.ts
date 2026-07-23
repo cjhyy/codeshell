@@ -6,13 +6,19 @@ import { LLMClientBase } from "@cjhyy/code-shell-core/extension";
 import { registerProvider } from "@cjhyy/code-shell-core/extension";
 import type { CreateMessageOptions } from "@cjhyy/code-shell-core/extension";
 import type { LLMResponse, Message } from "@cjhyy/code-shell-core/extension";
+import type { ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { Engine } from "@cjhyy/code-shell-core";
 import { createPetCapability } from "./capability.js";
 
 const provider = "fake-pet-behavior";
 const calls = new Map<
   string,
-  Array<{ tools: string[]; systemPrompt: string; messages: Message[] }>
+  Array<{
+    tools: string[];
+    toolDefinitions: ToolDefinition[];
+    systemPrompt: string;
+    messages: Message[];
+  }>
 >();
 const tempDirs: string[] = [];
 
@@ -23,38 +29,55 @@ class PetBehaviorClient extends LLMClientBase {
     const modelCalls = calls.get(this.model)!;
     modelCalls.push({
       tools: (options.tools ?? []).map((tool) => tool.name),
+      toolDefinitions: structuredClone(options.tools ?? []),
       systemPrompt: options.systemPrompt,
       messages: structuredClone(options.messages),
     });
     const response: LLMResponse =
-      modelCalls.length === 1
+      modelCalls.length === 1 && this.model.startsWith("gateway-reply-")
         ? {
             text: "",
             toolCalls: [
               {
-                id: "forbidden-write",
-                toolName: "Write",
-                args: { file_path: "should-not-exist.txt", content: "blocked" },
-              },
-              {
-                id: "delegate-work",
-                toolName: "DelegateWork",
+                id: "gateway-reply",
+                toolName: "GatewayReply",
                 args: {
-                  workspace_id: "workspace-codeshell",
-                  session_id: "session-existing",
-                  objective: "inspect CodeShell",
+                  text: "工具回复",
+                  button: { text: "打开", url: "https://example.test/result" },
                 },
               },
             ],
             stopReason: "tool_use",
             usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
           }
-        : {
-            text: "safe answer",
-            toolCalls: [],
-            stopReason: "stop",
-            usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
-          };
+        : modelCalls.length === 1
+          ? {
+              text: "",
+              toolCalls: [
+                {
+                  id: "forbidden-write",
+                  toolName: "Write",
+                  args: { file_path: "should-not-exist.txt", content: "blocked" },
+                },
+                {
+                  id: "delegate-work",
+                  toolName: "DelegateWork",
+                  args: {
+                    workspace_id: "workspace-codeshell",
+                    session_id: "session-existing",
+                    objective: "inspect CodeShell",
+                  },
+                },
+              ],
+              stopReason: "tool_use",
+              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            }
+          : {
+              text: "safe answer",
+              toolCalls: [],
+              stopReason: "stop",
+              usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+            };
     this.recordUsage(response.usage!, options);
     return response;
   }
@@ -161,5 +184,77 @@ describe("Engine pet behavior", () => {
     await expect(engine.run("rewrite", { sessionId: "pet", kind: "work" })).rejects.toThrow(
       "session kind mismatch",
     );
+  });
+
+  test("exposes Gateway discovery before the per-route GatewayReply execution tool", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "engine-pet-gateway-reply-"));
+    tempDirs.push(cwd);
+    const model = `gateway-reply-${Date.now()}-${Math.random()}`;
+    calls.set(model, []);
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd,
+      extensionModules: [createPetCapability()],
+      sessionStorageDir: join(cwd, "sessions"),
+      permissionMode: "bypassPermissions",
+      settingsScope: "isolated",
+      headless: true,
+      maxTurns: 3,
+    });
+    (engine as any).hooks.clear();
+
+    const result = await engine.run("请通过 Gateway 回复", {
+      sessionId: "gateway-pet",
+      kind: "pet",
+      behaviorMode: "pet",
+      profileParams: {
+        gateway: {
+          currentChannel: "line",
+          channels: [
+            {
+              channel: "line",
+              capabilities: {
+                inbound: {
+                  text: true,
+                  attachments: ["image", "file", "audio", "video"],
+                },
+                outbound: {
+                  text: true,
+                  maxTextLength: 8_000,
+                  button: "native",
+                  attachments: [],
+                },
+              },
+            },
+          ],
+        },
+        hostActions: ["gatewayReply"],
+        gatewayReply: {
+          button: "link",
+          attachments: [],
+          maxTextLength: 8_000,
+          maxAttachments: 4,
+          maxAttachmentBytes: 10 * 1024 * 1024,
+        },
+      },
+    });
+
+    const first = calls.get(model)![0]!;
+    expect(first.tools).toEqual(["Gateway", "GatewayReply"]);
+    expect(first.toolDefinitions[0]?.inputSchema.properties.action).toMatchObject({
+      enum: ["search", "describe"],
+    });
+    expect(first.toolDefinitions[1]?.inputSchema.properties).not.toHaveProperty("attachment_paths");
+    expect(result.extensions?.pet).toEqual({
+      hostActions: [
+        {
+          kind: "gatewayReply",
+          payload: {
+            text: "工具回复",
+            button: { text: "打开", url: "https://example.test/result" },
+          },
+        },
+      ],
+    });
   });
 });

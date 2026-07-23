@@ -1,6 +1,8 @@
 import WebSocket, { type RawData } from "ws";
 import type { ChannelAdapter, ChannelMessageHandler, OutgoingMessage } from "./channel.js";
+import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
 import { dispatchSafely, formatOutgoingMarkdown } from "./lifecycle.js";
+import { mediaKind, outgoingAttachments, remoteAttachment, safeAttachmentName } from "./media.js";
 
 export interface MattermostAdapterConfig {
   serverUrl: string;
@@ -21,10 +23,20 @@ interface MattermostPost {
   channel_id?: string;
   user_id?: string;
   message?: string;
+  file_ids?: string[];
+  metadata?: { files?: MattermostFileInfo[] };
+}
+
+interface MattermostFileInfo {
+  id?: string;
+  name?: string;
+  mime_type?: string;
+  size?: number;
 }
 
 export class MattermostAdapter implements ChannelAdapter {
   readonly channel = "mattermost";
+  readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.mattermost;
 
   constructor(
     private readonly config: MattermostAdapterConfig,
@@ -46,6 +58,32 @@ export class MattermostAdapter implements ChannelAdapter {
   }
 
   async send(target: string, message: OutgoingMessage): Promise<void> {
+    const attachments = outgoingAttachments(message, this.capabilities.outbound.attachments);
+    const fileIds: string[] = [];
+    for (const attachment of attachments) {
+      const form = new FormData();
+      form.set("channel_id", target);
+      form.set(
+        "files",
+        new Blob([new Uint8Array(attachment.data)], { type: attachment.mimeType }),
+        safeAttachmentName(attachment.name),
+      );
+      const upload = await this.fetchFn(`${this.config.serverUrl}/api/v4/files`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${this.config.botToken}` },
+        body: form,
+        signal: AbortSignal.timeout(30_000),
+      });
+      const uploadBody = (await upload.json().catch(() => ({}))) as {
+        file_infos?: Array<{ id?: string }>;
+        message?: string;
+      };
+      const id = uploadBody.file_infos?.[0]?.id;
+      if (!upload.ok || !id) {
+        throw new Error(uploadBody.message ?? `Mattermost 附件上传失败（HTTP ${upload.status}）`);
+      }
+      fileIds.push(id);
+    }
     const response = await this.fetchFn(`${this.config.serverUrl}/api/v4/posts`, {
       method: "POST",
       headers: {
@@ -55,6 +93,7 @@ export class MattermostAdapter implements ChannelAdapter {
       body: JSON.stringify({
         channel_id: target,
         message: formatOutgoingMarkdown(message.text, message.button),
+        ...(fileIds.length > 0 ? { file_ids: fileIds } : {}),
       }),
       signal: AbortSignal.timeout(15_000),
     });
@@ -115,17 +154,37 @@ export class MattermostAdapter implements ChannelAdapter {
     if (
       !post.channel_id ||
       !post.user_id ||
-      !post.message ||
+      (!post.message && !post.file_ids?.length && !post.metadata?.files?.length) ||
       post.user_id === this.config.botUserId
     ) {
       return;
     }
+    const infos = post.metadata?.files ?? [];
+    const infoById = new Map(infos.flatMap((info) => (info.id ? [[info.id, info] as const] : [])));
+    const attachmentIds = post.file_ids?.length
+      ? post.file_ids
+      : infos.flatMap((info) => (info.id ? [info.id] : []));
+    const attachments = attachmentIds.map((id) => {
+      const info = infoById.get(id);
+      return remoteAttachment({
+        id,
+        kind: mediaKind(info?.mime_type, info?.name),
+        name: info?.name ?? `mattermost-${id}`,
+        mimeType: info?.mime_type,
+        size: info?.size,
+        url: `${this.config.serverUrl}/api/v4/files/${encodeURIComponent(id)}`,
+        headers: { authorization: `Bearer ${this.config.botToken}` },
+        fetch: this.fetchFn,
+        allowPrivateNetwork: true,
+      });
+    });
     void dispatchSafely(handler, {
       channel: this.channel,
       target: post.channel_id,
       senderId: post.user_id,
-      text: post.message,
+      text: post.message ?? "",
       ...(post.id ? { messageId: post.id } : {}),
+      ...(attachments.length > 0 ? { attachments } : {}),
     });
   }
 }
