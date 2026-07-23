@@ -231,6 +231,16 @@ export type PetWorkInboxUpdate =
       action: "clear";
     };
 
+/**
+ * L2 disclosure payload: the newest assistant text of one work session, read
+ * straight from its on-disk transcript (possibly truncated by main).
+ */
+export interface PetLatestSessionResult {
+  text: string;
+  truncated: boolean;
+  timestamp?: number;
+}
+
 /** One durable Mimi memory entry; editable from the UI and from Mimi's Memory tool. */
 export interface PetMemoryEntry {
   id: string;
@@ -281,6 +291,7 @@ export interface PetApi {
   updateMemory?(id: string, text: string): Promise<PetMemoryEntry>;
   removeMemory?(id: string): Promise<PetMemoryEntry>;
   onMemoriesChanged?(listener: (entries: PetMemoryEntry[]) => void): () => void;
+  getLatestResult?(sessionId: string): Promise<PetLatestSessionResult | null>;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
   setWidgetSurface(mode: "collapsed" | "expanded"): Promise<{ ok: true }>;
@@ -368,6 +379,11 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ipcRenderer.on("pet:memories-changed", handler);
       return () => ipcRenderer.removeListener("pet:memories-changed", handler);
     },
+    getLatestResult: (sessionId) =>
+      ipcRenderer.invoke(
+        "pet:session-latest-result",
+        sessionId,
+      ) as Promise<PetLatestSessionResult | null>,
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>
       ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,

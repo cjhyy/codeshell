@@ -42,6 +42,7 @@ export const PET_MEMORY_ADD_CHANNEL = "pet:memory-add";
 export const PET_MEMORY_UPDATE_CHANNEL = "pet:memory-update";
 export const PET_MEMORY_REMOVE_CHANNEL = "pet:memory-remove";
 export const PET_MEMORY_EVENT_CHANNEL = "pet:memories-changed";
+export const PET_LATEST_RESULT_CHANNEL = "pet:session-latest-result";
 
 export interface PetIpcAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot;
@@ -102,6 +103,14 @@ export interface PetIpcMemories {
 export interface PetIpcWorkMemory {
   getActiveSegmentId(): string | null;
   getSegments(): { boundaryBeforeMessageId: string; brief?: string }[];
+}
+
+/**
+ * L2 disclosure reader: the newest assistant text of one on-disk session,
+ * surfaced in the Pet work tree without opening the session.
+ */
+export interface PetIpcLatestResult {
+  read(sessionId: string): Promise<{ text: string; truncated: boolean; timestamp?: number } | null>;
 }
 
 function afterReady<T>(ready: Promise<void> | undefined, callback: () => T): T | Promise<T> {
@@ -266,6 +275,7 @@ export function registerPetIpc(options: {
   workMemory?: PetIpcWorkMemory;
   longTasks?: PetIpcLongTasks;
   memories?: PetIpcMemories;
+  latestResult?: PetIpcLatestResult;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
@@ -437,6 +447,19 @@ export function registerPetIpc(options: {
       return afterReady(options.ready, () => options.memories!.forget(id));
     });
   }
+  if (options.latestResult) {
+    options.ipcMain.handle(PET_LATEST_RESULT_CHANNEL, (_event, ...args) => {
+      if (
+        args.length !== 1 ||
+        typeof args[0] !== "string" ||
+        !/^[A-Za-z0-9_-]{1,128}$/u.test(args[0])
+      ) {
+        throw new Error("invalid session id");
+      }
+      const sessionId = args[0];
+      return afterReady(options.ready, () => options.latestResult!.read(sessionId));
+    });
+  }
   const unsubscribeMemories = options.memories?.subscribe(() => {
     void Promise.resolve(options.memories!.list()).then((entries) => {
       for (const window of options.windows()) {
@@ -489,5 +512,6 @@ export function registerPetIpc(options: {
       options.ipcMain.removeHandler(PET_MEMORY_UPDATE_CHANNEL);
       options.ipcMain.removeHandler(PET_MEMORY_REMOVE_CHANNEL);
     }
+    if (options.latestResult) options.ipcMain.removeHandler(PET_LATEST_RESULT_CHANNEL);
   };
 }

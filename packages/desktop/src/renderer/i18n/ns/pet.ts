@@ -58,6 +58,12 @@ export const pet = {
         clearCompletedHint: "隐藏全部已完成工作，不会删除原 Session",
         restoreDismissed: "恢复隐藏项（{count}）",
         externalUnavailable: "外部会话定位信息不完整或 transcript 已不存在，无法打开",
+        latestResultExpandAria: "展开「{title}」的最新结果",
+        latestResultCollapseAria: "收起「{title}」的最新结果",
+        latestResultLoading: "加载中…",
+        latestResultEmpty: "暂无最新结果",
+        latestResultError: "无法读取最新结果",
+        latestResultTruncated: "…（已截断，打开会话查看全文）",
         branch: {
           running: "进行中",
           pending: "待决策",
@@ -331,6 +337,12 @@ export const pet = {
         restoreDismissed: "Restore hidden ({count})",
         externalUnavailable:
           "The external session locator is incomplete or its transcript no longer exists",
+        latestResultExpandAria: "Expand the latest result of “{title}”",
+        latestResultCollapseAria: "Collapse the latest result of “{title}”",
+        latestResultLoading: "Loading…",
+        latestResultEmpty: "No result yet",
+        latestResultError: "Could not read the latest result",
+        latestResultTruncated: "… (truncated — open the session for the full text)",
         branch: {
           running: "In progress",
           pending: "Needs decision",

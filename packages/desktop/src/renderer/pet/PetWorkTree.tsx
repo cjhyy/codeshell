@@ -11,6 +11,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import type { PetLatestSessionResult } from "../../preload/types";
 import { useT } from "../i18n";
 import type { PetSessionEmptyState } from "./SessionStatusSection";
 import { RISK_TONE, type PetWorkGroup, type PetWorkItem, type PetWorkMap } from "./petWorkMap";
@@ -65,6 +66,170 @@ const BRANCH_META: Record<PetWorkGroup, { Icon: LucideIcon; icon: string; count:
   },
 };
 
+type LatestResultState =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "loaded"; value: PetLatestSessionResult | null };
+
+/**
+ * One work-tree session row. Non-external rows carry an expand affordance
+ * that lazily reads the session's latest assistant result (L2 disclosure)
+ * over IPC; external-CLI transcripts are deliberately not copied, so external
+ * rows get no affordance.
+ */
+function WorkTreeItem({
+  item,
+  onOpen,
+  onDismiss,
+}: {
+  item: PetWorkItem;
+  onOpen?: (item: PetWorkItem) => void;
+  onDismiss?: (item: PetWorkItem) => void;
+}) {
+  const { t } = useT();
+  const [expanded, setExpanded] = React.useState(false);
+  const [result, setResult] = React.useState<LatestResultState | null>(null);
+  const fetchSeq = React.useRef(0);
+  const navigationDisabled = Boolean(item.external && !item.navigation.external);
+  const canExpand = !item.external;
+  const toggleExpanded = () => {
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+    setExpanded(true);
+    const read = window.codeshell.pet.getLatestResult;
+    if (!read) {
+      setResult({ status: "error" });
+      return;
+    }
+    setResult({ status: "loading" });
+    const seq = ++fetchSeq.current;
+    void read(item.navigation.agentSessionId)
+      .then((value) => {
+        if (fetchSeq.current === seq) setResult({ status: "loaded", value });
+      })
+      .catch(() => {
+        if (fetchSeq.current === seq) setResult({ status: "error" });
+      });
+  };
+  return (
+    <li>
+      <div className="group/item min-w-0 rounded-xl border border-transparent bg-background/45 transition hover:border-border/65 hover:bg-background hover:shadow-sm">
+        <div className="flex min-w-0 items-start">
+          <button
+            type="button"
+            data-pet-work-open={item.id}
+            disabled={navigationDisabled}
+            title={navigationDisabled ? t("pet.work.externalUnavailable") : undefined}
+            className="flex min-w-0 flex-1 items-start gap-2.5 rounded-l-xl px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => !navigationDisabled && onOpen?.(item)}
+          >
+            <span className="relative mt-1.5 flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+              <span
+                className={`h-2 w-2 rounded-full ${STATE_DOT[item.state]}`}
+                aria-hidden="true"
+              />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex min-w-0 items-start gap-2">
+                <span
+                  className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
+                  title={item.title}
+                >
+                  {item.title}
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${STATE_BADGE[item.state]}`}
+                >
+                  {t(`pet.work.state.${item.state}`)}
+                </span>
+                {item.external && (
+                  <span className="shrink-0 rounded border border-border px-1 text-[10px] uppercase text-muted-foreground">
+                    {item.external.cli}
+                  </span>
+                )}
+                {item.risk && (
+                  <span
+                    className={`shrink-0 rounded px-1 text-[10px] ${RISK_TONE[item.risk.level]}`}
+                  >
+                    {t(`pet.session.risk.${item.risk.level}`)}
+                    {item.risk.toolName ? ` · ${item.risk.toolName}` : ""}
+                  </span>
+                )}
+              </span>
+              {item.detail && (
+                <span
+                  className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground"
+                  title={item.detail}
+                >
+                  {item.detail}
+                </span>
+              )}
+            </span>
+          </button>
+          {canExpand && (
+            <button
+              type="button"
+              data-pet-work-expand={item.id}
+              aria-expanded={expanded}
+              aria-label={t(
+                expanded ? "pet.work.latestResultCollapseAria" : "pet.work.latestResultExpandAria",
+                { title: item.title },
+              )}
+              className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 opacity-70 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/item:opacity-100"
+              onClick={toggleExpanded}
+            >
+              <ChevronDown
+                size={14}
+                aria-hidden="true"
+                className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+              />
+            </button>
+          )}
+          {onDismiss && (
+            <button
+              type="button"
+              data-pet-work-dismiss={item.id}
+              aria-label={t("pet.work.dismissItemAria", { title: item.title })}
+              title={t("pet.work.dismissItemHint")}
+              className="mr-1 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 opacity-70 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/item:opacity-100"
+              onClick={() => onDismiss(item)}
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+        {canExpand && expanded && (
+          <div
+            data-pet-work-latest-result={item.id}
+            className="mx-3 mb-2.5 max-h-48 overflow-y-auto rounded-md bg-muted/50 p-2"
+          >
+            {!result || result.status === "loading" ? (
+              <p className="text-sm text-muted-foreground">{t("pet.work.latestResultLoading")}</p>
+            ) : result.status === "error" ? (
+              <p className="text-sm text-muted-foreground">{t("pet.work.latestResultError")}</p>
+            ) : result.value ? (
+              <>
+                <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                  {result.value.text}
+                </p>
+                {result.value.truncated && (
+                  <p className="mt-1 text-xs text-muted-foreground/80">
+                    {t("pet.work.latestResultTruncated")}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("pet.work.latestResultEmpty")}</p>
+            )}
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
 function WorkBranch({
   group,
   items,
@@ -103,78 +268,9 @@ function WorkBranch({
         />
       </summary>
       <ul className="space-y-1 px-1 pb-2 pt-0.5">
-        {items.map((item) => {
-          const navigationDisabled = Boolean(item.external && !item.navigation.external);
-          return (
-            <li key={item.id}>
-              <div className="group/item flex min-w-0 items-start rounded-xl border border-transparent bg-background/45 transition hover:border-border/65 hover:bg-background hover:shadow-sm">
-                <button
-                  type="button"
-                  data-pet-work-open={item.id}
-                  disabled={navigationDisabled}
-                  title={navigationDisabled ? t("pet.work.externalUnavailable") : undefined}
-                  className="flex min-w-0 flex-1 items-start gap-2.5 rounded-l-xl px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={() => !navigationDisabled && onOpen?.(item)}
-                >
-                  <span className="relative mt-1.5 flex h-2.5 w-2.5 shrink-0 items-center justify-center">
-                    <span
-                      className={`h-2 w-2 rounded-full ${STATE_DOT[item.state]}`}
-                      aria-hidden="true"
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex min-w-0 items-start gap-2">
-                      <span
-                        className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
-                        title={item.title}
-                      >
-                        {item.title}
-                      </span>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${STATE_BADGE[item.state]}`}
-                      >
-                        {t(`pet.work.state.${item.state}`)}
-                      </span>
-                      {item.external && (
-                        <span className="shrink-0 rounded border border-border px-1 text-[10px] uppercase text-muted-foreground">
-                          {item.external.cli}
-                        </span>
-                      )}
-                      {item.risk && (
-                        <span
-                          className={`shrink-0 rounded px-1 text-[10px] ${RISK_TONE[item.risk.level]}`}
-                        >
-                          {t(`pet.session.risk.${item.risk.level}`)}
-                          {item.risk.toolName ? ` · ${item.risk.toolName}` : ""}
-                        </span>
-                      )}
-                    </span>
-                    {item.detail && (
-                      <span
-                        className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground"
-                        title={item.detail}
-                      >
-                        {item.detail}
-                      </span>
-                    )}
-                  </span>
-                </button>
-                {onDismiss && (
-                  <button
-                    type="button"
-                    data-pet-work-dismiss={item.id}
-                    aria-label={t("pet.work.dismissItemAria", { title: item.title })}
-                    title={t("pet.work.dismissItemHint")}
-                    className="mr-1 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 opacity-70 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/item:opacity-100"
-                    onClick={() => onDismiss(item)}
-                  >
-                    <X size={14} aria-hidden="true" />
-                  </button>
-                )}
-              </div>
-            </li>
-          );
-        })}
+        {items.map((item) => (
+          <WorkTreeItem key={item.id} item={item} onOpen={onOpen} onDismiss={onDismiss} />
+        ))}
       </ul>
     </details>
   );

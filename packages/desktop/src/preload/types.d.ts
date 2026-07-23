@@ -90,6 +90,7 @@ export type {
   PetLongTaskControlResult,
   PetLongTaskSnapshot,
   PetMemoryEntry,
+  PetLatestSessionResult,
 } from "./pet-api";
 
 export type { SessionWorkspace, SessionForkLineage };

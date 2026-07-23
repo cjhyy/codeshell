@@ -100,6 +100,7 @@ import {
   ExternalSessionVisibilityController,
   touchesExternalSessionVisibility,
 } from "./pet/external-session-visibility.js";
+import { createLatestResultCache } from "./pet/latest-result-cache.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import {
@@ -1592,6 +1593,7 @@ async function createWindow(): Promise<BrowserWindow> {
         forget: (id) => petMemoryStoreInstance.forget(id),
         subscribe: (listener) => petMemoryStoreInstance.subscribe(listener),
       },
+      latestResult: createLatestResultCache(petSessionsRootDir),
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });

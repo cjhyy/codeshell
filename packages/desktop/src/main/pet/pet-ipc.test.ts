@@ -491,6 +491,69 @@ describe("registerPetIpc", () => {
     expect(snapshotReads).toBe(1);
   });
 
+  test("serves the latest assistant result for a validated session id only", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const removed: string[] = [];
+    const readIds: string[] = [];
+    const dispose = registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: (channel) => removed.push(channel as string),
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      latestResult: {
+        read: async (sessionId) => {
+          readIds.push(sessionId);
+          return { text: "done: shipped", truncated: false, timestamp: 42 };
+        },
+      },
+      windows: () => [],
+    });
+    const handler = handlers.get("pet:session-latest-result")!;
+
+    expect(await handler({}, "session-a_1")).toEqual({
+      text: "done: shipped",
+      truncated: false,
+      timestamp: 42,
+    });
+    expect(readIds).toEqual(["session-a_1"]);
+    expect(() => handler({})).toThrow("invalid session id");
+    expect(() => handler({}, "session-a", "extra")).toThrow("invalid session id");
+    expect(() => handler({}, 42)).toThrow("invalid session id");
+    expect(() => handler({}, "../x")).toThrow("invalid session id");
+    expect(() => handler({}, "")).toThrow("invalid session id");
+    expect(() => handler({}, "a".repeat(129))).toThrow("invalid session id");
+    expect(readIds).toEqual(["session-a_1"]);
+
+    dispose();
+    expect(removed).toContain("pet:session-latest-result");
+  });
+
+  test("does not register the latest-result handler when the option is absent", () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const removed: string[] = [];
+    const dispose = registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: (channel) => removed.push(channel as string),
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      windows: () => [],
+    });
+
+    expect(handlers.has("pet:session-latest-result")).toBe(false);
+    dispose();
+    expect(removed).not.toContain("pet:session-latest-result");
+  });
+
   test("mutates work inbox dismissal state in main and broadcasts the authoritative revision", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const sent: Array<[string, unknown]> = [];
