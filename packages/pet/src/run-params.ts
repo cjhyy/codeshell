@@ -23,6 +23,8 @@ export interface PetRunOptions {
   gatewayReply?: PetGatewayReplyCapability;
   /** Adapter-owned first-level discovery catalog backing the Gateway tool. */
   gateway?: PetGatewayCatalog;
+  /** Host-provided sessions directory backing the Sessions tool. */
+  sessionsRootDir?: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -104,6 +106,7 @@ function freezeOptions(options: {
   hostActionKinds: PetHostActionKind[];
   gatewayReply?: PetGatewayReplyCapability;
   gateway?: PetGatewayCatalog;
+  sessionsRootDir?: string;
 }): PetRunOptions {
   return Object.freeze({
     workspaces: Object.freeze(options.workspaces.map((entry) => Object.freeze(entry))),
@@ -111,7 +114,12 @@ function freezeOptions(options: {
     hostActionKinds: Object.freeze(options.hostActionKinds),
     ...(options.gatewayReply ? { gatewayReply: options.gatewayReply } : {}),
     ...(options.gateway ? { gateway: options.gateway } : {}),
+    ...(options.sessionsRootDir ? { sessionsRootDir: options.sessionsRootDir } : {}),
   });
+}
+
+function parseSessionsRootDir(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
 /** Fail closed: any non-array or unknown/duplicate kind hides every host-action tool. */
@@ -185,6 +193,7 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
       : parseGatewayReplyCapability(profileParams.gatewayReply);
   const gateway =
     profileParams.gateway === undefined ? undefined : parsePetGatewayCatalog(profileParams.gateway);
+  const sessionsRootDir = parseSessionsRootDir(profileParams.sessionsRootDir);
   const hostActionKinds = declaredHostActionKinds.filter(
     (kind) => kind !== "gatewayReply" || gatewayReply !== undefined,
   );
@@ -194,6 +203,7 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
     hostActionKinds,
     ...(gatewayReply ? { gatewayReply } : {}),
     ...(gateway ? { gateway } : {}),
+    ...(sessionsRootDir ? { sessionsRootDir } : {}),
   });
   const workspaces =
     profileParams.workspaces === undefined ? [] : parseWorkspaces(profileParams.workspaces);
@@ -210,6 +220,7 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
     hostActionKinds,
     ...(gatewayReply ? { gatewayReply } : {}),
     ...(gateway ? { gateway } : {}),
+    ...(sessionsRootDir ? { sessionsRootDir } : {}),
   });
 }
 

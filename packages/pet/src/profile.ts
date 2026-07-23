@@ -69,6 +69,8 @@ export interface PetRunScopedServices {
   petReusableSessions: readonly PetReusableSessionOption[];
   petGateway?: PetGatewayCatalog;
   petGatewayReply?: PetGatewayReplyCapability;
+  /** Host-provided sessions directory backing the Sessions tool. */
+  petSessionsRootDir?: string;
   requestPetWorkDelegation: (request: PetWorkDelegation) => PetWorkDelegationDecision;
   requestPetHostAction: (request: PetHostActionRequest) => PetHostActionDecision;
 }
@@ -102,6 +104,7 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
       petReusableSessions: options.reusableSessions,
       ...(options.gateway ? { petGateway: options.gateway } : {}),
       ...(options.gatewayReply ? { petGatewayReply: options.gatewayReply } : {}),
+      ...(options.sessionsRootDir ? { petSessionsRootDir: options.sessionsRootDir } : {}),
       requestPetWorkDelegation: (request) => {
         if (delegated.length > 0) {
           return { ok: false, error: "only one delegation is allowed per Mimi turn" };

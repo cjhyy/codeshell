@@ -114,4 +114,20 @@ describe("sessionsTool", () => {
     );
     expect(result.startsWith("Error:")).toBe(true);
   });
+
+  test("describe rejects a path-traversal session_id", async () => {
+    const root = makeRoot();
+    const result = await sessionsTool(
+      { action: "describe", session_id: "../work-1" },
+      ctxFor(root),
+    );
+    expect(result.startsWith("Error:")).toBe(true);
+  });
+
+  test("errors when no host-provided sessions root is injected", async () => {
+    const result = await sessionsTool({ action: "list" }, { runScopedServices: {} } as never);
+    expect(result).toBe(
+      "Error: Sessions is available only in a Mimi turn with a host-provided sessions root.",
+    );
+  });
 });

@@ -229,6 +229,18 @@ describe("Pet behavior profile inputs", () => {
     expect(Object.isFrozen(options.workspaces[0])).toBe(true);
   });
 
+  test("accepts a non-empty string sessionsRootDir", () => {
+    const options = petRunOptionsFrom({ sessionsRootDir: "/custom/sessions" });
+    expect(options.sessionsRootDir).toBe("/custom/sessions");
+  });
+
+  test("ignores a missing or non-string sessionsRootDir", () => {
+    expect(petRunOptionsFrom({}).sessionsRootDir).toBeUndefined();
+    expect(petRunOptionsFrom({ sessionsRootDir: "" }).sessionsRootDir).toBeUndefined();
+    expect(petRunOptionsFrom({ sessionsRootDir: 42 }).sessionsRootDir).toBeUndefined();
+    expect(petRunOptionsFrom({ sessionsRootDir: null }).sessionsRootDir).toBeUndefined();
+  });
+
   test("publishes the immutable GatewayReply route to tool visibility and run services", () => {
     const gateway = {
       currentChannel: "teams",
