@@ -31,6 +31,7 @@
       "@cjhyy/code-shell-pet/capability": ["packages/pet/src/index.capability.ts"],
       "@cjhyy/code-shell-pet/protocol": ["packages/pet/src/index.protocol.ts"],
       "@cjhyy/code-shell-pet/team": ["packages/pet/src/index.team.ts"],
+      "@cjhyy/code-shell-pet/disclosure": ["packages/pet/src/index.disclosure.ts"],
       "@cjhyy/code-shell-server": ["packages/server/src/index.ts"],
       "@cjhyy/code-shell-server/storage": ["packages/server/src/index.storage.ts"],
       "@cjhyy/code-shell-server/worker": ["packages/server/src/index.worker.ts"],

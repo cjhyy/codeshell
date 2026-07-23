@@ -69,6 +69,10 @@ describe("Pet package public entry contracts", () => {
         types: "./dist/index.team.d.ts",
         import: "./dist/index.team.js",
       },
+      "./disclosure": {
+        types: "./dist/index.disclosure.d.ts",
+        import: "./dist/index.disclosure.js",
+      },
     });
     expect(rootTsconfig.compilerOptions.paths["@cjhyy/code-shell-pet/capability"]).toEqual([
       "packages/pet/src/index.capability.ts",
@@ -78,6 +82,9 @@ describe("Pet package public entry contracts", () => {
     ]);
     expect(rootTsconfig.compilerOptions.paths["@cjhyy/code-shell-pet/team"]).toEqual([
       "packages/pet/src/index.team.ts",
+    ]);
+    expect(rootTsconfig.compilerOptions.paths["@cjhyy/code-shell-pet/disclosure"]).toEqual([
+      "packages/pet/src/index.disclosure.ts",
     ]);
     expect(rootTsconfig.compilerOptions.paths["@cjhyy/code-shell-pet/*"]).toBeUndefined();
   });

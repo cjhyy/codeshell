@@ -21,6 +21,10 @@
     "./team": {
       "types": "./dist/index.team.d.ts",
       "import": "./dist/index.team.js"
+    },
+    "./disclosure": {
+      "types": "./dist/index.disclosure.d.ts",
+      "import": "./dist/index.disclosure.js"
     }
   },
   "files": [
