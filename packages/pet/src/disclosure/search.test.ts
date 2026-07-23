@@ -69,8 +69,21 @@ describe("searchSessionTranscripts", () => {
     const result = await searchSessionTranscripts(root, "banana", { maxSessions: 1 });
 
     expect(result.matches.length).toBe(1);
-    expect(result.truncated).toBe(true);
     expect(["work-1", "work-2"]).toContain(result.matches[0]?.sessionId);
+  });
+
+  test("truncated is true when the deadline is exceeded before all candidates are scanned", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-deadline-"));
+    writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
+      { role: "user", content: "papaya smoothie recipe", turnNumber: 0 },
+    ]);
+    writeSession(root, "work-2", { kind: "work", cwd: "/b", title: "Work 2" }, [
+      { role: "user", content: "papaya bread recipe", turnNumber: 0 },
+    ]);
+
+    const result = await searchSessionTranscripts(root, "papaya", { budgetMs: -1 });
+
+    expect(result.truncated).toBe(true);
   });
 
   test("blank query returns empty matches", async () => {
@@ -82,5 +95,40 @@ describe("searchSessionTranscripts", () => {
     const result = await searchSessionTranscripts(root, "   ", {});
 
     expect(result.matches).toEqual([]);
+  });
+
+  test("truncated is false when all candidates are processed and matches exactly fill maxSessions", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-exact-"));
+    writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
+      { role: "user", content: "mango smoothie recipe", turnNumber: 0 },
+    ]);
+    writeSession(root, "work-2", { kind: "work", cwd: "/b", title: "Work 2" }, [
+      { role: "user", content: "mango bread recipe", turnNumber: 0 },
+    ]);
+
+    const result = await searchSessionTranscripts(root, "mango", { maxSessions: 2 });
+
+    expect(result.matches.length).toBe(2);
+    expect(result.truncated).toBe(false);
+  });
+
+  test("scannedSessions does not count a candidate missing transcript.jsonl", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-missing-transcript-"));
+    writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
+      { role: "user", content: "kiwi smoothie recipe", turnNumber: 0 },
+    ]);
+    // Work session on disk with state.json but no transcript.jsonl.
+    mkdirSync(join(root, "work-no-transcript"), { recursive: true });
+    writeFileSync(
+      join(root, "work-no-transcript", "state.json"),
+      JSON.stringify({ sessionId: "work-no-transcript", kind: "work", cwd: "/c" }),
+      "utf-8",
+    );
+
+    const result = await searchSessionTranscripts(root, "kiwi", {});
+
+    expect(result.scannedSessions).toBe(1);
+    expect(result.matches.length).toBe(1);
+    expect(result.matches[0]?.sessionId).toBe("work-1");
   });
 });

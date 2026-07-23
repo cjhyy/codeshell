@@ -91,19 +91,14 @@ export async function searchSessionTranscripts(
 
   async function worker(): Promise<void> {
     for (;;) {
-      if (Date.now() > deadline) {
-        truncated = true;
-        return;
-      }
-      if (matches.length >= maxSessions) {
-        truncated = true;
+      if (Date.now() > deadline || matches.length >= maxSessions) {
+        truncated = truncated || cursor < candidates.length;
         return;
       }
       const myIndex = cursor;
       cursor += 1;
       if (myIndex >= candidates.length) return;
       const candidate = candidates[myIndex]!;
-      scannedSessions += 1;
 
       const transcriptPath = join(sessionsRootDir, candidate.sessionId, "transcript.jsonl");
       let size: number;
@@ -123,6 +118,7 @@ export async function searchSessionTranscripts(
       } catch {
         continue;
       }
+      scannedSessions += 1;
 
       const events: DiskTranscriptEvent[] = [];
       for (const rawLine of text.split("\n")) {
@@ -151,8 +147,6 @@ export async function searchSessionTranscripts(
 
   const workers = Array.from({ length: Math.min(CONCURRENCY, candidates.length) }, () => worker());
   await Promise.all(workers);
-
-  if (cursor < candidates.length) truncated = true;
 
   matches.sort((a, b) => b.updatedAt - a.updatedAt);
   return { matches: matches.slice(0, maxSessions), scannedSessions, truncated };
