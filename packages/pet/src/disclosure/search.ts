@@ -120,6 +120,8 @@ export async function searchSessionTranscripts(
       }
       scannedSessions += 1;
 
+      if (!text.toLowerCase().includes(normalizedQuery)) continue;
+
       const events: DiskTranscriptEvent[] = [];
       for (const rawLine of text.split("\n")) {
         const line = rawLine.trim();

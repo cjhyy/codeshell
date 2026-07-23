@@ -28,8 +28,8 @@ export async function readTranscriptTail(transcriptPath: string): Promise<DiskTr
   let text: string;
   try {
     const buffer = Buffer.alloc(size - start);
-    await handle.read(buffer, 0, buffer.length, start);
-    text = buffer.toString("utf-8");
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, start);
+    text = buffer.subarray(0, bytesRead).toString("utf-8");
   } finally {
     await handle.close();
   }

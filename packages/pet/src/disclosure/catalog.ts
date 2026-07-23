@@ -24,10 +24,10 @@ interface DiskSessionState {
   origin?: string;
   parentSessionId?: string | null;
   ephemeral?: boolean;
-  summary?: string;
-  title?: string;
+  summary?: unknown;
+  title?: unknown;
   cwd?: unknown;
-  status?: string;
+  status?: unknown;
 }
 
 export async function listWorkSessionsOnDisk(
@@ -70,14 +70,21 @@ export async function listWorkSessionsOnDisk(
       }
     }
 
-    const title = (state.title ?? state.summary ?? sessionId).slice(0, 160);
+    const title = (
+      typeof state.title === "string"
+        ? state.title
+        : typeof state.summary === "string"
+          ? state.summary
+          : sessionId
+    ).slice(0, 160);
     const cwd = typeof state.cwd === "string" ? state.cwd : null;
+    const status = typeof state.status === "string" ? state.status : undefined;
 
     sessions.push({
       sessionId,
       title,
       cwd,
-      ...(state.status !== undefined ? { status: state.status } : {}),
+      ...(status !== undefined ? { status } : {}),
       updatedAt: Math.round(mtimeMs),
     });
   }

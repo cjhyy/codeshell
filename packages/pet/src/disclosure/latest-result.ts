@@ -12,6 +12,13 @@ export interface LatestAssistantText {
   timestamp?: number;
 }
 
+/** Truncate to maxChars without splitting a UTF-16 surrogate pair in two. */
+function truncateSafely(text: string, maxChars: number): string {
+  const sliced = text.slice(0, maxChars);
+  if (/[\uD800-\uDBFF]$/.test(sliced)) return sliced.slice(0, -1);
+  return sliced;
+}
+
 export async function readLatestAssistantText(
   sessionDir: string,
   options: { maxChars: number },
@@ -26,7 +33,7 @@ export async function readLatestAssistantText(
     if (!text) continue;
     const truncated = text.length > options.maxChars;
     return {
-      text: truncated ? text.slice(0, options.maxChars) : text,
+      text: truncated ? truncateSafely(text, options.maxChars) : text,
       truncated,
       ...(typeof event.timestamp === "number" ? { timestamp: event.timestamp } : {}),
     };

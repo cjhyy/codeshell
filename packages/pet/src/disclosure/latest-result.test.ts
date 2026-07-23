@@ -76,4 +76,20 @@ describe("readLatestAssistantText", () => {
     expect(result?.text).toBe("plain string answer");
     expect(result?.truncated).toBe(false);
   });
+
+  test("does not split a surrogate pair when truncating at the boundary", async () => {
+    // "😀" is a surrogate pair (2 UTF-16 code units). Placing it so its high
+    // surrogate lands exactly at maxChars must drop the whole character, not
+    // slice through it and leave a lone unpaired surrogate.
+    const prefix = "x".repeat(99);
+    const text = prefix + "😀" + "y".repeat(10);
+    const dir = makeSessionDir([{ role: "assistant", content: text }]);
+
+    const result = await readLatestAssistantText(dir, { maxChars: 100 });
+
+    expect(result).not.toBeNull();
+    expect(result?.truncated).toBe(true);
+    expect(result?.text).toBe(prefix);
+    expect(/[\uD800-\uDBFF]$/.test(result?.text ?? "")).toBe(false);
+  });
 });

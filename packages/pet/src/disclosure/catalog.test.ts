@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { createHash } from "node:crypto";
 import { mkdtempSync, mkdirSync, writeFileSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -65,12 +64,37 @@ describe("listWorkSessionsOnDisk", () => {
 
     expect(result).toEqual([]);
   });
+
+  test("a session with non-string title/summary/status does not break adjacent sessions", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-catalog-malformed-"));
+    writeSession(root, "malformed-1", {
+      kind: "work",
+      cwd: "/x",
+      title: 123,
+      summary: 456,
+      status: 789,
+    });
+    writeSession(root, "work-1", {
+      kind: "work",
+      cwd: "/Users/dev/project",
+      title: "Fix the bug",
+      status: "active",
+    });
+
+    const result = await listWorkSessionsOnDisk(root, { limit: 10 });
+
+    expect(result.length).toBe(2);
+    const normal = result.find((session) => session.sessionId === "work-1");
+    expect(normal?.title).toBe("Fix the bug");
+    expect(normal?.status).toBe("active");
+    const malformed = result.find((session) => session.sessionId === "malformed-1");
+    expect(malformed?.title).toBe("malformed-1");
+    expect(malformed?.status).toBeUndefined();
+  });
 });
 
 describe("sessionSelectorId", () => {
   test("matches the desktop pet-dispatch-service reusableSessionId convention", () => {
-    const expected = `session-${createHash("sha256").update("abc").digest("hex").slice(0, 20)}`;
-
-    expect(sessionSelectorId("abc")).toBe(expected);
+    expect(sessionSelectorId("abc")).toBe("session-ba7816bf8f01cfea4141");
   });
 });
