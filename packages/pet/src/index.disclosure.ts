@@ -7,3 +7,5 @@
 export * from "./disclosure/jsonl.js";
 export * from "./disclosure/latest-result.js";
 export * from "./disclosure/todo-snapshot.js";
+export * from "./disclosure/catalog.js";
+export * from "./disclosure/selector.js";
