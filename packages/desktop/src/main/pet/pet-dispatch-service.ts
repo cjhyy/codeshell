@@ -504,23 +504,31 @@ function readPetHostActionRequests(
   return requests;
 }
 
-function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<string, unknown> {
+/**
+ * Exported for tests. The aggregator snapshot is ordered by agentSessionId,
+ * so the bounded window must re-rank by recency before truncating — otherwise
+ * with >25 sessions Mimi would see an id-alphabetical subset.
+ */
+export function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<string, unknown> {
   return {
     version: snapshot.version,
     generation: snapshot.generation,
     observedAt: snapshot.observedAt,
     workerState: snapshot.workerState,
-    sessions: snapshot.sessions.slice(0, 25).map((session) => ({
-      agentSessionId: session.agentSessionId,
-      title: session.title,
-      workspace: session.workspaceDisplayName,
-      runState: session.runState,
-      phase: session.phase,
-      summary: session.summary,
-      queueDepth: session.queueDepth,
-      pendingDecisionCount: session.pendingDecisionCount,
-      observedAt: session.freshness.observedAt,
-    })),
+    sessions: [...snapshot.sessions]
+      .sort((left, right) => right.lastActivityAt - left.lastActivityAt)
+      .slice(0, 25)
+      .map((session) => ({
+        agentSessionId: session.agentSessionId,
+        title: session.title,
+        workspace: session.workspaceDisplayName,
+        runState: session.runState,
+        phase: session.phase,
+        summary: session.summary,
+        queueDepth: session.queueDepth,
+        pendingDecisionCount: session.pendingDecisionCount,
+        observedAt: session.freshness.observedAt,
+      })),
     pending: snapshot.pending
       .filter((pending) => pending.status === "pending")
       .slice(0, 25)

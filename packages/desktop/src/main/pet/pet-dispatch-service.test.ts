@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { BUILTIN_CHANNEL_CAPABILITIES } from "@cjhyy/code-shell-chat";
 import { validatePetRunParams } from "@cjhyy/code-shell-pet";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator";
-import { PetDispatchService } from "./pet-dispatch-service";
+import { boundedWorld, PetDispatchService } from "./pet-dispatch-service";
 
 const snapshot: DesktopPetProjectionSnapshot = {
   version: 4,
@@ -97,6 +97,30 @@ describe("PetDispatchService", () => {
       }),
     ).toEqual({ ok: true, type: "open_session", result: { status: "not-found" } });
     expect(workerCalls).toBe(0);
+  });
+
+  test("boundedWorld keeps the 25 most recently active sessions, newest first", () => {
+    const manySessions = Array.from({ length: 30 }, (_, index) => ({
+      agentSessionId: `a-${String(index).padStart(2, "0")}`,
+      title: `Work ${index}`,
+      workspaceDisplayName: "repo-a",
+      runState: "idle" as const,
+      summary: "空闲",
+      queueDepth: 0,
+      lastActivityAt: 1_000 + index,
+      pendingDecisionCount: 0,
+      freshness: { source: "live-event" as const, observedAt: 10, workerState: "active" as const },
+    }));
+    // The aggregator snapshot is ordered by agentSessionId, so a plain
+    // slice(0, 25) would show Mimi an id-alphabetical subset instead of the
+    // sessions the user actually touched most recently.
+    const world = boundedWorld({ ...snapshot, sessions: manySessions });
+    const ids = (world.sessions as Array<{ agentSessionId: string }>).map(
+      (session) => session.agentSessionId,
+    );
+    expect(ids.length).toBe(25);
+    expect(ids[0]).toBe("a-29");
+    expect(ids).not.toContain("a-04");
   });
 
   test("runs every channel through the persisted Mimi manager model", async () => {
