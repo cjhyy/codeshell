@@ -146,6 +146,23 @@ export interface InputAttachmentMeta {
 
 export type PtyStartResult = { ok: true; pid: number } | { ok: false; detail: string };
 
+/** One transcript content-search match, mirroring the disclosure layer's
+ *  SessionSearchMatch shape. Renderer-local (no pet/main import). */
+export interface SessionContentSearchMatch {
+  sessionId: string;
+  title: string;
+  cwd: string | null;
+  updatedAt: number;
+  snippets: { text: string; turnNumber: number }[];
+}
+
+/** Result of `searchSessionContent` — mirrors disclosure's SessionSearchResult. */
+export interface SessionContentSearchResult {
+  matches: SessionContentSearchMatch[];
+  scannedSessions: number;
+  truncated: boolean;
+}
+
 let nextRpcId = 1;
 const pending = new Map<
   number,
@@ -927,6 +944,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   listSkills: (cwd: string, opts?: { includeDisabled?: boolean }) =>
     ipcRenderer.invoke("skills:list", cwd, opts),
   searchFiles: (cwd: string, query: string) => ipcRenderer.invoke("files:search", cwd, query),
+  searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
+    ipcRenderer.invoke("session:content-search", query),
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
   getPluginMedia: (
     installKey: string,

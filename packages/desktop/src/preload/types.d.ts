@@ -1665,6 +1665,8 @@ export interface CodeshellApi {
   >;
   /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
   searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
+  /** Bounded full-text search over on-disk session transcripts (session switcher). */
+  searchSessionContent(query: string): Promise<SessionContentSearchResult>;
   readSkillBody(filePath: string): Promise<string>;
   installLocalSkill(
     sourceDir: string,
@@ -2232,6 +2234,23 @@ export interface FileSearchHit {
   kind: "file" | "dir";
   size?: number;
   mime?: string;
+}
+
+/** One transcript content-search match. Structural mirror of the pet
+ *  disclosure layer's SessionSearchMatch (no pet/main import). */
+export interface SessionContentSearchMatch {
+  sessionId: string;
+  title: string;
+  cwd: string | null;
+  updatedAt: number;
+  snippets: { text: string; turnNumber: number }[];
+}
+
+/** Result of `searchSessionContent`; mirrors disclosure's SessionSearchResult. */
+export interface SessionContentSearchResult {
+  matches: SessionContentSearchMatch[];
+  scannedSessions: number;
+  truncated: boolean;
 }
 
 export interface AgentSummary {

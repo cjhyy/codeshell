@@ -126,6 +126,7 @@ import {
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
 import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
+import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
 import { petChatModelKeyFromSettings } from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -2882,6 +2883,13 @@ ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
   if (typeof cwd !== "string") throw new Error("files:search requires cwd");
   const q = typeof query === "string" ? query : "";
   return searchFiles(cwd, q);
+});
+ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
+  const query = args.length === 1 ? args[0] : undefined;
+  if (typeof query !== "string") throw new Error("invalid content search query");
+  const trimmed = query.trim();
+  if (trimmed.length < 2 || trimmed.length > 128) throw new Error("invalid content search query");
+  return searchSessionTranscripts(sessionsRoot(), trimmed, { budgetMs: 5_000 });
 });
 
 async function runClaimBoundAttachmentOperation<T>(
