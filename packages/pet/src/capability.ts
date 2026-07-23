@@ -25,6 +25,7 @@ import {
   mobileRemoteToolDef,
 } from "./mobile-remote.js";
 import { gatewayAvailability, gatewayTool, gatewayToolDef } from "./gateway.js";
+import { sessionsAvailability, sessionsTool, sessionsToolDef } from "./sessions-tool.js";
 import {
   controlLongTaskAvailability,
   controlLongTaskTool,
@@ -177,6 +178,21 @@ export function createPetCapability(): ExtensionModule {
           defaultPermissionRules: [{ tool: gatewayReplyToolDef.name, decision: "allow" }],
           availability: gatewayReplyAvailability,
           rewriteDefinition: rewriteGatewayReplyDef,
+        },
+      },
+      {
+        definition: {
+          ...sessionsToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: true,
+          isConcurrencySafe: true,
+        },
+        execute: sessionsTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: sessionsToolDef.name, decision: "allow" }],
+          availability: sessionsAvailability,
         },
       },
     ],

@@ -57,6 +57,12 @@ export {
   type PetGatewayCatalog,
 } from "./gateway.js";
 export {
+  SESSIONS_TOOL_NAME,
+  sessionsToolDef,
+  sessionsTool,
+  sessionsAvailability,
+} from "./sessions-tool.js";
+export {
   PET_HOST_ACTION_KINDS,
   isPetHostActionKind,
   isPetHostActionRequest,
