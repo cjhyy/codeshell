@@ -241,6 +241,26 @@ export interface PetLatestSessionResult {
   timestamp?: number;
 }
 
+/** One open TodoWrite item surfaced in the Mimi workbench todo view. */
+export interface PetSessionTodoItem {
+  id: string;
+  subject: string;
+  activeForm: string;
+  status: "pending" | "in_progress" | "completed";
+}
+
+/**
+ * Cross-session open-todo group: one work session's still-open TodoWrite
+ * items (pending / in_progress), read from its on-disk transcript.
+ */
+export interface PetSessionTodos {
+  sessionId: string;
+  title: string;
+  workspace?: string;
+  updatedAt: number;
+  todos: PetSessionTodoItem[];
+}
+
 /** One durable Mimi memory entry; editable from the UI and from Mimi's Memory tool. */
 export interface PetMemoryEntry {
   id: string;
@@ -292,6 +312,7 @@ export interface PetApi {
   removeMemory?(id: string): Promise<PetMemoryEntry>;
   onMemoriesChanged?(listener: (entries: PetMemoryEntry[]) => void): () => void;
   getLatestResult?(sessionId: string): Promise<PetLatestSessionResult | null>;
+  getTodos?(): Promise<PetSessionTodos[]>;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
   setWidgetSurface(mode: "collapsed" | "expanded"): Promise<{ ok: true }>;
@@ -384,6 +405,7 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
         "pet:session-latest-result",
         sessionId,
       ) as Promise<PetLatestSessionResult | null>,
+    getTodos: () => ipcRenderer.invoke("pet:todos-get") as Promise<PetSessionTodos[]>,
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>
       ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,

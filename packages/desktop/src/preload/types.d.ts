@@ -91,6 +91,8 @@ export type {
   PetLongTaskSnapshot,
   PetMemoryEntry,
   PetLatestSessionResult,
+  PetSessionTodos,
+  PetSessionTodoItem,
 } from "./pet-api";
 
 export type { SessionWorkspace, SessionForkLineage };

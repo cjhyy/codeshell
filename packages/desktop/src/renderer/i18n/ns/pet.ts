@@ -82,6 +82,12 @@ export const pet = {
           idle: "未分类",
         },
       },
+      todo: {
+        title: "待办事项",
+        empty: "没有未完成的待办",
+        loading: "正在整理待办事项",
+        openSessionAria: "打开会话「{title}」",
+      },
       memory: {
         title: "Mimi 记忆",
         summary: "记住了 {count} 条信息",
@@ -360,6 +366,12 @@ export const pet = {
           completed: "Completed",
           idle: "Unclassified",
         },
+      },
+      todo: {
+        title: "To-dos",
+        empty: "No open to-dos",
+        loading: "Gathering to-dos",
+        openSessionAria: "Open session “{title}”",
       },
       memory: {
         title: "Mimi memory",

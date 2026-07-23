@@ -554,6 +554,78 @@ describe("registerPetIpc", () => {
     expect(removed).not.toContain("pet:session-latest-result");
   });
 
+  test("collects cross-session open todos and rejects any argument", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const removed: string[] = [];
+    let collectCalls = 0;
+    const dispose = registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: (channel) => removed.push(channel as string),
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      todos: {
+        collect: async () => {
+          collectCalls += 1;
+          return [
+            {
+              sessionId: "session-a",
+              title: "Open work",
+              workspace: "codeshell",
+              updatedAt: 42,
+              todos: [
+                { id: "1", subject: "finish", activeForm: "Finishing", status: "in_progress" },
+              ],
+            },
+          ];
+        },
+      },
+      windows: () => [],
+    });
+    const handler = handlers.get("pet:todos-get")!;
+
+    expect(await handler({})).toEqual([
+      {
+        sessionId: "session-a",
+        title: "Open work",
+        workspace: "codeshell",
+        updatedAt: 42,
+        todos: [{ id: "1", subject: "finish", activeForm: "Finishing", status: "in_progress" }],
+      },
+    ]);
+    expect(collectCalls).toBe(1);
+    expect(() => handler({}, true)).toThrow("does not accept arguments");
+    expect(collectCalls).toBe(1);
+
+    dispose();
+    expect(removed).toContain("pet:todos-get");
+  });
+
+  test("does not register the todos handler when the option is absent", () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const removed: string[] = [];
+    const dispose = registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: (channel) => removed.push(channel as string),
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      windows: () => [],
+    });
+
+    expect(handlers.has("pet:todos-get")).toBe(false);
+    dispose();
+    expect(removed).not.toContain("pet:todos-get");
+  });
+
   test("mutates work inbox dismissal state in main and broadcasts the authoritative revision", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const sent: Array<[string, unknown]> = [];

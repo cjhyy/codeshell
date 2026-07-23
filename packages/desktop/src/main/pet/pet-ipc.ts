@@ -17,6 +17,7 @@ import {
   type PetWorkInboxSnapshot,
 } from "./pet-work-inbox-store.js";
 import type { PetMemoryEntry } from "./pet-memory-store.js";
+import type { PetSessionTodos } from "./pet-todo-aggregator.js";
 import { randomUUID } from "node:crypto";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
@@ -43,6 +44,7 @@ export const PET_MEMORY_UPDATE_CHANNEL = "pet:memory-update";
 export const PET_MEMORY_REMOVE_CHANNEL = "pet:memory-remove";
 export const PET_MEMORY_EVENT_CHANNEL = "pet:memories-changed";
 export const PET_LATEST_RESULT_CHANNEL = "pet:session-latest-result";
+export const PET_TODOS_CHANNEL = "pet:todos-get";
 
 export interface PetIpcAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot;
@@ -111,6 +113,14 @@ export interface PetIpcWorkMemory {
  */
 export interface PetIpcLatestResult {
   read(sessionId: string): Promise<{ text: string; truncated: boolean; timestamp?: number } | null>;
+}
+
+/**
+ * Pull-based cross-session open-todo view for the Mimi workbench. Backed by
+ * PetTodoAggregator (structured TodoWrite snapshots only).
+ */
+export interface PetIpcTodos {
+  collect(): Promise<PetSessionTodos[]>;
 }
 
 function afterReady<T>(ready: Promise<void> | undefined, callback: () => T): T | Promise<T> {
@@ -276,6 +286,7 @@ export function registerPetIpc(options: {
   longTasks?: PetIpcLongTasks;
   memories?: PetIpcMemories;
   latestResult?: PetIpcLatestResult;
+  todos?: PetIpcTodos;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
@@ -460,6 +471,12 @@ export function registerPetIpc(options: {
       return afterReady(options.ready, () => options.latestResult!.read(sessionId));
     });
   }
+  if (options.todos) {
+    options.ipcMain.handle(PET_TODOS_CHANNEL, (_event, ...args) => {
+      if (args.length !== 0) throw new Error("pet:todos-get does not accept arguments");
+      return afterReady(options.ready, () => options.todos!.collect());
+    });
+  }
   const unsubscribeMemories = options.memories?.subscribe(() => {
     void Promise.resolve(options.memories!.list()).then((entries) => {
       for (const window of options.windows()) {
@@ -513,5 +530,6 @@ export function registerPetIpc(options: {
       options.ipcMain.removeHandler(PET_MEMORY_REMOVE_CHANNEL);
     }
     if (options.latestResult) options.ipcMain.removeHandler(PET_LATEST_RESULT_CHANNEL);
+    if (options.todos) options.ipcMain.removeHandler(PET_TODOS_CHANNEL);
   };
 }
