@@ -4,6 +4,7 @@
  * (~/.code-shell/sessions/<id>/{state.json,transcript.jsonl}) for progressive
  * disclosure surfaces (Mimi tool, desktop UI) built on top of this package.
  */
+export * from "./disclosure/constants.js";
 export * from "./disclosure/jsonl.js";
 export * from "./disclosure/latest-result.js";
 export * from "./disclosure/todo-snapshot.js";

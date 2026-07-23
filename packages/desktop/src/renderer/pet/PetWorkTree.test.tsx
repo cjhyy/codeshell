@@ -201,6 +201,67 @@ test("renders external-CLI and risk badges on items that carry them", () => {
   expect(html).not.toContain("claude");
 });
 
+test("gives non-external rows a latest-result expand affordance and external rows none", () => {
+  const mixed: PetWorkMap = {
+    groups: [
+      {
+        workspace: "codeshell",
+        latestActivityAt: 5_000,
+        buckets: [
+          {
+            group: "running" as const,
+            items: [
+              {
+                id: "running:ext",
+                group: "running" as const,
+                state: "running" as const,
+                workspace: "codeshell",
+                title: "外部会话",
+                lastActivityAt: 5_000,
+                external: { cli: "codex" as const, cwd: "/tmp/project" },
+                navigation: {
+                  agentSessionId: "ext",
+                  external: { cli: "codex", cwd: "/tmp/project", sessionId: "thread-ext" },
+                },
+              },
+              {
+                id: "running:internal",
+                group: "running" as const,
+                state: "running" as const,
+                workspace: "codeshell",
+                title: "内部会话",
+                lastActivityAt: 4_000,
+                navigation: { agentSessionId: "internal" },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    counts: { running: 2, pending: 0, "follow-up": 0, completed: 0, other: 0 },
+    itemIds: {
+      running: ["running:ext", "running:internal"],
+      pending: [],
+      "follow-up": [],
+      completed: [],
+      other: [],
+    },
+    dismissedCount: 0,
+    hiddenCount: 0,
+    unclassifiedCount: 0,
+  };
+  const html = renderToStaticMarkup(<PetWorkTree workMap={mixed} defaultOpen />);
+  // NOTE: renderToStaticMarkup cannot exercise the click → IPC → loading/error
+  // states; this asserts the affordance contract only.
+  expect(html).toContain('data-pet-work-expand="running:internal"');
+  expect(html).not.toContain('data-pet-work-expand="running:ext"');
+  // The result panel only exists after an expand, never in the initial markup.
+  expect(html).not.toContain("data-pet-work-latest-result");
+  // The expand button is wired for assistive tech from the start.
+  expect(html).toMatch(/data-pet-work-expand="running:internal"[^>]*aria-expanded="false"/);
+  expect(html).toMatch(/data-pet-work-expand="running:internal"[^>]*aria-controls="/);
+});
+
 test("disables an external item whose locator is incomplete and explains why", () => {
   const incomplete: PetWorkMap = {
     groups: [

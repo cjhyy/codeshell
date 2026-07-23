@@ -90,6 +90,7 @@ function WorkTreeItem({
   const [expanded, setExpanded] = React.useState(false);
   const [result, setResult] = React.useState<LatestResultState | null>(null);
   const fetchSeq = React.useRef(0);
+  const panelId = React.useId();
   const navigationDisabled = Boolean(item.external && !item.navigation.external);
   const canExpand = !item.external;
   const toggleExpanded = () => {
@@ -173,6 +174,7 @@ function WorkTreeItem({
               type="button"
               data-pet-work-expand={item.id}
               aria-expanded={expanded}
+              aria-controls={panelId}
               aria-label={t(
                 expanded ? "pet.work.latestResultCollapseAria" : "pet.work.latestResultExpandAria",
                 { title: item.title },
@@ -202,6 +204,7 @@ function WorkTreeItem({
         </div>
         {canExpand && expanded && (
           <div
+            id={panelId}
             data-pet-work-latest-result={item.id}
             className="mx-3 mb-2.5 max-h-48 overflow-y-auto rounded-md bg-muted/50 p-2"
           >
