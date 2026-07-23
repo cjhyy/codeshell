@@ -212,6 +212,36 @@ source and removes that CLI's projected rows. External rows are visible in
 Pet, but currently have no CodeShell disk navigation binding, so their cards do
 not open a Session yet.
 
+The bounded projection injected into Mimi's runtime context keeps only the 25
+most recently active Sessions (ranked by last activity, not id order) plus 25
+pending decisions.
+
+## Session world progressive disclosure
+
+Beyond the bounded projection, both Mimi and the workbench read Session content
+on demand through the `@cjhyy/code-shell-pet/disclosure` node-only entry, which
+reads the sessions directory directly (transcript tail, TodoWrite snapshot,
+work-session catalog, bounded grep). Three disclosure levels:
+
+1. **L1 list** — recent work Sessions (pet/subagent/child/ephemeral filtered
+   out), title + workspace + last activity.
+2. **L2 latest result** — a Session's newest assistant text (no generated
+   summary; truncated with a flag) and its open TodoWrite items.
+3. **L3 search** — a bounded, time-budgeted grep over transcript message text.
+
+Mimi reaches these through the read-only `Sessions` tool (list/describe/search),
+gated on a host-provided `sessionsRootDir` so it is hidden when unwired. All
+transcript-derived text returned to Mimi is tagged untrusted data, never
+instructions. A `Sessions` selector can be passed to `DelegateWork` to resume
+that Session; the host resolver applies the same reuse-pool boundaries as the
+in-turn candidate list (not archived, `origin === "desktop"`, not the Mimi
+Session itself, not currently busy). The desktop workbench consumes the same
+disclosure layer: the work tree expands a Session's latest result (external
+rows excluded), and a cross-Session TODO block aggregates open TodoWrite items;
+both read through an mtime-keyed cache. The Cmd-K switcher adds a `>`-prefixed
+content-search mode over the same grep. No push channel or new Mimi wakeup
+trigger is introduced — updates arrive on the next read.
+
 ## Package ownership
 
 | Layer            | Owns                                                                                                            |
