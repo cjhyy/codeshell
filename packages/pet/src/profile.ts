@@ -93,6 +93,7 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
       petHostActionKinds: options.hostActionKinds,
       ...(options.gateway ? { petGateway: options.gateway } : {}),
       ...(options.gatewayReply ? { petGatewayReply: options.gatewayReply } : {}),
+      ...(options.sessionsRootDir ? { petSessions: true } : {}),
     };
   },
   createRunServices: ({ profileParams, reportResult }) => {

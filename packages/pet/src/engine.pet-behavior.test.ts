@@ -125,6 +125,7 @@ describe("Engine pet behavior", () => {
             name: "Existing work",
           },
         ],
+        sessionsRootDir: join(cwd, "sessions"),
       },
     });
 
@@ -180,6 +181,9 @@ describe("Engine pet behavior", () => {
     calls.set(model, []);
     await engine.run("second", { sessionId: "pet" });
     expect(calls.get(model)![0]!.tools).not.toContain("Write");
+    // No host-provided sessionsRootDir on this turn, so the Sessions tool must
+    // stay invisible instead of surfacing as a permanently-broken tool.
+    expect(calls.get(model)![0]!.tools).not.toContain("Sessions");
 
     await expect(engine.run("rewrite", { sessionId: "pet", kind: "work" })).rejects.toThrow(
       "session kind mismatch",
@@ -236,6 +240,7 @@ describe("Engine pet behavior", () => {
           maxAttachments: 4,
           maxAttachmentBytes: 10 * 1024 * 1024,
         },
+        sessionsRootDir: join(cwd, "sessions"),
       },
     });
 

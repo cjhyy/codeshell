@@ -37,6 +37,7 @@ import {
   type CredentialScope,
   sweepStaleCredentialCookies,
   setDefaultCredentialCipher,
+  sessionsRoot,
   // Quota — remaining CC/Codex subscription usage.
   ErrorCodes,
   registerCapability,
@@ -1266,6 +1267,7 @@ async function createWindow(): Promise<BrowserWindow> {
       aggregator,
       worker: bridge,
       hostCwd: resolveNoRepoCwd(),
+      sessionsRootDir: sessionsRoot(),
       managerModel: async () =>
         petChatModelKeyFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {

@@ -115,6 +115,7 @@ describe("PetDispatchService", () => {
       },
       hostCwd: "/safe/pet",
       managerModel: async () => "fast-model",
+      sessionsRootDir: "/tmp/x",
       longTasks: {
         context: () => ({
           version: 1,
@@ -183,6 +184,11 @@ describe("PetDispatchService", () => {
       expect.objectContaining({ id: "no-workspace", name: "No workspace" }),
       expect.objectContaining({ name: "CodeShell", description: "/work/codeshell" }),
     ]);
+    // The host-injected sessions root reaches the worker turn so the Sessions
+    // tool becomes visible and reads the right directory.
+    expect(
+      (request?.params.profileParams as Record<string, unknown> | undefined)?.sessionsRootDir,
+    ).toBe("/tmp/x");
   });
 
   test("uses only the validated DelegateWork result for automatic delegation", async () => {

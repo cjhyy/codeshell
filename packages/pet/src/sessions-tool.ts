@@ -51,13 +51,14 @@ export const sessionsToolDef: ToolDefinition = {
 };
 
 /**
- * Sessions is a read-only Mimi-turn tool: it needs no per-turn catalog like
- * Gateway does, so it is simply available whenever the active behavior
- * profile is "pet" (the same profile-scoping signal delegateWorkAvailability
- * uses). PET_ALLOWED_TOOL_NAMES already restricts exposure to pet sessions.
+ * Sessions is visible only when the host declared a sessions root for this
+ * turn (profile.ts buildVisibilityMeta publishes `petSessions` from
+ * profileParams.sessionsRootDir), mirroring gatewayAvailability: a turn
+ * without the host wiring must not expose a permanently-broken tool. The
+ * runtime handler still fails closed as a second layer.
  */
 export function sessionsAvailability(ctx: ToolVisibilityContext): boolean {
-  return ctx.behaviorProfile === "pet";
+  return Boolean(ctx.profileMeta?.petSessions);
 }
 
 /**

@@ -183,6 +183,8 @@ interface PetDispatchOptions {
     ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
   };
   hostCwd: string;
+  /** On-disk sessions root backing Mimi's read-only Sessions disclosure tool. */
+  sessionsRootDir?: string;
   /** Mimi manager model used when a channel does not provide an explicit override. */
   managerModel?(): Promise<string | null>;
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
@@ -697,6 +699,9 @@ export class PetDispatchService {
           ...(gatewayReplyCapability && canGatewayReply
             ? { gatewayReply: gatewayReplyCapability }
             : {}),
+          ...(this.options.sessionsRootDir
+            ? { sessionsRootDir: this.options.sessionsRootDir }
+            : {}),
         },
       });
       if (!response.ok) throw new Error(response.message);
@@ -948,6 +953,7 @@ export class PetDispatchService {
               gatewayReply: gatewayReplyCapability,
             }
           : {}),
+        ...(this.options.sessionsRootDir ? { sessionsRootDir: this.options.sessionsRootDir } : {}),
       },
     });
     if (!response.ok) throw new Error(response.message);
@@ -1216,6 +1222,9 @@ export class PetDispatchService {
             ...(gatewayCatalog ? { gateway: gatewayCatalog } : {}),
             ...(gatewayReplyCapability && hostActionKinds.includes("gatewayReply")
               ? { gatewayReply: gatewayReplyCapability }
+              : {}),
+            ...(this.options.sessionsRootDir
+              ? { sessionsRootDir: this.options.sessionsRootDir }
               : {}),
           },
           cwd: this.options.hostCwd,
