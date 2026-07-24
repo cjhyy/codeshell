@@ -7,7 +7,7 @@
  * the transcript mtime has not changed.
  *
  * Only the cache skeleton lives here — each caller keeps its own reader,
- * arguments, and result shape (see latest-result-cache.ts, pet-todo-aggregator.ts).
+ * arguments, and result shape (see latest-result-cache.ts).
  */
 import { stat } from "node:fs/promises";
 import { join } from "node:path";

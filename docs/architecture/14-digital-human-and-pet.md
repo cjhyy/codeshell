@@ -237,8 +237,11 @@ that Session; the host resolver applies the same reuse-pool boundaries as the
 in-turn candidate list (not archived, `origin === "desktop"`, not the Mimi
 Session itself, not currently busy). The desktop workbench consumes the same
 disclosure layer: the work tree expands a Session's latest result (external
-rows excluded), and a cross-Session TODO block aggregates open TodoWrite items;
-both read through an mtime-keyed cache. The Cmd-K switcher adds a `>`-prefixed
+rows excluded, read through an mtime-keyed cache), and a "Mimi 小结"
+(closure-summary) block surfaces one aux-generated natural-language paragraph
+per completed Session — the conclusion plus any open follow-up the assistant
+asked — generated lazily and cached persistently, listing only Sessions with a
+worthwhile takeaway. The Cmd-K switcher adds a `>`-prefixed
 content-search mode over the same grep. No push channel or new Mimi wakeup
 trigger is introduced — updates arrive on the next read.
 

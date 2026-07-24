@@ -129,6 +129,58 @@ describe("createPetSummaryService", () => {
     expect(store.get("session-a")).toEqual({ terminalAt: 2_000, text: "new summary" });
   });
 
+  test("dedups concurrent summarize calls for the same (sessionId, terminalAt)", async () => {
+    const store = fakeStore();
+    let generateCalls = 0;
+    let releaseGenerate: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseGenerate = resolve;
+    });
+    const service = createPetSummaryService({
+      sessionsRootDir: "/root",
+      readClosureInput: async () => "closure",
+      generate: async () => {
+        generateCalls += 1;
+        await gate;
+        return "shared summary";
+      },
+      store,
+    });
+
+    const first = service.summarize("session-a", 1_000);
+    const second = service.summarize("session-a", 1_000);
+    releaseGenerate!();
+    const [a, b] = await Promise.all([first, second]);
+
+    expect(generateCalls).toBe(1);
+    expect(a).toEqual({ text: "shared summary" });
+    expect(b).toEqual({ text: "shared summary" });
+
+    // After settling, a fresh call is served from the store, still no re-generate.
+    expect(await service.summarize("session-a", 1_000)).toEqual({ text: "shared summary" });
+    expect(generateCalls).toBe(1);
+  });
+
+  test("a different terminalAt is not deduped against an in-flight older one", async () => {
+    const store = fakeStore();
+    const closuresByCall: string[] = [];
+    let calls = 0;
+    const service = createPetSummaryService({
+      sessionsRootDir: "/root",
+      readClosureInput: async () => `closure-${calls}`,
+      generate: async (closureText) => {
+        calls += 1;
+        closuresByCall.push(closureText);
+        return `summary-${calls}`;
+      },
+      store,
+    });
+
+    await Promise.all([service.summarize("session-a", 1_000), service.summarize("session-a", 2_000)]);
+    // Distinct terminalAt keys → two independent generations.
+    expect(calls).toBe(2);
+  });
+
   test("passes the resolved session dir to readClosureInput", async () => {
     const store = fakeStore();
     const seenDirs: string[] = [];

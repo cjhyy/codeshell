@@ -103,6 +103,7 @@ import {
 import { createLatestResultCache } from "./pet/latest-result-cache.js";
 import { createPetSummaryStore } from "./pet/pet-summary-store.js";
 import { createPetSummaryService } from "./pet/pet-summary-service.js";
+import { mapWithConcurrency } from "./pet/map-with-concurrency.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import {
@@ -1613,30 +1614,65 @@ async function createWindow(): Promise<BrowserWindow> {
       latestResult: createLatestResultCache(petSessionsRootDir),
       summaries: {
         collect: async () => {
+          // Newest-first: the display slices to 20, so both cached reads and any
+          // fresh generation should prefer the most recently finished sessions.
           const completed = aggregator
             .getSnapshot()
             .sessions.filter(
               (session) => !session.external && session.terminal?.status === "completed",
-            );
-          const rows: Array<{
+            )
+            .sort((left, right) => right.terminal!.at - left.terminal!.at);
+          type SummaryRow = {
             sessionId: string;
             title: string;
             workspace?: string;
             terminalAt: number;
             text: string;
-          }> = [];
+          };
+          const rowOf = (
+            session: (typeof completed)[number],
+            terminalAt: number,
+            text: string,
+          ): SummaryRow => ({
+            sessionId: session.agentSessionId,
+            title: session.title ?? session.agentSessionId.slice(-8),
+            ...(session.workspaceDisplayName ? { workspace: session.workspaceDisplayName } : {}),
+            terminalAt,
+            text,
+          });
+
+          // Partition into already-processed (a store hit for this exact
+          // terminalAt — non-empty is a row, empty is a settled no-value we must
+          // NOT regenerate) vs. sessions needing generation. Only the newest K
+          // uncached sessions are generated this pull; the rest are picked up by
+          // the next debounced fetch, so a 50-session backlog never fans out to
+          // 50 aux calls for a 20-row view.
+          const MAX_NEW_GENERATIONS = 20;
+          const cachedRows: SummaryRow[] = [];
+          const toGenerate: Array<{ session: (typeof completed)[number]; terminalAt: number }> = [];
           for (const session of completed) {
             const terminalAt = session.terminal!.at;
-            const summary = await petSummaryService.summarize(session.agentSessionId, terminalAt);
-            if (!summary) continue;
-            rows.push({
-              sessionId: session.agentSessionId,
-              title: session.title ?? session.agentSessionId.slice(-8),
-              ...(session.workspaceDisplayName ? { workspace: session.workspaceDisplayName } : {}),
-              terminalAt,
-              text: summary.text,
-            });
+            const cached = petSummaryStore.get(session.agentSessionId);
+            if (cached && cached.terminalAt === terminalAt) {
+              if (cached.text) cachedRows.push(rowOf(session, terminalAt, cached.text));
+              continue; // empty-marker: processed, no value → skip, no regenerate.
+            }
+            toGenerate.push({ session, terminalAt });
           }
+
+          const generated = await mapWithConcurrency(
+            toGenerate.slice(0, MAX_NEW_GENERATIONS),
+            5,
+            async ({ session, terminalAt }) => {
+              const summary = await petSummaryService.summarize(
+                session.agentSessionId,
+                terminalAt,
+              );
+              return summary ? rowOf(session, terminalAt, summary.text) : null;
+            },
+          );
+
+          const rows = [...cachedRows, ...generated.filter((row): row is SummaryRow => row !== null)];
           rows.sort((left, right) => right.terminalAt - left.terminalAt);
           return rows.slice(0, 20);
         },
