@@ -161,6 +161,7 @@ describe("pet settings (Mimi global-view external-session visibility)", () => {
     expect(parsed.pet).toEqual({
       showExternalCodexSessions: false,
       showExternalClaudeSessions: false,
+      memoryAutoExtract: true,
     });
     expect(
       SettingsSchema.parse({ pet: { showExternalCodexSessions: true } }).pet

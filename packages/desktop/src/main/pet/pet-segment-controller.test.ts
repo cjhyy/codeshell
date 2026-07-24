@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PetTopicSegment, PetWorkMemoryEntry } from "@cjhyy/code-shell-pet";
 import { PetSegmentController } from "./pet-segment-controller";
-import type { PetWorkMemoryStoreLike } from "./pet-segment-controller";
+import type { PetSegmentClosed, PetWorkMemoryStoreLike } from "./pet-segment-controller";
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * 60 * 1000;
@@ -185,6 +185,35 @@ describe("PetSegmentController", () => {
     await controller.beginTurn();
     expect(store.activeSegment()).toBeDefined();
     expect(store.segmentBoundaries()).toEqual([]);
+  });
+
+  test("opening a new segment fires onSegmentClosed for the segment that just closed", async () => {
+    const store = new FakePetWorkMemoryStore();
+    store.seed({ lastInteractionAt: 30 * MINUTE, entries: [] });
+    const closed: PetSegmentClosed[] = [];
+    let now = 13 * HOUR;
+    const controller = new PetSegmentController({
+      store,
+      petSessionId: "pet-1",
+      archiveRange: async () => ({ before: 0, after: 0 }),
+      onSegmentClosed: (event) => closed.push(event),
+      now: () => now,
+      idleMs: 12 * HOUR,
+    });
+    // First idle crossing opens seg A; there is no prior segment to close.
+    await controller.beginTurn("pet-a");
+    expect(closed).toHaveLength(0);
+    // Second idle crossing closes seg A (keyed to pet-a) and opens seg B.
+    now = 13 * HOUR + 13 * HOUR;
+    await controller.beginTurn("pet-b");
+    expect(closed).toHaveLength(1);
+    expect(closed[0]).toMatchObject({
+      closingBoundaryMessageId: "pet-a",
+      nextBoundaryMessageId: "pet-b",
+      startedAt: 13 * HOUR,
+      endedAt: 13 * HOUR + 13 * HOUR,
+    });
+    expect(closed[0]?.segmentId).toBe(store.opened[0]!.id);
   });
 
   test("no new segment within the idle window: no brief, clock still advances", async () => {

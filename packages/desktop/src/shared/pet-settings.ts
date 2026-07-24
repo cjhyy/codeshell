@@ -21,3 +21,17 @@ export function petChatModelKeyFromSettings(settings: unknown): string | null {
 export function petChatModelSettingsPatch(modelKey: string | null): Record<string, unknown> {
   return { pet: { [PET_CHAT_MODEL_SETTING]: modelKey } };
 }
+
+export const PET_MEMORY_AUTO_EXTRACT_SETTING = "memoryAutoExtract";
+
+/** Auto-extraction defaults ON; only an explicit `false` disables it. */
+export function petMemoryAutoExtractFromSettings(settings: unknown): boolean {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return true;
+  const pet = (settings as Record<string, unknown>).pet;
+  if (!pet || typeof pet !== "object" || Array.isArray(pet)) return true;
+  return (pet as Record<string, unknown>)[PET_MEMORY_AUTO_EXTRACT_SETTING] !== false;
+}
+
+export function petMemoryAutoExtractSettingsPatch(enabled: boolean): Record<string, unknown> {
+  return { pet: { [PET_MEMORY_AUTO_EXTRACT_SETTING]: enabled } };
+}

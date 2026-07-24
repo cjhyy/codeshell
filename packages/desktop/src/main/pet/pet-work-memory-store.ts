@@ -94,6 +94,11 @@ export class PetWorkMemoryStore {
     return this.segments.at(-1);
   }
 
+  /** Full topic-segment history, oldest → newest (the last is active). */
+  allSegments(): PetTopicSegment[] {
+    return [...this.segments];
+  }
+
   /**
    * Message-keyed topic-segment boundaries surfaced to the Mimi chat UI, oldest
    * → newest. Only segments that captured a chat message id appear here; a

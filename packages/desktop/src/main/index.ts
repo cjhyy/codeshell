@@ -103,6 +103,11 @@ import {
 import { createLatestResultCache } from "./pet/latest-result-cache.js";
 import { createPetSummaryStore } from "./pet/pet-summary-store.js";
 import { createPetSummaryService } from "./pet/pet-summary-service.js";
+import { PetJournalStore } from "./pet/pet-journal-store.js";
+import {
+  createPetSegmentClosureService,
+  type PetSegmentClosureService,
+} from "./pet/pet-segment-closure-service.js";
 import { mapWithConcurrency } from "./pet/map-with-concurrency.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
@@ -130,7 +135,10 @@ import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.
 import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
-import { petChatModelKeyFromSettings } from "../shared/pet-settings.js";
+import {
+  petChatModelKeyFromSettings,
+  petMemoryAutoExtractFromSettings,
+} from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -1174,6 +1182,14 @@ async function createWindow(): Promise<BrowserWindow> {
     void petMemoryStoreInstance
       .load()
       .catch((error) => dlog("main", "pet.memory.load.failed", { error: String(error) }));
+    const petJournalStore = new PetJournalStore(
+      resolve(app.getPath("userData"), "pet", "journal.json"),
+    );
+    void petJournalStore
+      .load()
+      .catch((error) => dlog("main", "pet.journal.load.failed", { error: String(error) }));
+    // Built inside petInitialization once the durable pet session id is known.
+    let petSegmentClosureService: PetSegmentClosureService | null = null;
     const longTaskCoordinator = new PetLongTaskCoordinator({
       store: longTaskStore,
       projection: aggregator,
@@ -1545,23 +1561,65 @@ async function createWindow(): Promise<BrowserWindow> {
       // dispatch currently passes no turnRange, so it stays dormant.
       const { petSessionId } = await petMetadata.ensure();
       const petBridge = bridge;
+      const archivePetRange = async (
+        sessionId: string,
+        range: { start: number; end: number },
+      ): Promise<{ before: number; after: number }> => {
+        const response = await petBridge.requestWorker("agent/query", {
+          type: "archive_range",
+          sessionId,
+          start: range.start,
+          end: range.end,
+        });
+        if (!response.ok) throw new Error(response.message);
+        const data = (response.result as { data?: { before?: number; after?: number } })?.data;
+        return { before: data?.before ?? 0, after: data?.after ?? 0 };
+      };
+      // Segment-closure pipeline: distill a journal entry + auto-memories from
+      // each closed Mimi topic segment, then archive that transcript range out
+      // of the live model context so the conversation cannot grow without bound.
+      petSegmentClosureService = createPetSegmentClosureService({
+        petSessionId,
+        sessionsRootDir: petSessionsRootDir,
+        journal: petJournalStore,
+        memory: petMemoryStoreInstance,
+        autoExtractEnabled: () => {
+          try {
+            return petMemoryAutoExtractFromSettings(
+              new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
+            );
+          } catch {
+            return true; // default ON if settings are unreadable
+          }
+        },
+        cwd: resolveNoRepoCwd(),
+      });
+      const closureService = petSegmentClosureService;
       petSegmentController = new PetSegmentController({
         store: petWorkMemory,
         petSessionId,
-        archiveRange: async (sessionId, range) => {
-          const response = await petBridge.requestWorker("agent/query", {
-            type: "archive_range",
-            sessionId,
-            start: range.start,
-            end: range.end,
-          });
-          if (!response.ok) throw new Error(response.message);
-          const data = (response.result as { data?: { before?: number; after?: number } })?.data;
-          return { before: data?.before ?? 0, after: data?.after ?? 0 };
+        archiveRange: archivePetRange,
+        // A long-idle boundary just closed the previous segment. Distill + record
+        // it, then archive its range — fire-and-forget so the new turn is never
+        // blocked. Extraction failures degrade to a plain context archive.
+        onSegmentClosed: (closed) => {
+          void closureService
+            .close(closed)
+            .then(async (result) => {
+              if (result) await archivePetRange(petSessionId, result.range);
+            })
+            .catch((error) => dlog("main", "pet.closure.failed", { error: String(error) }));
         },
         now: Date.now,
         idleMs: DEFAULT_SEGMENT_IDLE_MS,
       });
+      // Startup compensation: a segment whose closure was interrupted by app exit
+      // still has no journal entry. Recover those (journal + memory only; the
+      // range was — or will be — archived by the live path, so backfill never
+      // re-archives). Fire-and-forget; never blocks pet initialization.
+      void closureService
+        .backfill(petWorkMemory.allSegments(), Date.now())
+        .catch((error) => dlog("main", "pet.closure.backfill.failed", { error: String(error) }));
       // Load/reconcile durable long tasks only after both the session projection
       // and work-memory closure sink are ready. Running tasks left idle by a
       // previous process are marked interrupted and remain resumable.
@@ -1664,15 +1722,15 @@ async function createWindow(): Promise<BrowserWindow> {
             toGenerate.slice(0, MAX_NEW_GENERATIONS),
             5,
             async ({ session, terminalAt }) => {
-              const summary = await petSummaryService.summarize(
-                session.agentSessionId,
-                terminalAt,
-              );
+              const summary = await petSummaryService.summarize(session.agentSessionId, terminalAt);
               return summary ? rowOf(session, terminalAt, summary.text) : null;
             },
           );
 
-          const rows = [...cachedRows, ...generated.filter((row): row is SummaryRow => row !== null)];
+          const rows = [
+            ...cachedRows,
+            ...generated.filter((row): row is SummaryRow => row !== null),
+          ];
           rows.sort((left, right) => right.terminalAt - left.terminalAt);
           return rows.slice(0, 20);
         },

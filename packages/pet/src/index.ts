@@ -87,4 +87,5 @@ export {
 } from "./host-actions.js";
 export { createPetCapability } from "./capability.js";
 export * from "./topic-segment.js";
+export * from "./segment-closure.js";
 export * from "./long-task.js";

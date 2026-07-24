@@ -124,6 +124,13 @@ export const SettingsSchema = z
         showExternalCodexSessions: z.boolean().default(false),
         /** Same, for external Claude Code CLI sessions. Default off. */
         showExternalClaudeSessions: z.boolean().default(false),
+        /**
+         * Auto-extract durable memories + an event-journal entry from each closed
+         * Mimi topic segment. When off, segment closure still archives the model
+         * context (so it cannot grow without bound) but writes no journal/memory.
+         * Default on.
+         */
+        memoryAutoExtract: z.boolean().default(true),
       })
       .default({}),
 

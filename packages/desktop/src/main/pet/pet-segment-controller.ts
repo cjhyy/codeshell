@@ -31,8 +31,24 @@ export interface PetSegmentControllerOptions {
     sessionId: string,
     range: { start: number; end: number },
   ) => Promise<{ before: number; after: number }>;
+  /**
+   * Optional closure sink: invoked (fire-and-forget) when a long-idle boundary
+   * closes a segment, before the new one is opened. Receives the just-closed
+   * segment plus the newly-opened segment's first-turn client message id so the
+   * host can locate the closed window in the transcript. Distilling the journal
+   * entry + auto-memories and archiving the range is the sink's responsibility.
+   */
+  onSegmentClosed?: (closed: PetSegmentClosed) => void;
   now: () => number;
   idleMs: number;
+}
+
+export interface PetSegmentClosed {
+  segmentId: string;
+  closingBoundaryMessageId?: string;
+  nextBoundaryMessageId?: string;
+  startedAt: number;
+  endedAt: number;
 }
 
 export interface PetDelegationClosure {
@@ -108,6 +124,21 @@ export class PetSegmentController {
     if (!openNew) {
       await this.options.store.setLastInteractionAt(now);
       return undefined;
+    }
+    // Capture the segment that is about to close before we append the new one.
+    // Only a segment that actually captured a first-turn message id yields a
+    // locatable transcript window; a legacy/time-only segment closes silently.
+    const closing = this.options.store.activeSegment();
+    if (closing && this.options.onSegmentClosed) {
+      this.options.onSegmentClosed({
+        segmentId: closing.id,
+        ...(closing.boundaryBeforeMessageId
+          ? { closingBoundaryMessageId: closing.boundaryBeforeMessageId }
+          : {}),
+        ...(clientMessageId ? { nextBoundaryMessageId: clientMessageId } : {}),
+        startedAt: closing.startedAt,
+        endedAt: now,
+      });
     }
     const brief = this.buildBrief();
     const briefText = brief.length > 0 ? brief : undefined;
