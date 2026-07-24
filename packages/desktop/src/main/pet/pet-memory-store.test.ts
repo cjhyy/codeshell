@@ -386,6 +386,51 @@ describe("PetMemoryStore", () => {
     });
   });
 
+  test("stores auto-extracted entries with a segment backlink and round-trips them", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path, { now: () => 1_000 });
+      await store.load();
+      const entry = await store.remember("偏好使用 Bun 构建", "auto", { segmentId: "seg-1" });
+      expect(entry.source).toBe("auto");
+      expect(entry.segmentId).toBe("seg-1");
+
+      const reloaded = new PetMemoryStore(path);
+      await reloaded.load();
+      expect(reloaded.list()[0]).toMatchObject({ source: "auto", segmentId: "seg-1" });
+    });
+  });
+
+  test("evicts auto entries before Mimi entries, protecting user entries", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path, {
+        maxEntries: 3,
+        now: (() => {
+          let tick = 0;
+          return () => ++tick;
+        })(),
+      });
+      await store.load();
+      await store.remember("auto-old", "auto", { segmentId: "seg-a" });
+      await store.remember("mimi-old", "mimi");
+      await store.remember("user-one", "user");
+      // Capacity pressure: the oldest auto entry goes first, not the older Mimi one.
+      await store.remember("mimi-new", "mimi");
+      expect(store.list().map((entry) => entry.text)).toEqual(["mimi-new", "user-one", "mimi-old"]);
+    });
+  });
+
+  test("an auto write never rewrites or re-owns an equivalent user entry", async () => {
+    await withStore(async (path) => {
+      const store = new PetMemoryStore(path);
+      await store.load();
+      const original = await store.remember("用户喜欢使用暗色主题。", "user");
+      const observed = await store.remember("偏爱深色模式", "auto", { segmentId: "seg-x" });
+      expect(observed).toMatchObject({ id: original.id, source: "user" });
+      expect(observed.segmentId).toBeUndefined();
+      expect(store.list()).toHaveLength(1);
+    });
+  });
+
   test("notifies subscribers after each mutation", async () => {
     await withStore(async (path) => {
       const store = new PetMemoryStore(path);

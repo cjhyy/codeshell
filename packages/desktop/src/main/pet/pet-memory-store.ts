@@ -5,7 +5,7 @@ import { dirname } from "node:path";
 const MAX_MEMORY_TEXT_LENGTH = 2_000;
 const DEFAULT_MAX_ENTRIES = 200;
 
-export type PetMemorySource = "user" | "mimi";
+export type PetMemorySource = "user" | "mimi" | "auto";
 
 export interface PetMemoryEntry {
   id: string;
@@ -13,6 +13,8 @@ export interface PetMemoryEntry {
   source: PetMemorySource;
   createdAt: number;
   updatedAt: number;
+  /** Present iff auto-extracted: the topic segment the fact was distilled from. */
+  segmentId?: string;
 }
 
 interface PetMemoryStoreOptions {
@@ -98,20 +100,25 @@ export class PetMemoryStore {
     return sortedEntries(this.entries);
   }
 
-  remember(text: string, source: PetMemorySource): Promise<PetMemoryEntry> {
+  remember(
+    text: string,
+    source: PetMemorySource,
+    options: { segmentId?: string } = {},
+  ): Promise<PetMemoryEntry> {
     return this.mutate((entries) => {
       const normalized = normalizeText(text);
       const at = nextMutationTime(entries, this.now());
       const equivalent = findEquivalentEntry(entries, normalized);
       if (equivalent) {
-        // Mimi may recognize a user-authored memory, but must not rewrite its
-        // wording or ownership merely by calling remember with a paraphrase.
-        if (source === "mimi" && equivalent.source === "user") return equivalent;
+        // Mimi (or an auto-extraction) may recognize a user-authored memory, but
+        // must not rewrite its wording or ownership merely by re-observing a
+        // paraphrase. Only an explicit user write is allowed to reword.
+        if (source !== "user" && equivalent.source === "user") return equivalent;
         const entry: PetMemoryEntry = {
           ...equivalent,
           text: normalized,
-          // An explicit user write upgrades an equivalent Mimi inference to
-          // user ownership so later Mimi capacity pressure cannot evict it.
+          // An explicit user write upgrades an equivalent inference to user
+          // ownership so later capacity pressure cannot evict it.
           ...(source === "user" ? { source: "user" as const } : {}),
           updatedAt: at,
         };
@@ -120,7 +127,7 @@ export class PetMemoryStore {
       }
       if (entries.size >= this.maxEntries) {
         const evictable =
-          oldestMimiEntry(entries) ?? (source === "user" ? oldestEntry(entries) : undefined);
+          oldestEvictableEntry(entries) ?? (source === "user" ? oldestEntry(entries) : undefined);
         if (!evictable) {
           throw new Error(
             "Mimi memory is full of user-authored entries; remove one explicitly before adding another",
@@ -134,6 +141,7 @@ export class PetMemoryStore {
         source,
         createdAt: at,
         updatedAt: at,
+        ...(source === "auto" && options.segmentId ? { segmentId: options.segmentId } : {}),
       };
       entries.set(entry.id, entry);
       return entry;
@@ -226,22 +234,42 @@ function nextMutationTime(entries: ReadonlyMap<string, PetMemoryEntry>, now: num
   return latest === Number.NEGATIVE_INFINITY ? now : Math.max(now, latest + 1);
 }
 
+/**
+ * Eviction priority, lowest-value first: auto-extracted, then Mimi inferences,
+ * then user-authored (protected — only trimmed when nothing else can be). Within
+ * a tier the oldest goes first. `evictionRank` centralizes the ordering so the
+ * bulk trim and the single-slot eviction agree.
+ */
+function evictionRank(source: PetMemorySource): number {
+  if (source === "auto") return 0;
+  if (source === "mimi") return 1;
+  return 2;
+}
+
 function trimEntries(entries: Map<string, PetMemoryEntry>, maximum: number): void {
   const overflow = entries.size - maximum;
   if (overflow <= 0) return;
   const oldest = [...entries.values()]
     .sort((a, b) => {
-      if (a.source !== b.source) return a.source === "mimi" ? -1 : 1;
+      if (a.source !== b.source) return evictionRank(a.source) - evictionRank(b.source);
       return a.updatedAt - b.updatedAt;
     })
     .slice(0, overflow);
   for (const entry of oldest) entries.delete(entry.id);
 }
 
-function oldestMimiEntry(entries: ReadonlyMap<string, PetMemoryEntry>): PetMemoryEntry | undefined {
+/** Oldest entry that capacity pressure may evict without an explicit user action. */
+function oldestEvictableEntry(
+  entries: ReadonlyMap<string, PetMemoryEntry>,
+): PetMemoryEntry | undefined {
   return [...entries.values()]
-    .filter((entry) => entry.source === "mimi")
-    .sort((a, b) => a.updatedAt - b.updatedAt || a.id.localeCompare(b.id))[0];
+    .filter((entry) => entry.source !== "user")
+    .sort(
+      (a, b) =>
+        evictionRank(a.source) - evictionRank(b.source) ||
+        a.updatedAt - b.updatedAt ||
+        a.id.localeCompare(b.id),
+    )[0];
 }
 
 function oldestEntry(entries: ReadonlyMap<string, PetMemoryEntry>): PetMemoryEntry | undefined {
@@ -336,7 +364,7 @@ function parseEntry(value: unknown): PetMemoryEntry | null {
     typeof record.text !== "string" ||
     !record.text.trim() ||
     record.text.length > MAX_MEMORY_TEXT_LENGTH ||
-    (record.source !== "user" && record.source !== "mimi") ||
+    (record.source !== "user" && record.source !== "mimi" && record.source !== "auto") ||
     !Number.isFinite(record.createdAt) ||
     !Number.isFinite(record.updatedAt)
   ) {
@@ -348,5 +376,8 @@ function parseEntry(value: unknown): PetMemoryEntry | null {
     source: record.source,
     createdAt: record.createdAt as number,
     updatedAt: record.updatedAt as number,
+    ...(record.source === "auto" && typeof record.segmentId === "string" && record.segmentId
+      ? { segmentId: record.segmentId }
+      : {}),
   };
 }
