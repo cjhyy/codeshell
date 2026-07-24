@@ -9,7 +9,6 @@ import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
 import { PetLongTaskSection } from "./PetLongTaskSection";
 import { PetMemorySection } from "./PetMemorySection";
-import { useClosureReminders } from "./useClosureReminders";
 import {
   loadDismissedPetWorkItemIds,
   newerPetWorkInboxSnapshot,
@@ -24,6 +23,7 @@ export function PetWorldPane({
   status,
   now = Date.now(),
   onNavigate,
+  onOpenMemory,
   focusPending = false,
   excludedSessionIds,
 }: {
@@ -31,6 +31,7 @@ export function PetWorldPane({
   status: PetProjectionStatus;
   now?: number;
   onNavigate?: (request: PetOpenSessionRequest) => void;
+  onOpenMemory?: () => void;
   focusPending?: boolean;
   excludedSessionIds?: ReadonlySet<string>;
 }) {
@@ -89,11 +90,9 @@ export function PetWorldPane({
     },
     [applyDismissedSnapshot, receiveDismissedSnapshot],
   );
-  const reminders = useClosureReminders(projection ? projection.version : null);
   const workMap = buildPetWorkMap(selected.sessions, selected.pending, {
     dismissedIds,
     excludedSessionIds,
-    reminders,
   });
   const pendingRef = React.useRef<HTMLDivElement>(null);
   const dismissItems = React.useCallback(
@@ -177,7 +176,7 @@ export function PetWorldPane({
               });
             }}
           />
-          <PetMemorySection />
+          <PetMemorySection onManage={onOpenMemory} />
         </div>
       </div>
     </section>
