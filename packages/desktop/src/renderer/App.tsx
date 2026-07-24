@@ -2062,7 +2062,6 @@ function App() {
                     focusPending={petState.overviewFocus === "pending"}
                     excludedSessionIds={archivedPetSessionIds}
                     onNavigate={(request) => void handleOpenPetTarget(request)}
-                    onOpenMemory={() => setViewMode("pet_memory")}
                   />
                   <PetChatHost
                     defaultProjectPath={activeProject?.path ?? null}

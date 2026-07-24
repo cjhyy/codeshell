@@ -105,8 +105,6 @@ export const pet = {
         sourceMimi: "Mimi 记录",
         sourceUser: "手动添加",
         sourceAuto: "自动提取",
-        manage: "管理记忆",
-        recentEmpty: "还没有记忆",
       },
       memoryCenter: {
         title: "Mimi 记忆中心",
@@ -414,8 +412,6 @@ export const pet = {
         sourceMimi: "Saved by Mimi",
         sourceUser: "Added manually",
         sourceAuto: "Auto-extracted",
-        manage: "Manage memory",
-        recentEmpty: "No memories yet",
       },
       memoryCenter: {
         title: "Mimi memory center",

@@ -9,7 +9,6 @@ import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
 import { PetLongTaskSection } from "./PetLongTaskSection";
 import { PetFollowUpSection } from "./PetFollowUpSection";
-import { PetMemorySection } from "./PetMemorySection";
 import {
   loadDismissedPetWorkItemIds,
   newerPetWorkInboxSnapshot,
@@ -24,7 +23,6 @@ export function PetWorldPane({
   status,
   now = Date.now(),
   onNavigate,
-  onOpenMemory,
   focusPending = false,
   excludedSessionIds,
 }: {
@@ -32,7 +30,6 @@ export function PetWorldPane({
   status: PetProjectionStatus;
   now?: number;
   onNavigate?: (request: PetOpenSessionRequest) => void;
-  onOpenMemory?: () => void;
   focusPending?: boolean;
   excludedSessionIds?: ReadonlySet<string>;
 }) {
@@ -190,7 +187,6 @@ export function PetWorldPane({
               });
             }}
           />
-          <PetMemorySection onManage={onOpenMemory} />
         </div>
       </div>
     </section>
