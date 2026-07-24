@@ -5,6 +5,7 @@ import {
   CircleDot,
   FolderKanban,
   Inbox,
+  ListTodo,
   RotateCcw,
   Sparkles,
   Trash2,
@@ -159,14 +160,23 @@ function WorkTreeItem({
                   </span>
                 )}
               </span>
-              {item.detail && (
-                <span
-                  className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground"
-                  title={item.detail}
-                >
-                  {item.detail}
-                </span>
-              )}
+              {item.detail &&
+                (item.detailIsReminder ? (
+                  <span
+                    className="mt-0.5 flex min-w-0 items-center gap-1 text-xs leading-5 text-status-warn"
+                    title={item.detail}
+                  >
+                    <ListTodo size={12} aria-hidden="true" className="shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{item.detail}</span>
+                  </span>
+                ) : (
+                  <span
+                    className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground"
+                    title={item.detail}
+                  >
+                    {item.detail}
+                  </span>
+                ))}
             </span>
           </button>
           {canExpand && (

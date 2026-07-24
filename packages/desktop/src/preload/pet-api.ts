@@ -242,9 +242,10 @@ export interface PetLatestSessionResult {
 }
 
 /**
- * One "Mimi 小结" row: a natural-language closure paragraph for a completed
- * work session, generated lazily by the aux model and cached. `text` is always
- * non-empty (no-value sessions are dropped upstream).
+ * One closure-reminder row: a very short follow-up line for a completed work
+ * session, generated lazily by the aux model and cached. `text` is always
+ * non-empty (no-value sessions are dropped upstream). The renderer merges it
+ * onto the matching completed/follow-up work-tree row's detail.
  */
 export interface PetSessionSummaryRow {
   sessionId: string;

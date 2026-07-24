@@ -8,8 +8,8 @@ import React from "react";
 import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
 import { PetLongTaskSection } from "./PetLongTaskSection";
-import { PetSummarySection } from "./PetSummarySection";
 import { PetMemorySection } from "./PetMemorySection";
+import { useClosureReminders } from "./useClosureReminders";
 import {
   loadDismissedPetWorkItemIds,
   newerPetWorkInboxSnapshot,
@@ -89,9 +89,11 @@ export function PetWorldPane({
     },
     [applyDismissedSnapshot, receiveDismissedSnapshot],
   );
+  const reminders = useClosureReminders(projection?.version ?? 0);
   const workMap = buildPetWorkMap(selected.sessions, selected.pending, {
     dismissedIds,
     excludedSessionIds,
+    reminders,
   });
   const pendingRef = React.useRef<HTMLDivElement>(null);
   const dismissItems = React.useCallback(
@@ -158,21 +160,6 @@ export function PetWorldPane({
               });
             }}
           />
-          {projection && (
-            <PetSummarySection
-              snapshotVersion={projection.version}
-              generation={projection.generation}
-              dismissedIds={dismissedIds}
-              onDismiss={(id) => dismissItems([id])}
-              onOpen={(sessionId) => {
-                onNavigate?.({
-                  agentSessionId: sessionId,
-                  snapshotVersion: projection.version,
-                  generation: projection.generation,
-                });
-              }}
-            />
-          )}
           <PetWorkTree
             workMap={workMap}
             emptyState={selected.emptyState}

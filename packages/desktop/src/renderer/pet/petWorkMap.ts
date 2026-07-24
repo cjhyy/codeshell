@@ -25,6 +25,8 @@ export interface PetWorkItem {
   workspace?: string;
   title: string;
   detail?: string;
+  /** True when `detail` is a closure follow-up reminder (completed/follow-up only). */
+  detailIsReminder?: boolean;
   lastActivityAt: number;
   /** Present when this item is an external-CLI (Codex/Claude) session. */
   external?: NonNullable<PetSessionProjection["external"]>;
@@ -117,6 +119,7 @@ function classify(
 function itemFromSession(
   session: PetSessionProjection,
   pending: PetPendingDecision | undefined,
+  reminders?: ReadonlyMap<string, string>,
 ): PetWorkItem {
   const { group, state } = classify(session, pending);
   const externalLocator = petExternalSessionLocator(session);
@@ -124,13 +127,20 @@ function itemFromSession(
     group === "pending"
       ? `pending:${session.agentSessionId}:${pending?.requestId ?? "self"}`
       : `${group}:${session.agentSessionId}`;
+  // A closure reminder only applies to the terminal-completed buckets
+  // (completed / follow-up); other groups keep their structural detail.
+  const reminder =
+    group === "completed" || group === "follow-up"
+      ? reminders?.get(session.agentSessionId)
+      : undefined;
   return {
     id: idPrefix,
     group,
     state,
     workspace: session.workspaceDisplayName,
     title: session.title ?? session.workspaceDisplayName ?? session.agentSessionId.slice(-8),
-    detail: pending?.title ?? session.summary,
+    detail: pending?.title ?? (reminder ? reminder : session.summary),
+    ...(reminder && !pending ? { detailIsReminder: true } : {}),
     lastActivityAt: pending
       ? Math.max(session.lastActivityAt, pending.createdAt)
       : session.lastActivityAt,
@@ -183,6 +193,8 @@ export function buildPetWorkMap(
     dismissedIds?: ReadonlySet<string>;
     excludedSessionIds?: ReadonlySet<string>;
     workspaceFilter?: string;
+    /** sessionId → short closure reminder, applied to completed/follow-up rows only. */
+    reminders?: ReadonlyMap<string, string>;
   } = {},
 ): PetWorkMap {
   const sessionIds = new Set(sessions.map((session) => session.agentSessionId));
@@ -196,7 +208,9 @@ export function buildPetWorkMap(
   const items: PetWorkItem[] = [];
   for (const session of sessions) {
     if (options.excludedSessionIds?.has(session.agentSessionId)) continue;
-    items.push(itemFromSession(session, pendingBySession.get(session.agentSessionId)));
+    items.push(
+      itemFromSession(session, pendingBySession.get(session.agentSessionId), options.reminders),
+    );
   }
   for (const decision of pending) {
     if (options.excludedSessionIds?.has(decision.agentSessionId)) continue;

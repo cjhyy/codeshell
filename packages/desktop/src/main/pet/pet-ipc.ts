@@ -115,9 +115,10 @@ export interface PetIpcLatestResult {
 }
 
 /**
- * Pull-based "Mimi 小结" view for the workbench: one natural-language closure
- * paragraph per completed session that has a worthwhile takeaway, newest first.
- * Backed by the lazy aux summary service + persistent store.
+ * Pull-based closure-reminder feed for the work tree: one very short follow-up
+ * line per completed session that has a worthwhile takeaway, newest first. The
+ * renderer merges these onto completed/follow-up work-tree rows. Backed by the
+ * lazy aux summary service + persistent store.
  */
 export interface PetIpcSummaries {
   collect(): Promise<

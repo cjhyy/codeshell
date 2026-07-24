@@ -82,13 +82,6 @@ export const pet = {
           idle: "未分类",
         },
       },
-      summary: {
-        title: "Mimi 小结",
-        empty: "暂无小结",
-        loading: "正在整理小结",
-        openSessionAria: "打开会话「{title}」",
-        dismissAria: "忽略「{title}」的小结",
-      },
       memory: {
         title: "Mimi 记忆",
         summary: "记住了 {count} 条信息",
@@ -367,13 +360,6 @@ export const pet = {
           completed: "Completed",
           idle: "Unclassified",
         },
-      },
-      summary: {
-        title: "Mimi recap",
-        empty: "No recaps yet",
-        loading: "Gathering recaps",
-        openSessionAria: "Open session “{title}”",
-        dismissAria: "Dismiss the recap for “{title}”",
       },
       memory: {
         title: "Mimi memory",
