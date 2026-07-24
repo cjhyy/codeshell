@@ -17,6 +17,7 @@ import {
   type PetWorkInboxSnapshot,
 } from "./pet-work-inbox-store.js";
 import type { PetMemoryEntry } from "./pet-memory-store.js";
+import type { PetJournalEntry } from "./pet-journal-store.js";
 import { randomUUID } from "node:crypto";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
@@ -44,6 +45,11 @@ export const PET_MEMORY_REMOVE_CHANNEL = "pet:memory-remove";
 export const PET_MEMORY_EVENT_CHANNEL = "pet:memories-changed";
 export const PET_LATEST_RESULT_CHANNEL = "pet:session-latest-result";
 export const PET_SUMMARIES_CHANNEL = "pet:summaries-get";
+export const PET_JOURNAL_LIST_CHANNEL = "pet:journal-get";
+export const PET_JOURNAL_EVENT_CHANNEL = "pet:journal-changed";
+export const PET_SEGMENT_TRANSCRIPT_CHANNEL = "pet:segment-transcript";
+export const PET_PREFS_GET_CHANNEL = "pet:prefs-get";
+export const PET_PREFS_SET_AUTO_EXTRACT_CHANNEL = "pet:prefs-set-auto-extract";
 
 export interface PetIpcAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot;
@@ -130,6 +136,23 @@ export interface PetIpcSummaries {
       text: string;
     }>
   >;
+}
+
+/** The Mimi event journal: one entry per closed topic segment, newest-first. */
+export interface PetIpcJournal {
+  list(): Promise<PetJournalEntry[]>;
+  subscribe(listener: () => void): () => void;
+  /** Read-only原文 of a segment: the pet transcript messages in [start, end). */
+  readSegmentMessages(range: {
+    start: number;
+    end: number;
+  }): Promise<Array<{ role: "user" | "assistant"; text: string }>>;
+}
+
+/** Mimi feature preferences surfaced to the settings/memory-center UI. */
+export interface PetIpcPreferences {
+  getAutoExtract(): Promise<boolean>;
+  setAutoExtract(enabled: boolean): Promise<boolean>;
 }
 
 function afterReady<T>(ready: Promise<void> | undefined, callback: () => T): T | Promise<T> {
@@ -296,6 +319,8 @@ export function registerPetIpc(options: {
   memories?: PetIpcMemories;
   latestResult?: PetIpcLatestResult;
   summaries?: PetIpcSummaries;
+  journal?: PetIpcJournal;
+  preferences?: PetIpcPreferences;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
@@ -486,10 +511,54 @@ export function registerPetIpc(options: {
       return afterReady(options.ready, () => options.summaries!.collect());
     });
   }
+  if (options.journal) {
+    options.ipcMain.handle(PET_JOURNAL_LIST_CHANNEL, (_event, ...args) => {
+      if (args.length !== 0) throw new Error("pet:journal-get does not accept arguments");
+      return afterReady(options.ready, () => options.journal!.list());
+    });
+    options.ipcMain.handle(PET_SEGMENT_TRANSCRIPT_CHANNEL, (_event, ...args) => {
+      const payload = args[0] as { start?: unknown; end?: unknown } | undefined;
+      if (
+        args.length !== 1 ||
+        !payload ||
+        typeof payload !== "object" ||
+        !Number.isSafeInteger(payload.start) ||
+        !Number.isSafeInteger(payload.end) ||
+        (payload.start as number) < 0 ||
+        (payload.end as number) < (payload.start as number)
+      ) {
+        throw new Error("invalid segment transcript range");
+      }
+      const range = { start: payload.start as number, end: payload.end as number };
+      return afterReady(options.ready, () => options.journal!.readSegmentMessages(range));
+    });
+  }
+  if (options.preferences) {
+    options.ipcMain.handle(PET_PREFS_GET_CHANNEL, (_event, ...args) => {
+      if (args.length !== 0) throw new Error("pet:prefs-get does not accept arguments");
+      return afterReady(options.ready, async () => ({
+        autoExtract: await options.preferences!.getAutoExtract(),
+      }));
+    });
+    options.ipcMain.handle(PET_PREFS_SET_AUTO_EXTRACT_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1 || typeof args[0] !== "boolean") {
+        throw new Error("invalid Pet auto-extract preference");
+      }
+      const enabled = args[0];
+      return afterReady(options.ready, () => options.preferences!.setAutoExtract(enabled));
+    });
+  }
   const unsubscribeMemories = options.memories?.subscribe(() => {
     void Promise.resolve(options.memories!.list()).then((entries) => {
       for (const window of options.windows()) {
         if (!window.isDestroyed()) window.webContents.send(PET_MEMORY_EVENT_CHANNEL, entries);
+      }
+    });
+  });
+  const unsubscribeJournal = options.journal?.subscribe(() => {
+    void Promise.resolve(options.journal!.list()).then((entries) => {
+      for (const window of options.windows()) {
+        if (!window.isDestroyed()) window.webContents.send(PET_JOURNAL_EVENT_CHANNEL, entries);
       }
     });
   });
@@ -513,6 +582,7 @@ export function registerPetIpc(options: {
     unsubscribeAttention?.();
     unsubscribeLongTasks?.();
     unsubscribeMemories?.();
+    unsubscribeJournal?.();
     options.ipcMain.removeHandler(PET_SNAPSHOT_CHANNEL);
     options.ipcMain.removeHandler(PET_WORK_MEMORY_CHANNEL);
     options.ipcMain.removeHandler(PET_OPEN_SESSION_CHANNEL);
@@ -540,5 +610,13 @@ export function registerPetIpc(options: {
     }
     if (options.latestResult) options.ipcMain.removeHandler(PET_LATEST_RESULT_CHANNEL);
     if (options.summaries) options.ipcMain.removeHandler(PET_SUMMARIES_CHANNEL);
+    if (options.journal) {
+      options.ipcMain.removeHandler(PET_JOURNAL_LIST_CHANNEL);
+      options.ipcMain.removeHandler(PET_SEGMENT_TRANSCRIPT_CHANNEL);
+    }
+    if (options.preferences) {
+      options.ipcMain.removeHandler(PET_PREFS_GET_CHANNEL);
+      options.ipcMain.removeHandler(PET_PREFS_SET_AUTO_EXTRACT_CHANNEL);
+    }
   };
 }

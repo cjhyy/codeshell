@@ -153,6 +153,16 @@ export interface PetSegmentClosureService {
    * `now` stamps the endedAt of segments that never captured one.
    */
   backfill(segments: readonly ClosedSegmentDescriptor[], now: number): Promise<void>;
+
+  /**
+   * Read-only原文 for the UI: the pet transcript's ordered messages in a
+   * message-index window (a journal entry's `range`). Role + text only — the
+   * viewer does not replay the full fold pipeline.
+   */
+  readSegmentMessages(range: {
+    start: number;
+    end: number;
+  }): Promise<Array<{ role: "user" | "assistant"; text: string }>>;
 }
 
 export function createPetSegmentClosureService(deps: {
@@ -265,6 +275,22 @@ export function createPetSegmentClosureService(deps: {
           });
         }
       }
+    },
+
+    async readSegmentMessages(range) {
+      let messages: ClosureMessage[];
+      try {
+        messages = await readMessages(transcriptPath);
+      } catch (error) {
+        dlog("main", "pet.closure.read.failed", { error: String(error) });
+        return [];
+      }
+      const start = Math.max(0, range.start);
+      const end = Math.min(messages.length, range.end);
+      if (end <= start) return [];
+      return messages
+        .slice(start, end)
+        .map((message) => ({ role: message.role, text: message.text }));
     },
   };
 }

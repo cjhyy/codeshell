@@ -685,4 +685,81 @@ describe("registerPetIpc", () => {
       ),
     ).toThrow("invalid work inbox update");
   });
+
+  test("exposes the journal, segment transcript, and auto-extract preference", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const sent: Array<[string, unknown]> = [];
+    let journalListener: (() => void) | undefined;
+    const journalEntries = [
+      {
+        id: "journal-1",
+        segmentId: "seg-1",
+        title: "调试",
+        summary: "修好了",
+        startedAt: 1,
+        endedAt: 2,
+        messageCount: 4,
+        range: { start: 0, end: 4 },
+      },
+    ];
+    let autoExtract = true;
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      journal: {
+        list: async () => journalEntries,
+        subscribe: (listener) => {
+          journalListener = listener;
+          return () => {};
+        },
+        readSegmentMessages: async (range) => [
+          { role: "user" as const, text: `from ${range.start}` },
+          { role: "assistant" as const, text: `to ${range.end}` },
+        ],
+      },
+      preferences: {
+        getAutoExtract: async () => autoExtract,
+        setAutoExtract: async (enabled) => {
+          autoExtract = enabled;
+          return enabled;
+        },
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    expect(await handlers.get("pet:journal-get")?.({})).toEqual(journalEntries);
+    expect(await handlers.get("pet:segment-transcript")?.({}, { start: 0, end: 4 })).toEqual([
+      { role: "user", text: "from 0" },
+      { role: "assistant", text: "to 4" },
+    ]);
+    expect(() => handlers.get("pet:segment-transcript")?.({}, { start: 4, end: 0 })).toThrow(
+      "invalid segment transcript range",
+    );
+    expect(() => handlers.get("pet:segment-transcript")?.({}, { start: -1, end: 3 })).toThrow(
+      "invalid segment transcript range",
+    );
+
+    expect(await handlers.get("pet:prefs-get")?.({})).toEqual({ autoExtract: true });
+    expect(await handlers.get("pet:prefs-set-auto-extract")?.({}, false)).toBe(false);
+    expect(await handlers.get("pet:prefs-get")?.({})).toEqual({ autoExtract: false });
+    expect(() => handlers.get("pet:prefs-set-auto-extract")?.({}, "nope")).toThrow(
+      "invalid Pet auto-extract preference",
+    );
+
+    journalListener?.();
+    await Promise.resolve();
+    expect(sent).toEqual([["pet:journal-changed", journalEntries]]);
+  });
 });

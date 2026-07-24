@@ -259,9 +259,30 @@ export interface PetSessionSummaryRow {
 export interface PetMemoryEntry {
   id: string;
   text: string;
-  source: "user" | "mimi";
+  source: "user" | "mimi" | "auto";
   createdAt: number;
   updatedAt: number;
+  /** Present iff auto-extracted: the topic segment the fact was distilled from. */
+  segmentId?: string;
+}
+
+/** One event-journal entry: a closed Mimi topic segment distilled to title + summary. */
+export interface PetJournalEntry {
+  id: string;
+  segmentId: string;
+  title: string;
+  summary: string;
+  startedAt: number;
+  endedAt: number;
+  messageCount: number;
+  /** Transcript message-index window, for lazily loading the segment's原文. */
+  range: { start: number; end: number };
+}
+
+/** One原文 turn of a Mimi segment, for the read-only transcript viewer. */
+export interface PetSegmentMessage {
+  role: "user" | "assistant";
+  text: string;
 }
 
 interface PetProjectionEventBase {
@@ -307,6 +328,11 @@ export interface PetApi {
   onMemoriesChanged?(listener: (entries: PetMemoryEntry[]) => void): () => void;
   getLatestResult?(sessionId: string): Promise<PetLatestSessionResult | null>;
   getSummaries?(): Promise<PetSessionSummaryRow[]>;
+  listJournal?(): Promise<PetJournalEntry[]>;
+  onJournalChanged?(listener: (entries: PetJournalEntry[]) => void): () => void;
+  getSegmentMessages?(range: { start: number; end: number }): Promise<PetSegmentMessage[]>;
+  getMemoryAutoExtract?(): Promise<boolean>;
+  setMemoryAutoExtract?(enabled: boolean): Promise<boolean>;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
   setWidgetSurface(mode: "collapsed" | "expanded"): Promise<{ ok: true }>;
@@ -400,6 +426,21 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
         sessionId,
       ) as Promise<PetLatestSessionResult | null>,
     getSummaries: () => ipcRenderer.invoke("pet:summaries-get") as Promise<PetSessionSummaryRow[]>,
+    listJournal: () => ipcRenderer.invoke("pet:journal-get") as Promise<PetJournalEntry[]>,
+    onJournalChanged: (listener) => {
+      const handler = (_event: unknown, payload: unknown): void =>
+        listener(payload as PetJournalEntry[]);
+      ipcRenderer.on("pet:journal-changed", handler);
+      return () => ipcRenderer.removeListener("pet:journal-changed", handler);
+    },
+    getSegmentMessages: (range) =>
+      ipcRenderer.invoke("pet:segment-transcript", range) as Promise<PetSegmentMessage[]>,
+    getMemoryAutoExtract: () =>
+      (ipcRenderer.invoke("pet:prefs-get") as Promise<{ autoExtract: boolean }>).then(
+        (prefs) => prefs.autoExtract,
+      ),
+    setMemoryAutoExtract: (enabled) =>
+      ipcRenderer.invoke("pet:prefs-set-auto-extract", enabled) as Promise<boolean>,
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>
       ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,

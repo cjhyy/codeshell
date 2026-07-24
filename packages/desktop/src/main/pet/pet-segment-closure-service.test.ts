@@ -188,6 +188,27 @@ describe("createPetSegmentClosureService", () => {
     });
   });
 
+  test("readSegmentMessages returns role+text within a clamped range", async () => {
+    await withStores(async ({ journal, memory }) => {
+      const service = createPetSegmentClosureService({
+        petSessionId: "pet",
+        sessionsRootDir: "/unused",
+        journal,
+        memory,
+        autoExtractEnabled: () => true,
+        readMessages: async () => messages,
+        generate: async () => extraction(),
+      });
+      expect(await service.readSegmentMessages({ start: 0, end: 2 })).toEqual([
+        { role: "user", text: "帮我调试构建" },
+        { role: "assistant", text: "在看了" },
+      ]);
+      // Over-long end is clamped to the message count; empty windows return [].
+      expect(await service.readSegmentMessages({ start: 4, end: 999 })).toHaveLength(2);
+      expect(await service.readSegmentMessages({ start: 3, end: 3 })).toEqual([]);
+    });
+  });
+
   test("backfill records only settled, unrecorded segments and never the active one", async () => {
     await withStores(async ({ journal, memory }) => {
       const closed: string[] = [];

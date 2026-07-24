@@ -138,6 +138,7 @@ import { createReusableSessionResolver } from "./pet/reusable-session-resolver.j
 import {
   petChatModelKeyFromSettings,
   petMemoryAutoExtractFromSettings,
+  petMemoryAutoExtractSettingsPatch,
 } from "../shared/pet-settings.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
@@ -1733,6 +1734,23 @@ async function createWindow(): Promise<BrowserWindow> {
           ];
           rows.sort((left, right) => right.terminalAt - left.terminalAt);
           return rows.slice(0, 20);
+        },
+      },
+      journal: {
+        list: async () => {
+          await petJournalStore.load();
+          return petJournalStore.list();
+        },
+        subscribe: (listener) => petJournalStore.subscribe(listener),
+        readSegmentMessages: async (range) =>
+          petSegmentClosureService ? petSegmentClosureService.readSegmentMessages(range) : [],
+      },
+      preferences: {
+        getAutoExtract: async () =>
+          petMemoryAutoExtractFromSettings(await readSettings("user").catch(() => null)),
+        setAutoExtract: async (enabled) => {
+          await writeSettings("user", petMemoryAutoExtractSettingsPatch(enabled));
+          return enabled;
         },
       },
       windows: () => BrowserWindow.getAllWindows(),
