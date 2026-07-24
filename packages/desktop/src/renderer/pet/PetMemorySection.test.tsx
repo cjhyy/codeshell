@@ -3,7 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { PetMemoryEntry } from "../../preload/types";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-import { PetMemorySectionContent } from "./PetMemorySection";
+import { PetMemorySection } from "./PetMemorySection";
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -49,46 +49,22 @@ afterEach(async () => {
 });
 
 describe("PetMemorySection", () => {
-  test("shows source and sends edits and confirmed deletes through the Pet API", async () => {
+  test("previews recent entries with source labels and links to the memory center", async () => {
     ensureMiniDom();
     const testWindow = window as unknown as Record<string, any>;
     originalCodeshell = testWindow.codeshell;
     const entries: PetMemoryEntry[] = [
-      {
-        id: "mem-mimi",
-        text: "用户偏好暗色主题",
-        source: "mimi",
-        createdAt: 1,
-        updatedAt: 2,
-      },
-      {
-        id: "mem-user",
-        text: "默认使用 Bun",
-        source: "user",
-        createdAt: 3,
-        updatedAt: 4,
-      },
+      { id: "mem-auto", text: "偏好使用 Bun 构建", source: "auto", createdAt: 5, updatedAt: 6 },
+      { id: "mem-mimi", text: "用户偏好暗色主题", source: "mimi", createdAt: 1, updatedAt: 2 },
+      { id: "mem-user", text: "默认工作目录 ~/work", source: "user", createdAt: 3, updatedAt: 4 },
     ];
-    const updateCalls: Array<[string, string]> = [];
-    const removeCalls: string[] = [];
-    testWindow.codeshell = {
-      pet: {
-        listMemories: async () => entries,
-        updateMemory: async (id: string, text: string) => {
-          updateCalls.push([id, text]);
-          return { ...entries[0]!, id, text };
-        },
-        removeMemory: async (id: string) => {
-          removeCalls.push(id);
-          return entries.find((entry) => entry.id === id)!;
-        },
-      },
-    };
+    testWindow.codeshell = { pet: { listMemories: async () => entries } };
+    let managed = 0;
 
     const container = document.createElement("div") as unknown as HTMLElement;
     root = createRoot(container);
     await act(async () => {
-      root?.render(<PetMemorySectionContent confirmRemoval={async () => true} />);
+      root?.render(<PetMemorySection onManage={() => (managed += 1)} />);
       await flushMicrotasks();
       await flushMicrotasks();
     });
@@ -100,41 +76,21 @@ describe("PetMemorySection", () => {
       reactPropsOf(sectionToggle).onClick();
       await flushMicrotasks();
     });
-    expect(textOf(container)).toContain("Mimi 记录");
-    expect(textOf(container)).toContain("手动添加");
 
-    const editButton = findElements(container, "BUTTON").find(
-      (button) => reactPropsOf(button)["aria-label"] === "编辑",
-    );
-    await act(async () => {
-      reactPropsOf(editButton).onClick();
-      await flushMicrotasks();
-    });
-    const editArea = findElements(container, "TEXTAREA").find(
-      (textarea) => reactPropsOf(textarea).value === "用户偏好暗色主题",
-    );
-    await act(async () => {
-      reactPropsOf(editArea).onChange({ target: { value: "用户偏好深色主题" } });
-      await flushMicrotasks();
-    });
-    const saveButton = findElements(container, "BUTTON").find(
-      (button) => reactPropsOf(button)["aria-label"] === "保存",
-    );
-    await act(async () => {
-      reactPropsOf(saveButton).onClick();
-      await flushMicrotasks();
-      await flushMicrotasks();
-    });
-    expect(updateCalls).toEqual([["mem-mimi", "用户偏好深色主题"]]);
+    const text = textOf(container);
+    expect(text).toContain("自动提取");
+    expect(text).toContain("Mimi 记录");
+    expect(text).toContain("手动添加");
+    // Read-only preview: no editable textarea, and no add/edit/delete controls.
+    expect(findElements(container, "TEXTAREA")).toHaveLength(0);
 
-    const deleteButton = findElements(container, "BUTTON").find(
-      (button) => reactPropsOf(button)["aria-label"] === "删除",
+    const manageButton = findElements(container, "BUTTON").find((button) =>
+      textOf(button).includes("管理记忆"),
     );
     await act(async () => {
-      reactPropsOf(deleteButton).onClick();
-      await flushMicrotasks();
+      reactPropsOf(manageButton).onClick();
       await flushMicrotasks();
     });
-    expect(removeCalls).toEqual(["mem-mimi"]);
+    expect(managed).toBe(1);
   });
 });

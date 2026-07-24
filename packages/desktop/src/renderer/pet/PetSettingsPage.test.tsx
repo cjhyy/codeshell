@@ -15,12 +15,14 @@ describe("PetSettingsPage", () => {
         onResetModel={() => undefined}
         onWidgetVisibleChange={() => undefined}
         onOpenConnections={() => undefined}
+        onOpenMemory={() => undefined}
         onBack={() => undefined}
       />,
     );
 
     expect(html).toContain('data-pet-settings-page="standalone"');
     expect(html).toContain('data-pet-setting="model"');
+    expect(html).toContain('data-pet-setting="memory"');
     expect(html).toContain('data-active-model="deepseek-v4-pro"');
     expect(html).toContain("长程工作 Session 继续使用自己的默认模型");
     expect(html).toContain('data-pet-setting="widget"');

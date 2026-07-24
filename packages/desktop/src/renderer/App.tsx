@@ -9,6 +9,7 @@ import { PetWorldPane } from "./pet/PetWorldPane";
 import { openPetTarget } from "./pet/petNavigation";
 import { PetChatHost } from "./pet/PetChatHost";
 import { PetSettingsPage } from "./pet/PetSettingsPage";
+import { PetMemoryCenterPage } from "./pet/PetMemoryCenterPage";
 import { PetPeekHost } from "./pet/PetPeekHost";
 import { nextOpenCliSessionNonce } from "./cc-room/openCliSession";
 import {
@@ -1906,7 +1907,8 @@ function App() {
   const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
   const isPetView = view.viewMode === "pet";
   const isPetSettingsView = view.viewMode === "pet_settings";
-  const isPetSurface = isPetView || isPetSettingsView;
+  const isPetMemoryView = view.viewMode === "pet_memory";
+  const isPetSurface = isPetView || isPetSettingsView || isPetMemoryView;
   const isChatView = view.viewMode === "chat";
   useEffect(() => {
     if (!isPetView) return;
@@ -2060,6 +2062,7 @@ function App() {
                     focusPending={petState.overviewFocus === "pending"}
                     excludedSessionIds={archivedPetSessionIds}
                     onNavigate={(request) => void handleOpenPetTarget(request)}
+                    onOpenMemory={() => setViewMode("pet_memory")}
                   />
                   <PetChatHost
                     defaultProjectPath={activeProject?.path ?? null}
@@ -2079,8 +2082,11 @@ function App() {
                   onResetModel={() => setPetChatModelKey(null)}
                   onWidgetVisibleChange={setPetWidgetVisibility}
                   onOpenConnections={() => setViewMode("credentials")}
+                  onOpenMemory={() => setViewMode("pet_memory")}
                   onBack={openPetPage}
                 />
+              ) : isPetMemoryView ? (
+                <PetMemoryCenterPage onBack={() => setViewMode("pet_settings")} />
               ) : registeredPageRender ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   {registeredPageRender({ runsInitialRunId })}

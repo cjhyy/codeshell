@@ -19,6 +19,9 @@ export const pet = {
         connectionsTitle: "消息连接",
         connectionsDescription: "管理个人微信、Telegram 等连接到 Mimi 的渠道。",
         manageConnections: "管理消息连接",
+        memoryTitle: "记忆与事件档案",
+        memoryDescription: "管理 Mimi 的长期记忆，开关自动提取，回看已归档的对话事件。",
+        manageMemory: "打开记忆中心",
       },
       overview: {
         title: "Mimi 工作台",
@@ -82,6 +85,11 @@ export const pet = {
           idle: "未分类",
         },
       },
+      followUp: {
+        title: "需要跟进",
+        openSessionAria: "打开会话「{title}」",
+        dismissAria: "忽略「{title}」的跟进提醒",
+      },
       memory: {
         title: "Mimi 记忆",
         summary: "记住了 {count} 条信息",
@@ -96,6 +104,27 @@ export const pet = {
         deleteConfirm: "「{text}」将从 Mimi 的记忆中永久删除。",
         sourceMimi: "Mimi 记录",
         sourceUser: "手动添加",
+        sourceAuto: "自动提取",
+        manage: "管理记忆",
+        recentEmpty: "还没有记忆",
+      },
+      memoryCenter: {
+        title: "Mimi 记忆中心",
+        subtitle: "管理长期记忆，回看已归档的对话事件",
+        back: "返回",
+        tabMemories: "长期记忆",
+        tabJournal: "事件档案",
+        autoExtractTitle: "自动提取记忆",
+        autoExtractDescription:
+          "一段对话结束后，让 Mimi 自动提炼值得长期记住的事实，并整理成事件档案。",
+        journalEmpty: "还没有归档的对话事件",
+        journalMessageCount: "{count} 条消息",
+        viewTranscript: "查看原文",
+        hideTranscript: "收起原文",
+        transcriptLoading: "正在加载原文…",
+        transcriptEmpty: "这段对话没有可显示的原文",
+        speakerUser: "我",
+        speakerMimi: "Mimi",
       },
       longTask: {
         title: "长程任务",
@@ -297,6 +326,10 @@ export const pet = {
         connectionsDescription:
           "Manage Personal WeChat, Telegram, and other channels connected to Mimi.",
         manageConnections: "Manage connections",
+        memoryTitle: "Memory & event journal",
+        memoryDescription:
+          "Manage Mimi's durable memory, toggle auto-extraction, and revisit archived conversation events.",
+        manageMemory: "Open memory center",
       },
       overview: {
         title: "Mimi workspace",
@@ -361,6 +394,11 @@ export const pet = {
           idle: "Unclassified",
         },
       },
+      followUp: {
+        title: "Needs follow-up",
+        openSessionAria: "Open session “{title}”",
+        dismissAria: "Dismiss the follow-up for “{title}”",
+      },
       memory: {
         title: "Mimi memory",
         summary: "{count} things remembered",
@@ -375,6 +413,27 @@ export const pet = {
         deleteConfirm: "“{text}” will be permanently removed from Mimi's memory.",
         sourceMimi: "Saved by Mimi",
         sourceUser: "Added manually",
+        sourceAuto: "Auto-extracted",
+        manage: "Manage memory",
+        recentEmpty: "No memories yet",
+      },
+      memoryCenter: {
+        title: "Mimi memory center",
+        subtitle: "Manage durable memory and revisit archived conversation events",
+        back: "Back",
+        tabMemories: "Durable memory",
+        tabJournal: "Event journal",
+        autoExtractTitle: "Auto-extract memory",
+        autoExtractDescription:
+          "After a conversation winds down, let Mimi distill durable facts and file the segment as an event.",
+        journalEmpty: "No archived conversation events yet",
+        journalMessageCount: "{count} messages",
+        viewTranscript: "View transcript",
+        hideTranscript: "Hide transcript",
+        transcriptLoading: "Loading transcript…",
+        transcriptEmpty: "No transcript to show for this segment",
+        speakerUser: "Me",
+        speakerMimi: "Mimi",
       },
       longTask: {
         title: "Long-running tasks",

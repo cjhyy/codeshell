@@ -1,12 +1,6 @@
-import { ArrowLeft, MessageCircleMore, Monitor, RotateCcw, Settings2 } from "lucide-react";
+import { ArrowLeft, Brain, MessageCircleMore, Monitor, RotateCcw, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import dogIcon from "../assets/codeshell-dog-icon.png";
 import { ModelPill, type ModelOption } from "../chat/ModelPill";
@@ -21,6 +15,7 @@ export interface PetSettingsPageProps {
   onResetModel: () => void;
   onWidgetVisibleChange: (visible: boolean) => void;
   onOpenConnections: () => void;
+  onOpenMemory: () => void;
   onBack: () => void;
 }
 
@@ -33,6 +28,7 @@ export function PetSettingsPage({
   onResetModel,
   onWidgetVisibleChange,
   onOpenConnections,
+  onOpenMemory,
   onBack,
 }: PetSettingsPageProps) {
   const { t } = useT();
@@ -119,6 +115,23 @@ export function PetSettingsPage({
                 onCheckedChange={onWidgetVisibleChange}
                 aria-label={t("pet.settings.widgetTitle")}
               />
+            </CardHeader>
+          </Card>
+
+          <Card data-pet-setting="memory" className="rounded-2xl">
+            <CardHeader className="flex-row items-start gap-3 space-y-0">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Brain size={18} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <CardTitle className="text-base">{t("pet.settings.memoryTitle")}</CardTitle>
+                <CardDescription className="leading-5">
+                  {t("pet.settings.memoryDescription")}
+                </CardDescription>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={onOpenMemory}>
+                {t("pet.settings.manageMemory")}
+              </Button>
             </CardHeader>
           </Card>
 

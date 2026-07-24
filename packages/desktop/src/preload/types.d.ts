@@ -90,6 +90,8 @@ export type {
   PetLongTaskControlResult,
   PetLongTaskSnapshot,
   PetMemoryEntry,
+  PetJournalEntry,
+  PetSegmentMessage,
   PetLatestSessionResult,
   PetSessionSummaryRow,
 } from "./pet-api";
