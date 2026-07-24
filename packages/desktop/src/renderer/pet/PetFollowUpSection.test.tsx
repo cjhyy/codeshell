@@ -21,7 +21,11 @@ describe("PetFollowUpSectionView", () => {
       <PetFollowUpSectionView
         rows={[
           row(),
-          row({ sessionId: "s2", title: "重构缓存", text: "记得后续确认失效策略是否覆盖 TTL 边界" }),
+          row({
+            sessionId: "s2",
+            title: "重构缓存",
+            text: "记得后续确认失效策略是否覆盖 TTL 边界",
+          }),
         ]}
         onOpen={() => {}}
         onDismiss={() => {}}
