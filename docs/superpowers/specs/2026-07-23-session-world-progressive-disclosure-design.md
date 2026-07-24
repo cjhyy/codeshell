@@ -83,10 +83,19 @@ session 并 resume 它继续干活；session 的更新自动反映到索引；�
 ### E. 工作台 UI（packages/desktop/src/renderer/pet）
 
 - `PetWorkTree` session 行支持展开显示"最新结果"（L2），点击进入 session（L3）。
-- 新增 TODO 聚合区块。**v1 降级：只聚合 TodoWrite 未完成项
-  （pending/in_progress）**——PendingDecision 已在工作树 pending 桶展示
-  （重复展示反而添噪音），PetWorkMemoryStore 的 unfinished 条目留到 v1.1。
-  每条带来源 session 跳转。**不做自由文本 TODO 挖掘**。
+- 新增 **"Mimi 小结"区块**（取代早先的 TodoWrite 聚合方案——用户明确不需要
+  聚合 TodoWrite）。需求：work session 跑完时末尾常问"需不需要我再做 X"或给
+  结论，用户看了就忘；工作台把这些收尾沉淀成提醒。
+  - 只对**终态**（`terminal.status === "completed"`）session 生成；运行中不碰。
+  - **惰性生成**：工作台请求时，对终态 session 逐个查持久化 store；缺失或
+    `terminal.at` 变化才调 **aux 模型**生成并落盘，已有直接返回（不看不烧钱）。
+  - aux 解析走 `resolveAuxKey` → `resolveLLMConfigForTag(settings,"text",auxId)`，
+    **aux 未配时回退 `defaults.text`**；one-shot 调用照 `dream-service.ts` 范式
+    （`createLLMClient` + `createMessage`，无 Engine/工具）。
+  - 产出**一段**自然语言（结论 + 待跟进追问），**不逐条**；aux 判定纯"完成了"
+    无信息量时返回空 → 该 session 不入列（只留有价值的）。
+  - 展示：按 `terminal.at` 倒序最近 N 条，可**手动 dismiss**（复用 work-inbox，
+    `completed:` 前缀 id），可跳回来源 session。
 
 ### F. 更新流
 
