@@ -101,6 +101,8 @@ import {
   touchesExternalSessionVisibility,
 } from "./pet/external-session-visibility.js";
 import { createLatestResultCache } from "./pet/latest-result-cache.js";
+import { createPetSummaryStore } from "./pet/pet-summary-store.js";
+import { createPetSummaryService } from "./pet/pet-summary-service.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import {
@@ -1269,6 +1271,20 @@ async function createWindow(): Promise<BrowserWindow> {
     // so the directory Mimi reads and the one selectors resolve against can
     // never drift apart.
     const petSessionsRootDir = sessionsRoot();
+    // Lazy "Mimi 小结" closure-summary layer: a persistent store keyed by
+    // session id + the aux summary service. summarize() is only called for
+    // completed sessions on a workbench pull (see the summaries collector).
+    const petSummaryStore = createPetSummaryStore(
+      resolve(app.getPath("userData"), "pet", "summaries.json"),
+    );
+    void petSummaryStore
+      .load()
+      .catch((error) => dlog("main", "pet.summary.load.failed", { error: String(error) }));
+    const petSummaryService = createPetSummaryService({
+      sessionsRootDir: petSessionsRootDir,
+      store: petSummaryStore,
+      cwd: resolveNoRepoCwd(),
+    });
     petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator,
@@ -1595,6 +1611,36 @@ async function createWindow(): Promise<BrowserWindow> {
         subscribe: (listener) => petMemoryStoreInstance.subscribe(listener),
       },
       latestResult: createLatestResultCache(petSessionsRootDir),
+      summaries: {
+        collect: async () => {
+          const completed = aggregator
+            .getSnapshot()
+            .sessions.filter(
+              (session) => !session.external && session.terminal?.status === "completed",
+            );
+          const rows: Array<{
+            sessionId: string;
+            title: string;
+            workspace?: string;
+            terminalAt: number;
+            text: string;
+          }> = [];
+          for (const session of completed) {
+            const terminalAt = session.terminal!.at;
+            const summary = await petSummaryService.summarize(session.agentSessionId, terminalAt);
+            if (!summary) continue;
+            rows.push({
+              sessionId: session.agentSessionId,
+              title: session.title ?? session.agentSessionId.slice(-8),
+              ...(session.workspaceDisplayName ? { workspace: session.workspaceDisplayName } : {}),
+              terminalAt,
+              text: summary.text,
+            });
+          }
+          rows.sort((left, right) => right.terminalAt - left.terminalAt);
+          return rows.slice(0, 20);
+        },
+      },
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });

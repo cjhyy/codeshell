@@ -554,6 +554,76 @@ describe("registerPetIpc", () => {
     expect(removed).not.toContain("pet:session-latest-result");
   });
 
+  test("collects closure summaries and rejects any argument", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const removed: string[] = [];
+    let collectCalls = 0;
+    const dispose = registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: (channel) => removed.push(channel as string),
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      summaries: {
+        collect: async () => {
+          collectCalls += 1;
+          return [
+            {
+              sessionId: "session-a",
+              title: "Finished work",
+              workspace: "codeshell",
+              terminalAt: 42,
+              text: "shipped the fix; want me to also add tests?",
+            },
+          ];
+        },
+      },
+      windows: () => [],
+    });
+    const handler = handlers.get("pet:summaries-get")!;
+
+    expect(await handler({})).toEqual([
+      {
+        sessionId: "session-a",
+        title: "Finished work",
+        workspace: "codeshell",
+        terminalAt: 42,
+        text: "shipped the fix; want me to also add tests?",
+      },
+    ]);
+    expect(collectCalls).toBe(1);
+    expect(() => handler({}, true)).toThrow("does not accept arguments");
+    expect(collectCalls).toBe(1);
+
+    dispose();
+    expect(removed).toContain("pet:summaries-get");
+  });
+
+  test("does not register the summaries handler when the option is absent", () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const removed: string[] = [];
+    const dispose = registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: (channel) => removed.push(channel as string),
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      windows: () => [],
+    });
+
+    expect(handlers.has("pet:summaries-get")).toBe(false);
+    dispose();
+    expect(removed).not.toContain("pet:summaries-get");
+  });
+
   test("mutates work inbox dismissal state in main and broadcasts the authoritative revision", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const sent: Array<[string, unknown]> = [];

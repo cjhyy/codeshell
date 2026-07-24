@@ -8,6 +8,7 @@ import React from "react";
 import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
 import { PetLongTaskSection } from "./PetLongTaskSection";
+import { PetSummarySection } from "./PetSummarySection";
 import { PetMemorySection } from "./PetMemorySection";
 import {
   loadDismissedPetWorkItemIds,
@@ -157,6 +158,21 @@ export function PetWorldPane({
               });
             }}
           />
+          {projection && (
+            <PetSummarySection
+              snapshotVersion={projection.version}
+              generation={projection.generation}
+              dismissedIds={dismissedIds}
+              onDismiss={(id) => dismissItems([id])}
+              onOpen={(sessionId) => {
+                onNavigate?.({
+                  agentSessionId: sessionId,
+                  snapshotVersion: projection.version,
+                  generation: projection.generation,
+                });
+              }}
+            />
+          )}
           <PetWorkTree
             workMap={workMap}
             emptyState={selected.emptyState}

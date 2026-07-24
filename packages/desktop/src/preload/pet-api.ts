@@ -241,6 +241,19 @@ export interface PetLatestSessionResult {
   timestamp?: number;
 }
 
+/**
+ * One "Mimi 小结" row: a natural-language closure paragraph for a completed
+ * work session, generated lazily by the aux model and cached. `text` is always
+ * non-empty (no-value sessions are dropped upstream).
+ */
+export interface PetSessionSummaryRow {
+  sessionId: string;
+  title: string;
+  workspace?: string;
+  terminalAt: number;
+  text: string;
+}
+
 /** One durable Mimi memory entry; editable from the UI and from Mimi's Memory tool. */
 export interface PetMemoryEntry {
   id: string;
@@ -292,6 +305,7 @@ export interface PetApi {
   removeMemory?(id: string): Promise<PetMemoryEntry>;
   onMemoriesChanged?(listener: (entries: PetMemoryEntry[]) => void): () => void;
   getLatestResult?(sessionId: string): Promise<PetLatestSessionResult | null>;
+  getSummaries?(): Promise<PetSessionSummaryRow[]>;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
   setWidgetSurface(mode: "collapsed" | "expanded"): Promise<{ ok: true }>;
@@ -384,6 +398,7 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
         "pet:session-latest-result",
         sessionId,
       ) as Promise<PetLatestSessionResult | null>,
+    getSummaries: () => ipcRenderer.invoke("pet:summaries-get") as Promise<PetSessionSummaryRow[]>,
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>
       ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,
