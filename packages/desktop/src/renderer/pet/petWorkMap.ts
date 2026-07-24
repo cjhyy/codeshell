@@ -140,7 +140,7 @@ function itemFromSession(
     workspace: session.workspaceDisplayName,
     title: session.title ?? session.workspaceDisplayName ?? session.agentSessionId.slice(-8),
     detail: pending?.title ?? (reminder ? reminder : session.summary),
-    ...(reminder && !pending ? { detailIsReminder: true } : {}),
+    ...(reminder ? { detailIsReminder: true } : {}),
     lastActivityAt: pending
       ? Math.max(session.lastActivityAt, pending.createdAt)
       : session.lastActivityAt,

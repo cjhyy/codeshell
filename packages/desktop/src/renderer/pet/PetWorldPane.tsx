@@ -89,7 +89,7 @@ export function PetWorldPane({
     },
     [applyDismissedSnapshot, receiveDismissedSnapshot],
   );
-  const reminders = useClosureReminders(projection?.version ?? 0);
+  const reminders = useClosureReminders(projection ? projection.version : null);
   const workMap = buildPetWorkMap(selected.sessions, selected.pending, {
     dismissedIds,
     excludedSessionIds,

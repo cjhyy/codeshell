@@ -8,6 +8,9 @@ import React from "react";
  * `Map<sessionId, reminder>` carrying only entries with non-empty text; a
  * completed/follow-up work-tree row uses it as its one-line follow-up detail.
  *
+ * Pass `null` while the projection is not ready to skip fetching entirely (the
+ * hook stays on the empty map until a real version arrives).
+ *
  * Lifted from the former standalone "Mimi 小结" block — the fetch/debounce/seq
  * shape is identical; only the consumer changed from a list to row enrichment.
  */
@@ -15,12 +18,13 @@ const FETCH_DEBOUNCE_MS = 2_000;
 
 const EMPTY: ReadonlyMap<string, string> = new Map();
 
-export function useClosureReminders(snapshotVersion: number): ReadonlyMap<string, string> {
+export function useClosureReminders(snapshotVersion: number | null): ReadonlyMap<string, string> {
   const [reminders, setReminders] = React.useState<ReadonlyMap<string, string>>(EMPTY);
   const seqRef = React.useRef(0);
   const loadedOnceRef = React.useRef(false);
 
   React.useEffect(() => {
+    if (snapshotVersion === null) return;
     let disposed = false;
     const run = (): void => {
       const seq = (seqRef.current += 1);
