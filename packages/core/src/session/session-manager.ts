@@ -648,7 +648,20 @@ export class SessionManager {
    * transcripts. Used by profile deletion guards so a reusable/historical
    * Session cannot be left permanently unresumable.
    */
-  findSessionIdsByWorkspaceProfile(profileName: string, limit = 20): string[] {
+  /**
+   * Sessions whose state pins this digital human.
+   *
+   * `includeArchived: false` drops archived Sessions: they are closed history,
+   * not a live binding, so they should not block deleting the profile. A
+   * dangling name is already handled downstream — resolveActiveWorkspaceProfile
+   * logs `profile.active_missing_from_library` and returns undefined.
+   */
+  findSessionIdsByWorkspaceProfile(
+    profileName: string,
+    limit = 20,
+    options: { includeArchived?: boolean } = {},
+  ): string[] {
+    const includeArchived = options.includeArchived !== false;
     const target = typeof profileName === "string" ? profileName.trim() : "";
     if (!target || target.length > 64 || limit <= 0) return [];
     const cap = Math.max(1, Math.min(100, Math.floor(limit)));
@@ -676,8 +689,11 @@ export class SessionManager {
         if (info.isSymbolicLink() || !info.isFile() || info.size > 1024 * 1024) continue;
         const state = JSON.parse(readFileSync(stateFile, "utf-8")) as {
           workspaceProfile?: unknown;
+          archivedAt?: unknown;
         };
-        if (state.workspaceProfile === target) matches.push(entry.name);
+        if (state.workspaceProfile !== target) continue;
+        if (!includeArchived && typeof state.archivedAt === "number") continue;
+        matches.push(entry.name);
       } catch {
         // Corrupt or unsafe Sessions are isolated from the deletion decision.
       }

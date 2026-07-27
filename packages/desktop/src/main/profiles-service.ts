@@ -476,7 +476,9 @@ export function previewProfileDeletion(name: string, cwd?: string): ProfileDelet
   const blockingTeams = listDigitalHumanTeams()
     .filter((team) => team.members.includes(name))
     .map((team) => team.name);
-  const blockingSessions = new SessionManager().findSessionIdsByWorkspaceProfile(name, 6);
+  const blockingSessions = new SessionManager().findSessionIdsByWorkspaceProfile(name, 6, {
+    includeArchived: false,
+  });
 
   let isActiveProjectDefault = false;
   if (cwd) {
@@ -510,12 +512,14 @@ export function deleteProfile(name: string, options: DeleteProfileOptions = {}):
     );
   }
 
-  const referencingSessions = new SessionManager().findSessionIdsByWorkspaceProfile(name, 6);
+  const referencingSessions = new SessionManager().findSessionIdsByWorkspaceProfile(name, 6, {
+    includeArchived: false,
+  });
   if (referencingSessions.length > 0) {
     throw new Error(
-      `Digital human "${name}" is still bound to existing Session${
+      `Digital human "${name}" is still bound to active Session${
         referencingSessions.length > 1 ? "s" : ""
-      }: ${referencingSessions.join(", ")}. Delete those Sessions before deleting the profile.`,
+      }: ${referencingSessions.join(", ")}. Archive or delete those Sessions first.`,
     );
   }
 

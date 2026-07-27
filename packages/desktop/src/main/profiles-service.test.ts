@@ -432,6 +432,22 @@ describe("desktop profiles service", () => {
     expect(preview.blockingTeams).toEqual(["Delivery"]);
   });
 
+  test("an archived Session does not block deletion", () => {
+    const sessionDir = join(home, "sessions", "session-archived");
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(
+      join(sessionDir, "state.json"),
+      JSON.stringify({ workspaceProfile: "seedance", archivedAt: 1785137194100 }),
+    );
+
+    // Archived means the work is closed; requiring the user to delete closed
+    // history just to remove a digital human is disproportionate. A dangling
+    // name is already tolerated by resolveActiveWorkspaceProfile.
+    expect(previewProfileDeletion("seedance", cwd).canDelete).toBe(true);
+    deleteProfile("seedance", { cwd });
+    expect(listProfiles().some((profile) => profile.name === "seedance")).toBe(false);
+  });
+
   test("previewProfileDeletion clears once nothing references the profile", () => {
     const preview = previewProfileDeletion("seedance", cwd);
     expect(preview.canDelete).toBe(true);

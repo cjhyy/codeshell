@@ -40,4 +40,32 @@ describe("SessionManager digital-human reference scan", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test("can skip archived Sessions, which are history rather than live bindings", () => {
+    const root = mkdtempSync(join(tmpdir(), "session-profile-archived-"));
+    try {
+      const manager = new SessionManager(root);
+      mkdirSync(join(root, "session-live"));
+      writeFileSync(
+        join(root, "session-live", "state.json"),
+        JSON.stringify({ workspaceProfile: "researcher" }),
+      );
+      mkdirSync(join(root, "session-archived"));
+      writeFileSync(
+        join(root, "session-archived", "state.json"),
+        JSON.stringify({ workspaceProfile: "researcher", archivedAt: 1785137194100 }),
+      );
+
+      // Default stays inclusive so existing callers keep their semantics.
+      expect(manager.findSessionIdsByWorkspaceProfile("researcher")).toEqual([
+        "session-archived",
+        "session-live",
+      ]);
+      expect(
+        manager.findSessionIdsByWorkspaceProfile("researcher", 20, { includeArchived: false }),
+      ).toEqual(["session-live"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
