@@ -9,6 +9,27 @@ export {
   type WorkspaceProfileRequirements,
 } from "./types.js";
 export {
+  CATALOG_REPO_RE,
+  parseHumansManifest,
+  readCatalogFromDir,
+  sourceToRepoKey,
+  type CatalogEntry as DigitalHumanCatalogSourceEntry,
+  type CatalogReadResult,
+  type HumansManifest,
+  type HumansManifestEntry,
+} from "./catalog.js";
+export {
+  addHumanRepo,
+  humanRepoDir,
+  humanReposRoot,
+  listHumanRepoDetails,
+  listHumanRepos,
+  readAllHumanRepoEntries,
+  removeHumanRepo,
+  type HumanRepoListEntry,
+  type RegisteredHumanRepo,
+} from "./catalog-store.js";
+export {
   buildSkillInstallArgs,
   planProfileRequirements,
   summarizeSkillConflicts,

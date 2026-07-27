@@ -356,17 +356,21 @@ import {
 } from "./sources-service.js";
 import {
   activateProfile,
+  addProfileRepo,
   deleteProfile,
   deactivateProfile,
   exportProfileDefinition,
+  exportProfileRepo,
   importReviewedProfileDefinition,
   installCatalogProfile,
   installProfileRequirements,
   listProfileCatalog,
+  listProfileRepos,
   listProfiles,
   previewProfileDefinitionImport,
   previewProfileDeletion,
   previewProfileRequirements,
+  removeProfileRepo,
   saveProfile,
   setSessionWorkspaceProfile,
 } from "./profiles-service.js";
@@ -2579,6 +2583,15 @@ ipcMain.handle("profiles:install", async (_e, name: string) => {
   if (typeof name !== "string" || !name) throw new Error("profiles:install requires name");
   installCatalogProfile(name);
 });
+ipcMain.handle("profiles:listRepos", async () => listProfileRepos());
+ipcMain.handle("profiles:addRepo", async (_e, repo: string) => {
+  if (typeof repo !== "string" || !repo) throw new Error("profiles:addRepo requires repo");
+  return addProfileRepo(repo.trim());
+});
+ipcMain.handle("profiles:removeRepo", async (_e, repo: string) => {
+  if (typeof repo !== "string" || !repo) throw new Error("profiles:removeRepo requires repo");
+  removeProfileRepo(repo);
+});
 ipcMain.handle("profiles:previewDeletion", async (_e, name: string, cwd?: string) => {
   if (typeof name !== "string" || !name) throw new Error("profiles:previewDeletion requires name");
   if (cwd !== undefined && typeof cwd !== "string") {
@@ -2655,6 +2668,21 @@ ipcMain.handle("profiles:exportDefinition", async (event, name: string) => {
     : await dialog.showSaveDialog(options);
   if (result.canceled || !result.filePath) return { canceled: true };
   return exportProfileDefinition(name, result.filePath);
+});
+ipcMain.handle("profiles:exportRepo", async (event, names: string[]) => {
+  if (!Array.isArray(names) || names.length === 0 || names.some((n) => typeof n !== "string")) {
+    throw new Error("profiles:exportRepo requires profile names");
+  }
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const options = {
+    title: "Export digital humans as a publishable repo",
+    properties: ["openDirectory", "createDirectory"] as const,
+  };
+  const picked = win
+    ? await dialog.showOpenDialog(win, { ...options, properties: [...options.properties] })
+    : await dialog.showOpenDialog({ ...options, properties: [...options.properties] });
+  if (picked.canceled || picked.filePaths.length === 0) return { canceled: true };
+  return exportProfileRepo(names, picked.filePaths[0]);
 });
 ipcMain.handle(
   "profiles:delete",

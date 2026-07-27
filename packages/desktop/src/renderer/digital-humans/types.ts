@@ -59,6 +59,8 @@ export interface DigitalHumanCatalogEntry extends Omit<DigitalHumanProfileEntry,
   category: "product" | "design" | "engineering" | "quality";
   tags: string[];
   samplePrompts: string[];
+  /** Set when the entry came from a registered digital-human repo. */
+  sourceRepo?: string;
   installed: boolean;
 }
 

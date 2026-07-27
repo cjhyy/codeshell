@@ -171,6 +171,17 @@ export const settingsNs = {
         title: "数字人库",
         subtitle: "管理全局数字人定义；市场安装与团队编排在数字人页。",
         openMarket: "打开数字人页",
+        repos: {
+          title: "数字人仓库",
+          description:
+            "从 git 仓库批量获取数字人。添加会克隆到本地（需要网络），其中的数字人会出现在数字人广场。",
+          placeholder: "owner/repo，例如 cjhyy/mimi-humans",
+          add: "添加仓库",
+          remove: "移除",
+          empty: "还没有添加数字人仓库。",
+          count: "{count} 个数字人",
+          issues: "{count} 条问题",
+        },
         create: "新建",
         edit: "编辑",
         empty: "还没有数字人，点击「新建」或从市场安装。",
@@ -1018,6 +1029,17 @@ export const settingsNs = {
         subtitle:
           "Manage global digital human definitions; market installs and teams live on the Digital humans page.",
         openMarket: "Open digital humans",
+        repos: {
+          title: "Digital-human repos",
+          description:
+            "Pull digital humans from a git repo. Adding one clones it locally (needs network); its humans then appear in the market.",
+          placeholder: "owner/repo, e.g. cjhyy/mimi-humans",
+          add: "Add repo",
+          remove: "Remove",
+          empty: "No digital-human repos added yet.",
+          count: "{count} digital humans",
+          issues: "{count} issue(s)",
+        },
         create: "Create",
         edit: "Edit",
         empty: "No digital humans yet — create one or install from the market.",

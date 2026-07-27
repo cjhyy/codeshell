@@ -1524,8 +1524,34 @@ export interface CodeshellApi {
       tags: string[];
       samplePrompts: string[];
       installed: boolean;
+      /** Present when the entry came from a registered digital-human repo. */
+      sourceRepo?: string;
     }>
   >;
+  /** Registered digital-human repos, with how many humans each currently offers. */
+  listProfileRepos(): Promise<
+    Array<{
+      repo: string;
+      addedAt: number;
+      count: number;
+      errors: string[];
+      cloned: boolean;
+    }>
+  >;
+  /** Clones (or refreshes) a digital-human repo — network + disk write. */
+  addProfileRepo(
+    repo: string,
+  ): Promise<
+    | { ok: true; entry: { repo: string; addedAt: number; count: number; errors: string[] } }
+    | { ok: false; error: string }
+  >;
+  removeProfileRepo(repo: string): Promise<void>;
+  /**
+   * Write the named digital humans into a chosen directory as a publishable
+   * repo (humans.json + humans/<name>/profile.json + README) so it can be
+   * pushed to GitHub and installed by others via `owner/repo`.
+   */
+  exportProfileRepo(names: string[]): Promise<{ canceled: true } | { ok: true; written: string[] }>;
   installCatalogProfile(name: string): Promise<void>;
   /** Read-only: why this digital human can or cannot be deleted. Deletes nothing. */
   previewProfileDeletion(

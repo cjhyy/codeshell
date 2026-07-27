@@ -2,6 +2,7 @@ import React from "react";
 import { ExternalLink, Pencil, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { useT } from "../i18n";
 import { useToast } from "../ui/ToastProvider";
 import { DigitalHumanEditorDialog } from "../digital-humans/DigitalHumanEditorDialog";
@@ -173,8 +174,130 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
         onOpenChange={setEditorOpen}
         onSave={(profile) => void save(profile)}
       />
+      <DigitalHumanReposPanel />
       <PetExternalSessionsToggles scope="user" />
     </section>
+  );
+}
+
+type RepoRow = Awaited<ReturnType<typeof window.codeshell.listProfileRepos>>[number];
+
+/**
+ * 数字人仓库管理。
+ *
+ * 数字人不寄生于插件市场——它有自己的定义格式与分发通道，仓库只是把「一批定义」
+ * 打包。添加会克隆远程仓库（网络 + 磁盘写入），所以按钮上明说，并把失败原因
+ * 原样呈现，而不是吞掉。
+ */
+function DigitalHumanReposPanel() {
+  const { t } = useT();
+  const [repos, setRepos] = React.useState<RepoRow[]>([]);
+  const [input, setInput] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const refresh = React.useCallback(async () => {
+    try {
+      setRepos(await window.codeshell.listProfileRepos());
+    } catch (caught) {
+      setError(errorMessage(caught));
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const add = async () => {
+    const repo = input.trim();
+    if (!repo) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await window.codeshell.addProfileRepo(repo);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setInput("");
+      await refresh();
+    } catch (caught) {
+      setError(errorMessage(caught));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-md border border-border/70 bg-background/40 p-3">
+      <div>
+        <h4 className="text-xs font-medium text-foreground">
+          {t("settingsX.digitalHumans.repos.title")}
+        </h4>
+        <p className="text-xs text-muted-foreground">
+          {t("settingsX.digitalHumans.repos.description")}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") void add();
+          }}
+          placeholder={t("settingsX.digitalHumans.repos.placeholder")}
+          aria-label={t("settingsX.digitalHumans.repos.title")}
+          className="h-8 min-w-56 flex-1 text-xs"
+          disabled={busy}
+        />
+        <Button size="sm" onClick={() => void add()} disabled={busy || !input.trim()}>
+          {t("settingsX.digitalHumans.repos.add")}
+        </Button>
+      </div>
+      {error ? <p className="text-xs text-status-err">{error}</p> : null}
+      {repos.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{t("settingsX.digitalHumans.repos.empty")}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {repos.map((repo) => (
+            <li
+              key={repo.repo}
+              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-1.5"
+            >
+              <div className="min-w-0">
+                <span className="font-mono text-xs text-foreground">{repo.repo}</span>
+                <p className="text-[11px] text-muted-foreground">
+                  {t("settingsX.digitalHumans.repos.count", { count: repo.count })}
+                  {repo.errors.length > 0
+                    ? ` · ${t("settingsX.digitalHumans.repos.issues", {
+                        count: repo.errors.length,
+                      })}`
+                    : ""}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await window.codeshell.removeProfileRepo(repo.repo);
+                    await refresh();
+                  } catch (caught) {
+                    setError(errorMessage(caught));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {t("settingsX.digitalHumans.repos.remove")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

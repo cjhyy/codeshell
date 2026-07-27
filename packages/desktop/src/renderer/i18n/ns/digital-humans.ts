@@ -11,11 +11,16 @@ export const digitalHumans = {
       loadFailed: "数字人库加载失败",
       retry: "重试",
       moreActions: "「{name}」的更多操作",
+      publish: {
+        hint: "把这些数字人导出成仓库骨架，push 到 GitHub 后别人填 owner/repo 就能装。",
+        action: "发布为仓库",
+        done: "已导出 {count} 个数字人的仓库骨架（不含记忆内容）",
+      },
       noSearchResults: "没有匹配结果",
       noSearchResultsDescription: "换一个关键词，或清空搜索条件后再试。",
       emptyCatalog: "广场暂无内置数字人",
       emptyCatalogDescription:
-        "内置数字人已移除（原先那批只有提示词差异，没有实际能力）。用「导入定义 JSON」添加，或到 github.com/cjhyy/mimi-humans 获取自带依赖的数字人。",
+        "在设置 › 数字人 › 数字人仓库添加一个仓库（如 cjhyy/mimi-humans），其中的数字人会出现在这里；也可以直接导入定义 JSON 或自己新建。",
       tabs: { market: "数字人广场", mine: "我的数字人", teams: "数字人团队" },
       marketHint: "当前提供本地精选数字人；添加后归入“我的数字人”，可继续编辑方法和 Skills。",
       installed: "已添加",
@@ -257,11 +262,16 @@ export const digitalHumans = {
       loadFailed: "Could not load the digital-human library",
       retry: "Retry",
       moreActions: "More actions for “{name}”",
+      publish: {
+        hint: "Export these as a repo skeleton; push it to GitHub and others install it with owner/repo.",
+        action: "Publish as repo",
+        done: "Exported a repo skeleton for {count} digital humans (no memory content)",
+      },
       noSearchResults: "No matching results",
       noSearchResultsDescription: "Try another keyword or clear the search.",
       emptyCatalog: "No bundled digital humans",
       emptyCatalogDescription:
-        "The bundled starters were removed (they differed only by prompt, with no real capabilities). Use “Import definition JSON”, or get dependency-carrying ones from github.com/cjhyy/mimi-humans.",
+        "Add a repo under Settings › Digital humans › Digital-human repos (e.g. cjhyy/mimi-humans) and its humans show up here. You can also import a definition JSON or create one.",
       tabs: { market: "Market", mine: "My digital humans", teams: "Teams" },
       marketHint:
         "The current catalog is curated locally. Added entries appear under My digital humans and remain editable.",

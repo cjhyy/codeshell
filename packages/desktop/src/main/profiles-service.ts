@@ -22,12 +22,17 @@ import {
 import { spawnSync } from "node:child_process";
 import {
   activateWorkspaceProfile,
+  addHumanRepo,
   deactivateWorkspaceProfile,
   deleteWorkspaceProfile,
+  listHumanRepoDetails,
   listWorkspaceProfiles,
+  readAllHumanRepoEntries,
   readWorkspaceProfile,
+  removeHumanRepo,
   resolveActiveWorkspaceProfile,
   saveWorkspaceProfile,
+  type HumanRepoListEntry,
 } from "@cjhyy/code-shell-core/internal";
 import { randomUUID } from "node:crypto";
 import {
@@ -35,13 +40,14 @@ import {
   constants,
   fstatSync,
   lstatSync,
+  mkdirSync,
   openSync,
   readSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { DIGITAL_HUMAN_CATALOG, type DigitalHumanCatalogEntry } from "./digital-human-catalog.js";
 import { listDigitalHumanTeams } from "./digital-human-team-service.js";
 import type {
@@ -349,18 +355,140 @@ export function setSessionWorkspaceProfile(
 
 export type ProfileCatalogEntry = DigitalHumanCatalogEntry & { installed: boolean };
 
+const CATALOG_CATEGORIES = new Set(["product", "design", "engineering", "quality"]);
+
+function normalizeCategory(value: string | undefined): DigitalHumanCatalogEntry["category"] {
+  return value && CATALOG_CATEGORIES.has(value)
+    ? (value as DigitalHumanCatalogEntry["category"])
+    : "product";
+}
+
+/**
+ * 广场 = 内置目录（现为空）+ 已注册数字人仓库提供的定义。
+ *
+ * 内置常量保留只为让远程目录接上来时 IPC 契约不变；实际内容全部来自用户添加的
+ * 仓库，见 core 的 catalog-store。
+ */
 export function listProfileCatalog(): ProfileCatalogEntry[] {
-  return DIGITAL_HUMAN_CATALOG.map((entry) => ({
+  const bundled = DIGITAL_HUMAN_CATALOG.map((entry) => ({
     ...entry,
     installed: readWorkspaceProfile(entry.name) !== undefined,
   }));
+  const fromRepos = readAllHumanRepoEntries().entries.map((entry) => ({
+    ...entry.profile,
+    category: normalizeCategory(entry.category),
+    tags: entry.tags,
+    samplePrompts: [],
+    sourceRepo: entry.sourceRepo,
+    installed: readWorkspaceProfile(entry.profile.name) !== undefined,
+  }));
+  return [...bundled, ...fromRepos];
 }
 
 export function installCatalogProfile(name: string): void {
-  const entry = DIGITAL_HUMAN_CATALOG.find((candidate) => candidate.name === name);
-  if (!entry) throw new Error(`Unknown digital human catalog entry "${name}"`);
-  const { category: _category, tags: _tags, samplePrompts: _samplePrompts, ...profile } = entry;
-  saveWorkspaceProfile(profile);
+  const bundled = DIGITAL_HUMAN_CATALOG.find((candidate) => candidate.name === name);
+  if (bundled) {
+    const { category: _c, tags: _t, samplePrompts: _s, ...profile } = bundled;
+    saveWorkspaceProfile(profile);
+    return;
+  }
+  const fromRepo = readAllHumanRepoEntries().entries.find((entry) => entry.profile.name === name);
+  if (!fromRepo) throw new Error(`Unknown digital human catalog entry "${name}"`);
+  saveWorkspaceProfile(fromRepo.profile);
+}
+
+/** 添加一个数字人仓库（克隆/更新）。会写磁盘并访问网络。 */
+export async function addProfileRepo(repo: string) {
+  return addHumanRepo(repo);
+}
+
+export function removeProfileRepo(repo: string): void {
+  removeHumanRepo(repo);
+}
+
+export function listProfileRepos(): HumanRepoListEntry[] {
+  return listHumanRepoDetails();
+}
+
+/**
+ * 把选中的数字人导出成**一个可发布的仓库骨架**（humans.json + humans/<name>/
+ * profile.json + README），而不是一份裸 JSON。
+ *
+ * 单个 JSON 只能靠人肉传文件；生成成仓库布局后，`git init && git push` 出去，
+ * 别人填 `owner/repo` 就能装——这是「发布给别人用」缺的那一环。
+ *
+ * 与 exportProfileDefinition 一致：只写定义，绝不包含可移植记忆内容。
+ */
+export function exportProfileRepo(
+  names: string[],
+  destDir: string,
+): { ok: true; written: string[] } {
+  if (!Array.isArray(names) || names.length === 0) {
+    throw new Error("Digital-human repo export requires at least one profile");
+  }
+  if (typeof destDir !== "string" || !destDir) {
+    throw new Error("Digital-human repo export requires a destination directory");
+  }
+  const destInfo = lstatSync(destDir);
+  if (destInfo.isSymbolicLink() || !destInfo.isDirectory()) {
+    throw new Error("Digital-human repo export destination must be a regular directory");
+  }
+
+  const profiles: WorkspaceProfile[] = [];
+  for (const name of names) {
+    if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
+    const profile = readWorkspaceProfile(name);
+    if (!profile) throw new Error(`Digital human "${name}" is not installed`);
+    profiles.push(profile);
+  }
+
+  const written: string[] = [];
+  for (const profile of profiles) {
+    const dir = join(destDir, "humans", profile.name);
+    mkdirSync(dir, { recursive: true });
+    const target = join(dir, "profile.json");
+    writeFileSync(target, `${JSON.stringify(profile, null, 2)}\n`, { encoding: "utf-8" });
+    written.push(target);
+  }
+
+  const manifest = {
+    name: basename(destDir),
+    description: "codeshell digital humans",
+    humans: profiles.map((profile) => ({
+      name: profile.name,
+      label: profile.label,
+      ...(profile.description ? { description: profile.description } : {}),
+      path: `./humans/${profile.name}`,
+    })),
+  };
+  const manifestPath = join(destDir, "humans.json");
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf-8" });
+  written.push(manifestPath);
+
+  const readmePath = join(destDir, "README.md");
+  if (!lstatIfPresent(readmePath)) {
+    const rows = profiles.map((p) => `| ${p.label} | \`${p.name}\` | ${p.basePreset} |`).join("\n");
+    writeFileSync(
+      readmePath,
+      [
+        `# ${basename(destDir)}`,
+        "",
+        "codeshell 数字人仓库。推到 GitHub 后，别人在",
+        "**设置 › 数字人 › 数字人仓库** 填 `owner/repo` 即可安装。",
+        "",
+        "| 数字人 | ID | Preset |",
+        "| --- | --- | --- |",
+        rows,
+        "",
+        "> 只包含数字人定义，不含任何可移植记忆内容。",
+        "",
+      ].join("\n"),
+      { encoding: "utf-8" },
+    );
+    written.push(readmePath);
+  }
+
+  return { ok: true, written };
 }
 
 export interface ProfileRequirementPreview extends RequirementPlanSummary {

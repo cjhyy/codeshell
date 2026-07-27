@@ -201,6 +201,18 @@ export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: P
     });
   };
 
+  /** Write every library digital human out as a git-ready repo skeleton. */
+  const publishProfileRepo = async () => {
+    await operations.run("publish-repo", async () => {
+      const result = await window.codeshell.exportProfileRepo(profiles.map((p) => p.name));
+      if ("canceled" in result) return;
+      toast({
+        message: t("digitalHumans.publish.done", { count: profiles.length }),
+        variant: "success",
+      });
+    });
+  };
+
   const deleteProfileEntry = async (profile: DigitalHumanProfileEntry) => {
     // Preflight first: deleteProfile throws when a team or Session still binds
     // the profile, but that lands AFTER the user confirmed, as a raw English
@@ -770,6 +782,25 @@ export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: P
                 </TabsContent>
 
                 <TabsContent value="mine" className="mt-5">
+                  {profiles.length > 0 ? (
+                    // Publishing is the missing half of sharing: a single JSON
+                    // has to be hand-delivered, whereas a repo layout can be
+                    // pushed and installed by `owner/repo`.
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/20 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">
+                        {t("digitalHumans.publish.hint")}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={operations.isBusy("publish-repo")}
+                        onClick={() => void publishProfileRepo()}
+                      >
+                        <Upload size={13} aria-hidden="true" />
+                        {t("digitalHumans.publish.action")}
+                      </Button>
+                    </div>
+                  ) : null}
                   {profiles.length === 0 ? (
                     <EmptyState
                       Icon={Brain}
@@ -1219,8 +1250,11 @@ function CatalogCard({
                 </Badge>
               ) : null}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 truncate text-[11px] text-muted-foreground">
               {t(`digitalHumans.market.category.${entry.category}`)}
+              {/* Provenance matters once entries come from user-added repos —
+                  the user should see whose definition they are installing. */}
+              {entry.sourceRepo ? ` · ${entry.sourceRepo}` : ""}
             </p>
           </div>
         </div>

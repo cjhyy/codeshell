@@ -1030,6 +1030,9 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("profiles:setSession", sessionId, profileName),
   listProfileCatalog: () => ipcRenderer.invoke("profiles:catalog"),
   installCatalogProfile: (name: string) => ipcRenderer.invoke("profiles:install", name),
+  listProfileRepos: () => ipcRenderer.invoke("profiles:listRepos"),
+  addProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:addRepo", repo),
+  removeProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:removeRepo", repo),
   previewProfileDeletion: (name: string, cwd?: string) =>
     ipcRenderer.invoke("profiles:previewDeletion", name, cwd),
   previewProfileRequirements: (name: string, cwd: string) =>
@@ -1043,6 +1046,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     input: import("../shared/digital-human-profile-transfer").DigitalHumanProfileImportCommitInput,
   ) => ipcRenderer.invoke("profiles:importReviewedDefinition", input),
   exportProfileDefinition: (name: string) => ipcRenderer.invoke("profiles:exportDefinition", name),
+  exportProfileRepo: (names: string[]) => ipcRenderer.invoke("profiles:exportRepo", names),
   deleteProfile: (name: string, options?: { cwd?: string; clearActiveProject?: boolean }) =>
     ipcRenderer.invoke("profiles:delete", name, options),
   listDigitalHumanTeams: () => ipcRenderer.invoke("digital-human-teams:list"),

@@ -232,6 +232,15 @@ export {
   profileOverridesFromDefinition,
 } from "./profile/activation.js";
 export { resolveActiveWorkspaceProfile, workspaceProfilePresetFor } from "./profile/resolve.js";
+export {
+  addHumanRepo,
+  listHumanRepoDetails,
+  listHumanRepos,
+  readAllHumanRepoEntries,
+  removeHumanRepo,
+  type HumanRepoListEntry,
+} from "./profile/catalog-store.js";
+export { type CatalogEntry as DigitalHumanCatalogSourceEntry } from "./profile/catalog.js";
 export { CapabilityService } from "./capability-control/service.js";
 export { CapabilityNotFoundError } from "./capability-control/types.js";
 export {
