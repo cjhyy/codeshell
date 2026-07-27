@@ -350,13 +350,7 @@ export function listProfileCatalog(): ProfileCatalogEntry[] {
 export function installCatalogProfile(name: string): void {
   const entry = DIGITAL_HUMAN_CATALOG.find((candidate) => candidate.name === name);
   if (!entry) throw new Error(`Unknown digital human catalog entry "${name}"`);
-  const {
-    category: _category,
-    tags: _tags,
-    samplePrompts: _samplePrompts,
-    usageCount: _usageCount,
-    ...profile
-  } = entry;
+  const { category: _category, tags: _tags, samplePrompts: _samplePrompts, ...profile } = entry;
   saveWorkspaceProfile(profile);
 }
 

@@ -73,7 +73,6 @@ export const digitalHumans = {
           quality: { title: "质量保障" },
         },
         details: "查看详情",
-        uses: "次使用",
         members: "位成员",
       },
       detail: {
@@ -307,7 +306,6 @@ export const digitalHumans = {
           quality: { title: "Quality assurance" },
         },
         details: "View details",
-        uses: "uses",
         members: "members",
       },
       detail: {

@@ -102,16 +102,16 @@ describe("desktop profiles service", () => {
     );
   });
 
-  test("installs a starter digital human from the local catalog", () => {
-    const entry = listProfileCatalog().find((candidate) => candidate.name === "product-researcher");
-    expect(entry?.installed).toBe(false);
-    expect(entry?.samplePrompts.length).toBeGreaterThanOrEqual(2);
-    expect(entry?.usageCount).toBeGreaterThan(0);
-    installCatalogProfile("product-researcher");
-    expect(listProfiles().some((entry) => entry.name === "product-researcher")).toBe(true);
-    expect(
-      listProfileCatalog().find((entry) => entry.name === "product-researcher")?.installed,
-    ).toBe(true);
+  test("the bundled catalog ships empty", () => {
+    // The 8 hardcoded starters were removed: they carried no capability
+    // difference (plugins/skills/mcp/agents all empty) and fabricated usage
+    // counts. The read model stays so a remote catalog can fill it later.
+    expect(listProfileCatalog()).toEqual([]);
+  });
+
+  test("installing an unknown catalog entry fails loudly", () => {
+    expect(() => installCatalogProfile("product-researcher")).toThrow(/Unknown digital human/);
+    expect(listProfiles().some((entry) => entry.name === "product-researcher")).toBe(false);
   });
 
   test("creates and updates a digital human with assigned skills", () => {

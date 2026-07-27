@@ -1523,7 +1523,6 @@ export interface CodeshellApi {
       category: "product" | "design" | "engineering" | "quality";
       tags: string[];
       samplePrompts: string[];
-      usageCount: number;
       installed: boolean;
     }>
   >;

@@ -100,11 +100,7 @@ function modeKey(mode: DigitalHumanTeamMode): "auto" | "divide" | "compare" {
   return mode;
 }
 
-export function DigitalHumansView({
-  activeProjectPath,
-  onUse,
-  confirmDelete,
-}: Props) {
+export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: Props) {
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
@@ -221,11 +217,9 @@ export function DigitalHumansView({
       clearsProjectDefault: false,
     });
     if (!accepted) return;
-    await run(
-      `delete-team:${team.id}`,
-      () => window.codeshell.deleteDigitalHumanTeam(team.id),
-      { name: team.name },
-    );
+    await run(`delete-team:${team.id}`, () => window.codeshell.deleteDigitalHumanTeam(team.id), {
+      name: team.name,
+    });
   };
 
   const pickProfileDefinitionImport = async () => {
@@ -984,12 +978,6 @@ function initials(label: string): string {
   return label.trim().slice(0, 2).toUpperCase();
 }
 
-function formatUsageCount(value: number): string {
-  return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(
-    value,
-  );
-}
-
 function DigitalHumanAvatar({
   id,
   label,
@@ -1110,8 +1098,7 @@ function CatalogCard({
               ) : null}
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              {t(`digitalHumans.market.category.${entry.category}`)} ·{" "}
-              {formatUsageCount(entry.usageCount)} {t("digitalHumans.market.uses")}
+              {t(`digitalHumans.market.category.${entry.category}`)}
             </p>
           </div>
         </div>
@@ -1174,8 +1161,7 @@ function CuratedTeamCard({
               {installed ? <Badge variant="success">{t("digitalHumans.installed")}</Badge> : null}
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              {team.members.length} {t("digitalHumans.market.members")} ·{" "}
-              {formatUsageCount(team.usageCount)} {t("digitalHumans.market.uses")}
+              {team.members.length} {t("digitalHumans.market.members")}
             </p>
           </div>
         </div>
@@ -1473,7 +1459,6 @@ function DigitalHumanDetailDialog({
         category: detail.entry.category as DigitalHumanCategory | undefined,
         tags: detail.entry.tags,
         prompts: detail.entry.samplePrompts,
-        usageCount: detail.entry.usageCount as number | undefined,
         installed: detail.entry.installed,
         team: false,
         members: [] as string[],
@@ -1493,7 +1478,6 @@ function DigitalHumanDetailDialog({
           ...(detail.profile.portableMemory ? [t("digitalHumans.portableMemory")] : []),
         ],
         prompts: profileSamplePrompts(detail.profile),
-        usageCount: undefined,
         installed: true,
         team: false,
         members: [] as string[],
@@ -1509,7 +1493,6 @@ function DigitalHumanDetailDialog({
         category: detail.team.category as DigitalHumanCategory | undefined,
         tags: detail.team.tags,
         prompts: detail.team.samplePrompts,
-        usageCount: detail.team.usageCount as number | undefined,
         installed: Boolean(installedTeam),
         team: true,
         members: installedTeam?.members ?? detail.team.members,
@@ -1529,7 +1512,6 @@ function DigitalHumanDetailDialog({
         t("digitalHumans.detail.teamPrompt", { name: detail.team.name }),
         t("digitalHumans.detail.teamReviewPrompt", { name: detail.team.name }),
       ],
-      usageCount: undefined,
       installed: true,
       team: true,
       members: detail.team.members,
@@ -1581,11 +1563,6 @@ function DigitalHumanDetailDialog({
                 <DialogDescription className="mt-1.5 flex flex-wrap items-center gap-2">
                   {view.category ? (
                     <span>{t(`digitalHumans.market.category.${view.category}`)}</span>
-                  ) : null}
-                  {view.usageCount !== undefined ? (
-                    <span>
-                      {formatUsageCount(view.usageCount)} {t("digitalHumans.market.uses")}
-                    </span>
                   ) : null}
                   {view.installed ? (
                     <span className="inline-flex items-center gap-1 text-status-ok">
