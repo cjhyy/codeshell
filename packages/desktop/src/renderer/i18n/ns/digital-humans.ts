@@ -12,6 +12,9 @@ export const digitalHumans = {
       retry: "重试",
       noSearchResults: "没有匹配结果",
       noSearchResultsDescription: "换一个关键词，或清空搜索条件后再试。",
+      emptyCatalog: "广场暂无内置数字人",
+      emptyCatalogDescription:
+        "内置数字人已移除（原先那批只有提示词差异，没有实际能力）。用「导入定义 JSON」添加，或到 github.com/cjhyy/mimi-humans 获取自带依赖的数字人。",
       tabs: { market: "数字人广场", mine: "我的数字人", teams: "数字人团队" },
       marketHint: "当前提供本地精选数字人；添加后归入“我的数字人”，可继续编辑方法和 Skills。",
       installed: "已添加",
@@ -250,6 +253,9 @@ export const digitalHumans = {
       retry: "Retry",
       noSearchResults: "No matching results",
       noSearchResultsDescription: "Try another keyword or clear the search.",
+      emptyCatalog: "No bundled digital humans",
+      emptyCatalogDescription:
+        "The bundled starters were removed (they differed only by prompt, with no real capabilities). Use “Import definition JSON”, or get dependency-carrying ones from github.com/cjhyy/mimi-humans.",
       tabs: { market: "Market", mine: "My digital humans", teams: "Teams" },
       marketHint:
         "The current catalog is curated locally. Added entries appear under My digital humans and remain editable.",

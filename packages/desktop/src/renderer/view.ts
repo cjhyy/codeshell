@@ -8,7 +8,7 @@ export const BUILTIN_VIEW_MODES = [
   "pet", // first-class Pet workspace; never layered over chat
   "pet_settings", // Mimi-only settings, separate from the global settings center
   "pet_memory", // Mimi memory center: durable memory + event journal
-  "digital_humans", // market, installed digital humans, and Pet-led teams
+  "digital_humans", // catalog, installed digital humans, and teams
   "sessions",
   "approvals",
   "runs",

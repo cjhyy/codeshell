@@ -671,7 +671,14 @@ export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: P
 
                   {marketKind === "single" ? (
                     visibleCatalog.length === 0 ? (
-                      <SearchEmptyState />
+                      // Distinguish "nothing shipped" from "your filter matched
+                      // nothing" — the fix differs (import a definition vs clear
+                      // the search).
+                      catalog.length === 0 ? (
+                        <CatalogEmptyState />
+                      ) : (
+                        <SearchEmptyState />
+                      )
                     ) : (
                       <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                         {visibleCatalog.map((entry) => (
@@ -686,7 +693,11 @@ export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: P
                       </div>
                     )
                   ) : visibleCuratedTeams.length === 0 ? (
-                    <SearchEmptyState />
+                    CURATED_DIGITAL_HUMAN_TEAMS.length === 0 ? (
+                      <CatalogEmptyState />
+                    ) : (
+                      <SearchEmptyState />
+                    )
                   ) : (
                     <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                       {visibleCuratedTeams.map((team) => (
@@ -2009,6 +2020,22 @@ function SearchEmptyState() {
       Icon={Search}
       title={t("digitalHumans.noSearchResults")}
       description={t("digitalHumans.noSearchResultsDescription")}
+    />
+  );
+}
+
+/**
+ * The bundled catalog now ships empty on purpose (the 8 starters had no
+ * capability difference). Say where digital humans come from instead of
+ * showing "no search results", which reads as a broken filter.
+ */
+function CatalogEmptyState() {
+  const { t } = useT();
+  return (
+    <EmptyState
+      Icon={UsersRound}
+      title={t("digitalHumans.emptyCatalog")}
+      description={t("digitalHumans.emptyCatalogDescription")}
     />
   );
 }
