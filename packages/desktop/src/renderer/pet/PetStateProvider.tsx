@@ -60,6 +60,9 @@ export interface PetStateContextValue {
 }
 
 export const PET_CHAT_BUCKET = "__codeshell_pet_chat__";
+/** Max simultaneously-stacked peeks; older ones drop off the bottom. */
+const PET_PEEK_LIMIT = 12;
+
 const PetStateContext = React.createContext<PetStateContextValue | null>(null);
 
 function settingsBridge(): PetSettingsBridge | null {
@@ -451,8 +454,13 @@ export function PetStateProvider({
       if (event.kind === "count") {
         setSurfaceablePendingCount(event.surfaceablePendingCount);
       } else {
+        // Cap the stack: peeks only leave on explicit dismiss, so an unattended
+        // stream of them would grow unbounded (each peek also renders a widget
+        // that subscribes to sprite state). Keep the most recent PET_PEEK_LIMIT.
         setPeeks((current) =>
-          current.some((peek) => peek.id === event.peek.id) ? current : [...current, event.peek],
+          current.some((peek) => peek.id === event.peek.id)
+            ? current
+            : [...current, event.peek].slice(-PET_PEEK_LIMIT),
         );
       }
     };

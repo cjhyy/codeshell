@@ -94,6 +94,15 @@ describe("theme packs (theme.ts)", () => {
     expect(packStyleText()).not.toContain("210 80% 45%");
   });
 
+  test("re-applying the same pack keeps identical CSS (no needless repaint)", () => {
+    // Re-applying the active pack (as a cross-window storage event does in every
+    // window) must produce byte-identical CSS so the guard can skip the rewrite.
+    applyThemePack("ocean");
+    const first = packStyleText();
+    applyThemePack("ocean");
+    expect(packStyleText()).toBe(first);
+  });
+
   test("loadThemePackId round-trips a valid id and falls back on an unknown one", () => {
     saveThemePackId("grape");
     expect(loadThemePackId()).toBe("grape");

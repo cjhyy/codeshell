@@ -189,9 +189,14 @@ export class PetWorkMemoryStore {
   }
 
   private async persist(snapshot: PersistedWorkMemory): Promise<void> {
-    await mkdir(dirname(this.filePath), { recursive: true });
+    // Owner-only perms, matching pet-journal-store / pet-memory-store: this file
+    // holds distilled conversation work memory and shouldn't be world-readable.
+    await mkdir(dirname(this.filePath), { recursive: true, mode: 0o700 });
     const temporary = `${this.filePath}.tmp-${process.pid}-${randomUUID()}`;
-    await writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+    await writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
     await rename(temporary, this.filePath);
   }
 }

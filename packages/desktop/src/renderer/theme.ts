@@ -73,7 +73,12 @@ export function applyThemePack(
   }
   const light = renderVars({ ...pack.colors.light, ...wallpaperVars(pack, "light") });
   const dark = renderVars({ ...pack.colors.dark, ...wallpaperVars(pack, "dark") });
-  style.textContent = `:root {\n${light}\n}\n.dark {\n${dark}\n}\n`;
+  const next = `:root {\n${light}\n}\n.dark {\n${dark}\n}\n`;
+  // No-op when nothing changed. A cross-window `storage` event re-applies the
+  // same pack in every window; rewriting identical CSS would still trigger a
+  // style recalc/repaint (visible flicker in a window mid-animation).
+  if (style.textContent === next) return;
+  style.textContent = next;
 }
 
 /**
@@ -94,7 +99,10 @@ function wallpaperVars(pack: ThemePack, mode: "light" | "dark"): Record<string, 
 
 /** Escape a url for safe embedding inside a CSS url("…") token. */
 function cssUrlEscape(url: string): string {
-  return url.replace(/["\\]/g, "\\$&").replace(/\n/g, "");
+  // Backslash-escape the quote/backslash that would close the token, and strip
+  // control chars (newlines, CR, and stray `)` handled by the surrounding
+  // quotes) that could break out of the declaration.
+  return url.replace(/["\\]/g, "\\$&").replace(/[\n\r]/g, "");
 }
 
 export function initTheme(): Theme {
