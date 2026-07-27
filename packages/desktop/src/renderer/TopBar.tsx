@@ -8,6 +8,7 @@ import type { LiveActivity } from "./topbar/liveActivity";
 import type { ActiveGoal, TaskListMessage } from "./types";
 import { useT } from "./i18n";
 import { Button } from "@/components/ui/button";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
 interface Props {
   projectName: string | null;
@@ -150,27 +151,32 @@ function TopBarImpl({
           >
             <UserRound size={11} />
             {onWorkspaceProfileChange && workspaceProfiles.length > 0 ? (
-              <select
-                data-session-profile-switch="true"
-                aria-label={t("digitalHumans.sessionBinding.label")}
-                className="max-w-36 cursor-pointer bg-transparent text-[11px] font-medium text-primary outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                value={workspaceProfile ?? ""}
-                disabled={workspaceProfileSwitchDisabled}
-                onChange={(event) => onWorkspaceProfileChange(event.target.value)}
-              >
-                <option value="" disabled>
-                  {t("digitalHumans.sessionBinding.pick")}
-                </option>
-                {workspaceProfile &&
-                !workspaceProfiles.some((profile) => profile.name === workspaceProfile) ? (
-                  <option value={workspaceProfile}>{workspaceProfile}</option>
-                ) : null}
-                {workspaceProfiles.map((profile) => (
-                  <option key={profile.name} value={profile.name}>
-                    {profile.label}
-                  </option>
-                ))}
-              </select>
+              // The last native <select> in the renderer — it rendered as a raw
+              // OS control, visually detached from the shadcn theme. SimpleSelect
+              // is the drop-in adapter for this value/onChange/options shape.
+              <span data-session-profile-switch="true" className="contents">
+                <SimpleSelect
+                  size="sm"
+                  ariaLabel={t("digitalHumans.sessionBinding.label")}
+                  className="h-6 max-w-40 border-0 bg-transparent px-1 text-[11px] font-medium text-primary shadow-none focus:ring-0"
+                  placeholder={t("digitalHumans.sessionBinding.pick")}
+                  value={workspaceProfile ?? ""}
+                  disabled={workspaceProfileSwitchDisabled}
+                  onChange={onWorkspaceProfileChange}
+                  options={[
+                    // A session may point at a profile that is no longer in the
+                    // library; keep it selectable so switching away is possible.
+                    ...(workspaceProfile &&
+                    !workspaceProfiles.some((profile) => profile.name === workspaceProfile)
+                      ? [{ value: workspaceProfile, label: workspaceProfile }]
+                      : []),
+                    ...workspaceProfiles.map((profile) => ({
+                      value: profile.name,
+                      label: profile.label,
+                    })),
+                  ]}
+                />
+              </span>
             ) : (
               workspaceProfile
             )}

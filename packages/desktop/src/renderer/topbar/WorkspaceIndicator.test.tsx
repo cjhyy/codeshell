@@ -1235,7 +1235,37 @@ describe("TopBar workspace label", () => {
     );
 
     expect(html).toContain('data-session-profile-switch="true"');
-    expect(html).toContain('value="product-manager" selected=""');
-    expect(html).toContain("UI 设计师");
+    // Rendered by shadcn SimpleSelect, not a native <select>: the trigger shows
+    // the active profile's LABEL, and the option list lives in a portal that
+    // only mounts once opened — so静态 markup carries the selection, not the
+    // full option set.
+    expect(html).toContain("产品经理");
+    expect(html).toContain('role="combobox"');
+    expect(html).toContain('aria-label="切换 Session 数字人"');
+  });
+
+  test("keeps a session's profile selectable after it leaves the library", () => {
+    const html = renderToStaticMarkup(
+      <TopBar
+        projectName="codeshell"
+        projectPath="/repo/codeshell"
+        sessionId="session"
+        sessionTitle="Checkout"
+        workspaceProfile="retired-human"
+        workspaceProfiles={[{ name: "ui-designer", label: "UI 设计师" }]}
+        onWorkspaceProfileChange={() => {}}
+        busy={false}
+        sidebarCollapsed={false}
+        onToggleSidebar={() => {}}
+        panelOpen={false}
+        onTogglePanel={() => {}}
+        isMac={false}
+        isFullscreen={false}
+      />,
+    );
+
+    // A dangling binding must stay visible on the trigger, otherwise the user
+    // cannot see what to switch away from.
+    expect(html).toContain("retired-human");
   });
 });
