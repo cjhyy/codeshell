@@ -8,7 +8,17 @@
  * executable content, so there are no hooks/mcp/skills to approve.
  */
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { detectThemeImage } from "./image.js";
@@ -77,15 +87,30 @@ async function readImageAsset(
   if (!abs.startsWith(resolve(sourceDir) + "/") && abs !== resolve(sourceDir)) {
     throw new ThemeInstallError(`asset escapes theme root: ${rel}`);
   }
+  // The string check above stops literal traversal, but not a symlink INSIDE
+  // the pack pointing at an arbitrary file outside it. Resolve real paths and
+  // require the asset to physically live under the pack root, or a malicious
+  // pack could exfiltrate any readable file that happens to be a valid image.
+  let realRoot: string;
+  let realAbs: string;
+  try {
+    realRoot = await realpath(sourceDir);
+    realAbs = await realpath(abs);
+  } catch {
+    throw new ThemeInstallError(`asset not found: ${rel}`);
+  }
+  if (realAbs !== realRoot && !realAbs.startsWith(realRoot + "/")) {
+    throw new ThemeInstallError(`asset escapes theme root via symlink: ${rel}`);
+  }
   let info: Awaited<ReturnType<typeof stat>>;
   try {
-    info = await stat(abs);
+    info = await stat(realAbs);
   } catch {
     throw new ThemeInstallError(`asset not found: ${rel}`);
   }
   if (!info.isFile()) throw new ThemeInstallError(`asset is not a file: ${rel}`);
   if (info.size > MAX_ASSET_BYTES) throw new ThemeInstallError(`asset too large: ${rel}`);
-  const bytes = await readFile(abs);
+  const bytes = await readFile(realAbs);
   const detected = detectThemeImage(bytes);
   if (!detected) throw new ThemeInstallError(`asset is not a supported image: ${rel}`);
   return { bytes, ext: detected.ext };

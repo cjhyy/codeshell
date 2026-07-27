@@ -1936,6 +1936,13 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
   win.webContents.once("did-finish-load", () => {
     if (!win.isDestroyed()) win.showInactive();
   });
+  // A crashed renderer leaves a blank, unresponsive widget that the visibility
+  // checks still treat as "open" (window not destroyed), so toggling can't
+  // recover it. Tear it down so the next open creates a fresh one.
+  win.webContents.on("render-process-gone", (_event, details) => {
+    dlog("main", "pet-widget.render-process-gone", { reason: details.reason });
+    if (!win.isDestroyed()) win.destroy();
+  });
 
   win.on("move", () => schedulePetWidgetPositionSave(win));
   win.on("close", () => persistPetWidgetPosition(win));
@@ -1948,15 +1955,25 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
     petWidgetSurfaceMode = "collapsed";
   });
 
-  const devUrl = process.env.VITE_DEV_URL;
-  if (devUrl) {
-    const url = new URL(devUrl);
-    url.searchParams.set("popout", "pet");
-    await win.loadURL(url.toString());
-  } else {
-    await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), {
-      query: { popout: "pet" },
-    });
+  try {
+    const devUrl = process.env.VITE_DEV_URL;
+    if (devUrl) {
+      const url = new URL(devUrl);
+      url.searchParams.set("popout", "pet");
+      await win.loadURL(url.toString());
+    } else {
+      await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), {
+        query: { popout: "pet" },
+      });
+    }
+  } catch (error) {
+    // A failed load must not leave a blank window cached as petWidgetWindow —
+    // every later create/visibility check would return this dead window. Tear
+    // it down (the closed handler clears petWidgetWindow) and propagate so the
+    // caller can retry with a fresh window.
+    dlog("main", "pet-widget.load.failed", { error: String(error) });
+    if (!win.isDestroyed()) win.destroy();
+    throw error;
   }
   return win;
 }

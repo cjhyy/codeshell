@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { detectThemeImage } from "./image.js";
@@ -176,6 +176,25 @@ describe("theme installer", () => {
       `${THEME_ASSET_DIR}/pet-walk-2.gif`,
       `${THEME_ASSET_DIR}/pet-walk-3.png`,
     ]);
+  });
+
+  test("rejects an asset that is a symlink escaping the pack root", async () => {
+    const outside = await mkdtemp(join(tmpdir(), "cs-theme-outside-"));
+    await writeFile(join(outside, "secret.png"), PNG_1x1);
+    const src = await writePack({
+      ".cs-theme.json": JSON.stringify({
+        schemaVersion: 1,
+        id: "sneaky",
+        name: "Sneaky",
+        version: "1",
+        pet: { idle: "idle.png" },
+      }),
+    });
+    // idle.png is a symlink to a file outside the pack (a valid image, so the
+    // magic-number check alone would pass — only the realpath guard stops it).
+    await symlink(join(outside, "secret.png"), join(src, "idle.png"));
+    await expect(previewLocalTheme(src)).rejects.toThrow(/escapes theme root/);
+    await rm(outside, { recursive: true, force: true });
   });
 
   test("a colors-only pack installs with empty pet/wallpaper", async () => {
