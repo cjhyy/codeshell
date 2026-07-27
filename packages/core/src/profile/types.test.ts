@@ -87,3 +87,108 @@ describe("WorkspaceProfile schema", () => {
     }
   });
 });
+
+describe("WorkspaceProfile requires", () => {
+  const base = { name: "video-engineer", label: "视频工程师", basePreset: "terminal-coding" };
+
+  test("omitting requires keeps the pre-existing shape (backward compatible)", () => {
+    expect(WorkspaceProfileSchema.parse(base).requires).toBeUndefined();
+  });
+
+  test("parses a skill requirement and defaults scope/fullDepth", () => {
+    const p = WorkspaceProfileSchema.parse({
+      ...base,
+      requires: { skills: [{ source: "github", repo: "heygen-com/hyperframes" }] },
+    });
+    const [req] = p.requires!.skills;
+    expect(req.repo).toBe("heygen-com/hyperframes");
+    // scope is deliberately project-only: `skills add -g` lands in ~/.claude/skills,
+    // which is NOT one of the scanner's three roots.
+    expect(req.scope).toBe("project");
+    expect(req.fullDepth).toBe(false);
+    expect(req.skills).toBeUndefined();
+    expect(p.requires!.tools).toEqual([]);
+  });
+
+  test("rejects a user/global skill scope", () => {
+    for (const scope of ["user", "global"]) {
+      expect(() =>
+        WorkspaceProfileSchema.parse({
+          ...base,
+          requires: { skills: [{ source: "github", repo: "a/b", scope }] },
+        }),
+      ).toThrow();
+    }
+  });
+
+  test("rejects repo values that could inject CLI flags or traverse paths", () => {
+    for (const repo of [
+      "--version",
+      "-g",
+      "../evil/repo",
+      "owner/../../etc",
+      "owner",
+      "owner/repo extra",
+      "owner/repo;rm -rf /",
+      "$(whoami)/repo",
+      "-owner/repo",
+      "",
+    ]) {
+      expect(() =>
+        WorkspaceProfileSchema.parse({
+          ...base,
+          requires: { skills: [{ source: "github", repo }] },
+        }),
+      ).toThrow();
+    }
+  });
+
+  test("rejects a non-github skill source", () => {
+    expect(() =>
+      WorkspaceProfileSchema.parse({
+        ...base,
+        requires: { skills: [{ source: "npm", repo: "a/b" }] },
+      }),
+    ).toThrow();
+  });
+
+  test("parses tool requirements and rejects non-numeric versions", () => {
+    const p = WorkspaceProfileSchema.parse({
+      ...base,
+      requires: {
+        tools: [
+          { bin: "ffmpeg", hint: "brew install ffmpeg" },
+          { bin: "node", minVersion: "22" },
+        ],
+      },
+    });
+    expect(p.requires!.tools).toHaveLength(2);
+    expect(p.requires!.skills).toEqual([]);
+
+    for (const minVersion of ["latest", "22.x", "v22", ">=22", ""]) {
+      expect(() =>
+        WorkspaceProfileSchema.parse({
+          ...base,
+          requires: { tools: [{ bin: "node", minVersion }] },
+        }),
+      ).toThrow();
+    }
+  });
+
+  test("rejects an empty bin and too many requirement entries", () => {
+    expect(() =>
+      WorkspaceProfileSchema.parse({ ...base, requires: { tools: [{ bin: "" }] } }),
+    ).toThrow();
+    expect(() =>
+      WorkspaceProfileSchema.parse({
+        ...base,
+        requires: {
+          skills: Array.from({ length: WORKSPACE_PROFILE_LIMITS.requirementCount + 1 }, (_, i) => ({
+            source: "github",
+            repo: `owner/repo-${i}`,
+          })),
+        },
+      }),
+    ).toThrow();
+  });
+});

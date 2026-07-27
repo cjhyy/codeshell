@@ -1,8 +1,23 @@
 export {
+  SKILL_REPO_RE,
   WORKSPACE_PROFILE_NAME_RE,
+  WorkspaceProfileRequirementsSchema,
   WorkspaceProfileSchema,
+  type SkillRequirement,
+  type ToolRequirement,
   type WorkspaceProfile,
+  type WorkspaceProfileRequirements,
 } from "./types.js";
+export {
+  buildSkillInstallArgs,
+  planProfileRequirements,
+  summarizeSkillConflicts,
+  type KnownSkill,
+  type MissingTool,
+  type PlannedSkillInstall,
+  type ProfileRequirementPlan,
+  type SkillConflict,
+} from "./requirements.js";
 export {
   deleteWorkspaceProfile,
   listWorkspaceProfiles,

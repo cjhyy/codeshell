@@ -128,9 +128,21 @@ export { createOffBackend } from "./tool-system/sandbox/off.js";
 export {
   WORKSPACE_PROFILE_NAME_RE,
   WorkspaceProfileSchema,
+  WorkspaceProfileRequirementsSchema,
+  buildSkillInstallArgs,
+  planProfileRequirements,
+  summarizeSkillConflicts,
   type WorkspaceProfile,
+  type WorkspaceProfileRequirements,
   type WorkspaceProfileSubtree,
   type ResolveActiveWorkspaceProfileInput,
+  type SkillRequirement,
+  type ToolRequirement,
+  type KnownSkill,
+  type MissingTool,
+  type PlannedSkillInstall,
+  type ProfileRequirementPlan,
+  type SkillConflict,
 } from "./profile/index.js";
 
 // ─── Workspace data sources ─────────────────────────────────────
