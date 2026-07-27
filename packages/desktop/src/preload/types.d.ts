@@ -37,6 +37,7 @@ import type {
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaAvailability, PluginMediaDto } from "../shared/plugin-media";
+import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
 import type {
   DigitalHumanProfileExportResult,
   DigitalHumanProfileImportCommitInput,
@@ -1560,6 +1561,16 @@ export interface CodeshellApi {
     latestCommit?: string;
     reason?: string;
   }>;
+  /** Installed theme packs (pet sprites + colors + wallpaper) as renderer packs. */
+  listInstalledThemes(): Promise<InstalledThemePack[]>;
+  /** Open a directory picker and validate the chosen theme pack (no install yet). */
+  pickAndPreviewTheme(): Promise<ThemePickPreview>;
+  /** Install a previewed theme pack, keyed by its review token. */
+  installTheme(input: { path: string; reviewToken: string }): Promise<InstalledThemePack>;
+  /** Remove an installed theme pack by id. */
+  uninstallTheme(id: string): Promise<{ ok: true }>;
+  /** Subscribe to theme install/uninstall changes; returns an unsubscribe fn. */
+  onThemesChanged(listener: () => void): () => void;
   /**
    * Is a usable git binary available (on PATH, or the configured `git.path`)?
    * Marketplace install needs git; the UI uses this to prompt up front.
