@@ -164,6 +164,13 @@ const expectedRuntimeExportsByPartition = {
     "profileOverridesFromDefinition",
     "resolveActiveWorkspaceProfile",
     "workspaceProfilePresetFor",
+    // Digital-human repos: a distribution channel parallel to the plugin
+    // marketplace (profile/catalog-store.ts).
+    "addHumanRepo",
+    "listHumanRepoDetails",
+    "listHumanRepos",
+    "readAllHumanRepoEntries",
+    "removeHumanRepo",
     "CapabilityService",
     "CapabilityNotFoundError",
     "projectBuiltin",

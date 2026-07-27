@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import { DialogProvider } from "../ui/DialogProvider";
 import {
   DigitalHumansSection,
   nextPetPatch,
@@ -38,7 +39,13 @@ function switchButtons(container: unknown): any[] {
 // window.codeshell access is needed at module load / static render.
 describe("DigitalHumansSection — pet external session toggles (global scope)", () => {
   test("renders both external-session toggles with their labels + descriptions", () => {
-    const html = renderToStaticMarkup(<DigitalHumansSection scope="user" projectPath={null} />);
+    const html = renderToStaticMarkup(
+      // The editor dialog now uses useConfirm (unsaved-changes guard), which
+      // requires the provider main.tsx wraps the whole app in.
+      <DialogProvider>
+        <DigitalHumansSection scope="user" projectPath={null} />
+      </DialogProvider>,
+    );
     // Codex toggle
     expect(html).toContain("在 Pet 全局视图显示 Codex CLI/App 会话");
     expect(html).toContain("~/.codex");
@@ -51,7 +58,13 @@ describe("DigitalHumansSection — pet external session toggles (global scope)",
   });
 
   test("both toggles default to unchecked (aria-checked=false) before settings load", () => {
-    const html = renderToStaticMarkup(<DigitalHumansSection scope="user" projectPath={null} />);
+    const html = renderToStaticMarkup(
+      // The editor dialog now uses useConfirm (unsaved-changes guard), which
+      // requires the provider main.tsx wraps the whole app in.
+      <DialogProvider>
+        <DigitalHumansSection scope="user" projectPath={null} />
+      </DialogProvider>,
+    );
     const unchecked = html.match(/aria-checked="false"/g) ?? [];
     expect(unchecked.length).toBe(2);
     expect(html).not.toContain('aria-checked="true"');
