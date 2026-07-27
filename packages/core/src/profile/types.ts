@@ -76,7 +76,10 @@ const toolRequirementSchema = z.object({
 });
 
 export const WorkspaceProfileRequirementsSchema = z.object({
-  skills: z.array(skillRequirementSchema).max(WORKSPACE_PROFILE_LIMITS.requirementCount).default([]),
+  skills: z
+    .array(skillRequirementSchema)
+    .max(WORKSPACE_PROFILE_LIMITS.requirementCount)
+    .default([]),
   tools: z.array(toolRequirementSchema).max(WORKSPACE_PROFILE_LIMITS.requirementCount).default([]),
 });
 

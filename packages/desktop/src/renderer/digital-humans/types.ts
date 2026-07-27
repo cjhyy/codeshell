@@ -59,7 +59,6 @@ export interface DigitalHumanCatalogEntry extends Omit<DigitalHumanProfileEntry,
   category: "product" | "design" | "engineering" | "quality";
   tags: string[];
   samplePrompts: string[];
-  usageCount: number;
   installed: boolean;
 }
 
@@ -72,5 +71,4 @@ export interface CuratedDigitalHumanTeam {
   members: string[];
   mode: DigitalHumanTeamMode;
   samplePrompts: string[];
-  usageCount: number;
 }

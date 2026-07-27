@@ -1030,6 +1030,10 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("profiles:setSession", sessionId, profileName),
   listProfileCatalog: () => ipcRenderer.invoke("profiles:catalog"),
   installCatalogProfile: (name: string) => ipcRenderer.invoke("profiles:install", name),
+  previewProfileRequirements: (name: string, cwd: string) =>
+    ipcRenderer.invoke("profiles:previewRequirements", name, cwd),
+  installProfileRequirements: (name: string, cwd: string) =>
+    ipcRenderer.invoke("profiles:installRequirements", name, cwd),
   saveProfile: (profile: import("@cjhyy/code-shell-core").WorkspaceProfile) =>
     ipcRenderer.invoke("profiles:save", profile),
   pickProfileDefinitionImport: () => ipcRenderer.invoke("profiles:pickDefinitionImport"),
