@@ -38,7 +38,16 @@ export function PetWidget({
   // true while an actual drag is in progress so the pet cycles its walk frames.
   const [dragging, setDragging] = React.useState(false);
   // Which way the pet faces while dragged; flips as the drag crosses horizontally.
+  // The ref mirrors the state so onPointerMove (a hot path) only calls setState
+  // on a genuine flip, not on every move that happens to be in the same
+  // direction — keeping the pointer path free of needless widget re-renders.
   const [dragDir, setDragDir] = React.useState<"left" | "right">("right");
+  const dragDirRef = React.useRef<"left" | "right">("right");
+  const faceDrag = React.useCallback((next: "left" | "right"): void => {
+    if (dragDirRef.current === next) return;
+    dragDirRef.current = next;
+    setDragDir(next);
+  }, []);
   // A short-lived playful mood layered over the resting state: a periodic idle
   // wave ("hi") and a jump on click. Cleared by a timer back to the base state.
   const [mood, setMood] = React.useState<"waving" | "jumping" | null>(null);
@@ -119,8 +128,8 @@ export function PetWidget({
           if (!drag.moved) return;
           // Face the direction of travel; ignore tiny jitters (<2px) to avoid flip-flop.
           const dx = event.screenX - drag.lastX;
-          if (dx > 2) setDragDir("right");
-          else if (dx < -2) setDragDir("left");
+          if (dx > 2) faceDrag("right");
+          else if (dx < -2) faceDrag("left");
           drag.lastX = event.screenX;
           window.codeshell.pet.moveWidget({
             x: event.screenX - drag.offsetX,

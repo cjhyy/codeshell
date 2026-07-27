@@ -261,13 +261,16 @@ function PetChatRowView({
   row,
   session,
   onOpenDelegation,
+  dogIcon,
 }: {
   row: PetChatRow;
   session?: PetSessionProjection;
   onOpenDelegation?: () => void;
+  /** Passed from the parent so a long message list doesn't open one theme
+   * subscription per row (usePetSprite subscribes to 3 events each call). */
+  dogIcon: string;
 }) {
   const { t } = useT();
-  const dogIcon = usePetSprite();
   if (row.role === "history-boundary") return null;
   if (row.role === "delegation" && row.delegation) {
     return (
@@ -528,6 +531,7 @@ export function PetChatHost({
                         row={row}
                         session={rowSession(row)}
                         onOpenDelegation={openRowDelegation(row)}
+                        dogIcon={dogIcon}
                       />
                     ))}
                   </div>
@@ -540,6 +544,7 @@ export function PetChatHost({
                 row={row}
                 session={rowSession(row)}
                 onOpenDelegation={openRowDelegation(row)}
+                dogIcon={dogIcon}
               />
             ))}
             {chatBusy && (
