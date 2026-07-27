@@ -603,7 +603,7 @@ function useVisibleWorktreeBranches(
   return branches;
 }
 
-function ProjectGroup({
+export function ProjectGroup({
   project,
   index,
   collapsed,
@@ -679,6 +679,7 @@ function ProjectGroup({
           className="h-8 min-w-0 flex-1 justify-start gap-1.5 px-1 hover:bg-transparent"
           aria-expanded={!collapsed}
           onClick={() => {
+            setShowMore(false);
             onSelectProject();
             onToggle();
           }}

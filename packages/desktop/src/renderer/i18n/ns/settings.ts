@@ -11,6 +11,14 @@ export const settingsNs = {
         lightDesc: "始终使用浅色界面",
         dark: "深色",
         darkDesc: "始终使用深色界面",
+        packTitle: "主题包",
+        packDesc: "选择一套配色主题,会同时应用到浅色与深色。",
+        pack: {
+          default: "默认橙",
+          ocean: "海洋蓝",
+          forest: "森林绿",
+          grape: "葡萄紫",
+        },
       },
       permission: {
         title: "默认权限",
@@ -830,6 +838,14 @@ export const settingsNs = {
         lightDesc: "Always use the light interface",
         dark: "Dark",
         darkDesc: "Always use the dark interface",
+        packTitle: "Theme pack",
+        packDesc: "Pick a color theme, applied to both light and dark modes.",
+        pack: {
+          default: "Classic orange",
+          ocean: "Ocean blue",
+          forest: "Forest green",
+          grape: "Grape purple",
+        },
       },
       permission: {
         title: "Default permission",
