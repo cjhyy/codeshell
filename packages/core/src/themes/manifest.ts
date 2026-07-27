@@ -80,6 +80,8 @@ export const ThemeManifestSchema = z.object({
       idle: RELATIVE_ASSET.optional(),
       running: RELATIVE_ASSET.optional(),
       alert: RELATIVE_ASSET.optional(),
+      /** Ordered frames cycled while the widget is dragged (a "run" loop). */
+      walk: z.array(RELATIVE_ASSET).max(16).optional(),
     })
     .optional(),
   wallpaper: z

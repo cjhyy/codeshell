@@ -4,18 +4,21 @@
 /* Dark mode is driven by a `.dark` class on <html> (see theme.ts). */
 @custom-variant dark (&:is(.dark *));
 
-@keyframes cs-pet-idle-float {
+/* A calm "breathing" idle: a tiny, slow vertical bob with no rotation. The
+   earlier version tilted ±1deg which read as wobbly/odd; a subtle rise-and-fall
+   alone feels alive without drawing the eye. */
+@keyframes cs-pet-idle-breathe {
   0%,
   100% {
-    transform: translateY(0) rotate(-1deg);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(-5px) rotate(1deg);
+    transform: translateY(-2px);
   }
 }
 
 .cs-pet-idle {
-  animation: cs-pet-idle-float 2.8s ease-in-out infinite;
+  animation: cs-pet-idle-breathe 4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

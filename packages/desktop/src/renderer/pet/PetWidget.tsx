@@ -1,7 +1,7 @@
 import React from "react";
 import { ChevronDown } from "lucide-react";
 import { useT } from "../i18n";
-import { usePetSprite, petVisualState } from "../petSprite";
+import { usePetWidgetSprite, petVisualState } from "../petSprite";
 import { Badge } from "../ui/Badge";
 
 export function PetWidget({
@@ -33,6 +33,9 @@ export function PetWidget({
     pointerY: number;
     moved: boolean;
   } | null>(null);
+  // Re-rendering flag (the ref above drives movement; this drives the sprite):
+  // true while an actual drag is in progress so the pet cycles its walk frames.
+  const [dragging, setDragging] = React.useState(false);
 
   React.useEffect(
     () => () => {
@@ -46,7 +49,11 @@ export function PetWidget({
   const completed = Math.max(0, unreadCompletedCount);
   const summary = t("pet.widget.workSummary", { activity, completed, running });
   // Unread completions are the "look at me" cue → alert; active work → running.
-  const dogIcon = usePetSprite(petVisualState({ runningCount: running, alertCount: completed }));
+  // While dragging, usePetWidgetSprite cycles the pack's walk frames instead.
+  const dogIcon = usePetWidgetSprite(
+    petVisualState({ runningCount: running, alertCount: completed }),
+    dragging,
+  );
   return (
     <div
       data-pet-widget="desktop-window"
@@ -72,6 +79,7 @@ export function PetWidget({
           const drag = dragRef.current;
           if (!drag || drag.pointerId !== event.pointerId) return;
           if (Math.hypot(event.screenX - drag.pointerX, event.screenY - drag.pointerY) >= 4) {
+            if (!drag.moved) setDragging(true); // first real movement → start walking
             drag.moved = true;
           }
           if (!drag.moved) return;
@@ -84,6 +92,7 @@ export function PetWidget({
           const drag = dragRef.current;
           if (!drag || drag.pointerId !== event.pointerId) return;
           dragRef.current = null;
+          setDragging(false);
           event.currentTarget.releasePointerCapture(event.pointerId);
           if (!drag.moved) {
             if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
@@ -95,6 +104,7 @@ export function PetWidget({
         }}
         onPointerCancel={() => {
           dragRef.current = null;
+          setDragging(false);
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -118,7 +128,7 @@ export function PetWidget({
           src={dogIcon}
           alt=""
           draggable={false}
-          className="cs-pet-idle h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105"
+          className={`${dragging ? "" : "cs-pet-idle"} h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105`}
         />
         {running > 0 && (
           <span

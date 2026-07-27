@@ -8,7 +8,7 @@ export interface InstalledThemePack {
   name: string;
   swatch: string;
   colors: { light: Record<string, string>; dark: Record<string, string> };
-  pet?: { idle?: string; running?: string; alert?: string };
+  pet?: { idle?: string; running?: string; alert?: string; walk?: string[] };
   wallpaper?: { light?: string; dark?: string; opacity?: number };
   source: "installed";
 }

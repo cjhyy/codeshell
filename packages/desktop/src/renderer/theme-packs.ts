@@ -49,8 +49,15 @@ export type ThemeVars = Partial<Record<CssVarName, string>>;
 /** The three pet visual states a pack can supply a distinct sprite for. */
 export type PetSpriteState = "idle" | "running" | "alert";
 
-/** Per-state pet sprite urls (builtin: bundled asset url; installed: cstheme://). */
-export type PetSprites = Partial<Record<PetSpriteState, string>>;
+/**
+ * Per-state pet sprite urls (builtin: bundled asset url; installed: cstheme://),
+ * plus an optional `walk` frame sequence cycled while the widget is dragged. A
+ * pack with no walk frames simply shows its idle sprite during a drag.
+ */
+export type PetSprites = Partial<Record<PetSpriteState, string>> & {
+  /** Ordered frames cycled during a drag to animate the pet "running". */
+  walk?: string[];
+};
 
 export interface WallpaperSpec {
   light?: string;

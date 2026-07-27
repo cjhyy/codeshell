@@ -155,6 +155,29 @@ describe("theme installer", () => {
     await expect(previewLocalTheme(notImage)).rejects.toThrow();
   });
 
+  test("normalizes walk frames to ordered canonical names", async () => {
+    const src = await writePack({
+      ".cs-theme.json": JSON.stringify({
+        schemaVersion: 1,
+        id: "runner",
+        name: "Runner",
+        version: "1",
+        pet: { idle: "i.png", walk: ["a.png", "b.gif", "c.png"] },
+      }),
+      "i.png": PNG_1x1,
+      "a.png": PNG_1x1,
+      "b.gif": GIF_1x1,
+      "c.png": PNG_1x1,
+    });
+    const preview = await previewLocalTheme(src);
+    const installed = await installReviewedLocalTheme(src, preview.reviewToken);
+    expect(installed.pet.walk).toEqual([
+      `${THEME_ASSET_DIR}/pet-walk-1.png`,
+      `${THEME_ASSET_DIR}/pet-walk-2.gif`,
+      `${THEME_ASSET_DIR}/pet-walk-3.png`,
+    ]);
+  });
+
   test("a colors-only pack installs with empty pet/wallpaper", async () => {
     const src = await writePack({
       ".cs-theme.json": JSON.stringify({

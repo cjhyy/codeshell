@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_PET_SPRITE, petSpriteUrl } from "./petSprite";
+import { DEFAULT_PET_SPRITE, petSpriteUrl, petWalkFrames } from "./petSprite";
 import type { ThemePack } from "./theme-packs";
 
 function pack(pet?: ThemePack["pet"]): ThemePack {
@@ -23,5 +23,13 @@ describe("petSpriteUrl", () => {
     const p = pack({ idle: "idle.png" }); // no running/alert supplied
     expect(petSpriteUrl(p, "running")).toBe("idle.png");
     expect(petSpriteUrl(p, "alert")).toBe("idle.png");
+  });
+});
+
+describe("petWalkFrames", () => {
+  test("returns the frames, dropping blanks; empty when none", () => {
+    expect(petWalkFrames(pack())).toEqual([]);
+    expect(petWalkFrames(pack({ walk: [] }))).toEqual([]);
+    expect(petWalkFrames(pack({ walk: ["a.png", "", "b.png"] }))).toEqual(["a.png", "b.png"]);
   });
 });

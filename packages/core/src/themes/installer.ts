@@ -54,7 +54,7 @@ export interface InstalledTheme {
   name: string;
   version: string;
   colors: { light: Record<string, string>; dark: Record<string, string> };
-  pet: Partial<Record<PetState, string>>; // canonical relative asset paths
+  pet: Partial<Record<PetState, string>> & { walk?: string[] }; // canonical relative asset paths
   wallpaper?: { light?: string; dark?: string; opacity?: number };
 }
 
@@ -108,6 +108,9 @@ async function resolveAssets(
   await add(manifest.pet?.idle, "pet-idle");
   await add(manifest.pet?.running, "pet-running");
   await add(manifest.pet?.alert, "pet-alert");
+  for (let i = 0; i < (manifest.pet?.walk?.length ?? 0); i += 1) {
+    await add(manifest.pet!.walk![i], `pet-walk-${i + 1}`);
+  }
   await add(manifest.wallpaper?.light, "wallpaper-light");
   await add(manifest.wallpaper?.dark, "wallpaper-dark");
   return { assets, bytesByName };
@@ -241,11 +244,15 @@ function canonicalManifestFor(manifest: ThemeManifest, assets: ResolvedAsset[]):
     const n = nameFor(base);
     return n ? `${THEME_ASSET_DIR}/${n}` : undefined;
   };
+  const walk = (manifest.pet?.walk ?? [])
+    .map((_, i) => rel(`pet-walk-${i + 1}`))
+    .filter((p): p is string => Boolean(p));
   const pet = manifest.pet
     ? {
         ...(rel("pet-idle") ? { idle: rel("pet-idle") } : {}),
         ...(rel("pet-running") ? { running: rel("pet-running") } : {}),
         ...(rel("pet-alert") ? { alert: rel("pet-alert") } : {}),
+        ...(walk.length ? { walk } : {}),
       }
     : undefined;
   const wallpaper = manifest.wallpaper
@@ -278,6 +285,7 @@ function toInstalledTheme(manifest: ThemeManifest): InstalledTheme {
       ...(manifest.pet?.idle ? { idle: manifest.pet.idle } : {}),
       ...(manifest.pet?.running ? { running: manifest.pet.running } : {}),
       ...(manifest.pet?.alert ? { alert: manifest.pet.alert } : {}),
+      ...(manifest.pet?.walk?.length ? { walk: manifest.pet.walk } : {}),
     },
     ...(manifest.wallpaper ? { wallpaper: manifest.wallpaper } : {}),
   };

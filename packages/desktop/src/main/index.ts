@@ -146,6 +146,7 @@ import {
   petMemoryAutoExtractFromSettings,
   petMemoryAutoExtractSettingsPatch,
 } from "../shared/pet-settings.js";
+import type { InstalledThemePack } from "../shared/theme-packs.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
@@ -3038,21 +3039,14 @@ ipcMain.handle(
   },
 );
 /** Convert an installed theme to the renderer ThemePack shape with cstheme:// urls. */
-function installedThemeToPack(theme: InstalledTheme): {
-  id: string;
-  name: string;
-  swatch: string;
-  colors: { light: Record<string, string>; dark: Record<string, string> };
-  pet?: Record<string, string>;
-  wallpaper?: { light?: string; dark?: string; opacity?: number };
-  source: "installed";
-} {
+function installedThemeToPack(theme: InstalledTheme): InstalledThemePack {
   const asset = (rel?: string): string | undefined =>
     rel ? themeAssetUrl(theme.id, rel) : undefined;
-  const pet: Record<string, string> = {};
+  const pet: NonNullable<InstalledThemePack["pet"]> = {};
   if (theme.pet.idle) pet.idle = asset(theme.pet.idle)!;
   if (theme.pet.running) pet.running = asset(theme.pet.running)!;
   if (theme.pet.alert) pet.alert = asset(theme.pet.alert)!;
+  if (theme.pet.walk?.length) pet.walk = theme.pet.walk.map((rel) => asset(rel)!);
   const wp = theme.wallpaper;
   return {
     id: theme.id,
