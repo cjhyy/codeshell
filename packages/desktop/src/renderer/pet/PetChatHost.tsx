@@ -16,7 +16,7 @@ import type {
   PetOpenSessionRequest,
   PetSessionProjection,
 } from "../../preload/types";
-import dogIcon from "../assets/codeshell-dog-icon.png";
+import { usePetSprite } from "../petSprite";
 import { Markdown } from "../Markdown";
 import type { Message } from "../types";
 import { useT } from "../i18n";
@@ -267,6 +267,7 @@ function PetChatRowView({
   onOpenDelegation?: () => void;
 }) {
   const { t } = useT();
+  const dogIcon = usePetSprite();
   if (row.role === "history-boundary") return null;
   if (row.role === "delegation" && row.delegation) {
     return (
@@ -351,6 +352,7 @@ export function PetChatHost({
   onOpenSettings?: () => void;
 }) {
   const { t } = useT();
+  const dogIcon = usePetSprite();
   const {
     state,
     dispatch,

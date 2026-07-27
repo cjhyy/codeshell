@@ -259,11 +259,32 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Theme-pack wallpaper: a fixed image layer under all content, blended over
+     the base color via --cs-wallpaper(-opacity) set by applyThemePack. The
+     default pack sets `none`/0 so this paints nothing. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: var(--cs-wallpaper, none);
+    background-size: cover;
+    background-position: center;
+    opacity: var(--cs-wallpaper-opacity, 0);
+  }
+
   html.pet-widget-window,
   html.pet-widget-window body,
   html.pet-widget-window #root {
     overflow: hidden;
     background: transparent;
+  }
+
+  /* The pet widget is a transparent floating window — never tint it with a
+     wallpaper, which would break its cutout shape. */
+  html.pet-widget-window body::before {
+    display: none;
   }
 
   pre {

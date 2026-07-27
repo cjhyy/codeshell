@@ -1,7 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, CircleDot, Clock3, LayoutDashboard, Sparkles } from "lucide-react";
-import dogIcon from "../assets/codeshell-dog-icon.png";
+import { usePetSprite } from "../petSprite";
 import { useT } from "../i18n";
 import { useAnchoredPopover } from "../chat/useAnchoredPopover";
 
@@ -29,6 +29,7 @@ export function PetOverviewHeader({
   chatError,
 }: PetOverviewHeaderProps) {
   const { t } = useT();
+  const dogIcon = usePetSprite();
   const [expanded, setExpanded] = React.useState(false);
   const detailsId = React.useId();
   const anchorRef = React.useRef<HTMLButtonElement>(null);

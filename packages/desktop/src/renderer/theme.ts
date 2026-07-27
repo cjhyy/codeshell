@@ -1,4 +1,10 @@
-import { DEFAULT_PACK_ID, THEME_PACKS, getThemePack, type ThemeVars } from "./theme-packs";
+import {
+  DEFAULT_PACK_ID,
+  THEME_PACKS,
+  getThemePack,
+  type ThemePack,
+  type ThemeVars,
+} from "./theme-packs";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -29,7 +35,13 @@ export function applyTheme(t: Theme): void {
 }
 
 export function loadThemePackId(): string {
-  const raw = localStorage.getItem(PACK_KEY);
+  // Tolerate environments without Storage (SSR / mini-DOM component tests).
+  let raw: string | null = null;
+  try {
+    raw = typeof localStorage === "undefined" ? null : localStorage.getItem(PACK_KEY);
+  } catch {
+    raw = null;
+  }
   return raw && THEME_PACKS.some((pack) => pack.id === raw) ? raw : DEFAULT_PACK_ID;
 }
 
@@ -37,7 +49,7 @@ export function saveThemePackId(id: string): void {
   localStorage.setItem(PACK_KEY, id);
 }
 
-function renderVars(vars: ThemeVars): string {
+function renderVars(vars: Record<string, string>): string {
   return Object.entries(vars)
     .map(([name, value]) => `  ${name}: ${value};`)
     .join("\n");
@@ -50,17 +62,41 @@ function renderVars(vars: ThemeVars): string {
  * overrides win while the `.dark` class keeps deciding the active mode. The
  * default pack overrides nothing, writing empty rules (= the base palette).
  */
-export function applyThemePack(id: string): void {
-  const pack = getThemePack(id);
+export function applyThemePack(
+  id: string,
+  resolvePack: (id: string) => ThemePack = getThemePack,
+): void {
+  const pack = resolvePack(id);
   let style = document.getElementById(PACK_STYLE_ID) as HTMLStyleElement | null;
   if (!style) {
     style = document.createElement("style");
     style.setAttribute("id", PACK_STYLE_ID);
     document.head.appendChild(style);
   }
-  const light = renderVars(pack.colors.light);
-  const dark = renderVars(pack.colors.dark);
+  const light = renderVars({ ...pack.colors.light, ...wallpaperVars(pack, "light") });
+  const dark = renderVars({ ...pack.colors.dark, ...wallpaperVars(pack, "dark") });
   style.textContent = `:root {\n${light}\n}\n.dark {\n${dark}\n}\n`;
+}
+
+/**
+ * Wallpaper CSS variables for a mode. `--cs-wallpaper` is a CSS `image` value
+ * (`url("…")` or `none`) consumed by the body's fixed `::before` layer (see
+ * tailwind.css); `--cs-wallpaper-opacity` blends it over the base color. Absent
+ * wallpaper writes `none`/`0` so the default pack cleanly clears any prior image.
+ */
+function wallpaperVars(pack: ThemePack, mode: "light" | "dark"): Record<string, string> {
+  const url = pack.wallpaper?.[mode] ?? pack.wallpaper?.light;
+  if (!url) return { "--cs-wallpaper": "none", "--cs-wallpaper-opacity": "0" };
+  const opacity = pack.wallpaper?.opacity;
+  return {
+    "--cs-wallpaper": `url("${cssUrlEscape(url)}")`,
+    "--cs-wallpaper-opacity": String(typeof opacity === "number" ? opacity : 1),
+  };
+}
+
+/** Escape a url for safe embedding inside a CSS url("…") token. */
+function cssUrlEscape(url: string): string {
+  return url.replace(/["\\]/g, "\\$&").replace(/\n/g, "");
 }
 
 export function initTheme(): Theme {

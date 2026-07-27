@@ -1,6 +1,6 @@
 import type { PetPeek } from "../../preload/types";
 import React from "react";
-import dogIcon from "../assets/codeshell-dog-icon.png";
+import { usePetSprite } from "../petSprite";
 import { useT } from "../i18n";
 
 export function PetPeekHost({
@@ -13,6 +13,7 @@ export function PetPeekHost({
   onDismiss: (peek: PetPeek) => void;
 }) {
   const { t } = useT();
+  const dogIcon = usePetSprite();
   return (
     <div
       data-pet-peek-stack="bottom-right"

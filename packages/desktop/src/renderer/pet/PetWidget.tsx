@@ -1,7 +1,7 @@
 import React from "react";
 import { ChevronDown } from "lucide-react";
-import dogIcon from "../assets/codeshell-dog-icon.png";
 import { useT } from "../i18n";
+import { usePetSprite, petVisualState } from "../petSprite";
 import { Badge } from "../ui/Badge";
 
 export function PetWidget({
@@ -45,6 +45,8 @@ export function PetWidget({
   const activity = Math.max(0, activityCount);
   const completed = Math.max(0, unreadCompletedCount);
   const summary = t("pet.widget.workSummary", { activity, completed, running });
+  // Unread completions are the "look at me" cue → alert; active work → running.
+  const dogIcon = usePetSprite(petVisualState({ runningCount: running, alertCount: completed }));
   return (
     <div
       data-pet-widget="desktop-window"

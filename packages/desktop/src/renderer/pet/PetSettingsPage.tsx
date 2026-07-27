@@ -2,7 +2,7 @@ import { ArrowLeft, Brain, MessageCircleMore, Monitor, RotateCcw, Settings2 } fr
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import dogIcon from "../assets/codeshell-dog-icon.png";
+import { usePetSprite } from "../petSprite";
 import { ModelPill, type ModelOption } from "../chat/ModelPill";
 import { useT } from "../i18n";
 
@@ -32,6 +32,7 @@ export function PetSettingsPage({
   onBack,
 }: PetSettingsPageProps) {
   const { t } = useT();
+  const dogIcon = usePetSprite();
 
   return (
     <section

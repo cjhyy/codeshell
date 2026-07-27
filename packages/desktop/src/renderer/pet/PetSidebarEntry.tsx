@@ -1,5 +1,5 @@
 import React from "react";
-import dogIcon from "../assets/codeshell-dog-icon.png";
+import { usePetSprite } from "../petSprite";
 import { Badge } from "../ui/Badge";
 import { useT } from "../i18n";
 
@@ -17,6 +17,7 @@ export function PetSidebarEntry({
   onOpen,
 }: PetSidebarEntryProps) {
   const { t } = useT();
+  const dogIcon = usePetSprite();
   const safePending = Math.max(0, pendingCount);
   const safeRunning = Math.max(0, runningCount);
   const description = t("pet.sidebar.summary", {

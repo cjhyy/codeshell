@@ -54,6 +54,9 @@ export function AppearanceSection() {
     setPackId(next);
     saveThemePackId(next);
     applyThemePack(next);
+    // `storage` only fires in OTHER windows; notify this one so a live pet
+    // sprite / preview in the same window updates immediately too.
+    window.dispatchEvent(new Event("codeshell:theme-pack-changed"));
   };
 
   return (

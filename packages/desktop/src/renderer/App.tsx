@@ -19,7 +19,7 @@ import {
   parsePetWidgetReceiptState,
 } from "./pet/petWidgetActivity";
 import { TopBar } from "./TopBar";
-import dogIcon from "./assets/codeshell-dog-icon.png";
+import { usePetSprite } from "./petSprite";
 import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).
@@ -157,6 +157,7 @@ function PageLoading({ label }: { label: string }) {
 function App() {
   const toast = useToast();
   const { t, lang } = useT();
+  const dogIcon = usePetSprite();
   const {
     state: petState,
     dispatch: petDispatch,

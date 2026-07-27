@@ -47,10 +47,41 @@ describe("theme packs (theme.ts)", () => {
     expect(text).toContain("--cs-primary: 210 85% 60%;");
   });
 
-  test("the default pack writes empty rules (falls through to the base sheet)", () => {
+  test("the default pack overrides no colors and clears any wallpaper", () => {
     applyThemePack("default");
-    // No variable overrides — just the two empty selectors.
-    expect(packStyleText()).not.toContain("--cs-");
+    const text = packStyleText();
+    // No color overrides…
+    expect(text).not.toContain("--cs-primary");
+    expect(text).not.toContain("--cs-background");
+    // …and wallpaper is explicitly cleared so switching away from a wallpaper
+    // pack removes the image rather than leaving it painted.
+    expect(text).toContain("--cs-wallpaper: none;");
+    expect(text).toContain("--cs-wallpaper-opacity: 0;");
+  });
+
+  test("a pack with no wallpaper writes the cleared form in both selectors", () => {
+    applyThemePack("ocean");
+    expect(packStyleText().match(/--cs-wallpaper: none;/g)?.length).toBe(2);
+  });
+
+  test("applyThemePack emits an escaped wallpaper url + opacity when present", () => {
+    applyThemePack("acme", () => ({
+      id: "acme",
+      name: "Acme",
+      swatch: "0 0% 50%",
+      colors: { light: {}, dark: {} },
+      wallpaper: {
+        light: 'cstheme://acme/bg"x.jpg',
+        dark: "cstheme://acme/dark.jpg",
+        opacity: 0.2,
+      },
+      source: "installed",
+    }));
+    const text = packStyleText();
+    // Light selector gets the light url; the embedded quote is escaped.
+    expect(text).toContain('--cs-wallpaper: url("cstheme://acme/bg\\"x.jpg");');
+    expect(text).toContain('--cs-wallpaper: url("cstheme://acme/dark.jpg");');
+    expect(text.match(/--cs-wallpaper-opacity: 0\.2;/g)?.length).toBe(2);
   });
 
   test("applyThemePack reuses one managed node and the latest apply wins", () => {
