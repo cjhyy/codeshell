@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "spriteVersionNumber": 2,
+  "run_dir": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet",
+  "spritesheet": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet/final/spritesheet-extended.webp",
+  "validation": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet/final/validation-extended.json",
+  "chroma_despill": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet/qa/chroma-despill-extended.json",
+  "contact_sheet": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet/qa/contact-sheet-extended.png",
+  "direction_sheet": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet/qa/look-directions.png",
+  "direction_semantics": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet/qa/direction-semantics.json",
+  "blind_direction_validation": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet/qa/direction-blind-validation.json",
+  "blind_review_resolution": null,
+  "continuity": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet/qa/look-continuity.json",
+  "review": "/Users/admin/Documents/个人学习/代码学习/codeshell/artifacts/mimi-papillon-pet/qa/review.json",
+  "package": "/Users/admin/.codex/pets/mimi",
+  "codeshell_assets": "/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/assets/mimi-papillon"
+}

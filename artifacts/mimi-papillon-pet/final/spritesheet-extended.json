@@ -1,0 +1,96 @@
+{
+  "spritesheetPath": "spritesheet-extended.webp",
+  "spritesheetLayout": {
+    "columns": 8,
+    "rows": 11,
+    "cellWidth": 192,
+    "cellHeight": 208,
+    "lookDirectionCount": 16,
+    "neutralLookFrame": {
+      "rowIndex": 0,
+      "columnIndex": 6
+    }
+  },
+  "lookDirections": [
+    {
+      "degrees": 0.0,
+      "rowIndex": 9,
+      "columnIndex": 0
+    },
+    {
+      "degrees": 22.5,
+      "rowIndex": 9,
+      "columnIndex": 1
+    },
+    {
+      "degrees": 45.0,
+      "rowIndex": 9,
+      "columnIndex": 2
+    },
+    {
+      "degrees": 67.5,
+      "rowIndex": 9,
+      "columnIndex": 3
+    },
+    {
+      "degrees": 90.0,
+      "rowIndex": 9,
+      "columnIndex": 4
+    },
+    {
+      "degrees": 112.5,
+      "rowIndex": 9,
+      "columnIndex": 5
+    },
+    {
+      "degrees": 135.0,
+      "rowIndex": 9,
+      "columnIndex": 6
+    },
+    {
+      "degrees": 157.5,
+      "rowIndex": 9,
+      "columnIndex": 7
+    },
+    {
+      "degrees": 180.0,
+      "rowIndex": 10,
+      "columnIndex": 0
+    },
+    {
+      "degrees": 202.5,
+      "rowIndex": 10,
+      "columnIndex": 1
+    },
+    {
+      "degrees": 225.0,
+      "rowIndex": 10,
+      "columnIndex": 2
+    },
+    {
+      "degrees": 247.5,
+      "rowIndex": 10,
+      "columnIndex": 3
+    },
+    {
+      "degrees": 270.0,
+      "rowIndex": 10,
+      "columnIndex": 4
+    },
+    {
+      "degrees": 292.5,
+      "rowIndex": 10,
+      "columnIndex": 5
+    },
+    {
+      "degrees": 315.0,
+      "rowIndex": 10,
+      "columnIndex": 6
+    },
+    {
+      "degrees": 337.5,
+      "rowIndex": 10,
+      "columnIndex": 7
+    }
+  ]
+}

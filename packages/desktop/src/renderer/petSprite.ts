@@ -1,5 +1,30 @@
 import React from "react";
 import dogIcon from "./assets/codeshell-dog-icon.png";
+// Looping mood animations sliced from the Codex v2 atlas (see slice-atlas.py).
+import animIdle from "./assets/mimi-papillon/anim-idle.webp";
+import animRunning from "./assets/mimi-papillon/anim-running.webp";
+import animReview from "./assets/mimi-papillon/anim-review.webp";
+import animWaving from "./assets/mimi-papillon/anim-waving.webp";
+import animJumping from "./assets/mimi-papillon/anim-jumping.webp";
+import animWaiting from "./assets/mimi-papillon/anim-waiting.webp";
+import animFailed from "./assets/mimi-papillon/anim-failed.webp";
+// Directional drag frames (cycled per-frame in code so we can pick direction).
+import runRight1 from "./assets/mimi-papillon/run-right-1.png";
+import runRight2 from "./assets/mimi-papillon/run-right-2.png";
+import runRight3 from "./assets/mimi-papillon/run-right-3.png";
+import runRight4 from "./assets/mimi-papillon/run-right-4.png";
+import runRight5 from "./assets/mimi-papillon/run-right-5.png";
+import runRight6 from "./assets/mimi-papillon/run-right-6.png";
+import runRight7 from "./assets/mimi-papillon/run-right-7.png";
+import runRight8 from "./assets/mimi-papillon/run-right-8.png";
+import runLeft1 from "./assets/mimi-papillon/run-left-1.png";
+import runLeft2 from "./assets/mimi-papillon/run-left-2.png";
+import runLeft3 from "./assets/mimi-papillon/run-left-3.png";
+import runLeft4 from "./assets/mimi-papillon/run-left-4.png";
+import runLeft5 from "./assets/mimi-papillon/run-left-5.png";
+import runLeft6 from "./assets/mimi-papillon/run-left-6.png";
+import runLeft7 from "./assets/mimi-papillon/run-left-7.png";
+import runLeft8 from "./assets/mimi-papillon/run-left-8.png";
 import { loadThemePackId } from "./theme";
 import { resolveThemePack } from "./installedThemes";
 import {
@@ -14,15 +39,21 @@ import {
 export const DEFAULT_PET_SPRITE = dogIcon;
 
 /**
- * The default pack's own sprites. Kept here (not in the pure theme-packs data)
- * because it references a bundled asset url. The default dog is thus delivered
- * as a real builtin pack's sprites — the same path every other pack uses —
- * rather than a special fallback. Drop frame urls into `walk` to make the
- * default dog run while dragged (assets go in ./assets and are imported here).
+ * The default pack's sprites, drawn from the Codex v2 Mimi atlas. Kept here (not
+ * in the pure theme-packs data) because it references bundled asset urls. The
+ * default dog is thus delivered as a real builtin pack — the same path every
+ * other pack uses. `alert` maps to the atlas's "review" (ready/completed) mood.
  */
 const DEFAULT_PET_SPRITES: PetSprites = {
-  idle: dogIcon,
-  walk: [],
+  idle: animIdle,
+  running: animRunning,
+  alert: animReview,
+  waving: animWaving,
+  jumping: animJumping,
+  waiting: animWaiting,
+  failed: animFailed,
+  walk: [runRight1, runRight2, runRight3, runRight4, runRight5, runRight6, runRight7, runRight8],
+  walkLeft: [runLeft1, runLeft2, runLeft3, runLeft4, runLeft5, runLeft6, runLeft7, runLeft8],
 };
 
 /** The pet sprites a pack effectively provides (the default pack gets the dog). */
@@ -40,11 +71,17 @@ export function petSpriteUrl(pack: ThemePack, state: PetSpriteState): string {
   return sprites[state] ?? sprites.idle ?? DEFAULT_PET_SPRITE;
 }
 
-/** A pack's walk frames (non-empty urls only); empty when it supplies none. */
-export function petWalkFrames(pack: ThemePack): string[] {
-  return (effectivePetSprites(pack).walk ?? []).filter(
-    (url) => typeof url === "string" && url.length > 0,
-  );
+/** Horizontal drag direction; "left" uses walkLeft frames when a pack has them. */
+export type WalkDirection = "left" | "right";
+
+/**
+ * A pack's drag frames for a direction (non-empty urls only). Leftward drags use
+ * `walkLeft` and fall back to `walk` when the pack supplies only one set.
+ */
+export function petWalkFrames(pack: ThemePack, direction: WalkDirection = "right"): string[] {
+  const sprites = effectivePetSprites(pack);
+  const frames = direction === "left" ? (sprites.walkLeft ?? sprites.walk) : sprites.walk;
+  return (frames ?? []).filter((url) => typeof url === "string" && url.length > 0);
 }
 
 /**
@@ -99,17 +136,18 @@ const WALK_FRAME_MS = 120;
 
 /**
  * The pet sprite for the widget: normally the state sprite, but while
- * `dragging` and the pack has walk frames, cycle those frames to animate a
- * "run". Falls back to the state sprite when the pack has no walk frames, so a
- * plain pack (or the default dog before walk frames are added) is unaffected.
+ * `dragging` cycle the pack's directional walk frames to animate a run
+ * (leftward drags use walkLeft when present). Falls back to the state sprite
+ * when the pack has no walk frames, so a plain pack is unaffected.
  */
 export function usePetWidgetSprite(
   state: PetSpriteState,
   dragging: boolean,
+  direction: WalkDirection = "right",
   resolvePack?: (id: string) => ThemePack,
 ): string {
   const pack = useActiveThemePack(resolvePack);
-  const frames = petWalkFrames(pack);
+  const frames = petWalkFrames(pack, direction);
   const [frame, setFrame] = React.useState(0);
 
   React.useEffect(() => {
@@ -119,7 +157,8 @@ export function usePetWidgetSprite(
     }
     const id = setInterval(() => setFrame((n) => (n + 1) % frames.length), WALK_FRAME_MS);
     return () => clearInterval(id);
-  }, [dragging, frames.length]);
+    // Restart the loop when direction flips (frame set changes) or drag toggles.
+  }, [dragging, direction, frames.length]);
 
   if (dragging && frames.length > 0) return frames[frame % frames.length]!;
   return petSpriteUrl(pack, state);

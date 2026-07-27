@@ -1,0 +1,60 @@
+{
+  "pet": "Mimi",
+  "breed": "Papillon",
+  "codexV2": {
+    "spritesheet": "spritesheet-v2.webp",
+    "spriteVersionNumber": 2,
+    "cell": {
+      "width": 192,
+      "height": 208
+    },
+    "grid": {
+      "columns": 8,
+      "rows": 11,
+      "width": 1536,
+      "height": 2288
+    },
+    "animations": {
+      "idle": 6,
+      "running-right": 8,
+      "running-left": 8,
+      "waving": 4,
+      "jumping": 5,
+      "failed": 8,
+      "waiting": 6,
+      "running": 6,
+      "review": 6
+    },
+    "lookDirections": 16
+  },
+  "codeShellReady": {
+    "note": "Sliced from spritesheet-v2.webp by slice-atlas.py; wired in petSprite.ts.",
+    "idle": "anim-idle.webp",
+    "running": "anim-running.webp",
+    "alert": "anim-review.webp",
+    "waving": "anim-waving.webp",
+    "jumping": "anim-jumping.webp",
+    "waiting": "anim-waiting.webp",
+    "failed": "anim-failed.webp",
+    "walkRight": [
+      "run-right-1.png",
+      "run-right-2.png",
+      "run-right-3.png",
+      "run-right-4.png",
+      "run-right-5.png",
+      "run-right-6.png",
+      "run-right-7.png",
+      "run-right-8.png"
+    ],
+    "walkLeft": [
+      "run-left-1.png",
+      "run-left-2.png",
+      "run-left-3.png",
+      "run-left-4.png",
+      "run-left-5.png",
+      "run-left-6.png",
+      "run-left-7.png",
+      "run-left-8.png"
+    ]
+  }
+}

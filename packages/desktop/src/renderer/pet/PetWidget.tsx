@@ -32,28 +32,55 @@ export function PetWidget({
     pointerX: number;
     pointerY: number;
     moved: boolean;
+    lastX: number;
   } | null>(null);
   // Re-rendering flag (the ref above drives movement; this drives the sprite):
   // true while an actual drag is in progress so the pet cycles its walk frames.
   const [dragging, setDragging] = React.useState(false);
-
-  React.useEffect(
-    () => () => {
-      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-    },
-    [],
-  );
+  // Which way the pet faces while dragged; flips as the drag crosses horizontally.
+  const [dragDir, setDragDir] = React.useState<"left" | "right">("right");
+  // A short-lived playful mood layered over the resting state: a periodic idle
+  // wave ("hi") and a jump on click. Cleared by a timer back to the base state.
+  const [mood, setMood] = React.useState<"waving" | "jumping" | null>(null);
+  const moodTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const running = Math.max(0, runningCount);
   const activity = Math.max(0, activityCount);
   const completed = Math.max(0, unreadCompletedCount);
-  const summary = t("pet.widget.workSummary", { activity, completed, running });
-  // Unread completions are the "look at me" cue → alert; active work → running.
-  // While dragging, usePetWidgetSprite cycles the pack's walk frames instead.
-  const dogIcon = usePetWidgetSprite(
-    petVisualState({ runningCount: running, alertCount: completed }),
-    dragging,
+
+  const flashMood = React.useCallback((next: "waving" | "jumping", ms: number): void => {
+    setMood(next);
+    if (moodTimerRef.current) clearTimeout(moodTimerRef.current);
+    moodTimerRef.current = setTimeout(() => setMood(null), ms);
+  }, []);
+
+  // Every ~30s of calm (no active work, no unread), Mimi waves briefly.
+  React.useEffect(() => {
+    if (running > 0 || completed > 0) return;
+    const id = setInterval(() => flashMood("waving", 1600), 30_000);
+    return () => clearInterval(id);
+  }, [running, completed, flashMood]);
+
+  React.useEffect(
+    () => () => {
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+      if (moodTimerRef.current) clearTimeout(moodTimerRef.current);
+    },
+    [],
   );
+
+  const summary = t("pet.widget.workSummary", { activity, completed, running });
+  // Priority: a jump reaction, then work/alert states, then the idle wave; while
+  // dragging, usePetWidgetSprite cycles the pack's directional walk frames.
+  const baseState =
+    mood === "jumping"
+      ? "jumping"
+      : petVisualState({
+          runningCount: running,
+          alertCount: completed,
+          greeting: mood === "waving",
+        });
+  const dogIcon = usePetWidgetSprite(baseState, dragging, dragDir);
   return (
     <div
       data-pet-widget="desktop-window"
@@ -73,6 +100,7 @@ export function PetWidget({
             pointerX: event.screenX,
             pointerY: event.screenY,
             moved: false,
+            lastX: event.screenX,
           };
         }}
         onPointerMove={(event) => {
@@ -83,6 +111,11 @@ export function PetWidget({
             drag.moved = true;
           }
           if (!drag.moved) return;
+          // Face the direction of travel; ignore tiny jitters (<2px) to avoid flip-flop.
+          const dx = event.screenX - drag.lastX;
+          if (dx > 2) setDragDir("right");
+          else if (dx < -2) setDragDir("left");
+          drag.lastX = event.screenX;
           window.codeshell.pet.moveWidget({
             x: event.screenX - drag.offsetX,
             y: event.screenY - drag.offsetY,
@@ -95,6 +128,7 @@ export function PetWidget({
           setDragging(false);
           event.currentTarget.releasePointerCapture(event.pointerId);
           if (!drag.moved) {
+            flashMood("jumping", 650); // a playful hop on tap
             if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
             clickTimerRef.current = setTimeout(() => {
               clickTimerRef.current = null;
@@ -128,7 +162,7 @@ export function PetWidget({
           src={dogIcon}
           alt=""
           draggable={false}
-          className={`${dragging ? "" : "cs-pet-idle"} h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105`}
+          className={`${dragging || mood ? "" : "cs-pet-idle"} h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105`}
         />
         {running > 0 && (
           <span

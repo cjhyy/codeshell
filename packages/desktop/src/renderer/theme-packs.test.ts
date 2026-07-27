@@ -51,4 +51,11 @@ describe("theme-packs", () => {
     // running wins over a simultaneous alert
     expect(petVisualState({ runningCount: 1, alertCount: 3 })).toBe("running");
   });
+
+  test("a greeting cue waves only when otherwise idle", () => {
+    expect(petVisualState({ greeting: true })).toBe("waving");
+    // work or an alert outranks the idle wave
+    expect(petVisualState({ greeting: true, runningCount: 1 })).toBe("running");
+    expect(petVisualState({ greeting: true, alertCount: 1 })).toBe("alert");
+  });
 });

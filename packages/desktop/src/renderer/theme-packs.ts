@@ -46,17 +46,31 @@ import type { TranslationKey } from "./i18n";
 export type CssVarName = (typeof THEME_VAR_NAMES)[number];
 export type ThemeVars = Partial<Record<CssVarName, string>>;
 
-/** The three pet visual states a pack can supply a distinct sprite for. */
-export type PetSpriteState = "idle" | "running" | "alert";
+/**
+ * Pet visual states a pack can supply a distinct sprite for. `idle`/`running`/
+ * `alert` are the core trio; the rest mirror the Codex atlas's richer moods and
+ * are optional — a pack that omits them just never shows those moods.
+ */
+export type PetSpriteState =
+  | "idle"
+  | "running"
+  | "alert"
+  | "waving"
+  | "jumping"
+  | "waiting"
+  | "failed";
 
 /**
  * Per-state pet sprite urls (builtin: bundled asset url; installed: cstheme://),
- * plus an optional `walk` frame sequence cycled while the widget is dragged. A
- * pack with no walk frames simply shows its idle sprite during a drag.
+ * plus optional drag frame sequences. `walk` is the rightward/default run loop
+ * cycled while dragging; `walkLeft` is the leftward loop (falls back to `walk`
+ * when absent). A pack with no walk frames simply shows its idle sprite mid-drag.
  */
 export type PetSprites = Partial<Record<PetSpriteState, string>> & {
-  /** Ordered frames cycled during a drag to animate the pet "running". */
+  /** Ordered frames cycled during a rightward (or undirected) drag. */
   walk?: string[];
+  /** Ordered frames for a leftward drag; falls back to `walk` when absent. */
+  walkLeft?: string[];
 };
 
 export interface WallpaperSpec {
@@ -86,14 +100,20 @@ export interface ThemePack {
 }
 
 /**
- * Signals from the pet widget's activity that map to a sprite state. `running`
- * wins over `alert` (active work is the stronger "look at me" cue); everything
- * else is idle. Pure so it can be unit-tested and reused across windows.
+ * Signals from the pet widget's activity that map to a sprite state, in priority
+ * order: a transient `greeting` gesture (idle "hi, I'm here") wins briefly,
+ * then active work, then a ready/completed alert, else idle. Pure so it can be
+ * unit-tested and reused across windows.
  */
 export function petVisualState(activity: {
   runningCount?: number;
   alertCount?: number;
+  /** A short-lived "just went idle" cue → a waving gesture. */
+  greeting?: boolean;
 }): PetSpriteState {
+  if (activity.greeting && (activity.runningCount ?? 0) === 0 && (activity.alertCount ?? 0) === 0) {
+    return "waving";
+  }
   if ((activity.runningCount ?? 0) > 0) return "running";
   if ((activity.alertCount ?? 0) > 0) return "alert";
   return "idle";

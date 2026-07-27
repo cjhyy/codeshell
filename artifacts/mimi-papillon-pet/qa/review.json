@@ -1,0 +1,973 @@
+{
+  "ok": true,
+  "frames_root": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames",
+  "states": [
+    "idle",
+    "running-right",
+    "running-left",
+    "waving",
+    "jumping",
+    "failed",
+    "waiting",
+    "running",
+    "review"
+  ],
+  "errors": [],
+  "warnings": [],
+  "rows": [
+    {
+      "state": "idle",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/idle/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 23236,
+          "bbox": [
+            11,
+            5,
+            181,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 439
+        },
+        {
+          "index": 1,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/idle/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 23373,
+          "bbox": [
+            9,
+            5,
+            182,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 481
+        },
+        {
+          "index": 2,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/idle/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22896,
+          "bbox": [
+            11,
+            5,
+            181,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 500
+        },
+        {
+          "index": 3,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/idle/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 23110,
+          "bbox": [
+            10,
+            5,
+            181,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 482
+        },
+        {
+          "index": 4,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/idle/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22924,
+          "bbox": [
+            12,
+            5,
+            179,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 435
+        },
+        {
+          "index": 5,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/idle/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22801,
+          "bbox": [
+            12,
+            5,
+            180,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 456
+        }
+      ]
+    },
+    {
+      "state": "running-right",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-right/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17385,
+          "bbox": [
+            5,
+            29,
+            187,
+            178
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 577
+        },
+        {
+          "index": 1,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-right/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18501,
+          "bbox": [
+            5,
+            27,
+            187,
+            180
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 653
+        },
+        {
+          "index": 2,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-right/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15757,
+          "bbox": [
+            5,
+            40,
+            187,
+            167
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 550
+        },
+        {
+          "index": 3,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-right/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18694,
+          "bbox": [
+            5,
+            27,
+            187,
+            180
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 592
+        },
+        {
+          "index": 4,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-right/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17846,
+          "bbox": [
+            5,
+            28,
+            187,
+            180
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 613
+        },
+        {
+          "index": 5,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-right/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17080,
+          "bbox": [
+            5,
+            30,
+            187,
+            177
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 587
+        },
+        {
+          "index": 6,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-right/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18267,
+          "bbox": [
+            5,
+            26,
+            187,
+            182
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 586
+        },
+        {
+          "index": 7,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-right/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17612,
+          "bbox": [
+            5,
+            29,
+            187,
+            178
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 554
+        }
+      ]
+    },
+    {
+      "state": "running-left",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-left/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16052,
+          "bbox": [
+            5,
+            37,
+            187,
+            171
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 486
+        },
+        {
+          "index": 1,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-left/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18783,
+          "bbox": [
+            5,
+            23,
+            187,
+            185
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 625
+        },
+        {
+          "index": 2,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-left/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18334,
+          "bbox": [
+            5,
+            23,
+            187,
+            184
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 616
+        },
+        {
+          "index": 3,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-left/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18150,
+          "bbox": [
+            5,
+            28,
+            187,
+            179
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 534
+        },
+        {
+          "index": 4,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-left/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18032,
+          "bbox": [
+            5,
+            24,
+            187,
+            183
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 533
+        },
+        {
+          "index": 5,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-left/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20158,
+          "bbox": [
+            5,
+            22,
+            187,
+            186
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 702
+        },
+        {
+          "index": 6,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-left/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18010,
+          "bbox": [
+            5,
+            29,
+            187,
+            178
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 638
+        },
+        {
+          "index": 7,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running-left/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18044,
+          "bbox": [
+            5,
+            28,
+            187,
+            179
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 591
+        }
+      ]
+    },
+    {
+      "state": "waving",
+      "expected_frames": 4,
+      "actual_frames": 4,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waving/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 24005,
+          "bbox": [
+            8,
+            5,
+            184,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 232
+        },
+        {
+          "index": 1,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waving/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22040,
+          "bbox": [
+            16,
+            5,
+            176,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 245
+        },
+        {
+          "index": 2,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waving/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 21705,
+          "bbox": [
+            17,
+            5,
+            175,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 264
+        },
+        {
+          "index": 3,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waving/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 23777,
+          "bbox": [
+            10,
+            5,
+            182,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 278
+        }
+      ]
+    },
+    {
+      "state": "jumping",
+      "expected_frames": 5,
+      "actual_frames": 5,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/jumping/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 19333,
+          "bbox": [
+            5,
+            28,
+            187,
+            179
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 241
+        },
+        {
+          "index": 1,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/jumping/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 24347,
+          "bbox": [
+            5,
+            14,
+            187,
+            193
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 351
+        },
+        {
+          "index": 2,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/jumping/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 23806,
+          "bbox": [
+            5,
+            9,
+            187,
+            199
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 328
+        },
+        {
+          "index": 3,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/jumping/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22385,
+          "bbox": [
+            5,
+            19,
+            187,
+            188
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 286
+        },
+        {
+          "index": 4,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/jumping/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 23778,
+          "bbox": [
+            5,
+            11,
+            187,
+            197
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 331
+        }
+      ]
+    },
+    {
+      "state": "failed",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/failed/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 23557,
+          "bbox": [
+            19,
+            5,
+            172,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 299
+        },
+        {
+          "index": 1,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/failed/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 25693,
+          "bbox": [
+            12,
+            5,
+            179,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 377
+        },
+        {
+          "index": 2,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/failed/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20045,
+          "bbox": [
+            5,
+            33,
+            187,
+            175
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 274
+        },
+        {
+          "index": 3,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/failed/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 19789,
+          "bbox": [
+            5,
+            34,
+            187,
+            173
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 260
+        },
+        {
+          "index": 4,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/failed/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16363,
+          "bbox": [
+            5,
+            46,
+            187,
+            161
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 237
+        },
+        {
+          "index": 5,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/failed/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16972,
+          "bbox": [
+            5,
+            43,
+            187,
+            164
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 242
+        },
+        {
+          "index": 6,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/failed/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 24140,
+          "bbox": [
+            5,
+            11,
+            187,
+            197
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 408
+        },
+        {
+          "index": 7,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/failed/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 24718,
+          "bbox": [
+            7,
+            5,
+            185,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 369
+        }
+      ]
+    },
+    {
+      "state": "waiting",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waiting/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22850,
+          "bbox": [
+            14,
+            5,
+            178,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 335
+        },
+        {
+          "index": 1,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waiting/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 19102,
+          "bbox": [
+            13,
+            5,
+            178,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 268
+        },
+        {
+          "index": 2,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waiting/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20272,
+          "bbox": [
+            24,
+            5,
+            167,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 286
+        },
+        {
+          "index": 3,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waiting/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20229,
+          "bbox": [
+            21,
+            5,
+            170,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 358
+        },
+        {
+          "index": 4,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waiting/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 21302,
+          "bbox": [
+            26,
+            5,
+            165,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 347
+        },
+        {
+          "index": 5,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/waiting/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22726,
+          "bbox": [
+            19,
+            5,
+            173,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 331
+        }
+      ]
+    },
+    {
+      "state": "running",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22410,
+          "bbox": [
+            16,
+            5,
+            176,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 219
+        },
+        {
+          "index": 1,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17853,
+          "bbox": [
+            34,
+            5,
+            157,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 133
+        },
+        {
+          "index": 2,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18269,
+          "bbox": [
+            31,
+            5,
+            161,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 164
+        },
+        {
+          "index": 3,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 22081,
+          "bbox": [
+            24,
+            5,
+            167,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 230
+        },
+        {
+          "index": 4,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18991,
+          "bbox": [
+            34,
+            5,
+            157,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 184
+        },
+        {
+          "index": 5,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/running/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 21585,
+          "bbox": [
+            18,
+            5,
+            173,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 199
+        }
+      ]
+    },
+    {
+      "state": "review",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/review/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 23800,
+          "bbox": [
+            7,
+            5,
+            184,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 247
+        },
+        {
+          "index": 1,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/review/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18425,
+          "bbox": [
+            24,
+            5,
+            168,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 213
+        },
+        {
+          "index": 2,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/review/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 19505,
+          "bbox": [
+            23,
+            5,
+            168,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 237
+        },
+        {
+          "index": 3,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/review/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20759,
+          "bbox": [
+            20,
+            5,
+            172,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 255
+        },
+        {
+          "index": 4,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/review/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20267,
+          "bbox": [
+            20,
+            5,
+            171,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 275
+        },
+        {
+          "index": 5,
+          "file": "/Users/admin/Documents/\u4e2a\u4eba\u5b66\u4e60/\u4ee3\u7801\u5b66\u4e60/codeshell/artifacts/mimi-papillon-pet/frames/review/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20067,
+          "bbox": [
+            29,
+            5,
+            163,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 280
+        }
+      ]
+    }
+  ]
+}

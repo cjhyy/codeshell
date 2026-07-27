@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "directions": [
+    {"degree":"000","verdict":"pass","expected":"up","observed":"up","horizontal":"centered muzzle and pupils","vertical":"eyes and head visibly lifted","reason":"Clear up cardinal."},
+    {"degree":"022.5","verdict":"pass","expected":"up-right","observed":"up-right","horizontal":"muzzle turns screen-right","vertical":"eye line remains raised","reason":"Coherent first rightward step."},
+    {"degree":"045","verdict":"pass","expected":"up-right","observed":"up-right","horizontal":"clear screen-right facial turn","vertical":"elevated muzzle and eye line","reason":"Correct quadrant."},
+    {"degree":"067.5","verdict":"pass","expected":"up-right","observed":"up-right","horizontal":"further screen-right turn","vertical":"upward head pitch retained","reason":"Correct quadrant."},
+    {"degree":"090","verdict":"pass","expected":"right","observed":"right","horizontal":"unmistakable screen-right muzzle profile","vertical":"neutral pitch","reason":"Clear right cardinal."},
+    {"degree":"112.5","verdict":"warning","expected":"down-right","observed":"down-right","horizontal":"muzzle remains screen-right","vertical":"subtle downward pitch","reason":"The labeled loop reads down-right despite intermediate blind uncertainty."},
+    {"degree":"135","verdict":"pass","expected":"down-right","observed":"down-right","horizontal":"screen-right face plane","vertical":"clearly lowered gaze","reason":"Correct quadrant."},
+    {"degree":"157.5","verdict":"pass","expected":"down-right","observed":"down-right","horizontal":"right-facing muzzle","vertical":"downward gaze","reason":"Correct quadrant."},
+    {"degree":"180","verdict":"pass","expected":"down","observed":"down","horizontal":"centered muzzle","vertical":"eyes and nose clearly lowered","reason":"Clear down cardinal."},
+    {"degree":"202.5","verdict":"pass","expected":"down-left","observed":"down-left","horizontal":"face turns screen-left","vertical":"lowered eye line","reason":"Correct quadrant."},
+    {"degree":"225","verdict":"pass","expected":"down-left","observed":"down-left","horizontal":"screen-left face plane","vertical":"downward gaze","reason":"Correct quadrant."},
+    {"degree":"247.5","verdict":"pass","expected":"down-left","observed":"down-left","horizontal":"approaches screen-left profile","vertical":"down pitch retained","reason":"Correct quadrant."},
+    {"degree":"270","verdict":"pass","expected":"left","observed":"left","horizontal":"unmistakable screen-left muzzle profile","vertical":"neutral pitch","reason":"Clear left cardinal."},
+    {"degree":"292.5","verdict":"pass","expected":"up-left","observed":"up-left","horizontal":"screen-left turn","vertical":"eye line rises","reason":"Correct quadrant."},
+    {"degree":"315","verdict":"pass","expected":"up-left","observed":"up-left","horizontal":"screen-left facial angle","vertical":"upward gaze","reason":"Correct quadrant."},
+    {"degree":"337.5","verdict":"warning","expected":"up-left","observed":"up-left","horizontal":"slight screen-left facial turn","vertical":"raised gaze","reason":"The cue is subtle, but the ordered loop closes coherently."}
+  ],
+  "review_warnings": [
+    "Accepted intermediate blind uncertainty for 022.5, 045, 067.5, 112.5, and 337.5 after labeled normal-size review.",
+    "Continuity metrics flag larger transitions at 090 to 135, 157.5 to 180, and 337.5 to 000, but no visible snap, pop, or reversal is present.",
+    "Reported alpha-hole candidates are natural fur and ear negative spaces; no accidental interior hole is visible."
+  ],
+  "reviewed_by": "independent-final-visual-qa"
+}

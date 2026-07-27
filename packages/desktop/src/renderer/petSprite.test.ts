@@ -32,4 +32,39 @@ describe("petWalkFrames", () => {
     expect(petWalkFrames(pack({ walk: [] }))).toEqual([]);
     expect(petWalkFrames(pack({ walk: ["a.png", "", "b.png"] }))).toEqual(["a.png", "b.png"]);
   });
+
+  test("picks direction-specific frames, falling back to walk for left", () => {
+    const both = pack({ walk: ["r1.png", "r2.png"], walkLeft: ["l1.png", "l2.png"] });
+    expect(petWalkFrames(both, "right")).toEqual(["r1.png", "r2.png"]);
+    expect(petWalkFrames(both, "left")).toEqual(["l1.png", "l2.png"]);
+    // No walkLeft → left reuses the (rightward) walk frames.
+    const rightOnly = pack({ walk: ["r1.png", "r2.png"] });
+    expect(petWalkFrames(rightOnly, "left")).toEqual(["r1.png", "r2.png"]);
+  });
+
+  test("the default Mimi pack ships directional drag + rich mood sprites", () => {
+    const defaultPack = {
+      id: "default",
+      name: "default",
+      swatch: "0 0% 50%",
+      colors: { light: {}, dark: {} },
+    } satisfies ThemePack;
+
+    // Eight frames each direction, and left/right differ (leftward atlas row).
+    expect(petWalkFrames(defaultPack, "right")).toHaveLength(8);
+    expect(petWalkFrames(defaultPack, "left")).toHaveLength(8);
+    expect(petWalkFrames(defaultPack, "left")).not.toEqual(petWalkFrames(defaultPack, "right"));
+    // Core trio plus the extra Codex moods all resolve to real (non-default) art.
+    for (const state of [
+      "idle",
+      "running",
+      "alert",
+      "waving",
+      "jumping",
+      "waiting",
+      "failed",
+    ] as const) {
+      expect(petSpriteUrl(defaultPack, state)).not.toBe(DEFAULT_PET_SPRITE);
+    }
+  });
 });
