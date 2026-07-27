@@ -126,6 +126,7 @@ export { createOffBackend } from "./tool-system/sandbox/off.js";
 
 // ─── WorkspaceProfile（数字人）harness 元机制 ─────────────────────
 export {
+  SKILL_REPO_RE,
   WORKSPACE_PROFILE_NAME_RE,
   WorkspaceProfileSchema,
   WorkspaceProfileRequirementsSchema,

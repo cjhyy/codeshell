@@ -1527,6 +1527,19 @@ export interface CodeshellApi {
     }>
   >;
   installCatalogProfile(name: string): Promise<void>;
+  /** Read-only: what activating this digital human would install. Installs nothing. */
+  previewProfileRequirements(
+    name: string,
+    cwd: string,
+  ): Promise<{
+    profileName: string;
+    needsInstall: boolean;
+    willRun: string[];
+    warnings: string[];
+    blockers: string[];
+  }>;
+  /** Runs `npx skills add` — call only after the user confirmed the preview. */
+  installProfileRequirements(name: string, cwd: string): Promise<{ ok: boolean; errors: string[] }>;
   saveProfile(profile: WorkspaceProfile): Promise<void>;
   pickProfileDefinitionImport(): Promise<DigitalHumanProfileImportPickResult>;
   importReviewedProfileDefinition(

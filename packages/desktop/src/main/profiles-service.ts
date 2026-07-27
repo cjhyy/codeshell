@@ -9,8 +9,17 @@ import {
   SettingsManager,
   WorkspaceProfileSchema,
   WORKSPACE_PROFILE_NAME_RE,
+  invalidateSkillCache,
+  planProfileRequirements,
+  scanSkills,
   type WorkspaceProfile,
 } from "@cjhyy/code-shell-core";
+import {
+  formatRequirementPlan,
+  installSkillRequirement,
+  type RequirementPlanSummary,
+} from "./profile-requirements-service.js";
+import { spawnSync } from "node:child_process";
 import {
   activateWorkspaceProfile,
   deactivateWorkspaceProfile,
@@ -352,6 +361,79 @@ export function installCatalogProfile(name: string): void {
   if (!entry) throw new Error(`Unknown digital human catalog entry "${name}"`);
   const { category: _category, tags: _tags, samplePrompts: _samplePrompts, ...profile } = entry;
   saveWorkspaceProfile(profile);
+}
+
+export interface ProfileRequirementPreview extends RequirementPlanSummary {
+  profileName: string;
+  /** false → 没有要装的东西，UI 可直接跳过确认。 */
+  needsInstall: boolean;
+}
+
+/**
+ * 算出激活某数字人前要补齐的依赖。**只读**：不装任何东西，供 UI 先展示。
+ *
+ * 已装 skill 由 core scanner 提供（含 `plugin:skill` 命名空间的插件来源），
+ * 因此冲突判断与运行时实际可见的集合一致。
+ */
+export function previewProfileRequirements(name: string, cwd: string): ProfileRequirementPreview {
+  if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
+  const profile = readWorkspaceProfile(name);
+  if (!profile) throw new Error(`Digital human "${name}" not found`);
+
+  const installedSkills = scanSkills(cwd).map((skill) => ({
+    name: skill.name,
+    source: skill.source,
+  }));
+  const plan = planProfileRequirements(profile.requires, {
+    installedSkills,
+    toolProbe: probeTool,
+  });
+  return { profileName: name, needsInstall: plan.needsInstall, ...formatRequirementPlan(plan) };
+}
+
+/**
+ * 按计划安装依赖。调用方必须已经拿到用户确认——本函数会启动子进程克隆远程仓库。
+ *
+ * 安装后让 skill 缓存失效，否则刚装的 skill 要等缓存过期才可见。
+ */
+export async function installProfileRequirements(
+  name: string,
+  cwd: string,
+): Promise<{ ok: boolean; errors: string[] }> {
+  if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
+  const profile = readWorkspaceProfile(name);
+  if (!profile) throw new Error(`Digital human "${name}" not found`);
+
+  const installedSkills = scanSkills(cwd).map((skill) => ({
+    name: skill.name,
+    source: skill.source,
+  }));
+  const plan = planProfileRequirements(profile.requires, {
+    installedSkills,
+    toolProbe: probeTool,
+  });
+
+  const errors: string[] = [];
+  for (const { requirement } of plan.skillInstalls) {
+    const result = await installSkillRequirement(requirement, cwd);
+    if (!result.ok) errors.push(`${requirement.repo}: ${result.error}`);
+  }
+  // 新文件落地后必须让扫描缓存过期，否则本轮仍看不到刚装的 skill。
+  invalidateSkillCache();
+  return { ok: errors.length === 0, errors };
+}
+
+/** 探测外部命令版本；不存在返回 null（区别于「存在但版本低」）。 */
+function probeTool(bin: string): string | null {
+  // bin 来自 profile，故只允许命令名，绝不含路径分隔符或 shell 元字符。
+  if (!/^[A-Za-z0-9._-]{1,64}$/.test(bin)) return null;
+  const probe = spawnSync(bin, ["--version"], {
+    encoding: "utf8",
+    timeout: 10_000,
+    windowsHide: true,
+  });
+  if (probe.error || probe.status === null) return null;
+  return `${probe.stdout ?? ""}${probe.stderr ?? ""}`.trim() || null;
 }
 
 /** Create or atomically update one user-owned digital-human definition. */

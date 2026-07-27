@@ -361,9 +361,11 @@ import {
   exportProfileDefinition,
   importReviewedProfileDefinition,
   installCatalogProfile,
+  installProfileRequirements,
   listProfileCatalog,
   listProfiles,
   previewProfileDefinitionImport,
+  previewProfileRequirements,
   saveProfile,
   setSessionWorkspaceProfile,
 } from "./profiles-service.js";
@@ -2550,6 +2552,24 @@ ipcMain.handle("profiles:catalog", async () => listProfileCatalog());
 ipcMain.handle("profiles:install", async (_e, name: string) => {
   if (typeof name !== "string" || !name) throw new Error("profiles:install requires name");
   installCatalogProfile(name);
+});
+ipcMain.handle("profiles:previewRequirements", async (_e, name: string, cwd: string) => {
+  if (typeof name !== "string" || !name) {
+    throw new Error("profiles:previewRequirements requires name");
+  }
+  if (typeof cwd !== "string" || !cwd) {
+    throw new Error("profiles:previewRequirements requires cwd");
+  }
+  return previewProfileRequirements(name, cwd);
+});
+ipcMain.handle("profiles:installRequirements", async (_e, name: string, cwd: string) => {
+  if (typeof name !== "string" || !name) {
+    throw new Error("profiles:installRequirements requires name");
+  }
+  if (typeof cwd !== "string" || !cwd) {
+    throw new Error("profiles:installRequirements requires cwd");
+  }
+  return installProfileRequirements(name, cwd);
 });
 ipcMain.handle("profiles:save", async (_e, profile: unknown) => {
   if (typeof profile !== "object" || profile === null || Array.isArray(profile)) {

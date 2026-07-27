@@ -93,6 +93,15 @@ export const digitalHumans = {
         teamPrompt: "请让“{name}”拆解并完成这个复杂任务",
         teamReviewPrompt: "请让“{name}”并行产出方案，并交叉复核后交付",
       },
+      requirements: {
+        installTitle: "补齐数字人依赖",
+        installMessage:
+          "这个数字人声明了本机还没有的 skill。继续将从远程仓库安装到当前项目——这会执行远程代码，请确认来源可信。",
+        install: "安装并启用",
+        installFailed: "依赖安装失败：{{error}}",
+        blockedTitle: "缺少外部依赖",
+        blockedMessage: "数字人可以启用，但下列外部命令缺失或版本过低，相关能力将不可用。",
+      },
       transfer: {
         importDefinition: "导入定义 JSON",
         exportDefinition: "导出定义",
@@ -327,6 +336,16 @@ export const digitalHumans = {
         memberRole: "Independent Session",
         teamPrompt: "Ask “{name}” to break down and complete this complex task",
         teamReviewPrompt: "Ask “{name}” to produce parallel options and cross-review the delivery",
+      },
+      requirements: {
+        installTitle: "Install digital-human requirements",
+        installMessage:
+          "This digital human declares skills this machine does not have yet. Continuing installs them from a remote repository into the current project — that runs remote code, so confirm you trust the source.",
+        install: "Install and enable",
+        installFailed: "Requirement install failed: {{error}}",
+        blockedTitle: "Missing external dependencies",
+        blockedMessage:
+          "The digital human can be enabled, but the commands below are missing or too old, so those capabilities will not work.",
       },
       transfer: {
         importDefinition: "Import definition JSON",
