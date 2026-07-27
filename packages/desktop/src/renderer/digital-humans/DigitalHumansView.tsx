@@ -9,6 +9,7 @@ import {
   Download,
   Eye,
   GitFork,
+  MoreHorizontal,
   Loader2,
   MessageSquareText,
   Palette,
@@ -46,6 +47,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n";
 import { useConfirm } from "../ui/ConfirmDialog";
@@ -194,6 +202,40 @@ export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: P
   };
 
   const deleteProfileEntry = async (profile: DigitalHumanProfileEntry) => {
+    // Preflight first: deleteProfile throws when a team or Session still binds
+    // the profile, but that lands AFTER the user confirmed, as a raw English
+    // error listing session ids. Explain it up front instead.
+    try {
+      const preview = await window.codeshell.previewProfileDeletion(
+        profile.name,
+        activeProjectPath ?? undefined,
+      );
+      if (!preview.canDelete) {
+        const reasons = [
+          preview.blockingTeams.length
+            ? t("digitalHumans.delete.blockedByTeams", {
+                teams: preview.blockingTeams.join("、"),
+              })
+            : null,
+          preview.blockingSessions.length
+            ? t("digitalHumans.delete.blockedBySessions", {
+                count: preview.blockingSessions.length,
+              })
+            : null,
+        ].filter(Boolean);
+        await confirm({
+          title: t("digitalHumans.delete.blockedTitle", { name: profile.label }),
+          message: reasons.join("\n"),
+          detail: t("digitalHumans.delete.blockedDetail"),
+          confirmLabel: t("common.confirm"),
+        });
+        return;
+      }
+    } catch {
+      // Preflight is advisory — if it fails, fall through to the normal path
+      // and let the backend be the authority.
+    }
+
     const clearsCurrentSelection = false;
     const accepted = await requestDelete({
       kind: "profile",
@@ -1347,86 +1389,69 @@ function ProfileCard({
           <Badge variant="secondary">{t("digitalHumans.portableMemory")}</Badge>
         ) : null}
       </CardContent>
-      <CardFooter className="flex-col items-stretch gap-3 border-t border-border/60 pt-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="ghost" className="px-2" onClick={onDetails} disabled={busy}>
-            {t("digitalHumans.market.details")}
-            <ChevronRight size={13} aria-hidden="true" />
-          </Button>
-          <Button
-            size="sm"
-            className="min-w-28 flex-1"
-            onClick={onUse}
-            disabled={busy}
-            title={t("digitalHumans.useHint")}
-          >
-            <Sparkles size={13} aria-hidden="true" />
-            {t("digitalHumans.summon")}
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={onMemory}
-            disabled={busy}
-            title={t("digitalHumans.memory.button")}
-          >
-            <Brain size={13} aria-hidden="true" />
-            <span className="sr-only">{t("digitalHumans.memory.button")}</span>
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={onEdit}
-            disabled={busy}
-            title={t("digitalHumans.editor.edit")}
-          >
-            <Pencil size={13} aria-hidden="true" />
-            <span className="sr-only">{t("digitalHumans.editor.edit")}</span>
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={onExport}
-            disabled={busy}
-            title={t("digitalHumans.transfer.exportDefinitionHint")}
-          >
-            <Download size={13} aria-hidden="true" />
-            <span className="sr-only">{t("digitalHumans.transfer.exportDefinition")}</span>
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onDelete}
-            disabled={busy}
-            aria-label={t("digitalHumans.delete.profileButton", { name: profile.label })}
-            title={t("digitalHumans.delete.profileButton", { name: profile.label })}
-          >
-            <Trash2 size={14} aria-hidden="true" />
-          </Button>
-        </div>
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0 space-y-0.5">
-            <p className="text-xs font-medium text-foreground">
-              {t("digitalHumans.projectDefaultLabel")}
-            </p>
-            <p className="text-xs leading-5 text-muted-foreground">
-              {hasProject
-                ? t("digitalHumans.setProjectDefaultHint")
-                : t("digitalHumans.pickProject")}
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0"
-            onClick={onToggleDefault}
-            disabled={!hasProject || busy}
-          >
-            {profile.active
-              ? t("digitalHumans.clearDefault")
-              : t("digitalHumans.setProjectDefault")}
-          </Button>
-        </div>
+      {/* One primary action; everything else collapses into an overflow menu.
+          The old footer put 7 controls in a row — 4 of them same-weight icon
+          buttons — so nothing read as the thing you were meant to click. */}
+      <CardFooter className="items-center gap-2 border-t border-border/60 pt-3">
+        <Button
+          size="sm"
+          className="flex-1"
+          onClick={onUse}
+          disabled={busy}
+          title={t("digitalHumans.useHint")}
+        >
+          <Sparkles size={13} aria-hidden="true" />
+          {t("digitalHumans.summon")}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="shrink-0"
+          onClick={onToggleDefault}
+          disabled={!hasProject || busy}
+          title={
+            hasProject ? t("digitalHumans.setProjectDefaultHint") : t("digitalHumans.pickProject")
+          }
+        >
+          {profile.active ? t("digitalHumans.clearDefault") : t("digitalHumans.setProjectDefault")}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="shrink-0"
+              disabled={busy}
+              aria-label={t("digitalHumans.moreActions", { name: profile.label })}
+              title={t("digitalHumans.moreActions", { name: profile.label })}
+            >
+              <MoreHorizontal size={15} aria-hidden="true" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onSelect={onDetails}>
+              <ChevronRight size={13} aria-hidden="true" />
+              {t("digitalHumans.market.details")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onEdit}>
+              <Pencil size={13} aria-hidden="true" />
+              {t("digitalHumans.editor.edit")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onMemory}>
+              <Brain size={13} aria-hidden="true" />
+              {t("digitalHumans.memory.button")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onExport}>
+              <Download size={13} aria-hidden="true" />
+              {t("digitalHumans.transfer.exportDefinition")}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-status-err focus:text-status-err" onSelect={onDelete}>
+              <Trash2 size={13} aria-hidden="true" />
+              {t("common.delete")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardFooter>
     </Card>
   );

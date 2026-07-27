@@ -365,6 +365,7 @@ import {
   listProfileCatalog,
   listProfiles,
   previewProfileDefinitionImport,
+  previewProfileDeletion,
   previewProfileRequirements,
   saveProfile,
   setSessionWorkspaceProfile,
@@ -2577,6 +2578,13 @@ ipcMain.handle("profiles:catalog", async () => listProfileCatalog());
 ipcMain.handle("profiles:install", async (_e, name: string) => {
   if (typeof name !== "string" || !name) throw new Error("profiles:install requires name");
   installCatalogProfile(name);
+});
+ipcMain.handle("profiles:previewDeletion", async (_e, name: string, cwd?: string) => {
+  if (typeof name !== "string" || !name) throw new Error("profiles:previewDeletion requires name");
+  if (cwd !== undefined && typeof cwd !== "string") {
+    throw new Error("profiles:previewDeletion cwd must be a string");
+  }
+  return previewProfileDeletion(name, cwd);
 });
 ipcMain.handle("profiles:previewRequirements", async (_e, name: string, cwd: string) => {
   if (typeof name !== "string" || !name) {

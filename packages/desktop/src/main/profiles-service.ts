@@ -451,6 +451,52 @@ export interface DeleteProfileOptions {
  * an immediately dangling reference. Other projects are resolved defensively
  * by core if they still contain an old profile id.
  */
+export interface ProfileDeletionPreview {
+  name: string;
+  /** false → 存在硬阻塞，删除必定失败，UI 不该再弹「确认删除」。 */
+  canDelete: boolean;
+  /** 仍引用该数字人的团队名。 */
+  blockingTeams: string[];
+  /** 仍绑定该数字人的 Session id（最多 6 条）。 */
+  blockingSessions: string[];
+  /** 是当前项目默认——可恢复，删除时自动解绑，属提示而非阻塞。 */
+  isActiveProjectDefault: boolean;
+}
+
+/**
+ * 删除前的只读预检。
+ *
+ * deleteProfile 会在被团队或 Session 引用时抛错，但那发生在用户已经点过
+ * 「确认删除」之后，且错误是带 Session id 的英文原文——用户既看不懂也无法据此
+ * 行动。这里把同样的判断提前，让 UI 在确认框里就说清为什么删不了。
+ */
+export function previewProfileDeletion(name: string, cwd?: string): ProfileDeletionPreview {
+  if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
+
+  const blockingTeams = listDigitalHumanTeams()
+    .filter((team) => team.members.includes(name))
+    .map((team) => team.name);
+  const blockingSessions = new SessionManager().findSessionIdsByWorkspaceProfile(name, 6);
+
+  let isActiveProjectDefault = false;
+  if (cwd) {
+    try {
+      const settings = new SettingsManager(cwd, "full");
+      isActiveProjectDefault = resolveActiveWorkspaceProfile({ cwd, settings })?.name === name;
+    } catch {
+      // 读不到项目 settings 不该让预检失败——它只是少一条提示。
+    }
+  }
+
+  return {
+    name,
+    canDelete: blockingTeams.length === 0 && blockingSessions.length === 0,
+    blockingTeams,
+    blockingSessions,
+    isActiveProjectDefault,
+  };
+}
+
 export function deleteProfile(name: string, options: DeleteProfileOptions = {}): void {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   if (!readWorkspaceProfile(name)) return;

@@ -23,6 +23,7 @@ import {
   listProfiles,
   MAX_PROFILE_DEFINITION_IMPORT_BYTES,
   previewProfileDefinitionImport,
+  previewProfileDeletion,
   saveProfile,
   setSessionWorkspaceProfile,
 } from "./profiles-service.js";
@@ -399,6 +400,52 @@ describe("desktop profiles service", () => {
 
     expect(() => deleteProfile("seedance", { cwd })).toThrow(/session-pinned/);
     expect(listProfiles().some((profile) => profile.name === "seedance")).toBe(true);
+  });
+
+  test("previewProfileDeletion reports blockers before the confirm dialog", async () => {
+    const sessionDir = join(home, "sessions", "session-pinned");
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(sessionDir, "state.json"), JSON.stringify({ workspaceProfile: "seedance" }));
+    saveWorkspaceProfile({
+      name: "developer",
+      label: "Developer",
+      basePreset: "general",
+      plugins: [],
+      skills: [],
+      mcp: [],
+      agents: [],
+      portableMemory: false,
+    });
+    const { saveDigitalHumanTeam } = await import("./digital-human-team-service.js");
+    saveDigitalHumanTeam({
+      id: "delivery",
+      name: "Delivery",
+      members: ["seedance", "developer"],
+      mode: "divide",
+    });
+
+    const preview = previewProfileDeletion("seedance", cwd);
+    // The user must learn WHY it cannot be deleted before confirming, not from
+    // a raw backend error afterwards.
+    expect(preview.canDelete).toBe(false);
+    expect(preview.blockingSessions).toEqual(["session-pinned"]);
+    expect(preview.blockingTeams).toEqual(["Delivery"]);
+  });
+
+  test("previewProfileDeletion clears once nothing references the profile", () => {
+    const preview = previewProfileDeletion("seedance", cwd);
+    expect(preview.canDelete).toBe(true);
+    expect(preview.blockingSessions).toEqual([]);
+    expect(preview.blockingTeams).toEqual([]);
+  });
+
+  test("previewProfileDeletion flags the active project default without blocking", () => {
+    activateProfile(cwd, "seedance");
+    const preview = previewProfileDeletion("seedance", cwd);
+    // Being the project default is recoverable (we clear it on delete), so it
+    // is a warning, not a blocker.
+    expect(preview.isActiveProjectDefault).toBe(true);
+    expect(preview.canDelete).toBe(true);
   });
 
   test("refuses to delete through a symlinked profile directory", () => {

@@ -1527,6 +1527,17 @@ export interface CodeshellApi {
     }>
   >;
   installCatalogProfile(name: string): Promise<void>;
+  /** Read-only: why this digital human can or cannot be deleted. Deletes nothing. */
+  previewProfileDeletion(
+    name: string,
+    cwd?: string,
+  ): Promise<{
+    name: string;
+    canDelete: boolean;
+    blockingTeams: string[];
+    blockingSessions: string[];
+    isActiveProjectDefault: boolean;
+  }>;
   /** Read-only: what activating this digital human would install. Installs nothing. */
   previewProfileRequirements(
     name: string,

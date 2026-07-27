@@ -10,6 +10,7 @@ export const digitalHumans = {
       refreshing: "正在刷新数字人库…",
       loadFailed: "数字人库加载失败",
       retry: "重试",
+      moreActions: "「{{name}}」的更多操作",
       noSearchResults: "没有匹配结果",
       noSearchResultsDescription: "换一个关键词，或清空搜索条件后再试。",
       emptyCatalog: "广场暂无内置数字人",
@@ -144,6 +145,10 @@ export const digitalHumans = {
         clearsCurrentSelection: "此操作会同时清除当前团队选择。",
         profileMemoryWarning:
           "该数字人的可移植记忆也会一并删除；若仍被团队或历史会话引用，系统会拒绝删除。",
+        blockedTitle: "无法删除「{{name}}」",
+        blockedByTeams: "仍被这些团队引用：{{teams}}",
+        blockedBySessions: "仍有 {{count}} 个历史会话绑定着它",
+        blockedDetail: "请先解除这些引用（从团队移除，或删除/改绑对应会话），然后再试。",
       },
       empty: {
         title: "还没有数字人",
@@ -251,6 +256,7 @@ export const digitalHumans = {
       refreshing: "Refreshing digital-human library…",
       loadFailed: "Could not load the digital-human library",
       retry: "Retry",
+      moreActions: "More actions for “{{name}}”",
       noSearchResults: "No matching results",
       noSearchResultsDescription: "Try another keyword or clear the search.",
       emptyCatalog: "No bundled digital humans",
@@ -396,6 +402,11 @@ export const digitalHumans = {
         clearsCurrentSelection: "This also clears the current team selection.",
         profileMemoryWarning:
           "Its portable memory will be removed too. Deletion is blocked while a team or historical Session still references it.",
+        blockedTitle: "Cannot delete “{{name}}”",
+        blockedByTeams: "Still used by these teams: {{teams}}",
+        blockedBySessions: "Still bound to {{count}} historical session(s)",
+        blockedDetail:
+          "Remove those references first (take it out of the teams, or delete/rebind the sessions), then try again.",
       },
       empty: {
         title: "No digital humans yet",

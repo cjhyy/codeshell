@@ -115,9 +115,40 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("preview.portableMemory");
     expect(source).toContain("confirmProfileOverwrite");
     expect(source).toContain("digitalHumans.transfer.definitionOnlyNotice");
-    expect(source).toContain("digitalHumans.transfer.exportDefinitionHint");
+    // Export moved from an icon button (tooltip-only label) into the card's
+    // overflow menu, where it carries a written label instead of a hint.
+    expect(source).toContain("digitalHumans.transfer.exportDefinition");
     expect(source).toContain("operations.run(`import-profile:${preview.name}`");
     expect(source).toContain("operations.run(`export-profile:${profile.name}`");
+  });
+
+  test("a profile card has one primary action and folds the rest into a menu", () => {
+    // The footer used to line up 7 controls — details/summon/memory/edit/export/
+    // delete/set-default — four of them same-weight icon buttons, so nothing
+    // read as the thing to click.
+    expect(source).toContain("<DropdownMenu>");
+    expect(source).toContain("digitalHumans.moreActions");
+    for (const action of [
+      "digitalHumans.market.details",
+      "digitalHumans.editor.edit",
+      "digitalHumans.memory.button",
+      "digitalHumans.transfer.exportDefinition",
+    ]) {
+      expect(source).toContain(action);
+    }
+  });
+
+  test("deletion is preflighted so blockers surface before the confirm", () => {
+    // deleteProfile throws when a team or Session still binds the profile, but
+    // that lands after the user already confirmed, as raw English listing
+    // session ids. The preview must run first.
+    expect(source).toContain("window.codeshell.previewProfileDeletion");
+    expect(source).toContain("preview.canDelete");
+    expect(source).toContain("digitalHumans.delete.blockedByTeams");
+    expect(source).toContain("digitalHumans.delete.blockedBySessions");
+    expect(main).toContain('"profiles:previewDeletion"');
+    expect(preload).toContain("previewProfileDeletion");
+    expect(preloadTypes).toContain("previewProfileDeletion");
   });
 
   test("an empty market shows only a way forward, not chrome over a void", () => {
