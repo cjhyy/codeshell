@@ -8,10 +8,19 @@ import {
   saveThemePackId,
   type Theme,
 } from "../theme";
-import { THEME_PACKS } from "../theme-packs";
+import { THEME_PACKS, type ThemePack } from "../theme-packs";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n";
 import { Button } from "@/components/ui/button";
+
+/**
+ * Builtin packs carry an i18n key in `name`; installed packs carry a plain
+ * author-supplied string. Resolve to a display string for either.
+ */
+function packDisplayName(pack: ThemePack, t: (key: TranslationKey) => string): string {
+  return pack.source === "installed" ? String(pack.name) : t(pack.name as TranslationKey);
+}
 
 export function AppearanceSection() {
   const { t } = useT();
@@ -97,7 +106,7 @@ export function AppearanceSection() {
               className="h-6 w-6 shrink-0 rounded-full border border-border/60"
               style={{ backgroundColor: `hsl(${pack.swatch})` }}
             />
-            <span className="text-sm font-medium text-foreground">{t(pack.name)}</span>
+            <span className="text-sm font-medium text-foreground">{packDisplayName(pack, t)}</span>
           </Button>
         ))}
       </div>

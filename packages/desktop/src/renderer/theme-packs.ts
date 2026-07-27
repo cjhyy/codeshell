@@ -7,8 +7,10 @@
  * active (see theme.ts applyThemePack). Values are unitless HSL triples
  * ("H S% L%"), consumed via hsl(var(--cs-*)) exactly like the base sheet.
  *
- * First version ships color only. `pet` / `wallpaper` slots are reserved by the
- * design (docs/superpowers/specs/2026-07-27-theme-packs-design.md) and left off.
+ * Phase 2 adds the reserved slots: `pet` (per-state sprite urls) and `wallpaper`
+ * (a background image layered over the base color), plus `source` to tell a
+ * builtin pack from an externally installed one. Colors stay as in phase 1.
+ * See docs/superpowers/specs/2026-07-27-theme-packs-phase2-design.md.
  */
 
 /** Whitelist of overridable variables — must match names in tailwind.css. */
@@ -44,17 +46,50 @@ import type { TranslationKey } from "./i18n";
 export type CssVarName = (typeof THEME_VAR_NAMES)[number];
 export type ThemeVars = Partial<Record<CssVarName, string>>;
 
+/** The three pet visual states a pack can supply a distinct sprite for. */
+export type PetSpriteState = "idle" | "running" | "alert";
+
+/** Per-state pet sprite urls (builtin: bundled asset url; installed: cstheme://). */
+export type PetSprites = Partial<Record<PetSpriteState, string>>;
+
+export interface WallpaperSpec {
+  light?: string;
+  dark?: string;
+  /** 0..1 blend over the base color; defaults to 1 when a url is present. */
+  opacity?: number;
+}
+
 export interface ThemePack {
   /** Stable id persisted to localStorage. */
   id: string;
-  /** i18n key for the display name. */
-  name: TranslationKey;
+  /** i18n key (builtin) or plain display name (installed). */
+  name: TranslationKey | string;
   /** Representative color (unitless HSL) for the picker swatch — the pack's primary. */
   swatch: string;
   colors: {
     light: ThemeVars;
     dark: ThemeVars;
   };
+  /** Optional per-state pet sprites; missing states fall back to the default dog. */
+  pet?: PetSprites;
+  /** Optional background image; absent means the plain color background. */
+  wallpaper?: WallpaperSpec;
+  /** builtin ships with the app; installed comes from ~/.code-shell/themes/. */
+  source?: "builtin" | "installed";
+}
+
+/**
+ * Signals from the pet widget's activity that map to a sprite state. `running`
+ * wins over `alert` (active work is the stronger "look at me" cue); everything
+ * else is idle. Pure so it can be unit-tested and reused across windows.
+ */
+export function petVisualState(activity: {
+  runningCount?: number;
+  alertCount?: number;
+}): PetSpriteState {
+  if ((activity.runningCount ?? 0) > 0) return "running";
+  if ((activity.alertCount ?? 0) > 0) return "alert";
+  return "idle";
 }
 
 export const DEFAULT_PACK_ID = "default";
@@ -68,12 +103,14 @@ export const DEFAULT_PACK_ID = "default";
 export const THEME_PACKS: ThemePack[] = [
   {
     id: "default",
+    source: "builtin",
     name: "settingsX.appearance.pack.default",
     swatch: "19 63% 45%",
     colors: { light: {}, dark: {} },
   },
   {
     id: "ocean",
+    source: "builtin",
     name: "settingsX.appearance.pack.ocean",
     swatch: "210 80% 45%",
     colors: {
@@ -91,6 +128,7 @@ export const THEME_PACKS: ThemePack[] = [
   },
   {
     id: "forest",
+    source: "builtin",
     name: "settingsX.appearance.pack.forest",
     swatch: "150 55% 36%",
     colors: {
@@ -108,6 +146,7 @@ export const THEME_PACKS: ThemePack[] = [
   },
   {
     id: "grape",
+    source: "builtin",
     name: "settingsX.appearance.pack.grape",
     swatch: "270 55% 52%",
     colors: {

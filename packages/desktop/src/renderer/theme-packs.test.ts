@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_PACK_ID, THEME_PACKS, THEME_VAR_NAMES, getThemePack } from "./theme-packs";
+import {
+  DEFAULT_PACK_ID,
+  THEME_PACKS,
+  THEME_VAR_NAMES,
+  getThemePack,
+  petVisualState,
+} from "./theme-packs";
 
 const VAR_SET = new Set<string>(THEME_VAR_NAMES);
 const HSL = /^\d+(?:\.\d+)?\s+\d+(?:\.\d+)?%\s+\d+(?:\.\d+)?%$/;
@@ -32,5 +38,17 @@ describe("theme-packs", () => {
 
   test("getThemePack falls back to the default for an unknown id", () => {
     expect(getThemePack("nope").id).toBe(DEFAULT_PACK_ID);
+  });
+
+  test("builtin packs are tagged as builtin", () => {
+    for (const pack of THEME_PACKS) expect(pack.source).toBe("builtin");
+  });
+
+  test("petVisualState prefers running, then alert, else idle", () => {
+    expect(petVisualState({})).toBe("idle");
+    expect(petVisualState({ alertCount: 2 })).toBe("alert");
+    expect(petVisualState({ runningCount: 1 })).toBe("running");
+    // running wins over a simultaneous alert
+    expect(petVisualState({ runningCount: 1, alertCount: 3 })).toBe("running");
   });
 });
