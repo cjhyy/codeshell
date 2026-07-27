@@ -1,7 +1,8 @@
 import React from "react";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 import { loadThemePackId } from "./theme";
-import { getThemePack, petVisualState, type PetSpriteState, type ThemePack } from "./theme-packs";
+import { resolveThemePack } from "./installedThemes";
+import { petVisualState, type PetSpriteState, type ThemePack } from "./theme-packs";
 
 /** The bundled default pet image, used whenever a pack supplies no sprite. */
 export const DEFAULT_PET_SPRITE = dogIcon;
@@ -23,21 +24,28 @@ export function petSpriteUrl(pack: ThemePack, state: PetSpriteState): string {
  * can be resolved too; it defaults to the builtin table.
  */
 export function useActiveThemePack(
-  resolvePack: (id: string) => ThemePack = getThemePack,
+  resolvePack: (id: string) => ThemePack = resolveThemePack,
 ): ThemePack {
   const [id, setId] = React.useState<string>(() => loadThemePackId());
+  const [, bump] = React.useState(0);
   React.useEffect(() => {
+    const reread = (): void => setId(loadThemePackId());
     const onStorage = (event: StorageEvent): void => {
-      if (event.key === "codeshell.theme-pack") setId(loadThemePackId());
+      if (event.key === "codeshell.theme-pack") reread();
     };
     window.addEventListener("storage", onStorage);
     // A same-window pack switch does not emit `storage`; AppearanceSection
     // dispatches this custom event so the picker's own window updates too.
-    const onLocal = (): void => setId(loadThemePackId());
-    window.addEventListener("codeshell:theme-pack-changed", onLocal);
+    window.addEventListener("codeshell:theme-pack-changed", reread);
+    // An install/uninstall keeps the id but changes what it resolves to.
+    const shell = globalThis.window?.codeshell as
+      | { onThemesChanged?: (cb: () => void) => () => void }
+      | undefined;
+    const off = shell?.onThemesChanged?.(() => bump((n) => n + 1));
     return () => {
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("codeshell:theme-pack-changed", onLocal);
+      window.removeEventListener("codeshell:theme-pack-changed", reread);
+      off?.();
     };
   }, []);
   return resolvePack(id);

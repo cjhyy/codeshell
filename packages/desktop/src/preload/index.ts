@@ -21,6 +21,7 @@ import { createPetApi } from "./pet-api";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaDto } from "../shared/plugin-media";
+import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
 import type {
   LocalPluginPreview,
   PluginHookApprovalResult,
@@ -1047,6 +1048,19 @@ contextBridge.exposeInMainWorld("codeshell", {
   uninstallLocalPlugin: (name: string) => ipcRenderer.invoke("plugins:uninstallLocal", name),
   updatePlugin: (name: string) => ipcRenderer.invoke("plugins:update", name),
   checkPluginUpdate: (name: string) => ipcRenderer.invoke("plugins:checkUpdate", name),
+  // Theme packs (installable pet/color/wallpaper packs).
+  listInstalledThemes: () => ipcRenderer.invoke("themes:list") as Promise<InstalledThemePack[]>,
+  pickAndPreviewTheme: () =>
+    ipcRenderer.invoke("themes:pickAndPreview") as Promise<ThemePickPreview>,
+  installTheme: (input: { path: string; reviewToken: string }) =>
+    ipcRenderer.invoke("themes:install", input) as Promise<InstalledThemePack>,
+  uninstallTheme: (id: string) =>
+    ipcRenderer.invoke("themes:uninstall", id) as Promise<{ ok: true }>,
+  onThemesChanged: (listener: () => void) => {
+    const handler = (): void => listener();
+    ipcRenderer.on("themes:changed", handler);
+    return () => ipcRenderer.removeListener("themes:changed", handler);
+  },
   checkGit: () => ipcRenderer.invoke("git:check"),
   transcribeAudio: (payload: {
     cwd: string;

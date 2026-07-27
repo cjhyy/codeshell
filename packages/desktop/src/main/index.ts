@@ -42,6 +42,12 @@ import {
   ErrorCodes,
   registerCapability,
   WORKSPACE_PROFILE_NAME_RE,
+  previewLocalTheme,
+  installReviewedLocalTheme,
+  listInstalledThemes,
+  uninstallTheme,
+  type InstalledTheme,
+  type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
   defaultCacheDir,
@@ -308,6 +314,11 @@ import {
   registerPluginPanelSchemePrivileges,
   validatePluginPanelEntryUrl,
 } from "./plugin-panel-protocol.js";
+import {
+  installThemeAssetProtocol,
+  registerThemeAssetSchemePrivileges,
+  themeAssetUrl,
+} from "./theme-asset-protocol.js";
 import { PluginPanelBridge } from "./plugin-panel-bridge.js";
 import {
   listMarketplacesForUi,
@@ -435,6 +446,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Custom schemes must be privileged before app.ready. The request handler is
 // installed later on each plugin guest's isolated session partition.
 registerPluginPanelSchemePrivileges();
+// cstheme:// serves installed theme-pack image assets to the renderer; the
+// handler is installed on the default session once the app is ready.
+registerThemeAssetSchemePrivileges();
 
 // Override the runtime app name. In dev (`electron .`) the default is
 // "Electron"; this makes the macOS menu bar, Dock tooltip, and About
@@ -2233,6 +2247,9 @@ app.whenReady().then(async () => {
   if (!ownsDesktopInstance) return;
   writeSettingsSchemaAtStartup();
   void cleanupKnownAttachments();
+  // The main window and the pet popout both render on the default session, so
+  // one handler there serves cstheme:// assets to every window.
+  installThemeAssetProtocol();
 
   gatewayControlServer = new GatewayControlServer({
     descriptorPath: join(userHome(), ".code-shell", "im-gateway", "desktop-control.json"),
@@ -3020,6 +3037,83 @@ ipcMain.handle(
     return result;
   },
 );
+/** Convert an installed theme to the renderer ThemePack shape with cstheme:// urls. */
+function installedThemeToPack(theme: InstalledTheme): {
+  id: string;
+  name: string;
+  swatch: string;
+  colors: { light: Record<string, string>; dark: Record<string, string> };
+  pet?: Record<string, string>;
+  wallpaper?: { light?: string; dark?: string; opacity?: number };
+  source: "installed";
+} {
+  const asset = (rel?: string): string | undefined =>
+    rel ? themeAssetUrl(theme.id, rel) : undefined;
+  const pet: Record<string, string> = {};
+  if (theme.pet.idle) pet.idle = asset(theme.pet.idle)!;
+  if (theme.pet.running) pet.running = asset(theme.pet.running)!;
+  if (theme.pet.alert) pet.alert = asset(theme.pet.alert)!;
+  const wp = theme.wallpaper;
+  return {
+    id: theme.id,
+    name: theme.name,
+    swatch: theme.colors.light["--cs-primary"] ?? theme.colors.dark["--cs-primary"] ?? "0 0% 50%",
+    colors: theme.colors,
+    ...(Object.keys(pet).length ? { pet } : {}),
+    ...(wp
+      ? {
+          wallpaper: {
+            ...(asset(wp.light) ? { light: asset(wp.light) } : {}),
+            ...(asset(wp.dark) ? { dark: asset(wp.dark) } : {}),
+            ...(wp.opacity !== undefined ? { opacity: wp.opacity } : {}),
+          },
+        }
+      : {}),
+    source: "installed",
+  };
+}
+
+ipcMain.handle("themes:list", async () => {
+  const themes = await listInstalledThemes();
+  return themes.map(installedThemeToPack);
+});
+ipcMain.handle(
+  "themes:pickAndPreview",
+  async (): Promise<
+    { cancelled: true } | { cancelled: false; path: string; preview: ThemePreview }
+  > => {
+    const win = BrowserWindow.getFocusedWindow();
+    const picked = win
+      ? await dialog.showOpenDialog(win, {
+          title: "选择主题包目录",
+          properties: ["openDirectory"],
+        })
+      : await dialog.showOpenDialog({ title: "选择主题包目录", properties: ["openDirectory"] });
+    const path = picked.filePaths[0];
+    if (picked.canceled || !path) return { cancelled: true };
+    const preview = await previewLocalTheme(path);
+    return { cancelled: false, path, preview };
+  },
+);
+ipcMain.handle("themes:install", async (_e, input: { path: string; reviewToken: string }) => {
+  if (!input || typeof input.path !== "string" || typeof input.reviewToken !== "string") {
+    throw new Error("themes:install requires { path, reviewToken }");
+  }
+  const installed = await installReviewedLocalTheme(input.path, input.reviewToken);
+  const pack = installedThemeToPack(installed);
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send("themes:changed");
+  }
+  return pack;
+});
+ipcMain.handle("themes:uninstall", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("themes:uninstall requires an id");
+  await uninstallTheme(id);
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send("themes:changed");
+  }
+  return { ok: true };
+});
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
 ipcMain.handle("skills:checkUpdate", async (_e, filePath: string) =>
   checkSkillUpdateEntry(filePath),

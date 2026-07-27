@@ -1,10 +1,5 @@
-import {
-  DEFAULT_PACK_ID,
-  THEME_PACKS,
-  getThemePack,
-  type ThemePack,
-  type ThemeVars,
-} from "./theme-packs";
+import { DEFAULT_PACK_ID, THEME_PACKS, type ThemePack } from "./theme-packs";
+import { refreshInstalledThemes, resolveThemePack } from "./installedThemes";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -42,7 +37,10 @@ export function loadThemePackId(): string {
   } catch {
     raw = null;
   }
-  return raw && THEME_PACKS.some((pack) => pack.id === raw) ? raw : DEFAULT_PACK_ID;
+  if (!raw) return DEFAULT_PACK_ID;
+  // Accept a builtin id, or any id resolveThemePack can satisfy (installed).
+  if (THEME_PACKS.some((pack) => pack.id === raw)) return raw;
+  return resolveThemePack(raw).id === raw ? raw : DEFAULT_PACK_ID;
 }
 
 export function saveThemePackId(id: string): void {
@@ -64,7 +62,7 @@ function renderVars(vars: Record<string, string>): string {
  */
 export function applyThemePack(
   id: string,
-  resolvePack: (id: string) => ThemePack = getThemePack,
+  resolvePack: (id: string) => ThemePack = resolveThemePack,
 ): void {
   const pack = resolvePack(id);
   let style = document.getElementById(PACK_STYLE_ID) as HTMLStyleElement | null;
@@ -102,7 +100,11 @@ function cssUrlEscape(url: string): string {
 export function initTheme(): Theme {
   const t = loadTheme();
   applyTheme(t);
+  // Apply synchronously with whatever is cached (builtin default on first paint),
+  // then load installed packs and re-apply so an installed active pack lands
+  // without a flash of the base palette.
   applyThemePack(loadThemePackId());
+  void refreshInstalledThemes().then(() => applyThemePack(loadThemePackId()));
   if (t === "system") {
     window
       .matchMedia("(prefers-color-scheme: dark)")
@@ -114,6 +116,13 @@ export function initTheme(): Theme {
   window.addEventListener("storage", (event) => {
     if (event.key === KEY) applyTheme(loadTheme());
     else if (event.key === PACK_KEY) applyThemePack(loadThemePackId());
+  });
+  // A pack install/uninstall in any window refreshes the cache and re-applies.
+  const shell = globalThis.window?.codeshell as
+    | { onThemesChanged?: (cb: () => void) => void }
+    | undefined;
+  shell?.onThemesChanged?.(() => {
+    void refreshInstalledThemes().then(() => applyThemePack(loadThemePackId()));
   });
   return t;
 }
