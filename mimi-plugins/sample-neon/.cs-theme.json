@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "sample-neon",
+  "name": "Sample Neon",
+  "version": "1.0.0",
+  "colors": {
+    "light": { "--cs-primary": "310 80% 50%", "--cs-primary-foreground": "0 0% 100%", "--cs-ring": "310 80% 50%" },
+    "dark": { "--cs-primary": "310 85% 65%", "--cs-ring": "310 85% 65%" }
+  },
+  "pet": { "idle": "pet-idle.png" }
+}
