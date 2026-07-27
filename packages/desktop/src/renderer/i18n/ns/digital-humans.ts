@@ -161,6 +161,11 @@ export const digitalHumans = {
       },
       editor: {
         create: "创建数字人",
+        discardTitle: "放弃未保存的修改？",
+        discardMessage: "这个数字人还有改动没有保存，关闭后会丢失。",
+        discard: "放弃修改",
+        requiresTitle: "自带依赖",
+        requiresDescription: "启用时自动补齐；在定义 JSON 中编辑，此处只读。",
         edit: "编辑",
         titleCreate: "创建数字人",
         titleEdit: "编辑数字人",
@@ -424,6 +429,12 @@ export const digitalHumans = {
       },
       editor: {
         create: "Create digital human",
+        discardTitle: "Discard unsaved changes?",
+        discardMessage: "This digital human has unsaved edits; closing loses them.",
+        discard: "Discard",
+        requiresTitle: "Bundled requirements",
+        requiresDescription:
+          "Installed on enable; authored in the definition JSON, read-only here.",
         edit: "Edit",
         titleCreate: "Create digital human",
         titleEdit: "Edit digital human",

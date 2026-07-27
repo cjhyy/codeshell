@@ -47,6 +47,21 @@ export interface DigitalHumanProfileEntry {
   active: boolean;
   portableMemory: boolean;
   version?: string;
+  /**
+   * Dependency declaration (skill sources + required binaries). The editor has
+   * no field for it but must round-trip it on save, otherwise editing a
+   * repo-installed digital human strips the very thing that makes it work.
+   */
+  requires?: {
+    skills: Array<{
+      source: "github";
+      repo: string;
+      skills?: string[];
+      scope: "project";
+      fullDepth: boolean;
+    }>;
+    tools: Array<{ bin: string; minVersion?: string; hint?: string }>;
+  };
 }
 
 export interface DigitalHumanSkillEntry {

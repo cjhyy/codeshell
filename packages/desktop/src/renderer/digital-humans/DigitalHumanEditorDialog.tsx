@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n";
+import { useConfirm } from "../ui/ConfirmDialog";
 import {
   canAddDigitalHumanSkill,
   DIGITAL_HUMAN_PROFILE_LIMITS,
@@ -61,6 +62,7 @@ export function DigitalHumanEditorDialog({
   onSave,
 }: Props) {
   const { t } = useT();
+  const confirm = useConfirm();
   const [id, setId] = React.useState("");
   const [label, setLabel] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -132,6 +134,37 @@ export function DigitalHumanEditorDialog({
     textFieldsWithinLimits &&
     selectedSkillsWithinLimits &&
     !busy;
+  /**
+   * Has the user typed anything not yet saved? Radix closes the dialog on a
+   * backdrop click or Esc, which silently discarded a half-written digital
+   * human — the main reason editing felt unsafe.
+   */
+  const dirty =
+    normalizedId !== (profile?.name ?? "") ||
+    label !== (profile?.label ?? "") ||
+    description !== (profile?.description ?? "") ||
+    basePreset !== (profile?.basePreset ?? "general") ||
+    mainInstruction !== (profile?.mainInstruction ?? "") ||
+    version !== (profile?.version ?? "") ||
+    portableMemory !== (profile?.portableMemory ?? true) ||
+    selectedSkills.size !== (profile?.skills.length ?? 0) ||
+    (profile?.skills ?? []).some((name) => !selectedSkills.has(name));
+
+  const requestClose = (next: boolean) => {
+    if (next || !dirty || busy) {
+      onOpenChange(next);
+      return;
+    }
+    void confirm({
+      title: t("digitalHumans.editor.discardTitle"),
+      message: t("digitalHumans.editor.discardMessage"),
+      confirmLabel: t("digitalHumans.editor.discard"),
+      destructive: true,
+    }).then((accepted) => {
+      if (accepted) onOpenChange(false);
+    });
+  };
+
   const submit = () => {
     if (!canSave) return;
     onSave({
@@ -143,6 +176,10 @@ export function DigitalHumanEditorDialog({
       skills: [...selectedSkills].sort(),
       mcp: profile?.mcp ?? [],
       agents: profile?.agents ?? [],
+      // The editor has no `requires` field, so it must carry the existing one
+      // through. Dropping it would silently turn a repo-installed digital human
+      // back into a shell whose skills never get fetched.
+      ...(profile?.requires ? { requires: profile.requires } : {}),
       ...(mainInstruction.trim() ? { mainInstruction: mainInstruction.trim() } : {}),
       portableMemory,
       ...(version.trim() ? { version: version.trim() } : {}),
@@ -150,7 +187,7 @@ export function DigitalHumanEditorDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={requestClose}>
       <DialogContent className="max-h-[88vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -289,6 +326,34 @@ export function DigitalHumanEditorDialog({
                   onCheckedChange={setPortableMemory}
                 />
               </div>
+              {profile?.requires &&
+              (profile.requires.skills.length > 0 || profile.requires.tools.length > 0) ? (
+                // Read-only on purpose: `requires` is authored in the definition
+                // JSON. Showing it here stops the editor from looking like it
+                // holds the whole truth about a repo-installed digital human.
+                <div className="rounded-md border border-border/70 bg-muted/20 px-3 py-2">
+                  <p className="text-xs font-medium text-foreground">
+                    {t("digitalHumans.editor.requiresTitle")}
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">
+                    {t("digitalHumans.editor.requiresDescription")}
+                  </p>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {profile.requires.skills.map((requirement) => (
+                      <li key={requirement.repo} className="font-mono text-[11px] text-foreground">
+                        {requirement.repo}
+                        {requirement.skills?.length ? ` · ${requirement.skills.length} skills` : ""}
+                      </li>
+                    ))}
+                    {profile.requires.tools.map((tool) => (
+                      <li key={tool.bin} className="font-mono text-[11px] text-muted-foreground">
+                        {tool.bin}
+                        {tool.minVersion ? ` ≥ ${tool.minVersion}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </section>
 
             <section className="space-y-3">

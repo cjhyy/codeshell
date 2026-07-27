@@ -151,6 +151,32 @@ describe("DigitalHumansView contract", () => {
     expect(preloadTypes).toContain("previewProfileDeletion");
   });
 
+  test("the editor round-trips requires and guards unsaved edits", () => {
+    // The editor has no `requires` field. Without an explicit carry-through,
+    // saving a repo-installed digital human strips its dependency declaration
+    // and silently turns it back into a shell.
+    expect(editor).toContain("...(profile?.requires ? { requires: profile.requires } : {})");
+    // Radix closes on backdrop click / Esc; a half-written profile must not
+    // vanish without asking.
+    expect(editor).toContain("const dirty =");
+    expect(editor).toContain("onOpenChange={requestClose}");
+    expect(editor).toContain("digitalHumans.editor.discardTitle");
+  });
+
+  test("digital humans can come from a repo and be published as one", () => {
+    // Add: repos are managed in the settings section, mirroring the plugin
+    // marketplace flow rather than inventing a second one.
+    expect(dhSection).toContain("window.codeshell.addProfileRepo");
+    expect(dhSection).toContain("window.codeshell.listProfileRepos");
+    expect(main).toContain('"profiles:addRepo"');
+    expect(main).toContain('"profiles:listRepos"');
+    // Show: a catalog card states which repo it came from.
+    expect(source).toContain("entry.sourceRepo");
+    // Publish: a repo skeleton, not a bare JSON that has to be hand-delivered.
+    expect(main).toContain('"profiles:exportRepo"');
+    expect(source).toContain("window.codeshell.exportProfileRepo");
+  });
+
   test("an empty market shows only a way forward, not chrome over a void", () => {
     // Both bundled sources ship empty now. Without this guard the tab renders
     // four scene cards with no entries, a "browse (0)" heading and five
