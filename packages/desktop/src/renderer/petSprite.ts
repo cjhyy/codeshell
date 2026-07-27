@@ -1,7 +1,8 @@
 import React from "react";
 import dogIcon from "./assets/codeshell-dog-icon.png";
 // Looping mood animations sliced from the Codex v2 atlas (see slice-atlas.py).
-import animIdle from "./assets/mimi-papillon/anim-idle.webp";
+// anim-idle (a near-still breathe) is intentionally NOT the default resting
+// sprite — it reads as static; the livelier anim-waiting is used instead.
 import animRunning from "./assets/mimi-papillon/anim-running.webp";
 import animReview from "./assets/mimi-papillon/anim-review.webp";
 import animWaving from "./assets/mimi-papillon/anim-waving.webp";
@@ -43,9 +44,13 @@ export const DEFAULT_PET_SPRITE = dogIcon;
  * in the pure theme-packs data) because it references bundled asset urls. The
  * default dog is thus delivered as a real builtin pack — the same path every
  * other pack uses. `alert` maps to the atlas's "review" (ready/completed) mood.
+ *
+ * `idle` deliberately uses the atlas's "waiting" loop rather than "idle": the
+ * true idle is a near-still breathe/blink that reads as a static icon on the
+ * widget. "waiting" is a lively at-attention loop, so Mimi visibly moves at rest.
  */
 const DEFAULT_PET_SPRITES: PetSprites = {
-  idle: animIdle,
+  idle: animWaiting,
   running: animRunning,
   alert: animReview,
   waving: animWaving,
