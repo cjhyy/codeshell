@@ -119,4 +119,19 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("operations.run(`import-profile:${preview.name}`");
     expect(source).toContain("operations.run(`export-profile:${profile.name}`");
   });
+
+  test("an empty market shows only a way forward, not chrome over a void", () => {
+    // Both bundled sources ship empty now. Without this guard the tab renders
+    // four scene cards with no entries, a "browse (0)" heading and five
+    // category filters that filter nothing.
+    expect(source).toContain("const marketIsEmpty =");
+    expect(source).toContain("catalog.length === 0 && CURATED_DIGITAL_HUMAN_TEAMS.length === 0");
+    expect(source).toContain("{marketIsEmpty ? (");
+
+    // The dead end must offer the two real ways to get a digital human.
+    expect(source).toContain("<CatalogEmptyState");
+    expect(source).toContain("onImport={() => void pickProfileDefinitionImport()}");
+    expect(source).toContain("onCreate={() => setEditor({})}");
+    expect(source).toContain("digitalHumans.emptyCatalogDescription");
+  });
 });

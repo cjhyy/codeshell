@@ -168,6 +168,13 @@ export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: P
         )),
   );
 
+  /**
+   * Nothing is shipped in the market at all (as opposed to a filter hiding
+   * everything). The bundled catalog and curated teams are both intentionally
+   * empty now, so the whole browse UI would be chrome over a void.
+   */
+  const marketIsEmpty = catalog.length === 0 && CURATED_DIGITAL_HUMAN_TEAMS.length === 0;
+
   const requestDelete = async (request: DigitalHumanDeleteRequest): Promise<boolean> => {
     if (confirmDelete) return confirmDelete(request);
     const detail = [
@@ -589,129 +596,134 @@ export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: P
                 </TabsList>
 
                 <TabsContent value="market" className="mt-5">
-                  {!normalizedQuery && marketCategory === "all" ? (
-                    <FeaturedScenes
-                      catalog={catalog}
-                      onSelectCategory={(category) => {
-                        setMarketKind("single");
-                        setMarketCategory(category);
-                      }}
+                  {marketIsEmpty ? (
+                    // Nothing is shipped at all. Rendering the scene cards, the
+                    // "browse (0)" heading and the category filters over an empty
+                    // list is pure chrome — four cards with no entries and five
+                    // buttons that filter nothing. Show only where to get one.
+                    <CatalogEmptyState
+                      onImport={() => void pickProfileDefinitionImport()}
+                      onCreate={() => setEditor({})}
+                      importBusy={importPickerBusy}
                     />
-                  ) : null}
-
-                  <div className="mt-6 flex flex-col gap-4">
-                    <div className="flex flex-wrap items-end justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h2 className="text-base font-semibold tracking-tight">
-                            {t("digitalHumans.market.browseTitle")}
-                          </h2>
-                          <Badge variant="secondary">
-                            {marketKind === "single"
-                              ? visibleCatalog.length
-                              : visibleCuratedTeams.length}
-                          </Badge>
-                        </div>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          {t("digitalHumans.market.browseDescription")}
-                        </p>
-                      </div>
-                      <div className="flex rounded-md border border-border/80 bg-muted/30 p-0.5">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={marketKind === "single" ? "secondary" : "ghost"}
-                          className="h-7"
-                          onClick={() => setMarketKind("single")}
-                        >
-                          <UserRound size={13} aria-hidden="true" />
-                          {t("digitalHumans.market.singles")}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={marketKind === "team" ? "secondary" : "ghost"}
-                          className="h-7"
-                          onClick={() => setMarketKind("team")}
-                          data-testid="digital-human-market-teams"
-                        >
-                          <UsersRound size={13} aria-hidden="true" />
-                          {t("digitalHumans.market.groups")}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div
-                      className="flex flex-wrap gap-1.5"
-                      aria-label={t("digitalHumans.market.categoryLabel")}
-                    >
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={marketCategory === "all" ? "secondary" : "ghost"}
-                        className="h-7 rounded-full px-3"
-                        onClick={() => setMarketCategory("all")}
-                      >
-                        {t("digitalHumans.market.category.all")}
-                      </Button>
-                      {DIGITAL_HUMAN_CATEGORIES.map((category) => (
-                        <Button
-                          key={category}
-                          type="button"
-                          size="sm"
-                          variant={marketCategory === category ? "secondary" : "ghost"}
-                          className="h-7 rounded-full px-3"
-                          onClick={() => setMarketCategory(category)}
-                        >
-                          {t(`digitalHumans.market.category.${category}`)}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {marketKind === "single" ? (
-                    visibleCatalog.length === 0 ? (
-                      // Distinguish "nothing shipped" from "your filter matched
-                      // nothing" — the fix differs (import a definition vs clear
-                      // the search).
-                      catalog.length === 0 ? (
-                        <CatalogEmptyState />
-                      ) : (
-                        <SearchEmptyState />
-                      )
-                    ) : (
-                      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        {visibleCatalog.map((entry) => (
-                          <CatalogCard
-                            key={entry.name}
-                            entry={entry}
-                            busy={operations.isBusy(`install:${entry.name}`)}
-                            onDetails={() => setDetail({ kind: "catalog", entry })}
-                            onLaunch={() => void launchCatalogEntry(entry)}
-                          />
-                        ))}
-                      </div>
-                    )
-                  ) : visibleCuratedTeams.length === 0 ? (
-                    CURATED_DIGITAL_HUMAN_TEAMS.length === 0 ? (
-                      <CatalogEmptyState />
-                    ) : (
-                      <SearchEmptyState />
-                    )
                   ) : (
-                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      {visibleCuratedTeams.map((team) => (
-                        <CuratedTeamCard
-                          key={team.id}
-                          team={team}
-                          catalogByName={catalogByName}
-                          installed={teams.some((candidate) => candidate.id === team.id)}
-                          busy={operations.isBusy(`install-team:${team.id}`)}
-                          onDetails={() => setDetail({ kind: "curated-team", team })}
-                          onLaunch={() => void launchCuratedTeam(team)}
+                    <>
+                      {!normalizedQuery && marketCategory === "all" ? (
+                        <FeaturedScenes
+                          catalog={catalog}
+                          onSelectCategory={(category) => {
+                            setMarketKind("single");
+                            setMarketCategory(category);
+                          }}
                         />
-                      ))}
-                    </div>
+                      ) : null}
+
+                      <div className="mt-6 flex flex-col gap-4">
+                        <div className="flex flex-wrap items-end justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h2 className="text-base font-semibold tracking-tight">
+                                {t("digitalHumans.market.browseTitle")}
+                              </h2>
+                              <Badge variant="secondary">
+                                {marketKind === "single"
+                                  ? visibleCatalog.length
+                                  : visibleCuratedTeams.length}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                              {t("digitalHumans.market.browseDescription")}
+                            </p>
+                          </div>
+                          <div className="flex rounded-md border border-border/80 bg-muted/30 p-0.5">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={marketKind === "single" ? "secondary" : "ghost"}
+                              className="h-7"
+                              onClick={() => setMarketKind("single")}
+                            >
+                              <UserRound size={13} aria-hidden="true" />
+                              {t("digitalHumans.market.singles")}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={marketKind === "team" ? "secondary" : "ghost"}
+                              className="h-7"
+                              onClick={() => setMarketKind("team")}
+                              data-testid="digital-human-market-teams"
+                            >
+                              <UsersRound size={13} aria-hidden="true" />
+                              {t("digitalHumans.market.groups")}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div
+                          className="flex flex-wrap gap-1.5"
+                          aria-label={t("digitalHumans.market.categoryLabel")}
+                        >
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={marketCategory === "all" ? "secondary" : "ghost"}
+                            className="h-7 rounded-full px-3"
+                            onClick={() => setMarketCategory("all")}
+                          >
+                            {t("digitalHumans.market.category.all")}
+                          </Button>
+                          {DIGITAL_HUMAN_CATEGORIES.map((category) => (
+                            <Button
+                              key={category}
+                              type="button"
+                              size="sm"
+                              variant={marketCategory === category ? "secondary" : "ghost"}
+                              className="h-7 rounded-full px-3"
+                              onClick={() => setMarketCategory(category)}
+                            >
+                              {t(`digitalHumans.market.category.${category}`)}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {marketKind === "single" ? (
+                        visibleCatalog.length === 0 ? (
+                          // Reachable only when a filter/search hid everything —
+                          // the "nothing shipped" case short-circuits above.
+                          <SearchEmptyState />
+                        ) : (
+                          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            {visibleCatalog.map((entry) => (
+                              <CatalogCard
+                                key={entry.name}
+                                entry={entry}
+                                busy={operations.isBusy(`install:${entry.name}`)}
+                                onDetails={() => setDetail({ kind: "catalog", entry })}
+                                onLaunch={() => void launchCatalogEntry(entry)}
+                              />
+                            ))}
+                          </div>
+                        )
+                      ) : visibleCuratedTeams.length === 0 ? (
+                        <SearchEmptyState />
+                      ) : (
+                        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                          {visibleCuratedTeams.map((team) => (
+                            <CuratedTeamCard
+                              key={team.id}
+                              team={team}
+                              catalogByName={catalogByName}
+                              installed={teams.some((candidate) => candidate.id === team.id)}
+                              busy={operations.isBusy(`install-team:${team.id}`)}
+                              onDetails={() => setDetail({ kind: "curated-team", team })}
+                              onLaunch={() => void launchCuratedTeam(team)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </TabsContent>
 
@@ -2029,13 +2041,37 @@ function SearchEmptyState() {
  * capability difference). Say where digital humans come from instead of
  * showing "no search results", which reads as a broken filter.
  */
-function CatalogEmptyState() {
+function CatalogEmptyState({
+  onImport,
+  onCreate,
+  importBusy,
+}: {
+  onImport: () => void;
+  onCreate: () => void;
+  importBusy: boolean;
+}) {
   const { t } = useT();
   return (
     <EmptyState
       Icon={UsersRound}
       title={t("digitalHumans.emptyCatalog")}
       description={t("digitalHumans.emptyCatalogDescription")}
+      action={
+        <>
+          <Button size="sm" onClick={onImport} disabled={importBusy}>
+            {importBusy ? (
+              <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Upload size={14} aria-hidden="true" />
+            )}
+            {t("digitalHumans.transfer.importDefinition")}
+          </Button>
+          <Button size="sm" variant="outline" onClick={onCreate}>
+            <Plus size={14} aria-hidden="true" />
+            {t("digitalHumans.editor.create")}
+          </Button>
+        </>
+      }
     />
   );
 }
@@ -2064,11 +2100,14 @@ function EmptyState({
   title,
   description,
   iconClassName,
+  action,
 }: {
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   title: string;
   description: string;
   iconClassName?: string;
+  /** Optional call-to-action so a dead end can offer the way out. */
+  action?: React.ReactNode;
 }) {
   return (
     <Card>
@@ -2078,6 +2117,7 @@ function EmptyState({
         </span>
         <h3 className="text-sm font-medium">{title}</h3>
         <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">{description}</p>
+        {action ? <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div> : null}
       </CardContent>
     </Card>
   );
