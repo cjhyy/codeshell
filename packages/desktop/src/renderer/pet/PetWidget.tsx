@@ -54,12 +54,18 @@ export function PetWidget({
     moodTimerRef.current = setTimeout(() => setMood(null), ms);
   }, []);
 
-  // Every ~30s of calm (no active work, no unread), Mimi waves briefly.
+  // Every ~30s of calm, Mimi waves briefly. The "is it calm right now?" check
+  // reads a ref inside one stable interval — depending on running/completed
+  // directly would rebuild the interval on every activity tick and reset the
+  // 30s countdown, so the wave would almost never fire while work is happening.
+  const calmRef = React.useRef(true);
+  calmRef.current = running === 0 && completed === 0;
   React.useEffect(() => {
-    if (running > 0 || completed > 0) return;
-    const id = setInterval(() => flashMood("waving", 1600), 30_000);
+    const id = setInterval(() => {
+      if (calmRef.current) flashMood("waving", 1600);
+    }, 30_000);
     return () => clearInterval(id);
-  }, [running, completed, flashMood]);
+  }, [flashMood]);
 
   React.useEffect(
     () => () => {

@@ -26,7 +26,7 @@ import runLeft6 from "./assets/mimi-papillon/run-left-6.png";
 import runLeft7 from "./assets/mimi-papillon/run-left-7.png";
 import runLeft8 from "./assets/mimi-papillon/run-left-8.png";
 import { loadThemePackId } from "./theme";
-import { resolveThemePack } from "./installedThemes";
+import { resolveThemePack, subscribeInstalledThemes } from "./installedThemes";
 import {
   DEFAULT_PACK_ID,
   petVisualState,
@@ -110,10 +110,15 @@ export function useActiveThemePack(
       | { onThemesChanged?: (cb: () => void) => () => void }
       | undefined;
     const off = shell?.onThemesChanged?.(() => bump((n) => n + 1));
+    // The initial async load of installed packs (initTheme → refreshInstalledThemes)
+    // fires no window event; subscribe so an active *installed* pack's sprites
+    // replace the first-frame builtin fallback once the cache populates.
+    const offInstalled = subscribeInstalledThemes(() => bump((n) => n + 1));
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("codeshell:theme-pack-changed", reread);
       off?.();
+      offInstalled();
     };
   }, []);
   return resolvePack(id);

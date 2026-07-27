@@ -235,4 +235,40 @@ describe("PetSegmentController", () => {
     expect(store.lastInteractionAt()).toBe(13 * HOUR);
     expect(store.segmentBoundaries()).toEqual([]);
   });
+
+  test("concurrent beginTurn across the idle boundary opens ONE segment / closes ONCE", async () => {
+    // A store whose writes actually yield, so the read-modify-write of
+    // lastInteractionAt spans an await — the window the race lived in.
+    class SlowStore extends FakePetWorkMemoryStore {
+      async setLastInteractionAt(at: number): Promise<void> {
+        await Promise.resolve();
+        await super.setLastInteractionAt(at);
+      }
+      async openSegment(segment: PetTopicSegment): Promise<void> {
+        await Promise.resolve();
+        await super.openSegment(segment);
+      }
+    }
+    const store = new SlowStore();
+    store.seed({ lastInteractionAt: 30 * MINUTE, entries: [] });
+    // Seed one active segment so there IS something to close (and archive).
+    await store.openSegment({ id: "seg-old", startedAt: 0, boundaryBeforeMessageId: "pet-0" });
+    const closed: PetSegmentClosed[] = [];
+    const controller = new PetSegmentController({
+      store,
+      petSessionId: "pet-1",
+      archiveRange: async () => ({ before: 0, after: 0 }),
+      onSegmentClosed: (event) => closed.push(event),
+      now: () => 13 * HOUR,
+      idleMs: 12 * HOUR,
+    });
+
+    // Two turns cross the idle boundary at the same instant.
+    await Promise.all([controller.beginTurn("pet-a"), controller.beginTurn("pet-b")]);
+
+    // Exactly one NEW segment opened (plus the seeded one) and the close fired once.
+    expect(store.opened.filter((s) => s.id !== "seg-old")).toHaveLength(1);
+    expect(closed).toHaveLength(1);
+    expect(closed[0]?.segmentId).toBe("seg-old");
+  });
 });

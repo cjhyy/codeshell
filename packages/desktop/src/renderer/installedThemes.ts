@@ -10,6 +10,23 @@ import { getThemePack, type ThemePack } from "./theme-packs";
  */
 let installed: InstalledThemePack[] = [];
 
+// Subscribers re-render when the cache changes. This is what lets a hook like
+// useActiveThemePack pick up the *first* async load: initTheme calls
+// refreshInstalledThemes() on boot, which fires no window/themes:changed event,
+// so without this a component rendered before the load finishes would resolve an
+// installed active pack to the builtin default and never update.
+const listeners = new Set<() => void>();
+
+function notifyInstalledChanged(): void {
+  for (const cb of [...listeners]) cb();
+}
+
+/** Subscribe to installed-cache changes; returns an unsubscribe fn. */
+export function subscribeInstalledThemes(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 function toThemePack(pack: InstalledThemePack): ThemePack {
   return {
     id: pack.id,
@@ -44,9 +61,11 @@ export async function refreshInstalledThemes(): Promise<void> {
   } catch {
     installed = [];
   }
+  notifyInstalledChanged();
 }
 
 /** Test seam. */
 export function __setInstalledThemes(packs: InstalledThemePack[]): void {
   installed = packs;
+  notifyInstalledChanged();
 }

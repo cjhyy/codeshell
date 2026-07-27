@@ -1611,6 +1611,12 @@ async function createWindow(): Promise<BrowserWindow> {
         cwd: resolveNoRepoCwd(),
       });
       const closureService = petSegmentClosureService;
+      // Defense-in-depth against a segment's range being archived twice.
+      // archive_range uses absolute message indices; a second archive of the
+      // same segment would run on now-shifted indices and remove the wrong
+      // turns. The controller serializes beginTurn to prevent a double close,
+      // and this set guarantees at-most-once archival per segment regardless.
+      const archivedSegmentIds = new Set<string>();
       petSegmentController = new PetSegmentController({
         store: petWorkMemory,
         petSessionId,
@@ -1619,6 +1625,8 @@ async function createWindow(): Promise<BrowserWindow> {
         // it, then archive its range — fire-and-forget so the new turn is never
         // blocked. Extraction failures degrade to a plain context archive.
         onSegmentClosed: (closed) => {
+          if (archivedSegmentIds.has(closed.segmentId)) return;
+          archivedSegmentIds.add(closed.segmentId);
           void closureService
             .close(closed)
             .then(async (result) => {

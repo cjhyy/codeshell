@@ -81,6 +81,16 @@ export interface PetDelegationClosure {
  *   undefined. Either way the interaction clock advances.
  */
 export class PetSegmentController {
+  /**
+   * Serializes beginTurn so its read-decide-write of lastInteractionAt is
+   * atomic. Two chat entry points (desktop IPC + IM gateway) hit the same pet
+   * session; without this, concurrent turns both read the old lastInteractionAt,
+   * both decide to open a new segment, and both fire onSegmentClosed → the same
+   * transcript range gets archived twice (the second archive uses now-shifted
+   * absolute indices and removes the wrong turns).
+   */
+  private beginTurnQueue: Promise<unknown> = Promise.resolve();
+
   constructor(private readonly options: PetSegmentControllerOptions) {}
 
   async onDelegationClosed(closure: PetDelegationClosure): Promise<void> {
@@ -109,6 +119,16 @@ export class PetSegmentController {
    * divider (+ optional brief card) immediately before the turn.
    */
   async beginTurn(clientMessageId?: string): Promise<string | undefined> {
+    // Chain on the queue so overlapping turns run one-at-a-time. A failure in
+    // one turn must not poison the chain, so swallow the tail's rejection.
+    const run = this.beginTurnQueue
+      .catch(() => undefined)
+      .then(() => this.runBeginTurn(clientMessageId));
+    this.beginTurnQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async runBeginTurn(clientMessageId?: string): Promise<string | undefined> {
     const now = this.options.now();
     const lastInteractionAt = this.options.store.lastInteractionAt();
     // The very first interaction has no preceding segment to close, so it only
