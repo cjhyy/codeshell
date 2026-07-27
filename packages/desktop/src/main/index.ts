@@ -1903,6 +1903,12 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
   });
   petWidgetSurfaceMode = "collapsed";
   petWidgetWindow = win;
+  // Register the widget window with the agent bridge so it receives live
+  // agent:msg / agent:streamEvent broadcasts. Without this the widget's chat
+  // only updates on a fresh transcript hydrate (opening the panel or a restart)
+  // — the in-place reply never streams in. attachWindow self-removes on close,
+  // so re-creating the widget re-attaches cleanly.
+  bridge?.attachWindow(win);
   if (process.platform === "darwin") void app.dock?.show();
   win.setAlwaysOnTop(true, "floating");
   try {
