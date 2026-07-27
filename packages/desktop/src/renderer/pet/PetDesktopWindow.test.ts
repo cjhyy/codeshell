@@ -28,7 +28,10 @@ describe("Pet desktop mini chat", () => {
     const source = readFileSync(join(import.meta.dir, "PetDesktopWindow.tsx"), "utf8");
     expect(source).toContain("<PetActivityPreview");
     expect(source).toContain('panel ? "expanded" : "collapsed"');
-    expect(source).toContain("const state = usePetProjectionState(api)");
+    // Projection state comes from the provider (single subscription), not a
+    // second usePetProjectionState in the widget window.
+    expect(source).not.toContain("usePetProjectionState");
+    expect(source).toContain("} = usePetState();");
     expect(source).toContain('type PetMiniPanel = "chat" | "activity" | null');
     expect(source).toContain('data-pet-mini-panel-content="chat"');
     expect(source).toContain('panel === "activity"');

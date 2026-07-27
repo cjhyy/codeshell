@@ -90,6 +90,15 @@ export function PetStateProvider({
   const [state, dispatch] = React.useReducer(petStateReducer, initialPetState);
   const [petSessionId, setPetSessionId] = React.useState<string | null>(null);
   const [chatBusy, setChatBusy] = React.useState(false);
+  // Watchdog: chatBusy is cleared by the stream's turn_complete/error. If that
+  // event is lost (worker crash, dropped IPC), busy would stick true forever and
+  // the composer stays disabled — the user can't send again without reopening.
+  // Force-clear after a generous ceiling so the UI always recovers.
+  React.useEffect(() => {
+    if (!chatBusy) return;
+    const id = setTimeout(() => setChatBusy(false), 120_000);
+    return () => clearTimeout(id);
+  }, [chatBusy]);
   const [chatModelKey, setChatModelKeyState] = React.useState<string | null>(null);
   const chatModelKeyRef = React.useRef<string | null>(null);
   const chatModelPreferenceRevisionRef = React.useRef(0);

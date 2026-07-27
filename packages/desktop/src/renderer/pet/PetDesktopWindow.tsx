@@ -8,7 +8,6 @@ import { PetActivityPreview } from "./PetActivityPreview";
 import { PetDelegationCard, selectPetChatRows, type PetChatRow } from "./PetChatHost";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import { PetWidget } from "./PetWidget";
-import { usePetProjectionState } from "./usePetProjectionState";
 import { petExternalSessionLocator } from "./petExternalSession";
 import {
   PET_WIDGET_RECEIPTS_KEY,
@@ -110,6 +109,7 @@ export function PetDesktopWindow() {
   const { t } = useT();
   const api = window.codeshell.pet;
   const {
+    state,
     petSessionId,
     chatState,
     chatDispatch,
@@ -118,7 +118,10 @@ export function PetDesktopWindow() {
     delegationReceipts,
     longTasks,
   } = usePetState();
-  const state = usePetProjectionState(api);
+  // The provider already runs the projection subscription + snapshot fetch, so
+  // its `state` is reused here rather than opening a second projection
+  // subscription in the widget window (which meant two getSnapshot IPCs, two
+  // reducers, and every event handled twice).
   const [workReceipts, setWorkReceipts] = React.useState<PetWidgetReceiptState | null>(() => {
     try {
       return parsePetWidgetReceiptState(localStorage.getItem(PET_WIDGET_RECEIPTS_KEY));
