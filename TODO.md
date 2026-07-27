@@ -2,7 +2,7 @@
 
 > 已完成项一律删除（记录在 git 历史与记忆里）。本文件只保留**未完成**的待办。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-07-27（全面核对：代码侧健康，本文件此前落后主线 9 天，已补齐 07-23/07-24 两批并修正 push 状态）。
+> 最近一次核对：2026-07-28（数字人 feature 整体优化落地；07-27 曾全面核对并补齐 07-23/07-24 两批）。
 > **仓库状态（2026-07-27 实测）**：main 与 origin/main 完全同步（ahead/behind 均为 0），工作区干净。本文件历史版本多处写的「未 commit / 在工作树 / 未 push」均已过期作废——包括 2026-07-15 模块边界大拆分、07-16 优化冲刺 2、07-20 Pet 外部会话，全部已进 main 并推送。
 > 2026-07-15 模块边界大拆分（已合入 main）：core 去领域化（pet 迁出为 `packages/pet`，经通用 extension 钩子组合；三入口导出面收敛；protocol↔engine/session↔engine/settings→engine 四组倒置消除；goal/session-usage 下沉）、desktop 传输层抽出 `packages/server`、AgentBridge 拆出纯 Node `WorkerBridgeCore`、mobile 逻辑层抽出 `packages/web`、identity/data-root 注入基础落地（服务端部署项现状段已同步更新）。monorepo 现为 10 包（arena/cdp/chat/coding/core/desktop/pet/server/tui/web）。实施计划：`docs/superpowers/plans/2026-07-15-*.md`。
 >
@@ -21,6 +21,16 @@
 > 2026-07-24:**Mimi 记忆中心 + segment 收尾管线已落地**。架构要点:**segment 收尾是唯一触点**——`PetSegmentController.beginTurn` 检测到 idle 切段时,一次 aux 调用同时产出 journal(事件档案)与 auto 记忆,再 `archiveRange` 压缩刚关闭的段,聊天 UI 与模型上下文都不再无限增长。产出:aux session 收尾小结服务(并发上限 + in-flight 去重)、pet memory auto source + journal store、journal/segment-transcript/auto-extract IPC、Mimi 记忆中心页面(从设置进入)、工作台「需跟进」区块。决策记录:素材只从 mimi 对话提取(core memory/dream/pending 体系完全不动)、自动提取直接写入标 `source: "auto"` 不做待确认收件箱、事件档案只含 mimi 对话段落小结。设计稿:`docs/superpowers/specs/2026-07-24-mimi-memory-center-design.md`。
 >
 > 同批产品收敛(有意 revert,非回退失败):①`16ccdfbe` 删除跨 session TodoWrite 聚合区块(704 行)——工作台待办改由 **Mimi 收尾小结**承担,不再聚合 TodoWrite;②`e20d1caf` 删除内联行提醒;③`73c3c143` 工作台移除记忆区块(记忆归记忆中心页面)。收尾提醒改为一行式,且只在真实 follow-up 时触发。**注意**:07-23 计划里的 Task 9(TodoWrite 聚合)已被本次决策作废,读该计划时勿当待办。
+
+> 2026-07-28:**数字人 feature 整体优化已落地**。此前数字人是「配了等于没配」——8 个内置除一句提示词外能力全空,还带编造的使用量;声明的 skill 只 force-enable、从不获取。本轮补齐全链路:
+>
+> - **自带依赖**:profile 新增可选 `requires`(skill 来源 + 外部命令),与 plugins/skills/mcp/agents 分工——前者管「怎么弄来」,后者管「弄来后启用哪些」。启用前预检 → 列出将执行的命令确认 → 跑 `npx skills add`。`scope` 只允许 project(`-g` 落在 `~/.claude/skills`,不在 scanner 三个根内);repo 值双重校验挡 `--flag`/`../`/`;rm -rf` 注入。
+> - **仓库分发**:数字人不寄生插件市场,有独立通道(`core/profile/catalog*.ts`)。设置 › 数字人 › 数字人仓库填 `owner/repo` 克隆;广场卡片显示来源仓库;`exportProfileRepo` 把库里的数字人写成可 push 的仓库骨架(单个 JSON 只能人肉传,仓库骨架别人填 owner/repo 就能装)。配套目录:`cjhyy/mimi-humans`(3 个视频制作数字人,已验证真实克隆 + requires 完整 + 发布产物回读闭合)。
+> - **清理**:8 个空壳内置与编造 usageCount 全删;3 个 curated teams 删除(建立在已被 Session-first 取代的 Pet-led teams 模型上);空目录不再堆一屏空控件。
+> - **修 bug**:①编辑器保存会静默抹掉 `requires`(把仓库来的数字人打回空壳);②Radix 点遮罩/Esc 直接丢弃未保存改动;③归档会话被当成活引用阻止删除;④i18n 占位符写成 `{{name}}` 导致界面显示大括号;⑤删除报错发生在确认之后且是英文原文带 session id。
+> - **视觉**:TopBar 最后一个原生 `<select>` 换 shadcn;卡片 7 个平铺控件收敛为「一个主行动 + 项目默认 + 溢出菜单」。
+>
+> 遗留(非阻塞):①`requires` 只能在定义 JSON 里写,编辑器为只读展示——图形化编辑依赖字段增删待后续;②发布只生成骨架,`git init/push` 仍需用户自己做;③仓库更新要手动移除再添加,没有「检查更新」按钮。
 
 **未完成项(XS,可单会话直接着手):**
 
