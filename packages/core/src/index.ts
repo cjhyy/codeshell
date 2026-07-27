@@ -409,6 +409,23 @@ export {
   type PluginMcpApprovalState,
 } from "./plugins/pluginMcpIntegrity.js";
 export { pluginsRoot } from "./plugins/installer/paths.js";
+export {
+  previewLocalTheme,
+  installReviewedLocalTheme,
+  listInstalledThemes,
+  uninstallTheme,
+  themesRoot,
+  themeInstallDir,
+  assertSafeThemeName,
+  ThemeInstallError,
+  ThemeReviewChangedError,
+  THEME_ASSET_DIR,
+  THEME_VAR_NAMES,
+  detectThemeImage,
+  type ThemePreview,
+  type InstalledTheme,
+  type ThemeManifest,
+} from "./themes/index.js";
 export { resolveSafePluginPath } from "./plugins/pluginInstaller.js";
 export { listPluginHooks, pluginHookKey, type PluginHookEntry } from "./plugins/loadPluginHooks.js";
 export {
