@@ -116,15 +116,15 @@ For an out-of-process worker, swap `createInProcessTransport()` for a
 `StdioTransport` pair. The factory accepts any `Transport`, so a future
 `IpcAdapter` will compose without changing the call shape.
 
-Browser UI hosts that only need the trusted plugin lifecycle coordinator should
+Browser UI hosts that only need the trusted Panel App lifecycle coordinator should
 use the audited browser-safe subpath:
 
 ```ts
-import { PluginLifecycleRuntime } from "@cjhyy/code-shell-core/browser/plugin-runtime";
+import { PanelAppLifecycleRuntime } from "@cjhyy/code-shell-core/browser/panel-app-runtime";
 ```
 
 This entry contains no Engine, filesystem, process or Electron dependency.
-`@cjhyy/code-shell-core/plugin-runtime` remains available for compatibility.
+The non-browser alias is `@cjhyy/code-shell-core/panel-app-runtime`.
 
 `StreamEvent` includes `background_agent_completed` (B2.2) so embedders
 that don't poll `notificationQueue` still observe sub-agent finish/fail

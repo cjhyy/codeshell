@@ -2,11 +2,11 @@ import React from "react";
 
 import { PanelArea } from "../panels/PanelArea";
 import { QuickChatPanelHost } from "../panels/QuickChatPanelHost";
-import type { DesktopPanelPluginHost } from "../panels/DesktopPanelPlugin";
+import type { DesktopBuiltinPanelAppHost } from "../panels/DesktopBuiltinPanelApp";
 import {
-  QUICK_CHAT_PANEL_PLUGIN_ID,
-  type QuickChatPanelPluginService,
-} from "../panels/plugins/quickChatPlugin";
+  QUICK_CHAT_PANEL_APP_ID,
+  type QuickChatPanelAppService,
+} from "../panels/apps/quickChatPanelApp";
 import { anchorsIn, type AnchorsByBucket } from "../chat/anchorBuckets";
 import type { ImageAttachment } from "../chat/attachments";
 import type { ModelOption } from "../chat/ModelPill";
@@ -79,10 +79,10 @@ interface SessionPanelDockProps {
 
 /** Keeps every session-owned panel body mounted while only one dock is visible. */
 export function SessionPanelDock(props: SessionPanelDockProps) {
-  const panelPluginHost: DesktopPanelPluginHost = {
-    getService(pluginId) {
-      if (pluginId !== QUICK_CHAT_PANEL_PLUGIN_ID) return undefined;
-      const service: QuickChatPanelPluginService = {
+  const builtinPanelAppHost: DesktopBuiltinPanelAppHost = {
+    getService(appId) {
+      if (appId !== QUICK_CHAT_PANEL_APP_ID) return undefined;
+      const service: QuickChatPanelAppService = {
         ensure: ({ bucket: ownerBucket, tabId, cwd }) => {
           props.ensureQuickChatSession(ownerBucket, tabId, cwd);
         },
@@ -212,7 +212,7 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
             activeId: typeof next === "function" ? next(state.activeId) : next,
           }))
         }
-        panelPluginHost={panelPluginHost}
+        builtinPanelAppHost={builtinPanelAppHost}
         bucket={panelBucket}
       />
     );

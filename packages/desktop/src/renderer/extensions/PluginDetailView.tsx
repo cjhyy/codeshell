@@ -8,7 +8,6 @@ import {
   Webhook,
   Plug,
   Puzzle,
-  PanelTop,
   ExternalLink,
   Images,
   Loader2,
@@ -112,8 +111,7 @@ export function PluginDetailView({
     content.agents.length +
     content.hooks.length +
     content.mcpServers.length +
-    content.automationTemplates.length +
-    content.panels.length;
+    content.automationTemplates.length;
 
   const changeHookApproval = async (action: "approve" | "revoke") => {
     setHookAction(action);
@@ -677,24 +675,6 @@ export function PluginDetailView({
         </Section>
       )}
 
-      {content.panels.length > 0 && (
-        <Section
-          icon={<PanelTop className="h-3.5 w-3.5" />}
-          title={t("ext.pluginDetail.panelsTitle", { count: content.panels.length })}
-        >
-          {content.panels.map((panel) => (
-            <li key={panel.id} className="flex items-baseline gap-2">
-              <span className="shrink-0 font-mono text-xs">{panel.id}</span>
-              <span className="truncate text-xs text-muted-foreground">
-                {panel.title.default}
-                {panel.permissions.length > 0
-                  ? ` · ${t("ext.pluginDetail.panelPermissions", { permissions: panel.permissions.join(", ") })}`
-                  : ` · ${t("ext.pluginDetail.panelNoPermissions")}`}
-              </span>
-            </li>
-          ))}
-        </Section>
-      )}
     </div>
   );
 }

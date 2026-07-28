@@ -167,7 +167,9 @@ export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }:
           onChanged={() => void refresh()}
         />
       )}
-      {tab === "panels" && <PanelsTab cwd={cwd} query={query} />}
+      {tab === "panels" && (
+        <PanelsTab cwd={cwd} activeProjectPath={activeProjectPath} query={query} />
+      )}
       {tab === "skills" && (
         <SkillsTab
           cwd={cwd}

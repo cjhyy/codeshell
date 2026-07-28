@@ -16,7 +16,6 @@ import {
   CANONICAL_PLUGIN_MANIFEST_FILE,
   CanonicalPluginManifest,
   type PluginAutomationTemplate,
-  type PluginPanelManifestEntry,
 } from "./installer/types.js";
 import { pluginAutomationTemplateRevision } from "./pluginCatalog.js";
 
@@ -37,8 +36,6 @@ export interface PluginContentInventory {
   hookReview?: PluginHookReview;
   /** MCP server names as merged (keyed `<plugin>:<server>` — bare name here). */
   mcpServers: string[];
-  /** Sandboxed desktop panels declared by the canonical plugin manifest. */
-  panels: PluginPanelManifestEntry[];
   /** Reusable scheduled-task templates; never instantiated automatically. */
   automationTemplates: PluginAutomationTemplateDescriptor[];
 }
@@ -157,7 +154,6 @@ export function describePluginContent(
     hooks,
     ...(hookReview ? { hookReview } : {}),
     mcpServers,
-    panels: manifest?.panels?.entries ?? [],
     automationTemplates: (manifest?.automations?.templates ?? []).map((template) => ({
       ...template,
       revision: pluginAutomationTemplateRevision(installKey ?? pluginName, template),

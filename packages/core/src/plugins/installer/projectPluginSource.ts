@@ -16,6 +16,7 @@ import {
   type CanonicalPluginManifest as CanonicalPluginManifestData,
   PluginInstallError,
 } from "./types.js";
+import { PANEL_APP_MANIFEST_FILE } from "../../panel-apps/manifest.js";
 
 const MAX_PLUGIN_SOURCE_ENTRIES = 10_000;
 const MAX_PLUGIN_SOURCE_BYTES = 256 * 1024 * 1024;
@@ -133,6 +134,11 @@ export async function projectPluginSource(
   destinationRoot: string,
   name: string,
 ): Promise<ProjectedPluginSource> {
+  if (existsSync(join(sourceDir, PANEL_APP_MANIFEST_FILE))) {
+    throw new PluginInstallError(
+      `Panel App packages use a separate installer; remove ${PANEL_APP_MANIFEST_FILE} from the agent plugin source`,
+    );
+  }
   await assertBoundedPluginSource(sourceDir);
   const format = detectPluginFormat(sourceDir);
   let version: string | undefined;

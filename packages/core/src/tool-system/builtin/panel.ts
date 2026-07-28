@@ -6,7 +6,7 @@ export const panelToolDef: ToolDefinition = {
   description:
     "List or open/focus a panel in the interactive host. Use action='list' to discover " +
     "stable panel ids, then action='open' with panel_id. Opening a panel only changes the " +
-    "host UI; use that panel plugin's own tools to perform domain work.",
+    "host UI; a Panel App does not add agent tools.",
   inputSchema: {
     type: "object",
     properties: {

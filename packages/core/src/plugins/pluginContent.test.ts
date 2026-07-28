@@ -52,7 +52,6 @@ describe("describePluginContent (插件详情页 inventory)", () => {
         agents: [],
         hooks: [],
         mcpServers: [],
-        panels: [],
         automationTemplates: [],
       });
     } finally {

@@ -295,7 +295,10 @@ bun run build
 
 ## Further reading
 
-- [Plugin panels v1](docs/plugin-panels.md)
+- [Panel Apps v1 — independent from Agent Plugins](docs/panel-apps.md)
+- [Panel App starter template](examples/panel-apps/starter/README.md)
+- [Design Studio reference Panel App](examples/panel-apps/design-studio/README.md)
+- [Quant Lab reference Panel App](examples/panel-apps/quant-lab/README.md)
 - [Video editor reference plugin](examples/plugins/video-editor/README.md)
 - [Package boundaries & Pet split rationale](docs/architecture/12-package-boundaries-and-release-units.md)
 - [Plugin parity matrix](docs/architecture/13-plugin-parity-and-video-editor.md)

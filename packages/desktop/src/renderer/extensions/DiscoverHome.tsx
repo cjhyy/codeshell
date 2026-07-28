@@ -41,7 +41,7 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
     setCounts(null);
     Promise.all([
       window.codeshell.listPlugins(cwd).then((d) => d.length).catch(() => 0),
-      window.codeshell.listPanelExtensions(cwd, lang).then((d) => d.length).catch(() => 0),
+      window.codeshell.listPanelAppExtensions(cwd, lang).then((d) => d.length).catch(() => 0),
       window.codeshell
         .listSkills(cwd, { includeDisabled: true })
         .then((d) => d.length)

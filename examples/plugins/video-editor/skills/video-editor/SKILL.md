@@ -1,6 +1,6 @@
 ---
 name: video-editor
-description: Use when the user wants to trim, cut, concatenate, crossfade, reframe, resize, speed up, slow down, mute, adjust volume, burn subtitles into, inspect, or export a local video with FFmpeg. Also use for video edit plans, social-media aspect-ratio variants, precise clip extraction, and requests submitted from the Video Cut plugin panel.
+description: Use when the user wants to trim, cut, concatenate, crossfade, reframe, resize, speed up, slow down, mute, adjust volume, burn subtitles into, inspect, or export a local video with FFmpeg. Also use for video edit plans, social-media aspect-ratio variants, and precise clip extraction.
 ---
 
 # Video Editor

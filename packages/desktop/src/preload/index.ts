@@ -966,17 +966,17 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.on("plugin-commands:changed", handler);
     return () => ipcRenderer.removeListener("plugin-commands:changed", handler);
   },
-  listPluginPanels: (cwd: string, locale: string) =>
-    ipcRenderer.invoke("plugin-panels:list", cwd, locale),
-  listPanelExtensions: (cwd: string, locale: string) =>
-    ipcRenderer.invoke("plugin-panels:listExtensions", cwd, locale),
-  preparePluginPanel: (id: string) => ipcRenderer.invoke("plugin-panels:prepare", id),
-  bindPluginPanel: (input: import("../shared/plugin-panels").PluginPanelBindInput) =>
-    ipcRenderer.invoke("plugin-panels:bind", input),
-  onPluginPanelsChanged: (cb: () => void) => {
+  listPanelApps: (cwd: string, locale: string) =>
+    ipcRenderer.invoke("panel-apps:list", cwd, locale),
+  listPanelAppExtensions: (cwd: string, locale: string) =>
+    ipcRenderer.invoke("panel-apps:listExtensions", cwd, locale),
+  preparePanelApp: (id: string) => ipcRenderer.invoke("panel-apps:prepare", id),
+  bindPanelApp: (input: import("../shared/panel-apps").PanelAppBindInput) =>
+    ipcRenderer.invoke("panel-apps:bind", input),
+  onPanelAppsChanged: (cb: () => void) => {
     const handler = () => cb();
-    ipcRenderer.on("plugin-panels:changed", handler);
-    return () => ipcRenderer.removeListener("plugin-panels:changed", handler);
+    ipcRenderer.on("panel-apps:changed", handler);
+    return () => ipcRenderer.removeListener("panel-apps:changed", handler);
   },
   onAgentPanelRequest: (cb: (request: AgentPanelHostRequest) => void) => {
     const handler = (_event: IpcRendererEvent, request: AgentPanelHostRequest) => cb(request);
@@ -1130,6 +1130,37 @@ contextBridge.exposeInMainWorld("codeshell", {
     | { ok: false; previewChanged: true; error: string }
     | { ok: false; error?: string }
   > => ipcRenderer.invoke("plugins:installLocal", input),
+  pickPanelAppSource: (
+    kind: "dir" | "zip",
+  ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> =>
+    ipcRenderer.invoke("dialog:pickPanelAppSource", kind),
+  previewLocalPanelApp: (
+    input: import("@cjhyy/code-shell-core").PanelAppSourceInput,
+  ): Promise<
+    | { ok: true; preview: import("@cjhyy/code-shell-core").PanelAppPreview }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke("panel-apps:previewLocal", input),
+  previewPanelAppUpdate: (
+    id: string,
+  ): Promise<
+    | { ok: true; preview: import("@cjhyy/code-shell-core").PanelAppPreview }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke("panel-apps:previewUpdate", id),
+  installLocalPanelApp: (input: {
+    source: import("@cjhyy/code-shell-core").PanelAppSourceInput;
+    reviewToken: string;
+    overwrite?: boolean;
+  }): Promise<
+    | { ok: true; id: string }
+    | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
+  > => ipcRenderer.invoke("panel-apps:installLocal", input),
+  installPanelAppUpdate: (input: {
+    id: string;
+    reviewToken: string;
+  }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }> =>
+    ipcRenderer.invoke("panel-apps:installUpdate", input),
+  uninstallPanelApp: (id: string, cwd?: string): Promise<void> =>
+    ipcRenderer.invoke("panel-apps:uninstall", id, cwd),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
   checkSkillUpdate: (filePath: string) => ipcRenderer.invoke("skills:checkUpdate", filePath),
   updateSkill: (filePath: string) => ipcRenderer.invoke("skills:update", filePath),

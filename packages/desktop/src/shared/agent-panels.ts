@@ -1,4 +1,4 @@
-export type AgentPanelSource = "builtin" | "code" | "plugin";
+export type AgentPanelSource = "builtin" | "builtin-panel-app" | "panel-app";
 
 export interface AgentPanelDescriptorWire {
   id: string;

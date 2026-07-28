@@ -61,7 +61,6 @@ describe("previewLocalPlugin", () => {
     mkdirSync(join(source, "skills", "review-skill"), { recursive: true });
     mkdirSync(join(source, "prompts"), { recursive: true });
     mkdirSync(join(source, "agents"), { recursive: true });
-    mkdirSync(join(source, "panels"), { recursive: true });
     mkdirSync(join(source, "assets"), { recursive: true });
     writeFileSync(
       join(source, "skills", "review-skill", "SKILL.md"),
@@ -72,7 +71,6 @@ describe("previewLocalPlugin", () => {
       join(source, "agents", "reviewer.toml"),
       'name = "reviewer"\ndescription = "Reviews changes"\ndeveloper_instructions = "Be careful."\n',
     );
-    writeFileSync(join(source, "panels", "review.html"), "<!doctype html><title>Review</title>");
     writeFileSync(join(source, "assets", "logo.png"), PNG_1X1);
     writeFileSync(
       join(source, ".codex-plugin", "plugin.json"),
@@ -85,17 +83,6 @@ describe("previewLocalPlugin", () => {
           websiteURL: "https://example.com/plugin",
           privacyPolicyURL: "https://example.com/privacy",
           logo: "./assets/logo.png",
-        },
-        panels: {
-          version: 1,
-          entries: [
-            {
-              id: "review",
-              title: { default: "Review" },
-              entry: "panels/review.html",
-              permissions: ["context.session", "agent.submitPrompt"],
-            },
-          ],
         },
         hooks: {
           SessionStart: [
@@ -157,7 +144,6 @@ describe("previewLocalPlugin", () => {
       { name: "local", transport: "stdio" },
       { name: "remote", transport: "streamable-http" },
     ]);
-    expect(preview.panels[0]?.permissions).toEqual(["context.session", "agent.submitPrompt"]);
     expect(preview.automationTemplates).toEqual([
       expect.objectContaining({
         id: "weekday-review",
@@ -175,7 +161,6 @@ describe("previewLocalPlugin", () => {
       "executable-hooks",
       "stdio-mcp",
       "network-mcp",
-      "panel-permissions",
       "automation-templates",
       "external-links",
       "media",

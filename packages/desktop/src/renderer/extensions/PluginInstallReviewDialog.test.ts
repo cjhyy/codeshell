@@ -20,7 +20,6 @@ describe("local plugin install review UI contract", () => {
       "preview.agents",
       "preview.hooks",
       "preview.mcpServers",
-      "preview.panels",
       "preview.automationTemplates",
       "preview.interface.externalLinks",
       "preview.interface.media",

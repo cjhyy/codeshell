@@ -1,0 +1,175 @@
+# Panel Apps v1
+
+CodeShell has two independent extension systems:
+
+| System       | Purpose                                                             | Manifest                                                           | Install root                    | Registry                                  |
+| ------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------- | ----------------------------------------- |
+| Agent Plugin | Adds Skills, Agents, Commands, Hooks, MCP, and automation templates | `.codex-plugin/plugin.json` plus optional CodeShell agent metadata | `~/.claude/plugins`             | Plugin catalog                            |
+| Panel App    | Adds one sandboxed Desktop application                              | `.codeshell-panel/panel.json`                                      | `~/.code-shell/panel-apps/<id>` | `~/.code-shell/panel-apps/installed.json` |
+
+A Panel App is not a contribution inside an Agent Plugin. Installing, enabling,
+updating, or uninstalling one system never changes the other system. The Panel
+App installer rejects packages containing `.codex-plugin`, `.claude-plugin`,
+`.codeshell-plugin`, `.mcp.json`, `skills`, `agents`, `commands`, or `hooks`.
+The normal Plugin installer rejects `.codeshell-panel/panel.json`.
+
+## Package format
+
+```text
+my-panel-app/
+├── .codeshell-panel/
+│   └── panel.json
+├── app/
+│   ├── index.html
+│   ├── app.js
+│   └── style.css
+└── README.md
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "design-studio",
+  "version": "0.1.0",
+  "title": {
+    "default": "Design Studio",
+    "en": "Design Studio",
+    "zh-CN": "设计工作台"
+  },
+  "description": "A repository-native design workspace.",
+  "entry": "app/index.html",
+  "icon": "palette",
+  "placement": "right-dock",
+  "singleton": true,
+  "permissions": ["context.workspace", "workspace.read", "workspace.write", "storage"]
+}
+```
+
+The manifest is strict: unknown fields, unsafe IDs, traversal paths, unknown
+icons, and unsupported permissions are rejected. One package represents one app
+identity and one HTML entry point. App files live beside the entry under the
+same nested asset tree (for example `app/`); a package-root HTML entry is
+rejected so manifests, install metadata, README files, and licenses can never
+be served to the guest. README and license files may remain at the package root.
+
+Local folders, zip archives, and public GitHub repositories follow the same
+review flow:
+
+1. Core validates the complete package and computes a review token over every
+   file.
+2. Desktop shows identity, version, entry, instance mode, and requested Host
+   permissions.
+3. Installation revalidates the source and requires the same review token.
+4. Core atomically replaces the app directory and updates the dedicated
+   registry. A failed update restores the previous directory.
+
+Packages are bounded to 2,000 entries, 64 MiB total, 16 MiB per file, and 16
+directory levels. Symlinks and unsupported file types are rejected.
+
+GitHub installs accept `https://github.com/<owner>/<repo>` plus optional
+branch/tag and app-subdirectory fields. A standard
+`/tree/<ref>/<subdirectory>` URL is accepted as a shortcut. Only public HTTPS
+GitHub repositories are accepted; Git runs without interactive credential
+prompts, and the cloned tree is temporary. The reviewed app snapshot is copied
+into the dedicated Panel App install root.
+
+## Runtime and sandbox
+
+Each Panel App runs in its own Electron guest with Node.js disabled and no
+normal Desktop preload. The host serves static assets through an opaque,
+read-only authority, blocks navigation and popups, denies Electron permission
+requests, and applies a fixed Content Security Policy with no network, frames,
+forms, objects, inline scripts, or `eval`.
+
+The guest sees one frozen bridge:
+
+```js
+const context = await window.codeshellPanel.getContext();
+const file = await window.codeshellPanel.call("workspace.readText", {
+  path: "designs/home.codesign.json",
+});
+const unsubscribe = window.codeshellPanel.on("context.changed", (next) => {
+  // session, workspace, visibility, theme, or locale changed
+});
+```
+
+No Host capability is granted by default.
+
+| Permission           | Capability                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `context.session`    | Adds session ID and busy state to context.                                                                          |
+| `context.workspace`  | Adds workspace root and trust state to context.                                                                     |
+| `storage`            | JSON-only app storage, capped at 256 KiB per app.                                                                   |
+| `external.open`      | Opens HTTPS links after user confirmation.                                                                          |
+| `agent.submitPrompt` | Submits to the bound, idle session; requires `context.session`.                                                     |
+| `workspace.info`     | Reads safe workspace metadata and the current Git branch.                                                           |
+| `workspace.read`     | Lists and reads allowlisted repository text/data files; requires `context.workspace`.                               |
+| `workspace.write`    | Atomically writes allowlisted repository text/data files with optimistic concurrency; requires `context.workspace`. |
+| `notifications.send` | Sends rate-limited, app-attributed system notifications.                                                            |
+
+Workspace calls reject traversal, hidden paths, `node_modules`, symlinks,
+binary files, invalid UTF-8, control characters, Windows device names, and path
+segments ending in a dot or space. Existing-file writes require the revision or
+modification timestamp returned by the preceding read; blind overwrites are
+rejected.
+
+## Enablement
+
+Panel App policy is Desktop application state, not agent capability state:
+
+- `disabledPanelApps` is the global app denylist.
+- `panelAppOverrides` stores direct per-project `on` / `off` values; a missing
+  key inherits the global state.
+- `disabledPlugins` and `capabilityOverrides` do not affect Panel Apps.
+
+Extensions → Panel Apps owns app import, permission review, overwrite update,
+global enablement, project policy, and uninstall. Extensions → Plugins owns
+Agent Plugin packages and never lists Panel Apps.
+
+## Add and iterate on an app
+
+The quickest starting point is
+[`examples/panel-apps/starter`](../examples/panel-apps/starter/README.md):
+
+1. Copy the starter directory into the repository where you want to maintain
+   the app.
+2. Give `.codeshell-panel/panel.json` a unique `id`, title, version, and the
+   smallest required permission set.
+3. Keep all executable UI files under `app/`; the manifest entry normally
+   remains `app/index.html`.
+4. In CodeShell, open **Extensions → Panel Apps → Choose source folder**,
+   select the app root, review it, and install it.
+5. Open the app from the right dock's `+` menu.
+
+Folder installs are immutable snapshots. CodeShell remembers the original
+folder, so the development loop is still short: edit files in the repository,
+then choose **Update from source** on the installed app card. Every update
+re-runs package validation, produces a fresh content-bound review token, and
+requires an explicit review before replacing the installed snapshot. If the
+source folder moves, import it again from its new location.
+
+To install from GitHub instead, choose **From GitHub** and enter:
+
+- repository: `https://github.com/owner/repository`
+- branch or tag: optional (for example `main` or `v1.2.0`)
+- app subdirectory: optional (for example
+  `examples/panel-apps/design-studio`)
+
+After new commits are pushed, **Update from source** clones the same ref again
+and presents a new review before replacing the installed snapshot.
+
+## Reference apps
+
+- [Starter](../examples/panel-apps/starter/README.md) is the minimal template
+  for a new repository-maintained Panel App.
+- [Design Studio](../examples/panel-apps/design-studio/README.md) is a
+  repository-native visual editor with deterministic JSON/SVG documents,
+  frames, hierarchy, layout tools, audits, recovery, and conflict-safe saves.
+- [Quant Lab](../examples/panel-apps/quant-lab/README.md) is a separate stock
+  research application for local OHLCV data, deterministic backtests, risk
+  summaries, strategy files, and repository reports.
+
+The [Video Editor Agent Plugin](../examples/plugins/video-editor/README.md)
+remains an Agent Plugin example. Its Skills, Commands, scripts, and automation
+content illustrate the other system and are not valid Panel App package
+content.

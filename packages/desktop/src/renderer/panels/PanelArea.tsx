@@ -25,7 +25,10 @@ import {
 } from "./PanelWorkspaceRootConsumer";
 import type { PanelWorkspaceState } from "./usePanelWorkspaceRoot";
 import type { OpenCliSessionRequest } from "../cc-room/types";
-import { DesktopPanelLifecycleBoundary, type DesktopPanelPluginHost } from "./DesktopPanelPlugin";
+import {
+  DesktopPanelLifecycleBoundary,
+  type DesktopBuiltinPanelAppHost,
+} from "./DesktopBuiltinPanelApp";
 
 export interface OpenTab {
   id: string;
@@ -101,8 +104,8 @@ interface Props {
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   /** Update a browser anchor's comment by id. */
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
-  /** Trusted code-panel services. Web manifest panels continue through their scoped bridge. */
-  panelPluginHost?: DesktopPanelPluginHost;
+  /** Trusted built-in Panel App services. Installed apps use their scoped bridge. */
+  builtinPanelAppHost?: DesktopBuiltinPanelAppHost;
 }
 
 /**
@@ -146,7 +149,7 @@ function ResolvedPanelArea({
   browserAnchors,
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
-  panelPluginHost,
+  builtinPanelAppHost,
   tabs,
   setTabs,
   activeId,
@@ -399,7 +402,7 @@ function ResolvedPanelArea({
             <Slot key={panelTab.id} active={activeTab} panelId={panelTab.kind}>
               <DesktopPanelLifecycleBoundary
                 entry={getPanelEntry(panelTab.kind)}
-                host={panelPluginHost}
+                host={builtinPanelAppHost}
                 tabId={panelTab.id}
                 bucket={bucket}
                 cwd={cwd}
@@ -427,7 +430,7 @@ function ResolvedPanelArea({
                     onAttachImage={onAttachImage}
                     onRemoveBrowserAnchor={onRemoveBrowserAnchor}
                     onUpdateBrowserAnchor={onUpdateBrowserAnchor}
-                    panelPluginHost={panelPluginHost}
+                    builtinPanelAppHost={builtinPanelAppHost}
                   />
                 )}
               </DesktopPanelLifecycleBoundary>
@@ -497,7 +500,7 @@ function PanelBody({
   browserAnchors,
   onRemoveBrowserAnchor,
   onUpdateBrowserAnchor,
-  panelPluginHost,
+  builtinPanelAppHost,
 }: {
   tab: OpenTab;
   bucket: string;
@@ -517,15 +520,13 @@ function PanelBody({
   browserAnchors?: Anchor[];
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
-  panelPluginHost?: DesktopPanelPluginHost;
+  builtinPanelAppHost?: DesktopBuiltinPanelAppHost;
 }) {
   const entry = getPanelEntry(tab.kind);
   if (!entry) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
-        {
-          "This panel is unavailable. Its plugin may be disabled or uninstalled; close this tab to remove the saved entry."
-        }
+        {"This panel is unavailable. Its Panel App may be disabled or uninstalled."}
       </div>
     );
   }
@@ -548,7 +549,7 @@ function PanelBody({
     browserAnchors,
     onRemoveBrowserAnchor,
     onUpdateBrowserAnchor,
-    panelPluginHost,
+    builtinPanelAppHost,
   });
 }
 

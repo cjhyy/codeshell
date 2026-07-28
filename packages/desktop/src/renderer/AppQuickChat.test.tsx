@@ -66,8 +66,8 @@ interface PanelAreaProps {
   tabs: Array<{ id: string; kind: string }>;
   setTabs: React.Dispatch<React.SetStateAction<Array<{ id: string; kind: string }>>>;
   setActiveId: React.Dispatch<React.SetStateAction<string | null>>;
-  panelPluginHost?: {
-    getService(pluginId: string):
+  builtinPanelAppHost?: {
+    getService(appId: string):
       | {
           ensure(context: Record<string, unknown>): void;
           release(context: Record<string, unknown>): void;
@@ -81,7 +81,7 @@ let chatProps: ChatProps | null = null;
 let sidebarProps: SidebarProps | null = null;
 const quickChatProps = new Map<string, QuickChatPanelProps>();
 const panelAreaProps = new Map<string, PanelAreaProps>();
-const QUICK_CHAT_PANEL_PLUGIN_ID = "codeshell.panel.quick-chat";
+const QUICK_CHAT_PANEL_APP_ID = "codeshell.panel-app.quick-chat";
 
 function MockQuickChatPanelLifecycle({
   panel,
@@ -90,7 +90,7 @@ function MockQuickChatPanelLifecycle({
   panel: PanelAreaProps;
   tab: { id: string; kind: string };
 }) {
-  const service = panel.panelPluginHost?.getService(QUICK_CHAT_PANEL_PLUGIN_ID);
+  const service = panel.builtinPanelAppHost?.getService(QUICK_CHAT_PANEL_APP_ID);
   const serviceRef = React.useRef(service);
   serviceRef.current = service;
   const context = {

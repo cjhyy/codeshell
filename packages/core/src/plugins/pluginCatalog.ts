@@ -8,7 +8,6 @@ import {
   CanonicalPluginManifest,
   type PluginAutomationTemplate,
   type CanonicalPluginManifest as CanonicalPluginManifestData,
-  type PluginPanelManifestEntry,
 } from "./installer/types.js";
 import { resolveSafePluginPath } from "./pluginInstaller.js";
 import type { InstalledPluginsV2 } from "./types.js";
@@ -23,8 +22,6 @@ export interface PluginCatalogEntry {
   installedAt: string;
   lastUpdated: string;
   manifest: CanonicalPluginManifestData | null;
-  /** Panel declarations are plugin content; UI hosts decide how to render them. */
-  panels: readonly PluginPanelManifestEntry[];
   /** Reusable scheduled-task templates. They never instantiate during install. */
   automationTemplates: readonly PluginAutomationTemplate[];
 }
@@ -33,16 +30,6 @@ export interface LoadPluginCatalogOptions {
   /** Override points make the loader reusable by isolated hosts and deterministic tests. */
   root?: string;
   installed?: InstalledPluginsV2;
-}
-
-/** A panel is a UI extension contribution, not an agent plugin runtime. */
-export interface PluginPanelContribution {
-  kind: "panel";
-  installKey: string;
-  pluginName: string;
-  marketplace: string | null;
-  installPath: string;
-  panel: PluginPanelManifestEntry;
 }
 
 export interface PluginAutomationTemplateContribution {
@@ -122,7 +109,6 @@ export function loadPluginCatalog(options: LoadPluginCatalogOptions = {}): Plugi
         installedAt: entry.installedAt,
         lastUpdated: entry.lastUpdated,
         manifest,
-        panels: manifest?.panels?.entries ?? [],
         automationTemplates: manifest?.automations?.templates ?? [],
       });
       loadedKeys.add(installKey);
@@ -146,22 +132,6 @@ export function loadPluginAutomationTemplateContributions(
       ...(plugin.manifest?.version ? { pluginVersion: plugin.manifest.version } : {}),
       revision: pluginAutomationTemplateRevision(plugin.installKey, template),
       template,
-    })),
-  );
-}
-
-/** Load only UI panel contributions from installed plugin packages. */
-export function loadPluginPanelContributions(
-  options: LoadPluginCatalogOptions = {},
-): PluginPanelContribution[] {
-  return loadPluginCatalog(options).flatMap((plugin) =>
-    plugin.panels.map((panel) => ({
-      kind: "panel" as const,
-      installKey: plugin.installKey,
-      pluginName: plugin.name,
-      marketplace: plugin.marketplace,
-      installPath: plugin.installPath,
-      panel,
     })),
   );
 }

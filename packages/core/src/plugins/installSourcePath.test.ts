@@ -77,7 +77,7 @@ describe("installPlugin marketplace source path containment", () => {
     expect(res.error).toMatch(/parent-directory/);
   });
 
-  test("normalizes panel manifests before activating a marketplace install", async () => {
+  test("rejects a marketplace Agent Plugin that tries to bundle Desktop UI", async () => {
     mkdirSync(join(mpDir, "payload", ".claude-plugin"), { recursive: true });
     mkdirSync(join(mpDir, "payload", "panels", "dashboard"), { recursive: true });
     writeFileSync(join(mpDir, "payload", "panels", "dashboard", "index.html"), "dashboard");
@@ -102,11 +102,8 @@ describe("installPlugin marketplace source path containment", () => {
 
     const res = await installPlugin("p", "shop");
 
-    if (!res.ok) throw new Error(res.error);
-    const canonical = JSON.parse(
-      readFileSync(join(res.entry.installPath, ".cs-plugin-manifest.json"), "utf-8"),
-    );
-    expect(canonical.panels.entries[0].entry).toBe("panels/dashboard/index.html");
+    if (res.ok) throw new Error("expected bundled Desktop UI to be rejected");
+    expect(res.error).toMatch(/cannot declare panels/);
   });
 
   test("projects Codex marketplace plugins into runtime-native contributions", async () => {

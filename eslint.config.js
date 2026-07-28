@@ -49,7 +49,7 @@ function isCodeShellPackage(specifier) {
 }
 
 const rendererBrowserSafeRuntimeImports = new Set([
-  "@cjhyy/code-shell-core/browser/plugin-runtime",
+  "@cjhyy/code-shell-core/browser/panel-app-runtime",
 ]);
 
 const codeshellBoundaryImportsRule = {
@@ -300,7 +300,7 @@ export default [
         {
           patterns: [
             {
-              regex: "^@cjhyy/code-shell-core(?:$|/(?!browser/plugin-runtime$).+)",
+              regex: "^@cjhyy/code-shell-core(?:$|/(?!browser/panel-app-runtime$).+)",
               allowTypeImports: true,
               message:
                 "renderer may runtime-import only reviewed core browser entry points; use window.codeShell.* for host capabilities",

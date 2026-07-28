@@ -6,7 +6,6 @@ import type { InstalledPluginsV2, PluginInstallEntry } from "./types.js";
 import {
   loadPluginAutomationTemplateContributions,
   loadPluginCatalog,
-  loadPluginPanelContributions,
   pluginAutomationTemplateRevision,
 } from "./pluginCatalog.js";
 
@@ -41,7 +40,7 @@ describe("loadPluginCatalog", () => {
     expect(pluginAutomationTemplateRevision("other@local", template)).not.toBe(revision);
   });
 
-  test("core loads canonical panels and rejects installed paths outside its plugin root", () => {
+  test("core loads Agent Plugin metadata and rejects paths outside its plugin root", () => {
     const root = mkdtempSync(join(tmpdir(), "cs-plugin-catalog-"));
     const outside = mkdtempSync(join(tmpdir(), "cs-plugin-outside-"));
     try {
@@ -55,16 +54,6 @@ describe("loadPluginCatalog", () => {
           schemaVersion: 1,
           name: "build-insights",
           version: "1.0.0",
-          panels: {
-            version: 1,
-            entries: [
-              {
-                id: "dashboard",
-                title: { default: "Build dashboard" },
-                entry: "panels/dashboard/index.html",
-              },
-            ],
-          },
           automations: {
             version: 1,
             templates: [
@@ -98,28 +87,12 @@ describe("loadPluginCatalog", () => {
         marketplace: "local",
         installPath: realpathSync(insights),
       });
-      expect(catalog[0].panels).toEqual([
-        expect.objectContaining({
-          id: "dashboard",
-          entry: "panels/dashboard/index.html",
-          permissions: [],
-        }),
-      ]);
       expect(catalog[1].manifest).toBeNull();
-      expect(catalog[1].panels).toEqual([]);
       expect(catalog[0].automationTemplates).toEqual([
         expect.objectContaining({ id: "weekday-review", permissionLevel: "read-only" }),
       ]);
       expect(catalog[1].automationTemplates).toEqual([]);
 
-      expect(loadPluginPanelContributions({ root, installed })).toEqual([
-        expect.objectContaining({
-          kind: "panel",
-          installKey: "build-insights@local",
-          pluginName: "build-insights",
-          panel: expect.objectContaining({ id: "dashboard" }),
-        }),
-      ]);
       expect(loadPluginAutomationTemplateContributions({ root, installed })).toEqual([
         expect.objectContaining({
           kind: "automation-template",

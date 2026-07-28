@@ -302,17 +302,17 @@ The architectural rule says the desktop renderer talks to main through
 explicitly reviewed browser-safe code. `web` remains the main browser client
 package.
 
-`PluginLifecycleRuntime` was audited as browser-safe: its implementation has no
+`PanelAppLifecycleRuntime` was audited as browser-safe: its implementation has no
 module imports and uses only standard ECMAScript collections, promises and
 objects. Core now publishes it through the explicit
-`@cjhyy/code-shell-core/browser/plugin-runtime` subpath. The previous
-`/plugin-runtime` entry remains available for compatibility, but the renderer
+`@cjhyy/code-shell-core/browser/panel-app-runtime` subpath. The matching
+`/panel-app-runtime` entry is available to non-renderer hosts, while the renderer
 guard allows only the browser-named entry at runtime. Other core runtime
 imports, including other `/browser/*` paths, remain rejected.
 
 A browser-target bundle contract test protects the entry from acquiring Node or
 Electron dependencies, and the ESLint boundary test separately proves that the
-exact reviewed path is allowed while the legacy/general paths are denied. Host
+exact reviewed path is allowed while general runtime paths are denied. Host
 capabilities still cross preload through `window.codeshell`; this exception is
 only for a UI-agnostic in-memory coordinator.
 
@@ -398,7 +398,7 @@ host-to-core back references.
 
 Completed in these boundary passes: clean-first package builds; focused Pet,
 Coding, Arena, and Server subpaths; chat adapter lazy loading; and the
-renderer's explicit browser-safe plugin-runtime entry.
+renderer's explicit browser-safe Panel App runtime entry.
 
 Remaining order:
 

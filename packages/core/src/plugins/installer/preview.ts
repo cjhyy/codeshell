@@ -28,7 +28,7 @@ import {
 import { readPluginMcp } from "./loadPluginMcp.js";
 import { pluginInstallDir } from "./paths.js";
 import { assertBoundedPluginSource, projectPluginSource } from "./projectPluginSource.js";
-import { PluginInstallError, type PluginPanelManifestEntry } from "./types.js";
+import { PluginInstallError } from "./types.js";
 
 const MAX_PREVIEW_ITEMS = 256;
 const MAX_PREVIEW_SKILL_BYTES = 512 * 1024;
@@ -40,7 +40,6 @@ export type LocalPluginPreviewWarningKind =
   | "executable-hooks"
   | "stdio-mcp"
   | "network-mcp"
-  | "panel-permissions"
   | "automation-templates"
   | "external-links"
   | "media";
@@ -113,7 +112,6 @@ export interface LocalPluginPreview {
   interface: LocalPluginInterfacePreview;
   mcpServers: LocalPluginMcpPreview[];
   name: string;
-  panels: PluginPanelManifestEntry[];
   automationTemplates: LocalPluginAutomationTemplatePreview[];
   reviewToken: string;
   skills: Array<{ description?: string; name: string }>;
@@ -317,7 +315,6 @@ function interfacePreview(
 function warningsFor(
   hooks: readonly LocalPluginHookPreview[],
   mcpServers: readonly LocalPluginMcpPreview[],
-  panels: readonly PluginPanelManifestEntry[],
   automationTemplates: readonly LocalPluginAutomationTemplatePreview[],
   metadata: LocalPluginInterfacePreview,
 ): LocalPluginPreviewWarning[] {
@@ -329,14 +326,6 @@ function warningsFor(
   const network = mcpServers.length - stdio;
   if (stdio > 0) warnings.push({ kind: "stdio-mcp", severity: "warning", count: stdio });
   if (network > 0) warnings.push({ kind: "network-mcp", severity: "warning", count: network });
-  const privilegedPanels = panels.filter((panel) => panel.permissions.length > 0).length;
-  if (privilegedPanels > 0) {
-    warnings.push({
-      kind: "panel-permissions",
-      severity: "warning",
-      count: privilegedPanels,
-    });
-  }
   if (automationTemplates.length > 0) {
     warnings.push({
       kind: "automation-templates",
@@ -417,7 +406,6 @@ export async function previewLocalPlugin(
       const agents = await listMarkdownNames(join(projectionRoot, "agents"), true);
       const hooks = listHooks(projectionRoot);
       const mcpServers = await listMcp(projectionRoot, name, projected.format);
-      const panels = [...(projected.canonicalManifest.panels?.entries ?? [])];
       const automationTemplates = (projected.canonicalManifest.automations?.templates ?? []).map(
         (template) => {
           const prompt = truncated(template.prompt, 500);
@@ -451,10 +439,9 @@ export async function previewLocalPlugin(
         agents,
         hooks,
         mcpServers,
-        panels,
         automationTemplates,
         interface: metadata,
-        warnings: warningsFor(hooks, mcpServers, panels, automationTemplates, metadata),
+        warnings: warningsFor(hooks, mcpServers, automationTemplates, metadata),
       };
     } finally {
       await rm(projectionRoot, { recursive: true, force: true });

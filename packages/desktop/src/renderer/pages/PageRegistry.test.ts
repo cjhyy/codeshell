@@ -7,6 +7,7 @@ describe("PageRegistry", () => {
     // Settings remains reachable from the fixed footer menu, so it is not
     // duplicated in the first-level navigation.
     expect(PAGE_REGISTRY.navEntries().map((entry) => entry.key)).toEqual([
+      "extensions",
       "digital_humans",
       "automation",
       "credentials",
@@ -16,6 +17,7 @@ describe("PageRegistry", () => {
   it("reuses the existing sidebar i18n labels", () => {
     const titles = PAGE_REGISTRY.navEntries().map((entry) => entry.title);
     expect(titles).toEqual([
+      { kind: "i18n", key: "sidebar.extensions" },
       { kind: "i18n", key: "sidebar.digitalHumans" },
       { kind: "i18n", key: "sidebar.automation" },
       { kind: "i18n", key: "sidebar.credentials" },
@@ -40,6 +42,23 @@ describe("PageRegistry", () => {
     for (const key of ["digital_humans", "automation", "credentials", "settings_page"]) {
       expect(PAGE_REGISTRY.get(key)!.render).toBeNull();
     }
+  });
+
+  it("opens the complete extensions manager directly with the active project", () => {
+    const extensions = PAGE_REGISTRY.get("extensions")!;
+    expect(extensions.nav).toMatchObject({
+      target: "extensions",
+      order: -10,
+    });
+    expect(extensions.nav!.isActive("extensions")).toBe(true);
+    const element = extensions.render!({
+      runsInitialRunId: null,
+      activeProjectPath: "/repo/example",
+    }) as ReactElement<{ activeProjectPath: string | null; showDiscover?: boolean }>;
+    expect(element.props).toEqual({
+      activeProjectPath: "/repo/example",
+      showDiscover: false,
+    });
   });
 
   it("supports dynamic registration, duplicate rejection, and idempotent disposal", () => {
@@ -91,8 +110,9 @@ describe("migrated builtin pages", () => {
     expect(runs.nav).toBeUndefined();
     expect(logs.render).toBeFunction();
     expect(runs.render).toBeFunction();
-    // The sidebar nav must not grow.
+    // Render-only pages must not add entries beyond the intended first-level set.
     expect(PAGE_REGISTRY.navEntries().map((entry) => entry.key)).toEqual([
+      "extensions",
       "digital_humans",
       "automation",
       "credentials",
@@ -102,6 +122,7 @@ describe("migrated builtin pages", () => {
   it("threads the runs deep-link through the render context", () => {
     const element = PAGE_REGISTRY.get("runs")!.render!({
       runsInitialRunId: "run-42",
+      activeProjectPath: null,
     }) as ReactElement<{ initialRunId?: string | null }>;
     expect(element.props.initialRunId).toBe("run-42");
   });

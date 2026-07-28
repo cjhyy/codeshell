@@ -16,15 +16,12 @@
 
 import {
   loadPluginCatalog,
-  loadPluginPanelContributions,
   describePluginContent,
   listPluginMcpTrust,
   type PluginContentInventory,
   type PluginMcpTrustEntry,
-  SettingsManager,
 } from "@cjhyy/code-shell-core";
 import {
-  computeEffectiveDisabledLists,
   uninstallPlugin,
   uninstallPluginByName,
   updatePluginByName,
@@ -32,17 +29,8 @@ import {
   type UpdateResult,
   type UpdateCheck,
 } from "@cjhyy/code-shell-core/internal";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
-import type {
-  PluginPanelDescriptor,
-  PluginPanelExtensionSummary,
-} from "../shared/plugin-panels.js";
-import {
-  replacePluginPanelResources,
-  type PluginPanelProtocolResource,
-} from "./plugin-panel-protocol.js";
 import { normalizePluginDisplayMetadata } from "./plugin-display-metadata.js";
 import { pluginMediaAvailability } from "./plugin-media-service.js";
 import type { PluginMediaAvailability } from "../shared/plugin-media.js";
@@ -116,121 +104,6 @@ function readLegacyPluginManifest(installPath: string): PluginManifest | null {
   return null;
 }
 
-function panelTitle(
-  title: { default: string; en?: string; "zh-CN"?: string },
-  locale: string,
-): string {
-  return locale.toLowerCase().startsWith("zh")
-    ? (title["zh-CN"] ?? title.default)
-    : (title.en ?? title.default);
-}
-
-function installedPanelRevision(installPath: string, entry: string): string {
-  const hash = createHash("sha256");
-  for (const relative of [".cs-meta.json", ".cs-plugin-manifest.json", entry]) {
-    const file = path.join(installPath, relative);
-    try {
-      const stat = statSync(file);
-      hash.update(relative).update("\0").update(String(stat.size)).update("\0");
-      if (relative.endsWith(".json")) hash.update(readFileSync(file));
-      else hash.update(String(stat.mtimeMs));
-    } catch {
-      hash.update(relative).update("\0missing\0");
-    }
-  }
-  return hash.digest("hex");
-}
-
-function discoverPluginPanels(locale: string): {
-  descriptors: PluginPanelDescriptor[];
-  resources: PluginPanelProtocolResource[];
-} {
-  let panels: ReturnType<typeof loadPluginPanelContributions>;
-  try {
-    panels = loadPluginPanelContributions();
-  } catch {
-    return { descriptors: [], resources: [] };
-  }
-
-  const descriptors: PluginPanelDescriptor[] = [];
-  const resources: PluginPanelProtocolResource[] = [];
-  for (const contribution of panels) {
-    const { installKey: key, installPath, pluginName, panel } = contribution;
-    const revision = installedPanelRevision(installPath, panel.entry);
-    const hostSeed = createHash("sha256")
-      .update(key)
-      .update("\0")
-      .update(installPath)
-      .update("\0")
-      .update(JSON.stringify(panel))
-      .update("\0")
-      .update(revision)
-      .digest("hex");
-    // One authority/partition per panel is stricter than sharing a plugin
-    // origin: sibling panels cannot navigate into each other's entry trees.
-    const hostId = createHash("sha256")
-      .update(hostSeed)
-      .update("\0")
-      .update(panel.id)
-      .digest("hex")
-      .slice(0, 32);
-    const descriptor: PluginPanelDescriptor = {
-      id: `plugin:${key}:${panel.id}`,
-      installKey: key,
-      pluginName,
-      panelId: panel.id,
-      title: panelTitle(panel.title, locale),
-      icon: panel.icon,
-      singleton: panel.singleton,
-      permissions: [...panel.permissions],
-      hostId,
-      revision,
-    };
-    descriptors.push(descriptor);
-    resources.push({ descriptor, root: installPath, entry: panel.entry });
-  }
-  return { descriptors, resources };
-}
-
-function disabledPluginNames(cwd: string): Set<string> {
-  const disabledPlugins = (() => {
-    try {
-      return computeEffectiveDisabledLists(
-        new SettingsManager(cwd || process.cwd(), "full"),
-        cwd || undefined,
-      ).disabledPlugins;
-    } catch {
-      return [];
-    }
-  })();
-  return new Set(disabledPlugins);
-}
-
-/** Installed UI contributions for the Extensions page, including disabled ones. */
-export function listPanelExtensions(cwd: string, locale: string): PluginPanelExtensionSummary[] {
-  const disabled = disabledPluginNames(cwd);
-  return discoverPluginPanels(locale).descriptors.map((panel) => {
-    const disabledByPackage = disabled.has(panel.pluginName);
-    return {
-      ...panel,
-      kind: "panel" as const,
-      enabled: !disabledByPackage,
-      disabledByPackage,
-    };
-  });
-}
-
-/** Runtime descriptors for the session-owned right dock. */
-export function listPluginPanels(cwd: string, locale: string): PluginPanelDescriptor[] {
-  const discovered = discoverPluginPanels(locale);
-  // Protocol resources represent all installed panels. Per-project disabling
-  // only filters descriptors, so two windows with different settings cannot
-  // accidentally revoke each other's protocol host.
-  replacePluginPanelResources(discovered.resources);
-  const disabled = disabledPluginNames(cwd);
-  return discovered.descriptors.filter((panel) => !disabled.has(panel.pluginName));
-}
-
 function countSkills(installPath: string): number {
   const skillsDir = path.join(installPath, "skills");
   if (!existsSync(skillsDir)) return 0;
@@ -292,7 +165,7 @@ export interface PluginDetail extends PluginSummary {
 export function getPluginDetail(installKey: string): PluginDetail | null {
   const summary = listPlugins("").find((p) => p.installKey === installKey);
   if (!summary) return null;
-  const content = summary.installPath
+  const described = summary.installPath
     ? describePluginContent(summary.name, summary.installPath, summary.installKey)
     : {
         skills: [],
@@ -300,11 +173,10 @@ export function getPluginDetail(installKey: string): PluginDetail | null {
         agents: [],
         hooks: [],
         mcpServers: [],
-        panels: [],
         automationTemplates: [],
       };
   const mcpTrust = listPluginMcpTrust().find((entry) => entry.installKey === installKey);
-  return { ...summary, content, ...(mcpTrust ? { mcpTrust } : {}) };
+  return { ...summary, content: described, ...(mcpTrust ? { mcpTrust } : {}) };
 }
 
 export interface UninstallPluginResult {

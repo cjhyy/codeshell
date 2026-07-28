@@ -409,6 +409,16 @@ export const SettingsSchema = z
      */
     disabledPlugins: z.array(z.string()).default([]),
 
+    /** Globally disabled Panel Apps. Separate from agent-plugin capability policy. */
+    disabledPanelApps: z.array(z.string()).default([]),
+
+    /**
+     * Per-project Panel App policy. This deliberately does not live under
+     * capabilityOverrides: Panel Apps are Desktop applications, not agent
+     * skills/plugins/MCP capabilities. "on"/"off"; missing means inherit.
+     */
+    panelAppOverrides: z.record(CapabilityOverrideSchema).default({}),
+
     /**
      * Sub-agent role names (the `name` in .code-shell/agents/*.md) to
      * hide from the registry. A disabled role is filtered out at load

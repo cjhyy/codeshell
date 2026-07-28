@@ -705,9 +705,9 @@ export function SettingsPage({
               {active === "context" && <ContextSettingsSection />}
               {active === "mobile-remote" && <MobileRemoteSection />}
               {active === "plugins-skills" && (
-                // Market/discover moved in here with the 双门收口 — settings is
-                // now the only door to extensions, so it must show everything.
-                <ExtensionsPage activeProjectPath={activeProjectPath} />
+                // Settings and the standalone sidebar entry share one complete
+                // manager. Neither path should add a second discovery click.
+                <ExtensionsPage activeProjectPath={activeProjectPath} showDiscover={false} />
               )}
               {active === "agents" && <AgentsSection projects={projects} />}
               {active === "memory" && (

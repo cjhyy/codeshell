@@ -2,7 +2,7 @@
 export interface AgentPanelDescriptor {
   id: string;
   title: string;
-  source: "builtin" | "code" | "plugin";
+  source: "builtin" | "builtin-panel-app" | "panel-app";
 }
 
 export interface PanelOpenResult {

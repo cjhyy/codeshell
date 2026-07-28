@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import type { PanelId } from "../view";
 import type { Anchor } from "../chat/anchors";
-import type { PluginPanelDescriptor } from "../../shared/plugin-panels";
-import { resolvePluginPanelIcon } from "./pluginPanelIcons";
+import type { PanelAppDescriptor } from "../../shared/panel-apps";
+import { resolvePanelAppIcon } from "./panelAppIcons";
 import { FilesPanel } from "./FilesPanel";
 import { BrowserPanel } from "./BrowserPanel";
 import { ReviewPanel } from "./ReviewPanel";
@@ -19,8 +19,8 @@ import { TerminalPanel } from "./TerminalPanel";
 import { BackgroundShellPanel } from "./BackgroundShellPanel";
 import { CCRoomView } from "../cc-room/CCRoomView";
 import type { OpenCliSessionRequest } from "../cc-room/types";
-import { PluginPanelHost } from "./PluginPanelHost";
-import type { DesktopPanelPluginHost } from "./DesktopPanelPlugin";
+import { PanelAppHost } from "./PanelAppHost";
+import type { DesktopBuiltinPanelAppHost } from "./DesktopBuiltinPanelApp";
 
 export interface PanelAvailabilityContext {
   cwd: string | null;
@@ -44,13 +44,13 @@ export interface PanelRenderContext extends PanelAvailabilityContext {
   browserAnchors?: Anchor[];
   onRemoveBrowserAnchor?: (anchorId: string) => void;
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
-  panelPluginHost?: DesktopPanelPluginHost;
+  builtinPanelAppHost?: DesktopBuiltinPanelAppHost;
 }
 
 export type PanelOwner =
   | { kind: "builtin" }
-  | { kind: "code"; pluginId: string; panelId: string }
-  | { kind: "plugin"; installKey: string; panelId: string };
+  | { kind: "builtin-panel-app"; appId: string; panelId: string }
+  | { kind: "panel-app"; appId: string };
 
 export type PanelTitle = { kind: "i18n"; key: string } | { kind: "literal"; value: string };
 
@@ -63,8 +63,8 @@ export interface PanelEntry {
   readonly singleton: boolean;
   readonly enabled: (context: PanelAvailabilityContext) => boolean;
   readonly render: (context: PanelRenderContext) => ReactNode;
-  /** Present only for trusted code-backed panels coordinated by core's lifecycle runtime. */
-  readonly lifecycle?: { pluginId: string; panelId: string };
+  /** Present only for trusted built-in Panel Apps coordinated by core's lifecycle runtime. */
+  readonly lifecycle?: { appId: string; panelId: string };
 }
 
 const alwaysEnabled = (): boolean => true;
@@ -159,14 +159,11 @@ function sameOwner(left: PanelOwner, right: PanelOwner): boolean {
   return (
     left.kind === right.kind &&
     (left.kind === "builtin" ||
-      (left.kind === "code" &&
-        right.kind === "code" &&
-        left.pluginId === right.pluginId &&
+      (left.kind === "builtin-panel-app" &&
+        right.kind === "builtin-panel-app" &&
+        left.appId === right.appId &&
         left.panelId === right.panelId) ||
-      (left.kind === "plugin" &&
-        right.kind === "plugin" &&
-        left.installKey === right.installKey &&
-        left.panelId === right.panelId))
+      (left.kind === "panel-app" && right.kind === "panel-app" && left.appId === right.appId))
   );
 }
 
@@ -202,18 +199,20 @@ export class PanelRegistry {
     if (changed) this.emit();
   }
 
-  replacePluginEntries(next: PanelEntry[]): void {
+  replacePanelAppEntries(next: PanelEntry[]): void {
     const nextIds = new Set<string>();
     for (const entry of next) {
-      if (entry.owner.kind !== "plugin") throw new Error("plugin snapshot contains builtin panel");
+      if (entry.owner.kind !== "panel-app") {
+        throw new Error("Panel App snapshot contains a non-app panel");
+      }
       const existing = this.entries.get(entry.key);
-      if (nextIds.has(entry.key) || (existing && existing.owner.kind !== "plugin")) {
+      if (nextIds.has(entry.key) || (existing && existing.owner.kind !== "panel-app")) {
         throw new Error(`duplicate panel id: ${entry.key}`);
       }
       nextIds.add(entry.key);
     }
     for (const [id, entry] of this.entries) {
-      if (entry.owner.kind === "plugin") this.entries.delete(id);
+      if (entry.owner.kind === "panel-app") this.entries.delete(id);
     }
     for (const entry of next) this.entries.set(entry.key, entry);
     this.emit();
@@ -249,23 +248,22 @@ export class PanelRegistry {
 export const PANEL_REGISTRY = new PanelRegistry();
 for (const entry of BUILTIN_PANEL_ENTRIES) PANEL_REGISTRY.register(entry);
 
-export function replacePluginPanels(descriptors: PluginPanelDescriptor[]): void {
-  PANEL_REGISTRY.replacePluginEntries(
+export function replacePanelApps(descriptors: PanelAppDescriptor[]): void {
+  PANEL_REGISTRY.replacePanelAppEntries(
     descriptors.map(
       (descriptor, index): PanelEntry => ({
         key: descriptor.id,
         owner: {
-          kind: "plugin",
-          installKey: descriptor.installKey,
-          panelId: descriptor.panelId,
+          kind: "panel-app",
+          appId: descriptor.appId,
         },
         title: { kind: "literal", value: descriptor.title },
-        icon: resolvePluginPanelIcon(descriptor.icon),
+        icon: resolvePanelAppIcon(descriptor.icon),
         order: 1_000 + index,
         singleton: descriptor.singleton,
         enabled: alwaysEnabled,
         render: ({ tabId, bucket, busy, cwd, engineSessionId, foregroundVisible }) =>
-          createElement(PluginPanelHost, {
+          createElement(PanelAppHost, {
             descriptor,
             tabId,
             bucket,

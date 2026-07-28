@@ -16,10 +16,10 @@ export function resolveAgentPanelHostRequest(
       id: entry.key,
       title: panelEntryTitle(entry, options.translate),
       source:
-        entry.owner.kind === "plugin"
-          ? ("plugin" as const)
-          : entry.owner.kind === "code"
-            ? ("code" as const)
+        entry.owner.kind === "panel-app"
+          ? ("panel-app" as const)
+          : entry.owner.kind === "builtin-panel-app"
+            ? ("builtin-panel-app" as const)
             : ("builtin" as const),
     }));
     return { requestId: request.requestId, result: { ok: true, panels } };

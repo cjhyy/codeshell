@@ -94,7 +94,8 @@ export const messagesNs = {
         undoFailed: "撤销失败:{error}",
         redoFailed: "重新应用失败:{error}",
         confirmTitle: "撤销 {count} 个文件的改动?",
-        confirmBody: "这些文件会还原到该轮编辑前的内容,本轮新建的文件会被删除。撤销后可「重新应用」。",
+        confirmBody:
+          "这些文件会还原到该轮编辑前的内容,本轮新建的文件会被删除。撤销后可「重新应用」。",
         cancel: "取消",
         confirmUndo: "确认撤销",
         reviewModalTitle: "审核改动 — {count} 个文件",

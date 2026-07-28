@@ -1,0 +1,644 @@
+<!doctype html>
+<!-- Design Studio Panel App -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design Studio</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand" title="CodeShell Design Studio">
+          <span class="brand-mark">D</span>
+          <span class="brand-name">Studio</span>
+        </div>
+        <div class="document-control">
+          <input
+            id="document-path"
+            aria-label="设计文件路径"
+            value="designs/design.codesign.json"
+            spellcheck="false"
+          />
+          <span id="repo-link-state" class="repo-link-state" data-kind="idle">Repo · 连接中</span>
+          <span id="save-state" class="save-state" data-kind="idle">未保存</span>
+        </div>
+        <div class="top-actions">
+          <button
+            id="open-shortcuts"
+            class="icon-button help-button"
+            type="button"
+            title="快捷键 (?)"
+            aria-label="打开快捷键"
+          >
+            ?
+          </button>
+          <button
+            id="open-files"
+            class="icon-button"
+            type="button"
+            title="打开设计文件 (⌘O)"
+            aria-label="打开设计文件"
+          >
+            <span aria-hidden="true">⌘</span>
+          </button>
+          <button id="save" class="primary-button" type="button" title="保存 (⌘S)">保存</button>
+          <button id="run-audit" class="button" type="button" title="检查设计质量">检查</button>
+          <button id="export-svg" class="button" type="button" title="导出 SVG">SVG</button>
+          <button
+            id="toggle-inspector"
+            class="icon-button responsive-only"
+            type="button"
+            title="打开属性面板"
+            aria-label="打开属性面板"
+            aria-expanded="false"
+          >
+            ◫
+          </button>
+          <button id="open-ai" class="ai-button" type="button" title="让 Agent 继续设计">
+            <span class="ai-spark">✦</span>
+            AI
+          </button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <nav class="toolrail" aria-label="设计工具">
+          <button
+            class="tool active"
+            data-tool="select"
+            type="button"
+            title="选择 (V)"
+            aria-label="选择工具"
+            aria-pressed="true"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m5 3 14 8-6 2-3 6L5 3Z" />
+            </svg>
+          </button>
+          <button
+            class="tool"
+            data-tool="frame"
+            type="button"
+            title="画板 (F)"
+            aria-label="画板工具"
+            aria-pressed="false"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 3v18M19 3v18M3 7h18M3 17h18" />
+            </svg>
+          </button>
+          <button
+            class="tool"
+            data-tool="rectangle"
+            type="button"
+            title="矩形 (R)"
+            aria-label="矩形工具"
+            aria-pressed="false"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="4" y="5" width="16" height="14" rx="1" />
+            </svg>
+          </button>
+          <button
+            class="tool"
+            data-tool="ellipse"
+            type="button"
+            title="椭圆 (O)"
+            aria-label="椭圆工具"
+            aria-pressed="false"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <ellipse cx="12" cy="12" rx="8" ry="7" />
+            </svg>
+          </button>
+          <button
+            class="tool"
+            data-tool="text"
+            type="button"
+            title="文本 (T)"
+            aria-label="文本工具"
+            aria-pressed="false"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M12 5v14M8 19h8" /></svg>
+          </button>
+          <span class="tool-separator"></span>
+          <button
+            class="tool"
+            data-tool="hand"
+            type="button"
+            title="抓手 (H / Space)"
+            aria-label="抓手工具"
+            aria-pressed="false"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M8 11V6a1.5 1.5 0 0 1 3 0v4M11 10V4.5a1.5 1.5 0 0 1 3 0V10M14 10V6a1.5 1.5 0 0 1 3 0v5M17 11V8.5a1.5 1.5 0 0 1 3 0V14c0 4-2.5 7-7 7h-1c-2.5 0-4-1.2-5.3-3L4 14a1.6 1.6 0 0 1 2.5-2l1.5 1.5V11Z"
+              />
+            </svg>
+          </button>
+        </nav>
+
+        <section id="stage-wrap" class="stage-wrap" aria-label="设计画布">
+          <svg id="stage" role="img" aria-label="Design canvas">
+            <defs>
+              <pattern id="dot-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+                <circle cx="1" cy="1" r="0.7" class="grid-dot" />
+              </pattern>
+              <filter id="artboard-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="8" stdDeviation="16" flood-opacity="0.15" />
+              </filter>
+            </defs>
+            <rect id="grid" width="100%" height="100%" fill="url(#dot-grid)" />
+            <g id="scene"></g>
+          </svg>
+          <div class="canvas-meta">
+            <button id="zoom-out" type="button" aria-label="缩小">−</button>
+            <button id="zoom-value" type="button" title="适应画布">100%</button>
+            <button id="zoom-in" type="button" aria-label="放大">＋</button>
+            <span class="meta-divider"></span>
+            <button id="toggle-grid" type="button" class="active" aria-pressed="true">网格</button>
+            <button
+              id="toggle-snap"
+              type="button"
+              class="active"
+              aria-pressed="true"
+              title="8px 吸附；按住 Alt 临时绕过"
+            >
+              吸附
+            </button>
+          </div>
+          <div id="selection-size" class="selection-size" hidden></div>
+        </section>
+
+        <aside class="inspector">
+          <div class="inspector-tabs" role="tablist" aria-label="检查器视图">
+            <button
+              id="design-tab-button"
+              class="inspector-tab active"
+              data-tab="design"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="design-tab"
+            >
+              设计
+            </button>
+            <button
+              id="layers-tab-button"
+              class="inspector-tab"
+              data-tab="layers"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="layers-tab"
+              tabindex="-1"
+            >
+              图层
+            </button>
+          </div>
+
+          <section
+            id="design-tab"
+            class="inspector-body"
+            role="tabpanel"
+            aria-labelledby="design-tab-button"
+          >
+            <div id="no-selection" class="empty-state">
+              <span class="empty-icon">◇</span>
+              <strong>选择一个图层</strong>
+              <p>在画布或图层列表中选择对象来调整属性。</p>
+            </div>
+
+            <div id="multi-selection" class="multi-selection" hidden>
+              <div class="multi-selection-heading">
+                <span class="empty-icon">◇</span>
+                <div>
+                  <strong id="multi-selection-count">已选择 2 个图层</strong>
+                  <p>拖动可整体移动，或使用下方工具批量排布。</p>
+                </div>
+              </div>
+              <div class="property-section">
+                <div class="section-label">批量对齐</div>
+                <div class="align-row">
+                  <button data-align="left" type="button" title="左对齐">左</button>
+                  <button data-align="center" type="button" title="水平居中">中</button>
+                  <button data-align="right" type="button" title="右对齐">右</button>
+                </div>
+                <div class="align-row">
+                  <button data-align="top" type="button" title="顶部对齐">上</button>
+                  <button data-align="middle" type="button" title="垂直居中">中</button>
+                  <button data-align="bottom" type="button" title="底部对齐">下</button>
+                </div>
+                <div class="align-row">
+                  <button data-distribute="horizontal" type="button" title="水平等距分布">
+                    水平等距
+                  </button>
+                  <button data-distribute="vertical" type="button" title="垂直等距分布">
+                    垂直等距
+                  </button>
+                </div>
+                <button id="frame-selection" class="wide-action" type="button">
+                  装入新画板
+                  <kbd>⌥⌘G</kbd>
+                </button>
+                <button id="group-selection" class="wide-action" type="button">
+                  编组图层
+                  <kbd>⌘G</kbd>
+                </button>
+              </div>
+            </div>
+
+            <div id="canvas-properties">
+              <div class="property-section">
+                <div class="section-label">文档</div>
+                <label class="stacked-field">
+                  <span>设计名称</span>
+                  <input id="prop-document-name" maxlength="120" />
+                </label>
+              </div>
+              <div class="property-section">
+                <div class="section-label">画布</div>
+                <div class="property-grid">
+                  <label
+                    ><span>W</span
+                    ><input id="prop-canvas-width" type="number" min="100" max="10000"
+                  /></label>
+                  <label
+                    ><span>H</span
+                    ><input id="prop-canvas-height" type="number" min="100" max="10000"
+                  /></label>
+                </div>
+                <label class="color-field">
+                  <span>背景</span>
+                  <input id="prop-canvas-background-color" type="color" />
+                  <input id="prop-canvas-background" spellcheck="false" />
+                </label>
+              </div>
+            </div>
+
+            <div id="selection-properties" hidden>
+              <div class="section-heading">
+                <input id="prop-name" class="layer-name-input" aria-label="图层名称" />
+                <div class="inline-actions">
+                  <button id="toggle-lock" type="button" title="锁定">锁</button>
+                  <button id="toggle-visible" type="button" title="显示或隐藏">眼</button>
+                </div>
+              </div>
+
+              <div class="property-section">
+                <div class="section-label">位置与尺寸</div>
+                <div class="property-grid">
+                  <label><span>X</span><input id="prop-x" type="number" step="1" /></label>
+                  <label><span>Y</span><input id="prop-y" type="number" step="1" /></label>
+                  <label
+                    ><span>W</span><input id="prop-width" type="number" min="1" step="1"
+                  /></label>
+                  <label
+                    ><span>H</span><input id="prop-height" type="number" min="1" step="1"
+                  /></label>
+                </div>
+                <label id="prop-parent-field" class="stacked-field">
+                  <span>所属画板</span>
+                  <select id="prop-parent"></select>
+                </label>
+                <div class="align-row">
+                  <button data-align="left" type="button" title="左对齐">左</button>
+                  <button data-align="center" type="button" title="水平居中">中</button>
+                  <button data-align="right" type="button" title="右对齐">右</button>
+                </div>
+                <div class="align-row">
+                  <button data-align="top" type="button" title="顶部对齐">上</button>
+                  <button data-align="middle" type="button" title="垂直居中">中</button>
+                  <button data-align="bottom" type="button" title="底部对齐">下</button>
+                  <button data-order="down" type="button" title="下移一层">↓</button>
+                  <button data-order="up" type="button" title="上移一层">↑</button>
+                </div>
+              </div>
+
+              <div id="text-section" class="property-section" hidden>
+                <div class="section-label">文字</div>
+                <textarea id="prop-text" rows="3" aria-label="文字内容"></textarea>
+                <div class="property-grid">
+                  <label
+                    ><span>字号</span><input id="prop-font-size" type="number" min="6" max="240"
+                  /></label>
+                  <label>
+                    <span>字重</span>
+                    <select id="prop-font-weight">
+                      <option value="400">常规</option>
+                      <option value="500">中等</option>
+                      <option value="600">半粗</option>
+                      <option value="700">粗体</option>
+                    </select>
+                  </label>
+                  <label
+                    ><span>行高</span
+                    ><input id="prop-line-height" type="number" min="0.7" max="3" step="0.05"
+                  /></label>
+                  <label>
+                    <span>对齐</span>
+                    <select id="prop-text-align">
+                      <option value="left">左</option>
+                      <option value="center">中</option>
+                      <option value="right">右</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div id="frame-section" class="property-section" hidden>
+                <div id="container-section-label" class="section-label">画板</div>
+                <label id="clip-content-field" class="checkbox-field">
+                  <input id="prop-clip-content" type="checkbox" />
+                  <span>裁剪超出画板的内容</span>
+                </label>
+                <button id="release-frame" class="wide-action" type="button">
+                  <span id="release-container-label">解除画板，保留内容</span>
+                  <kbd>⇧⌘G</kbd>
+                </button>
+              </div>
+
+              <div id="layout-section" class="property-section" hidden>
+                <div class="section-label">自动布局</div>
+                <div id="container-layout-controls" class="layout-controls">
+                  <label class="stacked-field">
+                    <span>方向</span>
+                    <select id="prop-layout">
+                      <option value="none">自由布局</option>
+                      <option value="horizontal">水平排列</option>
+                      <option value="vertical">垂直排列</option>
+                    </select>
+                  </label>
+                  <div class="property-grid">
+                    <label
+                      ><span>间距</span
+                      ><input id="prop-layout-gap" type="number" min="0" max="2000"
+                    /></label>
+                    <label
+                      ><span>内边距</span
+                      ><input id="prop-layout-padding" type="number" min="0" max="2000"
+                    /></label>
+                  </div>
+                  <div class="property-grid">
+                    <label>
+                      <span>交叉轴</span>
+                      <select id="prop-align-items">
+                        <option value="start">起点</option>
+                        <option value="center">居中</option>
+                        <option value="end">终点</option>
+                        <option value="stretch">拉伸</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>主轴</span>
+                      <select id="prop-justify-content">
+                        <option value="start">起点</option>
+                        <option value="center">居中</option>
+                        <option value="end">终点</option>
+                        <option value="space-between">两端对齐</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+                <div id="child-layout-controls" class="layout-controls" hidden>
+                  <label class="checkbox-field">
+                    <input id="prop-layout-grow" type="checkbox" />
+                    <span>填满主轴剩余空间</span>
+                  </label>
+                  <label class="stacked-field">
+                    <span>交叉轴对齐</span>
+                    <select id="prop-layout-align">
+                      <option value="auto">跟随容器</option>
+                      <option value="start">起点</option>
+                      <option value="center">居中</option>
+                      <option value="end">终点</option>
+                      <option value="stretch">拉伸</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div id="component-section" class="property-section component-section" hidden>
+                <div class="section-label">组件</div>
+                <p id="component-status" class="component-status"></p>
+                <button id="make-component" class="wide-action" type="button">
+                  转换为主组件
+                  <span aria-hidden="true">◇</span>
+                </button>
+                <button id="create-instance" class="wide-action" type="button">
+                  创建组件实例
+                  <span aria-hidden="true">◆</span>
+                </button>
+              </div>
+
+              <div class="property-section">
+                <div class="section-label">外观</div>
+                <label class="color-field">
+                  <span>填充</span>
+                  <input id="prop-fill-color" type="color" />
+                  <input id="prop-fill" spellcheck="false" />
+                </label>
+                <label class="color-field">
+                  <span>描边</span>
+                  <input id="prop-stroke-color" type="color" />
+                  <input id="prop-stroke" spellcheck="false" />
+                </label>
+                <div class="property-grid">
+                  <label><span>圆角</span><input id="prop-radius" type="number" min="0" /></label>
+                  <label
+                    ><span>描边</span><input id="prop-stroke-width" type="number" min="0" max="100"
+                  /></label>
+                  <label
+                    ><span>透明</span><input id="prop-opacity" type="number" min="0" max="100"
+                  /></label>
+                  <label
+                    ><span>旋转</span><input id="prop-rotation" type="number" min="-360" max="360"
+                  /></label>
+                </div>
+              </div>
+
+              <div class="property-section">
+                <div class="section-label">开发备注</div>
+                <textarea
+                  id="prop-notes"
+                  rows="3"
+                  maxlength="2000"
+                  placeholder="交互、响应式、无障碍或实现说明…"
+                  aria-label="图层开发备注"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="property-section token-section">
+              <div class="token-heading">
+                <div class="section-label">颜色变量</div>
+                <button id="add-color-token" type="button" title="新增颜色变量">＋ 变量</button>
+              </div>
+              <div id="color-tokens" class="color-tokens"></div>
+            </div>
+          </section>
+
+          <section
+            id="layers-tab"
+            class="inspector-body"
+            role="tabpanel"
+            aria-labelledby="layers-tab-button"
+            hidden
+          >
+            <div class="layers-heading">
+              <span>图层</span>
+              <button id="duplicate-layer" type="button">复制</button>
+            </div>
+            <div class="layer-filter-wrap">
+              <input
+                id="layer-filter"
+                type="search"
+                placeholder="筛选名称、ID 或备注"
+                aria-label="筛选图层"
+              />
+            </div>
+            <div
+              id="layers-list"
+              class="layers-list"
+              role="listbox"
+              aria-label="设计图层"
+              aria-multiselectable="true"
+            ></div>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <dialog id="files-dialog">
+      <form method="dialog" class="dialog-card">
+        <header>
+          <div>
+            <span class="dialog-kicker">REPOSITORY DESIGNS</span>
+            <h2>设计文件</h2>
+          </div>
+          <button class="dialog-close" value="cancel" aria-label="关闭">×</button>
+        </header>
+        <div id="workspace-summary" class="workspace-summary">正在读取工作区…</div>
+        <div id="files-list" class="files-list"></div>
+        <footer>
+          <button id="new-document" class="button" value="cancel" type="button">新建设计</button>
+          <p>文件保存在 <code>designs/</code>，可直接进入 Git 版本管理。</p>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="ai-dialog">
+      <form method="dialog" class="dialog-card ai-dialog-card">
+        <header>
+          <div>
+            <span class="dialog-kicker">AGENT HANDOFF</span>
+            <h2>让 Agent 继续设计</h2>
+          </div>
+          <button class="dialog-close" value="cancel" aria-label="关闭">×</button>
+        </header>
+        <p class="dialog-description">
+          当前设计会先保存，再把文件路径和你的要求交给当前 CodeShell 会话。
+        </p>
+        <textarea
+          id="ai-request"
+          rows="6"
+          placeholder="例如：检查这个首页的信息层级，优化首屏 CTA，并保持现有颜色变量。"
+        ></textarea>
+        <footer class="ai-footer">
+          <span id="ai-context-state">会话可用</span>
+          <button id="submit-ai" class="ai-button" value="cancel" type="button">
+            <span class="ai-spark">✦</span>
+            提交给 Agent
+          </button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="shortcuts-dialog">
+      <form method="dialog" class="dialog-card shortcuts-dialog-card">
+        <header>
+          <div>
+            <span class="dialog-kicker">KEYBOARD MAP</span>
+            <h2>快捷键</h2>
+          </div>
+          <button class="dialog-close" value="cancel" aria-label="关闭">×</button>
+        </header>
+        <div class="shortcut-grid">
+          <section>
+            <h3>工具</h3>
+            <div><span>选择</span><kbd>V</kbd></div>
+            <div><span>画板</span><kbd>F</kbd></div>
+            <div>
+              <span>矩形 / 椭圆</span><span><kbd>R</kbd> <kbd>O</kbd></span>
+            </div>
+            <div>
+              <span>文字 / 抓手</span><span><kbd>T</kbd> <kbd>H</kbd></span>
+            </div>
+            <div><span>临时抓手</span><kbd>Space</kbd></div>
+          </section>
+          <section>
+            <h3>视图</h3>
+            <div><span>适应画布</span><kbd>⇧1</kbd></div>
+            <div><span>聚焦选择</span><kbd>⇧2</kbd></div>
+            <div><span>绕过 8px 吸附</span><kbd>Alt</kbd></div>
+            <div><span>等比创建 / 缩放</span><kbd>Shift</kbd></div>
+          </section>
+          <section>
+            <h3>编辑</h3>
+            <div>
+              <span>保存 / 打开</span><span><kbd>⌘S</kbd> <kbd>⌘O</kbd></span>
+            </div>
+            <div>
+              <span>撤销 / 重做</span><span><kbd>⌘Z</kbd> <kbd>⇧⌘Z</kbd></span>
+            </div>
+            <div>
+              <span>复制 / 粘贴</span><span><kbd>⌘C</kbd> <kbd>⌘V</kbd></span>
+            </div>
+            <div><span>复制图层</span><kbd>⌘D</kbd></div>
+            <div><span>编组图层</span><kbd>⌘G</kbd></div>
+            <div><span>装入新画板</span><kbd>⌥⌘G</kbd></div>
+            <div><span>解除画板 / 编组</span><kbd>⇧⌘G</kbd></div>
+            <div>
+              <span>微移 / 10px 微移</span><span><kbd>↑</kbd> <kbd>⇧↑</kbd></span>
+            </div>
+          </section>
+        </div>
+        <footer>
+          <p>
+            双击文字可直接跳到文字属性；Shift 点击或框选可多选。图层列表中用方向键移动，按 V
+            切换显示。
+          </p>
+          <button class="button" value="cancel" type="submit">完成</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="audit-dialog">
+      <form method="dialog" class="dialog-card audit-dialog-card">
+        <header>
+          <div>
+            <span class="dialog-kicker">DESIGN AUDIT</span>
+            <h2>设计检查</h2>
+          </div>
+          <button class="dialog-close" value="cancel" aria-label="关闭">×</button>
+        </header>
+        <div id="audit-summary" class="workspace-summary"></div>
+        <div id="audit-results" class="audit-results"></div>
+        <footer>
+          <p>检查画布边界、Frame 归属、空文本和文字对比度。</p>
+          <div class="dialog-footer-actions">
+            <button id="save-audit-report" class="button" value="cancel" type="button">
+              保存报告
+            </button>
+            <button class="button" value="cancel" type="submit">完成</button>
+          </div>
+        </footer>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

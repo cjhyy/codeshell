@@ -12,6 +12,26 @@ describe("disabledAgents", () => {
   });
 });
 
+describe("Panel App settings", () => {
+  it("defaults to an empty app denylist and project override map", () => {
+    const parsed = SettingsSchema.parse({});
+    expect(parsed.disabledPanelApps).toEqual([]);
+    expect(parsed.panelAppOverrides).toEqual({});
+  });
+
+  it("keeps Panel App policy outside agent capability overrides", () => {
+    const parsed = SettingsSchema.parse({
+      disabledPanelApps: ["design-studio"],
+      panelAppOverrides: { "design-studio": "on", "quant-lab": "off" },
+    });
+    expect(parsed.disabledPanelApps).toEqual(["design-studio"]);
+    expect(parsed.panelAppOverrides).toEqual({
+      "design-studio": "on",
+      "quant-lab": "off",
+    });
+  });
+});
+
 describe("capabilityOverrides", () => {
   it("accepts tri-state buckets", () => {
     const parsed = SettingsSchema.parse({

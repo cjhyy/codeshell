@@ -181,21 +181,15 @@ describe("installPluginFromPath", () => {
     expect(entry?.approvedHookDigest).toBeUndefined();
   });
 
-  test("writes a canonical manifest and copies Codex panel assets", async () => {
+  test("writes an Agent Plugin manifest, UI metadata, and automation templates", async () => {
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
     mkdirSync(join(src, ".codeshell-plugin"), { recursive: true });
     mkdirSync(join(src, "assets"), { recursive: true });
-    mkdirSync(join(src, "panels", "dashboard"), { recursive: true });
     writeFileSync(join(src, "assets", "composer.jpg"), JPEG);
     writeFileSync(join(src, "assets", "logo.webp"), WEBP);
     writeFileSync(join(src, "assets", "logo-dark.png"), PNG);
     writeFileSync(join(src, "assets", "screenshot-1.png"), PNG);
     writeFileSync(join(src, "assets", "screenshot-2.png"), PNG);
-    writeFileSync(
-      join(src, "panels", "dashboard", "index.html"),
-      "<script src='./app.js'></script>",
-    );
-    writeFileSync(join(src, "panels", "dashboard", "app.js"), "document.body.textContent='ok'");
     writeFileSync(
       join(src, ".codex-plugin", "plugin.json"),
       JSON.stringify({
@@ -224,17 +218,6 @@ describe("installPluginFromPath", () => {
       join(src, ".codeshell-plugin", "plugin.json"),
       JSON.stringify({
         schemaVersion: 1,
-        panels: {
-          version: 1,
-          entries: [
-            {
-              id: "dashboard",
-              title: { default: "Dashboard" },
-              entry: "panels/dashboard/index.html",
-              permissions: ["context.session"],
-            },
-          ],
-        },
         automations: {
           version: 1,
           templates: [
@@ -251,11 +234,7 @@ describe("installPluginFromPath", () => {
 
     const dir = await installPluginFromPath(src, "panel-cx", STAMP);
     const canonical = JSON.parse(readFileSync(join(dir, ".cs-plugin-manifest.json"), "utf-8"));
-    expect(canonical.panels.entries[0]).toMatchObject({
-      id: "dashboard",
-      entry: "panels/dashboard/index.html",
-      permissions: ["context.session"],
-    });
+    expect(canonical.panels).toBeUndefined();
     expect(canonical.automations.templates[0]).toMatchObject({
       id: "weekday-review",
       permissionLevel: "read-only",
@@ -282,7 +261,6 @@ describe("installPluginFromPath", () => {
     expect(readFileSync(join(dir, canonical.interface.logo))).toEqual(WEBP);
     expect(readFileSync(join(dir, canonical.interface.logoDark))).toEqual(PNG);
     expect(readFileSync(join(dir, canonical.interface.screenshots[0]))).toEqual(PNG);
-    expect(readFileSync(join(dir, "panels", "dashboard", "app.js"), "utf-8")).toContain("ok");
   });
 
   test("rejects an invalid plugin automation schedule before installation", async () => {
@@ -482,12 +460,10 @@ describe("installPluginFromPath", () => {
     }
   });
 
-  test("rejects a panel entry symlink that escapes the plugin root", async () => {
-    const outside = join(home, "outside.html");
-    writeFileSync(outside, "secret");
+  test("rejects Panel App declarations in an Agent Plugin package", async () => {
     mkdirSync(join(src, ".claude-plugin"), { recursive: true });
     mkdirSync(join(src, "panels"), { recursive: true });
-    symlinkSync(outside, join(src, "panels", "index.html"));
+    writeFileSync(join(src, "panels", "index.html"), "<!doctype html>");
     writeFileSync(
       join(src, ".claude-plugin", "plugin.json"),
       JSON.stringify({
@@ -500,8 +476,36 @@ describe("installPluginFromPath", () => {
       }),
     );
 
-    await expect(installPluginFromPath(src, "escape", STAMP)).rejects.toThrow(/escapes/);
+    await expect(installPluginFromPath(src, "escape", STAMP)).rejects.toThrow(
+      /separate .*Panel App/,
+    );
     expect(existsSync(join(home, ".code-shell", "plugins", "escape"))).toBe(false);
+  });
+
+  test("rejects a CodeShell overlay that tries to add Desktop UI to an Agent Plugin", async () => {
+    mkdirSync(join(src, ".codex-plugin"), { recursive: true });
+    mkdirSync(join(src, ".codeshell-plugin"), { recursive: true });
+    mkdirSync(join(src, "ui"), { recursive: true });
+    writeFileSync(
+      join(src, ".codex-plugin", "plugin.json"),
+      JSON.stringify({ name: "hybrid", version: "1.0.0" }),
+    );
+    writeFileSync(join(src, "ui", "index.html"), "<!doctype html>");
+    writeFileSync(
+      join(src, ".codeshell-plugin", "plugin.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        panels: {
+          version: 1,
+          entries: [{ id: "ui", title: { default: "UI" }, entry: "ui/index.html" }],
+        },
+      }),
+    );
+
+    await expect(installPluginFromPath(src, "hybrid", STAMP)).rejects.toThrow(
+      /\.codeshell-panel\/panel\.json Panel App/,
+    );
+    expect(existsSync(join(home, ".code-shell", "plugins", "hybrid"))).toBe(false);
   });
 
   test("refuses when install dir already exists", async () => {

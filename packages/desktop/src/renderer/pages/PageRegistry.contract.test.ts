@@ -29,6 +29,7 @@ describe("PageRegistry contract", () => {
   });
 
   test("nav labels live in the registry while settings stays footer-only", () => {
+    expect(registry).toContain('"sidebar.extensions"');
     expect(registry).toContain('"sidebar.digitalHumans"');
     expect(registry).toContain('"sidebar.automation"');
     expect(registry).toContain('"sidebar.credentials"');

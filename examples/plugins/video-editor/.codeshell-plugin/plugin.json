@@ -1,23 +1,5 @@
 {
   "schemaVersion": 1,
-  "panels": {
-    "version": 1,
-    "entries": [
-      {
-        "id": "video-cut",
-        "title": {
-          "default": "Video Cut",
-          "en": "Video Cut",
-          "zh-CN": "视频剪辑"
-        },
-        "entry": "panels/video-cut/index.html",
-        "icon": "activity",
-        "placement": "right-dock",
-        "singleton": true,
-        "permissions": ["context.session", "context.workspace", "storage", "agent.submitPrompt"]
-      }
-    ]
-  },
   "automations": {
     "version": 1,
     "templates": [

@@ -82,7 +82,6 @@ describe("PluginDetailView starter prompts", () => {
             hooks: [],
             mcpServers: [],
             automationTemplates: [],
-            panels: [],
           },
         }),
         getPluginMedia: async () => null,

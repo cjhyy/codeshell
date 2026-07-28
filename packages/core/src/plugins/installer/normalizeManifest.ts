@@ -9,9 +9,7 @@ import {
   CodexPluginManifest,
   PluginInterfaceMetadata,
   PluginAutomationsManifest,
-  PluginPanelsManifest,
   type CanonicalPluginManifest as CanonicalPluginManifestData,
-  type PluginPanelManifestEntry,
 } from "./types.js";
 import { validateSchedule } from "../../automation/scheduler.js";
 
@@ -301,26 +299,6 @@ async function normalizeInterfaceAssets(
   return normalized;
 }
 
-async function validatePanelEntry(
-  sourceRoot: string,
-  entry: PluginPanelManifestEntry,
-): Promise<void> {
-  const root = await realpath(sourceRoot);
-  const candidate = resolve(sourceRoot, ...entry.entry.split("/"));
-  let target: string;
-  try {
-    target = await realpath(candidate);
-  } catch {
-    throw new Error(`panel '${entry.id}' entry does not exist: ${entry.entry}`);
-  }
-  if (!isContained(root, target)) {
-    throw new Error(`panel '${entry.id}' entry escapes the plugin root: ${entry.entry}`);
-  }
-  if (!(await stat(target)).isFile()) {
-    throw new Error(`panel '${entry.id}' entry is not a file: ${entry.entry}`);
-  }
-}
-
 async function readCodeShellOverlay(sourceRoot: string) {
   const file = join(sourceRoot, CODESHELL_PLUGIN_OVERLAY_FILE);
   if (!existsSync(file)) return null;
@@ -330,13 +308,19 @@ async function readCodeShellOverlay(sourceRoot: string) {
       `${CODESHELL_PLUGIN_OVERLAY_FILE} must be a regular file no larger than ${MAX_PLUGIN_MANIFEST_BYTES} bytes`,
     );
   }
-  return CodeShellPluginOverlay.parse(JSON.parse(await readFile(file, "utf-8")));
+  const raw = JSON.parse(await readFile(file, "utf-8")) as Record<string, unknown>;
+  if (raw.panels !== undefined) {
+    throw new Error(
+      "Agent Plugin packages cannot declare panels; package Desktop UI as a separate " +
+        ".codeshell-panel/panel.json Panel App",
+    );
+  }
+  return CodeShellPluginOverlay.parse(raw);
 }
 
 /**
- * Normalize either author manifest into the only runtime manifest Desktop may
- * consume. Invalid declared panels fail installation; plugins without panels
- * remain backward-compatible and still receive a canonical identity record.
+ * Normalize an Agent Plugin into the runtime manifest. Desktop Panel Apps have
+ * their own package and installer, so a Plugin declaration cannot contain UI.
  */
 export async function normalizePluginManifest(
   sourceRoot: string,
@@ -360,13 +344,14 @@ export async function normalizePluginManifest(
       : {
           description: typeof raw.description === "string" ? raw.description : undefined,
           interface: undefined,
-          panels: raw.panels === undefined ? undefined : PluginPanelsManifest.parse(raw.panels),
         };
 
   const overlay = await readCodeShellOverlay(sourceRoot);
-  const panels = overlay?.panels ?? parsed.panels;
-  for (const entry of panels?.entries ?? []) {
-    await validatePanelEntry(sourceRoot, entry);
+  if (raw.panels !== undefined) {
+    throw new Error(
+      "Agent Plugin packages cannot declare panels; package Desktop UI as a separate " +
+        ".codeshell-panel/panel.json Panel App",
+    );
   }
   const automations = overlay?.automations
     ? PluginAutomationsManifest.parse(overlay.automations)
@@ -396,7 +381,6 @@ export async function normalizePluginManifest(
     version: options.version ?? (typeof raw.version === "string" ? raw.version : undefined),
     description: parsed.description,
     interface: normalizedInterface,
-    panels,
     automations,
   });
   await mkdir(options.destinationRoot, { recursive: true });

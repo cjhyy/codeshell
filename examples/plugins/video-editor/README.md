@@ -6,19 +6,17 @@ This is a local-first video editing plugin for CodeShell. It combines:
 - a `/video-editor:edit <input> "<request>"` command that expands into a
   review-first edit draft in the Desktop composer;
 - a dependency-free Node.js wrapper around `ffprobe` and `ffmpeg`;
-- a sandboxed CodeShell right-dock panel that submits a structured edit request
-  to the current agent session;
 - a read-only daily audit automation template that users can review and create
   explicitly for a project.
 
 The plan supports hard cuts or bounded video/audio crossfades between selected
 clips, in addition to reframing, speed, volume, subtitles, and encoding.
 
-The standard `.codex-plugin/plugin.json` stays Codex-valid. CodeShell-only panel
-permissions live in `.codeshell-plugin/plugin.json`, so the package can be
-inspected by either host without adding foreign fields to the Codex manifest.
-That overlay also carries the scheduled-task template. Installing or updating
-the plugin never creates a task.
+The standard `.codex-plugin/plugin.json` stays Codex-valid. The
+`.codeshell-plugin/plugin.json` overlay carries only the scheduled-task
+template. Desktop UI belongs in a separate `.codeshell-panel/panel.json` Panel
+App package; Agent Plugins cannot declare or install panels. Installing or
+updating this plugin never creates a task.
 
 ## Install
 

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "quant-lab",
+  "version": "0.1.0",
+  "title": {
+    "default": "Quant Lab",
+    "en": "Quant Lab",
+    "zh-CN": "量化实验室"
+  },
+  "description": "A local-first stock strategy research and backtesting application for repository data.",
+  "entry": "app/index.html",
+  "icon": "line-chart",
+  "placement": "right-dock",
+  "singleton": true,
+  "permissions": [
+    "context.session",
+    "context.workspace",
+    "workspace.info",
+    "workspace.read",
+    "workspace.write",
+    "storage",
+    "agent.submitPrompt"
+  ]
+}

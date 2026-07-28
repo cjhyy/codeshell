@@ -14,13 +14,13 @@
       "types": "./dist/index.internal.d.ts",
       "import": "./dist/index.internal.js"
     },
-    "./plugin-runtime": {
-      "types": "./dist/plugins/runtime.d.ts",
-      "import": "./dist/plugins/runtime.js"
+    "./panel-app-runtime": {
+      "types": "./dist/panel-apps/runtime.d.ts",
+      "import": "./dist/panel-apps/runtime.js"
     },
-    "./browser/plugin-runtime": {
-      "types": "./dist/plugins/runtime.d.ts",
-      "import": "./dist/plugins/runtime.js"
+    "./browser/panel-app-runtime": {
+      "types": "./dist/panel-apps/runtime.d.ts",
+      "import": "./dist/panel-apps/runtime.js"
     },
     "./extension": {
       "types": "./dist/index.extension.d.ts",

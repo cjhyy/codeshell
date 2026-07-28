@@ -38,7 +38,7 @@ async function buildPreload(): Promise<void> {
     entryPoints: {
       index: resolve(root, "src/preload/index.ts"),
       "browser-guest": resolve(root, "src/preload/browser-guest.ts"),
-      "plugin-panel": resolve(root, "src/preload/plugin-panel.ts"),
+      "panel-app": resolve(root, "src/preload/panel-app.ts"),
     },
     bundle: true,
     platform: "node",

@@ -1,0 +1,310 @@
+<!doctype html>
+<!-- Quant Lab Panel App -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quant Lab</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark"> <i></i><i></i><i></i> </span>
+          <div>
+            <strong>QUANT LAB</strong>
+            <span>LOCAL RESEARCH DESK</span>
+          </div>
+        </div>
+        <div class="data-loader">
+          <span class="path-prefix">repo:/</span>
+          <input
+            id="data-path"
+            value="data/market/AAPL.csv"
+            aria-label="OHLCV CSV 相对路径"
+            spellcheck="false"
+          />
+          <button id="load-data" type="button">加载</button>
+        </div>
+        <button id="ask-agent" class="agent-button" type="button">
+          <span>✦</span>
+          Agent
+        </button>
+      </header>
+
+      <section class="desk-header">
+        <div class="instrument">
+          <div class="instrument-row">
+            <h1 id="instrument-name">DEMO / SYNTHETIC</h1>
+            <span id="dataset-badge" class="badge demo">DEMO</span>
+          </div>
+          <p id="dataset-meta">520 daily bars · 2023-01-03 → 2024-12-30 · synthetic sample</p>
+        </div>
+        <div class="header-actions">
+          <span id="run-state" class="run-state">READY</span>
+          <button id="save-strategy" class="ghost-button" type="button">保存策略</button>
+          <button id="save-report" class="ghost-button" type="button">保存报告</button>
+          <button id="run-backtest" class="run-button" type="button">运行回测 <kbd>↵</kbd></button>
+        </div>
+      </section>
+
+      <section class="desk">
+        <aside class="controls">
+          <div class="control-block">
+            <div class="block-label">STRATEGY</div>
+            <label class="select-field">
+              <span>模型</span>
+              <select id="strategy-type">
+                <option value="sma-cross">SMA 趋势交叉</option>
+                <option value="rsi-reversion">RSI 均值回归</option>
+                <option value="breakout">通道突破</option>
+              </select>
+            </label>
+
+            <div id="sma-params" class="parameter-group">
+              <label
+                ><span>快速均线</span><input id="fast-period" type="number" min="2" value="20"
+              /></label>
+              <label
+                ><span>慢速均线</span><input id="slow-period" type="number" min="3" value="50"
+              /></label>
+            </div>
+            <div id="rsi-params" class="parameter-group" hidden>
+              <label
+                ><span>RSI 周期</span><input id="rsi-period" type="number" min="2" value="14"
+              /></label>
+              <label
+                ><span>超卖阈值</span
+                ><input id="rsi-oversold" type="number" min="0" max="100" value="30"
+              /></label>
+              <label
+                ><span>超买阈值</span
+                ><input id="rsi-overbought" type="number" min="0" max="100" value="65"
+              /></label>
+            </div>
+            <div id="breakout-params" class="parameter-group" hidden>
+              <label
+                ><span>通道周期</span><input id="breakout-period" type="number" min="2" value="20"
+              /></label>
+            </div>
+          </div>
+
+          <div class="control-block">
+            <div class="block-label">EXECUTION</div>
+            <label>
+              <span>初始资金</span>
+              <span class="input-with-prefix"
+                ><b>$</b><input id="initial-capital" type="number" min="100" value="100000"
+              /></span>
+            </label>
+            <label>
+              <span>手续费</span>
+              <span class="input-with-suffix"
+                ><input id="fee-bps" type="number" min="0" step="0.5" value="5" /><b>bps</b></span
+              >
+            </label>
+            <label>
+              <span>滑点</span>
+              <span class="input-with-suffix"
+                ><input id="slippage-bps" type="number" min="0" step="0.5" value="2" /><b
+                  >bps</b
+                ></span
+              >
+            </label>
+            <label>
+              <span>止损</span>
+              <span class="input-with-suffix"
+                ><input id="stop-loss" type="number" min="0" max="99" step="0.5" value="8" /><b
+                  >%</b
+                ></span
+              >
+            </label>
+          </div>
+
+          <div class="method-note">
+            <span class="method-icon">T+1</span>
+            <p>收盘生成信号，下一根 K 线开盘成交；包含费用与滑点，不使用未来数据。</p>
+          </div>
+          <div id="data-quality" class="data-quality" data-state="ok">数据检查通过</div>
+        </aside>
+
+        <section class="results">
+          <div class="metrics" aria-label="回测指标">
+            <article class="metric primary">
+              <span>总收益</span>
+              <strong id="metric-return">—</strong>
+              <small id="metric-final-equity">—</small>
+            </article>
+            <article class="metric">
+              <span>年化收益</span>
+              <strong id="metric-cagr">—</strong>
+              <small id="metric-cagr-detail">CAGR</small>
+            </article>
+            <article class="metric negative">
+              <span>最大回撤</span>
+              <strong id="metric-drawdown">—</strong>
+              <small id="metric-drawdown-detail">Peak → trough</small>
+            </article>
+            <article class="metric">
+              <span>Sharpe</span>
+              <strong id="metric-sharpe">—</strong>
+              <small id="metric-sharpe-detail">252D · rf 0%</small>
+            </article>
+            <article class="metric">
+              <span>胜率 / 交易</span>
+              <strong id="metric-win-rate">—</strong>
+              <small id="metric-trades">—</small>
+            </article>
+            <article class="metric">
+              <span>市场暴露</span>
+              <strong id="metric-exposure">—</strong>
+              <small>Long only</small>
+            </article>
+          </div>
+
+          <article class="chart-card">
+            <header class="card-header">
+              <div>
+                <span class="eyebrow">PERFORMANCE</span>
+                <h2 id="chart-title">权益曲线</h2>
+              </div>
+              <div class="chart-tabs" role="tablist" aria-label="图表视图">
+                <button
+                  id="chart-tab-equity"
+                  class="active"
+                  data-chart="equity"
+                  type="button"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="chart-wrap"
+                >
+                  权益
+                </button>
+                <button
+                  id="chart-tab-price"
+                  data-chart="price"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="chart-wrap"
+                  tabindex="-1"
+                >
+                  价格 / 指标
+                </button>
+                <button
+                  id="chart-tab-drawdown"
+                  data-chart="drawdown"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="chart-wrap"
+                  tabindex="-1"
+                >
+                  回撤
+                </button>
+              </div>
+            </header>
+            <div
+              id="chart-wrap"
+              class="chart-wrap"
+              role="tabpanel"
+              aria-labelledby="chart-tab-equity"
+            >
+              <svg
+                id="chart"
+                viewBox="0 0 900 320"
+                preserveAspectRatio="none"
+                role="img"
+                aria-label="回测图表"
+              >
+                <g id="chart-grid"></g>
+                <g id="chart-series"></g>
+                <g id="chart-labels"></g>
+                <line id="chart-cursor" x1="0" x2="0" y1="18" y2="286" hidden></line>
+              </svg>
+              <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+            </div>
+            <footer id="chart-legend" class="chart-legend"></footer>
+          </article>
+
+          <article class="trades-card">
+            <header class="card-header">
+              <div>
+                <span class="eyebrow">EXECUTIONS</span>
+                <h2>交易记录</h2>
+              </div>
+              <span id="trade-summary" class="trade-summary">0 笔已平仓交易</span>
+            </header>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>入场</th>
+                    <th>出场</th>
+                    <th>入场价</th>
+                    <th>出场价</th>
+                    <th>原因</th>
+                    <th>收益</th>
+                    <th>P&L</th>
+                  </tr>
+                </thead>
+                <tbody id="trades-body"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <p class="disclaimer">
+            研究工具，不构成投资建议。合成示例不代表真实市场表现；实盘前需处理复权、流动性、税费、
+            生存者偏差和样本外验证。
+          </p>
+        </section>
+      </section>
+    </main>
+
+    <dialog id="agent-dialog">
+      <form method="dialog" class="dialog-card">
+        <header>
+          <div>
+            <span class="eyebrow">AGENT REVIEW</span>
+            <h2>让 Agent 准备数据或审查回测</h2>
+          </div>
+          <button class="dialog-close" value="cancel" aria-label="关闭">×</button>
+        </header>
+        <div class="prompt-presets">
+          <button type="button" data-prompt="检查当前回测是否存在前视偏差、数据问题或过拟合风险。">
+            审查偏差
+          </button>
+          <button
+            type="button"
+            data-prompt="为这个标的准备符合 Quant Lab 格式的日线 OHLCV CSV，并记录数据来源和截止日期。"
+          >
+            准备数据
+          </button>
+          <button
+            type="button"
+            data-prompt="对比当前策略与买入持有，解释收益来源、回撤和样本外验证方案。"
+          >
+            解释结果
+          </button>
+        </div>
+        <textarea
+          id="agent-request"
+          rows="6"
+          placeholder="描述标的、数据范围或希望检查的问题…"
+        ></textarea>
+        <footer>
+          <span id="agent-state">当前会话可用</span>
+          <button id="submit-agent" class="agent-button" value="cancel" type="button">
+            <span>✦</span>
+            提交
+          </button>
+        </footer>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

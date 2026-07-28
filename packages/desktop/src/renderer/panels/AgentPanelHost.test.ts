@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { installQuickChatPanelPlugin } from "./plugins/quickChatPlugin";
+import { installQuickChatPanelApp } from "./apps/quickChatPanelApp";
 import { resolveAgentPanelHostRequest } from "./AgentPanelHost";
 
-installQuickChatPanelPlugin();
+installQuickChatPanelApp();
 
 describe("resolveAgentPanelHostRequest", () => {
-  test("lists code-backed panels and opens them by stable id", () => {
+  test("lists built-in Panel Apps and opens them by stable id", () => {
     const availability = { cwd: "/repo", engineSessionId: "session-1" };
     const listed = resolveAgentPanelHostRequest(
       {
@@ -19,7 +19,11 @@ describe("resolveAgentPanelHostRequest", () => {
     expect(listed.result).toMatchObject({
       ok: true,
       panels: expect.arrayContaining([
-        { id: "quickChat", title: "panels.kinds.quickChat", source: "code" },
+        {
+          id: "quickChat",
+          title: "panels.kinds.quickChat",
+          source: "builtin-panel-app",
+        },
       ]),
     });
 
@@ -45,7 +49,7 @@ describe("resolveAgentPanelHostRequest", () => {
         sessionId: "session-1",
         bucket: "repo::session-1",
         action: "open",
-        panelId: "plugin:missing@local:panel",
+        panelId: "panel-app:missing:panel",
       },
       {
         availability: { cwd: "/repo", engineSessionId: "session-1" },
@@ -55,6 +59,6 @@ describe("resolveAgentPanelHostRequest", () => {
         },
       },
     );
-    expect(response.result).toMatchObject({ ok: false, panelId: "plugin:missing@local:panel" });
+    expect(response.result).toMatchObject({ ok: false, panelId: "panel-app:missing:panel" });
   });
 });

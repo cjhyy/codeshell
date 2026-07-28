@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Panel App</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <span class="eyebrow">CODESHELL PANEL APP</span>
+        <h1>你的面板已经运行</h1>
+        <p>在 repo 中编辑这个目录，然后从 Panel Apps 管理页点击“从源码更新”。</p>
+      </header>
+
+      <section class="card" aria-labelledby="context-title">
+        <div>
+          <span class="label" id="context-title">当前工作区</span>
+          <strong id="workspace">正在连接…</strong>
+        </div>
+        <span id="status" class="status">初始化</span>
+      </section>
+
+      <section class="card action-card">
+        <div>
+          <span class="label">本地交互示例</span>
+          <strong id="count">0 次点击</strong>
+        </div>
+        <button id="increment" type="button">试一下</button>
+      </section>
+    </main>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

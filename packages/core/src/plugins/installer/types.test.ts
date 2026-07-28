@@ -3,7 +3,6 @@ import {
   CodexPluginManifest,
   PluginAutomationsManifest,
   PluginInterfaceMetadata,
-  PluginPanelsManifest,
   CSMeta,
   PluginInstallError,
 } from "./types.js";
@@ -31,120 +30,6 @@ describe("CodexPluginManifest", () => {
   });
   test("rejects missing name", () => {
     expect(() => CodexPluginManifest.parse({ version: "1" })).toThrow();
-  });
-});
-
-describe("PluginPanelsManifest", () => {
-  test("normalizes safe v1 entries with zero permissions by default", () => {
-    const panels = PluginPanelsManifest.parse({
-      version: 1,
-      entries: [
-        {
-          id: "dashboard",
-          title: { default: "Dashboard", "zh-CN": "仪表盘" },
-          entry: "panels/dashboard/index.html",
-        },
-      ],
-    });
-    expect(panels.entries[0]).toMatchObject({
-      icon: "panel",
-      placement: "right-dock",
-      singleton: true,
-      permissions: [],
-    });
-  });
-
-  test.each([
-    "../index.html",
-    "/index.html",
-    "panels\\index.html",
-    "panels/../index.html",
-    "panels/index.html?x=1",
-    "panels/index.js",
-  ])("rejects unsafe panel entry %s", (entry) => {
-    expect(() =>
-      PluginPanelsManifest.parse({
-        version: 1,
-        entries: [{ id: "dashboard", title: { default: "Dashboard" }, entry }],
-      }),
-    ).toThrow();
-  });
-
-  test("rejects duplicate ids and unknown permissions", () => {
-    expect(() =>
-      PluginPanelsManifest.parse({
-        version: 1,
-        entries: [
-          { id: "same", title: { default: "One" }, entry: "panels/one.html" },
-          { id: "same", title: { default: "Two" }, entry: "panels/two.html" },
-        ],
-      }),
-    ).toThrow(/duplicate panel id/);
-    expect(() =>
-      PluginPanelsManifest.parse({
-        version: 1,
-        entries: [
-          {
-            id: "panel",
-            title: { default: "Panel" },
-            entry: "panels/index.html",
-            permissions: ["shell.exec"],
-          },
-        ],
-      }),
-    ).toThrow();
-  });
-
-  test("requires session context for the submit-prompt bridge", () => {
-    expect(() =>
-      PluginPanelsManifest.parse({
-        version: 1,
-        entries: [
-          {
-            id: "agent-panel",
-            title: { default: "Agent" },
-            entry: "panels/agent/index.html",
-            permissions: ["agent.submitPrompt"],
-          },
-        ],
-      }),
-    ).toThrow(/requires context.session/);
-  });
-
-  test("accepts allowlisted lucide icon names and keeps the panel default", () => {
-    const panels = PluginPanelsManifest.parse({
-      version: 1,
-      entries: [
-        { id: "a", title: { default: "A" }, entry: "panels/a.html", icon: "bar-chart-3" },
-        { id: "b", title: { default: "B" }, entry: "panels/b.html" },
-      ],
-    });
-    expect(panels.entries[0].icon).toBe("bar-chart-3");
-    expect(panels.entries[1].icon).toBe("panel");
-  });
-
-  test("rejects icon names outside the allowlist", () => {
-    expect(() =>
-      PluginPanelsManifest.parse({
-        version: 1,
-        entries: [{ id: "a", title: { default: "A" }, entry: "panels/a.html", icon: "grid-3x3" }],
-      }),
-    ).toThrow();
-  });
-
-  test("accepts the workspace.info and notifications.send permissions", () => {
-    const panels = PluginPanelsManifest.parse({
-      version: 1,
-      entries: [
-        {
-          id: "a",
-          title: { default: "A" },
-          entry: "panels/a.html",
-          permissions: ["workspace.info", "notifications.send"],
-        },
-      ],
-    });
-    expect(panels.entries[0].permissions).toEqual(["workspace.info", "notifications.send"]);
   });
 });
 

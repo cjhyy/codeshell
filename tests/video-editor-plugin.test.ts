@@ -21,7 +21,6 @@ import {
 import {
   loadPluginAutomationTemplateContributions,
   loadPluginCatalog,
-  loadPluginPanelContributions,
 } from "../packages/core/src/plugins/pluginCatalog.js";
 import { describePluginContent } from "../packages/core/src/plugins/pluginContent.js";
 import {
@@ -53,7 +52,6 @@ describe("video-editor example plugin", () => {
     );
     expect(manifest.name).toBe("video-editor");
     expect("panels" in rawManifest).toBe(false);
-    expect(overlay.panels?.entries[0].permissions).toContain("agent.submitPrompt");
     expect(overlay.automations?.templates[0]).toMatchObject({
       id: "daily-edit-audit",
       permissionLevel: "read-only",
@@ -84,12 +82,6 @@ describe("video-editor example plugin", () => {
         installKey: "video-editor@local",
         name: "video-editor",
         installPath: canonicalInstallPath,
-        panels: [
-          expect.objectContaining({
-            id: "video-cut",
-            entry: "panels/video-cut/index.html",
-          }),
-        ],
         automationTemplates: [
           expect.objectContaining({
             id: "daily-edit-audit",
@@ -97,12 +89,6 @@ describe("video-editor example plugin", () => {
           }),
         ],
       });
-      expect(loadPluginPanelContributions()).toEqual([
-        expect.objectContaining({
-          pluginName: "video-editor",
-          panel: expect.objectContaining({ id: "video-cut" }),
-        }),
-      ]);
       expect(loadPluginAutomationTemplateContributions()).toEqual([
         expect.objectContaining({
           installKey: "video-editor@local",
@@ -134,12 +120,6 @@ describe("video-editor example plugin", () => {
         }),
       ]);
       expect(inventory.commands).toEqual(["edit"]);
-      expect(inventory.panels).toEqual([
-        expect.objectContaining({
-          id: "video-cut",
-          permissions: expect.arrayContaining(["agent.submitPrompt"]),
-        }),
-      ]);
       expect(inventory.automationTemplates).toEqual([
         expect.objectContaining({
           id: "daily-edit-audit",

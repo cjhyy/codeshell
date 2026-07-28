@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "starter-panel",
+  "version": "0.1.0",
+  "title": {
+    "default": "My Panel App",
+    "en": "My Panel App",
+    "zh-CN": "我的面板应用"
+  },
+  "description": "Minimal repository-maintained CodeShell Panel App starter.",
+  "entry": "app/index.html",
+  "icon": "panel",
+  "placement": "right-dock",
+  "singleton": true,
+  "permissions": ["context.workspace"]
+}

@@ -8,6 +8,7 @@ import {
 import {
   KeyRound,
   PlayCircle,
+  Puzzle,
   ScrollText,
   Settings,
   UsersRound,
@@ -21,18 +22,13 @@ import type { ViewMode } from "../view";
  * main view area. Built-in pages register here; the sidebar's first-level nav
  * and App.tsx's page render both consume it.
  *
- * This round is internal-consumers-only: `owner` reserves the code/plugin
- * shapes for later, but nothing outside this module constructs them yet
- * (see docs/superpowers/plans/2026-07-17-plugin-contribution-points.md
- * non-goals).
+ * This registry is intentionally built-in-only. Installable Agent Plugins do
+ * not contribute Desktop UI; installable UI belongs to the Panel App system.
  */
 
 export type PageKey = string;
 
-export type PageOwner =
-  | { kind: "builtin" }
-  | { kind: "code"; pluginId: string; pageId: string }
-  | { kind: "plugin"; installKey: string; pageId: string };
+export type PageOwner = { kind: "builtin" };
 
 export type PageTitle = { kind: "i18n"; key: string } | { kind: "literal"; value: string };
 
@@ -49,6 +45,8 @@ export interface PageNav {
 export interface PageRenderContext {
   /** Deep-link into the runs view (set by the automation view). */
   runsInitialRunId: string | null;
+  /** Active repository, used by project-aware standalone pages. */
+  activeProjectPath: string | null;
 }
 
 export interface PageEntry {
@@ -81,8 +79,23 @@ const LogsView: LazyExoticComponent<ComponentType> = lazy(() =>
 const RunsView: LazyExoticComponent<ComponentType<{ initialRunId?: string | null }>> = lazy(() =>
   import("../runs/RunsView").then((module) => ({ default: module.RunsView })),
 );
+const ExtensionsPage: LazyExoticComponent<
+  ComponentType<{ activeProjectPath: string | null; showDiscover?: boolean }>
+> = lazy(() =>
+  import("../extensions/ExtensionsPage").then((module) => ({
+    default: module.ExtensionsPage,
+  })),
+);
 
 const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
+  builtin({
+    key: "extensions",
+    title: { kind: "i18n", key: "sidebar.extensions" },
+    icon: Puzzle,
+    nav: { order: -10, target: "extensions", isActive: (mode) => mode === "extensions" },
+    render: ({ activeProjectPath }) =>
+      createElement(ExtensionsPage, { activeProjectPath, showDiscover: false }),
+  }),
   builtin({
     key: "digital_humans",
     title: { kind: "i18n", key: "sidebar.digitalHumans" },

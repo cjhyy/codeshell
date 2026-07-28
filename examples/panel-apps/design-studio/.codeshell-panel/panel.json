@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "design-studio",
+  "version": "0.2.0",
+  "title": {
+    "default": "Design Studio",
+    "en": "Design Studio",
+    "zh-CN": "设计工作台"
+  },
+  "description": "A repo-native visual design workspace with auto layout, components, and live JSON sync.",
+  "entry": "app/index.html",
+  "icon": "palette",
+  "placement": "right-dock",
+  "singleton": true,
+  "permissions": [
+    "context.session",
+    "context.workspace",
+    "workspace.info",
+    "workspace.read",
+    "workspace.write",
+    "storage",
+    "agent.submitPrompt"
+  ]
+}

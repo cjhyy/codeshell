@@ -226,20 +226,20 @@ export type { HookHandler } from "./hooks/registry.js";
 export type { HookEventName, HookContext, HookResult } from "./hooks/events.js";
 export { wrapHookMessages } from "./hooks/inject.js";
 
-// ─── Trusted plugin lifecycle ───────────────────────────────────
+// ─── Trusted Panel App lifecycle ────────────────────────────────
 
-export { PluginLifecycleRuntime } from "./plugins/runtime.js";
+export { PanelAppLifecycleRuntime } from "./panel-apps/runtime.js";
 export type {
-  PluginLifecycleError,
-  PluginLifecycleEvent,
-  PluginLifecycleEventName,
-  PluginLifecycleHook,
-  PluginLifecycleHookContext,
-  PluginLifecycleHooks,
-  PluginLifecycleModule,
-  PluginLifecycleRuntimeOptions,
-  PluginPanelInstance,
-} from "./plugins/runtime.js";
+  PanelAppInstance,
+  PanelAppLifecycleError,
+  PanelAppLifecycleEvent,
+  PanelAppLifecycleEventName,
+  PanelAppLifecycleHook,
+  PanelAppLifecycleHookContext,
+  PanelAppLifecycleHooks,
+  PanelAppLifecycleModule,
+  PanelAppLifecycleRuntimeOptions,
+} from "./panel-apps/runtime.js";
 
 // ─── Protocol (client/server + transports) ──────────────────────
 
@@ -388,18 +388,12 @@ export type { InstalledPluginsV2 } from "./plugins/types.js";
 // ─── Plugin manifests, trust & catalog (runtime surface) ────────
 export {
   CodexPluginManifest,
-  PluginPanelManifestEntry,
-  PluginPanelsManifest,
   PluginAutomationTemplate,
   PluginAutomationsManifest,
   CanonicalPluginManifest,
   CANONICAL_PLUGIN_MANIFEST_FILE,
-  PLUGIN_PANEL_PERMISSIONS,
-  PLUGIN_PANEL_ICONS,
   CSMeta,
   PluginInstallError,
-  type PluginPanelManifestEntry as PluginPanelManifestEntryData,
-  type PluginPanelsManifest as PluginPanelsManifestData,
   type PluginAutomationTemplate as PluginAutomationTemplateData,
   type PluginAutomationsManifest as PluginAutomationsManifestData,
   type CanonicalPluginManifest as CanonicalPluginManifestData,
@@ -422,6 +416,32 @@ export {
   type PluginMcpApprovalState,
 } from "./plugins/pluginMcpIntegrity.js";
 export { pluginsRoot } from "./plugins/installer/paths.js";
+export {
+  PANEL_APP_ICONS,
+  PANEL_APP_MANIFEST_FILE,
+  PANEL_APP_PERMISSIONS,
+  PanelAppManifest,
+  PanelAppAlreadyInstalledError,
+  PanelAppInstallError,
+  PanelAppReviewChangedError,
+  assertSafePanelAppId,
+  installReviewedLocalPanelApp,
+  installReviewedPanelAppUpdate,
+  listInstalledPanelApps,
+  panelAppInstallDir,
+  panelAppsRegistryPath,
+  panelAppsRoot,
+  previewLocalPanelApp,
+  previewInstalledPanelAppUpdate,
+  uninstallPanelApp,
+  type InstalledPanelApp,
+  type InstalledPanelAppSource,
+  type GitPanelAppSourceInput,
+  type LocalPanelAppSourceInput,
+  type PanelAppSourceInput,
+  type PanelAppManifestData,
+  type PanelAppPreview,
+} from "./panel-apps/index.js";
 export {
   previewLocalTheme,
   installReviewedLocalTheme,
@@ -461,12 +481,10 @@ export {
 export {
   loadPluginCatalog,
   loadPluginAutomationTemplateContributions,
-  loadPluginPanelContributions,
   pluginAutomationTemplateRevision,
   type LoadPluginCatalogOptions,
   type PluginAutomationTemplateContribution,
   type PluginCatalogEntry,
-  type PluginPanelContribution,
 } from "./plugins/pluginCatalog.js";
 export {
   instantiatePluginAutomationTemplate,

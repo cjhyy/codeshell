@@ -9,7 +9,7 @@ import { THEME_ASSET_SCHEME, parseThemeUrl, themeAssetUrl } from "./theme-asset-
  * URL shape: cstheme://<id>/.cs-theme-assets/<file>. Only image MIME types are
  * allowed; the theme id is validated as a safe segment and the resolved file
  * must stay strictly under that theme's install dir (defense against traversal
- * and symlink escape, mirroring the plugin-panel protocol). Pure url parsing
+ * and symlink escape, mirroring the Panel App protocol). Pure url parsing
  * lives in theme-asset-url.ts so it stays electron-free and testable.
  */
 export { THEME_ASSET_SCHEME, themeAssetUrl } from "./theme-asset-url.js";

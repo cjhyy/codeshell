@@ -52,8 +52,6 @@ function warningTranslationKey(
       return "ext.plugins.reviewWarnings.stdio-mcp";
     case "network-mcp":
       return "ext.plugins.reviewWarnings.network-mcp";
-    case "panel-permissions":
-      return "ext.plugins.reviewWarnings.panel-permissions";
     case "automation-templates":
       return "ext.plugins.reviewWarnings.automation-templates";
     case "external-links":
@@ -191,31 +189,6 @@ export function PluginInstallReviewDialog({ busy, onCancel, onInstall, preview }
                     {(server.command || server.url) && (
                       <code className="mt-1.5 block break-all">{server.command ?? server.url}</code>
                     )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </ReviewSection>
-
-          <ReviewSection title={t("ext.plugins.reviewPanels")} count={preview.panels.length}>
-            {preview.panels.length === 0 ? (
-              <p className="text-xs text-muted-foreground">{t("ext.plugins.reviewNone")}</p>
-            ) : (
-              <ul className="space-y-2 text-xs">
-                {preview.panels.map((panel) => (
-                  <li key={panel.id} className="rounded border bg-background p-2">
-                    <div className="font-medium">
-                      {panel.title.default}{" "}
-                      <span className="text-muted-foreground">({panel.id})</span>
-                    </div>
-                    <div className="mt-1 text-muted-foreground">{panel.entry}</div>
-                    <div className="mt-1">
-                      {panel.permissions.length > 0
-                        ? t("ext.plugins.reviewPermissions", {
-                            permissions: panel.permissions.join(", "),
-                          })
-                        : t("ext.plugins.reviewNoPermissions")}
-                    </div>
                   </li>
                 ))}
               </ul>

@@ -1,186 +1,5 @@
 import { z } from "zod";
 
-export const PLUGIN_PANEL_PERMISSIONS = [
-  "context.session",
-  "context.workspace",
-  "storage",
-  "external.open",
-  "agent.submitPrompt",
-  "workspace.info",
-  "notifications.send",
-] as const;
-
-/**
- * Panel icon allowlist. First three are v1 semantic aliases kept for installed
- * manifests; the rest are kebab-case lucide icon names, mirrored verbatim in
- * packages/desktop/src/shared/plugin-panels.ts (parity-tested from desktop main).
- */
-export const PLUGIN_PANEL_ICONS = [
-  "panel",
-  "chart",
-  "table",
-  "activity",
-  "alarm-clock",
-  "archive",
-  "bar-chart-3",
-  "bell",
-  "book-open",
-  "bot",
-  "box",
-  "brain",
-  "bug",
-  "calendar",
-  "camera",
-  "check-circle-2",
-  "clipboard-list",
-  "clock",
-  "cloud",
-  "code-2",
-  "compass",
-  "cpu",
-  "database",
-  "download",
-  "file-text",
-  "filter",
-  "flag",
-  "flame",
-  "folder-tree",
-  "gauge",
-  "git-branch",
-  "git-compare",
-  "globe",
-  "graduation-cap",
-  "hammer",
-  "hard-drive",
-  "heart",
-  "history",
-  "home",
-  "image",
-  "inbox",
-  "key-round",
-  "layers",
-  "layout-dashboard",
-  "library",
-  "lightbulb",
-  "line-chart",
-  "link",
-  "list-checks",
-  "lock",
-  "mail",
-  "map",
-  "message-square",
-  "mic",
-  "monitor",
-  "moon",
-  "music",
-  "newspaper",
-  "package",
-  "palette",
-  "panel-top",
-  "pie-chart",
-  "plug",
-  "puzzle",
-  "radar",
-  "rocket",
-  "search",
-  "server-cog",
-  "settings",
-  "shield",
-  "shopping-cart",
-  "sparkles",
-  "square-terminal",
-  "star",
-  "table-2",
-  "tag",
-  "target",
-  "terminal",
-  "timer",
-  "trending-up",
-  "trophy",
-  "users-round",
-  "wallet",
-  "wand-2",
-  "wifi",
-  "wrench",
-  "zap",
-] as const;
-
-const SafeRelativePanelPath = z.string().superRefine((value, ctx) => {
-  if (
-    value.length === 0 ||
-    value.startsWith("/") ||
-    value.includes("\\") ||
-    value.includes("\0") ||
-    value.includes("?") ||
-    value.includes("#") ||
-    value
-      .split("/")
-      .some(
-        (segment) =>
-          segment === "" || segment === "." || segment === ".." || segment.startsWith("."),
-      ) ||
-    !value.toLowerCase().endsWith(".html")
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "panel entry must be a POSIX relative .html path without traversal, query, or hash",
-    });
-  }
-});
-
-export const PluginPanelManifestEntry = z
-  .object({
-    id: z.string().regex(/^[a-z][a-z0-9-]{0,63}$/),
-    title: z
-      .object({
-        default: z.string().min(1).max(80),
-        en: z.string().min(1).max(80).optional(),
-        "zh-CN": z.string().min(1).max(80).optional(),
-      })
-      .strict(),
-    entry: SafeRelativePanelPath,
-    icon: z.enum(PLUGIN_PANEL_ICONS).default("panel"),
-    placement: z.literal("right-dock").default("right-dock"),
-    singleton: z.boolean().default(true),
-    permissions: z.array(z.enum(PLUGIN_PANEL_PERMISSIONS)).max(8).default([]),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (
-      value.permissions.includes("agent.submitPrompt") &&
-      !value.permissions.includes("context.session")
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["permissions"],
-        message: "agent.submitPrompt requires context.session",
-      });
-    }
-  });
-
-export const PluginPanelsManifest = z
-  .object({
-    version: z.literal(1),
-    entries: z.array(PluginPanelManifestEntry).max(16),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    const ids = new Set<string>();
-    for (const [index, entry] of value.entries.entries()) {
-      if (ids.has(entry.id)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["entries", index, "id"],
-          message: `duplicate panel id: ${entry.id}`,
-        });
-      }
-      ids.add(entry.id);
-    }
-  });
-
-export type PluginPanelManifestEntry = z.infer<typeof PluginPanelManifestEntry>;
-export type PluginPanelsManifest = z.infer<typeof PluginPanelsManifest>;
-
 const PluginLocalizedTitle = z
   .object({
     default: z.string().min(1).max(120),
@@ -276,7 +95,6 @@ export type PluginInterfaceMetadata = z.infer<typeof PluginInterfaceMetadata>;
 export const CodeShellPluginOverlay = z
   .object({
     schemaVersion: z.literal(1),
-    panels: PluginPanelsManifest.optional(),
     automations: PluginAutomationsManifest.optional(),
   })
   .strict();
@@ -295,7 +113,6 @@ export const CodexPluginManifest = z
     skills: z.string().optional(),
     agents: z.string().optional(),
     hooks: CodexHooksDeclaration.optional(),
-    panels: PluginPanelsManifest.optional(),
     interface: PluginInterfaceMetadata.passthrough().optional(),
   })
   .passthrough();
@@ -310,7 +127,6 @@ export const CanonicalPluginManifest = z
     version: z.string().optional(),
     description: z.string().optional(),
     interface: PluginInterfaceMetadata.optional(),
-    panels: PluginPanelsManifest.optional(),
     automations: PluginAutomationsManifest.optional(),
   })
   .strict();

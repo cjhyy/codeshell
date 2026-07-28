@@ -1,0 +1,358 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Repository format owned by the Design Studio Panel App.",
+  "title": "CodeShell Design Document v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "name", "canvas", "tokens", "nodes"],
+  "properties": {
+    "format": {
+      "const": "codeshell.design"
+    },
+    "version": {
+      "const": 2
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 120,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+    },
+    "canvas": {
+      "$ref": "#/$defs/canvas"
+    },
+    "tokens": {
+      "$ref": "#/$defs/tokens"
+    },
+    "nodes": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    }
+  },
+  "$defs": {
+    "color": {
+      "type": "string",
+      "pattern": "^(transparent|#[0-9a-fA-F]{6})$"
+    },
+    "canvas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "background"],
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 10000
+        },
+        "height": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 10000
+        },
+        "background": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["colors"],
+      "properties": {
+        "colors": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "value"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f]+$"
+              },
+              "value": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "name",
+        "x",
+        "y",
+        "width",
+        "height",
+        "fill",
+        "stroke",
+        "strokeWidth",
+        "opacity",
+        "rotation",
+        "cornerRadius",
+        "visible",
+        "locked"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "type": {
+          "enum": ["frame", "group", "component", "instance", "rectangle", "ellipse", "text"]
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+        },
+        "parentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "componentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "x": {
+          "type": "number",
+          "minimum": -20000,
+          "maximum": 20000
+        },
+        "y": {
+          "type": "number",
+          "minimum": -20000,
+          "maximum": 20000
+        },
+        "width": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 20000
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 20000
+        },
+        "fill": {
+          "$ref": "#/$defs/color"
+        },
+        "stroke": {
+          "$ref": "#/$defs/color"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": -360,
+          "maximum": 360
+        },
+        "cornerRadius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 9999
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "clipContent": {
+          "type": "boolean"
+        },
+        "layout": {
+          "enum": ["none", "horizontal", "vertical"]
+        },
+        "gap": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "padding": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "alignItems": {
+          "enum": ["start", "center", "end", "stretch"]
+        },
+        "justifyContent": {
+          "enum": ["start", "center", "end", "space-between"]
+        },
+        "layoutGrow": {
+          "enum": [0, 1]
+        },
+        "layoutAlign": {
+          "enum": ["auto", "start", "center", "end", "stretch"]
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "fontSize": {
+          "type": "number",
+          "minimum": 6,
+          "maximum": 240
+        },
+        "fontWeight": {
+          "enum": [400, 500, 600, 700]
+        },
+        "lineHeight": {
+          "type": "number",
+          "minimum": 0.7,
+          "maximum": 3
+        },
+        "textAlign": {
+          "enum": ["left", "center", "right"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["text", "fontSize", "fontWeight", "lineHeight", "textAlign"]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["text"]
+                },
+                {
+                  "required": ["fontSize"]
+                },
+                {
+                  "required": ["fontWeight"]
+                },
+                {
+                  "required": ["lineHeight"]
+                },
+                {
+                  "required": ["textAlign"]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": ["frame", "group", "component"]
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["layout", "gap", "padding", "alignItems", "justifyContent"],
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["parentId"]
+                },
+                {
+                  "required": ["layoutGrow"]
+                },
+                {
+                  "required": ["layoutAlign"]
+                }
+              ]
+            }
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["layout"]
+                },
+                {
+                  "required": ["gap"]
+                },
+                {
+                  "required": ["padding"]
+                },
+                {
+                  "required": ["alignItems"]
+                },
+                {
+                  "required": ["justifyContent"]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": ["frame", "component"]
+              }
+            },
+            "required": ["type"]
+          },
+          "else": {
+            "not": {
+              "required": ["clipContent"]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "instance"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["componentId"]
+          },
+          "else": {
+            "not": {
+              "required": ["componentId"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

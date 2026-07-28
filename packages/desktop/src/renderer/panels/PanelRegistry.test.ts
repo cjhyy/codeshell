@@ -8,10 +8,13 @@ import {
   PanelRegistry,
   type PanelRenderContext,
 } from "./PanelRegistry";
-import { installQuickChatPanelPlugin, QUICK_CHAT_PANEL_PLUGIN_ID } from "./plugins/quickChatPlugin";
-import { DESKTOP_PANEL_PLUGIN_RUNTIME } from "./DesktopPanelPlugin";
+import {
+  installQuickChatPanelApp,
+  QUICK_CHAT_PANEL_APP_ID,
+} from "./apps/quickChatPanelApp";
+import { DESKTOP_BUILTIN_PANEL_APP_RUNTIME } from "./DesktopBuiltinPanelApp";
 
-installQuickChatPanelPlugin();
+installQuickChatPanelApp();
 
 const PANEL_KEYS: PanelTab[] = [
   "files",
@@ -41,7 +44,7 @@ describe("PanelRegistry", () => {
     expect(entries.map((entry) => entry.key)).toEqual(PANEL_KEYS);
   });
 
-  it("routes QuickChat through a registered code-panel service", () => {
+  it("routes QuickChat through a registered built-in Panel App service", () => {
     const context: PanelRenderContext = {
       cwd: "/repo",
       engineSessionId: "session-1",
@@ -55,12 +58,12 @@ describe("PanelRegistry", () => {
 
     const rendered = getPanelEntry("quickChat")!.render({
       ...context,
-      panelPluginHost: {
-        getService: (pluginId) => ({
+      builtinPanelAppHost: {
+        getService: (appId) => ({
           ensure: () => undefined,
           release: () => undefined,
           render: (args: PanelRenderContext) => {
-            received = { pluginId, bucket: args.bucket, tabId: args.tabId, cwd: args.cwd };
+            received = { appId, bucket: args.bucket, tabId: args.tabId, cwd: args.cwd };
             return "quick-chat-body";
           },
         }),
@@ -69,14 +72,14 @@ describe("PanelRegistry", () => {
 
     expect(rendered).toBe("quick-chat-body");
     expect(received).toEqual({
-      pluginId: QUICK_CHAT_PANEL_PLUGIN_ID,
+      appId: QUICK_CHAT_PANEL_APP_ID,
       bucket: "repo::session-1",
       tabId: "quickChat-7",
       cwd: "/repo",
     });
     expect(getPanelEntry("quickChat")?.owner).toEqual({
-      kind: "code",
-      pluginId: QUICK_CHAT_PANEL_PLUGIN_ID,
+      kind: "builtin-panel-app",
+      appId: QUICK_CHAT_PANEL_APP_ID,
       panelId: "quick-chat",
     });
   });
@@ -99,17 +102,17 @@ describe("PanelRegistry", () => {
       }),
     };
 
-    await DESKTOP_PANEL_PLUGIN_RUNTIME.mountPanel(
-      QUICK_CHAT_PANEL_PLUGIN_ID,
+    await DESKTOP_BUILTIN_PANEL_APP_RUNTIME.mountPanel(
+      QUICK_CHAT_PANEL_APP_ID,
       { panelId: "quick-chat", instanceId: "lifecycle-instance", context, visible: true },
       host,
     );
-    await DESKTOP_PANEL_PLUGIN_RUNTIME.unmountPanel(
-      QUICK_CHAT_PANEL_PLUGIN_ID,
+    await DESKTOP_BUILTIN_PANEL_APP_RUNTIME.unmountPanel(
+      QUICK_CHAT_PANEL_APP_ID,
       "lifecycle-instance",
       host,
     );
-    await DESKTOP_PANEL_PLUGIN_RUNTIME.deactivate(QUICK_CHAT_PANEL_PLUGIN_ID, host);
+    await DESKTOP_BUILTIN_PANEL_APP_RUNTIME.deactivate(QUICK_CHAT_PANEL_APP_ID, host);
 
     expect(calls).toEqual(["ensure", "release"]);
   });
@@ -131,8 +134,8 @@ describe("PanelRegistry", () => {
   it("supports dynamic registration, duplicate rejection, and idempotent disposal", () => {
     const registry = new PanelRegistry();
     const entry = {
-      key: "plugin:demo@local:dashboard",
-      owner: { kind: "plugin" as const, installKey: "demo@local", panelId: "dashboard" },
+      key: "panel-app:demo:dashboard",
+      owner: { kind: "panel-app" as const, appId: "demo" },
       title: { kind: "literal" as const, value: "Dashboard" },
       icon: getPanelEntry("files")!.icon,
       order: 1_000,
@@ -149,6 +152,6 @@ describe("PanelRegistry", () => {
   });
 
   it("returns undefined for a stale persisted panel kind", () => {
-    expect(getPanelEntry("plugin:removed@local:old-panel")).toBeUndefined();
+    expect(getPanelEntry("panel-app:removed:old-panel")).toBeUndefined();
   });
 });

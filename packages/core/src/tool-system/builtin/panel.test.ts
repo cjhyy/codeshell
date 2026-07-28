@@ -11,23 +11,23 @@ describe("Panel tool", () => {
     expect(await panelTool({ action: "list" }, context())).toContain("not available");
   });
 
-  test("lists host and plugin panel ids", async () => {
+  test("lists host and Panel App ids", async () => {
     const result = await panelTool(
       { action: "list" },
       context({
         list: async () => [
-          { id: "quickChat", title: "Quick chat", source: "code" },
+          { id: "quickChat", title: "Quick chat", source: "builtin-panel-app" },
           {
-            id: "plugin:insights@local:dashboard",
+            id: "panel-app:design-studio",
             title: "Build dashboard",
-            source: "plugin",
+            source: "panel-app",
           },
         ],
         open: async (panelId) => ({ ok: true, panelId }),
       }),
     );
-    expect(result).toContain("quickChat\tQuick chat\tcode");
-    expect(result).toContain("plugin:insights@local:dashboard");
+    expect(result).toContain("quickChat\tQuick chat\tbuiltin-panel-app");
+    expect(result).toContain("panel-app:design-studio");
   });
 
   test("opens a stable panel id through the host bridge", async () => {

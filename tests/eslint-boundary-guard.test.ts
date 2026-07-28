@@ -27,8 +27,8 @@ describe("ESLint CodeShell package boundary guards", () => {
       lintStdin(
         "packages/desktop/src/renderer/__lint_boundary_probe__.tsx",
         [
-          'import { PluginLifecycleRuntime } from "@cjhyy/code-shell-core/plugin-runtime";',
-          "export const runtime = PluginLifecycleRuntime;",
+          'import { PanelAppLifecycleRuntime } from "@cjhyy/code-shell-core/panel-app-runtime";',
+          "export const runtime = PanelAppLifecycleRuntime;",
           "export async function loadCore() {",
           '  return import("@cjhyy/code-shell-core/browser/not-reviewed");',
           "}",
@@ -66,9 +66,9 @@ describe("ESLint CodeShell package boundary guards", () => {
     const result = lintStdin(
       "packages/desktop/src/renderer/__lint_boundary_browser_safe_probe__.tsx",
       [
-        'import { PluginLifecycleRuntime } from "@cjhyy/code-shell-core/browser/plugin-runtime";',
+        'import { PanelAppLifecycleRuntime } from "@cjhyy/code-shell-core/browser/panel-app-runtime";',
         'import type { StreamEvent } from "@cjhyy/code-shell-core";',
-        "export const runtime = new PluginLifecycleRuntime<unknown, Record<string, unknown>>();",
+        "export const runtime = new PanelAppLifecycleRuntime<unknown, Record<string, unknown>>();",
         "export type RendererStreamEvent = StreamEvent;",
         "",
       ].join("\n"),

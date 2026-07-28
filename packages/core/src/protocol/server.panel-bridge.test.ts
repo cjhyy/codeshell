@@ -90,7 +90,9 @@ describe("AgentServer panel bridge", () => {
           approved: true,
           answer: JSON.stringify({
             ok: true,
-            panels: [{ id: "quickChat", title: "Quick chat", source: "code" }],
+            panels: [
+              { id: "quickChat", title: "Quick chat", source: "builtin-panel-app" },
+            ],
           }),
         },
       },

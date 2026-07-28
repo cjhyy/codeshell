@@ -68,7 +68,7 @@ describe("shared ToolRegistry integration harness", () => {
       overrides: {
         askUser: async () => "approved",
         panels: {
-          list: async () => [{ id: "files", title: "Files", source: "code" }],
+          list: async () => [{ id: "files", title: "Files", source: "builtin" }],
           open: async (panelId) => {
             opened.push(panelId);
             return { ok: true, panelId };
