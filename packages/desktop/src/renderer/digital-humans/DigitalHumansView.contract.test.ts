@@ -156,8 +156,15 @@ describe("DigitalHumansView contract", () => {
     expect(topBar).toContain("digitalHumans.sessionBinding.clear");
     expect(app).toContain("digitalHumans.sessionBinding.cleared");
     // Non-chat full-screen views (sessions / approvals / runs / settings) reuse
-    // this TopBar; the switcher must be absent there, not merely disabled.
-    expect(app).toContain("isPetSurface || !isChatView ? [] : sessionWorkspaceProfiles");
+    // this TopBar; session chrome must be absent there, not merely disabled.
+    // One flag drives project name, title, status dot and the switcher so they
+    // cannot drift apart again.
+    expect(app).toContain("const sessionChromeVisible = !isPetSurface && isChatView;");
+    expect(app).toContain(
+      "workspaceProfiles={sessionChromeVisible ? sessionWorkspaceProfiles : []}",
+    );
+    expect(app).toContain("statusAvailable={sessionChromeVisible}");
+    expect(app).toContain("sessionTitle={sessionChromeVisible ? sessionTitleForTop : null}");
   });
 
   test("the editor round-trips requires and guards unsaved edits", () => {

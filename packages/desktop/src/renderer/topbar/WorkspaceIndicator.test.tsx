@@ -1244,6 +1244,53 @@ describe("TopBar workspace label", () => {
     expect(html).toContain('aria-label="切换 Session 数字人"');
   });
 
+  test("the status dot advertises no popover when there is nothing to show", () => {
+    const html = renderToStaticMarkup(
+      <TopBar
+        projectName="codeshell"
+        projectPath="/repo/codeshell"
+        sessionId="session"
+        sessionTitle="Checkout"
+        busy={false}
+        tasks={null}
+        activeGoal={null}
+        statusAvailable
+        sidebarCollapsed={false}
+        onToggleSidebar={() => {}}
+        panelOpen={false}
+        onTogglePanel={() => {}}
+        isMac={false}
+        isFullscreen={false}
+      />,
+    );
+    // Idle with no goal and no tasks: hovering used to open a card saying only
+    // "空闲". The dot's own colour + tooltip already carry that.
+    expect(html).toContain('title="空闲"');
+    expect(html).not.toContain('aria-haspopup="dialog"');
+  });
+
+  test("the status dot keeps its popover while a run is in flight", () => {
+    const html = renderToStaticMarkup(
+      <TopBar
+        projectName="codeshell"
+        projectPath="/repo/codeshell"
+        sessionId="session"
+        sessionTitle="Checkout"
+        busy
+        tasks={null}
+        activeGoal={null}
+        statusAvailable
+        sidebarCollapsed={false}
+        onToggleSidebar={() => {}}
+        panelOpen={false}
+        onTogglePanel={() => {}}
+        isMac={false}
+        isFullscreen={false}
+      />,
+    );
+    expect(html).toContain('aria-haspopup="dialog"');
+  });
+
   test("offers an unbind option once a digital human is bound", () => {
     const html = renderToStaticMarkup(
       <TopBar

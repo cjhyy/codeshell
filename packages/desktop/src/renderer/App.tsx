@@ -1916,6 +1916,17 @@ function App() {
   const isPetMemoryView = view.viewMode === "pet_memory";
   const isPetSurface = isPetView || isPetSettingsView || isPetMemoryView;
   const isChatView = view.viewMode === "chat";
+  /**
+   * Does the TopBar describe a live chat Session right now?
+   *
+   * Full-screen views (sessions / approvals / runs / settings / credentials)
+   * reuse this same TopBar. Showing the project name, session title, status dot
+   * and digital-human switcher there describes a surface the user is not
+   * looking at — the status dot even kept a hover tooltip ("空闲") on pages with
+   * no session at all. One flag so these stay in step; `busy` remains the
+   * separate "can't act right now" signal.
+   */
+  const sessionChromeVisible = !isPetSurface && isChatView;
   useEffect(() => {
     if (!isPetView) return;
     const markIfVisible = (): void => {
@@ -1953,18 +1964,12 @@ function App() {
       >
         <div className="shrink-0">
           <TopBar
-            projectName={isPetSurface ? null : (activeProject?.name ?? null)}
-            projectPath={isPetSurface ? null : (activeProject?.path ?? null)}
-            sessionId={isPetSurface ? null : engineSessionIdForActive()}
-            sessionTitle={isPetSurface ? null : sessionTitleForTop}
-            // The digital-human binding belongs to a chat Session. Other
-            // full-screen views (sessions / approvals / runs / settings) reuse
-            // this TopBar, where the switcher is noise about a surface the user
-            // is not looking at — it used to render there merely disabled.
-            workspaceProfile={
-              isPetSurface || !isChatView ? null : activeSessionSummary?.workspaceProfile
-            }
-            workspaceProfiles={isPetSurface || !isChatView ? [] : sessionWorkspaceProfiles}
+            projectName={sessionChromeVisible ? (activeProject?.name ?? null) : null}
+            projectPath={sessionChromeVisible ? (activeProject?.path ?? null) : null}
+            sessionId={sessionChromeVisible ? engineSessionIdForActive() : null}
+            sessionTitle={sessionChromeVisible ? sessionTitleForTop : null}
+            workspaceProfile={sessionChromeVisible ? activeSessionSummary?.workspaceProfile : null}
+            workspaceProfiles={sessionChromeVisible ? sessionWorkspaceProfiles : []}
             workspaceProfileSwitchDisabled={busy}
             onWorkspaceProfileChange={(profileName) => {
               void handleSessionWorkspaceProfileChange(profileName);
@@ -1983,14 +1988,14 @@ function App() {
             // but have no panel area, so also gate on the chat viewMode — otherwise
             // the toggle wrongly shows on those pages whenever a session is active.
             panelAvailable={activeSessionId !== null && isChatView}
-            statusAvailable={!isPetSurface}
+            statusAvailable={sessionChromeVisible}
             contextSelectionAvailable={
               activeSessionId !== null && isChatView && !busy && !awaitingHydration
             }
             onSelectContext={requestContextSelection}
-            activity={isPetSurface ? undefined : liveActivity}
-            tasks={isPetSurface ? null : latestTasks}
-            activeGoal={isPetSurface ? null : state.activeGoal}
+            activity={sessionChromeVisible ? liveActivity : undefined}
+            tasks={sessionChromeVisible ? latestTasks : null}
+            activeGoal={sessionChromeVisible ? state.activeGoal : null}
             onUpdateGoal={handleUpdateGoal}
             onGoalPausedChange={handleGoalPausedChange}
             onDeleteGoal={handleDeleteGoal}

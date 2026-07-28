@@ -281,6 +281,16 @@ function StatusBadge({
   };
   useEffect(() => () => cancelClose(), []);
 
+  /**
+   * Is there anything worth opening the popover for?
+   *
+   * With no goal, no tasks and nothing running, StatusPopover falls back to a
+   * bare "空闲" card — hovering the dot popped up a box that told you nothing.
+   * The dot itself already carries that state via its colour and tooltip, so
+   * skip the panel entirely instead of showing an empty one.
+   */
+  const hasStatusDetail = Boolean(activeGoal) || (tasks?.tasks.length ?? 0) > 0 || busy;
+
   return (
     <div
       ref={containerRef}
@@ -305,8 +315,8 @@ function StatusBadge({
         variant="ghost"
         size="sm"
         className="h-7 gap-1.5 rounded-full px-1.5"
-        aria-haspopup="dialog"
-        aria-expanded={open}
+        aria-haspopup={hasStatusDetail ? "dialog" : undefined}
+        aria-expanded={hasStatusDetail ? open && hasStatusDetail : undefined}
         aria-label={t("topbar.statusDetails")}
         onClick={() => setOpen((current) => !current)}
       >
@@ -341,7 +351,7 @@ function StatusBadge({
           title={t(busy ? "misc.status.running" : "misc.status.idle")}
         />
       </Button>
-      {open && (
+      {open && hasStatusDetail && (
         <div className="absolute right-0 top-full z-50 mt-1">
           <StatusPopover
             activity={
