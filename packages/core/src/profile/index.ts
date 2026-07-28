@@ -51,6 +51,7 @@ export {
   activateWorkspaceProfile,
   deactivateWorkspaceProfile,
   profileOverridesFromDefinition,
+  type InstalledCapabilityNames,
   type WorkspaceProfileSubtree,
 } from "./activation.js";
 export {

@@ -92,14 +92,14 @@ export async function addHumanRepo(
 
   if (existsSync(dir)) {
     const refreshed = await gitFetchAndReset(dir);
-    if (!refreshed.ok) return { ok: false, error: refreshed.error };
+    if (!refreshed.ok) return { ok: false, error: explainGitFailure(refreshed.error, repo) };
   } else {
     // Full checkout: unlike a plugin marketplace (manifest-only up front) we
     // read every humans/<name>/profile.json right away.
     const cloned = await gitClone(githubRepoToCloneUrl(repo), dir, { full: true });
     if (!cloned.ok) {
       rmSync(dir, { recursive: true, force: true });
-      return { ok: false, error: cloned.error };
+      return { ok: false, error: explainGitFailure(cloned.error, repo) };
     }
   }
 
@@ -125,6 +125,34 @@ export async function addHumanRepo(
       cloned: true,
     },
   };
+}
+
+/**
+ * Turn a raw git failure into something a user can act on.
+ *
+ * gitOps deliberately returns the full command line (`git clone --depth 1
+ * --filter=blob:none … exited 128: …`) because it serves low-level callers.
+ * Pasting that into an "add a repo" box tells the user nothing about the actual
+ * problem — usually just a typo in the name.
+ */
+function explainGitFailure(error: string, repo: string): string {
+  if (/repository not found|could not read from remote|remote: not found/i.test(error)) {
+    return `找不到仓库 ${repo}。请检查拼写，并确认它是公开仓库。`;
+  }
+  if (/authentication failed|permission denied|terminal prompts disabled/i.test(error)) {
+    return `无权访问 ${repo}。私有仓库需要先配置 git 凭据。`;
+  }
+  if (/could not resolve host|network is unreachable|timed out|operation timed out/i.test(error)) {
+    return `无法连接 GitHub，请检查网络后重试。`;
+  }
+  if (error.startsWith("GIT_NOT_FOUND")) {
+    // Already a written, actionable message from gitOps.
+    return error;
+  }
+  // Unrecognized: keep the tail (the actual stderr) and drop the command line,
+  // so the user sees the cause rather than our argv.
+  const tail = error.includes(": ") ? error.slice(error.lastIndexOf(": ") + 2) : error;
+  return `克隆 ${repo} 失败：${tail.trim() || "未知错误"}`;
 }
 
 export function removeHumanRepo(repo: string): void {

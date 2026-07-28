@@ -70,6 +70,7 @@ export function DigitalHumanEditorDialog({
   const [mainInstruction, setMainInstruction] = React.useState("");
   const [version, setVersion] = React.useState("");
   const [portableMemory, setPortableMemory] = React.useState(true);
+  const [exclusiveCapabilities, setExclusiveCapabilities] = React.useState(false);
   const [selectedSkills, setSelectedSkills] = React.useState<Set<string>>(() => new Set());
   const [skillQuery, setSkillQuery] = React.useState("");
 
@@ -82,6 +83,7 @@ export function DigitalHumanEditorDialog({
     setMainInstruction(profile?.mainInstruction ?? "");
     setVersion(profile?.version ?? "");
     setPortableMemory(profile?.portableMemory ?? true);
+    setExclusiveCapabilities(profile?.exclusiveCapabilities ?? false);
     setSelectedSkills(new Set(profile?.skills ?? []));
     setSkillQuery("");
   }, [open, profile]);
@@ -147,6 +149,7 @@ export function DigitalHumanEditorDialog({
     mainInstruction !== (profile?.mainInstruction ?? "") ||
     version !== (profile?.version ?? "") ||
     portableMemory !== (profile?.portableMemory ?? true) ||
+    exclusiveCapabilities !== (profile?.exclusiveCapabilities ?? false) ||
     selectedSkills.size !== (profile?.skills.length ?? 0) ||
     (profile?.skills ?? []).some((name) => !selectedSkills.has(name));
 
@@ -182,6 +185,7 @@ export function DigitalHumanEditorDialog({
       ...(profile?.requires ? { requires: profile.requires } : {}),
       ...(mainInstruction.trim() ? { mainInstruction: mainInstruction.trim() } : {}),
       portableMemory,
+      exclusiveCapabilities,
       ...(version.trim() ? { version: version.trim() } : {}),
     });
   };
@@ -324,6 +328,21 @@ export function DigitalHumanEditorDialog({
                   id="digital-human-memory"
                   checked={portableMemory}
                   onCheckedChange={setPortableMemory}
+                />
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <Label htmlFor="digital-human-exclusive">
+                    {t("digitalHumans.editor.exclusive")}
+                  </Label>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {t("digitalHumans.editor.exclusiveDescription")}
+                  </p>
+                </div>
+                <Switch
+                  id="digital-human-exclusive"
+                  checked={exclusiveCapabilities}
+                  onCheckedChange={setExclusiveCapabilities}
                 />
               </div>
               {profile?.requires &&

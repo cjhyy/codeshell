@@ -17,14 +17,47 @@ export interface WorkspaceProfileSubtree {
   overrides?: CapabilityOverrides;
 }
 
-/** 把 profile 声明的能力展开为 force-enable 快照；空 bucket 不落键。 */
-export function profileOverridesFromDefinition(profile: WorkspaceProfile): CapabilityOverrides {
-  const bucket = (names: readonly string[]): Record<string, "on"> | undefined =>
-    names.length > 0 ? Object.fromEntries(names.map((name) => [name, "on" as const])) : undefined;
-  const plugins = bucket(profile.plugins);
-  const skills = bucket(profile.skills);
-  const mcp = bucket(profile.mcp);
-  const agents = bucket(profile.agents);
+/**
+ * 当前机器上可见的能力清单，用于 `exclusiveCapabilities` 决定「要关掉哪些」。
+ * 由 host 注入（core 不扫描磁盘）。缺省即无法独占，退回并集语义。
+ */
+export interface InstalledCapabilityNames {
+  skills?: readonly string[];
+  plugins?: readonly string[];
+  mcp?: readonly string[];
+  agents?: readonly string[];
+}
+
+/**
+ * 把 profile 声明的能力展开为 override 快照；空 bucket 不落键。
+ *
+ * 默认只产出 `"on"`（并集：保证该有的在，不动用户开的）。profile 声明
+ * `exclusiveCapabilities` 且 host 给出 `installed` 时，未声明的同类能力显式
+ * 落 `"off"`，形成独占工作面。
+ */
+export function profileOverridesFromDefinition(
+  profile: WorkspaceProfile,
+  installed?: InstalledCapabilityNames,
+): CapabilityOverrides {
+  const exclusive = profile.exclusiveCapabilities === true;
+  const bucket = (
+    declared: readonly string[],
+    available: readonly string[] | undefined,
+  ): Record<string, "on" | "off"> | undefined => {
+    const entries: Record<string, "on" | "off"> = {};
+    for (const name of declared) entries[name] = "on";
+    if (exclusive && available) {
+      const claimed = new Set(declared);
+      for (const name of available) {
+        if (!claimed.has(name)) entries[name] = "off";
+      }
+    }
+    return Object.keys(entries).length > 0 ? entries : undefined;
+  };
+  const plugins = bucket(profile.plugins, installed?.plugins);
+  const skills = bucket(profile.skills, installed?.skills);
+  const mcp = bucket(profile.mcp, installed?.mcp);
+  const agents = bucket(profile.agents, installed?.agents);
   return {
     ...(plugins ? { plugins } : {}),
     ...(skills ? { skills } : {}),
@@ -37,6 +70,7 @@ export function activateWorkspaceProfile(
   settings: SettingsManager,
   name: string,
   cwd: string,
+  installed?: InstalledCapabilityNames,
 ): WorkspaceProfile {
   const profile = readWorkspaceProfile(name);
   if (!profile) {
@@ -45,7 +79,7 @@ export function activateWorkspaceProfile(
   const subtree: WorkspaceProfileSubtree = {
     active: profile.name,
     preset: profile.basePreset,
-    overrides: profileOverridesFromDefinition(profile),
+    overrides: profileOverridesFromDefinition(profile, installed),
   };
   settings.saveProjectSetting("profile", subtree, cwd);
   return profile;

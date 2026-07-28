@@ -296,6 +296,7 @@ export interface ProfileListEntry {
   mainInstruction: string | undefined;
   active: boolean;
   portableMemory: boolean;
+  exclusiveCapabilities: boolean;
   version: string | undefined;
 }
 
@@ -315,13 +316,20 @@ export function listProfiles(cwd?: string): ProfileListEntry[] {
     mainInstruction: profile.mainInstruction,
     active: profile.name === active,
     portableMemory: profile.portableMemory,
+    exclusiveCapabilities: profile.exclusiveCapabilities,
     version: profile.version,
   }));
 }
 
 export function activateProfile(cwd: string, name: string): void {
   const settings = new SettingsManager(cwd, "full");
-  activateWorkspaceProfile(settings, name, cwd);
+  // Only an exclusive profile needs the inventory (to know what to switch off),
+  // and scanning costs a disk walk — so skip it for the union default.
+  const profile = readWorkspaceProfile(name);
+  const installed = profile?.exclusiveCapabilities
+    ? { skills: scanSkills(cwd).map((skill) => skill.name) }
+    : undefined;
+  activateWorkspaceProfile(settings, name, cwd, installed);
 }
 
 export function deactivateProfile(cwd: string): void {

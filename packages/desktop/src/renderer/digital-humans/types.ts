@@ -46,6 +46,11 @@ export interface DigitalHumanProfileEntry {
   mainInstruction?: string;
   active: boolean;
   portableMemory: boolean;
+  /**
+   * true → 独占工作面：未声明的能力被显式关掉，而非与用户已开启的取并集。
+   * schema 侧有 default(false)，故解析后必有值；旧数据经 schema 归一化。
+   */
+  exclusiveCapabilities: boolean;
   version?: string;
   /**
    * Dependency declaration (skill sources + required binaries). The editor has

@@ -200,6 +200,9 @@ export const digitalHumans = {
         preset: "基础 Preset",
         version: "定义版本（可选）",
         memory: "可移植记忆",
+        exclusive: "独占工作面",
+        exclusiveDescription:
+          "开启后，只启用这里选中的 Skills，其余已安装的会在该数字人的会话里关掉；关闭则与你已开启的取并集（默认）。",
         memoryDescription: "让这个数字人在不同项目间保留自己的长期记忆层。",
         skills: "配置 Skills",
         skillsDescription:
@@ -481,6 +484,9 @@ export const digitalHumans = {
         preset: "Base preset",
         version: "Definition version (optional)",
         memory: "Portable memory",
+        exclusive: "Exclusive tool surface",
+        exclusiveDescription:
+          "On: only the Skills selected here stay enabled; other installed ones are switched off in this digital human's sessions. Off: union with whatever you already enabled (default).",
         memoryDescription:
           "Give this digital human its own long-term memory layer across projects.",
         skills: "Configure Skills",

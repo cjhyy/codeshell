@@ -95,6 +95,16 @@ export const WorkspaceProfileSchema = z.object({
   basePreset: z.string().min(1).max(WORKSPACE_PROFILE_LIMITS.basePreset),
   /** 可选：省略即旧行为（只 enable，不获取）。 */
   requires: WorkspaceProfileRequirementsSchema.optional(),
+  /**
+   * true → 独占工作面：激活时把**未声明**的 skill/plugin/mcp/agent 显式关掉，
+   * 而不是与用户已开启的取并集。
+   *
+   * 默认 false（并集）是安全的：数字人只保证「该有的能力一定在」，绝不静默
+   * 关掉用户手动开的东西。独占是更强的意图——「切到这个数字人就只用这套工具」
+   * ——上下文更干净，但代价是用户会发现自己开的东西不见了，所以必须显式声明。
+   * 注意：用户在项目 settings 里手写的 override 优先级仍然最高（见 overlay.ts）。
+   */
+  exclusiveCapabilities: z.boolean().default(false),
   plugins: capabilityListSchema.default([]),
   skills: capabilityListSchema.default([]),
   mcp: capabilityListSchema.default([]),

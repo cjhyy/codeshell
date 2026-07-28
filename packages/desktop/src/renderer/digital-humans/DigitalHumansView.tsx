@@ -757,7 +757,18 @@ export function DigitalHumansView({
                           >
                             {t("digitalHumans.market.category.all")}
                           </Button>
-                          {DIGITAL_HUMAN_CATEGORIES.map((category) => (
+                          {/* Same reason as FeaturedScenes: a fixed taxonomy of
+                              four would otherwise offer filters that match
+                              nothing. Keep the current selection visible even if
+                              it just went empty, so the user can click away. */}
+                          {DIGITAL_HUMAN_CATEGORIES.filter(
+                            (category) =>
+                              marketCategory === category ||
+                              catalog.some((entry) => entry.category === category) ||
+                              CURATED_DIGITAL_HUMAN_TEAMS.some(
+                                (team) => team.category === category,
+                              ),
+                          ).map((category) => (
                             <Button
                               key={category}
                               type="button"
@@ -1197,6 +1208,16 @@ function FeaturedScenes({
   onSelectCategory: (category: DigitalHumanCategory) => void;
 }) {
   const { t } = useT();
+  // Only scenes that actually have digital humans. The four categories are a
+  // fixed taxonomy, so rendering all of them produced empty cards for whatever
+  // the installed repos happen not to cover — and clicking one filtered to
+  // nothing. With fewer than two populated scenes there is no "overview" left
+  // to give, so the section stays hidden entirely.
+  const populated = DIGITAL_HUMAN_CATEGORIES.filter((category) =>
+    catalog.some((entry) => entry.category === category),
+  );
+  if (populated.length < 2) return null;
+
   return (
     <section aria-labelledby="digital-human-featured-scenes">
       <div className="mb-3 flex items-end justify-between gap-3">
@@ -1211,7 +1232,7 @@ function FeaturedScenes({
         <Sparkles size={17} className="text-primary" aria-hidden="true" />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {DIGITAL_HUMAN_CATEGORIES.map((category) => {
+        {populated.map((category) => {
           const entries = catalog.filter((entry) => entry.category === category).slice(0, 2);
           return (
             <Button

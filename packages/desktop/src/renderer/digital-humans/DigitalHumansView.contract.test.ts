@@ -159,6 +159,10 @@ describe("DigitalHumansView contract", () => {
     // this TopBar; session chrome must be absent there, not merely disabled.
     // One flag drives project name, title, status dot and the switcher so they
     // cannot drift apart again.
+    // The IPC guard must not reject "" — a bare `!profileName` check made the
+    // unbind path throw before the service ever saw it.
+    expect(main).toContain('if (typeof profileName !== "string") {');
+    expect(main).not.toContain('typeof profileName !== "string" || !profileName');
     expect(app).toContain("const sessionChromeVisible = !isPetSurface && isChatView;");
     expect(app).toContain(
       "workspaceProfiles={sessionChromeVisible ? sessionWorkspaceProfiles : []}",

@@ -15,6 +15,9 @@ import type {
   SourceScope,
   WorkspaceSourceBinding,
   WorkspaceProfile,
+  LocalPanelAppSourceInput,
+  PanelAppSourceInput,
+  PanelAppPreview,
 } from "@cjhyy/code-shell-core";
 import type {
   ApprovalRequest,
@@ -28,12 +31,12 @@ import type {
 } from "@cjhyy/code-shell-capability-coding/orchestration";
 import type { PetApi } from "./pet-api";
 import type {
-  PluginPanelBindInput,
-  PluginPanelDescriptor,
-  PluginPanelExtensionSummary,
-  PluginPanelHostContext,
-  PreparedPluginPanel,
-} from "../shared/plugin-panels";
+  PanelAppBindInput,
+  PanelAppDescriptor,
+  PanelAppExtensionSummary,
+  PanelAppHostContext,
+  PreparedPanelApp,
+} from "../shared/panel-apps";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaAvailability, PluginMediaDto } from "../shared/plugin-media";
@@ -47,12 +50,13 @@ import type {
 import type { DigitalHumanTeam } from "../shared/digital-human-team";
 
 export type {
-  PluginPanelBindInput,
-  PluginPanelDescriptor,
-  PluginPanelExtensionSummary,
-  PluginPanelHostContext,
-  PreparedPluginPanel,
+  PanelAppBindInput,
+  PanelAppDescriptor,
+  PanelAppExtensionSummary,
+  PanelAppHostContext,
+  PreparedPanelApp,
 };
+export type { LocalPanelAppSourceInput, PanelAppSourceInput, PanelAppPreview };
 export type { ExpandedPluginCommand, PluginCommandDescriptor };
 export type { PluginMediaAvailability, PluginMediaDto };
 export type {
@@ -1435,11 +1439,11 @@ export interface CodeshellApi {
     rawArguments: string,
   ): Promise<ExpandedPluginCommand>;
   onPluginCommandsChanged(cb: () => void): () => void;
-  listPluginPanels(cwd: string, locale: string): Promise<PluginPanelDescriptor[]>;
-  listPanelExtensions(cwd: string, locale: string): Promise<PluginPanelExtensionSummary[]>;
-  preparePluginPanel(id: string): Promise<PreparedPluginPanel>;
-  bindPluginPanel(input: PluginPanelBindInput): Promise<boolean>;
-  onPluginPanelsChanged(cb: () => void): () => void;
+  listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]>;
+  listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
+  preparePanelApp(id: string): Promise<PreparedPanelApp>;
+  bindPanelApp(input: PanelAppBindInput): Promise<boolean>;
+  onPanelAppsChanged(cb: () => void): () => void;
   onAgentPanelRequest(cb: (request: AgentPanelHostRequest) => void): () => void;
   respondAgentPanelRequest(response: AgentPanelHostResponse): void;
   /** Full content inventory for one installed plugin (详情页). */
@@ -1497,6 +1501,7 @@ export interface CodeshellApi {
       mainInstruction: string | undefined;
       active: boolean;
       portableMemory: boolean;
+      exclusiveCapabilities: boolean;
       version: string | undefined;
     }>
   >;
@@ -1519,6 +1524,7 @@ export interface CodeshellApi {
       agents: string[];
       mainInstruction?: string;
       portableMemory: boolean;
+      exclusiveCapabilities: boolean;
       version?: string;
       category: "product" | "design" | "engineering" | "quality";
       tags: string[];
@@ -1724,6 +1730,34 @@ export interface CodeshellApi {
     | { ok: false; previewChanged: true; error: string }
     | { ok: false; error?: string }
   >;
+  /** Open a native picker for an independent Desktop Panel App package. */
+  pickPanelAppSource(
+    kind: "dir" | "zip",
+  ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null>;
+  /** Validate a Panel App with the dedicated Panel App package rules. */
+  previewLocalPanelApp(
+    input: PanelAppSourceInput,
+  ): Promise<{ ok: true; preview: PanelAppPreview } | { ok: false; error: string }>;
+  /** Revalidate the original folder, archive, or GitHub source for an installed Panel App. */
+  previewPanelAppUpdate(
+    id: string,
+  ): Promise<{ ok: true; preview: PanelAppPreview } | { ok: false; error: string }>;
+  /** Install a reviewed Panel App into the independent Panel App registry. */
+  installLocalPanelApp(input: {
+    source: PanelAppSourceInput;
+    reviewToken: string;
+    overwrite?: boolean;
+  }): Promise<
+    | { ok: true; id: string }
+    | { ok: false; alreadyInstalled?: true; previewChanged?: true; error: string }
+  >;
+  /** Apply an explicitly reviewed update from the app's remembered source. */
+  installPanelAppUpdate(input: {
+    id: string;
+    reviewToken: string;
+  }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }>;
+  /** Remove one independently installed Panel App. */
+  uninstallPanelApp(id: string, cwd?: string): Promise<void>;
   /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
   searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
   /** Bounded full-text search over on-disk session transcripts (session switcher). */
@@ -2488,7 +2522,7 @@ declare global {
   interface Window {
     codeshell: CodeshellApi;
     codeshellPanel?: Readonly<{
-      getContext(): Promise<PluginPanelHostContext>;
+      getContext(): Promise<PanelAppHostContext>;
       call(method: string, params?: unknown): Promise<unknown>;
       on(event: "context.changed", listener: (payload: unknown) => void): () => void;
     }>;

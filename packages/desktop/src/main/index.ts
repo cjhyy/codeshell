@@ -47,6 +47,7 @@ import {
   listInstalledThemes,
   uninstallTheme,
   type InstalledTheme,
+  type PanelAppSourceInput,
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
 import {
@@ -299,28 +300,34 @@ import {
 } from "./skills-service.js";
 import {
   listPlugins,
-  listPanelExtensions,
-  listPluginPanels,
   getPluginDetail,
   uninstallPluginEntry,
   uninstallLocalPluginEntry,
   updatePluginEntry,
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
+import { listPanelAppExtensions, listPanelApps } from "./panel-apps-service.js";
+import {
+  installPanelAppUpdateForUi,
+  installLocalPanelAppForUi,
+  previewPanelAppUpdateForUi,
+  previewLocalPanelAppForUi,
+  uninstallPanelAppForUi,
+} from "./panel-app-install-service.js";
 import { createAutomationFromPluginTemplate } from "./plugin-automation-service.js";
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
 import { getPluginMedia } from "./plugin-media-service.js";
 import {
-  expectedPluginPanelPartition,
-  registerPluginPanelSchemePrivileges,
-  validatePluginPanelEntryUrl,
-} from "./plugin-panel-protocol.js";
+  expectedPanelAppPartition,
+  registerPanelAppSchemePrivileges,
+  validatePanelAppEntryUrl,
+} from "./panel-app-protocol.js";
 import {
   installThemeAssetProtocol,
   registerThemeAssetSchemePrivileges,
   themeAssetUrl,
 } from "./theme-asset-protocol.js";
-import { PluginPanelBridge } from "./plugin-panel-bridge.js";
+import { PanelAppBridge } from "./panel-app-bridge.js";
 import {
   listMarketplacesForUi,
   loadMarketplaceForUi,
@@ -452,8 +459,8 @@ registerCapability(CODING_CAPABILITY);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Custom schemes must be privileged before app.ready. The request handler is
-// installed later on each plugin guest's isolated session partition.
-registerPluginPanelSchemePrivileges();
+// installed later on each Panel App guest's isolated session partition.
+registerPanelAppSchemePrivileges();
 // cstheme:// serves installed theme-pack image assets to the renderer; the
 // handler is installed on the default session once the app is ready.
 registerThemeAssetSchemePrivileges();
@@ -492,7 +499,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
-const pluginPanelBridge = new PluginPanelBridge({
+const panelAppBridge = new PanelAppBridge({
   isTrustedHost: (sender) =>
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
   isWorkspaceTrusted: (cwd) => getTrustCachedSync(cwd) === "trusted",
@@ -504,7 +511,7 @@ const pluginPanelBridge = new PluginPanelBridge({
     return true;
   },
 });
-pluginPanelBridge.registerIpc();
+panelAppBridge.registerIpc();
 const imGatewayService = new ImGatewayService({
   emit: (event) => {
     for (const window of BrowserWindow.getAllWindows()) {
@@ -588,13 +595,17 @@ function broadcastPluginCommandsChanged(windows: Iterable<BrowserWindow>): void 
   }
 }
 
+function broadcastPanelAppsChanged(windows: Iterable<BrowserWindow>): void {
+  for (const window of windows) {
+    if (window.isDestroyed()) continue;
+    window.webContents.send("panel-apps:changed");
+  }
+}
+
 onPluginInstallJobsChanged((jobs) => {
   const installed = jobs.some((job) => job.status === "installed");
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("plugins:installJobsChanged", jobs);
-    if (!w.isDestroyed() && installed) {
-      w.webContents.send("plugin-panels:changed");
-    }
   }
   if (installed) broadcastPluginCommandsChanged(BrowserWindow.getAllWindows());
 });
@@ -801,22 +812,22 @@ function hardenWebviewGuests(win: BrowserWindow): void {
   const pendingWebviews: Array<
     | { kind: "browser"; partition: string }
     | {
-        kind: "plugin";
+        kind: "panel-app";
         partition: string;
-        resource: NonNullable<ReturnType<typeof validatePluginPanelEntryUrl>>;
+        resource: NonNullable<ReturnType<typeof validatePanelAppEntryUrl>>;
       }
   > = [];
   win.webContents.on("will-attach-webview", (event, webPreferences, params) => {
-    const pluginResource = validatePluginPanelEntryUrl(String(params.src ?? ""));
-    if (String(params.src ?? "").startsWith("csplugin:")) {
+    const panelAppResource = validatePanelAppEntryUrl(String(params.src ?? ""));
+    if (String(params.src ?? "").startsWith("cspanel:")) {
       if (
-        !pluginResource ||
-        params.partition !== expectedPluginPanelPartition(pluginResource.descriptor.hostId)
+        !panelAppResource ||
+        params.partition !== expectedPanelAppPartition(panelAppResource.descriptor.hostId)
       ) {
         event.preventDefault();
         return;
       }
-      webPreferences.preload = resolve(__dirname, "..", "preload", "plugin-panel.cjs");
+      webPreferences.preload = resolve(__dirname, "..", "preload", "panel-app.cjs");
       webPreferences.nodeIntegration = false;
       webPreferences.nodeIntegrationInSubFrames = false;
       webPreferences.contextIsolation = true;
@@ -824,9 +835,9 @@ function hardenWebviewGuests(win: BrowserWindow): void {
       webPreferences.webSecurity = true;
       (params as Record<string, unknown>).allowpopups = false;
       pendingWebviews.push({
-        kind: "plugin",
+        kind: "panel-app",
         partition: String(params.partition),
-        resource: pluginResource,
+        resource: panelAppResource,
       });
       return;
     }
@@ -865,8 +876,8 @@ function hardenWebviewGuests(win: BrowserWindow): void {
       kind: "browser" as const,
       partition: BROWSER_PARTITION,
     };
-    if (attached.kind === "plugin") {
-      pluginPanelBridge.registerGuest(guest, win, attached.resource);
+    if (attached.kind === "panel-app") {
+      panelAppBridge.registerGuest(guest, win, attached.resource);
       return;
     }
     const partition = attached.partition;
@@ -2573,7 +2584,9 @@ ipcMain.handle("profiles:setSession", async (_e, sessionId: unknown, profileName
   if (typeof sessionId !== "string" || !sessionId) {
     throw new Error("profiles:setSession requires sessionId");
   }
-  if (typeof profileName !== "string" || !profileName) {
+  // "" is the unbind signal — a bare falsy check rejected it, so cancelling a
+  // Session's digital human threw instead of clearing it.
+  if (typeof profileName !== "string") {
     throw new Error("profiles:setSession requires profileName");
   }
   return setSessionWorkspaceProfile(sessionId, profileName);
@@ -2745,15 +2758,15 @@ ipcMain.handle(
     return expandPluginCommand(cwd, name, rawArguments);
   },
 );
-ipcMain.handle("plugin-panels:list", async (_e, cwd: string, locale: string) => {
-  if (typeof cwd !== "string") throw new Error("plugin-panels:list requires cwd");
-  if (typeof locale !== "string") throw new Error("plugin-panels:list requires locale");
-  return listPluginPanels(cwd, locale);
+ipcMain.handle("panel-apps:list", async (_e, cwd: string, locale: string) => {
+  if (typeof cwd !== "string") throw new Error("panel-apps:list requires cwd");
+  if (typeof locale !== "string") throw new Error("panel-apps:list requires locale");
+  return listPanelApps(cwd, locale);
 });
-ipcMain.handle("plugin-panels:listExtensions", async (_e, cwd: string, locale: string) => {
-  if (typeof cwd !== "string") throw new Error("plugin-panels:listExtensions requires cwd");
-  if (typeof locale !== "string") throw new Error("plugin-panels:listExtensions requires locale");
-  return listPanelExtensions(cwd, locale);
+ipcMain.handle("panel-apps:listExtensions", async (_e, cwd: string, locale: string) => {
+  if (typeof cwd !== "string") throw new Error("panel-apps:listExtensions requires cwd");
+  if (typeof locale !== "string") throw new Error("panel-apps:listExtensions requires locale");
+  return listPanelAppExtensions(cwd, locale);
 });
 
 // ── Credentials (token/link store + cookie capture) ──────────────────
@@ -2987,22 +3000,16 @@ ipcMain.handle(
 );
 ipcMain.handle("plugins:uninstall", async (_e, pluginName: string, marketplaceName: string) => {
   const result = uninstallPluginEntry(pluginName, marketplaceName);
-  pluginPanelBridge.revokeInstallKey(`${pluginName}@${marketplaceName}`);
-  for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
 ipcMain.handle("plugins:uninstallLocal", async (_e, name: string) => {
   const result = uninstallLocalPluginEntry(name);
-  pluginPanelBridge.revokeInstallKey(`${name}@local`);
-  for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
 ipcMain.handle("plugins:update", async (_e, name: string) => {
   const result = await updatePluginEntry(name);
-  pluginPanelBridge.revokeInstallKey(`${name}@local`);
-  for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
@@ -3106,6 +3113,73 @@ ipcMain.handle("plugins:retryInstallJob", async (_e, id: string) => retryPluginI
 ipcMain.handle("plugins:previewLocal", async (_e, input: { kind: "dir" | "zip"; path: string }) =>
   previewLocalPluginForUi(input),
 );
+ipcMain.handle("panel-apps:previewLocal", async (_e, input: PanelAppSourceInput) =>
+  previewLocalPanelAppForUi(input),
+);
+ipcMain.handle("panel-apps:previewUpdate", async (_e, id: string) => {
+  if (typeof id !== "string" || !id) throw new Error("panel-apps:previewUpdate requires id");
+  return previewPanelAppUpdateForUi(id);
+});
+ipcMain.handle(
+  "panel-apps:installLocal",
+  async (
+    _e,
+    input: {
+      source: PanelAppSourceInput;
+      reviewToken: string;
+      overwrite?: boolean;
+    },
+  ) => {
+    if (!input || !input.source || typeof input.reviewToken !== "string") {
+      throw new Error("panel-apps:installLocal requires source and reviewToken");
+    }
+    const result = await installLocalPanelAppForUi(input);
+    if (result.ok) broadcastPanelAppsChanged(mainWindows);
+    return result;
+  },
+);
+ipcMain.handle(
+  "panel-apps:installUpdate",
+  async (_e, input: { id: string; reviewToken: string }) => {
+    if (
+      !input ||
+      typeof input.id !== "string" ||
+      !input.id ||
+      typeof input.reviewToken !== "string"
+    ) {
+      throw new Error("panel-apps:installUpdate requires id and reviewToken");
+    }
+    const result = await installPanelAppUpdateForUi(input);
+    if (result.ok) broadcastPanelAppsChanged(mainWindows);
+    return result;
+  },
+);
+ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
+  if (typeof id !== "string" || !id) throw new Error("panel-apps:uninstall requires id");
+  if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
+    throw new Error("panel-apps:uninstall cwd must be a non-empty string");
+  }
+  await uninstallPanelAppForUi(id);
+  panelAppBridge.revokeAppId(id);
+  try {
+    const settings = (await readSettings("user")) ?? {};
+    const disabled = (settings as { disabledPanelApps?: unknown }).disabledPanelApps;
+    if (Array.isArray(disabled)) {
+      await writeSettings("user", {
+        disabledPanelApps: disabled.filter((candidate) => candidate !== id),
+      });
+    }
+    if (cwd) {
+      await writeSettings("project", { panelAppOverrides: { [id]: null } }, cwd);
+    }
+  } catch (error) {
+    dlog("main", "panel_app.settings_cleanup_failed", {
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  broadcastPanelAppsChanged(mainWindows);
+});
 ipcMain.handle(
   "plugins:installLocal",
   async (
@@ -3118,10 +3192,7 @@ ipcMain.handle(
     },
   ) => {
     const result = await installLocalPluginForUi(input);
-    if (result.ok) {
-      for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
-      broadcastPluginCommandsChanged(mainWindows);
-    }
+    if (result.ok) broadcastPluginCommandsChanged(mainWindows);
     return result;
   },
 );
@@ -4066,6 +4137,30 @@ ipcMain.handle(
   },
 );
 
+ipcMain.handle(
+  "dialog:pickPanelAppSource",
+  async (
+    _e,
+    kind: "dir" | "zip",
+  ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> => {
+    const result =
+      kind === "zip"
+        ? await dialog.showOpenDialog({
+            title: "选择 Panel App 压缩包",
+            properties: ["openFile"],
+            filters: [{ name: "Zip 压缩包", extensions: ["zip"] }],
+          })
+        : await dialog.showOpenDialog({
+            title: "选择 Panel App 文件夹",
+            properties: ["openDirectory"],
+          });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const selected = result.filePaths[0];
+    const name = kind === "zip" ? basename(selected, extname(selected)) : basename(selected);
+    return { kind, path: selected, name };
+  },
+);
+
 ipcMain.handle("dialog:pickGitBinary", async (): Promise<string | null> => {
   const res = await dialog.showOpenDialog({
     title: "选择 git 可执行文件",
@@ -4604,8 +4699,10 @@ ipcMain.handle(
     if (touchesExternalSessionVisibility(scope, patch)) {
       await reconcileExternalAdapters?.();
     }
+    if ("disabledPanelApps" in patch || "panelAppOverrides" in patch) {
+      broadcastPanelAppsChanged(mainWindows);
+    }
     if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
-      for (const window of mainWindows) window.webContents.send("plugin-panels:changed");
       broadcastPluginCommandsChanged(mainWindows);
     }
   },

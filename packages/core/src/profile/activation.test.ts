@@ -112,3 +112,55 @@ describe("workspace profile activation transaction", () => {
     expect(() => activateWorkspaceProfile(settings, "nope", cwd)).toThrow(/nope/);
   });
 });
+
+describe("exclusiveCapabilities", () => {
+  const base = {
+    name: "video-engineer",
+    label: "视频工程师",
+    basePreset: "terminal-coding",
+    plugins: [],
+    skills: ["hyperframes-core"],
+    mcp: [],
+    agents: [],
+    portableMemory: false,
+  };
+
+  test("default (union) never turns anything off", () => {
+    const overrides = profileOverridesFromDefinition(
+      { ...base, exclusiveCapabilities: false },
+      { skills: ["hyperframes-core", "unrelated-skill"] },
+    );
+    // Union is the safe default: guarantee what must be on, never silently
+    // disable what the user enabled by hand.
+    expect(overrides.skills).toEqual({ "hyperframes-core": "on" });
+  });
+
+  test("exclusive turns off installed capabilities it does not declare", () => {
+    const overrides = profileOverridesFromDefinition(
+      { ...base, exclusiveCapabilities: true },
+      { skills: ["hyperframes-core", "unrelated-skill", "another"] },
+    );
+    expect(overrides.skills).toEqual({
+      "hyperframes-core": "on",
+      "unrelated-skill": "off",
+      another: "off",
+    });
+  });
+
+  test("exclusive without an installed list falls back to union", () => {
+    // core does not scan disk; with no host-supplied inventory there is nothing
+    // to exclude, and guessing would disable capabilities blindly.
+    const overrides = profileOverridesFromDefinition({ ...base, exclusiveCapabilities: true });
+    expect(overrides.skills).toEqual({ "hyperframes-core": "on" });
+  });
+
+  test("exclusive only touches buckets the profile could claim", () => {
+    const overrides = profileOverridesFromDefinition(
+      { ...base, exclusiveCapabilities: true },
+      { skills: ["hyperframes-core"], mcp: ["figma"] },
+    );
+    // mcp is declared empty, so every installed mcp entry is off.
+    expect(overrides.mcp).toEqual({ figma: "off" });
+    expect(overrides.plugins).toBeUndefined();
+  });
+});

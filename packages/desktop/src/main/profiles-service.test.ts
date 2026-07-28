@@ -78,6 +78,9 @@ describe("desktop profiles service", () => {
         mainInstruction: undefined,
         active: true,
         portableMemory: false,
+        // Union is the default: a digital human guarantees its own capabilities
+        // without switching off whatever the user enabled by hand.
+        exclusiveCapabilities: false,
         version: undefined,
       },
     ]);

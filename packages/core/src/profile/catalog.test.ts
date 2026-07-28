@@ -177,3 +177,26 @@ describe("human repo registry", () => {
     }
   });
 });
+
+describe("addHumanRepo error messages", () => {
+  test("a missing repo yields a name hint, not a git command line", async () => {
+    const home = mkdtempSync(join(tmpdir(), "dh-repo-err-"));
+    const prev = process.env.CODE_SHELL_HOME;
+    process.env.CODE_SHELL_HOME = home;
+    try {
+      const { addHumanRepo } = await import("./catalog-store.js");
+      const result = await addHumanRepo("cjhyy/definitely-not-a-real-repo-xyz");
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      // The raw failure is `git clone --depth 1 --filter=blob:none … exited 128`.
+      // Pasting argv into an "add a repo" box explains nothing.
+      expect(result.error).not.toContain("git clone");
+      expect(result.error).not.toContain("--filter=blob:none");
+      expect(result.error).toContain("cjhyy/definitely-not-a-real-repo-xyz");
+    } finally {
+      if (prev === undefined) delete process.env.CODE_SHELL_HOME;
+      else process.env.CODE_SHELL_HOME = prev;
+      rmSync(home, { recursive: true, force: true });
+    }
+  }, 60_000);
+});
