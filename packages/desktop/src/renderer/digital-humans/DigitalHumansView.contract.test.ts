@@ -179,6 +179,25 @@ describe("DigitalHumansView contract", () => {
     expect(editor).toContain("digitalHumans.editor.discardTitle");
   });
 
+  test("a repo can be added from the market page itself, not only from settings", () => {
+    // Requiring a trip through the settings tree to get a FIRST digital human
+    // made the market a dead end — its empty state could only describe where to
+    // go. The add row lives on the page where you notice the market is empty.
+    expect(source).toContain("function AddRepoRow");
+    expect(source).toContain("<AddRepoRow");
+    expect(source).toContain("window.codeshell.addProfileRepo");
+    expect(source).toContain('placeholder="owner/repo"');
+    // Still reachable from settings for the full manager (list / remove).
+    expect(source).toContain("onManage={onOpenSettings}");
+    expect(app).toContain('onOpenSettings={() => setViewMode("settings_page")}');
+    // The repo panel sits ABOVE the profile list in settings; a long library
+    // used to push it off-screen entirely.
+    const reposAt = dhSection.indexOf("<DigitalHumanReposPanel />");
+    const listAt = dhSection.indexOf("profiles.map((profile)");
+    expect(reposAt).toBeGreaterThan(-1);
+    expect(reposAt).toBeLessThan(listAt);
+  });
+
   test("digital humans can come from a repo and be published as one", () => {
     // Add: repos are managed in the settings section, mirroring the plugin
     // marketplace flow rather than inventing a second one.

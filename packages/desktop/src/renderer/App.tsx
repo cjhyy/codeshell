@@ -2122,6 +2122,7 @@ function App() {
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <DigitalHumansView
                     activeProjectPath={activeProject?.path ?? null}
+                    onOpenSettings={() => setViewMode("settings_page")}
                     onUse={(selection, starterPrompt) => {
                       if (!activeProjectId || !activeProject) {
                         toast({ message: t("digitalHumans.pickProject"), variant: "error" });

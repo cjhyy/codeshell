@@ -73,6 +73,8 @@ interface Props {
   activeProjectPath: string | null;
   onUse: (selection: DigitalHumanSelection, starterPrompt?: string) => void;
   confirmDelete?: (request: DigitalHumanDeleteRequest) => Promise<boolean>;
+  /** Jump to settings › digital humans, where repos are managed in full. */
+  onOpenSettings?: () => void;
 }
 
 export interface DigitalHumanDeleteRequest {
@@ -108,7 +110,12 @@ function modeKey(mode: DigitalHumanTeamMode): "auto" | "divide" | "compare" {
   return mode;
 }
 
-export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: Props) {
+export function DigitalHumansView({
+  activeProjectPath,
+  onUse,
+  confirmDelete,
+  onOpenSettings,
+}: Props) {
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
@@ -182,6 +189,22 @@ export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: P
    * empty now, so the whole browse UI would be chrome over a void.
    */
   const marketIsEmpty = catalog.length === 0 && CURATED_DIGITAL_HUMAN_TEAMS.length === 0;
+
+  // How many digital-human repos are registered. Purely informational on this
+  // page (the full manager lives in settings), so a failed read is ignored.
+  const [repoCount, setRepoCount] = React.useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    window.codeshell
+      .listProfileRepos()
+      .then((repos) => {
+        if (alive) setRepoCount(repos.length);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [catalog.length]);
 
   const requestDelete = async (request: DigitalHumanDeleteRequest): Promise<boolean> => {
     if (confirmDelete) return confirmDelete(request);
@@ -650,6 +673,13 @@ export function DigitalHumansView({ activeProjectPath, onUse, confirmDelete }: P
                 </TabsList>
 
                 <TabsContent value="market" className="mt-5">
+                  {/* Adding a repo belongs here, not only in settings: this is
+                      the page where you notice the market is empty. */}
+                  <AddRepoRow
+                    onAdded={() => void refresh()}
+                    repoCount={repoCount}
+                    onManage={onOpenSettings}
+                  />
                   {marketIsEmpty ? (
                     // Nothing is shipped at all. Rendering the scene cards, the
                     // "browse (0)" heading and the category filters over an empty
@@ -2100,6 +2130,93 @@ function SearchEmptyState() {
  * capability difference). Say where digital humans come from instead of
  * showing "no search results", which reads as a broken filter.
  */
+/**
+ * Inline "add a digital-human repo" row on the market tab.
+ *
+ * The repo manager lives in settings, but requiring a trip through the settings
+ * tree to get a first digital human made the market a dead end — the empty
+ * state could only *describe* where to go. Adding one from here is the whole
+ * point of the page.
+ */
+function AddRepoRow({
+  onAdded,
+  repoCount,
+  onManage,
+}: {
+  onAdded: () => void;
+  repoCount: number;
+  onManage?: () => void;
+}) {
+  const { t } = useT();
+  const toast = useToast();
+  const [input, setInput] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const add = async () => {
+    const repo = input.trim();
+    if (!repo) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await window.codeshell.addProfileRepo(repo);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setInput("");
+      toast({
+        message: t("digitalHumans.repos.added", { count: result.entry.count }),
+        variant: "success",
+      });
+      onAdded();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mb-5 rounded-md border border-border/70 bg-muted/20 px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-foreground">{t("digitalHumans.repos.title")}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {t("digitalHumans.repos.hint")}
+            {repoCount > 0 ? ` · ${t("digitalHumans.repos.active", { count: repoCount })}` : ""}
+          </p>
+        </div>
+        <Input
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") void add();
+          }}
+          placeholder="owner/repo"
+          aria-label={t("digitalHumans.repos.title")}
+          className="h-8 w-full min-w-48 sm:w-64"
+          disabled={busy}
+        />
+        <Button size="sm" onClick={() => void add()} disabled={busy || !input.trim()}>
+          {busy ? (
+            <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Plus size={13} aria-hidden="true" />
+          )}
+          {t("digitalHumans.repos.add")}
+        </Button>
+        {onManage ? (
+          <Button size="sm" variant="ghost" onClick={onManage}>
+            {t("digitalHumans.repos.manage")}
+          </Button>
+        ) : null}
+      </div>
+      {error ? <p className="mt-1.5 text-xs text-status-err">{error}</p> : null}
+    </div>
+  );
+}
+
 function CatalogEmptyState({
   onImport,
   onCreate,

@@ -11,6 +11,14 @@ export const digitalHumans = {
       loadFailed: "数字人库加载失败",
       retry: "重试",
       moreActions: "「{name}」的更多操作",
+      repos: {
+        title: "数字人仓库",
+        hint: "填 GitHub 仓库 owner/repo，把其中的数字人拉进广场（会克隆到本地）",
+        add: "添加",
+        manage: "管理仓库",
+        active: "已添加 {count} 个仓库",
+        added: "已添加仓库，获得 {count} 个数字人",
+      },
       publish: {
         hint: "把这些数字人导出成仓库骨架，push 到 GitHub 后别人填 owner/repo 就能装。",
         action: "发布为仓库",
@@ -20,7 +28,7 @@ export const digitalHumans = {
       noSearchResultsDescription: "换一个关键词，或清空搜索条件后再试。",
       emptyCatalog: "广场暂无内置数字人",
       emptyCatalogDescription:
-        "在设置 › 数字人 › 数字人仓库添加一个仓库（如 cjhyy/mimi-humans），其中的数字人会出现在这里；也可以直接导入定义 JSON 或自己新建。",
+        "在上方填一个数字人仓库（如 cjhyy/mimi-humans）即可拉取；也可以导入定义 JSON 或自己新建。",
       tabs: { market: "数字人广场", mine: "我的数字人", teams: "数字人团队" },
       marketHint: "当前提供本地精选数字人；添加后归入“我的数字人”，可继续编辑方法和 Skills。",
       installed: "已添加",
@@ -270,6 +278,14 @@ export const digitalHumans = {
       loadFailed: "Could not load the digital-human library",
       retry: "Retry",
       moreActions: "More actions for “{name}”",
+      repos: {
+        title: "Digital-human repos",
+        hint: "Enter a GitHub owner/repo to pull its digital humans into the market (clones locally)",
+        add: "Add",
+        manage: "Manage repos",
+        active: "{count} repo(s) added",
+        added: "Repo added — {count} digital humans available",
+      },
       publish: {
         hint: "Export these as a repo skeleton; push it to GitHub and others install it with owner/repo.",
         action: "Publish as repo",
@@ -279,7 +295,7 @@ export const digitalHumans = {
       noSearchResultsDescription: "Try another keyword or clear the search.",
       emptyCatalog: "No bundled digital humans",
       emptyCatalogDescription:
-        "Add a repo under Settings › Digital humans › Digital-human repos (e.g. cjhyy/mimi-humans) and its humans show up here. You can also import a definition JSON or create one.",
+        "Add a digital-human repo above (e.g. cjhyy/mimi-humans) to pull some in. You can also import a definition JSON or create one.",
       tabs: { market: "Market", mine: "My digital humans", teams: "Teams" },
       marketHint:
         "The current catalog is curated locally. Added entries appear under My digital humans and remain editable.",

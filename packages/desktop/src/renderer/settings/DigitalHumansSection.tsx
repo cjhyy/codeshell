@@ -133,6 +133,9 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
         </div>
       </div>
       {error ? <p className="text-xs text-status-err">{error}</p> : null}
+      {/* Above the library, not below it: this is where digital humans come
+          from, and a long profile list used to push it off-screen. */}
+      <DigitalHumanReposPanel />
       {profiles.length === 0 ? (
         <p className="text-xs text-muted-foreground">{t("settingsX.digitalHumans.empty")}</p>
       ) : (
@@ -174,7 +177,6 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
         onOpenChange={setEditorOpen}
         onSave={(profile) => void save(profile)}
       />
-      <DigitalHumanReposPanel />
       <PetExternalSessionsToggles scope="user" />
     </section>
   );
