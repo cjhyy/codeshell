@@ -432,6 +432,35 @@ describe("desktop profiles service", () => {
     expect(preview.blockingTeams).toEqual(["Delivery"]);
   });
 
+  test("an empty profile name unbinds the Session's digital human", () => {
+    const sessionDir = join(home, "sessions", "session-bound");
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(
+      join(sessionDir, "state.json"),
+      JSON.stringify({ sessionId: "session-bound", workspaceProfile: "seedance" }),
+    );
+
+    // Binding used to be one-way: you could swap digital humans but never get
+    // back to the plain project default.
+    expect(setSessionWorkspaceProfile("session-bound", "").persisted).toBe(true);
+    const after = JSON.parse(readFileSync(join(sessionDir, "state.json"), "utf-8")) as {
+      workspaceProfile?: string;
+    };
+    expect(after.workspaceProfile).toBeUndefined();
+  });
+
+  test("an unknown profile name is still rejected", () => {
+    const sessionDir = join(home, "sessions", "session-guard");
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(
+      join(sessionDir, "state.json"),
+      JSON.stringify({ sessionId: "session-guard", workspaceProfile: "seedance" }),
+    );
+    expect(() => setSessionWorkspaceProfile("session-guard", "no-such-human")).toThrow(
+      /does not exist/,
+    );
+  });
+
   test("an archived Session does not block deletion", () => {
     const sessionDir = join(home, "sessions", "session-archived");
     mkdirSync(sessionDir, { recursive: true });

@@ -339,7 +339,14 @@ export function setSessionWorkspaceProfile(
   sessionId: string,
   profileName: string,
 ): { persisted: boolean } {
-  if (!WORKSPACE_PROFILE_NAME_RE.test(profileName) || !readWorkspaceProfile(profileName)) {
+  // Empty string = unbind. Binding was one-way before: once a Session had a
+  // digital human you could only swap it for another, never go back to the
+  // plain project default.
+  const clearing = profileName === "";
+  if (
+    !clearing &&
+    (!WORKSPACE_PROFILE_NAME_RE.test(profileName) || !readWorkspaceProfile(profileName))
+  ) {
     throw new Error(`Digital human "${profileName}" does not exist`);
   }
   const sessions = new SessionManager();
@@ -347,7 +354,7 @@ export function setSessionWorkspaceProfile(
   const state = sessions.readSessionState(sessionId);
   if (!state) return { persisted: false };
   const persisted = sessions.saveStateOrUpdateFields(state, {
-    workspaceProfile: profileName,
+    workspaceProfile: clearing ? undefined : profileName,
   });
   if (!persisted) throw new Error(`Could not switch digital human for Session ${sessionId}`);
   return { persisted: true };

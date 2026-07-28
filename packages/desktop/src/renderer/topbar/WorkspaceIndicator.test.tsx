@@ -1244,6 +1244,55 @@ describe("TopBar workspace label", () => {
     expect(html).toContain('aria-label="切换 Session 数字人"');
   });
 
+  test("offers an unbind option once a digital human is bound", () => {
+    const html = renderToStaticMarkup(
+      <TopBar
+        projectName="codeshell"
+        projectPath="/repo/codeshell"
+        sessionId="session"
+        sessionTitle="Checkout"
+        workspaceProfile="product-manager"
+        workspaceProfiles={[{ name: "product-manager", label: "产品经理" }]}
+        onWorkspaceProfileChange={() => {}}
+        busy={false}
+        sidebarCollapsed={false}
+        onToggleSidebar={() => {}}
+        panelOpen={false}
+        onTogglePanel={() => {}}
+        isMac={false}
+        isFullscreen={false}
+      />,
+    );
+    // Radix keeps options in a portal, so assert the trigger still renders the
+    // bound profile; the unbind entry is covered by the source contract below.
+    expect(html).toContain("产品经理");
+    expect(html).toContain('data-session-profile-switch="true"');
+  });
+
+  test("hides the switcher entirely when no profiles and none bound", () => {
+    const html = renderToStaticMarkup(
+      <TopBar
+        projectName="codeshell"
+        projectPath="/repo/codeshell"
+        sessionId="session"
+        sessionTitle="Checkout"
+        workspaceProfile={null}
+        workspaceProfiles={[]}
+        onWorkspaceProfileChange={() => {}}
+        busy={false}
+        sidebarCollapsed={false}
+        onToggleSidebar={() => {}}
+        panelOpen={false}
+        onTogglePanel={() => {}}
+        isMac={false}
+        isFullscreen={false}
+      />,
+    );
+    // App passes empty props on non-chat views, so the whole pill disappears
+    // instead of lingering as a disabled control.
+    expect(html).not.toContain('data-session-profile-switch="true"');
+  });
+
   test("keeps a session's profile selectable after it leaves the library", () => {
     const html = renderToStaticMarkup(
       <TopBar

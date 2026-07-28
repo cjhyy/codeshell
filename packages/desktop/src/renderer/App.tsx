@@ -473,33 +473,33 @@ function App() {
 
   useEffect(() => {
     let alive = true;
-    const applyPanels = async (
-      panels: Awaited<ReturnType<typeof window.codeshell.listPluginPanels>>,
+    const applyPanelApps = async (
+      apps: Awaited<ReturnType<typeof window.codeshell.listPanelApps>>,
     ) => {
-      const { replacePluginPanels } = await import("./panels/PanelRegistry");
-      if (alive) replacePluginPanels(panels);
+      const { replacePanelApps } = await import("./panels/PanelRegistry");
+      if (alive) replacePanelApps(apps);
     };
-    const compatibilityApi = window.codeshell as typeof window.codeshell & {
-      listPluginPanels?: typeof window.codeshell.listPluginPanels;
-      onPluginPanelsChanged?: typeof window.codeshell.onPluginPanelsChanged;
+    const panelAppsApi = window.codeshell as typeof window.codeshell & {
+      listPanelApps?: typeof window.codeshell.listPanelApps;
+      onPanelAppsChanged?: typeof window.codeshell.onPanelAppsChanged;
     };
-    const listPanels = compatibilityApi.listPluginPanels;
-    const subscribePanels = compatibilityApi.onPluginPanelsChanged;
-    if (!listPanels || !subscribePanels) {
-      void applyPanels([]);
+    const listApps = panelAppsApi.listPanelApps;
+    const subscribe = panelAppsApi.onPanelAppsChanged;
+    if (!listApps || !subscribe) {
+      void applyPanelApps([]);
       return;
     }
     const refresh = () => {
-      void listPanels(activeProject?.path ?? "", lang)
-        .then((panels) => {
-          void applyPanels(panels);
+      void listApps(activeProject?.path ?? "", lang)
+        .then((apps) => {
+          void applyPanelApps(apps);
         })
         .catch(() => {
-          void applyPanels([]);
+          void applyPanelApps([]);
         });
     };
     refresh();
-    const unsubscribe = subscribePanels(refresh);
+    const unsubscribe = subscribe(refresh);
     return () => {
       alive = false;
       unsubscribe();
@@ -1596,10 +1596,15 @@ function App() {
           activeSessionSummary.engineSessionId ?? activeSessionSummary.id,
           profileName,
         );
-        const label =
-          sessionWorkspaceProfiles.find((profile) => profile.name === profileName)?.label ??
-          profileName;
-        toast({ message: t("digitalHumans.sessionBinding.switched", { name: label }) });
+        if (profileName === "") {
+          // Unbinding is its own outcome — "switched to ''" would read as a bug.
+          toast({ message: t("digitalHumans.sessionBinding.cleared") });
+        } else {
+          const label =
+            sessionWorkspaceProfiles.find((profile) => profile.name === profileName)?.label ??
+            profileName;
+          toast({ message: t("digitalHumans.sessionBinding.switched", { name: label }) });
+        }
       } catch (error) {
         const rolledBack = setSessionWorkspaceProfileLocal(
           activeProjectId,
@@ -1952,9 +1957,15 @@ function App() {
             projectPath={isPetSurface ? null : (activeProject?.path ?? null)}
             sessionId={isPetSurface ? null : engineSessionIdForActive()}
             sessionTitle={isPetSurface ? null : sessionTitleForTop}
-            workspaceProfile={isPetSurface ? null : activeSessionSummary?.workspaceProfile}
-            workspaceProfiles={isPetSurface ? [] : sessionWorkspaceProfiles}
-            workspaceProfileSwitchDisabled={busy || !isChatView}
+            // The digital-human binding belongs to a chat Session. Other
+            // full-screen views (sessions / approvals / runs / settings) reuse
+            // this TopBar, where the switcher is noise about a surface the user
+            // is not looking at — it used to render there merely disabled.
+            workspaceProfile={
+              isPetSurface || !isChatView ? null : activeSessionSummary?.workspaceProfile
+            }
+            workspaceProfiles={isPetSurface || !isChatView ? [] : sessionWorkspaceProfiles}
+            workspaceProfileSwitchDisabled={busy}
             onWorkspaceProfileChange={(profileName) => {
               void handleSessionWorkspaceProfileChange(profileName);
             }}
@@ -2089,7 +2100,10 @@ function App() {
                 <PetMemoryCenterPage onBack={() => setViewMode("pet_settings")} />
               ) : registeredPageRender ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
-                  {registeredPageRender({ runsInitialRunId })}
+                  {registeredPageRender({
+                    runsInitialRunId,
+                    activeProjectPath: activeProject?.path ?? null,
+                  })}
                 </React.Suspense>
               ) : view.viewMode === "approvals" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>

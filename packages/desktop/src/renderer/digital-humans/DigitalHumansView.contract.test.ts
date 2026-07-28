@@ -151,6 +151,15 @@ describe("DigitalHumansView contract", () => {
     expect(preloadTypes).toContain("previewProfileDeletion");
   });
 
+  test("a session's digital human can be unbound, and the switcher is chat-only", () => {
+    // Binding used to be one-way: swap yes, return to the project default no.
+    expect(topBar).toContain("digitalHumans.sessionBinding.clear");
+    expect(app).toContain("digitalHumans.sessionBinding.cleared");
+    // Non-chat full-screen views (sessions / approvals / runs / settings) reuse
+    // this TopBar; the switcher must be absent there, not merely disabled.
+    expect(app).toContain("isPetSurface || !isChatView ? [] : sessionWorkspaceProfiles");
+  });
+
   test("the editor round-trips requires and guards unsaved edits", () => {
     // The editor has no `requires` field. Without an explicit carry-through,
     // saving a repo-installed digital human strips its dependency declaration

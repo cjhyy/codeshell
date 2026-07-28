@@ -174,6 +174,17 @@ function TopBarImpl({
                       value: profile.name,
                       label: profile.label,
                     })),
+                    // Binding was one-way — once a Session had a digital human
+                    // you could only swap it, never return to the project default.
+                    ...(workspaceProfile
+                      ? [
+                          {
+                            value: "",
+                            label: t("digitalHumans.sessionBinding.clear"),
+                            description: t("digitalHumans.sessionBinding.clearHint"),
+                          },
+                        ]
+                      : []),
                   ]}
                 />
               </span>
