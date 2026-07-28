@@ -1,7 +1,7 @@
 import React from "react";
 import { ChevronDown } from "lucide-react";
 import { useT } from "../i18n";
-import { usePetWidgetSprite, useHasPetSprites, petVisualState } from "../petSprite";
+import { usePetWidgetSprite, useCanWalk, petVisualState } from "../petSprite";
 import { Badge } from "../ui/Badge";
 
 export function PetWidget({
@@ -48,58 +48,52 @@ export function PetWidget({
     dragDirRef.current = next;
     setDragDir(next);
   }, []);
-  // A short-lived playful mood layered over the resting state: a periodic idle
-  // wave ("hi") and a jump on click. Cleared by a timer back to the base state.
-  const [mood, setMood] = React.useState<"waving" | "jumping" | null>(null);
-  const moodTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  // The default pack is a single static icon; only animate (moods + the idle
-  // breathe) when an installed pack actually provides pet art.
-  const animated = useHasPetSprites();
+  // Occasional auto-trot: at rest Mimi is a still icon, but every so often she
+  // walks a short loop and settles back. This is the only ambient motion — no
+  // idle breathe, no shimmer — so the widget stays calm.
+  const [autoTrot, setAutoTrot] = React.useState(false);
+  const trotClearRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canWalk = useCanWalk();
 
   const running = Math.max(0, runningCount);
   const activity = Math.max(0, activityCount);
   const completed = Math.max(0, unreadCompletedCount);
 
-  const flashMood = React.useCallback((next: "waving" | "jumping", ms: number): void => {
-    setMood(next);
-    if (moodTimerRef.current) clearTimeout(moodTimerRef.current);
-    moodTimerRef.current = setTimeout(() => setMood(null), ms);
-  }, []);
-
-  // Every ~30s of calm, Mimi waves briefly. The "is it calm right now?" check
-  // reads a ref inside one stable interval — depending on running/completed
-  // directly would rebuild the interval on every activity tick and reset the
-  // 30s countdown, so the wave would almost never fire while work is happening.
-  const calmRef = React.useRef(true);
-  calmRef.current = running === 0 && completed === 0;
   React.useEffect(() => {
-    if (!animated) return; // static default pet: never auto-wave
-    const id = setInterval(() => {
-      if (calmRef.current) flashMood("waving", 1600);
-    }, 30_000);
-    return () => clearInterval(id);
-  }, [flashMood, animated]);
+    if (!canWalk) return; // no walk frames → never auto-trot
+    // One stable timer; re-arms itself with a randomized calm gap (25–55s) so
+    // the trots don't feel metronomic.
+    let armed = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = (): void => {
+      const gap = 25_000 + Math.floor(Math.random() * 30_000);
+      timer = setTimeout(() => {
+        if (!armed) return;
+        setAutoTrot(true);
+        trotClearRef.current = setTimeout(() => setAutoTrot(false), 2400);
+        schedule();
+      }, gap);
+    };
+    schedule();
+    return () => {
+      armed = false;
+      clearTimeout(timer);
+    };
+  }, [canWalk]);
 
   React.useEffect(
     () => () => {
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-      if (moodTimerRef.current) clearTimeout(moodTimerRef.current);
+      if (trotClearRef.current) clearTimeout(trotClearRef.current);
     },
     [],
   );
 
   const summary = t("pet.widget.workSummary", { activity, completed, running });
-  // Priority: a jump reaction, then work/alert states, then the idle wave; while
-  // dragging, usePetWidgetSprite cycles the pack's directional walk frames.
-  const baseState =
-    mood === "jumping"
-      ? "jumping"
-      : petVisualState({
-          runningCount: running,
-          alertCount: completed,
-          greeting: mood === "waving",
-        });
-  const dogIcon = usePetWidgetSprite(baseState, dragging, dragDir);
+  const baseState = petVisualState({ runningCount: running, alertCount: completed });
+  // Walk (cycle frames) while dragging OR during an auto-trot; otherwise the
+  // resting sprite (the static dog head for the default pack).
+  const dogIcon = usePetWidgetSprite(baseState, dragging || autoTrot, dragDir);
   return (
     <div
       data-pet-widget="desktop-window"
@@ -147,7 +141,6 @@ export function PetWidget({
           setDragging(false);
           event.currentTarget.releasePointerCapture(event.pointerId);
           if (!drag.moved) {
-            if (animated) flashMood("jumping", 650); // a playful hop on tap (animated packs only)
             if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
             clickTimerRef.current = setTimeout(() => {
               clickTimerRef.current = null;
@@ -181,7 +174,7 @@ export function PetWidget({
           src={dogIcon}
           alt=""
           draggable={false}
-          className={`${animated && !dragging && !mood ? "cs-pet-idle" : ""} h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105`}
+          className="h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105"
         />
         {running > 0 && (
           <span

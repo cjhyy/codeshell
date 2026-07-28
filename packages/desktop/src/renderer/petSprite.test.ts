@@ -42,7 +42,7 @@ describe("petWalkFrames", () => {
     expect(petWalkFrames(rightOnly, "left")).toEqual(["r1.png", "r2.png"]);
   });
 
-  test("the default pack is a single static dog icon — no animation, no walk", () => {
+  test("the default pack rests as the static dog icon but can walk (trot/drag)", () => {
     const defaultPack = {
       id: "default",
       name: "default",
@@ -50,19 +50,13 @@ describe("petWalkFrames", () => {
       colors: { light: {}, dark: {} },
     } satisfies ThemePack;
 
-    // Every state (and both drag directions) resolves to the one static icon.
-    for (const state of [
-      "idle",
-      "running",
-      "alert",
-      "waving",
-      "jumping",
-      "waiting",
-      "failed",
-    ] as const) {
+    // At rest every state resolves to the single static icon (no idle/mood art).
+    for (const state of ["idle", "running", "alert", "waving", "waiting", "failed"] as const) {
       expect(petSpriteUrl(defaultPack, state)).toBe(DEFAULT_PET_SPRITE);
     }
-    expect(petWalkFrames(defaultPack, "right")).toEqual([]);
-    expect(petWalkFrames(defaultPack, "left")).toEqual([]);
+    // …but it DOES carry directional walk frames for the trot + drag animation.
+    expect(petWalkFrames(defaultPack, "right")).toHaveLength(8);
+    expect(petWalkFrames(defaultPack, "left")).toHaveLength(8);
+    expect(petWalkFrames(defaultPack, "left")).not.toEqual(petWalkFrames(defaultPack, "right"));
   });
 });

@@ -1,8 +1,28 @@
 import React from "react";
 import dogIcon from "./assets/codeshell-dog-icon.png";
+// Papillon walk frames (from the Codex atlas). Only the WALK loops are used by
+// the default pet — at rest it's the static dog-head icon; it occasionally trots
+// and follows the drag. No idle/mood animation, so nothing "shimmers" at rest.
+import runRight1 from "./assets/mimi-papillon/run-right-1.png";
+import runRight2 from "./assets/mimi-papillon/run-right-2.png";
+import runRight3 from "./assets/mimi-papillon/run-right-3.png";
+import runRight4 from "./assets/mimi-papillon/run-right-4.png";
+import runRight5 from "./assets/mimi-papillon/run-right-5.png";
+import runRight6 from "./assets/mimi-papillon/run-right-6.png";
+import runRight7 from "./assets/mimi-papillon/run-right-7.png";
+import runRight8 from "./assets/mimi-papillon/run-right-8.png";
+import runLeft1 from "./assets/mimi-papillon/run-left-1.png";
+import runLeft2 from "./assets/mimi-papillon/run-left-2.png";
+import runLeft3 from "./assets/mimi-papillon/run-left-3.png";
+import runLeft4 from "./assets/mimi-papillon/run-left-4.png";
+import runLeft5 from "./assets/mimi-papillon/run-left-5.png";
+import runLeft6 from "./assets/mimi-papillon/run-left-6.png";
+import runLeft7 from "./assets/mimi-papillon/run-left-7.png";
+import runLeft8 from "./assets/mimi-papillon/run-left-8.png";
 import { loadThemePackId } from "./theme";
 import { resolveThemePack, subscribeInstalledThemes } from "./installedThemes";
 import {
+  DEFAULT_PACK_ID,
   petVisualState,
   type PetSprites,
   type PetSpriteState,
@@ -10,16 +30,26 @@ import {
 } from "./theme-packs";
 
 /**
- * The bundled default pet image: the original static dog-head icon. The default
- * pack ships NO sprites of its own, so every state (and the drag) resolves to
- * this single still image — Mimi is a calm static icon by default. Animated /
- * multi-state pets come from an installed theme pack, not the builtin default.
- * (The Codex "mimi-papillon" atlas frames stay in assets for such a pack.)
+ * The bundled default pet image: the original static dog-head icon. It's what
+ * every non-walk state resolves to, so Mimi rests as a still icon — no idle
+ * breathe, no shimmering. Motion is limited to walking: an occasional auto-trot
+ * and the drag animation (see DEFAULT_PET_SPRITES.walk).
  */
 export const DEFAULT_PET_SPRITE = dogIcon;
 
-/** The pet sprites a pack effectively provides; the default pack provides none. */
+/**
+ * The default pack's sprites: ONLY walk frames. idle/running/alert are omitted so
+ * they fall back to the static dog head; the walk loops power the occasional
+ * auto-trot and drag animation.
+ */
+const DEFAULT_PET_SPRITES: PetSprites = {
+  walk: [runRight1, runRight2, runRight3, runRight4, runRight5, runRight6, runRight7, runRight8],
+  walkLeft: [runLeft1, runLeft2, runLeft3, runLeft4, runLeft5, runLeft6, runLeft7, runLeft8],
+};
+
+/** The pet sprites a pack effectively provides; the default pack contributes walk frames. */
 function effectivePetSprites(pack: ThemePack): PetSprites {
+  if (pack.id === DEFAULT_PACK_ID && !pack.pet) return DEFAULT_PET_SPRITES;
   return pack.pet ?? {};
 }
 
@@ -91,9 +121,17 @@ export function useActiveThemePack(
   return resolvePack(id);
 }
 
-/** True when the active pack is animated (has pet art); false for the static default. */
-export function useHasPetSprites(): boolean {
-  return hasPetSprites(useActiveThemePack());
+/** True when the active pack supplies a distinct idle/mood sprite (not just walk). */
+export function useHasIdleAnimation(): boolean {
+  const sprites = effectivePetSprites(useActiveThemePack());
+  // The default pack has only walk frames → its resting state is the static icon,
+  // so idle-breathe/mood must stay off. An installed pack with an idle sprite opts in.
+  return Boolean(sprites.idle);
+}
+
+/** True when the active pack can walk (has drag/trot frames). */
+export function useCanWalk(): boolean {
+  return petWalkFrames(useActiveThemePack()).length > 1;
 }
 
 /**
@@ -112,14 +150,14 @@ export function usePetSprite(
 const WALK_FRAME_MS = 120;
 
 /**
- * The pet sprite for the widget: normally the state sprite, but while
- * `dragging` cycle the pack's directional walk frames to animate a run
- * (leftward drags use walkLeft when present). Falls back to the state sprite
- * when the pack has no walk frames, so a plain pack is unaffected.
+ * The pet sprite for the widget: normally the state sprite (the static dog head
+ * for the default pack), but while `walking` — either a drag or an occasional
+ * auto-trot — cycle the pack's directional walk frames. Falls back to the state
+ * sprite when the pack has no walk frames.
  */
 export function usePetWidgetSprite(
   state: PetSpriteState,
-  dragging: boolean,
+  walking: boolean,
   direction: WalkDirection = "right",
   resolvePack?: (id: string) => ThemePack,
 ): string {
@@ -128,16 +166,16 @@ export function usePetWidgetSprite(
   const [frame, setFrame] = React.useState(0);
 
   React.useEffect(() => {
-    if (!dragging || frames.length < 2) {
+    if (!walking || frames.length < 2) {
       setFrame(0);
       return;
     }
     const id = setInterval(() => setFrame((n) => (n + 1) % frames.length), WALK_FRAME_MS);
     return () => clearInterval(id);
-    // Restart the loop when direction flips (frame set changes) or drag toggles.
-  }, [dragging, direction, frames.length]);
+    // Restart the loop when direction flips (frame set changes) or walking toggles.
+  }, [walking, direction, frames.length]);
 
-  if (dragging && frames.length > 0) return frames[frame % frames.length]!;
+  if (walking && frames.length > 0) return frames[frame % frames.length]!;
   return petSpriteUrl(pack, state);
 }
 
