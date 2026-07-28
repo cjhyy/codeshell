@@ -54,6 +54,14 @@ export function PetWidget({
   const [autoTrot, setAutoTrot] = React.useState(false);
   const trotClearRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const canWalk = useCanWalk();
+  // A brief hop on tap. Cleared by a timer back to the resting sprite.
+  const [jumping, setJumping] = React.useState(false);
+  const jumpClearRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hop = React.useCallback((): void => {
+    setJumping(true);
+    if (jumpClearRef.current) clearTimeout(jumpClearRef.current);
+    jumpClearRef.current = setTimeout(() => setJumping(false), 650);
+  }, []);
 
   const running = Math.max(0, runningCount);
   const activity = Math.max(0, activityCount);
@@ -85,14 +93,17 @@ export function PetWidget({
     () => () => {
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
       if (trotClearRef.current) clearTimeout(trotClearRef.current);
+      if (jumpClearRef.current) clearTimeout(jumpClearRef.current);
     },
     [],
   );
 
   const summary = t("pet.widget.workSummary", { activity, completed, running });
-  const baseState = petVisualState({ runningCount: running, alertCount: completed });
-  // Walk (cycle frames) while dragging OR during an auto-trot; otherwise the
-  // resting sprite (the static dog head for the default pack).
+  // A tap hop takes precedence; otherwise the work/idle state. Walk-frame cycling
+  // (drag or auto-trot) overrides both inside usePetWidgetSprite.
+  const baseState = jumping
+    ? "jumping"
+    : petVisualState({ runningCount: running, alertCount: completed });
   const dogIcon = usePetWidgetSprite(baseState, dragging || autoTrot, dragDir);
   return (
     <div
@@ -141,6 +152,7 @@ export function PetWidget({
           setDragging(false);
           event.currentTarget.releasePointerCapture(event.pointerId);
           if (!drag.moved) {
+            hop(); // a little jump on tap
             if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
             clickTimerRef.current = setTimeout(() => {
               clickTimerRef.current = null;

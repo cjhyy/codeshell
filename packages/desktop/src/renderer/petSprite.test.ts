@@ -50,13 +50,15 @@ describe("petWalkFrames", () => {
       colors: { light: {}, dark: {} },
     } satisfies ThemePack;
 
-    // At rest every state resolves to the single static icon (no idle/mood art).
+    // At rest every non-interactive state resolves to the single static icon.
     for (const state of ["idle", "running", "alert", "waving", "waiting", "failed"] as const) {
       expect(petSpriteUrl(defaultPack, state)).toBe(DEFAULT_PET_SPRITE);
     }
-    // …but it DOES carry directional walk frames for the trot + drag animation.
+    // …but it DOES carry directional walk frames for the trot + drag animation…
     expect(petWalkFrames(defaultPack, "right")).toHaveLength(8);
     expect(petWalkFrames(defaultPack, "left")).toHaveLength(8);
     expect(petWalkFrames(defaultPack, "left")).not.toEqual(petWalkFrames(defaultPack, "right"));
+    // …and a real jump sprite for the tap reaction (not the static icon).
+    expect(petSpriteUrl(defaultPack, "jumping")).not.toBe(DEFAULT_PET_SPRITE);
   });
 });

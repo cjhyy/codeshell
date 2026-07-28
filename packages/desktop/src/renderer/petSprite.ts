@@ -1,8 +1,10 @@
 import React from "react";
 import dogIcon from "./assets/codeshell-dog-icon.png";
-// Papillon walk frames (from the Codex atlas). Only the WALK loops are used by
-// the default pet — at rest it's the static dog-head icon; it occasionally trots
-// and follows the drag. No idle/mood animation, so nothing "shimmers" at rest.
+// A short jump animation played on tap (from the Codex atlas).
+import animJumping from "./assets/mimi-papillon/anim-jumping.webp";
+// Papillon walk frames (from the Codex atlas). The default pet uses only WALK +
+// JUMP: at rest it's the static dog-head icon; it occasionally trots, follows the
+// drag, and hops on tap. No idle/breathe animation, so nothing "shimmers" at rest.
 import runRight1 from "./assets/mimi-papillon/run-right-1.png";
 import runRight2 from "./assets/mimi-papillon/run-right-2.png";
 import runRight3 from "./assets/mimi-papillon/run-right-3.png";
@@ -38,11 +40,12 @@ import {
 export const DEFAULT_PET_SPRITE = dogIcon;
 
 /**
- * The default pack's sprites: ONLY walk frames. idle/running/alert are omitted so
- * they fall back to the static dog head; the walk loops power the occasional
- * auto-trot and drag animation.
+ * The default pack's sprites: walk frames + a jump. idle/running/alert are
+ * omitted so at rest everything falls back to the static dog head; the walk
+ * loops power the auto-trot/drag, and `jumping` is the tap reaction.
  */
 const DEFAULT_PET_SPRITES: PetSprites = {
+  jumping: animJumping,
   walk: [runRight1, runRight2, runRight3, runRight4, runRight5, runRight6, runRight7, runRight8],
   walkLeft: [runLeft1, runLeft2, runLeft3, runLeft4, runLeft5, runLeft6, runLeft7, runLeft8],
 };
