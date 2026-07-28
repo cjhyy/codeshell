@@ -24,7 +24,9 @@ describe("PetWidget", () => {
     expect(html).toContain("w-28");
     expect(html).toContain("absolute");
     expect(html).toContain("bg-transparent");
-    expect(html).toContain("cs-pet-idle");
+    // The default (builtin) pack is a single static dog icon — no breathe class.
+    expect(html).toContain("codeshell-dog-icon");
+    expect(html).not.toContain("cs-pet-idle");
     expect(html).toContain("99+");
     expect(html).toContain('data-pet-indicator="running"');
     expect(html).toContain('data-pet-indicator="toggle"');

@@ -42,7 +42,7 @@ describe("petWalkFrames", () => {
     expect(petWalkFrames(rightOnly, "left")).toEqual(["r1.png", "r2.png"]);
   });
 
-  test("the default Mimi pack ships directional drag + rich mood sprites", () => {
+  test("the default pack is a single static dog icon — no animation, no walk", () => {
     const defaultPack = {
       id: "default",
       name: "default",
@@ -50,11 +50,7 @@ describe("petWalkFrames", () => {
       colors: { light: {}, dark: {} },
     } satisfies ThemePack;
 
-    // Eight frames each direction, and left/right differ (leftward atlas row).
-    expect(petWalkFrames(defaultPack, "right")).toHaveLength(8);
-    expect(petWalkFrames(defaultPack, "left")).toHaveLength(8);
-    expect(petWalkFrames(defaultPack, "left")).not.toEqual(petWalkFrames(defaultPack, "right"));
-    // Core trio plus the extra Codex moods all resolve to real (non-default) art.
+    // Every state (and both drag directions) resolves to the one static icon.
     for (const state of [
       "idle",
       "running",
@@ -64,7 +60,9 @@ describe("petWalkFrames", () => {
       "waiting",
       "failed",
     ] as const) {
-      expect(petSpriteUrl(defaultPack, state)).not.toBe(DEFAULT_PET_SPRITE);
+      expect(petSpriteUrl(defaultPack, state)).toBe(DEFAULT_PET_SPRITE);
     }
+    expect(petWalkFrames(defaultPack, "right")).toEqual([]);
+    expect(petWalkFrames(defaultPack, "left")).toEqual([]);
   });
 });

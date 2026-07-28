@@ -1,69 +1,25 @@
 import React from "react";
 import dogIcon from "./assets/codeshell-dog-icon.png";
-// Looping mood animations sliced from the Codex v2 atlas (see slice-atlas.py).
-// anim-idle (a near-still breathe) is intentionally NOT the default resting
-// sprite — it reads as static; the livelier anim-waiting is used instead.
-import animRunning from "./assets/mimi-papillon/anim-running.webp";
-import animReview from "./assets/mimi-papillon/anim-review.webp";
-import animWaving from "./assets/mimi-papillon/anim-waving.webp";
-import animJumping from "./assets/mimi-papillon/anim-jumping.webp";
-import animWaiting from "./assets/mimi-papillon/anim-waiting.webp";
-import animFailed from "./assets/mimi-papillon/anim-failed.webp";
-// Directional drag frames (cycled per-frame in code so we can pick direction).
-import runRight1 from "./assets/mimi-papillon/run-right-1.png";
-import runRight2 from "./assets/mimi-papillon/run-right-2.png";
-import runRight3 from "./assets/mimi-papillon/run-right-3.png";
-import runRight4 from "./assets/mimi-papillon/run-right-4.png";
-import runRight5 from "./assets/mimi-papillon/run-right-5.png";
-import runRight6 from "./assets/mimi-papillon/run-right-6.png";
-import runRight7 from "./assets/mimi-papillon/run-right-7.png";
-import runRight8 from "./assets/mimi-papillon/run-right-8.png";
-import runLeft1 from "./assets/mimi-papillon/run-left-1.png";
-import runLeft2 from "./assets/mimi-papillon/run-left-2.png";
-import runLeft3 from "./assets/mimi-papillon/run-left-3.png";
-import runLeft4 from "./assets/mimi-papillon/run-left-4.png";
-import runLeft5 from "./assets/mimi-papillon/run-left-5.png";
-import runLeft6 from "./assets/mimi-papillon/run-left-6.png";
-import runLeft7 from "./assets/mimi-papillon/run-left-7.png";
-import runLeft8 from "./assets/mimi-papillon/run-left-8.png";
 import { loadThemePackId } from "./theme";
 import { resolveThemePack, subscribeInstalledThemes } from "./installedThemes";
 import {
-  DEFAULT_PACK_ID,
   petVisualState,
   type PetSprites,
   type PetSpriteState,
   type ThemePack,
 } from "./theme-packs";
 
-/** The bundled default pet image, used whenever a pack supplies no sprite. */
+/**
+ * The bundled default pet image: the original static dog-head icon. The default
+ * pack ships NO sprites of its own, so every state (and the drag) resolves to
+ * this single still image — Mimi is a calm static icon by default. Animated /
+ * multi-state pets come from an installed theme pack, not the builtin default.
+ * (The Codex "mimi-papillon" atlas frames stay in assets for such a pack.)
+ */
 export const DEFAULT_PET_SPRITE = dogIcon;
 
-/**
- * The default pack's sprites, drawn from the Codex v2 Mimi atlas. Kept here (not
- * in the pure theme-packs data) because it references bundled asset urls. The
- * default dog is thus delivered as a real builtin pack — the same path every
- * other pack uses. `alert` maps to the atlas's "review" (ready/completed) mood.
- *
- * `idle` deliberately uses the atlas's "waiting" loop rather than "idle": the
- * true idle is a near-still breathe/blink that reads as a static icon on the
- * widget. "waiting" is a lively at-attention loop, so Mimi visibly moves at rest.
- */
-const DEFAULT_PET_SPRITES: PetSprites = {
-  idle: animWaiting,
-  running: animRunning,
-  alert: animReview,
-  waving: animWaving,
-  jumping: animJumping,
-  waiting: animWaiting,
-  failed: animFailed,
-  walk: [runRight1, runRight2, runRight3, runRight4, runRight5, runRight6, runRight7, runRight8],
-  walkLeft: [runLeft1, runLeft2, runLeft3, runLeft4, runLeft5, runLeft6, runLeft7, runLeft8],
-};
-
-/** The pet sprites a pack effectively provides (the default pack gets the dog). */
+/** The pet sprites a pack effectively provides; the default pack provides none. */
 function effectivePetSprites(pack: ThemePack): PetSprites {
-  if (pack.id === DEFAULT_PACK_ID && !pack.pet) return DEFAULT_PET_SPRITES;
   return pack.pet ?? {};
 }
 
@@ -74,6 +30,12 @@ function effectivePetSprites(pack: ThemePack): PetSprites {
 export function petSpriteUrl(pack: ThemePack, state: PetSpriteState): string {
   const sprites = effectivePetSprites(pack);
   return sprites[state] ?? sprites.idle ?? DEFAULT_PET_SPRITE;
+}
+
+/** Whether a pack provides any pet art (a static default pack provides none). */
+export function hasPetSprites(pack: ThemePack): boolean {
+  const sprites = effectivePetSprites(pack);
+  return Object.values(sprites).some((v) => (Array.isArray(v) ? v.length > 0 : Boolean(v)));
 }
 
 /** Horizontal drag direction; "left" uses walkLeft frames when a pack has them. */
@@ -127,6 +89,11 @@ export function useActiveThemePack(
     };
   }, []);
   return resolvePack(id);
+}
+
+/** True when the active pack is animated (has pet art); false for the static default. */
+export function useHasPetSprites(): boolean {
+  return hasPetSprites(useActiveThemePack());
 }
 
 /**

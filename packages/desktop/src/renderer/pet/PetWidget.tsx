@@ -1,7 +1,7 @@
 import React from "react";
 import { ChevronDown } from "lucide-react";
 import { useT } from "../i18n";
-import { usePetWidgetSprite, petVisualState } from "../petSprite";
+import { usePetWidgetSprite, useHasPetSprites, petVisualState } from "../petSprite";
 import { Badge } from "../ui/Badge";
 
 export function PetWidget({
@@ -52,6 +52,9 @@ export function PetWidget({
   // wave ("hi") and a jump on click. Cleared by a timer back to the base state.
   const [mood, setMood] = React.useState<"waving" | "jumping" | null>(null);
   const moodTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The default pack is a single static icon; only animate (moods + the idle
+  // breathe) when an installed pack actually provides pet art.
+  const animated = useHasPetSprites();
 
   const running = Math.max(0, runningCount);
   const activity = Math.max(0, activityCount);
@@ -70,11 +73,12 @@ export function PetWidget({
   const calmRef = React.useRef(true);
   calmRef.current = running === 0 && completed === 0;
   React.useEffect(() => {
+    if (!animated) return; // static default pet: never auto-wave
     const id = setInterval(() => {
       if (calmRef.current) flashMood("waving", 1600);
     }, 30_000);
     return () => clearInterval(id);
-  }, [flashMood]);
+  }, [flashMood, animated]);
 
   React.useEffect(
     () => () => {
@@ -143,7 +147,7 @@ export function PetWidget({
           setDragging(false);
           event.currentTarget.releasePointerCapture(event.pointerId);
           if (!drag.moved) {
-            flashMood("jumping", 650); // a playful hop on tap
+            if (animated) flashMood("jumping", 650); // a playful hop on tap (animated packs only)
             if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
             clickTimerRef.current = setTimeout(() => {
               clickTimerRef.current = null;
@@ -177,7 +181,7 @@ export function PetWidget({
           src={dogIcon}
           alt=""
           draggable={false}
-          className={`${dragging || mood ? "" : "cs-pet-idle"} h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105`}
+          className={`${animated && !dragging && !mood ? "cs-pet-idle" : ""} h-24 w-24 select-none object-contain drop-shadow-[0_5px_5px_rgb(0_0_0/0.18)] transition-transform group-hover:scale-105`}
         />
         {running > 0 && (
           <span
