@@ -233,6 +233,16 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("window.codeshell.exportProfileRepo");
   });
 
+  test("summoning satisfies requirements, not only the project-default toggle", () => {
+    // A real session bound to video-director called /hyperframes, got "Skill not
+    // found", searched with Glob, then gave up: summoning never ran the
+    // dependency gate, and summoning is the common entry point.
+    expect(source).toContain("const useSelection");
+    expect(source).toContain("ensureSelectionRequirements");
+    // Every summon path routes through the gate; only the wrapper calls onUse.
+    expect(source.match(/[^e]onUse\(/g) ?? []).toHaveLength(1);
+  });
+
   test("a blocked deletion offers force delete instead of a dead end", () => {
     // Unbinding is safe (Sessions survive), so making the user do it by hand
     // across every blocking conversation is busywork, not protection.

@@ -45,6 +45,17 @@ export interface ComposerOptions {
    * 解析后传入；composer 不自行读盘。
    */
   profileMainInstruction?: string;
+  /**
+   * Skills the active digital human declares (`WorkspaceProfile.skills`).
+   *
+   * Used only to warn when a declared skill is not actually installed here.
+   * `requires` installs per project, so a digital human summoned in a project
+   * that never got the install has an instruction telling it to use `/x` while
+   * `/x` does not exist — a real session then called `/hyperframes`, got
+   * "Skill not found", searched with Glob, and gave up. Stating the gap costs a
+   * line and stops the flailing.
+   */
+  profileDeclaredSkills?: readonly string[];
   /** 激活数字人的可移植记忆层根目录（portableMemory=true 时由 engine 传入）。 */
   profileMemoryDir?: string;
   /**
@@ -147,6 +158,25 @@ export class PromptComposer {
    * array (after the user task) so it sits past the conversation's cache
    * breakpoint — a change here never re-bills the history prefix.
    */
+  /**
+   * Declared-but-absent skills, stated plainly. Rides the dynamic context (not
+   * the cached system prefix) because it depends on what is installed right now.
+   */
+  private buildDeclaredSkillGap(available: readonly { name: string }[]): string {
+    const declared = this.options.profileDeclaredSkills;
+    if (!declared || declared.length === 0) return "";
+    const present = new Set(available.map((skill) => skill.name));
+    const missing = declared.filter((name) => !present.has(name));
+    if (missing.length === 0) return "";
+    return [
+      "<digital-human-capability-gap>",
+      `This digital human declares skills that are NOT installed in this workspace: ${missing.join(", ")}.`,
+      "Do not call them and do not hunt for their files — they are absent, not hidden.",
+      "Work with the tools you do have, and tell the user which capability is missing if it blocks the task.",
+      "</digital-human-capability-gap>",
+    ].join("\n");
+  }
+
   async buildDynamicContextMessage(): Promise<Message | null> {
     const skills = scanSkills(this.options.cwd, {
       disabledSkills: this.options.disabledSkills,
@@ -154,6 +184,7 @@ export class PromptComposer {
       skillAllowlist: this.options.skillAllowlist,
     });
     const skillsListing = buildSkillListing(skills);
+    const declaredSkillGap = this.buildDeclaredSkillGap(skills);
     const capabilityContext = await this.buildSystemContext();
     // Memory rides here (tail, past the cache breakpoint) — not the system
     // prefix — so a memory change (extraction / recall usage++ / approve) never
@@ -169,6 +200,7 @@ export class PromptComposer {
 
     const parts = [
       skillsListing,
+      declaredSkillGap,
       capabilityContext,
       memoryContext,
       sourcesContext,

@@ -28,3 +28,41 @@ describe("composer profile main instruction", () => {
     expect(prompt).not.toContain("Digital-Human Main Instruction");
   });
 });
+
+describe("composer declared-skill gap notice", () => {
+  test("names the digital human's declared skills that are not installed", async () => {
+    const composer = new PromptComposer({
+      cwd,
+      model: "test-model",
+      profileMainInstruction: "先读 /hyperframes 选工作流。",
+      // Names that cannot collide with whatever the developer has installed
+      // user-wide — scanSkills reads the real ~/.code-shell/skills too.
+      profileDeclaredSkills: ["cs-absent-skill-a", "cs-absent-skill-b"],
+    });
+    const message = await composer.buildDynamicContextMessage();
+    const text = typeof message?.content === "string" ? message.content : "";
+    // A session bound to video-director called /hyperframes, got "Skill not
+    // found", then flailed with Glob before giving up. Say it up front instead.
+    expect(text).toContain("cs-absent-skill-a");
+    expect(text).toContain("cs-absent-skill-b");
+    expect(text).toMatch(/not installed/i);
+  });
+
+  test("says nothing when every declared skill is available", async () => {
+    const composer = new PromptComposer({
+      cwd,
+      model: "test-model",
+      profileDeclaredSkills: [],
+    });
+    const message = await composer.buildDynamicContextMessage();
+    const text = typeof message?.content === "string" ? message.content : "";
+    expect(text).not.toMatch(/not installed/i);
+  });
+
+  test("no declaration means no notice", async () => {
+    const composer = new PromptComposer({ cwd, model: "test-model" });
+    const message = await composer.buildDynamicContextMessage();
+    const text = typeof message?.content === "string" ? message.content : "";
+    expect(text).not.toMatch(/not installed/i);
+  });
+});

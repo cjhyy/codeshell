@@ -421,6 +421,37 @@ export function DigitalHumansView({
     return true;
   };
 
+  /**
+   * Summoning must satisfy dependencies too, not just "set as project default".
+   *
+   * A digital human whose `requires` were never installed is exactly the shell
+   * this feature exists to prevent: a real session bound to `video-director`
+   * called `/hyperframes` and got "Skill not found", then flailed with Glob
+   * before giving up. Summoning is the *common* entry point, so gating only the
+   * default toggle left the main path unguarded.
+   *
+   * Teams resolve every member: skills install per project (two projects are
+   * genuinely two installs), and members usually share requirements, so the
+   * second pass finds them already present and skips.
+   */
+  const ensureSelectionRequirements = async (
+    selection: DigitalHumanSelection,
+  ): Promise<boolean> => {
+    const names = selection.kind === "single" ? [selection.id] : selection.members;
+    for (const name of names) {
+      if (!(await ensureProfileRequirements(name))) return false;
+    }
+    return true;
+  };
+
+  /** Single choke point: every summon path goes through the dependency gate. */
+  const useSelection = (selection: DigitalHumanSelection, starterPrompt?: string): void => {
+    void (async () => {
+      if (!(await ensureSelectionRequirements(selection))) return;
+      onUse(selection, starterPrompt);
+    })();
+  };
+
   const commitProfileDefinitionImport = async () => {
     if (!importPreview) return;
     const preview = importPreview;
@@ -515,7 +546,7 @@ export function DigitalHumansView({
       );
       if (!installed) return;
     }
-    onUse({ kind: "single", id: entry.name, label: entry.label }, starterPrompt);
+    useSelection({ kind: "single", id: entry.name, label: entry.label }, starterPrompt);
   };
 
   const launchCuratedTeam = async (
@@ -524,7 +555,7 @@ export function DigitalHumansView({
   ): Promise<void> => {
     const existingTeam = teams.find((team) => team.id === blueprint.id);
     if (existingTeam) {
-      onUse(
+      useSelection(
         {
           kind: "team",
           id: existingTeam.id,
@@ -560,7 +591,7 @@ export function DigitalHumansView({
       },
     );
     if (!installed) return;
-    onUse(
+    useSelection(
       {
         kind: "team",
         id: blueprint.id,
@@ -589,13 +620,13 @@ export function DigitalHumansView({
       return;
     }
     if (detail.kind === "profile") {
-      onUse(
+      useSelection(
         { kind: "single", id: detail.profile.name, label: detail.profile.label },
         starterPrompt,
       );
       return;
     }
-    onUse(
+    useSelection(
       {
         kind: "team",
         id: detail.team.id,
@@ -849,7 +880,7 @@ export function DigitalHumansView({
                             operations.isBusy(`export-profile:${profile.name}`)
                           }
                           onUse={() =>
-                            onUse({ kind: "single", id: profile.name, label: profile.label })
+                            useSelection({ kind: "single", id: profile.name, label: profile.label })
                           }
                           onDetails={() => setDetail({ kind: "profile", profile })}
                           onEdit={() => setEditor({ profile })}
@@ -928,7 +959,7 @@ export function DigitalHumansView({
                           )}
                           busy={operations.isBusy(`delete-team:${team.id}`)}
                           onUse={() =>
-                            onUse({
+                            useSelection({
                               kind: "team",
                               id: team.id,
                               label: team.name,

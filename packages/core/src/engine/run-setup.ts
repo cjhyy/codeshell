@@ -100,6 +100,10 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     // WorkspaceProfile（数字人）：mainInstruction 从库活读（settings 只记名字）。
     // 命名注意：engine 的局部变量 `profile` 已被 RunBehaviorProfile 占用。
     profileMainInstruction: workspaceProfile?.mainInstruction,
+    // Only for the "declared but absent" notice; `requires` installs per project,
+    // so a profile summoned where the install never ran would otherwise instruct
+    // the model to call skills that do not exist here.
+    profileDeclaredSkills: workspaceProfile?.skills,
     profileMemoryDir,
     instructionOptions: {
       compatFileNames: instructionCompatFileNames,
