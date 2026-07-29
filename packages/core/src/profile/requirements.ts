@@ -15,7 +15,7 @@ import type { SkillRequirement, WorkspaceProfileRequirements } from "./types.js"
 /** scanner 已发现的一条 skill（`plugin:skill` 形式代表插件来源）。 */
 export interface KnownSkill {
   name: string;
-  source: "project" | "user" | "plugin";
+  source: "project" | "user" | "plugin" | "panel-app";
 }
 
 export interface SkillConflict {

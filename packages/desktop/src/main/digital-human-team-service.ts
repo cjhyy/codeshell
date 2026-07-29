@@ -1,3 +1,4 @@
+import { readAllHumanRepoEntries } from "@cjhyy/code-shell-core/internal";
 import {
   existsSync,
   lstatSync,
@@ -112,6 +113,22 @@ export function listDigitalHumanTeams(options?: {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+  // Repo-provided teams sit alongside locally-authored ones. A local team with
+  // the same id wins — the user's own edit must not be shadowed by a repo pull.
+  const localIds = new Set(teams.map((team) => team.id));
+  for (const team of readAllHumanRepoEntries().teams) {
+    if (localIds.has(team.id)) continue;
+    teams.push({
+      id: team.id,
+      name: team.name,
+      ...(team.description ? { description: team.description } : {}),
+      members: [...team.members],
+      // `mode` is a dead enum kept for schema compatibility; repos never set it.
+      mode: "auto",
+      ...(team.lead ? { lead: team.lead } : {}),
+      ...(team.playbook ? { playbook: team.playbook } : {}),
+    });
   }
   return teams.sort((a, b) => a.name.localeCompare(b.name));
 }

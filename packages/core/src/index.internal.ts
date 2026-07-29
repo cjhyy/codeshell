@@ -240,7 +240,10 @@ export {
   removeHumanRepo,
   type HumanRepoListEntry,
 } from "./profile/catalog-store.js";
-export { type CatalogEntry as DigitalHumanCatalogSourceEntry } from "./profile/catalog.js";
+export {
+  type CatalogEntry as DigitalHumanCatalogSourceEntry,
+  type CatalogTeam as DigitalHumanCatalogTeam,
+} from "./profile/catalog.js";
 export { CapabilityService } from "./capability-control/service.js";
 export { CapabilityNotFoundError } from "./capability-control/types.js";
 export {

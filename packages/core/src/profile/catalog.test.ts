@@ -200,3 +200,99 @@ describe("addHumanRepo error messages", () => {
     }
   }, 60_000);
 });
+
+describe("teams in a digital-human repo", () => {
+  test("reads teams alongside humans", () => {
+    const root = mkdtempSync(join(tmpdir(), "dh-catalog-teams-"));
+    try {
+      seedRepo(
+        root,
+        {
+          name: "r",
+          humans: [
+            { name: "alpha", label: "Alpha" },
+            { name: "beta", label: "Beta" },
+          ],
+          teams: [
+            {
+              id: "squad",
+              name: "Squad",
+              description: "two-person crew",
+              members: ["alpha", "beta"],
+              lead: "alpha",
+              playbook: "alpha drafts, beta reviews",
+            },
+          ],
+        },
+        { alpha: validProfile("alpha"), beta: validProfile("beta") },
+      );
+      const result = readCatalogFromDir(root, "o/r");
+      expect(result.teams).toHaveLength(1);
+      expect(result.teams[0].id).toBe("squad");
+      expect(result.teams[0].lead).toBe("alpha");
+      expect(result.teams[0].playbook).toContain("alpha drafts");
+      expect(result.teams[0].sourceRepo).toBe("o/r");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("drops a team whose members are not all in the repo", () => {
+    const root = mkdtempSync(join(tmpdir(), "dh-catalog-teams-bad-"));
+    try {
+      seedRepo(
+        root,
+        {
+          name: "r",
+          humans: [{ name: "alpha", label: "Alpha" }],
+          // `ghost` is not shipped here, so the team could never be summoned.
+          teams: [{ id: "squad", name: "Squad", members: ["alpha", "ghost"] }],
+        },
+        { alpha: validProfile("alpha") },
+      );
+      const result = readCatalogFromDir(root, "o/r");
+      expect(result.teams).toEqual([]);
+      expect(result.errors.join(" ")).toContain("ghost");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("drops a team with a lead outside its own members", () => {
+    const root = mkdtempSync(join(tmpdir(), "dh-catalog-teams-lead-"));
+    try {
+      seedRepo(
+        root,
+        {
+          name: "r",
+          humans: [
+            { name: "alpha", label: "Alpha" },
+            { name: "beta", label: "Beta" },
+          ],
+          teams: [{ id: "squad", name: "Squad", members: ["alpha", "beta"], lead: "alpha2" }],
+        },
+        { alpha: validProfile("alpha"), beta: validProfile("beta") },
+      );
+      const result = readCatalogFromDir(root, "o/r");
+      expect(result.teams).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a repo with no teams key is fine", () => {
+    const root = mkdtempSync(join(tmpdir(), "dh-catalog-teams-none-"));
+    try {
+      seedRepo(
+        root,
+        { name: "r", humans: [{ name: "alpha", label: "Alpha" }] },
+        {
+          alpha: validProfile("alpha"),
+        },
+      );
+      expect(readCatalogFromDir(root, "o/r").teams).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

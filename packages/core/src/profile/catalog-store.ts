@@ -17,6 +17,7 @@ import {
   readCatalogFromDir,
   sourceToRepoKey,
   type CatalogEntry,
+  type CatalogTeam,
 } from "./catalog.js";
 
 export interface RegisteredHumanRepo {
@@ -179,10 +180,16 @@ export function listHumanRepoDetails(): HumanRepoListEntry[] {
  * 同名定义按注册顺序先到先得，并记一条冲突说明——静默覆盖会让用户以为装的是
  * 另一个仓库的版本。
  */
-export function readAllHumanRepoEntries(): { entries: CatalogEntry[]; errors: string[] } {
+export function readAllHumanRepoEntries(): {
+  entries: CatalogEntry[];
+  teams: CatalogTeam[];
+  errors: string[];
+} {
   const entries: CatalogEntry[] = [];
+  const teams: CatalogTeam[] = [];
   const errors: string[] = [];
   const seen = new Map<string, string>();
+  const seenTeams = new Map<string, string>();
   for (const { repo } of listHumanRepos()) {
     const dir = humanRepoDir(repo);
     if (!existsSync(dir)) continue;
@@ -197,6 +204,15 @@ export function readAllHumanRepoEntries(): { entries: CatalogEntry[]; errors: st
       seen.set(entry.profile.name, repo);
       entries.push(entry);
     }
+    for (const team of read.teams) {
+      const owner = seenTeams.get(team.id);
+      if (owner) {
+        errors.push(`团队 "${team.id}" 同时存在于 ${owner} 与 ${repo}，已采用前者`);
+        continue;
+      }
+      seenTeams.set(team.id, repo);
+      teams.push(team);
+    }
   }
-  return { entries, errors };
+  return { entries, teams, errors };
 }

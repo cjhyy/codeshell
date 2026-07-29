@@ -31,6 +31,25 @@ export interface HumansManifest {
   name?: string;
   description?: string;
   humans: HumansManifestEntry[];
+  teams: HumansManifestTeam[];
+}
+
+/**
+ * A team shipped by a repo. Same shape as a locally-authored team minus `mode`
+ * (the dead enum): `lead` picks the coordinator, `playbook` is the collaboration
+ * rules injected into its opening briefing.
+ */
+export interface HumansManifestTeam {
+  id: string;
+  name: string;
+  description?: string;
+  members: string[];
+  lead?: string;
+  playbook?: string;
+}
+
+export interface CatalogTeam extends HumansManifestTeam {
+  sourceRepo: string;
 }
 
 export interface CatalogEntry {
@@ -43,6 +62,7 @@ export interface CatalogEntry {
 
 export interface CatalogReadResult {
   entries: CatalogEntry[];
+  teams: CatalogTeam[];
   /** 逐条目的失败原因；一个坏定义不该让整个仓库不可用。 */
   errors: string[];
 }
@@ -84,10 +104,30 @@ export function parseHumansManifest(raw: string): HumansManifest {
         : [],
     });
   }
+  const rawTeams = Array.isArray(value.teams) ? value.teams : [];
+  const teams: HumansManifestTeam[] = [];
+  for (const item of rawTeams) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const entry = item as Record<string, unknown>;
+    if (typeof entry.id !== "string" || !entry.id) continue;
+    if (typeof entry.name !== "string" || !entry.name) continue;
+    const rawMembers = Array.isArray(entry.members) ? entry.members : [];
+    const members = rawMembers.filter((m): m is string => typeof m === "string" && m.length > 0);
+    if (members.length < 2) continue;
+    teams.push({
+      id: entry.id,
+      name: entry.name,
+      ...(typeof entry.description === "string" ? { description: entry.description } : {}),
+      members,
+      ...(typeof entry.lead === "string" && entry.lead ? { lead: entry.lead } : {}),
+      ...(typeof entry.playbook === "string" && entry.playbook ? { playbook: entry.playbook } : {}),
+    });
+  }
   return {
     ...(typeof value.name === "string" ? { name: value.name } : {}),
     ...(typeof value.description === "string" ? { description: value.description } : {}),
     humans,
+    teams,
   };
 }
 
@@ -95,7 +135,7 @@ export function parseHumansManifest(raw: string): HumansManifest {
 export function readCatalogFromDir(dir: string, sourceRepo: string): CatalogReadResult {
   const manifestPath = join(dir, "humans.json");
   if (!existsSync(manifestPath)) {
-    return { entries: [], errors: [`${sourceRepo}: humans.json not found`] };
+    return { entries: [], teams: [], errors: [`${sourceRepo}: humans.json not found`] };
   }
 
   let manifest: HumansManifest;
@@ -104,6 +144,7 @@ export function readCatalogFromDir(dir: string, sourceRepo: string): CatalogRead
   } catch (error) {
     return {
       entries: [],
+      teams: [],
       errors: [`${sourceRepo}: humans.json is not valid JSON (${describe(error)})`],
     };
   }
@@ -130,7 +171,27 @@ export function readCatalogFromDir(dir: string, sourceRepo: string): CatalogRead
       errors.push(`${sourceRepo}: "${item.name}" is invalid (${describe(error)})`);
     }
   }
-  return { entries, errors };
+  // A team is only usable if every member ships in this same repo — otherwise
+  // summoning it would create Sessions bound to digital humans that do not exist.
+  const shipped = new Set(entries.map((entry) => entry.profile.name));
+  const teams: CatalogTeam[] = [];
+  for (const team of manifest.teams) {
+    if (!SAFE_SEGMENT_RE.test(team.id)) {
+      errors.push(`${sourceRepo}: team "${team.id}" has an unsafe id`);
+      continue;
+    }
+    const missing = team.members.filter((member) => !shipped.has(member));
+    if (missing.length > 0) {
+      errors.push(`${sourceRepo}: team "${team.id}" references missing ${missing.join(", ")}`);
+      continue;
+    }
+    if (team.lead && !team.members.includes(team.lead)) {
+      errors.push(`${sourceRepo}: team "${team.id}" lead is not one of its members`);
+      continue;
+    }
+    teams.push({ ...team, sourceRepo });
+  }
+  return { entries, teams, errors };
 }
 
 function describe(error: unknown): string {

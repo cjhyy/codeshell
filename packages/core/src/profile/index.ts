@@ -14,6 +14,8 @@ export {
   readCatalogFromDir,
   sourceToRepoKey,
   type CatalogEntry as DigitalHumanCatalogSourceEntry,
+  type CatalogTeam as DigitalHumanCatalogTeam,
+  type HumansManifestTeam,
   type CatalogReadResult,
   type HumansManifest,
   type HumansManifestEntry,
