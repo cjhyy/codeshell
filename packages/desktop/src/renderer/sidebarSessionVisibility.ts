@@ -3,8 +3,25 @@ export function compactSidebarSessions<T extends { id: string }>(
   activeSessionId: string | null,
   expanded: boolean,
   limit: number,
+  /**
+   * Cap while expanded. Expanding used to return every Session, so a project
+   * with ~1000 of them mounted ~1000 rows (and fired one IPC each) in a single
+   * commit. Omitted = unbounded, preserving the original behaviour for callers
+   * that want it.
+   */
+  expandedLimit?: number,
 ): T[] {
-  if (expanded || sessions.length <= limit) return [...sessions];
+  if (expanded) {
+    if (expandedLimit === undefined || sessions.length <= expandedLimit) return [...sessions];
+    const head = sessions.slice(0, expandedLimit);
+    if (!activeSessionId || head.some((session) => session.id === activeSessionId)) return head;
+    const active = sessions.find((session) => session.id === activeSessionId);
+    if (!active) return head;
+    // The active Session must stay visible even past the cap, otherwise the
+    // selected row disappears from its own list.
+    return [...head.slice(0, Math.max(0, expandedLimit - 1)), active];
+  }
+  if (sessions.length <= limit) return [...sessions];
   const compact = sessions.slice(0, limit);
   if (!activeSessionId || compact.some((session) => session.id === activeSessionId)) {
     return compact;

@@ -24,7 +24,11 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
-import type { DigitalHumanTeam, DigitalHumanTeamMode } from "../../shared/digital-human-team";
+import {
+  DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT,
+  type DigitalHumanTeam,
+  type DigitalHumanTeamMode,
+} from "../../shared/digital-human-team";
 import type { DigitalHumanProfileImportPreview } from "../../shared/digital-human-profile-transfer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +42,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -501,6 +507,7 @@ export function DigitalHumansView({
           label: existingTeam.name,
           members: existingTeam.members,
           mode: existingTeam.mode,
+          team: existingTeam,
         },
         starterPrompt,
       );
@@ -536,6 +543,12 @@ export function DigitalHumansView({
         label: blueprint.name,
         members: [...blueprint.members],
         mode: blueprint.mode,
+        team: {
+          id: blueprint.id,
+          name: blueprint.name,
+          members: [...blueprint.members],
+          mode: blueprint.mode,
+        },
       },
       starterPrompt,
     );
@@ -565,6 +578,7 @@ export function DigitalHumansView({
         label: detail.team.name,
         members: detail.team.members,
         mode: detail.team.mode,
+        team: detail.team,
       },
       starterPrompt,
     );
@@ -948,6 +962,7 @@ export function DigitalHumansView({
                               label: team.name,
                               members: team.members,
                               mode: team.mode,
+                              team,
                             })
                           }
                           onDetails={() => setDetail({ kind: "team", team })}
@@ -1916,6 +1931,8 @@ export function useDigitalHumanTeamDraft(
   const [description, setDescription] = React.useState("");
   const [mode, setMode] = React.useState<DigitalHumanTeamMode>("auto");
   const [members, setMembers] = React.useState<Set<string>>(() => new Set());
+  const [lead, setLead] = React.useState("");
+  const [playbook, setPlaybook] = React.useState("");
 
   React.useEffect(() => {
     if (!open) return;
@@ -1924,6 +1941,8 @@ export function useDigitalHumanTeamDraft(
     setDescription(team?.description ?? "");
     setMode(team?.mode ?? "auto");
     setMembers(new Set(team?.members ?? []));
+    setLead(team?.lead ?? "");
+    setPlaybook(team?.playbook ?? "");
   }, [open, team]);
 
   const toggleMember = React.useCallback((memberId: string) => {
@@ -1947,6 +1966,10 @@ export function useDigitalHumanTeamDraft(
           ...(description.trim() ? { description: description.trim() } : {}),
           members: [...members],
           mode,
+          // A lead dropped from the roster must not be persisted — the schema
+          // rejects a lead outside `members`, and it could never be reached.
+          ...(lead && members.has(lead) ? { lead } : {}),
+          ...(lead && members.has(lead) && playbook.trim() ? { playbook: playbook.trim() } : {}),
         }
       : null;
 
@@ -1954,6 +1977,10 @@ export function useDigitalHumanTeamDraft(
     id,
     name,
     setName,
+    lead,
+    setLead,
+    playbook,
+    setPlaybook,
     description,
     setDescription,
     mode,
@@ -1987,14 +2014,17 @@ export function TeamDialog({
     setName,
     description,
     setDescription,
-    mode,
-    setMode,
     members,
     toggleMember,
     missingMembers,
+    lead,
+    setLead,
+    playbook,
+    setPlaybook,
     canSave: draftCanSave,
     toTeam,
   } = useDigitalHumanTeamDraft(open, team, profiles);
+  const selectedMembers = React.useMemo(() => [...members], [members]);
   const memberOptions = [
     ...profiles.map((profile) => ({
       id: profile.name,
@@ -2053,25 +2083,10 @@ export function TeamDialog({
                 placeholder={t("digitalHumans.team.descriptionPlaceholder")}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="digital-human-team-mode">{t("digitalHumans.team.modeLabel")}</Label>
-              <Select
-                value={mode}
-                onValueChange={(value) => setMode(value as DigitalHumanTeamMode)}
-              >
-                <SelectTrigger
-                  id="digital-human-team-mode"
-                  aria-label={t("digitalHumans.team.modeLabel")}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">{t("digitalHumans.team.mode.auto")}</SelectItem>
-                  <SelectItem value="divide">{t("digitalHumans.team.mode.divide")}</SelectItem>
-                  <SelectItem value="compare">{t("digitalHumans.team.mode.compare")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* `mode` (auto/divide/compare) is gone from the UI: it never reached
+                any runtime logic — all three produced identical Sessions. The lead
+                plus a written playbook is what actually drives collaboration. The
+                field is still persisted so existing team files keep parsing. */}
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">{t("digitalHumans.team.members")}</legend>
               <div className="grid max-h-52 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
@@ -2120,6 +2135,43 @@ export function TeamDialog({
                 </p>
               ) : null}
             </fieldset>
+            <div className="space-y-1.5">
+              <Label htmlFor="digital-human-team-lead">{t("digitalHumans.team.leadLabel")}</Label>
+              <SimpleSelect
+                ariaLabel={t("digitalHumans.team.leadLabel")}
+                value={selectedMembers.includes(lead) ? lead : ""}
+                onChange={setLead}
+                placeholder={t("digitalHumans.team.noLead")}
+                options={[
+                  { value: "", label: t("digitalHumans.team.noLead") },
+                  ...memberOptions
+                    .filter((profile) => selectedMembers.includes(profile.id))
+                    .map((profile) => ({ value: profile.id, label: profile.label })),
+                ]}
+              />
+              <p className="text-xs leading-5 text-muted-foreground">
+                {t("digitalHumans.team.leadHint")}
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="digital-human-team-playbook">
+                {t("digitalHumans.team.playbookLabel")}
+              </Label>
+              <Textarea
+                id="digital-human-team-playbook"
+                value={playbook}
+                onChange={(event) => setPlaybook(event.target.value)}
+                rows={4}
+                maxLength={DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT}
+                placeholder={t("digitalHumans.team.playbookPlaceholder")}
+                disabled={!lead || !selectedMembers.includes(lead)}
+              />
+              <p className="text-xs leading-5 text-muted-foreground">
+                {lead && selectedMembers.includes(lead)
+                  ? t("digitalHumans.team.playbookHint")
+                  : t("digitalHumans.team.playbookNeedsLead")}
+              </p>
+            </div>
           </div>
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

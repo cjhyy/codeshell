@@ -3423,11 +3423,16 @@ ipcMain.handle(
   async (
     _e,
     input: { scope?: unknown; cwd?: unknown; skillName?: unknown } | string,
-    source?: "user" | "project" | "plugin",
+    source?: "user" | "project" | "plugin" | "panel-app",
     cwd?: string,
   ) => {
     if (typeof input === "string") {
-      if (source !== "user" && source !== "project" && source !== "plugin") {
+      if (
+        source !== "user" &&
+        source !== "project" &&
+        source !== "plugin" &&
+        source !== "panel-app"
+      ) {
         throw new Error("invalid source");
       }
       return uninstallListedSkill(input, source, typeof cwd === "string" ? cwd : undefined);

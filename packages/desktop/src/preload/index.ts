@@ -973,6 +973,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   preparePanelApp: (id: string) => ipcRenderer.invoke("panel-apps:prepare", id),
   bindPanelApp: (input: import("../shared/panel-apps").PanelAppBindInput) =>
     ipcRenderer.invoke("panel-apps:bind", input),
+  invokePanelAppAgentTool: (
+    input: import("../shared/panel-apps").PanelAppAgentToolInvocation,
+  ) => ipcRenderer.invoke("panel-apps:invoke-agent-tool", input),
   onPanelAppsChanged: (cb: () => void) => {
     const handler = () => cb();
     ipcRenderer.on("panel-apps:changed", handler);

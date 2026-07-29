@@ -38,11 +38,25 @@ describe("DigitalHumansView contract", () => {
     expect(dhSection).toContain("<ProfileSection");
   });
 
-  test("creates Session-based teams with both collaboration modes", () => {
-    expect(source).toContain('value="divide"');
-    expect(source).toContain('value="compare"');
+  test("teams are authored with a lead and a written playbook, not a mode enum", () => {
+    // auto/divide/compare never reached any runtime logic — all three produced
+    // identical Sessions. A lead plus free-text rules is what actually drives
+    // collaboration, so the enum left the UI (the field stays persisted).
+    expect(source).not.toContain('<SelectItem value="divide">');
+    expect(source).not.toContain('<SelectItem value="compare">');
+    expect(source).toContain("digitalHumans.team.leadLabel");
+    expect(source).toContain("digitalHumans.team.playbookLabel");
     expect(source).toContain("saveDigitalHumanTeam");
     expect(source).toContain('kind: "team"');
+  });
+
+  test("summoning a team briefs every member with the roster it can reach", () => {
+    // Members used to be created in mutual ignorance: no teammate Session ids
+    // meant SendMessageToSession was unusable and a "team" saved only clicks.
+    expect(app).toContain("buildTeamBriefings");
+    expect(app).toContain("teamRole: profileName === team.lead");
+    // The lead is the Session the user talks to, so it gets activated.
+    expect(app).toContain("activate: index === leadIndex");
   });
 
   test("supports the discover-detail-sample-summon journey", () => {

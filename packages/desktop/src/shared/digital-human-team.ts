@@ -3,13 +3,37 @@ export const DIGITAL_HUMAN_ID_RE = DIGITAL_HUMAN_TEAM_ID_RE;
 
 export type DigitalHumanTeamMode = "auto" | "divide" | "compare";
 
+export const DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT = 4_000;
+
 /** Reusable project workflow that creates one independently bound Session per member. */
 export interface DigitalHumanTeam {
   id: string;
   name: string;
   description?: string;
   members: string[];
+  /**
+   * @deprecated `auto`/`divide`/`compare` never reached any runtime logic — the
+   * three modes produced identical Sessions. `playbook` replaces it: free text
+   * beats a three-value enum for describing real collaboration. Kept so existing
+   * team files still parse.
+   */
   mode: DigitalHumanTeamMode;
+  /**
+   * Which member coordinates. Must be one of `members`. Omitted = no lead, every
+   * member just gets the shared goal.
+   *
+   * The lead is a normal Session, not a new kind of agent: it receives the other
+   * members' Session ids and drives them with the existing SendMessageToSession
+   * tool. Orchestration lives in that Session's transcript — visible, and the
+   * user can step in — rather than inside Pet.
+   */
+  lead?: string;
+  /**
+   * User-authored collaboration rules, injected into the lead's opening message.
+   * This is the editable half of orchestration: you write who goes first and how
+   * output is handed over; the lead follows it.
+   */
+  playbook?: string;
 }
 
 const TEAM_MODES = new Set<DigitalHumanTeamMode>(["auto", "divide", "compare"]);
@@ -39,5 +63,22 @@ export function parseDigitalHumanTeam(input: unknown): DigitalHumanTeam {
   ) {
     throw new Error("digital-human team members must be unique valid ids");
   }
-  return { id, name, ...(description ? { description } : {}), members, mode };
+  const lead = typeof value.lead === "string" ? value.lead.trim() : undefined;
+  if (lead !== undefined && lead !== "" && !members.includes(lead)) {
+    // A lead outside the roster could never be handed the members' Session ids.
+    throw new Error("digital-human team lead must be one of its members");
+  }
+  const playbook = typeof value.playbook === "string" ? value.playbook.trim() : undefined;
+  if (playbook !== undefined && playbook.length > DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT) {
+    throw new Error("digital-human team playbook is too long");
+  }
+  return {
+    id,
+    name,
+    ...(description ? { description } : {}),
+    members,
+    mode,
+    ...(lead ? { lead } : {}),
+    ...(playbook ? { playbook } : {}),
+  };
 }

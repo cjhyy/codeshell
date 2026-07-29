@@ -1185,7 +1185,7 @@ function App() {
       const cwd = projectId
         ? (projects.find((project) => project.id === projectId)?.path ?? null)
         : noRepoCwdRef.current;
-      const response = resolveAgentPanelHostRequest(request, {
+      void resolveAgentPanelHostRequest(request, {
         availability: { cwd, engineSessionId: request.sessionId },
         translate: (key) => t(key as never),
         open: (panelId) => {
@@ -1196,8 +1196,14 @@ function App() {
             requestKind: panelId,
           }));
         },
-      });
-      compatibilityApi.respondAgentPanelRequest?.(response);
+        invoke: (panelId, toolName, args) =>
+          window.codeshell.invokePanelAppAgentTool({
+            appDescriptorId: panelId,
+            bucket: request.bucket,
+            toolName,
+            arguments: args,
+          }),
+      }).then((response) => compatibilityApi.respondAgentPanelRequest?.(response));
     });
   }, [activeBucket, panelByBucket, projects, t, updatePanelBucket]);
 
@@ -2131,19 +2137,35 @@ function App() {
                       const members =
                         selection.kind === "single" ? [selection.id] : selection.members;
                       if (members.length === 0) return;
+                      const team = selection.kind === "team" ? selection.team : undefined;
+                      // The lead is activated (and gets the composer draft) rather
+                      // than whoever happens to be first — that is the Session the
+                      // user actually talks to.
+                      const leadIndex = team?.lead ? Math.max(0, members.indexOf(team.lead)) : 0;
                       let activeCreatedId: string | null = null;
                       let latestIndex: SessionIndex | null = null;
+                      const roster: TeamMemberSlot[] = [];
                       members.forEach((profileName, index) => {
+                        const label =
+                          sessionWorkspaceProfiles.find((p) => p.name === profileName)?.label ??
+                          profileName;
                         const title =
                           selection.kind === "single"
                             ? selection.label
-                            : `${selection.label} · ${profileName}`;
+                            : `${team?.name ?? selection.label} · ${label}`;
                         const created = createSession(activeProjectId, title, {
-                          activate: index === 0,
+                          activate: index === leadIndex,
                           workspaceProfile: profileName,
+                          ...(team
+                            ? {
+                                teamId: team.id,
+                                teamRole: profileName === team.lead ? "lead" : "member",
+                              }
+                            : {}),
                         });
-                        if (index === 0) activeCreatedId = created.sessionId;
+                        if (index === leadIndex) activeCreatedId = created.sessionId;
                         latestIndex = created.index;
+                        roster.push({ profileName, sessionId: created.sessionId, label });
                       });
                       if (!activeCreatedId || !latestIndex) return;
                       const bucket = bucketKey(activeProjectId, activeCreatedId);
@@ -2152,7 +2174,25 @@ function App() {
                         ...previous,
                         [projectBucketSegmentFor(activeProjectId)]: latestIndex!,
                       }));
-                      if (starterPrompt) {
+                      if (team) {
+                        // Seed each Session's composer with its briefing so the
+                        // user can read (and adjust) what the lead was told before
+                        // anything is sent. Nothing auto-sends: summoning a team
+                        // must not fire N concurrent runs behind the user's back.
+                        const briefings = buildTeamBriefings(team, roster, starterPrompt);
+                        if (briefings.length > 0) {
+                          setComposerDrafts((previous) => {
+                            const next = { ...previous };
+                            for (const briefing of briefings) {
+                              next[bucketKey(activeProjectId, briefing.sessionId)] = {
+                                text: briefing.text,
+                                attachments: EMPTY_ATTACHMENTS,
+                              };
+                            }
+                            return next;
+                          });
+                        }
+                      } else if (starterPrompt) {
                         setComposerDrafts((previous) => ({
                           ...previous,
                           [bucket]: { text: starterPrompt, attachments: EMPTY_ATTACHMENTS },
@@ -2499,3 +2539,4 @@ function resolveActiveKey(s: Record<string, unknown>): string | null {
 
 export { App };
 export default App;
+import { buildTeamBriefings, type TeamMemberSlot } from "../shared/digital-human-team-briefing";

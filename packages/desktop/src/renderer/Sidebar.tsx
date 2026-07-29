@@ -22,6 +22,7 @@ import {
   GitBranch,
   Loader2,
   Pin,
+  UsersRound,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -88,6 +89,14 @@ interface SidebarProps {
 }
 
 const COMPACT_SESSION_LIMIT = 5;
+/**
+ * Cap on per-Session worktree-branch lookups (one IPC each). Chosen to comfortably
+ * cover a normally-sized expanded list while keeping a ~1000-Session project from
+ * issuing ~1000 concurrent state-file reads.
+ */
+const WORKTREE_BRANCH_LOOKUP_LIMIT = 40;
+/** Rows rendered per "show more" step, so expanding never mounts ~1000 at once. */
+const EXPANDED_SESSION_PAGE = 60;
 
 type MenuTarget =
   | { kind: "project"; x: number; y: number; project: TrackedProject }
@@ -540,7 +549,14 @@ function useVisibleWorktreeBranches(
   const requestVersions = useRef(new Map<string, number>());
   const [branches, setBranches] = useState<Record<string, string>>({});
   const engineSessionIds = useMemo(
-    () => sessions.flatMap((session) => (session.engineSessionId ? [session.engineSessionId] : [])),
+    () =>
+      sessions
+        .flatMap((session) => (session.engineSessionId ? [session.engineSessionId] : []))
+        // One `getSessionWorkspace` IPC per visible Session. Expanding a project
+        // with ~1000 Sessions fired ~1000 concurrent IPCs, each reading a state
+        // file in main — that, not the DOM, was what froze the sidebar. The
+        // branch icon is decoration, so cap it and let the rest render without.
+        .slice(0, WORKTREE_BRANCH_LOOKUP_LIMIT),
     [sessions],
   );
 
@@ -640,6 +656,8 @@ export function ProjectGroup({
 }) {
   const { t } = useT();
   const [showMore, setShowMore] = useState(false);
+  /** How many EXPANDED_SESSION_PAGE-sized pages of the expanded list to render. */
+  const [expandedPage, setExpandedPage] = useState(1);
 
   const all = index?.sessions ?? [];
   const live = useMemo(() => sortSidebarSessions(all.filter((s) => !s.archived)), [all]);
@@ -651,8 +669,9 @@ export function ProjectGroup({
         isActiveProject ? activeSessionId : null,
         showMore,
         COMPACT_SESSION_LIMIT,
+        expandedPage * EXPANDED_SESSION_PAGE,
       ),
-    [activeSessionId, isActiveProject, live, showMore],
+    [activeSessionId, expandedPage, isActiveProject, live, showMore],
   );
   const hiddenLiveCount = Math.max(0, live.length - visibleLive.length);
   const workspaceSessions = useMemo(() => (collapsed ? [] : visibleLive), [collapsed, visibleLive]);
@@ -680,6 +699,7 @@ export function ProjectGroup({
           aria-expanded={!collapsed}
           onClick={() => {
             setShowMore(false);
+            setExpandedPage(1);
             onSelectProject();
             onToggle();
           }}
@@ -756,14 +776,20 @@ export function ProjectGroup({
                   onHover={refreshProjectBranch}
                 />
               ))}
-              {hiddenLiveCount > 0 && !showMore && (
+              {hiddenLiveCount > 0 && (
                 <li>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="h-7 w-full justify-between px-2 text-xs text-primary"
-                    onClick={() => setShowMore(true)}
+                    // Expanding reveals one page at a time. Rendering every
+                    // Session at once is what made a large project's sidebar
+                    // freeze, so "expand" becomes repeatable rather than total.
+                    onClick={() => {
+                      if (!showMore) setShowMore(true);
+                      else setExpandedPage((current) => current + 1);
+                    }}
                   >
                     <span>{t("common.expand")}</span>
                     <span className="text-muted-foreground">{hiddenLiveCount}</span>
@@ -917,216 +943,258 @@ function SessionHoverCard({
   );
 }
 
-function SessionRow({
-  s,
-  isActive,
-  status,
-  worktreeBranch,
-  branch,
-  folderName,
-  showKbd,
-  kbdIndex,
-  onClick,
-  onContextMenu,
-  onPin,
-  onArchive,
-  onHover,
-}: {
-  s: SessionSummary;
-  isActive: boolean;
-  status?: SessionStatus;
-  worktreeBranch?: string;
-  branch?: string;
-  folderName: string;
-  showKbd: boolean;
-  kbdIndex: number;
-  onClick: () => void;
-  onContextMenu: (e: React.MouseEvent) => void;
-  onPin?: () => void;
-  onArchive?: () => void;
-  onHover?: () => void;
-}) {
-  const { t, lang } = useT();
-  const [confirming, setConfirming] = useState(false);
-  const [hoverCardOpen, setHoverCardOpen] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const rowRef = useRef<HTMLLIElement>(null);
-  const hoverCardId = useId();
+/**
+ * Memoized: the parent re-renders on every branch backfill and status tick, which
+ * previously re-rendered every mounted row. Callbacks are recreated per parent
+ * render, so compare by the values that actually change the output.
+ */
+const SessionRow = React.memo(
+  function SessionRow({
+    s,
+    isActive,
+    status,
+    worktreeBranch,
+    branch,
+    folderName,
+    showKbd,
+    kbdIndex,
+    onClick,
+    onContextMenu,
+    onPin,
+    onArchive,
+    onHover,
+  }: {
+    s: SessionSummary;
+    isActive: boolean;
+    status?: SessionStatus;
+    worktreeBranch?: string;
+    branch?: string;
+    folderName: string;
+    showKbd: boolean;
+    kbdIndex: number;
+    onClick: () => void;
+    onContextMenu: (e: React.MouseEvent) => void;
+    onPin?: () => void;
+    onArchive?: () => void;
+    onHover?: () => void;
+  }) {
+    const { t, lang } = useT();
+    const [confirming, setConfirming] = useState(false);
+    const [hoverCardOpen, setHoverCardOpen] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const rowRef = useRef<HTMLLIElement>(null);
+    const hoverCardId = useId();
 
-  useEffect(() => {
-    return () => {
+    useEffect(() => {
+      return () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      };
+    }, []);
+
+    const armConfirm = (e: React.MouseEvent): void => {
+      e.stopPropagation();
+      setConfirming(true);
       if (timerRef.current) clearTimeout(timerRef.current);
-      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      // Auto-revert if the user wanders off — same "tap twice or it cancels"
+      // pattern as the screenshot reference.
+      timerRef.current = setTimeout(() => setConfirming(false), 2500);
     };
-  }, []);
 
-  const armConfirm = (e: React.MouseEvent): void => {
-    e.stopPropagation();
-    setConfirming(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    // Auto-revert if the user wanders off — same "tap twice or it cancels"
-    // pattern as the screenshot reference.
-    timerRef.current = setTimeout(() => setConfirming(false), 2500);
-  };
+    const fireArchive = (e: React.MouseEvent): void => {
+      e.stopPropagation();
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setConfirming(false);
+      onArchive?.();
+    };
 
-  const fireArchive = (e: React.MouseEvent): void => {
-    e.stopPropagation();
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setConfirming(false);
-    onArchive?.();
-  };
+    const togglePin = (e: React.MouseEvent): void => {
+      e.stopPropagation();
+      onPin?.();
+    };
 
-  const togglePin = (e: React.MouseEvent): void => {
-    e.stopPropagation();
-    onPin?.();
-  };
-
-  return (
-    <>
-      <li
-        ref={rowRef}
-        aria-describedby={hoverCardOpen ? hoverCardId : undefined}
-        className={cn(
-          "group flex items-center gap-1 rounded-md px-1 text-sm",
-          isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60",
-          s.archived && "opacity-60",
-        )}
-        onContextMenu={onContextMenu}
-        onMouseEnter={() => {
-          if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = setTimeout(() => setHoverCardOpen(true), 350);
-          onHover?.();
-        }}
-        onFocus={onHover}
-        onMouseLeave={() => {
-          if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-          setHoverCardOpen(false);
-          if (confirming) {
-            if (timerRef.current) clearTimeout(timerRef.current);
-            setConfirming(false);
-          }
-        }}
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 min-w-0 flex-1 justify-start gap-1.5 px-1 font-normal hover:bg-transparent"
-          aria-current={isActive ? "page" : undefined}
-          onClick={onClick}
+    return (
+      <>
+        <li
+          ref={rowRef}
+          aria-describedby={hoverCardOpen ? hoverCardId : undefined}
+          className={cn(
+            "group flex items-center gap-1 rounded-md px-1 text-sm",
+            isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60",
+            s.archived && "opacity-60",
+          )}
+          onContextMenu={onContextMenu}
+          onMouseEnter={() => {
+            if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+            hoverTimerRef.current = setTimeout(() => setHoverCardOpen(true), 350);
+            onHover?.();
+          }}
+          onFocus={onHover}
+          onMouseLeave={() => {
+            if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+            setHoverCardOpen(false);
+            if (confirming) {
+              if (timerRef.current) clearTimeout(timerRef.current);
+              setConfirming(false);
+            }
+          }}
         >
-          {s.source === "automation" && (
-            <Clock
-              className="h-3 w-3 shrink-0 text-muted-foreground"
-              aria-label={t("sidebar.automationLabel")}
-            />
-          )}
-          {worktreeBranch && (
-            <GitBranch
-              className="h-3 w-3 shrink-0 text-primary"
-              aria-label={t("sidebar.worktreeBranch", { branch: worktreeBranch })}
-            />
-          )}
-          <span className="flex-1 truncate text-left">{s.title}</span>
-          {s.pinned && (
-            <Pin
-              className="h-3 w-3 shrink-0 fill-current text-primary"
-              aria-label={t("sidebar.pinnedSession")}
-            />
-          )}
-          {status === "running" ? (
-            <Loader2
-              className="h-3 w-3 shrink-0 animate-spin text-status-running"
-              aria-label={t("sidebar.sessionRunning")}
-            />
-          ) : status === "asking" ? (
-            <span
-              className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
-              aria-label={t("sidebar.sessionAsking")}
-              role="img"
-            />
-          ) : status === "unread" ? (
-            <span
-              className="h-2 w-2 shrink-0 rounded-full bg-primary"
-              aria-label={t("sidebar.sessionUnread")}
-              role="img"
-            />
-          ) : null}
-        </Button>
-        <span className="relative flex shrink-0 items-center">
-          {confirming ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-6 px-1.5 text-xs text-status-err hover:bg-background"
-              onClick={fireArchive}
-              aria-label={t("sidebar.confirmArchive")}
-              title={t("sidebar.confirmArchive")}
-            >
-              {t("common.confirm")}
-            </Button>
-          ) : (
-            <>
-              {/* Shortcut / relative-time badge sits in normal flow and defines
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 min-w-0 flex-1 justify-start gap-1.5 px-1 font-normal hover:bg-transparent"
+            aria-current={isActive ? "page" : undefined}
+            onClick={onClick}
+          >
+            {s.source === "automation" && (
+              <Clock
+                className="h-3 w-3 shrink-0 text-muted-foreground"
+                aria-label={t("sidebar.automationLabel")}
+              />
+            )}
+            {worktreeBranch && (
+              <GitBranch
+                className="h-3 w-3 shrink-0 text-primary"
+                aria-label={t("sidebar.worktreeBranch", { branch: worktreeBranch })}
+              />
+            )}
+            {/* Team membership was only inferable from the title prefix. The lead
+              gets a filled marker so the Session you talk to stands out from the
+              members it drives. */}
+            {s.teamId && (
+              <UsersRound
+                className={cn(
+                  "h-3 w-3 shrink-0",
+                  s.teamRole === "lead" ? "text-primary" : "text-muted-foreground",
+                )}
+                aria-label={t(
+                  s.teamRole === "lead" ? "sidebar.teamLeadSession" : "sidebar.teamMemberSession",
+                )}
+              />
+            )}
+            <span className="flex-1 truncate text-left">{s.title}</span>
+            {s.pinned && (
+              <Pin
+                className="h-3 w-3 shrink-0 fill-current text-primary"
+                aria-label={t("sidebar.pinnedSession")}
+              />
+            )}
+            {status === "running" ? (
+              <Loader2
+                className="h-3 w-3 shrink-0 animate-spin text-status-running"
+                aria-label={t("sidebar.sessionRunning")}
+              />
+            ) : status === "asking" ? (
+              <span
+                className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
+                aria-label={t("sidebar.sessionAsking")}
+                role="img"
+              />
+            ) : status === "unread" ? (
+              <span
+                className="h-2 w-2 shrink-0 rounded-full bg-primary"
+                aria-label={t("sidebar.sessionUnread")}
+                role="img"
+              />
+            ) : null}
+          </Button>
+          <span className="relative flex shrink-0 items-center">
+            {confirming ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-1.5 text-xs text-status-err hover:bg-background"
+                onClick={fireArchive}
+                aria-label={t("sidebar.confirmArchive")}
+                title={t("sidebar.confirmArchive")}
+              >
+                {t("common.confirm")}
+              </Button>
+            ) : (
+              <>
+                {/* Shortcut / relative-time badge sits in normal flow and defines
                     the slot width. */}
-              {showKbd ? (
-                <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
-                  ⌘{kbdIndex}
-                </kbd>
-              ) : (
-                <span className="text-[10px] text-muted-foreground">
-                  {formatRelative(s.updatedAt, lang)}
+                {showKbd ? (
+                  <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
+                    ⌘{kbdIndex}
+                  </kbd>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground">
+                    {formatRelative(s.updatedAt, lang)}
+                  </span>
+                )}
+                <span className="absolute right-0 z-10 flex bg-accent opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
+                  {onPin && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "size-6 text-muted-foreground hover:bg-background",
+                        s.pinned && "text-primary",
+                      )}
+                      onClick={togglePin}
+                      aria-label={s.pinned ? t("sidebar.unpinSession") : t("sidebar.pinSession")}
+                      title={s.pinned ? t("sidebar.unpinSession") : t("sidebar.pinSession")}
+                    >
+                      <Pin size={12} className={s.pinned ? "fill-current" : undefined} />
+                    </Button>
+                  )}
+                  {onArchive && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-6 text-muted-foreground hover:bg-background"
+                      onClick={armConfirm}
+                      aria-label={t("common.archive")}
+                      title={t("common.archive")}
+                    >
+                      <Archive size={12} />
+                    </Button>
+                  )}
                 </span>
-              )}
-              <span className="absolute right-0 z-10 flex bg-accent opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
-                {onPin && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "size-6 text-muted-foreground hover:bg-background",
-                      s.pinned && "text-primary",
-                    )}
-                    onClick={togglePin}
-                    aria-label={s.pinned ? t("sidebar.unpinSession") : t("sidebar.pinSession")}
-                    title={s.pinned ? t("sidebar.unpinSession") : t("sidebar.pinSession")}
-                  >
-                    <Pin size={12} className={s.pinned ? "fill-current" : undefined} />
-                  </Button>
-                )}
-                {onArchive && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 text-muted-foreground hover:bg-background"
-                    onClick={armConfirm}
-                    aria-label={t("common.archive")}
-                    title={t("common.archive")}
-                  >
-                    <Archive size={12} />
-                  </Button>
-                )}
-              </span>
-            </>
-          )}
-        </span>
-      </li>
-      <SessionHoverCard
-        id={hoverCardId}
-        open={hoverCardOpen}
-        anchorRef={rowRef}
-        title={s.title}
-        relativeTime={formatRelative(s.updatedAt, lang)}
-        folderName={folderName}
-        branch={branch}
-      />
-    </>
-  );
-}
+              </>
+            )}
+          </span>
+        </li>
+        <SessionHoverCard
+          id={hoverCardId}
+          open={hoverCardOpen}
+          anchorRef={rowRef}
+          title={s.title}
+          relativeTime={formatRelative(s.updatedAt, lang)}
+          folderName={folderName}
+          branch={branch}
+        />
+      </>
+    );
+  },
+  /**
+   * Re-render only when the row's own output changes. `s` is a new object on each
+   * index write, so compare the fields the row actually renders instead of identity.
+   */
+  (prev, next) =>
+    prev.s.id === next.s.id &&
+    prev.s.title === next.s.title &&
+    prev.s.pinned === next.s.pinned &&
+    prev.s.archived === next.s.archived &&
+    prev.s.updatedAt === next.s.updatedAt &&
+    prev.s.source === next.s.source &&
+    prev.s.teamId === next.s.teamId &&
+    prev.s.teamRole === next.s.teamRole &&
+    prev.s.workspaceProfile === next.s.workspaceProfile &&
+    prev.isActive === next.isActive &&
+    prev.status === next.status &&
+    prev.worktreeBranch === next.worktreeBranch &&
+    prev.branch === next.branch &&
+    prev.folderName === next.folderName &&
+    prev.showKbd === next.showKbd &&
+    prev.kbdIndex === next.kbdIndex,
+);
 
 export function formatRelative(ts: number, lang: "zh" | "en", now = Date.now()): string {
   const delta = Math.max(0, now - ts);

@@ -35,6 +35,7 @@ import type {
   PanelAppDescriptor,
   PanelAppExtensionSummary,
   PanelAppHostContext,
+  PanelAppAgentToolInvocation,
   PreparedPanelApp,
 } from "../shared/panel-apps";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
@@ -1443,6 +1444,7 @@ export interface CodeshellApi {
   listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
   preparePanelApp(id: string): Promise<PreparedPanelApp>;
   bindPanelApp(input: PanelAppBindInput): Promise<boolean>;
+  invokePanelAppAgentTool(input: PanelAppAgentToolInvocation): Promise<unknown>;
   onPanelAppsChanged(cb: () => void): () => void;
   onAgentPanelRequest(cb: (request: AgentPanelHostRequest) => void): () => void;
   respondAgentPanelRequest(response: AgentPanelHostResponse): void;
@@ -2317,7 +2319,7 @@ export interface McpProbeResult {
 export interface SkillSummary {
   name: string;
   description: string;
-  source: "project" | "user" | "plugin";
+  source: "project" | "user" | "plugin" | "panel-app";
   filePath: string;
 }
 
@@ -2524,6 +2526,10 @@ declare global {
     codeshellPanel?: Readonly<{
       getContext(): Promise<PanelAppHostContext>;
       call(method: string, params?: unknown): Promise<unknown>;
+      registerTool(
+        name: string,
+        handler: (args: Record<string, unknown>) => unknown | Promise<unknown>,
+      ): () => void;
       on(event: "context.changed", listener: (payload: unknown) => void): () => void;
     }>;
   }

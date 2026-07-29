@@ -92,6 +92,13 @@ export interface SessionSummary {
    * '新对话' resume the previous chat's context.
    */
   engineSessionId?: string;
+  /**
+   * Team this Session was summoned as part of, and its role in it. Set once at
+   * creation; lets the sidebar show which Sessions belong together instead of
+   * leaving the user to infer it from titles.
+   */
+  teamId?: string;
+  teamRole?: "lead" | "member";
   /** Current, switchable digital-human identity for this project Session. */
   workspaceProfile?: string;
   /** "automation" when imported from a cron run; absent for manual chats. */
@@ -635,6 +642,9 @@ export interface CreateSessionOptions {
   activate?: boolean;
   /** Bind the new Session to one workspace profile/digital human. */
   workspaceProfile?: string;
+  /** Mark the Session as part of a summoned team (see SessionSummary.teamId). */
+  teamId?: string;
+  teamRole?: "lead" | "member";
 }
 
 /** Create a new session under `projectId`, active by default. */
@@ -652,6 +662,8 @@ export function createSession(
     createdAt: now,
     updatedAt: now,
     ...(options.workspaceProfile ? { workspaceProfile: options.workspaceProfile } : {}),
+    ...(options.teamId ? { teamId: options.teamId } : {}),
+    ...(options.teamRole ? { teamRole: options.teamRole } : {}),
   };
   const next: SessionIndex = {
     sessions: [summary, ...idx.sessions],

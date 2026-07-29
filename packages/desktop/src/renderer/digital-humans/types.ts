@@ -1,4 +1,4 @@
-import type { DigitalHumanTeamMode } from "../../shared/digital-human-team";
+import type { DigitalHumanTeam, DigitalHumanTeamMode } from "../../shared/digital-human-team";
 
 /**
  * Mirrors core's WorkspaceProfile persistence boundary. Renderer code cannot
@@ -32,6 +32,8 @@ export type DigitalHumanSelection =
       label: string;
       members: string[];
       mode: DigitalHumanTeamMode;
+      /** Full definition, so the launcher can build briefings (lead + playbook). */
+      team: DigitalHumanTeam;
     };
 
 export interface DigitalHumanProfileEntry {
@@ -72,7 +74,7 @@ export interface DigitalHumanProfileEntry {
 export interface DigitalHumanSkillEntry {
   name: string;
   description: string;
-  source: "project" | "user" | "plugin";
+  source: "project" | "user" | "plugin" | "panel-app";
 }
 
 export interface DigitalHumanCatalogEntry extends Omit<DigitalHumanProfileEntry, "active"> {
