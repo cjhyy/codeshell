@@ -112,8 +112,6 @@ export function DigitalHumansView({
   const operations = useDigitalHumanOperations(refresh);
   const [query, setQuery] = React.useState("");
   const [marketKind, setMarketKind] = React.useState<MarketKind>("single");
-  /** Selected tag filter; null = no filter. Tags come from the repos themselves. */
-  const [marketTag, setMarketTag] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<DigitalHumanDetail | null>(null);
   const [teamEditor, setTeamEditor] = React.useState<{ team?: DigitalHumanTeam } | null>(null);
   const [editor, setEditor] = React.useState<{ profile?: DigitalHumanProfileEntry } | null>(null);
@@ -154,40 +152,21 @@ export function DigitalHumansView({
   const profileByName = new Map(profiles.map((profile) => [profile.name, profile]));
   const visibleCatalog = catalog.filter(
     (entry) =>
-      (marketTag === null || entry.tags.includes(marketTag)) &&
-      (matches(entry) ||
-        entry.tags.some((tag) => tag.toLocaleLowerCase().includes(normalizedQuery))),
+      matches(entry) ||
+      // Tags stay searchable — they just no longer get their own filter bar.
+      entry.tags.some((tag) => tag.toLocaleLowerCase().includes(normalizedQuery)),
   );
   const visibleProfiles = profiles.filter(matches);
   const visibleTeams = teams.filter((team) =>
     matches({ name: team.id, label: team.name, description: team.description }),
   );
   const catalogByName = new Map(catalog.map((entry) => [entry.name, entry]));
-  /**
-   * Tags present in the current catalog, most-used first. Derived rather than
-   * declared, so a repo about video work shows 视频/渲染/分镜 instead of being
-   * squeezed into our four-category enum.
-   */
-  const availableTags = React.useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const entry of catalog) {
-      for (const tag of entry.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
-    }
-    const ordered = [...counts.entries()]
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-      .map(([tag]) => tag)
-      .slice(0, 12);
-    // Keep an active tag visible even if the catalog changed under it, so the
-    // user can always click it off.
-    return marketTag && !ordered.includes(marketTag) ? [marketTag, ...ordered] : ordered;
-  }, [catalog, marketTag]);
   const visibleCuratedTeams = CURATED_DIGITAL_HUMAN_TEAMS.filter(
     (team) =>
-      (marketTag === null || team.tags.includes(marketTag)) &&
-      (!normalizedQuery ||
-        [team.id, team.name, team.description, ...team.tags, ...team.members].some((value) =>
-          value.toLocaleLowerCase().includes(normalizedQuery),
-        )),
+      !normalizedQuery ||
+      [team.id, team.name, team.description, ...team.tags, ...team.members].some((value) =>
+        value.toLocaleLowerCase().includes(normalizedQuery),
+      ),
   );
 
   /**
@@ -740,10 +719,8 @@ export function DigitalHumansView({
                     onManage={onOpenSettings}
                   />
                   {marketIsEmpty ? (
-                    // Nothing is shipped at all. Rendering the scene cards, the
-                    // "browse (0)" heading and the category filters over an empty
-                    // list is pure chrome — four cards with no entries and five
-                    // buttons that filter nothing. Show only where to get one.
+                    // Nothing is shipped at all — a "browse (0)" heading over an
+                    // empty grid is chrome. Show only where to get one.
                     <CatalogEmptyState
                       onImport={() => void pickProfileDefinitionImport()}
                       onCreate={() => setEditor({})}
@@ -751,81 +728,45 @@ export function DigitalHumansView({
                     />
                   ) : (
                     <>
-                      <div className="mt-6 flex flex-col gap-4">
-                        <div className="flex flex-wrap items-end justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h2 className="text-base font-semibold tracking-tight">
-                                {t("digitalHumans.market.browseTitle")}
-                              </h2>
-                              <Badge variant="secondary">
-                                {marketKind === "single"
-                                  ? visibleCatalog.length
-                                  : visibleCuratedTeams.length}
-                              </Badge>
-                            </div>
-                            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                              {t("digitalHumans.market.browseDescription")}
-                            </p>
+                      <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-base font-semibold tracking-tight">
+                              {t("digitalHumans.market.browseTitle")}
+                            </h2>
+                            <Badge variant="secondary">
+                              {marketKind === "single"
+                                ? visibleCatalog.length
+                                : visibleCuratedTeams.length}
+                            </Badge>
                           </div>
-                          <div className="flex rounded-md border border-border/80 bg-muted/30 p-0.5">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={marketKind === "single" ? "secondary" : "ghost"}
-                              className="h-7"
-                              onClick={() => setMarketKind("single")}
-                            >
-                              <UserRound size={13} aria-hidden="true" />
-                              {t("digitalHumans.market.singles")}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={marketKind === "team" ? "secondary" : "ghost"}
-                              className="h-7"
-                              onClick={() => setMarketKind("team")}
-                              data-testid="digital-human-market-teams"
-                            >
-                              <UsersRound size={13} aria-hidden="true" />
-                              {t("digitalHumans.market.groups")}
-                            </Button>
-                          </div>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            {t("digitalHumans.market.browseDescription")}
+                          </p>
                         </div>
-
-                        {/* Filter by the tags the repos actually ship, not by a
-                            fixed four-category taxonomy. A repo cannot know our
-                            enum — any category it writes outside it was silently
-                            rewritten to "product", so a video crew landed under
-                            "产品与策略". Tags are free text the repo author owns. */}
-                        {availableTags.length > 0 ? (
-                          <div
-                            className="flex flex-wrap gap-1.5"
-                            aria-label={t("digitalHumans.market.tagLabel")}
+                        <div className="flex rounded-md border border-border/80 bg-muted/30 p-0.5">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={marketKind === "single" ? "secondary" : "ghost"}
+                            className="h-7"
+                            onClick={() => setMarketKind("single")}
                           >
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={marketTag === null ? "secondary" : "ghost"}
-                              className="h-7 rounded-full px-3"
-                              onClick={() => setMarketTag(null)}
-                            >
-                              {t("digitalHumans.market.category.all")}
-                            </Button>
-                            {availableTags.map((tag) => (
-                              <Button
-                                key={tag}
-                                type="button"
-                                size="sm"
-                                variant={marketTag === tag ? "secondary" : "ghost"}
-                                className="h-7 rounded-full px-3"
-                                onClick={() => setMarketTag(marketTag === tag ? null : tag)}
-                              >
-                                {tag}
-                              </Button>
-                            ))}
-                          </div>
-                        ) : null}
+                            <UserRound size={13} aria-hidden="true" />
+                            {t("digitalHumans.market.singles")}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={marketKind === "team" ? "secondary" : "ghost"}
+                            className="h-7"
+                            onClick={() => setMarketKind("team")}
+                            data-testid="digital-human-market-teams"
+                          >
+                            <UsersRound size={13} aria-hidden="true" />
+                            {t("digitalHumans.market.groups")}
+                          </Button>
+                        </div>
                       </div>
 
                       {marketKind === "single" ? (

@@ -249,15 +249,16 @@ describe("DigitalHumansView contract", () => {
     expect(dhSection).toContain("settingsX.digitalHumans.repos.update");
   });
 
-  test("the market filters by repo-supplied tags, not a fixed category taxonomy", () => {
-    // A repo cannot know our four-value enum; anything else it wrote was
-    // silently rewritten to "product", so a video crew landed under 产品与策略.
-    // "精选场景" compounded it by advertising four scenes regardless of content.
+  test("the market has no taxonomy or tag filter bar, only search", () => {
+    // Two dead ends removed: "精选场景" advertised four fixed scenes regardless of
+    // content, and the tag bar that replaced it filtered a 3-entry catalog where
+    // 6 of 7 tags matched exactly one card — a filter that picks 1 of 3 is just
+    // another way to click the card. Tags stay searchable.
     expect(source).not.toContain("function FeaturedScenes");
     expect(source).not.toContain("DIGITAL_HUMAN_CATEGORIES");
-    expect(source).toContain("const availableTags");
-    expect(source).toContain("entry.tags.includes(marketTag)");
-    expect(source).toContain("digitalHumans.market.tagLabel");
+    expect(source).not.toContain("availableTags");
+    expect(source).not.toContain("marketTag");
+    expect(source).toContain("entry.tags.some((tag) => tag.toLocaleLowerCase()");
   });
 
   test("an empty market shows only a way forward, not chrome over a void", () => {

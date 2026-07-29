@@ -78,8 +78,6 @@ export const digitalHumans = {
         groups: "数字人团队",
         single: "数字人",
         group: "数字人团队",
-        categoryLabel: "数字人分类",
-        tagLabel: "按标签筛选",
         category: {
           all: "全部",
           product: "产品与策略",
@@ -368,8 +366,6 @@ export const digitalHumans = {
         groups: "Teams",
         single: "Digital human",
         group: "Digital-human team",
-        categoryLabel: "Digital-human categories",
-        tagLabel: "Filter by tag",
         category: {
           all: "All",
           product: "Product & strategy",
