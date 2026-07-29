@@ -60,7 +60,6 @@ describe("DigitalHumansView contract", () => {
   });
 
   test("supports the discover-detail-sample-summon journey", () => {
-    expect(source).toContain("FeaturedScenes");
     expect(source).toContain("CuratedTeamCard");
     expect(source).toContain("DigitalHumanDetailDialog");
     expect(source).toContain("samplePrompts");
@@ -232,6 +231,17 @@ describe("DigitalHumansView contract", () => {
     // Publish: a repo skeleton, not a bare JSON that has to be hand-delivered.
     expect(main).toContain('"profiles:exportRepo"');
     expect(source).toContain("window.codeshell.exportProfileRepo");
+  });
+
+  test("the market filters by repo-supplied tags, not a fixed category taxonomy", () => {
+    // A repo cannot know our four-value enum; anything else it wrote was
+    // silently rewritten to "product", so a video crew landed under 产品与策略.
+    // "精选场景" compounded it by advertising four scenes regardless of content.
+    expect(source).not.toContain("function FeaturedScenes");
+    expect(source).not.toContain("DIGITAL_HUMAN_CATEGORIES");
+    expect(source).toContain("const availableTags");
+    expect(source).toContain("entry.tags.includes(marketTag)");
+    expect(source).toContain("digitalHumans.market.tagLabel");
   });
 
   test("an empty market shows only a way forward, not chrome over a void", () => {

@@ -1,8 +1,6 @@
 import React from "react";
 import {
-  ArrowRight,
   Brain,
-  Briefcase,
   Check,
   ChevronRight,
   Code2,
@@ -12,12 +10,10 @@ import {
   MoreHorizontal,
   Loader2,
   MessageSquareText,
-  Palette,
   Pencil,
   Plus,
   RefreshCw,
   Search,
-  ShieldCheck,
   Sparkles,
   Trash2,
   Upload,
@@ -45,13 +41,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -99,13 +88,6 @@ type DigitalHumanDetail =
   | { kind: "team"; team: DigitalHumanTeam }
   | { kind: "curated-team"; team: CuratedDigitalHumanTeam };
 
-const DIGITAL_HUMAN_CATEGORIES: readonly DigitalHumanCategory[] = [
-  "product",
-  "design",
-  "engineering",
-  "quality",
-];
-
 function capabilityCount(profile: DigitalHumanProfileEntry): number {
   return (
     profile.plugins.length + profile.skills.length + profile.mcp.length + profile.agents.length
@@ -130,7 +112,8 @@ export function DigitalHumansView({
   const operations = useDigitalHumanOperations(refresh);
   const [query, setQuery] = React.useState("");
   const [marketKind, setMarketKind] = React.useState<MarketKind>("single");
-  const [marketCategory, setMarketCategory] = React.useState<DigitalHumanCategory | "all">("all");
+  /** Selected tag filter; null = no filter. Tags come from the repos themselves. */
+  const [marketTag, setMarketTag] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<DigitalHumanDetail | null>(null);
   const [teamEditor, setTeamEditor] = React.useState<{ team?: DigitalHumanTeam } | null>(null);
   const [editor, setEditor] = React.useState<{ profile?: DigitalHumanProfileEntry } | null>(null);
@@ -171,7 +154,7 @@ export function DigitalHumansView({
   const profileByName = new Map(profiles.map((profile) => [profile.name, profile]));
   const visibleCatalog = catalog.filter(
     (entry) =>
-      (marketCategory === "all" || entry.category === marketCategory) &&
+      (marketTag === null || entry.tags.includes(marketTag)) &&
       (matches(entry) ||
         entry.tags.some((tag) => tag.toLocaleLowerCase().includes(normalizedQuery))),
   );
@@ -180,9 +163,27 @@ export function DigitalHumansView({
     matches({ name: team.id, label: team.name, description: team.description }),
   );
   const catalogByName = new Map(catalog.map((entry) => [entry.name, entry]));
+  /**
+   * Tags present in the current catalog, most-used first. Derived rather than
+   * declared, so a repo about video work shows 视频/渲染/分镜 instead of being
+   * squeezed into our four-category enum.
+   */
+  const availableTags = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entry of catalog) {
+      for (const tag of entry.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+    const ordered = [...counts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .map(([tag]) => tag)
+      .slice(0, 12);
+    // Keep an active tag visible even if the catalog changed under it, so the
+    // user can always click it off.
+    return marketTag && !ordered.includes(marketTag) ? [marketTag, ...ordered] : ordered;
+  }, [catalog, marketTag]);
   const visibleCuratedTeams = CURATED_DIGITAL_HUMAN_TEAMS.filter(
     (team) =>
-      (marketCategory === "all" || team.category === marketCategory) &&
+      (marketTag === null || team.tags.includes(marketTag)) &&
       (!normalizedQuery ||
         [team.id, team.name, team.description, ...team.tags, ...team.members].some((value) =>
           value.toLocaleLowerCase().includes(normalizedQuery),
@@ -717,16 +718,6 @@ export function DigitalHumansView({
                     />
                   ) : (
                     <>
-                      {!normalizedQuery && marketCategory === "all" ? (
-                        <FeaturedScenes
-                          catalog={catalog}
-                          onSelectCategory={(category) => {
-                            setMarketKind("single");
-                            setMarketCategory(category);
-                          }}
-                        />
-                      ) : null}
-
                       <div className="mt-6 flex flex-col gap-4">
                         <div className="flex flex-wrap items-end justify-between gap-3">
                           <div>
@@ -769,43 +760,39 @@ export function DigitalHumansView({
                           </div>
                         </div>
 
-                        <div
-                          className="flex flex-wrap gap-1.5"
-                          aria-label={t("digitalHumans.market.categoryLabel")}
-                        >
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={marketCategory === "all" ? "secondary" : "ghost"}
-                            className="h-7 rounded-full px-3"
-                            onClick={() => setMarketCategory("all")}
+                        {/* Filter by the tags the repos actually ship, not by a
+                            fixed four-category taxonomy. A repo cannot know our
+                            enum — any category it writes outside it was silently
+                            rewritten to "product", so a video crew landed under
+                            "产品与策略". Tags are free text the repo author owns. */}
+                        {availableTags.length > 0 ? (
+                          <div
+                            className="flex flex-wrap gap-1.5"
+                            aria-label={t("digitalHumans.market.tagLabel")}
                           >
-                            {t("digitalHumans.market.category.all")}
-                          </Button>
-                          {/* Same reason as FeaturedScenes: a fixed taxonomy of
-                              four would otherwise offer filters that match
-                              nothing. Keep the current selection visible even if
-                              it just went empty, so the user can click away. */}
-                          {DIGITAL_HUMAN_CATEGORIES.filter(
-                            (category) =>
-                              marketCategory === category ||
-                              catalog.some((entry) => entry.category === category) ||
-                              CURATED_DIGITAL_HUMAN_TEAMS.some(
-                                (team) => team.category === category,
-                              ),
-                          ).map((category) => (
                             <Button
-                              key={category}
                               type="button"
                               size="sm"
-                              variant={marketCategory === category ? "secondary" : "ghost"}
+                              variant={marketTag === null ? "secondary" : "ghost"}
                               className="h-7 rounded-full px-3"
-                              onClick={() => setMarketCategory(category)}
+                              onClick={() => setMarketTag(null)}
                             >
-                              {t(`digitalHumans.market.category.${category}`)}
+                              {t("digitalHumans.market.category.all")}
                             </Button>
-                          ))}
-                        </div>
+                            {availableTags.map((tag) => (
+                              <Button
+                                key={tag}
+                                type="button"
+                                size="sm"
+                                variant={marketTag === tag ? "secondary" : "ghost"}
+                                className="h-7 rounded-full px-3"
+                                onClick={() => setMarketTag(marketTag === tag ? null : tag)}
+                              >
+                                {tag}
+                              </Button>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
 
                       {marketKind === "single" ? (
@@ -1172,14 +1159,6 @@ function ProfileDefinitionImportDialog({
   );
 }
 
-function categoryIcon(category: DigitalHumanCategory, size = 17) {
-  const props = { size, "aria-hidden": true as const };
-  if (category === "product") return <Briefcase {...props} />;
-  if (category === "design") return <Palette {...props} />;
-  if (category === "engineering") return <Code2 {...props} />;
-  return <ShieldCheck {...props} />;
-}
-
 function categoryTone(category: DigitalHumanCategory): string {
   if (category === "product") return "bg-primary/10 text-primary";
   if (category === "design") return "bg-status-warn/10 text-status-warn";
@@ -1223,77 +1202,6 @@ function DigitalHumanAvatar({
     >
       {team ? <UsersRound size={18} /> : initials(label)}
     </span>
-  );
-}
-
-function FeaturedScenes({
-  catalog,
-  onSelectCategory,
-}: {
-  catalog: DigitalHumanCatalogEntry[];
-  onSelectCategory: (category: DigitalHumanCategory) => void;
-}) {
-  const { t } = useT();
-  // Only scenes that actually have digital humans. The four categories are a
-  // fixed taxonomy, so rendering all of them produced empty cards for whatever
-  // the installed repos happen not to cover — and clicking one filtered to
-  // nothing. With fewer than two populated scenes there is no "overview" left
-  // to give, so the section stays hidden entirely.
-  const populated = DIGITAL_HUMAN_CATEGORIES.filter((category) =>
-    catalog.some((entry) => entry.category === category),
-  );
-  if (populated.length < 2) return null;
-
-  return (
-    <section aria-labelledby="digital-human-featured-scenes">
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div>
-          <h2 id="digital-human-featured-scenes" className="text-base font-semibold tracking-tight">
-            {t("digitalHumans.market.featuredTitle")}
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t("digitalHumans.market.featuredDescription")}
-          </p>
-        </div>
-        <Sparkles size={17} className="text-primary" aria-hidden="true" />
-      </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {populated.map((category) => {
-          const entries = catalog.filter((entry) => entry.category === category).slice(0, 2);
-          return (
-            <Button
-              key={category}
-              type="button"
-              variant="outline"
-              className="group h-auto min-h-32 items-stretch justify-start overflow-hidden p-0 text-left"
-              onClick={() => onSelectCategory(category)}
-            >
-              <span className="flex w-full flex-col">
-                <span className={cn("flex items-center gap-2 px-4 py-3", categoryTone(category))}>
-                  {categoryIcon(category, 16)}
-                  <span className="font-semibold">
-                    {t(`digitalHumans.market.scene.${category}.title`)}
-                  </span>
-                  <ArrowRight
-                    size={14}
-                    className="ml-auto transition-transform group-hover:translate-x-0.5"
-                    aria-hidden="true"
-                  />
-                </span>
-                <span className="flex flex-1 flex-col gap-1.5 px-4 py-3">
-                  {entries.map((entry) => (
-                    <span key={entry.name} className="flex min-w-0 items-center gap-2 text-xs">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
-                      <span className="truncate">{entry.label}</span>
-                    </span>
-                  ))}
-                </span>
-              </span>
-            </Button>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 
