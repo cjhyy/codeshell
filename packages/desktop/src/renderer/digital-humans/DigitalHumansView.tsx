@@ -276,12 +276,45 @@ export function DigitalHumansView({
               ].join("\n")
             : null,
         ].filter(Boolean);
-        await confirm({
+        // Offer the way through instead of a dead end: unbinding is safe (the
+        // Sessions survive), so make it one confirmed action rather than manual
+        // work across every blocking conversation.
+        const forced = await confirm({
           title: t("digitalHumans.delete.blockedTitle", { name: profile.label }),
           message: reasons.join("\n"),
-          detail: t("digitalHumans.delete.blockedDetail"),
-          confirmLabel: t("common.confirm"),
+          detail: t("digitalHumans.delete.forceDetail"),
+          confirmLabel: t("digitalHumans.delete.forceConfirm"),
+          destructive: true,
         });
+        if (!forced) return;
+        await run(
+          `delete-profile:${profile.name}`,
+          async () => {
+            const result = await window.codeshell.forceDeleteProfile(
+              profile.name,
+              activeProjectPath ?? undefined,
+            );
+            const notes = [
+              result.unboundSessions.length
+                ? t("digitalHumans.delete.forceUnbound", {
+                    count: result.unboundSessions.length,
+                  })
+                : null,
+              result.updatedTeams.length
+                ? t("digitalHumans.delete.forceTeamsUpdated", {
+                    teams: result.updatedTeams.join("、"),
+                  })
+                : null,
+              result.removedTeams.length
+                ? t("digitalHumans.delete.forceTeamsRemoved", {
+                    teams: result.removedTeams.join("、"),
+                  })
+                : null,
+            ].filter(Boolean);
+            if (notes.length > 0) toast({ message: notes.join(" · ") });
+          },
+          { name: profile.label },
+        );
         return;
       }
     } catch {

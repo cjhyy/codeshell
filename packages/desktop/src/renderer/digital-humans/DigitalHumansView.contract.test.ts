@@ -233,6 +233,22 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("window.codeshell.exportProfileRepo");
   });
 
+  test("a blocked deletion offers force delete instead of a dead end", () => {
+    // Unbinding is safe (Sessions survive), so making the user do it by hand
+    // across every blocking conversation is busywork, not protection.
+    expect(source).toContain("window.codeshell.forceDeleteProfile");
+    expect(source).toContain("digitalHumans.delete.forceConfirm");
+    expect(main).toContain('"profiles:forceDelete"');
+    expect(preload).toContain("forceDeleteProfile");
+    expect(preloadTypes).toContain("forceDeleteProfile");
+  });
+
+  test("a registered repo can be updated in place, not only removed and re-added", () => {
+    // addProfileRepo already fetch+resets an existing clone; the capability
+    // existed but had no button.
+    expect(dhSection).toContain("settingsX.digitalHumans.repos.update");
+  });
+
   test("the market filters by repo-supplied tags, not a fixed category taxonomy", () => {
     // A repo cannot know our four-value enum; anything else it wrote was
     // silently rewritten to "product", so a video crew landed under 产品与策略.

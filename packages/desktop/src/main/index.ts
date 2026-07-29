@@ -368,6 +368,7 @@ import {
   deactivateProfile,
   exportProfileDefinition,
   exportProfileRepo,
+  forceDeleteProfile,
   importReviewedProfileDefinition,
   installCatalogProfile,
   installProfileRequirements,
@@ -2604,6 +2605,13 @@ ipcMain.handle("profiles:addRepo", async (_e, repo: string) => {
 ipcMain.handle("profiles:removeRepo", async (_e, repo: string) => {
   if (typeof repo !== "string" || !repo) throw new Error("profiles:removeRepo requires repo");
   removeProfileRepo(repo);
+});
+ipcMain.handle("profiles:forceDelete", async (_e, name: string, cwd?: string) => {
+  if (typeof name !== "string" || !name) throw new Error("profiles:forceDelete requires name");
+  if (cwd !== undefined && typeof cwd !== "string") {
+    throw new Error("profiles:forceDelete cwd must be a string");
+  }
+  return forceDeleteProfile(name, cwd ? { cwd } : {});
 });
 ipcMain.handle("profiles:previewDeletion", async (_e, name: string, cwd?: string) => {
   if (typeof name !== "string" || !name) throw new Error("profiles:previewDeletion requires name");

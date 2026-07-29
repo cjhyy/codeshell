@@ -277,24 +277,53 @@ function DigitalHumanReposPanel() {
                     : ""}
                 </p>
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  try {
-                    await window.codeshell.removeProfileRepo(repo.repo);
-                    await refresh();
-                  } catch (caught) {
-                    setError(errorMessage(caught));
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                {t("settingsX.digitalHumans.repos.remove")}
-              </Button>
+              <div className="flex shrink-0 items-center gap-1">
+                {/* addProfileRepo already fetch+resets an existing clone, so
+                    updating was possible but had no button — the only visible
+                    path was remove-then-add. */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    setError(null);
+                    try {
+                      const result = await window.codeshell.addProfileRepo(repo.repo);
+                      if (!result.ok) {
+                        setError(result.error);
+                        return;
+                      }
+                      await refresh();
+                    } catch (caught) {
+                      setError(errorMessage(caught));
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  <RotateCcw className="size-3.5" aria-hidden />
+                  {t("settingsX.digitalHumans.repos.update")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await window.codeshell.removeProfileRepo(repo.repo);
+                      await refresh();
+                    } catch (caught) {
+                      setError(errorMessage(caught));
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  {t("settingsX.digitalHumans.repos.remove")}
+                </Button>
+              </div>
             </li>
           ))}
         </ul>

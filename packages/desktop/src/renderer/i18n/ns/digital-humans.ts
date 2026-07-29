@@ -162,7 +162,13 @@ export const digitalHumans = {
         clearsCurrentSelection: "此操作会同时清除当前团队选择。",
         profileMemoryWarning:
           "该数字人的可移植记忆也会一并删除；若仍被团队或历史会话引用，系统会拒绝删除。",
-        blockedTitle: "无法删除「{name}」",
+        blockedTitle: "无法直接删除「{name}」",
+        forceDetail:
+          "也可以强制删除：自动解除上面所有绑定后再删。会话本身完整保留（只是回到项目默认），团队会移除该成员；若团队因此不足两人则整个团队被删除。此操作不可撤销。",
+        forceConfirm: "强制删除",
+        forceUnbound: "已解绑 {count} 个会话",
+        forceTeamsUpdated: "已从团队移除：{teams}",
+        forceTeamsRemoved: "已删除团队：{teams}",
         blockedByTeams: "仍被这些团队引用：{teams}",
         blockedBySessions: "以下 {count} 个会话仍绑定着它：",
         blockedDetail:
@@ -453,7 +459,13 @@ export const digitalHumans = {
         clearsCurrentSelection: "This also clears the current team selection.",
         profileMemoryWarning:
           "Its portable memory will be removed too. Deletion is blocked while a team or historical Session still references it.",
-        blockedTitle: "Cannot delete “{name}”",
+        blockedTitle: "Cannot delete “{name}” directly",
+        forceDetail:
+          "You can also force delete: every binding above is released first. The Sessions themselves are kept (they fall back to the project default) and teams lose this member; a team left with fewer than two members is deleted. This cannot be undone.",
+        forceConfirm: "Force delete",
+        forceUnbound: "Unbound {count} session(s)",
+        forceTeamsUpdated: "Removed from teams: {teams}",
+        forceTeamsRemoved: "Deleted teams: {teams}",
         blockedByTeams: "Still used by these teams: {teams}",
         blockedBySessions: "These {count} session(s) are still bound to it:",
         blockedDetail:

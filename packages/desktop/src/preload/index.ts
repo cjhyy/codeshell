@@ -973,9 +973,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   preparePanelApp: (id: string) => ipcRenderer.invoke("panel-apps:prepare", id),
   bindPanelApp: (input: import("../shared/panel-apps").PanelAppBindInput) =>
     ipcRenderer.invoke("panel-apps:bind", input),
-  invokePanelAppAgentTool: (
-    input: import("../shared/panel-apps").PanelAppAgentToolInvocation,
-  ) => ipcRenderer.invoke("panel-apps:invoke-agent-tool", input),
+  invokePanelAppAgentTool: (input: import("../shared/panel-apps").PanelAppAgentToolInvocation) =>
+    ipcRenderer.invoke("panel-apps:invoke-agent-tool", input),
   onPanelAppsChanged: (cb: () => void) => {
     const handler = () => cb();
     ipcRenderer.on("panel-apps:changed", handler);
@@ -1036,6 +1035,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   listProfileRepos: () => ipcRenderer.invoke("profiles:listRepos"),
   addProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:addRepo", repo),
   removeProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:removeRepo", repo),
+  forceDeleteProfile: (name: string, cwd?: string) =>
+    ipcRenderer.invoke("profiles:forceDelete", name, cwd),
   previewProfileDeletion: (name: string, cwd?: string) =>
     ipcRenderer.invoke("profiles:previewDeletion", name, cwd),
   previewProfileRequirements: (name: string, cwd: string) =>

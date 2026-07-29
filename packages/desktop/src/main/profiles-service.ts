@@ -49,7 +49,11 @@ import {
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { DIGITAL_HUMAN_CATALOG, type DigitalHumanCatalogEntry } from "./digital-human-catalog.js";
-import { listDigitalHumanTeams } from "./digital-human-team-service.js";
+import {
+  deleteDigitalHumanTeam,
+  listDigitalHumanTeams,
+  saveDigitalHumanTeam,
+} from "./digital-human-team-service.js";
 import type {
   DigitalHumanProfileExportResult,
   DigitalHumanProfileImportCommitInput,
@@ -587,6 +591,97 @@ export function saveProfile(profile: WorkspaceProfile): void {
 export interface DeleteProfileOptions {
   cwd?: string;
   clearActiveProject?: boolean;
+}
+
+export interface ForceDeleteProfileResult {
+  /** Session ids that were unbound (the Sessions themselves are kept). */
+  unboundSessions: string[];
+  /** Teams that kept existing with this member removed. */
+  updatedTeams: string[];
+  /** Teams deleted because they would fall below the 2-member minimum. */
+  removedTeams: string[];
+  clearedProjectDefault: boolean;
+}
+
+/**
+ * 强制删除：先解除所有引用，再删除定义。
+ *
+ * 常规 deleteProfile 在被会话或团队引用时拒绝执行，这是合理的默认（引用是用户
+ * 的真实工作）。但当用户已经确认「就是要删」时，让他逐个去解绑十几个会话是不必要
+ * 的苦工——尤其解绑本身是安全操作：会话完整保留，只是回到项目默认。
+ *
+ * 绝不删除会话本身。团队若因移除成员跌破 schema 的 2 人下限则整体删除（一人团队
+ * 无法保存，留着会变成读不出来的坏文件）；lead 被删则一并清空。
+ */
+export function forceDeleteProfile(
+  name: string,
+  options: DeleteProfileOptions = {},
+): ForceDeleteProfileResult {
+  if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
+  if (!readWorkspaceProfile(name)) {
+    return {
+      unboundSessions: [],
+      updatedTeams: [],
+      removedTeams: [],
+      clearedProjectDefault: false,
+    };
+  }
+
+  // Unbind every Session, archived included — a leftover archived binding would
+  // still be a dangling reference after the definition is gone.
+  const sessions = new SessionManager();
+  const unboundSessions: string[] = [];
+  for (const sessionId of sessions.findSessionIdsByWorkspaceProfile(name, 100)) {
+    const state = sessions.readSessionState(sessionId);
+    if (!state) continue;
+    if (sessions.saveStateOrUpdateFields(state, { workspaceProfile: undefined })) {
+      unboundSessions.push(sessionId);
+    }
+  }
+
+  const updatedTeams: string[] = [];
+  const removedTeams: string[] = [];
+  for (const team of listDigitalHumanTeams()) {
+    if (!team.members.includes(name)) continue;
+    const members = team.members.filter((member) => member !== name);
+    if (members.length < 2) {
+      deleteDigitalHumanTeam(team.id);
+      removedTeams.push(team.name);
+      continue;
+    }
+    const { lead: _previousLead, ...rest } = team;
+    try {
+      saveDigitalHumanTeam({
+        ...rest,
+        members,
+        // Drop a lead that was this profile; keep it when it was someone else.
+        ...(team.lead && team.lead !== name ? { lead: team.lead } : {}),
+      });
+      updatedTeams.push(team.name);
+    } catch {
+      // saveDigitalHumanTeam rejects any member that is not in the library, so a
+      // team that already carried a dangling member cannot be rewritten. Removing
+      // it beats aborting the deletion the user already confirmed.
+      deleteDigitalHumanTeam(team.id);
+      removedTeams.push(team.name);
+    }
+  }
+
+  let clearedProjectDefault = false;
+  if (options.cwd) {
+    try {
+      const settings = new SettingsManager(options.cwd, "full");
+      if (resolveActiveWorkspaceProfile({ cwd: options.cwd, settings })?.name === name) {
+        deactivateWorkspaceProfile(settings, options.cwd);
+        clearedProjectDefault = true;
+      }
+    } catch {
+      // Unreadable project settings must not block the deletion itself.
+    }
+  }
+
+  deleteWorkspaceProfile(name);
+  return { unboundSessions, updatedTeams, removedTeams, clearedProjectDefault };
 }
 
 /**

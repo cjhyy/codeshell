@@ -1561,6 +1561,19 @@ export interface CodeshellApi {
    */
   exportProfileRepo(names: string[]): Promise<{ canceled: true } | { ok: true; written: string[] }>;
   installCatalogProfile(name: string): Promise<void>;
+  /**
+   * Unbind every reference (Sessions, teams, project default) and then delete.
+   * Sessions themselves are preserved. Call only after explicit confirmation.
+   */
+  forceDeleteProfile(
+    name: string,
+    cwd?: string,
+  ): Promise<{
+    unboundSessions: string[];
+    updatedTeams: string[];
+    removedTeams: string[];
+    clearedProjectDefault: boolean;
+  }>;
   /** Read-only: why this digital human can or cannot be deleted. Deletes nothing. */
   previewProfileDeletion(
     name: string,

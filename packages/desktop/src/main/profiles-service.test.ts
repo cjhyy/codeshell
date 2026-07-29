@@ -17,6 +17,7 @@ import {
   deleteProfile,
   deactivateProfile,
   exportProfileDefinition,
+  forceDeleteProfile,
   importReviewedProfileDefinition,
   installCatalogProfile,
   listProfileCatalog,
@@ -527,6 +528,95 @@ describe("desktop profiles service", () => {
     // is a warning, not a blocker.
     expect(preview.isActiveProjectDefault).toBe(true);
     expect(preview.canDelete).toBe(true);
+  });
+
+  test("force delete unbinds Sessions and drops the profile from teams", async () => {
+    const sessionDir = join(home, "sessions", "session-a");
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(
+      join(sessionDir, "state.json"),
+      JSON.stringify({ sessionId: "session-a", workspaceProfile: "seedance", title: "A" }),
+    );
+    saveWorkspaceProfile({
+      name: "developer",
+      label: "Developer",
+      basePreset: "general",
+      plugins: [],
+      skills: [],
+      mcp: [],
+      agents: [],
+      portableMemory: false,
+    });
+    saveWorkspaceProfile({
+      name: "reviewer",
+      label: "Reviewer",
+      basePreset: "general",
+      plugins: [],
+      skills: [],
+      mcp: [],
+      agents: [],
+      portableMemory: false,
+    });
+    const teamService = await import("./digital-human-team-service.js");
+    teamService.saveDigitalHumanTeam({
+      id: "trio",
+      name: "Trio",
+      members: ["seedance", "developer", "reviewer"],
+      mode: "divide",
+      lead: "seedance",
+    });
+
+    const result = forceDeleteProfile("seedance", { cwd });
+    expect(result.unboundSessions).toEqual(["session-a"]);
+    expect(result.updatedTeams).toEqual(["Trio"]);
+    expect(listProfiles().some((p) => p.name === "seedance")).toBe(false);
+
+    // The Session survives, just without the binding — force delete must not
+    // destroy conversations.
+    const after = JSON.parse(readFileSync(join(sessionDir, "state.json"), "utf-8")) as {
+      workspaceProfile?: string;
+      title?: string;
+    };
+    expect(after.workspaceProfile).toBeUndefined();
+    expect(after.title).toBe("A");
+
+    // The team keeps its remaining members and loses the lead it can no longer use.
+    const team = teamService.readDigitalHumanTeam("trio");
+    expect(team?.members).toEqual(["developer", "reviewer"]);
+    expect(team?.lead).toBeUndefined();
+  });
+
+  test("force delete removes a team that would drop below two members", async () => {
+    saveWorkspaceProfile({
+      name: "solo",
+      label: "Solo",
+      basePreset: "general",
+      plugins: [],
+      skills: [],
+      mcp: [],
+      agents: [],
+      portableMemory: false,
+    });
+    const teamService = await import("./digital-human-team-service.js");
+    teamService.saveDigitalHumanTeam({
+      id: "pair",
+      name: "Pair",
+      members: ["seedance", "solo"],
+      mode: "divide",
+    });
+
+    const result = forceDeleteProfile("seedance", { cwd });
+    // A one-member team cannot be saved (schema requires 2..8), so it is removed
+    // rather than left in an unparseable state.
+    expect(result.removedTeams).toEqual(["Pair"]);
+    expect(teamService.readDigitalHumanTeam("pair")).toBeUndefined();
+  });
+
+  test("force delete clears the active project default", () => {
+    activateProfile(cwd, "seedance");
+    const result = forceDeleteProfile("seedance", { cwd });
+    expect(result.clearedProjectDefault).toBe(true);
+    expect(listProfiles(cwd).some((p) => p.name === "seedance")).toBe(false);
   });
 
   test("refuses to delete through a symlinked profile directory", () => {
