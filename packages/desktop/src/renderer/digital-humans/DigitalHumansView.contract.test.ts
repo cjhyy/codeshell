@@ -160,6 +160,10 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("preview.canDelete");
     expect(source).toContain("digitalHumans.delete.blockedByTeams");
     expect(source).toContain("digitalHumans.delete.blockedBySessions");
+    // Names, not a bare count: "still bound to 3 sessions" gives the user no way
+    // to find which conversations to unbind.
+    expect(source).toContain("session.title ?? session.id");
+    expect(preloadTypes).toContain("blockingSessions: Array<{ id: string; title?: string");
     expect(main).toContain('"profiles:previewDeletion"');
     expect(preload).toContain("previewProfileDeletion");
     expect(preloadTypes).toContain("previewProfileDeletion");

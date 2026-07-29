@@ -163,8 +163,9 @@ export const digitalHumans = {
           "该数字人的可移植记忆也会一并删除；若仍被团队或历史会话引用，系统会拒绝删除。",
         blockedTitle: "无法删除「{name}」",
         blockedByTeams: "仍被这些团队引用：{teams}",
-        blockedBySessions: "仍有 {count} 个历史会话绑定着它",
-        blockedDetail: "请先解除这些引用（从团队移除，或删除/改绑对应会话），然后再试。",
+        blockedBySessions: "以下 {count} 个会话仍绑定着它：",
+        blockedDetail:
+          "解除方式任选：打开对应会话，在顶栏把数字人切成「取消数字人绑定」；或归档/删除该会话（已归档的会话不再阻止删除）。团队引用需先把它从团队成员里移除。",
       },
       empty: {
         title: "还没有数字人",
@@ -452,9 +453,9 @@ export const digitalHumans = {
           "Its portable memory will be removed too. Deletion is blocked while a team or historical Session still references it.",
         blockedTitle: "Cannot delete “{name}”",
         blockedByTeams: "Still used by these teams: {teams}",
-        blockedBySessions: "Still bound to {count} historical session(s)",
+        blockedBySessions: "These {count} session(s) are still bound to it:",
         blockedDetail:
-          "Remove those references first (take it out of the teams, or delete/rebind the sessions), then try again.",
+          "Any of these works: open the session and pick “Unbind digital human” in the top bar; or archive/delete it (archived sessions no longer block). Team references need the member removed from the team.",
       },
       empty: {
         title: "No digital humans yet",

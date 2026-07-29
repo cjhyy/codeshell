@@ -594,14 +594,26 @@ export interface DeleteProfileOptions {
  * an immediately dangling reference. Other projects are resolved defensively
  * by core if they still contain an old profile id.
  */
+export interface BlockingSession {
+  id: string;
+  /** 会话标题；未命名会话为 undefined，UI 退回显示 id。 */
+  title?: string;
+  /** 会话所在工作区，用于区分不同项目里的同名对话。 */
+  workspace?: string;
+}
+
 export interface ProfileDeletionPreview {
   name: string;
   /** false → 存在硬阻塞，删除必定失败，UI 不该再弹「确认删除」。 */
   canDelete: boolean;
   /** 仍引用该数字人的团队名。 */
   blockingTeams: string[];
-  /** 仍绑定该数字人的 Session id（最多 6 条）。 */
-  blockingSessions: string[];
+  /**
+   * 仍绑定该数字人的会话（最多 6 条），带标题与工作区。
+   *
+   * 只给 id 的话提示等于「仍有 3 个会话」——用户无法据此找到要解绑的是哪几个对话。
+   */
+  blockingSessions: BlockingSession[];
   /** 是当前项目默认——可恢复，删除时自动解绑，属提示而非阻塞。 */
   isActiveProjectDefault: boolean;
 }
@@ -619,9 +631,16 @@ export function previewProfileDeletion(name: string, cwd?: string): ProfileDelet
   const blockingTeams = listDigitalHumanTeams()
     .filter((team) => team.members.includes(name))
     .map((team) => team.name);
-  const blockingSessions = new SessionManager().findSessionIdsByWorkspaceProfile(name, 6, {
-    includeArchived: false,
-  });
+  const sessions = new SessionManager();
+  const blockingSessions: BlockingSession[] = sessions
+    .findSessionIdsByWorkspaceProfile(name, 6, { includeArchived: false })
+    .map((id) => {
+      const state = sessions.readSessionState(id) as { title?: unknown; cwd?: unknown } | undefined;
+      const title =
+        typeof state?.title === "string" && state.title.trim() ? state.title : undefined;
+      const workspace = typeof state?.cwd === "string" && state.cwd ? state.cwd : undefined;
+      return { id, ...(title ? { title } : {}), ...(workspace ? { workspace } : {}) };
+    });
 
   let isActiveProjectDefault = false;
   if (cwd) {

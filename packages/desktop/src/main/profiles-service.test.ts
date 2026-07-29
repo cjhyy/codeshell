@@ -431,7 +431,7 @@ describe("desktop profiles service", () => {
     // The user must learn WHY it cannot be deleted before confirming, not from
     // a raw backend error afterwards.
     expect(preview.canDelete).toBe(false);
-    expect(preview.blockingSessions).toEqual(["session-pinned"]);
+    expect(preview.blockingSessions.map((s) => s.id)).toEqual(["session-pinned"]);
     expect(preview.blockingTeams).toEqual(["Delivery"]);
   });
 
@@ -478,6 +478,39 @@ describe("desktop profiles service", () => {
     expect(previewProfileDeletion("seedance", cwd).canDelete).toBe(true);
     deleteProfile("seedance", { cwd });
     expect(listProfiles().some((profile) => profile.name === "seedance")).toBe(false);
+  });
+
+  test("blocking Sessions carry a title and workspace, not just an id", () => {
+    const sessionDir = join(home, "sessions", "session-named");
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(
+      join(sessionDir, "state.json"),
+      JSON.stringify({
+        sessionId: "session-named",
+        workspaceProfile: "seedance",
+        title: "技术方案与配置文件创建",
+        cwd: "/repo/alpha",
+      }),
+    );
+
+    // An opaque id list ("still bound to 3 sessions") is unactionable — the user
+    // cannot tell which conversations to unbind.
+    const [blocked] = previewProfileDeletion("seedance", cwd).blockingSessions;
+    expect(blocked.id).toBe("session-named");
+    expect(blocked.title).toBe("技术方案与配置文件创建");
+    expect(blocked.workspace).toBe("/repo/alpha");
+  });
+
+  test("a Session with no title still reports its id", () => {
+    const sessionDir = join(home, "sessions", "session-bare");
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(
+      join(sessionDir, "state.json"),
+      JSON.stringify({ sessionId: "session-bare", workspaceProfile: "seedance" }),
+    );
+    const [blocked] = previewProfileDeletion("seedance", cwd).blockingSessions;
+    expect(blocked.id).toBe("session-bare");
+    expect(blocked.title).toBeUndefined();
   });
 
   test("previewProfileDeletion clears once nothing references the profile", () => {

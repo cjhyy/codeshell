@@ -1569,7 +1569,8 @@ export interface CodeshellApi {
     name: string;
     canDelete: boolean;
     blockingTeams: string[];
-    blockingSessions: string[];
+    /** Named so the dialog can tell the user WHICH conversations to unbind. */
+    blockingSessions: Array<{ id: string; title?: string; workspace?: string }>;
     isActiveProjectDefault: boolean;
   }>;
   /** Read-only: what activating this digital human would install. Installs nothing. */

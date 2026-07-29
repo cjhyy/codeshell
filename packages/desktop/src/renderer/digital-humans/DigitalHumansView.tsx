@@ -259,9 +259,20 @@ export function DigitalHumansView({
               })
             : null,
           preview.blockingSessions.length
-            ? t("digitalHumans.delete.blockedBySessions", {
-                count: preview.blockingSessions.length,
-              })
+            ? [
+                t("digitalHumans.delete.blockedBySessions", {
+                  count: preview.blockingSessions.length,
+                }),
+                // Name them: "still bound to 3 sessions" leaves the user with no
+                // way to find which conversations to unbind.
+                ...preview.blockingSessions.map((session) => {
+                  const label = session.title ?? session.id;
+                  const where = session.workspace
+                    ? ` — ${session.workspace.split("/").pop() ?? session.workspace}`
+                    : "";
+                  return `  · ${label}${where}`;
+                }),
+              ].join("\n")
             : null,
         ].filter(Boolean);
         await confirm({
