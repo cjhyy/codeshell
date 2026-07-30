@@ -71,13 +71,17 @@ export interface PanelAppAgentToolInvocation {
 /** Extensions-page view of an independently installed Desktop Panel App. */
 export interface PanelAppExtensionSummary extends PanelAppDescriptor {
   kind: "panel-app";
+  /**
+   * Effective state for the queried project. Identical to `projectBound`
+   * unless a legacy user-level `disabledPanelApps` entry still vetoes the app;
+   * that denylist no longer has a UI and survives only for hand-edited
+   * settings and pre-existing files.
+   */
   enabled: boolean;
-  globalEnabled: boolean;
   /** Explicitly available to the currently selected project. */
   projectBound: boolean;
   /** Legacy migration state, when present in old project settings. */
   projectOverride?: "on" | "off";
-  disabledByPolicy: boolean;
   updateSource: {
     kind: "dir" | "zip" | "git";
     label: string;

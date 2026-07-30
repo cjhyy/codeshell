@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
   Code2,
   FileArchive,
-  FolderLock,
   FolderPlus,
   Github,
   Loader2,
@@ -20,10 +22,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useT } from "../i18n/I18nProvider";
+import { loadProjects, projectLabel, type TrackedProject } from "../projects";
 import { writeSettings } from "../settingsBus";
 import { useAlert, useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 import { PanelAppInstallReviewDialog } from "./PanelAppInstallReviewDialog";
+import {
+  bindingBusyKey,
+  computeProjectBindings,
+  type ProjectSettingsMap,
+} from "./panelAppBindings";
 
 interface Props {
   cwd: string;
@@ -34,15 +42,6 @@ interface Props {
 type PanelAppReviewState =
   | { mode: "install"; source: PanelAppSourceInput; preview: PanelAppPreview }
   | { mode: "update"; appId: string; preview: PanelAppPreview };
-
-export function nextDisabledPanelApps(value: unknown, appId: string, enabled: boolean): string[] {
-  const disabled = new Set(
-    Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : [],
-  );
-  if (enabled) disabled.delete(appId);
-  else disabled.add(appId);
-  return [...disabled];
-}
 
 export function nextPanelAppBindings(value: unknown, appId: string, bound: boolean): string[] {
   const bindings = new Set(
@@ -61,6 +60,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const [apps, setApps] = useState<PanelAppExtensionSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState<string | null>(null);
   const [installBusy, setInstallBusy] = useState<"dir" | "zip" | "git" | null>(null);
   const [gitOpen, setGitOpen] = useState(false);
   const [gitUrl, setGitUrl] = useState("");
@@ -68,13 +68,25 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const [gitSubdir, setGitSubdir] = useState("");
   const [review, setReview] = useState<PanelAppReviewState | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [projects, setProjects] = useState<TrackedProject[]>(() => loadProjects());
+  const [projectSettings, setProjectSettings] = useState<ProjectSettingsMap>({});
+  const [globalDisabled, setGlobalDisabled] = useState<ReadonlySet<string>>(() => new Set());
+  const [bindingBusy, setBindingBusy] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const confirm = useConfirm();
   const alert = useAlert();
   const toast = useToast();
 
+  // Blank the list only when the target actually changes, so another project's
+  // apps can never show under this one's heading. A post-toggle refresh keeps
+  // the current rows on screen — dropping to the loading shell on every switch
+  // flip made the whole tab flash.
+  useEffect(() => {
+    setApps(null);
+  }, [cwd, lang]);
+
   useEffect(() => {
     let alive = true;
-    setApps(null);
     setError(null);
     window.codeshell
       .listPanelAppExtensions(cwd, lang)
@@ -91,46 +103,85 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     };
   }, [cwd, lang, reloadKey]);
 
-  const toggleGlobal = async (app: PanelAppExtensionSummary, enabled: boolean) => {
-    setBusy(app.id);
-    setError(null);
-    try {
-      const settings = (await window.codeshell.getSettings("user")) ?? {};
-      const raw = (settings as { disabledPanelApps?: unknown }).disabledPanelApps;
-      await writeSettings("user", {
-        disabledPanelApps: nextDisabledPanelApps(raw, app.appId, enabled),
+  /**
+   * Read every tracked project's bindings so one app card can show its state
+   * across all projects without switching the active project. This reads raw
+   * settings (1 + N small getSettings calls) instead of calling
+   * listPanelAppExtensions per project — that call re-hashes every installed
+   * app's files, so N projects would mean N full catalog scans in main.
+   */
+  useEffect(() => {
+    let alive = true;
+    const tracked = loadProjects();
+    setProjects(tracked);
+    void (async () => {
+      const [user, ...scoped] = await Promise.all([
+        window.codeshell
+          .getSettings("user")
+          .then((value) => value ?? {})
+          .catch(() => null),
+        ...tracked.map((project) =>
+          window.codeshell
+            .getSettings("project", project.path)
+            .then((value) => (value ?? {}) as Record<string, unknown>)
+            // A per-project read must not fail the whole list: null marks the
+            // row unreadable so a permissions error is distinguishable from
+            // an explicit opt-out.
+            .catch(() => null),
+        ),
+      ]);
+      if (!alive) return;
+      const next: ProjectSettingsMap = {};
+      tracked.forEach((project, index) => {
+        next[project.path] = scoped[index] ?? null;
       });
-      setReloadKey((key) => key + 1);
-    } catch (cause) {
-      setError(String((cause as Error)?.message ?? cause));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const setProjectBinding = async (appId: string, bound: boolean) => {
-    if (!activeProjectPath) return;
-    setBusy(`panel-app:${appId}`);
-    setError(null);
-    try {
-      const settings = (await window.codeshell.getSettings("project", activeProjectPath)) ?? {};
-      await writeSettings(
-        "project",
-        {
-          panelAppBindings: nextPanelAppBindings(settings.panelAppBindings, appId, bound),
-          // Remove the old tri-state entry so the canonical binding is the
-          // only source of truth after the first user action.
-          panelAppOverrides: { [appId]: null },
-        },
-        activeProjectPath,
+      setProjectSettings(next);
+      const raw = (user as { disabledPanelApps?: unknown } | null)?.disabledPanelApps;
+      setGlobalDisabled(
+        new Set(Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : []),
       );
-      setReloadKey((key) => key + 1);
-    } catch (cause) {
-      setError(String((cause as Error)?.message ?? cause));
-    } finally {
-      setBusy(null);
-    }
-  };
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [reloadKey]);
+
+  const setProjectBinding = useCallback(
+    async (appId: string, projectPath: string, bound: boolean) => {
+      setBindingBusy(bindingBusyKey(appId, projectPath));
+      setError(null);
+      let previous: ProjectSettingsMap | null = null;
+      try {
+        const settings = (await window.codeshell.getSettings("project", projectPath)) ?? {};
+        const nextBindings = nextPanelAppBindings(settings.panelAppBindings, appId, bound);
+        // Apply locally first: the row is the only thing that changed, and a
+        // full reload here is what made the tab flash on every click.
+        setProjectSettings((current) => {
+          previous = current;
+          return {
+            ...current,
+            [projectPath]: { ...settings, panelAppBindings: nextBindings, panelAppOverrides: {} },
+          };
+        });
+        await writeSettings(
+          "project",
+          {
+            panelAppBindings: nextBindings,
+            // Remove the old tri-state entry so the canonical binding is the
+            // only source of truth after the first user action.
+            panelAppOverrides: { [appId]: null },
+          },
+          projectPath,
+        );
+      } catch (cause) {
+        if (previous) setProjectSettings(previous);
+        setError(String((cause as Error)?.message ?? cause));
+      } finally {
+        setBindingBusy(null);
+      }
+    },
+    [],
+  );
 
   const pickAndReview = async (kind: "dir" | "zip") => {
     setError(null);
@@ -261,7 +312,9 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         setError(result.error);
         return;
       }
-      await setProjectBinding(preview.id, true);
+      await setProjectBinding(preview.id, bindingProjectPath, true);
+      // Reveal the project list once so the user sees which project it bound to.
+      setExpanded((current) => new Set(current).add(preview.id));
       setReview(null);
       if (source.kind === "git") setGitOpen(false);
       setReloadKey((key) => key + 1);
@@ -281,6 +334,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
 
   const reviewUpdate = async (app: PanelAppExtensionSummary) => {
     setBusy(app.id);
+    setCheckingUpdate(app.id);
     setError(null);
     try {
       const result = await window.codeshell.previewPanelAppUpdate(app.appId);
@@ -292,6 +346,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
     } finally {
+      setCheckingUpdate(null);
       setBusy(null);
     }
   };
@@ -333,6 +388,17 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       ].some((value) => value.toLowerCase().includes(needle)),
   );
 
+  const bindingsByApp = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeProjectBindings>>();
+    for (const app of apps ?? []) {
+      map.set(
+        app.appId,
+        computeProjectBindings(projects, projectSettings, app.appId, globalDisabled),
+      );
+    }
+    return map;
+  }, [apps, projects, projectSettings, globalDisabled]);
+
   return (
     <div className="space-y-3">
       {review && (
@@ -346,35 +412,24 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       )}
 
       <div className="rounded-xl border bg-card p-4">
-        <div
-          className={`mb-3 flex items-start gap-3 rounded-lg border px-3 py-2.5 ${
-            activeProjectPath
-              ? "border-primary/20 bg-primary/5"
-              : "border-status-warn/30 bg-status-warn/5"
-          }`}
-        >
-          <FolderLock
-            className={`mt-0.5 h-4 w-4 shrink-0 ${
-              activeProjectPath ? "text-primary" : "text-status-warn"
-            }`}
-            aria-hidden="true"
-          />
-          <div className="min-w-0">
-            <div className="text-xs font-medium text-foreground">
-              {activeProjectPath
-                ? t("ext.panels.bindingProject", {
-                    project:
-                      activeProjectPath.split(/[\\/]/).filter(Boolean).at(-1) ?? activeProjectPath,
-                  })
-                : t("ext.panels.noBindingProject")}
-            </div>
-            <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
-              {activeProjectPath
-                ? t("ext.panels.bindingProjectDesc")
-                : t("ext.panels.noBindingProjectDesc")}
+        {/* Each app card owns its own per-project list, so the only thing left
+            to say up here is that installing needs a project to bind into. */}
+        {!activeProjectPath && (
+          <div className="mb-3 flex items-start gap-3 rounded-lg border border-status-warn/30 bg-status-warn/5 px-3 py-2.5">
+            <AlertTriangle
+              className="mt-0.5 h-4 w-4 shrink-0 text-status-warn"
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-foreground">
+                {t("ext.panels.noBindingProject")}
+              </div>
+              <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                {t("ext.panels.noBindingProjectDesc")}
+              </div>
             </div>
           </div>
-        </div>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Code2 className="h-5 w-5" aria-hidden="true" />
@@ -518,12 +573,14 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-medium text-foreground">{app.title}</span>
-                  <Badge variant={app.enabled ? "success" : "secondary"}>
-                    {app.enabled
+                  <Badge
+                    variant={
+                      (bindingsByApp.get(app.appId)?.boundCount ?? 0) > 0 ? "success" : "secondary"
+                    }
+                  >
+                    {(bindingsByApp.get(app.appId)?.boundCount ?? 0) > 0
                       ? t("ext.panels.boundAndEnabled")
-                      : app.projectBound
-                        ? t("ext.panels.globallyDisabled")
-                        : t("ext.panels.notBound")}
+                      : t("ext.panels.notBound")}
                   </Badge>
                   <Badge variant="outline">v{app.version}</Badge>
                 </div>
@@ -562,34 +619,116 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     </Badge>
                   )}
                 </div>
-                {app.disabledByPolicy && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    {t("ext.panels.disabledByPolicy")}
-                  </div>
-                )}
+                {(() => {
+                  const summary = bindingsByApp.get(app.appId);
+                  if (!summary) return null;
+                  const open = expanded.has(app.appId);
+                  return (
+                    <div className="mt-3 border-t pt-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-medium text-foreground">
+                          {summary.total === 0
+                            ? t("ext.panels.bindingNoProjects")
+                            : summary.boundCount === 0
+                              ? t("ext.panels.bindingCountNone")
+                              : t("ext.panels.bindingCount", {
+                                  bound: summary.boundCount,
+                                  total: summary.total,
+                                })}
+                        </span>
+                        {summary.total > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 gap-1 px-1.5 text-xs text-muted-foreground"
+                            aria-expanded={open}
+                            onClick={() =>
+                              setExpanded((current) => {
+                                const next = new Set(current);
+                                if (next.has(app.appId)) next.delete(app.appId);
+                                else next.add(app.appId);
+                                return next;
+                              })
+                            }
+                          >
+                            {open ? (
+                              <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                            )}
+                            {open ? t("ext.panels.bindingCollapse") : t("ext.panels.bindingExpand")}
+                          </Button>
+                        )}
+                      </div>
+                      {open && summary.total > 0 && (
+                        <ul
+                          className="mt-2 divide-y rounded-lg border"
+                          aria-label={t("ext.panels.bindingListAria", { title: app.title })}
+                        >
+                          {summary.rows.map((row) => {
+                            const project = projects.find((item) => item.path === row.projectPath);
+                            const rowBusy =
+                              bindingBusy === bindingBusyKey(app.appId, row.projectPath);
+                            return (
+                              <li
+                                key={row.projectPath}
+                                className="flex items-center gap-2 px-2.5 py-2"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="truncate text-xs font-medium text-foreground">
+                                      {project ? projectLabel(project) : row.projectPath}
+                                    </span>
+                                    {row.projectPath === activeProjectPath && (
+                                      <Badge variant="outline">
+                                        {t("ext.panels.bindingCurrentProject")}
+                                      </Badge>
+                                    )}
+                                    {row.vetoedByGlobalDenylist && (
+                                      <Badge
+                                        variant="secondary"
+                                        title={t("ext.panels.bindingVetoedHint")}
+                                      >
+                                        {t("ext.panels.bindingVetoed")}
+                                      </Badge>
+                                    )}
+                                    {row.unreadable && (
+                                      <Badge variant="outline">
+                                        {t("ext.panels.bindingUnreadable")}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="truncate text-[11px] text-muted-foreground">
+                                    {row.projectPath}
+                                  </div>
+                                </div>
+                                {rowBusy ? (
+                                  <Loader2
+                                    className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground"
+                                    aria-hidden="true"
+                                  />
+                                ) : null}
+                                <Switch
+                                  checked={row.bound || row.vetoedByGlobalDenylist}
+                                  disabled={rowBusy}
+                                  aria-label={t("ext.panels.bindingRowAria", {
+                                    title: app.title,
+                                    project: project ? projectLabel(project) : row.projectPath,
+                                  })}
+                                  onCheckedChange={(bound) =>
+                                    void setProjectBinding(app.appId, row.projectPath, bound)
+                                  }
+                                />
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="mt-3 flex flex-wrap items-center gap-3 border-t pt-3">
-                  {activeProjectPath && (
-                    <label className="flex items-center gap-2 text-xs font-medium text-foreground">
-                      <Switch
-                        checked={app.projectBound}
-                        disabled={busy === app.id}
-                        aria-label={t("ext.panels.projectBindingAria", {
-                          title: app.title,
-                        })}
-                        onCheckedChange={(bound) => void setProjectBinding(app.appId, bound)}
-                      />
-                      {t("ext.panels.bindCurrentProject")}
-                    </label>
-                  )}
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Switch
-                      checked={app.globalEnabled}
-                      disabled={busy === app.id}
-                      aria-label={t("ext.panels.globalToggleAria", { title: app.title })}
-                      onCheckedChange={(enabled) => void toggleGlobal(app, enabled)}
-                    />
-                    {t("ext.panels.globalToggle")}
-                  </label>
                   <Button
                     type="button"
                     variant="outline"
@@ -608,7 +747,9 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     ) : (
                       <RefreshCw className="h-3 w-3" aria-hidden="true" />
                     )}
-                    {t("ext.panels.updateFromSource")}
+                    {checkingUpdate === app.id
+                      ? t("ext.panels.checkingUpdate")
+                      : t("ext.panels.updateFromSource")}
                   </Button>
                   <Button
                     type="button"

@@ -33,4 +33,18 @@ describe("CapabilitiesOverviewSection", () => {
     expect(capabilityCacheKey("user", null)).toBe("caps:");
     expect(capabilityCacheKey("project", "/a")).toBe("caps:/a");
   });
+
+  // The group renders behind `!loading`, and useEffect does not run here, so
+  // the loading shell must not leak it in either scope. The project-scope-only
+  // rule itself is asserted in capabilitiesOverview.test.ts as a predicate.
+  test("the loading shell shows no Panel Apps group in either scope", () => {
+    for (const html of [
+      renderToStaticMarkup(
+        <CapabilitiesOverviewSection scope="project" projectPath="/a" projectLabel="Alpha" />,
+      ),
+      renderToStaticMarkup(<CapabilitiesOverviewSection scope="user" projectPath={null} />),
+    ]) {
+      expect(html).not.toContain("面板应用");
+    }
+  });
 });

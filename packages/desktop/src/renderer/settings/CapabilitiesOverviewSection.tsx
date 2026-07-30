@@ -25,6 +25,7 @@ import {
   FolderGit2,
   Globe2,
   Layers,
+  PanelTop,
   Plug,
   Puzzle,
   RotateCcw,
@@ -36,10 +37,14 @@ import { cacheGet, cacheSet } from "./settingsCache";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { PanelAppExtensionSummary } from "../../preload/types";
+import { nextPanelAppBindings } from "../extensions/PanelsTab";
+import { notifySettingsChanged } from "../settingsBus";
 import {
   type CapabilityKind,
   groupCapabilities,
   isGroupCollapsed,
+  showsPanelAppGroup,
   BROWSER_GROUP_ID,
   BROWSER_TOOL_IDS,
 } from "./capabilitiesOverview";
@@ -123,7 +128,7 @@ export function CapabilitiesOverviewSection({
   projectLabel,
   onNavigateToKind,
 }: Props) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const PROJECT_STATE_LABEL: Record<ProjectState, string> = {
     inherit: t("settingsX.capOverview.inherit"),
     on: t("settingsX.capOverview.on"),
@@ -147,6 +152,16 @@ export function CapabilitiesOverviewSection({
   // Kinds the user manually toggled away from their default collapse state.
   // Anything not in here falls back to isCollapsedByDefault (builtin folded).
   const [toggled, setToggled] = useState<Set<CapabilityKind>>(() => new Set());
+  /**
+   * Panel Apps are Desktop application state, not an agent capability, so they
+   * are NOT part of CapabilityDescriptor / capabilityOverrides. They render as a
+   * sibling group here and write the project's canonical `panelAppBindings`
+   * directly — the same key the Extensions → Panel Apps list writes, so the two
+   * entry points can never disagree.
+   */
+  const [panelApps, setPanelApps] = useState<PanelAppExtensionSummary[]>([]);
+  const [panelAppsCollapsed, setPanelAppsCollapsed] = useState(false);
+  const [savingPanelApp, setSavingPanelApp] = useState<string | null>(null);
 
   const toggleGroup = (kind: CapabilityKind) =>
     setToggled((prev) => {
@@ -164,6 +179,12 @@ export function CapabilitiesOverviewSection({
     try {
       // Non-empty cwd → project overlay view; empty → user/global view.
       const next = await window.codeshell.listCapabilities(cwd);
+      // Panel Apps have no global baseline, so the group is project-scope only.
+      // A failure here must not blank the capability list, which is the point
+      // of this screen; the group just stays empty.
+      const nextPanelApps = cwd
+        ? await window.codeshell.listPanelAppExtensions(cwd, lang).catch(() => [])
+        : [];
       cacheSet(requestCacheKey, next);
       if (
         seq !== loadSeqByCacheKey.current.get(requestCacheKey) ||
@@ -172,6 +193,7 @@ export function CapabilitiesOverviewSection({
         return;
       }
       setCaps(next);
+      setPanelApps(nextPanelApps);
     } catch (e) {
       if (
         seq !== loadSeqByCacheKey.current.get(requestCacheKey) ||
@@ -248,6 +270,41 @@ export function CapabilitiesOverviewSection({
     }
   };
 
+  /**
+   * Two-state, not the 继承/开/关 trio: a Panel App has no global baseline to
+   * inherit, so an "inherit" position would carry no meaning. Same shape as
+   * ConversationSettingsSection, which is also default-off + allowlist.
+   */
+  const onPanelAppToggle = async (app: PanelAppExtensionSummary, bound: boolean) => {
+    if (!projectPath) return;
+    const mutationCacheKey = cacheKey;
+    setSavingPanelApp(app.appId);
+    setError(null);
+    try {
+      const settings = (await window.codeshell.getSettings("project", projectPath)) ?? {};
+      await window.codeshell.updateSettings(
+        "project",
+        {
+          panelAppBindings: nextPanelAppBindings(settings.panelAppBindings, app.appId, bound),
+          // Retire the legacy tri-state entry so the binding list is the only
+          // source of truth, matching the Extensions → Panel Apps write.
+          panelAppOverrides: { [app.appId]: null },
+        },
+        projectPath,
+      );
+      // Panel App bindings gate the dock and the agent tool surface, so main
+      // must re-broadcast; listCapabilities alone would not do it.
+      notifySettingsChanged();
+      await load();
+    } catch (e) {
+      if (activeCacheKeyRef.current === mutationCacheKey) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    } finally {
+      if (activeCacheKeyRef.current === mutationCacheKey) setSavingPanelApp(null);
+    }
+  };
+
   const groups = groupCapabilities(caps);
   const selectedProject = scope === "project";
   const summary = useMemo(() => {
@@ -319,7 +376,9 @@ export function CapabilitiesOverviewSection({
         {loading && (
           <p className="m-0 text-xs text-muted-foreground">{t("settingsX.capOverview.loading")}</p>
         )}
-        {!loading && groups.length === 0 && (
+        {/* In project scope the Panel Apps group renders below, so an empty
+            capability list is not an empty screen. */}
+        {!loading && groups.length === 0 && !showsPanelAppGroup(scope) && (
           <p className="m-0 text-xs text-muted-foreground">{t("settingsX.capOverview.none")}</p>
         )}
         {!loading &&
@@ -459,6 +518,86 @@ export function CapabilitiesOverviewSection({
               </div>
             );
           })}
+
+        {/* Panel Apps: project scope only, and a sibling of the capability
+            groups rather than a CapabilityKind — they are Desktop application
+            state, not agent capability state. */}
+        {!loading && showsPanelAppGroup(scope) && (
+          <div className="border-b last:border-b-0">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-auto w-full justify-start gap-2 px-2 py-2 text-left text-sm"
+              aria-expanded={!panelAppsCollapsed}
+              onClick={() => setPanelAppsCollapsed((prev) => !prev)}
+            >
+              <span className="text-muted-foreground" aria-hidden>
+                {panelAppsCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+              </span>
+              <span className="text-muted-foreground" aria-hidden>
+                <PanelTop size={15} />
+              </span>
+              <span>{t("settingsX.capOverview.groupPanelApp")}</span>
+              <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                {panelApps.length > 0
+                  ? `${panelApps.filter((app) => app.enabled).length} / ${panelApps.length}`
+                  : 0}
+              </span>
+            </Button>
+            {!panelAppsCollapsed && panelApps.length === 0 && (
+              <p className="m-0 px-2 pb-2 text-xs text-muted-foreground">
+                {t("settingsX.capOverview.panelAppNone")}
+              </p>
+            )}
+            {!panelAppsCollapsed && panelApps.length > 0 && (
+              <>
+                <p className="m-0 px-2 pb-1 text-xs text-muted-foreground">
+                  {t("settingsX.capOverview.panelAppHint")}
+                </p>
+                {panelApps.map((app) => {
+                  const vetoed = app.projectBound && !app.enabled;
+                  return (
+                    <div className="flex items-center gap-3 px-2 py-2 text-sm" key={app.appId}>
+                      <span className="min-w-0 flex flex-1 flex-col gap-1">
+                        <span className="font-medium text-foreground">{app.title}</span>
+                        {app.description && (
+                          <span className="text-xs text-muted-foreground">{app.description}</span>
+                        )}
+                        <span className="flex shrink-0 flex-wrap items-center gap-1">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px]",
+                              app.enabled ? "text-status-ok" : "text-muted-foreground",
+                            )}
+                          >
+                            {app.enabled ? <Check size={12} /> : <Circle size={12} />}
+                            {app.enabled
+                              ? t("settingsX.capOverview.effectiveOn")
+                              : t("settingsX.capOverview.effectiveOff")}
+                          </span>
+                          {vetoed && (
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-status-warn">
+                              {t("settingsX.capOverview.panelAppVetoed")}
+                            </span>
+                          )}
+                          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                            {app.appId}
+                          </span>
+                        </span>
+                      </span>
+                      <Switch
+                        checked={app.projectBound}
+                        disabled={savingPanelApp === app.appId}
+                        aria-label={t("settingsX.capOverview.panelAppRowAria", { name: app.title })}
+                        onCheckedChange={(v) => void onPanelAppToggle(app, v)}
+                      />
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

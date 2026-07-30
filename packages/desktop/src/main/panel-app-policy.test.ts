@@ -24,20 +24,23 @@ function policy(input: Partial<PanelAppPolicy> = {}): PanelAppPolicy {
 }
 
 describe("Panel App policy", () => {
-  test("Panel App availability is independent from agent plugins", () => {
+  test("a legacy global denylist entry still vetoes a bound project", () => {
     const current = policy({
       boundApps: new Set([app.appId]),
       globalDisabledApps: new Set([app.appId]),
     });
     expect(isPanelAppAvailable(app, current)).toBe(false);
+    // The denylist has no UI anymore, so `projectBound` stays true while
+    // `enabled` reports the vetoed effective state; the Extensions list turns
+    // that difference into the "blocked by the global deny list" badge.
     expect(summarizePanelApp(app, current)).toMatchObject({
       kind: "panel-app",
       enabled: false,
-      disabledByPolicy: true,
+      projectBound: true,
     });
   });
 
-  test("global baseline and effective project state remain distinct", () => {
+  test("a bound project is enabled and keeps its legacy override marker", () => {
     const current = policy({
       boundApps: new Set([app.appId]),
       projectOverrides: { [app.appId]: "on" },
@@ -45,7 +48,6 @@ describe("Panel App policy", () => {
     expect(isPanelAppAvailable(app, current)).toBe(true);
     expect(summarizePanelApp(app, current)).toMatchObject({
       enabled: true,
-      globalEnabled: true,
       projectBound: true,
       projectOverride: "on",
     });
@@ -56,9 +58,7 @@ describe("Panel App policy", () => {
     expect(isPanelAppAvailable(app, current)).toBe(false);
     expect(summarizePanelApp(app, current)).toMatchObject({
       enabled: false,
-      globalEnabled: true,
       projectBound: false,
-      disabledByPolicy: false,
     });
   });
 });

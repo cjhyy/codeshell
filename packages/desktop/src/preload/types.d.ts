@@ -1442,6 +1442,18 @@ export interface CodeshellApi {
   onPluginCommandsChanged(cb: () => void): () => void;
   listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]>;
   listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
+  /**
+   * Descriptors for every app bound by any of `projectPaths`, plus which of
+   * those projects bind each app. Panel buckets are per project, so the dock
+   * needs the union rather than one project's filtered view.
+   */
+  listPanelAppsForProjects(
+    projectPaths: string[],
+    locale: string,
+  ): Promise<{
+    descriptors: PanelAppDescriptor[];
+    boundProjectPathsByAppId: Record<string, string[]>;
+  }>;
   preparePanelApp(id: string, projectPath: string): Promise<PreparedPanelApp>;
   bindPanelApp(input: PanelAppBindInput): Promise<boolean>;
   invokePanelAppAgentTool(input: PanelAppAgentToolInvocation): Promise<unknown>;

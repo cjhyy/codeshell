@@ -478,10 +478,16 @@ function App() {
     const applyPanelApps = async (
       apps: Awaited<ReturnType<typeof window.codeshell.listPanelApps>>,
       projectPath: string | null,
+      extraBound: Record<string, string[]> = {},
     ) => {
       const { replacePanelApps } = await import("./panels/PanelRegistry");
-      if (alive) replacePanelApps(apps, projectPath);
+      if (alive) replacePanelApps(apps, projectPath, extraBound);
     };
+    const listForProjects = (
+      window.codeshell as typeof window.codeshell & {
+        listPanelAppsForProjects?: typeof window.codeshell.listPanelAppsForProjects;
+      }
+    ).listPanelAppsForProjects;
     const panelAppsApi = window.codeshell as typeof window.codeshell & {
       listPanelApps?: typeof window.codeshell.listPanelApps;
       onPanelAppsChanged?: typeof window.codeshell.onPanelAppsChanged;
@@ -494,6 +500,22 @@ function App() {
     }
     const refresh = () => {
       const projectPath = activeProject?.path ?? null;
+      // Register apps bound by ANY tracked project, not just the active one:
+      // panel buckets are per project and bindings are editable for any project
+      // from the Extensions screen, so filtering to the active project left
+      // other projects' docks empty.
+      if (listForProjects) {
+        const paths = loadProjects().map((project) => project.path);
+        if (projectPath && !paths.includes(projectPath)) paths.push(projectPath);
+        void listForProjects(paths, lang)
+          .then((result) => {
+            void applyPanelApps(result.descriptors, projectPath, result.boundProjectPathsByAppId);
+          })
+          .catch(() => {
+            void applyPanelApps([], projectPath);
+          });
+        return;
+      }
       void listApps(projectPath ?? "", lang)
         .then((apps) => {
           void applyPanelApps(apps, projectPath);

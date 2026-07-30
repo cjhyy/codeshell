@@ -20,17 +20,17 @@ export function summarizePanelApp(
   },
 ): PanelAppExtensionSummary {
   const projectBound = policy.boundApps.has(app.appId);
-  const globallyDisabled = policy.globalDisabledApps.has(app.appId);
   return {
     ...app,
     kind: "panel-app",
-    enabled: projectBound && !globallyDisabled,
-    globalEnabled: !globallyDisabled,
+    // The global denylist has no UI anymore, but it is still honored at
+    // runtime (core `isPanelAppBound`) so pre-existing entries and manual
+    // edits of ~/.code-shell/settings.json keep working.
+    enabled: projectBound && !policy.globalDisabledApps.has(app.appId),
     projectBound,
     ...(policy.projectOverrides[app.appId]
       ? { projectOverride: policy.projectOverrides[app.appId] }
       : {}),
-    disabledByPolicy: globallyDisabled,
     updateSource,
   };
 }

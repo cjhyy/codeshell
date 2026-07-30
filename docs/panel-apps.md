@@ -115,16 +115,37 @@ rejected.
 
 ## Enablement
 
-Panel App policy is Desktop application state, not agent capability state:
+Panel App policy is Desktop application state, not agent capability state.
+Installed apps form a global catalog, but an app is **off everywhere until a
+project binds it** — there is no global baseline to inherit:
 
-- `disabledPanelApps` is the global app denylist.
-- `panelAppOverrides` stores direct per-project `on` / `off` values; a missing
-  key inherits the global state.
+- `panelAppBindings` is the project-owned list of bound app IDs and the
+  canonical source of truth. Only an app in this list contributes panel UI,
+  Agent tools, bundled Skills, or project-scoped storage.
+- `panelAppOverrides` is legacy. It is still read so projects that opted in
+  before `panelAppBindings` existed keep their app (`on` counts as a binding,
+  `off` removes one), but every new write clears the entry.
+- `disabledPanelApps` is a user-level denylist that still vetoes a bound app at
+  runtime. It has **no UI**: it survives only for settings written before the
+  global switch was removed, and as a hand-editable escape hatch in
+  `~/.code-shell/settings.json`. To turn an app off normally, unbind the
+  projects that use it, or uninstall it.
 - `disabledPlugins` and `capabilityOverrides` do not affect Panel Apps.
 
-Extensions → Panel Apps owns app import, permission review, overwrite update,
-global enablement, project policy, and uninstall. Extensions → Plugins owns
-Agent Plugin packages and never lists Panel Apps.
+Two screens edit the same `panelAppBindings` key from opposite directions:
+
+- **Extensions → Panel Apps** is the app view. Each installed app's card shows
+  how many of your tracked projects enable it (`3 / 5`) and expands into a
+  per-project switch list, so bindings for any project can be changed without
+  switching the active project. This screen also owns import, permission
+  review, overwrite update, and uninstall.
+- **Settings → (a project) → 能力总览** is the project view. Its Panel Apps
+  group lists every installed app with a two-state switch for that one project.
+  The group is project-scope only, and deliberately does not use the
+  继承 / 启用 / 停用 control the other capability groups use — Panel Apps have
+  no global baseline for an "inherit" position to mean anything.
+
+Extensions → Plugins owns Agent Plugin packages and never lists Panel Apps.
 
 ## Add and iterate on an app
 

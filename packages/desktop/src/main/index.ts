@@ -310,6 +310,7 @@ import {
   isPanelAppBoundToProject,
   listPanelAppExtensions,
   listPanelApps,
+  listPanelAppsForProjects,
 } from "./panel-apps-service.js";
 import {
   installPanelAppUpdateForUi,
@@ -2791,6 +2792,18 @@ ipcMain.handle("panel-apps:listExtensions", async (_e, cwd: string, locale: stri
   if (typeof cwd !== "string") throw new Error("panel-apps:listExtensions requires cwd");
   if (typeof locale !== "string") throw new Error("panel-apps:listExtensions requires locale");
   return listPanelAppExtensions(cwd, locale);
+});
+ipcMain.handle("panel-apps:listForProjects", async (_e, projectPaths: string[], locale: string) => {
+  if (!Array.isArray(projectPaths)) {
+    throw new Error("panel-apps:listForProjects requires projectPaths");
+  }
+  if (typeof locale !== "string") {
+    throw new Error("panel-apps:listForProjects requires locale");
+  }
+  return listPanelAppsForProjects(
+    projectPaths.filter((value): value is string => typeof value === "string"),
+    locale,
+  );
 });
 
 // ── Credentials (token/link store + cookie capture) ──────────────────

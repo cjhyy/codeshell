@@ -179,6 +179,39 @@ export async function listPanelAppExtensions(
   );
 }
 
+/**
+ * Runtime descriptors for the session-owned dock across several projects.
+ *
+ * Panel buckets are per project and the Extensions screen can bind an app to a
+ * project that is not the active one, so the renderer needs the union of every
+ * project's bound apps plus which projects bind each one. Filtering to a single
+ * cwd (as `listPanelApps` does) would leave a session in another project with
+ * an empty dock. The catalog is discovered once and the policy is evaluated per
+ * project, so this costs one scan regardless of project count.
+ */
+export async function listPanelAppsForProjects(
+  projectPaths: readonly string[],
+  locale: string,
+): Promise<{
+  descriptors: PanelAppDescriptor[];
+  boundProjectPathsByAppId: Record<string, string[]>;
+}> {
+  const discovered = await discoverPanelApps(locale);
+  replacePanelAppResources(discovered.resources);
+  const boundProjectPathsByAppId: Record<string, string[]> = {};
+  for (const projectPath of new Set(projectPaths.filter(Boolean))) {
+    const policy = panelAppPolicy(projectPath);
+    for (const app of discovered.descriptors) {
+      if (!isPanelAppAvailable(app, policy)) continue;
+      (boundProjectPathsByAppId[app.appId] ??= []).push(projectPath);
+    }
+  }
+  return {
+    descriptors: discovered.descriptors.filter((app) => boundProjectPathsByAppId[app.appId]),
+    boundProjectPathsByAppId,
+  };
+}
+
 /** Runtime descriptors for the session-owned dock. */
 export async function listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]> {
   const discovered = await discoverPanelApps(locale);

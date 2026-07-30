@@ -7,6 +7,7 @@ import {
   isCollapsedByDefault,
   isGroupCollapsed,
   foldBrowserGroup,
+  showsPanelAppGroup,
   BROWSER_GROUP_ID,
 } from "./capabilitiesOverview";
 
@@ -76,13 +77,7 @@ describe("groupCapabilities", () => {
       cap({ id: "m:1", kind: "mcp", name: "Srv" }),
       cap({ id: "s:1", kind: "skill", name: "Skl" }),
     ]);
-    expect(groups.map((g) => g.kind)).toEqual([
-      "mcp",
-      "skill",
-      "plugin",
-      "agent",
-      "builtin",
-    ]);
+    expect(groups.map((g) => g.kind)).toEqual(["mcp", "skill", "plugin", "agent", "builtin"]);
   });
 
   test("drops empty groups", () => {
@@ -143,26 +138,29 @@ describe("isGroupCollapsed", () => {
 
 describe("capabilityMeta", () => {
   test("shows MCP tool count", () => {
-    expect(capabilityMeta(cap({ kind: "mcp", origin: { toolCount: 3 } }))).toBe(
-      "3 个工具",
-    );
+    expect(capabilityMeta(cap({ kind: "mcp", origin: { toolCount: 3 } }))).toBe("3 个工具");
   });
 
   test("shows read-only marker", () => {
-    expect(
-      capabilityMeta(cap({ kind: "mcp", origin: { isReadOnly: true } })),
-    ).toBe("只读");
+    expect(capabilityMeta(cap({ kind: "mcp", origin: { isReadOnly: true } }))).toBe("只读");
   });
 
   test("combines count and read-only", () => {
-    expect(
-      capabilityMeta(
-        cap({ kind: "mcp", origin: { toolCount: 2, isReadOnly: true } }),
-      ),
-    ).toBe("2 个工具 · 只读");
+    expect(capabilityMeta(cap({ kind: "mcp", origin: { toolCount: 2, isReadOnly: true } }))).toBe(
+      "2 个工具 · 只读",
+    );
   });
 
   test("empty when no origin detail", () => {
     expect(capabilityMeta(cap({ origin: undefined }))).toBe("");
+  });
+});
+
+describe("showsPanelAppGroup", () => {
+  // Panel Apps are default-off + bound per project, so a user-scope row would
+  // have no global baseline to represent.
+  test("only project scope shows the Panel Apps group", () => {
+    expect(showsPanelAppGroup("project")).toBe(true);
+    expect(showsPanelAppGroup("user")).toBe(false);
   });
 });

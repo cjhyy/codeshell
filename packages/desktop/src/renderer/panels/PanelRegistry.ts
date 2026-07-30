@@ -251,13 +251,30 @@ export class PanelRegistry {
 export const PANEL_REGISTRY = new PanelRegistry();
 for (const entry of BUILTIN_PANEL_ENTRIES) PANEL_REGISTRY.register(entry);
 
+/**
+ * Publish the installed Panel App catalog to the registry.
+ *
+ * A Panel App is enabled for exactly the projects that bind it. Panel buckets
+ * are per project and the Extensions screen edits any project's bindings, so
+ * the caller passes the full per-app project list; keying off a single "active"
+ * project left every other project's dock empty.
+ *
+ * `boundProjectPathsByAppId` is authoritative when provided. `boundProjectPath`
+ * is the legacy single-project form, still used when the host predates
+ * `listPanelAppsForProjects` — there the descriptors are already filtered to
+ * that one project.
+ */
 export function replacePanelApps(
   descriptors: PanelAppDescriptor[],
   boundProjectPath: string | null,
+  boundProjectPathsByAppId?: Readonly<Record<string, readonly string[]>>,
 ): void {
   PANEL_REGISTRY.replacePanelAppEntries(
-    descriptors.map(
-      (descriptor, index): PanelEntry => ({
+    descriptors.map((descriptor, index): PanelEntry => {
+      const boundPaths = boundProjectPathsByAppId
+        ? new Set<string>(boundProjectPathsByAppId[descriptor.appId] ?? [])
+        : new Set<string>(boundProjectPath ? [boundProjectPath] : []);
+      return {
         key: descriptor.id,
         owner: {
           kind: "panel-app",
@@ -271,7 +288,7 @@ export function replacePanelApps(
           ...tool,
           inputSchema: { ...tool.inputSchema },
         })),
-        enabled: ({ projectPath }) => Boolean(boundProjectPath) && projectPath === boundProjectPath,
+        enabled: ({ projectPath }) => Boolean(projectPath) && boundPaths.has(projectPath!),
         render: ({ tabId, bucket, busy, projectPath, cwd, engineSessionId, foregroundVisible }) =>
           createElement(PanelAppHost, {
             descriptor,
@@ -283,8 +300,8 @@ export function replacePanelApps(
             engineSessionId,
             visible: foregroundVisible,
           }),
-      }),
-    ),
+      };
+    }),
   );
 }
 

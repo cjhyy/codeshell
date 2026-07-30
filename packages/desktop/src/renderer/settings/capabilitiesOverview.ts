@@ -43,7 +43,11 @@ export interface CapabilityGroup {
  * synthetic "浏览器" row in the overview; its toggle fans out to all three real
  * descriptors. The synthetic id is recognized by the component to expand back.
  */
-export const BROWSER_TOOL_IDS = ["builtin:browser_observe", "builtin:browser_act", "builtin:browser_navigate"];
+export const BROWSER_TOOL_IDS = [
+  "builtin:browser_observe",
+  "builtin:browser_act",
+  "builtin:browser_navigate",
+];
 export const BROWSER_GROUP_ID = "builtin:__browser__";
 
 /** True if this descriptor is one of the browser tools we fold. */
@@ -57,17 +61,20 @@ export function isBrowserTool(cap: CapabilityDescriptor): boolean {
  * else undefined (mixed → shows as 继承-ish / no single state). Pure +
  * unit-testable; the component fans a toggle back out via BROWSER_TOOL_IDS.
  */
-export function foldBrowserGroup(browserTools: CapabilityDescriptor[]): CapabilityDescriptor | null {
+export function foldBrowserGroup(
+  browserTools: CapabilityDescriptor[],
+): CapabilityDescriptor | null {
   if (browserTools.length === 0) return null;
   const allOn = browserTools.every((c) => c.enabled);
   const overrides = new Set(browserTools.map((c) => c.projectOverride ?? "inherit"));
   const sharedOverride = overrides.size === 1 ? browserTools[0]!.projectOverride : undefined;
-  const allBaselineOn = browserTools.every((c) => (c.globalEnabled ?? c.enabled));
+  const allBaselineOn = browserTools.every((c) => c.globalEnabled ?? c.enabled);
   return {
     id: BROWSER_GROUP_ID,
     kind: "builtin",
     name: "浏览器自动化",
-    description: "browser_observe / browser_act / browser_navigate —— 看网页、操作、看图、多 tab(整组开关)",
+    description:
+      "browser_observe / browser_act / browser_navigate —— 看网页、操作、看图、多 tab(整组开关)",
     enabled: allOn,
     control: browserTools[0]!.control, // unused for the synthetic row (component fans out)
     globalEnabled: allBaselineOn,
@@ -83,14 +90,16 @@ export function foldBrowserGroup(browserTools: CapabilityDescriptor[]): Capabili
  * returns a stable, name-sorted projection). The three browser builtin tools
  * are folded into one synthetic "浏览器" row (see foldBrowserGroup).
  */
-export function groupCapabilities(
-  caps: CapabilityDescriptor[],
-): CapabilityGroup[] {
+export function groupCapabilities(caps: CapabilityDescriptor[]): CapabilityGroup[] {
   const browserTools = caps.filter(isBrowserTool);
   const folded = foldBrowserGroup(browserTools);
   return CAPABILITY_GROUP_ORDER.map((kind) => {
     if (kind !== "builtin") {
-      return { kind, label: CAPABILITY_GROUP_LABEL[kind], items: caps.filter((c) => c.kind === kind) };
+      return {
+        kind,
+        label: CAPABILITY_GROUP_LABEL[kind],
+        items: caps.filter((c) => c.kind === kind),
+      };
     }
     // builtin group: non-browser tools as-is, plus the single folded browser row.
     const others = caps.filter((c) => c.kind === "builtin" && !isBrowserTool(c));
@@ -116,6 +125,17 @@ export function isGroupCollapsed(
 ): boolean {
   const def = isCollapsedByDefault(kind);
   return toggled.has(kind) ? !def : def;
+}
+
+/**
+ * Panel Apps render as a sibling group of the capability kinds (they are
+ * Desktop application state, not agent capability state, so they carry no
+ * CapabilityDescriptor). They are default-off and bound explicitly per project,
+ * so there is no global baseline a user-scope row could represent — an all-off
+ * list under 用户(全局) would read as "installed but broken".
+ */
+export function showsPanelAppGroup(scope: "user" | "project"): boolean {
+  return scope === "project";
 }
 
 /**
