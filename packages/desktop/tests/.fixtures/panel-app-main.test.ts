@@ -12,10 +12,7 @@ import {
 } from "node:fs";
 import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
-import {
-  installPanelAppElectronMock,
-  panelAppElectronMock,
-} from "../panel-app-electron-mock.js";
+import { installPanelAppElectronMock, panelAppElectronMock } from "../panel-app-electron-mock.js";
 
 let api: typeof import("../../src/main/panel-app-protocol.js");
 let PanelAppBridge: typeof import("../../src/main/panel-app-bridge.js").PanelAppBridge;
@@ -60,7 +57,7 @@ describe("Panel App protocol", () => {
       revision: hostId,
     };
     api.replacePanelAppResources([{ descriptor, root, entry: "panels/dashboard/index.html" }]);
-    const prepared = await api.preparePanelApp(descriptor.id);
+    const prepared = await api.preparePanelApp(descriptor.id, "/repo/alpha");
     expect(panelAppElectronMock.protocolHandler).not.toBeNull();
     return prepared;
   }
@@ -71,6 +68,7 @@ describe("Panel App protocol", () => {
     expect(html.status).toBe(200);
     expect(await html.text()).toContain("safe");
     expect(html.headers.get("content-security-policy")).toContain("connect-src 'none'");
+    expect(html.headers.get("content-security-policy")).toContain("frame-src 'self'");
     expect(html.headers.get("x-content-type-options")).toBe("nosniff");
 
     const script = await panelAppElectronMock.protocolHandler!(
@@ -108,23 +106,51 @@ describe("Panel App protocol", () => {
       rmSync(outside, { force: true });
     }
   });
+
+  test("uses separate WebView partitions for separate projects", async () => {
+    const first = await arrange("scopedhost");
+    const second = await api.preparePanelApp("panel-app:scopedhost", "/repo/beta");
+    expect(first.partition).not.toBe(second.partition);
+    expect(api.preparedPanelAppPartitionProjectPath("scopedhost", first.partition)).toBe(
+      "/repo/alpha",
+    );
+    expect(api.preparedPanelAppPartitionProjectPath("scopedhost", second.partition)).toBe(
+      "/repo/beta",
+    );
+  });
 });
 
-function fakeGuest(id: number) {
+function fakeGuest(
+  id: number,
+  onSend?: (channel: string, payload: Record<string, unknown>) => void,
+) {
   const once = new Map<string, () => void>();
+  const sent: Array<{ channel: string; payload: Record<string, unknown> }> = [];
   return {
     id,
     isDestroyed: () => false,
     once: (event: string, listener: () => void) => once.set(event, listener),
     on: () => undefined,
     setWindowOpenHandler: () => undefined,
-    send: () => undefined,
+    send: (channel: string, payload: Record<string, unknown>) => {
+      sent.push({ channel, payload });
+      onSend?.(channel, payload);
+    },
     stop: () => undefined,
     destroyForTest: () => once.get("destroyed")?.(),
+    sent,
   };
 }
 
-function bridgeResource(permissions: string[] = []) {
+function bridgeResource(
+  permissions: string[] = [],
+  agentTools: Array<{
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+    readOnly: boolean;
+  }> = [],
+) {
   return {
     descriptor: {
       id: "panel-app:demo",
@@ -134,6 +160,7 @@ function bridgeResource(permissions: string[] = []) {
       icon: "panel" as const,
       singleton: true,
       permissions: permissions as any,
+      ...(agentTools.length > 0 ? { agent: { tools: agentTools, skills: [] } } : {}),
       hostId: "host",
       revision: "revision-1",
     },
@@ -151,6 +178,7 @@ async function bindBridgeGuest(guestId: number, overrides: Record<string, unknow
       tabId: `tab-${guestId}`,
       bucket: "repo::session-1",
       sessionId: "session-1",
+      projectPath: "/repo",
       cwd: "/repo",
       visible: true,
       busy: false,
@@ -162,10 +190,325 @@ async function bindBridgeGuest(guestId: number, overrides: Record<string, unknow
 }
 
 describe("PanelAppBridge", () => {
+  afterEach(() => {
+    panelAppElectronMock.ipcHandlers.clear();
+    panelAppElectronMock.ipcListeners.clear();
+  });
+
+  test("fails closed before prepare and after a project binding is revoked", async () => {
+    let bound = false;
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => bound,
+      getAgentBridge: () => null,
+    });
+    bridge.registerIpc();
+    expect(() =>
+      panelAppElectronMock.ipcHandlers.get("panel-apps:prepare")!(
+        { sender: panelAppElectronMock.trustedSender },
+        "panel-app:demo",
+        "/repo",
+      ),
+    ).toThrow(/not bound/);
+
+    bound = true;
+    const guest = fakeGuest(30);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource() as any,
+      "/repo",
+    );
+    await expect(bindBridgeGuest(30, { cwd: "/other" })).rejects.toThrow(/does not belong/);
+    await bindBridgeGuest(30);
+    bound = false;
+    expect(() =>
+      panelAppElectronMock.ipcHandlers.get("panel-app:get-context")!({ sender: guest }),
+    ).toThrow(/no longer bound/);
+  });
+
+  test("invokes only declared Agent tools and accepts a response from the bound guest", async () => {
+    const bridge = new PanelAppBridge({
+      isTrustedHost: (sender) => sender === panelAppElectronMock.trustedSender,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      limits: { maxParamsBytes: 64 },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(24, (channel, payload) => {
+      if (channel !== "panel-app:agent-tool-request") return;
+      queueMicrotask(() => {
+        panelAppElectronMock.ipcListeners.get("panel-app:agent-tool-response")?.(
+          { sender: guest },
+          {
+            requestId: payload.requestId,
+            ok: true,
+            result: { echoed: payload.arguments },
+          },
+        );
+      });
+    });
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(
+        [],
+        [
+          {
+            name: "echo_design",
+            description: "Echo a design request",
+            inputSchema: {
+              type: "object",
+              properties: {
+                node_id: { type: "string" },
+                options: {
+                  type: "object",
+                  properties: {
+                    mode: { type: "string", enum: ["inspect", "edit"] },
+                  },
+                  required: ["mode"],
+                  additionalProperties: false,
+                },
+              },
+              required: ["node_id"],
+              additionalProperties: false,
+            },
+            readOnly: true,
+          },
+        ],
+      ) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(24);
+
+    const invoke = panelAppElectronMock.ipcHandlers.get("panel-apps:invoke-agent-tool")!;
+    await expect(
+      invoke(
+        { sender: panelAppElectronMock.trustedSender },
+        {
+          appDescriptorId: "panel-app:demo",
+          bucket: "repo::session-1",
+          toolName: "missing_tool",
+          arguments: {},
+        },
+      ),
+    ).rejects.toThrow(/not declared/);
+    await expect(
+      invoke(
+        { sender: panelAppElectronMock.trustedSender },
+        {
+          appDescriptorId: "panel-app:demo",
+          bucket: "repo::session-1",
+          toolName: "echo_design",
+          arguments: {},
+        },
+      ),
+    ).rejects.toThrow(/Missing required parameter: node_id/);
+    await expect(
+      invoke(
+        { sender: panelAppElectronMock.trustedSender },
+        {
+          appDescriptorId: "panel-app:demo",
+          bucket: "repo::session-1",
+          toolName: "echo_design",
+          arguments: { node_id: 42 },
+        },
+      ),
+    ).rejects.toThrow(/must be a string/);
+    await expect(
+      invoke(
+        { sender: panelAppElectronMock.trustedSender },
+        {
+          appDescriptorId: "panel-app:demo",
+          bucket: "repo::session-1",
+          toolName: "echo_design",
+          arguments: { node_id: "hero", options: { mode: "delete" } },
+        },
+      ),
+    ).rejects.toThrow(/enum/);
+    await expect(
+      invoke(
+        { sender: panelAppElectronMock.trustedSender },
+        {
+          appDescriptorId: "panel-app:demo",
+          bucket: "repo::session-1",
+          toolName: "echo_design",
+          arguments: { node_id: "hero", extra: true },
+        },
+      ),
+    ).rejects.toThrow(/Unexpected parameter/);
+    await expect(
+      invoke(
+        { sender: panelAppElectronMock.trustedSender },
+        {
+          appDescriptorId: "panel-app:demo",
+          bucket: "repo::session-1",
+          toolName: "echo_design",
+          arguments: { node_id: "x".repeat(100) },
+        },
+      ),
+    ).rejects.toThrow(/arguments are too large/);
+    expect(
+      await invoke(
+        { sender: panelAppElectronMock.trustedSender },
+        {
+          appDescriptorId: "panel-app:demo",
+          bucket: "repo::session-1",
+          toolName: "echo_design",
+          arguments: { node_id: "hero" },
+        },
+      ),
+    ).toEqual({ echoed: { node_id: "hero" } });
+    expect(
+      guest.sent.filter((message) => message.channel === "panel-app:agent-tool-request"),
+    ).toHaveLength(1);
+  });
+
+  test("clears an Agent tool request when the guest send fails synchronously", async () => {
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      limits: { callTimeoutMs: 1_000 },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(28, (channel) => {
+      if (channel === "panel-app:agent-tool-request") throw new Error("guest unavailable");
+    });
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(
+        [],
+        [
+          {
+            name: "read_design",
+            description: "Read a design",
+            inputSchema: { type: "object" },
+            readOnly: true,
+          },
+        ],
+      ) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(28);
+
+    await expect(
+      panelAppElectronMock.ipcHandlers.get("panel-apps:invoke-agent-tool")!(
+        { sender: panelAppElectronMock.trustedSender },
+        {
+          appDescriptorId: "panel-app:demo",
+          bucket: "repo::session-1",
+          toolName: "read_design",
+          arguments: {},
+        },
+      ),
+    ).rejects.toThrow(/guest unavailable/);
+    expect((bridge as any).pendingAgentToolCalls.size).toBe(0);
+  });
+
+  test("ignores an Agent tool response from a different guest", async () => {
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      limits: { callTimeoutMs: 10 },
+    });
+    bridge.registerIpc();
+    const attacker = fakeGuest(26);
+    const guest = fakeGuest(25, (_channel, payload) => {
+      queueMicrotask(() => {
+        panelAppElectronMock.ipcListeners.get("panel-app:agent-tool-response")?.(
+          { sender: attacker },
+          { requestId: payload.requestId, ok: true, result: "spoofed" },
+        );
+      });
+    });
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(
+        [],
+        [
+          {
+            name: "read_design",
+            description: "Read a design",
+            inputSchema: { type: "object" },
+            readOnly: true,
+          },
+        ],
+      ) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(25);
+    await expect(
+      panelAppElectronMock.ipcHandlers.get("panel-apps:invoke-agent-tool")!(
+        { sender: panelAppElectronMock.trustedSender },
+        {
+          appDescriptorId: "panel-app:demo",
+          bucket: "repo::session-1",
+          toolName: "read_design",
+          arguments: {},
+        },
+      ),
+    ).rejects.toThrow(/timed out/);
+  });
+
+  test("rejects an in-flight Agent tool immediately when its app is revoked", async () => {
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      limits: { callTimeoutMs: 1_000 },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(27);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(
+        [],
+        [
+          {
+            name: "read_design",
+            description: "Read a design",
+            inputSchema: { type: "object" },
+            readOnly: true,
+          },
+        ],
+      ) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(27);
+
+    const invocation = panelAppElectronMock.ipcHandlers.get("panel-apps:invoke-agent-tool")!(
+      { sender: panelAppElectronMock.trustedSender },
+      {
+        appDescriptorId: "panel-app:demo",
+        bucket: "repo::session-1",
+        toolName: "read_design",
+        arguments: {},
+      },
+    ) as Promise<unknown>;
+    await Promise.resolve();
+    bridge.revokeAppId("demo");
+
+    await expect(invocation).rejects.toThrow(/closed before its Agent tool completed/);
+    expect(() =>
+      panelAppElectronMock.ipcHandlers.get("panel-app:get-context")!({ sender: guest }),
+    ).toThrow(/scope is not bound/);
+  });
+
   test("binds scope from the trusted host and exposes only permitted context", async () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: (sender) => sender === panelAppElectronMock.trustedSender,
       isWorkspaceTrusted: (cwd) => cwd === "/repo",
+      isPanelAppBound: () => true,
       getAgentBridge: () => null,
     });
     bridge.registerIpc();
@@ -174,6 +517,7 @@ describe("PanelAppBridge", () => {
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource(["context.session", "context.workspace"]) as any,
+      "/repo",
     );
 
     await bindBridgeGuest(7, { busy: true });
@@ -187,7 +531,7 @@ describe("PanelAppBridge", () => {
       busy: true,
       theme: "dark",
       locale: "zh-CN",
-      apiVersion: 1,
+      apiVersion: 2,
     });
     expect(context.sessionId).toBe("session-1");
     expect(context.cwd).toBe("/repo");
@@ -198,6 +542,7 @@ describe("PanelAppBridge", () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
       isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
       getAgentBridge: () => null,
     });
     bridge.registerIpc();
@@ -206,15 +551,14 @@ describe("PanelAppBridge", () => {
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource() as any,
+      "/repo",
     );
     await bindBridgeGuest(8);
 
     await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "storage.get",
-        { key: "x" },
-      ),
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "storage.get", {
+        key: "x",
+      }),
     ).rejects.toThrow(/permission denied/);
     await expect(
       panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
@@ -229,6 +573,7 @@ describe("PanelAppBridge", () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
       isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
       getAgentBridge: () => null,
     });
     bridge.registerIpc();
@@ -237,6 +582,7 @@ describe("PanelAppBridge", () => {
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource() as any,
+      "/repo",
     );
     await bindBridgeGuest(16);
     await expect(
@@ -253,6 +599,7 @@ describe("PanelAppBridge", () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
       isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
       getAgentBridge: () => null,
       showNotification: (notification) => {
         shown.push(notification);
@@ -265,6 +612,7 @@ describe("PanelAppBridge", () => {
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource() as any,
+      "/repo",
     );
     await bindBridgeGuest(17);
     await expect(
@@ -282,6 +630,7 @@ describe("PanelAppBridge", () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
       isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
       getAgentBridge: () => null,
     });
     bridge.registerIpc();
@@ -290,15 +639,15 @@ describe("PanelAppBridge", () => {
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource(["storage"]) as any,
+      "/repo",
     );
     await bindBridgeGuest(9);
 
     await expect(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "storage.get",
-        { key: "x", padding: "x".repeat(70 * 1024) },
-      ),
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "storage.get", {
+        key: "x",
+        padding: "x".repeat(70 * 1024),
+      }),
     ).rejects.toThrow(/too large/);
     guest.destroyForTest();
     expect(() =>
@@ -311,6 +660,7 @@ describe("PanelAppBridge", () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
       isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
       getAgentBridge: () =>
         ({
           requestWorker: async () => {
@@ -325,6 +675,7 @@ describe("PanelAppBridge", () => {
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+      "/repo",
     );
     await bindBridgeGuest(10, { busy: true });
 
@@ -345,6 +696,7 @@ describe("PanelAppBridge", () => {
       const bridge = new PanelAppBridge({
         isTrustedHost: () => true,
         isWorkspaceTrusted: () => false,
+        isPanelAppBound: () => true,
         getAgentBridge: () => null,
         limits: { storageQuotaBytes: 256 },
       });
@@ -354,6 +706,7 @@ describe("PanelAppBridge", () => {
         guest as any,
         panelAppElectronMock.ownerWindow as any,
         bridgeResource(["storage"]) as any,
+        "/repo",
       );
       await bindBridgeGuest(11);
       const call = (method: string, params: unknown) =>
@@ -370,6 +723,26 @@ describe("PanelAppBridge", () => {
       expect(await call("storage.get", { key: "left" })).toBe(1);
       expect(await call("storage.get", { key: "right" })).toBe(2);
       expect(await call("storage.delete", { key: "left" })).toBe(true);
+
+      const otherProjectGuest = fakeGuest(29);
+      bridge.registerGuest(
+        otherProjectGuest as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource(["storage"]) as any,
+        "/repo/other",
+      );
+      await bindBridgeGuest(29, {
+        projectPath: "/repo/other",
+        cwd: "/repo/other",
+      });
+      expect(
+        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+          { sender: otherProjectGuest },
+          "storage.get",
+          { key: "right" },
+        ),
+      ).toBeNull();
+
       await expect(call("storage.set", { key: "large", value: "x".repeat(512) })).rejects.toThrow(
         /quota/,
       );
@@ -386,6 +759,7 @@ describe("PanelAppBridge", () => {
       const bridge = new PanelAppBridge({
         isTrustedHost: () => true,
         isWorkspaceTrusted: () => false,
+        isPanelAppBound: () => true,
         getAgentBridge: () => null,
         limits: { storageQuotaBytes: 96 * 1024 },
       });
@@ -395,6 +769,7 @@ describe("PanelAppBridge", () => {
         guest as any,
         panelAppElectronMock.ownerWindow as any,
         bridgeResource(["storage"]) as any,
+        "/repo",
       );
       await bindBridgeGuest(23);
       const call = (method: string, params: unknown) =>
@@ -416,6 +791,7 @@ describe("PanelAppBridge", () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
       isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
       getAgentBridge: () => null,
     });
     bridge.registerIpc();
@@ -424,14 +800,13 @@ describe("PanelAppBridge", () => {
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource(["external.open"]) as any,
+      "/repo",
     );
     await bindBridgeGuest(12);
     const call = (url: string) =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "external.open",
-        { url },
-      ) as Promise<unknown>;
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "external.open", {
+        url,
+      }) as Promise<unknown>;
     await expect(call("file:///etc/passwd")).rejects.toThrow(/https/);
     panelAppElectronMock.dialogResponse = 0;
     expect(await call("https://example.com/path")).toBe(true);
@@ -443,6 +818,7 @@ describe("PanelAppBridge", () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
       isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
       getAgentBridge: () =>
         ({
           requestWorker: async (_method: string, params: Record<string, unknown>) =>
@@ -461,6 +837,7 @@ describe("PanelAppBridge", () => {
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+      "/repo",
     );
     await bindBridgeGuest(13);
     const call = (prompt: string) =>
@@ -483,6 +860,7 @@ describe("PanelAppBridge", () => {
       const bridge = new PanelAppBridge({
         isTrustedHost: () => true,
         isWorkspaceTrusted: (cwd) => cwd === workspaceRoot,
+        isPanelAppBound: () => true,
         getAgentBridge: () => null,
       });
       bridge.registerIpc();
@@ -491,8 +869,12 @@ describe("PanelAppBridge", () => {
         guest as any,
         panelAppElectronMock.ownerWindow as any,
         bridgeResource(["workspace.info"]) as any,
+        workspaceRoot,
       );
-      await bindBridgeGuest(14, { cwd: workspaceRoot });
+      await bindBridgeGuest(14, {
+        projectPath: workspaceRoot,
+        cwd: workspaceRoot,
+      });
       const info = await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
         { sender: guest },
         "workspace.info",
@@ -547,6 +929,7 @@ describe("PanelAppBridge", () => {
       const bridge = new PanelAppBridge({
         isTrustedHost: () => true,
         isWorkspaceTrusted: (cwd) => cwd === workspaceRoot,
+        isPanelAppBound: () => true,
         getAgentBridge: () => null,
       });
       bridge.registerIpc();
@@ -555,8 +938,12 @@ describe("PanelAppBridge", () => {
         guest as any,
         panelAppElectronMock.ownerWindow as any,
         bridgeResource(["context.workspace", "workspace.read", "workspace.write"]) as any,
+        workspaceRoot,
       );
-      await bindBridgeGuest(18, { cwd: workspaceRoot });
+      await bindBridgeGuest(18, {
+        projectPath: workspaceRoot,
+        cwd: workspaceRoot,
+      });
       const call = (method: string, params: unknown) =>
         panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
           { sender: guest },
@@ -728,6 +1115,7 @@ describe("PanelAppBridge", () => {
       const bridge = new PanelAppBridge({
         isTrustedHost: () => true,
         isWorkspaceTrusted: (cwd) => cwd === workspaceRoot,
+        isPanelAppBound: () => true,
         getAgentBridge: () => null,
       });
       bridge.registerIpc();
@@ -736,8 +1124,12 @@ describe("PanelAppBridge", () => {
         readGuest as any,
         panelAppElectronMock.ownerWindow as any,
         bridgeResource(["context.workspace", "workspace.read"]) as any,
+        workspaceRoot,
       );
-      await bindBridgeGuest(21, { cwd: workspaceRoot });
+      await bindBridgeGuest(21, {
+        projectPath: workspaceRoot,
+        cwd: workspaceRoot,
+      });
       expect(
         await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
           { sender: readGuest },
@@ -758,8 +1150,12 @@ describe("PanelAppBridge", () => {
         writeGuest as any,
         panelAppElectronMock.ownerWindow as any,
         bridgeResource(["context.workspace", "workspace.write"]) as any,
+        workspaceRoot,
       );
-      await bindBridgeGuest(22, { cwd: workspaceRoot });
+      await bindBridgeGuest(22, {
+        projectPath: workspaceRoot,
+        cwd: workspaceRoot,
+      });
       await expect(
         panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
           { sender: writeGuest },
@@ -795,6 +1191,7 @@ describe("PanelAppBridge", () => {
       const bridge = new PanelAppBridge({
         isTrustedHost: () => true,
         isWorkspaceTrusted: (cwd) => cwd === workspaceRoot,
+        isPanelAppBound: () => true,
         getAgentBridge: () => null,
       });
       bridge.registerIpc();
@@ -803,8 +1200,12 @@ describe("PanelAppBridge", () => {
         guest as any,
         panelAppElectronMock.ownerWindow as any,
         bridgeResource(["context.workspace", "workspace.read", "workspace.write"]) as any,
+        workspaceRoot,
       );
-      await bindBridgeGuest(19, { cwd: workspaceRoot });
+      await bindBridgeGuest(19, {
+        projectPath: workspaceRoot,
+        cwd: workspaceRoot,
+      });
       const call = (method: string, params: unknown) =>
         panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
           { sender: guest },
@@ -862,6 +1263,7 @@ describe("PanelAppBridge", () => {
       const untrustedBridge = new PanelAppBridge({
         isTrustedHost: () => true,
         isWorkspaceTrusted: () => false,
+        isPanelAppBound: () => true,
         getAgentBridge: () => null,
       });
       untrustedBridge.registerIpc();
@@ -870,8 +1272,12 @@ describe("PanelAppBridge", () => {
         untrustedGuest as any,
         panelAppElectronMock.ownerWindow as any,
         bridgeResource(["context.workspace", "workspace.read"]) as any,
+        workspaceRoot,
       );
-      await bindBridgeGuest(20, { cwd: workspaceRoot });
+      await bindBridgeGuest(20, {
+        projectPath: workspaceRoot,
+        cwd: workspaceRoot,
+      });
       await expect(
         panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
           { sender: untrustedGuest },
@@ -890,6 +1296,7 @@ describe("PanelAppBridge", () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
       isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
       getAgentBridge: () => null,
       showNotification: (notification) => {
         shown.push(notification);
@@ -903,6 +1310,7 @@ describe("PanelAppBridge", () => {
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource(["notifications.send"]) as any,
+      "/repo",
     );
     await bindBridgeGuest(15);
     const call = (params: unknown) =>

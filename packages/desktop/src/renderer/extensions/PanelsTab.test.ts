@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { nextDisabledPanelApps, panelAppProjectOverridePatch } from "./PanelsTab";
+import { nextDisabledPanelApps, nextPanelAppBindings } from "./PanelsTab";
 
 describe("Panel App controls", () => {
   const appId = "design-studio";
@@ -15,15 +15,9 @@ describe("Panel App controls", () => {
     expect(nextDisabledPanelApps([42, appId, null], appId, true)).toEqual([]);
   });
 
-  test("project policy uses on/off and deletes the key for inherit", () => {
-    expect(panelAppProjectOverridePatch(appId, "on")).toEqual({
-      panelAppOverrides: { [appId]: "on" },
-    });
-    expect(panelAppProjectOverridePatch(appId, "off")).toEqual({
-      panelAppOverrides: { [appId]: "off" },
-    });
-    expect(panelAppProjectOverridePatch(appId, "inherit")).toEqual({
-      panelAppOverrides: { [appId]: null },
-    });
+  test("project binding adds and removes only the selected app", () => {
+    expect(nextPanelAppBindings(["quant-lab"], appId, true)).toEqual([appId, "quant-lab"]);
+    expect(nextPanelAppBindings(["quant-lab", appId], appId, false)).toEqual(["quant-lab"]);
+    expect(nextPanelAppBindings([42, appId, null], appId, false)).toEqual([]);
   });
 });

@@ -11,6 +11,21 @@ export interface PanelOpenResult {
   detail?: string;
 }
 
+export interface AgentPanelToolDescriptor {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  readOnly: boolean;
+}
+
+export interface PanelInvokeResult {
+  ok: boolean;
+  panelId: string;
+  toolName: string;
+  result?: unknown;
+  detail?: string;
+}
+
 /**
  * UI-agnostic bridge used by agent tools to discover and focus host panels.
  *
@@ -21,4 +36,10 @@ export interface PanelOpenResult {
 export interface PanelHostBridge {
   list(): Promise<AgentPanelDescriptor[]>;
   open(panelId: string): Promise<PanelOpenResult>;
+  tools?(panelId: string): Promise<AgentPanelToolDescriptor[]>;
+  invoke?(
+    panelId: string,
+    toolName: string,
+    args: Record<string, unknown>,
+  ): Promise<PanelInvokeResult>;
 }

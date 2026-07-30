@@ -17,7 +17,11 @@ import { tmpdir } from "node:os";
 import { basename, extname, join, posix, relative, resolve, sep } from "node:path";
 import { extractZip } from "../plugins/installer/unzip.js";
 import { gitClone } from "../plugins/gitOps.js";
-import { PANEL_APP_MANIFEST_FILE, PanelAppManifest } from "./manifest.js";
+import {
+  PANEL_APP_MANIFEST_FILE,
+  PanelAppManifest,
+  type PanelAppAgentContribution,
+} from "./manifest.js";
 import {
   PanelAppAlreadyInstalledError,
   PanelAppInstallError,
@@ -40,6 +44,7 @@ const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_DEPTH = 16;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
+const MAX_AGENT_SKILL_BYTES = 256 * 1024;
 const ALLOWED_ASSET_EXTENSIONS = new Set([
   ".html",
   ".js",
@@ -55,6 +60,7 @@ const ALLOWED_ASSET_EXTENSIONS = new Set([
   ".woff2",
   ".ttf",
 ]);
+const ALLOWED_AGENT_ASSET_EXTENSIONS = new Set([".md", ".json", ".png", ".jpg", ".jpeg", ".webp"]);
 const FORBIDDEN_AGENT_CONTENT = [
   ".claude-plugin",
   ".codex-plugin",
@@ -90,6 +96,7 @@ export interface PanelAppPreview {
   icon: PanelAppManifest["icon"];
   singleton: boolean;
   permissions: PanelAppManifest["permissions"];
+  agent?: PanelAppAgentContribution;
   alreadyInstalled: boolean;
   reviewToken: string;
   source: { kind: PanelAppSourceInput["kind"]; label: string };
@@ -105,6 +112,7 @@ export interface InstalledPanelApp {
   icon: PanelAppManifest["icon"];
   singleton: boolean;
   permissions: PanelAppManifest["permissions"];
+  agent?: PanelAppAgentContribution;
   installPath: string;
   source: InstalledPanelAppSource;
   installedAt: string;
@@ -374,11 +382,34 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
     throw new PanelAppInstallError(`Panel App entry is not a file: ${manifest.entry}`);
   }
   const assetRoot = posix.dirname(manifest.entry);
+  const agent = manifest.schemaVersion === 2 ? manifest.agent : undefined;
+  const declaredAgentRoots = new Set((agent?.skills ?? []).map((entry) => posix.dirname(entry)));
+  for (const skillEntry of agent?.skills ?? []) {
+    if (!files.includes(skillEntry)) {
+      throw new PanelAppInstallError(`declared Panel App skill is missing: ${skillEntry}`);
+    }
+    const skillInfo = await stat(join(root, ...skillEntry.split("/")));
+    if (!skillInfo.isFile() || skillInfo.size > MAX_AGENT_SKILL_BYTES) {
+      throw new PanelAppInstallError(
+        `declared Panel App skill must be a file no larger than 256 KiB: ${skillEntry}`,
+      );
+    }
+  }
   for (const file of files) {
     if (file === PANEL_APP_MANIFEST_FILE || file === PANEL_APP_META_FILE) continue;
     const relation = posix.relative(assetRoot, file);
     if (relation === ".." || relation.startsWith("../") || posix.isAbsolute(relation)) {
       if (file === "README.md" || file === "LICENSE" || file === "LICENSE.md") continue;
+      if (
+        [...declaredAgentRoots].some(
+          (rootEntry) => file === rootEntry || file.startsWith(`${rootEntry}/`),
+        )
+      ) {
+        if (!ALLOWED_AGENT_ASSET_EXTENSIONS.has(extname(file).toLowerCase())) {
+          throw new PanelAppInstallError(`unsupported Panel App agent asset extension: ${file}`);
+        }
+        continue;
+      }
       throw new PanelAppInstallError(`Panel App content must live beside its entry point: ${file}`);
     }
     if (!ALLOWED_ASSET_EXTENSIONS.has(extname(file).toLowerCase())) {
@@ -410,6 +441,17 @@ function previewFrom(
     icon: manifest.icon,
     singleton: manifest.singleton,
     permissions: [...manifest.permissions],
+    ...(manifest.schemaVersion === 2 && manifest.agent
+      ? {
+          agent: {
+            tools: manifest.agent.tools.map((tool) => ({
+              ...tool,
+              inputSchema: { ...tool.inputSchema },
+            })),
+            skills: [...manifest.agent.skills],
+          },
+        }
+      : {}),
     alreadyInstalled: existsSync(panelAppInstallDir(manifest.id)),
     reviewToken,
     source: {
@@ -421,10 +463,16 @@ function previewFrom(
             }`
           : basename(source.path),
     },
-    warnings:
-      manifest.permissions.length > 0
+    warnings: [
+      ...(manifest.permissions.length > 0
         ? [`Panel App requests ${manifest.permissions.length} host permission(s)`]
-        : [],
+        : []),
+      ...(manifest.schemaVersion === 2 && manifest.agent
+        ? [
+            `Panel App contributes ${manifest.agent.tools.length} Agent tool(s) and ${manifest.agent.skills.length} Skill(s)`,
+          ]
+        : []),
+    ],
   };
 }
 
@@ -606,6 +654,17 @@ function installedPanelApp(
     icon: manifest.icon,
     singleton: manifest.singleton,
     permissions: [...manifest.permissions],
+    ...(manifest.schemaVersion === 2 && manifest.agent
+      ? {
+          agent: {
+            tools: manifest.agent.tools.map((tool) => ({
+              ...tool,
+              inputSchema: { ...tool.inputSchema },
+            })),
+            skills: [...manifest.agent.skills],
+          },
+        }
+      : {}),
     installPath: panelAppInstallDir(manifest.id),
     source: record.source,
     installedAt: record.installedAt,

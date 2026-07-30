@@ -82,6 +82,11 @@ import type {
   AgentPanelHostResult,
 } from "../shared/agent-panels.js";
 import { parsePetReportToMimiEvent } from "./pet/pet-report-event.js";
+import {
+  acceptsPanelHostResponse,
+  allowsPanelHostBroadcastFallback,
+  PanelHostWindowRoutes,
+} from "./panel-host-routing.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -196,6 +201,13 @@ export class AgentBridge implements PetStateBridge {
    * credentialId). Keyed by sessionId; cleared in forgetSession.
    */
   private sessionCwd = new Map<string, string>();
+  /**
+   * Renderer window that most recently submitted `agent/run` for a session.
+   * Panel tools mutate renderer-owned tab/app state, so broadcasting them to
+   * every window can execute the same tool more than once when two windows
+   * have the same bucket mounted.
+   */
+  private readonly panelHostWindowRoutes = new PanelHostWindowRoutes();
   private credentialSnapshotRevision = 0;
   private readonly credentialSnapshotCwds = new Set<string>();
   private readonly quickChatForkRouter: QuickChatForkRouter | null;
@@ -211,7 +223,11 @@ export class AgentBridge implements PetStateBridge {
   private panelHostRequestId = 0;
   private readonly pendingPanelHostRequests = new Map<
     string,
-    (result: AgentPanelHostResult) => void
+    {
+      finish: (result: AgentPanelHostResult) => void;
+      ownerWebContentsId: number | null;
+      panelId: string;
+    }
   >();
 
   constructor(
@@ -272,18 +288,34 @@ export class AgentBridge implements PetStateBridge {
       },
     });
     this.core.subscribeLines((line) => this.handleWorkerLine(line));
-    this.windows.add(window);
+    this.registerWindow(window);
     this.quickChatForkRouter = quickChatForkLifecycle
       ? new QuickChatForkRouter(quickChatForkLifecycle)
       : null;
-    window.on("closed", () => this.windows.delete(window));
     this.attachIpcListener();
   }
 
   /** Add another window to broadcast list (multi-window mode). */
   attachWindow(window: BrowserWindow): void {
+    this.registerWindow(window);
+  }
+
+  private registerWindow(window: BrowserWindow): void {
+    if (this.windows.has(window)) return;
     this.windows.add(window);
-    window.on("closed", () => this.windows.delete(window));
+    const webContentsId = window.webContents.id;
+    window.once("closed", () => {
+      this.windows.delete(window);
+      this.panelHostWindowRoutes.releaseWindow(webContentsId);
+      for (const pending of this.pendingPanelHostRequests.values()) {
+        if (pending.ownerWebContentsId !== webContentsId) continue;
+        pending.finish({
+          ok: false,
+          panelId: pending.panelId,
+          detail: "panel host window closed before the request completed",
+        });
+      }
+    });
   }
 
   /**
@@ -432,6 +464,10 @@ export class AgentBridge implements PetStateBridge {
 
       if (parsed.method === "agent/run") {
         outLine = this.handleAgentRunMetadata(prepared);
+        const owner = BrowserWindow.fromWebContents(event.sender);
+        if (prepared.sessionId && owner && this.windows.has(owner)) {
+          this.panelHostWindowRoutes.claim(prepared.sessionId, event.sender.id);
+        }
       } else {
         const forkSourceId = forkSourceSessionId(parsed);
         if (forkSourceId) {
@@ -494,10 +530,10 @@ export class AgentBridge implements PetStateBridge {
       ) {
         return;
       }
-      const resolve = this.pendingPanelHostRequests.get(response.requestId);
-      if (!resolve) return;
-      this.pendingPanelHostRequests.delete(response.requestId);
-      resolve(response.result);
+      const pending = this.pendingPanelHostRequests.get(response.requestId);
+      if (!pending) return;
+      if (!acceptsPanelHostResponse(pending.ownerWebContentsId, event.sender.id)) return;
+      pending.finish(response.result);
     });
   }
 
@@ -511,9 +547,22 @@ export class AgentBridge implements PetStateBridge {
     for (const w of this.windows) {
       if (w.isDestroyed()) {
         this.windows.delete(w);
+        this.panelHostWindowRoutes.releaseWindow(w.webContents.id);
         continue;
       }
-      w.webContents.send(channel, payload);
+      try {
+        w.webContents.send(channel, payload);
+      } catch (error) {
+        dlog("bridge", "renderer.send_failed", {
+          channel,
+          windowId: w.id,
+          error: String(error),
+        });
+        if (w.isDestroyed()) {
+          this.windows.delete(w);
+          this.panelHostWindowRoutes.releaseWindow(w.webContents.id);
+        }
+      }
     }
   }
 
@@ -760,12 +809,43 @@ export class AgentBridge implements PetStateBridge {
         this.pendingPanelHostRequests.delete(requestId);
         resolve(result);
       };
-      this.pendingPanelHostRequests.set(requestId, finish);
+      const ownerRoute = this.panelHostWindowRoutes.resolve(request.sessionId, this.windows);
+      const { ownerWebContentsId } = ownerRoute;
+      this.pendingPanelHostRequests.set(requestId, {
+        finish,
+        ownerWebContentsId,
+        panelId: request.panelId ?? "",
+      });
       const timer = setTimeout(
         () => finish({ ok: false, panelId: request.panelId, detail: "panel host timed out" }),
-        5_000,
+        20_000,
       );
-      this.safeSend("panel:agent-request", { ...request, requestId });
+      const payload: AgentPanelHostRequest = { ...request, requestId };
+      try {
+        if (ownerRoute.window) {
+          ownerRoute.window.webContents.send("panel:agent-request", payload);
+        } else if (allowsPanelHostBroadcastFallback(request.action)) {
+          // Headless/mobile injected sessions have no renderer owner. Preserve
+          // discovery/open compatibility and let the first eligible window
+          // answer. Invocations fail closed below because broadcasting could
+          // execute a mutating Panel App tool once in every mounted window.
+          this.safeSend("panel:agent-request", payload);
+        } else {
+          finish({
+            ok: false,
+            panelId: request.panelId,
+            detail: "Panel App tool invocation requires an owning Desktop window",
+          });
+        }
+      } catch (error) {
+        finish({
+          ok: false,
+          panelId: request.panelId,
+          detail: `panel host dispatch failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        });
+      }
     });
   }
 
@@ -790,6 +870,8 @@ export class AgentBridge implements PetStateBridge {
             bucket,
             action: parsed.action,
             panelId: parsed.panelId,
+            toolName: parsed.toolName,
+            arguments: parsed.arguments,
           });
         }
       }
@@ -1000,6 +1082,7 @@ export class AgentBridge implements PetStateBridge {
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
     this.sessionCwd.delete(sessionId);
+    this.panelHostWindowRoutes.forgetSession(sessionId);
   }
 
   hasKnownSession(sessionId: string): boolean {

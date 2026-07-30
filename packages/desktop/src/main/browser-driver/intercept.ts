@@ -203,8 +203,10 @@ export function buildWorkspaceActionReply(
 export interface ParsedPanelAction {
   sessionId?: string;
   requestId: string;
-  action: "list" | "open";
+  action: "list" | "open" | "tools" | "invoke";
   panelId?: string;
+  toolName?: string;
+  arguments?: Record<string, unknown>;
 }
 
 export function parsePanelActionLine(line: string): ParsedPanelAction | null {
@@ -220,13 +222,33 @@ export function parsePanelActionLine(line: string): ParsedPanelAction | null {
   const request = params.request;
   if (!request || request.toolName !== "__panel_action__" || !request.args) return null;
   const args = request.args as Record<string, unknown>;
-  if (args.action !== "list" && args.action !== "open") return null;
-  if (args.action === "open" && typeof args.panelId !== "string") return null;
+  if (
+    args.action !== "list" &&
+    args.action !== "open" &&
+    args.action !== "tools" &&
+    args.action !== "invoke"
+  ) {
+    return null;
+  }
+  if (args.action !== "list" && typeof args.panelId !== "string") return null;
+  if (args.action === "invoke" && typeof args.toolName !== "string") return null;
+  if (
+    args.action === "invoke" &&
+    (args.arguments === null ||
+      typeof args.arguments !== "object" ||
+      Array.isArray(args.arguments))
+  ) {
+    return null;
+  }
   return {
     sessionId: typeof params.sessionId === "string" ? params.sessionId : undefined,
     requestId: params.requestId,
     action: args.action,
     panelId: typeof args.panelId === "string" ? args.panelId : undefined,
+    ...(typeof args.toolName === "string" ? { toolName: args.toolName } : {}),
+    ...(args.arguments && typeof args.arguments === "object" && !Array.isArray(args.arguments)
+      ? { arguments: args.arguments as Record<string, unknown> }
+      : {}),
   };
 }
 

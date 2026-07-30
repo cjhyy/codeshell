@@ -2,7 +2,11 @@ export {
   PANEL_APP_ICONS,
   PANEL_APP_MANIFEST_FILE,
   PANEL_APP_PERMISSIONS,
+  PanelAppAgentContribution,
+  PanelAppAgentTool,
   PanelAppManifest,
+  type PanelAppAgentContribution as PanelAppAgentContributionData,
+  type PanelAppAgentTool as PanelAppAgentToolData,
   type PanelAppManifest as PanelAppManifestData,
 } from "./manifest.js";
 export {
@@ -28,3 +32,9 @@ export {
   type PanelAppSourceInput,
   type PanelAppPreview,
 } from "./installer.js";
+export {
+  isPanelAppBound,
+  resolvePanelAppBindingPolicy,
+  resolvePanelAppBindingProjectPath,
+  type PanelAppBindingPolicy,
+} from "./bindings.js";

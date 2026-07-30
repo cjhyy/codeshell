@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
+import { resolvePanelAppBindingProjectPath, validateToolArgsStrict } from "@cjhyy/code-shell-core";
 import { createHash, randomUUID } from "node:crypto";
 import { constants, type Stats } from "node:fs";
 import {
@@ -24,6 +25,7 @@ import {
   PANEL_APP_API_VERSION,
   type PanelAppBindInput,
   type PanelAppHostContext,
+  type PanelAppAgentToolInvocation,
 } from "../shared/panel-apps.js";
 
 const MAX_PARAMS_BYTES = 64 * 1024;
@@ -37,6 +39,7 @@ const MAX_WORKSPACE_READ_BYTES = 480 * 1024;
 const MAX_WORKSPACE_WRITE_BYTES = 384 * 1024;
 const MAX_WORKSPACE_LIST_ENTRIES = 200;
 const MAX_WORKSPACE_LIST_RESULT_BYTES = 512 * 1024;
+const AGENT_TOOL_GUEST_WAIT_MS = 4_000;
 const WORKSPACE_TEXT_EXTENSIONS = new Set([
   ".css",
   ".csv",
@@ -59,13 +62,24 @@ interface GuestBinding {
   callTimes: number[];
   notifyTimes: number[];
   bucket?: string;
-  /** Raw bound cwd, host-side only; context.cwd stays gated on context.workspace. */
+  /** Project selected during prepare; immutable for this guest. */
+  projectPath: string;
+  /** Active session/worktree root; available only after renderer binding. */
   cwd?: string;
+}
+
+interface PendingAgentToolCall {
+  guestId: number;
+  resolve(value: unknown): void;
+  reject(error: Error): void;
+  timer: ReturnType<typeof setTimeout>;
 }
 
 export interface PanelAppBridgeOptions {
   isTrustedHost(sender: WebContents): boolean;
   isWorkspaceTrusted(cwd: string): boolean;
+  /** Rechecked on prepare, bind, Agent invocation, and every Host call. */
+  isPanelAppBound(projectPath: string, appId: string): boolean;
   getAgentBridge(): AgentBridge | null;
   /** Shows a system notification; injected so tests avoid Electron Notification. */
   showNotification?(notification: { title: string; body: string }): boolean;
@@ -108,20 +122,36 @@ export class PanelAppBridge {
   private readonly guests = new Map<number, GuestBinding>();
   private readonly storageQueues = new Map<string, Promise<void>>();
   private readonly workspaceWriteQueues = new Map<string, Promise<void>>();
+  private readonly pendingAgentToolCalls = new Map<string, PendingAgentToolCall>();
 
   constructor(private readonly options: PanelAppBridgeOptions) {}
 
   registerIpc(): void {
-    ipcMain.handle("panel-apps:prepare", (event, id: string) => {
+    ipcMain.handle("panel-apps:prepare", (event, id: string, projectPath: string) => {
       this.assertTrustedHost(event.sender);
       if (typeof id !== "string" || !id.startsWith("panel-app:")) {
         throw new Error("invalid Panel App id");
       }
-      return preparePanelApp(id);
+      if (typeof projectPath !== "string" || !projectPath || projectPath.length > 4096) {
+        throw new Error("Panel App requires a valid project binding");
+      }
+      const bindingProjectPath = resolvePanelAppBindingProjectPath(projectPath);
+      const appId = id.slice("panel-app:".length);
+      if (!this.options.isPanelAppBound(bindingProjectPath, appId)) {
+        throw new Error(`Panel App '${appId}' is not bound to this project`);
+      }
+      return preparePanelApp(id, bindingProjectPath);
     });
     ipcMain.handle("panel-apps:bind", (event, input: PanelAppBindInput) => {
       this.assertTrustedHost(event.sender);
       return this.bindGuest(event.sender, input);
+    });
+    ipcMain.handle("panel-apps:invoke-agent-tool", (event, input: PanelAppAgentToolInvocation) => {
+      this.assertTrustedHost(event.sender);
+      return this.invokeAgentTool(event.sender, input);
+    });
+    ipcMain.on("panel-app:agent-tool-response", (event, response: unknown) => {
+      this.handleAgentToolResponse(event.sender, response);
     });
     ipcMain.handle("panel-app:get-context", (event) => this.contextFor(event.sender));
     ipcMain.handle("panel-app:call", (event, method: string, params?: unknown) =>
@@ -133,6 +163,7 @@ export class PanelAppBridge {
     guest: WebContents,
     owner: BrowserWindow,
     resource: PanelAppProtocolResource,
+    projectPath: string,
   ): void {
     const binding: GuestBinding = {
       guest,
@@ -147,6 +178,7 @@ export class PanelAppBridge {
       },
       callTimes: [],
       notifyTimes: [],
+      projectPath,
     };
     this.guests.set(guest.id, binding);
     guest.once("destroyed", () => this.revokeGuest(guest.id));
@@ -168,18 +200,168 @@ export class PanelAppBridge {
 
   revokeGuest(guestId: number): void {
     this.guests.delete(guestId);
+    for (const [requestId, pending] of this.pendingAgentToolCalls) {
+      if (pending.guestId !== guestId) continue;
+      clearTimeout(pending.timer);
+      this.pendingAgentToolCalls.delete(requestId);
+      pending.reject(new Error("Panel App closed before its Agent tool completed"));
+    }
   }
 
   revokeAppId(appId: string): void {
     for (const [guestId, binding] of this.guests) {
       if (binding.resource.descriptor.appId !== appId) continue;
-      this.guests.delete(guestId);
+      this.revokeGuest(guestId);
       if (!binding.guest.isDestroyed()) binding.guest.stop();
     }
   }
 
   private assertTrustedHost(sender: WebContents): void {
     if (!this.options.isTrustedHost(sender)) throw new Error("untrusted Panel App host sender");
+  }
+
+  private findAgentToolBinding(
+    appDescriptorId: string,
+    bucket: string,
+    ownerWindowId: number,
+  ): GuestBinding | undefined {
+    return [...this.guests.values()]
+      .filter(
+        (binding) =>
+          !binding.guest.isDestroyed() &&
+          binding.ownerWindowId === ownerWindowId &&
+          binding.resource.descriptor.id === appDescriptorId &&
+          binding.bucket === bucket,
+      )
+      .sort((left, right) => Number(right.context.visible) - Number(left.context.visible))[0];
+  }
+
+  private waitForAgentToolBinding(
+    appDescriptorId: string,
+    bucket: string,
+    ownerWindowId: number,
+  ): Promise<GuestBinding> {
+    const existing = this.findAgentToolBinding(appDescriptorId, bucket, ownerWindowId);
+    if (existing) return Promise.resolve(existing);
+    return new Promise((resolveBinding, reject) => {
+      const startedAt = Date.now();
+      const check = (): void => {
+        const binding = this.findAgentToolBinding(appDescriptorId, bucket, ownerWindowId);
+        if (binding) {
+          resolveBinding(binding);
+          return;
+        }
+        if (Date.now() - startedAt >= AGENT_TOOL_GUEST_WAIT_MS) {
+          reject(new Error(`Panel App '${appDescriptorId}' did not become ready`));
+          return;
+        }
+        setTimeout(check, 50);
+      };
+      setTimeout(check, 0);
+    });
+  }
+
+  private async invokeAgentTool(
+    sender: WebContents,
+    input: PanelAppAgentToolInvocation,
+  ): Promise<unknown> {
+    if (
+      !input ||
+      typeof input.appDescriptorId !== "string" ||
+      !input.appDescriptorId.startsWith("panel-app:") ||
+      typeof input.bucket !== "string" ||
+      input.bucket.length === 0 ||
+      input.bucket.length > 512 ||
+      typeof input.toolName !== "string" ||
+      !/^[a-z][a-z0-9_]{0,63}$/.test(input.toolName) ||
+      !input.arguments ||
+      typeof input.arguments !== "object" ||
+      Array.isArray(input.arguments)
+    ) {
+      throw new Error("invalid Panel App Agent tool invocation");
+    }
+    if (jsonBytes(input.arguments) > (this.options.limits?.maxParamsBytes ?? MAX_PARAMS_BYTES)) {
+      throw new Error("Panel App Agent tool arguments are too large");
+    }
+    const owner = BrowserWindow.fromWebContents(sender);
+    if (!owner) throw new Error("Panel App Agent tool requires a live host window");
+    const binding = await this.waitForAgentToolBinding(
+      input.appDescriptorId,
+      input.bucket,
+      owner.id,
+    );
+    this.assertProjectBinding(binding);
+    const declaration = binding.resource.descriptor.agent?.tools.find(
+      (tool) => tool.name === input.toolName,
+    );
+    if (!declaration) {
+      throw new Error(`Panel App tool '${input.toolName}' is not declared`);
+    }
+    const validationError = validateToolArgsStrict(
+      input.toolName,
+      input.arguments,
+      declaration.inputSchema,
+    );
+    if (validationError) {
+      throw new Error(`Invalid Panel App tool input: ${validationError}`);
+    }
+    const requestId = randomUUID();
+    const result = await new Promise<unknown>((resolveResult, reject) => {
+      const timer = setTimeout(() => {
+        this.pendingAgentToolCalls.delete(requestId);
+        reject(new Error(`Panel App tool '${input.toolName}' timed out`));
+      }, this.options.limits?.callTimeoutMs ?? CALL_TIMEOUT_MS);
+      this.pendingAgentToolCalls.set(requestId, {
+        guestId: binding.guest.id,
+        resolve: resolveResult,
+        reject,
+        timer,
+      });
+      try {
+        binding.guest.send("panel-app:agent-tool-request", {
+          requestId,
+          toolName: input.toolName,
+          arguments: input.arguments,
+        });
+      } catch (error) {
+        clearTimeout(timer);
+        this.pendingAgentToolCalls.delete(requestId);
+        reject(
+          error instanceof Error
+            ? error
+            : new Error("Panel App closed before its Agent tool request was sent"),
+        );
+      }
+    });
+    if (jsonBytes(result) > (this.options.limits?.maxResultBytes ?? MAX_RESULT_BYTES)) {
+      throw new Error("Panel App Agent tool result is too large");
+    }
+    return result;
+  }
+
+  private handleAgentToolResponse(sender: WebContents, raw: unknown): void {
+    const response = raw as {
+      requestId?: unknown;
+      ok?: unknown;
+      result?: unknown;
+      error?: unknown;
+    } | null;
+    if (!response || typeof response.requestId !== "string") return;
+    const pending = this.pendingAgentToolCalls.get(response.requestId);
+    if (!pending || pending.guestId !== sender.id) return;
+    this.pendingAgentToolCalls.delete(response.requestId);
+    clearTimeout(pending.timer);
+    if (response.ok === true) {
+      pending.resolve(response.result ?? null);
+      return;
+    }
+    pending.reject(
+      new Error(
+        typeof response.error === "string"
+          ? response.error.slice(0, 1_000)
+          : "Panel App tool failed",
+      ),
+    );
   }
 
   private bindGuest(sender: WebContents, input: PanelAppBindInput): boolean {
@@ -212,10 +394,22 @@ export class PanelAppBridge {
     if (
       (input.sessionId != null &&
         (typeof input.sessionId !== "string" || input.sessionId.length > 256)) ||
-      (input.cwd != null && (typeof input.cwd !== "string" || input.cwd.length > 4096))
+      (input.cwd != null &&
+        (typeof input.cwd !== "string" || !input.cwd || input.cwd.length > 4096)) ||
+      typeof input.projectPath !== "string" ||
+      !input.projectPath ||
+      input.projectPath.length > 4096
     ) {
       throw new Error("invalid Panel App context");
     }
+    const bindingProjectPath = resolvePanelAppBindingProjectPath(input.projectPath);
+    if (bindingProjectPath !== binding.projectPath) {
+      throw new Error("Panel App project binding does not match its prepared scope");
+    }
+    if (input.cwd && resolvePanelAppBindingProjectPath(input.cwd) !== binding.projectPath) {
+      throw new Error("Panel App workspace does not belong to its bound project");
+    }
+    this.assertProjectBinding(binding);
     binding.bucket = input.bucket;
     binding.cwd = typeof input.cwd === "string" && input.cwd.length > 0 ? input.cwd : undefined;
     binding.context = {
@@ -247,11 +441,14 @@ export class PanelAppBridge {
   }
 
   private contextFor(sender: WebContents): PanelAppHostContext {
-    return { ...this.bindingFor(sender).context };
+    const binding = this.bindingFor(sender);
+    this.assertProjectBinding(binding);
+    return { ...binding.context };
   }
 
   private async call(sender: WebContents, method: string, params?: unknown): Promise<unknown> {
     const binding = this.bindingFor(sender);
+    this.assertProjectBinding(binding);
     if (!binding.bucket) throw new Error("Panel App scope is not bound");
     if (typeof method !== "string" || method.length > 64) throw new Error("invalid bridge method");
     const limits = this.options.limits;
@@ -295,6 +492,14 @@ export class PanelAppBridge {
     }
   }
 
+  private assertProjectBinding(binding: GuestBinding): void {
+    if (!this.options.isPanelAppBound(binding.projectPath, binding.resource.descriptor.appId)) {
+      throw new Error(
+        `Panel App '${binding.resource.descriptor.appId}' is no longer bound to this project`,
+      );
+    }
+  }
+
   private async dispatch(binding: GuestBinding, method: string, params: unknown): Promise<unknown> {
     switch (method) {
       case "storage.get":
@@ -333,7 +538,13 @@ export class PanelAppBridge {
   }
 
   private storagePath(binding: GuestBinding): string {
-    const namespace = createHash("sha256").update(binding.resource.descriptor.appId).digest("hex");
+    const namespace = createHash("sha256")
+      .update("codeshell-panel-app-storage-v2")
+      .update("\0")
+      .update(binding.resource.descriptor.appId)
+      .update("\0")
+      .update(binding.projectPath)
+      .digest("hex");
     return join(app.getPath("userData"), "panel-app-storage", `${namespace}.json`);
   }
 

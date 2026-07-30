@@ -295,10 +295,10 @@ bun run build
 
 ## Further reading
 
-- [Panel Apps v1 — independent from Agent Plugins](docs/panel-apps.md)
-- [Panel App starter template](examples/panel-apps/starter/README.md)
-- [Design Studio reference Panel App](examples/panel-apps/design-studio/README.md)
-- [Quant Lab reference Panel App](examples/panel-apps/quant-lab/README.md)
+- [Panel Apps v2 — project-bound UI, tools, and Skills](docs/panel-apps.md)
+- [Panel App starter template](https://github.com/cjhyy/codeshell-panel-apps/tree/main/templates/starter)
+- [Design Studio reference Panel App](https://github.com/cjhyy/codeshell-panel-apps/tree/main/apps/design-studio)
+- [Quant Lab reference Panel App](https://github.com/cjhyy/codeshell-panel-apps/tree/main/apps/quant-lab)
 - [Video editor reference plugin](examples/plugins/video-editor/README.md)
 - [Package boundaries & Pet split rationale](docs/architecture/12-package-boundaries-and-release-units.md)
 - [Plugin parity matrix](docs/architecture/13-plugin-parity-and-video-editor.md)

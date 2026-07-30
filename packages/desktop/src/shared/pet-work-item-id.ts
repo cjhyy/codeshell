@@ -13,8 +13,7 @@ export const MAX_PET_WORK_INBOX_DISMISSED_ITEMS = 1_000;
 export const MAX_PET_WORK_ITEM_ID_LENGTH = 512;
 
 /** Structured work groups (see renderer/pet/petWorkMap.ts PetWorkGroup). */
-const PET_WORK_ITEM_ID_PATTERN =
-  /^(?:running|pending|follow-up|completed|other):[^\u0000\r\n]+$/;
+const PET_WORK_ITEM_ID_PATTERN = /^(?:running|pending|follow-up|completed|other):[^\u0000\r\n]+$/;
 
 export function isPetWorkItemId(value: unknown): value is string {
   return (

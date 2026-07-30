@@ -409,13 +409,19 @@ export const SettingsSchema = z
      */
     disabledPlugins: z.array(z.string()).default([]),
 
-    /** Globally disabled Panel Apps. Separate from agent-plugin capability policy. */
+    /** Globally disabled Panel Apps, including their declared tools and bundled Skills. */
     disabledPanelApps: z.array(z.string()).default([]),
 
     /**
-     * Per-project Panel App policy. This deliberately does not live under
-     * capabilityOverrides: Panel Apps are Desktop applications, not agent
-     * skills/plugins/MCP capabilities. "on"/"off"; missing means inherit.
+     * Explicit project binding for installed Panel Apps. Installed apps form a
+     * global catalog, but only IDs in this project-owned list contribute panel
+     * UI, Agent tools, bundled Skills, or project-scoped storage.
+     */
+    panelAppBindings: z.array(z.string()).default([]),
+
+    /**
+     * Legacy per-project Panel App policy. `on` is read as an explicit binding
+     * during migration; new writes use panelAppBindings.
      */
     panelAppOverrides: z.record(CapabilityOverrideSchema).default({}),
 

@@ -17,6 +17,7 @@ import {
   setActiveSession,
   setSessionPinnedLocal,
   setSessionWorkspaceProfileLocal,
+  unbindWorkspaceProfileEverywhere,
 } from "./transcripts";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem" | "clear">;
@@ -303,5 +304,55 @@ describe("transcript snapshot cursor persistence", () => {
         estimatedTokens: 1500,
       },
     });
+  });
+});
+
+describe("unbindWorkspaceProfileEverywhere", () => {
+  it("clears the binding from every session in every project", () => {
+    const a = createSession("proj-a", "kept");
+    const b = createSession("proj-a", "bound");
+    const c = createSession("proj-b", "also bound");
+    saveSessionIndex("proj-a", {
+      ...b.index,
+      sessions: b.index.sessions.map((s) =>
+        s.id === b.sessionId ? { ...s, workspaceProfile: "gone" } : s,
+      ),
+    });
+    saveSessionIndex("proj-b", {
+      ...c.index,
+      sessions: c.index.sessions.map((s) =>
+        s.id === c.sessionId ? { ...s, workspaceProfile: "gone" } : s,
+      ),
+    });
+
+    // Deleting a digital human unbinds engine state, but a Session that never
+    // ran has no engine state — only this index. Left behind, opening it sends
+    // workspaceProfile for a profile that no longer exists and the run dies with
+    // "Workspace profile ... is unavailable".
+    const touched = unbindWorkspaceProfileEverywhere("gone", ["proj-a", "proj-b"]);
+    expect(touched.sort()).toEqual(["proj-a", "proj-b"]);
+    expect(
+      loadSessionIndex("proj-a").sessions.find((s) => s.id === b.sessionId)?.workspaceProfile,
+    ).toBeUndefined();
+    expect(
+      loadSessionIndex("proj-b").sessions.find((s) => s.id === c.sessionId)?.workspaceProfile,
+    ).toBeUndefined();
+    // Unrelated sessions are untouched.
+    expect(loadSessionIndex("proj-a").sessions.some((s) => s.id === a.sessionId)).toBe(true);
+  });
+
+  it("reports no writes when nothing is bound", () => {
+    createSession("proj-c", "free");
+    expect(unbindWorkspaceProfileEverywhere("never-used", ["proj-c"])).toEqual([]);
+  });
+
+  it("leaves other profiles' bindings alone", () => {
+    const kept = createSession("proj-d", "keeper");
+    saveSessionIndex("proj-d", {
+      ...kept.index,
+      sessions: kept.index.sessions.map((s) => ({ ...s, workspaceProfile: "keeper-profile" })),
+    });
+    unbindWorkspaceProfileEverywhere("other", ["proj-d"]);
+    expect(loadSessionIndex("proj-d").sessions[0]?.workspaceProfile).toBe("keeper-profile");
   });
 });

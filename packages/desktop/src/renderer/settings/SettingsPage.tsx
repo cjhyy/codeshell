@@ -234,7 +234,12 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
           scopes: ["user", "project"],
         },
         { id: "mcp", label: t("settingsX.page.mcp"), Icon: Plug, scopes: ["user", "project"] },
-        { id: "plugins-skills", label: t("settingsX.page.plugins"), Icon: Puzzle },
+        {
+          id: "plugins-skills",
+          label: t("settingsX.page.plugins"),
+          Icon: Puzzle,
+          scopes: ["user", "project"],
+        },
         {
           id: "agents",
           label: t("settingsX.page.agents"),
@@ -707,7 +712,10 @@ export function SettingsPage({
               {active === "plugins-skills" && (
                 // Settings and the standalone sidebar entry share one complete
                 // manager. Neither path should add a second discovery click.
-                <ExtensionsPage activeProjectPath={activeProjectPath} showDiscover={false} />
+                <ExtensionsPage
+                  activeProjectPath={scopeProjectPath ?? activeProjectPath}
+                  showDiscover={false}
+                />
               )}
               {active === "agents" && <AgentsSection projects={projects} />}
               {active === "memory" && (

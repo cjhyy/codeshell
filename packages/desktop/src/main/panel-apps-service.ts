@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import * as path from "node:path";
 import {
+  isPanelAppBound,
   listInstalledPanelApps,
+  resolvePanelAppBindingPolicy,
+  resolvePanelAppBindingProjectPath,
   SettingsManager,
   type InstalledPanelApp,
 } from "@cjhyy/code-shell-core";
@@ -67,6 +70,17 @@ async function discoverPanelApps(locale: string): Promise<{
       icon: app.icon,
       singleton: app.singleton,
       permissions: [...app.permissions],
+      ...(app.agent
+        ? {
+            agent: {
+              tools: app.agent.tools.map((tool) => ({
+                ...tool,
+                inputSchema: { ...tool.inputSchema },
+              })),
+              skills: [...app.agent.skills],
+            },
+          }
+        : {}),
       hostId,
       revision,
     };
@@ -104,34 +118,48 @@ function updateSource(app: InstalledPanelApp): PanelAppExtensionSummary["updateS
 
 function panelAppPolicy(cwd: string): PanelAppPolicy {
   try {
-    const settings = new SettingsManager(cwd || process.cwd(), "full");
-    const global = settings.get() as { disabledPanelApps?: unknown };
-    const scoped = cwd
-      ? (settings.getForScope("project", cwd) as {
-          panelAppOverrides?: Record<string, unknown>;
-        })
+    const projectPath = cwd ? resolvePanelAppBindingProjectPath(cwd) : "";
+    const settings = new SettingsManager(projectPath || process.cwd(), "full");
+    const global = settings.getForScope("user") as Record<string, unknown>;
+    const scoped = projectPath
+      ? (settings.getForScope("project", projectPath) as Record<string, unknown>)
       : undefined;
-    const globalDisabledApps = new Set(
-      Array.isArray(global.disabledPanelApps)
-        ? global.disabledPanelApps.filter((id): id is string => typeof id === "string")
-        : [],
-    );
-    const disabledApps = new Set(globalDisabledApps);
+    const binding = resolvePanelAppBindingPolicy(global, scoped, Boolean(projectPath));
     const projectOverrides: Record<string, "on" | "off"> = {};
-    for (const [id, value] of Object.entries(scoped?.panelAppOverrides ?? {})) {
+    const rawOverrides =
+      scoped?.panelAppOverrides &&
+      typeof scoped.panelAppOverrides === "object" &&
+      !Array.isArray(scoped.panelAppOverrides)
+        ? (scoped.panelAppOverrides as Record<string, unknown>)
+        : {};
+    for (const [id, value] of Object.entries(rawOverrides)) {
       if (value !== "on" && value !== "off") continue;
       projectOverrides[id] = value;
-      if (value === "on") disabledApps.delete(id);
-      else disabledApps.add(id);
     }
-    return { disabledApps, globalDisabledApps, projectOverrides };
+    return {
+      boundApps: binding.boundApps,
+      globalDisabledApps: binding.globalDisabledApps,
+      projectOverrides,
+    };
   } catch {
     return {
-      disabledApps: new Set(),
+      // Fail closed: a settings read error must not expose every installed app.
+      boundApps: new Set(),
       globalDisabledApps: new Set(),
       projectOverrides: {},
     };
   }
+}
+
+/** Synchronous runtime guard used by the WebView bridge on every bind/call. */
+export function isPanelAppBoundToProject(cwd: string, appId: string): boolean {
+  if (!cwd || !appId) return false;
+  const policy = panelAppPolicy(cwd);
+  return isPanelAppBound(appId, {
+    hasProject: true,
+    boundApps: policy.boundApps,
+    globalDisabledApps: policy.globalDisabledApps,
+  });
 }
 
 export async function listPanelAppExtensions(

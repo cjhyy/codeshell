@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { PanelId } from "../view";
 import type { Anchor } from "../chat/anchors";
-import type { PanelAppDescriptor } from "../../shared/panel-apps";
+import type { PanelAppAgentToolDescriptor, PanelAppDescriptor } from "../../shared/panel-apps";
 import { resolvePanelAppIcon } from "./panelAppIcons";
 import { FilesPanel } from "./FilesPanel";
 import { BrowserPanel } from "./BrowserPanel";
@@ -23,6 +23,7 @@ import { PanelAppHost } from "./PanelAppHost";
 import type { DesktopBuiltinPanelAppHost } from "./DesktopBuiltinPanelApp";
 
 export interface PanelAvailabilityContext {
+  projectPath: string | null;
   cwd: string | null;
   engineSessionId: string | null;
 }
@@ -65,6 +66,8 @@ export interface PanelEntry {
   readonly render: (context: PanelRenderContext) => ReactNode;
   /** Present only for trusted built-in Panel Apps coordinated by core's lifecycle runtime. */
   readonly lifecycle?: { appId: string; panelId: string };
+  /** Agent tools declared by an independently installed Panel App. */
+  readonly agentTools?: PanelAppAgentToolDescriptor[];
 }
 
 const alwaysEnabled = (): boolean => true;
@@ -248,7 +251,10 @@ export class PanelRegistry {
 export const PANEL_REGISTRY = new PanelRegistry();
 for (const entry of BUILTIN_PANEL_ENTRIES) PANEL_REGISTRY.register(entry);
 
-export function replacePanelApps(descriptors: PanelAppDescriptor[]): void {
+export function replacePanelApps(
+  descriptors: PanelAppDescriptor[],
+  boundProjectPath: string | null,
+): void {
   PANEL_REGISTRY.replacePanelAppEntries(
     descriptors.map(
       (descriptor, index): PanelEntry => ({
@@ -261,13 +267,18 @@ export function replacePanelApps(descriptors: PanelAppDescriptor[]): void {
         icon: resolvePanelAppIcon(descriptor.icon),
         order: 1_000 + index,
         singleton: descriptor.singleton,
-        enabled: alwaysEnabled,
-        render: ({ tabId, bucket, busy, cwd, engineSessionId, foregroundVisible }) =>
+        agentTools: descriptor.agent?.tools.map((tool) => ({
+          ...tool,
+          inputSchema: { ...tool.inputSchema },
+        })),
+        enabled: ({ projectPath }) => Boolean(boundProjectPath) && projectPath === boundProjectPath,
+        render: ({ tabId, bucket, busy, projectPath, cwd, engineSessionId, foregroundVisible }) =>
           createElement(PanelAppHost, {
             descriptor,
             tabId,
             bucket,
             busy,
+            projectPath,
             cwd,
             engineSessionId,
             visible: foregroundVisible,

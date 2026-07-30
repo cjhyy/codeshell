@@ -271,6 +271,36 @@ describe("panel action interception", () => {
     expect(parsePanelActionLine(panelActionLine({ action: "close" }))).toBeNull();
   });
 
+  test("parses a structured Panel App tool invocation", () => {
+    expect(
+      parsePanelActionLine(
+        panelActionLine({
+          action: "invoke",
+          panelId: "panel-app:design-studio",
+          toolName: "use_design",
+          arguments: { operations: [{ op: "delete_node", node_id: "old" }] },
+        }),
+      ),
+    ).toEqual({
+      sessionId: "s4",
+      requestId: "rq4",
+      action: "invoke",
+      panelId: "panel-app:design-studio",
+      toolName: "use_design",
+      arguments: { operations: [{ op: "delete_node", node_id: "old" }] },
+    });
+    expect(
+      parsePanelActionLine(
+        panelActionLine({
+          action: "invoke",
+          panelId: "panel-app:design-studio",
+          toolName: "use_design",
+          arguments: [],
+        }),
+      ),
+    ).toBeNull();
+  });
+
   test("builds the hidden approval reply", () => {
     const parsed = parsePanelActionLine(panelActionLine({ action: "open", panelId: "files" }))!;
     const reply = JSON.parse(buildPanelActionReply(parsed, '{"ok":true,"panelId":"files"}'));

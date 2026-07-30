@@ -25,7 +25,7 @@ import * as path from "node:path";
 export interface SkillSummary {
   name: string;
   description: string;
-  source: "project" | "user" | "plugin";
+  source: "project" | "user" | "plugin" | "panel-app";
   filePath: string;
 }
 
@@ -45,6 +45,9 @@ export function listSkills(cwd: string, opts?: { includeDisabled?: boolean }): S
   let defs: SkillDefinition[];
   try {
     if (opts?.includeDisabled) {
+      // "Include disabled" applies to individual Skill/plugin toggles. Panel
+      // App Skills remain project-bound and must not appear in unrelated
+      // projects' catalogs.
       defs = scanSkills(cwd);
     } else {
       const disabled = computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd);
@@ -94,11 +97,11 @@ export async function uninstallSkill(input: UninstallSkillInput): Promise<void> 
 
 export async function uninstallListedSkill(
   filePath: string,
-  source: "user" | "project" | "plugin",
+  source: "user" | "project" | "plugin" | "panel-app",
   cwd?: string,
 ): Promise<void> {
-  if (source === "plugin") {
-    throw new Error("plugin skill 不能在此处卸载，请使用「禁用」或移除对应插件");
+  if (source === "plugin" || source === "panel-app") {
+    throw new Error("托管 Skill 不能在此处卸载，请禁用或移除对应的插件/Panel App");
   }
   const localSource = source;
   if (!cwd) {

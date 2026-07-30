@@ -4,7 +4,14 @@ import { SkillDetailModal } from "./SkillDetailModal";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpCircle, FileText, Loader2, Plug, type LucideIcon } from "lucide-react";
+import {
+  ArrowUpCircle,
+  FileText,
+  Loader2,
+  PanelTop,
+  Plug,
+  type LucideIcon,
+} from "lucide-react";
 import { useToast } from "../ui/ToastProvider";
 import { useAlert } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
@@ -23,7 +30,7 @@ function skillNamespace(name: string): string | null {
 }
 
 function displaySkillName(s: SkillSummary): string {
-  if (s.source !== "plugin") return s.name;
+  if (s.source !== "plugin" && s.source !== "panel-app") return s.name;
   const namespace = skillNamespace(s.name);
   return namespace ? s.name.slice(namespace.length + 1) : s.name;
 }
@@ -160,6 +167,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
   const sourceLabel = (s: SkillSummary) => {
     if (s.source === "project") return t("ext.skills.sourceProject");
     if (s.source === "user") return t("ext.skills.sourceUser");
+    if (s.source === "panel-app") return "Panel App";
     return t("ext.skills.sourcePlugin");
   };
 
@@ -183,7 +191,8 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
 
   const renderSkillRow = (s: SkillSummary) => {
     const isPluginSkill = s.source === "plugin";
-    const owner = isPluginSkill ? skillNamespace(s.name) : null;
+    const isPanelAppSkill = s.source === "panel-app";
+    const owner = isPluginSkill || isPanelAppSkill ? skillNamespace(s.name) : null;
     return (
       <li
         key={s.filePath}
@@ -193,6 +202,8 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground">
           {isPluginSkill ? (
             <Plug className="h-4 w-4" aria-hidden="true" />
+          ) : isPanelAppSkill ? (
+            <PanelTop className="h-4 w-4" aria-hidden="true" />
           ) : (
             <FileText className="h-4 w-4" aria-hidden="true" />
           )}
@@ -200,7 +211,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             <div className="truncate font-medium">{displaySkillName(s)}</div>
-            {isPluginSkill ? (
+            {isPluginSkill || isPanelAppSkill ? (
               <Badge variant="info" className="shrink-0">{owner ?? t("ext.skills.unknownPlugin")}</Badge>
             ) : (
               <Badge variant={s.source === "project" ? "accent" : "secondary"} className="shrink-0">

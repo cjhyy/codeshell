@@ -1,4 +1,4 @@
-export const PANEL_APP_API_VERSION = 1 as const;
+export const PANEL_APP_API_VERSION = 2 as const;
 
 export type PanelAppPermission =
   | "context.session"
@@ -44,10 +44,28 @@ export interface PanelAppDescriptor {
   icon: PanelAppIconName;
   singleton: boolean;
   permissions: PanelAppPermission[];
+  agent?: {
+    tools: PanelAppAgentToolDescriptor[];
+    skills: string[];
+  };
   /** Opaque asset authority. Never an install path. */
   hostId: string;
   /** Changes whenever installed app bytes change and forces a fresh guest. */
   revision: string;
+}
+
+export interface PanelAppAgentToolDescriptor {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  readOnly: boolean;
+}
+
+export interface PanelAppAgentToolInvocation {
+  appDescriptorId: string;
+  bucket: string;
+  toolName: string;
+  arguments: Record<string, unknown>;
 }
 
 /** Extensions-page view of an independently installed Desktop Panel App. */
@@ -55,6 +73,9 @@ export interface PanelAppExtensionSummary extends PanelAppDescriptor {
   kind: "panel-app";
   enabled: boolean;
   globalEnabled: boolean;
+  /** Explicitly available to the currently selected project. */
+  projectBound: boolean;
+  /** Legacy migration state, when present in old project settings. */
   projectOverride?: "on" | "off";
   disabledByPolicy: boolean;
   updateSource: {
@@ -77,6 +98,7 @@ export interface PanelAppBindInput {
   tabId: string;
   bucket: string;
   sessionId?: string | null;
+  projectPath: string;
   cwd?: string | null;
   visible: boolean;
   busy?: boolean;

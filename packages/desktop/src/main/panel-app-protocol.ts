@@ -1,4 +1,5 @@
 import { protocol, session } from "electron";
+import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, posix, resolve, sep } from "node:path";
 import type { PanelAppDescriptor, PreparedPanelApp } from "../shared/panel-apps.js";
@@ -7,7 +8,7 @@ export const PANEL_APP_SCHEME = "cspanel";
 const CSP =
   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
   "img-src 'self' data:; font-src 'self' data:; connect-src 'none'; object-src 'none'; " +
-  "frame-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+  "frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 const MIME_TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -33,6 +34,7 @@ export interface PanelAppProtocolResource {
 
 let resources = new Map<string, PanelAppProtocolResource>();
 const installedPartitions = new Set<string>();
+const preparedPartitionScopes = new Map<string, { hostId: string; projectPath: string }>();
 
 export function registerPanelAppSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([
@@ -61,14 +63,27 @@ function encodePanelUrl(hostId: string, entry: string): string {
   return `${PANEL_APP_SCHEME}://${hostId}/${pathname}`;
 }
 
-function safePartition(hostId: string): string {
-  return `${PANEL_APP_SCHEME}:${hostId}`;
+function safePartition(hostId: string, projectPath: string): string {
+  const projectScope = createHash("sha256")
+    .update("codeshell-panel-app-project-v1")
+    .update("\0")
+    .update(projectPath)
+    .digest("hex")
+    .slice(0, 32);
+  return `${PANEL_APP_SCHEME}:${hostId}:${projectScope}`;
 }
 
-export async function preparePanelApp(id: string): Promise<PreparedPanelApp> {
+export async function preparePanelApp(id: string, projectPath: string): Promise<PreparedPanelApp> {
   const resource = [...resources.values()].find((candidate) => candidate.descriptor.id === id);
   if (!resource) throw new Error(`Panel App is not installed or enabled: ${id}`);
-  const partition = safePartition(resource.descriptor.hostId);
+  if (typeof projectPath !== "string" || !projectPath) {
+    throw new Error("Panel App requires a project binding");
+  }
+  const partition = safePartition(resource.descriptor.hostId, projectPath);
+  preparedPartitionScopes.set(partition, {
+    hostId: resource.descriptor.hostId,
+    projectPath,
+  });
   await installProtocolForPartition(partition);
   return {
     id,
@@ -85,8 +100,16 @@ export function validatePanelAppEntryUrl(source: string): PanelAppProtocolResour
   return resource && parsed.relativePath === resource.entry ? resource : null;
 }
 
-export function expectedPanelAppPartition(hostId: string): string {
-  return safePartition(hostId);
+/**
+ * Resolve the project scope recorded by a successful prepare call. Unprepared
+ * or cross-app partitions fail closed during Electron's attach hook.
+ */
+export function preparedPanelAppPartitionProjectPath(
+  hostId: string,
+  partition: string,
+): string | null {
+  const scope = preparedPartitionScopes.get(partition);
+  return scope?.hostId === hostId ? scope.projectPath : null;
 }
 
 function parsePanelAppUrl(source: string): { hostId: string; relativePath: string } | null {

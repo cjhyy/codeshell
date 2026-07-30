@@ -6,17 +6,28 @@ export interface AgentPanelDescriptorWire {
   source: AgentPanelSource;
 }
 
+export interface AgentPanelToolDescriptorWire {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  readOnly: boolean;
+}
+
 export interface AgentPanelHostRequest {
   requestId: string;
   sessionId: string;
   bucket: string;
-  action: "list" | "open";
+  action: "list" | "open" | "tools" | "invoke";
   panelId?: string;
+  toolName?: string;
+  arguments?: Record<string, unknown>;
 }
 
 export type AgentPanelHostResult =
   | { ok: true; panels: AgentPanelDescriptorWire[] }
   | { ok: true; panelId: string }
+  | { ok: true; panelId: string; tools: AgentPanelToolDescriptorWire[] }
+  | { ok: true; panelId: string; toolName: string; result: unknown }
   | { ok: false; panelId?: string; detail: string };
 
 export interface AgentPanelHostResponse {

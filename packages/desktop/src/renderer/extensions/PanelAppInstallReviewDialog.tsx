@@ -1,4 +1,4 @@
-import { Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Bot, Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,6 +88,35 @@ export function PanelAppInstallReviewDialog({ busy, action, preview, onCancel, o
               )}
             </div>
             <p className="text-xs text-muted-foreground">{t("ext.panels.reviewIsolation")}</p>
+          </section>
+
+          <section className="space-y-2 rounded-lg border bg-muted/15 p-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Bot className="h-4 w-4 text-muted-foreground" />
+              {t("ext.panels.reviewAgent")}
+            </div>
+            {!preview.agent ||
+            (preview.agent.tools.length === 0 && preview.agent.skills.length === 0) ? (
+              <Badge variant="outline">{t("ext.panels.reviewAgentNone")}</Badge>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-1.5">
+                  {preview.agent.tools.map((tool) => (
+                    <Badge key={tool.name} variant={tool.readOnly ? "secondary" : "warning"}>
+                      {tool.name}
+                    </Badge>
+                  ))}
+                  {preview.agent.skills.map((skill) => (
+                    <Badge key={skill} variant="outline">
+                      {skill.split("/").at(-2) ?? skill}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("ext.panels.reviewAgentIsolation")}
+                </p>
+              </>
+            )}
           </section>
         </div>
 

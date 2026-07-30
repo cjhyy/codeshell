@@ -1614,6 +1614,7 @@ export class PermissionClassifier {
     if (toolName === "Bash" && this.isDangerousCommand(args)) return "high";
     if (["Write", "Edit"].includes(toolName)) return "medium";
     if (toolName === "Bash") return "medium";
+    if (toolName === "Panel") return args.action === "invoke" ? "medium" : "low";
     // Only genuinely read-only built-ins are "low" (the sole tier
     // AutoApprovalBackend approves with no delegate). Everything else —
     // crucially every MCP tool, which can delete records, send messages, or

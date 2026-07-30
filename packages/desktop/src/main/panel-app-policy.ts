@@ -1,13 +1,13 @@
 import type { PanelAppDescriptor, PanelAppExtensionSummary } from "../shared/panel-apps.js";
 
 export interface PanelAppPolicy {
-  disabledApps: ReadonlySet<string>;
   globalDisabledApps: ReadonlySet<string>;
+  boundApps: ReadonlySet<string>;
   projectOverrides: Readonly<Record<string, "on" | "off">>;
 }
 
 export function isPanelAppAvailable(app: PanelAppDescriptor, policy: PanelAppPolicy): boolean {
-  return !policy.disabledApps.has(app.appId);
+  return policy.boundApps.has(app.appId) && !policy.globalDisabledApps.has(app.appId);
 }
 
 export function summarizePanelApp(
@@ -19,16 +19,18 @@ export function summarizePanelApp(
     available: false,
   },
 ): PanelAppExtensionSummary {
-  const disabledByPolicy = policy.disabledApps.has(app.appId);
+  const projectBound = policy.boundApps.has(app.appId);
+  const globallyDisabled = policy.globalDisabledApps.has(app.appId);
   return {
     ...app,
     kind: "panel-app",
-    enabled: !disabledByPolicy,
-    globalEnabled: !policy.globalDisabledApps.has(app.appId),
+    enabled: projectBound && !globallyDisabled,
+    globalEnabled: !globallyDisabled,
+    projectBound,
     ...(policy.projectOverrides[app.appId]
       ? { projectOverride: policy.projectOverrides[app.appId] }
       : {}),
-    disabledByPolicy,
+    disabledByPolicy: globallyDisabled,
     updateSource,
   };
 }

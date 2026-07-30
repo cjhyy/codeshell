@@ -22,6 +22,7 @@ export function PanelAppHost({
   tabId,
   bucket,
   busy,
+  projectPath,
   cwd,
   engineSessionId,
   visible,
@@ -30,6 +31,7 @@ export function PanelAppHost({
   tabId: string;
   bucket: string;
   busy: boolean;
+  projectPath: string | null;
   cwd: string | null;
   engineSessionId: string | null;
   visible: boolean;
@@ -44,7 +46,13 @@ export function PanelAppHost({
     let alive = true;
     setPrepared(null);
     setError(null);
-    window.codeshell.preparePanelApp(descriptor.id).then(
+    if (!projectPath) {
+      setError("Panel App requires a bound project.");
+      return () => {
+        alive = false;
+      };
+    }
+    window.codeshell.preparePanelApp(descriptor.id, projectPath).then(
       (result) => {
         if (alive) setPrepared(result);
       },
@@ -55,11 +63,11 @@ export function PanelAppHost({
     return () => {
       alive = false;
     };
-  }, [descriptor.hostId, descriptor.id]);
+  }, [cwd, descriptor.hostId, descriptor.id, projectPath]);
 
   useEffect(() => {
     const view = viewRef.current;
-    if (!view || !prepared) return;
+    if (!view || !prepared || !projectPath) return;
     let alive = true;
     const bind = () => {
       const guestId = view.getWebContentsId?.();
@@ -71,6 +79,7 @@ export function PanelAppHost({
           tabId,
           bucket,
           sessionId: engineSessionId,
+          projectPath,
           cwd,
           visible,
           busy,
@@ -98,7 +107,19 @@ export function PanelAppHost({
       view.removeEventListener("dom-ready", bind);
       view.removeEventListener("render-process-gone", crashed);
     };
-  }, [bucket, busy, cwd, descriptor.id, engineSessionId, lang, prepared, tabId, theme, visible]);
+  }, [
+    bucket,
+    busy,
+    cwd,
+    descriptor.id,
+    engineSessionId,
+    lang,
+    prepared,
+    projectPath,
+    tabId,
+    theme,
+    visible,
+  ]);
 
   if (error) {
     return (

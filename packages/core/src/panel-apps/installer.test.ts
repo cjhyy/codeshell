@@ -13,17 +13,18 @@ import {
   previewLocalPanelApp,
   uninstallPanelApp,
 } from "./index.js";
+import { invalidateSkillCache, scanSkills } from "../skills/scanner.js";
 
 function writePanelApp(
   root: string,
-  input: { id?: string; html?: string; version?: string } = {},
+  input: { id?: string; html?: string; version?: string; agent?: boolean } = {},
 ): void {
   mkdirSync(join(root, ".codeshell-panel"), { recursive: true });
   mkdirSync(join(root, "app"), { recursive: true });
   writeFileSync(
     join(root, ".codeshell-panel", "panel.json"),
     JSON.stringify({
-      schemaVersion: 1,
+      schemaVersion: input.agent ? 2 : 1,
       id: input.id ?? "design-studio",
       version: input.version ?? "0.1.0",
       title: { default: "Design Studio", "zh-CN": "设计工作台" },
@@ -33,6 +34,21 @@ function writePanelApp(
       placement: "right-dock",
       singleton: true,
       permissions: ["context.workspace", "workspace.read", "workspace.write", "storage"],
+      ...(input.agent
+        ? {
+            agent: {
+              tools: [
+                {
+                  name: "get_design_context",
+                  description: "Read the current design document.",
+                  inputSchema: { type: "object", properties: {} },
+                  readOnly: true,
+                },
+              ],
+              skills: ["agent/skills/design/SKILL.md"],
+            },
+          }
+        : {}),
     }),
   );
   writeFileSync(
@@ -40,6 +56,13 @@ function writePanelApp(
     input.html ?? "<!doctype html><title>Design</title>",
   );
   writeFileSync(join(root, "app", "app.js"), "document.body.dataset.ready = 'true';");
+  if (input.agent) {
+    mkdirSync(join(root, "agent", "skills", "design"), { recursive: true });
+    writeFileSync(
+      join(root, "agent", "skills", "design", "SKILL.md"),
+      "---\nname: design\ndescription: Edit repository designs.\n---\n",
+    );
+  }
 }
 
 function runGit(cwd: string, ...args: string[]): void {
@@ -109,6 +132,103 @@ describe("independent Panel App installer", () => {
     );
   });
 
+  test("installs schema v2 Agent tools and declared skills as one Panel App", async () => {
+    writePanelApp(source, { agent: true, version: "0.3.0" });
+    const preview = await previewLocalPanelApp({ kind: "dir", path: source });
+    expect(preview.agent).toMatchObject({
+      tools: [{ name: "get_design_context", readOnly: true }],
+      skills: ["agent/skills/design/SKILL.md"],
+    });
+    expect(preview.warnings).toContain("Panel App contributes 1 Agent tool(s) and 1 Skill(s)");
+
+    const installed = await installReviewedLocalPanelApp(
+      { kind: "dir", path: source },
+      preview.reviewToken,
+      "2026-07-28T00:00:00.000Z",
+    );
+    expect(installed.agent?.tools[0]?.name).toBe("get_design_context");
+    invalidateSkillCache();
+    expect(
+      scanSkills(source, { includeDisabledPanelApps: true }).find(
+        (skill) => skill.name === "design-studio:design",
+      ),
+    ).toMatchObject({
+      source: "panel-app",
+      description: "Edit repository designs.",
+    });
+    writeFileSync(
+      join(home, ".code-shell", "settings.json"),
+      JSON.stringify({ disabledPanelApps: ["design-studio"] }),
+    );
+    expect(scanSkills(source).some((skill) => skill.name === "design-studio:design")).toBe(false);
+    mkdirSync(join(source, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(source, ".code-shell", "settings.json"),
+      JSON.stringify({ panelAppBindings: [] }),
+    );
+    expect(scanSkills(source).some((skill) => skill.name === "design-studio:design")).toBe(false);
+    writeFileSync(
+      join(home, ".code-shell", "settings.json"),
+      JSON.stringify({ disabledPanelApps: [] }),
+    );
+    writeFileSync(
+      join(source, ".code-shell", "settings.json"),
+      JSON.stringify({ panelAppBindings: ["design-studio"] }),
+    );
+    expect(scanSkills(source).some((skill) => skill.name === "design-studio:design")).toBe(true);
+
+    const projectOverride = join(source, ".agents", "skills", "design-studio:design");
+    mkdirSync(projectOverride, { recursive: true });
+    writeFileSync(
+      join(projectOverride, "SKILL.md"),
+      "---\nname: design-studio:design\ndescription: Project-owned override.\n---\n",
+    );
+    invalidateSkillCache();
+    expect(
+      scanSkills(source, { includeDisabledPanelApps: true }).filter(
+        (skill) => skill.name === "design-studio:design",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        source: "project",
+        description: "Project-owned override.",
+      }),
+    ]);
+  });
+
+  test("rejects undeclared or missing schema v2 skill content", async () => {
+    writePanelApp(source, { agent: true });
+    writeFileSync(join(source, "agent", "skills", "design", "notes.md"), "allowed reference");
+    const manifestPath = join(source, ".codeshell-panel", "panel.json");
+    const manifest = JSON.parse(await Bun.file(manifestPath).text()) as {
+      agent: { skills: string[] };
+    };
+    manifest.agent.skills = ["agent/skills/missing/SKILL.md"];
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    await expect(previewLocalPanelApp({ kind: "dir", path: source })).rejects.toThrow(
+      /declared Panel App skill is missing/,
+    );
+  });
+
+  test("rejects malformed or unsupported Panel App tool schemas during review", async () => {
+    writePanelApp(source, { agent: true });
+    const manifestPath = join(source, ".codeshell-panel", "panel.json");
+    const manifest = JSON.parse(await Bun.file(manifestPath).text()) as {
+      agent: { tools: Array<{ inputSchema: Record<string, unknown> }> };
+    };
+    manifest.agent.tools[0].inputSchema = {
+      type: "object",
+      properties: {
+        email: { type: "string", format: "email" },
+        unused: { type: "array", minItems: "one" },
+      },
+    };
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    await expect(previewLocalPanelApp({ kind: "dir", path: source })).rejects.toThrow(
+      /inputSchema is invalid/,
+    );
+  });
+
   test("requires a nested app entry so package metadata is never web-accessible", async () => {
     writeFileSync(
       join(source, ".codeshell-panel", "panel.json"),
@@ -123,6 +243,18 @@ describe("independent Panel App installer", () => {
     writeFileSync(join(source, "index.html"), "<!doctype html>");
     await expect(previewLocalPanelApp({ kind: "dir", path: source })).rejects.toThrow(
       /entry must be a nested/,
+    );
+  });
+
+  test("rejects duplicate Host permissions instead of presenting a misleading review", async () => {
+    const manifestPath = join(source, ".codeshell-panel", "panel.json");
+    const manifest = JSON.parse(await Bun.file(manifestPath).text()) as {
+      permissions: string[];
+    };
+    manifest.permissions.push("storage");
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    await expect(previewLocalPanelApp({ kind: "dir", path: source })).rejects.toThrow(
+      /permissions must not contain duplicates/,
     );
   });
 

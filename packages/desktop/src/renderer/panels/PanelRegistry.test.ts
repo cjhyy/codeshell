@@ -8,10 +8,7 @@ import {
   PanelRegistry,
   type PanelRenderContext,
 } from "./PanelRegistry";
-import {
-  installQuickChatPanelApp,
-  QUICK_CHAT_PANEL_APP_ID,
-} from "./apps/quickChatPanelApp";
+import { installQuickChatPanelApp, QUICK_CHAT_PANEL_APP_ID } from "./apps/quickChatPanelApp";
 import { DESKTOP_BUILTIN_PANEL_APP_RUNTIME } from "./DesktopBuiltinPanelApp";
 
 installQuickChatPanelApp();
@@ -40,12 +37,17 @@ describe("PanelRegistry", () => {
   });
 
   it("keeps every existing panel enabled without an active session", () => {
-    const entries = getEnabledPanelEntries({ cwd: null, engineSessionId: null });
+    const entries = getEnabledPanelEntries({
+      projectPath: null,
+      cwd: null,
+      engineSessionId: null,
+    });
     expect(entries.map((entry) => entry.key)).toEqual(PANEL_KEYS);
   });
 
   it("routes QuickChat through a registered built-in Panel App service", () => {
     const context: PanelRenderContext = {
+      projectPath: "/repo",
       cwd: "/repo",
       engineSessionId: "session-1",
       tabId: "quickChat-7",

@@ -26,6 +26,7 @@ const panelAppDir = join(home, ".code-shell", "panel-apps", "panel-e2e");
 const panelAssetsDir = join(panelAppDir, "app");
 const panelSourceDir = join(home, "panel-source");
 const panelSourceAssetsDir = join(panelSourceDir, "app");
+const projectDir = join(home, "project-e2e");
 const installedAt = new Date().toISOString();
 
 let app;
@@ -36,7 +37,7 @@ function assert(condition, message) {
 
 async function installFixture(version, marker, installSnapshot = true) {
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: "panel-e2e",
     version,
     title: { default: "E2E Panel App" },
@@ -45,23 +46,49 @@ async function installFixture(version, marker, installSnapshot = true) {
     placement: "right-dock",
     singleton: true,
     permissions: ["context.session", "context.workspace", "storage"],
+    agent: {
+      tools: [
+        {
+          name: "echo_marker",
+          description: "Return the fixture marker and provided value.",
+          inputSchema: {
+            type: "object",
+            properties: { value: {} },
+          },
+          readOnly: true,
+        },
+      ],
+      skills: ["agent/skills/panel-e2e/SKILL.md"],
+    },
   };
   const html =
     '<!doctype html><html><body><main id="marker"></main><script src="./app.js"></script></body></html>\n';
-  const script = `document.getElementById("marker").textContent = ${JSON.stringify(marker)};\n`;
+  const script = [
+    `document.getElementById("marker").textContent = ${JSON.stringify(marker)};`,
+    `window.codeshellPanel.registerTool("echo_marker", async (args) => ({ marker: ${JSON.stringify(
+      marker,
+    )}, value: args.value ?? null }));`,
+    "",
+  ].join("\n");
 
   await mkdir(join(panelSourceDir, ".codeshell-panel"), { recursive: true });
   await mkdir(panelSourceAssetsDir, { recursive: true });
+  await mkdir(join(panelSourceDir, "agent", "skills", "panel-e2e"), { recursive: true });
   await writeFile(
     join(panelSourceDir, ".codeshell-panel", "panel.json"),
     `${JSON.stringify(manifest)}\n`,
   );
   await writeFile(join(panelSourceAssetsDir, "index.html"), html);
   await writeFile(join(panelSourceAssetsDir, "app.js"), script);
+  await writeFile(
+    join(panelSourceDir, "agent", "skills", "panel-e2e", "SKILL.md"),
+    "---\nname: panel-e2e\ndescription: E2E Panel App Skill.\n---\n",
+  );
 
   if (installSnapshot) {
     await mkdir(join(panelAppDir, ".codeshell-panel"), { recursive: true });
     await mkdir(panelAssetsDir, { recursive: true });
+    await mkdir(join(panelAppDir, "agent", "skills", "panel-e2e"), { recursive: true });
     await writeFile(
       join(panelAppDir, ".codeshell-panel", "panel.json"),
       `${JSON.stringify(manifest)}\n`,
@@ -78,6 +105,10 @@ async function installFixture(version, marker, installSnapshot = true) {
     );
     await writeFile(join(panelAssetsDir, "index.html"), html);
     await writeFile(join(panelAssetsDir, "app.js"), script);
+    await writeFile(
+      join(panelAppDir, "agent", "skills", "panel-e2e", "SKILL.md"),
+      "---\nname: panel-e2e\ndescription: E2E Panel App Skill.\n---\n",
+    );
     await writeFile(
       join(home, ".code-shell", "panel-apps", "installed.json"),
       `${JSON.stringify({
@@ -149,10 +180,11 @@ async function installFixture(version, marker, installSnapshot = true) {
   );
 }
 
-async function descriptor(win) {
-  const apps = await win.evaluate(() => window.codeshell.listPanelApps("/tmp/e2e", "en"));
-  assert(apps.length === 1, `expected one installed Panel App, got ${apps.length}`);
-  return apps[0];
+async function descriptor(win, appId = "panel-e2e") {
+  const apps = await win.evaluate((cwd) => window.codeshell.listPanelApps(cwd, "en"), projectDir);
+  const panel = apps.find((candidate) => candidate.appId === appId);
+  assert(panel, `expected installed Panel App '${appId}', got ${apps.length} app(s)`);
+  return panel;
 }
 
 async function attachPanel(win, panel, prepared) {
@@ -174,20 +206,21 @@ async function attachPanel(win, panel, prepared) {
   });
   const guestId = await view.evaluate((candidate) => candidate.getWebContentsId());
   await win.evaluate(
-    ({ guestId: id, appDescriptorId }) =>
+    ({ guestId: id, appDescriptorId, cwd }) =>
       window.codeshell.bindPanelApp({
         guestId: id,
         appDescriptorId,
         tabId: `tab:${appDescriptorId}`,
         bucket: "panel-app-e2e",
         sessionId: "session-e2e",
-        cwd: "/tmp/e2e",
+        projectPath: cwd,
+        cwd,
         visible: true,
         busy: false,
         theme: "dark",
         locale: "en",
       }),
-    { guestId, appDescriptorId: panel.id },
+    { guestId, appDescriptorId: panel.id, cwd: projectDir },
   );
   return view;
 }
@@ -198,6 +231,11 @@ async function execute(view, source) {
 
 try {
   await installFixture("1.0.0", "panel-v1");
+  await mkdir(join(projectDir, ".code-shell"), { recursive: true });
+  await writeFile(
+    join(projectDir, ".code-shell", "settings.json"),
+    `${JSON.stringify({ panelAppBindings: ["panel-e2e"] })}\n`,
+  );
   app = await launchCodeShellElectron({
     // Electron's instance lock follows userData, while core's plugin catalog
     // follows HOME. Isolate both so a developer's running CodeShell instance
@@ -223,6 +261,11 @@ try {
     .waitFor({ state: "visible" });
 
   const first = await descriptor(win);
+  assert(first.agent?.tools[0]?.name === "echo_marker", "Panel App Agent tools were not listed");
+  assert(
+    first.agent?.skills[0] === "agent/skills/panel-e2e/SKILL.md",
+    "Panel App Skill contribution was not listed",
+  );
   const firstDetail = await win.evaluate(() => window.codeshell.getPluginDetail("panel-e2e@local"));
   const firstTemplate = firstDetail?.content.automationTemplates[0];
   assert(firstTemplate?.id === "daily-review", "automation template was not inventoried");
@@ -231,14 +274,14 @@ try {
     "automation template revision was not exposed",
   );
   const createdAutomation = await win.evaluate(
-    ({ revision }) =>
+    ({ revision, cwd }) =>
       window.codeshell.createAutomationFromPluginTemplate(
         "panel-e2e@local",
         "daily-review",
         revision,
-        "/tmp/e2e",
+        cwd,
       ),
-    { revision: firstTemplate.revision },
+    { revision: firstTemplate.revision, cwd: projectDir },
   );
   assert(
     createdAutomation.prompt === "Review plugin marker panel-v1 without changing files.",
@@ -248,7 +291,10 @@ try {
     createdAutomation.templateSource?.revision === firstTemplate.revision,
     "automation provenance did not retain the reviewed revision",
   );
-  const firstPrepared = await win.evaluate((id) => window.codeshell.preparePanelApp(id), first.id);
+  const firstPrepared = await win.evaluate(
+    ({ id, cwd }) => window.codeshell.preparePanelApp(id, cwd),
+    { id: first.id, cwd: projectDir },
+  );
   assert(firstPrepared.revision === first.revision, "prepare/list revision mismatch");
   const firstView = await attachPanel(win, first, firstPrepared);
 
@@ -277,9 +323,24 @@ try {
 
   const context = await execute(firstView, "window.codeshellPanel.getContext()");
   assert(context.sessionId === "session-e2e", "session permission was not scoped correctly");
-  assert(context.cwd === "/tmp/e2e", "workspace permission was not scoped correctly");
+  assert(context.cwd === projectDir, "workspace permission was not scoped correctly");
   assert(context.trusted === false, "workspace trust must be decided by main");
   assert(context.theme === "dark" && context.locale === "en", "host context was not bound");
+  assert(context.apiVersion === 2, "Panel App bridge API v2 was not exposed");
+  const agentToolResult = await win.evaluate(
+    ({ appDescriptorId }) =>
+      window.codeshell.invokePanelAppAgentTool({
+        appDescriptorId,
+        bucket: "panel-app-e2e",
+        toolName: "echo_marker",
+        arguments: { value: 42 },
+      }),
+    { appDescriptorId: first.id },
+  );
+  assert(
+    agentToolResult.marker === "panel-v1" && agentToolResult.value === 42,
+    "Panel App Agent tool did not execute through the sandbox bridge",
+  );
   await execute(
     firstView,
     'window.codeshellPanel.call("storage.set", { key: "answer", value: 42 })',
@@ -307,20 +368,20 @@ try {
   );
   assert(updateResult.ok, `Panel App source update failed: ${updateResult.error}`);
   const staleReviewRejected = await win.evaluate(
-    async ({ revision }) => {
+    async ({ revision, cwd }) => {
       try {
         await window.codeshell.createAutomationFromPluginTemplate(
           "panel-e2e@local",
           "daily-review",
           revision,
-          "/tmp/e2e",
+          cwd,
         );
         return false;
       } catch (error) {
         return String(error).includes("changed after review");
       }
     },
-    { revision: firstTemplate.revision },
+    { revision: firstTemplate.revision, cwd: projectDir },
   );
   assert(staleReviewRejected, "stale automation review was accepted after plugin update");
   const persistedAutomation = await win.evaluate(
@@ -333,8 +394,8 @@ try {
   );
   const second = await descriptor(win);
   const secondPrepared = await win.evaluate(
-    (id) => window.codeshell.preparePanelApp(id),
-    second.id,
+    ({ id, cwd }) => window.codeshell.preparePanelApp(id, cwd),
+    { id: second.id, cwd: projectDir },
   );
   assert(second.revision !== first.revision, "Panel App update did not change its revision");
   assert(second.hostId !== first.hostId, "Panel App update reused the stale authority");
@@ -355,6 +416,7 @@ try {
     (await execute(secondView, "document.getElementById('marker')?.textContent")) === "panel-v2",
     "updated Panel App served stale assets",
   );
+
   console.log("Panel App Electron E2E: passed");
 } finally {
   await app?.close().catch(() => undefined);

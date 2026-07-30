@@ -892,7 +892,19 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: panelTool,
     exposure: expose(GENERAL_TAGS, {
-      defaultPermissionRules: allow(panelToolDef.name),
+      defaultPermissionRules: [
+        {
+          tool: panelToolDef.name,
+          argsPattern: { action: "^(list|open|tools)$" },
+          decision: "allow",
+        },
+        {
+          tool: panelToolDef.name,
+          argsPattern: { action: "^invoke$" },
+          decision: "ask",
+          reason: "Panel App Agent tools can read or change project design data",
+        },
+      ],
       availability: (ctx) => ctx.host === "desktop" && ctx.isSubAgent !== true,
     }),
   },

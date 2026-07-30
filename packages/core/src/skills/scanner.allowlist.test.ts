@@ -17,6 +17,36 @@ function writeSkill(root: string, name: string): void {
   );
 }
 
+function writePanelAppSkill(home: string): void {
+  const appRoot = join(home, ".code-shell", "panel-apps", "design");
+  const skillDir = join(appRoot, "agent", "skills", "repo-design");
+  mkdirSync(skillDir, { recursive: true });
+  writeFileSync(
+    join(skillDir, "SKILL.md"),
+    "---\nname: repo-design\ndescription: edit repository designs\n---\nuse design tools\n",
+  );
+  mkdirSync(join(appRoot, ".codeshell-panel"), { recursive: true });
+  writeFileSync(
+    join(appRoot, ".codeshell-panel", "panel.json"),
+    JSON.stringify({
+      schemaVersion: 2,
+      id: "design",
+      version: "1.0.0",
+      title: { default: "Design" },
+      entry: "app/index.html",
+      permissions: [],
+      agent: {
+        tools: [],
+        skills: ["agent/skills/repo-design/SKILL.md"],
+      },
+    }),
+  );
+  writeFileSync(
+    join(home, ".code-shell", "panel-apps", "installed.json"),
+    JSON.stringify({ version: 1, apps: [{ id: "design" }] }),
+  );
+}
+
 describe("scanSkills skillAllowlist (sub-agent isolation)", () => {
   let cwd: string;
   let home: string;
@@ -44,7 +74,9 @@ describe("scanSkills skillAllowlist (sub-agent isolation)", () => {
   });
 
   test("undefined allowlist → full pool inherited", () => {
-    const names = scanSkills(cwd).map((s) => s.name).sort();
+    const names = scanSkills(cwd)
+      .map((s) => s.name)
+      .sort();
     expect(names).toEqual(["alpha", "beta", "gamma"]);
   });
 
@@ -68,9 +100,34 @@ describe("scanSkills skillAllowlist (sub-agent isolation)", () => {
   });
 
   test("allowlist entry that doesn't exist is simply absent (no crash)", () => {
-    const names = scanSkills(cwd, { skillAllowlist: ["alpha", "nonexistent"] }).map(
-      (s) => s.name,
-    );
+    const names = scanSkills(cwd, { skillAllowlist: ["alpha", "nonexistent"] }).map((s) => s.name);
     expect(names).toEqual(["alpha"]);
+  });
+
+  test("loads namespaced Panel App skills only after explicit project binding", () => {
+    writePanelAppSkill(home);
+    invalidateSkillCache();
+    expect(scanSkills(cwd).map((skill) => skill.name)).not.toContain("design:repo-design");
+    expect(scanSkills(cwd, { includeDisabledPanelApps: true })).toContainEqual(
+      expect.objectContaining({
+        name: "design:repo-design",
+        source: "panel-app",
+        description: "edit repository designs",
+      }),
+    );
+
+    mkdirSync(join(cwd, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(cwd, ".code-shell", "settings.json"),
+      JSON.stringify({ panelAppBindings: ["design"] }),
+    );
+    expect(scanSkills(cwd).map((skill) => skill.name)).toContain("design:repo-design");
+
+    mkdirSync(join(home, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(home, ".code-shell", "settings.json"),
+      JSON.stringify({ disabledPanelApps: ["design"] }),
+    );
+    expect(scanSkills(cwd).map((skill) => skill.name)).not.toContain("design:repo-design");
   });
 });

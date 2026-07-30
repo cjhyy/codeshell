@@ -13,18 +13,21 @@ describe("disabledAgents", () => {
 });
 
 describe("Panel App settings", () => {
-  it("defaults to an empty app denylist and project override map", () => {
+  it("defaults to an empty global denylist and no project bindings", () => {
     const parsed = SettingsSchema.parse({});
     expect(parsed.disabledPanelApps).toEqual([]);
+    expect(parsed.panelAppBindings).toEqual([]);
     expect(parsed.panelAppOverrides).toEqual({});
   });
 
-  it("keeps Panel App policy outside agent capability overrides", () => {
+  it("keeps explicit Panel App bindings outside agent capability overrides", () => {
     const parsed = SettingsSchema.parse({
       disabledPanelApps: ["design-studio"],
+      panelAppBindings: ["design-studio", "quant-lab"],
       panelAppOverrides: { "design-studio": "on", "quant-lab": "off" },
     });
     expect(parsed.disabledPanelApps).toEqual(["design-studio"]);
+    expect(parsed.panelAppBindings).toEqual(["design-studio", "quant-lab"]);
     expect(parsed.panelAppOverrides).toEqual({
       "design-studio": "on",
       "quant-lab": "off",

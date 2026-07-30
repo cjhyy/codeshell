@@ -9,16 +9,20 @@ function packStyleText(): string {
 // The mini-DOM has no Storage; a minimal in-memory shim covers the pack id r/w.
 function installLocalStorage(): void {
   const store = new Map<string, string>();
-  (globalThis as unknown as { localStorage: Storage }).localStorage = {
-    getItem: (key) => store.get(key) ?? null,
-    setItem: (key, value) => void store.set(key, String(value)),
-    removeItem: (key) => void store.delete(key),
-    clear: () => store.clear(),
-    key: (index) => [...store.keys()][index] ?? null,
-    get length() {
-      return store.size;
-    },
-  } as Storage;
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    writable: true,
+    value: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, String(value)),
+      removeItem: (key: string) => void store.delete(key),
+      clear: () => store.clear(),
+      key: (index: number) => [...store.keys()][index] ?? null,
+      get length() {
+        return store.size;
+      },
+    } satisfies Storage,
+  });
 }
 
 function removePackStyle(): void {

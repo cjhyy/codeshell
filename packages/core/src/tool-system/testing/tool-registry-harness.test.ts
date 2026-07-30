@@ -73,6 +73,8 @@ describe("shared ToolRegistry integration harness", () => {
             opened.push(panelId);
             return { ok: true, panelId };
           },
+          tools: async () => [],
+          invoke: async (panelId, toolName) => ({ ok: true, panelId, toolName, result: null }),
         },
         browser: {
           snapshot: async () => ({

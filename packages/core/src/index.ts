@@ -117,11 +117,13 @@ export type { BuiltinTool, BuiltinToolFn } from "./tool-system/builtin/index.js"
 export type { ToolContext } from "./tool-system/context.js";
 export type {
   AgentPanelDescriptor,
+  AgentPanelToolDescriptor,
   PanelHostBridge,
+  PanelInvokeResult,
   PanelOpenResult,
 } from "./tool-system/panel-bridge.js";
 export { fileCache, invalidateFileCache } from "./tool-system/builtin/file-cache.js";
-export { validateToolArgs } from "./tool-system/validation.js";
+export { validateToolArgs, validateToolArgsStrict } from "./tool-system/validation.js";
 export { createOffBackend } from "./tool-system/sandbox/off.js";
 
 // ─── WorkspaceProfile（数字人）harness 元机制 ─────────────────────
@@ -433,6 +435,9 @@ export {
   panelAppsRoot,
   previewLocalPanelApp,
   previewInstalledPanelAppUpdate,
+  isPanelAppBound,
+  resolvePanelAppBindingPolicy,
+  resolvePanelAppBindingProjectPath,
   uninstallPanelApp,
   type InstalledPanelApp,
   type InstalledPanelAppSource,
@@ -440,6 +445,7 @@ export {
   type LocalPanelAppSourceInput,
   type PanelAppSourceInput,
   type PanelAppManifestData,
+  type PanelAppBindingPolicy,
   type PanelAppPreview,
 } from "./panel-apps/index.js";
 export {

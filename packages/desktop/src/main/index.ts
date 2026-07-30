@@ -306,7 +306,11 @@ import {
   updatePluginEntry,
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
-import { listPanelAppExtensions, listPanelApps } from "./panel-apps-service.js";
+import {
+  isPanelAppBoundToProject,
+  listPanelAppExtensions,
+  listPanelApps,
+} from "./panel-apps-service.js";
 import {
   installPanelAppUpdateForUi,
   installLocalPanelAppForUi,
@@ -318,7 +322,7 @@ import { createAutomationFromPluginTemplate } from "./plugin-automation-service.
 import { expandPluginCommand, listPluginCommands } from "./plugin-command-service.js";
 import { getPluginMedia } from "./plugin-media-service.js";
 import {
-  expectedPanelAppPartition,
+  preparedPanelAppPartitionProjectPath,
   registerPanelAppSchemePrivileges,
   validatePanelAppEntryUrl,
 } from "./panel-app-protocol.js";
@@ -504,6 +508,7 @@ const panelAppBridge = new PanelAppBridge({
   isTrustedHost: (sender) =>
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
   isWorkspaceTrusted: (cwd) => getTrustCachedSync(cwd) === "trusted",
+  isPanelAppBound: isPanelAppBoundToProject,
   getAgentBridge: () => bridge,
   showNotification: ({ title, body }) => {
     if (!Notification.isSupported()) return false;
@@ -823,7 +828,10 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     if (String(params.src ?? "").startsWith("cspanel:")) {
       if (
         !panelAppResource ||
-        params.partition !== expectedPanelAppPartition(panelAppResource.descriptor.hostId)
+        !preparedPanelAppPartitionProjectPath(
+          panelAppResource.descriptor.hostId,
+          String(params.partition ?? ""),
+        )
       ) {
         event.preventDefault();
         return;
@@ -878,7 +886,15 @@ function hardenWebviewGuests(win: BrowserWindow): void {
       partition: BROWSER_PARTITION,
     };
     if (attached.kind === "panel-app") {
-      panelAppBridge.registerGuest(guest, win, attached.resource);
+      const projectPath = preparedPanelAppPartitionProjectPath(
+        attached.resource.descriptor.hostId,
+        attached.partition,
+      );
+      if (!projectPath) {
+        guest.stop();
+        return;
+      }
+      panelAppBridge.registerGuest(guest, win, attached.resource, projectPath);
       return;
     }
     const partition = attached.partition;
@@ -3178,7 +3194,20 @@ ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
       });
     }
     if (cwd) {
-      await writeSettings("project", { panelAppOverrides: { [id]: null } }, cwd);
+      const projectSettings = (await readSettings("project", cwd)) ?? {};
+      const bindings = Array.isArray(projectSettings.panelAppBindings)
+        ? projectSettings.panelAppBindings.filter(
+            (candidate): candidate is string => typeof candidate === "string" && candidate !== id,
+          )
+        : [];
+      await writeSettings(
+        "project",
+        {
+          panelAppBindings: bindings,
+          panelAppOverrides: { [id]: null },
+        },
+        cwd,
+      );
     }
   } catch (error) {
     dlog("main", "panel_app.settings_cleanup_failed", {
@@ -4712,7 +4741,11 @@ ipcMain.handle(
     if (touchesExternalSessionVisibility(scope, patch)) {
       await reconcileExternalAdapters?.();
     }
-    if ("disabledPanelApps" in patch || "panelAppOverrides" in patch) {
+    if (
+      "disabledPanelApps" in patch ||
+      "panelAppBindings" in patch ||
+      "panelAppOverrides" in patch
+    ) {
       broadcastPanelAppsChanged(mainWindows);
     }
     if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {

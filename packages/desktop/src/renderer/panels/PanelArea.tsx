@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CircleOff, X, Plus, Maximize2, Minimize2 } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,6 @@ import {
   getPanelEntry,
   panelEntryTitle,
   PANEL_REGISTRY,
-  type PanelAvailabilityContext,
 } from "./PanelRegistry";
 import {
   PanelWorkspaceRootConsumer,
@@ -129,6 +128,7 @@ export function PanelArea(props: Props) {
 }
 
 function ResolvedPanelArea({
+  projectPath,
   hidden = false,
   keepActiveBodyLive = false,
   onClose,
@@ -158,13 +158,25 @@ function ResolvedPanelArea({
   workspace,
 }: Props & { workspace: PanelWorkspaceState }) {
   const { t } = useT();
-  useSyncExternalStore(PANEL_REGISTRY.subscribe, PANEL_REGISTRY.snapshot, PANEL_REGISTRY.snapshot);
+  const panelRegistryRevision = useSyncExternalStore(
+    PANEL_REGISTRY.subscribe,
+    PANEL_REGISTRY.snapshot,
+    PANEL_REGISTRY.snapshot,
+  );
   const cwd = workspace.root;
-  const panelAvailability: PanelAvailabilityContext = {
-    cwd,
-    engineSessionId: engineSessionId ?? null,
-  };
-  const enabledPanels = getEnabledPanelEntries(panelAvailability);
+  const enabledPanels = useMemo(
+    () =>
+      getEnabledPanelEntries({
+        projectPath,
+        cwd,
+        engineSessionId: engineSessionId ?? null,
+      }),
+    [cwd, engineSessionId, panelRegistryRevision, projectPath],
+  );
+  const enabledPanelIds = useMemo(
+    () => new Set(enabledPanels.map((entry) => entry.key)),
+    [enabledPanels],
+  );
   // Fresh, collision-proof tab id. The module counter resets to 0 on a renderer
   // reload, but tabs are persisted per bucket; bump past ids already present in
   // this bucket so restored tabs and newly-opened tabs don't collide.
@@ -183,9 +195,11 @@ function ResolvedPanelArea({
 
   // Dedup defensively: persisted state from older builds can carry duplicate ids.
   const seenTabIds = new Set<string>();
-  const activeTabs = tabs.filter((tb) =>
-    seenTabIds.has(tb.id) ? false : (seenTabIds.add(tb.id), true),
-  );
+  const activeTabs = tabs.filter((tb) => {
+    if (!enabledPanelIds.has(tb.kind) || seenTabIds.has(tb.id)) return false;
+    seenTabIds.add(tb.id);
+    return true;
+  });
   const candidateActiveId = activeId;
   const visibleActiveId =
     candidateActiveId && activeTabs.some((tb) => tb.id === candidateActiveId)
@@ -241,9 +255,15 @@ function ResolvedPanelArea({
   const openedNonce = useRef<number>(-1);
   useEffect(() => {
     if (openedNonce.current === requestNonce) return;
-    openedNonce.current = requestNonce;
     // null kind = open the dock on the card landing without creating a tab.
-    if (requestKind === null) return;
+    if (requestKind === null) {
+      openedNonce.current = requestNonce;
+      return;
+    }
+    // A project-bound app registry arrives asynchronously. Do not consume the
+    // open request until that project actually exposes the requested panel.
+    if (!enabledPanelIds.has(requestKind)) return;
+    openedNonce.current = requestNonce;
     const newTab: OpenTab = { id: mkId(requestKind), kind: requestKind };
     setTabs((prev) => {
       const existing = prev.find((t) => t.kind === requestKind);
@@ -255,7 +275,7 @@ function ResolvedPanelArea({
       setActiveId(newTab.id);
       return [...prev, newTab];
     });
-  }, [requestNonce, requestKind]);
+  }, [enabledPanelIds, panelRegistryRevision, requestNonce, requestKind]);
 
   const panelStyle: React.CSSProperties | undefined = hidden
     ? keepActiveBodyLive
@@ -417,6 +437,7 @@ function ResolvedPanelArea({
                     busy={busy}
                     visible={visibility.lifecycleVisible}
                     foregroundVisible={visibility.foregroundVisible}
+                    projectPath={projectPath}
                     cwd={cwd}
                     reviewFiles={reviewFiles}
                     reviewDiff={reviewDiff}
@@ -487,6 +508,7 @@ function PanelBody({
   busy,
   visible,
   foregroundVisible,
+  projectPath,
   cwd,
   reviewFiles,
   reviewDiff,
@@ -507,6 +529,7 @@ function PanelBody({
   busy: boolean;
   visible: boolean;
   foregroundVisible: boolean;
+  projectPath: string | null;
   cwd: string | null;
   reviewFiles?: string[];
   reviewDiff?: string;
@@ -536,6 +559,7 @@ function PanelBody({
     busy,
     visible,
     foregroundVisible,
+    projectPath,
     cwd,
     reviewFiles,
     reviewDiff,

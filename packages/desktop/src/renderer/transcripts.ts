@@ -850,6 +850,37 @@ export function setSessionPinnedLocal(
 }
 
 /** Switch the digital human used by future turns without replacing Session history. */
+/**
+ * Drop a digital-human binding from every Session in the given projects.
+ *
+ * Deleting a profile unbinds engine state, but a Session that never ran has no
+ * engine state — its binding lives only in this index. Left behind, opening that
+ * Session sends `workspaceProfile` for a profile that no longer exists and the
+ * run dies with "Workspace profile ... is unavailable".
+ *
+ * Returns the project ids actually rewritten, so callers can report honestly.
+ */
+export function unbindWorkspaceProfileEverywhere(
+  workspaceProfile: string,
+  projectIds: readonly (string | null)[],
+): (string | null)[] {
+  const touched: (string | null)[] = [];
+  for (const projectId of projectIds) {
+    const index = loadSessionIndex(projectId);
+    let changed = false;
+    const sessions = index.sessions.map((session) => {
+      if (session.workspaceProfile !== workspaceProfile) return session;
+      changed = true;
+      const { workspaceProfile: _dropped, ...rest } = session;
+      return { ...rest, updatedAt: Date.now() };
+    });
+    if (!changed) continue;
+    saveSessionIndex(projectId, { ...index, sessions });
+    touched.push(projectId);
+  }
+  return touched;
+}
+
 export function setSessionWorkspaceProfileLocal(
   projectId: string | null,
   sessionId: string,

@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
 import {
-  Check,
   Code2,
   FileArchive,
+  FolderLock,
   FolderPlus,
   Github,
   Loader2,
   PanelTop,
   RefreshCw,
-  RotateCcw,
   Trash2,
-  X,
 } from "lucide-react";
 import type {
   PanelAppExtensionSummary,
@@ -46,16 +44,18 @@ export function nextDisabledPanelApps(value: unknown, appId: string, enabled: bo
   return [...disabled];
 }
 
-export function panelAppProjectOverridePatch(
-  appId: string,
-  state: "inherit" | "on" | "off",
-): Record<string, unknown> {
-  return {
-    panelAppOverrides: { [appId]: state === "inherit" ? null : state },
-  };
+export function nextPanelAppBindings(value: unknown, appId: string, bound: boolean): string[] {
+  const bindings = new Set(
+    Array.isArray(value)
+      ? value.filter((candidate): candidate is string => typeof candidate === "string")
+      : [],
+  );
+  if (bound) bindings.add(appId);
+  else bindings.delete(appId);
+  return [...bindings].sort();
 }
 
-/** Independent Desktop Panel Apps. Agent plugins are managed by PluginsTab. */
+/** Desktop Panel Apps with optional sandboxed Agent tools and bundled Skills. */
 export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const { t, lang } = useT();
   const [apps, setApps] = useState<PanelAppExtensionSummary[] | null>(null);
@@ -108,17 +108,20 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     }
   };
 
-  const setProjectOverride = async (
-    app: PanelAppExtensionSummary,
-    state: "inherit" | "on" | "off",
-  ) => {
+  const setProjectBinding = async (appId: string, bound: boolean) => {
     if (!activeProjectPath) return;
-    setBusy(app.id);
+    setBusy(`panel-app:${appId}`);
     setError(null);
     try {
+      const settings = (await window.codeshell.getSettings("project", activeProjectPath)) ?? {};
       await writeSettings(
         "project",
-        panelAppProjectOverridePatch(app.appId, state),
+        {
+          panelAppBindings: nextPanelAppBindings(settings.panelAppBindings, appId, bound),
+          // Remove the old tri-state entry so the canonical binding is the
+          // only source of truth after the first user action.
+          panelAppOverrides: { [appId]: null },
+        },
         activeProjectPath,
       );
       setReloadKey((key) => key + 1);
@@ -131,6 +134,10 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
 
   const pickAndReview = async (kind: "dir" | "zip") => {
     setError(null);
+    if (!activeProjectPath) {
+      setError(t("ext.panels.projectRequired"));
+      return;
+    }
     const picked = await window.codeshell.pickPanelAppSource(kind);
     if (!picked) return;
     setInstallBusy(kind);
@@ -153,6 +160,10 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   };
 
   const reviewGit = async () => {
+    if (!activeProjectPath) {
+      setError(t("ext.panels.projectRequired"));
+      return;
+    }
     if (!gitUrl.trim()) {
       setError(t("ext.panels.githubUrlRequired"));
       return;
@@ -209,6 +220,11 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       return;
     }
 
+    if (!activeProjectPath) {
+      setError(t("ext.panels.projectRequired"));
+      return;
+    }
+    const bindingProjectPath = activeProjectPath;
     const { source } = review;
     let overwrite = false;
     if (preview.alreadyInstalled) {
@@ -245,11 +261,15 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         setError(result.error);
         return;
       }
+      await setProjectBinding(preview.id, true);
       setReview(null);
       if (source.kind === "git") setGitOpen(false);
       setReloadKey((key) => key + 1);
       toast({
-        message: t("ext.panels.installedToast", { name: preview.title.default }),
+        message: t("ext.panels.installedAndBoundToast", {
+          name: preview.title.default,
+          project: bindingProjectPath.split(/[\\/]/).filter(Boolean).at(-1) ?? bindingProjectPath,
+        }),
         variant: "success",
       });
     } catch (cause) {
@@ -309,6 +329,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         app.description ?? "",
         app.updateSource.label,
         ...app.permissions,
+        ...(app.agent?.tools.map((tool) => tool.name) ?? []),
       ].some((value) => value.toLowerCase().includes(needle)),
   );
 
@@ -325,6 +346,35 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       )}
 
       <div className="rounded-xl border bg-card p-4">
+        <div
+          className={`mb-3 flex items-start gap-3 rounded-lg border px-3 py-2.5 ${
+            activeProjectPath
+              ? "border-primary/20 bg-primary/5"
+              : "border-status-warn/30 bg-status-warn/5"
+          }`}
+        >
+          <FolderLock
+            className={`mt-0.5 h-4 w-4 shrink-0 ${
+              activeProjectPath ? "text-primary" : "text-status-warn"
+            }`}
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-foreground">
+              {activeProjectPath
+                ? t("ext.panels.bindingProject", {
+                    project:
+                      activeProjectPath.split(/[\\/]/).filter(Boolean).at(-1) ?? activeProjectPath,
+                  })
+                : t("ext.panels.noBindingProject")}
+            </div>
+            <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
+              {activeProjectPath
+                ? t("ext.panels.bindingProjectDesc")
+                : t("ext.panels.noBindingProjectDesc")}
+            </div>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Code2 className="h-5 w-5" aria-hidden="true" />
@@ -338,7 +388,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
           <Button
             size="sm"
             className="gap-1.5"
-            disabled={installBusy !== null}
+            disabled={installBusy !== null || !activeProjectPath}
             onClick={() => void pickAndReview("dir")}
           >
             {installBusy === "dir" ? (
@@ -352,7 +402,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
             size="sm"
             variant="outline"
             className="gap-1.5"
-            disabled={installBusy !== null}
+            disabled={installBusy !== null || !activeProjectPath}
             onClick={() => void pickAndReview("zip")}
           >
             {installBusy === "zip" ? (
@@ -366,7 +416,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
             size="sm"
             variant="outline"
             className="gap-1.5"
-            disabled={installBusy !== null}
+            disabled={installBusy !== null || !activeProjectPath}
             onClick={() => setGitOpen((open) => !open)}
           >
             <Github className="h-3.5 w-3.5" aria-hidden="true" />
@@ -401,7 +451,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
               </span>
               <Input
                 value={gitSubdir}
-                placeholder="examples/panel-apps/design-studio"
+                placeholder="apps/design-studio"
                 onChange={(event) => setGitSubdir(event.target.value)}
               />
             </label>
@@ -469,7 +519,11 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-medium text-foreground">{app.title}</span>
                   <Badge variant={app.enabled ? "success" : "secondary"}>
-                    {app.enabled ? t("ext.panels.enabled") : t("ext.panels.disabled")}
+                    {app.enabled
+                      ? t("ext.panels.boundAndEnabled")
+                      : app.projectBound
+                        ? t("ext.panels.globallyDisabled")
+                        : t("ext.panels.notBound")}
                   </Badge>
                   <Badge variant="outline">v{app.version}</Badge>
                 </div>
@@ -497,11 +551,14 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     ))
                   )}
                   {app.singleton && <Badge variant="outline">{t("ext.panels.singleton")}</Badge>}
-                  {app.projectOverride && (
-                    <Badge variant="outline">
-                      {app.projectOverride === "on"
-                        ? t("ext.panels.projectOn")
-                        : t("ext.panels.projectOff")}
+                  {(app.agent?.tools.length ?? 0) > 0 && (
+                    <Badge variant="info">
+                      {t("ext.panels.agentToolsCount", { count: app.agent!.tools.length })}
+                    </Badge>
+                  )}
+                  {(app.agent?.skills.length ?? 0) > 0 && (
+                    <Badge variant="info">
+                      {t("ext.panels.agentSkillsCount", { count: app.agent!.skills.length })}
                     </Badge>
                   )}
                 </div>
@@ -511,6 +568,19 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                   </div>
                 )}
                 <div className="mt-3 flex flex-wrap items-center gap-3 border-t pt-3">
+                  {activeProjectPath && (
+                    <label className="flex items-center gap-2 text-xs font-medium text-foreground">
+                      <Switch
+                        checked={app.projectBound}
+                        disabled={busy === app.id}
+                        aria-label={t("ext.panels.projectBindingAria", {
+                          title: app.title,
+                        })}
+                        onCheckedChange={(bound) => void setProjectBinding(app.appId, bound)}
+                      />
+                      {t("ext.panels.bindCurrentProject")}
+                    </label>
+                  )}
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Switch
                       checked={app.globalEnabled}
@@ -520,38 +590,6 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                     />
                     {t("ext.panels.globalToggle")}
                   </label>
-                  {activeProjectPath && (
-                    <div
-                      className="flex flex-wrap items-center gap-1"
-                      aria-label={t("ext.panels.projectPolicyAria", { title: app.title })}
-                    >
-                      <span className="mr-1 text-xs text-muted-foreground">
-                        {t("ext.panels.projectPolicy")}
-                      </span>
-                      {(
-                        [
-                          ["inherit", RotateCcw, "ext.panels.inherit"],
-                          ["on", Check, "ext.panels.on"],
-                          ["off", X, "ext.panels.off"],
-                        ] as const
-                      ).map(([state, Icon, label]) => (
-                        <Button
-                          key={state}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className={`h-7 gap-1 px-2 text-xs ${
-                            (app.projectOverride ?? "inherit") === state ? "bg-accent" : ""
-                          }`}
-                          disabled={busy === app.id}
-                          onClick={() => void setProjectOverride(app, state)}
-                        >
-                          <Icon className="h-3 w-3" aria-hidden="true" />
-                          {t(label)}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
                   <Button
                     type="button"
                     variant="outline"
