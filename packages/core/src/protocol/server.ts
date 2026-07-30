@@ -3855,13 +3855,17 @@ export class AgentServer {
         const result = (await this.requestPanelActionForSession(session, sessionId, "open", {
           panelId,
         })) as import("../tool-system/panel-bridge.js").PanelOpenResult;
-        if (result?.panelId) return result;
+        // Gate on SUCCESS, not merely on shape. A real failure reply is
+        // `{ok:false, panelId, detail}` — it satisfies a shape-only check and would
+        // return verbatim, skipping both the classification recovery and the length
+        // bound below. Every failure must fall through here.
+        if (result?.ok === true && result?.panelId) return result;
         // A classified terminal failure (cancelled / denied / timed out) must
         // survive this normalization — reporting it as "malformed" would tell the
         // model the HOST misbehaved when in fact the user stopped the turn.
         return {
           ok: false,
-          panelId,
+          panelId: result?.panelId ?? panelId,
           detail: hostLoopbackDetail(result) ?? "panel host returned a malformed result",
         };
       },
@@ -3883,11 +3887,14 @@ export class AgentServer {
           toolName,
           arguments: args,
         })) as import("../tool-system/panel-bridge.js").PanelInvokeResult;
-        if (result?.panelId && result?.toolName) return result;
+        // Success-gated for the same reason as `open` above: a real failure reply
+        // carries panelId + toolName and would otherwise bypass the length bound,
+        // letting a Panel App's raw error.message reach the model unbounded.
+        if (result?.ok === true && result?.panelId && result?.toolName) return result;
         return {
           ok: false,
-          panelId,
-          toolName,
+          panelId: result?.panelId ?? panelId,
+          toolName: result?.toolName ?? toolName,
           detail: hostLoopbackDetail(result) ?? "panel host returned a malformed result",
         };
       },

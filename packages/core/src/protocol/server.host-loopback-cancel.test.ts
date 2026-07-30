@@ -402,6 +402,7 @@ describe("host-loopback cancel semantics", () => {
           answer: JSON.stringify({
             ok: false,
             panelId: "designStudio",
+            toolName: "audit",
             detail:
               "Panel App tool invocation requires an owning Desktop window, and this " +
               "session has none.",
@@ -435,6 +436,11 @@ describe("host-loopback cancel semantics", () => {
           answer: JSON.stringify({
             ok: false,
             panelId: "designStudio",
+            // A REAL invoke failure reply carries toolName. Omitting it made this
+            // test pass for the wrong reason: the shape-only guard failed, so the
+            // payload detoured through the bounding helper. With toolName present
+            // it exercises the actual mainline path.
+            toolName: "audit",
             detail: `LINE1\nLINE2${"x".repeat(200_000)}`,
           }),
         },
