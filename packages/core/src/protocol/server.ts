@@ -3856,9 +3856,10 @@ export class AgentServer {
           panelId,
         })) as import("../tool-system/panel-bridge.js").PanelOpenResult;
         // Gate on SUCCESS, not merely on shape. A real failure reply is
-        // `{ok:false, panelId, detail}` — it satisfies a shape-only check and would
-        // return verbatim, skipping both the classification recovery and the length
-        // bound below. Every failure must fall through here.
+        // `{ok:false, panelId, detail}` (AgentPanelHost) — it satisfies a
+        // shape-only `result?.panelId` check and would return verbatim, skipping
+        // both the classification recovery and the length bound below. Every
+        // failure must fall through here.
         if (result?.ok === true && result?.panelId) return result;
         // A classified terminal failure (cancelled / denied / timed out) must
         // survive this normalization — reporting it as "malformed" would tell the
@@ -3887,9 +3888,12 @@ export class AgentServer {
           toolName,
           arguments: args,
         })) as import("../tool-system/panel-bridge.js").PanelInvokeResult;
-        // Success-gated for the same reason as `open` above: a real failure reply
-        // carries panelId + toolName and would otherwise bypass the length bound,
-        // letting a Panel App's raw error.message reach the model unbounded.
+        // Success-gated for the same reason as `open` above. Note a real failure
+        // reply carries `panelId` but usually NOT `toolName` (AgentPanelHost emits
+        // `{ok:false, panelId, detail}`), so the shape check alone was less
+        // frequently bypassed here than for `open` — but `ok === true` is the
+        // property that actually matters, and it also keeps a Panel App's raw
+        // `error.message` from reaching the model unbounded.
         if (result?.ok === true && result?.panelId && result?.toolName) return result;
         return {
           ok: false,

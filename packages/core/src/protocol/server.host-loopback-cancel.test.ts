@@ -481,6 +481,212 @@ describe("host-loopback cancel semantics", () => {
     expect(outcome.detail ?? "").not.toContain("curl");
   });
 
+  test("a denial carrying an answer is NOT reported as a successful invocation", async () => {
+    // handleApprove hands `params.decision` to the resolver as it arrived on the
+    // wire, with no runtime validation — the ApprovalResult union forbids
+    // `{approved:false, answer}` statically, but nothing enforces that. So the
+    // `approved ? answer : undefined` check is the only thing standing between a
+    // refused operation and the model being told it succeeded.
+    const probe = bootPanelProbe("escalation-session");
+    const request = await awaitPanelRequest(probe);
+
+    probe.transport.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.Approve,
+      params: {
+        sessionId: "escalation-session",
+        requestId: request.params.requestId,
+        decision: {
+          approved: false,
+          reason: "user refused",
+          // A payload that would read as a fully successful invoke if honored.
+          answer: JSON.stringify({
+            ok: true,
+            panelId: "designStudio",
+            toolName: "audit",
+            result: { exfiltrated: true },
+          }),
+        },
+      },
+    });
+
+    const outcome = (await waitFor(
+      () => probe.readOutcome(),
+      "invoke should settle after the denial",
+    )) as SettleOutcome & { result?: unknown };
+
+    expect(outcome.ok).toBe(false);
+    expect(outcome.result).toBeUndefined();
+    expect(outcome.detail).toContain("declined");
+  });
+
+  test("an open failure reply is bounded too, not only invoke", async () => {
+    // `open` and `invoke` have the same success gate for the same reason. Pin BOTH:
+    // reverting either one alone must fail a test, or half the fix is unprotected.
+    let panelBridge: PanelHostBridge | undefined;
+    let opened: { ok?: boolean; detail?: string } | undefined;
+    const engine = {
+      setAskUser() {},
+      setPlanMode() {},
+      setBrowserBridge() {},
+      setInjectCredential() {},
+      setSessionMessageRouter() {},
+      setPanelBridge(bridge: PanelHostBridge | undefined) {
+        panelBridge = bridge;
+      },
+      isHeadless: () => false,
+      async run(_task: string, options: { sessionId: string }): Promise<EngineResult> {
+        opened = await panelBridge!.open("designStudio");
+        return {
+          text: "done",
+          reason: "completed",
+          sessionId: options.sessionId,
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const transport = makeTransport();
+    new AgentServer({ transport: transport.transport, chatManager, panelBridge: true });
+    transport.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: Methods.Run,
+      params: { sessionId: "open-bound-session", task: "probe" },
+    });
+
+    const request = await waitFor(
+      () =>
+        transport.sent.find(
+          (message) =>
+            message.method === Methods.ApprovalRequest &&
+            message.params?.request?.args?.action === "open",
+        ),
+      "panel open should be emitted",
+    );
+    transport.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.Approve,
+      params: {
+        sessionId: "open-bound-session",
+        requestId: request.params.requestId,
+        decision: {
+          approved: true,
+          // A REAL open failure reply: ok:false WITH panelId. Shape alone would
+          // satisfy a `result?.panelId` gate and skip the length bound.
+          answer: JSON.stringify({
+            ok: false,
+            panelId: "designStudio",
+            detail: `LINE1\nLINE2${"x".repeat(200_000)}`,
+          }),
+        },
+      },
+    });
+
+    const result = await waitFor(() => opened, "open should settle");
+    expect(result.ok).toBe(false);
+    expect((result.detail ?? "").length).toBeLessThanOrEqual(501);
+    expect(result.detail ?? "").not.toContain("\n");
+  });
+
+  test("a tools failure keeps its host detail rather than a generic label", async () => {
+    let panelBridge: PanelHostBridge | undefined;
+    let queried: { items: unknown[]; failed?: string } | undefined;
+    const engine = {
+      setAskUser() {},
+      setPlanMode() {},
+      setBrowserBridge() {},
+      setInjectCredential() {},
+      setSessionMessageRouter() {},
+      setPanelBridge(bridge: PanelHostBridge | undefined) {
+        panelBridge = bridge;
+      },
+      isHeadless: () => false,
+      async run(_task: string, options: { sessionId: string }): Promise<EngineResult> {
+        queried = await panelBridge!.tools!("designStudio");
+        return {
+          text: "done",
+          reason: "completed",
+          sessionId: options.sessionId,
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const transport = makeTransport();
+    new AgentServer({ transport: transport.transport, chatManager, panelBridge: true });
+    transport.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: Methods.Run,
+      params: { sessionId: "tools-detail-session", task: "probe" },
+    });
+
+    const request = await waitFor(
+      () =>
+        transport.sent.find(
+          (message) =>
+            message.method === Methods.ApprovalRequest &&
+            message.params?.request?.args?.action === "tools",
+        ),
+      "panel tools should be emitted",
+    );
+    transport.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.Approve,
+      params: {
+        sessionId: "tools-detail-session",
+        requestId: request.params.requestId,
+        decision: {
+          approved: true,
+          answer: JSON.stringify({
+            ok: false,
+            panelId: "designStudio",
+            detail: "no panel bucket registered for session tools-detail-session",
+          }),
+        },
+      },
+    });
+
+    const result = await waitFor(() => queried, "tools should settle");
+    expect(result.items).toEqual([]);
+    // The host's own diagnosis must survive, not be replaced by "panel tools query failed".
+    expect(result.failed).toContain("no panel bucket registered");
+  });
+
+  test("closing the session reports session_closed, not a generic cancel", async () => {
+    // The four cancellation causes exist to be distinguishable. Without a test per
+    // cause, collapsing them all to "cancelled" would go unnoticed — and then
+    // "your turn was stopped" would be shown for a session that was closed.
+    const probe = bootPanelProbe("closing-session");
+    await awaitPanelRequest(probe);
+
+    probe.transport.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.CloseSession,
+      params: { sessionId: "closing-session" },
+    });
+
+    const outcome = await waitFor(() => probe.readOutcome(), "invoke should settle on close");
+    expect(outcome.ok).toBe(false);
+    expect(outcome.detail).toContain("session closed");
+    expect(outcome.detail ?? "").not.toContain("turn was stopped");
+  });
+
   test("a successful host reply is still forwarded unchanged", async () => {
     const probe = bootPanelProbe("ok-session");
     const request = await awaitPanelRequest(probe);

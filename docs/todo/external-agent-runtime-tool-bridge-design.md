@@ -1139,11 +1139,21 @@ session.pendingApprovals.clear();
 "函数有效"，不是"这条路径会走到函数"。教训：**fixture 必须长得像真实回复**，否则测试会把
 形状分支的漏洞一起掩盖掉。
 
+其三，第四轮做了一遍系统性变异测试（对每处生产逻辑逐个改坏、看是否有测试失败），
+发现**四处正确但完全没有测试保护**的行为。其中最严重的一处是
+`raw = result.approved ? result.answer : undefined`：`handleApprove` 把线上原始
+`decision` 直接交给 resolver，`ApprovalResult` 联合类型静态上禁止
+`{approved:false, answer}`，但运行时无人校验。删掉那个 `approved ?` 判断后全部测试依然
+通过，而一个带 `answer` 的**拒绝**会被当成成功的工具调用回报给模型。教训：
+**"改坏它，看有没有测试失败"是唯一能发现这类空档的方法** —— 覆盖率不能替代它。
+
 **回归防线**：`server.host-loopback-cancel.test.ts` 已用变异测试逐条确认可证伪 ——
 退回旧的无差别 drain → 2 个测试失败；删掉 internal 优先排序 → 顺序断言失败；
 恢复 `failure` 准入门槛 → 真实错误用例失败；去掉有界化与查表限制 → 2 个注入/预算用例失败；
-把 `open` / `invoke` 的守卫退回只看形状 → 有界化用例失败。
-新增宿主回环工具时，应在该文件补对应用例，并确保 fixture 与真实回复同形。
+把 `open` **或** `invoke` 的守卫退回只看形状 → 各自的用例失败（两处独立钉住）；
+删掉 `approved ?` 判断 → 越权用例失败；把 `session_closed` / `owner_lost` 塌缩成
+`cancelled` → 会话关闭用例失败；`tools` 丢掉宿主 detail → 对应用例失败。
+新增宿主回环工具时，应在该文件补对应用例，并确保 **fixture 与真实回复同形**。
 
 ### 13.6 Crash 与恢复
 
