@@ -1210,6 +1210,31 @@ apps/desktop/src/main/maker-host/mcp-tool-approval-policy.ts
 
 ## 17. 分阶段落地
 
+### Phase 0 实施进度
+
+| 项                               | 状态        | 落地位置                                                              |
+| -------------------------------- | ----------- | --------------------------------------------------------------------- |
+| D：internal pending 取消语义分离 | ✅ 已完成   | `core/src/protocol/server.ts` + `server.host-loopback-cancel.test.ts` |
+| C：宿主回环 owner claim 显式化   | ✅ 已完成   | `desktop/src/main/agent-bridge.ts` + `panel-host-owner.test.ts`       |
+| A：`toolVisibility` 组装可复用   | ✅ 部分完成 | `buildToolVisibility()` 已抽出;`ToolSurfaceInputs` 全量改造待续       |
+| B：Codex `_meta.threadId` 可信性 | ⏳ 未开始   | 需真实 app-server 环境验证                                            |
+
+已落地的三项都是**独立可交付**的,不依赖 `externalAgentRuntimeV2` flag：
+
+- **D** 修的是现网缺陷：`cancelSessionApprovals()` 无差别 drain
+  `session.pendingApprovals`,把飞行中的宿主回环请求结算成 `{approved:false}`
+  ——与"用户点了拒绝"同形。现在 internal 条目改用携带真实原因的哨兵结算
+  (`cancelled` / `session_closed` / `owner_lost` / `timed_out`),且**先于**
+  surfaceable 审批结算以保证每个 resolver 可达。四个 bridge 收敛到同一个
+  `parseHostLoopbackDecision()`。
+  附带修掉一处同源缺陷：`makePanelBridge` 的 `open` / `invoke` 归一化会把已分类的
+  失败盖成 `"malformed result"`,即把用户的 Stop 说成宿主的错。
+- **C** 新增 `claimSessionPanelOwner()` / `hasSessionPanelOwner()`,renderer 路径
+  也改走同一方法。fail-closed 的 detail 现在说清原因与处置方式。
+- **A** 只抽了 `buildToolVisibility()`。这是 8.2.1 的直接前置:executor 在
+  `toolCtx.toolVisibility` **缺失时会跳过整个 guard 检查**,所以第二个调用方漏填
+  不是"少暴露工具",而是让 host-gated 工具在其 guard 本想排除的上下文里可调用。
+
 ### Phase 0：安全基线、协议钉死与前置重构
 
 - 定义 `ExternalAgentRuntime`、capability 和 session lifecycle。

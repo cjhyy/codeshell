@@ -100,7 +100,7 @@ function bootPanelProbe(sessionId: string) {
     params: { sessionId, task: "probe panel" },
   });
 
-  return { transport, readOutcome: () => outcome };
+  return { transport, chatManager, readOutcome: () => outcome };
 }
 
 function awaitPanelRequest(probe: ReturnType<typeof bootPanelProbe>) {
@@ -164,6 +164,103 @@ describe("host-loopback cancel semantics", () => {
     expect(outcome.ok).toBe(false);
     expect(outcome.detail).toContain("declined");
     expect(outcome.detail ?? "").not.toContain("stopped");
+  });
+
+  test("a garbled host reply is reported as malformed, not as a denial", async () => {
+    const probe = bootPanelProbe("garbled-session");
+    const request = await awaitPanelRequest(probe);
+
+    probe.transport.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.Approve,
+      params: {
+        sessionId: "garbled-session",
+        requestId: request.params.requestId,
+        decision: { approved: true, answer: "{not json" },
+      },
+    });
+
+    const outcome = await waitFor(
+      () => probe.readOutcome(),
+      "host request should settle after a garbled reply",
+    );
+
+    expect(outcome.ok).toBe(false);
+    // Blaming the user for a host serialization bug sends the model looking in
+    // entirely the wrong place.
+    expect(outcome.detail).toContain("malformed");
+    expect(outcome.detail ?? "").not.toContain("declined");
+    expect(outcome.detail ?? "").not.toContain("stopped");
+  });
+
+  test("a mixed pending map settles internal entries first, each with its own shape", async () => {
+    // Both kinds live in the SAME session.pendingApprovals map. A Stop must give
+    // each its own terminal shape — the approval a denial (so the tool does not
+    // run), the host request a cancellation (nobody refused anything) — and
+    // internal entries must drain FIRST, before the map is cleared, so no
+    // resolver is stranded.
+    const probe = bootPanelProbe("mixed-session");
+    const panelRequest = await awaitPanelRequest(probe);
+
+    const session = probe.chatManager.get("mixed-session")!;
+    const order: string[] = [];
+    const approvalSettled: Array<unknown> = [];
+
+    // Observe the internal entry, then RE-INSERT it after the approval below so
+    // insertion order is [approval, internal] — the opposite of the required
+    // settle order. Without the kind-based reordering this test's assertion on
+    // `order` fails, because Map iteration is insertion-ordered.
+    const internal = session.pendingApprovals.get(panelRequest.params.requestId)!;
+    const originalResolve = internal.resolve;
+    session.pendingApprovals.delete(panelRequest.params.requestId);
+
+    // Register a real (surfaceable) tool approval alongside the in-flight host
+    // request, mirroring "a tool is awaiting permission while Panel is dispatching".
+    session.pendingApprovals.set("real-approval", {
+      resolve: (decision: unknown) => {
+        order.push("approval");
+        approvalSettled.push(decision);
+      },
+      metadata: {
+        sessionId: "mixed-session",
+        requestId: "real-approval",
+        kind: "tool_approval",
+        title: "等待批准 Write",
+        toolName: "Write",
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 60_000,
+        surfaceable: true,
+      },
+    } as never);
+
+    // Re-insert the internal entry LAST, wrapping its resolver to record order.
+    session.pendingApprovals.set(panelRequest.params.requestId, {
+      ...internal,
+      resolve: (decision: unknown) => {
+        order.push("internal");
+        originalResolve(decision);
+      },
+    } as never);
+
+    probe.transport.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.Cancel,
+      params: { sessionId: "mixed-session" },
+    });
+
+    const panelOutcome = await waitFor(
+      () => probe.readOutcome(),
+      "panel request should settle after cancel",
+    );
+
+    // Internal drains before the surfaceable approval.
+    expect(order).toEqual(["internal", "approval"]);
+    // ...and the two carry DIFFERENT terminal shapes.
+    expect(panelOutcome.ok).toBe(false);
+    expect(panelOutcome.detail).toContain("turn was stopped");
+    expect(approvalSettled[0]).toMatchObject({ approved: false });
   });
 
   test("a successful host reply is still forwarded unchanged", async () => {

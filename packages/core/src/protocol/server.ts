@@ -169,7 +169,9 @@ export type HostLoopbackFailure =
   | "cancelled"
   | "session_closed"
   | "owner_lost"
-  | "timed_out";
+  | "timed_out"
+  /** The host replied, but with something that wasn't parseable JSON. */
+  | "malformed";
 
 /**
  * Sentinel a cancel/close path hands to an INTERNAL pending entry's resolver.
@@ -205,6 +207,7 @@ const HOST_LOOPBACK_FAILURE_DETAIL: Record<HostLoopbackFailure, string> = {
   session_closed: "cancelled because the session closed",
   owner_lost: "unavailable because the approving client disconnected",
   timed_out: "timed out waiting for the host",
+  malformed: "returned a malformed result",
 };
 
 /**
@@ -257,7 +260,13 @@ function parseHostLoopbackDecision(
   try {
     return { ok: true, value: JSON.parse(raw) };
   } catch {
-    return { ok: false, failure: "denied", detail: `malformed ${label} result` };
+    // The host answered but garbled it. That is NOT a denial — blaming the user
+    // for a host serialization bug sends the model looking in the wrong place.
+    return {
+      ok: false,
+      failure: "malformed",
+      detail: `${label} ${HOST_LOOPBACK_FAILURE_DETAIL.malformed}`,
+    };
   }
 }
 
