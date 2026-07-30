@@ -672,10 +672,20 @@ v1 评审时，`ownerBySession` 的唯一写入点是 `agent-bridge.ts` 的 `age
 命名用 `hostSurfaceOwner` 而非 `panelOwner`：`Browser` / `SwitchSessionWorkspace` /
 `InjectCredential` 走同一条回环，未来纳入 allowlist 时应复用同一归属，不要每个工具一套。
 
+**现状与诚实的边界**：`claimSessionPanelOwner()` 目前**只有 renderer `agent/run` 一个调用方**。
+它**故意没有**接到 `reserveHostSession()` 上 —— 后者唯一的调用方是 pet work delegation，
+那是一个没有归属窗口的 headless 注入 run，在那里 claim 一个 owner 是撒谎。真正的调用方
+随外部 Runtime 一起到来（Phase 2）；在那之前，非 renderer 驱动的会话**正确地**没有 owner，
+`Panel.invoke` 对它 fail closed。
+
+`hasSessionPanelOwner()` 同理尚无调用方，但它底层用的是新增的
+`PanelHostWindowRoutes.hasLiveOwner()`，**不是** `resolve()` —— 后者在 owner 窗口已销毁时会
+**删除**映射，用它实现谓词会让"只是问一句"变成修改路由状态。
+
 **回归防线**：`panel-host-owner.test.ts` 覆盖"未 claim 的会话保持无主"、"owner 窗口销毁后
-需重新 claim"、"并发会话各自归属不串窗口"。变异测试确认：把
-`allowsPanelHostBroadcastFallback` 改成恒真（即允许广播 `invoke` —— 最危险的回归）
-会让测试失败。
+需重新 claim"、"并发会话各自归属不串窗口"、"`hasLiveOwner` 不改状态"。变异测试确认：
+把 `allowsPanelHostBroadcastFallback` 改成恒真（即允许广播 `invoke` —— 最危险的回归）
+会让测试失败；把 `hasLiveOwner` 改为委托 `resolve()` 也会让非变更性断言失败。
 
 #### 9.3.3 owner 归属与 ApprovalRouter owner 是两套东西
 
@@ -1091,12 +1101,34 @@ session.pendingApprovals.clear();
    surfaceable 审批。反序会让宿主请求在 Map 被 `clear()` 后失去 resolver。
 4. bridge 自身的结果归一化（`makePanelBridge` 的 `open` / `invoke`）**不得**把已分类的
    失败盖成 `"malformed result"`。这是同源的第二处缺陷：它会把用户的 Stop 说成宿主的错。
-5. 这项修改影响 Native Engine 现有路径（`Panel` / `Browser` 今天就有这个问题），
+5. **返回数组的 action 必须能表达失败**。`list` / `tools` 原先返回裸数组，任何失败都塌缩成
+   `[]`，`panelTool` 再把它变成 `"(no panels available)"` / `"has no Agent tools)"`。
+   这比原 bug 更有害：它是**肯定式的事实陈述**，模型会据此认定面板宿主不存在而彻底放弃，
+   而"被拒绝"至少还留有重试的余地。`PanelHostBridge.list/tools` 已改为返回
+   `PanelDiscoveryResult<T> { items, failed? }`，让"真的是空"与"没拿到"可区分。
+
+   这条推广到后续任何宿主回环工具：**返回集合的 action，其空集合必须与失败可区分**。
+   否则失败会被静默洗成一个关于世界的断言。
+
+6. 这项修改影响 Native Engine 现有路径（`Panel` / `Browser` 今天就有这个问题），
    因此它是一个**独立的前置 bugfix**，不埋在 external runtime 的 feature flag 之后。
 
-**回归防线**：`server.host-loopback-cancel.test.ts` 已用变异测试确认可证伪 ——
-删掉 kind 分支（退回旧的无差别 drain）会让 2 个测试失败；删掉 internal 优先排序会让
-顺序断言失败。新增宿主回环工具时，应在该文件补对应用例。
+7. **失败文本必须有界，且不得回显未知分类**。宿主文本会原样进入工具结果，而 Panel 路径
+   其余部分都是有界的（512KB 结果、500 字描述、≤16 个工具），失败路径也必须如此 ——
+   否则宿主的一个 bug 就同时成为上下文预算风险和注入面。`failure` 来自宿主解析后的 JSON，
+   因此只能用它去查表，绝不能在查不到时回显原值。
+
+**一条踩过的坑，值得单独记住**：detail 的恢复逻辑最初写成"先要求 `failure` 是字符串"。
+但真实的 Desktop 回复是 `{ok:false, panelId?, detail}`，**根本没有 `failure` 字段**
+（见 `AgentPanelHostResult`）—— 于是每一个真实宿主错误都被丢弃并重新标成
+`"malformed result"`，包括 9.3.2 那条精心写的"没有 owner 窗口"提示。**这恰好就是本节要
+消除的那种误标**。教训：恢复顺序必须是"先取人类可读文本，再回退到分类"，而不是反过来
+用分类做准入门槛。
+
+**回归防线**：`server.host-loopback-cancel.test.ts` 已用变异测试逐条确认可证伪 ——
+退回旧的无差别 drain → 2 个测试失败；删掉 internal 优先排序 → 顺序断言失败；
+恢复 `failure` 准入门槛 → 真实错误用例失败；去掉有界化与查表限制 → 2 个注入/预算用例失败。
+新增宿主回环工具时，应在该文件补对应用例。
 
 ### 13.6 Crash 与恢复
 

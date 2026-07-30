@@ -1125,6 +1125,13 @@ export class AgentBridge implements PetStateBridge {
    * and rely on forgetSession / window teardown to release it. Re-claiming is
    * safe and idempotent — the latest claim wins, which is also how a session
    * recovers after its owning window is destroyed.
+   *
+   * NOTE: the only caller today is the renderer `agent/run` path below. This is
+   * deliberately NOT wired into `reserveHostSession`: its lone caller is pet work
+   * delegation, a headless injected run with no owning window, where claiming one
+   * would be a lie. The external-Runtime caller arrives with that feature; until
+   * then a non-renderer session correctly has no owner and `Panel.invoke` fails
+   * closed for it. See docs/todo/external-agent-runtime-tool-bridge-design.md §9.3.
    */
   claimSessionPanelOwner(sessionId: string, webContentsId: number): void {
     this.panelHostWindowRoutes.claim(sessionId, webContentsId);
@@ -1136,7 +1143,7 @@ export class AgentBridge implements PetStateBridge {
    * very different remediation.
    */
   hasSessionPanelOwner(sessionId: string): boolean {
-    return this.panelHostWindowRoutes.resolve(sessionId, this.windows).window !== null;
+    return this.panelHostWindowRoutes.hasLiveOwner(sessionId, this.windows);
   }
 
   /**

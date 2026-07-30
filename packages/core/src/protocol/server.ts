@@ -211,6 +211,24 @@ const HOST_LOOPBACK_FAILURE_DETAIL: Record<HostLoopbackFailure, string> = {
 };
 
 /**
+ * Cap on host-supplied failure text forwarded to the model.
+ *
+ * The rest of the Panel path is carefully bounded (512KB JSON results, 500-char
+ * tool descriptions, ≤16 tools); the failure path must be too. Host text reaches
+ * the model verbatim, so an unbounded echo is both a context-budget hazard and an
+ * injection surface. Collapsed to one line so a multi-line payload can't fake
+ * structure in the tool result.
+ */
+const MAX_HOST_LOOPBACK_DETAIL_CHARS = 500;
+
+function boundedHostDetail(text: string): string {
+  const oneLine = text.replace(/\s+/gu, " ").trim();
+  return oneLine.length <= MAX_HOST_LOOPBACK_DETAIL_CHARS
+    ? oneLine
+    : `${oneLine.slice(0, MAX_HOST_LOOPBACK_DETAIL_CHARS)}…`;
+}
+
+/**
  * Recover the classified failure detail a host-loopback request settled with, if
  * any. Bridges call this before falling back to "malformed result": a cancelled /
  * denied / timed-out request is a KNOWN terminal state, and mislabelling it as
@@ -219,16 +237,25 @@ const HOST_LOOPBACK_FAILURE_DETAIL: Record<HostLoopbackFailure, string> = {
 function hostLoopbackDetail(result: unknown): string | undefined {
   if (!result || typeof result !== "object") return undefined;
   const candidate = result as { failure?: unknown; error?: unknown; detail?: unknown };
-  if (typeof candidate.failure !== "string") return undefined;
-  // The bridges carry the human-readable text under different keys (panel uses
-  // `error`, browser uses `detail`). Accept either, and fall back to the
-  // classification itself rather than dropping a known failure on the floor —
-  // returning undefined here would let the caller mislabel it "malformed".
-  if (typeof candidate.error === "string") return candidate.error;
-  if (typeof candidate.detail === "string") return candidate.detail;
-  return (
-    HOST_LOOPBACK_FAILURE_DETAIL[candidate.failure as HostLoopbackFailure] ?? candidate.failure
-  );
+  // Take the human-readable text FIRST, and do NOT require `failure` to be
+  // present. Genuine Desktop replies are `{ok:false, panelId?, detail}` and carry
+  // no `failure` key at all (see AgentPanelHostResult) — gating on `failure`
+  // discarded every real host error and relabelled it "malformed result", which
+  // is exactly the mislabelling this whole change exists to prevent.
+  // The bridges also disagree on the key: panel uses `error`, browser `detail`.
+  if (typeof candidate.error === "string" && candidate.error) {
+    return boundedHostDetail(candidate.error);
+  }
+  if (typeof candidate.detail === "string" && candidate.detail) {
+    return boundedHostDetail(candidate.detail);
+  }
+  // Classification only — never the raw string. `failure` arrives from
+  // host-parsed JSON, so echoing an unrecognized value verbatim would let the
+  // host inject arbitrary unbounded text into a tool result.
+  if (typeof candidate.failure === "string") {
+    return HOST_LOOPBACK_FAILURE_DETAIL[candidate.failure as HostLoopbackFailure];
+  }
+  return undefined;
 }
 
 /**

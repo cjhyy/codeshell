@@ -74,6 +74,28 @@ describe("explicit host-loopback owner claim", () => {
     });
   });
 
+  test("hasLiveOwner answers without mutating routing state", () => {
+    const routes = new PanelHostWindowRoutes();
+    const dead = fakeWindow(51, true);
+    const live = fakeWindow(52);
+
+    expect(routes.hasLiveOwner("unclaimed", [live])).toBe(false);
+
+    routes.claim("live-session", live.webContents.id);
+    expect(routes.hasLiveOwner("live-session", [live])).toBe(true);
+
+    // The owner window is gone. `resolve()` DELETES the mapping in this case, so a
+    // predicate built on it would mutate state as a side effect of being asked.
+    // hasLiveOwner must answer false and leave the mapping intact.
+    routes.claim("dead-session", dead.webContents.id);
+    expect(routes.hasLiveOwner("dead-session", [dead, live])).toBe(false);
+    expect(routes.hasLiveOwner("dead-session", [dead, live])).toBe(false);
+
+    // Proof the mapping survived: revive that webContentsId and it resolves again,
+    // which could not happen had the first query dropped the owner.
+    expect(routes.resolve("dead-session", [fakeWindow(51)]).ownerWebContentsId).toBe(51);
+  });
+
   test("a claimed owner rejects responses from any other window", () => {
     const routes = new PanelHostWindowRoutes();
     routes.claim("guarded-session", 45);
