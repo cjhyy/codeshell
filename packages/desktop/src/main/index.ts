@@ -3213,11 +3213,23 @@ ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
             (candidate): candidate is string => typeof candidate === "string" && candidate !== id,
           )
         : [];
+      // Write the full surviving map, not `{[id]: null}`: deepMerge only honors
+      // a null delete when the key already exists, so on a project without
+      // panelAppOverrides the null lands in the file and the settings schema
+      // then rejects it wholesale.
+      const rawOverrides = projectSettings.panelAppOverrides;
+      const overrides: Record<string, "inherit" | "on" | "off"> = {};
+      if (rawOverrides && typeof rawOverrides === "object" && !Array.isArray(rawOverrides)) {
+        for (const [key, value] of Object.entries(rawOverrides as Record<string, unknown>)) {
+          if (key === id) continue;
+          if (value === "inherit" || value === "on" || value === "off") overrides[key] = value;
+        }
+      }
       await writeSettings(
         "project",
         {
           panelAppBindings: bindings,
-          panelAppOverrides: { [id]: null },
+          panelAppOverrides: overrides,
         },
         cwd,
       );

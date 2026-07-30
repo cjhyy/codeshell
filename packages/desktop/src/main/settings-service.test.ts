@@ -103,3 +103,34 @@ describe("settings-service", () => {
     });
   });
 });
+
+describe("null-valued patch keys never reach disk", () => {
+  // Regression: `{a: {b: null}}` written onto a file with NO `a` key used to
+  // land the null verbatim, because the delete branch only ran once deepMerge
+  // had recursed into an existing object. The settings schema then rejected the
+  // entire file, and readers that fail closed on a parse error behaved as if
+  // the project had configured nothing at all.
+  it("deletes a nested key even when the parent does not exist yet", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "settings-null-"));
+    await writeSettings("project", { panelAppBindings: ["job-hunt-hq"] }, cwd);
+    await writeSettings("project", { panelAppOverrides: { "job-hunt-hq": null } }, cwd);
+    const after = (await readSettings("project", cwd)) as Record<string, any>;
+    expect(after.panelAppOverrides).toEqual({});
+    expect(JSON.stringify(after)).not.toContain("null");
+  });
+
+  it("keeps sibling values while dropping the null", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "settings-null-"));
+    await writeSettings("project", { panelAppOverrides: { keep: "on", drop: null } }, cwd);
+    const after = (await readSettings("project", cwd)) as Record<string, any>;
+    expect(after.panelAppOverrides).toEqual({ keep: "on" });
+  });
+
+  it("still deletes a top-level key outright", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "settings-null-"));
+    await writeSettings("project", { panelAppBindings: ["a"] }, cwd);
+    await writeSettings("project", { panelAppBindings: null }, cwd);
+    const after = (await readSettings("project", cwd)) as Record<string, any>;
+    expect("panelAppBindings" in after).toBe(false);
+  });
+});

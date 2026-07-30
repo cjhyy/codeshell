@@ -122,6 +122,17 @@ export async function writeSettings(
   }
 }
 
+/**
+ * Merge `b` into `a`, where a null in the patch means "delete this key".
+ *
+ * The delete must hold no matter what shape `a` had. It used to apply only when
+ * the target already held an object at that key — otherwise the branch below
+ * assigned the patch object verbatim, nulls included. A persisted null then
+ * failed schema validation for the WHOLE settings file, and every reader that
+ * fails closed on a parse error (e.g. panelAppPolicy) silently behaved as if the
+ * project had configured nothing. `stripNulls` keeps the contract shape-agnostic
+ * so no caller has to know whether a key already exists on disk.
+ */
 function deepMerge(
   a: Record<string, unknown>,
   b: Record<string, unknown>,
@@ -140,8 +151,19 @@ function deepMerge(
     ) {
       out[k] = deepMerge(out[k] as Record<string, unknown>, v as Record<string, unknown>);
     } else {
-      out[k] = v;
+      out[k] = stripNulls(v);
     }
+  }
+  return out;
+}
+
+/** Drop null-valued keys from a plain object recursively; other values pass through. */
+function stripNulls(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (v === null) continue;
+    out[k] = stripNulls(v);
   }
   return out;
 }
