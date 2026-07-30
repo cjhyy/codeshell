@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { PanelAppExtensionSummary } from "../../preload/types";
 import { nextPanelAppBindings } from "../extensions/PanelsTab";
+import { withoutLegacyOverride } from "../extensions/panelAppBindings";
 import { notifySettingsChanged } from "../settingsBus";
 import {
   type CapabilityKind,
@@ -287,8 +288,11 @@ export function CapabilitiesOverviewSection({
         {
           panelAppBindings: nextPanelAppBindings(settings.panelAppBindings, app.appId, bound),
           // Retire the legacy tri-state entry so the binding list is the only
-          // source of truth, matching the Extensions → Panel Apps write.
-          panelAppOverrides: { [app.appId]: null },
+          // source of truth, matching the Extensions → Panel Apps write. Send
+          // the full surviving map: a `{[appId]: null}` patch is written through
+          // verbatim when the project had no panelAppOverrides key, which makes
+          // the settings file fail schema validation.
+          panelAppOverrides: withoutLegacyOverride(settings.panelAppOverrides, app.appId),
         },
         projectPath,
       );

@@ -30,6 +30,7 @@ import { PanelAppInstallReviewDialog } from "./PanelAppInstallReviewDialog";
 import {
   bindingBusyKey,
   computeProjectBindings,
+  withoutLegacyOverride,
   type ProjectSettingsMap,
 } from "./panelAppBindings";
 
@@ -154,22 +155,31 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       try {
         const settings = (await window.codeshell.getSettings("project", projectPath)) ?? {};
         const nextBindings = nextPanelAppBindings(settings.panelAppBindings, appId, bound);
+        const nextOverrides = withoutLegacyOverride(settings.panelAppOverrides, appId);
         // Apply locally first: the row is the only thing that changed, and a
         // full reload here is what made the tab flash on every click.
         setProjectSettings((current) => {
           previous = current;
           return {
             ...current,
-            [projectPath]: { ...settings, panelAppBindings: nextBindings, panelAppOverrides: {} },
+            [projectPath]: {
+              ...settings,
+              panelAppBindings: nextBindings,
+              panelAppOverrides: nextOverrides,
+            },
           };
         });
         await writeSettings(
           "project",
           {
             panelAppBindings: nextBindings,
-            // Remove the old tri-state entry so the canonical binding is the
-            // only source of truth after the first user action.
-            panelAppOverrides: { [appId]: null },
+            // Send the full surviving map, NOT `{[appId]: null}`. main's
+            // deepMerge only honors a null delete when the key already exists;
+            // on a project whose settings had no panelAppOverrides at all it
+            // wrote the null through verbatim, and the settings schema then
+            // rejected the file — which made panelAppPolicy fail closed and
+            // silently unbind every app in that project.
+            panelAppOverrides: nextOverrides,
           },
           projectPath,
         );

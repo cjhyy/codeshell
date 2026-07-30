@@ -4,6 +4,7 @@ import {
   boundAppsForProject,
   computeProjectBindings,
   sortBindingProjects,
+  withoutLegacyOverride,
   type BindingProject,
 } from "./panelAppBindings";
 
@@ -174,5 +175,41 @@ describe("bindingBusyKey", () => {
     expect(bindingBusyKey(appId, "/one")).toBe("design-studio@/one");
     expect(bindingBusyKey(appId, "/one")).not.toBe(bindingBusyKey(appId, "/two"));
     expect(bindingBusyKey(appId, "/one")).not.toBe(bindingBusyKey("quant-lab", "/one"));
+  });
+});
+
+describe("withoutLegacyOverride", () => {
+  // Regression: writing `{[appId]: null}` relied on main's deepMerge treating
+  // null as a delete, which it only does when the key already exists. On a
+  // project with no panelAppOverrides the null was persisted, the settings
+  // schema rejected the file, and panelAppPolicy failed closed — unbinding
+  // every Panel App in that project.
+  test("never yields a null value", () => {
+    const out = withoutLegacyOverride({ [appId]: null, other: null }, appId);
+    expect(out).toEqual({});
+    expect(Object.values(out).every((v) => v !== null)).toBe(true);
+  });
+
+  test("drops the target app and keeps other valid entries", () => {
+    expect(withoutLegacyOverride({ [appId]: "on", "quant-lab": "off" }, appId)).toEqual({
+      "quant-lab": "off",
+    });
+  });
+
+  test("returns an empty map for a missing or malformed value", () => {
+    expect(withoutLegacyOverride(undefined, appId)).toEqual({});
+    expect(withoutLegacyOverride(null, appId)).toEqual({});
+    expect(withoutLegacyOverride(["nope"], appId)).toEqual({});
+    expect(withoutLegacyOverride("nope", appId)).toEqual({});
+  });
+
+  test("filters values the settings schema would reject", () => {
+    expect(withoutLegacyOverride({ a: "on", b: 42, c: null, d: "bogus" }, appId)).toEqual({
+      a: "on",
+    });
+  });
+
+  test("keeps a valid inherit entry for another app", () => {
+    expect(withoutLegacyOverride({ other: "inherit" }, appId)).toEqual({ other: "inherit" });
   });
 });

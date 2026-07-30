@@ -10,6 +10,7 @@ import {
   type InstalledPanelApp,
 } from "@cjhyy/code-shell-core";
 import type { PanelAppDescriptor, PanelAppExtensionSummary } from "../shared/panel-apps.js";
+import { dlog } from "./desktop-logger.js";
 import { replacePanelAppResources, type PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { isPanelAppAvailable, summarizePanelApp, type PanelAppPolicy } from "./panel-app-policy.js";
 
@@ -141,9 +142,16 @@ function panelAppPolicy(cwd: string): PanelAppPolicy {
       globalDisabledApps: binding.globalDisabledApps,
       projectOverrides,
     };
-  } catch {
+  } catch (error) {
+    // Fail closed: a settings read error must not expose every installed app.
+    // But log it — a single invalid key (e.g. a persisted null in
+    // panelAppOverrides) rejects the whole file here and silently unbinds every
+    // Panel App in the project, which is indistinguishable from "not bound".
+    dlog("main", "panel_app.policy_read_failed", {
+      cwd,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
-      // Fail closed: a settings read error must not expose every installed app.
       boundApps: new Set(),
       globalDisabledApps: new Set(),
       projectOverrides: {},

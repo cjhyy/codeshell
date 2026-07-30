@@ -131,3 +131,27 @@ export function computeProjectBindings(
 export function bindingBusyKey(appId: string, projectPath: string): string {
   return `${appId}@${projectPath}`;
 }
+
+/**
+ * The legacy `panelAppOverrides` map with `appId` retired, keeping only valid
+ * tri-state entries for other apps.
+ *
+ * Callers must write this whole map rather than patching `{[appId]: null}`:
+ * main's `deepMerge` only treats null as a delete when the key already exists
+ * in the target, so on a project with no `panelAppOverrides` the null was
+ * persisted verbatim. The settings schema then rejected the file, and
+ * `panelAppPolicy` fails closed on a parse error — silently unbinding every
+ * Panel App in that project.
+ */
+export function withoutLegacyOverride(
+  value: unknown,
+  appId: string,
+): Record<string, "inherit" | "on" | "off"> {
+  const out: Record<string, "inherit" | "on" | "off"> = {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) return out;
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (key === appId) continue;
+    if (entry === "inherit" || entry === "on" || entry === "off") out[key] = entry;
+  }
+  return out;
+}
