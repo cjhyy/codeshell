@@ -473,6 +473,11 @@ function App() {
     setView((current) => ({ ...current, viewMode: "chat" }));
   }, [activeProject, view.viewMode]);
 
+  const projectPathsKey = projects
+    .map((project) => project.path)
+    .sort()
+    .join("\0");
+
   useEffect(() => {
     let alive = true;
     const applyPanelApps = async (
@@ -505,7 +510,15 @@ function App() {
       // from the Extensions screen, so filtering to the active project left
       // other projects' docks empty.
       if (listForProjects) {
-        const paths = loadProjects().map((project) => project.path);
+        // Use the same project list the dock resolves its projectPath from
+        // (`projects` state, via SessionPanelDock), NOT loadProjects(): a
+        // project present only in state — just added, or id-remapped by disk
+        // reconciliation — would otherwise never be asked about, so its dock
+        // stayed empty even with a valid binding on disk.
+        const paths = projects.map((project) => project.path);
+        for (const extra of loadProjects().map((project) => project.path)) {
+          if (!paths.includes(extra)) paths.push(extra);
+        }
         if (projectPath && !paths.includes(projectPath)) paths.push(projectPath);
         void listForProjects(paths, lang)
           .then((result) => {
@@ -530,7 +543,10 @@ function App() {
       alive = false;
       unsubscribe();
     };
-  }, [activeProject?.path, lang]);
+    // Keyed on the project PATHS, not the array identity: a rename or reorder
+    // must not re-scan, but a newly tracked project must be asked about.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProject?.path, lang, projectPathsKey]);
 
   function prepareAttachmentSession(): { cwd: string; sessionId: string } | null {
     const cwd = activeProject?.path ?? noRepoCwdRef.current;

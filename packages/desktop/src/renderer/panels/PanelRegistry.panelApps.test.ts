@@ -66,4 +66,17 @@ describe("replacePanelApps project scoping", () => {
     replacePanelApps([descriptor("studio")], "/a", {});
     expect(enabledKeys("/a")).toEqual([]);
   });
+
+  // A non-git project resolves to itself rather than up to a repo root, so the
+  // dock's projectPath and the policy's canonical path can be different strings
+  // for a worktree/subdirectory. The service reports both; a session must match
+  // on either.
+  test("either the requested or the canonical project path enables the app", () => {
+    replacePanelApps([descriptor("studio")], "/repo/wt", {
+      studio: ["/repo/wt", "/repo"],
+    });
+    expect(enabledKeys("/repo/wt")).toEqual(["panel-app:studio"]);
+    expect(enabledKeys("/repo")).toEqual(["panel-app:studio"]);
+    expect(enabledKeys("/elsewhere")).toEqual([]);
+  });
 });

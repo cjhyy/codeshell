@@ -201,9 +201,16 @@ export async function listPanelAppsForProjects(
   const boundProjectPathsByAppId: Record<string, string[]> = {};
   for (const projectPath of new Set(projectPaths.filter(Boolean))) {
     const policy = panelAppPolicy(projectPath);
+    // Report BOTH the requested path and the path bindings actually resolve to
+    // (a worktree or subdirectory resolves up to its project root). The
+    // renderer compares the dock's projectPath against this list, and those two
+    // are not always the same string.
+    const canonical = resolvePanelAppBindingProjectPath(projectPath);
     for (const app of discovered.descriptors) {
       if (!isPanelAppAvailable(app, policy)) continue;
-      (boundProjectPathsByAppId[app.appId] ??= []).push(projectPath);
+      const paths = (boundProjectPathsByAppId[app.appId] ??= []);
+      if (!paths.includes(projectPath)) paths.push(projectPath);
+      if (canonical && !paths.includes(canonical)) paths.push(canonical);
     }
   }
   return {
