@@ -158,6 +158,109 @@ const INTERNAL_PENDING_TOOLS = new Set([
   "__workspace_action__",
 ]);
 
+/**
+ * Why a host-loopback request (Panel / Browser / workspace / credential) ended
+ * without a result. These four used to collapse into one string — "declined or
+ * unavailable" — so a Stop, a closed session, and an actual user denial were
+ * indistinguishable to the calling tool and therefore to the model.
+ */
+export type HostLoopbackFailure =
+  | "denied"
+  | "cancelled"
+  | "session_closed"
+  | "owner_lost"
+  | "timed_out";
+
+/**
+ * Sentinel a cancel/close path hands to an INTERNAL pending entry's resolver.
+ * Real approvals settle as `{approved:false}` (a denial); internal host requests
+ * must not reuse that shape, or "the user stopped the turn" reads as "the user
+ * refused the operation". Carries the reason so the bridge can classify it.
+ */
+interface InternalPendingCancellation {
+  readonly __internalCancelled: true;
+  readonly failure: HostLoopbackFailure;
+  readonly reason: string;
+}
+
+function internalCancellation(
+  failure: HostLoopbackFailure,
+  reason: string,
+): InternalPendingCancellation {
+  return { __internalCancelled: true, failure, reason };
+}
+
+function asInternalCancellation(value: unknown): InternalPendingCancellation | undefined {
+  return value &&
+    typeof value === "object" &&
+    (value as { __internalCancelled?: unknown }).__internalCancelled === true
+    ? (value as InternalPendingCancellation)
+    : undefined;
+}
+
+/** Human-facing tail appended to a host-loopback failure detail. */
+const HOST_LOOPBACK_FAILURE_DETAIL: Record<HostLoopbackFailure, string> = {
+  denied: "declined by the user",
+  cancelled: "cancelled because the turn was stopped",
+  session_closed: "cancelled because the session closed",
+  owner_lost: "unavailable because the approving client disconnected",
+  timed_out: "timed out waiting for the host",
+};
+
+/**
+ * Recover the classified failure detail a host-loopback request settled with, if
+ * any. Bridges call this before falling back to "malformed result": a cancelled /
+ * denied / timed-out request is a KNOWN terminal state, and mislabelling it as
+ * malformed blames the host for something the user (or a closing session) did.
+ */
+function hostLoopbackDetail(result: unknown): string | undefined {
+  if (!result || typeof result !== "object") return undefined;
+  const candidate = result as { failure?: unknown; error?: unknown };
+  if (typeof candidate.failure !== "string") return undefined;
+  return typeof candidate.error === "string" ? candidate.error : undefined;
+}
+
+/**
+ * Normalize what a host-loopback resolver received into either the parsed host
+ * payload or a classified failure. Shared by all four bridges so their terminal
+ * semantics can't drift apart.
+ *
+ * Accepts `{approved:true, answer:<json>}` (the ApprovalResult shape main replies
+ * with), a bare JSON string, or an InternalPendingCancellation sentinel.
+ */
+function parseHostLoopbackDecision(
+  decision: unknown,
+  label: string,
+): { ok: true; value: unknown } | { ok: false; failure: HostLoopbackFailure; detail: string } {
+  const cancelled = asInternalCancellation(decision);
+  if (cancelled) {
+    return {
+      ok: false,
+      failure: cancelled.failure,
+      detail: `${label} ${HOST_LOOPBACK_FAILURE_DETAIL[cancelled.failure]}`,
+    };
+  }
+  let raw: string | undefined;
+  if (decision && typeof decision === "object" && "approved" in decision) {
+    const result = decision as ApprovalResult;
+    raw = result.approved ? result.answer : undefined;
+  } else if (typeof decision === "string") {
+    raw = decision;
+  }
+  if (raw === undefined) {
+    return {
+      ok: false,
+      failure: "denied",
+      detail: `${label} ${HOST_LOOPBACK_FAILURE_DETAIL.denied}`,
+    };
+  }
+  try {
+    return { ok: true, value: JSON.parse(raw) };
+  } catch {
+    return { ok: false, failure: "denied", detail: `malformed ${label} result` };
+  }
+}
+
 function safeApprovalToolName(toolName: string): string {
   const firstLine = toolName.split(/\r?\n/, 1)[0]?.trim() ?? "";
   if (/(?:sk|api|token|secret)[-_][a-z0-9_-]{6,}/i.test(firstLine)) return "工具";
@@ -2277,7 +2380,7 @@ export class AgentServer {
     if (this.chatManager) {
       const session = this.chatManager.get(params.sessionId);
       if (session) {
-        this.cancelSessionApprovals(session, "session closed");
+        this.cancelSessionApprovals(session, "session closed", "cancelled", "session_closed");
       }
       this.approvalRouter.release(params.sessionId, this.connectionId, "session closed");
       await this.chatManager.close(params.sessionId);
@@ -3585,22 +3688,12 @@ export class AgentServer {
           this.clearApprovalTimer(requestId);
           // Main replies with { approved:true, answer:<json string> } (reusing the
           // ApprovalResult shape) or a raw json string. Parse → typed result.
-          let raw: string | undefined;
-          if (decision && typeof decision === "object" && "approved" in decision) {
-            const r = decision as ApprovalResult;
-            raw = r.approved ? r.answer : undefined;
-          } else if (typeof decision === "string") {
-            raw = decision;
-          }
-          if (raw === undefined) {
-            resolve({ ok: false, detail: "browser action declined or unavailable" });
-            return;
-          }
-          try {
-            resolve(JSON.parse(raw));
-          } catch {
-            resolve({ ok: false, detail: "malformed browser action result" });
-          }
+          const parsed = parseHostLoopbackDecision(decision, "browser action");
+          resolve(
+            parsed.ok
+              ? parsed.value
+              : { ok: false, failure: parsed.failure, detail: parsed.detail },
+          );
         },
       );
 
@@ -3609,7 +3702,11 @@ export class AgentServer {
           this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
-          resolve({ ok: false, detail: "browser action timed out" });
+          resolve({
+            ok: false,
+            failure: "timed_out" as const,
+            detail: `browser action ${HOST_LOOPBACK_FAILURE_DETAIL.timed_out}`,
+          });
         }
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
@@ -3646,22 +3743,12 @@ export class AgentServer {
         this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__credential_action__"),
         (decision: unknown) => {
           this.clearApprovalTimer(requestId);
-          let raw: string | undefined;
-          if (decision && typeof decision === "object" && "approved" in decision) {
-            const r = decision as ApprovalResult;
-            raw = r.approved ? r.answer : undefined;
-          } else if (typeof decision === "string") {
-            raw = decision;
-          }
-          if (raw === undefined) {
-            resolve({ ok: false, error: "credential inject declined or unavailable" });
-            return;
-          }
-          try {
-            resolve(JSON.parse(raw));
-          } catch {
-            resolve({ ok: false, error: "malformed credential inject result" });
-          }
+          const parsed = parseHostLoopbackDecision(decision, "credential inject");
+          resolve(
+            parsed.ok
+              ? (parsed.value as { ok: boolean; count?: number; error?: string })
+              : { ok: false, error: parsed.detail },
+          );
         },
       );
 
@@ -3670,7 +3757,10 @@ export class AgentServer {
           this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
-          resolve({ ok: false, error: "credential inject timed out" });
+          resolve({
+            ok: false,
+            error: `credential inject ${HOST_LOOPBACK_FAILURE_DETAIL.timed_out}`,
+          });
         }
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
@@ -3716,9 +3806,15 @@ export class AgentServer {
         const result = (await this.requestPanelActionForSession(session, sessionId, "open", {
           panelId,
         })) as import("../tool-system/panel-bridge.js").PanelOpenResult;
-        return result?.panelId
-          ? result
-          : { ok: false, panelId, detail: "panel host returned a malformed result" };
+        if (result?.panelId) return result;
+        // A classified terminal failure (cancelled / denied / timed out) must
+        // survive this normalization — reporting it as "malformed" would tell the
+        // model the HOST misbehaved when in fact the user stopped the turn.
+        return {
+          ok: false,
+          panelId,
+          detail: hostLoopbackDetail(result) ?? "panel host returned a malformed result",
+        };
       },
       tools: async (panelId) => {
         const result = (await this.requestPanelActionForSession(session, sessionId, "tools", {
@@ -3734,14 +3830,13 @@ export class AgentServer {
           toolName,
           arguments: args,
         })) as import("../tool-system/panel-bridge.js").PanelInvokeResult;
-        return result?.panelId && result?.toolName
-          ? result
-          : {
-              ok: false,
-              panelId,
-              toolName,
-              detail: "panel host returned a malformed result",
-            };
+        if (result?.panelId && result?.toolName) return result;
+        return {
+          ok: false,
+          panelId,
+          toolName,
+          detail: hostLoopbackDetail(result) ?? "panel host returned a malformed result",
+        };
       },
     };
   }
@@ -3760,22 +3855,10 @@ export class AgentServer {
         this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__panel_action__"),
         (decision: unknown) => {
           this.clearApprovalTimer(requestId);
-          let raw: string | undefined;
-          if (decision && typeof decision === "object" && "approved" in decision) {
-            const result = decision as ApprovalResult;
-            raw = result.approved ? result.answer : undefined;
-          } else if (typeof decision === "string") {
-            raw = decision;
-          }
-          if (raw === undefined) {
-            resolve({ ok: false, error: "panel action declined or unavailable" });
-            return;
-          }
-          try {
-            resolve(JSON.parse(raw));
-          } catch {
-            resolve({ ok: false, error: "malformed panel action result" });
-          }
+          const parsed = parseHostLoopbackDecision(decision, "panel action");
+          resolve(
+            parsed.ok ? parsed.value : { ok: false, failure: parsed.failure, error: parsed.detail },
+          );
         },
       );
 
@@ -3784,7 +3867,11 @@ export class AgentServer {
           this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
-          resolve({ ok: false, error: "panel action timed out" });
+          resolve({
+            ok: false,
+            failure: "timed_out" as const,
+            error: `panel action ${HOST_LOOPBACK_FAILURE_DETAIL.timed_out}`,
+          });
         }
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
@@ -3814,29 +3901,19 @@ export class AgentServer {
         this.internalPendingMetadata(sessionId, requestId, routeEnvelope, "__workspace_action__"),
         (decision: unknown) => {
           this.clearApprovalTimer(requestId);
-          let raw: string | undefined;
-          if (decision && typeof decision === "object" && "approved" in decision) {
-            const r = decision as ApprovalResult;
-            raw = r.approved ? r.answer : undefined;
-          } else if (typeof decision === "string") {
-            raw = decision;
-          }
-          if (raw === undefined) {
-            reject(new Error("workspace switch declined or unavailable"));
+          const outcome = parseHostLoopbackDecision(decision, "workspace switch");
+          if (!outcome.ok) {
+            reject(new Error(outcome.detail));
             return;
           }
-          try {
-            const parsed = JSON.parse(raw) as
-              | import("../types.js").SessionWorkspace
-              | { ok?: false; error?: string };
-            if ("ok" in parsed && parsed.ok === false) {
-              reject(new Error(parsed.error ?? "workspace switch failed"));
-              return;
-            }
-            resolve(parsed as import("../types.js").SessionWorkspace);
-          } catch {
-            reject(new Error("malformed workspace switch result"));
+          const parsed = outcome.value as
+            | import("../types.js").SessionWorkspace
+            | { ok?: false; error?: string };
+          if (parsed && typeof parsed === "object" && "ok" in parsed && parsed.ok === false) {
+            reject(new Error(parsed.error ?? "workspace switch failed"));
+            return;
           }
+          resolve(parsed as import("../types.js").SessionWorkspace);
         },
       );
 
@@ -3845,7 +3922,7 @@ export class AgentServer {
           this.takeSessionApproval(session, requestId, "expired");
           this.pendingApprovalTargets.delete(requestId);
           this.approvalTimers.delete(requestId);
-          reject(new Error("workspace switch timed out"));
+          reject(new Error(`workspace switch ${HOST_LOOPBACK_FAILURE_DETAIL.timed_out}`));
         }
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
@@ -3951,7 +4028,7 @@ export class AgentServer {
       const managers = [this.baseChatManager, ...this.identityManagers.values()];
       for (const manager of managers) {
         manager.forEachSession((session) => {
-          this.cancelSessionApprovals(session, "server closing");
+          this.cancelSessionApprovals(session, "server closing", "cancelled", "session_closed");
         });
         manager.closeAll();
       }
@@ -4064,13 +4141,36 @@ export class AgentServer {
     session: import("./chat-session.js").ChatSession,
     reason = "cancelled",
     status = "cancelled",
+    failure: HostLoopbackFailure = "cancelled",
   ): void {
-    for (const [requestId, entry] of session.pendingApprovals) {
+    // Two kinds of entry share this map and they must NOT settle the same way.
+    //
+    //  - kind "tool_approval": a real permission prompt. `{approved:false}` is
+    //    the correct terminal value — the tool call does not proceed.
+    //  - kind "internal": an in-flight host-loopback request (Panel / Browser /
+    //    workspace / credential). `{approved:false}` here is a lie: it makes a
+    //    Stop or a session close indistinguishable from the user pressing Deny,
+    //    and the model is told its Panel operation was refused. These get a
+    //    cancellation sentinel carrying the real cause instead.
+    //
+    // Internal entries settle FIRST: they need no user interaction and have a
+    // determinate outcome, and draining them before the map is cleared keeps
+    // every resolver reachable.
+    const entries = [...session.pendingApprovals];
+    const ordered = [
+      ...entries.filter(([, entry]) => entry.metadata.kind === "internal"),
+      ...entries.filter(([, entry]) => entry.metadata.kind !== "internal"),
+    ];
+    for (const [requestId, entry] of ordered) {
       this.clearApprovalTimer(requestId);
       this.pendingApprovalTargets.delete(requestId);
       this.observeApprovalTransition(entry.metadata, status);
       try {
-        entry.resolve({ approved: false, reason });
+        entry.resolve(
+          entry.metadata.kind === "internal"
+            ? internalCancellation(failure, reason)
+            : { approved: false, reason },
+        );
       } catch {
         /* a resolver must never break cancel cleanup */
       }
@@ -4082,7 +4182,7 @@ export class AgentServer {
     for (const target of targets) {
       const session = this.chatManager?.get(target.sessionId);
       if (session) {
-        this.cancelSessionApprovals(session, reason, "owner-lost");
+        this.cancelSessionApprovals(session, reason, "owner-lost", "owner_lost");
         continue;
       }
       for (const [requestId, pending] of this.pendingApprovalTargets) {
