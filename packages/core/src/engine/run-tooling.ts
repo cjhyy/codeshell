@@ -212,6 +212,56 @@ export async function connectRunMcp(args: {
   }
 }
 
+/**
+ * Inputs to {@link buildToolVisibility}. This is the whole set of run state that
+ * a tool-availability guard is allowed to branch on — naming it keeps the
+ * contract explicit for callers that assemble a tool surface WITHOUT an Engine
+ * run (e.g. a session-scoped host exposing tools to an external Agent Runtime).
+ */
+export interface ToolVisibilityInputs {
+  cwd: string;
+  hasGoal: boolean;
+  sessionId?: string;
+  settingsScope?: SettingsScope;
+  /** Host identity a guard may require, e.g. Panel needs `"desktop"`. */
+  host?: string;
+  isSubAgent?: boolean;
+  behaviorProfile?: string;
+  sessionMessageTargets?: readonly import("../session/session-message.js").SessionMessageTarget[];
+  profileMeta?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Build the availability-guard context for a tool surface.
+ *
+ * Extracted from {@link assembleRunToolDefs} so it is callable on its own. It
+ * matters that this has exactly one implementation: the executor SKIPS its
+ * visibility gate when `toolCtx.toolVisibility` is absent, so a caller that
+ * forgets to populate it doesn't just under-expose tools — it makes host-gated
+ * tools callable in contexts their guards were written to exclude.
+ *
+ * Optional keys are omitted rather than set to `undefined`: guards use
+ * `!== true` / `?? 0` style checks, and an empty `sessionMessageTargets` must not
+ * read as "the host authorized targets".
+ */
+export function buildToolVisibility(
+  inputs: ToolVisibilityInputs,
+): import("../tool-system/context.js").ToolVisibilityContext {
+  return {
+    cwd: inputs.cwd,
+    hasGoal: inputs.hasGoal,
+    ...(inputs.sessionId ? { sessionId: inputs.sessionId } : {}),
+    ...(inputs.settingsScope ? { settingsScope: inputs.settingsScope } : {}),
+    ...(inputs.host !== undefined ? { host: inputs.host } : {}),
+    ...(inputs.isSubAgent !== undefined ? { isSubAgent: inputs.isSubAgent } : {}),
+    ...(inputs.behaviorProfile !== undefined ? { behaviorProfile: inputs.behaviorProfile } : {}),
+    ...(inputs.sessionMessageTargets?.length
+      ? { sessionMessageTargets: inputs.sessionMessageTargets }
+      : {}),
+    ...(inputs.profileMeta ? { profileMeta: inputs.profileMeta } : {}),
+  };
+}
+
 /** engine.ts L2023-2145 —— builtin override / MCP 可见性 / feature flags / 动态 defs / plan-mode 过滤。
  *  注意:本函数按原逻辑就地 mutate toolCtx(toolVisibility/disabledBuiltins/
  *  allowedMcpServers/mcpToolPolicies)。 */
@@ -241,20 +291,17 @@ export function assembleRunToolDefs(args: {
 }): ToolDefinition[] {
   const { toolCtx } = args;
   const guardCwd = args.guardCwd;
-  const profileMeta = args.profileMeta;
-  const toolVisibility = {
+  const toolVisibility = buildToolVisibility({
     cwd: guardCwd,
     hasGoal: args.hasRunnableGoal,
-    ...(toolCtx.sessionId ? { sessionId: toolCtx.sessionId } : {}),
+    sessionId: toolCtx.sessionId,
     settingsScope: args.settingsScope,
     host: args.builtinToolHost,
     isSubAgent: args.isSubAgent,
     behaviorProfile: args.behaviorProfileId,
-    ...(toolCtx.sessionMessages?.targets.length
-      ? { sessionMessageTargets: toolCtx.sessionMessages.targets }
-      : {}),
-    ...(profileMeta ? { profileMeta } : {}),
-  };
+    sessionMessageTargets: toolCtx.sessionMessages?.targets,
+    profileMeta: args.profileMeta,
+  });
   toolCtx.toolVisibility = toolVisibility;
   // #7: per-turn project builtin override. The toolRegistry's builtin tool
   // SET is ctor-frozen (and may be shared via runtime), so a mid-session
