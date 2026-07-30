@@ -38,6 +38,7 @@ import {
   migrateProjectSessionBucket,
   loadSessionIndex,
   saveSessionIndex,
+  unbindWorkspaceProfileEverywhere,
   createSession,
   archiveSession,
   loadDeletedArchivedIndices,
@@ -2136,6 +2137,25 @@ function App() {
                   <DigitalHumansView
                     activeProjectPath={activeProject?.path ?? null}
                     onOpenSettings={() => setViewMode("settings_page")}
+                    onProfileDeleted={(name) => {
+                      // Drop the binding from every project's Session index. The
+                      // backend can only unbind Sessions that reached disk; one
+                      // that never ran lives solely here, and opening it later
+                      // would send a profile that no longer exists.
+                      const projectIds: (string | null)[] = [
+                        ...projects.map((project) => project.id),
+                        null,
+                      ];
+                      const touched = unbindWorkspaceProfileEverywhere(name, projectIds);
+                      if (touched.length === 0) return;
+                      setSessionIndices((previous) => {
+                        const next = { ...previous };
+                        for (const projectId of touched) {
+                          next[projectBucketSegmentFor(projectId)] = loadSessionIndex(projectId);
+                        }
+                        return next;
+                      });
+                    }}
                     onUse={(selection, starterPrompt) => {
                       if (!activeProjectId || !activeProject) {
                         toast({ message: t("digitalHumans.pickProject"), variant: "error" });

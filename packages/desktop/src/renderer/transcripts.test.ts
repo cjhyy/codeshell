@@ -308,6 +308,22 @@ describe("transcript snapshot cursor persistence", () => {
 });
 
 describe("unbindWorkspaceProfileEverywhere", () => {
+  const originalLocalStorage = globalThis.localStorage;
+
+  beforeEach(() => {
+    Object.defineProperty(globalThis, "localStorage", {
+      value: createStorage(),
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(globalThis, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
+  });
+
   it("clears the binding from every session in every project", () => {
     const a = createSession("proj-a", "kept");
     const b = createSession("proj-a", "bound");

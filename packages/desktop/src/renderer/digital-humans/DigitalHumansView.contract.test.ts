@@ -257,6 +257,15 @@ describe("DigitalHumansView contract", () => {
     expect(source.match(/[^e]onUse\(/g) ?? []).toHaveLength(1);
   });
 
+  test("deleting a digital human unbinds the renderer index too", () => {
+    // The backend unbinds Sessions it can see on disk, but a Session that never
+    // ran has no engine state — its binding lives only in the renderer index.
+    // Left behind, opening it sends a profile that no longer exists and the run
+    // dies with "Workspace profile ... is unavailable".
+    expect(source).toContain("onProfileDeleted?.(profile.name)");
+    expect(app).toContain("unbindWorkspaceProfileEverywhere(name, projectIds)");
+  });
+
   test("a blocked deletion offers force delete instead of a dead end", () => {
     // Unbinding is safe (Sessions survive), so making the user do it by hand
     // across every blocking conversation is busywork, not protection.

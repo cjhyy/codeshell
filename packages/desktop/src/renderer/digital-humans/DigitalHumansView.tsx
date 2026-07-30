@@ -70,6 +70,13 @@ interface Props {
   confirmDelete?: (request: DigitalHumanDeleteRequest) => Promise<boolean>;
   /** Jump to settings › digital humans, where repos are managed in full. */
   onOpenSettings?: () => void;
+  /**
+   * A digital human was removed from the library. The host must drop the binding
+   * from its Session index too: a Session that never ran has no engine state, so
+   * the backend's unbind cannot reach it, and opening it later would send a
+   * profile that no longer exists.
+   */
+  onProfileDeleted?: (name: string) => void;
 }
 
 export interface DigitalHumanDeleteRequest {
@@ -103,6 +110,7 @@ export function DigitalHumansView({
   onUse,
   confirmDelete,
   onOpenSettings,
+  onProfileDeleted,
 }: Props) {
   const { t } = useT();
   const toast = useToast();
@@ -290,6 +298,7 @@ export function DigitalHumansView({
                   })
                 : null,
             ].filter(Boolean);
+            onProfileDeleted?.(profile.name);
             if (notes.length > 0) toast({ message: notes.join(" · ") });
           },
           { name: profile.label },
@@ -310,15 +319,21 @@ export function DigitalHumansView({
       clearsProjectDefault: profile.active,
     });
     if (!accepted) return;
-    await run(
-      `delete-profile:${profile.name}`,
-      () =>
-        window.codeshell.deleteProfile(profile.name, {
-          ...(activeProjectPath ? { cwd: activeProjectPath } : {}),
-          ...(profile.active ? { clearActiveProject: true } : {}),
-        }),
-      { name: profile.label },
-    );
+    if (
+      await run(
+        `delete-profile:${profile.name}`,
+        () =>
+          window.codeshell.deleteProfile(profile.name, {
+            ...(activeProjectPath ? { cwd: activeProjectPath } : {}),
+            ...(profile.active ? { clearActiveProject: true } : {}),
+          }),
+        { name: profile.label },
+      )
+    ) {
+      // Also on the plain path: the backend only unbinds Sessions that reached
+      // disk, so the renderer index can still hold the deleted profile.
+      onProfileDeleted?.(profile.name);
+    }
   };
 
   const deleteTeamEntry = async (team: DigitalHumanTeam) => {
