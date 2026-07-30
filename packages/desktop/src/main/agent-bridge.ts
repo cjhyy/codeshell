@@ -202,10 +202,14 @@ export class AgentBridge implements PetStateBridge {
    */
   private sessionCwd = new Map<string, string>();
   /**
-   * Renderer window that most recently submitted `agent/run` for a session.
-   * Panel tools mutate renderer-owned tab/app state, so broadcasting them to
-   * every window can execute the same tool more than once when two windows
-   * have the same bucket mounted.
+   * Renderer window that owns each session's host-loopback surface. Panel tools
+   * mutate renderer-owned tab/app state, so broadcasting them to every window can
+   * execute the same tool more than once when two windows have the same bucket
+   * mounted.
+   *
+   * Populated either by that window submitting `agent/run`, or explicitly via
+   * claimSessionPanelOwner for sessions whose turns are driven outside the
+   * renderer (main-owned sessions, external Agent Runtimes).
    */
   private readonly panelHostWindowRoutes = new PanelHostWindowRoutes();
   private credentialSnapshotRevision = 0;
@@ -466,7 +470,10 @@ export class AgentBridge implements PetStateBridge {
         outLine = this.handleAgentRunMetadata(prepared);
         const owner = BrowserWindow.fromWebContents(event.sender);
         if (prepared.sessionId && owner && this.windows.has(owner)) {
-          this.panelHostWindowRoutes.claim(prepared.sessionId, event.sender.id);
+          // The renderer-driven case. Sessions driven from elsewhere (main-owned,
+          // external Agent Runtime) never reach this line and must claim
+          // ownership explicitly — same method, so there is one code path.
+          this.claimSessionPanelOwner(prepared.sessionId, event.sender.id);
         }
       } else {
         const forkSourceId = forkSourceSessionId(parsed);
@@ -831,10 +838,18 @@ export class AgentBridge implements PetStateBridge {
           // execute a mutating Panel App tool once in every mounted window.
           this.safeSend("panel:agent-request", payload);
         } else {
+          // Deliberately unreachable-by-broadcast. Say WHY and how to fix it:
+          // "no owner" and "the tool itself failed" need opposite remediation,
+          // and an external Agent Runtime driving this session is the case that
+          // reaches here most often (its turns never pass through agent/run, so
+          // nothing claimed an owner — see claimSessionPanelOwner).
           finish({
             ok: false,
             panelId: request.panelId,
-            detail: "Panel App tool invocation requires an owning Desktop window",
+            detail:
+              "Panel App tool invocation requires an owning Desktop window, and this " +
+              "session has none. Discovery (list/open/tools) still works. A session " +
+              "driven outside the renderer must claim an owner window first.",
           });
         }
       } catch (error) {
@@ -1092,6 +1107,36 @@ export class AgentBridge implements PetStateBridge {
   /** Reserve a main-owned Session before a headless producer submits agent/run. */
   reserveHostSession(sessionId: string, cwd: string): void {
     this.sessionCwd.set(sessionId, cwd);
+  }
+
+  /**
+   * Bind a session's host-loopback surface (Panel tools) to one renderer window.
+   *
+   * Ownership is otherwise established as a side effect of that window
+   * submitting `agent/run` over "agent:msg". A session whose turns are driven
+   * from anywhere else never gets an owner that way — a main-owned session from
+   * reserveHostSession, or an external Agent Runtime (Codex / Claude Code) whose
+   * loop lives in the runtime rather than the renderer. Without an owner,
+   * `Panel.invoke` is unreachable for that session by design: broadcasting a
+   * mutating Panel App tool would run it once in every mounted window, so
+   * requestPanelHost fails closed instead.
+   *
+   * Callers own the lifecycle: claim when the session's surface is established,
+   * and rely on forgetSession / window teardown to release it. Re-claiming is
+   * safe and idempotent — the latest claim wins, which is also how a session
+   * recovers after its owning window is destroyed.
+   */
+  claimSessionPanelOwner(sessionId: string, webContentsId: number): void {
+    this.panelHostWindowRoutes.claim(sessionId, webContentsId);
+  }
+
+  /**
+   * Whether a session currently resolves to a live owning window. Hosts use this
+   * to tell "no owner yet" apart from "the tool failed", since the two produce
+   * very different remediation.
+   */
+  hasSessionPanelOwner(sessionId: string): boolean {
+    return this.panelHostWindowRoutes.resolve(sessionId, this.windows).window !== null;
   }
 
   /**
