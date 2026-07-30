@@ -400,10 +400,10 @@ Desktop main 是最终组合根，负责：
 **宿主回环归属（v2 展开）**。v1 的"提供 host bridges"过于笼统 —— 宿主回环工具（9.3）
 在 Desktop 侧有两个必须显式建立、且当前都挂在 renderer `agent/run` 副作用上的前置条件：
 
-| 项                | 现状                                                                                             | external runtime 需要                     |
-| ----------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| panel bucket 注册 | `desktop/src/main/index.ts` 附近维护；缺失则 Panel 四个 action 全废（`agent-bridge.ts:860-866`） | 会话创建时显式注册                        |
-| panel owner claim | 仅 `agent-bridge.ts:465-470` 的 renderer `agent/run` 路径写入                                    | 会话创建时显式 `claimSessionPanelOwner()` |
+| 项                | 现状                                                                                                                | external runtime 需要                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| panel bucket 注册 | `desktop/src/main/index.ts` 附近维护；缺失则 Panel 四个 action 全废（`agent-bridge.ts` `maybeHandlePanelAction()`） | 会话创建时显式注册                        |
+| panel owner claim | 仅 `agent-bridge.ts` 的 `agent/run` 分支 的 renderer `agent/run` 路径写入                                           | 会话创建时显式 `claimSessionPanelOwner()` |
 
 两者都必须在 external session 的**创建流程**中完成，并在 close 时对称注销
 （`forgetSession()` / bucket 注销），窗口销毁时 `releaseWindow()`（已存在）。
@@ -526,21 +526,32 @@ guard 不通过就返回 `"not available in the current session context"` 并且
 
 - guard 依赖的字段缺失 → 工具静默不可见，或反过来**绕过了本该生效的 guard**；
 - 例如 `Panel` 的 guard 是 `ctx.host === "desktop" && ctx.isSubAgent !== true`
-  （`packages/core/src/tool-system/builtin/index.ts:911`）。`host` 源自
+  （`builtin/index.ts` 的 `Panel` `exposure.availability`）。`host` 源自
   `config.builtinToolHost`。若不传，`Panel` 在 external 会话里既列不出也执行不了。
 
-因此显式化为：
+因此显式化为一个具名的、可独立调用的 builder。**已实现**（Phase 0-A）：
+`buildToolVisibility(inputs: ToolVisibilityInputs)`，位于
+`core/src/engine/run-tooling.ts`，`assembleRunToolDefs()` 已改为调用它以保持唯一实现。
 
 ```ts
-interface ExternalToolVisibilityInputs {
-  /** 源自 config.builtinToolHost。external runtime 会话仍报 "desktop"——见下。 */
-  host: string | undefined;
-  isSubAgent: boolean;
-  settingsScope: SettingsScope;
+interface ToolVisibilityInputs {
+  cwd: string;
   hasGoal: boolean;
+  sessionId?: string;
+  settingsScope?: SettingsScope;
+  /** 源自 config.builtinToolHost。external runtime 会话仍报 "desktop"——见下。 */
+  host?: string;
+  isSubAgent?: boolean;
   behaviorProfile?: string;
+  sessionMessageTargets?: readonly SessionMessageTarget[];
+  profileMeta?: Readonly<Record<string, unknown>>;
 }
 ```
+
+实现上有一条容易写错、且已被测试钉死的细节：**可选字段必须"不存在"而不是"存在但
+`undefined`"**。guard 用的是 `!== true` / `?? 0` 这类判断，而空的
+`sessionMessageTargets` 数组不能读成"宿主授权了目标"（`SendMessageToSession` 的 guard 是
+`(targets?.length ?? 0) > 0`）。变异测试确认：把空数组的丢弃逻辑去掉会让测试失败。
 
 **`host` 的取值决策**：external runtime 会话报 `"desktop"`，**不**引入新的 host 值。理由是
 guard 语义为"宿主是否具备交互式 Desktop 能力"，而 external runtime 第一阶段只在本地桌面端
@@ -605,14 +616,14 @@ v1 缺失的一层建模。CodeShell 的 builtin 工具分两类：
 
 回环机制（以 `Panel` 为例，行号对应当前源码）：
 
-| 步骤                                                                      | 位置                                        |
-| ------------------------------------------------------------------------- | ------------------------------------------- |
-| 1. builtin 拿到 `ctx.panels` bridge                                       | `core/src/tool-system/builtin/panel.ts:271` |
-| 2. bridge 四个 action 全部转 `requestPanelActionForSession()`             | `core/src/protocol/server.ts:3681-3729`     |
-| 3. 复用 **approval 通道**发 `__panel_action__`,带 `approvalRouteEnvelope` | `core/src/protocol/server.ts:3731-3782`     |
-| 4. Desktop main 拦截该行,要求 `sessionId` + `bucketForSession()`          | `desktop/src/main/agent-bridge.ts:852-881`  |
-| 5. 用 `panelHostWindowRoutes.resolve()` 查 owner webContents              | `desktop/src/main/agent-bridge.ts:812`      |
-| 6. 发 `panel:agent-request` 给**那个窗口**                                | `desktop/src/main/agent-bridge.ts:825-826`  |
+| 步骤                                                                      | 位置                                         |
+| ------------------------------------------------------------------------- | -------------------------------------------- |
+| 1. builtin 拿到 `ctx.panels` bridge                                       | `builtin/panel.ts` `panelTool()`             |
+| 2. bridge 四个 action 全部转 `requestPanelActionForSession()`             | `server.ts` `makePanelBridge()`              |
+| 3. 复用 **approval 通道**发 `__panel_action__`,带 `approvalRouteEnvelope` | `server.ts` `requestPanelActionForSession()` |
+| 4. Desktop main 拦截该行,要求 `sessionId` + `bucketForSession()`          | `agent-bridge.ts` `maybeHandlePanelAction()` |
+| 5. 用 `panelHostWindowRoutes.resolve()` 查 owner webContents              | `agent-bridge.ts` `requestPanelHost()`       |
+| 6. 发 `panel:agent-request` 给**那个窗口**                                | `agent-bridge.ts` `requestPanelHost()`       |
 
 关键约束：`ToolExecutor` 对第 3 步之后的一切**没有可见性、没有否决权、也无法降级**。
 
@@ -620,49 +631,51 @@ v1 缺失的一层建模。CodeShell 的 builtin 工具分两类：
 
 宿主回环工具在 external runtime 会话下能否工作，取决于两个 `ToolExecutor` 之外的条件：
 
-**条件 A — panel bucket**。`agent-bridge.ts:860-866`：`bucketForSession(sessionId)` 为空时
+**条件 A — panel bucket**。`agent-bridge.ts` `maybeHandlePanelAction()`：`bucketForSession(sessionId)` 为空时
 **四个 action 全部失败**（比 owner window 更严格，连 `list` 都不行）。
 
-**条件 B — owner window**。`panel-host-routing.ts:33-50` 查 `ownerBySession`；查不到时
-`agent-bridge.ts:827-839` 分流：
+**条件 B — owner window**。`panel-host-routing.ts` `PanelHostWindowRoutes.resolve()` 查 `ownerBySession`；查不到时
+`requestPanelHost()` 分流：
 
 - `list` / `open` / `tools` → 走 broadcast fallback，第一个响应的窗口应答；
 - `invoke` → **直接失败**，`"Panel App tool invocation requires an owning Desktop window"`
-  （`panel-host-routing.ts:60-64` 的 `allowsPanelHostBroadcastFallback` 明确 `action !== "invoke"`）。
+  （`panel-host-routing.ts` 的 `allowsPanelHostBroadcastFallback` 明确 `action !== "invoke"`）。
 
 这个 fail-closed 是**正确且必须保留**的：广播一次 mutating 的 Panel App 工具会让它在每个已挂载
 窗口各执行一遍。
 
-而 `ownerBySession` 的唯一写入点是 `agent-bridge.ts:465-470`，条件是
-**renderer 通过 `ipcMain.on("agent:msg")` 发来一条 `agent/run`**：
-
-```ts
-if (parsed.method === "agent/run") {
-  outLine = this.handleAgentRunMetadata(prepared);
-  const owner = BrowserWindow.fromWebContents(event.sender);
-  if (prepared.sessionId && owner && this.windows.has(owner)) {
-    this.panelHostWindowRoutes.claim(prepared.sessionId, event.sender.id);
-  }
-}
-```
+v1 评审时，`ownerBySession` 的唯一写入点是 `agent-bridge.ts` 的 `agent/run` 分支，条件是
+**renderer 通过 `ipcMain.on("agent:msg")` 发来一条 `agent/run`**。
 
 **外部 Runtime 的 turn 由 Codex / Claude 驱动，CodeShell 侧不产生 renderer 发起的
-`agent/run`，因此 `claim()` 从不执行。** 结论：当前源码下，Codex 会话调用 `Panel.invoke`
-必然失败。这不是权限问题，而是 owner 路由问题。
+`agent/run`，因此 `claim()` 从不执行。** 结论：Codex 会话调用 `Panel.invoke` 必然失败。
+这不是权限问题，而是 owner 路由问题。
 
 #### 9.3.2 修正方向：owner claim 必须显式
 
+> **已实现**（Phase 0-C）。下面是最终形态。
+
 把 owner 归属从 `agent/run` 的副作用提升为显式的宿主生命周期操作。
 
-- Desktop main 暴露显式 API：`claimSessionPanelOwner(sessionId, webContentsId)`，
+- Desktop main 暴露显式 API：**`claimSessionPanelOwner(sessionId, webContentsId)`**，
   由 external runtime 的**会话创建流程**调用，而不再依赖 `agent/run` 触发。
+  配套 **`hasSessionPanelOwner(sessionId)`**，让宿主能把"还没有 owner"与"工具失败"
+  分开报告 —— 两者的处置方式完全相反。
+  renderer 那条路径也改走同一方法，保持**单一代码路径**。
+- fail-closed 的 detail 现在说清原因与处置方式（原文只说"requires an owning
+  Desktop window"，没说为什么、也没说 discovery 仍可用）。
 - `ExternalAgentSessionOptions` 增加 `hostSurfaceOwner?: { webContentsId: number }`，
-  由 Desktop 组合根（第 7.4 节）在创建 session 时填充。
-- 同时注册 panel bucket（条件 A）。
+  由 Desktop 组合根（第 7.4 节）在创建 session 时填充。**（待 Phase 2）**
+- 同时注册 panel bucket（条件 A）。**（待 Phase 2）**
 - session close 时 `forgetSession()`；窗口销毁时 `releaseWindow()`（两者已存在）。
 
 命名用 `hostSurfaceOwner` 而非 `panelOwner`：`Browser` / `SwitchSessionWorkspace` /
 `InjectCredential` 走同一条回环，未来纳入 allowlist 时应复用同一归属，不要每个工具一套。
+
+**回归防线**：`panel-host-owner.test.ts` 覆盖"未 claim 的会话保持无主"、"owner 窗口销毁后
+需重新 claim"、"并发会话各自归属不串窗口"。变异测试确认：把
+`allowsPanelHostBroadcastFallback` 改成恒真（即允许广播 `invoke` —— 最危险的回归）
+会让测试失败。
 
 #### 9.3.3 owner 归属与 ApprovalRouter owner 是两套东西
 
@@ -701,7 +714,7 @@ argsPatterns: new Map([["Panel", { action: "^(list|open|tools)$" }]]);
 
 注意这与 builtin 自带的 `defaultPermissionRules` 是**两层**：后者管审批决策
 （`list|open|tools` → `allow`，`invoke` → `ask`，见
-`core/src/tool-system/builtin/index.ts:894-908`），前者管**是否对外部 Runtime 存在**。
+`builtin/index.ts` 的 `Panel` `defaultPermissionRules`），前者管**是否对外部 Runtime 存在**。
 第一阶段两层都收窄到只读 action，即使 allowlist 写错，`invoke` 也仍会撞上 9.3.1 的
 fail-closed —— 三层独立防线，这是期望的设计。
 
@@ -894,10 +907,10 @@ v1 在第 10.3、12.1、21.3 节反复声称"`bypassPermissions` 无法绕过 `T
 真实风险不在外部 Runtime 的 mode，而在 **CodeShell 自己的 `PermissionClassifier`**：
 
 ```
-core/src/tool-system/permission.ts:1458-1459
+core/src/tool-system/permission.ts  PermissionClassifier.classify()
   if (this.defaultMode === "bypassPermissions") return "allow";
 
-core/src/tool-system/permission.ts:1512-1519
+core/src/tool-system/permission.ts  PermissionClassifier.requestApproval()
   if (this.defaultMode === "bypassPermissions") { ...; return true; }
 ```
 
@@ -919,7 +932,7 @@ type ExternalSessionPermissionMode = Exclude<PermissionMode, "bypassPermissions"
 
 - `createSessionToolHost()` 在构造时校验，收到被排除的 mode 直接 **throw**，不静默降级
   （静默降级会让"我明明设了 bypass"变成难以察觉的行为差异）。
-- `dontAsk` 一并排除的原因不同但同样重要：它在 `permission.ts:1504-1510` 里是 auto-**deny**。
+- `dontAsk` 一并排除的原因不同但同样重要：它在 `permission.ts` 的 `requestApproval()` 里是 auto-**deny**。
   外部 Runtime 会收到一连串无法解释的拒绝，把配置错误伪装成工具故障。
 - 外部 Runtime 自己用什么 permission mode 不受本约束影响 —— 它管的是 Native Tools。
   两者正交，这也正是 v1 想表达但没说准的部分。
@@ -1009,11 +1022,11 @@ Runtime 启动失败时必须 dispose 未使用的 tool host，不保留孤立 b
 
 **超时预算**。宿主回环工具在 abort 之外还有三层独立超时，当前互不知情：
 
-| 层                               | 值              | 位置                                       |
-| -------------------------------- | --------------- | ------------------------------------------ |
-| 外部 Runtime 的 MCP 调用超时     | 由 Runtime 决定 | Codex / Claude SDK                         |
-| `__panel_action__` approval 超时 | 5 min           | `server.ts:349` `APPROVAL_TIMEOUT_MS`      |
-| panel host 请求超时              | 20 s            | `desktop/src/main/agent-bridge.ts:819-822` |
+| 层                               | 值              | 位置                                   |
+| -------------------------------- | --------------- | -------------------------------------- |
+| 外部 Runtime 的 MCP 调用超时     | 由 Runtime 决定 | Codex / Claude SDK                     |
+| `__panel_action__` approval 超时 | 5 min           | `server.ts` `APPROVAL_TIMEOUT_MS`      |
+| panel host 请求超时              | 20 s            | `agent-bridge.ts` `requestPanelHost()` |
 
 内层（20s）远小于中层（5min）在这里是**对的**——内层先失败，中层的 resolver 正常拿到结果。
 但必须显式保证 **Runtime 层 > approval 层 > host 请求层**；若 Runtime 的 MCP 超时短于 20s，
@@ -1037,46 +1050,53 @@ Runtime 启动失败时必须 dispose 未使用的 tool host，不保留孤立 b
 v1 第 13.3 / 13.4 节笼统写"取消未决审批"。但宿主回环工具（9.3）**复用同一个
 `session.pendingApprovals` Map**，于是一次 `Panel.invoke` 会在里面同时产生两类条目：
 
-| 条目                                            | 来源                                              | `surfaceable`                      |
-| ----------------------------------------------- | ------------------------------------------------- | ---------------------------------- |
-| 真实权限审批（`Panel` `action=invoke` → `ask`） | `PermissionClassifier` → `requestApproval`        | `true`                             |
-| `__panel_action__` 宿主请求                     | `server.ts:3740-3742` `internalPendingMetadata()` | `false`（`server.ts:4026` 硬编码） |
+| 条目                                            | 来源                                       | `surfaceable`     |
+| ----------------------------------------------- | ------------------------------------------ | ----------------- |
+| 真实权限审批（`Panel` `action=invoke` → `ask`） | `PermissionClassifier` → `requestApproval` | `true`            |
+| `__panel_action__` 宿主请求                     | `internalPendingMetadata()`                | `false`（硬编码） |
 
-而当前的取消实现是**无差别** drain：
+> 本节的缺陷**已修复**（Phase 0-D，见「Phase 0 实施进度」）。下面保留问题描述，
+> 因为它解释了修复为何必须这样做，也是后续新增宿主回环工具时的验收依据。
+
+原实现是**无差别** drain（`cancelSessionApprovals()`）：
 
 ```
-core/src/protocol/server.ts:4045-4061  cancelSessionApprovals()
-  for (const [requestId, entry] of session.pendingApprovals) {
-    ...
-    entry.resolve({ approved: false, reason });   // 不区分 kind / surfaceable
-  }
-  session.pendingApprovals.clear();
+for (const [requestId, entry] of session.pendingApprovals) {
+  ...
+  entry.resolve({ approved: false, reason });   // 不区分 kind / surfaceable
+}
+session.pendingApprovals.clear();
 ```
 
 具体故障：用户按 Stop 时，飞行中的 `__panel_action__` 被 resolve 成
-`{approved: false}`，而 `requestPanelActionForSession` 的 decision 解析
-（`server.ts:3746-3754`）把 `approved: false` 归一成
+`{approved: false}`，而 `requestPanelActionForSession` 的 decision 解析把它归一成
 `"panel action declined or unavailable"`。**模型看到的是"用户拒绝了 Panel 操作"，
-而用户实际做的是"停止本轮"。** session 关闭竞态下（`server.ts:3363-3366`
-直接返回 `{approved:false, reason: "session closed"}`）同样如此。
+而用户实际做的是"停止本轮"。** session 关闭竞态同样如此。
 
 反向的错误同样存在：如果为了保住宿主请求而只 drain `surfaceable: true`，
-则真实审批被取消、宿主请求泄漏，只能等 `APPROVAL_TIMEOUT_MS`（5 分钟，
-`server.ts:349`）超时 —— 一个挂 5 分钟的 turn。
+则真实审批被取消、宿主请求泄漏，只能等 `APPROVAL_TIMEOUT_MS`（5 分钟）超时 ——
+一个挂 5 分钟的 turn。
 
-**要求：**
+**要求（已实现）：**
 
-1. 取消路径按 `metadata.kind` 分流：`kind === "internal"` 的条目 resolve 成**结构化的
-   取消结果**（例如 `{ ok: false, cancelled: true, detail: "aborted by user" }`），
+1. 取消路径按 `metadata.kind` 分流：`kind === "internal"` 的条目以携带真实原因的
+   哨兵结算（`InternalPendingCancellation`，`failure` ∈ `cancelled` /
+   `session_closed` / `owner_lost` / `timed_out` / `malformed`），
    不复用 `{approved: false}` 这个语义已被占用的形状。
-2. 宿主回环 bridge 的 decision 解析（`server.ts:3746`、`3632`、以及 workspace / browser 对应处）
-   必须能区分"用户拒绝"、"本轮取消"、"session 关闭"、"超时"四种，并把区别透给模型 ——
-   现在四者都塌缩成同一句话。
+2. 四个宿主回环 bridge 的 decision 解析收敛到同一个 `parseHostLoopbackDecision()`，
+   能区分"用户拒绝"、"本轮取消"、"session 关闭"、"owner 断开"、"超时"、"宿主答案损坏"，
+   并把区别透给模型 —— 原先全部塌缩成同一句话。收敛到单一实现是为了让这几个终态语义
+   不会各自漂移。
 3. 顺序：**先**结算 internal 条目（它们有确定的失败语义且不需要用户交互），**再**取消
    surfaceable 审批。反序会让宿主请求在 Map 被 `clear()` 后失去 resolver。
-4. 这项修改影响 Native Engine 现有路径（`Panel` / `Browser` 今天就有这个问题），
-   因此它是一个**独立的前置 bugfix**，不应埋在 external runtime 的 feature flag 之后。
-   列入 Phase 0（第 17 节）。
+4. bridge 自身的结果归一化（`makePanelBridge` 的 `open` / `invoke`）**不得**把已分类的
+   失败盖成 `"malformed result"`。这是同源的第二处缺陷：它会把用户的 Stop 说成宿主的错。
+5. 这项修改影响 Native Engine 现有路径（`Panel` / `Browser` 今天就有这个问题），
+   因此它是一个**独立的前置 bugfix**，不埋在 external runtime 的 feature flag 之后。
+
+**回归防线**：`server.host-loopback-cancel.test.ts` 已用变异测试确认可证伪 ——
+删掉 kind 分支（退回旧的无差别 drain）会让 2 个测试失败；删掉 internal 优先排序会让
+顺序断言失败。新增宿主回环工具时，应在该文件补对应用例。
 
 ### 13.6 Crash 与恢复
 
@@ -1144,8 +1164,8 @@ v1 这一节只说了"不制造第二套 start/result"，**没有覆盖审批事
 在 CodeShell 侧会产生两个独立事件源（都在 `core/src/engine/run-tooling.ts`）：
 
 ```
-run-tooling.ts:128-130  setApprovalStateListener  → UI 的"等待批准"态
-run-tooling.ts:134-142  setApprovalEventListener  → approval_requested / approval_resolved 通知
+run-tooling.ts  setApprovalStateListener  → UI 的"等待批准"态
+run-tooling.ts  setApprovalEventListener  → approval_requested / approval_resolved 通知
 ```
 
 同时第 15.1 节要求 translator 也翻译 Runtime 自己的 `approval request / response`。
@@ -1278,7 +1298,7 @@ v2 新增的四项前置工作（**前两项是阻塞性调研，后两项是独
 **试点入口选择（v1 第 23 节问题 8 的答案）：Desktop 主会话，不从 Room 起。**
 理由是 owner 归属：Desktop 主会话是当前唯一天然具备 renderer owner 的入口，
 能让 9.3.2 的 claim 改造在最小范围内验证。Room / mobile 注入会话**明确没有** renderer
-owner —— `desktop/src/main/agent-bridge.ts:828-832` 的 broadcast fallback 注释就是为它写的；
+owner —— `requestPanelHost()` 的 broadcast fallback 注释就是为它写的；
 从 Room 起会同时撞上 owner 缺失和 approval routing 两个问题。DriveAgent 排第二。
 
 验收：Claude Code 可调用首批 Host Tools；`SessionToolHost` 的 `PermissionClassifier.defaultMode
@@ -1512,17 +1532,17 @@ runtimeVersion
 
 留档以便复核，行号对应评审时的源码状态：
 
-| v1 位置     | v1 描述                                            | 实际源码                                                                                                        | 修订位置                 |
-| ----------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| 7.1         | `packages/core/src/extension/session-tool-host.ts` | 该目录不存在；入口是单文件 `src/index.extension.ts`                                                             | 7.1                      |
-| 7.1         | "尽量复用 `run-tooling.ts`"                        | 三函数 17/13/21 参数，注释标明从 `engine.ts` 机械抽取且"就地 mutate toolCtx"                                    | 7.1.1                    |
-| 第 5 节图   | 链路止于 `Registry → Builtins`                     | `Panel` 等四个工具从 builtin **反向**回 Desktop renderer owner window                                           | 第 5 节图 + 9.3          |
-| 10.3 / 21.3 | "`bypassPermissions` 无法绕过 ToolExecutor"        | CodeShell 自己的 `permission.ts:1458,1512` 在该 mode 下短路全部规则；不变量取决于 `SessionToolHost` 拒绝该 mode | 12.1.1                   |
-| 15.2        | "不额外制造第二套 start/result"                    | 未覆盖审批事件双源（`run-tooling.ts:128-142`）                                                                  | 15.2.1                   |
-| 13.3 / 13.4 | 笼统"取消未决审批"                                 | `cancelSessionApprovals()`（`server.ts:4045-4061`）无差别 drain，把宿主请求误结算成"用户拒绝"                   | 13.5                     |
-| 21 标准 1   | Host Tool 可由三条路径调用                         | 对宿主回环工具不成立；`Panel.invoke` 因 owner 缺失 fail closed（`panel-host-routing.ts:60-64`）                 | 21.1 / 21.2              |
-| 9.1         | "Panel 查询或聚焦"为候选                           | `Panel` 是单工具四 action，`toolNames` set 无法表达 action 粒度                                                 | 8.2 `argsPatterns` + 9.4 |
-| 22.7        | "暂不采用"                                         | 其前提（`_meta.threadId` 可信）未经验证                                                                         | 22.7 状态改为待定        |
+| v1 位置     | v1 描述                                            | 实际源码                                                                                                                                    | 修订位置                 |
+| ----------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| 7.1         | `packages/core/src/extension/session-tool-host.ts` | 该目录不存在；入口是单文件 `src/index.extension.ts`                                                                                         | 7.1                      |
+| 7.1         | "尽量复用 `run-tooling.ts`"                        | 三函数 17/13/21 参数，注释标明从 `engine.ts` 机械抽取且"就地 mutate toolCtx"                                                                | 7.1.1                    |
+| 第 5 节图   | 链路止于 `Registry → Builtins`                     | `Panel` 等四个工具从 builtin **反向**回 Desktop renderer owner window                                                                       | 第 5 节图 + 9.3          |
+| 10.3 / 21.3 | "`bypassPermissions` 无法绕过 ToolExecutor"        | CodeShell 自己的 `permission.ts` 的 `classify()` / `requestApproval()` 在该 mode 下短路全部规则；不变量取决于 `SessionToolHost` 拒绝该 mode | 12.1.1                   |
+| 15.2        | "不额外制造第二套 start/result"                    | 未覆盖审批事件双源（`run-tooling.ts` 的两个 approval listener）                                                                             | 15.2.1                   |
+| 13.3 / 13.4 | 笼统"取消未决审批"                                 | `cancelSessionApprovals()`（`cancelSessionApprovals()`）无差别 drain，把宿主请求误结算成"用户拒绝"                                          | 13.5                     |
+| 21 标准 1   | Host Tool 可由三条路径调用                         | 对宿主回环工具不成立；`Panel.invoke` 因 owner 缺失 fail closed（`panel-host-routing.ts`）                                                   | 21.1 / 21.2              |
+| 9.1         | "Panel 查询或聚焦"为候选                           | `Panel` 是单工具四 action，`toolNames` set 无法表达 action 粒度                                                                             | 8.2 `argsPatterns` + 9.4 |
+| 22.7        | "暂不采用"                                         | 其前提（`_meta.threadId` 可信）未经验证                                                                                                     | 22.7 状态改为待定        |
 
 ## 24. 评审后需要产出的后续文档
 
