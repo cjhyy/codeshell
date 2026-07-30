@@ -438,6 +438,32 @@ export function DigitalHumansView({
     selection: DigitalHumanSelection,
   ): Promise<boolean> => {
     const names = selection.kind === "single" ? [selection.id] : selection.members;
+    // Install any member missing from the library FIRST. A team definition names
+    // members the user may never have installed individually — summoning still
+    // created their Sessions, and the lead's first SendMessageToSession then died
+    // with "Workspace profile … is unavailable". Summoning a team must bring the
+    // whole roster.
+    const installedNames = new Set(profiles.map((profile) => profile.name));
+    const missing = names.filter((name) => !installedNames.has(name));
+    for (const name of missing) {
+      const entry = catalog.find((candidate) => candidate.name === name);
+      if (!entry) {
+        toast({
+          message: t("digitalHumans.team.memberUnavailable", { name }),
+          variant: "error",
+        });
+        return false;
+      }
+      if (
+        !(await run(`install:${name}`, () => window.codeshell.installCatalogProfile(name), {
+          name: entry.label,
+        }))
+      ) {
+        return false;
+      }
+    }
+    if (missing.length > 0) await refresh();
+
     for (const name of names) {
       if (!(await ensureProfileRequirements(name))) return false;
     }

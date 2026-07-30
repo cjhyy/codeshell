@@ -724,9 +724,18 @@ export class AgentServer {
       },
       approvalRouter: this.approvalRouter,
     });
-    void run
+    // The turn itself must NOT block the sender — a member's work can take
+    // minutes and the lead has more to dispatch. But a turn that fails to *start*
+    // (most often: the target's digital human is not installed, so run-setup
+    // throws "Workspace profile ... is unavailable") used to be reported only to
+    // the log while SendMessageToSession still answered "has queued the turn".
+    // A real lead then waited two hours and re-sent, never learning the reason.
+    // So: surface an immediate failure to the caller, keep a slow turn detached.
+    let startupError: unknown;
+    const tracked = run
       .then(() => this.maybeWakeIdleSession(targetId))
       .catch((error) => {
+        startupError = error;
         logger.warn("session_message.turn_failed", {
           sourceSessionId: input.sourceSessionId,
           targetSessionId: targetId,
@@ -740,6 +749,13 @@ export class AgentServer {
           },
         });
       });
+    // One macrotask is enough for a synchronous-throw path to settle; anything
+    // still running by then is genuine work and stays detached.
+    await Promise.race([tracked, new Promise((resolve) => setTimeout(resolve, 0))]);
+    if (startupError) {
+      throw startupError instanceof Error ? startupError : new Error(String(startupError));
+    }
+    void tracked;
   }
 
   // ─── Request Dispatch ───────────────────────────────────────────
@@ -3702,13 +3718,36 @@ export class AgentServer {
           ? result
           : { ok: false, panelId, detail: "panel host returned a malformed result" };
       },
+      tools: async (panelId) => {
+        const result = (await this.requestPanelActionForSession(session, sessionId, "tools", {
+          panelId,
+        })) as { ok?: boolean; tools?: unknown };
+        return result?.ok === true && Array.isArray(result.tools)
+          ? (result.tools as import("../tool-system/panel-bridge.js").AgentPanelToolDescriptor[])
+          : [];
+      },
+      invoke: async (panelId, toolName, args) => {
+        const result = (await this.requestPanelActionForSession(session, sessionId, "invoke", {
+          panelId,
+          toolName,
+          arguments: args,
+        })) as import("../tool-system/panel-bridge.js").PanelInvokeResult;
+        return result?.panelId && result?.toolName
+          ? result
+          : {
+              ok: false,
+              panelId,
+              toolName,
+              detail: "panel host returned a malformed result",
+            };
+      },
     };
   }
 
   private requestPanelActionForSession(
     session: import("./chat-session.js").ChatSession,
     sessionId: string,
-    action: "list" | "open",
+    action: "list" | "open" | "tools" | "invoke",
     payload: Record<string, unknown>,
   ): Promise<unknown> {
     return new Promise((resolve) => {

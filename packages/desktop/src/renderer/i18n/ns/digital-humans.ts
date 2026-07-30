@@ -252,6 +252,7 @@ export const digitalHumans = {
         descriptionLabel: "团队说明",
         descriptionPlaceholder: "这个团队适合完成什么",
         modeLabel: "默认工作方式",
+        memberUnavailable: "成员「{name}」既未安装、广场里也找不到,无法召唤这个团队。",
         leadLabel: "团长",
         noLead: "不设团长（成员并行）",
         leadHint: "团长会收到其他成员的 Session id，用消息把子任务派下去并汇总结果。",
@@ -555,6 +556,8 @@ export const digitalHumans = {
         descriptionLabel: "Team description",
         descriptionPlaceholder: "What this team is good at",
         modeLabel: "Default work mode",
+        memberUnavailable:
+          "Member “{name}” is neither installed nor available in the market, so this team cannot be summoned.",
         leadLabel: "Lead",
         noLead: "No lead (members work in parallel)",
         leadHint:

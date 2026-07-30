@@ -233,6 +233,15 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("window.codeshell.exportProfileRepo");
   });
 
+  test("summoning a team installs members that are missing from the library", () => {
+    // The team definition names three members but only the lead was installed.
+    // Sessions were still created, and the lead's first SendMessageToSession died
+    // with "Workspace profile ... is unavailable" — twice, two hours apart.
+    expect(source).toContain("const installedNames = new Set(profiles.map");
+    expect(source).toContain("window.codeshell.installCatalogProfile(name)");
+    expect(source).toContain("digitalHumans.team.memberUnavailable");
+  });
+
   test("summoning satisfies requirements, not only the project-default toggle", () => {
     // A real session bound to video-director called /hyperframes, got "Skill not
     // found", searched with Glob, then gave up: summoning never ran the

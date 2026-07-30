@@ -95,3 +95,102 @@ describe("AgentServer cross-Session message routing", () => {
     }
   });
 });
+
+describe("AgentServer cross-Session message failure reporting", () => {
+  test("a target that fails to start rejects the sender instead of reporting success", async () => {
+    // Real incident: the target's digital human was never installed, so the turn
+    // threw "Workspace profile ... is unavailable". The turn ran fire-and-forget,
+    // so SendMessageToSession still answered "has queued the turn" and the lead
+    // waited two hours, then re-sent — never learning why.
+    const engine = {
+      isHeadless: () => true,
+      sessionExistsOnDisk: () => false,
+      async run(): Promise<EngineResult> {
+        throw new Error('Workspace profile "video-engineer" is unavailable');
+      },
+    } as unknown as Engine;
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const transport = makeTransport();
+    const server = new AgentServer({ transport: transport.transport, chatManager: manager });
+    const catalog = [
+      { sessionId: "lead", title: "Lead", workspaceRoot: "/project" },
+      {
+        sessionId: "member",
+        title: "Member",
+        workspaceRoot: "/project",
+        workspaceProfile: "video-engineer",
+      },
+    ];
+
+    try {
+      await expect(
+        (
+          server as unknown as {
+            routeSessionMessage(value: RouteSessionMessageInput): Promise<void>;
+          }
+        ).routeSessionMessage({
+          sourceSessionId: "lead",
+          target: catalog[1]!,
+          message: "render the video",
+          catalog,
+        }),
+      ).rejects.toThrow(/video-engineer/);
+    } finally {
+      server.close();
+    }
+  });
+
+  test("a healthy target still returns without waiting for the whole turn", async () => {
+    let released: (() => void) | undefined;
+    const engine = {
+      isHeadless: () => true,
+      sessionExistsOnDisk: () => false,
+      async run(options?: unknown): Promise<EngineResult> {
+        // Block until the test releases it: routeSessionMessage must not await
+        // the turn, only its startup.
+        await new Promise<void>((resolve) => {
+          released = resolve;
+        });
+        return {
+          text: "done",
+          reason: "completed",
+          sessionId: "member",
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const transport = makeTransport();
+    const server = new AgentServer({ transport: transport.transport, chatManager: manager });
+    const catalog = [
+      { sessionId: "lead", title: "Lead", workspaceRoot: "/project" },
+      { sessionId: "member", title: "Member", workspaceRoot: "/project" },
+    ];
+
+    try {
+      await (
+        server as unknown as {
+          routeSessionMessage(value: RouteSessionMessageInput): Promise<void>;
+        }
+      ).routeSessionMessage({
+        sourceSessionId: "lead",
+        target: catalog[1]!,
+        message: "go",
+        catalog,
+      });
+      // Returned while the turn is still running — the sender is not blocked.
+      expect(manager.get("member")?.isBusy()).toBe(true);
+      released?.();
+      await manager.get("member")?.settled;
+    } finally {
+      server.close();
+    }
+  });
+});
