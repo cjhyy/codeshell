@@ -273,7 +273,11 @@ export async function panelTool(
 
   const action = args.action;
   if (action === "list") {
-    const panels = await bridge.list();
+    const listed = await bridge.list();
+    // A failed discovery must not be reported as an empty host: "(no panels
+    // available)" reads as fact and makes the model stop trying.
+    if (listed.failed) return `Error: ${listed.failed}`;
+    const panels = listed.items;
     if (panels.length === 0) return "(no panels available)";
     return panels.map((panel) => `${panel.id}\t${panel.title}\t${panel.source}`).join("\n");
   }
@@ -289,7 +293,11 @@ export async function panelTool(
     const panelId = typeof args.panel_id === "string" ? args.panel_id.trim() : "";
     if (!panelId) return "Error: panel_id is required for action='tools'";
     if (!bridge.tools) return "Error: this panel host does not expose Agent tools";
-    const tools = safePanelToolDescriptors(await bridge.tools(panelId));
+    const queried = await bridge.tools(panelId);
+    // Same hazard as list: "has no Agent tools" is a factual claim, so a Stop or
+    // a timeout must not be laundered into it.
+    if (queried.failed) return `Error: ${queried.failed}`;
+    const tools = safePanelToolDescriptors(queried.items);
     if (!tools) return "Error: panel host returned malformed Agent tool descriptors";
     if (tools.length === 0) return `(panel ${panelId} has no Agent tools)`;
     return (

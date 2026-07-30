@@ -263,6 +263,124 @@ describe("host-loopback cancel semantics", () => {
     expect(approvalSettled[0]).toMatchObject({ approved: false });
   });
 
+  test("a cancelled discovery is not laundered into an empty host", async () => {
+    // `list` / `tools` return arrays, so before this was fixed every failure
+    // collapsed to `[]` and the Panel tool reported "(no panels available)" — an
+    // affirmative factual claim that panel hosting is unavailable. That is worse
+    // than a refusal: the model concludes there is nothing there and stops.
+    let panelBridge: PanelHostBridge | undefined;
+    let listed: { items: unknown[]; failed?: string } | undefined;
+    const engine = {
+      setAskUser() {},
+      setPlanMode() {},
+      setBrowserBridge() {},
+      setInjectCredential() {},
+      setSessionMessageRouter() {},
+      setPanelBridge(bridge: PanelHostBridge | undefined) {
+        panelBridge = bridge;
+      },
+      isHeadless: () => false,
+      async run(_task: string, options: { sessionId: string }): Promise<EngineResult> {
+        listed = await panelBridge!.list();
+        return {
+          text: "done",
+          reason: "completed",
+          sessionId: options.sessionId,
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const transport = makeTransport();
+    new AgentServer({ transport: transport.transport, chatManager, panelBridge: true });
+    transport.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: Methods.Run,
+      params: { sessionId: "discovery-session", task: "probe" },
+    });
+
+    await waitFor(
+      () =>
+        transport.sent.find(
+          (message) =>
+            message.method === Methods.ApprovalRequest &&
+            message.params?.request?.args?.action === "list",
+        ),
+      "panel list should be emitted",
+    );
+
+    transport.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.Cancel,
+      params: { sessionId: "discovery-session" },
+    });
+
+    const result = await waitFor(() => listed, "list should settle after cancel");
+    expect(result.items).toEqual([]);
+    // The distinguishing bit: an empty list alone is ambiguous, `failed` is not.
+    expect(result.failed).toBeTruthy();
+    expect(result.failed).toContain("turn was stopped");
+  });
+
+  test("an entry registered while cancelling is still settled, not stranded", async () => {
+    // The cancel loop must not iterate a single snapshot: a resolver — or the
+    // synchronous observeApprovalTransition hook — can register a NEW pending
+    // entry mid-drain. Iterating a snapshot and then clear()ing would delete that
+    // newcomer without settling it, and its timer is already gone, so the awaiting
+    // caller hangs until some outer timeout instead of resolving promptly.
+    const probe = bootPanelProbe("latecomer-session");
+    const panelRequest = await awaitPanelRequest(probe);
+    const session = probe.chatManager.get("latecomer-session")!;
+
+    let latecomerSettled: unknown = "NEVER_SETTLED";
+    const original = session.pendingApprovals.get(panelRequest.params.requestId)!;
+    session.pendingApprovals.set(panelRequest.params.requestId, {
+      ...original,
+      resolve: (decision: unknown) => {
+        // Register a follow-on entry from inside a resolver, exactly as a
+        // retry-on-cancel bridge or an approval-transition hook would.
+        if (!session.pendingApprovals.has("latecomer")) {
+          session.pendingApprovals.set("latecomer", {
+            resolve: (value: unknown) => {
+              latecomerSettled = value;
+            },
+            metadata: {
+              sessionId: "latecomer-session",
+              requestId: "latecomer",
+              kind: "tool_approval",
+              title: "等待批准 Read",
+              toolName: "Read",
+              createdAt: Date.now(),
+              expiresAt: Date.now() + 60_000,
+              surfaceable: true,
+            },
+          } as never);
+        }
+        original.resolve(decision);
+      },
+    } as never);
+
+    probe.transport.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.Cancel,
+      params: { sessionId: "latecomer-session" },
+    });
+
+    await waitFor(() => probe.readOutcome(), "panel request should settle after cancel");
+
+    expect(latecomerSettled).not.toBe("NEVER_SETTLED");
+    expect(latecomerSettled).toMatchObject({ approved: false });
+    expect(session.pendingApprovals.size).toBe(0);
+  });
+
   test("a successful host reply is still forwarded unchanged", async () => {
     const probe = bootPanelProbe("ok-session");
     const request = await awaitPanelRequest(probe);

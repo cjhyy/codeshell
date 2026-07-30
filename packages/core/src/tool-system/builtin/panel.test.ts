@@ -76,18 +76,66 @@ describe("Panel tool", () => {
     expect(await panelTool({ action: "list" }, context())).toContain("not available");
   });
 
+  test("reports a failed discovery as an error, never as an empty host", async () => {
+    // "(no panels available)" / "has no Agent tools" are affirmative factual
+    // claims. A request that never completed (user Stop, closed session, timeout)
+    // must not be laundered into them — the model would conclude panel hosting is
+    // unavailable and stop trying, which is worse than being told it was refused.
+    const stopped = await panelTool(
+      { action: "list" },
+      context({
+        list: async () => ({
+          items: [],
+          failed: "panel action cancelled because the turn was stopped",
+        }),
+        open: async (panelId) => ({ ok: true, panelId }),
+      }),
+    );
+    expect(stopped).toContain("Error");
+    expect(stopped).toContain("turn was stopped");
+    expect(stopped).not.toContain("no panels available");
+
+    const toolsStopped = await panelTool(
+      { action: "tools", panel_id: "panel-app:design-studio" },
+      context({
+        list: async () => ({ items: [] }),
+        open: async (panelId) => ({ ok: true, panelId }),
+        tools: async () => ({ items: [], failed: "panel tools query timed out" }),
+      }),
+    );
+    expect(toolsStopped).toContain("Error");
+    expect(toolsStopped).toContain("timed out");
+    expect(toolsStopped).not.toContain("has no Agent tools");
+  });
+
+  test("still reports a genuinely empty host as empty", async () => {
+    // The flip side: absent `failed`, an empty list IS the truth and must keep
+    // reading as such rather than becoming an error.
+    expect(
+      await panelTool(
+        { action: "list" },
+        context({
+          list: async () => ({ items: [] }),
+          open: async (panelId) => ({ ok: true, panelId }),
+        }),
+      ),
+    ).toBe("(no panels available)");
+  });
+
   test("lists host and Panel App ids", async () => {
     const result = await panelTool(
       { action: "list" },
       context({
-        list: async () => [
-          { id: "quickChat", title: "Quick chat", source: "builtin-panel-app" },
-          {
-            id: "panel-app:design-studio",
-            title: "Build dashboard",
-            source: "panel-app",
-          },
-        ],
+        list: async () => ({
+          items: [
+            { id: "quickChat", title: "Quick chat", source: "builtin-panel-app" },
+            {
+              id: "panel-app:design-studio",
+              title: "Build dashboard",
+              source: "panel-app",
+            },
+          ],
+        }),
         open: async (panelId) => ({ ok: true, panelId }),
       }),
     );
@@ -98,7 +146,7 @@ describe("Panel tool", () => {
   test("opens a stable panel id through the host bridge", async () => {
     const opened: string[] = [];
     const panels: NonNullable<ToolContext["panels"]> = {
-      list: async () => [],
+      list: async () => ({ items: [] }),
       open: async (panelId) => {
         opened.push(panelId);
         return { ok: true, panelId };
@@ -114,16 +162,18 @@ describe("Panel tool", () => {
   test("discovers and invokes a declared Panel App Agent tool", async () => {
     const calls: Array<{ panelId: string; toolName: string; args: Record<string, unknown> }> = [];
     const panels: NonNullable<ToolContext["panels"]> = {
-      list: async () => [],
+      list: async () => ({ items: [] }),
       open: async (panelId) => ({ ok: true, panelId }),
-      tools: async () => [
-        {
-          name: "get_design_context",
-          description: "Read design context",
-          inputSchema: { type: "object", properties: {} },
-          readOnly: true,
-        },
-      ],
+      tools: async () => ({
+        items: [
+          {
+            name: "get_design_context",
+            description: "Read design context",
+            inputSchema: { type: "object", properties: {} },
+            readOnly: true,
+          },
+        ],
+      }),
       invoke: async (panelId, toolName, args) => {
         calls.push({ panelId, toolName, args });
         return { ok: true, panelId, toolName, result: { nodeCount: 3 } };
@@ -167,16 +217,18 @@ describe("Panel tool", () => {
 
   test("fails closed on malformed descriptors and non-JSON or oversized results", async () => {
     const malformedDescriptors: NonNullable<ToolContext["panels"]> = {
-      list: async () => [],
+      list: async () => ({ items: [] }),
       open: async (panelId) => ({ ok: true, panelId }),
-      tools: async () => [
-        {
-          name: "unsafe",
-          description: "Unsupported schema",
-          inputSchema: { type: "object", properties: {}, format: "unknown" },
-          readOnly: true,
-        },
-      ],
+      tools: async () => ({
+        items: [
+          {
+            name: "unsafe",
+            description: "Unsupported schema",
+            inputSchema: { type: "object", properties: {}, format: "unknown" },
+            readOnly: true,
+          },
+        ],
+      }),
     };
     expect(
       await panelTool(
@@ -196,7 +248,7 @@ describe("Panel tool", () => {
             tool_name: "read",
           },
           context({
-            list: async () => [],
+            list: async () => ({ items: [] }),
             open: async (panelId) => ({ ok: true, panelId }),
             invoke: async (panelId, toolName) => ({
               ok: true,
@@ -213,7 +265,7 @@ describe("Panel tool", () => {
   test("surfaces a validated Panel App screenshot as an image tool result", async () => {
     const data = pngHeader(1200, 720);
     const panels: NonNullable<ToolContext["panels"]> = {
-      list: async () => [],
+      list: async () => ({ items: [] }),
       open: async (panelId) => ({ ok: true, panelId }),
       invoke: async (panelId, toolName) => ({
         ok: true,
@@ -274,7 +326,7 @@ describe("Panel tool", () => {
           tool_name: "render",
         },
         context({
-          list: async () => [],
+          list: async () => ({ items: [] }),
           open: async (panelId) => ({ ok: true, panelId }),
           invoke: async (panelId, toolName) => ({
             ok: true,
@@ -312,7 +364,7 @@ describe("Panel tool", () => {
           tool_name: "render",
         },
         context({
-          list: async () => [],
+          list: async () => ({ items: [] }),
           open: async (panelId) => ({ ok: true, panelId }),
           invoke: async (panelId, toolName) => ({
             ok: true,
@@ -328,7 +380,7 @@ describe("Panel tool", () => {
 
   test("rejects malformed image envelopes without echoing their payload", async () => {
     const panels: NonNullable<ToolContext["panels"]> = {
-      list: async () => [],
+      list: async () => ({ items: [] }),
       open: async (panelId) => ({ ok: true, panelId }),
       invoke: async (panelId, toolName) => ({
         ok: true,

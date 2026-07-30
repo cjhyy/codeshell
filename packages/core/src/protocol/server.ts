@@ -218,9 +218,17 @@ const HOST_LOOPBACK_FAILURE_DETAIL: Record<HostLoopbackFailure, string> = {
  */
 function hostLoopbackDetail(result: unknown): string | undefined {
   if (!result || typeof result !== "object") return undefined;
-  const candidate = result as { failure?: unknown; error?: unknown };
+  const candidate = result as { failure?: unknown; error?: unknown; detail?: unknown };
   if (typeof candidate.failure !== "string") return undefined;
-  return typeof candidate.error === "string" ? candidate.error : undefined;
+  // The bridges carry the human-readable text under different keys (panel uses
+  // `error`, browser uses `detail`). Accept either, and fall back to the
+  // classification itself rather than dropping a known failure on the floor —
+  // returning undefined here would let the caller mislabel it "malformed".
+  if (typeof candidate.error === "string") return candidate.error;
+  if (typeof candidate.detail === "string") return candidate.detail;
+  return (
+    HOST_LOOPBACK_FAILURE_DETAIL[candidate.failure as HostLoopbackFailure] ?? candidate.failure
+  );
 }
 
 /**
@@ -3807,9 +3815,14 @@ export class AgentServer {
           "list",
           {},
         )) as { ok?: boolean; panels?: unknown };
-        return result?.ok === true && Array.isArray(result.panels)
-          ? (result.panels as import("../tool-system/panel-bridge.js").AgentPanelDescriptor[])
-          : [];
+        if (result?.ok === true && Array.isArray(result.panels)) {
+          return {
+            items: result.panels as import("../tool-system/panel-bridge.js").AgentPanelDescriptor[],
+          };
+        }
+        // Never report a failed discovery as an empty host. "(no panels
+        // available)" is an affirmative claim that makes the model give up.
+        return { items: [], failed: hostLoopbackDetail(result) ?? "panel list failed" };
       },
       open: async (panelId) => {
         const result = (await this.requestPanelActionForSession(session, sessionId, "open", {
@@ -3829,9 +3842,13 @@ export class AgentServer {
         const result = (await this.requestPanelActionForSession(session, sessionId, "tools", {
           panelId,
         })) as { ok?: boolean; tools?: unknown };
-        return result?.ok === true && Array.isArray(result.tools)
-          ? (result.tools as import("../tool-system/panel-bridge.js").AgentPanelToolDescriptor[])
-          : [];
+        if (result?.ok === true && Array.isArray(result.tools)) {
+          return {
+            items:
+              result.tools as import("../tool-system/panel-bridge.js").AgentPanelToolDescriptor[],
+          };
+        }
+        return { items: [], failed: hostLoopbackDetail(result) ?? "panel tools query failed" };
       },
       invoke: async (panelId, toolName, args) => {
         const result = (await this.requestPanelActionForSession(session, sessionId, "invoke", {
@@ -3918,7 +3935,17 @@ export class AgentServer {
           const parsed = outcome.value as
             | import("../types.js").SessionWorkspace
             | { ok?: false; error?: string };
-          if (parsed && typeof parsed === "object" && "ok" in parsed && parsed.ok === false) {
+          // A workspace is always an object. Reject any other JSON shape rather
+          // than resolving it: `null` / a bare number / a string would otherwise
+          // be handed to setSessionWorkspace as if the switch had succeeded,
+          // rebasing the session onto a non-workspace. (Previously a `"ok" in
+          // parsed` TypeError happened to be caught and turned into a rejection;
+          // this states the requirement instead of relying on that.)
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            reject(new Error(`workspace switch ${HOST_LOOPBACK_FAILURE_DETAIL.malformed}`));
+            return;
+          }
+          if ("ok" in parsed && parsed.ok === false) {
             reject(new Error(parsed.error ?? "workspace switch failed"));
             return;
           }
@@ -4163,25 +4190,40 @@ export class AgentServer {
     //    cancellation sentinel carrying the real cause instead.
     //
     // Internal entries settle FIRST: they need no user interaction and have a
-    // determinate outcome, and draining them before the map is cleared keeps
+    // determinate outcome, and draining them before the map is emptied keeps
     // every resolver reachable.
-    const entries = [...session.pendingApprovals];
-    const ordered = [
-      ...entries.filter(([, entry]) => entry.metadata.kind === "internal"),
-      ...entries.filter(([, entry]) => entry.metadata.kind !== "internal"),
-    ];
-    for (const [requestId, entry] of ordered) {
-      this.clearApprovalTimer(requestId);
-      this.pendingApprovalTargets.delete(requestId);
-      this.observeApprovalTransition(entry.metadata, status);
-      try {
-        entry.resolve(
-          entry.metadata.kind === "internal"
-            ? internalCancellation(failure, reason)
-            : { approved: false, reason },
-        );
-      } catch {
-        /* a resolver must never break cancel cleanup */
+    //
+    // Drain in a loop rather than over one snapshot. A resolver — or the
+    // observeApprovalTransition hook called synchronously below — may register a
+    // NEW pending entry while we are cancelling. Iterating a snapshot and then
+    // clear()ing would delete that newcomer without ever settling it, leaving its
+    // awaiting tool hung until an outer timeout (its own timer is already gone).
+    // The `settled` guard keeps this terminating even if a resolver re-registers
+    // the same requestId, and the iteration cap stops a pathological resolver
+    // that registers a fresh id every time from spinning forever.
+    const settled = new Set<string>();
+    for (let pass = 0; session.pendingApprovals.size > 0 && pass < 1000; pass += 1) {
+      const entries = [...session.pendingApprovals].filter(([id]) => !settled.has(id));
+      if (entries.length === 0) break;
+      const ordered = [
+        ...entries.filter(([, entry]) => entry.metadata.kind === "internal"),
+        ...entries.filter(([, entry]) => entry.metadata.kind !== "internal"),
+      ];
+      for (const [requestId, entry] of ordered) {
+        settled.add(requestId);
+        session.pendingApprovals.delete(requestId);
+        this.clearApprovalTimer(requestId);
+        this.pendingApprovalTargets.delete(requestId);
+        this.observeApprovalTransition(entry.metadata, status);
+        try {
+          entry.resolve(
+            entry.metadata.kind === "internal"
+              ? internalCancellation(failure, reason)
+              : { approved: false, reason },
+          );
+        } catch {
+          /* a resolver must never break cancel cleanup */
+        }
       }
     }
     session.pendingApprovals.clear();
