@@ -548,16 +548,21 @@ function useVisibleWorktreeBranches(
 ): Record<string, string> {
   const requestVersions = useRef(new Map<string, number>());
   const [branches, setBranches] = useState<Record<string, string>>({});
+  // One `getSessionWorkspace` IPC per visible Session. Expanding a project with
+  // ~1000 Sessions fired ~1000 concurrent IPCs, each reading a state file in
+  // main — that, not the DOM, was what froze the sidebar. The branch icon is
+  // decoration, so cap it and let the rest render without.
+  //
+  // Keyed by a joined string rather than the array: the effect below calls
+  // setBranches, which re-renders, which produced a fresh array identity and
+  // re-ran the effect — "Maximum update depth exceeded".
+  const engineSessionIdKey = sessions
+    .flatMap((session) => (session.engineSessionId ? [session.engineSessionId] : []))
+    .slice(0, WORKTREE_BRANCH_LOOKUP_LIMIT)
+    .join("\u0000");
   const engineSessionIds = useMemo(
-    () =>
-      sessions
-        .flatMap((session) => (session.engineSessionId ? [session.engineSessionId] : []))
-        // One `getSessionWorkspace` IPC per visible Session. Expanding a project
-        // with ~1000 Sessions fired ~1000 concurrent IPCs, each reading a state
-        // file in main — that, not the DOM, was what froze the sidebar. The
-        // branch icon is decoration, so cap it and let the rest render without.
-        .slice(0, WORKTREE_BRANCH_LOOKUP_LIMIT),
-    [sessions],
+    () => (engineSessionIdKey ? engineSessionIdKey.split("\u0000") : []),
+    [engineSessionIdKey],
   );
 
   const commitWorkspace = useCallback((sessionId: string, workspace: SessionWorkspace) => {
@@ -575,9 +580,15 @@ function useVisibleWorktreeBranches(
   useEffect(() => {
     let cancelled = false;
     const visible = new Set(engineSessionIds);
-    setBranches((current) =>
-      Object.fromEntries(Object.entries(current).filter(([sessionId]) => visible.has(sessionId))),
-    );
+    // Return the SAME object when nothing is stale. Building a new one every run
+    // made this setState unconditional, and each render fed the effect again.
+    setBranches((current) => {
+      const stale = Object.keys(current).filter((sessionId) => !visible.has(sessionId));
+      if (stale.length === 0) return current;
+      const next = { ...current };
+      for (const sessionId of stale) delete next[sessionId];
+      return next;
+    });
 
     for (const sessionId of engineSessionIds) {
       const version = (requestVersions.current.get(sessionId) ?? 0) + 1;

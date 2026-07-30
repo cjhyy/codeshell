@@ -66,3 +66,39 @@ describe("composer declared-skill gap notice", () => {
     expect(text).not.toMatch(/not installed/i);
   });
 });
+
+describe("composer session brief", () => {
+  test("injects the standing brief as its own system section", async () => {
+    const composer = new PromptComposer({
+      cwd,
+      model: "test-model",
+      sessionBrief: "你是「视频出品小队」的团长。成员：video-engineer — `s-abc`。",
+      appendSystemPrompt: "APPEND-MARKER",
+    });
+    const prompt = await composer.buildSystemPrompt([]);
+    // Belongs in the prompt, not the composer draft: it is configuration for the
+    // agent, and a draft is lost the moment the user edits or sends.
+    expect(prompt).toContain("视频出品小队");
+    expect(prompt).toContain("s-abc");
+    expect(prompt).toContain("# Session Brief");
+    // Ordering: after the digital human's own instruction, before append.
+    expect(prompt.indexOf("# Session Brief")).toBeLessThan(prompt.indexOf("APPEND-MARKER"));
+  });
+
+  test("sits after the digital-human main instruction", async () => {
+    const composer = new PromptComposer({
+      cwd,
+      model: "test-model",
+      profileMainInstruction: "你是短片导演。",
+      sessionBrief: "本团队目标：做一条介绍视频。",
+    });
+    const prompt = await composer.buildSystemPrompt([]);
+    expect(prompt.indexOf("你是短片导演")).toBeLessThan(prompt.indexOf("本团队目标"));
+  });
+
+  test("absent brief adds no section", async () => {
+    const composer = new PromptComposer({ cwd, model: "test-model" });
+    const prompt = await composer.buildSystemPrompt([]);
+    expect(prompt).not.toContain("# Session Brief");
+  });
+});

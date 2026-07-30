@@ -1442,7 +1442,7 @@ export interface CodeshellApi {
   onPluginCommandsChanged(cb: () => void): () => void;
   listPanelApps(cwd: string, locale: string): Promise<PanelAppDescriptor[]>;
   listPanelAppExtensions(cwd: string, locale: string): Promise<PanelAppExtensionSummary[]>;
-  preparePanelApp(id: string): Promise<PreparedPanelApp>;
+  preparePanelApp(id: string, projectPath: string): Promise<PreparedPanelApp>;
   bindPanelApp(input: PanelAppBindInput): Promise<boolean>;
   invokePanelAppAgentTool(input: PanelAppAgentToolInvocation): Promise<unknown>;
   onPanelAppsChanged(cb: () => void): () => void;

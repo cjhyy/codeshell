@@ -1373,6 +1373,7 @@ export class Engine {
       cwd,
       sessionKind,
       sessionWorkspaceProfile,
+      ...(options?.sessionBrief ? { sessionBrief: options.sessionBrief } : {}),
       llmModel: this.config.llm.model,
       llmProvider: this.config.llm.provider,
       isSubAgent: this.config.isSubAgent === true,
@@ -2523,6 +2524,9 @@ export class Engine {
         responseLanguage: this.config.responseLanguage,
         userProfile: this.config.userProfile,
         workspaceProfile: runWorkspaceProfile,
+        // Read from the Session's own persisted state, so every turn — not just
+        // the first — carries the standing brief.
+        sessionBrief: session.state.sessionBrief,
         profileMemoryDir,
         instructionCompatFileNames: compatFileNamesFrom(this.config.instructions),
         instructionBoundaryFinder: (scanCwd) =>

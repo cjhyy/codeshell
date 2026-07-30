@@ -21,6 +21,8 @@ export interface OpenRunSessionArgs {
   cwd: string;
   sessionKind: SessionKind;
   sessionWorkspaceProfile: string | undefined;
+  /** Standing brief resent by the host each turn until the Session persists it. */
+  sessionBrief?: string;
   llmModel: string;
   llmProvider: string;
   isSubAgent: boolean;
@@ -214,6 +216,15 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
     session.state.workspaceProfile = args.sessionWorkspaceProfile;
     args.sessionManager.saveStateOrUpdateFields(session.state, {
       workspaceProfile: args.sessionWorkspaceProfile,
+    });
+  }
+  // Same first-write-wins shape as the profile binding: the host resends the
+  // standing brief every turn (a planned Session has no state yet), so persist it
+  // once and let later turns read it from state.
+  if (args.sessionBrief && session.state.sessionBrief !== args.sessionBrief) {
+    session.state.sessionBrief = args.sessionBrief;
+    args.sessionManager.saveStateOrUpdateFields(session.state, {
+      sessionBrief: args.sessionBrief,
     });
   }
   session.state.turnSeq = (session.state.turnSeq ?? 0) + 1;

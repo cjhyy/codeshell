@@ -37,6 +37,7 @@ import {
   saveTranscript,
   migrateProjectSessionBucket,
   loadSessionIndex,
+  saveSessionIndex,
   createSession,
   archiveSession,
   loadDeletedArchivedIndices,
@@ -475,9 +476,10 @@ function App() {
     let alive = true;
     const applyPanelApps = async (
       apps: Awaited<ReturnType<typeof window.codeshell.listPanelApps>>,
+      projectPath: string | null,
     ) => {
       const { replacePanelApps } = await import("./panels/PanelRegistry");
-      if (alive) replacePanelApps(apps);
+      if (alive) replacePanelApps(apps, projectPath);
     };
     const panelAppsApi = window.codeshell as typeof window.codeshell & {
       listPanelApps?: typeof window.codeshell.listPanelApps;
@@ -486,16 +488,17 @@ function App() {
     const listApps = panelAppsApi.listPanelApps;
     const subscribe = panelAppsApi.onPanelAppsChanged;
     if (!listApps || !subscribe) {
-      void applyPanelApps([]);
+      void applyPanelApps([], null);
       return;
     }
     const refresh = () => {
-      void listApps(activeProject?.path ?? "", lang)
+      const projectPath = activeProject?.path ?? null;
+      void listApps(projectPath ?? "", lang)
         .then((apps) => {
-          void applyPanelApps(apps);
+          void applyPanelApps(apps, projectPath);
         })
         .catch(() => {
-          void applyPanelApps([]);
+          void applyPanelApps([], projectPath);
         });
     };
     refresh();
@@ -1186,7 +1189,11 @@ function App() {
         ? (projects.find((project) => project.id === projectId)?.path ?? null)
         : noRepoCwdRef.current;
       void resolveAgentPanelHostRequest(request, {
-        availability: { cwd, engineSessionId: request.sessionId },
+        availability: {
+          projectPath: projectId ? cwd : null,
+          cwd,
+          engineSessionId: request.sessionId,
+        },
         translate: (key) => t(key as never),
         open: (panelId) => {
           updatePanelBucket(request.bucket, (state) => ({
@@ -2175,21 +2182,27 @@ function App() {
                         [projectBucketSegmentFor(activeProjectId)]: latestIndex!,
                       }));
                       if (team) {
-                        // Seed each Session's composer with its briefing so the
-                        // user can read (and adjust) what the lead was told before
-                        // anything is sent. Nothing auto-sends: summoning a team
-                        // must not fire N concurrent runs behind the user's back.
+                        // The brief is configuration for the agent, so it goes to
+                        // the prompt (SessionState.sessionBrief → a system section),
+                        // not the composer. Pre-filling the input box read as if the
+                        // user had typed a specification, and one stray edit or Enter
+                        // destroyed it. Nothing auto-sends either way: summoning a
+                        // team must not fire N runs behind the user's back.
                         const briefings = buildTeamBriefings(team, roster, starterPrompt);
                         if (briefings.length > 0) {
-                          setComposerDrafts((previous) => {
-                            const next = { ...previous };
-                            for (const briefing of briefings) {
-                              next[bucketKey(activeProjectId, briefing.sessionId)] = {
-                                text: briefing.text,
-                                attachments: EMPTY_ATTACHMENTS,
-                              };
-                            }
-                            return next;
+                          const byId = new Map(briefings.map((b) => [b.sessionId, b.text]));
+                          setSessionIndices((previous) => {
+                            const segment = projectBucketSegmentFor(activeProjectId);
+                            const index = previous[segment] ?? latestIndex!;
+                            const next = {
+                              ...index,
+                              sessions: index.sessions.map((session) => {
+                                const brief = byId.get(session.id);
+                                return brief ? { ...session, sessionBrief: brief } : session;
+                              }),
+                            };
+                            saveSessionIndex(activeProjectId, next);
+                            return { ...previous, [segment]: next };
                           });
                         }
                       } else if (starterPrompt) {

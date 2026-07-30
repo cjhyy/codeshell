@@ -99,6 +99,11 @@ export interface EngineRunOptions {
   /** Digital human bound to this Work Session; persisted on first use. */
   workspaceProfile?: string;
   /**
+   * Standing brief for this Session, injected as a system section every turn and
+   * persisted on first use (see SessionState.sessionBrief).
+   */
+  sessionBrief?: string;
+  /**
    * Host-authorized Sessions in the same project that this run may message.
    * The Engine validates the closed set against the source workspace
    * before exposing it to the model.

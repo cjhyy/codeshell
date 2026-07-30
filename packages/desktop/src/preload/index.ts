@@ -442,6 +442,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       planMode?: boolean;
       behaviorMode?: "quickChatRestricted";
       workspaceProfile?: string;
+      /** Standing brief injected as system context (see SessionState.sessionBrief). */
+      sessionBrief?: string;
       sessionMessageTargets?: Array<{
         sessionId: string;
         title: string;
@@ -970,7 +972,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("panel-apps:list", cwd, locale),
   listPanelAppExtensions: (cwd: string, locale: string) =>
     ipcRenderer.invoke("panel-apps:listExtensions", cwd, locale),
-  preparePanelApp: (id: string) => ipcRenderer.invoke("panel-apps:prepare", id),
+  preparePanelApp: (id: string, projectPath: string) =>
+    ipcRenderer.invoke("panel-apps:prepare", id, projectPath),
   bindPanelApp: (input: import("../shared/panel-apps").PanelAppBindInput) =>
     ipcRenderer.invoke("panel-apps:bind", input),
   invokePanelAppAgentTool: (input: import("../shared/panel-apps").PanelAppAgentToolInvocation) =>

@@ -268,6 +268,16 @@ export interface SessionState {
   /** Durable per-session digital-human binding. It overrides the Workspace default profile. */
   workspaceProfile?: string;
   /**
+   * Standing brief for this Session, injected as system context on every run.
+   *
+   * Set when a team is summoned: the member's role, its teammates' Session ids
+   * and the lead's playbook. It used to be pre-filled into the composer instead,
+   * which read as if the *user* had typed a specification — and one stray edit or
+   * Enter lost it. This is configuration for the agent, so it belongs in the
+   * prompt, not the input box.
+   */
+  sessionBrief?: string;
+  /**
    * Monotonic whole-state revision used by SessionManager.saveState as a CAS
    * token. Absent only on legacy state files; the first successful save
    * upgrades them. Detached writers with an older revision are rejected.

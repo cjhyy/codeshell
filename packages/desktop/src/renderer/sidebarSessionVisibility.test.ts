@@ -62,3 +62,36 @@ describe("compactSidebarSessions expanded cap", () => {
     expect(compactSidebarSessions(many.slice(0, 10), null, true, 5, 60)).toHaveLength(10);
   });
 });
+
+describe("worktree branch pruning is identity-stable", () => {
+  // Mirrors the reducer inside useVisibleWorktreeBranches. Returning a fresh
+  // object when nothing is stale made its setState unconditional, so each render
+  // re-ran the effect that caused it — "Maximum update depth exceeded".
+  const prune = (
+    current: Record<string, string>,
+    visible: ReadonlySet<string>,
+  ): Record<string, string> => {
+    const stale = Object.keys(current).filter((sessionId) => !visible.has(sessionId));
+    if (stale.length === 0) return current;
+    const next = { ...current };
+    for (const sessionId of stale) delete next[sessionId];
+    return next;
+  };
+
+  test("returns the same reference when every entry is still visible", () => {
+    const current = { a: "main", b: "feature" };
+    expect(prune(current, new Set(["a", "b"]))).toBe(current);
+  });
+
+  test("returns the same reference when empty", () => {
+    const current = {};
+    expect(prune(current, new Set(["a"]))).toBe(current);
+  });
+
+  test("drops only stale entries, returning a new object", () => {
+    const current = { a: "main", gone: "old" };
+    const next = prune(current, new Set(["a"]));
+    expect(next).not.toBe(current);
+    expect(next).toEqual({ a: "main" });
+  });
+});

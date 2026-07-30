@@ -150,6 +150,13 @@ export interface RunParams {
   profileParams?: Record<string, unknown>;
   /** Digital human to bind to this Work Session. */
   workspaceProfile?: string;
+  /**
+   * Standing brief for this Session, injected as a system section on every run
+   * (see SessionState.sessionBrief). Set when a team is summoned; a planned
+   * Session has no engine state yet, so the host resends it each turn until the
+   * Session persists it.
+   */
+  sessionBrief?: string;
   /** Closed same-project Session catalog available to SendMessageToSession. */
   sessionMessageTargets?: SessionMessageTarget[];
   /**

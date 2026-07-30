@@ -46,6 +46,12 @@ export interface ComposerOptions {
    */
   profileMainInstruction?: string;
   /**
+   * Standing brief for this Session (see SessionState.sessionBrief) — team role,
+   * teammate Session ids, the lead's playbook. Part of the cached system prefix
+   * because it is fixed for the Session's lifetime, unlike the skills listing.
+   */
+  sessionBrief?: string;
+  /**
    * Skills the active digital human declares (`WorkspaceProfile.skills`).
    *
    * Used only to warn when a declared skill is not actually installed here.
@@ -299,6 +305,16 @@ export class PromptComposer {
         name: "profile_main_instruction",
         compute: () =>
           `# Digital-Human Main Instruction\n\n${this.options.profileMainInstruction!}`,
+      });
+    }
+
+    // Standing Session brief — see sessionBrief's doc comment. Placed after the
+    // digital human's own instruction (who you are) because it narrows that role
+    // to this Session (what you are doing here, with whom).
+    if (this.options.sessionBrief) {
+      sections.push({
+        name: "session_brief",
+        compute: () => `# Session Brief\n\n${this.options.sessionBrief!}`,
       });
     }
 

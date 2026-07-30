@@ -54,6 +54,11 @@ describe("DigitalHumansView contract", () => {
     // Members used to be created in mutual ignorance: no teammate Session ids
     // meant SendMessageToSession was unusable and a "team" saved only clicks.
     expect(app).toContain("buildTeamBriefings");
+    // The brief goes to the prompt (SessionState.sessionBrief), not the composer:
+    // pre-filling the input box read as if the user had typed a spec, and one
+    // stray edit or Enter destroyed it.
+    expect(app).toContain("sessionBrief: brief");
+    expect(app).not.toContain("text: briefing.text");
     expect(app).toContain("teamRole: profileName === team.lead");
     // The lead is the Session the user talks to, so it gets activated.
     expect(app).toContain("activate: index === leadIndex");

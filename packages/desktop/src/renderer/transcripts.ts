@@ -99,6 +99,12 @@ export interface SessionSummary {
    */
   teamId?: string;
   teamRole?: "lead" | "member";
+  /**
+   * Standing brief injected as system context on every run of this Session.
+   * Persisted here (not just in engine state) because a planned Session has no
+   * engine state until its first run.
+   */
+  sessionBrief?: string;
   /** Current, switchable digital-human identity for this project Session. */
   workspaceProfile?: string;
   /** "automation" when imported from a cron run; absent for manual chats. */
@@ -645,6 +651,8 @@ export interface CreateSessionOptions {
   /** Mark the Session as part of a summoned team (see SessionSummary.teamId). */
   teamId?: string;
   teamRole?: "lead" | "member";
+  /** See SessionSummary.sessionBrief. */
+  sessionBrief?: string;
 }
 
 /** Create a new session under `projectId`, active by default. */
@@ -664,6 +672,7 @@ export function createSession(
     ...(options.workspaceProfile ? { workspaceProfile: options.workspaceProfile } : {}),
     ...(options.teamId ? { teamId: options.teamId } : {}),
     ...(options.teamRole ? { teamRole: options.teamRole } : {}),
+    ...(options.sessionBrief ? { sessionBrief: options.sessionBrief } : {}),
   };
   const next: SessionIndex = {
     sessions: [summary, ...idx.sessions],

@@ -39,6 +39,8 @@ export function resolveRunProfileState(args: {
 
 export interface RunPromptComposerConfigInput {
   cwd: ComposerOptions["cwd"];
+  /** Standing brief persisted on the Session (see SessionState.sessionBrief). */
+  sessionBrief?: ComposerOptions["sessionBrief"];
   model: ComposerOptions["model"];
   preset: ComposerOptions["preset"];
   customSystemPrompt: ComposerOptions["customSystemPrompt"];
@@ -75,6 +77,7 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     responseLanguage,
     userProfile,
     workspaceProfile,
+    sessionBrief,
     profileMemoryDir,
     instructionCompatFileNames,
     instructionBoundaryFinder,
@@ -104,6 +107,7 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     // so a profile summoned where the install never ran would otherwise instruct
     // the model to call skills that do not exist here.
     profileDeclaredSkills: workspaceProfile?.skills,
+    sessionBrief,
     profileMemoryDir,
     instructionOptions: {
       compatFileNames: instructionCompatFileNames,

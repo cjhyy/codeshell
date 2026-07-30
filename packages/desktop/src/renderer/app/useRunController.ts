@@ -269,6 +269,7 @@ export function useRunController({
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
       workspaceProfile?: string;
+      sessionBrief?: string;
       sessionMessageTargets?: Array<{
         sessionId: string;
         title: string;
@@ -281,6 +282,10 @@ export function useRunController({
       browserPartition: browserPartitionForBucket(bucket),
       clientMessageId,
       ...(summary?.workspaceProfile ? { workspaceProfile: summary.workspaceProfile } : {}),
+      // Standing team brief travels with every run, exactly like the profile
+      // binding: a planned Session has no engine state yet, and the brief must
+      // still be in the prompt on the very first turn.
+      ...(summary?.sessionBrief ? { sessionBrief: summary.sessionBrief } : {}),
     };
     if (targetProject) {
       const projectSessions =
