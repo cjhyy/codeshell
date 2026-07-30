@@ -59,3 +59,6 @@ packages/desktop/.preview/
 # nightly loop bookkeeping (untracked)
 .loop/
 packages/web/dist-app/
+
+# 视频生成产物，throwaway
+video-output/

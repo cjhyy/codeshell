@@ -18,6 +18,7 @@
 | [`mcp-http-auth-oauth-link-tech-design.md`](mcp-http-auth-oauth-link-tech-design.md) | 方案稿(未动手)                              | HTTP MCP 认证 UI 与 OAuth/link 凭证模型设计:认证方式单选、`oauth` credential 类型、OAuth login/logout/refresh、探测 authStatus 与 Codex 字段兼容                                                                                                                                                                  |
 | [`smoke-automation-mock-provider.md`](smoke-automation-mock-provider.md)             | v1 已落地并接入 CI                          | OpenAI 四场景 + Anthropic SSE、隔离 Electron harness、L1/L2 smoke、plugin sandbox e2e、xvfb CI 与根 `smoke` 入口均已完成；L3 发布产物仍后置                                                                                                                                                                       |
 | [`im-gateway-remote-orchestration.md`](im-gateway-remote-orchestration.md)           | 设计稿/方向锚点(未动手,非承诺)              | IM Gateway(对标 openclaw):独立常驻进程,IM(Telegram/飞书)发指令→远程拉起隧道→手机配对入口回推 IM→手机操作。下游隧道/配对/房间全已存在(复用),纯新增 IM 控制入口。gateway 是**通道非大脑**,高阶编排委托给未来「assistant 主体」(§6 留衔接口,与整体产品形态 design 强绑)。MVP=Telegram+开关+复用隧道,方案 A 唤起 main |
+| [`external-agent-runtime-bridge.md`](external-agent-runtime-tool-bridge-design.md)   | 设计稿(待评审,未动手)                       | Claude Code / Codex 作为外部 Agent Runtime 接入 CodeShell，并通过进程内 MCP / loopback HTTP MCP 安全调用 CodeShell 工具；第一阶段采用增强模式，统一经过 ToolExecutor、权限、路径和沙箱链路                                                                                                                        |
 
 ## 仍准确未做的代表项
 
