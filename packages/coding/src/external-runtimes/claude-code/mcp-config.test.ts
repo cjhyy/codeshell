@@ -1,8 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { readFileSync, statSync } from "node:fs";
 import {
   buildClaudeMcpConfig,
   claudeAllowedToolNames,
   claudeBridgeArgs,
+  writeClaudeMcpConfigFile,
   CLAUDE_MCP_SERVER_NAME,
 } from "./mcp-config.js";
 import type { McpBridgeHandle } from "../shared/mcp-bridge.js";
@@ -13,6 +15,11 @@ const bridge: McpBridgeHandle = {
   tokenEnvVar: "CODESHELL_CODEX_MCP_TOKEN",
   close: async () => {},
 };
+
+const cleanups: Array<() => void> = [];
+afterEach(() => {
+  for (const cleanup of cleanups.splice(0)) cleanup();
+});
 
 describe("claude-code MCP config", () => {
   test("declares an HTTP server with a bearer Authorization header", () => {
@@ -31,40 +38,81 @@ describe("claude-code MCP config", () => {
     expect(config).not.toContain("0.0.0.0");
   });
 
+  test("the bearer token never enters argv", () => {
+    // `ps auxww` exposes another process's argv to every local user (measured on
+    // macOS), and this token IS the bridge's only authentication — leaking it
+    // hands a local process full session authority. So the config goes in a file.
+    const built = claudeBridgeArgs({ bridge, exposedToolNames: ["Panel"] });
+    cleanups.push(built.cleanup);
+    expect(built.args.join(" ")).not.toContain("TOKEN-VALUE");
+    const path = built.args[built.args.indexOf("--mcp-config") + 1]!;
+    expect(readFileSync(path, "utf8")).toContain("TOKEN-VALUE");
+  });
+
+  test("the config file is mode 0600", () => {
+    const file = writeClaudeMcpConfigFile({ bridge });
+    cleanups.push(file.cleanup);
+    expect(statSync(file.path).mode & 0o777).toBe(0o600);
+  });
+
+  test("cleanup removes the config file", () => {
+    const file = writeClaudeMcpConfigFile({ bridge });
+    expect(statSync(file.path).isFile()).toBe(true);
+    file.cleanup();
+    expect(() => statSync(file.path)).toThrow();
+  });
+
+  test("passes --strict-mcp-config so the bridge is the only tool channel", () => {
+    // Without it, Claude Code ALSO loads every MCP server from the user's
+    // ~/.claude.json and project config — approved for their own interactive use,
+    // not for an agent CodeShell spawns, and outside CodeShell's ToolExecutor.
+    const built = claudeBridgeArgs({ bridge, exposedToolNames: ["Panel"] });
+    cleanups.push(built.cleanup);
+    expect(built.args).toContain("--strict-mcp-config");
+  });
+
   test("namespaces allowed tool names the way Claude Code does", () => {
-    // Claude Code exposes MCP tools as `mcp__<server>__<tool>`; a bare "Panel"
-    // would silently match nothing.
     expect(claudeAllowedToolNames(["Panel", "Memory"])).toEqual([
       "mcp__codeshell_tools__Panel",
       "mcp__codeshell_tools__Memory",
     ]);
   });
 
-  test("allowed tools are derived from the exposure list, not hardcoded", () => {
-    // The host's allowlist is the single source of truth; passing a name here
-    // that the host does not expose is refused on arrival anyway.
-    const args = claudeBridgeArgs({ bridge, exposedToolNames: ["Panel"] });
-    const allowed = args[args.indexOf("--allowed-tools") + 1];
-    expect(allowed).toBe("mcp__codeshell_tools__Panel");
-    expect(allowed).not.toContain("Bash");
+  test.each(["Bash", "Write", "Edit", "Read", "Bash(git *)", "*"])(
+    "refuses to pre-approve the built-in tool %p",
+    (name) => {
+      // `--allowed-tools` is a GRANT, measured: `--allowed-tools Write` writes a
+      // file with no approval prompt, while omitting the flag blocks it. A
+      // built-in name reaching this list would hand the untrusted runtime an
+      // unapproved tool, and the exposure allowlist would NOT help — it governs
+      // the MCP surface, not Claude Code's own tools.
+      expect(() => claudeAllowedToolNames([name])).toThrow(/GRANT|ToolExecutor/i);
+    },
+  );
+
+  test("an already-qualified name is refused rather than passed through", () => {
+    // Accepting a pre-qualified name would let a caller pre-approve a tool on a
+    // DIFFERENT MCP server — one outside CodeShell's exposure policy entirely.
+    // Callers pass plain CodeShell tool names; this function does the qualifying.
+    expect(() => claudeAllowedToolNames(["mcp__other__Thing"])).toThrow(/already qualified/i);
   });
 
-  test("config is inline JSON, never a path into the user's own config", () => {
-    // Per-invocation config keeps this session's token out of a file that
-    // outlives the session, and leaves ~/.claude.json untouched.
-    const args = claudeBridgeArgs({ bridge, exposedToolNames: ["Panel"] });
-    const value = args[args.indexOf("--mcp-config") + 1]!;
-    expect(() => JSON.parse(value)).not.toThrow();
-    expect(value).not.toContain(".claude.json");
+  test("allowed tools are derived from the exposure list, not hardcoded", () => {
+    const built = claudeBridgeArgs({ bridge, exposedToolNames: ["Panel"] });
+    cleanups.push(built.cleanup);
+    const allowed = built.args[built.args.indexOf("--allowed-tools") + 1];
+    expect(allowed).toBe("mcp__codeshell_tools__Panel");
   });
 
   test("a custom server name flows into both the config and the tool prefix", () => {
-    const args = claudeBridgeArgs({
+    const built = claudeBridgeArgs({
       bridge,
       exposedToolNames: ["Panel"],
       serverName: "other_tools",
     });
-    expect(args.join(" ")).toContain('"other_tools"');
-    expect(args.join(" ")).toContain("mcp__other_tools__Panel");
+    cleanups.push(built.cleanup);
+    const path = built.args[built.args.indexOf("--mcp-config") + 1]!;
+    expect(readFileSync(path, "utf8")).toContain('"other_tools"');
+    expect(built.args.join(" ")).toContain("mcp__other_tools__Panel");
   });
 });

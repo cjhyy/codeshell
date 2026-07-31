@@ -138,7 +138,13 @@ export async function startLoopbackMcpBridge(options: McpBridgeOptions): Promise
   const serverName = options.serverName ?? "codeshell_tools";
   const log = options.log ?? (() => {});
   const store = options.store;
-  const pinnedThreadId = options.singleSessionThreadId;
+  // Treat "" as unset explicitly. `??` only guards null/undefined, so an empty
+  // string would silently fall back to caller-supplied `_meta` — restoring exactly
+  // the caller-steered routing the pin exists to remove.
+  const pinnedThreadId = options.singleSessionThreadId || undefined;
+  if (options.singleSessionThreadId !== undefined && !pinnedThreadId) {
+    throw new Error("singleSessionThreadId must be a non-empty string when provided.");
+  }
 
   /**
    * Thread identity for a request. When the bridge is pinned to one session the

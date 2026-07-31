@@ -28,9 +28,8 @@ const { ToolRegistry } = await import(
 const { BUILTIN_AGENT_PRESETS } = await import(
   require.resolve("../../../packages/core/dist/preset/index.js")
 );
-const { startLoopbackMcpBridge, SessionContextStore, buildRuntimeSpawnEnv } = await import(
-  require.resolve("../../../packages/coding/dist/external-runtimes/index.js")
-);
+const { startLoopbackMcpBridge, SessionContextStore, buildRuntimeSpawnEnv, claudeBridgeArgs } =
+  await import(require.resolve("../../../packages/coding/dist/external-runtimes/index.js"));
 
 const panelBridgeCalls = [];
 const panels = {
@@ -106,14 +105,11 @@ console.log("product bridge:", bridge.url);
 
 store.register(CLAUDE_THREAD, host);
 
-const mcpConfig = JSON.stringify({
-  mcpServers: {
-    codeshell_tools: {
-      type: "http",
-      url: bridge.url,
-      headers: { Authorization: `Bearer ${bridge.token}` },
-    },
-  },
+// The PRODUCT helper: 0600 config file (token out of argv), --strict-mcp-config
+// (the bridge is the only tool channel), and validated --allowed-tools names.
+const wiring = claudeBridgeArgs({
+  bridge,
+  exposedToolNames: host.listTools().map((definition) => definition.name),
 });
 
 const PROMPT = `Use the codeshell_tools MCP server's Panel tool. Do these three steps in order and report each raw result verbatim, including any error text:
@@ -127,10 +123,7 @@ const child = spawn(
   [
     "-p",
     "--dangerously-skip-permissions",
-    "--mcp-config",
-    mcpConfig,
-    "--allowed-tools",
-    "mcp__codeshell_tools__Panel",
+    ...wiring.args,
   ],
   {
     env: buildRuntimeSpawnEnv({ bridgeToken: { name: bridge.tokenEnvVar, value: bridge.token } }),
@@ -177,6 +170,9 @@ console.log(
 console.log("invoke LEAKED (must be false):", invokeLeaked);
 console.log("approvals asked (expect 0):   ", approvalsAsked.length);
 console.log("token in logs (must be false):", tokenLeaked);
+console.log("token in argv (must be false): ", wiring.args.join(" ").includes(bridge.token));
+console.log("--strict-mcp-config passed:   ", wiring.args.includes("--strict-mcp-config"));
 
+wiring.cleanup();
 await bridge.close();
 process.exit(invokeLeaked || tokenLeaked ? 1 : 0);
