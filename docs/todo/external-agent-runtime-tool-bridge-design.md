@@ -1629,6 +1629,49 @@ Event translator 的排序规则**全部来自它的踩坑记录**,不是从 sch
 架构与它高度一致(分层、fail-closed、thread 路由),但那些"跑得快所以测不出来"的
 缺陷,只有读别人流过血的注释才能免费拿到。
 
+### Phase 2.7：Claude Code 接通 ✅ 已完成 —— §10.2 的假设被推翻
+
+设计稿 §10.2 假设 Claude Code 需要 `@anthropic-ai/claude-agent-sdk` 的**进程内 MCP
+server**,也就是第二套传输 + 一个新依赖。**实测不需要。**
+
+`claude --mcp-config <inline json>` 接受带 `Authorization` 头的 HTTP MCP server,
+与 Codex 完全一样。因此:
+
+- **两个 runtime 共用一个 bridge、一份代码**;
+- **CodeShell 不新增任何依赖**(Cindy 需要 pin `claude-agent-sdk@0.2.112`,我们不用);
+- 已用真机 `claude 2.1.220` 端到端验证,断言与 Codex 逐条一致
+  (`docs/todo/evidence/e2e-claude-product-bridge.mjs`)。
+
+据此把 runtime 无关的部分挪进 `shared/`:
+
+```text
+packages/coding/src/external-runtimes/
+  shared/mcp-bridge.ts            startLoopbackMcpBridge  (两个 runtime 共用)
+  shared/session-context-store.ts SessionContextStore
+  shared/spawn-env.ts             buildRuntimeSpawnEnv
+  codex/event-translator.ts       Codex 专属
+  claude-code/mcp-config.ts       Claude 专属(--mcp-config / --allowed-tools)
+```
+
+配置用**内联 JSON 而非文件**:每次调用独立,既不改用户的 `~/.claude.json`,也不会把
+本会话的 bearer token 写进一个比会话活得更久的文件。代价要说清:token 会出现在命令行
+参数里(Claude Code 没有 MCP header 的 env 间接层),这是 §12.2 在这个 runtime 上唯一
+做不到的一点 —— token 是 per-bridge 随机 32 字节且随会话消亡,权衡后接受,但不应让读者
+误以为 §12.2 完全达成。
+
+#### 一处我此前写错的结论(已更正)
+
+我在 2.5 节写过「首次 `tools/list` 不带 threadId 是无害的,Codex 会在 thread 建立后
+重新拉取」。**这是非确定性的。** 后续实测出现了不重拉的情况,结果 Codex 整个会话都
+看不到 `Panel` 工具(它甚至转而用 `curl` 直接打 bridge —— bypass sandbox 下它有 shell)。
+
+正确解法是新增的 **`singleSessionThreadId`**:一 bridge 一 session,**端口即归属**。
+
+这不是 §11.3 / §22.5 禁止的「猜前台会话」。区别在于**没有任何推断**:归属在开端口
+之前就定死了,一个请求不可能被错误归属。代价是这种 runtime 用不了共享 bridge ——
+正是 §22.7 的取舍,现在按 runtime 逐个接受,而不是全局二选一。Codex 也改用这个模式,
+因为它比依赖「会重拉」更可靠。pin **优先于**调用方给的 `_meta`,变异测试确认反过来会失败。
+
 ### Phase 3：Codex Runtime
 
 - 实现共享 app-server host 和 thread session。
