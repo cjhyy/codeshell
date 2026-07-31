@@ -129,13 +129,47 @@ const FIRST_PHASE_ARGS_PATTERNS: ReadonlyMap<string, Readonly<Record<string, str
   ["Panel", { action: "list|open|tools" }],
 ]);
 
+/**
+ * `ReadonlySet` / `ReadonlyMap` are compile-time only — the underlying `Set` and
+ * `Map` stay mutable at runtime, and this policy is a process-wide singleton read
+ * live on every `execute()`. Without this, one `argsPatterns.delete("Panel")`
+ * anywhere in the process would re-enable `Panel.invoke` for every already-running
+ * host: exactly the capability held back pending the §9.3.2 owner claim.
+ */
+function frozenSet<T>(values: Iterable<T>): ReadonlySet<T> {
+  const set = new Set(values);
+  const reject = (): never => {
+    throw new TypeError("The external tool exposure policy is frozen and cannot be widened.");
+  };
+  set.add = reject;
+  set.delete = reject;
+  set.clear = reject;
+  return set;
+}
+
+function frozenMap<K, V>(entries: Iterable<readonly [K, V]>): ReadonlyMap<K, V> {
+  const map = new Map(entries);
+  const reject = (): never => {
+    throw new TypeError("The external tool exposure policy is frozen and cannot be widened.");
+  };
+  map.set = reject;
+  map.delete = reject;
+  map.clear = reject;
+  return map;
+}
+
 /** The phase-one policy. Pass to `createSessionToolHost({ exposure })`. */
-export const FIRST_PHASE_EXPOSURE: ExternalToolExposurePolicy = {
-  mode: "allowlist",
-  toolNames: new Set(
+export const FIRST_PHASE_EXPOSURE: ExternalToolExposurePolicy = Object.freeze({
+  mode: "allowlist" as const,
+  toolNames: frozenSet(
     FIRST_PHASE_EXPOSURE_RATIONALE.filter((entry) => entry.status === "exposed").map(
       (entry) => entry.tool,
     ),
   ),
-  argsPatterns: FIRST_PHASE_ARGS_PATTERNS,
-};
+  argsPatterns: frozenMap(
+    [...FIRST_PHASE_ARGS_PATTERNS].map(([tool, patterns]) => [
+      tool,
+      Object.freeze({ ...patterns }),
+    ]),
+  ),
+});

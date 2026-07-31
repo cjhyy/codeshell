@@ -24,6 +24,7 @@ import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier, type ApprovalBackend } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { buildToolVisibility, type ToolVisibilityInputs } from "../engine/run-tooling.js";
+import { composePermissionRules } from "../engine/permission-controller.js";
 
 /**
  * Permission modes an external session may use.
@@ -97,20 +98,26 @@ export interface CreateSessionToolHostOptions {
   registry: ToolRegistry;
   permissionMode: ExternalSessionPermissionMode;
   /**
-   * Per-tool permission rules, exactly as the Native Engine path assembles them
-   * (preset rules + settings rules + mode rules — see
-   * `PermissionController.build()`).
+   * The agent preset's permission rules (e.g.
+   * `BUILTIN_AGENT_PRESETS.general.defaultPermissionRules`).
    *
-   * Required, not optional, and deliberately not defaulted to `[]`. The design's
-   * core claim is that a Host Tool behaves IDENTICALLY whether it is reached by
-   * the Native Engine or by an external runtime. Rules are what make
-   * `Panel{action:"list"}` an `allow` and `Panel{action:"invoke"}` an `ask`;
-   * drop them and every tool silently falls back to the bare mode default —
-   * read-only calls start prompting, and narrowing rules that were meant to
-   * RESTRICT a tool stop applying. A user's own `settings.permissions.rules`
-   * would likewise never bind the external runtime.
+   * Only the PRESET layer is supplied here. The rest of the stack — the standing
+   * memory-scope carve-outs, mode-derived rules, and the user's own
+   * `settings.permissions.rules` — is composed internally by
+   * {@link composePermissionRules}, the same function the Native Engine uses.
+   *
+   * That composition is deliberately not left to the caller. An earlier revision
+   * took a finished rule array, which turned an equivalence guarantee into an
+   * unenforceable obligation: nothing checked that a caller reproduced
+   * `PermissionController.build()`, and the easy mistake — omitting
+   * `settings.permissions.rules` — meant a user's explicit "deny this tool" bound
+   * the Native Engine but not the external runtime.
    */
-  permissionRules: readonly import("../types.js").PermissionRule[];
+  presetRules: readonly import("../types.js").PermissionRule[];
+  /** Settings scope used to resolve the user's own permission rules. */
+  settingsScope?: import("../settings/manager.js").SettingsScope;
+  /** Defaults to trusted; pass `false` to read settings in untrusted mode. */
+  projectTrusted?: boolean;
   planMode: boolean;
   exposure: ExternalToolExposurePolicy;
   /**
@@ -178,12 +185,18 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
 
   const { registry, exposure } = options;
   const hooks = options.hooks ?? new HookRegistry();
-  // Rules come from the caller and are REQUIRED (see CreateSessionToolHostOptions).
-  // Passing `[]` here silently diverges from the Native Engine: the per-tool rules
-  // that make read-only actions `allow` and risky ones `ask` would vanish, and
-  // every tool would fall back to the bare mode default.
+  // Composed HERE, by the same function the Native Engine uses, so the two paths
+  // cannot drift. In particular this is what pulls in the user's own
+  // `settings.permissions.rules` — a deny the user wrote must bind an external
+  // runtime exactly as it binds the Native Engine.
   const permission = new PermissionClassifier(
-    [...options.permissionRules],
+    composePermissionRules({
+      mode: options.permissionMode,
+      cwd: options.cwd,
+      presetRules: options.presetRules,
+      ...(options.settingsScope ? { settingsScope: options.settingsScope } : {}),
+      ...(options.projectTrusted !== undefined ? { projectTrusted: options.projectTrusted } : {}),
+    }),
     options.permissionMode,
     options.approvalBackend,
   );
@@ -266,14 +279,32 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
             `session. Do NOT retry this tool call with the same arguments.`,
         );
       }
-      // `signal` already folds in the session lifetime and the caller-supplied
-      // signal; `callSignal` is the optional per-call one.
+      // `sessionSignal` folds in the session lifetime and the caller-supplied
+      // signal; `callSignal` is the optional per-call one (an MCP cancellation).
       if (sessionSignal.aborted || callSignal?.aborted) {
         return failClosed(call.id, call.name, `Tool aborted before execution: ${call.name}`);
       }
 
-      // The one authorized path. Everything above only NARROWS what may reach it.
-      return await executor.executeSingle({
+      // Forward the per-call signal rather than only checking it at entry: an MCP
+      // cancellation arriving mid-flight has to actually stop the work.
+      //
+      // A `ToolExecutor` holds exactly one signal, and swapping it per call would
+      // race with concurrent calls carrying different signals. So a call that
+      // brings its own signal gets its own executor — cheap (it is a thin wrapper
+      // over the shared registry/permission/hooks) and free of shared mutable
+      // state. Calls without one use the shared executor unchanged.
+      if (!callSignal) {
+        // The one authorized path. Everything above only NARROWS what may reach it.
+        return await executor.executeSingle({
+          id: call.id,
+          toolName: call.name,
+          args: input,
+        });
+      }
+      const scoped = new ToolExecutor(registry, permission, hooks);
+      scoped.setContext(toolCtx);
+      scoped.setSignal(AbortSignal.any([sessionSignal, callSignal]));
+      return await scoped.executeSingle({
         id: call.id,
         toolName: call.name,
         args: input,

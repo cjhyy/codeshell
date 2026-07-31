@@ -54,7 +54,7 @@ describe("first-phase external tool exposure", () => {
       cwd: process.cwd(),
       registry,
       permissionMode: "default",
-      permissionRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
+      presetRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
       planMode: false,
       exposure: FIRST_PHASE_EXPOSURE,
       visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
@@ -96,6 +96,32 @@ describe("first-phase external tool exposure", () => {
     expect(panelCalls.some((c) => c.startsWith("invoke"))).toBe(false);
   });
 
+  test("the policy singleton cannot be widened at runtime", async () => {
+    // `ReadonlySet`/`ReadonlyMap` are compile-time only. This object is a
+    // process-wide singleton that execute() reads live, so a mutation anywhere
+    // would retroactively widen every running host — including re-enabling
+    // Panel.invoke, the one capability deliberately held back.
+    expect(() => (FIRST_PHASE_EXPOSURE.toolNames as Set<string>).add("Bash")).toThrow(/frozen/i);
+    expect(() => (FIRST_PHASE_EXPOSURE.toolNames as Set<string>).delete("Panel")).toThrow(
+      /frozen/i,
+    );
+    expect(() =>
+      (FIRST_PHASE_EXPOSURE.argsPatterns as Map<string, unknown>).delete("Panel"),
+    ).toThrow(/frozen/i);
+    expect(() =>
+      (FIRST_PHASE_EXPOSURE.argsPatterns as Map<string, unknown>).set("Panel", {}),
+    ).toThrow(/frozen/i);
+
+    // The nested pattern object is frozen too, so the action regex itself can't
+    // be swapped for a permissive one.
+    const patterns = FIRST_PHASE_EXPOSURE.argsPatterns?.get("Panel") as Record<string, string>;
+    expect(Object.isFrozen(patterns)).toBe(true);
+
+    // …and the policy still behaves after all those rejected attempts.
+    expect(FIRST_PHASE_EXPOSURE.toolNames.has("Panel")).toBe(true);
+    expect(FIRST_PHASE_EXPOSURE.toolNames.has("Bash")).toBe(false);
+  });
+
   test("an action that merely contains an allowed word is still rejected", async () => {
     // Guards against an unanchored pattern: "invoke_list" must not pass because
     // it contains "list".
@@ -105,7 +131,7 @@ describe("first-phase external tool exposure", () => {
       cwd: process.cwd(),
       registry,
       permissionMode: "default",
-      permissionRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
+      presetRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
       planMode: false,
       exposure: FIRST_PHASE_EXPOSURE,
       visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },

@@ -122,7 +122,7 @@ function makeHost(
     cwd: process.cwd(),
     registry,
     permissionMode: opts.permissionMode ?? "default",
-    permissionRules: CATALOG_RULES,
+    presetRules: CATALOG_RULES,
     planMode: opts.planMode ?? false,
     exposure: {
       mode: "allowlist",
@@ -178,7 +178,7 @@ describe("SessionToolHost", () => {
       cwd: process.cwd(),
       registry,
       permissionMode: "default" as const,
-      permissionRules: CATALOG_RULES,
+      presetRules: CATALOG_RULES,
       planMode: false,
       visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
       approvalBackend: { requestApproval: async () => ({ approved: true }) },
@@ -227,7 +227,7 @@ describe("SessionToolHost", () => {
       cwd: process.cwd(),
       registry,
       permissionMode: "default",
-      permissionRules: CATALOG_RULES,
+      presetRules: CATALOG_RULES,
       planMode: false,
       exposure: { mode: "allowlist", toolNames: new Set(["EchoRead"]) },
       visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
@@ -267,7 +267,7 @@ describe("SessionToolHost", () => {
       cwd: process.cwd(),
       registry,
       permissionMode: "default",
-      permissionRules: CATALOG_RULES,
+      presetRules: CATALOG_RULES,
       planMode: false,
       exposure: { mode: "allowlist", toolNames: new Set(["EchoRead"]) },
       visibility: { cwd: process.cwd(), hasGoal: false },
@@ -299,7 +299,7 @@ describe("SessionToolHost", () => {
           cwd: process.cwd(),
           registry: new ToolRegistry({ toolCatalog: catalog([]) }),
           permissionMode: mode as never,
-          permissionRules: CATALOG_RULES,
+          presetRules: CATALOG_RULES,
           planMode: false,
           exposure: { mode: "allowlist", toolNames: new Set(["EchoRead"]) },
           visibility: { cwd: process.cwd(), hasGoal: false },
@@ -451,7 +451,7 @@ describe("SessionToolHost", () => {
       cwd: process.cwd(),
       registry,
       permissionMode: "default",
-      permissionRules: [{ tool: "SlowTool", decision: "allow" }],
+      presetRules: [{ tool: "SlowTool", decision: "allow" }],
       planMode: false,
       exposure: { mode: "allowlist", toolNames: new Set(["SlowTool"]) },
       visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
@@ -467,6 +467,61 @@ describe("SessionToolHost", () => {
     const result = await inFlight;
     expect(result.isError).toBe(true);
     expect(record).toEqual([]);
+  });
+
+  test("a per-call signal cancels that call mid-flight", async () => {
+    // The per-call signal used to be checked only at entry, so an MCP
+    // cancellation arriving after the call started was a no-op.
+    const record: string[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const registry = new ToolRegistry({
+      toolCatalog: [
+        {
+          definition: {
+            name: "SlowTool",
+            description: "Blocks until released.",
+            inputSchema: { type: "object", properties: {} },
+            source: "builtin",
+            permissionDefault: "allow",
+            isReadOnly: true,
+            isConcurrencySafe: true,
+          },
+          execute: async (_args: Record<string, unknown>, ctx?: ToolContext) => {
+            await gate;
+            if (ctx?.signal?.aborted) throw new Error("aborted");
+            record.push("SlowTool");
+            return "done";
+          },
+          exposure: {
+            presetTags: ["general"],
+            defaultPermissionRules: [{ tool: "SlowTool", decision: "allow" }],
+          },
+        },
+      ] as unknown as BuiltinTool[],
+    });
+    const host = createSessionToolHost({
+      businessSessionId: "sess-callsignal",
+      cwd: process.cwd(),
+      registry,
+      permissionMode: "default",
+      presetRules: [{ tool: "SlowTool", decision: "allow" }],
+      planMode: false,
+      exposure: { mode: "allowlist", toolNames: new Set(["SlowTool"]) },
+      visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
+      approvalBackend: { requestApproval: async () => ({ approved: true }) },
+    });
+
+    const controller = new AbortController();
+    const inFlight = host.execute({ id: "cs1", name: "SlowTool", input: {} }, controller.signal);
+    controller.abort(); // cancellation arrives AFTER the call began
+    release();
+    const result = await inFlight;
+    expect(result.isError).toBe(true);
+    expect(record).toEqual([]);
+
+    // The session itself is unaffected — only that one call was cancelled.
+    expect(host.toolContext.signal?.aborted).toBe(false);
   });
 
   test("exposes the business session id it was created for", () => {
