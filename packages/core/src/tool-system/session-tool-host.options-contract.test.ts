@@ -16,8 +16,25 @@
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { createSessionToolHost, type CreateSessionToolHostOptions } from "./session-tool-host.js";
+import { ToolRegistry } from "./registry.js";
 
 const SOURCE = readFileSync(new URL("./session-tool-host.ts", import.meta.url), "utf8");
+
+/** A fully-specified, valid options object for the runtime half of the check. */
+function baseOptions(): CreateSessionToolHostOptions {
+  return {
+    businessSessionId: "sess-contract",
+    cwd: process.cwd(),
+    registry: new ToolRegistry({ builtinTools: [] }),
+    permissionMode: "default",
+    presetRules: [],
+    projectTrusted: false,
+    planMode: false,
+    exposure: { mode: "allowlist", toolNames: new Set<string>() },
+    visibility: { cwd: process.cwd(), hasGoal: false },
+  };
+}
 
 /**
  * Inputs where "not specified" must never silently resolve to the permissive
@@ -51,30 +68,91 @@ const MUST_BE_REQUIRED: ReadonlyArray<{ field: string; because: string }> = [
   },
 ];
 
-function optionsBlock(): string {
+/**
+ * Requiredness is asserted against the SOURCE TEXT, not with a compile-time
+ * `IsRequired<…>` helper, because `packages/core/tsconfig.json` excludes
+ * `src/**\/*.test.ts` — a type-level assertion living in a test file is never
+ * checked by any build, so it would look like a guard while enforcing nothing.
+ *
+ * The scan therefore has to cover both spellings of "may be absent":
+ * `field?: T` and `field: T | undefined`.
+ */
+function declarationOf(field: string): string {
   const start = SOURCE.indexOf("export interface CreateSessionToolHostOptions");
   expect(start).toBeGreaterThan(-1);
-  const end = SOURCE.indexOf("\n}", start);
-  return SOURCE.slice(start, end);
+  // Slice to the closing brace of the interface, tolerating nested object types.
+  let depth = 0;
+  let end = SOURCE.indexOf("{", start);
+  for (let i = end; i < SOURCE.length; i += 1) {
+    if (SOURCE[i] === "{") depth += 1;
+    else if (SOURCE[i] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  const block = SOURCE.slice(start, end);
+  const match = new RegExp(`^\\s*${field}(\\??):([^;]*);`, "m").exec(block);
+  expect(match).not.toBeNull();
+  return `${match![1]}:${match![2]}`;
 }
 
 describe("CreateSessionToolHostOptions contract", () => {
   test.each(MUST_BE_REQUIRED)("$field is required — $because", ({ field }) => {
-    const block = optionsBlock();
-    // Match the declaration, ignoring the doc comments above it.
-    const declaration = new RegExp(`^\\s*${field}(\\??):`, "m").exec(block);
-    expect(declaration).not.toBeNull();
-    // Group 1 is "?" when optional. It must be empty.
-    expect(declaration![1]).toBe("");
+    const declaration = declarationOf(field);
+    // Not optional...
+    expect(declaration.startsWith("?")).toBe(false);
+    // ...and does not admit `undefined`, which keeps the required marker while
+    // still allowing the "not specified" value through.
+    expect(/\bundefined\b/.test(declaration)).toBe(false);
   });
 
-  test("no security-relevant input acquires a fail-open default", () => {
-    // A `?? true`, `?? []` or `!== false` on one of these inside the factory
-    // would reintroduce the default that the required marker just removed.
+  test("omitting a required input does not silently yield a permissive host", () => {
+    // The runtime half. TypeScript would reject these calls, so go around the
+    // type to prove the VALUE is genuinely absent rather than quietly defaulted.
+    for (const { field } of MUST_BE_REQUIRED) {
+      const options = baseOptions();
+      delete (options as Record<string, unknown>)[field];
+      let built: { toolContext?: { planMode?: boolean } } | undefined;
+      try {
+        built = createSessionToolHost(options as never) as never;
+      } catch {
+        continue; // throwing on a missing required input is the correct outcome
+      }
+      if (field === "planMode") {
+        // The one field whose default would be silently observable: it must not
+        // have become `false` out of nowhere.
+        expect(built?.toolContext?.planMode).toBeUndefined();
+      }
+    }
+  });
+
+  test("no security-relevant input acquires a fail-open default in the factory", () => {
+    // Complements the type check: catches a default introduced INSIDE the
+    // factory body, where requiredness of the option cannot help. Covers the
+    // `??`, `||` and `!== false` spellings.
     const factory = SOURCE.slice(SOURCE.indexOf("export function createSessionToolHost"));
     for (const { field } of MUST_BE_REQUIRED) {
-      const fallback = new RegExp(`options\\.${field}\\s*(\\?\\?|\\|\\|)`).exec(factory);
+      const fallback = new RegExp(
+        `options\\.${field}\\s*(\\?\\?|\\|\\||!==\\s*false|===\\s*undefined)`,
+      ).exec(factory);
       expect(fallback).toBeNull();
     }
+    // Destructuring defaults are the other way in, and they are invisible to the
+    // per-field scan above.
+    expect(/const\s*\{[^}]*=\s*(true|false|\[\])[^}]*\}\s*=\s*options/.test(factory)).toBe(false);
+  });
+
+  test("composePermissionRules does not re-introduce a trusted-by-default", () => {
+    // The guard above protects session-tool-host.ts, but the value is CONSUMED
+    // one call away. `ComposePermissionRulesOptions.projectTrusted` is optional
+    // there (the Engine has its own defaulting), so the host must always pass an
+    // explicit value rather than relying on the callee's default.
+    const factory = SOURCE.slice(SOURCE.indexOf("export function createSessionToolHost"));
+    const composeCall = /composePermissionRules\(\{[\s\S]*?\}\)/.exec(factory);
+    expect(composeCall).not.toBeNull();
+    expect(composeCall![0]).toContain("projectTrusted: options.projectTrusted");
   });
 });

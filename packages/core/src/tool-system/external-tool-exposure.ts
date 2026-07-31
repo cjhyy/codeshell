@@ -151,7 +151,7 @@ function reject(): never {
  */
 function frozenSet<T>(values: Iterable<T>): ReadonlySet<T> {
   const inner = new Set(values);
-  return Object.freeze({
+  const view: ReadonlySet<T> = Object.freeze({
     has: (value: T) => inner.has(value),
     get size() {
       return inner.size;
@@ -159,19 +159,25 @@ function frozenSet<T>(values: Iterable<T>): ReadonlySet<T> {
     keys: () => inner.keys(),
     values: () => inner.values(),
     entries: () => inner.entries(),
+    // Pass the VIEW as the third argument, never `inner`. Set.prototype.forEach
+    // hands the callback the collection itself, so forwarding `inner` would leak
+    // a live mutable handle to the very object this wrapper exists to protect —
+    // `policy.forEach((_a, _b, s) => s.add("Bash"))` would widen it in one line,
+    // through the public frozen API, with no prototype tricks at all.
     forEach: (fn: (v: T, v2: T, s: ReadonlySet<T>) => void, thisArg?: unknown) =>
-      inner.forEach((a, b) => fn.call(thisArg, a, b, inner), thisArg),
+      inner.forEach((a, b) => fn.call(thisArg, a, b, view)),
     [Symbol.iterator]: () => inner[Symbol.iterator](),
     add: reject,
     delete: reject,
     clear: reject,
   }) as unknown as ReadonlySet<T>;
+  return view;
 }
 
 /** Same reasoning as {@link frozenSet}, for the args-pattern map. */
 function frozenMap<K, V>(entries: Iterable<readonly [K, V]>): ReadonlyMap<K, V> {
   const inner = new Map(entries);
-  return Object.freeze({
+  const view: ReadonlyMap<K, V> = Object.freeze({
     get: (key: K) => inner.get(key),
     has: (key: K) => inner.has(key),
     get size() {
@@ -180,13 +186,15 @@ function frozenMap<K, V>(entries: Iterable<readonly [K, V]>): ReadonlyMap<K, V> 
     keys: () => inner.keys(),
     values: () => inner.values(),
     entries: () => inner.entries(),
+    // See frozenSet.forEach — arg 3 must be the view, not `inner`.
     forEach: (fn: (v: V, k: K, m: ReadonlyMap<K, V>) => void, thisArg?: unknown) =>
-      inner.forEach((v, k) => fn.call(thisArg, v, k, inner), thisArg),
+      inner.forEach((v, k) => fn.call(thisArg, v, k, view)),
     [Symbol.iterator]: () => inner[Symbol.iterator](),
     set: reject,
     delete: reject,
     clear: reject,
   }) as unknown as ReadonlyMap<K, V>;
+  return view;
 }
 
 /** The phase-one policy. Pass to `createSessionToolHost({ exposure })`. */

@@ -122,6 +122,21 @@ describe("first-phase external tool exposure", () => {
       names.add("Bash");
     }).toThrow();
 
+    // forEach hands the callback the collection as its third argument. Passing
+    // the real backing Set/Map there would leak a live mutable handle through
+    // the public frozen API — one line, no prototype tricks:
+    //   policy.forEach((_a, _b, s) => s.add("Bash"))
+    expect(() =>
+      (FIRST_PHASE_EXPOSURE.toolNames as Set<string>).forEach((_a, _b, s) =>
+        (s as Set<string>).add("Bash"),
+      ),
+    ).toThrow(/frozen/i);
+    expect(() =>
+      (FIRST_PHASE_EXPOSURE.argsPatterns as Map<string, unknown>).forEach((_v, _k, m) =>
+        (m as Map<string, unknown>).delete("Panel"),
+      ),
+    ).toThrow(/frozen/i);
+
     // The nested pattern object is frozen too, so the action regex itself can't
     // be swapped for a permissive one.
     expect(Object.isFrozen(FIRST_PHASE_EXPOSURE.argsPatterns?.get("Panel"))).toBe(true);
