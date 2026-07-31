@@ -7,6 +7,11 @@ import {
   type DigitalHumansLibraryApi,
 } from "./useDigitalHumansLibrary";
 import { useDigitalHumanTeamDraft } from "./DigitalHumansView";
+import {
+  DIGITAL_HUMAN_TEAM_MEMBER_MAX,
+  DIGITAL_HUMAN_TEAM_NAME_LIMIT,
+  DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT,
+} from "../../shared/digital-human-team";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -219,6 +224,7 @@ describe("useDigitalHumanTeamDraft", () => {
     cleanup = hook.unmount;
 
     expect(hook.result.current.toTeam()).toEqual(team);
+    expect(hook.result.current.dirty).toBe(false);
     await act(async () => {
       hook.result.current.setName("Delivery v2");
       hook.result.current.setDescription("Updated description");
@@ -226,6 +232,7 @@ describe("useDigitalHumanTeamDraft", () => {
       await flushMicrotasks();
     });
 
+    expect(hook.result.current.dirty).toBe(true);
     expect(hook.result.current.toTeam()).toEqual({
       id: "delivery-team",
       name: "Delivery v2",
@@ -263,5 +270,38 @@ describe("useDigitalHumanTeamDraft", () => {
       members: ["researcher", "reviewer"],
       mode: "auto",
     });
+  });
+
+  test("caps the roster and rejects text beyond the persisted team limits", async () => {
+    ensureMiniDom();
+    const profiles = Array.from({ length: DIGITAL_HUMAN_TEAM_MEMBER_MAX + 1 }, (_, index) =>
+      profile(`member-${index}`),
+    );
+    const hook = await renderHook(() => useDigitalHumanTeamDraft(true, undefined, profiles));
+    cleanup = hook.unmount;
+
+    await act(async () => {
+      hook.result.current.setName("Bounded team");
+      for (const member of profiles) hook.result.current.toggleMember(member.name);
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.members.size).toBe(DIGITAL_HUMAN_TEAM_MEMBER_MAX);
+    expect(hook.result.current.members.has(profiles.at(-1)!.name)).toBe(false);
+    expect(hook.result.current.canSave).toBe(true);
+
+    await act(async () => {
+      hook.result.current.setName("x".repeat(DIGITAL_HUMAN_TEAM_NAME_LIMIT + 1));
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.canSave).toBe(false);
+    expect(hook.result.current.toTeam()).toBeNull();
+
+    await act(async () => {
+      hook.result.current.setName("Bounded team");
+      hook.result.current.setPlaybook("x".repeat(DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT + 1));
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.canSave).toBe(false);
+    expect(hook.result.current.toTeam()).toBeNull();
   });
 });

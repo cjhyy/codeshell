@@ -13,6 +13,47 @@ import {
 let home: string;
 let previousHome: string | undefined;
 
+function seedRepoTeamCatalog(): void {
+  const repoDir = join(home, "human-repos", "owner-repo");
+  mkdirSync(repoDir, { recursive: true });
+  writeFileSync(
+    join(home, "human-repos.json"),
+    JSON.stringify({ repos: [{ repo: "owner/repo", addedAt: 1 }] }),
+  );
+  writeFileSync(
+    join(repoDir, "humans.json"),
+    JSON.stringify({
+      name: "repo",
+      humans: [{ name: "researcher" }, { name: "developer" }],
+      teams: [
+        {
+          id: "repo-pair",
+          name: "Repo Pair",
+          members: ["researcher", "developer"],
+          lead: "researcher",
+        },
+      ],
+    }),
+  );
+  for (const name of ["researcher", "developer"]) {
+    const profileDir = join(repoDir, "humans", name);
+    mkdirSync(profileDir, { recursive: true });
+    writeFileSync(
+      join(profileDir, "profile.json"),
+      JSON.stringify({
+        name,
+        label: name,
+        basePreset: "general",
+        plugins: [],
+        skills: [],
+        mcp: [],
+        agents: [],
+        portableMemory: false,
+      }),
+    );
+  }
+}
+
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), "cs-digital-human-teams-"));
   previousHome = process.env.CODE_SHELL_HOME;
@@ -57,6 +98,43 @@ describe("digital-human team service", () => {
     ]);
     deleteDigitalHumanTeam("build-team");
     expect(listDigitalHumanTeams()).toEqual([]);
+  });
+
+  test("keeps repo provenance on a local override and restores the source on delete", () => {
+    seedRepoTeamCatalog();
+    expect(listDigitalHumanTeams()).toEqual([
+      expect.objectContaining({
+        id: "repo-pair",
+        name: "Repo Pair",
+        sourceRepo: "owner/repo",
+      }),
+    ]);
+
+    saveDigitalHumanTeam({
+      id: "repo-pair",
+      name: "My Repo Pair",
+      members: ["researcher", "developer"],
+      mode: "auto",
+      playbook: "Use my local workflow.",
+    });
+    expect(listDigitalHumanTeams()).toEqual([
+      expect.objectContaining({
+        id: "repo-pair",
+        name: "My Repo Pair",
+        sourceRepo: "owner/repo",
+        localOverride: true,
+      }),
+    ]);
+
+    deleteDigitalHumanTeam("repo-pair");
+    expect(listDigitalHumanTeams()).toEqual([
+      expect.objectContaining({
+        id: "repo-pair",
+        name: "Repo Pair",
+        sourceRepo: "owner/repo",
+      }),
+    ]);
+    expect(listDigitalHumanTeams()[0]?.localOverride).toBeUndefined();
   });
 
   test("rejects a team that references a missing digital human", () => {

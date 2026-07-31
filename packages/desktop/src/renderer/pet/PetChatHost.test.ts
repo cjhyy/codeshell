@@ -100,6 +100,44 @@ describe("PetChatHost", () => {
     });
   });
 
+  test("places a host-action receipt after its originating turn instead of after later chat", () => {
+    const rows = selectPetChatRows(
+      [
+        {
+          kind: "user",
+          id: "u1",
+          text: "完成待办",
+          clientMessageId: "pet-turn-1",
+        },
+        { kind: "assistant", id: "a1", text: "我来处理。", done: true },
+        {
+          kind: "user",
+          id: "u2",
+          text: "下一件事",
+          clientMessageId: "pet-turn-2",
+        },
+        { kind: "assistant", id: "a2", text: "请说。", done: true },
+      ],
+      [],
+      [],
+      [
+        {
+          clientMessageId: "pet-turn-1",
+          message: "待办已完成：「整理发布说明」。",
+          createdAt: 2,
+        },
+      ],
+    );
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "完成待办",
+      "我来处理。",
+      "待办已完成：「整理发布说明」。",
+      "下一件事",
+      "请说。",
+    ]);
+  });
+
   test("keeps automatic context compaction as an explicit history boundary", () => {
     expect(
       selectPetChatRows([

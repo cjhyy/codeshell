@@ -56,6 +56,11 @@ describe("skills-service listSkills", () => {
         .map((s) => s.name)
         .sort(),
     ).toEqual(["alpha", "beta"]);
+    expect(
+      Object.fromEntries(
+        listSkills(cwd, { includeDisabled: true }).map((skill) => [skill.name, skill.enabled]),
+      ),
+    ).toEqual({ alpha: true, beta: false });
   });
 
   test("honors project capabilityOverrides when filtering for mentions", () => {

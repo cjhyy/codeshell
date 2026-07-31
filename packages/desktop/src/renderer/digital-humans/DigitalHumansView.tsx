@@ -21,6 +21,10 @@ import {
   UsersRound,
 } from "lucide-react";
 import {
+  DIGITAL_HUMAN_TEAM_DESCRIPTION_LIMIT,
+  DIGITAL_HUMAN_TEAM_MEMBER_MAX,
+  DIGITAL_HUMAN_TEAM_MEMBER_MIN,
+  DIGITAL_HUMAN_TEAM_NAME_LIMIT,
   DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT,
   type DigitalHumanTeam,
   type DigitalHumanTeamMode,
@@ -55,11 +59,19 @@ import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
 import { DigitalHumanEditorDialog } from "./DigitalHumanEditorDialog";
 import { DigitalHumanMemoryDialog } from "./DigitalHumanMemoryDialog";
+import { ensureDigitalHumanRequirements } from "./profileRequirements";
 import type {
   DigitalHumanCatalogEntry,
   DigitalHumanProfileEntry,
   DigitalHumanSelection,
+  DigitalHumanSkillEntry,
   CuratedDigitalHumanTeam,
+} from "./types";
+import {
+  digitalHumanMissingSkillNames,
+  digitalHumanNamedProjectRequirementSkillNames,
+  hasDigitalHumanCatchAllSkillRequirement,
+  normalizeDigitalHumanSkillRepo,
 } from "./types";
 import { CURATED_DIGITAL_HUMAN_TEAMS, profileSamplePrompts } from "./marketplace";
 import { useDigitalHumanOperations, useDigitalHumansLibrary } from "./useDigitalHumansLibrary";
@@ -89,6 +101,7 @@ export interface DigitalHumanDeleteRequest {
 
 type DigitalHumanCategory = DigitalHumanCatalogEntry["category"];
 type MarketKind = "single" | "team";
+type DigitalHumanTab = "mine" | "teams" | "market";
 type DigitalHumanDetail =
   | { kind: "catalog"; entry: DigitalHumanCatalogEntry }
   | { kind: "profile"; profile: DigitalHumanProfileEntry }
@@ -101,8 +114,8 @@ function capabilityCount(profile: DigitalHumanProfileEntry): number {
   );
 }
 
-function modeKey(mode: DigitalHumanTeamMode): "auto" | "divide" | "compare" {
-  return mode;
+function sameMembers(left: Set<string>, right: string[]): boolean {
+  return left.size === right.length && right.every((member) => left.has(member));
 }
 
 export function DigitalHumansView({
@@ -119,6 +132,7 @@ export function DigitalHumansView({
     useDigitalHumansLibrary(activeProjectPath);
   const operations = useDigitalHumanOperations(refresh);
   const [query, setQuery] = React.useState("");
+  const [activeTab, setActiveTab] = React.useState<DigitalHumanTab>("mine");
   const [marketKind, setMarketKind] = React.useState<MarketKind>("single");
   const [detail, setDetail] = React.useState<DigitalHumanDetail | null>(null);
   const [teamEditor, setTeamEditor] = React.useState<{ team?: DigitalHumanTeam } | null>(null);
@@ -129,6 +143,11 @@ export function DigitalHumansView({
   );
   const [importPickerBusy, setImportPickerBusy] = React.useState(false);
   const importPickerLock = React.useRef(false);
+  const [selectionBusy, setSelectionBusy] = React.useState(false);
+  const selectionLock = React.useRef(false);
+  const [editorSaveFlowBusy, setEditorSaveFlowBusy] = React.useState(false);
+  const [editorInstallFlowBusy, setEditorInstallFlowBusy] = React.useState(false);
+  const editorSaveFlowLock = React.useRef(false);
 
   const run = async (
     key: string,
@@ -187,18 +206,17 @@ export function DigitalHumansView({
   // How many digital-human repos are registered. Purely informational on this
   // page (the full manager lives in settings), so a failed read is ignored.
   const [repoCount, setRepoCount] = React.useState(0);
+  const refreshRepoCount = React.useCallback(async () => {
+    try {
+      setRepoCount((await window.codeshell.listProfileRepos()).length);
+    } catch {
+      // The catalog itself remains usable when only this informational count
+      // cannot be read.
+    }
+  }, []);
   React.useEffect(() => {
-    let alive = true;
-    window.codeshell
-      .listProfileRepos()
-      .then((repos) => {
-        if (alive) setRepoCount(repos.length);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [catalog.length]);
+    void refreshRepoCount();
+  }, [catalog.length, refreshRepoCount]);
 
   const requestDelete = async (request: DigitalHumanDeleteRequest): Promise<boolean> => {
     if (confirmDelete) return confirmDelete(request);
@@ -220,14 +238,18 @@ export function DigitalHumansView({
 
   /** Write every library digital human out as a git-ready repo skeleton. */
   const publishProfileRepo = async () => {
-    await operations.run("publish-repo", async () => {
-      const result = await window.codeshell.exportProfileRepo(profiles.map((p) => p.name));
-      if ("canceled" in result) return;
-      toast({
-        message: t("digitalHumans.publish.done", { count: profiles.length }),
-        variant: "success",
-      });
-    });
+    await run(
+      "publish-repo",
+      async () => {
+        const result = await window.codeshell.exportProfileRepo(profiles.map((p) => p.name));
+        if ("canceled" in result) return;
+        toast({
+          message: t("digitalHumans.publish.done", { count: profiles.length }),
+          variant: "success",
+        });
+      },
+      { name: t("digitalHumans.publish.action") },
+    );
   };
 
   const deleteProfileEntry = async (profile: DigitalHumanProfileEntry) => {
@@ -338,13 +360,24 @@ export function DigitalHumansView({
 
   const deleteTeamEntry = async (team: DigitalHumanTeam) => {
     const clearsCurrentSelection = false;
-    const accepted = await requestDelete({
-      kind: "team",
-      id: team.id,
-      label: team.name,
-      clearsCurrentSelection,
-      clearsProjectDefault: false,
-    });
+    const accepted = team.localOverride
+      ? await confirm({
+          title: t("digitalHumans.team.restoreSourceTitle"),
+          message: t("digitalHumans.team.restoreSourceMessage", {
+            name: team.name,
+            repo: team.sourceRepo ?? "",
+          }),
+          detail: t("digitalHumans.team.restoreSourceDetail"),
+          confirmLabel: t("digitalHumans.team.restoreSource"),
+          destructive: true,
+        })
+      : await requestDelete({
+          kind: "team",
+          id: team.id,
+          label: team.name,
+          clearsCurrentSelection,
+          clearsProjectDefault: false,
+        });
     if (!accepted) return;
     await run(`delete-team:${team.id}`, () => window.codeshell.deleteDigitalHumanTeam(team.id), {
       name: team.name,
@@ -389,51 +422,18 @@ export function DigitalHumansView({
    *
    * 安装会克隆远程仓库并跑 `npx skills add`，属于执行远程代码，必须先把「将要
    * 发生什么」摊给用户看。返回 false 表示用户取消，调用方应中止启用。
-   * 依赖安装失败不阻断启用——数字人仍可用，只是部分能力缺失，如实告知即可。
+   * 依赖安装失败会阻断启用：继续创建一个已知缺能力的 Session，只会把安装错误
+   * 推迟成模型调用 `/skill` 时更难理解的失败。
    */
   const ensureProfileRequirements = async (name: string): Promise<boolean> => {
-    if (!activeProjectPath) return true;
-    let preview: Awaited<ReturnType<typeof window.codeshell.previewProfileRequirements>>;
-    try {
-      preview = await window.codeshell.previewProfileRequirements(name, activeProjectPath);
-    } catch {
-      // 预检本身失败不该挡住启用（例如老 profile 没有 requires）。
-      return true;
-    }
-    if (!preview.needsInstall && preview.blockers.length === 0) return true;
-
-    const detail = [...preview.willRun, ...preview.warnings, ...preview.blockers].join("\n");
-    if (!preview.needsInstall) {
-      // 没有可装的东西，只有装不了的外部依赖：告知即可，不做安装。
-      await confirm({
-        title: t("digitalHumans.requirements.blockedTitle"),
-        message: t("digitalHumans.requirements.blockedMessage"),
-        detail,
-        confirmLabel: t("common.confirm"),
-      });
-      return true;
-    }
-    if (
-      !(await confirm({
-        title: t("digitalHumans.requirements.installTitle"),
-        message: t("digitalHumans.requirements.installMessage"),
-        detail,
-        confirmLabel: t("digitalHumans.requirements.install"),
-      }))
-    ) {
-      return false;
-    }
-
-    const result = await window.codeshell.installProfileRequirements(name, activeProjectPath);
-    if (!result.ok) {
-      toast({
-        message: t("digitalHumans.requirements.installFailed", {
-          error: result.errors.join("; "),
-        }),
-        variant: "error",
-      });
-    }
-    return true;
+    return ensureDigitalHumanRequirements({
+      name,
+      projectPath: activeProjectPath,
+      api: window.codeshell,
+      confirm,
+      toast,
+      t,
+    });
   };
 
   /**
@@ -451,6 +451,7 @@ export function DigitalHumansView({
    */
   const ensureSelectionRequirements = async (
     selection: DigitalHumanSelection,
+    knownInstalledNames: readonly string[] = [],
   ): Promise<boolean> => {
     const names = selection.kind === "single" ? [selection.id] : selection.members;
     // Install any member missing from the library FIRST. A team definition names
@@ -458,7 +459,14 @@ export function DigitalHumansView({
     // created their Sessions, and the lead's first SendMessageToSession then died
     // with "Workspace profile … is unavailable". Summoning a team must bring the
     // whole roster.
-    const installedNames = new Set(profiles.map((profile) => profile.name));
+    // A market install refreshes the library before this call, but the current
+    // render closure still contains the previous `profiles` array. Carry the
+    // names committed in this same action so "Add and summon" cannot install
+    // the same profile twice while React applies the refreshed state.
+    const installedNames = new Set([
+      ...profiles.map((profile) => profile.name),
+      ...knownInstalledNames,
+    ]);
     const missing = names.filter((name) => !installedNames.has(name));
     for (const name of missing) {
       const entry = catalog.find((candidate) => candidate.name === name);
@@ -486,10 +494,22 @@ export function DigitalHumansView({
   };
 
   /** Single choke point: every summon path goes through the dependency gate. */
-  const useSelection = (selection: DigitalHumanSelection, starterPrompt?: string): void => {
+  const useSelection = (
+    selection: DigitalHumanSelection,
+    starterPrompt?: string,
+    knownInstalledNames: readonly string[] = [],
+  ): void => {
+    if (selectionLock.current) return;
+    selectionLock.current = true;
+    setSelectionBusy(true);
     void (async () => {
-      if (!(await ensureSelectionRequirements(selection))) return;
-      onUse(selection, starterPrompt);
+      try {
+        if (!(await ensureSelectionRequirements(selection, knownInstalledNames))) return;
+        onUse(selection, starterPrompt);
+      } finally {
+        selectionLock.current = false;
+        setSelectionBusy(false);
+      }
     })();
   };
 
@@ -503,16 +523,22 @@ export function DigitalHumansView({
         overwrite = true;
       }
 
-      let committed = await window.codeshell.importReviewedProfileDefinition({
-        reviewToken: preview.reviewToken,
-        ...(overwrite ? { overwrite: true } : {}),
-      });
+      let committed = await window.codeshell.importReviewedProfileDefinition(
+        {
+          reviewToken: preview.reviewToken,
+          ...(overwrite ? { overwrite: true } : {}),
+        },
+        activeProjectPath ?? undefined,
+      );
       if (!committed.ok && committed.alreadyExists && !overwrite) {
         if (!(await confirmProfileOverwrite(preview))) return { canceled: true } as const;
-        committed = await window.codeshell.importReviewedProfileDefinition({
-          reviewToken: preview.reviewToken,
-          overwrite: true,
-        });
+        committed = await window.codeshell.importReviewedProfileDefinition(
+          {
+            reviewToken: preview.reviewToken,
+            overwrite: true,
+          },
+          activeProjectPath ?? undefined,
+        );
       }
       return { canceled: false, committed } as const;
     });
@@ -587,7 +613,9 @@ export function DigitalHumansView({
       );
       if (!installed) return;
     }
-    useSelection({ kind: "single", id: entry.name, label: entry.label }, starterPrompt);
+    useSelection({ kind: "single", id: entry.name, label: entry.label }, starterPrompt, [
+      entry.name,
+    ]);
   };
 
   const launchCuratedTeam = async (
@@ -642,11 +670,13 @@ export function DigitalHumansView({
         team: {
           id: blueprint.id,
           name: blueprint.name,
+          description: blueprint.description,
           members: [...blueprint.members],
           mode: blueprint.mode,
         },
       },
       starterPrompt,
+      blueprint.members,
     );
   };
 
@@ -681,112 +711,231 @@ export function DigitalHumansView({
   };
 
   const detailBusy =
-    detail?.kind === "catalog"
+    selectionBusy ||
+    (detail?.kind === "catalog"
       ? operations.isBusy(`install:${detail.entry.name}`)
       : detail?.kind === "curated-team"
         ? operations.isBusy(`install-team:${detail.team.id}`)
-        : false;
+        : false);
+  const activeProfile = profiles.find((profile) => profile.active);
+  const activeProjectName =
+    activeProjectPath?.split(/[\\/]/).filter(Boolean).at(-1) ?? t("digitalHumans.workspace.none");
+  const activeSection =
+    activeTab === "mine"
+      ? {
+          title: t("digitalHumans.sections.mineTitle"),
+          description: t("digitalHumans.sections.mineDescription"),
+          count: visibleProfiles.length,
+        }
+      : activeTab === "teams"
+        ? {
+            title: t("digitalHumans.sections.teamsTitle"),
+            description: t("digitalHumans.sections.teamsDescription"),
+            count: visibleTeams.length,
+          }
+        : {
+            title: t("digitalHumans.sections.marketTitle"),
+            description: t("digitalHumans.sections.marketDescription"),
+            count: marketKind === "single" ? visibleCatalog.length : visibleCuratedTeams.length,
+          };
 
   return (
-    <section className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background">
-      <header className="border-b border-border/70 px-6 py-5">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="mb-1 flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <UsersRound size={18} aria-hidden="true" />
-              </span>
-              <h1 className="text-xl font-semibold tracking-tight">{t("digitalHumans.title")}</h1>
-            </div>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              {t("digitalHumans.subtitle")}
-            </p>
-          </div>
-          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void pickProfileDefinitionImport()}
-              disabled={importPickerBusy}
-            >
-              {importPickerBusy ? (
-                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
-              ) : (
-                <Upload size={14} aria-hidden="true" />
-              )}
-              {t("digitalHumans.transfer.importDefinition")}
-            </Button>
-            <Button size="sm" onClick={() => setEditor({})}>
-              <Plus size={14} aria-hidden="true" />
-              {t("digitalHumans.editor.create")}
-            </Button>
-            <div className="relative w-full sm:w-72">
-              <Search
-                size={15}
-                className="pointer-events-none absolute left-3 top-2.5 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="pl-9"
-                placeholder={t("digitalHumans.search")}
-                aria-label={t("digitalHumans.searchLabel")}
-              />
-            </div>
-          </div>
-        </div>
-      </header>
+    <section className="digital-human-page-shell flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-8 lg:py-7">
+        <div className="mx-auto w-full max-w-7xl">
+          <header className="digital-human-hero relative overflow-hidden rounded-2xl border border-border/70 px-5 py-5 sm:px-7 sm:py-6">
+            <div className="relative z-10 flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
+              <div className="max-w-2xl">
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                  {t("digitalHumans.eyebrow")}
+                </p>
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary shadow-sm">
+                    <UsersRound size={20} aria-hidden="true" />
+                  </span>
+                  <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
+                    {t("digitalHumans.title")}
+                  </h1>
+                </div>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+                  {t("digitalHumans.subtitle")}
+                </p>
+              </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <div className="mx-auto w-full max-w-6xl">
-          {status === "loading" ? (
-            <EmptyState
-              Icon={Loader2}
-              iconClassName="animate-spin"
-              title={t("digitalHumans.loading")}
-              description={t("digitalHumans.loadingDescription")}
-            />
-          ) : status === "error" ? (
-            <ErrorState
-              error={error ?? t("digitalHumans.loadFailed")}
-              onRetry={() => void refresh()}
-            />
-          ) : (
-            <>
-              {error ? (
-                <div
-                  className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-status-err/30 bg-status-err/5 px-3 py-2 text-sm text-status-err"
-                  role="alert"
-                >
-                  <span>{error}</span>
-                  <Button size="sm" variant="outline" onClick={() => void refresh()}>
-                    <RefreshCw size={13} aria-hidden="true" />
-                    {t("digitalHumans.retry")}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <dl className="grid grid-cols-3 gap-5 border-y border-border/60 py-3 sm:border-y-0 sm:border-r sm:py-0 sm:pr-5">
+                  <HeroMetric value={profiles.length} label={t("digitalHumans.metrics.people")} />
+                  <HeroMetric value={teams.length} label={t("digitalHumans.metrics.teams")} />
+                  <HeroMetric value={repoCount} label={t("digitalHumans.metrics.sources")} />
+                </dl>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void pickProfileDefinitionImport()}
+                    disabled={importPickerBusy}
+                    className="bg-background/70"
+                  >
+                    {importPickerBusy ? (
+                      <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Upload size={14} aria-hidden="true" />
+                    )}
+                    {t("digitalHumans.transfer.importDefinition")}
+                  </Button>
+                  <Button size="sm" onClick={() => setEditor({})}>
+                    <Plus size={14} aria-hidden="true" />
+                    {t("digitalHumans.editor.create")}
                   </Button>
                 </div>
-              ) : null}
-              {status === "refreshing" ? (
-                <div
-                  className="mb-4 flex items-center gap-2 text-xs text-muted-foreground"
-                  role="status"
+              </div>
+            </div>
+          </header>
+
+          {status === "loading" ? (
+            <div className="mt-5 rounded-xl border border-border/70 bg-card/80">
+              <EmptyState
+                Icon={Loader2}
+                iconClassName="animate-spin"
+                title={t("digitalHumans.loading")}
+                description={t("digitalHumans.loadingDescription")}
+              />
+            </div>
+          ) : status === "error" ? (
+            <div className="mt-5 rounded-xl border border-border/70 bg-card/80">
+              <ErrorState
+                error={error ?? t("digitalHumans.loadFailed")}
+                onRetry={() => void refresh()}
+              />
+            </div>
+          ) : (
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => setActiveTab(value as DigitalHumanTab)}
+              className="mt-5 flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start"
+            >
+              <aside className="w-full shrink-0 lg:sticky lg:top-0 lg:w-56">
+                <TabsList
+                  className="digital-human-nav grid h-auto w-full grid-cols-3 gap-1 rounded-xl border-border/70 bg-card/85 p-1.5 shadow-sm lg:flex lg:flex-col"
+                  aria-label={t("digitalHumans.navigationLabel")}
                 >
-                  <Loader2 size={13} className="animate-spin" aria-hidden="true" />
-                  {t("digitalHumans.refreshing")}
-                </div>
-              ) : null}
-              <Tabs defaultValue="market">
-                <TabsList className="mb-1">
-                  <TabsTrigger value="market">{t("digitalHumans.tabs.market")}</TabsTrigger>
-                  <TabsTrigger value="mine">{t("digitalHumans.tabs.mine")}</TabsTrigger>
-                  <TabsTrigger value="teams">{t("digitalHumans.tabs.teams")}</TabsTrigger>
+                  <TabsTrigger
+                    value="mine"
+                    className="digital-human-nav-item h-11 justify-start gap-2.5 px-3"
+                  >
+                    <UserRound size={15} aria-hidden="true" />
+                    <span className="min-w-0 truncate">{t("digitalHumans.tabs.mine")}</span>
+                    <span className="ml-auto hidden text-xs tabular-nums text-muted-foreground lg:inline">
+                      {profiles.length}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="teams"
+                    className="digital-human-nav-item h-11 justify-start gap-2.5 px-3"
+                  >
+                    <UsersRound size={15} aria-hidden="true" />
+                    <span className="min-w-0 truncate">{t("digitalHumans.tabs.teams")}</span>
+                    <span className="ml-auto hidden text-xs tabular-nums text-muted-foreground lg:inline">
+                      {teams.length}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="market"
+                    className="digital-human-nav-item h-11 justify-start gap-2.5 px-3"
+                  >
+                    <Sparkles size={15} aria-hidden="true" />
+                    <span className="min-w-0 truncate">{t("digitalHumans.tabs.market")}</span>
+                    <span className="ml-auto hidden text-xs tabular-nums text-muted-foreground lg:inline">
+                      {catalog.length + CURATED_DIGITAL_HUMAN_TEAMS.length}
+                    </span>
+                  </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="market" className="mt-5">
+                <div className="mt-3 hidden rounded-xl border border-border/70 bg-card/70 p-4 lg:block">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {t("digitalHumans.workspace.title")}
+                  </p>
+                  <p className="mt-2 truncate text-sm font-medium" title={activeProjectPath ?? ""}>
+                    {activeProjectName}
+                  </p>
+                  <div className="mt-3 flex items-center gap-2 border-t border-border/60 pt-3">
+                    <span
+                      className={cn(
+                        "h-2 w-2 shrink-0 rounded-full",
+                        activeProfile ? "bg-status-ok" : "bg-muted-foreground/35",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <p className="min-w-0 truncate text-xs text-muted-foreground">
+                      {activeProfile
+                        ? t("digitalHumans.workspace.default", { name: activeProfile.label })
+                        : t("digitalHumans.workspace.unassigned")}
+                    </p>
+                  </div>
+                </div>
+              </aside>
+
+              <div className="min-w-0 flex-1 rounded-xl border border-border/70 bg-card/85 p-4 shadow-sm sm:p-5">
+                {error ? (
+                  <div
+                    className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-status-err/30 bg-status-err/5 px-3 py-2 text-sm text-status-err"
+                    role="alert"
+                  >
+                    <span>{error}</span>
+                    <Button size="sm" variant="outline" onClick={() => void refresh()}>
+                      <RefreshCw size={13} aria-hidden="true" />
+                      {t("digitalHumans.retry")}
+                    </Button>
+                  </div>
+                ) : null}
+                {status === "refreshing" ? (
+                  <div
+                    className="mb-4 flex items-center gap-2 text-xs text-muted-foreground"
+                    role="status"
+                  >
+                    <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                    {t("digitalHumans.refreshing")}
+                  </div>
+                ) : null}
+
+                <div className="mb-5 flex flex-col justify-between gap-3 border-b border-border/60 pb-4 lg:flex-row lg:items-end">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold tracking-tight">
+                        {activeSection.title}
+                      </h2>
+                      <Badge variant="secondary">{activeSection.count}</Badge>
+                    </div>
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+                      {activeSection.description}
+                    </p>
+                  </div>
+                  <div className="relative w-full shrink-0 sm:w-64">
+                    <Search
+                      size={15}
+                      className="pointer-events-none absolute left-3 top-2.5 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      className="bg-background/80 pl-9"
+                      placeholder={t("digitalHumans.search")}
+                      aria-label={t("digitalHumans.searchLabel")}
+                    />
+                  </div>
+                </div>
+
+                <TabsContent value="market" className="mt-0">
                   {/* Adding a repo belongs here, not only in settings: this is
                       the page where you notice the market is empty. */}
                   <AddRepoRow
-                    onAdded={() => void refresh()}
+                    onAdded={() => {
+                      void refresh();
+                      // A valid repo may contain zero valid definitions, so a
+                      // catalog-length effect alone cannot keep this count fresh.
+                      void refreshRepoCount();
+                    }}
                     repoCount={repoCount}
                     onManage={onOpenSettings}
                   />
@@ -800,12 +949,12 @@ export function DigitalHumansView({
                     />
                   ) : (
                     <>
-                      <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
+                      <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h2 className="text-base font-semibold tracking-tight">
+                            <h3 className="text-sm font-semibold tracking-tight">
                               {t("digitalHumans.market.browseTitle")}
-                            </h2>
+                            </h3>
                             <Badge variant="secondary">
                               {marketKind === "single"
                                 ? visibleCatalog.length
@@ -852,7 +1001,7 @@ export function DigitalHumansView({
                               <CatalogCard
                                 key={entry.name}
                                 entry={entry}
-                                busy={operations.isBusy(`install:${entry.name}`)}
+                                busy={selectionBusy || operations.isBusy(`install:${entry.name}`)}
                                 onDetails={() => setDetail({ kind: "catalog", entry })}
                                 onLaunch={() => void launchCatalogEntry(entry)}
                               />
@@ -869,7 +1018,7 @@ export function DigitalHumansView({
                               team={team}
                               catalogByName={catalogByName}
                               installed={teams.some((candidate) => candidate.id === team.id)}
-                              busy={operations.isBusy(`install-team:${team.id}`)}
+                              busy={selectionBusy || operations.isBusy(`install-team:${team.id}`)}
                               onDetails={() => setDetail({ kind: "curated-team", team })}
                               onLaunch={() => void launchCuratedTeam(team)}
                             />
@@ -880,7 +1029,7 @@ export function DigitalHumansView({
                   )}
                 </TabsContent>
 
-                <TabsContent value="mine" className="mt-5">
+                <TabsContent value="mine" className="mt-0">
                   {profiles.length > 0 ? (
                     // Publishing is the missing half of sharing: a single JSON
                     // has to be hand-delivered, whereas a repo layout can be
@@ -901,10 +1050,10 @@ export function DigitalHumansView({
                     </div>
                   ) : null}
                   {profiles.length === 0 ? (
-                    <EmptyState
-                      Icon={Brain}
-                      title={t("digitalHumans.empty.title")}
-                      description={t("digitalHumans.empty.description")}
+                    <LibraryEmptyState
+                      onCreate={() => setEditor({})}
+                      onImport={() => void pickProfileDefinitionImport()}
+                      importBusy={importPickerBusy}
                     />
                   ) : visibleProfiles.length === 0 ? (
                     <SearchEmptyState />
@@ -914,8 +1063,19 @@ export function DigitalHumansView({
                         <ProfileCard
                           key={profile.name}
                           profile={profile}
+                          missingSkillCount={
+                            digitalHumanMissingSkillNames(
+                              profile.skills,
+                              profile.requires,
+                              availableSkills,
+                            ).length
+                          }
+                          requirementsNeedReview={hasDigitalHumanCatchAllSkillRequirement(
+                            profile.requires,
+                          )}
                           hasProject={Boolean(activeProjectPath)}
                           busy={
+                            selectionBusy ||
                             operations.isBusy(`profile:${profile.name}`) ||
                             operations.isBusy(`delete-profile:${profile.name}`) ||
                             operations.isBusy(`export-profile:${profile.name}`)
@@ -953,10 +1113,10 @@ export function DigitalHumansView({
                   )}
                 </TabsContent>
 
-                <TabsContent value="teams" className="mt-5">
+                <TabsContent value="teams" className="mt-0">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-sm font-medium">{t("digitalHumans.team.title")}</h2>
+                      <h3 className="text-sm font-medium">{t("digitalHumans.team.title")}</h3>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {t("digitalHumans.team.description")}
                       </p>
@@ -998,7 +1158,7 @@ export function DigitalHumansView({
                           memberLabels={team.members.map(
                             (member) => profileByName.get(member)?.label ?? member,
                           )}
-                          busy={operations.isBusy(`delete-team:${team.id}`)}
+                          busy={selectionBusy || operations.isBusy(`delete-team:${team.id}`)}
                           onUse={() =>
                             useSelection({
                               kind: "team",
@@ -1011,14 +1171,15 @@ export function DigitalHumansView({
                           }
                           onDetails={() => setDetail({ kind: "team", team })}
                           onEdit={() => setTeamEditor({ team })}
+                          onManageSource={team.sourceRepo ? onOpenSettings : undefined}
                           onDelete={() => void deleteTeamEntry(team)}
                         />
                       ))}
                     </div>
                   )}
                 </TabsContent>
-              </Tabs>
-            </>
+              </div>
+            </Tabs>
           )}
         </div>
       </div>
@@ -1029,22 +1190,101 @@ export function DigitalHumansView({
         existingIds={profiles.map((profile) => profile.name)}
         skills={availableSkills.filter((skill) => skill.source !== "project")}
         projectSkills={availableSkills.filter((skill) => skill.source === "project")}
-        busy={operations.isBusy("save-profile")}
+        projectPath={activeProjectPath}
+        busy={editorSaveFlowBusy || operations.isBusy("save-profile")}
+        installing={editorInstallFlowBusy}
+        onRequirementsInstalled={refresh}
         onOpenChange={(open) => {
           if (!open) setEditor(null);
         }}
-        onSave={(profile) => {
+        onSave={(profile, options) => {
+          if (editorSaveFlowLock.current) return;
+          editorSaveFlowLock.current = true;
+          setEditorSaveFlowBusy(true);
+          setEditorInstallFlowBusy(Boolean(options?.installRequirements));
           void (async () => {
-            const saved = await run("save-profile", () => window.codeshell.saveProfile(profile), {
-              name: profile.label,
-            });
-            if (saved) setEditor(null);
+            try {
+              const saved = await run(
+                "save-profile",
+                () => window.codeshell.saveProfile(profile, activeProjectPath ?? undefined),
+                { name: profile.label },
+              );
+              if (!saved) return;
+              if (options?.installRequirements) {
+                if (await ensureProfileRequirements(profile.name)) {
+                  setEditor(null);
+                } else {
+                  // Saving the new source succeeded even when install review was
+                  // cancelled or installation failed. Refresh the editor's
+                  // baseline so closing it does not claim those saved changes
+                  // are still unsaved, and expose the normal retry action.
+                  setEditor((current) =>
+                    current
+                      ? {
+                          profile: {
+                            ...profile,
+                            active: current.profile?.active ?? false,
+                          },
+                        }
+                      : current,
+                  );
+                }
+                return;
+              }
+              setEditor(null);
+            } finally {
+              editorSaveFlowLock.current = false;
+              setEditorSaveFlowBusy(false);
+              setEditorInstallFlowBusy(false);
+            }
           })();
         }}
       />
 
       <DigitalHumanMemoryDialog
         profile={memoryProfile}
+        enabling={
+          memoryProfile ? operations.isBusy(`enable-profile-memory:${memoryProfile.name}`) : false
+        }
+        onEnable={
+          memoryProfile
+            ? () => {
+                const profile = memoryProfile;
+                void (async () => {
+                  const { active: _active, ...definition } = profile;
+                  const result = await operations.run(`enable-profile-memory:${profile.name}`, () =>
+                    window.codeshell.saveProfile(
+                      { ...definition, portableMemory: true },
+                      activeProjectPath ?? undefined,
+                    ),
+                  );
+                  if (!result.ok) {
+                    if (!result.duplicate) {
+                      toast({
+                        message: t("digitalHumans.actionFailed", {
+                          name: profile.label,
+                          message:
+                            result.error instanceof Error
+                              ? result.error.message
+                              : String(result.error),
+                        }),
+                        variant: "error",
+                      });
+                    }
+                    return;
+                  }
+                  setMemoryProfile((current) =>
+                    current?.name === profile.name ? { ...current, portableMemory: true } : current,
+                  );
+                  await refresh();
+                  toast({
+                    message: t("digitalHumans.memory.enabled", { name: profile.label }),
+                    variant: "success",
+                  });
+                })();
+              }
+            : undefined
+        }
         onOpenChange={(open) => {
           if (!open) setMemoryProfile(null);
         }}
@@ -1064,6 +1304,7 @@ export function DigitalHumansView({
         profiles={profiles}
         catalog={catalog}
         teams={teams}
+        availableSkills={availableSkills}
         busy={detailBusy}
         onOpenChange={(open) => {
           if (!open) setDetail(null);
@@ -1146,20 +1387,6 @@ function ProfileDefinitionImportDialog({
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">
-                {t("digitalHumans.transfer.basePreset")}
-              </dt>
-              <dd className="mt-1 font-medium">{preview.basePreset}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">
-                {t("digitalHumans.transfer.version")}
-              </dt>
-              <dd className="mt-1 font-medium">
-                {preview.version ?? t("digitalHumans.transfer.notSpecified")}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">
                 {t("digitalHumans.transfer.portableMemory")}
               </dt>
               <dd className="mt-1 font-medium">
@@ -1212,6 +1439,17 @@ function categoryTone(category: DigitalHumanCategory): string {
   return "bg-status-ok/10 text-status-ok";
 }
 
+function identityTone(id: string): string {
+  const tones = [
+    "border-primary/15 bg-primary/10 text-primary",
+    "border-status-running/15 bg-status-running/10 text-status-running",
+    "border-status-ok/15 bg-status-ok/10 text-status-ok",
+    "border-status-warn/15 bg-status-warn/10 text-status-warn",
+  ];
+  const seed = [...id].reduce((total, character) => total + character.charCodeAt(0), 0);
+  return tones[seed % tones.length]!;
+}
+
 function initials(label: string): string {
   const words = label.trim().split(/\s+/).filter(Boolean);
   if (words.length > 1)
@@ -1239,8 +1477,8 @@ function DigitalHumanAvatar({
   return (
     <span
       className={cn(
-        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-semibold",
-        category ? categoryTone(category) : "bg-muted text-muted-foreground",
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-transparent text-xs font-semibold shadow-sm",
+        category ? categoryTone(category) : identityTone(id),
         className,
       )}
       data-digital-human-avatar={id}
@@ -1265,7 +1503,7 @@ function CatalogCard({
   const { t } = useT();
   return (
     <Card
-      className="group flex min-h-52 flex-col transition-colors hover:border-primary/30"
+      className="digital-human-card group flex min-h-52 flex-col overflow-hidden transition-all"
       data-digital-human-card={entry.name}
     >
       <CardHeader className="pb-3">
@@ -1300,7 +1538,7 @@ function CatalogCard({
           </Badge>
         ))}
       </CardContent>
-      <CardFooter className="justify-between gap-2 border-t border-border/60 pt-3">
+      <CardFooter className="justify-between gap-2 border-t border-border/60 bg-muted/15 p-3.5">
         <Button size="sm" variant="ghost" className="px-2" onClick={onDetails}>
           {t("digitalHumans.market.details")}
           <ChevronRight size={13} aria-hidden="true" />
@@ -1336,7 +1574,7 @@ function CuratedTeamCard({
   const { t } = useT();
   return (
     <Card
-      className="group flex min-h-60 flex-col transition-colors hover:border-primary/30"
+      className="digital-human-card group flex min-h-60 flex-col overflow-hidden transition-all"
       data-curated-team-card={team.id}
     >
       <CardHeader className="pb-3">
@@ -1379,7 +1617,7 @@ function CuratedTeamCard({
           ))}
         </div>
       </CardContent>
-      <CardFooter className="justify-between gap-2 border-t border-border/60 pt-3">
+      <CardFooter className="justify-between gap-2 border-t border-border/60 bg-muted/15 p-3.5">
         <Button size="sm" variant="ghost" className="px-2" onClick={onDetails}>
           {t("digitalHumans.market.details")}
           <ChevronRight size={13} aria-hidden="true" />
@@ -1399,6 +1637,8 @@ function CuratedTeamCard({
 
 function ProfileCard({
   profile,
+  missingSkillCount,
+  requirementsNeedReview,
   hasProject,
   busy,
   onUse,
@@ -1410,6 +1650,8 @@ function ProfileCard({
   onToggleDefault,
 }: {
   profile: DigitalHumanProfileEntry;
+  missingSkillCount: number;
+  requirementsNeedReview: boolean;
   hasProject: boolean;
   busy: boolean;
   onUse: () => void;
@@ -1422,19 +1664,42 @@ function ProfileCard({
 }) {
   const { t } = useT();
   const count = capabilityCount(profile);
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const runMenuAction = (action: () => void) => {
+    setMenuOpen(false);
+    action();
+  };
   return (
-    <Card className="flex min-h-64 flex-col transition-colors hover:border-primary/30">
-      <CardHeader className="pb-3">
+    <Card
+      data-digital-human-card={profile.name}
+      className={cn(
+        "digital-human-card group flex min-h-64 flex-col overflow-hidden transition-all",
+        profile.active && "border-primary/35",
+      )}
+    >
+      <CardHeader className="p-5 pb-3">
         <div className="flex items-start gap-3">
-          <DigitalHumanAvatar id={profile.name} label={profile.label} />
+          <DigitalHumanAvatar
+            id={profile.name}
+            label={profile.label}
+            className="h-12 w-12 rounded-xl text-sm"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <CardTitle className="truncate text-sm">{profile.label}</CardTitle>
-              {profile.active ? (
-                <Badge variant="accent" className="shrink-0">
-                  {t("digitalHumans.current")}
+              <CardTitle className="line-clamp-2 pt-0.5 text-base leading-5">
+                {profile.label}
+              </CardTitle>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <Badge variant="success">
+                  <Check size={11} className="mr-1" aria-hidden="true" />
+                  {t("digitalHumans.localInstalled")}
                 </Badge>
-              ) : null}
+                {profile.active ? (
+                  <Badge variant="accent" className="border border-primary/15">
+                    {t("digitalHumans.current")}
+                  </Badge>
+                ) : null}
+              </div>
             </div>
             <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
               {profile.name}
@@ -1445,10 +1710,18 @@ function ProfileCard({
           {profile.description ?? t("digitalHumans.noDescription")}
         </p>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5 pb-3">
-        <Badge variant="secondary">{profile.basePreset}</Badge>
+      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5 px-5 pb-4">
         {count > 0 ? (
           <Badge variant="secondary">{t("digitalHumans.capabilityCount", { count })}</Badge>
+        ) : null}
+        {profile.skills.length > 0 || requirementsNeedReview ? (
+          <Badge variant={missingSkillCount > 0 || requirementsNeedReview ? "warning" : "success"}>
+            {missingSkillCount > 0
+              ? t("digitalHumans.skillReadiness.missing", { count: missingSkillCount })
+              : requirementsNeedReview
+                ? t("digitalHumans.skillReadiness.review")
+                : t("digitalHumans.skillReadiness.ready")}
+          </Badge>
         ) : null}
         {profile.portableMemory ? (
           <Badge variant="secondary">{t("digitalHumans.portableMemory")}</Badge>
@@ -1457,7 +1730,7 @@ function ProfileCard({
       {/* One primary action; everything else collapses into an overflow menu.
           The old footer put 7 controls in a row — 4 of them same-weight icon
           buttons — so nothing read as the thing you were meant to click. */}
-      <CardFooter className="items-center gap-2 border-t border-border/60 pt-3">
+      <CardFooter className="items-center gap-2 border-t border-border/60 bg-muted/15 p-3.5">
         <Button
           size="sm"
           className="flex-1"
@@ -1468,19 +1741,10 @@ function ProfileCard({
           <Sparkles size={13} aria-hidden="true" />
           {t("digitalHumans.summon")}
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="shrink-0"
-          onClick={onToggleDefault}
-          disabled={!hasProject || busy}
-          title={
-            hasProject ? t("digitalHumans.setProjectDefaultHint") : t("digitalHumans.pickProject")
-          }
-        >
-          {profile.active ? t("digitalHumans.clearDefault") : t("digitalHumans.setProjectDefault")}
-        </Button>
-        <DropdownMenu>
+        {/* These actions can open a Dialog (details/edit/memory/delete).
+            A modal Radix menu keeps document pointer events locked while its
+            Dialog mounts and can leave the page inert after the Dialog closes. */}
+        <DropdownMenu modal={false} open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               size="icon"
@@ -1493,29 +1757,43 @@ function ProfileCard({
               <MoreHorizontal size={15} aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onSelect={onDetails}>
-              <ChevronRight size={13} aria-hidden="true" />
-              {t("digitalHumans.market.details")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={onEdit}>
-              <Pencil size={13} aria-hidden="true" />
-              {t("digitalHumans.editor.edit")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={onMemory}>
-              <Brain size={13} aria-hidden="true" />
-              {t("digitalHumans.memory.button")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={onExport}>
-              <Download size={13} aria-hidden="true" />
-              {t("digitalHumans.transfer.exportDefinition")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-status-err focus:text-status-err" onSelect={onDelete}>
-              <Trash2 size={13} aria-hidden="true" />
-              {t("common.delete")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
+          {menuOpen ? (
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onSelect={() => runMenuAction(onDetails)}>
+                <ChevronRight size={13} aria-hidden="true" />
+                {t("digitalHumans.market.details")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => runMenuAction(onEdit)}>
+                <Pencil size={13} aria-hidden="true" />
+                {t("digitalHumans.editor.edit")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => runMenuAction(onMemory)}>
+                <Brain size={13} aria-hidden="true" />
+                {t("digitalHumans.memory.button")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => runMenuAction(onToggleDefault)}
+                disabled={!hasProject}
+              >
+                <Check size={13} aria-hidden="true" />
+                {profile.active
+                  ? t("digitalHumans.clearDefault")
+                  : t("digitalHumans.setProjectDefault")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => runMenuAction(onExport)}>
+                <Download size={13} aria-hidden="true" />
+                {t("digitalHumans.transfer.exportDefinition")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-status-err focus:text-status-err"
+                onSelect={() => runMenuAction(onDelete)}
+              >
+                <Trash2 size={13} aria-hidden="true" />
+                {t("common.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          ) : null}
         </DropdownMenu>
       </CardFooter>
     </Card>
@@ -1529,6 +1807,7 @@ function TeamCard({
   onUse,
   onDetails,
   onEdit,
+  onManageSource,
   onDelete,
 }: {
   team: DigitalHumanTeam;
@@ -1537,23 +1816,41 @@ function TeamCard({
   onUse: () => void;
   onDetails: () => void;
   onEdit: () => void;
+  onManageSource?: () => void;
   onDelete: () => void;
 }) {
   const { t } = useT();
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const runMenuAction = (action: () => void) => {
+    setMenuOpen(false);
+    action();
+  };
   return (
-    <Card className="flex min-h-60 flex-col transition-colors hover:border-primary/30">
-      <CardHeader className="pb-3">
+    <Card
+      data-digital-human-team-card={team.id}
+      className="digital-human-card group flex min-h-60 flex-col overflow-hidden transition-all"
+    >
+      <CardHeader className="p-5 pb-3">
         <div className="flex items-start gap-3">
-          <DigitalHumanAvatar id={team.id} label={team.name} team />
+          <DigitalHumanAvatar
+            id={team.id}
+            label={team.name}
+            team
+            className="h-12 w-12 rounded-xl"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <CardTitle className="truncate text-sm">{team.name}</CardTitle>
+              <CardTitle className="line-clamp-2 pt-0.5 text-base leading-5">{team.name}</CardTitle>
               <Badge variant="info" className="shrink-0">
-                {t(`digitalHumans.team.mode.${modeKey(team.mode)}`)}
+                {team.lead
+                  ? t("digitalHumans.team.leadConfigured")
+                  : t("digitalHumans.team.parallel")}
               </Badge>
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
               {memberLabels.length} {t("digitalHumans.market.members")}
+              {team.sourceRepo ? ` · ${team.sourceRepo}` : ""}
+              {team.localOverride ? ` · ${t("digitalHumans.team.localOverride")}` : ""}
             </p>
           </div>
         </div>
@@ -1561,38 +1858,68 @@ function TeamCard({
           {team.description ?? t("digitalHumans.team.defaultDescription")}
         </p>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5 pb-3">
+      <CardContent className="flex flex-1 flex-wrap content-start gap-1.5 px-5 pb-4">
         {memberLabels.map((label) => (
           <Badge key={label} variant="secondary">
             {label}
           </Badge>
         ))}
       </CardContent>
-      <CardFooter className="flex-wrap justify-between gap-2 border-t border-border/60 pt-3">
-        <Button size="sm" variant="ghost" className="px-2" onClick={onDetails} disabled={busy}>
-          {t("digitalHumans.market.details")}
-          <ChevronRight size={13} aria-hidden="true" />
-        </Button>
+      <CardFooter className="gap-2 border-t border-border/60 bg-muted/15 p-3.5">
         <Button size="sm" className="min-w-28 flex-1" onClick={onUse} disabled={busy}>
           <Sparkles size={14} aria-hidden="true" />
           {t("digitalHumans.summonTeam")}
         </Button>
-        <div className="flex items-center gap-1">
-          <Button size="sm" variant="outline" onClick={onEdit} disabled={busy}>
-            <Pencil size={13} aria-hidden="true" />
-            {t("digitalHumans.team.edit")}
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onDelete}
-            disabled={busy}
-            aria-label={t("digitalHumans.delete.teamButton", { name: team.name })}
-            title={t("digitalHumans.delete.teamButton", { name: team.name })}
-          >
-            <Trash2 size={14} aria-hidden="true" />
-          </Button>
-        </div>
+        <DropdownMenu modal={false} open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="shrink-0"
+              disabled={busy}
+              aria-label={t("digitalHumans.moreActions", { name: team.name })}
+              title={t("digitalHumans.moreActions", { name: team.name })}
+            >
+              <MoreHorizontal size={15} aria-hidden="true" />
+            </Button>
+          </DropdownMenuTrigger>
+          {menuOpen ? (
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onSelect={() => runMenuAction(onDetails)}>
+                <ChevronRight size={13} aria-hidden="true" />
+                {t("digitalHumans.market.details")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => runMenuAction(onEdit)}>
+                <Pencil size={13} aria-hidden="true" />
+                {team.sourceRepo ? t("digitalHumans.team.customize") : t("digitalHumans.team.edit")}
+              </DropdownMenuItem>
+              {team.sourceRepo && onManageSource ? (
+                <DropdownMenuItem onSelect={() => runMenuAction(onManageSource)}>
+                  <RefreshCw size={13} aria-hidden="true" />
+                  {t("digitalHumans.team.manageSource")}
+                </DropdownMenuItem>
+              ) : null}
+              {!team.sourceRepo || team.localOverride ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-status-err focus:text-status-err"
+                    onSelect={() => runMenuAction(onDelete)}
+                  >
+                    {team.localOverride ? (
+                      <RefreshCw size={13} aria-hidden="true" />
+                    ) : (
+                      <Trash2 size={13} aria-hidden="true" />
+                    )}
+                    {team.localOverride
+                      ? t("digitalHumans.team.restoreSource")
+                      : t("common.delete")}
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          ) : null}
+        </DropdownMenu>
       </CardFooter>
     </Card>
   );
@@ -1603,6 +1930,7 @@ function DigitalHumanDetailDialog({
   profiles,
   catalog,
   teams,
+  availableSkills,
   busy,
   onOpenChange,
   onLaunch,
@@ -1611,6 +1939,7 @@ function DigitalHumanDetailDialog({
   profiles: DigitalHumanProfileEntry[];
   catalog: DigitalHumanCatalogEntry[];
   teams: DigitalHumanTeam[];
+  availableSkills: DigitalHumanSkillEntry[];
   busy: boolean;
   onOpenChange: (open: boolean) => void;
   onLaunch: (starterPrompt?: string) => void;
@@ -1620,6 +1949,14 @@ function DigitalHumanDetailDialog({
 
   const installedTeam =
     detail.kind === "curated-team" ? teams.find((team) => team.id === detail.team.id) : undefined;
+  const describeTeamMethod = (
+    team: Pick<DigitalHumanTeam, "lead" | "playbook"> | undefined,
+  ): string => {
+    if (!team?.lead) return t("digitalHumans.team.parallelDescription");
+    return team.playbook
+      ? t("digitalHumans.team.leadPlaybookDescription")
+      : t("digitalHumans.team.leadDescription");
+  };
   const view = (() => {
     if (detail.kind === "catalog") {
       return {
@@ -1632,8 +1969,17 @@ function DigitalHumanDetailDialog({
         installed: detail.entry.installed,
         team: false,
         members: [] as string[],
+        lead: undefined as string | undefined,
+        playbook: undefined as string | undefined,
         method: detail.entry.mainInstruction,
+        requires: detail.entry.requires,
         capabilityCount: capabilityCount({ ...detail.entry, active: false }),
+        capabilities: {
+          skills: detail.entry.skills,
+          plugins: detail.entry.plugins,
+          mcp: detail.entry.mcp,
+          agents: detail.entry.agents,
+        },
       };
     }
     if (detail.kind === "profile") {
@@ -1643,7 +1989,6 @@ function DigitalHumanDetailDialog({
         description: detail.profile.description ?? t("digitalHumans.noDescription"),
         category: undefined,
         tags: [
-          detail.profile.basePreset,
           ...detail.profile.skills.slice(0, 3),
           ...(detail.profile.portableMemory ? [t("digitalHumans.portableMemory")] : []),
         ],
@@ -1651,8 +1996,17 @@ function DigitalHumanDetailDialog({
         installed: true,
         team: false,
         members: [] as string[],
+        lead: undefined as string | undefined,
+        playbook: undefined as string | undefined,
         method: detail.profile.mainInstruction,
+        requires: detail.profile.requires,
         capabilityCount: capabilityCount(detail.profile),
+        capabilities: {
+          skills: detail.profile.skills,
+          plugins: detail.profile.plugins,
+          mcp: detail.profile.mcp,
+          agents: detail.profile.agents,
+        },
       };
     }
     if (detail.kind === "curated-team") {
@@ -1666,10 +2020,12 @@ function DigitalHumanDetailDialog({
         installed: Boolean(installedTeam),
         team: true,
         members: installedTeam?.members ?? detail.team.members,
-        method: t(
-          `digitalHumans.team.modeDescription.${modeKey(installedTeam?.mode ?? detail.team.mode)}`,
-        ),
+        lead: installedTeam?.lead,
+        playbook: installedTeam?.playbook,
+        method: describeTeamMethod(installedTeam),
+        requires: undefined,
         capabilityCount: 0,
+        capabilities: { skills: [], plugins: [], mcp: [], agents: [] },
       };
     }
     return {
@@ -1677,7 +2033,12 @@ function DigitalHumanDetailDialog({
       label: detail.team.name,
       description: detail.team.description ?? t("digitalHumans.team.defaultDescription"),
       category: undefined,
-      tags: [t(`digitalHumans.team.mode.${modeKey(detail.team.mode)}`)],
+      tags: [
+        detail.team.lead
+          ? t("digitalHumans.team.leadConfigured")
+          : t("digitalHumans.team.parallel"),
+        ...(detail.team.sourceRepo ? [detail.team.sourceRepo] : []),
+      ],
       prompts: [
         t("digitalHumans.detail.teamPrompt", { name: detail.team.name }),
         t("digitalHumans.detail.teamReviewPrompt", { name: detail.team.name }),
@@ -1685,13 +2046,46 @@ function DigitalHumanDetailDialog({
       installed: true,
       team: true,
       members: detail.team.members,
-      method: t(`digitalHumans.team.modeDescription.${modeKey(detail.team.mode)}`),
+      lead: detail.team.lead,
+      playbook: detail.team.playbook,
+      method: describeTeamMethod(detail.team),
+      requires: undefined,
       capabilityCount: 0,
+      capabilities: { skills: [], plugins: [], mcp: [], agents: [] },
     };
   })();
 
   const profileById = new Map(profiles.map((profile) => [profile.name, profile]));
   const catalogById = new Map(catalog.map((entry) => [entry.name, entry]));
+  const availableSkillByName = new Map(availableSkills.map((skill) => [skill.name, skill]));
+  const missingCapabilitySkillNames = new Set(
+    digitalHumanMissingSkillNames(view.capabilities.skills, view.requires, availableSkills),
+  );
+  const namedProjectRequirementSkills = digitalHumanNamedProjectRequirementSkillNames(
+    view.requires,
+  );
+  const capabilityGroups = [
+    {
+      id: "skills",
+      label: t("digitalHumans.detail.capabilityGroup.skills"),
+      values: view.capabilities.skills,
+    },
+    {
+      id: "plugins",
+      label: t("digitalHumans.detail.capabilityGroup.plugins"),
+      values: view.capabilities.plugins,
+    },
+    {
+      id: "mcp",
+      label: t("digitalHumans.detail.capabilityGroup.mcp"),
+      values: view.capabilities.mcp,
+    },
+    {
+      id: "agents",
+      label: t("digitalHumans.detail.capabilityGroup.agents"),
+      values: view.capabilities.agents,
+    },
+  ].filter((group) => group.values.length > 0);
   const memberEntries = view.members.map((id) => ({
     id,
     label: profileById.get(id)?.label ?? catalogById.get(id)?.label ?? id,
@@ -1782,40 +2176,112 @@ function DigitalHumanDetailDialog({
                       {member.label}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {t("digitalHumans.detail.memberRole")}
+                      {member.id === view.lead
+                        ? t("digitalHumans.detail.leadRole")
+                        : t("digitalHumans.detail.memberRole")}
                     </span>
                   </div>
                 ))}
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">{view.method}</p>
+              {view.playbook ? (
+                <div className="mt-3 rounded-lg border border-primary/15 bg-primary/5 p-3">
+                  <p className="text-xs font-semibold">{t("digitalHumans.detail.playbookTitle")}</p>
+                  <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                    {view.playbook}
+                  </p>
+                </div>
+              ) : null}
             </section>
           ) : (
-            <section>
-              <h3 className="text-sm font-semibold">{t("digitalHumans.detail.workMethod")}</h3>
-              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <DetailPrinciple
-                  Icon={UserRound}
-                  title={t("digitalHumans.detail.role")}
-                  description={t("digitalHumans.detail.roleDescription")}
-                />
-                <DetailPrinciple
-                  Icon={Eye}
-                  title={t("digitalHumans.detail.method")}
-                  description={view.method || t("digitalHumans.detail.methodDescription")}
-                />
-                <DetailPrinciple
-                  Icon={Code2}
-                  title={t("digitalHumans.detail.tools")}
-                  description={
-                    view.capabilityCount > 0
-                      ? t("digitalHumans.detail.toolsDescription", {
-                          count: view.capabilityCount,
-                        })
-                      : t("digitalHumans.detail.toolsEmptyDescription")
-                  }
-                />
-              </div>
-            </section>
+            <>
+              <section>
+                <h3 className="text-sm font-semibold">{t("digitalHumans.detail.workMethod")}</h3>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <DetailPrinciple
+                    Icon={UserRound}
+                    title={t("digitalHumans.detail.role")}
+                    description={t("digitalHumans.detail.roleDescription")}
+                  />
+                  <DetailPrinciple
+                    Icon={Eye}
+                    title={t("digitalHumans.detail.method")}
+                    description={view.method || t("digitalHumans.detail.methodDescription")}
+                  />
+                  <DetailPrinciple
+                    Icon={Code2}
+                    title={t("digitalHumans.detail.tools")}
+                    description={
+                      view.capabilityCount > 0
+                        ? t("digitalHumans.detail.toolsDescription", {
+                            count: view.capabilityCount,
+                          })
+                        : t("digitalHumans.detail.toolsEmptyDescription")
+                    }
+                  />
+                </div>
+              </section>
+
+              {capabilityGroups.length > 0 ? (
+                <section>
+                  <h3 className="text-sm font-semibold">
+                    {t("digitalHumans.detail.configuredCapabilities")}
+                  </h3>
+                  <div className="mt-2 divide-y divide-border/60 rounded-lg border border-border/70">
+                    {capabilityGroups.map((group) => (
+                      <div
+                        key={group.id}
+                        className="grid gap-2 px-3 py-3 sm:grid-cols-[6.5rem_minmax(0,1fr)]"
+                      >
+                        <p className="pt-1 text-xs font-medium text-muted-foreground">
+                          {group.label}
+                        </p>
+                        <div className="flex min-w-0 flex-wrap gap-1.5">
+                          {group.values.map((name) => {
+                            const skill =
+                              group.id === "skills" ? availableSkillByName.get(name) : null;
+                            const skillState =
+                              group.id !== "skills"
+                                ? null
+                                : missingCapabilitySkillNames.has(name) &&
+                                    namedProjectRequirementSkills.has(name) &&
+                                    skill
+                                  ? "projectMissing"
+                                  : missingCapabilitySkillNames.has(name)
+                                    ? "missing"
+                                    : skill?.enabled === false
+                                      ? "disabled"
+                                      : skill
+                                        ? "installed"
+                                        : "missing";
+                            return (
+                              <Badge
+                                key={`${group.id}:${name}`}
+                                variant={
+                                  skillState === "missing" || skillState === "projectMissing"
+                                    ? "warning"
+                                    : skillState === "installed"
+                                      ? "success"
+                                      : "secondary"
+                                }
+                                className="max-w-full gap-1.5 px-2.5 py-1"
+                              >
+                                <span className="truncate">{name}</span>
+                                {skillState ? (
+                                  <span className="font-normal opacity-75">
+                                    · {t(`digitalHumans.detail.skillState.${skillState}`)}
+                                  </span>
+                                ) : null}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+            </>
           )}
 
           <section>
@@ -1894,7 +2360,6 @@ export function useDigitalHumanTeamDraft(
   const [id, setId] = React.useState("");
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [mode, setMode] = React.useState<DigitalHumanTeamMode>("auto");
   const [members, setMembers] = React.useState<Set<string>>(() => new Set());
   const [lead, setLead] = React.useState("");
   const [playbook, setPlaybook] = React.useState("");
@@ -1904,7 +2369,6 @@ export function useDigitalHumanTeamDraft(
     setId(team?.id ?? createDigitalHumanTeamId());
     setName(team?.name ?? "");
     setDescription(team?.description ?? "");
-    setMode(team?.mode ?? "auto");
     setMembers(new Set(team?.members ?? []));
     setLead(team?.lead ?? "");
     setPlaybook(team?.playbook ?? "");
@@ -1914,15 +2378,33 @@ export function useDigitalHumanTeamDraft(
     setMembers((current) => {
       const next = new Set(current);
       if (next.has(memberId)) next.delete(memberId);
-      else next.add(memberId);
+      else if (next.size < DIGITAL_HUMAN_TEAM_MEMBER_MAX) next.add(memberId);
       return next;
     });
   }, []);
 
   const knownMembers = new Set(profiles.map((profile) => profile.name));
   const missingMembers = [...members].filter((member) => !knownMembers.has(member));
+  // There is no mode picker in this dialog: an edited team keeps whatever mode
+  // it was created with, and a new one is always "auto". So mode is derived,
+  // never form state, and can never make the form dirty.
+  const mode: DigitalHumanTeamMode = team?.mode ?? "auto";
+  const dirty = team
+    ? name !== team.name ||
+      description !== (team.description ?? "") ||
+      !sameMembers(members, team.members) ||
+      lead !== (team.lead ?? "") ||
+      playbook !== (team.playbook ?? "")
+    : Boolean(name || description || members.size > 0 || lead || playbook);
   const canSave =
-    Boolean(id) && Boolean(name.trim()) && members.size >= 2 && missingMembers.length === 0;
+    Boolean(id) &&
+    Boolean(name.trim()) &&
+    name.trim().length <= DIGITAL_HUMAN_TEAM_NAME_LIMIT &&
+    description.trim().length <= DIGITAL_HUMAN_TEAM_DESCRIPTION_LIMIT &&
+    playbook.trim().length <= DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT &&
+    members.size >= DIGITAL_HUMAN_TEAM_MEMBER_MIN &&
+    members.size <= DIGITAL_HUMAN_TEAM_MEMBER_MAX &&
+    missingMembers.length === 0;
   const toTeam = (): DigitalHumanTeam | null =>
     canSave
       ? {
@@ -1934,7 +2416,7 @@ export function useDigitalHumanTeamDraft(
           // A lead dropped from the roster must not be persisted — the schema
           // rejects a lead outside `members`, and it could never be reached.
           ...(lead && members.has(lead) ? { lead } : {}),
-          ...(lead && members.has(lead) && playbook.trim() ? { playbook: playbook.trim() } : {}),
+          ...(playbook.trim() ? { playbook: playbook.trim() } : {}),
         }
       : null;
 
@@ -1948,11 +2430,10 @@ export function useDigitalHumanTeamDraft(
     setPlaybook,
     description,
     setDescription,
-    mode,
-    setMode,
     members,
     toggleMember,
     missingMembers,
+    dirty,
     canSave,
     toTeam,
   };
@@ -1974,6 +2455,7 @@ export function TeamDialog({
   onSave: (team: DigitalHumanTeam) => void;
 }) {
   const { t } = useT();
+  const confirm = useConfirm();
   const {
     name,
     setName,
@@ -1986,6 +2468,7 @@ export function TeamDialog({
     setLead,
     playbook,
     setPlaybook,
+    dirty,
     canSave: draftCanSave,
     toTeam,
   } = useDigitalHumanTeamDraft(open, team, profiles);
@@ -2004,10 +2487,25 @@ export function TeamDialog({
     const value = toTeam();
     if (value) onSave(value);
   };
+  const requestClose = (next: boolean) => {
+    if (!next && busy) return;
+    if (next || !dirty) {
+      onOpenChange(next);
+      return;
+    }
+    void confirm({
+      title: t("digitalHumans.team.discardTitle"),
+      message: t("digitalHumans.team.discardMessage"),
+      confirmLabel: t("digitalHumans.team.discard"),
+      destructive: true,
+    }).then((accepted) => {
+      if (accepted) onOpenChange(false);
+    });
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={requestClose}>
+      <DialogContent showClose={!busy}>
         <DialogHeader>
           <DialogTitle>
             {team
@@ -2034,8 +2532,12 @@ export function TeamDialog({
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder={t("digitalHumans.team.namePlaceholder")}
+                maxLength={DIGITAL_HUMAN_TEAM_NAME_LIMIT}
                 autoFocus
               />
+              <p className="text-right text-[11px] tabular-nums text-muted-foreground">
+                {name.length}/{DIGITAL_HUMAN_TEAM_NAME_LIMIT}
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="digital-human-team-description">
@@ -2046,7 +2548,11 @@ export function TeamDialog({
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder={t("digitalHumans.team.descriptionPlaceholder")}
+                maxLength={DIGITAL_HUMAN_TEAM_DESCRIPTION_LIMIT}
               />
+              <p className="text-right text-[11px] tabular-nums text-muted-foreground">
+                {description.length}/{DIGITAL_HUMAN_TEAM_DESCRIPTION_LIMIT}
+              </p>
             </div>
             {/* `mode` (auto/divide/compare) is gone from the UI: it never reached
                 any runtime logic — all three produced identical Sessions. The lead
@@ -2057,6 +2563,8 @@ export function TeamDialog({
               <div className="grid max-h-52 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
                 {memberOptions.map((profile) => {
                   const selected = members.has(profile.id);
+                  const additionBlocked =
+                    !selected && members.size >= DIGITAL_HUMAN_TEAM_MEMBER_MAX;
                   return (
                     <Button
                       key={profile.id}
@@ -2073,6 +2581,7 @@ export function TeamDialog({
                           ? t("digitalHumans.team.memberSelected")
                           : t("digitalHumans.team.memberNotSelected"),
                       })}
+                      disabled={additionBlocked}
                       onClick={() => toggleMember(profile.id)}
                     >
                       <span
@@ -2092,8 +2601,19 @@ export function TeamDialog({
                 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                {t("digitalHumans.team.memberCount", { count: members.size })}
+                {t("digitalHumans.team.memberCount", {
+                  count: members.size,
+                  min: DIGITAL_HUMAN_TEAM_MEMBER_MIN,
+                  max: DIGITAL_HUMAN_TEAM_MEMBER_MAX,
+                })}
               </p>
+              {members.size >= DIGITAL_HUMAN_TEAM_MEMBER_MAX ? (
+                <p className="text-xs text-status-warn">
+                  {t("digitalHumans.team.memberLimit", {
+                    max: DIGITAL_HUMAN_TEAM_MEMBER_MAX,
+                  })}
+                </p>
+              ) : null}
               {missingMembers.length > 0 ? (
                 <p className="text-xs text-status-err" role="alert">
                   {t("digitalHumans.team.removeMissingMembers")}
@@ -2129,17 +2649,24 @@ export function TeamDialog({
                 rows={4}
                 maxLength={DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT}
                 placeholder={t("digitalHumans.team.playbookPlaceholder")}
-                disabled={!lead || !selectedMembers.includes(lead)}
               />
               <p className="text-xs leading-5 text-muted-foreground">
                 {lead && selectedMembers.includes(lead)
                   ? t("digitalHumans.team.playbookHint")
                   : t("digitalHumans.team.playbookNeedsLead")}
               </p>
+              <p className="text-right text-[11px] tabular-nums text-muted-foreground">
+                {playbook.length}/{DIGITAL_HUMAN_TEAM_PLAYBOOK_LIMIT}
+              </p>
             </div>
           </div>
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => requestClose(false)}
+            >
               {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={!canSave}>
@@ -2149,6 +2676,54 @@ export function TeamDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function HeroMetric({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex min-w-14 flex-col">
+      <dt className="order-2 mt-0.5 whitespace-nowrap text-[11px] text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="order-1 text-xl font-semibold tabular-nums tracking-tight">{value}</dd>
+    </div>
+  );
+}
+
+function LibraryEmptyState({
+  onCreate,
+  onImport,
+  importBusy,
+}: {
+  onCreate: () => void;
+  onImport: () => void;
+  importBusy: boolean;
+}) {
+  const { t } = useT();
+  return (
+    <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/15 px-6 py-10 text-center">
+      <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary shadow-sm">
+        <Brain size={21} aria-hidden="true" />
+      </span>
+      <h3 className="mt-4 text-base font-semibold">{t("digitalHumans.empty.title")}</h3>
+      <p className="mt-1.5 max-w-sm text-sm leading-6 text-muted-foreground">
+        {t("digitalHumans.empty.description")}
+      </p>
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <Button size="sm" onClick={onCreate}>
+          <Plus size={14} aria-hidden="true" />
+          {t("digitalHumans.editor.create")}
+        </Button>
+        <Button size="sm" variant="outline" onClick={onImport} disabled={importBusy}>
+          {importBusy ? (
+            <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Upload size={14} aria-hidden="true" />
+          )}
+          {t("digitalHumans.transfer.importDefinition")}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -2190,14 +2765,17 @@ function AddRepoRow({
   const [input, setInput] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const addLock = React.useRef(false);
+  const normalizedRepo = normalizeDigitalHumanSkillRepo(input);
+  const repoInvalid = input.trim().length > 0 && normalizedRepo === null;
 
   const add = async () => {
-    const repo = input.trim();
-    if (!repo) return;
+    if (!normalizedRepo || addLock.current) return;
+    addLock.current = true;
     setBusy(true);
     setError(null);
     try {
-      const result = await window.codeshell.addProfileRepo(repo);
+      const result = await window.codeshell.addProfileRepo(normalizedRepo);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -2211,32 +2789,46 @@ function AddRepoRow({
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
+      addLock.current = false;
       setBusy(false);
     }
   };
 
   return (
-    <div className="mb-5 rounded-md border border-border/70 bg-muted/20 px-3 py-2.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-foreground">{t("digitalHumans.repos.title")}</p>
-          <p className="text-[11px] text-muted-foreground">
+    <div className="mb-5 rounded-xl border border-border/70 bg-muted/20 p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground">
+          <GitFork size={16} aria-hidden="true" />
+        </span>
+        <div className="min-w-52 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium text-foreground">{t("digitalHumans.repos.title")}</p>
+            {repoCount > 0 ? (
+              <Badge variant="secondary">
+                {t("digitalHumans.repos.active", { count: repoCount })}
+              </Badge>
+            ) : null}
+          </div>
+          <p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">
             {t("digitalHumans.repos.hint")}
-            {repoCount > 0 ? ` · ${t("digitalHumans.repos.active", { count: repoCount })}` : ""}
           </p>
         </div>
         <Input
           value={input}
-          onChange={(event) => setInput(event.target.value)}
+          onChange={(event) => {
+            setInput(event.target.value);
+            if (error) setError(null);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") void add();
           }}
           placeholder="owner/repo"
           aria-label={t("digitalHumans.repos.title")}
+          aria-invalid={repoInvalid}
           className="h-8 w-full min-w-48 sm:w-64"
           disabled={busy}
         />
-        <Button size="sm" onClick={() => void add()} disabled={busy || !input.trim()}>
+        <Button size="sm" onClick={() => void add()} disabled={busy || !normalizedRepo}>
           {busy ? (
             <Loader2 size={13} className="animate-spin" aria-hidden="true" />
           ) : (
@@ -2250,6 +2842,9 @@ function AddRepoRow({
           </Button>
         ) : null}
       </div>
+      {repoInvalid ? (
+        <p className="mt-1.5 text-xs text-status-err">{t("digitalHumans.repos.invalid")}</p>
+      ) : null}
       {error ? <p className="mt-1.5 text-xs text-status-err">{error}</p> : null}
     </div>
   );

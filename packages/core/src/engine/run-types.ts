@@ -81,6 +81,8 @@ export interface EngineRunOptions {
   onStream?: StreamCallback;
   signal?: AbortSignal;
   sessionId?: string;
+  /** User-facing text persisted beside the full model-facing task. */
+  displayText?: string;
   permissionMode?: NonNullable<EngineConfig["permissionMode"]>;
   planMode?: boolean;
   approvalRouter?: ApprovalRouter;

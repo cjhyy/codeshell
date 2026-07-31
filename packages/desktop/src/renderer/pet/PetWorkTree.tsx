@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Archive,
   CheckCircle2,
   ChevronDown,
   CircleDot,
@@ -81,18 +82,39 @@ function WorkTreeItem({
   item,
   onOpen,
   onDismiss,
+  onArchive,
 }: {
   item: PetWorkItem;
   onOpen?: (item: PetWorkItem) => void;
   onDismiss?: (item: PetWorkItem) => void;
+  onArchive?: (item: PetWorkItem) => Promise<void>;
 }) {
   const { t } = useT();
   const [expanded, setExpanded] = React.useState(false);
   const [result, setResult] = React.useState<LatestResultState | null>(null);
+  const [archiveBusy, setArchiveBusy] = React.useState(false);
+  const [archiveError, setArchiveError] = React.useState(false);
   const fetchSeq = React.useRef(0);
   const panelId = React.useId();
   const navigationDisabled = Boolean(item.external && !item.navigation.external);
   const canExpand = !item.external;
+  const canArchive =
+    !item.external &&
+    item.state !== "running" &&
+    item.state !== "queued" &&
+    item.state !== "needs-action";
+  const archive = async (): Promise<void> => {
+    if (!onArchive || archiveBusy) return;
+    setArchiveBusy(true);
+    setArchiveError(false);
+    try {
+      await onArchive(item);
+    } catch {
+      setArchiveError(true);
+    } finally {
+      setArchiveBusy(false);
+    }
+  };
   const toggleExpanded = () => {
     if (expanded) {
       setExpanded(false);
@@ -189,6 +211,30 @@ function WorkTreeItem({
               />
             </button>
           )}
+          {canArchive && onArchive && (
+            <button
+              type="button"
+              data-pet-work-archive={item.id}
+              aria-label={t("pet.work.archiveSessionAria", { title: item.title })}
+              title={
+                archiveError ? t("pet.work.archiveSessionError") : t("pet.work.archiveSessionHint")
+              }
+              className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg opacity-70 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover/item:opacity-100 ${
+                archiveError ? "text-status-err" : "text-muted-foreground/65"
+              }`}
+              disabled={archiveBusy}
+              onClick={() => void archive()}
+            >
+              {archiveBusy ? (
+                <span
+                  className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Archive size={14} aria-hidden="true" />
+              )}
+            </button>
+          )}
           {onDismiss && (
             <button
               type="button"
@@ -238,11 +284,13 @@ function WorkBranch({
   items,
   onOpen,
   onDismiss,
+  onArchive,
 }: {
   group: PetWorkGroup;
   items: readonly PetWorkItem[];
   onOpen?: (item: PetWorkItem) => void;
   onDismiss?: (item: PetWorkItem) => void;
+  onArchive?: (item: PetWorkItem) => Promise<void>;
 }) {
   const { t } = useT();
   const [open, setOpen] = React.useState(false);
@@ -272,7 +320,13 @@ function WorkBranch({
       </summary>
       <ul className="space-y-1 px-1 pb-2 pt-0.5">
         {items.map((item) => (
-          <WorkTreeItem key={item.id} item={item} onOpen={onOpen} onDismiss={onDismiss} />
+          <WorkTreeItem
+            key={item.id}
+            item={item}
+            onOpen={onOpen}
+            onDismiss={onDismiss}
+            onArchive={onArchive}
+          />
         ))}
       </ul>
     </details>
@@ -285,6 +339,7 @@ export function PetWorkTree({
   defaultOpen = false,
   onOpen,
   onDismiss,
+  onArchive,
   onClearCompleted,
   onRestoreDismissed,
 }: {
@@ -293,6 +348,7 @@ export function PetWorkTree({
   defaultOpen?: boolean;
   onOpen?: (item: PetWorkItem) => void;
   onDismiss?: (item: PetWorkItem) => void;
+  onArchive?: (item: PetWorkItem) => Promise<void>;
   onClearCompleted?: () => void;
   onRestoreDismissed?: () => void;
 }) {
@@ -428,6 +484,7 @@ export function PetWorkTree({
                           items={bucket.items}
                           onOpen={onOpen}
                           onDismiss={onDismiss}
+                          onArchive={onArchive}
                         />
                       ))}
                     </div>

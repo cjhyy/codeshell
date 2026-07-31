@@ -88,6 +88,10 @@ const context = await window.codeshellPanel.getContext();
 const file = await window.codeshellPanel.call("workspace.readText", {
   path: "designs/home.codesign.json",
 });
+await window.codeshellPanel.call("agent.submitPrompt", {
+  prompt: "Full model-facing context and instructions",
+  displayText: "Short user-facing input shown in the current session",
+});
 const unsubscribe = window.codeshellPanel.on("context.changed", (next) => {
   // session, workspace, visibility, theme, or locale changed
 });
@@ -101,7 +105,7 @@ No Host capability is granted by default.
 | `context.workspace`  | Adds workspace root and trust state to context.                                                                     |
 | `storage`            | JSON-only app storage, capped at 256 KiB per app.                                                                   |
 | `external.open`      | Opens HTTPS links after user confirmation.                                                                          |
-| `agent.submitPrompt` | Submits to the bound, idle session; requires `context.session`.                                                     |
+| `agent.submitPrompt` | Immediately queues work in the bound, idle session and renders `displayText` (or `prompt`) as an app-attributed user message; requires `context.session`. |
 | `workspace.info`     | Reads safe workspace metadata and the current Git branch.                                                           |
 | `workspace.read`     | Lists and reads allowlisted repository text/data files; requires `context.workspace`.                               |
 | `workspace.write`    | Atomically writes allowlisted repository text/data files with optimistic concurrency; requires `context.workspace`. |

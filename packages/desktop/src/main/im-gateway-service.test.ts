@@ -335,6 +335,68 @@ describe("ImGatewayService", () => {
     }
   });
 
+  test("sends proactive owner messages only through opaque, currently allowlisted targets", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-owner-send-"));
+    const configPath = join(root, "config.json");
+    const config = {
+      telegram: {
+        botToken: "test-token",
+        allowedChatIds: ["owner-chat"],
+        allowedUserIds: [],
+      },
+      desktop: { autoLaunch: false },
+      runtime: {
+        lockPath: join(root, "gateway.lock"),
+        inboxPath: join(root, "inbox.json"),
+        eventCursorPath: join(root, "events.json"),
+        adapterRestartBaseMs: 5,
+        adapterRestartMaxMs: 5,
+      },
+    };
+    writeFileSync(configPath, JSON.stringify(config), { mode: 0o600 });
+    if (process.platform !== "win32") chmodSync(configPath, 0o600);
+    const sent: Array<{ target: string; text: string }> = [];
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async (_handler, signal) => {
+          if (signal.aborted) return;
+          await new Promise<void>((resolveDone) =>
+            signal.addEventListener("abort", () => resolveDone(), { once: true }),
+          );
+        },
+        send: async (target, message) => {
+          sent.push({ target, text: message.text });
+        },
+      }),
+    });
+
+    try {
+      await service.start();
+      const targets = service.listOwnerMessageTargets();
+      expect(targets).toHaveLength(1);
+      expect(targets[0]).toMatchObject({ channel: "telegram", label: "Telegram" });
+      expect(JSON.stringify(targets)).not.toContain("owner-chat");
+
+      await service.sendOwnerMessage(targets[0]!.id, "已经完成");
+      expect(sent).toEqual([{ target: "owner-chat", text: "已经完成" }]);
+
+      writeFileSync(
+        configPath,
+        JSON.stringify({
+          ...config,
+          telegram: { ...config.telegram, allowedChatIds: ["replacement-chat"] },
+        }),
+        { mode: 0o600 },
+      );
+      await expect(service.sendOwnerMessage(targets[0]!.id, "不应发送")).rejects.toThrow("未授权");
+      expect(sent).toHaveLength(1);
+    } finally {
+      await service.stop();
+    }
+  });
+
   test("starts configured channels automatically at Desktop launch", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-autostart-"));
     const configPath = join(root, "config.json");

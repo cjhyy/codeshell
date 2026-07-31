@@ -18,6 +18,9 @@ export const PET_HOST_ACTION_KINDS = [
   "longTaskControl",
   "memory",
   "gatewayReply",
+  "todoMutation",
+  "sessionArchive",
+  "outboundMessage",
 ] as const;
 export type PetHostActionKind = (typeof PET_HOST_ACTION_KINDS)[number];
 
@@ -155,6 +158,62 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
     );
   }
   if (value.kind === "gatewayReply") return isGatewayReplyPayload(payload);
+  if (value.kind === "todoMutation") {
+    const action = payload.action;
+    if (
+      action !== "create" &&
+      action !== "update" &&
+      action !== "start" &&
+      action !== "block" &&
+      action !== "complete" &&
+      action !== "reopen" &&
+      action !== "archive"
+    ) {
+      return false;
+    }
+    const todoId = payload.todoId;
+    const text = payload.text;
+    if (action === "create") {
+      return (
+        hasExactKeys(payload, ["action", "text"]) &&
+        typeof text === "string" &&
+        text.trim().length > 0 &&
+        text.length <= 500
+      );
+    }
+    if (!isOpaqueId(todoId)) return false;
+    if (action === "update") {
+      return (
+        hasExactKeys(payload, ["action", "todoId", "text"]) &&
+        typeof text === "string" &&
+        text.trim().length > 0 &&
+        text.length <= 500
+      );
+    }
+    return hasExactKeys(payload, ["action", "todoId"]);
+  }
+  if (value.kind === "sessionArchive") {
+    return (
+      payload.action === "archive" &&
+      hasExactKeys(payload, ["action", "sessionIds"]) &&
+      Array.isArray(payload.sessionIds) &&
+      payload.sessionIds.length > 0 &&
+      payload.sessionIds.length <= 20 &&
+      payload.sessionIds.every(
+        (id) => typeof id === "string" && /^[A-Za-z0-9_-]{1,128}$/u.test(id),
+      ) &&
+      new Set(payload.sessionIds).size === payload.sessionIds.length
+    );
+  }
+  if (value.kind === "outboundMessage") {
+    return (
+      hasExactKeys(payload, ["targetId", "text"]) &&
+      isOpaqueId(payload.targetId) &&
+      typeof payload.text === "string" &&
+      payload.text.trim().length > 0 &&
+      payload.text.length <= MAX_GATEWAY_REPLY_TEXT_LENGTH
+    );
+  }
   if (payload.action === "remember") {
     return (
       hasExactKeys(payload, ["action", "text"]) &&

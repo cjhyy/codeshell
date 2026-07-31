@@ -67,8 +67,10 @@ export function buildTeamBriefings(
       );
     }
 
-    if (isLead && team.playbook) {
-      lines.push(`协作规则（由用户设定，请遵循）：\n${team.playbook}`);
+    if (team.playbook && (isLead || !leadSlot)) {
+      lines.push(
+        `${isLead ? "协作规则" : "共同工作规则"}（由用户设定，请遵循）：\n${team.playbook}`,
+      );
     }
 
     if (isLead) {

@@ -312,12 +312,11 @@ describe("independent Panel App installer", () => {
     );
   });
 
-  test("clones, reviews, installs, and updates a Panel App from a GitHub monorepo subdirectory", async () => {
+  test("downloads, reviews, installs, and updates a Panel App from a GitHub monorepo subdirectory", async () => {
     const repository = mkdtempSync(join(tmpdir(), "cs-panel-git-source-"));
     const appRoot = join(repository, "examples", "panel-app");
     const cloneUrl = "https://github.com/codeshell-tests/panel-source.git";
-    const envKeys = ["GIT_CONFIG_COUNT", "GIT_CONFIG_KEY_0", "GIT_CONFIG_VALUE_0"] as const;
-    const previous = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
+    const previousFetch = globalThis.fetch;
     try {
       writePanelApp(appRoot, { id: "remote-panel", version: "1.0.0" });
       runGit(repository, "init", "--initial-branch=main");
@@ -326,9 +325,24 @@ describe("independent Panel App installer", () => {
       runGit(repository, "add", ".");
       runGit(repository, "commit", "-m", "initial panel");
 
-      process.env.GIT_CONFIG_COUNT = "1";
-      process.env.GIT_CONFIG_KEY_0 = `url.file://${repository}.insteadOf`;
-      process.env.GIT_CONFIG_VALUE_0 = cloneUrl;
+      globalThis.fetch = async () => {
+        const archive = spawnSync(
+          "git",
+          ["archive", "--format=zip", "--prefix=panel-source-main/", "HEAD"],
+          { cwd: repository, maxBuffer: 16 * 1024 * 1024 },
+        );
+        if (archive.status !== 0) {
+          throw new Error(`git archive failed: ${String(archive.stderr)}`);
+        }
+        const body = Buffer.from(archive.stdout);
+        return new Response(body, {
+          status: 200,
+          headers: {
+            "content-length": String(body.length),
+            "content-type": "application/zip",
+          },
+        });
+      };
 
       const source = {
         kind: "git" as const,
@@ -364,6 +378,12 @@ describe("independent Panel App installer", () => {
       runGit(repository, "commit", "-m", "update panel");
       const update = await previewInstalledPanelAppUpdate("remote-panel");
       expect(update.version).toBe("1.1.0");
+      // Installing applies the exact bytes the user reviewed. Moving the
+      // branch after preview must not trigger another download or silently swap
+      // in a newer version.
+      writePanelApp(appRoot, { id: "remote-panel", version: "1.2.0" });
+      runGit(repository, "add", ".");
+      runGit(repository, "commit", "-m", "move branch after review");
       expect(
         (
           await installReviewedPanelAppUpdate(
@@ -373,17 +393,25 @@ describe("independent Panel App installer", () => {
           )
         ).version,
       ).toBe("1.1.0");
+
+      const nextUpdate = await previewInstalledPanelAppUpdate("remote-panel");
+      expect(nextUpdate.version).toBe("1.2.0");
+      expect(
+        (
+          await installReviewedPanelAppUpdate(
+            "remote-panel",
+            nextUpdate.reviewToken,
+            "2026-07-28T02:00:00.000Z",
+          )
+        ).version,
+      ).toBe("1.2.0");
     } finally {
-      for (const key of envKeys) {
-        const value = previous[key];
-        if (value === undefined) delete process.env[key];
-        else process.env[key] = value;
-      }
+      globalThis.fetch = previousFetch;
       rmSync(repository, { recursive: true, force: true });
     }
   });
 
-  test("rejects unsafe GitHub sources before cloning", async () => {
+  test("rejects unsafe GitHub sources before downloading", async () => {
     await expect(
       previewLocalPanelApp({
         kind: "git",

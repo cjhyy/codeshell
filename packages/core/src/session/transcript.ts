@@ -109,6 +109,7 @@ export class Transcript {
       injected?: boolean;
       steerId?: string;
       clientMessageId?: string;
+      displayText?: string;
       authority?: "user" | "agent" | "system" | "policy";
       source?: "agent-direction" | "goal-control";
       envelopeIds?: string[];
@@ -132,6 +133,7 @@ export class Transcript {
       ...(opts?.injected ? { injected: true } : {}),
       ...(opts?.steerId ? { steerId: opts.steerId } : {}),
       ...(opts?.clientMessageId ? { clientMessageId: opts.clientMessageId } : {}),
+      ...(opts?.displayText ? { displayText: opts.displayText } : {}),
       ...(opts?.authority ? { authority: opts.authority } : {}),
       ...(opts?.source ? { source: opts.source } : {}),
       ...(opts?.envelopeIds ? { envelopeIds: opts.envelopeIds } : {}),

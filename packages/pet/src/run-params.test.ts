@@ -199,6 +199,45 @@ describe("validatePetRunParams", () => {
       }),
     ).toBe("profileParams.gateway contains an invalid Gateway capability catalog");
   });
+
+  test("validates durable todo snapshots and opaque proactive destinations", () => {
+    const todo = {
+      id: "todo-one",
+      text: "整理发布说明",
+      status: "pending",
+      createdAt: 1,
+      updatedAt: 2,
+    };
+    const target = {
+      id: "owner-one",
+      channel: "wechat",
+      label: "微信",
+      maxTextLength: 8_000,
+    };
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { todos: [todo], outboundTargets: [target] },
+      }),
+    ).toBeNull();
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: { todos: [todo, todo] },
+      }),
+    ).toContain("duplicate todo");
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: {
+          outboundTargets: [{ ...target, id: " raw\nowner " }],
+        },
+      }),
+    ).toContain("invalid or duplicate destination");
+  });
 });
 
 describe("Pet behavior profile inputs", () => {
@@ -223,6 +262,8 @@ describe("Pet behavior profile inputs", () => {
       ],
       reusableSessions: [],
       hostActionKinds: [],
+      todos: [],
+      outboundTargets: [],
     });
     expect(Object.isFrozen(options)).toBe(true);
     expect(Object.isFrozen(options.workspaces)).toBe(true);
@@ -299,6 +340,8 @@ describe("Pet behavior profile inputs", () => {
       petWorkspaces: [],
       petReusableSessions: [],
       petHostActionKinds: [],
+      petTodos: true,
+      petOutboundTargets: [],
     });
     expect(
       PET_BEHAVIOR_PROFILE.buildVisibilityMeta?.({ hostActions: ["mobileRemote", "shell"] }),

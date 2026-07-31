@@ -45,16 +45,28 @@ interface Props {
   projects: TrackedProject[];
 }
 
-const MEMORY_SCOPES: Array<{ id: MemoryScope; label: string; helpKey: TranslationKey }> = [
-  { id: "user", label: "User", helpKey: "settingsX.memory.scopeUserHelp" },
-  { id: "dream", label: "Dream", helpKey: "settingsX.memory.scopeDreamHelp" },
+const MEMORY_SCOPES: Array<{
+  id: MemoryScope;
+  labelKey: TranslationKey;
+  helpKey: TranslationKey;
+}> = [
+  {
+    id: "user",
+    labelKey: "settingsX.memory.scopeUserLabel",
+    helpKey: "settingsX.memory.scopeUserHelp",
+  },
+  {
+    id: "dream",
+    labelKey: "settingsX.memory.scopeDreamLabel",
+    helpKey: "settingsX.memory.scopeDreamHelp",
+  },
 ];
 
-const MEMORY_TYPES: Array<{ id: MemoryType; label: string }> = [
-  { id: "user", label: "user" },
-  { id: "feedback", label: "feedback" },
-  { id: "project", label: "project" },
-  { id: "reference", label: "reference" },
+const MEMORY_TYPES: Array<{ id: MemoryType; labelKey: TranslationKey }> = [
+  { id: "user", labelKey: "settingsX.memory.typeUser" },
+  { id: "feedback", labelKey: "settingsX.memory.typeFeedback" },
+  { id: "project", labelKey: "settingsX.memory.typeProject" },
+  { id: "reference", labelKey: "settingsX.memory.typeReference" },
 ];
 
 function memoryTypeClassName(type: MemoryType): string {
@@ -64,6 +76,14 @@ function memoryTypeClassName(type: MemoryType): string {
     type === "project" && "bg-status-running/10 text-status-running",
     type === "reference" && "bg-muted text-muted-foreground",
     type === "user" && "bg-primary/10 text-primary",
+  );
+}
+
+function MemoryTypeBadge({ type }: { type: MemoryType }) {
+  const { t } = useT();
+  const typeInfo = MEMORY_TYPES.find((candidate) => candidate.id === type);
+  return (
+    <span className={memoryTypeClassName(type)}>{typeInfo ? t(typeInfo.labelKey) : type}</span>
   );
 }
 
@@ -79,6 +99,27 @@ function memoryUseCount(entry: RendererMemoryEntry): number {
 
 function memoryUpdateCount(entry: RendererMemoryEntry): number {
   return entry.updateCount ?? 0;
+}
+
+export function memoryDraftChanged(
+  draft: SaveMemoryInput | null,
+  baseline: SaveMemoryInput | null,
+): boolean {
+  if (!draft || !baseline) return false;
+  const keys: Array<keyof SaveMemoryInput> = [
+    "level",
+    "scope",
+    "name",
+    "description",
+    "type",
+    "content",
+    "cwd",
+    "profileName",
+    "pinned",
+    "id",
+    "origin",
+  ];
+  return keys.some((key) => draft[key] !== baseline[key]);
 }
 
 function memoryOriginLabelKey(origin: MemoryOrigin): TranslationKey {
@@ -257,10 +298,16 @@ export function MemoryStoreView({
   level,
   cwd,
   profileName,
+  presentation = "default",
+  onDirtyChange,
+  onSavingChange,
 }: {
   level: MemoryLevel;
   cwd?: string;
   profileName?: string;
+  presentation?: "default" | "profile";
+  onDirtyChange?: (dirty: boolean) => void;
+  onSavingChange?: (saving: boolean) => void;
 }) {
   const confirm = useConfirm();
   const { t } = useT();
@@ -269,13 +316,17 @@ export function MemoryStoreView({
   // switch) renders the list synchronously instead of an empty-state flash.
   const [entries, setEntries] = useState<RendererMemoryEntry[]>(
     () =>
-      cacheGet<RendererMemoryEntry[]>(
-        `memory:${level}:user:${cwd ?? ""}:${profileName ?? ""}`,
-      ) ?? [],
+      cacheGet<RendererMemoryEntry[]>(`memory:${level}:user:${cwd ?? ""}:${profileName ?? ""}`) ??
+      [],
   );
   const [selected, setSelected] = useState<RendererMemoryEntryFull | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [draft, setDraft] = useState<SaveMemoryInput | null>(null);
+  const [draftBaseline, setDraftBaseline] = useState<SaveMemoryInput | null>(null);
+  const [saving, setSaving] = useState(false);
+  const saveLock = React.useRef(false);
+  const refreshGeneration = React.useRef(0);
+  const entryReadGeneration = React.useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -285,6 +336,25 @@ export function MemoryStoreView({
   // 审批门: global memories the extractor flagged as "global" wait here. Only
   // meaningful at the global (user) level — pending is global-only.
   const [pending, setPending] = useState<RendererMemoryEntryFull[]>([]);
+  const profilePresentation = presentation === "profile";
+  // Dream is an automatic consolidation workspace for global/project memory.
+  // Automatic jobs are deliberately forbidden from writing into a digital
+  // human's portable memory, so exposing an always-empty Dream tab here is a
+  // dead end rather than a useful choice.
+  const visibleMemoryScopes = profilePresentation
+    ? MEMORY_SCOPES.filter((candidate) => candidate.id === "user")
+    : MEMORY_SCOPES;
+  const draftDirty = drafting && memoryDraftChanged(draft, draftBaseline);
+
+  useEffect(() => {
+    onDirtyChange?.(draftDirty);
+    return () => onDirtyChange?.(false);
+  }, [draftDirty, onDirtyChange]);
+
+  useEffect(() => {
+    onSavingChange?.(saving);
+    return () => onSavingChange?.(false);
+  }, [onSavingChange, saving]);
 
   const refreshPending = useCallback(async () => {
     if (level !== "user") return;
@@ -296,27 +366,44 @@ export function MemoryStoreView({
   }, [level]);
 
   const refresh = useCallback(async () => {
+    const generation = ++refreshGeneration.current;
     setLoading(true);
     setError(null);
     try {
       const list = await window.codeshell.listMemory(level, scope, cwd, profileName);
+      if (generation !== refreshGeneration.current) return;
       setEntries(list);
       cacheSet(`memory:${level}:${scope}:${cwd ?? ""}:${profileName ?? ""}`, list);
     } catch (e: unknown) {
+      if (generation !== refreshGeneration.current) return;
       setError(String(e instanceof Error ? e.message : e));
     } finally {
-      setLoading(false);
+      if (generation === refreshGeneration.current) setLoading(false);
     }
   }, [level, scope, cwd, profileName]);
 
   useEffect(() => {
+    // A store switch must not leave the previous scope's rows clickable while
+    // the new list is in flight. Reuse only the matching cached snapshot.
+    setEntries(
+      cacheGet<RendererMemoryEntry[]>(
+        `memory:${level}:${scope}:${cwd ?? ""}:${profileName ?? ""}`,
+      ) ?? [],
+    );
     void refresh();
     void refreshPending();
+    entryReadGeneration.current += 1;
     setSelected(null);
     setDrafting(false);
+    setDraft(null);
+    setDraftBaseline(null);
     setNotice(null);
     setCleanupReviewOpen(false);
     setCleanupSelected(new Set());
+    return () => {
+      refreshGeneration.current += 1;
+      entryReadGeneration.current += 1;
+    };
   }, [refresh, refreshPending]);
 
   const approvePending = async (name: string): Promise<void> => {
@@ -357,21 +444,43 @@ export function MemoryStoreView({
     }
   };
 
-  const openEntry = async (name: string): Promise<void> => {
+  const loadEntry = async (name: string): Promise<void> => {
+    const generation = ++entryReadGeneration.current;
     setError(null);
     setDrafting(false);
+    setDraft(null);
+    setDraftBaseline(null);
     try {
       const e = await window.codeshell.readMemory(level, scope, name, cwd, profileName);
+      if (generation !== entryReadGeneration.current) return;
       setSelected(e);
     } catch (e: unknown) {
+      if (generation !== entryReadGeneration.current) return;
       setError(String(e instanceof Error ? e.message : e));
     }
   };
 
-  const startNew = (): void => {
-    setDrafting(true);
-    setSelected(null);
-    setDraft({
+  const confirmDiscardDraft = async (): Promise<boolean> => {
+    if (!draftDirty) return true;
+    return confirm({
+      title: t("settingsX.memory.discardTitle"),
+      message: t("settingsX.memory.discardMessage"),
+      confirmLabel: t("settingsX.memory.discard"),
+      destructive: true,
+    });
+  };
+
+  const openEntry = async (name: string): Promise<void> => {
+    if (saving) return;
+    if (!(await confirmDiscardDraft())) return;
+    await loadEntry(name);
+  };
+
+  const startNew = async (): Promise<void> => {
+    if (saving) return;
+    if (!(await confirmDiscardDraft())) return;
+    entryReadGeneration.current += 1;
+    const next: SaveMemoryInput = {
       level,
       scope,
       name: "",
@@ -380,21 +489,37 @@ export function MemoryStoreView({
       content: "",
       cwd,
       profileName,
-    });
+    };
+    setDrafting(true);
+    setSelected(null);
+    setDraft(next);
+    setDraftBaseline(next);
   };
 
-  const startEdit = (): void => {
+  const startEdit = async (): Promise<void> => {
     if (!selected) return;
+    if (!(await confirmDiscardDraft())) return;
+    const next = buildEditDraft(selected, level, scope, cwd, profileName);
     setDrafting(true);
-    setDraft(buildEditDraft(selected, level, scope, cwd, profileName));
+    setDraft(next);
+    setDraftBaseline(next);
+  };
+
+  const cancelDraft = async (): Promise<void> => {
+    if (!(await confirmDiscardDraft())) return;
+    setDrafting(false);
+    setDraft(null);
+    setDraftBaseline(null);
   };
 
   const saveDraft = async (): Promise<void> => {
-    if (!draft) return;
+    if (!draft || saveLock.current) return;
     if (!draft.name.trim()) {
       setError(t("settingsX.memory.nameRequired"));
       return;
     }
+    saveLock.current = true;
+    setSaving(true);
     setError(null);
     try {
       const payload: SaveMemoryInput = {
@@ -408,13 +533,19 @@ export function MemoryStoreView({
       await window.codeshell.saveMemory(payload);
       await refresh();
       setDrafting(false);
-      await openEntry(payload.id ?? payload.name);
+      setDraft(null);
+      setDraftBaseline(null);
+      await loadEntry(payload.id ?? payload.name);
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      saveLock.current = false;
+      setSaving(false);
     }
   };
 
   const removeEntry = async (name: string): Promise<void> => {
+    if (saving) return;
     const ok = await confirm({
       title: t("settingsX.memory.confirmDeleteTitle"),
       message: t("settingsX.memory.confirmDeleteMsg", { name }),
@@ -423,10 +554,15 @@ export function MemoryStoreView({
       destructive: true,
     });
     if (!ok) return;
+    const deletingSelected = selected?.name === name;
+    const fallbackName = deletingSelected
+      ? entries.find((entry) => entry.name !== name)?.name
+      : undefined;
     try {
       await window.codeshell.deleteMemory(level, scope, name, cwd, profileName);
-      if (selected?.name === name) setSelected(null);
+      if (deletingSelected) setSelected(null);
       await refresh();
+      if (fallbackName) await loadEntry(fallbackName);
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -521,8 +657,14 @@ export function MemoryStoreView({
     }
   };
 
+  const changeScope = async (next: MemoryScope): Promise<void> => {
+    if (saving || next === scope || !(await confirmDiscardDraft())) return;
+    setScope(next);
+  };
+
   /** Pin/unpin = re-save with the flag flipped (content fetched on demand). */
   const togglePin = async (entry: RendererMemoryEntry): Promise<void> => {
+    if (saving) return;
     setError(null);
     try {
       const full = await window.codeshell.readMemory(level, scope, entry.name, cwd, profileName);
@@ -539,9 +681,14 @@ export function MemoryStoreView({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-1">
-          {MEMORY_SCOPES.map((s) => (
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-2",
+          profilePresentation && "rounded-xl border border-border/70 bg-muted/15 p-3",
+        )}
+      >
+        <div className="flex items-center gap-1 rounded-lg border border-border/70 bg-background p-1">
+          {visibleMemoryScopes.map((s) => (
             <Button
               key={s.id}
               type="button"
@@ -549,9 +696,10 @@ export function MemoryStoreView({
               size="sm"
               className="h-7 px-2 text-xs"
               title={t(s.helpKey)}
-              onClick={() => setScope(s.id)}
+              disabled={saving}
+              onClick={() => void changeScope(s.id)}
             >
-              {s.label}
+              {t(s.labelKey)}
             </Button>
           ))}
         </div>
@@ -601,18 +749,19 @@ export function MemoryStoreView({
             size="sm"
             className="h-8 gap-1 px-2 text-xs"
             onClick={() => void refresh()}
-            disabled={loading || dreaming}
+            disabled={saving || loading || dreaming}
             title={t("settingsX.memory.refresh")}
+            aria-label={t("settingsX.memory.refresh")}
           >
             <RefreshCw size={12} />
           </Button>
           <Button
             type="button"
-            variant="ghost"
+            variant={profilePresentation ? "solid" : "ghost"}
             size="sm"
-            className="h-8 gap-1 px-2 text-xs"
-            onClick={startNew}
-            disabled={dreaming}
+            className="h-8 gap-1 px-3 text-xs"
+            onClick={() => void startNew()}
+            disabled={saving || dreaming}
           >
             <Plus size={12} />
             <span>{t("settingsX.memory.newBtn")}</span>
@@ -659,7 +808,7 @@ export function MemoryStoreView({
               <li key={p.fileName} className="flex items-start gap-1 rounded-md px-2 py-1.5">
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <div className="flex min-w-0 items-center gap-1.5">
-                    <span className={memoryTypeClassName(p.type)}>{p.type}</span>
+                    <MemoryTypeBadge type={p.type} />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                       {p.name}
                     </span>
@@ -717,33 +866,47 @@ export function MemoryStoreView({
         </div>
       )}
 
-      <div className="grid h-[min(60vh,560px)] min-h-[360px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]">
+      <div
+        className={cn(
+          "grid h-[min(60vh,560px)] min-h-[360px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]",
+          profilePresentation &&
+            "mt-3 h-[min(55vh,560px)] min-h-[400px] lg:grid-cols-[minmax(250px,0.44fr)_1fr]",
+        )}
+      >
         {/* min-h-0 + the bounded grid height above let this list scroll on its own
             instead of growing the whole panel (which left it without a scrollbar). */}
         <ul
-          className="flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2"
+          className={cn(
+            "flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2",
+            profilePresentation && "rounded-xl border-border/70 bg-muted/10 p-2.5",
+          )}
           role="list"
         >
           {sortedEntries.length === 0 && !loading && (
-            <li className="p-4 text-center text-sm text-muted-foreground">
-              {t("settingsX.memory.emptyScope")}
+            <li className="flex min-h-36 flex-col items-center justify-center p-4 text-center text-sm text-muted-foreground">
+              <Sparkles size={18} className="mb-2 opacity-50" aria-hidden="true" />
+              <span>
+                {profilePresentation
+                  ? t("digitalHumans.memory.empty")
+                  : t("settingsX.memory.emptyScope")}
+              </span>
             </li>
           )}
           {sortedEntries.map((e) => (
             <li
               key={e.fileName}
               className={cn(
-                "flex items-start gap-1 rounded-md px-2 py-1.5",
-                selected?.fileName === e.fileName && "bg-accent",
+                "flex items-start gap-1 rounded-lg border border-transparent px-2.5 py-2",
+                selected?.fileName === e.fileName && "border-primary/20 bg-primary/5 shadow-sm",
               )}
             >
               <Button
                 type="button"
                 variant="ghost"
-                className="flex h-auto min-w-0 flex-1 flex-col items-stretch gap-0.5 px-0 py-0 text-left hover:bg-transparent"
+                className="flex h-auto min-w-0 flex-1 flex-col items-stretch gap-1 px-0 py-0 text-left hover:bg-transparent"
                 onClick={() => void openEntry(e.name)}
+                disabled={saving}
               >
-                {/* Line 1: name takes the width; badges shrink and don't squeeze it out */}
                 <span className="flex min-w-0 items-center gap-1.5">
                   {e.pinned && (
                     <Pin
@@ -752,30 +915,33 @@ export function MemoryStoreView({
                       aria-label={t("settingsX.memory.pinned")}
                     />
                   )}
-                  <span className={memoryTypeClassName(e.type)}>{e.type}</span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                     {e.name}
                   </span>
-                  <MemoryEntryBadges entry={e} />
                 </span>
-                {/* Line 2: description, full row width, truncated */}
                 {e.description && (
                   <span className="min-w-0 truncate text-xs text-muted-foreground">
                     {e.description}
                   </span>
                 )}
+                <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1">
+                  <MemoryTypeBadge type={e.type} />
+                  <MemoryEntryBadges entry={e} />
+                </span>
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                onClick={() => void togglePin(e)}
-                aria-label={e.pinned ? t("settingsX.memory.unpin") : t("settingsX.memory.pin")}
-                title={e.pinned ? t("settingsX.memory.unpin") : t("settingsX.memory.pinTitle")}
-              >
-                {e.pinned ? <PinOff size={12} /> : <Pin size={12} />}
-              </Button>
+              {!profilePresentation ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={() => void togglePin(e)}
+                  aria-label={e.pinned ? t("settingsX.memory.unpin") : t("settingsX.memory.pin")}
+                  title={e.pinned ? t("settingsX.memory.unpin") : t("settingsX.memory.pinTitle")}
+                >
+                  {e.pinned ? <PinOff size={12} /> : <Pin size={12} />}
+                </Button>
+              ) : null}
               {/* 手动「提升到全局」— only for project-level user entries. */}
               {level === "project" && scope === "user" && (
                 <Button
@@ -790,34 +956,52 @@ export function MemoryStoreView({
                   <ArrowUp size={12} />
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-status-err"
-                onClick={() => void removeEntry(e.name)}
-                aria-label="delete"
-                title={t("settingsX.memory.deleteTitle")}
-              >
-                <Trash2 size={12} />
-              </Button>
+              {!profilePresentation ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-status-err"
+                  onClick={() => void removeEntry(e.name)}
+                  aria-label={t("settingsX.memory.deleteTitle")}
+                  title={t("settingsX.memory.deleteTitle")}
+                >
+                  <Trash2 size={12} />
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>
 
-        <div className="min-h-0 overflow-y-auto rounded-md border p-3">
+        <div
+          className={cn(
+            "min-h-0 overflow-y-auto rounded-md border p-3",
+            profilePresentation && "rounded-xl border-border/70 bg-background p-4",
+          )}
+        >
           {drafting && draft ? (
             <DraftEditor
               draft={draft}
+              saving={saving}
               onChange={setDraft}
               onSave={() => void saveDraft()}
-              onCancel={() => setDrafting(false)}
+              onCancel={() => void cancelDraft()}
             />
           ) : selected ? (
-            <ViewEntry entry={selected} onEdit={startEdit} onClose={() => setSelected(null)} />
+            <ViewEntry
+              entry={selected}
+              onEdit={() => void startEdit()}
+              onClose={() => setSelected(null)}
+              onPin={() => void togglePin(selected)}
+              onDelete={() => void removeEntry(selected.name)}
+              friendly={profilePresentation}
+            />
           ) : (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              {t("settingsX.memory.emptyDetail")}
+            <div className="flex h-full min-h-40 flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground">
+              <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                <Pencil size={16} aria-hidden="true" />
+              </span>
+              <p className="max-w-xs leading-6">{t("settingsX.memory.emptyDetail")}</p>
             </div>
           )}
         </div>
@@ -857,7 +1041,7 @@ function CleanupReview({
         />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className={memoryTypeClassName(entry.type)}>{entry.type}</span>
+            <MemoryTypeBadge type={entry.type} />
             {entry.pinned && <Pin size={11} className="shrink-0 text-primary" />}
             <span className="truncate font-medium text-foreground">{entry.name}</span>
           </span>
@@ -915,27 +1099,51 @@ function ViewEntry({
   entry,
   onEdit,
   onClose,
+  onPin,
+  onDelete,
+  friendly = false,
 }: {
   entry: RendererMemoryEntryFull;
   onEdit: () => void;
   onClose: () => void;
+  onPin: () => void;
+  onDelete: () => void;
+  friendly?: boolean;
 }) {
   const { t } = useT();
   return (
     <div className="flex flex-col">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <strong>{entry.name}</strong>
-        {entry.pinned && (
-          <span className="flex items-center gap-0.5 rounded bg-primary/10 px-1 text-[10px] text-primary">
-            <Pin size={10} /> {t("settingsX.memory.pinned")}
-          </span>
-        )}
-        <span className={memoryTypeClassName(entry.type)}>{entry.type}</span>
-        <MemoryEntryBadges entry={entry} />
-        <div className="ml-auto flex items-center gap-1">
+      <div className="mb-3 flex flex-wrap items-start gap-3 border-b border-border/60 pb-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <strong className="truncate text-base">{entry.name}</strong>
+            {entry.pinned && (
+              <span className="flex items-center gap-0.5 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                <Pin size={10} /> {t("settingsX.memory.pinned")}
+              </span>
+            )}
+            <MemoryTypeBadge type={entry.type} />
+          </div>
+          {entry.description ? (
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">{entry.description}</p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {friendly ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 px-2 text-xs"
+              onClick={onPin}
+            >
+              {entry.pinned ? <PinOff size={12} /> : <Pin size={12} />}
+              <span>{entry.pinned ? t("settingsX.memory.unpin") : t("settingsX.memory.pin")}</span>
+            </Button>
+          ) : null}
           <Button
             type="button"
-            variant="ghost"
+            variant={friendly ? "default" : "ghost"}
             size="sm"
             className="h-8 gap-1 px-2 text-xs"
             onClick={onEdit}
@@ -943,6 +1151,19 @@ function ViewEntry({
             <Pencil size={12} />
             <span>{t("settingsX.memory.edit")}</span>
           </Button>
+          {friendly ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-status-err"
+              onClick={onDelete}
+              aria-label={t("settingsX.memory.deleteTitle")}
+              title={t("settingsX.memory.deleteTitle")}
+            >
+              <Trash2 size={13} />
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"
@@ -955,11 +1176,18 @@ function ViewEntry({
           </Button>
         </div>
       </div>
-      <div className="mb-3 text-sm text-muted-foreground">{entry.description}</div>
-      <MemoryEntryMeta entry={entry} />
-      <pre className="max-h-[50vh] overflow-auto rounded-md bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap">
+      <div className="mb-3 flex flex-wrap gap-1">
+        <MemoryEntryBadges entry={entry} />
+      </div>
+      <div className="max-h-[38vh] overflow-auto rounded-xl border border-border/60 bg-muted/20 p-4 text-sm leading-6 whitespace-pre-wrap">
         {entry.content}
-      </pre>
+      </div>
+      <details className="mt-3 rounded-lg border border-border/60 px-3 py-2">
+        <summary className="cursor-pointer text-xs text-muted-foreground">
+          {t("settingsX.memory.details")}
+        </summary>
+        <MemoryEntryMeta entry={entry} />
+      </details>
     </div>
   );
 }
@@ -977,7 +1205,7 @@ function MemoryEntryMeta({ entry }: { entry: RendererMemoryEntryFull }) {
     { label: t("settingsX.memory.metaUpdateCount"), value: memoryUpdateCount(entry) },
   ];
   return (
-    <dl className="mb-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs">
+    <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1 text-xs">
       {rows.map((row) => (
         <React.Fragment key={row.label}>
           <dt className="text-muted-foreground">{row.label}</dt>
@@ -990,59 +1218,67 @@ function MemoryEntryMeta({ entry }: { entry: RendererMemoryEntryFull }) {
 
 function DraftEditor({
   draft,
+  saving,
   onChange,
   onSave,
   onCancel,
 }: {
   draft: SaveMemoryInput;
+  saving: boolean;
   onChange: (next: SaveMemoryInput) => void;
   onSave: () => void;
   onCancel: () => void;
 }) {
   const { t } = useT();
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-xs text-muted-foreground">name</span>
+        <span className="text-xs font-medium">{t("settingsX.memory.fieldName")}</span>
         <Input
           type="text"
           value={draft.name}
+          disabled={saving}
           onChange={(e) => onChange({ ...draft, name: e.target.value })}
           placeholder={t("settingsX.memory.nameHint")}
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-xs text-muted-foreground">description</span>
+        <span className="text-xs font-medium">{t("settingsX.memory.fieldType")}</span>
+        <SimpleSelect<MemoryType>
+          value={draft.type}
+          disabled={saving}
+          onChange={(type) => onChange({ ...draft, type })}
+          options={MEMORY_TYPES.map((mt) => ({ value: mt.id, label: t(mt.labelKey) }))}
+        />
+      </label>
+      <label className="flex flex-col gap-1.5 text-sm md:col-span-2">
+        <span className="text-xs font-medium">{t("settingsX.memory.fieldDescription")}</span>
         <Input
           type="text"
           value={draft.description}
+          disabled={saving}
           onChange={(e) => onChange({ ...draft, description: e.target.value })}
           placeholder={t("settingsX.memory.descHint")}
         />
       </label>
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-xs text-muted-foreground">type</span>
-        <SimpleSelect<MemoryType>
-          value={draft.type}
-          onChange={(type) => onChange({ ...draft, type })}
-          options={MEMORY_TYPES.map((mt) => ({ value: mt.id, label: mt.label }))}
-        />
-      </label>
       <label className="flex flex-col gap-1.5 text-sm md:col-span-2">
-        <span className="text-xs text-muted-foreground">content (markdown)</span>
+        <span className="text-xs font-medium">{t("settingsX.memory.fieldContent")}</span>
         <Textarea
           value={draft.content}
-          rows={14}
+          disabled={saving}
+          rows={12}
           onChange={(e) => onChange({ ...draft, content: e.target.value })}
+          placeholder={t("settingsX.memory.contentHint")}
+          className="leading-6"
         />
       </label>
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="default" onClick={onCancel}>
+      <div className="flex justify-end gap-2 md:col-span-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           {t("settingsX.memory.cancel")}
         </Button>
-        <Button type="button" variant="solid" onClick={onSave}>
-          <Save size={12} />
-          <span>{t("settingsX.memory.save")}</span>
+        <Button type="button" variant="solid" onClick={onSave} disabled={saving}>
+          {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+          <span>{saving ? t("settingsX.memory.saving") : t("settingsX.memory.save")}</span>
         </Button>
       </div>
     </div>

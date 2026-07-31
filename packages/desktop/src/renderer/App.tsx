@@ -24,7 +24,9 @@ import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).
 import { useToast } from "./ui/ToastProvider";
+import { useOptionalConfirm } from "./ui/DialogProvider";
 import { useT } from "./i18n/I18nProvider";
+import { ensureDigitalHumanRequirements } from "./digital-humans/profileRequirements";
 import {
   INITIAL_STATE,
   type ActiveGoal,
@@ -158,6 +160,7 @@ function PageLoading({ label }: { label: string }) {
 
 function App() {
   const toast = useToast();
+  const confirm = useOptionalConfirm();
   const { t, lang } = useT();
   const dogIcon = usePetSprite();
   const {
@@ -179,6 +182,7 @@ function App() {
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
+  const [profileSwitchBusy, setProfileSwitchBusy] = useState(false);
   const [compactingBuckets, setCompactingBuckets] = useState<Set<string>>(() => new Set());
   const compactingBucketsRef = useRef<Set<string>>(new Set());
   const [queuedInputs, setQueuedInputs] = useState<QueuedInputState>({});
@@ -1631,19 +1635,34 @@ function App() {
 
   const handleSessionWorkspaceProfileChange = useCallback(
     async (profileName: string): Promise<void> => {
-      if (!activeProjectId || !activeSessionSummary || busy) return;
+      if (!activeProjectId || !activeSessionSummary || busy || profileSwitchBusy) return;
       const previousProfile = activeSessionSummary.workspaceProfile;
       if (previousProfile === profileName) return;
-      const next = setSessionWorkspaceProfileLocal(
-        activeProjectId,
-        activeSessionSummary.id,
-        profileName,
-      );
-      setSessionIndices((current) => ({
-        ...current,
-        [activeProjectBucketSegment]: next,
-      }));
+      setProfileSwitchBusy(true);
       try {
+        if (
+          profileName !== "" &&
+          !(await ensureDigitalHumanRequirements({
+            name: profileName,
+            projectPath: activeProject?.path ?? null,
+            api: window.codeshell,
+            confirm,
+            toast,
+            t,
+          }))
+        ) {
+          return;
+        }
+
+        const next = setSessionWorkspaceProfileLocal(
+          activeProjectId,
+          activeSessionSummary.id,
+          profileName,
+        );
+        setSessionIndices((current) => ({
+          ...current,
+          [activeProjectBucketSegment]: next,
+        }));
         await window.codeshell.setSessionWorkspaceProfile(
           activeSessionSummary.engineSessionId ?? activeSessionSummary.id,
           profileName,
@@ -1673,13 +1692,18 @@ function App() {
           }),
           variant: "error",
         });
+      } finally {
+        setProfileSwitchBusy(false);
       }
     },
     [
       activeProjectBucketSegment,
       activeProjectId,
+      activeProject?.path,
       activeSessionSummary,
       busy,
+      confirm,
+      profileSwitchBusy,
       sessionWorkspaceProfiles,
       t,
       toast,
@@ -2022,7 +2046,7 @@ function App() {
             sessionTitle={sessionChromeVisible ? sessionTitleForTop : null}
             workspaceProfile={sessionChromeVisible ? activeSessionSummary?.workspaceProfile : null}
             workspaceProfiles={sessionChromeVisible ? sessionWorkspaceProfiles : []}
-            workspaceProfileSwitchDisabled={busy}
+            workspaceProfileSwitchDisabled={busy || profileSwitchBusy}
             onWorkspaceProfileChange={(profileName) => {
               void handleSessionWorkspaceProfileChange(profileName);
             }}

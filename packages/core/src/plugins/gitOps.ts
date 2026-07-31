@@ -71,6 +71,10 @@ async function runGit(args: string[], cwd?: string, timeoutMs = 60_000): Promise
     cwd: cwd ?? process.cwd(),
     env: nonInteractiveGitEnv(process.env),
     timeoutMs,
+    // A stalled git clone/fetch owns helpers such as git-remote-https. Keep
+    // them in a dedicated group so the timeout cannot leave network workers
+    // running after the UI operation has failed.
+    processGroup: process.platform !== "win32",
   });
   if (r.spawnFailed) {
     return { ok: false, error: `git ${args.join(" ")} failed: ${r.error ?? "spawn failed"}` };
@@ -178,7 +182,10 @@ export async function gitLsRemote(url: string, ref?: string): Promise<GitResult>
   if (!r.ok) return r;
   const sha = r.stdout.split(/\s+/)[0] ?? "";
   if (!/^[0-9a-f]{7,40}$/i.test(sha)) {
-    return { ok: false, error: `ls-remote: no sha for ${ref ?? "HEAD"} in: ${r.stdout.slice(0, 120)}` };
+    return {
+      ok: false,
+      error: `ls-remote: no sha for ${ref ?? "HEAD"} in: ${r.stdout.slice(0, 120)}`,
+    };
   }
   return { ok: true, stdout: sha };
 }

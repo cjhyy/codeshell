@@ -102,6 +102,13 @@ export type { InputAttachmentKind, InputAttachmentOrigin, InputAttachmentMeta } 
 export interface RunParams {
   sessionId: string; // required, client-minted
   task: string;
+  /**
+   * Optional user-facing representation of `task`. The model still receives
+   * the full task, while session feeds and transcript replay show this text.
+   * Host-owned surfaces use it to hide transport/context envelopes without
+   * hiding the user's actual input.
+   */
+  displayText?: string;
   /** Structured input attachments. Legacy `<codeshell-image>` task blocks remain supported. */
   attachments?: InputAttachmentMeta[];
   /** Stable id for the user's submit intent; duplicate ids are idempotent. */

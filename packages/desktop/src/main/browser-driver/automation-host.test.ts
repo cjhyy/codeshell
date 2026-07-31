@@ -1,4 +1,5 @@
 import { describe, expect, test, beforeEach } from "bun:test";
+import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import { handleBrowserAction, releaseGuest, type AutomationDeps } from "./automation-host";
 import type { WebContents } from "electron";
 
@@ -75,6 +76,29 @@ describe("handleBrowserAction tabs", () => {
     );
     expect(JSON.parse(missOut)).toMatchObject({ ok: false });
   });
+
+  test("uses background tab operations when no visible panel tabs exist", async () => {
+    const backgroundBridge = {
+      listTabs: async () => [
+        { tabId: "background", url: "https://example.com", title: "Example", active: true },
+      ],
+      switchTab: async (tabId: string) => ({ ok: tabId === "background" }),
+    } as BrowserBridge;
+
+    const listed = await handleBrowserAction(
+      { action: "listTabs" },
+      deps({ activeGuest: () => null, backgroundBridge, listTabs: () => [] }),
+    );
+    expect(JSON.parse(listed)).toEqual([
+      { tabId: "background", url: "https://example.com", title: "Example", active: true },
+    ]);
+
+    const switched = await handleBrowserAction(
+      { action: "switchTab", tabId: "background" },
+      deps({ activeGuest: () => null, backgroundBridge, switchTab: () => false }),
+    );
+    expect(JSON.parse(switched)).toEqual({ ok: true });
+  });
 });
 
 describe("handleBrowserAction", () => {
@@ -85,6 +109,30 @@ describe("handleBrowserAction", () => {
     );
     expect(JSON.parse(out)).toMatchObject({ ok: false });
     expect(out).toContain("no active browser");
+  });
+
+  test("no active guest uses a background bridge without opening the panel", async () => {
+    let openPanelCalled = false;
+    const backgroundBridge = {
+      navigate: async (url: string) => ({ ok: true, detail: `background:${url}` }),
+    } as BrowserBridge;
+    const out = await handleBrowserAction(
+      { action: "navigate", url: "https://example.com/" },
+      deps({
+        activeGuest: () => null,
+        backgroundBridge,
+        openPanel: async () => {
+          openPanelCalled = true;
+          return true;
+        },
+      }),
+    );
+
+    expect(JSON.parse(out)).toEqual({
+      ok: true,
+      detail: "background:https://example.com/",
+    });
+    expect(openPanelCalled).toBe(false);
   });
 
   test("no guest but openPanel succeeds → auto-opens panel then proceeds", async () => {
@@ -196,3 +244,6 @@ describe("handleBrowserAction", () => {
     expect(out).toContain("declined");
   });
 });
+
+// The reveal decision is owned by BackgroundBrowserRuntime, which calls
+// host.show() at each takeover point; see background-runtime.test.ts.

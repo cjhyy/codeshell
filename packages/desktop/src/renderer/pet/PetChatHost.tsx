@@ -59,29 +59,49 @@ export interface PetChatSegmentBoundary {
   brief?: string;
 }
 
+export interface PetHostActionReceiptRow {
+  clientMessageId: string;
+  message: string;
+  createdAt: number;
+}
+
 export function selectPetChatRows(
   messages: readonly Message[],
   segments: readonly PetChatSegmentBoundary[] = [],
   delegationReceipts: readonly PetDelegationReceiptGroup[] = [],
+  hostActionReceipts: readonly PetHostActionReceiptRow[] = [],
 ): PetChatRow[] {
   const boundaries = new Map(segments.map((segment) => [segment.boundaryBeforeMessageId, segment]));
   const receiptsByMessageId = new Map(
     delegationReceipts.map((receipt) => [receipt.originClientMessageId, receipt]),
   );
+  const hostReceiptsByMessageId = new Map(
+    hostActionReceipts.map((receipt) => [receipt.clientMessageId, receipt]),
+  );
   const emittedReceipts = new Set<string>();
   const rows: PetChatRow[] = [];
   let activeClientMessageId: string | undefined;
-  const appendDelegationReceipts = (): void => {
+  const appendTurnReceipts = (): void => {
     if (!activeClientMessageId || emittedReceipts.has(activeClientMessageId)) return;
-    const receipt = receiptsByMessageId.get(activeClientMessageId);
-    if (!receipt) return;
+    const delegationReceipt = receiptsByMessageId.get(activeClientMessageId);
+    const hostReceipt = hostReceiptsByMessageId.get(activeClientMessageId);
+    if (!delegationReceipt && !hostReceipt) return;
     emittedReceipts.add(activeClientMessageId);
-    for (const delegation of receipt.delegations) {
+    if (delegationReceipt) {
+      for (const delegation of delegationReceipt.delegations) {
+        rows.push({
+          id: `delegation:${activeClientMessageId}:${delegation.sessionId}`,
+          role: "delegation",
+          text: delegation.task,
+          delegation,
+        });
+      }
+    }
+    if (hostReceipt?.message.trim()) {
       rows.push({
-        id: `delegation:${activeClientMessageId}:${delegation.sessionId}`,
-        role: "delegation",
-        text: delegation.task,
-        delegation,
+        id: `host-action:${activeClientMessageId}:${hostReceipt.createdAt}`,
+        role: "assistant",
+        text: hostReceipt.message.trim(),
       });
     }
   };
@@ -117,7 +137,7 @@ export function selectPetChatRows(
     if (message.kind === "assistant") {
       const text = visiblePetAssistantText(message.text);
       if (text) rows.push({ id: message.id, role: "assistant" as const, text });
-      if (message.done) appendDelegationReceipts();
+      if (message.done) appendTurnReceipts();
       continue;
     }
     if (message.kind === "context_boundary") {
@@ -367,14 +387,15 @@ export function PetChatHost({
     chatModelKey,
     setChatModelKey,
     delegationReceipts,
+    hostActionReceipts,
   } = usePetState();
   const [error, setError] = React.useState<string | null>(null);
   const endRef = React.useRef<HTMLDivElement>(null);
   const effectiveModelKey = chatModelKey ?? defaultModelKey;
   const segments = state.projection?.workMemorySegments;
   const rows = React.useMemo(
-    () => selectPetChatRows(chatState.messages, segments, delegationReceipts),
-    [chatState.messages, delegationReceipts, segments],
+    () => selectPetChatRows(chatState.messages, segments, delegationReceipts, hostActionReceipts),
+    [chatState.messages, delegationReceipts, hostActionReceipts, segments],
   );
   const latestHistoryBoundary = latestHistoryBoundaryIndex(rows);
   const historyBoundary = latestHistoryBoundary >= 0 ? rows[latestHistoryBoundary] : undefined;

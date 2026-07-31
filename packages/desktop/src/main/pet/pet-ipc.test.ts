@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { PetTodoItem } from "@cjhyy/code-shell-pet";
 import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
@@ -358,6 +359,160 @@ describe("registerPetIpc", () => {
         delegations: [expect.objectContaining({ sessionId: "work-session" })],
       }),
     ]);
+  });
+
+  test("persists and broadcasts the authoritative host-action receipt after chat", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const sent: Array<[string, unknown]> = [];
+    let recorded: unknown;
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      dispatcher: {
+        dispatch: async () => ({
+          ok: true,
+          type: "chat",
+          petSessionId: "pet-one",
+          result: {},
+          hostActions: [
+            {
+              kind: "todoMutation",
+              payload: { action: "complete", todoId: "todo-one" },
+              ok: true,
+              result: { status: "completed" },
+            },
+          ],
+        }),
+      },
+      hostActionReceipt: {
+        record: async (input) => {
+          recorded = input;
+          return "待办已完成。";
+        },
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    await handlers.get("pet:dispatch")?.(
+      {},
+      { type: "chat", message: "完成它", clientMessageId: "client-one" },
+    );
+
+    expect(recorded).toMatchObject({
+      petSessionId: "pet-one",
+      clientMessageId: "client-one",
+      executions: [expect.objectContaining({ kind: "todoMutation", ok: true })],
+    });
+    expect(sent.at(-1)).toEqual([
+      "pet:chat-event",
+      expect.objectContaining({
+        kind: "host-action-completed",
+        clientMessageId: "client-one",
+        message: "待办已完成。",
+      }),
+    ]);
+  });
+
+  test("exposes durable todo actions and recoverable Session archive over separate IPC calls", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const sent: Array<[string, unknown]> = [];
+    let todoListener: (() => void) | undefined;
+    let entries: PetTodoItem[] = [
+      {
+        id: "todo-one",
+        text: "整理发布说明",
+        status: "pending" as const,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ];
+    let archivedSessionId: string | undefined;
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      todos: {
+        list: async () => entries,
+        create: async (text) => {
+          const item = {
+            id: "todo-two",
+            text,
+            status: "pending" as const,
+            createdAt: 2,
+            updatedAt: 2,
+          };
+          entries = [item, ...entries];
+          return item;
+        },
+        update: async (id, text) => {
+          const item = { ...entries.find((entry) => entry.id === id)!, text, updatedAt: 3 };
+          entries = entries.map((entry) => (entry.id === id ? item : entry));
+          return item;
+        },
+        setStatus: async (id, status) => {
+          const item = { ...entries.find((entry) => entry.id === id)!, status, updatedAt: 4 };
+          entries = entries.map((entry) => (entry.id === id ? item : entry));
+          return item;
+        },
+        subscribe: (listener) => {
+          todoListener = listener;
+          return () => {};
+        },
+      },
+      sessionArchive: {
+        archive: async (sessionId) => {
+          archivedSessionId = sessionId;
+          return { ok: true };
+        },
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    expect(await handlers.get("pet:todos-get")?.({})).toEqual(entries);
+    expect(await handlers.get("pet:todo-create")?.({}, "确认回归测试")).toMatchObject({
+      id: "todo-two",
+    });
+    expect(
+      await handlers.get("pet:todo-update")?.({}, { id: "todo-one", text: "整理最终发布说明" }),
+    ).toMatchObject({ text: "整理最终发布说明" });
+    expect(
+      await handlers.get("pet:todo-set-status")?.({}, { id: "todo-one", status: "completed" }),
+    ).toMatchObject({ status: "completed" });
+    expect(await handlers.get("pet:session-archive")?.({}, "session-one")).toEqual({ ok: true });
+    expect(archivedSessionId).toBe("session-one");
+    expect(() =>
+      handlers.get("pet:todo-set-status")?.({}, { id: "todo-one", status: "deleted" }),
+    ).toThrow("invalid Pet todo status");
+    expect(() => handlers.get("pet:session-archive")?.({}, "../session")).toThrow(
+      "invalid Pet session archive request",
+    );
+
+    todoListener?.();
+    await Promise.resolve();
+    expect(sent.at(-1)).toEqual(["pet:todos-changed", entries]);
   });
 
   test("rejects legacy digital-human routing keys at the Pet IPC boundary", async () => {

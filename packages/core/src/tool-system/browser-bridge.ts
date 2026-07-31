@@ -1,16 +1,16 @@
 /**
  * BrowserBridge — driver-agnostic contract between the browser tools (core)
- * and whatever drives the actual browser (renderer's webview via CDP).
+ * and whatever drives the actual browser (a renderer webview, hidden main-
+ * process BrowserWindow, or external provider via CDP).
  *
  * Spec: docs/superpowers/specs/2026-06-16-browser-automation-mvp.md
  *
- * The core tools only know this interface. The renderer implements it on top
- * of the webview's `webContents.debugger` (CDP): observe via
+ * The core tools only know this interface. Desktop implementations use
+ * `webContents.debugger` (CDP): observe via
  * Accessibility.getFullAXTree, act via DOM.getBoxModel → Input.dispatchMouseEvent.
- * Keeping it driver-agnostic means a future implementation (a hidden
- * BrowserWindow for unattended runs, or an external engine) can swap in without
- * touching the tools. Undefined on ToolContext → headless / no panel → tools
- * degrade with a clear error.
+ * Keeping it driver-agnostic lets visible, background, and remote targets swap
+ * without touching the tools. Undefined on ToolContext means the current host
+ * did not provide browser automation, so tools degrade with a clear error.
  */
 
 /** One interactive element from the page's accessibility tree. */
@@ -32,6 +32,8 @@ export interface BrowserSnapshot {
   url: string;
   title?: string;
   elements: BrowserElement[];
+  /** Operational/policy failure. Unlike needsHuman, this must not trigger takeover. */
+  detail?: string;
   /** Set when the page needs the user to act (login wall / 2FA) — agent should
    *  hand control back to the user rather than retry. */
   needsHuman?: string;

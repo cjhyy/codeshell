@@ -71,7 +71,11 @@ describe("DigitalHumansSection — pet external session toggles (global scope)",
   });
 
   test("renders both pet toggles alongside ProfileSection in project scope", () => {
-    const html = renderToStaticMarkup(<DigitalHumansSection scope="project" projectPath="/a" />);
+    const html = renderToStaticMarkup(
+      <DialogProvider>
+        <DigitalHumansSection scope="project" projectPath="/a" />
+      </DialogProvider>,
+    );
     expect(html).toContain("给这个 Workspace 设一个默认数字同事");
     expect(html).toContain("在 Pet 全局视图显示 Codex CLI/App 会话");
     expect(html).toContain("在 Pet 全局视图显示 Claude Code 会话");

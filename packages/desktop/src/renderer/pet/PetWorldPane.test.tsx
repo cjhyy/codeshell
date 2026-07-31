@@ -51,6 +51,10 @@ describe("PetWorldPane", () => {
 
     expect(html).toContain("目前没有工作记录");
     expect(html).toContain("工作收件箱");
+    expect(html).toContain('data-pet-todos="durable"');
+    expect(html).toContain("我的待办");
+    expect(html).toContain("添加一个待办");
+    expect(html).toContain(">添加</button>");
     expect(html).not.toContain("工作会话");
     expect(html).not.toContain("待你决定");
     expect(html).toContain('data-pet-world-pane="deterministic"');

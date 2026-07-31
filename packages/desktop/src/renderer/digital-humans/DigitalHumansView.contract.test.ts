@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const source = readFileSync(join(import.meta.dir, "DigitalHumansView.tsx"), "utf-8");
+const styles = readFileSync(join(import.meta.dir, "..", "styles", "tailwind.css"), "utf-8");
 const pageRegistry = readFileSync(join(import.meta.dir, "..", "pages", "PageRegistry.ts"), "utf-8");
 const settings = readFileSync(join(import.meta.dir, "..", "settings", "SettingsPage.tsx"), "utf-8");
 const dhSection = readFileSync(
@@ -10,6 +11,11 @@ const dhSection = readFileSync(
   "utf-8",
 );
 const editor = readFileSync(join(import.meta.dir, "DigitalHumanEditorDialog.tsx"), "utf-8");
+const memoryDialog = readFileSync(join(import.meta.dir, "DigitalHumanMemoryDialog.tsx"), "utf-8");
+const memorySection = readFileSync(
+  join(import.meta.dir, "..", "settings", "MemorySection.tsx"),
+  "utf-8",
+);
 const libraryHook = readFileSync(join(import.meta.dir, "useDigitalHumansLibrary.ts"), "utf-8");
 const app = readFileSync(join(import.meta.dir, "..", "App.tsx"), "utf-8");
 const topBar = readFileSync(join(import.meta.dir, "..", "TopBar.tsx"), "utf-8");
@@ -18,6 +24,10 @@ const runController = readFileSync(
   "utf-8",
 );
 const main = readFileSync(join(import.meta.dir, "..", "..", "main", "index.ts"), "utf-8");
+const profilesService = readFileSync(
+  join(import.meta.dir, "..", "..", "main", "profiles-service.ts"),
+  "utf-8",
+);
 const preload = readFileSync(join(import.meta.dir, "..", "..", "preload", "index.ts"), "utf-8");
 const preloadTypes = readFileSync(
   join(import.meta.dir, "..", "..", "preload", "types.d.ts"),
@@ -25,6 +35,18 @@ const preloadTypes = readFileSync(
 );
 
 describe("DigitalHumansView contract", () => {
+  test("opens as a personal studio with clear navigation and project context", () => {
+    // The bundled market can legitimately be empty, so it must not be the
+    // default landing surface. The page starts from the user's own roster and
+    // keeps market/team management one deliberate navigation step away.
+    expect(source).toContain('useState<DigitalHumanTab>("mine")');
+    expect(source).toContain("digital-human-hero");
+    expect(source).toContain("digital-human-nav");
+    expect(source).toContain("digitalHumans.workspace.default");
+    expect(source).toContain("<LibraryEmptyState");
+    expect(styles).toContain('.digital-human-nav-item[data-state="active"]');
+  });
+
   test("is a first-class market and library rather than a capabilities toggle", () => {
     expect(pageRegistry).toContain('"sidebar.digitalHumans"');
     expect(source).toContain('value="market"');
@@ -44,8 +66,17 @@ describe("DigitalHumansView contract", () => {
     // collaboration, so the enum left the UI (the field stays persisted).
     expect(source).not.toContain('<SelectItem value="divide">');
     expect(source).not.toContain('<SelectItem value="compare">');
+    expect(source).not.toContain("digitalHumans.team.mode.");
     expect(source).toContain("digitalHumans.team.leadLabel");
     expect(source).toContain("digitalHumans.team.playbookLabel");
+    expect(source).toContain("digitalHumans.team.leadConfigured");
+    // Repo teams are live catalog entries. Saving customizes them locally and
+    // the action is described as restoring the source, not deleting the team.
+    expect(source).toContain("team.sourceRepo");
+    expect(source).toContain("team.localOverride");
+    expect(source).toContain("digitalHumans.team.customize");
+    expect(source).toContain("digitalHumans.team.manageSource");
+    expect(source).toContain("digitalHumans.team.restoreSource");
     expect(source).toContain("saveDigitalHumanTeam");
     expect(source).toContain('kind: "team"');
   });
@@ -67,6 +98,9 @@ describe("DigitalHumansView contract", () => {
   test("supports the discover-detail-sample-summon journey", () => {
     expect(source).toContain("CuratedTeamCard");
     expect(source).toContain("DigitalHumanDetailDialog");
+    expect(source).toContain("digitalHumans.detail.configuredCapabilities");
+    expect(source).toContain("availableSkillByName");
+    expect(source).toContain("digitalHumans.detail.skillState");
     expect(source).toContain("samplePrompts");
     expect(source).toContain("installAndSummon");
     expect(app).toContain("workspaceProfile: profileName");
@@ -76,14 +110,62 @@ describe("DigitalHumansView contract", () => {
   test("creates and edits a digital human with installed Skill assignment", () => {
     expect(source).toContain("DigitalHumanEditorDialog");
     expect(source).toContain("window.codeshell.saveProfile");
+    expect(source).toContain("activeProjectPath ?? undefined");
     expect(source).toContain("availableSkills");
     expect(libraryHook).toContain("api.listSkills");
     expect(editor).toContain("profile?.skills");
     expect(editor).toContain("selectedSkills");
     expect(editor).toContain("projectSkillsDescription");
+    expect(editor).toContain("digitalHumans.editor.projectSkillsMore");
+    expect(editor).toContain(".slice(0, 8)");
+    expect(editor).toContain("digital-human-skill-repo");
+    expect(editor).toContain("digitalHumans.editor.saveAndInstall");
+    expect(editor).toContain("installRequirements");
+    expect(source).toContain("options?.installRequirements");
     expect(source).toContain('skill.source !== "project"');
     expect(source).toContain('t("digitalHumans.editor.create")');
     expect(source).toContain('t("digitalHumans.editor.edit")');
+  });
+
+  test("organizes editing into identity, System Prompt, Skills, and settings sections", () => {
+    expect(editor).toContain('type EditorSection = "identity" | "prompt" | "skills" | "settings"');
+    expect(editor).toContain("digitalHumans.editor.navigationLabel");
+    expect(editor).toContain("<EditorSectionHeader");
+    expect(editor).toContain("<ToggleCard");
+    expect(editor).toContain("digitalHumans.editor.systemPromptField");
+    expect(editor).toContain('section === "prompt"');
+    expect(editor).toContain("digitalHumans.editor.unsavedChanges");
+    // The written Cancel action must use the same dirty-state guard as Esc and
+    // backdrop close; directly calling onOpenChange used to bypass it.
+    expect(editor).toContain("onClick={() => requestClose(false)}");
+  });
+
+  test("presents profile memory as a readable workspace instead of raw settings", () => {
+    expect(memoryDialog).toContain('presentation="profile"');
+    expect(memoryDialog).toContain("digitalHumans.memory.workspaceTitle");
+    expect(memoryDialog).toContain("digitalHumans.memory.enable");
+    expect(source).toContain("enable-profile-memory:");
+    expect(memorySection).toContain('presentation?: "default" | "profile"');
+    expect(memorySection).toContain("profilePresentation");
+    expect(memorySection).toContain("settingsX.memory.fieldContent");
+    expect(memoryDialog).toContain("onDirtyChange={setDirty}");
+    expect(memoryDialog).toContain("onSavingChange={setSaving}");
+    expect(memoryDialog).toContain("showClose={!saving}");
+    expect(memoryDialog).toContain("settingsX.memory.discardTitle");
+    expect(memorySection).toContain("confirmDiscardDraft");
+    // Saving may outlive a click. Scope/navigation actions stay locked until
+    // the write and reload finish, otherwise an old-scope read can win the race.
+    expect(memorySection).toContain("if (saving || next === scope");
+    expect(memorySection).toContain("disabled={saving || loading || dreaming}");
+    expect(memorySection).toContain("<details");
+  });
+
+  test("guards unsaved team edits on every close path", () => {
+    expect(source).toContain("digitalHumans.team.discardTitle");
+    expect(source).toContain("<Dialog open={open} onOpenChange={requestClose}>");
+    expect(source).toContain("onClick={() => requestClose(false)}");
+    expect(source).toContain("if (!next && busy) return");
+    expect(source).toContain("<DialogContent showClose={!busy}>");
   });
 
   test("owns long-term memory and model-driven Session messaging outside Pet", () => {
@@ -117,6 +199,18 @@ describe("DigitalHumansView contract", () => {
     expect(editor).toContain("digitalHumans.editor.skillLimitExceeded");
   });
 
+  test("keeps the CodeShell runtime base out of digital-human authoring", () => {
+    expect(editor).not.toContain('id="digital-human-preset"');
+    expect(editor).not.toContain('id="digital-human-version"');
+    expect(editor).toContain('basePreset: "general"');
+    expect(editor).toContain("profile?.version ? { version: profile.version }");
+    expect(profilesService).toContain(
+      'saveWorkspaceProfile({ ...profile, basePreset: "general" })',
+    );
+    expect(source).not.toContain("<dd className=\"mt-1 font-medium\">{preview.basePreset}</dd>");
+    expect(source).not.toContain("<Badge variant=\"secondary\">{profile.basePreset}</Badge>");
+  });
+
   test("reviews local definition JSON before import and exports definitions without memory", () => {
     expect(main).toContain('"profiles:pickDefinitionImport"');
     expect(main).toContain("previewProfileDefinitionImport(filePath)");
@@ -132,6 +226,7 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("preview.capabilityCounts");
     expect(source).toContain("preview.portableMemory");
     expect(source).toContain("confirmProfileOverwrite");
+    expect(source).toContain("activeProjectPath ?? undefined");
     expect(source).toContain("digitalHumans.transfer.definitionOnlyNotice");
     // Export moved from an icon button (tooltip-only label) into the card's
     // overflow menu, where it carries a written label instead of a hint.
@@ -144,7 +239,13 @@ describe("DigitalHumansView contract", () => {
     // The footer used to line up 7 controls — details/summon/memory/edit/export/
     // delete/set-default — four of them same-weight icon buttons, so nothing
     // read as the thing to click.
-    expect(source).toContain("<DropdownMenu>");
+    expect(source).toContain("<DropdownMenu");
+    // Menu actions launch nested dialogs. Keeping the menu non-modal prevents
+    // Radix's pointer-event lock from leaving the studio inert afterwards.
+    expect(source).toContain("modal={false}");
+    expect(source).toContain("open={menuOpen} onOpenChange={setMenuOpen}");
+    expect(source).toContain("digitalHumans.localInstalled");
+    expect(source).toContain("digitalHumans.skillReadiness.missing");
     expect(source).toContain("digitalHumans.moreActions");
     for (const action of [
       "digitalHumans.market.details",
@@ -154,6 +255,28 @@ describe("DigitalHumansView contract", () => {
     ]) {
       expect(source).toContain(action);
     }
+  });
+
+  test("shows Skill installation, availability, and profile configuration separately", () => {
+    expect(editor).toContain("digitalHumans.editor.skillsInstalled");
+    expect(editor).toContain("digitalHumans.editor.skillsEnabled");
+    expect(editor).toContain("digitalHumans.editor.skillsConfigured");
+    expect(editor).toContain("digitalHumans.editor.skillInstalledDisabled");
+    expect(editor).toContain("digitalHumans.editor.skillNotInstalled");
+    expect(editor).toContain("digitalHumans.editor.configuredSkillsTitle");
+    expect(editor).toContain("digitalHumans.editor.removeSkill");
+    expect(editor).toContain('type SkillFilter = "all" | "selected"');
+    // Project requirements install project-scoped Skills. Those must count as
+    // installed, and a truly missing requirement needs an install action here
+    // instead of waiting for the user to discover the summon-time prompt.
+    expect(editor).toContain("...skills, ...projectSkills");
+    expect(editor).toContain("window.codeshell.previewProfileRequirements");
+    expect(editor).toContain("window.codeshell.installProfileRequirements");
+    expect(editor).toContain("digitalHumans.editor.installMissingSkills");
+    expect(source).toContain("onRequirementsInstalled={refresh}");
+    expect(dhSection).toContain("onRequirementsInstalled={refresh}");
+    expect(source).toContain("return false;");
+    expect(preloadTypes).toContain('requires?: WorkspaceProfile["requires"]');
   });
 
   test("deletion is preflighted so blockers surface before the confirm", () => {
@@ -194,10 +317,18 @@ describe("DigitalHumansView contract", () => {
   });
 
   test("the editor round-trips requires and guards unsaved edits", () => {
-    // The editor has no `requires` field. Without an explicit carry-through,
-    // saving a repo-installed digital human strips its dependency declaration
-    // and silently turns it back into a shell.
-    expect(editor).toContain("...(profile?.requires ? { requires: profile.requires } : {})");
+    // Existing multi-source requirements are preserved; each missing Skill can
+    // name or change its trusted source without rewriting unrelated rows.
+    expect(editor).toContain("digitalHumanSkillSourcesByName");
+    expect(editor).toContain("replaceDigitalHumanSkillSources");
+    expect(editor).toContain("changedSkillInstallRepos");
+    expect(editor).toContain("missingSkillSourceRows.map");
+    expect(editor).toContain("const requirementTools = profile?.requires?.tools ?? []");
+    expect(editor).toContain("nextRequirements ? { requires: nextRequirements }");
+    expect(source).toContain("editorSaveFlowLock.current");
+    expect(source).toContain("editorSaveFlowBusy || operations.isBusy");
+    expect(editor).toContain("if (!next && operationBusy) return");
+    expect(editor).toContain("showClose={!operationBusy}");
     // Radix closes on backdrop click / Esc; a half-written profile must not
     // vanish without asking.
     expect(editor).toContain("const dirty =");
@@ -229,6 +360,8 @@ describe("DigitalHumansView contract", () => {
     // marketplace flow rather than inventing a second one.
     expect(dhSection).toContain("window.codeshell.addProfileRepo");
     expect(dhSection).toContain("window.codeshell.listProfileRepos");
+    expect(dhSection).toContain("settingsX.digitalHumans.repos.removeTitle");
+    expect(dhSection).toContain("settingsX.digitalHumans.repos.viewIssues");
     expect(main).toContain('"profiles:addRepo"');
     expect(main).toContain('"profiles:listRepos"');
     // Show: a catalog card states which repo it came from.
@@ -242,9 +375,21 @@ describe("DigitalHumansView contract", () => {
     // The team definition names three members but only the lead was installed.
     // Sessions were still created, and the lead's first SendMessageToSession died
     // with "Workspace profile ... is unavailable" — twice, two hours apart.
-    expect(source).toContain("const installedNames = new Set(profiles.map");
+    expect(source).toContain("...profiles.map((profile) => profile.name)");
     expect(source).toContain("window.codeshell.installCatalogProfile(name)");
     expect(source).toContain("digitalHumans.team.memberUnavailable");
+  });
+
+  test("add-and-summon does not reinstall a profile from a stale render", () => {
+    // `run()` refreshes the library, but React does not replace the current
+    // closure's profiles array synchronously. Newly committed names are carried
+    // into the dependency gate so the same click cannot install them twice.
+    expect(source).toContain("knownInstalledNames: readonly string[] = []");
+    expect(source).toContain("...knownInstalledNames");
+    expect(source).toMatch(
+      /useSelection\(\{ kind: "single".+starterPrompt,\s*\[\s*entry\.name,\s*\]\);/s,
+    );
+    expect(source).toContain("blueprint.members,");
   });
 
   test("summoning satisfies requirements, not only the project-default toggle", () => {

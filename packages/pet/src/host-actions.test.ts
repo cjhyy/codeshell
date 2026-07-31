@@ -248,6 +248,24 @@ describe("host-action envelope validation", () => {
         },
       }),
     ).toBe(true);
+    expect(
+      isPetHostActionRequest({
+        kind: "todoMutation",
+        payload: { action: "update", todoId: "todo-one", text: "更新后的待办" },
+      }),
+    ).toBe(true);
+    expect(
+      isPetHostActionRequest({
+        kind: "sessionArchive",
+        payload: { action: "archive", sessionIds: ["session-one", "session-two"] },
+      }),
+    ).toBe(true);
+    expect(
+      isPetHostActionRequest({
+        kind: "outboundMessage",
+        payload: { targetId: "owner-one", text: "已经完成" },
+      }),
+    ).toBe(true);
 
     expect(isPetHostActionRequest({ kind: "mobileRemote", payload: { action: "destroy" } })).toBe(
       false,
@@ -262,6 +280,24 @@ describe("host-action envelope validation", () => {
       isPetHostActionRequest({
         kind: "memory",
         payload: { action: "remember", text: "x".repeat(2_001) },
+      }),
+    ).toBe(false);
+    expect(
+      isPetHostActionRequest({
+        kind: "todoMutation",
+        payload: { action: "complete", todoId: "todo-one", text: "unexpected" },
+      }),
+    ).toBe(false);
+    expect(
+      isPetHostActionRequest({
+        kind: "sessionArchive",
+        payload: { action: "archive", sessionIds: ["session-one", "session-one"] },
+      }),
+    ).toBe(false);
+    expect(
+      isPetHostActionRequest({
+        kind: "outboundMessage",
+        payload: { targetId: "owner-one", text: "x".repeat(8_001) },
       }),
     ).toBe(false);
     expect(

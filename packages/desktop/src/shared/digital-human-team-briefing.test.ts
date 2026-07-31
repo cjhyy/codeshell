@@ -57,6 +57,19 @@ describe("buildTeamBriefings", () => {
     }
   });
 
+  test("a leaderless team gives every member the shared collaboration rules", () => {
+    const briefings = buildTeamBriefings(
+      { ...team, lead: undefined, playbook: "每人给出证据、风险和建议。" },
+      roster,
+      "各自调研",
+    );
+    expect(briefings).toHaveLength(3);
+    for (const briefing of briefings) {
+      expect(briefing.text).toContain("共同工作规则");
+      expect(briefing.text).toContain("每人给出证据、风险和建议");
+    }
+  });
+
   test("no goal still produces a usable briefing", () => {
     const briefings = buildTeamBriefings(team, roster, undefined);
     expect(briefings.length).toBeGreaterThan(0);

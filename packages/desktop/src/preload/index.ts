@@ -1048,12 +1048,13 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("profiles:previewRequirements", name, cwd),
   installProfileRequirements: (name: string, cwd: string) =>
     ipcRenderer.invoke("profiles:installRequirements", name, cwd),
-  saveProfile: (profile: import("@cjhyy/code-shell-core").WorkspaceProfile) =>
-    ipcRenderer.invoke("profiles:save", profile),
+  saveProfile: (profile: import("@cjhyy/code-shell-core").WorkspaceProfile, cwd?: string) =>
+    ipcRenderer.invoke("profiles:save", profile, cwd),
   pickProfileDefinitionImport: () => ipcRenderer.invoke("profiles:pickDefinitionImport"),
   importReviewedProfileDefinition: (
     input: import("../shared/digital-human-profile-transfer").DigitalHumanProfileImportCommitInput,
-  ) => ipcRenderer.invoke("profiles:importReviewedDefinition", input),
+    cwd?: string,
+  ) => ipcRenderer.invoke("profiles:importReviewedDefinition", input, cwd),
   exportProfileDefinition: (name: string) => ipcRenderer.invoke("profiles:exportDefinition", name),
   exportProfileRepo: (names: string[]) => ipcRenderer.invoke("profiles:exportRepo", names),
   deleteProfile: (name: string, options?: { cwd?: string; clearActiveProject?: boolean }) =>

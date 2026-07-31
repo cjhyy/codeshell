@@ -1,11 +1,15 @@
 import React from "react";
 import { ExternalLink, Pencil, Plus, RotateCcw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { useT } from "../i18n";
+import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
 import { DigitalHumanEditorDialog } from "../digital-humans/DigitalHumanEditorDialog";
+import { ensureDigitalHumanRequirements } from "../digital-humans/profileRequirements";
+import { normalizeDigitalHumanSkillRepo } from "../digital-humans/types";
 import type { DigitalHumanProfileEntry, DigitalHumanSkillEntry } from "../digital-humans/types";
 import { ProfileSection } from "./ProfileSection";
 import { writeSettings } from "../settingsBus";
@@ -13,7 +17,7 @@ import { useRefreshOnSettingsChange } from "./useSettingsResource";
 
 interface Props {
   scope: "user" | "project";
-  /** Project path when scope === "project"; used for activation. */
+  /** Selected/active project, used for activation and Skill installation status. */
   projectPath: string | null;
   /** Jump to the full digital-humans page (market / teams). */
   onOpenDigitalHumans?: () => void;
@@ -35,18 +39,21 @@ function errorMessage(caught: unknown): string {
 export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }: Props) {
   const { t } = useT();
   const toast = useToast();
+  const confirm = useConfirm();
   const [profiles, setProfiles] = React.useState<DigitalHumanProfileEntry[]>([]);
   const [skills, setSkills] = React.useState<DigitalHumanSkillEntry[]>([]);
   const [editing, setEditing] = React.useState<DigitalHumanProfileEntry | undefined>();
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  const [installingRequirements, setInstallingRequirements] = React.useState(false);
+  const saveLock = React.useRef(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
     // Profiles are the primary content; a skills failure only degrades the
     // editor's skill picker, so it must not discard a fetched profile list.
     const [profileResult, skillResult] = await Promise.allSettled([
-      window.codeshell.listProfiles(),
+      window.codeshell.listProfiles(projectPath ?? undefined),
       window.codeshell.listSkills(projectPath ?? "/", { includeDisabled: true }),
     ]);
     if (profileResult.status === "fulfilled") {
@@ -81,12 +88,36 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
     );
   }
 
-  const save = async (profile: Omit<DigitalHumanProfileEntry, "active">) => {
+  const save = async (
+    profile: Omit<DigitalHumanProfileEntry, "active">,
+    options?: { installRequirements?: boolean },
+  ) => {
+    if (saveLock.current) return;
+    saveLock.current = true;
     setBusy(true);
+    setInstallingRequirements(Boolean(options?.installRequirements));
     try {
-      await window.codeshell.saveProfile(profile);
-      setEditorOpen(false);
+      await window.codeshell.saveProfile(profile, projectPath ?? undefined);
       await refresh();
+      if (options?.installRequirements) {
+        const ready = await ensureDigitalHumanRequirements({
+          name: profile.name,
+          projectPath,
+          api: window.codeshell,
+          confirm,
+          toast,
+          t,
+        });
+        if (!ready) {
+          setEditing((current) => ({
+            ...profile,
+            active: current?.active ?? false,
+          }));
+          return;
+        }
+        await refresh();
+      }
+      setEditorOpen(false);
     } catch (caught) {
       // The section-body error <p> sits under the dialog overlay, so save
       // failures surface as a toast (same pattern as DigitalHumansView) and
@@ -99,12 +130,15 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
         variant: "error",
       });
     } finally {
+      saveLock.current = false;
       setBusy(false);
+      setInstallingRequirements(false);
     }
   };
 
   return (
-    <section className="space-y-3 rounded-md border border-border bg-card p-4">
+    <div className="space-y-4">
+      <section className="space-y-3 rounded-md border border-border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-medium text-foreground">
@@ -146,7 +180,12 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
               className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
             >
               <div className="min-w-0">
-                <span className="text-sm text-foreground">{profile.label}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-sm text-foreground">{profile.label}</span>
+                  <Badge variant="success" className="shrink-0">
+                    {t("digitalHumans.localInstalled")}
+                  </Badge>
+                </div>
                 {profile.description ? (
                   <p className="truncate text-xs text-muted-foreground">{profile.description}</p>
                 ) : null}
@@ -173,12 +212,16 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
         existingIds={profiles.map((profile) => profile.name)}
         skills={skills.filter((skill) => skill.source !== "project")}
         projectSkills={skills.filter((skill) => skill.source === "project")}
+        projectPath={projectPath}
         busy={busy}
+        installing={installingRequirements}
+        onRequirementsInstalled={refresh}
         onOpenChange={setEditorOpen}
-        onSave={(profile) => void save(profile)}
+        onSave={(profile, options) => void save(profile, options)}
       />
+      </section>
       <PetExternalSessionsToggles scope="user" />
-    </section>
+    </div>
   );
 }
 
@@ -193,10 +236,14 @@ type RepoRow = Awaited<ReturnType<typeof window.codeshell.listProfileRepos>>[num
  */
 function DigitalHumanReposPanel() {
   const { t } = useT();
+  const confirm = useConfirm();
   const [repos, setRepos] = React.useState<RepoRow[]>([]);
   const [input, setInput] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const operationLock = React.useRef(false);
+  const normalizedRepo = normalizeDigitalHumanSkillRepo(input);
+  const repoInvalid = input.trim().length > 0 && normalizedRepo === null;
 
   const refresh = React.useCallback(async () => {
     try {
@@ -210,24 +257,32 @@ function DigitalHumanReposPanel() {
     void refresh();
   }, [refresh]);
 
-  const add = async () => {
-    const repo = input.trim();
-    if (!repo) return;
+  const runRepoOperation = async (operation: () => Promise<void>) => {
+    if (operationLock.current) return;
+    operationLock.current = true;
     setBusy(true);
     setError(null);
     try {
-      const result = await window.codeshell.addProfileRepo(repo);
+      await operation();
+    } catch (caught) {
+      setError(errorMessage(caught));
+    } finally {
+      operationLock.current = false;
+      setBusy(false);
+    }
+  };
+
+  const add = async () => {
+    if (!normalizedRepo) return;
+    await runRepoOperation(async () => {
+      const result = await window.codeshell.addProfileRepo(normalizedRepo);
       if (!result.ok) {
         setError(result.error);
         return;
       }
       setInput("");
       await refresh();
-    } catch (caught) {
-      setError(errorMessage(caught));
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   return (
@@ -243,19 +298,26 @@ function DigitalHumanReposPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <Input
           value={input}
-          onChange={(event) => setInput(event.target.value)}
+          onChange={(event) => {
+            setInput(event.target.value);
+            if (error) setError(null);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") void add();
           }}
           placeholder={t("settingsX.digitalHumans.repos.placeholder")}
           aria-label={t("settingsX.digitalHumans.repos.title")}
+          aria-invalid={repoInvalid}
           className="h-8 min-w-56 flex-1 text-xs"
           disabled={busy}
         />
-        <Button size="sm" onClick={() => void add()} disabled={busy || !input.trim()}>
+        <Button size="sm" onClick={() => void add()} disabled={busy || !normalizedRepo}>
           {t("settingsX.digitalHumans.repos.add")}
         </Button>
       </div>
+      {repoInvalid ? (
+        <p className="text-xs text-status-err">{t("settingsX.digitalHumans.repos.invalid")}</p>
+      ) : null}
       {error ? <p className="text-xs text-status-err">{error}</p> : null}
       {repos.length === 0 ? (
         <p className="text-xs text-muted-foreground">{t("settingsX.digitalHumans.repos.empty")}</p>
@@ -276,6 +338,20 @@ function DigitalHumanReposPanel() {
                       })}`
                     : ""}
                 </p>
+                {repo.errors.length > 0 ? (
+                  <details className="mt-1 max-w-xl text-[11px] text-status-warn">
+                    <summary className="cursor-pointer select-none">
+                      {t("settingsX.digitalHumans.repos.viewIssues")}
+                    </summary>
+                    <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                      {repo.errors.map((issue, index) => (
+                        <li key={`${repo.repo}:${index}`} className="break-words">
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 {/* addProfileRepo already fetch+resets an existing clone, so
@@ -285,21 +361,15 @@ function DigitalHumanReposPanel() {
                   size="sm"
                   variant="outline"
                   disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    setError(null);
-                    try {
+                  onClick={() => {
+                    void runRepoOperation(async () => {
                       const result = await window.codeshell.addProfileRepo(repo.repo);
                       if (!result.ok) {
                         setError(result.error);
                         return;
                       }
                       await refresh();
-                    } catch (caught) {
-                      setError(errorMessage(caught));
-                    } finally {
-                      setBusy(false);
-                    }
+                    });
                   }}
                 >
                   <RotateCcw className="size-3.5" aria-hidden />
@@ -310,15 +380,20 @@ function DigitalHumanReposPanel() {
                   variant="ghost"
                   disabled={busy}
                   onClick={async () => {
-                    setBusy(true);
-                    try {
+                    const accepted = await confirm({
+                      title: t("settingsX.digitalHumans.repos.removeTitle"),
+                      message: t("settingsX.digitalHumans.repos.removeMessage", {
+                        repo: repo.repo,
+                      }),
+                      detail: t("settingsX.digitalHumans.repos.removeDetail"),
+                      confirmLabel: t("settingsX.digitalHumans.repos.remove"),
+                      destructive: true,
+                    });
+                    if (!accepted) return;
+                    await runRepoOperation(async () => {
                       await window.codeshell.removeProfileRepo(repo.repo);
                       await refresh();
-                    } catch (caught) {
-                      setError(errorMessage(caught));
-                    } finally {
-                      setBusy(false);
-                    }
+                    });
                   }}
                 >
                   {t("settingsX.digitalHumans.repos.remove")}
@@ -503,7 +578,7 @@ export function PetExternalSessionsToggles({
   };
 
   return (
-    <div className="space-y-3 rounded-md border border-border bg-background p-4">
+    <div className="space-y-3 rounded-md border border-border bg-card p-4">
       <div>
         <h3 className="text-sm font-medium text-foreground">
           {t("settingsX.digitalHumans.externalSessionsTitle")}

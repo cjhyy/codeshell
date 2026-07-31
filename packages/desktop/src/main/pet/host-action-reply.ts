@@ -11,6 +11,9 @@ const HOST_ACTION_LABELS: Record<string, string> = {
   longTaskControl: "长程任务",
   memory: "记忆",
   gatewayReply: "Gateway 回复",
+  todoMutation: "待办",
+  sessionArchive: "Session 归档",
+  outboundMessage: "主动消息",
 };
 
 const LONG_TASK_ACTION_LABELS: Record<string, string> = {
@@ -77,6 +80,12 @@ export async function enrichPetChatReplyWithHostActions(
       lines.push(renderLongTaskLine(execution));
     } else if (execution.kind === "memory") {
       lines.push(renderMemoryLine(execution));
+    } else if (execution.kind === "todoMutation") {
+      lines.push(renderTodoMutationLine(execution));
+    } else if (execution.kind === "sessionArchive") {
+      lines.push(renderSessionArchiveLine(execution));
+    } else if (execution.kind === "outboundMessage") {
+      lines.push(renderOutboundMessageLine(execution));
     } else if (execution.kind === "gatewayReply") {
       const rendered = renderGatewayReply(execution, attachmentKinds);
       if (!rendered) {
@@ -196,6 +205,43 @@ function renderMemoryLine(execution: PetHostActionExecution): string {
     return "已有等价的用户记忆，已保留原文。";
   }
   return MEMORY_ACTION_LABELS[action] ?? "记忆已更新。";
+}
+
+function renderTodoMutationLine(execution: PetHostActionExecution): string {
+  const action = String(execution.payload.action ?? "");
+  const text =
+    typeof execution.result?.text === "string"
+      ? execution.result.text.replace(/\s+/gu, " ").trim().slice(0, 120)
+      : "";
+  const labels: Record<string, string> = {
+    create: "已加入待办",
+    update: "待办已更新",
+    start: "待办已标记为处理中",
+    block: "待办已标记为受阻",
+    complete: "待办已完成",
+    reopen: "待办已重新打开",
+    archive: "待办已归档",
+  };
+  const label = labels[action] ?? "待办已更新";
+  return text ? `${label}：「${text}」。` : `${label}。`;
+}
+
+function renderSessionArchiveLine(execution: PetHostActionExecution): string {
+  const count =
+    typeof execution.result?.count === "number" && Number.isSafeInteger(execution.result.count)
+      ? execution.result.count
+      : Array.isArray(execution.result?.archived)
+        ? execution.result.archived.length
+        : 0;
+  return count > 0 ? `已归档 ${count} 个工作 Session。` : "没有需要归档的工作 Session。";
+}
+
+function renderOutboundMessageLine(execution: PetHostActionExecution): string {
+  const label =
+    typeof execution.result?.label === "string"
+      ? execution.result.label.replace(/\s+/gu, " ").trim().slice(0, 80)
+      : "";
+  return label ? `消息已发送到 ${label}。` : "消息已发送。";
 }
 
 /** Render the one-time pairing URL as a PNG QR file; best-effort. */

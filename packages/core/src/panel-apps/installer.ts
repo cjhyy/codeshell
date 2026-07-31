@@ -15,8 +15,8 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, extname, join, posix, relative, resolve, sep } from "node:path";
-import { extractZip } from "../plugins/installer/unzip.js";
-import { gitClone } from "../plugins/gitOps.js";
+import { extractZip, extractZipSubdirectory } from "../plugins/installer/unzip.js";
+import { downloadGitHubPanelAppArchive } from "./github-archive.js";
 import {
   PANEL_APP_MANIFEST_FILE,
   PanelAppManifest,
@@ -45,6 +45,8 @@ const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_DEPTH = 16;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MAX_AGENT_SKILL_BYTES = 256 * 1024;
+const REVIEWED_GIT_SNAPSHOT_TTL_MS = 10 * 60 * 1000;
+const MAX_REVIEWED_GIT_SNAPSHOTS = 8;
 const ALLOWED_ASSET_EXTENSIONS = new Set([
   ".html",
   ".js",
@@ -123,6 +125,22 @@ interface TreeBudget {
   entries: number;
   bytes: number;
 }
+
+interface OpenedGitPanelAppSource {
+  source: GitPanelAppSourceInput;
+  sourceKey: string;
+  sourceRoot: string;
+  temporaryRoot: string;
+}
+
+interface ReviewedGitPanelAppSnapshot extends OpenedGitPanelAppSource {
+  id: string;
+  reviewToken: string;
+  createdAt: number;
+  expiryTimer: ReturnType<typeof setTimeout>;
+}
+
+const reviewedGitPanelAppSnapshots = new Map<string, ReviewedGitPanelAppSnapshot>();
 
 function validLocalSourceInput(input: LocalPanelAppSourceInput): boolean {
   return (
@@ -222,6 +240,10 @@ function normalizeGitPanelAppSource(input: GitPanelAppSourceInput): GitPanelAppS
   };
 }
 
+function normalizedGitSourceKey(input: GitPanelAppSourceInput): string {
+  return JSON.stringify(normalizeGitPanelAppSource(input));
+}
+
 function looksLikePanelAppRoot(directory: string): boolean {
   return existsSync(join(directory, PANEL_APP_MANIFEST_FILE));
 }
@@ -237,34 +259,98 @@ async function findPanelAppRoot(directory: string): Promise<string> {
   throw new PanelAppInstallError(`no Panel App found (expected ${PANEL_APP_MANIFEST_FILE})`);
 }
 
+async function openGitPanelAppSource(
+  input: GitPanelAppSourceInput,
+): Promise<OpenedGitPanelAppSource> {
+  const source = normalizeGitPanelAppSource(input);
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "cs-panel-app-git-"));
+  try {
+    const archivePath = join(temporaryRoot, "source.zip");
+    const extractedRoot = join(temporaryRoot, "source");
+    await mkdir(extractedRoot, { recursive: true, mode: 0o700 });
+    await downloadGitHubPanelAppArchive(source, archivePath);
+    await extractZipSubdirectory(archivePath, extractedRoot, source.subdir);
+    await rm(archivePath, { force: true });
+    return {
+      source,
+      sourceKey: JSON.stringify(source),
+      sourceRoot: await findPanelAppRoot(extractedRoot),
+      temporaryRoot,
+    };
+  } catch (error) {
+    await rm(temporaryRoot, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
+  }
+}
+
+async function disposeReviewedGitSnapshot(snapshot: ReviewedGitPanelAppSnapshot): Promise<void> {
+  clearTimeout(snapshot.expiryTimer);
+  await rm(snapshot.temporaryRoot, { recursive: true, force: true }).catch(() => undefined);
+}
+
+async function removeReviewedGitSnapshot(
+  key: string,
+  expected?: ReviewedGitPanelAppSnapshot,
+): Promise<void> {
+  const snapshot = reviewedGitPanelAppSnapshots.get(key);
+  if (!snapshot || (expected && snapshot !== expected)) return;
+  reviewedGitPanelAppSnapshots.delete(key);
+  await disposeReviewedGitSnapshot(snapshot);
+}
+
+async function cacheReviewedGitSnapshot(
+  opened: OpenedGitPanelAppSource,
+  id: string,
+  reviewToken: string,
+): Promise<void> {
+  for (const [key, snapshot] of reviewedGitPanelAppSnapshots) {
+    if (snapshot.sourceKey === opened.sourceKey) {
+      await removeReviewedGitSnapshot(key, snapshot);
+    }
+  }
+  while (reviewedGitPanelAppSnapshots.size >= MAX_REVIEWED_GIT_SNAPSHOTS) {
+    const oldest = [...reviewedGitPanelAppSnapshots.entries()].sort(
+      ([, left], [, right]) => left.createdAt - right.createdAt,
+    )[0];
+    if (!oldest) break;
+    await removeReviewedGitSnapshot(oldest[0], oldest[1]);
+  }
+  const key = `${opened.sourceKey}\0${reviewToken}`;
+  const snapshot: ReviewedGitPanelAppSnapshot = {
+    ...opened,
+    id,
+    reviewToken,
+    createdAt: Date.now(),
+    expiryTimer: setTimeout(() => {
+      void removeReviewedGitSnapshot(key, snapshot);
+    }, REVIEWED_GIT_SNAPSHOT_TTL_MS),
+  };
+  snapshot.expiryTimer.unref?.();
+  reviewedGitPanelAppSnapshots.set(key, snapshot);
+}
+
+function takeReviewedGitSnapshot(
+  input: GitPanelAppSourceInput,
+  reviewToken: string,
+): ReviewedGitPanelAppSnapshot | undefined {
+  const key = `${normalizedGitSourceKey(input)}\0${reviewToken}`;
+  const snapshot = reviewedGitPanelAppSnapshots.get(key);
+  if (!snapshot) return undefined;
+  reviewedGitPanelAppSnapshots.delete(key);
+  clearTimeout(snapshot.expiryTimer);
+  return snapshot;
+}
+
 async function withPanelAppSourceRoot<T>(
   input: PanelAppSourceInput,
   operation: (root: string) => Promise<T>,
 ): Promise<T> {
   if (input.kind === "git") {
-    const source = normalizeGitPanelAppSource(input);
-    const temporary = await mkdtemp(join(tmpdir(), "cs-panel-app-git-"));
+    const opened = await openGitPanelAppSource(input);
     try {
-      const clone = await gitClone(source.url, temporary, {
-        ...(source.ref ? { ref: source.ref } : {}),
-        full: true,
-      });
-      if (!clone.ok) throw new PanelAppInstallError(`GitHub clone failed: ${clone.error}`);
-      let root = temporary;
-      if (source.subdir) {
-        const candidate = resolve(temporary, ...source.subdir.split("/"));
-        const resolved = await realpath(candidate).catch(() => "");
-        const cloneRoot = await realpath(temporary);
-        if (!resolved || !resolved.startsWith(`${cloneRoot}${sep}`)) {
-          throw new PanelAppInstallError(
-            `Panel App subdirectory was not found in the repository: ${source.subdir}`,
-          );
-        }
-        root = resolved;
-      }
-      return await operation(await findPanelAppRoot(root));
+      return await operation(opened.sourceRoot);
     } finally {
-      await rm(temporary, { recursive: true, force: true });
+      await rm(opened.temporaryRoot, { recursive: true, force: true });
     }
   }
   if (!validLocalSourceInput(input)) throw new PanelAppInstallError("Panel App source is invalid");
@@ -477,6 +563,21 @@ function previewFrom(
 }
 
 export async function previewLocalPanelApp(input: PanelAppSourceInput): Promise<PanelAppPreview> {
+  if (input.kind === "git") {
+    const opened = await openGitPanelAppSource(input);
+    let retained = false;
+    try {
+      const inspected = await inspectPanelAppSource(opened.sourceRoot);
+      const preview = previewFrom(inspected.manifest, inspected.digest, opened.source);
+      await cacheReviewedGitSnapshot(opened, preview.id, preview.reviewToken);
+      retained = true;
+      return preview;
+    } finally {
+      if (!retained) {
+        await rm(opened.temporaryRoot, { recursive: true, force: true }).catch(() => undefined);
+      }
+    }
+  }
   return withPanelAppSourceRoot(input, async (sourceRoot) => {
     const inspected = await inspectPanelAppSource(sourceRoot);
     return previewFrom(inspected.manifest, inspected.digest, input);
@@ -516,6 +617,10 @@ export async function previewInstalledPanelAppUpdate(id: string): Promise<PanelA
   const input = await installedPanelAppSource(id);
   const preview = await previewLocalPanelApp(input);
   if (preview.id !== id) {
+    if (input.kind === "git") {
+      const snapshot = takeReviewedGitSnapshot(input, preview.reviewToken);
+      if (snapshot) await disposeReviewedGitSnapshot(snapshot);
+    }
     throw new PanelAppInstallError(
       `original source now declares Panel App '${preview.id}', expected '${id}'`,
     );
@@ -547,80 +652,111 @@ async function replaceInstalledDirectory(
   }
 }
 
+async function installReviewedPanelAppFromRoot(
+  sourceRoot: string,
+  input: PanelAppSourceInput,
+  expectedReviewToken: string,
+  installedAt: string,
+  options: { overwrite?: boolean; expectedId?: string },
+): Promise<InstalledPanelApp> {
+  const inspected = await inspectPanelAppSource(sourceRoot);
+  if (options.expectedId && inspected.manifest.id !== options.expectedId) {
+    throw new PanelAppInstallError(
+      `original source now declares Panel App '${inspected.manifest.id}', expected '${options.expectedId}'`,
+    );
+  }
+  if (inspected.digest !== expectedReviewToken) throw new PanelAppReviewChangedError();
+  await mkdir(panelAppsRoot(), { recursive: true, mode: 0o700 });
+  const staging = await mkdtemp(join(panelAppsRoot(), `.tmp-${inspected.manifest.id}-`));
+  let backup: string | undefined;
+  let directoryReplaced = false;
+  try {
+    await cp(sourceRoot, staging, { recursive: true });
+    const copied = await inspectPanelAppSource(staging);
+    if (copied.digest !== expectedReviewToken) throw new PanelAppReviewChangedError();
+    const storedSource: InstalledPanelAppSource =
+      input.kind === "git" ? normalizeGitPanelAppSource(input) : input.path;
+    await writeFile(
+      join(staging, PANEL_APP_META_FILE),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          id: copied.manifest.id,
+          version: copied.manifest.version,
+          source: storedSource,
+          installedAt,
+        },
+        null,
+        2,
+      )}\n`,
+      { mode: 0o600 },
+    );
+    ({ backup } = await replaceInstalledDirectory(
+      copied.manifest.id,
+      staging,
+      options.overwrite === true,
+    ));
+    directoryReplaced = true;
+    const previous = (await readInstalledPanelAppsRegistry()).find(
+      (candidate) => candidate.id === copied.manifest.id,
+    );
+    await upsertInstalledPanelAppRecord({
+      id: copied.manifest.id,
+      version: copied.manifest.version,
+      source: storedSource,
+      installedAt: previous?.installedAt ?? installedAt,
+      lastUpdated: installedAt,
+    });
+    if (backup) await rm(backup, { recursive: true, force: true }).catch(() => undefined);
+    return installedPanelApp(copied.manifest, {
+      id: copied.manifest.id,
+      version: copied.manifest.version,
+      source: storedSource,
+      installedAt: previous?.installedAt ?? installedAt,
+      lastUpdated: installedAt,
+    });
+  } catch (error) {
+    await rm(staging, { recursive: true, force: true }).catch(() => undefined);
+    if (directoryReplaced) {
+      const finalDir = panelAppInstallDir(inspected.manifest.id);
+      await rm(finalDir, { recursive: true, force: true }).catch(() => undefined);
+    }
+    if (backup) {
+      const finalDir = panelAppInstallDir(inspected.manifest.id);
+      await rename(backup, finalDir).catch(() => undefined);
+    }
+    throw error;
+  }
+}
+
 export async function installReviewedLocalPanelApp(
   input: PanelAppSourceInput,
   expectedReviewToken: string,
   installedAt: string,
-  options: { overwrite?: boolean } = {},
+  options: { overwrite?: boolean; expectedId?: string } = {},
 ): Promise<InstalledPanelApp> {
   if (!/^[a-f0-9]{64}$/.test(expectedReviewToken)) {
     throw new PanelAppInstallError("Panel App review token is invalid");
   }
-  return withPanelAppSourceRoot(input, async (sourceRoot) => {
-    const inspected = await inspectPanelAppSource(sourceRoot);
-    if (inspected.digest !== expectedReviewToken) throw new PanelAppReviewChangedError();
-    await mkdir(panelAppsRoot(), { recursive: true, mode: 0o700 });
-    const staging = await mkdtemp(join(panelAppsRoot(), `.tmp-${inspected.manifest.id}-`));
-    let backup: string | undefined;
-    let directoryReplaced = false;
-    try {
-      await cp(sourceRoot, staging, { recursive: true });
-      const copied = await inspectPanelAppSource(staging);
-      if (copied.digest !== expectedReviewToken) throw new PanelAppReviewChangedError();
-      const storedSource: InstalledPanelAppSource =
-        input.kind === "git" ? normalizeGitPanelAppSource(input) : input.path;
-      await writeFile(
-        join(staging, PANEL_APP_META_FILE),
-        `${JSON.stringify(
-          {
-            schemaVersion: 1,
-            id: copied.manifest.id,
-            version: copied.manifest.version,
-            source: storedSource,
-            installedAt,
-          },
-          null,
-          2,
-        )}\n`,
-        { mode: 0o600 },
-      );
-      ({ backup } = await replaceInstalledDirectory(
-        copied.manifest.id,
-        staging,
-        options.overwrite === true,
-      ));
-      directoryReplaced = true;
-      const previous = (await readInstalledPanelAppsRegistry()).find(
-        (candidate) => candidate.id === copied.manifest.id,
-      );
-      await upsertInstalledPanelAppRecord({
-        id: copied.manifest.id,
-        version: copied.manifest.version,
-        source: storedSource,
-        installedAt: previous?.installedAt ?? installedAt,
-        lastUpdated: installedAt,
-      });
-      if (backup) await rm(backup, { recursive: true, force: true }).catch(() => undefined);
-      return installedPanelApp(copied.manifest, {
-        id: copied.manifest.id,
-        version: copied.manifest.version,
-        source: storedSource,
-        installedAt: previous?.installedAt ?? installedAt,
-        lastUpdated: installedAt,
-      });
-    } catch (error) {
-      await rm(staging, { recursive: true, force: true }).catch(() => undefined);
-      if (directoryReplaced) {
-        const finalDir = panelAppInstallDir(inspected.manifest.id);
-        await rm(finalDir, { recursive: true, force: true }).catch(() => undefined);
+  if (input.kind === "git") {
+    const snapshot = takeReviewedGitSnapshot(input, expectedReviewToken);
+    if (snapshot) {
+      try {
+        return await installReviewedPanelAppFromRoot(
+          snapshot.sourceRoot,
+          snapshot.source,
+          expectedReviewToken,
+          installedAt,
+          options,
+        );
+      } finally {
+        await disposeReviewedGitSnapshot(snapshot);
       }
-      if (backup) {
-        const finalDir = panelAppInstallDir(inspected.manifest.id);
-        await rename(backup, finalDir).catch(() => undefined);
-      }
-      throw error;
     }
-  });
+  }
+  return withPanelAppSourceRoot(input, (sourceRoot) =>
+    installReviewedPanelAppFromRoot(sourceRoot, input, expectedReviewToken, installedAt, options),
+  );
 }
 
 export async function installReviewedPanelAppUpdate(
@@ -629,15 +765,9 @@ export async function installReviewedPanelAppUpdate(
   installedAt: string,
 ): Promise<InstalledPanelApp> {
   const input = await installedPanelAppSource(id);
-  const preview = await previewLocalPanelApp(input);
-  if (preview.id !== id) {
-    throw new PanelAppInstallError(
-      `original source now declares Panel App '${preview.id}', expected '${id}'`,
-    );
-  }
-  if (preview.reviewToken !== expectedReviewToken) throw new PanelAppReviewChangedError();
   return installReviewedLocalPanelApp(input, expectedReviewToken, installedAt, {
     overwrite: true,
+    expectedId: id,
   });
 }
 

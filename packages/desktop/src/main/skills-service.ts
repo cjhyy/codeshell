@@ -27,6 +27,7 @@ export interface SkillSummary {
   description: string;
   source: "project" | "user" | "plugin" | "panel-app";
   filePath: string;
+  enabled: boolean;
 }
 
 export interface InstalledSkill {
@@ -43,12 +44,20 @@ export interface UninstallSkillInput {
 
 export function listSkills(cwd: string, opts?: { includeDisabled?: boolean }): SkillSummary[] {
   let defs: SkillDefinition[];
+  let enabledNames: Set<string> | undefined;
   try {
     if (opts?.includeDisabled) {
       // "Include disabled" applies to individual Skill/plugin toggles. Panel
       // App Skills remain project-bound and must not appear in unrelated
       // projects' catalogs.
       defs = scanSkills(cwd);
+      const disabled = computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd);
+      enabledNames = new Set(
+        scanSkills(cwd, {
+          disabledSkills: disabled.disabledSkills,
+          disabledPlugins: disabled.disabledPlugins,
+        }).map((definition) => definition.name),
+      );
     } else {
       const disabled = computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd);
       defs = scanSkills(cwd, {
@@ -66,6 +75,7 @@ export function listSkills(cwd: string, opts?: { includeDisabled?: boolean }): S
       description: d.description,
       source: d.source,
       filePath: d.filePath,
+      enabled: enabledNames?.has(d.name) ?? true,
     };
   });
 }
@@ -130,6 +140,7 @@ function findListedSkill(
       description: "",
       source: "user",
       filePath: path.join(userSkillRoot(), skillName, "SKILL.md"),
+      enabled: true,
     };
   }
   if (!cwd) return null;

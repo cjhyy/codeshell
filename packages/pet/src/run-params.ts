@@ -5,10 +5,14 @@ import {
   type PetHostActionKind,
 } from "./host-actions.js";
 import { parsePetGatewayCatalog, type PetGatewayCatalog } from "./gateway.js";
+import { PET_TODO_STATUSES, type PetTodoItem } from "./todos.js";
+import type { PetOutboundTargetOption } from "./outbound-message.js";
 
 const MAX_RUNTIME_CONTEXT_LENGTH = 32_768;
 const MAX_WORKSPACES = 64;
 const MAX_REUSABLE_SESSIONS = 32;
+const MAX_TODOS = 100;
+const MAX_OUTBOUND_TARGETS = 32;
 const MAX_ID_LENGTH = 128;
 const MAX_NAME_LENGTH = 256;
 const MAX_DESCRIPTION_LENGTH = 4_096;
@@ -25,6 +29,10 @@ export interface PetRunOptions {
   gateway?: PetGatewayCatalog;
   /** Host-provided sessions directory backing the Sessions tool. */
   sessionsRootDir?: string;
+  /** Durable personal todos visible to this manager turn. */
+  todos: readonly PetTodoItem[];
+  /** Host-authorized proactive owner destinations. */
+  outboundTargets: readonly PetOutboundTargetOption[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -100,6 +108,74 @@ function parseReusableSessions(value: unknown): PetReusableSessionOption[] | und
   return result;
 }
 
+function parseTodos(value: unknown): PetTodoItem[] | undefined {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > MAX_TODOS) return undefined;
+  const ids = new Set<string>();
+  const result: PetTodoItem[] = [];
+  for (const entry of value) {
+    if (
+      !isRecord(entry) ||
+      !validOpaqueId(entry.id) ||
+      ids.has(entry.id) ||
+      typeof entry.text !== "string" ||
+      !entry.text.trim() ||
+      entry.text.length > 500 ||
+      !(PET_TODO_STATUSES as readonly unknown[]).includes(entry.status) ||
+      !Number.isFinite(entry.createdAt) ||
+      !Number.isFinite(entry.updatedAt) ||
+      (entry.workspaceId !== undefined && !validOpaqueId(entry.workspaceId)) ||
+      (entry.sessionId !== undefined && !validOpaqueId(entry.sessionId))
+    ) {
+      return undefined;
+    }
+    ids.add(entry.id);
+    result.push({
+      id: entry.id,
+      text: entry.text.replace(/\s+/gu, " ").trim(),
+      status: entry.status as PetTodoItem["status"],
+      createdAt: Number(entry.createdAt),
+      updatedAt: Number(entry.updatedAt),
+      ...(typeof entry.workspaceId === "string" ? { workspaceId: entry.workspaceId } : {}),
+      ...(typeof entry.sessionId === "string" ? { sessionId: entry.sessionId } : {}),
+    });
+  }
+  return result;
+}
+
+function parseOutboundTargets(value: unknown): PetOutboundTargetOption[] | undefined {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > MAX_OUTBOUND_TARGETS) return undefined;
+  const ids = new Set<string>();
+  const result: PetOutboundTargetOption[] = [];
+  for (const entry of value) {
+    if (
+      !isRecord(entry) ||
+      !validOpaqueId(entry.id) ||
+      ids.has(entry.id) ||
+      typeof entry.channel !== "string" ||
+      !entry.channel.trim() ||
+      entry.channel.length > 32 ||
+      typeof entry.label !== "string" ||
+      !entry.label.trim() ||
+      entry.label.length > 128 ||
+      !Number.isSafeInteger(entry.maxTextLength) ||
+      Number(entry.maxTextLength) < 1 ||
+      Number(entry.maxTextLength) > 8_000
+    ) {
+      return undefined;
+    }
+    ids.add(entry.id);
+    result.push({
+      id: entry.id,
+      channel: entry.channel.trim(),
+      label: entry.label.replace(/\s+/gu, " ").trim(),
+      maxTextLength: Number(entry.maxTextLength),
+    });
+  }
+  return result;
+}
+
 function freezeOptions(options: {
   workspaces: PetWorkspaceOption[];
   reusableSessions: PetReusableSessionOption[];
@@ -107,6 +183,8 @@ function freezeOptions(options: {
   gatewayReply?: PetGatewayReplyCapability;
   gateway?: PetGatewayCatalog;
   sessionsRootDir?: string;
+  todos: PetTodoItem[];
+  outboundTargets: PetOutboundTargetOption[];
 }): PetRunOptions {
   return Object.freeze({
     workspaces: Object.freeze(options.workspaces.map((entry) => Object.freeze(entry))),
@@ -115,6 +193,8 @@ function freezeOptions(options: {
     ...(options.gatewayReply ? { gatewayReply: options.gatewayReply } : {}),
     ...(options.gateway ? { gateway: options.gateway } : {}),
     ...(options.sessionsRootDir ? { sessionsRootDir: options.sessionsRootDir } : {}),
+    todos: Object.freeze(options.todos.map((entry) => Object.freeze(entry))),
+    outboundTargets: Object.freeze(options.outboundTargets.map((entry) => Object.freeze(entry))),
   });
 }
 
@@ -194,6 +274,8 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
   const gateway =
     profileParams.gateway === undefined ? undefined : parsePetGatewayCatalog(profileParams.gateway);
   const sessionsRootDir = parseSessionsRootDir(profileParams.sessionsRootDir);
+  const todos = parseTodos(profileParams.todos) ?? [];
+  const outboundTargets = parseOutboundTargets(profileParams.outboundTargets) ?? [];
   const hostActionKinds = declaredHostActionKinds.filter(
     (kind) => kind !== "gatewayReply" || gatewayReply !== undefined,
   );
@@ -204,6 +286,8 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
     ...(gatewayReply ? { gatewayReply } : {}),
     ...(gateway ? { gateway } : {}),
     ...(sessionsRootDir ? { sessionsRootDir } : {}),
+    todos,
+    outboundTargets,
   });
   const workspaces =
     profileParams.workspaces === undefined ? [] : parseWorkspaces(profileParams.workspaces);
@@ -221,6 +305,8 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
     ...(gatewayReply ? { gatewayReply } : {}),
     ...(gateway ? { gateway } : {}),
     ...(sessionsRootDir ? { sessionsRootDir } : {}),
+    todos,
+    outboundTargets,
   });
 }
 
@@ -290,6 +376,11 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
     Object.prototype.hasOwnProperty.call(profileParams, "gatewayReply");
   const hasCanonicalGateway =
     profileParams !== undefined && Object.prototype.hasOwnProperty.call(profileParams, "gateway");
+  const hasCanonicalTodos =
+    profileParams !== undefined && Object.prototype.hasOwnProperty.call(profileParams, "todos");
+  const hasCanonicalOutboundTargets =
+    profileParams !== undefined &&
+    Object.prototype.hasOwnProperty.call(profileParams, "outboundTargets");
 
   const runtimeContext = hasCanonicalRuntimeContext
     ? profileParams.runtimeContext
@@ -334,6 +425,12 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
   }
   if (hasCanonicalGateway && !parsePetGatewayCatalog(profileParams.gateway)) {
     return "profileParams.gateway contains an invalid Gateway capability catalog";
+  }
+  if (hasCanonicalTodos && !parseTodos(profileParams.todos)) {
+    return "profileParams.todos contains an invalid or duplicate todo";
+  }
+  if (hasCanonicalOutboundTargets && !parseOutboundTargets(profileParams.outboundTargets)) {
+    return "profileParams.outboundTargets contains an invalid or duplicate destination";
   }
 
   return null;

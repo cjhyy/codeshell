@@ -128,4 +128,88 @@ describe("agent/run model", () => {
     expect(injected).toBe(true);
     expect(t.sent.find((message) => message.id === 3)?.result?.text).toBe("completion delivered");
   });
+
+  it("shows displayText in the session while keeping the full task for the model", async () => {
+    let receivedTask: string | undefined;
+    let receivedDisplayText: string | undefined;
+    const engine = {
+      isHeadless: () => true,
+      async run(task: string, options: { displayText?: string }): Promise<EngineResult> {
+        receivedTask = task;
+        receivedDisplayText = options.displayText;
+        return {
+          text: "design updated",
+          reason: "completed",
+          sessionId: "panel-session",
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 4,
+      method: "agent/run",
+      params: {
+        sessionId: "panel-session",
+        task: 'INTERNAL PANEL CONTEXT\n{"selection":["hero-title"]}',
+        displayText: "【Design Studio】 把标题改得更醒目",
+        clientMessageId: "panel:design-studio:1",
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(receivedTask).toBe('INTERNAL PANEL CONTEXT\n{"selection":["hero-title"]}');
+    expect(receivedDisplayText).toBe("【Design Studio】 把标题改得更醒目");
+    expect(
+      t.sent.find(
+        (message) =>
+          message.method === "agent/streamEvent" &&
+          message.params?.event?.type === "session_user_message",
+      )?.params,
+    ).toEqual({
+      sessionId: "panel-session",
+      event: {
+        type: "session_user_message",
+        text: "【Design Studio】 把标题改得更醒目",
+        clientMessageId: "panel:design-studio:1",
+      },
+    });
+    expect(t.sent.find((message) => message.id === 4)?.result?.text).toBe("design updated");
+  });
+
+  it("rejects an empty displayText before starting a turn", async () => {
+    const { engine, calls } = makeEngine();
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 5,
+      method: "agent/run",
+      params: {
+        sessionId: "panel-session",
+        task: "valid internal prompt",
+        displayText: "   ",
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(t.sent.find((message) => message.id === 5)?.error).toMatchObject({
+      code: ErrorCodes.InvalidParams,
+      message: "displayText must be a non-empty string up to 20000 characters",
+    });
+    expect(calls).toEqual([]);
+  });
 });

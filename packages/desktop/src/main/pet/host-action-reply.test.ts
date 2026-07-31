@@ -135,6 +135,38 @@ describe("enrichPetChatReplyWithHostActions", () => {
     expect(enriched.attachments).toEqual([]);
   });
 
+  test("renders authoritative todo, session archive, and outbound delivery receipts", async () => {
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "",
+      [
+        {
+          kind: "todoMutation",
+          payload: { action: "complete", todoId: "todo-one" },
+          ok: true,
+          result: { action: "complete", text: "整理发布说明", status: "completed" },
+        },
+        {
+          kind: "sessionArchive",
+          payload: { action: "archive", sessionIds: ["session-one", "session-two"] },
+          ok: true,
+          result: { count: 2, archived: ["session-one", "session-two"] },
+        },
+        {
+          kind: "outboundMessage",
+          payload: { targetId: "owner-one", text: "已经完成" },
+          ok: true,
+          result: { label: "微信", delivered: true },
+        },
+      ],
+      { qrDir: join(tmpdir(), "unused"), attachmentKinds: [] },
+    );
+
+    expect(enriched.text).toContain("待办已完成：「整理发布说明」");
+    expect(enriched.text).toContain("已归档 2 个工作 Session");
+    expect(enriched.text).toContain("消息已发送到 微信");
+    expect(enriched.attachments).toEqual([]);
+  });
+
   test("uses host-validated Gateway text, button, and every media kind as the IM reply", async () => {
     const enriched = await enrichPetChatReplyWithHostActions(
       "给你。",

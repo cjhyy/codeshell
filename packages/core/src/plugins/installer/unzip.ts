@@ -71,6 +71,70 @@ export async function extractZip(zipPath: string, destDir: string): Promise<void
   }
 }
 
+/**
+ * Extract one repository-relative subtree from an archive with a single
+ * wrapper directory, as produced by GitHub source archives. Unrelated
+ * monorepo content is never materialized or counted against extracted limits.
+ */
+export async function extractZipSubdirectory(
+  zipPath: string,
+  destDir: string,
+  subdirectory = "",
+): Promise<void> {
+  const archive = await stat(zipPath);
+  if (!archive.isFile() || archive.size > MAX_PLUGIN_ZIP_BYTES) {
+    throw new PluginInstallError(
+      `plugin zip must be a regular file no larger than ${MAX_PLUGIN_ZIP_BYTES} bytes`,
+    );
+  }
+  const normalizedSubdirectory = subdirectory.replaceAll("\\", "/").replace(/\/+$/, "");
+  if (
+    normalizedSubdirectory.startsWith("/") ||
+    normalizedSubdirectory.split("/").some((segment) => segment === "." || segment === "..")
+  ) {
+    throw new PluginInstallError(`refusing unsafe zip subdirectory: ${subdirectory}`);
+  }
+
+  let wrapper: string | undefined;
+  const prefix = normalizedSubdirectory ? `${normalizedSubdirectory}/` : "";
+  const zip = await openZip(zipPath);
+  try {
+    const selected = await drainEntries(zip, destDir, (entryName) => {
+      // Validate the original archive path before removing GitHub's generated
+      // top-level wrapper. safeJoin rejects traversal, absolute paths, NULs,
+      // drive letters, and backslashes.
+      safeJoin(destDir, entryName);
+      const slash = entryName.indexOf("/");
+      if (slash < 1) return null;
+      const entryWrapper = entryName.slice(0, slash);
+      if (wrapper === undefined) wrapper = entryWrapper;
+      else if (wrapper !== entryWrapper) {
+        throw new PluginInstallError("GitHub source archive contains multiple root directories");
+      }
+      const repositoryPath = entryName.slice(slash + 1);
+      if (!repositoryPath) return null;
+      if (normalizedSubdirectory) {
+        if (repositoryPath !== normalizedSubdirectory && !repositoryPath.startsWith(prefix)) {
+          return null;
+        }
+        const relativePath =
+          repositoryPath === normalizedSubdirectory ? "" : repositoryPath.slice(prefix.length);
+        return relativePath || null;
+      }
+      return repositoryPath;
+    });
+    if (selected === 0) {
+      throw new PluginInstallError(
+        normalizedSubdirectory
+          ? `GitHub source archive does not contain subdirectory: ${normalizedSubdirectory}`
+          : "GitHub source archive is empty",
+      );
+    }
+  } finally {
+    zip.close();
+  }
+}
+
 function openZip(zipPath: string): Promise<ZipFile> {
   return new Promise((resolve, reject) => {
     yauzl().open(zipPath, { lazyEntries: true }, (err, z) => {
@@ -83,7 +147,11 @@ function openZip(zipPath: string): Promise<ZipFile> {
   });
 }
 
-function drainEntries(zip: ZipFile, destDir: string): Promise<void> {
+function drainEntries(
+  zip: ZipFile,
+  destDir: string,
+  mapEntryName: (entryName: string) => string | null = (entryName) => entryName,
+): Promise<number> {
   return new Promise((resolve, reject) => {
     let entryCount = 0;
     let extractedBytes = 0;
@@ -98,9 +166,20 @@ function drainEntries(zip: ZipFile, destDir: string): Promise<void> {
     zip.on("end", () => {
       if (settled) return;
       settled = true;
-      resolve();
+      resolve(entryCount);
     });
     zip.on("entry", (entry: Entry) => {
+      let entryName: string | null;
+      try {
+        entryName = mapEntryName(entry.fileName);
+      } catch (error) {
+        fail(error);
+        return;
+      }
+      if (entryName === null) {
+        zip.readEntry();
+        return;
+      }
       entryCount += 1;
       if (entryCount > MAX_PLUGIN_ZIP_ENTRIES) {
         fail(
@@ -109,13 +188,11 @@ function drainEntries(zip: ZipFile, destDir: string): Promise<void> {
         return;
       }
       if (
-        entry.fileName.length > MAX_PLUGIN_ZIP_ENTRY_NAME ||
+        entryName.length > MAX_PLUGIN_ZIP_ENTRY_NAME ||
         entry.uncompressedSize > MAX_PLUGIN_ZIP_ENTRY_BYTES
       ) {
         fail(
-          new PluginInstallError(
-            `plugin zip entry exceeds preview/install limits: ${entry.fileName}`,
-          ),
+          new PluginInstallError(`plugin zip entry exceeds preview/install limits: ${entryName}`),
         );
         return;
       }
@@ -130,18 +207,18 @@ function drainEntries(zip: ZipFile, destDir: string): Promise<void> {
       }
       const onErr = (e: unknown): void => fail(e);
       // Directory entry — yauzl signals these with a trailing slash.
-      if (/\/$/.test(entry.fileName)) {
-        mkdir(safeJoin(destDir, entry.fileName), { recursive: true })
+      if (/\/$/.test(entryName)) {
+        mkdir(safeJoin(destDir, entryName), { recursive: true })
           .then(() => zip.readEntry())
           .catch(onErr);
         return;
       }
-      const outPath = safeJoin(destDir, entry.fileName);
+      const outPath = safeJoin(destDir, entryName);
       zip.openReadStream(entry, (err, stream) => {
         if (err || !stream) {
           onErr(
             new PluginInstallError(
-              `cannot read zip entry ${entry.fileName}: ${err?.message ?? "unknown"}`,
+              `cannot read zip entry ${entryName}: ${err?.message ?? "unknown"}`,
             ),
           );
           return;

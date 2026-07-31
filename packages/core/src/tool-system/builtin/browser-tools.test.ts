@@ -20,7 +20,7 @@ function ctxVision(bridge?: Partial<BrowserBridge>): ToolContext {
   } as unknown as ToolContext;
 }
 
-describe("browser tools — no bridge (headless / no panel)", () => {
+describe("browser tools — host without a browser bridge", () => {
   test("every tool degrades with a clear error, never throws", async () => {
     const ctx = ctxWith(undefined);
     for (const out of [
@@ -59,6 +59,19 @@ describe("browser_observe", () => {
     expect(out).toContain("e1");
     expect(out).toContain("[sensitive]");
     expect(out).toContain("login required");
+  });
+
+  test("snapshot reports operational failures without asking for human takeover", async () => {
+    const ctx = ctxWith({
+      snapshot: async () => ({
+        url: "",
+        elements: [],
+        detail: "background browser target limit reached",
+      }),
+    });
+    const out = await browserObserveTool({}, ctx);
+    expect(out).toBe("Error: background browser target limit reached");
+    expect(out).not.toContain("please complete");
   });
 
   test("read returns cleaned page text", async () => {

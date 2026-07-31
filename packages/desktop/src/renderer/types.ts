@@ -588,7 +588,16 @@ export function applyStreamEvent(
 ): MessagesReducerState {
   switch (event.type) {
     case "session_user_message":
-      return appendUserMessage(state, event.text, now());
+      return appendUserMessage(
+        state,
+        event.text,
+        now(),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        event.clientMessageId,
+      );
 
     case "session_started": {
       // Ignore event.promptTokens here: on resume, core reports the

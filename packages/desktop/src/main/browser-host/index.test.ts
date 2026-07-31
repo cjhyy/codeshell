@@ -110,15 +110,21 @@ describe("buildWindowOptions", () => {
     const def = buildWindowOptions({ kind: "window", url: "https://x", partition: "p" });
     expect(def.width).toBe(1000);
     expect(def.title).toBe("登录");
+    expect(def.show).toBe(true);
+    expect(def.webPreferences.backgroundThrottling).toBe(true);
     const ov = buildWindowOptions({
       kind: "window",
       url: "https://x",
       partition: "p",
       width: 1200,
       title: "登录 YouTube",
+      show: false,
+      backgroundThrottling: false,
     });
     expect(ov.width).toBe(1200);
     expect(ov.title).toBe("登录 YouTube");
+    expect(ov.show).toBe(false);
+    expect(ov.webPreferences.backgroundThrottling).toBe(false);
   });
 });
 

@@ -4,6 +4,8 @@ import type {
   PetLongTaskControlRequest,
   PetLongTaskControlResult,
   PetLongTaskSnapshot,
+  PetTodoItem,
+  PetTodoStatus,
 } from "@cjhyy/code-shell-pet";
 
 export type {
@@ -12,6 +14,8 @@ export type {
   PetLongTaskControlRequest,
   PetLongTaskControlResult,
   PetLongTaskSnapshot,
+  PetTodoItem,
+  PetTodoStatus,
 };
 
 export type PetWorkerState = "active" | "reclaimed" | "disconnected" | "reconciling" | "unknown";
@@ -44,7 +48,13 @@ export type PetChatEvent =
         messageId?: string;
       };
     }
-  | ({ kind: "delegation-started" } & PetDelegationReceiptGroup);
+  | ({ kind: "delegation-started" } & PetDelegationReceiptGroup)
+  | {
+      kind: "host-action-completed";
+      clientMessageId: string;
+      message: string;
+      createdAt: number;
+    };
 
 export type PetSessionRunState = "dormant" | "idle" | "queued" | "running" | "terminal" | "unknown";
 
@@ -333,6 +343,12 @@ export interface PetApi {
   getSegmentMessages?(range: { start: number; end: number }): Promise<PetSegmentMessage[]>;
   getMemoryAutoExtract?(): Promise<boolean>;
   setMemoryAutoExtract?(enabled: boolean): Promise<boolean>;
+  listTodos?(): Promise<PetTodoItem[]>;
+  createTodo?(text: string): Promise<PetTodoItem>;
+  updateTodo?(id: string, text: string): Promise<PetTodoItem>;
+  setTodoStatus?(id: string, status: PetTodoStatus): Promise<PetTodoItem>;
+  onTodosChanged?(listener: (entries: PetTodoItem[]) => void): () => void;
+  archiveSession?(sessionId: string): Promise<{ ok: true }>;
   getWidgetVisibility(): Promise<boolean>;
   setWidgetVisible(visible: boolean): Promise<{ ok: true }>;
   setWidgetSurface(mode: "collapsed" | "expanded"): Promise<{ ok: true }>;
@@ -441,6 +457,20 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
       ),
     setMemoryAutoExtract: (enabled) =>
       ipcRenderer.invoke("pet:prefs-set-auto-extract", enabled) as Promise<boolean>,
+    listTodos: () => ipcRenderer.invoke("pet:todos-get") as Promise<PetTodoItem[]>,
+    createTodo: (text) => ipcRenderer.invoke("pet:todo-create", text) as Promise<PetTodoItem>,
+    updateTodo: (id, text) =>
+      ipcRenderer.invoke("pet:todo-update", { id, text }) as Promise<PetTodoItem>,
+    setTodoStatus: (id, status) =>
+      ipcRenderer.invoke("pet:todo-set-status", { id, status }) as Promise<PetTodoItem>,
+    onTodosChanged: (listener) => {
+      const handler = (_event: unknown, payload: unknown): void =>
+        listener(payload as PetTodoItem[]);
+      ipcRenderer.on("pet:todos-changed", handler);
+      return () => ipcRenderer.removeListener("pet:todos-changed", handler);
+    },
+    archiveSession: (sessionId) =>
+      ipcRenderer.invoke("pet:session-archive", sessionId) as Promise<{ ok: true }>,
     getWidgetVisibility: () => ipcRenderer.invoke("pet:widget-visible-get") as Promise<boolean>,
     setWidgetVisible: (visible) =>
       ipcRenderer.invoke("pet:widget-visible", visible) as Promise<{ ok: true }>,

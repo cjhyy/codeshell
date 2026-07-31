@@ -107,9 +107,10 @@ export async function browserObserveTool(
   switch (mode) {
     case "snapshot": {
       const snap = await b.snapshot();
+      if (snap.detail) return `Error: ${snap.detail}`;
       const header = `URL: ${snap.url}${snap.title ? `\nTitle: ${snap.title}` : ""}`;
       const human = snap.needsHuman
-        ? `\n\n⚠ ${snap.needsHuman} — please complete it in the browser panel, then continue.`
+        ? `\n\n⚠ ${snap.needsHuman} — please complete it in the browser window, then continue.`
         : "";
       return `${header}\n\n${renderElementList(snap.elements)}${human}`;
     }
@@ -188,7 +189,8 @@ export async function browserObserveTool(
 export const browserActToolDef: ToolDefinition = {
   name: "browser_act",
   description:
-    "Act on the page in the browser panel. Use refs (eN) from the latest " +
+    "Act on the active in-app browser target (visible panel when open, otherwise " +
+    "a background target). Use refs (eN) from the latest " +
     "browser_observe(snapshot). Actions:\n" +
     "- click {ref}: click an element.\n" +
     "- type {ref, text}: type text into an input (focuses first).\n" +
@@ -332,8 +334,10 @@ export async function browserActTool(
 export const browserNavigateToolDef: ToolDefinition = {
   name: "browser_navigate",
   description:
-    "Navigate the browser panel to a URL (opens the panel automatically if none " +
-    "is open). Then call browser_act(wait) + browser_observe to see the page.",
+    "Navigate the in-app browser to a URL. If no visible browser panel is open, " +
+    "navigation stays in the background; a window appears only when login or a " +
+    "high-consequence action needs human control. Then call browser_act(wait) + " +
+    "browser_observe to inspect the page.",
   inputSchema: {
     type: "object",
     properties: { url: { type: "string", description: "Absolute URL to open" } },

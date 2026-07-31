@@ -78,7 +78,10 @@ export function activateWorkspaceProfile(
   }
   const subtree: WorkspaceProfileSubtree = {
     active: profile.name,
-    preset: profile.basePreset,
+    // A digital human contributes its role, capabilities, and memory. The
+    // CodeShell runtime base is a host concern and must not vary with imported
+    // definitions that happen to carry a legacy basePreset value.
+    preset: "general",
     overrides: profileOverridesFromDefinition(profile, installed),
   };
   settings.saveProjectSetting("profile", subtree, cwd);

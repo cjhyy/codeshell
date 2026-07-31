@@ -126,7 +126,11 @@ export function PanelAppInstallReviewDialog({ busy, action, preview, onCancel, o
           </Button>
           <Button type="button" disabled={busy} onClick={onInstall}>
             {busy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-            {action === "update" ? t("ext.panels.reviewUpdate") : t("ext.panels.reviewInstall")}
+            {busy && action === "update"
+              ? t("ext.panels.applyingUpdate")
+              : action === "update"
+                ? t("ext.panels.reviewUpdate")
+                : t("ext.panels.reviewInstall")}
           </Button>
         </DialogFooter>
       </DialogContent>
