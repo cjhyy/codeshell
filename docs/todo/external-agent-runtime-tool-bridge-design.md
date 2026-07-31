@@ -27,7 +27,13 @@ v1 的信任分层（Runtime → MCP → `SessionToolHost` → `ToolExecutor`）
    这是 v1 第 23 节问题 2 的答案。
 6. **7.1 节文件路径修正**：`packages/core/src/extension/` 目录不存在。
 7. **Phase 0 新增两个阻塞性调研项**（第 17 节）：`run-tooling.ts` 的可复用性改造、
-   Codex `_meta.threadId` 可信性验证。后者是 22.7 节能否维持"暂不采用"的前提。
+   Codex `_meta.threadId` 可信性验证。
+
+**v2.1（同日）**：Phase 0-B 已用真实 `codex-cli 0.145.0` 实证完成 —— `_meta.threadId`
+由 app-server 逐调用注入且模型无法伪造，共享 bridge 方案的前提成立，22.7 恢复
+「暂不采用」，Phase 3 解除阻塞。另发现两个都会伪装成「用户取消」的实现坑（bridge 必须回
+SSE；Codex 侧审批与 CodeShell 授权正交）。复现脚本见
+[`docs/todo/evidence/`](evidence/README.md)。
 
 评审中确认**无需修改**的结论：`SessionToolHost` 归属 `packages/core` 正确；外部 Runtime
 实现归属 `packages/coding` 正确；`server -> coding` 依赖方向无环。
@@ -861,23 +867,84 @@ Map<CodexThreadId, SessionToolHost>;
 如果目标 Codex 版本没有可信 `_meta.threadId`，该版本的 Host Tools capability 应标记为
 unsupported，而不是牺牲隔离性。
 
-#### 11.3.1 该前提尚未验证，是 Phase 3 的最大不确定性
+#### 11.3.1 前提已实证成立（codex-cli 0.145.0）
 
-必须记录清楚：**本方案对 `_meta.threadId` 的可信性没有任何已验证的依据。**
+> **状态：已验证。** 复现脚本与完整记录见
+> [`docs/todo/evidence/`](evidence/README.md)。
 
-- 当前仓库没有任何 Codex app-server 协议的版本探测或 `_meta` 处理代码 ——
-  `packages/coding/src/external-agents/` 目前只有 `config.ts` / `config.test.ts` / `types.ts`。
-- v1 第 23 节问题 5 自己在问"哪个最低版本能稳定提供可信 thread metadata"，
-  说明设计时也没有答案。
+v2 曾把这条列为 Phase 3 的最大不确定性——整个共享 bridge 方案（11.2 + 11.3）都建立在
+「Codex 是否提供**可信** `_meta.threadId`」这个未验证前提上。现已用真实
+`codex-cli 0.145.0` 跑通并证伪测试，**前提成立**：
 
-而整个共享 bridge 方案（11.2 + 11.3）**完全建立在这个未验证前提之上**。因此：
+**其一，`_meta` 携带的比预期更全。** 实际收到：
 
-1. "验证目标 Codex 版本是否在 MCP 请求中提供可信 `_meta.threadId`"提升为
-   **Phase 0 的阻塞性调研项**（第 17 节），必须在 Phase 3 排期前给出结论。
-2. 结论出来前，第 22.7 节（每 session 一个 bridge）**不能维持"暂不采用"** ——
-   若 `_meta.threadId` 不可信，它是唯一能同时满足隔离性的方案。已同步修改 22.7 的状态。
-3. 判定标准要写死：可信 = **由 app-server 自身注入、模型无法通过 tool args 或 prompt 影响**。
-   仅仅"字段存在"不算可信。若只能确认字段存在而无法确认注入方，按不可信处理。
+```json
+{
+  "threadId": "019fb618-…",
+  "x-codex-turn-metadata": {
+    "thread_id": "019fb618-…",
+    "turn_id": "019fb618-e905-…",
+    "workspaces": { "<cwd>": { "latest_git_commit_hash": "…" } },
+    "model": "gpt-5.6-sol",
+    "sandbox": "none",
+    "thread_source": "user"
+  }
+}
+```
+
+多出来的 `turn_id` 可直接支撑 13.2 的「Host Tool 调用继承该 turn 的 abort signal」，
+`workspaces` 可用于交叉校验 cwd。
+
+**其二，身份只在 `_meta` 里，不在 HTTP header 里。** 收到的 header 仅
+`mcp-protocol-version` / `accept` / `authorization`。bridge 必须从 JSON-RPC body
+取 `_meta`，不能寄望 header。
+
+**其三，模型无法伪造。** 这是 11.3.1 原本定的判定标准——可信 = 由 app-server 注入、
+模型无法通过 tool args 或 prompt 影响。伪造测试给模型一个带 `threadId` 参数的工具并要求
+它填入攻击者值：
+
+```
+model-supplied args.threadId : "ATTACKER-CONTROLLED-THREAD"
+_meta.threadId (app-server)  : 019fb619-95cd-7e43-af6c-1c794793ddd9
+MODEL COULD FORGE _meta?     : false
+```
+
+**因此：**
+
+1. Phase 0-B 阻塞项**解除**，Phase 3 可以排期。
+2. 22.7（每 session 一个 bridge）**恢复为「暂不采用」**。
+3. 11.3 的 fail-closed 规则**全部保留** —— 前提成立不等于可以省掉校验。
+4. 新增一条实现要求，见 11.3.2。
+
+#### 11.3.2 两个必须写进实现的坑
+
+实证过程中踩到两个都会伪装成「用户取消」的失败，值得先记下来：
+
+1. **bridge 必须按 `accept` 回 SSE**。Codex 发的是
+   `accept: text/event-stream, application/json`；只回 `application/json` 时
+   `tools/call` 会被报成 `user cancelled MCP tool call`。这个错误极具误导性 ——
+   看起来像用户拒绝，实际是传输层不匹配。（与 13.5 同源的教训：把传输/取消/拒绝
+   塌缩成一句话会让排查走向完全错误的方向。）
+2. **非交互 `codex exec` 下 MCP 调用默认被审批拒绝**，报错同样是
+   "user cancelled MCP tool call"。
+
+第 2 点顺带**印证了 10.3 / 12.1.1 的核心论点**：Codex 侧的 approval / bypass 只决定
+Codex 自己愿不愿意发出这次调用，与 CodeShell 是否授权**完全正交**。实测中必须显式
+`--dangerously-bypass-approvals-and-sandbox` 才能让调用发出——而即便如此，真实实现里
+CodeShell 的 `ToolExecutor` 仍会独立审批。**Codex 的 bypass 不构成 Host Tool 的信任边界。**
+
+#### 11.3.3 值得跟踪但现在不能依赖：`item/tool/call`
+
+app-server 协议里已有一条 server→client 的反向工具调用
+`item/tool/call`，其 `DynamicToolCallParams` **要求顶层 `threadId` + `turnId`**
+（不在 `_meta` 里）。若它可用，就完全不需要 HTTP bridge。
+
+但在 0.145.0 中它 **schema 已定义、未接线**：`turn/start` 没有声明动态工具的字段，
+`DynamicToolSpec` 不被任何请求类型引用，`code_mode` feature 仍是
+`under development`（实测 `--enable code_mode` 后仍不触发）。
+
+所以第一阶段坚持 HTTP bridge 方案；把 `item/tool/call` 列为后续观察项 ——
+它一旦接线，11.2 的整个传输层可以删掉。
 
 ### 11.4 Codex MCP 审批
 
@@ -1294,7 +1361,7 @@ apps/desktop/src/main/maker-host/mcp-tool-approval-policy.ts
 | D：internal pending 取消语义分离 | ✅ 已完成   | `core/src/protocol/server.ts` + `server.host-loopback-cancel.test.ts` |
 | C：宿主回环 owner claim 显式化   | ✅ 已完成   | `desktop/src/main/agent-bridge.ts` + `panel-host-owner.test.ts`       |
 | A：`toolVisibility` 组装可复用   | ✅ 部分完成 | `buildToolVisibility()` 已抽出;`ToolSurfaceInputs` 全量改造待续       |
-| B：Codex `_meta.threadId` 可信性 | ⏳ 未开始   | 需真实 app-server 环境验证                                            |
+| B：Codex `_meta.threadId` 可信性 | ✅ 已验证   | `docs/todo/evidence/`（codex-cli 0.145.0 实测 + 伪造测试）            |
 
 已落地的三项都是**独立可交付**的,不依赖 `externalAgentRuntimeV2` flag：
 
@@ -1324,8 +1391,10 @@ v2 新增的四项前置工作（**前两项是阻塞性调研，后两项是独
 - **A（调研，阻塞 Phase 1）**：`run-tooling.ts` 的 `ToolSurfaceInputs` 改造方案定稿。
   见 7.1.1 —— 三个函数当前是 engine.ts 的机械抽取（17/13/21 参数、就地 mutate），
   不改造就只能复制。
-- **B（调研，阻塞 Phase 3）**：验证目标 Codex app-server 是否提供**可信**
-  `_meta.threadId`。见 11.3.1。结论决定 22.7 的取舍，也决定 Phase 3 是否可排期。
+- **B（调研，阻塞 Phase 3）—— 已完成**：验证目标 Codex app-server 是否提供**可信**
+  `_meta.threadId`。**结论：成立**（codex-cli 0.145.0 实测，模型无法伪造）。
+  22.7 恢复「暂不采用」，Phase 3 可排期。见 11.3.1 与
+  [`docs/todo/evidence/`](evidence/README.md)。
 - **C（重构，独立可交付）**：宿主回环 owner claim 显式化。见 9.3.2。
   当前 `claim()` 挂在 renderer `agent/run` 的副作用上，external runtime 会话拿不到 owner。
 - **D（bugfix，独立可交付，影响现网）**：internal pending 与真实审批的取消语义分离。
@@ -1559,31 +1628,34 @@ runtimeVersion
 
 ### 22.7 每个 Codex session 启一个 HTTP bridge
 
-**状态：待定，取决于 11.3.1 的调研结论**（v1 写的"暂不采用"已撤回）。
+**状态：暂不采用**（前提已于 2026-07-31 实证成立，见 11.3.1）。
 
-它增加端口、transport 和清理成本，因此在 `_meta.threadId` 可信的前提下，共享 bridge +
-严格 thread context store 更适合多 session。
+它增加端口、transport 和清理成本。而共享 bridge 所依赖的 `_meta.threadId` 可信性已用真实
+`codex-cli 0.145.0` 验证：app-server 逐调用注入、模型无法伪造（见
+[`docs/todo/evidence/`](evidence/README.md)）。因此共享 bridge + 严格 thread context
+store 是更优解。
 
-但该前提尚未验证。若调研结论是不可信，本节即成为**唯一**能同时满足隔离性的方案 ——
-它把 thread 路由问题从"协议是否诚实"降级为"进程/端口归属"，而后者由 CodeShell 完全掌控。
+若未来某个目标版本回退了这一保证，本节即重新成为**唯一**能同时满足隔离性的方案 ——
+它把 thread 路由问题从"协议是否诚实"降级为"进程/端口归属"，后者由 CodeShell 完全掌控。
 届时应直接采用本节，而不是弱化隔离或引入任何 11.3 节禁止的降级方式。
 
 ## 23. 评审问题与结论
 
-第一轮评审（对照当前源码）已回答 1、2、7、8，部分回答 3；4、5、6、9、10 仍开放。
+已回答 1、2、5、7、8（5 由 Phase 0-B 实证给出），部分回答 3；4、6、9、10 仍开放
+（6 已解除对 5 的依赖，可开始设计）。
 
-| #   | 问题                                                                    | 状态                                                                                                                                            |
-| --- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `SessionToolHost` 的 capability 边界；能否不复制 `run-tooling.ts`       | **已答**：边界正确（放 core、经 `./extension` 单文件入口导出，且只导出工厂+类型）；但**不能**直接复用，需先做 7.1.1 的 `ToolSurfaceInputs` 重构 |
-| 2   | `executeSingle()` 还依赖哪些 Engine 内状态                              | **已答**：`toolVisibility`（`host` / `isSubAgent` / `settingsScope` / `hasGoal` / `behaviorProfile`）必须显式化 —— 见 8.2.1                     |
-| 3   | Host Tool lifecycle 事件归属能否稳定去重                                | **部分**：tool card 归 translator、审批事件归 CodeShell（15.2.1 已定规则）；call ID adapter 仍需在 Phase 2 具体设计                             |
-| 4   | Claude Agent SDK 目标版本与进程内 MCP API 稳定性；CLI fallback 保留多久 | 开放                                                                                                                                            |
-| 5   | Codex app-server 最低版本与可信 thread metadata；capability handshake   | **升级为 Phase 0-B 阻塞调研** —— 见 11.3.1，它同时决定 22.7 的取舍                                                                              |
-| 6   | 共享 app-server + bridge 的清理、崩溃恢复、generation fencing           | 开放（依赖 5 的结论）                                                                                                                           |
-| 7   | 第一批 allowlist 与敏感数据                                             | **已答**：见 9.4 修订表；`Panel` 只放只读 action，宿主回环工具需逐个论证 owner                                                                  |
-| 8   | 迁移顺序与首个试点                                                      | **已答**：Desktop 主会话优先，Room 最后 —— 理由见 Phase 2                                                                                       |
-| 9   | session 持久化需要哪些字段                                              | 开放（另见第 24 节 ADR 1；v2 新增：需持久化宿主回环 owner 归属的**重建**依据，但不持久化 webContentsId 本身）                                   |
-| 10  | Native Tool 审批如何与 Host Tool 审批区分                               | 部分：15.2.1 给了前缀判定规则，UI 呈现仍需设计                                                                                                  |
+| #   | 问题                                                                    | 状态                                                                                                                                                                   |
+| --- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `SessionToolHost` 的 capability 边界；能否不复制 `run-tooling.ts`       | **已答**：边界正确（放 core、经 `./extension` 单文件入口导出，且只导出工厂+类型）；但**不能**直接复用，需先做 7.1.1 的 `ToolSurfaceInputs` 重构                        |
+| 2   | `executeSingle()` 还依赖哪些 Engine 内状态                              | **已答**：`toolVisibility`（`host` / `isSubAgent` / `settingsScope` / `hasGoal` / `behaviorProfile`）必须显式化 —— 见 8.2.1                                            |
+| 3   | Host Tool lifecycle 事件归属能否稳定去重                                | **部分**：tool card 归 translator、审批事件归 CodeShell（15.2.1 已定规则）；call ID adapter 仍需在 Phase 2 具体设计                                                    |
+| 4   | Claude Agent SDK 目标版本与进程内 MCP API 稳定性；CLI fallback 保留多久 | 开放                                                                                                                                                                   |
+| 5   | Codex app-server 最低版本与可信 thread metadata；capability handshake   | **已答**：0.145.0 实测可信 —— app-server 逐调用注入 `_meta.threadId`，模型无法伪造；handshake 校验首个 `tools/call` 的 `_meta` 即可。见 11.3.1 / `docs/todo/evidence/` |
+| 6   | 共享 app-server + bridge 的清理、崩溃恢复、generation fencing           | 开放（5 已解，共享 bridge 路线确定，可开始设计）                                                                                                                       |
+| 7   | 第一批 allowlist 与敏感数据                                             | **已答**：见 9.4 修订表；`Panel` 只放只读 action，宿主回环工具需逐个论证 owner                                                                                         |
+| 8   | 迁移顺序与首个试点                                                      | **已答**：Desktop 主会话优先，Room 最后 —— 理由见 Phase 2                                                                                                              |
+| 9   | session 持久化需要哪些字段                                              | 开放（另见第 24 节 ADR 1；v2 新增：需持久化宿主回环 owner 归属的**重建**依据，但不持久化 webContentsId 本身）                                                          |
+| 10  | Native Tool 审批如何与 Host Tool 审批区分                               | 部分：15.2.1 给了前缀判定规则，UI 呈现仍需设计                                                                                                                         |
 
 ### 23.1 v1 与当前源码不一致之处（已在正文修订）
 
