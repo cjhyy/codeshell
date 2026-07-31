@@ -1459,6 +1459,26 @@ packages/core/src/index.extension.tool-host.test.ts         # 导出面守卫
 3. **`dispose()` 只置标志不取消**：已在执行或正卡在审批上的调用会跑完并落在一个
    已关闭的会话上，违反 13.4。改为会话级 `AbortController`，与调用方 signal 合并。
 
+#### 第二轮复查：把「错的值」换成「无法强制的义务」也不算修好
+
+第一轮修完后再查，又出三条，第一条是对第一轮修法本身的否定：
+
+1. **用户的 `settings.permissions.rules` 仍然约束不到外部 Runtime。** 第一轮把
+   `permissionRules` 改成必填，看起来解决了；但类型只是
+   `readonly PermissionRule[]`，**没有任何东西检查调用方是否复刻了
+   `PermissionController.build()`**，而当时根本没有非测试调用方。实测：项目 settings
+   写 `deny Panel`，Native 判 `deny`，host 路径判 `allow` —— 用户明确关掉的面板，
+   外部 Runtime 照开。
+   最终改法：把 `build()` 的规则合成抽成 **`composePermissionRules()`**，
+   Native 与 `SessionToolHost` **共用同一个函数**；宿主只接收 preset 层，其余
+   （memory 豁免 / mode 规则 / 用户 settings）一律内部合成。
+   **教训：等价性不能靠"要求调用方照做"来保证，只能靠"两边跑同一段代码"。**
+2. **暴露策略单例可在运行时改宽。** `ReadonlySet` / `ReadonlyMap` 只是编译期约束，
+   而 `FIRST_PHASE_EXPOSURE` 是进程级单例、`execute()` 每次实时读取 —— 进程内任何
+   一处 `argsPatterns.delete("Panel")` 都会让**所有已在运行的 host** 重新放行
+   `Panel.invoke`，正是因 9.3.2 未完成而刻意扣住的能力。已改为真正冻结。
+3. **per-call signal 是死代码**：只在入口检查、从不向下传，MCP 中途取消无效。
+
 **最值得记住的是缺陷 1 为什么没被测出来**：验收测试给 native 侧手喂了
 `[{tool:"WhereAmI",decision:"allow"}]`，给 host 侧一个自动放行的 backend ——
 两侧**因为不同的原因**返回了相同字符串。等价性测试如果让两条路径各自用不同的方式
