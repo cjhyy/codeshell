@@ -46,5 +46,14 @@ export {
   claudeBridgeArgs,
   CLAUDE_MCP_SERVER_NAME,
 } from "./claude-code/mcp-config.js";
-export type { ClaudeMcpConfigOptions } from "./claude-code/mcp-config.js";
+export type { ClaudeMcpConfigOptions, ClaudeMcpConfigFile } from "./claude-code/mcp-config.js";
+export { writeClaudeMcpConfigFile } from "./claude-code/mcp-config.js";
+export { ClaudeEventTranslator } from "./claude-code/event-translator.js";
+export type { ClaudeEventTranslatorOptions } from "./claude-code/event-translator.js";
+export { ClaudeCodeRuntime } from "./claude-code/runtime.js";
+export type {
+  ClaudeRuntimeOptions,
+  ClaudeRuntimeHooks,
+  ClaudeTurnHandle,
+} from "./claude-code/runtime.js";
 export type { CodexEventTranslatorOptions } from "./codex/event-translator.js";
