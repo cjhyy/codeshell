@@ -8,27 +8,64 @@
 
 ## 0.0 交付状态(可合并 main)
 
-反向工具通道对 **Codex 与 Claude Code 两条 runtime 均已打通并真机验证**。
+**Codex 与 Claude Code 都已是可用的 Agent Runtime**,不只是「能调 CodeShell 工具」。
 
-| 项                                            | 状态                        |
-| --------------------------------------------- | --------------------------- |
-| Phase 0(A/B/C/D 四项)                         | ✅                          |
-| Phase 1 `SessionToolHost`                     | ✅ 含验收                   |
-| Phase 2.5 Codex MCP bridge + session store    | ✅ 真机 `codex-cli 0.145.0` |
-| Phase 2.6 event translator + spawn env        | ✅                          |
-| Phase 2.7 Claude Code 接通                    | ✅ 真机 `claude 2.1.220`    |
-| Phase 3 Codex Runtime 驱动(app-server client) | ⏳ 未做                     |
-| Desktop 组合根接线 / `Panel.invoke` 解禁      | ⏳ 未做                     |
+| 项                                                     | 状态      |
+| ------------------------------------------------------ | --------- |
+| Phase 0(A/B/C/D)                                       | ✅        |
+| Phase 1 `SessionToolHost`                              | ✅ 含验收 |
+| Phase 2.5 loopback MCP bridge + session store          | ✅        |
+| Phase 2.6 Codex event translator + spawn env           | ✅        |
+| Phase 2.7 Claude Code 接通(共用同一 bridge)            | ✅        |
+| **Phase 3 Codex Runtime**(app-server client + runtime) | ✅ 真机   |
+| **Phase 3 Claude Code Runtime**(stream-json + runtime) | ✅ 真机   |
+| Desktop 组合根接线 / `Panel.invoke` 解禁               | ⏳ 未做   |
 
-验证:全仓 **7964 passed / 0 failed**;core + desktop typecheck 干净;build 干净;
+```text
+packages/coding/src/external-runtimes/
+  shared/mcp-bridge.ts            两个 runtime 共用的反向工具通道
+  shared/session-context-store.ts threadId -> SessionToolHost,全部 fail closed
+  shared/spawn-env.ts             NO_PROXY 等子进程环境
+  codex/app-server-client.ts      NDJSON JSON-RPC 客户端
+  codex/runtime.ts                CodexRuntime
+  codex/event-translator.ts
+  claude-code/runtime.ts          ClaudeCodeRuntime
+  claude-code/event-translator.ts
+  claude-code/mcp-config.ts
+```
+
+两条 runtime 的真机端到端(`docs/todo/evidence/`,可复现)结论一致:
+runtime 开出会话 → 跑 turn → 收到翻译后的 `StreamEvent` → **模型在 turn 中途调到
+真实 CodeShell 工具** → 恰好一个 `turn_complete`。
+
+验证:全仓 **8008 passed / 0 failed**;core + desktop typecheck 干净;build 干净;
 0 lint error;`lint:engine-bypass` 通过;与 main **零冲突、零落后**。
-两条 runtime 的端到端脚本在 `docs/todo/evidence/`,可复现。
 
-**尚未做的部分说清楚**:目前只有反向工具通道(外部 Runtime 调 CodeShell 工具)。
-Runtime 驱动本身(app-server client、`turn/start`、把 `StreamEvent` 接回 UI)和
-Desktop 组合根接线都没做,所以**还不能用 Codex/Claude 跑一个完整的 CodeShell 会话**。
-`createSessionToolHost` 也仍无生产调用方 —— 这是 Phase 1 复查里那条缺陷能溜进来的根因,
-第一个 adapter 落地时要重点验。
+### 最后一个真机发现:Codex 对我们自己 MCP 工具的审批走 elicitation
+
+第一次跑 `CodexRuntime` 时模型报「MCP call was rejected」,bridge 日志只有
+`tools_list` 没有 `tools_call`。抓 stderr 才看到:
+
+```
+ERROR codex_app_server: unhandled: mcpServer/elicitation/request
+```
+
+Codex 通过 **`mcpServer/elicitation/request`** 询问**我们自己** MCP server 的工具
+(判定标记 `_meta.codex_approval_kind === "mcp_tool_call"`),**不是**
+`item/permissions/requestApproval`。不处理它,整条反向通道**静默永不触发** ——
+这也修正了 §11.4 原本的描述。
+
+按 §10.3 只接受**我们自己 server** 的 tool-call 审批(调用即将进
+`SessionToolHost` → `ToolExecutor`,那里才是真正的授权点;在这里再问一次就是双重审批,
+拒绝则让 CodeShell 工具永久不可达)。第三方 server 或无法识别的 kind 一律拒绝,
+且不做 session 级持久化。
+
+### 仍未做的部分
+
+**Desktop 组合根接线**:两条 runtime 都还没接进 Desktop 的会话创建流程,
+`createSessionToolHost` 也仍无生产调用方 —— 这是 Phase 1 复查那条安全缺陷能溜进来的
+根因,接线时要重点验。`Panel.invoke` 仍按设计 fail closed,需要 Desktop 调
+`claimSessionPanelOwner()` 才能解禁(API 已备好)。
 
 ## 0. v2 修订说明
 
