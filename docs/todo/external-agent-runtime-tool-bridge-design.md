@@ -1574,6 +1574,61 @@ Electron,用脚本化 panel bridge 代替)外全是产品代码。3 次调用全
 调用方传的世代(可复活旧 host);`bumpGeneration()` 保留不可达 entry 从而钉住活的
 host 不被 GC;缺 HTTP method 白名单;`reply()` 会丢 JSON-RPC `id`。
 
+### Phase 2.6：Event translator + spawn env ✅ 已完成
+
+```text
+packages/coding/src/external-runtimes/codex/
+  event-translator.ts   # app-server notification -> StreamEvent
+  spawn-env.ts          # NO_PROXY 等子进程环境
+```
+
+#### 读 Cindy 源码的收获(它直接指出我两个已"验证通过"的 bug)
+
+设计稿第 16 节本来就以 [`makecindy/cindy`](https://github.com/makecindy/cindy)
+(`2f409937`)为参考,但前面几个 Phase 我只按文档 + 真机 schema 做。实际读它的实现后,
+发现**两个我已经写好、端到端还跑绿了的真实缺陷**:
+
+1. **`keepAliveTimeout` 必须设 0**。Streamable HTTP 是长连接 SSE,Node 默认 5s
+   keep-alive 会切断 Codex 连接。我的端到端之所以全绿,只是因为三次调用都在 5 秒内
+   跑完 —— 真实会话必然踩到。**这类"测试通过是因为跑得快"的缺陷,端到端测试本身
+   抓不到。**
+2. **`NO_PROXY` 必须包含 `127.0.0.1` / `localhost` / `::1`**。Codex 的 Rust MCP
+   客户端(reqwest)会把 localhost 请求也走 `HTTP_PROXY`(企业网 / PAC 常见),上游
+   代理不认 localhost 返回 HTML 错误页 → MCP transport 全崩。用户看到的是
+   「Codex 看不到任何 CodeShell 工具」,而 **bridge 日志里什么都没有**,因为请求
+   根本没到。同时要删掉小写 `no_proxy` 孪生键 —— Rust/Go 生态两种拼写都读。
+
+Event translator 的排序规则**全部来自它的踩坑记录**,不是从 schema 推的:
+
+| 现象                                                 | 后果                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `turn/completed` 可能**重复投递**                    | 只有第一次能关闭 turn,否则重复计费/重复通知                                    |
+| item **会在 `turn/completed` 之后到达**              | 只清 currentTurnId 不够;迟到 item 会重开一个已消费完成的 turn,会话**永久假忙** |
+| `turn/started` 可能**早于** `turn/start` 的 RPC 响应 | 孤儿 `turn/started` 不得复活已终结的 turn                                      |
+| `willRetry: true` 的 error 不是终态                  | 401 重试约每秒一次;报终态会关闭仍在工作的 turn                                 |
+| `thread/started` 的 id 在 `params.thread.id`         | **不是** `params.threadId`,协议不对称                                          |
+
+#### 尚未采纳但已记录的 Cindy 结论
+
+- **共享 app-server 进程 + 按 threadId 多路复用**,而不是一 session 一进程。代价是
+  `account/rateLimits/updated` **不带 threadId**(要广播 + 缓存重放)。
+- **`request()` 默认不设全局超时**,由调用点按需 opt-in(`thread/start` / `turn/start`
+  60s,`turn/interrupt` 10s)。全局超时会制造孤儿 turn 噩梦。
+- **Codex 会把多个 thread 的 `tools/call` 合并进一个 JSON-RPC batch**。我们目前整批
+  拒绝(见 2.5),Cindy 是逐条路由 + 只拒有歧义的那条。等真的观察到 batch 再决定。
+- **`turn/interrupt` 不能撤回已派发的副作用**,而且 app-server 卡死时它会永久悬挂 ——
+  需要有界等待 + 重试一次。
+- Codex 对我们自己 MCP server 的工具**也会要审批**,但走的是
+  `mcpServer/elicitationRequest` + `_meta.codex_approval_kind === 'mcp_tool_call'`,
+  不是 `item/permissions/requestApproval`。这条直接关系到 §11.4 的双重审批设计。
+- 协议形状陷阱:`AskForApproval` / `SandboxMode` 是 **kebab-case**;
+  `ReasoningEffort` 全小写(`xhigh`);`turn/start` 用 `sandboxPolicy`(tagged union)
+  而 `thread/start` 用 `sandbox`(kebab enum)—— **字段名和类型都不一样**。
+
+**方法论上的一条**:参考实现的价值不在"抄结构",而在**它踩过的坑**。我独立做出的
+架构与它高度一致(分层、fail-closed、thread 路由),但那些"跑得快所以测不出来"的
+缺陷,只有读别人流过血的注释才能免费拿到。
+
 ### Phase 3：Codex Runtime
 
 - 实现共享 app-server host 和 thread session。
