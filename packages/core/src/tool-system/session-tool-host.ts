@@ -55,11 +55,19 @@ export interface ExternalToolExposurePolicy {
   /**
    * Optional per-tool argument narrowing, for tools that multiplex several
    * operations behind one name (e.g. a Panel tool with list/open/tools/invoke).
-   * Values are regex sources matched against the stringified argument.
+   * Each value is a regex source matched against the whole argument value —
+   * patterns are anchored for you, see {@link matchesWholeValue}.
    *
-   * This binds on `execute()` as well as `listTools()`: describing a limit only
-   * in the advertised schema would leave it advisory, and the arguments come
-   * from the model.
+   * This binds on `execute()`, not just `listTools()`: describing a limit only in
+   * the advertised schema would leave it advisory, and the arguments come from
+   * the model.
+   *
+   * **Scope, stated plainly:** this constrains only the keys it names. Keys the
+   * pattern does not mention pass through untouched, so it is a good fit for
+   * "which action may run" and a poor one for "what may that action do".
+   * Restricting a nested payload (e.g. the arguments a Panel tool forwards to a
+   * Panel App) is the tool's own schema validation, not this. Do not treat an
+   * `argsPatterns` entry as a sandbox for everything a tool might accept.
    */
   argsPatterns?: ReadonlyMap<string, Readonly<Record<string, string>>>;
 }
@@ -119,23 +127,42 @@ export interface CreateSessionToolHostOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * Whole-string match for an exposure pattern.
+ *
+ * Patterns are ANCHORED here rather than trusting the author to write `^…$`.
+ * An unanchored `action: "list"` would also admit `"invoke_list"` — a silent
+ * widening of a rule whose entire purpose is to narrow. Anchoring in one place
+ * makes the safe reading the only reading; an author who deliberately writes
+ * `^(list|open)$` gets the same result either way.
+ */
+function matchesWholeValue(source: string, value: string): boolean {
+  let re: RegExp;
+  try {
+    re = new RegExp(`^(?:${source})$`, "u");
+  } catch {
+    // A malformed pattern must not silently permit everything.
+    return false;
+  }
+  return re.test(value);
+}
+
 function argsMatch(
   patterns: Readonly<Record<string, string>> | undefined,
   input: Record<string, unknown>,
 ): boolean {
   if (!patterns) return true;
   for (const [key, source] of Object.entries(patterns)) {
-    const value = input[key];
+    // Read own properties only: a model-supplied JSON body cannot smuggle a
+    // match through the prototype chain.
+    const value = Object.prototype.hasOwnProperty.call(input, key) ? input[key] : undefined;
+    // Only primitives are comparable. Objects/arrays are rejected rather than
+    // stringified — `String(["list"])` is `"list"`, which would let an array
+    // satisfy a scalar pattern.
     if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
       return false;
     }
-    let re: RegExp;
-    try {
-      re = new RegExp(source);
-    } catch {
-      return false;
-    }
-    if (!re.test(String(value))) return false;
+    if (!matchesWholeValue(source, String(value))) return false;
   }
   return true;
 }

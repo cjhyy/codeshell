@@ -347,6 +347,65 @@ describe("SessionToolHost", () => {
     expect(record).toEqual(["EchoRead:allowed"]);
   });
 
+  test("argsPatterns are anchored, so a narrowing rule cannot widen by accident", async () => {
+    // An unanchored `value: "allowed"` would also admit "allowed_extra" and
+    // "not_allowed". A rule whose whole job is to NARROW must never widen
+    // because its author forgot `^…$`.
+    const { host, record } = makeHost({
+      expose: ["EchoRead"],
+      argsPatterns: new Map([["EchoRead", { value: "allowed" }]]),
+    });
+
+    const exact = await host.execute({ id: "a1", name: "EchoRead", input: { value: "allowed" } });
+    expect(exact.isError).toBeFalsy();
+
+    for (const sneaky of ["allowed_extra", "not_allowed", "xallowedx"]) {
+      const blocked = await host.execute({ id: "a2", name: "EchoRead", input: { value: sneaky } });
+      expect(blocked.isError).toBe(true);
+    }
+    expect(record).toEqual(["EchoRead:allowed"]);
+  });
+
+  test("argsPatterns reject non-primitive and prototype-borne values", async () => {
+    const { host, record } = makeHost({
+      expose: ["EchoRead"],
+      argsPatterns: new Map([["EchoRead", { value: "list" }]]),
+    });
+
+    // `String(["list"])` is "list" — an array must not satisfy a scalar pattern.
+    const arrayArg = await host.execute({
+      id: "a3",
+      name: "EchoRead",
+      input: { value: ["list"] as never },
+    });
+    expect(arrayArg.isError).toBe(true);
+
+    // An object with a crafted toString must not coerce its way through.
+    const objectArg = await host.execute({
+      id: "a4",
+      name: "EchoRead",
+      input: { value: { toString: () => "list" } as never },
+    });
+    expect(objectArg.isError).toBe(true);
+
+    // A value reachable only via the prototype chain is not an own property.
+    const viaProto = Object.create({ value: "list" }) as Record<string, unknown>;
+    const protoArg = await host.execute({ id: "a5", name: "EchoRead", input: viaProto });
+    expect(protoArg.isError).toBe(true);
+
+    expect(record).toEqual([]);
+  });
+
+  test("a malformed argsPattern denies rather than permits", async () => {
+    const { host, record } = makeHost({
+      expose: ["EchoRead"],
+      argsPatterns: new Map([["EchoRead", { value: "([unclosed" }]]),
+    });
+    const result = await host.execute({ id: "a6", name: "EchoRead", input: { value: "x" } });
+    expect(result.isError).toBe(true);
+    expect(record).toEqual([]);
+  });
+
   test("dispose makes further calls fail closed", async () => {
     const { host, record } = makeHost();
     await host.dispose();
