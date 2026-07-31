@@ -13,6 +13,10 @@ export {
   threadIdFromMeta,
 } from "./mcp-bridge.js";
 export type { BridgeToolHost, McpBridgeHandle, McpBridgeOptions } from "./mcp-bridge.js";
+export { CodexEventTranslator } from "./event-translator.js";
+export type { CodexEventTranslatorOptions } from "./event-translator.js";
+export { buildCodexSpawnEnv } from "./spawn-env.js";
+export type { CodexSpawnEnvOptions } from "./spawn-env.js";
 export { CodexThreadContextStore } from "./thread-context-store.js";
 export type {
   CodexToolHostRef,

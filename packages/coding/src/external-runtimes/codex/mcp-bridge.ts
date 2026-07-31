@@ -329,8 +329,23 @@ export async function startCodexMcpBridge(options: McpBridgeOptions): Promise<Mc
     reply({});
   }
 
+  // Streamable HTTP is a long-lived SSE stream. Node's default 5s keep-alive
+  // severs the Codex connection mid-session; `headersTimeout` must stay >=
+  // keepAliveTimeout, and 0 means unlimited for both. A Codex MCP request can
+  // also be genuinely large (base64 images), so the per-request clock is off too
+  // — body size is bounded explicitly in readBody() instead.
+  //
+  // Credit where due: this is one of two latent bugs found by reading the
+  // `makecindy/cindy` reference implementation (§16). Without it the bridge
+  // works in a fast test and drops out after five seconds in real use.
+  server.keepAliveTimeout = 0;
+  server.headersTimeout = 0;
+  server.requestTimeout = 0;
+
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
+    // Resolve only once actually listening: a caller that hands the url to a
+    // spawned Codex before the socket is up gets a connection refused.
     server.listen(0, "127.0.0.1", () => {
       server.removeListener("error", reject);
       resolve();
