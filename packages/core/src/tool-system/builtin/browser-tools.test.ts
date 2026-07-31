@@ -63,7 +63,13 @@ describe("browser_observe", () => {
 
   test("read returns cleaned page text", async () => {
     const ctx = ctxWith({
-      readContent: async () => ({ ok: true, url: "u", title: "t", text: "article body", truncated: false }),
+      readContent: async () => ({
+        ok: true,
+        url: "u",
+        title: "t",
+        text: "article body",
+        truncated: false,
+      }),
     });
     expect(await browserObserveTool({ mode: "read" }, ctx)).toContain("article body");
   });
@@ -91,7 +97,12 @@ describe("browser_observe", () => {
 
   test("image: non-vision model is refused, never fetches pixels", async () => {
     let fetched = false;
-    const ctx = ctxWith({ fetchImages: async () => { fetched = true; return []; } }); // no llmConfig → non-vision
+    const ctx = ctxWith({
+      fetchImages: async () => {
+        fetched = true;
+        return [];
+      },
+    }); // no llmConfig → non-vision
     const out = await browserObserveTool({ mode: "image", refs: ["img1"] }, ctx);
     expect(out).toContain("不支持视觉");
     expect(fetched).toBe(false); // gate prevents fetching
@@ -99,13 +110,17 @@ describe("browser_observe", () => {
 
   test("image: vision model returns image content blocks", async () => {
     const ctx = ctxVision({
-      fetchImages: async (refs) => refs.map((ref) => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg", ref })),
+      fetchImages: async (refs) =>
+        refs.map((ref) => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg", ref })),
     });
     const out = await browserObserveTool({ mode: "image", refs: ["img1", "img2"] }, ctx);
     expect(typeof out).toBe("object");
     if (typeof out === "object" && "contentBlocks" in out) {
       expect(out.contentBlocks).toHaveLength(2);
-      expect(out.contentBlocks![0]).toMatchObject({ type: "image", source: { type: "base64", media_type: "image/jpeg" } });
+      expect(out.contentBlocks![0]).toMatchObject({
+        type: "image",
+        source: { type: "base64", media_type: "image/jpeg" },
+      });
     }
   });
 
@@ -115,29 +130,44 @@ describe("browser_observe", () => {
   });
 
   test("image: all-fail reports details", async () => {
-    const ctx = ctxVision({ fetchImages: async () => [{ ok: false, ref: "img1", detail: "fetch 403" }] });
+    const ctx = ctxVision({
+      fetchImages: async () => [{ ok: false, ref: "img1", detail: "fetch 403" }],
+    });
     const out = await browserObserveTool({ mode: "image", refs: ["img1"] }, ctx);
     expect(out).toContain("no images loaded");
     expect(out).toContain("403");
   });
 
   test("vision: non-vision model refused", async () => {
-    const ctx = ctxWith({ screenshot: async () => ({ ok: true, base64: "x", mediaType: "image/jpeg" }) });
+    const ctx = ctxWith({
+      screenshot: async () => ({ ok: true, base64: "x", mediaType: "image/jpeg" }),
+    });
     expect(await browserObserveTool({ mode: "vision" }, ctx)).toContain("不支持视觉");
   });
 
   test("vision: vision model returns a screenshot block", async () => {
-    const ctx = ctxVision({ screenshot: async () => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg" }) });
+    const ctx = ctxVision({
+      screenshot: async () => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg" }),
+    });
     const out = await browserObserveTool({ mode: "vision" }, ctx);
     expect(typeof out).toBe("object");
-    if (typeof out === "object" && "contentBlocks" in out) expect(out.contentBlocks![0]).toMatchObject({ type: "image" });
+    if (typeof out === "object" && "contentBlocks" in out)
+      expect(out.contentBlocks![0]).toMatchObject({ type: "image" });
   });
 });
 
 describe("browser_act", () => {
   test("click ok / stale", async () => {
-    expect(await browserActTool({ action: "click", ref: "e3" }, ctxWith({ click: async () => ({ ok: true }) }))).toContain("Clicked e3");
-    const stale = await browserActTool({ action: "click", ref: "e9" }, ctxWith({ click: async () => ({ ok: false, staleRef: true }) }));
+    expect(
+      await browserActTool(
+        { action: "click", ref: "e3" },
+        ctxWith({ click: async () => ({ ok: true }) }),
+      ),
+    ).toContain("Clicked e3");
+    const stale = await browserActTool(
+      { action: "click", ref: "e9" },
+      ctxWith({ click: async () => ({ ok: false, staleRef: true }) }),
+    );
     expect(stale).toContain("no longer valid");
   });
 
@@ -145,33 +175,58 @@ describe("browser_act", () => {
     const ctx = ctxWith({ type: async () => ({ ok: true }) });
     expect(await browserActTool({ action: "type", text: "hi" }, ctx)).toContain("ref is required");
     expect(await browserActTool({ action: "type", ref: "e1" }, ctx)).toContain("text is required");
-    expect(await browserActTool({ action: "type", ref: "e1", text: "hi" }, ctx)).toContain("Typed into e1");
+    expect(await browserActTool({ action: "type", ref: "e1", text: "hi" }, ctx)).toContain(
+      "Typed into e1",
+    );
   });
 
   test("select reports match / passes value", async () => {
-    const ctx = ctxWith({ selectOption: async (_ref, v) => ({ ok: true, detail: `selected "${v}"` }) });
-    expect(await browserActTool({ action: "select", ref: "e1", value: "中国" }, ctx)).toContain("中国");
+    const ctx = ctxWith({
+      selectOption: async (_ref, v) => ({ ok: true, detail: `selected "${v}"` }),
+    });
+    expect(await browserActTool({ action: "select", ref: "e1", value: "中国" }, ctx)).toContain(
+      "中国",
+    );
   });
 
   test("press_key defaults to Enter", async () => {
     let got = "";
-    const ctx = ctxWith({ pressKey: async (k) => { got = k; return { ok: true }; } });
+    const ctx = ctxWith({
+      pressKey: async (k) => {
+        got = k;
+        return { ok: true };
+      },
+    });
     expect(await browserActTool({ action: "press_key" }, ctx)).toContain("Pressed Enter");
     expect(got).toBe("Enter");
   });
 
   test("hover ok", async () => {
-    expect(await browserActTool({ action: "hover", ref: "e2" }, ctxWith({ hover: async () => ({ ok: true }) }))).toContain("Hovered e2");
+    expect(
+      await browserActTool(
+        { action: "hover", ref: "e2" },
+        ctxWith({ hover: async () => ({ ok: true }) }),
+      ),
+    ).toContain("Hovered e2");
   });
 
   test("scroll validates direction", async () => {
     const ctx = ctxWith({ scroll: async () => ({ ok: true }) });
-    expect(await browserActTool({ action: "scroll", direction: "sideways" }, ctx)).toContain("must be 'up' or 'down'");
-    expect(await browserActTool({ action: "scroll", direction: "down" }, ctx)).toContain("Scrolled down");
+    expect(await browserActTool({ action: "scroll", direction: "sideways" }, ctx)).toContain(
+      "must be 'up' or 'down'",
+    );
+    expect(await browserActTool({ action: "scroll", direction: "down" }, ctx)).toContain(
+      "Scrolled down",
+    );
   });
 
   test("wait ready", async () => {
-    expect(await browserActTool({ action: "wait", timeout_ms: 5000 }, ctxWith({ waitForLoad: async () => ({ ok: true }) }))).toContain("Page ready");
+    expect(
+      await browserActTool(
+        { action: "wait", timeout_ms: 5000 },
+        ctxWith({ waitForLoad: async () => ({ ok: true }) }),
+      ),
+    ).toContain("Page ready");
   });
 
   test("unknown action errors", async () => {
@@ -194,14 +249,22 @@ describe("browser_act", () => {
   test("switch_tab requires tabId / reports success", async () => {
     const ctx = ctxWith({ switchTab: async () => ({ ok: true }) });
     expect(await browserActTool({ action: "switch_tab" }, ctx)).toContain("tabId is required");
-    expect(await browserActTool({ action: "switch_tab", tabId: "3" }, ctx)).toContain("Switched to tab 3");
+    expect(await browserActTool({ action: "switch_tab", tabId: "3" }, ctx)).toContain(
+      "Switched to tab 3",
+    );
   });
 
   test("tabId on a normal action switches first, then acts", async () => {
     const order: string[] = [];
     const ctx = ctxWith({
-      switchTab: async (id) => { order.push(`switch:${id}`); return { ok: true }; },
-      click: async () => { order.push("click"); return { ok: true }; },
+      switchTab: async (id) => {
+        order.push(`switch:${id}`);
+        return { ok: true };
+      },
+      click: async () => {
+        order.push("click");
+        return { ok: true };
+      },
     });
     await browserActTool({ action: "click", ref: "e1", tabId: "5" }, ctx);
     expect(order).toEqual(["switch:5", "click"]);
@@ -211,7 +274,10 @@ describe("browser_act", () => {
     let clicked = false;
     const ctx = ctxWith({
       switchTab: async () => ({ ok: false, detail: "not found" }),
-      click: async () => { clicked = true; return { ok: true }; },
+      click: async () => {
+        clicked = true;
+        return { ok: true };
+      },
     });
     const out = await browserActTool({ action: "click", ref: "e1", tabId: "9" }, ctx);
     expect(out).toContain("could not switch to tab 9");

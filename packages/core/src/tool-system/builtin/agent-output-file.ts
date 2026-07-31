@@ -42,10 +42,7 @@ interface WriteOpts {
  * failure. The body is prefixed with a small header so a human tailing the
  * file sees what it is.
  */
-export async function writeAgentOutputFile(
-  agentId: string,
-  opts: WriteOpts,
-): Promise<void> {
+export async function writeAgentOutputFile(agentId: string, opts: WriteOpts): Promise<void> {
   try {
     await mkdir(agentOutputDir(), { recursive: true });
     const header =
@@ -81,9 +78,7 @@ export async function clearAgentOutputFiles(): Promise<void> {
     const dir = agentOutputDir();
     const names = await readdir(dir);
     await Promise.all(
-      names
-        .filter((n) => n.endsWith(".txt"))
-        .map((n) => rm(join(dir, n), { force: true })),
+      names.filter((n) => n.endsWith(".txt")).map((n) => rm(join(dir, n), { force: true })),
     );
   } catch {
     // dir may not exist yet — fine

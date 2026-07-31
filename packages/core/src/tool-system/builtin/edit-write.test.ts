@@ -57,9 +57,9 @@ describe("editTool", () => {
     expect(await editTool({ file_path: p, old_string: "a" }, ctx())).toContain(
       "new_string is required",
     );
-    expect(
-      await editTool({ file_path: p, old_string: "a", new_string: "a" }, ctx()),
-    ).toContain("must be different");
+    expect(await editTool({ file_path: p, old_string: "a", new_string: "a" }, ctx())).toContain(
+      "must be different",
+    );
   });
 
   it("errors when the file is missing", async () => {

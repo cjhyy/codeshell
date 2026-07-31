@@ -11,10 +11,7 @@ import { describe, test, expect } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  CLOSED_SESSION_TOMBSTONE_LIMIT,
-  InteractiveApprovalBackend,
-} from "./permission.js";
+import { CLOSED_SESSION_TOMBSTONE_LIMIT, InteractiveApprovalBackend } from "./permission.js";
 import type { ApprovalRequest, ApprovalResult } from "../types.js";
 
 function backendWithAnswer(answer: ApprovalResult) {

@@ -136,26 +136,57 @@ const FIRST_PHASE_ARGS_PATTERNS: ReadonlyMap<string, Readonly<Record<string, str
  * anywhere in the process would re-enable `Panel.invoke` for every already-running
  * host: exactly the capability held back pending the §9.3.2 owner claim.
  */
-function frozenSet<T>(values: Iterable<T>): ReadonlySet<T> {
-  const set = new Set(values);
-  const reject = (): never => {
-    throw new TypeError("The external tool exposure policy is frozen and cannot be widened.");
-  };
-  set.add = reject;
-  set.delete = reject;
-  set.clear = reject;
-  return set;
+function reject(): never {
+  throw new TypeError("The external tool exposure policy is frozen and cannot be widened.");
 }
 
+/**
+ * Hand out a plain object implementing the read half of `Set`, not a real `Set`.
+ *
+ * Shadowing `add`/`delete`/`clear` on a `Set` is not enough: the prototype method
+ * is still reachable (`Set.prototype.add.call(policySet, "Bash")`), and `delete
+ * s.add` un-shadows it. Returning a non-`Set` object removes the mutators
+ * entirely — there is no `Set` internal slot to target — and `Object.freeze`
+ * stops the read methods from being swapped out.
+ */
+function frozenSet<T>(values: Iterable<T>): ReadonlySet<T> {
+  const inner = new Set(values);
+  return Object.freeze({
+    has: (value: T) => inner.has(value),
+    get size() {
+      return inner.size;
+    },
+    keys: () => inner.keys(),
+    values: () => inner.values(),
+    entries: () => inner.entries(),
+    forEach: (fn: (v: T, v2: T, s: ReadonlySet<T>) => void, thisArg?: unknown) =>
+      inner.forEach((a, b) => fn.call(thisArg, a, b, inner), thisArg),
+    [Symbol.iterator]: () => inner[Symbol.iterator](),
+    add: reject,
+    delete: reject,
+    clear: reject,
+  }) as unknown as ReadonlySet<T>;
+}
+
+/** Same reasoning as {@link frozenSet}, for the args-pattern map. */
 function frozenMap<K, V>(entries: Iterable<readonly [K, V]>): ReadonlyMap<K, V> {
-  const map = new Map(entries);
-  const reject = (): never => {
-    throw new TypeError("The external tool exposure policy is frozen and cannot be widened.");
-  };
-  map.set = reject;
-  map.delete = reject;
-  map.clear = reject;
-  return map;
+  const inner = new Map(entries);
+  return Object.freeze({
+    get: (key: K) => inner.get(key),
+    has: (key: K) => inner.has(key),
+    get size() {
+      return inner.size;
+    },
+    keys: () => inner.keys(),
+    values: () => inner.values(),
+    entries: () => inner.entries(),
+    forEach: (fn: (v: V, k: K, m: ReadonlyMap<K, V>) => void, thisArg?: unknown) =>
+      inner.forEach((v, k) => fn.call(thisArg, v, k, inner), thisArg),
+    [Symbol.iterator]: () => inner[Symbol.iterator](),
+    set: reject,
+    delete: reject,
+    clear: reject,
+  }) as unknown as ReadonlyMap<K, V>;
 }
 
 /** The phase-one policy. Pass to `createSessionToolHost({ exposure })`. */

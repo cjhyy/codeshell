@@ -38,10 +38,7 @@ export const replToolDef: ToolDefinition = {
 
 const REPL_MAX_BUFFER = 1024 * 1024;
 
-export async function replTool(
-  args: Record<string, unknown>,
-  ctx?: ToolContext,
-): Promise<string> {
+export async function replTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
   const language = args.language as string;
   const code = args.code as string;
   // `??` only catches null/undefined — a non-positive timeout (0/-5) would slip
@@ -60,9 +57,10 @@ export async function replTool(
   // execSync-style shell-quoting risk.
   const commands: Record<string, { file: string; pre: string[] }> = {
     javascript: { file: "node", pre: ["-e"] },
-    typescript: typeof (globalThis as any).Bun !== "undefined"
-      ? { file: "bun", pre: ["-e"] }
-      : { file: "npx", pre: ["tsx", "-e"] },
+    typescript:
+      typeof (globalThis as any).Bun !== "undefined"
+        ? { file: "bun", pre: ["-e"] }
+        : { file: "npx", pre: ["tsx", "-e"] },
     python: { file: "python3", pre: ["-c"] },
     ruby: { file: "ruby", pre: ["-e"] },
   };

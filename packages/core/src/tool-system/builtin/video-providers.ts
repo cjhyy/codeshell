@@ -30,9 +30,7 @@ export interface VideoSubmitRequest {
   signal?: AbortSignal;
 }
 
-export type VideoSubmitResult =
-  | { ok: true; jobId: string }
-  | { ok: false; error: string };
+export type VideoSubmitResult = { ok: true; jobId: string } | { ok: false; error: string };
 
 export type VideoPollResult =
   | { ok: true; status: "running" }
@@ -56,7 +54,11 @@ export interface VideoDownloadRequest {
 export interface VideoProvider {
   readonly kind: string;
   submit(req: VideoSubmitRequest): Promise<VideoSubmitResult>;
-  poll(req: { jobId: string; creds: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoPollResult>;
+  poll(req: {
+    jobId: string;
+    creds: VideoProviderCreds;
+    signal?: AbortSignal;
+  }): Promise<VideoPollResult>;
   download(req: VideoDownloadRequest): Promise<VideoDownloadResult>;
 }
 
@@ -87,7 +89,11 @@ export class FakeVideoProvider implements VideoProvider {
     return { ok: true, jobId };
   }
 
-  async poll(req: { jobId: string; creds?: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoPollResult> {
+  async poll(req: {
+    jobId: string;
+    creds?: VideoProviderCreds;
+    signal?: AbortSignal;
+  }): Promise<VideoPollResult> {
     const n = this.polls.get(req.jobId) ?? 0;
     this.polls.set(req.jobId, n + 1);
     if (this.opts.failAfterPolls !== undefined && n >= this.opts.failAfterPolls) {
@@ -141,7 +147,8 @@ export class FalVideoProvider implements VideoProvider {
 
   /** Route model suffix by image count: 0→text, 1→image, ≥2→reference. */
   private resolveModel(model: string, imageCount: number): string {
-    const target = imageCount >= 2 ? "reference-to-video" : imageCount === 1 ? "image-to-video" : null;
+    const target =
+      imageCount >= 2 ? "reference-to-video" : imageCount === 1 ? "image-to-video" : null;
     if (target && /(text|image|reference)-to-video$/.test(model)) {
       return model.replace(/(text|image|reference)-to-video$/, target);
     }
@@ -188,7 +195,11 @@ export class FalVideoProvider implements VideoProvider {
         const t = await r.text().catch(() => "");
         return { ok: false, error: `fal submit failed: HTTP ${r.status} ${t}`.trim() };
       }
-      const j = (await r.json()) as { request_id?: string; status_url?: string; response_url?: string };
+      const j = (await r.json()) as {
+        request_id?: string;
+        status_url?: string;
+        response_url?: string;
+      };
       if (!j.request_id) return { ok: false, error: "fal submit: no request_id in response" };
       // Prefer the URLs fal hands back; fall back to family-prefix reconstruction
       // only if they're absent (defensive — live API always returns them).
@@ -203,7 +214,11 @@ export class FalVideoProvider implements VideoProvider {
     }
   }
 
-  async poll(req: { jobId: string; creds: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoPollResult> {
+  async poll(req: {
+    jobId: string;
+    creds: VideoProviderCreds;
+    signal?: AbortSignal;
+  }): Promise<VideoPollResult> {
     const { statusUrl } = this.split(req.jobId);
     try {
       const r = await this.fetchImpl(statusUrl, {
@@ -277,7 +292,10 @@ export const DEFAULT_VIDEO_MODEL: Record<string, string> = {
  * today (test/dev). Real adapters (seedance, kling) are intentionally absent
  * until their private API contracts are confirmed — see TODO 7.1 块3.
  */
-export function getVideoProvider(kind: string, fetchImpl: typeof fetch = fetch): VideoProvider | null {
+export function getVideoProvider(
+  kind: string,
+  fetchImpl: typeof fetch = fetch,
+): VideoProvider | null {
   switch (kind) {
     case "fake":
       return new FakeVideoProvider({ succeedAfterPolls: 0 });

@@ -19,7 +19,8 @@ describe("CronCreate tool — conversational config", () => {
   });
 
   test("schema exposes timezone / cwd / permissionLevel so the model can fill them", () => {
-    const props = (cronCreateToolDef.inputSchema as { properties: Record<string, unknown> }).properties;
+    const props = (cronCreateToolDef.inputSchema as { properties: Record<string, unknown> })
+      .properties;
     expect(props.timezone).toBeDefined();
     expect(props.cwd).toBeDefined();
     expect(props.permissionLevel).toBeDefined();
@@ -76,7 +77,8 @@ describe("CronCreate tool — conversational config", () => {
   });
 
   test("schema 暴露 once 供模型填写", () => {
-    const props = (cronCreateToolDef.inputSchema as { properties: Record<string, unknown> }).properties;
+    const props = (cronCreateToolDef.inputSchema as { properties: Record<string, unknown> })
+      .properties;
     expect(props.once).toBeDefined();
   });
 
@@ -119,7 +121,8 @@ describe("CronCreate tool — conversational config", () => {
   });
 
   test("schema 暴露 continueInSession 供模型填写", () => {
-    const props = (cronCreateToolDef.inputSchema as { properties: Record<string, unknown> }).properties;
+    const props = (cronCreateToolDef.inputSchema as { properties: Record<string, unknown> })
+      .properties;
     expect(props.continueInSession).toBeDefined();
   });
 });

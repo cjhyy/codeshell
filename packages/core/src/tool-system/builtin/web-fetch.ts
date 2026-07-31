@@ -34,8 +34,13 @@ const RAW_BYTE_BUDGET_MULTIPLIER = 4;
 
 // Header names that must not be overridable via args.headers (SSRF / auth injection)
 const BLOCKED_REQUEST_HEADERS = new Set([
-  "host", "authorization", "cookie", "proxy-authorization",
-  "x-forwarded-for", "x-real-ip", "x-forwarded-host",
+  "host",
+  "authorization",
+  "cookie",
+  "proxy-authorization",
+  "x-forwarded-for",
+  "x-real-ip",
+  "x-forwarded-host",
 ]);
 
 // Hostname patterns that block SSRF to internal/metadata services
@@ -44,21 +49,20 @@ const BLOCKED_HOST_PATTERNS: RegExp[] = [
   /^127\./,
   /^0\.0\.0\.0$/,
   /^10\./,
-  /^169\.254\./,         // link-local + AWS/GCP metadata (169.254.169.254)
+  /^169\.254\./, // link-local + AWS/GCP metadata (169.254.169.254)
   /^192\.168\./,
-  /^172\.(1[6-9]|2[0-9]|3[01])\./,  // 172.16.0.0/12
+  /^172\.(1[6-9]|2[0-9]|3[01])\./, // 172.16.0.0/12
   /^::1$/,
-  /^fc00:/i, /^fd00:/i,  // IPv6 ULA
-  /^fe80:/i,             // IPv6 link-local
+  /^fc00:/i,
+  /^fd00:/i, // IPv6 ULA
+  /^fe80:/i, // IPv6 link-local
 ];
 
 function isBlockedHost(hostname: string): boolean {
   // `new URL("http://[::1]/").hostname` returns "[::1]" (with brackets);
   // strip them so IPv6 patterns match.
   const stripped =
-    hostname.startsWith("[") && hostname.endsWith("]")
-      ? hostname.slice(1, -1)
-      : hostname;
+    hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
   return BLOCKED_HOST_PATTERNS.some((re) => re.test(stripped));
 }
 
@@ -120,11 +124,7 @@ const MAX_REDIRECTS = 5;
 // Headers that must be stripped when a redirect crosses origins.
 // Same policy fetch(... redirect: "follow") applies internally; we
 // re-implement it here because we drive redirects manually.
-const CROSS_ORIGIN_STRIP_HEADERS = new Set([
-  "authorization",
-  "cookie",
-  "proxy-authorization",
-]);
+const CROSS_ORIGIN_STRIP_HEADERS = new Set(["authorization", "cookie", "proxy-authorization"]);
 
 interface HopCheckResult {
   ok: true;
@@ -163,7 +163,10 @@ async function validateHopHost(u: URL): Promise<HopCheckResult | HopCheckRefused
   try {
     ips = await dnsLookupImpl(u.hostname);
   } catch (err) {
-    return { ok: false, reason: `DNS lookup failed for "${u.hostname}": ${(err as Error).message}` };
+    return {
+      ok: false,
+      reason: `DNS lookup failed for "${u.hostname}": ${(err as Error).message}`,
+    };
   }
   if (ips.length === 0) {
     return { ok: false, reason: `DNS returned no addresses for "${u.hostname}"` };
@@ -206,7 +209,8 @@ export async function webFetchTool(args: Record<string, unknown>): Promise<strin
   );
   const rawHeaders = (args.headers as Record<string, string>) ?? {};
   const baseHeaders: Record<string, string> = {
-    "User-Agent": "Mozilla/5.0 (compatible; code-shell/0.1; +https://github.com/nicepkg/code-shell)",
+    "User-Agent":
+      "Mozilla/5.0 (compatible; code-shell/0.1; +https://github.com/nicepkg/code-shell)",
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
   };
   // Strip dangerous user-supplied headers up-front.
@@ -324,7 +328,8 @@ async function readAndTruncateBody(res: Response, maxLength: number): Promise<st
 
   if (rawTruncated || text.length > maxLength) {
     const shownChars = Math.min(text.length, maxLength);
-    text = text.slice(0, maxLength) + `\n\n... content truncated (showing first ${shownChars} chars)`;
+    text =
+      text.slice(0, maxLength) + `\n\n... content truncated (showing first ${shownChars} chars)`;
   }
   return text || "(page returned empty content)";
 }
@@ -360,7 +365,9 @@ function extractTextFromHTML(html: string): string {
   const mainMatch =
     text.match(/<main[\s\S]*?<\/main>/i) ??
     text.match(/<article[\s\S]*?<\/article>/i) ??
-    text.match(/<div[^>]*(?:role="main"|id="content"|class="[^"]*content[^"]*")[^>]*>[\s\S]*?<\/div>/i);
+    text.match(
+      /<div[^>]*(?:role="main"|id="content"|class="[^"]*content[^"]*")[^>]*>[\s\S]*?<\/div>/i,
+    );
 
   if (mainMatch) {
     text = mainMatch[0];

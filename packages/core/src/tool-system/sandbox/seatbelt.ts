@@ -59,14 +59,9 @@ export function createSeatbeltBackend(config: SandboxConfig): SandboxBackend {
 }
 
 function buildProfile(config: SandboxConfig): string {
-  const writeAllows = config.writableRoots
-    .map((p) => `  (subpath ${quote(p)})`)
-    .join("\n");
-  const readDenies = config.deniedReads
-    .map((p) => `  (subpath ${quote(p)})`)
-    .join("\n");
-  const networkClause =
-    config.network === "deny" ? "(deny network-outbound)" : "(allow network*)";
+  const writeAllows = config.writableRoots.map((p) => `  (subpath ${quote(p)})`).join("\n");
+  const readDenies = config.deniedReads.map((p) => `  (subpath ${quote(p)})`).join("\n");
+  const networkClause = config.network === "deny" ? "(deny network-outbound)" : "(allow network*)";
 
   // SBPL evaluation note: when a broad `(allow file-read*)` and a specific
   // `(deny file-read* (subpath …))` both match, the more specific subpath

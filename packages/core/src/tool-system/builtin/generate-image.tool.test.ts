@@ -27,7 +27,11 @@ let homeDir: string;
 function stubFetchOk(): void {
   globalThis.fetch = (async (_url: string, init: any) => {
     lastBody = JSON.parse(init.body);
-    return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "QUJD" }] }) } as Response;
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [{ b64_json: "QUJD" }] }),
+    } as Response;
   }) as unknown as typeof fetch;
 }
 
@@ -40,7 +44,9 @@ beforeEach(() => {
   writeFileSync(
     join(ws, ".code-shell", "settings.json"),
     JSON.stringify({
-      providers: [{ key: "oa", kind: "openai", baseUrl: "https://api.example.com/v1", apiKey: "sk-x" }],
+      providers: [
+        { key: "oa", kind: "openai", baseUrl: "https://api.example.com/v1", apiKey: "sk-x" },
+      ],
     }),
   );
   lastBody = null;
@@ -93,7 +99,11 @@ describe("GenerateImage referenceImages (image-to-image)", () => {
     globalThis.fetch = (async (url: string, init: any) => {
       sawUrl = url;
       sawForm = init.body as FormData;
-      return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "QUJD" }] }) } as Response;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [{ b64_json: "QUJD" }] }),
+      } as Response;
     }) as unknown as typeof fetch;
 
     // A reference image living in the workspace (relative path).
@@ -113,7 +123,11 @@ describe("GenerateImage referenceImages (image-to-image)", () => {
     let called = false;
     globalThis.fetch = (async () => {
       called = true;
-      return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "x" }] }) } as Response;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [{ b64_json: "x" }] }),
+      } as Response;
     }) as unknown as typeof fetch;
     const out = await generateImageTool(
       { prompt: "p", referenceImages: ["does-not-exist.png"] },
@@ -124,10 +138,7 @@ describe("GenerateImage referenceImages (image-to-image)", () => {
   });
 
   test("an unsupported reference type errors clearly", async () => {
-    const out = await generateImageTool(
-      { prompt: "p", referenceImages: ["notes.txt"] },
-      ctx(),
-    );
+    const out = await generateImageTool({ prompt: "p", referenceImages: ["notes.txt"] }, ctx());
     expect(out).toMatch(/unsupported reference image type/);
   });
 });

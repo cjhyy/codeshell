@@ -116,8 +116,21 @@ export interface CreateSessionToolHostOptions {
   presetRules: readonly import("../types.js").PermissionRule[];
   /** Settings scope used to resolve the user's own permission rules. */
   settingsScope?: import("../settings/manager.js").SettingsScope;
-  /** Defaults to trusted; pass `false` to read settings in untrusted mode. */
-  projectTrusted?: boolean;
+  /**
+   * Whether the project at `cwd` has been trusted by the user.
+   *
+   * **Required, and there is no default** — `permissions` is the first entry in
+   * `DANGEROUS_PROJECT_FIELDS`, so an untrusted project's
+   * `settings.permissions.rules` are stripped precisely to stop a cloned repo
+   * self-authorizing. Every protocol-layer caller resolves this explicitly and
+   * defaults it to `false`; an optional field defaulting to "trusted" here would
+   * let a hostile repo grant an external runtime tools the user never trusted,
+   * without the approval backend ever being consulted.
+   *
+   * Optional-plus-unsafe-default is the exact shape of the bug this whole
+   * options object has now been bitten by twice. Hence: required.
+   */
+  projectTrusted: boolean;
   planMode: boolean;
   exposure: ExternalToolExposurePolicy;
   /**
@@ -194,8 +207,8 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       mode: options.permissionMode,
       cwd: options.cwd,
       presetRules: options.presetRules,
+      projectTrusted: options.projectTrusted,
       ...(options.settingsScope ? { settingsScope: options.settingsScope } : {}),
-      ...(options.projectTrusted !== undefined ? { projectTrusted: options.projectTrusted } : {}),
     }),
     options.permissionMode,
     options.approvalBackend,

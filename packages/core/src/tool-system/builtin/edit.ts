@@ -89,18 +89,14 @@ export async function editTool(
       }
     }
 
-    const updatedLf = replaceAll
-      ? content.split(oldLf).join(newLf)
-      : content.replace(oldLf, newLf);
+    const updatedLf = replaceAll ? content.split(oldLf).join(newLf) : content.replace(oldLf, newLf);
 
     const beforeWrite = revalidateFinalWritePath(filePath, cwd, approvedPath);
     if ("error" in beforeWrite) return { ok: false, error: beforeWrite.error };
     await writeFileNoFollow(beforeWrite.resolvedPath, applyEol(updatedLf, eol));
     fileCache.invalidate(filePath);
 
-    const count = replaceAll
-      ? (content.split(oldLf).length - 1)
-      : 1;
+    const count = replaceAll ? content.split(oldLf).length - 1 : 1;
 
     // Generate a compact diff summary
     const oldLines = oldLf.split("\n");

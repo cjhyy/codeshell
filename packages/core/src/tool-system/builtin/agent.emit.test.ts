@@ -14,7 +14,10 @@ function makeCtx(spawnText: (req: { agentId: string; prompt: string }) => Promis
 } {
   const events: StreamEvent[] = [];
   const spawner: SubAgentSpawner = {
-    spawn: async (req) => ({ text: await spawnText(req), sessionId: req.resumeSessionId ?? req.agentId }),
+    spawn: async (req) => ({
+      text: await spawnText(req),
+      sessionId: req.resumeSessionId ?? req.agentId,
+    }),
     parentStream: (e) => {
       events.push(e);
     },

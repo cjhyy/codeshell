@@ -45,9 +45,7 @@ export const addMarketplaceToolDef: ToolDefinition = {
   },
 };
 
-export async function addMarketplaceTool(
-  args: Record<string, unknown>,
-): Promise<string> {
+export async function addMarketplaceTool(args: Record<string, unknown>): Promise<string> {
   const name = args.name;
   if (typeof name !== "string" || !name.trim()) {
     return "Error: name is required";

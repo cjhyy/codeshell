@@ -94,8 +94,7 @@ export async function killShellTool(
 
 export const listShellsToolDef: ToolDefinition = {
   name: "ListShells",
-  description:
-    "List background shells for the current session, with status and detected port.",
+  description: "List background shells for the current session, with status and detected port.",
   inputSchema: { type: "object", properties: {} },
 };
 

@@ -79,7 +79,9 @@ export function detectSandboxCapabilities(): {
 } {
   return {
     seatbelt: process.platform === "darwin" && binaryExists("/usr/bin/sandbox-exec"),
-    bwrap: process.platform === "linux" && (binaryExists("/usr/bin/bwrap") || binaryExists("/usr/local/bin/bwrap")),
+    bwrap:
+      process.platform === "linux" &&
+      (binaryExists("/usr/bin/bwrap") || binaryExists("/usr/local/bin/bwrap")),
   };
 }
 
@@ -166,18 +168,11 @@ export function defaultSandboxConfig(mode: SandboxMode = "auto"): SandboxConfig 
   // somewhere. POSIX: the canonical /tmp family. Windows has no OS sandbox
   // backend (auto → off), so writableRoots is effectively unused there, but
   // keep it host-correct by using the platform temp dir instead of /tmp.
-  const tmpRoots =
-    process.platform === "win32" ? [tmpdir()] : ["/tmp", "/private/tmp", "/var/tmp"];
+  const tmpRoots = process.platform === "win32" ? [tmpdir()] : ["/tmp", "/private/tmp", "/var/tmp"];
   return {
     mode,
     writableRoots: ["${workspace}", ...tmpRoots],
-    deniedReads: [
-      "~/.ssh",
-      "~/.aws",
-      "~/.config/gcloud",
-      "~/.code-shell",
-      "~/.claude",
-    ],
+    deniedReads: ["~/.ssh", "~/.aws", "~/.config/gcloud", "~/.code-shell", "~/.claude"],
     network: "allow",
   };
 }

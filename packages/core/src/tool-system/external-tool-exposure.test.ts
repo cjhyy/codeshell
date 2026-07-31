@@ -55,6 +55,7 @@ describe("first-phase external tool exposure", () => {
       registry,
       permissionMode: "default",
       presetRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
+      projectTrusted: true,
       planMode: false,
       exposure: FIRST_PHASE_EXPOSURE,
       visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
@@ -101,21 +102,29 @@ describe("first-phase external tool exposure", () => {
     // process-wide singleton that execute() reads live, so a mutation anywhere
     // would retroactively widen every running host — including re-enabling
     // Panel.invoke, the one capability deliberately held back.
-    expect(() => (FIRST_PHASE_EXPOSURE.toolNames as Set<string>).add("Bash")).toThrow(/frozen/i);
-    expect(() => (FIRST_PHASE_EXPOSURE.toolNames as Set<string>).delete("Panel")).toThrow(
-      /frozen/i,
-    );
-    expect(() =>
-      (FIRST_PHASE_EXPOSURE.argsPatterns as Map<string, unknown>).delete("Panel"),
-    ).toThrow(/frozen/i);
-    expect(() =>
-      (FIRST_PHASE_EXPOSURE.argsPatterns as Map<string, unknown>).set("Panel", {}),
-    ).toThrow(/frozen/i);
+    const names = FIRST_PHASE_EXPOSURE.toolNames as Set<string>;
+    const patterns = FIRST_PHASE_EXPOSURE.argsPatterns as Map<string, unknown>;
+
+    // The obvious spellings.
+    expect(() => names.add("Bash")).toThrow(/frozen/i);
+    expect(() => names.delete("Panel")).toThrow(/frozen/i);
+    expect(() => patterns.delete("Panel")).toThrow(/frozen/i);
+    expect(() => patterns.set("Panel", {})).toThrow(/frozen/i);
+
+    // …and the ways round them. Shadowing `add` on a real Set is not enough:
+    // the prototype method stays reachable and `delete s.add` un-shadows it.
+    // These must fail because the object is not a Set at all.
+    expect(() => Set.prototype.add.call(names, "Bash")).toThrow();
+    expect(() => Map.prototype.set.call(patterns, "Panel", { action: ".*" })).toThrow();
+    expect(() => {
+      // @ts-expect-error deliberately probing the un-shadowing route
+      delete names.add;
+      names.add("Bash");
+    }).toThrow();
 
     // The nested pattern object is frozen too, so the action regex itself can't
     // be swapped for a permissive one.
-    const patterns = FIRST_PHASE_EXPOSURE.argsPatterns?.get("Panel") as Record<string, string>;
-    expect(Object.isFrozen(patterns)).toBe(true);
+    expect(Object.isFrozen(FIRST_PHASE_EXPOSURE.argsPatterns?.get("Panel"))).toBe(true);
 
     // …and the policy still behaves after all those rejected attempts.
     expect(FIRST_PHASE_EXPOSURE.toolNames.has("Panel")).toBe(true);
@@ -132,6 +141,7 @@ describe("first-phase external tool exposure", () => {
       registry,
       permissionMode: "default",
       presetRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
+      projectTrusted: true,
       planMode: false,
       exposure: FIRST_PHASE_EXPOSURE,
       visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },

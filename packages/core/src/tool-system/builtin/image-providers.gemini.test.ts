@@ -26,13 +26,25 @@ describe("GeminiImageProvider", () => {
         ok: true,
         status: 200,
         json: async () => ({
-          candidates: [{ content: { parts: [{ text: "ok" }, { inline_data: { mime_type: "image/png", data: "QUJD" } }] } }],
+          candidates: [
+            {
+              content: {
+                parts: [{ text: "ok" }, { inline_data: { mime_type: "image/png", data: "QUJD" } }],
+              },
+            },
+          ],
         }),
       } as Response;
     }) as unknown as typeof fetch;
 
     const p = new GeminiImageProvider(fakeFetch);
-    const res = await p.generate({ prompt: "a fox", size: "1024x1024", quality: "auto", model: "gemini-2.5-flash-image", creds });
+    const res = await p.generate({
+      prompt: "a fox",
+      size: "1024x1024",
+      quality: "auto",
+      model: "gemini-2.5-flash-image",
+      creds,
+    });
 
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.b64).toBe("QUJD");
@@ -49,8 +61,10 @@ describe("GeminiImageProvider", () => {
       ({
         ok: true,
         status: 200,
-        json: async () => ({ candidates: [{ content: { parts: [{ inlineData: { data: "WFla" } }] } }] }),
-      } as Response)) as unknown as typeof fetch;
+        json: async () => ({
+          candidates: [{ content: { parts: [{ inlineData: { data: "WFla" } }] } }],
+        }),
+      }) as Response) as unknown as typeof fetch;
     const p = new GeminiImageProvider(fakeFetch);
     const res = await p.generate({ prompt: "p", size: "auto", quality: "auto", model: "m", creds });
     expect(res.ok && res.b64).toBe("WFla");
@@ -58,7 +72,11 @@ describe("GeminiImageProvider", () => {
 
   test("non-OK → error with status + body", async () => {
     const fakeFetch: typeof fetch = (async () =>
-      ({ ok: false, status: 400, text: async () => "bad key" } as Response)) as unknown as typeof fetch;
+      ({
+        ok: false,
+        status: 400,
+        text: async () => "bad key",
+      }) as Response) as unknown as typeof fetch;
     const p = new GeminiImageProvider(fakeFetch);
     const res = await p.generate({ prompt: "p", size: "auto", quality: "auto", model: "m", creds });
     expect(res.ok).toBe(false);
@@ -70,7 +88,11 @@ describe("GeminiImageProvider", () => {
 
   test("no image part in response → error", async () => {
     const fakeFetch: typeof fetch = (async () =>
-      ({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: "only text" }] } }] }) } as Response)) as unknown as typeof fetch;
+      ({
+        ok: true,
+        status: 200,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: "only text" }] } }] }),
+      }) as Response) as unknown as typeof fetch;
     const p = new GeminiImageProvider(fakeFetch);
     const res = await p.generate({ prompt: "p", size: "auto", quality: "auto", model: "m", creds });
     expect(res.ok).toBe(false);
@@ -82,7 +104,13 @@ describe("baseUrl normalization (OpenAI-compat layer → native REST)", () => {
     let calledUrl = "";
     const fakeFetch: typeof fetch = (async (url: string) => {
       calledUrl = url;
-      return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ inline_data: { data: "x" } }] } }] }) } as Response;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ inline_data: { data: "x" } }] } }],
+        }),
+      } as Response;
     }) as unknown as typeof fetch;
     const p = new GeminiImageProvider(fakeFetch);
     await p.generate({
@@ -101,7 +129,13 @@ describe("baseUrl normalization (OpenAI-compat layer → native REST)", () => {
     let calledUrl = "";
     const fakeFetch: typeof fetch = (async (url: string) => {
       calledUrl = url;
-      return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ inline_data: { data: "x" } }] } }] }) } as Response;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ inline_data: { data: "x" } }] } }],
+        }),
+      } as Response;
     }) as unknown as typeof fetch;
     const p = new GeminiImageProvider(fakeFetch);
     await p.generate({
@@ -111,7 +145,9 @@ describe("baseUrl normalization (OpenAI-compat layer → native REST)", () => {
       model: "m",
       creds: { baseUrl: "https://generativelanguage.googleapis.com/v1beta", apiKey: "k" },
     });
-    expect(calledUrl).toBe("https://generativelanguage.googleapis.com/v1beta/models/m:generateContent");
+    expect(calledUrl).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/m:generateContent",
+    );
   });
 });
 

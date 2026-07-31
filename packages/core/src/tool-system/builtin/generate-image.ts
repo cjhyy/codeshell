@@ -60,8 +60,14 @@ export function effectiveApiKey(inst: GenInstance, list: GenInstance[]): string 
 }
 
 /** Loose shapes read off raw settings for the unified store. */
-interface GenInstanceSource { tag?: string; [k: string]: unknown }
-interface CredentialSource { id?: string; [k: string]: unknown }
+interface GenInstanceSource {
+  tag?: string;
+  [k: string]: unknown;
+}
+interface CredentialSource {
+  id?: string;
+  [k: string]: unknown;
+}
 
 /**
  * Resolve a ResolvedImageProvider from a candidate list whose entries already
@@ -75,15 +81,21 @@ function resolveFromGenList(
   def: string | undefined,
 ): ResolvedImageProvider | null {
   const usable = (p: GenInstance): boolean => !!p.apiKey && getImageProvider(p.kind) !== null;
-  const credsOf = (p: GenInstance): ImageProviderCreds => ({ baseUrl: p.baseUrl, apiKey: p.apiKey! });
+  const credsOf = (p: GenInstance): ImageProviderCreds => ({
+    baseUrl: p.baseUrl,
+    apiKey: p.apiKey!,
+  });
   if (prefer) {
     const chosen = list.find((p) => p.id === prefer);
-    if (chosen && usable(chosen)) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+    if (chosen && usable(chosen))
+      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
     return null;
   }
   const preferred = def ? list.find((p) => p.id === def) : undefined;
   const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
-  return chosen ? { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel } : null;
+  return chosen
+    ? { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel }
+    : null;
 }
 
 const DEFAULT_SIZE = "1024x1024";
@@ -122,13 +134,13 @@ export const generateImageToolDef: ToolDefinition = {
         type: "string",
         description:
           "Image provider to use. With imageGen configured, this is the instance `id` " +
-          "(e.g. \"gemini\"); otherwise it's a provider kind (e.g. \"openai\"). " +
+          '(e.g. "gemini"); otherwise it\'s a provider kind (e.g. "openai"). ' +
           "Defaults to the configured default / first available. Only specify to override.",
       },
       model: {
         type: "string",
         description:
-          "Image model id (e.g. \"gpt-image-2\"). Defaults to the provider's default model. " +
+          'Image model id (e.g. "gpt-image-2"). Defaults to the provider\'s default model. ' +
           "Only specify to override.",
       },
       referenceImages: {
@@ -188,12 +200,17 @@ function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvid
   }
 
   // 1. Canonical imageGen config.
-  const imageGen = (settings as { imageGen?: { defaultProvider?: string; providers?: GenInstance[] } }).imageGen;
+  const imageGen = (
+    settings as { imageGen?: { defaultProvider?: string; providers?: GenInstance[] } }
+  ).imageGen;
   if (imageGen && Array.isArray(imageGen.providers) && imageGen.providers.length > 0) {
     const list = imageGen.providers;
     const usable = (p: GenInstance): boolean =>
       !!effectiveApiKey(p, list) && getImageProvider(p.kind) !== null;
-    const credsOf = (p: GenInstance): ImageProviderCreds => ({ baseUrl: p.baseUrl, apiKey: effectiveApiKey(p, list)! });
+    const credsOf = (p: GenInstance): ImageProviderCreds => ({
+      baseUrl: p.baseUrl,
+      apiKey: effectiveApiKey(p, list)!,
+    });
 
     if (prefer) {
       // Explicit request — respect the user's intent. If that exact instance
@@ -222,10 +239,12 @@ function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvid
   // dropped from the schema; un-migrated settings.json still carry it via the
   // schema's .passthrough(), so read it through an inline cast.
   const legacyProviders =
-    (settings as { providers?: Array<{ kind: string; baseUrl: string; apiKey?: string }> }).providers ?? [];
+    (settings as { providers?: Array<{ kind: string; baseUrl: string; apiKey?: string }> })
+      .providers ?? [];
   const kinds = prefer ? [prefer] : [...IMAGE_PROVIDER_KINDS];
   for (const kind of kinds) {
-    if (!prefer && !IMAGE_PROVIDER_KINDS.includes(kind as (typeof IMAGE_PROVIDER_KINDS)[number])) continue;
+    if (!prefer && !IMAGE_PROVIDER_KINDS.includes(kind as (typeof IMAGE_PROVIDER_KINDS)[number]))
+      continue;
     const provider = legacyProviders.find((p) => p.kind === kind);
     if (provider && provider.apiKey) {
       return { kind, creds: { baseUrl: provider.baseUrl, apiKey: provider.apiKey } };
@@ -400,7 +419,7 @@ export async function generateImageTool(
   if (!resolved) {
     return preferKind
       ? `Error: no image provider "${preferKind}" is available (unknown id/kind, or it has no API key). Configure it in your code-shell settings, or omit \`provider\` to use the default.`
-      : 'Error: no image provider available. Configure an image provider (including an apiKey) ' +
+      : "Error: no image provider available. Configure an image provider (including an apiKey) " +
           "in your code-shell settings to use GenerateImage.";
   }
 
@@ -410,7 +429,8 @@ export async function generateImageTool(
   }
 
   // Model precedence: call arg > instance defaultModel (imageGen) > kind default.
-  const model = overrideModel ?? resolved.defaultModel ?? DEFAULT_IMAGE_MODEL[resolved.kind] ?? "gpt-image-2";
+  const model =
+    overrideModel ?? resolved.defaultModel ?? DEFAULT_IMAGE_MODEL[resolved.kind] ?? "gpt-image-2";
 
   const result = await adapter.generate({
     prompt,
@@ -436,9 +456,7 @@ export async function generateImageTool(
     await writeFile(path, Buffer.from(result.b64, "base64"));
     // Name the provider/model actually used, so the user/agent knows which
     // image backend produced this (esp. when a default fell back to another).
-    const mode = inputImages?.length
-      ? ` from ${inputImages.length} reference image(s)`
-      : "";
+    const mode = inputImages?.length ? ` from ${inputImages.length} reference image(s)` : "";
     return `Generated image with ${resolved.kind} (${model})${mode}, saved to ${path}`;
   } catch (err) {
     return `Error saving generated image: ${(err as Error).message}`;

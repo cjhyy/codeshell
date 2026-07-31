@@ -68,9 +68,7 @@ describe("TodoWrite transcript replay", () => {
       ),
     ]);
 
-    expect(snap).toEqual([
-      { id: "1", subject: "valid", activeForm: "valid", status: "pending" },
-    ]);
+    expect(snap).toEqual([{ id: "1", subject: "valid", activeForm: "valid", status: "pending" }]);
   });
 
   it("returns [] when the latest TodoWrite snapshot is all completed", () => {

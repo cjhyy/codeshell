@@ -56,7 +56,10 @@ describe("asyncAgentRegistry.listForSession", () => {
     asyncAgentRegistry.register(entry({ agentId: "a1", sessionId: "s1", status: "running" }));
     asyncAgentRegistry.register(entry({ agentId: "a2", sessionId: "s1", status: "completed" }));
     asyncAgentRegistry.register(entry({ agentId: "a3", sessionId: "s2", status: "running" }));
-    const s1 = asyncAgentRegistry.listForSession("s1").map((e) => e.agentId).sort();
+    const s1 = asyncAgentRegistry
+      .listForSession("s1")
+      .map((e) => e.agentId)
+      .sort();
     expect(s1).toEqual(["a1", "a2"]);
     expect(asyncAgentRegistry.listForSession("s2").map((e) => e.agentId)).toEqual(["a3"]);
   });

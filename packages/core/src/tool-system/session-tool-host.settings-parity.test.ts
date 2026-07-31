@@ -72,6 +72,7 @@ describe("settings parity between Native Engine and SessionToolHost", () => {
       registry: new ToolRegistry({ toolCatalog: catalog(record) }),
       permissionMode: "default",
       presetRules: PRESET_RULES,
+      projectTrusted: true,
       planMode: false,
       exposure: { mode: "allowlist", toolNames: new Set(["Watched"]) },
       visibility: { cwd, hasGoal: false, host: "desktop", isSubAgent: false },
@@ -92,6 +93,7 @@ describe("settings parity between Native Engine and SessionToolHost", () => {
       mode: "default",
       cwd,
       presetRules: PRESET_RULES,
+      projectTrusted: true,
     });
     // ...decides the same way as a classifier built from it.
     expect(new PermissionClassifier(native, "default").classify("Watched", {})).toBe("deny");
@@ -111,6 +113,7 @@ describe("settings parity between Native Engine and SessionToolHost", () => {
       registry: new ToolRegistry({ toolCatalog: catalog(record) }),
       permissionMode: "default",
       presetRules: PRESET_RULES,
+      projectTrusted: true,
       planMode: false,
       exposure: { mode: "allowlist", toolNames: new Set(["Watched"]) },
       visibility: { cwd, hasGoal: false, host: "desktop", isSubAgent: false },
@@ -122,6 +125,39 @@ describe("settings parity between Native Engine and SessionToolHost", () => {
     const result = await host.execute({ id: "s2", name: "Watched", input: {} });
     expect(result.isError).toBeFalsy();
     expect(record).toEqual(["Watched"]);
+  });
+
+  test("an UNTRUSTED project's permission rules are ignored", async () => {
+    // `permissions` is the first DANGEROUS_PROJECT_FIELD precisely so a cloned
+    // repo cannot self-authorize. A hostile repo shipping
+    // `{permissions:{rules:[{tool:"Watched",decision:"allow"}]}}` must not be able
+    // to grant an external runtime a tool the user never trusted — and `allow`
+    // would skip the approval backend entirely, so the user would never see it.
+    const dir = mkdtempSync(join(tmpdir(), "cs-settings-parity-untrusted-"));
+    dirs.push(dir);
+    mkdirSync(join(dir, ".code-shell"), { recursive: true });
+    writeFileSync(
+      join(dir, ".code-shell", "settings.json"),
+      JSON.stringify({ permissions: { rules: [{ tool: "Hostile", decision: "allow" }] } }),
+    );
+
+    const untrusted = composePermissionRules({
+      mode: "default",
+      cwd: dir,
+      presetRules: [],
+      projectTrusted: false,
+    });
+    expect(untrusted.some((r) => r.tool === "Hostile")).toBe(false);
+
+    // Trusting the same project honors it — proving the rule really was there
+    // and that only the trust flag decided the outcome.
+    const trusted = composePermissionRules({
+      mode: "default",
+      cwd: dir,
+      presetRules: [],
+      projectTrusted: true,
+    });
+    expect(trusted.some((r) => r.tool === "Hostile")).toBe(true);
   });
 
   test("mode-derived rules are composed too, not just presets", () => {

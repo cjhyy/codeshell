@@ -244,7 +244,7 @@ export function flattenAxTree(nodes: AXNode[]): {
 
     const sensitive =
       propValue(node, "protected") === true || // ARIA "protected" → password-like
-      role === "textbox" && /password|密码/i.test(name);
+      (role === "textbox" && /password|密码/i.test(name));
 
     counter += 1;
     const ref = `e${counter}`;
@@ -314,7 +314,10 @@ export function buildExtractLinksScript(cap = EXTRACT_LINK_CAP): string {
  * lines, trim, and cap to `cap` chars (marking truncation). The renderer pulls
  * raw innerText via CDP; this keeps the cleanup logic testable and consistent.
  */
-export function cleanPageText(raw: string, cap: number = CONTENT_CHAR_CAP): { text: string; truncated: boolean } {
+export function cleanPageText(
+  raw: string,
+  cap: number = CONTENT_CHAR_CAP,
+): { text: string; truncated: boolean } {
   const normalized = raw
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t\f\v]+/g, " ")

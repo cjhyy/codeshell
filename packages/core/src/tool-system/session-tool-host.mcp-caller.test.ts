@@ -72,6 +72,7 @@ function makeHost(sessionId: string, record: string[]): SessionToolHost {
     registry: new ToolRegistry({ toolCatalog: catalog(record) }),
     permissionMode: "default",
     presetRules: SHARED_RULES,
+    projectTrusted: true,
     planMode: false,
     exposure: { mode: "allowlist", toolNames: new Set(["WhereAmI"]) },
     visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },

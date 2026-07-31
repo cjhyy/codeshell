@@ -56,7 +56,6 @@ describe("builtin tool availability guards", () => {
     expect(cancel!({ cwd: "/x", hasGoal: true })).toBe(true);
   });
 
-
   test("credential guards use metadata provider and honor project scope", () => {
     const access: CredentialAccess = {
       listMasked: (_cwd, scope) =>

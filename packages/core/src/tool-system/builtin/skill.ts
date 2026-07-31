@@ -31,10 +31,7 @@ export const skillToolDef: ToolDefinition = {
   },
 };
 
-export async function skillTool(
-  args: Record<string, unknown>,
-  ctx?: ToolContext,
-): Promise<string> {
+export async function skillTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
   const skillName = args.skill as string;
   const skillArgs = (args.args as string) ?? "";
 
