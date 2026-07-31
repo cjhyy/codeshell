@@ -207,7 +207,10 @@ const server = createServer((req, res) => {
         return send({
           jsonrpc: "2.0",
           id: msg.id,
-          result: { content: [{ type: "text", text: "refused: missing thread id" }], isError: true },
+          result: {
+            content: [{ type: "text", text: "refused: missing thread id" }],
+            isError: true,
+          },
         });
       }
       const host = resolveHost(threadId, { strict: true });
@@ -300,7 +303,10 @@ server.listen(0, "127.0.0.1", async () => {
   console.log("codex reached SessionToolHost:", executed.length > 0);
   console.log("host executions:", executed.length);
   console.log("panel bridge saw list:", panelBridgeCalls.includes("list"));
-  console.log("panel bridge saw tools:", panelBridgeCalls.some((c) => c.startsWith("tools:")));
+  console.log(
+    "panel bridge saw tools:",
+    panelBridgeCalls.some((c) => c.startsWith("tools:")),
+  );
   console.log("invoke LEAKED to bridge (must be false):", invokeReached);
   console.log("approval backend consulted:", trace.filter((t) => t.startsWith("APPROVAL")).length);
 

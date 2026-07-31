@@ -80,7 +80,11 @@ const server = createServer((req, res) => {
       return;
     }
     if (msg.method === "tools/list") {
-      observed.push({ stage: "tools/list", headers: pickHeaders(req.headers), meta: msg.params?._meta ?? null });
+      observed.push({
+        stage: "tools/list",
+        headers: pickHeaders(req.headers),
+        meta: msg.params?._meta ?? null,
+      });
       return send({
         jsonrpc: "2.0",
         id: msg.id,
@@ -121,7 +125,8 @@ const server = createServer((req, res) => {
 function pickHeaders(h) {
   const out = {};
   for (const [k, v] of Object.entries(h)) {
-    if (["host", "content-length", "content-type", "connection", "accept-encoding"].includes(k)) continue;
+    if (["host", "content-length", "content-type", "connection", "accept-encoding"].includes(k))
+      continue;
     out[k] = k === "authorization" ? "Bearer <redacted>" : v;
   }
   return out;

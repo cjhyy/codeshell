@@ -118,20 +118,12 @@ const PROMPT = `Use the codeshell_tools MCP server's Panel tool. Do these three 
 3. Panel with {"action":"invoke","panel_id":"panel-app:design-studio","tool_name":"get_design_context","arguments":{}}
 If a step fails, say so and continue to the next one.`;
 
-const child = spawn(
-  "claude",
-  [
-    "-p",
-    "--dangerously-skip-permissions",
-    ...wiring.args,
-  ],
-  {
-    env: buildRuntimeSpawnEnv({ bridgeToken: { name: bridge.tokenEnvVar, value: bridge.token } }),
-    // The prompt goes on stdin: `--mcp-config` is variadic, so a positional
-    // prompt after it is swallowed as another config value.
-    stdio: ["pipe", "pipe", "pipe"],
-  },
-);
+const child = spawn("claude", ["-p", "--dangerously-skip-permissions", ...wiring.args], {
+  env: buildRuntimeSpawnEnv({ bridgeToken: { name: bridge.tokenEnvVar, value: bridge.token } }),
+  // The prompt goes on stdin: `--mcp-config` is variadic, so a positional
+  // prompt after it is swallowed as another config value.
+  stdio: ["pipe", "pipe", "pipe"],
+});
 child.stdin.end(PROMPT);
 
 let out = "";
