@@ -58,12 +58,18 @@ export class CodexThreadContextStore<T extends CodexToolHostRef = CodexToolHostR
   }
 
   /**
-   * Bind a thread to its host. Re-registering the same thread replaces the
-   * binding — a resumed thread points at the new host, and nothing accumulates.
+   * Bind a thread to its host, in the store's CURRENT generation.
+   *
+   * The generation is a property of the store (one app-server lifetime), not of
+   * an individual entry, and callers deliberately cannot choose it. An earlier
+   * revision took it as a parameter and raised the counter to match, which made
+   * one registration reorder reachability for every other thread: registering at
+   * a lower generation stranded the new thread immediately, and registering at a
+   * higher one mass-evicted every healthy thread. Both were invisible to the
+   * suite because its only fencing test walked the happy sequence.
    */
-  register(threadId: string, host: T, generation: number): void {
-    this.byThread.set(threadId, { host, generation });
-    if (generation > this.currentGeneration) this.currentGeneration = generation;
+  register(threadId: string, host: T): void {
+    this.byThread.set(threadId, { host, generation: this.currentGeneration });
   }
 
   /** Drop a thread. Call this BEFORE closing the host, so a late request finds
@@ -84,6 +90,11 @@ export class CodexThreadContextStore<T extends CodexToolHostRef = CodexToolHostR
    */
   bumpGeneration(): number {
     this.currentGeneration += 1;
+    // Drop the entries the bump just made unreachable. Leaving them would pin
+    // live SessionToolHost objects — each holding an executor and an approval
+    // route — against GC for the process lifetime, growing with every restart.
+    // Callers re-register the threads they successfully resume.
+    this.byThread.clear();
     return this.currentGeneration;
   }
 
@@ -91,7 +102,21 @@ export class CodexThreadContextStore<T extends CodexToolHostRef = CodexToolHostR
     if (!request.threadId) return { ok: false, reason: "missing_thread_id" };
     const entry = this.byThread.get(request.threadId);
     if (!entry) return { ok: false, reason: "unknown_thread" };
-    if (entry.generation !== request.generation) {
+    // The load-bearing half is `request.generation`: it fences a request that was
+    // already in flight when the app-server restarted. Comparing the request
+    // against `entry.generation` instead would let a caller resurrect a stale
+    // entry by handing the stale number back in — the caller's word is not
+    // evidence about which generation is live.
+    //
+    // The `entry.generation` half is unreachable belt-and-braces today, because
+    // `bumpGeneration()` clears the map, so a surviving entry is always current.
+    // It is kept so that a future change which stops clearing cannot silently
+    // reopen the hole — but a mutation test will NOT flag its removal, and
+    // claiming otherwise would overstate the guard.
+    if (
+      entry.generation !== this.currentGeneration ||
+      request.generation !== this.currentGeneration
+    ) {
       return { ok: false, reason: "stale_generation" };
     }
     return { ok: true, host: entry.host };

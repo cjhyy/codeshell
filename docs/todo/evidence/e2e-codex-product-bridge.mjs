@@ -137,7 +137,7 @@ const onChunk = (chunk) => {
   const match = /session id:\s*([0-9a-f-]{36})/i.exec(out);
   if (match && registered !== match[1]) {
     registered = match[1];
-    store.register(registered, host, store.generation);
+    store.register(registered, host);
     console.log("registered thread →", registered);
   }
 };

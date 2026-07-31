@@ -114,8 +114,8 @@ describe("Codex MCP bridge", () => {
   test("routes a call to the host bound to that thread", async () => {
     const calls: string[] = [];
     const { handle, store } = await boot(calls);
-    store.register("thread-a", fakeHost("sess-a", calls), store.generation);
-    store.register("thread-b", fakeHost("sess-b", calls), store.generation);
+    store.register("thread-a", fakeHost("sess-a", calls));
+    store.register("thread-b", fakeHost("sess-b", calls));
 
     await rpc(handle, {
       id: 2,
@@ -135,8 +135,8 @@ describe("Codex MCP bridge", () => {
     // §22.4: the model controls arguments and cannot touch `_meta`.
     const calls: string[] = [];
     const { handle, store } = await boot(calls);
-    store.register("thread-a", fakeHost("sess-a", calls), store.generation);
-    store.register("thread-b", fakeHost("sess-b", calls), store.generation);
+    store.register("thread-a", fakeHost("sess-a", calls));
+    store.register("thread-b", fakeHost("sess-b", calls));
 
     await rpc(handle, {
       id: 2,
@@ -159,7 +159,7 @@ describe("Codex MCP bridge", () => {
   ])("fails closed on %s", async (_label, meta, pattern) => {
     const calls: string[] = [];
     const { handle, store } = await boot(calls);
-    store.register("thread-a", fakeHost("sess-a", calls), store.generation);
+    store.register("thread-a", fakeHost("sess-a", calls));
 
     const { json } = await rpc(handle, {
       id: 2,
@@ -175,7 +175,7 @@ describe("Codex MCP bridge", () => {
   test("a stale generation is refused after a restart", async () => {
     const calls: string[] = [];
     const { handle, store } = await boot(calls);
-    store.register("thread-a", fakeHost("sess-old", calls), 1);
+    store.register("thread-a", fakeHost("sess-old", calls));
     store.bumpGeneration();
     // The thread was NOT re-registered under the new generation.
     const { json } = await rpc(handle, {
@@ -191,7 +191,7 @@ describe("Codex MCP bridge", () => {
     // Guessing whose tools to show would leak one session's surface into
     // another session's prompt.
     const { handle, store } = await boot();
-    store.register("thread-a", fakeHost("sess-a", []), store.generation);
+    store.register("thread-a", fakeHost("sess-a", []));
     const { json } = await rpc(handle, {
       id: 1,
       method: "tools/list",
@@ -202,7 +202,7 @@ describe("Codex MCP bridge", () => {
 
   test("tools/list returns the host's own tools when routable", async () => {
     const { handle, store } = await boot();
-    store.register("thread-a", fakeHost("sess-a", []), store.generation);
+    store.register("thread-a", fakeHost("sess-a", []));
     const { json } = await rpc(handle, {
       id: 1,
       method: "tools/list",
@@ -223,6 +223,74 @@ describe("Codex MCP bridge", () => {
     expect(response.status).toBe(413);
   });
 
+  test("a batched (array) body is refused explicitly, not silently accepted", async () => {
+    // An array body used to fall through every method branch and get
+    // `200 {"result":{}}` — no host reached, so it failed closed, but it failed
+    // SILENTLY and told the client it had succeeded.
+    const calls: string[] = [];
+    const { handle, store } = await boot(calls);
+    store.register("thread-a", fakeHost("sess-a", calls));
+
+    const response = await fetch(handle.url, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${handle.token}`,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify([
+        { id: 1, method: "tools/call", params: { name: "Panel", _meta: { threadId: "thread-a" } } },
+      ]),
+    });
+    expect(response.status).toBe(400);
+    const json = (await response.json()) as { error?: { message?: string } };
+    expect(json.error?.message).toBeTruthy();
+    expect(calls).toEqual([]);
+  });
+
+  test("a batch spanning two threads is refused as ambiguous", async () => {
+    const calls: string[] = [];
+    const { handle, store } = await boot(calls);
+    store.register("thread-a", fakeHost("sess-a", calls));
+    store.register("thread-b", fakeHost("sess-b", calls));
+
+    const response = await fetch(handle.url, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${handle.token}`,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify([
+        { id: 1, method: "tools/call", params: { name: "Panel", _meta: { threadId: "thread-a" } } },
+        { id: 2, method: "tools/call", params: { name: "Panel", _meta: { threadId: "thread-b" } } },
+      ]),
+    });
+    expect(response.status).toBe(400);
+    expect(calls).toEqual([]);
+  });
+
+  test("only POST is accepted", async () => {
+    // A GET with a valid token used to answer 202. MCP Streamable HTTP reserves
+    // GET for opening an SSE stream, which this bridge does not offer.
+    const { handle } = await boot();
+    for (const method of ["GET", "PUT", "DELETE"]) {
+      const response = await fetch(handle.url, {
+        method,
+        headers: { authorization: `Bearer ${handle.token}` },
+      });
+      expect(response.status).toBe(405);
+    }
+  });
+
+  test("a reply always carries a JSON-RPC id", async () => {
+    const { handle } = await boot();
+    const { json } = await rpc(handle, { method: "initialize", params: {} });
+    // No `id` in the request → `null`, never absent.
+    expect("id" in json).toBe(true);
+    expect(json.id).toBeNull();
+  });
+
   test("malformed JSON is refused", async () => {
     const { handle } = await boot();
     const response = await fetch(handle.url, {
@@ -236,7 +304,7 @@ describe("Codex MCP bridge", () => {
   test("logs never contain the bearer token or full arguments", async () => {
     const calls: string[] = [];
     const { handle, store, logs } = await boot(calls);
-    store.register("thread-a", fakeHost("sess-a", calls), store.generation);
+    store.register("thread-a", fakeHost("sess-a", calls));
     await rpc(handle, {
       id: 2,
       method: "tools/call",

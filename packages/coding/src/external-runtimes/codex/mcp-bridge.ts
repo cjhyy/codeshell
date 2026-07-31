@@ -140,6 +140,15 @@ export async function startCodexMcpBridge(options: McpBridgeOptions): Promise<Mc
       res.writeHead(404).end();
       return;
     }
+    // POST only. A GET with a valid token used to return 202, which is both
+    // misleading (MCP Streamable HTTP reserves GET for opening an SSE stream,
+    // which this bridge does not offer) and the natural shape for a
+    // browser-originated probe.
+    if (req.method !== "POST") {
+      log("bridge.rejected", { reason: "method_not_allowed", method: req.method });
+      res.writeHead(405, { allow: "POST" }).end();
+      return;
+    }
     // Constant-shape check; the token never reaches the log.
     if (req.headers.authorization !== `Bearer ${token}`) {
       log("bridge.rejected", { reason: "unauthorized" });
@@ -158,17 +167,61 @@ export async function startCodexMcpBridge(options: McpBridgeOptions): Promise<Mc
       return;
     }
 
-    let message: { id?: unknown; method?: unknown; params?: unknown };
+    let parsed: unknown;
     try {
-      message = JSON.parse(body) as typeof message;
+      parsed = JSON.parse(body);
     } catch {
       log("bridge.rejected", { reason: "malformed_json" });
       res.writeHead(400).end();
       return;
     }
 
+    // JSON-RPC allows an array (batch). Left unhandled, a batch fell through
+    // every branch below and got `{result:{}}` with HTTP 200 — no host reached,
+    // so it failed closed, but it failed SILENTLY and told the client it had
+    // succeeded. Refuse it explicitly and say why.
+    //
+    // Batches are not supported at all rather than resolved per item: a mixed
+    // batch would touch two sessions on the strength of one authorization
+    // (§11.3), and `store.resolveBatch()` exists for the day batching is added.
+    if (Array.isArray(parsed)) {
+      const threadIds = parsed.map((entry) =>
+        threadIdFromMeta((entry as { params?: unknown } | null)?.params),
+      );
+      const batch = store.resolveBatch(threadIds, store.generation);
+      const reason = batch.ok ? "batch_unsupported" : batch.reason;
+      log("bridge.rejected", { reason, itemCount: parsed.length });
+      res.writeHead(400, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: null,
+          error: {
+            code: -32600,
+            message:
+              batch.ok || batch.reason === "ambiguous_thread"
+                ? "Batched requests are not supported by this bridge."
+                : missMessage(batch.reason),
+          },
+        }),
+      );
+      return;
+    }
+    if (!parsed || typeof parsed !== "object") {
+      log("bridge.rejected", { reason: "not_an_object" });
+      res.writeHead(400).end();
+      return;
+    }
+    const message = parsed as { id?: unknown; method?: unknown; params?: unknown };
+
     const reply = (result: unknown): void => {
-      const payload = JSON.stringify({ jsonrpc: "2.0", id: message.id, result });
+      // `id` must always be present: JSON.stringify drops an undefined value,
+      // and a reply with no id is spec-invalid and uncorrelatable.
+      const payload = JSON.stringify({
+        jsonrpc: "2.0",
+        id: message.id ?? null,
+        result,
+      });
       // SSE when the client accepts it — see the module header; a plain JSON body
       // makes Codex report the call as user-cancelled.
       if (String(req.headers.accept ?? "").includes("text/event-stream")) {
