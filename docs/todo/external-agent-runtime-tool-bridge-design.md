@@ -1532,6 +1532,48 @@ owner —— `requestPanelHost()` 的 broadcast fallback 注释就是为它写�
 ∉ {bypassPermissions, dontAsk}`（12.1.1 的可测形式）；停止、恢复和审批无重复；
 Host Tool 的审批事件只有 CodeShell 一个来源（15.2.1）。
 
+### Phase 2.5：Codex 反向工具通道 ✅ 已完成
+
+Phase 3 的前半段(反向工具通道)已先于 Runtime 驱动落地,因为它承担全部安全负担。
+
+```text
+packages/coding/src/external-runtimes/codex/
+  mcp-bridge.ts            # loopback HTTP + bearer + SSE
+  thread-context-store.ts  # threadId -> SessionToolHost,全部 fail closed
+  index.ts
+```
+
+**已用真实 codex-cli 0.145.0 端到端验证**
+(`docs/todo/evidence/e2e-codex-product-bridge.mjs`):除 Desktop 渲染窗口(CLI 无
+Electron,用脚本化 panel bridge 代替)外全是产品代码。3 次调用全部到达
+`SessionToolHost`,`list`/`tools` 拿到真结果,**`invoke` 在触达 panel bridge 之前
+被拒**,approvals 计数 0(反证 preset 规则生效),token 未入日志。
+
+实测得到的三条实现约束(都写进了代码注释):
+
+1. **必须按 `accept` 回 SSE**。只回 `application/json` 会让 Codex 报
+   `user cancelled MCP tool call` —— 看着像用户拒绝,实际是传输层不匹配。
+2. **身份只在 body 的 `_meta` 里**,HTTP header 只有 `mcp-protocol-version` /
+   `accept` / `authorization`。
+3. **首次 `tools/list` 根本不带 `threadId`**(thread 还不存在),共享 bridge 必然
+   无法回答它 —— 返回空列表是正确的 fail-closed;Codex 会在 thread 建立后重新拉取
+   (已连续多次复现)。若未来某版本不再重拉,才需要重新评估 22.7。
+
+#### 复查发现的最严重一条:generation 模型整个是错的
+
+`register()` 原本接收 `generation` 参数并顺手抬高全局计数器,而 `resolve()` 拿
+`entry.generation` 去比全局计数器 —— **任何一次注册都会重排所有其他 thread 的
+可达性**:用较低世代注册会让新 thread 从创建起就永久不可达;用较高世代注册会
+**静默驱逐所有健康 thread**(实测 gen 1 → 42,原本正常的线程立刻失效)。
+
+两个失效模式测试全都没盖到,因为唯一那条 fencing 测试只走了顺序正确的路径。
+教训与 Phase 1 的第一条同源:**generation 是 store 的属性(一个 app-server 生命
+周期),不是每个 entry 各自的,调用方不该能选**。
+
+另外修掉:`resolveBatch` 是死代码而数组 body 会静默返回成功;`resolve()` 信任
+调用方传的世代(可复活旧 host);`bumpGeneration()` 保留不可达 entry 从而钉住活的
+host 不被 GC;缺 HTTP method 白名单;`reply()` 会丢 JSON-RPC `id`。
+
 ### Phase 3：Codex Runtime
 
 - 实现共享 app-server host 和 thread session。
