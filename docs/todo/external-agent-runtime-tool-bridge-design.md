@@ -1404,14 +1404,66 @@ v2 新增的四项前置工作（**前两项是阻塞性调研，后两项是独
 验收：接口和安全测试通过；A / B 有书面结论；C / D 已合并且现有 Native Engine 行为改善
 （D 可独立回归验证），其余不改变现有用户路径。
 
-### Phase 1：SessionToolHost
+### Phase 1：SessionToolHost ✅ 已完成
 
-- 从 `run-tooling.ts` 提取可复用的会话级工具组装。
-- 建立显式 external exposure allowlist。
+- 从 `run-tooling.ts` 提取可复用的会话级工具组装（`buildToolVisibility()`）。
+- 建立显式 external exposure allowlist（含 `argsPatterns` 的 action 级收窄）。
 - 保证 `SessionToolHost.execute()` 必经 `ToolExecutor`。
-- 单测可见性、权限、Plan Mode、路径、abort 和隐藏工具直调。
+- 单测可见性、权限、Plan Mode、abort、隐藏工具直调、mode 拒绝、dispose。
 
-验收：使用 fake MCP caller 可调用一个 Host Tool，行为与 Native Engine 调用一致。
+**验收已通过**：`session-tool-host.mcp-caller.test.ts` 用按 codex-cli 0.145.0
+真实线上形状构造的 fake MCP caller 调用 Host Tool，与直接走 `ToolExecutor` 的
+Native Engine 路径**模型可见结果逐字相同**。
+
+落地位置：
+
+```text
+packages/core/src/tool-system/session-tool-host.ts          # 实现
+packages/core/src/tool-system/session-tool-host.test.ts     # 单元
+packages/core/src/tool-system/session-tool-host.mcp-caller.test.ts  # 验收
+packages/core/src/index.extension.tool-host.test.ts         # 导出面守卫
+```
+
+两个值得记住的实现约束：
+
+1. **`visibility` 是必填项**。`ToolExecutor` 在 `toolCtx.toolVisibility` 缺失时
+   **跳过整个 availability guard**，漏填不是"少暴露工具"而是"host-gated 工具在其
+   guard 本想排除的上下文里变得可调用"。
+2. **导出面本身是安全面**。`./extension` 只导出工厂与类型；
+   `index.extension.tool-host.test.ts` 机械禁止 `ToolExecutor` / `ToolRegistry` /
+   `PermissionClassifier` 出现在该入口 —— 一旦导出，capability 就有了一条绕过
+   `SessionToolHost` 的**合法**路径，6.2 的「唯一授权点」在类型层面即失效。
+
+三层收窄（宿主 allowlist / `allowedToolNames` / `argsPatterns`）刻意冗余，
+但冗余意味着**单独删掉任一层测试都不会失败**，所以每层都补了独立用例。
+6 处保护逐个变异确认可证伪；把 `executeSingle` 换成 `registry.executeTool` 直调
+会让 2 个测试失败。
+
+#### Phase 1 复查发现的三处缺陷（已修）
+
+对 `SessionToolHost` 本身做对抗式复查，三条都属实，第一条直接推翻了上面的验收结论：
+
+1. **丢掉了每个工具的 permission rules。** 最初写成
+   `new PermissionClassifier([], mode, backend)`。Native 路径经
+   `PermissionController.build()` 拿到 preset + settings + mode 规则；外部路径传了空
+   数组。实测同一个 `Panel`：`NATIVE Panel{action:"list"} → allow`，
+   `HOST 同一调用 → ask`。也就是说"与 Native Engine 行为一致"当时是**假的**。
+   后果有两面：所有只读工具变成交互式询问（噪音）；而那些用来**收紧**的规则
+   （`Panel invoke → ask`）会消失，由 mode 默认值接管（风险）。用户自己的
+   `settings.permissions.rules` 也根本约束不到外部 Runtime。
+   现改为 `permissionRules` **必填**，不给默认值。
+2. **`contextOverrides` 展开在最后，可以覆盖安全字段** —— 包括
+   `toolVisibility: undefined`（让 executor 跳过 availability guard，正是本节
+   反复强调不能发生的事）、放宽 `allowedToolNames`、甚至塞回刚被构造函数拒绝的
+   `bypassPermissions`。改为宿主 seam 先展开、安全字段后写。
+3. **`dispose()` 只置标志不取消**：已在执行或正卡在审批上的调用会跑完并落在一个
+   已关闭的会话上，违反 13.4。改为会话级 `AbortController`，与调用方 signal 合并。
+
+**最值得记住的是缺陷 1 为什么没被测出来**：验收测试给 native 侧手喂了
+`[{tool:"WhereAmI",decision:"allow"}]`，给 host 侧一个自动放行的 backend ——
+两侧**因为不同的原因**返回了相同字符串。等价性测试如果让两条路径各自用不同的方式
+达成同一结果，它就什么都没证明。现在两侧共用同一份规则，且 host 侧 backend 改为
+一律拒绝：规则生效就走不到它，规则丢了就会走到并失败。
 
 ### Phase 2：Claude Code Runtime
 
