@@ -17,6 +17,9 @@
 import { describe, expect, test } from "bun:test";
 import { createSessionToolHost } from "./session-tool-host.js";
 import { ToolRegistry } from "./registry.js";
+import { ToolExecutor } from "./executor.js";
+import { PermissionClassifier } from "./permission.js";
+import { HookRegistry } from "../hooks/registry.js";
 import type { BuiltinTool } from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
 
@@ -91,6 +94,17 @@ function catalog(record: string[]): BuiltinTool[] {
   ] as unknown as BuiltinTool[];
 }
 
+/**
+ * The same per-tool rules the catalog declares. The Native Engine gets these via
+ * PermissionController.build(); an external session must be given the equivalent
+ * set, or its behavior silently diverges (read-only calls start prompting).
+ */
+const CATALOG_RULES = [
+  { tool: "EchoRead", decision: "allow" as const },
+  { tool: "PretendWrite", decision: "ask" as const },
+  { tool: "SecretTool", decision: "allow" as const },
+];
+
 function makeHost(
   opts: {
     expose?: string[];
@@ -108,6 +122,7 @@ function makeHost(
     cwd: process.cwd(),
     registry,
     permissionMode: opts.permissionMode ?? "default",
+    permissionRules: CATALOG_RULES,
     planMode: opts.planMode ?? false,
     exposure: {
       mode: "allowlist",
@@ -163,35 +178,79 @@ describe("SessionToolHost", () => {
       cwd: process.cwd(),
       registry,
       permissionMode: "default" as const,
+      permissionRules: CATALOG_RULES,
       planMode: false,
       visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
       approvalBackend: { requestApproval: async () => ({ approved: true }) },
     };
 
-    // Layer 2 alone: the host's own allowlist deliberately PERMITS SecretTool
-    // here, so the call reaches ToolExecutor and only `allowedToolNames` can
-    // stop it. Without this, layer 2 is untestable — the host gate would reject
-    // first and mask whether the executor gate exists at all.
-    const executorOnly = createSessionToolHost({
-      ...base,
-      exposure: { mode: "allowlist", toolNames: new Set(["EchoRead", "SecretTool"]) },
-      contextOverrides: { allowedToolNames: new Set(["EchoRead"]) } as never,
-    });
-    const viaExecutor = await executorOnly.execute({ id: "l2", name: "SecretTool", input: {} });
-    expect(viaExecutor.isError).toBe(true);
-    expect(String(viaExecutor.error)).toMatch(/not allowed by this run profile/i);
-    expect(record).toEqual([]);
-
-    // Layer 1 alone: the host's exposure check rejects before ToolExecutor is
-    // even reached, so it must not depend on allowedToolNames being set.
+    // Layer 1: the host's exposure check rejects before ToolExecutor is reached.
     const hostOnly = createSessionToolHost({
       ...base,
       exposure: { mode: "allowlist", toolNames: new Set(["EchoRead"]) },
-      contextOverrides: { allowedToolNames: undefined } as never,
     });
     const viaHost = await hostOnly.execute({ id: "l1", name: "SecretTool", input: {} });
     expect(viaHost.isError).toBe(true);
     expect(String(viaHost.error)).toMatch(/not exposed/i);
+    expect(record).toEqual([]);
+
+    // Layer 2: `allowedToolNames` on the context ToolExecutor holds. Drive the
+    // executor DIRECTLY with the host's own assembled context — contextOverrides
+    // deliberately can no longer widen it (that was the vulnerability), so this
+    // is the only honest way to isolate the second layer.
+    const executor = new ToolExecutor(
+      registry,
+      new PermissionClassifier([...CATALOG_RULES], "default"),
+      new HookRegistry(),
+    );
+    executor.setContext(hostOnly.toolContext);
+    const viaExecutor = await executor.executeSingle({
+      id: "l2",
+      toolName: "SecretTool",
+      args: {},
+    });
+    expect(viaExecutor.isError).toBe(true);
+    expect(String(viaExecutor.error)).toMatch(/not allowed by this run profile/i);
+    expect(record).toEqual([]);
+  });
+
+  test("contextOverrides cannot weaken security-relevant context fields", async () => {
+    // Host seams (panels, browser, askUser…) are caller-supplied, but they must
+    // not be able to reach past the policy. Spreading them LAST used to let a
+    // caller set `toolVisibility: undefined` — which makes ToolExecutor skip its
+    // availability guard outright — or widen allowedToolNames, or re-introduce a
+    // permission mode the constructor just rejected.
+    const record: string[] = [];
+    const registry = new ToolRegistry({ toolCatalog: catalog(record) });
+    const host = createSessionToolHost({
+      businessSessionId: "sess-override",
+      cwd: process.cwd(),
+      registry,
+      permissionMode: "default",
+      permissionRules: CATALOG_RULES,
+      planMode: false,
+      exposure: { mode: "allowlist", toolNames: new Set(["EchoRead"]) },
+      visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
+      approvalBackend: { requestApproval: async () => ({ approved: true }) },
+      contextOverrides: {
+        toolVisibility: undefined,
+        allowedToolNames: new Set(["EchoRead", "SecretTool"]),
+        sessionId: "attacker-session",
+        planMode: true,
+        permissionMode: "bypassPermissions",
+      } as never,
+    });
+
+    const ctx = host.toolContext;
+    expect(ctx.toolVisibility).toBeDefined();
+    expect([...(ctx.allowedToolNames ?? [])]).toEqual(["EchoRead"]);
+    expect(ctx.sessionId).toBe("sess-override");
+    expect(ctx.planMode).toBe(false);
+    expect(ctx.permissionMode).toBe("default");
+
+    // …and the widened allowlist really did not take effect.
+    const blocked = await host.execute({ id: "o1", name: "SecretTool", input: {} });
+    expect(blocked.isError).toBe(true);
     expect(record).toEqual([]);
   });
 
@@ -208,6 +267,7 @@ describe("SessionToolHost", () => {
       cwd: process.cwd(),
       registry,
       permissionMode: "default",
+      permissionRules: CATALOG_RULES,
       planMode: false,
       exposure: { mode: "allowlist", toolNames: new Set(["EchoRead"]) },
       visibility: { cwd: process.cwd(), hasGoal: false },
@@ -239,6 +299,7 @@ describe("SessionToolHost", () => {
           cwd: process.cwd(),
           registry: new ToolRegistry({ toolCatalog: catalog([]) }),
           permissionMode: mode as never,
+          permissionRules: CATALOG_RULES,
           planMode: false,
           exposure: { mode: "allowlist", toolNames: new Set(["EchoRead"]) },
           visibility: { cwd: process.cwd(), hasGoal: false },
@@ -290,6 +351,61 @@ describe("SessionToolHost", () => {
     const { host, record } = makeHost();
     await host.dispose();
     const result = await host.execute({ id: "c9", name: "EchoRead", input: { value: "x" } });
+    expect(result.isError).toBe(true);
+    expect(record).toEqual([]);
+  });
+
+  test("dispose aborts work that is already in flight", async () => {
+    // §13.4 requires close to cancel active calls, not merely refuse new ones.
+    // Marking a flag without aborting lets a call that is mid-execution — or
+    // parked on an approval prompt — run to completion after the session is gone.
+    const record: string[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const registry = new ToolRegistry({
+      toolCatalog: [
+        {
+          definition: {
+            name: "SlowTool",
+            description: "Blocks until released.",
+            inputSchema: { type: "object", properties: {} },
+            source: "builtin",
+            permissionDefault: "allow",
+            isReadOnly: true,
+            isConcurrencySafe: true,
+          },
+          execute: async (_args: Record<string, unknown>, ctx?: ToolContext) => {
+            await gate;
+            if (ctx?.signal?.aborted) throw new Error("aborted");
+            record.push("SlowTool");
+            return "done";
+          },
+          exposure: {
+            presetTags: ["general"],
+            defaultPermissionRules: [{ tool: "SlowTool", decision: "allow" }],
+          },
+        },
+      ] as unknown as BuiltinTool[],
+    });
+    const host = createSessionToolHost({
+      businessSessionId: "sess-dispose",
+      cwd: process.cwd(),
+      registry,
+      permissionMode: "default",
+      permissionRules: [{ tool: "SlowTool", decision: "allow" }],
+      planMode: false,
+      exposure: { mode: "allowlist", toolNames: new Set(["SlowTool"]) },
+      visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
+      approvalBackend: { requestApproval: async () => ({ approved: true }) },
+    });
+
+    const inFlight = host.execute({ id: "d1", name: "SlowTool", input: {} });
+    await host.dispose();
+    // The session's lifetime signal must now be aborted, so the parked call sees
+    // cancellation rather than completing into a closed session.
+    expect(host.toolContext.signal?.aborted).toBe(true);
+    release();
+    const result = await inFlight;
     expect(result.isError).toBe(true);
     expect(record).toEqual([]);
   });

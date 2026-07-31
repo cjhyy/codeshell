@@ -54,16 +54,33 @@ function catalog(record: string[]): BuiltinTool[] {
   ] as unknown as BuiltinTool[];
 }
 
+/**
+ * One rule set, used by BOTH the host and the native comparator below.
+ *
+ * Earlier this test hand-fed the native side `[{tool:"WhereAmI",decision:"allow"}]`
+ * while giving the host an auto-approving backend — both returned the same string
+ * for DIFFERENT reasons, which masked the real divergence (the host was dropping
+ * per-tool rules entirely). Sharing the rules is what makes the comparison mean
+ * something.
+ */
+const SHARED_RULES = [{ tool: "WhereAmI", decision: "allow" as const }];
+
 function makeHost(sessionId: string, record: string[]): SessionToolHost {
   return createSessionToolHost({
     businessSessionId: sessionId,
     cwd: process.cwd(),
     registry: new ToolRegistry({ toolCatalog: catalog(record) }),
     permissionMode: "default",
+    permissionRules: SHARED_RULES,
     planMode: false,
     exposure: { mode: "allowlist", toolNames: new Set(["WhereAmI"]) },
     visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
-    approvalBackend: { requestApproval: async () => ({ approved: true }) },
+    // Deliberately DENY-everything: if the shared allow-rule is honored the call
+    // never reaches this backend. If the rules were dropped, the mode default
+    // would ask, hit this, and fail — which is exactly the divergence to catch.
+    approvalBackend: {
+      requestApproval: async () => ({ approved: false, reason: "backend must not be consulted" }),
+    },
   });
 }
 
@@ -121,7 +138,7 @@ describe("SessionToolHost via a fake MCP caller", () => {
     const registry = new ToolRegistry({ toolCatalog: catalog(nativeRecord) });
     const executor = new ToolExecutor(
       registry,
-      new PermissionClassifier([{ tool: "WhereAmI", decision: "allow" }], "default"),
+      new PermissionClassifier([...SHARED_RULES], "default"),
       new HookRegistry(),
     );
     executor.setContext({

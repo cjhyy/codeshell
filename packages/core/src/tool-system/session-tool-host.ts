@@ -88,6 +88,21 @@ export interface CreateSessionToolHostOptions {
   cwd: string;
   registry: ToolRegistry;
   permissionMode: ExternalSessionPermissionMode;
+  /**
+   * Per-tool permission rules, exactly as the Native Engine path assembles them
+   * (preset rules + settings rules + mode rules — see
+   * `PermissionController.build()`).
+   *
+   * Required, not optional, and deliberately not defaulted to `[]`. The design's
+   * core claim is that a Host Tool behaves IDENTICALLY whether it is reached by
+   * the Native Engine or by an external runtime. Rules are what make
+   * `Panel{action:"list"}` an `allow` and `Panel{action:"invoke"}` an `ask`;
+   * drop them and every tool silently falls back to the bare mode default —
+   * read-only calls start prompting, and narrowing rules that were meant to
+   * RESTRICT a tool stop applying. A user's own `settings.permissions.rules`
+   * would likewise never bind the external runtime.
+   */
+  permissionRules: readonly import("../types.js").PermissionRule[];
   planMode: boolean;
   exposure: ExternalToolExposurePolicy;
   /**
@@ -136,25 +151,48 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
 
   const { registry, exposure } = options;
   const hooks = options.hooks ?? new HookRegistry();
-  const permission = new PermissionClassifier([], options.permissionMode, options.approvalBackend);
+  // Rules come from the caller and are REQUIRED (see CreateSessionToolHostOptions).
+  // Passing `[]` here silently diverges from the Native Engine: the per-tool rules
+  // that make read-only actions `allow` and risky ones `ask` would vanish, and
+  // every tool would fall back to the bare mode default.
+  const permission = new PermissionClassifier(
+    [...options.permissionRules],
+    options.permissionMode,
+    options.approvalBackend,
+  );
+
+  // Every in-flight call is chained to this, so dispose() can actually stop work
+  // that is mid-execution or parked on an approval prompt (§13.4).
+  const lifetime = new AbortController();
+  const sessionSignal = options.signal
+    ? AbortSignal.any([options.signal, lifetime.signal])
+    : lifetime.signal;
 
   const toolCtx = {
     cwd: options.cwd,
-    sessionId: options.businessSessionId,
     toolRegistry: registry,
+    // The COMBINED signal, not just the caller's: a tool that cooperates with
+    // ctx.signal must observe session disposal too.
+    signal: sessionSignal,
+    // Caller-supplied host seams (panels, browser, askUser, …) come FIRST so the
+    // security-relevant fields below always win. Spreading them last would let a
+    // caller — or a careless refactor — set `toolVisibility: undefined` (which
+    // makes ToolExecutor skip its availability guard entirely), widen
+    // `allowedToolNames`, or re-introduce a permission mode the throw above
+    // just rejected.
+    ...options.contextOverrides,
+    sessionId: options.businessSessionId,
     planMode: options.planMode,
     permissionMode: options.permissionMode,
-    signal: options.signal,
     toolVisibility: buildToolVisibility(options.visibility),
     // Belt and braces with the exposure check in execute(): the executor
     // enforces this too, so a future refactor that loses one still fails closed.
     allowedToolNames: new Set(exposure.toolNames),
-    ...options.contextOverrides,
   } as unknown as ToolContext;
 
   const executor = new ToolExecutor(registry, permission, hooks);
   executor.setContext(toolCtx);
-  if (options.signal) executor.setSignal(options.signal);
+  executor.setSignal(sessionSignal);
 
   let disposed = false;
 
@@ -176,7 +214,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
         .filter((definition) => exposure.toolNames.has(definition.name));
     },
 
-    async execute(call, signal): Promise<ToolResult> {
+    async execute(call, callSignal): Promise<ToolResult> {
       if (disposed) {
         return failClosed(call.id, call.name, "This tool session has been closed.");
       }
@@ -201,7 +239,9 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
             `session. Do NOT retry this tool call with the same arguments.`,
         );
       }
-      if (signal?.aborted || options.signal?.aborted) {
+      // `signal` already folds in the session lifetime and the caller-supplied
+      // signal; `callSignal` is the optional per-call one.
+      if (sessionSignal.aborted || callSignal?.aborted) {
         return failClosed(call.id, call.name, `Tool aborted before execution: ${call.name}`);
       }
 
@@ -214,7 +254,12 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
     },
 
     async dispose(): Promise<void> {
+      // Order matters (§13.4): stop accepting new calls, THEN abort in-flight
+      // ones. Marking disposed without aborting would let a call that is already
+      // running — or parked on an approval prompt — continue and complete after
+      // the session is gone.
       disposed = true;
+      lifetime.abort();
       executor.setContext(undefined);
     },
   };
