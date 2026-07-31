@@ -29,6 +29,14 @@ export { logger } from "./logging/logger.js";
 export { addTokenUsage } from "./session/usage.js";
 export { resolveMaxOutput } from "./onboarding.js";
 export { SettingsManager, userHome } from "./settings/manager.js";
+// Feature flags: a host needs to READ them to decide whether an experimental
+// backend is permitted. Read-only surface — the flag registry itself stays in core.
+export {
+  isFeatureEnabled,
+  featureFlagNames,
+  resolveFeatureFlags,
+} from "./settings/feature-flags.js";
+export type { FeatureFlagName, FeatureFlagOverrides } from "./settings/feature-flags.js";
 export { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 export type { ToolContext } from "./tool-system/context.js";
 // Session-scoped tool surface for external Agent Runtimes (Codex / Claude Code).

@@ -74,7 +74,8 @@ export type LogSource =
   | "agent"
   | "mcp-probe"
   | "browser"
-  | "credentials";
+  | "credentials"
+  | "external-runtime";
 
 /** YYYY-MM-DD stamp for a date (local time). */
 export function dayStamp(d: Date): string {
