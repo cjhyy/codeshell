@@ -7,12 +7,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   codexBridgeConfigArgs,
-  startCodexMcpBridge,
+  startLoopbackMcpBridge,
   threadIdFromMeta,
   type BridgeToolHost,
   type McpBridgeHandle,
 } from "./mcp-bridge.js";
-import { CodexThreadContextStore } from "./thread-context-store.js";
+import { SessionContextStore } from "./session-context-store.js";
 
 const open: McpBridgeHandle[] = [];
 afterEach(async () => {
@@ -33,9 +33,9 @@ function fakeHost(sessionId: string, calls: string[]): BridgeToolHost {
 }
 
 async function boot(calls: string[] = []) {
-  const store = new CodexThreadContextStore<BridgeToolHost>();
+  const store = new SessionContextStore<BridgeToolHost>();
   const logs: Array<{ event: string; data: Record<string, unknown> }> = [];
-  const handle = await startCodexMcpBridge({
+  const handle = await startLoopbackMcpBridge({
     store,
     log: (event, data) => logs.push({ event, data }),
   });
@@ -212,8 +212,8 @@ describe("Codex MCP bridge", () => {
   });
 
   test("an oversized body is refused", async () => {
-    const store = new CodexThreadContextStore<BridgeToolHost>();
-    const handle = await startCodexMcpBridge({ store, maxBodyBytes: 256 });
+    const store = new SessionContextStore<BridgeToolHost>();
+    const handle = await startLoopbackMcpBridge({ store, maxBodyBytes: 256 });
     open.push(handle);
     const response = await fetch(handle.url, {
       method: "POST",
@@ -289,6 +289,71 @@ describe("Codex MCP bridge", () => {
     // No `id` in the request → `null`, never absent.
     expect("id" in json).toBe(true);
     expect(json.id).toBeNull();
+  });
+
+  describe("single-session pin (Claude Code, which sends no thread identity)", () => {
+    async function bootPinned(calls: string[]) {
+      const store = new SessionContextStore<BridgeToolHost>();
+      const handle = await startLoopbackMcpBridge({
+        store,
+        singleSessionThreadId: "pinned",
+      });
+      open.push(handle);
+      store.register("pinned", fakeHost("sess-pinned", calls));
+      return { store, handle };
+    }
+
+    test("routes a call that carries no _meta at all", async () => {
+      const calls: string[] = [];
+      const { handle } = await bootPinned(calls);
+      const { json } = await rpc(handle, {
+        id: 1,
+        method: "tools/call",
+        params: { name: "Panel", arguments: { action: "list" } },
+      });
+      expect(json.result.isError).toBeFalsy();
+      expect(calls).toEqual(['sess-pinned:Panel:{"action":"list"}']);
+    });
+
+    test("lists tools without a thread id", async () => {
+      const { handle } = await bootPinned([]);
+      const { json } = await rpc(handle, { id: 1, method: "tools/list", params: {} });
+      expect(json.result.tools.map((t: { name: string }) => t.name)).toEqual(["Panel"]);
+    });
+
+    test("the pin OVERRIDES a caller-supplied thread id", async () => {
+      // The pin is the whole attribution. A runtime (or a model influencing one)
+      // must not be able to steer routing by supplying a different `_meta`.
+      const calls: string[] = [];
+      const { store, handle } = await bootPinned(calls);
+      store.register("someone-else", fakeHost("sess-other", calls));
+
+      await rpc(handle, {
+        id: 1,
+        method: "tools/call",
+        params: {
+          name: "Panel",
+          arguments: { action: "list" },
+          _meta: { threadId: "someone-else" },
+        },
+      });
+      // Landed in the pinned session, not the one the request named.
+      expect(calls).toEqual(['sess-pinned:Panel:{"action":"list"}']);
+    });
+
+    test("an unpinned bridge still refuses a call with no thread id", async () => {
+      // The pin must be opt-in. Without it the shared-bridge rules stand.
+      const calls: string[] = [];
+      const { handle, store } = await boot(calls);
+      store.register("thread-a", fakeHost("sess-a", calls));
+      const { json } = await rpc(handle, {
+        id: 1,
+        method: "tools/call",
+        params: { name: "Panel", arguments: {} },
+      });
+      expect(json.result.isError).toBe(true);
+      expect(calls).toEqual([]);
+    });
   });
 
   test("malformed JSON is refused", async () => {

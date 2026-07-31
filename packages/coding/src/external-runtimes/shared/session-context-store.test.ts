@@ -9,16 +9,16 @@
  * arguments but not `_meta`.
  */
 import { describe, expect, test } from "bun:test";
-import { CodexThreadContextStore } from "./thread-context-store.js";
+import { SessionContextStore } from "./session-context-store.js";
 
 /** Minimal stand-in; the store only ever holds and returns these. */
 function fakeHost(id: string) {
   return { businessSessionId: id } as never;
 }
 
-describe("CodexThreadContextStore", () => {
+describe("SessionContextStore", () => {
   test("resolves a registered thread to its own host", () => {
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     const a = fakeHost("sess-a");
     const b = fakeHost("sess-b");
     store.register("thread-a", a);
@@ -29,7 +29,7 @@ describe("CodexThreadContextStore", () => {
   });
 
   test("fails closed on a missing thread id", () => {
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     const result = store.resolve({ threadId: undefined, generation: 1 });
     expect(result.ok).toBe(false);
@@ -40,7 +40,7 @@ describe("CodexThreadContextStore", () => {
     // The single-session case is the tempting one to "helpfully" guess at.
     // §11.3 forbids it: guessing is what turns a background run into a
     // cross-session write.
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     const result = store.resolve({ threadId: "thread-zzz", generation: 1 });
     expect(result.ok).toBe(false);
@@ -48,7 +48,7 @@ describe("CodexThreadContextStore", () => {
   });
 
   test("fails closed after the thread is unregistered", () => {
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     store.unregister("thread-a");
     const result = store.resolve({ threadId: "thread-a", generation: 1 });
@@ -60,7 +60,7 @@ describe("CodexThreadContextStore", () => {
     // An app-server restart re-registers threads under a new generation. A
     // request still in flight from the old process must not land on the new
     // host — §13.6 calls for exactly this fence.
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-old"));
     store.bumpGeneration();
     store.register("thread-a", fakeHost("sess-new"));
@@ -80,7 +80,7 @@ describe("CodexThreadContextStore", () => {
     // new thread immediately, and registering at a HIGHER one silently evicted
     // every healthy thread. Both were invisible to the suite, because the only
     // fencing test walked the happy sequence.
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     expect(store.resolve({ threadId: "thread-a", generation: store.generation }).ok).toBe(true);
 
@@ -98,7 +98,7 @@ describe("CodexThreadContextStore", () => {
     // only compared entry-vs-request, handing the stale number back in would
     // return the stale host — the caller's word is not evidence about which
     // app-server generation is live.
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-old"));
     const staleGeneration = store.generation;
     store.bumpGeneration();
@@ -111,7 +111,7 @@ describe("CodexThreadContextStore", () => {
     // Unreachable entries pin live SessionToolHost objects (each holding an
     // executor and an approval route) against GC for the process lifetime,
     // growing with every app-server restart.
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     store.register("thread-b", fakeHost("sess-b"));
     expect(store.size).toBe(2);
@@ -124,7 +124,7 @@ describe("CodexThreadContextStore", () => {
   test("a batch spanning two threads is rejected wholesale", () => {
     // §11.3: one batch, one thread. Resolving per-item would let a mixed batch
     // touch two sessions on the strength of one authorization.
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     store.register("thread-b", fakeHost("sess-b"));
 
@@ -137,7 +137,7 @@ describe("CodexThreadContextStore", () => {
   });
 
   test("a batch with any missing thread id is rejected", () => {
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     const result = store.resolveBatch(["thread-a", undefined], store.generation);
     expect(result.ok).toBe(false);
@@ -150,7 +150,7 @@ describe("CodexThreadContextStore", () => {
     // which already refuses. Removing the check alone therefore does NOT make
     // this test fail, and it would be dishonest to claim otherwise. The
     // assertion still pins the OUTCOME, which is what callers depend on.
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     const result = store.resolveBatch([], store.generation);
     expect(result.ok).toBe(false);
@@ -158,7 +158,7 @@ describe("CodexThreadContextStore", () => {
   });
 
   test("re-registering a thread replaces the host instead of accumulating", () => {
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     const first = fakeHost("sess-1");
     const second = fakeHost("sess-2");
     store.register("thread-a", first);
@@ -171,7 +171,7 @@ describe("CodexThreadContextStore", () => {
   });
 
   test("clear() drops every mapping", () => {
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     store.register("thread-b", fakeHost("sess-b"));
     store.clear();
@@ -181,7 +181,7 @@ describe("CodexThreadContextStore", () => {
 
   test("never serializes a host — the store is memory-only", () => {
     // §13.6: bridge context is rebuilt in memory on restart, never persisted.
-    const store = new CodexThreadContextStore();
+    const store = new SessionContextStore();
     store.register("thread-a", fakeHost("sess-a"));
     expect(() => JSON.stringify(store)).not.toThrow();
     // The JSON form must not leak the host objects.

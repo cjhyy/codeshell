@@ -105,25 +105,27 @@ function declarationOf(field: string): string {
 }
 
 describe("CreateSessionToolHostOptions contract", () => {
-  test.each(MUST_BE_REQUIRED)("$field is required — $because", ({ field }) => {
-    const declaration = declarationOf(field);
-    // Not optional...
-    expect(declaration.startsWith("?")).toBe(false);
-    // ...and does not admit `undefined`, which keeps the required marker while
-    // still allowing the "not specified" value through.
-    expect(/\bundefined\b/.test(declaration)).toBe(false);
-    // ...and is not a local alias that could hide `undefined` one level down.
-    // Only inline types and imported types are allowed; a bare local identifier
-    // (`projectTrusted: MaybeTrusted`) would move the question somewhere this
-    // scan does not look.
-    const named = /^:\s*([A-Za-z_$][\w$]*)\s*$/.exec(declaration);
-    if (named) {
-      const alias = new RegExp(`^\\s*(export\\s+)?type\\s+${named[1]}\\b`, "m").exec(SOURCE);
-      expect(
-        alias === null || !/\bundefined\b/.test(SOURCE.slice(alias.index).split(";")[0] ?? ""),
-      ).toBe(true);
-    }
-  });
+  for (const { field, because } of MUST_BE_REQUIRED) {
+    test(`${field} is required — ${because}`, () => {
+      const declaration = declarationOf(field);
+      // Not optional...
+      expect(declaration.startsWith("?")).toBe(false);
+      // ...and does not admit `undefined`, which keeps the required marker while
+      // still allowing the "not specified" value through.
+      expect(/\bundefined\b/.test(declaration)).toBe(false);
+      // ...and is not a local alias that could hide `undefined` one level down.
+      // Only inline types and imported types are allowed; a bare local identifier
+      // (`projectTrusted: MaybeTrusted`) would move the question somewhere this
+      // scan does not look.
+      const named = /^:\s*([A-Za-z_$][\w$]*)\s*$/.exec(declaration);
+      if (named) {
+        const alias = new RegExp(`^\\s*(export\\s+)?type\\s+${named[1]}\\b`, "m").exec(SOURCE);
+        expect(
+          alias === null || !/\bundefined\b/.test(SOURCE.slice(alias.index).split(";")[0] ?? ""),
+        ).toBe(true);
+      }
+    });
+  }
 
   test("options are never re-assigned or spread over with defaults", () => {
     // `options = Object.assign({projectTrusted: true}, options)` reintroduces
@@ -139,10 +141,12 @@ describe("CreateSessionToolHostOptions contract", () => {
     // type to prove the VALUE is genuinely absent rather than quietly defaulted.
     for (const { field } of MUST_BE_REQUIRED) {
       const options = baseOptions();
-      delete (options as Record<string, unknown>)[field];
+      delete (options as unknown as Record<string, unknown>)[field];
       let built: { toolContext?: { planMode?: boolean } } | undefined;
       try {
-        built = createSessionToolHost(options as never) as never;
+        built = createSessionToolHost(options) as unknown as {
+          toolContext?: { planMode?: boolean };
+        };
       } catch {
         continue; // throwing on a missing required input is the correct outcome
       }

@@ -21,7 +21,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { randomBytes } from "node:crypto";
 import type { AddressInfo } from "node:net";
-import type { CodexThreadContextStore, ThreadContextMissReason } from "./thread-context-store.js";
+import type { SessionContextStore, SessionContextMissReason } from "./session-context-store.js";
 
 /** What the bridge needs of a session tool host. Structural, so this module
  *  does not depend on core's concrete implementation. */
@@ -36,9 +36,26 @@ export interface BridgeToolHost {
 }
 
 export interface McpBridgeOptions {
-  store: CodexThreadContextStore<BridgeToolHost>;
+  store: SessionContextStore<BridgeToolHost>;
   /** Logical MCP server name Codex is configured with. */
   serverName?: string;
+  /**
+   * Bind this bridge to exactly ONE session, for runtimes that do not send a
+   * per-call thread identity.
+   *
+   * Codex injects `_meta.threadId`, which is what lets one shared bridge serve
+   * many threads safely. Claude Code sends no equivalent — so for it the binding
+   * has to be the PORT: one bridge, one session, and whatever arrives on this
+   * socket belongs to that session by construction.
+   *
+   * This is not the "guess the foreground session" fallback that §11.3 and §22.5
+   * forbid. The distinction is that nothing is being inferred: a request cannot
+   * be misattributed, because there is only one possible attribution and it was
+   * fixed before the port was opened. The cost is that a shared bridge is no
+   * longer possible for such a runtime — which is exactly the §22.7 trade-off,
+   * accepted here per-runtime rather than globally.
+   */
+  singleSessionThreadId?: string;
   /** Cap on a single request body. Prevents an oversized init/call. */
   maxBodyBytes?: number;
   /**
@@ -102,7 +119,7 @@ function turnIdFromMeta(params: unknown): string | undefined {
 
 /** Model-facing text for a routing refusal. Says what happened without leaking
  *  which other sessions exist. */
-function missMessage(reason: ThreadContextMissReason): string {
+function missMessage(reason: SessionContextMissReason): string {
   switch (reason) {
     case "missing_thread_id":
       return "Refused: this tool call carried no thread identity, so it cannot be attributed to a session.";
@@ -115,12 +132,21 @@ function missMessage(reason: ThreadContextMissReason): string {
   }
 }
 
-export async function startCodexMcpBridge(options: McpBridgeOptions): Promise<McpBridgeHandle> {
+export async function startLoopbackMcpBridge(options: McpBridgeOptions): Promise<McpBridgeHandle> {
   const token = randomBytes(32).toString("hex");
   const maxBody = options.maxBodyBytes ?? DEFAULT_MAX_BODY;
   const serverName = options.serverName ?? "codeshell_tools";
   const log = options.log ?? (() => {});
   const store = options.store;
+  const pinnedThreadId = options.singleSessionThreadId;
+
+  /**
+   * Thread identity for a request. When the bridge is pinned to one session the
+   * pin wins outright — a runtime that sends no `_meta.threadId` must not be able
+   * to steer routing by supplying one either.
+   */
+  const threadIdFor = (params: unknown): string | undefined =>
+    pinnedThreadId ?? threadIdFromMeta(params);
 
   const server: Server = createServer((req, res) => {
     void handle(req, res).catch((error) => {
@@ -186,7 +212,7 @@ export async function startCodexMcpBridge(options: McpBridgeOptions): Promise<Mc
     // (§11.3), and `store.resolveBatch()` exists for the day batching is added.
     if (Array.isArray(parsed)) {
       const threadIds = parsed.map((entry) =>
-        threadIdFromMeta((entry as { params?: unknown } | null)?.params),
+        threadIdFor((entry as { params?: unknown } | null)?.params),
       );
       const batch = store.resolveBatch(threadIds, store.generation);
       const reason = batch.ok ? "batch_unsupported" : batch.reason;
@@ -255,7 +281,7 @@ export async function startCodexMcpBridge(options: McpBridgeOptions): Promise<Mc
 
     if (message.method === "tools/list") {
       const resolved = store.resolve({
-        threadId: threadIdFromMeta(message.params),
+        threadId: threadIdFor(message.params),
         generation: store.generation,
       });
       if (!resolved.ok) {
@@ -263,18 +289,19 @@ export async function startCodexMcpBridge(options: McpBridgeOptions): Promise<Mc
         // guess here would leak one session's surface into another's prompt.
         //
         // Observed against real codex-cli 0.145.0: the FIRST `tools/list` of a
-        // run carries no `_meta.threadId` at all (the thread does not exist
-        // yet), so it necessarily lands here. Codex re-lists once the thread is
-        // established and that second call routes normally — verified twice in
-        // `docs/todo/evidence/e2e-codex-product-bridge.mjs`. An empty first
-        // answer is therefore the correct, expected outcome and not a
-        // misconfiguration.
+        // run carries no `_meta.threadId` at all — the thread does not exist yet —
+        // so on a SHARED bridge it necessarily lands here.
         //
-        // Consequence for §11.3: a shared bridge fundamentally cannot answer a
-        // pre-thread `tools/list`. If a future Codex version stopped re-listing,
-        // the model would never learn the tool exists — that is the point at
-        // which §22.7 (one bridge per session, where the port itself identifies
-        // the session) would have to be revisited.
+        // An earlier note here claimed Codex reliably re-issues `tools/list` once
+        // the thread exists. That was wrong: it does so only sometimes, and when
+        // it does not, the tool is invisible for the entire session (measured
+        // both ways on the same binary). Do not depend on the retry.
+        //
+        // The supported fix is `singleSessionThreadId`: one bridge per session,
+        // where the port is the attribution, so the pre-thread `tools/list`
+        // resolves. §22.7's trade-off, taken per-runtime. A shared bridge remains
+        // correct for a runtime that identifies every call — it just cannot
+        // advertise tools before the first thread exists.
         log("bridge.tools_list_refused", { reason: resolved.reason });
         reply({ tools: [] });
         return;
@@ -294,7 +321,7 @@ export async function startCodexMcpBridge(options: McpBridgeOptions): Promise<Mc
 
     if (message.method === "tools/call") {
       const params = message.params as { name?: unknown; arguments?: unknown } | undefined;
-      const threadId = threadIdFromMeta(message.params);
+      const threadId = threadIdFor(message.params);
       const resolved = store.resolve({ threadId, generation: store.generation });
       if (!resolved.ok) {
         log("bridge.call_refused", {

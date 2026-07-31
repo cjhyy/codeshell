@@ -15,7 +15,7 @@
 
 const LOOPBACK_NO_PROXY = ["127.0.0.1", "localhost", "::1"] as const;
 
-export interface CodexSpawnEnvOptions {
+export interface RuntimeSpawnEnvOptions {
   /** Base environment; defaults to the current process env. */
   base?: NodeJS.ProcessEnv;
   /** Bearer token env var name and value for the loopback MCP bridge. */
@@ -28,7 +28,7 @@ export interface CodexSpawnEnvOptions {
  * and Go read both, and leaving two spellings behind lets one silently override
  * the other depending on which library looks first.
  */
-export function buildCodexSpawnEnv(options: CodexSpawnEnvOptions = {}): NodeJS.ProcessEnv {
+export function buildRuntimeSpawnEnv(options: RuntimeSpawnEnvOptions = {}): NodeJS.ProcessEnv {
   const base = options.base ?? process.env;
   const env: NodeJS.ProcessEnv = { ...base };
 

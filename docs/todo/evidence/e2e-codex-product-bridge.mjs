@@ -28,8 +28,8 @@ const { BUILTIN_AGENT_PRESETS } = await import(
   require.resolve("../../../packages/core/dist/preset/index.js")
 );
 // ── the product bridge, not a local reimplementation ──────────────────────
-const { startCodexMcpBridge, codexBridgeConfigArgs, CodexThreadContextStore } = await import(
-  require.resolve("../../../packages/coding/dist/external-runtimes/codex/index.js")
+const { startLoopbackMcpBridge, codexBridgeConfigArgs, SessionContextStore } = await import(
+  require.resolve("../../../packages/coding/dist/external-runtimes/index.js")
 );
 
 const panelBridgeCalls = [];
@@ -95,9 +95,15 @@ function makeHost(businessSessionId) {
 }
 
 const logs = [];
-const store = new CodexThreadContextStore();
-const bridge = await startCodexMcpBridge({
+const store = new SessionContextStore();
+const PINNED = "codex-single-session";
+const bridge = await startLoopbackMcpBridge({
   store,
+  // Pin the bridge to this one session. Codex's first `tools/list` arrives BEFORE
+  // its thread exists and therefore carries no `_meta.threadId`; a shared bridge
+  // must refuse it, and Codex does not reliably re-list afterwards — when it does
+  // not, the tool is simply invisible for the whole session. Observed both ways.
+  singleSessionThreadId: PINNED,
   log: (event, data) => logs.push({ event, ...data }),
 });
 console.log("product bridge:", bridge.url);
@@ -107,6 +113,7 @@ console.log("product bridge:", bridge.url);
 // register before the model gets a chance to call a tool. `tools/list` may land
 // first and correctly return [] — that is the fail-closed path, not a bug.
 const host = makeHost("business-e2e");
+store.register(PINNED, host);
 let registered = null;
 
 const PROMPT = `You have a Panel tool from the codeshell_tools MCP server.
@@ -114,7 +121,10 @@ Do these three steps in order and report each raw result verbatim, including err
 1. Panel with {"action":"list"}
 2. Panel with {"action":"tools","panel_id":"panel-app:design-studio"}
 3. Panel with {"action":"invoke","panel_id":"panel-app:design-studio","tool_name":"get_design_context","arguments":{}}
-If a step fails, say so and continue to the next one.`;
+If a step fails, say so and continue to the next one.
+
+Use the MCP tool itself for every step. Do NOT use curl, shell commands, or any
+other transport to reach the server — the point is to exercise the tool call path.`;
 
 const child = spawn(
   "codex",

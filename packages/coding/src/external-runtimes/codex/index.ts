@@ -1,26 +1,7 @@
 /**
- * Codex external-runtime plumbing: the loopback MCP bridge and the thread
- * context store that keeps concurrent threads apart.
- *
- * The Runtime/session driver (app-server client, event translator) is not here
- * yet — this is the reverse tool channel only, which is the half that carries
- * the security burden.
+ * Codex-specific pieces. The transport, the session store and the spawn env are
+ * shared with Claude Code (see `../shared/`) — both runtimes speak HTTP MCP with
+ * a bearer token, so there is one bridge implementation, not two.
  */
-export {
-  CODEX_MCP_TOKEN_ENV_VAR,
-  codexBridgeConfigArgs,
-  startCodexMcpBridge,
-  threadIdFromMeta,
-} from "./mcp-bridge.js";
-export type { BridgeToolHost, McpBridgeHandle, McpBridgeOptions } from "./mcp-bridge.js";
 export { CodexEventTranslator } from "./event-translator.js";
 export type { CodexEventTranslatorOptions } from "./event-translator.js";
-export { buildCodexSpawnEnv } from "./spawn-env.js";
-export type { CodexSpawnEnvOptions } from "./spawn-env.js";
-export { CodexThreadContextStore } from "./thread-context-store.js";
-export type {
-  CodexToolHostRef,
-  ResolveRequest,
-  ThreadContextMissReason,
-  ThreadContextResult,
-} from "./thread-context-store.js";

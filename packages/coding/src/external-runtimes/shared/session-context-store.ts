@@ -18,19 +18,19 @@
 
 /** Anything the bridge can dispatch a tool call to. Structural on purpose so
  *  this file stays free of a hard dependency on the host implementation. */
-export interface CodexToolHostRef {
+export interface ToolHostRef {
   readonly businessSessionId: string;
 }
 
-export type ThreadContextMissReason =
+export type SessionContextMissReason =
   | "missing_thread_id"
   | "unknown_thread"
   | "stale_generation"
   | "ambiguous_thread";
 
-export type ThreadContextResult<T> =
+export type SessionContextResult<T> =
   | { ok: true; host: T }
-  | { ok: false; reason: ThreadContextMissReason };
+  | { ok: false; reason: SessionContextMissReason };
 
 export interface ResolveRequest {
   /** From `_meta.threadId` (or `_meta["x-codex-turn-metadata"].thread_id`). */
@@ -44,7 +44,7 @@ interface Entry<T> {
   generation: number;
 }
 
-export class CodexThreadContextStore<T extends CodexToolHostRef = CodexToolHostRef> {
+export class SessionContextStore<T extends ToolHostRef = ToolHostRef> {
   /** Non-enumerable so a stray `JSON.stringify(store)` cannot leak live hosts. */
   private readonly byThread = new Map<string, Entry<T>>();
   private currentGeneration = 1;
@@ -98,7 +98,7 @@ export class CodexThreadContextStore<T extends CodexToolHostRef = CodexToolHostR
     return this.currentGeneration;
   }
 
-  resolve(request: ResolveRequest): ThreadContextResult<T> {
+  resolve(request: ResolveRequest): SessionContextResult<T> {
     if (!request.threadId) return { ok: false, reason: "missing_thread_id" };
     const entry = this.byThread.get(request.threadId);
     if (!entry) return { ok: false, reason: "unknown_thread" };
@@ -133,7 +133,7 @@ export class CodexThreadContextStore<T extends CodexToolHostRef = CodexToolHostR
   resolveBatch(
     threadIds: readonly (string | undefined)[],
     generation: number,
-  ): ThreadContextResult<T> {
+  ): SessionContextResult<T> {
     if (threadIds.length === 0) return { ok: false, reason: "missing_thread_id" };
     if (threadIds.some((id) => !id)) return { ok: false, reason: "missing_thread_id" };
     const unique = new Set(threadIds as readonly string[]);
