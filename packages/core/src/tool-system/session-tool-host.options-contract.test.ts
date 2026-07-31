@@ -69,13 +69,18 @@ const MUST_BE_REQUIRED: ReadonlyArray<{ field: string; because: string }> = [
 ];
 
 /**
- * Requiredness is asserted against the SOURCE TEXT, not with a compile-time
- * `IsRequired<…>` helper, because `packages/core/tsconfig.json` excludes
- * `src/**\/*.test.ts` — a type-level assertion living in a test file is never
- * checked by any build, so it would look like a guard while enforcing nothing.
+ * Requiredness is asserted against the SOURCE TEXT rather than with a
+ * compile-time `IsRequired<…>` helper.
  *
- * The scan therefore has to cover both spellings of "may be absent":
- * `field?: T` and `field: T | undefined`.
+ * A type-level assertion here would be only partially enforced:
+ * `packages/core/tsconfig.json` excludes `src/**\/*.test.ts`, so the
+ * package-local typecheck skips it. The repo-root `bun run typecheck` DOES
+ * include it — but that split means the guard would hold in CI and vanish for
+ * anyone running the package check alone, which is the worse kind of guard:
+ * present enough to be trusted, absent exactly when someone is iterating.
+ *
+ * A source scan runs wherever the test runs. It has to cover both spellings of
+ * "may be absent": `field?: T` and `field: T | undefined`.
  */
 function declarationOf(field: string): string {
   const start = SOURCE.indexOf("export interface CreateSessionToolHostOptions");
@@ -107,6 +112,26 @@ describe("CreateSessionToolHostOptions contract", () => {
     // ...and does not admit `undefined`, which keeps the required marker while
     // still allowing the "not specified" value through.
     expect(/\bundefined\b/.test(declaration)).toBe(false);
+    // ...and is not a local alias that could hide `undefined` one level down.
+    // Only inline types and imported types are allowed; a bare local identifier
+    // (`projectTrusted: MaybeTrusted`) would move the question somewhere this
+    // scan does not look.
+    const named = /^:\s*([A-Za-z_$][\w$]*)\s*$/.exec(declaration);
+    if (named) {
+      const alias = new RegExp(`^\\s*(export\\s+)?type\\s+${named[1]}\\b`, "m").exec(SOURCE);
+      expect(
+        alias === null || !/\bundefined\b/.test(SOURCE.slice(alias.index).split(";")[0] ?? ""),
+      ).toBe(true);
+    }
+  });
+
+  test("options are never re-assigned or spread over with defaults", () => {
+    // `options = Object.assign({projectTrusted: true}, options)` reintroduces
+    // every default at once while leaving each per-field check untouched.
+    const factory = SOURCE.slice(SOURCE.indexOf("export function createSessionToolHost"));
+    expect(/\boptions\s*=\s*/.test(factory)).toBe(false);
+    expect(/Object\.assign\s*\([^)]*options/.test(factory)).toBe(false);
+    expect(/\{\s*\.\.\.\s*(defaults?|DEFAULTS?)[\s,]/.test(factory)).toBe(false);
   });
 
   test("omitting a required input does not silently yield a permissive host", () => {
