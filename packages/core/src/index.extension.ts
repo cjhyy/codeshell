@@ -45,6 +45,11 @@ export type {
   SessionToolHost,
 } from "./tool-system/session-tool-host.js";
 export type { ToolVisibilityInputs } from "./engine/run-tooling.js";
+export {
+  FIRST_PHASE_EXPOSURE,
+  FIRST_PHASE_EXPOSURE_RATIONALE,
+} from "./tool-system/external-tool-exposure.js";
+export type { ExposureRationale } from "./tool-system/external-tool-exposure.js";
 export { webSearchTool } from "./tool-system/builtin/web-search.js";
 export { webFetchTool } from "./tool-system/builtin/web-fetch.js";
 export { extractJSON, extractJSONArray } from "./utils/json.js";
