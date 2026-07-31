@@ -6,6 +6,30 @@
 > 参考实现：[`makecindy/cindy`](https://github.com/makecindy/cindy)，核对版本
 > `2f409937`
 
+## 0.0 交付状态(可合并 main)
+
+反向工具通道对 **Codex 与 Claude Code 两条 runtime 均已打通并真机验证**。
+
+| 项                                            | 状态                        |
+| --------------------------------------------- | --------------------------- |
+| Phase 0(A/B/C/D 四项)                         | ✅                          |
+| Phase 1 `SessionToolHost`                     | ✅ 含验收                   |
+| Phase 2.5 Codex MCP bridge + session store    | ✅ 真机 `codex-cli 0.145.0` |
+| Phase 2.6 event translator + spawn env        | ✅                          |
+| Phase 2.7 Claude Code 接通                    | ✅ 真机 `claude 2.1.220`    |
+| Phase 3 Codex Runtime 驱动(app-server client) | ⏳ 未做                     |
+| Desktop 组合根接线 / `Panel.invoke` 解禁      | ⏳ 未做                     |
+
+验证:全仓 **7964 passed / 0 failed**;core + desktop typecheck 干净;build 干净;
+0 lint error;`lint:engine-bypass` 通过;与 main **零冲突、零落后**。
+两条 runtime 的端到端脚本在 `docs/todo/evidence/`,可复现。
+
+**尚未做的部分说清楚**:目前只有反向工具通道(外部 Runtime 调 CodeShell 工具)。
+Runtime 驱动本身(app-server client、`turn/start`、把 `StreamEvent` 接回 UI)和
+Desktop 组合根接线都没做,所以**还不能用 Codex/Claude 跑一个完整的 CodeShell 会话**。
+`createSessionToolHost` 也仍无生产调用方 —— 这是 Phase 1 复查里那条缺陷能溜进来的根因,
+第一个 adapter 落地时要重点验。
+
 ## 0. v2 修订说明
 
 v1 的信任分层（Runtime → MCP → `SessionToolHost` → `ToolExecutor`）经评审确认方向正确，
