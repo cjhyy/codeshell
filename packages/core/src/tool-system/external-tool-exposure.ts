@@ -41,9 +41,14 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
     status: "exposed",
     reason:
       "Only list/open/tools. These are read-or-focus, and they have a broadcast " +
-      "fallback, so they work without an owning window. invoke is deferred: it " +
-      "refuses to broadcast (running a mutating Panel App tool once per mounted " +
-      "window), so it needs the explicit owner claim from §9.3.2 first.",
+      "fallback, so they work without an owning window. invoke stays out for now " +
+      "for a DIFFERENT reason than originally recorded: the owner claim it was " +
+      "waiting on now exists and is wired (ExternalRuntimeService claims before " +
+      "the runtime starts), so the blocker is no longer technical. What is still " +
+      "missing is a per-Panel-App risk review — invoke runs third-party Panel App " +
+      "code with whatever arguments the model supplies, and argsPatterns cannot " +
+      "constrain a nested payload. Enabling it is a policy decision, not a wiring " +
+      "one, and it belongs to whoever reviews the first Panel App to be trusted.",
   },
   {
     tool: "Browser",

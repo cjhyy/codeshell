@@ -8,64 +8,65 @@
 
 ## 0.0 交付状态(可合并 main)
 
-**Codex 与 Claude Code 都已是可用的 Agent Runtime**,不只是「能调 CodeShell 工具」。
+**Codex 与 Claude Code 都已接通为可选的会话后端**,从设计稿到 Desktop 接线全线打通。
 
-| 项                                                     | 状态      |
-| ------------------------------------------------------ | --------- |
-| Phase 0(A/B/C/D)                                       | ✅        |
-| Phase 1 `SessionToolHost`                              | ✅ 含验收 |
-| Phase 2.5 loopback MCP bridge + session store          | ✅        |
-| Phase 2.6 Codex event translator + spawn env           | ✅        |
-| Phase 2.7 Claude Code 接通(共用同一 bridge)            | ✅        |
-| **Phase 3 Codex Runtime**(app-server client + runtime) | ✅ 真机   |
-| **Phase 3 Claude Code Runtime**(stream-json + runtime) | ✅ 真机   |
-| Desktop 组合根接线 / `Panel.invoke` 解禁               | ⏳ 未做   |
+| 项                                            | 状态                                       |
+| --------------------------------------------- | ------------------------------------------ |
+| Phase 0(A/B/C/D)                              | ✅                                         |
+| Phase 1 `SessionToolHost`                     | ✅                                         |
+| Phase 2.5 loopback MCP bridge + session store | ✅                                         |
+| Phase 2.6/2.7 两个 event translator           | ✅                                         |
+| Phase 3 `CodexRuntime`(app-server client)     | ✅ 真机                                    |
+| Phase 3 `ClaudeCodeRuntime`(stream-json)      | ✅ 真机                                    |
+| Phase 4 组合根 `startExternalRuntimeSession`  | ✅ 真机                                    |
+| Phase 4 Desktop 接线 `ExternalRuntimeService` | ✅                                         |
+| `Panel.invoke` 解禁                           | ⏸ 技术阻塞已解除,待逐个 Panel App 风险评审 |
 
 ```text
 packages/coding/src/external-runtimes/
-  shared/mcp-bridge.ts            两个 runtime 共用的反向工具通道
-  shared/session-context-store.ts threadId -> SessionToolHost,全部 fail closed
-  shared/spawn-env.ts             NO_PROXY 等子进程环境
-  codex/app-server-client.ts      NDJSON JSON-RPC 客户端
-  codex/runtime.ts                CodexRuntime
-  codex/event-translator.ts
-  claude-code/runtime.ts          ClaudeCodeRuntime
-  claude-code/event-translator.ts
-  claude-code/mcp-config.ts
+  shared/          mcp-bridge / session-context-store / spawn-env   (两 runtime 共用)
+  codex/           app-server-client / runtime / event-translator
+  claude-code/     runtime / event-translator / mcp-config
+  session-factory.ts   startExternalRuntimeSession —— 组合根
+packages/desktop/src/main/
+  external-runtime-service.ts   Desktop 接线(owner claim + trust + flags)
 ```
 
-两条 runtime 的真机端到端(`docs/todo/evidence/`,可复现)结论一致:
-runtime 开出会话 → 跑 turn → 收到翻译后的 `StreamEvent` → **模型在 turn 中途调到
-真实 CodeShell 工具** → 恰好一个 `turn_complete`。
+验证:全仓 **8025 passed**;core + desktop typecheck 干净;build 干净;0 lint error;
+与 main 零冲突。唯一 1 个 fail 是 `login-shell-path.test.ts` 在全量并行下的 3 秒
+shell 探测 flake —— 单独跑 12/12 连过三次,不在本次改动文件内。
 
-验证:全仓 **8008 passed / 0 failed**;core + desktop typecheck 干净;build 干净;
-0 lint error;`lint:engine-bypass` 通过;与 main **零冲突、零落后**。
-
-### 最后一个真机发现:Codex 对我们自己 MCP 工具的审批走 elicitation
-
-第一次跑 `CodexRuntime` 时模型报「MCP call was rejected」,bridge 日志只有
-`tools_list` 没有 `tools_call`。抓 stderr 才看到:
+四个真机端到端脚本在 `docs/todo/evidence/`,其中
+`e2e-session-factory.mjs` 一次调用产品入口跑通**两个真实二进制**:
 
 ```
-ERROR codex_app_server: unhandled: mcpServer/elicitation/request
+codex        PASS  exactlyOneTerminal ✓ reachedPanelBridge ✓ invokeLeaked ✗
+claude-code  PASS  exactlyOneTerminal ✓ reachedPanelBridge ✓ invokeLeaked ✗
 ```
 
-Codex 通过 **`mcpServer/elicitation/request`** 询问**我们自己** MCP server 的工具
-(判定标记 `_meta.codex_approval_kind === "mcp_tool_call"`),**不是**
-`item/permissions/requestApproval`。不处理它,整条反向通道**静默永不触发** ——
-这也修正了 §11.4 原本的描述。
+### 两个 flag,默认全关(§20)
 
-按 §10.3 只接受**我们自己 server** 的 tool-call 审批(调用即将进
-`SessionToolHost` → `ToolExecutor`,那里才是真正的授权点;在这里再问一次就是双重审批,
-拒绝则让 CodeShell 工具永久不可达)。第三方 server 或无法识别的 kind 一律拒绝,
-且不做 session 级持久化。
+- `external_agent_runtime` 关 → `start()` **报错**,不静默回落到 native engine
+  (要了 Codex 却拿到 native 而无人告知,只会让人排查错误的后端);
+- `external_host_tools` 关 → 暴露**空 allowlist**。bridge 仍在,只是什么都不广告 ——
+  这样才能「先试 runtime、完全不开工具面」,而工具桥才是承担安全负担的那部分。
 
-### 仍未做的部分
+### 关于 `Panel.invoke`:阻塞理由变了,必须说清
 
-**Desktop 组合根接线**:两条 runtime 都还没接进 Desktop 的会话创建流程,
-`createSessionToolHost` 也仍无生产调用方 —— 这是 Phase 1 复查那条安全缺陷能溜进来的
-根因,接线时要重点验。`Panel.invoke` 仍按设计 fail closed,需要 Desktop 调
-`claimSessionPanelOwner()` 才能解禁(API 已备好)。
+原记录说它在等 §9.3.2 的显式 owner claim。**那个 claim 现在已存在且已接线**
+(`ExternalRuntimeService` 在 runtime 启动前 claim),所以技术阻塞解除了。
+
+它仍不开放是**另一个**理由:`invoke` 会用模型给的参数运行第三方 Panel App 代码,
+而 `argsPatterns` 约束不了嵌套 payload(见 8.2 的作用域说明)。这是一个**策略决定**,
+不是接线问题,应该由评审第一个被信任的 Panel App 的人来做。
+
+### 仍未做
+
+- **UI**:runtime selector 还没进设置界面 —— 目前只能通过 feature flag + 服务 API 使用。
+- **Room / DriveAgent 复用**:Phase 4 原本还包括让它们复用同一 Runtime Factory,
+  尚未做;现有 CLI adapter 未动,回退路径完整。
+- **会话持久化**:`runtimeKind` / runtime session id 尚未落盘,进程重启后不能 resume
+  (第 24 节的 ADR 1 就是为此)。
 
 ## 0. v2 修订说明
 
