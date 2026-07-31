@@ -26,6 +26,26 @@ import {
 } from "./mobile-remote.js";
 import { gatewayAvailability, gatewayTool, gatewayToolDef } from "./gateway.js";
 import { sessionsAvailability, sessionsTool, sessionsToolDef } from "./sessions-tool.js";
+import { currentTimeAvailability, currentTimeTool, currentTimeToolDef } from "./current-time.js";
+import {
+  manageSessionsAvailability,
+  manageSessionsTool,
+  manageSessionsToolDef,
+} from "./session-control.js";
+import {
+  manageTodoAvailability,
+  manageTodoTool,
+  manageTodoToolDef,
+  todosAvailability,
+  todosTool,
+  todosToolDef,
+} from "./todos.js";
+import {
+  rewriteSendMessageDef,
+  sendMessageAvailability,
+  sendMessageTool,
+  sendMessageToolDef,
+} from "./outbound-message.js";
 import {
   controlLongTaskAvailability,
   controlLongTaskTool,
@@ -193,6 +213,82 @@ export function createPetCapability(): ExtensionModule {
           presetTags: ["harness-min", "general"],
           defaultPermissionRules: [{ tool: sessionsToolDef.name, decision: "allow" }],
           availability: sessionsAvailability,
+        },
+      },
+      {
+        definition: {
+          ...todosToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: true,
+          isConcurrencySafe: true,
+        },
+        execute: todosTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: todosToolDef.name, decision: "allow" }],
+          availability: todosAvailability,
+        },
+      },
+      {
+        definition: {
+          ...manageTodoToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: manageTodoTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: manageTodoToolDef.name, decision: "allow" }],
+          availability: manageTodoAvailability,
+        },
+      },
+      {
+        definition: {
+          ...manageSessionsToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: manageSessionsTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: manageSessionsToolDef.name, decision: "allow" }],
+          availability: manageSessionsAvailability,
+        },
+      },
+      {
+        definition: {
+          ...currentTimeToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: true,
+          isConcurrencySafe: true,
+        },
+        execute: currentTimeTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: currentTimeToolDef.name, decision: "allow" }],
+          availability: currentTimeAvailability,
+        },
+      },
+      {
+        definition: {
+          ...sendMessageToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: sendMessageTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: sendMessageToolDef.name, decision: "allow" }],
+          availability: sendMessageAvailability,
+          rewriteDefinition: rewriteSendMessageDef,
         },
       },
     ],

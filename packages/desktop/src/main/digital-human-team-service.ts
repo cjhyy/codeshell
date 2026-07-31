@@ -98,28 +98,42 @@ export function listDigitalHumanTeams(options?: {
   onInvalidTeam?: (issue: InvalidDigitalHumanTeam) => void;
 }): DigitalHumanTeam[] {
   const root = checkedTeamsRoot();
-  if (!root) return [];
   const teams: DigitalHumanTeam[] = [];
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    try {
-      const team = readDigitalHumanTeam(entry.name);
-      if (team) teams.push(team);
-    } catch (error) {
-      // One broken local team must not hide the rest of the library.
-      options?.onInvalidTeam?.({
-        id: entry.name,
-        path: teamFile(entry.name),
-        error: error instanceof Error ? error.message : String(error),
-      });
+  if (root) {
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      try {
+        const team = readDigitalHumanTeam(entry.name);
+        if (team) teams.push(team);
+      } catch (error) {
+        // One broken local team must not hide the rest of the library.
+        options?.onInvalidTeam?.({
+          id: entry.name,
+          path: teamFile(entry.name),
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
   // Repo-provided teams sit alongside locally-authored ones. A local team with
-  // the same id wins — the user's own edit must not be shadowed by a repo pull.
-  const localIds = new Set(teams.map((team) => team.id));
-  for (const team of readAllHumanRepoEntries().teams) {
+  // the same id wins, but keeps read-only source metadata so the UI can explain
+  // that deleting the override restores the repo version.
+  const repoTeams = readAllHumanRepoEntries().teams;
+  const repoById = new Map(repoTeams.map((team) => [team.id, team]));
+  const localTeams = teams.map((team) => {
+    const source = repoById.get(team.id);
+    return source
+      ? {
+          ...team,
+          sourceRepo: source.sourceRepo,
+          localOverride: true,
+        }
+      : team;
+  });
+  const localIds = new Set(localTeams.map((team) => team.id));
+  for (const team of repoTeams) {
     if (localIds.has(team.id)) continue;
-    teams.push({
+    localTeams.push({
       id: team.id,
       name: team.name,
       ...(team.description ? { description: team.description } : {}),
@@ -128,9 +142,10 @@ export function listDigitalHumanTeams(options?: {
       mode: "auto",
       ...(team.lead ? { lead: team.lead } : {}),
       ...(team.playbook ? { playbook: team.playbook } : {}),
+      sourceRepo: team.sourceRepo,
     });
   }
-  return teams.sort((a, b) => a.name.localeCompare(b.name));
+  return localTeams.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function saveDigitalHumanTeam(input: DigitalHumanTeam): DigitalHumanTeam {

@@ -17,23 +17,66 @@ import {
   deleteProfile,
   deactivateProfile,
   exportProfileDefinition,
+  exportProfileRepo,
   forceDeleteProfile,
   importReviewedProfileDefinition,
   installCatalogProfile,
+  installProfileRequirements,
   listProfileCatalog,
   listProfiles,
   MAX_PROFILE_DEFINITION_IMPORT_BYTES,
   previewProfileDefinitionImport,
   previewProfileDeletion,
+  previewProfileRequirements,
   saveProfile,
   setSessionWorkspaceProfile,
 } from "./profiles-service.js";
-import { SessionManager } from "@cjhyy/code-shell-core";
+import { SessionManager, SettingsManager } from "@cjhyy/code-shell-core";
 
 let home: string;
 let cwd: string;
 let prevHome: string | undefined;
 const externalRoots: string[] = [];
+
+function seedRepoTeamCatalog(): void {
+  const repoDir = join(home, "human-repos", "owner-repo");
+  mkdirSync(join(repoDir, "humans", "seedance"), { recursive: true });
+  mkdirSync(join(repoDir, "humans", "developer"), { recursive: true });
+  writeFileSync(
+    join(home, "human-repos.json"),
+    JSON.stringify({ repos: [{ repo: "owner/repo", addedAt: 1 }] }),
+  );
+  writeFileSync(
+    join(repoDir, "humans.json"),
+    JSON.stringify({
+      name: "repo",
+      humans: [{ name: "seedance" }, { name: "developer" }],
+      teams: [
+        {
+          id: "repo-pair",
+          name: "Repo Pair",
+          members: ["seedance", "developer"],
+          lead: "seedance",
+        },
+      ],
+    }),
+  );
+  for (const name of ["seedance", "developer"]) {
+    writeFileSync(
+      join(repoDir, "humans", name, "profile.json"),
+      JSON.stringify({
+        name,
+        label: name,
+        basePreset: "general",
+        plugins: [],
+        skills: [],
+        mcp: [],
+        agents: [],
+        portableMemory: false,
+      }),
+    );
+  }
+}
 
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), "cs-desk-profiles-"));
@@ -124,7 +167,7 @@ describe("desktop profiles service", () => {
       name: "research-lead",
       label: "研究负责人",
       description: "负责研究与交付",
-      basePreset: "general",
+      basePreset: "harness-min",
       plugins: [],
       skills: ["web-search", "spreadsheets:analysis"],
       mcp: [],
@@ -136,6 +179,7 @@ describe("desktop profiles service", () => {
 
     expect(listProfiles().find((profile) => profile.name === "research-lead")).toMatchObject({
       label: "研究负责人",
+      basePreset: "general",
       skills: ["web-search", "spreadsheets:analysis"],
       mainInstruction: "先核对来源，再综合结论。",
       portableMemory: true,
@@ -163,6 +207,115 @@ describe("desktop profiles service", () => {
     });
   });
 
+  test("refreshes the active project's capability snapshot when its profile is edited", () => {
+    activateProfile(cwd, "seedance");
+    saveProfile(
+      {
+        name: "seedance",
+        label: "Seedance",
+        basePreset: "harness-min",
+        plugins: [],
+        skills: ["newly-configured-skill"],
+        mcp: [],
+        agents: [],
+        portableMemory: false,
+      },
+      cwd,
+    );
+
+    const project = new SettingsManager(cwd, "full").getForScope("project", cwd);
+    expect(project.profile).toMatchObject({
+      active: "seedance",
+      overrides: { skills: { "newly-configured-skill": "on" } },
+    });
+  });
+
+  test("returns dependency sources to the editor and verifies named Skill installation", async () => {
+    saveProfile({
+      name: "video-director",
+      label: "短片导演",
+      basePreset: "general",
+      requires: {
+        skills: [
+          {
+            source: "github",
+            repo: "heygen-com/hyperframes",
+            skills: ["hyperframes", "media-use"],
+            scope: "project",
+            fullDepth: false,
+          },
+        ],
+        tools: [],
+      },
+      plugins: [],
+      skills: ["hyperframes", "media-use"],
+      mcp: [],
+      agents: [],
+      portableMemory: true,
+    });
+
+    expect(listProfiles().find((profile) => profile.name === "video-director")?.requires).toEqual({
+      skills: [
+        {
+          source: "github",
+          repo: "heygen-com/hyperframes",
+          skills: ["hyperframes", "media-use"],
+          scope: "project",
+          fullDepth: false,
+        },
+      ],
+      tools: [],
+    });
+    expect(previewProfileRequirements("video-director", cwd).needsInstall).toBe(true);
+
+    const writeInstalledSkills = async () => {
+      for (const name of ["hyperframes", "media-use"]) {
+        const dir = join(cwd, ".agents", "skills", name);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          join(dir, "SKILL.md"),
+          `---\nname: ${name}\ndescription: ${name} test skill\n---\n\n# ${name}\n`,
+        );
+      }
+      return { ok: true as const, stdout: "installed" };
+    };
+    expect(await installProfileRequirements("video-director", cwd, writeInstalledSkills)).toEqual({
+      ok: true,
+      errors: [],
+    });
+    expect(previewProfileRequirements("video-director", cwd).needsInstall).toBe(false);
+  });
+
+  test("does not report success when an installer exits zero without visible project Skills", async () => {
+    saveProfile({
+      name: "video-director",
+      label: "短片导演",
+      basePreset: "general",
+      requires: {
+        skills: [
+          {
+            source: "github",
+            repo: "heygen-com/hyperframes",
+            skills: ["hyperframes"],
+            scope: "project",
+            fullDepth: false,
+          },
+        ],
+        tools: [],
+      },
+      plugins: [],
+      skills: ["hyperframes"],
+      mcp: [],
+      agents: [],
+      portableMemory: false,
+    });
+
+    const noOpInstaller = async () => ({ ok: true as const, stdout: "done" });
+    const result = await installProfileRequirements("video-director", cwd, noOpInstaller);
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(" ")).toContain("仍未发现项目 Skill：hyperframes");
+  });
+
   test("previews a validated definition without mutating, then commits the reviewed snapshot", () => {
     const filePath = join(home, "researcher.json");
     writeFileSync(
@@ -171,7 +324,7 @@ describe("desktop profiles service", () => {
         name: "researcher",
         label: "Researcher",
         description: "Checks sources",
-        basePreset: "general",
+        basePreset: "harness-min",
         plugins: ["browser"],
         skills: ["web-search", "documents"],
         mcp: ["linear"],
@@ -188,7 +341,7 @@ describe("desktop profiles service", () => {
       name: "researcher",
       label: "Researcher",
       description: "Checks sources",
-      basePreset: "general",
+      basePreset: "harness-min",
       portableMemory: true,
       version: "1.2.0",
       capabilityCounts: { plugins: 1, skills: 2, mcp: 1, agents: 1, total: 5 },
@@ -216,6 +369,7 @@ describe("desktop profiles service", () => {
       mcp: ["linear"],
       agents: ["critic"],
       portableMemory: true,
+      basePreset: "general",
     });
     expect(() => importReviewedProfileDefinition({ reviewToken: preview.reviewToken })).toThrow(
       /review expired/,
@@ -280,6 +434,31 @@ describe("desktop profiles service", () => {
     expect(listProfiles()[0]).toMatchObject({
       label: "Seedance Updated",
       portableMemory: true,
+    });
+  });
+
+  test("refreshes the active project capability snapshot after an imported overwrite", () => {
+    activateProfile(cwd, "seedance");
+    const filePath = join(home, "seedance-capabilities.json");
+    writeFileSync(
+      filePath,
+      JSON.stringify({
+        name: "seedance",
+        label: "Seedance",
+        basePreset: "general",
+        skills: ["imported-skill"],
+      }),
+    );
+    const preview = previewProfileDefinitionImport(filePath);
+
+    expect(
+      importReviewedProfileDefinition({ reviewToken: preview.reviewToken, overwrite: true }, cwd),
+    ).toMatchObject({ ok: true, name: "seedance" });
+
+    const project = new SettingsManager(cwd, "full").getForScope("project", cwd);
+    expect(project.profile).toMatchObject({
+      active: "seedance",
+      overrides: { skills: { "imported-skill": "on" } },
     });
   });
 
@@ -351,6 +530,38 @@ describe("desktop profiles service", () => {
     symlinkSync(outside, output, "file");
 
     expect(() => exportProfileDefinition("seedance", output)).toThrow(/regular file/);
+    expect(readFileSync(outside, "utf-8")).toBe("outside");
+  });
+
+  test("exports a publishable repo layout without portable-memory content", () => {
+    const outputDir = join(home, "repo-export");
+    mkdirSync(outputDir);
+    mkdirSync(join(home, "profiles", "seedance", "memory"), { recursive: true });
+    writeFileSync(join(home, "profiles", "seedance", "memory", "private.md"), "DO-NOT-EXPORT");
+
+    const result = exportProfileRepo(["seedance"], outputDir);
+    expect(result.ok).toBe(true);
+    const manifest = JSON.parse(readFileSync(join(outputDir, "humans.json"), "utf-8"));
+    expect(manifest.humans).toEqual([
+      expect.objectContaining({ name: "seedance", path: "./humans/seedance" }),
+    ]);
+    const definition = readFileSync(join(outputDir, "humans", "seedance", "profile.json"), "utf-8");
+    expect(definition).not.toContain("DO-NOT-EXPORT");
+    const readme = readFileSync(join(outputDir, "README.md"), "utf-8");
+    expect(readme).toContain("数字人仓库");
+    expect(readme).not.toContain("Preset");
+  });
+
+  test("refuses to export a repo through a symlinked profile artifact", () => {
+    if (process.platform === "win32") return;
+    const outputDir = join(home, "repo-export-link");
+    const profileDir = join(outputDir, "humans", "seedance");
+    mkdirSync(profileDir, { recursive: true });
+    const outside = join(home, "outside-profile.json");
+    writeFileSync(outside, "outside");
+    symlinkSync(outside, join(profileDir, "profile.json"), "file");
+
+    expect(() => exportProfileRepo(["seedance"], outputDir)).toThrow(/regular file/);
     expect(readFileSync(outside, "utf-8")).toBe("outside");
   });
 
@@ -528,6 +739,57 @@ describe("desktop profiles service", () => {
     // is a warning, not a blocker.
     expect(preview.isActiveProjectDefault).toBe(true);
     expect(preview.canDelete).toBe(true);
+  });
+
+  test("a repo-provided team is catalog data and does not block deleting an installed profile", async () => {
+    seedRepoTeamCatalog();
+    const teamService = await import("./digital-human-team-service.js");
+    expect(teamService.listDigitalHumanTeams()).toEqual([
+      expect.objectContaining({
+        id: "repo-pair",
+        sourceRepo: "owner/repo",
+      }),
+    ]);
+
+    const preview = previewProfileDeletion("seedance", cwd);
+    expect(preview.blockingTeams).toEqual([]);
+    expect(preview.canDelete).toBe(true);
+    deleteProfile("seedance", { cwd });
+    expect(listProfiles().some((profile) => profile.name === "seedance")).toBe(false);
+    // The upstream catalog team remains available and may reinstall its member
+    // later; deleting a library copy must not claim it deleted repo content.
+    expect(teamService.listDigitalHumanTeams()[0]?.sourceRepo).toBe("owner/repo");
+  });
+
+  test("a local override of a repo team still blocks deleting one of its members", async () => {
+    seedRepoTeamCatalog();
+    saveWorkspaceProfile({
+      name: "developer",
+      label: "Developer",
+      basePreset: "general",
+      plugins: [],
+      skills: [],
+      mcp: [],
+      agents: [],
+      portableMemory: false,
+    });
+    const teamService = await import("./digital-human-team-service.js");
+    teamService.saveDigitalHumanTeam({
+      id: "repo-pair",
+      name: "My Repo Pair",
+      members: ["seedance", "developer"],
+      mode: "auto",
+      playbook: "Use my local workflow.",
+    });
+    expect(teamService.listDigitalHumanTeams()[0]).toMatchObject({
+      sourceRepo: "owner/repo",
+      localOverride: true,
+    });
+
+    const preview = previewProfileDeletion("seedance", cwd);
+    expect(preview.blockingTeams).toEqual(["My Repo Pair"]);
+    expect(preview.canDelete).toBe(false);
+    expect(() => deleteProfile("seedance", { cwd })).toThrow(/My Repo Pair/);
   });
 
   test("force delete unbinds Sessions and drops the profile from teams", async () => {

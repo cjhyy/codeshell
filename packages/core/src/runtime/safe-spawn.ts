@@ -37,7 +37,12 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
-import { resolveSpawnTarget, defaultShellBinary, killChildTree, killProcessGroup } from "./spawn-common.js";
+import {
+  resolveSpawnTarget,
+  defaultShellBinary,
+  killChildTree,
+  killProcessGroup,
+} from "./spawn-common.js";
 
 export interface SafeSpawnOptions {
   /** Process working directory. Required — callers know their cwd; SafeSpawn does not fall back to process.cwd(). */
@@ -57,6 +62,12 @@ export interface SafeSpawnOptions {
   ioDrainGraceMs?: number;
   /** Optional cancellation signal. If already aborted, SafeSpawn resolves immediately without spawning. */
   signal?: AbortSignal;
+  /**
+   * POSIX only: launch the direct child as a process-group leader so timeout
+   * and abort terminate helpers such as git-remote-https as well. Windows
+   * already uses taskkill /T for direct children.
+   */
+  processGroup?: boolean;
 }
 
 export interface SafeSpawnShellOptions extends SafeSpawnOptions {
@@ -129,6 +140,7 @@ export function safeSpawn(
     opts,
     cleanup: undefined,
     resolveMs: undefined,
+    detached: opts.processGroup === true && process.platform !== "win32",
   });
 }
 
@@ -178,7 +190,14 @@ interface LifecycleArgs {
   detached?: boolean;
 }
 
-function runLifecycle({ file, args, opts, cleanup, resolveMs, detached }: LifecycleArgs): Promise<SafeSpawnResult> {
+function runLifecycle({
+  file,
+  args,
+  opts,
+  cleanup,
+  resolveMs,
+  detached,
+}: LifecycleArgs): Promise<SafeSpawnResult> {
   const maxBytes = opts.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
   const abortGrace = opts.ioDrainGraceMs ?? DEFAULT_IO_DRAIN_GRACE_MS;
   const lifecycleStartedAt = spawnProfileEnabled() ? performance.now() : 0;
@@ -217,7 +236,9 @@ function runLifecycle({ file, args, opts, cleanup, resolveMs, detached }: Lifecy
     try {
       child = spawn(file, args, { cwd: opts.cwd, env: opts.env, detached });
     } catch (err) {
-      finish(emptyResult({ reason: "spawn_failed", spawnFailed: true, error: (err as Error).message }));
+      finish(
+        emptyResult({ reason: "spawn_failed", spawnFailed: true, error: (err as Error).message }),
+      );
       return;
     }
 
@@ -320,11 +341,7 @@ function runLifecycle({ file, args, opts, cleanup, resolveMs, detached }: Lifecy
       // throw above, so we surface the same reason. If timeout or abort
       // fired concurrently, give those precedence — the user-facing cause
       // is the cancel/timeout, not the resulting process death.
-      const reason: SafeSpawnReason = timedOut
-        ? "timeout"
-        : aborted
-        ? "aborted"
-        : "spawn_failed";
+      const reason: SafeSpawnReason = timedOut ? "timeout" : aborted ? "aborted" : "spawn_failed";
       finish({
         reason,
         stdout,
@@ -362,11 +379,7 @@ function runLifecycle({ file, args, opts, cleanup, resolveMs, detached }: Lifecy
           stderr += tailErr;
         }
       }
-      const reason: SafeSpawnReason = timedOut
-        ? "timeout"
-        : aborted
-        ? "aborted"
-        : "ok";
+      const reason: SafeSpawnReason = timedOut ? "timeout" : aborted ? "aborted" : "ok";
       finish({
         reason,
         stdout,
@@ -406,7 +419,11 @@ function logSpawnProfile(
 
 function safeCleanup(cleanup: (() => void) | undefined): void {
   if (!cleanup) return;
-  try { cleanup(); } catch { /* best-effort */ }
+  try {
+    cleanup();
+  } catch {
+    /* best-effort */
+  }
 }
 
 function emptyResult(overrides: Partial<SafeSpawnResult>): SafeSpawnResult {

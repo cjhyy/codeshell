@@ -44,6 +44,11 @@ export interface PetStateContextValue {
   chatModelKey: string | null;
   setChatModelKey: React.Dispatch<React.SetStateAction<string | null>>;
   delegationReceipts: PetDelegationReceiptGroup[];
+  hostActionReceipts: Array<{
+    clientMessageId: string;
+    message: string;
+    createdAt: number;
+  }>;
   longTasks: PetLongTaskSnapshot;
   longTaskBusyIds: ReadonlySet<string>;
   longTaskCleanupBusy: boolean;
@@ -122,6 +127,9 @@ export function PetStateProvider({
   const [delegationReceipts, setDelegationReceipts] = React.useState<PetDelegationReceiptGroup[]>(
     [],
   );
+  const [hostActionReceipts, setHostActionReceipts] = React.useState<
+    Array<{ clientMessageId: string; message: string; createdAt: number }>
+  >([]);
   const [longTasks, setLongTasks] = React.useState<PetLongTaskSnapshot>({
     revision: 0,
     observedAt: 0,
@@ -325,6 +333,16 @@ export function PetStateProvider({
         });
         return;
       }
+      if (event.kind === "host-action-completed") {
+        setHostActionReceipts((current) => {
+          const next = current.filter(
+            (receipt) => receipt.clientMessageId !== event.clientMessageId,
+          );
+          next.push(event);
+          return next.slice(-100);
+        });
+        return;
+      }
       setDelegationReceipts((current) => {
         const next = current.filter(
           (receipt) => receipt.originClientMessageId !== event.originClientMessageId,
@@ -510,6 +528,7 @@ export function PetStateProvider({
       chatModelKey,
       setChatModelKey,
       delegationReceipts,
+      hostActionReceipts,
       longTasks,
       longTaskBusyIds,
       longTaskCleanupBusy,
@@ -528,6 +547,7 @@ export function PetStateProvider({
       chatBusy,
       chatModelKey,
       delegationReceipts,
+      hostActionReceipts,
       longTasks,
       longTaskBusyIds,
       longTaskCleanupBusy,
@@ -564,6 +584,7 @@ const INERT_PET_CONTEXT: PetStateContextValue = {
   chatModelKey: null,
   setChatModelKey: () => {},
   delegationReceipts: [],
+  hostActionReceipts: [],
   longTasks: { revision: 0, observedAt: 0, tasks: [] },
   longTaskBusyIds: new Set(),
   longTaskCleanupBusy: false,

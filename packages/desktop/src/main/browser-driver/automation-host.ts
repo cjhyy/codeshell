@@ -10,6 +10,7 @@
  * so the routing is unit-testable and the driver module stays UI-agnostic.
  */
 
+import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import type { WebContents } from "electron";
 import { CdpBrowserDriver } from "./cdp-driver.js";
 import { attachDebugger, detachDebugger } from "./electron-cdp.js";
@@ -90,6 +91,12 @@ export interface BrowserActionRequest {
 export interface AutomationDeps {
   /** Current automation-target guest webContents, or null if no panel/tab. */
   activeGuest: () => WebContents | null;
+  /**
+   * Main-process browser target used when no renderer-owned panel is mounted.
+   * Supplying this keeps ordinary agent runs headless until the result says a
+   * human is needed. Policy enforcement remains the bridge owner's job.
+   */
+  backgroundBridge?: BrowserBridge;
   /** Domain whitelist / policy (read from settings). */
   policy: () => BrowserAutomationPolicy;
   /** Ask the user to approve a sensitive/off-whitelist action. Resolves true to
@@ -120,27 +127,41 @@ export async function handleBrowserAction(
   // Tab management is panel-global (operates on the guest registry, not a single
   // guest's driver) — handle it before resolving an active guest / driver.
   if (req.action === "listTabs") {
-    return JSON.stringify(deps.listTabs ? deps.listTabs() : []);
+    const visibleTabs = deps.listTabs ? deps.listTabs() : [];
+    if (visibleTabs.length > 0 || !deps.backgroundBridge) {
+      return JSON.stringify(visibleTabs);
+    }
+    return dispatchBrowserBridgeAction(req, deps.backgroundBridge);
   }
   if (req.action === "switchTab") {
     const ok = deps.switchTab && req.tabId ? deps.switchTab(req.tabId) : false;
-    return JSON.stringify(ok ? { ok: true } : { ok: false, detail: `tab ${req.tabId ?? "?"} not found` });
+    if (ok) return JSON.stringify({ ok: true });
+    if (deps.backgroundBridge) {
+      return dispatchBrowserBridgeAction(req, deps.backgroundBridge);
+    }
+    return JSON.stringify({ ok: false, detail: `tab ${req.tabId ?? "?"} not found` });
   }
 
   let guest = deps.activeGuest();
   if (!guest || guest.isDestroyed()) {
+    if (deps.backgroundBridge) {
+      return dispatchBrowserBridgeAction(req, deps.backgroundBridge);
+    }
     // No panel/tab yet — try to auto-open it (so the agent can start browsing
     // without the user manually opening the panel). For a navigate we pass the
     // target URL so the panel lands there directly; other actions open a blank
     // panel the agent can then navigate.
     if (deps.openPanel) {
-      const opened = await deps.openPanel(req.action === "navigate" ? req.url : undefined).catch(() => false);
+      const opened = await deps
+        .openPanel(req.action === "navigate" ? req.url : undefined)
+        .catch(() => false);
       if (opened) guest = deps.activeGuest();
     }
     if (!guest || guest.isDestroyed()) {
       return JSON.stringify({
         ok: false,
-        detail: "no active browser panel — open the browser panel in the desktop app (or use browser_navigate to open one)",
+        detail:
+          "no active browser panel — open the browser panel in the desktop app (or use browser_navigate to open one)",
       });
     }
     // If we just opened the panel via a navigate, the URL is already loading;
@@ -158,7 +179,10 @@ export async function handleBrowserAction(
   // that case the user's intent is to block, so we block outright.
   const targetUrl = req.action === "navigate" ? req.url : safeUrl(guest);
   if (targetUrl && !isDomainAllowed(targetUrl, policy)) {
-    return JSON.stringify({ ok: false, detail: `domain not allowed by whitelist: ${hostOf(targetUrl)}` });
+    return JSON.stringify({
+      ok: false,
+      detail: `domain not allowed by whitelist: ${hostOf(targetUrl)}`,
+    });
   }
 
   // Sensitive action approval (click/type on payment/delete/credential surfaces).
@@ -227,6 +251,75 @@ export async function handleBrowserAction(
       automationAttachedGuests.delete(guest.id);
       driver.resetDomains();
     }
+  }
+}
+
+/**
+ * Dispatch a worker request to a non-webview BrowserBridge. Kept separate from
+ * the Electron guest path so hidden BrowserWindows and future remote browser
+ * providers use the same request semantics.
+ */
+export async function dispatchBrowserBridgeAction(
+  req: BrowserActionRequest,
+  bridge: BrowserBridge,
+): Promise<string> {
+  try {
+    let result: unknown;
+    switch (req.action) {
+      case "snapshot":
+        result = await bridge.snapshot();
+        break;
+      case "click":
+        result = await bridge.click(req.ref ?? "");
+        break;
+      case "type":
+        result = await bridge.type(req.ref ?? "", req.text ?? "");
+        break;
+      case "navigate":
+        result = await bridge.navigate(req.url ?? "");
+        break;
+      case "scroll":
+        result = await bridge.scroll(req.dir ?? "down", req.amount);
+        break;
+      case "readContent":
+        result = await bridge.readContent();
+        break;
+      case "extractLinks":
+        result = await bridge.extractLinks();
+        break;
+      case "waitForLoad":
+        result = await bridge.waitForLoad(req.timeoutMs);
+        break;
+      case "hover":
+        result = await bridge.hover(req.ref ?? "");
+        break;
+      case "selectOption":
+        result = await bridge.selectOption(req.ref ?? "", req.value ?? "");
+        break;
+      case "pressKey":
+        result = await bridge.pressKey(req.key ?? "Enter", req.ref);
+        break;
+      case "fetchImages":
+        result = await bridge.fetchImages(req.refs ?? []);
+        break;
+      case "screenshot":
+        result = await bridge.screenshot(req.ref);
+        break;
+      case "listTabs":
+        result = await bridge.listTabs();
+        break;
+      case "switchTab":
+        result = await bridge.switchTab(req.tabId ?? "");
+        break;
+      default:
+        result = { ok: false, detail: `unknown action: ${(req as { action: string }).action}` };
+    }
+    return JSON.stringify(result);
+  } catch (error) {
+    return JSON.stringify({
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 

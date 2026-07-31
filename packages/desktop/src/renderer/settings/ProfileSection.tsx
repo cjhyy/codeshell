@@ -2,6 +2,9 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
+import { ensureDigitalHumanRequirements } from "../digital-humans/profileRequirements";
+import { useConfirm } from "../ui/ConfirmDialog";
+import { useToast } from "../ui/ToastProvider";
 
 interface ProfileEntry {
   name: string;
@@ -14,6 +17,8 @@ interface ProfileEntry {
 /** 数字人（WorkspaceProfile）管理区块：列库、激活/切换/关闭。 */
 export function ProfileSection({ cwd }: { cwd: string }) {
   const { t } = useT();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [profiles, setProfiles] = React.useState<ProfileEntry[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -87,7 +92,18 @@ export function ProfileSection({ cwd }: { cwd: string }) {
                   size="sm"
                   disabled={busy}
                   onClick={() =>
-                    void act(() => window.codeshell.activateProfile(cwd, profile.name))
+                    void act(async () => {
+                      const ready = await ensureDigitalHumanRequirements({
+                        name: profile.name,
+                        projectPath: cwd,
+                        api: window.codeshell,
+                        confirm,
+                        toast,
+                        t,
+                      });
+                      if (!ready) return;
+                      await window.codeshell.activateProfile(cwd, profile.name);
+                    })
                   }
                 >
                   {t("settingsX.profiles.activate")}

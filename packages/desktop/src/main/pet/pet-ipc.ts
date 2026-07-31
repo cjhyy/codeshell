@@ -4,12 +4,18 @@ import type {
   PetNavigationRequest,
   PetNavigationResult,
 } from "./pet-state-aggregator.js";
-import type { PetDispatchCommand, PetDispatchResult } from "./pet-dispatch-service.js";
+import type {
+  PetDispatchCommand,
+  PetDispatchResult,
+  PetHostActionExecution,
+} from "./pet-dispatch-service.js";
 import type { PetAttentionEvent, PetAttentionSnapshot } from "./pet-attention-policy.js";
 import {
   type PetLongTaskControlRequest,
   type PetLongTaskControlResult,
   type PetLongTaskSnapshot,
+  type PetTodoItem,
+  type PetTodoStatus,
 } from "@cjhyy/code-shell-pet";
 import {
   isPetWorkItemId,
@@ -50,6 +56,12 @@ export const PET_JOURNAL_EVENT_CHANNEL = "pet:journal-changed";
 export const PET_SEGMENT_TRANSCRIPT_CHANNEL = "pet:segment-transcript";
 export const PET_PREFS_GET_CHANNEL = "pet:prefs-get";
 export const PET_PREFS_SET_AUTO_EXTRACT_CHANNEL = "pet:prefs-set-auto-extract";
+export const PET_TODO_LIST_CHANNEL = "pet:todos-get";
+export const PET_TODO_CREATE_CHANNEL = "pet:todo-create";
+export const PET_TODO_UPDATE_CHANNEL = "pet:todo-update";
+export const PET_TODO_STATUS_CHANNEL = "pet:todo-set-status";
+export const PET_TODO_EVENT_CHANNEL = "pet:todos-changed";
+export const PET_SESSION_ARCHIVE_CHANNEL = "pet:session-archive";
 
 export interface PetIpcAggregator {
   getSnapshot(): DesktopPetProjectionSnapshot;
@@ -153,6 +165,26 @@ export interface PetIpcJournal {
 export interface PetIpcPreferences {
   getAutoExtract(): Promise<boolean>;
   setAutoExtract(enabled: boolean): Promise<boolean>;
+}
+
+export interface PetIpcTodos {
+  list(): Promise<PetTodoItem[]>;
+  create(text: string): Promise<PetTodoItem>;
+  update(id: string, text: string): Promise<PetTodoItem>;
+  setStatus(id: string, status: PetTodoStatus): Promise<PetTodoItem>;
+  subscribe(listener: () => void): () => void;
+}
+
+export interface PetIpcSessionArchive {
+  archive(sessionId: string): Promise<{ ok: true }>;
+}
+
+export interface PetIpcHostActionReceipt {
+  record(input: {
+    petSessionId: string;
+    clientMessageId: string;
+    executions: PetHostActionExecution[];
+  }): Promise<string | null>;
 }
 
 function afterReady<T>(ready: Promise<void> | undefined, callback: () => T): T | Promise<T> {
@@ -307,6 +339,42 @@ function parseLongTaskClear(value: unknown): string {
   return record.taskId;
 }
 
+function parseTodoUpdate(value: unknown): { id: string; text: string } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalid Pet todo update");
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some((key) => key !== "id" && key !== "text") ||
+    typeof record.id !== "string" ||
+    !/^todo-[A-Za-z0-9-]{1,128}$/u.test(record.id) ||
+    typeof record.text !== "string"
+  ) {
+    throw new Error("invalid Pet todo update");
+  }
+  return { id: record.id, text: record.text };
+}
+
+function parseTodoStatus(value: unknown): { id: string; status: PetTodoStatus } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalid Pet todo status");
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some((key) => key !== "id" && key !== "status") ||
+    typeof record.id !== "string" ||
+    !/^todo-[A-Za-z0-9-]{1,128}$/u.test(record.id) ||
+    (record.status !== "pending" &&
+      record.status !== "in_progress" &&
+      record.status !== "blocked" &&
+      record.status !== "completed" &&
+      record.status !== "archived")
+  ) {
+    throw new Error("invalid Pet todo status");
+  }
+  return { id: record.id, status: record.status };
+}
+
 export function registerPetIpc(options: {
   ipcMain: PetIpcMainLike;
   aggregator: PetIpcAggregator;
@@ -321,6 +389,9 @@ export function registerPetIpc(options: {
   summaries?: PetIpcSummaries;
   journal?: PetIpcJournal;
   preferences?: PetIpcPreferences;
+  todos?: PetIpcTodos;
+  sessionArchive?: PetIpcSessionArchive;
+  hostActionReceipt?: PetIpcHostActionReceipt;
   /** Register handlers immediately while their backing indexes hydrate. */
   ready?: Promise<void>;
 }): () => void {
@@ -373,6 +444,26 @@ export function registerPetIpc(options: {
             for (const window of options.windows()) {
               if (!window.isDestroyed()) {
                 window.webContents.send(PET_CHAT_EVENT_CHANNEL, delegationEvent);
+              }
+            }
+          }
+          if (result.hostActions?.length && options.hostActionReceipt) {
+            const text = await options.hostActionReceipt.record({
+              petSessionId: result.petSessionId,
+              clientMessageId: command.clientMessageId,
+              executions: result.hostActions,
+            });
+            if (text) {
+              const receiptEvent = {
+                kind: "host-action-completed" as const,
+                clientMessageId: command.clientMessageId,
+                message: text,
+                createdAt: Date.now(),
+              };
+              for (const window of options.windows()) {
+                if (!window.isDestroyed()) {
+                  window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
+                }
               }
             }
           }
@@ -548,6 +639,40 @@ export function registerPetIpc(options: {
       return afterReady(options.ready, () => options.preferences!.setAutoExtract(enabled));
     });
   }
+  if (options.todos) {
+    options.ipcMain.handle(PET_TODO_LIST_CHANNEL, (_event, ...args) => {
+      if (args.length !== 0) throw new Error("Pet todo list does not accept arguments");
+      return afterReady(options.ready, () => options.todos!.list());
+    });
+    options.ipcMain.handle(PET_TODO_CREATE_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1 || typeof args[0] !== "string") {
+        throw new Error("invalid Pet todo text");
+      }
+      return afterReady(options.ready, () => options.todos!.create(args[0] as string));
+    });
+    options.ipcMain.handle(PET_TODO_UPDATE_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1) throw new Error("invalid Pet todo update");
+      const update = parseTodoUpdate(args[0]);
+      return afterReady(options.ready, () => options.todos!.update(update.id, update.text));
+    });
+    options.ipcMain.handle(PET_TODO_STATUS_CHANNEL, (_event, ...args) => {
+      if (args.length !== 1) throw new Error("invalid Pet todo status");
+      const update = parseTodoStatus(args[0]);
+      return afterReady(options.ready, () => options.todos!.setStatus(update.id, update.status));
+    });
+  }
+  if (options.sessionArchive) {
+    options.ipcMain.handle(PET_SESSION_ARCHIVE_CHANNEL, (_event, ...args) => {
+      if (
+        args.length !== 1 ||
+        typeof args[0] !== "string" ||
+        !/^[A-Za-z0-9_-]{1,128}$/u.test(args[0])
+      ) {
+        throw new Error("invalid Pet session archive request");
+      }
+      return afterReady(options.ready, () => options.sessionArchive!.archive(args[0] as string));
+    });
+  }
   const unsubscribeMemories = options.memories?.subscribe(() => {
     void Promise.resolve(options.memories!.list()).then((entries) => {
       for (const window of options.windows()) {
@@ -559,6 +684,13 @@ export function registerPetIpc(options: {
     void Promise.resolve(options.journal!.list()).then((entries) => {
       for (const window of options.windows()) {
         if (!window.isDestroyed()) window.webContents.send(PET_JOURNAL_EVENT_CHANNEL, entries);
+      }
+    });
+  });
+  const unsubscribeTodos = options.todos?.subscribe(() => {
+    void Promise.resolve(options.todos!.list()).then((entries) => {
+      for (const window of options.windows()) {
+        if (!window.isDestroyed()) window.webContents.send(PET_TODO_EVENT_CHANNEL, entries);
       }
     });
   });
@@ -583,6 +715,7 @@ export function registerPetIpc(options: {
     unsubscribeLongTasks?.();
     unsubscribeMemories?.();
     unsubscribeJournal?.();
+    unsubscribeTodos?.();
     options.ipcMain.removeHandler(PET_SNAPSHOT_CHANNEL);
     options.ipcMain.removeHandler(PET_WORK_MEMORY_CHANNEL);
     options.ipcMain.removeHandler(PET_OPEN_SESSION_CHANNEL);
@@ -617,6 +750,15 @@ export function registerPetIpc(options: {
     if (options.preferences) {
       options.ipcMain.removeHandler(PET_PREFS_GET_CHANNEL);
       options.ipcMain.removeHandler(PET_PREFS_SET_AUTO_EXTRACT_CHANNEL);
+    }
+    if (options.todos) {
+      options.ipcMain.removeHandler(PET_TODO_LIST_CHANNEL);
+      options.ipcMain.removeHandler(PET_TODO_CREATE_CHANNEL);
+      options.ipcMain.removeHandler(PET_TODO_UPDATE_CHANNEL);
+      options.ipcMain.removeHandler(PET_TODO_STATUS_CHANNEL);
+    }
+    if (options.sessionArchive) {
+      options.ipcMain.removeHandler(PET_SESSION_ARCHIVE_CHANNEL);
     }
   };
 }

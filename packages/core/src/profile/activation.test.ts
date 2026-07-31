@@ -86,6 +86,24 @@ describe("workspace profile activation transaction", () => {
     });
   });
 
+  test("activation always uses CodeShell's digital-human runtime base", () => {
+    saveWorkspaceProfile({
+      name: "legacy-preset",
+      label: "Legacy preset",
+      basePreset: "harness-min",
+      plugins: [],
+      skills: [],
+      mcp: [],
+      agents: [],
+      portableMemory: false,
+    });
+    const settings = new SettingsManager(cwd, "full");
+
+    activateWorkspaceProfile(settings, "legacy-preset", cwd);
+
+    expect((projectSettings().profile as { preset: string }).preset).toBe("general");
+  });
+
   test("switching replaces the subtree wholesale (old capabilities gone)", () => {
     const settings = new SettingsManager(cwd, "full");
     activateWorkspaceProfile(settings, "seedance", cwd);

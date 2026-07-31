@@ -70,6 +70,24 @@ describe("transcriptToFoldItems", () => {
     });
   });
 
+  it("replays a panel displayText instead of its model-facing context envelope", () => {
+    const items = transcriptToFoldItems(
+      line("message", {
+        role: "user",
+        content: 'INTERNAL PANEL CONTEXT\n{"selection":["hero-title"]}',
+        displayText: "【Design Studio】 把标题改得更醒目",
+        clientMessageId: "panel:design-studio:1",
+      }),
+    );
+
+    expect(items[0]).toEqual({
+      kind: "user",
+      text: "【Design Studio】 把标题改得更醒目",
+      clientMessageId: "panel:design-studio:1",
+      timestamp: 1,
+    });
+  });
+
   it("skips a synthetic injected user message (background-wakeup system-reminder)", () => {
     // Background-job completion notifications are submitted as a `role:user`
     // turn (the model must see them as a user message), but they are NOT the

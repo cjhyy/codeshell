@@ -10,6 +10,7 @@
  */
 import { execFile } from "node:child_process";
 import { isAbsolute } from "node:path";
+import { stripVTControlCharacters } from "node:util";
 import {
   SKILL_REPO_RE,
   buildSkillInstallArgs,
@@ -29,6 +30,17 @@ export type SkillInstallRunner = (
 /** `npx skills add` 会克隆仓库并写文件，给足超时但不无限等。 */
 const INSTALL_TIMEOUT_MS = 180_000;
 const MAX_OUTPUT_BYTES = 1_000_000;
+const MAX_INSTALL_ERROR_CHARS = 2_400;
+
+function conciseInstallError(raw: string): string {
+  const cleaned = stripVTControlCharacters(raw)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .trim();
+  if (!cleaned) return "安装失败，但安装器没有返回错误信息";
+  if (cleaned.length <= MAX_INSTALL_ERROR_CHARS) return cleaned;
+  const edge = Math.floor(MAX_INSTALL_ERROR_CHARS / 2);
+  return `${cleaned.slice(0, edge)}\n…（安装日志过长，已省略中间内容）…\n${cleaned.slice(-edge)}`;
+}
 
 const defaultRunner: SkillInstallRunner = (file, args, cwd) =>
   new Promise((resolve) => {
@@ -66,7 +78,12 @@ export async function installSkillRequirement(
   }
   // `--yes` 是 npx 自己的「别提示是否下载 skills 包」；skills CLI 的 --yes 由
   // buildSkillInstallArgs 负责，两者不是同一个。
-  return runner("npx", ["--yes", ...buildSkillInstallArgs(requirement)], workspaceCwd);
+  const result = await runner(
+    "npx",
+    ["--yes", ...buildSkillInstallArgs(requirement)],
+    workspaceCwd,
+  );
+  return result.ok ? result : { ok: false, error: conciseInstallError(result.error) };
 }
 
 export interface RequirementPlanSummary {
@@ -78,17 +95,36 @@ export interface RequirementPlanSummary {
   blockers: string[];
 }
 
+/** Render argv for review only. Execution still uses execFile with separate argv slots. */
+function formatReviewedCommand(file: string, args: readonly string[]): string {
+  const quote = (value: string) =>
+    /^[A-Za-z0-9_@%+=:,./-]+$/.test(value) ? value : `'${value.replaceAll("'", "'\"'\"'")}'`;
+  return [file, ...args].map(quote).join(" ");
+}
+
 /** 把计划摊成确认弹窗要显示的三段文字。UI 不该自己拼这些语义。 */
 export function formatRequirementPlan(plan: ProfileRequirementPlan): RequirementPlanSummary {
   const willRun = plan.skillInstalls.map(({ requirement, missing }) => {
     const which = missing?.length ? missing.join("、") : "全部 skill";
-    return `从 ${requirement.repo} 安装 ${which} 到项目 .agents/skills`;
+    const command = formatReviewedCommand("npx", ["--yes", ...buildSkillInstallArgs(requirement)]);
+    return `从 ${requirement.repo} 安装 ${which} 到项目 .agents/skills\n${command}`;
   });
 
+  const sourceLabel = (source: ProfileRequirementPlan["conflicts"][number]["existingSource"]) => {
+    switch (source) {
+      case "user":
+        return "用户级目录";
+      case "panel-app":
+        return "已安装的扩展";
+      case "plugin":
+        return "插件";
+      case "project":
+        return "项目级目录";
+    }
+  };
   const warnings = plan.conflicts.map(
     ({ name, existingSource }) =>
-      `"${name}" 已存在于${existingSource === "user" ? "用户级" : "项目级"}目录，` +
-      `安装后将被本次的项目级版本遮蔽`,
+      `"${name}" 已存在于${sourceLabel(existingSource)}，安装后将被本次的项目级版本遮蔽`,
   );
 
   const blockers = plan.missingTools.map((tool) => {

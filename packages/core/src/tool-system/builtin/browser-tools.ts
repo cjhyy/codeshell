@@ -38,7 +38,8 @@ function bridge(ctx?: ToolContext) {
   return ctx?.browser;
 }
 
-const STALE = (ref: string) => `Error: ref ${ref} is no longer valid (page changed). Re-run browser_observe.`;
+const STALE = (ref: string) =>
+  `Error: ref ${ref} is no longer valid (page changed). Re-run browser_observe.`;
 
 // ════════════════════════════════════════════════════════════════════════════
 // browser_observe — observe the page (snapshot / read / extract)
@@ -74,7 +75,10 @@ export const browserObserveToolDef: ToolDefinition = {
         items: { type: "string" },
         description: "image mode: image refs (imgN/vidN from extract) to see, one or more",
       },
-      ref: { type: "string", description: "vision mode (optional): screenshot just this element's region" },
+      ref: {
+        type: "string",
+        description: "vision mode (optional): screenshot just this element's region",
+      },
     },
   },
 };
@@ -93,16 +97,20 @@ function toImageBlock(d: BrowserImageData): ContentBlock | null {
   return { type: "image", source: { type: "base64", media_type: d.mediaType, data: d.base64 } };
 }
 
-export async function browserObserveTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<BuiltinToolReturn> {
+export async function browserObserveTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<BuiltinToolReturn> {
   const b = bridge(ctx);
   if (!b) return NO_BROWSER;
   const mode = (args.mode as string) || "snapshot";
   switch (mode) {
     case "snapshot": {
       const snap = await b.snapshot();
+      if (snap.detail) return `Error: ${snap.detail}`;
       const header = `URL: ${snap.url}${snap.title ? `\nTitle: ${snap.title}` : ""}`;
       const human = snap.needsHuman
-        ? `\n\n⚠ ${snap.needsHuman} — please complete it in the browser panel, then continue.`
+        ? `\n\n⚠ ${snap.needsHuman} — please complete it in the browser window, then continue.`
         : "";
       return `${header}\n\n${renderElementList(snap.elements)}${human}`;
     }
@@ -123,7 +131,9 @@ export async function browserObserveTool(args: Record<string, unknown>, ctx?: To
       const images =
         r.images.length > 0
           ? "Images (use the ref with browser_observe(image) to SEE one):\n" +
-            r.images.map((im) => `- [${im.ref ?? "?"}] ${im.alt ? `${im.alt} → ` : ""}${im.url}`).join("\n")
+            r.images
+              .map((im) => `- [${im.ref ?? "?"}] ${im.alt ? `${im.alt} → ` : ""}${im.url}`)
+              .join("\n")
           : "Images: (none)";
       const videos =
         r.videos && r.videos.length > 0
@@ -137,7 +147,8 @@ export async function browserObserveTool(args: Record<string, unknown>, ctx?: To
         return "[图片未加载 —— 当前模型不支持视觉输入,已跳过。切换到 vision 模型后再用 browser_observe(image)。]";
       }
       const refs = Array.isArray(args.refs) ? (args.refs as string[]) : [];
-      if (refs.length === 0) return "Error: refs is required for image mode (image refs from browser_observe(extract), e.g. img3)";
+      if (refs.length === 0)
+        return "Error: refs is required for image mode (image refs from browser_observe(extract), e.g. img3)";
       const datas = await b.fetchImages(refs);
       const blocks: ContentBlock[] = [];
       const notes: string[] = [];
@@ -151,7 +162,10 @@ export async function browserObserveTool(args: Record<string, unknown>, ctx?: To
         }
       }
       if (blocks.length === 0) return `Error: no images loaded — ${notes.join("; ")}`;
-      return { contentBlocks: blocks, result: `[loaded ${blocks.length} image(s): ${notes.join("; ")}]` };
+      return {
+        contentBlocks: blocks,
+        result: `[loaded ${blocks.length} image(s): ${notes.join("; ")}]`,
+      };
     }
     case "vision": {
       if (!modelSupportsVision(ctx)) {
@@ -175,7 +189,8 @@ export async function browserObserveTool(args: Record<string, unknown>, ctx?: To
 export const browserActToolDef: ToolDefinition = {
   name: "browser_act",
   description:
-    "Act on the page in the browser panel. Use refs (eN) from the latest " +
+    "Act on the active in-app browser target (visible panel when open, otherwise " +
+    "a background target). Use refs (eN) from the latest " +
     "browser_observe(snapshot). Actions:\n" +
     "- click {ref}: click an element.\n" +
     "- type {ref, text}: type text into an input (focuses first).\n" +
@@ -195,7 +210,17 @@ export const browserActToolDef: ToolDefinition = {
     properties: {
       action: {
         type: "string",
-        enum: ["click", "type", "select", "press_key", "hover", "scroll", "wait", "list_tabs", "switch_tab"],
+        enum: [
+          "click",
+          "type",
+          "select",
+          "press_key",
+          "hover",
+          "scroll",
+          "wait",
+          "list_tabs",
+          "switch_tab",
+        ],
         description: "The interaction to perform",
       },
       ref: { type: "string", description: "Element ref (eN) — click/type/select/hover/press_key" },
@@ -205,13 +230,19 @@ export const browserActToolDef: ToolDefinition = {
       direction: { type: "string", enum: ["up", "down"], description: "Scroll direction — scroll" },
       amount: { type: "number", description: "Pixels to scroll (default one viewport) — scroll" },
       timeout_ms: { type: "number", description: "Max wait in ms (default 10000) — wait" },
-      tabId: { type: "string", description: "Target tab — required for switch_tab; optional on others (switches first)" },
+      tabId: {
+        type: "string",
+        description: "Target tab — required for switch_tab; optional on others (switches first)",
+      },
     },
     required: ["action"],
   },
 };
 
-export async function browserActTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
+export async function browserActTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const b = bridge(ctx);
   if (!b) return NO_BROWSER;
   const action = args.action as string;
@@ -230,13 +261,20 @@ export async function browserActTool(args: Record<string, unknown>, ctx?: ToolCo
       if (tabs.length === 0) return "(no open browser tabs)";
       return (
         "Open tabs:\n" +
-        tabs.map((t) => `- [${t.tabId}]${t.active ? " (active)" : ""} ${t.title || "(untitled)"} — ${t.url || "(blank)"}`).join("\n")
+        tabs
+          .map(
+            (t) =>
+              `- [${t.tabId}]${t.active ? " (active)" : ""} ${t.title || "(untitled)"} — ${t.url || "(blank)"}`,
+          )
+          .join("\n")
       );
     }
     case "switch_tab": {
       if (!tabId) return "Error: tabId is required for switch_tab (see list_tabs)";
       const r = await b.switchTab(tabId);
-      return r.ok ? `Switched to tab ${tabId} — re-observe to see it` : `Error: ${r.detail ?? "switch failed"}`;
+      return r.ok
+        ? `Switched to tab ${tabId} — re-observe to see it`
+        : `Error: ${r.detail ?? "switch failed"}`;
     }
     case "click": {
       if (!ref) return "Error: ref is required for click";
@@ -280,7 +318,9 @@ export async function browserActTool(args: Record<string, unknown>, ctx?: ToolCo
     }
     case "wait": {
       const r = await b.waitForLoad(args.timeout_ms as number | undefined);
-      return r.ok ? `Page ready${r.detail ? ` (${r.detail})` : ""}` : `Error: ${r.detail ?? "wait failed"}`;
+      return r.ok
+        ? `Page ready${r.detail ? ` (${r.detail})` : ""}`
+        : `Error: ${r.detail ?? "wait failed"}`;
     }
     default:
       return `Error: unknown action "${action}"`;
@@ -294,8 +334,10 @@ export async function browserActTool(args: Record<string, unknown>, ctx?: ToolCo
 export const browserNavigateToolDef: ToolDefinition = {
   name: "browser_navigate",
   description:
-    "Navigate the browser panel to a URL (opens the panel automatically if none " +
-    "is open). Then call browser_act(wait) + browser_observe to see the page.",
+    "Navigate the in-app browser to a URL. If no visible browser panel is open, " +
+    "navigation stays in the background; a window appears only when login or a " +
+    "high-consequence action needs human control. Then call browser_act(wait) + " +
+    "browser_observe to inspect the page.",
   inputSchema: {
     type: "object",
     properties: { url: { type: "string", description: "Absolute URL to open" } },
@@ -303,7 +345,10 @@ export const browserNavigateToolDef: ToolDefinition = {
   },
 };
 
-export async function browserNavigateTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
+export async function browserNavigateTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const b = bridge(ctx);
   if (!b) return NO_BROWSER;
   const url = args.url as string;

@@ -46,6 +46,41 @@ describe("Pet preload contract", () => {
           expect(payload).toEqual({ taskId: "pet-task-0123456789abcdef01234567" });
           return { revision: 3, observedAt: 7, tasks: [] };
         }
+        if (channel === "pet:todos-get") {
+          return [
+            {
+              id: "todo-one",
+              text: "整理发布说明",
+              status: "pending",
+              createdAt: 1,
+              updatedAt: 1,
+            },
+          ];
+        }
+        if (channel === "pet:todo-create") {
+          expect(payload).toBe("确认回归测试");
+          return {
+            id: "todo-two",
+            text: payload,
+            status: "pending",
+            createdAt: 2,
+            updatedAt: 2,
+          };
+        }
+        if (channel === "pet:todo-set-status") {
+          expect(payload).toEqual({ id: "todo-one", status: "completed" });
+          return {
+            id: "todo-one",
+            text: "整理发布说明",
+            status: "completed",
+            createdAt: 1,
+            updatedAt: 3,
+          };
+        }
+        if (channel === "pet:session-archive") {
+          expect(payload).toBe("session-one");
+          return { ok: true };
+        }
         if (channel === "pet:widget-visible-get") return false;
         if (channel === "pet:widget-visible") return { ok: true };
         if (channel === "pet:widget-surface") return { ok: true };
@@ -168,6 +203,29 @@ describe("Pet preload contract", () => {
     }
     offTasks?.();
     expect(taskRevisions).toEqual([2]);
+    expect(await api.listTodos?.()).toEqual([
+      expect.objectContaining({ id: "todo-one", status: "pending" }),
+    ]);
+    expect(await api.createTodo?.("确认回归测试")).toMatchObject({ id: "todo-two" });
+    expect(await api.setTodoStatus?.("todo-one", "completed")).toMatchObject({
+      status: "completed",
+    });
+    const todoStatuses: string[] = [];
+    const offTodos = api.onTodosChanged?.((items) => todoStatuses.push(items[0]?.status ?? ""));
+    for (const handler of handlers.get("pet:todos-changed") ?? []) {
+      handler({}, [
+        {
+          id: "todo-one",
+          text: "整理发布说明",
+          status: "completed",
+          createdAt: 1,
+          updatedAt: 3,
+        },
+      ]);
+    }
+    offTodos?.();
+    expect(todoStatuses).toEqual(["completed"]);
+    expect(await api.archiveSession?.("session-one")).toEqual({ ok: true });
     expect(await api.getWidgetVisibility()).toBe(false);
     expect(await api.setWidgetVisible(true)).toEqual({ ok: true });
     expect(await api.setWidgetSurface("expanded")).toEqual({ ok: true });

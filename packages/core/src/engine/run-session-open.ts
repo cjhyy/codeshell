@@ -140,6 +140,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
     session.transcript.appendMessage("user", args.userMessageContent, {
       injected: options?.injected === true,
       clientMessageId: options?.clientMessageId,
+      displayText: options?.displayText?.trim() || undefined,
       ...(options?.agentDirection
         ? {
             authority: "agent" as const,
@@ -179,6 +180,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
     session.transcript.appendMessage("user", args.userMessageContent, {
       injected: options?.injected === true,
       clientMessageId: options?.clientMessageId,
+      displayText: options?.displayText?.trim() || undefined,
       ...(options?.agentDirection
         ? {
             authority: "agent" as const,
@@ -194,10 +196,12 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
     // Save first user message as session summary — text only. The summary
     // shows up in the session list; "[image]" is more informative than a
     // truncated `[object Object]` when the prompt was purely visual.
-    const summarySrc = args.parsedTask.hasImages
-      ? args.parsedTask.text ||
-        `[image${args.parsedTask.images.length > 1 ? `s × ${args.parsedTask.images.length}` : ""}]`
-      : args.taskText;
+    const summarySrc =
+      options?.displayText?.trim() ||
+      (args.parsedTask.hasImages
+        ? args.parsedTask.text ||
+          `[image${args.parsedTask.images.length > 1 ? `s × ${args.parsedTask.images.length}` : ""}]`
+        : args.taskText);
     session.state.summary = summarySrc.slice(0, 80).replace(/\n/g, " ");
     args.sessionManager.saveStateOrUpdateFields(session.state, {
       summary: session.state.summary,

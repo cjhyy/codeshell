@@ -10,6 +10,8 @@ interface Props {
   summary: React.ReactNode;
   /** Optional rich detail when the card is expanded inline. */
   details?: React.ReactNode;
+  /** Important result preview that remains visible while details are collapsed. */
+  preview?: React.ReactNode;
   /** Optional chip rendered on the head row (e.g. sandbox status). */
   headerBadge?: React.ReactNode;
   /** Optional interactive action beside the toggle button. */
@@ -28,6 +30,7 @@ export function ToolCardShell({
   message,
   summary,
   details,
+  preview,
   headerBadge,
   headerAction,
   onSelect,
@@ -80,6 +83,7 @@ export function ToolCardShell({
         </button>
         {headerAction && <div className="shrink-0 pr-3">{headerAction}</div>}
       </div>
+      {preview && <div className="border-t border-border px-3 py-2">{preview}</div>}
       {open && details && <div className="border-t border-border px-3 py-2">{details}</div>}
       {message.summary && (
         <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">

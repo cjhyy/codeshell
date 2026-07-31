@@ -50,6 +50,37 @@ describe("transcriptsReducer pending steer bubbles", () => {
     });
   });
 
+  it("deduplicates a replayed panel input by client message id", () => {
+    let map = transcriptsReducer(
+      {},
+      {
+        type: "stream",
+        bucket: "project::ui",
+        event: {
+          type: "session_user_message",
+          text: "【Design Studio】 调整标题",
+          clientMessageId: "panel:design-studio:1",
+        },
+      },
+    );
+    map = transcriptsReducer(map, {
+      type: "stream",
+      bucket: "project::ui",
+      event: {
+        type: "session_user_message",
+        text: "【Design Studio】 调整标题",
+        clientMessageId: "panel:design-studio:1",
+      },
+    });
+
+    expect(map["project::ui"].messages).toHaveLength(1);
+    expect(map["project::ui"].messages[0]).toMatchObject({
+      kind: "user",
+      text: "【Design Studio】 调整标题",
+      clientMessageId: "panel:design-studio:1",
+    });
+  });
+
   it("does not move snapshotSeq backwards for an older stream batch", () => {
     let map: TranscriptsMap = {
       b: { ...INITIAL_STATE, snapshotSeq: 12 },

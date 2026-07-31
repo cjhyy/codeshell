@@ -6,6 +6,7 @@ import { SearchToolCard } from "./SearchToolCard";
 import { WebToolCard } from "./WebToolCard";
 import { AgentToolCard } from "./AgentToolCard";
 import { GenericToolCard } from "./GenericToolCard";
+import { BrowserToolCard } from "./BrowserToolCard";
 
 interface Props {
   message: ToolMessage;
@@ -96,6 +97,16 @@ function ToolCardImpl({ message, onSelect, selectedId, turnEpoch, cwd }: Props) 
     if (name === "webfetch" || name === "websearch" || name === "fetch") {
       return (
         <WebToolCard
+          message={message}
+          onSelect={onSelect}
+          selected={selected}
+          turnEpoch={turnEpoch}
+        />
+      );
+    }
+    if (name === "browser_observe" || name === "browser_act" || name === "browser_navigate") {
+      return (
+        <BrowserToolCard
           message={message}
           onSelect={onSelect}
           selected={selected}

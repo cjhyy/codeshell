@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import { DialogProvider } from "../ui/DialogProvider";
 import { ProfileSection } from "./ProfileSection";
 
 function reactPropsOf(node: unknown): Record<string, any> {
@@ -72,7 +73,11 @@ describe("ProfileSection", () => {
     const container = document.createElement("div") as unknown as HTMLElement;
     root = createRoot(container);
     await act(async () => {
-      root?.render(<ProfileSection cwd="/repo" />);
+      root?.render(
+        <DialogProvider>
+          <ProfileSection cwd="/repo" />
+        </DialogProvider>,
+      );
       await flushMicrotasks();
       await flushMicrotasks();
     });
@@ -115,6 +120,12 @@ describe("ProfileSection", () => {
           activations.push([cwd, name]);
           activeName = name;
         },
+        previewProfileRequirements: async () => ({
+          needsInstall: false,
+          willRun: [],
+          warnings: [],
+          blockers: [],
+        }),
         deactivateProfile: async () => undefined,
       },
     });
@@ -122,7 +133,11 @@ describe("ProfileSection", () => {
     const container = document.createElement("div") as unknown as HTMLElement;
     root = createRoot(container);
     await act(async () => {
-      root?.render(<ProfileSection cwd="/repo" />);
+      root?.render(
+        <DialogProvider>
+          <ProfileSection cwd="/repo" />
+        </DialogProvider>,
+      );
       await flushMicrotasks();
       await flushMicrotasks();
     });

@@ -18,6 +18,7 @@ import {
   formatRequirementPlan,
   installSkillRequirement,
   type RequirementPlanSummary,
+  type SkillInstallRunner,
 } from "./profile-requirements-service.js";
 import { spawnSync } from "node:child_process";
 import {
@@ -94,6 +95,31 @@ function lstatIfPresent(path: string): ReturnType<typeof lstatSync> | undefined 
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
+  }
+}
+
+function ensureRegularExportDirectory(path: string): void {
+  const existing = lstatIfPresent(path);
+  if (!existing) {
+    mkdirSync(path, { mode: 0o700 });
+    return;
+  }
+  if (existing.isSymbolicLink() || !existing.isDirectory()) {
+    throw new Error("Digital-human repo export path must be a regular directory");
+  }
+}
+
+function writeExportArtifact(path: string, content: string): void {
+  const existing = lstatIfPresent(path);
+  if (existing && (existing.isSymbolicLink() || !existing.isFile())) {
+    throw new Error("Digital-human repo export destination must be a regular file");
+  }
+  const tmp = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(tmp, content, { encoding: "utf-8", mode: 0o600, flag: "wx" });
+    renameSync(tmp, path);
+  } finally {
+    rmSync(tmp, { force: true });
   }
 }
 
@@ -216,6 +242,7 @@ export function previewProfileDefinitionImport(filePath: string): DigitalHumanPr
 /** Commit exactly the Schema-normalized snapshot represented by a review token. */
 export function importReviewedProfileDefinition(
   input: DigitalHumanProfileImportCommitInput,
+  cwd?: string,
 ): DigitalHumanProfileImportCommitResult {
   if (!input || typeof input.reviewToken !== "string" || !input.reviewToken) {
     throw new Error("Digital-human profile import requires a review token");
@@ -238,7 +265,10 @@ export function importReviewedProfileDefinition(
       label: reviewed.profile.label,
     };
   }
-  saveWorkspaceProfile(reviewed.profile);
+  // Match the editor save path: overwriting the active project default must
+  // refresh its persisted capability snapshot, otherwise the new definition
+  // is visible in the library while the project keeps running the old Skills.
+  saveProfile(reviewed.profile, cwd);
   reviewedProfileImports.delete(input.reviewToken);
   return { ok: true, name: reviewed.profile.name, label: reviewed.profile.label };
 }
@@ -298,6 +328,7 @@ export interface ProfileListEntry {
   mcp: string[];
   agents: string[];
   mainInstruction: string | undefined;
+  requires?: WorkspaceProfile["requires"];
   active: boolean;
   portableMemory: boolean;
   exclusiveCapabilities: boolean;
@@ -318,6 +349,7 @@ export function listProfiles(cwd?: string): ProfileListEntry[] {
     mcp: profile.mcp,
     agents: profile.agents,
     mainInstruction: profile.mainInstruction,
+    ...(profile.requires ? { requires: profile.requires } : {}),
     active: profile.name === active,
     portableMemory: profile.portableMemory,
     exclusiveCapabilities: profile.exclusiveCapabilities,
@@ -408,12 +440,12 @@ export function installCatalogProfile(name: string): void {
   const bundled = DIGITAL_HUMAN_CATALOG.find((candidate) => candidate.name === name);
   if (bundled) {
     const { category: _c, tags: _t, samplePrompts: _s, ...profile } = bundled;
-    saveWorkspaceProfile(profile);
+    saveWorkspaceProfile({ ...profile, basePreset: "general" });
     return;
   }
   const fromRepo = readAllHumanRepoEntries().entries.find((entry) => entry.profile.name === name);
   if (!fromRepo) throw new Error(`Unknown digital human catalog entry "${name}"`);
-  saveWorkspaceProfile(fromRepo.profile);
+  saveWorkspaceProfile({ ...fromRepo.profile, basePreset: "general" });
 }
 
 /** 添加一个数字人仓库（克隆/更新）。会写磁盘并访问网络。 */
@@ -462,11 +494,13 @@ export function exportProfileRepo(
   }
 
   const written: string[] = [];
+  const humansDir = join(destDir, "humans");
+  ensureRegularExportDirectory(humansDir);
   for (const profile of profiles) {
-    const dir = join(destDir, "humans", profile.name);
-    mkdirSync(dir, { recursive: true });
+    const dir = join(humansDir, profile.name);
+    ensureRegularExportDirectory(dir);
     const target = join(dir, "profile.json");
-    writeFileSync(target, `${JSON.stringify(profile, null, 2)}\n`, { encoding: "utf-8" });
+    writeExportArtifact(target, `${JSON.stringify(profile, null, 2)}\n`);
     written.push(target);
   }
 
@@ -481,13 +515,17 @@ export function exportProfileRepo(
     })),
   };
   const manifestPath = join(destDir, "humans.json");
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf-8" });
+  writeExportArtifact(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   written.push(manifestPath);
 
   const readmePath = join(destDir, "README.md");
-  if (!lstatIfPresent(readmePath)) {
-    const rows = profiles.map((p) => `| ${p.label} | \`${p.name}\` | ${p.basePreset} |`).join("\n");
-    writeFileSync(
+  const readmeInfo = lstatIfPresent(readmePath);
+  if (readmeInfo && (readmeInfo.isSymbolicLink() || !readmeInfo.isFile())) {
+    throw new Error("Digital-human repo README destination must be a regular file");
+  }
+  if (!readmeInfo) {
+    const rows = profiles.map((p) => `| ${p.label} | \`${p.name}\` |`).join("\n");
+    writeExportArtifact(
       readmePath,
       [
         `# ${basename(destDir)}`,
@@ -495,14 +533,13 @@ export function exportProfileRepo(
         "codeshell 数字人仓库。推到 GitHub 后，别人在",
         "**设置 › 数字人 › 数字人仓库** 填 `owner/repo` 即可安装。",
         "",
-        "| 数字人 | ID | Preset |",
-        "| --- | --- | --- |",
+        "| 数字人 | ID |",
+        "| --- | --- |",
         rows,
         "",
         "> 只包含数字人定义，不含任何可移植记忆内容。",
         "",
       ].join("\n"),
-      { encoding: "utf-8" },
     );
     written.push(readmePath);
   }
@@ -546,6 +583,7 @@ export function previewProfileRequirements(name: string, cwd: string): ProfileRe
 export async function installProfileRequirements(
   name: string,
   cwd: string,
+  runner?: SkillInstallRunner,
 ): Promise<{ ok: boolean; errors: string[] }> {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   const profile = readWorkspaceProfile(name);
@@ -562,11 +600,27 @@ export async function installProfileRequirements(
 
   const errors: string[] = [];
   for (const { requirement } of plan.skillInstalls) {
-    const result = await installSkillRequirement(requirement, cwd);
+    const result = await installSkillRequirement(requirement, cwd, runner);
     if (!result.ok) errors.push(`${requirement.repo}: ${result.error}`);
   }
   // 新文件落地后必须让扫描缓存过期，否则本轮仍看不到刚装的 skill。
   invalidateSkillCache();
+
+  // A zero exit code is not proof that the requested Skills landed in a root
+  // CodeShell can scan. Verify every named Skill this plan actually tried to
+  // install before the renderer shows a success toast or starts a Session.
+  const expected = new Set(plan.skillInstalls.flatMap(({ missing }) => missing ?? []));
+  if (expected.size > 0) {
+    const installedAfter = new Set(
+      scanSkills(cwd)
+        .filter((skill) => skill.source === "project")
+        .map((skill) => skill.name),
+    );
+    const stillMissing = [...expected].filter((skill) => !installedAfter.has(skill));
+    if (stillMissing.length > 0) {
+      errors.push(`安装命令已结束，但 CodeShell 仍未发现项目 Skill：${stillMissing.join("、")}`);
+    }
+  }
   return { ok: errors.length === 0, errors };
 }
 
@@ -583,9 +637,25 @@ function probeTool(bin: string): string | null {
   return `${probe.stdout ?? ""}${probe.stderr ?? ""}`.trim() || null;
 }
 
-/** Create or atomically update one user-owned digital-human definition. */
-export function saveProfile(profile: WorkspaceProfile): void {
-  saveWorkspaceProfile(profile);
+/**
+ * Create or atomically update one user-owned digital-human definition.
+ *
+ * If it is the selected project's default, refresh the persisted capability
+ * snapshot too. Prompt and memory fields are resolved live, but project-default
+ * Skills otherwise stay frozen at the last activation.
+ */
+export function saveProfile(profile: WorkspaceProfile, cwd?: string): void {
+  const refreshActiveProject =
+    cwd !== undefined &&
+    resolveActiveWorkspaceProfile({
+      cwd,
+      settings: new SettingsManager(cwd, "full"),
+    })?.name === profile.name;
+  // `basePreset` remains in the on-disk schema for definition compatibility,
+  // but it is not authored by a digital human. Normalize every local/imported
+  // save so an old or remote value cannot silently change CodeShell's runtime.
+  saveWorkspaceProfile({ ...profile, basePreset: "general" });
+  if (refreshActiveProject && cwd) activateProfile(cwd, profile.name);
 }
 
 export interface DeleteProfileOptions {
@@ -642,6 +712,10 @@ export function forceDeleteProfile(
   const updatedTeams: string[] = [];
   const removedTeams: string[] = [];
   for (const team of listDigitalHumanTeams()) {
+    // A repo team is catalog data, not a persisted local reference. Deleting a
+    // library profile must not rewrite (or pretend to delete) its upstream
+    // definition; summoning it later can explicitly reinstall that member.
+    if (team.sourceRepo && !team.localOverride) continue;
     if (!team.members.includes(name)) continue;
     const members = team.members.filter((member) => member !== name);
     if (members.length < 2) {
@@ -724,7 +798,7 @@ export function previewProfileDeletion(name: string, cwd?: string): ProfileDelet
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
 
   const blockingTeams = listDigitalHumanTeams()
-    .filter((team) => team.members.includes(name))
+    .filter((team) => (!team.sourceRepo || team.localOverride) && team.members.includes(name))
     .map((team) => team.name);
   const sessions = new SessionManager();
   const blockingSessions: BlockingSession[] = sessions
@@ -760,7 +834,9 @@ export function deleteProfile(name: string, options: DeleteProfileOptions = {}):
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) throw new Error("invalid digital-human profile id");
   if (!readWorkspaceProfile(name)) return;
 
-  const referencingTeams = listDigitalHumanTeams().filter((team) => team.members.includes(name));
+  const referencingTeams = listDigitalHumanTeams().filter(
+    (team) => (!team.sourceRepo || team.localOverride) && team.members.includes(name),
+  );
   if (referencingTeams.length > 0) {
     throw new Error(
       `Digital human "${name}" is still used by team${

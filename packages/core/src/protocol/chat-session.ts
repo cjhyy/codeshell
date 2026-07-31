@@ -26,6 +26,8 @@ export interface TurnOpts {
    *  configured cwd. */
   cwd?: string;
   onStream?: (event: StreamEvent) => void;
+  /** User-facing text persisted beside the full model-facing task. */
+  displayText?: string;
   /** Goal mode for this turn — forwarded to engine.run (loop-until-done).
    *  String objective or full GoalConfig (objective + optional budgets). */
   goal?: string | import("../goal/lifecycle.js").GoalConfig;
@@ -378,6 +380,7 @@ export class ChatSession {
       const result = await this.engine.run(next.task, {
         cwd: next.opts.cwd,
         sessionId: this.id,
+        displayText: next.opts.displayText,
         signal: this.controller.signal,
         onStream,
         goal: next.opts.goal,

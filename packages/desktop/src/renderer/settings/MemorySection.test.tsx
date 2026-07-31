@@ -7,6 +7,7 @@ import {
   buildEditDraft,
   buildPinSaveInput,
   defaultCleanupSelection,
+  memoryDraftChanged,
 } from "./MemorySection";
 
 describe("MemorySection badges", () => {
@@ -56,7 +57,7 @@ describe("MemorySection badges", () => {
 
     expect(html).toContain("手动");
     expect(html).toContain("自动");
-    expect(html).toContain("Dream");
+    expect(html).toContain("整理");
     expect(html).toContain("命中 1 次");
     expect(html).toContain("更新 2 次");
     expect(html).toContain("命中 5 次");
@@ -95,6 +96,13 @@ describe("MemorySection save payload helpers", () => {
     expect(next.id).toBe("mem_selected");
     expect(next.origin).toBe("dream");
     expect(next.pinned).toBe(false);
+  });
+
+  test("detects only real unsaved draft changes", () => {
+    const baseline = buildEditDraft(selected, "profile", "user", undefined, "researcher");
+    expect(memoryDraftChanged(baseline, baseline)).toBe(false);
+    expect(memoryDraftChanged({ ...baseline, content: "changed" }, baseline)).toBe(true);
+    expect(memoryDraftChanged(null, baseline)).toBe(false);
   });
 });
 

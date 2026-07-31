@@ -9,6 +9,7 @@ import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
 import { PetLongTaskSection } from "./PetLongTaskSection";
 import { PetFollowUpSection } from "./PetFollowUpSection";
+import { PetTodoSection } from "./PetTodoSection";
 import {
   loadDismissedPetWorkItemIds,
   newerPetWorkInboxSnapshot,
@@ -147,6 +148,7 @@ export function PetWorldPane({
       />
       <div className="min-h-0 flex-1 overflow-visible p-3.5 @min-[1100px]/pet-page:overflow-y-auto">
         <div ref={pendingRef} tabIndex={-1} className="space-y-3 outline-none">
+          <PetTodoSection />
           <PetLongTaskSection
             onOpenSession={(sessionId) => {
               if (!projection) return;
@@ -175,6 +177,11 @@ export function PetWorldPane({
             emptyState={selected.emptyState}
             defaultOpen={focusPending}
             onDismiss={(item) => dismissItems([item.id])}
+            onArchive={async (item) => {
+              const archive = window.codeshell.pet.archiveSession;
+              if (!archive) throw new Error("Session archive is unavailable");
+              await archive(item.navigation.agentSessionId);
+            }}
             onClearCompleted={() => dismissItems(workMap.itemIds.completed)}
             onRestoreDismissed={restoreDismissed}
             onOpen={(item) => {

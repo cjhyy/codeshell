@@ -128,6 +128,7 @@ describe("planProfileRequirements", () => {
     );
     expect(plan.skillInstalls).toHaveLength(1);
     expect(plan.skillInstalls[0].missing).toEqual(["not-here"]);
+    expect(plan.skillInstalls[0].requirement.skills).toEqual(["not-here"]);
     expect(plan.needsInstall).toBe(true);
   });
 

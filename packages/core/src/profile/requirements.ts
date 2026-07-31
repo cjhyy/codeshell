@@ -139,7 +139,15 @@ export function planProfileRequirements(
       conflicts.push(...shadowed);
       // 具名子集全在了就不必再跑安装。
       if (missing.length === 0) continue;
-      skillInstalls.push({ requirement, missing });
+      // Keep the reviewed command and the executed argv aligned: if part of a
+      // multi-Skill requirement is already present, only pass the genuinely
+      // missing names to the installer. Re-sending the full authored subset
+      // could unnecessarily replace a working project Skill while the UI said
+      // it was only going to install the missing one.
+      skillInstalls.push({
+        requirement: { ...requirement, skills: missing },
+        missing,
+      });
     } else {
       // 整仓安装无法预判会带来哪些名字，只能照跑；`skills add` 自身是幂等的。
       skillInstalls.push({ requirement });

@@ -2204,4 +2204,59 @@ describe("PetDispatchService", () => {
     expect(executed).toBe(0);
     expect(result).not.toHaveProperty("hostActions");
   });
+
+  test("executes only desktop-safe atomic manager actions and returns their real outcomes", async () => {
+    let declared: unknown;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, requestParams) => {
+          declared = (requestParams.profileParams as Record<string, unknown>).hostActions;
+          return {
+            ok: true,
+            result: {
+              text: "request accepted",
+              extensions: {
+                pet: {
+                  hostActions: [
+                    {
+                      kind: "todoMutation",
+                      payload: { action: "complete", todoId: "todo-one" },
+                    },
+                  ],
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        todoMutation: async () => ({
+          action: "complete",
+          todoId: "todo-one",
+          status: "completed",
+        }),
+        mobileRemote: async () => ({ action: "open" }),
+      },
+    });
+
+    const result = await service.dispatch({ type: "chat", message: "complete my todo" });
+    expect(declared).toEqual(["todoMutation"]);
+    expect(result).toMatchObject({
+      ok: true,
+      type: "chat",
+      hostActions: [
+        {
+          kind: "todoMutation",
+          ok: true,
+          result: { todoId: "todo-one", status: "completed" },
+        },
+      ],
+    });
+  });
 });

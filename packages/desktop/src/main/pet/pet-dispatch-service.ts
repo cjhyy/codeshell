@@ -19,6 +19,8 @@ import type {
   PetWorkExecutionBackend,
   PetWorkspaceOption,
   PetWorkDelegation,
+  PetTodoItem,
+  PetOutboundTargetOption,
 } from "@cjhyy/code-shell-pet";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
 
@@ -190,6 +192,10 @@ interface PetDispatchOptions {
   managerModel?(): Promise<string | null>;
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
   listReusableSessions?(): Promise<PetReusableSessionCandidate[]>;
+  /** Durable personal todos; independent from per-Session TodoWrite snapshots. */
+  listTodos?(): Promise<PetTodoItem[]>;
+  /** Opaque, host-authorized proactive owner destinations. */
+  listOutboundTargets?(): Promise<PetOutboundTargetOption[]>;
   /**
    * Second-chance lookup for a DelegateWork reusable-Session selector outside
    * the turn's injected <=32 option list (e.g. one Mimi found via the
@@ -1061,11 +1067,15 @@ export class PetDispatchService {
         const [
           listedWorkspaces,
           listedReusableSessions,
+          listedTodos,
+          listedOutboundTargets,
           configuredManagerModel,
           replyAttachmentRoots,
         ] = await Promise.all([
           this.options.listWorkspaces?.() ?? [],
           this.options.listReusableSessions?.() ?? [],
+          this.options.listTodos?.() ?? [],
+          this.options.listOutboundTargets?.() ?? [],
           this.options.managerModel?.() ?? null,
           this.getReplyAttachmentRoots(),
         ]);
@@ -1150,17 +1160,22 @@ export class PetDispatchService {
         // Read host extras once; canonical projection keys are reserved below
         // so an extension cannot shadow trusted session state.
         const worldExtras = (await this.options.worldContext?.()) ?? {};
-        // Desktop renderers currently persist/display the model stream, not
-        // the post-turn host outcome. Do not expose action tools there: a turn
-        // must never execute a side effect while only displaying "accepted".
-        // IM consumes the enriched post-turn result, so those tools remain
-        // available there when the originating adapter declares support.
+        // GatewayReply is route-bound and therefore IM-only. The other atomic
+        // actions below are safe on desktop too because pet-ipc records and
+        // displays the host's authoritative post-turn receipt.
+        const desktopHostActionKinds = new Set([
+          "todoMutation",
+          "sessionArchive",
+          "outboundMessage",
+        ]);
         const hostActionKinds =
           command.source?.kind === "im-gateway"
             ? Object.keys(this.options.hostActions ?? {})
                 .filter((kind) => kind !== "gatewayReply" || gatewayReplyCapability !== undefined)
                 .sort()
-            : [];
+            : Object.keys(this.options.hostActions ?? {})
+                .filter((kind) => desktopHostActionKinds.has(kind))
+                .sort();
         const projectionWorld = boundedWorld(snapshot);
         const reservedWorldKeys = new Set([
           ...Object.keys(projectionWorld),
@@ -1171,6 +1186,8 @@ export class PetDispatchService {
           "currentMessageSource",
           "currentMessageCapabilities",
           "memoryWindow",
+          "todos",
+          "outboundTargets",
         ]);
         const remainingWorldExtras = Object.fromEntries(
           Object.entries(worldExtras)
@@ -1223,6 +1240,8 @@ export class PetDispatchService {
             ? { mobileRemote: worldExtras.mobileRemote }
             : {}),
           ...(this.options.longTasks ? { longTasks: this.options.longTasks.context() } : {}),
+          todos: listedTodos.slice(0, 100),
+          outboundTargets: listedOutboundTargets.slice(0, 32),
           sessions: projectionWorld.sessions,
           pending: projectionWorld.pending,
           ...(carryoverBrief ? { carryoverBrief } : {}),
@@ -1250,6 +1269,8 @@ export class PetDispatchService {
             ...(this.options.sessionsRootDir
               ? { sessionsRootDir: this.options.sessionsRootDir }
               : {}),
+            todos: listedTodos.slice(0, 100),
+            outboundTargets: listedOutboundTargets.slice(0, 32),
           },
           cwd: this.options.hostCwd,
           behaviorMode: "pet",

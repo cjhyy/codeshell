@@ -657,7 +657,9 @@ export function SettingsPage({
               {active === "digital-humans" && (
                 <DigitalHumansSection
                   scope={scope}
-                  projectPath={scopeProjectPath}
+                  // Global library editing still needs the active project for
+                  // requirement installation and project-scoped Skill status.
+                  projectPath={scopeProjectPath ?? activeProjectPath}
                   onOpenDigitalHumans={onOpenDigitalHumans}
                 />
               )}

@@ -34,6 +34,11 @@ import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
 import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
 import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
 import { stablePromptHash } from "@cjhyy/code-shell-server/storage";
+import {
+  backgroundBrowserPartition,
+  backgroundBrowserRuntime,
+  type BackgroundBrowserRuntimeLike,
+} from "./browser-driver/background-runtime.js";
 
 /**
  * Build a read-only RunManager for automation. Per-job cwd is passed at submit
@@ -96,6 +101,7 @@ export interface AutomationSessionMeta {
 export function buildDesktopAutomationRunner(
   emit?: (sessionId: string, event: unknown) => void,
   onSession?: (meta: AutomationSessionMeta) => void,
+  browserRuntime: BackgroundBrowserRuntimeLike = backgroundBrowserRuntime,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
     const jobCwd = resolveProjectRoot(req.job.cwd ?? process.cwd());
@@ -122,99 +128,114 @@ export function buildDesktopAutomationRunner(
       ? `${AUTOMATION_PROMPT_NOTE}\n\n<previous_runs_memory>\n${memory.trim()}\n</previous_runs_memory>`
       : AUTOMATION_PROMPT_NOTE;
 
-    const engine = new Engine({
-      llm,
-      cwd: jobCwd,
-      settingsScope: "full",
-      headless: true,
-      origin: "automation",
-      // This is an unattended automation run — tell the model so it doesn't
-      // ask the user or offer to schedule automation, and so it persists a
-      // cross-run memory summary on finish. Prior-run memory is appended here
-      // too (see above) so it's framed as system context, not a user message.
-      appendSystemPrompt,
-      // Automation runs are unattended and should not block before the first
-      // LLM request on plugin/user MCP startup. MCP tools are disabled below,
-      // so explicitly keep the engine's MCP config empty for this one-shot run.
-      mcpServers: {},
-      // Strip the cron tools so an unattended run can't recursively schedule
-      // more automations. (disabledBuiltinTools is a delta on the preset's
-      // builtin set — see resolveBuiltinToolNames.)
-      disabledBuiltinTools: [...AUTOMATION_DISABLED_TOOLS],
-      // Reject Bash(run_in_background=true) too — the param survives even
-      // though the companion tools are stripped (design §5.5).
-      allowBackgroundShells: false,
-      // Permission tier from the job (bindCronToEngine → resolveWritePolicy).
-      permissionMode: req.permissionMode,
-      approvalBackend: req.approvalBackend,
-      // Confine writes/shell to the workspace per the job's tier — defense in
-      // depth on top of the approval backend (§5.6 #9).
-      sandbox: defaultSandboxConfig(req.sandboxMode),
+    // A headless Engine has no renderer-owned <webview>. Give it a lazy lease on
+    // a main-process hidden BrowserWindow instead. The stable per-job partition
+    // preserves an explicitly established login across fires without sharing
+    // cookies between unrelated automations. No Chromium process is created
+    // unless the model actually calls a browser tool.
+    const browserLease = browserRuntime.acquire({
+      ownerId: `automation:${req.job.id}`,
+      partition: backgroundBrowserPartition(req.job.id),
+      title: `CodeShell 自动化 · ${req.job.name?.trim() || req.job.id}`,
     });
-
-    // Let the run persist a one-paragraph summary for the NEXT scheduled run.
-    // The sink writes to this job's task-level memory.md.
-    const memoryTool = makeUpdateAutomationMemoryTool((summary) =>
-      appendAutomationMemory(req.job.id, summary),
-    );
-    engine.registerCustomTool(memoryTool.definition, memoryTool.execute);
-    const clientMessageId = `automation:${req.job.id}:${stablePromptHash(req.job.prompt)}`;
-
-    // Key emitted events by the REAL engine sessionId (carried on the first
-    // `session_started` event) so renderer routing/reconnect matches interactive
-    // chat. Fall back to job.id until that event is seen.
-    let sid: string | undefined;
-    const onStream =
-      emit || onSession
-        ? (e: unknown) => {
-            const ev = e as { type?: string; sessionId?: string };
-            if (ev.type === "session_started" && typeof ev.sessionId === "string") {
-              const firstBind = sid === undefined;
-              sid = ev.sessionId;
-              // Announce the session ONCE so the renderer can attribute this
-              // live run to the project owning jobCwd and title it nicely.
-              if (firstBind && onSession) {
-                const name = req.job.name?.trim() || req.job.id;
-                const date = new Date().toLocaleDateString();
-                onSession({
-                  sessionId: sid,
-                  cwd: jobCwd,
-                  title: `${name} ${date}`,
-                  prompt: req.job.prompt,
-                  cronJobId: req.job.id,
-                  clientMessageId,
-                });
-              }
-            }
-            emit?.(sid ?? req.job.id, e);
-          }
-        : undefined;
     try {
-      const result = await engine.run(req.prompt, {
+      const engine = new Engine({
+        llm,
         cwd: jobCwd,
-        onStream,
-        signal: req.signal,
-        clientMessageId,
+        settingsScope: "full",
+        headless: true,
+        origin: "automation",
+        // This is an unattended automation run — tell the model so it doesn't
+        // ask the user or offer to schedule automation, and so it persists a
+        // cross-run memory summary on finish. Prior-run memory is appended here
+        // too (see above) so it's framed as system context, not a user message.
+        appendSystemPrompt,
+        // Automation runs are unattended and should not block before the first
+        // LLM request on plugin/user MCP startup. MCP tools are disabled below,
+        // so explicitly keep the engine's MCP config empty for this one-shot run.
+        mcpServers: {},
+        // Strip the cron tools so an unattended run can't recursively schedule
+        // more automations. (disabledBuiltinTools is a delta on the preset's
+        // builtin set — see resolveBuiltinToolNames.)
+        disabledBuiltinTools: [...AUTOMATION_DISABLED_TOOLS],
+        // Reject Bash(run_in_background=true) too — the param survives even
+        // though the companion tools are stripped (design §5.5).
+        allowBackgroundShells: false,
+        // Permission tier from the job (bindCronToEngine → resolveWritePolicy).
+        permissionMode: req.permissionMode,
+        approvalBackend: req.approvalBackend,
+        // Confine writes/shell to the workspace per the job's tier — defense in
+        // depth on top of the approval backend (§5.6 #9).
+        sandbox: defaultSandboxConfig(req.sandboxMode),
+        browserBridge: browserLease.bridge,
       });
-      return { text: result.text, reason: result.reason };
-    } catch (err) {
-      // engine.run normally emits its own terminal turn_complete/error, which
-      // the renderer uses to clear the sidebar "running" spinner it raised on
-      // the announce. But post-turn cleanup (background-agent drain, on_session_end
-      // hooks, memory pipeline) runs after the turn loop with no catch — a throw
-      // there skips that terminal event. If we'd already announced the session
-      // (so the renderer is showing a spinner), synthesize one terminal `error`
-      // event so the spinner clears instead of sticking forever. No-op when the
-      // throw happened before session_started (nothing was marked busy yet).
-      if (sid !== undefined) {
-        // The envelope supplies the sessionId (emit's first arg); the `error`
-        // StreamEvent itself is just { type, error } (see core types.ts).
-        emit?.(sid, {
-          type: "error",
-          error: err instanceof Error ? err.message : String(err),
+
+      // Let the run persist a one-paragraph summary for the NEXT scheduled run.
+      // The sink writes to this job's task-level memory.md.
+      const memoryTool = makeUpdateAutomationMemoryTool((summary) =>
+        appendAutomationMemory(req.job.id, summary),
+      );
+      engine.registerCustomTool(memoryTool.definition, memoryTool.execute);
+      const clientMessageId = `automation:${req.job.id}:${stablePromptHash(req.job.prompt)}`;
+
+      // Key emitted events by the REAL engine sessionId (carried on the first
+      // `session_started` event) so renderer routing/reconnect matches interactive
+      // chat. Fall back to job.id until that event is seen.
+      let sid: string | undefined;
+      const onStream =
+        emit || onSession
+          ? (e: unknown) => {
+              const ev = e as { type?: string; sessionId?: string };
+              if (ev.type === "session_started" && typeof ev.sessionId === "string") {
+                const firstBind = sid === undefined;
+                sid = ev.sessionId;
+                // Announce the session ONCE so the renderer can attribute this
+                // live run to the project owning jobCwd and title it nicely.
+                if (firstBind && onSession) {
+                  const name = req.job.name?.trim() || req.job.id;
+                  const date = new Date().toLocaleDateString();
+                  onSession({
+                    sessionId: sid,
+                    cwd: jobCwd,
+                    title: `${name} ${date}`,
+                    prompt: req.job.prompt,
+                    cronJobId: req.job.id,
+                    clientMessageId,
+                  });
+                }
+              }
+              emit?.(sid ?? req.job.id, e);
+            }
+          : undefined;
+      try {
+        const result = await engine.run(req.prompt, {
+          cwd: jobCwd,
+          onStream,
+          signal: req.signal,
+          clientMessageId,
         });
+        return { text: result.text, reason: result.reason };
+      } catch (err) {
+        // engine.run normally emits its own terminal turn_complete/error, which
+        // the renderer uses to clear the sidebar "running" spinner it raised on
+        // the announce. But post-turn cleanup (background-agent drain, on_session_end
+        // hooks, memory pipeline) runs after the turn loop with no catch — a throw
+        // there skips that terminal event. If we'd already announced the session
+        // (so the renderer is showing a spinner), synthesize one terminal `error`
+        // event so the spinner clears instead of sticking forever. No-op when the
+        // throw happened before session_started (nothing was marked busy yet).
+        if (sid !== undefined) {
+          // The envelope supplies the sessionId (emit's first arg); the `error`
+          // StreamEvent itself is just { type, error } (see core types.ts).
+          emit?.(sid, {
+            type: "error",
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        throw err;
       }
-      throw err;
+    } finally {
+      browserLease.release();
     }
   };
 }

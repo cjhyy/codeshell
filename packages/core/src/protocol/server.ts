@@ -109,6 +109,14 @@ function runInputError(params: RunParams): string | null {
   if (params.task.trim().length === 0 && !hasAttachment) {
     return "task or a valid attachment is required";
   }
+  if (
+    params.displayText !== undefined &&
+    (typeof params.displayText !== "string" ||
+      params.displayText.trim().length === 0 ||
+      params.displayText.length > 20_000)
+  ) {
+    return "displayText must be a non-empty string up to 20000 characters";
+  }
   if (params.injected !== undefined && typeof params.injected !== "boolean") {
     return "injected must be a boolean";
   }
@@ -1397,8 +1405,21 @@ export class AgentServer {
     // these host callbacks must be installed after every create/recreate.
     this.wireInteractiveSession(session, sid);
     try {
+      const displayText = typeof params.displayText === "string" ? params.displayText.trim() : "";
+      if (displayText) {
+        const userMessageEvent = {
+          type: "session_user_message",
+          text: displayText,
+          ...(typeof params.clientMessageId === "string"
+            ? { clientMessageId: params.clientMessageId }
+            : {}),
+        } satisfies StreamEvent;
+        this.observeSessionStream(sid, userMessageEvent);
+        this.notify(Methods.StreamEvent, { sessionId: sid, event: userMessageEvent });
+      }
       const run = session.enqueueTurn(params.task, {
         cwd: params.cwd,
+        displayText: displayText || undefined,
         injected: params.injected === true,
         attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
         goal:
@@ -1540,6 +1561,16 @@ export class AgentServer {
     // `signal.aborted` below it's already gone.
     const runController = this.abortController!;
     try {
+      const displayText = typeof params.displayText === "string" ? params.displayText.trim() : "";
+      if (displayText) {
+        streamToClient({
+          type: "session_user_message",
+          text: displayText,
+          ...(typeof params.clientMessageId === "string"
+            ? { clientMessageId: params.clientMessageId }
+            : {}),
+        });
+      }
       this.notify(Methods.RunAccepted, {
         requestId: req.id,
         sessionId: params.sessionId ?? "",
@@ -1547,6 +1578,7 @@ export class AgentServer {
       const result = await this.legacyEngine!.run(params.task, {
         cwd: params.cwd,
         sessionId: params.sessionId,
+        displayText: displayText || undefined,
         injected: params.injected === true,
         signal: runController.signal,
         onStream: streamToClient,

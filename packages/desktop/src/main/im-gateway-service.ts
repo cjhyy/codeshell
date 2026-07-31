@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { IpcMain } from "electron";
@@ -167,8 +167,16 @@ interface ActiveGateway {
   abort: AbortController;
   task: Promise<void>;
   channels: ImGatewayChannel[];
+  adapters: Map<ImGatewayChannel, ChannelAdapter>;
   startedAt: number;
   lease: GatewayInstanceLease;
+}
+
+export interface ImGatewayOwnerTarget {
+  id: string;
+  channel: ImGatewayChannel;
+  label: string;
+  maxTextLength: number;
 }
 
 interface PendingVerification {
@@ -426,6 +434,13 @@ export class ImGatewayService {
         abort,
         task: Promise.resolve(),
         channels: config.channels.map(({ channel }) => channel),
+        adapters: new Map(
+          adapters
+            .filter((adapter): adapter is ChannelAdapter & { channel: ImGatewayChannel } =>
+              isImGatewayChannel(adapter.channel),
+            )
+            .map((adapter) => [adapter.channel, adapter]),
+        ),
         startedAt: Date.now(),
         lease,
       };
@@ -509,6 +524,73 @@ export class ImGatewayService {
     ]);
     this.emitStatus();
     return this.status();
+  }
+
+  /**
+   * Opaque, allowlisted owner destinations exposed to Mimi. Raw platform ids
+   * never cross into the model; sendOwnerMessage resolves the same id again
+   * against the current config before every side effect.
+   */
+  listOwnerMessageTargets(): ImGatewayOwnerTarget[] {
+    if (!this.active) return [];
+    const config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
+    return config.channels.flatMap((channel) => {
+      if (!this.active?.adapters.has(channel.channel)) return [];
+      const capabilities = BUILTIN_CHANNEL_CAPABILITIES[channel.channel];
+      const maxTextLength = Math.min(capabilities.outbound.maxTextLength ?? 8_000, 8_000);
+      return channel.allowedTargetIds.map((target, index) => ({
+        id: ownerTargetId(channel.channel, target),
+        channel: channel.channel,
+        label: `${channelDisplayName(channel.channel)}${channel.allowedTargetIds.length > 1 ? ` ${index + 1}` : ""}`,
+        maxTextLength,
+      }));
+    });
+  }
+
+  async sendOwnerMessage(targetId: string, text: string): Promise<ImGatewayOwnerTarget> {
+    const normalized = text.trim();
+    const targets = this.listOwnerMessageTargets();
+    const selected = targets.find((target) => target.id === targetId);
+    if (!selected) throw new Error("消息目标未授权、已移除或 Gateway 尚未运行");
+    if (!normalized || normalized.length > selected.maxTextLength) {
+      throw new Error(`消息长度必须在 1 到 ${selected.maxTextLength} 个字符之间`);
+    }
+    const config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
+    const channel = config.channels.find((candidate) => candidate.channel === selected.channel);
+    const rawTarget = channel?.allowedTargetIds.find(
+      (candidate) => ownerTargetId(selected.channel, candidate) === selected.id,
+    );
+    const adapter = this.active?.adapters.get(selected.channel);
+    if (!channel || !rawTarget || !adapter) {
+      throw new Error("消息目标在发送前失效，请重新连接 Gateway");
+    }
+    const requestId = randomUUID();
+    try {
+      await adapter.send(rawTarget, { text: normalized });
+      this.recordActivity({
+        id: randomUUID(),
+        requestId,
+        channel: selected.channel,
+        direction: "outbound",
+        status: "sent",
+        target: rawTarget,
+        text: activityPreview(normalized),
+        createdAt: Date.now(),
+      });
+      return selected;
+    } catch (error) {
+      this.recordActivity({
+        id: randomUUID(),
+        requestId,
+        channel: selected.channel,
+        direction: "outbound",
+        status: "failed",
+        target: rawTarget,
+        text: activityPreview(normalized),
+        createdAt: Date.now(),
+      });
+      throw error;
+    }
   }
 
   ensureConfig(): string {
@@ -898,6 +980,33 @@ export function createImGatewayActivityMiddleware(
     };
     await next();
   };
+}
+
+function ownerTargetId(channel: ImGatewayChannel, target: string): string {
+  return `owner-${createHash("sha256")
+    .update(channel)
+    .update("\0")
+    .update(target)
+    .digest("hex")
+    .slice(0, 24)}`;
+}
+
+function channelDisplayName(channel: ImGatewayChannel): string {
+  const labels: Record<ImGatewayChannel, string> = {
+    telegram: "Telegram",
+    discord: "Discord",
+    slack: "Slack",
+    lark: "飞书",
+    dingtalk: "钉钉",
+    wecom: "企业微信",
+    wechat: "微信",
+    matrix: "Matrix",
+    mattermost: "Mattermost",
+    line: "LINE",
+    whatsapp: "WhatsApp",
+    teams: "Teams",
+  };
+  return labels[channel];
 }
 
 function activityPreview(text: string): string {

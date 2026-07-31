@@ -27,6 +27,7 @@
     "test:e2e:digital-humans": "node scripts/e2e-digital-humans.mjs",
     "test:e2e:settings": "node scripts/e2e-settings.mjs",
     "test:e2e:panel-app": "node scripts/e2e-panel-app.mjs",
+    "smoke:background-browser": "esbuild scripts/smoke-background-browser.ts --bundle --platform=node --format=esm --outfile=out/smoke-background-browser.mjs --external:electron --external:@cjhyy/code-shell-core && electron out/smoke-background-browser.mjs",
     "smoke": "node scripts/smoke-panels.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.mobile.json --noEmit",
     "start": "electron .",

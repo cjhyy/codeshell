@@ -21,3 +21,14 @@ export type { BrowserAutomationPolicy } from "./policy.js";
 export { parseBrowserActionLine, buildBrowserActionReply } from "./intercept.js";
 export { activeGuest, registerGuest } from "./active-guest.js";
 export { loadBrowserAutomationPolicy } from "./load-policy.js";
+export {
+  BackgroundBrowserRuntime,
+  backgroundBrowserRuntime,
+  backgroundBrowserPartition,
+} from "./background-runtime.js";
+export type {
+  BackgroundBrowserAcquireOptions,
+  BackgroundBrowserLease,
+  BackgroundBrowserRuntimeLike,
+  BackgroundBrowserRuntimeOptions,
+} from "./background-runtime.js";

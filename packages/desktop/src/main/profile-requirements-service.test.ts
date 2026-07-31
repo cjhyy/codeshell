@@ -63,6 +63,20 @@ describe("installSkillRequirement", () => {
     expect(result).toEqual({ ok: false, error: "network unreachable" });
   });
 
+  test("keeps install failures readable when a CLI returns ANSI or huge logs", async () => {
+    const result = await installSkillRequirement(req(), "/repo", async () => ({
+      ok: false,
+      error: `\u001B[31mstart failure\u001B[0m\n${"noise".repeat(1_000)}\nfinal cause`,
+    }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("start failure");
+    expect(result.error).toContain("final cause");
+    expect(result.error).toContain("已省略中间内容");
+    expect(result.error).not.toContain("\u001B");
+    expect(result.error.length).toBeLessThan(2_500);
+  });
+
   test("rejects a repo that fails the schema guard before spawning anything", async () => {
     let spawned = false;
     const result = await installSkillRequirement(
@@ -104,6 +118,9 @@ describe("formatRequirementPlan", () => {
 
     expect(summary.willRun[0]).toContain("heygen-com/hyperframes");
     expect(summary.willRun[0]).toContain("media-use");
+    expect(summary.willRun[0]).toContain(
+      "npx --yes skills add heygen-com/hyperframes --skill media-use --agent '*' --yes",
+    );
     expect(summary.warnings.join(" ")).toContain("media-use");
     expect(summary.blockers.join(" ")).toContain("ffmpeg");
     expect(summary.blockers.join(" ")).toContain("20.1.0");
@@ -120,5 +137,18 @@ describe("formatRequirementPlan", () => {
     expect(summary.willRun).toEqual([]);
     expect(summary.warnings).toEqual([]);
     expect(summary.blockers).toEqual([]);
+  });
+
+  test("names extension-provided Skill conflicts accurately", () => {
+    const summary = formatRequirementPlan({
+      skillInstalls: [{ requirement: req({ skills: ["media-use"] }), missing: ["media-use"] }],
+      conflicts: [{ name: "media-use", existingSource: "panel-app" }],
+      missingTools: [],
+      needsInstall: true,
+    });
+
+    expect(summary.warnings).toEqual([
+      '"media-use" 已存在于已安装的扩展，安装后将被本次的项目级版本遮蔽',
+    ]);
   });
 });

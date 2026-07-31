@@ -24,6 +24,10 @@ export interface BrowserHostOpenOptions {
   width?: number;
   height?: number;
   title?: string;
+  /** Whether the OS window is shown immediately. Background automation uses false. */
+  show?: boolean;
+  /** Keep timers/rendering active while the window is hidden. */
+  backgroundThrottling?: boolean;
   /** 覆盖 UA(伪装桌面 Chrome 等);省略用默认。 */
   userAgent?: string;
   onFailLoad?: (info: { errorCode: number; errorDescription: string; url: string }) => void;
@@ -38,6 +42,10 @@ export interface BrowserHostHandle {
   getCookies(domain?: string): Promise<ElectronCookieLike[]>;
   /** 关闭窗口(不销毁分区;分区销毁用 destroyPartition)。 */
   close(): void;
+  /** Reveal/hide the same browser target for a human takeover. */
+  show(): void;
+  hide(): void;
+  isVisible(): boolean;
   /** 注册关闭回调。 */
   onClosed(cb: () => void): void;
 }
@@ -51,6 +59,7 @@ export function buildWindowOptions(opts: BrowserHostOpenOptions): {
   width: number;
   height: number;
   title: string;
+  show: boolean;
   autoHideMenuBar: true;
   backgroundColor: string;
   webPreferences: {
@@ -59,12 +68,14 @@ export function buildWindowOptions(opts: BrowserHostOpenOptions): {
     contextIsolation: true;
     sandbox: true;
     webSecurity: true;
+    backgroundThrottling: boolean;
   };
 } {
   return {
     width: opts.width ?? 1000,
     height: opts.height ?? 720,
     title: opts.title ?? "登录",
+    show: opts.show ?? true,
     autoHideMenuBar: true,
     backgroundColor: "#ffffff",
     webPreferences: {
@@ -74,6 +85,7 @@ export function buildWindowOptions(opts: BrowserHostOpenOptions): {
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
+      backgroundThrottling: opts.backgroundThrottling ?? true,
     },
   };
 }
@@ -92,7 +104,9 @@ export async function openBrowserHost(opts: BrowserHostOpenOptions): Promise<Bro
     throw new Error(`BrowserHost: kind '${opts.kind}' not implemented yet (第一步只支持 window)`);
   }
   const { BrowserWindow, session } = await import("electron");
-  const win = new BrowserWindow(buildWindowOptions(opts) as Electron.BrowserWindowConstructorOptions);
+  const win = new BrowserWindow(
+    buildWindowOptions(opts) as Electron.BrowserWindowConstructorOptions,
+  );
 
   // 防外链:非 http(s)/about 的导航拦掉;任何 window.open / target=_blank 一律 deny
   // (登录窗口不需要弹新窗)。
@@ -133,12 +147,19 @@ export async function openBrowserHost(opts: BrowserHostOpenOptions): Promise<Bro
   return {
     webContents: win.webContents,
     loadURL: (url) => win.loadURL(url),
-    executeJavaScript: <T,>(code: string) => win.webContents.executeJavaScript(code) as Promise<T>,
+    executeJavaScript: <T>(code: string) => win.webContents.executeJavaScript(code) as Promise<T>,
     getCookies: async (domain?: string) =>
       (await sess.cookies.get(domain ? { domain } : {})) as ElectronCookieLike[],
     close: () => {
       if (!win.isDestroyed()) win.close();
     },
+    show: () => {
+      if (!win.isDestroyed()) win.show();
+    },
+    hide: () => {
+      if (!win.isDestroyed()) win.hide();
+    },
+    isVisible: () => !win.isDestroyed() && win.isVisible(),
     onClosed: (cb) => win.on("closed", cb),
   };
 }

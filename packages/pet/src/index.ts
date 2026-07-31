@@ -63,6 +63,39 @@ export {
   sessionsAvailability,
 } from "./sessions-tool.js";
 export {
+  CURRENT_TIME_TOOL_NAME,
+  currentTimeToolDef,
+  currentTimeTool,
+  currentTimeAvailability,
+} from "./current-time.js";
+export {
+  MANAGE_SESSIONS_TOOL_NAME,
+  manageSessionsToolDef,
+  manageSessionsTool,
+  manageSessionsAvailability,
+} from "./session-control.js";
+export {
+  TODOS_TOOL_NAME,
+  MANAGE_TODO_TOOL_NAME,
+  PET_TODO_STATUSES,
+  todosToolDef,
+  todosTool,
+  todosAvailability,
+  manageTodoToolDef,
+  manageTodoTool,
+  manageTodoAvailability,
+  type PetTodoStatus,
+  type PetTodoItem,
+} from "./todos.js";
+export {
+  SEND_MESSAGE_TOOL_NAME,
+  sendMessageToolDef,
+  sendMessageTool,
+  sendMessageAvailability,
+  rewriteSendMessageDef,
+  type PetOutboundTargetOption,
+} from "./outbound-message.js";
+export {
   PET_HOST_ACTION_KINDS,
   isPetHostActionKind,
   isPetHostActionRequest,

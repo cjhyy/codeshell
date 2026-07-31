@@ -15,14 +15,7 @@
  * The queueing/resolver logic lives in the pure ./dialogState reducer (unit
  * tested); this file is the thin React + shadcn rendering shell.
  */
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -68,12 +61,9 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const api: DialogApi = {
-    confirm: (options) =>
-      open({ kind: "confirm", options }) as Promise<boolean>,
-    alert: (options) =>
-      open({ kind: "alert", options }).then(() => undefined),
-    prompt: (options) =>
-      open({ kind: "prompt", options }) as Promise<string | null>,
+    confirm: (options) => open({ kind: "confirm", options }) as Promise<boolean>,
+    alert: (options) => open({ kind: "alert", options }).then(() => undefined),
+    prompt: (options) => open({ kind: "prompt", options }) as Promise<string | null>,
   };
 
   const active = state.active;
@@ -94,10 +84,7 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
         />
       )}
       {active?.kind === "prompt" && (
-        <PromptModal
-          options={active.options as PromptDialogOptions}
-          onResult={(v) => close(v)}
-        />
+        <PromptModal options={active.options as PromptDialogOptions} onResult={(v) => close(v)} />
       )}
     </DialogContextRef.Provider>
   );
@@ -112,6 +99,18 @@ function useDialogApi(): DialogApi {
 export function useConfirm(): (opts: ConfirmDialogOptions) => Promise<boolean> {
   return useDialogApi().confirm;
 }
+
+const denyConfirmationWithoutProvider = async (): Promise<boolean> => false;
+
+/**
+ * Root-level shells are also rendered directly by a few isolated tests and
+ * embedders. Keep those render paths safe while failing closed if they ever
+ * try to perform an action that requires confirmation.
+ */
+export function useOptionalConfirm(): (opts: ConfirmDialogOptions) => Promise<boolean> {
+  return useContext(DialogContextRef)?.confirm ?? denyConfirmationWithoutProvider;
+}
+
 export function useAlert(): (opts: AlertDialogOptions) => Promise<void> {
   return useDialogApi().alert;
 }
@@ -137,7 +136,9 @@ function ModalHead({
       <DialogTitle className={title ? undefined : "sr-only"}>{title ?? message}</DialogTitle>
       <DialogDescription className="text-foreground">{message}</DialogDescription>
       {detail && (
-        <p className="text-xs text-muted-foreground">{detail}</p>
+        <p className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2 text-xs leading-5 text-muted-foreground">
+          {detail}
+        </p>
       )}
     </DialogHeader>
   );
@@ -153,7 +154,10 @@ function ConfirmModal({
   const { t } = useT();
   return (
     <Dialog open onOpenChange={(o) => !o && onResult(false)}>
-      <DialogContent className="max-w-sm" onEscapeKeyDown={() => onResult(false)}>
+      <DialogContent
+        className={options.detail?.includes("\n") ? "max-w-2xl" : "max-w-sm"}
+        onEscapeKeyDown={() => onResult(false)}
+      >
         <ModalHead title={options.title} message={options.message} detail={options.detail} />
         <DialogFooter>
           <Button variant="outline" onClick={() => onResult(false)}>
@@ -172,13 +176,7 @@ function ConfirmModal({
   );
 }
 
-function AlertModal({
-  options,
-  onClose,
-}: {
-  options: AlertDialogOptions;
-  onClose: () => void;
-}) {
+function AlertModal({ options, onClose }: { options: AlertDialogOptions; onClose: () => void }) {
   const { t } = useT();
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>

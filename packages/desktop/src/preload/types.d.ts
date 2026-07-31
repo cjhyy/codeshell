@@ -95,6 +95,8 @@ export type {
   PetLongTaskControlRequest,
   PetLongTaskControlResult,
   PetLongTaskSnapshot,
+  PetTodoItem,
+  PetTodoStatus,
   PetMemoryEntry,
   PetJournalEntry,
   PetSegmentMessage,
@@ -1513,6 +1515,7 @@ export interface CodeshellApi {
       mcp: string[];
       agents: string[];
       mainInstruction: string | undefined;
+      requires?: WorkspaceProfile["requires"];
       active: boolean;
       portableMemory: boolean;
       exclusiveCapabilities: boolean;
@@ -1537,6 +1540,7 @@ export interface CodeshellApi {
       mcp: string[];
       agents: string[];
       mainInstruction?: string;
+      requires?: WorkspaceProfile["requires"];
       portableMemory: boolean;
       exclusiveCapabilities: boolean;
       version?: string;
@@ -1611,10 +1615,12 @@ export interface CodeshellApi {
   }>;
   /** Runs `npx skills add` — call only after the user confirmed the preview. */
   installProfileRequirements(name: string, cwd: string): Promise<{ ok: boolean; errors: string[] }>;
-  saveProfile(profile: WorkspaceProfile): Promise<void>;
+  /** Saves the definition and refreshes its active-project capability snapshot. */
+  saveProfile(profile: WorkspaceProfile, cwd?: string): Promise<void>;
   pickProfileDefinitionImport(): Promise<DigitalHumanProfileImportPickResult>;
   importReviewedProfileDefinition(
     input: DigitalHumanProfileImportCommitInput,
+    cwd?: string,
   ): Promise<DigitalHumanProfileImportCommitResult>;
   exportProfileDefinition(name: string): Promise<DigitalHumanProfileExportResult>;
   deleteProfile(
@@ -2347,6 +2353,8 @@ export interface SkillSummary {
   description: string;
   source: "project" | "user" | "plugin" | "panel-app";
   filePath: string;
+  /** Installed and currently available after settings overrides. */
+  enabled: boolean;
 }
 
 export interface FileSearchHit {

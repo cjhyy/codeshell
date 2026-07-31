@@ -39,6 +39,11 @@ import {
   buildPanelActionReply,
 } from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
+import {
+  backgroundBrowserPartition,
+  backgroundBrowserRuntime,
+  type BackgroundBrowserLease,
+} from "./browser-driver/background-runtime.js";
 import { Methods, SessionManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
 import {
   PET_REPORT_TO_MIMI_METHOD,
@@ -103,6 +108,10 @@ export function resolveNoRepoCwd(): string {
     /* best-effort */
   }
   return dir;
+}
+
+function interactiveBackgroundBrowserOwner(sessionId: string): string {
+  return `interactive:${sessionId}`;
 }
 
 export type { QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
@@ -577,6 +586,7 @@ export class AgentBridge implements PetStateBridge {
     if (!parsed) return false;
     void (async () => {
       let resultJson: string;
+      let backgroundLease: BackgroundBrowserLease | undefined;
       try {
         if (!parsed.sessionId) {
           resultJson = JSON.stringify({
@@ -589,8 +599,19 @@ export class AgentBridge implements PetStateBridge {
             detail: `no browser bucket registered for session ${parsed.sessionId}`,
           });
         } else {
+          const activeGuest = activeGuestForSession(parsed.sessionId)?.guest ?? null;
+          if (!activeGuest || activeGuest.isDestroyed()) {
+            const ownerId = interactiveBackgroundBrowserOwner(parsed.sessionId);
+            backgroundLease = backgroundBrowserRuntime.acquire({
+              ownerId,
+              partition:
+                partitionForSession(parsed.sessionId) ?? backgroundBrowserPartition(ownerId),
+              title: "CodeShell 后台浏览器 — 需要你接管",
+            });
+          }
           resultJson = await handleBrowserAction(parsed.request, {
             activeGuest: () => activeGuestForSession(parsed.sessionId)?.guest ?? null,
+            backgroundBridge: backgroundLease?.bridge,
             policy: loadBrowserAutomationPolicy,
             // Sensitive browser page actions are gated by the preset permission
             // rules before they reach here; permissionDefault is only UI metadata.
@@ -605,12 +626,18 @@ export class AgentBridge implements PetStateBridge {
             listTabs: () => listGuestsForSession(parsed.sessionId),
             switchTab: (tabId) => focusGuestForSession(parsed.sessionId, tabId),
           });
+          // No reveal decision here: BackgroundBrowserRuntime calls host.show()
+          // itself at every takeover point (login wall, high-consequence click,
+          // sensitive input), on the same serialized queue as the action. Adding
+          // a second, result-text-derived reveal here would only duplicate it.
         }
       } catch (e) {
         resultJson = JSON.stringify({
           ok: false,
           detail: e instanceof Error ? e.message : String(e),
         });
+      } finally {
+        backgroundLease?.release();
       }
       this.core.sendLine(buildBrowserActionReply(parsed, resultJson));
     })();
@@ -1083,6 +1110,7 @@ export class AgentBridge implements PetStateBridge {
     this.snapshots.forget(sessionId);
     this.sessionCwd.delete(sessionId);
     this.panelHostWindowRoutes.forgetSession(sessionId);
+    backgroundBrowserRuntime.close(interactiveBackgroundBrowserOwner(sessionId));
   }
 
   hasKnownSession(sessionId: string): boolean {

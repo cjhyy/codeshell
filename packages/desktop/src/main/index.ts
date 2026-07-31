@@ -49,6 +49,7 @@ import {
   type InstalledTheme,
   type PanelAppSourceInput,
   type ThemePreview,
+  Transcript,
 } from "@cjhyy/code-shell-core";
 import {
   defaultCacheDir,
@@ -125,6 +126,7 @@ import {
 } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
+import { PetTodoStore } from "./pet/pet-todo-store.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
@@ -139,8 +141,8 @@ import {
   takeOverLinkedSessionFromIpc,
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
-import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
-import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
+import { DEFAULT_SEGMENT_IDLE_MS, type PetTodoStatus } from "@cjhyy/code-shell-pet";
+import { searchSessionTranscripts, sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
 import {
   petChatModelKeyFromSettings,
@@ -161,6 +163,7 @@ import {
   registerAttachedGuestMetadata,
   registerSessionBucket,
 } from "./browser-driver/active-guest.js";
+import { backgroundBrowserRuntime } from "./browser-driver/background-runtime.js";
 import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
@@ -1114,6 +1117,9 @@ async function createWindow(): Promise<BrowserWindow> {
   // webContents is actually torn down (next tick after `closed`).
   win.on("closed", () => {
     mainWindows.delete(win);
+    if (process.platform !== "darwin" && mainWindows.size === 0) {
+      backgroundBrowserRuntime.closeAll();
+    }
     setImmediate(ptyReapDestroyed);
   });
 
@@ -1234,6 +1240,10 @@ async function createWindow(): Promise<BrowserWindow> {
     void petMemoryStoreInstance
       .load()
       .catch((error) => dlog("main", "pet.memory.load.failed", { error: String(error) }));
+    const petTodoStore = new PetTodoStore(resolve(app.getPath("userData"), "pet", "todos.json"));
+    void petTodoStore
+      .load()
+      .catch((error) => dlog("main", "pet.todo.load.failed", { error: String(error) }));
     const petJournalStore = new PetJournalStore(
       resolve(app.getPath("userData"), "pet", "journal.json"),
     );
@@ -1436,6 +1446,67 @@ async function createWindow(): Promise<BrowserWindow> {
           }
           throw new Error("invalid memory action");
         },
+        todoMutation: async (payload) => {
+          const action = payload.action;
+          const todoId = typeof payload.todoId === "string" ? payload.todoId : "";
+          const text = typeof payload.text === "string" ? payload.text : "";
+          if (action === "create") {
+            const item = await petTodoStore.create(text);
+            return { action, todoId: item.id, text: item.text, status: item.status };
+          }
+          if (!todoId) throw new Error("invalid todo mutation request");
+          if (action === "update") {
+            const item = await petTodoStore.update(todoId, text);
+            return { action, todoId: item.id, text: item.text, status: item.status };
+          }
+          const statusByAction: Partial<Record<string, PetTodoStatus>> = {
+            start: "in_progress",
+            block: "blocked",
+            complete: "completed",
+            reopen: "pending",
+            archive: "archived",
+          };
+          const status = statusByAction[String(action)];
+          if (!status) throw new Error("invalid todo mutation request");
+          const item = await petTodoStore.setStatus(todoId, status);
+          return { action, todoId: item.id, text: item.text, status: item.status };
+        },
+        sessionArchive: async (payload) => {
+          if (payload.action !== "archive" || !Array.isArray(payload.sessionIds)) {
+            throw new Error("invalid session archive request");
+          }
+          const selectors = payload.sessionIds.filter(
+            (value): value is string => typeof value === "string",
+          );
+          const { sessions } = await listDiskSessions({ limit: 1_000, includeArchived: true });
+          const bySelector = new Map(
+            sessions
+              .filter((session) => session.origin === "desktop")
+              .map((session) => [sessionSelectorId(session.engineSessionId), session] as const),
+          );
+          const archived: string[] = [];
+          for (const selector of selectors) {
+            const session = bySelector.get(selector);
+            if (!session) throw new Error(`Session 不存在或不允许归档：${selector}`);
+            if (session.archivedAt !== undefined) continue;
+            await archiveDiskSession(session.engineSessionId, Date.now());
+            archived.push(selector);
+          }
+          if (archived.length > 0) await aggregator.refreshCatalog(true, { full: true });
+          return { action: "archive", archived, count: archived.length };
+        },
+        outboundMessage: async (payload) => {
+          const targetId = typeof payload.targetId === "string" ? payload.targetId : "";
+          const text = typeof payload.text === "string" ? payload.text : "";
+          if (!targetId || !text.trim()) throw new Error("invalid outbound message request");
+          const target = await imGatewayService.sendOwnerMessage(targetId, text);
+          return {
+            targetId: target.id,
+            channel: target.channel,
+            label: target.label,
+            delivered: true,
+          };
+        },
         gatewayReply: async (payload) => {
           const text = typeof payload.text === "string" ? payload.text.trim() : "";
           const button = payload.button;
@@ -1496,6 +1567,17 @@ async function createWindow(): Promise<BrowserWindow> {
         };
       },
       listWorkspaces: () => mobileOrchestrator.projectList(),
+      listTodos: async () => {
+        await petTodoStore.load();
+        return petTodoStore.list({ includeArchived: true });
+      },
+      listOutboundTargets: async () =>
+        imGatewayService.listOwnerMessageTargets().map((target) => ({
+          id: target.id,
+          channel: target.channel,
+          label: target.label,
+          maxTextLength: target.maxTextLength,
+        })),
       replyAttachmentRoots: knownReplyAttachmentCwds,
       // Second-chance lookup for a DelegateWork selector Mimi found via the
       // read-only Sessions tool: same opaque selector convention, resolved
@@ -1607,7 +1689,12 @@ async function createWindow(): Promise<BrowserWindow> {
     const petInitialization = (async () => {
       await aggregator.start();
       await externalVisibility.reconcile();
-      await Promise.all([petReceipts.load(), petWorkInbox.load(), petWorkMemory.load()]);
+      await Promise.all([
+        petReceipts.load(),
+        petWorkInbox.load(),
+        petWorkMemory.load(),
+        petTodoStore.load(),
+      ]);
       // Build the topic-segment controller now that the pet session id is
       // resolved. Range archival rides the generic archive_range worker query;
       // dispatch currently passes no turnRange, so it stays dormant.
@@ -1810,6 +1897,56 @@ async function createWindow(): Promise<BrowserWindow> {
         setAutoExtract: async (enabled) => {
           await writeSettings("user", petMemoryAutoExtractSettingsPatch(enabled));
           return enabled;
+        },
+      },
+      todos: {
+        list: async () => {
+          await petTodoStore.load();
+          return petTodoStore.list();
+        },
+        create: (text) => petTodoStore.create(text),
+        update: (id, text) => petTodoStore.update(id, text),
+        setStatus: (id, status) => petTodoStore.setStatus(id, status),
+        subscribe: (listener) => petTodoStore.subscribe(listener),
+      },
+      sessionArchive: {
+        archive: async (sessionId) => {
+          const { sessions } = await listDiskSessions({ limit: 1_000, includeArchived: true });
+          const session = sessions.find(
+            (candidate) =>
+              candidate.engineSessionId === sessionId && candidate.origin === "desktop",
+          );
+          if (!session) throw new Error("Session 不存在或不允许归档");
+          if (session.archivedAt === undefined) {
+            await archiveDiskSession(session.engineSessionId, Date.now());
+            await aggregator.refreshCatalog(true, { full: true });
+          }
+          return { ok: true };
+        },
+      },
+      hostActionReceipt: {
+        record: async ({ petSessionId, clientMessageId, executions }) => {
+          const receipt = await enrichPetChatReplyWithHostActions("", executions, {
+            qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+            attachmentKinds: [],
+          });
+          const text = receipt.text.trim();
+          if (!text) return null;
+          try {
+            const transcript = new Transcript(
+              join(petSessionsRootDir, petSessionId, "transcript.jsonl"),
+            );
+            transcript.appendMessage("assistant", text, {
+              clientMessageId: `pet-host-action-${clientMessageId}`,
+            });
+          } catch (error) {
+            dlog("main", "pet.hostActionReceipt.persist.failed", {
+              petSessionId,
+              clientMessageId,
+              error: String(error),
+            });
+          }
+          return text;
         },
       },
       windows: () => BrowserWindow.getAllWindows(),
@@ -2655,11 +2792,17 @@ ipcMain.handle("profiles:installRequirements", async (_e, name: string, cwd: str
   }
   return installProfileRequirements(name, cwd);
 });
-ipcMain.handle("profiles:save", async (_e, profile: unknown) => {
+ipcMain.handle("profiles:save", async (_e, profile: unknown, cwd?: unknown) => {
   if (typeof profile !== "object" || profile === null || Array.isArray(profile)) {
     throw new Error("profiles:save requires profile");
   }
-  saveProfile(profile as Parameters<typeof saveProfile>[0]);
+  if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
+    throw new Error("profiles:save cwd must be a non-empty string");
+  }
+  saveProfile(
+    profile as Parameters<typeof saveProfile>[0],
+    cwd as Parameters<typeof saveProfile>[1],
+  );
 });
 ipcMain.handle("profiles:pickDefinitionImport", async (event) => {
   const options: OpenDialogOptions = {
@@ -2675,7 +2818,7 @@ ipcMain.handle("profiles:pickDefinitionImport", async (event) => {
   if (result.canceled || !filePath) return { canceled: true };
   return { canceled: false, preview: previewProfileDefinitionImport(filePath) };
 });
-ipcMain.handle("profiles:importReviewedDefinition", async (_e, input: unknown) => {
+ipcMain.handle("profiles:importReviewedDefinition", async (_e, input: unknown, cwd?: unknown) => {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     throw new Error("profiles:importReviewedDefinition requires input");
   }
@@ -2686,10 +2829,16 @@ ipcMain.handle("profiles:importReviewedDefinition", async (_e, input: unknown) =
   if (candidate.overwrite !== undefined && typeof candidate.overwrite !== "boolean") {
     throw new Error("profiles:importReviewedDefinition overwrite must be a boolean");
   }
-  return importReviewedProfileDefinition({
-    reviewToken: candidate.reviewToken,
-    ...(candidate.overwrite === undefined ? {} : { overwrite: candidate.overwrite }),
-  });
+  if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
+    throw new Error("profiles:importReviewedDefinition cwd must be a non-empty string");
+  }
+  return importReviewedProfileDefinition(
+    {
+      reviewToken: candidate.reviewToken,
+      ...(candidate.overwrite === undefined ? {} : { overwrite: candidate.overwrite }),
+    },
+    cwd as string | undefined,
+  );
 });
 ipcMain.handle("profiles:exportDefinition", async (event, name: string) => {
   if (typeof name !== "string" || !WORKSPACE_PROFILE_NAME_RE.test(name)) {
@@ -5070,6 +5219,7 @@ app.on("before-quit", (event) => {
   if (quitCleanupDone) return;
   event.preventDefault();
   if (quitCleanupPromise) return;
+  backgroundBrowserRuntime.closeAll();
   bridge?.kill();
   petStateAggregator?.stop();
   petStateAggregator = null;

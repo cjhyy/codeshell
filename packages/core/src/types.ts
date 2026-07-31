@@ -567,7 +567,7 @@ export type StreamEvent =
   // A host queued an ordinary user turn in this Session (for example through
   // SendMessageToSession). Engine persists the same text as a normal user
   // message; this event lets live clients render the bubble immediately.
-  | { type: "session_user_message"; text: string }
+  | { type: "session_user_message"; text: string; clientMessageId?: string }
   // Emitted once, fire-and-forget, after the FIRST turn of a session
   // completes: an LLM-generated one-line title for the sidebar. Best-effort
   // — absent on failure / when aux model unavailable.
