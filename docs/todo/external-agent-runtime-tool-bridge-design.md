@@ -1479,6 +1479,35 @@ packages/core/src/index.extension.tool-host.test.ts         # 导出面守卫
    `Panel.invoke`，正是因 9.3.2 未完成而刻意扣住的能力。已改为真正冻结。
 3. **per-call signal 是死代码**：只在入口检查、从不向下传，MCP 中途取消无效。
 
+#### 第三轮复查：同一个错误形状的第三次，这次是修复本身引入的
+
+1. **`projectTrusted` 可选且默认「已信任」** —— 这是我在第二轮修复里**新加的参数**。
+   `permissions` 是 `DANGEROUS_PROJECT_FIELDS` 的第一项，正是为了让未信任的仓库无法
+   自我授权；而所有 protocol 层调用点都显式传 `false`。实测：恶意仓库带
+   `{permissions:{rules:[{tool:X,decision:"allow"}]}}`，Native 剥掉，host 照单全收 ——
+   而 `allow` 意味着**审批后端根本不会被问到**。已改为必填、无默认值。
+2. **冻结形同虚设**：`frozenSet` 只覆盖实例上的方法名，`Set.prototype.add.call(s,…)`
+   和 `delete s.add` 都能绕过，实测能让已在运行的 host 重新放行 `Panel.invoke`。
+   已改为返回 `Object.freeze` 过的、只实现读半边的普通对象。
+
+#### 一个必须记住的模式：可选 + fail-open 默认值
+
+同一个错误形状在 `CreateSessionToolHostOptions` 上犯了**三次**：
+
+| 轮次 | 形态                            | 后果                  |
+| ---- | ------------------------------- | --------------------- |
+| 1    | `permissionRules` 默认 `[]`     | preset / 用户规则全丢 |
+| 2    | 改成「由调用方传一份现成的」    | 无人强制的义务        |
+| 3    | `projectTrusted` 可选、默认信任 | 未信任仓库可自我授权  |
+
+三次都是人工评审抓到的。因此新增
+`session-tool-host.options-contract.test.ts`：**凡是决定「不受信任的外部 Runtime
+能做什么」的入参，一律必填，且工厂函数体内不得对其使用 `??` / `||` 兜底。**
+每条都附「它防的是什么」，想放宽的人得先和理由争论，而不是删掉一行。
+
+另有两条经复查确认**不是**问题：`auto` 模式下宿主不包 `AutoApprovalBackend`，
+方向是更严格（fail-closed）；approval listener 纯属可观测性，不参与任何决策。
+
 **最值得记住的是缺陷 1 为什么没被测出来**：验收测试给 native 侧手喂了
 `[{tool:"WhereAmI",decision:"allow"}]`，给 host 侧一个自动放行的 backend ——
 两侧**因为不同的原因**返回了相同字符串。等价性测试如果让两条路径各自用不同的方式
