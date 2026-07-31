@@ -57,3 +57,9 @@ export type {
   ClaudeTurnHandle,
 } from "./claude-code/runtime.js";
 export type { CodexEventTranslatorOptions } from "./codex/event-translator.js";
+export { startExternalRuntimeSession } from "./session-factory.js";
+export type {
+  ExternalRuntimeKind,
+  ExternalRuntimeSession,
+  ExternalRuntimeSessionOptions,
+} from "./session-factory.js";

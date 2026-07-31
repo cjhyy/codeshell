@@ -29,6 +29,26 @@ export const FEATURE_FLAGS = {
   undo: { default: false, description: "Per-session file undo (/undo)" },
   /** Shell snapshot: capture full stdout/stderr of commands. */
   shell_snapshot: { default: false, description: "Capture full command stdout/stderr snapshots" },
+  /**
+   * Run a session on an EXTERNAL Agent Runtime (Codex / Claude Code) instead of
+   * the native Engine. Default off per §20: the native path must not depend on an
+   * external binary being installed or logged in, and the fallback has to stay
+   * one setting away.
+   */
+  external_agent_runtime: {
+    default: false,
+    description: "Allow a session to run on Codex or Claude Code instead of the native engine",
+  },
+  /**
+   * Expose CodeShell Host Tools to an external runtime. Separate from the flag
+   * above so the runtime can be trialled with NO tool surface at all — §20 asks
+   * for exactly that split, because the tool bridge is the part that carries the
+   * security burden.
+   */
+  external_host_tools: {
+    default: false,
+    description: "Expose allowlisted CodeShell tools to an external Agent Runtime",
+  },
 } as const;
 
 export type FeatureFlagName = keyof typeof FEATURE_FLAGS;

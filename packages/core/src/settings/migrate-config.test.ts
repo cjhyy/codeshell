@@ -148,7 +148,12 @@ describe("v1→v2: clear mis-written sandbox auto default", () => {
       [CONFIG_VERSION_KEY]: 1,
       sandbox: { mode: "auto", network: "deny", writableRoots: [], deniedReads: [] },
     });
-    expect(r.config.sandbox).toEqual({ mode: "auto", network: "deny", writableRoots: [], deniedReads: [] });
+    expect(r.config.sandbox).toEqual({
+      mode: "auto",
+      network: "deny",
+      writableRoots: [],
+      deniedReads: [],
+    });
   });
 
   it("keeps a user-configured sandbox (explicit mode like seatbelt)", () => {

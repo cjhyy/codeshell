@@ -34,9 +34,24 @@ describe("feature flags", () => {
   });
 
   test("featureFlagNames lists every known flag", () => {
-    expect([...featureFlagNames()].sort()).toEqual(
-      ["fast_mode", "shell_snapshot", "shell_tool", "undo", "web_search"],
-    );
+    expect([...featureFlagNames()].sort()).toEqual([
+      "external_agent_runtime",
+      "external_host_tools",
+      "fast_mode",
+      "shell_snapshot",
+      "shell_tool",
+      "undo",
+      "web_search",
+    ]);
+  });
+
+  test("both external-runtime flags default OFF", () => {
+    // §20: the native path must not depend on an external binary, and the
+    // fallback stays one setting away. A default-on flag here would make an
+    // experimental backend the shipping default.
+    const resolved = resolveFeatureFlags({});
+    expect(resolved.external_agent_runtime).toBe(false);
+    expect(resolved.external_host_tools).toBe(false);
   });
 
   test("resolveFeatureFlags merges defaults with overrides for every flag", () => {
