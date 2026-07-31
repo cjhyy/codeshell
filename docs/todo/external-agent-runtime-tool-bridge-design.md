@@ -8,7 +8,9 @@
 
 ## 0.0 交付状态(可合并 main)
 
-**Codex 与 Claude Code 都已接通为可选的会话后端**,从设计稿到 Desktop 接线全线打通。
+**Codex 与 Claude Code 都已可作为会话后端跑通,并用真实二进制验证过。**
+但要说清楚:**库和服务已就绪,产品接线未完成** —— 从 Desktop UI 目前还到不了这个功能。
+本节末尾逐条列出差什么。
 
 | 项                                            | 状态                                       |
 | --------------------------------------------- | ------------------------------------------ |
@@ -19,7 +21,8 @@
 | Phase 3 `CodexRuntime`(app-server client)     | ✅ 真机                                    |
 | Phase 3 `ClaudeCodeRuntime`(stream-json)      | ✅ 真机                                    |
 | Phase 4 组合根 `startExternalRuntimeSession`  | ✅ 真机                                    |
-| Phase 4 Desktop 接线 `ExternalRuntimeService` | ✅                                         |
+| Phase 4 Desktop 服务 `ExternalRuntimeService` | ⚠️ 已实现+测试,**无人实例化**              |
+| Phase 4 产品接线(IPC + preload + UI)          | ❌ 未做 —— 用户当前不可达                  |
 | `Panel.invoke` 解禁                           | ⏸ 技术阻塞已解除,待逐个 Panel App 风险评审 |
 
 ```text
@@ -32,9 +35,13 @@ packages/desktop/src/main/
   external-runtime-service.ts   Desktop 接线(owner claim + trust + flags)
 ```
 
-验证:全仓 **8025 passed**;core + desktop typecheck 干净;build 干净;0 lint error;
-与 main 零冲突。唯一 1 个 fail 是 `login-shell-path.test.ts` 在全量并行下的 3 秒
-shell 探测 flake —— 单独跑 12/12 连过三次,不在本次改动文件内。
+验证:全仓 `bun test` 通过(约 8000 个);core + desktop typecheck 干净;build 干净;
+0 lint error;与 main 零冲突。
+
+两个已知的**既有** flake,都不在本次改动的文件内,单独跑都能连过:
+`login-shell-path.test.ts`(全量并行下 3 秒 shell 探测超时)、
+`worktree.test.ts`(并行下 git index.lock 争用)。判断办法是单独跑那个文件 ——
+如果只在全量并行时红,就是这两个已知项,不是本次改动。
 
 四个真机端到端脚本在 `docs/todo/evidence/`,其中
 `e2e-session-factory.mjs` 一次调用产品入口跑通**两个真实二进制**:
@@ -53,20 +60,52 @@ claude-code  PASS  exactlyOneTerminal ✓ reachedPanelBridge ✓ invokeLeaked �
 
 ### 关于 `Panel.invoke`:阻塞理由变了,必须说清
 
-原记录说它在等 §9.3.2 的显式 owner claim。**那个 claim 现在已存在且已接线**
-(`ExternalRuntimeService` 在 runtime 启动前 claim),所以技术阻塞解除了。
+原记录说它在等 §9.3.2 的显式 owner claim。**那个 claim 现在已实现**
+(`ExternalRuntimeService.start()` 在 runtime 启动前 claim,有测试锁顺序),
+所以技术阻塞解除了 —— 注意是「代码已写」,产品接线仍未完成(见下)。
 
 它仍不开放是**另一个**理由:`invoke` 会用模型给的参数运行第三方 Panel App 代码,
 而 `argsPatterns` 约束不了嵌套 payload(见 8.2 的作用域说明)。这是一个**策略决定**,
 不是接线问题,应该由评审第一个被信任的 Panel App 的人来做。
 
-### 仍未做
+### 仍未做 —— 合并后还不能用
 
-- **UI**:runtime selector 还没进设置界面 —— 目前只能通过 feature flag + 服务 API 使用。
-- **Room / DriveAgent 复用**:Phase 4 原本还包括让它们复用同一 Runtime Factory,
-  尚未做;现有 CLI adapter 未动,回退路径完整。
-- **会话持久化**:`runtimeKind` / runtime session id 尚未落盘,进程重启后不能 resume
-  (第 24 节的 ADR 1 就是为此)。
+必须先纠正一句容易误导的说法:「Desktop 接线完成」是不准确的。
+`ExternalRuntimeService` 已实现、有 11 个测试(含 5 处安全决策的变异验证),
+但**没有任何地方 `new` 它**,`packages/desktop/src/preload/index.ts` 里也没有 IPC 通道。
+从用户视角这个功能不可达。
+
+这正是本方案反复踩到的那个形状:**没有生产调用方的代码,就是没人被迫写对过的代码。**
+`createSessionToolHost` 当初就是这样溜进一条真实安全缺陷的(未信任仓库可经 settings
+自我授权,见 §7.4 的记录),而 `ExternalRuntimeService` 现在处在一模一样的位置 ——
+下一步接线时它的输入解析要重点验,不要因为「有测试」就假定已经对。
+
+**必须做,否则用不上:**
+
+1. 在 `packages/desktop/src/main/index.ts` 实例化 service,`claimPanelOwner` 绑到
+   `AgentBridge.claimSessionPanelOwner`,并在 `app.before-quit` 调 `stopAll()` ——
+   每个会话持有一个子进程和一个监听端口,在 Windows 上都不随父进程死。
+2. IPC 通道 + preload 暴露 `window.codeshell.externalRuntime.*`(renderer 不 import
+   core,只能走 preload —— 见 `packages/desktop/CLAUDE.md`)。
+3. 最小 UI:选择 runtime、显示当前后端。
+
+**该做,否则体验残缺:**
+
+4. **审批接线** —— 目前未提供 `onNativeApproval` 时 native tool 审批默认 `decline`。
+   安全方向正确,但用户看到的是「Codex 什么都干不了」而不是一个审批弹窗。
+5. **会话持久化**:`runtimeKind` / runtime session id 尚未落盘,进程重启后不能 resume
+   (第 24 节 ADR 1 就是为此)。
+
+**可选:** Room / DriveAgent 复用同一 Runtime Factory;现有 CLI adapter 未动,
+回退路径完整。
+
+### 为什么这样也可以先合
+
+- 两个 flag **默认全关**,且有测试断言默认值;
+- 没有任何现有代码路径调用新模块,Native Engine 行为不变;
+- 全仓测试通过、与 main 零冲突;
+- 剩下的 1–3 要动 `index.ts` 和 renderer,review 面(UI/IPC)与本次(协议/安全边界)
+  不同,混在一个 PR 里更难审。
 
 ## 0. v2 修订说明
 
