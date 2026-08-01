@@ -8,6 +8,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { resolveMemoryBaseDir } from "../session/memory.js";
+import { mutateJsonFile } from "../utils/file-mutex.js";
 
 export interface AutoDreamConfig {
   /** Minimum sessions between dream runs */
@@ -53,6 +54,32 @@ function saveState(state: DreamState): void {
 }
 
 /**
+ * Read-modify-write the cadence state under a cross-process lock.
+ *
+ * The reload happens inside the lock, so a writer that lost the race still sees
+ * the winner's value and applies its own change on top instead of overwriting it.
+ */
+function mutateState(change: (current: DreamState) => DreamState): void {
+  mkdirSync(resolveMemoryBaseDir(), { recursive: true });
+  mutateJsonFile<DreamState>(getStateFile(), {
+    parse: (raw) => {
+      if (raw === undefined) return { lastDreamAt: null, sessionsSinceLastDream: 0 };
+      try {
+        const parsed = JSON.parse(raw) as Partial<DreamState>;
+        return {
+          lastDreamAt: parsed.lastDreamAt ?? null,
+          sessionsSinceLastDream: Number(parsed.sessionsSinceLastDream) || 0,
+        };
+      } catch {
+        return { lastDreamAt: null, sessionsSinceLastDream: 0 };
+      }
+    },
+    serialize: (state) => JSON.stringify(state, null, 2),
+    mutation: (current) => ({ value: change(current) }),
+  });
+}
+
+/**
  * Check if auto-dream should run.
  */
 export function shouldAutoDream(config: AutoDreamConfig = DEFAULT_CONFIG): boolean {
@@ -75,20 +102,42 @@ export function shouldAutoDream(config: AutoDreamConfig = DEFAULT_CONFIG): boole
 /**
  * Record that a session was completed (increment counter).
  */
+/**
+ * Sessions counted since the last consolidation.
+ *
+ * Callers snapshot this BEFORE starting an async dream run and pass it back to
+ * `recordDreamComplete`, so sessions finishing mid-run are not swallowed.
+ */
+export function sessionsSinceLastDream(): number {
+  return loadState().sessionsSinceLastDream;
+}
+
 export function recordSession(): void {
-  const state = loadState();
-  state.sessionsSinceLastDream++;
-  saveState(state);
+  // Cross-process increment. Desktop worker, Desktop main/automation, TUI and a
+  // standalone agent server can share one CODE_SHELL_HOME, so this was a real
+  // multi-writer path: an unlocked read → +1 → write dropped nearly everything
+  // (48 concurrent processes recorded 1–2 increments). The cadence then never
+  // reached its threshold and auto-consolidation silently stopped happening.
+  mutateState((state) => ({
+    ...state,
+    sessionsSinceLastDream: state.sessionsSinceLastDream + 1,
+  }));
 }
 
 /**
  * Record that a dream run completed.
+ *
+ * `consumed` is how many sessions the finished run accounted for — captured
+ * BEFORE it started. Subtracting it (instead of zeroing) preserves sessions that
+ * completed while the run was in flight: `runDream()` is async, so blindly
+ * resetting to 0 threw away increments that belonged to the next cycle.
  */
-export function recordDreamComplete(): void {
-  const state = loadState();
-  state.lastDreamAt = new Date().toISOString();
-  state.sessionsSinceLastDream = 0;
-  saveState(state);
+export function recordDreamComplete(consumed?: number): void {
+  mutateState((state) => ({
+    lastDreamAt: new Date().toISOString(),
+    sessionsSinceLastDream:
+      consumed === undefined ? 0 : Math.max(0, state.sessionsSinceLastDream - consumed),
+  }));
 }
 
 /**

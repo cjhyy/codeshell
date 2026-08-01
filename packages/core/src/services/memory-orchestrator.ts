@@ -32,6 +32,7 @@ import {
   shouldAutoDream,
   recordSession,
   recordDreamComplete,
+  sessionsSinceLastDream,
   buildDreamSystemPrompt,
   buildDreamUserPrompt,
 } from "./auto-dream.js";
@@ -358,13 +359,17 @@ export class MemoryOrchestrator {
           ? new MemoryManager({ scope: "dream" }).loadScope("dream")
           : [];
         if (userMems.length + dreamMems.length + globalDreamMems.length > 0) {
+          // Snapshot the cadence counter BEFORE the (async) run so sessions that
+          // finish while it is in flight are carried into the next cycle rather
+          // than being zeroed away on completion.
+          const consumed = sessionsSinceLastDream();
           const ran = await this.options.runDream({
             systemPrompt: buildDreamSystemPrompt(),
             userPrompt: buildDreamUserPrompt(userMems, dreamMems, globalDreamMems),
             projectDir: this.options.projectDir,
           });
           if (ran) {
-            recordDreamComplete();
+            recordDreamComplete(consumed);
             dreamTriggered = true;
             logger.info("memory.auto_dream_done", {
               sessionId,
