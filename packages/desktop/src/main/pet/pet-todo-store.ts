@@ -97,16 +97,7 @@ export class PetTodoStore {
 
   create(text: string): Promise<PetTodoItem> {
     return this.mutate((entries) => {
-      // Count only ACTIVE items: archiving must actually free capacity.
-      let active = 0;
-      for (const entry of entries.values()) {
-        if (entry.status !== "archived") active += 1;
-      }
-      if (active >= MAX_ACTIVE_TODO_ENTRIES) {
-        throw new Error(
-          `待办列表已满（${MAX_ACTIVE_TODO_ENTRIES} 条未归档），请先归档或删除一些待办`,
-        );
-      }
+      assertActiveCapacity(entries);
       const at = nextMutationTime(entries, this.now());
       const item: PetTodoItem = {
         id: `todo-${randomUUID()}`,
@@ -139,6 +130,14 @@ export class PetTodoStore {
     }
     return this.mutate((entries) => {
       const current = requiredTodo(entries, id);
+      // Un-archiving ADDS an active item, so it must pass the same capacity
+      // check as create(). Without this, archived → pending was a back door
+      // past the active cap (500 active + 1 archived → un-archive → 501).
+      // Only this direction is checked: active → active is a no-op for the
+      // count, and anything → archived only frees capacity.
+      if (current.status === "archived" && status !== "archived") {
+        assertActiveCapacity(entries);
+      }
       const item = {
         ...current,
         status,
@@ -250,6 +249,21 @@ function pruneArchivedHistory(entries: Map<string, PetTodoItem>, limit: number):
   );
   for (const entry of archived.slice(0, archived.length - limit)) {
     entries.delete(entry.id);
+  }
+}
+
+/**
+ * Guard the ACTIVE (non-archived) capacity. Shared by every path that can add
+ * an active item — creating one, or restoring one out of the archive — so the
+ * cap cannot be bypassed by taking a different route to the same end state.
+ */
+function assertActiveCapacity(entries: ReadonlyMap<string, PetTodoItem>): void {
+  let active = 0;
+  for (const entry of entries.values()) {
+    if (entry.status !== "archived") active += 1;
+  }
+  if (active >= MAX_ACTIVE_TODO_ENTRIES) {
+    throw new Error(`待办列表已满（${MAX_ACTIVE_TODO_ENTRIES} 条未归档），请先归档或删除一些待办`);
   }
 }
 

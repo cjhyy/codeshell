@@ -48,11 +48,31 @@ function sleepSync(ms: number): void {
 export function acquireFileLock(file: string): () => void {
   const dir = dirname(file);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const deadline = Date.now() + LOCK_WAIT_MS;
+  return acquireLockOn(dir, LOCK_WAIT_MS);
+}
+
+/**
+ * Lock one specific path rather than its whole directory.
+ *
+ * Use when several independent resources live side by side and must NOT
+ * serialize against each other — e.g. per-repo clone dirs, where locking the
+ * shared parent would make unrelated installs queue behind one another (and
+ * would deadlock against any directory-scoped lock taken inside).
+ *
+ * `target` must already exist; proper-lockfile creates a sibling `<target>.lock`.
+ * `timeoutMs` can exceed the default when the critical section legitimately
+ * takes a while (network clone + directory swap).
+ */
+export function acquireLockOnPath(target: string, timeoutMs = LOCK_WAIT_MS): () => void {
+  return acquireLockOn(target, timeoutMs);
+}
+
+function acquireLockOn(target: string, timeoutMs: number): () => void {
+  const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
   for (;;) {
     try {
-      return lockSync(dir, { stale: LOCK_STALE_MS, retries: 0 });
+      return lockSync(target, { stale: LOCK_STALE_MS, retries: 0 });
     } catch (err) {
       lastError = err;
       if (Date.now() > deadline) throw lastError;

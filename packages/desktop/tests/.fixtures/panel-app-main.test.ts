@@ -918,6 +918,89 @@ describe("PanelAppBridge", () => {
     expect(workerParams?.task).toBe("do the thing");
   });
 
+  test("agent.submitPrompt rejects a second submit while the first is in flight", async () => {
+    // context.busy is pushed from the renderer, so it lags. Once submitPrompt
+    // started returning as soon as the worker accepts, two rapid calls both saw
+    // busy === false and both started a run. A binding-level in-flight
+    // reservation has to close that window.
+    let runsStarted = 0;
+    const neverSettles = new Promise<never>(() => undefined);
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () =>
+        ({
+          requestWorker: async () => {
+            runsStarted += 1;
+            return neverSettles;
+          },
+          ingestExternalEvent: () => undefined,
+        }) as any,
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(25);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(25);
+    const submit = () =>
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        "agent.submitPrompt",
+        { prompt: "go" },
+      ) as Promise<unknown>;
+
+    const first = (await submit()) as { accepted: boolean };
+    expect(first.accepted).toBe(true);
+    await expect(submit()).rejects.toThrow(/busy/);
+    expect(runsStarted).toBe(1);
+  });
+
+  test("agent.submitPrompt frees its in-flight slot after the worker fails", async () => {
+    // The reservation must be released on the failure path too, or one dropped
+    // request would wedge the panel into a permanent "session is busy".
+    let runsStarted = 0;
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () =>
+        ({
+          requestWorker: async () => {
+            runsStarted += 1;
+            return { ok: false, message: "worker exited" };
+          },
+          ingestExternalEvent: () => undefined,
+        }) as any,
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(26);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(26);
+    const submit = () =>
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        "agent.submitPrompt",
+        { prompt: "go" },
+      ) as Promise<unknown>;
+
+    await submit();
+    // Let the fire-and-forget continuation settle and release the slot.
+    await new Promise((r) => setTimeout(r, 10));
+    const second = (await submit()) as { accepted: boolean };
+    expect(second.accepted).toBe(true);
+    expect(runsStarted).toBe(2);
+  });
+
   test("agent.submitPrompt reports a background worker failure into the session", async () => {
     // Because the Host call already returned, a later worker failure has only one
     // way to reach the user: an error event injected into the owning session.

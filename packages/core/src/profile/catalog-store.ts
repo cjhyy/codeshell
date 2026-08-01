@@ -8,11 +8,19 @@
  *   ~/.code-shell/human-repos.json        —— 注册表（owner/repo 列表）
  *   ~/.code-shell/human-repos/<key>/      —— 各仓库的浅克隆
  */
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { randomUUID } from "node:crypto";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { codeShellHome } from "../session/session-manager.js";
-import { mutateJsonFile } from "../utils/file-mutex.js";
+import { acquireLockOnPath, mutateJsonFile } from "../utils/file-mutex.js";
 // gitFetchAndReset is deliberately NOT used any more: updating in place is what
 // destroyed the last-known-good tree on a bad upstream commit. Updates clone to
 // a staging dir and swap (see addHumanRepo).
@@ -82,6 +90,35 @@ function parseRegistry(raw: string | undefined): RegisteredHumanRepo[] {
 }
 
 /**
+ * Serialize add/update/remove of ONE repo across processes.
+ *
+ * Distinct from the registry lock inside `updateRegistry`: that one only guards
+ * the JSON file, and is held for a moment. This one spans the whole mutation —
+ * capacity check, directory swap, registry write — so two processes cannot both
+ * decide the repo is absent and clone into the same path, and cannot both slip
+ * past MAX_REPOS. Keyed per repo, so unrelated repos still install in parallel.
+ *
+ * The lock file lives next to the clones and is never the clone dir itself
+ * (proper-lockfile creates `<path>.lock`, which must not collide with a tree we
+ * rename over).
+ */
+function withHumanRepoLock<T>(repo: string, run: () => T): T {
+  const root = humanReposRoot();
+  mkdirSync(root, { recursive: true });
+  const lockTarget = join(root, `.${sourceToRepoKey(repo)}.repo-lock`);
+  if (!existsSync(lockTarget)) writeFileSync(lockTarget, "", { mode: 0o600 });
+  // Lock the marker FILE, not humanReposRoot(): a directory lock would serialize
+  // unrelated repos and deadlock against the registry lock taken below.
+  // 30s covers a swap that waits behind another process's publish step.
+  const release = acquireLockOnPath(lockTarget, 30_000);
+  try {
+    return run();
+  } finally {
+    release();
+  }
+}
+
+/**
  * Read-modify-write the registry under a cross-process lock.
  *
  * add/remove used to be `listHumanRepos()` in the caller followed by a bare
@@ -113,109 +150,143 @@ export async function addHumanRepo(
   if (!CATALOG_REPO_RE.test(repo)) {
     return { ok: false, error: `"${repo}" 不是合法的仓库地址（应为 owner/repo）` };
   }
-  const existing = listHumanRepos();
-  if (existing.length >= MAX_REPOS && !existing.some((r) => r.repo === repo)) {
-    return { ok: false, error: `最多只能添加 ${MAX_REPOS} 个数字人仓库` };
-  }
-
   const dir = humanRepoDir(repo);
   mkdirSync(humanReposRoot(), { recursive: true });
-  const isUpdate = existsSync(dir);
 
-  if (isUpdate) {
-    // UPDATE PATH — validate in a staging clone, then swap.
-    //
-    // This used to `gitFetchAndReset(dir)` in place and validate afterwards. If
-    // the new upstream commit invalidated every definition, the code then
-    // `rmSync`ed the clone and returned early WITHOUT touching the registry —
-    // so the repo stayed registered, its working copy was gone ("尚未克隆" in
-    // the UI), and the previously-good version was unrecoverable. A failed
-    // update must leave the last known good tree exactly as it was.
-    const staging = `${dir}.staging-${process.pid}-${randomUUID()}`;
-    try {
-      const cloned = await gitClone(githubRepoToCloneUrl(repo), staging, { full: true });
-      if (!cloned.ok) {
-        return { ok: false, error: explainGitFailure(cloned.error, repo) };
-      }
-      const staged = readCatalogFromDir(staging, repo);
-      if (staged.entries.length === 0 && staged.errors.length > 0) {
-        // Keep serving the old tree and report why the update was rejected.
-        return {
-          ok: false,
-          error: `更新 ${repo} 失败，已保留上一个可用版本：${staged.errors[0]}`,
-        };
-      }
+  // Clone into a private staging dir FIRST, outside the lock — this is the slow
+  // network step and must not hold the lock for the duration. Both the add and
+  // the update path stage: cloning straight into `dir` let two processes race
+  // into the same path, and the loser's `rmSync(dir)` then deleted the winner's
+  // perfectly good clone.
+  const staging = `${dir}.staging-${process.pid}-${randomUUID()}`;
+  try {
+    const cloned = await gitClone(githubRepoToCloneUrl(repo), staging, { full: true });
+    if (!cloned.ok) {
+      // Only ever removes OUR staging dir (finally below); `dir` is untouched.
+      return { ok: false, error: explainGitFailure(cloned.error, repo) };
+    }
+    const staged = readCatalogFromDir(staging, repo);
+    if (staged.entries.length === 0 && staged.errors.length > 0) {
+      // A repo that yields nothing usable is a mistake worth surfacing now
+      // rather than leaving an empty row in the list. On update this also keeps
+      // the last known good tree in place.
+      const hadPrevious = existsSync(dir);
+      return {
+        ok: false,
+        error: hadPrevious
+          ? `更新 ${repo} 失败，已保留上一个可用版本：${staged.errors[0]}`
+          : staged.errors[0]!,
+      };
+    }
 
-      // Swap: move the old tree aside, promote staging, then drop the old one.
-      // Renames are atomic within the same filesystem, so a crash mid-swap
-      // leaves either the old or the new tree in place — never a half-copy.
-      const retired = `${dir}.retired-${process.pid}-${randomUUID()}`;
-      renameSync(dir, retired);
-      try {
-        renameSync(staging, dir);
-      } catch (err) {
-        // Promotion failed — put the good tree back before surfacing the error.
-        try {
-          renameSync(retired, dir);
-        } catch {
-          // Best effort; the retired copy is still on disk for manual recovery.
-        }
-        throw err;
+    // Publish under the repo lock: capacity check, directory swap and registry
+    // write must be one critical section. Checking MAX_REPOS before the lock
+    // let N processes each observe 31 repos and all proceed past the cap.
+    const published = withHumanRepoLock(repo, () => {
+      const current = listHumanRepos();
+      const alreadyRegistered = current.some((r) => r.repo === repo);
+      if (current.length >= MAX_REPOS && !alreadyRegistered) {
+        return { ok: false as const, error: `最多只能添加 ${MAX_REPOS} 个数字人仓库` };
       }
-      rmSync(retired, { recursive: true, force: true });
-
+      promoteStagedRepo(staging, dir);
       updateRegistry((repos) => [
         ...repos.filter((r) => r.repo !== repo),
         { repo, addedAt: Date.now() },
       ]);
-      return {
-        ok: true,
-        entry: {
-          repo,
-          addedAt: Date.now(),
-          count: staged.entries.length,
-          errors: staged.errors,
-          cloned: true,
-        },
-      };
-    } finally {
-      rmSync(staging, { recursive: true, force: true });
+      return { ok: true as const };
+    });
+    if (!published.ok) return published;
+
+    return {
+      ok: true,
+      entry: {
+        repo,
+        addedAt: Date.now(),
+        count: staged.entries.length,
+        errors: staged.errors,
+        cloned: true,
+      },
+    };
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Swap a validated staging tree into place.
+ *
+ * Ordering matters for crash safety: promote FIRST (rename staging over a
+ * now-absent `dir`), and only retire the old tree around it. The previous
+ * `dir → retired` then `staging → dir` sequence left no tree at `dir` at all if
+ * the process died in between, and nothing scanned for `.retired-*` on startup,
+ * so the UI showed "尚未克隆" with the data still on disk under a name nobody
+ * looked for. Here the only window is one where BOTH the old tree (at `retired`)
+ * and the new tree (at `staging`) still exist, and `reclaimOrphanedTrees`
+ * cleans up whatever is left over on the next call.
+ */
+function promoteStagedRepo(staging: string, dir: string): void {
+  reclaimOrphanedTrees(dir);
+  if (!existsSync(dir)) {
+    renameSync(staging, dir);
+    return;
+  }
+  const retired = `${dir}.retired-${process.pid}-${randomUUID()}`;
+  renameSync(dir, retired);
+  try {
+    renameSync(staging, dir);
+  } catch (err) {
+    // Promotion failed — put the good tree back before surfacing the error.
+    try {
+      renameSync(retired, dir);
+    } catch {
+      // Best effort; the retired copy is still on disk for manual recovery.
+    }
+    throw err;
+  }
+  rmSync(retired, { recursive: true, force: true });
+}
+
+/**
+ * Recover from a crash during a previous swap.
+ *
+ * If `dir` is missing but a `.retired-*` sibling exists, a process died between
+ * retiring the old tree and promoting the new one. Restore the newest retired
+ * tree rather than leaving the repo looking un-cloned, then drop the rest.
+ * Runs under the repo lock, so no concurrent swap can be mid-flight.
+ */
+function reclaimOrphanedTrees(dir: string): void {
+  const parent = dirname(dir);
+  const prefix = `${basename(dir)}.retired-`;
+  let orphans: string[];
+  try {
+    orphans = readdirSync(parent).filter((name) => name.startsWith(prefix));
+  } catch {
+    return;
+  }
+  if (orphans.length === 0) return;
+  orphans.sort();
+  if (!existsSync(dir)) {
+    const restore = orphans.pop()!;
+    try {
+      renameSync(join(parent, restore), dir);
+    } catch {
+      // Fall through: leave it for manual recovery rather than deleting data.
     }
   }
-
-  // FIRST-ADD PATH — nothing to preserve, so clone straight into place.
-  // Full checkout: unlike a plugin marketplace (manifest-only up front) we
-  // read every humans/<name>/profile.json right away.
-  const cloned = await gitClone(githubRepoToCloneUrl(repo), dir, { full: true });
-  if (!cloned.ok) {
-    rmSync(dir, { recursive: true, force: true });
-    return { ok: false, error: explainGitFailure(cloned.error, repo) };
+  for (const stale of orphans) {
+    rmSync(join(parent, stale), { recursive: true, force: true });
   }
-
-  const read = readCatalogFromDir(dir, repo);
-  if (read.entries.length === 0 && read.errors.length > 0) {
-    // A repo that yields nothing usable is a mistake worth surfacing now
-    // rather than leaving an empty row in the list.
-    rmSync(dir, { recursive: true, force: true });
-    return { ok: false, error: read.errors[0] };
-  }
-
-  updateRegistry((repos) => [
-    ...repos.filter((r) => r.repo !== repo),
-    { repo, addedAt: Date.now() },
-  ]);
-
-  return {
-    ok: true,
-    entry: {
-      repo,
-      addedAt: Date.now(),
-      count: read.entries.length,
-      errors: read.errors,
-      cloned: true,
-    },
-  };
 }
+
+/**
+ * Crash-safety internals, exposed for tests only.
+ *
+ * `promoteStagedRepo`/`reclaimOrphanedTrees` implement the swap-and-recover
+ * protocol. Exercising them through `addHumanRepo` would require network git, so
+ * the recovery cases (interrupted swap, stale retired trees) are tested here
+ * directly. Not part of the package's public surface.
+ */
+export const __testables = { promoteStagedRepo, reclaimOrphanedTrees };
 
 /**
  * Turn a raw git failure into something a user can act on.
@@ -247,9 +318,19 @@ function explainGitFailure(error: string, repo: string): string {
 
 export function removeHumanRepo(repo: string): void {
   if (!CATALOG_REPO_RE.test(repo)) throw new Error("invalid digital-human repo");
-  // Filter inside the lock so a concurrent add of a DIFFERENT repo is not lost.
-  updateRegistry((repos) => repos.filter((r) => r.repo !== repo));
-  rmSync(humanRepoDir(repo), { recursive: true, force: true });
+  // Same repo lock as add/update: otherwise a remove can delete the tree a
+  // concurrent add just published, leaving a registered repo with no clone.
+  withHumanRepoLock(repo, () => {
+    // Filter inside the registry lock so a concurrent add of a DIFFERENT repo
+    // is not lost.
+    updateRegistry((repos) => repos.filter((r) => r.repo !== repo));
+    const dir = humanRepoDir(repo);
+    rmSync(dir, { recursive: true, force: true });
+    // Drop any tree a crashed swap left behind, so a later re-add does not
+    // resurrect the old contents via reclaimOrphanedTrees.
+    reclaimOrphanedTrees(dir);
+    rmSync(dir, { recursive: true, force: true });
+  });
 }
 
 /** 注册表 + 每个仓库的读取结果，供设置页展示。 */

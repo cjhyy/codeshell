@@ -68,6 +68,17 @@ interface GuestBinding {
   projectPath: string;
   /** Active session/worktree root; available only after renderer binding. */
   cwd?: string;
+  /**
+   * A submitPrompt handed to the worker but not yet reflected in
+   * `context.busy`.
+   *
+   * `context.busy` is pushed from the renderer, so it lags. Now that
+   * submitPrompt returns as soon as the worker accepts (instead of awaiting the
+   * agent), two calls in quick succession both saw `busy === false` and both
+   * started a run. This flag closes that window from the moment we hand the run
+   * over until the worker acknowledges it.
+   */
+  agentSubmitInFlight?: boolean;
 }
 
 interface PendingAgentToolCall {
@@ -694,7 +705,12 @@ export class PanelAppBridge {
     }
     const { sessionId, cwd } = binding.context;
     if (!sessionId) throw new Error("agent.submitPrompt requires context.session permission");
-    if (binding.context.busy) throw new Error("the target session is busy");
+    // Reject on EITHER the renderer-reported busy state or our own in-flight
+    // reservation. The reservation covers the gap where a run has been handed to
+    // the worker but `context.busy` has not been pushed back yet.
+    if (binding.context.busy || binding.agentSubmitInFlight) {
+      throw new Error("the target session is busy");
+    }
     const bridge = this.options.getAgentBridge();
     if (!bridge) throw new Error("agent worker is unavailable");
 
@@ -707,6 +723,10 @@ export class PanelAppBridge {
       MAX_AGENT_PROMPT_CHARS - prefix.length,
     )}`;
     const clientMessageId = `panel:${binding.resource.descriptor.appId}:${randomUUID()}`;
+
+    // Claim the slot BEFORE the await point. Everything above is synchronous, so
+    // no second call can interleave between the check and this assignment.
+    binding.agentSubmitInFlight = true;
 
     void bridge
       .requestWorker(
@@ -727,6 +747,10 @@ export class PanelAppBridge {
         { settleOnExit: true, failFast: true },
       )
       .then((result) => {
+        // Release once the worker has answered. By now either the run finished
+        // or it failed; in the success case `context.busy` has long since been
+        // pushed by the renderer, so there is no gap to re-open.
+        binding.agentSubmitInFlight = false;
         if (result.ok) return;
         bridge.ingestExternalEvent(sessionId, {
           type: "error",
@@ -734,6 +758,9 @@ export class PanelAppBridge {
         });
       })
       .catch((error: unknown) => {
+        // Must also release on failure, or one dropped request would wedge the
+        // panel into a permanent "session is busy".
+        binding.agentSubmitInFlight = false;
         bridge.ingestExternalEvent(sessionId, {
           type: "error",
           error: `Panel App request failed: ${

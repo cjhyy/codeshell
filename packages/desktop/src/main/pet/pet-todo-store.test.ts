@@ -145,6 +145,49 @@ describe("PetTodoStore", () => {
       });
     });
 
+    test("un-archiving cannot push active past the cap", async () => {
+      // Splitting the old single cap into active + history opened this hole:
+      // create() counts active items, but setStatus() did not, so archived →
+      // pending was a back door to 501 active todos.
+      await withStore(async (path) => {
+        let tick = 0;
+        const store = new PetTodoStore(path, { now: () => ++tick });
+        await store.load();
+
+        const ids: string[] = [];
+        for (let i = 0; i < 500; i += 1) ids.push((await store.create(`item-${i}`)).id);
+        // Archive one, then refill the freed slot so active is back at the cap.
+        await store.setStatus(ids[0]!, "archived");
+        await store.create("refill");
+        expect(store.list()).toHaveLength(500);
+
+        await expect(store.setStatus(ids[0]!, "pending")).rejects.toThrow("待办列表已满");
+        expect(store.list()).toHaveLength(500);
+      });
+    });
+
+    test("archived → archived and active → active transitions stay allowed at the cap", async () => {
+      // The guard must only fire on the archived → active direction; editing a
+      // full list's items, or re-archiving, must keep working.
+      await withStore(async (path) => {
+        let tick = 0;
+        const store = new PetTodoStore(path, { now: () => ++tick });
+        await store.load();
+
+        const ids: string[] = [];
+        for (let i = 0; i < 500; i += 1) ids.push((await store.create(`item-${i}`)).id);
+
+        // active → active at the cap: allowed (no new active item appears).
+        expect((await store.setStatus(ids[1]!, "in_progress")).status).toBe("in_progress");
+        // active → archived at the cap: allowed, and frees a slot.
+        await store.setStatus(ids[2]!, "archived");
+        expect(store.list()).toHaveLength(499);
+        // Now the freed slot makes un-archiving legal again.
+        expect((await store.setStatus(ids[2]!, "pending")).status).toBe("pending");
+        expect(store.list()).toHaveLength(500);
+      });
+    });
+
     test("active items are never pruned as history", async () => {
       await withStore(async (path) => {
         let tick = 0;
