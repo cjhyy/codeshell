@@ -3,7 +3,7 @@
  * Uses core's canonical session root so CODE_SHELL_HOME matches the worker.
  */
 
-import { sessionsRoot, type TurnCompletionKind } from "@cjhyy/code-shell-core";
+import { SessionManager, sessionsRoot, type TurnCompletionKind } from "@cjhyy/code-shell-core";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
@@ -336,15 +336,18 @@ export async function archiveDiskSession(
   if (!SAFE_ID.test(id) || id === "." || id === "..") {
     throw new Error(`archiveDiskSession: unsafe session id ${JSON.stringify(id)}`);
   }
-  const stateFile = path.join(baseDir, id, "state.json");
-  const raw = await fs.readFile(stateFile, "utf8");
-  const state = JSON.parse(raw) as Record<string, unknown>;
-  if (archivedAt === undefined) {
-    delete state.archivedAt;
-  } else {
-    state.archivedAt = archivedAt;
-  }
-  const tmp = `${stateFile}.tmp-${process.pid}-${Math.random().toString(36).slice(2)}`;
-  await fs.writeFile(tmp, JSON.stringify(state), "utf8");
-  await fs.rename(tmp, stateFile);
+  // Route through Core's SessionManager instead of hand-rolling the write.
+  //
+  // This used to read the whole state.json, set/delete `archivedAt`, and rename a
+  // full replacement over it — with no lock and no revision check. A live worker
+  // saving token usage, goal, workspace, title or status at the same instant
+  // meant two full snapshots racing, and only one survived: archiving could roll
+  // back a just-saved field, or a worker save could erase `archivedAt`.
+  //
+  // `setSessionArchived` → `updateSessionState` already does this correctly: it
+  // takes the per-session lock, compares `stateRevision`, re-reads and merges at
+  // field level on a CAS miss, and retries. Archiving is a field-level update, so
+  // it belongs on exactly that path.
+  const manager = new SessionManager(baseDir);
+  manager.setSessionArchived(id, archivedAt);
 }
