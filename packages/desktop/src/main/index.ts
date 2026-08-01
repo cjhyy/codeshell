@@ -1574,7 +1574,8 @@ async function createWindow(): Promise<BrowserWindow> {
           const selectors = payload.sessionIds.filter(
             (value): value is string => typeof value === "string",
           );
-          const { sessions } = await listDiskSessions({ limit: 1_000, includeArchived: true });
+          // By-id archive must not be limited to a page of recent sessions.
+          const sessions = await listAllDiskSessions();
           const bySelector = new Map(
             sessions
               .filter((session) => session.origin === "desktop")
@@ -1935,7 +1936,8 @@ async function createWindow(): Promise<BrowserWindow> {
       },
       sessionArchive: {
         archive: async (sessionId) => {
-          const { sessions } = await listDiskSessions({ limit: 1_000, includeArchived: true });
+          // By-id archive must not be limited to a page of recent sessions.
+          const sessions = await listAllDiskSessions();
           const session = sessions.find(
             (candidate) =>
               candidate.engineSessionId === sessionId && candidate.origin === "desktop",
@@ -2004,8 +2006,42 @@ const PET_AUTO_ARCHIVE_IDLE_DAYS = 7;
  * anything changed — forces a FULL catalog rebuild so the aggregator's held Map
  * is repopulated from the archive-filtered listDiskSessions (no ghost rows).
  */
+/**
+ * Every disk session, consumed page by page.
+ *
+ * Several callers used a bare `listDiskSessions({ limit: 1_000 })` and treated
+ * the result as "all sessions". Once a user passed 1,000 sessions that silently
+ * became a window: archiving a specific session by id would report "不存在"
+ * merely because it fell outside the newest 1,000, and the auto-archive sweep —
+ * whose comment claims a full catalog pass — quietly stopped seeing the oldest,
+ * i.e. exactly the ones most likely to be archivable.
+ *
+ * `maxPages` is a runaway guard, not a cap: hitting it is logged rather than
+ * silently truncating.
+ */
+async function listAllDiskSessions(): Promise<
+  Awaited<ReturnType<typeof listDiskSessions>>["sessions"]
+> {
+  const pageSize = 500;
+  const maxPages = 200;
+  const all: Awaited<ReturnType<typeof listDiskSessions>>["sessions"] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < maxPages; page += 1) {
+    const result = await listDiskSessions({
+      limit: pageSize,
+      includeArchived: true,
+      ...(cursor ? { cursor } : {}),
+    });
+    all.push(...result.sessions);
+    if (!result.nextCursor) return all;
+    cursor = result.nextCursor;
+  }
+  dlog("main", "listAllDiskSessions.page_limit", { maxPages, scanned: all.length });
+  return all;
+}
+
 async function runPetAutoArchive(aggregator: PetStateAggregator): Promise<void> {
-  const { sessions } = await listDiskSessions({ limit: 1000, includeArchived: true });
+  const sessions = await listAllDiskSessions();
   const toArchive = selectSessionsToArchive(
     sessions.map((s) => ({
       engineSessionId: s.engineSessionId,
@@ -3024,14 +3060,28 @@ ipcMain.handle("links:connectLocal", async (_e, raw: unknown) => {
   if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(methodId)) {
     throw new Error("Invalid local Link connection method");
   }
+  if (label.length > 200) throw new Error("Connection label is too long");
   if (token.length > 16_384) throw new Error("Token is too long");
 
+  const credentialId = existingId || `link-${providerId}-${methodId}`;
+  const store = new CredentialStore(cwd || undefined);
+  if (existingId) {
+    const current = store.resolve(existingId, "full");
+    if (
+      !current ||
+      current.type !== "link" ||
+      current.meta?.linkProvider !== providerId ||
+      current.meta.linkConnectionMethod !== methodId ||
+      current.meta.linkExecutionRuntime !== "local"
+    ) {
+      throw new Error("The existing credential does not belong to this local Link provider");
+    }
+  }
   // Validation and save are one main-process operation: the renderer never
   // receives the token back and an invalid replacement never overwrites the
   // last working credential.
   const validation = await validateLocalLinkToken(providerId, token);
-  const credentialId = existingId || `link-${providerId}-${methodId}`;
-  new CredentialStore(cwd || undefined).save("user", {
+  store.save("user", {
     id: credentialId,
     type: "link",
     label: label || `${providerId} · ${methodId}`,
@@ -3044,6 +3094,7 @@ ipcMain.handle("links:connectLocal", async (_e, raw: unknown) => {
       agentExposable: false,
       linkAccountId: validation.identity.externalAccountId,
       linkAccountLabel: validation.identity.label,
+      linkResourceLabels: validation.identity.resourceLabels,
       linkCapabilityIds: validation.capabilityIds,
       linkLastVerifiedAt: validation.verifiedAt,
     },
