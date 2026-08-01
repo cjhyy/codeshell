@@ -11,7 +11,12 @@ import type { ChannelMessage } from "./channel.js";
 
 const roots: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
+  // `stop()` prevents NEW work but does not await a persist already in flight.
+  // Under full-suite load that write could land after the directory was removed,
+  // surfacing as an ENOENT rename from a previous test's queue and failing an
+  // unrelated one. Yield first so any pending atomic write completes.
+  await new Promise((resolve) => setTimeout(resolve, 25));
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
