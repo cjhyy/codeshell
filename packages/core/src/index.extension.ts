@@ -39,6 +39,18 @@ export {
 export type { FeatureFlagName, FeatureFlagOverrides } from "./settings/feature-flags.js";
 export { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 export type { ToolContext } from "./tool-system/context.js";
+// The `panels` tool-context seam. A host that drives a session outside the
+// Engine (external Agent Runtime) has to supply this itself — on the native
+// path the worker's protocol server provides it. Type-only: core owns no
+// implementation, every one of them is a host callback.
+export type {
+  AgentPanelDescriptor,
+  AgentPanelToolDescriptor,
+  PanelDiscoveryResult,
+  PanelHostBridge,
+  PanelInvokeResult,
+  PanelOpenResult,
+} from "./tool-system/panel-bridge.js";
 // Session-scoped tool surface for external Agent Runtimes (Codex / Claude Code).
 // This is intentionally the STRONGEST tool-execution handle a capability package
 // can obtain: `ToolExecutor`, `ToolRegistry` and `PermissionClassifier` are

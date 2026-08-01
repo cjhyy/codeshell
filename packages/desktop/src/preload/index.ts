@@ -273,6 +273,8 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     return;
   }
   if (method === "agent/streamEvent") {
+    // (external-runtime events join the same listeners below — see the
+    // "externalRuntime:event" bridge near the bottom of this file)
     // Multi-session wire format: `{ sessionId, event }` envelope. The
     // renderer routes by sessionId; legacy callers can ignore it.
     const sessionId = (params?.sessionId as string | undefined) ?? "";
@@ -422,6 +424,23 @@ function rpc(
     }
   });
 }
+
+/**
+ * External-runtime events join the SAME stream listeners the worker feeds.
+ *
+ * The alternative — a separate `onExternalRuntimeEvent` subscription — would
+ * mean every consumer of the transcript stream (the reducer, the pet provider,
+ * unread badges, the mobile mirror) had to subscribe twice and stay in sync.
+ * The event shape is already identical because the runtime adapters translate
+ * into the same StreamEvent union, so the only real difference is which
+ * process produced it, and no consumer needs to care.
+ */
+ipcRenderer.on("externalRuntime:event", (_e, payload: { sessionId?: unknown; event?: unknown }) => {
+  const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+  const event = payload?.event;
+  if (!sessionId || event === undefined) return;
+  streamListeners.forEach((cb) => cb({ sessionId, event }));
+});
 
 contextBridge.exposeInMainWorld("codeshell", {
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
@@ -1340,6 +1359,10 @@ contextBridge.exposeInMainWorld("codeshell", {
     refresh: (credentialId: string) => ipcRenderer.invoke("mcpOAuth:refresh", credentialId),
     logout: (credentialId: string) => ipcRenderer.invoke("mcpOAuth:logout", credentialId),
   },
+  links: {
+    listLocalProviders: () => ipcRenderer.invoke("links:listLocalProviders"),
+    connectLocal: (input: unknown) => ipcRenderer.invoke("links:connectLocal", input),
+  },
   credentials: {
     list: (cwd: string) => ipcRenderer.invoke("credentials:list", cwd),
     save: (cwd: string, scope: "user" | "project", cred: unknown) =>
@@ -1397,6 +1420,27 @@ contextBridge.exposeInMainWorld("codeshell", {
         }
       | { ok: false; cancelled?: boolean; error?: string }
     > => ipcRenderer.invoke("credentials:loginCapture", req),
+  },
+  // ── External Agent Runtimes (Codex / Claude Code) ───────────────────────
+  // Picked from the ordinary model dropdown as `codex/gpt-5.1` etc. The
+  // renderer never learns there is a separate backend beyond routing a send.
+  externalRuntime: {
+    /** Runtime kinds whose binary is installed. Empty when the flag is off. */
+    available: (): Promise<string[]> => ipcRenderer.invoke("externalRuntime:available"),
+    /** Start or restart a session on the runtime encoded in `modelKey`. */
+    start: (payload: {
+      sessionId: string;
+      cwd: string;
+      modelKey: string;
+    }): Promise<{ kind: string; runtimeSessionId: string | null; tools: string[] }> =>
+      ipcRenderer.invoke("externalRuntime:start", payload),
+    /** Send one user turn. Resolves when the turn completes. */
+    send: (payload: { sessionId: string; text: string }): Promise<void> =>
+      ipcRenderer.invoke("externalRuntime:send", payload),
+    interrupt: (sessionId: string): Promise<void> =>
+      ipcRenderer.invoke("externalRuntime:interrupt", sessionId),
+    stop: (sessionId: string): Promise<void> =>
+      ipcRenderer.invoke("externalRuntime:stop", sessionId),
   },
   /** Probe common localhost dev-server ports via real TCP connect in main.
    *  Returns the open ports (ascending). Pass a custom candidate list or omit

@@ -35,6 +35,8 @@ import {
   CredentialStore,
   type Credential,
   type CredentialScope,
+  listLocalLinkProviders,
+  validateLocalLinkToken,
   sweepStaleCredentialCookies,
   setDefaultCredentialCipher,
   sessionsRoot,
@@ -102,6 +104,9 @@ import {
   resolveProjectRoot,
 } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
+import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { availableExternalRuntimes } from "./external-runtime-availability.js";
+import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
 import {
@@ -126,7 +131,6 @@ import {
 } from "./pet/pet-dispatch-service.js";
 import { enrichPetChatReplyWithHostActions } from "./pet/host-action-reply.js";
 import { PetMemoryStore } from "./pet/pet-memory-store.js";
-import { PetTodoStore } from "./pet/pet-todo-store.js";
 import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
@@ -141,8 +145,12 @@ import {
   takeOverLinkedSessionFromIpc,
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
-import { DEFAULT_SEGMENT_IDLE_MS, type PetTodoStatus } from "@cjhyy/code-shell-pet";
+import { DEFAULT_SEGMENT_IDLE_MS, type PetFollowUpItem } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts, sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
+import {
+  PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX,
+  PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX,
+} from "../shared/pet-host-action-receipt.js";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
 import {
   petChatModelKeyFromSettings,
@@ -508,6 +516,14 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
+/**
+ * Sessions backed by Codex / Claude Code instead of the native Engine.
+ *
+ * Created alongside the AgentBridge below (it needs the bridge for host-tool
+ * seams) and torn down in `before-quit` — each session owns a child process and
+ * a listening port, neither of which dies with the parent on Windows.
+ */
+let externalRuntimeService: ExternalRuntimeService | null = null;
 const panelAppBridge = new PanelAppBridge({
   isTrustedHost: (sender) =>
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
@@ -1137,6 +1153,41 @@ async function createWindow(): Promise<BrowserWindow> {
         },
       },
     );
+    // External Agent Runtimes (Codex / Claude Code). Everything
+    // security-relevant is resolved here, in the composition root: this is the
+    // only layer that knows the owning window, whether the project is trusted,
+    // and which feature flags are on. The layers below deliberately refuse to
+    // default any of it.
+    const externalBridge = bridge;
+    externalRuntimeService = new ExternalRuntimeService({
+      featureFlags: () => {
+        const cwd = resolveNoRepoCwd();
+        const settings = new SettingsManager(cwd, "full").getForScope("user") as {
+          featureFlags?: Record<string, boolean>;
+        };
+        return settings.featureFlags ?? {};
+      },
+      registerSession: (sessionId, cwd, webContentsId) =>
+        externalBridge.registerExternalSession(sessionId, cwd, webContentsId),
+      releaseSession: (sessionId) => externalBridge.releaseExternalSession(sessionId),
+      // Route events to the window that owns the session, not every window: a
+      // second window showing a different session must not receive its stream.
+      emit: (sessionId, event) => {
+        for (const window of mainWindows) {
+          if (!window.isDestroyed()) {
+            window.webContents.send("externalRuntime:event", { sessionId, event });
+          }
+        }
+      },
+      // The host seams the exposed tools need. `panels` points at the same
+      // requestPanelHost the native protocol line reaches, so owner routing,
+      // the timeout and invoke's fail-closed behaviour are shared rather than
+      // reimplemented.
+      toolContextOverrides: (sessionId) => ({
+        panels: externalBridge.panelBridgeForSession(sessionId),
+      }),
+    });
+
     // Mirror every worker→renderer line onto any connected mobile clients, so
     // the phone sees the same stream (messages, tool summaries, approvals).
     bridge.subscribeOutbound((line, snapshotEntry) => {
@@ -1240,10 +1291,10 @@ async function createWindow(): Promise<BrowserWindow> {
     void petMemoryStoreInstance
       .load()
       .catch((error) => dlog("main", "pet.memory.load.failed", { error: String(error) }));
-    const petTodoStore = new PetTodoStore(resolve(app.getPath("userData"), "pet", "todos.json"));
-    void petTodoStore
-      .load()
-      .catch((error) => dlog("main", "pet.todo.load.failed", { error: String(error) }));
+    const petWorkInbox = new PetWorkInboxStore(
+      resolve(app.getPath("userData"), "pet", "work-inbox.json"),
+    );
+    petWorkInboxStore = petWorkInbox;
     const petJournalStore = new PetJournalStore(
       resolve(app.getPath("userData"), "pet", "journal.json"),
     );
@@ -1364,6 +1415,60 @@ async function createWindow(): Promise<BrowserWindow> {
       store: petSummaryStore,
       cwd: resolveNoRepoCwd(),
     });
+    type FollowUpSummaryRow = {
+      sessionId: string;
+      title: string;
+      workspace?: string;
+      terminalAt: number;
+      text: string;
+    };
+    const followUpIdForSession = (sessionId: string): string =>
+      `followup-${sessionSelectorId(sessionId)}`;
+    const collectPetFollowUps = async (): Promise<FollowUpSummaryRow[]> => {
+      const completed = aggregator
+        .getSnapshot()
+        .sessions.filter((session) => !session.external && session.terminal?.status === "completed")
+        .sort((left, right) => right.terminal!.at - left.terminal!.at);
+      const rowOf = (
+        session: (typeof completed)[number],
+        terminalAt: number,
+        text: string,
+      ): FollowUpSummaryRow => ({
+        sessionId: session.agentSessionId,
+        title: session.title ?? session.agentSessionId.slice(-8),
+        ...(session.workspaceDisplayName ? { workspace: session.workspaceDisplayName } : {}),
+        terminalAt,
+        text,
+      });
+
+      const MAX_NEW_GENERATIONS = 20;
+      const cachedRows: FollowUpSummaryRow[] = [];
+      const toGenerate: Array<{ session: (typeof completed)[number]; terminalAt: number }> = [];
+      for (const session of completed) {
+        const terminalAt = session.terminal!.at;
+        const cached = petSummaryStore.get(session.agentSessionId);
+        if (cached && cached.terminalAt === terminalAt) {
+          if (cached.text) cachedRows.push(rowOf(session, terminalAt, cached.text));
+          continue;
+        }
+        toGenerate.push({ session, terminalAt });
+      }
+
+      const generated = await mapWithConcurrency(
+        toGenerate.slice(0, MAX_NEW_GENERATIONS),
+        5,
+        async ({ session, terminalAt }) => {
+          const summary = await petSummaryService.summarize(session.agentSessionId, terminalAt);
+          return summary ? rowOf(session, terminalAt, summary.text) : null;
+        },
+      );
+      const rows = [
+        ...cachedRows,
+        ...generated.filter((row): row is FollowUpSummaryRow => row !== null),
+      ];
+      rows.sort((left, right) => right.terminalAt - left.terminalAt);
+      return rows.slice(0, 20);
+    };
     petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator,
@@ -1446,30 +1551,21 @@ async function createWindow(): Promise<BrowserWindow> {
           }
           throw new Error("invalid memory action");
         },
-        todoMutation: async (payload) => {
+        followUpMutation: async (payload) => {
           const action = payload.action;
-          const todoId = typeof payload.todoId === "string" ? payload.todoId : "";
-          const text = typeof payload.text === "string" ? payload.text : "";
-          if (action === "create") {
-            const item = await petTodoStore.create(text);
-            return { action, todoId: item.id, text: item.text, status: item.status };
+          const followUpId = typeof payload.followUpId === "string" ? payload.followUpId : "";
+          if ((action !== "complete" && action !== "dismiss") || !followUpId) {
+            throw new Error("invalid follow-up mutation request");
           }
-          if (!todoId) throw new Error("invalid todo mutation request");
-          if (action === "update") {
-            const item = await petTodoStore.update(todoId, text);
-            return { action, todoId: item.id, text: item.text, status: item.status };
+          const dismissed = new Set(petWorkInbox.getSnapshot().dismissedIds);
+          const row = (await collectPetFollowUps()).find(
+            (candidate) => followUpIdForSession(candidate.sessionId) === followUpId,
+          );
+          if (!row || dismissed.has(`completed:${row.sessionId}`)) {
+            throw new Error("跟进项不存在或已处理");
           }
-          const statusByAction: Partial<Record<string, PetTodoStatus>> = {
-            start: "in_progress",
-            block: "blocked",
-            complete: "completed",
-            reopen: "pending",
-            archive: "archived",
-          };
-          const status = statusByAction[String(action)];
-          if (!status) throw new Error("invalid todo mutation request");
-          const item = await petTodoStore.setStatus(todoId, status);
-          return { action, todoId: item.id, text: item.text, status: item.status };
+          petWorkInbox.add([`completed:${row.sessionId}`]);
+          return { action, followUpId, title: row.title };
         },
         sessionArchive: async (payload) => {
           if (payload.action !== "archive" || !Array.isArray(payload.sessionIds)) {
@@ -1504,7 +1600,7 @@ async function createWindow(): Promise<BrowserWindow> {
             targetId: target.id,
             channel: target.channel,
             label: target.label,
-            delivered: true,
+            accepted: true,
           };
         },
         gatewayReply: async (payload) => {
@@ -1567,9 +1663,18 @@ async function createWindow(): Promise<BrowserWindow> {
         };
       },
       listWorkspaces: () => mobileOrchestrator.projectList(),
-      listTodos: async () => {
-        await petTodoStore.load();
-        return petTodoStore.list({ includeArchived: true });
+      listFollowUps: async (): Promise<PetFollowUpItem[]> => {
+        const dismissed = new Set(petWorkInbox.getSnapshot().dismissedIds);
+        return (await collectPetFollowUps())
+          .filter((row) => !dismissed.has(`completed:${row.sessionId}`))
+          .map((row) => ({
+            id: followUpIdForSession(row.sessionId),
+            title: row.title,
+            text: row.text,
+            terminalAt: row.terminalAt,
+            sessionSelector: sessionSelectorId(row.sessionId),
+            ...(row.workspace ? { workspace: row.workspace } : {}),
+          }));
       },
       listOutboundTargets: async () =>
         imGatewayService.listOwnerMessageTargets().map((target) => ({
@@ -1677,10 +1782,6 @@ async function createWindow(): Promise<BrowserWindow> {
     const petReceipts = new PetReceiptStore(
       resolve(app.getPath("userData"), "pet", "attention-receipts.json"),
     );
-    const petWorkInbox = new PetWorkInboxStore(
-      resolve(app.getPath("userData"), "pet", "work-inbox.json"),
-    );
-    petWorkInboxStore = petWorkInbox;
     const attention = new PetAttentionPolicy({
       source: aggregator,
       receipts: petReceipts,
@@ -1689,12 +1790,7 @@ async function createWindow(): Promise<BrowserWindow> {
     const petInitialization = (async () => {
       await aggregator.start();
       await externalVisibility.reconcile();
-      await Promise.all([
-        petReceipts.load(),
-        petWorkInbox.load(),
-        petWorkMemory.load(),
-        petTodoStore.load(),
-      ]);
+      await Promise.all([petReceipts.load(), petWorkInbox.load(), petWorkMemory.load()]);
       // Build the topic-segment controller now that the pet session id is
       // resolved. Range archival rides the generic archive_range worker query;
       // dispatch currently passes no turnRange, so it stays dormant.
@@ -1818,69 +1914,7 @@ async function createWindow(): Promise<BrowserWindow> {
       },
       latestResult: createLatestResultCache(petSessionsRootDir),
       summaries: {
-        collect: async () => {
-          // Newest-first: the display slices to 20, so both cached reads and any
-          // fresh generation should prefer the most recently finished sessions.
-          const completed = aggregator
-            .getSnapshot()
-            .sessions.filter(
-              (session) => !session.external && session.terminal?.status === "completed",
-            )
-            .sort((left, right) => right.terminal!.at - left.terminal!.at);
-          type SummaryRow = {
-            sessionId: string;
-            title: string;
-            workspace?: string;
-            terminalAt: number;
-            text: string;
-          };
-          const rowOf = (
-            session: (typeof completed)[number],
-            terminalAt: number,
-            text: string,
-          ): SummaryRow => ({
-            sessionId: session.agentSessionId,
-            title: session.title ?? session.agentSessionId.slice(-8),
-            ...(session.workspaceDisplayName ? { workspace: session.workspaceDisplayName } : {}),
-            terminalAt,
-            text,
-          });
-
-          // Partition into already-processed (a store hit for this exact
-          // terminalAt — non-empty is a row, empty is a settled no-value we must
-          // NOT regenerate) vs. sessions needing generation. Only the newest K
-          // uncached sessions are generated this pull; the rest are picked up by
-          // the next debounced fetch, so a 50-session backlog never fans out to
-          // 50 aux calls for a 20-row view.
-          const MAX_NEW_GENERATIONS = 20;
-          const cachedRows: SummaryRow[] = [];
-          const toGenerate: Array<{ session: (typeof completed)[number]; terminalAt: number }> = [];
-          for (const session of completed) {
-            const terminalAt = session.terminal!.at;
-            const cached = petSummaryStore.get(session.agentSessionId);
-            if (cached && cached.terminalAt === terminalAt) {
-              if (cached.text) cachedRows.push(rowOf(session, terminalAt, cached.text));
-              continue; // empty-marker: processed, no value → skip, no regenerate.
-            }
-            toGenerate.push({ session, terminalAt });
-          }
-
-          const generated = await mapWithConcurrency(
-            toGenerate.slice(0, MAX_NEW_GENERATIONS),
-            5,
-            async ({ session, terminalAt }) => {
-              const summary = await petSummaryService.summarize(session.agentSessionId, terminalAt);
-              return summary ? rowOf(session, terminalAt, summary.text) : null;
-            },
-          );
-
-          const rows = [
-            ...cachedRows,
-            ...generated.filter((row): row is SummaryRow => row !== null),
-          ];
-          rows.sort((left, right) => right.terminalAt - left.terminalAt);
-          return rows.slice(0, 20);
-        },
+        collect: collectPetFollowUps,
       },
       journal: {
         list: async () => {
@@ -1898,16 +1932,6 @@ async function createWindow(): Promise<BrowserWindow> {
           await writeSettings("user", petMemoryAutoExtractSettingsPatch(enabled));
           return enabled;
         },
-      },
-      todos: {
-        list: async () => {
-          await petTodoStore.load();
-          return petTodoStore.list();
-        },
-        create: (text) => petTodoStore.create(text),
-        update: (id, text) => petTodoStore.update(id, text),
-        setStatus: (id, status) => petTodoStore.setStatus(id, status),
-        subscribe: (listener) => petTodoStore.subscribe(listener),
       },
       sessionArchive: {
         archive: async (sessionId) => {
@@ -1932,12 +1956,19 @@ async function createWindow(): Promise<BrowserWindow> {
           });
           const text = receipt.text.trim();
           if (!text) return null;
+          const replaceAssistant = executions.some(
+            (execution) => execution.kind === "outboundMessage",
+          );
           try {
             const transcript = new Transcript(
               join(petSessionsRootDir, petSessionId, "transcript.jsonl"),
             );
             transcript.appendMessage("assistant", text, {
-              clientMessageId: `pet-host-action-${clientMessageId}`,
+              clientMessageId: `${
+                replaceAssistant
+                  ? PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX
+                  : PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX
+              }${clientMessageId}`,
             });
           } catch (error) {
             dlog("main", "pet.hostActionReceipt.persist.failed", {
@@ -1946,7 +1977,7 @@ async function createWindow(): Promise<BrowserWindow> {
               error: String(error),
             });
           }
-          return text;
+          return { message: text, ...(replaceAssistant ? { replaceAssistant: true } : {}) };
         },
       },
       windows: () => BrowserWindow.getAllWindows(),
@@ -2975,6 +3006,51 @@ ipcMain.handle(
     bridge?.pushCredentialSnapshot(cwd || undefined);
   },
 );
+ipcMain.handle("links:listLocalProviders", () => listLocalLinkProviders());
+ipcMain.handle("links:connectLocal", async (_e, raw: unknown) => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("links:connectLocal requires a connection request");
+  }
+  const input = raw as Record<string, unknown>;
+  const cwd = typeof input.cwd === "string" ? input.cwd : "";
+  const providerId = typeof input.providerId === "string" ? input.providerId.trim() : "";
+  const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
+  const label = typeof input.label === "string" ? input.label.trim() : "";
+  const token = typeof input.token === "string" ? input.token.trim() : "";
+  const existingId = typeof input.existingId === "string" ? input.existingId.trim() : "";
+  if (!providerId || !methodId || !token) {
+    throw new Error("Provider, connection method, and token are required");
+  }
+  if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(methodId)) {
+    throw new Error("Invalid local Link connection method");
+  }
+  if (token.length > 16_384) throw new Error("Token is too long");
+
+  // Validation and save are one main-process operation: the renderer never
+  // receives the token back and an invalid replacement never overwrites the
+  // last working credential.
+  const validation = await validateLocalLinkToken(providerId, token);
+  const credentialId = existingId || `link-${providerId}-${methodId}`;
+  new CredentialStore(cwd || undefined).save("user", {
+    id: credentialId,
+    type: "link",
+    label: label || `${providerId} · ${methodId}`,
+    secret: token,
+    autoUseByAI: false,
+    meta: {
+      linkProvider: providerId,
+      linkConnectionMethod: methodId,
+      linkExecutionRuntime: "local",
+      agentExposable: false,
+      linkAccountId: validation.identity.externalAccountId,
+      linkAccountLabel: validation.identity.label,
+      linkCapabilityIds: validation.capabilityIds,
+      linkLastVerifiedAt: validation.verifiedAt,
+    },
+  });
+  bridge?.pushCredentialSnapshot(cwd || undefined);
+  return validation;
+});
 // 只改元数据(label/autoUseByAI/meta),保留 secret —— UI 的编辑/AI 开关用,避免清空 jar。
 ipcMain.handle(
   "credentials:patchMeta",
@@ -4470,6 +4546,73 @@ ipcMain.handle("browser:popout", async (e, initialUrl?: string) => {
 const CANDIDATE_DEV_PORTS = [
   3000, 3001, 4000, 5000, 5173, 5174, 6006, 7000, 8000, 8080, 8888, 9000, 1420, 1313,
 ];
+// ─── External Agent Runtimes (Codex / Claude Code) ────────────────
+// The renderer picks these like any other model (`codex/gpt-5.1`); these
+// handlers are what makes such a key actually run something.
+
+/** Which runtimes this machine can run — gates the model picker entries. */
+ipcMain.handle("externalRuntime:available", () => {
+  if (!externalRuntimeService?.isEnabled()) return [];
+  return availableExternalRuntimes();
+});
+
+/**
+ * Start (or restart) a session on an external runtime.
+ *
+ * The owning window comes from the SENDER, never from the payload: it decides
+ * where this session's host-loopback tools are routed, so letting the renderer
+ * name an arbitrary window id would let one window drive another's panels.
+ */
+ipcMain.handle(
+  "externalRuntime:start",
+  async (event, payload: { sessionId?: unknown; cwd?: unknown; modelKey?: unknown }) => {
+    const service = externalRuntimeService;
+    if (!service) throw new Error("external runtime service is unavailable");
+    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+    const cwd = typeof payload?.cwd === "string" ? payload.cwd : "";
+    const modelKey = typeof payload?.modelKey === "string" ? payload.modelKey : "";
+    if (!sessionId || !cwd) throw new Error("sessionId and cwd are required");
+    const parsed = parseExternalRuntimeModelKey(modelKey);
+    if (!parsed) throw new Error(`not an external runtime model: ${modelKey}`);
+
+    const ownerWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const session = await service.start({
+      kind: parsed.kind,
+      sessionId,
+      cwd,
+      ...(parsed.model ? { model: parsed.model } : {}),
+      ...(ownerWindow ? { ownerWindow } : {}),
+    });
+    return {
+      kind: session.kind,
+      runtimeSessionId: session.runtimeSessionId ?? null,
+      tools: session.listTools().map((tool) => tool.name),
+    };
+  },
+);
+
+ipcMain.handle(
+  "externalRuntime:send",
+  async (_e, payload: { sessionId?: unknown; text?: unknown }) => {
+    const service = externalRuntimeService;
+    if (!service) throw new Error("external runtime service is unavailable");
+    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+    const text = typeof payload?.text === "string" ? payload.text : "";
+    if (!sessionId) throw new Error("sessionId is required");
+    await service.send(sessionId, text);
+  },
+);
+
+ipcMain.handle("externalRuntime:interrupt", async (_e, sessionId: unknown) => {
+  if (typeof sessionId !== "string") throw new Error("sessionId is required");
+  await externalRuntimeService?.interrupt(sessionId);
+});
+
+ipcMain.handle("externalRuntime:stop", async (_e, sessionId: unknown) => {
+  if (typeof sessionId !== "string") throw new Error("sessionId is required");
+  await externalRuntimeService?.stop(sessionId);
+});
+
 ipcMain.handle("browser:probePorts", async (_e, ports?: unknown) => {
   const candidates =
     Array.isArray(ports) && ports.every((p) => typeof p === "number")
@@ -5246,6 +5389,11 @@ app.on("before-quit", (event) => {
   ptyKillAll();
   transcriptSubscriptions?.closeAll();
   roomManager.closeAll();
+  // Each external-runtime session holds a child process and a listening port,
+  // and neither dies with the parent on Windows. Captured before the async
+  // block so a later reassignment cannot make this a no-op.
+  const externalRuntimeShutdown = externalRuntimeService?.stopAll();
+  externalRuntimeService = null;
   quitCleanupPromise = (async () => {
     await Promise.allSettled([
       imGatewayService.dispose(),
@@ -5254,6 +5402,7 @@ app.on("before-quit", (event) => {
       gatewayControlServer?.stop(),
       petWorkInboxFlush,
       petLongTaskFlush,
+      externalRuntimeShutdown,
     ]);
     gatewayControlServer = undefined;
     await mobileUploads.dispose();

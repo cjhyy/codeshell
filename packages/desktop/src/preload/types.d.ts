@@ -95,8 +95,6 @@ export type {
   PetLongTaskControlRequest,
   PetLongTaskControlResult,
   PetLongTaskSnapshot,
-  PetTodoItem,
-  PetTodoStatus,
   PetMemoryEntry,
   PetJournalEntry,
   PetSegmentMessage,
@@ -586,6 +584,14 @@ export interface CredentialView {
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    linkProvider?: string;
+    linkConnectionMethod?: string;
+    linkExecutionRuntime?: "local" | "server";
+    agentExposable?: boolean;
+    linkAccountId?: string;
+    linkAccountLabel?: string;
+    linkCapabilityIds?: string[];
+    linkLastVerifiedAt?: string;
     oauthProvider?: string;
     mcpServerName?: string;
     mcpServerUrl?: string;
@@ -616,6 +622,30 @@ export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
     scopes?: string[];
     error?: string;
   };
+}
+
+export interface LocalLinkValidationView {
+  providerId: string;
+  identity: {
+    externalAccountId: string;
+    label: string;
+    detail?: string;
+  };
+  capabilityIds: string[];
+  verifiedAt: string;
+}
+
+export interface LocalLinkProviderView {
+  id: string;
+  displayName: string;
+  tokenLabel: string;
+  tokenPlaceholder: string;
+  actions: Array<{
+    id: string;
+    title: string;
+    description: string;
+    risk: "discovery" | "read" | "write";
+  }>;
 }
 
 export type McpOAuthLoginInput =
@@ -737,6 +767,10 @@ export interface ImGatewayChannelCapabilities {
   };
   outbound: {
     text: true;
+    /** Missing only when a newer renderer is attached to an older main process. */
+    proactive?: boolean;
+    /** Whether sending works while the Gateway polling loop is stopped. */
+    direct?: boolean;
     maxTextLength?: number;
     button: "native" | "link";
     attachments: readonly ImGatewayAttachmentKind[];
@@ -760,7 +794,7 @@ export interface ImGatewayActivity {
   requestId: string;
   channel: ImGatewayChannel;
   direction: "inbound" | "outbound";
-  status: "received" | "sent" | "failed";
+  status: "received" | "accepted" | "failed";
   target: string;
   senderId?: string;
   text: string;
@@ -1152,6 +1186,17 @@ export interface CodeshellApi {
     refresh(credentialId: string): Promise<McpOAuthActionResult>;
     logout(credentialId: string): Promise<{ removed: true; remoteRevoked: boolean }>;
   };
+  links: {
+    listLocalProviders(): Promise<LocalLinkProviderView[]>;
+    connectLocal(input: {
+      cwd: string;
+      providerId: string;
+      methodId: string;
+      label: string;
+      token: string;
+      existingId?: string;
+    }): Promise<LocalLinkValidationView>;
+  };
   credentials: {
     list(cwd: string): Promise<MaskedCredentialView[]>;
     save(cwd: string, scope: "user" | "project", cred: CredentialView): Promise<void>;
@@ -1172,6 +1217,14 @@ export interface CodeshellApi {
           domain?: string;
           scope?: "domain" | "all";
           switchMode?: "clear" | "merge";
+          linkProvider?: string;
+          linkConnectionMethod?: string;
+          linkExecutionRuntime?: "local" | "server";
+          agentExposable?: boolean;
+          linkAccountId?: string;
+          linkAccountLabel?: string;
+          linkCapabilityIds?: string[];
+          linkLastVerifiedAt?: string;
           oauthProvider?: string;
           mcpServerName?: string;
           mcpServerUrl?: string;
@@ -1214,6 +1267,24 @@ export interface CodeshellApi {
   // ── Browser popout window ─────────────────────────────────────────────
   /** Probe common localhost dev-server ports via real TCP connect in main;
    *  returns the open ports (ascending). */
+  /**
+   * External Agent Runtimes (Codex / Claude Code), selected from the ordinary
+   * model dropdown as `codex/gpt-5.1` — see shared/external-runtime-models.ts.
+   */
+  externalRuntime: Readonly<{
+    /** Runtime kinds whose binary is installed; empty when the flag is off. */
+    available(): Promise<string[]>;
+    start(payload: {
+      sessionId: string;
+      cwd: string;
+      modelKey: string;
+    }): Promise<{ kind: string; runtimeSessionId: string | null; tools: string[] }>;
+    send(payload: { sessionId: string; text: string }): Promise<void>;
+    interrupt(sessionId: string): Promise<void>;
+    stop(sessionId: string): Promise<void>;
+    // No onEvent: translated events are delivered through `onStreamEvent`,
+    // the same subscription the native path uses.
+  }>;
   probeLocalhostPorts(ports?: number[]): Promise<number[]>;
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout(initialUrl?: string): Promise<void>;

@@ -96,6 +96,10 @@ import { createEventCoalescer } from "./streamCoalescer";
 import { fromSettingsPermissionMode, type PermissionMode } from "./chat/PermissionPill";
 import { copyContextPackageOverrides } from "./contextSelection";
 import type { ModelOption } from "./chat/ModelPill";
+import {
+  externalRuntimeModelEntries,
+  type ExternalRuntimeModelKind,
+} from "../shared/external-runtime-models";
 import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
 import type { QuickChatSessionRef } from "./quickChatSession";
 import type { SettingsModuleId } from "./settings/SettingsPage";
@@ -1432,7 +1436,23 @@ function App() {
         const conns = Array.isArray(merged.modelConnections)
           ? (merged.modelConnections as ModelInstance[])
           : [];
-        const baseOpts = catalogModelOptions(conns, catalog);
+        // External Agent Runtimes appear as ordinary models (`codex/gpt-5.1`),
+        // so picking Codex is the same gesture as picking any other model. Only
+        // runtimes whose binary is actually installed are listed — an entry the
+        // machine cannot run would fail on send and read as a broken feature.
+        const runtimeKinds = await window.codeshell.externalRuntime
+          .available()
+          .catch(() => [] as string[]);
+        const baseOpts: ModelOption[] = [
+          ...catalogModelOptions(conns, catalog),
+          ...externalRuntimeModelEntries(runtimeKinds as ExternalRuntimeModelKind[]).map(
+            (entry) => ({
+              key: entry.key,
+              label: entry.label,
+              provider: entry.provider,
+            }),
+          ),
+        ];
         setModelOptions(baseOpts);
 
         // Backfill maxContextTokens/supportsVision for connections whose

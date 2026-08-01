@@ -39,8 +39,17 @@ export interface ExternalRuntimeStartRequest {
 export interface ExternalRuntimeServiceDeps {
   /** Resolved feature flags for this workspace. */
   featureFlags: () => FeatureFlagOverrides;
-  /** Claim the panel owner for a session (AgentBridge.claimSessionPanelOwner). */
-  claimPanelOwner: (sessionId: string, webContentsId: number) => void;
+  /**
+   * Register a session that main owns but `agent/run` never created
+   * (AgentBridge.registerExternalSession): reserves the session, registers its
+   * browser bucket, and claims the panel owner when there is a window.
+   *
+   * Paired with `releaseExternalSession` — both halves come from the same
+   * object so the several registries they touch cannot be half-updated.
+   */
+  registerSession: (sessionId: string, cwd: string, webContentsId?: number) => void;
+  /** Undo registerSession (AgentBridge.releaseExternalSession). */
+  releaseSession: (sessionId: string) => void;
   /** Forward translated events to the renderer. */
   emit: (sessionId: string, event: StreamEvent) => void;
   /** Host seams the exposed tools need (panels, browser, …). */
@@ -103,12 +112,11 @@ export class ExternalRuntimeService {
       ? undefined // the reviewed first-phase allowlist
       : { mode: "allowlist" as const, toolNames: new Set<string>() };
 
-    // Claim the owner BEFORE the runtime starts: a Panel tool call on the first
-    // turn would otherwise find no owning window and fail closed (§9.3.2).
+    // Register BEFORE the runtime starts: a host tool call on the very first
+    // turn would otherwise find no bucket and no owning window, and fail with
+    // "no panel bucket registered" rather than doing its job (§9.3.2).
     const ownerId = request.ownerWindow?.webContents.id;
-    if (ownerId !== undefined) {
-      this.deps.claimPanelOwner(request.sessionId, ownerId);
-    }
+    this.deps.registerSession(request.sessionId, request.cwd, ownerId);
 
     const session = await startExternalRuntimeSession({
       kind: request.kind,
@@ -165,7 +173,14 @@ export class ExternalRuntimeService {
     const session = this.sessions.get(sessionId);
     if (!session) return;
     this.sessions.delete(sessionId);
-    await session.close();
+    try {
+      await session.close();
+    } finally {
+      // In `finally` because a close() that throws must still release the host
+      // registries — otherwise the bucket and the reserved session leak for the
+      // life of the process, and a later session reusing the id inherits them.
+      this.deps.releaseSession(sessionId);
+    }
     dlog("external-runtime", "session.stopped", { sessionId });
   }
 

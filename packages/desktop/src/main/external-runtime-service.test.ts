@@ -45,13 +45,15 @@ mock.module("./trust-store.js", () => ({
 
 const { ExternalRuntimeService } = await import("./external-runtime-service.js");
 
-const claims: Array<{ sessionId: string; webContentsId: number }> = [];
+const claims: Array<{ sessionId: string; webContentsId?: number }> = [];
+const released: string[] = [];
 const emitted: Array<{ sessionId: string; type: string }> = [];
 
 function service(flags: Record<string, boolean>) {
   return new ExternalRuntimeService({
     featureFlags: () => flags as never,
-    claimPanelOwner: (sessionId, webContentsId) => claims.push({ sessionId, webContentsId }),
+    registerSession: (sessionId, _cwd, webContentsId) => claims.push({ sessionId, webContentsId }),
+    releaseSession: (sessionId) => released.push(sessionId),
     emit: (sessionId, event) => emitted.push({ sessionId, type: event.type }),
   });
 }
@@ -67,6 +69,7 @@ beforeEach(() => {
   starts.length = 0;
   closed.length = 0;
   claims.length = 0;
+  released.length = 0;
   emitted.length = 0;
   trust = "trusted";
 });
@@ -128,7 +131,9 @@ describe("ExternalRuntimeService", () => {
     // only Panel.invoke is unavailable, which the bridge reports on its own.
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     await svc.start({ ...request, ownerWindow: undefined });
-    expect(claims).toEqual([]);
+    // Still registered (the session and its bucket must exist), just with no
+    // owner — that is what makes Panel.invoke fail closed rather than broadcast.
+    expect(claims).toEqual([{ sessionId: "sess-1", webContentsId: undefined }]);
     expect(starts).toHaveLength(1);
   });
 
@@ -168,5 +173,37 @@ describe("ExternalRuntimeService", () => {
   test("stop() on an unknown session is a no-op", async () => {
     const svc = service({ external_agent_runtime: true });
     await expect(svc.stop("ghost")).resolves.toBeUndefined();
+  });
+
+  test("stopping releases the host registries", async () => {
+    // registerSession touches several registries that different modules own.
+    // If release is ever dropped, the browser bucket and the reserved session
+    // survive for the life of the process, and a later session reusing the id
+    // silently inherits them.
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    await svc.stop("sess-1");
+    expect(released).toEqual(["sess-1"]);
+  });
+
+  test("a close() that throws still releases", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    const session = svc.get("sess-1") as unknown as { close: () => Promise<void> };
+    session.close = () => Promise.reject(new Error("runtime died badly"));
+    await expect(svc.stop("sess-1")).rejects.toThrow(/died badly/);
+    // The throw propagates (callers should see it), but the leak does not.
+    expect(released).toEqual(["sess-1"]);
+    expect(svc.get("sess-1")).toBeUndefined();
+  });
+
+  test("restarting the same session releases before re-registering", async () => {
+    // start() closes any previous session for the id; that path must release
+    // too, or a restart leaves a stale owner claim pointing at an old window.
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    await svc.start(request);
+    expect(released).toEqual(["sess-1"]);
+    expect(claims).toHaveLength(2);
   });
 });

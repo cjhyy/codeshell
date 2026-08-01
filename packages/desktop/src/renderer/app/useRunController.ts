@@ -43,6 +43,8 @@ import type { ApprovalRequestEnvelope, InputAttachmentMeta } from "../../preload
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import { NO_REPO_KEY } from "../transcripts";
+import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models";
+import { runExternalRuntimeTurn } from "../externalRuntimeRun";
 
 interface Params {
   shell: {
@@ -376,13 +378,29 @@ export function useRunController({
     // ran on deepseek-v4-flash and refused the image. Always pin before the
     // turn so the engine matches what the UI claims.
     const bucketModel = modelOverrides[bucket] ?? sendModelKey;
-    return runAfterModelSwitch({
-      sessionId: engineSessionId,
-      model: bucketModel,
-      text,
-      opts,
-      run: window.codeshell.run,
-    })
+    // A `codex/…` or `claude-code/…` model key routes this turn to an external
+    // Agent Runtime instead of the Engine. Everything AROUND the call is shared
+    // — busy clearing, error surfacing, the whole .then chain below — because
+    // the two paths differ only in who produces the stream, and duplicating the
+    // bookkeeping is how one path ends up permanently "busy" after a failure.
+    const externalRuntime = parseExternalRuntimeModelKey(bucketModel);
+    const startRun = externalRuntime
+      ? runExternalRuntimeTurn({
+          sessionId: engineSessionId,
+          // `opts.cwd` is the same value the native path sends to agent/run.
+          cwd: opts.cwd ?? "",
+          modelKey: bucketModel,
+          text,
+          runtime: window.codeshell.externalRuntime,
+        })
+      : runAfterModelSwitch({
+          sessionId: engineSessionId,
+          model: bucketModel,
+          text,
+          opts,
+          run: window.codeshell.run,
+        });
+    return startRun
       .then((r) => {
         // Belt-and-braces: clear busy for THIS run's bucket even if the
         // stream never delivered turn_complete (e.g. error in setup, or

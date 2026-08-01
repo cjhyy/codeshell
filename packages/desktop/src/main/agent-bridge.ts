@@ -62,6 +62,9 @@ import {
   activeGuestForSession,
   bucketForSession,
   focusGuestForSession,
+  // Aliased: this class has its own forgetSession, and the two clear DIFFERENT
+  // registries. releaseExternalSession has to call both.
+  forgetSession as forgetSessionBucket,
   listGuestsForSession,
   partitionForSession,
   registerSessionBucket,
@@ -86,6 +89,7 @@ import type {
   AgentPanelHostResponse,
   AgentPanelHostResult,
 } from "../shared/agent-panels.js";
+import type { PanelHostBridge } from "@cjhyy/code-shell-core/extension";
 import { parsePetReportToMimiEvent } from "./pet/pet-report-event.js";
 import {
   acceptsPanelHostResponse,
@@ -112,6 +116,31 @@ export function resolveNoRepoCwd(): string {
 
 function interactiveBackgroundBrowserOwner(sessionId: string): string {
   return `interactive:${sessionId}`;
+}
+
+/**
+ * The browser bucket for an externally-driven session.
+ *
+ * Per-session rather than the renderer's active bucket: buckets select a
+ * browser partition, so reusing the user's would put the runtime's automation
+ * in the same cookie jar and login state as the tab they are looking at.
+ */
+function externalRuntimeBrowserBucket(sessionId: string): string {
+  return `external-runtime:${sessionId}`;
+}
+
+/**
+ * Turn a failed panel-host result into a sentence the model can act on.
+ *
+ * Always prefers the host's own `detail`, which distinguishes the cases that
+ * need opposite fixes ("no owning window" vs "the tool threw"). The fallback
+ * exists only for a malformed reply and says so rather than inventing a cause.
+ */
+function describePanelFailure(result: AgentPanelHostResult): string {
+  if (result.ok === false && typeof result.detail === "string" && result.detail) {
+    return result.detail;
+  }
+  return "panel host returned an unexpected result";
 }
 
 export type { QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
@@ -1191,6 +1220,105 @@ export class AgentBridge implements PetStateBridge {
    */
   hasSessionPanelOwner(sessionId: string): boolean {
     return this.panelHostWindowRoutes.hasLiveOwner(sessionId, this.windows);
+  }
+
+  /**
+   * Register a session whose turns are driven by an external Agent Runtime.
+   *
+   * Host tools gate on two registries that are both side effects of the
+   * `agent/run` path this session never takes:
+   *
+   *   - `sessionCwd`          (via hasKnownSession) — is this a main-owned session?
+   *   - `bucketBySessionId`   (via bucketForSession) — the Panel action handler
+   *                            rejects before routing without it.
+   *
+   * Without both, the very first `Panel.list` returns "no panel bucket
+   * registered" and every host tool looks broken.
+   *
+   * Paired with {@link releaseExternalSession} on purpose. The two registries
+   * live in different modules and are torn down by different functions —
+   * `forgetSession` here clears sessionCwd, while the bucket lives in
+   * browser-driver/active-guest and is cleared by ITS own forgetSession. Split
+   * the register/release halves across call sites and the bucket leaks for the
+   * lifetime of the process.
+   *
+   * The bucket is per-session (`external-runtime:<id>`) rather than the
+   * renderer's active bucket: sharing one would put the runtime's browser
+   * automation in the same partition — same cookies, same logged-in state — as
+   * whatever tab the user happens to be looking at.
+   */
+  registerExternalSession(sessionId: string, cwd: string, webContentsId?: number): void {
+    this.reserveHostSession(sessionId, cwd);
+    try {
+      registerSessionBucket(sessionId, externalRuntimeBrowserBucket(sessionId));
+    } catch (err) {
+      dlog("bridge", "external.register_session_bucket_failed", { error: String(err) });
+    }
+    if (webContentsId !== undefined) this.claimSessionPanelOwner(sessionId, webContentsId);
+  }
+
+  /** Release everything {@link registerExternalSession} registered. */
+  releaseExternalSession(sessionId: string): void {
+    this.forgetSession(sessionId);
+    forgetSessionBucket(sessionId);
+  }
+
+  /**
+   * The `panels` tool-context seam for a session driven outside the Engine.
+   *
+   * On the native path the Engine receives this from the worker's protocol
+   * server, which reaches main over the `__panel_action__` line. An external
+   * runtime has no worker and no Engine, so it needs the same capability
+   * assembled directly — but pointed at the SAME `requestPanelHost` the
+   * protocol line ends up calling, not at a parallel implementation. Owner
+   * routing, the 20s timeout and invoke's fail-closed behaviour are all
+   * properties of that method; a second path would have to re-earn them.
+   */
+  panelBridgeForSession(sessionId: string): PanelHostBridge {
+    const call = (
+      action: "list" | "open" | "tools" | "invoke",
+      extra: Partial<Omit<AgentPanelHostRequest, "requestId" | "sessionId" | "action">> = {},
+    ): Promise<AgentPanelHostResult> =>
+      this.requestPanelHost({
+        sessionId,
+        bucket: bucketForSession(sessionId) ?? externalRuntimeBrowserBucket(sessionId),
+        action,
+        ...extra,
+      });
+
+    // A failed discovery must surface as `failed`, never as an empty list —
+    // "(no panels available)" would read to the model as a definitive answer.
+    return {
+      list: async () => {
+        const result = await call("list");
+        return result.ok === true && "panels" in result
+          ? { items: result.panels as never[] }
+          : { items: [], failed: describePanelFailure(result) };
+      },
+      open: async (panelId: string) => {
+        const result = await call("open", { panelId });
+        return result.ok === true
+          ? { ok: true as const, panelId }
+          : { ok: false as const, panelId, detail: describePanelFailure(result) };
+      },
+      tools: async (panelId: string) => {
+        const result = await call("tools", { panelId });
+        return result.ok === true && "tools" in result
+          ? { items: result.tools as never[] }
+          : { items: [], failed: describePanelFailure(result) };
+      },
+      invoke: async (panelId: string, toolName: string, args: Record<string, unknown>) => {
+        const result = await call("invoke", { panelId, toolName, arguments: args });
+        return result.ok === true && "result" in result
+          ? { ok: true as const, panelId, toolName, result: result.result }
+          : {
+              ok: false as const,
+              panelId,
+              toolName,
+              detail: describePanelFailure(result),
+            };
+      },
+    };
   }
 
   /**
