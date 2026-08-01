@@ -25,10 +25,22 @@ import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { lockSync } from "./lockfile.js";
 
-/** How long to keep retrying the lock before giving up. */
-const LOCK_WAIT_MS = 2_000;
+/**
+ * How long to keep retrying the lock before giving up.
+ *
+ * Sized for real contention, not the happy path. Every holder does a bounded
+ * amount of work (re-read, merge, atomic rename), but with N writers the last
+ * one in line waits for all N-1 ahead of it. Measured here: 48 concurrent
+ * processes saving memories against one index blew through a 2s budget and up to
+ * 46 of them died with ELOCKED. 30s leaves generous headroom while still
+ * failing loudly if a holder is genuinely wedged.
+ */
+const LOCK_WAIT_MS = 30_000;
 /** A lock older than this is treated as abandoned by a crashed holder. */
 const LOCK_STALE_MS = 10_000;
+/** Backoff bounds for the retry loop (see acquireLockOn). */
+const LOCK_RETRY_MIN_MS = 5;
+const LOCK_RETRY_MAX_MS = 50;
 
 // Atomics.wait only ever reads slot 0, which stays 0, so one shared buffer is
 // safe and avoids allocating per retry.
@@ -70,13 +82,21 @@ export function acquireLockOnPath(target: string, timeoutMs = LOCK_WAIT_MS): () 
 function acquireLockOn(target: string, timeoutMs: number): () => void {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
+  let attempt = 0;
   for (;;) {
     try {
       return lockSync(target, { stale: LOCK_STALE_MS, retries: 0 });
     } catch (err) {
       lastError = err;
       if (Date.now() > deadline) throw lastError;
-      sleepSync(10);
+      // Randomized backoff. A fixed delay makes every waiter wake at the same
+      // instant and collide again, so under real contention (dozens of writers)
+      // the same unlucky processes kept losing and eventually timed out.
+      // Jitter spreads the retries out; the cap keeps latency low when only a
+      // couple of writers are competing.
+      const ceiling = Math.min(LOCK_RETRY_MIN_MS * 2 ** attempt, LOCK_RETRY_MAX_MS);
+      attempt += 1;
+      sleepSync(LOCK_RETRY_MIN_MS + Math.floor(Math.random() * ceiling));
     }
   }
 }

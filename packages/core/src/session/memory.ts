@@ -36,6 +36,7 @@ import {
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { createHash, randomUUID } from "node:crypto";
+import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
 
 /**
  * Memory scopes (storage subdirs under a memory root):
@@ -294,8 +295,9 @@ export class MemoryManager {
     // save by paying one loadAll() — every save after that just
     // mutates the cache and rewrites MEMORY.md.
     const cache = this.ensureIndexCache();
-    cache.set(fileName, { name: entry.name, description: entry.description });
-    this.writeIndex(cache);
+    const meta = { name: entry.name, description: entry.description };
+    cache.set(fileName, meta);
+    this.writeIndex(cache, { kind: "save", fileName, meta });
     return fileName;
   }
 
@@ -518,7 +520,7 @@ export class MemoryManager {
       renameSync(join(this.memoryDir, entry.fileName), join(trashDir, entry.fileName));
       const cache = this.ensureIndexCache();
       cache.delete(entry.fileName);
-      this.writeIndex(cache);
+      this.writeIndex(cache, { kind: "delete", fileName: entry.fileName });
       return true;
     } catch {
       return false;
@@ -828,31 +830,35 @@ export class MemoryManager {
       return "";
     }
 
-    const fmt = (e: MemoryEntry): string =>
-      `- ${e.pinned ? "[pinned] " : ""}[${e.type}] ${e.name}: ${e.description}`;
+    const fmt = (e: MemoryEntry, location: "global" | "profile" | "project"): string =>
+      `- ${e.pinned ? "[pinned] " : ""}[scope="${e.scope}" location="${location}" type="${e.type}"] ${e.name}: ${e.description}`;
     const readableLocations = profile ? "global, profile, or project" : "global or project";
 
     const lines: string[] = [];
     if (globalEntries.length > 0) {
       lines.push("## Global memories (apply across all projects)");
-      for (const e of globalEntries) lines.push(fmt(e));
+      for (const e of globalEntries) lines.push(fmt(e, "global"));
     }
     if (profileEntries.length > 0) {
       if (lines.length > 0) lines.push("");
       lines.push("## Digital-human memories (travel with the active profile)");
-      for (const e of profileEntries) lines.push(fmt(e));
+      for (const e of profileEntries) lines.push(fmt(e, "profile"));
     }
     if (projectEntries.length > 0) {
       if (lines.length > 0) lines.push("");
       lines.push("## Project memories (this repo)");
-      for (const e of projectEntries) lines.push(fmt(e));
+      for (const e of projectEntries) lines.push(fmt(e, "project"));
     }
 
     return (
       `# Persistent Memory (index)\n\n` +
       `These are summaries of memories from previous sessions. Only the summary is shown here.\n` +
       `When a memory looks relevant to the current task, read its full content with the ` +
-      `MemoryRead tool (scope = user or dream; location = ${readableLocations}) before relying on it.\n\n` +
+      `MemoryRead tool before relying on it. Every entry includes its exact scope and location; ` +
+      `copy both values exactly and never infer them from the memory name or type. ` +
+      `Readable locations for this run: ${readableLocations}.\n` +
+      `If MemoryRead reports that an entry is missing, do not repeat the same call. ` +
+      `Use MemoryList once to refresh that exact store, or continue without the memory.\n\n` +
       lines.join("\n")
     );
   }
@@ -932,13 +938,55 @@ export class MemoryManager {
     return cache;
   }
 
-  private writeIndex(cache: Map<string, { name: string; description: string }>): void {
-    const lines: string[] = [];
-    for (const [fileName, meta] of cache) {
-      lines.push(`- [${meta.name}](${fileName}) — ${meta.description}`);
+  /**
+   * Rewrite MEMORY.md from the CURRENT set of memory files on disk, under a
+   * cross-process lock.
+   *
+   * The in-memory `indexCache` is a per-instance optimisation, and several
+   * managers exist for the same directory (desktop main, agent worker, TUI, a
+   * second desktop instance). Writing the cache out verbatim meant a stale
+   * snapshot clobbered whatever another writer had added:
+   *
+   *   A saves a → B loads {a}, saves b → A still holds {a}, saves c
+   *   → files a, b, c all exist, but MEMORY.md lists only a and c.
+   *
+   * The individual `<name>.md` files are the source of truth; MEMORY.md is a
+   * derived index. So rather than trusting any cache, re-derive it from disk
+   * inside the lock. `pending` carries this writer's own change, which may not
+   * be visible on disk yet (a delete moves the file to trash first, a save
+   * writes it first) — it is applied on top of the freshly scanned set.
+   */
+  private writeIndex(
+    cache: Map<string, { name: string; description: string }>,
+    pending?:
+      | { kind: "save"; fileName: string; meta: { name: string; description: string } }
+      | { kind: "delete"; fileName: string },
+  ): void {
+    const release = acquireFileLock(this.indexPath);
+    try {
+      // Re-scan under the lock: picks up entries written by other processes
+      // since this instance's cache was built.
+      const merged = new Map<string, { name: string; description: string }>();
+      for (const entry of this.loadAll()) {
+        merged.set(entry.fileName, { name: entry.name, description: entry.description });
+      }
+      if (pending?.kind === "save") merged.set(pending.fileName, pending.meta);
+      if (pending?.kind === "delete") merged.delete(pending.fileName);
+
+      // Keep this instance's cache consistent with what we are about to write,
+      // so the next incremental update starts from the merged truth.
+      cache.clear();
+      for (const [fileName, meta] of merged) cache.set(fileName, meta);
+
+      const lines: string[] = [];
+      for (const [fileName, meta] of merged) {
+        lines.push(`- [${meta.name}](${fileName}) — ${meta.description}`);
+      }
+      const content = lines.length > 0 ? lines.join("\n") + "\n" : "(no memories stored)\n";
+      writeFileAtomic(this.indexPath, content);
+    } finally {
+      release();
     }
-    const content = lines.length > 0 ? lines.join("\n") + "\n" : "(no memories stored)\n";
-    writeFileSync(this.indexPath, content, "utf-8");
   }
 
   private generateId(): string {
