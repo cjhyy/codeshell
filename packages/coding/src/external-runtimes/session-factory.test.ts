@@ -8,7 +8,7 @@
  * real-binary proof lives in `docs/todo/evidence/`.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ToolRegistry } from "@cjhyy/code-shell-core";
@@ -153,10 +153,7 @@ describe("startExternalRuntimeSession", () => {
     // Mirrors the contract test on CreateSessionToolHostOptions one layer up: the
     // fail-open shape (optional + permissive default) has bitten this options
     // object family three times, so the factory must not reintroduce it.
-    const source = require("node:fs").readFileSync(
-      new URL("./session-factory.ts", import.meta.url),
-      "utf8",
-    ) as string;
+    const source = readFileSync(new URL("./session-factory.ts", import.meta.url), "utf8");
     const block = source.slice(
       source.indexOf("export interface ExternalRuntimeSessionOptions"),
       source.indexOf("export interface ExternalRuntimeSession {"),

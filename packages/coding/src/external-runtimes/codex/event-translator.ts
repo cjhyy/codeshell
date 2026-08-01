@@ -40,11 +40,6 @@ export interface CodexEventTranslatorOptions {
   codeshellServerName?: string;
 }
 
-interface Notification {
-  method?: unknown;
-  params?: unknown;
-}
-
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
