@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from "react";
+import { createElement, lazy, Suspense, type ComponentType, type ReactNode } from "react";
 import {
   Bot,
   FolderTree,
@@ -15,7 +15,18 @@ import { resolvePanelAppIcon } from "./panelAppIcons";
 import { FilesPanel } from "./FilesPanel";
 import { BrowserPanel } from "./BrowserPanel";
 import { ReviewPanel } from "./ReviewPanel";
-import { TerminalPanel } from "./TerminalPanel";
+// TerminalPanel is the ONLY importer of @xterm/xterm (+ addon-fit + its CSS).
+// Importing it statically pulled the whole terminal emulator into the first-load
+// chunk for every user, including those who never open a terminal. Loading it on
+// first render moves it to its own chunk.
+const TerminalPanel = lazy(async () => ({
+  default: (await import("./TerminalPanel")).TerminalPanel as ComponentType<TerminalPanelProps>,
+}));
+
+interface TerminalPanelProps {
+  cwd: string | null;
+  sessionId: string;
+}
 import { BackgroundShellPanel } from "./BackgroundShellPanel";
 import { CCRoomView } from "../cc-room/CCRoomView";
 import type { OpenCliSessionRequest } from "../cc-room/types";
@@ -131,7 +142,13 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
     order: 30,
     enabled: alwaysEnabled,
     render: ({ cwd, bucket, tabId }) =>
-      createElement(TerminalPanel, { cwd, sessionId: `term:${bucket}:${tabId}` }),
+      createElement(
+        Suspense,
+        // No spinner: the chunk is local and resolves in a frame or two, so a
+        // flash of loading UI would be more distracting than an empty panel.
+        { fallback: null },
+        createElement(TerminalPanel, { cwd, sessionId: `term:${bucket}:${tabId}` }),
+      ),
   }),
   builtin({
     key: "shells",

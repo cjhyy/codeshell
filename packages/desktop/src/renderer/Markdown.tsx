@@ -21,6 +21,44 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema, type Options as SanitizeSchema } from "rehype-sanitize";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github.css";
+import bash from "highlight.js/lib/languages/bash";
+import css from "highlight.js/lib/languages/css";
+import diff from "highlight.js/lib/languages/diff";
+import go from "highlight.js/lib/languages/go";
+import json from "highlight.js/lib/languages/json";
+import markdown from "highlight.js/lib/languages/markdown";
+import python from "highlight.js/lib/languages/python";
+import rust from "highlight.js/lib/languages/rust";
+import sql from "highlight.js/lib/languages/sql";
+import typescript from "highlight.js/lib/languages/typescript";
+import xml from "highlight.js/lib/languages/xml";
+import yaml from "highlight.js/lib/languages/yaml";
+
+/**
+ * Explicit language set instead of rehype-highlight's default bundle.
+ *
+ * The default pulls in ~37 grammars and, with `detect: true`, runs
+ * auto-detection against all of them for every unlabelled code block — both a
+ * first-load size cost and per-render work. These cover what actually shows up
+ * in this app's transcripts; anything else renders as plain text, which is a far
+ * better trade than shipping every grammar to every user.
+ *
+ * `typescript` also covers JS/TSX/JSX, `xml` covers HTML.
+ */
+const HIGHLIGHT_LANGUAGES = {
+  bash,
+  css,
+  diff,
+  go,
+  json,
+  markdown,
+  python,
+  rust,
+  sql,
+  typescript,
+  xml,
+  yaml,
+};
 
 type SanitizeAttribute = NonNullable<SanitizeSchema["attributes"]>[string][number];
 
@@ -180,7 +218,13 @@ function MarkdownImpl({ text, cwd }: Props) {
           rehypeRaw,
           [rehypeSanitize, SANITIZE_SCHEMA],
           rehypeDropEmptyClassNames,
-          [rehypeHighlight, { detect: true, ignoreMissing: true }],
+          // detect:false — auto-detection only pays off with the full grammar
+          // bundle; with an explicit set an unlabelled block is better left as
+          // plain text than guessed from a partial language list.
+          [
+            rehypeHighlight,
+            { detect: false, ignoreMissing: true, languages: HIGHLIGHT_LANGUAGES },
+          ],
         ]}
         urlTransform={(url) =>
           url.startsWith(CODESHELL_PATH_SCHEME) ? url : defaultUrlTransform(url)
