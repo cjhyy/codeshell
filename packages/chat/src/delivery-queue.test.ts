@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -161,3 +161,135 @@ function persistedPending(path: string): number {
     return -1;
   }
 }
+
+describe("attachment durability", () => {
+  // Attachments used to force `persistent = false`, because a ChatAttachment
+  // carries a `load()` closure that cannot be serialized. The record therefore
+  // lived in memory ONLY — while the adapter had already been told the message
+  // was accepted (Telegram advances its long-poll offset, Slack acks on handler
+  // return). A restart between enqueue and delivery lost the message for good:
+  // upstream never resends, and the durable inbox had no record of it.
+  //
+  // Bytes are now spooled to disk and the metadata persisted, so the record
+  // survives exactly like a text-only one.
+  const withAttachment = (messageId: string, bytes: number[]): ChannelMessage => ({
+    ...incoming(messageId, "look at this"),
+    attachments: [
+      {
+        id: "att-1",
+        kind: "image",
+        name: "shot.png",
+        mimeType: "image/png",
+        size: bytes.length,
+        load: async () => Uint8Array.from(bytes),
+      },
+    ],
+  });
+
+  test("a message with attachments is persisted, not memory-only", async () => {
+    const path = inboxPath();
+    // maxConcurrent:0 holds the record pending so we can inspect what landed.
+    const queue = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0 },
+      async () => undefined,
+      () => undefined,
+    );
+    await queue.start();
+    expect(await queue.enqueue("line:0", withAttachment("m-att", [1, 2, 3]))).toBe("queued");
+
+    // Pre-fix this file had zero pending entries.
+    expect(JSON.parse(readFileSync(path, "utf-8")).pending).toHaveLength(1);
+    queue.stop();
+  });
+
+  test("the attachment survives a restart and its bytes are readable", async () => {
+    const path = inboxPath();
+    const first = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0 },
+      async () => undefined,
+      () => undefined,
+    );
+    await first.start();
+    await first.enqueue("line:0", withAttachment("m-restart", [9, 8, 7]));
+    first.stop();
+
+    // Fresh process: the closure is gone, so the bytes must come from the spool.
+    const seen: Uint8Array[] = [];
+    const second = new DeliveryQueue(
+      config(path),
+      async (_adapter, message) => {
+        for (const attachment of message.attachments ?? []) {
+          seen.push(await attachment.load());
+        }
+      },
+      () => undefined,
+    );
+    await second.start();
+    await waitUntil(() => seen.length === 1);
+    expect([...seen[0]!]).toEqual([9, 8, 7]);
+    second.stop();
+  });
+
+  test("attachment metadata round-trips through the restart", async () => {
+    const path = inboxPath();
+    const first = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0 },
+      async () => undefined,
+      () => undefined,
+    );
+    await first.start();
+    await first.enqueue("line:0", withAttachment("m-meta", [1]));
+    first.stop();
+
+    const observed: Array<{ id: string; name?: string; mimeType?: string }> = [];
+    const second = new DeliveryQueue(
+      config(path),
+      async (_adapter, message) => {
+        for (const attachment of message.attachments ?? []) {
+          observed.push({
+            id: attachment.id,
+            ...(attachment.name ? { name: attachment.name } : {}),
+            ...(attachment.mimeType ? { mimeType: attachment.mimeType } : {}),
+          });
+        }
+      },
+      () => undefined,
+    );
+    await second.start();
+    await waitUntil(() => observed.length === 1);
+    expect(observed[0]).toEqual({ id: "att-1", name: "shot.png", mimeType: "image/png" });
+    second.stop();
+  });
+
+  test("an oversized attachment falls back to memory rather than filling the disk", async () => {
+    const path = inboxPath();
+    const queue = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0, maxSpooledAttachmentBytes: 2 },
+      async () => undefined,
+      () => undefined,
+    );
+    await queue.start();
+    await queue.enqueue("line:0", withAttachment("m-big", [1, 2, 3, 4, 5]));
+    // Not persisted — the pre-existing behaviour, kept deliberately for payloads
+    // too large to spool. With nothing persistable the state file is never even
+    // written, so treat a missing file as "zero pending".
+    const pending = existsSync(path)
+      ? (JSON.parse(readFileSync(path, "utf-8")) as { pending: unknown[] }).pending
+      : [];
+    expect(pending).toHaveLength(0);
+    queue.stop();
+  });
+
+  test("text-only messages are unaffected", async () => {
+    const path = inboxPath();
+    const queue = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0 },
+      async () => undefined,
+      () => undefined,
+    );
+    await queue.start();
+    await queue.enqueue("line:0", incoming("m-text", "plain"));
+    expect(JSON.parse(readFileSync(path, "utf-8")).pending).toHaveLength(1);
+    queue.stop();
+  });
+});
