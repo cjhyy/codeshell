@@ -19,10 +19,11 @@ import type {
   PetWorkExecutionBackend,
   PetWorkspaceOption,
   PetWorkDelegation,
-  PetTodoItem,
+  PetFollowUpItem,
   PetOutboundTargetOption,
 } from "@cjhyy/code-shell-pet";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
+import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -192,8 +193,8 @@ interface PetDispatchOptions {
   managerModel?(): Promise<string | null>;
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
   listReusableSessions?(): Promise<PetReusableSessionCandidate[]>;
-  /** Durable personal todos; independent from per-Session TodoWrite snapshots. */
-  listTodos?(): Promise<PetTodoItem[]>;
+  /** The same actionable items shown in the desktop Needs follow-up section. */
+  listFollowUps?(): Promise<PetFollowUpItem[]>;
   /** Opaque, host-authorized proactive owner destinations. */
   listOutboundTargets?(): Promise<PetOutboundTargetOption[]>;
   /**
@@ -219,6 +220,17 @@ interface PetDispatchOptions {
    * The key set is declared to the worker so only wired tools become visible.
    */
   hostActions?: Record<string, PetHostActionExecutor>;
+  /**
+   * Durable log of already-executed host actions, keyed by
+   * (petSessionId, clientMessageId, actionIndex).
+   *
+   * Engine replays a stored `run_result` for a repeated `clientMessageId` without
+   * re-running the model; without this log the dispatcher would re-execute the
+   * side effects in that replayed result (a second Todo, a second proactive
+   * message). Optional: when absent, behaviour is the pre-existing at-least-once
+   * one.
+   */
+  hostActionReceipts?: PetHostActionReceiptStore;
   /** Extra bounded world fields (memories, tunnel status, ...) for each turn. */
   worldContext?(): Promise<Record<string, unknown>> | Record<string, unknown>;
   /**
@@ -1067,14 +1079,14 @@ export class PetDispatchService {
         const [
           listedWorkspaces,
           listedReusableSessions,
-          listedTodos,
+          listedFollowUps,
           listedOutboundTargets,
           configuredManagerModel,
           replyAttachmentRoots,
         ] = await Promise.all([
           this.options.listWorkspaces?.() ?? [],
           this.options.listReusableSessions?.() ?? [],
-          this.options.listTodos?.() ?? [],
+          this.options.listFollowUps?.() ?? [],
           this.options.listOutboundTargets?.() ?? [],
           this.options.managerModel?.() ?? null,
           this.getReplyAttachmentRoots(),
@@ -1120,7 +1132,13 @@ export class PetDispatchService {
         >();
         const reusableSessionCounts = new Map<string, number>();
         const petReusableSessions: PetReusableSessionOption[] = [];
-        for (const candidate of listedReusableSessions) {
+        const followUpSelectors = new Set(listedFollowUps.map((item) => item.sessionSelector));
+        const orderedReusableSessions = [...listedReusableSessions].sort((left, right) => {
+          const leftIsFollowUp = followUpSelectors.has(reusableSessionId(left.sessionId));
+          const rightIsFollowUp = followUpSelectors.has(reusableSessionId(right.sessionId));
+          return Number(rightIsFollowUp) - Number(leftIsFollowUp);
+        });
+        for (const candidate of orderedReusableSessions) {
           if (
             petReusableSessions.length >= 32 ||
             !candidate.sessionId ||
@@ -1133,8 +1151,11 @@ export class PetDispatchService {
             candidate.workspacePath === null
               ? NO_WORKSPACE_ID
               : workspaceIdByPath.get(normalizeWorkspacePath(candidate.workspacePath));
-          if (!workspaceId || (reusableSessionCounts.get(workspaceId) ?? 0) >= 6) continue;
           const id = reusableSessionId(candidate.sessionId);
+          const isFollowUp = followUpSelectors.has(id);
+          if (!workspaceId || (!isFollowUp && (reusableSessionCounts.get(workspaceId) ?? 0) >= 6)) {
+            continue;
+          }
           if (reusableSessionById.has(id)) continue;
           reusableSessionById.set(id, { ...candidate, workspaceId });
           reusableSessionCounts.set(workspaceId, (reusableSessionCounts.get(workspaceId) ?? 0) + 1);
@@ -1149,6 +1170,10 @@ export class PetDispatchService {
             }`,
           });
         }
+        const petFollowUps = listedFollowUps.slice(0, 100).map((item) => {
+          const sourceSession = reusableSessionById.get(item.sessionSelector);
+          return sourceSession ? { ...item, workspaceId: sourceSession.workspaceId } : item;
+        });
         // Advance the topic-segment clock and, if a long-idle boundary was
         // crossed, obtain a carryover brief (open tasks + recent conclusions)
         // to inject as background continuity via the pet runtime context. The
@@ -1164,7 +1189,7 @@ export class PetDispatchService {
         // actions below are safe on desktop too because pet-ipc records and
         // displays the host's authoritative post-turn receipt.
         const desktopHostActionKinds = new Set([
-          "todoMutation",
+          "followUpMutation",
           "sessionArchive",
           "outboundMessage",
         ]);
@@ -1186,7 +1211,7 @@ export class PetDispatchService {
           "currentMessageSource",
           "currentMessageCapabilities",
           "memoryWindow",
-          "todos",
+          "followUps",
           "outboundTargets",
         ]);
         const remainingWorldExtras = Object.fromEntries(
@@ -1240,7 +1265,7 @@ export class PetDispatchService {
             ? { mobileRemote: worldExtras.mobileRemote }
             : {}),
           ...(this.options.longTasks ? { longTasks: this.options.longTasks.context() } : {}),
-          todos: listedTodos.slice(0, 100),
+          followUps: petFollowUps,
           outboundTargets: listedOutboundTargets.slice(0, 32),
           sessions: projectionWorld.sessions,
           pending: projectionWorld.pending,
@@ -1269,7 +1294,7 @@ export class PetDispatchService {
             ...(this.options.sessionsRootDir
               ? { sessionsRootDir: this.options.sessionsRootDir }
               : {}),
-            todos: listedTodos.slice(0, 100),
+            followUps: petFollowUps,
             outboundTargets: listedOutboundTargets.slice(0, 32),
           },
           cwd: this.options.hostCwd,
@@ -1414,6 +1439,13 @@ export class PetDispatchService {
         const hostActions = await this.executeHostActions(
           readPetHostActionRequests(response.result, new Set(hostActionKinds)),
           gatewayReplyCapability,
+          // This is the replay-prone path: a duplicate submission of the same
+          // clientMessageId returns the transcript's stored result, whose host
+          // actions must not run twice.
+          {
+            petSessionId: metadata.petSessionId,
+            ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
+          },
         );
         // Launch acceptance is not task completion. PetLongTaskCoordinator owns
         // the real terminal signal and records work memory only after a worker
@@ -1438,14 +1470,49 @@ export class PetDispatchService {
   private async executeHostActions(
     requests: Array<{ kind: string; payload: Record<string, unknown> }>,
     gatewayReplyCapability?: PetGatewayReplyCapability,
+    /**
+     * Replay identity. When provided, each action is looked up in the durable
+     * receipt log first and its recorded outcome is reused instead of re-running
+     * the side effect.
+     *
+     * Needed because Engine treats a repeated `clientMessageId` as "replay the
+     * stored run_result" — it does not re-run the model, but this dispatcher used
+     * to re-read `extensions.pet.hostActions` and execute them again, so a
+     * duplicate delivery could send a second message or create a second Todo.
+     */
+    replayIdentity?: { petSessionId: string; clientMessageId?: string },
   ): Promise<PetHostActionExecution[]> {
     const executions: PetHostActionExecution[] = [];
-    for (const request of requests) {
+    const receipts = this.options.hostActionReceipts;
+    const canReplay =
+      receipts !== undefined &&
+      replayIdentity !== undefined &&
+      typeof replayIdentity.clientMessageId === "string" &&
+      replayIdentity.clientMessageId.length > 0;
+
+    for (const [actionIndex, request] of requests.entries()) {
       const executor = this.options.hostActions?.[request.kind];
       if (!executor) {
         executions.push({ ...request, ok: false, error: "host action is unavailable" });
         continue;
       }
+
+      // Per-action key: if action 1 succeeded and action 2 crashed, a retry must
+      // replay 1's receipt and only re-run 2.
+      if (canReplay) {
+        const prior = await receipts
+          .find(replayIdentity.petSessionId, replayIdentity.clientMessageId!, actionIndex)
+          .catch(() => undefined);
+        if (prior && prior.kind === request.kind) {
+          executions.push(
+            prior.ok
+              ? { ...request, ok: true, result: prior.result }
+              : { ...request, ok: false, error: prior.error ?? "host action failed" },
+          );
+          continue;
+        }
+      }
+
       try {
         if (request.kind === "gatewayReply") {
           if (!gatewayReplyCapability) throw new Error("Gateway 回复能力不可用");
@@ -1467,12 +1534,31 @@ export class PetDispatchService {
           throw new Error("Gateway 回复结果超出当前渠道能力");
         }
         executions.push({ ...request, ok: true, result });
+        if (canReplay) {
+          await receipts
+            .record(replayIdentity.petSessionId, replayIdentity.clientMessageId!, actionIndex, {
+              kind: request.kind,
+              ok: true,
+              result,
+              completedAt: Date.now(),
+            })
+            .catch(() => undefined);
+        }
       } catch (error) {
-        executions.push({
-          ...request,
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        const message = error instanceof Error ? error.message : String(error);
+        executions.push({ ...request, ok: false, error: message });
+        // Record failures too: a retry must report the SAME outcome rather than
+        // quietly attempting the side effect a second time.
+        if (canReplay) {
+          await receipts
+            .record(replayIdentity.petSessionId, replayIdentity.clientMessageId!, actionIndex, {
+              kind: request.kind,
+              ok: false,
+              error: message,
+              completedAt: Date.now(),
+            })
+            .catch(() => undefined);
+        }
       }
     }
     return executions;
