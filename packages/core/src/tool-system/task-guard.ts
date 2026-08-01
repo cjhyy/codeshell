@@ -66,8 +66,8 @@ export class TaskGuard {
       this.lastNagTurn.set(task.id, turnNumber);
     }
 
-    const lines = stale.map(({ task, age }) =>
-      `  - "${task.subject}" (in_progress for ${age} turns)`,
+    const lines = stale.map(
+      ({ task, age }) => `  - "${task.subject}" (in_progress for ${age} turns)`,
     );
 
     return (

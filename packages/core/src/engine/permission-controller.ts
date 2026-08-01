@@ -13,6 +13,62 @@ import type { EngineConfig } from "./types.js";
 
 type PermissionMode = NonNullable<EngineConfig["permissionMode"]>;
 
+export interface ComposePermissionRulesOptions {
+  mode: PermissionMode;
+  cwd: string;
+  presetRules: readonly PermissionRule[];
+  settingsScope?: EngineConfig["settingsScope"];
+  projectTrusted?: boolean;
+}
+
+/**
+ * Compose the permission rule list for a session: preset rules, the standing
+ * memory-scope carve-outs, mode-derived rules, and finally the user's own
+ * `settings.permissions.rules` at highest precedence.
+ *
+ * Extracted from {@link PermissionController.build} so that a non-Engine caller
+ * — notably `SessionToolHost`, which exposes tools to an external Agent Runtime
+ * — composes rules the SAME way instead of being handed the obligation and
+ * silently getting it wrong. That mattered concretely: a user rule denying a
+ * tool lives only in settings, so a path that skips this leaves the user's
+ * explicit "no" unenforced for the external runtime while the Native Engine
+ * honors it.
+ */
+export function composePermissionRules(options: ComposePermissionRulesOptions): PermissionRule[] {
+  const { mode, cwd } = options;
+  const rules = [...options.presetRules];
+  rules.push({
+    tool: "MemorySave",
+    argsPattern: { scope: "^dream$" },
+    decision: "allow",
+    reason: "Dream scope is the LLM's auto-consolidation workspace",
+  });
+  rules.push({
+    tool: "MemoryDelete",
+    argsPattern: { scope: "^dream$" },
+    decision: "allow",
+    reason: "Dream scope is the LLM's auto-consolidation workspace",
+  });
+  if (mode === "acceptEdits" || mode === "bypassPermissions") {
+    rules.push({ tool: "Write", decision: "allow" });
+    rules.push({ tool: "Edit", decision: "allow" });
+  }
+  if (mode === "bypassPermissions") rules.push({ tool: "Bash", decision: "allow" });
+
+  try {
+    const settings = new SettingsManager(
+      cwd,
+      options.settingsScope ?? "project",
+      options.projectTrusted !== false,
+    ).get();
+    // unshift: the user's own rules outrank every default.
+    if (settings.permissions?.rules?.length) rules.unshift(...settings.permissions.rules);
+  } catch {
+    // Settings are optional; preset and mode defaults remain usable.
+  }
+  return rules;
+}
+
 export class PermissionController {
   private mode: PermissionMode;
   private inPlanMode: boolean;
@@ -53,35 +109,13 @@ export class PermissionController {
     approvalRouter?: ApprovalRouter,
   ): { rules: PermissionRule[]; backend: ApprovalBackend } {
     const config = this.deps.config();
-    const rules = [...this.deps.presetRules()];
-    rules.push({
-      tool: "MemorySave",
-      argsPattern: { scope: "^dream$" },
-      decision: "allow",
-      reason: "Dream scope is the LLM's auto-consolidation workspace",
+    const rules = composePermissionRules({
+      mode,
+      cwd,
+      presetRules: this.deps.presetRules(),
+      settingsScope: config.settingsScope,
+      projectTrusted: config.projectTrusted,
     });
-    rules.push({
-      tool: "MemoryDelete",
-      argsPattern: { scope: "^dream$" },
-      decision: "allow",
-      reason: "Dream scope is the LLM's auto-consolidation workspace",
-    });
-    if (mode === "acceptEdits" || mode === "bypassPermissions") {
-      rules.push({ tool: "Write", decision: "allow" });
-      rules.push({ tool: "Edit", decision: "allow" });
-    }
-    if (mode === "bypassPermissions") rules.push({ tool: "Bash", decision: "allow" });
-
-    try {
-      const settings = new SettingsManager(
-        cwd,
-        config.settingsScope ?? "project",
-        config.projectTrusted !== false,
-      ).get();
-      if (settings.permissions?.rules?.length) rules.unshift(...settings.permissions.rules);
-    } catch {
-      // Settings are optional; preset and mode defaults remain usable.
-    }
 
     if (config.approvalBackend) {
       return {

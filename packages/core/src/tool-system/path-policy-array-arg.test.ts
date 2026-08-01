@@ -85,10 +85,7 @@ describe("path-policy enforces each element of an array path arg", () => {
   test("an in-workspace array element does not prompt", async () => {
     writeFileSync(join(workspace, "ok.png"), "x");
     const approved = ctxWith("允许本次");
-    await execute(
-      { id: "c2", toolName: "ReadMany", args: { paths: ["ok.png"] } },
-      approved.ctx,
-    );
+    await execute({ id: "c2", toolName: "ReadMany", args: { paths: ["ok.png"] } }, approved.ctx);
     expect(approved.asked()).toBe(0); // in-workspace → allow, no prompt
   });
 });

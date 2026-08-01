@@ -45,7 +45,7 @@ describe("AgentServer panel bridge", () => {
       },
       isHeadless: () => false,
       async run(_task: string, options: { sessionId: string }): Promise<EngineResult> {
-        const panels = await panelBridge!.list();
+        const panels = (await panelBridge!.list()).items;
         const opened = await panelBridge!.open(panels[0]!.id);
         return {
           text: `${panels[0]!.title}:${opened.panelId}`,
@@ -90,9 +90,7 @@ describe("AgentServer panel bridge", () => {
           approved: true,
           answer: JSON.stringify({
             ok: true,
-            panels: [
-              { id: "quickChat", title: "Quick chat", source: "builtin-panel-app" },
-            ],
+            panels: [{ id: "quickChat", title: "Quick chat", source: "builtin-panel-app" }],
           }),
         },
       },

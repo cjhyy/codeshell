@@ -21,7 +21,12 @@ describe("flattenAxTree", () => {
 
   test("drops ignored nodes and roleless nodes", () => {
     const { elements } = flattenAxTree([
-      ax({ ignored: true, role: { value: "button" }, name: { value: "hidden" }, backendDOMNodeId: 1 }),
+      ax({
+        ignored: true,
+        role: { value: "button" },
+        name: { value: "hidden" },
+        backendDOMNodeId: 1,
+      }),
       ax({ name: { value: "no role" }, backendDOMNodeId: 2 }),
       ax({ role: { value: "button" }, name: { value: "ok" }, backendDOMNodeId: 3 }),
     ]);
@@ -38,7 +43,12 @@ describe("flattenAxTree", () => {
 
   test("includes non-sensitive textbox value but NEVER a sensitive one", () => {
     const { elements } = flattenAxTree([
-      ax({ role: { value: "textbox" }, name: { value: "关键词" }, value: { value: "hello" }, backendDOMNodeId: 1 }),
+      ax({
+        role: { value: "textbox" },
+        name: { value: "关键词" },
+        value: { value: "hello" },
+        backendDOMNodeId: 1,
+      }),
       ax({
         role: { value: "textbox" },
         name: { value: "password" },
@@ -96,7 +106,9 @@ describe("renderElementList", () => {
       { ref: "e3", role: "textbox", name: "password", sensitive: true },
     ]);
     expect(text).toBe(
-      '[ref=e1] button "搜索"\n' + '[ref=e2] textbox "关键词" ="hi"\n' + '[ref=e3] textbox "password" [sensitive]',
+      '[ref=e1] button "搜索"\n' +
+        '[ref=e2] textbox "关键词" ="hi"\n' +
+        '[ref=e3] textbox "password" [sensitive]',
     );
   });
 

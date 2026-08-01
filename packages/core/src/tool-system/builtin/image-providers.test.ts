@@ -36,7 +36,13 @@ describe("OpenAIImageProvider", () => {
     if (res.ok) expect(res.b64).toBe("QUJD");
     // Trailing slash on baseUrl must be trimmed (no double slash).
     expect(calls[0].url).toBe("https://api.example.com/v1/images/generations");
-    expect(calls[0].body).toMatchObject({ model: "gpt-image-2", prompt: "a cat", size: "1024x1024", quality: "high", n: 1 });
+    expect(calls[0].body).toMatchObject({
+      model: "gpt-image-2",
+      prompt: "a cat",
+      size: "1024x1024",
+      quality: "high",
+      n: 1,
+    });
     expect(calls[0].headers.Authorization).toBe("Bearer sk-test");
   });
 
@@ -44,16 +50,30 @@ describe("OpenAIImageProvider", () => {
     let sentModel = "";
     const fakeFetch: typeof fetch = (async (_url: string, init: any) => {
       sentModel = JSON.parse(init.body).model;
-      return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "x" }] }) } as Response;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [{ b64_json: "x" }] }),
+      } as Response;
     }) as unknown as typeof fetch;
     const p = new OpenAIImageProvider(fakeFetch);
-    await p.generate({ prompt: "p", size: "auto", quality: "auto", model: "gpt-image-9000", creds });
+    await p.generate({
+      prompt: "p",
+      size: "auto",
+      quality: "auto",
+      model: "gpt-image-9000",
+      creds,
+    });
     expect(sentModel).toBe("gpt-image-9000");
   });
 
   test("non-OK response → error result with status + body", async () => {
     const fakeFetch: typeof fetch = (async () =>
-      ({ ok: false, status: 429, text: async () => "rate limited" } as Response)) as unknown as typeof fetch;
+      ({
+        ok: false,
+        status: 429,
+        text: async () => "rate limited",
+      }) as Response) as unknown as typeof fetch;
     const p = new OpenAIImageProvider(fakeFetch);
     const res = await p.generate({ prompt: "p", size: "auto", quality: "auto", model: "m", creds });
     expect(res.ok).toBe(false);
@@ -65,7 +85,11 @@ describe("OpenAIImageProvider", () => {
 
   test("missing b64 in response → error result", async () => {
     const fakeFetch: typeof fetch = (async () =>
-      ({ ok: true, status: 200, json: async () => ({ data: [{}] }) } as Response)) as unknown as typeof fetch;
+      ({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [{}] }),
+      }) as Response) as unknown as typeof fetch;
     const p = new OpenAIImageProvider(fakeFetch);
     const res = await p.generate({ prompt: "p", size: "auto", quality: "auto", model: "m", creds });
     expect(res.ok).toBe(false);
@@ -75,7 +99,11 @@ describe("OpenAIImageProvider", () => {
     const calls: Array<{ url: string; init: any }> = [];
     const fakeFetch: typeof fetch = (async (url: string, init: any) => {
       calls.push({ url, init });
-      return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "RURJVA==" }] }) } as Response;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [{ b64_json: "RURJVA==" }] }),
+      } as Response;
     }) as unknown as typeof fetch;
 
     const p = new OpenAIImageProvider(fakeFetch);
@@ -111,7 +139,11 @@ describe("OpenAIImageProvider", () => {
     let form: FormData | null = null;
     const fakeFetch: typeof fetch = (async (_url: string, init: any) => {
       form = init.body as FormData;
-      return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "x" }] }) } as Response;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [{ b64_json: "x" }] }),
+      } as Response;
     }) as unknown as typeof fetch;
     const p = new OpenAIImageProvider(fakeFetch);
     await p.generate({

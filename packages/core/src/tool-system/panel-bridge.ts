@@ -27,6 +27,23 @@ export interface PanelInvokeResult {
 }
 
 /**
+ * A discovery result that can distinguish "the host has none" from "the request
+ * never completed".
+ *
+ * `list` / `tools` used to return a bare array, so every failure — a user Stop, a
+ * closed session, a timeout — collapsed to `[]`, which the Panel tool then
+ * reported as the factual claim "(no panels available)". That is worse than a
+ * refusal: it tells the model panel hosting is unavailable, so it stops trying.
+ * `failed` carries the reason instead, and an absent `failed` means the empty
+ * list is real.
+ */
+export interface PanelDiscoveryResult<T> {
+  items: T[];
+  /** Present only when the request did not complete; `items` is then empty. */
+  failed?: string;
+}
+
+/**
  * UI-agnostic bridge used by agent tools to discover and focus host panels.
  *
  * Core never imports a renderer. Desktop implements this through its protocol
@@ -34,9 +51,9 @@ export interface PanelInvokeResult {
  * use the same bridge to open their own panel by stable registry id.
  */
 export interface PanelHostBridge {
-  list(): Promise<AgentPanelDescriptor[]>;
+  list(): Promise<PanelDiscoveryResult<AgentPanelDescriptor>>;
   open(panelId: string): Promise<PanelOpenResult>;
-  tools?(panelId: string): Promise<AgentPanelToolDescriptor[]>;
+  tools?(panelId: string): Promise<PanelDiscoveryResult<AgentPanelToolDescriptor>>;
   invoke?(
     panelId: string,
     toolName: string,

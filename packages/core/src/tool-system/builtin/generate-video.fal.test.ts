@@ -37,7 +37,13 @@ describe("resolveVideoProvider reads videoGen.providers[]", () => {
       videoGen: {
         defaultProvider: "fal",
         providers: [
-          { id: "fal", kind: "fal", baseUrl: "https://queue.fal.run", apiKey: "k", defaultModel: "fal-ai/kling-video/v3/pro/text-to-video" },
+          {
+            id: "fal",
+            kind: "fal",
+            baseUrl: "https://queue.fal.run",
+            apiKey: "k",
+            defaultModel: "fal-ai/kling-video/v3/pro/text-to-video",
+          },
         ],
       },
     });
@@ -61,7 +67,13 @@ describe("resolveVideoProvider reads unified modelConnections + credentials", ()
     const cwd = tmpWorkspaceWithSettings({
       credentials: [{ id: "fal-acct", catalogId: "fal-video", apiKey: "sk-fal-unified" }],
       modelConnections: [
-        { id: "vid1", catalogId: "fal-video", tag: "video", model: "fal-ai/kling-video/v3/pro/text-to-video", credentialId: "fal-acct" },
+        {
+          id: "vid1",
+          catalogId: "fal-video",
+          tag: "video",
+          model: "fal-ai/kling-video/v3/pro/text-to-video",
+          credentialId: "fal-acct",
+        },
       ],
       defaults: { video: "vid1" },
     });
@@ -88,20 +100,34 @@ describe("GenerateVideo image normalization", () => {
   test("local image paths resolve against ctx.cwd before upload, URLs pass through", () => {
     const cwd = "/tmp/video-workspace";
 
-    expect(__resolveLocalImageInputForTests("frame.png", cwd)).toBe(
-      join(cwd, "frame.png"),
-    );
+    expect(__resolveLocalImageInputForTests("frame.png", cwd)).toBe(join(cwd, "frame.png"));
     expect(__resolveLocalImageInputForTests("https://example.test/frame.png", cwd)).toBe(
       "https://example.test/frame.png",
     );
   });
 
   test("images[] wins; URLs pass through; >9 → error", async () => {
-    const fakeUploader = { kind: "fal", toUrl: async (p: string) => ({ ok: true as const, url: p.startsWith("http") ? p : `https://fal/${p}` }) };
-    const ok = await __normalizeImagesForTests(["https://x/a.png", "/local/b.png"], undefined, fakeUploader, { baseUrl: "x", apiKey: "k" });
+    const fakeUploader = {
+      kind: "fal",
+      toUrl: async (p: string) => ({
+        ok: true as const,
+        url: p.startsWith("http") ? p : `https://fal/${p}`,
+      }),
+    };
+    const ok = await __normalizeImagesForTests(
+      ["https://x/a.png", "/local/b.png"],
+      undefined,
+      fakeUploader,
+      { baseUrl: "x", apiKey: "k" },
+    );
     expect(ok).toEqual({ ok: true, urls: ["https://x/a.png", "https://fal//local/b.png"] });
 
-    const tooMany = await __normalizeImagesForTests(Array.from({ length: 10 }, (_, i) => `https://x/${i}.png`), undefined, fakeUploader, { baseUrl: "x", apiKey: "k" });
+    const tooMany = await __normalizeImagesForTests(
+      Array.from({ length: 10 }, (_, i) => `https://x/${i}.png`),
+      undefined,
+      fakeUploader,
+      { baseUrl: "x", apiKey: "k" },
+    );
     expect(tooMany.ok).toBe(false);
   });
 });

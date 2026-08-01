@@ -29,8 +29,35 @@ export { logger } from "./logging/logger.js";
 export { addTokenUsage } from "./session/usage.js";
 export { resolveMaxOutput } from "./onboarding.js";
 export { SettingsManager, userHome } from "./settings/manager.js";
+// Feature flags: a host needs to READ them to decide whether an experimental
+// backend is permitted. Read-only surface — the flag registry itself stays in core.
+export {
+  isFeatureEnabled,
+  featureFlagNames,
+  resolveFeatureFlags,
+} from "./settings/feature-flags.js";
+export type { FeatureFlagName, FeatureFlagOverrides } from "./settings/feature-flags.js";
 export { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 export type { ToolContext } from "./tool-system/context.js";
+// Session-scoped tool surface for external Agent Runtimes (Codex / Claude Code).
+// This is intentionally the STRONGEST tool-execution handle a capability package
+// can obtain: `ToolExecutor`, `ToolRegistry` and `PermissionClassifier` are
+// deliberately NOT exported here, because exporting them would hand the caller a
+// supported way to bypass SessionToolHost — and with it every authorization check
+// the design routes through ToolExecutor.
+export { createSessionToolHost } from "./tool-system/session-tool-host.js";
+export type {
+  CreateSessionToolHostOptions,
+  ExternalSessionPermissionMode,
+  ExternalToolExposurePolicy,
+  SessionToolHost,
+} from "./tool-system/session-tool-host.js";
+export type { ToolVisibilityInputs } from "./engine/run-tooling.js";
+export {
+  FIRST_PHASE_EXPOSURE,
+  FIRST_PHASE_EXPOSURE_RATIONALE,
+} from "./tool-system/external-tool-exposure.js";
+export type { ExposureRationale } from "./tool-system/external-tool-exposure.js";
 export { webSearchTool } from "./tool-system/builtin/web-search.js";
 export { webFetchTool } from "./tool-system/builtin/web-fetch.js";
 export { extractJSON, extractJSONArray } from "./utils/json.js";

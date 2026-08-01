@@ -15,12 +15,9 @@ describe("PermissionClassifier approval lifecycle events", () => {
     const events: ApprovalLifecycleEvent[] = [];
     classifier.setApprovalEventListener((event) => events.push(event));
 
-    const approved = await classifier.handleAsk(
-      "Bash",
-      { command: "ls" },
-      undefined,
-      { sessionId: "s-1" },
-    );
+    const approved = await classifier.handleAsk("Bash", { command: "ls" }, undefined, {
+      sessionId: "s-1",
+    });
 
     expect(approved).toBe(true);
     expect(events.map((e) => e.phase)).toEqual(["requested", "resolved"]);

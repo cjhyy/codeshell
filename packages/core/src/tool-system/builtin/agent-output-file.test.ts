@@ -29,9 +29,7 @@ afterEach(async () => {
 describe("agent-output-file", () => {
   it("resolves the path under ~/.code-shell/agents", () => {
     expect(agentOutputDir()).toBe(join(home, ".code-shell", "agents"));
-    expect(agentOutputPath("agent-1")).toBe(
-      join(home, ".code-shell", "agents", "agent-1.txt"),
-    );
+    expect(agentOutputPath("agent-1")).toBe(join(home, ".code-shell", "agents", "agent-1.txt"));
   });
 
   it("sanitizes a hostile agentId so it can't escape the dir", () => {

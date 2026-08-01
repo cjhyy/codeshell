@@ -44,9 +44,7 @@ export interface ImageGenerateRequest {
   signal?: AbortSignal;
 }
 
-export type ImageGenerateResult =
-  | { ok: true; b64: string }
-  | { ok: false; error: string };
+export type ImageGenerateResult = { ok: true; b64: string } | { ok: false; error: string };
 
 export interface ImageProvider {
   /** Adapter id — matches the settings provider `kind` it consumes. */
@@ -219,7 +217,10 @@ export const DEFAULT_IMAGE_MODEL: Record<string, string> = {
 };
 
 /** Registry of available image-provider adapters, keyed by `kind`. */
-export function getImageProvider(kind: string, fetchImpl: typeof fetch = fetch): ImageProvider | null {
+export function getImageProvider(
+  kind: string,
+  fetchImpl: typeof fetch = fetch,
+): ImageProvider | null {
   switch (kind) {
     case "openai":
       return new OpenAIImageProvider(fetchImpl);

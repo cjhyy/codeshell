@@ -44,9 +44,7 @@ export const completeGoalToolDef: ToolDefinition = {
   },
 };
 
-export async function completeGoalTool(
-  args: Record<string, unknown>,
-): Promise<string> {
+export async function completeGoalTool(args: Record<string, unknown>): Promise<string> {
   const summary = typeof args.summary === "string" ? args.summary.trim() : "";
   return summary
     ? `目标已完成 (goal complete). Summary: ${summary}`

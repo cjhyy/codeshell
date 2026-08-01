@@ -109,7 +109,11 @@ describe("enforcePathPolicyWithApproval", () => {
     const ws = tmpWorkspace();
     const sensitive = join(homedir(), ".ssh", "config");
     const cap: { question?: string; header?: string } = {};
-    const res = await enforcePathPolicyWithApproval(sensitive, "read", ctxAnswering(ws, "拒绝", cap));
+    const res = await enforcePathPolicyWithApproval(
+      sensitive,
+      "read",
+      ctxAnswering(ws, "拒绝", cap),
+    );
     // ~/.ssh classifies as sensitive (ask on read) → titled accordingly.
     expect(res).toContain("approval denied");
     expect(cap.question).toContain("敏感文件");

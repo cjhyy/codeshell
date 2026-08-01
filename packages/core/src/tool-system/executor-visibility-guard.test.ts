@@ -30,7 +30,10 @@ function setup(toolVisibility?: { cwd: string; hasGoal: boolean }) {
   return { executor, ranHandler: (name: string) => ran.includes(name) };
 }
 
-function call(toolName: "complete_goal" | "cancel_goal", args: Record<string, unknown> = {}): ToolCall {
+function call(
+  toolName: "complete_goal" | "cancel_goal",
+  args: Record<string, unknown> = {},
+): ToolCall {
   return { id: `${toolName}-1`, toolName, args };
 }
 

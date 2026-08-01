@@ -14,10 +14,7 @@
  * existing renderEntry switch picks them up without code changes.
  */
 import type { StreamEvent } from "../../types.js";
-import {
-  asyncAgentRegistry,
-  type AgentTranscriptEntry,
-} from "./agent-registry.js";
+import { asyncAgentRegistry, type AgentTranscriptEntry } from "./agent-registry.js";
 
 interface TranslatedEntry {
   id: string;
@@ -35,9 +32,7 @@ function nextId(agentId: string): string {
  * function is a StreamCallback drop-in: feed it the child Engine's events and
  * it maintains the agent's transcript in `asyncAgentRegistry`.
  */
-export function createTranscriptTranslator(
-  agentId: string,
-): (event: StreamEvent) => void {
+export function createTranscriptTranslator(agentId: string): (event: StreamEvent) => void {
   // Local state for THIS agent. Background sub-agents run independently so
   // each gets its own translator; no cross-agent state.
   let streamingAssistantId: string | undefined;

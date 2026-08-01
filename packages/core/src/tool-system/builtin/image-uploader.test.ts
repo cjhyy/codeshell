@@ -15,7 +15,10 @@ describe("FalStorageUploader.toUrl", () => {
 
   test("already-a-URL → returned unchanged, no fetch", async () => {
     let called = false;
-    const fakeFetch: typeof fetch = (async () => { called = true; return {} as Response; }) as unknown as typeof fetch;
+    const fakeFetch: typeof fetch = (async () => {
+      called = true;
+      return {} as Response;
+    }) as unknown as typeof fetch;
     const up = new FalStorageUploader(fakeFetch);
     const r = await up.toUrl("https://x/a.png", creds);
     expect(r).toEqual({ ok: true, url: "https://x/a.png" });
@@ -31,7 +34,14 @@ describe("FalStorageUploader.toUrl", () => {
     const fakeFetch: typeof fetch = (async (url: string, init: any) => {
       calls.push({ url, method: init?.method });
       if (url.endsWith("/storage/upload/initiate")) {
-        return { ok: true, status: 200, json: async () => ({ file_url: "https://v3b.fal.media/files/x/out.png", upload_url: "https://v3b.fal.media/files/x/out.png?signature=sig" }) } as Response;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            file_url: "https://v3b.fal.media/files/x/out.png",
+            upload_url: "https://v3b.fal.media/files/x/out.png?signature=sig",
+          }),
+        } as Response;
       }
       return { ok: true, status: 200 } as Response; // PUT
     }) as unknown as typeof fetch;

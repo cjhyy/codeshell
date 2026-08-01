@@ -74,8 +74,10 @@ function clearMisWrittenSandboxAuto(config: Record<string, unknown>): Record<str
   const isMisWritten =
     s.mode === "auto" &&
     s.network === "allow" &&
-    Array.isArray(s.writableRoots) && s.writableRoots.length === 0 &&
-    Array.isArray(s.deniedReads) && s.deniedReads.length === 0;
+    Array.isArray(s.writableRoots) &&
+    s.writableRoots.length === 0 &&
+    Array.isArray(s.deniedReads) &&
+    s.deniedReads.length === 0;
   if (!isMisWritten) return config;
   const next = { ...config };
   delete next.sandbox;
@@ -92,10 +94,7 @@ export const MIGRATIONS: readonly MigrationStep[] = [
 ];
 
 /** The version a freshly-written config is stamped with. */
-export const CURRENT_CONFIG_VERSION = MIGRATIONS.reduce(
-  (max, m) => Math.max(max, m.to),
-  0,
-);
+export const CURRENT_CONFIG_VERSION = MIGRATIONS.reduce((max, m) => Math.max(max, m.to), 0);
 
 /** Read the config's version, defaulting to 0 for pre-versioning files. */
 export function configVersionOf(config: Record<string, unknown>): number {

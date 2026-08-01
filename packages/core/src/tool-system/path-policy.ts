@@ -443,9 +443,9 @@ export function getFinalWritePathSnapshot(
   filePath: string,
   workspaceRoot: string,
 ): FinalWritePathSnapshot {
-  const carried = (
-    args as Record<string, unknown> & { [FINAL_WRITE_PATH_SNAPSHOT]?: unknown }
-  )[FINAL_WRITE_PATH_SNAPSHOT];
+  const carried = (args as Record<string, unknown> & { [FINAL_WRITE_PATH_SNAPSHOT]?: unknown })[
+    FINAL_WRITE_PATH_SNAPSHOT
+  ];
   if (carried && typeof carried === "object") {
     return carried as FinalWritePathSnapshot;
   }

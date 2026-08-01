@@ -62,14 +62,20 @@ afterEach(() => {
   else process.env.HOME = realHome;
 });
 
-const ctx = (): ToolContext => ({ cwd: ws } as unknown as ToolContext);
+const ctx = (): ToolContext => ({ cwd: ws }) as unknown as ToolContext;
 
 describe("unified modelConnections + credentials (image)", () => {
   test("resolves an image connection's key from the referenced credential", async () => {
     writeSettings({
       credentials: [{ id: "oa-acct", catalogId: "openai-images", apiKey: "sk-unified" }],
       modelConnections: [
-        { id: "img1", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "oa-acct" },
+        {
+          id: "img1",
+          catalogId: "openai-images",
+          tag: "image",
+          model: "gpt-image-2",
+          credentialId: "oa-acct",
+        },
       ],
       defaults: { image: "img1" },
     });
@@ -82,8 +88,20 @@ describe("unified modelConnections + credentials (image)", () => {
     writeSettings({
       credentials: [{ id: "oa-acct", catalogId: "openai-images", apiKey: "sk-shared-img" }],
       modelConnections: [
-        { id: "a", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "oa-acct" },
-        { id: "b", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "oa-acct" },
+        {
+          id: "a",
+          catalogId: "openai-images",
+          tag: "image",
+          model: "gpt-image-2",
+          credentialId: "oa-acct",
+        },
+        {
+          id: "b",
+          catalogId: "openai-images",
+          tag: "image",
+          model: "gpt-image-2",
+          credentialId: "oa-acct",
+        },
       ],
     });
     await generateImageTool({ prompt: "p", provider: "b" }, ctx());
@@ -97,8 +115,20 @@ describe("imageGen.providers[] config", () => {
       imageGen: {
         defaultProvider: "oa",
         providers: [
-          { id: "oa", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-oa", defaultModel: "gpt-image-2" },
-          { id: "gem", kind: "google", baseUrl: "https://generativelanguage.googleapis.com/v1beta", apiKey: "AIza-x", defaultModel: "gemini-2.5-flash-image" },
+          {
+            id: "oa",
+            kind: "openai",
+            baseUrl: "https://oa.test/v1",
+            apiKey: "sk-oa",
+            defaultModel: "gpt-image-2",
+          },
+          {
+            id: "gem",
+            kind: "google",
+            baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+            apiKey: "AIza-x",
+            defaultModel: "gemini-2.5-flash-image",
+          },
         ],
       },
     });
@@ -114,7 +144,15 @@ describe("imageGen.providers[] config", () => {
     writeSettings({
       imageGen: {
         defaultProvider: "oa",
-        providers: [{ id: "oa", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-oa", defaultModel: "gpt-image-2" }],
+        providers: [
+          {
+            id: "oa",
+            kind: "openai",
+            baseUrl: "https://oa.test/v1",
+            apiKey: "sk-oa",
+            defaultModel: "gpt-image-2",
+          },
+        ],
       },
     });
     await generateImageTool({ prompt: "p" }, ctx());
@@ -124,7 +162,17 @@ describe("imageGen.providers[] config", () => {
 
   test("model arg overrides the instance defaultModel", async () => {
     writeSettings({
-      imageGen: { providers: [{ id: "oa", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-oa", defaultModel: "gpt-image-2" }] },
+      imageGen: {
+        providers: [
+          {
+            id: "oa",
+            kind: "openai",
+            baseUrl: "https://oa.test/v1",
+            apiKey: "sk-oa",
+            defaultModel: "gpt-image-2",
+          },
+        ],
+      },
     });
     await generateImageTool({ prompt: "p", model: "gpt-image-9000" }, ctx());
     expect(lastBody.model).toBe("gpt-image-9000");
@@ -132,7 +180,9 @@ describe("imageGen.providers[] config", () => {
 
   test("unknown provider id errors clearly", async () => {
     writeSettings({
-      imageGen: { providers: [{ id: "oa", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-oa" }] },
+      imageGen: {
+        providers: [{ id: "oa", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-oa" }],
+      },
     });
     const out = await generateImageTool({ prompt: "p", provider: "nope" }, ctx());
     expect(out).toMatch(/no image provider/i);
@@ -146,8 +196,19 @@ describe("default-with-no-key falls back to a configured one", () => {
         defaultProvider: "gem",
         providers: [
           // default points here, but no apiKey → must not be chosen
-          { id: "gem", kind: "google", baseUrl: "https://g.test/v1beta", defaultModel: "gemini-2.5-flash-image" },
-          { id: "oa", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-oa", defaultModel: "gpt-image-2" },
+          {
+            id: "gem",
+            kind: "google",
+            baseUrl: "https://g.test/v1beta",
+            defaultModel: "gemini-2.5-flash-image",
+          },
+          {
+            id: "oa",
+            kind: "openai",
+            baseUrl: "https://oa.test/v1",
+            apiKey: "sk-oa",
+            defaultModel: "gpt-image-2",
+          },
         ],
       },
     });
@@ -176,7 +237,15 @@ describe("result names the provider/model actually used", () => {
     writeSettings({
       imageGen: {
         defaultProvider: "gem",
-        providers: [{ id: "gem", kind: "google", baseUrl: "https://generativelanguage.googleapis.com/v1beta", apiKey: "AIza", defaultModel: "gemini-2.5-flash-image" }],
+        providers: [
+          {
+            id: "gem",
+            kind: "google",
+            baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+            apiKey: "AIza",
+            defaultModel: "gemini-2.5-flash-image",
+          },
+        ],
       },
     });
     const out = (await generateImageTool({ prompt: "p" }, ctx())) as string;
@@ -191,9 +260,21 @@ describe("apiKeyRef — reuse another instance's key", () => {
       imageGen: {
         defaultProvider: "oa2",
         providers: [
-          { id: "oa1", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-shared", defaultModel: "gpt-image-2" },
+          {
+            id: "oa1",
+            kind: "openai",
+            baseUrl: "https://oa.test/v1",
+            apiKey: "sk-shared",
+            defaultModel: "gpt-image-2",
+          },
           // oa2 has no key of its own — reuses oa1's.
-          { id: "oa2", kind: "openai", baseUrl: "https://oa.test/v1", apiKeyRef: "oa1", defaultModel: "gpt-image-2" },
+          {
+            id: "oa2",
+            kind: "openai",
+            baseUrl: "https://oa.test/v1",
+            apiKeyRef: "oa1",
+            defaultModel: "gpt-image-2",
+          },
         ],
       },
     });
@@ -205,7 +286,9 @@ describe("apiKeyRef — reuse another instance's key", () => {
   test("dangling apiKeyRef (target missing/keyless) → not usable", async () => {
     writeSettings({
       imageGen: {
-        providers: [{ id: "oa2", kind: "openai", baseUrl: "https://oa.test/v1", apiKeyRef: "ghost" }],
+        providers: [
+          { id: "oa2", kind: "openai", baseUrl: "https://oa.test/v1", apiKeyRef: "ghost" },
+        ],
       },
     });
     const out = await generateImageTool({ prompt: "p", provider: "oa2" }, ctx());
@@ -216,7 +299,14 @@ describe("apiKeyRef — reuse another instance's key", () => {
 describe("fallback to LLM providers[] when imageGen absent", () => {
   test("still resolves an openai LLM provider (back-compat)", async () => {
     writeSettings({
-      providers: [{ key: "openai", kind: "openai", baseUrl: "https://api.openai.com/v1", apiKey: "sk-legacy" }],
+      providers: [
+        {
+          key: "openai",
+          kind: "openai",
+          baseUrl: "https://api.openai.com/v1",
+          apiKey: "sk-legacy",
+        },
+      ],
     });
     const out = await generateImageTool({ prompt: "p" }, ctx());
     expect(out).toMatch(/Generated image with .+ saved to/);

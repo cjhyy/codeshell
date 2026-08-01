@@ -112,6 +112,83 @@ describe("AgentServer workspace bridge", () => {
     expect(response.result.text).toBe("switched:/repo/.worktrees/feature");
   });
 
+  test.each(["null", "42", "true", '"hello"', "[]"])(
+    "rejects a non-object workspace payload (%s) instead of resolving it",
+    async (answer) => {
+      // A workspace is always an object. Resolving `null` / a number / a string
+      // would hand a non-workspace to setSessionWorkspace as if the switch had
+      // succeeded, rebasing the session onto garbage. (This used to be caught
+      // only incidentally, by a TypeError from `"ok" in parsed`.)
+      const state = {
+        workspaceBridge: undefined as WorkspaceBridge | undefined,
+        error: "",
+      };
+      const engine = {
+        setAskUser() {},
+        setPlanMode() {},
+        setBrowserBridge() {},
+        setInjectCredential() {},
+        setSessionMessageRouter() {},
+        setWorkspaceBridge(bridge: WorkspaceBridge | undefined) {
+          state.workspaceBridge = bridge;
+        },
+        isHeadless: () => false,
+        async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
+          try {
+            await state.workspaceBridge!.switch("feature");
+            state.error = "RESOLVED_UNEXPECTEDLY";
+          } catch (error) {
+            state.error = error instanceof Error ? error.message : String(error);
+          }
+          return {
+            text: "done",
+            reason: "completed",
+            sessionId: opts.sessionId,
+            turnCount: 1,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          };
+        },
+      } as unknown as Engine;
+
+      const chatManager = new ChatSessionManager({
+        runtime: {} as never,
+        engineFactory: () => engine,
+      });
+      const t = makeTransport();
+      new AgentServer({ transport: t.transport, chatManager, workspaceBridge: true });
+      t.deliver({
+        jsonrpc: "2.0",
+        id: 1,
+        method: Methods.Run,
+        params: { sessionId: "sess-malformed", task: "switch" },
+      });
+
+      const request = await waitFor(
+        () =>
+          t.sent.find(
+            (m) =>
+              m.method === Methods.ApprovalRequest &&
+              m.params?.request?.toolName === "__workspace_action__",
+          ),
+        "workspace bridge request should be emitted",
+      );
+      t.deliver({
+        jsonrpc: "2.0",
+        id: 2,
+        method: Methods.Approve,
+        params: {
+          sessionId: "sess-malformed",
+          requestId: request.params.requestId,
+          decision: { approved: true, answer },
+        },
+      });
+
+      await waitFor(() => (state.error === "" ? undefined : state.error), "switch should settle");
+      expect(state.error).not.toBe("RESOLVED_UNEXPECTEDLY");
+      expect(state.error).toContain("malformed");
+    },
+  );
+
   test("agent/releaseWorkspace resets a live session engine", async () => {
     const released: string[] = [];
     const engine = {

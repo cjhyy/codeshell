@@ -156,9 +156,9 @@ export class InvestigationGuard {
       }
       return (
         `<system-reminder>Investigation guard: you have taken ${wasSilent} consecutive turns of read-only investigation ` +
-          `without any text update to the user or side-effecting action. ` +
-          `Either surface a status update (what have you ruled out, what's your current hypothesis?), ` +
-          `or change tactic — verify at runtime (logs, repro, Bash) instead of reading further.</system-reminder>`
+        `without any text update to the user or side-effecting action. ` +
+        `Either surface a status update (what have you ruled out, what's your current hypothesis?), ` +
+        `or change tactic — verify at runtime (logs, repro, Bash) instead of reading further.</system-reminder>`
       );
     }
     return undefined;

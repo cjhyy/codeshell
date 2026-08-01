@@ -17,7 +17,9 @@ describe("settings.credentials", () => {
 
   it("holds independent key entities keyed by catalogId", () => {
     const parsed = SettingsSchema.parse({
-      credentials: [{ id: "openai-acct", catalogId: "openai", apiKey: "sk-abc", baseUrl: "https://x/v1" }],
+      credentials: [
+        { id: "openai-acct", catalogId: "openai", apiKey: "sk-abc", baseUrl: "https://x/v1" },
+      ],
     });
     expect(parsed.credentials[0]!.apiKey).toBe("sk-abc");
     expect(parsed.credentials[0]!.catalogId).toBe("openai");
@@ -60,8 +62,20 @@ describe("settings.modelConnections", () => {
   it("accepts image and video connections under the same schema", () => {
     const parsed = SettingsSchema.parse({
       modelConnections: [
-        { id: "img1", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "c" },
-        { id: "vid1", catalogId: "fal-video", tag: "video", model: "fal-ai/kling", credentialId: "c" },
+        {
+          id: "img1",
+          catalogId: "openai-images",
+          tag: "image",
+          model: "gpt-image-2",
+          credentialId: "c",
+        },
+        {
+          id: "vid1",
+          catalogId: "fal-video",
+          tag: "video",
+          model: "fal-ai/kling",
+          credentialId: "c",
+        },
       ],
     });
     expect(parsed.modelConnections.map((c) => c.tag)).toEqual(["image", "video"]);

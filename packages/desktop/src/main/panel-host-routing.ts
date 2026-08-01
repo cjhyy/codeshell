@@ -30,6 +30,22 @@ export class PanelHostWindowRoutes {
     }
   }
 
+  /**
+   * Non-mutating check for a live owning window.
+   *
+   * Deliberately NOT implemented via {@link resolve}: that method *deletes* a dead
+   * owner as a side effect, so using it for a predicate would make a read-only
+   * question mutate routing state.
+   */
+  hasLiveOwner<T extends PanelHostWindowRoute>(sessionId: string, windows: Iterable<T>): boolean {
+    const ownerWebContentsId = this.ownerBySession.get(sessionId);
+    if (ownerWebContentsId === undefined) return false;
+    for (const window of windows) {
+      if (!window.isDestroyed() && window.webContents.id === ownerWebContentsId) return true;
+    }
+    return false;
+  }
+
   resolve<T extends PanelHostWindowRoute>(
     sessionId: string,
     windows: Iterable<T>,

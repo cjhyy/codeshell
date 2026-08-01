@@ -34,7 +34,11 @@ describe("VideoProvider contract (FakeVideoProvider)", () => {
 
   test("a failed job surfaces status=failed with a message", async () => {
     const p = new FakeVideoProvider({ failAfterPolls: 0, failMessage: "content policy" });
-    const submit = await p.submit({ prompt: "p", model: "m", creds: { baseUrl: "x", apiKey: "k" } });
+    const submit = await p.submit({
+      prompt: "p",
+      model: "m",
+      creds: { baseUrl: "x", apiKey: "k" },
+    });
     if (!submit.ok) throw new Error("submit failed");
     const poll = await p.poll({ jobId: submit.jobId, creds: { baseUrl: "x", apiKey: "k" } });
     expect(poll.ok && poll.status).toBe("failed");
@@ -123,14 +127,20 @@ describe("FalVideoProvider", () => {
     });
     expect(res.ok).toBe(true);
     expect(calls[0].url).toBe("https://queue.fal.run/bytedance/seedance-2.0/reference-to-video");
-    expect(calls[0].body).toEqual({ prompt: "@Image1 and @Image2 dance", image_urls: ["https://x/a.png", "https://x/b.png"] });
+    expect(calls[0].body).toEqual({
+      prompt: "@Image1 and @Image2 dance",
+      image_urls: ["https://x/a.png", "https://x/b.png"],
+    });
   });
 
   test("submit with 2+ images on a model without reference support (Kling) → ok:false", async () => {
     // Kling has no reference-to-video endpoint (live API 404s at result fetch),
     // so fail fast at submit instead of building a broken URL.
     let called = false;
-    const fakeFetch: typeof fetch = (async () => { called = true; return {} as Response; }) as unknown as typeof fetch;
+    const fakeFetch: typeof fetch = (async () => {
+      called = true;
+      return {} as Response;
+    }) as unknown as typeof fetch;
     const p = new FalVideoProvider(fakeFetch);
     const res = await p.submit({
       prompt: "two imgs",
@@ -177,12 +187,18 @@ describe("FalVideoProvider", () => {
     expect(res.ok).toBe(true);
     // video forces the reference-to-video endpoint even with zero images
     expect(calls[0].url).toBe("https://queue.fal.run/bytedance/seedance-2.0/reference-to-video");
-    expect(calls[0].body).toEqual({ prompt: "continue from @Video1", video_urls: ["https://x/prev.mp4"] });
+    expect(calls[0].body).toEqual({
+      prompt: "continue from @Video1",
+      video_urls: ["https://x/prev.mp4"],
+    });
   });
 
   test("submit with videos[] on Kling (no reference support) → ok:false, no network call", async () => {
     let called = false;
-    const fakeFetch: typeof fetch = (async () => { called = true; return {} as Response; }) as unknown as typeof fetch;
+    const fakeFetch: typeof fetch = (async () => {
+      called = true;
+      return {} as Response;
+    }) as unknown as typeof fetch;
     const p = new FalVideoProvider(fakeFetch);
     const res = await p.submit({
       prompt: "continue",
@@ -197,7 +213,11 @@ describe("FalVideoProvider", () => {
 
   test("submit non-OK → ok:false with status", async () => {
     const fakeFetch: typeof fetch = (async () =>
-      ({ ok: false, status: 401, text: async () => "bad key" } as Response)) as unknown as typeof fetch;
+      ({
+        ok: false,
+        status: 401,
+        text: async () => "bad key",
+      }) as Response) as unknown as typeof fetch;
     const p = new FalVideoProvider(fakeFetch);
     const res = await p.submit({ prompt: "p", model: "m", creds });
     expect(res.ok).toBe(false);
@@ -206,7 +226,11 @@ describe("FalVideoProvider", () => {
 
   test("submit missing status_url/response_url → ok:false", async () => {
     const fakeFetch: typeof fetch = (async () =>
-      ({ ok: true, status: 200, json: async () => ({ request_id: "x" }) } as Response)) as unknown as typeof fetch;
+      ({
+        ok: true,
+        status: 200,
+        json: async () => ({ request_id: "x" }),
+      }) as Response) as unknown as typeof fetch;
     const p = new FalVideoProvider(fakeFetch);
     const res = await p.submit({ prompt: "p", model: "m", creds });
     expect(res.ok).toBe(false);
@@ -223,7 +247,11 @@ describe("FalVideoProvider", () => {
     const fakeFetch: typeof fetch = (async (url: string) => {
       urls.push(url);
       const s = seq[i++];
-      return { ok: s.status >= 200 && s.status < 300, status: s.status, json: async () => ({ status: s.body }) } as Response;
+      return {
+        ok: s.status >= 200 && s.status < 300,
+        status: s.status,
+        json: async () => ({ status: s.body }),
+      } as Response;
     }) as unknown as typeof fetch;
     const p = new FalVideoProvider(fakeFetch);
     const jobId = `${STATUS_URL}|${RESPONSE_URL}`;
@@ -251,10 +279,18 @@ describe("FalVideoProvider", () => {
     const fakeFetch: typeof fetch = (async (url: string) => {
       urls.push(url);
       if (url === RESPONSE_URL) {
-        return { ok: true, status: 200, json: async () => ({ video: { url: "https://cdn.fal/v/out.mp4" } }) } as Response;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ video: { url: "https://cdn.fal/v/out.mp4" } }),
+        } as Response;
       }
       // hop2: video bytes
-      return { ok: true, status: 200, arrayBuffer: async () => new TextEncoder().encode("VIDEOBYTES").buffer } as Response;
+      return {
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new TextEncoder().encode("VIDEOBYTES").buffer,
+      } as Response;
     }) as unknown as typeof fetch;
     const p = new FalVideoProvider(fakeFetch);
     const jobId = `${STATUS_URL}|${RESPONSE_URL}`;
@@ -272,7 +308,11 @@ describe("FalVideoProvider", () => {
 
   test("download: missing video.url → ok:false", async () => {
     const fakeFetch: typeof fetch = (async () =>
-      ({ ok: true, status: 200, json: async () => ({ video: {} }) } as Response)) as unknown as typeof fetch;
+      ({
+        ok: true,
+        status: 200,
+        json: async () => ({ video: {} }),
+      }) as Response) as unknown as typeof fetch;
     const p = new FalVideoProvider(fakeFetch);
     const dl = await p.download({ jobId: `${STATUS_URL}|${RESPONSE_URL}`, creds });
     expect(dl.ok).toBe(false);

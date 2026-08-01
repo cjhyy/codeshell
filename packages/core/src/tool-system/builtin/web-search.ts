@@ -70,8 +70,7 @@ export function resolveSearchConfig(cwd: string = process.cwd()): ResolvedSearch
         ? { provider: "searxng", baseUrl: base, source: settingsBaseUrl ? "settings" : "env" }
         : { provider: "searxng", source: "none" };
     }
-    const key =
-      settingsKey ?? (settingsProvider === "serper" ? envSerper : envTavily);
+    const key = settingsKey ?? (settingsProvider === "serper" ? envSerper : envTavily);
     return key
       ? { provider: settingsProvider, apiKey: key, source: settingsKey ? "settings" : "env" }
       : { provider: settingsProvider, source: "none" };
@@ -180,15 +179,18 @@ export async function webSearchTool(
 
     if (results.length === 0) return "No results found.";
 
-    return results
-      .map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}\n   ${r.snippet}`)
-      .join("\n\n");
+    return results.map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}\n   ${r.snippet}`).join("\n\n");
   } catch (err) {
     return `Search error: ${(err as Error).message}`;
   }
 }
 
-async function searchSerper(query: string, num: number, apiKey: string, signal?: AbortSignal): Promise<SearchResult[]> {
+async function searchSerper(
+  query: string,
+  num: number,
+  apiKey: string,
+  signal?: AbortSignal,
+): Promise<SearchResult[]> {
   const res = await fetch("https://google.serper.dev/search", {
     method: "POST",
     headers: {
@@ -212,7 +214,12 @@ async function searchSerper(query: string, num: number, apiKey: string, signal?:
   }));
 }
 
-async function searchTavily(query: string, num: number, apiKey: string, signal?: AbortSignal): Promise<SearchResult[]> {
+async function searchTavily(
+  query: string,
+  num: number,
+  apiKey: string,
+  signal?: AbortSignal,
+): Promise<SearchResult[]> {
   const res = await fetch("https://api.tavily.com/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -238,7 +245,12 @@ async function searchTavily(query: string, num: number, apiKey: string, signal?:
   }));
 }
 
-async function searchSearXNG(query: string, num: number, baseUrl: string, signal?: AbortSignal): Promise<SearchResult[]> {
+async function searchSearXNG(
+  query: string,
+  num: number,
+  baseUrl: string,
+  signal?: AbortSignal,
+): Promise<SearchResult[]> {
   const url = new URL("/search", baseUrl);
   url.searchParams.set("q", query);
   url.searchParams.set("format", "json");

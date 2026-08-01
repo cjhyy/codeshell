@@ -3,9 +3,11 @@ import { askUserTool } from "./ask-user.js";
 import type { ToolContext, AskUserOptions } from "../context.js";
 
 /** Capture the args askUser was called with, return a canned answer. */
-function ctxWith(
-  answer: string | Promise<string> | (() => Promise<string>),
-): { ctx: ToolContext; lastOpts: () => AskUserOptions | undefined; lastQuestion: () => string } {
+function ctxWith(answer: string | Promise<string> | (() => Promise<string>)): {
+  ctx: ToolContext;
+  lastOpts: () => AskUserOptions | undefined;
+  lastQuestion: () => string;
+} {
   let opts: AskUserOptions | undefined;
   let question = "";
   const ctx = {

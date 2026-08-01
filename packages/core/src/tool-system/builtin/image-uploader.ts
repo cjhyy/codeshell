@@ -25,7 +25,13 @@ export function isHttpUrl(s: string): boolean {
 
 function mimeFromName(name: string): string {
   const ext = name.toLowerCase().split(".").pop() ?? "";
-  const map: Record<string, string> = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif" };
+  const map: Record<string, string> = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+    gif: "image/gif",
+  };
   return map[ext] ?? "application/octet-stream";
 }
 
@@ -35,7 +41,11 @@ export class FalStorageUploader implements ImageUploader {
   private static readonly UPLOAD_BASE = "https://rest.alpha.fal.ai";
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
-  async toUrl(pathOrUrl: string, creds: UploaderCreds, signal?: AbortSignal): Promise<UploadResult> {
+  async toUrl(
+    pathOrUrl: string,
+    creds: UploaderCreds,
+    signal?: AbortSignal,
+  ): Promise<UploadResult> {
     if (isHttpUrl(pathOrUrl)) return { ok: true, url: pathOrUrl };
     try {
       const bytes = await readFile(pathOrUrl);
@@ -53,7 +63,12 @@ export class FalStorageUploader implements ImageUploader {
    *   2. PUT <upload_url> with the bytes (signed URL, no Authorization)
    *   3. file_url is the final public URL.
    */
-  private async uploadBytes(bytes: Uint8Array, name: string, creds: UploaderCreds, signal?: AbortSignal): Promise<string> {
+  private async uploadBytes(
+    bytes: Uint8Array,
+    name: string,
+    creds: UploaderCreds,
+    signal?: AbortSignal,
+  ): Promise<string> {
     const mime = mimeFromName(name);
     const ini = await this.fetchImpl(`${FalStorageUploader.UPLOAD_BASE}/storage/upload/initiate`, {
       method: "POST",
@@ -62,7 +77,10 @@ export class FalStorageUploader implements ImageUploader {
       signal,
     });
     if (!ini.ok) throw new Error(`initiate failed: HTTP ${ini.status}`);
-    const { file_url, upload_url } = (await ini.json()) as { file_url?: string; upload_url?: string };
+    const { file_url, upload_url } = (await ini.json()) as {
+      file_url?: string;
+      upload_url?: string;
+    };
     if (!file_url || !upload_url) throw new Error("initiate: missing file_url/upload_url");
     const put = await this.fetchImpl(upload_url, {
       method: "PUT",
@@ -75,7 +93,10 @@ export class FalStorageUploader implements ImageUploader {
   }
 }
 
-export function getImageUploader(kind: string, fetchImpl: typeof fetch = fetch): ImageUploader | null {
+export function getImageUploader(
+  kind: string,
+  fetchImpl: typeof fetch = fetch,
+): ImageUploader | null {
   switch (kind) {
     case "fal":
       return new FalStorageUploader(fetchImpl);

@@ -31,7 +31,12 @@ const RUN = process.env.RUN_LLM_E2E === "1";
  * order and returns the first whose credential has an apiKey. provider is the
  * catalog's adapterKind. (Set CS_LLM_CONN to force a specific connection id.)
  */
-function loadTextConn(): { apiKey: string; baseUrl: string; model: string; provider: string } | null {
+function loadTextConn(): {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  provider: string;
+} | null {
   try {
     const s = JSON.parse(readFileSync(join(homedir(), ".code-shell", "settings.json"), "utf-8"));
     const order = process.env.CS_LLM_CONN
@@ -77,7 +82,12 @@ describeMaybe("send_input continuation — REAL LLM memory recall", () => {
     spawner = {
       spawn: async (req) => {
         const child = new Engine({
-          llm: { provider: ds!.provider, model: ds!.model, apiKey: ds!.apiKey, baseUrl: ds!.baseUrl },
+          llm: {
+            provider: ds!.provider,
+            model: ds!.model,
+            apiKey: ds!.apiKey,
+            baseUrl: ds!.baseUrl,
+          },
           cwd: storageDir,
           sessionStorageDir: storageDir,
           maxTurns: req.maxTurns,
@@ -85,7 +95,10 @@ describeMaybe("send_input continuation — REAL LLM memory recall", () => {
           isSubAgent: true,
         } as ConstructorParameters<typeof Engine>[0]);
         const childSessionId = req.resumeSessionId ?? req.agentId;
-        const result = await child.run(req.prompt, { signal: req.signal, sessionId: childSessionId });
+        const result = await child.run(req.prompt, {
+          signal: req.signal,
+          sessionId: childSessionId,
+        });
         return { text: result.text, sessionId: result.sessionId };
       },
       // Child sessions persist under storageDir/<sid>/state.json (agent_id===sid).
@@ -123,7 +136,10 @@ describeMaybe("send_input continuation — REAL LLM memory recall", () => {
 
     // Turn 2: continue the SAME sub-agent. If replay works it recalls 4291.
     const recall = await agentSendInputTool(
-      { agent_id: agentId, prompt: "What was the number I asked you to remember? Reply with just the number." },
+      {
+        agent_id: agentId,
+        prompt: "What was the number I asked you to remember? Reply with just the number.",
+      },
       ctx,
     );
     expect(recall).toContain("4291");
