@@ -27,6 +27,15 @@ export interface AutomationSummary {
   nextRun: number | null;
   runCount: number;
   createdAt: number;
+  /**
+   * @deprecated Always null in this product.
+   *
+   * Only `bindCronToRunManager` writes `CronJob.lastRunId`, and production
+   * automation goes through `startAutomation({ runner })` — a plain Engine
+   * Session, never RunManager. Automation history IS the session list; the UI no
+   * longer reads this. Kept on the wire so an older renderer does not break on a
+   * missing key.
+   */
   lastRunId: string | null;
   /** True = one-shot job: runs once then auto-deletes (CronCreate once:true). */
   once: boolean;

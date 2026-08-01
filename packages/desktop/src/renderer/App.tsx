@@ -2342,10 +2342,6 @@ function App() {
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <AutomationView
                     onCreateConversational={startConversationalAutomation}
-                    onViewRun={(runId) => {
-                      setRunsInitialRunId(runId);
-                      setViewMode("runs");
-                    }}
                     onOpenRunSession={(run) => {
                       void handleOpenAutomationRunSession(run);
                     }}

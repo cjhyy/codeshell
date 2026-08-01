@@ -590,6 +590,7 @@ export interface CredentialView {
     agentExposable?: boolean;
     linkAccountId?: string;
     linkAccountLabel?: string;
+    linkResourceLabels?: string[];
     linkCapabilityIds?: string[];
     linkLastVerifiedAt?: string;
     oauthProvider?: string;
@@ -630,6 +631,7 @@ export interface LocalLinkValidationView {
     externalAccountId: string;
     label: string;
     detail?: string;
+    resourceLabels?: string[];
   };
   capabilityIds: string[];
   verifiedAt: string;
@@ -1223,6 +1225,7 @@ export interface CodeshellApi {
           agentExposable?: boolean;
           linkAccountId?: string;
           linkAccountLabel?: string;
+          linkResourceLabels?: string[];
           linkCapabilityIds?: string[];
           linkLastVerifiedAt?: string;
           oauthProvider?: string;
@@ -2557,6 +2560,7 @@ export interface AutomationSummary {
   nextRun: number | null;
   runCount: number;
   createdAt: number;
+  /** @deprecated Always null — automation runs as a Session, not a RunManager run. */
   lastRunId: string | null;
   once: boolean;
   resumeSessionId: string | null;

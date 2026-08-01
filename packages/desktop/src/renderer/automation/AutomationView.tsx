@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock3, History, Link2, Loader2, PackageOpen, Play, Plus, Trash2 } from "lucide-react";
+import { Clock3, Link2, Loader2, PackageOpen, Play, Plus, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
 import {
   parseSchedule,
@@ -109,13 +109,11 @@ function automationSessionLinks(
   const runsBySessionId = new Map(
     runs.filter((r) => r.sessionId).map((r) => [r.sessionId as string, r]),
   );
+  // Matched by job NAME only. `lastRunId` used to be part of this, but nothing
+  // in production sets it (see the note at the detail header), so it only ever
+  // widened the predicate with a null.
   const matchingRunIds = new Set(
-    runs
-      .filter(
-        (r) =>
-          r.source === "automation" && (r.cronJobName === job.name || r.runId === job.lastRunId),
-      )
-      .map((r) => r.runId),
+    runs.filter((r) => r.source === "automation" && r.cronJobName === job.name).map((r) => r.runId),
   );
 
   const out: AutomationSessionLink[] = [];
@@ -131,8 +129,7 @@ function automationSessionLinks(
       const matches =
         session.title === job.name ||
         (session.runId ? matchingRunIds.has(session.runId) : false) ||
-        run?.cronJobName === job.name ||
-        run?.runId === job.lastRunId;
+        run?.cronJobName === job.name;
       if (matches) {
         // Locally-present session (found in a repo's session index) → already
         // imported, so never flag it for import. Set explicitly so the render
@@ -151,7 +148,7 @@ function automationSessionLinks(
       !run.sessionId ||
       seenRunIds.has(run.runId) ||
       seenSessionIds.has(run.sessionId) ||
-      (run.cronJobName !== job.name && run.runId !== job.lastRunId)
+      run.cronJobName !== job.name
     ) {
       continue;
     }
@@ -209,7 +206,6 @@ function automationSessionLinks(
 
 export function AutomationView({
   onCreateConversational,
-  onViewRun,
   onOpenRunSession,
   onOpenDiskSession,
   onOpenSession,
@@ -217,7 +213,6 @@ export function AutomationView({
   projects,
 }: {
   onCreateConversational: () => void;
-  onViewRun: (runId: string) => void;
   onOpenRunSession: (run: RunSummary) => void;
   onOpenDiskSession: (session: DiskSessionMeta) => void;
   onOpenSession: (projectId: string | null, sessionId: string) => void;
@@ -381,7 +376,6 @@ export function AutomationView({
                 deleteBusy={!!pending["delete:" + detail.id]}
                 toggleBusy={!!pending["toggle:" + detail.id]}
                 saveBusy={!!pending["save:" + detail.id]}
-                onViewRun={onViewRun}
                 onOpenRunSession={onOpenRunSession}
                 onOpenDiskSession={onOpenDiskSession}
                 onOpenSession={onOpenSession}
@@ -427,7 +421,6 @@ export function AutomationDetail(props: {
   deleteBusy: boolean;
   toggleBusy: boolean;
   saveBusy: boolean;
-  onViewRun: (runId: string) => void;
   onOpenRunSession: (run: RunSummary) => void;
   onOpenDiskSession: (session: DiskSessionMeta) => void;
   onOpenSession: (projectId: string | null, sessionId: string) => void;
@@ -886,12 +879,11 @@ export function AutomationDetail(props: {
                   : t("auto.detail.noSession")}
               </p>
             </div>
-            {job.lastRunId && (
-              <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
-                <History size={14} />
-                {t("auto.detail.runDetail")}
-              </Button>
-            )}
+            {/* The "view last run" button is gone: `lastRunId` is only ever set
+                by bindCronToRunManager, and production automation runs through
+                startAutomation({ runner }) — a plain Engine Session, never
+                RunManager. So the field was permanently null and this button
+                never rendered. Automation history IS the session list below. */}
           </div>
           {sessions.length === 0 ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
