@@ -8,9 +8,9 @@
 
 ## 0.0 交付状态(可合并 main)
 
-**Codex 与 Claude Code 都已可作为会话后端跑通,并用真实二进制验证过。**
-但要说清楚:**库和服务已就绪,产品接线未完成** —— 从 Desktop UI 目前还到不了这个功能。
-本节末尾逐条列出差什么。
+**Codex 与 Claude Code 已接通,可从 composer 的模型下拉里直接选用。**
+选 `codex/gpt-5.1` 跟选任何别的模型是同一个动作,没有单独的「后端」概念。
+本节末尾说明仍未做的部分(主要是审批 UI)。
 
 | 项                                            | 状态                                       |
 | --------------------------------------------- | ------------------------------------------ |
@@ -21,8 +21,8 @@
 | Phase 3 `CodexRuntime`(app-server client)     | ✅ 真机                                    |
 | Phase 3 `ClaudeCodeRuntime`(stream-json)      | ✅ 真机                                    |
 | Phase 4 组合根 `startExternalRuntimeSession`  | ✅ 真机                                    |
-| Phase 4 Desktop 服务 `ExternalRuntimeService` | ⚠️ 已实现+测试,**无人实例化**              |
-| Phase 4 产品接线(IPC + preload + UI)          | ❌ 未做 —— 用户当前不可达                  |
+| Phase 4 Desktop 服务 `ExternalRuntimeService` | ✅ 已实例化                                |
+| Phase 4 产品接线(IPC + preload + 模型下拉)    | ✅ 真机                                    |
 | `Panel.invoke` 解禁                           | ⏸ 技术阻塞已解除,待逐个 Panel App 风险评审 |
 
 ```text
@@ -68,44 +68,69 @@ claude-code  PASS  exactlyOneTerminal ✓ reachedPanelBridge ✓ invokeLeaked �
 而 `argsPatterns` 约束不了嵌套 payload(见 8.2 的作用域说明)。这是一个**策略决定**,
 不是接线问题,应该由评审第一个被信任的 Panel App 的人来做。
 
-### 仍未做 —— 合并后还不能用
+### 接线已完成 —— 从模型下拉里直接选
 
-必须先纠正一句容易误导的说法:「Desktop 接线完成」是不准确的。
-`ExternalRuntimeService` 已实现、有 11 个测试(含 5 处安全决策的变异验证),
-但**没有任何地方 `new` 它**,`packages/desktop/src/preload/index.ts` 里也没有 IPC 通道。
-从用户视角这个功能不可达。
+Codex / Claude Code 现在作为**普通模型项**出现在 composer 的模型下拉里
+(`codex/gpt-5.1`、`claude-code/sonnet`),选中即用,没有单独的「后端」
+开关 —— 参考 cindy 的做法把 runtime 编进模型键本身。因此 `ModelPill`
+一行未改,`onModelChange` 的按会话记忆、「下次新会话继承」也原样复用。
 
-这正是本方案反复踩到的那个形状:**没有生产调用方的代码,就是没人被迫写对过的代码。**
-`createSessionToolHost` 当初就是这样溜进一条真实安全缺陷的(未信任仓库可经 settings
-自我授权,见 §7.4 的记录),而 `ExternalRuntimeService` 现在处在一模一样的位置 ——
-下一步接线时它的输入解析要重点验,不要因为「有测试」就假定已经对。
+只列**本机装了二进制的** runtime。列一个跑不起来的项比不列更糟:用户
+选了、发消息、拿到 spawn 失败,看起来像功能坏了而不是没装。
 
-**必须做,否则用不上:**
+已接:
 
-1. 在 `packages/desktop/src/main/index.ts` 实例化 service,`claimPanelOwner` 绑到
-   `AgentBridge.claimSessionPanelOwner`,并在 `app.before-quit` 调 `stopAll()` ——
-   每个会话持有一个子进程和一个监听端口,在 Windows 上都不随父进程死。
-2. IPC 通道 + preload 暴露 `window.codeshell.externalRuntime.*`(renderer 不 import
-   core,只能走 preload —— 见 `packages/desktop/CLAUDE.md`)。
-3. 最小 UI:选择 runtime、显示当前后端。
+1. `index.ts` 实例化 `ExternalRuntimeService`,`before-quit` 里 `stopAll()`;
+2. 4 个 IPC + preload(owner 窗口一律取自 sender,不接受 payload 指定);
+3. 模型下拉集成 + 发送分流;
+4. 事件流并入 preload 现有的 `streamListeners` —— 不另开订阅,消费方
+   (reducer / pet / 未读 / 手机镜像)不需要知道是哪个进程产生的。
 
-**该做,否则体验残缺:**
+### 工具面:1 → 19
 
-4. **审批接线** —— 目前未提供 `onNativeApproval` 时 native tool 审批默认 `decline`。
-   安全方向正确,但用户看到的是「Codex 什么都干不了」而不是一个审批弹窗。
-5. **会话持久化**:`runtimeKind` / runtime session id 尚未落盘,进程重启后不能 resume
-   (第 24 节 ADR 1 就是为此)。
+原来只暴露 `Panel` 一个。那不是风险判断的结果,是排序的结果 —— 工具被
+扣着等各自的理由写出来,而只有一个写了,于是 runtime 没有 skill、没有
+记忆、碰不了文件。按产品决定放开到 19 个,依据是:**每个工具仍然走
+ToolExecutor**,所以路径策略、项目信任、用户权限规则、审批 UI 全都还在。
+外部 runtime 拿到的 `Bash` 比它自己那把内置 shell **更受管**,后者只对
+runtime 自己的沙箱负责。
 
-**可选:** Room / DriveAgent 复用同一 Runtime Factory;现有 CLI adapter 未动,
-回退路径完整。
+仍然排除 4 个(`Agent` / `DriveAgent` / `EnterPlanMode` / `ExitPlanMode`),
+理由是另一种性质:**放开也不工作** —— 递归没有 owner 可计费,外部路径
+也没有 Engine 的 plan 状态。
 
-### 为什么这样也可以先合
+`Panel.invoke` 仍是唯一的 action 级限制:它用模型给的参数跑第三方 Panel
+App 代码,而 `argsPatterns` 约束不了嵌套 payload —— 授权层看不见自己在
+授权什么。
 
-- 两个 flag **默认全关**,且有测试断言默认值;
-- 没有任何现有代码路径调用新模块,Native Engine 行为不变;
-- 全仓测试通过、与 main 零冲突;
-- 剩下的 1–3 要动 `index.ts` 和 renderer,review 面(UI/IPC)与本次(协议/安全边界)
-  不同,混在一个 PR 里更难审。
+### 真机验证
+
+```
+codex        PASS  reachedPanelBridge ✓ exactlyOneTerminal ✓ invokeLeaked ✗
+claude-code  PASS  reachedPanelBridge ✓ exactlyOneTerminal ✓ invokeLeaked ✗
+
+19 个工具真实下发给 codex;逐个走 ToolExecutor 实跑:
+  MemoryList {scope:"user"} → 真实记忆条目
+  Glob / Grep / Read        → 真实文件内容
+```
+
+权限行为(未提供 approvalBackend 时,即 Desktop 当前状态)也实测过,
+是**失败关闭**而不是失败放行:
+
+```
+Bash "echo hi"            → 允许(preset 规则认定安全)
+Bash "rm -rf …"           → 拒绝(无审批后端可问)
+Write 工作区外            → 拒绝(路径策略)
+```
+
+### 仍未做
+
+- **审批 UI**:上面第 2、3 行的「拒绝」目前是静默的。安全方向对,但用户
+  看到的是「Codex 干不了这个」而不是一个审批弹窗。接进现有审批弹窗是
+  下一步,不影响安全性,只影响可用性。
+- **会话持久化**:`runtimeKind` / runtime session id 尚未落盘,进程重启
+  后接不回原来的 runtime 线程(第 24 节 ADR 1)。
+- **Room / DriveAgent 复用**同一 Factory;现有 CLI adapter 未动。
 
 ## 0. v2 修订说明
 
