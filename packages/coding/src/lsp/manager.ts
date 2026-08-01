@@ -173,14 +173,61 @@ function isExecutableFile(filePath: string): boolean {
   }
 }
 
-// Singleton
-let _manager: LSPServerManager | undefined;
+/**
+ * One manager per workspace root.
+ *
+ * This used to be a single process-wide singleton that only existed if some host
+ * called `initializeLSPManager()` — and NO host ever did. The `LSP` tool was
+ * registered and advertised to the agent, but its first act is
+ * `getLSPManager()`, so every invocation returned "LSP is not initialized".
+ * The capability was dead on arrival in every product surface.
+ *
+ * Keying by root also fixes the design problem behind the singleton: an agent
+ * can work across several workspaces in one process (worktrees, sub-agents), and
+ * a language server is rooted at exactly one directory.
+ */
+const managers = new Map<string, LSPServerManager>();
 
 export function initializeLSPManager(cwd: string): LSPServerManager {
-  _manager = new LSPServerManager(cwd);
-  return _manager;
+  const existing = managers.get(cwd);
+  if (existing) return existing;
+  const created = new LSPServerManager(cwd);
+  managers.set(cwd, created);
+  return created;
 }
 
-export function getLSPManager(): LSPServerManager | undefined {
-  return _manager;
+/**
+ * Manager for `cwd`, creating it on first use.
+ *
+ * Lazy by design: spawning language servers eagerly at startup would cost every
+ * session a process it may never use. Callers that only want to observe existing
+ * state pass `{ create: false }`.
+ */
+export function getLSPManager(
+  cwd?: string,
+  options: { create?: boolean } = {},
+): LSPServerManager | undefined {
+  if (cwd === undefined) {
+    // Back-compat for callers with no workspace context: return the sole manager
+    // when exactly one exists, otherwise nothing (ambiguous).
+    return managers.size === 1 ? [...managers.values()][0] : undefined;
+  }
+  const existing = managers.get(cwd);
+  if (existing || options.create === false) return existing;
+  return initializeLSPManager(cwd);
+}
+
+/** Shut down and forget one workspace's servers (session/workspace teardown). */
+export async function shutdownLSPManager(cwd: string): Promise<void> {
+  const manager = managers.get(cwd);
+  if (!manager) return;
+  managers.delete(cwd);
+  await manager.shutdownAll();
+}
+
+/** Shut down every workspace's servers (process teardown). */
+export async function shutdownAllLSPManagers(): Promise<void> {
+  const all = [...managers.values()];
+  managers.clear();
+  await Promise.all(all.map((manager) => manager.shutdownAll()));
 }

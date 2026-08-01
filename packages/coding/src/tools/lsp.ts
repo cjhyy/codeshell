@@ -8,6 +8,29 @@ import { detectLSPServer } from "../lsp/servers.js";
 import { pathToFileURL } from "node:url";
 import { isAbsolute, resolve } from "node:path";
 
+/**
+ * How long to wait for `textDocument/publishDiagnostics` after opening a file.
+ *
+ * A cold server has to index the project first, so this is a deadline rather
+ * than an expected duration — timing out reports "still indexing" instead of
+ * silently claiming the file is clean.
+ */
+const DIAGNOSTICS_TIMEOUT_MS = 10_000;
+
+const DIAGNOSTIC_SEVERITY: Record<number, string> = {
+  1: "error",
+  2: "warning",
+  3: "info",
+  4: "hint",
+};
+
+interface LspDiagnostic {
+  message: string;
+  severity?: number;
+  source?: string;
+  range?: { start?: { line: number; character: number } };
+}
+
 export const lspToolDef: ToolDefinition = {
   name: "LSP",
   description:
@@ -50,7 +73,10 @@ export async function lspTool(args: Record<string, unknown>, ctx?: ToolContext):
   const cwd = ctx?.cwd ?? process.cwd();
   const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
 
-  const manager = getLSPManager();
+  // Lazily create the manager for THIS workspace. Previously this read a
+  // process-wide singleton that no host ever initialized, so the tool was
+  // advertised to the agent but always answered "LSP is not initialized".
+  const manager = getLSPManager(cwd);
   if (!manager) return "Error: LSP is not initialized. Language servers are not available.";
 
   // Detect the appropriate server
@@ -98,15 +124,54 @@ export async function lspTool(args: Record<string, unknown>, ctx?: ToolContext):
       }
 
       case "getDiagnostics": {
-        // Open the document to trigger diagnostics
+        // Collect the ACTUAL diagnostics for this file.
+        //
+        // This used to open the document, sleep 2s, and return "Diagnostics
+        // requested. Check LSP notifications for results." — nobody was
+        // subscribed to those notifications, so the agent got a status string
+        // and never any findings. Subscribe first, then open, then wait for the
+        // matching publishDiagnostics (with a deadline, since a clean file may
+        // legitimately produce none).
         const { readFileSync } = await import("node:fs");
         const text = readFileSync(filePath, "utf-8");
-        await client.notify("textDocument/didOpen", {
-          textDocument: { uri, languageId: serverConfig.language, version: 1, text },
+
+        const diagnostics = await new Promise<LspDiagnostic[] | undefined>((resolveWait) => {
+          let settled = false;
+          const finish = (value: LspDiagnostic[] | undefined): void => {
+            if (settled) return;
+            settled = true;
+            client.off?.("notification", onNotification);
+            clearTimeout(timer);
+            resolveWait(value);
+          };
+          const onNotification = (message: { method?: string; params?: unknown }): void => {
+            if (message?.method !== "textDocument/publishDiagnostics") return;
+            const params = message.params as { uri?: string; diagnostics?: LspDiagnostic[] };
+            // Servers report per-URI; ignore other files opened in the session.
+            if (params?.uri !== uri) return;
+            finish(params.diagnostics ?? []);
+          };
+          const timer = setTimeout(() => finish(undefined), DIAGNOSTICS_TIMEOUT_MS);
+          client.on?.("notification", onNotification);
+          void client.notify("textDocument/didOpen", {
+            textDocument: { uri, languageId: serverConfig.language, version: 1, text },
+          });
         });
-        // Wait briefly for diagnostics
-        await new Promise((r) => setTimeout(r, 2000));
-        return "Diagnostics requested. Check LSP notifications for results.";
+
+        if (diagnostics === undefined) {
+          return `No diagnostics published within ${DIAGNOSTICS_TIMEOUT_MS}ms. The server may still be indexing.`;
+        }
+        if (diagnostics.length === 0) return "No diagnostics — the file is clean.";
+        const lines = diagnostics.slice(0, 100).map((diagnostic) => {
+          const severity = DIAGNOSTIC_SEVERITY[diagnostic.severity ?? 1] ?? "info";
+          const start = diagnostic.range?.start;
+          const at = start ? `${start.line + 1}:${start.character + 1}` : "?";
+          const source = diagnostic.source ? ` [${diagnostic.source}]` : "";
+          return `  ${severity} ${at}${source} ${diagnostic.message}`;
+        });
+        const more =
+          diagnostics.length > 100 ? `\n  … ${diagnostics.length - 100} more` : "";
+        return `Diagnostics (${diagnostics.length}):\n${lines.join("\n")}${more}`;
       }
 
       case "getSymbols": {
