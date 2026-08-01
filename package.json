@@ -34,6 +34,7 @@
     "lint": "eslint packages/",
     "lint:engine-bypass": "bash scripts/check-no-engine-bypass.sh",
     "lint:workflow-test-paths": "node scripts/check-workflow-test-paths.mjs",
+    "lint:baseline": "node scripts/check-lint-baseline.mjs",
     "format": "prettier --write 'packages/**/*.ts'"
   },
   "dependencies": {
