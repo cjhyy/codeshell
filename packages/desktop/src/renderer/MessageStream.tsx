@@ -43,6 +43,15 @@ import { SystemReminderTask } from "./messages/SystemReminderTask";
 // fresh onAnswer prop on every render.
 const NOOP_ON_ANSWER = (): void => undefined;
 
+/**
+ * How many trailing items stay outside content-visibility containment.
+ *
+ * The tail is where streaming output lands and where auto-scroll measures, so
+ * containment there would fight live growth. Everything above it is settled
+ * history and can be skipped while off-screen.
+ */
+const LIVE_TAIL_UNCONTAINED = 8;
+
 export interface ContextPackageCreatedOptions {
   /** Re-check immediately before navigating because registration may itself be asynchronous. */
   shouldActivate: () => boolean;
@@ -532,7 +541,30 @@ export function MessageStream({
                   </div>
                 );
               })}
-            {!selectionOpen && items.map(renderStreamItem)}
+            {!selectionOpen &&
+              items.map((item, index) => {
+                const node = renderStreamItem(item);
+                // Skip layout/paint for off-screen history.
+                //
+                // The stream mounts EVERY item; a few hundred turns of tool
+                // cards and highlighted code blocks keep costing layout on each
+                // render even though almost all of it is scrolled out of view.
+                // `content-visibility:auto` lets the browser skip rendering work
+                // for subtrees outside the viewport, and
+                // `contain-intrinsic-size` gives it a placeholder height so the
+                // scrollbar does not jump as items enter and leave.
+                //
+                // Deliberately NOT applied to the last few items: those are
+                // where streaming output lands, and containment there would
+                // fight the live-growth path (and the auto-scroll that follows
+                // it). Cheap, reversible, and no virtualization bookkeeping.
+                if (index >= items.length - LIVE_TAIL_UNCONTAINED) return node;
+                return (
+                  <div key={`vc-${item.id}`} className="cs-stream-item">
+                    {node}
+                  </div>
+                );
+              })}
             {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
             {trailing}
           </div>

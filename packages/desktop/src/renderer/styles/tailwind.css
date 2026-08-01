@@ -21,6 +21,24 @@
   animation: cs-pet-idle-breathe 4s ease-in-out infinite;
 }
 
+/*
+ * Off-screen transcript items skip layout and paint.
+ *
+ * MessageStream mounts every item, so a few hundred turns of tool cards and
+ * highlighted code keep costing layout on each render even when scrolled far out
+ * of view. `content-visibility: auto` lets the browser skip that work for
+ * subtrees outside the viewport; `contain-intrinsic-size` supplies a placeholder
+ * height so the scrollbar stays stable as items enter and leave.
+ *
+ * The value is a rough average item height — wrong guesses only cause minor
+ * scrollbar drift, never incorrect rendering. Applied to settled history only
+ * (see LIVE_TAIL_UNCONTAINED), never to the streaming tail.
+ */
+.cs-stream-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cs-pet-idle {
     animation: none;
@@ -72,6 +90,83 @@
     transform: translateY(-1px);
   }
 
+  .link-hero {
+    background:
+      radial-gradient(circle at 88% 8%, hsl(var(--cs-primary) / 0.11), transparent 22rem),
+      linear-gradient(135deg, hsl(var(--cs-card)) 0%, hsl(var(--cs-muted) / 0.48) 100%);
+    box-shadow:
+      0 14px 38px hsl(var(--cs-foreground) / 0.045),
+      0 1px 2px hsl(var(--cs-foreground) / 0.035);
+  }
+
+  .link-nav-item[data-state="active"] {
+    border-color: hsl(var(--cs-primary) / 0.28);
+    background: hsl(var(--cs-primary) / 0.065);
+    box-shadow: inset 0 0 0 1px hsl(var(--cs-primary) / 0.06);
+  }
+
+  .link-nav-item[data-state="active"] > span:first-child {
+    background: hsl(var(--cs-primary) / 0.12);
+    color: hsl(var(--cs-primary));
+  }
+
+  .link-card {
+    box-shadow: 0 1px 2px hsl(var(--cs-foreground) / 0.025);
+  }
+
+  .link-card:hover {
+    border-color: hsl(var(--cs-primary) / 0.28);
+    box-shadow:
+      0 12px 28px hsl(var(--cs-foreground) / 0.06),
+      0 1px 2px hsl(var(--cs-foreground) / 0.04);
+    transform: translateY(-1px);
+  }
+
+  .credential-hero {
+    background:
+      radial-gradient(circle at 88% 8%, hsl(var(--cs-primary) / 0.085), transparent 22rem),
+      linear-gradient(135deg, hsl(var(--cs-card)) 0%, hsl(var(--cs-muted) / 0.42) 100%);
+    box-shadow:
+      0 14px 38px hsl(var(--cs-foreground) / 0.04),
+      0 1px 2px hsl(var(--cs-foreground) / 0.035);
+  }
+
+  .credential-card {
+    box-shadow: 0 1px 2px hsl(var(--cs-foreground) / 0.025);
+  }
+
+  .credential-card:hover {
+    border-color: hsl(var(--cs-primary) / 0.22);
+    box-shadow:
+      0 10px 24px hsl(var(--cs-foreground) / 0.05),
+      0 1px 2px hsl(var(--cs-foreground) / 0.035);
+    transform: translateY(-1px);
+  }
+
+  .credential-status-ok,
+  .credential-status-muted {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.625rem;
+    line-height: 1rem;
+    font-weight: 500;
+  }
+
+  .credential-status-ok {
+    border: 1px solid hsl(var(--cs-status-ok) / 0.25);
+    background: hsl(var(--cs-status-ok) / 0.08);
+    color: hsl(var(--cs-status-ok));
+  }
+
+  .credential-status-muted {
+    border: 1px solid hsl(var(--cs-border) / 0.7);
+    background: hsl(var(--cs-muted) / 0.6);
+    color: hsl(var(--cs-muted-foreground));
+  }
+
   .dark .digital-human-hero {
     background:
       radial-gradient(circle at 92% 8%, hsl(var(--cs-primary) / 0.16), transparent 22rem),
@@ -82,6 +177,32 @@
   }
 
   .dark .digital-human-card {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  }
+
+  .dark .link-hero {
+    background:
+      radial-gradient(circle at 88% 8%, hsl(var(--cs-primary) / 0.15), transparent 23rem),
+      linear-gradient(135deg, hsl(var(--cs-card)) 0%, hsl(var(--cs-muted) / 0.62) 100%);
+    box-shadow:
+      0 16px 42px rgb(0 0 0 / 0.2),
+      0 1px 2px rgb(0 0 0 / 0.14);
+  }
+
+  .dark .link-card {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  }
+
+  .dark .credential-hero {
+    background:
+      radial-gradient(circle at 88% 8%, hsl(var(--cs-primary) / 0.12), transparent 23rem),
+      linear-gradient(135deg, hsl(var(--cs-card)) 0%, hsl(var(--cs-muted) / 0.58) 100%);
+    box-shadow:
+      0 16px 42px rgb(0 0 0 / 0.18),
+      0 1px 2px rgb(0 0 0 / 0.14);
+  }
+
+  .dark .credential-card {
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
   }
 
@@ -190,7 +311,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .digital-human-card:hover {
+  .digital-human-card:hover,
+  .link-card:hover,
+  .credential-card:hover {
     transform: none;
   }
 }
