@@ -8,6 +8,7 @@ import { describe, expect, test } from "bun:test";
 import { FIRST_PHASE_EXPOSURE, FIRST_PHASE_EXPOSURE_RATIONALE } from "./external-tool-exposure.js";
 import { createSessionToolHost } from "./session-tool-host.js";
 import { ToolRegistry } from "./registry.js";
+import { BUILTIN_TOOLS } from "./builtin/index.js";
 import { BUILTIN_AGENT_PRESETS } from "../preset/index.js";
 
 describe("first-phase external tool exposure", () => {
@@ -18,7 +19,9 @@ describe("first-phase external tool exposure", () => {
     expect([...FIRST_PHASE_EXPOSURE.toolNames].sort()).toEqual(
       [
         "Bash",
-        "Browser",
+        "browser_act",
+        "browser_navigate",
+        "browser_observe",
         "Edit",
         "Glob",
         "Grep",
@@ -30,13 +33,23 @@ describe("first-phase external tool exposure", () => {
         "Panel",
         "Read",
         "Skill",
-        "SwitchSessionWorkspace",
         "TodoWrite",
         "WebFetch",
         "WebSearch",
         "Write",
       ].sort(),
     );
+  });
+
+  test("every exposed name is a real builtin tool", () => {
+    // An allowlist entry for a name no tool has is SILENTLY INERT: it grants
+    // nothing and denies nothing, while reading to a reviewer as "covered".
+    // This caught two real mistakes — "Browser" (the registry has
+    // browser_navigate / browser_observe / browser_act) and
+    // "SwitchSessionWorkspace" (not a core builtin at all).
+    const real = new Set(BUILTIN_TOOLS.map((tool) => tool.definition.name));
+    const bogus = [...FIRST_PHASE_EXPOSURE.toolNames].filter((name) => !real.has(name));
+    expect(bogus).toEqual([]);
   });
 
   test("keeps the structurally-excluded tools out", () => {

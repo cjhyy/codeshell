@@ -74,30 +74,36 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
       "one, and it belongs to whoever reviews the first Panel App to be trusted.",
   },
   {
-    tool: "Browser",
+    // NOTE the names: there is no tool called "Browser". The registry exposes
+    // three separate browser tools, and an allowlist entry for a name that does
+    // not exist is silently inert — it neither grants nor denies anything,
+    // which is the worst of both (a reviewer reads it as covered).
+    tool: "browser_navigate",
     kind: "host-loopback",
     status: "exposed",
     reason:
-      "Large surface (navigate, click, type, read page content), and the owner " +
-      "argument it was waiting on is the same one Panel now has: " +
-      "ExternalRuntimeService registers the session and claims the owning window " +
-      "before the runtime starts. Exposed because it is a capability the runtime " +
-      "genuinely lacks — the differentiator, not a duplicate — and it stays under " +
-      "ToolExecutor plus the user's permission rules. Without an owning window it " +
-      "fails closed on routing rather than broadcasting.",
+      "The browser capability the runtime genuinely lacks — the differentiator, " +
+      "not a duplicate — and the owner argument it was waiting on is the same one " +
+      "Panel now has: ExternalRuntimeService registers the session and claims the " +
+      "owning window before the runtime starts. Stays under ToolExecutor plus the " +
+      "user's permission rules; without an owning window it fails closed on " +
+      "routing rather than broadcasting.",
   },
   {
-    tool: "SwitchSessionWorkspace",
+    tool: "browser_observe",
+    kind: "host-loopback",
+    status: "exposed",
+    reason: "Reads page content. Same owner story as browser_navigate, no mutation.",
+  },
+  {
+    tool: "browser_act",
     kind: "host-loopback",
     status: "exposed",
     reason:
-      "Changes the session cwd, which every later path/permission decision is " +
-      "resolved against — so it is genuinely load-bearing, not merely risky. " +
-      "Exposed on the product owner's call. Two properties keep it bounded: the " +
-      "switch targets a workspace the session already has, and every subsequent " +
-      "call re-resolves its policy against the NEW cwd rather than inheriting the " +
-      "old decision. An untrusted target therefore narrows permissions instead of " +
-      "carrying trust across.",
+      "Click / type / interact — the mutating third of the browser surface, and " +
+      "the one that combines with InjectCredential to act as the logged-in user. " +
+      "Exposed on the product owner's call, under the same ToolExecutor rules as " +
+      "every other entry here.",
   },
   {
     tool: "InjectCredential",
