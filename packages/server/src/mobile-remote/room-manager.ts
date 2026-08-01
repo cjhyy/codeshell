@@ -19,6 +19,14 @@ import type { InputAttachmentMeta } from "../attachment-service.js";
  */
 const ROOM_ID_RE = /^room_[a-z0-9]+_[a-z0-9]+$/;
 
+/**
+ * Minimum gap between room.json rewrites for `lastActiveAt`.
+ *
+ * The field only drives idle pruning, which is measured in hours, so writing it
+ * per message bought nothing and cost a full file rewrite each time.
+ */
+const LAST_ACTIVE_THROTTLE_MS = 10_000;
+
 export function isValidRoomId(id: unknown): id is string {
   return typeof id === "string" && ROOM_ID_RE.test(id);
 }
@@ -268,6 +276,15 @@ export class RoomManager {
    */
   private deferredEmitRooms = new Set<string>();
   private deferredEmits = new Map<string, ResidentAgentEvent[]>();
+  /**
+   * Last assigned message seq per room, so appends do not re-read the whole
+   * JSONL. Seeded lazily from disk on the first append after startup; dropped
+   * when the room's messages are deleted so the next append re-derives it.
+   */
+  private lastSeqByRoom = new Map<string, number>();
+  /** Throttled lastActiveAt bookkeeping — see touchLastActive. */
+  private pendingLastActive = new Map<string, number>();
+  private lastActiveWrittenAt = new Map<string, number>();
   private now: () => number;
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
@@ -368,8 +385,24 @@ export class RoomManager {
   }
 
   private nextSeq(id: string): number {
+    // Scan the file ONCE per room, then keep the counter in memory.
+    //
+    // This used to call getMessages(id, 0) on every append — a full synchronous
+    // read + JSON.parse of the entire messages.jsonl just to learn the last seq.
+    // Appending N messages therefore cost O(N²) parsing, all of it on the remote
+    // host's event loop: a long-lived room progressively slowed down new
+    // messages, heartbeats and every other WebSocket client. (Measured: ~32s to
+    // write 2,000 short messages.)
+    const cached = this.lastSeqByRoom.get(id);
+    if (cached !== undefined) {
+      const next = cached + 1;
+      this.lastSeqByRoom.set(id, next);
+      return next;
+    }
     const msgs = this.getMessages(id, 0);
-    return msgs.length === 0 ? 1 : msgs[msgs.length - 1]!.seq + 1;
+    const next = msgs.length === 0 ? 1 : msgs[msgs.length - 1]!.seq + 1;
+    this.lastSeqByRoom.set(id, next);
+    return next;
   }
 
   private append(id: string, partial: Omit<RoomMessage, "seq" | "ts">): RoomMessage {
@@ -383,9 +416,33 @@ export class RoomManager {
     return msg;
   }
 
+  /**
+   * Refresh the room's `lastActiveAt`, throttled.
+   *
+   * This re-read and rewrote the whole room.json on EVERY appended message. The
+   * field only feeds idle-based pruning (measured in hours), so second-level
+   * precision is worthless while the write cost is paid per message — together
+   * with the old full-history seq scan it made a busy room progressively slower.
+   *
+   * Writes at most once per THROTTLE window per room; `flushLastActive` forces
+   * one out at close/prune time so a room that goes quiet still records its real
+   * last activity.
+   */
   private touchLastActive(id: string, ts: number): void {
+    this.pendingLastActive.set(id, ts);
+    const lastWrite = this.lastActiveWrittenAt.get(id) ?? 0;
+    if (ts - lastWrite < LAST_ACTIVE_THROTTLE_MS) return;
+    this.flushLastActive(id);
+  }
+
+  /** Persist a pending lastActiveAt immediately, if there is one. */
+  private flushLastActive(id: string): void {
+    const ts = this.pendingLastActive.get(id);
+    if (ts === undefined) return;
+    this.pendingLastActive.delete(id);
     const meta = this.getRoom(id);
     if (!meta) return;
+    this.lastActiveWrittenAt.set(id, ts);
     writeFileSync(
       this.metaPath(id),
       JSON.stringify({ ...meta, lastActiveAt: ts }, null, 2),
@@ -852,6 +909,9 @@ export class RoomManager {
   }
 
   close(id: string): void {
+    // A room going quiet must record its REAL last activity, not the last
+    // throttled write.
+    this.flushLastActive(id);
     this.agents.get(id)?.stop();
     this.agents.delete(id);
     this.clearPendingAskUser(id);
@@ -880,6 +940,9 @@ export class RoomManager {
    * truly dormant rooms (whole directory) are removed. Returns the ids deleted.
    */
   pruneStaleRooms(maxAgeMs: number): string[] {
+    // Flush pending timestamps first: pruning reads lastActiveAt off disk, and a
+    // throttled-but-unwritten value would make an active room look dormant.
+    for (const id of [...this.pendingLastActive.keys()]) this.flushLastActive(id);
     const cutoff = this.now() - maxAgeMs;
     const removed: string[] = [];
     for (const meta of this.listRooms()) {
@@ -887,6 +950,9 @@ export class RoomManager {
       if (this.isOpen(meta.id)) continue; // never reap a live session
       rmSync(this.roomDir(meta.id), { recursive: true, force: true });
       this.agents.delete(meta.id);
+      // Drop the cached seq with the files, so a room id that somehow comes back
+      // re-derives its counter from disk instead of continuing a dead sequence.
+      this.lastSeqByRoom.delete(meta.id);
       removed.push(meta.id);
     }
     return removed;
