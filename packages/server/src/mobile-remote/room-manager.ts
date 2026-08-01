@@ -258,6 +258,16 @@ export class RoomManager {
    * transcript follower later sees the same CLI-written user line, this queue
    * suppresses that duplicate. */
   private pendingTranscriptUserEchoes = new Map<string, Array<{ text: string; ts: number }>>();
+  /**
+   * Rooms whose agent events must be buffered instead of handled immediately.
+   *
+   * Only set for the duration of `agent.send()` inside `send()`: acceptance has
+   * to be known before the user turn is persisted, but the user turn must still
+   * come FIRST in the history. An agent that emits synchronously from send()
+   * would otherwise have its reply appended ahead of the prompt it answers.
+   */
+  private deferredEmitRooms = new Set<string>();
+  private deferredEmits = new Map<string, ResidentAgentEvent[]>();
   private now: () => number;
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
@@ -671,6 +681,14 @@ export class RoomManager {
   }
 
   private onAgentEvent(id: string, event: ResidentAgentEvent): void {
+    // Buffered while send() is deciding acceptance — replayed right after the
+    // user turn is appended, so a synchronous agent reply cannot precede it.
+    if (this.deferredEmitRooms.has(id)) {
+      const queued = this.deferredEmits.get(id) ?? [];
+      queued.push(event);
+      this.deferredEmits.set(id, queued);
+      return;
+    }
     if (
       this.transcriptFollowedRooms.has(id) &&
       (event.type === "text" ||
@@ -780,6 +798,42 @@ export class RoomManager {
     if (this.open(id).status !== "running") return false;
     const summaries = roomAttachmentSummary(attachments);
     const agentText = roomTurnText(displayText, attachments);
+
+    // Decide acceptance BEFORE persisting, but keep the user turn first in the
+    // history.
+    //
+    // The old order was append-then-send, with send()'s result returned straight
+    // to the phone. `CodexRoomAgent.send()` returns false while a previous turn
+    // is still running, so the phone showed "房间未就绪或已关闭" while the very
+    // same text was already in messages.jsonl and broadcast to every other
+    // client — a message that looks delivered but was never given to the agent.
+    // With attachments it was worse: the handler released the upload claim,
+    // leaving a history entry pointing at an attachment that never materialized.
+    //
+    // Simply moving append() after send() is not enough: an agent that emits its
+    // reply synchronously from send() would land the reply BEFORE the user turn.
+    // So buffer anything the agent emits during the call and flush it after the
+    // user message is appended. (The real Codex agent spawns a child and emits
+    // asynchronously, but ordering must not depend on that.)
+    const agent = this.agents.get(id);
+    if (!agent) return false;
+
+    this.deferredEmitRooms.add(id);
+    let accepted = false;
+    try {
+      accepted = agent.send(agentText);
+    } finally {
+      this.deferredEmitRooms.delete(id);
+    }
+
+    const buffered = this.deferredEmits.get(id) ?? [];
+    this.deferredEmits.delete(id);
+
+    if (!accepted) {
+      // Rejected: nothing about this turn reaches history or the phone.
+      return false;
+    }
+
     this.append(id, {
       from: "user",
       type: "text",
@@ -791,7 +845,10 @@ export class RoomManager {
       pending.push({ text: displayText, ts: this.now() });
       this.pendingTranscriptUserEchoes.set(id, pending);
     }
-    return this.agents.get(id)?.send(agentText) ?? false;
+    // Replay whatever the agent produced synchronously, now correctly ordered
+    // after the user turn.
+    for (const event of buffered) this.onAgentEvent(id, event);
+    return true;
   }
 
   close(id: string): void {
