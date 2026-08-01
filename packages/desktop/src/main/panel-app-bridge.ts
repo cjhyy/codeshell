@@ -33,6 +33,8 @@ const MAX_RESULT_BYTES = 256 * 1024;
 const MAX_CALLS_PER_WINDOW = 30;
 const RATE_WINDOW_MS = 10_000;
 const CALL_TIMEOUT_MS = 15_000;
+const PANEL_AGENT_RUN_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+const MAX_AGENT_PROMPT_CHARS = 20_000;
 const STORAGE_QUOTA_BYTES = 256 * 1024;
 const MAX_NOTIFICATIONS_PER_WINDOW = 5;
 const MAX_WORKSPACE_READ_BYTES = 480 * 1024;
@@ -671,23 +673,76 @@ export class PanelAppBridge {
   }
 
   private async submitPrompt(binding: GuestBinding, params: unknown): Promise<unknown> {
-    const task = (params as { prompt?: unknown } | null)?.prompt;
-    if (typeof task !== "string" || task.trim().length === 0 || task.length > 20_000) {
+    const input = params as { prompt?: unknown; displayText?: unknown } | null;
+    const task = input?.prompt;
+    if (
+      typeof task !== "string" ||
+      task.trim().length === 0 ||
+      task.length > MAX_AGENT_PROMPT_CHARS
+    ) {
       throw new Error("agent.submitPrompt requires a non-empty prompt up to 20000 characters");
+    }
+    if (
+      input?.displayText !== undefined &&
+      (typeof input.displayText !== "string" ||
+        input.displayText.trim().length === 0 ||
+        input.displayText.length > MAX_AGENT_PROMPT_CHARS)
+    ) {
+      throw new Error(
+        "agent.submitPrompt displayText must be non-empty and up to 20000 characters",
+      );
     }
     const { sessionId, cwd } = binding.context;
     if (!sessionId) throw new Error("agent.submitPrompt requires context.session permission");
     if (binding.context.busy) throw new Error("the target session is busy");
     const bridge = this.options.getAgentBridge();
     if (!bridge) throw new Error("agent worker is unavailable");
-    const result = await bridge.requestWorker("agent/run", {
-      task: task.trim(),
-      sessionId,
-      cwd,
-      bucket: binding.bucket,
-    });
-    if (!result.ok) throw new Error(result.message);
-    return result.result;
+
+    const appLabel = binding.resource.descriptor.title.trim();
+    const prefix = appLabel ? `【${appLabel}】 ` : "";
+    const requestedDisplayText =
+      typeof input?.displayText === "string" ? input.displayText.trim() : task.trim();
+    const displayText = `${prefix}${requestedDisplayText.slice(
+      0,
+      MAX_AGENT_PROMPT_CHARS - prefix.length,
+    )}`;
+    const clientMessageId = `panel:${binding.resource.descriptor.appId}:${randomUUID()}`;
+
+    void bridge
+      .requestWorker(
+        "agent/run",
+        {
+          task: task.trim(),
+          displayText,
+          clientMessageId,
+          sessionId,
+          cwd,
+          bucket: binding.bucket,
+        },
+        PANEL_AGENT_RUN_TIMEOUT_MS,
+        // This RPC is a fire-and-forget backstop, not the completion signal —
+        // real progress arrives on the session stream. The 24h timeout exists
+        // only so the correlation is eventually reclaimed, so release it as soon
+        // as the worker is known to be gone instead of holding it for a day.
+        { settleOnExit: true, failFast: true },
+      )
+      .then((result) => {
+        if (result.ok) return;
+        bridge.ingestExternalEvent(sessionId, {
+          type: "error",
+          error: `Panel App request failed: ${result.message}`,
+        });
+      })
+      .catch((error: unknown) => {
+        bridge.ingestExternalEvent(sessionId, {
+          type: "error",
+          error: `Panel App request failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        });
+      });
+
+    return { accepted: true, clientMessageId };
   }
 
   /** Read-only workspace metadata. Git branch is best-effort via .git/HEAD (no exec). */

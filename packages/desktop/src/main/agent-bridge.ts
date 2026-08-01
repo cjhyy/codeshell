@@ -1019,11 +1019,21 @@ export class AgentBridge implements PetStateBridge {
     method: string,
     params: Record<string, unknown>,
     timeoutMs = 120_000,
+    /**
+     * Opt-in lifecycle tightening for callers that do NOT await the agent's real
+     * completion (the Panel App fire-and-forget submit). Such a call uses a very
+     * long timeout purely as a backstop, so it must be released as soon as the
+     * worker is known to be gone rather than sitting pending for hours:
+     *   settleOnExit — worker exit settles the correlation immediately;
+     *   failFast     — a failed/dropped write settles it instead of waiting.
+     * Default OFF so existing callers keep the old inject-then-wait semantics.
+     */
+    options: { settleOnExit?: boolean; failFast?: boolean } = {},
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
     const id = `desktop-pet-host-${++this.petHostRequestId}`;
     // consume: false — the response line still flows to renderer + taps, like
-    // any other worker output. failFast unset — a dropped send waits out the
-    // timeout, matching the old inject-then-wait semantics.
+    // any other worker output. failFast defaults unset — a dropped send waits out
+    // the timeout, matching the old inject-then-wait semantics.
     //
     // agent/run is the only method that may spawn the worker on demand, exactly
     // as the renderer's "agent:msg" path does. Without this a pet/IM-gateway
@@ -1034,6 +1044,8 @@ export class AgentBridge implements PetStateBridge {
     const outcome = await this.core.request(method, params, {
       id,
       timeoutMs,
+      ...(options.settleOnExit ? { settleOnExit: true } : {}),
+      ...(options.failFast ? { failFast: true } : {}),
       ...(ensureWorker ? { ensureWorker: true, ...(cwd ? { ensureWorkerCwd: cwd } : {}) } : {}),
     });
     switch (outcome.status) {
@@ -1045,6 +1057,13 @@ export class AgentBridge implements PetStateBridge {
           message: outcome.error.message ?? "worker rejected the request",
           code: outcome.error.code,
         };
+      // Distinguish the non-response outcomes. For a fire-and-forget submit these
+      // strings are what the user actually sees in the session error event, so
+      // "worker did not respond" for an outright crash was needlessly opaque.
+      case "workerExit":
+        return { ok: false, message: "the agent worker exited before responding" };
+      case "sendFailed":
+        return { ok: false, message: "could not reach the agent worker" };
       default:
         return { ok: false, message: "worker did not respond" };
     }

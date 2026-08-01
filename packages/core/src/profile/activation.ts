@@ -35,10 +35,14 @@ export interface InstalledCapabilityNames {
  * `exclusiveCapabilities` 且 host 给出 `installed` 时，未声明的同类能力显式
  * 落 `"off"`，形成独占工作面。
  */
+// 返回 NonNullable：`CapabilityOverrides` 自身以 `.optional()` 结尾（settings 里
+// 整个 key 可以缺失），但这个函数**总是**构造一个对象字面量，永不返回 undefined。
+// 沿用可空别名会迫使每个调用方（含断言 `overrides.skills` 的测试）先做一次不可能
+// 为真的 null 检查。
 export function profileOverridesFromDefinition(
   profile: WorkspaceProfile,
   installed?: InstalledCapabilityNames,
-): CapabilityOverrides {
+): NonNullable<CapabilityOverrides> {
   const exclusive = profile.exclusiveCapabilities === true;
   const bucket = (
     declared: readonly string[],

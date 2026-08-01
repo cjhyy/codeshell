@@ -195,6 +195,9 @@ export const settingsNs = {
         create: "新建",
         edit: "编辑",
         empty: "还没有数字人，点击「新建」或从市场安装。",
+        advancedExportTitle: "高级导出",
+        advancedExportDescription:
+          "仅用于备份、迁移或发布数字人定义，日常使用无需操作。导出内容不包含长期记忆。",
         skillsLoadFailed: "技能列表加载失败：{message}",
         externalSessionsTitle: "外部 CLI 会话",
         externalSessionsSubtitle: "在 Pet 全局视图显示本机其他 CLI 工具的会话状态。默认关闭。",
@@ -1082,6 +1085,9 @@ export const settingsNs = {
         create: "Create",
         edit: "Edit",
         empty: "No digital humans yet — create one or install from the market.",
+        advancedExportTitle: "Advanced export",
+        advancedExportDescription:
+          "For backing up, migrating, or publishing digital-human definitions. Daily use does not require this, and exports never include long-term memory.",
         skillsLoadFailed: "Failed to load skills: {message}",
         externalSessionsTitle: "External CLI sessions",
         externalSessionsSubtitle:

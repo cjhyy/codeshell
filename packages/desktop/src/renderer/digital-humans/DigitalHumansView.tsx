@@ -236,22 +236,6 @@ export function DigitalHumansView({
     });
   };
 
-  /** Write every library digital human out as a git-ready repo skeleton. */
-  const publishProfileRepo = async () => {
-    await run(
-      "publish-repo",
-      async () => {
-        const result = await window.codeshell.exportProfileRepo(profiles.map((p) => p.name));
-        if ("canceled" in result) return;
-        toast({
-          message: t("digitalHumans.publish.done", { count: profiles.length }),
-          variant: "success",
-        });
-      },
-      { name: t("digitalHumans.publish.action") },
-    );
-  };
-
   const deleteProfileEntry = async (profile: DigitalHumanProfileEntry) => {
     // Preflight first: deleteProfile throws when a team or Session still binds
     // the profile, but that lands AFTER the user confirmed, as a raw English
@@ -437,13 +421,15 @@ export function DigitalHumansView({
   };
 
   /**
-   * Summoning must satisfy dependencies too, not just "set as project default".
+   * Starting work must satisfy dependencies too, not just "set as project default".
    *
    * A digital human whose `requires` were never installed is exactly the shell
    * this feature exists to prevent: a real session bound to `video-director`
    * called `/hyperframes` and got "Skill not found", then flailed with Glob
-   * before giving up. Summoning is the *common* entry point, so gating only the
-   * default toggle left the main path unguarded.
+   * before giving up. Starting work is the *common* entry point, so gating only the
+   * default toggle left the main path unguarded. Downloading a definition is
+   * deliberately excluded: it only adds an editable library entry and must not
+   * create a Session or execute the definition's Skill installers.
    *
    * Teams resolve every member: skills install per project (two projects are
    * genuinely two installs), and members usually share requirements, so the
@@ -451,22 +437,16 @@ export function DigitalHumansView({
    */
   const ensureSelectionRequirements = async (
     selection: DigitalHumanSelection,
-    knownInstalledNames: readonly string[] = [],
   ): Promise<boolean> => {
     const names = selection.kind === "single" ? [selection.id] : selection.members;
     // Install any member missing from the library FIRST. A team definition names
-    // members the user may never have installed individually — summoning still
+    // members the user may never have downloaded individually — starting it still
     // created their Sessions, and the lead's first SendMessageToSession then died
-    // with "Workspace profile … is unavailable". Summoning a team must bring the
+    // with "Workspace profile … is unavailable". Starting a team must bring the
     // whole roster.
-    // A market install refreshes the library before this call, but the current
-    // render closure still contains the previous `profiles` array. Carry the
-    // names committed in this same action so "Add and summon" cannot install
-    // the same profile twice while React applies the refreshed state.
-    const installedNames = new Set([
-      ...profiles.map((profile) => profile.name),
-      ...knownInstalledNames,
-    ]);
+    // A local team may come from a repo before each member has been downloaded,
+    // so the start action resolves that roster here, immediately before use.
+    const installedNames = new Set(profiles.map((profile) => profile.name));
     const missing = names.filter((name) => !installedNames.has(name));
     for (const name of missing) {
       const entry = catalog.find((candidate) => candidate.name === name);
@@ -493,18 +473,14 @@ export function DigitalHumansView({
     return true;
   };
 
-  /** Single choke point: every summon path goes through the dependency gate. */
-  const useSelection = (
-    selection: DigitalHumanSelection,
-    starterPrompt?: string,
-    knownInstalledNames: readonly string[] = [],
-  ): void => {
+  /** Single choke point: every start-using path goes through the dependency gate. */
+  const useSelection = (selection: DigitalHumanSelection, starterPrompt?: string): void => {
     if (selectionLock.current) return;
     selectionLock.current = true;
     setSelectionBusy(true);
     void (async () => {
       try {
-        if (!(await ensureSelectionRequirements(selection, knownInstalledNames))) return;
+        if (!(await ensureSelectionRequirements(selection))) return;
         onUse(selection, starterPrompt);
       } finally {
         selectionLock.current = false;
@@ -572,69 +548,35 @@ export function DigitalHumansView({
     });
   };
 
-  const exportProfileEntry = async (profile: DigitalHumanProfileEntry) => {
-    const result = await operations.run(`export-profile:${profile.name}`, () =>
-      window.codeshell.exportProfileDefinition(profile.name),
-    );
-    if (!result.ok) {
-      if (!result.duplicate) {
-        toast({
-          message: t("digitalHumans.actionFailed", {
-            name: profile.label,
-            message: result.error instanceof Error ? result.error.message : String(result.error),
-          }),
-          variant: "error",
-        });
-      }
+  /**
+   * Marketplace actions are download-only. They never create a Session and
+   * never install Skill requirements; both happen later from My digital humans
+   * when the user explicitly chooses Start using.
+   */
+  const downloadCatalogEntry = async (entry: DigitalHumanCatalogEntry): Promise<void> => {
+    if (entry.installed) {
+      setDetail(null);
+      setActiveTab("mine");
       return;
     }
-    if (!result.value.canceled) {
-      toast({
-        message: t("digitalHumans.transfer.exported", {
-          name: result.value.label,
-          file: result.value.fileName,
-        }),
-      });
-    }
+    const downloaded = await run(
+      `install:${entry.name}`,
+      () => window.codeshell.installCatalogProfile(entry.name),
+      {
+        name: entry.label,
+        successMessage: t("digitalHumans.installDone", { name: entry.label }),
+      },
+    );
+    if (!downloaded) return;
+    setDetail(null);
+    setActiveTab("mine");
   };
 
-  const launchCatalogEntry = async (
-    entry: DigitalHumanCatalogEntry,
-    starterPrompt?: string,
-  ): Promise<void> => {
-    if (!entry.installed) {
-      const installed = await run(
-        `install:${entry.name}`,
-        () => window.codeshell.installCatalogProfile(entry.name),
-        {
-          name: entry.label,
-          successMessage: t("digitalHumans.installDone", { name: entry.label }),
-        },
-      );
-      if (!installed) return;
-    }
-    useSelection({ kind: "single", id: entry.name, label: entry.label }, starterPrompt, [
-      entry.name,
-    ]);
-  };
-
-  const launchCuratedTeam = async (
-    blueprint: CuratedDigitalHumanTeam,
-    starterPrompt?: string,
-  ): Promise<void> => {
+  const downloadCuratedTeam = async (blueprint: CuratedDigitalHumanTeam): Promise<void> => {
     const existingTeam = teams.find((team) => team.id === blueprint.id);
     if (existingTeam) {
-      useSelection(
-        {
-          kind: "team",
-          id: existingTeam.id,
-          label: existingTeam.name,
-          members: existingTeam.members,
-          mode: existingTeam.mode,
-          team: existingTeam,
-        },
-        starterPrompt,
-      );
+      setDetail(null);
+      setActiveTab("teams");
       return;
     }
 
@@ -660,34 +602,18 @@ export function DigitalHumansView({
       },
     );
     if (!installed) return;
-    useSelection(
-      {
-        kind: "team",
-        id: blueprint.id,
-        label: blueprint.name,
-        members: [...blueprint.members],
-        mode: blueprint.mode,
-        team: {
-          id: blueprint.id,
-          name: blueprint.name,
-          description: blueprint.description,
-          members: [...blueprint.members],
-          mode: blueprint.mode,
-        },
-      },
-      starterPrompt,
-      blueprint.members,
-    );
+    setDetail(null);
+    setActiveTab("teams");
   };
 
   const launchDetail = (starterPrompt?: string): void => {
     if (!detail) return;
     if (detail.kind === "catalog") {
-      void launchCatalogEntry(detail.entry, starterPrompt);
+      void downloadCatalogEntry(detail.entry);
       return;
     }
     if (detail.kind === "curated-team") {
-      void launchCuratedTeam(detail.team, starterPrompt);
+      void downloadCuratedTeam(detail.team);
       return;
     }
     if (detail.kind === "profile") {
@@ -1003,7 +929,7 @@ export function DigitalHumansView({
                                 entry={entry}
                                 busy={selectionBusy || operations.isBusy(`install:${entry.name}`)}
                                 onDetails={() => setDetail({ kind: "catalog", entry })}
-                                onLaunch={() => void launchCatalogEntry(entry)}
+                                onDownload={() => void downloadCatalogEntry(entry)}
                               />
                             ))}
                           </div>
@@ -1020,7 +946,7 @@ export function DigitalHumansView({
                               installed={teams.some((candidate) => candidate.id === team.id)}
                               busy={selectionBusy || operations.isBusy(`install-team:${team.id}`)}
                               onDetails={() => setDetail({ kind: "curated-team", team })}
-                              onLaunch={() => void launchCuratedTeam(team)}
+                              onDownload={() => void downloadCuratedTeam(team)}
                             />
                           ))}
                         </div>
@@ -1030,25 +956,6 @@ export function DigitalHumansView({
                 </TabsContent>
 
                 <TabsContent value="mine" className="mt-0">
-                  {profiles.length > 0 ? (
-                    // Publishing is the missing half of sharing: a single JSON
-                    // has to be hand-delivered, whereas a repo layout can be
-                    // pushed and installed by `owner/repo`.
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/20 px-3 py-2">
-                      <p className="text-xs text-muted-foreground">
-                        {t("digitalHumans.publish.hint")}
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={operations.isBusy("publish-repo")}
-                        onClick={() => void publishProfileRepo()}
-                      >
-                        <Upload size={13} aria-hidden="true" />
-                        {t("digitalHumans.publish.action")}
-                      </Button>
-                    </div>
-                  ) : null}
                   {profiles.length === 0 ? (
                     <LibraryEmptyState
                       onCreate={() => setEditor({})}
@@ -1077,8 +984,7 @@ export function DigitalHumansView({
                           busy={
                             selectionBusy ||
                             operations.isBusy(`profile:${profile.name}`) ||
-                            operations.isBusy(`delete-profile:${profile.name}`) ||
-                            operations.isBusy(`export-profile:${profile.name}`)
+                            operations.isBusy(`delete-profile:${profile.name}`)
                           }
                           onUse={() =>
                             useSelection({ kind: "single", id: profile.name, label: profile.label })
@@ -1086,7 +992,6 @@ export function DigitalHumansView({
                           onDetails={() => setDetail({ kind: "profile", profile })}
                           onEdit={() => setEditor({ profile })}
                           onMemory={() => setMemoryProfile(profile)}
-                          onExport={() => void exportProfileEntry(profile)}
                           onDelete={() => void deleteProfileEntry(profile)}
                           onToggleDefault={() => {
                             if (!activeProjectPath) return;
@@ -1493,12 +1398,12 @@ function CatalogCard({
   entry,
   busy,
   onDetails,
-  onLaunch,
+  onDownload,
 }: {
   entry: DigitalHumanCatalogEntry;
   busy: boolean;
   onDetails: () => void;
-  onLaunch: () => void;
+  onDownload: () => void;
 }) {
   const { t } = useT();
   return (
@@ -1543,13 +1448,17 @@ function CatalogCard({
           {t("digitalHumans.market.details")}
           <ChevronRight size={13} aria-hidden="true" />
         </Button>
-        <Button size="sm" onClick={onLaunch} disabled={busy}>
-          <Sparkles size={13} aria-hidden="true" />
+        <Button size="sm" onClick={onDownload} disabled={busy}>
+          {entry.installed ? (
+            <ChevronRight size={13} aria-hidden="true" />
+          ) : (
+            <Download size={13} aria-hidden="true" />
+          )}
           {busy
-            ? t("digitalHumans.installing")
+            ? t("digitalHumans.downloading")
             : entry.installed
-              ? t("digitalHumans.summon")
-              : t("digitalHumans.installAndSummon")}
+              ? t("digitalHumans.viewDownloaded")
+              : t("digitalHumans.download")}
         </Button>
       </CardFooter>
     </Card>
@@ -1562,14 +1471,14 @@ function CuratedTeamCard({
   installed,
   busy,
   onDetails,
-  onLaunch,
+  onDownload,
 }: {
   team: CuratedDigitalHumanTeam;
   catalogByName: Map<string, DigitalHumanCatalogEntry>;
   installed: boolean;
   busy: boolean;
   onDetails: () => void;
-  onLaunch: () => void;
+  onDownload: () => void;
 }) {
   const { t } = useT();
   return (
@@ -1622,13 +1531,17 @@ function CuratedTeamCard({
           {t("digitalHumans.market.details")}
           <ChevronRight size={13} aria-hidden="true" />
         </Button>
-        <Button size="sm" onClick={onLaunch} disabled={busy}>
-          <Sparkles size={13} aria-hidden="true" />
+        <Button size="sm" onClick={onDownload} disabled={busy}>
+          {installed ? (
+            <ChevronRight size={13} aria-hidden="true" />
+          ) : (
+            <Download size={13} aria-hidden="true" />
+          )}
           {busy
-            ? t("digitalHumans.installing")
+            ? t("digitalHumans.downloading")
             : installed
-              ? t("digitalHumans.summonTeam")
-              : t("digitalHumans.installAndSummonTeam")}
+              ? t("digitalHumans.viewDownloadedTeam")
+              : t("digitalHumans.downloadTeam")}
         </Button>
       </CardFooter>
     </Card>
@@ -1645,7 +1558,6 @@ function ProfileCard({
   onDetails,
   onEdit,
   onMemory,
-  onExport,
   onDelete,
   onToggleDefault,
 }: {
@@ -1658,7 +1570,6 @@ function ProfileCard({
   onDetails: () => void;
   onEdit: () => void;
   onMemory: () => void;
-  onExport: () => void;
   onDelete: () => void;
   onToggleDefault: () => void;
 }) {
@@ -1779,10 +1690,6 @@ function ProfileCard({
                 {profile.active
                   ? t("digitalHumans.clearDefault")
                   : t("digitalHumans.setProjectDefault")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => runMenuAction(onExport)}>
-                <Download size={13} aria-hidden="true" />
-                {t("digitalHumans.transfer.exportDefinition")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -1947,6 +1854,7 @@ function DigitalHumanDetailDialog({
   const { t } = useT();
   if (!detail) return null;
 
+  const marketplaceMode = detail.kind === "catalog" || detail.kind === "curated-team";
   const installedTeam =
     detail.kind === "curated-team" ? teams.find((team) => team.id === detail.team.id) : undefined;
   const describeTeamMethod = (
@@ -2091,13 +1999,17 @@ function DigitalHumanDetailDialog({
     label: profileById.get(id)?.label ?? catalogById.get(id)?.label ?? id,
     category: catalogById.get(id)?.category,
   }));
-  const primaryLabel = view.team
-    ? view.installed
+  const primaryLabel = marketplaceMode
+    ? view.team
+      ? view.installed
+        ? t("digitalHumans.viewDownloadedTeam")
+        : t("digitalHumans.downloadTeam")
+      : view.installed
+        ? t("digitalHumans.viewDownloaded")
+        : t("digitalHumans.download")
+    : view.team
       ? t("digitalHumans.summonTeam")
-      : t("digitalHumans.installAndSummonTeam")
-    : view.installed
-      ? t("digitalHumans.summon")
-      : t("digitalHumans.installAndSummon");
+      : t("digitalHumans.summon");
 
   return (
     <Dialog
@@ -2290,21 +2202,30 @@ function DigitalHumanDetailDialog({
               <h3 className="text-sm font-semibold">{t("digitalHumans.detail.tryTasks")}</h3>
             </div>
             <div className="mt-2 space-y-2">
-              {view.prompts.map((prompt) => (
-                <Button
-                  key={prompt}
-                  type="button"
-                  variant="outline"
-                  className="h-auto w-full justify-between gap-4 whitespace-normal px-3 py-2.5 text-left"
-                  onClick={() => onLaunch(prompt)}
-                  disabled={busy}
-                >
-                  <span className="line-clamp-2 flex-1 text-sm font-normal leading-5">
-                    {prompt}
-                  </span>
-                  <ChevronRight size={14} className="shrink-0" aria-hidden="true" />
-                </Button>
-              ))}
+              {view.prompts.map((prompt) =>
+                marketplaceMode ? (
+                  <div
+                    key={prompt}
+                    className="rounded-md border border-border/70 bg-muted/15 px-3 py-2.5"
+                  >
+                    <span className="line-clamp-2 text-sm font-normal leading-5">{prompt}</span>
+                  </div>
+                ) : (
+                  <Button
+                    key={prompt}
+                    type="button"
+                    variant="outline"
+                    className="h-auto w-full justify-between gap-4 whitespace-normal px-3 py-2.5 text-left"
+                    onClick={() => onLaunch(prompt)}
+                    disabled={busy}
+                  >
+                    <span className="line-clamp-2 flex-1 text-sm font-normal leading-5">
+                      {prompt}
+                    </span>
+                    <ChevronRight size={14} className="shrink-0" aria-hidden="true" />
+                  </Button>
+                ),
+              )}
             </div>
           </section>
         </div>
@@ -2313,10 +2234,20 @@ function DigitalHumanDetailDialog({
           <Button className="w-full" size="lg" onClick={() => onLaunch()} disabled={busy}>
             {busy ? (
               <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+            ) : marketplaceMode ? (
+              view.installed ? (
+                <ChevronRight size={15} aria-hidden="true" />
+              ) : (
+                <Download size={15} aria-hidden="true" />
+              )
             ) : (
               <Sparkles size={15} aria-hidden="true" />
             )}
-            {busy ? t("digitalHumans.installing") : primaryLabel}
+            {busy
+              ? marketplaceMode
+                ? t("digitalHumans.downloading")
+                : t("digitalHumans.preparing")
+              : primaryLabel}
           </Button>
         </div>
       </DialogContent>

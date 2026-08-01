@@ -107,10 +107,12 @@ const BUILTIN_PAGE_ENTRIES: PageEntry[] = [
     key: "automation",
     title: { kind: "i18n", key: "sidebar.automation" },
     icon: Workflow,
-    // NOTE: preserved verbatim from the previously hardcoded Sidebar item —
-    // clicking sets "automation" but the item highlights on the "runs" view.
-    // Known quirk; fixing it is out of scope for the registry migration.
-    nav: { order: 10, target: "automation", isActive: (mode) => mode === "runs" },
+    // Highlights on the view it actually navigates to. This previously said
+    // `mode === "runs"`, carried over from the hardcoded Sidebar: clicking the
+    // item opened Automation but left it un-highlighted, while the Runs page lit
+    // up an item that does not lead there. `runs` has no sidebar entry of its
+    // own (it is reached from Automation), so it highlights nothing.
+    nav: { order: 10, target: "automation", isActive: (mode) => mode === "automation" },
     render: null,
   }),
   builtin({

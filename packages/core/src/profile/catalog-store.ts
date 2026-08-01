@@ -8,10 +8,15 @@
  *   ~/.code-shell/human-repos.json        —— 注册表（owner/repo 列表）
  *   ~/.code-shell/human-repos/<key>/      —— 各仓库的浅克隆
  */
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { codeShellHome } from "../session/session-manager.js";
-import { gitClone, gitFetchAndReset, githubRepoToCloneUrl } from "../plugins/gitOps.js";
+import { mutateJsonFile } from "../utils/file-mutex.js";
+// gitFetchAndReset is deliberately NOT used any more: updating in place is what
+// destroyed the last-known-good tree on a bad upstream commit. Updates clone to
+// a staging dir and swap (see addHumanRepo).
+import { gitClone, githubRepoToCloneUrl } from "../plugins/gitOps.js";
 import {
   CATALOG_REPO_RE,
   readCatalogFromDir,
@@ -50,7 +55,17 @@ export function humanRepoDir(repo: string): string {
 
 export function listHumanRepos(): RegisteredHumanRepo[] {
   try {
-    const parsed = JSON.parse(readFileSync(registryPath(), "utf-8")) as { repos?: unknown };
+    // Missing or corrupt registry reads as "no repos" — never fatal.
+    return parseRegistry(readFileSync(registryPath(), "utf-8"));
+  } catch {
+    return [];
+  }
+}
+
+function parseRegistry(raw: string | undefined): RegisteredHumanRepo[] {
+  if (raw === undefined) return [];
+  try {
+    const parsed = JSON.parse(raw) as { repos?: unknown };
     if (!Array.isArray(parsed.repos)) return [];
     return parsed.repos
       .filter(
@@ -62,14 +77,29 @@ export function listHumanRepos(): RegisteredHumanRepo[] {
       )
       .map((r) => ({ repo: r.repo, addedAt: Number(r.addedAt) || 0 }));
   } catch {
-    // Missing or corrupt registry reads as "no repos" — never fatal.
     return [];
   }
 }
 
-function writeRegistry(repos: RegisteredHumanRepo[]): void {
+/**
+ * Read-modify-write the registry under a cross-process lock.
+ *
+ * add/remove used to be `listHumanRepos()` in the caller followed by a bare
+ * `writeFileSync` of the whole array. Two windows (or a window plus an agent)
+ * mutating different repos would each write back their own stale snapshot, so
+ * one of the entries silently disappeared. The single-window UI operation lock
+ * did not help, because it does not span processes.
+ */
+function updateRegistry(
+  change: (repos: RegisteredHumanRepo[]) => RegisteredHumanRepo[],
+): void {
   mkdirSync(codeShellHome(), { recursive: true });
-  writeFileSync(registryPath(), `${JSON.stringify({ repos }, null, 2)}\n`, { mode: 0o600 });
+  mutateJsonFile<RegisteredHumanRepo[]>(registryPath(), {
+    parse: parseRegistry,
+    serialize: (repos) => `${JSON.stringify({ repos }, null, 2)}\n`,
+    mutation: (current) => ({ value: change(current) }),
+    mode: 0o600,
+  });
 }
 
 /**
@@ -90,18 +120,76 @@ export async function addHumanRepo(
 
   const dir = humanRepoDir(repo);
   mkdirSync(humanReposRoot(), { recursive: true });
+  const isUpdate = existsSync(dir);
 
-  if (existsSync(dir)) {
-    const refreshed = await gitFetchAndReset(dir);
-    if (!refreshed.ok) return { ok: false, error: explainGitFailure(refreshed.error, repo) };
-  } else {
-    // Full checkout: unlike a plugin marketplace (manifest-only up front) we
-    // read every humans/<name>/profile.json right away.
-    const cloned = await gitClone(githubRepoToCloneUrl(repo), dir, { full: true });
-    if (!cloned.ok) {
-      rmSync(dir, { recursive: true, force: true });
-      return { ok: false, error: explainGitFailure(cloned.error, repo) };
+  if (isUpdate) {
+    // UPDATE PATH — validate in a staging clone, then swap.
+    //
+    // This used to `gitFetchAndReset(dir)` in place and validate afterwards. If
+    // the new upstream commit invalidated every definition, the code then
+    // `rmSync`ed the clone and returned early WITHOUT touching the registry —
+    // so the repo stayed registered, its working copy was gone ("尚未克隆" in
+    // the UI), and the previously-good version was unrecoverable. A failed
+    // update must leave the last known good tree exactly as it was.
+    const staging = `${dir}.staging-${process.pid}-${randomUUID()}`;
+    try {
+      const cloned = await gitClone(githubRepoToCloneUrl(repo), staging, { full: true });
+      if (!cloned.ok) {
+        return { ok: false, error: explainGitFailure(cloned.error, repo) };
+      }
+      const staged = readCatalogFromDir(staging, repo);
+      if (staged.entries.length === 0 && staged.errors.length > 0) {
+        // Keep serving the old tree and report why the update was rejected.
+        return {
+          ok: false,
+          error: `更新 ${repo} 失败，已保留上一个可用版本：${staged.errors[0]}`,
+        };
+      }
+
+      // Swap: move the old tree aside, promote staging, then drop the old one.
+      // Renames are atomic within the same filesystem, so a crash mid-swap
+      // leaves either the old or the new tree in place — never a half-copy.
+      const retired = `${dir}.retired-${process.pid}-${randomUUID()}`;
+      renameSync(dir, retired);
+      try {
+        renameSync(staging, dir);
+      } catch (err) {
+        // Promotion failed — put the good tree back before surfacing the error.
+        try {
+          renameSync(retired, dir);
+        } catch {
+          // Best effort; the retired copy is still on disk for manual recovery.
+        }
+        throw err;
+      }
+      rmSync(retired, { recursive: true, force: true });
+
+      updateRegistry((repos) => [
+        ...repos.filter((r) => r.repo !== repo),
+        { repo, addedAt: Date.now() },
+      ]);
+      return {
+        ok: true,
+        entry: {
+          repo,
+          addedAt: Date.now(),
+          count: staged.entries.length,
+          errors: staged.errors,
+          cloned: true,
+        },
+      };
+    } finally {
+      rmSync(staging, { recursive: true, force: true });
     }
+  }
+
+  // FIRST-ADD PATH — nothing to preserve, so clone straight into place.
+  // Full checkout: unlike a plugin marketplace (manifest-only up front) we
+  // read every humans/<name>/profile.json right away.
+  const cloned = await gitClone(githubRepoToCloneUrl(repo), dir, { full: true });
+  if (!cloned.ok) {
+    rmSync(dir, { recursive: true, force: true });
+    return { ok: false, error: explainGitFailure(cloned.error, repo) };
   }
 
   const read = readCatalogFromDir(dir, repo);
@@ -112,9 +200,10 @@ export async function addHumanRepo(
     return { ok: false, error: read.errors[0] };
   }
 
-  const next = existing.filter((r) => r.repo !== repo);
-  next.push({ repo, addedAt: Date.now() });
-  writeRegistry(next);
+  updateRegistry((repos) => [
+    ...repos.filter((r) => r.repo !== repo),
+    { repo, addedAt: Date.now() },
+  ]);
 
   return {
     ok: true,
@@ -158,7 +247,8 @@ function explainGitFailure(error: string, repo: string): string {
 
 export function removeHumanRepo(repo: string): void {
   if (!CATALOG_REPO_RE.test(repo)) throw new Error("invalid digital-human repo");
-  writeRegistry(listHumanRepos().filter((r) => r.repo !== repo));
+  // Filter inside the lock so a concurrent add of a DIFFERENT repo is not lost.
+  updateRegistry((repos) => repos.filter((r) => r.repo !== repo));
   rmSync(humanRepoDir(repo), { recursive: true, force: true });
 }
 

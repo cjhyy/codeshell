@@ -14,6 +14,13 @@ function zipDir(srcDir: string, zipPath: string): void {
   execFileSync("zip", ["-r", "-q", zipPath, "."], { cwd: srcDir });
 }
 
+/**
+ * Tests that shell out to the system `zip` and then run the real extract+install
+ * pipeline routinely exceed bun's 5s default on a loaded machine, and a timeout
+ * is reported as a test FAILURE — indistinguishable from a real regression.
+ */
+const ARCHIVE_TEST_TIMEOUT_MS = 60_000;
+
 describe("installLocalPlugin (dir)", () => {
   let home: string, src: string, prevHome: string | undefined;
   beforeEach(() => {
@@ -128,7 +135,7 @@ describe("installPluginFromArchive (zip)", () => {
     const { dir, name } = await installPluginFromArchive(zipPath, STAMP);
     expect(name).toBe("zipplug");
     expect(existsSync(join(dir, "skills", "s", "SKILL.md"))).toBe(true);
-  });
+  }, ARCHIVE_TEST_TIMEOUT_MS);
 
   test("rejects a non-existent archive", async () => {
     await expect(installPluginFromArchive(join(work, "nope.zip"), STAMP)).rejects.toThrow(

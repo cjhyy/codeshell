@@ -117,3 +117,15 @@ export const WorkspaceProfileSchema = z.object({
 });
 
 export type WorkspaceProfile = z.infer<typeof WorkspaceProfileSchema>;
+
+/**
+ * 写入侧类型：带 `.default()` 的字段（`exclusiveCapabilities`、`portableMemory`、
+ * 四个 capability 列表）在这里是可选的。
+ *
+ * 为什么需要它：`WorkspaceProfile` 是 schema 的**输出**类型，defaults 已解析，
+ * 所以每个字段都是必填。但接受「未解析的 profile 再 parse」的函数
+ * （如 `saveWorkspaceProfile`）实际契约是**输入**类型——用输出类型标注会强迫每个
+ * 调用方手写它本来就想让 schema 填的默认值。schema 新增一个带 default 的字段时，
+ * 这个错配会让所有既有调用方一起报错（`exclusiveCapabilities` 就是这么发生的）。
+ */
+export type WorkspaceProfileInput = z.input<typeof WorkspaceProfileSchema>;

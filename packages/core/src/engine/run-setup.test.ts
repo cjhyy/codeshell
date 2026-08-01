@@ -39,6 +39,7 @@ function workspaceProfile(overrides: Partial<WorkspaceProfile> = {}): WorkspaceP
     skills: [],
     mcp: [],
     agents: [],
+    exclusiveCapabilities: false,
     portableMemory: false,
     ...overrides,
   };

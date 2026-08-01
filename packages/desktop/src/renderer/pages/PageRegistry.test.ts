@@ -24,12 +24,16 @@ describe("PageRegistry", () => {
     ]);
   });
 
-  it("replicates the hardcoded active-state predicates exactly", () => {
+  it("highlights the automation item on the view it navigates to", () => {
+    // This used to assert the inverse and called it a "preserved quirk" carried
+    // over from the hardcoded Sidebar: the item navigated to "automation" but
+    // highlighted on "runs", so opening Automation highlighted nothing while the
+    // Runs page highlighted an item that does not lead there. Now treated as the
+    // bug it was; see PageRegistry.nav-active.test.ts for the general invariant.
     const automation = PAGE_REGISTRY.get("automation")!;
-    // Preserved quirk: the automation item highlights on the runs view.
-    expect(automation.nav!.isActive("runs")).toBe(true);
-    expect(automation.nav!.isActive("automation")).toBe(false);
     expect(automation.nav!.target).toBe("automation");
+    expect(automation.nav!.isActive("automation")).toBe(true);
+    expect(automation.nav!.isActive("runs")).toBe(false);
   });
 
   it("keeps settings routable without duplicating it in first-level nav", () => {

@@ -1,5 +1,5 @@
 import React from "react";
-import { ExternalLink, Pencil, Plus, RotateCcw } from "lucide-react";
+import { Download, ExternalLink, Loader2, Pencil, Plus, RotateCcw, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -47,6 +47,8 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
   const [busy, setBusy] = React.useState(false);
   const [installingRequirements, setInstallingRequirements] = React.useState(false);
   const saveLock = React.useRef(false);
+  const transferLock = React.useRef(false);
+  const [transferBusy, setTransferBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
@@ -136,89 +138,191 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
     }
   };
 
+  const runTransfer = async (key: string, name: string, action: () => Promise<void>) => {
+    if (transferLock.current) return;
+    transferLock.current = true;
+    setTransferBusy(key);
+    try {
+      await action();
+    } catch (caught) {
+      toast({
+        message: t("digitalHumans.actionFailed", {
+          name,
+          message: errorMessage(caught),
+        }),
+        variant: "error",
+      });
+    } finally {
+      transferLock.current = false;
+      setTransferBusy(null);
+    }
+  };
+
+  const exportDefinition = (profile: DigitalHumanProfileEntry) =>
+    runTransfer(`profile:${profile.name}`, profile.label, async () => {
+      const result = await window.codeshell.exportProfileDefinition(profile.name);
+      if (result.canceled) return;
+      toast({
+        message: t("digitalHumans.transfer.exported", {
+          name: result.label,
+          file: result.fileName,
+        }),
+      });
+    });
+
+  const exportLibraryRepo = () =>
+    runTransfer("library", t("digitalHumans.publish.action"), async () => {
+      const result = await window.codeshell.exportProfileRepo(
+        profiles.map((profile) => profile.name),
+      );
+      if ("canceled" in result) return;
+      toast({
+        message: t("digitalHumans.publish.done", { count: profiles.length }),
+        variant: "success",
+      });
+    });
+
   return (
     <div className="space-y-4">
       <section className="space-y-3 rounded-md border border-border bg-card p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-medium text-foreground">
-            {t("settingsX.digitalHumans.title")}
-          </h3>
-          <p className="text-xs text-muted-foreground">{t("settingsX.digitalHumans.subtitle")}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {onOpenDigitalHumans ? (
-            <Button size="sm" variant="outline" onClick={onOpenDigitalHumans}>
-              <ExternalLink className="size-3.5" aria-hidden />
-              {t("settingsX.digitalHumans.openMarket")}
-            </Button>
-          ) : null}
-          <Button
-            size="sm"
-            disabled={busy}
-            onClick={() => {
-              setEditing(undefined);
-              setEditorOpen(true);
-            }}
-          >
-            <Plus className="size-3.5" aria-hidden />
-            {t("settingsX.digitalHumans.create")}
-          </Button>
-        </div>
-      </div>
-      {error ? <p className="text-xs text-status-err">{error}</p> : null}
-      {/* Above the library, not below it: this is where digital humans come
-          from, and a long profile list used to push it off-screen. */}
-      <DigitalHumanReposPanel />
-      {profiles.length === 0 ? (
-        <p className="text-xs text-muted-foreground">{t("settingsX.digitalHumans.empty")}</p>
-      ) : (
-        <ul className="space-y-2">
-          {profiles.map((profile) => (
-            <li
-              key={profile.name}
-              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-medium text-foreground">
+              {t("settingsX.digitalHumans.title")}
+            </h3>
+            <p className="text-xs text-muted-foreground">{t("settingsX.digitalHumans.subtitle")}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {onOpenDigitalHumans ? (
+              <Button size="sm" variant="outline" onClick={onOpenDigitalHumans}>
+                <ExternalLink className="size-3.5" aria-hidden />
+                {t("settingsX.digitalHumans.openMarket")}
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() => {
+                setEditing(undefined);
+                setEditorOpen(true);
+              }}
             >
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-sm text-foreground">{profile.label}</span>
-                  <Badge variant="success" className="shrink-0">
-                    {t("digitalHumans.localInstalled")}
-                  </Badge>
+              <Plus className="size-3.5" aria-hidden />
+              {t("settingsX.digitalHumans.create")}
+            </Button>
+          </div>
+        </div>
+        {error ? <p className="text-xs text-status-err">{error}</p> : null}
+        {/* Above the library, not below it: this is where digital humans come
+          from, and a long profile list used to push it off-screen. */}
+        <DigitalHumanReposPanel />
+        {profiles.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("settingsX.digitalHumans.empty")}</p>
+        ) : (
+          <ul className="space-y-2">
+            {profiles.map((profile) => (
+              <li
+                key={profile.name}
+                className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm text-foreground">{profile.label}</span>
+                    <Badge variant="success" className="shrink-0">
+                      {t("digitalHumans.localInstalled")}
+                    </Badge>
+                  </div>
+                  {profile.description ? (
+                    <p className="truncate text-xs text-muted-foreground">{profile.description}</p>
+                  ) : null}
                 </div>
-                {profile.description ? (
-                  <p className="truncate text-xs text-muted-foreground">{profile.description}</p>
-                ) : null}
-              </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    setEditing(profile);
+                    setEditorOpen(true);
+                  }}
+                >
+                  <Pencil className="size-3.5" aria-hidden />
+                  {t("settingsX.digitalHumans.edit")}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <DigitalHumanEditorDialog
+          open={editorOpen}
+          profile={editing}
+          existingIds={profiles.map((profile) => profile.name)}
+          skills={skills.filter((skill) => skill.source !== "project")}
+          projectSkills={skills.filter((skill) => skill.source === "project")}
+          projectPath={projectPath}
+          busy={busy}
+          installing={installingRequirements}
+          onRequirementsInstalled={refresh}
+          onOpenChange={setEditorOpen}
+          onSave={(profile, options) => void save(profile, options)}
+        />
+        <details className="group rounded-md border border-border/70 bg-background/40">
+          <summary className="cursor-pointer select-none px-3 py-2.5 text-xs font-medium text-muted-foreground">
+            {t("settingsX.digitalHumans.advancedExportTitle")}
+          </summary>
+          <div className="space-y-3 border-t border-border/70 px-3 py-3">
+            <p className="text-xs leading-5 text-muted-foreground">
+              {t("settingsX.digitalHumans.advancedExportDescription")}
+            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2">
+              <p className="max-w-xl text-xs text-muted-foreground">
+                {t("digitalHumans.publish.hint")}
+              </p>
               <Button
                 size="sm"
                 variant="outline"
-                disabled={busy}
-                onClick={() => {
-                  setEditing(profile);
-                  setEditorOpen(true);
-                }}
+                disabled={profiles.length === 0 || transferBusy !== null}
+                onClick={() => void exportLibraryRepo()}
               >
-                <Pencil className="size-3.5" aria-hidden />
-                {t("settingsX.digitalHumans.edit")}
+                {transferBusy === "library" ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <Upload className="size-3.5" aria-hidden />
+                )}
+                {t("digitalHumans.publish.action")}
               </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <DigitalHumanEditorDialog
-        open={editorOpen}
-        profile={editing}
-        existingIds={profiles.map((profile) => profile.name)}
-        skills={skills.filter((skill) => skill.source !== "project")}
-        projectSkills={skills.filter((skill) => skill.source === "project")}
-        projectPath={projectPath}
-        busy={busy}
-        installing={installingRequirements}
-        onRequirementsInstalled={refresh}
-        onOpenChange={setEditorOpen}
-        onSave={(profile, options) => void save(profile, options)}
-      />
+            </div>
+            {profiles.length > 0 ? (
+              <ul className="divide-y divide-border/60 rounded-md border border-border/70">
+                {profiles.map((profile) => {
+                  const key = `profile:${profile.name}`;
+                  return (
+                    <li
+                      key={profile.name}
+                      className="flex items-center justify-between gap-3 px-3 py-2"
+                    >
+                      <span className="min-w-0 truncate text-xs text-foreground">
+                        {profile.label}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={transferBusy !== null}
+                        onClick={() => void exportDefinition(profile)}
+                      >
+                        {transferBusy === key ? (
+                          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                        ) : (
+                          <Download className="size-3.5" aria-hidden />
+                        )}
+                        {t("digitalHumans.transfer.exportDefinition")}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+          </div>
+        </details>
       </section>
       <PetExternalSessionsToggles scope="user" />
     </div>

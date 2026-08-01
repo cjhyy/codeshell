@@ -813,43 +813,149 @@ describe("PanelAppBridge", () => {
     expect(panelAppElectronMock.openedUrls).toEqual(["https://example.com/path"]);
   });
 
+  // The rate/timeout/size limits are generic wrappers around dispatch(), so they
+  // are exercised through a method that actually AWAITS its work. They must NOT
+  // be tested through agent.submitPrompt: that call is fire-and-forget by design
+  // (see the two tests below), so it can neither time out nor return a payload
+  // big enough to trip maxResultBytes.
   test("enforces call rate, timeout, and result size independently", async () => {
-    const pending = new Promise<never>(() => undefined);
+    // A real directory is still needed: bindGuest validates the project path.
+    // Its CONTENTS are irrelevant — workspaceReadText is stubbed below.
+    const workspaceRoot = mkdtempSync(join(tmpdir(), "cspanel-limits-"));
+    try {
+      let hang = false;
+      const bridge = new PanelAppBridge({
+        isTrustedHost: () => true,
+        isWorkspaceTrusted: () => true,
+        isPanelAppBound: () => true,
+        getAgentBridge: () => null,
+        limits: {
+          maxCallsPerWindow: 3,
+          rateWindowMs: 60_000,
+          // Generous enough that only the deliberately-parked call can trip it.
+          // A tight budget (20ms) raced real disk I/O: reading the oversized
+          // fixture sometimes took longer, so the size assertion below saw
+          // "timed out" instead — flaky for reasons unrelated to the limits.
+          callTimeoutMs: 250,
+          maxResultBytes: 64,
+        },
+      });
+      // Stub the handler entirely: return an oversized payload instantly, or park
+      // forever. No filesystem timing in the assertions.
+      (bridge as any).workspaceReadText = async () =>
+        hang ? new Promise<never>(() => undefined) : { path: "big.txt", text: "x".repeat(4096) };
+
+      bridge.registerIpc();
+      const guest = fakeGuest(13);
+      bridge.registerGuest(
+        guest as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource(["workspace.read"]) as any,
+        workspaceRoot,
+      );
+      await bindBridgeGuest(13, { cwd: workspaceRoot, projectPath: workspaceRoot });
+      const call = (path: string) =>
+        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+          { sender: guest },
+          "workspace.readText",
+          { path },
+        ) as Promise<unknown>;
+
+      // 1st call: result exceeds the 64-byte cap.
+      await expect(call("big.txt")).rejects.toThrow(/result is too large/);
+      // 2nd call: never settles → the timeout wrapper rejects.
+      hang = true;
+      await expect(call("small.txt")).rejects.toThrow(/timed out/);
+      hang = false;
+      // 3rd call: size again — proves a timeout did not consume the size check.
+      await expect(call("big.txt")).rejects.toThrow(/result is too large/);
+      // 4th call: over maxCallsPerWindow=3 → rate limited regardless of outcome.
+      await expect(call("small.txt")).rejects.toThrow(/rate limit/);
+    } finally {
+      rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("agent.submitPrompt accepts immediately instead of awaiting the agent", async () => {
+    // Contract: the Host call returns as soon as the worker has been handed the
+    // run. Completion arrives over the session stream, NOT this RPC — so a
+    // long-running agent must never block or time out the Panel App call.
+    let workerParams: Record<string, unknown> | undefined;
+    const neverSettles = new Promise<never>(() => undefined);
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
       isWorkspaceTrusted: () => false,
       isPanelAppBound: () => true,
       getAgentBridge: () =>
         ({
-          requestWorker: async (_method: string, params: Record<string, unknown>) =>
-            params.task === "hang" ? pending : { ok: true, result: { text: "x".repeat(256) } },
+          requestWorker: async (_method: string, params: Record<string, unknown>) => {
+            workerParams = params;
+            return neverSettles; // agent still running when the Host call returns
+          },
+          ingestExternalEvent: () => undefined,
         }) as any,
-      limits: {
-        maxCallsPerWindow: 3,
-        rateWindowMs: 60_000,
-        callTimeoutMs: 5,
-        maxResultBytes: 64,
-      },
+      limits: { callTimeoutMs: 50 },
     });
     bridge.registerIpc();
-    const guest = fakeGuest(13);
+    const guest = fakeGuest(23);
     bridge.registerGuest(
       guest as any,
       panelAppElectronMock.ownerWindow as any,
       bridgeResource(["context.session", "agent.submitPrompt"]) as any,
       "/repo",
     );
-    await bindBridgeGuest(13);
-    const call = (prompt: string) =>
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "agent.submitPrompt",
-        { prompt },
-      ) as Promise<unknown>;
-    await expect(call("large")).rejects.toThrow(/result is too large/);
-    await expect(call("hang")).rejects.toThrow(/timed out/);
-    await expect(call("large-again")).rejects.toThrow(/result is too large/);
-    await expect(call("rate")).rejects.toThrow(/rate limit/);
+    await bindBridgeGuest(23);
+
+    const accepted = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+      { sender: guest },
+      "agent.submitPrompt",
+      { prompt: "do the thing" },
+    )) as { accepted: boolean; clientMessageId: string };
+
+    expect(accepted.accepted).toBe(true);
+    // A stable, panel-scoped id is what makes the submission idempotent upstream.
+    expect(accepted.clientMessageId).toStartWith("panel:");
+    expect(workerParams?.task).toBe("do the thing");
+  });
+
+  test("agent.submitPrompt reports a background worker failure into the session", async () => {
+    // Because the Host call already returned, a later worker failure has only one
+    // way to reach the user: an error event injected into the owning session.
+    const ingested: Array<{ sessionId: string; event: unknown }> = [];
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () =>
+        ({
+          requestWorker: async () => ({ ok: false, message: "worker exited" }),
+          ingestExternalEvent: (sessionId: string, event: unknown) =>
+            ingested.push({ sessionId, event }),
+        }) as any,
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(24);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "agent.submitPrompt"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(24);
+
+    const accepted = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+      { sender: guest },
+      "agent.submitPrompt",
+      { prompt: "will fail" },
+    )) as { accepted: boolean };
+    // Accepted even though the run fails — the failure is asynchronous.
+    expect(accepted.accepted).toBe(true);
+
+    // Let the fire-and-forget continuation run.
+    await new Promise((r) => setTimeout(r, 10));
+    expect(ingested).toHaveLength(1);
+    expect((ingested[0]!.event as { type: string }).type).toBe("error");
+    expect((ingested[0]!.event as { error: string }).error).toContain("worker exited");
   });
 
   test("returns read-only workspace metadata with a best-effort git branch", async () => {

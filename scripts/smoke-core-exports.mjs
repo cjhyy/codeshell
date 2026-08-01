@@ -23,9 +23,80 @@ for (const specifier of ["@cjhyy/code-shell-core", "@cjhyy/code-shell-core/inter
 assert.equal(typeof publicApi.Engine, "function");
 assert.equal(typeof publicApi.createServer, "function");
 
-// I1 retains root compatibility aliases while establishing the new subpath.
-for (const exportName of Object.keys(internalApi)) {
-  assert.equal(exportName in publicApi, true, `${exportName} must remain available from public`);
+// Host-only runtime symbols that must NOT be reachable from the public root
+// barrel. Mirrors `hostOnlySamples` in packages/core/src/index.exports.test.ts —
+// keep the two lists in sync; this one checks the BUILT dist, that one the source.
+//
+// This replaces the pre-0.8 rule that walked every `/internal` export and
+// required it to ALSO exist on public. That rule predated the deliberate
+// export-surface convergence (eb3bd752, "BREAKING CHANGE (0.8)"), which moved
+// installer/marketplace/onboarding/updater off the public root. The two
+// contracts were mutually exclusive, so this smoke failed on the first
+// internal-only value (`BUILTIN_CATALOG`) even though the separation was
+// correct and the four source-level contract tests passed.
+const hostOnlySamples = [
+  "sliceAnsi",
+  "getGraphemeSegmenter",
+  "logForDebugging",
+  "getTheme",
+  "rotateLogs",
+  "recordUIEvent",
+  "notificationQueue",
+  "cronScheduler",
+  "asyncAgentRegistry",
+  "backgroundShellManager",
+  "ENV_DENY_REGEX",
+  "transcribe",
+  "getMergedCatalog",
+  "createInProcessClient",
+  "fetchModelList",
+  "PROVIDER_KINDS",
+  "listSourceDefinitions",
+  "LOCAL_FILES_SOURCE_ID",
+  "resolveUploadTarget",
+  "activateWorkspaceProfile",
+  "CapabilityService",
+  "computeEffectiveDisabledLists",
+  "installPluginFromPath",
+  "installPlugin",
+  "previewLocalPlugin",
+  "uninstallPluginByName",
+  "addMarketplace",
+  "parseMarketplaceInput",
+  "resolveApiKey",
+  "detectEnvKeys",
+  "getCurrentVersion",
+  "checkForUpdate",
+  "BUILTIN_CATALOG",
+];
+
+for (const exportName of hostOnlySamples) {
+  assert.equal(
+    exportName in internalApi,
+    true,
+    `${exportName} must be exported from @cjhyy/code-shell-core/internal`,
+  );
+  assert.equal(
+    exportName in publicApi,
+    false,
+    `${exportName} is host-only and must NOT be re-exported from the public root`,
+  );
+}
+
+// Symbols intentionally shared by BOTH entries must be the same binding, not a
+// duplicated module instance — two copies of a singleton (notificationQueue,
+// SettingsManager, …) would silently split host state.
+const sharedIdentityContract = [
+  "SessionManager",
+  "SettingsManager",
+  "codeShellHome",
+  "logger",
+  "BUILTIN_TOOLS",
+  "BUILTIN_AGENT_PRESETS",
+];
+
+for (const exportName of sharedIdentityContract) {
+  if (!(exportName in internalApi) || !(exportName in publicApi)) continue;
   assert.equal(
     internalApi[exportName],
     publicApi[exportName],
@@ -36,56 +107,86 @@ for (const exportName of Object.keys(internalApi)) {
 assert.equal("Engine" in internalApi, false);
 assert.equal("Arena" in internalApi, false);
 
+// The complete type-only surface of /internal, pinned so an accidental addition
+// or removal is a deliberate edit. Refreshed for 0.8: the 24 host-assembly types
+// (plugin installer/preview, npm/marketplace, onboarding, updater, digital-human
+// catalog, tool-registry harness) moved to /internal with their runtime
+// counterparts, but this list was never updated — nothing was removed, so the
+// separation itself was intact; only the pin had drifted.
 const expectedInternalTypeExports = [
-  "BashLineKind",
-  "ClassifiedBashLine",
-  "Theme",
-  "ThemeName",
-  "ThemeSetting",
-  "SystemTheme",
-  "SandboxConfig",
-  "NotificationItem",
-  "BackgroundAgentCompletedEvent",
-  "StartAutomationDeps",
-  "AutomationHandle",
-  "CronJob",
-  "CronPermissionLevel",
-  "CreateJobOptions",
-  "UpdateJobPatch",
-  "CronRunner",
-  "CronRunRequest",
-  "CronRunResult",
-  "RunSubmitter",
-  "ParsedCron",
-  "WritePolicy",
-  "WriteJobGitOps",
-  "RunWriteJobInput",
-  "RunWriteJobResult",
-  "AsyncAgentEntry",
-  "BgShell",
-  "BgShellStatus",
-  "ImageProvider",
-  "ImageProviderCreds",
-  "ImageGenerateRequest",
-  "ImageGenerateResult",
-  "TranscribeCreds",
-  "TranscribeRequest",
-  "TranscribeResult",
-  "ResolvedTranscribeProvider",
-  "TranscribeDescription",
-  "CatalogEntry",
-  "ProtocolModelEntry",
-  "CachedModel",
-  "FetchResult",
-  "ProviderKindName",
-  "Capability",
-  "ReasoningControl",
-  "ReasoningSetting",
-  "ProviderConfig",
   "ApprovalRequest",
   "ApprovalResult",
   "ApprovalScope",
+  "AsyncAgentEntry",
+  "AutomationHandle",
+  "BackgroundAgentCompletedEvent",
+  "BashLineKind",
+  "BgShell",
+  "BgShellStatus",
+  "CachedModel",
+  "Capability",
+  "CatalogEntry",
+  "ClassifiedBashLine",
+  "CreateJobOptions",
+  "CronJob",
+  "CronPermissionLevel",
+  "CronRunRequest",
+  "CronRunResult",
+  "CronRunner",
+  "CronTemplateSource",
+  "DigitalHumanCatalogSourceEntry",
+  "DigitalHumanCatalogTeam",
+  "FakeToolContextOptions",
+  "FetchResult",
+  "HumanRepoListEntry",
+  "ImageGenerateRequest",
+  "ImageGenerateResult",
+  "ImageProvider",
+  "ImageProviderCreds",
+  "InstallPluginFromPathOptions",
+  "LocalPluginAutomationTemplatePreview",
+  "LocalPluginHookPreview",
+  "LocalPluginInterfacePreview",
+  "LocalPluginMcpPreview",
+  "LocalPluginPreview",
+  "LocalPluginPreviewWarning",
+  "LocalPluginPreviewWarningKind",
+  "NotificationItem",
+  "NpmPluginFetch",
+  "NpmPluginInstallOptions",
+  "OnboardingResult",
+  "ParsedCron",
+  "ParsedSource",
+  "PluginListRow",
+  "ProtocolModelEntry",
+  "ProviderConfig",
+  "ProviderKindName",
+  "ReasoningControl",
+  "ReasoningSetting",
+  "ResolvedNpmPlugin",
+  "ResolvedTranscribeProvider",
+  "RunSubmitter",
+  "RunWriteJobInput",
+  "RunWriteJobResult",
+  "SandboxConfig",
+  "StartAutomationDeps",
+  "SystemTheme",
   "TaskInfo",
+  "Theme",
+  "ThemeName",
+  "ThemeSetting",
+  "ToolRegistryHarness",
+  "ToolRegistryHarnessOptions",
+  "TranscribeCreds",
+  "TranscribeDescription",
+  "TranscribeRequest",
+  "TranscribeResult",
+  "UpdateCheck",
+  "UpdateInfo",
+  "UpdateJobPatch",
+  "UpdateResult",
+  "WriteJobGitOps",
+  "WritePolicy",
 ];
 
 const internalDeclaration = resolve(coreDistDir, "index.internal.d.ts");

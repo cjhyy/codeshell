@@ -62,6 +62,7 @@ describe("workspace profile activation transaction", () => {
       skills: ["s1"],
       mcp: [],
       agents: ["a1"],
+      exclusiveCapabilities: false,
       portableMemory: false,
     });
     expect(overrides).toEqual({

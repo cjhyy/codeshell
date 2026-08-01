@@ -52,13 +52,19 @@ jobs:
           bun-version: latest
       - name: install
         run: bun install --frozen-lockfile
+      # Fail fast and legibly when a listed test file was renamed/deleted. bun
+      # exits 1 on an unmatched literal path with a message that reads like a
+      # test failure, hiding the real cause (stale CI config).
+      - name: verify workflow test paths exist
+        run: bun run lint:workflow-test-paths
       - name: gate test suites
-        # Targeted instead of the full suite because the broader test set
-        # currently has pre-existing failures unrelated to core stability
-        # (OpenAI capabilities + a task.ts named-export issue). Lock the
-        # core stability surface here; sweep the rest as separate work.
+        # Targeted rather than the full suite to keep this job fast; it locks the
+        # core stability surface. (The old note here claimed the broader suite had
+        # pre-existing OpenAI/task.ts failures — no longer true: `bun test` is
+        # green. Its remaining flakiness was per-test 5s timeouts under load,
+        # hence the explicit --timeout below.)
         run: |
-          bun test \
+          bun test --timeout 30000 \
             packages/chat/src/*.test.ts \
             packages/coding/src/git/worktree/crud.test.ts \
             packages/coding/src/tools/drive-agent.test.ts \
@@ -69,7 +75,7 @@ jobs:
             packages/desktop/scripts/mock-provider-server.test.mjs \
             packages/desktop/src/main/im-gateway-control-server.test.ts \
             packages/server/src/mobile-remote/tunnel-manager.test.ts \
-            packages/desktop/src/main/plugin-panel-protocol.test.ts \
+            packages/desktop/src/main/panel-app-protocol.test.ts \
             tests/agent-notifications.test.ts \
             tests/background-agent-protocol.test.ts \
             tests/chat-session-isolation.test.ts \
@@ -133,7 +139,7 @@ jobs:
         # on the macOS/Linux dev box (process.platform is redefined). Run the
         # SAME suites on a real Windows host so the actual branches execute.
         run: |
-          bun test `
+          bun test --timeout 30000 `
             packages/core/src/runtime/shell-invocation.test.ts `
             packages/core/src/runtime/kill-win32.test.ts `
             packages/core/src/tool-system/path-policy-win32.test.ts `

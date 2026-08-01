@@ -24,6 +24,21 @@ import { resolveMaxContextTokens } from "./max-context-tokens.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
+/**
+ * Store-only accessor for the READ-ONLY subcommands (list/get/events).
+ *
+ * These just read JSON out of the runs directory, but they used to go through
+ * createRunManager(), which resolves a text LLM connection and exits 1 when none
+ * is configured. So a broken/missing model connection also took away the ability
+ * to inspect run history — exactly when you most need it for diagnosis. Reading
+ * the store needs no model, no executor, and no engine.
+ */
+function openRunStore(): FileRunStore {
+  // Same default location createRunManager() uses (~/.code-shell/runs) — it also
+  // constructs FileRunStore with no argument.
+  return new FileRunStore();
+}
+
 function createRunManager(): RunManager {
   const cwd = process.cwd();
   const settings = new SettingsManager(cwd).get();
@@ -87,8 +102,8 @@ export function createRunsCommand(): Command {
     .option("-s, --status <status>", "Filter by status (queued, running, completed, etc.)")
     .option("-t, --tag <tag>", "Filter by tag")
     .action(async (opts) => {
-      const manager = createRunManager();
-      const snapshots = await manager.list({
+      // Read-only: store access only, no LLM connection required.
+      const snapshots = await openRunStore().list({
         limit: opts.limit as number,
         status: opts.status as RunStatus | undefined,
         tag: opts.tag,
@@ -119,8 +134,8 @@ export function createRunsCommand(): Command {
     .description("Inspect a run")
     .argument("<runId>", "Run ID")
     .action(async (runId: string) => {
-      const manager = createRunManager();
-      const run = await manager.get(runId);
+      // Read-only: store access only, no LLM connection required.
+      const run = await openRunStore().get(runId);
 
       if (!run) {
         console.error(`Run not found: ${runId}`);
@@ -260,8 +275,8 @@ export function createRunsCommand(): Command {
     .argument("<runId>", "Run ID")
     .option("-n, --limit <n>", "Number of events to show", positiveIntOption("--limit"), 50)
     .action(async (runId: string, opts) => {
-      const manager = createRunManager();
-      const events = await manager.getEvents(runId);
+      // Read-only: store access only, no LLM connection required.
+      const events = await openRunStore().listEvents(runId);
 
       if (events.length === 0) {
         console.log("No events found.");

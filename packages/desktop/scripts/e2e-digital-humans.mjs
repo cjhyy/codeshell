@@ -293,6 +293,10 @@ try {
   };
 
   await openResearcherMenu();
+  assert(
+    (await win.getByRole("menuitem", { name: /导出定义|Export definition/i }).count()) === 0,
+    "rare definition export was still exposed as a digital-human card action",
+  );
   await win.getByRole("menuitem", { name: /查看详情|View details/i }).click();
   dialog = win.getByRole("dialog");
   await dialog.waitFor({ state: "visible" });
@@ -400,13 +404,11 @@ try {
   await dialog.getByRole("button", { name: /配置 Skills|Skills/i }).click();
   await dialog.locator("#digital-human-skill-repo").waitFor({ state: "visible" });
   assert(
-    (await dialog.locator("#digital-human-skill-repo").inputValue()) ===
-      "heygen-com/hyperframes",
+    (await dialog.locator("#digital-human-skill-repo").inputValue()) === "heygen-com/hyperframes",
     "the saved Critical Review source was not pre-filled for editing",
   );
   assert(
-    (await dialog.locator("#digital-human-skill-repo-1").inputValue()) ===
-      "openai/media-skills",
+    (await dialog.locator("#digital-human-skill-repo-1").inputValue()) === "openai/media-skills",
     "the saved media-use source was not pre-filled for editing",
   );
   await dialog.locator("#digital-human-skill-repo").fill("reviewco/reviewer-skills");
@@ -421,8 +423,7 @@ try {
   dialog = win.getByRole("dialog");
   await dialog.getByRole("button", { name: /配置 Skills|Skills/i }).click();
   assert(
-    (await dialog.locator("#digital-human-skill-repo").inputValue()) ===
-      "reviewco/reviewer-skills",
+    (await dialog.locator("#digital-human-skill-repo").inputValue()) === "reviewco/reviewer-skills",
     "changing a saved Skill source did not survive reopening the editor",
   );
   await dialog.getByRole("button", { name: /^取消$|^Cancel$/i }).click();
@@ -448,8 +449,9 @@ try {
   dialog = win.getByRole("dialog");
   await dialog.getByText(/参与工作时生效|Used while working/i).waitFor({ state: "visible" });
   assert(
-    (await dialog.getByRole("button", { name: /启用长期记忆|Enable long-term memory/i }).count()) ===
-      0,
+    (await dialog
+      .getByRole("button", { name: /启用长期记忆|Enable long-term memory/i })
+      .count()) === 0,
     "enabling portable memory did not refresh the digital-human library",
   );
   await win.keyboard.press("Escape");
@@ -629,6 +631,29 @@ try {
   await assertNoHorizontalOverflow(win, "digital-human empty market");
   await screenshot(win, "digital-humans-market-empty.png");
 
+  await win.getByRole("button", { name: /管理仓库|Manage repos/i }).click();
+  const repoSettingsNavigation = win.getByRole("navigation", {
+    name: /设置导航|Settings navigation/i,
+  });
+  const digitalHumanSettingsNav = repoSettingsNavigation.getByRole("button", {
+    name: /^数字人$|^Digital humans$/i,
+  });
+  await digitalHumanSettingsNav.waitFor({ state: "visible" });
+  assert(
+    (await digitalHumanSettingsNav.getAttribute("aria-current")) === "page",
+    "Manage repos opened Settings without selecting the Digital humans module",
+  );
+  await win
+    .getByRole("heading", { name: /数字人库|Digital human library/i })
+    .waitFor({ state: "visible" });
+  await win
+    .getByText(/^数字人仓库$|^Digital-human repos$/i)
+    .first()
+    .waitFor({ state: "visible" });
+  await screenshot(win, "digital-human-repo-settings-deep-link.png");
+  await win.getByRole("button", { name: /返回应用|Back to app/i }).click();
+  await navButton.click();
+
   await win.setViewportSize({ width: 700, height: 900 });
   await win
     .getByRole("heading", { level: 1, name: /数字人|Digital humans/i })
@@ -662,9 +687,7 @@ try {
   await win.getByRole("menuitem", { name: /取消项目默认|Clear project default/i }).click();
   await researcherCard.getByText(/项目默认|Project default/i).waitFor({ state: "hidden" });
 
-  await researcherCard
-    .getByRole("button", { name: /^召唤数字人$|^Summon digital human$/i })
-    .click();
+  await researcherCard.getByRole("button", { name: /^开始使用$|^Start using$/i }).click();
   const sessionProfileSwitch = win.getByRole("combobox", {
     name: /切换 Session 数字人|Switch Session digital human/i,
   });
@@ -709,7 +732,7 @@ try {
   }
   await navButton.click();
   await win.getByRole("tab", { name: /数字人团队|Teams/i }).click();
-  await teamCard.getByRole("button", { name: /^召唤团队$|^Summon team$/i }).click();
+  await teamCard.getByRole("button", { name: /^开始使用团队$|^Start using team$/i }).click();
   await sessionProfileSwitch.getByText("Research Analyst", { exact: true }).waitFor({
     state: "visible",
   });
@@ -767,12 +790,21 @@ try {
   await win
     .getByRole("heading", { name: /数字人库|Digital human library/i })
     .waitFor({ state: "visible" });
-  await win.locator("main").getByText("Research Analyst", { exact: true }).waitFor({
-    state: "visible",
-  });
+  await win
+    .locator("main")
+    .getByText("Research Analyst", { exact: true })
+    .first()
+    .waitFor({ state: "visible" });
   await win
     .locator("main")
     .getByText(/本机已安装|Installed locally/i)
+    .first()
+    .waitFor({ state: "visible" });
+  const advancedExport = win.getByText(/高级导出|Advanced export/i, { exact: true });
+  await advancedExport.click();
+  await win
+    .locator("main")
+    .getByRole("button", { name: /导出定义|Export definition/i })
     .first()
     .waitFor({ state: "visible" });
   await assertVisibleButtonsNamed(win, "digital-human settings");

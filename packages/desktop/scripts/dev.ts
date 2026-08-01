@@ -35,6 +35,9 @@ const repoRoot = resolve(root, "..", "..");
 const coreDir = resolve(repoRoot, "packages/core");
 const coreDist = resolve(coreDir, "dist/index.js");
 const codingDir = resolve(repoRoot, "packages/coding");
+// cdp is bundled into main by esbuild, so a stale dist ships old browser-action
+// code into the dev app just as silently as it did into installers.
+const cdpDir = resolve(repoRoot, "packages/cdp");
 
 const VITE_PORT = 5273;
 const VITE_URL = `http://localhost:${VITE_PORT}`;
@@ -114,6 +117,7 @@ async function shutdown(code: number): Promise<void> {
   }
   killTree(coreWatchProc);
   killTree(codingWatchProc);
+  killTree(cdpWatchProc);
 
   // esbuild watch contexts and vite servers hold their own child procs / ports;
   // dispose them so nothing lingers. Bounded so a hung dispose can't wedge exit.
@@ -182,6 +186,7 @@ function spawnElectron(): void {
 
 let coreWatchProc: ChildProcess | null = null;
 let codingWatchProc: ChildProcess | null = null;
+let cdpWatchProc: ChildProcess | null = null;
 
 /**
  * Build core once (synchronously, so a stale dist never reaches main), then
@@ -214,6 +219,20 @@ function startCoreWatch(): void {
     process.exit(codingBuilt.status ?? 1);
   }
 
+  // cdp is bundled INTO main (not external), so esbuild must be able to resolve
+  // its dist at bundle time. It is also not tracked by git, so on a fresh clone
+  // this is the only thing that creates it — without this build, `bun run dev`
+  // fails with `Could not resolve "@cjhyy/code-shell-cdp"`.
+  console.log("[dev] building @cjhyy/code-shell-cdp (once)…");
+  const cdpBuilt = spawnSync("bun", ["run", "build"], {
+    cwd: cdpDir,
+    stdio: "inherit",
+  });
+  if (cdpBuilt.status !== 0) {
+    console.error("[dev] cdp build failed; aborting");
+    process.exit(cdpBuilt.status ?? 1);
+  }
+
   // tsc --watch keeps dist in sync with core source edits. detached:true so the
   // bun wrapper + its tsc grandchild form one group killTree can take down —
   // bun does not forward SIGTERM to tsc, which is how these got orphaned before.
@@ -224,6 +243,11 @@ function startCoreWatch(): void {
   });
   codingWatchProc = spawn("bun", ["run", "dev"], {
     cwd: codingDir,
+    stdio: "inherit",
+    detached: true,
+  });
+  cdpWatchProc = spawn("bun", ["run", "dev"], {
+    cwd: cdpDir,
     stdio: "inherit",
     detached: true,
   });
@@ -249,6 +273,12 @@ function startCoreWatch(): void {
       spawnElectron();
     }, 150);
   });
+
+  // NOTE: cdp deliberately gets no fs.watch here. Unlike core and coding (both
+  // `external` in main's bundle, so only the dist on disk changes), cdp is
+  // bundled INTO out/main — esbuild tracks its dist as a bundle input, so
+  // `cdpWatchProc`'s tsc emit already triggers the main-rebuild plugin above,
+  // which restarts electron. Watching it here too would double-restart.
 }
 
 async function buildAndWatch(): Promise<void> {

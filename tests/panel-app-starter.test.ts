@@ -43,7 +43,10 @@ describe("Panel App starter", () => {
     expect((await previewInstalledPanelAppUpdate("starter-panel")).reviewToken).toBe(
       preview.reviewToken,
     );
-  });
+    // Runs the real preview + install + update-preview pipeline. Fast in
+    // isolation (~200ms) but can exceed bun's 5s default when the full suite
+    // (1100+ files) is contending for disk, and a timeout reads as a failure.
+  }, 60_000);
 
   test("keeps scripts external and uses only the scoped Panel App bridge", () => {
     const html = readFileSync(join(source, "app", "index.html"), "utf-8");

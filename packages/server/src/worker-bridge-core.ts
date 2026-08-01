@@ -360,6 +360,12 @@ export class WorkerBridgeCore {
         resolve(outcome);
       };
       const timer = setTimeout(() => settle({ status: "timeout" }), options.timeoutMs);
+      // unref so a long-lived correlation can never be the only thing keeping the
+      // process alive. Callers legitimately use very long timeouts (the Panel App
+      // fire-and-forget agent/run uses 24h); without this, a pending request of
+      // that length blocks a clean exit for a day. Settling still works normally
+      // while the process is running — unref only removes the event-loop hold.
+      timer.unref?.();
       this.pendingRequests.set(id, {
         consume: options.consume === true,
         settleOnExit: options.settleOnExit === true,

@@ -1224,7 +1224,10 @@ describe("design-studio example Panel App", () => {
       else process.env.HOME = previousHome;
       rmSync(home, { recursive: true, force: true });
     }
-  });
+    // Real preview + install over the whole example app (hundreds of files) can
+    // exceed bun's 5s default on a loaded machine; a timeout reports as a
+    // failure, indistinguishable from a genuine regression.
+  }, 60_000);
 
   test("ships a CSP-compatible dependency-free app", () => {
     const html = readFileSync(join(ROOT, "app", "index.html"), "utf-8");

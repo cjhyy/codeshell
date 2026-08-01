@@ -95,14 +95,17 @@ describe("DigitalHumansView contract", () => {
     expect(app).toContain("activate: index === leadIndex");
   });
 
-  test("supports the discover-detail-sample-summon journey", () => {
+  test("supports a discover-download-configure-start journey", () => {
     expect(source).toContain("CuratedTeamCard");
     expect(source).toContain("DigitalHumanDetailDialog");
     expect(source).toContain("digitalHumans.detail.configuredCapabilities");
     expect(source).toContain("availableSkillByName");
     expect(source).toContain("digitalHumans.detail.skillState");
     expect(source).toContain("samplePrompts");
-    expect(source).toContain("installAndSummon");
+    expect(source).toContain("downloadCatalogEntry");
+    expect(source).toContain("downloadCuratedTeam");
+    expect(source).toContain("marketplaceMode");
+    expect(source).not.toContain("installAndSummon");
     expect(app).toContain("workspaceProfile: profileName");
     expect(app).toContain("setComposerDrafts");
   });
@@ -207,11 +210,11 @@ describe("DigitalHumansView contract", () => {
     expect(profilesService).toContain(
       'saveWorkspaceProfile({ ...profile, basePreset: "general" })',
     );
-    expect(source).not.toContain("<dd className=\"mt-1 font-medium\">{preview.basePreset}</dd>");
-    expect(source).not.toContain("<Badge variant=\"secondary\">{profile.basePreset}</Badge>");
+    expect(source).not.toContain('<dd className="mt-1 font-medium">{preview.basePreset}</dd>');
+    expect(source).not.toContain('<Badge variant="secondary">{profile.basePreset}</Badge>');
   });
 
-  test("reviews local definition JSON before import and exports definitions without memory", () => {
+  test("reviews local definition JSON and keeps rare export tools in settings", () => {
     expect(main).toContain('"profiles:pickDefinitionImport"');
     expect(main).toContain("previewProfileDefinitionImport(filePath)");
     expect(main).toContain('"profiles:importReviewedDefinition"');
@@ -228,15 +231,15 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("confirmProfileOverwrite");
     expect(source).toContain("activeProjectPath ?? undefined");
     expect(source).toContain("digitalHumans.transfer.definitionOnlyNotice");
-    // Export moved from an icon button (tooltip-only label) into the card's
-    // overflow menu, where it carries a written label instead of a hint.
-    expect(source).toContain("digitalHumans.transfer.exportDefinition");
+    expect(source).not.toContain("window.codeshell.exportProfileDefinition");
+    expect(dhSection).toContain("window.codeshell.exportProfileDefinition");
+    expect(dhSection).toContain("settingsX.digitalHumans.advancedExportTitle");
+    expect(dhSection).toContain("<details");
     expect(source).toContain("operations.run(`import-profile:${preview.name}`");
-    expect(source).toContain("operations.run(`export-profile:${profile.name}`");
   });
 
   test("a profile card has one primary action and folds the rest into a menu", () => {
-    // The footer used to line up 7 controls — details/summon/memory/edit/export/
+    // The footer used to line up 7 controls — details/start/memory/edit/export/
     // delete/set-default — four of them same-weight icon buttons, so nothing
     // read as the thing to click.
     expect(source).toContain("<DropdownMenu");
@@ -251,10 +254,10 @@ describe("DigitalHumansView contract", () => {
       "digitalHumans.market.details",
       "digitalHumans.editor.edit",
       "digitalHumans.memory.button",
-      "digitalHumans.transfer.exportDefinition",
     ]) {
       expect(source).toContain(action);
     }
+    expect(source).not.toContain("onExport");
   });
 
   test("shows Skill installation, availability, and profile configuration separately", () => {
@@ -346,11 +349,12 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain('placeholder="owner/repo"');
     // Still reachable from settings for the full manager (list / remove).
     expect(source).toContain("onManage={onOpenSettings}");
-    expect(app).toContain('onOpenSettings={() => setViewMode("settings_page")}');
+    expect(app).toContain('setSettingsInitialModule("digital-humans")');
+    expect(app).toContain("initialModule={settingsInitialModule}");
     // The repo panel sits ABOVE the profile list in settings; a long library
     // used to push it off-screen entirely.
     const reposAt = dhSection.indexOf("<DigitalHumanReposPanel />");
-    const listAt = dhSection.indexOf("profiles.map((profile)");
+    const listAt = dhSection.indexOf("profiles.map((profile)", reposAt);
     expect(reposAt).toBeGreaterThan(-1);
     expect(reposAt).toBeLessThan(listAt);
   });
@@ -368,37 +372,47 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("entry.sourceRepo");
     // Publish: a repo skeleton, not a bare JSON that has to be hand-delivered.
     expect(main).toContain('"profiles:exportRepo"');
-    expect(source).toContain("window.codeshell.exportProfileRepo");
+    expect(source).not.toContain("window.codeshell.exportProfileRepo");
+    expect(dhSection).toContain("window.codeshell.exportProfileRepo");
   });
 
-  test("summoning a team installs members that are missing from the library", () => {
+  test("starting a team downloads members that are missing from the library", () => {
     // The team definition names three members but only the lead was installed.
     // Sessions were still created, and the lead's first SendMessageToSession died
     // with "Workspace profile ... is unavailable" — twice, two hours apart.
-    expect(source).toContain("...profiles.map((profile) => profile.name)");
+    expect(source).toContain("new Set(profiles.map((profile) => profile.name))");
     expect(source).toContain("window.codeshell.installCatalogProfile(name)");
     expect(source).toContain("digitalHumans.team.memberUnavailable");
   });
 
-  test("add-and-summon does not reinstall a profile from a stale render", () => {
-    // `run()` refreshes the library, but React does not replace the current
-    // closure's profiles array synchronously. Newly committed names are carried
-    // into the dependency gate so the same click cannot install them twice.
-    expect(source).toContain("knownInstalledNames: readonly string[] = []");
-    expect(source).toContain("...knownInstalledNames");
-    expect(source).toMatch(
-      /useSelection\(\{ kind: "single".+starterPrompt,\s*\[\s*entry\.name,\s*\]\);/s,
-    );
-    expect(source).toContain("blueprint.members,");
+  test("market downloads definitions without starting Sessions or installing Skills", () => {
+    const singleStart = source.indexOf("const downloadCatalogEntry");
+    const teamStart = source.indexOf("const downloadCuratedTeam", singleStart);
+    const detailStart = source.indexOf("const launchDetail", teamStart);
+    expect(singleStart).toBeGreaterThan(-1);
+    expect(teamStart).toBeGreaterThan(singleStart);
+    expect(detailStart).toBeGreaterThan(teamStart);
+
+    const singleDownload = source.slice(singleStart, teamStart);
+    expect(singleDownload).toContain("window.codeshell.installCatalogProfile");
+    expect(singleDownload).toContain('setActiveTab("mine")');
+    expect(singleDownload).not.toContain("useSelection(");
+    expect(singleDownload).not.toContain("ensureProfileRequirements");
+
+    const teamDownload = source.slice(teamStart, detailStart);
+    expect(teamDownload).toContain("window.codeshell.saveDigitalHumanTeam");
+    expect(teamDownload).toContain('setActiveTab("teams")');
+    expect(teamDownload).not.toContain("useSelection(");
+    expect(teamDownload).not.toContain("ensureProfileRequirements");
   });
 
-  test("summoning satisfies requirements, not only the project-default toggle", () => {
+  test("starting work satisfies requirements, not only the project-default toggle", () => {
     // A real session bound to video-director called /hyperframes, got "Skill not
-    // found", searched with Glob, then gave up: summoning never ran the
-    // dependency gate, and summoning is the common entry point.
+    // found", searched with Glob, then gave up: starting work never ran the
+    // dependency gate, even though it is the common entry point.
     expect(source).toContain("const useSelection");
     expect(source).toContain("ensureSelectionRequirements");
-    // Every summon path routes through the gate; only the wrapper calls onUse.
+    // Every start-using path routes through the gate; only the wrapper calls onUse.
     expect(source.match(/[^e]onUse\(/g) ?? []).toHaveLength(1);
   });
 

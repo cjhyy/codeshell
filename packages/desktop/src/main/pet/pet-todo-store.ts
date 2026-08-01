@@ -4,10 +4,33 @@ import { dirname } from "node:path";
 import { PET_TODO_STATUSES, type PetTodoItem, type PetTodoStatus } from "@cjhyy/code-shell-pet";
 
 const MAX_TODO_TEXT_LENGTH = 500;
-const MAX_TODO_ENTRIES = 500;
+
+/**
+ * Cap on ACTIVE (non-archived) todos — what "the list is full" should mean.
+ *
+ * The single 500-entry cap this replaces counted archived rows too, while
+ * archiving only flips `status` and there was no purge/delete API. So the limit
+ * was a lifetime total: once 500 todos had ever existed, creation failed
+ * permanently — even with an empty visible list — and the error told the user to
+ * "archive some old todos", which could not possibly unblock them.
+ */
+const MAX_ACTIVE_TODO_ENTRIES = 500;
+
+/**
+ * How many archived todos to keep as history. Beyond this the OLDEST archived
+ * rows are dropped on the next mutation, so archiving genuinely reclaims space
+ * instead of accumulating forever. Kept well above the active cap so normal use
+ * never loses history a user might still want.
+ */
+const MAX_ARCHIVED_TODO_ENTRIES = 2_000;
 
 interface PetTodoStoreOptions {
   now?: () => number;
+  /**
+   * Override archived-history retention. Production uses the default; tests set
+   * a small value so retention is verifiable without thousands of atomic writes.
+   */
+  maxArchivedEntries?: number;
 }
 
 /**
@@ -21,6 +44,7 @@ export class PetTodoStore {
   private readonly entries = new Map<string, PetTodoItem>();
   private readonly listeners = new Set<() => void>();
   private readonly now: () => number;
+  private readonly maxArchivedEntries: number;
   private loadPromise: Promise<void> | undefined;
   private mutationQueue: Promise<unknown> = Promise.resolve();
 
@@ -29,6 +53,7 @@ export class PetTodoStore {
     options: PetTodoStoreOptions = {},
   ) {
     this.now = options.now ?? Date.now;
+    this.maxArchivedEntries = options.maxArchivedEntries ?? MAX_ARCHIVED_TODO_ENTRIES;
   }
 
   load(): Promise<void> {
@@ -72,8 +97,15 @@ export class PetTodoStore {
 
   create(text: string): Promise<PetTodoItem> {
     return this.mutate((entries) => {
-      if (entries.size >= MAX_TODO_ENTRIES) {
-        throw new Error("待办列表已满，请先归档一些旧待办");
+      // Count only ACTIVE items: archiving must actually free capacity.
+      let active = 0;
+      for (const entry of entries.values()) {
+        if (entry.status !== "archived") active += 1;
+      }
+      if (active >= MAX_ACTIVE_TODO_ENTRIES) {
+        throw new Error(
+          `待办列表已满（${MAX_ACTIVE_TODO_ENTRIES} 条未归档），请先归档或删除一些待办`,
+        );
       }
       const at = nextMutationTime(entries, this.now());
       const item: PetTodoItem = {
@@ -129,6 +161,9 @@ export class PetTodoStore {
       .then(async () => {
         const staged = new Map(this.entries);
         const result = operation(staged);
+        // Every write funnels through here, so history retention is enforced in
+        // one place rather than per-operation.
+        pruneArchivedHistory(staged, this.maxArchivedEntries);
         await this.persist(staged);
         this.replace(staged);
         return result;
@@ -193,6 +228,29 @@ function statusRank(status: PetTodoStatus): number {
   if (status === "pending") return 2;
   if (status === "completed") return 3;
   return 4;
+}
+
+/**
+ * Trim archived history to MAX_ARCHIVED_TODO_ENTRIES, dropping the oldest first.
+ *
+ * Without this, archiving never reclaims anything: it only flips `status`, and
+ * there is no delete API, so the file grows without bound and (before the active
+ * cap split) eventually blocked all creation. Mutates `entries` in place; runs on
+ * every mutation, and is a no-op below the limit.
+ */
+function pruneArchivedHistory(entries: Map<string, PetTodoItem>, limit: number): void {
+  const archived: PetTodoItem[] = [];
+  for (const entry of entries.values()) {
+    if (entry.status === "archived") archived.push(entry);
+  }
+  if (archived.length <= limit) return;
+  // Oldest-first by archive time (updatedAt), stable on id.
+  archived.sort(
+    (left, right) => left.updatedAt - right.updatedAt || left.id.localeCompare(right.id),
+  );
+  for (const entry of archived.slice(0, archived.length - limit)) {
+    entries.delete(entry.id);
+  }
 }
 
 function nextMutationTime(entries: ReadonlyMap<string, PetTodoItem>, now: number): number {

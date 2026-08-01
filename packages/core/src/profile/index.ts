@@ -6,6 +6,7 @@ export {
   type SkillRequirement,
   type ToolRequirement,
   type WorkspaceProfile,
+  type WorkspaceProfileInput,
   type WorkspaceProfileRequirements,
 } from "./types.js";
 export {

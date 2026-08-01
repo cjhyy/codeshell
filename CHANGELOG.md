@@ -179,6 +179,54 @@ breaking.
   archived under `docs/archive/`, and generated build artifacts are covered by
   `.gitignore`.
 
+## [0.7.1] - 2026-07-11
+
+Hardening release. No breaking changes from 0.7.0 — 71 of the 119 commits are
+fixes, concentrated in usage accounting, tool failure semantics, permission
+boundaries and session lifecycle.
+
+### Added
+
+- **Full-context session forks** — fork a session and keep the entire context
+  instead of restarting from a summary.
+- **MCP HTTP OAuth** — the login and token-refresh flow is now complete, so
+  OAuth-protected HTTP MCP servers stay authenticated across restarts.
+- Send images from the mobile remote.
+- Jump from a `DriveAgent` job straight to its CLI session.
+- Browser panel address-bar actions.
+
+### Fixed
+
+- **Unified usage accounting** — billing and visibility are now split, and
+  aux / Arena / sub-agent / `maxTurns` usage is recovered instead of being
+  dropped. Image token estimation was also corrected.
+- **Tool failure and abort semantics** are enforced consistently: a failed tool
+  reports as failed, and an abort propagates instead of being swallowed.
+- **Permission modes defer to run boundaries**, so a mode change mid-run can no
+  longer apply to a tool call that was already in flight.
+- **Session close is serialized** with close-only generation fencing, removing a
+  race between closing a session and its in-flight work.
+- Hook stdin is protected against `EPIPE`, and transcript flush failures are
+  surfaced rather than silently lost.
+- Approvals are bounded and plugin denials propagate correctly.
+- Background media jobs are hardened: timed-out video URLs are retained, stream
+  fetches are capped, and MCP image names are unique.
+- Duplicate mobile uploads are serialized; review requests are scoped by
+  workspace.
+
+## [0.7.0] - 2026-07-10
+
+### Added
+
+- **Quick chat dock panel** — a lightweight always-available chat surface in the
+  desktop app.
+- **Live CC room transcripts** stream into the desktop client.
+- **Goal judge reads run evidence** (tool results, progress, previous gaps) on
+  the primary model, so goal evaluation is grounded in what the run actually did.
+- `DriveAgent` job inspection and cancellation.
+- `DriveAgent` accepts an optional per-job model override for claude/codex.
+- OAuth MCP credentials.
+
 ## [0.6.0-rc.14]
 
 ### Fixed

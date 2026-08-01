@@ -67,7 +67,7 @@ import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { cn } from "@/lib/utils";
 
-type ModuleId =
+export type SettingsModuleId =
   | "project-overview"
   | "general"
   | "appearance"
@@ -97,7 +97,7 @@ type SettingsScopeKind = "user" | "project";
 export type SettingsScope = { kind: "user" } | { kind: "project"; path: string };
 
 interface Module {
-  id: ModuleId;
+  id: SettingsModuleId;
   label: string;
   Icon: React.ComponentType<{ className?: string; size?: number }>;
   /** Which scopes this module can render in. Defaults to user-only. */
@@ -130,7 +130,7 @@ function moduleStorageKey(scope: SettingsScopeKind): string {
   return `${SETTINGS_LAST_MODULE_KEY}:${scope}`;
 }
 
-function storedModuleId(modules: Module[], scope: SettingsScopeKind): ModuleId | undefined {
+function storedModuleId(modules: Module[], scope: SettingsScopeKind): SettingsModuleId | undefined {
   if (typeof window === "undefined") return undefined;
   try {
     // The unscoped key is a one-time compatibility fallback for users who
@@ -139,7 +139,7 @@ function storedModuleId(modules: Module[], scope: SettingsScopeKind): ModuleId |
     const stored =
       window.localStorage.getItem(moduleStorageKey(scope)) ??
       (scope === "user" ? window.localStorage.getItem(SETTINGS_LAST_MODULE_KEY) : null);
-    return modules.some(({ id }) => id === stored) ? (stored as ModuleId) : undefined;
+    return modules.some(({ id }) => id === stored) ? (stored as SettingsModuleId) : undefined;
   } catch {
     return undefined;
   }
@@ -301,6 +301,8 @@ interface Props {
   activeProjectPath: string | null;
   /** When set, open in project scope for this project (project_config route). */
   initialProjectPath?: string | null;
+  /** Explicit destination for deep links into Settings. */
+  initialModule?: SettingsModuleId;
   projects: TrackedProject[];
   sessionIndices: Record<string, SessionIndex>;
   onRestoreArchivedSession: (projectId: string | null, sessionId: string) => void;
@@ -323,6 +325,7 @@ interface Props {
 export function SettingsPage({
   activeProjectPath,
   initialProjectPath,
+  initialModule,
   projects,
   sessionIndices,
   onRestoreArchivedSession,
@@ -338,14 +341,15 @@ export function SettingsPage({
   // Scope-check the stored module in the initializer (not the auto-jump
   // effect) so opening in project scope never flashes an unsupported
   // module for one frame before jumping.
-  const [active, setActive] = useState<ModuleId>(() => {
+  const [active, setActive] = useState<SettingsModuleId>(() => {
     const initialScope: SettingsScope = initialProjectPath
       ? { kind: "project", path: initialProjectPath }
       : { kind: "user" };
-    const fallback: ModuleId = initialScope.kind === "project" ? "project-overview" : "general";
+    const fallback: SettingsModuleId =
+      initialScope.kind === "project" ? "project-overview" : "general";
     return preferredModuleForScope(
       MODULES,
-      storedModuleId(MODULES, initialScope.kind) ?? fallback,
+      initialModule ?? storedModuleId(MODULES, initialScope.kind) ?? fallback,
       initialScope,
     );
   });
@@ -419,7 +423,7 @@ export function SettingsPage({
     return () => window.removeEventListener("keydown", focusSearch);
   }, []);
 
-  const selectModule = (id: ModuleId) => {
+  const selectModule = (id: SettingsModuleId) => {
     setActive(id);
     setQuery("");
   };
@@ -563,7 +567,7 @@ export function SettingsPage({
             >
               <ArrowLeft className="size-4" aria-hidden />
             </Button>
-            <SimpleSelect<ModuleId>
+            <SimpleSelect<SettingsModuleId>
               value={active}
               options={mobileOptions}
               ariaLabel={t("settingsX.page.settingsNav")}
@@ -672,7 +676,7 @@ export function SettingsPage({
                   onNavigateToKind={
                     scope === "user"
                       ? (kind) => {
-                          const target: Record<string, ModuleId> = {
+                          const target: Record<string, SettingsModuleId> = {
                             mcp: "mcp",
                             skill: "plugins-skills",
                             plugin: "plugins-skills",

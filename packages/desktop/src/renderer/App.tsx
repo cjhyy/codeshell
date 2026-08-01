@@ -98,6 +98,7 @@ import { copyContextPackageOverrides } from "./contextSelection";
 import type { ModelOption } from "./chat/ModelPill";
 import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
 import type { QuickChatSessionRef } from "./quickChatSession";
+import type { SettingsModuleId } from "./settings/SettingsPage";
 import { resolveAgentPanelHostRequest } from "./panels/AgentPanelHost";
 import {
   browserPartitionForBucket,
@@ -236,6 +237,9 @@ function App() {
     setGoalOverrides,
   } = useBucketOverrides();
   const [settingsRevision, setSettingsRevision] = useState(0);
+  const [settingsInitialModule, setSettingsInitialModule] = useState<
+    SettingsModuleId | undefined
+  >();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   /** Transient: a run to pre-select when jumping into the runs view (e.g. from
    *  the 自动化 detail's 「查看最近运行」 button). Not persisted in view state. */
@@ -476,6 +480,13 @@ function App() {
     if (view.viewMode !== "project_config" || activeProject) return;
     setView((current) => ({ ...current, viewMode: "chat" }));
   }, [activeProject, view.viewMode]);
+
+  // Deep-link targets are one-shot. Clear them after leaving Settings so the
+  // ordinary Settings entry can resume the user's last visited module.
+  useEffect(() => {
+    if (view.viewMode === "settings_page" || view.viewMode === "project_config") return;
+    setSettingsInitialModule(undefined);
+  }, [view.viewMode]);
 
   const projectPathsKey = projects
     .map((project) => project.path)
@@ -2198,7 +2209,10 @@ function App() {
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <DigitalHumansView
                     activeProjectPath={activeProject?.path ?? null}
-                    onOpenSettings={() => setViewMode("settings_page")}
+                    onOpenSettings={() => {
+                      setSettingsInitialModule("digital-humans");
+                      setViewMode("settings_page");
+                    }}
                     onProfileDeleted={(name) => {
                       // Drop the binding from every project's Session index. The
                       // backend can only unbind Sessions that reached disk; one
@@ -2576,6 +2590,7 @@ function App() {
               <SettingsPage
                 key="settings-global"
                 activeProjectPath={activeProject?.path ?? null}
+                initialModule={settingsInitialModule}
                 projects={projects}
                 sessionIndices={sessionIndices}
                 onRestoreArchivedSession={(projectId, sessionId) => {

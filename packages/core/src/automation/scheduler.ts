@@ -19,6 +19,24 @@ import { isCronExpression, parseCronExpression, nextCronTime } from "./cron-expr
 const CRON_MISFIRE_GRACE_MS = 90_000;
 
 /**
+ * Largest delay a Node/Electron timer accepts (2^31 - 1 ms, ~24.8 days).
+ *
+ * Above this, `setTimeout` does not wait longer — it warns
+ * (`TimeoutOverflowWarning`) and clamps the delay to **1ms**, so a long
+ * schedule fired instantly instead of far in the future. `armAt()` sleeps in
+ * chunks no larger than this.
+ */
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+
+/**
+ * Hard ceiling on a schedule interval: ~10 years. Anything beyond this is far
+ * more likely a unit mistake (passing microseconds, or a raw epoch timestamp as
+ * "milliseconds from now") than a real intent, and `nextRun` bookkeeping should
+ * not silently carry a nonsense value.
+ */
+const MAX_SCHEDULE_INTERVAL_MS = 10 * 365 * 24 * 60 * 60 * 1000;
+
+/**
  * True when a cron timer fired too far past its scheduled instant to be a
  * legitimate on-time run — i.e. the host slept through the scheduled time and
  * the timer fired on wake. Exported for unit testing the sleep/wake guard.
@@ -645,11 +663,37 @@ export class CronScheduler {
     }
   }
 
+  /**
+   * Wait until an ABSOLUTE instant, in `setTimeout`-safe chunks.
+   *
+   * Node/Electron timers take a 32-bit signed delay: anything above
+   * 2,147,483,647ms (~24.8 days) does NOT wait longer — it emits
+   * `TimeoutOverflowWarning` and is coerced to **1ms**. A `30d` interval or a
+   * monthly cron therefore fired almost immediately and then kept re-firing,
+   * because the next absolute target was still out of range.
+   *
+   * So never hand a raw long delay to setTimeout. Sleep at most
+   * MAX_TIMER_DELAY_MS at a time and re-check the clock; only run `onDue` once
+   * the real instant has arrived. Chunked waiting also self-corrects for clock
+   * drift and sleep/wake, since each hop recomputes from `Date.now()`.
+   */
+  private armAt(jobId: string, scheduledFor: number, onDue: () => void): void {
+    const step = (): void => {
+      const remaining = scheduledFor - Date.now();
+      if (remaining <= 0) {
+        this.timers.delete(jobId);
+        onDue();
+        return;
+      }
+      const timer = setTimeout(step, Math.min(remaining, MAX_TIMER_DELAY_MS));
+      this.timers.set(jobId, timer);
+    };
+    step();
+  }
+
   private armInterval(job: CronJob, intervalMs: number, scheduledFor: number): void {
     job.nextRun = scheduledFor;
-    const delay = Math.max(0, scheduledFor - Date.now());
-    const timer = setTimeout(() => {
-      this.timers.delete(job.id);
+    this.armAt(job.id, scheduledFor, () => {
       const rearm = () => {
         if (!this.executionEnabled || !job.enabled || !this.jobs.has(job.id)) return;
         this.armInterval(
@@ -658,11 +702,17 @@ export class CronScheduler {
           this.nextIntervalRunAfter(scheduledFor, intervalMs, Date.now()),
         );
       };
+      // Interval jobs get the same misfire semantics cron already had: if we
+      // wake far PAST the target (host slept through it), skip this occurrence
+      // and re-arm on the next absolute slot instead of firing late.
+      if (isCronMisfire(scheduledFor, Date.now())) {
+        rearm();
+        return;
+      }
       void this.fire(job, rearm).then((ran) => {
         if (!ran) rearm();
       });
-    }, delay);
-    this.timers.set(job.id, timer);
+    });
   }
 
   private nextIntervalRunAfter(scheduledFor: number, intervalMs: number, now: number): number {
@@ -684,9 +734,7 @@ export class CronScheduler {
     }
     job.nextRun = next;
     const scheduledFor = next;
-    const delay = Math.max(0, next - Date.now());
-    const timer = setTimeout(() => {
-      this.timers.delete(job.id);
+    this.armAt(job.id, scheduledFor, () => {
       // Misfire guard for sleep/wake drift. A setTimeout pauses while the host
       // sleeps, then fires the instant the machine wakes — which can be hours
       // off the scheduled wall-clock (observed: a `0 9 * * *` job running at
@@ -707,8 +755,7 @@ export class CronScheduler {
       void this.fire(job, rearm).then((ran) => {
         if (!ran) rearm();
       });
-    }, delay);
-    this.timers.set(job.id, timer);
+    });
   }
 
   private clearTimer(id: string): void {
@@ -802,6 +849,20 @@ export function validateSchedule(schedule: string, timezone?: string): void {
  * 10 minutes (review-2026-05-30).
  */
 export function parseSchedule(schedule: string): number {
+  // Reject anything that is not a finite, safe, in-range interval. Long values
+  // are no longer an overflow hazard (armAt sleeps in chunks), but a value that
+  // cannot survive arithmetic — beyond Number.MAX_SAFE_INTEGER, or an absurd
+  // "10 years from now" — is a caller mistake, not a schedule. Failing here
+  // keeps `nextRun` and the re-arm math meaningful.
+  const accept = (ms: number): number => {
+    if (!Number.isSafeInteger(ms) || ms <= 0 || ms > MAX_SCHEDULE_INTERVAL_MS) {
+      throw new Error(
+        `Invalid schedule: ${JSON.stringify(schedule)}. Interval must be between 1ms and ${MAX_SCHEDULE_INTERVAL_MS}ms (~10 years).`,
+      );
+    }
+    return ms;
+  };
+
   const match = schedule.match(/^(\d+)(s|m|h|d)$/);
   if (match) {
     const value = parseInt(match[1], 10);
@@ -811,13 +872,13 @@ export function parseSchedule(schedule: string): number {
     if (value > 0) {
       switch (match[2]) {
         case "s":
-          return value * 1000;
+          return accept(value * 1000);
         case "m":
-          return value * 60 * 1000;
+          return accept(value * 60 * 1000);
         case "h":
-          return value * 60 * 60 * 1000;
+          return accept(value * 60 * 60 * 1000);
         case "d":
-          return value * 24 * 60 * 60 * 1000;
+          return accept(value * 24 * 60 * 60 * 1000);
       }
     }
   }
@@ -825,7 +886,7 @@ export function parseSchedule(schedule: string): number {
   // accept "1500abc").
   if (/^\d+$/.test(schedule)) {
     const ms = parseInt(schedule, 10);
-    if (ms > 0) return ms;
+    if (ms > 0) return accept(ms);
   }
 
   throw new Error(

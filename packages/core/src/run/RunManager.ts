@@ -392,16 +392,28 @@ export class RunManager {
    * Returns the IDs of recovered runs.
    */
   async recover(): Promise<string[]> {
-    const runs = await this.store.list({ status: "running" });
+    const runs = await this.listAllByStatus("running");
     const recovered: string[] = [];
 
     for (const run of runs) {
       const processAlive = this.heartbeat.isProcessAlive(run.runId);
       const stale = this.heartbeat.isStale(run.runId);
 
-      if (processAlive && !stale) {
-        // Still actively running in another process — leave it alone
-        logger.info("run.recover.skip", { runId: run.runId, reason: "process alive" });
+      // Process liveness has VETO power: never recover a run whose owning
+      // process is still alive. A live process can miss a heartbeat window for
+      // benign reasons (a long synchronous tool call, GC pause, a suspended
+      // laptop), and recovering it force-unlocks the lock and re-queues work
+      // that is still executing — the same run then runs twice.
+      //
+      // This matches the documented contract above ("stale AND dead → recover").
+      // The old condition (`processAlive && !stale`) recovered a live-but-stale
+      // run, which was reproducible with a run owning the current PID and a
+      // 60s-old heartbeat.
+      if (processAlive || !stale) {
+        logger.info("run.recover.skip", {
+          runId: run.runId,
+          reason: processAlive ? "process alive" : "heartbeat recent",
+        });
         continue;
       }
 
@@ -442,7 +454,7 @@ export class RunManager {
 
     // Also check waiting runs with stale heartbeats (process died while waiting)
     for (const status of ["waiting_input", "waiting_approval"] as const) {
-      const waitingRuns = await this.store.list({ status });
+      const waitingRuns = await this.listAllByStatus(status);
       for (const run of waitingRuns) {
         const stale = this.heartbeat.isStale(run.runId);
         if (stale && !this.heartbeat.isProcessAlive(run.runId)) {
@@ -455,6 +467,42 @@ export class RunManager {
     }
 
     return recovered;
+  }
+
+  /**
+   * Drain EVERY run with the given status, page by page.
+   *
+   * `store.list()` defaults to `limit: 50` because it backs a UI list. Crash
+   * recovery must not inherit a UI page size: with 55 stale running runs, the
+   * bare `list({ status })` call recovered the first 50 and left the remaining 5
+   * pinned in "running" forever (no later pass would revisit them, because
+   * recovery only runs at startup).
+   *
+   * Pages until a short page arrives. `maxPages` is a runaway guard for a store
+   * that ignores `offset` — without it a buggy store would loop forever.
+   */
+  private async listAllByStatus(status: RunStatus): Promise<RunSnapshot[]> {
+    const pageSize = 200;
+    const maxPages = 10_000;
+    const all: RunSnapshot[] = [];
+    const seen = new Set<string>();
+    for (let page = 0; page < maxPages; page += 1) {
+      const batch = await this.store.list({
+        status,
+        limit: pageSize,
+        offset: page * pageSize,
+      });
+      for (const run of batch) {
+        // Dedupe defensively: concurrent writes can shift the offset window and
+        // surface the same run twice, which would double-recover it.
+        if (seen.has(run.runId)) continue;
+        seen.add(run.runId);
+        all.push(run);
+      }
+      if (batch.length < pageSize) return all;
+    }
+    logger.warn("run.recover.page_limit", { status, scanned: all.length });
+    return all;
   }
 
   /**

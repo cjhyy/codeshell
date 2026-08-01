@@ -51,6 +51,9 @@ const coreSrc = resolve(repoRoot, "packages/core");
 const codingSrc = resolve(repoRoot, "packages/coding");
 const arenaSrc = resolve(repoRoot, "packages/arena");
 const petSrc = resolve(repoRoot, "packages/pet");
+// cdp is bundled INTO main by esbuild (not materialized, not external), so it
+// only needs a fresh dist at desktop-build time — no node_modules target.
+const cdpSrc = resolve(repoRoot, "packages/cdp");
 const coreTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
 const codingTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-capability-coding");
 const arenaTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-arena");
@@ -66,13 +69,25 @@ function main(): void {
   if (!existsSync(codingSrc)) throw new Error(`coding package not found at ${codingSrc}`);
   if (!existsSync(arenaSrc)) throw new Error(`Arena package not found at ${arenaSrc}`);
   if (!existsSync(petSrc)) throw new Error(`Pet package not found at ${petSrc}`);
+  if (!existsSync(cdpSrc)) throw new Error(`CDP package not found at ${cdpSrc}`);
 
-  // Rebuild the desktop bundle FIRST. electron-builder only packs whatever is
-  // already in out/**; predist itself just materializes core. Without this, a
-  // stale out/ (source changed but never rebuilt) is silently packaged — you
-  // ship old main/renderer/mobile code. `build` is fast (esbuild + vite prod)
-  // and idempotent, so always running it makes `dist`/`pack` reproducible.
-  // (core's own dist must already be built — copyDir below asserts it exists.)
+  // Rebuild every workspace dependency we materialize or bundle, in dependency
+  // order, BEFORE the desktop bundle. Previously this step only asserted that
+  // each `dist` existed (see copyDir) — so whatever a developer or CI job had
+  // left on disk got shipped. Two ways that silently produced a WRONG installer:
+  //   - `packages/cdp/dist` is not tracked by git and was in no build script, yet
+  //     esbuild bundles it INTO main. A clean checkout failed to resolve it; a
+  //     dev box with a stale dist packaged old browser-action code.
+  //   - `bun run --cwd packages/desktop dist` only triggers desktop's own build,
+  //     so core/pet/arena/coding dist could predate the source by any amount.
+  // Building here makes `dist`/`pack` reproducible from a clean checkout and
+  // removes the "did you remember to run the root build first?" failure mode.
+  buildWorkspaceDependencies();
+
+  // electron-builder only packs whatever is already in out/**; predist itself
+  // just materializes core. Without this, a stale out/ (source changed but never
+  // rebuilt) is silently packaged — you ship old main/renderer/mobile code.
+  // `build` is fast (esbuild + vite prod) and idempotent.
   log("building desktop bundle (out/) before packaging");
   execFileSync("bun", ["run", "build"], { cwd: desktopRoot, stdio: "inherit" });
 
@@ -100,6 +115,24 @@ function main(): void {
   verifyMaterializedCapabilities();
 
   log(`materialized core + coding + Arena + Pet into node_modules (LICENSE/README excluded)`);
+}
+
+// Dependency order matters: coding/arena/pet compile against core's freshly
+// emitted declarations, so core must land first. cdp is independent (zero
+// runtime deps) but is bundled into main, so it must precede the desktop build.
+const WORKSPACE_BUILD_ORDER: ReadonlyArray<{ label: string; dir: string }> = [
+  { label: "core", dir: coreSrc },
+  { label: "pet", dir: petSrc },
+  { label: "arena", dir: arenaSrc },
+  { label: "coding", dir: codingSrc },
+  { label: "cdp", dir: cdpSrc },
+];
+
+function buildWorkspaceDependencies(): void {
+  for (const { label, dir } of WORKSPACE_BUILD_ORDER) {
+    log(`building ${label} (workspace dependency)`);
+    execFileSync("bun", ["run", "build"], { cwd: dir, stdio: "inherit" });
+  }
 }
 
 function verifyMaterializedCapabilities(): void {

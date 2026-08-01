@@ -3,6 +3,15 @@ import { spawnSync } from "node:child_process";
 
 const repoRoot = process.cwd();
 
+/**
+ * Each probe is a full `bunx eslint` spawn (~2s: bunx resolution + loading the
+ * flat config and the typescript-eslint plugin). The multi-probe test runs five
+ * of them serially, so it needs well past bun's 5s default — it was timing out
+ * and reporting as a boundary-guard FAILURE even though every probe produced the
+ * expected violations.
+ */
+const LINT_PROBE_TIMEOUT_MS = 120_000;
+
 function lintStdin(filename: string, source: string) {
   return spawnSync("bunx", ["eslint", "--stdin", "--stdin-filename", filename], {
     cwd: repoRoot,
@@ -60,7 +69,7 @@ describe("ESLint CodeShell package boundary guards", () => {
     expect(output).toContain(
       "capability packages must not depend on another CodeShell product or host package",
     );
-  });
+  }, LINT_PROBE_TIMEOUT_MS);
 
   it("allows the exact reviewed browser-safe core entry in the renderer", () => {
     const result = lintStdin(
@@ -76,5 +85,5 @@ describe("ESLint CodeShell package boundary guards", () => {
 
     expect(`${result.stdout}\n${result.stderr}`).toBe("\n");
     expect(result.status).toBe(0);
-  });
+  }, LINT_PROBE_TIMEOUT_MS);
 });

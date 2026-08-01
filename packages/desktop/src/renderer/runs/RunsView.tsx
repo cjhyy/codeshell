@@ -21,11 +21,23 @@ const STATUS_TONES: Record<string, string> = {
   cancelled: "bg-status-warn",
 };
 
+/**
+ * Detail-pane request state. Explicit states keep the three failure modes
+ * distinguishable: before this, a rejected or slow `getRun` was indistinguishable
+ * from "nothing selected", and the previous run's detail stayed on screen.
+ */
+type DetailState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "ready"; detail: RunDetail }
+  | { kind: "missing" }
+  | { kind: "error"; message: string };
+
 export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}) {
   const { t } = useT();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [selected, setSelected] = useState<string | null>(initialRunId ?? null);
-  const [detail, setDetail] = useState<RunDetail | null>(null);
+  const [detail, setDetail] = useState<DetailState>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
 
@@ -50,13 +62,28 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
 
   useEffect(() => {
     if (!selected) {
-      setDetail(null);
+      setDetail({ kind: "idle" });
       return;
     }
     let cancelled = false;
-    void window.codeshell.getRun(selected).then((d) => {
-      if (!cancelled) setDetail(d);
-    });
+    // Clear immediately so the previous run's detail is never shown under the
+    // newly selected id while the request is in flight.
+    setDetail({ kind: "loading" });
+    void window.codeshell
+      .getRun(selected)
+      .then((d) => {
+        if (cancelled) return;
+        // A run reachable by id but absent from the default list page (e.g.
+        // opened straight from an automation) must read as "not found" rather
+        // than silently falling back to the empty-selection hint.
+        setDetail(d ? { kind: "ready", detail: d } : { kind: "missing" });
+      })
+      .catch((e: unknown) => {
+        // Previously unhandled: a rejected getRun left the pane on whatever was
+        // there before, so a failed load looked like a successful one.
+        if (cancelled) return;
+        setDetail({ kind: "error", message: e instanceof Error ? e.message : String(e) });
+      });
     return () => { cancelled = true; };
   }, [selected]);
 
@@ -106,7 +133,19 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
           )}
         </ul>
         <div className="min-w-0 flex-1 overflow-y-auto">
-          {detail ? <RunDetailView detail={detail} t={t} /> : (
+          {detail.kind === "ready" ? (
+            <RunDetailView detail={detail.detail} t={t} />
+          ) : detail.kind === "loading" ? (
+            <div className="p-6 text-sm text-muted-foreground">{t("auto.runs.detailLoading")}</div>
+          ) : detail.kind === "missing" ? (
+            <div className="p-6 text-sm text-muted-foreground">
+              {t("auto.runs.detailNotFound")}
+            </div>
+          ) : detail.kind === "error" ? (
+            <div className="p-6 text-sm text-status-err">
+              {t("auto.runs.detailFailed", { message: detail.message })}
+            </div>
+          ) : (
             <div className="p-6 text-sm text-muted-foreground">{t("auto.runs.selectRun")}</div>
           )}
         </div>

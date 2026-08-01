@@ -21,6 +21,7 @@ import {
   WORKSPACE_PROFILE_NAME_RE,
   WorkspaceProfileSchema,
   type WorkspaceProfile,
+  type WorkspaceProfileInput,
 } from "./types.js";
 
 export function workspaceProfilesRoot(): string {
@@ -141,8 +142,15 @@ export function listWorkspaceProfiles(): WorkspaceProfile[] {
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** 原子写（tmp+rename），与 SettingsManager 的写法一致。 */
-export function saveWorkspaceProfile(profile: WorkspaceProfile): void {
+/**
+ * 原子写（tmp+rename），与 SettingsManager 的写法一致。
+ *
+ * 接收 `WorkspaceProfileInput`（而不是解析后的 `WorkspaceProfile`）：这个函数
+ * 本来就会 `parse()`，所以带 default 的字段由 schema 负责填。用输出类型标注会
+ * 让调用方必须手写它们，也会在 schema 新增带 default 的字段时把所有调用方一起
+ * 弄红——尽管运行时完全没变。
+ */
+export function saveWorkspaceProfile(profile: WorkspaceProfileInput): void {
   const parsed = WorkspaceProfileSchema.parse(profile);
   const dir = checkedProfileDirectory(parsed.name, true);
   if (!dir) throw new Error(`Could not create workspace profile directory for "${parsed.name}"`);

@@ -14,6 +14,7 @@ import {
   uninstallPanelApp,
 } from "./index.js";
 import { invalidateSkillCache, scanSkills } from "../skills/scanner.js";
+import { asGlobalFetch } from "../testing/fetch-stub.js";
 
 function writePanelApp(
   root: string,
@@ -325,7 +326,7 @@ describe("independent Panel App installer", () => {
       runGit(repository, "add", ".");
       runGit(repository, "commit", "-m", "initial panel");
 
-      globalThis.fetch = async () => {
+      globalThis.fetch = asGlobalFetch(async () => {
         const archive = spawnSync(
           "git",
           ["archive", "--format=zip", "--prefix=panel-source-main/", "HEAD"],
@@ -342,7 +343,7 @@ describe("independent Panel App installer", () => {
             "content-type": "application/zip",
           },
         });
-      };
+      });
 
       const source = {
         kind: "git" as const,

@@ -27,6 +27,13 @@ function zipDirectory(source: string, target: string): void {
   execFileSync("zip", ["-r", "-q", target, "."], { cwd: source });
 }
 
+/**
+ * Preview runs the real extract + hook-validation pipeline (and shells out to
+ * `zip`), which routinely exceeds bun's 5s default on a loaded machine. A timeout
+ * surfaces as a FAILURE, indistinguishable from a real regression.
+ */
+const PREVIEW_TEST_TIMEOUT_MS = 60_000;
+
 describe("previewLocalPlugin", () => {
   let home: string;
   let scratch: string;
@@ -182,7 +189,7 @@ describe("previewLocalPlugin", () => {
     expect(preview.source.kind).toBe("zip");
     expect(readdirSync(previewTmp)).toEqual([]);
     expect(existsSync(join(home, ".code-shell", "plugins"))).toBe(false);
-  });
+  }, PREVIEW_TEST_TIMEOUT_MS);
 
   test("source changes produce a new review token", async () => {
     writeCodexPlugin();
@@ -260,5 +267,5 @@ describe("previewLocalPlugin", () => {
       /more than 256/,
     );
     expect(existsSync(join(home, ".code-shell", "plugins"))).toBe(false);
-  });
+  }, PREVIEW_TEST_TIMEOUT_MS);
 });

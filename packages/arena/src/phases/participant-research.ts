@@ -202,6 +202,12 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
         messageCount: messages.length,
       });
 
+      // Bail out before spending a request if the user already stopped. Without
+      // this (and the `signal` below) a Stop during the force-conclude phase
+      // left the final model request running to completion — still billed, and
+      // still holding the task alive until the provider answered on its own.
+      signal?.throwIfAborted();
+
       const forceResponse = await client.createMessage({
         systemPrompt: strategy.researchSystemPrompt(p.name),
         messages: [
@@ -217,6 +223,7 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
               "Do NOT request any more tools. No prose outside the XML.",
           },
         ],
+        signal,
       });
       onUsage?.(forceResponse.usage);
 

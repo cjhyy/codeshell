@@ -5,7 +5,19 @@ const GITHUB_ARCHIVE_TIMEOUT_MS = 45_000;
 const MAX_GITHUB_ARCHIVE_BYTES = 128 * 1024 * 1024;
 const USER_AGENT = "CodeShell-panel-app-installer/1";
 
-export type PanelAppArchiveFetch = typeof globalThis.fetch;
+/**
+ * 只描述这里真正用到的能力：「用一个 URL 和 init 调用它，拿回 Response」。
+ *
+ * 刻意不写成 `typeof globalThis.fetch`。那是**完整**的运行时 fetch，包含
+ * 实现自带的挂载属性——Bun 1.3 加了 `fetch.preconnect` 之后，每个只提供函数
+ * 的测试 stub 都不再满足这个类型（`Property 'preconnect' is missing`），
+ * 尽管本文件从头到尾只调用它。绑定到实际契约上，让运行时给 fetch 加静态属性
+ * 不再变成下游的类型破坏。
+ */
+export type PanelAppArchiveFetch = (
+  input: string | URL | Request,
+  init?: RequestInit,
+) => Promise<Response>;
 
 export interface GitHubPanelAppArchiveSource {
   url: string;

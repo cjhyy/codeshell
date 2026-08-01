@@ -99,7 +99,9 @@ export class IterativeArena {
         subject: config.subject,
         format,
         draft: currentDraft,
-        critics: this.criticsForRound(r),
+        // Pass the author of THIS round's draft, not the round number: the
+        // draft under review was written by `currentAuthor`.
+        critics: this.criticsForRound(currentAuthor),
         round: r,
         enableWebSearch: config.enableWebSearch,
         maxToolRounds: config.maxArgueToolRounds,
@@ -173,9 +175,22 @@ export class IterativeArena {
     return this.finalize(rounds, "max_rounds", start);
   }
 
-  /** Critics for a given round = pool minus current author (so author isn't critiquing self). */
-  private criticsForRound(_round: number): ArenaParticipant[] {
-    return this.config.critics;
+  /**
+   * Critics for a round = the whole pool minus whoever wrote the draft under
+   * review, so nobody critiques their own text.
+   *
+   * This used to return `config.critics` verbatim, ignoring rotation. Once
+   * `round-robin`/`best-critic` promoted critic B to author, B kept reviewing
+   * the draft B had just written, while the original author A never entered the
+   * critic pool at all — the exact opposite of the intent documented here.
+   */
+  private criticsForRound(currentAuthor: ArenaParticipant): ArenaParticipant[] {
+    const pool = [this.config.author, ...this.config.critics];
+    const critics = pool.filter((p) => p.name !== currentAuthor.name);
+    // Degenerate config (single participant, or every critic named like the
+    // author): fall back to the configured critics so a round still has
+    // reviewers rather than silently running with none.
+    return critics.length > 0 ? critics : this.config.critics;
   }
 
   private checkConvergence(args: {

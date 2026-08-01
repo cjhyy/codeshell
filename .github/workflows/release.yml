@@ -171,18 +171,25 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
 
-      # Build core + coding + cdp — desktop needs all workspace packages' dist/ present.
+      # Build every workspace package the desktop app bundles OR materializes.
       # core: kept external in the main bundle and loaded at runtime (main
       # process spawns it), so its dist must exist. cdp: imported by
       # src/main/browser-driver/cdp-driver.ts and bundled INTO the main process
       # (not external), so esbuild must resolve its dist at build time — without
       # this the desktop build fails with `Could not resolve "@cjhyy/code-shell-cdp"`.
+      # pet + arena: NOT bundled, but predist.ts copies their dist into
+      # node_modules and throws when it is missing. They were absent here, so a
+      # clean checkout (their dist is not tracked by git either) died in predist.
       # We deliberately do NOT run the root `bun run build` (which also builds
       # tui): the desktop app doesn't use tui, and tui's build script uses
       # `cp -r`, which the Windows runner's cp rejects ("illegal option -- r").
-      - name: build core + coding + cdp
+      # predist.ts rebuilds these too; keeping them here means the `build desktop`
+      # step below (which runs first) can already resolve every import.
+      - name: build core + pet + arena + coding + cdp
         run: |
           bun run --filter '@cjhyy/code-shell-core' build
+          bun run --filter '@cjhyy/code-shell-pet' build
+          bun run --filter '@cjhyy/code-shell-arena' build
           bun run --filter '@cjhyy/code-shell-capability-coding' build
           bun run --filter '@cjhyy/code-shell-cdp' build
 

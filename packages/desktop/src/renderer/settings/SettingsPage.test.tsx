@@ -9,6 +9,7 @@ import {
   preferredModuleForScope,
   type SettingsScope,
 } from "./SettingsPage";
+import { DialogProvider } from "../ui/DialogProvider";
 
 describe("SettingsPage", () => {
   test("matches modules by localized label or group title", () => {
@@ -56,6 +57,27 @@ describe("SettingsPage", () => {
     expect(html).toContain(">项目概览</h1>");
     expect(html).toContain("以下设置仅作用于所选项目");
     expect(html).toContain("/repo");
+  });
+
+  test("honors an explicit deep-link module instead of the last visited setting", () => {
+    const html = renderToStaticMarkup(
+      <DialogProvider>
+        <SettingsPage
+          activeProjectPath={null}
+          initialModule="digital-humans"
+          projects={[]}
+          sessionIndices={{}}
+          onRestoreArchivedSession={() => undefined}
+          onDeleteArchivedSession={() => undefined}
+          isMac={false}
+          isFullscreen={false}
+          onBack={() => undefined}
+        />
+      </DialogProvider>,
+    );
+
+    expect(html).toContain(">数字人</h1>");
+    expect(html).toContain("数字人库");
   });
 
   test("keeps the current module when it supports the next scope", () => {
