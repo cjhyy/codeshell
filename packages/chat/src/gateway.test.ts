@@ -220,7 +220,16 @@ describe("CodeShell remote command integration", () => {
     expect(observed.origin).toMatchObject({ channel: "telegram", senderId: "user-1" });
     expect(observed.origin.capabilities).toEqual({
       inbound: { text: true, attachments: [] },
-      outbound: { text: true, maxTextLength: 8_000, button: "link", attachments: [] },
+      // `proactive` distinguishes "can reply in an open conversation" from "can
+      // push unprompted"; it is a required capability field, so an exact-match
+      // assertion has to carry it.
+      outbound: {
+        text: true,
+        proactive: true,
+        maxTextLength: 8_000,
+        button: "link",
+        attachments: [],
+      },
     });
     expect(observed.origin.channels).toEqual([
       {

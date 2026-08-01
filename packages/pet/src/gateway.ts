@@ -15,6 +15,14 @@ export interface PetGatewayChannelCapabilities {
   };
   outbound: {
     text: true;
+    /**
+     * Whether the adapter can send WITHOUT a fresh inbound conversation context
+     * (an unprompted push), as opposed to only replying inside an open one.
+     *
+     * Mirrors `ChannelCapabilities.outbound.proactive` in @cjhyy/code-shell-chat.
+     * Optional here so an older host that does not report it still validates.
+     */
+    proactive?: boolean;
     maxTextLength?: number;
     button: "native" | "link";
     attachments: readonly PetGatewayAttachmentKind[];
@@ -233,6 +241,11 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
       (key) =>
         ![
           "text",
+          // `proactive` is part of the chat package's capability shape. It was
+          // missing from this allowlist, and the check rejects ANY unknown key —
+          // so every real channel failed catalog validation and Mimi silently
+          // lost Gateway discovery on IM turns.
+          "proactive",
           "maxTextLength",
           "button",
           "attachments",
@@ -256,10 +269,17 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
   if (maxTextLength === null || maxAttachments === null || maxAttachmentBytes === null) {
     return undefined;
   }
+  // Must be a real boolean when present: the value reaches Mimi's prompt as a
+  // capability claim, so a truthy string would misreport what the channel can do.
+  const proactive = value.outbound.proactive;
+  if (proactive !== undefined && typeof proactive !== "boolean") return undefined;
   return Object.freeze({
     inbound: Object.freeze({ text: true as const, attachments: inboundAttachments }),
     outbound: Object.freeze({
       text: true as const,
+      // Carried through rather than dropped — "can push unprompted" is exactly
+      // the kind of thing Mimi must not assume.
+      ...(proactive === undefined ? {} : { proactive }),
       ...(maxTextLength === undefined ? {} : { maxTextLength }),
       button: value.outbound.button,
       attachments: outboundAttachments,

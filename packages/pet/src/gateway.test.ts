@@ -168,3 +168,44 @@ describe("Gateway discovery tool", () => {
     expect(gatewayAvailability({ profileMeta: {} } as never)).toBe(false);
   });
 });
+
+describe("outbound.proactive capability", () => {
+  // `proactive` ("can push without an open conversation") was added to the chat
+  // package's ChannelCapabilities but never mirrored here. parseCapabilities
+  // rejects ANY unknown outbound key, so every real channel failed catalog
+  // validation and Mimi silently lost Gateway discovery on IM turns.
+  const withOutbound = (outbound: Record<string, unknown>) => ({
+    currentChannel: "telegram",
+    channels: [
+      {
+        channel: "telegram",
+        capabilities: {
+          inbound: { text: true, attachments: [] },
+          outbound: { text: true, button: "link", attachments: [], ...outbound },
+        },
+      },
+    ],
+  });
+
+  test("is accepted and carried through, not dropped", () => {
+    const catalog = parsePetGatewayCatalog(withOutbound({ proactive: true }));
+    expect(catalog).toBeDefined();
+    expect(catalog!.channels[0]!.capabilities.outbound.proactive).toBe(true);
+    // false must survive too — it is the restrictive claim.
+    const restricted = parsePetGatewayCatalog(withOutbound({ proactive: false }));
+    expect(restricted!.channels[0]!.capabilities.outbound.proactive).toBe(false);
+  });
+
+  test("stays optional for hosts that do not report it", () => {
+    const catalog = parsePetGatewayCatalog(withOutbound({}));
+    expect(catalog).toBeDefined();
+    expect(catalog!.channels[0]!.capabilities.outbound.proactive).toBeUndefined();
+  });
+
+  test("a non-boolean value is rejected", () => {
+    // It reaches Mimi's prompt as a capability claim, so a truthy string must
+    // not be read as "yes, this channel can push".
+    expect(parsePetGatewayCatalog(withOutbound({ proactive: "yes" }))).toBeUndefined();
+    expect(parsePetGatewayCatalog(withOutbound({ proactive: 1 }))).toBeUndefined();
+  });
+});
