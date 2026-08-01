@@ -18,6 +18,7 @@ import { parse as parseYaml } from "yaml";
 import { validateSettings, type ValidatedSettings } from "./schema.js";
 import { migrateModels } from "../migrate-models.js";
 import { migrateConfig, CONFIG_VERSION_KEY } from "./migrate-config.js";
+import { acquireFileLock } from "../utils/file-mutex.js";
 
 /**
  * Resolve the user's home directory. Prefers `process.env.HOME` so that
@@ -407,29 +408,38 @@ export class SettingsManager {
    */
   saveUserSetting(key: string, value: unknown): void {
     const path = join(this.userConfigDir(), "settings.json");
-    let current: Record<string, unknown> = {};
-    if (existsSync(path)) {
-      try {
-        const raw = readFileSync(path, "utf-8");
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          current = sanitizeSettingsObject(parsed);
-        }
-      } catch {
-        // Corrupt file — overwrite rather than crash.
-      }
-    }
-
-    setDottedSetting(current, key, value);
-
     mkdirSync(dirname(path), { recursive: true });
-    // Atomic write: stage to .tmp, then rename, so a concurrent read can't
-    // catch a half-written file. mode 0o600 — settings.json can hold plaintext
-    // API keys, so it must be owner-only like credentials.json (store.ts:56),
-    // not world-readable (default umask leaves 0o644 otherwise).
-    const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
-    writeFileSync(tmp, JSON.stringify(current, null, 2), { encoding: "utf-8", mode: 0o600 });
-    renameSync(tmp, path);
+    // Lock spans read → modify → write; see mutateSettingsFile for why the
+    // atomic rename alone was not enough. This path keeps its own sanitizing
+    // read (readJsonObject does not sanitize) so behaviour is unchanged apart
+    // from the added serialization.
+    const release = acquireFileLock(path);
+    try {
+      let current: Record<string, unknown> = {};
+      if (existsSync(path)) {
+        try {
+          const raw = readFileSync(path, "utf-8");
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            current = sanitizeSettingsObject(parsed);
+          }
+        } catch {
+          // Corrupt file — overwrite rather than crash.
+        }
+      }
+
+      setDottedSetting(current, key, value);
+
+      // Atomic write: stage to .tmp, then rename, so a concurrent read can't
+      // catch a half-written file. mode 0o600 — settings.json can hold plaintext
+      // API keys, so it must be owner-only like credentials.json (store.ts:56),
+      // not world-readable (default umask leaves 0o644 otherwise).
+      const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
+      writeFileSync(tmp, JSON.stringify(current, null, 2), { encoding: "utf-8", mode: 0o600 });
+      renameSync(tmp, path);
+    } finally {
+      release();
+    }
 
     this.invalidate();
   }
@@ -448,9 +458,9 @@ export class SettingsManager {
     // gone. A non-empty cwd that no longer exists means the project was deleted
     // — skip the write rather than recreate it.
     if (!existsSync(cwd)) return;
-    const current = this.readJsonObject(path);
-    setDottedSetting(current, key, value);
-    this.atomicWriteJson(path, current);
+    this.mutateSettingsFile(path, (current) => {
+      setDottedSetting(current, key, value);
+    });
     this.invalidate();
   }
 
@@ -468,16 +478,19 @@ export class SettingsManager {
     // YAML; the cleaned object is written back as JSON (JSON is the write-back
     // format and wins over YAML, exactly as save does).
     if (!resolveConfigPath(path)) return;
-    const current = this.readJsonObject(path);
-    const parts = parseDottedSettingKey(key);
-    let target: Record<string, unknown> | undefined = current;
-    for (let i = 0; i < parts.length - 1; i++) {
-      const seg = parts[i]!;
-      if (!target || !isOwnPlainObject(target, seg)) return;
-      target = target[seg] as Record<string, unknown>;
-    }
-    if (target) delete target[parts[parts.length - 1]!];
-    this.atomicWriteJson(path, current);
+    this.mutateSettingsFile(path, (current) => {
+      const parts = parseDottedSettingKey(key);
+      let target: Record<string, unknown> | undefined = current;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const seg = parts[i]!;
+        // Intermediate segment missing → nothing to delete; skip the write
+        // entirely rather than rewriting the file unchanged.
+        if (!target || !isOwnPlainObject(target, seg)) return false;
+        target = target[seg] as Record<string, unknown>;
+      }
+      if (target) delete target[parts[parts.length - 1]!];
+      return true;
+    });
     this.invalidate();
   }
 
@@ -532,6 +545,40 @@ export class SettingsManager {
     const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
     writeFileSync(tmp, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 0o600 });
     renameSync(tmp, path);
+  }
+
+  /**
+   * Read-modify-write a settings file under a cross-process lock.
+   *
+   * Atomic rename alone only prevents a half-written file; it does NOT prevent a
+   * lost update. Every writer here used to read its own snapshot outside any
+   * lock, so two processes changing DIFFERENT keys still clobbered each other:
+   * 48 concurrent writers each setting a distinct key left only 17 keys on disk.
+   *
+   * Real multi-writer paths, not a theoretical concern: the desktop settings
+   * page, the Agent `Config` tool, an automation worker, the TUI and a second
+   * desktop instance all write the same files. The desktop settings service
+   * already locked correctly; this brings Core's own writers onto the same
+   * protocol so they interlock rather than race past one another.
+   *
+   * `mutate` receives the CURRENT on-disk object (re-read inside the lock) and
+   * mutates it in place; returning false skips the write.
+   */
+  private mutateSettingsFile(
+    path: string,
+    mutate: (current: Record<string, unknown>) => boolean | void,
+  ): void {
+    mkdirSync(dirname(path), { recursive: true });
+    const release = acquireFileLock(path);
+    try {
+      // Re-read INSIDE the lock: a snapshot taken before acquiring it would be
+      // exactly the stale value that drops the other writer's key.
+      const current = this.readJsonObject(path);
+      if (mutate(current) === false) return;
+      this.atomicWriteJson(path, current);
+    } finally {
+      release();
+    }
   }
 
   private loadJsonFile(path: string, name: SettingsSourceName, priority: number): void {
