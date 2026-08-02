@@ -31,12 +31,25 @@ export const FEATURE_FLAGS = {
   shell_snapshot: { default: false, description: "Capture full command stdout/stderr snapshots" },
   /**
    * Run a session on an EXTERNAL Agent Runtime (Codex / Claude Code) instead of
-   * the native Engine. Default off per §20: the native path must not depend on an
-   * external binary being installed or logged in, and the fallback has to stay
-   * one setting away.
+   * the native Engine.
+   *
+   * Default ON, which reverses the original §20 decision. The reasoning behind
+   * "off" was that the native path must not depend on an external binary — that
+   * still holds, and is now enforced by a better mechanism than a flag: the
+   * picker only lists a runtime whose binary is actually installed
+   * (external-runtime-availability.ts), and every non-prefixed model key still
+   * routes to the native Engine. A machine without `codex` sees exactly what it
+   * saw before.
+   *
+   * What the flag actually did in practice was hide the feature from everyone,
+   * including the people who installed Codex on purpose: the entries never
+   * appeared, with no hint that a setting was responsible. An opt-in nobody can
+   * discover is indistinguishable from a missing feature.
+   *
+   * Turning it off remains the escape hatch — it hides the entries outright.
    */
   external_agent_runtime: {
-    default: false,
+    default: true,
     description: "Allow a session to run on Codex or Claude Code instead of the native engine",
   },
   /**
@@ -44,9 +57,16 @@ export const FEATURE_FLAGS = {
    * above so the runtime can be trialled with NO tool surface at all — §20 asks
    * for exactly that split, because the tool bridge is the part that carries the
    * security burden.
+   *
+   * Also default ON now, for a blunt reason: with it off the runtime has an
+   * EMPTY tool surface — no skills, no memory, no file access — which is not a
+   * usable Agent Runtime, so shipping that as the default just means the
+   * feature appears broken. Every exposed tool still executes through
+   * ToolExecutor, so the user's permission rules and the approval dialog apply
+   * exactly as they do on the native path.
    */
   external_host_tools: {
-    default: false,
+    default: true,
     description: "Expose allowlisted CodeShell tools to an external Agent Runtime",
   },
 } as const;

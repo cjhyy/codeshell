@@ -45,13 +45,27 @@ describe("feature flags", () => {
     ]);
   });
 
-  test("both external-runtime flags default OFF", () => {
-    // §20: the native path must not depend on an external binary, and the
-    // fallback stays one setting away. A default-on flag here would make an
-    // experimental backend the shipping default.
+  test("both external-runtime flags default ON, and stay switchable off", () => {
+    // Reverses the original §20 "default off". The concern behind it — the
+    // native path must not depend on an external binary — is now enforced by
+    // something stronger than a flag: the picker only lists a runtime whose
+    // binary is installed, and any model key without a `codex/` /
+    // `claude-code/` prefix still routes to the native Engine.
+    //
+    // What the flag actually achieved was hiding the feature from everyone,
+    // with no hint that a setting was responsible. An opt-in nobody can
+    // discover is indistinguishable from a missing feature.
     const resolved = resolveFeatureFlags({});
-    expect(resolved.external_agent_runtime).toBe(false);
-    expect(resolved.external_host_tools).toBe(false);
+    expect(resolved.external_agent_runtime).toBe(true);
+    expect(resolved.external_host_tools).toBe(true);
+
+    // The escape hatch has to keep working — that is the half worth pinning.
+    const disabled = resolveFeatureFlags({
+      external_agent_runtime: false,
+      external_host_tools: false,
+    });
+    expect(disabled.external_agent_runtime).toBe(false);
+    expect(disabled.external_host_tools).toBe(false);
   });
 
   test("resolveFeatureFlags merges defaults with overrides for every flag", () => {
