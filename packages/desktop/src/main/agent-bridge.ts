@@ -1223,6 +1223,19 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /**
+   * The webContents id owning this session, if any.
+   *
+   * Used to aim an approval prompt at the window the session belongs to.
+   * Returns undefined rather than a fallback: the caller decides what "no
+   * owner" means, and for approvals that answer differs from Panel.invoke's.
+   */
+  panelOwnerWebContentsId(sessionId: string): number | undefined {
+    return (
+      this.panelHostWindowRoutes.resolve(sessionId, this.windows).ownerWebContentsId ?? undefined
+    );
+  }
+
+  /**
    * Register a session whose turns are driven by an external Agent Runtime.
    *
    * Host tools gate on two registries that are both side effects of the

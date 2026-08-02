@@ -442,6 +442,27 @@ ipcRenderer.on("externalRuntime:event", (_e, payload: { sessionId?: unknown; eve
   streamListeners.forEach((cb) => cb({ sessionId, event }));
 });
 
+/**
+ * External-runtime approval prompts join the SAME listeners the worker feeds,
+ * so the renderer shows its existing dialog without knowing a different
+ * transport is involved — one approval UI, not two that drift.
+ *
+ * `externalApprovalIds` records which prompts arrived this way, because the
+ * answer must go back to main: an external session has no worker to receive
+ * `agent/approve`.
+ */
+const externalApprovalIds = new Set<string>();
+ipcRenderer.on(
+  "externalRuntime:approvalRequest",
+  (_e, payload: { sessionId?: unknown; requestId?: unknown; request?: unknown }) => {
+    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+    const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
+    if (!sessionId || !requestId || payload?.request === undefined) return;
+    externalApprovalIds.add(requestId);
+    approvalListeners.forEach((cb) => cb({ sessionId, requestId, request: payload.request }));
+  },
+);
+
 contextBridge.exposeInMainWorld("codeshell", {
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
   platform: process.platform,
@@ -645,6 +666,22 @@ contextBridge.exposeInMainWorld("codeshell", {
       approveBranch.always = true;
       approveBranch.scope = scope;
       if (pathScope && pathScope !== "tool") approveBranch.pathScope = pathScope;
+    }
+    // An external-runtime prompt has no worker to answer to, so it goes back to
+    // main instead. Intercepting HERE — after the argument parsing above — means
+    // the renderer calls `approve(...)` identically for both transports and the
+    // scope/pathScope handling is shared rather than reimplemented.
+    if (externalApprovalIds.has(requestId)) {
+      externalApprovalIds.delete(requestId);
+      ipcRenderer.send("externalRuntime:approvalDecision", {
+        requestId,
+        approved: decision === "approve",
+        ...(reason !== undefined ? { reason } : {}),
+        ...(answerText !== undefined ? { answer: answerText } : {}),
+        ...(scope ? { scope } : {}),
+        ...(pathScope ? { pathScope } : {}),
+      });
+      return Promise.resolve({ ok: true });
     }
     return rpc("agent/approve", {
       sessionId,
@@ -1361,6 +1398,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   },
   links: {
     listLocalProviders: () => ipcRenderer.invoke("links:listLocalProviders"),
+    githubCliStatus: () => ipcRenderer.invoke("links:githubCliStatus"),
+    connectGithubCli: (input: unknown) => ipcRenderer.invoke("links:connectGithubCli", input),
     connectLocal: (input: unknown) => ipcRenderer.invoke("links:connectLocal", input),
   },
   credentials: {

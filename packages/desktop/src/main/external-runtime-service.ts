@@ -23,7 +23,11 @@ import type {
   ExternalRuntimeSession,
 } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import { BUILTIN_AGENT_PRESETS, ToolRegistry, type StreamEvent } from "@cjhyy/code-shell-core";
-import { isFeatureEnabled, type FeatureFlagOverrides } from "@cjhyy/code-shell-core/extension";
+import {
+  FIRST_PHASE_EXPOSURE,
+  isFeatureEnabled,
+  type FeatureFlagOverrides,
+} from "@cjhyy/code-shell-core/extension";
 import { getTrustCachedSync } from "./trust-store.js";
 import { dlog } from "./desktop-logger.js";
 
@@ -54,6 +58,20 @@ export interface ExternalRuntimeServiceDeps {
   emit: (sessionId: string, event: StreamEvent) => void;
   /** Host seams the exposed tools need (panels, browser, …). */
   toolContextOverrides?: (sessionId: string) => Record<string, unknown>;
+  /**
+   * Ask the user to approve a tool call.
+   *
+   * Without this the host has no `approvalBackend`, and an `ask` decision fails
+   * closed with no prompt — safe, but indistinguishable from "the runtime is
+   * broken" for anyone watching. Supplying it is what turns a silent refusal
+   * into a dialog.
+   */
+  requestApproval?: (
+    sessionId: string,
+    request: { toolName: string; [key: string]: unknown },
+  ) => Promise<{ approved: boolean; reason?: string }>;
+  /** Drop any prompt still on screen for a session that is going away. */
+  cancelApprovals?: (sessionId: string) => void;
 }
 
 /**
@@ -118,11 +136,19 @@ export class ExternalRuntimeService {
     const ownerId = request.ownerWindow?.webContents.id;
     this.deps.registerSession(request.sessionId, request.cwd, ownerId);
 
+    // The registry must actually CONTAIN the tools the exposure policy allows.
+    // `new ToolRegistry({})` registers none, which would make the allowlist
+    // moot in the quietest possible way: `listTools()` returns [], the runtime
+    // advertises nothing, and it looks like the policy denied everything.
+    // Built from the policy so the two cannot drift — a name added to the
+    // allowlist is registered by that same edit.
+    const registry = new ToolRegistry({ builtinTools: [...FIRST_PHASE_EXPOSURE.toolNames] });
+
     const session = await startExternalRuntimeSession({
       kind: request.kind,
       cwd: request.cwd,
       businessSessionId: request.sessionId,
-      registry: new ToolRegistry({}),
+      registry,
       permissionMode: "default",
       presetRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
       projectTrusted,
@@ -136,6 +162,14 @@ export class ExternalRuntimeService {
       },
       ...(exposure ? { exposure } : {}),
       ...(request.model ? { model: request.model } : {}),
+      ...(this.deps.requestApproval
+        ? {
+            approvalBackend: {
+              requestApproval: (approvalRequest: { toolName: string }) =>
+                this.deps.requestApproval!(request.sessionId, approvalRequest),
+            } as never,
+          }
+        : {}),
       ...(this.deps.toolContextOverrides
         ? { contextOverrides: this.deps.toolContextOverrides(request.sessionId) as never }
         : {}),
@@ -180,6 +214,9 @@ export class ExternalRuntimeService {
       // registries — otherwise the bucket and the reserved session leak for the
       // life of the process, and a later session reusing the id inherits them.
       this.deps.releaseSession(sessionId);
+      // Any prompt still on screen belongs to a runtime that no longer exists;
+      // leaving it would park its tool call forever.
+      this.deps.cancelApprovals?.(sessionId);
     }
     dlog("external-runtime", "session.stopped", { sessionId });
   }

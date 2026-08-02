@@ -18,7 +18,7 @@ import {
   type SaveDialogOptions,
 } from "electron";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import {
@@ -105,6 +105,7 @@ import {
 } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { availableExternalRuntimes } from "./external-runtime-availability.js";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
@@ -121,7 +122,6 @@ import {
   createPetSegmentClosureService,
   type PetSegmentClosureService,
 } from "./pet/pet-segment-closure-service.js";
-import { mapWithConcurrency } from "./pet/map-with-concurrency.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import {
@@ -135,6 +135,9 @@ import { PetWorkDelegationHost } from "./pet/pet-work-delegation-host.js";
 import { PetAttentionPolicy } from "./pet/pet-attention-policy.js";
 import { PetReceiptStore } from "./pet/pet-receipt-store.js";
 import { PetWorkInboxStore } from "./pet/pet-work-inbox-store.js";
+import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
+import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
+import { createPetFollowUpService } from "./pet/pet-follow-up-service.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
 import { PetSegmentController } from "./pet/pet-segment-controller.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
@@ -145,8 +148,9 @@ import {
   takeOverLinkedSessionFromIpc,
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
-import { DEFAULT_SEGMENT_IDLE_MS, type PetFollowUpItem } from "@cjhyy/code-shell-pet";
-import { searchSessionTranscripts, sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
+import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
+import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
+import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
 import {
   PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX,
   PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX,
@@ -160,6 +164,7 @@ import {
 import type { InstalledThemePack } from "../shared/theme-packs.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
+import { getGitHubCliLinkStatus, obtainGitHubCliToken } from "./github-cli-link-service.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
 import { inspectReadableReplyAttachment, readImageDataUrl } from "./image-read-service.js";
 import {
@@ -173,6 +178,7 @@ import {
 } from "./browser-driver/active-guest.js";
 import { backgroundBrowserRuntime } from "./browser-driver/background-runtime.js";
 import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
+import { automationLifecycleNotification } from "./automation-notification.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
   setAutomationScheduler,
@@ -248,6 +254,7 @@ import {
 import {
   GatewayControlServer,
   type GatewayControlEventAttachment,
+  type GatewayControlEventInput,
   type MobileRemoteGatewayStatus,
   type MobileRemoteOpenResult,
   type PetChatControlRequest,
@@ -524,6 +531,8 @@ let bridge: AgentBridge | null = null;
  * a listening port, neither of which dies with the parent on Windows.
  */
 let externalRuntimeService: ExternalRuntimeService | null = null;
+/** Routes external-runtime tool approvals to the renderer's existing dialog. */
+let externalRuntimeApprovals: ExternalRuntimeApprovals | null = null;
 const panelAppBridge = new PanelAppBridge({
   isTrustedHost: (sender) =>
     [...mainWindows].some((window) => !window.isDestroyed() && window.webContents === sender),
@@ -678,6 +687,42 @@ const accessPasscode = new AccessPasscode({
   filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
 });
 let gatewayControlServer: GatewayControlServer | undefined;
+
+/**
+ * Publish once, then opportunistically hand the same event to the standalone
+ * direct sender. When the live Gateway owns the stream the hand-off is a no-op;
+ * when stopped, direct-capable adapters deliver it without task-layer coupling.
+ */
+function publishGatewayControlEvent(event: GatewayControlEventInput): void {
+  const gateway = gatewayControlServer;
+  if (!gateway) throw new Error("IM Gateway notification outbox is unavailable");
+  const published = gateway.publish(event);
+  const context = gateway.eventContext();
+  if (!context) return;
+  void imGatewayService
+    .deliverPublishedNotification(published, context)
+    .then((delivered) => {
+      if (delivered) gateway.acknowledgeDirectDelivery(published.id);
+    })
+    .catch((error) =>
+      dlog("main", "im_gateway.notification_direct.failed", {
+        eventId: published.id,
+        type: published.type,
+        error: String(error),
+      }),
+    );
+}
+
+function publishGatewayControlEventBestEffort(event: GatewayControlEventInput): void {
+  try {
+    publishGatewayControlEvent(event);
+  } catch (error) {
+    dlog("main", "im_gateway.notification_publish.failed", {
+      type: event.type,
+      error: String(error),
+    });
+  }
+}
 // Forward tunnel status changes to every renderer so the UI can reflect
 // connected / disconnected (address invalidated) without polling.
 tunnelManager.on("status", (status: string, detail?: unknown) => {
@@ -688,20 +733,20 @@ tunnelManager.on("status", (status: string, detail?: unknown) => {
     if (!w.isDestroyed()) w.webContents.send("mobileRemote:tunnelStatus", { status, detail });
   }
   if (status === "connected" && typeof detail === "string") {
-    gatewayControlServer?.publish({
+    publishGatewayControlEventBestEffort({
       type: "tunnel.connected",
       title: "CodeShell 公网隧道已连接",
       text: `公网地址：${detail}`,
       button: { text: "打开 CodeShell", url: detail },
     });
   } else if (status === "disconnected") {
-    gatewayControlServer?.publish({
+    publishGatewayControlEventBestEffort({
       type: "tunnel.disconnected",
       title: "CodeShell 公网隧道已断开",
       text: "公网隧道连接已断开，请在桌面端或聊天命令中重新开启。",
     });
   } else if (status === "error") {
-    gatewayControlServer?.publish({
+    publishGatewayControlEventBestEffort({
       type: "tunnel.error",
       title: "CodeShell 公网隧道异常",
       text: typeof detail === "string" ? detail : "公网隧道发生异常。",
@@ -1159,6 +1204,14 @@ async function createWindow(): Promise<BrowserWindow> {
     // and which feature flags are on. The layers below deliberately refuse to
     // default any of it.
     const externalBridge = bridge;
+    // Approvals reach the SAME renderer dialog the native path uses — the
+    // renderer cannot tell which transport a prompt arrived over, so there is
+    // only one approval UI to keep correct.
+    externalRuntimeApprovals = new ExternalRuntimeApprovals({
+      windows: () => mainWindows,
+      ownerWebContentsId: (sessionId) => externalBridge.panelOwnerWebContentsId(sessionId),
+    });
+    const approvals = externalRuntimeApprovals;
     externalRuntimeService = new ExternalRuntimeService({
       featureFlags: () => {
         const cwd = resolveNoRepoCwd();
@@ -1186,6 +1239,8 @@ async function createWindow(): Promise<BrowserWindow> {
       toolContextOverrides: (sessionId) => ({
         panels: externalBridge.panelBridgeForSession(sessionId),
       }),
+      requestApproval: (sessionId, request) => approvals.request(sessionId, request),
+      cancelApprovals: (sessionId) => approvals.cancelSession(sessionId),
     });
 
     // Mirror every worker→renderer line onto any connected mobile clients, so
@@ -1295,6 +1350,9 @@ async function createWindow(): Promise<BrowserWindow> {
       resolve(app.getPath("userData"), "pet", "work-inbox.json"),
     );
     petWorkInboxStore = petWorkInbox;
+    const petHostActionReceipts = new PetHostActionReceiptStore(
+      resolve(app.getPath("userData"), "pet", "host-action-receipts.json"),
+    );
     const petJournalStore = new PetJournalStore(
       resolve(app.getPath("userData"), "pet", "journal.json"),
     );
@@ -1353,7 +1411,15 @@ async function createWindow(): Promise<BrowserWindow> {
           });
           message = enriched.text;
           const completionAttachments = enriched.attachments;
-          gatewayControlServer?.publish({
+          publishGatewayControlEvent({
+            deliveryKey: createHash("sha256")
+              .update("pet-task-closure\0")
+              .update(task.id)
+              .update("\0")
+              .update(String(task.attempt))
+              .update("\0")
+              .update(task.status)
+              .digest("hex"),
             type: completed
               ? "pet.task.completed"
               : cancelled
@@ -1415,60 +1481,12 @@ async function createWindow(): Promise<BrowserWindow> {
       store: petSummaryStore,
       cwd: resolveNoRepoCwd(),
     });
-    type FollowUpSummaryRow = {
-      sessionId: string;
-      title: string;
-      workspace?: string;
-      terminalAt: number;
-      text: string;
-    };
-    const followUpIdForSession = (sessionId: string): string =>
-      `followup-${sessionSelectorId(sessionId)}`;
-    const collectPetFollowUps = async (): Promise<FollowUpSummaryRow[]> => {
-      const completed = aggregator
-        .getSnapshot()
-        .sessions.filter((session) => !session.external && session.terminal?.status === "completed")
-        .sort((left, right) => right.terminal!.at - left.terminal!.at);
-      const rowOf = (
-        session: (typeof completed)[number],
-        terminalAt: number,
-        text: string,
-      ): FollowUpSummaryRow => ({
-        sessionId: session.agentSessionId,
-        title: session.title ?? session.agentSessionId.slice(-8),
-        ...(session.workspaceDisplayName ? { workspace: session.workspaceDisplayName } : {}),
-        terminalAt,
-        text,
-      });
-
-      const MAX_NEW_GENERATIONS = 20;
-      const cachedRows: FollowUpSummaryRow[] = [];
-      const toGenerate: Array<{ session: (typeof completed)[number]; terminalAt: number }> = [];
-      for (const session of completed) {
-        const terminalAt = session.terminal!.at;
-        const cached = petSummaryStore.get(session.agentSessionId);
-        if (cached && cached.terminalAt === terminalAt) {
-          if (cached.text) cachedRows.push(rowOf(session, terminalAt, cached.text));
-          continue;
-        }
-        toGenerate.push({ session, terminalAt });
-      }
-
-      const generated = await mapWithConcurrency(
-        toGenerate.slice(0, MAX_NEW_GENERATIONS),
-        5,
-        async ({ session, terminalAt }) => {
-          const summary = await petSummaryService.summarize(session.agentSessionId, terminalAt);
-          return summary ? rowOf(session, terminalAt, summary.text) : null;
-        },
-      );
-      const rows = [
-        ...cachedRows,
-        ...generated.filter((row): row is FollowUpSummaryRow => row !== null),
-      ];
-      rows.sort((left, right) => right.terminalAt - left.terminalAt);
-      return rows.slice(0, 20);
-    };
+    const petFollowUps = createPetFollowUpService({
+      listSessions: () => aggregator.getSnapshot().sessions,
+      summaryStore: petSummaryStore,
+      summaryService: petSummaryService,
+      inbox: petWorkInbox,
+    });
     petDispatchService = new PetDispatchService({
       metadata: petMetadata,
       aggregator,
@@ -1493,6 +1511,7 @@ async function createWindow(): Promise<BrowserWindow> {
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
       longTasks: longTaskCoordinator,
+      hostActionReceipts: petHostActionReceipts,
       // Atomic CodeShell capabilities Mimi may request via her host-action
       // tools; each runs only after her turn, and the real outcome is folded
       // into the reply. The key set gates which tools the worker exposes.
@@ -1557,15 +1576,7 @@ async function createWindow(): Promise<BrowserWindow> {
           if ((action !== "complete" && action !== "dismiss") || !followUpId) {
             throw new Error("invalid follow-up mutation request");
           }
-          const dismissed = new Set(petWorkInbox.getSnapshot().dismissedIds);
-          const row = (await collectPetFollowUps()).find(
-            (candidate) => followUpIdForSession(candidate.sessionId) === followUpId,
-          );
-          if (!row || dismissed.has(`completed:${row.sessionId}`)) {
-            throw new Error("跟进项不存在或已处理");
-          }
-          petWorkInbox.add([`completed:${row.sessionId}`]);
-          return { action, followUpId, title: row.title };
+          return petFollowUps.mutate({ action, followUpId });
         },
         sessionArchive: async (payload) => {
           if (payload.action !== "archive" || !Array.isArray(payload.sessionIds)) {
@@ -1574,34 +1585,38 @@ async function createWindow(): Promise<BrowserWindow> {
           const selectors = payload.sessionIds.filter(
             (value): value is string => typeof value === "string",
           );
-          // By-id archive must not be limited to a page of recent sessions.
-          const sessions = await listAllDiskSessions();
-          const bySelector = new Map(
-            sessions
-              .filter((session) => session.origin === "desktop")
-              .map((session) => [sessionSelectorId(session.engineSessionId), session] as const),
-          );
-          const archived: string[] = [];
-          for (const selector of selectors) {
-            const session = bySelector.get(selector);
-            if (!session) throw new Error(`Session 不存在或不允许归档：${selector}`);
-            if (session.archivedAt !== undefined) continue;
-            await archiveDiskSession(session.engineSessionId, Date.now());
-            archived.push(selector);
+          if (selectors.length !== payload.sessionIds.length) {
+            throw new Error("invalid session archive request");
           }
-          if (archived.length > 0) await aggregator.refreshCatalog(true, { full: true });
-          return { action: "archive", archived, count: archived.length };
+          return archivePetSessionsBySelector({
+            selectors,
+            // By-id archive must not be limited to a page of recent sessions.
+            listSessions: listAllDiskSessions,
+            archiveSession: archiveDiskSession,
+            refreshCatalog: () => aggregator.refreshCatalog(true, { full: true }),
+          });
         },
         outboundMessage: async (payload) => {
           const targetId = typeof payload.targetId === "string" ? payload.targetId : "";
           const text = typeof payload.text === "string" ? payload.text : "";
-          if (!targetId || !text.trim()) throw new Error("invalid outbound message request");
-          const target = await imGatewayService.sendOwnerMessage(targetId, text);
+          const paths = Array.isArray(payload.attachmentPaths) ? payload.attachmentPaths : [];
+          if (
+            !targetId ||
+            !text.trim() ||
+            paths.length > 4 ||
+            !paths.every((path) => typeof path === "string")
+          ) {
+            throw new Error("invalid outbound message request");
+          }
+          const attachmentMetadata = await inspectKnownReplyAttachments(paths as string[]);
+          const attachments = await materializeOutgoingAttachments(attachmentMetadata);
+          const target = await imGatewayService.sendOwnerMessage(targetId, text, attachments);
           return {
             targetId: target.id,
             channel: target.channel,
             label: target.label,
             accepted: true,
+            ...(attachments.length > 0 ? { attachmentCount: attachments.length } : {}),
           };
         },
         gatewayReply: async (payload) => {
@@ -1621,16 +1636,7 @@ async function createWindow(): Promise<BrowserWindow> {
           ) {
             throw new Error("invalid Gateway reply request");
           }
-          const attachments: GatewayControlEventAttachment[] = [];
-          for (const path of paths as string[]) {
-            const attachment = await inspectKnownReplyAttachment(path);
-            if (!attachment) {
-              throw new Error(
-                `附件不在允许的附件目录内、属于敏感文件、格式无效或超过 10 MB：${path}`,
-              );
-            }
-            attachments.push(attachment);
-          }
+          const attachments = await inspectKnownReplyAttachments(paths as string[]);
           return {
             text,
             ...(button ? { button } : {}),
@@ -1664,25 +1670,16 @@ async function createWindow(): Promise<BrowserWindow> {
         };
       },
       listWorkspaces: () => mobileOrchestrator.projectList(),
-      listFollowUps: async (): Promise<PetFollowUpItem[]> => {
-        const dismissed = new Set(petWorkInbox.getSnapshot().dismissedIds);
-        return (await collectPetFollowUps())
-          .filter((row) => !dismissed.has(`completed:${row.sessionId}`))
-          .map((row) => ({
-            id: followUpIdForSession(row.sessionId),
-            title: row.title,
-            text: row.text,
-            terminalAt: row.terminalAt,
-            sessionSelector: sessionSelectorId(row.sessionId),
-            ...(row.workspace ? { workspace: row.workspace } : {}),
-          }));
-      },
+      listFollowUps: () => petFollowUps.listOpen(),
       listOutboundTargets: async () =>
         imGatewayService.listOwnerMessageTargets().map((target) => ({
           id: target.id,
           channel: target.channel,
           label: target.label,
           maxTextLength: target.maxTextLength,
+          attachments: target.attachments,
+          maxAttachments: target.maxAttachments,
+          maxAttachmentBytes: target.maxAttachmentBytes,
         })),
       replyAttachmentRoots: knownReplyAttachmentCwds,
       // Second-chance lookup for a DelegateWork selector Mimi found via the
@@ -1745,7 +1742,11 @@ async function createWindow(): Promise<BrowserWindow> {
               attachmentKinds: completionTarget.replyAttachmentKinds,
             },
           );
-          gateway.publish({
+          publishGatewayControlEvent({
+            deliveryKey: createHash("sha256")
+              .update("pet-task-report\0")
+              .update(event.reportId)
+              .digest("hex"),
             type: "pet.task.reported",
             title: "Mimi 工作更新",
             text: enriched.text,
@@ -1791,7 +1792,12 @@ async function createWindow(): Promise<BrowserWindow> {
     const petInitialization = (async () => {
       await aggregator.start();
       await externalVisibility.reconcile();
-      await Promise.all([petReceipts.load(), petWorkInbox.load(), petWorkMemory.load()]);
+      await Promise.all([
+        petReceipts.load(),
+        petWorkInbox.load(),
+        petHostActionReceipts.load(),
+        petWorkMemory.load(),
+      ]);
       // Build the topic-segment controller now that the pet session id is
       // resolved. Range archival rides the generic archive_range worker query;
       // dispatch currently passes no turnRange, so it stays dormant.
@@ -1915,7 +1921,7 @@ async function createWindow(): Promise<BrowserWindow> {
       },
       latestResult: createLatestResultCache(petSessionsRootDir),
       summaries: {
-        collect: collectPetFollowUps,
+        collect: () => petFollowUps.collect(),
       },
       journal: {
         list: async () => {
@@ -2387,6 +2393,20 @@ async function inspectKnownReplyAttachment(
   return null;
 }
 
+async function inspectKnownReplyAttachments(
+  paths: readonly string[],
+): Promise<GatewayControlEventAttachment[]> {
+  const attachments: GatewayControlEventAttachment[] = [];
+  for (const path of paths) {
+    const attachment = await inspectKnownReplyAttachment(path);
+    if (!attachment) {
+      throw new Error(`附件不在允许的附件目录内、属于敏感文件、格式无效或超过 10 MB：${path}`);
+    }
+    attachments.push(attachment);
+  }
+  return attachments;
+}
+
 async function cleanupKnownAttachments(sessionId?: string): Promise<void> {
   for (const cwd of await knownAttachmentCwds()) {
     if (sessionId) {
@@ -2532,7 +2552,6 @@ app.whenReady().then(async () => {
     petChat: (request) => dispatchGatewayPetChat(request),
   });
   await gatewayControlServer.start().catch((error) => {
-    gatewayControlServer = undefined;
     dlog("main", "im_gateway.desktop_control.start_failed", { error: String(error) });
   });
 
@@ -2675,6 +2694,10 @@ app.whenReady().then(async () => {
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
       runner: automationRunner,
+      onJobEvent: (event) => {
+        const notification = automationLifecycleNotification(event);
+        if (notification) publishGatewayControlEventBestEffort(notification);
+      },
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);
@@ -3043,6 +3066,87 @@ ipcMain.handle(
   },
 );
 ipcMain.handle("links:listLocalProviders", () => listLocalLinkProviders());
+
+async function persistLocalLinkCredential(input: {
+  cwd: string;
+  providerId: string;
+  methodId: string;
+  label: string;
+  token: string;
+  existingId: string;
+  authSource: "manual-token" | "github-cli";
+}) {
+  const { cwd, providerId, methodId, label, token, existingId, authSource } = input;
+  const credentialId = existingId || `link-${providerId}-${methodId}`;
+  const store = new CredentialStore(cwd || undefined);
+  if (existingId) {
+    const current = store.resolve(existingId, "full");
+    if (
+      !current ||
+      current.type !== "link" ||
+      current.meta?.linkProvider !== providerId ||
+      current.meta.linkConnectionMethod !== methodId ||
+      current.meta.linkExecutionRuntime !== "local"
+    ) {
+      throw new Error("The existing credential does not belong to this local Link provider");
+    }
+  }
+
+  // Validation and save are one main-process operation: the renderer never
+  // receives the token back and an invalid replacement never overwrites the
+  // last working credential.
+  const validation = await validateLocalLinkToken(providerId, token);
+  store.save("user", {
+    id: credentialId,
+    type: "link",
+    label: label || `${providerId} · ${methodId}`,
+    secret: token,
+    autoUseByAI: false,
+    meta: {
+      linkProvider: providerId,
+      linkConnectionMethod: methodId,
+      linkExecutionRuntime: "local",
+      linkAuthSource: authSource,
+      agentExposable: false,
+      linkAccountId: validation.identity.externalAccountId,
+      linkAccountLabel: validation.identity.label,
+      linkResourceLabels: validation.identity.resourceLabels,
+      linkCapabilityIds: validation.capabilityIds,
+      linkLastVerifiedAt: validation.verifiedAt,
+    },
+  });
+  bridge?.pushCredentialSnapshot(cwd || undefined);
+  return validation;
+}
+
+ipcMain.handle("links:githubCliStatus", () => getGitHubCliLinkStatus());
+ipcMain.handle("links:connectGithubCli", async (_e, raw: unknown) => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("links:connectGithubCli requires a connection request");
+  }
+  const input = raw as Record<string, unknown>;
+  const cwd = typeof input.cwd === "string" ? input.cwd : "";
+  const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
+  const label = typeof input.label === "string" ? input.label.trim() : "";
+  const existingId = typeof input.existingId === "string" ? input.existingId.trim() : "";
+  const loginIfNeeded = input.loginIfNeeded === true;
+  if (methodId !== "fine-grained-pat") {
+    throw new Error("Invalid GitHub local Link connection method");
+  }
+  if (label.length > 200) throw new Error("Connection label is too long");
+
+  const result = await obtainGitHubCliToken({ loginIfNeeded });
+  return persistLocalLinkCredential({
+    cwd,
+    providerId: "github",
+    methodId,
+    label: label || `GitHub · ${result.account ?? "GitHub CLI"}`,
+    token: result.token,
+    existingId,
+    authSource: "github-cli",
+  });
+});
+
 ipcMain.handle("links:connectLocal", async (_e, raw: unknown) => {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error("links:connectLocal requires a connection request");
@@ -3063,44 +3167,15 @@ ipcMain.handle("links:connectLocal", async (_e, raw: unknown) => {
   if (label.length > 200) throw new Error("Connection label is too long");
   if (token.length > 16_384) throw new Error("Token is too long");
 
-  const credentialId = existingId || `link-${providerId}-${methodId}`;
-  const store = new CredentialStore(cwd || undefined);
-  if (existingId) {
-    const current = store.resolve(existingId, "full");
-    if (
-      !current ||
-      current.type !== "link" ||
-      current.meta?.linkProvider !== providerId ||
-      current.meta.linkConnectionMethod !== methodId ||
-      current.meta.linkExecutionRuntime !== "local"
-    ) {
-      throw new Error("The existing credential does not belong to this local Link provider");
-    }
-  }
-  // Validation and save are one main-process operation: the renderer never
-  // receives the token back and an invalid replacement never overwrites the
-  // last working credential.
-  const validation = await validateLocalLinkToken(providerId, token);
-  store.save("user", {
-    id: credentialId,
-    type: "link",
-    label: label || `${providerId} · ${methodId}`,
-    secret: token,
-    autoUseByAI: false,
-    meta: {
-      linkProvider: providerId,
-      linkConnectionMethod: methodId,
-      linkExecutionRuntime: "local",
-      agentExposable: false,
-      linkAccountId: validation.identity.externalAccountId,
-      linkAccountLabel: validation.identity.label,
-      linkResourceLabels: validation.identity.resourceLabels,
-      linkCapabilityIds: validation.capabilityIds,
-      linkLastVerifiedAt: validation.verifiedAt,
-    },
+  return persistLocalLinkCredential({
+    cwd,
+    providerId,
+    methodId,
+    label,
+    token,
+    existingId,
+    authSource: "manual-token",
   });
-  bridge?.pushCredentialSnapshot(cwd || undefined);
-  return validation;
 });
 // 只改元数据(label/autoUseByAI/meta),保留 secret —— UI 的编辑/AI 开关用,避免清空 jar。
 ipcMain.handle(
@@ -4658,6 +4733,28 @@ ipcMain.handle("externalRuntime:interrupt", async (_e, sessionId: unknown) => {
   if (typeof sessionId !== "string") throw new Error("sessionId is required");
   await externalRuntimeService?.interrupt(sessionId);
 });
+
+/** The renderer answering a prompt this session's runtime is parked on. */
+ipcMain.on(
+  "externalRuntime:approvalDecision",
+  (_e, payload: { requestId?: unknown; approved?: unknown; [key: string]: unknown }) => {
+    const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
+    if (!requestId) return;
+    externalRuntimeApprovals?.settle(requestId, {
+      approved: payload?.approved === true,
+      ...(typeof payload?.reason === "string" ? { reason: payload.reason } : {}),
+      ...(typeof payload?.answer === "string" ? { answer: payload.answer } : {}),
+      ...(payload?.scope === "once" || payload?.scope === "session" || payload?.scope === "project"
+        ? { scope: payload.scope }
+        : {}),
+      ...(payload?.pathScope === "file" ||
+      payload?.pathScope === "dir" ||
+      payload?.pathScope === "tool"
+        ? { pathScope: payload.pathScope }
+        : {}),
+    });
+  },
+);
 
 ipcMain.handle("externalRuntime:stop", async (_e, sessionId: unknown) => {
   if (typeof sessionId !== "string") throw new Error("sessionId is required");
