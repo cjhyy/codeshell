@@ -47,6 +47,21 @@ export interface ExternalRuntimeRunResult {
  * Keyed by session id. `start` is idempotent in the service (it closes and
  * replaces), which is exactly what must NOT happen mid-conversation: a restart
  * would drop the runtime's own thread and the user would silently lose history.
+ *
+ * ## Deliberately in-memory: what an app restart does
+ *
+ * The model CHOICE survives a restart (`modelOverrides` is persisted to
+ * localStorage), so reopening the session still routes to Codex. What does not
+ * survive is the runtime's own conversation thread — this map is empty, so the
+ * next turn starts a fresh backend and the model no longer remembers the
+ * earlier exchange, even though CodeShell's transcript still displays it.
+ *
+ * That gap is not fixable by persisting this map: the runtime processes are
+ * gone too, and only Claude Code exposes a resume handle (`--resume`), which is
+ * itself scoped to a live process. Genuine cross-restart resume needs the
+ * runtime session id durably stored and re-attached at startup — ADR 1 in the
+ * design doc. Until then the honest behaviour is a clean restart rather than a
+ * silently truncated context, which is what this does.
  */
 const startedSessions = new Map<string, string>();
 

@@ -123,13 +123,32 @@ Bash "rm -rf …"           → 拒绝(无审批后端可问)
 Write 工作区外            → 拒绝(路径策略)
 ```
 
+### 审批已接进现有弹窗
+
+外部审批并入 preload 现有的 `approvalListeners`,renderer 收到同样的
+`{sessionId, requestId, request}` 信封、渲染**同一个弹窗**、用同一个
+`approve(...)` 回答。只有底下的传输不同 —— 外部会话没有 worker 可以接收
+`agent/approve`,所以在 preload 里拦截并转给 main。**只有一个审批 UI**,
+不会各自漂移。
+
+所有「问不到」的路径一律拒绝:没有窗口、超时(10 分钟,`unref` 不阻止
+退出)、会话关闭时清空。实测审批确实改变行为,不只是弹出来:
+
+```
+批准 rm -rf → 执行
+拒绝 rm -rf → Permission denied by user for tool: Bash
+```
+
 ### 仍未做
 
-- **审批 UI**:上面第 2、3 行的「拒绝」目前是静默的。安全方向对,但用户
-  看到的是「Codex 干不了这个」而不是一个审批弹窗。接进现有审批弹窗是
-  下一步,不影响安全性,只影响可用性。
-- **会话持久化**:`runtimeKind` / runtime session id 尚未落盘,进程重启
-  后接不回原来的 runtime 线程(第 24 节 ADR 1)。
+- **跨重启 resume**:模型**选择**会持久化(`modelOverrides` 存在
+  localStorage),重开会话仍然路由到 Codex;但 runtime 自己的对话线程不会
+  —— 下一轮会开一个干净的后端,模型不记得之前的交流,尽管 CodeShell 的
+  transcript 仍然显示着。这个缺口不是「把那个 map 持久化」能补的:runtime
+  进程也没了,而且只有 Claude Code 暴露 resume 句柄(`--resume`),它本身
+  也只在进程存活期内有效。真正的跨重启 resume 需要把 runtime session id
+  落盘并在启动时重新附着 —— 第 24 节 ADR 1。当前行为是**干净重启**而不是
+  静默截断上下文,这是两者中诚实的那个。
 - **Room / DriveAgent 复用**同一 Factory;现有 CLI adapter 未动。
 
 ## 0. v2 修订说明
