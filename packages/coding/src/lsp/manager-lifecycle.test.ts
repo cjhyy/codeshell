@@ -85,6 +85,44 @@ describe("LSP manager registry", () => {
     expect(getLSPManager()).toBeUndefined();
   });
 
+  test("the live workspace set is bounded — oldest are evicted", () => {
+    // Per-workspace managers fixed the single-cwd bug but made the map
+    // unbounded: a long session touching many worktrees would keep a language
+    // server per root alive forever.
+    const roots = Array.from({ length: 6 }, () => workspace());
+    for (const root of roots) getLSPManager(root);
+
+    const live = roots.filter((root) => getLSPManager(root, { create: false }) !== undefined);
+    expect(live.length).toBeLessThanOrEqual(4);
+    // The most recently used ones survive.
+    expect(getLSPManager(roots[5]!, { create: false })).toBeDefined();
+    expect(getLSPManager(roots[0]!, { create: false })).toBeUndefined();
+  });
+
+  test("recency is refreshed on read, so an active workspace is not evicted", () => {
+    const roots = Array.from({ length: 4 }, () => workspace());
+    for (const root of roots) getLSPManager(root);
+
+    // Keep using the OLDEST one, then push the set past the cap.
+    const keepAlive = roots[0]!;
+    expect(getLSPManager(keepAlive, { create: false })).toBeDefined();
+    getLSPManager(workspace());
+    getLSPManager(workspace());
+
+    // It survived because reads count as use; without that it would have been
+    // the first victim purely for having been created earliest.
+    expect(getLSPManager(keepAlive, { create: false })).toBeDefined();
+  });
+
+  test("an evicted workspace simply rebuilds on next use", () => {
+    const roots = Array.from({ length: 6 }, () => workspace());
+    for (const root of roots) getLSPManager(root);
+    const evicted = roots[0]!;
+    expect(getLSPManager(evicted, { create: false })).toBeUndefined();
+    // Cold start, not an error.
+    expect(getLSPManager(evicted)).toBeDefined();
+  });
+
   test("a fresh manager reports its servers as stopped, not connected", () => {
     const manager = getLSPManager(workspace())!;
     expect(manager.isConnected()).toBe(false);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -283,6 +283,43 @@ describe("attachment durability", () => {
       : [];
     expect(pending).toHaveLength(0);
     queue.stop();
+  });
+
+
+  test("orphaned spool files are reclaimed on startup", async () => {
+    // discardSpool covers the normal path, but bytes can still be orphaned: a
+    // crash between writing them and persisting the record, or the
+    // oversized-attachment fallback that abandons what it already wrote.
+    // Nothing else ever looks in that directory, so without a sweep it only grows.
+    const path = inboxPath();
+    const spoolDir = `${path}.attachments`;
+
+    const first = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0 },
+      async () => undefined,
+      () => undefined,
+    );
+    await first.start();
+    await first.enqueue("line:0", withAttachment("m-keep", [1, 2, 3]));
+    first.stop();
+
+    // Simulate leftovers from a crashed run.
+    writeFileSync(join(spoolDir, "orphan-a.0"), "stale");
+    writeFileSync(join(spoolDir, "orphan-b.0"), "stale");
+    expect(readdirSync(spoolDir)).toHaveLength(3);
+
+    const second = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0 },
+      async () => undefined,
+      () => undefined,
+    );
+    await second.start();
+
+    // Only the file the surviving record points at remains.
+    const remaining = readdirSync(spoolDir);
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]).not.toContain("orphan");
+    second.stop();
   });
 
   test("text-only messages are unaffected", async () => {

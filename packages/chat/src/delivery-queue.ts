@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { ChannelMessage } from "./channel.js";
 
@@ -102,7 +102,11 @@ export class DeliveryQueue {
 
   async start(): Promise<void> {
     this.stopped = false;
-    if (this.config.path) await this.load();
+    if (this.config.path) {
+      await this.load();
+      // Reclaim spool files no surviving record points at.
+      await this.sweepOrphanedSpool();
+    }
     this.pump();
   }
 
@@ -295,6 +299,37 @@ export class DeliveryQueue {
       size: entry.size,
       load: async () => new Uint8Array(await readFile(`${dir}/${entry.file}`)),
     }));
+  }
+
+  /**
+   * Delete spool files that no pending record references.
+   *
+   * `discardSpool` covers the normal path, but files can still be orphaned: a
+   * crash between writing the bytes and persisting the record, or the
+   * oversized-attachment fallback that spools nothing yet may have written
+   * earlier attachments of the same message. Without this the directory only
+   * grows, since nothing else ever looks at it.
+   *
+   * Runs once at load(), when the set of live records is exactly known.
+   */
+  private async sweepOrphanedSpool(): Promise<void> {
+    const dir = this.spoolDir();
+    if (!dir) return;
+    const referenced = new Set<string>();
+    for (const entry of this.pending) {
+      for (const attachment of entry.spooled ?? []) referenced.add(attachment.file);
+    }
+    let files: string[];
+    try {
+      files = await readdir(dir);
+    } catch {
+      return; // No spool directory yet — nothing to sweep.
+    }
+    await Promise.all(
+      files
+        .filter((file) => !referenced.has(file))
+        .map((file) => rm(`${dir}/${file}`, { force: true }).catch(() => undefined)),
+    );
   }
 
   /** Delete a record's spooled files once it will never be delivered again. */

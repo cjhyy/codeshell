@@ -187,13 +187,51 @@ function isExecutableFile(filePath: string): boolean {
  * a language server is rooted at exactly one directory.
  */
 const managers = new Map<string, LSPServerManager>();
+/**
+ * Use order, as a monotonic counter rather than a clock.
+ *
+ * `Date.now()` has millisecond resolution, so several workspaces touched in the
+ * same tick would tie and the LRU sort would pick an arbitrary victim — possibly
+ * the one being actively used.
+ */
+const useOrder = new Map<string, number>();
+let useTick = 0;
+
+/**
+ * Most workspaces to keep language servers alive for at once.
+ *
+ * Per-workspace managers removed the single-cwd bug, but replaced it with a map
+ * that only ever grows: a long-lived Desktop session that touches many
+ * worktrees would accumulate a language server per root. Evicting the
+ * least-recently-used keeps the process bounded — an evicted workspace simply
+ * pays a cold start the next time it is used.
+ */
+const MAX_LIVE_WORKSPACES = 4;
 
 export function initializeLSPManager(cwd: string): LSPServerManager {
+  useOrder.set(cwd, ++useTick);
   const existing = managers.get(cwd);
   if (existing) return existing;
   const created = new LSPServerManager(cwd);
   managers.set(cwd, created);
+  evictLeastRecentlyUsed();
   return created;
+}
+
+/** Shut down the oldest workspaces once the live set exceeds its cap. */
+function evictLeastRecentlyUsed(): void {
+  if (managers.size <= MAX_LIVE_WORKSPACES) return;
+  const ordered = [...managers.keys()].sort(
+    (left, right) => (useOrder.get(left) ?? 0) - (useOrder.get(right) ?? 0),
+  );
+  for (const cwd of ordered.slice(0, managers.size - MAX_LIVE_WORKSPACES)) {
+    const manager = managers.get(cwd);
+    managers.delete(cwd);
+    useOrder.delete(cwd);
+    // Fire-and-forget: eviction must not make the caller wait on a shutdown
+    // handshake with a server it is no longer using.
+    void manager?.shutdownAll().catch(() => undefined);
+  }
 }
 
 /**
@@ -213,7 +251,13 @@ export function getLSPManager(
     return managers.size === 1 ? [...managers.values()][0] : undefined;
   }
   const existing = managers.get(cwd);
-  if (existing || options.create === false) return existing;
+  if (existing) {
+    // Refresh recency on READ too — a workspace being actively used must not be
+    // the LRU victim just because it was created long ago.
+    useOrder.set(cwd, ++useTick);
+    return existing;
+  }
+  if (options.create === false) return undefined;
   return initializeLSPManager(cwd);
 }
 
@@ -222,6 +266,7 @@ export async function shutdownLSPManager(cwd: string): Promise<void> {
   const manager = managers.get(cwd);
   if (!manager) return;
   managers.delete(cwd);
+  useOrder.delete(cwd);
   await manager.shutdownAll();
 }
 
@@ -229,5 +274,6 @@ export async function shutdownLSPManager(cwd: string): Promise<void> {
 export async function shutdownAllLSPManagers(): Promise<void> {
   const all = [...managers.values()];
   managers.clear();
+  useOrder.clear();
   await Promise.all(all.map((manager) => manager.shutdownAll()));
 }
