@@ -120,7 +120,8 @@ export class AccessPasscode {
    * HTTP gate. Returns true (allow) when the request carries a valid remember
    * token (cookie) or the correct passcode (query/header); on a fresh correct
    * passcode it also sets the remember cookie so the phone is not re-challenged.
-   * Returns false and writes a 401 challenge otherwise — the caller must stop.
+   * Returns false after writing either a redirect or a 401 challenge — the
+   * caller must stop in both cases.
    */
   gate(req: GateRequest, res: GateResponse): boolean {
     if (!this.isSet()) {
@@ -147,6 +148,18 @@ export class AccessPasscode {
           // because the tunnel terminates TLS (always https).
           `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`,
         );
+        const cleanLocation = acceptsHtml(req) ? locationWithoutPasscode(req.url) : undefined;
+        if (cleanLocation) {
+          // The HTML challenge has a no-query JavaScript path below, but keep a
+          // server-side redirect as a no-JS fallback. Never render the app while
+          // the plaintext passcode is still visible in the navigation URL.
+          res.writeHead(303, {
+            Location: cleanLocation,
+            "Cache-Control": "no-store",
+          });
+          res.end();
+          return false;
+        }
         return true;
       }
       wrongAttempt = true;
@@ -263,6 +276,18 @@ function acceptsHtml(req: GateRequest): boolean {
   return typeof value === "string" && value.includes("text/html");
 }
 
+function locationWithoutPasscode(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  const qIdx = url.indexOf("?");
+  if (qIdx < 0) return undefined;
+  const path = url.slice(0, qIdx) || "/";
+  const params = new URLSearchParams(url.slice(qIdx + 1));
+  if (!params.has("passcode")) return undefined;
+  params.delete("passcode");
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -284,10 +309,7 @@ function challengePage(url: string | undefined, wrong: boolean, locked: boolean)
   const params = new URLSearchParams(qIdx >= 0 ? url!.slice(qIdx + 1) : "");
   params.delete("passcode");
   const hidden = [...params.entries()]
-    .map(
-      ([k, v]) =>
-        `<input type="hidden" name="${escapeHtml(k)}" value="${escapeHtml(v)}">`,
-    )
+    .map(([k, v]) => `<input type="hidden" name="${escapeHtml(k)}" value="${escapeHtml(v)}">`)
     .join("");
   const note = locked
     ? "尝试过多,已临时锁定,请稍后再试。"
@@ -317,9 +339,35 @@ function challengePage(url: string | undefined, wrong: boolean, locked: boolean)
   <h1>手机遥控</h1>
   <p class="${wrong || locked ? "err" : ""}">${note}</p>
   ${hidden}
-  <input type="password" name="passcode" placeholder="访问口令" autofocus required ${locked ? "disabled" : ""}>
+  <input id="passcode" type="password" name="passcode" placeholder="访问口令" autofocus required ${locked ? "disabled" : ""}>
   <button type="submit" ${locked ? "disabled" : ""}>进入</button>
-</form></body></html>`;
+</form>
+<script>
+  const form = document.querySelector("form");
+  const input = document.querySelector("#passcode");
+  const note = document.querySelector("p");
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const value = input?.value ?? "";
+    if (!value) return;
+    try {
+      const response = await fetch(window.location.href, {
+        headers: { "X-Access-Passcode": value, Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        if (note) note.textContent = "口令不正确或尝试过多，请稍后重试。";
+        if (note) note.className = "err";
+        if (input) input.value = "";
+        return;
+      }
+      window.location.replace(${JSON.stringify(path + (params.size ? `?${params.toString()}` : ""))});
+    } catch {
+      if (note) note.textContent = "连接失败，请重试。";
+      if (note) note.className = "err";
+    }
+  });
+</script></body></html>`;
 }
 
 /** Constant-time hex comparison that tolerates length mismatch. */

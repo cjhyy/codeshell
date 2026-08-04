@@ -114,11 +114,26 @@ async function boot(options: { seedSession?: boolean } = {}): Promise<HeadlessSe
   return server;
 }
 
+async function authenticate(server: HeadlessServer): Promise<string> {
+  const response = await fetch(`${server.url}/?passcode=${PASSCODE}`, {
+    headers: { accept: "text/html" },
+    redirect: "manual",
+  });
+  expect(response.status).toBe(303);
+  expect(response.headers.get("location")).toBe("/");
+  const cookie = (response.headers.get("set-cookie") ?? "").split(";")[0]!;
+  expect(cookie).toContain("cs_access=");
+  return cookie;
+}
+
 function wsUrl(server: HeadlessServer): string {
   return `${server.url.replace(/^http/, "ws")}/ws`;
 }
 
-async function openWs(server: HeadlessServer, headers?: Record<string, string>): Promise<WebSocket> {
+async function openWs(
+  server: HeadlessServer,
+  headers?: Record<string, string>,
+): Promise<WebSocket> {
   const ws = new WebSocket(wsUrl(server), { headers });
   // Swallow late error emissions (a rejected upgrade fires 'unexpected-response'
   // AND 'error' when the socket dies) so they never become unhandled.
@@ -126,12 +141,17 @@ async function openWs(server: HeadlessServer, headers?: Record<string, string>):
   await new Promise<void>((resolve, reject) => {
     ws.once("open", () => resolve());
     ws.once("error", (e) => reject(e instanceof Error ? e : new Error(String(e))));
-    ws.once("unexpected-response", (_req, res) => reject(new Error(`upgrade rejected: ${res.statusCode}`)));
+    ws.once("unexpected-response", (_req, res) =>
+      reject(new Error(`upgrade rejected: ${res.statusCode}`)),
+    );
   });
   return ws;
 }
 
-function nextMessage(ws: WebSocket, predicate?: (msg: Record<string, unknown>) => boolean): Promise<Record<string, unknown>> {
+function nextMessage(
+  ws: WebSocket,
+  predicate?: (msg: Record<string, unknown>) => boolean,
+): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("timed out waiting for ws message")), 5_000);
     const onMsg = (data: unknown): void => {
@@ -155,16 +175,15 @@ describe("headless serve — HTTP gate + static", () => {
 
   test("correct passcode unlocks the static app and sets a remember cookie", async () => {
     const server = await boot();
-    const res = await fetch(`${server.url}/?passcode=${PASSCODE}`, { headers: { accept: "text/html" } });
+    const cookie = await authenticate(server);
+    const res = await fetch(`${server.url}/`, { headers: { cookie, accept: "text/html" } });
     expect(res.status).toBe(200);
     expect(await res.text()).toContain("ROOT_OK");
-    expect(res.headers.get("set-cookie") ?? "").toContain("cs_access=");
   });
 
   test("remember cookie works for subsequent asset requests; traversal is blocked", async () => {
     const server = await boot();
-    const first = await fetch(`${server.url}/?passcode=${PASSCODE}`, { headers: { accept: "text/html" } });
-    const cookie = (first.headers.get("set-cookie") ?? "").split(";")[0]!;
+    const cookie = await authenticate(server);
     const asset = await fetch(`${server.url}/app.js`, { headers: { cookie } });
     expect(asset.status).toBe(200);
     const evil = await fetch(`${server.url}/..%2f..%2fetc%2fpasswd`, { headers: { cookie } });
@@ -173,9 +192,10 @@ describe("headless serve — HTTP gate + static", () => {
 
   test("unknown paths fall back to index.html (SPA routing) once authenticated", async () => {
     const server = await boot();
-    const first = await fetch(`${server.url}/?passcode=${PASSCODE}`, { headers: { accept: "text/html" } });
-    const cookie = (first.headers.get("set-cookie") ?? "").split(";")[0]!;
-    const spa = await fetch(`${server.url}/sessions/abc`, { headers: { cookie, accept: "text/html" } });
+    const cookie = await authenticate(server);
+    const spa = await fetch(`${server.url}/sessions/abc`, {
+      headers: { cookie, accept: "text/html" },
+    });
     expect(spa.status).toBe(200);
     expect(await spa.text()).toContain("ROOT_OK");
   });
@@ -193,7 +213,9 @@ describe("headless serve — WS pipe", () => {
   test("request frames round-trip through the worker; responses come back", async () => {
     const server = await boot();
     const ws = await openWs(server, { "x-access-passcode": PASSCODE });
-    ws.send(JSON.stringify({ jsonrpc: "2.0", id: "r1", method: "agent/run", params: { task: "hi" } }));
+    ws.send(
+      JSON.stringify({ jsonrpc: "2.0", id: "r1", method: "agent/run", params: { task: "hi" } }),
+    );
     const reply = await nextMessage(ws, (m) => m.id === "r1");
     expect(reply.result).toEqual({ echo: { task: "hi", cwd: dir } });
     ws.close();
@@ -202,7 +224,14 @@ describe("headless serve — WS pipe", () => {
   test("session queries are persisted, workspace-scoped, and include a readable preview", async () => {
     const server = await boot({ seedSession: true });
     const ws = await openWs(server, { "x-access-passcode": PASSCODE });
-    ws.send(JSON.stringify({ jsonrpc: "2.0", id: "s1", method: "agent/query", params: { type: "sessions" } }));
+    ws.send(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "s1",
+        method: "agent/query",
+        params: { type: "sessions" },
+      }),
+    );
     const listReply = await nextMessage(ws, (m) => m.id === "s1");
     expect(listReply.result).toEqual({
       type: "sessions",
@@ -219,12 +248,14 @@ describe("headless serve — WS pipe", () => {
       ],
     });
 
-    ws.send(JSON.stringify({
-      jsonrpc: "2.0",
-      id: "s2",
-      method: "agent/query",
-      params: { type: "session_detail", sessionId: "session-in-workspace" },
-    }));
+    ws.send(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "s2",
+        method: "agent/query",
+        params: { type: "session_detail", sessionId: "session-in-workspace" },
+      }),
+    );
     const detailReply = await nextMessage(ws, (m) => m.id === "s2");
     expect((detailReply.result as { type: string }).type).toBe("session_detail");
     ws.close();
@@ -251,7 +282,14 @@ describe("headless serve — WS pipe", () => {
     const server = await boot();
     const ws = await openWs(server, { "x-access-passcode": PASSCODE });
     ws.send("not json at all");
-    ws.send(JSON.stringify({ jsonrpc: "2.0", id: "r2", method: "agent/query", params: { type: "tools" } }));
+    ws.send(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "r2",
+        method: "agent/query",
+        params: { type: "tools" },
+      }),
+    );
     const reply = await nextMessage(ws, (m) => m.id === "r2");
     expect(reply.result).toEqual({ echo: { type: "tools" } });
     ws.close();

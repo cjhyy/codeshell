@@ -80,7 +80,7 @@ describe("AccessPasscode", () => {
   });
 
   test("a successful verify resets the failure counter", () => {
-    let now = 1_000_000;
+    const now = 1_000_000;
     const ap = new AccessPasscode({
       filePath: freshFile(),
       now: () => now,
@@ -142,6 +142,22 @@ describe("AccessPasscode", () => {
     expect(setCookie).toContain("HttpOnly");
   });
 
+  test("gate: browser query auth redirects to the same URL without the plaintext passcode", () => {
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("correct");
+    const { req, res } = fakeReqRes({
+      url: "/mobile?pairing=tok123&passcode=correct",
+    });
+    req.headers.accept = "text/html";
+
+    expect(ap.gate(req, res)).toBe(false);
+    expect(res.statusCode).toBe(303);
+    expect(res.headers.Location).toBe("/mobile?pairing=tok123");
+    expect(res.headers["Cache-Control"]).toBe("no-store");
+    expect(String(res.headers["set-cookie"] ?? res.headers["Set-Cookie"])).toContain("cs_access=");
+    expect(res.ended).toBe(true);
+  });
+
   test("gate: a correct passcode in the x-access-passcode header allows", () => {
     const ap = new AccessPasscode({ filePath: freshFile() });
     ap.set("correct");
@@ -172,6 +188,7 @@ describe("AccessPasscode", () => {
     // a real input the user can submit
     expect(res.body).toContain("<form");
     expect(res.body).toContain('name="passcode"');
+    expect(res.body).toContain('"X-Access-Passcode"');
     // must preserve the pairing token so submitting the passcode keeps it
     expect(res.body).toContain("tok123");
   });
