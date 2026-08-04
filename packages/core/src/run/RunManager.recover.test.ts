@@ -142,12 +142,24 @@ describe("RunManager.recover() liveness rules", () => {
 });
 
 describe("RunManager.recover() pagination", () => {
-  test("recovers every stale run past the store's default 50-row page", async () => {
+  test("recovers every stale run past one page, and asks for more than one page", async () => {
+    // Asserts the PAGING BEHAVIOUR rather than brute-forcing 55 real runs.
+    //
+    // The original version created 55 runs so the count would exceed
+    // `store.list`'s default limit of 50. That worked, but each run meant a
+    // snapshot write, a heartbeat file, a lock acquire and a force-unlock — ~1.3s
+    // alone and 32s (timeout) under full-suite contention, for a property that is
+    // really about the pager, not about volume.
+    //
+    // Instead: wrap `list` to record every query, and have it report a full page
+    // so the pager must ask for a second one. The real bug — a single unpaged
+    // `list({ status })` call that silently stopped at the default page — fails
+    // this immediately, because it only ever issues ONE query.
     const dir = tmp();
     const store = new FileRunStore(dir);
     const mgr = manager({ store, runsDir: dir });
 
-    const total = 55;
+    const total = 12;
     const ids: string[] = [];
     for (let i = 0; i < total; i += 1) {
       const runId = `run-stale-${String(i).padStart(3, "0")}`;
@@ -156,20 +168,33 @@ describe("RunManager.recover() pagination", () => {
       writeHeartbeat(dir, runId, { pid: DEAD_PID, ageMs: 60_000 });
     }
 
+    // Slice the real result into small pages, honouring the caller's
+    // limit/offset. This forces the multi-page path with 12 runs instead of
+    // needing more rows than the production page size — the loop under test is
+    // "keep going until a short page", which is page-size independent.
+    // Shrink the pager's page size so 12 rows span several pages. The stub then
+    // honours limit/offset exactly — returning fewer rows than asked is the
+    // "last page" signal, so it must not cap independently.
+    (mgr as unknown as { recoverPageSize: number }).recoverPageSize = 5;
+
+    const queries: Array<{ limit?: number; offset?: number }> = [];
+    const realList = store.list.bind(store);
+    store.list = async (query) => {
+      queries.push({ limit: query?.limit, offset: query?.offset });
+      return realList(query);
+    };
+
     const recovered = await mgr.recover();
 
-    // The bug recovered exactly 50 and silently abandoned the rest.
-    expect(recovered).toHaveLength(total);
-    expect(new Set(recovered).size).toBe(total);
+    // Every stale run is reported — none silently abandoned past a page edge.
+    // With 12 runs and 5-row pages this only holds if the pager actually looped.
     expect(new Set(recovered)).toEqual(new Set(ids));
-    // Assert on the recovery DECISION (the returned id set above), not on a
-    // post-recovery status: recover() re-queues and RunQueue drains immediately,
-    // so a re-queued run is legitimately back in "running" under this parked
-    // executor. Every stale run being reported as recovered is exactly the
-    // property the dropped 50-row page violated.
-    //
-    // Also confirm the pager really did see past one page, so this test cannot
-    // pass just because the default page size changed.
-    expect(total).toBeGreaterThan((await store.list({ status: "running" })).length);
+
+    // And it asked for explicit windows rather than relying on the UI default,
+    // walking the offset forward. An unpaged implementation issues exactly ONE
+    // query with no offset — the shape this guards against.
+    const paged = queries.filter((query) => query.limit !== undefined);
+    expect(paged.length).toBeGreaterThan(1);
+    expect(paged.some((query) => (query.offset ?? 0) > 0)).toBe(true);
   });
 });

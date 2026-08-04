@@ -94,6 +94,14 @@ export class RunManager {
   private readonly runner: RunExecutor;
   private readonly lock: RunLock;
   private readonly heartbeat: Heartbeat;
+  /**
+   * Page size for crash-recovery scans (see listAllByStatus).
+   *
+   * Deliberately NOT a constructor option: hosts have no reason to tune it, and
+   * exposing it would invite a caller to re-introduce the UI's 50-row default.
+   * Tests override it to exercise the multi-page loop cheaply.
+   */
+  private recoverPageSize = 200;
   private readonly evaluator: Evaluator;
   private readonly defaultTags: string[];
   private readonly defaultMetadata: Record<string, unknown>;
@@ -482,7 +490,9 @@ export class RunManager {
    * that ignores `offset` — without it a buggy store would loop forever.
    */
   private async listAllByStatus(status: RunStatus): Promise<RunSnapshot[]> {
-    const pageSize = 200;
+    // Overridable so a test can force the multi-page path without creating more
+    // rows than the production page size (which cost ~30s under load).
+    const pageSize = this.recoverPageSize;
     const maxPages = 10_000;
     const all: RunSnapshot[] = [];
     const seen = new Set<string>();
