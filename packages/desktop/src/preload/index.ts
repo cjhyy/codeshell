@@ -452,6 +452,17 @@ ipcRenderer.on("externalRuntime:event", (_e, payload: { sessionId?: unknown; eve
  * `agent/approve`.
  */
 const externalApprovalIds = new Set<string>();
+
+/**
+ * Sessions currently backed by an external runtime.
+ *
+ * `cancel()` (the Stop button) normally sends `agent/cancel` to the worker.
+ * An external session has no worker, so without this the button is a silent
+ * no-op — the model keeps streaming and Stop looks broken. Recording the
+ * session here lets `cancel` route to the runtime's own interrupt instead,
+ * which keeps the renderer's Stop handler untouched.
+ */
+const externalRuntimeSessions = new Set<string>();
 ipcRenderer.on(
   "externalRuntime:approvalRequest",
   (_e, payload: { sessionId?: unknown; requestId?: unknown; request?: unknown }) => {
@@ -502,7 +513,17 @@ contextBridge.exposeInMainWorld("codeshell", {
    * multi-session worker; legacy callers that omitted it routed through
    * the (now-removed) single-flag path — multi-session always wants the id.
    */
-  cancel: (sessionId?: string) => rpc("agent/cancel", { sessionId }),
+  cancel: (sessionId?: string) => {
+    // The Stop button. An external-runtime session has no worker to receive
+    // `agent/cancel`, so routing it there would make Stop a silent no-op while
+    // the model kept streaming. Interrupting the runtime is the equivalent
+    // action, and intercepting here keeps the renderer's Stop handler identical
+    // for both backends.
+    if (sessionId && externalRuntimeSessions.has(sessionId)) {
+      return ipcRenderer.invoke("externalRuntime:interrupt", sessionId);
+    }
+    return rpc("agent/cancel", { sessionId });
+  },
   /**
    * Steer an in-flight run: queue a user message that the running turn loop
    * splices into its NEXT step — 不打断 (vs cancel, which aborts). For 引导 (gentle
@@ -1483,14 +1504,23 @@ contextBridge.exposeInMainWorld("codeshell", {
       cwd: string;
       modelKey: string;
     }): Promise<{ kind: string; runtimeSessionId: string | null; tools: string[] }> =>
-      ipcRenderer.invoke("externalRuntime:start", payload),
+      ipcRenderer
+        .invoke("externalRuntime:start", payload)
+        .then((result: { kind: string; runtimeSessionId: string | null; tools: string[] }) => {
+          // Remember it so `cancel()` (Stop) knows to interrupt the runtime
+          // rather than sending agent/cancel to a worker that does not exist.
+          externalRuntimeSessions.add(payload.sessionId);
+          return result;
+        }),
     /** Send one user turn. Resolves when the turn completes. */
     send: (payload: { sessionId: string; text: string }): Promise<void> =>
       ipcRenderer.invoke("externalRuntime:send", payload),
     interrupt: (sessionId: string): Promise<void> =>
       ipcRenderer.invoke("externalRuntime:interrupt", sessionId),
-    stop: (sessionId: string): Promise<void> =>
-      ipcRenderer.invoke("externalRuntime:stop", sessionId),
+    stop: (sessionId: string): Promise<void> => {
+      externalRuntimeSessions.delete(sessionId);
+      return ipcRenderer.invoke("externalRuntime:stop", sessionId);
+    },
   },
   /** Probe common localhost dev-server ports via real TCP connect in main.
    *  Returns the open ports (ascending). Pass a custom candidate list or omit

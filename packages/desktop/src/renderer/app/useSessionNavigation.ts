@@ -41,6 +41,7 @@ import type { MessagesReducerState } from "../types";
 import type { RunSummary } from "../../preload/types";
 import type { ViewState } from "../view";
 import { revealSidebarProject } from "../sidebarSessionVisibility";
+import { forgetExternalRuntimeSession } from "../externalRuntimeRun";
 
 interface Params {
   projects: TrackedProject[];
@@ -293,6 +294,10 @@ export function useSessionNavigation({
           error: String(error),
         }),
       );
+      // Drop the renderer's "already started on this runtime" binding. Main
+      // stops the runtime itself, but a stale binding here would make a future
+      // session reusing this id skip start() and send into nothing.
+      forgetExternalRuntimeSession(plan.deleteEngineId);
       if (plan.deleteRunId) {
         await window.codeshell.deleteRun(plan.deleteRunId).catch((error) =>
           window.codeshell.log("session.delete.run.failed", {

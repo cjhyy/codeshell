@@ -5513,6 +5513,12 @@ async function deleteDesktopSession(id: string): Promise<void> {
   // Reap the session's background shells (if any) before dropping it —
   // explicit delete is the one tab-close path that DOES kill (core §6).
   await bridge?.closeSession(id);
+  // An external runtime is a child process plus a listening port; neither is
+  // owned by the worker, so closeSession above does not touch them. Without
+  // this a deleted session leaves both alive for the rest of the app's life.
+  await externalRuntimeService?.stop(id).catch((error) => {
+    dlog("external-runtime", "session.delete.stop_failed", { id, error: String(error) });
+  });
   await deleteSession(id);
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be
