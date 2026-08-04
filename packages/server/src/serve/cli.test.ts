@@ -25,6 +25,11 @@ describe("parseServeArgs", () => {
   test("rejects a bogus port", () => {
     expect(() => parseServeArgs(["--port", "not-a-port"], {} as NodeJS.ProcessEnv)).toThrow(/port/);
   });
+
+  test("rejects unknown arguments and flags without values", () => {
+    expect(() => parseServeArgs(["--bogus"], {} as NodeJS.ProcessEnv)).toThrow(/unknown argument/);
+    expect(() => parseServeArgs(["--host"], {} as NodeJS.ProcessEnv)).toThrow(/missing value/);
+  });
 });
 
 describe("resolveWorkerEntry", () => {

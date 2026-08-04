@@ -23,18 +23,41 @@ interface CliArgs {
   staticRootDir?: string;
 }
 
+const SERVE_HELP = `Usage: code-shell-serve [options]
+
+Run the CodeShell headless Web host for a workspace.
+
+Options:
+  --cwd <path>         Workspace root (default: current directory)
+  --host <host>        Bind host (default: 127.0.0.1)
+  --port <port>        Bind port, 0 selects a free port (default: 8790)
+  --passcode <code>    Set or rotate the access passcode
+  --data-dir <path>    Access-control data directory
+  --static-root <path> Override the built Web app directory
+  -h, --help           Show this help and exit`;
+
+const VALUE_FLAGS = new Set([
+  "--cwd",
+  "--host",
+  "--port",
+  "--passcode",
+  "--data-dir",
+  "--static-root",
+]);
+
 export function parseServeArgs(argv: string[], env: NodeJS.ProcessEnv = process.env): CliArgs {
   const args: Record<string, string> = {};
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
-    if (!key?.startsWith("--")) continue;
+    if (!key || !VALUE_FLAGS.has(key)) {
+      throw new Error(`unknown argument: ${key ?? ""}\n\n${SERVE_HELP}`);
+    }
     const value = argv[i + 1];
     if (value === undefined || value.startsWith("--")) {
-      args[key.slice(2)] = "true";
-    } else {
-      args[key.slice(2)] = value;
-      i++;
+      throw new Error(`missing value for ${key}\n\n${SERVE_HELP}`);
     }
+    args[key.slice(2)] = value;
+    i++;
   }
   const home = env.CODE_SHELL_HOME || join(homedir(), ".code-shell");
   const port = Number(args.port ?? "8790");
@@ -73,6 +96,10 @@ export function resolveWebAppRoot(): string | undefined {
 }
 
 export async function runServeCli(argv: string[] = process.argv.slice(2)): Promise<void> {
+  if (argv.includes("--help") || argv.includes("-h")) {
+    console.log(SERVE_HELP);
+    return;
+  }
   const parsed = parseServeArgs(argv);
   const staticRootDir = parsed.staticRootDir ?? resolveWebAppRoot();
   const server = await startHeadlessServer({
