@@ -47,6 +47,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const desktopRoot = resolve(here, "..");
 const repoRoot = resolve(desktopRoot, "../..");
+const linkSrc = resolve(repoRoot, "packages/link");
 const coreSrc = resolve(repoRoot, "packages/core");
 const codingSrc = resolve(repoRoot, "packages/coding");
 const arenaSrc = resolve(repoRoot, "packages/arena");
@@ -54,6 +55,7 @@ const petSrc = resolve(repoRoot, "packages/pet");
 // cdp is bundled INTO main by esbuild (not materialized, not external), so it
 // only needs a fresh dist at desktop-build time — no node_modules target.
 const cdpSrc = resolve(repoRoot, "packages/cdp");
+const linkTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-link");
 const coreTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-core");
 const codingTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-capability-coding");
 const arenaTarget = resolve(desktopRoot, "node_modules/@cjhyy/code-shell-arena");
@@ -65,6 +67,7 @@ function log(msg: string): void {
 }
 
 function main(): void {
+  if (!existsSync(linkSrc)) throw new Error(`Link package not found at ${linkSrc}`);
   if (!existsSync(coreSrc)) throw new Error(`core package not found at ${coreSrc}`);
   if (!existsSync(codingSrc)) throw new Error(`coding package not found at ${codingSrc}`);
   if (!existsSync(arenaSrc)) throw new Error(`Arena package not found at ${arenaSrc}`);
@@ -97,11 +100,13 @@ function main(): void {
   // `recursive: true`. For a junction/symlink, `recursive` removes only the
   // link entry, never following it into the real core dir (verified: rm of a
   // junction does not delete the target's contents).
+  removeWorkspaceTarget(linkTarget, "Link");
   removeWorkspaceTarget(coreTarget, "core");
   removeWorkspaceTarget(codingTarget, "coding");
   removeWorkspaceTarget(arenaTarget, "Arena");
   removeWorkspaceTarget(petTarget, "Pet");
 
+  materializePackage(linkSrc, linkTarget);
   materializePackage(coreSrc, coreTarget);
   materializePackage(codingSrc, codingTarget);
   materializePackage(arenaSrc, arenaTarget);
@@ -114,13 +119,16 @@ function main(): void {
   installProductionDeps(arenaSrc, arenaTarget, "Arena");
   verifyMaterializedCapabilities();
 
-  log(`materialized core + coding + Arena + Pet into node_modules (LICENSE/README excluded)`);
+  log(
+    `materialized Link + core + coding + Arena + Pet into node_modules (LICENSE/README excluded)`,
+  );
 }
 
 // Dependency order matters: coding/arena/pet compile against core's freshly
 // emitted declarations, so core must land first. cdp is independent (zero
 // runtime deps) but is bundled into main, so it must precede the desktop build.
 const WORKSPACE_BUILD_ORDER: ReadonlyArray<{ label: string; dir: string }> = [
+  { label: "Link", dir: linkSrc },
   { label: "core", dir: coreSrc },
   { label: "pet", dir: petSrc },
   { label: "arena", dir: arenaSrc },
@@ -141,7 +149,7 @@ function verifyMaterializedCapabilities(): void {
     "bun",
     [
       "--eval",
-      "await import('@cjhyy/code-shell-arena'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding')",
+      "await import('@cjhyy/code-shell-link'); await import('@cjhyy/code-shell-core'); await import('@cjhyy/code-shell-arena'); await import('@cjhyy/code-shell-pet'); await import('@cjhyy/code-shell-capability-coding')",
     ],
     { cwd: desktopRoot, stdio: "inherit" },
   );

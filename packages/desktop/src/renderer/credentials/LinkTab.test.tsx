@@ -2,8 +2,19 @@ import { afterEach, describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-import { LINK_CATALOG } from "./link-catalog";
-import { LinkTab, oauthErrorRequiresRelogin } from "./LinkTab";
+import { buildLinkCatalog } from "./link-catalog";
+import {
+  buildCliLinkConnectionRequest,
+  buildLocalLinkCredential,
+  ChatGatewayTab,
+  CliQuickAuthPanel,
+  gatewayCapabilityLabels,
+  gatewayToolNames,
+  LinkTab,
+  oauthErrorRequiresRelogin,
+  resolvePreferredLinkRuntime,
+} from "./LinkTab";
+import type { LocalLinkProviderView } from "../../preload/types";
 import type { MaskedCredentialView } from "./types";
 import { DialogProvider } from "../ui/DialogProvider";
 
@@ -42,6 +53,114 @@ function buttonWithAriaLabel(container: HTMLElement, label: string): any {
   );
 }
 
+const LINK_PROVIDER_FIXTURES: LocalLinkProviderView[] = [
+  {
+    id: "github",
+    displayName: "GitHub",
+    category: "developer",
+    description: { zh: "读取仓库、Issue 和 PR。", en: "Read repositories, issues, and PRs." },
+    brandText: "GH",
+    icon: "github",
+    accent: "neutral",
+    featured: true,
+    tokenLabel: "Fine-grained PAT",
+    tokenPlaceholder: "github_pat_…",
+    connectionMethods: [
+      {
+        id: "fine-grained-pat",
+        displayName: { zh: "GitHub 登录 / PAT", en: "GitHub sign-in / PAT" },
+        executionRuntime: "local",
+        secretLocation: "device",
+        authKind: "token",
+        availability: "available",
+        tokenLabel: "Fine-grained PAT",
+        tokenPlaceholder: "github_pat_…",
+        authGuide: {
+          title: { zh: "创建 Fine-grained PAT", en: "Create a fine-grained PAT" },
+          summary: { zh: "只授权必要仓库。", en: "Authorize only necessary repositories." },
+          createCredentialUrl:
+            "https://github.com/settings/personal-access-tokens/new?contents=read&issues=write&pull_requests=read",
+          docsUrl: "https://docs.github.com/authentication",
+          permissions: [{ id: "contents", label: "Contents: read", level: "required" }],
+          steps: [
+            { zh: "选择仓库。", en: "Choose repositories." },
+            { zh: "生成 Token。", en: "Generate the token." },
+            { zh: "粘贴并验证。", en: "Paste and verify it." },
+          ],
+        },
+        quickAuth: {
+          kind: "cli-session",
+          command: "gh",
+          displayName: { zh: "使用 GitHub CLI 登录", en: "Sign in with GitHub CLI" },
+          summary: { zh: "复用本机 CLI 会话。", en: "Reuse the local CLI session." },
+          installUrl: "https://cli.github.com/",
+          privacyNote: {
+            zh: "只保存本地绑定，每次 Action 都由 gh 执行。",
+            en: "Only a local binding is stored; gh executes every Action.",
+          },
+        },
+      },
+      {
+        id: "github-app",
+        displayName: { zh: "GitHub App 官方授权", en: "GitHub App OAuth" },
+        executionRuntime: "server",
+        secretLocation: "server",
+        authKind: "oauth",
+        availability: "coming-soon",
+      },
+    ],
+    actionIds: ["list_repositories"],
+    actions: [
+      { id: "list_repositories", title: "列出仓库", description: "列出仓库", risk: "read" },
+    ],
+  },
+  {
+    id: "figma",
+    displayName: "Figma",
+    category: "design",
+    description: { zh: "读取设计文件。", en: "Read design files." },
+    brandText: "Fi",
+    icon: "figma",
+    accent: "violet",
+    tokenLabel: "Personal access token",
+    tokenPlaceholder: "figd_…",
+    connectionMethods: [
+      {
+        id: "personal-access-token",
+        displayName: { zh: "Personal access token", en: "Personal access token" },
+        executionRuntime: "local",
+        secretLocation: "device",
+        authKind: "token",
+        availability: "available",
+        tokenLabel: "Personal access token",
+        tokenPlaceholder: "figd_…",
+        authGuide: {
+          title: { zh: "创建 Figma Token", en: "Create a Figma token" },
+          summary: { zh: "选择最小读取权限。", en: "Choose minimum read scopes." },
+          createCredentialUrl: "https://www.figma.com/settings",
+          docsUrl: "https://developers.figma.com/docs/rest-api/personal-access-tokens/",
+          permissions: [{ id: "file_content:read", label: "file_content:read", level: "required" }],
+          steps: [
+            { zh: "打开设置。", en: "Open settings." },
+            { zh: "创建 Token。", en: "Create a token." },
+            { zh: "粘贴并验证。", en: "Paste and verify it." },
+          ],
+        },
+      },
+      {
+        id: "figma-oauth",
+        displayName: { zh: "Figma 官方授权", en: "Figma OAuth" },
+        executionRuntime: "server",
+        secretLocation: "server",
+        authKind: "oauth",
+        availability: "coming-soon",
+      },
+    ],
+    actionIds: ["get_file"],
+    actions: [{ id: "get_file", title: "读取文件", description: "读取文件", risk: "read" }],
+  },
+];
+
 let root: Root | null = null;
 
 afterEach(async () => {
@@ -55,13 +174,79 @@ afterEach(async () => {
 });
 
 describe("LinkTab integrations", () => {
+  test("distinguishes proactive delivery from direct send while Gateway is stopped", () => {
+    const labels = gatewayCapabilityLabels(
+      {
+        inbound: { text: true, attachments: [] },
+        outbound: {
+          text: true,
+          proactive: true,
+          direct: true,
+          button: "link",
+          attachments: [],
+        },
+      },
+      ((key: string) => key) as never,
+    );
+
+    expect(labels.outbound).toContain("ext.link.gatewayCapability.proactive");
+    expect(labels.outbound).toContain("ext.link.gatewayCapability.direct");
+    expect(
+      gatewayToolNames({
+        capabilities: {
+          inbound: { text: true, attachments: [] },
+          outbound: {
+            text: true,
+            proactive: true,
+            direct: true,
+            button: "link",
+            attachments: [],
+          },
+        },
+        proactiveReady: false,
+      }),
+    ).toBe("GatewayReply");
+  });
+
   test("turns invalid-grant style refresh errors into an immediate relogin action", () => {
     expect(oauthErrorRequiresRelogin("OAuth credential requires login")).toBe(true);
     expect(oauthErrorRequiresRelogin("invalid_grant")).toBe(true);
     expect(oauthErrorRequiresRelogin("network timeout")).toBe(false);
   });
 
-  test("surfaces the Chat Gateway in Link and starts configured channels", async () => {
+  test("prefers a usable local connection and falls back to the server", () => {
+    const local: MaskedCredentialView = {
+      id: "link-github-fine-grained-pat",
+      type: "link",
+      label: "GitHub local",
+      hasSecret: true,
+      meta: { linkProvider: "github", linkExecutionRuntime: "local" },
+    };
+    const server: MaskedCredentialView = {
+      id: "github-oauth",
+      type: "oauth",
+      label: "GitHub server",
+      hasSecret: true,
+      oauthStatus: { state: "valid" },
+      meta: { oauthProvider: "github", linkExecutionRuntime: "server" },
+    };
+
+    expect(resolvePreferredLinkRuntime([server, local], "github")).toBe("local");
+    expect(resolvePreferredLinkRuntime([server, { ...local, hasSecret: false }], "github")).toBe(
+      "server",
+    );
+    expect(
+      resolvePreferredLinkRuntime(
+        [
+          { ...server, oauthStatus: { state: "invalid" } },
+          { ...local, hasSecret: false },
+        ],
+        "github",
+      ),
+    ).toBeNull();
+  });
+
+  test("renders Link apps and the independent Chat Gateway, then starts configured channels", async () => {
     ensureMiniDom();
     let starts = 0;
     let dingTalkSetupLoads = 0;
@@ -75,6 +260,35 @@ describe("LinkTab integrations", () => {
             configExists: true,
             channels: ["telegram"],
             wechatConnected: false,
+            channelStatuses: [
+              {
+                channel: "telegram" as const,
+                enabled: true,
+                state: "ready" as const,
+              },
+              {
+                channel: "wechat" as const,
+                enabled: true,
+                state: "ready" as const,
+                capabilities: {
+                  inbound: { text: true, attachments: ["image", "audio", "file"] },
+                  outbound: {
+                    text: true,
+                    proactive: true,
+                    direct: true,
+                    button: "none" as const,
+                    attachments: ["image", "audio", "file"],
+                  },
+                },
+                proactiveReady: false,
+                proactiveReason: "awaiting-inbound-context" as const,
+              },
+              {
+                channel: "dingtalk" as const,
+                enabled: false,
+                state: "disabled" as const,
+              },
+            ],
           }),
           start: async () => {
             starts += 1;
@@ -114,6 +328,17 @@ describe("LinkTab integrations", () => {
         openPath: async (path: string) => path,
         openExternal: async (url: string) => void openedUrls.push(url),
         credentials: { list: async () => [] },
+        links: {
+          listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
+          cliStatus: async () => ({
+            providerId: "github",
+            command: "gh",
+            installed: false,
+            authenticated: false,
+          }),
+          connectCli: async () => undefined,
+          connectLocal: async () => undefined,
+        },
         mcpOAuth: {
           refresh: async () => undefined,
           login: async () => undefined,
@@ -128,11 +353,20 @@ describe("LinkTab integrations", () => {
       root?.render(
         <DialogProvider>
           <LinkTab cwd="/repo" />
+          <ChatGatewayTab />
         </DialogProvider>,
       );
       await flushMicrotasks();
       await flushMicrotasks();
     });
+
+    const githubCards = findElements(container, "ARTICLE").filter(
+      (article) => reactPropsOf(article)["data-link-integration"] === "github",
+    );
+    expect(githubCards.map((card) => reactPropsOf(card)["data-link-runtime"]).sort()).toEqual([
+      "local",
+      "server",
+    ]);
 
     const toggleChannels = buttonWithAriaLabel(container, "展开或收起支持的聊天渠道");
     expect(toggleChannels).toBeDefined();
@@ -140,6 +374,12 @@ describe("LinkTab integrations", () => {
       reactPropsOf(toggleChannels).onClick();
       await flushMicrotasks();
     });
+    const wechatHint = findElements(container, "P").find(
+      (paragraph) => reactPropsOf(paragraph)["data-gateway-proactive-hint"] === "wechat",
+    );
+    expect(reactChildText(reactPropsOf(wechatHint).children)).toBe(
+      "主动发送暂不可用：请先从微信给 Mimi 发一条消息以刷新会话上下文。",
+    );
     expect(buttonWithLabel(container, "连接个人微信")).toBeDefined();
     const configureDingTalk = buttonWithAriaLabel(container, "配置钉钉");
     expect(configureDingTalk).toBeDefined();
@@ -167,14 +407,169 @@ describe("LinkTab integrations", () => {
     expect(buttonWithLabel(container, "停止")).toBeDefined();
   });
 
+  test("builds a local credential with a runtime-specific id so server OAuth stays independent", () => {
+    const github = buildLinkCatalog(LINK_PROVIDER_FIXTURES, "zh")
+      .flatMap((category) => category.items)
+      .find((item) => item.id === "github");
+    if (!github) throw new Error("missing GitHub catalog fixture");
+    const method = github.connectionMethods.find(
+      (candidate) => candidate.executionRuntime === "local",
+    );
+    if (!method) throw new Error("missing GitHub local method fixture");
+
+    expect(buildLocalLinkCredential(github, method, "", " github_pat_local ")).toEqual({
+      id: "link-github-fine-grained-pat",
+      type: "link",
+      label: "GitHub · GitHub 登录 / PAT",
+      secret: "github_pat_local",
+      autoUseByAI: false,
+      meta: {
+        linkProvider: "github",
+        linkConnectionMethod: "fine-grained-pat",
+        linkExecutionRuntime: "local",
+        linkAuthSource: "manual-token",
+        agentExposable: false,
+      },
+    });
+  });
+
+  test("offers a zero-copy CLI session before the manual token fallback", async () => {
+    ensureMiniDom();
+    const github = buildLinkCatalog(LINK_PROVIDER_FIXTURES, "zh")
+      .flatMap((category) => category.items)
+      .find((item) => item.id === "github");
+    const quickAuth = github?.connectionMethods.find(
+      (method) => method.executionRuntime === "local",
+    )?.quickAuth;
+    if (!quickAuth) throw new Error("missing GitHub CLI fixture");
+    let connectClicks = 0;
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <CliQuickAuthPanel
+          providerName="GitHub"
+          quickAuth={quickAuth}
+          status={{
+            providerId: "github",
+            command: "gh",
+            installed: true,
+            authenticated: true,
+            account: "octocat",
+          }}
+          checking={false}
+          busy={false}
+          onConnect={() => {
+            connectClicks += 1;
+          }}
+          onInstall={() => undefined}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    expect(buttonWithLabel(container, "使用 @octocat 连接")).toBeDefined();
+    expect(
+      findElements(container, "P").some(
+        (paragraph) => reactChildText(reactPropsOf(paragraph).children) === "使用 GitHub CLI 登录",
+      ),
+    ).toBe(true);
+    const useCli = buttonWithLabel(container, "使用 @octocat 连接");
+    await act(async () => {
+      reactPropsOf(useCli).onClick();
+      await flushMicrotasks();
+    });
+    expect(connectClicks).toBe(1);
+    expect(
+      buildCliLinkConnectionRequest({
+        authenticated: true,
+        cwd: "/repo",
+        providerId: "github",
+        methodId: "fine-grained-pat",
+        label: "GitHub local",
+      }),
+    ).toEqual({
+      cwd: "/repo",
+      providerId: "github",
+      methodId: "fine-grained-pat",
+      label: "GitHub local",
+      existingId: undefined,
+      loginIfNeeded: false,
+    });
+  });
+
+  test("downloads a supported missing CLI inside CodeShell instead of opening an install page", async () => {
+    ensureMiniDom();
+    const github = buildLinkCatalog(LINK_PROVIDER_FIXTURES, "zh")
+      .flatMap((category) => category.items)
+      .find((item) => item.id === "github");
+    const quickAuth = github?.connectionMethods.find(
+      (method) => method.executionRuntime === "local",
+    )?.quickAuth;
+    if (!quickAuth) throw new Error("missing GitHub CLI fixture");
+    let managedInstalls = 0;
+    let externalInstalls = 0;
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <CliQuickAuthPanel
+          providerName="GitHub"
+          quickAuth={quickAuth}
+          status={{
+            providerId: "github",
+            command: "gh",
+            installed: false,
+            authenticated: false,
+          }}
+          installStatus={{
+            providerId: "github",
+            supported: true,
+            managedInstalled: false,
+          }}
+          checking={false}
+          busy={false}
+          onConnect={() => undefined}
+          onManagedInstall={() => {
+            managedInstalls += 1;
+          }}
+          onInstall={() => {
+            externalInstalls += 1;
+          }}
+        />,
+      );
+      await flushMicrotasks();
+    });
+
+    const download = buttonWithLabel(container, "下载并登录 gh");
+    expect(download).toBeDefined();
+    await act(async () => {
+      reactPropsOf(download).onClick();
+      await flushMicrotasks();
+    });
+    expect(managedInstalls).toBe(1);
+    expect(externalInstalls).toBe(0);
+  });
+
+  test("localizes provider content without duplicating it in the renderer", () => {
+    const zh = buildLinkCatalog(LINK_PROVIDER_FIXTURES, "zh");
+    const en = buildLinkCatalog(LINK_PROVIDER_FIXTURES, "en");
+    expect(zh[0]?.items[0]?.description).toBe("读取仓库、Issue 和 PR。");
+    expect(en[0]?.items[0]?.description).toBe("Read repositories, issues, and PRs.");
+    expect(zh.flatMap((category) => category.items)).toHaveLength(2);
+  });
+
   test("reloads invalid_grant metadata after refresh rejection and relogs with the same id", async () => {
     ensureMiniDom();
-    const figma = LINK_CATALOG.flatMap((category) => category.items).find(
-      (item) => item.id === "figma",
-    );
+    const figma = LINK_PROVIDER_FIXTURES.find((item) => item.id === "figma");
     if (!figma) throw new Error("missing Figma catalog fixture");
-    const previousProfileId = figma.oauthProfileId;
-    figma.oauthProfileId = "figma-profile";
+    const serverMethod = figma.connectionMethods.find(
+      (method) => method.executionRuntime === "server",
+    );
+    if (!serverMethod) throw new Error("missing Figma server method fixture");
+    const previousProfileId = serverMethod.oauthProfileId;
+    const previousAvailability = serverMethod.availability;
+    serverMethod.oauthProfileId = "figma-profile";
+    serverMethod.availability = "available";
 
     let invalidGrant = false;
     const loginInputs: unknown[] = [];
@@ -214,6 +609,17 @@ describe("LinkTab integrations", () => {
         openPath: async (path: string) => path,
         openExternal: async () => undefined,
         credentials: { list: async () => [credential()] },
+        links: {
+          listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
+          cliStatus: async () => ({
+            providerId: "github",
+            command: "gh",
+            installed: false,
+            authenticated: false,
+          }),
+          connectCli: async () => undefined,
+          connectLocal: async () => undefined,
+        },
         mcpOAuth: {
           refresh: async () => {
             invalidGrant = true;
@@ -260,7 +666,8 @@ describe("LinkTab integrations", () => {
         { source: "catalog", profileId: "figma-profile", credentialId: "figma-oauth" },
       ]);
     } finally {
-      figma.oauthProfileId = previousProfileId;
+      serverMethod.oauthProfileId = previousProfileId;
+      serverMethod.availability = previousAvailability;
     }
   });
 });

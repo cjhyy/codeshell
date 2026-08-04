@@ -14,6 +14,17 @@ export interface CredentialView {
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    linkProvider?: string;
+    linkConnectionMethod?: string;
+    linkExecutionRuntime?: "local" | "server";
+    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
+    linkExecutionBackend?: "http-token" | "cli";
+    agentExposable?: boolean;
+    linkAccountId?: string;
+    linkAccountLabel?: string;
+    linkResourceLabels?: string[];
+    linkCapabilityIds?: string[];
+    linkLastVerifiedAt?: string;
     oauthProvider?: string;
     mcpServerName?: string;
     mcpServerUrl?: string;

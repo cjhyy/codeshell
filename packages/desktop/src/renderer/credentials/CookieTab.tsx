@@ -2,11 +2,21 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { SimpleSelect } from "@/components/ui/simple-select";
-import { Separator } from "@/components/ui/separator";
+import {
+  Cookie as CookieIcon,
+  Globe2,
+  History,
+  LogIn,
+  MonitorDown,
+  Pencil,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { useToast } from "../ui/ToastProvider";
 import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import type { MaskedCredentialView } from "./types";
@@ -353,163 +363,348 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     groups.get(p)!.push(c);
   }
 
+  const autoInjectCount = items.filter((item) => item.autoInjectByAI === true).length;
+
   return (
-    <div className="space-y-4">
-      <Card className="space-y-3 p-4">
-        <p className="text-sm text-muted-foreground">{t("ext.cookie.intro")}</p>
-        <div className="space-y-1">
-          <Label>{t("ext.cookie.urlLabel")}</Label>
-          <Input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder={t("ext.cookie.urlPlaceholder")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !busy) void loginCapture();
-            }}
-          />
-          {urlHistory.length > 0 && (
-            <div className="flex flex-wrap gap-1 pt-1">
-              {urlHistory.map((h) => (
-                <Button
-                  key={h}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-6 rounded-full bg-muted/50 px-2 text-xs text-muted-foreground"
-                  onClick={() => setUrl(h)}
-                  title={t("ext.cookie.historyChipTip")}
-                >
-                  {h}
-                </Button>
-              ))}
+    <div className="space-y-5" data-cookie-page>
+      <section className="credential-hero overflow-hidden rounded-2xl border border-border/70 px-5 py-6 sm:px-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-600 shadow-sm dark:text-amber-400">
+              <CookieIcon className="size-6" aria-hidden />
             </div>
-          )}
+            <div className="min-w-0 max-w-2xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400">
+                  {t("ext.cookie.eyebrow")}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-status-ok/25 bg-status-ok/8 px-2 py-0.5 text-[10px] font-medium text-status-ok">
+                  <ShieldCheck className="size-3" aria-hidden />
+                  {t("ext.cookie.localStorage")}
+                </span>
+              </div>
+              <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-foreground">
+                {t("ext.cookie.title")}
+              </h2>
+              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                {t("ext.cookie.description")}
+              </p>
+            </div>
+          </div>
+          <div className="grid shrink-0 grid-cols-3 gap-2 lg:min-w-72">
+            <CookieStat value={items.length} label={t("ext.cookie.accountCount")} />
+            <CookieStat value={groups.size} label={t("ext.cookie.platformCount")} />
+            <CookieStat value={autoInjectCount} label={t("ext.cookie.autoInjectCount")} />
+          </div>
         </div>
-        <Button disabled={busy} onClick={() => void loginCapture()}>
-          {busy ? t("ext.cookie.processing") : t("ext.cookie.loginAndSave")}
-        </Button>
+      </section>
 
-        <Separator className="my-1" />
-
-        {/* 第二条独立路径:从内置浏览器面板全量拓取,和弹窗登录不是一回事,单列出来防歧义。 */}
-        <div className="space-y-2">
+      <section className="space-y-4" aria-labelledby="cookie-add-title">
+        <div className="flex items-start gap-2.5">
+          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <LogIn className="size-4" aria-hidden />
+          </div>
           <div>
-            <p className="text-sm font-medium">{t("ext.cookie.browserSectionTitle")}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("ext.cookie.captureFromBrowserTitle")}
+            <h3 id="cookie-add-title" className="text-base font-semibold tracking-tight">
+              {t("ext.cookie.addTitle")}
+            </h3>
+            <p className="mt-0.5 max-w-2xl text-xs leading-5 text-muted-foreground">
+              {t("ext.cookie.addDescription")}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="credential-card flex flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all sm:p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Globe2 className="size-5" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-sm font-semibold">{t("ext.cookie.loginMethodTitle")}</h4>
+                  <span className="credential-status-ok">{t("ext.cookie.recommended")}</span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {t("ext.cookie.loginMethodDescription")}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex-1 space-y-2">
+              <Label htmlFor="cookie-login-url">{t("ext.cookie.urlLabel")}</Label>
+              <Input
+                id="cookie-login-url"
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                placeholder={t("ext.cookie.urlPlaceholder")}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !busy) void loginCapture();
+                }}
+              />
+              {urlHistory.length > 0 ? (
+                <div className="flex items-start gap-2 pt-1">
+                  <History className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                  <div className="flex flex-wrap gap-1.5">
+                    {urlHistory.map((historyUrl) => (
+                      <Button
+                        key={historyUrl}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 max-w-full rounded-full bg-muted/35 px-2 text-[11px] font-normal text-muted-foreground"
+                        onClick={() => setUrl(historyUrl)}
+                        title={t("ext.cookie.historyChipTip")}
+                      >
+                        <span className="truncate">{historyUrl}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
             <Button
-              variant="secondary"
+              className="mt-5 w-full sm:w-auto sm:self-start"
               disabled={busy}
-              onClick={() => void captureCurrentSessionFromBrowser()}
+              onClick={() => void loginCapture()}
             >
-              {t("ext.cookie.captureCurrentSession")}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={busy}
-              onClick={() => void captureAllSessionsFromBrowser()}
-            >
-              {t("ext.cookie.captureAllSessions")}
+              <LogIn className="size-4" aria-hidden />
+              {busy ? t("ext.cookie.processing") : t("ext.cookie.loginAndSave")}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {t("ext.cookie.captureAllSessionsWarning")}
-          </p>
-        </div>
-      </Card>
 
-      <div className="space-y-3">
-        {items.length === 0 && (
-          <p className="text-sm text-muted-foreground">{t("ext.cookie.emptyAccounts")}</p>
-        )}
-        {[...groups.entries()].map(([platform, accounts]) => (
-          <div key={platform} className="space-y-2">
-            <h3 className="text-sm font-medium">{platform}</h3>
-            {accounts.map((c) => (
-              <Card key={c.id} className="space-y-2 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate font-medium">{c.label}</span>
-                      {/* 「全量/混合」徽章只标从内置浏览器分区拓的(platform=browser,真混多站)。
-                          弹窗登录虽也 scope=all,但用的是全新隔离 session、抓出来只是该站自己的
-                          子域,实际很干净,不标徽章免误导。 */}
-                      {c.meta?.scope === "all" && c.meta?.platform === "browser" && (
-                        <Badge variant="info" className="shrink-0">
-                          {t("ext.cookie.scopeBadgeAll")}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{c.meta?.domain ?? c.id}</div>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => void switchTo(c)}
-                    >
-                      {t("ext.cookie.actionSwitch")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => void rename(c)}
-                    >
-                      {t("ext.cookie.actionEdit")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => void relogin(c)}
-                    >
-                      {t("ext.cookie.actionRepull")}
-                    </Button>
-                    <Button variant="ghost" size="sm" disabled={busy} onClick={() => void del(c)}>
-                      {t("ext.cookie.actionDelete")}
-                    </Button>
-                  </div>
+          {/* 从内置浏览器抓取与隔离窗口登录是两条不同路径，保留为独立卡片。 */}
+          <div className="credential-card flex flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all sm:p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                <MonitorDown className="size-5" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-sm font-semibold">{t("ext.cookie.browserMethodTitle")}</h4>
+                  <span className="credential-status-muted">{t("ext.cookie.existingSession")}</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Switch
-                      checked={c.autoUseByAI === true}
-                      disabled={busy}
-                      onCheckedChange={(next) => toggleAiUse(c, next)}
-                    />
-                    {t("ext.cookie.aiAutoUse")}
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Switch
-                      checked={c.autoInjectByAI === true}
-                      disabled={busy}
-                      onCheckedChange={(next) => toggleAiInject(c, next)}
-                    />
-                    {t("ext.cookie.aiAutoInject")}
-                  </label>
-                  <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
-                    {t("ext.cookie.switchModeLabel")}
-                    <SimpleSelect
-                      value={c.meta?.switchMode === "clear" ? "clear" : "merge"}
-                      onChange={(v) => setSwitchMode(c, v as SwitchMode)}
-                      options={[
-                        { value: "clear", label: t("ext.cookie.switchModeClear") },
-                        { value: "merge", label: t("ext.cookie.switchModeMerge") },
-                      ]}
-                      size="sm"
-                    />
-                  </label>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {t("ext.cookie.captureFromBrowserTitle")}
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex-1 rounded-xl border border-border/55 bg-muted/30 p-3 text-[11px] leading-5 text-muted-foreground">
+              <div className="flex items-start gap-2">
+                <MonitorDown className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <span>{t("ext.cookie.captureAllSessionsWarning")}</span>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                disabled={busy}
+                onClick={() => void captureCurrentSessionFromBrowser()}
+              >
+                {t("ext.cookie.captureCurrentSession")}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={busy}
+                onClick={() => void captureAllSessionsFromBrowser()}
+              >
+                {t("ext.cookie.captureAllSessions")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4" aria-labelledby="cookie-accounts-title">
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <UserRound className="size-4" aria-hidden />
+            </div>
+            <div>
+              <h3 id="cookie-accounts-title" className="text-base font-semibold tracking-tight">
+                {t("ext.cookie.accountsTitle")}
+              </h3>
+              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                {t("ext.cookie.accountsDescription")}
+              </p>
+            </div>
+          </div>
+          <span className="text-xs tabular-nums text-muted-foreground">{items.length}</span>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-muted/15 px-5 py-10 text-center">
+            <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+              <CookieIcon className="size-5" aria-hidden />
+            </div>
+            <p className="mt-3 text-sm font-medium text-foreground">{t("ext.cookie.emptyTitle")}</p>
+            <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">
+              {t("ext.cookie.emptyAccounts")}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {[...groups.entries()].map(([platform, accounts]) => (
+              <div key={platform} className="space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    {platform}
+                  </h4>
+                  <span className="text-[10px] text-muted-foreground">{accounts.length}</span>
                 </div>
-              </Card>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {accounts.map((c) => (
+                    <article
+                      key={c.id}
+                      className="credential-card flex flex-col rounded-2xl border border-border/70 bg-card p-4 transition-all"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                          <UserRound className="size-4.5" aria-hidden />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                            <h5 className="truncate text-sm font-semibold" title={c.label}>
+                              {c.label}
+                            </h5>
+                            {c.meta?.scope === "all" && c.meta?.platform === "browser" ? (
+                              <Badge variant="info" className="shrink-0">
+                                {t("ext.cookie.scopeBadgeAll")}
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <p
+                            className="mt-0.5 truncate text-[11px] text-muted-foreground"
+                            title={c.meta?.domain ?? c.id}
+                          >
+                            {c.meta?.domain ?? c.id}
+                          </p>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="shrink-0"
+                          disabled={busy}
+                          onClick={() => void switchTo(c)}
+                        >
+                          {t("ext.cookie.actionSwitch")}
+                        </Button>
+                      </div>
+
+                      <div className="mt-4 divide-y divide-border/55 rounded-xl border border-border/55 bg-muted/20 px-3">
+                        <CookiePermissionSwitch
+                          title={t("ext.cookie.aiAutoUse")}
+                          description={t("ext.cookie.aiAutoUseDescription")}
+                          checked={c.autoUseByAI === true}
+                          disabled={busy}
+                          onCheckedChange={(next) => toggleAiUse(c, next)}
+                        />
+                        <CookiePermissionSwitch
+                          title={t("ext.cookie.aiAutoInject")}
+                          description={t("ext.cookie.aiAutoInjectDescription")}
+                          checked={c.autoInjectByAI === true}
+                          disabled={busy}
+                          onCheckedChange={(next) => toggleAiInject(c, next)}
+                        />
+                        <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-foreground">
+                              {t("ext.cookie.switchModeLabel")}
+                            </p>
+                            <p className="mt-0.5 text-[10px] leading-4 text-muted-foreground">
+                              {t("ext.cookie.switchModeDescription")}
+                            </p>
+                          </div>
+                          <SimpleSelect
+                            value={c.meta?.switchMode === "clear" ? "clear" : "merge"}
+                            onChange={(value) => setSwitchMode(c, value as SwitchMode)}
+                            options={[
+                              { value: "clear", label: t("ext.cookie.switchModeClear") },
+                              { value: "merge", label: t("ext.cookie.switchModeMerge") },
+                            ]}
+                            size="sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center justify-end gap-1 border-t border-border/55 pt-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void rename(c)}
+                        >
+                          <Pencil className="size-3.5" aria-hidden />
+                          {t("ext.cookie.actionEdit")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void relogin(c)}
+                        >
+                          <RefreshCw className="size-3.5" aria-hidden />
+                          {t("ext.cookie.actionRepull")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-status-err"
+                          disabled={busy}
+                          onClick={() => void del(c)}
+                        >
+                          <Trash2 className="size-3.5" aria-hidden />
+                          {t("ext.cookie.actionDelete")}
+                        </Button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-        ))}
+        )}
+      </section>
+    </div>
+  );
+}
+
+function CookieStat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2.5 backdrop-blur-sm">
+      <div className="text-lg font-semibold leading-none tabular-nums text-foreground">{value}</div>
+      <div className="mt-1 truncate text-[10px] text-muted-foreground" title={label}>
+        {label}
       </div>
     </div>
+  );
+}
+
+function CookiePermissionSwitch({
+  title,
+  description,
+  checked,
+  disabled,
+  onCheckedChange,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  disabled: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-3 py-3">
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-medium text-foreground">{title}</span>
+        <span className="mt-0.5 block text-[10px] leading-4 text-muted-foreground">
+          {description}
+        </span>
+      </span>
+      <Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
+    </label>
   );
 }

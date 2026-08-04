@@ -16,7 +16,7 @@ export interface CredentialResolveRequest {
   cwd?: string;
   id: string;
   scope: CredentialAccessScope;
-  purpose: "use" | "mcp";
+  purpose: "use" | "mcp" | "link";
 }
 
 export interface CredentialMaterializeCookieRequest {
@@ -46,13 +46,19 @@ export function resolveCredentialValueForWorker(req: CredentialResolveRequest): 
     throw new Error(`credential "${req.id}" is unavailable`);
   }
   const allowed =
-    req.purpose === "mcp"
-      ? cred.type === "token" || cred.type === "link"
+    req.purpose === "link"
+      ? cred.type === "link" &&
+        cred.meta?.linkExecutionRuntime === "local" &&
+        Boolean(cred.meta.linkProvider)
       : cred.type === "token" || cred.type === "link";
   if (!allowed) {
     throw new Error(
       `credential "${req.id}" is not a ${
-        req.purpose === "mcp" ? "token/link (OAuth uses the host access resolver)" : "token/link"
+        req.purpose === "mcp"
+          ? "token/link (OAuth uses the host access resolver)"
+          : req.purpose === "link"
+            ? "local Link"
+            : "token/link"
       } credential`,
     );
   }

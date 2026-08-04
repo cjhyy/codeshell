@@ -23,7 +23,8 @@
     "build:mobile": "vite build -c vite.mobile.config.ts",
     "mock-provider": "bun run scripts/mock-provider-server.mjs",
     "test:mock-provider": "bun test scripts/mock-provider-server.test.mjs",
-    "test:e2e": "node scripts/smoke-panels.mjs && node scripts/e2e-settings.mjs && node scripts/e2e-digital-humans.mjs && node scripts/e2e-panel-app.mjs",
+    "test:e2e": "node scripts/smoke-panels.mjs && node scripts/e2e-settings.mjs && node scripts/e2e-link.mjs && node scripts/e2e-digital-humans.mjs && node scripts/e2e-panel-app.mjs",
+    "test:e2e:link": "node scripts/e2e-link.mjs",
     "test:e2e:digital-humans": "node scripts/e2e-digital-humans.mjs",
     "test:e2e:settings": "node scripts/e2e-settings.mjs",
     "test:e2e:panel-app": "node scripts/e2e-panel-app.mjs",
@@ -135,6 +136,7 @@
   "devDependencies": {
     "@cjhyy/code-shell-cdp": "workspace:*",
     "@cjhyy/code-shell-chat": "workspace:*",
+    "@cjhyy/code-shell-link": "workspace:*",
     "@cjhyy/code-shell-server": "workspace:*",
     "@cjhyy/code-shell-web": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.12.1",

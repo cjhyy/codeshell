@@ -32,6 +32,7 @@ const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
 // repo root (…/codeshell): packages/desktop/scripts → desktop → packages → root
 const repoRoot = resolve(root, "..", "..");
+const linkDir = resolve(repoRoot, "packages/link");
 const coreDir = resolve(repoRoot, "packages/core");
 const coreDist = resolve(coreDir, "dist/index.js");
 const codingDir = resolve(repoRoot, "packages/coding");
@@ -116,6 +117,7 @@ async function shutdown(code: number): Promise<void> {
     electronProc = null;
   }
   killTree(coreWatchProc);
+  killTree(linkWatchProc);
   killTree(codingWatchProc);
   killTree(cdpWatchProc);
 
@@ -185,6 +187,7 @@ function spawnElectron(): void {
 }
 
 let coreWatchProc: ChildProcess | null = null;
+let linkWatchProc: ChildProcess | null = null;
 let codingWatchProc: ChildProcess | null = null;
 let cdpWatchProc: ChildProcess | null = null;
 
@@ -195,6 +198,16 @@ let cdpWatchProc: ChildProcess | null = null;
  * orchestrator only ever sees fresh core output.
  */
 function startCoreWatch(): void {
+  console.log("[dev] building @cjhyy/code-shell-link (once)…");
+  const linkBuilt = spawnSync("bun", ["run", "build"], {
+    cwd: linkDir,
+    stdio: "inherit",
+  });
+  if (linkBuilt.status !== 0) {
+    console.error("[dev] Link manifest build failed; aborting");
+    process.exit(linkBuilt.status ?? 1);
+  }
+
   // eslint-disable-next-line no-console
   console.log("[dev] building @cjhyy/code-shell-core (once)…");
   const built = spawnSync("bun", ["run", "build"], {
@@ -241,6 +254,11 @@ function startCoreWatch(): void {
     stdio: "inherit",
     detached: true,
   });
+  linkWatchProc = spawn("bun", ["run", "dev"], {
+    cwd: linkDir,
+    stdio: "inherit",
+    detached: true,
+  });
   codingWatchProc = spawn("bun", ["run", "dev"], {
     cwd: codingDir,
     stdio: "inherit",
@@ -262,6 +280,14 @@ function startCoreWatch(): void {
     restartTimer = setTimeout(() => {
       // eslint-disable-next-line no-console
       console.log("[dev] core rebuilt → restarting electron");
+      spawnElectron();
+    }, 150);
+  });
+  watch(resolve(linkDir, "dist"), { recursive: true }, () => {
+    if (!electronProc) return;
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      console.log("[dev] Link manifests rebuilt → restarting electron");
       spawnElectron();
     }, 150);
   });

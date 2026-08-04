@@ -587,6 +587,8 @@ export interface CredentialView {
     linkProvider?: string;
     linkConnectionMethod?: string;
     linkExecutionRuntime?: "local" | "server";
+    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
+    linkExecutionBackend?: "http-token" | "cli";
     agentExposable?: boolean;
     linkAccountId?: string;
     linkAccountLabel?: string;
@@ -640,14 +642,104 @@ export interface LocalLinkValidationView {
 export interface LocalLinkProviderView {
   id: string;
   displayName: string;
+  category: "developer" | "communication" | "work" | "design";
+  description: { zh: string; en: string };
+  brandText: string;
+  icon: "github" | "figma" | "notes" | "conversation";
+  accent: "neutral" | "orange" | "rose" | "violet" | "fuchsia" | "indigo" | "red" | "amber";
+  featured?: boolean;
   tokenLabel: string;
   tokenPlaceholder: string;
+  connectionMethods: Array<{
+    id: string;
+    displayName: { zh: string; en: string };
+    executionRuntime: "local" | "server";
+    secretLocation: "device" | "server";
+    authKind: "token" | "oauth";
+    availability: "available" | "coming-soon";
+    oauthProfileId?: string;
+    tokenLabel?: string;
+    tokenPlaceholder?: string;
+    authGuide?: {
+      title: { zh: string; en: string };
+      summary: { zh: string; en: string };
+      createCredentialUrl: string;
+      docsUrl: string;
+      permissions: Array<{
+        id: string;
+        label: string;
+        level: "required" | "optional";
+        description?: { zh: string; en: string };
+      }>;
+      steps: Array<{ zh: string; en: string }>;
+      note?: { zh: string; en: string };
+    };
+    quickAuth?: {
+      kind: "cli-session";
+      command: string;
+      displayName: { zh: string; en: string };
+      summary: { zh: string; en: string };
+      installUrl: string;
+      privacyNote: { zh: string; en: string };
+    };
+    browserAuth?: {
+      kind: "browser-oauth";
+      flow: "device-code" | "authorization-code-pkce";
+      displayName: { zh: string; en: string };
+      summary: { zh: string; en: string };
+      docsUrl: string;
+      privacyNote: { zh: string; en: string };
+    };
+  }>;
+  actionIds: string[];
   actions: Array<{
     id: string;
     title: string;
     description: string;
     risk: "discovery" | "read" | "write";
   }>;
+}
+
+export interface CliLinkStatusView {
+  providerId: string;
+  command: string;
+  installed: boolean;
+  authenticated: boolean;
+  account?: string;
+  message?: string;
+}
+
+export interface ManagedCliInstallStatusView {
+  providerId: string;
+  supported: boolean;
+  managedPath?: string;
+  managedInstalled: boolean;
+}
+
+export interface ManagedCliInstallResultView {
+  providerId: string;
+  command: "gh" | "glab";
+  version: string;
+  executablePath: string;
+  source: "official-release";
+  checksumVerified: true;
+}
+
+export interface BrowserLinkAuthStatusView {
+  providerId: string;
+  configured: boolean;
+  flow: "device-code";
+  configurationCode?: "client_id_missing";
+}
+
+export interface BrowserLinkAuthPromptView {
+  attemptId: string;
+  providerId: string;
+  userCode: string;
+  verificationUri: string;
+  verificationUriComplete?: string;
+  expiresAt: string;
+  codeCopied: boolean;
 }
 
 export type McpOAuthLoginInput =
@@ -789,6 +881,9 @@ export interface ImGatewayChannelStatus {
   state: "disabled" | "needs-config" | "ready" | "starting" | "running" | "retrying";
   attempts?: number;
   error?: string;
+  /** Dynamic readiness for context-bound proactive delivery (currently WeChat). */
+  proactiveReady?: boolean;
+  proactiveReason?: "awaiting-inbound-context";
 }
 
 export interface ImGatewayActivity {
@@ -1190,6 +1285,28 @@ export interface CodeshellApi {
   };
   links: {
     listLocalProviders(): Promise<LocalLinkProviderView[]>;
+    cliStatus(providerId: string, cwd?: string): Promise<CliLinkStatusView>;
+    cliInstallStatus(providerId: string): Promise<ManagedCliInstallStatusView>;
+    installCli(providerId: string): Promise<ManagedCliInstallResultView>;
+    browserAuthStatus(providerId: string): Promise<BrowserLinkAuthStatusView>;
+    startBrowserAuth(providerId: string): Promise<BrowserLinkAuthPromptView>;
+    completeBrowserAuth(input: {
+      attemptId: string;
+      cwd: string;
+      providerId: string;
+      methodId: string;
+      label: string;
+      existingId?: string;
+    }): Promise<LocalLinkValidationView>;
+    cancelBrowserAuth(attemptId: string): Promise<boolean>;
+    connectCli(input: {
+      cwd: string;
+      providerId: string;
+      methodId: string;
+      label: string;
+      existingId?: string;
+      loginIfNeeded: boolean;
+    }): Promise<LocalLinkValidationView>;
     connectLocal(input: {
       cwd: string;
       providerId: string;
@@ -1222,6 +1339,8 @@ export interface CodeshellApi {
           linkProvider?: string;
           linkConnectionMethod?: string;
           linkExecutionRuntime?: "local" | "server";
+          linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
+          linkExecutionBackend?: "http-token" | "cli";
           agentExposable?: boolean;
           linkAccountId?: string;
           linkAccountLabel?: string;

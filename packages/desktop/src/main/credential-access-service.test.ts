@@ -196,6 +196,40 @@ describe("desktop credential access service", () => {
     expect(entry.envFull).toEqual({ SERVICE_LINK: "single-value-link-secret" });
   });
 
+  test("LinkAction purpose resolves only an owned local Link credential", () => {
+    const store = new CredentialStore(cwd);
+    store.save("user", {
+      id: "link-github-fine-grained-pat",
+      type: "link",
+      label: "GitHub local",
+      secret: "github_pat_private",
+      meta: { linkProvider: "github", linkExecutionRuntime: "local", agentExposable: false },
+    });
+    store.save("user", {
+      id: "ordinary-token",
+      type: "token",
+      label: "Ordinary token",
+      secret: "ordinary-secret",
+    });
+
+    expect(
+      resolveCredentialValueForWorker({
+        cwd,
+        id: "link-github-fine-grained-pat",
+        scope: "full",
+        purpose: "link",
+      }),
+    ).toEqual({ value: "github_pat_private" });
+    expect(() =>
+      resolveCredentialValueForWorker({
+        cwd,
+        id: "ordinary-token",
+        scope: "full",
+        purpose: "link",
+      }),
+    ).toThrow(/not a local Link credential/);
+  });
+
   test("legacy structured env exposure is filtered from metadata and worker env", () => {
     const sentinelRefresh = "sentinel-refresh-token";
     const sentinelClientSecret = "sentinel-client-QX9Z";
@@ -221,7 +255,7 @@ describe("desktop credential access service", () => {
             type: "cookie",
             label: "Legacy Cookie",
             exposeAsEnv: "COOKIE_JSON",
-              secret: JSON.stringify([{ name: "sid", value: "sentinel-cookie-K7WQ" }]),
+            secret: JSON.stringify([{ name: "sid", value: "sentinel-cookie-K7WQ" }]),
           },
         ],
       }),

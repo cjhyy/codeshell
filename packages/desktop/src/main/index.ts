@@ -6,6 +6,7 @@
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   ipcMain,
   session,
@@ -18,7 +19,7 @@ import {
   type SaveDialogOptions,
 } from "electron";
 import { fileURLToPath } from "node:url";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { dirname, resolve, basename, extname, isAbsolute, join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import {
@@ -35,8 +36,11 @@ import {
   CredentialStore,
   type Credential,
   type CredentialScope,
-  listLocalLinkProviders,
   validateLocalLinkToken,
+  connectCliLink,
+  getCliLinkStatus,
+  isCliLinkProvider,
+  type CliLinkProviderId,
   sweepStaleCredentialCookies,
   setDefaultCredentialCipher,
   sessionsRoot,
@@ -163,7 +167,13 @@ import {
 import type { InstalledThemePack } from "../shared/theme-packs.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
-import { getGitHubCliLinkStatus, obtainGitHubCliToken } from "./github-cli-link-service.js";
+import { listDesktopLinkProviders } from "./link-provider-catalog.js";
+import { isLocalBrowserLinkProvider, LinkDeviceOAuthBroker } from "./link-device-oauth.js";
+import {
+  installManagedLinkCli,
+  managedCliInstallStatus,
+  type ManagedCliInstallResult,
+} from "./link-cli-installer.js";
 import { migrateCredentialStore, migrateKnownCredentialStores } from "./credential-migration.js";
 import { inspectReadableReplyAttachment, readImageDataUrl } from "./image-read-service.js";
 import {
@@ -567,6 +577,8 @@ let unsubscribePetLongTaskStream: (() => void) | null = null;
 let unsubscribePetReportStream: (() => void) | null = null;
 let disposePetIpc: (() => void) | null = null;
 let mcpOAuthService: McpOAuthService | null = null;
+const linkDeviceOAuthBroker = new LinkDeviceOAuthBroker();
+const managedCliInstallJobs = new Map<string, Promise<ManagedCliInstallResult>>();
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
 const quickChatOwnership = new QuickChatOwnershipRegistry();
@@ -3110,7 +3122,7 @@ ipcMain.handle(
     bridge?.pushCredentialSnapshot(cwd || undefined);
   },
 );
-ipcMain.handle("links:listLocalProviders", () => listLocalLinkProviders());
+ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
 
 async function persistLocalLinkCredential(input: {
   cwd: string;
@@ -3119,7 +3131,7 @@ async function persistLocalLinkCredential(input: {
   label: string;
   token: string;
   existingId: string;
-  authSource: "manual-token" | "github-cli";
+  authSource: "manual-token" | "browser-oauth";
 }) {
   const { cwd, providerId, methodId, label, token, existingId, authSource } = input;
   const credentialId = existingId || `link-${providerId}-${methodId}`;
@@ -3152,6 +3164,7 @@ async function persistLocalLinkCredential(input: {
       linkConnectionMethod: methodId,
       linkExecutionRuntime: "local",
       linkAuthSource: authSource,
+      linkExecutionBackend: "http-token",
       agentExposable: false,
       linkAccountId: validation.identity.externalAccountId,
       linkAccountLabel: validation.identity.label,
@@ -3164,31 +3177,170 @@ async function persistLocalLinkCredential(input: {
   return validation;
 }
 
-ipcMain.handle("links:githubCliStatus", () => getGitHubCliLinkStatus());
-ipcMain.handle("links:connectGithubCli", async (_e, raw: unknown) => {
+async function persistCliLinkCredential(input: {
+  cwd: string;
+  providerId: CliLinkProviderId;
+  methodId: string;
+  label: string;
+  existingId: string;
+  loginIfNeeded: boolean;
+}) {
+  const { cwd, providerId, methodId, label, existingId, loginIfNeeded } = input;
+  const provider = listDesktopLinkProviders().find((candidate) => candidate.id === providerId);
+  const method = provider?.connectionMethods.find((candidate) => candidate.id === methodId);
+  if (!provider || !method?.quickAuth || method.quickAuth.kind !== "cli-session") {
+    throw new Error("This Link connection method does not support a CLI session");
+  }
+  const store = new CredentialStore(cwd || undefined);
+  const credentialId = existingId || `link-${providerId}-${methodId}`;
+  if (existingId) {
+    const current = store.resolve(existingId, "full");
+    if (
+      !current ||
+      current.type !== "link" ||
+      current.meta?.linkProvider !== providerId ||
+      current.meta.linkConnectionMethod !== methodId ||
+      current.meta.linkExecutionRuntime !== "local"
+    ) {
+      throw new Error("The existing credential does not belong to this local Link provider");
+    }
+  }
+
+  const validation = await connectCliLink(providerId, { cwd: cwd || undefined, loginIfNeeded });
+  store.save("user", {
+    id: credentialId,
+    type: "link",
+    label: label || `${provider.displayName} · ${validation.identity.label}`,
+    // This random value is only an encrypted binding marker. It is never sent
+    // to the provider and never used to authenticate a Link Action.
+    secret: `cli-binding:${randomBytes(24).toString("base64url")}`,
+    autoUseByAI: false,
+    meta: {
+      linkProvider: providerId,
+      linkConnectionMethod: methodId,
+      linkExecutionRuntime: "local",
+      linkAuthSource: "cli-session",
+      linkExecutionBackend: "cli",
+      agentExposable: false,
+      linkAccountId: validation.identity.externalAccountId,
+      linkAccountLabel: validation.identity.label,
+      linkResourceLabels: validation.identity.resourceLabels,
+      linkCapabilityIds: validation.capabilityIds,
+      linkLastVerifiedAt: validation.verifiedAt,
+    },
+  });
+  bridge?.pushCredentialSnapshot(cwd || undefined);
+  return validation;
+}
+
+ipcMain.handle("links:cliStatus", async (_e, rawProviderId: unknown, rawCwd: unknown) => {
+  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
+  const cwd = typeof rawCwd === "string" ? rawCwd : undefined;
+  if (!isCliLinkProvider(providerId)) throw new Error("Unsupported CLI Link provider");
+  return getCliLinkStatus(providerId, { cwd });
+});
+
+ipcMain.handle("links:cliInstallStatus", (_e, rawProviderId: unknown) => {
+  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
+  return managedCliInstallStatus(providerId);
+});
+
+ipcMain.handle("links:installCli", async (_e, rawProviderId: unknown) => {
+  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
+  if (!isCliLinkProvider(providerId)) throw new Error("Unsupported CLI Link provider");
+  const current = managedCliInstallJobs.get(providerId);
+  if (current) return current;
+  const job = installManagedLinkCli(providerId).finally(() => {
+    managedCliInstallJobs.delete(providerId);
+  });
+  managedCliInstallJobs.set(providerId, job);
+  return job;
+});
+
+ipcMain.handle("links:browserAuthStatus", (_e, rawProviderId: unknown) => {
+  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
+  if (!isLocalBrowserLinkProvider(providerId)) {
+    throw new Error("Unsupported browser-login Link provider");
+  }
+  return linkDeviceOAuthBroker.status(providerId);
+});
+
+ipcMain.handle("links:startBrowserAuth", async (_e, rawProviderId: unknown) => {
+  const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
+  if (!isLocalBrowserLinkProvider(providerId)) {
+    throw new Error("Unsupported browser-login Link provider");
+  }
+  const prompt = await linkDeviceOAuthBroker.start(providerId);
+  clipboard.writeText(prompt.userCode);
+  try {
+    await shell.openExternal(prompt.verificationUriComplete ?? prompt.verificationUri);
+  } catch (error) {
+    linkDeviceOAuthBroker.cancel(prompt.attemptId);
+    throw new Error("Could not open the provider authorization page", { cause: error });
+  }
+  return { ...prompt, codeCopied: true };
+});
+
+ipcMain.handle("links:completeBrowserAuth", async (_e, raw: unknown) => {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("links:connectGithubCli requires a connection request");
+    throw new Error("links:completeBrowserAuth requires a connection request");
+  }
+  const input = raw as Record<string, unknown>;
+  const attemptId = typeof input.attemptId === "string" ? input.attemptId.trim() : "";
+  const cwd = typeof input.cwd === "string" ? input.cwd : "";
+  const providerId = typeof input.providerId === "string" ? input.providerId.trim() : "";
+  const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
+  const label = typeof input.label === "string" ? input.label.trim() : "";
+  const existingId = typeof input.existingId === "string" ? input.existingId.trim() : "";
+  if (!attemptId || !isLocalBrowserLinkProvider(providerId)) {
+    throw new Error("Invalid browser-login Link attempt");
+  }
+  if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(methodId)) {
+    throw new Error("Invalid local Link connection method");
+  }
+  if (label.length > 200) throw new Error("Connection label is too long");
+  const token = await linkDeviceOAuthBroker.complete(attemptId);
+  if (token.providerId !== providerId) {
+    throw new Error("Browser-login provider does not match the connection request");
+  }
+  return persistLocalLinkCredential({
+    cwd,
+    providerId,
+    methodId,
+    label,
+    token: token.accessToken,
+    existingId,
+    authSource: "browser-oauth",
+  });
+});
+
+ipcMain.handle("links:cancelBrowserAuth", (_e, rawAttemptId: unknown) => {
+  const attemptId = typeof rawAttemptId === "string" ? rawAttemptId.trim() : "";
+  return attemptId ? linkDeviceOAuthBroker.cancel(attemptId) : false;
+});
+
+ipcMain.handle("links:connectCli", async (_e, raw: unknown) => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("links:connectCli requires a connection request");
   }
   const input = raw as Record<string, unknown>;
   const cwd = typeof input.cwd === "string" ? input.cwd : "";
+  const rawProviderId = typeof input.providerId === "string" ? input.providerId.trim() : "";
   const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
   const label = typeof input.label === "string" ? input.label.trim() : "";
   const existingId = typeof input.existingId === "string" ? input.existingId.trim() : "";
   const loginIfNeeded = input.loginIfNeeded === true;
-  if (methodId !== "fine-grained-pat") {
-    throw new Error("Invalid GitHub local Link connection method");
-  }
+  if (!isCliLinkProvider(rawProviderId)) throw new Error("Unsupported CLI Link provider");
+  if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(methodId)) throw new Error("Invalid Link method");
   if (label.length > 200) throw new Error("Connection label is too long");
 
-  const result = await obtainGitHubCliToken({ loginIfNeeded });
-  return persistLocalLinkCredential({
+  return persistCliLinkCredential({
     cwd,
-    providerId: "github",
+    providerId: rawProviderId,
     methodId,
-    label: label || `GitHub · ${result.account ?? "GitHub CLI"}`,
-    token: result.token,
+    label,
     existingId,
-    authSource: "github-cli",
+    loginIfNeeded,
   });
 });
 

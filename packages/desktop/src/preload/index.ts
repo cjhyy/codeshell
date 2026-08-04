@@ -1398,8 +1398,19 @@ contextBridge.exposeInMainWorld("codeshell", {
   },
   links: {
     listLocalProviders: () => ipcRenderer.invoke("links:listLocalProviders"),
-    githubCliStatus: () => ipcRenderer.invoke("links:githubCliStatus"),
-    connectGithubCli: (input: unknown) => ipcRenderer.invoke("links:connectGithubCli", input),
+    cliStatus: (providerId: string, cwd?: string) =>
+      ipcRenderer.invoke("links:cliStatus", providerId, cwd),
+    cliInstallStatus: (providerId: string) =>
+      ipcRenderer.invoke("links:cliInstallStatus", providerId),
+    installCli: (providerId: string) => ipcRenderer.invoke("links:installCli", providerId),
+    browserAuthStatus: (providerId: string) =>
+      ipcRenderer.invoke("links:browserAuthStatus", providerId),
+    startBrowserAuth: (providerId: string) =>
+      ipcRenderer.invoke("links:startBrowserAuth", providerId),
+    completeBrowserAuth: (input: unknown) => ipcRenderer.invoke("links:completeBrowserAuth", input),
+    cancelBrowserAuth: (attemptId: string) =>
+      ipcRenderer.invoke("links:cancelBrowserAuth", attemptId),
+    connectCli: (input: unknown) => ipcRenderer.invoke("links:connectCli", input),
     connectLocal: (input: unknown) => ipcRenderer.invoke("links:connectLocal", input),
   },
   credentials: {
