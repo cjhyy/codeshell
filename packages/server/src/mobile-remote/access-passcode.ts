@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_LOCKOUT_MS = 60_000;
+const DEFAULT_TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const COOKIE_NAME = "cs_access";
 const SCRYPT_KEYLEN = 32;
 
@@ -37,6 +38,9 @@ export interface AccessPasscodeOptions {
   now?: () => number;
   maxAttempts?: number;
   lockoutMs?: number;
+  /** Remember-token validity window (default 30 days). Also drives the cookie
+   *  Max-Age so the browser drops the cookie when the server would reject it. */
+  tokenMaxAgeMs?: number;
 }
 
 /**
@@ -56,6 +60,7 @@ export class AccessPasscode {
   private readonly now: () => number;
   private readonly maxAttempts: number;
   private readonly lockoutMs: number;
+  private readonly tokenMaxAgeMs: number;
   private failures = 0;
   private lockedUntil = 0;
 
@@ -64,6 +69,7 @@ export class AccessPasscode {
     this.now = opts.now ?? Date.now;
     this.maxAttempts = opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
     this.lockoutMs = opts.lockoutMs ?? DEFAULT_LOCKOUT_MS;
+    this.tokenMaxAgeMs = opts.tokenMaxAgeMs ?? DEFAULT_TOKEN_MAX_AGE_MS;
   }
 
   isSet(): boolean {
@@ -104,7 +110,9 @@ export class AccessPasscode {
   }
 
   /** Validate a remember-token: HMAC signature must match AND be over the
-   *  current secret (so it dies when the passcode is rotated). */
+   *  current secret (so it dies when the passcode is rotated), AND the signed
+   *  issue timestamp must be within the validity window (so a stolen/synced
+   *  cookie cannot grant access indefinitely). */
   verifyToken(token: string): boolean {
     const record = this.read();
     if (!record) return false;
@@ -113,7 +121,12 @@ export class AccessPasscode {
     const payload = token.slice(0, dot);
     const sig = token.slice(dot + 1);
     const expected = this.sign(payload, record.secret);
-    return safeEqualHex(sig, expected);
+    if (!safeEqualHex(sig, expected)) return false;
+    // The timestamp is covered by the HMAC, so it is trustworthy once the
+    // signature checks out.
+    const issuedAt = Number(payload.slice(payload.indexOf(".") + 1));
+    if (!Number.isFinite(issuedAt)) return false;
+    return this.now() - issuedAt <= this.tokenMaxAgeMs;
   }
 
   /**
@@ -146,7 +159,7 @@ export class AccessPasscode {
           // cross-site and refuses to send the cookie on — re-challenging the
           // user every visit. Lax sends it on top-level navigations. Secure
           // because the tunnel terminates TLS (always https).
-          `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`,
+          `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(this.tokenMaxAgeMs / 1000)}`,
         );
         const cleanLocation = acceptsHtml(req) ? locationWithoutPasscode(req.url) : undefined;
         if (cleanLocation) {

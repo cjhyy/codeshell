@@ -51,6 +51,55 @@ describe("AccessPasscode", () => {
     expect(ap.verifyToken("garbage.token")).toBe(false);
   });
 
+  test("remember-token expires after tokenMaxAgeMs even if the secret never rotates", () => {
+    let now = 1_000_000_000_000;
+    const ap = new AccessPasscode({
+      filePath: freshFile(),
+      now: () => now,
+      tokenMaxAgeMs: 30 * 24 * 60 * 60 * 1000,
+    });
+    ap.set("correct");
+    const token = ap.verify("correct")!;
+    expect(ap.verifyToken(token)).toBe(true);
+    now += 29 * 24 * 60 * 60 * 1000;
+    expect(ap.verifyToken(token)).toBe(true);
+    now += 2 * 24 * 60 * 60 * 1000;
+    expect(ap.verifyToken(token)).toBe(false);
+  });
+
+  test("a token with a tampered timestamp fails the signature check", () => {
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("correct");
+    const token = ap.verify("correct")!;
+    const [rand, ts, sig] = token.split(".");
+    const forged = `${rand}.${Number(ts) + 999_999}.${sig}`;
+    expect(ap.verifyToken(forged)).toBe(false);
+  });
+
+  test("gate: remember-cookie Max-Age matches the token validity window", () => {
+    let now = 1_000_000_000_000;
+    const ap = new AccessPasscode({
+      filePath: freshFile(),
+      now: () => now,
+      tokenMaxAgeMs: 7 * 24 * 60 * 60 * 1000,
+    });
+    ap.set("correct");
+    const headers: Record<string, string> = {};
+    const res = {
+      writeHead: () => undefined,
+      setHeader: (name: string, value: string) => {
+        headers[name] = value;
+      },
+      end: () => undefined,
+    };
+    const allowed = ap.gate(
+      { url: "/mobile", headers: { "x-access-passcode": "correct" } },
+      res,
+    );
+    expect(allowed).toBe(true);
+    expect(headers["Set-Cookie"]).toContain(`Max-Age=${7 * 24 * 60 * 60}`);
+  });
+
   test("changing the passcode invalidates previously issued tokens", () => {
     const ap = new AccessPasscode({ filePath: freshFile() });
     ap.set("first");
