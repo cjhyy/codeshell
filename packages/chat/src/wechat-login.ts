@@ -57,8 +57,12 @@ export async function loginCodeShellWechat(
   });
 
   let credentials: WechatCredentials | undefined;
+  let credentialsChanged = false;
   if (result.connected && result.credentials) {
+    const previous = store.load(result.credentials.accountId);
     credentials = store.save(result.credentials);
+    credentialsChanged =
+      !previous || previous.token !== credentials.token || previous.baseUrl !== credentials.baseUrl;
   } else if (result.alreadyConnected) {
     credentials = store.load();
     if (!credentials) {
@@ -66,6 +70,23 @@ export async function loginCodeShellWechat(
     }
   } else {
     throw new Error("个人微信未完成连接");
+  }
+
+  const stateStore = store.stateStore(credentials.accountId);
+  if (credentialsChanged) {
+    // Cursor and context tokens belong to the credential session that
+    // produced them. Reusing them after a QR rebind can yield prepare failed
+    // or poll from an unrelated cursor, so make the new binding start clean.
+    await stateStore.save({});
+  } else {
+    try {
+      await stateStore.load();
+    } catch {
+      // Keep ordinary adapter startup fail-closed. An explicit successful
+      // login (including an already-connected confirmation) is the recovery
+      // boundary where replacing an unsafe state file is intentional.
+      await stateStore.save({});
+    }
   }
 
   updateWechatConfig({

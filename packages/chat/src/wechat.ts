@@ -8,7 +8,12 @@ import type {
 } from "./channel.js";
 import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
 import { OutgoingDeliveryTracker, outgoingAttachments } from "./media.js";
-import type { WechatAdapterState, WechatCredentials, WechatStateStore } from "./wechat-storage.js";
+import {
+  normalizeWechatAccountId,
+  type WechatAdapterState,
+  type WechatCredentials,
+  type WechatStateStore,
+} from "./wechat-storage.js";
 export * from "./wechat-storage.js";
 
 export const WECHAT_DEFAULT_BASE_URL = "https://ilinkai.weixin.qq.com";
@@ -17,6 +22,11 @@ export const WECHAT_DEFAULT_BOT_AGENT = "CodeShellChat/0.7.1";
 
 const DEFAULT_LONG_POLL_TIMEOUT_MS = 35_000;
 const DEFAULT_MESSAGE_AGE_MS = 5 * 60_000;
+const DEFAULT_RATE_LIMIT_RETRIES = 2;
+const DEFAULT_RATE_LIMIT_RETRY_BASE_MS = 500;
+const DEFAULT_RATE_LIMIT_COOLDOWN_MS = 30_000;
+const WECHAT_CDN_UPLOAD_ATTEMPTS = 3;
+const WECHAT_CDN_UPLOAD_RETRY_BASE_MS = 250;
 const DEFAULT_BOT_TYPE = "3";
 const MESSAGE_TYPE_USER = 1;
 const MESSAGE_TYPE_BOT = 2;
@@ -28,6 +38,16 @@ const ITEM_TYPE_VOICE = 3;
 const ITEM_TYPE_FILE = 4;
 const ITEM_TYPE_VIDEO = 5;
 const WECHAT_CDN_BASE_URL = "https://novac2c.cdn.weixin.qq.com/c2c";
+const WECHAT_CDN_DOWNLOAD_HOSTS = new Set([
+  "novac2c.cdn.weixin.qq.com",
+  "ilinkai.weixin.qq.com",
+  "wx.qlogo.cn",
+  "thirdwx.qlogo.cn",
+  "res.wx.qq.com",
+  "mmbiz.qpic.cn",
+  "mmbiz.qlogo.cn",
+]);
+const WECHAT_CDN_MAX_REDIRECTS = 5;
 
 interface WechatCdnMedia {
   encrypt_query_param?: string;
@@ -96,6 +116,7 @@ interface GetUpdatesResponse {
 
 interface BasicResponse {
   ret?: number;
+  errcode?: number;
   errmsg?: string;
 }
 
@@ -128,7 +149,26 @@ export interface WechatAdapterOptions {
   stateStore?: WechatStateStore;
   now?: () => number;
   maxMessageAgeMs?: number;
+  /** Retries only explicit platform rate-limit responses, reusing client_id. */
+  rateLimitRetries?: number;
+  rateLimitRetryBaseMs?: number;
+  /** Account-wide cooldown after explicit rate-limit retries are exhausted. */
+  rateLimitCooldownMs?: number;
 }
+
+export interface WechatDirectSendResult {
+  channel: "wechat";
+  target: string;
+  status: "accepted";
+  /** iLink acknowledges API acceptance, not display on the recipient device. */
+  terminalDeliveryConfirmed: false;
+  /** True when the helper reused the adapter already long-polling this account. */
+  viaLiveAdapter: boolean;
+}
+
+const accountSendTails = new Map<string, Promise<void>>();
+const rateLimitCooldownUntil = new Map<string, number>();
+const liveWechatAdapters = new Map<string, { credentialKey: string; adapter: WechatAdapter }>();
 
 /** Personal WeChat ClawBot adapter using Tencent's documented iLink Bot HTTP protocol. */
 export class WechatAdapter implements ChannelAdapter {
@@ -141,11 +181,19 @@ export class WechatAdapter implements ChannelAdapter {
   private readonly stateStore?: WechatStateStore;
   private readonly now: () => number;
   private readonly maxMessageAgeMs: number;
+  private readonly rateLimitRetries: number;
+  private readonly rateLimitRetryBaseMs: number;
+  private readonly rateLimitCooldownMs: number;
+  private readonly accountKey: string;
+  private readonly credentialKey: string;
   private readonly baseUrl: string;
   private readonly protocolVersion: string;
   private readonly botAgent: string;
   private state: WechatAdapterState = { contextTokens: {} };
   private stateReady?: Promise<void>;
+  private stateWrite: Promise<void> = Promise.resolve();
+  /** Preserve visible ordering and keep context/media state mutations single-writer. */
+  private outboundQueue: Promise<void> = Promise.resolve();
   private readonly seenMessageIds = new Set<string>();
   private readonly delivery = new OutgoingDeliveryTracker();
 
@@ -159,6 +207,8 @@ export class WechatAdapter implements ChannelAdapter {
       config.baseUrl ?? WECHAT_DEFAULT_BASE_URL,
       config.allowUnsafeBaseUrl ?? false,
     );
+    this.accountKey = wechatAccountKey(this.baseUrl, config.accountId);
+    this.credentialKey = wechatCredentialKey(this.baseUrl, config.accountId, config.token);
     this.protocolVersion = config.protocolVersion ?? WECHAT_PROTOCOL_VERSION;
     this.botAgent = sanitizeBotAgent(config.botAgent ?? WECHAT_DEFAULT_BOT_AGENT);
     this.fetchFn = options.fetch ?? fetch;
@@ -167,14 +217,39 @@ export class WechatAdapter implements ChannelAdapter {
     this.stateStore = options.stateStore;
     this.now = options.now ?? Date.now;
     this.maxMessageAgeMs = options.maxMessageAgeMs ?? DEFAULT_MESSAGE_AGE_MS;
+    this.rateLimitRetries = boundedInteger(
+      options.rateLimitRetries,
+      DEFAULT_RATE_LIMIT_RETRIES,
+      0,
+      5,
+      "微信限流重试次数",
+    );
+    this.rateLimitRetryBaseMs = boundedInteger(
+      options.rateLimitRetryBaseMs,
+      DEFAULT_RATE_LIMIT_RETRY_BASE_MS,
+      1,
+      30_000,
+      "微信限流退避时间",
+    );
+    this.rateLimitCooldownMs = boundedInteger(
+      options.rateLimitCooldownMs,
+      DEFAULT_RATE_LIMIT_COOLDOWN_MS,
+      0,
+      5 * 60_000,
+      "微信限流冷却时间",
+    );
   }
 
   async run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void> {
     await this.ensureState();
-    await this.notifyLifecycle("notifystart");
+    if (liveWechatAdapters.has(this.accountKey)) {
+      throw new Error("同一微信账号已有一个长轮询 adapter 在运行");
+    }
+    liveWechatAdapters.set(this.accountKey, { credentialKey: this.credentialKey, adapter: this });
     let nextTimeoutMs = DEFAULT_LONG_POLL_TIMEOUT_MS;
     let retryMs = 1_000;
     try {
+      await withWechatAccountSendLock(this.accountKey, () => this.notifyLifecycle("notifystart"));
       while (!signal.aborted) {
         try {
           const response = await this.post<GetUpdatesResponse>(
@@ -197,25 +272,30 @@ export class WechatAdapter implements ChannelAdapter {
             }
             throw new Error(`微信 getUpdates 失败：${response.errmsg ?? `ret=${errorCode}`}`);
           }
-          if (response.get_updates_buf) {
-            this.state.cursor = response.get_updates_buf;
-            await this.persistState();
-          }
+          let batchAccepted = true;
           for (const raw of response.msgs ?? []) {
             const message = this.normalizeInbound(raw);
             if (!message || this.isDuplicate(message.messageId)) continue;
-            if (raw.context_token) {
-              this.state.contextTokens ??= {};
-              this.state.contextTokens[message.target] = raw.context_token;
-              await this.persistState();
-            }
             try {
+              if (raw.context_token) {
+                this.state.contextTokens ??= {};
+                this.state.contextTokens[message.target] = raw.context_token;
+                await this.persistState();
+              }
               await handler(message);
             } catch (error) {
+              batchAccepted = false;
+              this.forgetDuplicate(message.messageId);
               this.log(
                 `微信消息处理失败：${error instanceof Error ? error.message : String(error)}`,
               );
             }
+          }
+          if (!batchAccepted) {
+            throw new Error("微信消息未被上层接收，保留游标等待重投");
+          }
+          if (response.get_updates_buf) {
+            await this.commitCursor(response.get_updates_buf);
           }
         } catch (error) {
           if (signal.aborted) return;
@@ -228,55 +308,175 @@ export class WechatAdapter implements ChannelAdapter {
         }
       }
     } finally {
-      await this.notifyLifecycle("notifystop");
+      // Stop advertising this adapter before yielding, so new direct sends use
+      // the one-shot route. A caller that already observed the live entry has
+      // synchronously enqueued its send; drain that queue before notifystop so
+      // accepted work cannot race behind the session shutdown.
+      if (liveWechatAdapters.get(this.accountKey)?.adapter === this) {
+        liveWechatAdapters.delete(this.accountKey);
+      }
+      await this.outboundQueue.catch(() => undefined);
+      await withWechatAccountSendLock(this.accountKey, () => this.notifyLifecycle("notifystop"));
     }
   }
 
-  async send(target: string, message: OutgoingMessage): Promise<void> {
+  send(target: string, message: OutgoingMessage): Promise<void> {
+    const operation = this.outboundQueue.then(() =>
+      withWechatAccountSendLock(this.accountKey, () => this.sendInOrder(target, message)),
+    );
+    this.outboundQueue = operation.catch(() => undefined);
+    return operation;
+  }
+
+  private async sendInOrder(target: string, message: OutgoingMessage): Promise<void> {
     await this.ensureState();
     const text = message.button
       ? `${message.text}\n\n${message.button.text}: ${message.button.url}`
       : message.text;
     const attachments = outgoingAttachments(message, this.capabilities.outbound.attachments);
+    const textChunks = splitWechatText(text, this.capabilities.outbound.maxTextLength ?? 8_000);
+    if (textChunks.length === 0 && attachments.length === 0) {
+      throw new Error("微信待发送消息不能为空");
+    }
     // iLink accepts exactly one MessageItem per sendmessage call. In
     // particular, a text caption and a media item must be sent separately;
     // combining them is rejected by the service as "invalid arguments".
     await this.delivery.run(message, () => [
-      ...(text ? [() => this.sendItem(target, { type: ITEM_TYPE_TEXT, text_item: { text } })] : []),
-      ...attachments.map((attachment) => async () => {
-        const item =
-          attachment.kind === "image"
-            ? await this.uploadImage(target, attachment)
-            : attachment.kind === "video"
-              ? await this.uploadVideo(target, attachment)
-              : // Arbitrary audio lacks the SILK metadata required by native
-                // voice bubbles, so deliver it as a playable file attachment.
-                await this.uploadFile(target, attachment);
-        await this.sendItem(target, item);
+      ...textChunks.map((chunk) => {
+        // Keep the platform id stable across DeliveryQueue retries. A request
+        // can reach WeChat successfully while its HTTP acknowledgement is
+        // lost; retrying with a fresh id visibly duplicates the reply.
+        const clientId = `code-shell-chat-${randomUUID()}`;
+        return () =>
+          this.sendItem(target, { type: ITEM_TYPE_TEXT, text_item: { text: chunk } }, clientId);
+      }),
+      ...attachments.map((attachment) => {
+        const clientId = `code-shell-chat-${randomUUID()}`;
+        return async () => {
+          const item =
+            attachment.kind === "image"
+              ? await this.uploadImage(target, attachment)
+              : attachment.kind === "video"
+                ? await this.uploadVideo(target, attachment)
+                : // Arbitrary audio lacks the SILK metadata required by native
+                  // voice bubbles, so deliver it as a playable file attachment.
+                  await this.uploadFile(target, attachment);
+          await this.sendItem(target, item, clientId);
+        };
       }),
     ]);
   }
 
-  private async sendItem(target: string, item: WechatMessageItem): Promise<void> {
-    const response = await this.post<BasicResponse>(
-      "ilink/bot/sendmessage",
-      {
-        msg: {
-          from_user_id: "",
-          to_user_id: target,
-          client_id: `code-shell-chat-${randomUUID()}`,
-          message_type: MESSAGE_TYPE_BOT,
-          message_state: MESSAGE_STATE_FINISH,
-          item_list: [item],
-          context_token: this.state.contextTokens?.[target],
-        },
-        base_info: this.baseInfo(),
-      },
-      15_000,
+  private async sendItem(target: string, item: WechatMessageItem, clientId: string): Promise<void> {
+    const contextToken = this.state.contextTokens?.[target];
+    const first = await this.postWechatMessageWithRateLimitRetry(
+      target,
+      item,
+      clientId,
+      contextToken,
     );
-    if (response.ret && response.ret !== 0) {
-      throw new Error(`微信发送失败：${response.errmsg ?? `ret=${response.ret}`}`);
+    if (!wechatResponseFailed(first)) return;
+
+    // Tencent's client attempts sends without context_token, although the
+    // documented contract remains context-bound and some accounts reject it.
+    // Clear only the exact stale token and try the compatible-backend fallback
+    // once. Reusing client_id lets the platform deduplicate if the first
+    // request reached deeper than its error suggests.
+    if (contextToken && isStaleWechatContextResponse(first)) {
+      try {
+        await this.clearContextToken(target, contextToken);
+      } catch (error) {
+        // Persistence is a cache concern, not a delivery prerequisite. Keep the
+        // in-memory token cleared and perform the safe tokenless retry.
+        this.log(
+          `微信失效上下文未能写回状态文件：${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      this.log(`微信会话上下文已失效，已清除并尝试无上下文直发：${wechatResponseDetail(first)}`);
+      const fallback = await this.postWechatMessageWithRateLimitRetry(target, item, clientId);
+      if (!wechatResponseFailed(fallback)) return;
+      throw new Error(wechatSendFailure(fallback, true));
     }
+
+    throw new Error(wechatSendFailure(first, contextToken === undefined));
+  }
+
+  private async postWechatMessage(
+    target: string,
+    item: WechatMessageItem,
+    clientId: string,
+    contextToken?: string,
+  ): Promise<BasicResponse> {
+    try {
+      return await this.post<BasicResponse>(
+        "ilink/bot/sendmessage",
+        {
+          msg: {
+            from_user_id: "",
+            to_user_id: target,
+            client_id: clientId,
+            message_type: MESSAGE_TYPE_BOT,
+            message_state: MESSAGE_STATE_FINISH,
+            item_list: [item],
+            ...(contextToken ? { context_token: contextToken } : {}),
+          },
+          base_info: this.baseInfo(),
+        },
+        15_000,
+      );
+    } catch (error) {
+      // HTTP 429 is an explicit rejection, unlike a socket/timeout failure
+      // whose acceptance outcome is unknown. Normalize only that status into
+      // the same safe retry path as iLink ret=-2.
+      if (error instanceof WechatHttpError && error.status === 429) {
+        return { ret: 429, errmsg: error.message };
+      }
+      throw error;
+    }
+  }
+
+  private async postWechatMessageWithRateLimitRetry(
+    target: string,
+    item: WechatMessageItem,
+    clientId: string,
+    contextToken?: string,
+  ): Promise<BasicResponse> {
+    this.assertRateLimitCircuitClosed();
+    let response = await this.postWechatMessage(target, item, clientId, contextToken);
+    for (let attempt = 0; attempt < this.rateLimitRetries; attempt += 1) {
+      if (!isExplicitWechatRateLimitResponse(response)) break;
+      const delayMs = Math.min(this.rateLimitRetryBaseMs * 2 ** attempt, 30_000);
+      this.log(`微信发送被限流，${delayMs}ms 后重试（${attempt + 1}/${this.rateLimitRetries}）`);
+      await this.sleepFn(delayMs, new AbortController().signal);
+      response = await this.postWechatMessage(target, item, clientId, contextToken);
+    }
+    if (isExplicitWechatRateLimitResponse(response)) {
+      if (this.rateLimitCooldownMs > 0) {
+        rateLimitCooldownUntil.set(this.accountKey, this.now() + this.rateLimitCooldownMs);
+      }
+    } else if (!wechatResponseFailed(response)) {
+      rateLimitCooldownUntil.delete(this.accountKey);
+    }
+    return response;
+  }
+
+  private assertRateLimitCircuitClosed(): void {
+    const until = rateLimitCooldownUntil.get(this.accountKey);
+    if (until === undefined) return;
+    const remaining = until - this.now();
+    if (remaining <= 0) {
+      rateLimitCooldownUntil.delete(this.accountKey);
+      return;
+    }
+    throw new Error(`微信发送暂时限流，冷却还剩 ${remaining}ms`);
+  }
+
+  private async clearContextToken(target: string, failedToken: string): Promise<void> {
+    // Do not erase a fresher token learned by the long poll while this send was
+    // in flight. Only the token proven stale by this response may be removed.
+    if (this.state.contextTokens?.[target] !== failedToken) return;
+    delete this.state.contextTokens[target];
+    await this.persistState();
   }
 
   private async uploadImage(
@@ -376,25 +576,57 @@ export class WechatAdapter implements ChannelAdapter {
       },
       15_000,
     );
-    if (upload.ret && upload.ret !== 0) {
-      throw new Error(`微信获取附件上传地址失败：${upload.errmsg ?? `ret=${upload.ret}`}`);
+    if (wechatResponseFailed(upload)) {
+      throw new Error(`微信获取附件上传地址失败：${wechatResponseDetail(upload)}`);
     }
     const uploadUrl = resolveWechatCdnUploadUrl(upload, filekey);
-    const response = await this.fetchFn(uploadUrl, {
-      method: "POST",
-      headers: { "content-type": "application/octet-stream" },
-      body: new Uint8Array(ciphertext),
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!response.ok) throw new Error(`微信附件上传失败（HTTP ${response.status}）`);
-    const encryptedQueryParam = response.headers.get("x-encrypted-param")?.trim();
-    if (!encryptedQueryParam) throw new Error("微信附件上传响应缺少下载参数");
+    const encryptedQueryParam = await this.uploadCiphertext(uploadUrl, ciphertext);
     return {
       plaintextSize: plaintext.byteLength,
       ciphertextSize: ciphertext.byteLength,
       keyHex,
       encryptedQueryParam,
     };
+  }
+
+  private async uploadCiphertext(uploadUrl: string, ciphertext: Buffer): Promise<string> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= WECHAT_CDN_UPLOAD_ATTEMPTS; attempt += 1) {
+      try {
+        const response = await this.fetchFn(uploadUrl, {
+          method: "POST",
+          headers: { "content-type": "application/octet-stream" },
+          body: new Uint8Array(ciphertext),
+          signal: AbortSignal.timeout(30_000),
+          // Never let a CDN response turn this trusted upload into an arbitrary
+          // follow-up request. Unlike downloads, an upload has no legitimate
+          // cross-host redirect flow to preserve.
+          redirect: "manual",
+        });
+        if (
+          (response.status >= 300 && response.status < 400) ||
+          (response.status >= 400 && response.status < 500)
+        ) {
+          throw new WechatCdnUploadClientError(response.status);
+        }
+        if (!response.ok) throw new Error(`微信附件上传失败（HTTP ${response.status}）`);
+        const encryptedQueryParam = response.headers.get("x-encrypted-param")?.trim();
+        if (!encryptedQueryParam) throw new Error("微信附件上传响应缺少下载参数");
+        return encryptedQueryParam;
+      } catch (error) {
+        if (error instanceof WechatCdnUploadClientError) throw error;
+        lastError = error;
+        if (attempt >= WECHAT_CDN_UPLOAD_ATTEMPTS) break;
+        const delayMs = WECHAT_CDN_UPLOAD_RETRY_BASE_MS * attempt;
+        this.log(
+          `微信附件上传失败，${delayMs}ms 后重试（${attempt}/${WECHAT_CDN_UPLOAD_ATTEMPTS - 1}）：${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        await this.sleepFn(delayMs, new AbortController().signal);
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error("微信附件上传失败");
   }
 
   private normalizeInbound(raw: WechatWireMessage): ChannelMessage | undefined {
@@ -493,16 +725,33 @@ export class WechatAdapter implements ChannelAdapter {
     preferredHexKey?: string,
     signal?: AbortSignal,
   ): Promise<Uint8Array> {
-    const url = resolveWechatCdnUrl(media);
-    const response = await this.fetchFn(url, {
-      signal: signal ?? AbortSignal.timeout(30_000),
-    });
+    const url = resolveWechatCdnUrl(media, this.config.allowUnsafeBaseUrl ?? false);
+    const response = await this.fetchWechatCdn(url, signal ?? AbortSignal.timeout(30_000));
     if (!response.ok) throw new Error(`微信附件下载失败（HTTP ${response.status}）`);
     const encrypted = await readBoundedWechatResponse(response, 10 * 1024 * 1024 + 16);
     const key = decodeWechatAesKey(preferredHexKey, media.aes_key);
     const decipher = createDecipheriv("aes-128-ecb", key, null);
     decipher.setAutoPadding(true);
     return Buffer.concat([decipher.update(encrypted), decipher.final()]);
+  }
+
+  private async fetchWechatCdn(initialUrl: string, signal: AbortSignal): Promise<Response> {
+    let currentUrl = initialUrl;
+    for (let redirects = 0; redirects <= WECHAT_CDN_MAX_REDIRECTS; redirects += 1) {
+      const response = await this.fetchFn(currentUrl, { signal, redirect: "manual" });
+      if (response.status < 300 || response.status >= 400) return response;
+      const location = response.headers.get("location");
+      await response.body?.cancel().catch(() => undefined);
+      if (!location) throw new Error("微信附件 CDN 重定向缺少地址");
+      if (redirects >= WECHAT_CDN_MAX_REDIRECTS) {
+        throw new Error("微信附件 CDN 重定向过多");
+      }
+      currentUrl = validateWechatCdnDownloadUrl(
+        new URL(location, currentUrl).toString(),
+        this.config.allowUnsafeBaseUrl ?? false,
+      );
+    }
+    throw new Error("微信附件 CDN 重定向过多");
   }
 
   private isDuplicate(messageId: string | undefined): boolean {
@@ -514,6 +763,21 @@ export class WechatAdapter implements ChannelAdapter {
       if (oldest) this.seenMessageIds.delete(oldest);
     }
     return false;
+  }
+
+  private forgetDuplicate(messageId: string | undefined): void {
+    if (messageId) this.seenMessageIds.delete(messageId);
+  }
+
+  private async commitCursor(cursor: string): Promise<void> {
+    const previous = this.state.cursor;
+    this.state.cursor = cursor;
+    try {
+      await this.persistState();
+    } catch (error) {
+      this.state.cursor = previous;
+      throw error;
+    }
   }
 
   private ensureState(): Promise<void> {
@@ -528,10 +792,17 @@ export class WechatAdapter implements ChannelAdapter {
   }
 
   private async persistState(): Promise<void> {
-    await this.stateStore?.save({
+    const snapshot: WechatAdapterState = {
       cursor: this.state.cursor,
       contextTokens: { ...(this.state.contextTokens ?? {}) },
-    });
+    };
+    const write = this.stateWrite
+      .catch(() => undefined)
+      .then(async () => {
+        await this.stateStore?.save(snapshot);
+      });
+    this.stateWrite = write;
+    await write;
   }
 
   private baseInfo(): { channel_version: string; bot_agent: string } {
@@ -564,8 +835,8 @@ export class WechatAdapter implements ChannelAdapter {
         { base_info: this.baseInfo() },
         10_000,
       );
-      if (response.ret && response.ret !== 0) {
-        this.log(`微信 ${action} 返回 ret=${response.ret}：${response.errmsg ?? ""}`);
+      if (wechatResponseFailed(response)) {
+        this.log(`微信 ${action} 失败：${wechatResponseDetail(response)}`);
       }
     } catch (error) {
       this.log(
@@ -575,15 +846,142 @@ export class WechatAdapter implements ChannelAdapter {
   }
 }
 
-function resolveWechatCdnUrl(media: WechatCdnMedia): string {
+/**
+ * Direct WeChat delivery for schedulers and notification workers. It reuses a
+ * live long-poll adapter when available and otherwise creates a one-shot
+ * adapter. Both routes share persisted context lookup, stale-context eviction,
+ * best-effort tokenless fallback, media upload, and response validation.
+ */
+export async function sendWechatDirect(
+  config: WechatAdapterConfig,
+  target: string,
+  message: OutgoingMessage,
+  options: WechatAdapterOptions = {},
+): Promise<WechatDirectSendResult> {
+  const lockBaseUrl = validateWechatBaseUrl(
+    config.baseUrl ?? WECHAT_DEFAULT_BASE_URL,
+    config.allowUnsafeBaseUrl ?? false,
+  );
+  const accountKey = wechatAccountKey(lockBaseUrl, config.accountId);
+  const credentialKey = wechatCredentialKey(lockBaseUrl, config.accountId, config.token);
+  // iLink can acknowledge a competing short-lived session without showing
+  // the message on the recipient device. Reuse the authoritative long-poll
+  // adapter whenever this process has one, matching Hermes' live-adapter
+  // routing; only fall back to a one-shot adapter while the Gateway is down.
+  const live = liveWechatAdapters.get(accountKey);
+  if (live && live.credentialKey !== credentialKey) {
+    throw new Error("微信凭据已更新，请重启 Gateway 后再发送");
+  }
+  const adapter = live?.adapter ?? new WechatAdapter(config, options);
+  await adapter.send(target, message);
+  return {
+    channel: "wechat",
+    target,
+    status: "accepted",
+    terminalDeliveryConfirmed: false,
+    viaLiveAdapter: live !== undefined,
+  };
+}
+
+async function withWechatAccountSendLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  const previous = accountSendTails.get(key) ?? Promise.resolve();
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolveGate) => {
+    release = resolveGate;
+  });
+  const tail = previous.then(
+    () => gate,
+    () => gate,
+  );
+  accountSendTails.set(key, tail);
+  await previous.catch(() => undefined);
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (accountSendTails.get(key) === tail) accountSendTails.delete(key);
+  }
+}
+
+function wechatAccountKey(baseUrl: string, accountId: string): string {
+  return `${baseUrl}\0${normalizeWechatAccountId(accountId)}`;
+}
+
+function wechatCredentialKey(baseUrl: string, accountId: string, token: string): string {
+  const tokenFingerprint = createHash("sha256").update(token).digest("base64url").slice(0, 24);
+  return `${wechatAccountKey(baseUrl, accountId)}\0${tokenFingerprint}`;
+}
+
+function wechatResponseFailed(response: BasicResponse): boolean {
+  return [response.ret, response.errcode].some((code) => typeof code === "number" && code !== 0);
+}
+
+function isStaleWechatContextResponse(response: BasicResponse): boolean {
+  const message = response.errmsg?.trim() ?? "";
+  if (/prepare failed/iu.test(message)) return true;
+  if (response.ret === -14 || response.errcode === -14) return true;
+  return (
+    (response.ret === -2 || response.errcode === -2) && /unknown(?:\s+|_)error/iu.test(message)
+  );
+}
+
+/**
+ * Retry only an explicit application-level throttle response. Transport
+ * failures are intentionally excluded because their delivery outcome is
+ * ambiguous, and stale-context responses must take the tokenless fallback path.
+ */
+function isExplicitWechatRateLimitResponse(response: BasicResponse): boolean {
+  if (!wechatResponseFailed(response) || isStaleWechatContextResponse(response)) return false;
+  return [response.ret, response.errcode].some((code) => code === -2 || code === 429);
+}
+
+function wechatResponseDetail(response: BasicResponse): string {
+  const message = response.errmsg?.trim();
+  if (message) return message;
+  const codes = [
+    ...(typeof response.ret === "number" ? [`ret=${response.ret}`] : []),
+    ...(typeof response.errcode === "number" ? [`errcode=${response.errcode}`] : []),
+  ];
+  return codes.join(", ") || "微信服务返回了未知错误";
+}
+
+function wechatSendFailure(response: BasicResponse, direct: boolean): string {
+  if (response.ret === -14 || response.errcode === -14) {
+    return `微信登录或发送授权已失效：${wechatResponseDetail(response)}。请重新扫码连接个人微信。`;
+  }
+  if (direct && isStaleWechatContextResponse(response)) {
+    return `微信直接发送失败：${wechatResponseDetail(response)}。当前微信会话没有可用的 context_token；请先让管理员向 Mimi 发一条消息刷新会话上下文。`;
+  }
+  return `微信${direct ? "直接" : ""}发送失败：${wechatResponseDetail(response)}`;
+}
+
+function splitWechatText(text: string, maximum: number): string[] {
+  if (!text) return [];
+  const characters = Array.from(text);
+  const chunks: string[] = [];
+  for (let offset = 0; offset < characters.length; offset += maximum) {
+    chunks.push(characters.slice(offset, offset + maximum).join(""));
+  }
+  return chunks;
+}
+
+function resolveWechatCdnUrl(media: WechatCdnMedia, allowUnsafe: boolean): string {
   const raw = media.full_url?.trim()
     ? media.full_url
     : media.encrypt_query_param
       ? `${WECHAT_CDN_BASE_URL}/download?encrypted_query_param=${encodeURIComponent(media.encrypt_query_param)}`
       : "";
   if (!raw) throw new Error("微信附件缺少 CDN 下载参数");
+  return validateWechatCdnDownloadUrl(raw, allowUnsafe);
+}
+
+function validateWechatCdnDownloadUrl(raw: string, allowUnsafe: boolean): string {
   const url = new URL(raw);
   if (url.protocol !== "https:") throw new Error("微信附件 CDN 地址必须使用 HTTPS");
+  if (url.username || url.password) throw new Error("微信附件 CDN 地址不能包含登录信息");
+  if (!allowUnsafe && !WECHAT_CDN_DOWNLOAD_HOSTS.has(url.hostname)) {
+    throw new Error("微信附件 CDN 地址不在受信任主机列表中");
+  }
   return url.toString();
 }
 
@@ -595,7 +993,12 @@ function resolveWechatCdnUploadUrl(upload: GetUploadUrlResponse, filekey: string
       : "";
   if (!raw) throw new Error("微信服务未返回附件上传地址");
   const url = new URL(raw);
-  if (url.protocol !== "https:" || url.hostname !== "novac2c.cdn.weixin.qq.com") {
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== "novac2c.cdn.weixin.qq.com" ||
+    url.username ||
+    url.password
+  ) {
     throw new Error("微信附件上传地址不是受信任的 CDN HTTPS 地址");
   }
   return url.toString();
@@ -817,6 +1220,18 @@ interface WechatRequestOptions {
 
 class WechatRequestTimeoutError extends Error {}
 
+class WechatHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`微信 API 返回 HTTP ${status}`);
+  }
+}
+
+class WechatCdnUploadClientError extends Error {
+  constructor(readonly status: number) {
+    super(`微信附件上传失败（HTTP ${status}）`);
+  }
+}
+
 async function requestWechatJson<T>(options: WechatRequestOptions): Promise<T> {
   const controller = new AbortController();
   let timedOut = false;
@@ -838,12 +1253,23 @@ async function requestWechatJson<T>(options: WechatRequestOptions): Promise<T> {
         }),
         ...(options.method === "POST" ? { body: JSON.stringify(options.body ?? {}) } : {}),
         signal: controller.signal,
+        // An automatic redirect could forward the bearer token away from the
+        // already-validated API origin. iLink expresses regional redirects in
+        // its JSON protocol, so HTTP redirects are never required here.
+        redirect: "manual",
       },
     );
-    if (!response.ok) throw new Error(`微信 API 返回 HTTP ${response.status}`);
+    if (!response.ok) throw new WechatHttpError(response.status);
     try {
-      return (await response.json()) as T;
+      const parsed: unknown = await response.json();
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("微信 API 返回的 JSON 不是对象");
+      }
+      return parsed as T;
     } catch (error) {
+      if (error instanceof Error && error.message === "微信 API 返回的 JSON 不是对象") {
+        throw error;
+      }
       throw new Error("微信 API 返回了无效 JSON", { cause: error });
     }
   } catch (error) {
@@ -886,8 +1312,23 @@ function sanitizeBotAgent(value: string): string {
   return ascii && Buffer.byteLength(ascii, "utf8") <= 256 ? ascii : WECHAT_DEFAULT_BOT_AGENT;
 }
 
+function boundedInteger(
+  value: number | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+  label: string,
+): number {
+  const resolved = value ?? fallback;
+  if (!Number.isSafeInteger(resolved) || resolved < minimum || resolved > maximum) {
+    throw new Error(`${label}必须是 ${minimum} 到 ${maximum} 之间的整数`);
+  }
+  return resolved;
+}
+
 function validateWechatBaseUrl(value: string, allowUnsafe: boolean): string {
   const url = new URL(value);
+  if (url.username || url.password) throw new Error("微信 API baseUrl 不能包含登录信息");
   if (url.protocol !== "https:" && !allowUnsafe) {
     throw new Error("微信 API baseUrl 必须使用 HTTPS");
   }
