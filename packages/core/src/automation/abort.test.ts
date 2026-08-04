@@ -6,6 +6,10 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 describe("CronScheduler.abort", () => {
   test("aborts an in-flight run via the AbortSignal handed to the executor", async () => {
     const sched = new CronScheduler();
+    const terminalTypes: string[] = [];
+    sched.setJobEventListener((event) => {
+      if (event.type !== "job_start") terminalTypes.push(event.type);
+    });
     let sawAbort = false;
     sched.setExecutor(async (_job, signal) => {
       // Mirror Engine.run: cooperate with the signal, resolve (don't throw) on abort.
@@ -26,6 +30,7 @@ describe("CronScheduler.abort", () => {
     await sleep(10); // let fire() install the controller + start the executor
     await expect(sched.abort(job.id)).resolves.toBe(true);
     expect(sawAbort).toBe(true);
+    expect(terminalTypes).toEqual(["job_cancelled"]);
     sched.stopAll();
   });
 

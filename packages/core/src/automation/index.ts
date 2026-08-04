@@ -7,7 +7,7 @@
  * (docs/automation-plan-2026-05-31.md, D1).
  */
 
-import { CronScheduler } from "./scheduler.js";
+import { CronScheduler, type CronJobLifecycleEvent } from "./scheduler.js";
 import {
   bindCronToEngine,
   bindCronToRunManager,
@@ -27,6 +27,8 @@ export interface StartAutomationDeps {
    */
   runner?: CronRunner;
   runManager?: RunSubmitter;
+  /** Installed before persisted jobs are restored and their timers are armed. */
+  onJobEvent?: (event: CronJobLifecycleEvent) => void;
 }
 
 export interface AutomationHandle {
@@ -49,6 +51,7 @@ export function startAutomation(deps: StartAutomationDeps): AutomationHandle {
   } else {
     throw new Error("startAutomation requires either a runner or a runManager");
   }
+  scheduler.setJobEventListener(deps.onJobEvent);
   scheduler.loadJobs();
   return {
     scheduler,
@@ -57,7 +60,13 @@ export function startAutomation(deps: StartAutomationDeps): AutomationHandle {
 }
 
 // Re-export the building blocks so hosts import everything from one place.
-export { CronScheduler, cronScheduler, type CronJob } from "./scheduler.js";
+export {
+  CronScheduler,
+  cronScheduler,
+  type CronExecutionOutcome,
+  type CronJob,
+  type CronJobLifecycleEvent,
+} from "./scheduler.js";
 export { CronStore, defaultCronStorePath } from "./store.js";
 export {
   bindCronToEngine,

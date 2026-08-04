@@ -46,4 +46,19 @@ describe("CronScheduler job lifecycle events", () => {
     expect(errors.length).toBeGreaterThanOrEqual(1);
     expect(errors[0].error).toBe("job boom");
   });
+
+  test("a semantic stop outcome is distinct from successful completion", async () => {
+    const scheduler = new CronScheduler();
+    const events: CronJobLifecycleEvent[] = [];
+    scheduler.setJobEventListener((event) => events.push(event));
+    scheduler.setExecutor(async () => ({ stoppedReason: "target disappeared" }));
+    const job = scheduler.create("stops itself", "1h", "p");
+
+    scheduler.runNow(job.id);
+    await sleep(20);
+
+    expect(events.map((event) => event.type)).toEqual(["job_start", "job_stopped"]);
+    expect(events.at(-1)?.reason).toBe("target disappeared");
+    scheduler.stopAll();
+  });
 });

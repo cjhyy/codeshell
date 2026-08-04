@@ -99,10 +99,17 @@ export interface CronJob {
  * job_error carries the message `fire()` would otherwise swallow.
  */
 export interface CronJobLifecycleEvent {
-  type: "job_start" | "job_end" | "job_error";
+  type: "job_start" | "job_end" | "job_stopped" | "job_cancelled" | "job_error";
   job: CronJob;
   durationMs?: number;
+  reason?: string;
   error?: string;
+}
+
+/** Optional semantic outcome returned by an executor after a non-throwing run. */
+export interface CronExecutionOutcome {
+  /** The run permanently disabled itself and should not be reported as success. */
+  stoppedReason?: string;
 }
 
 /** Optional metadata accepted by create(). */
@@ -144,7 +151,7 @@ export class CronScheduler {
     { controller: AbortController; done: Promise<void> }
   >();
   private nextId = 1;
-  private onExecute?: (job: CronJob, signal: AbortSignal) => Promise<void>;
+  private onExecute?: (job: CronJob, signal: AbortSignal) => Promise<void | CronExecutionOutcome>;
   private onJobEvent?: (event: CronJobLifecycleEvent) => void;
   /** Optional persistence backend. When set, every create/delete/pause/resume
    *  writes the full job set to disk so jobs survive a restart. */
@@ -177,12 +184,15 @@ export class CronScheduler {
     this.store = store;
   }
 
-  setExecutor(fn: (job: CronJob, signal: AbortSignal) => Promise<void>): void {
+  setExecutor(
+    fn: (job: CronJob, signal: AbortSignal) => Promise<void | CronExecutionOutcome>,
+  ): void {
     this.onExecute = fn;
   }
 
   /**
-   * Observe job execution lifecycle (job_start → job_end | job_error). Hosts
+   * Observe job execution lifecycle
+   * (job_start → job_end | job_stopped | job_cancelled | job_error). Hosts
    * wire this to their notification surface so scheduled runs — especially
    * failures, which `fire()` otherwise swallows — are no longer silent.
    * Listener errors are swallowed; observation never affects scheduling.
@@ -797,15 +807,28 @@ export class CronScheduler {
     const startedAt = Date.now();
     this.emitJobEvent({ type: "job_start", job });
     try {
-      await this.onExecute?.(job, controller.signal);
-      this.emitJobEvent({ type: "job_end", job, durationMs: Date.now() - startedAt });
-    } catch (err) {
-      // Job execution failed — continue scheduling (but tell observers).
+      const outcome = await this.onExecute?.(job, controller.signal);
       this.emitJobEvent({
-        type: "job_error",
+        type: controller.signal.aborted
+          ? "job_cancelled"
+          : outcome?.stoppedReason
+            ? "job_stopped"
+            : "job_end",
         job,
         durationMs: Date.now() - startedAt,
-        error: err instanceof Error ? err.message : String(err),
+        ...(outcome?.stoppedReason ? { reason: outcome.stoppedReason } : {}),
+      });
+    } catch (err) {
+      // Cancellation is an owner decision, not a job failure. A transport may
+      // reject on AbortSignal instead of resolving, so classify from the
+      // scheduler-owned signal on both terminal paths.
+      this.emitJobEvent({
+        type: controller.signal.aborted ? "job_cancelled" : "job_error",
+        job,
+        durationMs: Date.now() - startedAt,
+        ...(controller.signal.aborted
+          ? {}
+          : { error: err instanceof Error ? err.message : String(err) }),
       });
     } finally {
       // The executor may have recorded lastRunId on the job. Persist only run

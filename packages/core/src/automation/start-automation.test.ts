@@ -19,7 +19,10 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 describe("startAutomation", () => {
   test("returns a handle with a scheduler and stop()", () => {
     const store = new CronStore(file);
-    const handle = startAutomation({ store, runner: async () => ({ text: "", reason: "completed" }) });
+    const handle = startAutomation({
+      store,
+      runner: async () => ({ text: "", reason: "completed" }),
+    });
     expect(typeof handle.stop).toBe("function");
     expect(handle.scheduler).toBeDefined();
     handle.stop();
@@ -46,11 +49,17 @@ describe("startAutomation", () => {
 
   test("loads persisted jobs on start (restart survival)", () => {
     // First lifetime: persist a job, then stop.
-    const a = startAutomation({ store: new CronStore(file), runner: async () => ({ text: "", reason: "completed" }) });
+    const a = startAutomation({
+      store: new CronStore(file),
+      runner: async () => ({ text: "", reason: "completed" }),
+    });
     const job = a.scheduler.create("persisted", "1h", "p");
     a.stop();
     // Second lifetime: a fresh facade over the same store restores it.
-    const b = startAutomation({ store: new CronStore(file), runner: async () => ({ text: "", reason: "completed" }) });
+    const b = startAutomation({
+      store: new CronStore(file),
+      runner: async () => ({ text: "", reason: "completed" }),
+    });
     expect(b.scheduler.get(job.id)?.name).toBe("persisted");
     b.stop();
   });
@@ -58,12 +67,38 @@ describe("startAutomation", () => {
   test("stop() halts all timers (no further runner calls)", async () => {
     const store = new CronStore(file);
     let count = 0;
-    const handle = startAutomation({ store, runner: async () => { count++; return { text: "", reason: "completed" }; } });
+    const handle = startAutomation({
+      store,
+      runner: async () => {
+        count++;
+        return { text: "", reason: "completed" };
+      },
+    });
     handle.scheduler.create("x", "20", "p");
     await sleep(50);
     handle.stop();
     const after = count;
     await sleep(60);
     expect(count).toBe(after); // no ticks after stop()
+  });
+
+  test("installs the lifecycle observer before restored jobs are armed", async () => {
+    const seed = startAutomation({
+      store: new CronStore(file),
+      runner: async () => ({ text: "", reason: "completed" }),
+    });
+    seed.scheduler.create("restored-fast-job", "5", "p");
+    seed.stop();
+
+    const events: string[] = [];
+    const restored = startAutomation({
+      store: new CronStore(file),
+      runner: async () => ({ text: "", reason: "completed" }),
+      onJobEvent: (event) => events.push(event.type),
+    });
+    await sleep(20);
+    restored.stop();
+
+    expect(events.slice(0, 2)).toEqual(["job_start", "job_end"]);
   });
 });

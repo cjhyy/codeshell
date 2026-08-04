@@ -102,9 +102,10 @@ export function bindCronToEngine(scheduler: CronScheduler, runner: CronRunner): 
       // was deleted) auto-disables the job so it stops silently retrying.
       if (result?.stop) {
         scheduler.disableWithReason(job.id, result.stop.reason);
+        return { stoppedReason: result.stop.reason };
       }
     } catch (err) {
-      logCronFailure(job, err);
+      if (!signal.aborted) logCronFailure(job, err);
       throw err; // let the scheduler's catch record stats + keep ticking
     }
   });
@@ -134,10 +135,7 @@ export interface RunSubmitter {
  * by the host injecting `approvalBackend: HeadlessApprovalBackend("approve-read-only")`
  * into createRunManager (Phase 2) until sandbox+write tiers land (Phase 4/5).
  */
-export function bindCronToRunManager(
-  scheduler: CronScheduler,
-  runManager: RunSubmitter,
-): void {
+export function bindCronToRunManager(scheduler: CronScheduler, runManager: RunSubmitter): void {
   scheduler.setExecutor(async (job: CronJob, _signal: AbortSignal) => {
     try {
       const snapshot = await runManager.submit({

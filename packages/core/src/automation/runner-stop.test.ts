@@ -1,12 +1,14 @@
 import { describe, test, expect } from "bun:test";
 import { bindCronToEngine } from "./runner.js";
-import { CronScheduler } from "./scheduler.js";
+import { CronScheduler, type CronJobLifecycleEvent } from "./scheduler.js";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 describe("bindCronToEngine — stop outcome disables the job", () => {
   test("a runner result with `stop` auto-disables the job and records the reason", async () => {
     const scheduler = new CronScheduler();
+    const events: CronJobLifecycleEvent[] = [];
+    scheduler.setJobEventListener((event) => events.push(event));
     bindCronToEngine(scheduler, async () => ({
       text: "",
       reason: "resume-target-missing",
@@ -23,6 +25,8 @@ describe("bindCronToEngine — stop outcome disables the job", () => {
     expect(after).toBeDefined(); // retained, not deleted
     expect(after.enabled).toBe(false);
     expect(after.disabledReason).toBe("续接目标会话已删除,已停止该定时");
+    expect(events.map((event) => event.type)).toEqual(["job_start", "job_stopped"]);
+    expect(events.at(-1)?.reason).toBe("续接目标会话已删除,已停止该定时");
     scheduler.stopAll();
   });
 
