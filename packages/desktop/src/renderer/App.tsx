@@ -87,6 +87,7 @@ import { foldTranscript } from "./automation/foldTranscript";
 import { type SerialTaskQueue, type QueuedInputState } from "./queuedInput";
 import { loadView, saveView, type ViewState } from "./view";
 import { PAGE_REGISTRY } from "./pages/PageRegistry";
+import { replacePanelApps } from "./panels/PanelRegistry";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -109,6 +110,7 @@ import {
   EMPTY_ATTACHMENTS,
   parsePanelBucket,
   resolveMainComposerBucket,
+  shouldShowPanelDockFallback,
   toMobilePermissionMode,
   type ApprovalHistoryEntry,
   type ComposerDraftsMap,
@@ -499,12 +501,11 @@ function App() {
 
   useEffect(() => {
     let alive = true;
-    const applyPanelApps = async (
+    const applyPanelApps = (
       apps: Awaited<ReturnType<typeof window.codeshell.listPanelApps>>,
       projectPath: string | null,
       extraBound: Record<string, string[]> = {},
     ) => {
-      const { replacePanelApps } = await import("./panels/PanelRegistry");
       if (alive) replacePanelApps(apps, projectPath, extraBound);
     };
     const listForProjects = (
@@ -2505,13 +2506,15 @@ function App() {
             {panelBuckets.length > 0 && (
               <React.Suspense
                 fallback={
-                  <div
-                    className="flex shrink-0 items-center justify-center border-l border-border text-xs text-muted-foreground"
-                    style={{ width: panelWidth }}
-                    role="status"
-                  >
-                    {t("panels.common.loading")}
-                  </div>
+                  shouldShowPanelDockFallback(activePanelState.open, isChatView) ? (
+                    <div
+                      className="flex shrink-0 items-center justify-center border-l border-border text-xs text-muted-foreground"
+                      style={{ width: panelWidth }}
+                      role="status"
+                    >
+                      {t("panels.common.loading")}
+                    </div>
+                  ) : null
                 }
               >
                 <SessionPanelDock

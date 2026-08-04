@@ -76,6 +76,16 @@ export function emptyPanelBucketState(): PanelBucketState {
   return { open: false, tabs: [], activeId: null, requestNonce: 0, requestKind: null };
 }
 
+/**
+ * The dock module stays mounted/loads for retained tabs even after the user
+ * closes it. Its Suspense placeholder must follow the same foreground
+ * visibility rule as the resolved dock, otherwise a closed panel flashes at
+ * startup while the lazy module is loading.
+ */
+export function shouldShowPanelDockFallback(panelOpen: boolean, isChatView: boolean): boolean {
+  return panelOpen && isChatView;
+}
+
 export function hydratePanelBucketState(bucket: string): PanelBucketState {
   const snap = loadPanelState<PanelTab>(bucket);
   return { ...snap, requestNonce: 0, requestKind: null };
