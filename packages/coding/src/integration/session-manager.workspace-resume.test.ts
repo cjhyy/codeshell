@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -17,13 +17,17 @@ function git(cwd: string, args: string[]): string {
 }
 
 describe("SessionManager workspace resume resolution", () => {
+  let testRoot: string;
   let repo: string;
   let sessions: string;
   let sm: SessionManager;
 
   beforeEach(() => {
-    repo = mkdtempSync(join(tmpdir(), "cs-ws-resume-repo-"));
-    sessions = mkdtempSync(join(tmpdir(), "cs-ws-resume-sessions-"));
+    testRoot = mkdtempSync(join(tmpdir(), "cs-ws-resume-"));
+    repo = join(testRoot, "repo");
+    sessions = join(testRoot, "sessions");
+    mkdirSync(repo, { recursive: true });
+    mkdirSync(sessions, { recursive: true });
     sm = new SessionManager(sessions, CODING_CAPABILITY.sessionWorkspace);
     git(repo, ["init", "-q"]);
     git(repo, ["config", "user.email", "t@t.t"]);
@@ -34,9 +38,7 @@ describe("SessionManager workspace resume resolution", () => {
   });
 
   afterEach(() => {
-    rmSync(repo, { recursive: true, force: true });
-    rmSync(join(repo, "..", ".worktrees"), { recursive: true, force: true });
-    rmSync(sessions, { recursive: true, force: true });
+    rmSync(testRoot, { recursive: true, force: true });
   });
 
   test("restores cwd to the persisted worktree when the directory exists", async () => {

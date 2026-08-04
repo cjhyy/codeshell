@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, afterEach } from "bun:test";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -107,12 +107,16 @@ function stop(): LLMResponse {
 }
 
 describe("Engine workspace cwd resolution", () => {
+  let testRoot: string;
   let repo: string;
   let sessions: string;
 
   beforeEach(() => {
-    repo = mkdtempSync(join(tmpdir(), "cs-engine-ws-repo-"));
-    sessions = mkdtempSync(join(tmpdir(), "cs-engine-ws-sessions-"));
+    testRoot = mkdtempSync(join(tmpdir(), "cs-engine-ws-"));
+    repo = join(testRoot, "repo");
+    sessions = join(testRoot, "sessions");
+    mkdirSync(repo, { recursive: true });
+    mkdirSync(sessions, { recursive: true });
     git(repo, ["init", "-q"]);
     git(repo, ["config", "user.email", "t@t.t"]);
     git(repo, ["config", "user.name", "t"]);
@@ -122,9 +126,7 @@ describe("Engine workspace cwd resolution", () => {
   });
 
   afterEach(() => {
-    rmSync(repo, { recursive: true, force: true });
-    rmSync(join(repo, "..", ".worktrees"), { recursive: true, force: true });
-    rmSync(sessions, { recursive: true, force: true });
+    rmSync(testRoot, { recursive: true, force: true });
   });
 
   test("resumed tools run from the persisted SessionWorkspace root", async () => {

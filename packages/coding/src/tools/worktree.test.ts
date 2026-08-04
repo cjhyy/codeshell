@@ -31,12 +31,19 @@ function git(cwd: string, args: string[]): string {
 }
 
 describe("ExitWorktree cleanup actions", () => {
+  let testRoot: string;
   let repo: string;
   let sessions: string;
   let sm: SessionManager;
   beforeEach(() => {
-    repo = mkdtempSync(join(tmpdir(), "cs-wt-tool-"));
-    sessions = mkdtempSync(join(tmpdir(), "cs-wt-sessions-"));
+    // Production worktrees live next to the repository. Keep each test's
+    // repository one level below its own temporary root so parallel test files
+    // cannot share (and delete) the same system-wide /tmp/.worktrees directory.
+    testRoot = mkdtempSync(join(tmpdir(), "cs-wt-tool-"));
+    repo = join(testRoot, "repo");
+    sessions = join(testRoot, "sessions");
+    mkdirSync(repo, { recursive: true });
+    mkdirSync(sessions, { recursive: true });
     sm = new SessionManager(sessions);
     git(repo, ["init", "-q"]);
     git(repo, ["config", "user.email", "t@t.t"]);
@@ -46,9 +53,7 @@ describe("ExitWorktree cleanup actions", () => {
     git(repo, ["commit", "-q", "-m", "init"]);
   });
   afterEach(async () => {
-    rmSync(repo, { recursive: true, force: true });
-    rmSync(join(repo, "..", ".worktrees"), { recursive: true, force: true });
-    rmSync(sessions, { recursive: true, force: true });
+    rmSync(testRoot, { recursive: true, force: true });
   });
 
   function ctx(sessionId: string, cwd = repo): ToolContext {

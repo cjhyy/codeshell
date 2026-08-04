@@ -379,9 +379,12 @@ describe.serial("external agent driver", () => {
           });
           harnessPid = harness.pid ?? 0;
           expect(harnessPid).toBeGreaterThan(1);
+          // A full-suite run can have several process-heavy worktree and plugin
+          // tests competing for CPU. Give the detached harness enough time to
+          // reach both heartbeat writers before judging process-group ownership.
           for (
             let i = 0;
-            i < 250 && (!existsSync(agentMarker) || !existsSync(descendantMarker));
+            i < 750 && (!existsSync(agentMarker) || !existsSync(descendantMarker));
             i++
           ) {
             await new Promise((resolve) => setTimeout(resolve, 20));
