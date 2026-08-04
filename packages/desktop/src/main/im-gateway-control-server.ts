@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { dirname, isAbsolute } from "node:path";
+import { dlog } from "./desktop-logger.js";
 
 export const DESKTOP_CONTROL_PROTOCOL_VERSION = 1;
 
@@ -204,7 +205,15 @@ export class GatewayControlServer {
     if (this.descriptor) return this.descriptor;
 
     this.eventOutboxReady = false;
-    const restored = this.readEventOutbox();
+    let restored: GatewayControlEventOutbox | undefined;
+    try {
+      restored = this.readEventOutbox();
+    } catch (error) {
+      // A corrupt/insecure events file must only cost its own pending events,
+      // never the whole control plane (pet chat RPC, tunnel control,
+      // notifications). Quarantine it for inspection and start a fresh stream.
+      this.quarantineEventOutbox(error);
+    }
     const outbox =
       restored ??
       ({
@@ -468,6 +477,28 @@ export class GatewayControlServer {
     } finally {
       if (handle !== undefined) closeSync(handle);
     }
+  }
+
+  /**
+   * Move an unreadable event outbox aside so start() can proceed with a fresh
+   * one. The rename keeps the bytes beside the original for diagnosis; a
+   * genuine I/O failure of the rename itself still propagates.
+   */
+  private quarantineEventOutbox(cause: unknown): void {
+    const path = this.eventOutboxPath();
+    const quarantinePath = `${path}.corrupt-${Date.now()}-${randomBytes(4).toString("hex")}`;
+    try {
+      renameSync(path, quarantinePath);
+    } catch (error) {
+      // Already gone (racing cleanup); a fresh outbox is the right outcome.
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
+    dlog("main", "im_gateway.event_outbox.quarantined", {
+      path,
+      quarantinePath,
+      error: String(cause),
+    });
   }
 
   private writeEventOutbox(outbox: GatewayControlEventOutbox): void {

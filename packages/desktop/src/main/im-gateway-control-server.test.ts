@@ -3,6 +3,7 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -343,24 +344,62 @@ describe("GatewayControlServer", () => {
     await second.stop();
   });
 
-  test("fails closed on insecure or malformed event outboxes", async () => {
+  test("never trusts insecure or malformed event outboxes and quarantines them", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-outbox-invalid-"));
     roots.push(root);
     const descriptorPath = join(root, "desktop-control.json");
     const outboxPath = `${descriptorPath}.events`;
     const initial = makeServer(descriptorPath);
     await initial.start();
+    const initialStreamId = initial.eventContext()?.streamId;
     await initial.stop();
 
     if (process.platform !== "win32") {
       chmodSync(outboxPath, 0o644);
-      await expect(makeServer(descriptorPath).start()).rejects.toThrow("permissions must be 0600");
+      const insecure = makeServer(descriptorPath);
+      await insecure.start();
+      // Fail closed: the world-readable stream is abandoned, never resumed.
+      expect(insecure.eventContext()?.streamId).not.toBe(initialStreamId);
+      await insecure.stop();
     }
     writeFileSync(outboxPath, '{"version":1,"streamId":"forged"}\n', { mode: 0o600 });
     chmodSync(outboxPath, 0o600);
-    await expect(makeServer(descriptorPath).start()).rejects.toThrow(
-      "Invalid Gateway event outbox",
-    );
+    const afterForged = makeServer(descriptorPath);
+    await afterForged.start();
+    expect(afterForged.eventContext()?.streamId).toMatch(/^[a-f0-9]{32}$/);
+    await afterForged.stop();
+    const quarantined = readdirSync(root).filter((name) => name.includes(".events.corrupt-"));
+    expect(quarantined.length).toBe(process.platform === "win32" ? 1 : 2);
+  });
+
+  test("quarantines a corrupt event outbox instead of disabling the control plane", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-outbox-corrupt-"));
+    roots.push(root);
+    const descriptorPath = join(root, "desktop-control.json");
+    const outboxPath = `${descriptorPath}.events`;
+    const corruptContent = '{"version":2,"streamId":';
+    writeFileSync(outboxPath, corruptContent, { mode: 0o600 });
+    const server = makeServer(descriptorPath);
+
+    // A truncated/corrupt events file must not brick pet chat RPC, tunnel
+    // control, and notifications: the server starts and serves.
+    const descriptor = await server.start();
+    const status = await call(descriptor, "GET", "/v1/status");
+    expect(status.status).toBe(200);
+
+    // The bad file is renamed away beside the original for inspection.
+    const quarantined = readdirSync(root).filter((name) => name.includes(".events.corrupt-"));
+    expect(quarantined).toHaveLength(1);
+    expect(readFileSync(join(root, quarantined[0]!), "utf-8")).toBe(corruptContent);
+
+    // Publishing works against the fresh outbox.
+    expect(server.eventContext()?.streamId).toMatch(/^[a-f0-9]{32}$/);
+    expect(server.publish({ type: "automation.completed", text: "fresh outbox" }).id).toBe(1);
+    expect(JSON.parse(readFileSync(outboxPath, "utf-8"))).toMatchObject({
+      nextEventId: 2,
+      events: [{ id: 1, text: "fresh outbox" }],
+    });
+    await server.stop();
   });
 
   test("does not expose an event when the atomic outbox replace fails", async () => {

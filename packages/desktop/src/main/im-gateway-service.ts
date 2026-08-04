@@ -674,6 +674,7 @@ export class ImGatewayService {
     if (!existsSync(this.configPath)) return false;
     const config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
     const requestedTargets = event.target ? [event.target] : config.notifications;
+    let authorizedRequestedTargets = 0;
     const directTargets = requestedTargets.flatMap(({ channel, target }) => {
       if (!isImGatewayChannel(channel)) {
         if (event.target) throw new Error("Desktop 通知目标渠道未授权");
@@ -684,11 +685,21 @@ export class ImGatewayService {
         if (event.target) throw new Error("Desktop 通知目标已移除或未授权");
         return [];
       }
+      // Revocation above is an owner decision; every target from here on is
+      // authorized and still owed a delivery even when this one-shot path
+      // cannot reach it (channel not direct-capable, WeChat context missing).
+      authorizedRequestedTargets += 1;
       if (!BUILTIN_CHANNEL_CAPABILITIES[channel].outbound.direct) return [];
       if (!hasRequiredProactiveContext(configured, target)) return [];
       return [{ channel, target, configured }];
     });
     if (directTargets.length === 0) return false;
+    // Only full coverage may be reported as "fully handled" — the caller acks
+    // and permanently drops the durable event on true. A partial send still
+    // runs (the shared progress store keeps a resumed Gateway watcher from
+    // repeating these targets), but the event must stay in the outbox for the
+    // remaining authorized targets.
+    const coversAllAuthorizedTargets = directTargets.length === authorizedRequestedTargets;
 
     const channels = [...new Set(directTargets.map(({ channel }) => channel))].sort();
     return this.withOwnerSendLocks(channels, async () => {
@@ -733,7 +744,7 @@ export class ImGatewayService {
           },
         );
         await handler(event, context);
-        return true;
+        return coversAllAuthorizedTargets;
       } finally {
         lease.release();
       }

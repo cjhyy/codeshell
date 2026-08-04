@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { acquireGatewayInstanceLock, type ChannelMessageHandler } from "@cjhyy/code-shell-chat";
+import {
+  acquireGatewayInstanceLock,
+  notificationDeliveryProgressPath,
+  notificationTargetProgressKey,
+  type ChannelMessageHandler,
+} from "@cjhyy/code-shell-chat";
 import { FileWechatCredentialStore } from "@cjhyy/code-shell-chat/wechat";
 import { CredentialStore, type Credential, type EncryptionCipher } from "@cjhyy/code-shell-core";
 import type { CronJobLifecycleEvent } from "@cjhyy/code-shell-core/internal";
@@ -715,6 +720,69 @@ describe("ImGatewayService", () => {
     ]);
   });
 
+  test("keeps a partially direct-delivered event unacknowledged for the Gateway to finish", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-partial-direct-"));
+    const configPath = join(root, "config.json");
+    const eventCursorPath = join(root, "events.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: {
+          botToken: "test-token",
+          allowedChatIds: ["owner-chat"],
+          allowedUserIds: [],
+        },
+        discord: {
+          botToken: "discord-token",
+          allowedChannelIds: ["owner-channel"],
+          allowedUserIds: [],
+        },
+        notifications: {
+          enabled: true,
+          targets: { telegram: ["owner-chat"], discord: ["owner-channel"] },
+        },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const sent: Array<{ channel: string; target: string; text: string }> = [];
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async () => undefined,
+        send: async (target, message) =>
+          void sent.push({ channel: channel.channel, target, text: message.text }),
+      }),
+    });
+    const context = { streamId: "c".repeat(32) };
+
+    // Discord is not direct-capable: telegram is sent now, but the event must
+    // stay in the durable outbox (no ack) until the Gateway reaches discord.
+    await expect(
+      service.deliverPublishedNotification(
+        { id: 1, createdAt: 1, type: "pet.task.completed", text: "完成" },
+        context,
+      ),
+    ).resolves.toBe(false);
+    expect(sent).toEqual([{ channel: "telegram", target: "owner-chat", text: "完成" }]);
+
+    // The delivered telegram target is checkpointed so a resumed Gateway
+    // watcher finishes discord without repeating telegram.
+    const progress = JSON.parse(
+      readFileSync(notificationDeliveryProgressPath(eventCursorPath), "utf8"),
+    ) as { events: Record<string, { chunks: Record<string, number> }> };
+    expect(
+      progress.events[`${context.streamId}:1`]?.chunks[
+        notificationTargetProgressKey("telegram", "owner-chat")
+      ],
+    ).toBe(1);
+  });
+
   test("never opens a one-shot adapter while a separate CLI Gateway owns the lock", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-external-owner-"));
     const configPath = join(root, "config.json");
@@ -929,9 +997,7 @@ describe("ImGatewayService", () => {
 
     const target = service.listOwnerMessageTargets()[0];
     if (!target) throw new Error("missing context-bound WeChat target");
-    await expect(service.sendOwnerMessage(target.id, "测试消息")).rejects.toThrow(
-      "prepare failed",
-    );
+    await expect(service.sendOwnerMessage(target.id, "测试消息")).rejects.toThrow("prepare failed");
     expect(service.listOwnerMessageTargets()).toEqual([]);
     expect(
       service.status().channelStatuses.find(({ channel }) => channel === "wechat"),
