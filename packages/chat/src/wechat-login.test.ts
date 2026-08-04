@@ -3,7 +3,12 @@ import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loginCodeShellWechat } from "./wechat-login.js";
-import { FileWechatCredentialStore } from "./wechat-storage.js";
+import {
+  FileWechatCredentialStore,
+  FileWechatStateStore,
+  wechatCredentialFingerprint,
+  WechatStateOwnershipError,
+} from "./wechat-storage.js";
 
 describe("loginCodeShellWechat", () => {
   test("persists credentials and updates the owner-only gateway config", async () => {
@@ -64,6 +69,20 @@ describe("loginCodeShellWechat", () => {
       }),
     });
 
+    await expect(store.stateStore("owner-account").load()).resolves.toEqual({});
+
+    // A Gateway adapter still running with the revoked token must not be able
+    // to write its stale cursor/context back over the fresh binding.
+    const staleAdapterStore = new FileWechatStateStore(
+      store.statePath("owner-account"),
+      wechatCredentialFingerprint("old-token"),
+    );
+    await expect(
+      staleAdapterStore.save({
+        cursor: "old-cursor",
+        contextTokens: { "owner-user": "old-context" },
+      }),
+    ).rejects.toThrow(WechatStateOwnershipError);
     await expect(store.stateStore("owner-account").load()).resolves.toEqual({});
   });
 

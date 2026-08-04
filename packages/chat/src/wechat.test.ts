@@ -1,9 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { createCipheriv, randomBytes } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
+  FileWechatStateStore,
   loginWechatWithQr,
   sendWechatDirect,
   WechatAdapter,
+  wechatCredentialFingerprint,
   type WechatAdapterState,
   type WechatStateStore,
 } from "./wechat.js";
@@ -203,6 +208,56 @@ describe("personal WeChat ClawBot", () => {
       cursor: "cursor-2",
       contextTokens: { "owner-user": "fresh-context" },
     });
+  });
+
+  test("stops polling instead of resurrecting state after a QR rebind takes over the state file", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "codeshell-wechat-rebind-"));
+    const statePath = join(directory, "owner.state.json");
+    try {
+      const staleStore = new FileWechatStateStore(
+        statePath,
+        wechatCredentialFingerprint("bot-secret"),
+      );
+      await staleStore.save({ cursor: "cursor-1" });
+      const logs: string[] = [];
+      let polls = 0;
+      const adapter = new WechatAdapter(
+        { accountId: "rebind-im-bot", token: "bot-secret" },
+        {
+          now: () => 1_000,
+          stateStore: staleStore,
+          log: (message) => void logs.push(message),
+          sleep: async () => undefined,
+          fetch: async (input) => {
+            const url = String(input);
+            if (url.endsWith("/ilink/bot/msg/notifystart")) return Response.json({ ret: 0 });
+            if (url.endsWith("/ilink/bot/msg/notifystop")) return Response.json({ ret: 0 });
+            if (url.endsWith("/ilink/bot/getupdates")) {
+              polls += 1;
+              // The login CLI rebinds via QR while this adapter is mid-poll.
+              await new FileWechatStateStore(
+                statePath,
+                wechatCredentialFingerprint("rotated-secret"),
+              ).reset({});
+              return Response.json({ ret: 0, get_updates_buf: "cursor-2", msgs: [] });
+            }
+            throw new Error(`unexpected request: ${url}`);
+          },
+        },
+      );
+
+      await expect(
+        adapter.run(async () => undefined, new AbortController().signal),
+      ).rejects.toThrow("已被新的扫码绑定接管");
+      expect(polls).toBe(1);
+      // The fresh binding survives untouched; the stale cursor never lands.
+      await expect(
+        new FileWechatStateStore(statePath, wechatCredentialFingerprint("rotated-secret")).load(),
+      ).resolves.toEqual({});
+      expect(logs.filter((line) => line.includes("已被新的扫码绑定接管"))).toHaveLength(1);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   test("retries cursor persistence without redelivering an already accepted inbound message", async () => {
@@ -1044,6 +1099,94 @@ describe("personal WeChat ClawBot", () => {
       controller.abort();
     }, controller.signal);
     expect(requests).not.toContain("https://attacker.example/internal");
+  });
+
+  test("extends the CDN download allowlist with configured extra hosts, HTTPS only", async () => {
+    const key = randomBytes(16);
+    const plaintext = Buffer.from("regional-image");
+    const cipher = createCipheriv("aes-128-ecb", key, null);
+    const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+    const regionalHost = "novac2c-region2.cdn.weixin.qq.com";
+    const runDownload = async (fullUrl: string): Promise<Uint8Array> => {
+      const controller = new AbortController();
+      let loaded: Uint8Array | undefined;
+      const adapter = new WechatAdapter(
+        {
+          accountId: "cdn-extra-im-bot",
+          token: "bot-secret",
+          extraCdnDownloadHosts: [regionalHost],
+        },
+        {
+          now: () => 1_000,
+          fetch: async (input) => {
+            const url = String(input);
+            if (url.endsWith("/ilink/bot/msg/notifystart")) return Response.json({ ret: 0 });
+            if (url.endsWith("/ilink/bot/msg/notifystop")) return Response.json({ ret: 0 });
+            if (url.endsWith("/ilink/bot/getupdates")) {
+              return Response.json({
+                ret: 0,
+                msgs: [
+                  {
+                    message_id: 46,
+                    from_user_id: "owner-user",
+                    create_time_ms: 1_000,
+                    message_type: 1,
+                    message_state: 2,
+                    item_list: [
+                      {
+                        type: 2,
+                        msg_id: "image-46",
+                        image_item: {
+                          media: { full_url: fullUrl, aes_key: key.toString("base64") },
+                        },
+                      },
+                    ],
+                  },
+                ],
+              });
+            }
+            if (url === fullUrl && new URL(url).protocol === "https:") {
+              return new Response(encrypted);
+            }
+            throw new Error(`unexpected request: ${url}`);
+          },
+        },
+      );
+      let failure: unknown;
+      await adapter.run(async (message) => {
+        try {
+          loaded = await message.attachments![0]!.load();
+        } catch (error) {
+          failure = error;
+        } finally {
+          controller.abort();
+        }
+      }, controller.signal);
+      if (failure) throw failure;
+      if (!loaded) throw new Error("attachment did not load");
+      return loaded;
+    };
+
+    const bytes = await runDownload(`https://${regionalHost}/c2c/download?id=46`);
+    expect(Buffer.from(bytes)).toEqual(plaintext);
+
+    // The extra allowlist never weakens the HTTPS requirement.
+    await expect(runDownload(`http://${regionalHost}/c2c/download?id=46`)).rejects.toThrow(
+      "必须使用 HTTPS",
+    );
+  });
+
+  test("rejects extra CDN hosts that are not exact hostnames before any request", () => {
+    for (const invalid of ["https://evil.example", "evil.example/path", "evil.example:8443", ""]) {
+      expect(
+        () =>
+          new WechatAdapter({
+            accountId: "cdn-invalid-im-bot",
+            token: "bot-secret",
+            extraCdnDownloadHosts: [invalid],
+          }),
+      ).toThrow("微信附件 CDN 额外主机必须是纯主机名");
+    }
   });
 
   test("revalidates every WeChat CDN redirect before following it", async () => {

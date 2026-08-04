@@ -147,6 +147,38 @@ describe("loadGatewayConfig", () => {
     }
   });
 
+  test("plumbs extra WeChat CDN download hosts through the wechat section", () => {
+    const root = tempRoot();
+    const credentialsDir = join(root, "wechat-credentials");
+    const store = new FileWechatCredentialStore(credentialsDir);
+    const credentials = store.save({
+      accountId: "abc@im.bot",
+      token: "wechat-secret",
+      baseUrl: "https://ilinkai.weixin.qq.com",
+      userId: "owner-user",
+    });
+    const file = join(root, "config.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        wechat: {
+          accountId: credentials.accountId,
+          credentialsDir,
+          extraCdnDownloadHosts: ["novac2c-region2.cdn.weixin.qq.com"],
+        },
+      }),
+      { mode: 0o600 },
+    );
+    if (process.platform !== "win32") chmodSync(file, 0o600);
+
+    const config = loadGatewayConfig({ configPath: file, env: {}, platform: "linux" });
+
+    expect(config.channels[0]).toMatchObject({
+      channel: "wechat",
+      extraCdnDownloadHosts: ["novac2c-region2.cdn.weixin.qq.com"],
+    });
+  });
+
   test("rejects a partially configured adapter", () => {
     const root = tempRoot();
     expect(() =>

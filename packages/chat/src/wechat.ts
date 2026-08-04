@@ -10,6 +10,7 @@ import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
 import { OutgoingDeliveryTracker, outgoingAttachments } from "./media.js";
 import {
   normalizeWechatAccountId,
+  WechatStateOwnershipError,
   type WechatAdapterState,
   type WechatCredentials,
   type WechatStateStore,
@@ -140,6 +141,12 @@ export interface WechatAdapterConfig {
   protocolVersion?: string;
   /** Only enable for an explicitly trusted self-hosted compatible backend. */
   allowUnsafeBaseUrl?: boolean;
+  /**
+   * Exact extra hostnames trusted for inbound media downloads, extending the
+   * built-in WeChat CDN allowlist (e.g. a regional CDN variant). Downloads
+   * stay HTTPS-only; this never affects the API baseUrl trust decision.
+   */
+  extraCdnDownloadHosts?: readonly string[];
 }
 
 export interface WechatAdapterOptions {
@@ -186,12 +193,15 @@ export class WechatAdapter implements ChannelAdapter {
   private readonly rateLimitCooldownMs: number;
   private readonly accountKey: string;
   private readonly credentialKey: string;
+  private readonly extraCdnDownloadHosts: ReadonlySet<string>;
   private readonly baseUrl: string;
   private readonly protocolVersion: string;
   private readonly botAgent: string;
   private state: WechatAdapterState = { contextTokens: {} };
   private stateReady?: Promise<void>;
   private stateWrite: Promise<void> = Promise.resolve();
+  /** Set once the state file is owned by a newer QR binding; never cleared. */
+  private staleCredential = false;
   /** Preserve visible ordering and keep context/media state mutations single-writer. */
   private outboundQueue: Promise<void> = Promise.resolve();
   private readonly seenMessageIds = new Set<string>();
@@ -209,6 +219,7 @@ export class WechatAdapter implements ChannelAdapter {
     );
     this.accountKey = wechatAccountKey(this.baseUrl, config.accountId);
     this.credentialKey = wechatCredentialKey(this.baseUrl, config.accountId, config.token);
+    this.extraCdnDownloadHosts = validateExtraWechatCdnDownloadHosts(config.extraCdnDownloadHosts);
     this.protocolVersion = config.protocolVersion ?? WECHAT_PROTOCOL_VERSION;
     this.botAgent = sanitizeBotAgent(config.botAgent ?? WECHAT_DEFAULT_BOT_AGENT);
     this.fetchFn = options.fetch ?? fetch;
@@ -251,6 +262,13 @@ export class WechatAdapter implements ChannelAdapter {
     try {
       await withWechatAccountSendLock(this.accountKey, () => this.notifyLifecycle("notifystart"));
       while (!signal.aborted) {
+        if (this.staleCredential) {
+          // Continuing to poll would consume messages the fresh binding owns
+          // and re-offer state this process can no longer persist.
+          throw new Error(
+            "微信状态文件已被新的扫码绑定接管，长轮询停止；请重启 Gateway 使用新凭据",
+          );
+        }
         try {
           const response = await this.post<GetUpdatesResponse>(
             "ilink/bot/getupdates",
@@ -725,7 +743,11 @@ export class WechatAdapter implements ChannelAdapter {
     preferredHexKey?: string,
     signal?: AbortSignal,
   ): Promise<Uint8Array> {
-    const url = resolveWechatCdnUrl(media, this.config.allowUnsafeBaseUrl ?? false);
+    const url = resolveWechatCdnUrl(
+      media,
+      this.config.allowUnsafeBaseUrl ?? false,
+      this.extraCdnDownloadHosts,
+    );
     const response = await this.fetchWechatCdn(url, signal ?? AbortSignal.timeout(30_000));
     if (!response.ok) throw new Error(`微信附件下载失败（HTTP ${response.status}）`);
     const encrypted = await readBoundedWechatResponse(response, 10 * 1024 * 1024 + 16);
@@ -749,6 +771,7 @@ export class WechatAdapter implements ChannelAdapter {
       currentUrl = validateWechatCdnDownloadUrl(
         new URL(location, currentUrl).toString(),
         this.config.allowUnsafeBaseUrl ?? false,
+        this.extraCdnDownloadHosts,
       );
     }
     throw new Error("微信附件 CDN 重定向过多");
@@ -799,7 +822,20 @@ export class WechatAdapter implements ChannelAdapter {
     const write = this.stateWrite
       .catch(() => undefined)
       .then(async () => {
-        await this.stateStore?.save(snapshot);
+        if (this.staleCredential) {
+          throw new Error("微信状态文件已被新的扫码绑定接管，本进程已停止持久化");
+        }
+        try {
+          await this.stateStore?.save(snapshot);
+        } catch (error) {
+          if (error instanceof WechatStateOwnershipError && !this.staleCredential) {
+            this.staleCredential = true;
+            this.log(
+              `微信状态文件已被新的扫码绑定接管，本进程停止持久化并停止长轮询：${error.message}`,
+            );
+          }
+          throw error;
+        }
       });
     this.stateWrite = write;
     await write;
@@ -965,24 +1001,62 @@ function splitWechatText(text: string, maximum: number): string[] {
   return chunks;
 }
 
-function resolveWechatCdnUrl(media: WechatCdnMedia, allowUnsafe: boolean): string {
+function resolveWechatCdnUrl(
+  media: WechatCdnMedia,
+  allowUnsafe: boolean,
+  extraHosts: ReadonlySet<string>,
+): string {
   const raw = media.full_url?.trim()
     ? media.full_url
     : media.encrypt_query_param
       ? `${WECHAT_CDN_BASE_URL}/download?encrypted_query_param=${encodeURIComponent(media.encrypt_query_param)}`
       : "";
   if (!raw) throw new Error("微信附件缺少 CDN 下载参数");
-  return validateWechatCdnDownloadUrl(raw, allowUnsafe);
+  return validateWechatCdnDownloadUrl(raw, allowUnsafe, extraHosts);
 }
 
-function validateWechatCdnDownloadUrl(raw: string, allowUnsafe: boolean): string {
+function validateWechatCdnDownloadUrl(
+  raw: string,
+  allowUnsafe: boolean,
+  extraHosts: ReadonlySet<string>,
+): string {
   const url = new URL(raw);
   if (url.protocol !== "https:") throw new Error("微信附件 CDN 地址必须使用 HTTPS");
   if (url.username || url.password) throw new Error("微信附件 CDN 地址不能包含登录信息");
-  if (!allowUnsafe && !WECHAT_CDN_DOWNLOAD_HOSTS.has(url.hostname)) {
+  if (
+    !allowUnsafe &&
+    !WECHAT_CDN_DOWNLOAD_HOSTS.has(url.hostname) &&
+    !extraHosts.has(url.hostname)
+  ) {
     throw new Error("微信附件 CDN 地址不在受信任主机列表中");
   }
   return url.toString();
+}
+
+/**
+ * Extra hosts widen only the download allowlist, so they must be exact
+ * hostnames — no scheme, path, port, or credentials. HTTPS enforcement stays
+ * unconditional in validateWechatCdnDownloadUrl.
+ */
+function validateExtraWechatCdnDownloadHosts(
+  hosts: readonly string[] | undefined,
+): ReadonlySet<string> {
+  const validated = new Set<string>();
+  for (const raw of hosts ?? []) {
+    const host = raw.trim().toLowerCase();
+    let hostname: string | undefined;
+    try {
+      const parsed = new URL(`https://${host}/`);
+      if (!parsed.port && !parsed.username && !parsed.password) hostname = parsed.hostname;
+    } catch {
+      // Rejected below with the original value for a clear config error.
+    }
+    if (!host || hostname !== host) {
+      throw new Error(`微信附件 CDN 额外主机必须是纯主机名：${JSON.stringify(raw)}`);
+    }
+    validated.add(host);
+  }
+  return validated;
 }
 
 function resolveWechatCdnUploadUrl(upload: GetUploadUrlResponse, filekey: string): string {

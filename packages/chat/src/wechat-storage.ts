@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
   closeSync,
@@ -34,6 +34,22 @@ export interface WechatStateStore {
 }
 
 const MAX_WECHAT_STORE_BYTES = 1024 * 1024;
+
+/**
+ * Short non-reversible identity of the bot token. Stored inside the state file
+ * so a state written by one credential generation can never be silently
+ * overwritten by an adapter still running with a revoked one.
+ */
+export function wechatCredentialFingerprint(token: string): string {
+  return createHash("sha256").update(token).digest("base64url").slice(0, 16);
+}
+
+export class WechatStateOwnershipError extends Error {
+  constructor(filePath: string) {
+    super(`微信状态文件属于另一个登录凭据（可能已重新扫码绑定），请重启 Gateway：${filePath}`);
+    this.name = "WechatStateOwnershipError";
+  }
+}
 
 export function defaultWechatDataDirectory(env: NodeJS.ProcessEnv = process.env): string {
   return join(env.HOME ?? homedir(), ".code-shell", "chat", "wechat");
@@ -95,8 +111,8 @@ export class FileWechatCredentialStore {
     return value;
   }
 
-  stateStore(accountId: string): FileWechatStateStore {
-    return new FileWechatStateStore(this.statePath(accountId));
+  stateStore(accountId: string, credentialFingerprint?: string): FileWechatStateStore {
+    return new FileWechatStateStore(this.statePath(accountId), credentialFingerprint);
   }
 
   credentialPath(accountId: string): string {
@@ -109,10 +125,15 @@ export class FileWechatCredentialStore {
 }
 
 export class FileWechatStateStore implements WechatStateStore {
-  constructor(readonly filePath: string) {}
+  constructor(
+    readonly filePath: string,
+    /** Binds this store to one credential generation; omitted disables the check. */
+    readonly credentialFingerprint?: string,
+  ) {}
 
   async load(): Promise<WechatAdapterState | undefined> {
     const value = readJson(this.filePath, true);
+    this.assertOwnership(value);
     const parsed = parseWechatAdapterState(value);
     if (value !== undefined && !parsed) {
       throw new Error(`微信状态文件格式无效：${this.filePath}`);
@@ -121,7 +142,40 @@ export class FileWechatStateStore implements WechatStateStore {
   }
 
   async save(state: WechatAdapterState): Promise<void> {
-    writeOwnerOnlyJson(this.filePath, state);
+    // Cheap ownership probe before every write. A file stamped by another
+    // credential (fresh QR rebind) must never be overwritten by a stale
+    // adapter, while a legacy file without a fingerprint is adopted by the
+    // first stamped writer. A check-then-write race with a concurrent rebind
+    // is still possible, but the exposure shrinks from "every future persist"
+    // to at most the single write already in flight during the rebind.
+    this.assertOwnership(readJson(this.filePath));
+    this.write(state);
+  }
+
+  /**
+   * Claim the state file for this credential unconditionally. Only the QR
+   * login flow may use it: an explicit successful login is the one boundary
+   * where replacing another generation's state is intentional.
+   */
+  async reset(state: WechatAdapterState): Promise<void> {
+    this.write(state);
+  }
+
+  private write(state: WechatAdapterState): void {
+    writeOwnerOnlyJson(
+      this.filePath,
+      this.credentialFingerprint
+        ? { ...state, credentialFingerprint: this.credentialFingerprint }
+        : state,
+    );
+  }
+
+  private assertOwnership(value: unknown): void {
+    if (!this.credentialFingerprint) return;
+    const existing = isRecord(value) ? readString(value.credentialFingerprint) : undefined;
+    if (existing && existing !== this.credentialFingerprint) {
+      throw new WechatStateOwnershipError(this.filePath);
+    }
   }
 }
 

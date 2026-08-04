@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FileWechatStateStore, hasWechatStoredContextToken } from "./wechat-storage.js";
+import {
+  FileWechatStateStore,
+  hasWechatStoredContextToken,
+  wechatCredentialFingerprint,
+  WechatStateOwnershipError,
+} from "./wechat-storage.js";
 
 let directory: string;
 let statePath: string;
@@ -72,6 +77,46 @@ describe("WeChat state storage", () => {
     symlinkSync(target, statePath);
     expect(hasWechatStoredContextToken(statePath, "owner")).toBe(false);
     await expect(new FileWechatStateStore(statePath).load()).rejects.toThrow("不是普通文件");
+  });
+
+  test("a stale credential cannot resurrect state after a QR rebind takeover", async () => {
+    const staleStore = new FileWechatStateStore(
+      statePath,
+      wechatCredentialFingerprint("old-token"),
+    );
+    await staleStore.save({
+      cursor: "cursor-old",
+      contextTokens: { "owner-user": "old-context" },
+    });
+
+    const rebindStore = new FileWechatStateStore(
+      statePath,
+      wechatCredentialFingerprint("new-token"),
+    );
+    await rebindStore.reset({});
+
+    await expect(
+      staleStore.save({
+        cursor: "cursor-resurrected",
+        contextTokens: { "owner-user": "old-context" },
+      }),
+    ).rejects.toThrow(WechatStateOwnershipError);
+    await expect(rebindStore.load()).resolves.toEqual({});
+    await expect(staleStore.load()).rejects.toThrow(WechatStateOwnershipError);
+  });
+
+  test("a legacy state file without a fingerprint is adopted by the first stamped writer", async () => {
+    await new FileWechatStateStore(statePath).save({ cursor: "cursor-legacy" });
+
+    const adopting = new FileWechatStateStore(statePath, wechatCredentialFingerprint("token-a"));
+    await expect(adopting.load()).resolves.toEqual({ cursor: "cursor-legacy" });
+    await adopting.save({ cursor: "cursor-adopted" });
+
+    const other = new FileWechatStateStore(statePath, wechatCredentialFingerprint("token-b"));
+    await expect(other.save({ cursor: "cursor-hijack" })).rejects.toThrow(
+      WechatStateOwnershipError,
+    );
+    await expect(adopting.load()).resolves.toEqual({ cursor: "cursor-adopted" });
   });
 
   test("refuses to persist an unbounded state file", async () => {

@@ -52,6 +52,8 @@ export interface WechatGatewayConfig extends AllowlistConfig {
   botAgent?: string;
   protocolVersion?: string;
   allowUnsafeBaseUrl?: boolean;
+  /** Exact extra CDN hostnames trusted for inbound media downloads (HTTPS only). */
+  extraCdnDownloadHosts?: string[];
   credentialsDir: string;
   statePath: string;
 }
@@ -574,6 +576,9 @@ function loadWechat(
       envString(env, "CODE_SHELL_WECHAT_PROTOCOL_VERSION") ??
       readNonEmptyString(raw?.protocolVersion),
     allowUnsafeBaseUrl: raw?.allowUnsafeBaseUrl === true,
+    extraCdnDownloadHosts:
+      readCsvOverride(env.CODE_SHELL_WECHAT_EXTRA_CDN_DOWNLOAD_HOSTS) ??
+      readStringList(raw?.extraCdnDownloadHosts, false),
     credentialsDir,
     statePath: store.statePath(accountId),
     allowedTargetIds,

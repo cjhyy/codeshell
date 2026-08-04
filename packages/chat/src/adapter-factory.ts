@@ -114,11 +114,9 @@ async function loadDefaultChannelAdapterModule(channel: ChannelName): Promise<ob
     case "wecom":
       return import("./wecom.js");
     case "wechat": {
-      const [{ WechatAdapter }, { FileWechatStateStore }] = await Promise.all([
-        import("./wechat.js"),
-        import("./wechat-storage.js"),
-      ]);
-      return { WechatAdapter, FileWechatStateStore };
+      const [{ WechatAdapter }, { FileWechatStateStore, wechatCredentialFingerprint }] =
+        await Promise.all([import("./wechat.js"), import("./wechat-storage.js")]);
+      return { WechatAdapter, FileWechatStateStore, wechatCredentialFingerprint };
     }
     case "matrix":
       return import("./matrix.js");
@@ -198,8 +196,14 @@ function instantiateChannelAdapter(
       const FileWechatStateStore = readModuleExport<
         typeof import("./wechat-storage.js").FileWechatStateStore
       >(loaded, config.channel, "FileWechatStateStore");
+      const wechatCredentialFingerprint = readModuleExport<
+        typeof import("./wechat-storage.js").wechatCredentialFingerprint
+      >(loaded, config.channel, "wechatCredentialFingerprint");
       return new WechatAdapter(config, {
-        stateStore: new FileWechatStateStore(config.statePath),
+        stateStore: new FileWechatStateStore(
+          config.statePath,
+          wechatCredentialFingerprint(config.token),
+        ),
         log: (message) => console.error(`[chat] ${message}`),
       });
     }

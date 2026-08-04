@@ -17,6 +17,7 @@ import {
 import {
   defaultWechatDataDirectory,
   FileWechatCredentialStore,
+  wechatCredentialFingerprint,
   type WechatCredentials,
 } from "./wechat-storage.js";
 
@@ -72,12 +73,17 @@ export async function loginCodeShellWechat(
     throw new Error("个人微信未完成连接");
   }
 
-  const stateStore = store.stateStore(credentials.accountId);
+  const stateStore = store.stateStore(
+    credentials.accountId,
+    wechatCredentialFingerprint(credentials.token),
+  );
   if (credentialsChanged) {
     // Cursor and context tokens belong to the credential session that
     // produced them. Reusing them after a QR rebind can yield prepare failed
     // or poll from an unrelated cursor, so make the new binding start clean.
-    await stateStore.save({});
+    // reset() stamps the new credential fingerprint, so an adapter still
+    // running with the revoked token refuses to write its stale state back.
+    await stateStore.reset({});
   } else {
     try {
       await stateStore.load();
@@ -85,7 +91,7 @@ export async function loginCodeShellWechat(
       // Keep ordinary adapter startup fail-closed. An explicit successful
       // login (including an already-connected confirmation) is the recovery
       // boundary where replacing an unsafe state file is intentional.
-      await stateStore.save({});
+      await stateStore.reset({});
     }
   }
 
