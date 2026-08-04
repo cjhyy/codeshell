@@ -84,8 +84,9 @@ export const memoryListToolDef: ToolDefinition = {
   name: "MemoryList",
   description:
     "List persistent memory entries from one scope. " +
-    "Returns each entry's id, origin, counts, name, type, and short description (not the full content — use MemoryRead for that). " +
+    "Returns each entry's exact scope/location locator, id, origin, counts, name, type, and short description (not the full content — use MemoryRead for that). " +
     "Use this before MemorySave/MemoryDelete to find the exact name to target. " +
+    "Copy the returned scope and location exactly when calling MemoryRead; never guess them from the entry name or type. " +
     'Scopes: "user" (entries the user owns; you need permission to modify) or "dream" (auto-consolidation workspace; you may freely modify).',
   inputSchema: {
     type: "object",
@@ -110,13 +111,16 @@ export async function memoryListTool(
     return scope as string;
   }
   try {
-    const mm = mmFor(ctx, scope as MemoryScope, parseLocation(args.location));
+    const location = parseLocation(args.location);
+    const mm = mmFor(ctx, scope as MemoryScope, location);
     const entries = mm.loadAll();
-    if (entries.length === 0) return `(no memories in scope "${scope}")`;
+    if (entries.length === 0) {
+      return `(no memories at scope="${scope}" location="${location}")`;
+    }
     return entries
       .map(
         (e) =>
-          `- [${e.type}] ${e.name} ` +
+          `- [scope="${scope}" location="${location}" type="${e.type}"] ${e.name} ` +
           `(id:${e.id ?? "(none)"}, origin:${e.origin ?? "manual"}, use:${e.useCount ?? 0}, updates:${e.updateCount ?? 0}) — ` +
           e.description,
       )
@@ -132,14 +136,15 @@ export const memoryReadToolDef: ToolDefinition = {
   name: "MemoryRead",
   description:
     "Read the full content of a single memory entry by name. " +
-    "Use MemoryList first to find the exact name.",
+    "Use the exact scope and location printed on the injected memory index or returned by MemoryList; never infer or guess either value. " +
+    "If a read reports that the memory is missing, do not repeat the identical call. Use MemoryList once to refresh that exact store, or continue without the memory.",
   inputSchema: {
     type: "object",
     properties: {
       scope: {
         type: "string",
         enum: ["user", "dream"],
-        description: "Which scope to read from",
+        description: "Exact scope printed on the injected memory index or returned by MemoryList",
       },
       location: LOCATION_SCHEMA,
       name: {
@@ -167,7 +172,12 @@ export async function memoryReadTool(
     const mm = mmFor(ctx, scope as MemoryScope, location);
     const entries = mm.loadAll();
     const entry = entries.find((e) => e.name === name || e.fileName === name);
-    if (!entry) return `Error: no memory named "${name}" in scope "${scope}"`;
+    if (!entry) {
+      return (
+        `Error: no memory named "${name}" at scope="${scope}" location="${location}". ` +
+        "Do not repeat this identical MemoryRead call. Use MemoryList once to refresh this exact store, or continue without the memory."
+      );
+    }
 
     // Recall signal (用户拍板 C + 可见性): reading a memory bumps its usage so
     // the recall-TTL sweep keeps frequently-read memories alive, and emits a
@@ -193,6 +203,8 @@ export async function memoryReadTool(
     return (
       `name: ${entry.name}\n` +
       `id: ${entry.id ?? ""}\n` +
+      `scope: ${scope}\n` +
+      `location: ${location}\n` +
       `description: ${entry.description}\n` +
       `type: ${entry.type}\n` +
       `origin: ${entry.origin ?? "manual"}\n` +

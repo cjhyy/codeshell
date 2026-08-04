@@ -446,17 +446,31 @@ describe("buildInjectionIndex (two-layer, global + project)", () => {
         type: "project",
         content: "SECRET-BODY-PROJECT",
       });
+      const projDreamMm = new MemoryManager({ baseDir: base, projectDir: projDir, scope: "dream" });
+      projDreamMm.save({
+        name: "morning-briefing-structure",
+        description: "preferred briefing sections",
+        type: "feedback",
+        content: "SECRET-BODY-DREAM",
+      });
 
       const idx = MemoryManager.buildInjectionIndex({ projectDir: projDir, baseDir: base });
       expect(idx).toContain("Global memories");
       expect(idx).toContain("grep-first");
+      expect(idx).toContain('[scope="user" location="global" type="feedback"] grep-first');
       expect(idx).toContain("Project memories");
       expect(idx).toContain("uses-worktree");
+      expect(idx).toContain(
+        '[scope="dream" location="project" type="feedback"] morning-briefing-structure',
+      );
       // bodies must NOT be inlined — that's the whole point of the two-layer design
       expect(idx).not.toContain("SECRET-BODY-GLOBAL");
       expect(idx).not.toContain("SECRET-BODY-PROJECT");
+      expect(idx).not.toContain("SECRET-BODY-DREAM");
       // it should instruct the model to MemoryRead
       expect(idx).toContain("MemoryRead");
+      expect(idx).toContain("copy both values exactly");
+      expect(idx).toContain("do not repeat the same call");
     });
   });
 

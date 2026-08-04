@@ -59,6 +59,8 @@ describe("memory tools profile location", () => {
         "profile",
       ]);
     }
+    expect(memoryReadToolDef.description).toContain("exact scope and location");
+    expect(memoryReadToolDef.description).toContain("do not repeat the identical call");
   });
 
   test("returns a clear error when the run has no portable profile memory", async () => {
@@ -111,12 +113,15 @@ describe("memory tools profile location", () => {
 
     const listed = await memoryListTool({ scope: "user", location: "profile" }, context);
     expect(listed).toContain("research-method");
+    expect(listed).toContain('[scope="user" location="profile" type="feedback"]');
 
     const read = await memoryReadTool(
       { scope: "user", location: "profile", name: "research-method" },
       context,
     );
     expect(read).toContain("Triangulate primary sources");
+    expect(read).toContain("scope: user");
+    expect(read).toContain("location: profile");
     expect(events).toContainEqual({
       type: "memory_recalled",
       name: "research-method",
@@ -137,6 +142,16 @@ describe("memory tools profile location", () => {
       "(no memories",
     );
     expect(existsSync(join(profileMemoryDir, "memory-trash"))).toBe(true);
+  });
+
+  test("a missing read identifies the exact failed store and forbids identical retries", async () => {
+    const result = await memoryReadTool(
+      { scope: "dream", location: "project", name: "missing-memory" },
+      ctx(),
+    );
+    expect(result).toContain('scope="dream" location="project"');
+    expect(result).toContain("Do not repeat this identical MemoryRead call");
+    expect(result).toContain("MemoryList once");
   });
 
   test("keeps omitted/project and global routing unchanged", async () => {
