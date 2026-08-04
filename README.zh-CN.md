@@ -235,6 +235,7 @@ OpenAI-compatible provider 会中止在 `CODESHELL_STREAM_IDLE_TIMEOUT_MS` 毫�
 
 ```text
 packages/
+├── link/      # 与框架无关的 Link provider 清单和授权指南
 ├── core/      # 领域无关的 Engine、context、MCP、hooks、sessions、runs、memory
 ├── coding/    # 编码 capability：tools、git/worktrees、LSP、review、prompt/presets
 ├── arena/     # 可选的多模型 Arena capability
@@ -264,7 +265,7 @@ scripts/      # Build, release, and repo maintenance scripts
 
 ```bash
 bun install
-bun run build          # build core + coding capability + tui + chat + meta package
+bun run build          # build link + core + capability/host packages + meta package
 bun run typecheck      # root core + coding capability + tui + chat check
 bun test               # core / tui test suites
 

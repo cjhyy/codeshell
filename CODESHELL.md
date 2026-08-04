@@ -7,10 +7,11 @@ Guidance for AI assistants (Code Shell, Claude Code, Codex) working in this repo
 
 **CodeShell** — a general-purpose AI Agent orchestration framework. The engine is domain-agnostic; "coding" is expressed as a preset, not hardcoded. Design principles: (1) Core First (engine decoupled from domain), (2) Presets over Hardcoding, (3) Secure by Default (permission-gated tools), (4) Long-running Ready (Task/Cron/Sleep/Sub-Agent are first-class).
 
-## Monorepo layout (10 packages)
+## Monorepo layout (11 packages)
 
 ```
 packages/
+  link/     @cjhyy/code-shell-link     — framework-independent Link provider manifests and authorization guides.
   core/     @cjhyy/code-shell-core     — engine, tools, hooks, protocol. UI-agnostic, domain-agnostic.
   coding/   @cjhyy/code-shell-capability-coding — optional coding/git/LSP/worktree capability pack.
   arena/    @cjhyy/code-shell-arena    — optional Arena capability built on core/extension.
@@ -38,7 +39,7 @@ Root package `@cjhyy/code-shell` is the meta package that installs core + tui an
 
 ```bash
 bun install            # bun workspaces (NOT npm/yarn/pnpm)
-bun run build          # filter order: core → pet → arena → coding → server → web → tui → chat → build-meta.ts (desktop/cdp separate)
+bun run build          # filter order: link → core → pet → arena → coding → cdp → server → web → tui → chat → build-meta.ts (desktop separate)
 bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
 bun test               # bun test runner (NOT vitest/jest)

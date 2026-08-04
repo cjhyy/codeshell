@@ -246,6 +246,7 @@ Design principles:
 
 ```text
 packages/
+├── link/      # Framework-independent Link provider manifests and authorization guides
 ├── core/      # Domain-agnostic engine, context, MCP, hooks, sessions, runs, memory
 ├── coding/    # Coding capability pack: tools, git/worktrees, LSP, review, prompt/presets
 ├── arena/     # Optional multi-model Arena capability
@@ -275,7 +276,7 @@ scripts/      # Build, release, and repo maintenance scripts
 
 ```bash
 bun install
-bun run build          # build core + coding capability + tui + chat + meta package
+bun run build          # build link + core + capability/host packages + meta package
 bun run typecheck      # root core + coding capability + tui + chat check
 bun test               # core / tui test suites
 
