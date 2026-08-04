@@ -250,8 +250,8 @@ describe("host-action envelope validation", () => {
     ).toBe(true);
     expect(
       isPetHostActionRequest({
-        kind: "todoMutation",
-        payload: { action: "update", todoId: "todo-one", text: "更新后的待办" },
+        kind: "followUpMutation",
+        payload: { action: "complete", followUpId: "followup-one" },
       }),
     ).toBe(true);
     expect(
@@ -263,7 +263,11 @@ describe("host-action envelope validation", () => {
     expect(
       isPetHostActionRequest({
         kind: "outboundMessage",
-        payload: { targetId: "owner-one", text: "已经完成" },
+        payload: {
+          targetId: "owner-one",
+          text: "已经完成",
+          attachmentPaths: ["/work/result.png"],
+        },
       }),
     ).toBe(true);
 
@@ -284,8 +288,8 @@ describe("host-action envelope validation", () => {
     ).toBe(false);
     expect(
       isPetHostActionRequest({
-        kind: "todoMutation",
-        payload: { action: "complete", todoId: "todo-one", text: "unexpected" },
+        kind: "followUpMutation",
+        payload: { action: "complete", followUpId: "followup-one", text: "unexpected" },
       }),
     ).toBe(false);
     expect(
@@ -298,6 +302,32 @@ describe("host-action envelope validation", () => {
       isPetHostActionRequest({
         kind: "outboundMessage",
         payload: { targetId: "owner-one", text: "x".repeat(8_001) },
+      }),
+    ).toBe(false);
+    expect(
+      isPetHostActionRequest({
+        kind: "outboundMessage",
+        payload: { targetId: "owner-one", text: "bad\u0000message" },
+      }),
+    ).toBe(false);
+    expect(
+      isPetHostActionRequest({
+        kind: "outboundMessage",
+        payload: {
+          targetId: "owner-one",
+          text: "完成了",
+          attachmentPaths: ["relative/result.png"],
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isPetHostActionRequest({
+        kind: "outboundMessage",
+        payload: {
+          targetId: "owner-one",
+          text: "完成了",
+          attachmentPaths: ["/work/result.png", "/work/result.png"],
+        },
       }),
     ).toBe(false);
     expect(

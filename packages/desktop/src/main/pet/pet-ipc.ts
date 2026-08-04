@@ -4,18 +4,12 @@ import type {
   PetNavigationRequest,
   PetNavigationResult,
 } from "./pet-state-aggregator.js";
-import type {
-  PetDispatchCommand,
-  PetDispatchResult,
-  PetHostActionExecution,
-} from "./pet-dispatch-service.js";
+import type { PetDispatchCommand, PetDispatchResult } from "./pet-dispatch-service.js";
 import type { PetAttentionEvent, PetAttentionSnapshot } from "./pet-attention-policy.js";
 import {
   type PetLongTaskControlRequest,
   type PetLongTaskControlResult,
   type PetLongTaskSnapshot,
-  type PetTodoItem,
-  type PetTodoStatus,
 } from "@cjhyy/code-shell-pet";
 import {
   isPetWorkItemId,
@@ -25,6 +19,10 @@ import {
 import type { PetMemoryEntry } from "./pet-memory-store.js";
 import type { PetJournalEntry } from "./pet-journal-store.js";
 import { randomUUID } from "node:crypto";
+import {
+  completePetHostActionReceipt,
+  type PetHostActionReceiptRecorder,
+} from "./pet-host-action-completion.js";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
 export const PET_WORK_MEMORY_CHANNEL = "pet:get-work-memory";
@@ -56,11 +54,6 @@ export const PET_JOURNAL_EVENT_CHANNEL = "pet:journal-changed";
 export const PET_SEGMENT_TRANSCRIPT_CHANNEL = "pet:segment-transcript";
 export const PET_PREFS_GET_CHANNEL = "pet:prefs-get";
 export const PET_PREFS_SET_AUTO_EXTRACT_CHANNEL = "pet:prefs-set-auto-extract";
-export const PET_TODO_LIST_CHANNEL = "pet:todos-get";
-export const PET_TODO_CREATE_CHANNEL = "pet:todo-create";
-export const PET_TODO_UPDATE_CHANNEL = "pet:todo-update";
-export const PET_TODO_STATUS_CHANNEL = "pet:todo-set-status";
-export const PET_TODO_EVENT_CHANNEL = "pet:todos-changed";
 export const PET_SESSION_ARCHIVE_CHANNEL = "pet:session-archive";
 
 export interface PetIpcAggregator {
@@ -94,6 +87,13 @@ export interface PetIpcWorkInbox {
   getSnapshot(): PetWorkInboxSnapshot;
   add(ids: readonly string[]): PetWorkInboxSnapshot;
   clear(): PetWorkInboxSnapshot;
+  /** Preferred transactional mutation; legacy hosts may omit it. */
+  addDurably?(ids: readonly string[]): Promise<PetWorkInboxSnapshot>;
+  /** Preferred transactional reset; legacy hosts may omit it. */
+  clearDurably?(): Promise<PetWorkInboxSnapshot>;
+  /** Resolve only after the latest mutation is durably persisted. */
+  flush?(): Promise<void>;
+  subscribe?(listener: (snapshot: PetWorkInboxSnapshot) => void): () => void;
 }
 
 export interface PetIpcLongTasks {
@@ -133,14 +133,16 @@ export interface PetIpcLatestResult {
 }
 
 /**
- * Pull-based closure-reminder feed for the work tree: one very short follow-up
- * line per completed session that has a worthwhile takeaway, newest first. The
- * renderer merges these onto completed/follow-up work-tree rows. Backed by the
- * lazy aux summary service + persistent store.
+ * Pull-based canonical Needs-follow-up feed: one very short actionable reminder
+ * per completed session, newest first. The renderer presents these in the same
+ * list exposed to Mimi's FollowUps/ManageFollowUp tools; they are not a generic
+ * completed-work-tree classification. Backed by the lazy aux summary service +
+ * persistent store.
  */
 export interface PetIpcSummaries {
   collect(): Promise<
     Array<{
+      followUpId: string;
       sessionId: string;
       title: string;
       workspace?: string;
@@ -167,25 +169,11 @@ export interface PetIpcPreferences {
   setAutoExtract(enabled: boolean): Promise<boolean>;
 }
 
-export interface PetIpcTodos {
-  list(): Promise<PetTodoItem[]>;
-  create(text: string): Promise<PetTodoItem>;
-  update(id: string, text: string): Promise<PetTodoItem>;
-  setStatus(id: string, status: PetTodoStatus): Promise<PetTodoItem>;
-  subscribe(listener: () => void): () => void;
-}
-
 export interface PetIpcSessionArchive {
   archive(sessionId: string): Promise<{ ok: true }>;
 }
 
-export interface PetIpcHostActionReceipt {
-  record(input: {
-    petSessionId: string;
-    clientMessageId: string;
-    executions: PetHostActionExecution[];
-  }): Promise<string | null>;
-}
+export type PetIpcHostActionReceipt = PetHostActionReceiptRecorder;
 
 function afterReady<T>(ready: Promise<void> | undefined, callback: () => T): T | Promise<T> {
   return ready ? ready.then(callback) : callback();
@@ -339,42 +327,6 @@ function parseLongTaskClear(value: unknown): string {
   return record.taskId;
 }
 
-function parseTodoUpdate(value: unknown): { id: string; text: string } {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("invalid Pet todo update");
-  }
-  const record = value as Record<string, unknown>;
-  if (
-    Object.keys(record).some((key) => key !== "id" && key !== "text") ||
-    typeof record.id !== "string" ||
-    !/^todo-[A-Za-z0-9-]{1,128}$/u.test(record.id) ||
-    typeof record.text !== "string"
-  ) {
-    throw new Error("invalid Pet todo update");
-  }
-  return { id: record.id, text: record.text };
-}
-
-function parseTodoStatus(value: unknown): { id: string; status: PetTodoStatus } {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("invalid Pet todo status");
-  }
-  const record = value as Record<string, unknown>;
-  if (
-    Object.keys(record).some((key) => key !== "id" && key !== "status") ||
-    typeof record.id !== "string" ||
-    !/^todo-[A-Za-z0-9-]{1,128}$/u.test(record.id) ||
-    (record.status !== "pending" &&
-      record.status !== "in_progress" &&
-      record.status !== "blocked" &&
-      record.status !== "completed" &&
-      record.status !== "archived")
-  ) {
-    throw new Error("invalid Pet todo status");
-  }
-  return { id: record.id, status: record.status };
-}
-
 export function registerPetIpc(options: {
   ipcMain: PetIpcMainLike;
   aggregator: PetIpcAggregator;
@@ -389,7 +341,6 @@ export function registerPetIpc(options: {
   summaries?: PetIpcSummaries;
   journal?: PetIpcJournal;
   preferences?: PetIpcPreferences;
-  todos?: PetIpcTodos;
   sessionArchive?: PetIpcSessionArchive;
   hostActionReceipt?: PetIpcHostActionReceipt;
   /** Register handlers immediately while their backing indexes hydrate. */
@@ -448,24 +399,21 @@ export function registerPetIpc(options: {
             }
           }
           if (result.hostActions?.length && options.hostActionReceipt) {
-            const text = await options.hostActionReceipt.record({
-              petSessionId: result.petSessionId,
-              clientMessageId: command.clientMessageId,
-              executions: result.hostActions,
-            });
-            if (text) {
-              const receiptEvent = {
-                kind: "host-action-completed" as const,
+            await completePetHostActionReceipt({
+              recorder: options.hostActionReceipt,
+              input: {
+                petSessionId: result.petSessionId,
                 clientMessageId: command.clientMessageId,
-                message: text,
-                createdAt: Date.now(),
-              };
-              for (const window of options.windows()) {
-                if (!window.isDestroyed()) {
-                  window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
+                executions: result.hostActions,
+              },
+              publish: (receiptEvent) => {
+                for (const window of options.windows()) {
+                  if (!window.isDestroyed()) {
+                    window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
+                  }
                 }
-              }
-            }
+              },
+            });
           }
         }
         return result;
@@ -514,14 +462,28 @@ export function registerPetIpc(options: {
     options.ipcMain.handle(PET_WORK_INBOX_UPDATE_CHANNEL, (_event, ...args) => {
       if (args.length !== 1) throw new Error("invalid work inbox update");
       const update = parseWorkInboxUpdate(args[0]);
-      return afterReady(options.ready, () => {
-        const snapshot =
-          update.action === "clear"
-            ? options.workInbox!.clear()
+      return afterReady(options.ready, async () => {
+        let snapshot: PetWorkInboxSnapshot;
+        if (update.action === "clear") {
+          snapshot = options.workInbox!.clearDurably
+            ? await options.workInbox!.clearDurably!()
+            : options.workInbox!.clear();
+        } else {
+          snapshot = options.workInbox!.addDurably
+            ? await options.workInbox!.addDurably!(update.ids)
             : options.workInbox!.add(update.ids);
-        for (const window of options.windows()) {
-          if (!window.isDestroyed())
-            window.webContents.send(PET_WORK_INBOX_EVENT_CHANNEL, snapshot);
+        }
+        if (
+          (update.action === "clear" && !options.workInbox!.clearDurably) ||
+          (update.action === "add" && !options.workInbox!.addDurably)
+        ) {
+          await options.workInbox!.flush?.();
+        }
+        if (!options.workInbox!.subscribe) {
+          for (const window of options.windows()) {
+            if (!window.isDestroyed())
+              window.webContents.send(PET_WORK_INBOX_EVENT_CHANNEL, snapshot);
+          }
         }
         return snapshot;
       });
@@ -639,28 +601,6 @@ export function registerPetIpc(options: {
       return afterReady(options.ready, () => options.preferences!.setAutoExtract(enabled));
     });
   }
-  if (options.todos) {
-    options.ipcMain.handle(PET_TODO_LIST_CHANNEL, (_event, ...args) => {
-      if (args.length !== 0) throw new Error("Pet todo list does not accept arguments");
-      return afterReady(options.ready, () => options.todos!.list());
-    });
-    options.ipcMain.handle(PET_TODO_CREATE_CHANNEL, (_event, ...args) => {
-      if (args.length !== 1 || typeof args[0] !== "string") {
-        throw new Error("invalid Pet todo text");
-      }
-      return afterReady(options.ready, () => options.todos!.create(args[0] as string));
-    });
-    options.ipcMain.handle(PET_TODO_UPDATE_CHANNEL, (_event, ...args) => {
-      if (args.length !== 1) throw new Error("invalid Pet todo update");
-      const update = parseTodoUpdate(args[0]);
-      return afterReady(options.ready, () => options.todos!.update(update.id, update.text));
-    });
-    options.ipcMain.handle(PET_TODO_STATUS_CHANNEL, (_event, ...args) => {
-      if (args.length !== 1) throw new Error("invalid Pet todo status");
-      const update = parseTodoStatus(args[0]);
-      return afterReady(options.ready, () => options.todos!.setStatus(update.id, update.status));
-    });
-  }
   if (options.sessionArchive) {
     options.ipcMain.handle(PET_SESSION_ARCHIVE_CHANNEL, (_event, ...args) => {
       if (
@@ -687,13 +627,6 @@ export function registerPetIpc(options: {
       }
     });
   });
-  const unsubscribeTodos = options.todos?.subscribe(() => {
-    void Promise.resolve(options.todos!.list()).then((entries) => {
-      for (const window of options.windows()) {
-        if (!window.isDestroyed()) window.webContents.send(PET_TODO_EVENT_CHANNEL, entries);
-      }
-    });
-  });
   const unsubscribe = options.aggregator.subscribe((event) => {
     for (const window of options.windows()) {
       if (!window.isDestroyed()) window.webContents.send(PET_EVENT_CHANNEL, event);
@@ -709,13 +642,18 @@ export function registerPetIpc(options: {
       if (!window.isDestroyed()) window.webContents.send(PET_LONG_TASK_EVENT_CHANNEL, snapshot);
     }
   });
+  const unsubscribeWorkInbox = options.workInbox?.subscribe?.((snapshot) => {
+    for (const window of options.windows()) {
+      if (!window.isDestroyed()) window.webContents.send(PET_WORK_INBOX_EVENT_CHANNEL, snapshot);
+    }
+  });
   return () => {
     unsubscribe();
     unsubscribeAttention?.();
     unsubscribeLongTasks?.();
+    unsubscribeWorkInbox?.();
     unsubscribeMemories?.();
     unsubscribeJournal?.();
-    unsubscribeTodos?.();
     options.ipcMain.removeHandler(PET_SNAPSHOT_CHANNEL);
     options.ipcMain.removeHandler(PET_WORK_MEMORY_CHANNEL);
     options.ipcMain.removeHandler(PET_OPEN_SESSION_CHANNEL);
@@ -750,12 +688,6 @@ export function registerPetIpc(options: {
     if (options.preferences) {
       options.ipcMain.removeHandler(PET_PREFS_GET_CHANNEL);
       options.ipcMain.removeHandler(PET_PREFS_SET_AUTO_EXTRACT_CHANNEL);
-    }
-    if (options.todos) {
-      options.ipcMain.removeHandler(PET_TODO_LIST_CHANNEL);
-      options.ipcMain.removeHandler(PET_TODO_CREATE_CHANNEL);
-      options.ipcMain.removeHandler(PET_TODO_UPDATE_CHANNEL);
-      options.ipcMain.removeHandler(PET_TODO_STATUS_CHANNEL);
     }
     if (options.sessionArchive) {
       options.ipcMain.removeHandler(PET_SESSION_ARCHIVE_CHANNEL);

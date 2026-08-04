@@ -6,11 +6,10 @@ import type {
 import { petExternalSessionLocator } from "./petExternalSession";
 
 /** Structured work group derived from projection state, never from title/summary text. */
-export type PetWorkGroup = "running" | "pending" | "follow-up" | "completed" | "other";
+export type PetWorkGroup = "running" | "pending" | "completed" | "other";
 
 export type PetWorkState =
   | "needs-action"
-  | "follow-up"
   | "running"
   | "queued"
   | "failed"
@@ -66,18 +65,11 @@ export interface PetWorkMap {
   unclassifiedCount: number;
 }
 
-const GROUP_ORDER: readonly PetWorkGroup[] = [
-  "running",
-  "pending",
-  "follow-up",
-  "completed",
-  "other",
-];
+const GROUP_ORDER: readonly PetWorkGroup[] = ["running", "pending", "completed", "other"];
 
 const DISPLAY_LIMITS: Record<PetWorkGroup, number> = {
   running: 16,
   pending: 16,
-  "follow-up": 12,
   completed: 8,
   other: 8,
 };
@@ -88,10 +80,11 @@ const DISPLAY_LIMITS: Record<PetWorkGroup, number> = {
  * decisions), never from title/summary text. Any session that does not match a
  * concrete state falls into the "other" bucket so nothing is ever hidden.
  *
- * "follow-up" = an idle session whose last turn produced a terminal-completed
- * outcome that the user has not yet acted on, i.e. a completed run that is not
- * yet dismissed. "completed" is reserved for sessions whose durable terminal
- * status is completed AND whose run is no longer live (disk/dormant/terminal).
+ * Actionable follow-ups deliberately do not come from this generic session
+ * projection. They have one canonical source: the summarized rows rendered by
+ * PetFollowUpSection and exposed to Mimi through FollowUps/ManageFollowUp.
+ * A terminal-completed session is therefore simply "completed", whether its
+ * worker is still idle or has already been reclaimed.
  */
 function classify(
   session: PetSessionProjection,
@@ -103,13 +96,8 @@ function classify(
   if (session.runState === "queued") return { group: "running", state: "queued" };
   if (session.terminal?.status === "failed") return { group: "other", state: "failed" };
   if (session.terminal?.status === "cancelled") return { group: "other", state: "cancelled" };
-  // A live idle session that just finished a completed turn is a follow-up: the
-  // user may want to review or continue it. A dormant/terminal completed disk
-  // session is "completed" (already settled).
   if (session.terminal?.status === "completed") {
-    return session.runState === "idle"
-      ? { group: "follow-up", state: "follow-up" }
-      : { group: "completed", state: "completed" };
+    return { group: "completed", state: "completed" };
   }
   return { group: "other", state: "idle" };
 }

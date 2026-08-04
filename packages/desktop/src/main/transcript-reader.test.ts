@@ -48,6 +48,111 @@ describe("transcriptToFoldItems", () => {
     });
   });
 
+  it("marks outbound host receipts so replay replaces a premature delivery claim", () => {
+    const items = transcriptToFoldItems(
+      line("message", {
+        role: "assistant",
+        content: "主动消息操作失败：微信发送失败：prepare failed",
+        clientMessageId: "pet-host-action-pet-turn-send",
+      }),
+    );
+
+    expect(items[1]).toEqual({
+      kind: "stream",
+      event: {
+        type: "text_delta",
+        text: "<!--PET:HOST_ACTION_REPLACE:pet-turn-send-->主动消息操作失败：微信发送失败：prepare failed",
+      },
+      timestamp: 1,
+    });
+    expect(items[2]).toEqual({
+      kind: "stream",
+      event: {
+        type: "assistant_message",
+        message: {
+          role: "assistant",
+          content:
+            "<!--PET:HOST_ACTION_REPLACE:pet-turn-send-->主动消息操作失败：微信发送失败：prepare failed",
+        },
+      },
+      timestamp: 1,
+    });
+  });
+
+  it("also recognizes the truthful platform-acceptance success receipt", () => {
+    const items = transcriptToFoldItems(
+      line("message", {
+        role: "assistant",
+        content: "消息已提交到 微信，平台已接受发送请求。",
+        clientMessageId: "pet-host-action-pet-turn-accepted",
+      }),
+    );
+
+    expect(items[1]).toMatchObject({
+      kind: "stream",
+      event: {
+        type: "text_delta",
+        text: "<!--PET:HOST_ACTION_REPLACE:pet-turn-accepted-->消息已提交到 微信，平台已接受发送请求。",
+      },
+    });
+  });
+
+  it("recognizes platform-acceptance receipts that include proactive attachments", () => {
+    const items = transcriptToFoldItems(
+      line("message", {
+        role: "assistant",
+        content: "消息和 2 个附件已提交到 微信，平台已接受发送请求。",
+        clientMessageId: "pet-host-action-pet-turn-attachments",
+      }),
+    );
+
+    expect(items[1]).toMatchObject({
+      kind: "stream",
+      event: {
+        type: "text_delta",
+        text: "<!--PET:HOST_ACTION_REPLACE:pet-turn-attachments-->消息和 2 个附件已提交到 微信，平台已接受发送请求。",
+      },
+    });
+  });
+
+  it("recognizes the current non-terminal platform-acceptance receipt", () => {
+    const content = "消息已提交到 微信，平台接口已接受发送请求；尚未确认收件设备已展示。";
+    const items = transcriptToFoldItems(
+      line("message", {
+        role: "assistant",
+        content,
+        clientMessageId: "pet-host-action-pet-turn-current-accepted",
+      }),
+    );
+
+    expect(items[1]).toMatchObject({
+      kind: "stream",
+      event: {
+        type: "text_delta",
+        text: `<!--PET:HOST_ACTION_REPLACE:pet-turn-current-accepted-->${content}`,
+      },
+    });
+  });
+
+  it("restores the delivery channel carried by a durable Gateway reply", () => {
+    const content = "Mooncake 分析完成。";
+    const items = transcriptToFoldItems(
+      line("message", {
+        role: "assistant",
+        content,
+        clientMessageId: "pet-host-action-replace-delivery-wechat:im:wechat:message-one",
+      }),
+    );
+
+    expect(items[1]).toMatchObject({
+      kind: "stream",
+      event: {
+        type: "text_delta",
+        text: `<!--PET:HOST_ACTION_REPLACE:im%3Awechat%3Amessage-one:wechat-->${content}`,
+      },
+    });
+  });
+
   it("carries a persisted steerId onto the user FoldItem (step-in dedup key)", () => {
     // Step-gap steering messages are persisted as a real user turn (unmarked),
     // now stamped with the queued-draft id so hydrate can dedup the optimistic

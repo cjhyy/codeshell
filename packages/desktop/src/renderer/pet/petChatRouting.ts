@@ -1,7 +1,10 @@
+import { parsePetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
+
 const PET_AUTO_DELEGATE_MARKER = "<!--PET:AUTO_DELEGATE-->";
 
 /** Keep Pet's host-control line out of both the live stream and hydrated chat. */
 export function visiblePetAssistantText(text: string): string {
+  text = parsePetHostActionReplacementDisplay(text).text;
   const markerIndex = text.indexOf(PET_AUTO_DELEGATE_MARKER);
   if (markerIndex >= 0) return text.slice(0, markerIndex).trim();
 

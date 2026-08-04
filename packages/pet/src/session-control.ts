@@ -1,5 +1,6 @@
 import type { ToolContext, ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { hostActionAvailability, hostActionService } from "./host-actions.js";
+import { hasOnlyDeclaredToolArguments } from "./tool-arguments.js";
 
 export const MANAGE_SESSIONS_TOOL_NAME = "ManageSessions";
 
@@ -41,7 +42,7 @@ export async function manageSessionsTool(
     args.session_ids.length > 20 ||
     args.session_ids.some((id) => typeof id !== "string" || !/^[A-Za-z0-9_-]{1,128}$/u.test(id)) ||
     new Set(args.session_ids).size !== args.session_ids.length ||
-    Object.keys(args).some((key) => key !== "action" && key !== "session_ids")
+    !hasOnlyDeclaredToolArguments(args, ["action", "session_ids"])
   ) {
     return "Error: ManageSessions archive requires 1 to 20 unique Sessions selectors.";
   }

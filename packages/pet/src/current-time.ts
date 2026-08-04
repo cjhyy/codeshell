@@ -1,4 +1,5 @@
 import type { ToolDefinition, ToolVisibilityContext } from "@cjhyy/code-shell-core/extension";
+import { hasOnlyDeclaredToolArguments } from "./tool-arguments.js";
 
 export const CURRENT_TIME_TOOL_NAME = "CurrentTime";
 
@@ -19,7 +20,7 @@ export function currentTimeAvailability(ctx: ToolVisibilityContext): boolean {
 }
 
 export async function currentTimeTool(args: Record<string, unknown>): Promise<string> {
-  if (Object.keys(args).length > 0) return "Error: CurrentTime accepts no arguments.";
+  if (!hasOnlyDeclaredToolArguments(args, [])) return "Error: CurrentTime accepts no arguments.";
   const now = new Date();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const parts = new Intl.DateTimeFormat("zh-CN", {

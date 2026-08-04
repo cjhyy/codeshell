@@ -4,7 +4,7 @@
 // submitted again — the model does not re-run, but the dispatcher used to re-read
 // `extensions.pet.hostActions` from that replayed result and execute every
 // executor a second time. Observable effect: a duplicate delivery created a
-// second Todo or sent a second proactive message.
+// repeated follow-up mutation or a second proactive message.
 //
 // These drive the real PetDispatchService with a worker stub that returns the
 // SAME result for a repeated clientMessageId, exactly as Engine's replay does.
@@ -56,7 +56,13 @@ function makeService(options: {
         ok: true as const,
         result: {
           text: "done",
-          extensions: { pet: { hostActions: [{ kind: "outboundMessage", payload: { targetId: "owner-1", text: "hi" } }] } },
+          extensions: {
+            pet: {
+              hostActions: [
+                { kind: "outboundMessage", payload: { targetId: "owner-1", text: "hi" } },
+              ],
+            },
+          },
         },
       }),
     },
@@ -127,6 +133,25 @@ describe("pet host action replay", () => {
       clientMessageId: "gw:msg-2",
     } as never);
     expect(calls).toBe(1);
+  });
+
+  test("a stranded pre-execution claim is reported but never repeated", async () => {
+    let calls = 0;
+    const receipts = new PetHostActionReceiptStore(join(dir, "receipts.json"));
+    await receipts.claim("pet-one", "gw:uncertain", 0, "outboundMessage", 1);
+    const service = makeService({ receipts, onSideEffect: () => (calls += 1) });
+
+    const replay = (await service.dispatch({
+      type: "chat",
+      message: "hi",
+      clientMessageId: "gw:uncertain",
+    } as never)) as {
+      hostActions?: Array<{ ok: boolean; error?: string }>;
+    };
+
+    expect(calls).toBe(0);
+    expect(replay.hostActions?.[0]).toMatchObject({ ok: false });
+    expect(replay.hostActions?.[0]?.error).toContain("为避免重复执行");
   });
 
   test("a different clientMessageId is a new turn and does execute", async () => {

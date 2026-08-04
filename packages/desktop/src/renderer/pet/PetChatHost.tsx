@@ -25,6 +25,7 @@ import {
   imGatewayChannelFromClientMessageId,
 } from "../imGatewayChannels";
 import { visiblePetAssistantText } from "./petChatRouting";
+import { parsePetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import { ModelPill, type ModelOption } from "../chat/ModelPill";
 
@@ -42,6 +43,7 @@ export interface PetChatRow {
   before?: number;
   after?: number;
   delegation?: PetDelegationReceipt;
+  deliveryLabel?: string;
 }
 
 /**
@@ -63,6 +65,8 @@ export interface PetHostActionReceiptRow {
   clientMessageId: string;
   message: string;
   createdAt: number;
+  replaceAssistant?: boolean;
+  deliveryChannel?: string;
 }
 
 export function selectPetChatRows(
@@ -75,40 +79,92 @@ export function selectPetChatRows(
   const receiptsByMessageId = new Map(
     delegationReceipts.map((receipt) => [receipt.originClientMessageId, receipt]),
   );
-  const hostReceiptsByMessageId = new Map(
-    hostActionReceipts.map((receipt) => [receipt.clientMessageId, receipt]),
-  );
-  const emittedReceipts = new Set<string>();
+  const hostReceiptsByMessageId = new Map<string, PetHostActionReceiptRow>();
+  const persistedReplacementMessageIds = new Set<string>();
+  let persistedTurnClientMessageId: string | undefined;
+  for (const message of messages) {
+    if (message.kind === "user") {
+      persistedTurnClientMessageId = message.clientMessageId;
+      continue;
+    }
+    if (message.kind !== "assistant" || !persistedTurnClientMessageId) continue;
+    const parsed = parsePetHostActionReplacementDisplay(message.text);
+    if (!parsed.replacesAssistant || !parsed.text.trim()) continue;
+    persistedReplacementMessageIds.add(message.id);
+    const sourceClientMessageId = parsed.sourceClientMessageId ?? persistedTurnClientMessageId;
+    hostReceiptsByMessageId.set(sourceClientMessageId, {
+      clientMessageId: sourceClientMessageId,
+      message: parsed.text,
+      createdAt: message.createdAt ?? 0,
+      replaceAssistant: true,
+      ...(parsed.deliveryChannel ? { deliveryChannel: parsed.deliveryChannel } : {}),
+    });
+  }
+  for (const receipt of hostActionReceipts) {
+    hostReceiptsByMessageId.set(receipt.clientMessageId, receipt);
+  }
+  const emittedDelegationReceipts = new Set<string>();
+  const emittedHostReceipts = new Set<string>();
   const rows: PetChatRow[] = [];
   let activeClientMessageId: string | undefined;
-  const appendTurnReceipts = (): void => {
-    if (!activeClientMessageId || emittedReceipts.has(activeClientMessageId)) return;
+  let activeTurnRowStart = 0;
+  const turnRowStarts = new Map<string, number>();
+  const appendDelegationReceipts = (): void => {
+    if (!activeClientMessageId || emittedDelegationReceipts.has(activeClientMessageId)) return;
     const delegationReceipt = receiptsByMessageId.get(activeClientMessageId);
-    const hostReceipt = hostReceiptsByMessageId.get(activeClientMessageId);
-    if (!delegationReceipt && !hostReceipt) return;
-    emittedReceipts.add(activeClientMessageId);
-    if (delegationReceipt) {
-      for (const delegation of delegationReceipt.delegations) {
-        rows.push({
-          id: `delegation:${activeClientMessageId}:${delegation.sessionId}`,
-          role: "delegation",
-          text: delegation.task,
-          delegation,
-        });
+    if (!delegationReceipt) return;
+    emittedDelegationReceipts.add(activeClientMessageId);
+    for (const delegation of delegationReceipt.delegations) {
+      rows.push({
+        id: `delegation:${activeClientMessageId}:${delegation.sessionId}`,
+        role: "delegation",
+        text: delegation.task,
+        delegation,
+      });
+    }
+  };
+  const appendHostReceipt = (clientMessageId = activeClientMessageId): void => {
+    if (!clientMessageId || emittedHostReceipts.has(clientMessageId)) return;
+    const hostReceipt = hostReceiptsByMessageId.get(clientMessageId);
+    if (!hostReceipt?.message.trim()) return;
+    emittedHostReceipts.add(clientMessageId);
+    const turnStart = turnRowStarts.get(clientMessageId) ?? activeTurnRowStart;
+    let turnEnd = rows.length;
+    for (let index = turnStart + 1; index < rows.length; index += 1) {
+      if (rows[index]?.role !== "user") continue;
+      turnEnd = index;
+      break;
+    }
+    if (hostReceipt.replaceAssistant) {
+      for (let index = turnEnd - 1; index >= turnStart; index -= 1) {
+        if (rows[index]?.role !== "assistant") continue;
+        rows.splice(index, 1);
+        turnEnd -= 1;
+        break;
       }
     }
     if (hostReceipt?.message.trim()) {
-      rows.push({
-        id: `host-action:${activeClientMessageId}:${hostReceipt.createdAt}`,
+      const deliveryChannel =
+        hostReceipt.deliveryChannel ?? imGatewayChannelFromClientMessageId(clientMessageId);
+      const deliveryLabel =
+        deliveryChannel && deliveryChannel in IM_GATEWAY_CHANNEL_NAMES
+          ? IM_GATEWAY_CHANNEL_NAMES[deliveryChannel as keyof typeof IM_GATEWAY_CHANNEL_NAMES]
+          : undefined;
+      rows.splice(turnEnd, 0, {
+        id: `host-action:${clientMessageId}:${hostReceipt.createdAt}`,
         role: "assistant",
         text: hostReceipt.message.trim(),
+        ...(deliveryLabel ? { deliveryLabel } : {}),
       });
     }
   };
 
   for (const message of messages) {
     if (message.kind === "user" && message.text.trim()) {
+      appendHostReceipt();
       activeClientMessageId = message.clientMessageId;
+      activeTurnRowStart = rows.length;
+      if (activeClientMessageId) turnRowStarts.set(activeClientMessageId, activeTurnRowStart);
       const channel = imGatewayChannelFromClientMessageId(message.clientMessageId);
       const userRow: PetChatRow = {
         id: message.id,
@@ -135,9 +191,15 @@ export function selectPetChatRows(
       continue;
     }
     if (message.kind === "assistant") {
+      if (persistedReplacementMessageIds.has(message.id)) {
+        const replacement = parsePetHostActionReplacementDisplay(message.text);
+        const sourceClientMessageId = replacement.sourceClientMessageId ?? activeClientMessageId;
+        appendHostReceipt(sourceClientMessageId);
+        continue;
+      }
       const text = visiblePetAssistantText(message.text);
       if (text) rows.push({ id: message.id, role: "assistant" as const, text });
-      if (message.done) appendTurnReceipts();
+      if (message.done) appendDelegationReceipts();
       continue;
     }
     if (message.kind === "context_boundary") {
@@ -150,6 +212,7 @@ export function selectPetChatRows(
       });
     }
   }
+  appendHostReceipt();
   return rows;
 }
 
@@ -277,6 +340,19 @@ export function PetChatMarkdown({ text, compact = false }: { text: string; compa
   );
 }
 
+export function PetDeliveryStatusTip({ label }: { label: string }) {
+  const { t } = useT();
+  return (
+    <div
+      className="mt-2 flex items-center gap-1.5 border-t border-border/50 pt-2 text-[11px] font-medium leading-4 text-status-ok"
+      role="status"
+    >
+      <CheckCircle2 size={12} className="shrink-0" aria-hidden="true" />
+      <span>{t("pet.chat.deliverySent", { channel: label })}</span>
+    </div>
+  );
+}
+
 function PetChatRowView({
   row,
   session,
@@ -349,6 +425,7 @@ function PetChatRowView({
       </span>
       <div className="max-w-[88%] rounded-2xl rounded-tl-md border border-border/60 bg-background px-3.5 py-2.5 text-sm leading-6 shadow-sm">
         <PetChatMarkdown text={row.text} />
+        {row.deliveryLabel && <PetDeliveryStatusTip label={row.deliveryLabel} />}
       </div>
     </div>
   );

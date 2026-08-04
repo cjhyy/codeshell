@@ -11,7 +11,8 @@
  * eviction. `get`/`set` are synchronous over the in-memory map; callers await
  * `load()` once before use and may `flush()` in teardown.
  */
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 const DEFAULT_MAX_ENTRIES = 500;
@@ -35,7 +36,7 @@ interface PetSummaryFileEntry {
 }
 
 interface PetSummaryFile {
-  version: 1;
+  version: 2;
   entries: PetSummaryFileEntry[];
 }
 
@@ -77,7 +78,11 @@ export function createPetSummaryStore(
       // Corrupt JSON → empty store rather than throwing.
       return;
     }
-    if (parsed.version !== 1 || !Array.isArray(parsed.entries)) return;
+    // v1 accepted arbitrary model prose and could surface ordinary completion
+    // summaries as follow-ups. Ignore it so v2 regenerates through the strict
+    // FOLLOW_UP/NONE envelope while preserving dismissals in the separate
+    // work-inbox store.
+    if (parsed.version !== 2 || !Array.isArray(parsed.entries)) return;
     for (const candidate of parsed.entries) {
       if (!isValidEntry(candidate)) continue;
       entries.set(candidate.sessionId, {
@@ -93,22 +98,35 @@ export function createPetSummaryStore(
   }
 
   async function persist(): Promise<void> {
-    await mkdir(dirname(filePath), { recursive: true });
-    const temporary = `${filePath}.tmp-${process.pid}`;
+    await mkdir(dirname(filePath), { recursive: true, mode: 0o700 });
+    const temporary = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
     const file: PetSummaryFile = {
-      version: 1,
+      version: 2,
       entries: [...entries.entries()].map(([sessionId, entry]) => ({
         sessionId,
         terminalAt: entry.terminalAt,
         text: entry.text,
       })),
     };
-    await writeFile(temporary, `${JSON.stringify(file, null, 2)}\n`, "utf8");
-    await rename(temporary, filePath);
+    try {
+      await writeFile(temporary, `${JSON.stringify(file, null, 2)}\n`, {
+        encoding: "utf8",
+        mode: 0o600,
+      });
+      await rename(temporary, filePath);
+      await chmod(filePath, 0o600).catch(() => undefined);
+    } catch (error) {
+      await rm(temporary, { force: true }).catch(() => undefined);
+      throw error;
+    }
   }
 
   function scheduleFlush(): void {
-    writeQueue = writeQueue.then(() => persist()).catch(() => {});
+    const write = writeQueue.catch(() => undefined).then(() => persist());
+    // Keep the rejection observable through flush(), without creating an
+    // unhandled promise when a caller intentionally uses synchronous set().
+    void write.catch(() => undefined);
+    writeQueue = write;
   }
 
   return {
@@ -120,6 +138,8 @@ export function createPetSummaryStore(
       return entries.get(sessionId);
     },
     set(sessionId, terminalAt, text) {
+      const current = entries.get(sessionId);
+      if (current && current.terminalAt > terminalAt) return;
       // Delete first so a re-set moves the key to the newest insertion slot.
       entries.delete(sessionId);
       entries.set(sessionId, { terminalAt, text });

@@ -6,6 +6,7 @@ import type {
   ToolVisibilityContext,
 } from "@cjhyy/code-shell-core/extension";
 import type { PetReportToMimiEvent } from "./protocol.js";
+import { hasOnlyDeclaredToolArguments } from "./tool-arguments.js";
 
 export const REPORT_TO_MIMI_TOOL_NAME = "ReportToMimi";
 
@@ -59,7 +60,7 @@ export async function reportToMimiTool(
     return "Error: ReportToMimi requires a valid current Session.";
   }
   if (!report) return "Error: the Mimi host reporting channel is unavailable.";
-  if (Object.keys(args).some((key) => key !== "message" && key !== "attachment_paths")) {
+  if (!hasOnlyDeclaredToolArguments(args, ["message", "attachment_paths"])) {
     return "Error: ReportToMimi accepts only message and attachment_paths.";
   }
   const message = typeof args.message === "string" ? args.message.trim() : "";

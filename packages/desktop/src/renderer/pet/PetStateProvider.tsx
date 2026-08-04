@@ -48,6 +48,8 @@ export interface PetStateContextValue {
     clientMessageId: string;
     message: string;
     createdAt: number;
+    replaceAssistant?: boolean;
+    deliveryChannel?: string;
   }>;
   longTasks: PetLongTaskSnapshot;
   longTaskBusyIds: ReadonlySet<string>;
@@ -128,7 +130,13 @@ export function PetStateProvider({
     [],
   );
   const [hostActionReceipts, setHostActionReceipts] = React.useState<
-    Array<{ clientMessageId: string; message: string; createdAt: number }>
+    Array<{
+      clientMessageId: string;
+      message: string;
+      createdAt: number;
+      replaceAssistant?: boolean;
+      deliveryChannel?: string;
+    }>
   >([]);
   const [longTasks, setLongTasks] = React.useState<PetLongTaskSnapshot>({
     revision: 0,

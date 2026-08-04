@@ -200,34 +200,39 @@ describe("validatePetRunParams", () => {
     ).toBe("profileParams.gateway contains an invalid Gateway capability catalog");
   });
 
-  test("validates durable todo snapshots and opaque proactive destinations", () => {
-    const todo = {
-      id: "todo-one",
+  test("validates Needs follow-up snapshots and opaque proactive destinations", () => {
+    const followUp = {
+      id: "followup-one",
+      title: "发布准备",
       text: "整理发布说明",
-      status: "pending",
-      createdAt: 1,
-      updatedAt: 2,
+      workspace: "codeshell",
+      terminalAt: 2,
+      sessionSelector: "session-one",
+      workspaceId: "workspace-one",
     };
     const target = {
       id: "owner-one",
       channel: "wechat",
       label: "微信",
       maxTextLength: 8_000,
+      attachments: ["image", "file"],
+      maxAttachments: 2,
+      maxAttachmentBytes: 10 * 1024 * 1024,
     };
     expect(
       validatePetRunParams({
         behaviorMode: "pet",
         kind: "pet",
-        profileParams: { todos: [todo], outboundTargets: [target] },
+        profileParams: { followUps: [followUp], outboundTargets: [target] },
       }),
     ).toBeNull();
     expect(
       validatePetRunParams({
         behaviorMode: "pet",
         kind: "pet",
-        profileParams: { todos: [todo, todo] },
+        profileParams: { followUps: [followUp, followUp] },
       }),
-    ).toContain("duplicate todo");
+    ).toContain("invalid or duplicate follow-up");
     expect(
       validatePetRunParams({
         behaviorMode: "pet",
@@ -237,6 +242,34 @@ describe("validatePetRunParams", () => {
         },
       }),
     ).toContain("invalid or duplicate destination");
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: {
+          outboundTargets: [
+            {
+              ...target,
+              maxAttachments: undefined,
+              maxAttachmentBytes: undefined,
+            },
+          ],
+        },
+      }),
+    ).toContain("invalid or duplicate destination");
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: {
+          outboundTargets: [{ ...target, attachments: ["image", "image"] }],
+        },
+      }),
+    ).toContain("invalid or duplicate destination");
+
+    const options = petRunOptionsFrom({ outboundTargets: [target] });
+    expect(options.outboundTargets[0]).toEqual(target);
+    expect(Object.isFrozen(options.outboundTargets[0]?.attachments)).toBe(true);
   });
 });
 
@@ -262,7 +295,7 @@ describe("Pet behavior profile inputs", () => {
       ],
       reusableSessions: [],
       hostActionKinds: [],
-      todos: [],
+      followUps: [],
       outboundTargets: [],
     });
     expect(Object.isFrozen(options)).toBe(true);
@@ -340,7 +373,7 @@ describe("Pet behavior profile inputs", () => {
       petWorkspaces: [],
       petReusableSessions: [],
       petHostActionKinds: [],
-      petTodos: true,
+      petFollowUps: true,
       petOutboundTargets: [],
     });
     expect(

@@ -51,7 +51,6 @@ import {
   type InstalledTheme,
   type PanelAppSourceInput,
   type ThemePreview,
-  Transcript,
 } from "@cjhyy/code-shell-core";
 import {
   defaultCacheDir,
@@ -123,6 +122,10 @@ import {
   type PetSegmentClosureService,
 } from "./pet/pet-segment-closure-service.js";
 import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
+import {
+  completePetHostActionReceipt,
+  PetHostActionReceiptService,
+} from "./pet/pet-host-action-completion.js";
 import { PetMetadataStore } from "./pet/pet-metadata-store.js";
 import {
   formatPetLongTaskClosureMessage,
@@ -151,10 +154,6 @@ import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.
 import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
-import {
-  PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX,
-  PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX,
-} from "../shared/pet-host-action-receipt.js";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
 import {
   petChatModelKeyFromSettings,
@@ -559,6 +558,7 @@ let petStateAggregator: PetStateAggregator | null = null;
 let petExternalVisibilityController: ExternalSessionVisibilityController | null = null;
 let reconcileExternalAdapters: (() => Promise<void>) | null = null;
 let petDispatchService: PetDispatchService | null = null;
+let petHostActionReceiptService: PetHostActionReceiptService | null = null;
 let petAttentionPolicy: PetAttentionPolicy | null = null;
 let petWorkInboxStore: PetWorkInboxStore | null = null;
 let petLongTaskStore: PetLongTaskStore | null = null;
@@ -1439,6 +1439,44 @@ async function createWindow(): Promise<BrowserWindow> {
               : {}),
           });
 
+          // The closure manager's final assistant text is only an internal
+          // acknowledgement after GatewayReply (for example, "微信消息已发送，待命").
+          // Persist and publish the actual routed body as the visible reply,
+          // with delivery state kept as separate UI metadata.
+          const gatewayReplyAccepted = closureHostActions?.some(
+            (execution) => execution.kind === "gatewayReply" && execution.ok,
+          );
+          if (
+            gatewayReplyAccepted &&
+            task.completionTarget &&
+            petHostActionReceiptService &&
+            petDispatchService
+          ) {
+            await completePetHostActionReceipt({
+              recorder: petHostActionReceiptService,
+              input: {
+                petSessionId: await petDispatchService.getSessionId(),
+                clientMessageId: task.originClientMessageId,
+                executions: closureHostActions ?? [],
+                authoritativeMessage: message,
+                replaceAssistant: true,
+                deliveryChannel: task.completionTarget.channel,
+              },
+              publish: (receiptEvent) => {
+                for (const window of BrowserWindow.getAllWindows()) {
+                  if (!window.isDestroyed()) {
+                    window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
+                  }
+                }
+              },
+            }).catch((error) =>
+              dlog("main", "pet.longTask.gatewayReceipt.failed", {
+                taskId: task.id,
+                error: String(error),
+              }),
+            );
+          }
+
           try {
             if (!BrowserWindow.getFocusedWindow() && Notification.isSupported()) {
               new Notification({
@@ -1467,6 +1505,17 @@ async function createWindow(): Promise<BrowserWindow> {
     // so the directory Mimi reads and the one selectors resolve against can
     // never drift apart.
     const petSessionsRootDir = sessionsRoot();
+    const hostActionReceiptService = new PetHostActionReceiptService({
+      sessionsRootDir: petSessionsRootDir,
+      qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+      onPersistError: (error, input) =>
+        dlog("main", "pet.hostActionReceipt.persist.failed", {
+          petSessionId: input.petSessionId,
+          clientMessageId: input.clientMessageId,
+          error: String(error),
+        }),
+    });
+    petHostActionReceiptService = hostActionReceiptService;
     // Lazy "Mimi 小结" closure-summary layer: a persistent store keyed by
     // session id + the aux summary service. summarize() is only called for
     // completed sessions on a workbench pull (see the summaries collector).
@@ -1956,38 +2005,7 @@ async function createWindow(): Promise<BrowserWindow> {
           return { ok: true };
         },
       },
-      hostActionReceipt: {
-        record: async ({ petSessionId, clientMessageId, executions }) => {
-          const receipt = await enrichPetChatReplyWithHostActions("", executions, {
-            qrDir: resolve(app.getPath("userData"), "pet", "qr"),
-            attachmentKinds: [],
-          });
-          const text = receipt.text.trim();
-          if (!text) return null;
-          const replaceAssistant = executions.some(
-            (execution) => execution.kind === "outboundMessage",
-          );
-          try {
-            const transcript = new Transcript(
-              join(petSessionsRootDir, petSessionId, "transcript.jsonl"),
-            );
-            transcript.appendMessage("assistant", text, {
-              clientMessageId: `${
-                replaceAssistant
-                  ? PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX
-                  : PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX
-              }${clientMessageId}`,
-            });
-          } catch (error) {
-            dlog("main", "pet.hostActionReceipt.persist.failed", {
-              petSessionId,
-              clientMessageId,
-              error: String(error),
-            });
-          }
-          return { message: text, ...(replaceAssistant ? { replaceAssistant: true } : {}) };
-        },
-      },
+      hostActionReceipt: hostActionReceiptService,
       windows: () => BrowserWindow.getAllWindows(),
       ready: petInitialization,
     });
@@ -2513,6 +2531,33 @@ async function dispatchGatewayPetChat(
       ),
     },
   );
+  if (
+    result.hostActions?.some((execution) => execution.kind === "outboundMessage") &&
+    petHostActionReceiptService
+  ) {
+    await completePetHostActionReceipt({
+      recorder: petHostActionReceiptService,
+      input: {
+        petSessionId: result.petSessionId,
+        clientMessageId,
+        executions: result.hostActions,
+        authoritativeMessage: enriched.text,
+      },
+      publish: (receiptEvent) => {
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (!window.isDestroyed()) {
+            window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
+          }
+        }
+      },
+    }).catch((error) =>
+      dlog("main", "pet.hostActionReceipt.gateway.failed", {
+        petSessionId: result.petSessionId,
+        clientMessageId,
+        error: String(error),
+      }),
+    );
+  }
   return {
     text: enriched.text,
     petSessionId: result.petSessionId,
@@ -5518,6 +5563,7 @@ app.on("before-quit", (event) => {
   petExternalVisibilityController = null;
   reconcileExternalAdapters = null;
   petDispatchService = null;
+  petHostActionReceiptService = null;
   petLongTaskCoordinator?.stop();
   petLongTaskCoordinator = null;
   unsubscribePetLongTaskStream?.();

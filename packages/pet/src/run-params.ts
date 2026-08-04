@@ -5,13 +5,13 @@ import {
   type PetHostActionKind,
 } from "./host-actions.js";
 import { parsePetGatewayCatalog, type PetGatewayCatalog } from "./gateway.js";
-import { PET_TODO_STATUSES, type PetTodoItem } from "./todos.js";
+import type { PetFollowUpItem } from "./follow-ups.js";
 import type { PetOutboundTargetOption } from "./outbound-message.js";
 
 const MAX_RUNTIME_CONTEXT_LENGTH = 32_768;
 const MAX_WORKSPACES = 64;
 const MAX_REUSABLE_SESSIONS = 32;
-const MAX_TODOS = 100;
+const MAX_FOLLOW_UPS = 100;
 const MAX_OUTBOUND_TARGETS = 32;
 const MAX_ID_LENGTH = 128;
 const MAX_NAME_LENGTH = 256;
@@ -29,8 +29,8 @@ export interface PetRunOptions {
   gateway?: PetGatewayCatalog;
   /** Host-provided sessions directory backing the Sessions tool. */
   sessionsRootDir?: string;
-  /** Durable personal todos visible to this manager turn. */
-  todos: readonly PetTodoItem[];
+  /** The actionable rows shown in the desktop Needs follow-up section. */
+  followUps: readonly PetFollowUpItem[];
   /** Host-authorized proactive owner destinations. */
   outboundTargets: readonly PetOutboundTargetOption[];
 }
@@ -108,36 +108,41 @@ function parseReusableSessions(value: unknown): PetReusableSessionOption[] | und
   return result;
 }
 
-function parseTodos(value: unknown): PetTodoItem[] | undefined {
+function parseFollowUps(value: unknown): PetFollowUpItem[] | undefined {
   if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length > MAX_TODOS) return undefined;
+  if (!Array.isArray(value) || value.length > MAX_FOLLOW_UPS) return undefined;
   const ids = new Set<string>();
-  const result: PetTodoItem[] = [];
+  const result: PetFollowUpItem[] = [];
   for (const entry of value) {
     if (
       !isRecord(entry) ||
       !validOpaqueId(entry.id) ||
       ids.has(entry.id) ||
+      !validOpaqueId(entry.sessionSelector) ||
+      (entry.workspaceId !== undefined && !validOpaqueId(entry.workspaceId)) ||
+      typeof entry.title !== "string" ||
+      !entry.title.trim() ||
+      entry.title.length > 256 ||
       typeof entry.text !== "string" ||
       !entry.text.trim() ||
-      entry.text.length > 500 ||
-      !(PET_TODO_STATUSES as readonly unknown[]).includes(entry.status) ||
-      !Number.isFinite(entry.createdAt) ||
-      !Number.isFinite(entry.updatedAt) ||
-      (entry.workspaceId !== undefined && !validOpaqueId(entry.workspaceId)) ||
-      (entry.sessionId !== undefined && !validOpaqueId(entry.sessionId))
+      entry.text.length > 2_000 ||
+      !Number.isFinite(entry.terminalAt) ||
+      (entry.workspace !== undefined &&
+        (typeof entry.workspace !== "string" || entry.workspace.length > 256))
     ) {
       return undefined;
     }
     ids.add(entry.id);
     result.push({
       id: entry.id,
-      text: entry.text.replace(/\s+/gu, " ").trim(),
-      status: entry.status as PetTodoItem["status"],
-      createdAt: Number(entry.createdAt),
-      updatedAt: Number(entry.updatedAt),
+      sessionSelector: entry.sessionSelector,
       ...(typeof entry.workspaceId === "string" ? { workspaceId: entry.workspaceId } : {}),
-      ...(typeof entry.sessionId === "string" ? { sessionId: entry.sessionId } : {}),
+      title: entry.title.replace(/\s+/gu, " ").trim(),
+      text: entry.text.replace(/\s+/gu, " ").trim(),
+      terminalAt: Number(entry.terminalAt),
+      ...(typeof entry.workspace === "string" && entry.workspace.trim()
+        ? { workspace: entry.workspace.replace(/\s+/gu, " ").trim() }
+        : {}),
     });
   }
   return result;
@@ -149,8 +154,12 @@ function parseOutboundTargets(value: unknown): PetOutboundTargetOption[] | undef
   const ids = new Set<string>();
   const result: PetOutboundTargetOption[] = [];
   for (const entry of value) {
+    if (!isRecord(entry)) return undefined;
+    const attachments = entry.attachments === undefined ? [] : entry.attachments;
+    const maxAttachments = entry.maxAttachments === undefined ? 0 : Number(entry.maxAttachments);
+    const maxAttachmentBytes =
+      entry.maxAttachmentBytes === undefined ? 0 : Number(entry.maxAttachmentBytes);
     if (
-      !isRecord(entry) ||
       !validOpaqueId(entry.id) ||
       ids.has(entry.id) ||
       typeof entry.channel !== "string" ||
@@ -161,7 +170,19 @@ function parseOutboundTargets(value: unknown): PetOutboundTargetOption[] | undef
       entry.label.length > 128 ||
       !Number.isSafeInteger(entry.maxTextLength) ||
       Number(entry.maxTextLength) < 1 ||
-      Number(entry.maxTextLength) > 8_000
+      Number(entry.maxTextLength) > 8_000 ||
+      !Array.isArray(attachments) ||
+      attachments.length > 4 ||
+      attachments.some((kind) => !["image", "file", "audio", "video"].includes(String(kind))) ||
+      new Set(attachments).size !== attachments.length ||
+      !Number.isSafeInteger(maxAttachments) ||
+      !Number.isSafeInteger(maxAttachmentBytes) ||
+      (attachments.length === 0
+        ? maxAttachments !== 0 || maxAttachmentBytes !== 0
+        : maxAttachments < 1 ||
+          maxAttachments > 4 ||
+          maxAttachmentBytes < 1 ||
+          maxAttachmentBytes > 10 * 1024 * 1024)
     ) {
       return undefined;
     }
@@ -171,6 +192,9 @@ function parseOutboundTargets(value: unknown): PetOutboundTargetOption[] | undef
       channel: entry.channel.trim(),
       label: entry.label.replace(/\s+/gu, " ").trim(),
       maxTextLength: Number(entry.maxTextLength),
+      attachments: Object.freeze([...attachments]) as PetOutboundTargetOption["attachments"],
+      maxAttachments,
+      maxAttachmentBytes,
     });
   }
   return result;
@@ -183,7 +207,7 @@ function freezeOptions(options: {
   gatewayReply?: PetGatewayReplyCapability;
   gateway?: PetGatewayCatalog;
   sessionsRootDir?: string;
-  todos: PetTodoItem[];
+  followUps: PetFollowUpItem[];
   outboundTargets: PetOutboundTargetOption[];
 }): PetRunOptions {
   return Object.freeze({
@@ -193,7 +217,7 @@ function freezeOptions(options: {
     ...(options.gatewayReply ? { gatewayReply: options.gatewayReply } : {}),
     ...(options.gateway ? { gateway: options.gateway } : {}),
     ...(options.sessionsRootDir ? { sessionsRootDir: options.sessionsRootDir } : {}),
-    todos: Object.freeze(options.todos.map((entry) => Object.freeze(entry))),
+    followUps: Object.freeze(options.followUps.map((entry) => Object.freeze(entry))),
     outboundTargets: Object.freeze(options.outboundTargets.map((entry) => Object.freeze(entry))),
   });
 }
@@ -274,7 +298,7 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
   const gateway =
     profileParams.gateway === undefined ? undefined : parsePetGatewayCatalog(profileParams.gateway);
   const sessionsRootDir = parseSessionsRootDir(profileParams.sessionsRootDir);
-  const todos = parseTodos(profileParams.todos) ?? [];
+  const followUps = parseFollowUps(profileParams.followUps) ?? [];
   const outboundTargets = parseOutboundTargets(profileParams.outboundTargets) ?? [];
   const hostActionKinds = declaredHostActionKinds.filter(
     (kind) => kind !== "gatewayReply" || gatewayReply !== undefined,
@@ -286,7 +310,7 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
     ...(gatewayReply ? { gatewayReply } : {}),
     ...(gateway ? { gateway } : {}),
     ...(sessionsRootDir ? { sessionsRootDir } : {}),
-    todos,
+    followUps,
     outboundTargets,
   });
   const workspaces =
@@ -305,7 +329,7 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
     ...(gatewayReply ? { gatewayReply } : {}),
     ...(gateway ? { gateway } : {}),
     ...(sessionsRootDir ? { sessionsRootDir } : {}),
-    todos,
+    followUps,
     outboundTargets,
   });
 }
@@ -376,8 +400,8 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
     Object.prototype.hasOwnProperty.call(profileParams, "gatewayReply");
   const hasCanonicalGateway =
     profileParams !== undefined && Object.prototype.hasOwnProperty.call(profileParams, "gateway");
-  const hasCanonicalTodos =
-    profileParams !== undefined && Object.prototype.hasOwnProperty.call(profileParams, "todos");
+  const hasCanonicalFollowUps =
+    profileParams !== undefined && Object.prototype.hasOwnProperty.call(profileParams, "followUps");
   const hasCanonicalOutboundTargets =
     profileParams !== undefined &&
     Object.prototype.hasOwnProperty.call(profileParams, "outboundTargets");
@@ -426,8 +450,8 @@ export function validatePetRunParams(params: Record<string, unknown>): string | 
   if (hasCanonicalGateway && !parsePetGatewayCatalog(profileParams.gateway)) {
     return "profileParams.gateway contains an invalid Gateway capability catalog";
   }
-  if (hasCanonicalTodos && !parseTodos(profileParams.todos)) {
-    return "profileParams.todos contains an invalid or duplicate todo";
+  if (hasCanonicalFollowUps && !parseFollowUps(profileParams.followUps)) {
+    return "profileParams.followUps contains an invalid or duplicate follow-up";
   }
   if (hasCanonicalOutboundTargets && !parseOutboundTargets(profileParams.outboundTargets)) {
     return "profileParams.outboundTargets contains an invalid or duplicate destination";

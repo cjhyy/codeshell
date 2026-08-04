@@ -11,7 +11,7 @@ const HOST_ACTION_LABELS: Record<string, string> = {
   longTaskControl: "长程任务",
   memory: "记忆",
   gatewayReply: "Gateway 回复",
-  todoMutation: "待办",
+  followUpMutation: "跟进项",
   sessionArchive: "Session 归档",
   outboundMessage: "主动消息",
 };
@@ -80,8 +80,8 @@ export async function enrichPetChatReplyWithHostActions(
       lines.push(renderLongTaskLine(execution));
     } else if (execution.kind === "memory") {
       lines.push(renderMemoryLine(execution));
-    } else if (execution.kind === "todoMutation") {
-      lines.push(renderTodoMutationLine(execution));
+    } else if (execution.kind === "followUpMutation") {
+      lines.push(renderFollowUpMutationLine(execution));
     } else if (execution.kind === "sessionArchive") {
       lines.push(renderSessionArchiveLine(execution));
     } else if (execution.kind === "outboundMessage") {
@@ -100,10 +100,13 @@ export async function enrichPetChatReplyWithHostActions(
   }
 
   const appended = lines.join("\n");
+  const hasOutboundMessage = executions.some((execution) => execution.kind === "outboundMessage");
   // The model only sees that its request was recorded; actual file validation
   // runs after its turn. If validation fails, discard any premature "sent"
   // claim and return the authoritative host failure instead.
-  const trimmed = gatewayReplyFailed ? "" : (gatewayReplyText ?? baseText.trim());
+  const trimmed = gatewayReplyFailed
+    ? ""
+    : (gatewayReplyText ?? (hasOutboundMessage ? "" : baseText.trim()));
   return {
     text: appended ? (trimmed ? `${trimmed}\n\n${appended}` : appended) : trimmed,
     ...(!gatewayReplyFailed && gatewayReplyButton ? { button: gatewayReplyButton } : {}),
@@ -207,23 +210,18 @@ function renderMemoryLine(execution: PetHostActionExecution): string {
   return MEMORY_ACTION_LABELS[action] ?? "记忆已更新。";
 }
 
-function renderTodoMutationLine(execution: PetHostActionExecution): string {
+function renderFollowUpMutationLine(execution: PetHostActionExecution): string {
   const action = String(execution.payload.action ?? "");
-  const text =
-    typeof execution.result?.text === "string"
-      ? execution.result.text.replace(/\s+/gu, " ").trim().slice(0, 120)
+  const title =
+    typeof execution.result?.title === "string"
+      ? execution.result.title.replace(/\s+/gu, " ").trim().slice(0, 120)
       : "";
   const labels: Record<string, string> = {
-    create: "已加入待办",
-    update: "待办已更新",
-    start: "待办已标记为处理中",
-    block: "待办已标记为受阻",
-    complete: "待办已完成",
-    reopen: "待办已重新打开",
-    archive: "待办已归档",
+    complete: "跟进项已标记为已处理",
+    dismiss: "跟进项已忽略",
   };
-  const label = labels[action] ?? "待办已更新";
-  return text ? `${label}：「${text}」。` : `${label}。`;
+  const label = labels[action] ?? "跟进项已更新";
+  return title ? `${label}：「${title}」。` : `${label}。`;
 }
 
 function renderSessionArchiveLine(execution: PetHostActionExecution): string {
@@ -241,7 +239,16 @@ function renderOutboundMessageLine(execution: PetHostActionExecution): string {
     typeof execution.result?.label === "string"
       ? execution.result.label.replace(/\s+/gu, " ").trim().slice(0, 80)
       : "";
-  return label ? `消息已发送到 ${label}。` : "消息已发送。";
+  const attachmentCount =
+    typeof execution.result?.attachmentCount === "number" &&
+    Number.isSafeInteger(execution.result.attachmentCount) &&
+    execution.result.attachmentCount > 0
+      ? execution.result.attachmentCount
+      : 0;
+  const subject = attachmentCount > 0 ? `消息和 ${attachmentCount} 个附件` : "消息";
+  return label
+    ? `${subject}已提交到 ${label}，平台接口已接受发送请求；尚未确认收件设备已展示。`
+    : `${subject}已提交，平台接口已接受发送请求；尚未确认收件设备已展示。`;
 }
 
 /** Render the one-time pairing URL as a PNG QR file; best-effort. */

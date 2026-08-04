@@ -74,13 +74,11 @@ export const pet = {
         branch: {
           running: "进行中",
           pending: "待决策",
-          "follow-up": "待跟进",
           completed: "已完成",
           other: "其他",
         },
         state: {
           "needs-action": "待你处理",
-          "follow-up": "待跟进",
           running: "进行中",
           queued: "排队中",
           failed: "失败待处理",
@@ -89,35 +87,16 @@ export const pet = {
           idle: "未分类",
         },
       },
-      todo: {
-        title: "我的待办",
-        summary: "{count} 项待处理，可直接操作或交给 Mimi",
-        loading: "正在加载待办…",
-        empty: "还没有待办；在上方添加，或直接告诉 Mimi。",
-        placeholder: "添加一个待办…",
-        add: "添加",
-        save: "保存",
-        cancel: "取消",
-        archive: "归档",
-        askMimi: "交给 Mimi",
-        askMimiPrompt:
-          "请处理我的待办「{text}」。需要实际执行时，请创建或接续合适的 Work Session，并同步更新这条个人待办的状态。",
-        completeAria: "完成待办「{text}」",
-        reopenAria: "重新打开待办「{text}」",
-        editAria: "编辑待办「{text}」",
-        archiveAria: "归档待办「{text}」",
-        status: {
-          pending: "待处理",
-          in_progress: "处理中",
-          blocked: "受阻",
-          completed: "已完成",
-          archived: "已归档",
-        },
-      },
       followUp: {
         title: "需要跟进",
         openSessionAria: "打开会话「{title}」",
         dismissAria: "忽略「{title}」的跟进提醒",
+        continue: "继续处理",
+        askMimi: "交给 Mimi",
+        complete: "已处理",
+        dismiss: "忽略",
+        askMimiPrompt:
+          "请处理「需要跟进」里的这一项：\n跟进 ID：{followUpId}\n来源 Session：{title}\n跟进内容：{text}\n请先用 FollowUps get 核对这个精确 ID，优先接续原 Work Session 执行，完成后再将跟进项标记为已处理。",
       },
       memory: {
         title: "Mimi 记忆",
@@ -284,6 +263,7 @@ export const pet = {
         workMemoryTitle: "上一段纪要",
         historyCompacted: "此前对话已自动压缩为历史",
         historyCompactedWithTokens: "此前对话已自动压缩为历史（{before} → {after} tokens）",
+        deliverySent: "已发送到{channel}",
         delegation: {
           dispatched: "已派出 Session",
           resumed: "已接续 Session",
@@ -410,13 +390,11 @@ export const pet = {
         branch: {
           running: "In progress",
           pending: "Needs decision",
-          "follow-up": "Follow up",
           completed: "Completed",
           other: "Other",
         },
         state: {
           "needs-action": "Needs you",
-          "follow-up": "Follow up",
           running: "In progress",
           queued: "Queued",
           failed: "Failed",
@@ -425,35 +403,16 @@ export const pet = {
           idle: "Unclassified",
         },
       },
-      todo: {
-        title: "My todos",
-        summary: "{count} to handle — act here or hand one to Mimi",
-        loading: "Loading todos…",
-        empty: "No todos yet. Add one above or tell Mimi directly.",
-        placeholder: "Add a todo…",
-        add: "Add",
-        save: "Save",
-        cancel: "Cancel",
-        archive: "Archive",
-        askMimi: "Ask Mimi",
-        askMimiPrompt:
-          "Please handle my todo “{text}”. If execution is needed, create or resume the right Work Session and keep this personal todo's status in sync.",
-        completeAria: "Complete todo “{text}”",
-        reopenAria: "Reopen todo “{text}”",
-        editAria: "Edit todo “{text}”",
-        archiveAria: "Archive todo “{text}”",
-        status: {
-          pending: "Pending",
-          in_progress: "In progress",
-          blocked: "Blocked",
-          completed: "Completed",
-          archived: "Archived",
-        },
-      },
       followUp: {
         title: "Needs follow-up",
         openSessionAria: "Open session “{title}”",
         dismissAria: "Dismiss the follow-up for “{title}”",
+        continue: "Continue",
+        askMimi: "Ask Mimi",
+        complete: "Handled",
+        dismiss: "Dismiss",
+        askMimiPrompt:
+          "Please handle this item from Needs follow-up:\nFollow-up ID: {followUpId}\nSource Session: {title}\nFollow-up: {text}\nUse FollowUps get to verify this exact ID, resume the original Work Session when possible, then mark the item handled after the work is complete.",
       },
       memory: {
         title: "Mimi memory",
@@ -626,6 +585,7 @@ export const pet = {
         historyCompacted: "Earlier conversation was compacted into history",
         historyCompactedWithTokens:
           "Earlier conversation was compacted into history ({before} → {after} tokens)",
+        deliverySent: "Sent to {channel}",
         delegation: {
           dispatched: "Session dispatched",
           resumed: "Session resumed",

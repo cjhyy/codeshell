@@ -74,16 +74,16 @@ describe("sessionsTool", () => {
     expect(parsed.sessions[0]!.selector).toBe(sessionSelectorId("work-1"));
   });
 
-  test("describe returns latestResult, todos, and selector", async () => {
+  test("describe returns latestResult, open work steps, and selector", async () => {
     const root = makeRoot();
     const result = await sessionsTool({ action: "describe", session_id: "work-1" }, ctxFor(root));
     const parsed = JSON.parse(result) as {
       selector: string;
       latestResult: { text: string };
-      todos: Array<{ subject: string }>;
+      openSteps: Array<{ subject: string }>;
     };
     expect(parsed.latestResult.text).toContain("Patched the payment flow");
-    expect(parsed.todos[0]!.subject).toBe("patch checkout");
+    expect(parsed.openSteps[0]!.subject).toBe("patch checkout");
     expect(parsed.selector).toBe(sessionSelectorId("work-1"));
   });
 
@@ -122,6 +122,27 @@ describe("sessionsTool", () => {
       ctxFor(root),
     );
     expect(result.startsWith("Error:")).toBe(true);
+  });
+
+  test("describe cannot bypass list policy to read Mimi's own session", async () => {
+    const root = makeRoot();
+    const petDir = join(root, "pet-private");
+    mkdirSync(petDir, { recursive: true });
+    writeFileSync(join(petDir, "state.json"), JSON.stringify({ kind: "pet", cwd: "/repo/a" }));
+    writeFileSync(
+      join(petDir, "transcript.jsonl"),
+      JSON.stringify({
+        type: "message",
+        data: { role: "assistant", content: "private manager history" },
+      }),
+    );
+
+    const result = await sessionsTool(
+      { action: "describe", session_id: "pet-private" },
+      ctxFor(root),
+    );
+    expect(result).toContain("not an available ordinary Work Session");
+    expect(result).not.toContain("private manager history");
   });
 
   test("errors when no host-provided sessions root is injected", async () => {

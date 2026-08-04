@@ -1,5 +1,11 @@
 # Session 世界渐进披露 Implementation Plan
 
+> **Superseded note (2026-08-02):** 本文档是历史实施计划，其 Task 9 的跨 Session
+> `PetTodo` / “待办事项”独立区块已被撤销，不得再按该设计实现。用户级行动项的唯一
+> 正式模型是 [Needs follow-up](../../architecture/14-digital-human-and-pet.md#session-world-progressive-disclosure)：
+> Desktop 和 Mimi 共用 `PetFollowUpService` / `FollowUps` / `ManageFollowUp`。`TodoWrite`
+> 快照只作为单个 Session 内部执行步骤，不是第二套个人待办。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让 Mimi 与工作台共享一套"session 世界"三层披露（L1 列表 → L2 最新文本结果 → L3 下钻/搜索），Mimi 能搜索并 resume 任意合规 session，工作台展示最新结果与跨 session TODO 聚合。

@@ -89,7 +89,6 @@ describe("buildPetWorkMap", () => {
     expect(map.counts).toEqual({
       running: 1,
       pending: 1,
-      "follow-up": 0,
       completed: 2,
       other: 3,
     });
@@ -111,7 +110,6 @@ describe("buildPetWorkMap", () => {
     expect(bucket(map.groups[1], "other").map((item) => item.title)).toEqual([
       "优化 session 加载性能",
     ]);
-    expect(map.itemIds["follow-up"]).toEqual([]);
   });
 
   test("filters dismissed rows before counts and display limits are applied", () => {
@@ -131,7 +129,6 @@ describe("buildPetWorkMap", () => {
     expect(map.counts).toEqual({
       running: 1,
       pending: 0,
-      "follow-up": 0,
       completed: 0,
       other: 0,
     });
@@ -156,7 +153,6 @@ describe("buildPetWorkMap", () => {
     expect(map.counts).toEqual({
       running: 1,
       pending: 0,
-      "follow-up": 0,
       completed: 0,
       other: 0,
     });
@@ -175,7 +171,7 @@ describe("buildPetWorkMap structured classification", () => {
         session("run", { runState: "running" }),
         session("queued", { runState: "queued" }),
         session("done", { terminal: { status: "completed", at: 5_000 }, runState: "terminal" }),
-        session("followup", {
+        session("completed-idle", {
           runState: "idle",
           terminal: { status: "completed", at: 4_500 },
           summary: "本轮已完成:改好了三个文件",
@@ -202,7 +198,7 @@ describe("buildPetWorkMap structured classification", () => {
     expect(byId.get("running:run")).toBe("running");
     expect(byId.get("running:queued")).toBe("running");
     expect(byId.get("pending:decide:r1")).toBe("pending");
-    expect(byId.get("follow-up:followup")).toBe("follow-up");
+    expect(byId.get("completed:completed-idle")).toBe("completed");
     expect(byId.get("completed:done")).toBe("completed");
     // The genuinely unclassifiable session lands in "other", not hidden.
     expect(byId.get("other:mystery")).toBe("other");

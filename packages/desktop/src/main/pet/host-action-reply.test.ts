@@ -135,15 +135,15 @@ describe("enrichPetChatReplyWithHostActions", () => {
     expect(enriched.attachments).toEqual([]);
   });
 
-  test("renders authoritative todo, session archive, and outbound delivery receipts", async () => {
+  test("renders authoritative follow-up, session archive, and outbound acceptance receipts", async () => {
     const enriched = await enrichPetChatReplyWithHostActions(
       "",
       [
         {
-          kind: "todoMutation",
-          payload: { action: "complete", todoId: "todo-one" },
+          kind: "followUpMutation",
+          payload: { action: "complete", followUpId: "followup-one" },
           ok: true,
-          result: { action: "complete", text: "整理发布说明", status: "completed" },
+          result: { action: "complete", title: "整理发布说明" },
         },
         {
           kind: "sessionArchive",
@@ -153,18 +153,42 @@ describe("enrichPetChatReplyWithHostActions", () => {
         },
         {
           kind: "outboundMessage",
-          payload: { targetId: "owner-one", text: "已经完成" },
+          payload: {
+            targetId: "owner-one",
+            text: "已经完成",
+            attachmentPaths: ["/work/result.png"],
+          },
           ok: true,
-          result: { label: "微信", delivered: true },
+          result: { label: "微信", accepted: true, attachmentCount: 1 },
         },
       ],
       { qrDir: join(tmpdir(), "unused"), attachmentKinds: [] },
     );
 
-    expect(enriched.text).toContain("待办已完成：「整理发布说明」");
+    expect(enriched.text).toContain("跟进项已标记为已处理：「整理发布说明」");
     expect(enriched.text).toContain("已归档 2 个工作 Session");
-    expect(enriched.text).toContain("消息已发送到 微信");
+    expect(enriched.text).toContain(
+      "消息和 1 个附件已提交到 微信，平台接口已接受发送请求；尚未确认收件设备已展示",
+    );
     expect(enriched.attachments).toEqual([]);
+  });
+
+  test("discards Mimi's premature delivery claim when outbound delivery fails", async () => {
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "测试消息已经通过 SendMessage 发出去了。",
+      [
+        {
+          kind: "outboundMessage",
+          payload: { targetId: "owner-one", text: "测试消息" },
+          ok: false,
+          error: "微信发送失败：prepare failed",
+        },
+      ],
+      { qrDir: join(tmpdir(), "unused"), attachmentKinds: [] },
+    );
+
+    expect(enriched.text).toBe("主动消息操作失败：微信发送失败：prepare failed");
+    expect(enriched.text).not.toContain("已经通过 SendMessage 发出去了");
   });
 
   test("uses host-validated Gateway text, button, and every media kind as the IM reply", async () => {

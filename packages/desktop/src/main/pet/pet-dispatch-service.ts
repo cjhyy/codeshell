@@ -198,10 +198,10 @@ interface PetDispatchOptions {
   /** Opaque, host-authorized proactive owner destinations. */
   listOutboundTargets?(): Promise<PetOutboundTargetOption[]>;
   /**
-   * Second-chance lookup for a DelegateWork reusable-Session selector outside
-   * the turn's injected <=32 option list (e.g. one Mimi found via the
-   * read-only Sessions tool). Fail-closed: null/throw keeps the existing
-   * rejection. The implementation owns the pool boundaries the in-list
+   * Exact lookup for a reusable-Session selector outside the recent candidate
+   * list (e.g. an open follow-up source or one Mimi found via the read-only
+   * Sessions tool). Fail-closed: null/throw keeps the existing rejection. The
+   * implementation owns the pool boundaries the in-list
    * listReusableSessions path applies (desktop origin, not archived); this
    * service re-checks only its per-turn constraints on the resolved candidate
    * (not Mimi's own session, not busy, workspace must match the delegation).
@@ -226,8 +226,8 @@ interface PetDispatchOptions {
    *
    * Engine replays a stored `run_result` for a repeated `clientMessageId` without
    * re-running the model; without this log the dispatcher would re-execute the
-   * side effects in that replayed result (a second Todo, a second proactive
-   * message). Optional: when absent, behaviour is the pre-existing at-least-once
+   * side effects in that replayed result (a second follow-up mutation, a second
+   * proactive message). Optional: when absent, behaviour is the pre-existing at-least-once
    * one.
    */
   hostActionReceipts?: PetHostActionReceiptStore;
@@ -1091,6 +1091,31 @@ export class PetDispatchService {
           this.options.managerModel?.() ?? null,
           this.getReplyAttachmentRoots(),
         ]);
+        const reusableSessionCandidates = [...listedReusableSessions];
+        if (this.options.resolveReusableSessionBySelector) {
+          const knownSelectors = new Set(
+            reusableSessionCandidates.map((candidate) => reusableSessionId(candidate.sessionId)),
+          );
+          const missingFollowUpSelectors = [
+            ...new Set(
+              listedFollowUps
+                .map((item) => item.sessionSelector)
+                .filter((selector) => !knownSelectors.has(selector)),
+            ),
+          ];
+          const resolvedFollowUpSources = await Promise.all(
+            missingFollowUpSelectors.map((selector) =>
+              this.options.resolveReusableSessionBySelector!(selector).catch(() => null),
+            ),
+          );
+          for (const resolved of resolvedFollowUpSources) {
+            if (!resolved) continue;
+            const selector = reusableSessionId(resolved.sessionId);
+            if (knownSelectors.has(selector)) continue;
+            knownSelectors.add(selector);
+            reusableSessionCandidates.push(resolved);
+          }
+        }
         const managerModel = command.model ?? configuredManagerModel;
         const workspacePathById = new Map<string, string | null>([[NO_WORKSPACE_ID, null]]);
         const workspaceIdByPath = new Map<string, string>();
@@ -1133,7 +1158,7 @@ export class PetDispatchService {
         const reusableSessionCounts = new Map<string, number>();
         const petReusableSessions: PetReusableSessionOption[] = [];
         const followUpSelectors = new Set(listedFollowUps.map((item) => item.sessionSelector));
-        const orderedReusableSessions = [...listedReusableSessions].sort((left, right) => {
+        const orderedReusableSessions = reusableSessionCandidates.sort((left, right) => {
           const leftIsFollowUp = followUpSelectors.has(reusableSessionId(left.sessionId));
           const rightIsFollowUp = followUpSelectors.has(reusableSessionId(right.sessionId));
           return Number(rightIsFollowUp) - Number(leftIsFollowUp);
@@ -1446,6 +1471,11 @@ export class PetDispatchService {
             petSessionId: metadata.petSessionId,
             ...(command.clientMessageId ? { clientMessageId: command.clientMessageId } : {}),
           },
+          workDelegations.length > 0
+            ? new Map([
+                ["followUpMutation", "Work Session 刚刚启动，跟进项只能在真实完成后再标记已处理"],
+              ])
+            : undefined,
         );
         // Launch acceptance is not task completion. PetLongTaskCoordinator owns
         // the real terminal signal and records work memory only after a worker
@@ -1478,9 +1508,11 @@ export class PetDispatchService {
      * Needed because Engine treats a repeated `clientMessageId` as "replay the
      * stored run_result" — it does not re-run the model, but this dispatcher used
      * to re-read `extensions.pet.hostActions` and execute them again, so a
-     * duplicate delivery could send a second message or create a second Todo.
+     * duplicate delivery could send a second message or repeat a follow-up mutation.
      */
     replayIdentity?: { petSessionId: string; clientMessageId?: string },
+    /** Deterministic per-turn guards, persisted through the normal receipt path. */
+    blockedReasons?: ReadonlyMap<string, string>,
   ): Promise<PetHostActionExecution[]> {
     const executions: PetHostActionExecution[] = [];
     const receipts = this.options.hostActionReceipts;
@@ -1497,13 +1529,32 @@ export class PetDispatchService {
         continue;
       }
 
-      // Per-action key: if action 1 succeeded and action 2 crashed, a retry must
-      // replay 1's receipt and only re-run 2.
+      // Claim before any external side effect. If the process dies after a
+      // platform accepts a message but before completion is recorded, replay
+      // sees the durable uncertainty receipt and does not send it again.
       if (canReplay) {
-        const prior = await receipts
-          .find(replayIdentity.petSessionId, replayIdentity.clientMessageId!, actionIndex)
-          .catch(() => undefined);
-        if (prior && prior.kind === request.kind) {
+        let claim;
+        try {
+          claim = await receipts.claim(
+            replayIdentity.petSessionId,
+            replayIdentity.clientMessageId!,
+            actionIndex,
+            request.kind,
+          );
+        } catch (error) {
+          executions.push({
+            ...request,
+            ok: false,
+            error: `无法安全记录操作，未执行：${error instanceof Error ? error.message : String(error)}`,
+          });
+          continue;
+        }
+        if (!claim.claimed) {
+          const prior = claim.receipt;
+          if (prior.kind !== request.kind) {
+            executions.push({ ...request, ok: false, error: "操作重放回执类型不匹配，未执行" });
+            continue;
+          }
           executions.push(
             prior.ok
               ? { ...request, ok: true, result: prior.result }
@@ -1514,6 +1565,8 @@ export class PetDispatchService {
       }
 
       try {
+        const blockedReason = blockedReasons?.get(request.kind);
+        if (blockedReason) throw new Error(blockedReason);
         if (request.kind === "gatewayReply") {
           if (!gatewayReplyCapability) throw new Error("Gateway 回复能力不可用");
           const attachmentPaths = request.payload.attachmentPaths;

@@ -75,18 +75,16 @@ export {
   manageSessionsAvailability,
 } from "./session-control.js";
 export {
-  TODOS_TOOL_NAME,
-  MANAGE_TODO_TOOL_NAME,
-  PET_TODO_STATUSES,
-  todosToolDef,
-  todosTool,
-  todosAvailability,
-  manageTodoToolDef,
-  manageTodoTool,
-  manageTodoAvailability,
-  type PetTodoStatus,
-  type PetTodoItem,
-} from "./todos.js";
+  FOLLOW_UPS_TOOL_NAME,
+  MANAGE_FOLLOW_UP_TOOL_NAME,
+  followUpsToolDef,
+  followUpsTool,
+  followUpsAvailability,
+  manageFollowUpToolDef,
+  manageFollowUpTool,
+  manageFollowUpAvailability,
+  type PetFollowUpItem,
+} from "./follow-ups.js";
 export {
   SEND_MESSAGE_TOOL_NAME,
   sendMessageToolDef,

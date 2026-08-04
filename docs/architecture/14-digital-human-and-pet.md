@@ -114,9 +114,12 @@ effects inside the worker. For each turn, Desktop derives the supported action
 kinds from its executor registry and sends them in `profileParams.hostActions`;
 the Pet profile parses that closed list as `hostActionKinds` and exposes only
 the matching tools. The current envelope kinds are `mobileRemote`,
-`longTaskControl`, `memory`, and `gatewayReply`. `gatewayReply` is enabled for
-every IM turn and owns the complete outbound text, optional URL button, and
-optional image/file paths in one tool request.
+`longTaskControl`, `memory`, `gatewayReply`, `followUpMutation`,
+`sessionArchive`, and `outboundMessage`. `gatewayReply` is enabled for every IM
+turn and owns the complete outbound text, optional URL button, and optional
+image/file/audio/video paths in one tool request. `outboundMessage` is the separate
+proactive primitive: it accepts only a host-issued opaque owner destination,
+never a model-supplied platform user id.
 
 A matching tool validates its input and records one `{ kind, payload }` request
 through the run-scoped Pet service. The behavior profile reports the accumulated
@@ -130,11 +133,18 @@ undeclared or duplicate kinds, and executes accepted requests through the
 Desktop registry only after `agent/run` returns. Execution failures are
 non-fatal to Mimi's generated reply and are returned as structured outcomes.
 
+Before any replayable side effect starts, Desktop durably claims
+`(petSessionId, clientMessageId, actionIndex)`. A completed receipt is replayed
+without repeating the effect; a surviving claim with no terminal receipt is
+reported as uncertain and is never retried blindly. This includes proactive
+messages and follow-up mutations.
+
 For a durable long-task closure, `gatewayReply` follows the same explicit tool
 path. The closure decision stores the validated reply text, optional button,
 and attachment paths so a crash can replay delivery without rerunning her
 turn. Entries in the task artifact ledger never trigger an outgoing attachment
 by themselves.
+
 Every enabled Gateway adapter publishes a JSON-safe directional capability
 contract. Chat forwards a bounded catalog of channel names and capabilities to
 Desktop, without credentials, allowlists, or target identifiers. Pet exposes
@@ -157,6 +167,30 @@ recording a request. Its result is deliberately `PENDING`, while post-turn host
 enrichment and the Gateway own the only authoritative success or failure
 wording.
 
+`SendMessage` is intentionally not another mode of `GatewayReply`. Desktop
+builds its destination enum from the current allowlist and adapter readiness,
+then resolves that opaque id against fresh configuration again immediately
+before sending. Direct-capable HTTP adapters may be instantiated while the
+polling Gateway is stopped; a shared process/instance lock prevents a Desktop
+one-shot sender from competing with an active CLI Gateway. Platform acceptance
+is rendered by host receipt and is never presented as recipient-device delivery.
+
+Personal WeChat follows the same generic adapter boundary but has a dynamic
+readiness prerequisite. Its persisted per-owner `context_token` comes only from
+an inbound message. A direct send first reuses the live adapter for that account
+and otherwise creates a one-shot adapter; a stale-token response evicts only the
+token that failed and makes one best-effort tokenless attempt with the same
+`client_id`. Tokenless sending is not advertised as guaranteed, so Desktop does
+not expose the WeChat `SendMessage` destination until a usable inbound context
+exists. Live registration and direct-send serialization are account-scoped, not
+token-scoped: credential rotation while a live adapter exists fails explicitly
+until the Gateway restarts instead of opening competing sessions. A successful
+QR rebind resets cursor/context state when its token or base URL changed; when
+credentials are unchanged it preserves valid state and acts as the explicit
+recovery boundary for a malformed state file. The same recovery is allowed
+after an explicit login attempt receives an already-connected confirmation;
+ordinary startup remains fail-closed.
+
 This is a bounded two-level variant of
 [Hermes Agent Tool Search](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-search):
 the catalog is rebuilt from the live per-turn adapter set and cannot reveal
@@ -165,6 +199,7 @@ discovery steps into the read-only `Gateway` meta-tool, then keeps its single
 current-route `GatewayReply` execution primitive direct. This preserves two
 tool levels without adding a separate generic call bridge or another model
 round trip.
+
 Platform media stays at the Gateway edge. Adapters normalize inbound image,
 file, audio, and video references into lazy attachments; bytes are fetched only
 after sender/target policy admission and pass through shared count, size, total,
@@ -245,14 +280,28 @@ worthwhile takeaway. The Cmd-K switcher adds a `>`-prefixed
 content-search mode over the same grep. No push channel or new Mimi wakeup
 trigger is introduced — updates arrive on the next read.
 
+The closure summary's actionable remainder is also the only user-visible
+"Needs follow-up" source. Desktop's workbench and Mimi's read-only `FollowUps`
+tool call the same `PetFollowUpService`; `ManageFollowUp` and the renderer
+buttons write the same `follow-up:<opaque-id>` state through one durable queue.
+There is no separate personal Todo store, tool, or renderer section. The
+source Session's completed-history id is independent, so handling a follow-up
+does not hide the work that produced it. Summary title/text/workspace fields are
+untrusted descriptive data; only host-issued selectors and follow-up ids are
+accepted as control values. An off-list open follow-up receives an exact
+selector lookup and is prioritized into the bounded reusable-Session set, so
+older items retain their trusted Workspace binding. If one Mimi turn starts a
+Work Session and also requests `ManageFollowUp`, the host rejects the mutation:
+launch acceptance is not proof that the follow-up has been handled.
+
 ## Package ownership
 
-| Layer            | Owns                                                                                                            |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| Core             | profile schema/store, Session binding, profile memory injection, Session message tool/router                    |
-| Desktop main     | profile/team persistence, memory access, Pet state aggregation, host-action execution, and durable Mimi memory  |
-| Desktop renderer | library/editor, direct Session creation, memory studios, closed same-project Session catalog, and Pet memory UI |
-| Pet package      | Mimi prompt, projection contract, generic `DelegateWork`, host-action envelopes/tools, and Pet long-task state  |
+| Layer            | Owns                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Core             | profile schema/store, Session binding, profile memory injection, Session message tool/router                                         |
+| Desktop main     | profile/team persistence, memory access, Pet state aggregation, host-action execution/receipts, follow-up state, and channel routing |
+| Desktop renderer | library/editor, direct Session creation, memory studios, closed same-project Session catalog, and Pet memory UI                      |
+| Pet package      | Mimi prompt, projection contract, generic `DelegateWork`, atomic discovery/action tools, and Pet long-task state                     |
 
 The Desktop team schema lives under `packages/desktop/src/shared`, not in Pet.
 The Pet runtime accepts closed Workspace and reusable-Session selectors, a

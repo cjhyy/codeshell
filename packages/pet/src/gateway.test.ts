@@ -169,9 +169,9 @@ describe("Gateway discovery tool", () => {
   });
 });
 
-describe("outbound.proactive capability", () => {
-  // `proactive` ("can push without an open conversation") was added to the chat
-  // package's ChannelCapabilities but never mirrored here. parseCapabilities
+describe("outbound proactive and direct capabilities", () => {
+  // `proactive` ("can send outside the current reply call") was added to the
+  // chat package's ChannelCapabilities but never mirrored here. parseCapabilities
   // rejects ANY unknown outbound key, so every real channel failed catalog
   // validation and Mimi silently lost Gateway discovery on IM turns.
   const withOutbound = (outbound: Record<string, unknown>) => ({
@@ -207,5 +207,17 @@ describe("outbound.proactive capability", () => {
     // not be read as "yes, this channel can push".
     expect(parsePetGatewayCatalog(withOutbound({ proactive: "yes" }))).toBeUndefined();
     expect(parsePetGatewayCatalog(withOutbound({ proactive: 1 }))).toBeUndefined();
+    expect(parsePetGatewayCatalog(withOutbound({ direct: "yes" }))).toBeUndefined();
+  });
+
+  test("direct is carried through and available to capability search", async () => {
+    const catalog = parsePetGatewayCatalog(withOutbound({ proactive: true, direct: true }));
+    expect(catalog?.channels[0]?.capabilities.outbound.direct).toBe(true);
+    const result = JSON.parse(
+      await gatewayTool({ action: "search", query: "outbound:proactive outbound:direct" }, {
+        runScopedServices: { petGateway: catalog },
+      } as never),
+    );
+    expect(result.matches).toEqual([{ channel: "telegram", current: true }]);
   });
 });

@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { DialogProvider } from "../ui/DialogProvider";
-import { PetWorldPane } from "./PetWorldPane";
+import { countVisibleFollowUps, PetWorldPane } from "./PetWorldPane";
 
 const reclaimed: PetProjectionSnapshot = {
   version: 1,
@@ -40,6 +40,42 @@ function textOf(node: unknown): string {
 }
 
 describe("PetWorldPane", () => {
+  test("counts only the canonical Needs follow-up rows that remain visible", () => {
+    expect(
+      countVisibleFollowUps(
+        [
+          {
+            followUpId: "followup-handled",
+            sessionId: "handled",
+            title: "Handled",
+            terminalAt: 1,
+            text: "done",
+          },
+          {
+            followUpId: "followup-open",
+            sessionId: "open",
+            title: "Open",
+            terminalAt: 2,
+            text: "next",
+          },
+        ],
+        new Set(["follow-up:followup-handled"]),
+      ),
+    ).toBe(1);
+    expect(
+      countVisibleFollowUps(
+        Array.from({ length: 25 }, (_, index) => ({
+          followUpId: `followup-${index}`,
+          sessionId: `session-${index}`,
+          title: `Open ${index}`,
+          terminalAt: index,
+          text: "next",
+        })),
+        new Set(),
+      ),
+    ).toBe(20);
+  });
+
   test("shows an empty work map without exposing a raw session list", () => {
     ensureMiniDom();
     (window as unknown as Record<string, any>).codeshell = { pet: {} };
@@ -51,10 +87,6 @@ describe("PetWorldPane", () => {
 
     expect(html).toContain("目前没有工作记录");
     expect(html).toContain("工作收件箱");
-    expect(html).toContain('data-pet-todos="durable"');
-    expect(html).toContain("我的待办");
-    expect(html).toContain("添加一个待办");
-    expect(html).toContain(">添加</button>");
     expect(html).not.toContain("工作会话");
     expect(html).not.toContain("待你决定");
     expect(html).toContain('data-pet-world-pane="deterministic"');

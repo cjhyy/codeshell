@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPetSummaryStore, type PetSummaryStore } from "./pet-summary-store.js";
@@ -47,6 +47,13 @@ describe("createPetSummaryStore", () => {
     expect(store.get("session-a")).toEqual({ terminalAt: 2_000, text: "second" });
   });
 
+  test("an older terminalAt cannot overwrite a newer entry", async () => {
+    const store = await loaded(filePath);
+    store.set("session-a", 2_000, "newer");
+    store.set("session-a", 1_000, "late old result");
+    expect(store.get("session-a")).toEqual({ terminalAt: 2_000, text: "newer" });
+  });
+
   test("evicts oldest-written entries beyond the bound", async () => {
     const store = createPetSummaryStore(filePath, { maxEntries: 3 });
     await store.load();
@@ -90,7 +97,45 @@ describe("createPetSummaryStore", () => {
     store.set("session-a", 1_000, "persisted");
     await store.flush();
     const parsed = JSON.parse(await readFile(filePath, "utf8"));
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(2);
+    if (process.platform !== "win32") expect((await stat(filePath)).mode & 0o777).toBe(0o600);
+  });
+
+  test("surfaces a failed write and lets the next summary mutation recover", async () => {
+    const blocker = join(dir, "not-a-directory");
+    const blockedPath = join(blocker, "summaries.json");
+    await writeFile(blocker, "block directory creation");
+    const store = await loaded(blockedPath);
+    store.set("session-a", 1_000, "first");
+    await expect(store.flush()).rejects.toThrow();
+
+    await unlink(blocker);
+    await mkdir(blocker);
+    store.set("session-b", 2_000, "second");
+    await store.flush();
+
+    const reloaded = await loaded(blockedPath);
+    expect(reloaded.get("session-a")?.text).toBe("first");
+    expect(reloaded.get("session-b")?.text).toBe("second");
+  });
+
+  test("ignores legacy v1 prose so follow-ups regenerate through the strict parser", async () => {
+    await writeFile(
+      filePath,
+      JSON.stringify({
+        version: 1,
+        entries: [
+          {
+            sessionId: "ordinary-completion",
+            terminalAt: 1_000,
+            text: "工作已完成，没有待跟进的追问。",
+          },
+        ],
+      }),
+      "utf8",
+    );
+    const store = await loaded(filePath);
+    expect(store.get("ordinary-completion")).toBeUndefined();
   });
 
   test("missing file loads as an empty store", async () => {
@@ -99,7 +144,6 @@ describe("createPetSummaryStore", () => {
   });
 
   test("corrupt file loads as an empty store without throwing", async () => {
-    const { writeFile } = await import("node:fs/promises");
     await writeFile(filePath, "{not json", "utf8");
     const store = await loaded(filePath);
     expect(store.get("anything")).toBeUndefined();

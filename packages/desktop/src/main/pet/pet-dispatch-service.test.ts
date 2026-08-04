@@ -928,6 +928,72 @@ describe("PetDispatchService", () => {
     expect(exposed).toEqual([expect.objectContaining({ name: "Login work" })]);
   });
 
+  test("supplements an off-list Needs follow-up source and supplies its exact Workspace id", async () => {
+    let exposedFollowUps: Array<{ sessionSelector: string; workspaceId?: string }> = [];
+    let exposedSessions: Array<{ id: string; workspaceId: string }> = [];
+    const followUpSessionId = "work-follow-up";
+    const followUpSelector = sessionSelectorId(followUpSessionId);
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const profile = params.profileParams as {
+            followUps: typeof exposedFollowUps;
+            reusableSessions: typeof exposedSessions;
+          };
+          exposedFollowUps = profile.followUps;
+          exposedSessions = profile.reusableSessions;
+          return { ok: true, result: { text: "noop" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      listReusableSessions: async () => [
+        ...Array.from({ length: 7 }, (_, index) => ({
+          sessionId: `ordinary-${index}`,
+          workspacePath: "/work/codeshell",
+          title: `Ordinary ${index}`,
+          updatedAt: 100 - index,
+          status: "completed" as const,
+        })),
+      ],
+      resolveReusableSessionBySelector: async (selector) =>
+        selector === followUpSelector
+          ? {
+              sessionId: followUpSessionId,
+              workspacePath: "/work/codeshell",
+              title: "Follow-up source",
+              updatedAt: 1,
+              status: "completed",
+            }
+          : null,
+      listFollowUps: async () => [
+        {
+          id: "followup-one",
+          title: "发布准备",
+          text: "整理发布说明",
+          terminalAt: 1,
+          sessionSelector: followUpSelector,
+        },
+      ],
+    });
+
+    await service.dispatch({ type: "chat", message: "处理需要跟进的工作" });
+
+    const reusable = exposedSessions.find((entry) => entry.id === followUpSelector);
+    expect(reusable).toBeDefined();
+    expect(exposedFollowUps).toEqual([
+      expect.objectContaining({
+        sessionSelector: followUpSelector,
+        workspaceId: reusable!.workspaceId,
+      }),
+    ]);
+  });
+
   test("rejects a DelegateWork result outside the host-provided Workspace list", async () => {
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
@@ -2224,8 +2290,8 @@ describe("PetDispatchService", () => {
                 pet: {
                   hostActions: [
                     {
-                      kind: "todoMutation",
-                      payload: { action: "complete", todoId: "todo-one" },
+                      kind: "followUpMutation",
+                      payload: { action: "complete", followUpId: "followup-one" },
                     },
                   ],
                 },
@@ -2236,27 +2302,92 @@ describe("PetDispatchService", () => {
       },
       hostCwd: "/safe/pet",
       hostActions: {
-        todoMutation: async () => ({
+        followUpMutation: async () => ({
           action: "complete",
-          todoId: "todo-one",
-          status: "completed",
+          followUpId: "followup-one",
+          title: "发布准备",
         }),
         mobileRemote: async () => ({ action: "open" }),
       },
     });
 
-    const result = await service.dispatch({ type: "chat", message: "complete my todo" });
-    expect(declared).toEqual(["todoMutation"]);
+    const result = await service.dispatch({ type: "chat", message: "complete the follow-up" });
+    expect(declared).toEqual(["followUpMutation"]);
     expect(result).toMatchObject({
       ok: true,
       type: "chat",
       hostActions: [
         {
-          kind: "todoMutation",
+          kind: "followUpMutation",
           ok: true,
-          result: { todoId: "todo-one", status: "completed" },
+          result: { followUpId: "followup-one", title: "发布准备" },
         },
       ],
     });
+  });
+
+  test("does not complete a follow-up in the same turn that only starts its Work Session", async () => {
+    let mutations = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, requestParams) => {
+          const workspace = (
+            requestParams.profileParams as { workspaces: Array<{ id: string; name: string }> }
+          ).workspaces.find((candidate) => candidate.name === "CodeShell")!;
+          return {
+            ok: true,
+            result: {
+              text: "已开始继续处理。",
+              extensions: {
+                pet: {
+                  workDelegation: {
+                    workspaceId: workspace.id,
+                    objective: "继续处理这条跟进",
+                  },
+                  hostActions: [
+                    {
+                      kind: "followUpMutation",
+                      payload: { action: "complete", followUpId: "followup-one" },
+                    },
+                  ],
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/codeshell", name: "CodeShell" }],
+      startWorkSession: async () => ({ sessionId: "work-follow-up", cwd: "/work/codeshell" }),
+      hostActions: {
+        followUpMutation: async () => {
+          mutations += 1;
+          return { action: "complete", followUpId: "followup-one" };
+        },
+      },
+    });
+
+    const result = await service.dispatch({
+      type: "chat",
+      message: "处理这条跟进",
+      clientMessageId: "follow-up-start-only",
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      delegation: { sessionId: "work-follow-up" },
+      hostActions: [
+        {
+          kind: "followUpMutation",
+          ok: false,
+          error: expect.stringContaining("真实完成后"),
+        },
+      ],
+    });
+    expect(mutations).toBe(0);
   });
 });

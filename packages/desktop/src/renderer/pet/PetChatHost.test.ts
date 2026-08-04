@@ -5,10 +5,12 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   PetChatMarkdown,
+  PetDeliveryStatusTip,
   PetDelegationCard,
   petDelegationDisplayState,
   selectPetChatRows,
 } from "./PetChatHost";
+import { markPetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
 
 describe("PetChatHost", () => {
   test("shows only the manager conversation and hides execution events", () => {
@@ -106,7 +108,7 @@ describe("PetChatHost", () => {
         {
           kind: "user",
           id: "u1",
-          text: "完成待办",
+          text: "完成跟进项",
           clientMessageId: "pet-turn-1",
         },
         { kind: "assistant", id: "a1", text: "我来处理。", done: true },
@@ -123,19 +125,202 @@ describe("PetChatHost", () => {
       [
         {
           clientMessageId: "pet-turn-1",
-          message: "待办已完成：「整理发布说明」。",
+          message: "跟进项已完成：「整理发布说明」。",
           createdAt: 2,
         },
       ],
     );
 
     expect(rows.map((row) => row.text)).toEqual([
-      "完成待办",
+      "完成跟进项",
       "我来处理。",
-      "待办已完成：「整理发布说明」。",
+      "跟进项已完成：「整理发布说明」。",
       "下一件事",
       "请说。",
     ]);
+  });
+
+  test("replaces Mimi's premature sent claim with the authoritative outbound failure", () => {
+    const rows = selectPetChatRows(
+      [
+        {
+          kind: "user",
+          id: "u1",
+          text: "给微信发测试消息",
+          clientMessageId: "pet-turn-send",
+        },
+        {
+          kind: "assistant",
+          id: "a1",
+          text: "测试消息已经通过 SendMessage 发出去了。",
+          done: true,
+        },
+      ],
+      [],
+      [],
+      [
+        {
+          clientMessageId: "pet-turn-send",
+          message: "主动消息操作失败：微信发送准备失败",
+          createdAt: 2,
+          replaceAssistant: true,
+        },
+      ],
+    );
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "给微信发测试消息",
+      "主动消息操作失败：微信发送准备失败",
+    ]);
+  });
+
+  test("keeps outbound replacement semantics after transcript hydration", () => {
+    const rows = selectPetChatRows([
+      {
+        kind: "user",
+        id: "u1",
+        text: "给微信发测试消息",
+        clientMessageId: "pet-turn-send",
+      },
+      {
+        kind: "assistant",
+        id: "a1",
+        text: "测试消息已经发出去了。",
+        done: true,
+      },
+      {
+        kind: "assistant",
+        id: "receipt",
+        text: markPetHostActionReplacementDisplay("主动消息操作失败：微信发送准备失败"),
+        done: true,
+      },
+    ]);
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "给微信发测试消息",
+      "主动消息操作失败：微信发送准备失败",
+    ]);
+  });
+
+  test("uses the persisted source id when a delayed receipt follows a newer turn", () => {
+    const rows = selectPetChatRows([
+      {
+        kind: "user",
+        id: "u1",
+        text: "给微信发测试消息",
+        clientMessageId: "pet-turn-send",
+      },
+      {
+        kind: "assistant",
+        id: "a1",
+        text: "测试消息已经发出去了。",
+        done: true,
+      },
+      {
+        kind: "user",
+        id: "u2",
+        text: "再查一下进度",
+        clientMessageId: "pet-turn-check",
+      },
+      {
+        kind: "assistant",
+        id: "a2",
+        text: "还在查。",
+        done: true,
+      },
+      {
+        kind: "assistant",
+        id: "receipt",
+        text: markPetHostActionReplacementDisplay(
+          "主动消息操作失败：微信发送准备失败",
+          "pet-turn-send",
+        ),
+        done: true,
+      },
+    ]);
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "给微信发测试消息",
+      "主动消息操作失败：微信发送准备失败",
+      "再查一下进度",
+      "还在查。",
+    ]);
+  });
+
+  test("shows the WeChat reply body, keeps the dispatch update, and separates delivery status", () => {
+    const rows = selectPetChatRows(
+      [
+        {
+          kind: "user",
+          id: "u1",
+          text: "帮我分析这篇文章",
+          clientMessageId: "im:wechat:message-one",
+        },
+        { kind: "assistant", id: "a1", text: "任务已派出，完成后发给你。", done: true },
+        {
+          kind: "assistant",
+          id: "a2",
+          text: "微信消息已发送。系统提示当前没有活跃任务，待命。",
+          done: true,
+        },
+      ],
+      [],
+      [],
+      [
+        {
+          clientMessageId: "im:wechat:message-one",
+          message: "Mooncake 的核心是用 KVCache 换取更少的重复计算。",
+          createdAt: 3,
+          replaceAssistant: true,
+          deliveryChannel: "wechat",
+        },
+      ],
+    );
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "帮我分析这篇文章",
+      "任务已派出，完成后发给你。",
+      "Mooncake 的核心是用 KVCache 换取更少的重复计算。",
+    ]);
+    expect(rows.at(-1)?.deliveryLabel).toBe("个人微信");
+    expect(
+      renderToStaticMarkup(React.createElement(PetDeliveryStatusTip, { label: "个人微信" })),
+    ).toContain("已发送到个人微信");
+  });
+
+  test("restores the WeChat delivery tip from a persisted replacement receipt", () => {
+    const rows = selectPetChatRows([
+      {
+        kind: "user",
+        id: "u1",
+        text: "帮我分析文章",
+        clientMessageId: "im:wechat:message-two",
+      },
+      { kind: "assistant", id: "a1", text: "任务已派出。", done: true },
+      {
+        kind: "assistant",
+        id: "a2",
+        text: "微信消息已发送。系统提示当前没有活跃任务，待命。",
+        done: true,
+      },
+      {
+        kind: "assistant",
+        id: "receipt",
+        text: markPetHostActionReplacementDisplay(
+          "这是发送给微信的原文。",
+          "im:wechat:message-two",
+          "wechat",
+        ),
+        done: true,
+      },
+    ]);
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "帮我分析文章",
+      "任务已派出。",
+      "这是发送给微信的原文。",
+    ]);
+    expect(rows.at(-1)?.deliveryLabel).toBe("个人微信");
   });
 
   test("keeps automatic context compaction as an explicit history boundary", () => {

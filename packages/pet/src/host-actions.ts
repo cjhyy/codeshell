@@ -18,7 +18,7 @@ export const PET_HOST_ACTION_KINDS = [
   "longTaskControl",
   "memory",
   "gatewayReply",
-  "todoMutation",
+  "followUpMutation",
   "sessionArchive",
   "outboundMessage",
 ] as const;
@@ -158,39 +158,12 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
     );
   }
   if (value.kind === "gatewayReply") return isGatewayReplyPayload(payload);
-  if (value.kind === "todoMutation") {
-    const action = payload.action;
-    if (
-      action !== "create" &&
-      action !== "update" &&
-      action !== "start" &&
-      action !== "block" &&
-      action !== "complete" &&
-      action !== "reopen" &&
-      action !== "archive"
-    ) {
-      return false;
-    }
-    const todoId = payload.todoId;
-    const text = payload.text;
-    if (action === "create") {
-      return (
-        hasExactKeys(payload, ["action", "text"]) &&
-        typeof text === "string" &&
-        text.trim().length > 0 &&
-        text.length <= 500
-      );
-    }
-    if (!isOpaqueId(todoId)) return false;
-    if (action === "update") {
-      return (
-        hasExactKeys(payload, ["action", "todoId", "text"]) &&
-        typeof text === "string" &&
-        text.trim().length > 0 &&
-        text.length <= 500
-      );
-    }
-    return hasExactKeys(payload, ["action", "todoId"]);
+  if (value.kind === "followUpMutation") {
+    return (
+      hasExactKeys(payload, ["action", "followUpId"]) &&
+      (payload.action === "complete" || payload.action === "dismiss") &&
+      isOpaqueId(payload.followUpId)
+    );
   }
   if (value.kind === "sessionArchive") {
     return (
@@ -206,12 +179,21 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
     );
   }
   if (value.kind === "outboundMessage") {
+    const attachmentPaths = payload.attachmentPaths;
     return (
-      hasExactKeys(payload, ["targetId", "text"]) &&
+      Object.keys(payload).every((key) => ["targetId", "text", "attachmentPaths"].includes(key)) &&
+      Object.keys(payload).length === (attachmentPaths === undefined ? 2 : 3) &&
       isOpaqueId(payload.targetId) &&
       typeof payload.text === "string" &&
       payload.text.trim().length > 0 &&
-      payload.text.length <= MAX_GATEWAY_REPLY_TEXT_LENGTH
+      payload.text.length <= MAX_GATEWAY_REPLY_TEXT_LENGTH &&
+      !CONTROL_CHARACTER_RE.test(payload.text.replaceAll("\n", "").replaceAll("\t", "")) &&
+      (attachmentPaths === undefined ||
+        (Array.isArray(attachmentPaths) &&
+          attachmentPaths.length > 0 &&
+          attachmentPaths.length <= MAX_GATEWAY_ATTACHMENTS &&
+          attachmentPaths.every(isGatewayAttachmentPath) &&
+          new Set(attachmentPaths).size === attachmentPaths.length))
     );
   }
   if (payload.action === "remember") {

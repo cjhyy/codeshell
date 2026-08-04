@@ -5,11 +5,10 @@ import { PetWorkTree } from "./PetWorkTree";
 import type { PetWorkMap } from "./petWorkMap";
 
 const workMap: PetWorkMap = {
-  counts: { running: 1, pending: 0, "follow-up": 1, completed: 1, other: 1 },
+  counts: { running: 1, pending: 0, completed: 1, other: 1 },
   itemIds: {
     running: ["running:one"],
     pending: [],
-    "follow-up": ["follow-up:one"],
     completed: ["completed:one"],
     other: ["other:one"],
   },
@@ -33,20 +32,6 @@ const workMap: PetWorkMap = {
               detail: "正在运行测试",
               lastActivityAt: 3_000,
               navigation: { agentSessionId: "session-secret-one" },
-            },
-          ],
-        },
-        {
-          group: "follow-up",
-          items: [
-            {
-              id: "follow-up:one",
-              group: "follow-up",
-              state: "follow-up",
-              workspace: "codeshell",
-              title: "跟进启动速度",
-              lastActivityAt: 2_000,
-              navigation: { agentSessionId: "session-secret-two" },
             },
           ],
         },
@@ -90,7 +75,7 @@ describe("PetWorkTree", () => {
     expect(html).toContain('data-pet-work-drawer="toggle"');
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain("工作收件箱");
-    expect(html).toContain("4 项");
+    expect(html).toContain("3 项");
     expect(html).not.toContain('data-pet-work-drawer-content="open"');
     expect(html).not.toContain("codeshell");
   });
@@ -109,7 +94,7 @@ describe("PetWorkTree", () => {
     expect(html).toContain('data-pet-work-drawer-content="open"');
     expect(html).toContain("codeshell");
     expect(html).toContain("进行中");
-    expect(html).toContain("待跟进");
+    expect(html).not.toContain("待跟进");
     expect(html).toContain("已完成");
     expect(html).toContain("其他");
     expect(html).toContain("清除已完成");
@@ -181,11 +166,10 @@ test("renders external-CLI and risk badges on items that carry them", () => {
         ],
       },
     ],
-    counts: { running: 1, pending: 1, "follow-up": 0, completed: 0, other: 1 },
+    counts: { running: 1, pending: 1, completed: 0, other: 1 },
     itemIds: {
       running: ["running:ext"],
       pending: ["pending:risk:r1"],
-      "follow-up": [],
       completed: [],
       other: ["other:plain"],
     },
@@ -238,11 +222,10 @@ test("gives non-external rows a latest-result expand affordance and external row
         ],
       },
     ],
-    counts: { running: 2, pending: 0, "follow-up": 0, completed: 0, other: 0 },
+    counts: { running: 2, pending: 0, completed: 0, other: 0 },
     itemIds: {
       running: ["running:ext", "running:internal"],
       pending: [],
-      "follow-up": [],
       completed: [],
       other: [],
     },
@@ -286,11 +269,10 @@ test("disables an external item whose locator is incomplete and explains why", (
         ],
       },
     ],
-    counts: { running: 0, pending: 0, "follow-up": 0, completed: 0, other: 1 },
+    counts: { running: 0, pending: 0, completed: 0, other: 1 },
     itemIds: {
       running: [],
       pending: [],
-      "follow-up": [],
       completed: [],
       other: ["other:external"],
     },
@@ -333,11 +315,10 @@ test.each([
         ],
       },
     ],
-    counts: { running: 0, pending: 1, "follow-up": 0, completed: 0, other: 0 },
+    counts: { running: 0, pending: 1, completed: 0, other: 0 },
     itemIds: {
       running: [],
       pending: ["pending:risk:r1"],
-      "follow-up": [],
       completed: [],
       other: [],
     },
@@ -375,8 +356,8 @@ test("renders the other bucket and its i18n label without hiding items", () => {
         latestActivityAt: 1,
       },
     ],
-    counts: { running: 0, pending: 0, "follow-up": 0, completed: 0, other: 1 },
-    itemIds: { running: [], pending: [], "follow-up": [], completed: [], other: ["other:x"] },
+    counts: { running: 0, pending: 0, completed: 0, other: 1 },
+    itemIds: { running: [], pending: [], completed: [], other: ["other:x"] },
     dismissedCount: 0,
     hiddenCount: 0,
     unclassifiedCount: 0,

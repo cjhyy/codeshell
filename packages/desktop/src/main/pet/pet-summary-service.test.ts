@@ -24,17 +24,17 @@ describe("createPetSummaryService", () => {
       readClosureInput: async () => "final assistant message",
       generate: async () => {
         generateCalls += 1;
-        return "shipped the fix; want me to also add tests?";
+        return "FOLLOW_UP: want me to also add tests?";
       },
       store,
     });
 
     const result = await service.summarize("session-a", 1_000);
-    expect(result).toEqual({ text: "shipped the fix; want me to also add tests?" });
+    expect(result).toEqual({ text: "want me to also add tests?" });
     expect(generateCalls).toBe(1);
     expect(store.get("session-a")).toEqual({
       terminalAt: 1_000,
-      text: "shipped the fix; want me to also add tests?",
+      text: "want me to also add tests?",
     });
   });
 
@@ -91,6 +91,26 @@ describe("createPetSummaryService", () => {
     expect(store.get("session-a")).toEqual({ terminalAt: 1_000, text: "" });
   });
 
+  test("rejects explanatory prose and overlong output instead of creating false follow-ups", async () => {
+    for (const raw of [
+      "工作已完成，没有待跟进的追问。",
+      "NONE。",
+      "FOLLOW_UP: 要不要我再补测试？\n这是额外解释。",
+      "```\nFOLLOW_UP: 要不要我再补测试？\n```",
+      `FOLLOW_UP: ${"很".repeat(81)}`,
+    ]) {
+      const store = fakeStore();
+      const service = createPetSummaryService({
+        sessionsRootDir: "/root",
+        readClosureInput: async () => "closure",
+        generate: async () => raw,
+        store,
+      });
+      expect(await service.summarize("session-a", 1_000)).toBeNull();
+      expect(store.get("session-a")?.text).toBe("");
+    }
+  });
+
   test("null closure input stores an empty-marker and never calls generate", async () => {
     const store = fakeStore();
     let generateCalls = 0;
@@ -118,7 +138,7 @@ describe("createPetSummaryService", () => {
       readClosureInput: async () => "new closure",
       generate: async () => {
         generateCalls += 1;
-        return "new summary";
+        return "FOLLOW_UP: new summary";
       },
       store,
     });
@@ -142,7 +162,7 @@ describe("createPetSummaryService", () => {
       generate: async () => {
         generateCalls += 1;
         await gate;
-        return "shared summary";
+        return "FOLLOW_UP: shared summary";
       },
       store,
     });
@@ -171,14 +191,48 @@ describe("createPetSummaryService", () => {
       generate: async (closureText) => {
         calls += 1;
         closuresByCall.push(closureText);
-        return `summary-${calls}`;
+        return `FOLLOW_UP: summary-${calls}`;
       },
       store,
     });
 
-    await Promise.all([service.summarize("session-a", 1_000), service.summarize("session-a", 2_000)]);
+    await Promise.all([
+      service.summarize("session-a", 1_000),
+      service.summarize("session-a", 2_000),
+    ]);
     // Distinct terminalAt keys → two independent generations.
     expect(calls).toBe(2);
+  });
+
+  test("a slower old generation cannot overwrite a newer completion", async () => {
+    const store = fakeStore();
+    let releaseOld: (() => void) | undefined;
+    const oldGate = new Promise<void>((resolve) => {
+      releaseOld = resolve;
+    });
+    const service = createPetSummaryService({
+      sessionsRootDir: "/root",
+      readClosureInput: async (_dir) => "closure",
+      generate: async () => {
+        if (!store.get("session-a")) await oldGate;
+        return store.get("session-a") ? "FOLLOW_UP: old result" : "FOLLOW_UP: newer result";
+      },
+      store,
+    });
+
+    const old = service.summarize("session-a", 1_000);
+    // Let the newer completion finish while the old generation is held.
+    const newerService = createPetSummaryService({
+      sessionsRootDir: "/root",
+      readClosureInput: async () => "new closure",
+      generate: async () => "FOLLOW_UP: newer result",
+      store,
+    });
+    expect(await newerService.summarize("session-a", 2_000)).toEqual({ text: "newer result" });
+    releaseOld!();
+    await old;
+
+    expect(store.get("session-a")).toEqual({ terminalAt: 2_000, text: "newer result" });
   });
 
   test("passes the resolved session dir to readClosureInput", async () => {
@@ -190,7 +244,7 @@ describe("createPetSummaryService", () => {
         seenDirs.push(dir);
         return "closure";
       },
-      generate: async () => "summary",
+      generate: async () => "FOLLOW_UP: summary",
       store,
     });
     await service.summarize("session-a", 1_000);

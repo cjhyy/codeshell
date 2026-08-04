@@ -33,13 +33,13 @@ import {
   manageSessionsToolDef,
 } from "./session-control.js";
 import {
-  manageTodoAvailability,
-  manageTodoTool,
-  manageTodoToolDef,
-  todosAvailability,
-  todosTool,
-  todosToolDef,
-} from "./todos.js";
+  followUpsAvailability,
+  followUpsTool,
+  followUpsToolDef,
+  manageFollowUpAvailability,
+  manageFollowUpTool,
+  manageFollowUpToolDef,
+} from "./follow-ups.js";
 import {
   rewriteSendMessageDef,
   sendMessageAvailability,
@@ -217,32 +217,32 @@ export function createPetCapability(): ExtensionModule {
       },
       {
         definition: {
-          ...todosToolDef,
+          ...followUpsToolDef,
           source: "builtin",
           permissionDefault: "allow",
           isReadOnly: true,
           isConcurrencySafe: true,
         },
-        execute: todosTool,
+        execute: followUpsTool,
         exposure: {
           presetTags: ["harness-min", "general"],
-          defaultPermissionRules: [{ tool: todosToolDef.name, decision: "allow" }],
-          availability: todosAvailability,
+          defaultPermissionRules: [{ tool: followUpsToolDef.name, decision: "allow" }],
+          availability: followUpsAvailability,
         },
       },
       {
         definition: {
-          ...manageTodoToolDef,
+          ...manageFollowUpToolDef,
           source: "builtin",
           permissionDefault: "allow",
           isReadOnly: false,
           isConcurrencySafe: false,
         },
-        execute: manageTodoTool,
+        execute: manageFollowUpTool,
         exposure: {
           presetTags: ["harness-min", "general"],
-          defaultPermissionRules: [{ tool: manageTodoToolDef.name, decision: "allow" }],
-          availability: manageTodoAvailability,
+          defaultPermissionRules: [{ tool: manageFollowUpToolDef.name, decision: "allow" }],
+          availability: manageFollowUpAvailability,
         },
       },
       {

@@ -92,7 +92,7 @@ describe("ExternalSessionAdapter", () => {
   test("task_complete flips to idle; quiet decay flips a stuck running session to idle", async () => {
     const home = mkdtempSync(join(tmpdir(), "codex-adapter-"));
     const file = makeRollout(join(home, "s"), "rollout-b.jsonl", "thread-b", "/tmp/proj-b");
-    let now = 10_000;
+    const now = 10_000;
     const sink = recordingSink();
     const adapter = new ExternalSessionAdapter({
       cli: "codex",

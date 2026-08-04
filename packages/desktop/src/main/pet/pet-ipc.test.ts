@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { PetTodoItem } from "@cjhyy/code-shell-pet";
 import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
@@ -383,10 +382,10 @@ describe("registerPetIpc", () => {
           result: {},
           hostActions: [
             {
-              kind: "todoMutation",
-              payload: { action: "complete", todoId: "todo-one" },
+              kind: "followUpMutation",
+              payload: { action: "complete", followUpId: "followup-one" },
               ok: true,
-              result: { status: "completed" },
+              result: { title: "发布准备" },
             },
           ],
         }),
@@ -394,7 +393,7 @@ describe("registerPetIpc", () => {
       hostActionReceipt: {
         record: async (input) => {
           recorded = input;
-          return "待办已完成。";
+          return { message: "跟进项已处理。" };
         },
       },
       windows: () => [
@@ -413,31 +412,79 @@ describe("registerPetIpc", () => {
     expect(recorded).toMatchObject({
       petSessionId: "pet-one",
       clientMessageId: "client-one",
-      executions: [expect.objectContaining({ kind: "todoMutation", ok: true })],
+      executions: [expect.objectContaining({ kind: "followUpMutation", ok: true })],
     });
     expect(sent.at(-1)).toEqual([
       "pet:chat-event",
       expect.objectContaining({
         kind: "host-action-completed",
         clientMessageId: "client-one",
-        message: "待办已完成。",
+        message: "跟进项已处理。",
       }),
     ]);
   });
 
-  test("exposes durable todo actions and recoverable Session archive over separate IPC calls", async () => {
+  test("marks outbound delivery receipts as replacements for Mimi's untrusted claim", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const sent: Array<[string, unknown]> = [];
-    let todoListener: (() => void) | undefined;
-    let entries: PetTodoItem[] = [
-      {
-        id: "todo-one",
-        text: "整理发布说明",
-        status: "pending" as const,
-        createdAt: 1,
-        updatedAt: 1,
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
       },
-    ];
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      dispatcher: {
+        dispatch: async () => ({
+          ok: true,
+          type: "chat",
+          petSessionId: "pet-one",
+          result: {},
+          hostActions: [
+            {
+              kind: "outboundMessage",
+              payload: { targetId: "owner-one", text: "测试" },
+              ok: false,
+              error: "微信发送准备失败",
+            },
+          ],
+        }),
+      },
+      hostActionReceipt: {
+        record: async () => ({
+          message: "主动消息操作失败：微信发送准备失败",
+          replaceAssistant: true,
+        }),
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    await handlers.get("pet:dispatch")?.(
+      {},
+      { type: "chat", message: "发测试消息", clientMessageId: "client-send" },
+    );
+
+    expect(sent.at(-1)).toEqual([
+      "pet:chat-event",
+      expect.objectContaining({
+        kind: "host-action-completed",
+        clientMessageId: "client-send",
+        message: "主动消息操作失败：微信发送准备失败",
+        replaceAssistant: true,
+      }),
+    ]);
+  });
+
+  test("exposes recoverable Session archive over its own validated IPC call", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     let archivedSessionId: string | undefined;
     registerPetIpc({
       ipcMain: {
@@ -449,70 +496,20 @@ describe("registerPetIpc", () => {
         subscribe: () => () => {},
         resolveNavigation: async () => ({ status: "not-found" }),
       },
-      todos: {
-        list: async () => entries,
-        create: async (text) => {
-          const item = {
-            id: "todo-two",
-            text,
-            status: "pending" as const,
-            createdAt: 2,
-            updatedAt: 2,
-          };
-          entries = [item, ...entries];
-          return item;
-        },
-        update: async (id, text) => {
-          const item = { ...entries.find((entry) => entry.id === id)!, text, updatedAt: 3 };
-          entries = entries.map((entry) => (entry.id === id ? item : entry));
-          return item;
-        },
-        setStatus: async (id, status) => {
-          const item = { ...entries.find((entry) => entry.id === id)!, status, updatedAt: 4 };
-          entries = entries.map((entry) => (entry.id === id ? item : entry));
-          return item;
-        },
-        subscribe: (listener) => {
-          todoListener = listener;
-          return () => {};
-        },
-      },
       sessionArchive: {
         archive: async (sessionId) => {
           archivedSessionId = sessionId;
           return { ok: true };
         },
       },
-      windows: () => [
-        {
-          isDestroyed: () => false,
-          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
-        },
-      ],
+      windows: () => [],
     });
 
-    expect(await handlers.get("pet:todos-get")?.({})).toEqual(entries);
-    expect(await handlers.get("pet:todo-create")?.({}, "确认回归测试")).toMatchObject({
-      id: "todo-two",
-    });
-    expect(
-      await handlers.get("pet:todo-update")?.({}, { id: "todo-one", text: "整理最终发布说明" }),
-    ).toMatchObject({ text: "整理最终发布说明" });
-    expect(
-      await handlers.get("pet:todo-set-status")?.({}, { id: "todo-one", status: "completed" }),
-    ).toMatchObject({ status: "completed" });
     expect(await handlers.get("pet:session-archive")?.({}, "session-one")).toEqual({ ok: true });
     expect(archivedSessionId).toBe("session-one");
-    expect(() =>
-      handlers.get("pet:todo-set-status")?.({}, { id: "todo-one", status: "deleted" }),
-    ).toThrow("invalid Pet todo status");
     expect(() => handlers.get("pet:session-archive")?.({}, "../session")).toThrow(
       "invalid Pet session archive request",
     );
-
-    todoListener?.();
-    await Promise.resolve();
-    expect(sent.at(-1)).toEqual(["pet:todos-changed", entries]);
   });
 
   test("rejects legacy digital-human routing keys at the Pet IPC boundary", async () => {
@@ -728,6 +725,7 @@ describe("registerPetIpc", () => {
           collectCalls += 1;
           return [
             {
+              followUpId: "followup-session-a",
               sessionId: "session-a",
               title: "Finished work",
               workspace: "codeshell",
@@ -743,6 +741,7 @@ describe("registerPetIpc", () => {
 
     expect(await handler({})).toEqual([
       {
+        followUpId: "followup-session-a",
         sessionId: "session-a",
         title: "Finished work",
         workspace: "codeshell",
@@ -782,6 +781,7 @@ describe("registerPetIpc", () => {
   test("mutates work inbox dismissal state in main and broadcasts the authoritative revision", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const sent: Array<[string, unknown]> = [];
+    const persistedRevisions: number[] = [];
     let state = { revision: 4, dismissedIds: ["completed:session-a"] };
     registerPetIpc({
       ipcMain: {
@@ -801,6 +801,7 @@ describe("registerPetIpc", () => {
             dismissedIds: [...new Set([...state.dismissedIds, ...ids])],
           }),
         clear: () => (state = { revision: state.revision + 1, dismissedIds: [] }),
+        flush: async () => void persistedRevisions.push(state.revision),
       },
       windows: () => [
         {
@@ -830,6 +831,7 @@ describe("registerPetIpc", () => {
       ],
       ["pet:work-inbox-dismissed-changed", { revision: 6, dismissedIds: [] }],
     ]);
+    expect(persistedRevisions).toEqual([5, 6]);
     expect(() =>
       handlers.get("pet:work-inbox-dismissed-update")?.({}, { action: "add", ids: ["unscoped"] }),
     ).toThrow("invalid work inbox update");
@@ -839,6 +841,93 @@ describe("registerPetIpc", () => {
         { action: "clear", ids: ["completed:session-a"] },
       ),
     ).toThrow("invalid work inbox update");
+  });
+
+  test("prefers transactional work-inbox mutations when the host provides them", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const calls: string[] = [];
+    let state = { revision: 0, dismissedIds: [] as string[] };
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      workInbox: {
+        getSnapshot: () => state,
+        add: () => {
+          calls.push("legacy-add");
+          return state;
+        },
+        clear: () => {
+          calls.push("legacy-clear");
+          return state;
+        },
+        flush: async () => void calls.push("legacy-flush"),
+        addDurably: async (ids) => {
+          calls.push("durable-add");
+          return (state = { revision: 1, dismissedIds: [...ids] });
+        },
+        clearDurably: async () => {
+          calls.push("durable-clear");
+          return (state = { revision: 2, dismissedIds: [] });
+        },
+      },
+      windows: () => [],
+    });
+
+    await handlers.get("pet:work-inbox-dismissed-update")?.(
+      {},
+      { action: "add", ids: ["follow-up:followup-a"] },
+    );
+    await handlers.get("pet:work-inbox-dismissed-update")?.({}, { action: "clear" });
+
+    expect(calls).toEqual(["durable-add", "durable-clear"]);
+  });
+
+  test("broadcasts follow-up dismissals made outside IPC, including Mimi host actions", () => {
+    const sent: Array<[string, unknown]> = [];
+    let listener: ((snapshot: { revision: number; dismissedIds: string[] }) => void) | undefined;
+    let unsubscribed = false;
+    const dispose = registerPetIpc({
+      ipcMain: {
+        handle: () => {},
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      workInbox: {
+        getSnapshot: () => ({ revision: 0, dismissedIds: [] }),
+        add: () => ({ revision: 1, dismissedIds: [] }),
+        clear: () => ({ revision: 1, dismissedIds: [] }),
+        subscribe: (next) => {
+          listener = next;
+          return () => {
+            unsubscribed = true;
+          };
+        },
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    listener?.({ revision: 1, dismissedIds: ["completed:session-a"] });
+    expect(sent).toEqual([
+      ["pet:work-inbox-dismissed-changed", { revision: 1, dismissedIds: ["completed:session-a"] }],
+    ]);
+    dispose();
+    expect(unsubscribed).toBe(true);
   });
 
   test("exposes the journal, segment transcript, and auto-extract preference", async () => {

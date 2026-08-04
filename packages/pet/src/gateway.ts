@@ -3,6 +3,7 @@ import type {
   ToolDefinition,
   ToolVisibilityContext,
 } from "@cjhyy/code-shell-core/extension";
+import { hasOnlyDeclaredToolArguments } from "./tool-arguments.js";
 
 export const GATEWAY_TOOL_NAME = "Gateway";
 
@@ -16,13 +17,16 @@ export interface PetGatewayChannelCapabilities {
   outbound: {
     text: true;
     /**
-     * Whether the adapter can send WITHOUT a fresh inbound conversation context
-     * (an unprompted push), as opposed to only replying inside an open one.
+     * Whether the adapter supports an owner-addressed send outside the current
+     * reply call. A platform may still require a persisted inbound context;
+     * authorized SendMessage targets carry that dynamic readiness separately.
      *
      * Mirrors `ChannelCapabilities.outbound.proactive` in @cjhyy/code-shell-chat.
      * Optional here so an older host that does not report it still validates.
      */
     proactive?: boolean;
+    /** Whether send works without an active Gateway polling loop. */
+    direct?: boolean;
     maxTextLength?: number;
     button: "native" | "link";
     attachments: readonly PetGatewayAttachmentKind[];
@@ -64,7 +68,8 @@ export const gatewayToolDef: ToolDefinition = {
         maxLength: 128,
         description:
           "Optional search terms. Omit to list every granted channel. Use terms such as " +
-          "channel:telegram, inbound:file, outbound:image, button:native, or current.",
+          "channel:telegram, inbound:file, outbound:image, outbound:proactive, " +
+          "outbound:direct, button:native, or current.",
       },
       channel: {
         type: "string",
@@ -90,7 +95,7 @@ export async function gatewayTool(
     ?.petGateway;
   if (!catalog) return "Error: Gateway is available only in a Mimi turn with Gateway context.";
   if (
-    Object.keys(args).some((key) => !["action", "query", "channel"].includes(key)) ||
+    !hasOnlyDeclaredToolArguments(args, ["action", "query", "channel"]) ||
     typeof args.action !== "string"
   ) {
     return "Error: Gateway requires an action and accepts only query or channel.";
@@ -183,7 +188,10 @@ function matchesGatewayTerm(
     }
     if (scope === "outbound") {
       return (
-        value === "text" || entry.capabilities.outbound.attachments.includes(asAttachment(value))
+        value === "text" ||
+        (value === "proactive" && entry.capabilities.outbound.proactive === true) ||
+        (value === "direct" && entry.capabilities.outbound.direct === true) ||
+        entry.capabilities.outbound.attachments.includes(asAttachment(value))
       );
     }
     return false;
@@ -191,6 +199,8 @@ function matchesGatewayTerm(
   if (entry.channel.includes(term)) return true;
   if (entry.capabilities.outbound.button === term) return true;
   if (term === "text") return true;
+  if (term === "proactive") return entry.capabilities.outbound.proactive === true;
+  if (term === "direct") return entry.capabilities.outbound.direct === true;
   const attachment = asAttachment(term);
   return (
     entry.capabilities.inbound.attachments.includes(attachment) ||
@@ -246,6 +256,7 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
           // so every real channel failed catalog validation and Mimi silently
           // lost Gateway discovery on IM turns.
           "proactive",
+          "direct",
           "maxTextLength",
           "button",
           "attachments",
@@ -273,6 +284,8 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
   // capability claim, so a truthy string would misreport what the channel can do.
   const proactive = value.outbound.proactive;
   if (proactive !== undefined && typeof proactive !== "boolean") return undefined;
+  const direct = value.outbound.direct;
+  if (direct !== undefined && typeof direct !== "boolean") return undefined;
   return Object.freeze({
     inbound: Object.freeze({ text: true as const, attachments: inboundAttachments }),
     outbound: Object.freeze({
@@ -280,6 +293,7 @@ function parseCapabilities(value: unknown): PetGatewayChannelCapabilities | unde
       // Carried through rather than dropped — "can push unprompted" is exactly
       // the kind of thing Mimi must not assume.
       ...(proactive === undefined ? {} : { proactive }),
+      ...(direct === undefined ? {} : { direct }),
       ...(maxTextLength === undefined ? {} : { maxTextLength }),
       button: value.outbound.button,
       attachments: outboundAttachments,

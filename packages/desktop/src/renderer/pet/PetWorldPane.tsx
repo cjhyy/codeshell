@@ -1,15 +1,16 @@
 import type {
   PetOpenSessionRequest,
   PetProjectionSnapshot,
+  PetSessionSummaryRow,
   PetWorkInboxSnapshot,
   PetWorkInboxUpdate,
 } from "../../preload/types";
 import React from "react";
+import { petFollowUpStateId } from "../../shared/pet-work-item-id";
 import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
 import { PetLongTaskSection } from "./PetLongTaskSection";
 import { PetFollowUpSection } from "./PetFollowUpSection";
-import { PetTodoSection } from "./PetTodoSection";
 import {
   loadDismissedPetWorkItemIds,
   newerPetWorkInboxSnapshot,
@@ -18,6 +19,17 @@ import {
 import { buildPetWorkMap } from "./petWorkMap";
 import { selectPetOverview } from "./petSelectors";
 import type { PetProjectionStatus } from "./petStateReducer";
+import { useFollowUps } from "./useFollowUps";
+
+export function countVisibleFollowUps(
+  rows: readonly PetSessionSummaryRow[],
+  dismissedIds: ReadonlySet<string>,
+): number {
+  return Math.min(
+    rows.filter((row) => !dismissedIds.has(petFollowUpStateId(row.followUpId))).length,
+    20,
+  );
+}
 
 export function PetWorldPane({
   projection,
@@ -93,6 +105,8 @@ export function PetWorldPane({
     dismissedIds,
     excludedSessionIds,
   });
+  const followUps = useFollowUps(projection ? projection.version : null);
+  const visibleFollowUpCount = countVisibleFollowUps(followUps, dismissedIds);
   const pendingRef = React.useRef<HTMLDivElement>(null);
   const dismissItems = React.useCallback(
     (ids: readonly string[]) => {
@@ -139,7 +153,7 @@ export function PetWorldPane({
       <PetOverviewHeader
         runningCount={workMap.counts.running}
         pendingCount={workMap.counts.pending}
-        followUpCount={workMap.counts["follow-up"]}
+        followUpCount={visibleFollowUpCount}
         observedAt={projection?.observedAt}
         now={now}
         loading={status === "loading"}
@@ -148,7 +162,6 @@ export function PetWorldPane({
       />
       <div className="min-h-0 flex-1 overflow-visible p-3.5 @min-[1100px]/pet-page:overflow-y-auto">
         <div ref={pendingRef} tabIndex={-1} className="space-y-3 outline-none">
-          <PetTodoSection />
           <PetLongTaskSection
             onOpenSession={(sessionId) => {
               if (!projection) return;
@@ -160,7 +173,7 @@ export function PetWorldPane({
             }}
           />
           <PetFollowUpSection
-            snapshotVersion={projection ? projection.version : null}
+            rows={followUps}
             dismissedIds={dismissedIds}
             onDismiss={(id) => dismissItems([id])}
             onOpen={(sessionId) => {

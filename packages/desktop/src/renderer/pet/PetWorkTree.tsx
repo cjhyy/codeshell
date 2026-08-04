@@ -7,7 +7,6 @@ import {
   FolderKanban,
   Inbox,
   RotateCcw,
-  Sparkles,
   Trash2,
   X,
   type LucideIcon,
@@ -19,7 +18,6 @@ import { RISK_TONE, type PetWorkGroup, type PetWorkItem, type PetWorkMap } from 
 
 const STATE_DOT: Record<PetWorkItem["state"], string> = {
   "needs-action": "bg-status-warn",
-  "follow-up": "bg-status-warn",
   running: "bg-status-running animate-pulse motion-reduce:animate-none",
   queued: "bg-status-running",
   failed: "bg-status-err",
@@ -30,7 +28,6 @@ const STATE_DOT: Record<PetWorkItem["state"], string> = {
 
 const STATE_BADGE: Record<PetWorkItem["state"], string> = {
   "needs-action": "bg-status-warn/10 text-status-warn",
-  "follow-up": "bg-status-warn/10 text-status-warn",
   running: "bg-status-running/10 text-status-running",
   queued: "bg-status-running/10 text-status-running",
   failed: "bg-status-err/10 text-status-err",
@@ -47,11 +44,6 @@ const BRANCH_META: Record<PetWorkGroup, { Icon: LucideIcon; icon: string; count:
   },
   pending: {
     Icon: CircleDot,
-    icon: "bg-status-warn/10 text-status-warn",
-    count: "bg-status-warn/10 text-status-warn",
-  },
-  "follow-up": {
-    Icon: Sparkles,
     icon: "bg-status-warn/10 text-status-warn",
     count: "bg-status-warn/10 text-status-warn",
   },

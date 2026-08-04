@@ -13,15 +13,14 @@
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { listWorkSessionsOnDisk, sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
+import { readWorkSessionBySelectorOnDisk } from "@cjhyy/code-shell-pet/disclosure";
 import type { PetReusableSessionCandidate } from "./pet-dispatch-service.js";
 
 export function createReusableSessionResolver(
   sessionsRootDir: string,
 ): (selectorId: string) => Promise<PetReusableSessionCandidate | null> {
   return async (selectorId) => {
-    const sessions = await listWorkSessionsOnDisk(sessionsRootDir, { limit: 500 });
-    const match = sessions.find((session) => sessionSelectorId(session.sessionId) === selectorId);
+    const match = await readWorkSessionBySelectorOnDisk(sessionsRootDir, selectorId);
     if (!match) return null;
     // One extra state read on this miss-only path: the disclosure catalog does
     // not surface archivedAt/origin, and both gates must match the in-list

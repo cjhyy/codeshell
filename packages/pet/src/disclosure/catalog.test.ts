@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { listWorkSessionsOnDisk } from "./catalog.js";
+import {
+  listWorkSessionsOnDisk,
+  readWorkSessionBySelectorOnDisk,
+  readWorkSessionOnDisk,
+} from "./catalog.js";
 import { sessionSelectorId } from "./selector.js";
 
 function writeSession(
@@ -90,6 +94,32 @@ describe("listWorkSessionsOnDisk", () => {
     const malformed = result.find((session) => session.sessionId === "malformed-1");
     expect(malformed?.title).toBe("malformed-1");
     expect(malformed?.status).toBeUndefined();
+  });
+
+  test("single-session reads enforce the same ordinary-work policy as the list", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-catalog-read-"));
+    writeSession(root, "work-1", { kind: "work", cwd: "/repo" });
+    writeSession(root, "pet-1", { kind: "pet", cwd: "/repo" });
+    writeSession(root, "child-1", { kind: "work", parentSessionId: "work-1", cwd: "/repo" });
+
+    expect((await readWorkSessionOnDisk(root, "work-1"))?.sessionId).toBe("work-1");
+    expect(await readWorkSessionOnDisk(root, "pet-1")).toBeNull();
+    expect(await readWorkSessionOnDisk(root, "child-1")).toBeNull();
+    expect(await readWorkSessionOnDisk(root, "../work-1")).toBeNull();
+  });
+
+  test("resolves an opaque selector independently of the visible catalog limit", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-selector-read-"));
+    writeSession(root, "older-work", { kind: "work", cwd: "/repo" }, 1_000);
+    writeSession(root, "newer-work", { kind: "work", cwd: "/repo" }, 2_000);
+
+    expect(await listWorkSessionsOnDisk(root, { limit: 1 })).toEqual([
+      expect.objectContaining({ sessionId: "newer-work" }),
+    ]);
+    expect(await readWorkSessionBySelectorOnDisk(root, sessionSelectorId("older-work"))).toEqual(
+      expect.objectContaining({ sessionId: "older-work" }),
+    );
+    expect(await readWorkSessionBySelectorOnDisk(root, "session-malformed")).toBeNull();
   });
 });
 

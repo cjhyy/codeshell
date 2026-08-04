@@ -136,7 +136,7 @@ describe("Engine pet behavior", () => {
     expect(first.systemPrompt).toContain("complaints, or corrections about Mimi's own routing");
     expect(first.systemPrompt).toContain("runtime-only-hunter2");
     expect(JSON.stringify(first.messages)).not.toContain("runtime-only-hunter2");
-    expect(first.tools).toEqual(["DelegateWork", "Sessions", "Todos", "CurrentTime"]);
+    expect(first.tools).toEqual(["DelegateWork", "Sessions", "FollowUps", "CurrentTime"]);
     expect(result.petWorkDelegation).toEqual({
       workspaceId: "workspace-codeshell",
       objective: "inspect CodeShell",
@@ -245,7 +245,13 @@ describe("Engine pet behavior", () => {
     });
 
     const first = calls.get(model)![0]!;
-    expect(first.tools).toEqual(["Gateway", "GatewayReply", "Sessions", "Todos", "CurrentTime"]);
+    expect(first.tools).toEqual([
+      "Gateway",
+      "GatewayReply",
+      "Sessions",
+      "FollowUps",
+      "CurrentTime",
+    ]);
     expect(first.toolDefinitions[0]?.inputSchema.properties.action).toMatchObject({
       enum: ["search", "describe"],
     });

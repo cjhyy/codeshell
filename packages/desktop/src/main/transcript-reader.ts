@@ -11,6 +11,10 @@ import { sessionsRoot, type ContentBlock } from "@cjhyy/code-shell-core";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FoldItem } from "../preload/types";
+import {
+  markPetHostActionReplacementDisplay,
+  replacementReceiptDisplayMetadata,
+} from "../shared/pet-host-action-receipt.js";
 
 interface TranscriptEvent {
   id: string;
@@ -139,6 +143,8 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
             timestamp: ts,
           });
         } else if (role === "assistant") {
+          const assistantText = textOf(d.content);
+          const replacement = replacementReceiptDisplayMetadata(d.clientMessageId, assistantText);
           items.push({
             kind: "stream",
             event: { type: "stream_request_start", turnNumber: ev.turnNumber },
@@ -146,14 +152,32 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           });
           items.push({
             kind: "stream",
-            event: { type: "text_delta", text: textOf(d.content) },
+            event: {
+              type: "text_delta",
+              text: replacement
+                ? markPetHostActionReplacementDisplay(
+                    assistantText,
+                    replacement.sourceClientMessageId,
+                    replacement.deliveryChannel,
+                  )
+                : assistantText,
+            },
             timestamp: ts,
           });
           items.push({
             kind: "stream",
             event: {
               type: "assistant_message",
-              message: { role: "assistant", content: d.content as string | ContentBlock[] },
+              message: {
+                role: "assistant",
+                content: replacement
+                  ? markPetHostActionReplacementDisplay(
+                      assistantText,
+                      replacement.sourceClientMessageId,
+                      replacement.deliveryChannel,
+                    )
+                  : (d.content as string | ContentBlock[]),
+              },
             },
             timestamp: ts,
           });
