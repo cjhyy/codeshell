@@ -635,6 +635,36 @@ export {
   getDefaultCredentialCipher,
 } from "./credentials/index.js";
 
+export {
+  LOCAL_LINK_PROVIDERS,
+  getLocalLinkProvider,
+  listLocalLinkProviders,
+  validateLocalLinkToken,
+  connectCliLink,
+  executeCliLinkAction,
+  getCliLinkStatus,
+  isCliLinkProvider,
+  managedLinkCliPath,
+  resolveLinkCliExecutable,
+  runCliLinkCommand,
+  linkActionToolDef,
+  linkActionTool,
+  isLinkActionAvailable,
+  type LinkActionRisk,
+  type LocalLinkIdentity,
+  type LocalLinkValidationResult,
+  type LocalLinkActionSummary,
+  type LocalLinkProviderSummary,
+  type LocalLinkActionContext,
+  type LocalLinkActionSpec,
+  type LocalLinkProviderSpec,
+  type CliLinkCommandResult,
+  type CliLinkCommandRunner,
+  type CliLinkProviderId,
+  type CliLinkRunOptions,
+  type CliLinkStatus,
+} from "./links/index.js";
+
 // ─── Cost Tracker ────────────────────────────────────────────────
 
 export { CostTracker, costTracker, installCostTracking } from "./cost-tracker.js";

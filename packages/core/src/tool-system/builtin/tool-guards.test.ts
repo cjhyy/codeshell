@@ -100,6 +100,24 @@ describe("builtin tool availability guards", () => {
     ).toBe(false);
   });
 
+  test("LinkAction is visible only when a usable local Link connection exists", () => {
+    const access: CredentialAccess = {
+      listMasked: () => [
+        {
+          id: "link-github-fine-grained-pat",
+          type: "link",
+          label: "GitHub local",
+          hasSecret: true,
+          meta: { linkProvider: "github", linkExecutionRuntime: "local" },
+        },
+      ],
+      resolveMeta: () => undefined,
+      envExposures: () => ({}),
+    };
+    setDefaultCredentialAccess(access);
+    expect(BUILTIN_TOOL_GUARDS.get("LinkAction")!({ cwd: "/repo", hasGoal: false })).toBe(true);
+  });
+
   test("ungated tools have no guard entry (so they're always visible)", () => {
     expect(BUILTIN_TOOL_GUARDS.has("Read")).toBe(false);
   });

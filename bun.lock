@@ -103,6 +103,7 @@
       "devDependencies": {
         "@cjhyy/code-shell-cdp": "workspace:*",
         "@cjhyy/code-shell-chat": "workspace:*",
+        "@cjhyy/code-shell-link": "workspace:*",
         "@cjhyy/code-shell-server": "workspace:*",
         "@cjhyy/code-shell-web": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.12.1",
@@ -152,6 +153,10 @@
         "vite": "^7.0.0",
         "ws": "^8.21.0",
       },
+    },
+    "packages/link": {
+      "name": "@cjhyy/code-shell-link",
+      "version": "0.7.1",
     },
     "packages/pet": {
       "name": "@cjhyy/code-shell-pet",
@@ -313,6 +318,8 @@
     "@cjhyy/code-shell-core": ["@cjhyy/code-shell-core@workspace:packages/core"],
 
     "@cjhyy/code-shell-desktop": ["@cjhyy/code-shell-desktop@workspace:packages/desktop"],
+
+    "@cjhyy/code-shell-link": ["@cjhyy/code-shell-link@workspace:packages/link"],
 
     "@cjhyy/code-shell-pet": ["@cjhyy/code-shell-pet@workspace:packages/pet"],
 

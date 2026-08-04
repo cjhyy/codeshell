@@ -43,11 +43,13 @@ export interface CredentialAccess {
     scope: CredentialAccessScope,
   ): CredentialMetadata | undefined;
   envExposures(cwd: string | undefined, scope: CredentialAccessScope): Record<string, string>;
+  /** Subscribe to host credential snapshot changes (desktop worker uses this to cancel in-flight Links). */
+  subscribe?(listener: () => void): () => void;
   resolveValue?(req: {
     cwd?: string;
     id: string;
     scope: CredentialAccessScope;
-    purpose: "use" | "mcp";
+    purpose: "use" | "mcp" | "link";
   }): Promise<string>;
   /** Resolve only the bearer material needed by an MCP request. */
   resolveOAuthAccess?(req: {
@@ -93,6 +95,7 @@ export function createIpcCredentialAccess(
 ): CredentialAccess {
   let snapshot: CredentialSnapshot = { revision: 0, entries: [] };
   let nextId = 1;
+  const subscribers = new Set<() => void>();
   const pending = new Map<
     string,
     {
@@ -110,6 +113,13 @@ export function createIpcCredentialAccess(
           revision: params.revision,
           entries: params.entries as CredentialSnapshotEntry[],
         };
+        for (const listener of subscribers) {
+          try {
+            listener();
+          } catch {
+            // One consumer must not break the credential snapshot transport.
+          }
+        }
       }
       return;
     }
@@ -159,6 +169,10 @@ export function createIpcCredentialAccess(
       const entry = entryFor(cwd);
       if (!entry) return {};
       return { ...(scope === "project" ? entry.envProject : entry.envFull) };
+    },
+    subscribe(listener) {
+      subscribers.add(listener);
+      return () => subscribers.delete(listener);
     },
     async resolveValue(req) {
       const result = (await request(
@@ -251,6 +265,14 @@ export const localCredentialAccess: CredentialAccess = {
     const cred = storeFor(req.cwd).resolve(req.id, req.scope);
     if (!cred || !isCredentialSecretAvailable(cred.secret)) {
       throw new Error(`credential "${req.id}" is unavailable`);
+    }
+    if (
+      req.purpose === "link" &&
+      (cred.type !== "link" ||
+        cred.meta?.linkExecutionRuntime !== "local" ||
+        !cred.meta.linkProvider)
+    ) {
+      throw new Error(`credential "${req.id}" is not a local Link credential`);
     }
     return cred.secret;
   },

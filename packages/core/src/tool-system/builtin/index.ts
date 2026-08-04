@@ -116,6 +116,11 @@ import {
   isInjectCredentialAvailable,
 } from "../../credentials/inject-credential-tool.js";
 import { credentialAccessScope, getCredentialAccess } from "../../credentials/access.js";
+import {
+  linkActionToolDef,
+  linkActionTool,
+  isLinkActionAvailable,
+} from "../../links/link-action-tool.js";
 
 /**
  * Tool executor signature.
@@ -944,6 +949,23 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     execute: useCredentialBuiltinTool,
     exposure: expose(GENERAL_TAGS, {
       availability: (ctx) => isUseCredentialAvailable(ctx.cwd, ctx.settingsScope),
+    }),
+  },
+  // Local Link actions resolve their provider-owned credential on every call.
+  // Read actions are allowed after the user connects a provider; write actions
+  // use a closed, in-tool approval prompt so read and write share one catalog.
+  {
+    definition: {
+      ...linkActionToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: true,
+    },
+    execute: linkActionTool,
+    exposure: expose(GENERAL_TAGS, {
+      defaultPermissionRules: allow(linkActionToolDef.name),
+      availability: (ctx) => isLinkActionAvailable(ctx.cwd, ctx.settingsScope),
     }),
   },
   // InjectCredential:把 cookie 凭证注入内置浏览器(恢复登录态)。审批由工具内部

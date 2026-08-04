@@ -49,6 +49,11 @@ export interface PublishEntry {
  */
 export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
   {
+    directory: "packages/link",
+    name: "@cjhyy/code-shell-link",
+    publish: true,
+  },
+  {
     directory: "packages/core",
     name: "@cjhyy/code-shell-core",
     publish: true,

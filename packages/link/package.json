@@ -1,0 +1,37 @@
+{
+  "name": "@cjhyy/code-shell-link",
+  "version": "0.7.1",
+  "description": "Framework-independent provider manifests and authorization guides for CodeShell Link.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun run clean && tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "test": "bun test src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/link"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}

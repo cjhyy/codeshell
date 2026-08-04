@@ -21,6 +21,7 @@
       "@cjhyy/code-shell-core/internal": ["packages/core/src/index.internal.ts"],
       "@cjhyy/code-shell-core/extension": ["packages/core/src/index.extension.ts"],
       "@cjhyy/code-shell-core/*": ["packages/core/src/*"],
+      "@cjhyy/code-shell-link": ["packages/link/src/index.ts"],
       "@cjhyy/code-shell-capability-coding": ["packages/coding/src/index.ts"],
       "@cjhyy/code-shell-capability-coding/capability": ["packages/coding/src/index.capability.ts"],
       "@cjhyy/code-shell-capability-coding/git": ["packages/coding/src/index.git.ts"],
@@ -48,6 +49,7 @@
     "types": ["node", "bun-types"]
   },
   "include": [
+    "packages/link/src/**/*.ts",
     "packages/core/src/**/*.ts",
     "packages/coding/src/**/*.ts",
     "packages/tui/src/**/*.ts",

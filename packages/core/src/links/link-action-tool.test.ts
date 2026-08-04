@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { asGlobalFetch } from "../testing/fetch-stub.js";
 import { setDefaultCredentialAccess, type CredentialAccess } from "../credentials/access.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { linkActionTool } from "./link-action-tool.js";
+import { runCliLinkCommand } from "./cli.js";
 import { listLocalLinkProviders, validateLocalLinkToken } from "./providers.js";
 
 const cwd = "/repo";
@@ -17,7 +21,10 @@ interface GithubState {
   listeners?: Set<() => void>;
 }
 
-function githubAccess(state: GithubState): CredentialAccess {
+function githubAccess(
+  state: GithubState,
+  backend: "http-token" | "cli" = "http-token",
+): CredentialAccess {
   const credential = {
     id: "link-github-fine-grained-pat",
     type: "link" as const,
@@ -27,7 +34,9 @@ function githubAccess(state: GithubState): CredentialAccess {
       linkProvider: "github",
       linkConnectionMethod: "fine-grained-pat",
       linkExecutionRuntime: "local" as const,
+      linkExecutionBackend: backend,
       agentExposable: false,
+      linkAccountId: "42",
       linkAccountLabel: "octocat",
       linkLastVerifiedAt: "2026-08-02T00:00:00.000Z",
     },
@@ -48,7 +57,26 @@ function githubAccess(state: GithubState): CredentialAccess {
   };
 }
 
-afterEach(() => setDefaultCredentialAccess(null));
+afterEach(() => {
+  setDefaultCredentialAccess(null);
+  delete process.env.CODESHELL_CLI_LINK_HANG;
+  delete process.env.CODESHELL_CLI_LINK_MARKER;
+});
+
+function installFakeGithubCli(directory: string): void {
+  const command = join(directory, "gh");
+  writeFileSync(
+    command,
+    `#!${process.execPath}\n` +
+      `const fs = require("node:fs");\n` +
+      `const args = process.argv.slice(2);\n` +
+      `const endpoint = args[1] || "";\n` +
+      `if (endpoint === "user") { process.stdout.write(JSON.stringify({ id: 42, login: "octocat" })); process.exit(0); }\n` +
+      `if (process.env.CODESHELL_CLI_LINK_HANG === "1") { fs.writeFileSync(process.env.CODESHELL_CLI_LINK_MARKER, "started"); setInterval(() => {}, 1000); }\n` +
+      `else { process.stdout.write(JSON.stringify([{ id: 1, full_name: "acme/repo" }])); }\n`,
+  );
+  chmodSync(command, 0o755);
+}
 
 describe("local Link providers", () => {
   test("registers ten unique local-first providers with actions", () => {
@@ -74,8 +102,17 @@ describe("local Link providers", () => {
     let authorization = "";
     const validation = await validateLocalLinkToken("github", " github_pat_private ", {
       fetchImpl: (async (url: string | URL | Request, init?: RequestInit) => {
-        expect(String(url)).toBe("https://api.github.com/user");
         authorization = new Headers(init?.headers).get("authorization") ?? "";
+        if (String(url).startsWith("https://api.github.com/user/repos?")) {
+          return new Response(
+            JSON.stringify([
+              { id: 1, full_name: "octocat/hello-world" },
+              { id: 2, full_name: "acme/private-repo" },
+            ]),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        expect(String(url)).toBe("https://api.github.com/user");
         return new Response(JSON.stringify({ id: 42, login: "octocat", name: "Octo Cat" }), {
           status: 200,
           headers: { "content-type": "application/json" },
@@ -84,8 +121,15 @@ describe("local Link providers", () => {
     });
     expect(authorization).toBe("Bearer github_pat_private");
     expect(validation.identity).toMatchObject({ externalAccountId: "42", label: "octocat" });
+    expect(validation.identity.resourceLabels).toEqual([
+      "octocat/hello-world",
+      "acme/private-repo",
+    ]);
     expect(JSON.stringify(validation)).not.toContain("github_pat_private");
     expect(validation.capabilityIds).toContain("github.list_repositories");
+    expect(validation.capabilityIds).toContain("github.get_file");
+    expect(validation.capabilityIds).toContain("github.get_issue");
+    expect(validation.capabilityIds).toContain("github.get_pull_request");
   });
 });
 
@@ -205,6 +249,66 @@ describe("LinkAction tool", () => {
       expect(result.error).toContain("disconnected");
     } finally {
       globalThis.fetch = previousFetch;
+    }
+  });
+
+  test("runs a CLI connection without resolving a token and kills it on disconnect", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "codeshell-link-cli-"));
+    const marker = join(directory, "started");
+    const previousPath = process.env.PATH;
+    installFakeGithubCli(directory);
+    process.env.PATH = `${directory}:${previousPath ?? ""}`;
+    const state: GithubState = { connected: true, resolveCalls: 0 };
+    setDefaultCredentialAccess(githubAccess(state, "cli"));
+    const cliContext = { ...context(), cwd: directory } as ToolContext;
+    try {
+      const probe = await runCliLinkCommand(
+        "github",
+        "gh",
+        ["api", "user", "--hostname", "github.com"],
+        { timeoutMs: 5_000 },
+      );
+      expect(JSON.parse(probe.stdout)).toEqual({ id: 42, login: "octocat" });
+      const connected = JSON.parse(
+        await linkActionTool(
+          { provider: "github", action: "list_repositories", params: { limit: 10 } },
+          cliContext,
+        ),
+      );
+      expect(connected).toMatchObject({
+        kind: "action_result",
+        provider: "github",
+        data: { repositories: [{ full_name: "acme/repo" }] },
+      });
+      expect(state.resolveCalls).toBe(0);
+
+      process.env.CODESHELL_CLI_LINK_HANG = "1";
+      process.env.CODESHELL_CLI_LINK_MARKER = marker;
+      const pending = linkActionTool(
+        { provider: "github", action: "list_repositories", params: {} },
+        cliContext,
+      );
+      for (let attempt = 0; attempt < 100 && !existsSync(marker); attempt += 1) {
+        await Bun.sleep(10);
+      }
+      expect(existsSync(marker)).toBe(true);
+      state.connected = false;
+      for (const listener of state.listeners ?? []) listener();
+      const disconnected = JSON.parse(await pending);
+      expect(disconnected.kind).toBe("error");
+      expect(disconnected.error).toMatch(/abort|disconnect/i);
+      expect(state.resolveCalls).toBe(0);
+
+      const next = JSON.parse(
+        await linkActionTool(
+          { provider: "github", action: "list_repositories", params: {} },
+          cliContext,
+        ),
+      );
+      expect(next.error).toContain("not connected locally");
+    } finally {
+      process.env.PATH = previousPath;
+      rmSync(directory, { recursive: true, force: true });
     }
   });
 });

@@ -55,6 +55,28 @@ describe("UseCredential tool", () => {
     expect(JSON.stringify(out)).not.toContain("secretval");
   });
 
+  test("provider-owned Link credentials stay behind LinkAction", async () => {
+    const store = new CredentialStore(cwd);
+    store.save("user", {
+      id: "link-github-fine-grained-pat",
+      type: "link",
+      label: "GitHub local",
+      secret: "github_pat_private",
+      meta: {
+        linkProvider: "github",
+        linkExecutionRuntime: "local",
+        agentExposable: false,
+      },
+    });
+    const list = parse(await useCredentialTool({}, ctxWith(cwd, "允许本次")));
+    expect(list).toEqual({ kind: "list", credentials: [] });
+    const direct = parse(
+      await useCredentialTool({ id: "link-github-fine-grained-pat" }, ctxWith(cwd, "允许本次")),
+    );
+    expect(direct.kind).toBe("error");
+    expect(JSON.stringify(direct)).not.toContain("github_pat_private");
+  });
+
   test("id → token returns value (after approval)", async () => {
     new CredentialStore(cwd).save("user", {
       id: "figma",

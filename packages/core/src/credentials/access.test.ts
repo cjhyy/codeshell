@@ -6,6 +6,10 @@ describe("createIpcCredentialAccess", () => {
   test("uses snapshots for metadata/env and internal requests for secret operations", async () => {
     const [main, worker] = createInProcessTransport();
     const access = createIpcCredentialAccess(worker);
+    let snapshotNotifications = 0;
+    const unsubscribe = access.subscribe?.(() => {
+      snapshotNotifications += 1;
+    });
     const snapshot: CredentialSnapshot = {
       revision: 1,
       entries: [
@@ -22,6 +26,7 @@ describe("createIpcCredentialAccess", () => {
       ],
     };
     main.send({ jsonrpc: "2.0", method: "desktop/credentialSnapshot", params: { ...snapshot } });
+    expect(snapshotNotifications).toBe(1);
 
     expect(access.listMasked("/repo", "full").map((c) => c.id)).toEqual(["figma", "xhs"]);
     expect(access.resolveMeta("/repo", "figma", "full")?.label).toBe("Figma");
@@ -67,5 +72,6 @@ describe("createIpcCredentialAccess", () => {
       "desktop/credentialMaterializeCookie",
       "desktop/oauthAccessResolve",
     ]);
+    unsubscribe?.();
   });
 });

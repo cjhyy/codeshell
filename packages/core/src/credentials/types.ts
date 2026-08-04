@@ -125,6 +125,28 @@ export interface Credential {
     domain?: string;
     scope?: "domain" | "all";
     switchMode?: "clear" | "merge";
+    /** Link provider id for credentials owned by a local/server app connection. */
+    linkProvider?: string;
+    /** Provider-specific connection method, e.g. fine-grained-pat or github-app. */
+    linkConnectionMethod?: string;
+    /** Where Link actions execute. Local is preferred when both runtimes are usable. */
+    linkExecutionRuntime?: "local" | "server";
+    /** How a local Link credential was obtained without exposing its secret to the renderer. */
+    linkAuthSource?: "manual-token" | "github-cli" | "cli-session" | "browser-oauth";
+    /** Fixed execution adapter. CLI bindings never resolve or copy a provider token. */
+    linkExecutionBackend?: "http-token" | "cli";
+    /** False for provider-owned Link secrets that must only flow through LinkAction. */
+    agentExposable?: boolean;
+    /** Stable upstream account/user id returned by the provider validation endpoint. */
+    linkAccountId?: string;
+    /** Human-readable upstream account label shown in the Link page. */
+    linkAccountLabel?: string;
+    /** Safe resource labels returned during validation for a compact Link card preview. */
+    linkResourceLabels?: string[];
+    /** Provider Action ids enabled for this connection. */
+    linkCapabilityIds?: string[];
+    /** ISO timestamp of the last successful live provider validation. */
+    linkLastVerifiedAt?: string;
     /** OAuth provider/integration id, e.g. "figma". */
     oauthProvider?: string;
     /** MCP server identity associated with an advanced OAuth login. */

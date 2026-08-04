@@ -40,6 +40,17 @@ const BASE_DESCRIPTION =
   "(use it as `yt-dlp --cookies <cookiesFile>` / `curl -b <cookiesFile>`). " +
   "Each use is gated by a quick user approval unless auto-approve is on.";
 
+function isAgentExposableCredential(
+  credential: Pick<import("./access.js").CredentialMetadata, "type" | "meta">,
+): boolean {
+  if (credential.meta?.agentExposable === false) return false;
+  return !(
+    credential.type === "link" &&
+    credential.meta?.linkExecutionRuntime === "local" &&
+    credential.meta.linkProvider
+  );
+}
+
 export const useCredentialToolDef: ToolDefinition = {
   name: TOOL_NAME,
   description: BASE_DESCRIPTION,
@@ -64,7 +75,7 @@ export const useCredentialToolDef: ToolDefinition = {
  */
 export function useCredentialToolDefFor(cwd: string): ToolDefinition {
   try {
-    const list = getCredentialAccess().listMasked(cwd, "full");
+    const list = getCredentialAccess().listMasked(cwd, "full").filter(isAgentExposableCredential);
     if (list.length === 0) return useCredentialToolDef;
     const names = list.map((c) => `${c.id} (${c.type})`).join(", ");
     return {
@@ -144,6 +155,7 @@ export async function useCredentialTool(
   if (!id) {
     const credentials = access
       .listMasked(cwd, scope)
+      .filter(isAgentExposableCredential)
       .map((c) => ({ id: c.id, label: c.label, type: c.type }));
     return json({ kind: "list", credentials });
   }
@@ -151,6 +163,12 @@ export async function useCredentialTool(
   const cred = access.resolveMeta(cwd, id, scope);
   if (!cred) {
     return json({ kind: "error", error: `凭证不存在: "${id}"。调用本工具(无参)可列出可用凭证。` });
+  }
+  if (!isAgentExposableCredential(cred)) {
+    return json({
+      kind: "error",
+      error: `凭证「${cred.label}」只能通过 Link Action 使用，不能读取原始 Token。`,
+    });
   }
 
   // 取值前过门
