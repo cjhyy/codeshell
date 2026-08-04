@@ -34,7 +34,6 @@ const root = resolve(cwd, "..");
 const repoRoot = resolve(root, "..", "..");
 const linkDir = resolve(repoRoot, "packages/link");
 const coreDir = resolve(repoRoot, "packages/core");
-const coreDist = resolve(coreDir, "dist/index.js");
 const codingDir = resolve(repoRoot, "packages/coding");
 // cdp is bundled into main by esbuild, so a stale dist ships old browser-action
 // code into the dev app just as silently as it did into installers.
