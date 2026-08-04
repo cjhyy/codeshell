@@ -1,11 +1,30 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { buildLinkCatalog } from "./link-catalog";
-import {
+import type { LocalLinkProviderView } from "../../preload/types";
+import type { MaskedCredentialView } from "./types";
+
+// The mini-DOM cannot host Radix portals, so dialogs render inline (mirrors
+// PetLongTaskSection.test.tsx). Must run before LinkTab/DialogProvider load.
+mock.module("@/components/ui/dialog", () => ({
+  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
+    open ? React.createElement("div", null, children) : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", null, children),
+  DialogHeader: ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", null, children),
+  DialogFooter: ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", null, children),
+  DialogTitle: ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", null, children),
+  DialogDescription: ({ children }: { children: React.ReactNode }) =>
+    React.createElement("div", null, children),
+}));
+
+const {
   buildCliLinkConnectionRequest,
-  buildLocalLinkCredential,
   ChatGatewayTab,
   CliQuickAuthPanel,
   gatewayCapabilityLabels,
@@ -13,10 +32,8 @@ import {
   LinkTab,
   oauthErrorRequiresRelogin,
   resolvePreferredLinkRuntime,
-} from "./LinkTab";
-import type { LocalLinkProviderView } from "../../preload/types";
-import type { MaskedCredentialView } from "./types";
-import { DialogProvider } from "../ui/DialogProvider";
+} = await import("./LinkTab");
+const { DialogProvider } = await import("../ui/DialogProvider");
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -407,30 +424,166 @@ describe("LinkTab integrations", () => {
     expect(buttonWithLabel(container, "停止")).toBeDefined();
   });
 
-  test("builds a local credential with a runtime-specific id so server OAuth stays independent", () => {
-    const github = buildLinkCatalog(LINK_PROVIDER_FIXTURES, "zh")
-      .flatMap((category) => category.items)
-      .find((item) => item.id === "github");
-    if (!github) throw new Error("missing GitHub catalog fixture");
-    const method = github.connectionMethods.find(
-      (candidate) => candidate.executionRuntime === "local",
-    );
-    if (!method) throw new Error("missing GitHub local method fixture");
-
-    expect(buildLocalLinkCredential(github, method, "", " github_pat_local ")).toEqual({
-      id: "link-github-fine-grained-pat",
-      type: "link",
-      label: "GitHub · GitHub 登录 / PAT",
-      secret: "github_pat_local",
-      autoUseByAI: false,
-      meta: {
-        linkProvider: "github",
-        linkConnectionMethod: "fine-grained-pat",
-        linkExecutionRuntime: "local",
-        linkAuthSource: "manual-token",
-        agentExposable: false,
+  test("keeps legacy link credentials without provider meta visible and deletable", async () => {
+    ensureMiniDom();
+    const removals: Array<[string, string, string]> = [];
+    let all: MaskedCredentialView[] = [
+      { id: "team-notion-token", type: "link", label: "旧版 Notion", hasSecret: true },
+    ];
+    Object.assign(window, {
+      codeshell: {
+        openExternal: async () => undefined,
+        credentials: {
+          list: async () => all,
+          remove: async (cwd: string, scope: string, id: string) => {
+            removals.push([cwd, scope, id]);
+            all = all.filter((credential) => credential.id !== id);
+          },
+        },
+        links: {
+          listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
+          cliStatus: async () => ({
+            providerId: "github",
+            command: "gh",
+            installed: false,
+            authenticated: false,
+          }),
+          connectCli: async () => undefined,
+          connectLocal: async () => undefined,
+        },
+        mcpOAuth: {
+          refresh: async () => undefined,
+          login: async () => undefined,
+          logout: async () => ({ removed: true, remoteRevoked: true }),
+        },
       },
     });
+
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <DialogProvider>
+          <LinkTab cwd="/repo" />
+        </DialogProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    const legacyRow = findElements(container, "DIV").find(
+      (node) => reactPropsOf(node)["data-link-legacy-credential"] === "team-notion-token",
+    );
+    expect(legacyRow).toBeDefined();
+    expect(reactChildText(reactPropsOf(legacyRow).children)).toContain("旧版 Notion");
+
+    const remove = buttonWithLabel(container, "删除");
+    expect(remove).toBeDefined();
+    await act(async () => {
+      reactPropsOf(remove).onClick();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      await flushMicrotasks();
+    });
+    expect(removals).toEqual([["/repo", "user", "team-notion-token"]]);
+    expect(
+      findElements(container, "DIV").some(
+        (node) => reactPropsOf(node)["data-link-legacy-credential"] === "team-notion-token",
+      ),
+    ).toBe(false);
+  });
+
+  test("connects a local method through links.connectLocal with the pasted secret", async () => {
+    ensureMiniDom();
+    const connectRequests: unknown[] = [];
+    let cliStatusCalls = 0;
+    Object.assign(window, {
+      codeshell: {
+        openExternal: async () => undefined,
+        credentials: { list: async () => [] },
+        links: {
+          listLocalProviders: async () => LINK_PROVIDER_FIXTURES,
+          cliStatus: async () => {
+            cliStatusCalls += 1;
+            return {
+              providerId: "github",
+              command: "gh",
+              installed: false,
+              authenticated: false,
+            };
+          },
+          connectCli: async () => undefined,
+          connectLocal: async (request: unknown) => {
+            connectRequests.push(request);
+            return { identity: { label: "octocat" } };
+          },
+        },
+        mcpOAuth: {
+          refresh: async () => undefined,
+          login: async () => undefined,
+          logout: async () => ({ removed: true, remoteRevoked: true }),
+        },
+      },
+    });
+
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <DialogProvider>
+          <LinkTab cwd="/repo" />
+        </DialogProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    const githubLocalCard = findElements(container, "ARTICLE").find(
+      (article) =>
+        reactPropsOf(article)["data-link-integration"] === "github" &&
+        reactPropsOf(article)["data-link-runtime"] === "local",
+    );
+    if (!githubLocalCard) throw new Error("missing GitHub local card");
+    const connect = buttonWithLabel(githubLocalCard, "连接本地");
+    expect(connect).toBeDefined();
+    await act(async () => {
+      reactPropsOf(connect).onClick();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(cliStatusCalls).toBe(1);
+    const secretInput = findElements(container, "INPUT").find(
+      (input) => reactPropsOf(input).id === "link-local-secret",
+    );
+    expect(secretInput).toBeDefined();
+    await act(async () => {
+      reactPropsOf(secretInput).onChange({ target: { value: "github_pat_local" } });
+      await flushMicrotasks();
+    });
+
+    // The card trigger and the dialog submit share the "连接本地" label; the
+    // dialog renders after the sections, so the submit is the last match.
+    const saveButtons = findElements(container, "BUTTON").filter(
+      (button) => reactChildText(reactPropsOf(button).children) === "连接本地",
+    );
+    const save = saveButtons[saveButtons.length - 1];
+    expect(reactPropsOf(save).disabled).toBe(false);
+    await act(async () => {
+      reactPropsOf(save).onClick();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      await flushMicrotasks();
+    });
+
+    expect(connectRequests).toEqual([
+      {
+        cwd: "/repo",
+        providerId: "github",
+        methodId: "fine-grained-pat",
+        label: "GitHub · GitHub 登录 / PAT",
+        token: "github_pat_local",
+        existingId: undefined,
+      },
+    ]);
   });
 
   test("offers a zero-copy CLI session before the manual token fallback", async () => {

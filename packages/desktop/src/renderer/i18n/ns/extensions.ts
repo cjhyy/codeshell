@@ -608,6 +608,11 @@ export const extensions = {
         localSaved: "已连接 {name} 的本地方式",
         localDisconnected: "已断开 {name} 的本地方式",
         localCredentialSaved: "本地连接已保存",
+        legacySection: "旧版凭据",
+        legacySectionDescription:
+          "由旧版通用表单创建、未关联具体应用的 Link 凭据；不再支持编辑，只能删除。",
+        legacyDelete: "删除",
+        legacyDeleted: "已删除旧版凭据「{label}」",
         localCredentialVerified: "已验证 {account}",
         connectedViaGithubCli: "通过本机 GitHub CLI 授权",
         connectedViaCli: "通过本机 {command} 会话执行；Link 不保存服务商 Token",
@@ -1524,6 +1529,11 @@ export const extensions = {
         localSaved: "Connected {name} locally",
         localDisconnected: "Disconnected the local {name} connection",
         localCredentialSaved: "Local connection saved",
+        legacySection: "Legacy credentials",
+        legacySectionDescription:
+          "Link credentials created by the old generic form without an app binding; they can no longer be edited, only deleted.",
+        legacyDelete: "Delete",
+        legacyDeleted: "Deleted legacy credential “{label}”",
         localCredentialVerified: "Verified {account}",
         connectedViaGithubCli: "Authorized through GitHub CLI on this device",
         connectedViaCli:

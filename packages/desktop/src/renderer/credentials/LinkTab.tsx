@@ -47,7 +47,7 @@ import {
   type LinkIntegration,
 } from "./link-catalog";
 import { linkOAuthPrimaryAction } from "./link-oauth-actions";
-import type { CredentialView, MaskedCredentialView } from "./types";
+import type { MaskedCredentialView } from "./types";
 import { DingTalkSetupDialog } from "./DingTalkSetupDialog";
 import type {
   ImGatewayChannel,
@@ -59,7 +59,6 @@ import type {
   BrowserLinkAuthPromptView,
   BrowserLinkAuthStatusView,
   LocalLinkProviderView,
-  LocalLinkValidationView,
   ManagedCliInstallStatusView,
 } from "../../preload/types";
 
@@ -217,35 +216,6 @@ interface LinkMethodEntry {
   method: LinkConnectionMethod;
   credential?: MaskedCredentialView;
   preferredRuntime: LinkExecutionRuntime | null;
-}
-
-export function buildLocalLinkCredential(
-  item: LinkIntegration,
-  method: LinkConnectionMethod,
-  label: string,
-  secret: string,
-  existingId?: string,
-  validation?: LocalLinkValidationView,
-): CredentialView {
-  return {
-    id: existingId ?? `link-${item.id}-${method.id}`,
-    type: "link",
-    label: label.trim() || `${item.name} · ${method.displayName}`,
-    secret: secret.trim(),
-    autoUseByAI: false,
-    meta: {
-      linkProvider: item.id,
-      linkConnectionMethod: method.id,
-      linkExecutionRuntime: "local",
-      linkAuthSource: "manual-token",
-      agentExposable: false,
-      linkAccountId: validation?.identity.externalAccountId,
-      linkAccountLabel: validation?.identity.label,
-      linkResourceLabels: validation?.identity.resourceLabels,
-      linkCapabilityIds: validation?.capabilityIds,
-      linkLastVerifiedAt: validation?.verifiedAt,
-    },
-  };
 }
 
 export function oauthErrorRequiresRelogin(message: string | undefined): boolean {
@@ -605,6 +575,18 @@ export function LinkTab({ cwd }: { cwd: string }) {
     return result;
   }, [byRuntime, catalog, credentials, filter, query, t]);
 
+  /**
+   * 旧版通用表单创建的 type:"link" 凭据没有 linkProvider/oauthProvider meta，
+   * 匹配不到任何 provider 卡片。单独列出来，让用户至少能看到并删除它们。
+   */
+  const legacyCredentials = useMemo(
+    () =>
+      credentials.filter(
+        (credential) => credential.type === "link" && !linkCredentialProvider(credential),
+      ),
+    [credentials],
+  );
+
   const localConnectedCount = [...byRuntime.keys()].filter((key) => key.endsWith(":local")).length;
   const serverConnectedCount = [...byRuntime.keys()].filter((key) =>
     key.endsWith(":server"),
@@ -799,6 +781,20 @@ export function LinkTab({ cwd }: { cwd: string }) {
       await window.codeshell.credentials.remove(cwd, "user", entry.credential!.id);
       toast({ message: t("ext.link.localDisconnected", { name: entry.item.name }) });
     });
+  };
+
+  const removeLegacy = async (credential: MaskedCredentialView) => {
+    if (busyId) return;
+    setBusyId(`legacy:${credential.id}`);
+    try {
+      await window.codeshell.credentials.remove(cwd, "user", credential.id);
+      toast({ message: t("ext.link.legacyDeleted", { label: credential.label }) });
+      await load();
+    } catch (err) {
+      toast({ message: err instanceof Error ? err.message : String(err), variant: "error" });
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const noMatches = entries.local.length === 0 && entries.server.length === 0;
@@ -1004,6 +1000,55 @@ export function LinkTab({ cwd }: { cwd: string }) {
           </div>
         )}
       </section>
+
+      {legacyCredentials.length > 0 ? (
+        <section className="space-y-3" aria-labelledby="link-legacy-title">
+          <div>
+            <h3 id="link-legacy-title" className="text-sm font-semibold tracking-tight">
+              {t("ext.link.legacySection")}
+            </h3>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+              {t("ext.link.legacySectionDescription")}
+            </p>
+          </div>
+          <div className="space-y-2">
+            {legacyCredentials.map((credential) => (
+              <div
+                key={credential.id}
+                data-link-legacy-credential={credential.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-3.5 py-2.5"
+              >
+                <div className="min-w-0">
+                  <div
+                    className="truncate text-sm font-medium text-foreground"
+                    title={credential.label}
+                  >
+                    {credential.label}
+                  </div>
+                  <div
+                    className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground"
+                    title={credential.id}
+                  >
+                    {credential.id}
+                    {credential.meta?.linkLastVerifiedAt
+                      ? ` · ${new Date(credential.meta.linkLastVerifiedAt).toLocaleDateString()}`
+                      : ""}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-muted-foreground hover:text-status-err"
+                  disabled={Boolean(busyId)}
+                  onClick={() => void removeLegacy(credential)}
+                >
+                  {t("ext.link.legacyDelete")}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <Dialog
         open={Boolean(localDialog)}

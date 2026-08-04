@@ -45,6 +45,14 @@ export function resolveCredentialValueForWorker(req: CredentialResolveRequest): 
   if (!cred || !isCredentialSecretAvailable(cred.secret)) {
     throw new Error(`credential "${req.id}" is unavailable`);
   }
+  if (req.purpose !== "link" && cred.meta?.agentExposable === false) {
+    // Trust boundary lives here in the main process, not in the worker: a
+    // credential marked agentExposable:false may only feed Link Action
+    // execution and must never surface its raw token to agent-facing purposes.
+    throw new Error(
+      `credential "${req.id}" is restricted to Link Actions and never returns its raw token`,
+    );
+  }
   const allowed =
     req.purpose === "link"
       ? cred.type === "link" &&

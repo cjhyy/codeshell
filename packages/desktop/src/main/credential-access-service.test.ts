@@ -230,6 +230,35 @@ describe("desktop credential access service", () => {
     ).toThrow(/not a local Link credential/);
   });
 
+  test("agent-facing purposes never resolve a credential marked agentExposable:false", () => {
+    new CredentialStore(cwd).save("user", {
+      id: "link-github-fine-grained-pat",
+      type: "link",
+      label: "GitHub local",
+      secret: "github_pat_private",
+      meta: { linkProvider: "github", linkExecutionRuntime: "local", agentExposable: false },
+    });
+
+    for (const purpose of ["use", "mcp"] as const) {
+      expect(() =>
+        resolveCredentialValueForWorker({
+          cwd,
+          id: "link-github-fine-grained-pat",
+          scope: "full",
+          purpose,
+        }),
+      ).toThrow(/Link Action/);
+    }
+    expect(
+      resolveCredentialValueForWorker({
+        cwd,
+        id: "link-github-fine-grained-pat",
+        scope: "full",
+        purpose: "link",
+      }),
+    ).toEqual({ value: "github_pat_private" });
+  });
+
   test("legacy structured env exposure is filtered from metadata and worker env", () => {
     const sentinelRefresh = "sentinel-refresh-token";
     const sentinelClientSecret = "sentinel-client-QX9Z";
