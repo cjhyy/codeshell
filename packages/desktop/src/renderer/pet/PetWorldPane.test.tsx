@@ -191,6 +191,97 @@ describe("PetWorldPane", () => {
     else testWindow.codeshell = originalCodeshell;
   });
 
+  test("restore-dismissed keeps handled follow-ups hidden while restoring session rows", async () => {
+    ensureMiniDom();
+    const projection: PetProjectionSnapshot = {
+      ...reclaimed,
+      sessions: [
+        {
+          agentSessionId: "session-a",
+          runState: "terminal",
+          queueDepth: 0,
+          lastActivityAt: 1_500,
+          pendingDecisionCount: 0,
+          terminal: { status: "completed", at: 1_500 },
+          freshness: {
+            source: "disk",
+            observedAt: 1_500,
+            workerState: "reclaimed",
+          },
+          title: "Completed session",
+        },
+      ],
+    };
+    const updates: unknown[] = [];
+    let resolveUpdate: ((snapshot: PetWorkInboxSnapshot) => void) | undefined;
+    const testWindow = window as unknown as Record<string, any>;
+    const originalCodeshell = testWindow.codeshell;
+    testWindow.codeshell = {
+      pet: {
+        getDismissedWorkItemIds: async () => ({
+          revision: 1,
+          dismissedIds: ["completed:session-a", "follow-up:followup-handled"],
+        }),
+        updateDismissedWorkItemIds: (update: unknown) => {
+          updates.push(update);
+          return new Promise<PetWorkInboxSnapshot>((resolve) => {
+            resolveUpdate = resolve;
+          });
+        },
+        onDismissedWorkItemIdsChanged: () => () => undefined,
+        getSummaries: async () => [
+          {
+            followUpId: "followup-handled",
+            sessionId: "session-a",
+            title: "Handled follow-up",
+            terminalAt: 1_500,
+            text: "已处理的跟进事项",
+          },
+        ],
+      },
+    };
+    const container = document.createElement("div") as unknown as HTMLElement;
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <DialogProvider>
+          <PetWorldPane projection={projection} status="ready" now={2_000} />
+        </DialogProvider>,
+      );
+      // useFollowUps 的首次拉取走 setTimeout(0)，微任务冲不掉。
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await flushMicrotasks();
+    });
+    // 已处理的跟进（follow-up:* 已在 dismissed 集合里）不应显示。
+    expect(textOf(container)).not.toContain("已处理的跟进事项");
+
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "data-pet-work-drawer")).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "data-pet-work-restore")).onClick();
+      await flushMicrotasks();
+    });
+
+    // 「恢复已忽略」只还原会话行，绝不能把已处理的跟进复活——
+    // 主进程回包之前，本地乐观状态就必须保住 follow-up:* 的已处理标记。
+    expect(textOf(container)).toContain("Completed session");
+    expect(textOf(container)).not.toContain("已处理的跟进事项");
+    expect(updates).toEqual([{ action: "clear" }]);
+
+    await act(async () => {
+      resolveUpdate?.({ revision: 2, dismissedIds: ["follow-up:followup-handled"] });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toContain("已处理的跟进事项");
+
+    await act(async () => root.unmount());
+    if (originalCodeshell === undefined) delete testWindow.codeshell;
+    else testWindow.codeshell = originalCodeshell;
+  });
+
   test("does not let an equal-revision inbox event undo an optimistic dismissal", async () => {
     ensureMiniDom();
     const projection: PetProjectionSnapshot = {

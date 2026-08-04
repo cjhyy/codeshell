@@ -165,6 +165,67 @@ describe("PetWorkInboxStore", () => {
     }
   });
 
+  test("restore-dismissed clear keeps handled follow-up ids while clearing session rows", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codeshell-pet-work-inbox-restore-"));
+    const file = join(root, "work-inbox.json");
+    try {
+      const store = new PetWorkInboxStore(file);
+      await store.addDurably([
+        "completed:session-a",
+        "follow-up:followup-a",
+        "pending:session-b:req-1",
+        "follow-up:followup-b",
+      ]);
+      expect(await store.clearDurably()).toEqual({
+        revision: 2,
+        dismissedIds: ["follow-up:followup-a", "follow-up:followup-b"],
+      });
+
+      store.add(["completed:session-c"]);
+      expect(store.clear()).toEqual({
+        revision: 4,
+        dismissedIds: ["follow-up:followup-a", "follow-up:followup-b"],
+      });
+      await store.flush();
+
+      const reloaded = new PetWorkInboxStore(file);
+      await reloaded.load();
+      expect(reloaded.getSnapshot().dismissedIds).toEqual([
+        "follow-up:followup-a",
+        "follow-up:followup-b",
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("history eviction drops oldest session ids before follow-up handled ids", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codeshell-pet-work-inbox-evict-"));
+    const file = join(root, "work-inbox.json");
+    try {
+      const store = new PetWorkInboxStore(file);
+      store.add(["follow-up:followup-a"]);
+      store.add(
+        Array.from(
+          { length: MAX_PET_WORK_INBOX_DISMISSED_ITEMS },
+          (_, index) => `other:session-${index}`,
+        ),
+      );
+      const ids = store.getSnapshot().dismissedIds;
+      expect(ids).toHaveLength(MAX_PET_WORK_INBOX_DISMISSED_ITEMS);
+      expect(ids).toContain("follow-up:followup-a");
+      expect(ids).not.toContain("other:session-0");
+
+      const durable = await store.addDurably(["completed:session-late"]);
+      expect(durable.dismissedIds).toHaveLength(MAX_PET_WORK_INBOX_DISMISSED_ITEMS);
+      expect(durable.dismissedIds).toContain("follow-up:followup-a");
+      expect(durable.dismissedIds).toContain("completed:session-late");
+      expect(durable.dismissedIds).not.toContain("other:session-1");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test("serializes the renderer's durable clear with a Mimi follow-up claim", async () => {
     const root = await mkdtemp(join(tmpdir(), "codeshell-pet-work-inbox-clear-"));
     const file = join(root, "work-inbox.json");
@@ -175,7 +236,9 @@ describe("PetWorkInboxStore", () => {
       const clear = store.clearDurably();
 
       expect((await claim).added).toBe(true);
-      expect(await clear).toEqual({ revision: 3, dismissedIds: [] });
+      // The serialized clear lands after the claim and must keep the freshly
+      // claimed follow-up handled state while restoring the session row.
+      expect(await clear).toEqual({ revision: 3, dismissedIds: ["follow-up:followup-a"] });
       const reloaded = new PetWorkInboxStore(file);
       await reloaded.load();
       expect(reloaded.getSnapshot()).toEqual(store.getSnapshot());

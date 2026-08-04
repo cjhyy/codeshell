@@ -6,7 +6,7 @@ import type {
   PetWorkInboxUpdate,
 } from "../../preload/types";
 import React from "react";
-import { petFollowUpStateId } from "../../shared/pet-work-item-id";
+import { isPetFollowUpStateId, petFollowUpStateId } from "../../shared/pet-work-item-id";
 import { PetOverviewHeader } from "./PetOverviewHeader";
 import { PetWorkTree } from "./PetWorkTree";
 import { PetLongTaskSection } from "./PetLongTaskSection";
@@ -119,7 +119,9 @@ export function PetWorldPane({
     [enqueueDismissedMutation],
   );
   const restoreDismissed = React.useCallback(() => {
-    const next = new Set<string>();
+    // 只还原会话行；follow-up:* 是已处理跟进的持久回执，主进程的 clear 也会
+    // 保留它们，本地乐观状态必须一致，否则回包前已处理的跟进会闪现复活。
+    const next = new Set([...dismissedIdsRef.current].filter(isPetFollowUpStateId));
     dismissedIdsRef.current = next;
     setDismissedIds(next);
     enqueueDismissedMutation({ action: "clear" }, next);

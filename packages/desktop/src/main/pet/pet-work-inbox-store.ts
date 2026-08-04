@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import {
   MAX_PET_WORK_INBOX_DISMISSED_ITEMS,
   MAX_PET_WORK_ITEM_ID_LENGTH,
+  isPetFollowUpStateId,
   isPetWorkItemId,
 } from "../../shared/pet-work-item-id.js";
 
@@ -30,6 +31,28 @@ interface PetWorkInboxFile {
 function normalizeIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.filter(isPetWorkItemId))].slice(-MAX_PET_WORK_INBOX_DISMISSED_ITEMS);
+}
+
+/**
+ * Bounds the dismissed history by evicting the oldest session-row ids first.
+ * `follow-up:*` handled receipts go last: their summary rows outlive session
+ * churn (rows live as long as the session), so evicting one would resurrect an
+ * already-handled follow-up after ~1000 later dismissals.
+ */
+function evictOverflow(ids: Set<string>): boolean {
+  let changed = false;
+  while (ids.size > MAX_PET_WORK_INBOX_DISMISSED_ITEMS) {
+    let victim: string | undefined;
+    for (const id of ids) {
+      if (!isPetFollowUpStateId(id)) {
+        victim = id;
+        break;
+      }
+    }
+    ids.delete(victim ?? ids.values().next().value!);
+    changed = true;
+  }
+  return changed;
 }
 
 export class PetWorkInboxStore {
@@ -74,10 +97,7 @@ export class PetWorkInboxStore {
       this.dismissedIds.add(id);
       changed = true;
     }
-    while (this.dismissedIds.size > MAX_PET_WORK_INBOX_DISMISSED_ITEMS) {
-      this.dismissedIds.delete(this.dismissedIds.values().next().value!);
-      changed = true;
-    }
+    if (evictOverflow(this.dismissedIds)) changed = true;
     if (changed) this.changed();
     return this.getSnapshot();
   }
@@ -95,22 +115,29 @@ export class PetWorkInboxStore {
    * Durable counterpart of clear() used by the renderer IPC. It shares the
    * same serialized queue as Mimi's exact follow-up claims, so a clear/add
    * race has one deterministic disk order instead of exposing transient state.
+   * Like clear(), it only restores session rows: `follow-up:*` handled state
+   * survives, otherwise every already-handled follow-up would resurrect.
    */
   async clearDurably(): Promise<PetWorkInboxSnapshot> {
     const previous = this.writeQueue;
     const run = previous
       .catch(() => undefined)
       .then(async () => {
-        if (this.dismissedIds.size === 0) {
+        const retained = [...this.dismissedIds].filter(isPetFollowUpStateId);
+        if (retained.length === this.dismissedIds.size) {
           await this.persist();
           return this.getSnapshot();
         }
         const staged: PetWorkInboxSnapshot = {
           revision: this.revision + 1,
-          dismissedIds: [],
+          dismissedIds: retained,
         };
         await this.persist(staged);
-        this.dismissedIds.clear();
+        // Re-filter the latest memory state: a follow-up claim may have landed
+        // while the staged file was being written and must not be dropped.
+        for (const id of [...this.dismissedIds]) {
+          if (!isPetFollowUpStateId(id)) this.dismissedIds.delete(id);
+        }
         this.revision += 1;
         const snapshot = this.getSnapshot();
         for (const listener of this.listeners) listener(snapshot);
@@ -159,10 +186,7 @@ export class PetWorkInboxStore {
           addedIds.push(id);
         }
         let changed = addedIds.length > 0;
-        while (stagedIds.size > MAX_PET_WORK_INBOX_DISMISSED_ITEMS) {
-          stagedIds.delete(stagedIds.values().next().value!);
-          changed = true;
-        }
+        if (evictOverflow(stagedIds)) changed = true;
         if (!changed) {
           // Also repairs a prior failed legacy/UI write before declaring an
           // already-present item durable.
@@ -180,9 +204,7 @@ export class PetWorkInboxStore {
         // being written. Apply this action on top of the latest memory state;
         // their already-queued write will then persist the merged state.
         for (const id of normalized) this.dismissedIds.add(id);
-        while (this.dismissedIds.size > MAX_PET_WORK_INBOX_DISMISSED_ITEMS) {
-          this.dismissedIds.delete(this.dismissedIds.values().next().value!);
-        }
+        evictOverflow(this.dismissedIds);
         this.revision += 1;
         const snapshot = this.getSnapshot();
         for (const listener of this.listeners) listener(snapshot);
@@ -198,11 +220,15 @@ export class PetWorkInboxStore {
     return await run;
   }
 
+  /** Restores session rows only; `follow-up:*` handled state is kept (see clearDurably). */
   clear(): PetWorkInboxSnapshot {
-    if (this.dismissedIds.size > 0) {
-      this.dismissedIds.clear();
-      this.changed();
+    let changed = false;
+    for (const id of [...this.dismissedIds]) {
+      if (isPetFollowUpStateId(id)) continue;
+      this.dismissedIds.delete(id);
+      changed = true;
     }
+    if (changed) this.changed();
     return this.getSnapshot();
   }
 
