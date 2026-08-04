@@ -185,8 +185,15 @@ jobs:
       # `cp -r`, which the Windows runner's cp rejects ("illegal option -- r").
       # predist.ts rebuilds these too; keeping them here means the `build desktop`
       # step below (which runs first) can already resolve every import.
-      - name: build core + pet + arena + coding + cdp
+      # link: bundled INTO the desktop main process, and its dist is not tracked
+      # by git — so a clean checkout fails the `build desktop` step below with
+      # `Could not resolve "@cjhyy/code-shell-link"`. predist rebuilds it too, but
+      # predist runs AFTER the desktop build, so it must also be built here.
+      # (Same shape as the cdp gap; keep this list in sync with
+      # packages/desktop/scripts/predist.ts's WORKSPACE_BUILD_ORDER.)
+      - name: build link + core + pet + arena + coding + cdp
         run: |
+          bun run --filter '@cjhyy/code-shell-link' build
           bun run --filter '@cjhyy/code-shell-core' build
           bun run --filter '@cjhyy/code-shell-pet' build
           bun run --filter '@cjhyy/code-shell-arena' build
