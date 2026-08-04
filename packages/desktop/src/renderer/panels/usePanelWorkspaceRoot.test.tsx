@@ -39,7 +39,7 @@ describe("usePanelWorkspaceRoot", () => {
       },
     });
 
-    let sessionId: string | null = null;
+    const sessionId: string | null = null;
     let projectPath: string | null = null;
     const hook = await renderHook(() => usePanelWorkspaceRoot(sessionId, projectPath));
     cleanup = hook.unmount;

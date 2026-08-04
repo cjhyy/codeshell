@@ -37,7 +37,7 @@ export async function runRevise(args: {
   // Defensive: refuse to accept a revision that's drastically shorter than v(N) — that's
   // usually the model collapsing into a summary rather than rewriting.
   // Accept if shrinkage < 30% OR new content is still above the minimum length.
-  let acceptedContent = content;
+  const acceptedContent = content;
   const shrinkage = previous.content.length > 0
     ? 1 - acceptedContent.length / previous.content.length
     : 0;

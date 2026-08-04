@@ -85,7 +85,7 @@ export function formatToolArgs(toolName: string, args: Record<string, unknown>):
   const keys = TOOL_ARG_KEYS[toolName] ?? Object.keys(args).slice(0, 2);
   const parts: string[] = [];
   for (const k of keys) {
-    let v = args[k];
+    const v = args[k];
     if (v !== undefined && !k.startsWith("__")) {
       let s = String(v);
       if (toolName === "Bash" && k === "command") s = stripCdPrefix(s);

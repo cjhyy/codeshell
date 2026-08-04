@@ -80,7 +80,7 @@ export class HookRegistry {
     if (!handlers?.length) return {};
 
     const ctx: HookContext = { eventName, data: { ...data } };
-    let aggregated: HookResult = {};
+    const aggregated: HookResult = {};
 
     for (const { handler } of handlers) {
       try {
