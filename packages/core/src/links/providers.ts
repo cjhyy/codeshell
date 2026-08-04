@@ -1,9 +1,12 @@
 import {
   asArray,
   asRecord,
+  assertPathSegment,
   firstString,
   intParam,
   linkRequestJson,
+  pathParam,
+  pathSegmentParam,
   pick,
   stringParam,
 } from "./http.js";
@@ -16,8 +19,8 @@ import type {
 } from "./types.js";
 
 const bearer = (token: string): Record<string, string> => ({ Authorization: `Bearer ${token}` });
-const GITHUB_API_VERSION = "2026-03-10";
-const NOTION_API_VERSION = "2026-03-11";
+const GITHUB_API_VERSION = "2022-11-28";
+const NOTION_API_VERSION = "2022-06-28";
 const githubHeaders = (token: string): Record<string, string> => ({
   ...bearer(token),
   Accept: "application/vnd.github+json",
@@ -135,8 +138,8 @@ const github: LocalLinkProviderSpec = {
       "读取 README",
       "读取 GitHub README；params: owner, repo。",
       async (ctx) => {
-        const owner = stringParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
-        const repo = stringParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+        const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+        const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
         const data =
           asRecord(
             await request(
@@ -165,8 +168,8 @@ const github: LocalLinkProviderSpec = {
       "列出 Issue",
       "列出 GitHub Issue（排除 Pull Request）；params: owner, repo, 可选 limit。",
       async (ctx) => {
-        const owner = stringParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
-        const repo = stringParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+        const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+        const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
         const url = new URL(
           `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`,
         );
@@ -200,15 +203,12 @@ const github: LocalLinkProviderSpec = {
       "读取指定文件",
       "读取 GitHub 仓库文件；params: owner, repo, path, 可选 ref。",
       async (ctx) => {
-        const owner = stringParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
-        const repo = stringParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
-        const path = stringParam(ctx.params, "path", { required: true, maxLength: 2_000 })!;
+        const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+        const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+        const path = pathParam(ctx.params, "path", { required: true, maxLength: 2_000 })!;
         const ref = stringParam(ctx.params, "ref", { maxLength: 300 });
         const url = new URL(
-          `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path
-            .split("/")
-            .map(encodeURIComponent)
-            .join("/")}`,
+          `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path}`,
         );
         if (ref) url.searchParams.set("ref", ref);
         const data = asRecord(await request(ctx, url, { headers: githubHeaders(ctx.token) })) ?? {};
@@ -235,8 +235,8 @@ const github: LocalLinkProviderSpec = {
       "列出 Pull Request",
       "列出 GitHub Pull Request；params: owner, repo, 可选 limit。",
       async (ctx) => {
-        const owner = stringParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
-        const repo = stringParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+        const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+        const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
         const url = new URL(
           `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`,
         );
@@ -269,8 +269,8 @@ const github: LocalLinkProviderSpec = {
       "查看 Issue",
       "查看单个 GitHub Issue；params: owner, repo, issue_number。",
       async (ctx) => {
-        const owner = stringParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
-        const repo = stringParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+        const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+        const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
         const number = intParam(ctx.params, "issue_number", 0, Number.MAX_SAFE_INTEGER);
         return pick(
           await request(
@@ -302,8 +302,8 @@ const github: LocalLinkProviderSpec = {
       "查看 Pull Request",
       "查看单个 GitHub Pull Request；params: owner, repo, pull_number。",
       async (ctx) => {
-        const owner = stringParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
-        const repo = stringParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+        const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+        const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
         const number = intParam(ctx.params, "pull_number", 0, Number.MAX_SAFE_INTEGER);
         return pick(
           await request(
@@ -343,8 +343,8 @@ const github: LocalLinkProviderSpec = {
       "创建 Issue",
       "创建 GitHub Issue；params: owner, repo, title, 可选 body；执行前始终审批。",
       async (ctx) => {
-        const owner = stringParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
-        const repo = stringParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
+        const owner = pathSegmentParam(ctx.params, "owner", { required: true, maxLength: 100 })!;
+        const repo = pathSegmentParam(ctx.params, "repo", { required: true, maxLength: 100 })!;
         const title = stringParam(ctx.params, "title", { required: true, maxLength: 256 })!;
         const body = stringParam(ctx.params, "body", { maxLength: 20_000 });
         const data = await request(
@@ -482,7 +482,7 @@ function figmaFileKey(params: Record<string, unknown>): string {
     stringParam(params, "file_url_or_key", { maxLength: 1_000 }) ??
     stringParam(params, "file_key", { maxLength: 200 });
   if (!value) throw new Error("Missing required Link Action parameter: file_url_or_key");
-  if (!/^https?:\/\//i.test(value)) return value;
+  if (!/^https?:\/\//i.test(value)) return assertPathSegment(value, "file_url_or_key");
   let url: URL;
   try {
     url = new URL(value);
@@ -494,7 +494,7 @@ function figmaFileKey(params: Record<string, unknown>): string {
   }
   const match = url.pathname.match(/\/(?:file|design|board)\/([^/]+)/);
   if (!match?.[1]) throw new Error("Could not find a Figma file key in the URL");
-  return decodeURIComponent(match[1]);
+  return assertPathSegment(decodeURIComponent(match[1]), "file_url_or_key");
 }
 
 const notionHeaders = (token: string) => ({
@@ -558,7 +558,7 @@ const notion: LocalLinkProviderSpec = {
       },
     ),
     action("get_page", "读取页面属性", "读取 Notion 页面属性；params: page_id。", async (ctx) => {
-      const pageId = stringParam(ctx.params, "page_id", { required: true, maxLength: 100 })!;
+      const pageId = pathSegmentParam(ctx.params, "page_id", { required: true, maxLength: 100 })!;
       return pick(
         await request(ctx, `https://api.notion.com/v1/pages/${encodeURIComponent(pageId)}`, {
           headers: notionHeaders(ctx.token),
@@ -733,7 +733,10 @@ const sentry: LocalLinkProviderSpec = {
       "列出项目",
       "列出 Sentry 组织项目；params: organization。",
       async (ctx) => {
-        const org = stringParam(ctx.params, "organization", { required: true, maxLength: 100 })!;
+        const org = pathSegmentParam(ctx.params, "organization", {
+          required: true,
+          maxLength: 100,
+        })!;
         return {
           projects: compactList(
             await request(
@@ -779,7 +782,7 @@ const airtable: LocalLinkProviderSpec = {
       "列出数据表",
       "列出 Airtable 表与字段；params: base_id。",
       async (ctx) => {
-        const baseId = stringParam(ctx.params, "base_id", { required: true, maxLength: 100 })!;
+        const baseId = pathSegmentParam(ctx.params, "base_id", { required: true, maxLength: 100 })!;
         const data =
           asRecord(
             await request(

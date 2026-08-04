@@ -2,7 +2,16 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { asArray, asRecord, firstString, intParam, pick, stringParam } from "./http.js";
+import {
+  asArray,
+  asRecord,
+  firstString,
+  intParam,
+  pathParam,
+  pathSegmentParam,
+  pick,
+  stringParam,
+} from "./http.js";
 import { getLocalLinkProvider } from "./providers.js";
 import type { LocalLinkIdentity, LocalLinkValidationResult } from "./types.js";
 
@@ -476,19 +485,19 @@ async function executeGithubCliAction(
       ]),
     };
   }
-  const owner = stringParam(params, "owner", { required: true, maxLength: 100 })!;
-  const repo = stringParam(params, "repo", { required: true, maxLength: 100 })!;
+  // `gh api` resolves the endpoint against the REST base URL, so dot segments
+  // in argv would escape the fixed path template exactly like in a browser URL.
+  const owner = pathSegmentParam(params, "owner", { required: true, maxLength: 100 })!;
+  const repo = pathSegmentParam(params, "repo", { required: true, maxLength: 100 })!;
   const base = `repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
   if (actionId === "get_readme") {
     const result = githubFile(await api("github", `${base}/readme`, options, run), owner, repo);
     return { ...result, size: undefined };
   }
   if (actionId === "get_file") {
-    const path = stringParam(params, "path", { required: true, maxLength: 2_000 })!;
+    const path = pathParam(params, "path", { required: true, maxLength: 2_000 })!;
     const ref = stringParam(params, "ref", { maxLength: 300 });
-    const endpoint = `${base}/contents/${path.split("/").map(encodeURIComponent).join("/")}${
-      ref ? `?ref=${encodeURIComponent(ref)}` : ""
-    }`;
+    const endpoint = `${base}/contents/${path}${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`;
     return githubFile(await api("github", endpoint, options, run), owner, repo, ref);
   }
   if (actionId === "list_issues") {
@@ -701,7 +710,7 @@ async function executeNotionCliAction(
     };
   }
   if (actionId === "get_page") {
-    const pageId = stringParam(params, "page_id", { required: true, maxLength: 100 })!;
+    const pageId = pathSegmentParam(params, "page_id", { required: true, maxLength: 100 })!;
     return pick(await api("notion", `v1/pages/${encodeURIComponent(pageId)}`, options, run), [
       "object",
       "id",

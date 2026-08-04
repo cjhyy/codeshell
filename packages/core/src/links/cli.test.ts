@@ -245,6 +245,65 @@ describe("CLI Link sessions", () => {
     expect(result.stdout).toBe("false");
   });
 
+  test("rejects dot-segment path params before invoking any CLI", async () => {
+    const calls: string[][] = [];
+    const run: CliLinkCommandRunner = async (_provider, _command, args) => {
+      calls.push(args);
+      return { stdout: "{}", stderr: "" };
+    };
+    const cases: Array<
+      [Parameters<typeof executeCliLinkAction>[0], string, Record<string, unknown>, string]
+    > = [
+      ["github", "get_file", { owner: "acme", repo: "repo", path: "docs/../secret" }, "path"],
+      ["github", "get_readme", { owner: "..", repo: "repo" }, "owner"],
+      ["github", "list_issues", { owner: "acme", repo: "repo/../../user" }, "repo"],
+      ["notion", "get_page", { page_id: "../users/me" }, "page_id"],
+    ];
+    for (const [providerId, actionId, params, paramName] of cases) {
+      let error: unknown;
+      try {
+        await executeCliLinkAction(providerId, actionId, params, {}, run);
+      } catch (caught) {
+        error = caught;
+      }
+      // gh/ntn api resolve the endpoint against the REST base URL, so no argv
+      // may ever carry a dot segment: the CLI must not run at all.
+      expect(calls).toEqual([]);
+      expect(String(error)).toContain(paramName);
+    }
+  });
+
+  test("still reads a legitimate nested file path through the GitHub CLI", async () => {
+    let captured: string[] = [];
+    const run: CliLinkCommandRunner = async (_provider, _command, args) => {
+      captured = args;
+      return {
+        stdout: JSON.stringify({
+          type: "file",
+          path: "docs/a/b.md",
+          sha: "abc",
+          size: 5,
+          content: Buffer.from("hello").toString("base64"),
+        }),
+        stderr: "",
+      };
+    };
+    const result = await executeCliLinkAction(
+      "github",
+      "get_file",
+      { owner: "acme", repo: "repo", path: "docs/a/b.md" },
+      {},
+      run,
+    );
+    expect(captured).toEqual([
+      "api",
+      "repos/acme/repo/contents/docs/a/b.md",
+      "--hostname",
+      "github.com",
+    ]);
+    expect(result).toMatchObject({ content: "hello", path: "docs/a/b.md" });
+  });
+
   test("rejects an Action when the CLI switched to another account", async () => {
     const run: CliLinkCommandRunner = async () => ({
       stdout: JSON.stringify({ id: 99, login: "another-user" }),

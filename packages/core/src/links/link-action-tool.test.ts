@@ -7,7 +7,11 @@ import { setDefaultCredentialAccess, type CredentialAccess } from "../credential
 import type { ToolContext } from "../tool-system/context.js";
 import { linkActionTool } from "./link-action-tool.js";
 import { runCliLinkCommand } from "./cli.js";
-import { listLocalLinkProviders, validateLocalLinkToken } from "./providers.js";
+import {
+  getLocalLinkProvider,
+  listLocalLinkProviders,
+  validateLocalLinkToken,
+} from "./providers.js";
 
 const cwd = "/repo";
 
@@ -130,6 +134,128 @@ describe("local Link providers", () => {
     expect(validation.capabilityIds).toContain("github.get_file");
     expect(validation.capabilityIds).toContain("github.get_issue");
     expect(validation.capabilityIds).toContain("github.get_pull_request");
+  });
+
+  test("pins documented GitHub and Notion API versions", async () => {
+    let githubVersion = "";
+    await validateLocalLinkToken("github", "github_pat_private", {
+      fetchImpl: (async (_url: string | URL | Request, init?: RequestInit) => {
+        githubVersion = new Headers(init?.headers).get("x-github-api-version") ?? "";
+        return new Response(JSON.stringify([]), { status: 200 });
+      }) as typeof fetch,
+    });
+    expect(githubVersion).toBe("2022-11-28");
+
+    let notionVersion = "";
+    await executeProviderAction("notion", "get_page", { page_id: "page-1" }, (async (
+      _url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      notionVersion = new Headers(init?.headers).get("notion-version") ?? "";
+      return new Response(JSON.stringify({ object: "page", id: "page-1" }), { status: 200 });
+    }) as typeof fetch);
+    expect(notionVersion).toBe("2022-06-28");
+  });
+});
+
+function executeProviderAction(
+  providerId: string,
+  actionId: string,
+  params: Record<string, unknown>,
+  fetchImpl: typeof fetch,
+): Promise<unknown> {
+  const provider = getLocalLinkProvider(providerId);
+  const action = provider?.actions.find((candidate) => candidate.id === actionId);
+  if (!action) throw new Error(`missing action ${providerId}.${actionId}`);
+  return action.execute({ token: "test-token", params, fetchImpl });
+}
+
+function recordingFetch(makeResponse: () => Response): { urls: string[]; fetchImpl: typeof fetch } {
+  const urls: string[] = [];
+  const fetchImpl = (async (url: string | URL | Request) => {
+    urls.push(String(url));
+    return makeResponse();
+  }) as typeof fetch;
+  return { urls, fetchImpl };
+}
+
+describe("path template hardening", () => {
+  test("rejects a dot-segment Sentry organization without sending any request", async () => {
+    const { urls, fetchImpl } = recordingFetch(() => new Response("[]", { status: 200 }));
+    let error: unknown;
+    try {
+      await executeProviderAction("sentry", "list_projects", { organization: ".." }, fetchImpl);
+    } catch (caught) {
+      error = caught;
+    }
+    // The fixed path template must stay fixed: no request may leave the process.
+    expect(urls).toEqual([]);
+    expect(String(error)).toContain("organization");
+  });
+
+  test("rejects dot segments and separators in every single-segment path param", async () => {
+    const cases: Array<[string, string, Record<string, unknown>, string]> = [
+      ["github", "list_issues", { owner: "..", repo: "repo" }, "owner"],
+      ["github", "list_issues", { owner: "acme", repo: "repo/../../user" }, "repo"],
+      ["github", "get_readme", { owner: ".", repo: "repo" }, "owner"],
+      ["notion", "get_page", { page_id: "../users/me" }, "page_id"],
+      ["airtable", "list_tables", { base_id: ".." }, "base_id"],
+      ["figma", "get_file", { file_key: ".." }, "file_url_or_key"],
+    ];
+    for (const [providerId, actionId, params, paramName] of cases) {
+      const { urls, fetchImpl } = recordingFetch(() => new Response("{}", { status: 200 }));
+      let error: unknown;
+      try {
+        await executeProviderAction(providerId, actionId, params, fetchImpl);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(urls).toEqual([]);
+      expect(String(error)).toContain(paramName);
+    }
+  });
+
+  test("rejects traversal in the multi-segment GitHub file path without fetching", async () => {
+    for (const path of ["docs/../secret", "..", "docs//secret", "%2e%2e/secret"]) {
+      const { urls, fetchImpl } = recordingFetch(() => new Response("{}", { status: 200 }));
+      let error: unknown;
+      try {
+        await executeProviderAction(
+          "github",
+          "get_file",
+          { owner: "o", repo: "r", path },
+          fetchImpl,
+        );
+      } catch (caught) {
+        error = caught;
+      }
+      expect(urls).toEqual([]);
+      expect(String(error)).toContain("path");
+    }
+  });
+
+  test("still reads a legitimate nested GitHub file path", async () => {
+    const { urls, fetchImpl } = recordingFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            type: "file",
+            path: "docs/a/b.md",
+            sha: "abc",
+            size: 5,
+            content: Buffer.from("hello").toString("base64"),
+          }),
+          { status: 200 },
+        ),
+    );
+    const result = (await executeProviderAction(
+      "github",
+      "get_file",
+      { owner: "o", repo: "r", path: "docs/a/b.md" },
+      fetchImpl,
+    )) as Record<string, unknown>;
+    expect(urls).toEqual(["https://api.github.com/repos/o/r/contents/docs/a/b.md"]);
+    expect(result.content).toBe("hello");
   });
 });
 
