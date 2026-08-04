@@ -13,6 +13,7 @@ export interface SlackAdapterConfig {
 export class SlackAdapter implements ChannelAdapter {
   readonly channel = "slack";
   readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.slack;
+  readonly combinesTextAndAttachmentsAtomically = true;
   private readonly socket: SocketModeClient;
   private readonly web: WebClient;
   private readonly botToken: string;

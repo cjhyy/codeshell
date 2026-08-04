@@ -34,6 +34,7 @@ export interface DiscordAdapterOptions {
 export class DiscordAdapter implements ChannelAdapter {
   readonly channel = "discord";
   readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.discord;
+  readonly combinesTextAndAttachmentsAtomically = true;
   private readonly client: Client;
   private readonly interactionContext = new AsyncLocalStorage<{
     interaction: ChatInputCommandInteraction;

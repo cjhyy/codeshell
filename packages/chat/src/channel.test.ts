@@ -28,6 +28,8 @@ describe("built-in channel capabilities", () => {
       inbound: { text: true, attachments: ["image", "file", "audio", "video"] },
       outbound: {
         text: true,
+        proactive: true,
+        direct: true,
         button: "native",
         attachments: ["image", "file", "audio", "video"],
       },
@@ -36,6 +38,8 @@ describe("built-in channel capabilities", () => {
       inbound: { text: true, attachments: ["image", "file", "audio", "video"] },
       outbound: {
         text: true,
+        proactive: true,
+        direct: true,
         button: "link",
         attachments: ["image", "file", "audio", "video"],
       },
@@ -60,8 +64,15 @@ describe("built-in channel capabilities", () => {
     });
     for (const capability of Object.values(BUILTIN_CHANNEL_CAPABILITIES)) {
       expect(capability.outbound.maxTextLength).toBe(8_000);
+      expect(typeof capability.outbound.proactive).toBe("boolean");
+      expect(typeof capability.outbound.direct).toBe("boolean");
       expect(["native", "link"]).toContain(capability.outbound.button);
     }
+    expect(
+      Object.entries(BUILTIN_CHANNEL_CAPABILITIES)
+        .filter(([, capability]) => capability.outbound.direct)
+        .map(([channel]) => channel),
+    ).toEqual(["telegram", "slack", "lark", "wechat", "matrix", "mattermost", "line", "whatsapp"]);
   });
 
   test("uses granular kinds while preserving legacy third-party adapters", () => {

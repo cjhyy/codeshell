@@ -24,6 +24,7 @@ export interface TeamsAdapterConfig {
 export class TeamsAdapter implements WebhookChannelAdapter {
   readonly channel = "teams";
   readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.teams;
+  readonly combinesTextAndAttachmentsAtomically = true;
   readonly webhookPath = "/webhooks/teams";
   private readonly adapter: CloudAdapter;
   private readonly appId: string;

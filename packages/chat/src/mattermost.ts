@@ -37,6 +37,7 @@ interface MattermostFileInfo {
 export class MattermostAdapter implements ChannelAdapter {
   readonly channel = "mattermost";
   readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.mattermost;
+  readonly combinesTextAndAttachmentsAtomically = true;
 
   constructor(
     private readonly config: MattermostAdapterConfig,
