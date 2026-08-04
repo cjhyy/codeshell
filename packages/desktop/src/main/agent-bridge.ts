@@ -38,12 +38,15 @@ import {
   parsePanelActionLine,
   buildPanelActionReply,
 } from "./browser-driver/intercept.js";
-import { handleBrowserAction } from "./browser-driver/automation-host.js";
 import {
-  backgroundBrowserPartition,
-  backgroundBrowserRuntime,
-  type BackgroundBrowserLease,
-} from "./browser-driver/background-runtime.js";
+  browserRuntime,
+  builtInBrowserHandoffGrants,
+  chromeExtensionRuntimeService,
+  annotateBrowserRuntimeStreamEvent,
+  dispatchInteractiveBrowserRuntimeAction,
+  interactiveBrowserRuntimeOwner,
+  replaceStreamEventInLine,
+} from "./browser-runtime/index.js";
 import { Methods, SessionManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
 import {
   PET_REPORT_TO_MIMI_METHOD,
@@ -61,15 +64,12 @@ import {
 import {
   activeGuestForSession,
   bucketForSession,
-  focusGuestForSession,
   // Aliased: this class has its own forgetSession, and the two clear DIFFERENT
   // registries. releaseExternalSession has to call both.
   forgetSession as forgetSessionBucket,
-  listGuestsForSession,
   partitionForSession,
   registerSessionBucket,
 } from "./browser-driver/active-guest.js";
-import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 import {
   buildNoChildFallbackReply,
   compactQuerySessionId,
@@ -112,10 +112,6 @@ export function resolveNoRepoCwd(): string {
     /* best-effort */
   }
   return dir;
-}
-
-function interactiveBackgroundBrowserOwner(sessionId: string): string {
-  return `interactive:${sessionId}`;
 }
 
 /**
@@ -370,7 +366,8 @@ export class AgentBridge implements PetStateBridge {
     // secrets. Consumed here; never forwarded to renderer/transcript.
     if (this.maybeHandleCredentialAccessMessage(line)) return;
     // Browser automation: intercept __browser_action__ requests here (drive the
-    // webview in main, reply to the worker) and DON'T forward to the renderer.
+    // independent Browser Runtime in main, reply to the worker) and DON'T
+    // forward the private bridge request to the renderer.
     if (this.maybeHandleBrowserAction(line)) return;
     // InjectCredential: intercept __credential_action__ (restore a cookie
     // credential into the built-in browser) here; DON'T forward to renderer.
@@ -402,12 +399,25 @@ export class AgentBridge implements PetStateBridge {
     }
     // Mirror stream events into the per-session snapshot so a remounted
     // renderer can replay what it missed. Non-streamEvent lines yield null.
-    const append = parseSnapshotAppend(line);
+    const rawAppend = parseSnapshotAppend(line);
+    const append = rawAppend
+      ? {
+          ...rawAppend,
+          event: annotateBrowserRuntimeStreamEvent(rawAppend.event, "milestones"),
+        }
+      : null;
     if (append) this.workerSnapshotSessionIds.add(append.sessionId);
     const snapshotEntry = append
       ? { sessionId: append.sessionId, ...this.snapshots.append(append.sessionId, append.event) }
       : undefined;
-    const liveStreamEnvelope = parseLiveStreamEnvelope(line, snapshotEntry);
+    const liveStreamEnvelope = append
+      ? {
+          sessionId: append.sessionId,
+          event: append.event,
+          ...(snapshotEntry ? { seq: snapshotEntry.seq } : {}),
+        }
+      : parseLiveStreamEnvelope(line, snapshotEntry);
+    const projectedLine = append ? replaceStreamEventInLine(line, append.event) : line;
     dlog("bridge", "worker→renderer", summary);
     if (liveStreamEnvelope) {
       this.safeSend("agent:streamEvent", liveStreamEnvelope);
@@ -420,7 +430,7 @@ export class AgentBridge implements PetStateBridge {
     if (!quickChatForkSettlement) {
       for (const tap of this.outboundTaps) {
         try {
-          tap(line, snapshotEntry);
+          tap(projectedLine, snapshotEntry);
         } catch {
           /* a tap must never break worker streaming */
         }
@@ -612,68 +622,34 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /**
-   * If `line` is a __browser_action__ request from the worker, drive the active
-   * webview here (main) and write the result back to the worker as an approve
-   * reply, returning true (caller must NOT forward to renderer). Otherwise
-   * false. Never throws — a failure still replies so the worker tool unblocks.
+   * If `line` is a __browser_action__ request from the worker, route it to the
+   * browser runtime owned by that engine session and write the result back to
+   * the worker as an approve reply. The built-in BrowserPanel is deliberately
+   * not consulted implicitly: the dispatch layer can use one of its tabs only
+   * after an explicit, expiring handoff grant, never from focus alone.
    */
   private maybeHandleBrowserAction(line: string): boolean {
     const parsed = parseBrowserActionLine(line);
     if (!parsed) return false;
     void (async () => {
       let resultJson: string;
-      let backgroundLease: BackgroundBrowserLease | undefined;
       try {
         if (!parsed.sessionId) {
           resultJson = JSON.stringify({
             ok: false,
             detail: "browser action missing sessionId",
           });
-        } else if (!bucketForSession(parsed.sessionId)) {
-          resultJson = JSON.stringify({
-            ok: false,
-            detail: `no browser bucket registered for session ${parsed.sessionId}`,
-          });
         } else {
-          const activeGuest = activeGuestForSession(parsed.sessionId)?.guest ?? null;
-          if (!activeGuest || activeGuest.isDestroyed()) {
-            const ownerId = interactiveBackgroundBrowserOwner(parsed.sessionId);
-            backgroundLease = backgroundBrowserRuntime.acquire({
-              ownerId,
-              partition:
-                partitionForSession(parsed.sessionId) ?? backgroundBrowserPartition(ownerId),
-              title: "CodeShell 后台浏览器 — 需要你接管",
-            });
-          }
-          resultJson = await handleBrowserAction(parsed.request, {
-            activeGuest: () => activeGuestForSession(parsed.sessionId)?.guest ?? null,
-            backgroundBridge: backgroundLease?.bridge,
-            policy: loadBrowserAutomationPolicy,
-            // Sensitive browser page actions are gated by the preset permission
-            // rules before they reach here; permissionDefault is only UI metadata.
-            // A second hard-decline at the bridge would just dead-block legit
-            // flows the user already approved. So we allow at the bridge level.
-            // The one bridge-only gate that still hard-enforces is
-            // the DOMAIN WHITELIST: it's opt-in (empty list = allow all), and when
-            // the user did set one, blocking an off-list host is the intended
-            // behavior. An interactive per-action approval dialog is a follow-up.
-            approve: async () => true,
-            openPanel: (url) => this.openBrowserPanelForSession(parsed.sessionId, url),
-            listTabs: () => listGuestsForSession(parsed.sessionId),
-            switchTab: (tabId) => focusGuestForSession(parsed.sessionId, tabId),
-          });
-          // No reveal decision here: BackgroundBrowserRuntime calls host.show()
-          // itself at every takeover point (login wall, high-consequence click,
-          // sensitive input), on the same serialized queue as the action. Adding
-          // a second, result-text-derived reveal here would only duplicate it.
+          resultJson = await dispatchInteractiveBrowserRuntimeAction(
+            parsed.sessionId,
+            parsed.request,
+          );
         }
       } catch (e) {
         resultJson = JSON.stringify({
           ok: false,
           detail: e instanceof Error ? e.message : String(e),
         });
-      } finally {
-        backgroundLease?.release();
       }
       this.core.sendLine(buildBrowserActionReply(parsed, resultJson));
     })();
@@ -1113,35 +1089,7 @@ export class AgentBridge implements PetStateBridge {
     }
   }
 
-  /**
-   * Open the in-app browser panel for the originating session bucket, then wait
-   * for that bucket's <webview> guest to attach. Never falls back to a globally
-   * focused guest: a missing session->bucket mapping is a fail-closed error.
-   */
-  private async openBrowserPanelForSession(
-    sessionId: string | undefined,
-    url?: string,
-  ): Promise<boolean> {
-    if (!sessionId) return false;
-    const bucket = bucketForSession(sessionId);
-    if (!bucket) return false;
-    const win = [...this.windows].find((w) => !w.isDestroyed());
-    if (!win) return false;
-    // A blank panel needs *some* URL to attach a <webview>; default to about:blank.
-    win.webContents.send("browser:open-url", {
-      sessionId,
-      bucket,
-      url: url ?? "about:blank",
-    });
-    const deadline = Date.now() + 6000;
-    while (Date.now() < deadline) {
-      const target = activeGuestForSession(sessionId);
-      if (target?.guest && !target.guest.isDestroyed()) return true;
-      await new Promise((r) => setTimeout(r, 150));
-    }
-    return !!activeGuestForSession(sessionId);
-  }
-
+  /** Push the current host credential metadata to the live worker. */
   pushCredentialSnapshot(cwd?: string): void {
     if (typeof cwd === "string" && cwd) this.credentialSnapshotCwds.add(cwd);
     if (!this.core.hasLiveWorker()) return;
@@ -1173,7 +1121,9 @@ export class AgentBridge implements PetStateBridge {
     this.snapshots.forget(sessionId);
     this.sessionCwd.delete(sessionId);
     this.panelHostWindowRoutes.forgetSession(sessionId);
-    backgroundBrowserRuntime.close(interactiveBackgroundBrowserOwner(sessionId));
+    browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
+    builtInBrowserHandoffGrants.revoke(sessionId);
+    chromeExtensionRuntimeService.revoke(sessionId);
   }
 
   hasKnownSession(sessionId: string): boolean {
@@ -1448,9 +1398,17 @@ export class AgentBridge implements PetStateBridge {
   /** Feed an event produced OUTSIDE the stdio worker (e.g. an in-main automation
    *  Engine) into the same snapshot + renderer stream, so renderer reconnect works
    *  identically for automation sessions. */
-  ingestExternalEvent(sessionId: string, event: unknown): void {
-    const entry = this.snapshots.append(sessionId, event);
-    this.safeSend("agent:streamEvent", { sessionId, event, seq: entry.seq });
+  ingestExternalEvent(
+    sessionId: string,
+    event: unknown,
+    options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
+  ): void {
+    const projected = annotateBrowserRuntimeStreamEvent(
+      event,
+      options.browserVisibility ?? "full",
+    );
+    const entry = this.snapshots.append(sessionId, projected);
+    this.safeSend("agent:streamEvent", { sessionId, event: projected, seq: entry.seq });
   }
 
   /**

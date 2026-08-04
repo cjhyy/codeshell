@@ -176,7 +176,7 @@ describe("handleBrowserAction", () => {
     const r = JSON.parse(out);
     expect(r.url).toContain("xiaohongshu");
     expect(r.elements).toHaveLength(2);
-    expect(r.elements[0].ref).toBe("e1");
+    expect(r.elements[0].ref).toBe("s1:e1");
   });
 
   test("detaches the debugger after each action while keeping refs cached", async () => {
@@ -187,10 +187,13 @@ describe("handleBrowserAction", () => {
     });
     const d = deps({ activeGuest: () => guest });
     const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
-    expect(snap.elements[1].ref).toBe("e2");
+    expect(snap.elements[1].ref).toBe("s1:e2");
     expect(debuggerState).toMatchObject({ attached: false, attaches: 1, detaches: 1 });
 
-    const out = await handleBrowserAction({ action: "click", ref: "e2" }, d);
+    const out = await handleBrowserAction(
+      { action: "click", ref: snap.elements[1].ref },
+      d,
+    );
     expect(JSON.parse(out)).toMatchObject({ ok: true });
     expect(debuggerState).toMatchObject({ attached: false, attaches: 2, detaches: 2 });
   });
@@ -198,10 +201,13 @@ describe("handleBrowserAction", () => {
   test("click after snapshot reuses the cached driver → ref resolves (persistent ref map)", async () => {
     const d = deps();
     const snap = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
-    expect(snap.elements[1].ref).toBe("e2");
+    expect(snap.elements[1].ref).toBe("s1:e2");
     // The per-guest driver (id:1) persists across calls, so e2's ref map survives
     // into this separate click call — it must NOT be stale.
-    const out = await handleBrowserAction({ action: "click", ref: "e2" }, d);
+    const out = await handleBrowserAction(
+      { action: "click", ref: snap.elements[1].ref },
+      d,
+    );
     expect(JSON.parse(out)).toMatchObject({ ok: true });
   });
 
@@ -242,6 +248,47 @@ describe("handleBrowserAction", () => {
     );
     expect(JSON.parse(out)).toMatchObject({ ok: false });
     expect(out).toContain("declined");
+  });
+
+  test("snapshot-learned destructive ref requires approval before dispatch", async () => {
+    let approvalRequests = 0;
+    let mouseEvents = 0;
+    const guest = fakeGuest({
+      cdp: {
+        "Accessibility.getFullAXTree": () => ({
+          nodes: [
+            {
+              nodeId: "delete-account",
+              role: { value: "button" },
+              name: { value: "删除账号" },
+              backendDOMNodeId: 30,
+            },
+          ],
+        }),
+        "DOM.getBoxModel": () => BOX,
+        "Input.dispatchMouseEvent": () => {
+          mouseEvents++;
+          return {};
+        },
+      },
+    });
+    const d = deps({
+      activeGuest: () => guest,
+      approve: async () => {
+        approvalRequests++;
+        return false;
+      },
+    });
+
+    const snapshot = JSON.parse(await handleBrowserAction({ action: "snapshot" }, d));
+    const out = await handleBrowserAction(
+      { action: "click", ref: snapshot.elements[0].ref },
+      d,
+    );
+
+    expect(JSON.parse(out)).toMatchObject({ ok: false, detail: "sensitive action declined" });
+    expect(approvalRequests).toBe(1);
+    expect(mouseEvents).toBe(0);
   });
 });
 

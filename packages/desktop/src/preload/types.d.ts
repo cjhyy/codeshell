@@ -68,6 +68,36 @@ export type {
   DigitalHumanProfileImportPreview,
 } from "../shared/digital-human-profile-transfer";
 
+export interface BrowserRuntimeHandoffStatus {
+  granted: boolean;
+  sessionId: string;
+  guestId?: number;
+  url?: string;
+  title?: string;
+  grantedAt?: number;
+  expiresAt?: number;
+}
+
+export interface ChromeBrowserRuntimeStatus {
+  sessionId: string;
+  connected: boolean;
+  pairing?: { code: string; label: string; expiresAt: number };
+  granted?: {
+    tabId: number;
+    url: string;
+    title: string;
+    grantedAt: number;
+    expiresAt: number;
+  };
+}
+
+export interface ChromeBrowserRuntimeInstallation {
+  installed: boolean;
+  manifestPaths: string[];
+  extensionPath: string;
+  detail?: string;
+}
+
 export type {
   PetApi,
   PetChatEvent,
@@ -1434,6 +1464,21 @@ export interface CodeshellApi {
     partition: string;
     engineSessionId?: string | null;
   }): void;
+  /** Explicitly grant one built-in BrowserPanel tab to this task's Browser Runtime. */
+  grantBuiltInBrowserToRuntime(payload: {
+    sessionId: string;
+    guestId: number;
+    ttlMs?: number;
+  }): Promise<BrowserRuntimeHandoffStatus>;
+  revokeBuiltInBrowserFromRuntime(sessionId: string): Promise<BrowserRuntimeHandoffStatus>;
+  getBuiltInBrowserRuntimeHandoff(sessionId: string): Promise<BrowserRuntimeHandoffStatus>;
+  beginChromeBrowserRuntimePairing(payload: {
+    sessionId: string;
+    label?: string;
+  }): Promise<ChromeBrowserRuntimeStatus>;
+  getChromeBrowserRuntimeStatus(sessionId: string): Promise<ChromeBrowserRuntimeStatus>;
+  revokeChromeBrowserRuntime(sessionId: string): Promise<ChromeBrowserRuntimeStatus>;
+  getChromeBrowserRuntimeInstallation(): Promise<ChromeBrowserRuntimeInstallation>;
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove(anchorId: string): void;
   /** From a popout: ask the owner to update an anchor's comment. */

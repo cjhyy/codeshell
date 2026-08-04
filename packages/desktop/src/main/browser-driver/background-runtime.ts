@@ -1,12 +1,12 @@
 /**
- * BackgroundBrowserRuntime — owns hidden Electron BrowserWindows for headless
- * and scheduled runs.
+ * BackgroundBrowserRuntime — legacy-named low-level pool of runtime-owned hidden
+ * Electron BrowserWindows.
  *
- * The visible browser path routes worker requests to a renderer-owned <webview>.
- * That cannot serve a genuinely unattended Engine: the renderer may not exist,
- * its panel may be evicted, and AgentServer intentionally does not wire a
- * BrowserBridge into headless sessions. This runtime supplies the same bridge
- * directly in Electron main.
+ * This is not the product-level Browser Runtime and it never selects a visible
+ * BrowserPanel tab. `browser-runtime/runtime.ts` owns agent session/profile
+ * semantics and uses this class only as its initial Electron target backend.
+ * The legacy public name remains temporarily for compatibility with focused
+ * driver tests and the smoke script.
  *
  * Design constraints:
  * - lazy: acquiring a lease does not start Chromium; the first browser call does
@@ -324,11 +324,11 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
             ),
           failResult,
         ),
-      readContent: () =>
+      readContent: (options) =>
         safely(
           () =>
             use(async (target) => {
-              if (allowed(target)) return target.driver.readContent();
+              if (allowed(target)) return target.driver.readContent(options);
               const page = currentPage(target);
               return {
                 ok: false,

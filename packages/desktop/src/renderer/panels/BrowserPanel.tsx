@@ -10,6 +10,8 @@ import {
   X,
   MousePointerSquareDashed,
   PictureInPicture2,
+  ShieldCheck,
+  PlugZap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -248,6 +250,128 @@ export function BrowserPanel({
   // Which marker is open for editing (anchor id), if any. Pure UI state — the
   // markers themselves are derived from the `anchors` prop (single source).
   const [editingMarker, setEditingMarker] = useState<string | null>(null);
+  const [handoff, setHandoff] = useState<{
+    granted: boolean;
+    sessionId: string;
+    guestId?: number;
+    expiresAt?: number;
+  }>({ granted: false, sessionId: engineSessionId ?? "" });
+  const [handoffBusy, setHandoffBusy] = useState(false);
+  const [chromeRuntime, setChromeRuntime] = useState<{
+    sessionId: string;
+    connected: boolean;
+    pairing?: { code: string; label: string; expiresAt: number };
+    granted?: {
+      tabId: number;
+      url: string;
+      title: string;
+      grantedAt: number;
+      expiresAt: number;
+    };
+  }>({ sessionId: engineSessionId ?? "", connected: false });
+  const [chromeBusy, setChromeBusy] = useState(false);
+  const [chromeExtensionPath, setChromeExtensionPath] = useState<string | undefined>();
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!engineSessionId) {
+      setHandoff({ granted: false, sessionId: "" });
+      setChromeRuntime({ sessionId: "", connected: false });
+      return () => {
+        cancelled = true;
+      };
+    }
+    const refresh = () => {
+      void Promise.all([
+        window.codeshell.getBuiltInBrowserRuntimeHandoff(engineSessionId),
+        window.codeshell.getChromeBrowserRuntimeStatus(engineSessionId),
+      ])
+        .then(([builtIn, chrome]) => {
+          if (cancelled) return;
+          setHandoff(builtIn);
+          setChromeRuntime(chrome);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setHandoff({ granted: false, sessionId: engineSessionId });
+          setChromeRuntime({ sessionId: engineSessionId, connected: false });
+        });
+    };
+    refresh();
+    const timer = setInterval(refresh, 2_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeId, engineSessionId]);
+
+  const toggleRuntimeHandoff = useCallback(async (): Promise<void> => {
+    if (!engineSessionId || handoffBusy) return;
+    setHandoffBusy(true);
+    try {
+      if (handoff.granted) {
+        const status = await window.codeshell.revokeBuiltInBrowserFromRuntime(engineSessionId);
+        setHandoff(status);
+        toast({ message: t("panels.browser.handoffRevoked"), variant: "success" });
+        return;
+      }
+      const view = viewRef.current;
+      const guestId =
+        view && typeof view.getWebContentsId === "function"
+          ? view.getWebContentsId()
+          : undefined;
+      if (!Number.isFinite(guestId)) throw new Error("browser guest is not attached");
+      const status = await window.codeshell.grantBuiltInBrowserToRuntime({
+        sessionId: engineSessionId,
+        guestId: guestId!,
+      });
+      setHandoff(status);
+      toast({ message: t("panels.browser.handoffGranted"), variant: "success" });
+    } catch (error) {
+      toast({
+        message: `${t("panels.browser.handoffFailed")}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        variant: "error",
+      });
+    } finally {
+      setHandoffBusy(false);
+    }
+  }, [engineSessionId, handoff.granted, handoffBusy, t, toast, viewRef]);
+
+  const toggleChromeRuntime = useCallback(async (): Promise<void> => {
+    if (!engineSessionId || chromeBusy) return;
+    setChromeBusy(true);
+    try {
+      if (chromeRuntime.granted || chromeRuntime.pairing) {
+        const status = await window.codeshell.revokeChromeBrowserRuntime(engineSessionId);
+        setChromeRuntime(status);
+        toast({ message: t("panels.browser.chromeRevoked"), variant: "success" });
+        return;
+      }
+      const [status, installation] = await Promise.all([
+        window.codeshell.beginChromeBrowserRuntimePairing({ sessionId: engineSessionId }),
+        window.codeshell.getChromeBrowserRuntimeInstallation(),
+      ]);
+      setChromeRuntime(status);
+      setChromeExtensionPath(installation.extensionPath);
+      toast({
+        message: t("panels.browser.chromePairingStarted", {
+          code: status.pairing?.code ?? "—",
+        }),
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        message: `${t("panels.browser.chromeFailed")}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        variant: "error",
+      });
+    } finally {
+      setChromeBusy(false);
+    }
+  }, [chromeBusy, chromeRuntime.granted, chromeRuntime.pairing, engineSessionId, t, toast]);
 
   const markers = useMemo(() => browserMarkersFrom(anchors ?? []), [anchors]);
   // Markers belong to a page; hide them when not on that URL.
@@ -425,6 +549,34 @@ export function BrowserPanel({
             <PictureInPicture2 className="h-4 w-4" />
           </IconBtn>
         )}
+        {engineSessionId && (
+          <IconBtn
+            onClick={() => void toggleRuntimeHandoff()}
+            disabled={active.url === NEW_TAB || handoffBusy}
+            label={t(
+              handoff.granted
+                ? "panels.browser.revokeRuntimeHandoff"
+                : "panels.browser.grantRuntimeHandoff",
+            )}
+            active={handoff.granted}
+          >
+            <ShieldCheck className="h-4 w-4" />
+          </IconBtn>
+        )}
+        {engineSessionId && (
+          <IconBtn
+            onClick={() => void toggleChromeRuntime()}
+            disabled={chromeBusy}
+            label={t(
+              chromeRuntime.granted || chromeRuntime.pairing
+                ? "panels.browser.revokeChromeRuntime"
+                : "panels.browser.connectChromeRuntime",
+            )}
+            active={Boolean(chromeRuntime.granted || chromeRuntime.pairing)}
+          >
+            <PlugZap className="h-4 w-4" />
+          </IconBtn>
+        )}
         <IconBtn
           onClick={() => void openExternally(active.url)}
           label={t("panels.browser.openExternal")}
@@ -432,6 +584,55 @@ export function BrowserPanel({
           <ExternalLink className="h-4 w-4" />
         </IconBtn>
       </div>
+
+      {handoff.granted && (
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-foreground">
+          <span>{t("panels.browser.handoffActive")}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            disabled={handoffBusy}
+            onClick={() => void toggleRuntimeHandoff()}
+          >
+            {t("panels.browser.revokeRuntimeHandoff")}
+          </Button>
+        </div>
+      )}
+
+      {(chromeRuntime.pairing || chromeRuntime.granted) && (
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs text-foreground">
+          <span>
+            {chromeRuntime.granted
+              ? t("panels.browser.chromeActive", { title: chromeRuntime.granted.title || "Chrome" })
+              : t("panels.browser.chromePairing", { code: chromeRuntime.pairing?.code ?? "—" })}
+          </span>
+          <div className="flex items-center gap-1">
+            {chromeRuntime.pairing && chromeExtensionPath && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => void window.codeshell.revealInFinder(chromeExtensionPath)}
+              >
+                {t("panels.browser.openChromeExtensionFolder")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              disabled={chromeBusy}
+              onClick={() => void toggleChromeRuntime()}
+            >
+              {t("panels.browser.revokeChromeRuntime")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {selecting && (
         <div className="shrink-0 border-b border-border bg-primary/10 px-3 py-1 text-xs text-foreground">

@@ -34,11 +34,7 @@ import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
 import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
 import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
 import { stablePromptHash } from "@cjhyy/code-shell-server/storage";
-import {
-  backgroundBrowserPartition,
-  backgroundBrowserRuntime,
-  type BackgroundBrowserRuntimeLike,
-} from "./browser-driver/background-runtime.js";
+import { browserRuntime, type BrowserRuntimeLike } from "./browser-runtime/index.js";
 
 /**
  * Build a read-only RunManager for automation. Per-job cwd is passed at submit
@@ -101,7 +97,7 @@ export interface AutomationSessionMeta {
 export function buildDesktopAutomationRunner(
   emit?: (sessionId: string, event: unknown) => void,
   onSession?: (meta: AutomationSessionMeta) => void,
-  browserRuntime: BackgroundBrowserRuntimeLike = backgroundBrowserRuntime,
+  runtime: BrowserRuntimeLike = browserRuntime,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
     const jobCwd = resolveProjectRoot(req.job.cwd ?? process.cwd());
@@ -133,9 +129,10 @@ export function buildDesktopAutomationRunner(
     // preserves an explicitly established login across fires without sharing
     // cookies between unrelated automations. No Chromium process is created
     // unless the model actually calls a browser tool.
-    const browserLease = browserRuntime.acquire({
+    const browserLease = await runtime.acquire({
       ownerId: `automation:${req.job.id}`,
-      partition: backgroundBrowserPartition(req.job.id),
+      profileId: `automation:${req.job.id}`,
+      visibility: "hidden",
       title: `CodeShell 自动化 · ${req.job.name?.trim() || req.job.id}`,
     });
     try {

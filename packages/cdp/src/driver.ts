@@ -24,11 +24,15 @@ import type {
   CdpContentResult,
   CdpExtractResult,
   CdpImageData,
+  CdpReadOptions,
+  CdpScrollState,
 } from "./types.js";
 import { planKeySequence } from "./keymap.js";
 
 /** Default cap for extracted page text (chars). */
 export const CONTENT_CHAR_CAP = 12_000;
+/** Hard ceiling for one text chunk even if a caller requests more. */
+export const MAX_CONTENT_CHAR_CAP = 24_000;
 /** Cap for extracted links/images/videos per call. */
 export const EXTRACT_LINK_CAP = 200;
 /** Max image dimension (px) we keep — Claude caps at 1568, downscaling past it
@@ -103,7 +107,24 @@ export class CdpActionsDriver {
     const { nodes } = (await this.send("Accessibility.getFullAXTree")) as {
       nodes: RawSnapshot["nodes"];
     };
-    return { url: info.url, title: info.title, nodes: nodes ?? [] };
+    const documentId = await this.currentDocumentId(info.url);
+    return { url: info.url, title: info.title, documentId, nodes: nodes ?? [] };
+  }
+
+  /** Main-frame identity used to invalidate snapshots/cursors after navigation. */
+  async currentDocumentId(fallbackUrl?: string): Promise<string> {
+    try {
+      const tree = (await this.send("Page.getFrameTree")) as {
+        frameTree?: { frame?: { id?: string; loaderId?: string; url?: string } };
+      };
+      const frame = tree.frameTree?.frame;
+      if (frame?.id && frame.loaderId) return `${frame.id}:${frame.loaderId}`;
+      if (frame?.id && frame.url) return `${frame.id}:url:${frame.url}`;
+    } catch {
+      // Older/minimal CDP transports may not expose Page.getFrameTree.
+    }
+    const info = fallbackUrl === undefined ? await this.pageInfo() : undefined;
+    return `url:${fallbackUrl ?? info?.url ?? ""}`;
   }
 
   /** Resolve a backendDOMNodeId to its element's viewport-center coordinates, or
@@ -386,16 +407,81 @@ export class CdpActionsDriver {
     }
   }
 
-  async readContent(): Promise<CdpContentResult> {
+  async readContent(options: CdpReadOptions = {}): Promise<CdpContentResult> {
     const info = await this.pageInfo();
     try {
       const res = (await this.send("Runtime.evaluate", {
-        expression: "document.body && document.body.innerText || ''",
+        expression: READ_PAGE_STATE_EXPRESSION,
         returnByValue: true,
-      })) as { result?: { value?: string } };
-      const raw = res.result?.value ?? "";
-      const { text, truncated } = cleanPageText(raw);
-      return { ok: true, url: info.url, title: info.title, text, truncated };
+      })) as { result?: { value?: ReadPageState } };
+      const state = normalizeReadPageState(res.result?.value);
+      const documentId = await this.currentDocumentId(info.url);
+      const normalized = normalizePageText(state.text);
+      const contentHash = hashText(normalized);
+      const parsedCursor = options.cursor ? parseReadCursor(options.cursor) : undefined;
+      if (options.cursor && !parsedCursor) {
+        return {
+          ok: false,
+          code: "STALE_CURSOR",
+          url: info.url,
+          title: info.title,
+          documentId,
+          text: "",
+          scroll: state.scroll,
+          contentHash,
+          detail: "invalid read cursor — restart browser_observe(read) without a cursor",
+        };
+      }
+      if (parsedCursor && parsedCursor.documentId !== documentId) {
+        return {
+          ok: false,
+          code: "STALE_CURSOR",
+          url: info.url,
+          title: info.title,
+          documentId,
+          text: "",
+          scroll: state.scroll,
+          contentHash,
+          detail: "read cursor belongs to a previous document",
+        };
+      }
+
+      const offset = parsedCursor?.offset ?? 0;
+      if (offset < 0 || offset > normalized.length) {
+        return {
+          ok: false,
+          code: "STALE_CURSOR",
+          url: info.url,
+          title: info.title,
+          documentId,
+          text: "",
+          scroll: state.scroll,
+          contentHash,
+          detail: "read cursor is outside the current document",
+        };
+      }
+      const requested =
+        typeof options.maxChars === "number" && Number.isFinite(options.maxChars)
+          ? Math.floor(options.maxChars)
+          : CONTENT_CHAR_CAP;
+      const maxChars = Math.min(MAX_CONTENT_CHAR_CAP, Math.max(256, requested));
+      const end = Math.min(normalized.length, offset + maxChars);
+      const done = end >= normalized.length;
+      const cursor = encodeReadCursor(documentId, offset);
+      return {
+        ok: true,
+        code: "OK",
+        url: info.url,
+        title: info.title,
+        documentId,
+        text: normalized.slice(offset, end),
+        cursor,
+        nextCursor: done ? undefined : encodeReadCursor(documentId, end),
+        done,
+        contentHash,
+        scroll: state.scroll,
+        truncated: !done,
+      };
     } catch (e) {
       return { ok: false, url: info.url, title: info.title, text: "", detail: errMsg(e) };
     }
@@ -463,23 +549,228 @@ export class CdpActionsDriver {
   }
 
   async scroll(dir: "up" | "down", amount?: number): Promise<CdpActionResult> {
-    // Guard a non-finite amount (NaN/Infinity) → would send NaN deltaY to CDP.
-    const magnitude =
-      typeof amount === "number" && Number.isFinite(amount) ? Math.abs(amount) : 600;
-    const deltaY = (dir === "down" ? 1 : -1) * magnitude;
     try {
+      const before = await this.readProgressState();
+      // Keep one action to at most one viewport. Huge deltas made progress
+      // impossible to reason about and encouraged blind 20,000px loops.
+      const requested =
+        typeof amount === "number" && Number.isFinite(amount) ? Math.abs(amount) : 600;
+      const magnitude = Math.max(1, Math.min(requested, Math.max(1, before.scroll.viewportHeight)));
+      const deltaY = (dir === "down" ? 1 : -1) * magnitude;
       await this.send("Input.dispatchMouseEvent", {
         type: "mouseWheel",
-        x: 0,
-        y: 0,
+        x: before.scroll.viewportWidth / 2,
+        y: before.scroll.viewportHeight / 2,
         deltaX: 0,
         deltaY,
       });
-      return { ok: true };
+      await delay(75);
+      const after = await this.readProgressState();
+      const documentChanged = before.documentId !== after.documentId;
+      if (documentChanged) {
+        return {
+          ok: true,
+          code: "NAVIGATION",
+          documentId: after.documentId,
+          documentChanged: true,
+          scroll: after.scroll,
+          contentChanged: before.contentSignature !== after.contentSignature,
+        };
+      }
+      const contentChanged = before.contentSignature !== after.contentSignature;
+      const moved =
+        Math.abs(before.scroll.x - after.scroll.x) > 0.5 ||
+        Math.abs(before.scroll.y - after.scroll.y) > 0.5;
+      const extentChanged =
+        before.scroll.maxX !== after.scroll.maxX || before.scroll.maxY !== after.scroll.maxY;
+      if (!moved && !extentChanged && !contentChanged) {
+        return {
+          ok: false,
+          code: "NO_PROGRESS",
+          retryable: false,
+          documentId: after.documentId,
+          scroll: after.scroll,
+          contentChanged: false,
+          detail: after.scroll.atEnd
+            ? "scroll made no progress: already at the end of the page"
+            : "scroll made no progress",
+        };
+      }
+      return {
+        ok: true,
+        code: "OK",
+        documentId: after.documentId,
+        documentChanged: false,
+        scroll: after.scroll,
+        contentChanged,
+      };
     } catch (e) {
-      return { ok: false, detail: errMsg(e) };
+      return { ok: false, code: "FAILED", retryable: true, detail: errMsg(e) };
     }
   }
+
+  private async readProgressState(): Promise<ProgressState> {
+    const info = await this.pageInfo();
+    const res = (await this.send("Runtime.evaluate", {
+      expression: READ_PROGRESS_STATE_EXPRESSION,
+      returnByValue: true,
+    })) as { result?: { value?: Partial<ProgressPayload> } };
+    const payload = normalizeProgressPayload(res.result?.value);
+    return {
+      documentId: await this.currentDocumentId(info.url),
+      scroll: payload.scroll,
+      contentSignature: `${payload.textLength}:${payload.scroll.maxX}:${payload.scroll.maxY}`,
+    };
+  }
+}
+
+interface ReadPageState {
+  text: string;
+  scroll: CdpScrollState;
+}
+
+interface ProgressPayload {
+  scroll: CdpScrollState;
+  textLength: number;
+}
+
+interface ProgressState {
+  documentId: string;
+  scroll: CdpScrollState;
+  contentSignature: string;
+}
+
+const READ_PAGE_STATE_EXPRESSION = `(() => {
+  const de = document.documentElement;
+  const body = document.body;
+  const viewportWidth = Math.max(0, window.innerWidth || de?.clientWidth || 0);
+  const viewportHeight = Math.max(0, window.innerHeight || de?.clientHeight || 0);
+  const width = Math.max(de?.scrollWidth || 0, body?.scrollWidth || 0, viewportWidth);
+  const height = Math.max(de?.scrollHeight || 0, body?.scrollHeight || 0, viewportHeight);
+  const x = Math.max(0, window.scrollX || window.pageXOffset || 0);
+  const y = Math.max(0, window.scrollY || window.pageYOffset || 0);
+  const maxX = Math.max(0, width - viewportWidth);
+  const maxY = Math.max(0, height - viewportHeight);
+  return {
+    text: body?.innerText || '',
+    scroll: {
+      x, y, maxX, maxY, viewportWidth, viewportHeight,
+      atTop: y <= 1,
+      atEnd: y >= maxY - 1,
+    },
+  };
+})()`;
+
+const READ_PROGRESS_STATE_EXPRESSION = `(() => {
+  const de = document.documentElement;
+  const body = document.body;
+  const viewportWidth = Math.max(0, window.innerWidth || de?.clientWidth || 0);
+  const viewportHeight = Math.max(0, window.innerHeight || de?.clientHeight || 0);
+  const width = Math.max(de?.scrollWidth || 0, body?.scrollWidth || 0, viewportWidth);
+  const height = Math.max(de?.scrollHeight || 0, body?.scrollHeight || 0, viewportHeight);
+  const x = Math.max(0, window.scrollX || window.pageXOffset || 0);
+  const y = Math.max(0, window.scrollY || window.pageYOffset || 0);
+  const maxX = Math.max(0, width - viewportWidth);
+  const maxY = Math.max(0, height - viewportHeight);
+  return {
+    textLength: (body?.innerText || '').length,
+    scroll: {
+      x, y, maxX, maxY, viewportWidth, viewportHeight,
+      atTop: y <= 1,
+      atEnd: y >= maxY - 1,
+    },
+  };
+})()`;
+
+function emptyScrollState(): CdpScrollState {
+  return {
+    x: 0,
+    y: 0,
+    maxX: 0,
+    maxY: 0,
+    viewportWidth: 1280,
+    viewportHeight: 800,
+    atTop: true,
+    atEnd: true,
+  };
+}
+
+function normalizeScrollState(value: Partial<CdpScrollState> | undefined): CdpScrollState {
+  const fallback = emptyScrollState();
+  const x = Math.max(0, finiteOr(value?.x, fallback.x));
+  const y = Math.max(0, finiteOr(value?.y, fallback.y));
+  const maxX = Math.max(0, finiteOr(value?.maxX, fallback.maxX));
+  const maxY = Math.max(0, finiteOr(value?.maxY, fallback.maxY));
+  const viewportWidth = positiveFinite(value?.viewportWidth, fallback.viewportWidth);
+  const viewportHeight = positiveFinite(value?.viewportHeight, fallback.viewportHeight);
+  return {
+    x,
+    y,
+    maxX,
+    maxY,
+    viewportWidth,
+    viewportHeight,
+    atTop: typeof value?.atTop === "boolean" ? value.atTop : y <= 1,
+    atEnd: typeof value?.atEnd === "boolean" ? value.atEnd : y >= maxY - 1,
+  };
+}
+
+function normalizeReadPageState(value: Partial<ReadPageState> | undefined): ReadPageState {
+  return {
+    text: typeof value?.text === "string" ? value.text : "",
+    scroll: normalizeScrollState(value?.scroll),
+  };
+}
+
+function normalizeProgressPayload(value: Partial<ProgressPayload> | undefined): ProgressPayload {
+  return {
+    scroll: normalizeScrollState(value?.scroll),
+    textLength:
+      typeof value?.textLength === "number" && Number.isFinite(value.textLength)
+        ? Math.max(0, Math.floor(value.textLength))
+        : 0,
+  };
+}
+
+export function normalizePageText(raw: string): string {
+  return raw
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t\f\v]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export function encodeReadCursor(documentId: string, offset: number): string {
+  return `${encodeURIComponent(documentId)}:${Math.max(0, Math.floor(offset))}`;
+}
+
+export function parseReadCursor(
+  cursor: string,
+): { documentId: string; offset: number } | undefined {
+  const split = cursor.lastIndexOf(":");
+  if (split <= 0) return undefined;
+  const rawOffset = cursor.slice(split + 1);
+  if (!/^\d+$/.test(rawOffset)) return undefined;
+  try {
+    const documentId = decodeURIComponent(cursor.slice(0, split));
+    if (!documentId) return undefined;
+    const offset = Number(rawOffset);
+    if (!Number.isSafeInteger(offset) || offset < 0) return undefined;
+    return { documentId, offset };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Small deterministic FNV-1a hash; used only as a progress signature. */
+export function hashText(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 function finiteOr(value: number | undefined, fallback: number): number {
@@ -683,12 +974,7 @@ export function cleanPageText(
   raw: string,
   cap: number = CONTENT_CHAR_CAP,
 ): { text: string; truncated: boolean } {
-  const normalized = raw
-    .replace(/\r\n?/g, "\n")
-    .replace(/[ \t\f\v]+/g, " ")
-    .replace(/ *\n */g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const normalized = normalizePageText(raw);
   if (normalized.length <= cap) return { text: normalized, truncated: false };
   return { text: normalized.slice(0, cap) + "\n…(truncated)", truncated: true };
 }

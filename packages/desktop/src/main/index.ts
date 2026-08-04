@@ -185,7 +185,16 @@ import {
   registerAttachedGuestMetadata,
   registerSessionBucket,
 } from "./browser-driver/active-guest.js";
-import { backgroundBrowserRuntime } from "./browser-driver/background-runtime.js";
+import {
+  browserRuntime,
+  builtInBrowserHandoffGrants,
+  chromeExtensionRuntimeService,
+  installChromeNativeMessagingHost,
+  interactiveBrowserRuntimeOwner,
+  nativeMessagingOriginFromArgv,
+  runChromeNativeMessagingHost,
+  type ChromeNativeRegistrationResult,
+} from "./browser-runtime/index.js";
 import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
@@ -490,6 +499,15 @@ import {
 registerCapability(CODING_CAPABILITY);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
+if (chromeNativeMessagingOrigin) {
+  void runChromeNativeMessagingHost(chromeNativeMessagingOrigin)
+    .then(() => app.exit(0))
+    .catch((error) => {
+      process.stderr.write(`[codeshell chrome native host] ${String(error)}\n`);
+      app.exit(1);
+    });
+}
 
 // Custom schemes must be privileged before app.ready. The request handler is
 // installed later on each Panel App guest's isolated session partition.
@@ -514,7 +532,9 @@ let markPetIpcReady: (() => void) | null = null;
 const petIpcReady = new Promise<void>((resolveReady) => {
   markPetIpcReady = resolveReady;
 });
-const ownsDesktopInstance = acquireDesktopInstanceLock(app);
+const ownsDesktopInstance = chromeNativeMessagingOrigin
+  ? false
+  : acquireDesktopInstanceLock(app);
 if (ownsDesktopInstance) {
   registerSecondInstanceFocus(
     (handler) => app.on("second-instance", handler),
@@ -532,6 +552,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
+let chromeNativeRegistration: ChromeNativeRegistrationResult | undefined;
 /**
  * Sessions backed by Codex / Claude Code instead of the native Engine.
  *
@@ -1191,7 +1212,7 @@ async function createWindow(): Promise<BrowserWindow> {
   win.on("closed", () => {
     mainWindows.delete(win);
     if (process.platform !== "darwin" && mainWindows.size === 0) {
-      backgroundBrowserRuntime.closeAll();
+      browserRuntime.closeAll();
     }
     setImmediate(ptyReapDestroyed);
   });
@@ -2600,6 +2621,23 @@ app.whenReady().then(async () => {
   // one handler there serves cstheme:// assets to every window.
   installThemeAssetProtocol();
 
+  await chromeExtensionRuntimeService.start().catch((error) => {
+    dlog("browser", "chrome_extension_bridge_start_failed", { error: String(error) });
+  });
+  chromeNativeRegistration = await installChromeNativeMessagingHost({
+    executablePath: process.execPath,
+    appPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+    isPackaged: app.isPackaged,
+  }).catch((error) => ({
+    installed: false,
+    manifestPaths: [],
+    extensionPath: app.isPackaged
+      ? join(process.resourcesPath, "packages", "desktop", "resources", "chrome-extension")
+      : join(app.getAppPath(), "resources", "chrome-extension"),
+    detail: String(error),
+  }));
+
   gatewayControlServer = new GatewayControlServer({
     descriptorPath: join(userHome(), ".code-shell", "im-gateway", "desktop-control.json"),
     open: () => startMobileRemote({ mode: "tunnel" }),
@@ -2681,7 +2719,7 @@ app.whenReady().then(async () => {
     // to interactive chat. `bridge?.` safely no-ops if a job somehow fires
     // before any window (and thus the bridge) exists.
     const emitAutomationEvent = (sessionId: string, event: unknown) =>
-      bridge?.ingestExternalEvent(sessionId, event);
+      bridge?.ingestExternalEvent(sessionId, event, { browserVisibility: "hidden" });
     const announceAutomationSession = (meta: {
       sessionId: string;
       cwd: string;
@@ -3482,6 +3520,91 @@ ipcMain.on(
     }
   },
 );
+
+ipcMain.handle(
+  "browser-runtime:grant-built-in",
+  (
+    e,
+    payload: { sessionId?: unknown; guestId?: unknown; ttlMs?: unknown },
+  ) => {
+    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+    const guestId =
+      typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
+    if (!sessionId || !Number.isFinite(guestId) || !bridge?.hasKnownSession(sessionId)) {
+      throw new Error("browser handoff requires a live task and browser tab");
+    }
+    const ownerWindow = BrowserWindow.fromWebContents(e.sender);
+    if (!ownerWindow) throw new Error("browser handoff requires an owning window");
+    const status = builtInBrowserHandoffGrants.grant({
+      sessionId,
+      guestId,
+      sourceWindowId: ownerWindow.id,
+      ttlMs:
+        typeof payload.ttlMs === "number" && Number.isFinite(payload.ttlMs)
+          ? payload.ttlMs
+          : undefined,
+    });
+    // Switching targets is explicit. Dispose the independent runtime target so
+    // there is never a second browser silently continuing in the background.
+    chromeExtensionRuntimeService.revoke(sessionId);
+    browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
+    return status;
+  },
+);
+
+ipcMain.handle("browser-runtime:revoke-built-in", (_e, sessionId: unknown) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("browser handoff revoke requires sessionId");
+  }
+  builtInBrowserHandoffGrants.revoke(sessionId);
+  return builtInBrowserHandoffGrants.status(sessionId);
+});
+
+ipcMain.handle("browser-runtime:handoff-status", (_e, sessionId: unknown) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    return { granted: false, sessionId: "" };
+  }
+  return builtInBrowserHandoffGrants.status(sessionId);
+});
+
+ipcMain.handle(
+  "browser-runtime:chrome-begin-pairing",
+  (_e, payload: { sessionId?: unknown; label?: unknown }) => {
+    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+    if (!sessionId || !bridge?.hasKnownSession(sessionId)) {
+      throw new Error("Chrome pairing requires a live CodeShell task");
+    }
+    return chromeExtensionRuntimeService.beginPairing(
+      sessionId,
+      typeof payload.label === "string" ? payload.label : undefined,
+    );
+  },
+);
+
+ipcMain.handle("browser-runtime:chrome-status", (_e, sessionId: unknown) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    return { sessionId: "", connected: false };
+  }
+  return chromeExtensionRuntimeService.status(sessionId);
+});
+
+ipcMain.handle("browser-runtime:chrome-revoke", (_e, sessionId: unknown) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("Chrome revoke requires sessionId");
+  }
+  return chromeExtensionRuntimeService.revoke(sessionId);
+});
+
+ipcMain.handle("browser-runtime:chrome-installation", () => ({
+  ...(chromeNativeRegistration ?? {
+    installed: false,
+    manifestPaths: [],
+    extensionPath: app.isPackaged
+      ? join(process.resourcesPath, "packages", "desktop", "resources", "chrome-extension")
+      : join(app.getAppPath(), "resources", "chrome-extension"),
+    detail: "Chrome bridge is still starting",
+  }),
+}));
 
 ipcMain.handle("credentials:cookieDomains", async (_e, bucket?: string) =>
   listCookieDomains(browserPartitionForBucket(bucket)),
@@ -5704,16 +5827,18 @@ ipcMain.handle("badge:set", async (_e, count: number) => {
 });
 
 app.on("window-all-closed", () => {
+  if (!ownsDesktopInstance) return;
   if (process.platform !== "darwin") app.quit();
 });
 
 let quitCleanupPromise: Promise<void> | undefined;
 let quitCleanupDone = false;
 app.on("before-quit", (event) => {
+  if (!ownsDesktopInstance) return;
   if (quitCleanupDone) return;
   event.preventDefault();
   if (quitCleanupPromise) return;
-  backgroundBrowserRuntime.closeAll();
+  browserRuntime.closeAll();
   bridge?.kill();
   petStateAggregator?.stop();
   petStateAggregator = null;
@@ -5755,6 +5880,7 @@ app.on("before-quit", (event) => {
       petWorkInboxFlush,
       petLongTaskFlush,
       externalRuntimeShutdown,
+      chromeExtensionRuntimeService.stop(),
     ]);
     gatewayControlServer = undefined;
     await mobileUploads.dispose();
@@ -5764,5 +5890,5 @@ app.on("before-quit", (event) => {
 });
 
 app.on("activate", () => {
-  if (!preferredMainWindow()) void createWindow();
+  if (ownsDesktopInstance && !preferredMainWindow()) void createWindow();
 });

@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "CodeShell Browser Runtime",
+  "description": "Explicitly grant a signed-in Chrome tab to a CodeShell task.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "109",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtplv1yZYroX4SqGPCQVh5mDk+OezKg82sukxZ8ILI4k5QvKhS1SUDHm4ZuK7pCms4o9birqCodMK1PntdNX+x35hJGeGcHAoxtBkWfbcdHwa13M4Lg95kvGuFzppH34sSzo3J+epuVi3KbPahjcosL/ITJuldGXbqJcZffMv0tDWBp19yRkP/yBNtJPm628Z4+t80Q8Qw3AUD7fCQqiQ9ru9KrwrXIQlKIPgeMsoujirj6k6aslZAt9vE+Tnq2KDcElv2skR160VK95lwR+PyxLvqzA3SYv6gmwRkEkS711TH+MbDU340WqlVqR6pMXXKrNYQI1pH5sxg7cbMnOtTwIDAQAB",
+  "permissions": [
+    "debugger",
+    "nativeMessaging",
+    "storage",
+    "tabs",
+    "tabGroups"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "action": {
+    "default_title": "CodeShell Browser Runtime",
+    "default_popup": "popup.html"
+  }
+}

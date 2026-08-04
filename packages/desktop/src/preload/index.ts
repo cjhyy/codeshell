@@ -1570,6 +1570,31 @@ contextBridge.exposeInMainWorld("codeshell", {
     partition: string;
     engineSessionId?: string | null;
   }) => ipcRenderer.send("browser:guest-attached", payload),
+  grantBuiltInBrowserToRuntime: (payload: {
+    sessionId: string;
+    guestId: number;
+    ttlMs?: number;
+  }): Promise<{
+    granted: boolean;
+    sessionId: string;
+    guestId?: number;
+    url?: string;
+    title?: string;
+    grantedAt?: number;
+    expiresAt?: number;
+  }> => ipcRenderer.invoke("browser-runtime:grant-built-in", payload),
+  revokeBuiltInBrowserFromRuntime: (sessionId: string) =>
+    ipcRenderer.invoke("browser-runtime:revoke-built-in", sessionId),
+  getBuiltInBrowserRuntimeHandoff: (sessionId: string) =>
+    ipcRenderer.invoke("browser-runtime:handoff-status", sessionId),
+  beginChromeBrowserRuntimePairing: (payload: { sessionId: string; label?: string }) =>
+    ipcRenderer.invoke("browser-runtime:chrome-begin-pairing", payload),
+  getChromeBrowserRuntimeStatus: (sessionId: string) =>
+    ipcRenderer.invoke("browser-runtime:chrome-status", sessionId),
+  revokeChromeBrowserRuntime: (sessionId: string) =>
+    ipcRenderer.invoke("browser-runtime:chrome-revoke", sessionId),
+  getChromeBrowserRuntimeInstallation: () =>
+    ipcRenderer.invoke("browser-runtime:chrome-installation"),
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove: (anchorId: string) =>
     ipcRenderer.send("browser:anchor-remove", anchorId),

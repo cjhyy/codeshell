@@ -1,6 +1,8 @@
 /**
- * Browser automation tools — drive the in-app webview via the BrowserBridge
- * (CDP under the hood). Collapsed into THREE semantic tools (was 9 flat tools)
+ * Browser automation tools — drive a host-owned Browser Runtime through the
+ * BrowserBridge compatibility port. The runtime is independent of any
+ * user-facing built-in browser panel. Collapsed into THREE semantic tools
+ * (was 9 flat tools)
  * to keep the LLM's tool list lean:
  *
  *   browser_observe  — observe the page: snapshot (a11y elements) / read (text) /
@@ -14,7 +16,7 @@
  * snapshot returns interactive elements as a compact ref-tagged list (a11y tree,
  * token-economical, no screenshots); act references elements by the ref the
  * latest snapshot assigned. All tools degrade with a clear error when no browser
- * is wired. isConcurrencySafe:false — a single webview is driven serially.
+ * runtime is wired. isConcurrencySafe:false — one runtime tab is driven serially.
  *
  * Permission: browser_act is permissionDefault "allow"; the sensitive actions
  * (click/type/select) are escalated to "ask" by a preset PermissionRule keyed on
@@ -31,8 +33,7 @@ import type { ProviderKindName } from "../../llm/provider-kinds.js";
 import type { ContentBlock } from "../../types.js";
 
 const NO_BROWSER =
-  "Error: browser automation is not available (no browser panel in this session). " +
-  "It requires the desktop app with an open browser panel.";
+  "Error: browser automation runtime is not available in this host session.";
 
 function bridge(ctx?: ToolContext) {
   return ctx?.browser;
@@ -48,13 +49,14 @@ const STALE = (ref: string) =>
 export const browserObserveToolDef: ToolDefinition = {
   name: "browser_observe",
   description:
-    "Observe the current page in the browser panel. Modes:\n" +
+    "Observe the current page in the CodeShell browser runtime. This runtime is " +
+    "independent of the user-facing built-in browser. Modes:\n" +
     "- snapshot (default): URL/title + a compact list of interactive elements, each " +
     "tagged [ref=eN] for browser_act. ALWAYS snapshot before acting, and re-snapshot " +
     "after navigation/page changes (refs are only valid for the latest snapshot). " +
     "Passwords show as [sensitive] with no value.\n" +
-    "- read: the page's main readable text (for summarizing/scraping an article/post; " +
-    "long pages truncate — scroll + read again).\n" +
+    "- read: a cursor-paged chunk of the page's normalized readable text. Continue " +
+    "with the returned nextCursor until complete; scrolling is only for lazy/infinite loading.\n" +
     "- extract: the real URLs on the page (hyperlink hrefs, image srcs, video srcs) " +
     "that snapshot omits — each image/video is tagged [ref=imgN/vidN] for image mode.\n" +
     "- image: SEE the actual pixels of page images (refs from extract, e.g. img3) — for " +
@@ -78,6 +80,14 @@ export const browserObserveToolDef: ToolDefinition = {
       ref: {
         type: "string",
         description: "vision mode (optional): screenshot just this element's region",
+      },
+      cursor: {
+        type: "string",
+        description: "read mode: opaque nextCursor returned by the previous read chunk",
+      },
+      max_chars: {
+        type: "number",
+        description: "read mode: requested chunk size (clamped by the runtime)",
       },
     },
   },
@@ -115,9 +125,22 @@ export async function browserObserveTool(
       return `${header}\n\n${renderElementList(snap.elements)}${human}`;
     }
     case "read": {
-      const c = await b.readContent();
+      const c = await b.readContent({
+        cursor: typeof args.cursor === "string" ? args.cursor : undefined,
+        maxChars: typeof args.max_chars === "number" ? args.max_chars : undefined,
+      });
       if (!c.ok) return `Error: ${c.detail ?? "could not read page content"}`;
-      const head = `URL: ${c.url}${c.title ? `\nTitle: ${c.title}` : ""}${c.truncated ? "\n(content truncated)" : ""}`;
+      const progress = c.done
+        ? "\nRead: complete"
+        : c.nextCursor
+          ? `\nRead: more available\nnextCursor: ${c.nextCursor}`
+          : c.truncated
+            ? "\nRead: truncated"
+            : "";
+      const scroll = c.scroll
+        ? `\nScroll: ${Math.round(c.scroll.y)}/${Math.round(c.scroll.maxY)}${c.scroll.atEnd ? " (end)" : ""}`
+        : "";
+      const head = `URL: ${c.url}${c.title ? `\nTitle: ${c.title}` : ""}${progress}${scroll}`;
       return `${head}\n\n${c.text || "(no readable text)"}`;
     }
     case "extract": {
@@ -189,8 +212,8 @@ export async function browserObserveTool(
 export const browserActToolDef: ToolDefinition = {
   name: "browser_act",
   description:
-    "Act on the active in-app browser target (visible panel when open, otherwise " +
-    "a background target). Use refs (eN) from the latest " +
+    "Act on the active tab in the CodeShell Browser Runtime. It is independent of " +
+    "the user-facing built-in browser. Use refs (eN) from the latest " +
     "browser_observe(snapshot). Actions:\n" +
     "- click {ref}: click an element.\n" +
     "- type {ref, text}: type text into an input (focuses first).\n" +
@@ -314,7 +337,14 @@ export async function browserActTool(
       const dir = args.direction as "up" | "down";
       if (dir !== "up" && dir !== "down") return "Error: direction must be 'up' or 'down'";
       const r = await b.scroll(dir, args.amount as number | undefined);
-      return r.ok ? `Scrolled ${dir}` : `Error: ${r.detail ?? "scroll failed"}`;
+      if (!r.ok) {
+        const code = r.code ? ` [${r.code}]` : "";
+        return `Error${code}: ${r.detail ?? "scroll failed"}`;
+      }
+      const state = r.scroll
+        ? ` — position ${Math.round(r.scroll.y)}/${Math.round(r.scroll.maxY)}${r.scroll.atEnd ? " (end)" : ""}`
+        : "";
+      return `Scrolled ${dir}${state}`;
     }
     case "wait": {
       const r = await b.waitForLoad(args.timeout_ms as number | undefined);
@@ -334,8 +364,9 @@ export async function browserActTool(
 export const browserNavigateToolDef: ToolDefinition = {
   name: "browser_navigate",
   description:
-    "Navigate the in-app browser to a URL. If no visible browser panel is open, " +
-    "navigation stays in the background; a window appears only when login or a " +
+    "Navigate the CodeShell browser runtime to a URL. It does not control the " +
+    "user-facing built-in browser unless the user explicitly grants a future handoff. " +
+    "Navigation stays in the background; the runtime's own window appears only when login or a " +
     "high-consequence action needs human control. Then call browser_act(wait) + " +
     "browser_observe to inspect the page.",
   inputSchema: {

@@ -140,13 +140,106 @@ describe("CdpActionsDriver.typeNode", () => {
 
 describe("CdpActionsDriver.scroll", () => {
   test("dispatches mouseWheel with signed deltaY", async () => {
-    const { send, calls } = fakeCdp();
+    let y = 0;
+    const { send, calls } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: {
+          value: {
+            textLength: 100,
+            scroll: {
+              x: 0,
+              y,
+              maxX: 0,
+              maxY: 2000,
+              viewportWidth: 800,
+              viewportHeight: 600,
+              atTop: y === 0,
+              atEnd: false,
+            },
+          },
+        },
+      }),
+      "Input.dispatchMouseEvent": (params) => {
+        y += params.deltaY;
+        return {};
+      },
+    });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
     await d.scroll("down", 300);
-    expect(calls[0]?.params).toMatchObject({ type: "mouseWheel", deltaY: 300 });
+    expect(calls.find((c) => c.params?.type === "mouseWheel")?.params).toMatchObject({
+      type: "mouseWheel",
+      deltaY: 300,
+    });
     calls.length = 0;
     await d.scroll("up");
-    expect(calls[0]?.params).toMatchObject({ type: "mouseWheel", deltaY: -600 });
+    expect(calls.find((c) => c.params?.type === "mouseWheel")?.params).toMatchObject({
+      type: "mouseWheel",
+      deltaY: -600,
+    });
+  });
+
+  test("clamps huge deltas to one viewport and returns the resulting position", async () => {
+    let y = 0;
+    const { send, calls } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: {
+          value: {
+            textLength: 100,
+            scroll: {
+              x: 0,
+              y,
+              maxX: 0,
+              maxY: 2000,
+              viewportWidth: 900,
+              viewportHeight: 500,
+              atTop: y === 0,
+              atEnd: y >= 2000,
+            },
+          },
+        },
+      }),
+      "Input.dispatchMouseEvent": (params) => {
+        y += params.deltaY;
+        return {};
+      },
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    const result = await d.scroll("down", 20_000);
+
+    const wheel = calls.find((call) => call.params?.type === "mouseWheel");
+    expect(wheel?.params.deltaY).toBe(500);
+    expect(result).toMatchObject({ ok: true, code: "OK", scroll: { y: 500, maxY: 2000 } });
+  });
+
+  test("reports NO_PROGRESS instead of succeeding at the page end", async () => {
+    const { send } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: {
+          value: {
+            textLength: 100,
+            scroll: {
+              x: 0,
+              y: 1000,
+              maxX: 0,
+              maxY: 1000,
+              viewportWidth: 800,
+              viewportHeight: 600,
+              atTop: false,
+              atEnd: true,
+            },
+          },
+        },
+      }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    expect(await d.scroll("down", 600)).toMatchObject({
+      ok: false,
+      code: "NO_PROGRESS",
+      retryable: false,
+      scroll: { atEnd: true },
+    });
   });
 });
 
@@ -396,6 +489,86 @@ describe("validateNavigationUrl", () => {
 
   test("rejects relative URLs", () => {
     expect(validateNavigationUrl("example.com")).toMatchObject({ ok: false });
+  });
+});
+
+describe("CdpActionsDriver.readContent cursor paging", () => {
+  test("returns deterministic chunks and completes with nextCursor", async () => {
+    const text = "x".repeat(500);
+    const { send } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: {
+          value: {
+            text,
+            scroll: {
+              x: 0,
+              y: 0,
+              maxX: 0,
+              maxY: 0,
+              viewportWidth: 800,
+              viewportHeight: 600,
+              atTop: true,
+              atEnd: true,
+            },
+          },
+        },
+      }),
+      "Page.getFrameTree": () => ({
+        frameTree: { frame: { id: "frame-1", loaderId: "loader-1", url: "https://x.test" } },
+      }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "https://x.test" }));
+
+    const first = await d.readContent({ maxChars: 300 });
+    expect(first).toMatchObject({
+      ok: true,
+      documentId: "frame-1:loader-1",
+      done: false,
+      truncated: true,
+    });
+    expect(first.text).toHaveLength(300);
+    expect(first.nextCursor).toBeDefined();
+
+    const second = await d.readContent({ cursor: first.nextCursor, maxChars: 300 });
+    expect(second).toMatchObject({ ok: true, done: true, truncated: false });
+    expect(second.text).toHaveLength(200);
+    expect(second.nextCursor).toBeUndefined();
+    expect(second.contentHash).toBe(first.contentHash);
+  });
+
+  test("rejects a cursor after the main document loader changes", async () => {
+    let loaderId = "loader-1";
+    const { send } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: {
+          value: {
+            text: "x".repeat(500),
+            scroll: {
+              x: 0,
+              y: 0,
+              maxX: 0,
+              maxY: 0,
+              viewportWidth: 800,
+              viewportHeight: 600,
+              atTop: true,
+              atEnd: true,
+            },
+          },
+        },
+      }),
+      "Page.getFrameTree": () => ({
+        frameTree: { frame: { id: "frame-1", loaderId, url: "https://x.test" } },
+      }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "https://x.test" }));
+    const first = await d.readContent({ maxChars: 256 });
+    loaderId = "loader-2";
+
+    expect(await d.readContent({ cursor: first.nextCursor })).toMatchObject({
+      ok: false,
+      code: "STALE_CURSOR",
+      documentId: "frame-1:loader-2",
+    });
   });
 });
 

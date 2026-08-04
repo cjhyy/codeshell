@@ -3735,7 +3735,7 @@ export class AgentServer {
       type: (ref, text) => call("type", { ref, text }),
       navigate: (url) => call("navigate", { url }),
       scroll: (dir, amount) => call("scroll", { dir, amount }),
-      readContent: () => call("readContent", {}),
+      readContent: (options) => call("readContent", { ...(options ?? {}) }),
       extractLinks: () => call("extractLinks", {}),
       waitForLoad: (timeoutMs) => call("waitForLoad", { timeoutMs }),
       hover: (ref) => call("hover", { ref }),

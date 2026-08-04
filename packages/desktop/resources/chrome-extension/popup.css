@@ -1,0 +1,14 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; min-width: 330px; }
+main { padding: 14px; }
+h1 { margin: 0 0 8px; font-size: 16px; }
+p { margin: 8px 0; font-size: 12px; line-height: 1.45; }
+#requests { display: grid; gap: 8px; margin: 12px 0; }
+.request { display: grid; gap: 5px; padding: 9px; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 8px; }
+.request strong { font-size: 13px; }
+.request code { font-size: 12px; }
+button { cursor: pointer; border: 0; border-radius: 6px; padding: 7px 10px; background: #2563eb; color: white; }
+button:disabled { cursor: default; opacity: .55; }
+#refresh { width: 100%; background: color-mix(in srgb, currentColor 12%, transparent); color: inherit; }
+.hint { color: color-mix(in srgb, currentColor 65%, transparent); }
+.error { color: #dc2626; }

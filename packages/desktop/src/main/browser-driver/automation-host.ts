@@ -10,11 +10,16 @@
  * so the routing is unit-testable and the driver module stays UI-agnostic.
  */
 
-import type { BrowserBridge } from "@cjhyy/code-shell-core";
+import type { BrowserBridge, BrowserSnapshot } from "@cjhyy/code-shell-core";
 import type { WebContents } from "electron";
 import { CdpBrowserDriver } from "./cdp-driver.js";
 import { attachDebugger, detachDebugger } from "./electron-cdp.js";
-import { isDomainAllowed, isSensitiveAction, type BrowserAutomationPolicy } from "./policy.js";
+import {
+  isDomainAllowed,
+  isSensitiveAction,
+  SENSITIVE_WORDS,
+  type BrowserAutomationPolicy,
+} from "./policy.js";
 
 /**
  * Per-guest driver cache. The CdpBrowserDriver holds the ref→backendNodeId map
@@ -26,6 +31,7 @@ import { isDomainAllowed, isSensitiveAction, type BrowserAutomationPolicy } from
 const drivers = new Map<number, CdpBrowserDriver>();
 const knownGuests = new Map<number, WebContents>();
 const automationAttachedGuests = new Set<number>();
+const sensitiveRefsByGuest = new Map<number, Set<string>>();
 
 function driverForGuest(guest: WebContents): CdpBrowserDriver {
   const id = guest.id;
@@ -50,6 +56,7 @@ export function releaseGuest(id: number): void {
   automationAttachedGuests.delete(id);
   knownGuests.delete(id);
   drivers.delete(id);
+  sensitiveRefsByGuest.delete(id);
 }
 
 /** The action shape the worker sends (args of the __browser_action__ request). */
@@ -76,6 +83,10 @@ export interface BrowserActionRequest {
   dir?: "up" | "down";
   amount?: number;
   timeoutMs?: number;
+  /** readContent: opaque continuation from a previous read. */
+  cursor?: string;
+  /** readContent: requested text chunk size (driver clamps it). */
+  maxChars?: number;
   /** selectOption: option value/text to choose. */
   value?: string;
   /** pressKey: key name or combination ("Enter", "Tab", "Control+a"). */
@@ -186,7 +197,10 @@ export async function handleBrowserAction(
   }
 
   // Sensitive action approval (click/type on payment/delete/credential surfaces).
-  if (isSensitiveAction(req)) {
+  const learnedSensitiveRef = Boolean(
+    req.ref && sensitiveRefsByGuest.get(guest.id)?.has(req.ref),
+  );
+  if (isSensitiveAction(req) || learnedSensitiveRef) {
     const ok = await requestApproval(deps, `敏感浏览器操作:${req.action} ${req.ref ?? ""}`);
     if (!ok) return JSON.stringify({ ok: false, detail: "sensitive action declined" });
   }
@@ -202,6 +216,17 @@ export async function handleBrowserAction(
     switch (req.action) {
       case "snapshot":
         result = await driver.snapshot();
+        sensitiveRefsByGuest.set(
+          guest.id,
+          new Set(
+            (result as BrowserSnapshot).elements
+              .filter(
+                (element) =>
+                  element.sensitive === true || hasHighConsequenceName(element.name),
+              )
+              .map((element) => element.ref),
+          ),
+        );
         break;
       case "click":
         result = await driver.click(req.ref ?? "");
@@ -211,12 +236,13 @@ export async function handleBrowserAction(
         break;
       case "navigate":
         result = await driver.navigate(req.url ?? "");
+        if ((result as { ok?: boolean }).ok) sensitiveRefsByGuest.delete(guest.id);
         break;
       case "scroll":
         result = await driver.scroll(req.dir ?? "down", req.amount);
         break;
       case "readContent":
-        result = await driver.readContent();
+        result = await driver.readContent({ cursor: req.cursor, maxChars: req.maxChars });
         break;
       case "extractLinks":
         result = await driver.extractLinks();
@@ -282,7 +308,7 @@ export async function dispatchBrowserBridgeAction(
         result = await bridge.scroll(req.dir ?? "down", req.amount);
         break;
       case "readContent":
-        result = await bridge.readContent();
+        result = await bridge.readContent({ cursor: req.cursor, maxChars: req.maxChars });
         break;
       case "extractLinks":
         result = await bridge.extractLinks();
@@ -354,4 +380,11 @@ function hostOf(url: string): string {
   } catch {
     return url;
   }
+}
+
+function hasHighConsequenceName(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return (
+    normalized.length > 0 && SENSITIVE_WORDS.some((word) => normalized.includes(word.toLowerCase()))
+  );
 }

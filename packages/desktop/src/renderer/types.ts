@@ -69,6 +69,7 @@ export interface ToolMessage {
   kind: "tool";
   id: string;
   toolName: string;
+  uiVisibility?: "hidden" | "milestones" | "full";
   args: string; // serialized JSON snapshot at tool_use_start
   argsLive?: Record<string, unknown>; // updates while tool_use_args_delta streams
   result?: string;
@@ -720,6 +721,7 @@ export function applyStreamEvent(
         kind: "tool",
         id,
         toolName: event.toolCall.toolName,
+        uiVisibility: event.toolCall.uiVisibility,
         args: JSON.stringify(event.toolCall.args ?? {}),
         status: "running",
         // Use the clock, not a hard-coded Date.now(): on replay `now()` returns
@@ -802,6 +804,7 @@ export function applyStreamEvent(
           images: images && images.length > 0 ? images : t.images,
           error: event.result.error,
           sandbox: event.result.sandbox,
+          uiVisibility: event.result.uiVisibility ?? t.uiVisibility,
           status: failed ? "failed" : "succeeded",
           endedAt: end,
           durationMs: Math.max(0, end - t.startedAt),

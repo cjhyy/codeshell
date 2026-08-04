@@ -8,10 +8,40 @@
 /** Outcome of an action (click/type/navigate/…). */
 export interface CdpActionResult {
   ok: boolean;
+  code?:
+    | "OK"
+    | "STALE_SNAPSHOT"
+    | "STALE_CURSOR"
+    | "NO_PROGRESS"
+    | "NAVIGATION"
+    | "BLOCKED"
+    | "NEEDS_HUMAN"
+    | "FAILED";
+  retryable?: boolean;
   /** Human-readable detail (error reason, or short success note). */
   detail?: string;
   /** True when a ref no longer resolves (DOM changed) → caller should re-snapshot. */
   staleRef?: boolean;
+  documentId?: string;
+  documentChanged?: boolean;
+  scroll?: CdpScrollState;
+  contentChanged?: boolean;
+}
+
+export interface CdpScrollState {
+  x: number;
+  y: number;
+  maxX: number;
+  maxY: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  atTop: boolean;
+  atEnd: boolean;
+}
+
+export interface CdpReadOptions {
+  cursor?: string;
+  maxChars?: number;
 }
 
 /**
@@ -35,6 +65,7 @@ export interface AXNode {
 export interface RawSnapshot {
   url: string;
   title?: string;
+  documentId?: string;
   nodes: AXNode[];
 }
 
@@ -43,7 +74,14 @@ export interface CdpContentResult {
   ok: boolean;
   url: string;
   title?: string;
+  code?: CdpActionResult["code"];
+  documentId?: string;
   text: string;
+  cursor?: string;
+  nextCursor?: string;
+  done?: boolean;
+  contentHash?: string;
+  scroll?: CdpScrollState;
   truncated?: boolean;
   detail?: string;
 }

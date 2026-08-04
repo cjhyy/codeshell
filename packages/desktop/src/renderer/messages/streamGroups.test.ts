@@ -4,6 +4,7 @@ import {
   processGroupActivityLabel,
   processGroupLabel,
   reconcileStreamItems,
+  shouldHideBrowserRuntimeTool,
   toolGroupActivityLabel,
   type ToolGroup,
   type TurnProcessGroup,
@@ -61,6 +62,44 @@ function tool(
     durationMs: endedAt - startedAt,
   };
 }
+
+describe("Browser Runtime UI projection", () => {
+  test("milestones hide routine browser internals but keep navigation and visual evidence", () => {
+    const snapshot = tool("browser_observe", 1, 2, { mode: "snapshot" });
+    const scroll = tool("browser_act", 3, 4, { action: "scroll" });
+    const navigate = tool("browser_navigate", 5, 6, { url: "https://x.test" });
+    const vision = tool("browser_observe", 7, 8, { mode: "vision" });
+
+    expect(shouldHideBrowserRuntimeTool(snapshot)).toBe(true);
+    expect(shouldHideBrowserRuntimeTool(scroll)).toBe(true);
+    expect(shouldHideBrowserRuntimeTool(navigate)).toBe(false);
+    expect(shouldHideBrowserRuntimeTool(vision)).toBe(false);
+  });
+
+  test("hidden removes every browser card while full preserves every call", () => {
+    const hidden = {
+      ...tool("browser_navigate", 1, 2, { url: "https://x.test" }),
+      uiVisibility: "hidden" as const,
+    };
+    const full = {
+      ...tool("browser_act", 3, 4, { action: "scroll" }),
+      uiVisibility: "full" as const,
+    };
+    expect(shouldHideBrowserRuntimeTool(hidden)).toBe(true);
+    expect(shouldHideBrowserRuntimeTool(full)).toBe(false);
+  });
+
+  test("milestones surface failures and NO_PROGRESS while keeping successful internals folded", () => {
+    const failure = {
+      ...tool("browser_act", 1, 2, { action: "scroll" }),
+      result: "Error [NO_PROGRESS]: already at end",
+    };
+    expect(shouldHideBrowserRuntimeTool(failure)).toBe(false);
+    expect(buildStreamItems([user(), failure]).some((item) => item.kind.includes("process"))).toBe(
+      true,
+    );
+  });
+});
 
 function agent(id: string, toolCount: number, opts: { done?: boolean } = {}): AgentMessage {
   return {

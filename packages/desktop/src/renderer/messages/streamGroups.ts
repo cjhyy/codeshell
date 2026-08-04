@@ -126,7 +126,53 @@ const HIDDEN_TOOL_NAMES = new Set([
 ]);
 
 function isHiddenTool(m: Message): boolean {
-  return m.kind === "tool" && HIDDEN_TOOL_NAMES.has(m.toolName.toLowerCase());
+  if (m.kind !== "tool") return false;
+  if (HIDDEN_TOOL_NAMES.has(m.toolName.toLowerCase())) return true;
+  return shouldHideBrowserRuntimeTool(m);
+}
+
+const BROWSER_RUNTIME_TOOL_NAMES = new Set([
+  "browser_observe",
+  "browser_act",
+  "browser_navigate",
+]);
+
+/**
+ * Browser Runtime keeps complete tool messages in state/transcript but projects
+ * only useful milestones into the ordinary chat stream. Legacy replayed events
+ * have no uiVisibility metadata, so browser calls default to milestones.
+ */
+export function shouldHideBrowserRuntimeTool(message: ToolMessage): boolean {
+  const name = message.toolName.toLowerCase();
+  if (!BROWSER_RUNTIME_TOOL_NAMES.has(name)) return false;
+  const visibility = message.uiVisibility ?? "milestones";
+  if (visibility === "full") return false;
+  if (visibility === "hidden") return true;
+
+  // Failures and takeover signals are milestones even when the tool returned a
+  // model-facing error string instead of setting ToolResult.isError.
+  const detail = `${message.error ?? ""}\n${message.result ?? ""}`;
+  if (
+    message.status === "failed" ||
+    /(^|\b)error\b|no_progress|needs[ _-]?human|login required|2fa|登录|接管/i.test(detail)
+  ) {
+    return false;
+  }
+
+  let args: Record<string, unknown> = {};
+  try {
+    args = JSON.parse(message.args) as Record<string, unknown>;
+  } catch {
+    // Malformed legacy args are not a reason to expose low-level calls.
+  }
+  args = { ...args, ...(message.argsLive ?? {}) };
+  // Navigation and visual evidence are useful user-facing milestones. Routine
+  // snapshot/read/extract/act/wait/scroll calls stay in the trace only.
+  if (name === "browser_navigate") return false;
+  if (name === "browser_observe" && (args.mode === "vision" || args.mode === "image")) {
+    return false;
+  }
+  return true;
 }
 
 /**

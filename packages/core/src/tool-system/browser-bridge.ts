@@ -5,17 +5,16 @@
  *
  * Spec: docs/superpowers/specs/2026-06-16-browser-automation-mvp.md
  *
- * The core tools only know this interface. Desktop implementations use
- * `webContents.debugger` (CDP): observe via
- * Accessibility.getFullAXTree, act via DOM.getBoxModel → Input.dispatchMouseEvent.
- * Keeping it driver-agnostic lets visible, background, and remote targets swap
- * without touching the tools. Undefined on ToolContext means the current host
- * did not provide browser automation, so tools degrade with a clear error.
+ * The core tools only know this interface. Desktop can implement it with a
+ * Playwright-owned context, Electron `webContents.debugger`, or an authorized
+ * Chrome-extension CDP transport. Keeping it driver-agnostic lets those targets
+ * swap without touching the tools. Undefined on ToolContext means the current
+ * host did not provide browser automation, so tools degrade with a clear error.
  */
 
 /** One interactive element from the page's accessibility tree. */
 export interface BrowserElement {
-  /** Per-snapshot reference id (e1, e2, …); the renderer maps it back to a
+  /** Per-snapshot reference id (for example s3:e1); the host maps it back to a
    *  backendDOMNodeId for the action tools. Reassigned each snapshot. */
   ref: string;
   /** ARIA role (button, link, textbox, checkbox, combobox, …). */
@@ -31,6 +30,10 @@ export interface BrowserElement {
 export interface BrowserSnapshot {
   url: string;
   title?: string;
+  /** Main-frame document identity. Changes on every cross-document navigation. */
+  documentId?: string;
+  /** Identity of this exact observation; refs belong only to this snapshot. */
+  snapshotId?: string;
   elements: BrowserElement[];
   /** Operational/policy failure. Unlike needsHuman, this must not trigger takeover. */
   detail?: string;
@@ -39,12 +42,49 @@ export interface BrowserSnapshot {
   needsHuman?: string;
 }
 
+export type BrowserResultCode =
+  | "OK"
+  | "STALE_SNAPSHOT"
+  | "STALE_CURSOR"
+  | "NO_PROGRESS"
+  | "NAVIGATION"
+  | "BLOCKED"
+  | "NEEDS_HUMAN"
+  | "FAILED";
+
+export interface BrowserScrollState {
+  x: number;
+  y: number;
+  maxX: number;
+  maxY: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  atTop: boolean;
+  atEnd: boolean;
+}
+
 export interface BrowserResult {
   ok: boolean;
+  /** Stable machine-readable outcome; detail remains for the model/user. */
+  code?: BrowserResultCode;
+  /** Whether repeating the same operation without a new observation can help. */
+  retryable?: boolean;
   /** Human-readable detail (error reason, or short success note). */
   detail?: string;
   /** True when a ref no longer resolves (DOM changed) → agent should re-snapshot. */
   staleRef?: boolean;
+  documentId?: string;
+  documentChanged?: boolean;
+  /** Present for scroll-like actions so callers can prove forward progress. */
+  scroll?: BrowserScrollState;
+  contentChanged?: boolean;
+}
+
+export interface BrowserReadOptions {
+  /** Opaque continuation returned by the previous read call. */
+  cursor?: string;
+  /** Requested chunk size; the driver clamps it to a safe maximum. */
+  maxChars?: number;
 }
 
 /** Result of reading the page's main textual content (扒内容). */
@@ -52,9 +92,20 @@ export interface BrowserContent {
   ok: boolean;
   url: string;
   title?: string;
+  code?: BrowserResultCode;
+  documentId?: string;
   /** Extracted readable text (main content, scripts/styles/nav stripped). */
   text: string;
-  /** True if the text was truncated to a cap. */
+  /** Cursor represented by this response (the first page uses an implicit start). */
+  cursor?: string;
+  /** Opaque cursor for the next chunk. Absent when done. */
+  nextCursor?: string;
+  /** True when the complete normalized document text has been consumed. */
+  done?: boolean;
+  /** Stable hash of the normalized full text for progress/deduplication. */
+  contentHash?: string;
+  scroll?: BrowserScrollState;
+  /** Compatibility alias for !done. */
   truncated?: boolean;
   detail?: string;
 }
@@ -121,7 +172,7 @@ export interface BrowserBridge {
   navigate(url: string): Promise<BrowserResult>;
   scroll(dir: "up" | "down", amount?: number): Promise<BrowserResult>;
   /** Read the page's main readable text content (for summarizing / extraction). */
-  readContent(): Promise<BrowserContent>;
+  readContent(options?: BrowserReadOptions): Promise<BrowserContent>;
   /** Extract the page's hyperlink + image URLs (href/src the a11y tree omits). */
   extractLinks(): Promise<BrowserExtract>;
   /** Wait until the page finishes loading (or a timeout). */

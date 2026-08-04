@@ -19,7 +19,12 @@ async function buildMain(): Promise<void> {
     platform: "node",
     format: "esm",
     outfile: resolve(root, "out/main/index.mjs"),
-    external: ["electron", "@cjhyy/code-shell-core", "@cjhyy/code-shell-capability-coding"],
+    external: [
+      "electron",
+      "playwright-core",
+      "@cjhyy/code-shell-core",
+      "@cjhyy/code-shell-capability-coding",
+    ],
     loader: { ".md": "text" },
     banner: {
       // esbuild wraps bundled CommonJS dependencies but does not provide the

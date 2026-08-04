@@ -220,6 +220,33 @@ const turnComplete: StreamEvent = { type: "turn_complete", reason: "completed" }
 // ── tests ───────────────────────────────────────────────────────────
 
 describe("applyStreamEvent — tool_use_start idempotency", () => {
+  test("preserves host-projected Browser Runtime visibility through the result", () => {
+    let state = applyStreamEvent(
+      INITIAL_STATE,
+      ev("tool_use_start", {
+        toolCall: {
+          id: "browser-1",
+          toolName: "browser_act",
+          args: { action: "scroll" },
+          uiVisibility: "hidden",
+        },
+      } as any),
+    );
+    state = applyStreamEvent(
+      state,
+      ev("tool_result", {
+        result: {
+          id: "browser-1",
+          toolName: "browser_act",
+          result: "Scrolled",
+          uiVisibility: "hidden",
+        },
+      } as any),
+    );
+    const tool = state.messages.find((message) => message.kind === "tool");
+    expect(tool).toMatchObject({ uiVisibility: "hidden", status: "succeeded" });
+  });
+
   // Regression: a duplicate tool_use_start for the same call id (provider
   // re-emit, stream replay/overlap) must not append a second tool message with
   // the same id — that caused duplicate React keys + a doubled card.

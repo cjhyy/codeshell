@@ -48,11 +48,15 @@ export interface ToolCall {
   toolName: string;
   serverName?: string;
   args: Record<string, unknown>;
+  /** Host-projected UI visibility. Does not affect execution or transcript retention. */
+  uiVisibility?: "hidden" | "milestones" | "full";
 }
 
 export interface ToolResult {
   id: string;
   toolName: string;
+  /** Host-projected UI visibility. Does not affect the model-facing result. */
+  uiVisibility?: "hidden" | "milestones" | "full";
   /**
    * Sensitive tool results keep `result` as the model-facing value for the
    * current model round only. Persisted/displayed/streamed observers must use

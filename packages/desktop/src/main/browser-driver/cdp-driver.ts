@@ -26,6 +26,7 @@ import {
   type BrowserSnapshot,
   type BrowserResult,
   type BrowserContent,
+  type BrowserReadOptions,
   type BrowserExtract,
   type BrowserImageData,
   type AXNode,
@@ -40,6 +41,8 @@ export class CdpBrowserDriver implements BrowserBridge {
   private readonly inner: CdpActionsDriver;
   /** ref (e1,e2,…) → backendDOMNodeId from the latest snapshot. Cleared each snapshot. */
   private refMap: Record<string, number> = {};
+  private latestDocumentId: string | undefined;
+  private snapshotCounter = 0;
 
   constructor(send: CdpSender, pageInfo: () => Promise<PageInfo> | PageInfo) {
     this.inner = new CdpActionsDriver(send, pageInfo);
@@ -51,25 +54,52 @@ export class CdpBrowserDriver implements BrowserBridge {
 
   async snapshot(): Promise<BrowserSnapshot> {
     const raw = await this.inner.snapshot();
-    const { elements, refToBackendId } = flattenAxTree((raw.nodes ?? []) as AXNode[]);
-    this.refMap = refToBackendId;
+    const flattened = flattenAxTree((raw.nodes ?? []) as AXNode[]);
+    this.snapshotCounter += 1;
+    const snapshotId = `s${this.snapshotCounter}`;
+    const elements = flattened.elements.map((element) => ({
+      ...element,
+      ref: `${snapshotId}:${element.ref}`,
+    }));
+    this.refMap = Object.fromEntries(
+      Object.entries(flattened.refToBackendId).map(([ref, backendId]) => [
+        `${snapshotId}:${ref}`,
+        backendId,
+      ]),
+    );
+    this.latestDocumentId = raw.documentId;
     const needsHuman = detectLoginWall(raw.url, elements);
-    return { url: raw.url, title: raw.title, elements, ...(needsHuman ? { needsHuman } : {}) };
+    return {
+      url: raw.url,
+      title: raw.title,
+      documentId: raw.documentId,
+      snapshotId,
+      elements,
+      ...(needsHuman ? { needsHuman } : {}),
+    };
   }
 
-  /** Resolve a ref to its backendDOMNodeId; undefined if unknown (caller re-snapshots). */
-  private backendId(ref: string): number | undefined {
+  /** Resolve a ref only while its source document is still current. */
+  private async backendId(ref: string): Promise<number | undefined> {
+    if (this.latestDocumentId) {
+      const current = await this.inner.currentDocumentId();
+      if (current !== this.latestDocumentId) {
+        this.refMap = {};
+        this.latestDocumentId = undefined;
+        return undefined;
+      }
+    }
     return this.refMap[ref];
   }
 
   async click(ref: string): Promise<BrowserResult> {
-    const id = this.backendId(ref);
+    const id = await this.backendId(ref);
     if (id === undefined) return unknownRef(ref);
     return this.inner.clickNode(id);
   }
 
   async type(ref: string, text: string): Promise<BrowserResult> {
-    const id = this.backendId(ref);
+    const id = await this.backendId(ref);
     if (id === undefined) return unknownRef(ref);
     return this.inner.typeNode(id, text);
   }
@@ -78,11 +108,12 @@ export class CdpBrowserDriver implements BrowserBridge {
     const r = await this.inner.navigate(url);
     // A navigation invalidates every ref from the previous page.
     this.refMap = {};
+    this.latestDocumentId = undefined;
     return r;
   }
 
-  readContent(): Promise<BrowserContent> {
-    return this.inner.readContent();
+  readContent(options?: BrowserReadOptions): Promise<BrowserContent> {
+    return this.inner.readContent(options);
   }
 
   extractLinks(): Promise<BrowserExtract> {
@@ -94,13 +125,13 @@ export class CdpBrowserDriver implements BrowserBridge {
   }
 
   async hover(ref: string): Promise<BrowserResult> {
-    const id = this.backendId(ref);
+    const id = await this.backendId(ref);
     if (id === undefined) return unknownRef(ref);
     return this.inner.hoverNode(id);
   }
 
   async selectOption(ref: string, value: string): Promise<BrowserResult> {
-    const id = this.backendId(ref);
+    const id = await this.backendId(ref);
     if (id === undefined) return unknownRef(ref);
     return this.inner.selectOptionNode(id, value);
   }
@@ -108,7 +139,7 @@ export class CdpBrowserDriver implements BrowserBridge {
   async pressKey(key: string, ref?: string): Promise<BrowserResult> {
     // Focus the ref first (so the key lands on the right field), then dispatch.
     if (ref) {
-      const id = this.backendId(ref);
+      const id = await this.backendId(ref);
       if (id === undefined) return unknownRef(ref);
       const focused = await this.inner.focusNode(id);
       if (!focused.ok) return focused;
@@ -153,7 +184,7 @@ export class CdpBrowserDriver implements BrowserBridge {
     // region capture; no ref → viewport screenshot.
     let backendId: number | undefined;
     if (ref) {
-      backendId = this.backendId(ref);
+      backendId = await this.backendId(ref);
       if (backendId === undefined) return { ok: false, detail: `unknown ref ${ref}` };
     }
     const r = await this.inner.screenshot(backendId);
@@ -163,7 +194,13 @@ export class CdpBrowserDriver implements BrowserBridge {
 
 /** A ref we never had → unknown; ask the agent to re-snapshot. */
 function unknownRef(ref: string): BrowserResult {
-  return { ok: false, detail: `unknown ref ${ref}`, staleRef: true };
+  return {
+    ok: false,
+    code: "STALE_SNAPSHOT",
+    retryable: true,
+    detail: `unknown ref ${ref} or stale snapshot`,
+    staleRef: true,
+  };
 }
 
 /** Heuristic: a page that is essentially a login form (password field present)

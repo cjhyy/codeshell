@@ -27,9 +27,10 @@ describe("CdpBrowserDriver.snapshot", () => {
 
     const snap = await d.snapshot();
     expect(snap.url).toBe("https://x.com");
+    expect(snap.snapshotId).toBe("s1");
     expect(snap.elements).toEqual([
-      { ref: "e1", role: "textbox", name: "关键词" },
-      { ref: "e2", role: "button", name: "搜索" },
+      { ref: "s1:e1", role: "textbox", name: "关键词" },
+      { ref: "s1:e2", role: "button", name: "搜索" },
     ]);
     // DOM.enable + Accessibility.enable happened before the tree query
     const methods = calls.map((c) => c.method);
@@ -62,10 +63,10 @@ describe("CdpBrowserDriver.click", () => {
       "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
-    await d.snapshot();
+    const snap = await d.snapshot();
     calls.length = 0;
 
-    const r = await d.click("e2");
+    const r = await d.click(snap.elements[1]!.ref);
     expect(r.ok).toBe(true);
     // box was queried for the e2 → backend 20
     expect(calls.find((c) => c.method === "DOM.getBoxModel")?.params.backendNodeId).toBe(20);
@@ -91,9 +92,33 @@ describe("CdpBrowserDriver.click", () => {
       "DOM.getBoxModel": () => ({ model: undefined }), // detached
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
-    await d.snapshot();
-    const r = await d.click("e1");
+    const snap = await d.snapshot();
+    const r = await d.click(snap.elements[0]!.ref);
     expect(r).toMatchObject({ ok: false, staleRef: true });
+  });
+
+  test("rejects a snapshot ref after the main-frame loader changes", async () => {
+    let loaderId = "loader-1";
+    const { send, calls } = fakeCdp({
+      "Accessibility.getFullAXTree": () => AX_TWO,
+      "Page.getFrameTree": () => ({
+        frameTree: { frame: { id: "frame-1", loaderId, url: "https://x.com" } },
+      }),
+      "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
+    });
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
+    const snap = await d.snapshot();
+    loaderId = "loader-2";
+    calls.length = 0;
+
+    const result = await d.click(snap.elements[1]!.ref);
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "STALE_SNAPSHOT",
+      staleRef: true,
+    });
+    expect(calls.some((call) => call.method === "Input.dispatchMouseEvent")).toBe(false);
   });
 });
 
@@ -104,9 +129,9 @@ describe("CdpBrowserDriver.type", () => {
       "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
-    await d.snapshot();
+    const snap = await d.snapshot();
     calls.length = 0;
-    const r = await d.type("e1", "hello");
+    const r = await d.type(snap.elements[0]!.ref, "hello");
     expect(r.ok).toBe(true);
     expect(calls.find((c) => c.method === "Input.insertText")?.params.text).toBe("hello");
   });
@@ -119,11 +144,11 @@ describe("CdpBrowserDriver.navigate / scroll", () => {
       "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
-    await d.snapshot();
+    const snap = await d.snapshot();
     const nav = await d.navigate("https://y.com");
     expect(nav.ok).toBe(true);
     // refs from the old page are now stale
-    const r = await d.click("e1");
+    const r = await d.click(snap.elements[0]!.ref);
     expect(r.staleRef).toBe(true);
   });
 
@@ -142,13 +167,31 @@ describe("CdpBrowserDriver.navigate / scroll", () => {
 describe("CdpBrowserDriver.readContent / waitForLoad / pressKey / select / hover", () => {
   test("readContent pulls innerText via Runtime.evaluate and cleans it", async () => {
     const { send } = fakeCdp({
-      "Runtime.evaluate": () => ({ result: { value: "标题\n\n\n正文   多空格" } }),
+      "Runtime.evaluate": () => ({
+        result: {
+          value: {
+            text: "标题\n\n\n正文   多空格",
+            scroll: {
+              x: 0,
+              y: 0,
+              maxX: 0,
+              maxY: 1200,
+              viewportWidth: 800,
+              viewportHeight: 600,
+              atTop: true,
+              atEnd: false,
+            },
+          },
+        },
+      }),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://xhs.com/p/1", title: "探店" }));
     const c = await d.readContent();
     expect(c.ok).toBe(true);
     expect(c.url).toBe("https://xhs.com/p/1");
     expect(c.text).toBe("标题\n\n正文 多空格");
+    expect(c.done).toBe(true);
+    expect(c.contentHash).toBeDefined();
   });
 
   test("waitForLoad resolves when readyState is complete", async () => {
@@ -175,9 +218,9 @@ describe("CdpBrowserDriver.readContent / waitForLoad / pressKey / select / hover
       "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
-    await d.snapshot();
+    const snap = await d.snapshot();
     calls.length = 0;
-    const r = await d.pressKey("Enter", "e1");
+    const r = await d.pressKey("Enter", snap.elements[0]!.ref);
     expect(r.ok).toBe(true);
     expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(true); // focused via click
     expect(calls.some((c) => c.method === "Input.dispatchKeyEvent")).toBe(true);
@@ -192,8 +235,8 @@ describe("CdpBrowserDriver.readContent / waitForLoad / pressKey / select / hover
       "Runtime.callFunctionOn": () => ({ result: { value: { ok: true, matched: "中国" } } }),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
-    await d.snapshot();
-    const r = await d.selectOption("e1", "中国");
+    const snap = await d.snapshot();
+    const r = await d.selectOption(snap.elements[0]!.ref, "中国");
     expect(r.ok).toBe(true);
     expect(calls.some((c) => c.method === "Runtime.callFunctionOn")).toBe(true);
   });
@@ -204,9 +247,9 @@ describe("CdpBrowserDriver.readContent / waitForLoad / pressKey / select / hover
       "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
-    await d.snapshot();
+    const snap = await d.snapshot();
     calls.length = 0;
-    const r = await d.hover("e2");
+    const r = await d.hover(snap.elements[1]!.ref);
     expect(r.ok).toBe(true);
     const moves = calls.filter((c) => c.method === "Input.dispatchMouseEvent");
     expect(moves.map((m) => m.params.type)).toEqual(["mouseMoved"]);
@@ -230,8 +273,8 @@ describe("CdpBrowserDriver.readContent / waitForLoad / pressKey / select / hover
       "Runtime.evaluate": () => ({ result: { value: { ok: false } } }),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
-    await d.snapshot();
-    const r = await d.screenshot("e1");
+    const snap = await d.snapshot();
+    const r = await d.screenshot(snap.elements[0]!.ref);
     expect(r).toMatchObject({ ok: true, base64: "QUJD", mediaType: "image/jpeg" });
     expect(calls.some((c) => c.method === "Page.captureScreenshot")).toBe(true);
   });

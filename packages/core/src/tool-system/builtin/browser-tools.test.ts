@@ -87,6 +87,33 @@ describe("browser_observe", () => {
     expect(await browserObserveTool({ mode: "read" }, ctx)).toContain("article body");
   });
 
+  test("read forwards the opaque cursor and exposes deterministic continuation", async () => {
+    let received: unknown;
+    const ctx = ctxWith({
+      readContent: async (options) => {
+        received = options;
+        return {
+          ok: true,
+          url: "u",
+          text: "next chunk",
+          cursor: "cursor-1",
+          nextCursor: "cursor-2",
+          done: false,
+          contentHash: "hash",
+        };
+      },
+    });
+
+    const out = await browserObserveTool(
+      { mode: "read", cursor: "cursor-1", max_chars: 4000 },
+      ctx,
+    );
+
+    expect(received).toEqual({ cursor: "cursor-1", maxChars: 4000 });
+    expect(out).toContain("nextCursor: cursor-2");
+    expect(out).toContain("next chunk");
+  });
+
   test("extract lists links/images/videos", async () => {
     const ctx = ctxWith({
       extractLinks: async () => ({
@@ -231,6 +258,22 @@ describe("browser_act", () => {
     expect(await browserActTool({ action: "scroll", direction: "down" }, ctx)).toContain(
       "Scrolled down",
     );
+  });
+
+  test("scroll surfaces structured NO_PROGRESS instead of claiming success", async () => {
+    const out = await browserActTool(
+      { action: "scroll", direction: "down" },
+      ctxWith({
+        scroll: async () => ({
+          ok: false,
+          code: "NO_PROGRESS",
+          retryable: false,
+          detail: "already at the end of the page",
+        }),
+      }),
+    );
+    expect(out).toContain("[NO_PROGRESS]");
+    expect(out).toContain("already at the end");
   });
 
   test("wait ready", async () => {

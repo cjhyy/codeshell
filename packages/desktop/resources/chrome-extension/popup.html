@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CodeShell Browser Runtime</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <h1>CodeShell Browser Runtime</h1>
+      <p id="status">正在连接 CodeShell…</p>
+      <div id="requests"></div>
+      <button id="refresh" type="button">刷新配对请求</button>
+      <p class="hint">先在 CodeShell 的浏览器工具栏选择“连接 Chrome”，再在这里把当前登录标签授权给对应任务。</p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

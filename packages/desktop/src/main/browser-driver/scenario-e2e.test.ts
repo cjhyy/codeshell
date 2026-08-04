@@ -47,6 +47,25 @@ function fakeXiaohongshu() {
     "DOM.getBoxModel": () => ({ model: { content: [0, 0, 100, 0, 100, 40, 0, 40] } }),
     "Runtime.evaluate": (p) => {
       if (typeof p?.expression === "string" && p.expression.includes("readyState")) return { result: { value: "complete" } };
+      if (typeof p?.expression === "string" && p.expression.includes("body?.innerText")) {
+        return {
+          result: {
+            value: {
+              text: innerText(),
+              scroll: {
+                x: 0,
+                y: 0,
+                maxX: 0,
+                maxY: 0,
+                viewportWidth: 1280,
+                viewportHeight: 800,
+                atTop: true,
+                atEnd: true,
+              },
+            },
+          },
+        };
+      }
       return { result: { value: innerText() } };
     },
     // typing into search then Enter → results; clicking a result → article.
@@ -94,7 +113,7 @@ describe("E2E: 小红书 搜索→打开→扒内容", () => {
     // 1. snapshot home → find the search box
     const home = await act({ action: "snapshot" });
     const searchBox = home.elements.find((e: any) => e.role === "textbox");
-    expect(searchBox.ref).toBe("e1");
+    expect(searchBox.ref).toBe("s1:e1");
 
     // 2. type the query + press Enter (→ results page)
     expect((await act({ action: "type", ref: searchBox.ref, text: "citywalk" })).ok).toBe(true);

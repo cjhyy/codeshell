@@ -99,6 +99,7 @@
         "@cjhyy/code-shell-core": "workspace:*",
         "@cjhyy/code-shell-pet": "workspace:*",
         "node-pty": "^1.1.0",
+        "playwright-core": "1.60.0",
       },
       "devDependencies": {
         "@cjhyy/code-shell-cdp": "workspace:*",
