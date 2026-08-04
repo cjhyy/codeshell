@@ -425,7 +425,17 @@ export function useRunController({
         // as a turn_end(error) line in the stream + an error toast.
         const result = r as { reason?: string; text?: string } | null;
         const reason = result?.reason;
-        if (reason === "image_error" || reason === "model_error" || reason === "prompt_too_long") {
+        // `external_runtime_error` belongs here for exactly the reason above: a
+        // runtime that failed to spawn or is not logged in produces NO stream at
+        // all, so without this branch busy clears, nothing renders, and it reads
+        // as "卡住 / 没反应" — same symptom, but with a cause the user can act on
+        // ("codex not found", "not logged in").
+        if (
+          reason === "image_error" ||
+          reason === "model_error" ||
+          reason === "prompt_too_long" ||
+          reason === "external_runtime_error"
+        ) {
           const detail = result?.text?.replace(/^ERROR:\s*/, "") || t("misc.app.requestRejected");
           dispatch({ type: "turn_end", bucket, reason: "error", detail });
           toast({ message: detail, variant: "error" });
