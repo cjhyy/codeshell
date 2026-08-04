@@ -130,7 +130,7 @@ Pet 的两层工具；Pet 不再按渠道名猜测能力。
 上限。适配器遇到未声明的附件类型会明确报错，Gateway 在调用适配器前会按能力过滤
 Desktop/Pet 产物。
 
-Pet 使用两层渐进式工具：
+Pet 使用分层、原子化工具：
 
 1. 只读 `Gateway`：`search` 只在本回合实际授予的渠道中查询，不带 query 时返回全部渠道名，
    也可用 `outbound:image`、`inbound:file`、`button:native` 等条件过滤；`describe` 再返回一个
@@ -138,6 +138,10 @@ Pet 使用两层渐进式工具：
    不传递 token、白名单或会话 target。
 2. 有副作用的 `GatewayReply`：只绑定当前入站消息的原会话，一次声明完整文字、可选 URL 按钮
    和可选本地附件。它不能借第一层目录向其他渠道或其他 target 任意发送。
+3. 有副作用的 `SendMessage`：用于桌面 Mimi 主动发往宿主授权的 owner 目标。模型只看到宿主生成
+   的不透明 `target_id`，看不到原始平台用户 ID；宿主在执行前重新读取白名单并校验文字、附件与
+   渠道能力。工具调用只登记请求，Mimi 的原始回复会被宿主的实际“平台已接受”或失败回执替换；
+   平台接受仍不等于收件人设备已经展示消息。
 
 普通纯文字回复可以直接进入第二层；富媒体能力不确定、或用户询问另一个已启用渠道时，Mimi
 先查询第一层。Gateway 按当前路由动态移除 `GatewayReply` 不支持的附件参数，并在真正调用
@@ -154,8 +158,72 @@ code-shell-chat wechat login
 
 终端会显示二维码，用手机微信扫码并确认。token 保存在 owner-only 凭据文件中，不写入
 gateway 配置。登录命令会自动增加 `wechat.accountId`，扫码者默认成为唯一允许的用户。
-`@cjhyy/code-shell-chat/wechat` 同时导出 `loginWechatWithQr`、`WechatAdapter` 和
-`FileWechatCredentialStore`，第三方应用可以完全不使用 CodeShell CLI。协议实现对齐
+`@cjhyy/code-shell-chat/wechat` 同时导出 `loginWechatWithQr`、`WechatAdapter`、
+`sendWechatDirect` 和 `FileWechatCredentialStore`，第三方应用可以完全不使用 CodeShell CLI。
+`sendWechatDirect` 是供定时任务和通知 worker 使用的独立入口：同一进程里若已有相同账号与
+凭据的长轮询 adapter，它会排队复用该实例；否则才创建一次性 adapter。同一账号只允许
+一个 live adapter；所有 adapter 实例的发送、限流冷却和生命周期请求共用账号级串行边界。
+运行中若更换 token，必须先重启 Gateway，不会用新旧凭据打开竞争会话。CodeShell Desktop 的
+扫码流程也把游标和上下文视为凭据会话状态：token 或服务地址变化时清空旧状态；凭据未变时保留
+有效状态，而一次用户主动发起且平台确认成功的登录（含“已绑定”确认）可以修复损坏或不安全的
+状态文件。普通启动仍然失败关闭。
+Desktop 宿主包装还会在整个直发期间持有与 CLI 共用的 Gateway 单实例锁；若锁已由 CLI 持有，通知会
+留给 CLI 的事件 watcher，不会再开一条短连接。这样可避免并行连接得到 HTTP 成功却没有在微信
+客户端显示。返回值区分
+`status: "accepted"`、`terminalDeliveryConfirmed: false` 和 `viaLiveAdapter`，调用方不得把它
+渲染成“已送达”。
+
+```ts
+import { FileWechatCredentialStore, sendWechatDirect } from "@cjhyy/code-shell-chat/wechat";
+
+const store = new FileWechatCredentialStore();
+const credentials = store.load("my-account");
+if (!credentials?.userId) throw new Error("请先完成微信扫码登录");
+
+const receipt = await sendWechatDirect(
+  credentials,
+  credentials.userId,
+  { text: "这是一条定时提醒" },
+  { stateStore: store.stateStore(credentials.accountId) },
+);
+// receipt.status === "accepted" 只表示平台接口接受，不代表收件设备已展示。
+```
+
+这层路由直接借鉴 Hermes 的
+[`send_weixin_direct`](https://github.com/NousResearch/hermes-agent/blob/main/gateway/platforms/weixin.py#L2156-L2245)：
+先按凭据查找同事件循环里的 live adapter，找不到时才创建短生命周期 adapter，并让两条路径复用
+同一套上下文、媒体上传和响应校验。CodeShell 把这个做法收敛为渠道 adapter 的 `send()` 能力和
+宿主单实例锁，而不是让定时任务直接依赖微信模块。
+
+个人微信的公开协议契约仍以 `context_token` 为主。adapter 会持久保存每个 owner 最近一次入站
+消息带来的 token；遇到明确的过期响应时清除它，并用同一个 `client_id` 做一次无 token 的兼容
+尝试，但该降级并非所有账号都支持。CodeShell Desktop 因此只在 owner 先给 Mimi 发过一条消息、
+且状态中存在可用 token 时向 `SendMessage` 暴露微信目标；若返回 `prepare failed`，界面会要求
+先从微信发一条新消息刷新上下文，而不会继续宣称推送成功。
+入站长轮询只在上层持久接收消息后才提交 `get_updates_buf`，临时处理失败会保留旧游标重投。
+媒体下载只允许已知微信 CDN 的 HTTPS 主机，并逐跳重新校验重定向。
+桌面任务和定时通知只发布渠道无关的事件；Gateway 停止时，宿主会用同一套独立直发能力处理
+支持 direct 的目标，Gateway 在线时则由事件 watcher 独占发送。两者共享事件进度，启动交接不会
+重复发送；独立直发完整成功时可直接确认当前队首，不必等 watcher 以后上线才释放容量。进度文件在事件游标旁保留最近
+200 个事件、每个目标的文本分段和附件子步骤；文件使用 owner-only 权限和原子替换，
+符号链接、过大或损坏状态会失败关闭，不能伪造“已投递”进度。单个
+渠道失败或 Gateway 正常重启时只续传未完成部分。传输已受理但未来得及落盘就崩溃的窗口仍是
+「至少一次」，不会伪称精确一次。
+控制事件本身也会在对 watcher 可见前，先原子写入 owner-only outbox（最多 200 条未确认事件）。
+Desktop 重启后恢复同一 `streamId` 和递增事件 ID，所以 Gateway 会从已确认游标继续，而不是
+把重启前尚未接收的通知遗留在内存里。落盘失败时发布直接失败，不会暴露半成功事件。
+watcher 在下一次请求带回持久游标后，Desktop 才原子删除已确认前缀；未确认队列满时施加背压并拒绝
+新发布，不会静默挤掉旧通知。如果恢复后发现本地游标高于 outbox，协议会显式要求 watcher 重置，
+且 checkpoint 必须先写盘成功，内存游标才能前进。
+每个 live watcher 事件在真正调用 adapter 前还会重读当前配置验证 target 白名单；用户已撤销的目标会被安全跳过，
+不会因为 Gateway 启动时的旧快照继续发送。
+长任务 closure、Work Session 主动上报和定时任务终态都会携带匿名稳定 delivery key；Desktop
+控制事件若在上游恢复时被重新发布，仍会接续原目标/分段/附件进度，而不是把它当成全新通知。
+定时任务的完成、失败、永久停用和用户取消分别发布 `automation.completed`、
+`automation.failed`、`automation.stopped` 和 `automation.cancelled`；开始事件不外发，避免每次
+执行产生两条通知。
+
+协议实现对齐
 [Tencent/openclaw-weixin](https://github.com/Tencent/openclaw-weixin) 2.4.x 的公开文档。
 
 ## CodeShell CLI 配置
@@ -265,9 +333,10 @@ Desktop 的「编辑配置」会生成包含所有渠道的模板；在模板里
 可序列化的文字入站会先原子写入 `~/.code-shell/im-gateway/inbox.json`，webhook 平台随后才会
 收到确认；相同平台 message ID 会持久去重。处理采用有界队列、全局并发和 per-target 串行，
 暂时失败按指数退避重试。含惰性媒体 loader 的消息保留在内存队列，媒体仍受平台重投策略约束。
-`notifications.targets` 只能引用已启用渠道且必须同时位于该渠道 target 白名单。Desktop 主动
+`notifications.targets` 最多 32 个，只能引用已启用渠道且必须同时位于该渠道 target 白名单。Desktop 主动
 通知游标会按事件流实例原子写入 `~/.code-shell/im-gateway/desktop-events.json`（可用
-`runtime.eventCursorPath` 覆盖）；Gateway 重启后续传，Desktop 重启时会识别新事件流并重置游标。
+`runtime.eventCursorPath` 覆盖）；Gateway 和 Desktop 正常重启后都会续传。只有 Desktop 初始化了全新的
+事件 outbox 时，watcher 才会识别新 `streamId` 并安全重置游标。
 
 所有字段都有 `CODE_SHELL_<CHANNEL>_*` 环境变量对应项；数组使用逗号分隔。例如：
 

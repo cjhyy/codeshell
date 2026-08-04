@@ -7,6 +7,7 @@ export * from "./webhook.js";
 export * from "./delivery-queue.js";
 export * from "./instance-lock.js";
 export * from "./notification-relay.js";
+export * from "./notification-progress.js";
 export * from "./service-manager.js";
 export * from "./ingress.js";
 export * from "./platform-canary.js";

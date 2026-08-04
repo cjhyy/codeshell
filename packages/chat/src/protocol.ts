@@ -13,6 +13,11 @@ export interface DesktopControlDescriptor {
 export interface DesktopControlEvent {
   id: number;
   createdAt: number;
+  /**
+   * Optional opaque semantic delivery identity. Unlike streamId:id it remains
+   * stable when Desktop republishes one durable event after a process restart.
+   */
+  deliveryKey?: string;
   type:
     | "tunnel.connected"
     | "tunnel.disconnected"
@@ -20,7 +25,11 @@ export interface DesktopControlEvent {
     | "pet.task.completed"
     | "pet.task.failed"
     | "pet.task.cancelled"
-    | "pet.task.reported";
+    | "pet.task.reported"
+    | "automation.completed"
+    | "automation.failed"
+    | "automation.stopped"
+    | "automation.cancelled";
   text: string;
   title?: string;
   button?: { text: string; url: string };
@@ -39,10 +48,12 @@ export interface DesktopControlEventAttachment {
 }
 
 export interface DesktopControlEventPage {
-  /** Changes whenever the Desktop loopback control server restarts. */
+  /** Durable outbox identity; changes only when Desktop initializes a replacement event store. */
   streamId: string;
   events: DesktopControlEvent[];
   cursor: number;
+  /** Desktop retained the stream identity but recovered behind this checkpoint. */
+  resetCursor?: true;
 }
 
 export interface MobileRemoteOpenResult {

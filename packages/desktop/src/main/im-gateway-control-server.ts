@@ -1,9 +1,43 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { dirname } from "node:path";
+import { dirname, isAbsolute } from "node:path";
 
 export const DESKTOP_CONTROL_PROTOCOL_VERSION = 1;
+
+const GATEWAY_EVENT_OUTBOX_VERSION = 2;
+const MAX_GATEWAY_EVENTS = 200;
+const MAX_GATEWAY_EVENT_TEXT_LENGTH = 100_000;
+const MAX_GATEWAY_EVENT_OUTBOX_BYTES = 96 * 1024 * 1024;
+const MAX_GATEWAY_EVENT_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const GATEWAY_EVENT_CONTROL_CHARACTER_RE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
+const GATEWAY_EVENT_DELIVERY_KEY_RE = /^[a-f0-9]{64}$/u;
+const GATEWAY_EVENT_STREAM_ID_RE = /^[a-f0-9]{32}$/u;
+const GATEWAY_EVENT_TYPES = new Set<GatewayControlEventInput["type"]>([
+  "tunnel.connected",
+  "tunnel.disconnected",
+  "tunnel.error",
+  "pet.task.completed",
+  "pet.task.failed",
+  "pet.task.cancelled",
+  "pet.task.reported",
+  "automation.completed",
+  "automation.failed",
+  "automation.stopped",
+  "automation.cancelled",
+]);
 
 export interface MobileRemoteOpenResult {
   url: string;
@@ -34,6 +68,8 @@ export interface GatewayControlServerOptions {
 }
 
 export interface GatewayControlEventInput {
+  /** Opaque 256-bit key for resuming one durable notification across restarts. */
+  deliveryKey?: string;
   type:
     | "tunnel.connected"
     | "tunnel.disconnected"
@@ -41,7 +77,11 @@ export interface GatewayControlEventInput {
     | "pet.task.completed"
     | "pet.task.failed"
     | "pet.task.cancelled"
-    | "pet.task.reported";
+    | "pet.task.reported"
+    | "automation.completed"
+    | "automation.failed"
+    | "automation.stopped"
+    | "automation.cancelled";
   text: string;
   title?: string;
   button?: { text: string; url: string };
@@ -61,6 +101,18 @@ export interface GatewayControlEventAttachment {
 export interface GatewayControlEvent extends GatewayControlEventInput {
   id: number;
   createdAt: number;
+}
+
+export interface GatewayControlEventContext {
+  streamId: string;
+}
+
+interface GatewayControlEventOutbox {
+  version: typeof GATEWAY_EVENT_OUTBOX_VERSION;
+  streamId: string;
+  acknowledgedEventId: number;
+  nextEventId: number;
+  events: GatewayControlEvent[];
 }
 
 export type PetChatControlAttachmentKind = "image" | "file" | "audio" | "video";
@@ -99,6 +151,10 @@ export interface PetChatControlChannelCapabilities {
   };
   outbound: {
     text: true;
+    /** Owner-addressed send outside the current reply call. Optional for legacy Gateway clients. */
+    proactive?: boolean;
+    /** Fresh-adapter send support. Optional for legacy Gateway clients. */
+    direct?: boolean;
     maxTextLength?: number;
     button: "native" | "link";
     attachments: PetChatControlAttachmentKind[];
@@ -140,15 +196,28 @@ export class GatewayControlServer {
   private readonly eventWaiters = new Set<() => void>();
   private eventStreamId = "";
   private nextEventId = 1;
+  private eventOutboxReady = false;
 
   constructor(private readonly opts: GatewayControlServerOptions) {}
 
   async start(): Promise<DesktopControlDescriptor> {
     if (this.descriptor) return this.descriptor;
 
-    this.eventStreamId = randomBytes(16).toString("hex");
-    this.events.splice(0);
-    this.nextEventId = 1;
+    this.eventOutboxReady = false;
+    const restored = this.readEventOutbox();
+    const outbox =
+      restored ??
+      ({
+        version: GATEWAY_EVENT_OUTBOX_VERSION,
+        streamId: randomBytes(16).toString("hex"),
+        acknowledgedEventId: 0,
+        nextEventId: 1,
+        events: [],
+      } satisfies GatewayControlEventOutbox);
+    // Also rewrites a validated v1 file into the current schema atomically.
+    this.writeEventOutbox(outbox);
+    this.restoreEventOutbox(outbox);
+    this.eventOutboxReady = true;
     const token = randomBytes(32).toString("hex");
     const server = createServer((req, res) => {
       void this.handleRequest(token, req, res);
@@ -192,6 +261,7 @@ export class GatewayControlServer {
     const descriptor = this.descriptor;
     this.server = undefined;
     this.descriptor = undefined;
+    this.eventOutboxReady = false;
     this.wakeEventWaiters();
 
     if (server) await closeServer(server);
@@ -199,15 +269,54 @@ export class GatewayControlServer {
   }
 
   publish(event: GatewayControlEventInput): GatewayControlEvent {
-    const stored: GatewayControlEvent = {
+    if (!this.eventOutboxReady || !this.eventStreamId) {
+      throw new Error("Gateway control event stream is not started");
+    }
+    if (this.events.length >= MAX_GATEWAY_EVENTS) {
+      throw new Error(
+        `Gateway control event outbox is full (${MAX_GATEWAY_EVENTS} unacknowledged events)`,
+      );
+    }
+    const stored = parseGatewayControlEvent({
       ...event,
-      id: this.nextEventId++,
+      id: this.nextEventId,
       createdAt: Date.now(),
+    });
+    const events = [...this.events, stored];
+    const outbox: GatewayControlEventOutbox = {
+      version: GATEWAY_EVENT_OUTBOX_VERSION,
+      streamId: this.eventStreamId,
+      acknowledgedEventId: this.events.at(0)?.id ? this.events[0]!.id - 1 : stored.id - 1,
+      nextEventId: stored.id + 1,
+      events,
     };
-    this.events.push(stored);
-    if (this.events.length > 200) this.events.splice(0, this.events.length - 200);
+    // Persist before making the event observable. Once publish() returns, a
+    // process restart can recover the same stream/id and retry the notification.
+    this.writeEventOutbox(outbox);
+    this.restoreEventOutbox(outbox);
     this.wakeEventWaiters();
     return stored;
+  }
+
+  /** Stable identity required by delivery checkpoints for this durable event stream. */
+  eventContext(): GatewayControlEventContext | undefined {
+    return this.eventOutboxReady && this.eventStreamId
+      ? { streamId: this.eventStreamId }
+      : undefined;
+  }
+
+  /**
+   * Confirm one fully delivered one-shot event without skipping an older event
+   * that still belongs to the live watcher. Direct delivery is serialized, so
+   * accepting only the current head preserves the same contiguous-ack rule as
+   * the HTTP cursor.
+   */
+  acknowledgeDirectDelivery(eventId: number): boolean {
+    if (!Number.isSafeInteger(eventId) || eventId < 1 || this.events.at(0)?.id !== eventId) {
+      return false;
+    }
+    this.acknowledgeEvents(eventId);
+    return true;
   }
 
   private async handleRequest(
@@ -243,11 +352,14 @@ export class GatewayControlServer {
           Number.MAX_SAFE_INTEGER,
         );
         const waitMs = parseBoundedInteger(url.searchParams.get("waitMs"), 0, 25_000);
-        const events = await this.eventsAfter(after, waitMs);
+        const resetCursor = after > this.nextEventId - 1;
+        if (!resetCursor) this.acknowledgeEvents(after);
+        const events = resetCursor ? [] : await this.eventsAfter(after, waitMs);
         sendJson(res, 200, {
           streamId: this.eventStreamId,
           events,
           cursor: events.at(-1)?.id ?? after,
+          ...(resetCursor ? { resetCursor: true } : {}),
         });
         return;
       }
@@ -286,28 +398,140 @@ export class GatewayControlServer {
   private writeDescriptor(descriptor: DesktopControlDescriptor): void {
     const dir = dirname(this.opts.descriptorPath);
     mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const dirInfo = lstatSync(dir);
+    if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) {
+      throw new Error(`IM gateway control descriptor parent is not a regular directory: ${dir}`);
+    }
     try {
       chmodSync(dir, 0o700);
     } catch {
       // Windows does not implement POSIX modes; the bearer token still gates RPC.
     }
 
-    const tmp = `${this.opts.descriptorPath}.${process.pid}.tmp`;
-    writeFileSync(tmp, `${JSON.stringify(descriptor, null, 2)}\n`, {
-      encoding: "utf-8",
-      mode: 0o600,
-    });
     try {
-      chmodSync(tmp, 0o600);
+      const temporary = `${this.opts.descriptorPath}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
+      try {
+        writeFileSync(temporary, `${JSON.stringify(descriptor, null, 2)}\n`, {
+          encoding: "utf-8",
+          mode: 0o600,
+          flag: "wx",
+        });
+        renameSync(temporary, this.opts.descriptorPath);
+        try {
+          chmodSync(this.opts.descriptorPath, 0o600);
+        } catch {
+          // Best-effort on platforms without POSIX modes.
+        }
+      } catch (error) {
+        rmSync(temporary, { force: true });
+        throw error;
+      }
+    } catch (error) {
+      throw new Error("Failed to atomically publish the IM gateway control descriptor", {
+        cause: error,
+      });
+    }
+  }
+
+  private eventOutboxPath(): string {
+    return `${this.opts.descriptorPath}.events`;
+  }
+
+  private readEventOutbox(): GatewayControlEventOutbox | undefined {
+    const path = this.eventOutboxPath();
+    let handle: number | undefined;
+    try {
+      const pathInfo = lstatSync(path);
+      if (pathInfo.isSymbolicLink() || !pathInfo.isFile()) {
+        throw new Error(`Gateway event outbox is not a regular file: ${path}`);
+      }
+      if (process.platform !== "win32" && (pathInfo.mode & 0o077) !== 0) {
+        throw new Error(`Gateway event outbox permissions must be 0600: ${path}`);
+      }
+      if (pathInfo.size > MAX_GATEWAY_EVENT_OUTBOX_BYTES) {
+        throw new Error(`Gateway event outbox is too large: ${path}`);
+      }
+      const noFollow = process.platform === "win32" ? 0 : constants.O_NOFOLLOW;
+      handle = openSync(path, constants.O_RDONLY | noFollow);
+      const openedInfo = fstatSync(handle);
+      if (!openedInfo.isFile() || openedInfo.size > MAX_GATEWAY_EVENT_OUTBOX_BYTES) {
+        throw new Error(`Gateway event outbox is not a bounded regular file: ${path}`);
+      }
+      const raw = readFileSync(handle, "utf-8");
+      if (Buffer.byteLength(raw, "utf-8") > MAX_GATEWAY_EVENT_OUTBOX_BYTES) {
+        throw new Error(`Gateway event outbox is too large: ${path}`);
+      }
+      return parseGatewayControlEventOutbox(raw, path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw error;
+    } finally {
+      if (handle !== undefined) closeSync(handle);
+    }
+  }
+
+  private writeEventOutbox(outbox: GatewayControlEventOutbox): void {
+    const validated = parseGatewayControlEventOutbox(JSON.stringify(outbox), "memory");
+    const serialized = `${JSON.stringify(validated)}\n`;
+    if (Buffer.byteLength(serialized, "utf-8") > MAX_GATEWAY_EVENT_OUTBOX_BYTES) {
+      throw new Error("Gateway event outbox exceeds its size limit");
+    }
+    const path = this.eventOutboxPath();
+    const dir = dirname(path);
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const dirInfo = lstatSync(dir);
+    if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) {
+      throw new Error(`Gateway event outbox parent is not a regular directory: ${dir}`);
+    }
+    try {
+      chmodSync(dir, 0o700);
     } catch {
       // Best-effort on platforms without POSIX modes.
     }
-    renameSync(tmp, this.opts.descriptorPath);
+
+    const temporary = `${path}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
     try {
-      chmodSync(this.opts.descriptorPath, 0o600);
-    } catch {
-      // Best-effort on platforms without POSIX modes.
+      writeFileSync(temporary, serialized, {
+        encoding: "utf-8",
+        mode: 0o600,
+        flag: "wx",
+      });
+      renameSync(temporary, path);
+      try {
+        chmodSync(path, 0o600);
+      } catch {
+        // Best-effort on platforms without POSIX modes.
+      }
+    } catch (error) {
+      rmSync(temporary, { force: true });
+      throw error;
     }
+  }
+
+  private restoreEventOutbox(outbox: GatewayControlEventOutbox): void {
+    this.eventStreamId = outbox.streamId;
+    this.nextEventId = outbox.nextEventId;
+    this.events.splice(0, this.events.length, ...outbox.events);
+  }
+
+  private acknowledgeEvents(after: number): void {
+    const acknowledgedEventId = this.events.at(0)?.id
+      ? this.events[0]!.id - 1
+      : this.nextEventId - 1;
+    const latestPublishedEventId = this.nextEventId - 1;
+    // A high cursor can belong to a replaced stream. The response still
+    // returns our streamId so the client can reset, but it must not erase this
+    // stream's events. Repeated/older acknowledgements are no-ops.
+    if (after <= acknowledgedEventId || after > latestPublishedEventId) return;
+    const outbox: GatewayControlEventOutbox = {
+      version: GATEWAY_EVENT_OUTBOX_VERSION,
+      streamId: this.eventStreamId,
+      acknowledgedEventId: after,
+      nextEventId: this.nextEventId,
+      events: this.events.filter((event) => event.id > after),
+    };
+    this.writeEventOutbox(outbox);
+    this.restoreEventOutbox(outbox);
   }
 
   private async eventsAfter(after: number, waitMs: number): Promise<GatewayControlEvent[]> {
@@ -341,6 +565,205 @@ export class GatewayControlServer {
       // Already removed, malformed, or replaced by a newer desktop instance.
     }
   }
+}
+
+function parseGatewayControlEventOutbox(raw: string, source: string): GatewayControlEventOutbox {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Invalid Gateway event outbox JSON: ${source}`, { cause: error });
+  }
+  if (!isPlainRecord(value)) {
+    throw new Error(`Invalid Gateway event outbox: ${source}`);
+  }
+  const legacy = value.version === 1;
+  const allowedKeys = legacy
+    ? ["version", "streamId", "nextEventId", "events"]
+    : ["version", "streamId", "acknowledgedEventId", "nextEventId", "events"];
+  if (
+    !hasOnlyKeys(value, allowedKeys) ||
+    (!legacy && value.version !== GATEWAY_EVENT_OUTBOX_VERSION) ||
+    typeof value.streamId !== "string" ||
+    !GATEWAY_EVENT_STREAM_ID_RE.test(value.streamId) ||
+    !Number.isSafeInteger(value.nextEventId) ||
+    Number(value.nextEventId) < 1 ||
+    !Array.isArray(value.events) ||
+    value.events.length > MAX_GATEWAY_EVENTS
+  ) {
+    throw new Error(`Invalid Gateway event outbox: ${source}`);
+  }
+  const events = value.events.map(parseGatewayControlEvent);
+  const acknowledgedEventId = legacy
+    ? (events.at(0)?.id ?? 1) - 1
+    : Number(value.acknowledgedEventId);
+  if (
+    !Number.isSafeInteger(acknowledgedEventId) ||
+    acknowledgedEventId < 0 ||
+    acknowledgedEventId >= Number(value.nextEventId)
+  ) {
+    throw new Error(`Gateway event outbox acknowledgement is invalid: ${source}`);
+  }
+  for (let index = 1; index < events.length; index++) {
+    if (events[index]!.id !== events[index - 1]!.id + 1) {
+      throw new Error(`Gateway event outbox ids are not contiguous: ${source}`);
+    }
+  }
+  if (events.at(0)?.id !== undefined && events[0]!.id !== acknowledgedEventId + 1) {
+    throw new Error(`Gateway event outbox first id is invalid: ${source}`);
+  }
+  const expectedNextEventId = events.length > 0 ? events.at(-1)!.id + 1 : acknowledgedEventId + 1;
+  if (value.nextEventId !== expectedNextEventId || !Number.isSafeInteger(expectedNextEventId)) {
+    throw new Error(`Gateway event outbox cursor is invalid: ${source}`);
+  }
+  return {
+    version: GATEWAY_EVENT_OUTBOX_VERSION,
+    streamId: value.streamId,
+    acknowledgedEventId,
+    nextEventId: value.nextEventId as number,
+    events,
+  };
+}
+
+function parseGatewayControlEvent(value: unknown): GatewayControlEvent {
+  if (!isPlainRecord(value)) throw new Error("Invalid Gateway control event");
+  const rawAttachments = value.attachments ?? [];
+  if (
+    !hasOnlyKeys(value, [
+      "id",
+      "createdAt",
+      "deliveryKey",
+      "type",
+      "text",
+      "title",
+      "button",
+      "attachments",
+      "target",
+    ]) ||
+    !Number.isSafeInteger(value.id) ||
+    Number(value.id) < 1 ||
+    !Number.isSafeInteger(value.createdAt) ||
+    Number(value.createdAt) < 0 ||
+    typeof value.type !== "string" ||
+    !GATEWAY_EVENT_TYPES.has(value.type as GatewayControlEventInput["type"]) ||
+    typeof value.text !== "string" ||
+    !value.text.trim() ||
+    value.text.length > MAX_GATEWAY_EVENT_TEXT_LENGTH ||
+    GATEWAY_EVENT_CONTROL_CHARACTER_RE.test(value.text) ||
+    (value.deliveryKey !== undefined &&
+      (typeof value.deliveryKey !== "string" ||
+        !GATEWAY_EVENT_DELIVERY_KEY_RE.test(value.deliveryKey))) ||
+    (value.title !== undefined && !isValidGatewayEventLabel(value.title)) ||
+    (value.button !== undefined && !isValidGatewayEventButton(value.button)) ||
+    (value.target !== undefined && !isValidGatewayEventTarget(value.target)) ||
+    !Array.isArray(rawAttachments) ||
+    rawAttachments.length > 4
+  ) {
+    throw new Error("Invalid Gateway control event");
+  }
+  const attachments = rawAttachments.map(parseGatewayControlEventAttachment);
+  return {
+    id: value.id as number,
+    createdAt: value.createdAt as number,
+    type: value.type as GatewayControlEventInput["type"],
+    text: value.text,
+    ...(value.deliveryKey === undefined ? {} : { deliveryKey: value.deliveryKey as string }),
+    ...(value.title === undefined ? {} : { title: value.title as string }),
+    ...(value.button === undefined
+      ? {}
+      : { button: { ...(value.button as { text: string; url: string }) } }),
+    ...(attachments.length === 0 ? {} : { attachments }),
+    ...(value.target === undefined
+      ? {}
+      : { target: { ...(value.target as { channel: string; target: string }) } }),
+  };
+}
+
+function parseGatewayControlEventAttachment(value: unknown): GatewayControlEventAttachment {
+  if (
+    !isPlainRecord(value) ||
+    !hasOnlyKeys(value, ["kind", "name", "mimeType", "size", "path"]) ||
+    typeof value.kind !== "string" ||
+    !["image", "file", "audio", "video"].includes(value.kind) ||
+    typeof value.name !== "string" ||
+    !value.name.trim() ||
+    value.name.length > 255 ||
+    /[\\/\u0000-\u001f\u007f]/u.test(value.name) ||
+    typeof value.mimeType !== "string" ||
+    !value.mimeType.trim() ||
+    value.mimeType.length > 255 ||
+    /[\u0000-\u001f\u007f]/u.test(value.mimeType) ||
+    (value.kind === "image" && !value.mimeType.startsWith("image/")) ||
+    (value.kind === "audio" && !value.mimeType.startsWith("audio/")) ||
+    (value.kind === "video" && !value.mimeType.startsWith("video/")) ||
+    !Number.isSafeInteger(value.size) ||
+    Number(value.size) < 1 ||
+    Number(value.size) > MAX_GATEWAY_EVENT_ATTACHMENT_BYTES ||
+    typeof value.path !== "string" ||
+    value.path.length > 32_768 ||
+    value.path.includes("\0") ||
+    !isAbsolute(value.path)
+  ) {
+    throw new Error("Invalid Gateway control event attachment");
+  }
+  return {
+    kind: value.kind as PetChatControlAttachmentKind,
+    name: value.name,
+    mimeType: value.mimeType,
+    size: value.size as number,
+    path: value.path,
+  };
+}
+
+function isValidGatewayEventLabel(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    Boolean(value.trim()) &&
+    value.length <= 256 &&
+    !GATEWAY_EVENT_CONTROL_CHARACTER_RE.test(value)
+  );
+}
+
+function isValidGatewayEventButton(value: unknown): value is { text: string; url: string } {
+  if (
+    !isPlainRecord(value) ||
+    !hasOnlyKeys(value, ["text", "url"]) ||
+    !isValidGatewayEventLabel(value.text) ||
+    typeof value.url !== "string" ||
+    value.url.length > 2_048
+  ) {
+    return false;
+  }
+  try {
+    const url = new URL(value.url);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isValidGatewayEventTarget(value: unknown): value is { channel: string; target: string } {
+  return (
+    isPlainRecord(value) &&
+    hasOnlyKeys(value, ["channel", "target"]) &&
+    typeof value.channel === "string" &&
+    /^[a-z0-9_-]{1,64}$/u.test(value.channel) &&
+    typeof value.target === "string" &&
+    Boolean(value.target.trim()) &&
+    value.target.length <= 4_096 &&
+    !GATEWAY_EVENT_CONTROL_CHARACTER_RE.test(value.target)
+  );
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]): boolean {
+  const keys = Object.keys(value);
+  return keys.every((key) => allowed.includes(key));
 }
 
 function parseBoundedInteger(value: string | null, min: number, max: number): number {
@@ -520,6 +943,8 @@ function sameChannelCapabilities(
 ): boolean {
   return (
     left.inbound.attachments.join("\0") === right.inbound.attachments.join("\0") &&
+    left.outbound.proactive === right.outbound.proactive &&
+    left.outbound.direct === right.outbound.direct &&
     left.outbound.maxTextLength === right.outbound.maxTextLength &&
     left.outbound.button === right.outbound.button &&
     left.outbound.attachments.join("\0") === right.outbound.attachments.join("\0") &&
@@ -539,6 +964,8 @@ function parseChannelCapabilities(value: unknown): PetChatControlChannelCapabili
     inbound: { text: true, attachments: inbound.attachments },
     outbound: {
       text: true,
+      ...(outbound.proactive === undefined ? {} : { proactive: outbound.proactive }),
+      ...(outbound.direct === undefined ? {} : { direct: outbound.direct }),
       ...(outbound.maxTextLength === undefined ? {} : { maxTextLength: outbound.maxTextLength }),
       button: outbound.button!,
       attachments: outbound.attachments,
@@ -556,6 +983,8 @@ function parseCapabilityDirection(
 ): {
   attachments: PetChatControlAttachmentKind[];
   button?: "native" | "link";
+  proactive?: boolean;
+  direct?: boolean;
   maxTextLength?: number;
   maxAttachments?: number;
   maxAttachmentBytes?: number;
@@ -569,6 +998,8 @@ function parseCapabilityDirection(
         "text",
         "attachments",
         "button",
+        "proactive",
+        "direct",
         "maxTextLength",
         "maxAttachments",
         "maxAttachmentBytes",
@@ -585,6 +1016,8 @@ function parseCapabilityDirection(
     new Set(record.attachments).size !== record.attachments.length ||
     (outbound && record.button !== "native" && record.button !== "link") ||
     (!outbound && record.button !== undefined) ||
+    (record.proactive !== undefined && (!outbound || typeof record.proactive !== "boolean")) ||
+    (record.direct !== undefined && (!outbound || typeof record.direct !== "boolean")) ||
     (record.maxTextLength !== undefined &&
       (!outbound ||
         !Number.isSafeInteger(record.maxTextLength) ||
@@ -606,6 +1039,8 @@ function parseCapabilityDirection(
   return {
     attachments: record.attachments as PetChatControlAttachmentKind[],
     ...(outbound ? { button: record.button as "native" | "link" } : {}),
+    ...(typeof record.proactive === "boolean" ? { proactive: record.proactive } : {}),
+    ...(typeof record.direct === "boolean" ? { direct: record.direct } : {}),
     ...(typeof record.maxTextLength === "number" ? { maxTextLength: record.maxTextLength } : {}),
     ...(typeof record.maxAttachments === "number" ? { maxAttachments: record.maxAttachments } : {}),
     ...(typeof record.maxAttachmentBytes === "number"

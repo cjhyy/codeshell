@@ -164,7 +164,7 @@ describe("loadGatewayConfig", () => {
       file,
       JSON.stringify({
         telegram: { botToken: "secret", allowedChatIds: ["owner"] },
-        notifications: { enabled: true, targets: { telegram: ["owner"] } },
+        notifications: { enabled: true, targets: { telegram: ["owner", "owner"] } },
       }),
       { mode: 0o600 },
     );
@@ -183,6 +183,19 @@ describe("loadGatewayConfig", () => {
     );
     expect(() => loadGatewayConfig({ configPath: file, env: {}, platform: "linux" })).toThrow(
       "不在",
+    );
+
+    const ownerIds = Array.from({ length: 33 }, (_, index) => `owner-${index}`);
+    writeFileSync(
+      file,
+      JSON.stringify({
+        telegram: { botToken: "secret", allowedChatIds: ownerIds },
+        notifications: { enabled: true, targets: { telegram: ownerIds } },
+      }),
+      { mode: 0o600 },
+    );
+    expect(() => loadGatewayConfig({ configPath: file, env: {}, platform: "linux" })).toThrow(
+      "最多配置 32 个",
     );
   });
 });

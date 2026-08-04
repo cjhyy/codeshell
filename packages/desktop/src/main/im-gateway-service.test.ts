@@ -2,9 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ChannelMessageHandler } from "@cjhyy/code-shell-chat";
+import { acquireGatewayInstanceLock, type ChannelMessageHandler } from "@cjhyy/code-shell-chat";
 import { FileWechatCredentialStore } from "@cjhyy/code-shell-chat/wechat";
 import { CredentialStore, type Credential, type EncryptionCipher } from "@cjhyy/code-shell-core";
+import type { CronJobLifecycleEvent } from "@cjhyy/code-shell-core/internal";
+import { automationLifecycleNotification } from "./automation-notification.js";
 import {
   createImGatewayActivityMiddleware,
   ImGatewayService,
@@ -79,7 +81,12 @@ describe("ImGatewayService", () => {
       state: "ready",
       capabilities: {
         inbound: { attachments: ["image", "file", "audio", "video"] },
-        outbound: { button: "native", attachments: ["image", "file"] },
+        outbound: {
+          proactive: true,
+          direct: true,
+          button: "native",
+          attachments: ["image", "file"],
+        },
       },
     });
     expect(status.channelStatuses.find(({ channel }) => channel === "wechat")).toMatchObject({
@@ -87,7 +94,12 @@ describe("ImGatewayService", () => {
       state: "disabled",
       capabilities: {
         inbound: { attachments: ["image", "file", "audio", "video"] },
-        outbound: { button: "link", attachments: ["image", "file"] },
+        outbound: {
+          proactive: true,
+          direct: true,
+          button: "link",
+          attachments: ["image", "file"],
+        },
       },
     });
     expect(status.error).toBeUndefined();
@@ -397,6 +409,584 @@ describe("ImGatewayService", () => {
     }
   });
 
+  test("exposes personal WeChat as an opaque direct Mimi destination while Gateway is stopped", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-wechat-reply-only-"));
+    const configPath = join(root, "config.json");
+    const credentialsDir = join(root, "wechat-credentials");
+    const credentialStore = new FileWechatCredentialStore(credentialsDir);
+    const credentials = credentialStore.save({
+      accountId: "wechat-account",
+      token: "wechat-token",
+      baseUrl: "https://ilinkai.weixin.qq.com",
+      userId: "wechat-owner",
+    });
+    await credentialStore.stateStore(credentials.accountId).save({
+      contextTokens: { "wechat-owner": "fresh-context" },
+    });
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        wechat: {
+          enabled: true,
+          accountId: credentials.accountId,
+          credentialsDir,
+        },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+          adapterRestartBaseMs: 5,
+          adapterRestartMaxMs: 5,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const sent: Array<{
+      text: string;
+      attachments: Array<{ kind: string; name: string; bytes: number[] }>;
+    }> = [];
+    let releaseFirstSend!: () => void;
+    const firstSendGate = new Promise<void>((resolveGate) => {
+      releaseFirstSend = resolveGate;
+    });
+    let markFirstSendEntered!: () => void;
+    const firstSendEntered = new Promise<void>((resolveEntered) => {
+      markFirstSendEntered = resolveEntered;
+    });
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async (_handler, signal) => {
+          if (signal.aborted) return;
+          await new Promise<void>((resolveDone) =>
+            signal.addEventListener("abort", () => resolveDone(), { once: true }),
+          );
+        },
+        send: async (_target, message) => {
+          sent.push({
+            text: message.text,
+            attachments: (message.attachments ?? []).map((attachment) => ({
+              kind: attachment.kind,
+              name: attachment.name,
+              bytes: [...attachment.data],
+            })),
+          });
+          if (sent.length === 1) {
+            markFirstSendEntered();
+            await firstSendGate;
+          }
+        },
+      }),
+    });
+
+    try {
+      const targets = service.listOwnerMessageTargets();
+      expect(targets).toHaveLength(1);
+      expect(targets[0]).toMatchObject({
+        channel: "wechat",
+        label: "微信",
+        attachments: ["image", "file", "audio", "video"],
+        maxAttachments: 4,
+        maxAttachmentBytes: 10 * 1024 * 1024,
+      });
+      expect(JSON.stringify(targets)).not.toContain("wechat-owner");
+
+      const firstSend = service.sendOwnerMessage(targets[0]!.id, "可以直接发送", [
+        {
+          kind: "image",
+          name: "result.png",
+          mimeType: "image/png",
+          data: Uint8Array.from([1, 2, 3]),
+        },
+      ]);
+      await firstSendEntered;
+      const secondSend = service.sendOwnerMessage(targets[0]!.id, "第二条直发");
+      await Promise.resolve();
+      expect(sent).toHaveLength(1);
+      releaseFirstSend();
+      await Promise.all([firstSend, secondSend]);
+      expect(sent).toEqual([
+        {
+          text: "可以直接发送",
+          attachments: [{ kind: "image", name: "result.png", bytes: [1, 2, 3] }],
+        },
+        { text: "第二条直发", attachments: [] },
+      ]);
+      await expect(
+        service.sendOwnerMessage(targets[0]!.id, "不支持的附件", [
+          {
+            kind: "archive" as never,
+            name: "result.zip",
+            mimeType: "application/zip",
+            data: Uint8Array.from([1]),
+          },
+        ]),
+      ).rejects.toThrow("附件类型、数量或大小超出目标渠道能力");
+      await expect(service.sendOwnerMessage(targets[0]!.id, "bad\u0000text")).rejects.toThrow(
+        "控制字符",
+      );
+      await expect(
+        service.sendOwnerMessage(targets[0]!.id, "附件名不安全", [
+          {
+            kind: "image",
+            name: "../result.png",
+            mimeType: "image/png",
+            data: Uint8Array.from([1]),
+          },
+        ]),
+      ).rejects.toThrow("附件类型、数量或大小超出目标渠道能力");
+      await expect(service.sendOwnerMessage("forged-wechat-target", "不应发送")).rejects.toThrow(
+        "未授权",
+      );
+      expect(sent).toHaveLength(2);
+    } finally {
+      await service.stop();
+    }
+  });
+
+  test("direct-delivers a scheduled completion while stopped and hands off cleanly to start", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-direct-notification-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: {
+          botToken: "test-token",
+          allowedChatIds: ["owner-chat"],
+          allowedUserIds: [],
+        },
+        desktop: {
+          autoLaunch: false,
+          descriptorPath: join(root, "missing-desktop-control.json"),
+        },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+          adapterRestartBaseMs: 5,
+          adapterRestartMaxMs: 5,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const sent: Array<{ target: string; text: string }> = [];
+    let releaseDirect!: () => void;
+    const directGate = new Promise<void>((resolveGate) => {
+      releaseDirect = resolveGate;
+    });
+    let markDirectEntered!: () => void;
+    const directEntered = new Promise<void>((resolveEntered) => {
+      markDirectEntered = resolveEntered;
+    });
+    let runCalls = 0;
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async (_handler, signal) => {
+          runCalls += 1;
+          if (signal.aborted) return;
+          await new Promise<void>((resolveDone) =>
+            signal.addEventListener("abort", () => resolveDone(), { once: true }),
+          );
+        },
+        send: async (target, message) => {
+          sent.push({ target, text: message.text });
+          if (sent.length === 1) {
+            markDirectEntered();
+            await directGate;
+          }
+        },
+      }),
+    });
+    const notification = automationLifecycleNotification({
+      type: "job_end",
+      durationMs: 1_400,
+      job: {
+        id: "job-1",
+        name: "每日检查",
+        schedule: "1d",
+        prompt: "inspect",
+        enabled: true,
+        runCount: 1,
+        createdAt: 1,
+      },
+    } satisfies CronJobLifecycleEvent);
+    if (!notification) throw new Error("missing terminal automation notification");
+    const event = {
+      id: 1,
+      createdAt: 1,
+      ...notification,
+      target: { channel: "telegram", target: "owner-chat" },
+    };
+    const context = { streamId: "d".repeat(32) };
+
+    const direct = service.deliverPublishedNotification(event, context);
+    await directEntered;
+    const start = service.start();
+    await Promise.resolve();
+    expect(runCalls).toBe(0);
+    releaseDirect();
+    expect(await direct).toBe(true);
+    expect(await start).toMatchObject({ running: true });
+    expect(runCalls).toBe(1);
+    expect(sent).toEqual([
+      {
+        target: "owner-chat",
+        text: "定时任务「每日检查」已完成（用时 1 秒）。可在 CodeShell 中查看完整结果。",
+      },
+    ]);
+
+    // The live event watcher is now the only delivery owner.
+    expect(await service.deliverPublishedNotification({ ...event, id: 2 }, context)).toBe(false);
+    expect(sent).toHaveLength(1);
+    await service.stop();
+
+    await expect(
+      service.deliverPublishedNotification(
+        { ...event, id: 3, target: { channel: "telegram", target: "attacker" } },
+        context,
+      ),
+    ).rejects.toThrow("未授权");
+    expect(sent).toHaveLength(1);
+  });
+
+  test("direct-delivers a semantic automation stop with its owner-readable reason", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-direct-stop-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: {
+          botToken: "test-token",
+          allowedChatIds: ["owner-chat"],
+          allowedUserIds: [],
+        },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const sent: Array<{ target: string; text: string }> = [];
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async () => undefined,
+        send: async (target, message) => void sent.push({ target, text: message.text }),
+      }),
+    });
+    const notification = automationLifecycleNotification({
+      type: "job_stopped",
+      durationMs: 800,
+      reason: "续接目标会话已删除，请重新选择",
+      job: {
+        id: "job-1",
+        name: "每日跟进",
+        schedule: "1d",
+        prompt: "follow up",
+        enabled: false,
+        runCount: 1,
+        createdAt: 1,
+      },
+    } satisfies CronJobLifecycleEvent);
+    if (!notification) throw new Error("missing stopped automation notification");
+
+    await expect(
+      service.deliverPublishedNotification(
+        {
+          id: 1,
+          createdAt: 1,
+          ...notification,
+          target: { channel: "telegram", target: "owner-chat" },
+        },
+        { streamId: "f".repeat(32) },
+      ),
+    ).resolves.toBe(true);
+    expect(sent).toEqual([
+      {
+        target: "owner-chat",
+        text: "定时任务「每日跟进」已停止（用时 1 秒）：续接目标会话已删除，请重新选择",
+      },
+    ]);
+  });
+
+  test("never opens a one-shot adapter while a separate CLI Gateway owns the lock", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-external-owner-"));
+    const configPath = join(root, "config.json");
+    const lockPath = join(root, "gateway.lock");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: {
+          botToken: "test-token",
+          allowedChatIds: ["owner-chat"],
+          allowedUserIds: [],
+        },
+        runtime: {
+          lockPath,
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+        },
+      }),
+      { mode: 0o600 },
+    );
+    let factoryCalls = 0;
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => {
+        factoryCalls += 1;
+        return {
+          channel: channel.channel,
+          run: async () => undefined,
+          send: async () => undefined,
+        };
+      },
+    });
+    const external = acquireGatewayInstanceLock(lockPath, "code-shell-chat CLI");
+    try {
+      expect(
+        await service.deliverPublishedNotification(
+          {
+            id: 1,
+            createdAt: 1,
+            type: "pet.task.completed",
+            text: "完成",
+            target: { channel: "telegram", target: "owner-chat" },
+          },
+          { streamId: "e".repeat(32) },
+        ),
+      ).toBe(false);
+      const target = service.listOwnerMessageTargets()[0];
+      if (!target) throw new Error("missing owner target");
+      await expect(service.sendOwnerMessage(target.id, "主动消息")).rejects.toThrow(
+        "code-shell-chat CLI",
+      );
+      expect(factoryCalls).toBe(0);
+    } finally {
+      external.release();
+    }
+  });
+
+  test("a proactive send arriving during Gateway construction waits for the live adapter", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-start-send-handoff-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        telegram: {
+          botToken: "test-token",
+          allowedChatIds: ["owner-chat"],
+          allowedUserIds: [],
+        },
+        desktop: {
+          autoLaunch: false,
+          descriptorPath: join(root, "missing-desktop-control.json"),
+        },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+          adapterRestartBaseMs: 5,
+          adapterRestartMaxMs: 5,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    let releaseFactory!: () => void;
+    const factoryGate = new Promise<void>((resolveGate) => {
+      releaseFactory = resolveGate;
+    });
+    let markFactoryEntered!: () => void;
+    const factoryEntered = new Promise<void>((resolveEntered) => {
+      markFactoryEntered = resolveEntered;
+    });
+    let factoryCalls = 0;
+    const sent: string[] = [];
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => {
+        factoryCalls += 1;
+        markFactoryEntered();
+        await factoryGate;
+        return {
+          channel: channel.channel,
+          run: async (_handler, signal) => {
+            if (signal.aborted) return;
+            await new Promise<void>((resolveDone) =>
+              signal.addEventListener("abort", () => resolveDone(), { once: true }),
+            );
+          },
+          send: async (_target, message) => void sent.push(message.text),
+        };
+      },
+    });
+
+    const starting = service.start();
+    await factoryEntered;
+    const target = service.listOwnerMessageTargets()[0];
+    if (!target) throw new Error("missing owner target");
+    const sending = service.sendOwnerMessage(target.id, "使用正在启动的连接");
+    await Promise.resolve();
+    expect(factoryCalls).toBe(1);
+    expect(sent).toEqual([]);
+    releaseFactory();
+    await starting;
+    await sending;
+    expect(factoryCalls).toBe(1);
+    expect(sent).toEqual(["使用正在启动的连接"]);
+    await service.stop();
+  });
+
+  test("hides WeChat proactive targets until an inbound message provides context", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-wechat-context-"));
+    const configPath = join(root, "config.json");
+    const credentialsDir = join(root, "wechat-credentials");
+    const credentialStore = new FileWechatCredentialStore(credentialsDir);
+    const credentials = credentialStore.save({
+      accountId: "wechat-account",
+      token: "wechat-token",
+      baseUrl: "https://ilinkai.weixin.qq.com",
+      userId: "wechat-owner",
+    });
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        wechat: {
+          enabled: true,
+          accountId: credentials.accountId,
+          credentialsDir,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const service = new ImGatewayService({ configPath });
+
+    expect(service.listOwnerMessageTargets()).toEqual([]);
+    expect(
+      service.status().channelStatuses.find(({ channel }) => channel === "wechat"),
+    ).toMatchObject({
+      proactiveReady: false,
+      proactiveReason: "awaiting-inbound-context",
+    });
+    await credentialStore.stateStore(credentials.accountId).save({
+      contextTokens: { "wechat-owner": "fresh-context" },
+    });
+    expect(service.listOwnerMessageTargets()).toHaveLength(1);
+    expect(
+      service.status().channelStatuses.find(({ channel }) => channel === "wechat"),
+    ).toMatchObject({ proactiveReady: true });
+    await credentialStore.stateStore(credentials.accountId).save({ contextTokens: {} });
+    expect(service.listOwnerMessageTargets()).toEqual([]);
+  });
+
+  test("removes a WeChat Mimi destination after a failed send invalidates its context", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-wechat-stale-context-"));
+    const configPath = join(root, "config.json");
+    const credentialsDir = join(root, "wechat-credentials");
+    const credentialStore = new FileWechatCredentialStore(credentialsDir);
+    const credentials = credentialStore.save({
+      accountId: "wechat-account",
+      token: "wechat-token",
+      baseUrl: "https://ilinkai.weixin.qq.com",
+      userId: "wechat-owner",
+    });
+    const stateStore = credentialStore.stateStore(credentials.accountId);
+    await stateStore.save({ contextTokens: { "wechat-owner": "stale-context" } });
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        wechat: {
+          enabled: true,
+          accountId: credentials.accountId,
+          credentialsDir,
+        },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async () => undefined,
+        send: async () => {
+          // Mirrors WechatAdapter's stale-context eviction before it reports
+          // that the tokenless compatibility attempt was also rejected.
+          await stateStore.save({ contextTokens: {} });
+          throw new Error("微信直接发送失败：prepare failed");
+        },
+      }),
+    });
+
+    const target = service.listOwnerMessageTargets()[0];
+    if (!target) throw new Error("missing context-bound WeChat target");
+    await expect(service.sendOwnerMessage(target.id, "测试消息")).rejects.toThrow(
+      "prepare failed",
+    );
+    expect(service.listOwnerMessageTargets()).toEqual([]);
+    expect(
+      service.status().channelStatuses.find(({ channel }) => channel === "wechat"),
+    ).toMatchObject({
+      proactiveReady: false,
+      proactiveReason: "awaiting-inbound-context",
+    });
+  });
+
+  test("keeps lifecycle-bound channels unavailable to Mimi while Gateway is stopped", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-lifecycle-bound-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        discord: {
+          enabled: true,
+          botToken: "discord-token",
+          allowedChannelIds: ["owner-channel"],
+          allowedUserIds: [],
+        },
+        runtime: {
+          lockPath: join(root, "gateway.lock"),
+          inboxPath: join(root, "inbox.json"),
+          eventCursorPath: join(root, "events.json"),
+          adapterRestartBaseMs: 5,
+          adapterRestartMaxMs: 5,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const service = new ImGatewayService({
+      configPath,
+      createChannelAdapter: async (channel) => ({
+        channel: channel.channel,
+        run: async (_handler, signal) => {
+          if (signal.aborted) return;
+          await new Promise<void>((resolveDone) =>
+            signal.addEventListener("abort", () => resolveDone(), { once: true }),
+          );
+        },
+        send: async () => undefined,
+      }),
+    });
+
+    expect(service.listOwnerMessageTargets()).toEqual([]);
+    try {
+      await service.start();
+      expect(service.listOwnerMessageTargets()).toHaveLength(1);
+    } finally {
+      await service.stop();
+    }
+    expect(service.listOwnerMessageTargets()).toEqual([]);
+  });
+
   test("starts configured channels automatically at Desktop launch", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-autostart-"));
     const configPath = join(root, "config.json");
@@ -500,7 +1090,17 @@ describe("ImGatewayService", () => {
       reply: async (message: { text: string }) => void sent.push(message.text),
     };
     await middleware(context, async () => {
-      await context.reply({ text: "done" });
+      await (context.reply as (message: Record<string, unknown>) => Promise<void>)({
+        text: "done",
+        attachments: [
+          {
+            kind: "file",
+            name: "result.txt",
+            mimeType: "text/plain",
+            data: Uint8Array.from([1]),
+          },
+        ],
+      });
     });
 
     expect(activity).toHaveLength(2);
@@ -511,7 +1111,12 @@ describe("ImGatewayService", () => {
       attachmentCount: 1,
     });
     expect(activity[0]!.text.length).toBe(280);
-    expect(activity[1]).toMatchObject({ direction: "outbound", status: "sent", text: "done" });
+    expect(activity[1]).toMatchObject({
+      direction: "outbound",
+      status: "accepted",
+      text: "done",
+      attachmentCount: 1,
+    });
     expect(activity[1]!.requestId).toBe(activity[0]!.requestId);
     expect(sent).toEqual(["done"]);
   });

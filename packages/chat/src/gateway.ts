@@ -14,7 +14,10 @@ import {
   DesktopControlUnavailableError,
   type DesktopControlClient,
 } from "./desktop-control-client.js";
-import { materializeEventAttachments, splitNotificationText } from "./notification-relay.js";
+import {
+  materializeOutgoingAttachments,
+  splitNotificationTextForChannel,
+} from "./notification-relay.js";
 
 export interface CodeShellRemoteCommandsOptions {
   desktop: Pick<DesktopControlClient, "open" | "close" | "status">;
@@ -238,7 +241,11 @@ async function buildMimiOutgoingReplies(
       channels: gatewayChannelCatalog(message.channel, capabilities, configuredChannels),
     },
   });
-  const chunks = splitNotificationText(result.text || "Mimi Pet 已处理，但没有返回文字内容。");
+  const chunks = splitNotificationTextForChannel(
+    result.text || "Mimi Pet 已处理，但没有返回文字内容。",
+    message.channel,
+    capabilities,
+  );
   const outgoing = chunks.map((text): OutgoingMessage => ({ text }));
   const last = outgoing.at(-1)!;
   const button = normalizePetReplyButton(result.button);
@@ -248,7 +255,7 @@ async function buildMimiOutgoingReplies(
       const supported = result.attachments.filter((attachment) =>
         capabilities.outbound.attachments.includes(attachment.kind),
       );
-      const materialized = await materializeEventAttachments(supported);
+      const materialized = await materializeOutgoingAttachments(supported);
       if (materialized.length > 0) last.attachments = materialized;
     } catch {
       // A stale or invalid host file must not drop Mimi's text reply.

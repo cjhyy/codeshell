@@ -1,7 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { ChildProcess } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DesktopGatewayConfig } from "./config.js";
@@ -33,6 +42,42 @@ describe("DesktopControlClient", () => {
         }),
       ),
     ).toThrow(DesktopControlUnavailableError);
+  });
+
+  test("rejects symbolic-link descriptor and checkpoint trust files", async () => {
+    if (process.platform === "win32") return;
+    const root = mkdtempSync(join(tmpdir(), "codeshell-desktop-control-symlink-"));
+    const realDescriptor = join(root, "real-descriptor.json");
+    const linkedDescriptor = join(root, "descriptor.json");
+    const realCheckpoint = join(root, "real-checkpoint.json");
+    const linkedCheckpoint = join(root, "checkpoint.json");
+    writeFileSync(realDescriptor, descriptor, { mode: 0o600 });
+    writeFileSync(
+      realCheckpoint,
+      JSON.stringify({ version: 1, streamId: "a".repeat(32), cursor: 0 }),
+      { mode: 0o600 },
+    );
+    symlinkSync(realDescriptor, linkedDescriptor);
+    symlinkSync(realCheckpoint, linkedCheckpoint);
+    try {
+      const client = new DesktopControlClient({
+        ...baseConfig(),
+        descriptorPath: linkedDescriptor,
+        autoLaunch: false,
+      });
+      await expect(client.status()).rejects.toThrow("not a regular file");
+
+      const checkpointClient = new DesktopControlClient(baseConfig(), {
+        readDescriptor: async () => descriptor,
+      });
+      await expect(
+        checkpointClient.watchEvents(new AbortController().signal, async () => undefined, {
+          checkpointPath: linkedCheckpoint,
+        }),
+      ).rejects.toThrow("not a regular file");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("auto-launches desktop and waits for control readiness before opening", async () => {
@@ -177,6 +222,65 @@ describe("DesktopControlClient", () => {
     }
   });
 
+  test("does not acknowledge an event when its durable checkpoint write fails", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-event-checkpoint-failure-"));
+    const checkpointDir = join(root, "checkpoint");
+    const checkpointPath = join(checkpointDir, "events.json");
+    const streamId = "a".repeat(32);
+    mkdirSync(checkpointDir);
+    writeFileSync(checkpointPath, JSON.stringify({ version: 1, streamId, cursor: 0 }), {
+      mode: 0o600,
+    });
+    if (process.platform !== "win32") chmodSync(checkpointPath, 0o600);
+    const abort = new AbortController();
+    const after: number[] = [];
+    let requests = 0;
+    let handled = 0;
+    let errors = 0;
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      fetch: async (url) => {
+        const cursor = Number(new URL(String(url)).searchParams.get("after"));
+        after.push(cursor);
+        requests++;
+        if (requests === 1) {
+          // Break the checkpoint parent after startup load but before the
+          // handler's post-delivery atomic write.
+          rmSync(checkpointDir, { recursive: true, force: true });
+          writeFileSync(checkpointDir, "temporarily not a directory");
+        }
+        return Response.json({
+          streamId,
+          cursor: 1,
+          events: [{ id: 1, createdAt: 1, type: "automation.completed", text: "ready" }],
+        });
+      },
+      sleep: async () => {
+        rmSync(checkpointDir, { force: true });
+        mkdirSync(checkpointDir);
+      },
+    });
+    try {
+      await client.watchEvents(
+        abort.signal,
+        async () => {
+          handled++;
+          if (handled === 2) abort.abort();
+        },
+        { checkpointPath, retryBaseMs: 1, retryMaxMs: 1, onError: () => errors++ },
+      );
+      expect(after).toEqual([0, 0]);
+      expect({ handled, errors }).toEqual({ handled: 2, errors: 1 });
+      expect(JSON.parse(readFileSync(checkpointPath, "utf-8"))).toEqual({
+        version: 1,
+        streamId,
+        cursor: 1,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("resets a persisted cursor when the Desktop event stream changes", async () => {
     const root = mkdtempSync(join(tmpdir(), "codeshell-event-stream-"));
     const checkpointPath = join(root, "events.json");
@@ -208,6 +312,48 @@ describe("DesktopControlClient", () => {
       expect(after).toEqual([99, 0]);
       expect(JSON.parse(readFileSync(checkpointPath, "utf-8"))).toMatchObject({
         streamId: "b".repeat(32),
+        cursor: 1,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("resets a persisted cursor when the same Desktop outbox recovered behind it", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-event-stream-rollback-"));
+    const checkpointPath = join(root, "events.json");
+    const streamId = "a".repeat(32);
+    writeFileSync(checkpointPath, JSON.stringify({ version: 1, streamId, cursor: 99 }), {
+      mode: 0o600,
+    });
+    if (process.platform !== "win32") chmodSync(checkpointPath, 0o600);
+    const abort = new AbortController();
+    const after: number[] = [];
+    const client = new DesktopControlClient(baseConfig(), {
+      readDescriptor: async () => descriptor,
+      fetch: async (url) => {
+        const cursor = Number(new URL(String(url)).searchParams.get("after"));
+        after.push(cursor);
+        if (cursor === 99) {
+          return Response.json({
+            streamId,
+            cursor: 99,
+            resetCursor: true,
+            events: [],
+          });
+        }
+        return Response.json({
+          streamId,
+          cursor: 1,
+          events: [{ id: 1, createdAt: 1, type: "tunnel.connected", text: "recovered" }],
+        });
+      },
+    });
+    try {
+      await client.watchEvents(abort.signal, async () => abort.abort(), { checkpointPath });
+      expect(after).toEqual([99, 0]);
+      expect(JSON.parse(readFileSync(checkpointPath, "utf-8"))).toMatchObject({
+        streamId,
         cursor: 1,
       });
     } finally {

@@ -220,12 +220,12 @@ describe("CodeShell remote command integration", () => {
     expect(observed.origin).toMatchObject({ channel: "telegram", senderId: "user-1" });
     expect(observed.origin.capabilities).toEqual({
       inbound: { text: true, attachments: [] },
-      // `proactive` distinguishes "can reply in an open conversation" from "can
-      // push unprompted"; it is a required capability field, so an exact-match
-      // assertion has to carry it.
+      // These distinguish open-conversation replies, proactive pushes, and a
+      // one-shot sender that does not need the polling loop to be active.
       outbound: {
         text: true,
         proactive: true,
+        direct: false,
         maxTextLength: 8_000,
         button: "link",
         attachments: [],
@@ -419,6 +419,30 @@ describe("CodeShell remote command integration", () => {
       text: "打开",
       url: "https://example.test/result",
     });
+  });
+
+  test("keeps a personal WeChat Mimi reply under 8k in one visible message", async () => {
+    const adapter = {
+      ...fakeAdapter({ capabilities: BUILTIN_CHANNEL_CAPABILITIES.wechat }),
+      channel: "wechat",
+    };
+    const text = "文章分析：" + "中".repeat(3_500);
+    const gateway = new ChatGateway({ adapters: [adapter] });
+    gateway.use(
+      createMimiPetChat({
+        desktop: {
+          petChat: async () => ({ text, petSessionId: "pet-1" }),
+        },
+      }),
+    );
+
+    await gateway.dispatch(adapter, {
+      ...message("分析文章"),
+      channel: "wechat",
+      messageId: "wechat-long-reply",
+    });
+
+    expect(adapter.replies).toEqual([{ target: "chat-1", message: { text } }]);
   });
 
   test("keeps the text reply and rejects a relative host attachment path", async () => {

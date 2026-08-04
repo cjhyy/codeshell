@@ -1,4 +1,5 @@
-import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { chmod, lstat, mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -44,6 +45,9 @@ interface DesktopEventCheckpoint {
   streamId: string;
   cursor: number;
 }
+
+const MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES = 64 * 1024;
+const MAX_DESKTOP_EVENT_CHECKPOINT_BYTES = 16 * 1024;
 
 export class DesktopControlUnavailableError extends Error {
   constructor(message = "桌面端未在线") {
@@ -127,9 +131,9 @@ export class DesktopControlClient {
     while (!signal.aborted) {
       try {
         const page = await this.events(cursor, 25_000, signal);
-        if (streamId !== undefined && streamId !== page.streamId) {
-          // Event ids are local to one Desktop process. Reset before reading
-          // the replacement stream or a high old cursor could mask new events.
+        if ((streamId !== undefined && streamId !== page.streamId) || page.resetCursor === true) {
+          // Reset before reading a replacement/rolled-back outbox or a high old
+          // cursor could mask new events forever.
           streamId = page.streamId;
           cursor = 0;
           continue;
@@ -138,10 +142,19 @@ export class DesktopControlClient {
         for (const event of page.events) {
           if (signal.aborted) return;
           await handle(event, { streamId });
-          cursor = Math.max(cursor, event.id);
+          const nextCursor = Math.max(cursor, event.id);
           if (options.checkpointPath) {
-            await writeEventCheckpoint(options.checkpointPath, { version: 1, streamId, cursor });
+            await writeEventCheckpoint(options.checkpointPath, {
+              version: 1,
+              streamId,
+              cursor: nextCursor,
+            });
           }
+          // Advance the acknowledgement cursor only after its durable
+          // checkpoint succeeds. Otherwise a failed checkpoint write followed
+          // by another poll could make Desktop prune an event this process
+          // cannot prove it consumed across a restart.
+          cursor = nextCursor;
         }
         cursor = Math.max(cursor, page.cursor);
         if (recovering) {
@@ -297,19 +310,16 @@ export function parseDescriptor(raw: string): DesktopControlDescriptor {
 }
 
 async function readSecureDescriptor(path: string): Promise<string> {
-  const [raw, info] = await Promise.all([readFile(path, "utf-8"), stat(path)]);
-  if (process.platform !== "win32" && (info.mode & 0o077) !== 0) {
-    throw new Error("桌面端控制信息权限不是 0600");
-  }
-  return raw;
+  return readOwnerOnlyFile(path, MAX_DESKTOP_CONTROL_DESCRIPTOR_BYTES, "桌面端控制信息");
 }
 
 async function readEventCheckpoint(path: string): Promise<DesktopEventCheckpoint | undefined> {
   try {
-    const [raw, info] = await Promise.all([readFile(path, "utf-8"), stat(path)]);
-    if (process.platform !== "win32" && (info.mode & 0o077) !== 0) {
-      throw new Error(`Desktop event checkpoint permissions must be 0600: ${path}`);
-    }
+    const raw = await readOwnerOnlyFile(
+      path,
+      MAX_DESKTOP_EVENT_CHECKPOINT_BYTES,
+      "Desktop event checkpoint",
+    );
     const parsed = JSON.parse(raw) as Partial<DesktopEventCheckpoint>;
     if (
       parsed.version !== 1 ||
@@ -331,17 +341,53 @@ async function writeEventCheckpoint(
   path: string,
   checkpoint: DesktopEventCheckpoint,
 ): Promise<void> {
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  const dir = dirname(path);
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  const dirInfo = await lstat(dir);
+  if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) {
+    throw new Error(`Desktop event checkpoint parent is not a regular directory: ${dir}`);
+  }
+  await chmod(dir, 0o700).catch(() => undefined);
   const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
   try {
     await writeFile(temporary, `${JSON.stringify(checkpoint)}\n`, {
       encoding: "utf-8",
       mode: 0o600,
+      flag: "wx",
     });
     await rename(temporary, path);
     await chmod(path, 0o600).catch(() => undefined);
   } catch (error) {
     await rm(temporary, { force: true }).catch(() => undefined);
     throw error;
+  }
+}
+
+async function readOwnerOnlyFile(path: string, maxBytes: number, label: string): Promise<string> {
+  const pathInfo = await lstat(path);
+  if (pathInfo.isSymbolicLink() || !pathInfo.isFile()) {
+    throw new Error(`${label} is not a regular file: ${path}`);
+  }
+  if (process.platform !== "win32" && (pathInfo.mode & 0o077) !== 0) {
+    throw new Error(`${label} permissions must be 0600: ${path}`);
+  }
+  if (pathInfo.size > maxBytes) throw new Error(`${label} is too large: ${path}`);
+
+  const noFollow = process.platform === "win32" ? 0 : constants.O_NOFOLLOW;
+  const handle = await open(path, constants.O_RDONLY | noFollow);
+  try {
+    const openedInfo = await handle.stat();
+    if (!openedInfo.isFile()) throw new Error(`${label} is not a regular file: ${path}`);
+    if (process.platform !== "win32" && (openedInfo.mode & 0o077) !== 0) {
+      throw new Error(`${label} permissions must be 0600: ${path}`);
+    }
+    if (openedInfo.size > maxBytes) throw new Error(`${label} is too large: ${path}`);
+    const raw = await handle.readFile("utf-8");
+    if (Buffer.byteLength(raw, "utf-8") > maxBytes) {
+      throw new Error(`${label} is too large: ${path}`);
+    }
+    return raw;
+  } finally {
+    await handle.close();
   }
 }

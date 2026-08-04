@@ -9,23 +9,31 @@ import {
   ChatGateway,
   createAllowlistMiddleware,
   createDesktopNotificationHandler,
+  FileNotificationDeliveryProgressStore,
+  GatewayAlreadyRunningError,
+  notificationDeliveryProgressPath,
   createRateLimitMiddleware,
   type AdapterRuntimeState,
   type ChannelAdapter,
+  type ChatAttachmentKind,
   type ChannelCapabilities,
   type ChannelMessage,
   type ChatCommandDefinition,
   type ChatMiddleware,
   type GatewayInstanceLease,
+  type OutgoingAttachment,
 } from "@cjhyy/code-shell-chat";
 import {
   CODE_SHELL_REMOTE_COMMANDS,
   createCodeShellRemoteCommands,
   createMimiPetChat,
   type ConfiguredChannel,
+  type DesktopControlEvent,
   defaultGatewayConfigPath,
   DesktopControlClient,
+  type DesktopEventContext,
   gatewayConfigTemplate,
+  hasWechatStoredContextToken,
   loadGatewayConfig,
   loginCodeShellWechat,
 } from "@cjhyy/code-shell-chat/codeshell";
@@ -66,6 +74,9 @@ export interface ImGatewayChannelStatus {
   state: "disabled" | "needs-config" | "ready" | "starting" | "running" | "retrying";
   attempts?: number;
   error?: string;
+  /** Dynamic readiness for context-bound proactive delivery (currently WeChat). */
+  proactiveReady?: boolean;
+  proactiveReason?: "awaiting-inbound-context";
 }
 
 export interface ImGatewayActivity {
@@ -73,7 +84,7 @@ export interface ImGatewayActivity {
   requestId: string;
   channel: ImGatewayChannel;
   direction: "inbound" | "outbound";
-  status: "received" | "sent" | "failed";
+  status: "received" | "accepted" | "failed";
   target: string;
   senderId?: string;
   text: string;
@@ -177,6 +188,9 @@ export interface ImGatewayOwnerTarget {
   channel: ImGatewayChannel;
   label: string;
   maxTextLength: number;
+  attachments: readonly ChatAttachmentKind[];
+  maxAttachments: number;
+  maxAttachmentBytes: number;
 }
 
 interface PendingVerification {
@@ -261,8 +275,15 @@ export class ImGatewayService {
   private dingtalkDiscovery?: ActiveDingTalkDiscovery;
   private readonly adapterStates = new Map<ImGatewayChannel, AdapterRuntimeState>();
   private readonly recentActivity: ImGatewayActivity[] = [];
+  /** Serializes fresh-adapter sends per channel, including state-file access. */
+  private readonly ownerSendTails = new Map<ImGatewayChannel, Promise<void>>();
   /** Set while a stopped gateway's instance lease is still being released. */
   private pendingRelease?: Promise<void>;
+  /** One lifecycle owner while adapters and the event watcher are being constructed. */
+  private startTask?: Promise<ImGatewayStatus>;
+  private startingAdapters = false;
+  /** Serializes host delivery ownership and the polling-Gateway start hand-off. */
+  private deliveryHandoffTail: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: ImGatewayServiceOptions = {}) {
     this.configPath = resolve(
@@ -274,12 +295,14 @@ export class ImGatewayService {
     let channels: ImGatewayChannel[] = this.active?.channels ?? [];
     let configError: string | undefined;
     let rawEnabled = new Set<ImGatewayChannel>();
+    let configuredDetails: ConfiguredChannel[] = [];
     try {
       rawEnabled = readEnabledChannels(this.configPath);
-      const configuredChannels = loadDesktopGatewayConfig(
+      configuredDetails = loadDesktopGatewayConfig(
         this.configPath,
         this.options.credentialStore,
-      ).channels.map(({ channel }) => channel);
+      ).channels;
+      const configuredChannels = configuredDetails.map(({ channel }) => channel);
       if (!this.active) channels = configuredChannels;
     } catch (error) {
       configError = error instanceof Error ? error.message : String(error);
@@ -287,8 +310,24 @@ export class ImGatewayService {
     for (const channel of channels) rawEnabled.add(channel);
     const activeChannels = new Set(this.active?.channels ?? []);
     const channelStatuses = IM_GATEWAY_CHANNELS.map((channel): ImGatewayChannelStatus => {
-      const base = { channel, capabilities: BUILTIN_CHANNEL_CAPABILITIES[channel] };
       const enabled = rawEnabled.has(channel);
+      const configured = configuredDetails.find((candidate) => candidate.channel === channel);
+      const proactiveReady =
+        configured?.channel === "wechat"
+          ? configured.allowedTargetIds.some((target) =>
+              hasRequiredProactiveContext(configured, target),
+            )
+          : undefined;
+      const base = {
+        channel,
+        capabilities: BUILTIN_CHANNEL_CAPABILITIES[channel],
+        ...(proactiveReady !== undefined
+          ? {
+              proactiveReady,
+              ...(!proactiveReady ? { proactiveReason: "awaiting-inbound-context" as const } : {}),
+            }
+          : {}),
+      };
       if (!enabled) return { ...base, enabled: false, state: "disabled" };
       if (configError && !this.active) {
         return { ...base, enabled: true, state: "needs-config", error: configError };
@@ -343,6 +382,24 @@ export class ImGatewayService {
 
   async start(): Promise<ImGatewayStatus> {
     if (this.active) return this.status();
+    if (this.startTask) return await this.startTask;
+    const task = this.startInOrder();
+    this.startTask = task;
+    try {
+      return await task;
+    } finally {
+      if (this.startTask === task) this.startTask = undefined;
+      this.startingAdapters = false;
+    }
+  }
+
+  private async startInOrder(): Promise<ImGatewayStatus> {
+    // A notification published while stopped owns fresh adapters until it
+    // settles. Starting the polling Gateway afterwards would otherwise race
+    // the same channel state and could consume the retained event twice.
+    await this.deliveryHandoffTail;
+    if (this.active) return this.status();
+    this.startingAdapters = true;
     await this.stopDingTalkDiscovery();
     // Load only the selected platform modules when starting the gateway so
     // status/config operations stay lightweight and mixed test processes do
@@ -450,7 +507,12 @@ export class ImGatewayService {
       // a targeted Mimi completion must return to its exact originating chat.
       const notificationTask = desktop.watchEvents(
         abort.signal,
-        createDesktopNotificationHandler(adapters, config.notifications),
+        createDesktopNotificationHandler(adapters, config.notifications, {
+          progressStore: new FileNotificationDeliveryProgressStore(
+            notificationDeliveryProgressPath(config.runtime.eventCursorPath),
+          ),
+          authorizeTarget: (target) => this.isNotificationTargetAuthorized(target),
+        }),
         {
           checkpointPath: config.runtime.eventCursorPath,
           onError: (error) => {
@@ -532,22 +594,171 @@ export class ImGatewayService {
    * against the current config before every side effect.
    */
   listOwnerMessageTargets(): ImGatewayOwnerTarget[] {
-    if (!this.active) return [];
-    const config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
+    if (!existsSync(this.configPath)) return [];
+    let config: ReturnType<typeof loadDesktopGatewayConfig>;
+    try {
+      config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
+    } catch {
+      return [];
+    }
     return config.channels.flatMap((channel) => {
-      if (!this.active?.adapters.has(channel.channel)) return [];
       const capabilities = BUILTIN_CHANNEL_CAPABILITIES[channel.channel];
+      if (!capabilities.outbound.proactive) return [];
+      // A running adapter remains the default. HTTP/fresh-adapter channels that
+      // explicitly expose direct delivery may also be used by Mimi and other
+      // host-side one-shot callers while the polling Gateway is stopped.
+      if (!this.active?.adapters.has(channel.channel) && !capabilities.outbound.direct) return [];
       const maxTextLength = Math.min(capabilities.outbound.maxTextLength ?? 8_000, 8_000);
-      return channel.allowedTargetIds.map((target, index) => ({
-        id: ownerTargetId(channel.channel, target),
-        channel: channel.channel,
-        label: `${channelDisplayName(channel.channel)}${channel.allowedTargetIds.length > 1 ? ` ${index + 1}` : ""}`,
-        maxTextLength,
-      }));
+      return channel.allowedTargetIds.flatMap((target, index) =>
+        hasRequiredProactiveContext(channel, target)
+          ? [
+              {
+                id: ownerTargetId(channel.channel, target),
+                channel: channel.channel,
+                label: `${channelDisplayName(channel.channel)}${channel.allowedTargetIds.length > 1 ? ` ${index + 1}` : ""}`,
+                maxTextLength,
+                attachments: capabilities.outbound.attachments,
+                maxAttachments: capabilities.outbound.maxAttachments ?? 0,
+                maxAttachmentBytes: capabilities.outbound.maxAttachmentBytes ?? 0,
+              },
+            ]
+          : [],
+      );
     });
   }
 
-  async sendOwnerMessage(targetId: string, text: string): Promise<ImGatewayOwnerTarget> {
+  private isNotificationTargetAuthorized(target: { channel: string; target: string }): boolean {
+    const current = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
+    return current.channels.some(
+      (channel) =>
+        channel.channel === target.channel && channel.allowedTargetIds.includes(target.target),
+    );
+  }
+
+  async sendOwnerMessage(
+    targetId: string,
+    text: string,
+    attachments: readonly OutgoingAttachment[] = [],
+  ): Promise<ImGatewayOwnerTarget> {
+    const selected = this.listOwnerMessageTargets().find((target) => target.id === targetId);
+    if (!selected) throw new Error("消息目标未授权、已移除或 Gateway 尚未运行");
+    return this.enqueueDeliveryHandoff(() =>
+      this.withOwnerSendLock(selected.channel, () =>
+        this.sendOwnerMessageInOrder(targetId, text, attachments),
+      ),
+    );
+  }
+
+  /**
+   * Deliver a Desktop notification with fresh direct-capable adapters while
+   * the polling Gateway is stopped. The caller may acknowledge a fully handled
+   * head event immediately; otherwise shared per-event progress lets a later
+   * Gateway watcher resume without repeating chunks already accepted here.
+   */
+  deliverPublishedNotification(
+    event: DesktopControlEvent,
+    context: DesktopEventContext,
+  ): Promise<boolean> {
+    return this.enqueueDeliveryHandoff(() =>
+      this.deliverPublishedNotificationInOrder(event, context),
+    );
+  }
+
+  private async deliverPublishedNotificationInOrder(
+    event: DesktopControlEvent,
+    context: DesktopEventContext,
+  ): Promise<boolean> {
+    // The live watcher is the sole owner while active. It uses the same relay
+    // and progress store, so this boundary is channel-neutral.
+    if (this.active || this.startingAdapters) return false;
+    if (!existsSync(this.configPath)) return false;
+    const config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
+    const requestedTargets = event.target ? [event.target] : config.notifications;
+    const directTargets = requestedTargets.flatMap(({ channel, target }) => {
+      if (!isImGatewayChannel(channel)) {
+        if (event.target) throw new Error("Desktop 通知目标渠道未授权");
+        return [];
+      }
+      const configured = config.channels.find((candidate) => candidate.channel === channel);
+      if (!configured?.allowedTargetIds.includes(target)) {
+        if (event.target) throw new Error("Desktop 通知目标已移除或未授权");
+        return [];
+      }
+      if (!BUILTIN_CHANNEL_CAPABILITIES[channel].outbound.direct) return [];
+      if (!hasRequiredProactiveContext(configured, target)) return [];
+      return [{ channel, target, configured }];
+    });
+    if (directTargets.length === 0) return false;
+
+    const channels = [...new Set(directTargets.map(({ channel }) => channel))].sort();
+    return this.withOwnerSendLocks(channels, async () => {
+      if (this.active || this.startingAdapters) return false;
+      if (this.pendingRelease) await this.pendingRelease;
+      if (this.active || this.startingAdapters) return false;
+      let lease: GatewayInstanceLease;
+      try {
+        lease = acquireGatewayInstanceLock(
+          config.runtime.lockPath,
+          "CodeShell Desktop direct notification",
+        );
+      } catch (error) {
+        // A separate CLI Gateway owns the retained event and will consume it.
+        // Never open a competing short-lived channel session in this process.
+        if (error instanceof GatewayAlreadyRunningError) return false;
+        throw error;
+      }
+      try {
+        const createChannelAdapter =
+          this.options.createChannelAdapter ??
+          (await import("@cjhyy/code-shell-chat/factory")).createChannelAdapterAsync;
+        const adapters = await Promise.all(
+          channels.map(async (channel) => {
+            const configured = directTargets.find(
+              (target) => target.channel === channel,
+            )?.configured;
+            if (!configured) throw new Error(`Desktop 通知渠道配置已失效：${channel}`);
+            return await createChannelAdapter(configured, {
+              discordCommands: CODE_SHELL_REMOTE_COMMANDS,
+            });
+          }),
+        );
+        const handler = createDesktopNotificationHandler(
+          adapters,
+          event.target ? [] : directTargets.map(({ channel, target }) => ({ channel, target })),
+          {
+            progressStore: new FileNotificationDeliveryProgressStore(
+              notificationDeliveryProgressPath(config.runtime.eventCursorPath),
+            ),
+            authorizeTarget: (target) => this.isNotificationTargetAuthorized(target),
+          },
+        );
+        await handler(event, context);
+        return true;
+      } finally {
+        lease.release();
+      }
+    });
+  }
+
+  private enqueueDeliveryHandoff<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = this.deliveryHandoffTail;
+    const current = previous.catch(() => undefined).then(operation);
+    this.deliveryHandoffTail = current.then(
+      () => undefined,
+      () => undefined,
+    );
+    return current;
+  }
+
+  private async sendOwnerMessageInOrder(
+    targetId: string,
+    text: string,
+    attachments: readonly OutgoingAttachment[],
+  ): Promise<ImGatewayOwnerTarget> {
+    // If Gateway construction claimed delivery first, wait and use its live
+    // adapter. When this send claimed first, startInOrder waits on the hand-off
+    // tail and startingAdapters remains false, so there is no circular wait.
+    if (this.startingAdapters && this.startTask) await this.startTask;
     const normalized = text.trim();
     const targets = this.listOwnerMessageTargets();
     const selected = targets.find((target) => target.id === targetId);
@@ -555,26 +766,88 @@ export class ImGatewayService {
     if (!normalized || normalized.length > selected.maxTextLength) {
       throw new Error(`消息长度必须在 1 到 ${selected.maxTextLength} 个字符之间`);
     }
+    if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(normalized)) {
+      throw new Error("消息不能包含控制字符");
+    }
+    if (
+      attachments.length > selected.maxAttachments ||
+      attachments.some(
+        (attachment) =>
+          !selected.attachments.includes(attachment.kind) ||
+          typeof attachment.name !== "string" ||
+          !attachment.name.trim() ||
+          attachment.name.length > 255 ||
+          /[\\/\u0000-\u001f\u007f]/u.test(attachment.name) ||
+          typeof attachment.mimeType !== "string" ||
+          !attachment.mimeType.trim() ||
+          attachment.mimeType.length > 255 ||
+          /[\u0000-\u001f\u007f]/u.test(attachment.mimeType) ||
+          (attachment.kind === "image"
+            ? !attachment.mimeType.startsWith("image/")
+            : attachment.kind === "audio"
+              ? !attachment.mimeType.startsWith("audio/")
+              : attachment.kind === "video"
+                ? !attachment.mimeType.startsWith("video/")
+                : false) ||
+          !(attachment.data instanceof Uint8Array) ||
+          attachment.data.byteLength < 1 ||
+          attachment.data.byteLength > selected.maxAttachmentBytes,
+      )
+    ) {
+      throw new Error("附件类型、数量或大小超出目标渠道能力");
+    }
     const config = loadDesktopGatewayConfig(this.configPath, this.options.credentialStore);
     const channel = config.channels.find((candidate) => candidate.channel === selected.channel);
     const rawTarget = channel?.allowedTargetIds.find(
       (candidate) => ownerTargetId(selected.channel, candidate) === selected.id,
     );
-    const adapter = this.active?.adapters.get(selected.channel);
-    if (!channel || !rawTarget || !adapter) {
-      throw new Error("消息目标在发送前失效，请重新连接 Gateway");
+    let adapter = this.active?.adapters.get(selected.channel);
+    let directLease: GatewayInstanceLease | undefined;
+    if (!channel || !rawTarget) {
+      throw new Error("消息目标在发送前失效，请检查 Gateway 配置");
+    }
+    if (!adapter) {
+      // Do not overlap a one-shot adapter with the previous polling adapter's
+      // final state write. This matters for WeChat's persisted context cache.
+      if (this.pendingRelease) await this.pendingRelease;
+      adapter = this.active?.adapters.get(selected.channel);
+    }
+    if (!adapter) {
+      const capabilities = BUILTIN_CHANNEL_CAPABILITIES[selected.channel];
+      if (!capabilities.outbound.direct) {
+        throw new Error("当前渠道需要 Gateway 正在运行才能发送");
+      }
+      const createChannelAdapter =
+        this.options.createChannelAdapter ??
+        (await import("@cjhyy/code-shell-chat/factory")).createChannelAdapterAsync;
+      directLease = acquireGatewayInstanceLock(
+        config.runtime.lockPath,
+        "CodeShell Desktop direct send",
+      );
+      try {
+        adapter = await createChannelAdapter(channel, {
+          discordCommands: CODE_SHELL_REMOTE_COMMANDS,
+        });
+      } catch (error) {
+        directLease.release();
+        throw error;
+      }
     }
     const requestId = randomUUID();
     try {
-      await adapter.send(rawTarget, { text: normalized });
+      await adapter.send(rawTarget, {
+        text: normalized,
+        ...(attachments.length > 0 ? { attachments } : {}),
+      });
       this.recordActivity({
         id: randomUUID(),
         requestId,
         channel: selected.channel,
         direction: "outbound",
-        status: "sent",
+        status: "accepted",
         target: rawTarget,
         text: activityPreview(normalized),
+        ...(attachments.length > 0 ? { attachmentCount: attachments.length } : {}),
         createdAt: Date.now(),
       });
       return selected;
@@ -587,10 +860,47 @@ export class ImGatewayService {
         status: "failed",
         target: rawTarget,
         text: activityPreview(normalized),
+        ...(attachments.length > 0 ? { attachmentCount: attachments.length } : {}),
         createdAt: Date.now(),
       });
       throw error;
+    } finally {
+      directLease?.release();
     }
+  }
+
+  private async withOwnerSendLock<T>(
+    channel: ImGatewayChannel,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const previous = this.ownerSendTails.get(channel) ?? Promise.resolve();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolveGate) => {
+      release = resolveGate;
+    });
+    const tail = previous.then(
+      () => gate,
+      () => gate,
+    );
+    this.ownerSendTails.set(channel, tail);
+    await previous.catch(() => undefined);
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.ownerSendTails.get(channel) === tail) this.ownerSendTails.delete(channel);
+    }
+  }
+
+  private async withOwnerSendLocks<T>(
+    channels: readonly ImGatewayChannel[],
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const [channel, ...remaining] = channels;
+    if (!channel) return await operation();
+    return await this.withOwnerSendLock(channel, () =>
+      this.withOwnerSendLocks(remaining, operation),
+    );
   }
 
   ensureConfig(): string {
@@ -844,6 +1154,7 @@ export class ImGatewayService {
     this.cancelWechatLogin();
     await this.stopDingTalkDiscovery();
     await this.stop();
+    await this.deliveryHandoffTail;
   }
 
   private captureDingTalkDiscovery(active: ActiveDingTalkDiscovery, message: ChannelMessage): void {
@@ -959,9 +1270,10 @@ export function createImGatewayActivityMiddleware(
           requestId,
           channel,
           direction: "outbound",
-          status: "sent",
+          status: "accepted",
           target: message.target,
           text: activityPreview(outgoing.text),
+          ...(outgoing.attachments?.length ? { attachmentCount: outgoing.attachments.length } : {}),
           createdAt: Date.now(),
         });
       } catch (error) {
@@ -973,6 +1285,7 @@ export function createImGatewayActivityMiddleware(
           status: "failed",
           target: message.target,
           text: activityPreview(outgoing.text),
+          ...(outgoing.attachments?.length ? { attachmentCount: outgoing.attachments.length } : {}),
           createdAt: Date.now(),
         });
         throw error;
@@ -989,6 +1302,11 @@ function ownerTargetId(channel: ImGatewayChannel, target: string): string {
     .update(target)
     .digest("hex")
     .slice(0, 24)}`;
+}
+
+function hasRequiredProactiveContext(channel: ConfiguredChannel, target: string): boolean {
+  if (channel.channel !== "wechat") return true;
+  return hasWechatStoredContextToken(channel.statePath, target);
 }
 
 function channelDisplayName(channel: ImGatewayChannel): string {

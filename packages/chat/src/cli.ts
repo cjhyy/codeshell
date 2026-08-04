@@ -24,8 +24,26 @@ import { renderWebhookIngress, type IngressFormat } from "./ingress.js";
 import { GatewayServiceManager } from "./service-manager.js";
 import { runPlatformCanary } from "./platform-canary.js";
 import { createDesktopNotificationHandler } from "./notification-relay.js";
+import {
+  FileNotificationDeliveryProgressStore,
+  notificationDeliveryProgressPath,
+} from "./notification-progress.js";
+
+const CHAT_HELP = `用法：
+  code-shell-chat [--config /path/config.json]
+  code-shell-chat wechat login [--config /path/config.json] [--credentials-dir /path]
+  code-shell-chat service install|uninstall|status [--config /path/config.json]
+  code-shell-chat ingress print --host chat.example.com [--format caddy|nginx]
+  code-shell-chat canary [--config /path/config.json]
+
+选项：
+  -h, --help  显示帮助并退出`;
 
 async function main(args = process.argv.slice(2)): Promise<void> {
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(CHAT_HELP);
+    return;
+  }
   if (args[0] === "wechat" && args[1] === "login") {
     await loginWechat(readWechatLoginOptions(args.slice(2)));
     return;
@@ -91,7 +109,18 @@ async function main(args = process.argv.slice(2)): Promise<void> {
     const gatewayTask = gateway.run(shutdown.signal);
     const notificationTask = desktop.watchEvents(
       shutdown.signal,
-      createDesktopNotificationHandler(adapters, config.notifications),
+      createDesktopNotificationHandler(adapters, config.notifications, {
+        progressStore: new FileNotificationDeliveryProgressStore(
+          notificationDeliveryProgressPath(config.runtime.eventCursorPath),
+        ),
+        authorizeTarget: ({ channel, target }) => {
+          const current = loadGatewayConfig({ configPath });
+          return current.channels.some(
+            (configured) =>
+              configured.channel === channel && configured.allowedTargetIds.includes(target),
+          );
+        },
+      }),
       {
         checkpointPath: config.runtime.eventCursorPath,
         onError: (error) =>

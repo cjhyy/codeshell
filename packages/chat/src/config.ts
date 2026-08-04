@@ -367,6 +367,7 @@ function loadNotificationTargets(
     }
   }
   if (result.length === 0) throw new Error("notifications.enabled=true 时至少配置一个 target");
+  if (result.length > 32) throw new Error("notifications targets 最多配置 32 个");
   return result;
 }
 
