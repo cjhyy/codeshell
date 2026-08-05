@@ -12,7 +12,8 @@ export function PetWidget({
   activityExpanded,
   onToggleChat,
   onToggleActivity,
-  onClose,
+  onOpen,
+  onContextMenu,
 }: {
   runningCount: number;
   activityCount: number;
@@ -21,7 +22,8 @@ export function PetWidget({
   activityExpanded: boolean;
   onToggleChat: () => void;
   onToggleActivity: () => void;
-  onClose: () => void;
+  onOpen: () => void;
+  onContextMenu: () => void;
 }) {
   const { t } = useT();
   const clickTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,7 +178,15 @@ export function PetWidget({
             clearTimeout(clickTimerRef.current);
             clickTimerRef.current = null;
           }
-          onClose();
+          onOpen();
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          if (clickTimerRef.current) {
+            clearTimeout(clickTimerRef.current);
+            clickTimerRef.current = null;
+          }
+          onContextMenu();
         }}
         aria-expanded={chatExpanded}
         aria-label={`${t(chatExpanded ? "pet.widget.collapseChat" : "pet.widget.expandChat")}：${summary}`}

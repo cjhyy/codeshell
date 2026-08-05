@@ -352,6 +352,7 @@ export interface PetApi {
   /** @deprecated Use setWidgetSurface to choose the widget's content surface. */
   setWidgetExpanded(expanded: boolean): Promise<{ ok: true }>;
   moveWidget(position: PetWidgetPosition): void;
+  showWidgetContextMenu?(): void;
   openWidgetOverview(target?: PetOpenSessionRequest): Promise<{ ok: true }>;
   onWidgetOpenOverview(listener: (target?: PetOpenSessionRequest) => void): () => void;
   onWidgetVisibilityChanged(listener: (visible: boolean) => void): () => void;
@@ -464,6 +465,7 @@ export function createPetApi(ipcRenderer: PetIpcRenderer): PetApi {
     setWidgetExpanded: (expanded) =>
       ipcRenderer.invoke("pet:widget-expanded", expanded) as Promise<{ ok: true }>,
     moveWidget: (position) => ipcRenderer.send("pet:widget-move", position),
+    showWidgetContextMenu: () => ipcRenderer.send("pet:widget-context-menu"),
     openWidgetOverview: (target) =>
       ipcRenderer.invoke("pet:widget-open-overview", target) as Promise<{ ok: true }>,
     onWidgetOpenOverview: (listener) => {

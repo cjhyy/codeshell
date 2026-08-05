@@ -178,7 +178,11 @@ describe("Pet preload contract", () => {
     expect(await api.setWidgetSurface("expanded")).toEqual({ ok: true });
     expect(await api.setWidgetExpanded(true)).toEqual({ ok: true });
     api.moveWidget({ x: 320, y: 180 });
-    expect(ipc.sent).toEqual([{ channel: "pet:widget-move", payload: { x: 320, y: 180 } }]);
+    api.showWidgetContextMenu?.();
+    expect(ipc.sent).toEqual([
+      { channel: "pet:widget-move", payload: { x: 320, y: 180 } },
+      { channel: "pet:widget-context-menu", payload: undefined },
+    ]);
     expect(await api.openWidgetOverview()).toEqual({ ok: true });
     const externalTarget = {
       agentSessionId: "thread-1",

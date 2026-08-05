@@ -137,7 +137,9 @@ describe("App Pet lifecycle boundaries", () => {
     expect(petSource).toContain("window.codeshell.pet.moveWidget");
     expect(petSource).toContain('data-pet-mini-panel="open"');
     expect(petSource).toContain("onDoubleClick");
-    expect(petSource).toContain("api.setWidgetVisible(false)");
+    expect(petSource).toContain("api.openWidgetOverview()");
+    expect(petSource).toContain("api.showWidgetContextMenu?.()");
+    expect(petSource).not.toContain("api.setWidgetVisible(false)");
     expect(petSource).toContain("api.onProjectionEvent");
     expect(petSource).toContain("api.onAttentionEvent");
   });

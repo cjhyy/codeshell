@@ -440,7 +440,8 @@ export function PetDesktopWindow() {
         activityExpanded={panel === "activity"}
         onToggleChat={toggleChatPanel}
         onToggleActivity={toggleActivityPanel}
-        onClose={() => void api.setWidgetVisible(false)}
+        onOpen={() => void api.openWidgetOverview()}
+        onContextMenu={() => api.showWidgetContextMenu?.()}
       />
     </div>
   );

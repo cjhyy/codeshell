@@ -299,7 +299,7 @@ export const pet = {
         send: "发送",
         replying: "Mimi 正在回复…",
         replyFallback: "已经处理完成，可打开完整页面查看详情。",
-        dragHint: "拖动移动；点 Mimi 打开聊天；点右侧数量查看工作动态；双击隐藏",
+        dragHint: "拖动移动；单击打开聊天；双击打开完整页面；右键菜单可关闭宠物",
         workSummary: "{activity} 项工作提醒；其中 {completed} 项完成未读；{running} 项执行中",
         activityBubbles: "当前工作动态",
         previewAria: "打开 Session：{title}",
@@ -622,7 +622,7 @@ export const pet = {
         replying: "Mimi is replying…",
         replyFallback: "Done. Open the full view for details.",
         dragHint:
-          "Drag to move; click Mimi for chat; click the right count for activity; double-click to hide",
+          "Drag to move; click for chat; double-click for the full view; right-click to close the Pet",
         workSummary: "{activity} work alerts; {completed} completed unread; {running} in progress",
         activityBubbles: "Current work activity",
         previewAria: "Open Session: {title}",

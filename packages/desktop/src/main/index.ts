@@ -9,6 +9,7 @@ import {
   clipboard,
   dialog,
   ipcMain,
+  Menu,
   session,
   shell,
   systemPreferences,
@@ -4960,8 +4961,13 @@ ipcMain.handle("pet:widget-visible-get", () => {
   return petWidgetShouldBeVisible && Boolean(petWidgetWindow && !petWidgetWindow.isDestroyed());
 });
 
-ipcMain.handle("pet:widget-visible", async (_event, visible: unknown) => {
-  if (typeof visible !== "boolean") throw new Error("pet:widget-visible requires boolean");
+function broadcastPetWidgetVisibility(visible: boolean): void {
+  for (const win of mainWindows) {
+    if (!win.isDestroyed()) win.webContents.send("pet:widget-visibility-changed", visible);
+  }
+}
+
+async function setPetWidgetVisibility(visible: boolean): Promise<void> {
   petWidgetShouldBeVisible = visible;
   if (visible) {
     await petIpcReady;
@@ -4970,10 +4976,31 @@ ipcMain.handle("pet:widget-visible", async (_event, visible: unknown) => {
   } else destroyPetWidgetWindow();
   const effectiveVisible =
     petWidgetShouldBeVisible && Boolean(petWidgetWindow && !petWidgetWindow.isDestroyed());
-  for (const win of mainWindows) {
-    if (!win.isDestroyed()) win.webContents.send("pet:widget-visibility-changed", effectiveVisible);
-  }
+  broadcastPetWidgetVisibility(effectiveVisible);
+}
+
+ipcMain.handle("pet:widget-visible", async (_event, visible: unknown) => {
+  if (typeof visible !== "boolean") throw new Error("pet:widget-visible requires boolean");
+  await setPetWidgetVisibility(visible);
   return { ok: true as const };
+});
+
+ipcMain.on("pet:widget-context-menu", (event) => {
+  const win = petWidgetWindow;
+  if (!win || win.isDestroyed() || event.sender !== win.webContents) return;
+  const chinese = app.getLocale().toLowerCase().startsWith("zh");
+  const menu = Menu.buildFromTemplate([
+    {
+      label: chinese ? "打开 Mimi" : "Open Mimi",
+      click: () => void openPetOverviewFromWidget(),
+    },
+    { type: "separator" },
+    {
+      label: chinese ? "关闭宠物" : "Close Pet",
+      click: () => void setPetWidgetVisibility(false),
+    },
+  ]);
+  menu.popup({ window: win });
 });
 
 ipcMain.on("pet:widget-move", (event, rawPosition: unknown) => {
