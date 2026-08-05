@@ -465,10 +465,10 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /**
-   * WorkerBridgeCore prepareInbound hook: rewrite injected lines the same way
-   * the renderer IPC path does (an `agent/run` spawns the worker on demand
-   * and gets trust/session metadata injected; everything else passes through
-   * verbatim).
+   * WorkerBridgeCore prepareInbound hook: rewrite every injected or correlated
+   * host frame the same way the renderer IPC path does (an `agent/run` spawns
+   * the worker on demand and gets trust/session metadata injected; everything
+   * else passes through verbatim).
    */
   private prepareInboundLine(line: string): { line: string; method?: string } {
     const prepared = prepareAgentRunMetadata(line, (cwd) => getTrustCachedSync(cwd) === "trusted");
@@ -1152,12 +1152,11 @@ export class AgentBridge implements PetStateBridge {
    * safe and idempotent — the latest claim wins, which is also how a session
    * recovers after its owning window is destroyed.
    *
-   * NOTE: the only caller today is the renderer `agent/run` path below. This is
-   * deliberately NOT wired into `reserveHostSession`: its lone caller is pet work
-   * delegation, a headless injected run with no owning window, where claiming one
-   * would be a lie. The external-Runtime caller arrives with that feature; until
-   * then a non-renderer session correctly has no owner and `Panel.invoke` fails
-   * closed for it. See docs/todo/external-agent-runtime-tool-bridge-design.md §9.3.
+   * Callers today are the renderer `agent/run` path and Panel App submissions,
+   * which explicitly carry their host window. This is deliberately NOT wired
+   * into `reserveHostSession`: pet work delegation is a headless run with no
+   * owning window, where claiming one would be a lie. See
+   * docs/todo/external-agent-runtime-tool-bridge-design.md §9.3.
    */
   claimSessionPanelOwner(sessionId: string, webContentsId: number): void {
     this.panelHostWindowRoutes.claim(sessionId, webContentsId);

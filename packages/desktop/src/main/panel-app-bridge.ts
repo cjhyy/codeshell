@@ -19,6 +19,7 @@ import {
 } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, resolve, sep } from "node:path";
 import type { AgentBridge } from "./agent-bridge.js";
+import { claimPanelHostOwnerForRun } from "./panel-host-routing.js";
 import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { preparePanelApp } from "./panel-app-protocol.js";
 import {
@@ -723,6 +724,13 @@ export class PanelAppBridge {
       MAX_AGENT_PROMPT_CHARS - prefix.length,
     )}`;
     const clientMessageId = `panel:${binding.resource.descriptor.appId}:${randomUUID()}`;
+
+    // Panel App submissions originate in main, so they never cross the
+    // renderer agent:msg path that normally claims the session's unique host
+    // window. Claim it explicitly before dispatch; the worker may invoke a
+    // mutating Panel tool immediately after accepting the run.
+    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    claimPanelHostOwnerForRun(bridge, sessionId, owner);
 
     // Claim the slot BEFORE the await point. Everything above is synchronous, so
     // no second call can interleave between the check and this assignment.

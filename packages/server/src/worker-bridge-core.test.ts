@@ -6,7 +6,7 @@
 //
 // Covered here: stdout line framing + listener dispatch, request/response
 // correlation (consume vs pass-through, timeout, settle-on-exit, fail-fast
-// when no worker), injectWorkerMessage prepareInbound rewriting + drop
+// when no worker), correlated/injected prepareInbound rewriting + drop
 // semantics, and lifecycle callbacks (started generation / clean exit).
 import { describe, test, expect, beforeAll, afterAll, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -192,6 +192,55 @@ describe("WorkerBridgeCore", () => {
       result: { method: "test/echo", echo: { woke: true } },
     });
     expect(core.hasLiveWorker()).toBe(true);
+  });
+
+  test("request(): prepareInbound registers and strips host-only agent/run metadata", async () => {
+    let registered: { sessionId: string; bucket: string; cwd: string } | undefined;
+    const core = makeCore({
+      prepareInbound: (line) => {
+        const frame = JSON.parse(line) as {
+          method?: string;
+          params?: Record<string, unknown>;
+        };
+        if (frame.method === "agent/run" && frame.params) {
+          registered = {
+            sessionId: String(frame.params.sessionId),
+            bucket: String(frame.params.bucket),
+            cwd: String(frame.params.cwd),
+          };
+          delete frame.params.bucket;
+          frame.params.projectTrusted = true;
+        }
+        return { line: JSON.stringify(frame), method: frame.method };
+      },
+    });
+
+    const outcome = await core.request(
+      "agent/run",
+      {
+        sessionId: "restored-session",
+        bucket: "project::restored-session",
+        cwd: "/project",
+      },
+      { id: "req-panel-run", timeoutMs: 5_000, ensureWorker: true },
+    );
+
+    expect(registered).toEqual({
+      sessionId: "restored-session",
+      bucket: "project::restored-session",
+      cwd: "/project",
+    });
+    expect(outcome).toEqual({
+      status: "result",
+      result: {
+        method: "agent/run",
+        echo: {
+          sessionId: "restored-session",
+          cwd: "/project",
+          projectTrusted: true,
+        },
+      },
+    });
   });
 
   test("request(): settleOnExit resolves pending requests when the worker dies", async () => {

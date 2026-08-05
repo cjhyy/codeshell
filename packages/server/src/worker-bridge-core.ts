@@ -10,7 +10,7 @@
 //   - stdout line framing (readline split) + listener dispatch
 //   - request/response correlation (id → resolver, with timeout / consume /
 //     settle-on-exit semantics)
-//   - inbound line injection (`injectWorkerMessage`) with a pluggable
+//   - inbound line injection and correlated requests with a pluggable
 //     `prepareInbound` hook for host-specific rewriting (e.g. agent/run trust)
 //   - worker generation counter (bumped on every successful spawn)
 //   - pending outbox flushed once the worker's stdin exists
@@ -90,9 +90,9 @@ export interface WorkerBridgeCoreOptions {
   fallbackCwd?: () => string;
   log?: WorkerBridgeLog;
   /**
-   * Rewrite/side-effect hook for injectWorkerMessage lines (e.g. agent/run
-   * trust metadata + on-demand spawn). Returns the line to write; `method`
-   * is only used for log context.
+   * Rewrite/side-effect hook for every host-originated worker frame, whether
+   * injected or correlated (e.g. agent/run trust metadata + on-demand spawn).
+   * Returns the line to write; `method` is only used for log context.
    */
   prepareInbound?: (line: string) => { line: string; method?: string };
   /** A worker successfully spawned with piped stdio. */
@@ -371,20 +371,29 @@ export class WorkerBridgeCore {
         settleOnExit: options.settleOnExit === true,
         settle,
       });
-      const frame = JSON.stringify({
+      const rawFrame = JSON.stringify({
         jsonrpc: "2.0",
         id,
         method,
         ...(params === undefined ? {} : { params }),
       });
-      // Wake a lazily-unspawned worker before writing, so a spawn-triggering
-      // request (pet/IM-gateway agent/run) isn't dropped by sendLine and left
-      // to hang until timeout. Idempotent when a child is already alive.
-      if (options.ensureWorker) this.ensureWorker(options.ensureWorkerCwd);
       let sent = false;
       let sendError: unknown;
       try {
-        sent = this.sendLine(frame);
+        // Correlated host requests must cross the same metadata boundary as
+        // injected renderer/mobile frames. In particular, Panel App
+        // agent.submitPrompt uses request() and carries the session bucket;
+        // bypassing this hook left the main process unable to route the first
+        // Panel tool call for a restored session.
+        const prepared = this.opts.prepareInbound
+          ? this.opts.prepareInbound(rawFrame)
+          : { line: rawFrame, method: undefined };
+        // Wake a lazily-unspawned worker before writing, so a spawn-triggering
+        // request (pet/IM-gateway agent/run) isn't dropped by sendLine and left
+        // to hang until timeout. Idempotent when prepareInbound already spawned
+        // the worker as an agent/run side effect.
+        if (options.ensureWorker) this.ensureWorker(options.ensureWorkerCwd);
+        sent = this.sendLine(prepared.line);
       } catch (e) {
         sendError = e;
       }

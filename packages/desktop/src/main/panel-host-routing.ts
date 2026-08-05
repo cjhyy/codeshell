@@ -8,6 +8,26 @@ export interface ResolvedPanelHostWindow<T extends PanelHostWindowRoute> {
   window: T | null;
 }
 
+export interface PanelHostOwnerClaimer {
+  claimSessionPanelOwner(sessionId: string, webContentsId: number): void;
+}
+
+/**
+ * Claim the unique renderer owner before a Panel App starts an agent run.
+ *
+ * Panel-originated runs do not cross the renderer's agent:msg IPC path, so they
+ * must establish the same ownership explicitly. Failing closed for a missing
+ * owner preserves the invariant that mutating Panel tools are never broadcast.
+ */
+export function claimPanelHostOwnerForRun(
+  claimer: PanelHostOwnerClaimer,
+  sessionId: string,
+  owner: PanelHostWindowRoute | null,
+): void {
+  if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+  claimer.claimSessionPanelOwner(sessionId, owner.webContents.id);
+}
+
 /**
  * Tracks the renderer window that owns each agent session. Keeping this state
  * separate makes the multi-window routing contract deterministic and testable

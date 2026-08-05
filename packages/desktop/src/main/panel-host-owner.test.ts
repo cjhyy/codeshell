@@ -19,6 +19,7 @@ import { describe, expect, test } from "bun:test";
 import {
   acceptsPanelHostResponse,
   allowsPanelHostBroadcastFallback,
+  claimPanelHostOwnerForRun,
   PanelHostWindowRoutes,
 } from "./panel-host-routing.js";
 
@@ -30,6 +31,40 @@ function fakeWindow(id: number, destroyed = false) {
 }
 
 describe("explicit host-loopback owner claim", () => {
+  test("a panel-originated run claims its live host window before dispatch", () => {
+    const routes = new PanelHostWindowRoutes();
+    const window = fakeWindow(40);
+
+    claimPanelHostOwnerForRun(
+      {
+        claimSessionPanelOwner: (sessionId, webContentsId) =>
+          routes.claim(sessionId, webContentsId),
+      },
+      "panel-session",
+      window,
+    );
+
+    expect(routes.resolve("panel-session", [window])).toEqual({
+      ownerWebContentsId: 40,
+      window,
+    });
+  });
+
+  test("a panel-originated run fails closed when its host window is gone", () => {
+    const routes = new PanelHostWindowRoutes();
+    const claimer = {
+      claimSessionPanelOwner: (sessionId: string, webContentsId: number) =>
+        routes.claim(sessionId, webContentsId),
+    };
+
+    expect(() => claimPanelHostOwnerForRun(claimer, "missing-owner", null)).toThrow(
+      "owner window is unavailable",
+    );
+    expect(() => claimPanelHostOwnerForRun(claimer, "dead-owner", fakeWindow(39, true))).toThrow(
+      "owner window is unavailable",
+    );
+  });
+
   test("a session claimed without any agent/run resolves to its owner", () => {
     const routes = new PanelHostWindowRoutes();
     const window = fakeWindow(41);
