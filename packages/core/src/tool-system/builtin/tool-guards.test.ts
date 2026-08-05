@@ -116,6 +116,18 @@ describe("builtin tool availability guards", () => {
     };
     setDefaultCredentialAccess(access);
     expect(BUILTIN_TOOL_GUARDS.get("LinkAction")!({ cwd: "/repo", hasGoal: false })).toBe(true);
+
+    access.listMasked = () => [
+      {
+        id: "link-github-app",
+        type: "link",
+        label: "GitHub browser OAuth",
+        hasSecret: true,
+        oauthStatus: { state: "expired", hasRefreshToken: true },
+        meta: { linkProvider: "github", linkExecutionRuntime: "local" },
+      },
+    ];
+    expect(BUILTIN_TOOL_GUARDS.get("LinkAction")!({ cwd: "/repo", hasGoal: false })).toBe(false);
   });
 
   test("ungated tools have no guard entry (so they're always visible)", () => {

@@ -2,32 +2,38 @@
 
 ## Decision
 
-CodeShell has three deliberately separate browser surfaces:
+CodeShell has one Browser Runtime control plane with four deliberately separate
+target paths:
 
-1. **Browser Runtime (default)** — a runtime-owned, headless Playwright context
-   with its own filesystem profile. It is the default target for ordinary
-   `browser_*` tools. If Playwright cannot launch a compatible Chromium or
-   system Chrome, the runtime falls back to the hidden Electron/CDP backend.
-2. **Built-in BrowserPanel (explicit handoff)** — the user-facing Electron
-   `<webview>` and its `persist:browser:<bucket>` session. Focus never grants
-   control. A user gesture grants one exact guest id to one task for 30 minutes.
-3. **User Chrome (explicit extension handoff)** — an MV3 extension attaches
+1. **InAppBrowserBackend (default)** — a runtime-owned background target in the
+   task's `persist:browser:<bucket>` profile. It shares the in-app browser's
+   cookies and sign-in state without controlling any user-opened tab. The exact
+   background target can be revealed in place for login or human takeover.
+2. **BuiltInTabClaimBackend (explicit claim)** — the user-facing Electron
+   `<webview>`. Focus never grants control. A user gesture grants one exact
+   guest id to one task for 30 minutes.
+3. **ChromeExtensionBackend (optional)** — an MV3 extension attaches
    `chrome.debugger` to one signed-in tab, then relays CDP commands through an
    authenticated Native Messaging host. A short pairing request binds that tab
    to one task; tab close, debugger detach, revoke, or expiry removes the grant.
+4. **DedicatedPlaywrightBackend (optional)** — an isolated filesystem profile
+   for scheduled tasks, unattended work, and explicit isolated crawling. It is
+   never selected silently for an ordinary interactive task.
 
 The dispatch order is an explicit built-in grant, then an explicit Chrome
-grant, then the independent Browser Runtime. Creating either grant closes the
-independent runtime target so two browsers cannot silently continue at once.
+grant, then the task-owned in-app target. Scheduled tasks explicitly request
+Dedicated Playwright. Creating either grant closes the task-owned target so two
+browsers cannot silently continue at once.
 
 ## Why Playwright is above CDP
 
 The old driver manually implemented mouse coordinates, input events, waiting,
-and stale references. CDP remains useful as a transport, but it is not a mature
-interaction runtime by itself. The Playwright backend uses `Locator` for strict
-resolution, auto-waiting, and actionability checks (visible, stable, receives
-events, enabled, editable), while CodeShell keeps ownership of policy, task
-identity, profiles, trace visibility, pagination, and human handoff.
+and stale references. CDP remains useful for the in-app and claimed-tab
+transports, but it is not a mature interaction runtime by itself. The dedicated
+Playwright backend uses `Locator` for strict resolution, auto-waiting, and
+actionability checks (visible, stable, receives events, enabled, editable),
+while CodeShell keeps ownership of policy, task identity, profiles, trace
+visibility, pagination, backend selection, and human handoff.
 
 References:
 

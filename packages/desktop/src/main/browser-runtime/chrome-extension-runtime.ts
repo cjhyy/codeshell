@@ -12,11 +12,7 @@ import {
   type BrowserActionRequest,
 } from "../browser-driver/automation-host.js";
 import { loadBrowserAutomationPolicy } from "../browser-driver/load-policy.js";
-import {
-  isDomainAllowed,
-  isSensitiveAction,
-  SENSITIVE_WORDS,
-} from "../browser-driver/policy.js";
+import { isDomainAllowed, isSensitiveAction, SENSITIVE_WORDS } from "../browser-driver/policy.js";
 import {
   ChromeNativeBridgeServer,
   type ChromeExtensionMessage,
@@ -80,7 +76,7 @@ export interface ChromeExtensionTransport {
 }
 
 /** Logged-in Chrome channel: Extension chrome.debugger → Native Messaging → Runtime. */
-export class ChromeExtensionRuntimeService {
+export class ChromeExtensionBackend {
   private readonly server: ChromeExtensionTransport;
   private readonly now: () => number;
   private readonly onGranted?: (sessionId: string) => void;
@@ -92,7 +88,9 @@ export class ChromeExtensionRuntimeService {
     this.onGranted = options.onGranted;
     this.server =
       options.server ??
-      new ChromeNativeBridgeServer({ onMessage: (message) => this.handleExtensionMessage(message) });
+      new ChromeNativeBridgeServer({
+        onMessage: (message) => this.handleExtensionMessage(message),
+      });
   }
 
   start(): Promise<ChromeNativeBridgeStatus> {
@@ -228,9 +226,7 @@ export class ChromeExtensionRuntimeService {
       async (method, params) =>
         this.server.request("cdp.command", { tabId: tab.id, method, params }) as Promise<unknown>,
       async () => {
-        const current = sanitizeChromeTab(
-          await this.server.request("tab.get", { tabId: tab.id }),
-        );
+        const current = sanitizeChromeTab(await this.server.request("tab.get", { tabId: tab.id }));
         grant.tab = current;
         return { url: current.url, title: current.title };
       },
@@ -242,14 +238,11 @@ export class ChromeExtensionRuntimeService {
 
   private secureBridge(grant: ChromeTabGrant): BrowserBridge {
     const currentTab = async () => {
-      const tab = sanitizeChromeTab(
-        await this.server.request("tab.get", { tabId: grant.tab.id }),
-      );
+      const tab = sanitizeChromeTab(await this.server.request("tab.get", { tabId: grant.tab.id }));
       grant.tab = tab;
       return tab;
     };
-    const allowed = (tab: ChromeTabInfo) =>
-      isDomainAllowed(tab.url, loadBrowserAutomationPolicy());
+    const allowed = (tab: ChromeTabInfo) => isDomainAllowed(tab.url, loadBrowserAutomationPolicy());
     const blocked = (url: string): BrowserResult => ({
       ok: false,
       code: "BLOCKED",
@@ -272,9 +265,7 @@ export class ChromeExtensionRuntimeService {
         const snapshot = await grant.driver.snapshot();
         grant.sensitiveRefs = new Set(
           snapshot.elements
-            .filter(
-              (element) => element.sensitive === true || hasHighConsequenceName(element.name),
-            )
+            .filter((element) => element.sensitive === true || hasHighConsequenceName(element.name))
             .map((element) => element.ref),
         );
         return snapshot;
@@ -339,21 +330,22 @@ export class ChromeExtensionRuntimeService {
       selectOption: async (ref, value) => {
         const tab = await currentTab();
         if (!allowed(tab)) return blocked(tab.url);
-        if (grant.sensitiveRefs.has(ref)) return human("sensitive Chrome selection requires the user");
+        if (grant.sensitiveRefs.has(ref))
+          return human("sensitive Chrome selection requires the user");
         return grant.driver.selectOption(ref, value);
       },
       pressKey: async (key, ref) => {
         const tab = await currentTab();
         if (!allowed(tab)) return blocked(tab.url);
-        if (ref && grant.sensitiveRefs.has(ref)) return human("sensitive Chrome input requires the user");
+        if (ref && grant.sensitiveRefs.has(ref))
+          return human("sensitive Chrome input requires the user");
         return grant.driver.pressKey(key, ref);
       },
       fetchImages: async (refs) => {
         const tab = await currentTab();
         if (allowed(tab)) return grant.driver.fetchImages(refs);
         return refs.map(
-          (ref) =>
-            ({ ok: false, ref, detail: blocked(tab.url).detail }) satisfies BrowserImageData,
+          (ref) => ({ ok: false, ref, detail: blocked(tab.url).detail }) satisfies BrowserImageData,
         );
       },
       screenshot: async (ref) => {
@@ -415,6 +407,9 @@ export class ChromeExtensionRuntimeService {
     return result;
   }
 }
+
+/** @deprecated Use ChromeExtensionBackend. */
+export { ChromeExtensionBackend as ChromeExtensionRuntimeService };
 
 function sanitizeChromeTab(value: unknown): ChromeTabInfo {
   const tab = value && typeof value === "object" ? (value as Record<string, unknown>) : {};

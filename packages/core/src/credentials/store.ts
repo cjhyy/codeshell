@@ -10,6 +10,7 @@ import {
 import { type EncryptionCipher, getDefaultCredentialCipher } from "./cipher.js";
 import { logger } from "../logging/logger.js";
 import { summarizeOAuthCredentialSecret } from "./oauth.js";
+import { isBrowserOAuthLinkCredential } from "./oauth.js";
 
 /** 测试可经 process.env.HOME 覆盖(镜像 settings/manager.ts userHome)。 */
 function userHome(): string {
@@ -223,7 +224,9 @@ export class CredentialStore {
         ...(credentialAllowsEnvExposure(c.type) ? {} : { exposeAsEnv: undefined }),
         hasSecret: typeof secret === "string" && secret.length > 0,
         secretHint: credentialSecretHint(c.type, secret),
-        ...(c.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
+        ...(c.type === "oauth" || isBrowserOAuthLinkCredential(c)
+          ? { oauthStatus: summarizeOAuthCredentialSecret(secret) }
+          : {}),
       };
     });
   }

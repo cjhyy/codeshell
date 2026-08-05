@@ -1,8 +1,4 @@
-export {
-  DesktopBrowserRuntime,
-  browserRuntime,
-  browserRuntimePartition,
-} from "./runtime.js";
+export { DesktopBrowserRuntime, browserRuntime, browserRuntimePartition } from "./runtime.js";
 export type {
   BrowserRuntimeAcquireOptions,
   BrowserRuntimeLease,
@@ -14,22 +10,32 @@ export type {
   BrowserRuntimeBackend,
   BrowserRuntimeBackendAcquireOptions,
   BrowserRuntimeBackendKind,
+  BrowserRuntimeBackendPreference,
   BrowserRuntimeBackendLease,
 } from "./backend.js";
 export {
+  DedicatedPlaywrightBackend,
   PlaywrightRuntimeBackend,
+  dedicatedPlaywrightBackend,
   defaultLaunchCandidates,
 } from "./playwright-backend.js";
+export { InAppBrowserBackend, inAppBrowserBackend } from "./in-app-browser-backend.js";
 export { PlaywrightBrowserDriver } from "./playwright-driver.js";
 export {
+  BuiltInTabClaimBackend,
+  builtInTabClaimBackend,
   BuiltInBrowserHandoffGrants,
   builtInBrowserHandoffGrants,
 } from "./built-in-handoff.js";
 export {
+  ChromeExtensionBackend,
   ChromeExtensionRuntimeService,
 } from "./chrome-extension-runtime.js";
 export type { ChromeExtensionRuntimeStatus } from "./chrome-extension-runtime.js";
-export { chromeExtensionRuntimeService } from "./chrome-extension-singleton.js";
+export {
+  chromeExtensionBackend,
+  chromeExtensionRuntimeService,
+} from "./chrome-extension-singleton.js";
 export {
   installChromeNativeMessagingHost,
   chromeExtensionPath,
@@ -42,10 +48,7 @@ export {
   nativeMessagingOriginFromArgv,
   runChromeNativeMessagingHost,
 } from "./chrome-native-protocol.js";
-export type {
-  BuiltInBrowserHandoffStatus,
-  GrantBuiltInBrowserInput,
-} from "./built-in-handoff.js";
+export type { BuiltInBrowserHandoffStatus, GrantBuiltInBrowserInput } from "./built-in-handoff.js";
 export {
   dispatchInteractiveBrowserRuntimeAction,
   interactiveBrowserRuntimeOwner,

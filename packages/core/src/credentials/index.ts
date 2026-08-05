@@ -31,9 +31,11 @@ export type {
 export { credentialAllowsEnvExposure, credentialSecretHint } from "./types.js";
 export {
   buildOAuthRefreshRequest,
+  isBrowserOAuthLinkCredential,
   isOAuthAccessTokenExpired,
   oauthCredentialStatus,
   parseOAuthCredentialSecret,
+  resolveLinkCredentialAccessToken,
   mergeOAuthTokenResponse,
   shouldRefreshOAuthCredential,
   summarizeOAuthCredentialSecret,

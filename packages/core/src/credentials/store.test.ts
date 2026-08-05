@@ -309,6 +309,38 @@ describe("CredentialStore", () => {
     expect(c.meta?.scopes).toEqual(["files:read"]);
   });
 
+  test("browser OAuth Link credentials expose expiry metadata without exposing refresh tokens", () => {
+    const store = new CredentialStore(cwd);
+    store.save("user", {
+      id: "link-github-github-app",
+      type: "link",
+      label: "GitHub App",
+      secret: JSON.stringify({
+        version: 1,
+        accessToken: "access-private",
+        refreshToken: "refresh-private",
+        expiresAt: "2030-01-01T00:00:00.000Z",
+        tokenEndpoint: "https://github.com/login/oauth/access_token",
+        clientId: "Iv1.public-client",
+      }),
+      meta: {
+        linkProvider: "github",
+        linkExecutionRuntime: "local",
+        linkAuthSource: "browser-oauth",
+      },
+    });
+
+    const masked = store
+      .listMasked()
+      .find((credential) => credential.id === "link-github-github-app");
+    expect(masked?.oauthStatus).toMatchObject({
+      state: "valid",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      hasRefreshToken: true,
+    });
+    expect(JSON.stringify(masked)).not.toContain("refresh-private");
+  });
+
   test("same domain can hold multiple named accounts (no overwrite)", () => {
     const store = new CredentialStore(cwd);
     const meta = { platform: "xiaohongshu", domain: "xiaohongshu.com" };

@@ -8,6 +8,8 @@ breaking.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-05
+
 ### Added
 
 #### Unified input attachments
@@ -59,13 +61,16 @@ breaking.
 
 #### Browser automation + built-in browser panel
 
-- CDP-driven automation of the built-in browser (no Playwright/JS-injection):
-  semantic `browser_observe` / `browser_act` / `browser_navigate` tools, image
-  & vision observation, multi-tab support, and link/image URL extraction. The
-  whole capability is a single toggle — turning it off removes both the tools
-  and their prompt text. Stale snapshots are folded to save tokens.
-- The agent can open the browser panel itself; selections echo back into tool
-  cards; screenshots echo to the stream as clickable thumbnails.
+- Semantic `browser_observe` / `browser_act` / `browser_navigate` tools now use
+  a task-owned background target in the built-in browser profile by default,
+  sharing that profile's login state without silently taking over a tab the
+  user opened. The exact same target can be revealed for login or human
+  takeover.
+- User-opened built-in tabs and regular Chrome tabs require an explicit claim;
+  dedicated Playwright remains an explicit isolated option for scheduled or
+  unattended work. Image/vision observation, multi-tab control, URL extraction,
+  trace visibility, and stale-snapshot folding are available across the runtime
+  control plane.
 
 #### Credentials: cookie login, multi-account, inject
 
@@ -123,6 +128,22 @@ breaking.
 
 ### Fixed
 
+- Link Actions now preserve the dedicated `link` credential-access purpose
+  through the desktop bridge, so provider-owned credentials remain
+  non-agent-exposable while still being usable by the approved Link tool.
+- Browser device authorization now encrypts the access token, refresh token,
+  token and refresh expiries, token endpoint, and public client ID together.
+  Only the access token crosses the Link execution boundary; expired or invalid
+  connections are hidden from Link Actions and surfaced in the UI for a clean
+  reconnect.
+- Link connection cards isolate state per provider and connection method,
+  cancel pending device flows on close/unmount, clear abandoned local secrets,
+  derive gateway totals from the live channel list, and leave browser-login
+  status retryable after a transient status-check failure.
+- Clean-checkout CI now builds workspace exports before package-boundary tests,
+  resolves the agent stdio source subpath during typechecking, recognizes the
+  packaged Chrome extension globals, and gives coverage tests the same timeout
+  budget as the full suite.
 - Addressed the latest core/desktop architecture review findings around stream
   routing, permission/session scoping, and event coalescing, reducing
   wrong-session routing, duplicated events, and hard-to-cancel operations in
@@ -174,6 +195,13 @@ breaking.
 
 ### Changed
 
+- The core installer, marketplace, onboarding, and updater implementation
+  exports have moved to the `/internal` subpath. Embedders importing these
+  implementation details must update their import path for 0.8.0.
+- The short-lived personal todo UI has been replaced by Mimi follow-ups. Existing
+  `userData/pet/todos.json` files are intentionally left untouched and are not
+  auto-imported; users of that preview should back up or copy any remaining text
+  manually.
 - Refreshed beta-release documentation and repository hygiene: README badges and
   status copy now reflect the public beta track, obsolete handoff notes are
   archived under `docs/archive/`, and generated build artifacts are covered by
@@ -269,7 +297,7 @@ plus one private Electron POC:
   render layer, the `code-shell` CLI bin, themes, key bindings, all
   terminal-only utilities. Imports core; nothing else imports it.
 - **`@cjhyy/code-shell`** (meta) — thin re-export shim. `import { Engine }
-  from "@cjhyy/code-shell"` still works for SDK users; the `code-shell`
+from "@cjhyy/code-shell"` still works for SDK users; the `code-shell`
   bin loads the TUI CLI. Ships three files total: `index.js`, `index.d.ts`,
   `cli.js`.
 - **`@cjhyy/code-shell-desktop`** (private) — Electron POC. Currently a
@@ -330,7 +358,7 @@ plugin `hooks.json` files.
   user's prompt text on `user_prompt_submit`). Registry aggregation is
   last-write-wins for input/prompt, newline-joined for additionalContext.
 - **`settings.json` shell hooks.** New `hooks: [{event, command,
-  matcher?, timeout_ms?, cwd?}]` schema. Engine spawns the command per
+matcher?, timeout_ms?, cwd?}]` schema. Engine spawns the command per
   emit with the CC wire protocol — stdin is the HookContext JSON,
   stdout is a HookResult JSON, exit 2 = deny with stderr surfaced to
   the model. `CODESHELL_HOOK_EVENT` / `CODESHELL_HOOK_CWD` env vars
@@ -349,7 +377,7 @@ plugin `hooks.json` files.
   `${CODESHELL_PLUGIN_ROOT}` across every text file, so CC-authored
   plugin scripts that branch on host detection pick the codeshell
   path. `InstallResult.varRewrite` reports counts and `/plugin
-  install` prints a `rewrote: N file(s)` line so the modification is
+install` prints a `rewrote: N file(s)` line so the modification is
   visible.
 - **`ToolContext.hooks`.** Tools that need to emit lifecycle events
   (currently `notification` on background sub-agent terminal states)
@@ -413,6 +441,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
 ## [0.1.6] - 2026-05-13
 
 ### Added
+
 - **Built-in skills bundled with the package.** The skill scanner now also
   reads `skills-builtin/` shipped inside the installed npm package. First
   built-in is `codeshell-help` — answers questions about code-shell itself
@@ -425,6 +454,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
   block, since unattended automations have no human to retry the task.
 
 ### Fixed
+
 - `code-shell run` now resolves API keys / baseUrl / model from
   `settings.providers[]` and `settings.models[]` in addition to the legacy
   `settings.model.*` mirror — matches what Engine reconciles at startup,
@@ -443,8 +473,9 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
 ## [0.1.5] - 2026-05-13
 
 ### Added
+
 - **Auto-installing updater.** Background update check probes `npm config get
-  prefix` for write permission; if writable, registers a detached `npm i -g`
+prefix` for write permission; if writable, registers a detached `npm i -g`
   on process exit so the next launch picks up the new version. File lock at
   `~/.code-shell/.update.lock` (5min stale-takeover) prevents concurrent
   installs from corrupting each other. Disable with `DISABLE_AUTOUPDATER=1`,
@@ -469,7 +500,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
   reminder; a third re-read is hard-blocked. Four+ consecutive read-only
   calls (or three+ silent turns) inject a strategy-change reminder.
 - **Per-session verbose recorder.** Dev-only JSONL trace under `log/<date>/
-  session-<sid>.jsonl` capturing every LLM request/response, tool call, and
+session-<sid>.jsonl` capturing every LLM request/response, tool call, and
   engine event. Gated on `CODE_SHELL_DEV=1` / `--debug` / running from src.
   7-day retention, argv secrets redacted, per-record output clipped to 256 KB.
 - **Pasted-noise sanitizer.** Engine rejects tasks that are >70% ANSI/box
@@ -482,6 +513,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
   progress instead of a stale snapshot from the last completed run.
 
 ### Changed (breaking)
+
 - `SessionStatus` is now `"active" | "paused" | TerminalReason` instead of
   `"active" | "paused" | "completed" | "errored"`. `state.json` records the
   raw terminal reason (e.g. `aborted_streaming`, `model_error`,
@@ -490,6 +522,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
   need to widen its match.
 
 ### Changed
+
 - API key resolution centralized into `resolveApiKey()` (one canonical
   fallback chain: option → settings → all provider env vars). Replaces five
   drifting copies in `repl.ts`, `run.ts`, `runs.ts`, `main.ts`,
@@ -502,6 +535,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
 ## [0.1.4] - 2026-05-09
 
 ### Fixed
+
 - **Multi-model `apiKey` ignored on startup.** When `settings.json` defined
   a model in `models[]` (with its own `apiKey`/`baseUrl`) and the top-level
   `model.apiKey` was empty, the runtime fell through to
@@ -520,6 +554,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
 ## [0.1.0-alpha.1] - 2026-04-30
 
 ### Changed (breaking)
+
 - **Tool timeout system rewritten.** Removed the hardcoded
   `LEGACY_LONG_TIMEOUT_TOOLS = {Agent, Arena}` whitelist in
   `tool-system/registry.ts`. Tools now declare their own timeout via
@@ -539,6 +574,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
   (e.g. extended thinking).
 
 ### Added
+
 - **`Agent(run_in_background: true)`** — fire-and-forget sub-agents. Returns
   an `agent_id` immediately instead of blocking the parent turn. The agent
   runs detached in the same process; restarting loses its state.
@@ -550,6 +586,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
   registry for async agent handles.
 
 ### Notes
+
 - Cross-process / restart-survivable long tasks still belong to `RunManager`
   in `@cjhyy/code-shell/run`, not to `Agent(run_in_background)`. The split
   mirrors Claude Code's REPL/Agent-tool/Routines architecture.
@@ -557,6 +594,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
 ## [0.1.0-alpha.0] - 2026-04-28
 
 ### Added
+
 - **`IterativeArena` — multi-model authoring loop.** Pipeline: tournament v1
   (every participant writes a draft, the author merges anonymized drafts into
   v1) → critique-revise rounds (parallel critics produce anchored critiques
@@ -575,6 +613,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
 - `node >= 20` engine constraint alongside the existing `bun >= 1.3` hint.
 
 ### Fixed
+
 - TypeScript compilation is now clean (was 50+ errors).
   - Removed zombie `cli/transports/`, `cli/handlers/`, `cli/remoteIO.ts`,
     `cli/structuredIO.ts`, `cli/ndjsonSafeStringify.ts` — these were copied
@@ -619,11 +658,13 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
   Azure backend that rejects tool calls with 401.
 
 ### Removed
+
 - `TodoWrite` tool. It was a 6-line wrapper around `TaskCreate` and its
   presence confused models into using two equivalent interfaces. Use the
   `Task*` family (`TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`, etc.).
 
 ### Changed
+
 - Arena research-phase prompts no longer hard-cap output at "exactly 3 to 6
   findings". The new instruction asks for "as many findings as the topic
   warrants — typically 5-15", with each `summary` field expected to be 80+
@@ -641,6 +682,7 @@ see git log between v0.1.6 and v0.2.0 for the detailed change set.)
   marked `[需调研]` / `[TBD: ...]`.
 
 ### Fixed
+
 - IterativeArena: `extractTag` now tolerates LLM responses where the
   closing `</v1_content>` / `</v_next_content>` marker is missing (e.g. due
   to max_tokens truncation). Previously the parser fell back to "use the

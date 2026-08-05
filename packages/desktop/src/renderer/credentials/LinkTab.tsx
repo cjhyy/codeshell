@@ -193,8 +193,14 @@ function linkCredentialRuntime(credential: MaskedCredentialView): LinkExecutionR
 
 function linkCredentialIsUsable(credential: MaskedCredentialView | undefined): boolean {
   if (!credential?.hasSecret) return false;
-  if (credential.type !== "oauth") return true;
   return credential.oauthStatus?.state !== "expired" && credential.oauthStatus?.state !== "invalid";
+}
+
+function linkMethodStateKey(
+  providerId: string,
+  method: Pick<LinkConnectionMethod, "id" | "executionRuntime">,
+): string {
+  return `${providerId}:${method.executionRuntime}:${method.id}`;
 }
 
 /** Link Action 的默认路由规则：有效本地连接优先，否则回退到有效服务器连接。 */
@@ -216,10 +222,6 @@ interface LinkMethodEntry {
   method: LinkConnectionMethod;
   credential?: MaskedCredentialView;
   preferredRuntime: LinkExecutionRuntime | null;
-}
-
-export function oauthErrorRequiresRelogin(message: string | undefined): boolean {
-  return /invalid[_ -]?grant|requires? (?:a )?login|sign in again/i.test(message ?? "");
 }
 
 export function buildCliLinkConnectionRequest(input: {
@@ -372,7 +374,7 @@ function BrowserQuickAuthPanel({
         type="button"
         className="mt-3 w-full"
         variant="outline"
-        disabled={busy || status === null || status.configured === false}
+        disabled={busy || status?.configured === false}
         onClick={onConnect}
       >
         <Globe2 className="mr-2 size-4" aria-hidden />
@@ -531,17 +533,28 @@ export function LinkTab({ cwd }: { cwd: string }) {
     };
   }, [localDialogBrowserAuth, localDialogProviderId]);
 
+  useEffect(() => {
+    const attemptId = browserAuthPrompt?.attemptId;
+    if (!attemptId) return;
+    return () => {
+      void window.codeshell.links.cancelBrowserAuth(attemptId);
+    };
+  }, [browserAuthPrompt?.attemptId]);
+
   const catalog = useMemo(
     () => buildLinkCatalog(providerViews, lang === "zh" ? "zh" : "en"),
     [lang, providerViews],
   );
-  const byRuntime = useMemo(() => {
+  const byMethod = useMemo(() => {
     const map = new Map<string, MaskedCredentialView>();
     for (const credential of credentials) {
       const provider = linkCredentialProvider(credential);
       const runtime = linkCredentialRuntime(credential);
-      if (provider && runtime && !map.has(`${provider}:${runtime}`)) {
-        map.set(`${provider}:${runtime}`, credential);
+      if (!provider || !runtime) continue;
+      const methodId = credential.meta?.linkConnectionMethod;
+      const key = methodId ? `${provider}:${runtime}:${methodId}` : `${provider}:${runtime}`;
+      if (!map.has(key)) {
+        map.set(key, credential);
       }
     }
     return map;
@@ -553,7 +566,9 @@ export function LinkTab({ cwd }: { cwd: string }) {
     for (const category of catalog) {
       for (const item of category.items) {
         for (const method of item.connectionMethods) {
-          const credential = byRuntime.get(`${item.id}:${method.executionRuntime}`);
+          const credential =
+            byMethod.get(linkMethodStateKey(item.id, method)) ??
+            byMethod.get(`${item.id}:${method.executionRuntime}`);
           const available =
             method.availability === "available" &&
             (method.authKind === "token" || Boolean(method.oauthProfileId));
@@ -573,7 +588,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
       }
     }
     return result;
-  }, [byRuntime, catalog, credentials, filter, query, t]);
+  }, [byMethod, catalog, credentials, filter, query, t]);
 
   /**
    * 旧版通用表单创建的 type:"link" 凭据没有 linkProvider/oauthProvider meta，
@@ -587,9 +602,11 @@ export function LinkTab({ cwd }: { cwd: string }) {
     [credentials],
   );
 
-  const localConnectedCount = [...byRuntime.keys()].filter((key) => key.endsWith(":local")).length;
-  const serverConnectedCount = [...byRuntime.keys()].filter((key) =>
-    key.endsWith(":server"),
+  const localConnectedCount = credentials.filter(
+    (credential) => linkCredentialRuntime(credential) === "local",
+  ).length;
+  const serverConnectedCount = credentials.filter(
+    (credential) => linkCredentialRuntime(credential) === "server",
   ).length;
   const connectedCount = localConnectedCount + serverConnectedCount;
 
@@ -599,7 +616,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
     action: () => Promise<void>,
   ): Promise<boolean> => {
     if (busyId) return false;
-    const key = `${item.id}:${method.executionRuntime}`;
+    const key = linkMethodStateKey(item.id, method);
     setBusyId(key);
     setErrors((current) => ({ ...current, [key]: "" }));
     try {
@@ -767,6 +784,7 @@ export function LinkTab({ cwd }: { cwd: string }) {
     setBrowserAuthPrompt(null);
     setBrowserAuthBusy(false);
     setLocalDialog(null);
+    setLocalSecret("");
   };
 
   const openExternalLink = (url: string) => {
@@ -1561,7 +1579,10 @@ export function ChatGatewayTab() {
               <span>
                 <span className="font-medium">{t("ext.link.gatewaySupportedChannels")}</span>
                 <span className="ml-2 text-muted-foreground">
-                  {t("ext.link.gatewayEnabledCount", { enabled: enabledCount, total: 12 })}
+                  {t("ext.link.gatewayEnabledCount", {
+                    enabled: enabledCount,
+                    total: channelStatuses.length,
+                  })}
                 </span>
               </span>
               <ChevronDown
@@ -1952,7 +1973,7 @@ function RuntimeLinkSection(props: RuntimeLinkSectionProps) {
       ) : (
         <div className="space-y-3">
           {props.entries.map((entry) => {
-            const key = `${entry.item.id}:${entry.method.executionRuntime}`;
+            const key = linkMethodStateKey(entry.item.id, entry.method);
             return (
               <LinkMethodCard
                 key={`${entry.item.id}:${entry.method.id}`}
@@ -2003,11 +2024,9 @@ function LinkMethodCard({
   const Icon = INTEGRATION_ICONS[item.icon];
   const local = method.executionRuntime === "local";
   const state = credential?.oauthStatus?.state ?? (credential ? "valid" : "missing");
-  const primaryAction = oauthErrorRequiresRelogin(error)
-    ? "login"
-    : linkOAuthPrimaryAction(credential, Boolean(method.oauthProfileId));
+  const primaryAction = linkOAuthPrimaryAction(credential, Boolean(method.oauthProfileId));
   const status =
-    local && credential
+    local && credential && !credential.oauthStatus
       ? t("ext.link.localCredentialSaved")
       : state === "valid"
         ? t("ext.link.oauthStatusValid")

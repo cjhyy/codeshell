@@ -3,7 +3,9 @@ import {
   credentialAllowsEnvExposure,
   credentialSecretHint,
   isCredentialSecretAvailable,
+  isBrowserOAuthLinkCredential,
   materializeCookieSecret,
+  resolveLinkCredentialAccessToken,
   summarizeOAuthCredentialSecret,
   type CredentialAccessScope,
   type Credential,
@@ -70,7 +72,9 @@ export function resolveCredentialValueForWorker(req: CredentialResolveRequest): 
       } credential`,
     );
   }
-  return { value: cred.secret };
+  return {
+    value: req.purpose === "link" ? resolveLinkCredentialAccessToken(cred)! : cred.secret,
+  };
 }
 
 export function materializeCredentialCookieForWorker(req: CredentialMaterializeCookieRequest): {
@@ -124,6 +128,8 @@ function toMetadata(cred: Credential): CredentialMetadata {
     meta,
     hasSecret,
     secretHint: hasSecret ? credentialSecretHint(type, secret) : undefined,
-    ...(cred.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
+    ...(cred.type === "oauth" || isBrowserOAuthLinkCredential(cred)
+      ? { oauthStatus: summarizeOAuthCredentialSecret(secret) }
+      : {}),
   };
 }

@@ -20,6 +20,9 @@
       "@cjhyy/code-shell-core": ["packages/core/src/index.ts"],
       "@cjhyy/code-shell-core/internal": ["packages/core/src/index.internal.ts"],
       "@cjhyy/code-shell-core/extension": ["packages/core/src/index.extension.ts"],
+      "@cjhyy/code-shell-core/bin/agent-server-stdio": [
+        "packages/core/src/cli/agent-server-stdio.ts"
+      ],
       "@cjhyy/code-shell-core/*": ["packages/core/src/*"],
       "@cjhyy/code-shell-link": ["packages/link/src/index.ts"],
       "@cjhyy/code-shell-capability-coding": ["packages/coding/src/index.ts"],

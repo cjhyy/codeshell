@@ -272,6 +272,29 @@ describe("LinkAction tool", () => {
     expect(state.resolveCalls).toBe(0);
   });
 
+  test("does not offer an expired browser OAuth connection", async () => {
+    const state = { connected: true, resolveCalls: 0 };
+    const access = githubAccess(state);
+    const credential = access.listMasked(cwd)[0]!;
+    access.listMasked = () => [
+      {
+        ...credential,
+        oauthStatus: {
+          state: "expired",
+          accessTokenExpiresAt: "2026-08-01T00:00:00.000Z",
+          hasRefreshToken: true,
+        },
+      },
+    ];
+    setDefaultCredentialAccess(access);
+
+    expect(JSON.parse(await linkActionTool({}, context()))).toMatchObject({
+      kind: "connected_providers",
+      providers: [],
+    });
+    expect(state.resolveCalls).toBe(0);
+  });
+
   test("resolves the credential live and fails immediately after disconnect", async () => {
     const state = { connected: true, resolveCalls: 0 };
     setDefaultCredentialAccess(githubAccess(state));

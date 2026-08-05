@@ -69,6 +69,8 @@ describe("local Link browser OAuth", () => {
       refreshToken: "ghr_private_refresh",
       expiresIn: 28_800,
       refreshTokenExpiresIn: 15_897_600,
+      clientId: "Iv1.public-client",
+      tokenEndpoint: "https://github.com/login/oauth/access_token",
       tokenType: "Bearer",
       scope: "",
     });

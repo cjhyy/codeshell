@@ -33,6 +33,8 @@ export interface OAuthCredentialSecret {
   refreshToken?: string;
   /** ISO-8601 expiry time for accessToken. Missing means "unknown", not expired. */
   expiresAt?: string;
+  /** Optional ISO-8601 expiry time for a rotating refresh token. */
+  refreshTokenExpiresAt?: string;
   /** Upstream token type, usually Bearer. Stored for round-trip/debugging. */
   tokenType?: string;
   /** Space-delimited OAuth scope string returned by many token endpoints. */

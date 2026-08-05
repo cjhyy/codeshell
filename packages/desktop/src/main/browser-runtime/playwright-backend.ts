@@ -22,10 +22,7 @@ import type {
   BrowserRuntimeBackendLease,
 } from "./backend.js";
 import { PlaywrightBrowserDriver } from "./playwright-driver.js";
-import {
-  browserRuntimeProfilePath,
-  defaultBrowserRuntimeProfilesRoot,
-} from "./profile.js";
+import { browserRuntimeProfilePath, defaultBrowserRuntimeProfilesRoot } from "./profile.js";
 
 const DEFAULT_IDLE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_MAX_CONTEXTS = 3;
@@ -68,7 +65,7 @@ interface PlaywrightBackendDeps {
   launchCandidates: () => PlaywrightLaunchCandidate[];
 }
 
-export interface PlaywrightRuntimeBackendOptions {
+export interface DedicatedPlaywrightBackendOptions {
   profilesRoot?: string;
   idleTtlMs?: number;
   maxContexts?: number;
@@ -76,9 +73,9 @@ export interface PlaywrightRuntimeBackendOptions {
   deps?: Partial<PlaywrightBackendDeps>;
 }
 
-/** Runtime-owned Chromium backend powered by Playwright Locator semantics. */
-export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
-  readonly kind = "playwright" as const;
+/** Explicit isolated Chromium backend powered by Playwright Locator semantics. */
+export class DedicatedPlaywrightBackend implements BrowserRuntimeBackend {
+  readonly kind = "dedicated-playwright" as const;
   private readonly entries = new Map<string, PlaywrightEntry>();
   private readonly profileOwners = new Map<string, string>();
   private readonly profilesRoot: string;
@@ -86,7 +83,7 @@ export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
   private readonly maxContexts: number;
   private readonly deps: PlaywrightBackendDeps;
 
-  constructor(options: PlaywrightRuntimeBackendOptions = {}) {
+  constructor(options: DedicatedPlaywrightBackendOptions = {}) {
     this.profilesRoot = options.profilesRoot ?? defaultBrowserRuntimeProfilesRoot();
     this.idleTtlMs = positiveFiniteOr(options.idleTtlMs, DEFAULT_IDLE_TTL_MS);
     this.maxContexts = Math.max(
@@ -110,9 +107,7 @@ export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
     }
   }
 
-  async acquire(
-    options: BrowserRuntimeBackendAcquireOptions,
-  ): Promise<BrowserRuntimeBackendLease> {
+  async acquire(options: BrowserRuntimeBackendAcquireOptions): Promise<BrowserRuntimeBackendLease> {
     const ownerId = options.ownerId.trim();
     const profileId = options.profileId.trim();
     if (!ownerId) throw new Error("Playwright Browser Runtime ownerId is required");
@@ -120,7 +115,9 @@ export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
 
     let entry = this.entries.get(ownerId);
     if (entry && entry.profileId !== profileId) {
-      throw new Error(`Browser Runtime owner ${ownerId} is already bound to profile ${entry.profileId}`);
+      throw new Error(
+        `Browser Runtime owner ${ownerId} is already bound to profile ${entry.profileId}`,
+      );
     }
     const currentProfileOwner = this.profileOwners.get(profileId);
     if (currentProfileOwner && currentProfileOwner !== ownerId) {
@@ -226,7 +223,10 @@ export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
           entry.sensitiveRefs.clear();
         });
         if (entry.initialUrl !== "about:blank") {
-          if (!isInternalPage(entry.initialUrl) && !isDomainAllowed(entry.initialUrl, this.deps.policy())) {
+          if (
+            !isInternalPage(entry.initialUrl) &&
+            !isDomainAllowed(entry.initialUrl, this.deps.policy())
+          ) {
             throw new Error(
               `Browser Runtime domain not allowed by whitelist: ${hostOf(entry.initialUrl)}`,
             );
@@ -300,9 +300,7 @@ export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
         const snapshot = await driver.snapshot();
         entry.sensitiveRefs = new Set(
           snapshot.elements
-            .filter(
-              (element) => element.sensitive === true || hasHighConsequenceName(element.name),
-            )
+            .filter((element) => element.sensitive === true || hasHighConsequenceName(element.name))
             .map((element) => element.ref),
         );
         return snapshot;
@@ -318,10 +316,7 @@ export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
       type: (ref, text) =>
         this.run(entry, async () => {
           if (!currentAllowed()) return denied();
-          if (
-            entry.sensitiveRefs.has(ref) ||
-            isSensitiveAction({ action: "type", ref, text })
-          ) {
+          if (entry.sensitiveRefs.has(ref) || isSensitiveAction({ action: "type", ref, text })) {
             return human("sensitive input requires explicit browser handoff");
           }
           return driver.type(ref, text);
@@ -341,7 +336,9 @@ export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
           return result;
         }),
       scroll: (dir, amount) =>
-        this.run(entry, () => (currentAllowed() ? driver.scroll(dir, amount) : Promise.resolve(denied()))),
+        this.run(entry, () =>
+          currentAllowed() ? driver.scroll(dir, amount) : Promise.resolve(denied()),
+        ),
       readContent: (options) =>
         this.run(entry, async () => {
           if (currentAllowed()) return driver.readContent(options);
@@ -392,8 +389,7 @@ export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
             ? driver.fetchImages(refs)
             : Promise.resolve(
                 refs.map(
-                  (ref) =>
-                    ({ ok: false, ref, detail: denied().detail }) satisfies BrowserImageData,
+                  (ref) => ({ ok: false, ref, detail: denied().detail }) satisfies BrowserImageData,
                 ),
               ),
         ),
@@ -475,7 +471,14 @@ export class PlaywrightRuntimeBackend implements BrowserRuntimeBackend {
   }
 }
 
-export const playwrightRuntimeBackend = new PlaywrightRuntimeBackend();
+export const dedicatedPlaywrightBackend = new DedicatedPlaywrightBackend();
+
+/** @deprecated Use DedicatedPlaywrightBackendOptions. */
+export type PlaywrightRuntimeBackendOptions = DedicatedPlaywrightBackendOptions;
+/** @deprecated Use DedicatedPlaywrightBackend. */
+export { DedicatedPlaywrightBackend as PlaywrightRuntimeBackend };
+/** @deprecated Use dedicatedPlaywrightBackend. */
+export const playwrightRuntimeBackend = dedicatedPlaywrightBackend;
 
 export function defaultLaunchCandidates(): PlaywrightLaunchCandidate[] {
   const candidates: PlaywrightLaunchCandidate[] = [];
@@ -489,8 +492,10 @@ export function defaultLaunchCandidates(): PlaywrightLaunchCandidate[] {
   }
 
   const paths = systemBrowserPaths();
-  if (paths.chrome.some(existsSync)) candidates.push({ label: "system Google Chrome", channel: "chrome" });
-  if (paths.edge.some(existsSync)) candidates.push({ label: "system Microsoft Edge", channel: "msedge" });
+  if (paths.chrome.some(existsSync))
+    candidates.push({ label: "system Google Chrome", channel: "chrome" });
+  if (paths.edge.some(existsSync))
+    candidates.push({ label: "system Microsoft Edge", channel: "msedge" });
   return candidates;
 }
 
@@ -499,7 +504,10 @@ function systemBrowserPaths(): { chrome: string[]; edge: string[] } {
     return {
       chrome: [
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        path.join(process.env.USERPROFILE || "", "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+        path.join(
+          process.env.USERPROFILE || "",
+          "Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        ),
       ],
       edge: ["/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"],
     };

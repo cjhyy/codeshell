@@ -1,7 +1,8 @@
 /**
  * Browser automation tools — drive a host-owned Browser Runtime through the
- * BrowserBridge compatibility port. The runtime is independent of any
- * user-facing built-in browser panel. Collapsed into THREE semantic tools
+ * BrowserBridge compatibility port. The default runtime owns a background tab
+ * in the in-app profile; user-opened tabs require an explicit claim. Collapsed
+ * into THREE semantic tools
  * (was 9 flat tools)
  * to keep the LLM's tool list lean:
  *
@@ -32,8 +33,7 @@ import { capabilitiesFor } from "../../llm/capabilities/index.js";
 import type { ProviderKindName } from "../../llm/provider-kinds.js";
 import type { ContentBlock } from "../../types.js";
 
-const NO_BROWSER =
-  "Error: browser automation runtime is not available in this host session.";
+const NO_BROWSER = "Error: browser automation runtime is not available in this host session.";
 
 function bridge(ctx?: ToolContext) {
   return ctx?.browser;
@@ -49,8 +49,9 @@ const STALE = (ref: string) =>
 export const browserObserveToolDef: ToolDefinition = {
   name: "browser_observe",
   description:
-    "Observe the current page in the CodeShell browser runtime. This runtime is " +
-    "independent of the user-facing built-in browser. Modes:\n" +
+    "Observe the task-owned page in the CodeShell Browser Runtime. It shares the " +
+    "in-app browser profile but never controls a user-opened tab without an " +
+    "explicit claim. Modes:\n" +
     "- snapshot (default): URL/title + a compact list of interactive elements, each " +
     "tagged [ref=eN] for browser_act. ALWAYS snapshot before acting, and re-snapshot " +
     "after navigation/page changes (refs are only valid for the latest snapshot). " +
@@ -212,8 +213,9 @@ export async function browserObserveTool(
 export const browserActToolDef: ToolDefinition = {
   name: "browser_act",
   description:
-    "Act on the active tab in the CodeShell Browser Runtime. It is independent of " +
-    "the user-facing built-in browser. Use refs (eN) from the latest " +
+    "Act on the task-owned tab in the CodeShell Browser Runtime. By default it " +
+    "shares the in-app browser profile but never controls a user-opened tab " +
+    "without an explicit claim. Use refs (eN) from the latest " +
     "browser_observe(snapshot). Actions:\n" +
     "- click {ref}: click an element.\n" +
     "- type {ref, text}: type text into an input (focuses first).\n" +

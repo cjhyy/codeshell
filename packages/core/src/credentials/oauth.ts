@@ -1,4 +1,5 @@
 import type {
+  Credential,
   OAuthCredentialPublicStatus,
   OAuthCredentialSecret,
   OAuthTokenResponse,
@@ -83,6 +84,8 @@ export function parseOAuthCredentialSecret(secret: string): OAuthCredentialSecre
 
   const expiresAt = optionalString(raw.expiresAt);
   parseExpiresAt(expiresAt);
+  const refreshTokenExpiresAt = optionalString(raw.refreshTokenExpiresAt);
+  parseExpiresAt(refreshTokenExpiresAt);
   const tokenType = optionalString(raw.tokenType);
   if (tokenType && tokenType.toLowerCase() !== "bearer") {
     throw new Error("OAuth credential tokenType must be Bearer");
@@ -93,6 +96,7 @@ export function parseOAuthCredentialSecret(secret: string): OAuthCredentialSecre
     accessToken,
     refreshToken: optionalString(raw.refreshToken),
     expiresAt,
+    refreshTokenExpiresAt,
     tokenType,
     scope: optionalString(raw.scope),
     scopes: optionalStringArray(raw.scopes),
@@ -126,6 +130,22 @@ export function parseOAuthCredentialSecret(secret: string): OAuthCredentialSecre
           }
         : undefined,
   };
+}
+
+export function isBrowserOAuthLinkCredential(
+  credential: Pick<Credential, "type" | "meta">,
+): boolean {
+  return credential.type === "link" && credential.meta?.linkAuthSource === "browser-oauth";
+}
+
+/** Return only the bearer token from a Link secret, never its refresh material. */
+export function resolveLinkCredentialAccessToken(
+  credential: Pick<Credential, "type" | "secret" | "meta">,
+): string | undefined {
+  if (!credential.secret) return undefined;
+  return isBrowserOAuthLinkCredential(credential)
+    ? parseOAuthCredentialSecret(credential.secret).accessToken
+    : credential.secret;
 }
 
 /** Merge and validate an OAuth token endpoint response without losing rotation state. */

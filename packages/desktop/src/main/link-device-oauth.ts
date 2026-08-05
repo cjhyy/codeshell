@@ -25,6 +25,8 @@ export interface LocalBrowserAuthToken {
   refreshToken?: string;
   expiresIn?: number;
   refreshTokenExpiresIn?: number;
+  clientId: string;
+  tokenEndpoint: string;
   tokenType: "Bearer";
   scope?: string;
 }
@@ -293,6 +295,8 @@ export class LinkDeviceOAuthBroker {
               Number.isFinite(payload.refresh_token_expires_in)
                 ? Math.max(0, payload.refresh_token_expires_in)
                 : undefined,
+            clientId: attempt.clientId,
+            tokenEndpoint: attempt.tokenEndpoint,
             tokenType: "Bearer",
             scope: typeof payload.scope === "string" ? payload.scope : undefined,
           };

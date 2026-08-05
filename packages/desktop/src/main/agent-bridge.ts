@@ -157,12 +157,12 @@ function normalizeCredentialResolveParams(params: Record<string, unknown> | unde
   cwd?: string;
   id: string;
   scope: "full" | "project";
-  purpose: "use" | "mcp";
+  purpose: "use" | "mcp" | "link";
 } {
   const id = typeof params?.id === "string" ? params.id : "";
   if (!id) throw new Error("credentialResolve requires id");
   const scope = params?.scope === "project" ? "project" : "full";
-  const purpose = params?.purpose === "mcp" ? "mcp" : "use";
+  const purpose = params?.purpose === "mcp" ? "mcp" : params?.purpose === "link" ? "link" : "use";
   return {
     cwd: typeof params?.cwd === "string" ? params.cwd : undefined,
     id,
@@ -1403,10 +1403,7 @@ export class AgentBridge implements PetStateBridge {
     event: unknown,
     options: { browserVisibility?: "hidden" | "milestones" | "full" } = {},
   ): void {
-    const projected = annotateBrowserRuntimeStreamEvent(
-      event,
-      options.browserVisibility ?? "full",
-    );
+    const projected = annotateBrowserRuntimeStreamEvent(event, options.browserVisibility ?? "full");
     const entry = this.snapshots.append(sessionId, projected);
     this.safeSend("agent:streamEvent", { sessionId, event: projected, seq: entry.seq });
   }

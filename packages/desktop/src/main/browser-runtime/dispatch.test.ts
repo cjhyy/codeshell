@@ -3,9 +3,7 @@ import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import type { BrowserRuntimeLike } from "./runtime.js";
 import { dispatchInteractiveBrowserRuntimeAction } from "./dispatch.js";
 
-function runtimeDispatchTestBridge(
-  overrides: Partial<BrowserBridge> = {},
-): BrowserBridge {
+function runtimeDispatchTestBridge(overrides: Partial<BrowserBridge> = {}): BrowserBridge {
   return {
     snapshot: async () => ({ url: "about:blank", elements: [] }),
     click: async () => ({ ok: true }),
@@ -33,7 +31,7 @@ function runtimeDispatchTestBridge(
 }
 
 describe("interactive Browser Runtime dispatch", () => {
-  test("always targets the independent runtime, including tab operations", async () => {
+  test("targets a task-owned in-app runtime tab, including tab operations", async () => {
     const acquisitions: Array<Record<string, unknown>> = [];
     let released = 0;
     let runtimeTabsRead = 0;
@@ -42,8 +40,8 @@ describe("interactive Browser Runtime dispatch", () => {
         acquisitions.push(options);
         return {
           ...options,
-          backendKind: "playwright",
-          canReveal: false,
+          backendKind: "in-app",
+          canReveal: true,
           bridge: runtimeDispatchTestBridge({
             listTabs: async () => {
               runtimeTabsRead += 1;
@@ -69,17 +67,13 @@ describe("interactive Browser Runtime dispatch", () => {
     };
 
     const result = JSON.parse(
-      await dispatchInteractiveBrowserRuntimeAction(
-        "s-1",
-        { action: "listTabs" },
-        runtime,
-      ),
+      await dispatchInteractiveBrowserRuntimeAction("s-1", { action: "listTabs" }, runtime),
     );
 
     expect(acquisitions).toEqual([
       {
         ownerId: "interactive:s-1",
-        profileId: "interactive:s-1",
+        profileId: "s-1",
         visibility: "milestones",
         title: "CodeShell Browser Runtime — 需要你接管",
       },
@@ -101,8 +95,8 @@ describe("interactive Browser Runtime dispatch", () => {
     const runtime: BrowserRuntimeLike = {
       acquire: async (options) => ({
         ...options,
-        backendKind: "playwright",
-        canReveal: false,
+        backendKind: "in-app",
+        canReveal: true,
         bridge: runtimeDispatchTestBridge({
           snapshot: async () => {
             throw new Error("runtime target crashed");

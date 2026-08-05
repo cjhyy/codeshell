@@ -4,12 +4,12 @@
  * This is the ownership boundary between agent browser tools and concrete
  * browser targets. The built-in BrowserPanel is a user-facing product surface
  * and is deliberately not consulted here. A runtime lease always targets a
- * browser session owned by the runtime itself; explicit BrowserPanel handoff is
- * a separate capability that can be added as another backend later.
+ * task-owned browser session. It never controls a user-opened BrowserPanel tab
+ * unless that exact tab is explicitly claimed by the handoff service.
  *
- * The default backend is a Playwright-owned Chromium profile. The existing
- * hidden Electron/CDP pool remains a compatibility fallback and later serves
- * as the adapter for explicit built-in-browser handoff.
+ * The default backend is a background in-app-browser target sharing the task's
+ * BrowserPanel profile. Dedicated Playwright remains available for isolated
+ * crawling, scheduled work, and other explicitly unattended execution.
  */
 
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
@@ -17,12 +17,10 @@ import { type BackgroundBrowserLease } from "../browser-driver/background-runtim
 import type {
   BrowserRuntimeBackend,
   BrowserRuntimeBackendKind,
+  BrowserRuntimeBackendPreference,
 } from "./backend.js";
-import {
-  ElectronCdpRuntimeBackend,
-  electronCdpRuntimeBackend,
-} from "./electron-cdp-backend.js";
-import { playwrightRuntimeBackend } from "./playwright-backend.js";
+import { InAppBrowserBackend, inAppBrowserBackend } from "./in-app-browser-backend.js";
+import { dedicatedPlaywrightBackend } from "./playwright-backend.js";
 export { browserRuntimePartition } from "./profile.js";
 
 export type BrowserRuntimeVisibility = "hidden" | "milestones" | "full";
@@ -30,10 +28,12 @@ export type BrowserRuntimeVisibility = "hidden" | "milestones" | "full";
 export interface BrowserRuntimeAcquireOptions {
   /** Stable owner of this execution session, e.g. interactive:<sid>. */
   ownerId: string;
-  /** Stable, explicit runtime login profile. Never a BrowserPanel bucket. */
+  /** Interactive session id for in-app profile lookup, or an isolated profile id. */
   profileId: string;
   /** Controls UI projection only; the complete trace remains available. */
   visibility: BrowserRuntimeVisibility;
+  /** Omit for the in-app default; dedicated Playwright must be explicit. */
+  backendPreference?: BrowserRuntimeBackendPreference;
   initialUrl?: string;
   title?: string;
 }
@@ -70,17 +70,19 @@ export interface RuntimeTargetPool {
 }
 
 export interface DesktopBrowserRuntimeOptions {
-  /** Test seam; production uses the main-process hidden Electron target pool. */
+  /** Test seam; production uses the main-process in-app target pool. */
   targetPool?: RuntimeTargetPool;
-  /** Ordered concrete backends. Production uses Playwright, then Electron/CDP. */
+  /** Test seam for resolving the in-app partition used by targetPool. */
+  inAppPartitionForProfile?: (profileId: string) => string | null;
+  /** Ordered concrete backends. Production uses in-app, then optional Playwright. */
   backends?: BrowserRuntimeBackend[];
-  /** "auto" falls back; an explicit backend fails closed instead. */
-  backendPreference?: "auto" | BrowserRuntimeBackendKind;
+  /** Default is in-app. "auto" is opt-in fallback behavior. */
+  backendPreference?: BrowserRuntimeBackendPreference;
 }
 
 export class DesktopBrowserRuntime implements BrowserRuntimeLike {
   private readonly backends: BrowserRuntimeBackend[];
-  private readonly backendPreference: "auto" | BrowserRuntimeBackendKind;
+  private readonly backendPreference: BrowserRuntimeBackendPreference;
   private readonly selectedBackendByOwner = new Map<string, BrowserRuntimeBackendKind>();
   private readonly profileByOwner = new Map<string, string>();
   private readonly progressByOwner = new Map<
@@ -97,9 +99,14 @@ export class DesktopBrowserRuntime implements BrowserRuntimeLike {
       throw new Error("provide targetPool or backends, not both");
     }
     this.backends = options.targetPool
-      ? [new ElectronCdpRuntimeBackend(options.targetPool)]
-      : options.backends ?? [playwrightRuntimeBackend, electronCdpRuntimeBackend];
-    this.backendPreference = options.backendPreference ?? "auto";
+      ? [
+          new InAppBrowserBackend({
+            targetPool: options.targetPool,
+            partitionForProfile: options.inAppPartitionForProfile,
+          }),
+        ]
+      : (options.backends ?? [inAppBrowserBackend, dedicatedPlaywrightBackend]);
+    this.backendPreference = options.backendPreference ?? "in-app";
   }
 
   async acquire(options: BrowserRuntimeAcquireOptions): Promise<BrowserRuntimeLease> {
@@ -110,7 +117,9 @@ export class DesktopBrowserRuntime implements BrowserRuntimeLike {
 
     const boundProfile = this.profileByOwner.get(ownerId);
     if (boundProfile && boundProfile !== profileId) {
-      throw new Error(`browser runtime owner ${ownerId} is already bound to profile ${boundProfile}`);
+      throw new Error(
+        `browser runtime owner ${ownerId} is already bound to profile ${boundProfile}`,
+      );
     }
     this.profileByOwner.set(ownerId, profileId);
 
@@ -161,9 +170,15 @@ export class DesktopBrowserRuntime implements BrowserRuntimeLike {
     options: BrowserRuntimeAcquireOptions,
   ): Promise<Awaited<ReturnType<BrowserRuntimeBackend["acquire"]>>> {
     const selected = this.selectedBackendByOwner.get(ownerId);
+    const preference = options.backendPreference ?? this.backendPreference;
+    if (selected && preference !== "auto" && selected !== preference) {
+      throw new Error(
+        `browser runtime owner ${ownerId} is already using ${selected}, not ${preference}`,
+      );
+    }
     const candidates = this.backends.filter((backend) => {
       if (selected) return backend.kind === selected;
-      if (this.backendPreference !== "auto") return backend.kind === this.backendPreference;
+      if (preference !== "auto") return backend.kind === preference;
       return true;
     });
     const failures: string[] = [];
@@ -186,7 +201,7 @@ export class DesktopBrowserRuntime implements BrowserRuntimeLike {
         failures.push(`${backend.kind}: ${error instanceof Error ? error.message : String(error)}`);
         // An acquire failure must not leave a half-open context or profile lock.
         backend.close(ownerId);
-        if (selected || this.backendPreference !== "auto") break;
+        if (selected || preference !== "auto") break;
       }
     }
     if (!backendLease) {

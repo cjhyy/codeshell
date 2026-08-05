@@ -30,7 +30,6 @@ const {
   gatewayCapabilityLabels,
   gatewayToolNames,
   LinkTab,
-  oauthErrorRequiresRelogin,
   resolvePreferredLinkRuntime,
 } = await import("./LinkTab");
 const { DialogProvider } = await import("../ui/DialogProvider");
@@ -225,12 +224,6 @@ describe("LinkTab integrations", () => {
     ).toBe("GatewayReply");
   });
 
-  test("turns invalid-grant style refresh errors into an immediate relogin action", () => {
-    expect(oauthErrorRequiresRelogin("OAuth credential requires login")).toBe(true);
-    expect(oauthErrorRequiresRelogin("invalid_grant")).toBe(true);
-    expect(oauthErrorRequiresRelogin("network timeout")).toBe(false);
-  });
-
   test("prefers a usable local connection and falls back to the server", () => {
     const local: MaskedCredentialView = {
       id: "link-github-fine-grained-pat",
@@ -249,6 +242,12 @@ describe("LinkTab integrations", () => {
     };
 
     expect(resolvePreferredLinkRuntime([server, local], "github")).toBe("local");
+    expect(
+      resolvePreferredLinkRuntime(
+        [server, { ...local, oauthStatus: { state: "expired" } }],
+        "github",
+      ),
+    ).toBe("server");
     expect(resolvePreferredLinkRuntime([server, { ...local, hasSecret: false }], "github")).toBe(
       "server",
     );

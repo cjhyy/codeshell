@@ -168,7 +168,11 @@ import type { InstalledThemePack } from "../shared/theme-packs.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
 import { McpOAuthService, type McpOAuthLoginInput } from "./mcp-oauth-service.js";
 import { listDesktopLinkProviders } from "./link-provider-catalog.js";
-import { isLocalBrowserLinkProvider, LinkDeviceOAuthBroker } from "./link-device-oauth.js";
+import {
+  isLocalBrowserLinkProvider,
+  LinkDeviceOAuthBroker,
+  type LocalBrowserAuthToken,
+} from "./link-device-oauth.js";
 import {
   installManagedLinkCli,
   managedCliInstallStatus,
@@ -532,9 +536,7 @@ let markPetIpcReady: (() => void) | null = null;
 const petIpcReady = new Promise<void>((resolveReady) => {
   markPetIpcReady = resolveReady;
 });
-const ownsDesktopInstance = chromeNativeMessagingOrigin
-  ? false
-  : acquireDesktopInstanceLock(app);
+const ownsDesktopInstance = chromeNativeMessagingOrigin ? false : acquireDesktopInstanceLock(app);
 if (ownsDesktopInstance) {
   registerSecondInstanceFocus(
     (handler) => app.on("second-instance", handler),
@@ -3168,10 +3170,12 @@ async function persistLocalLinkCredential(input: {
   methodId: string;
   label: string;
   token: string;
+  browserOAuthToken?: LocalBrowserAuthToken;
   existingId: string;
   authSource: "manual-token" | "browser-oauth";
 }) {
-  const { cwd, providerId, methodId, label, token, existingId, authSource } = input;
+  const { cwd, providerId, methodId, label, token, browserOAuthToken, existingId, authSource } =
+    input;
   const credentialId = existingId || `link-${providerId}-${methodId}`;
   const store = new CredentialStore(cwd || undefined);
   if (existingId) {
@@ -3195,7 +3199,27 @@ async function persistLocalLinkCredential(input: {
     id: credentialId,
     type: "link",
     label: label || `${providerId} · ${methodId}`,
-    secret: token,
+    secret: browserOAuthToken
+      ? JSON.stringify({
+          version: 1,
+          accessToken: browserOAuthToken.accessToken,
+          refreshToken: browserOAuthToken.refreshToken,
+          expiresAt:
+            browserOAuthToken.expiresIn === undefined
+              ? undefined
+              : new Date(Date.now() + browserOAuthToken.expiresIn * 1_000).toISOString(),
+          refreshTokenExpiresAt:
+            browserOAuthToken.refreshTokenExpiresIn === undefined
+              ? undefined
+              : new Date(
+                  Date.now() + browserOAuthToken.refreshTokenExpiresIn * 1_000,
+                ).toISOString(),
+          tokenType: browserOAuthToken.tokenType,
+          scope: browserOAuthToken.scope,
+          tokenEndpoint: browserOAuthToken.tokenEndpoint,
+          clientId: browserOAuthToken.clientId,
+        })
+      : token,
     autoUseByAI: false,
     meta: {
       linkProvider: providerId,
@@ -3347,6 +3371,7 @@ ipcMain.handle("links:completeBrowserAuth", async (_e, raw: unknown) => {
     methodId,
     label,
     token: token.accessToken,
+    browserOAuthToken: token,
     existingId,
     authSource: "browser-oauth",
   });
@@ -3523,10 +3548,7 @@ ipcMain.on(
 
 ipcMain.handle(
   "browser-runtime:grant-built-in",
-  (
-    e,
-    payload: { sessionId?: unknown; guestId?: unknown; ttlMs?: unknown },
-  ) => {
+  (e, payload: { sessionId?: unknown; guestId?: unknown; ttlMs?: unknown }) => {
     const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
     const guestId =
       typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);

@@ -317,4 +317,13 @@ export default [
       "custom-rules/codeshell-boundary-imports": "error",
     },
   },
+  {
+    files: ["packages/desktop/resources/chrome-extension/**/*.js"],
+    languageOptions: {
+      globals: {
+        chrome: "readonly",
+        document: "readonly",
+      },
+    },
+  },
 ];

@@ -61,6 +61,11 @@ jobs:
       # test failure, hiding the real cause (stale CI config).
       - name: verify workflow test paths exist
         run: bun run lint:workflow-test-paths
+      # A few integration paths intentionally resolve workspace packages through
+      # their public export maps. Build those exports so a fresh checkout tests
+      # the same package boundary that consumers receive.
+      - name: build workspace packages
+        run: bun run build
       - name: gate test suites
         # Targeted rather than the full suite to keep this job fast; it locks the
         # core stability surface. (The old note here claimed the broader suite had

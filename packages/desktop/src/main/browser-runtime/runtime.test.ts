@@ -34,7 +34,7 @@ function fakeBridge(): BrowserBridge {
 }
 
 describe("DesktopBrowserRuntime", () => {
-  test("uses a runtime-owned profile namespace, never the built-in browser partition", () => {
+  test("keeps the dedicated Playwright profile namespace isolated", () => {
     expect(browserRuntimePartition("interactive:s-1")).toBe(
       "persist:browser-runtime:interactive:s-1",
     );
@@ -51,6 +51,7 @@ describe("DesktopBrowserRuntime", () => {
     let hidden = 0;
     const bridge = fakeBridge();
     const runtime = new DesktopBrowserRuntime({
+      inAppPartitionForProfile: (profileId) => `persist:browser:${profileId}`,
       targetPool: {
         acquire: (options) => {
           calls.push(options);
@@ -84,13 +85,13 @@ describe("DesktopBrowserRuntime", () => {
     await lease.bridge.snapshot();
     expect(calls[0]).toEqual({
       ownerId: "interactive:s-1",
-      partition: "persist:browser-runtime:account:research",
+      partition: "persist:browser:account:research",
       initialUrl: undefined,
       title: "CodeShell Browser Runtime — 需要你接管",
     });
     expect(lease.bridge).not.toBe(bridge);
     expect(lease.visibility).toBe("milestones");
-    expect(lease.backendKind).toBe("electron-cdp");
+    expect(lease.backendKind).toBe("in-app");
     expect(lease.canReveal).toBe(true);
     await lease.show();
     lease.hide();
@@ -102,6 +103,7 @@ describe("DesktopBrowserRuntime", () => {
 
   test("rejects missing owner and profile identity", async () => {
     const runtime = new DesktopBrowserRuntime({
+      inAppPartitionForProfile: () => "persist:browser:test",
       targetPool: {
         acquire: () => {
           throw new Error("should not acquire");
@@ -133,6 +135,7 @@ describe("DesktopBrowserRuntime", () => {
       contentHash: "whole-document",
     });
     const runtime = new DesktopBrowserRuntime({
+      inAppPartitionForProfile: () => "persist:browser:test",
       targetPool: {
         acquire: () => ({
           bridge: targetBridge,
@@ -178,6 +181,7 @@ describe("DesktopBrowserRuntime", () => {
       },
     });
     const runtime = new DesktopBrowserRuntime({
+      inAppPartitionForProfile: () => "persist:browser:test",
       targetPool: {
         acquire: () => ({
           bridge: targetBridge,
@@ -200,7 +204,7 @@ describe("DesktopBrowserRuntime", () => {
     });
   });
 
-  test("auto mode falls back from Playwright only when backend acquisition fails", async () => {
+  test("default mode fails closed instead of silently switching away from in-app", async () => {
     const attempts: string[] = [];
     const backend = (
       kind: BrowserRuntimeBackend["kind"],
@@ -214,16 +218,94 @@ describe("DesktopBrowserRuntime", () => {
     });
     const runtime = new DesktopBrowserRuntime({
       backends: [
-        backend("playwright", async () => {
-          attempts.push("playwright");
-          throw new Error("browser binary missing");
+        backend("in-app", async () => {
+          attempts.push("in-app");
+          throw new Error("in-app target unavailable");
         }),
-        backend("electron-cdp", async () => {
-          attempts.push("electron-cdp");
+        backend("dedicated-playwright", async () => {
+          attempts.push("dedicated-playwright");
           return {
-            kind: "electron-cdp",
+            kind: "dedicated-playwright",
             bridge: fakeBridge(),
-            canReveal: true,
+            canReveal: false,
+            show: async () => undefined,
+            hide: () => undefined,
+            release: () => undefined,
+          };
+        }),
+      ],
+    });
+
+    const lease = await runtime.acquire({
+      ownerId: "interactive:closed",
+      profileId: "s-closed",
+      visibility: "hidden",
+    });
+
+    await expect(lease.bridge.snapshot()).rejects.toThrow("no Browser Runtime backend");
+    expect(attempts).toEqual(["in-app", "close:in-app:interactive:closed"]);
+  });
+
+  test("selects Dedicated Playwright only when the caller requests it", async () => {
+    const attempts: string[] = [];
+    const backend = (kind: BrowserRuntimeBackend["kind"]): BrowserRuntimeBackend => ({
+      kind,
+      isAvailable: () => true,
+      acquire: async () => {
+        attempts.push(kind);
+        return {
+          kind,
+          bridge: fakeBridge(),
+          canReveal: kind === "in-app",
+          show: async () => undefined,
+          hide: () => undefined,
+          release: () => undefined,
+        };
+      },
+      close: () => undefined,
+      closeAll: () => undefined,
+    });
+    const runtime = new DesktopBrowserRuntime({
+      backends: [backend("in-app"), backend("dedicated-playwright")],
+    });
+
+    const lease = await runtime.acquire({
+      ownerId: "automation:job-1",
+      profileId: "automation:job-1",
+      visibility: "hidden",
+      backendPreference: "dedicated-playwright",
+    });
+    await lease.bridge.snapshot();
+
+    expect(lease.backendKind).toBe("dedicated-playwright");
+    expect(attempts).toEqual(["dedicated-playwright"]);
+  });
+
+  test("explicit auto mode falls back in declared backend order", async () => {
+    const attempts: string[] = [];
+    const backend = (
+      kind: BrowserRuntimeBackend["kind"],
+      acquire: BrowserRuntimeBackend["acquire"],
+    ): BrowserRuntimeBackend => ({
+      kind,
+      isAvailable: () => true,
+      acquire,
+      close: (ownerId) => attempts.push(`close:${kind}:${ownerId}`),
+      closeAll: () => undefined,
+    });
+    const runtime = new DesktopBrowserRuntime({
+      backendPreference: "auto",
+      backends: [
+        backend("in-app", async () => {
+          attempts.push("in-app");
+          throw new Error("in-app target unavailable");
+        }),
+        backend("dedicated-playwright", async () => {
+          attempts.push("dedicated-playwright");
+          return {
+            kind: "dedicated-playwright",
+            bridge: fakeBridge(),
+            canReveal: false,
             show: async () => undefined,
             hide: () => undefined,
             release: () => undefined,
@@ -240,12 +322,12 @@ describe("DesktopBrowserRuntime", () => {
 
     expect(lease.backendKind).toBe("pending");
     await lease.bridge.snapshot();
-    expect(lease.backendKind).toBe("electron-cdp");
-    expect(lease.canReveal).toBe(true);
+    expect(lease.backendKind).toBe("dedicated-playwright");
+    expect(lease.canReveal).toBe(false);
     expect(attempts).toEqual([
-      "playwright",
-      "close:playwright:interactive:fallback",
-      "electron-cdp",
+      "in-app",
+      "close:in-app:interactive:fallback",
+      "dedicated-playwright",
     ]);
   });
 });

@@ -4,6 +4,7 @@ import {
   mergeOAuthTokenResponse,
   oauthCredentialStatus,
   parseOAuthCredentialSecret,
+  resolveLinkCredentialAccessToken,
   shouldRefreshOAuthCredential,
 } from "./oauth.js";
 
@@ -34,6 +35,26 @@ describe("OAuth credential secret schema", () => {
     expect(() => parseOAuthCredentialSecret(JSON.stringify({ refreshToken: "r" }))).toThrow(
       /accessToken/,
     );
+  });
+
+  test("resolves only the access token from a browser OAuth Link secret", () => {
+    const credential = {
+      type: "link" as const,
+      secret: JSON.stringify({
+        version: 1,
+        accessToken: "access-only",
+        refreshToken: "refresh-must-stay-private",
+      }),
+      meta: { linkAuthSource: "browser-oauth" as const },
+    };
+    expect(resolveLinkCredentialAccessToken(credential)).toBe("access-only");
+    expect(
+      resolveLinkCredentialAccessToken({
+        type: "link",
+        secret: "manual-token",
+        meta: { linkAuthSource: "manual-token" },
+      }),
+    ).toBe("manual-token");
   });
 
   test("detects expired tokens with a refresh skew", () => {

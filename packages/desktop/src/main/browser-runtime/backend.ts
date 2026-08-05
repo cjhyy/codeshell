@@ -1,6 +1,9 @@
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 
-export type BrowserRuntimeBackendKind = "playwright" | "electron-cdp";
+/** Runtime-owned target kinds. Explicit tab claims are routed before lease acquisition. */
+export type BrowserRuntimeBackendKind = "in-app" | "dedicated-playwright";
+
+export type BrowserRuntimeBackendPreference = "auto" | BrowserRuntimeBackendKind;
 
 export interface BrowserRuntimeBackendAcquireOptions {
   ownerId: string;

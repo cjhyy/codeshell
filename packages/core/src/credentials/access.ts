@@ -12,6 +12,8 @@ import { CredentialStore } from "./store.js";
 import { formatNetscapeCookies, parseCookieJar } from "./cookie-jar.js";
 import {
   parseOAuthCredentialSecret,
+  isBrowserOAuthLinkCredential,
+  resolveLinkCredentialAccessToken,
   shouldRefreshOAuthCredential,
   summarizeOAuthCredentialSecret,
 } from "./oauth.js";
@@ -231,7 +233,9 @@ function toMetadata(cred: Credential): CredentialMetadata {
     ...(credentialAllowsEnvExposure(cred.type) ? {} : { exposeAsEnv: undefined }),
     hasSecret: available,
     secretHint: available ? credentialSecretHint(cred.type, secret) : undefined,
-    ...(cred.type === "oauth" ? { oauthStatus: summarizeOAuthCredentialSecret(secret) } : {}),
+    ...(cred.type === "oauth" || isBrowserOAuthLinkCredential(cred)
+      ? { oauthStatus: summarizeOAuthCredentialSecret(secret) }
+      : {}),
   };
 }
 
@@ -274,7 +278,7 @@ export const localCredentialAccess: CredentialAccess = {
     ) {
       throw new Error(`credential "${req.id}" is not a local Link credential`);
     }
-    return cred.secret;
+    return req.purpose === "link" ? resolveLinkCredentialAccessToken(cred)! : cred.secret;
   },
   async resolveOAuthAccess(req) {
     return resolveLocalOAuthAccess(req.id, Boolean(req.forceRefresh));

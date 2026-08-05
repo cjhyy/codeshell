@@ -124,15 +124,16 @@ export function buildDesktopAutomationRunner(
       ? `${AUTOMATION_PROMPT_NOTE}\n\n<previous_runs_memory>\n${memory.trim()}\n</previous_runs_memory>`
       : AUTOMATION_PROMPT_NOTE;
 
-    // A headless Engine has no renderer-owned <webview>. Give it a lazy lease on
-    // a main-process hidden BrowserWindow instead. The stable per-job partition
-    // preserves an explicitly established login across fires without sharing
-    // cookies between unrelated automations. No Chromium process is created
-    // unless the model actually calls a browser tool.
+    // A headless Engine has no renderer-owned <webview>. Give it an explicit,
+    // lazy Dedicated Playwright lease instead. The stable per-job user-data
+    // directory preserves an intentionally established login across fires
+    // without sharing cookies between unrelated automations. No Chromium process
+    // is created unless the model actually calls a browser tool.
     const browserLease = await runtime.acquire({
       ownerId: `automation:${req.job.id}`,
       profileId: `automation:${req.job.id}`,
       visibility: "hidden",
+      backendPreference: "dedicated-playwright",
       title: `CodeShell 自动化 · ${req.job.name?.trim() || req.job.id}`,
     });
     try {

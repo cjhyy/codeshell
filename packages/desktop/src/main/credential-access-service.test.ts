@@ -230,6 +230,35 @@ describe("desktop credential access service", () => {
     ).toThrow(/not a local Link credential/);
   });
 
+  test("LinkAction resolves a browser OAuth Link access token without returning refresh material", () => {
+    new CredentialStore(cwd).save("user", {
+      id: "link-github-github-app",
+      type: "link",
+      label: "GitHub App",
+      secret: JSON.stringify({
+        version: 1,
+        accessToken: "github-access",
+        refreshToken: "github-refresh-private",
+        expiresAt: "2030-01-01T00:00:00.000Z",
+      }),
+      meta: {
+        linkProvider: "github",
+        linkExecutionRuntime: "local",
+        linkAuthSource: "browser-oauth",
+        agentExposable: false,
+      },
+    });
+
+    expect(
+      resolveCredentialValueForWorker({
+        cwd,
+        id: "link-github-github-app",
+        scope: "full",
+        purpose: "link",
+      }),
+    ).toEqual({ value: "github-access" });
+  });
+
   test("agent-facing purposes never resolve a credential marked agentExposable:false", () => {
     new CredentialStore(cwd).save("user", {
       id: "link-github-fine-grained-pat",

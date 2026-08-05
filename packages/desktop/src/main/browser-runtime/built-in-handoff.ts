@@ -48,7 +48,7 @@ export interface GrantBuiltInBrowserInput {
  * Explicit, expiring capability grant from one engine session to one built-in
  * BrowserPanel guest. It never copies cookies and never follows focus changes.
  */
-export class BuiltInBrowserHandoffGrants {
+export class BuiltInTabClaimBackend {
   private readonly grants = new Map<string, HandoffGrant>();
   private readonly deps: BuiltInHandoffDeps;
 
@@ -121,11 +121,8 @@ export class BuiltInBrowserHandoffGrants {
     };
   }
 
-  /** Undefined means no grant: caller should use the independent Runtime. */
-  async dispatch(
-    sessionId: string,
-    request: BrowserActionRequest,
-  ): Promise<string | undefined> {
+  /** Undefined means no claim: caller should use the task-owned in-app target. */
+  async dispatch(sessionId: string, request: BrowserActionRequest): Promise<string | undefined> {
     const grant = this.liveGrant(sessionId);
     if (!grant) return undefined;
     const record = this.deps.guestRecordForId(grant.guestId);
@@ -167,7 +164,12 @@ export class BuiltInBrowserHandoffGrants {
   }
 }
 
-export const builtInBrowserHandoffGrants = new BuiltInBrowserHandoffGrants();
+export const builtInTabClaimBackend = new BuiltInTabClaimBackend();
+
+/** @deprecated Use BuiltInTabClaimBackend. */
+export { BuiltInTabClaimBackend as BuiltInBrowserHandoffGrants };
+/** @deprecated Use builtInTabClaimBackend. */
+export const builtInBrowserHandoffGrants = builtInTabClaimBackend;
 
 function tabFromRecord(record: GuestRecord): {
   tabId: string;

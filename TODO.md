@@ -2,7 +2,7 @@
 
 > 已完成项一律删除（记录在 git 历史与记忆里）。本文件只保留**未完成**的待办。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-08-04（当日 185 文件分 14 批落库 + 5 路 review 修复批 `f4e07b7f..95ce222c`，遗留跟进见「2026-08-04 review 遗留跟进」小节；07-28 数字人 feature 整体优化落地）。
+> 最近一次核对：2026-08-05（0.8.0 发布前核对；08-04 review 中已完成的 Link 设备码、LinkTab 与旧 todo 发布说明项已清理）。
 > **仓库状态（2026-07-27 实测）**：main 与 origin/main 完全同步（ahead/behind 均为 0），工作区干净。本文件历史版本多处写的「未 commit / 在工作树 / 未 push」均已过期作废——包括 2026-07-15 模块边界大拆分、07-16 优化冲刺 2、07-20 Pet 外部会话，全部已进 main 并推送。
 > 2026-07-15 模块边界大拆分（已合入 main）：core 去领域化（pet 迁出为 `packages/pet`，经通用 extension 钩子组合；三入口导出面收敛；protocol↔engine/session↔engine/settings→engine 四组倒置消除；goal/session-usage 下沉）、desktop 传输层抽出 `packages/server`、AgentBridge 拆出纯 Node `WorkerBridgeCore`、mobile 逻辑层抽出 `packages/web`、identity/data-root 注入基础落地（服务端部署项现状段已同步更新）。monorepo 现为 10 包（arena/cdp/chat/coding/core/desktop/pet/server/tui/web）。实施计划：`docs/superpowers/plans/2026-07-15-*.md`。
 >
@@ -38,10 +38,7 @@
 
 **2026-08-04 review 遗留跟进**(当日 5 路并行 review + 修复批 `f4e07b7f..95ce222c` 后仍开放的项;已修项见 git 历史,勿重复施工):
 
-- **Link 真机/真 token 验证**(体量 S,验证任务非编码)。①各 provider 用真 token 实测一遍 action 响应形状——API 版本头已改回文档版本(GitHub `2022-11-28`/Notion `2022-06-28`),但响应解析没对过真实服务,测试全是 stub fetch;②CLI login 流:`packages/core/src/links/cli.ts` 所有 login 都在 `child.stdin.end()` 下跑,`gh auth login --web` 会等"Press Enter"、`vercel login` 无参要交互选方式,真机上可能 EOF 失败;③`ntn`(Notion)/`td`(Todoist) 官方 CLI 及其 flag(`td auth login --read-only --json`、`ntn api`)是否真实存在未验证(gh/glab 已验)。
-- **Link 设备码流丢弃 refreshToken/expiresIn**(体量 S)。现状:`packages/desktop/src/main/index.ts` `links:completeBrowserAuth` 持久化时只存 access token。后果:会过期的 GitHub App 用户 token(8h)静默失效,无刷新路径,只能手动重连。期望:持久化 refreshToken(主进程侧),过期前自动刷新或至少在 UI 标注过期时间。
-- **旧 `userData/pet/todos.json` 无迁移**(体量 XS,产品决策)。todos→follow-ups 迁移(`0e687cce`)不读不迁不删旧文件,用户手写的待办文本升级后从 UI 消失。曝光窗口小(todo 存储 `feb71f6c` 2026-07-31 才上线)。最低限度:release note 说明;可选:一次性把未完成 todo 导入 pet 记忆/journal。
-- **LinkTab 小项打包**(体量 S,同文件一并处理)。`packages/desktop/src/renderer/credentials/LinkTab.tsx`:①设备码流取消/卸载清理缺口——关窗前未落状态的 attempt 继续轮询、无 unmount cleanup,已授权的 attempt 可能在用户离开后仍保存凭据;取消连接对话框不清 `localSecret`;②`oauthErrorRequiresRelogin` 用正则匹配散文错误,应改用主进程已暴露的 `meta.lastRefreshErrorCode === "invalid_grant"`(仓库明文约定:不用正则匹配散文);③connection/busy/error 状态按 `provider:runtime` 键控而凭据按 `link-{provider}-{method}`,首个双 method provider 会串卡片;④`total: 12` 硬编码网关渠道数,应取 `channelStatuses.length`;⑤`links.browserAuthStatus` reject 时静默置空,登录按钮永久禁用无重试。
+- **Link 真机/真 token 验证**(体量 S,验证任务非编码)。①各 provider 用真 token 实测一遍 action 响应形状——API 版本头已改回文档版本(GitHub `2022-11-28`/Notion `2022-06-28`),但响应解析没对过真实服务,测试全是 stub fetch;②CLI login 流:`packages/core/src/links/cli.ts` 所有 login 都在 `child.stdin.end()` 下跑,`gh auth login --web` 会等"Press Enter"、`vercel login` 无参要交互选方式,真机上可能 EOF 失败。`ntn`(Notion)与`td`(Todoist)的官方身份及当前命令已于 2026-08-05 对照官方文档确认。
 - **微信 hold-cursor 重试与 5 分钟 maxMessageAgeMs 的交互**(体量 S)。`packages/chat/src/wechat.ts`:handler 停摆 >5min 后,重试消息被 `normalizeInbound` 按"太旧"丢弃、`batchAccepted` 置真、cursor 提交——至少一次投递在 5 分钟外静默退化为至多一次。期望:重试路径豁免 age 过滤,或丢弃时显式记日志。
 - **通知 pet/tunnel 事件无 deliveryKey 的进度键碰撞**(体量 XS)。`packages/chat/src/notification-relay.ts:119`:无 deliveryKey 的事件用 `streamId:eventId` 做进度键,server 支持的 resetCursor 回滚保留 streamId,重发 id 可能撞上上一世代"已投完"的进度记录导致新通知被跳过。期望:pet/tunnel publish 也带 deliveryKey。
 - **事件 outbox 全量 writeFileSync 在 Electron 主线程**(体量 S,性能)。`packages/desktop/src/main/im-gateway-control-server.ts`:每次 publish 和 ack 轮询都同步全量重写(上限 96MB,现实数百 KB–MB),最坏卡 UI 事件循环。期望:移到 worker/异步写,或增量 append。

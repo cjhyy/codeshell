@@ -42,6 +42,10 @@ interface ConnectedLocalLink {
   providerId: string;
 }
 
+function isUsableLinkCredential(credential: CredentialMetadata): boolean {
+  return credential.oauthStatus?.state !== "expired" && credential.oauthStatus?.state !== "invalid";
+}
+
 function connectedLocalLinks(ctx?: ToolContext): ConnectedLocalLink[] {
   const cwd = ctx?.cwd ?? process.cwd();
   const scope = credentialAccessScope(ctx?.settingsScope);
@@ -51,6 +55,7 @@ function connectedLocalLinks(ctx?: ToolContext): ConnectedLocalLink[] {
       const providerId = credential.meta?.linkProvider;
       return credential.type === "link" &&
         credential.hasSecret &&
+        isUsableLinkCredential(credential) &&
         credential.meta?.linkExecutionRuntime === "local" &&
         typeof providerId === "string" &&
         getLocalLinkProvider(providerId)
@@ -259,6 +264,7 @@ export function isLinkActionAvailable(
         (credential) =>
           credential.type === "link" &&
           credential.hasSecret &&
+          isUsableLinkCredential(credential) &&
           credential.meta?.linkExecutionRuntime === "local" &&
           Boolean(credential.meta.linkProvider) &&
           Boolean(getLocalLinkProvider(credential.meta.linkProvider!)),
