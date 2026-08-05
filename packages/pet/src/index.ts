@@ -14,9 +14,13 @@ export * from "./team.js";
 export * from "./protocol.js";
 export {
   REPORT_TO_MIMI_TOOL_NAME,
+  REQUEST_MIMI_DELIVERY_TOOL_NAME,
   reportToMimiToolDef,
   reportToMimiTool,
   reportToMimiAvailability,
+  requestMimiDeliveryToolDef,
+  requestMimiDeliveryTool,
+  requestMimiDeliveryAvailability,
   type PetReportToMimiSink,
 } from "./report-to-mimi.js";
 export { petRunOptionsFrom, validatePetRunParams, type PetRunOptions } from "./run-params.js";

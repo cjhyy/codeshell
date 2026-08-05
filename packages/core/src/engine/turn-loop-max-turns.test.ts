@@ -123,9 +123,11 @@ function makeDeps(
   };
 }
 
-const toolResp = (): LLMResponse => ({
+const toolResp = (attempt?: number): LLMResponse => ({
   text: "",
-  toolCalls: [{ id: "c0", toolName: "Tool0", args: {} }] as ToolCall[],
+  toolCalls: [
+    { id: "c0", toolName: "Tool0", args: attempt === undefined ? {} : { attempt } },
+  ] as ToolCall[],
   stopReason: "tool_use",
   usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
 });
@@ -165,9 +167,9 @@ describe("TurnLoop maxTurns ceiling (§4.3)", () => {
     // 3 turns; the 4th (final, no-tools) call returns the summary. The response
     // list is indexed per model.call, so turns 1-3 = toolResp, call 4 = summary.
     const { deps, callArgs, modelCalls } = makeDeps([
-      toolResp(),
-      toolResp(),
-      toolResp(),
+      toolResp(1),
+      toolResp(2),
+      toolResp(3),
       summaryResp(),
     ]);
     const loop = new TurnLoop(deps, config);

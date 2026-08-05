@@ -49,7 +49,7 @@ export function PetSidebarEntry({
         {safeRunning > 0 && (
           <span
             data-pet-indicator="running"
-            className="motion-reduce:animate-none absolute -bottom-0.5 -left-0.5 h-2 w-2 animate-pulse rounded-full border border-card bg-status-info"
+            className="motion-reduce:animate-none absolute -bottom-0.5 -left-0.5 h-2 w-2 animate-pulse rounded-full border border-card bg-status-running"
             aria-hidden="true"
           />
         )}

@@ -152,3 +152,54 @@ describe("TurnLoop per-turn tool-call cap (B-3)", () => {
     expect(reminder).toBeUndefined();
   });
 });
+
+describe("TurnLoop repeated tool-batch circuit breaker", () => {
+  const repeatedToolResponse = (id: string, query: string): LLMResponse =>
+    toolResp([
+      {
+        id,
+        toolName: "ToolSearch",
+        args: { query },
+      },
+    ]);
+
+  it("stops after three identical calls with identical results even when call ids change", async () => {
+    const { deps, executed } = makeDeps([
+      repeatedToolResponse("call-1", "SendMessage"),
+      repeatedToolResponse("call-2", "SendMessage"),
+      repeatedToolResponse("call-3", "SendMessage"),
+      doneResp(),
+    ]);
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 10,
+      maxToolCallsPerTurn: 10,
+    }).run([{ role: "user", content: "send it" }]);
+
+    expect(executed).toEqual(["ToolSearch", "ToolSearch", "ToolSearch"]);
+    expect(result.reason).toBe("completed");
+    expect(result.completionKind).toBe("limit_stop");
+    expect(result.text).toContain("连续重复 3 次");
+    expect(result.text).toContain("已自动停止");
+  });
+
+  it("resets the streak when the tool arguments change", async () => {
+    const { deps, executed } = makeDeps([
+      repeatedToolResponse("call-1", "SendMessage"),
+      repeatedToolResponse("call-2", "SendMessage"),
+      repeatedToolResponse("call-3", "GatewayReply"),
+      repeatedToolResponse("call-4", "SendMessage"),
+      repeatedToolResponse("call-5", "SendMessage"),
+      doneResp(),
+    ]);
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 10,
+      maxToolCallsPerTurn: 10,
+    }).run([{ role: "user", content: "send it" }]);
+
+    expect(executed).toHaveLength(5);
+    expect(result.text).toBe("done");
+    expect(result.completionKind).toBeUndefined();
+  });
+});

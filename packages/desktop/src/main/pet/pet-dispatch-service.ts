@@ -65,6 +65,7 @@ export interface PetSessionReport {
   sourceSessionId: string;
   message: string;
   attachmentPaths?: string[];
+  deliveryRequest?: { channel: string };
 }
 
 export interface PetSessionReportResult {
@@ -934,15 +935,39 @@ export class PetDispatchService {
           new Set(report.attachmentPaths).size !== report.attachmentPaths.length ||
           !report.attachmentPaths.every(
             (path) => typeof path === "string" && path.length <= 4_096 && isAbsolute(path),
-          )))
+          ))) ||
+      (report.deliveryRequest !== undefined &&
+        (Object.keys(report.deliveryRequest).length !== 1 ||
+          report.deliveryRequest.channel !== "wechat"))
     ) {
       throw new Error("Session report is malformed");
     }
+    const deliveryRequest = report.deliveryRequest;
+    const listedOutboundTargets = deliveryRequest
+      ? await (this.options.listOutboundTargets?.() ?? [])
+      : [];
+    const outboundTargets = deliveryRequest
+      ? listedOutboundTargets
+          .filter(
+            (target) =>
+              target.channel === deliveryRequest.channel &&
+              target.maxTextLength >= message.length &&
+              (!report.attachmentPaths ||
+                (target.attachments.length > 0 &&
+                  target.maxAttachments >= report.attachmentPaths.length)),
+          )
+          .slice(0, 32)
+      : [];
+    const canOutboundDelivery =
+      deliveryRequest !== undefined &&
+      outboundTargets.length > 0 &&
+      typeof this.options.hostActions?.outboundMessage === "function";
     const completionTarget =
       task?.sessionId === report.sourceSessionId && task.completionTarget?.kind === "im-gateway"
         ? task.completionTarget
         : undefined;
     const canGatewayReply =
+      !deliveryRequest &&
       completionTarget !== undefined &&
       typeof this.options.hostActions?.gatewayReply === "function";
     const gatewayReplyCapability: PetGatewayReplyCapability | undefined = completionTarget
@@ -985,6 +1010,7 @@ export class PetDispatchService {
         sourceSessionId: report.sourceSessionId,
         message,
         ...(report.attachmentPaths ? { attachmentPaths: report.attachmentPaths } : {}),
+        ...(deliveryRequest ? { deliveryRequest } : {}),
         ...(task
           ? {
               delegatedTask: {
@@ -995,8 +1021,14 @@ export class PetDispatchService {
           : {}),
       },
     });
-    const routeInstruction =
-      canGatewayReply && completionTarget
+    const routeInstruction = deliveryRequest
+      ? canOutboundDelivery
+        ? "The owner explicitly approved a request to deliver this report through the semantic channel in sessionReport.deliveryRequest. " +
+          "Use the one matching host-authorized SendMessage destination and call SendMessage exactly once with sessionReport.message and every listed attachmentPath. " +
+          "Do not search for any tool or target id. After the request is recorded, stop immediately and do not claim success."
+        : "The owner requested external delivery, but the host has no currently authorized compatible destination for that channel. " +
+          "Do not call or search for SendMessage, GatewayReply, a target id, or a Session id. Explain concisely that personal WeChat proactive sending requires a live authorized context, usually refreshed by first sending Mimi a WeChat message."
+      : canGatewayReply && completionTarget
         ? "This report belongs to a host-bound originating IM conversation. " +
           "Compose the concise user-facing update and call GatewayReply exactly once. " +
           "Include attachment_paths only when sessionReport names exact paths inside allowedRoots and the user asked to receive those artifacts. " +
@@ -1028,11 +1060,45 @@ export class PetDispatchService {
               gatewayReply: gatewayReplyCapability,
             }
           : {}),
+        ...(canOutboundDelivery
+          ? {
+              hostActions: ["outboundMessage"],
+              outboundTargets,
+            }
+          : {}),
         ...(this.options.sessionsRootDir ? { sessionsRootDir: this.options.sessionsRootDir } : {}),
       },
     });
     if (!response.ok) throw new Error(response.message);
     const responseText = (response.result as { text?: unknown } | undefined)?.text;
+    if (deliveryRequest) {
+      if (!canOutboundDelivery) {
+        return {
+          text:
+            deliveryRequest.channel === "wechat"
+              ? "微信主动发送暂不可用：请先从微信给 Mimi 发一条消息以刷新会话上下文，然后重试。"
+              : "当前没有该渠道的授权发送目标。",
+          routedToOrigin: false,
+        };
+      }
+      const outboundMessage = readPetHostActionRequests(
+        response.result,
+        new Set(["outboundMessage"]),
+      ).find((request) => request.kind === "outboundMessage");
+      if (!outboundMessage) {
+        throw new Error("Mimi did not submit a SendMessage for the authorized delivery request");
+      }
+      const hostActions = await this.executeHostActions([outboundMessage], undefined, {
+        petSessionId: metadata.petSessionId,
+        clientMessageId: `pet-report:${report.reportId}`,
+      });
+      return {
+        text:
+          typeof responseText === "string" && responseText.trim() ? responseText.trim() : message,
+        routedToOrigin: false,
+        hostActions,
+      };
+    }
     if (!canGatewayReply || !gatewayReplyCapability) {
       return {
         text:

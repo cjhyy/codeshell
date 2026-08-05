@@ -47,6 +47,8 @@ describe("PetWidget", () => {
     expect(html).not.toContain("cs-pet-idle");
     expect(html).toContain("99+");
     expect(html).toContain('data-pet-indicator="running"');
+    expect(html).toContain("bg-status-running");
+    expect(html).not.toContain("bg-status-info");
     expect(html).toContain('data-pet-indicator="toggle"');
     expect(html).toContain('data-pet-action="chat"');
     expect(html).toContain('data-pet-action="activity"');

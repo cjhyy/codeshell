@@ -23,8 +23,29 @@ describe("parsePetReportToMimiEvent", () => {
     ).toMatchObject({ sessionId: "ordinary-session" });
   });
 
+  test("accepts the exact semantic delivery request", () => {
+    expect(
+      parsePetReportToMimiEvent({
+        ...VALID_REPORT,
+        deliveryRequest: { channel: "wechat" },
+      }),
+    ).toMatchObject({ deliveryRequest: { channel: "wechat" } });
+  });
+
   test("rejects unknown routing fields and invalid attachment paths", () => {
     expect(parsePetReportToMimiEvent({ ...VALID_REPORT, target: "wechat-owner" })).toBeNull();
+    expect(
+      parsePetReportToMimiEvent({
+        ...VALID_REPORT,
+        deliveryRequest: { channel: "wechat", targetId: "guessed" },
+      }),
+    ).toBeNull();
+    expect(
+      parsePetReportToMimiEvent({
+        ...VALID_REPORT,
+        deliveryRequest: { channel: "telegram" },
+      }),
+    ).toBeNull();
     expect(
       parsePetReportToMimiEvent({ ...VALID_REPORT, attachmentPaths: ["~/pet-comic-v2.png"] }),
     ).toBeNull();

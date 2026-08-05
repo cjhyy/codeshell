@@ -227,9 +227,9 @@ type PetDelegationDisplayState =
   | "cancelled";
 
 const DELEGATION_STATE_TONE: Record<PetDelegationDisplayState, string> = {
-  dispatched: "bg-status-info",
+  dispatched: "bg-status-running",
   waiting: "bg-status-warn",
-  queued: "bg-status-info",
+  queued: "bg-status-running",
   running: "bg-status-running animate-pulse motion-reduce:animate-none",
   started: "bg-status-ok",
   completed: "bg-status-ok",

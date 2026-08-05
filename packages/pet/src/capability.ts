@@ -62,6 +62,9 @@ import { PET_BEHAVIOR_PROFILE } from "./profile.js";
 import { createPetProjectionObserver, PET_HIDDEN_SESSION_KINDS } from "./projection-extension.js";
 import { PET_REPORT_TO_MIMI_METHOD } from "./protocol.js";
 import {
+  requestMimiDeliveryAvailability,
+  requestMimiDeliveryTool,
+  requestMimiDeliveryToolDef,
   reportToMimiAvailability,
   reportToMimiTool,
   reportToMimiToolDef,
@@ -90,6 +93,20 @@ export function createPetCapability(): ExtensionModule {
     validateRunParams: validatePetRunParams,
     hiddenSessionKinds: PET_HIDDEN_SESSION_KINDS,
     catalogTools: [
+      {
+        definition: {
+          ...requestMimiDeliveryToolDef,
+          source: "builtin",
+          permissionDefault: "ask",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: (args, ctx) => requestMimiDeliveryTool(args, ctx, reportToMimi),
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          availability: requestMimiDeliveryAvailability,
+        },
+      },
       {
         definition: {
           ...reportToMimiToolDef,

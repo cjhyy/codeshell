@@ -248,7 +248,7 @@ describe("Engine prompt-cache hygiene", () => {
           const payload = i < 5 ? earlyAssistantPayload : recentAssistantPayload;
           return {
             text: `${payload}${i}`,
-            toolCalls: [{ id: `missing-${i}`, toolName: "MissingTool", args: {} }],
+            toolCalls: [{ id: `missing-${i}`, toolName: "MissingTool", args: { attempt: i + 1 } }],
             stopReason: "tool_use" as const,
             usage: { promptTokens, completionTokens: 1, totalTokens: promptTokens + 1 },
           };

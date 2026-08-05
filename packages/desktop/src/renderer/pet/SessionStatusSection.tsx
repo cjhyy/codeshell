@@ -25,7 +25,7 @@ export type PetSessionEmptyState =
 const STATE_TONE: Record<PetSessionDisplayState, string> = {
   waiting: "bg-status-warn text-status-warn",
   running: "bg-status-running text-status-running",
-  queued: "bg-status-info text-status-info",
+  queued: "bg-status-running text-status-running",
   idle: "bg-status-ok text-status-ok",
   dormant: "bg-muted-foreground text-muted-foreground",
   terminal: "bg-muted-foreground text-muted-foreground",

@@ -201,7 +201,7 @@ export function PetWidget({
         {running > 0 && (
           <span
             data-pet-indicator="running"
-            className="motion-reduce:animate-none absolute bottom-3 left-3 h-2.5 w-2.5 animate-pulse rounded-full border-2 border-background bg-status-info"
+            className="motion-reduce:animate-none absolute bottom-3 left-3 h-2.5 w-2.5 animate-pulse rounded-full border-2 border-background bg-status-running"
             aria-hidden="true"
           />
         )}

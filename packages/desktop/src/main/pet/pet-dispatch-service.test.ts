@@ -2236,6 +2236,130 @@ describe("PetDispatchService", () => {
     });
   });
 
+  test("hands an approved Work Session WeChat request to Mimi and executes one authorized send", async () => {
+    let request: { method: string; params: Record<string, unknown> } | undefined;
+    const executed: Record<string, unknown>[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method, params) => {
+          request = { method, params };
+          return {
+            ok: true,
+            result: {
+              text: "internal acknowledgement",
+              extensions: {
+                pet: {
+                  hostActions: [
+                    {
+                      kind: "outboundMessage",
+                      payload: {
+                        targetId: "owner-wechat-context",
+                        text: "新版本已经发布。",
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listOutboundTargets: async () => [
+        {
+          id: "owner-wechat-context",
+          channel: "wechat",
+          label: "微信",
+          maxTextLength: 8_000,
+          attachments: [],
+          maxAttachments: 0,
+          maxAttachmentBytes: 0,
+        },
+      ],
+      hostActions: {
+        outboundMessage: async (payload) => {
+          executed.push(payload);
+          return { channel: "wechat", label: "微信", accepted: true };
+        },
+      },
+    });
+
+    const result = await service.reportSessionMessage({
+      sourceSessionId: "pet-work-806bb2404fc122889366de82",
+      reportId: "c".repeat(32),
+      message: "新版本已经发布。",
+      deliveryRequest: { channel: "wechat" },
+    });
+
+    expect(request?.method).toBe("agent/run");
+    expect(String(request?.params.task)).toContain("call SendMessage exactly once");
+    expect(String(request?.params.task)).toContain("Do not search for any tool or target id");
+    expect(request?.params.profileParams).toMatchObject({
+      hostActions: ["outboundMessage"],
+      outboundTargets: [{ id: "owner-wechat-context", channel: "wechat" }],
+    });
+    expect(String(request?.params.petRuntimeContext)).toContain(
+      '"deliveryRequest":{"channel":"wechat"}',
+    );
+    expect(executed).toEqual([{ targetId: "owner-wechat-context", text: "新版本已经发布。" }]);
+    expect(result).toMatchObject({
+      routedToOrigin: false,
+      hostActions: [
+        {
+          kind: "outboundMessage",
+          ok: true,
+          result: { channel: "wechat", label: "微信", accepted: true },
+        },
+      ],
+    });
+  });
+
+  test("does not search or send when WeChat has no live authorized context", async () => {
+    let request: { method: string; params: Record<string, unknown> } | undefined;
+    let executed = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method, params) => {
+          request = { method, params };
+          return { ok: true, result: { text: "请先从微信联系 Mimi。" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listOutboundTargets: async () => [],
+      hostActions: {
+        outboundMessage: async () => {
+          executed += 1;
+          return {};
+        },
+      },
+    });
+
+    const result = await service.reportSessionMessage({
+      sourceSessionId: "pet-work-806bb2404fc122889366de82",
+      reportId: "d".repeat(32),
+      message: "发到微信",
+      deliveryRequest: { channel: "wechat" },
+    });
+
+    expect(String(request?.params.task)).toContain("Do not call or search for SendMessage");
+    expect(request?.params.profileParams).not.toHaveProperty("hostActions");
+    expect(executed).toBe(0);
+    expect(result).toEqual({
+      text: "微信主动发送暂不可用：请先从微信给 Mimi 发一条消息以刷新会话上下文，然后重试。",
+      routedToOrigin: false,
+    });
+  });
+
   test("does not execute a reported host action for a desktop Pet turn", async () => {
     let executed = 0;
     let declared: unknown;

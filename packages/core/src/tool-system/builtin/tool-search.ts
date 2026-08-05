@@ -14,9 +14,10 @@ import { isRegisteredMcpToolAllowed } from "../mcp-tool-policy.js";
 export const toolSearchToolDef: ToolDefinition = {
   name: "ToolSearch",
   description:
-    "Search for and discover available tools by name or keyword. " +
+    "Search only the tools available in the current Session context by name or keyword. " +
     "Some tools (especially from MCP servers) are deferred — their full schemas " +
-    "are only loaded when you search for them. Use this to find the right tool.",
+    "are only loaded when you search for them. If an exact tool is reported unavailable, " +
+    "do not retry unless the Session context changes.",
   inputSchema: {
     type: "object",
     properties: {
@@ -48,6 +49,21 @@ export async function toolSearchTool(
   const rawMax = args.max_results as number;
   const maxResults = Math.min(typeof rawMax === "number" && rawMax > 0 ? rawMax : 5, 20);
 
+  const currentDefinitions = ctx.searchableToolDefinitions;
+  if (currentDefinitions) {
+    const currentTools = currentDefinitions.map((definition) =>
+      definitionToSearchableTool(definition, ctx.toolRegistry),
+    );
+    if (query.startsWith("select:")) {
+      const names = query
+        .slice(7)
+        .split(",")
+        .map((name) => name.trim());
+      return matchCurrentExact(currentTools, names);
+    }
+    return searchCurrentByKeyword(currentTools, query, maxResults);
+  }
+
   // The tool registry is worker-SHARED (B1): it holds MCP tools registered by
   // every session, including servers another project enabled. ToolSearch is a
   // side door around the per-turn toolDefs filter — without this gate it would
@@ -78,6 +94,42 @@ export async function toolSearchTool(
   return searchByKeyword(ctx.toolRegistry, query, maxResults, visible);
 }
 
+function definitionToSearchableTool(
+  definition: ToolDefinition,
+  registry: ToolRegistry,
+): RegisteredTool {
+  const registered = registry.getTool(definition.name);
+  return {
+    name: definition.name,
+    description: definition.description,
+    inputSchema: definition.inputSchema,
+    source: registered?.source ?? "builtin",
+    ...(registered?.serverName ? { serverName: registered.serverName } : {}),
+    ...(registered?.mcpToolName ? { mcpToolName: registered.mcpToolName } : {}),
+    permissionDefault: registered?.permissionDefault ?? "ask",
+  };
+}
+
+function matchCurrentExact(tools: RegisteredTool[], names: string[]): string {
+  const byName = new Map(tools.map((tool) => [tool.name, tool]));
+  return names
+    .map((name) => {
+      const tool = byName.get(name);
+      return tool
+        ? formatTool(tool)
+        : `Tool "${name}" is not available in the current Session context. Do not retry unless the Session context changes.`;
+    })
+    .join("\n\n---\n\n");
+}
+
+function searchCurrentByKeyword(
+  tools: RegisteredTool[],
+  query: string,
+  maxResults: number,
+): string {
+  return searchDetailedTools(tools, query, maxResults);
+}
+
 function matchExact(
   registry: ToolRegistry,
   names: string[],
@@ -102,6 +154,14 @@ function searchByKeyword(
   visible: (t: RegisteredTool) => boolean,
 ): string {
   const allTools = registry.listToolsDetailed().filter(visible);
+  return searchDetailedTools(allTools, query, maxResults);
+}
+
+function searchDetailedTools(
+  allTools: RegisteredTool[],
+  query: string,
+  maxResults: number,
+): string {
   const queryLower = query.toLowerCase();
   const keywords = queryLower.split(/\s+/);
 

@@ -5,7 +5,7 @@
  * pre_check → model_call → post_check → tool_exec → context_mgmt → hook_notify → next turn
  */
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type {
   Message,
   StreamCallback,
@@ -247,6 +247,44 @@ export function toolResultToBlock(result: ToolResult): ContentBlock {
   return block;
 }
 
+const REPEATED_TOOL_BATCH_LIMIT = 3;
+
+function canonicalToolValue(value: unknown): string {
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (Array.isArray(value)) return `[${value.map(canonicalToolValue).join(",")}]`;
+  if (typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalToolValue(entry)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function repeatedToolBatchFingerprint(
+  toolCalls: readonly import("../types.js").ToolCall[],
+  results: readonly ToolResult[],
+): string {
+  // Hash immediately and never log the canonical source: tool results may
+  // contain credentials or large media payloads. Call ids are deliberately
+  // omitted because providers generate a fresh id for every identical retry.
+  return createHash("sha256")
+    .update(
+      canonicalToolValue({
+        calls: toolCalls.map((call) => ({ toolName: call.toolName, args: call.args })),
+        results: results.map((result) => ({
+          toolName: result.toolName,
+          isError: result.isError === true || Boolean(result.error),
+          error: result.error,
+          result: result.result,
+          contentBlocks: result.contentBlocks,
+        })),
+      }),
+    )
+    .digest("hex");
+}
+
 export class TurnLoop {
   private turnCount = 0;
   /** Tool IDs already emitted as tool_use_start during streaming (to avoid duplicates). */
@@ -283,6 +321,9 @@ export class TurnLoop {
    * loop forces a stop so a stuck goal can't loop forever.
    */
   private stopBlockCount = 0;
+  /** Consecutive identical tool-call/result batches, ignoring provider call ids. */
+  private repeatedToolBatchFingerprint: string | undefined;
+  private repeatedToolBatchCount = 0;
 
   /**
    * Run-scoped goal budget tracker (Goal mode). Hoisted to an instance field
@@ -1742,6 +1783,49 @@ export class TurnLoop {
             messages.push({ role: "user", content: taskReminder });
             tlog.info("guard.stale_task", { cat: "guard", turn: this.turnCount });
           }
+        }
+
+        const toolBatchFingerprint = repeatedToolBatchFingerprint(toolCalls, results);
+        if (toolBatchFingerprint === this.repeatedToolBatchFingerprint) {
+          this.repeatedToolBatchCount++;
+        } else {
+          this.repeatedToolBatchFingerprint = toolBatchFingerprint;
+          this.repeatedToolBatchCount = 1;
+        }
+        if (this.repeatedToolBatchCount >= REPEATED_TOOL_BATCH_LIMIT) {
+          tlog.warn("turn.repeated_tool_batch_stopped", {
+            cat: "turn",
+            repeatedCount: this.repeatedToolBatchCount,
+            tools: toolCalls.map((call) => call.toolName),
+          });
+          await this.emitHook("on_turn_end", {
+            turnNumber: this.turnCount,
+            hasToolUse: true,
+            toolCallCount: toolCalls.length,
+          });
+          finalText =
+            `检测到同一组工具调用及其结果连续重复 ${REPEATED_TOOL_BATCH_LIMIT} 次，` +
+            "已自动停止，避免继续空转。请调整请求或让 Session 获取新的上下文后再试。";
+          this.deps.transcript.appendMessage("assistant", finalText);
+          messages.push({ role: "assistant", content: finalText });
+          this.config.onStream?.({
+            type: "assistant_message",
+            messageId: assistantMessageId,
+            message: { role: "assistant", content: finalText },
+          });
+          this.finalizeModelTurn();
+          if (await this.consumeQueuedSteer(messages, "finalize_backfill")) {
+            this.repeatedToolBatchFingerprint = undefined;
+            this.repeatedToolBatchCount = 0;
+            continue;
+          }
+          messages = this.redactConsumedSensitiveToolResults(messages);
+          return {
+            text: finalText,
+            reason: "completed",
+            messages,
+            completionKind: "limit_stop",
+          };
         }
 
         // Hook: turn end

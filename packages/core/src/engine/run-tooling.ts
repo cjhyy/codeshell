@@ -412,5 +412,9 @@ export function assembleRunToolDefs(args: {
   const toolDefs = args.runPlanMode
     ? profileToolDefs.filter((t) => PLAN_MODE_ALLOWED_TOOLS.has(t.name))
     : profileToolDefs;
+  // ToolSearch shares the worker registry across Sessions, but discovery must
+  // reflect this exact run's filtered and rewritten surface. Keep the context
+  // snapshot in lockstep with the definitions sent to the model.
+  toolCtx.searchableToolDefinitions = toolDefs;
   return toolDefs;
 }

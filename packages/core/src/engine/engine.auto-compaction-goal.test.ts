@@ -35,7 +35,9 @@ const scenarios = new Map<string, Scenario>();
 function response(text: string, toolCallId?: string, usage = MAIN_USAGE): LLMResponse {
   return {
     text,
-    toolCalls: toolCallId ? [{ id: toolCallId, toolName: "MissingTool", args: {} }] : [],
+    toolCalls: toolCallId
+      ? [{ id: toolCallId, toolName: "MissingTool", args: { attempt: toolCallId } }]
+      : [],
     stopReason: toolCallId ? "tool_use" : "stop",
     usage,
   };

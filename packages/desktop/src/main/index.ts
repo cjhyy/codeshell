@@ -1811,6 +1811,7 @@ async function createWindow(): Promise<BrowserWindow> {
             reportId: event.reportId,
             message: event.message,
             ...(event.attachmentPaths ? { attachmentPaths: event.attachmentPaths } : {}),
+            ...(event.deliveryRequest ? { deliveryRequest: event.deliveryRequest } : {}),
           },
           task,
         );
@@ -1843,6 +1844,36 @@ async function createWindow(): Promise<BrowserWindow> {
               target: completionTarget.target,
             },
           });
+        } else if (
+          event.deliveryRequest &&
+          report.hostActions?.length &&
+          petHostActionReceiptService
+        ) {
+          const enriched = await enrichPetChatReplyWithHostActions(
+            report.text,
+            report.hostActions,
+            {
+              qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+              attachmentKinds: [],
+            },
+          );
+          await completePetHostActionReceipt({
+            recorder: petHostActionReceiptService,
+            input: {
+              petSessionId: await petDispatchService.getSessionId(),
+              clientMessageId: `pet-report:${event.reportId}`,
+              executions: report.hostActions,
+              authoritativeMessage: enriched.text,
+              replaceAssistant: true,
+            },
+            publish: (receiptEvent) => {
+              for (const window of BrowserWindow.getAllWindows()) {
+                if (!window.isDestroyed()) {
+                  window.webContents.send(PET_CHAT_EVENT_CHANNEL, receiptEvent);
+                }
+              }
+            },
+          });
         }
         deliveredPetReports.add(event.reportId);
         if (deliveredPetReports.size > 1_000) {
@@ -1855,6 +1886,7 @@ async function createWindow(): Promise<BrowserWindow> {
           routedToOrigin: report.routedToOrigin,
           ...(task ? { taskId: task.id } : {}),
           attachmentCount: event.attachmentPaths?.length ?? 0,
+          ...(event.deliveryRequest ? { deliveryChannel: event.deliveryRequest.channel } : {}),
         });
       } catch (error) {
         dlog("main", "pet.report.failed", {

@@ -12,7 +12,7 @@
  * Tools that don't need any context (Read/Write/Bash/...) just ignore
  * the second argument; the type is purely additive.
  */
-import type { LLMConfig, StreamCallback, TokenUsage } from "../types.js";
+import type { LLMConfig, StreamCallback, TokenUsage, ToolDefinition } from "../types.js";
 import type { ModelPool } from "../llm/model-pool.js";
 import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
@@ -257,6 +257,13 @@ export interface ToolContext {
   modelPool?: ModelPool;
   /** Tool registry (ToolSearch reads this to enumerate available tools). */
   toolRegistry: ToolRegistry;
+  /**
+   * Final per-turn tool surface after availability guards, feature flags,
+   * behavior-profile allowlists, plan-mode filtering, and definition rewrites.
+   * ToolSearch must prefer this list over the worker-shared registry so it
+   * cannot advertise a tool the current Session cannot actually call.
+   */
+  searchableToolDefinitions?: readonly ToolDefinition[];
   /** Opaque services contributed by capability modules, keyed by capability id. */
   capabilityServices?: Readonly<Record<string, unknown>>;
   /**

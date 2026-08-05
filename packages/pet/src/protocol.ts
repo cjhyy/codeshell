@@ -60,6 +60,8 @@ export interface PetReportToMimiEvent {
   sessionId: string;
   message: string;
   attachmentPaths?: string[];
+  /** Permission-gated owner request for Mimi to use one authorized outbound route. */
+  deliveryRequest?: { channel: string };
   createdAt: number;
 }
 

@@ -12,6 +12,8 @@ describe("PetSidebarEntry", () => {
     expect(html).toContain("Mimi");
     expect(html).toContain("99+");
     expect(html).toContain('data-pet-indicator="running"');
+    expect(html).toContain("bg-status-running");
+    expect(html).not.toContain("bg-status-info");
     expect(html).toContain('data-pet-indicator="pending"');
     expect(html).toContain("120 项等你处理；2 项执行中");
     expect(html).toContain('aria-pressed="true"');

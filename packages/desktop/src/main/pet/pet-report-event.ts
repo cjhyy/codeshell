@@ -5,8 +5,19 @@ export function parsePetReportToMimiEvent(value: unknown): PetReportToMimiEvent 
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const event = value as Record<string, unknown>;
   const keys = Object.keys(event).sort();
-  const expected = ["attachmentPaths", "createdAt", "message", "reportId", "sessionId"]
-    .filter((key) => key !== "attachmentPaths" || event.attachmentPaths !== undefined)
+  const expected = [
+    "attachmentPaths",
+    "createdAt",
+    "deliveryRequest",
+    "message",
+    "reportId",
+    "sessionId",
+  ]
+    .filter(
+      (key) =>
+        (key !== "attachmentPaths" || event.attachmentPaths !== undefined) &&
+        (key !== "deliveryRequest" || event.deliveryRequest !== undefined),
+    )
     .sort();
   if (
     keys.length !== expected.length ||
@@ -42,11 +53,31 @@ export function parsePetReportToMimiEvent(value: unknown): PetReportToMimiEvent 
     }
     attachmentPaths = [...event.attachmentPaths] as string[];
   }
+  let deliveryRequest: { channel: string } | undefined;
+  if (event.deliveryRequest !== undefined) {
+    if (
+      !event.deliveryRequest ||
+      typeof event.deliveryRequest !== "object" ||
+      Array.isArray(event.deliveryRequest)
+    ) {
+      return null;
+    }
+    const request = event.deliveryRequest as Record<string, unknown>;
+    if (
+      Object.keys(request).length !== 1 ||
+      typeof request.channel !== "string" ||
+      request.channel !== "wechat"
+    ) {
+      return null;
+    }
+    deliveryRequest = { channel: request.channel };
+  }
   return {
     reportId: event.reportId,
     sessionId: event.sessionId,
     message: event.message.trim(),
     ...(attachmentPaths ? { attachmentPaths } : {}),
+    ...(deliveryRequest ? { deliveryRequest } : {}),
     createdAt: Number(event.createdAt),
   };
 }

@@ -70,6 +70,53 @@ describe("toolSearchTool", () => {
   });
 });
 
+describe("toolSearchTool — current Session surface", () => {
+  it("does not advertise a registry tool filtered out of the current Session", async () => {
+    const r = registryWith(
+      { name: "SendMessage", description: "raw outbound sender" },
+      { name: "ReportToMimi", description: "report internally" },
+    );
+    const current = {
+      ...ctx(r),
+      searchableToolDefinitions: [
+        {
+          name: "ReportToMimi",
+          description: "report internally",
+          inputSchema: { type: "object", properties: {} },
+        },
+      ],
+    } as unknown as ToolContext;
+
+    const keyword = await toolSearchTool({ query: "message outbound" }, current);
+    expect(keyword).not.toContain("SendMessage");
+    const exact = await toolSearchTool({ query: "select:SendMessage" }, current);
+    expect(exact).toContain("not available in the current Session context");
+    expect(exact).toContain("Do not retry");
+  });
+
+  it("returns the per-turn rewritten schema and description", async () => {
+    const r = registryWith({ name: "Dynamic", description: "raw description" });
+    const current = {
+      ...ctx(r),
+      searchableToolDefinitions: [
+        {
+          name: "Dynamic",
+          description: "rewritten authorized destination",
+          inputSchema: {
+            type: "object",
+            properties: { target_id: { type: "string", enum: ["opaque-1"] } },
+          },
+        },
+      ],
+    } as unknown as ToolContext;
+
+    const out = await toolSearchTool({ query: "select:Dynamic" }, current);
+    expect(out).toContain("rewritten authorized destination");
+    expect(out).toContain('"opaque-1"');
+    expect(out).not.toContain("raw description");
+  });
+});
+
 describe("toolSearchTool — MCP visibility gate (worker-shared registry leak)", () => {
   function registryWithMcp(): ToolRegistry {
     const r = new ToolRegistry({ builtinTools: [] });

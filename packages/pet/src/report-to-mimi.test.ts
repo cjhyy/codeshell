@@ -8,6 +8,9 @@ import { createPetCapability } from "./capability.js";
 import { PET_REPORT_TO_MIMI_METHOD, type PetReportToMimiEvent } from "./protocol.js";
 import {
   REPORT_TO_MIMI_TOOL_NAME,
+  REQUEST_MIMI_DELIVERY_TOOL_NAME,
+  requestMimiDeliveryAvailability,
+  requestMimiDeliveryTool,
   reportToMimiAvailability,
   reportToMimiTool,
 } from "./report-to-mimi.js";
@@ -117,5 +120,63 @@ describe("ReportToMimi tool", () => {
     await expect(
       tool?.execute({ message: "again" }, { sessionId: WORK_SESSION_ID } as unknown as ToolContext),
     ).resolves.toContain("unavailable");
+  });
+});
+
+describe("RequestMimiDelivery tool", () => {
+  test("is permission-gated and visible to a top-level Work Session, not Mimi or sub-agents", () => {
+    expect(requestMimiDeliveryAvailability(visibility())).toBe(true);
+    expect(requestMimiDeliveryAvailability(visibility({ behaviorProfile: "pet" }))).toBe(false);
+    expect(requestMimiDeliveryAvailability(visibility({ isSubAgent: true }))).toBe(false);
+
+    const capability = createPetCapability();
+    const tool = capability.catalogTools?.find(
+      (candidate) => candidate.definition.name === REQUEST_MIMI_DELIVERY_TOOL_NAME,
+    );
+    expect(tool?.definition.permissionDefault).toBe("ask");
+    expect(tool?.exposure.defaultPermissionRules).toBeUndefined();
+  });
+
+  test("emits a semantic WeChat delivery request without exposing a target id", async () => {
+    const reports: PetReportToMimiEvent[] = [];
+    const result = await requestMimiDeliveryTool(
+      {
+        channel: "wechat",
+        text: "新版本已经发布。",
+        attachment_paths: ["/tmp/release-notes.txt"],
+      },
+      {
+        sessionId: WORK_SESSION_ID,
+        originClientMessageId: "owner-request-1",
+      } as unknown as ToolContext,
+      (event) => reports.push(event),
+    );
+
+    expect(result).toContain("accepted for Mimi host validation");
+    expect(reports).toHaveLength(1);
+    expect(reports[0]).toMatchObject({
+      sessionId: WORK_SESSION_ID,
+      message: "新版本已经发布。",
+      attachmentPaths: ["/tmp/release-notes.txt"],
+      deliveryRequest: { channel: "wechat" },
+    });
+    expect(reports[0]).not.toHaveProperty("targetId");
+  });
+
+  test("rejects unsupported channels and routing fields", async () => {
+    const reports: PetReportToMimiEvent[] = [];
+    const context = { sessionId: WORK_SESSION_ID } as unknown as ToolContext;
+    const sink = (event: PetReportToMimiEvent) => reports.push(event);
+    await expect(
+      requestMimiDeliveryTool({ channel: "telegram", text: "x" }, context, sink),
+    ).resolves.toContain("currently: wechat");
+    await expect(
+      requestMimiDeliveryTool(
+        { channel: "wechat", text: "x", target_id: "guessed" },
+        context,
+        sink,
+      ),
+    ).resolves.toContain("accepts only");
+    expect(reports).toEqual([]);
   });
 });

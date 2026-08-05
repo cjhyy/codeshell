@@ -1270,7 +1270,11 @@ describe("TurnLoop goal lifecycle guardrails", () => {
   it("bounds repeated ineffective tool-use turns with maxTurns instead of stop blocks", async () => {
     let stopHookCalls = 0;
     const responses = Array.from({ length: 3 }, (_, index) =>
-      toolResponse({ id: `ineffective-${index + 1}`, toolName: "Bash", args: {} }),
+      toolResponse({
+        id: `ineffective-${index + 1}`,
+        toolName: "Bash",
+        args: { attempt: index + 1 },
+      }),
     );
     const { deps, calls, executedTools } = makeTurnLoopDeps(responses, {
       execute: async (call) => ({
