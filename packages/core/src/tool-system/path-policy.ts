@@ -38,11 +38,13 @@ import {
   writeFileSync,
   mkdirSync,
   renameSync,
+  statSync,
 } from "node:fs";
 import { open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { dirname, isAbsolute, join, resolve as resolvePath, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve as resolvePath, sep } from "node:path";
+import { readInstalledPlugins } from "../plugins/installedPlugins.js";
 import type { ToolContext } from "./context.js";
 
 export type PathDecision = "allow" | "ask" | "deny";
@@ -505,6 +507,82 @@ function isInsideDir(child: string, parent: string): boolean {
   return c === par || c.startsWith(p);
 }
 
+function configuredUserHome(): string {
+  return process.env.HOME ?? homedir();
+}
+
+/**
+ * Whether `resolved` belongs to one concrete Skill tree rooted below
+ * `<skillsRoot>/<skill>/`.
+ *
+ * Both the root and manifest are realpathed, so a reference symlink cannot
+ * turn this read-only exception into access outside the managed Skill tree.
+ */
+function isSkillTreeResource(resolved: string, skillsRoot: string): boolean {
+  try {
+    const realSkillsRoot = realpathSync(skillsRoot);
+    if (!isInsideDir(resolved, realSkillsRoot)) return false;
+    const rel = relative(realSkillsRoot, resolved);
+    const skillName = rel.split(sep).filter(Boolean)[0];
+    if (!skillName || skillName === "..") return false;
+
+    const skillRoot = realpathSync(join(realSkillsRoot, skillName));
+    if (!isInsideDir(skillRoot, realSkillsRoot)) return false;
+    const manifest = realpathSync(join(skillRoot, "SKILL.md"));
+    if (!isInsideDir(manifest, skillRoot) || !statSync(manifest).isFile()) return false;
+    return isInsideDir(resolved, skillRoot);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Skill instructions routinely link to sibling references/scripts/assets.
+ * The Skill builtin can already read the registered SKILL.md, so asking again
+ * for every referenced file is both inconsistent and capable of wedging a
+ * headless run.
+ *
+ * Keep the exception narrow:
+ *   - read-only (the caller checks the operation);
+ *   - user Skills, or an installed plugin recorded in the V2 registry;
+ *   - plugin installs must realpath beneath the managed plugin cache;
+ *   - the target must remain inside a directory containing a real SKILL.md.
+ */
+function isRegisteredSkillResourceRead(resolved: string): boolean {
+  let codeShellRoot: string;
+  try {
+    codeShellRoot = realpathSync(join(configuredUserHome(), ".code-shell"));
+  } catch {
+    return false;
+  }
+  if (!isInsideDir(resolved, codeShellRoot)) return false;
+
+  if (isSkillTreeResource(resolved, join(codeShellRoot, "skills"))) return true;
+
+  let cacheRoot: string;
+  try {
+    cacheRoot = realpathSync(join(codeShellRoot, "plugins", "cache"));
+  } catch {
+    return false;
+  }
+
+  const installed = readInstalledPlugins();
+  for (const entries of Object.values(installed.plugins)) {
+    for (const entry of entries) {
+      try {
+        const installRoot = realpathSync(entry.installPath);
+        if (installRoot === cacheRoot || !isInsideDir(installRoot, cacheRoot)) continue;
+        const skillsRoot = realpathSync(join(installRoot, "skills"));
+        if (!isInsideDir(skillsRoot, installRoot)) continue;
+        if (isSkillTreeResource(resolved, skillsRoot)) return true;
+      } catch {
+        // A stale/tampered registry entry must never broaden read authority.
+      }
+    }
+  }
+  return false;
+}
+
 /**
  * Returns the matching sensitive-dir entry (with the user's home prefix) if
  * `resolved` lives underneath any sensitive directory, else undefined.
@@ -595,6 +673,23 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
   const sensitiveFile = matchSensitiveFile(resolved);
   const sensitiveLabel = sensitiveDir ?? sensitiveFile;
   const insideWorkspace = isInsideDir(resolved, workspace);
+
+  // Registered Skill resources are managed runtime inputs. Their SKILL.md is
+  // already readable through the Skill builtin; allow its contained reference
+  // files through the ordinary Read tool as well. A credential-shaped basename
+  // (.env, token.txt, key files, ...) deliberately keeps the sensitive-file
+  // gate even inside a Skill tree.
+  if (
+    opts.operation === "read" &&
+    !sensitiveFile &&
+    isRegisteredSkillResourceRead(resolved)
+  ) {
+    return {
+      decision: "allow",
+      reason: "registered Skill resource read",
+      resolvedPath: resolved,
+    };
+  }
 
   // Sensitive: write is always denied, read always asks. Workspace placement
   // doesn't soften the rule — an `.env` in the project still asks on read.

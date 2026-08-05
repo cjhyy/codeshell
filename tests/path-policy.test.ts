@@ -184,6 +184,140 @@ describe("classifyPath", () => {
     ).toBe("deny");
   });
 
+  test("registered user and plugin Skill resources are readable without approval", async () => {
+    const previousHome = process.env.HOME;
+    const fakeHome = join(outside, "home");
+    const codeShellRoot = join(fakeHome, ".code-shell");
+    const userSkill = join(codeShellRoot, "skills", "user-demo");
+    const pluginRoot = join(
+      codeShellRoot,
+      "plugins",
+      "cache",
+      "mimi-plugins",
+      "media-downloader",
+      "local",
+    );
+    const pluginSkill = join(pluginRoot, "skills", "media-downloader");
+    const userReference = join(userSkill, "references", "guide.md");
+    const pluginReference = join(pluginSkill, "references", "troubleshooting.md");
+    mkdirSync(join(userSkill, "references"), { recursive: true });
+    mkdirSync(join(pluginSkill, "references"), { recursive: true });
+    writeFileSync(join(userSkill, "SKILL.md"), "# User Skill\n");
+    writeFileSync(userReference, "guide\n");
+    writeFileSync(join(pluginSkill, "SKILL.md"), "# Plugin Skill\n");
+    writeFileSync(pluginReference, "troubleshooting\n");
+    mkdirSync(join(codeShellRoot, "plugins"), { recursive: true });
+    writeFileSync(
+      join(codeShellRoot, "plugins", "installed_plugins.json"),
+      JSON.stringify({
+        version: 2,
+        plugins: {
+          "media-downloader@mimi-plugins": [
+            {
+              scope: "user",
+              installPath: pluginRoot,
+              version: "local",
+              installedAt: "2026-08-05T00:00:00.000Z",
+              lastUpdated: "2026-08-05T00:00:00.000Z",
+            },
+          ],
+        },
+      }),
+    );
+
+    process.env.HOME = fakeHome;
+    try {
+      for (const target of [userReference, pluginReference]) {
+        const read = classifyPath(target, { workspaceRoot: workspace, operation: "read" });
+        expect(read.decision).toBe("allow");
+        expect(read.reason).toContain("Skill resource");
+        // The exception is read-only.
+        expect(
+          classifyPath(target, { workspaceRoot: workspace, operation: "write" }).decision,
+        ).not.toBe("allow");
+      }
+      // Exact headless/worker regression: without this exception the same
+      // reference read returns "No interactive approval UI" and the Skill run
+      // cannot continue.
+      expect(
+        await enforcePathPolicyWithApproval(pluginReference, "read", {
+          cwd: workspace,
+          sessionId: "skill-reference-session",
+        } as ToolContext),
+      ).toBeNull();
+    } finally {
+      if (previousHome === undefined) delete process.env.HOME;
+      else process.env.HOME = previousHome;
+    }
+  });
+
+  test("Skill read exception rejects unregistered trees, credential files, and symlink escapes", () => {
+    const previousHome = process.env.HOME;
+    const fakeHome = join(outside, "guard-home");
+    const codeShellRoot = join(fakeHome, ".code-shell");
+    const cacheRoot = join(codeShellRoot, "plugins", "cache");
+    const pluginRoot = join(cacheRoot, "market", "safe-plugin", "v1");
+    const skillRoot = join(pluginRoot, "skills", "safe-skill");
+    const unregisteredRoot = join(cacheRoot, "market", "unregistered", "v1");
+    const privateFile = join(outside, "private.md");
+    mkdirSync(join(skillRoot, "references"), { recursive: true });
+    mkdirSync(join(unregisteredRoot, "skills", "other", "references"), { recursive: true });
+    writeFileSync(join(skillRoot, "SKILL.md"), "# Safe Skill\n");
+    writeFileSync(join(skillRoot, "token.txt"), "not automatically readable\n");
+    writeFileSync(privateFile, "private\n");
+    symlinkSync(privateFile, join(skillRoot, "references", "escape.md"));
+    const unregisteredReference = join(
+      unregisteredRoot,
+      "skills",
+      "other",
+      "references",
+      "guide.md",
+    );
+    writeFileSync(join(unregisteredRoot, "skills", "other", "SKILL.md"), "# Other\n");
+    writeFileSync(unregisteredReference, "other\n");
+    mkdirSync(join(codeShellRoot, "plugins"), { recursive: true });
+    writeFileSync(
+      join(codeShellRoot, "plugins", "installed_plugins.json"),
+      JSON.stringify({
+        version: 2,
+        plugins: {
+          "safe-plugin@market": [
+            {
+              scope: "user",
+              installPath: pluginRoot,
+              version: "v1",
+              installedAt: "2026-08-05T00:00:00.000Z",
+              lastUpdated: "2026-08-05T00:00:00.000Z",
+            },
+          ],
+        },
+      }),
+    );
+
+    process.env.HOME = fakeHome;
+    try {
+      expect(
+        classifyPath(unregisteredReference, { workspaceRoot: workspace, operation: "read" })
+          .decision,
+      ).toBe("ask");
+      expect(
+        classifyPath(join(skillRoot, "token.txt"), {
+          workspaceRoot: workspace,
+          operation: "read",
+        }).decision,
+      ).toBe("ask");
+      expect(
+        classifyPath(join(skillRoot, "references", "escape.md"), {
+          workspaceRoot: workspace,
+          operation: "read",
+        }).decision,
+      ).toBe("ask");
+    } finally {
+      if (previousHome === undefined) delete process.env.HOME;
+      else process.env.HOME = previousHome;
+    }
+  });
+
   test("read of .env in workspace → ask", () => {
     writeFileSync(join(workspace, ".env"), "x\n");
     expect(
