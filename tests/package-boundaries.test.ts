@@ -228,6 +228,10 @@ describe("workspace package boundaries", () => {
     expect(workflow).toContain(
       'bun run scripts/publish-release-packages.ts --tag "$NPM_TAG" --execute',
     );
+    expect(workflow).toContain("bun run packages/desktop/scripts/build-workspace-dependencies.ts");
+    expect(workflow).toMatch(
+      /npm-publish:[\s\S]*?needs: \[verify-version, package-release-smoke, package\]/,
+    );
     expect(workflow).not.toContain("bun publish --cwd packages/");
     expect(releaseHelper).toContain("RELEASE_PACKAGES.map(packageManifestPath)");
     expect(releaseHelper).toContain("bun install --lockfile-only --ignore-scripts");

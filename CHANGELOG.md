@@ -144,6 +144,10 @@ breaking.
   resolves the agent stdio source subpath during typechecking, recognizes the
   packaged Chrome extension globals, and gives coverage tests the same timeout
   budget as the full suite.
+- Desktop packaging now derives its workspace build order from one tested list,
+  including the Web, Server, and Chat packages introduced by the monorepo
+  split. npm publication also waits for all three native installer jobs, so a
+  failed desktop package cannot leave a half-published release.
 - Addressed the latest core/desktop architecture review findings around stream
   routing, permission/session scoping, and event coalescing, reducing
   wrong-session routing, duplicated events, and hard-to-cancel operations in

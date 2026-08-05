@@ -50,7 +50,7 @@ jobs:
           bun run scripts/verify-release-versions.ts "$TAG"
 
   package-release-smoke:
-    name: package release smoke (nine tarballs)
+    name: package release smoke (ten tarballs)
     needs: verify-version
     if: ${{ always() && needs.verify-version.result != 'failure' }}
     runs-on: ubuntu-latest
@@ -75,7 +75,10 @@ jobs:
     name: publish npm packages
     # Only on a tag push — a workflow_dispatch run must not publish to npm.
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [verify-version, package-release-smoke]
+    # Publishing is irreversible, so wait for the package smoke AND all three
+    # native installer builds. This prevents a half-release where npm is live
+    # but the GitHub desktop release cannot be produced.
+    needs: [verify-version, package-release-smoke, package]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -171,34 +174,13 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
 
-      # Build every workspace package the desktop app bundles OR materializes.
-      # core: kept external in the main bundle and loaded at runtime (main
-      # process spawns it), so its dist must exist. cdp: imported by
-      # src/main/browser-driver/cdp-driver.ts and bundled INTO the main process
-      # (not external), so esbuild must resolve its dist at build time — without
-      # this the desktop build fails with `Could not resolve "@cjhyy/code-shell-cdp"`.
-      # pet + arena: NOT bundled, but predist.ts copies their dist into
-      # node_modules and throws when it is missing. They were absent here, so a
-      # clean checkout (their dist is not tracked by git either) died in predist.
-      # We deliberately do NOT run the root `bun run build` (which also builds
-      # tui): the desktop app doesn't use tui, and tui's build script uses
-      # `cp -r`, which the Windows runner's cp rejects ("illegal option -- r").
-      # predist.ts rebuilds these too; keeping them here means the `build desktop`
-      # step below (which runs first) can already resolve every import.
-      # link: bundled INTO the desktop main process, and its dist is not tracked
-      # by git — so a clean checkout fails the `build desktop` step below with
-      # `Could not resolve "@cjhyy/code-shell-link"`. predist rebuilds it too, but
-      # predist runs AFTER the desktop build, so it must also be built here.
-      # (Same shape as the cdp gap; keep this list in sync with
-      # packages/desktop/scripts/predist.ts's WORKSPACE_BUILD_ORDER.)
-      - name: build link + core + pet + arena + coding + cdp
-        run: |
-          bun run --filter '@cjhyy/code-shell-link' build
-          bun run --filter '@cjhyy/code-shell-core' build
-          bun run --filter '@cjhyy/code-shell-pet' build
-          bun run --filter '@cjhyy/code-shell-arena' build
-          bun run --filter '@cjhyy/code-shell-capability-coding' build
-          bun run --filter '@cjhyy/code-shell-cdp' build
+      # Build every workspace package the desktop app bundles or materializes.
+      # Keep one source of truth with predist so new package splits cannot leave
+      # clean release runners without a required dist directory. We deliberately
+      # do not run the root build because desktop does not ship TUI and its
+      # historical copy command is not portable to the Windows runner.
+      - name: build desktop workspace dependencies
+        run: bun run packages/desktop/scripts/build-workspace-dependencies.ts
 
       # Four desktop sub-builds (main / preload / renderer / mobile) → out/.
       - name: build desktop
