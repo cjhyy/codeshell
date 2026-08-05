@@ -257,6 +257,29 @@ describe("enrichPetChatReplyWithHostActions", () => {
     ]);
   });
 
+  test("keeps a post-launch host reply instead of a stale pre-launch GatewayReply", async () => {
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "任务已启动，正在处理。完成后我会在当前会话回复结果。",
+      [
+        {
+          kind: "gatewayReply",
+          payload: { text: "微信消息已发送。系统提示当前没有活跃任务，待命。" },
+          ok: true,
+          result: { text: "微信消息已发送。系统提示当前没有活跃任务，待命。" },
+        },
+      ],
+      {
+        qrDir: join(tmpdir(), "unused"),
+        authoritativeBaseText: true,
+      },
+    );
+
+    expect(enriched).toEqual({
+      text: "任务已启动，正在处理。完成后我会在当前会话回复结果。",
+      attachments: [],
+    });
+  });
+
   test("reports close and failure outcomes as plain text", async () => {
     const closed = await enrichPetChatReplyWithHostActions(
       "好的。",

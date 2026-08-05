@@ -2560,14 +2560,19 @@ async function dispatchGatewayPetChat(
     result.hostActions,
     {
       qrDir: resolve(app.getPath("userData"), "pet", "qr"),
+      authoritativeBaseText: Boolean(result.authoritativeReply),
       attachmentKinds: request.origin?.capabilities.outbound.attachments.filter(
         (kind): kind is "image" | "file" | "audio" | "video" =>
           ["image", "file", "audio", "video"].includes(kind),
       ),
     },
   );
+  const replacesGatewayTurn =
+    Boolean(result.authoritativeReply) ||
+    Boolean(result.hostActions?.some((execution) => execution.kind === "gatewayReply"));
   if (
-    result.hostActions?.some((execution) => execution.kind === "outboundMessage") &&
+    (replacesGatewayTurn ||
+      result.hostActions?.some((execution) => execution.kind === "outboundMessage")) &&
     petHostActionReceiptService
   ) {
     await completePetHostActionReceipt({
@@ -2575,8 +2580,14 @@ async function dispatchGatewayPetChat(
       input: {
         petSessionId: result.petSessionId,
         clientMessageId,
-        executions: result.hostActions,
+        executions: result.hostActions ?? [],
         authoritativeMessage: enriched.text,
+        ...(replacesGatewayTurn
+          ? {
+              replaceAssistant: true,
+              deliveryChannel: sourceChannel,
+            }
+          : {}),
       },
       publish: (receiptEvent) => {
         for (const window of BrowserWindow.getAllWindows()) {

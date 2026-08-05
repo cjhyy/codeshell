@@ -360,6 +360,76 @@ describe("registerPetIpc", () => {
     ]);
   });
 
+  test("replaces Mimi's stale post-tool text with the host-confirmed delegation launch", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const sent: Array<[string, unknown]> = [];
+    let recorded: unknown;
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      dispatcher: {
+        dispatch: async () => ({
+          ok: true,
+          type: "chat",
+          petSessionId: "pet-one",
+          result: { text: "任务已启动，正在处理。" },
+          authoritativeReply: "任务已启动，正在处理。",
+          delegation: {
+            clientMessageId: "client-one",
+            task: "download video",
+            workspacePath: "/work/project",
+            sessionId: "work-session",
+            reusedSession: false,
+          },
+        }),
+      },
+      hostActionReceipt: {
+        record: async (input) => {
+          recorded = input;
+          return {
+            message: "任务已启动，正在处理。",
+            replaceAssistant: true,
+          };
+        },
+      },
+      windows: () => [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+    });
+
+    await handlers.get("pet:dispatch")?.(
+      {},
+      { type: "chat", message: "download", clientMessageId: "client-one" },
+    );
+
+    expect(recorded).toMatchObject({
+      petSessionId: "pet-one",
+      clientMessageId: "client-one",
+      executions: [],
+      baseMessage: "任务已启动，正在处理。",
+      replaceAssistant: true,
+    });
+    expect(sent.at(-1)).toEqual([
+      "pet:chat-event",
+      expect.objectContaining({
+        kind: "host-action-completed",
+        clientMessageId: "client-one",
+        message: "任务已启动，正在处理。",
+        replaceAssistant: true,
+      }),
+    ]);
+  });
+
   test("persists and broadcasts the authoritative host-action receipt after chat", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const sent: Array<[string, unknown]> = [];

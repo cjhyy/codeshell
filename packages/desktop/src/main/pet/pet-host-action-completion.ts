@@ -12,6 +12,8 @@ export interface PetHostActionReceiptRecordInput {
   petSessionId: string;
   clientMessageId: string;
   executions: PetHostActionExecution[];
+  /** Trusted host text to use before rendering any host-action outcomes. */
+  baseMessage?: string;
   /**
    * A host-rendered final reply that is already authoritative for this route.
    * Gateway uses this for SendMessage so persistence, HTTP, and the Mimi UI all
@@ -53,9 +55,10 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
     const renderedMessage =
       input.authoritativeMessage === undefined
         ? (
-            await enrichPetChatReplyWithHostActions("", input.executions, {
+            await enrichPetChatReplyWithHostActions(input.baseMessage ?? "", input.executions, {
               qrDir: this.options.qrDir,
               attachmentKinds: [],
+              authoritativeBaseText: Boolean(input.baseMessage?.trim()),
             })
           ).text
         : input.authoritativeMessage;
@@ -63,7 +66,8 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
     if (!message) return null;
     const replaceAssistant =
       input.replaceAssistant ??
-      input.executions.some((execution) => execution.kind === "outboundMessage");
+      (Boolean(input.baseMessage?.trim()) ||
+        input.executions.some((execution) => execution.kind === "outboundMessage"));
     let deliveryChannel = input.deliveryChannel;
     if (!deliveryChannel) {
       const resultChannel = input.executions.find(

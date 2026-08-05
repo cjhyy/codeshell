@@ -80,6 +80,36 @@ describe("Pet host-action completion", () => {
     expect(events).toEqual([]);
   });
 
+  test("persists a host-authored delegation launch after rendering action outcomes", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-delegation-completion-"));
+    roots.push(root);
+    mkdirSync(join(root, "pet-one"));
+    const service = new PetHostActionReceiptService({
+      sessionsRootDir: root,
+      qrDir: join(root, "qr"),
+    });
+
+    const receipt = await service.record({
+      petSessionId: "pet-one",
+      clientMessageId: "im:wechat:delegation-one",
+      executions: [],
+      baseMessage: "任务已启动，正在处理。完成后我会在当前会话回复结果。",
+    });
+
+    expect(receipt).toEqual({
+      message: "任务已启动，正在处理。完成后我会在当前会话回复结果。",
+      replaceAssistant: true,
+    });
+    const rows = readFileSync(join(root, "pet-one", "transcript.jsonl"), "utf-8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(rows.at(-1)?.data).toMatchObject({
+      content: "任务已启动，正在处理。完成后我会在当前会话回复结果。",
+      clientMessageId: "pet-host-action-replace-im:wechat:delegation-one",
+    });
+  });
+
   test("persists a Gateway reply as the visible WeChat body with delivery metadata", async () => {
     const root = mkdtempSync(join(tmpdir(), "pet-gateway-completion-"));
     roots.push(root);

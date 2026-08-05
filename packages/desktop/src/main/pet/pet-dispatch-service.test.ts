@@ -232,7 +232,7 @@ describe("PetDispatchService", () => {
           return {
             ok: true,
             result: {
-              text: "已交给工作会话。",
+              text: "微信消息已发送。系统提示当前没有活跃任务，待命。",
               petWorkDelegation: {
                 workspaceId: workspace.id,
                 objective: "修复 CodeShell 登录问题",
@@ -265,6 +265,8 @@ describe("PetDispatchService", () => {
     ).toMatchObject({
       ok: true,
       type: "chat",
+      result: { text: "任务已启动，正在处理。完成后我会在当前会话回复结果。" },
+      authoritativeReply: "任务已启动，正在处理。完成后我会在当前会话回复结果。",
       delegation: {
         clientMessageId: "client-delegate",
         task: "修复 CodeShell 登录问题",
@@ -1260,7 +1262,7 @@ describe("PetDispatchService", () => {
     expect(started).toBe(false);
   });
 
-  test("keeps Mimi's chat reply but reports a delegationError when the Work Session cannot start", async () => {
+  test("replaces Mimi's launch claim and reports a delegationError when the Work Session cannot start", async () => {
     const service = new PetDispatchService({
       metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
       aggregator: {
@@ -1300,7 +1302,8 @@ describe("PetDispatchService", () => {
       ok: true,
       type: "chat",
       petSessionId: "pet-one",
-      result: { text: "已交给工作会话。" },
+      result: { text: "任务未能启动，请稍后重试。" },
+      authoritativeReply: "任务未能启动，请稍后重试。",
       delegationError: "Mimi failed to start the delegated Work Session: queue rejected",
     });
     expect(failedResult).not.toHaveProperty("delegation");

@@ -162,6 +162,12 @@ export type PetDispatchResult =
       type: "chat";
       petSessionId: string;
       result: unknown;
+      /**
+       * Host-authored reply produced only after DelegateWork launch outcomes
+       * are known. Consumers use this instead of the model's pre-launch status
+       * guess and persist it as a replacement in Mimi's visible transcript.
+       */
+      authoritativeReply?: string;
       delegation?: PetStartedDelegation;
       delegations?: PetStartedDelegation[];
       /**
@@ -590,6 +596,33 @@ export function formatPetLongTaskClosureMessage(task: PetLongTask): string {
         ? `任务已取消：${objective}`
         : `任务执行失败：${objective}`;
   return detail ? `${heading}\n\n${detail}` : heading;
+}
+
+function formatDelegationLaunchReply(
+  delegations: readonly PetStartedDelegation[],
+  requestedCount: number,
+  replyAtOrigin: boolean,
+): string | undefined {
+  if (requestedCount === 0) return undefined;
+  if (delegations.length === 0) return "任务未能启动，请稍后重试。";
+
+  const allStarted = delegations.length === requestedCount;
+  const allReused = delegations.every((delegation) => delegation.reusedSession);
+  const launch =
+    requestedCount === 1
+      ? allReused
+        ? "原任务已继续执行，正在处理。"
+        : "任务已启动，正在处理。"
+      : allStarted
+        ? `${delegations.length} 个任务已启动，正在处理。`
+        : `已启动 ${delegations.length} 个任务，另有 ${requestedCount - delegations.length} 个未能启动。`;
+  return replyAtOrigin && allStarted ? `${launch}完成后我会在当前会话回复结果。` : launch;
+}
+
+function replaceRunResultText(result: unknown, text: string): unknown {
+  return result && typeof result === "object" && !Array.isArray(result)
+    ? { ...(result as Record<string, unknown>), text }
+    : { text };
 }
 
 export class PetDispatchService {
@@ -1481,11 +1514,19 @@ export class PetDispatchService {
         // the real terminal signal and records work memory only after a worker
         // completion/failure/cancellation event is observed.
         const delegation = delegations[0];
+        const authoritativeReply = formatDelegationLaunchReply(
+          delegations,
+          resolvedDelegations.length,
+          Boolean(command.source?.target),
+        );
         return {
           ok: true,
           type: "chat",
           petSessionId: metadata.petSessionId,
-          result: response.result,
+          result: authoritativeReply
+            ? replaceRunResultText(response.result, authoritativeReply)
+            : response.result,
+          ...(authoritativeReply ? { authoritativeReply } : {}),
           ...(delegation ? { delegation } : {}),
           ...(delegations.length > 1 ? { delegations } : {}),
           ...(delegationError ? { delegationError } : {}),

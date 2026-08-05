@@ -47,6 +47,8 @@ export async function enrichPetChatReplyWithHostActions(
   options: {
     qrDir: string;
     attachmentKinds?: readonly ("image" | "file" | "audio" | "video")[];
+    /** A post-launch host reply wins over any pre-launch GatewayReply payload. */
+    authoritativeBaseText?: boolean;
   },
 ): Promise<HostActionReplyEnrichment> {
   if (!executions?.length) return { text: baseText.trim(), attachments: [] };
@@ -58,6 +60,7 @@ export async function enrichPetChatReplyWithHostActions(
   let gatewayReplyButton: { text: string; url: string } | undefined;
   let gatewayReplyFailed = false;
   for (const execution of executions) {
+    if (options.authoritativeBaseText && execution.kind === "gatewayReply") continue;
     if (!execution.ok) {
       if (execution.kind === "gatewayReply") gatewayReplyFailed = true;
       const label = HOST_ACTION_LABELS[execution.kind] ?? execution.kind;

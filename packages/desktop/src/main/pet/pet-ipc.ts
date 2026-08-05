@@ -398,13 +398,22 @@ export function registerPetIpc(options: {
               }
             }
           }
-          if (result.hostActions?.length && options.hostActionReceipt) {
+          if (
+            (result.authoritativeReply || result.hostActions?.length) &&
+            options.hostActionReceipt
+          ) {
             await completePetHostActionReceipt({
               recorder: options.hostActionReceipt,
               input: {
                 petSessionId: result.petSessionId,
                 clientMessageId: command.clientMessageId,
-                executions: result.hostActions,
+                executions: result.hostActions ?? [],
+                ...(result.authoritativeReply
+                  ? {
+                      baseMessage: result.authoritativeReply,
+                      replaceAssistant: true,
+                    }
+                  : {}),
               },
               publish: (receiptEvent) => {
                 for (const window of options.windows()) {
