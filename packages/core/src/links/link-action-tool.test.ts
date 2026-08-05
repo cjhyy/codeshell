@@ -275,7 +275,7 @@ describe("LinkAction tool", () => {
   test("does not offer an expired browser OAuth connection", async () => {
     const state = { connected: true, resolveCalls: 0 };
     const access = githubAccess(state);
-    const credential = access.listMasked(cwd)[0]!;
+    const credential = access.listMasked(cwd, "full")[0]!;
     access.listMasked = () => [
       {
         ...credential,
