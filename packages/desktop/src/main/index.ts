@@ -108,6 +108,7 @@ import {
   resolveProjectRoot,
 } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
+import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { availableExternalRuntimes } from "./external-runtime-availability.js";
@@ -3513,6 +3514,11 @@ ipcMain.on(
         return;
       }
       if (existingBucket !== bucket) {
+        // External runtimes intentionally own an isolated browser partition.
+        // A late renderer effect must never rebind it to the visible session
+        // bucket; ignore that stale registration instead of emitting a noisy
+        // error after the external runtime has already started successfully.
+        if (existingBucket === externalRuntimeBrowserBucket(sessionId)) return;
         throw new Error(
           `renderer attempted to rebind session ${sessionId} from ${existingBucket} to ${bucket}`,
         );
@@ -5053,7 +5059,7 @@ const CANDIDATE_DEV_PORTS = [
   3000, 3001, 4000, 5000, 5173, 5174, 6006, 7000, 8000, 8080, 8888, 9000, 1420, 1313,
 ];
 // ─── External Agent Runtimes (Codex / Claude Code) ────────────────
-// The renderer picks these like any other model (`codex/gpt-5.1`); these
+// The renderer picks these like any other model (`codex/gpt-5.6-sol`); these
 // handlers are what makes such a key actually run something.
 
 /** Which runtimes this machine can run — gates the model picker entries. */

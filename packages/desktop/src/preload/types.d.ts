@@ -1421,7 +1421,7 @@ export interface CodeshellApi {
    *  returns the open ports (ascending). */
   /**
    * External Agent Runtimes (Codex / Claude Code), selected from the ordinary
-   * model dropdown as `codex/gpt-5.1` — see shared/external-runtime-models.ts.
+   * model dropdown as `codex/gpt-5.6-sol` — see shared/external-runtime-models.ts.
    */
   externalRuntime: Readonly<{
     /** Runtime kinds whose binary is installed; empty when the flag is off. */

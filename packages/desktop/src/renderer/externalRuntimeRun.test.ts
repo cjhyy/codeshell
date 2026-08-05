@@ -28,7 +28,7 @@ function bridge(overrides: Partial<ExternalRuntimeBridge> = {}) {
   return { impl, starts, sends };
 }
 
-const base = { sessionId: "sess-1", cwd: "/tmp/project", modelKey: "codex/gpt-5.1" };
+const base = { sessionId: "sess-1", cwd: "/tmp/project", modelKey: "codex/gpt-5.6-sol" };
 
 beforeEach(() => resetExternalRuntimeSessions());
 
@@ -54,7 +54,10 @@ describe("runExternalRuntimeTurn", () => {
       text: "two",
       runtime: impl,
     });
-    expect(starts.map((s) => s.modelKey)).toEqual(["codex/gpt-5.1", "claude-code/sonnet"]);
+    expect(starts.map((s) => s.modelKey)).toEqual([
+      "codex/gpt-5.6-sol",
+      "claude-code/sonnet",
+    ]);
   });
 
   test("tracks sessions independently", async () => {

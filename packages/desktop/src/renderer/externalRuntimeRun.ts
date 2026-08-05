@@ -2,7 +2,7 @@
  * Running one turn on an external Agent Runtime (Codex / Claude Code).
  *
  * The renderer treats these exactly like a model choice: the user picks
- * `codex/gpt-5.1` from the ordinary dropdown and sends. This module is the only
+ * `codex/gpt-5.6-sol` from the ordinary dropdown and sends. This module is the only
  * place that knows the turn goes somewhere else, and it exists to make the
  * external path return the SAME shape as `window.codeshell.run`, so the caller's
  * bookkeeping — busy clearing, error surfacing, logging — stays shared.

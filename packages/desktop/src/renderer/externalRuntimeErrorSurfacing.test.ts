@@ -38,7 +38,7 @@ describe("external runtime failures surface to the user", () => {
     const result = await runExternalRuntimeTurn({
       sessionId: "sess-1",
       cwd: "/tmp/project",
-      modelKey: "codex/gpt-5.1",
+      modelKey: "codex/gpt-5.6-sol",
       text: "hi",
       runtime: {
         start: () => Promise.reject(new Error("codex: not logged in")),

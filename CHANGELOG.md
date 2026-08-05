@@ -8,6 +8,25 @@ breaking.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-08-05
+
+### Fixed
+
+- Restored Panel App session ownership and browser-bucket routing, including
+  external-runtime isolation, so panel tools no longer fail with an unregistered
+  session bucket or get rebound when switching conversations.
+- Qualified CodeShell MCP tools for Claude Code even when their names overlap
+  Claude built-ins such as `Read`, `Bash`, `Write`, and `Edit`.
+- Kept model choices local to each conversation, refreshed the Codex picker to
+  GPT-5.6 Sol/Terra/Luna, and migrated saved 0.8.0 GPT-5.1 selections to Sol.
+- Allowed registered Skill reference files under user and plugin Skill roots to
+  be read without a repeated sensitive-path approval, while retaining credential
+  and symlink-escape protections.
+- Replaced Mimi's stale "no active task" delivery text with the authoritative
+  Work Session launch result after delegation succeeds.
+- Kept the desktop pet visible when double-clicking it to open Mimi; the pet now
+  closes only through its right-click close action.
+
 ## [0.8.0] - 2026-08-05
 
 ### Added

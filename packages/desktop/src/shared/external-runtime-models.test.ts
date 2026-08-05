@@ -12,14 +12,15 @@ import {
   externalRuntimeModelEntries,
   externalRuntimeModelKey,
   isExternalRuntimeModelKey,
+  normalizeExternalRuntimeModelKey,
   parseExternalRuntimeModelKey,
 } from "./external-runtime-models.js";
 
 describe("external runtime model keys", () => {
   test("parses a runtime key into kind + model", () => {
-    expect(parseExternalRuntimeModelKey("codex/gpt-5.1")).toEqual({
+    expect(parseExternalRuntimeModelKey("codex/gpt-5.6-sol")).toEqual({
       kind: "codex",
-      model: "gpt-5.1",
+      model: "gpt-5.6-sol",
     });
     expect(parseExternalRuntimeModelKey("claude-code/sonnet")).toEqual({
       kind: "claude-code",
@@ -95,5 +96,24 @@ describe("external runtime model keys", () => {
       expect(parseExternalRuntimeModelKey(entry.key)?.kind).toBe(entry.kind);
       expect(entry.label.length).toBeGreaterThan(0);
     }
+  });
+
+  test("offers the current recommended Codex family instead of retired 5.1 entries", () => {
+    expect(EXTERNAL_RUNTIME_MODELS.codex.map(({ model }) => model)).toEqual([
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+    ]);
+    expect(EXTERNAL_RUNTIME_MODELS.codex.some(({ model }) => model.includes("5.1"))).toBe(false);
+  });
+
+  test("migrates saved 0.8.0 Codex choices to Sol", () => {
+    for (const legacy of ["gpt-5.1-codex-max", "gpt-5.1-codex", "gpt-5.1"]) {
+      const key = `codex/${legacy}`;
+      expect(normalizeExternalRuntimeModelKey(key)).toBe("codex/gpt-5.6-sol");
+      expect(parseExternalRuntimeModelKey(key)).toEqual({ kind: "codex", model: "gpt-5.6-sol" });
+    }
+    expect(normalizeExternalRuntimeModelKey("claude-code/opus")).toBe("claude-code/opus");
+    expect(normalizeExternalRuntimeModelKey("openai/gpt-5.1")).toBe("openai/gpt-5.1");
   });
 });

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync, statSync } from "node:fs";
+import { FIRST_PHASE_EXPOSURE } from "@cjhyy/code-shell-core/extension";
 import {
   buildClaudeMcpConfig,
   claudeAllowedToolNames,
@@ -78,17 +79,32 @@ describe("claude-code MCP config", () => {
     ]);
   });
 
-  test.each(["Bash", "Write", "Edit", "Read", "Bash(git *)", "*"])(
-    "refuses to pre-approve the built-in tool %p",
-    (name) => {
-      // `--allowed-tools` is a GRANT, measured: `--allowed-tools Write` writes a
-      // file with no approval prompt, while omitting the flag blocks it. A
-      // built-in name reaching this list would hand the untrusted runtime an
-      // unapproved tool, and the exposure allowlist would NOT help — it governs
-      // the MCP surface, not Claude Code's own tools.
-      expect(() => claudeAllowedToolNames([name])).toThrow(/GRANT|ToolExecutor/i);
-    },
-  );
+  test("qualifies CodeShell tools that share names with Claude built-ins", () => {
+    // The qualified names grant only the CodeShell MCP alternatives. Claude's
+    // bare built-ins keep following Claude Code's own permission flow.
+    expect(claudeAllowedToolNames(["Read", "Bash", "Write", "Edit"])).toEqual([
+      "mcp__codeshell_tools__Read",
+      "mcp__codeshell_tools__Bash",
+      "mcp__codeshell_tools__Write",
+      "mcp__codeshell_tools__Edit",
+    ]);
+  });
+
+  test.each(["Bash(git *)", "*"])("refuses malformed or wildcard grant %p", (name) => {
+    expect(() => claudeAllowedToolNames([name])).toThrow(/GRANT|ToolExecutor/i);
+  });
+
+  test("the complete first-phase exposure can be passed to Claude Code", () => {
+    const built = claudeBridgeArgs({
+      bridge,
+      exposedToolNames: FIRST_PHASE_EXPOSURE.toolNames,
+    });
+    cleanups.push(built.cleanup);
+    const allowed = built.args[built.args.indexOf("--allowed-tools") + 1]!.split(",");
+    expect(allowed).toHaveLength(FIRST_PHASE_EXPOSURE.toolNames.size);
+    expect(allowed.every((name) => name.startsWith("mcp__codeshell_tools__"))).toBe(true);
+    expect(allowed).toContain("mcp__codeshell_tools__Read");
+  });
 
   test("an already-qualified name is refused rather than passed through", () => {
     // Accepting a pre-qualified name would let a caller pre-approve a tool on a

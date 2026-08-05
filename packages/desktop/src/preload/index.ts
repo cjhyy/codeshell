@@ -1493,7 +1493,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     > => ipcRenderer.invoke("credentials:loginCapture", req),
   },
   // ── External Agent Runtimes (Codex / Claude Code) ───────────────────────
-  // Picked from the ordinary model dropdown as `codex/gpt-5.1` etc. The
+  // Picked from the ordinary model dropdown as `codex/gpt-5.6-sol` etc. The
   // renderer never learns there is a separate backend beyond routing a send.
   externalRuntime: {
     /** Runtime kinds whose binary is installed. Empty when the flag is off. */

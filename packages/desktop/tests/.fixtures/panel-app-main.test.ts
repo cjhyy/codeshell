@@ -881,6 +881,7 @@ describe("PanelAppBridge", () => {
     // run. Completion arrives over the session stream, NOT this RPC — so a
     // long-running agent must never block or time out the Panel App call.
     let workerParams: Record<string, unknown> | undefined;
+    let ownerClaim: { sessionId: string; webContentsId: number } | undefined;
     const neverSettles = new Promise<never>(() => undefined);
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,
@@ -891,6 +892,9 @@ describe("PanelAppBridge", () => {
           requestWorker: async (_method: string, params: Record<string, unknown>) => {
             workerParams = params;
             return neverSettles; // agent still running when the Host call returns
+          },
+          claimSessionPanelOwner: (sessionId: string, webContentsId: number) => {
+            ownerClaim = { sessionId, webContentsId };
           },
           ingestExternalEvent: () => undefined,
         }) as any,
@@ -916,6 +920,7 @@ describe("PanelAppBridge", () => {
     // A stable, panel-scoped id is what makes the submission idempotent upstream.
     expect(accepted.clientMessageId).toStartWith("panel:");
     expect(workerParams?.task).toBe("do the thing");
+    expect(ownerClaim).toEqual({ sessionId: "session-1", webContentsId: 1 });
   });
 
   test("agent.submitPrompt rejects a second submit while the first is in flight", async () => {
@@ -935,6 +940,7 @@ describe("PanelAppBridge", () => {
             runsStarted += 1;
             return neverSettles;
           },
+          claimSessionPanelOwner: () => undefined,
           ingestExternalEvent: () => undefined,
         }) as any,
     });
@@ -974,6 +980,7 @@ describe("PanelAppBridge", () => {
             runsStarted += 1;
             return { ok: false, message: "worker exited" };
           },
+          claimSessionPanelOwner: () => undefined,
           ingestExternalEvent: () => undefined,
         }) as any,
     });
@@ -1012,6 +1019,7 @@ describe("PanelAppBridge", () => {
       getAgentBridge: () =>
         ({
           requestWorker: async () => ({ ok: false, message: "worker exited" }),
+          claimSessionPanelOwner: () => undefined,
           ingestExternalEvent: (sessionId: string, event: unknown) =>
             ingested.push({ sessionId, event }),
         }) as any,

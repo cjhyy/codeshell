@@ -78,6 +78,7 @@ import {
 } from "./agent-bridge-fallback.js";
 import { QuickChatForkRouter, type QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-run-metadata.js";
+import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
@@ -112,17 +113,6 @@ export function resolveNoRepoCwd(): string {
     /* best-effort */
   }
   return dir;
-}
-
-/**
- * The browser bucket for an externally-driven session.
- *
- * Per-session rather than the renderer's active bucket: buckets select a
- * browser partition, so reusing the user's would put the runtime's automation
- * in the same cookie jar and login state as the tab they are looking at.
- */
-function externalRuntimeBrowserBucket(sessionId: string): string {
-  return `external-runtime:${sessionId}`;
 }
 
 /**

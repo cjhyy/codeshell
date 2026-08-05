@@ -7,9 +7,9 @@
  * `codex app-server`.
  *
  * So the runtime is encoded INTO the model key, the way the cindy reference
- * implementation does it (`codex/gpt-5.5`):
+ * implementation does it (`codex/gpt-5.6-sol`):
  *
- *     codex/gpt-5.5            → CodexRuntime,      model gpt-5.5
+ *     codex/gpt-5.6-sol        → CodexRuntime,      model gpt-5.6-sol
  *     claude-code/sonnet       → ClaudeCodeRuntime, model sonnet
  *     <anything without "/">   → native Engine, unchanged
  *
@@ -34,10 +34,26 @@ export const EXTERNAL_RUNTIME_PROVIDERS: Readonly<Record<ExternalRuntimeModelKin
 
 const PREFIXES: readonly ExternalRuntimeModelKind[] = ["codex", "claude-code"];
 
+/** 0.8.0 shipped these stale picker values; keep saved sessions usable after upgrade. */
+const LEGACY_CODEX_MODELS: Readonly<Record<string, string>> = Object.freeze({
+  "gpt-5.1-codex-max": "gpt-5.6-sol",
+  "gpt-5.1-codex": "gpt-5.6-sol",
+  "gpt-5.1": "gpt-5.6-sol",
+});
+
 export interface ParsedExternalRuntimeModel {
   kind: ExternalRuntimeModelKind;
   /** The runtime-specific model id, or undefined to let the runtime decide. */
   model?: string;
+}
+
+/** Normalize persisted 0.8.0 runtime keys without touching native model keys. */
+export function normalizeExternalRuntimeModelKey(key: string): string {
+  const prefix = "codex/";
+  if (!key.startsWith(prefix)) return key;
+  const model = key.slice(prefix.length).trim();
+  const replacement = LEGACY_CODEX_MODELS[model];
+  return replacement ? `${prefix}${replacement}` : key;
 }
 
 /**
@@ -54,6 +70,7 @@ export function parseExternalRuntimeModelKey(
   key: string | null | undefined,
 ): ParsedExternalRuntimeModel | null {
   if (!key) return null;
+  key = normalizeExternalRuntimeModelKey(key);
   for (const kind of PREFIXES) {
     const prefix = `${kind}/`;
     if (!key.startsWith(prefix)) continue;
@@ -86,9 +103,9 @@ export const EXTERNAL_RUNTIME_MODELS: Readonly<
   Record<ExternalRuntimeModelKind, readonly { model: string; label: string }[]>
 > = Object.freeze({
   codex: Object.freeze([
-    { model: "gpt-5.1-codex-max", label: "Codex · GPT-5.1 Codex Max" },
-    { model: "gpt-5.1-codex", label: "Codex · GPT-5.1 Codex" },
-    { model: "gpt-5.1", label: "Codex · GPT-5.1" },
+    { model: "gpt-5.6-sol", label: "Codex · GPT-5.6 Sol" },
+    { model: "gpt-5.6-terra", label: "Codex · GPT-5.6 Terra" },
+    { model: "gpt-5.6-luna", label: "Codex · GPT-5.6 Luna" },
   ]),
   "claude-code": Object.freeze([
     { model: "opus", label: "Claude Code · Opus" },

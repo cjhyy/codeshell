@@ -46,6 +46,7 @@ interface ChatProps {
   permissionMode: PermissionMode | null;
   activeModelKey: string | null;
   onPermissionChange: (mode: PermissionMode) => void;
+  onModelChange: (option: ModelOption) => void;
   onDraftChange: (text: string) => void;
   onSend: (text: string, opts?: { bucket?: string }) => Promise<void> | void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
@@ -179,6 +180,7 @@ mock.module("./shell/SessionSearchModal", () => ({
   SessionSearchModal: () => <div data-testid="session-search" />,
 }));
 mock.module("./assets/codeshell-dog-icon.png", () => ({ default: "dog.png" }));
+mock.module("./petSprite", () => ({ usePetSprite: () => "dog.png" }));
 
 const { App } = await import("./App");
 
@@ -243,6 +245,7 @@ let forkSessionCalls: Array<Record<string, unknown>> = [];
 let getSessionTranscriptCalls: string[] = [];
 let runCalls: Array<{ prompt: string; opts: Record<string, unknown> }> = [];
 let markAttachmentsSentCalls: Array<Record<string, unknown>> = [];
+let browserSessionRegistrations: Array<Record<string, unknown>> = [];
 
 function restoreGlobalProperty(
   key: "localStorage" | "window",
@@ -257,10 +260,12 @@ function restoreGlobalProperty(
 
 function seedApp(options: {
   withNormalSession: boolean;
+  withSecondSession?: boolean;
   panelTabs: Array<{ id: string; kind: string }>;
   sidebarCollapsed?: boolean;
   startInDraft?: boolean;
   savedTranscript?: Record<string, unknown>;
+  modelOverrides?: Record<string, string>;
 }): string {
   const hasActiveSession = options.withNormalSession && !options.startInDraft;
   const bucket = hasActiveSession ? "repoA::session-a" : "repoA::_none_";
@@ -290,6 +295,17 @@ function seedApp(options: {
               createdAt: 1,
               updatedAt: 2,
             },
+            ...(options.withSecondSession
+              ? [
+                  {
+                    id: "session-b",
+                    engineSessionId: "engine-b",
+                    title: "Session B",
+                    createdAt: 1,
+                    updatedAt: 1,
+                  },
+                ]
+              : []),
           ]
         : [],
     }),
@@ -308,6 +324,9 @@ function seedApp(options: {
       JSON.stringify(options.savedTranscript),
     );
   }
+  if (options.modelOverrides) {
+    localStorageMock.setItem("codeshell.overrides.model", JSON.stringify(options.modelOverrides));
+  }
   return bucket;
 }
 
@@ -320,6 +339,7 @@ function installCodeshellStub(
     nextSeq: 1,
   }),
   goalGet: (sessionId: string) => Promise<any> = async () => ({ ok: true, goal: null }),
+  getSettings: () => Promise<Record<string, unknown>> = async () => ({}),
 ): void {
   const unsubscribe = () => undefined;
   const project = { path: "/tmp/repo-a", name: "Repo A", addedAt: 1 };
@@ -342,11 +362,16 @@ function installCodeshellStub(
     },
     noRepoCwd: async () => "/tmp",
     configure: async () => undefined,
+    externalRuntime: {
+      available: async () => [],
+    },
     markAttachmentsSent: async (payload: Record<string, unknown>) => {
       markAttachmentsSentCalls.push(payload);
       return { ok: true };
     },
-    registerBrowserSessionBucket: () => undefined,
+    registerBrowserSessionBucket: (payload: Record<string, unknown>) => {
+      browserSessionRegistrations.push(payload);
+    },
     setGitPrefs: async () => undefined,
     getGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
     getGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
@@ -423,7 +448,8 @@ function installCodeshellStub(
     onBrowserAnchorUpdateFromPopout: () => unsubscribe,
     syncBrowserAnchors: () => undefined,
     onMenuEvent: () => unsubscribe,
-    getSettings: async () => ({}),
+    getSettings,
+    updateSettings: async () => undefined,
     getModelCatalog: async () => [],
     resolveModelMeta: async () => [],
     setBadgeCount: async () => undefined,
@@ -442,15 +468,18 @@ async function flushApp(waitMs = 0): Promise<void> {
 
 async function mountApp(options: {
   withNormalSession: boolean;
+  withSecondSession?: boolean;
   panelTabs: Array<{ id: string; kind: string }>;
   sidebarCollapsed?: boolean;
   startInDraft?: boolean;
   savedTranscript?: Record<string, unknown>;
+  modelOverrides?: Record<string, string>;
   listDiskSessions?: () => Promise<any>;
   forkSession?: (params: Record<string, unknown>) => Promise<any>;
   getSessionTranscript?: (sessionId: string) => Promise<any>;
   subscribeSession?: (sessionId: string, sinceSeq?: number) => Promise<any>;
   goalGet?: (sessionId: string) => Promise<any>;
+  settings?: Record<string, unknown>;
 }): Promise<string> {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -482,6 +511,7 @@ async function mountApp(options: {
     options.getSessionTranscript,
     options.subscribeSession,
     options.goalGet,
+    async () => options.settings ?? {},
   );
   container = document.createElement("div");
   root = createRoot(container);
@@ -552,6 +582,7 @@ afterEach(async () => {
   getSessionTranscriptCalls = [];
   runCalls = [];
   markAttachmentsSentCalls = [];
+  browserSessionRegistrations = [];
   chatProps = null;
   sidebarProps = null;
   quickChatProps.clear();
@@ -562,6 +593,63 @@ afterEach(async () => {
 });
 
 describe("App quick-chat integration", () => {
+  test("does not rebind an external runtime session to the renderer browser bucket", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      modelOverrides: { "repoA::session-a": "codex/gpt-5.6-sol" },
+    });
+
+    expect(chatProps?.activeModelKey).toBe("codex/gpt-5.6-sol");
+    expect(browserSessionRegistrations).toEqual([]);
+  });
+
+  test("migrates a saved 0.8.0 Codex model before rendering or sending", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      modelOverrides: { "repoA::session-a": "codex/gpt-5.1-codex-max" },
+    });
+
+    expect(chatProps?.activeModelKey).toBe("codex/gpt-5.6-sol");
+    expect(
+      JSON.parse(localStorageMock.getItem("codeshell.overrides.model") ?? "{}"),
+    ).toEqual({ "repoA::session-a": "codex/gpt-5.6-sol" });
+  });
+
+  test("keeps a main-composer model change local to its session", async () => {
+    await mountApp({
+      withNormalSession: true,
+      withSecondSession: true,
+      panelTabs: [],
+      sidebarCollapsed: false,
+      settings: { defaults: { text: "default-model" } },
+    });
+    if (!chatProps || !sidebarProps) throw new Error("main chat controls were not rendered");
+    expect(chatProps.activeModelKey).toBe("default-model");
+
+    await act(async () => {
+      chatProps?.onModelChange({
+        key: "session-a-model",
+        label: "Session A model",
+        provider: "test",
+      });
+      await flushMicrotasks();
+    });
+    expect(chatProps?.activeModelKey).toBe("session-a-model");
+
+    await act(async () => {
+      sidebarProps?.onSelectSession("repoA", "session-b");
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    expect(chatProps?.sendBucket).toBe("repoA::session-b");
+    expect(chatProps?.activeModelKey).toBe("default-model");
+    expect(JSON.parse(localStorageMock.getItem("codeshell.overrides.model") ?? "{}"))
+      .toEqual({ "repoA::session-a": "session-a-model" });
+  });
+
   test("moves same-tick composer callbacks to the draft bucket when starting a new conversation", async () => {
     await mountApp({
       withNormalSession: true,

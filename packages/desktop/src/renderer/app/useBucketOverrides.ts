@@ -2,6 +2,16 @@ import { useEffect, useState } from "react";
 
 import type { PermissionMode } from "../chat/PermissionPill";
 import { loadOverrideMap, saveOverrideMap } from "../transcripts";
+import { normalizeExternalRuntimeModelKey } from "../../shared/external-runtime-models";
+
+function loadModelOverrides(): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(loadOverrideMap<string>("model")).map(([bucket, key]) => [
+      bucket,
+      normalizeExternalRuntimeModelKey(key),
+    ]),
+  );
+}
 
 /** Bucket-scoped renderer preferences with their localStorage projection. */
 export function useBucketOverrides(): {
@@ -17,9 +27,7 @@ export function useBucketOverrides(): {
   const [permissionOverrides, setPermissionOverrides] = useState<
     Record<string, PermissionMode>
   >(() => loadOverrideMap<PermissionMode>("permission"));
-  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>(() =>
-    loadOverrideMap<string>("model"),
-  );
+  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>(loadModelOverrides);
   const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>(() =>
     loadOverrideMap<boolean>("goal"),
   );

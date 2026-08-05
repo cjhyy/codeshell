@@ -28,31 +28,6 @@ export const CLAUDE_MCP_SERVER_NAME = "codeshell_tools";
 /** `mcp__<server>__<tool>` — the only shape that may reach `--allowed-tools`. */
 const MCP_TOOL_NAME = /^mcp__[a-z0-9_]+__[A-Za-z0-9_]+$/;
 
-/**
- * Claude Code's own built-in tools. They share the plain-identifier shape with
- * CodeShell tool names, so shape validation alone cannot separate them — and
- * pre-approving one of these grants the untrusted runtime an unapproved built-in.
- * Over-inclusive on purpose: a false positive is a loud error at a call site, a
- * false negative is a silent capability grant.
- */
-const CLAUDE_BUILTIN_TOOL_NAMES: ReadonlySet<string> = new Set([
-  "Agent",
-  "Bash",
-  "BashOutput",
-  "Edit",
-  "ExitPlanMode",
-  "Glob",
-  "Grep",
-  "KillShell",
-  "NotebookEdit",
-  "Read",
-  "Task",
-  "TodoWrite",
-  "WebFetch",
-  "WebSearch",
-  "Write",
-]);
-
 export interface ClaudeMcpConfigOptions {
   bridge: McpBridgeHandle;
   serverName?: string;
@@ -126,17 +101,15 @@ export function writeClaudeMcpConfigFile(options: ClaudeMcpConfigOptions): Claud
  *
  * Safety therefore rests on ONE property, enforced below rather than assumed:
  * every emitted name is `mcp__<server>__<tool>`, which routes to CodeShell's own
- * `ToolExecutor` and exposure policy. A bare `Bash` or `Write` reaching this list
- * would grant the untrusted runtime an unapproved built-in tool, and the exposure
- * allowlist would not help — it governs the MCP surface, not Claude Code's own
- * tools.
+ * `ToolExecutor` and exposure policy. CodeShell deliberately exposes governed
+ * alternatives named `Read`, `Bash`, `Write`, and `Edit`; after qualification
+ * these become `mcp__codeshell_tools__Read`, etc. They do not pre-approve Claude
+ * Code's bare built-ins with the same names.
  *
- * Note what is NOT done here: auto-prefixing. Turning `"Bash"` into
- * `mcp__codeshell_tools__Bash` would make every input "valid" and defeat the
- * check — the first version of this function did exactly that. A CodeShell tool
- * name is a plain identifier, so it must be a plain identifier, and anything that
- * looks like a built-in-tool pattern (`Bash(git *)`, `*`) or is already qualified
- * for a different server is a programming error.
+ * The function accepts only plain tool identifiers sourced from the exposed
+ * CodeShell registry, then adds the MCP namespace itself. Anything that looks
+ * like a Claude permission pattern (`Bash(git *)`, `*`) or is already qualified
+ * for another server is a programming error and is rejected.
  */
 export function claudeAllowedToolNames(
   toolNames: Iterable<string>,
@@ -159,11 +132,6 @@ export function claudeAllowedToolNames(
     // from the shape test above: `mcp__other__Thing` is a valid identifier.)
     if (name.startsWith("mcp__")) {
       return reject(name, "already qualified — pass a plain CodeShell tool name");
-    }
-    // Claude Code's own built-ins share the identifier shape, so shape alone is
-    // not enough — these must never be pre-approved through this path.
-    if (CLAUDE_BUILTIN_TOOL_NAMES.has(name)) {
-      return reject(name, "this is a Claude Code built-in tool, not a CodeShell tool");
     }
     const qualified = `mcp__${serverName}__${name}`;
     if (!MCP_TOOL_NAME.test(qualified)) return reject(name, "does not qualify as an MCP tool name");

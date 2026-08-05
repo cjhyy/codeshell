@@ -5,7 +5,7 @@ export const panelAppElectronMock = {
   ipcHandlers: new Map<string, (event: { sender: any }, ...args: any[]) => unknown>(),
   ipcListeners: new Map<string, (event: { sender: any }, ...args: any[]) => void>(),
   trustedSender: { id: 1 },
-  ownerWindow: { id: 10, isDestroyed: () => false },
+  ownerWindow: { id: 10, isDestroyed: () => false, webContents: { id: 1 } },
   userDataPath: "/tmp/codeshell-panel-app-test",
   dialogResponse: 1,
   openedUrls: [] as string[],

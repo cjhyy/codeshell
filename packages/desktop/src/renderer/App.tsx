@@ -58,8 +58,6 @@ import { resolveAttachmentSessionId } from "./attachmentSession";
 import { buildPathAttachment, sha256FromDataUrl, type ImageAttachment } from "./chat/attachments";
 import { findAskUserOrigin } from "./streamRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
-import { persistDefaultTextModel } from "./modelSelection";
-import { writeSettings } from "./settingsBus";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type {
   ApprovalRequestEnvelope,
@@ -99,6 +97,8 @@ import { copyContextPackageOverrides } from "./contextSelection";
 import type { ModelOption } from "./chat/ModelPill";
 import {
   externalRuntimeModelEntries,
+  isExternalRuntimeModelKey,
+  normalizeExternalRuntimeModelKey,
   type ExternalRuntimeModelKind,
 } from "../shared/external-runtime-models";
 import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
@@ -222,10 +222,8 @@ function App() {
   /** Cmd+P / sidebar 搜索 — cross-project session picker (modal). */
   const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
   // The GLOBAL default model — the choice that seeds *new* sessions. Lives in
-  // settings.defaults.text (unified catalog). A per-session switch updates this
-  // default too (so the next 新对话 inherits it), but it must NOT retroactively
-  // drag existing sessions onto a different model — that's what `modelOverrides`
-  // is for.
+  // settings.defaults.text (unified catalog). Composer changes are session-local;
+  // users change this global default explicitly in Settings.
   const [defaultActiveModelKey, setDefaultActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
@@ -318,13 +316,13 @@ function App() {
   activeBucketRef.current = activeBucket;
   quickChatSessionsRef.current = quickChatSessions;
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!activeSessionId || isExternalRuntimeModelKey(activeModelKey)) return;
     window.codeshell.registerBrowserSessionBucket({
       sessionId: activeSessionId,
       bucket: activeBucket,
       partition: browserPartitionForBucket(activeBucket),
     });
-  }, [activeBucket, activeSessionId]);
+  }, [activeBucket, activeModelKey, activeSessionId]);
   const composerDraft = composerDrafts[activeBucket] ?? {
     text: "",
     attachments: EMPTY_ATTACHMENTS,
@@ -1421,7 +1419,10 @@ function App() {
         // as fallback for un-migrated configs.
         const catalog = await window.codeshell.getModelCatalog().catch(() => []);
         if (cancelled) return;
-        setDefaultActiveModelKey(resolveActiveKey(merged));
+        const configuredDefault = resolveActiveKey(merged);
+        setDefaultActiveModelKey(
+          configuredDefault ? normalizeExternalRuntimeModelKey(configuredDefault) : null,
+        );
         const permissions =
           merged.permissions && typeof merged.permissions === "object"
             ? (merged.permissions as Record<string, unknown>)
@@ -1437,7 +1438,7 @@ function App() {
         const conns = Array.isArray(merged.modelConnections)
           ? (merged.modelConnections as ModelInstance[])
           : [];
-        // External Agent Runtimes appear as ordinary models (`codex/gpt-5.1`),
+        // External Agent Runtimes appear as ordinary models (`codex/gpt-5.6-sol`),
         // so picking Codex is the same gesture as picking any other model. Only
         // runtimes whose binary is actually installed are listed — an entry the
         // machine cannot run would fail on send and read as a broken feature.
@@ -1583,7 +1584,7 @@ function App() {
   };
 
   const onModelChange = (opt: ModelOption): void => {
-    // 1) Pin the choice to THIS session's bucket. The pill reads
+    // Pin the choice to THIS session's bucket. The pill reads
     //    `modelOverrides[activeBucket] ?? defaultActiveModelKey`, so this is
     //    what makes the switch local — other sessions keep their own model.
     setModelOverrides((prev) => ({ ...prev, [activeBucket]: opt.key }));
@@ -1600,16 +1601,7 @@ function App() {
         singleTurnCacheCreationTokens: 0,
       } as StreamEvent,
     });
-    // 2) Also adopt it as the global default so the NEXT 新对话 inherits it
-    //    (user-chosen semantics). This only seeds future sessions; it never
-    //    rewrites another bucket's existing override above.
-    setDefaultActiveModelKey(opt.key);
-    void persistDefaultTextModel({
-      key: opt.key,
-      getSettings: window.codeshell.getSettings,
-      writeSettings,
-    });
-    // 3) Hot-switch the running worker. Scope it to THIS session's engine so
+    // Hot-switch the running worker. Scope it to THIS session's engine so
     //    we don't swap the model under any OTHER live session. The backend
     //    (server.ts handleConfigure) routes a sessionId'd configure to
     //    ChatSession.requestModelSwitch (applies when idle, defers past a
