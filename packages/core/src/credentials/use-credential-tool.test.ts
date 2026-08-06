@@ -267,6 +267,10 @@ describe("UseCredential tool", () => {
 
   test("dynamic def lists available credentials; base when empty", () => {
     expect(useCredentialToolDefFor(cwd).description).toBe(useCredentialToolDef.description);
+    expect(useCredentialToolDef.description).toContain(
+      "Prefer this tool over reading a browser credential store",
+    );
+    expect(useCredentialToolDef.description).toContain("Before `--cookies-from-browser`");
     new CredentialStore(cwd).save("user", {
       id: "figma",
       type: "token",

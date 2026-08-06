@@ -34,8 +34,11 @@ const TOOL_NAME = "UseCredential";
 
 const BASE_DESCRIPTION =
   "Use a stored credential (token / API key / login cookie) to run a command. " +
-  "Call with NO arguments first to list available credentials (id + label + type); " +
-  "then call again with `id` to fetch one. Token/link credentials return their secret " +
+  "Prefer this tool over reading a browser credential store, asking the user to log in again, " +
+  "or manually exporting credentials. Before `--cookies-from-browser` or retrying an " +
+  "authentication failure, check stored credentials here. If `Currently available` names a " +
+  "matching id, fetch it directly; otherwise call with NO arguments first to list available " +
+  "credentials (id + label + type), then call again with `id`. Token/link credentials return their secret " +
   "value; cookie credentials are materialized to a temporary Netscape cookies.txt file " +
   "(use it as `yt-dlp --cookies <cookiesFile>` / `curl -b <cookiesFile>`). " +
   "Each use is gated by a quick user approval unless auto-approve is on.";
