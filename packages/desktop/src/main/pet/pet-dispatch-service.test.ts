@@ -922,7 +922,7 @@ describe("PetDispatchService", () => {
     ]);
   });
 
-  test("reuses the matching recent Work Session when Mimi omits session_id for the same URL", async () => {
+  test("creates a new Work Session when Mimi omits session_id even for the same URL", async () => {
     const starts: unknown[] = [];
     const videoUrl = "https://youtu.be/TBVjqvueeCo";
     const service = new PetDispatchService({
@@ -983,7 +983,10 @@ describe("PetDispatchService", () => {
       },
       startWorkSession: async (delegation) => {
         starts.push(delegation);
-        return { sessionId: delegation.targetSessionId!, cwd: delegation.workspacePath! };
+        return {
+          sessionId: delegation.targetSessionId ?? "work-new-video",
+          cwd: delegation.workspacePath!,
+        };
       },
     });
 
@@ -996,13 +999,14 @@ describe("PetDispatchService", () => {
     ).toMatchObject({
       ok: true,
       type: "chat",
-      delegation: { sessionId: "work-video", reusedSession: true },
+      delegation: { sessionId: "work-new-video", reusedSession: false },
     });
     expect(starts).toEqual([
-      expect.objectContaining({
-        targetSessionId: "work-video",
+      {
+        clientMessageId: "client-video-retry",
+        task: `继续下载同一个视频：${videoUrl}，代理已经打开。`,
         workspacePath: "/work/downloads",
-      }),
+      },
     ]);
   });
 

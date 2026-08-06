@@ -20,6 +20,9 @@ export const delegateWorkToolDef: ToolDefinition = {
   description:
     "Delegate one execution objective to exactly one host-provided Workspace. " +
     "Use only as Mimi after deciding that the user's request requires execution. " +
+    "Before calling, decide whether this is the same concrete work thread as one reusable Session. " +
+    "Pass session_id only for a clear continuation; omit it to create a new Session. " +
+    "A shared Workspace, URL, filename, entity, or broad topic alone does not prove continuity. " +
     "workspace_id must be copied exactly from the available Workspace list.",
   inputSchema: {
     type: "object",
@@ -41,7 +44,8 @@ export const delegateWorkToolDef: ToolDefinition = {
       },
       session_id: {
         type: "string",
-        description: "Optional exact id from the reusable Session list.",
+        description:
+          "Optional exact id from the reusable Session list. Pass it only after deciding this objective clearly continues that Session; omit it for new or uncertain work. The host never infers an omitted id.",
       },
     },
     required: ["workspace_id", "objective"],
@@ -119,7 +123,8 @@ export function delegateWorkToolDefFor(
               session_id: {
                 type: "string",
                 enum: sessions.map((session) => session.id),
-                description: "Optional exact id from the reusable Session list.",
+                description:
+                  "Optional exact id from the reusable Session list. Pass it only for a clear continuation of the same concrete work thread; omit it to create a new Session. The host never infers an omitted id.",
               },
             }
           : {}),

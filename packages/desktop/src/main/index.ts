@@ -3825,8 +3825,8 @@ ipcMain.handle("plugins:uninstallLocal", async (_e, name: string) => {
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });
-ipcMain.handle("plugins:update", async (_e, name: string) => {
-  const result = await updatePluginEntry(name);
+ipcMain.handle("plugins:update", async (_e, installKey: string) => {
+  const result = await updatePluginEntry(installKey);
   broadcastPluginCommandsChanged(mainWindows);
   return result;
 });

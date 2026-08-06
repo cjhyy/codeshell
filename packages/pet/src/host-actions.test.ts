@@ -352,6 +352,18 @@ describe("host-action envelope validation", () => {
 });
 
 describe("pet profile host-action integration", () => {
+  test("requires Mimi to decide semantically between Session reuse and creation", () => {
+    expect(PET_SYSTEM_PROMPT).toContain(
+      "decide whether the execution belongs to an existing Session or needs a new one",
+    );
+    expect(PET_SYSTEM_PROMPT).toContain(
+      "A matching Workspace, URL, filename, entity, or broad topic is only a clue",
+    );
+    expect(PET_SYSTEM_PROMPT).toContain(
+      "The host will not infer a Session when session_id is omitted",
+    );
+  });
+
   test("tells Mimi that host-mediated attachment replies are real channel sends", () => {
     expect(PET_SYSTEM_PROMPT).toContain("you MUST call GatewayReply exactly once");
     expect(PET_SYSTEM_PROMPT).toContain("two progressive tool levels");

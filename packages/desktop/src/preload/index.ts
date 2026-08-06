@@ -1149,7 +1149,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   uninstallPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:uninstall", pluginName, marketplaceName),
   uninstallLocalPlugin: (name: string) => ipcRenderer.invoke("plugins:uninstallLocal", name),
-  updatePlugin: (name: string) => ipcRenderer.invoke("plugins:update", name),
+  updatePlugin: (installKey: string) => ipcRenderer.invoke("plugins:update", installKey),
   checkPluginUpdate: (name: string) => ipcRenderer.invoke("plugins:checkUpdate", name),
   // Theme packs (installable pet/color/wallpaper packs).
   listInstalledThemes: () => ipcRenderer.invoke("themes:list") as Promise<InstalledThemePack[]>,

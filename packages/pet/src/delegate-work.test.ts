@@ -47,6 +47,13 @@ describe("DelegateWork", () => {
     expect(
       (definition.inputSchema.properties as Record<string, { enum?: string[] }>).session_id?.enum,
     ).toEqual(["session-alpha-login"]);
+    expect(definition.description).toContain(
+      "A shared Workspace, URL, filename, entity, or broad topic alone does not prove continuity",
+    );
+    expect(
+      (definition.inputSchema.properties as Record<string, { description?: string }>).session_id
+        ?.description,
+    ).toContain("The host never infers an omitted id");
     expect(
       (definition.inputSchema.properties as Record<string, { enum?: string[] }>).executor?.enum,
     ).toEqual(["codeshell"]);

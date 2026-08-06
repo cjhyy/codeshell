@@ -15,13 +15,18 @@
  */
 
 import {
+  invalidateSkillCache,
   loadPluginCatalog,
   describePluginContent,
   listPluginMcpTrust,
+  PluginInstallError,
   type PluginContentInventory,
+  type PluginCatalogEntry,
   type PluginMcpTrustEntry,
 } from "@cjhyy/code-shell-core";
 import {
+  installPlugin,
+  refreshMarketplace,
   uninstallPlugin,
   uninstallPluginByName,
   updatePluginByName,
@@ -217,18 +222,86 @@ export function uninstallLocalPluginEntry(name: string): void {
   uninstallPluginByName(name);
 }
 
-/**
- * Re-install a plugin from its recorded source (the manual "update" button).
- * `name` is the bare plugin name — the same key `pluginInstallDir` uses, which
- * is what PluginSummary.name carries. Core stamps the install timestamp; we
- * pass `force` so a CC plugin (no version to diff) can be re-pulled on demand.
- * The reinstall is atomic in core — a failed update keeps the old version.
- */
-export async function updatePluginEntry(name: string): Promise<UpdateResult> {
-  if (typeof name !== "string" || !name) {
-    throw new Error("updatePluginEntry requires a plugin name");
+type PluginUpdateCatalogEntry = Pick<PluginCatalogEntry, "installKey" | "name" | "marketplace">;
+
+interface PluginUpdateServices {
+  listCatalog(): PluginUpdateCatalogEntry[];
+  updateLocal(name: string, installedAt: string, force: boolean): Promise<UpdateResult>;
+  refreshMarket(name: string): Promise<{ ok: boolean; error?: string }>;
+  installFromMarket(
+    pluginName: string,
+    marketplaceName: string,
+  ): Promise<{ ok: boolean; error?: string }>;
+  invalidateSkills(): void;
+  now(): string;
+}
+
+const defaultPluginUpdateServices: PluginUpdateServices = {
+  listCatalog: () => loadPluginCatalog(),
+  updateLocal: updatePluginByName,
+  refreshMarket: refreshMarketplace,
+  installFromMarket: installPlugin,
+  invalidateSkills: invalidateSkillCache,
+  now: () => new Date().toISOString(),
+};
+
+function resolvePluginUpdateEntry(
+  identity: string,
+  catalog: PluginUpdateCatalogEntry[],
+): PluginUpdateCatalogEntry {
+  const exact = catalog.find((plugin) => plugin.installKey === identity);
+  if (exact) return exact;
+
+  // Backward compatibility for a renderer from before update-by-installKey.
+  // A bare name is safe only when it identifies exactly one installed source.
+  const matchingNames = catalog.filter((plugin) => plugin.name === identity);
+  if (matchingNames.length === 1) return matchingNames[0]!;
+  if (matchingNames.length > 1) {
+    throw new PluginInstallError(
+      `multiple installed plugins are named '${identity}'; update by install key instead`,
+    );
   }
-  return updatePluginByName(name, new Date().toISOString(), true);
+  throw new PluginInstallError(`no installed plugin named '${identity}'`);
+}
+
+/**
+ * Re-install one exact installed plugin (the manual "update" button).
+ *
+ * Local/direct installs update from their recorded source. Marketplace
+ * installs have no `~/.code-shell/plugins/<name>/.cs-meta.json`; refresh their
+ * marketplace clone and materialize the same `<plugin>@<marketplace>` entry
+ * instead. The install key keeps same-name plugins from different sources
+ * unambiguous, while the bare-name fallback supports an older renderer.
+ */
+export async function updatePluginEntry(
+  identity: string,
+  services: PluginUpdateServices = defaultPluginUpdateServices,
+): Promise<UpdateResult> {
+  if (typeof identity !== "string" || !identity) {
+    throw new Error("updatePluginEntry requires an install key");
+  }
+  const plugin = resolvePluginUpdateEntry(identity, services.listCatalog());
+  if (!plugin.marketplace || plugin.marketplace === "local") {
+    return services.updateLocal(plugin.name, services.now(), true);
+  }
+
+  const refreshed = await services.refreshMarket(plugin.marketplace);
+  if (!refreshed.ok) {
+    throw new PluginInstallError(
+      `could not refresh marketplace '${plugin.marketplace}': ${refreshed.error ?? "unknown error"}`,
+    );
+  }
+  const installed = await services.installFromMarket(plugin.name, plugin.marketplace);
+  if (!installed.ok) {
+    throw new PluginInstallError(
+      `could not update '${plugin.name}' from marketplace '${plugin.marketplace}': ${installed.error ?? "unknown error"}`,
+    );
+  }
+  services.invalidateSkills();
+  return {
+    updated: true,
+    reason: `refreshed ${plugin.marketplace} and reinstalled ${plugin.name}`,
+  };
 }
 
 /**

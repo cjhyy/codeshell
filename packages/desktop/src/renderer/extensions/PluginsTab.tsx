@@ -151,7 +151,7 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   const update = async (p: PluginSummary) => {
     setBusy(p.installKey);
     try {
-      const r = await window.codeshell.updatePlugin(p.name);
+      const r = await window.codeshell.updatePlugin(p.installKey);
       setReloadKey((k) => k + 1);
       onChanged();
       // Hot-reload: skills/commands are disk-scanned live (next turn picks them
@@ -177,11 +177,11 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     if (targets.length === 0) return;
     setBusy("__all__");
     try {
-      const labelByName = new Map(targets.map((p) => [p.name, p.name]));
+      const labelByInstallKey = new Map(targets.map((p) => [p.installKey, p.name]));
       const outcomes = await runBatchUpdate(
-        targets.map((p) => p.name),
-        (name) => labelByName.get(name) ?? name,
-        (name) => window.codeshell.updatePlugin(name),
+        targets.map((p) => p.installKey),
+        (installKey) => labelByInstallKey.get(installKey) ?? installKey,
+        (installKey) => window.codeshell.updatePlugin(installKey),
       );
       setReloadKey((k) => k + 1);
       onChanged();

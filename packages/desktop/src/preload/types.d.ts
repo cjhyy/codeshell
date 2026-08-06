@@ -1890,8 +1890,8 @@ export interface CodeshellApi {
   ): Promise<{ ok: boolean; removedFromManifest: boolean; removedFromDisk: boolean }>;
   /** Uninstall a local / direct-GitHub plugin (no marketplace) by bare name. */
   uninstallLocalPlugin(name: string): Promise<void>;
-  /** Re-install a plugin from its recorded source (manual update). Atomic in core. */
-  updatePlugin(name: string): Promise<{ updated: boolean; reason: string }>;
+  /** Update one exact installed plugin from its local or marketplace source. */
+  updatePlugin(installKey: string): Promise<{ updated: boolean; reason: string }>;
   /** Check if a remote plugin has a newer commit upstream (network; never throws). */
   checkPluginUpdate(name: string): Promise<{
     name: string;
