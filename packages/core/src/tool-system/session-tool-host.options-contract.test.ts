@@ -164,9 +164,22 @@ describe("CreateSessionToolHostOptions contract", () => {
     // `??`, `||` and `!== false` spellings.
     const factory = SOURCE.slice(SOURCE.indexOf("export function createSessionToolHost"));
     for (const { field } of MUST_BE_REQUIRED) {
-      const fallback = new RegExp(
-        `options\\.${field}\\s*(\\?\\?|\\|\\||!==\\s*false|===\\s*undefined)`,
-      ).exec(factory);
+      const candidates = [
+        ...factory.matchAll(
+          new RegExp(`options\\.${field}\\s*(\\?\\?|\\|\\||!==\\s*false|===\\s*undefined)`, "g"),
+        ),
+      ];
+      // `!options.planMode || allowed.has(...)` narrows the visible tools; it is
+      // not a fallback default. Ignore a candidate when its preceding non-space
+      // token is `!`, while still catching `options.field || default`.
+      const fallback =
+        candidates.find(
+          (candidate) =>
+            factory
+              .slice(0, candidate.index ?? 0)
+              .trimEnd()
+              .at(-1) !== "!",
+        ) ?? null;
       expect(fallback).toBeNull();
     }
     // Destructuring defaults are the other way in, and they are invisible to the
