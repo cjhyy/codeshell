@@ -21,4 +21,14 @@ describe("buildAppendSystemPrompt", () => {
       AUTOMATION_PROMPT_NOTE,
     );
   });
+
+  it("requires memory bookkeeping before a complete final assistant result", () => {
+    expect(AUTOMATION_PROMPT_NOTE).toContain("first call UpdateAutomationMemory exactly once");
+    expect(AUTOMATION_PROMPT_NOTE).toContain(
+      "complete requested output as the final assistant message",
+    );
+    expect(AUTOMATION_PROMPT_NOTE).toContain(
+      "Do not replace the requested output with a completion acknowledgement",
+    );
+  });
 });

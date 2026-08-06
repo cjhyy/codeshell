@@ -135,6 +135,10 @@ export interface PetStateAggregatorOptions {
 const MAX_TITLE_LENGTH = 160;
 const MAX_SUMMARY_LENGTH = 240;
 
+function isQuickChatSessionId(sessionId: string): boolean {
+  return sessionId.startsWith("qchat-");
+}
+
 function bounded(value: string | undefined, maximum: number): string | undefined {
   if (!value) return undefined;
   return value.length > maximum ? `${value.slice(0, maximum - 1)}…` : value;
@@ -452,6 +456,11 @@ export class PetStateAggregator {
         // Once we descend strictly below the prior high-water mark, every
         // remaining session is older and already held: stop paging.
         if (!full && session.updatedAt < this.lastHighWaterMtime!) break pager;
+        // listDiskSessions already excludes ephemeral quick chats. Keep this
+        // boundary too so alternate/older catalog providers cannot leak them
+        // into Mimi's durable view.
+        newHighWater = Math.max(newHighWater, session.updatedAt);
+        if (isQuickChatSessionId(session.engineSessionId)) continue;
         next.set(session.engineSessionId, diskProjection(session, observedAt));
         nextBindings.set(session.engineSessionId, {
           uiSessionId: session.id,
@@ -462,7 +471,6 @@ export class PetStateAggregator {
           origin: session.origin,
           status: session.status,
         });
-        newHighWater = Math.max(newHighWater, session.updatedAt);
       }
       cursor = page.nextCursor ?? undefined;
     } while (cursor !== undefined);
@@ -541,11 +549,13 @@ export class PetStateAggregator {
     this.liveSessions.clear();
     for (const session of snapshot.sessions) {
       const safe = safeSession(session);
+      if (isQuickChatSessionId(safe.agentSessionId)) continue;
       this.liveSessions.set(safe.agentSessionId, safe);
     }
     this.pending.clear();
     for (const pending of snapshot.pending) {
       const safe = safePending(pending);
+      if (isQuickChatSessionId(safe.agentSessionId)) continue;
       this.pending.set(pendingKey(safe.agentSessionId, safe.requestId), safe);
     }
     if (emit) this.emit({ kind: "reset" });
@@ -563,6 +573,10 @@ export class PetStateAggregator {
     switch (delta.kind) {
       case "session-upsert": {
         const session = safeSession(delta.session);
+        if (isQuickChatSessionId(session.agentSessionId)) {
+          this.liveSessions.delete(session.agentSessionId);
+          break;
+        }
         this.liveSessions.set(session.agentSessionId, session);
         if (session.phase === "finalizing" && !session.terminal) {
           try {
@@ -577,6 +591,7 @@ export class PetStateAggregator {
       }
       case "session-remove": {
         this.liveSessions.delete(delta.sessionId);
+        if (isQuickChatSessionId(delta.sessionId)) break;
         const disk = this.diskSessions.get(delta.sessionId);
         if (disk) this.emit({ kind: "session-upsert", session: disk });
         else this.emit({ kind: "session-remove", sessionId: delta.sessionId });
@@ -589,6 +604,10 @@ export class PetStateAggregator {
       }
       case "pending-upsert": {
         const pending = safePending(delta.pending);
+        if (isQuickChatSessionId(pending.agentSessionId)) {
+          this.pending.delete(pendingKey(pending.agentSessionId, pending.requestId));
+          break;
+        }
         this.pending.set(pendingKey(pending.agentSessionId, pending.requestId), pending);
         this.emit({ kind: "pending-upsert", pending });
         break;
@@ -614,6 +633,8 @@ export class PetStateAggregator {
 
   private withDurableOverlay(session: DesktopPetSession): DesktopPetSession {
     const durable = this.diskSessions.get(session.agentSessionId);
+    const staleBackgroundWait =
+      session.completionKind === "background_wait" || session.summary === "等待后台结果";
     const reconciledCompletionKind =
       !session.completionKind &&
       !session.terminal &&
@@ -623,9 +644,9 @@ export class PetStateAggregator {
         : undefined;
     const reconciledTerminal =
       !session.terminal &&
-      session.phase === "finalizing" &&
       durable?.terminal &&
-      durable.lastActivityAt >= session.lastActivityAt
+      durable.lastActivityAt >= session.lastActivityAt &&
+      (session.phase === "finalizing" || staleBackgroundWait)
         ? durable.terminal
         : undefined;
     return {
@@ -645,6 +666,8 @@ export class PetStateAggregator {
         ? {
             runState: "terminal" as const,
             phase: undefined,
+            summary: durable?.summary,
+            completionKind: undefined,
             terminal: reconciledTerminal,
             lastActivityAt: Math.max(session.lastActivityAt, durable?.lastActivityAt ?? 0),
           }

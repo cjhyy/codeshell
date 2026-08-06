@@ -24,6 +24,7 @@ import type {
 } from "@cjhyy/code-shell-pet";
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
 import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
+import type { PetPersonalization } from "../../shared/pet-settings.js";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -198,6 +199,8 @@ interface PetDispatchOptions {
   sessionsRootDir?: string;
   /** Mimi manager model used when a channel does not provide an explicit override. */
   managerModel?(): Promise<string | null>;
+  /** Owner-authored settings applied only to Mimi manager turns. */
+  personalization?(): Promise<PetPersonalization> | PetPersonalization;
   listWorkspaces?(): Promise<Array<{ path: string; name: string }>>;
   listReusableSessions?(): Promise<PetReusableSessionCandidate[]>;
   /** The same actionable items shown in the desktop Needs follow-up section. */
@@ -557,6 +560,10 @@ export function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<str
     observedAt: snapshot.observedAt,
     workerState: snapshot.workerState,
     sessions: [...snapshot.sessions]
+      // Defense in depth: never place ephemeral quick-chat metadata in the
+      // trusted runtime context sent to Mimi, even if an older projection
+      // producer accidentally includes it.
+      .filter((session) => !session.agentSessionId.startsWith("qchat-"))
       .sort((left, right) => right.lastActivityAt - left.lastActivityAt)
       .slice(0, 25)
       .map((session) => ({
@@ -571,7 +578,9 @@ export function boundedWorld(snapshot: DesktopPetProjectionSnapshot): Record<str
         observedAt: session.freshness.observedAt,
       })),
     pending: snapshot.pending
-      .filter((pending) => pending.status === "pending")
+      .filter(
+        (pending) => pending.status === "pending" && !pending.agentSessionId.startsWith("qchat-"),
+      )
       .slice(0, 25)
       .map((pending) => ({
         agentSessionId: pending.agentSessionId,
@@ -628,6 +637,22 @@ function replaceRunResultText(result: unknown, text: string): unknown {
 
 export class PetDispatchService {
   constructor(private readonly options: PetDispatchOptions) {}
+
+  private async currentPersonalization(): Promise<PetPersonalization | undefined> {
+    try {
+      const personalization = await this.options.personalization?.();
+      if (!personalization) return undefined;
+      return Object.values(personalization).some(
+        (value) => typeof value === "string" && value.trim().length > 0,
+      )
+        ? personalization
+        : undefined;
+    } catch {
+      // A malformed or temporarily unreadable settings file must never block
+      // Mimi chat, completion receipts, or Session reports.
+      return undefined;
+    }
+  }
 
   async getSessionId(): Promise<string> {
     return (await this.options.metadata.ensure()).petSessionId;
@@ -713,11 +738,13 @@ export class PetDispatchService {
         })),
         completedAt: task.completedAt ?? task.updatedAt,
       };
+      const personalization = await this.currentPersonalization();
       const runtimeContext = stringifyBoundedPetWorld({
         version: snapshot.version,
         generation: snapshot.generation,
         observedAt: snapshot.observedAt,
         workerState: snapshot.workerState,
+        ...(personalization ? { personalization } : {}),
         ...(task.completionTarget
           ? {
               currentMessageSource: {
@@ -985,11 +1012,13 @@ export class PetDispatchService {
         : [];
     const metadata = await this.options.metadata.ensure();
     const snapshot = this.options.aggregator.getSnapshot();
+    const personalization = await this.currentPersonalization();
     const runtimeContext = stringifyBoundedPetWorld({
       version: snapshot.version,
       generation: snapshot.generation,
       observedAt: snapshot.observedAt,
       workerState: snapshot.workerState,
+      ...(personalization ? { personalization } : {}),
       ...(canGatewayReply && completionTarget
         ? {
             currentMessageSource: {
@@ -1309,6 +1338,7 @@ export class PetDispatchService {
         // Read host extras once; canonical projection keys are reserved below
         // so an extension cannot shadow trusted session state.
         const worldExtras = (await this.options.worldContext?.()) ?? {};
+        const personalization = await this.currentPersonalization();
         // GatewayReply is route-bound and therefore IM-only. The other atomic
         // actions below are safe on desktop too because pet-ipc records and
         // displays the host's authoritative post-turn receipt.
@@ -1334,6 +1364,7 @@ export class PetDispatchService {
           "reusableSessions",
           "currentMessageSource",
           "currentMessageCapabilities",
+          "personalization",
           "memoryWindow",
           "followUps",
           "outboundTargets",
@@ -1351,6 +1382,7 @@ export class PetDispatchService {
           generation: projectionWorld.generation,
           observedAt: projectionWorld.observedAt,
           workerState: projectionWorld.workerState,
+          ...(personalization ? { personalization } : {}),
           ...(command.source
             ? {
                 currentMessageSource: {

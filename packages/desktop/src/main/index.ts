@@ -110,8 +110,10 @@ import {
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
+import { removeExternalRuntimeBinding } from "./external-runtime-state.js";
 import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
 import { availableExternalRuntimes } from "./external-runtime-availability.js";
+import type { ExternalRuntimeAttachment } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
@@ -165,6 +167,7 @@ import {
   petChatModelKeyFromSettings,
   petMemoryAutoExtractFromSettings,
   petMemoryAutoExtractSettingsPatch,
+  petPersonalizationFromSettings,
 } from "../shared/pet-settings.js";
 import type { InstalledThemePack } from "../shared/theme-packs.js";
 import { SafeStorageCipher } from "./credential-cipher.js";
@@ -196,6 +199,7 @@ import {
   builtInBrowserHandoffGrants,
   chromeExtensionRuntimeService,
   installChromeNativeMessagingHost,
+  interactiveBrowserBridgeForSession,
   interactiveBrowserRuntimeOwner,
   nativeMessagingOriginFromArgv,
   runChromeNativeMessagingHost,
@@ -459,6 +463,7 @@ import {
   clampPetWidgetWindowPosition,
   defaultPetWidgetWindowPosition,
   loadPetWidgetWindowPosition,
+  petWidgetAlwaysOnTopLevel,
   petWidgetSurface,
   sanitizePetWidgetWindowPosition,
   savePetWidgetWindowPosition,
@@ -1263,11 +1268,11 @@ async function createWindow(): Promise<BrowserWindow> {
       // Route events to the window that owns the session, not every window: a
       // second window showing a different session must not receive its stream.
       emit: (sessionId, event) => {
-        for (const window of mainWindows) {
-          if (!window.isDestroyed()) {
-            window.webContents.send("externalRuntime:event", { sessionId, event });
-          }
-        }
+        const ownerId = externalBridge.panelOwnerWebContentsId(sessionId);
+        const owner = [...mainWindows].find(
+          (window) => !window.isDestroyed() && window.webContents.id === ownerId,
+        );
+        owner?.webContents.send("externalRuntime:event", { sessionId, event });
       },
       // The host seams the exposed tools need. `panels` points at the same
       // requestPanelHost the native protocol line reaches, so owner routing,
@@ -1275,6 +1280,9 @@ async function createWindow(): Promise<BrowserWindow> {
       // reimplemented.
       toolContextOverrides: (sessionId) => ({
         panels: externalBridge.panelBridgeForSession(sessionId),
+        browser: interactiveBrowserBridgeForSession(sessionId),
+        injectCredentialToBrowser: (credentialId: string, scope?: "full" | "project") =>
+          externalBridge.injectCredentialForSession(sessionId, credentialId, scope),
       }),
       requestApproval: (sessionId, request) => approvals.request(sessionId, request),
       cancelApprovals: (sessionId) => approvals.cancelSession(sessionId),
@@ -1581,6 +1589,8 @@ async function createWindow(): Promise<BrowserWindow> {
       sessionsRootDir: petSessionsRootDir,
       managerModel: async () =>
         petChatModelKeyFromSettings(await readSettings("user").catch(() => null)),
+      personalization: async () =>
+        petPersonalizationFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {
         beginTurn: async (clientMessageId) => {
           if (!petSegmentController) return undefined;
@@ -2207,6 +2217,18 @@ function schedulePetWidgetPositionSave(win: BrowserWindow): void {
   }, 250);
 }
 
+function elevatePetWidgetWindow(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+  win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(process.platform));
+  try {
+    // Refresh the z-order without stealing focus when the active application
+    // or Space changes. Wayland may not implement this operation.
+    win.moveTop();
+  } catch {
+    // The always-on-top level still applies when moveTop is unavailable.
+  }
+}
+
 async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
   if (petWidgetWindow && !petWidgetWindow.isDestroyed()) return petWidgetWindow;
 
@@ -2240,6 +2262,9 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Keep the pet animation and live activity state responsive while
+      // CodeShell itself is behind another application.
+      backgroundThrottling: false,
     },
   });
   petWidgetSurfaceMode = "collapsed";
@@ -2250,13 +2275,16 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
   // — the in-place reply never streams in. attachWindow self-removes on close,
   // so re-creating the widget re-attaches cleanly.
   bridge?.attachWindow(win);
-  if (process.platform === "darwin") void app.dock?.show();
-  win.setAlwaysOnTop(true, "floating");
+  if (process.platform === "darwin") {
+    void app.dock?.show();
+    win.setHiddenInMissionControl(true);
+  }
   try {
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   } catch {
     // Some Linux window managers do not implement workspace pinning.
   }
+  elevatePetWidgetWindow(win);
 
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   win.webContents.on("will-navigate", (event) => event.preventDefault());
@@ -2267,7 +2295,9 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
     if (level >= 2) dlog("main", "pet-widget.console", { level, message, line, sourceId });
   });
   win.webContents.once("did-finish-load", () => {
-    if (!win.isDestroyed()) win.showInactive();
+    if (win.isDestroyed()) return;
+    win.showInactive();
+    elevatePetWidgetWindow(win);
   });
   // A crashed renderer leaves a blank, unresponsive widget that the visibility
   // checks still treat as "open" (window not destroyed), so toggling can't
@@ -2278,6 +2308,12 @@ async function createPetWidgetWindowNow(): Promise<BrowserWindow> {
   });
 
   win.on("move", () => schedulePetWidgetPositionSave(win));
+  win.on("show", () => elevatePetWidgetWindow(win));
+  win.on("blur", () => elevatePetWidgetWindow(win));
+  win.on("always-on-top-changed", (_event, isAlwaysOnTop) => {
+    if (isAlwaysOnTop || !petWidgetShouldBeVisible) return;
+    setImmediate(() => elevatePetWidgetWindow(win));
+  });
   win.on("close", () => persistPetWidgetPosition(win));
   win.on("closed", () => {
     if (petWidgetPositionSaveTimer) {
@@ -2332,6 +2368,7 @@ function setPetWidgetSurfaceMode(mode: PetWidgetSurfaceMode): void {
   const surface = petWidgetSurface(mode);
   petWidgetSurfaceMode = mode;
   win.setBounds({ ...origin, ...surface }, true);
+  elevatePetWidgetWindow(win);
 }
 
 function destroyPetWidgetWindow(): void {
@@ -5109,7 +5146,19 @@ ipcMain.handle("externalRuntime:available", () => {
  */
 ipcMain.handle(
   "externalRuntime:start",
-  async (event, payload: { sessionId?: unknown; cwd?: unknown; modelKey?: unknown }) => {
+  async (
+    event,
+    payload: {
+      sessionId?: unknown;
+      cwd?: unknown;
+      modelKey?: unknown;
+      permissionMode?: unknown;
+      planMode?: unknown;
+      hasGoal?: unknown;
+      initialContext?: unknown;
+      developerInstructions?: unknown;
+    },
+  ) => {
     const service = externalRuntimeService;
     if (!service) throw new Error("external runtime service is unavailable");
     const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
@@ -5118,12 +5167,29 @@ ipcMain.handle(
     if (!sessionId || !cwd) throw new Error("sessionId and cwd are required");
     const parsed = parseExternalRuntimeModelKey(modelKey);
     if (!parsed) throw new Error(`not an external runtime model: ${modelKey}`);
+    const permissionMode =
+      payload?.permissionMode === "default" ||
+      payload?.permissionMode === "acceptEdits" ||
+      payload?.permissionMode === "bypassPermissions" ||
+      payload?.permissionMode === "dontAsk"
+        ? payload.permissionMode
+        : "default";
 
     const ownerWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined;
     const session = await service.start({
       kind: parsed.kind,
       sessionId,
       cwd,
+      modelKey,
+      permissionMode,
+      planMode: payload?.planMode === true,
+      hasGoal: payload?.hasGoal === true,
+      ...(typeof payload?.initialContext === "string"
+        ? { initialContext: payload.initialContext }
+        : {}),
+      ...(typeof payload?.developerInstructions === "string"
+        ? { developerInstructions: payload.developerInstructions }
+        : {}),
       ...(parsed.model ? { model: parsed.model } : {}),
       ...(ownerWindow ? { ownerWindow } : {}),
     });
@@ -5137,13 +5203,56 @@ ipcMain.handle(
 
 ipcMain.handle(
   "externalRuntime:send",
-  async (_e, payload: { sessionId?: unknown; text?: unknown }) => {
+  async (
+    _e,
+    payload: {
+      sessionId?: unknown;
+      text?: unknown;
+      clientMessageId?: unknown;
+      attachments?: unknown;
+    },
+  ) => {
     const service = externalRuntimeService;
     if (!service) throw new Error("external runtime service is unavailable");
     const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
     const text = typeof payload?.text === "string" ? payload.text : "";
     if (!sessionId) throw new Error("sessionId is required");
-    await service.send(sessionId, text);
+    const attachments: ExternalRuntimeAttachment[] = Array.isArray(payload?.attachments)
+      ? payload.attachments.flatMap((value) => {
+          if (!value || typeof value !== "object") return [];
+          const attachment = value as Record<string, unknown>;
+          const path =
+            typeof attachment.absPath === "string"
+              ? attachment.absPath
+              : typeof attachment.path === "string"
+                ? attachment.path
+                : "";
+          if (!path) return [];
+          const detail =
+            attachment.vision && typeof attachment.vision === "object"
+              ? (attachment.vision as { detail?: unknown }).detail
+              : undefined;
+          return [
+            {
+              path,
+              ...(attachment.kind === "image" ||
+              attachment.kind === "file" ||
+              attachment.kind === "directory"
+                ? { kind: attachment.kind }
+                : {}),
+              ...(typeof attachment.mime === "string" ? { mime: attachment.mime } : {}),
+              ...(detail === "low" || detail === "standard" || detail === "high" ? { detail } : {}),
+            } satisfies ExternalRuntimeAttachment,
+          ];
+        })
+      : [];
+    return await service.send(sessionId, {
+      text,
+      ...(typeof payload?.clientMessageId === "string"
+        ? { clientMessageId: payload.clientMessageId }
+        : {}),
+      ...(attachments.length > 0 ? { attachments } : {}),
+    });
   },
 );
 
@@ -5740,6 +5849,7 @@ async function deleteDesktopSession(id: string): Promise<void> {
   await externalRuntimeService?.stop(id).catch((error) => {
     dlog("external-runtime", "session.delete.stop_failed", { id, error: String(error) });
   });
+  removeExternalRuntimeBinding(id);
   await deleteSession(id);
   await cleanupKnownAttachments(id);
   // Drop any in-memory snapshot for the deleted session so it can't be

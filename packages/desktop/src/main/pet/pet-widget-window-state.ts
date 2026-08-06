@@ -31,6 +31,15 @@ export interface PetWidgetWorkArea extends PetWidgetWindowPosition {
   height: number;
 }
 
+export type PetWidgetAlwaysOnTopLevel = "floating" | "screen-saver";
+
+export function petWidgetAlwaysOnTopLevel(platform: NodeJS.Platform): PetWidgetAlwaysOnTopLevel {
+  // Electron's default `floating` level can still fall behind other apps on
+  // macOS. `screen-saver` is the closest BrowserWindow equivalent to the
+  // native overlay panel used by desktop pets such as Codex's.
+  return platform === "darwin" ? "screen-saver" : "floating";
+}
+
 export function shouldSkipPetWidgetTaskbar(platform: NodeJS.Platform): boolean {
   return platform !== "darwin";
 }

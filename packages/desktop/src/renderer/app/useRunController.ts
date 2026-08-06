@@ -44,7 +44,7 @@ import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import { NO_REPO_KEY } from "../transcripts";
 import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models";
-import { runExternalRuntimeTurn } from "../externalRuntimeRun";
+import { buildExternalRuntimeHandoff, runExternalRuntimeTurn } from "../externalRuntimeRun";
 
 interface Params {
   shell: {
@@ -384,6 +384,21 @@ export function useRunController({
     // the two paths differ only in who produces the stream, and duplicating the
     // bookkeeping is how one path ends up permanently "busy" after a failure.
     const externalRuntime = parseExternalRuntimeModelKey(bucketModel);
+    const activeGoal = opts.goal ?? state.activeGoal?.objective;
+    const externalDeveloperInstructions = [
+      opts.sessionBrief ? `CodeShell Session brief:\n${opts.sessionBrief}` : undefined,
+      activeGoal ? `Active CodeShell goal:\n${activeGoal}` : undefined,
+      opts.workspaceProfile
+        ? `Active CodeShell workspace profile: ${opts.workspaceProfile}`
+        : undefined,
+      opts.sessionMessageTargets?.length
+        ? `Related CodeShell Sessions:\n${opts.sessionMessageTargets
+            .map((target) => `- ${target.title}: ${target.sessionId} (${target.workspaceRoot})`)
+            .join("\n")}`
+        : undefined,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
     const startRun = externalRuntime
       ? runExternalRuntimeTurn({
           sessionId: engineSessionId,
@@ -391,6 +406,15 @@ export function useRunController({
           cwd: opts.cwd ?? "",
           modelKey: bucketModel,
           text,
+          clientMessageId,
+          attachments: opts.attachments,
+          permissionMode: opts.permissionMode,
+          planMode: false,
+          hasGoal: !!activeGoal,
+          initialContext: buildExternalRuntimeHandoff(state.messages),
+          ...(externalDeveloperInstructions
+            ? { developerInstructions: externalDeveloperInstructions }
+            : {}),
           runtime: window.codeshell.externalRuntime,
         })
       : runAfterModelSwitch({
@@ -423,7 +447,7 @@ export function useRunController({
         // nothing renders, and it reads as "卡住 / 没反应" (the deepseek-
         // vision rejection bug). Render the engine's human-readable message
         // as a turn_end(error) line in the stream + an error toast.
-        const result = r as { reason?: string; text?: string } | null;
+        const result = r as { reason?: string; text?: string; streamed?: boolean } | null;
         const reason = result?.reason;
         // `external_runtime_error` belongs here for exactly the reason above: a
         // runtime that failed to spawn or is not logged in produces NO stream at
@@ -432,7 +456,7 @@ export function useRunController({
         // ("codex not found", "not logged in").
         if (
           reason === "image_error" ||
-          reason === "model_error" ||
+          (reason === "model_error" && result?.streamed !== true) ||
           reason === "prompt_too_long" ||
           reason === "external_runtime_error"
         ) {

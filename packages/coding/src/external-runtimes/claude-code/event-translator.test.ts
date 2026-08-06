@@ -182,6 +182,43 @@ describe("ClaudeEventTranslator", () => {
     expect(t.translate(result("success"))).toEqual([]);
   });
 
+  test("a second turn reports its own terminal event", () => {
+    const t = translator();
+    expect(t.translate(result("success"))).toHaveLength(1);
+    t.beginTurn();
+    expect(t.translate(result("success"))).toEqual([
+      { type: "turn_complete", reason: "completed" },
+    ]);
+  });
+
+  test("result preserves usage and execution error detail", () => {
+    const t = translator();
+    expect(
+      t.translate({
+        ...result("error_during_execution", true),
+        result: "permission denied",
+        usage: {
+          input_tokens: 20,
+          output_tokens: 3,
+          cache_read_input_tokens: 10,
+          cache_creation_input_tokens: 2,
+        },
+      }),
+    ).toEqual([
+      {
+        type: "usage_update",
+        promptTokens: 20,
+        completionTokens: 3,
+        cacheReadTokens: 10,
+        cacheCreationTokens: 2,
+        promptTokensSource: "provider_usage",
+        promptTokensConfidence: "high",
+      },
+      { type: "error", error: "permission denied" },
+      { type: "turn_complete", reason: "model_error" },
+    ]);
+  });
+
   test("unknown and malformed lines are ignored rather than throwing", () => {
     const t = translator();
     expect(t.translate({ type: "rate_limit_event", rate_limit_info: {} })).toEqual([]);

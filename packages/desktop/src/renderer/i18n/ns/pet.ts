@@ -10,6 +10,18 @@ export const pet = {
         title: "Mimi 设置",
         subtitle: "管理 Mimi 对话、桌面 Pet 与消息入口",
         back: "返回 Mimi",
+        personalizationTitle: "Mimi 个性化",
+        personalizationDescription:
+          "只作用于 Mimi 管理对话，不会改变普通 Work Session 里 Agent 的回复方式。",
+        responseLanguageLabel: "回复语言",
+        responseLanguagePlaceholder: "例如：始终使用简体中文",
+        userProfileLabel: "你的称呼与背景",
+        userProfilePlaceholder: "例如：叫我 Maki；我做后端开发，熟悉技术细节",
+        communicationStyleLabel: "Mimi 的语气与风格",
+        communicationStylePlaceholder: "例如：亲切、简洁、直接，主动提醒风险，少用客套话",
+        customInstructionsLabel: "给 Mimi 的专属要求",
+        customInstructionsPlaceholder: "例如：汇报工作时先说结论；任务有明显风险时先跟我确认…",
+        personalizationSaveHint: "自动保存，下一次 Mimi 回复时生效。",
         modelTitle: "Mimi 对话模型",
         modelDescription: "只用于 Mimi 的管理对话；长程工作 Session 继续使用自己的默认模型。",
         useAppDefault: "跟随应用默认",
@@ -258,6 +270,10 @@ export const pet = {
         organizing: "Mimi 正在整理…",
         autoRoute: "自动判断直接回复，或在合适的 Workspace 新建 Session 执行。",
         placeholder: "描述问题、目标或需要跟进的工作…",
+        dropFiles: "松开以添加本地文件路径",
+        localFilePaths: "本地文件路径（由你拖入）",
+        filePathUnavailable: "无法获取该文件的本地路径，请重启应用后重试。",
+        removeFile: "移除文件 {name}",
         send: "发送",
         segmentDivider: "新话题",
         workMemoryTitle: "上一段纪要",
@@ -322,6 +338,21 @@ export const pet = {
         title: "Mimi settings",
         subtitle: "Manage Mimi chat, the desktop Pet, and messaging entry points",
         back: "Back to Mimi",
+        personalizationTitle: "Mimi personalization",
+        personalizationDescription:
+          "Applies only to Mimi's manager chat and does not change how agents respond in regular Work Sessions.",
+        responseLanguageLabel: "Reply language",
+        responseLanguagePlaceholder: "For example: Always reply in English",
+        userProfileLabel: "How to address you & your background",
+        userProfilePlaceholder:
+          "For example: Call me Maki; I am a backend engineer and am comfortable with technical detail",
+        communicationStyleLabel: "Mimi's tone & style",
+        communicationStylePlaceholder:
+          "For example: Warm, concise, and direct; proactively flag risks and avoid filler",
+        customInstructionsLabel: "Mimi-only instructions",
+        customInstructionsPlaceholder:
+          "For example: Lead work updates with the outcome; ask before proceeding when a task has material risk…",
+        personalizationSaveHint: "Saved automatically and applied to Mimi's next reply.",
         modelTitle: "Mimi chat model",
         modelDescription:
           "Used only for Mimi's manager chat. Long-running work Sessions keep their own default model.",
@@ -579,6 +610,11 @@ export const pet = {
         autoRoute:
           "Mimi replies directly or starts a session in the appropriate workspace automatically.",
         placeholder: "Describe a problem, goal, or follow-up…",
+        dropFiles: "Drop to add local file paths",
+        localFilePaths: "Local file paths (dropped by you)",
+        filePathUnavailable:
+          "Could not resolve this file's local path. Restart the app and try again.",
+        removeFile: "Remove file {name}",
         send: "Send",
         segmentDivider: "New topic",
         workMemoryTitle: "Previous segment recap",

@@ -183,6 +183,50 @@ afterEach(async () => {
 });
 
 describe("ChatView ephemeral async lifecycle", () => {
+  test("sends a dropped PDF as an exact path-only turn", async () => {
+    const onSend = mock(() => undefined);
+    const mounted = await mountChatView({
+      codeshell: {
+        sttAvailable: async () => ({ available: false }),
+        getPathForFile: () => "/Users/maki/My PDFs/quarterly report.pdf",
+      },
+      onSend,
+    });
+    const chatRoot = findElement(mounted, (props) => props["data-chat-variant"] === "quickChat");
+
+    await act(async () => {
+      reactProps(chatRoot).onDrop({
+        preventDefault() {},
+        dataTransfer: {
+          files: [{ name: "quarterly report.pdf", type: "application/pdf" }],
+          getData: () => "",
+        },
+      });
+      await flushMicrotasks();
+    });
+
+    expect(
+      findElement(mounted, (props) => props["data-local-path-attachments"] === "true"),
+    ).toBeDefined();
+    const textarea = findElement(mounted, (props) => props.rows === 1);
+    await act(async () => {
+      reactProps(textarea).onKeyDown({
+        key: "Enter",
+        shiftKey: false,
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+        nativeEvent: { isComposing: false },
+        preventDefault: () => undefined,
+      });
+      await flushMicrotasks();
+    });
+
+    expect(onSend).toHaveBeenCalledWith(
+      '本地文件路径（由你选择）:\n- "/Users/maki/My PDFs/quarterly report.pdf"',
+    );
+  });
+
   test("does not persist a quick-chat prompt in main composer history", async () => {
     const setItem = mock(() => undefined);
     Object.defineProperty(globalThis, "localStorage", {

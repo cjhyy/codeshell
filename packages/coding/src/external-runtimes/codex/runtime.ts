@@ -20,6 +20,7 @@ import { CodexAppServerClient, type AppServerClientOptions } from "./app-server-
 import { CodexEventTranslator } from "./event-translator.js";
 import { buildRuntimeSpawnEnv } from "../shared/spawn-env.js";
 import { codexBridgeConfigArgs, type McpBridgeHandle } from "../shared/mcp-bridge.js";
+import { textWithAttachmentReferences, type ExternalRuntimeTurnInput } from "../turn-input.js";
 
 /** A thread/start or turn/start that hangs is worse than one that fails. */
 const CRITICAL_RPC_TIMEOUT_MS = 60_000;
@@ -39,6 +40,9 @@ export interface CodexRuntimeOptions {
    */
   bridgeServerName?: string;
   model?: string;
+  resumeRuntimeSessionId?: string;
+  initialContext?: string;
+  developerInstructions?: string;
   /** Codex sandbox mode. Kebab-case per protocol (`workspace-write`, …). */
   sandbox?: string;
   /** Codex approval policy. Also kebab-case. */
@@ -70,6 +74,8 @@ export interface CodexRuntimeHooks {
     method: string;
     params: unknown;
   }) => Promise<NativeApprovalDecision> | NativeApprovalDecision;
+  /** Answer Codex's request_user_input tool through the owning CodeShell UI. */
+  onUserInput?: (request: { method: string; params: unknown }) => Promise<unknown> | unknown;
 }
 
 export class CodexRuntime {
@@ -79,6 +85,8 @@ export class CodexRuntime {
   private translator?: CodexEventTranslator;
   private threadId?: string;
   private started = false;
+  private resumed = false;
+  private firstTurn = true;
   private activeTurn?: { id?: string; resolve: () => void };
 
   constructor(
@@ -131,19 +139,49 @@ export class CodexRuntime {
       CRITICAL_RPC_TIMEOUT_MS,
     );
 
-    const thread = (await this.client.request(
+    let thread: { thread?: { id?: string } } | undefined;
+    if (this.options.resumeRuntimeSessionId) {
+      try {
+        thread = (await this.client.request(
+          "thread/resume",
+          {
+            threadId: this.options.resumeRuntimeSessionId,
+            cwd: this.options.cwd,
+            ...(this.options.model ? { model: this.options.model } : {}),
+            ...(this.options.sandbox ? { sandbox: this.options.sandbox } : {}),
+            ...(this.options.approvalPolicy ? { approvalPolicy: this.options.approvalPolicy } : {}),
+            ...(this.options.developerInstructions
+              ? { developerInstructions: this.options.developerInstructions }
+              : {}),
+          },
+          CRITICAL_RPC_TIMEOUT_MS,
+        )) as { thread?: { id?: string } };
+        this.resumed = true;
+      } catch (error) {
+        this.log("runtime.thread_resume_failed", {
+          businessSessionId: this.options.businessSessionId,
+          error: error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200),
+        });
+      }
+    }
+    thread ??= (await this.client.request(
       "thread/start",
       {
         cwd: this.options.cwd,
         ...(this.options.model ? { model: this.options.model } : {}),
         ...(this.options.sandbox ? { sandbox: this.options.sandbox } : {}),
         ...(this.options.approvalPolicy ? { approvalPolicy: this.options.approvalPolicy } : {}),
+        ...(this.options.developerInstructions
+          ? { developerInstructions: this.options.developerInstructions }
+          : {}),
       },
       CRITICAL_RPC_TIMEOUT_MS,
     )) as { thread?: { id?: string } };
 
     const threadId = thread?.thread?.id;
-    if (!threadId) throw new Error("thread/start returned no thread id");
+    if (!threadId) {
+      throw new Error(`${this.resumed ? "thread/resume" : "thread/start"} returned no thread id`);
+    }
     this.threadId = threadId;
     this.translator = new CodexEventTranslator({
       threadId,
@@ -152,6 +190,7 @@ export class CodexRuntime {
     this.log("runtime.thread_started", {
       businessSessionId: this.options.businessSessionId,
       threadIdPrefix: threadId.slice(0, 8),
+      resumed: this.resumed,
     });
   }
 
@@ -163,18 +202,36 @@ export class CodexRuntime {
    * tombstones are what keep a late `turn/started` from reactivating a session
    * that already reported terminal.
    */
-  async send(text: string): Promise<CodexTurnHandle> {
+  async send(input: ExternalRuntimeTurnInput): Promise<CodexTurnHandle> {
     if (!this.threadId) throw new Error("CodexRuntime.send() before start()");
     let resolveDone!: () => void;
     const done = new Promise<void>((resolve) => (resolveDone = resolve));
     this.activeTurn = { resolve: resolveDone };
 
+    let text = textWithAttachmentReferences(input);
+    if (this.firstTurn && !this.resumed && this.options.initialContext) {
+      text = `${this.options.initialContext}\n\n<current_user_request>\n${text}\n</current_user_request>`;
+    }
+    this.firstTurn = false;
+    const imageInputs = (input.attachments ?? [])
+      .filter(
+        (attachment) =>
+          attachment.kind === "image" || attachment.mime?.toLowerCase().startsWith("image/"),
+      )
+      .map((attachment) => ({
+        type: "localImage" as const,
+        path: attachment.path,
+        ...(attachment.detail === "low" || attachment.detail === "high"
+          ? { detail: attachment.detail }
+          : {}),
+      }));
     const response = (await this.client.request(
       "turn/start",
       {
         threadId: this.threadId,
+        ...(input.clientMessageId ? { clientUserMessageId: input.clientMessageId } : {}),
         // `text_elements` is required by the protocol even when empty.
-        input: [{ type: "text", text, text_elements: [] }],
+        input: [{ type: "text", text, text_elements: [] }, ...imageInputs],
       },
       CRITICAL_RPC_TIMEOUT_MS,
     )) as { turn?: { id?: string } };
@@ -258,6 +315,11 @@ export class CodexRuntime {
     // marker is `_meta.codex_approval_kind === "mcp_tool_call"`.
     if (method === "mcpServer/elicitation/request") {
       return this.answerMcpElicitation(params);
+    }
+    if (method === "item/tool/requestUserInput") {
+      return this.hooks.onUserInput
+        ? await this.hooks.onUserInput({ method, params })
+        : { answers: {} };
     }
     if (!method.includes("requestApproval")) {
       // Some other server request (user input, …). Leave unhandled so the client

@@ -35,6 +35,7 @@ import {
 import { SessionContextStore } from "./shared/session-context-store.js";
 import { CodexRuntime, type CodexRuntimeHooks, type CodexRuntimeOptions } from "./codex/runtime.js";
 import { ClaudeCodeRuntime, type ClaudeRuntimeHooks } from "./claude-code/runtime.js";
+import type { ExternalRuntimeTurnInput } from "./turn-input.js";
 
 export type ExternalRuntimeKind = "codex" | "claude-code";
 
@@ -66,6 +67,12 @@ export interface ExternalRuntimeSessionOptions {
   contextOverrides?: Parameters<typeof createSessionToolHost>[0]["contextOverrides"];
   settingsScope?: Parameters<typeof createSessionToolHost>[0]["settingsScope"];
   model?: string;
+  /** Runtime thread/session id recovered from durable Desktop state. */
+  resumeRuntimeSessionId?: string;
+  /** Context replayed only when resume is unavailable and a fresh thread starts. */
+  initialContext?: string;
+  /** Stable host guidance applied to new and resumed runtime threads. */
+  developerInstructions?: string;
   /** Codex only. Kebab-case per protocol. */
   sandbox?: string;
   /** Codex only. Kebab-case per protocol. */
@@ -91,7 +98,7 @@ export interface ExternalRuntimeSession {
   readonly runtimeSessionId: string | undefined;
   /** Tools actually exposed, after the allowlist and visibility guards. */
   listTools(): readonly ToolDefinition[];
-  send(text: string): Promise<{ done: Promise<void> }>;
+  send(input: ExternalRuntimeTurnInput): Promise<{ done: Promise<void> }>;
   interrupt(): Promise<void>;
   /** Reverses the assembly order; safe to call more than once. */
   close(): Promise<void>;
@@ -168,6 +175,13 @@ export async function startExternalRuntimeSession(
           businessSessionId: options.businessSessionId,
           bridge,
           ...(options.model ? { model: options.model } : {}),
+          ...(options.resumeRuntimeSessionId
+            ? { resumeRuntimeSessionId: options.resumeRuntimeSessionId }
+            : {}),
+          ...(options.initialContext ? { initialContext: options.initialContext } : {}),
+          ...(options.developerInstructions
+            ? { developerInstructions: options.developerInstructions }
+            : {}),
           ...(options.sandbox ? { sandbox: options.sandbox } : {}),
           ...(options.approvalPolicy ? { approvalPolicy: options.approvalPolicy } : {}),
           ...(options.codexClient ? { client: options.codexClient } : {}),
@@ -185,6 +199,10 @@ export async function startExternalRuntimeSession(
           bridge,
           exposedToolNames,
           ...(options.model ? { model: options.model } : {}),
+          ...(options.resumeRuntimeSessionId
+            ? { resumeRuntimeSessionId: options.resumeRuntimeSessionId }
+            : {}),
+          ...(options.initialContext ? { initialContext: options.initialContext } : {}),
           ...(options.claudeExtraArgs ? { extraArgs: options.claudeExtraArgs } : {}),
           ...(options.claudeCommand ? { command: options.claudeCommand } : {}),
           log,
@@ -209,7 +227,7 @@ export async function startExternalRuntimeSession(
       return activeRuntime.runtimeSessionId;
     },
     listTools: () => activeHost.listTools(),
-    send: (text) => activeRuntime.send(text),
+    send: (input) => activeRuntime.send(input),
     interrupt: () => activeRuntime.interrupt(),
     close,
   };

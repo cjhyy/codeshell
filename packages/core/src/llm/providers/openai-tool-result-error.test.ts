@@ -35,7 +35,20 @@ function clientCapturing(): { client: OpenAIClient; lastBody: () => any } {
 function optsWith(content: ContentBlock[]): CreateMessageOptions {
   return {
     systemPrompt: "sys",
-    messages: [{ role: "user", content }],
+    messages: [
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "tool_use",
+            id: "call_1",
+            name: "Read",
+            input: { file_path: "/tmp/example" },
+          },
+        ],
+      },
+      { role: "user", content },
+    ],
     tools: [],
     stream: true,
     onChunk: () => {},
@@ -64,5 +77,58 @@ describe("OpenAIClient errored tool_result", () => {
     expect(toolMsg).toBeDefined();
     expect(toolMsg.content).toContain("Error:");
     expect(toolMsg.content).toContain("timed out");
+  });
+
+  it("collapses duplicate results to the latest response for one tool call", async () => {
+    const { client, lastBody } = clientCapturing();
+    await client.createMessage(
+      optsWith([
+        {
+          type: "tool_result",
+          tool_use_id: "call_1",
+          content: "Error: synthetic interrupted result",
+          is_error: true,
+        },
+        {
+          type: "tool_result",
+          tool_use_id: "call_1",
+          content: "real file contents",
+        },
+      ]),
+    );
+
+    const matching = lastBody().messages.filter(
+      (message: any) => message.role === "tool" && message.tool_call_id === "call_1",
+    );
+    expect(matching).toHaveLength(1);
+    expect(matching[0].content).toBe("real file contents");
+  });
+
+  it("fills a missing result at the wire boundary without persisting it", async () => {
+    const { client, lastBody } = clientCapturing();
+    await client.createMessage({
+      systemPrompt: "sys",
+      messages: [
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "call_missing",
+              name: "Read",
+              input: { file_path: "/tmp/example" },
+            },
+          ],
+        },
+      ],
+      tools: [],
+      stream: true,
+      onChunk: () => {},
+    } as unknown as CreateMessageOptions);
+
+    const toolMessage = lastBody().messages.find(
+      (message: any) => message.role === "tool" && message.tool_call_id === "call_missing",
+    );
+    expect(toolMessage?.content).toContain("did not complete");
   });
 });

@@ -36,6 +36,8 @@ mock.module("@cjhyy/code-shell-capability-coding/external-runtimes", () => ({
     starts.push(args);
     return fakeSession(args);
   },
+  textWithAttachmentReferences: (input: { text: string; attachments?: Array<{ path: string }> }) =>
+    [input.text, ...(input.attachments ?? []).map((attachment) => attachment.path)].join("\n"),
 }));
 
 let trust: "trusted" | "untrusted" = "trusted";
@@ -49,12 +51,16 @@ const claims: Array<{ sessionId: string; webContentsId?: number }> = [];
 const released: string[] = [];
 const emitted: Array<{ sessionId: string; type: string }> = [];
 
-function service(flags: Record<string, boolean>) {
+function service(
+  flags: Record<string, boolean>,
+  requestApproval?: () => Promise<{ approved: boolean; answer?: string }>,
+) {
   return new ExternalRuntimeService({
     featureFlags: () => flags as never,
     registerSession: (sessionId, _cwd, webContentsId) => claims.push({ sessionId, webContentsId }),
     releaseSession: (sessionId) => released.push(sessionId),
     emit: (sessionId, event) => emitted.push({ sessionId, type: event.type }),
+    ...(requestApproval ? { requestApproval } : {}),
   });
 }
 
@@ -104,6 +110,24 @@ describe("ExternalRuntimeService", () => {
     // `undefined` means "the reviewed FIRST_PHASE_EXPOSURE default", which is the
     // safe direction — an explicit set here could only ever be wider.
     expect(starts[0]!.exposure).toBeUndefined();
+    const registry = starts[0]!.registry as {
+      getToolDefinitions(): Array<{ name: string }>;
+    };
+    expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgent");
+    expect(registry.getToolDefinitions().map((tool) => tool.name)).toContain("DriveAgentJobs");
+  });
+
+  test("dontAsk disables approval prompts but preserves user questions", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, async () => ({
+      approved: true,
+      answer: "answer",
+    }));
+    await svc.start({ ...request, permissionMode: "dontAsk" });
+    expect(starts[0]!.approvalPolicy).toBe("never");
+    expect(starts[0]!.approvalBackend).toBeUndefined();
+    const hooks = starts[0]!.hooks as Record<string, unknown>;
+    expect(hooks.onNativeApproval).toBeUndefined();
+    expect(hooks.onUserInput).toBeFunction();
   });
 
   test("resolves projectTrusted from the trust store, not a default", async () => {

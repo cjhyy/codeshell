@@ -191,4 +191,26 @@ describe("pet settings (Mimi global-view external-session visibility)", () => {
         ?.showExternalCodexSessions,
     ).toBe(true);
   });
+
+  it("accepts bounded Mimi-only personalization independently of agent settings", () => {
+    const parsed = SettingsSchema.parse({
+      pet: {
+        personalization: {
+          responseLanguage: "简体中文",
+          userProfile: "叫我 Maki",
+          communicationStyle: "亲切、简洁、直接",
+          customInstructions: "工作汇报先说结论",
+        },
+      },
+      agent: { responseLanguage: "English" },
+    });
+
+    expect(parsed.pet?.personalization).toEqual({
+      responseLanguage: "简体中文",
+      userProfile: "叫我 Maki",
+      communicationStyle: "亲切、简洁、直接",
+      customInstructions: "工作汇报先说结论",
+    });
+    expect(parsed.agent.responseLanguage).toBe("English");
+  });
 });

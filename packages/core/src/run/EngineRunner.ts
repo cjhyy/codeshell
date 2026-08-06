@@ -40,10 +40,11 @@ export const AUTOMATION_PROMPT_NOTE =
   "This is an unattended, scheduled automation run. No human is watching, and " +
   "AskUserQuestion will not reach anyone. You ARE the automation — do not ask " +
   "the user questions and do not offer to set up or schedule automation. " +
-  "Produce the requested output directly; when uncertain, state your assumption " +
-  "and proceed." +
-  " When finished, call UpdateAutomationMemory exactly once with a concise " +
-  "summary of this run's key findings/state for the next run.";
+  "When uncertain, state your assumption and proceed. When the work is ready, " +
+  "first call UpdateAutomationMemory exactly once with a concise summary of this " +
+  "run's key findings/state for the next run. After that call succeeds, return the " +
+  "complete requested output as the final assistant message. Do not replace the " +
+  "requested output with a completion acknowledgement or put it in a formatting tool.";
 
 /** Compose the run's appendSystemPrompt: prepend the automation note when the
  *  run is tagged source "automation", preserving any host-provided append. */

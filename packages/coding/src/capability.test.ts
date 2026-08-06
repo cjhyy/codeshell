@@ -17,14 +17,17 @@ describe("coding capability package", () => {
     expect(coreNames).not.toContain("LSP");
   });
 
-  test("installs its preset and tools into one Engine instance", () => {
+  test("installs its preset tools without the compatibility-only Brief formatter", () => {
     const engine = new Engine({
       llm,
       preset: "terminal-coding",
       capabilities: [CODING_CAPABILITY],
       settingsScope: "isolated",
     });
-    expect(engine.getToolRegistry().hasTool("Brief")).toBe(true);
+    // Brief only formats Markdown into a tool result. Exposing it to the model
+    // hides user-facing output inside a folded tool card and breaks headless
+    // consumers that take the final assistant text as the run result.
+    expect(engine.getToolRegistry().hasTool("Brief")).toBe(false);
     expect(engine.getToolRegistry().hasTool("NotebookEdit")).toBe(true);
     expect(engine.getToolRegistry().hasTool("LSP")).toBe(true);
   });

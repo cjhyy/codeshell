@@ -86,11 +86,31 @@ describe("CodexRuntime", () => {
     expect(runtime.runtimeSessionId).not.toBe("sess-runtime");
   });
 
+  test("resumes a durable Codex thread instead of silently starting over", async () => {
+    const file = fakeServerScript(`
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/resume") return send({ id: m.id, result: { thread: { id: m.params.threadId } } });
+        if (m.method === "thread/start") return send({ id: m.id, error: { code: -1, message: "must not start" } });
+      });
+    `);
+    const runtime = new CodexRuntime({
+      cwd: process.cwd(),
+      businessSessionId: "sess-resume",
+      bridge,
+      resumeRuntimeSessionId: "thread-existing",
+      client: { command: process.execPath, args: [file] },
+    });
+    runtimes.push(runtime);
+    await runtime.start();
+    expect(runtime.runtimeSessionId).toBe("thread-existing");
+  });
+
   test("runs a turn and emits translated StreamEvents in order", async () => {
     const events: StreamEvent[] = [];
     const runtime = makeRuntime(HAPPY_PATH, (event) => events.push(event));
     await runtime.start();
-    const turn = await runtime.send("hi");
+    const turn = await runtime.send({ text: "hi" });
     await turn.done;
 
     expect(events.map((event) => event.type)).toEqual([
@@ -106,14 +126,50 @@ describe("CodexRuntime", () => {
     // The RPC only acknowledges acceptance; the turn ends on the notification.
     const runtime = makeRuntime(HAPPY_PATH);
     await runtime.start();
-    const turn = await runtime.send("hi");
+    const turn = await runtime.send({ text: "hi" });
     await expect(turn.done).resolves.toBeUndefined();
     expect(turn.turnId).toBe("turn-1");
   });
 
+  test("sends client id and local image attachments through turn/start", async () => {
+    const file = fakeServerScript(`
+      let captured = null;
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/start") return send({ id: m.id, result: { thread: { id: "t" } } });
+        if (m.method === "turn/start") {
+          captured = m.params;
+          send({ id: m.id, result: { turn: { id: "turn-1" } } });
+          send({ method: "turn/completed", params: { threadId: "t", turn: { id: "turn-1", status: "completed" } } });
+          return;
+        }
+        if (m.method === "collect") return send({ id: m.id, result: captured });
+      });
+    `);
+    const runtime = new CodexRuntime({
+      cwd: process.cwd(),
+      businessSessionId: "sess-attachments",
+      bridge,
+      client: { command: process.execPath, args: [file] },
+    });
+    runtimes.push(runtime);
+    await runtime.start();
+    const turn = await runtime.send({
+      text: "inspect",
+      clientMessageId: "client-1",
+      attachments: [{ path: "/tmp/example.png", kind: "image", mime: "image/png" }],
+    });
+    await turn.done;
+    const captured = (await (
+      runtime as unknown as { client: { request(m: string): Promise<unknown> } }
+    ).client.request("collect")) as { clientUserMessageId?: string; input?: unknown[] };
+    expect(captured.clientUserMessageId).toBe("client-1");
+    expect(captured.input).toContainEqual({ type: "localImage", path: "/tmp/example.png" });
+  });
+
   test("send() before start() is refused", async () => {
     const runtime = makeRuntime(HAPPY_PATH);
-    await expect(runtime.send("hi")).rejects.toThrow(/before start/i);
+    await expect(runtime.send({ text: "hi" })).rejects.toThrow(/before start/i);
   });
 
   test("a thread/start with no id fails loudly", async () => {
@@ -136,7 +192,7 @@ describe("CodexRuntime", () => {
       });
     `);
     await runtime.start();
-    const turn = await runtime.send("hi");
+    const turn = await runtime.send({ text: "hi" });
     await runtime.close();
     await expect(turn.done).resolves.toBeUndefined();
   });
@@ -163,7 +219,7 @@ describe("CodexRuntime", () => {
       (event) => events.push(event),
     );
     await runtime.start();
-    const turn = await runtime.send("hi");
+    const turn = await runtime.send({ text: "hi" });
     await runtime.interrupt();
     await turn.done;
     expect(events.at(-1)).toEqual({ type: "turn_complete", reason: "aborted_streaming" });
@@ -180,7 +236,7 @@ describe("CodexRuntime", () => {
       });
     `);
     await runtime.start();
-    await runtime.send("hi");
+    await runtime.send({ text: "hi" });
     await expect(runtime.interrupt()).rejects.toThrow(/nope/);
   });
 
@@ -238,6 +294,38 @@ describe("CodexRuntime", () => {
       runtime as unknown as { client: { request(m: string): Promise<unknown> } }
     ).client.request("collect")) as { decision?: string };
     expect(collected.decision).toBe("accept");
+  });
+
+  test("routes request_user_input through the owning host hook", async () => {
+    const file = fakeServerScript(`
+      let answer = null;
+      setOnLine((m) => {
+        if (m.method === "initialize") return send({ id: m.id, result: {} });
+        if (m.method === "thread/start") {
+          send({ id: m.id, result: { thread: { id: "t" } } });
+          send({ id: 801, method: "item/tool/requestUserInput", params: { questions: [{ id: "q1", question: "Choose" }] } });
+          return;
+        }
+        if (m.method === "collect") return send({ id: m.id, result: { answer } });
+        if (m.result?.answers) answer = m.result;
+      });
+    `);
+    const runtime = new CodexRuntime(
+      {
+        cwd: process.cwd(),
+        businessSessionId: "sess-input",
+        bridge,
+        client: { command: process.execPath, args: [file] },
+      },
+      { onUserInput: () => ({ answers: { q1: { answers: ["A"] } } }) },
+    );
+    runtimes.push(runtime);
+    await runtime.start();
+    await Bun.sleep(100);
+    const collected = (await (
+      runtime as unknown as { client: { request(m: string): Promise<unknown> } }
+    ).client.request("collect")) as { answer?: unknown };
+    expect(collected.answer).toEqual({ answers: { q1: { answers: ["A"] } } });
   });
 
   describe("MCP approval elicitation (how Codex asks about OUR tools)", () => {
@@ -349,7 +437,7 @@ describe("CodexRuntime", () => {
       throw new Error("ui exploded");
     });
     await runtime.start();
-    const turn = await runtime.send("hi");
+    const turn = await runtime.send({ text: "hi" });
     await expect(turn.done).resolves.toBeUndefined();
   });
 });

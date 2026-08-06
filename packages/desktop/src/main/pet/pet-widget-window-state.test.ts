@@ -6,6 +6,7 @@ import {
   PET_WIDGET_EXPANDED_WIDTH,
   clampPetWidgetWindowPosition,
   defaultPetWidgetWindowPosition,
+  petWidgetAlwaysOnTopLevel,
   petWidgetWindowStatePath,
   petWidgetSurface,
   sanitizePetWidgetWindowPosition,
@@ -55,6 +56,26 @@ describe("desktop Pet window position", () => {
     expect(shouldSkipPetWidgetTaskbar("linux")).toBe(true);
   });
 
+  test("uses a system overlay level for the macOS pet", () => {
+    expect(petWidgetAlwaysOnTopLevel("darwin")).toBe("screen-saver");
+    expect(petWidgetAlwaysOnTopLevel("win32")).toBe("floating");
+    expect(petWidgetAlwaysOnTopLevel("linux")).toBe("floating");
+  });
+
+  test("keeps the pet above other apps and active across macOS Spaces", () => {
+    const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
+    expect(mainSource).toContain(
+      "win.setAlwaysOnTop(true, petWidgetAlwaysOnTopLevel(process.platform))",
+    );
+    expect(mainSource).toContain("win.moveTop()");
+    expect(mainSource).toContain(
+      "win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })",
+    );
+    expect(mainSource).toContain("win.setHiddenInMissionControl(true)");
+    expect(mainSource).toContain("backgroundThrottling: false");
+    expect(mainSource).toContain('win.on("always-on-top-changed"');
+  });
+
   test("deduplicates concurrent renderer requests into one Pet BrowserWindow", () => {
     const mainSource = readFileSync(join(import.meta.dir, "..", "index.ts"), "utf8");
     expect(mainSource).toContain("let petWidgetWindowCreation: Promise<BrowserWindow> | null");
@@ -78,7 +99,7 @@ describe("desktop Pet window position", () => {
     expect(widgetSource).toContain("onContextMenu();");
     expect(widgetSource).not.toContain("onClose();");
     expect(mainSource).toContain('ipcMain.on("pet:widget-context-menu"');
-    expect(mainSource).toContain('event.sender !== win.webContents');
+    expect(mainSource).toContain("event.sender !== win.webContents");
     expect(mainSource).toContain('chinese ? "关闭宠物" : "Close Pet"');
     expect(mainSource).toContain("setPetWidgetVisibility(false)");
   });

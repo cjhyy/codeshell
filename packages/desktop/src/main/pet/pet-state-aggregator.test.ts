@@ -125,6 +125,57 @@ function deferred<T>() {
 }
 
 describe("PetStateAggregator", () => {
+  test("filters quick chats from both disk and live worker projections", async () => {
+    const bridge = new FakeBridge();
+    bridge.active = true;
+    bridge.snapshot = {
+      ...workerSnapshot(8, [live("work-visible"), live("qchat-private")]),
+      pending: [
+        {
+          owner: "local-user",
+          agentSessionId: "qchat-private",
+          coreSessionId: "qchat-private",
+          requestId: "private-decision",
+          workerGeneration: 1,
+          kind: "ask_user",
+          title: "private quick-chat decision",
+          createdAt: 2_000,
+          status: "pending",
+        },
+      ],
+    };
+    const aggregator = new PetStateAggregator({
+      bridge,
+      // Model an older/alternate catalog provider that has not applied its own
+      // ephemeral-session filter yet.
+      listDiskSessions: pagedCatalog([disk("work-visible"), disk("qchat-disk")]).list,
+      catalogRefreshIntervalMs: 0,
+    });
+
+    await aggregator.start();
+    expect(aggregator.getSnapshot().sessions.map((session) => session.agentSessionId)).toEqual([
+      "work-visible",
+    ]);
+    expect(aggregator.getSnapshot().pending).toEqual([]);
+
+    const events: DesktopPetProjectionEvent[] = [];
+    aggregator.subscribe((event) => events.push(event));
+    await bridge.emit({
+      kind: "delta",
+      delta: {
+        workerGeneration: 1,
+        version: 9,
+        observedAt: 3_000,
+        kind: "session-upsert",
+        session: live("qchat-late"),
+      },
+    });
+    expect(events).toEqual([]);
+    expect(aggregator.getSnapshot().sessions.map((session) => session.agentSessionId)).toEqual([
+      "work-visible",
+    ]);
+  });
+
   test("periodically refreshes the durable work catalog and observes external changes", async () => {
     const bridge = new FakeBridge();
     const catalog = pagedCatalog([disk("one")]);
@@ -268,6 +319,68 @@ describe("PetStateAggregator", () => {
       phase: undefined,
       terminal: { status: "completed", at: 2_500 },
     });
+  });
+
+  test("replaces a stale background wait with the newer durable terminal state", async () => {
+    const bridge = new FakeBridge();
+    bridge.active = true;
+    bridge.snapshot = workerSnapshot(8, [
+      live("one", {
+        runState: "idle",
+        summary: "等待后台结果",
+        completionKind: "background_wait",
+        lastActivityAt: 2_000,
+      }),
+    ]);
+    const catalog = pagedCatalog([disk("one", { status: "completed", updatedAt: 2_500 })]);
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: catalog.list,
+      now: () => 3_000,
+    });
+
+    await aggregator.start();
+
+    expect(aggregator.getSnapshot().sessions[0]).toEqual(
+      expect.objectContaining({
+        runState: "terminal",
+        phase: undefined,
+        summary: undefined,
+        completionKind: undefined,
+        terminal: { status: "completed", at: 2_500 },
+        lastActivityAt: 2_500,
+      }),
+    );
+  });
+
+  test("keeps a newer background wait over an older durable terminal state", async () => {
+    const bridge = new FakeBridge();
+    bridge.active = true;
+    bridge.snapshot = workerSnapshot(8, [
+      live("one", {
+        runState: "idle",
+        summary: "等待后台结果",
+        completionKind: "background_wait",
+        lastActivityAt: 2_000,
+      }),
+    ]);
+    const aggregator = new PetStateAggregator({
+      bridge,
+      listDiskSessions: pagedCatalog([disk("one", { status: "completed", updatedAt: 1_500 })]).list,
+      now: () => 3_000,
+    });
+
+    await aggregator.start();
+
+    expect(aggregator.getSnapshot().sessions[0]).toEqual(
+      expect.objectContaining({
+        runState: "idle",
+        summary: "等待后台结果",
+        completionKind: "background_wait",
+        terminal: undefined,
+        lastActivityAt: 2_000,
+      }),
+    );
   });
 
   test("serializes deltas while an older finalizing event awaits disk reconciliation", async () => {
@@ -765,9 +878,9 @@ describe("external session source", () => {
 
     aggregator.removeExternalSession("thread-a");
     expect(events.at(-1)).toMatchObject({ kind: "session-remove", sessionId: "thread-a" });
-    expect(
-      aggregator.getSnapshot().sessions.some((s) => s.agentSessionId === "thread-a"),
-    ).toBe(false);
+    expect(aggregator.getSnapshot().sessions.some((s) => s.agentSessionId === "thread-a")).toBe(
+      false,
+    );
     aggregator.stop();
   });
 
@@ -790,9 +903,7 @@ describe("external session source", () => {
     aggregator.upsertExternalSession(externalSession("thread-a"));
     emitLifecycle!({ kind: "lifecycle", state: "disconnected" });
     await new Promise((resolve) => setTimeout(resolve, 0));
-    const found = aggregator
-      .getSnapshot()
-      .sessions.find((s) => s.agentSessionId === "thread-a");
+    const found = aggregator.getSnapshot().sessions.find((s) => s.agentSessionId === "thread-a");
     expect(found?.runState).toBe("running");
     expect(found?.freshness.workerState).toBe("active");
     aggregator.stop();
@@ -830,7 +941,10 @@ describe("external session source", () => {
     });
     await aggregator.start();
     aggregator.upsertExternalSession({ ...externalSession("codex-1"), external: { cli: "codex" } });
-    aggregator.upsertExternalSession({ ...externalSession("claude-1"), external: { cli: "claude" } });
+    aggregator.upsertExternalSession({
+      ...externalSession("claude-1"),
+      external: { cli: "claude" },
+    });
     aggregator.removeExternalSessionsByCli("codex");
     const ids = aggregator.getSnapshot().sessions.map((s) => s.agentSessionId);
     expect(ids).not.toContain("codex-1");

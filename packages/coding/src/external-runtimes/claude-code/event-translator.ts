@@ -61,6 +61,12 @@ export class ClaudeEventTranslator {
     this.codeshellServer = options.codeshellServerName ?? "codeshell_tools";
   }
 
+  /** Reset turn-scoped state while preserving the durable Claude session id. */
+  beginTurn(): void {
+    this.terminal = false;
+    this.toolInput.clear();
+  }
+
   /** Claude session id, learned from the `system/init` line. */
   runtimeSessionId?: string;
 
@@ -212,12 +218,32 @@ export class ClaudeEventTranslator {
     // turn twice — the same hazard Codex has with turn/completed.
     if (this.terminal) return [];
     this.terminal = true;
-    return [
-      {
-        type: "turn_complete",
-        reason: terminalReasonFor(str(message.subtype), message.is_error === true),
-      },
-    ];
+    const events: StreamEvent[] = [];
+    const usage = asRecord(message.usage);
+    const number = (value: unknown): number | undefined =>
+      typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+    const promptTokens = number(usage?.input_tokens);
+    if (promptTokens !== undefined) {
+      const completionTokens = number(usage?.output_tokens);
+      const cacheReadTokens = number(usage?.cache_read_input_tokens);
+      const cacheCreationTokens = number(usage?.cache_creation_input_tokens);
+      events.push({
+        type: "usage_update",
+        promptTokens,
+        promptTokensSource: "provider_usage",
+        promptTokensConfidence: "high",
+        ...(completionTokens !== undefined ? { completionTokens } : {}),
+        ...(cacheReadTokens !== undefined ? { cacheReadTokens } : {}),
+        ...(cacheCreationTokens !== undefined ? { cacheCreationTokens } : {}),
+      });
+    }
+    const reason = terminalReasonFor(str(message.subtype), message.is_error === true);
+    if (reason === "model_error") {
+      const detail = str(message.result) ?? str(message.error);
+      if (detail) events.push({ type: "error", error: detail });
+    }
+    events.push({ type: "turn_complete", reason });
+    return events;
   }
 
   private isCodeshellHostTool(toolName: string): boolean {

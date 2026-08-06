@@ -132,11 +132,14 @@ describe("Engine ephemeral quick-chat memory isolation", () => {
         join(userHome, ".code-shell", "session-memories", `${sessionId}.json`),
       ),
       autoDreamStateUpdated: existsSync(join(codeShellHome, "auto-dream-state.json")),
+      sessionDirectoryPersisted: existsSync(join(root, "sessions", sessionId)),
     }).toEqual({
       memoryPrompts: [],
       dreamMemories: [],
       sessionSummaryPersisted: false,
       autoDreamStateUpdated: false,
+      sessionDirectoryPersisted: false,
     });
+    expect(manager.forgetEphemeralSession(sessionId)).toBe(true);
   });
 });

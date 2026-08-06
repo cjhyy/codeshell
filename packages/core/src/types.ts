@@ -358,9 +358,10 @@ export interface SessionState {
   /** User-fork lineage; deliberately separate from sub-agent ownership. */
   forkedFrom?: SessionForkLineage;
   /**
-   * Temporary child sessions are persisted only while their owning surface is
-   * alive. Ordinary resume/session pickers must omit them. Absent on legacy
-   * sessions; desktop also recognizes its historical `qchat-*` namespace.
+   * Temporary child sessions live only in process memory. Ordinary
+   * resume/session pickers omit them, and closing/expiry forgets them instead
+   * of publishing state or transcript files. Absent on legacy sessions;
+   * desktop also recognizes its historical `qchat-*` namespace.
    */
   ephemeral?: boolean;
   /**
@@ -751,6 +752,9 @@ export type StreamEvent =
       sessionCacheReadTokens?: number;
       sessionCacheCreationTokens?: number;
       sessionPromptTokens?: number;
+      /** Provider-reported completion tokens for the latest and whole thread. */
+      completionTokens?: number;
+      cumulativeCompletionTokens?: number;
       agentId?: string;
     }
   // B2.2 — background sub-agent/job finished (completed | failed | cancelled). Mirrors the

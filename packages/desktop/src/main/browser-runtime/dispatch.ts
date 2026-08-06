@@ -1,5 +1,6 @@
 /** Runtime-only dispatch for interactive engine sessions. */
 
+import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import {
   dispatchBrowserBridgeAction,
   type BrowserActionRequest,
@@ -40,4 +41,34 @@ export async function dispatchInteractiveBrowserRuntimeAction(
   } finally {
     lease.release();
   }
+}
+
+/**
+ * Direct ToolContext bridge for sessions whose agent loop lives in Desktop
+ * main. It intentionally dispatches through the same ownership/handoff router
+ * as worker-originated browser actions.
+ */
+export function interactiveBrowserBridgeForSession(sessionId: string): BrowserBridge {
+  const call = async <T>(request: BrowserActionRequest): Promise<T> => {
+    const json = await dispatchInteractiveBrowserRuntimeAction(sessionId, request);
+    return JSON.parse(json) as T;
+  };
+  return {
+    snapshot: () => call({ action: "snapshot" }),
+    click: (ref) => call({ action: "click", ref }),
+    type: (ref, text) => call({ action: "type", ref, text }),
+    navigate: (url) => call({ action: "navigate", url }),
+    scroll: (dir, amount) => call({ action: "scroll", dir, amount }),
+    readContent: (options) =>
+      call({ action: "readContent", cursor: options?.cursor, maxChars: options?.maxChars }),
+    extractLinks: () => call({ action: "extractLinks" }),
+    waitForLoad: (timeoutMs) => call({ action: "waitForLoad", timeoutMs }),
+    hover: (ref) => call({ action: "hover", ref }),
+    selectOption: (ref, value) => call({ action: "selectOption", ref, value }),
+    pressKey: (key, ref) => call({ action: "pressKey", key, ref }),
+    fetchImages: (refs) => call({ action: "fetchImages", refs }),
+    screenshot: (ref) => call({ action: "screenshot", ref }),
+    listTabs: () => call({ action: "listTabs" }),
+    switchTab: (tabId) => call({ action: "switchTab", tabId }),
+  };
 }

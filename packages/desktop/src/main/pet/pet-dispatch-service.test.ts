@@ -124,6 +124,31 @@ describe("PetDispatchService", () => {
     expect(ids).not.toContain("a-04");
   });
 
+  test("boundedWorld never exposes quick-chat metadata to Mimi", () => {
+    const world = boundedWorld({
+      ...snapshot,
+      sessions: [
+        ...snapshot.sessions,
+        {
+          ...snapshot.sessions[0]!,
+          agentSessionId: "qchat-private",
+          title: "private quick-chat title",
+        },
+      ],
+      pending: [
+        ...snapshot.pending,
+        {
+          ...snapshot.pending[0]!,
+          agentSessionId: "qchat-private",
+          requestId: "private-request",
+        },
+      ],
+    });
+
+    expect(JSON.stringify(world)).not.toContain("qchat-private");
+    expect(JSON.stringify(world)).not.toContain("private quick-chat title");
+  });
+
   test("runs every channel through the persisted Mimi manager model", async () => {
     let request: { method: string; params: Record<string, unknown> } | undefined;
     const service = new PetDispatchService({
@@ -1396,6 +1421,41 @@ describe("PetDispatchService", () => {
     await service.dispatch({ type: "chat", message: "你好" });
     expect(runtimeContext).toContain('"carryoverBrief"');
     expect(runtimeContext).toContain("重构 X");
+  });
+
+  test("injects fresh Mimi-only personalization without changing the user task", async () => {
+    let task = "";
+    let runtimeContext = "";
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          task = String(params.task);
+          runtimeContext = String(params.petRuntimeContext);
+          return { ok: true, result: { text: "hi" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      personalization: async () => ({
+        responseLanguage: "简体中文",
+        userProfile: "叫我 Maki",
+        communicationStyle: "亲切但简洁",
+        customInstructions: "汇报先说结论",
+      }),
+    });
+
+    await service.dispatch({ type: "chat", message: "整理一下工作" });
+    expect(task).toBe("整理一下工作");
+    expect(JSON.parse(runtimeContext).personalization).toEqual({
+      responseLanguage: "简体中文",
+      userProfile: "叫我 Maki",
+      communicationStyle: "亲切但简洁",
+      customInstructions: "汇报先说结论",
+    });
   });
 
   test("passes the turn's client message id to beginTurn so a boundary can key on it", async () => {

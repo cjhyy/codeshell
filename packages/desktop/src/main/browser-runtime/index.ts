@@ -51,6 +51,7 @@ export {
 export type { BuiltInBrowserHandoffStatus, GrantBuiltInBrowserInput } from "./built-in-handoff.js";
 export {
   dispatchInteractiveBrowserRuntimeAction,
+  interactiveBrowserBridgeForSession,
   interactiveBrowserRuntimeOwner,
 } from "./dispatch.js";
 export {

@@ -1,9 +1,14 @@
 /**
- * BriefTool — send structured messages with markdown support.
+ * Legacy Brief formatter.
+ *
+ * Kept as a root compatibility export for existing programmatic consumers. It
+ * is intentionally not registered in the default coding capability because a
+ * tool result is not a user-facing assistant message.
  */
 
 import type { ToolDefinition } from "@cjhyy/code-shell-core/extension";
 
+/** @deprecated Return user-facing Markdown as normal assistant text instead. */
 export const briefToolDef: ToolDefinition = {
   name: "Brief",
   description:
@@ -30,6 +35,7 @@ export const briefToolDef: ToolDefinition = {
   },
 };
 
+/** @deprecated Return user-facing Markdown as normal assistant text instead. */
 export async function briefTool(args: Record<string, unknown>): Promise<string> {
   const title = args.title as string | undefined;
   const content = args.content as string;

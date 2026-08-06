@@ -89,6 +89,9 @@ export const panels = {
         ownerSessionUnavailable: "无法定位此任务所属的会话",
         observingDescription: "正在只读查看外部 CLI 对话；继续前需要明确接管。",
         observingComposer: "只读查看中；接管后才能发送消息",
+        localFilePaths: "本地文件路径（由你拖入）",
+        filePathUnavailable: "无法获取该文件的本地路径，请重启应用后重试。",
+        removeFile: "移除文件 {name}",
         takeOver: "继续对话 / 接管",
         takingOver: "正在接管…",
       },
@@ -344,6 +347,10 @@ export const panels = {
         observingDescription:
           "Viewing this external CLI conversation read-only. Explicit takeover is required to continue.",
         observingComposer: "Read-only; take over before sending a message",
+        localFilePaths: "Local file paths (dropped by you)",
+        filePathUnavailable:
+          "Could not get the local path for that file. Restart the app and try again.",
+        removeFile: "Remove file {name}",
         takeOver: "Continue / Take over",
         takingOver: "Taking over…",
       },

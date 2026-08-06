@@ -33,11 +33,16 @@ describe("desktop session services CODE_SHELL_HOME routing", () => {
     expect((await listDiskSessions({ limit: 10 })).sessions.map((session) => session.id)).toEqual([
       "normal-in-custom-home",
     ]);
+    expect(existsSync(join(sessionsRoot(), "qchat-in-custom-home"))).toBe(false);
 
     await deleteSession("normal-in-custom-home");
     expect(existsSync(join(sessionsRoot(), "normal-in-custom-home"))).toBe(false);
 
-    expect(await cleanupStaleQuickChatSessions()).toEqual(["qchat-in-custom-home"]);
-    expect(existsSync(join(sessionsRoot(), "qchat-in-custom-home"))).toBe(false);
+    // New Quick Chats never reach disk. Startup GC remains compatible with a
+    // directory left by an older build.
+    mkdirSync(join(sessionsRoot(), "qchat-legacy-leftover"));
+    expect(await cleanupStaleQuickChatSessions()).toEqual(["qchat-legacy-leftover"]);
+    expect(existsSync(join(sessionsRoot(), "qchat-legacy-leftover"))).toBe(false);
+    expect(manager.forgetEphemeralSession("qchat-in-custom-home")).toBe(true);
   });
 });

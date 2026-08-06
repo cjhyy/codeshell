@@ -2,7 +2,7 @@
 
 Optional coding capability pack for `@cjhyy/code-shell-core`. It owns
 CodeShell's coding policy and implementations: the `terminal-coding` preset,
-coding prompt, Git/worktree behavior, LSP, ApplyPatch, NotebookEdit, Brief,
+coding prompt, Git/worktree behavior, LSP, ApplyPatch, NotebookEdit,
 review/quota helpers, and external coding-agent adapters.
 
 The package is deliberately separate from core. A service building a customer
@@ -52,8 +52,10 @@ import { probeClaudeCli } from "@cjhyy/code-shell-capability-coding/orchestratio
 ```
 
 These are subpaths of the same npm package, not independently versioned
-packages. LSP, ApplyPatch, Brief, NotebookEdit, and other compatibility exports
-remain available from the root.
+packages. LSP, ApplyPatch, NotebookEdit, and other compatibility exports remain
+available from the root. The legacy `briefTool` formatter is also retained as a
+root compatibility export, but it is no longer registered with the default
+coding preset: user-facing Markdown should be returned as normal assistant text.
 
 ## Boundary
 

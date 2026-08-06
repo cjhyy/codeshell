@@ -16,7 +16,7 @@
  * dispatch via ChatSessionManager.
  */
 
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from "electron";
 import { createPetApi } from "./pet-api";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
@@ -477,6 +477,12 @@ ipcRenderer.on(
 contextBridge.exposeInMainWorld("codeshell", {
   /** Main-process platform, exposed explicitly so renderer layout doesn't infer it from UA strings. */
   platform: process.platform,
+  /**
+   * Resolve a browser File created by an explicit picker/drop to its local
+   * absolute path. Electron intentionally removed the old `file.path` field;
+   * webUtils is the supported replacement and keeps path access user-driven.
+   */
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
   /** Read-only local Pet projection; no transcript, resolver, approval or mutation routes. */
   pet: createPetApi(ipcRenderer),
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
@@ -1503,6 +1509,11 @@ contextBridge.exposeInMainWorld("codeshell", {
       sessionId: string;
       cwd: string;
       modelKey: string;
+      permissionMode?: string;
+      planMode?: boolean;
+      hasGoal?: boolean;
+      initialContext?: string;
+      developerInstructions?: string;
     }): Promise<{ kind: string; runtimeSessionId: string | null; tools: string[] }> =>
       ipcRenderer
         .invoke("externalRuntime:start", payload)
@@ -1513,7 +1524,12 @@ contextBridge.exposeInMainWorld("codeshell", {
           return result;
         }),
     /** Send one user turn. Resolves when the turn completes. */
-    send: (payload: { sessionId: string; text: string }): Promise<void> =>
+    send: (payload: {
+      sessionId: string;
+      text: string;
+      clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
+    }): Promise<{ ok: boolean; reason?: string; text?: string; streamed?: boolean }> =>
       ipcRenderer.invoke("externalRuntime:send", payload),
     interrupt: (sessionId: string): Promise<void> =>
       ipcRenderer.invoke("externalRuntime:interrupt", sessionId),

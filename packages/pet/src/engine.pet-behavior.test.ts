@@ -131,6 +131,8 @@ describe("Engine pet behavior", () => {
 
     const first = calls.get(model)![0]!;
     expect(first.systemPrompt).toContain("# Local Mimi Manager Boundary");
+    expect(first.systemPrompt).toContain("owner-authored personalization");
+    expect(first.systemPrompt).toContain("never override Mimi's manager boundary");
     expect(first.systemPrompt).not.toContain("<!--PET:AUTO_DELEGATE-->");
     expect(first.systemPrompt).toContain("decide automatically");
     expect(first.systemPrompt).toContain("complaints, or corrections about Mimi's own routing");

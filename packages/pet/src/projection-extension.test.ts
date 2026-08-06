@@ -71,6 +71,54 @@ describe("Pet projection observer", () => {
     expect(PET_HIDDEN_SESSION_KINDS).toEqual(["pet"]);
   });
 
+  test("keeps ephemeral quick chats out of Mimi's live projection", async () => {
+    const liveSessions: ProtocolLiveSession[] = [
+      {
+        sessionId: "work-visible",
+        busy: true,
+        queueDepth: 0,
+        lastActivityAt: 100,
+        kind: "work",
+      },
+      {
+        sessionId: "qchat-private",
+        busy: true,
+        queueDepth: 0,
+        lastActivityAt: 200,
+        kind: "work",
+      },
+    ];
+    let snapshotQuery: ExtensionQueryHandler | undefined;
+    const deltas: PetProjectionDelta[] = [];
+    const host: ProtocolObserverHost = {
+      getLiveSessionSnapshot: () => liveSessions,
+      projectionGeneration: () => 1,
+      getSessionKind: () => "work",
+      isTransportDisconnected: () => false,
+      notify: (method, payload) => {
+        if (method === PET_PROJECTION_DELTA_METHOD) {
+          deltas.push(payload as unknown as PetProjectionDelta);
+        }
+      },
+      registerQuery: (method, handler) => {
+        if (method === GET_PET_PROJECTION_SNAPSHOT_METHOD) snapshotQuery = handler;
+      },
+    };
+    const observer = createPetProjectionObserver(host);
+
+    observer.onSessionAttached?.("work-visible", 100);
+    observer.onSessionAttached?.("qchat-private", 200);
+    observer.onSessionStream?.("qchat-private", {
+      type: "tool_use_start",
+      toolCall: { id: "private-tool", toolName: "ReadSecret", args: {} },
+    });
+    observer.onRunBoundary?.("qchat-private");
+
+    const snapshot = (await snapshotQuery?.({})) as PetProjectionSnapshotResult;
+    expect(snapshot.sessions.map((session) => session.agentSessionId)).toEqual(["work-visible"]);
+    expect(deltas).toEqual([]);
+  });
+
   test("preserves the indexed terminal when the host becomes idle at turn completion", async () => {
     const liveSessions: ProtocolLiveSession[] = [
       {

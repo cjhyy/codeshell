@@ -186,6 +186,65 @@ export async function runStreamWithWatchdog<T = any>(
   return text;
 }
 
+const MISSING_TOOL_RESULT_WIRE_TEXT =
+  "Error: Tool execution did not complete before the conversation resumed.";
+
+/**
+ * OpenAI requires each assistant tool_calls batch to be followed immediately
+ * by exactly one role:tool message per id. Normalize at the provider boundary
+ * as a final guard against legacy/corrupt transcripts: keep the latest result
+ * for a duplicate id, synthesize a request-local result for a missing id, and
+ * discard tool messages that were never declared by the preceding assistant.
+ */
+function normalizeOpenAIToolMessagePairs(
+  messages: OpenAI.ChatCompletionMessageParam[],
+): OpenAI.ChatCompletionMessageParam[] {
+  const normalized: OpenAI.ChatCompletionMessageParam[] = [];
+
+  for (let index = 0; index < messages.length; index++) {
+    const message = messages[index]!;
+    if (message.role === "tool") continue;
+
+    normalized.push(message);
+    if (message.role !== "assistant") continue;
+    const toolCalls = (
+      message as OpenAI.ChatCompletionAssistantMessageParam & {
+        tool_calls?: Array<{ id?: string }>;
+      }
+    ).tool_calls;
+    const expectedIds = Array.isArray(toolCalls)
+      ? toolCalls
+          .map((toolCall) => toolCall.id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0)
+      : [];
+    if (expectedIds.length === 0) continue;
+
+    const expected = new Set(expectedIds);
+    const latestResultById = new Map<string, OpenAI.ChatCompletionToolMessageParam>();
+    let cursor = index + 1;
+    while (cursor < messages.length && messages[cursor]?.role === "tool") {
+      const toolMessage = messages[cursor] as OpenAI.ChatCompletionToolMessageParam;
+      if (expected.has(toolMessage.tool_call_id)) {
+        latestResultById.set(toolMessage.tool_call_id, toolMessage);
+      }
+      cursor++;
+    }
+
+    for (const id of expectedIds) {
+      normalized.push(
+        latestResultById.get(id) ?? {
+          role: "tool",
+          tool_call_id: id,
+          content: MISSING_TOOL_RESULT_WIRE_TEXT,
+        },
+      );
+    }
+    index = cursor - 1;
+  }
+
+  return normalized;
+}
+
 export class OpenAIClient extends LLMClientBase {
   private _client: OpenAI | null = null;
   // Sticky override: once the endpoint tells us `max_tokens` is rejected for
@@ -959,11 +1018,12 @@ export class OpenAIClient extends LLMClientBase {
       }
     }
 
+    const normalized = normalizeOpenAIToolMessagePairs(result);
     if (this.isOpenRouterAnthropic) {
-      this.applyAnthropicCacheBreakpoints(result);
+      this.applyAnthropicCacheBreakpoints(normalized);
     }
 
-    return result;
+    return normalized;
   }
 
   /**

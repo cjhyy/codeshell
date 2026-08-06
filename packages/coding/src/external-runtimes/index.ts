@@ -30,6 +30,8 @@ export type {
 } from "./shared/session-context-store.js";
 export { buildRuntimeSpawnEnv } from "./shared/spawn-env.js";
 export type { RuntimeSpawnEnvOptions } from "./shared/spawn-env.js";
+export { textWithAttachmentReferences } from "./turn-input.js";
+export type { ExternalRuntimeAttachment, ExternalRuntimeTurnInput } from "./turn-input.js";
 export { CodexEventTranslator } from "./codex/event-translator.js";
 export { CodexAppServerClient } from "./codex/app-server-client.js";
 export type { AppServerClientOptions } from "./codex/app-server-client.js";

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "./session-manager.js";
@@ -49,7 +49,31 @@ describe("SessionManager side snapshot", () => {
     expect(forked.bundle.state.ephemeral).toBe(true);
     const blankQuickChat = manager.create("/project", "model", "provider", "qchat-blank");
     expect(blankQuickChat.state.ephemeral).toBe(true);
+    expect(existsSync(join(dir, "side-child"))).toBe(false);
+    expect(existsSync(join(dir, "qchat-blank"))).toBe(false);
+
+    const sibling = new SessionManager(dir);
+    expect(sibling.exists("side-child")).toBe(true);
+    expect(
+      sibling
+        .resume("side-child")
+        .transcript.getEvents("message")
+        .map((event) => event.data.content),
+    ).toEqual(["completed request", "completed response"]);
+    const siblingState = sibling.resume("side-child").state;
+    siblingState.title = "memory-only title";
+    expect(sibling.saveState(siblingState)).toBe(true);
+    expect(manager.resume("side-child").state.title).toBe("memory-only title");
     expect(manager.list(10).map((session) => session.sessionId)).toEqual(["parent"]);
+
+    expect(sibling.forgetEphemeralSession("side-child")).toBe(true);
+    expect(manager.exists("side-child")).toBe(false);
+    expect(() => manager.resume("side-child")).toThrow(SessionError);
+    expect(manager.forgetEphemeralSession("qchat-blank")).toBe(true);
+
+    blankQuickChat.state.title = "late write after close";
+    expect(manager.saveState(blankQuickChat.state)).toBe(false);
+    expect(existsSync(join(dir, "qchat-blank"))).toBe(false);
   });
 
   test("cuts all paired assistant and tool tail events after the completed cursor", () => {

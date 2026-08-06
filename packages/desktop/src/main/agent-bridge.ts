@@ -1273,6 +1273,38 @@ export class AgentBridge implements PetStateBridge {
     };
   }
 
+  /** Direct InjectCredential seam for a main-owned external runtime session. */
+  async injectCredentialForSession(
+    sessionId: string,
+    credentialId: string,
+    credentialScope: "full" | "project" = "full",
+  ): Promise<{ ok: boolean; count?: number; error?: string }> {
+    try {
+      const bucket = bucketForSession(sessionId);
+      if (!bucket) throw new Error(`no browser bucket registered for session ${sessionId}`);
+      const sessionCwd = this.cwdForSessionOrThrow(sessionId);
+      const resolved = resolveCookieCredentialForBrowser(sessionCwd, credentialId, credentialScope);
+      if (!resolved.ok) return { ok: false, error: resolved.error };
+      const target = activeGuestForSession(sessionId);
+      const targetPartition = partitionForSession(sessionId);
+      if (!target?.guest && !targetPartition) {
+        throw new Error(`no browser partition registered for session ${sessionId}`);
+      }
+      const targetSession = target?.guest.session ?? targetPartition ?? undefined;
+      const { count } = await restoreCookiesToBrowser(
+        resolved.jar as ElectronCookieLike[],
+        resolved.switchMode,
+        targetSession,
+      );
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
+      }
+      return { ok: true, count };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
   /**
    * Inject a JSON-RPC line into the worker exactly as the renderer would via
    * the "agent:msg" IPC channel. This is the reuse seam for alternate front

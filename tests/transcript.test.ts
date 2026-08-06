@@ -60,23 +60,25 @@ describe("Transcript", () => {
     expect(t2.turnNumber).toBe(1);
   });
 
-  it("repairs orphaned tool results on load", () => {
+  it("drops orphaned results without persisting a synthetic result on load", () => {
     const t1 = new Transcript(filePath);
     t1.appendMessage("user", "test");
     // tool_use without matching result
     t1.appendToolUse("Bash", "tc_orphan", { command: "ls" });
     // tool_result without matching use
     t1.appendToolResult("tc_ghost", "Read", "data");
+    const before = readFileSync(filePath, "utf8");
 
     const t2 = Transcript.loadFromFile(filePath);
     const events = t2.getEvents();
-    // orphan should get a synthetic result
+    // Loading is read-only: request-time recovery handles the missing result.
     const results = events.filter((e) => e.type === "tool_result");
     const hasOrphanResult = results.some((e) => e.data.toolCallId === "tc_orphan");
-    expect(hasOrphanResult).toBe(true);
+    expect(hasOrphanResult).toBe(false);
     // ghost should be removed
     const hasGhost = results.some((e) => e.data.toolCallId === "tc_ghost");
     expect(hasGhost).toBe(false);
+    expect(readFileSync(filePath, "utf8")).toBe(before);
   });
 
   it("appendSummary records compact metadata", () => {

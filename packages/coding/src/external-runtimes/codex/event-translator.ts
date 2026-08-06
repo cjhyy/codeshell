@@ -31,6 +31,19 @@ const CODESHELL_MCP_SERVER = "codeshell_tools";
 /** Cap on remembered finished turns — a session is long-lived, the set is not. */
 const MAX_TOMBSTONES = 256;
 
+/** Thread items that represent observable runtime work rather than prose/state. */
+const TOOL_ITEM_TYPES: ReadonlySet<string> = new Set([
+  "commandExecution",
+  "fileChange",
+  "mcpToolCall",
+  "dynamicToolCall",
+  "collabAgentToolCall",
+  "webSearch",
+  "imageView",
+  "sleep",
+  "imageGeneration",
+]);
+
 export interface CodexEventTranslatorOptions {
   /** The ONE Codex thread this translator serves. */
   threadId: string;
@@ -111,13 +124,17 @@ export class CodexEventTranslator {
         return this.onError(params);
       case "item/agentMessage/delta":
         return this.onAgentDelta(params);
+      case "item/reasoning/summaryTextDelta":
+      case "item/reasoning/textDelta":
+        return this.onReasoningDelta(params);
+      case "thread/tokenUsage/updated":
+        return this.onTokenUsage(params);
       case "item/started":
         return this.onItemStarted(params);
       case "item/completed":
         return this.onItemCompleted(params);
       default:
-        // Everything else (token usage, rate limits, plan updates, MCP status…)
-        // is either handled elsewhere or deliberately not surfaced.
+        // Rate limits, plan updates and MCP status are not chat events.
         return [];
     }
   }
@@ -158,7 +175,18 @@ export class CodexEventTranslator {
     if (turnId && this.finishedTurns.has(turnId)) return [];
     if (turnId) this.remember(turnId);
     this.activeTurnId = undefined;
-    return [{ type: "turn_complete", reason: terminalReasonFor(str(turn?.status)) }];
+    const reason = terminalReasonFor(str(turn?.status));
+    if (reason === "model_error") {
+      const error = asRecord(turn?.error);
+      const detail = str(error?.message) ?? str(error?.additionalDetails);
+      if (detail) {
+        return [
+          { type: "error", error: detail },
+          { type: "turn_complete", reason },
+        ];
+      }
+    }
+    return [{ type: "turn_complete", reason }];
   }
 
   private onError(params: Record<string, unknown>): StreamEvent[] {
@@ -170,13 +198,62 @@ export class CodexEventTranslator {
     if (turnId && this.finishedTurns.has(turnId)) return [];
     if (turnId) this.remember(turnId);
     this.activeTurnId = undefined;
-    return [{ type: "turn_complete", reason: "model_error" }];
+    const error = asRecord(params.error);
+    const message = str(error?.message) ?? str(error?.additionalDetails) ?? "Codex turn failed";
+    return [
+      { type: "error", error: message },
+      { type: "turn_complete", reason: "model_error" },
+    ];
   }
 
   private onAgentDelta(params: Record<string, unknown>): StreamEvent[] {
     if (this.isStale(str(params.turnId))) return [];
     const delta = str(params.delta);
     return delta ? [{ type: "text_delta", text: delta }] : [];
+  }
+
+  private onReasoningDelta(params: Record<string, unknown>): StreamEvent[] {
+    if (this.isStale(str(params.turnId))) return [];
+    const delta = str(params.delta);
+    return delta ? [{ type: "thinking_delta", text: delta }] : [];
+  }
+
+  private onTokenUsage(params: Record<string, unknown>): StreamEvent[] {
+    if (this.isStale(str(params.turnId))) return [];
+    const usage = asRecord(params.tokenUsage);
+    const total = asRecord(usage?.total);
+    const last = asRecord(usage?.last);
+    const number = (value: unknown): number | undefined =>
+      typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+    const promptTokens = number(last?.inputTokens);
+    if (promptTokens === undefined) return [];
+    const cacheReadTokens = number(last?.cachedInputTokens);
+    const cumulativePromptTokens = number(total?.inputTokens);
+    const cumulativeCacheReadTokens = number(total?.cachedInputTokens);
+    const cacheCreationTokens = number(last?.cacheWriteInputTokens);
+    const cumulativeCacheCreationTokens = number(total?.cacheWriteInputTokens);
+    const completionTokens = number(last?.outputTokens);
+    const cumulativeCompletionTokens = number(total?.outputTokens);
+    return [
+      {
+        type: "usage_update",
+        promptTokens,
+        promptTokensSource: "provider_usage",
+        promptTokensConfidence: "high",
+        ...(cacheReadTokens !== undefined ? { cacheReadTokens } : {}),
+        ...(cacheCreationTokens !== undefined ? { cacheCreationTokens } : {}),
+        singleTurnPromptTokens: promptTokens,
+        ...(cacheReadTokens !== undefined ? { singleTurnCacheReadTokens: cacheReadTokens } : {}),
+        ...(cacheCreationTokens !== undefined
+          ? { singleTurnCacheCreationTokens: cacheCreationTokens }
+          : {}),
+        ...(cumulativePromptTokens !== undefined ? { cumulativePromptTokens } : {}),
+        ...(cumulativeCacheReadTokens !== undefined ? { cumulativeCacheReadTokens } : {}),
+        ...(cumulativeCacheCreationTokens !== undefined ? { cumulativeCacheCreationTokens } : {}),
+        ...(completionTokens !== undefined ? { completionTokens } : {}),
+        ...(cumulativeCompletionTokens !== undefined ? { cumulativeCompletionTokens } : {}),
+      },
+    ];
   }
 
   /**
@@ -197,6 +274,7 @@ export class CodexEventTranslator {
     const id = str(item?.id);
     const type = str(item?.type);
     if (!item || !id || !type) return [];
+    if (!TOOL_ITEM_TYPES.has(type)) return [];
     if (this.isCodeshellHostTool(item)) return [];
     const { id: _id, type: _type, ...args } = item;
     return [{ type: "tool_use_start", toolCall: { id, toolName: type, args } }];
@@ -208,13 +286,30 @@ export class CodexEventTranslator {
     const id = str(item?.id);
     const type = str(item?.type);
     if (!item || !id || !type) return [];
+    if (!TOOL_ITEM_TYPES.has(type)) return [];
     if (this.isCodeshellHostTool(item)) return [];
-    const output =
-      str(item.aggregatedOutput) ?? str(item.output) ?? str(item.text) ?? str(item.result);
+    const rawOutput =
+      item.aggregatedOutput ?? item.output ?? item.text ?? item.result ?? item.changes;
+    let output: string | undefined;
+    if (typeof rawOutput === "string") output = rawOutput;
+    else if (rawOutput !== undefined && rawOutput !== null) {
+      try {
+        output = JSON.stringify(rawOutput);
+      } catch {
+        output = String(rawOutput);
+      }
+    }
+    const error = asRecord(item.error);
+    const errorMessage = str(error?.message) ?? str(item.error);
     return [
       {
         type: "tool_result",
-        result: { id, toolName: type, ...(output !== undefined ? { result: output } : {}) },
+        result: {
+          id,
+          toolName: type,
+          ...(output !== undefined ? { result: output } : {}),
+          ...(errorMessage ? { error: errorMessage, isError: true } : {}),
+        },
       },
     ];
   }

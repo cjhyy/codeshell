@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Engine, EngineResult } from "../engine/engine.js";
@@ -31,6 +31,31 @@ afterEach(() => {
 });
 
 describe("ChatSessionManager serialized lifecycle", () => {
+  it("forgets a process-local Quick Chat even when it never started a run", async () => {
+    const storageDir = mkdtempSync(join(tmpdir(), "chat-ephemeral-close-"));
+    tempDirs.push(storageDir);
+    const sid = "qchat-never-ran";
+    const creator = new SessionManager(storageDir);
+    creator.create("/tmp/project", "model", "provider", sid);
+
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () =>
+        ({
+          getSessionManager: () => new SessionManager(storageDir),
+        }) as unknown as Engine,
+    });
+    const probe = new SessionManager(storageDir);
+    expect(probe.exists(sid)).toBe(true);
+    expect(existsSync(join(storageDir, sid))).toBe(false);
+
+    await manager.close(sid);
+
+    expect(probe.exists(sid)).toBe(false);
+    expect(() => probe.resume(sid)).toThrow();
+    expect(existsSync(join(storageDir, sid))).toBe(false);
+  });
+
   it("bounds closed-session tombstones and evicts the oldest id", async () => {
     const manager = new ChatSessionManager({
       runtime: {} as never,

@@ -24,9 +24,10 @@ describe("desktop workspace build dependencies", () => {
       .map(([name]) => name)
       .sort();
 
-    expect(DESKTOP_WORKSPACE_BUILD_ORDER.map(({ packageName }) => packageName).sort()).toEqual(
-      expected,
-    );
+    const actual = DESKTOP_WORKSPACE_BUILD_ORDER.map<string>(
+      ({ packageName }) => packageName,
+    ).sort();
+    expect(actual).toEqual(expected);
   });
 
   test("is topologically ordered for workspace dependencies", () => {

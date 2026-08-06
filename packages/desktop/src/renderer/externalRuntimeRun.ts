@@ -11,6 +11,8 @@
  * "busy" after a failure the other path handles, so the seam is deliberately
  * this narrow.
  */
+import type { InputAttachmentMeta } from "../preload/types";
+import type { Message } from "./types";
 
 /** The subset of the preload surface this needs. Injected for testability. */
 export interface ExternalRuntimeBridge {
@@ -18,8 +20,18 @@ export interface ExternalRuntimeBridge {
     sessionId: string;
     cwd: string;
     modelKey: string;
+    permissionMode?: string;
+    planMode?: boolean;
+    hasGoal?: boolean;
+    initialContext?: string;
+    developerInstructions?: string;
   }): Promise<{ kind: string; runtimeSessionId: string | null; tools: string[] }>;
-  send(payload: { sessionId: string; text: string }): Promise<void>;
+  send(payload: {
+    sessionId: string;
+    text: string;
+    clientMessageId?: string;
+    attachments?: InputAttachmentMeta[];
+  }): Promise<{ ok: boolean; reason?: string; text?: string; streamed?: boolean } | void>;
 }
 
 export interface ExternalRuntimeTurnArgs {
@@ -27,6 +39,13 @@ export interface ExternalRuntimeTurnArgs {
   cwd: string;
   modelKey: string;
   text: string;
+  clientMessageId?: string;
+  attachments?: InputAttachmentMeta[];
+  permissionMode?: string;
+  planMode?: boolean;
+  hasGoal?: boolean;
+  initialContext?: string;
+  developerInstructions?: string;
   runtime: ExternalRuntimeBridge;
 }
 
@@ -38,6 +57,7 @@ export interface ExternalRuntimeRunResult {
   ok: boolean;
   reason?: string;
   text?: string;
+  streamed?: boolean;
 }
 
 /**
@@ -48,22 +68,52 @@ export interface ExternalRuntimeRunResult {
  * replaces), which is exactly what must NOT happen mid-conversation: a restart
  * would drop the runtime's own thread and the user would silently lose history.
  *
- * ## Deliberately in-memory: what an app restart does
- *
- * The model CHOICE survives a restart (`modelOverrides` is persisted to
- * localStorage), so reopening the session still routes to Codex. What does not
- * survive is the runtime's own conversation thread — this map is empty, so the
- * next turn starts a fresh backend and the model no longer remembers the
- * earlier exchange, even though CodeShell's transcript still displays it.
- *
- * That gap is not fixable by persisting this map: the runtime processes are
- * gone too, and only Claude Code exposes a resume handle (`--resume`), which is
- * itself scoped to a live process. Genuine cross-restart resume needs the
- * runtime session id durably stored and re-attached at startup — ADR 1 in the
- * design doc. Until then the honest behaviour is a clean restart rather than a
- * silently truncated context, which is what this does.
+ * This renderer cache is deliberately in-memory. Desktop persists the real
+ * runtime thread binding beside the canonical Session transcript, so after an
+ * app restart the first `start` call resumes that thread (or falls back to the
+ * bounded transcript handoff supplied by the renderer). Keeping this map
+ * durable as well would create a second, stale source of truth.
  */
 const startedSessions = new Map<string, string>();
+
+const MAX_HANDOFF_CHARS = 48_000;
+
+/** Bounded renderer projection used only when no durable runtime thread resumes. */
+export function buildExternalRuntimeHandoff(messages: readonly Message[]): string | undefined {
+  const lines = messages.flatMap((message): string[] => {
+    switch (message.kind) {
+      case "user":
+        return [`USER: ${message.text}`];
+      case "assistant":
+        return message.text ? [`ASSISTANT: ${message.text}`] : [];
+      case "system":
+        return message.text ? [`SYSTEM NOTE: ${message.text}`] : [];
+      case "tool": {
+        const result = message.error ?? message.result;
+        return result
+          ? [`TOOL ${message.toolName}: ${result}`]
+          : [`TOOL ${message.toolName} called with ${message.args}`];
+      }
+      default:
+        return [];
+    }
+  });
+  if (lines.length === 0) return undefined;
+  const selected: string[] = [];
+  let used = 0;
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index]!.slice(0, 12_000);
+    if (used + line.length > MAX_HANDOFF_CHARS) break;
+    selected.unshift(line);
+    used += line.length;
+  }
+  return [
+    "<codeshell_conversation_handoff>",
+    "Continue the existing CodeShell task using this recent conversation. Do not ask the user to repeat context already present here.",
+    ...selected,
+    "</codeshell_conversation_handoff>",
+  ].join("\n\n");
+}
 
 /** Forget a session's runtime binding (session deleted, or runtime stopped). */
 export function forgetExternalRuntimeSession(sessionId: string): void {
@@ -87,18 +137,41 @@ export async function runExternalRuntimeTurn({
   cwd,
   modelKey,
   text,
+  clientMessageId,
+  attachments,
+  permissionMode,
+  planMode,
+  hasGoal,
+  initialContext,
+  developerInstructions,
   runtime,
 }: ExternalRuntimeTurnArgs): Promise<ExternalRuntimeRunResult> {
   try {
     // Restart only when the model actually changed. Switching Codex → Claude
     // mid-session has to rebuild the backend; re-sending on the same one must
     // not, or every turn would begin with an empty context.
-    if (startedSessions.get(sessionId) !== modelKey) {
-      await runtime.start({ sessionId, cwd, modelKey });
-      startedSessions.set(sessionId, modelKey);
+    const configurationKey = JSON.stringify({ modelKey, permissionMode, planMode });
+    if (startedSessions.get(sessionId) !== configurationKey) {
+      await runtime.start({
+        sessionId,
+        cwd,
+        modelKey,
+        ...(permissionMode ? { permissionMode } : {}),
+        ...(planMode !== undefined ? { planMode } : {}),
+        ...(hasGoal !== undefined ? { hasGoal } : {}),
+        ...(initialContext ? { initialContext } : {}),
+        ...(developerInstructions ? { developerInstructions } : {}),
+      });
+      startedSessions.set(sessionId, configurationKey);
     }
-    await runtime.send({ sessionId, text });
-    return { ok: true };
+    const result = await runtime.send({
+      sessionId,
+      text,
+      ...(clientMessageId ? { clientMessageId } : {}),
+      ...(attachments && attachments.length > 0 ? { attachments } : {}),
+    });
+    if (result && !result.ok) startedSessions.delete(sessionId);
+    return result ?? { ok: true };
   } catch (error) {
     // A failed start leaves no usable session — drop the binding so the next
     // attempt retries the start instead of sending into a runtime that is not

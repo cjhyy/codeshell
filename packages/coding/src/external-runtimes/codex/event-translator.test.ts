@@ -73,6 +73,22 @@ describe("CodexEventTranslator", () => {
     expect(events).toEqual([{ type: "turn_complete", reason: "aborted_streaming" }]);
   });
 
+  test("a failed completed turn preserves its provider error detail", () => {
+    const t = translator();
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });
+    const events = t.translate({
+      method: "turn/completed",
+      params: {
+        threadId: "thread-a",
+        turn: { id: "t1", status: "failed", error: { message: "sandbox setup failed" } },
+      },
+    });
+    expect(events).toEqual([
+      { type: "error", error: "sandbox setup failed" },
+      { type: "turn_complete", reason: "model_error" },
+    ]);
+  });
+
   test("an error notification becomes a model_error turn_complete", () => {
     const t = translator();
     t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });
@@ -85,7 +101,10 @@ describe("CodexEventTranslator", () => {
         error: { message: "upstream exploded" },
       },
     });
-    expect(events).toEqual([{ type: "turn_complete", reason: "model_error" }]);
+    expect(events).toEqual([
+      { type: "error", error: "upstream exploded" },
+      { type: "turn_complete", reason: "model_error" },
+    ]);
   });
 
   test("an error that WILL be retried is not a terminal event", () => {
@@ -147,6 +166,66 @@ describe("CodexEventTranslator", () => {
         type: "tool_result",
         result: { id: "i1", toolName: "commandExecution", result: "total 0" },
       },
+    ]);
+  });
+
+  test("reasoning and agent messages are prose, not fake tool cards", () => {
+    const t = translator();
+    t.translate({ method: "turn/started", params: { threadId: "thread-a", turn: { id: "t1" } } });
+    expect(
+      t.translate({
+        method: "item/started",
+        params: {
+          threadId: "thread-a",
+          turnId: "t1",
+          item: { id: "r1", type: "reasoning", summary: [], content: [] },
+        },
+      }),
+    ).toEqual([]);
+    expect(
+      t.translate({
+        method: "item/completed",
+        params: {
+          threadId: "thread-a",
+          turnId: "t1",
+          item: { id: "m1", type: "agentMessage", text: "done" },
+        },
+      }),
+    ).toEqual([]);
+  });
+
+  test("provider token usage reaches the CodeShell usage stream", () => {
+    const events = translator().translate({
+      method: "thread/tokenUsage/updated",
+      params: {
+        threadId: "thread-a",
+        turnId: "t1",
+        tokenUsage: {
+          last: {
+            inputTokens: 87397,
+            cachedInputTokens: 78592,
+            cacheWriteInputTokens: 0,
+            outputTokens: 5577,
+          },
+          total: {
+            inputTokens: 844271,
+            cachedInputTokens: 750848,
+            cacheWriteInputTokens: 0,
+            outputTokens: 5577,
+          },
+        },
+      },
+    });
+    expect(events).toEqual([
+      expect.objectContaining({
+        type: "usage_update",
+        promptTokens: 87397,
+        cacheReadTokens: 78592,
+        cumulativePromptTokens: 844271,
+        cumulativeCacheReadTokens: 750848,
+        completionTokens: 5577,
+        cumulativeCompletionTokens: 5577,
+      }),
     ]);
   });
 
@@ -283,7 +362,10 @@ describe("CodexEventTranslator", () => {
       method: "error",
       params: { threadId: "thread-a", turnId: "t1", willRetry: false, error: { message: "boom" } },
     });
-    expect(failed).toEqual([{ type: "turn_complete", reason: "model_error" }]);
+    expect(failed).toEqual([
+      { type: "error", error: "boom" },
+      { type: "turn_complete", reason: "model_error" },
+    ]);
     // The turn already reported terminal; a trailing completion must not add a
     // second terminal event.
     const trailing = t.translate({

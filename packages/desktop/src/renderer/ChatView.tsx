@@ -6,6 +6,7 @@ import {
   Mic,
   Loader2,
   ArrowUp,
+  FileText,
   Square,
   Monitor,
   Plug,
@@ -38,10 +39,15 @@ import {
   decodeWireForDisplay,
   encodeAttachmentsForWire,
   filesFromClipboard,
-  imageFilesFromDrop,
   CODESHELL_PATH_DND_MIME,
   type ImageAttachment,
 } from "./chat/attachments";
+import {
+  buildMessageWithLocalFilePaths,
+  localFileBasename,
+  normalizeLocalFilePaths,
+  pathForRendererFile,
+} from "./chat/localFilePaths";
 import { compressBatch, type ImageDetail } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
 import { detectMention } from "./chat/mention";
@@ -265,16 +271,22 @@ function referenceFromAbsPath(
   absPath: string,
   cwd: string | null | undefined,
   sessionId: string | null | undefined,
-): InputAttachmentMeta {
-  const relPath = cwd ? relativeBrowserPath(cwd, absPath) : null;
+  origin: InputAttachmentMeta["origin"] = "file-panel",
+): InputAttachmentMeta | null {
+  if (!cwd || !sessionId) return null;
+  const relPath = relativeBrowserPath(cwd, absPath);
+  // Keep an outside-workspace selection as a literal path only. A structured
+  // attachment would make the engine reject the turn before the agent can ask
+  // for normal filesystem permission to inspect the selected path.
+  if (!relPath) return null;
   return {
     id: `ref_file_${hashKey(absPath)}_${Date.now().toString(36)}`,
-    sessionId: sessionId || "file-panel",
+    sessionId,
     kind: "file",
-    origin: "file-panel",
-    path: relPath ?? absPath,
+    origin,
+    path: relPath,
     absPath,
-    relPath: relPath ?? undefined,
+    relPath,
     size: 0,
     sha256: "",
     originalName: absPath.split(/[\\/]/).pop() || absPath,
@@ -394,6 +406,7 @@ export function ChatView({
   const setDraft = onDraftChange;
   const setAttachments = onAttachmentsChange;
   const [inputReferences, setInputReferences] = useState<InputAttachmentMeta[]>([]);
+  const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
   const toast = useToast();
 
   // ─── Voice input (听写) ───────────────────────────────────────────────
@@ -756,39 +769,41 @@ export function ChatView({
     setSlashSelected((s) => (slashItems.length === 0 ? 0 : Math.min(s, slashItems.length - 1)));
   }, [slashItems]);
 
-  // Insert an `@path` reference into the draft (file-panel drag of a non-image
-  // file — TODO 2.1). Appends at the caret, or at the end with a leading space
-  // if the draft doesn't already end with whitespace.
-  const insertPathReference = (absPath: string): void => {
+  const addLocalFilePaths = (
+    paths: readonly string[],
+    origin: "os-drop" | "file-panel" | "picker",
+  ): void => {
+    const normalized = normalizeLocalFilePaths(paths);
+    if (normalized.length === 0) return;
+    const combined = normalizeLocalFilePaths([...localFilePaths, ...normalized]);
+    const accepted = combined.filter((path) => !localFilePaths.includes(path));
+    if (accepted.length === 0) return;
+    setLocalFilePaths(combined);
+
     const attachmentContext = onPrepareAttachmentSession?.();
-    setInputReferences((cur) =>
-      appendReference(
-        cur,
-        referenceFromAbsPath(
-          absPath,
-          attachmentContext?.cwd ?? messageCwd,
-          attachmentContext?.sessionId ?? engineSessionId,
-        ),
+    if (!attachmentContext) return;
+    setInputReferences((current) =>
+      accepted.reduce(
+        (references, path) =>
+          appendReference(
+            references,
+            referenceFromAbsPath(
+              path,
+              attachmentContext.cwd ?? messageCwd,
+              attachmentContext.sessionId ?? engineSessionId,
+              origin,
+            ),
+          ),
+        current,
       ),
     );
-    const ta = textareaRef.current;
-    const ref = `@${absPath} `;
-    if (ta && ta.selectionStart != null) {
-      const caret = ta.selectionStart;
-      const before = draft.slice(0, caret);
-      const after = draft.slice(caret);
-      const sep = before.length > 0 && !/\s$/.test(before) ? " " : "";
-      const next = before + sep + ref + after;
-      setDraft(next);
-      const nextCaret = before.length + sep.length + ref.length;
-      requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(nextCaret, nextCaret);
-      });
-      return;
-    }
-    const sep = draft.length > 0 && !/\s$/.test(draft) ? " " : "";
-    setDraft(draft + sep + ref);
+  };
+
+  const removeLocalFilePath = (path: string): void => {
+    setLocalFilePaths((current) => current.filter((item) => item !== path));
+    setInputReferences((current) =>
+      current.filter((item) => item.absPath !== path || item.origin === "mention"),
+    );
   };
 
   const applyMentionPick = (item: MentionItem): void => {
@@ -891,6 +906,7 @@ export function ChatView({
       onCompactCommand();
       setDraft("");
       setInputReferences([]);
+      setLocalFilePaths([]);
       setAttachmentError(null);
       setHistoryCursor(-1);
       liveDraftStash.current = "";
@@ -911,12 +927,13 @@ export function ChatView({
     const text = draft.trim();
     const hasImages = attachments.length > 0;
     const hasAnchors = anchors.length > 0;
-    if (!text && !hasImages && !hasAnchors) return;
+    const hasLocalFiles = localFilePaths.length > 0;
+    if (!text && !hasImages && !hasAnchors && !hasLocalFiles) return;
     const compactCommand = slashCommands.find(
       (command): command is Extract<SlashCommandItem, { kind: "builtin" }> =>
         command.kind === "builtin" && command.name === "/compact",
     );
-    if (text === "/compact" && !hasImages && !hasAnchors && compactCommand) {
+    if (text === "/compact" && !hasImages && !hasAnchors && !hasLocalFiles && compactCommand) {
       executeSlashCommand(compactCommand);
       return;
     }
@@ -931,9 +948,14 @@ export function ChatView({
       setAttachmentError(t("chat.attachment.missingPath"));
       return;
     }
+    const withLocalFiles = buildMessageWithLocalFilePaths(
+      text,
+      localFilePaths,
+      t("chat.composer.localFilePaths"),
+    );
     // Anchors (diff/browser/file comments) are prepended as a structured block
     // so the model can pin each comment to its exact location.
-    const withAnchors = encodeAnchorsForWire(text, anchors);
+    const withAnchors = encodeAnchorsForWire(withLocalFiles, anchors);
     const displayPayload = encodeAttachmentsForWire(withAnchors, attachments);
     const runAttachments = [...toRunAttachments(attachments), ...inputReferences];
     const routeOpts = sendBucket ? { bucket: sendBucket } : undefined;
@@ -952,10 +974,13 @@ export function ChatView({
     // Snap the stream to the bottom + re-arm follow regardless of scroll pos.
     setSendEpoch((n) => n + 1);
     // Reusing the main composer must not make ephemeral side prompts durable.
-    if (text && variant === "main") setHistory(pushHistory(activeProjectId, text));
+    if (withLocalFiles && variant === "main") {
+      setHistory(pushHistory(activeProjectId, withLocalFiles));
+    }
     setDraft("");
     setAttachments([]);
     setInputReferences([]);
+    setLocalFilePaths([]);
     setAttachmentError(null);
     setHistoryCursor(-1);
     liveDraftStash.current = "";
@@ -1038,6 +1063,35 @@ export function ChatView({
 
   const removeAttachment = (id: string) => {
     setAttachments((cur) => cur.filter((a) => a.id !== id));
+  };
+
+  const acceptComposerFiles = async (
+    files: File[],
+    origin: "os-drop" | "picker",
+  ): Promise<void> => {
+    if (compacting || files.length === 0) return;
+    setAttachmentError(null);
+    const images: File[] = [];
+    const paths: string[] = [];
+    const unavailable: string[] = [];
+
+    for (const file of files) {
+      const path = pathForRendererFile(file);
+      if (file.type.startsWith("image/") || (path && classifyPath(path) === "image")) {
+        images.push(file);
+      } else if (path) {
+        paths.push(path);
+      } else {
+        unavailable.push(file.name || t("chat.attachment.unnamed"));
+      }
+    }
+
+    if (images.length > 0) await acceptFiles(images, origin);
+    if (!mountedRef.current) return;
+    if (paths.length > 0) addLocalFilePaths(paths, origin);
+    if (unavailable.length > 0) {
+      setAttachmentError(t("chat.composer.filePathUnavailable", { names: unavailable.join("、") }));
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -1246,27 +1300,26 @@ export function ChatView({
     e.preventDefault();
     setDragOver(false);
     if (compacting) return;
-    // Internal file-panel drag. Image → attach as an image; any other file →
-    // insert an `@path` reference into the draft (same convention as @mention),
-    // so the user/model can refer to it.
+    // Internal file-panel drag. Image → native image attachment; everything
+    // else → a literal local-path reference, matching desktop/CLI semantics.
     const draggedPath = e.dataTransfer?.getData(CODESHELL_PATH_DND_MIME);
     if (draggedPath) {
       if (classifyPath(draggedPath) === "image") {
         onAttachImagePath?.(draggedPath);
       } else {
-        insertPathReference(draggedPath);
+        addLocalFilePaths([draggedPath], "file-panel");
       }
       return;
     }
-    const imageFiles = imageFilesFromDrop(e.dataTransfer?.items ?? null);
-    if (imageFiles.length === 0) return;
-    void acceptFiles(imageFiles, "os-drop");
+    const files = Array.from(e.dataTransfer?.files ?? []);
+    if (files.length === 0) return;
+    void acceptComposerFiles(files, "os-drop");
   };
 
   return (
     <div
       className={
-        "flex h-full min-w-0 max-w-full flex-col overflow-hidden" +
+        "relative flex h-full min-w-0 max-w-full flex-col overflow-hidden" +
         (dragOver ? " ring-2 ring-inset ring-primary/40" : "")
       }
       data-mode={isNewChat ? "new" : "active"}
@@ -1276,6 +1329,14 @@ export function ChatView({
       onDragLeave={onChatDragLeave}
       onDrop={onChatDrop}
     >
+      {dragOver && (
+        <div className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-[1px]">
+          <div className="flex items-center gap-2 rounded-2xl border border-primary/30 bg-background px-4 py-3 text-sm font-medium text-primary shadow-lg">
+            <FileText size={17} aria-hidden="true" />
+            {t("chat.composer.dropFiles")}
+          </div>
+        </div>
+      )}
       {/*
         In new-chat mode the stream is empty; skip it so its flex-1 doesn't
         eat the vertical space and push the welcome + composer to the bottom.
@@ -1480,6 +1541,38 @@ export function ChatView({
               </div>
             )}
 
+            {localFilePaths.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2" data-local-path-attachments="true">
+                {localFilePaths.map((path) => (
+                  <div
+                    key={path}
+                    className="relative flex max-w-full items-center gap-2 rounded-md border bg-muted/40 py-1 pl-2 pr-7"
+                    title={path}
+                  >
+                    <FileText size={16} className="shrink-0 text-primary" aria-hidden="true" />
+                    <div className="flex min-w-0 max-w-[360px] flex-col">
+                      <span className="truncate text-xs font-medium text-foreground">
+                        {localFileBasename(path)}
+                      </span>
+                      <span className="truncate text-[10px] text-muted-foreground">{path}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1 size-5 rounded-full bg-background/80 text-muted-foreground"
+                      aria-label={t("chat.composer.removeFileAria", {
+                        name: localFileBasename(path),
+                      })}
+                      onClick={() => removeLocalFilePath(path)}
+                    >
+                      <X size={11} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {attachments.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
                 {attachments.map((a) => (
@@ -1676,13 +1769,12 @@ export function ChatView({
             <Input
               ref={fileInputRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
               multiple
               className="hidden"
               onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
                 if (e.target) e.target.value = "";
-                void acceptFiles(files, "picker");
+                void acceptComposerFiles(files, "picker");
               }}
             />
 
@@ -1711,11 +1803,11 @@ export function ChatView({
                       variant="ghost"
                       size="icon"
                       className="size-8 shrink-0 text-muted-foreground"
-                      aria-label={t("chat.composer.addImage")}
+                      aria-label={t("chat.composer.addFile")}
                       title={
                         activeSupportsVision
-                          ? t("chat.composer.addImageTitle")
-                          : t("chat.composer.addImageDisabledTitle")
+                          ? t("chat.composer.addFileTitle")
+                          : t("chat.composer.addFileNoVisionTitle")
                       }
                       onClick={() => fileInputRef.current?.click()}
                       disabled={controlsDisabled}
@@ -1806,44 +1898,55 @@ export function ChatView({
                       <Mic size={14} />
                     )}
                   </Button>
-                  {busy && draft.trim() && onForceSend && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 shrink-0 gap-1 rounded-full px-2.5 text-xs text-muted-foreground"
-                      onClick={() => {
-                        if (attachments.some((img) => !img.path)) {
-                          setAttachmentError(t("chat.attachment.missingPath"));
-                          return;
-                        }
-                        const withAnchors = encodeAnchorsForWire(draft.trim(), anchors);
-                        const displayPayload = encodeAttachmentsForWire(withAnchors, attachments);
-                        const runAttachments = [
-                          ...toRunAttachments(attachments),
-                          ...inputReferences,
-                        ];
-                        onForceSend(withAnchors, {
-                          ...(sendBucket ? { bucket: sendBucket } : {}),
-                          attachments: runAttachments,
-                          displayText: displayPayload,
-                        });
-                        if (draft.trim() && variant === "main") {
-                          setHistory(pushHistory(activeProjectId, draft.trim()));
-                        }
-                        setDraft("");
-                        setAttachments([]);
-                        setInputReferences([]);
-                        setAttachmentError(null);
-                        onClearAnchors?.();
-                      }}
-                      aria-label={t("chat.composer.guideAria")}
-                      title={t("chat.composer.guideTitle")}
-                    >
-                      <CornerDownRight size={13} />
-                      {t("chat.composer.guide")}
-                    </Button>
-                  )}
+                  {busy &&
+                    (draft.trim() ||
+                      localFilePaths.length > 0 ||
+                      attachments.length > 0 ||
+                      anchors.length > 0) &&
+                    onForceSend && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 shrink-0 gap-1 rounded-full px-2.5 text-xs text-muted-foreground"
+                        onClick={() => {
+                          if (attachments.some((img) => !img.path)) {
+                            setAttachmentError(t("chat.attachment.missingPath"));
+                            return;
+                          }
+                          const withLocalFiles = buildMessageWithLocalFilePaths(
+                            draft.trim(),
+                            localFilePaths,
+                            t("chat.composer.localFilePaths"),
+                          );
+                          const withAnchors = encodeAnchorsForWire(withLocalFiles, anchors);
+                          const displayPayload = encodeAttachmentsForWire(withAnchors, attachments);
+                          const runAttachments = [
+                            ...toRunAttachments(attachments),
+                            ...inputReferences,
+                          ];
+                          onForceSend(withAnchors, {
+                            ...(sendBucket ? { bucket: sendBucket } : {}),
+                            attachments: runAttachments,
+                            displayText: displayPayload,
+                          });
+                          if (withLocalFiles && variant === "main") {
+                            setHistory(pushHistory(activeProjectId, withLocalFiles));
+                          }
+                          setDraft("");
+                          setAttachments([]);
+                          setInputReferences([]);
+                          setLocalFilePaths([]);
+                          setAttachmentError(null);
+                          onClearAnchors?.();
+                        }}
+                        aria-label={t("chat.composer.guideAria")}
+                        title={t("chat.composer.guideTitle")}
+                      >
+                        <CornerDownRight size={13} />
+                        {t("chat.composer.guide")}
+                      </Button>
+                    )}
                   {busy && (
                     <Button
                       type="button"
@@ -1865,7 +1968,10 @@ export function ChatView({
                       className="size-8 shrink-0 rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50"
                       onClick={submit}
                       disabled={
-                        (!draft.trim() && attachments.length === 0) ||
+                        (!draft.trim() &&
+                          attachments.length === 0 &&
+                          localFilePaths.length === 0 &&
+                          anchors.length === 0) ||
                         (attachments.length > 0 && !activeSupportsVision)
                       }
                       aria-label={t("chat.composer.send")}

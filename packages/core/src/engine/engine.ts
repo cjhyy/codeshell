@@ -1902,7 +1902,9 @@ export class Engine {
 
     // Wire up LLM summarization for context compaction
     // Uses a lightweight call without tools
-    contextManager.setTranscriptPath(session.transcript.getFilePath());
+    if (session.transcript.isPersistent()) {
+      contextManager.setTranscriptPath(session.transcript.getFilePath());
+    }
     // Re-derive frozen persistence decisions from the messages we just
     // loaded. Skipped on cold start (messages == [userContextMsg] only).
     // Critical for resume — otherwise a result that was persisted last
@@ -2217,17 +2219,22 @@ export class Engine {
     // it (see foldRunUsage). Snapshot now, before any turn boundary fires.
     const usageBaseline: TokenUsage = { ...session.state.tokenUsage };
 
-    const sessionDir = join(
-      this.config.sessionStorageDir ?? sessionsRoot(),
-      session.state.sessionId,
-    );
-    const fileHistoryHook = registerFileHistoryHook({
-      hooks: this.hooks,
-      sessionDir,
-      cwd,
-      getTurnSeq: () => session.state.turnSeq,
-      contributions: this.capabilities.flatMap((capability) => [...(capability.fileHistory ?? [])]),
-    });
+    const fileHistoryHook: ReturnType<typeof registerFileHistoryHook> = isEphemeralSessionState(
+      session.state,
+    )
+      ? { dispose() {} }
+      : registerFileHistoryHook({
+          hooks: this.hooks,
+          sessionDir: join(
+            this.config.sessionStorageDir ?? sessionsRoot(),
+            session.state.sessionId,
+          ),
+          cwd,
+          getTurnSeq: () => session.state.turnSeq,
+          contributions: this.capabilities.flatMap((capability) => [
+            ...(capability.fileHistory ?? []),
+          ]),
+        });
 
     // Hook: agent start
     await this.emitHook(
@@ -3540,7 +3547,9 @@ export class Engine {
           Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
         ),
       });
-      contextManager.setTranscriptPath(session.transcript.getFilePath());
+      if (session.transcript.isPersistent()) {
+        contextManager.setTranscriptPath(session.transcript.getFilePath());
+      }
       contextManager.initReplacementStateFromMessages(sourceMessages);
       this.lastContextManager = contextManager;
     }

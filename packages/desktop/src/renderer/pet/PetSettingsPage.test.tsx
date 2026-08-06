@@ -21,6 +21,13 @@ describe("PetSettingsPage", () => {
     );
 
     expect(html).toContain('data-pet-settings-page="standalone"');
+    expect(html).toContain('data-pet-setting="personalization"');
+    expect(html).toContain("Mimi 个性化");
+    expect(html).toContain("不会改变普通 Work Session");
+    expect(html).toContain('id="pet-response-language"');
+    expect(html).toContain('id="pet-user-profile"');
+    expect(html).toContain('id="pet-communication-style"');
+    expect(html).toContain('id="pet-custom-instructions"');
     expect(html).toContain('data-pet-setting="model"');
     expect(html).toContain('data-pet-setting="memory"');
     expect(html).toContain('data-active-model="deepseek-v4-pro"');

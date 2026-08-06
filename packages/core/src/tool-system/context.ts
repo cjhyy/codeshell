@@ -241,6 +241,12 @@ export interface ToolContext {
   /** Active working directory for this Engine. */
   cwd: string;
   /**
+   * True when this call belongs to an external Agent Runtime rather than the
+   * native Engine loop. Async handoff tools use this to keep their result on
+   * the current turn instead of queueing a wake-up only the Engine can consume.
+   */
+  externalRuntime?: boolean;
+  /**
    * Active digital-human profile's portable memory root. Present only when
    * the resolved WorkspaceProfile enables portableMemory for this run.
    * Memory tools use it for location:"profile"; other tools should treat the

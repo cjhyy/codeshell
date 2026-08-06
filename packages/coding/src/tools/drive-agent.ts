@@ -184,6 +184,12 @@ export interface DriveAgentToolOptions {
   readChangedFiles?: typeof readExternalChangedFiles;
 }
 
+function isExternalRuntimeContext(ctx?: ToolContext): boolean {
+  return (
+    (ctx as (ToolContext & { externalRuntime?: boolean }) | undefined)?.externalRuntime === true
+  );
+}
+
 const defaultRunner: Runner = (opts) => {
   const { adapter, command } = CLI_ADAPTERS[opts.cli];
   return runAgentOnce(
@@ -533,7 +539,8 @@ function recordSuccessfulSession(
   // still exists, and drop the dead worktree path. `keep` runs keep the
   // worktree; `detach` keeps the branch for recreation but its directory is
   // gone, so bind cwd to the workspace root while retaining the branch.
-  const dirRemoved = metadata.lifecycle?.action === "discarded" || metadata.lifecycle?.action === "detached";
+  const dirRemoved =
+    metadata.lifecycle?.action === "discarded" || metadata.lifecycle?.action === "detached";
   const branchPreserved = metadata.lifecycle?.action === "detached";
   const boundCwd = dirRemoved ? metadata.workspaceRoot : cwd;
   const boundIsolation: DriveIsolation =
@@ -793,7 +800,7 @@ async function waitForForegroundOrHandoff(
   run: Promise<AgentRunResult>,
   handoffMs: number,
 ): Promise<{ kind: "completed"; result: AgentRunResult } | { kind: "handoff" }> {
-  if (handoffMs < 0) {
+  if (!Number.isFinite(handoffMs) || handoffMs < 0) {
     return { kind: "completed", result: await run };
   }
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -847,9 +854,14 @@ export function makeDriveAgentTool(
       args.permissionMode === "acceptEdits" ||
       args.permissionMode === "bypassPermissions"
         ? args.permissionMode
-        : "bypassPermissions";
+        : isExternalRuntimeContext(ctx)
+          ? "default"
+          : "bypassPermissions";
     const isWritableRun = permissionMode !== "default";
-    const background = args.background !== false;
+    // External runtimes do not participate in the native Engine's wake-up loop.
+    // A detached result would be queued for an Engine that is not driving this
+    // turn, so keep delegation attached to the parent runtime.
+    const background = isExternalRuntimeContext(ctx) ? false : args.background !== false;
     const cliName = cli === "codex" ? "Codex" : "Claude Code";
     if (background && !isValidSessionId(ctx?.sessionId)) {
       return `Error: cannot start a background ${cliName} job without a session — its result notification would be dropped. Retry with background:false, or ensure the tool runs inside a session.`;
@@ -1004,7 +1016,9 @@ export function makeDriveAgentTool(
       permissionMode,
       imagePaths,
     };
-    const foregroundHandoffMs = options.foregroundHandoffMs ?? DRIVE_AGENT_FOREGROUND_HANDOFF_MS;
+    const foregroundHandoffMs = isExternalRuntimeContext(ctx)
+      ? Number.POSITIVE_INFINITY
+      : (options.foregroundHandoffMs ?? DRIVE_AGENT_FOREGROUND_HANDOFF_MS);
     if (background) {
       // Fail loud on a missing sessionId: a background job whose completion
       // notification can't be routed (enqueue drops invalid/empty sessionId)

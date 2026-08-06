@@ -40,7 +40,20 @@ function clientCapturing(): { client: OpenAIClient; lastBody: () => any } {
 function optsWith(content: ContentBlock[]): CreateMessageOptions {
   return {
     systemPrompt: "sys",
-    messages: [{ role: "user", content }],
+    messages: [
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "tool_use",
+            id: "call_1",
+            name: "view_image",
+            input: { path: "/tmp/example.png" },
+          },
+        ],
+      },
+      { role: "user", content },
+    ],
     tools: [],
     stream: true,
     onChunk: () => {},

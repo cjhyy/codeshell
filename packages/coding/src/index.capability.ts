@@ -9,7 +9,6 @@ import {
   type CapabilityModule,
   type RegisteredTool,
 } from "@cjhyy/code-shell-core/extension";
-import { briefTool, briefToolDef } from "./tools/brief.js";
 import { lspTool, lspToolDef } from "./tools/lsp.js";
 import { notebookEditTool, notebookEditToolDef } from "./tools/notebook-edit.js";
 import { applyPatchTool, applyPatchToolDef } from "./tools/apply-patch/index.js";
@@ -50,6 +49,9 @@ function defineTool(
 }
 
 export const CODING_TOOLS: readonly BuiltinTool[] = [
+  // `briefTool` remains a root compatibility export, but is deliberately not
+  // model-exposed here: its Markdown return value is a tool result, not a
+  // user-facing assistant message (especially important for headless runs).
   defineTool(
     {
       ...driveAgentToolDef,
@@ -156,20 +158,6 @@ export const CODING_TOOLS: readonly BuiltinTool[] = [
     },
     applyPatchTool,
     { presetTags: ["terminal-coding"] },
-  ),
-  defineTool(
-    {
-      ...briefToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: true,
-      isConcurrencySafe: true,
-    },
-    briefTool,
-    {
-      presetTags: ["terminal-coding"],
-      defaultPermissionRules: [{ tool: "Brief", decision: "allow" }],
-    },
   ),
   defineTool(
     {

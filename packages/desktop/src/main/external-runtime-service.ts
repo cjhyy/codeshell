@@ -19,23 +19,39 @@
 import type { BrowserWindow } from "electron";
 import { startExternalRuntimeSession } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import type {
+  ExternalRuntimeTurnInput,
   ExternalRuntimeKind,
   ExternalRuntimeSession,
 } from "@cjhyy/code-shell-capability-coding/external-runtimes";
-import { BUILTIN_AGENT_PRESETS, ToolRegistry, type StreamEvent } from "@cjhyy/code-shell-core";
+import { CODING_TOOLS } from "@cjhyy/code-shell-capability-coding/capability";
 import {
-  FIRST_PHASE_EXPOSURE,
-  isFeatureEnabled,
-  type FeatureFlagOverrides,
-} from "@cjhyy/code-shell-core/extension";
+  BUILTIN_AGENT_PRESETS,
+  BUILTIN_TOOLS,
+  ToolRegistry,
+  type PermissionMode,
+  type StreamEvent,
+} from "@cjhyy/code-shell-core";
+import { isFeatureEnabled, type FeatureFlagOverrides } from "@cjhyy/code-shell-core/extension";
 import { getTrustCachedSync } from "./trust-store.js";
 import { dlog } from "./desktop-logger.js";
+import {
+  ExternalRuntimeSessionRecorder,
+  readExternalRuntimeBinding,
+  writeExternalRuntimeBinding,
+  type ExternalRuntimeTurnOutcome,
+} from "./external-runtime-state.js";
 
 export interface ExternalRuntimeStartRequest {
   kind: ExternalRuntimeKind;
   sessionId: string;
   cwd: string;
   model?: string;
+  modelKey?: string;
+  permissionMode?: PermissionMode;
+  planMode?: boolean;
+  hasGoal?: boolean;
+  initialContext?: string;
+  developerInstructions?: string;
   /** The renderer window that owns this session's host-loopback surface. */
   ownerWindow?: BrowserWindow;
 }
@@ -69,7 +85,7 @@ export interface ExternalRuntimeServiceDeps {
   requestApproval?: (
     sessionId: string,
     request: { toolName: string; [key: string]: unknown },
-  ) => Promise<{ approved: boolean; reason?: string }>;
+  ) => Promise<{ approved: boolean; reason?: string; answer?: string }>;
   /** Drop any prompt still on screen for a session that is going away. */
   cancelApprovals?: (sessionId: string) => void;
 }
@@ -81,7 +97,16 @@ export interface ExternalRuntimeServiceDeps {
  * the first, because two runtimes writing the same session would interleave turns.
  */
 export class ExternalRuntimeService {
-  private readonly sessions = new Map<string, ExternalRuntimeSession>();
+  private readonly sessions = new Map<
+    string,
+    {
+      session: ExternalRuntimeSession;
+      recorder: ExternalRuntimeSessionRecorder;
+      kind: ExternalRuntimeKind;
+      cwd: string;
+      model?: string;
+    }
+  >();
 
   constructor(private readonly deps: ExternalRuntimeServiceDeps) {}
 
@@ -96,7 +121,7 @@ export class ExternalRuntimeService {
   }
 
   get(sessionId: string): ExternalRuntimeSession | undefined {
-    return this.sessions.get(sessionId);
+    return this.sessions.get(sessionId)?.session;
   }
 
   /**
@@ -142,44 +167,183 @@ export class ExternalRuntimeService {
     // advertises nothing, and it looks like the policy denied everything.
     // Built from the policy so the two cannot drift — a name added to the
     // allowlist is registered by that same edit.
-    const registry = new ToolRegistry({ builtinTools: [...FIRST_PHASE_EXPOSURE.toolNames] });
-
-    const session = await startExternalRuntimeSession({
-      kind: request.kind,
-      cwd: request.cwd,
-      businessSessionId: request.sessionId,
-      registry,
-      permissionMode: "default",
-      presetRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
-      projectTrusted,
-      planMode: false,
-      visibility: {
-        cwd: request.cwd,
-        hasGoal: false,
-        host: "desktop",
-        isSubAgent: false,
-        sessionId: request.sessionId,
-      },
-      ...(exposure ? { exposure } : {}),
-      ...(request.model ? { model: request.model } : {}),
+    const registry = new ToolRegistry({ toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS] });
+    const hostPermissionMode =
+      request.permissionMode === "acceptEdits" || request.permissionMode === "bypassPermissions"
+        ? "acceptEdits"
+        : "default";
+    const sandbox = request.planMode
+      ? "read-only"
+      : request.permissionMode === "bypassPermissions"
+        ? "danger-full-access"
+        : "workspace-write";
+    const approvalPolicy =
+      request.permissionMode === "bypassPermissions" || request.permissionMode === "dontAsk"
+        ? "never"
+        : "on-request";
+    const mayRequestToolApproval =
+      request.permissionMode !== "dontAsk" && this.deps.requestApproval !== undefined;
+    const developerInstructions = [
+      "You are running as an Agent Runtime inside CodeShell. Prefer the " +
+        "mcp__codeshell_tools__* host tools for CodeShell panels, browser state, " +
+        "credentials, memory, skills, and DriveAgent delegation. Do not use the " +
+        "Codex desktop in-app-browser plugin: this host provides browser_navigate, " +
+        "browser_observe, and browser_act with the owning CodeShell session. Never " +
+        "claim that a sub-agent was dispatched unless DriveAgent returned success.",
+      request.developerInstructions,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    const persisted = readExternalRuntimeBinding(request.sessionId);
+    const resumeRuntimeSessionId =
+      persisted?.kind === request.kind &&
+      persisted.cwd === request.cwd &&
+      persisted.model === request.model
+        ? persisted.runtimeSessionId
+        : undefined;
+    const recorder = new ExternalRuntimeSessionRecorder(
+      request.sessionId,
+      request.cwd,
+      request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
+      request.kind,
+    );
+    const forwardEvent = (event: StreamEvent): void => {
+      recorder.onEvent(event);
+      this.deps.emit(request.sessionId, event);
+    };
+    const contextOverrides = {
+      ...(this.deps.toolContextOverrides?.(request.sessionId) ?? {}),
+      streamCallback: forwardEvent,
       ...(this.deps.requestApproval
         ? {
-            approvalBackend: {
-              requestApproval: (approvalRequest: { toolName: string }) =>
-                this.deps.requestApproval!(request.sessionId, approvalRequest),
-            } as never,
+            askUser: async (question: string, options?: Record<string, unknown>) => {
+              const decision = await this.deps.requestApproval!(request.sessionId, {
+                toolName: "__ask_user__",
+                question,
+                ...(options ?? {}),
+              });
+              return (
+                decision.answer ?? decision.reason ?? (decision.approved ? "approved" : "denied")
+              );
+            },
           }
         : {}),
-      ...(this.deps.toolContextOverrides
-        ? { contextOverrides: this.deps.toolContextOverrides(request.sessionId) as never }
-        : {}),
-      hooks: {
-        onEvent: (event) => this.deps.emit(request.sessionId, event),
-      },
-      log: (event, data) => dlog("external-runtime", event, data),
-    });
+    };
 
-    this.sessions.set(request.sessionId, session);
+    let session: ExternalRuntimeSession;
+    try {
+      session = await startExternalRuntimeSession({
+        kind: request.kind,
+        cwd: request.cwd,
+        businessSessionId: request.sessionId,
+        registry,
+        permissionMode: hostPermissionMode,
+        presetRules: BUILTIN_AGENT_PRESETS.general.defaultPermissionRules,
+        projectTrusted,
+        planMode: request.planMode === true,
+        visibility: {
+          cwd: request.cwd,
+          hasGoal: request.hasGoal === true,
+          host: "desktop",
+          isSubAgent: false,
+          sessionId: request.sessionId,
+        },
+        ...(exposure ? { exposure } : {}),
+        ...(request.model ? { model: request.model } : {}),
+        ...(resumeRuntimeSessionId ? { resumeRuntimeSessionId } : {}),
+        ...(request.initialContext ? { initialContext: request.initialContext } : {}),
+        developerInstructions,
+        sandbox,
+        approvalPolicy,
+        ...(mayRequestToolApproval
+          ? {
+              approvalBackend: {
+                requestApproval: (approvalRequest: { toolName: string }) =>
+                  this.deps.requestApproval!(request.sessionId, approvalRequest),
+              } as never,
+            }
+          : {}),
+        contextOverrides: contextOverrides as never,
+        hooks: {
+          onEvent: forwardEvent,
+          ...(mayRequestToolApproval
+            ? {
+                onNativeApproval: async (nativeRequest) => {
+                  const decision = await this.deps.requestApproval!(request.sessionId, {
+                    toolName: "Codex native tool",
+                    method: nativeRequest.method,
+                    params: nativeRequest.params,
+                  });
+                  return decision.approved ? "accept" : "decline";
+                },
+              }
+            : {}),
+          ...(this.deps.requestApproval
+            ? {
+                onUserInput: async (inputRequest) => {
+                  const params =
+                    inputRequest.params && typeof inputRequest.params === "object"
+                      ? (inputRequest.params as Record<string, unknown>)
+                      : {};
+                  const questions = Array.isArray(params.questions) ? params.questions : [];
+                  const answers: Record<string, { answers: string[] }> = {};
+                  for (const value of questions) {
+                    if (!value || typeof value !== "object") continue;
+                    const question = value as Record<string, unknown>;
+                    const id = typeof question.id === "string" ? question.id : "";
+                    const text = typeof question.question === "string" ? question.question : "";
+                    if (!id || !text) continue;
+                    const options = Array.isArray(question.options)
+                      ? question.options.flatMap((option) => {
+                          if (!option || typeof option !== "object") return [];
+                          const item = option as Record<string, unknown>;
+                          return typeof item.label === "string"
+                            ? [
+                                {
+                                  label: item.label,
+                                  description:
+                                    typeof item.description === "string" ? item.description : "",
+                                },
+                              ]
+                            : [];
+                        })
+                      : undefined;
+                    const decision = await this.deps.requestApproval!(request.sessionId, {
+                      toolName: "__ask_user__",
+                      question: text,
+                      ...(typeof question.header === "string" ? { header: question.header } : {}),
+                      ...(options && options.length > 0 ? { options } : {}),
+                    });
+                    if (decision.answer) answers[id] = { answers: [decision.answer] };
+                  }
+                  return { answers };
+                },
+              }
+            : {}),
+        },
+        log: (event, data) => dlog("external-runtime", event, data),
+      });
+    } catch (error) {
+      this.deps.releaseSession(request.sessionId);
+      this.deps.cancelApprovals?.(request.sessionId);
+      throw error;
+    }
+
+    this.sessions.set(request.sessionId, {
+      session,
+      recorder,
+      kind: request.kind,
+      cwd: request.cwd,
+      ...(request.model ? { model: request.model } : {}),
+    });
+    if (session.runtimeSessionId) {
+      writeExternalRuntimeBinding(request.sessionId, {
+        kind: request.kind,
+        cwd: request.cwd,
+        runtimeSessionId: session.runtimeSessionId,
+        ...(request.model ? { model: request.model } : {}),
+      });
+    }
     dlog("external-runtime", "session.started", {
       kind: request.kind,
       sessionId: request.sessionId,
@@ -191,24 +355,49 @@ export class ExternalRuntimeService {
     return session;
   }
 
-  async send(sessionId: string, text: string): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (!session) throw new Error(`no external runtime session for ${sessionId}`);
-    const turn = await session.send(text);
-    await turn.done;
+  async send(
+    sessionId: string,
+    input: ExternalRuntimeTurnInput | string,
+  ): Promise<ExternalRuntimeTurnOutcome> {
+    const entry = this.sessions.get(sessionId);
+    if (!entry) throw new Error(`no external runtime session for ${sessionId}`);
+    const turnInput = typeof input === "string" ? { text: input } : input;
+    entry.recorder.beginTurn(turnInput);
+    try {
+      const turn = await entry.session.send(turnInput);
+      await turn.done;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      const errorEvent = { type: "error" as const, error: detail };
+      const terminalEvent = { type: "turn_complete" as const, reason: "model_error" as const };
+      entry.recorder.onEvent(errorEvent);
+      this.deps.emit(sessionId, errorEvent);
+      entry.recorder.onEvent(terminalEvent);
+      this.deps.emit(sessionId, terminalEvent);
+      return entry.recorder.finishIfMissing();
+    }
+    if (entry.session.runtimeSessionId) {
+      writeExternalRuntimeBinding(sessionId, {
+        kind: entry.kind,
+        cwd: entry.cwd,
+        runtimeSessionId: entry.session.runtimeSessionId,
+        ...(entry.model ? { model: entry.model } : {}),
+      });
+    }
+    return entry.recorder.finishIfMissing();
   }
 
   async interrupt(sessionId: string): Promise<void> {
-    await this.sessions.get(sessionId)?.interrupt();
+    await this.sessions.get(sessionId)?.session.interrupt();
   }
 
   /** Close one session. Safe when there is none. */
   async stop(sessionId: string): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (!session) return;
+    const entry = this.sessions.get(sessionId);
+    if (!entry) return;
     this.sessions.delete(sessionId);
     try {
-      await session.close();
+      await entry.session.close();
     } finally {
       // In `finally` because a close() that throws must still release the host
       // registries — otherwise the bucket and the reserved session leak for the

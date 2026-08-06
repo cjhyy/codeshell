@@ -58,11 +58,63 @@ const CONTEXT_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
   "context_transfer",
 ]);
 
+const INTERRUPTED_TOOL_RESULT_ERROR = "[Tool result missing due to interrupted session]";
+
+function isSyntheticInterruptedToolResult(event: TranscriptEvent): boolean {
+  return (
+    event.type === "tool_result" &&
+    event.data.toolName === "unknown" &&
+    event.data.error === INTERRUPTED_TOOL_RESULT_ERROR
+  );
+}
+
+/**
+ * Choose at most one result for every declared tool call. A real late result
+ * wins over the legacy synthetic "interrupted" placeholder that an older
+ * reader could persist while the tool was merely waiting for approval.
+ */
+function preferredToolResults(events: readonly TranscriptEvent[]): Map<string, TranscriptEvent> {
+  const toolUseIds = new Set<string>();
+  for (const event of events) {
+    if (event.type === "tool_use" && typeof event.data.toolCallId === "string") {
+      toolUseIds.add(event.data.toolCallId);
+    }
+    if (
+      event.type === "message" &&
+      event.data.role === "assistant" &&
+      Array.isArray(event.data.content)
+    ) {
+      for (const block of event.data.content as ContentBlock[]) {
+        if (block.type === "tool_use" && typeof block.id === "string") {
+          toolUseIds.add(block.id);
+        }
+      }
+    }
+  }
+
+  const preferred = new Map<string, TranscriptEvent>();
+  for (const event of events) {
+    if (event.type !== "tool_result") continue;
+    const toolCallId = event.data.toolCallId;
+    if (typeof toolCallId !== "string" || !toolUseIds.has(toolCallId)) continue;
+    const current = preferred.get(toolCallId);
+    if (
+      !current ||
+      isSyntheticInterruptedToolResult(current) ||
+      !isSyntheticInterruptedToolResult(event)
+    ) {
+      preferred.set(toolCallId, event);
+    }
+  }
+  return preferred;
+}
+
 export class Transcript {
   private events: TranscriptEvent[] = [];
   private filePath: string;
   private currentTurn = 0;
   private readonly writer: TranscriptWriter;
+  private readonly persistent: boolean;
   private dirty = false;
   private lastFlushFailure: TranscriptFlushFailure | undefined;
 
@@ -70,13 +122,35 @@ export class Transcript {
     return this.filePath;
   }
 
-  constructor(filePath: string, writer: TranscriptWriter = appendFileSync) {
+  constructor(
+    filePath: string,
+    writer: TranscriptWriter = appendFileSync,
+    options: { persistent?: boolean } = {},
+  ) {
     this.filePath = filePath;
     this.writer = writer;
+    this.persistent = options.persistent !== false;
+    if (!this.persistent) return;
     mkdirSync(dirname(filePath), { recursive: true });
     if (!existsSync(filePath)) {
       writeFileSync(filePath, "", "utf-8");
     }
+  }
+
+  /** A process-local transcript that never creates or appends a file. */
+  static inMemory(label: string): Transcript {
+    return new Transcript(`<memory:${label}>`, () => undefined, { persistent: false });
+  }
+
+  /** Rehydrate a process-local fork without serializing its copied history. */
+  static fromMemoryEvents(label: string, events: readonly TranscriptEvent[]): Transcript {
+    const transcript = Transcript.inMemory(label);
+    transcript.loadEvents(events);
+    return transcript;
+  }
+
+  isPersistent(): boolean {
+    return this.persistent;
   }
 
   append(type: TranscriptEventType, data: Record<string, unknown>): TranscriptEvent {
@@ -241,6 +315,7 @@ export class Transcript {
    */
   toMessages(): Message[] {
     const messages: Message[] = [];
+    const selectedToolResults = preferredToolResults(this.events);
 
     for (const event of this.events) {
       switch (event.type) {
@@ -258,6 +333,13 @@ export class Transcript {
           break;
         }
         case "tool_result": {
+          const eventToolCallId = event.data.toolCallId;
+          if (
+            typeof eventToolCallId !== "string" ||
+            selectedToolResults.get(eventToolCallId) !== event
+          ) {
+            break;
+          }
           const { toolCallId, result, error, contentBlocks } = event.data as {
             toolCallId: string;
             result?: string;
@@ -342,6 +424,7 @@ export class Transcript {
   }
 
   private flush(event: TranscriptEvent): boolean {
+    if (!this.persistent) return true;
     const line = JSON.stringify(event) + "\n";
     try {
       this.writer(this.filePath, line, "utf-8");
@@ -388,41 +471,23 @@ export class Transcript {
   }
 
   /**
-   * Repair tool_result pairing issues:
-   * - Orphaned tool_results (no matching tool_use) get removed
-   * - Missing tool_results (tool_use with no result) get synthetic error results
+   * Normalize tool_result pairing in this detached in-memory snapshot:
+   * - orphaned results are removed;
+   * - duplicate results collapse to one, preferring a real result over the
+   *   legacy synthetic interrupted placeholder;
+   * - missing results remain missing. The run-resume boundary patches those
+   *   in its request-local Message[] after it has established ownership.
+   *
+   * This method must never append to the JSONL file. loadFromFile is used by
+   * read-only/background consumers while another run may be waiting for tool
+   * approval; persisting a synthetic result there races the real executor.
    */
   repairToolResultPairs(): void {
-    const toolUseIds = new Set<string>();
-    const toolResultIds = new Set<string>();
-
-    for (const event of this.events) {
-      if (event.type === "tool_use") {
-        toolUseIds.add(event.data.toolCallId as string);
-      } else if (event.type === "tool_result") {
-        toolResultIds.add(event.data.toolCallId as string);
-      }
-    }
-
-    // Find tool_use events without matching tool_result
-    for (const id of toolUseIds) {
-      if (!toolResultIds.has(id)) {
-        // Synthesize an error result
-        this.append("tool_result", {
-          toolCallId: id,
-          toolName: "unknown",
-          error: "[Tool result missing due to interrupted session]",
-        });
-      }
-    }
-
-    // Remove orphaned tool_results (result without matching use)
+    const selectedToolResults = preferredToolResults(this.events);
     this.events = this.events.filter((event) => {
-      if (event.type === "tool_result") {
-        const id = event.data.toolCallId as string;
-        return toolUseIds.has(id);
-      }
-      return true;
+      if (event.type !== "tool_result") return true;
+      const toolCallId = event.data.toolCallId;
+      return typeof toolCallId === "string" && selectedToolResults.get(toolCallId) === event;
     });
   }
 
@@ -552,22 +617,31 @@ export class Transcript {
     const content = readFileSync(filePath, "utf-8");
     const lines = content.split("\n").filter((l) => l.trim());
 
+    const events: TranscriptEvent[] = [];
     for (const line of lines) {
       try {
-        const event = JSON.parse(line) as TranscriptEvent;
-        transcript.events.push(event);
-        if (event.type === "turn_boundary") {
-          transcript.currentTurn = (event.data.turnNumber as number) ?? transcript.currentTurn + 1;
-        }
+        events.push(JSON.parse(line) as TranscriptEvent);
       } catch {
         // Skip malformed lines
       }
     }
+    transcript.loadEvents(events);
 
     // Repair pairing on load
     transcript.repairToolResultPairs();
 
     return transcript;
+  }
+
+  private loadEvents(events: readonly TranscriptEvent[]): void {
+    this.events = structuredClone([...events]);
+    this.currentTurn = 0;
+    for (const event of this.events) {
+      if (event.type === "turn_boundary") {
+        this.currentTurn =
+          typeof event.data.turnNumber === "number" ? event.data.turnNumber : this.currentTurn + 1;
+      }
+    }
   }
 }
 

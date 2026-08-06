@@ -25,6 +25,7 @@ import { PermissionClassifier, type ApprovalBackend } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { buildToolVisibility, type ToolVisibilityInputs } from "../engine/run-tooling.js";
 import { composePermissionRules } from "../engine/permission-controller.js";
+import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
 
 /**
  * Permission modes an external session may use.
@@ -70,7 +71,10 @@ export interface ExternalToolExposurePolicy {
    * Panel App) is the tool's own schema validation, not this. Do not treat an
    * `argsPatterns` entry as a sandbox for everything a tool might accept.
    */
-  argsPatterns?: ReadonlyMap<string, Readonly<Record<string, string>>>;
+  argsPatterns?: ReadonlyMap<
+    string,
+    Readonly<Record<string, string>> | readonly Readonly<Record<string, string>>[]
+  >;
 }
 
 export interface SessionToolHost {
@@ -168,10 +172,21 @@ function matchesWholeValue(source: string, value: string): boolean {
 }
 
 function argsMatch(
-  patterns: Readonly<Record<string, string>> | undefined,
+  patterns:
+    | Readonly<Record<string, string>>
+    | readonly Readonly<Record<string, string>>[]
+    | undefined,
   input: Record<string, unknown>,
 ): boolean {
   if (!patterns) return true;
+  const alternatives = Array.isArray(patterns) ? patterns : [patterns];
+  return alternatives.some((alternative) => argsPatternMatches(alternative, input));
+}
+
+function argsPatternMatches(
+  patterns: Readonly<Record<string, string>>,
+  input: Record<string, unknown>,
+): boolean {
   for (const [key, source] of Object.entries(patterns)) {
     // Read own properties only: a model-supplied JSON body cannot smuggle a
     // match through the prototype chain.
@@ -235,6 +250,7 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
     // just rejected.
     ...options.contextOverrides,
     sessionId: options.businessSessionId,
+    externalRuntime: true,
     planMode: options.planMode,
     permissionMode: options.permissionMode,
     toolVisibility: buildToolVisibility(options.visibility),
@@ -264,7 +280,12 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       if (disposed) return [];
       return registry
         .getToolDefinitions()
-        .filter((definition) => exposure.toolNames.has(definition.name));
+        .filter((definition) => exposure.toolNames.has(definition.name))
+        .filter((definition) => !options.planMode || PLAN_MODE_ALLOWED_TOOLS.has(definition.name))
+        .filter((definition) => {
+          const guard = registry.getAvailabilityGuard(definition.name);
+          return !guard || guard(toolCtx.toolVisibility!);
+        });
     },
 
     async execute(call, callSignal): Promise<ToolResult> {
@@ -298,6 +319,19 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
         return failClosed(call.id, call.name, `Tool aborted before execution: ${call.name}`);
       }
 
+      const emit = async (event: import("../types.js").StreamEvent): Promise<void> => {
+        try {
+          await toolCtx.streamCallback?.(event);
+        } catch {
+          // Stream projection is observational; a broken renderer/recorder must
+          // not turn an authorized tool execution into an unrelated failure.
+        }
+      };
+      await emit({
+        type: "tool_use_start",
+        toolCall: { id: call.id, toolName: call.name, args: input },
+      });
+
       // Forward the per-call signal rather than only checking it at entry: an MCP
       // cancellation arriving mid-flight has to actually stop the work.
       //
@@ -308,20 +342,24 @@ export function createSessionToolHost(options: CreateSessionToolHostOptions): Se
       // state. Calls without one use the shared executor unchanged.
       if (!callSignal) {
         // The one authorized path. Everything above only NARROWS what may reach it.
-        return await executor.executeSingle({
+        const result = await executor.executeSingle({
           id: call.id,
           toolName: call.name,
           args: input,
         });
+        await emit({ type: "tool_result", result });
+        return result;
       }
       const scoped = new ToolExecutor(registry, permission, hooks);
       scoped.setContext(toolCtx);
       scoped.setSignal(AbortSignal.any([sessionSignal, callSignal]));
-      return await scoped.executeSingle({
+      const result = await scoped.executeSingle({
         id: call.id,
         toolName: call.name,
         args: input,
       });
+      await emit({ type: "tool_result", result });
+      return result;
     },
 
     async dispose(): Promise<void> {

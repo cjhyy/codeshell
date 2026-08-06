@@ -315,6 +315,34 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     expect(seen).toBe("default");
   });
 
+  it("keeps external-runtime delegation in the foreground with safe defaults", async () => {
+    backgroundJobRegistry.reset?.();
+    let seenPermission: string | undefined;
+    const tool = makeDriveAgentTool(
+      async (options) => {
+        seenPermission = options.permissionMode;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return {
+          sessionId: "CODEX-INLINE",
+          finalText: "repo research complete",
+          isError: false,
+          exitCode: 0,
+          lines: [],
+        };
+      },
+      undefined,
+      { foregroundHandoffMs: 1 },
+    );
+    const output = await tool(
+      { prompt: "research", cli: "codex", cwd: process.cwd(), background: true },
+      { cwd: process.cwd(), sessionId: "S-EXTERNAL", externalRuntime: true } as any,
+    );
+    expect(output).toContain("repo research complete");
+    expect(output).not.toContain("jobId");
+    expect(seenPermission).toBe("default");
+    expect(backgroundJobRegistry.hasRunningForSession("S-EXTERNAL")).toBe(false);
+  });
+
   it("background:false auto-hands off to a tracked background job after the foreground threshold", async () => {
     backgroundJobRegistry.reset?.();
     notificationQueue.drainAll("S-HANDOFF");

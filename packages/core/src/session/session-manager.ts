@@ -249,13 +249,20 @@ export interface SessionBundle {
   transcript: Transcript;
 }
 
+// Quick Chat sessions are intentionally process-local. SessionManager
+// instances are created per Engine, so this registry lives at module scope to
+// let a fork created by one Engine be resumed by another without touching
+// disk. The storage root remains part of the key to preserve identity/data-root
+// isolation.
+const processLocalSessionBundles = new Map<string, SessionBundle>();
+
 export interface ForkSessionOptions {
   targetSessionId?: string;
   /** Inclusive source event cursor; omitted means the frozen transcript tail. */
   throughEventId?: string;
   /** `completed` is the interrupted snapshot used by ephemeral side chats. */
   snapshotMode?: "tail" | "completed";
-  /** Hide this temporary fork from ordinary session lists and resume pickers. */
+  /** Keep this temporary fork in process memory only. */
   ephemeral?: boolean;
 }
 
@@ -455,6 +462,29 @@ export class SessionManager {
     this.cleanupStaleForkStaging();
   }
 
+  private processLocalKey(sessionId: string): string {
+    return `${this.sessionsDir}\0${sessionId}`;
+  }
+
+  private processLocalBundle(sessionId: string): SessionBundle | undefined {
+    return processLocalSessionBundles.get(this.processLocalKey(sessionId));
+  }
+
+  private storeProcessLocalBundle(bundle: SessionBundle): void {
+    processLocalSessionBundles.set(this.processLocalKey(bundle.state.sessionId), {
+      state: structuredClone(bundle.state),
+      transcript: bundle.transcript,
+    });
+  }
+
+  /** Forget a Quick Chat/side-chat bundle immediately; nothing remains on disk. */
+  forgetEphemeralSession(sessionId: string): boolean {
+    assertSafeSessionId(sessionId);
+    const bundle = this.processLocalBundle(sessionId);
+    if (!bundle || !isEphemeralSessionState(bundle.state)) return false;
+    return processLocalSessionBundles.delete(this.processLocalKey(sessionId));
+  }
+
   private cleanupStaleForkStaging(): void {
     let removed = 0;
     let entries;
@@ -497,11 +527,8 @@ export class SessionManager {
   }
 
   /**
-   * Create a new on-disk session. If `explicitSessionId` is passed, use
-   * it verbatim (ChatSessionManager-driven hosts choose a logical sid like
-   * "tui-main" and expect us to honor it). Otherwise generate one with
-   * nanoid. Either way the on-disk directory is materialized and the
-   * state.json + transcript.jsonl files are written before return.
+   * Create a session. `qchat-` sessions stay process-local; ordinary sessions
+   * materialize state.json + transcript.jsonl before return.
    */
   create(
     cwd: string,
@@ -517,16 +544,6 @@ export class SessionManager {
     // point validates before that join.
     if (explicitSessionId !== undefined) assertSafeSessionId(explicitSessionId);
     const sessionId = explicitSessionId ?? nanoid(16);
-    const sessionDir = join(this.sessionsDir, sessionId);
-    try {
-      mkdirSync(sessionDir);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "EEXIST") {
-        throw new SessionError(`Session already exists: ${sessionId}`);
-      }
-      throw err;
-    }
-
     const state: SessionState = {
       sessionId,
       kind,
@@ -552,6 +569,34 @@ export class SessionManager {
       ...(origin ? { origin } : {}),
     };
 
+    if (isEphemeralSessionState(state)) {
+      if (this.processLocalBundle(sessionId)) {
+        throw new SessionError(`Session already exists: ${sessionId}`);
+      }
+      const transcript = Transcript.inMemory(sessionId);
+      transcript.append("session_meta", {
+        sessionId,
+        cwd,
+        model,
+        provider,
+        startedAt: state.startedAt,
+        kind,
+      });
+      const bundle = { state, transcript };
+      this.storeProcessLocalBundle(bundle);
+      return bundle;
+    }
+
+    const sessionDir = join(this.sessionsDir, sessionId);
+    try {
+      mkdirSync(sessionDir);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new SessionError(`Session already exists: ${sessionId}`);
+      }
+      throw err;
+    }
+
     // Atomic write (tmp+rename) like saveState, so a crash during this one-time
     // create can't leave a torn state.json that resume() then fails to parse.
     const stateTarget = join(sessionDir, "state.json");
@@ -572,11 +617,7 @@ export class SessionManager {
     return { state, transcript };
   }
 
-  /**
-   * Whether a session directory exists on disk. Used by ChatSession-driven
-   * cold starts to decide between resume vs create-with-explicit-sid
-   * without catching SessionError.
-   */
+  /** Whether a persisted or process-local session exists. */
   exists(sessionId: string): boolean {
     // exists() is a probe — callers use it to decide between resume and
     // create-with-explicit-sid. Treat an invalid id as "not present"
@@ -586,6 +627,10 @@ export class SessionManager {
     } catch {
       return false;
     }
+    if (this.processLocalBundle(sessionId)) return true;
+    // Never resurrect a legacy Quick Chat directory after the process-local
+    // record has expired.
+    if (sessionId.startsWith("qchat-")) return false;
     return existsSync(join(this.sessionsDir, sessionId));
   }
 
@@ -601,6 +646,9 @@ export class SessionManager {
     } catch {
       return undefined;
     }
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) return sessionMainRoot(processLocal.state);
+    if (sessionId.startsWith("qchat-")) return undefined;
     const stateFile = join(this.sessionsDir, sessionId, "state.json");
     if (!existsSync(stateFile)) return undefined;
     try {
@@ -618,6 +666,9 @@ export class SessionManager {
     } catch {
       return undefined;
     }
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) return normalizedSessionKind(processLocal.state.kind);
+    if (sessionId.startsWith("qchat-")) return undefined;
     const stateFile = join(this.sessionsDir, sessionId, "state.json");
     if (!existsSync(stateFile)) return undefined;
     try {
@@ -632,6 +683,12 @@ export class SessionManager {
   readSessionWorkspaceProfile(sessionId: string): string | undefined {
     try {
       assertSafeSessionId(sessionId);
+      const processLocal = this.processLocalBundle(sessionId);
+      if (processLocal) {
+        const profile = processLocal.state.workspaceProfile;
+        return typeof profile === "string" && profile ? profile : undefined;
+      }
+      if (sessionId.startsWith("qchat-")) return undefined;
       const stateFile = join(this.sessionsDir, sessionId, "state.json");
       if (!existsSync(stateFile)) return undefined;
       const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
@@ -706,13 +763,19 @@ export class SessionManager {
     return this.readSessionMainRoot(sessionId);
   }
 
-  /** Disk-only direct-parent ACL metadata. Undefined means unprovable/corrupt. */
+  /** Direct-parent ACL metadata. Undefined means unprovable/corrupt. */
   readParentSessionId(sessionId: string): string | null | undefined {
     try {
       assertSafeSessionId(sessionId);
     } catch {
       return undefined;
     }
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) {
+      const parent = processLocal.state.parentSessionId;
+      return parent === null || typeof parent === "string" ? parent : undefined;
+    }
+    if (sessionId.startsWith("qchat-")) return undefined;
     const stateFile = join(this.sessionsDir, sessionId, "state.json");
     if (!existsSync(stateFile)) return undefined;
     try {
@@ -726,7 +789,7 @@ export class SessionManager {
   }
 
   /**
-   * Disk-only workspace pointer reader. Legacy sessions written before
+   * Workspace pointer reader. Legacy sessions written before
    * `workspace` existed are treated as main-workspace sessions rooted at
    * `state.cwd`; the read is intentionally non-mutating.
    */
@@ -736,6 +799,14 @@ export class SessionManager {
     } catch {
       return undefined;
     }
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) {
+      const state = processLocal.state;
+      if (isSessionWorkspace(state.workspace)) return structuredClone(state.workspace);
+      const mainRoot = sessionMainRoot(state);
+      return mainRoot ? { root: mainRoot, kind: "main" } : undefined;
+    }
+    if (sessionId.startsWith("qchat-")) return undefined;
     const stateFile = join(this.sessionsDir, sessionId, "state.json");
     if (!existsSync(stateFile)) return undefined;
     try {
@@ -768,6 +839,9 @@ export class SessionManager {
     } catch {
       return undefined;
     }
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) return processLocal.state.archivedAt;
+    if (sessionId.startsWith("qchat-")) return undefined;
     const stateFile = join(this.sessionsDir, sessionId, "state.json");
     if (!existsSync(stateFile)) return undefined;
     try {
@@ -789,6 +863,18 @@ export class SessionManager {
     to: SessionWorkspace,
   ): void {
     assertSafeSessionId(sessionId);
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) {
+      processLocal.transcript.append("session_meta", {
+        sessionId,
+        cwd: to.root,
+        workspace: to,
+        handoffFrom: from?.root,
+        handoffAt: Date.now(),
+      });
+      return;
+    }
+    if (sessionId.startsWith("qchat-")) return;
     const transcriptFile = join(this.sessionsDir, sessionId, "transcript.jsonl");
     if (!existsSync(transcriptFile)) return;
     try {
@@ -817,14 +903,11 @@ export class SessionManager {
     sessionId: string,
   ): Promise<SessionWorkspaceResumeResolution> {
     assertSafeSessionId(sessionId);
-    const stateFile = join(this.sessionsDir, sessionId, "state.json");
-    if (!existsSync(stateFile)) {
-      throw new SessionError(`Session state file not found: ${sessionId}`);
-    }
     let state: SessionState;
     try {
-      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+      state = this.readPersistedState(sessionId);
     } catch (err) {
+      if (err instanceof SessionError) throw err;
       throw new SessionError(
         `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
       );
@@ -918,6 +1001,23 @@ export class SessionManager {
     } catch {
       return undefined;
     }
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) {
+      try {
+        const state = hydrateGoalLifecycle(structuredClone(processLocal.state));
+        const lifecycle = state.goalLifecycle;
+        if (!lifecycle || lifecycle.phase === "terminal") return undefined;
+        const goal = goalConfigFromLifecycle(lifecycle);
+        return {
+          ...goal,
+          goalId: goal.goalId ?? deriveLegacyGoalId(sessionId, goal),
+          revision: goal.revision ?? 1,
+        };
+      } catch {
+        return undefined;
+      }
+    }
+    if (sessionId.startsWith("qchat-")) return undefined;
     const stateFile = join(this.sessionsDir, sessionId, "state.json");
     if (!existsSync(stateFile)) return undefined;
     try {
@@ -1055,6 +1155,18 @@ export class SessionManager {
 
   resume(sessionId: string): SessionBundle {
     assertSafeSessionId(sessionId);
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) {
+      const state = hydrateGoalLifecycle(structuredClone(processLocal.state));
+      state.kind = normalizedSessionKind(state.kind);
+      state.status = "active";
+      delete state.lastCompletionKind;
+      Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));
+      return { state, transcript: processLocal.transcript };
+    }
+    if (sessionId.startsWith("qchat-")) {
+      throw new SessionError(`Session not found: ${sessionId}`);
+    }
     const sessionDir = join(this.sessionsDir, sessionId);
     if (!existsSync(sessionDir)) {
       throw new SessionError(`Session not found: ${sessionId}`);
@@ -1378,6 +1490,35 @@ export class SessionManager {
       return { ok: false, reason: "generation_conflict" };
     }
 
+    const processLocal = this.processLocalBundle(state.sessionId);
+    if (processLocal) {
+      const persisted = structuredClone(processLocal.state);
+      const incomingKind = normalizedSessionKind(state.kind);
+      const persistedKind = normalizedSessionKind(persisted.kind);
+      if (incomingKind !== persistedKind) return { ok: false, reason: "kind_conflict" };
+      state.kind = persistedKind;
+
+      const persistedRevision = persisted.stateRevision;
+      const incomingRevision = state.stateRevision;
+      const revisionsMatch =
+        (persistedRevision === undefined && incomingRevision === undefined) ||
+        (typeof persistedRevision === "number" && incomingRevision === persistedRevision);
+      if (!revisionsMatch) return { ok: false, reason: "revision_conflict" };
+
+      if (persisted.title !== undefined && !("title" in state)) state.title = persisted.title;
+      state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
+      const next = hydrateGoalLifecycle(structuredClone(stateForPersistence(state)));
+      this.rebaseLiveState(processLocal.state, next);
+      if (state !== processLocal.state) this.rebaseLiveState(state, next);
+      return { ok: true };
+    }
+
+    // A closed process-local session must stay gone even if a late writer
+    // races the close fence.
+    if (isEphemeralSessionState(state)) {
+      return { ok: false, reason: "revision_conflict" };
+    }
+
     const sessionDir = join(this.sessionsDir, state.sessionId);
     mkdirSync(sessionDir, { recursive: true });
     const target = join(sessionDir, "state.json");
@@ -1481,6 +1622,11 @@ export class SessionManager {
   }
 
   private readPersistedState(sessionId: string): SessionState {
+    const processLocal = this.processLocalBundle(sessionId);
+    if (processLocal) return hydrateGoalLifecycle(structuredClone(processLocal.state));
+    if (sessionId.startsWith("qchat-")) {
+      throw new SessionError(`Session state file not found: ${sessionId}`);
+    }
     const stateFile = join(this.sessionsDir, sessionId, "state.json");
     if (!existsSync(stateFile)) {
       throw new SessionError(`Session state file not found: ${sessionId}`);
@@ -1540,6 +1686,13 @@ export class SessionManager {
     range: { fromEventId: string; toEventId: string },
   ): ReturnType<typeof Transcript.selectContextRange> {
     assertSafeSessionId(sourceSessionId);
+    const processLocal = this.processLocalBundle(sourceSessionId);
+    if (processLocal) {
+      return Transcript.selectContextRange(processLocal.transcript.getEvents(), range);
+    }
+    if (sourceSessionId.startsWith("qchat-")) {
+      throw new SessionError(`Session not found: ${sourceSessionId}`);
+    }
     const transcriptFile = join(this.sessionsDir, sourceSessionId, "transcript.jsonl");
     const stateFile = join(this.sessionsDir, sourceSessionId, "state.json");
     if (!existsSync(stateFile)) throw new SessionError(`Session not found: ${sourceSessionId}`);
@@ -1601,6 +1754,19 @@ export class SessionManager {
     throughEventId: string | undefined,
     snapshotMode: "tail" | "completed",
   ): FrozenForkSnapshot {
+    const processLocal = this.processLocalBundle(sourceSessionId);
+    if (processLocal) {
+      return this.freezeForkSnapshot(
+        sourceSessionId,
+        structuredClone(processLocal.state),
+        processLocal.transcript.getEvents(),
+        throughEventId,
+        snapshotMode,
+      );
+    }
+    if (sourceSessionId.startsWith("qchat-")) {
+      throw new SessionError(`Session not found: ${sourceSessionId}`);
+    }
     const sessionDir = join(this.sessionsDir, sourceSessionId);
     const stateFile = join(sessionDir, "state.json");
     const transcriptFile = join(sessionDir, "transcript.jsonl");
@@ -1619,7 +1785,23 @@ export class SessionManager {
         `Session transcript is malformed for ${sourceSessionId}: ${parsed.malformedLineCount} invalid line(s)`,
       );
     }
-    const sourceEvents = structuredClone(parsed.events);
+    return this.freezeForkSnapshot(
+      sourceSessionId,
+      sourceState,
+      parsed.events,
+      throughEventId,
+      snapshotMode,
+    );
+  }
+
+  private freezeForkSnapshot(
+    sourceSessionId: string,
+    sourceState: SessionState,
+    events: readonly TranscriptEvent[],
+    throughEventId: string | undefined,
+    snapshotMode: "tail" | "completed",
+  ): FrozenForkSnapshot {
+    const sourceEvents = structuredClone([...events]);
     let frozen = sourceEvents;
     const effectiveCursor =
       snapshotMode === "completed" ? sourceState.completedThroughEventId : throughEventId;
@@ -1669,6 +1851,17 @@ export class SessionManager {
     events: readonly TranscriptEvent[],
   ): SessionBundle {
     const targetDir = join(this.sessionsDir, targetSessionId);
+    if (isEphemeralSessionState(state)) {
+      if (this.processLocalBundle(targetSessionId) || existsSync(targetDir)) {
+        throw new SessionError(`Session already exists: ${targetSessionId}`);
+      }
+      const bundle = {
+        state: hydrateGoalLifecycle(structuredClone(state)),
+        transcript: Transcript.fromMemoryEvents(targetSessionId, events),
+      };
+      this.storeProcessLocalBundle(bundle);
+      return bundle;
+    }
     if (existsSync(targetDir)) throw new SessionError(`Session already exists: ${targetSessionId}`);
     const stagingDir = join(this.sessionsDir, `.pending-fork-${targetSessionId}-${nanoid(8)}`);
     let published = false;

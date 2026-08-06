@@ -282,6 +282,15 @@ export class ChatSessionManager {
     if (alreadyClosing) return alreadyClosing;
     const s = this.sessions.get(sessionId);
     if (!s) {
+      if (sessionId.startsWith("qchat-")) {
+        try {
+          this.engineSessionManager(
+            this.factory({} as EngineConfigSlice),
+          )?.forgetEphemeralSession?.(sessionId);
+        } catch {
+          // Closing an already-expired process-local chat is idempotent.
+        }
+      }
       if (markClosed) this.rememberClosedSession(sessionId);
       return Promise.resolve();
     }
@@ -296,6 +305,7 @@ export class ChatSessionManager {
     clearCredentialSessionAllow(sessionId);
     clearInjectCredentialSessionAllow(sessionId);
     const finishClose = () => {
+      sessionManager?.forgetEphemeralSession?.(sessionId);
       this.unregisterMcpOwner(s);
       if (this.sessions.get(sessionId) === s) this.sessions.delete(sessionId);
       if (markClosed) this.rememberClosedSession(sessionId);
@@ -402,12 +412,14 @@ export class ChatSessionManager {
     | {
         registerSessionGeneration: (sessionId: string) => number;
         incrementSessionGeneration: (sessionId: string) => number;
+        forgetEphemeralSession?: (sessionId: string) => boolean;
       }
     | undefined {
     const candidate = engine as Engine & {
       getSessionManager?: () => {
         registerSessionGeneration?: (sessionId: string) => number;
         incrementSessionGeneration?: (sessionId: string) => number;
+        forgetEphemeralSession?: (sessionId: string) => boolean;
       };
     };
     const manager = candidate.getSessionManager?.();
@@ -420,6 +432,7 @@ export class ChatSessionManager {
     return manager as {
       registerSessionGeneration: (sessionId: string) => number;
       incrementSessionGeneration: (sessionId: string) => number;
+      forgetEphemeralSession?: (sessionId: string) => boolean;
     };
   }
 }

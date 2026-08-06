@@ -21,6 +21,7 @@ import { ClaudeEventTranslator } from "./event-translator.js";
 import { claudeBridgeArgs, CLAUDE_MCP_SERVER_NAME } from "./mcp-config.js";
 import { buildRuntimeSpawnEnv } from "../shared/spawn-env.js";
 import type { McpBridgeHandle } from "../shared/mcp-bridge.js";
+import { textWithAttachmentReferences, type ExternalRuntimeTurnInput } from "../turn-input.js";
 
 export interface ClaudeRuntimeOptions {
   cwd: string;
@@ -34,6 +35,8 @@ export interface ClaudeRuntimeOptions {
   /** Extra args, inserted before the runtime's own. */
   extraArgs?: readonly string[];
   model?: string;
+  resumeRuntimeSessionId?: string;
+  initialContext?: string;
   serverName?: string;
   log?: (event: string, data: Record<string, unknown>) => void;
 }
@@ -53,6 +56,8 @@ export class ClaudeCodeRuntime {
   private child?: ChildProcessWithoutNullStreams;
   private claudeSessionId?: string;
   private closed = false;
+  private firstTurn = true;
+  private terminalSeen = false;
 
   constructor(
     private readonly options: ClaudeRuntimeOptions,
@@ -63,6 +68,7 @@ export class ClaudeCodeRuntime {
       sessionId: options.businessSessionId,
       codeshellServerName: options.serverName ?? CLAUDE_MCP_SERVER_NAME,
     });
+    this.claudeSessionId = options.resumeRuntimeSessionId;
   }
 
   /** Claude session id, once the first turn has reported it. Resume key only. */
@@ -78,9 +84,11 @@ export class ClaudeCodeRuntime {
    * positional prompt after it is swallowed as another config value (measured),
    * and a prompt on the command line would also be visible in `ps`.
    */
-  async send(text: string): Promise<ClaudeTurnHandle> {
+  async send(input: ExternalRuntimeTurnInput): Promise<ClaudeTurnHandle> {
     if (this.closed) throw new Error("ClaudeCodeRuntime is closed");
     if (this.child) throw new Error("a turn is already running");
+    this.terminalSeen = false;
+    this.translator.beginTurn();
 
     const wiring = claudeBridgeArgs({
       bridge: this.options.bridge,
@@ -126,20 +134,35 @@ export class ClaudeCodeRuntime {
       if (trimmed) this.log("claude.stderr", { bytes: trimmed.length });
     });
 
+    let text = textWithAttachmentReferences(input);
+    if (this.firstTurn && !this.options.resumeRuntimeSessionId && this.options.initialContext) {
+      text = `${this.options.initialContext}\n\n<current_user_request>\n${text}\n</current_user_request>`;
+    }
+    this.firstTurn = false;
     child.stdin.end(text);
 
     const done = new Promise<void>((resolve) => {
-      const finish = (): void => {
+      let finished = false;
+      const finish = (code?: number | null, error?: Error): void => {
+        if (finished) return;
+        finished = true;
         lines.close();
         // Clean up the config file that carried the bearer token.
         wiring.cleanup();
         this.child = undefined;
+        if (!this.terminalSeen) {
+          const detail =
+            error?.message ??
+            `Claude Code exited without a terminal result (code ${code ?? "unknown"})`;
+          this.emit({ type: "error", error: detail });
+          this.emit({ type: "turn_complete", reason: "model_error" });
+        }
         resolve();
       };
-      child.once("exit", finish);
+      child.once("exit", (code) => finish(code));
       child.once("error", (error) => {
         this.log("claude.spawn_failed", { error: error.message.slice(0, 200) });
-        finish();
+        finish(undefined, error);
       });
     });
 
@@ -157,19 +180,24 @@ export class ClaudeCodeRuntime {
       return;
     }
     for (const event of this.translator.translate(parsed)) {
-      try {
-        this.hooks.onEvent?.(event);
-      } catch (error) {
-        this.log("claude.event_handler_failed", {
-          error: error instanceof Error ? error.name : "unknown",
-        });
-      }
+      if (event.type === "turn_complete") this.terminalSeen = true;
+      this.emit(event);
     }
     if (!this.claudeSessionId && this.translator.runtimeSessionId) {
       this.claudeSessionId = this.translator.runtimeSessionId;
       this.log("claude.session_started", {
         businessSessionId: this.options.businessSessionId,
         runtimeSessionIdPrefix: this.claudeSessionId.slice(0, 8),
+      });
+    }
+  }
+
+  private emit(event: StreamEvent): void {
+    try {
+      this.hooks.onEvent?.(event);
+    } catch (error) {
+      this.log("claude.event_handler_failed", {
+        error: error instanceof Error ? error.name : "unknown",
       });
     }
   }

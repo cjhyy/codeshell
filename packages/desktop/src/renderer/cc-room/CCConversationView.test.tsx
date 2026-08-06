@@ -212,4 +212,72 @@ describe("CCConversationView transcript ownership", () => {
       "keep this draft",
     );
   });
+
+  test("sends a dropped PDF as an exact local path reference", async () => {
+    ensureMiniDom();
+    const sentMessages: string[] = [];
+    const off = () => undefined;
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      ccRoom: {
+        onApprovalRequest: () => off,
+        onApprovalResolved: () => off,
+        onRoomMessage: () => off,
+        subscribeTranscript: async () => ({ messages: [], roomCursor: 0 }),
+        unsubscribeTranscript: async () => undefined,
+        roomHistory: async () => [],
+        readHistory: async () => ({ messages: [] }),
+        readCodexHistory: async () => ({ messages: [] }),
+        send: async (_roomId: string, text: string) => {
+          sentMessages.push(text);
+          return true;
+        },
+        respondApproval: async () => undefined,
+      },
+    };
+
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <CCConversationView
+          roomId="room-files"
+          cwd="/repo"
+          sessionId="thread-files"
+          mode="default"
+          onBack={() => undefined}
+        />,
+      );
+      await flushMicrotasks();
+    });
+
+    const droppedFile = {
+      name: "quarterly report.pdf",
+      path: "/repo/My PDFs/quarterly report.pdf",
+    } as File;
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "onDrop")).onDrop({
+        preventDefault() {},
+        dataTransfer: {
+          files: [droppedFile],
+          getData: () => "",
+        },
+      });
+      await flushMicrotasks();
+    });
+
+    expect(findElementByProp(container, "data-cc-room-path-attachments")).toBeDefined();
+    await act(async () => {
+      reactPropsOf(findElementByProp(container, "data-cc-room-composer")).onKeyDown({
+        key: "Enter",
+        shiftKey: false,
+        preventDefault() {},
+      });
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(sentMessages).toEqual([
+      '本地文件路径（由你拖入）:\n- "/repo/My PDFs/quarterly report.pdf"',
+    ]);
+  });
 });

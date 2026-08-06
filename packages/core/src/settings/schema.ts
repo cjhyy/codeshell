@@ -131,6 +131,19 @@ export const SettingsSchema = z
          * Default on.
          */
         memoryAutoExtract: z.boolean().default(true),
+        /**
+         * Mimi-only presentation and standing preferences. These are injected
+         * only into Pet manager turns; ordinary work Sessions continue to use
+         * the separate agent.* personalization fields above.
+         */
+        personalization: z
+          .object({
+            responseLanguage: z.string().max(120).optional(),
+            userProfile: z.string().max(2_000).optional(),
+            communicationStyle: z.string().max(2_000).optional(),
+            customInstructions: z.string().max(6_000).optional(),
+          })
+          .optional(),
       })
       .default({}),
 

@@ -30,6 +30,14 @@ import {
 /** Session kinds owned by the pet domain — hidden from generic session lists. */
 export const PET_HIDDEN_SESSION_KINDS: readonly string[] = ["pet"];
 
+function isQuickChatSessionId(sessionId: string): boolean {
+  return sessionId.startsWith("qchat-");
+}
+
+function isPetObservableSession(session: { sessionId: string; kind?: string }): boolean {
+  return session.kind !== "pet" && !isQuickChatSessionId(session.sessionId);
+}
+
 /**
  * Build the pet projection observer. All former AgentServer pet state and
  * methods live here, keyed off the domain-neutral host surface.
@@ -73,8 +81,9 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
     sessionId: string,
     observedAt: number,
   ): PetSessionProjection | undefined => {
+    if (isQuickChatSessionId(sessionId)) return undefined;
     const live = host.getLiveSessionSnapshot().find((session) => session.sessionId === sessionId);
-    if (!live || live.kind === "pet") return undefined;
+    if (!live || !isPetObservableSession(live)) return undefined;
     ensurePetSession(sessionId, live.lastActivityAt);
     const indexed = petSessionIndex.get(sessionId);
     const pendingDecisionCount = pendingDecisionIndex
@@ -110,7 +119,7 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
     const observedAt = Date.now();
     const sessions = host
       .getLiveSessionSnapshot()
-      .filter((session) => session.kind !== "pet")
+      .filter(isPetObservableSession)
       .map((session) => currentPetSessionProjection(session.sessionId, observedAt))
       .filter((session): session is PetSessionProjection => session !== undefined)
       .sort((a, b) => a.agentSessionId.localeCompare(b.agentSessionId));
@@ -119,11 +128,14 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
       workerGeneration: petWorkerGeneration(),
       observedAt,
       sessions,
-      pending: pendingDecisionIndex.pendingSnapshot(),
+      pending: pendingDecisionIndex
+        .pendingSnapshot()
+        .filter((entry) => !isQuickChatSessionId(entry.agentSessionId)),
     };
   };
 
   const recordPetStreamEvent = (sessionId: string, event: StreamEvent): void => {
+    if (isQuickChatSessionId(sessionId)) return;
     const observedAt = Date.now();
     const live = host.getLiveSessionSnapshot().find((session) => session.sessionId === sessionId);
     if (live?.kind === "pet") return;
@@ -236,18 +248,24 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
 
   return {
     onSessionAttached: (sessionId, lastActivityAt) => {
+      if (isQuickChatSessionId(sessionId)) return;
       ensurePetSession(sessionId, lastActivityAt);
     },
     onSessionStream: (sessionId, event) => {
       recordPetStreamEvent(sessionId, event);
     },
     onRunBoundary: (sessionId) => {
+      if (isQuickChatSessionId(sessionId)) return;
       emitPetSessionUpsert(sessionId);
     },
     onApprovalCreated: (metadata) => {
-      if (host.getSessionKind(metadata.sessionId) === "pet") {
+      const hiddenFromPet =
+        host.getSessionKind(metadata.sessionId) === "pet" ||
+        isQuickChatSessionId(metadata.sessionId);
+      if (hiddenFromPet) {
         metadata = { ...metadata, surfaceable: false };
       }
+      if (isQuickChatSessionId(metadata.sessionId)) return metadata;
       if (pendingDecisionIndex.created(metadata)) {
         const pending = pendingDecisionIndex.get(metadata.sessionId, metadata.requestId);
         if (pending) {
@@ -258,10 +276,12 @@ export function createPetProjectionObserver(host: ProtocolObserverHost): Protoco
       return metadata;
     },
     onApprovalTransition: (metadata, status) => {
+      if (isQuickChatSessionId(metadata.sessionId)) return;
       if (status === "pending") return;
       transitionPendingDecision(metadata, status as Exclude<PendingDecisionStatus, "pending">);
     },
     onSessionClosed: (sessionId) => {
+      if (isQuickChatSessionId(sessionId)) return;
       const observedAt = Date.now();
       petCatalog.delete(sessionId);
       petSessionIndex.replaceCatalog({

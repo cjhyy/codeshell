@@ -5,9 +5,11 @@ import {
   ArrowUpRight,
   CheckCircle2,
   ChevronDown,
+  FileText,
   FolderKanban,
   Settings,
   Sparkles,
+  X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
@@ -28,6 +30,36 @@ import { visiblePetAssistantText } from "./petChatRouting";
 import { parsePetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import { ModelPill, type ModelOption } from "../chat/ModelPill";
+import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
+import {
+  buildMessageWithLocalFilePaths,
+  localFileBasename,
+  MAX_LOCAL_FILE_PATHS,
+  normalizeLocalFilePaths,
+  pathForRendererFile,
+} from "../chat/localFilePaths";
+
+export const MAX_PET_PATH_ATTACHMENTS = MAX_LOCAL_FILE_PATHS;
+
+/**
+ * Mimi never reads dropped files herself. Keep only explicit absolute paths so
+ * she can hand them unchanged to a Work Session that owns file inspection.
+ */
+export function normalizePetPathAttachments(paths: readonly string[]): string[] {
+  return normalizeLocalFilePaths(paths);
+}
+
+export function buildPetMessageWithPathAttachments(
+  message: string,
+  paths: readonly string[],
+  label: string,
+): string {
+  return buildMessageWithLocalFilePaths(message, paths, label);
+}
+
+function petPathBasename(path: string): string {
+  return localFileBasename(path);
+}
 
 export interface PetChatRow {
   id: string;
@@ -467,6 +499,8 @@ export function PetChatHost({
     hostActionReceipts,
   } = usePetState();
   const [error, setError] = React.useState<string | null>(null);
+  const [dragOver, setDragOver] = React.useState(false);
+  const [pathAttachments, setPathAttachments] = React.useState<string[]>([]);
   const endRef = React.useRef<HTMLDivElement>(null);
   const effectiveModelKey = chatModelKey ?? defaultModelKey;
   const segments = state.projection?.workMemorySegments;
@@ -500,11 +534,61 @@ export function PetChatHost({
 
   const setDraft = (draft: string): void => dispatch({ type: "set-chat-draft", draft });
 
+  const dragHasFiles = (dataTransfer: DataTransfer | null): boolean => {
+    if (!dataTransfer) return false;
+    return (
+      dataTransfer.files.length > 0 ||
+      Array.from(dataTransfer.items ?? []).some((item) => item.kind === "file") ||
+      Array.from(dataTransfer.types ?? []).includes(CODESHELL_PATH_DND_MIME)
+    );
+  };
+
+  const onDragEnter = (event: React.DragEvent<HTMLElement>): void => {
+    if (!dragHasFiles(event.dataTransfer)) return;
+    event.preventDefault();
+    setDragOver(true);
+  };
+
+  const onDragOver = (event: React.DragEvent<HTMLElement>): void => {
+    if (!dragHasFiles(event.dataTransfer)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  };
+
+  const onDragLeave = (event: React.DragEvent<HTMLElement>): void => {
+    const next = event.relatedTarget as Node | null;
+    if (!next || !event.currentTarget.contains(next)) setDragOver(false);
+  };
+
+  const onDrop = (event: React.DragEvent<HTMLElement>): void => {
+    event.preventDefault();
+    setDragOver(false);
+    const candidates: string[] = [];
+    const internalPath = event.dataTransfer.getData(CODESHELL_PATH_DND_MIME);
+    if (internalPath) candidates.push(internalPath);
+    for (const file of Array.from(event.dataTransfer.files ?? [])) {
+      const resolved = pathForRendererFile(file);
+      if (resolved) candidates.push(resolved);
+    }
+    const accepted = normalizePetPathAttachments(candidates);
+    if (accepted.length === 0) {
+      setError(t("pet.chat.filePathUnavailable"));
+      return;
+    }
+    setPathAttachments((current) => normalizePetPathAttachments([...current, ...accepted]));
+    setError(null);
+  };
+
   const submitToPet = async (): Promise<void> => {
-    const message = state.chatDraft.trim();
+    const message = buildPetMessageWithPathAttachments(
+      state.chatDraft,
+      pathAttachments,
+      t("pet.chat.localFilePaths"),
+    );
     if (!message || !petSessionId || chatBusy) return;
     const clientMessageId = `pet-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     setDraft("");
+    setPathAttachments([]);
     setError(null);
     chatDispatch({
       type: "user_message",
@@ -534,11 +618,25 @@ export function PetChatHost({
 
   return (
     <section
-      className="mimi-surface flex min-h-[360px] w-full flex-col overflow-hidden rounded-3xl @min-[1100px]/pet-page:col-start-1 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:min-h-0 @min-[1100px]/pet-page:max-w-[960px] @min-[1100px]/pet-page:justify-self-center"
+      className={`mimi-surface relative flex min-h-[360px] w-full flex-col overflow-hidden rounded-3xl @min-[1100px]/pet-page:col-start-1 @min-[1100px]/pet-page:row-start-1 @min-[1100px]/pet-page:min-h-0 @min-[1100px]/pet-page:max-w-[960px] @min-[1100px]/pet-page:justify-self-center ${
+        dragOver ? "ring-2 ring-inset ring-primary/50" : ""
+      }`}
       aria-label={t("pet.chat.title")}
       data-pet-manager-chat="true"
       data-pet-auto-routing="true"
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
     >
+      {dragOver && (
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-[1px]">
+          <div className="flex items-center gap-2 rounded-2xl border border-primary/30 bg-background px-4 py-3 text-sm font-medium text-primary shadow-lg">
+            <FileText size={17} aria-hidden="true" />
+            {t("pet.chat.dropFiles")}
+          </div>
+        </div>
+      )}
       <div className="@container/composer-controls flex items-center gap-3 border-b border-border/55 px-5 py-4 @min-[1440px]/pet-page:px-6 @min-[1440px]/pet-page:py-5">
         <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
           <img
@@ -676,6 +774,33 @@ export function PetChatHost({
 
       <div className="shrink-0 p-4 pt-2 @min-[1440px]/pet-page:p-5 @min-[1440px]/pet-page:pt-3">
         <div className="rounded-2xl border border-input/90 bg-background p-2 shadow-[0_8px_24px_hsl(var(--cs-foreground)/0.06)] transition focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10">
+          {pathAttachments.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-1 pb-2" data-pet-path-attachments="true">
+              {pathAttachments.map((path) => (
+                <span
+                  key={path}
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border/70 bg-muted/55 px-2 py-1 text-xs text-foreground"
+                  title={path}
+                >
+                  <FileText size={12} className="shrink-0 text-primary" aria-hidden="true" />
+                  <span className="min-w-0 max-w-80">
+                    <span className="block truncate font-medium">{petPathBasename(path)}</span>
+                    <span className="block truncate text-[10px] text-muted-foreground">{path}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="rounded-sm text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    aria-label={t("pet.chat.removeFile", { name: petPathBasename(path) })}
+                    onClick={() =>
+                      setPathAttachments((current) => current.filter((item) => item !== path))
+                    }
+                  >
+                    <X size={12} aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
           <textarea
             value={state.chatDraft}
             onChange={(event) => setDraft(event.target.value)}
@@ -698,7 +823,11 @@ export function PetChatHost({
             <button
               type="button"
               className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-40"
-              disabled={!state.chatDraft.trim() || !petSessionId || chatBusy}
+              disabled={
+                (!state.chatDraft.trim() && pathAttachments.length === 0) ||
+                !petSessionId ||
+                chatBusy
+              }
               onClick={() => void submitToPet()}
             >
               <ArrowUp size={13} aria-hidden="true" />

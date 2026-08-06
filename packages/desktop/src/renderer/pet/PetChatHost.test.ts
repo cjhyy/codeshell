@@ -4,6 +4,9 @@ import { join } from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
+  buildPetMessageWithPathAttachments,
+  MAX_PET_PATH_ATTACHMENTS,
+  normalizePetPathAttachments,
   PetChatMarkdown,
   PetDeliveryStatusTip,
   PetDelegationCard,
@@ -13,6 +16,36 @@ import {
 import { markPetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
 
 describe("PetChatHost", () => {
+  test("keeps dropped PDFs as bounded absolute path references", () => {
+    const paths = normalizePetPathAttachments([
+      "/Users/maki/Documents/spec.pdf",
+      "/Users/maki/Documents/spec.pdf",
+      "relative/spec.pdf",
+      "C:\\Users\\maki\\report.pdf",
+      "bad\npath.pdf",
+      ...Array.from({ length: 20 }, (_, index) => `/tmp/file-${index}.pdf`),
+    ]);
+
+    expect(paths).toEqual([
+      "/Users/maki/Documents/spec.pdf",
+      "C:\\Users\\maki\\report.pdf",
+      ...Array.from(
+        { length: MAX_PET_PATH_ATTACHMENTS - 2 },
+        (_, index) => `/tmp/file-${index}.pdf`,
+      ),
+    ]);
+  });
+
+  test("allows a file-only Mimi turn and preserves paths exactly", () => {
+    expect(
+      buildPetMessageWithPathAttachments(
+        "",
+        ["/Users/maki/My PDFs/quarterly report.pdf"],
+        "本地文件路径（由你拖入）",
+      ),
+    ).toBe('本地文件路径（由你拖入）:\n- "/Users/maki/My PDFs/quarterly report.pdf"');
+  });
+
   test("shows only the manager conversation and hides execution events", () => {
     expect(
       selectPetChatRows([
@@ -64,6 +97,8 @@ describe("PetChatHost", () => {
     const source = readFileSync(join(import.meta.dir, "PetChatHost.tsx"), "utf8");
     expect(source).toContain("min-h-[360px]");
     expect(source).not.toContain("min-h-[520px]");
+    expect(source).toContain("pathForRendererFile(file)");
+    expect(source).toContain('data-pet-path-attachments="true"');
   });
 
   test("places a structured delegation receipt after the matching assistant reply", () => {

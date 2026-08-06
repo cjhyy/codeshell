@@ -22,6 +22,7 @@ import { PermissionClassifier } from "./permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { BuiltinTool } from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
+import type { StreamEvent } from "../types.js";
 
 /** Two trivial tools: one read-only, one that "writes". */
 function catalog(record: string[]): BuiltinTool[] {
@@ -74,6 +75,45 @@ function catalog(record: string[]): BuiltinTool[] {
     },
     {
       definition: {
+        name: "Read",
+        description: "Plan-safe test read.",
+        inputSchema: { type: "object", properties: {} },
+        source: "builtin",
+        permissionDefault: "allow",
+        isReadOnly: true,
+        isConcurrencySafe: true,
+      },
+      execute: async () => {
+        record.push("Read");
+        return "read";
+      },
+      exposure: {
+        presetTags: ["general"],
+        defaultPermissionRules: [{ tool: "Read", decision: "allow" }],
+      },
+    },
+    {
+      definition: {
+        name: "GoalOnly",
+        description: "Visible only while a goal is active.",
+        inputSchema: { type: "object", properties: {} },
+        source: "builtin",
+        permissionDefault: "allow",
+        isReadOnly: true,
+        isConcurrencySafe: true,
+      },
+      execute: async () => {
+        record.push("GoalOnly");
+        return "goal";
+      },
+      exposure: {
+        presetTags: ["general"],
+        defaultPermissionRules: [{ tool: "GoalOnly", decision: "allow" }],
+        availability: (ctx) => ctx.hasGoal === true,
+      },
+    },
+    {
+      definition: {
         name: "SecretTool",
         description: "Never exposed to external runtimes.",
         inputSchema: { type: "object", properties: {} },
@@ -100,6 +140,8 @@ function catalog(record: string[]): BuiltinTool[] {
  * set, or its behavior silently diverges (read-only calls start prompting).
  */
 const CATALOG_RULES = [
+  { tool: "Read", decision: "allow" as const },
+  { tool: "GoalOnly", decision: "allow" as const },
   { tool: "EchoRead", decision: "allow" as const },
   { tool: "PretendWrite", decision: "ask" as const },
   { tool: "SecretTool", decision: "allow" as const },
@@ -111,8 +153,10 @@ function makeHost(
     argsPatterns?: Map<string, Record<string, string>>;
     permissionMode?: "default" | "acceptEdits" | "auto" | "plan";
     planMode?: boolean;
+    hasGoal?: boolean;
     signal?: AbortSignal;
     approve?: boolean;
+    events?: StreamEvent[];
   } = {},
 ) {
   const record: string[] = [];
@@ -130,10 +174,24 @@ function makeHost(
       toolNames: new Set(opts.expose ?? ["EchoRead", "PretendWrite"]),
       ...(opts.argsPatterns ? { argsPatterns: opts.argsPatterns } : {}),
     },
-    visibility: { cwd: process.cwd(), hasGoal: false, host: "desktop", isSubAgent: false },
+    visibility: {
+      cwd: process.cwd(),
+      hasGoal: opts.hasGoal ?? false,
+      host: "desktop",
+      isSubAgent: false,
+    },
     approvalBackend: {
       requestApproval: async () => ({ approved: opts.approve ?? true }),
     },
+    ...(opts.events
+      ? {
+          contextOverrides: {
+            streamCallback: (event: StreamEvent) => {
+              opts.events!.push(event);
+            },
+          },
+        }
+      : {}),
     ...(opts.signal ? { signal: opts.signal } : {}),
   });
   return { host, record, registry };
@@ -153,6 +211,14 @@ describe("SessionToolHost", () => {
     expect(result.isError).toBeFalsy();
     expect(result.result).toContain("echo:hi");
     expect(record).toEqual(["EchoRead:hi"]);
+  });
+
+  test("lists only tools available in the current session context", () => {
+    const hidden = makeHost({ expose: ["GoalOnly"], hasGoal: false });
+    expect(hidden.host.listTools()).toEqual([]);
+
+    const visible = makeHost({ expose: ["GoalOnly"], hasGoal: true });
+    expect(visible.host.listTools().map((tool) => tool.name)).toEqual(["GoalOnly"]);
   });
 
   test("knowing a hidden tool's name is not enough to run it", async () => {
@@ -321,10 +387,25 @@ describe("SessionToolHost", () => {
   });
 
   test("plan mode blocks a write tool but allows a read", async () => {
-    const { host, record } = makeHost({ planMode: true, permissionMode: "plan" });
+    const { host, record } = makeHost({
+      expose: ["Read", "PretendWrite"],
+      planMode: true,
+      permissionMode: "plan",
+    });
+    expect(host.listTools().map((tool) => tool.name)).toEqual(["Read"]);
+    const read = await host.execute({ id: "c5-read", name: "Read", input: {} });
+    expect(read.isError).toBeFalsy();
     const write = await host.execute({ id: "c5", name: "PretendWrite", input: { path: "a.txt" } });
     expect(write.isError).toBe(true);
-    expect(record).toEqual([]);
+    expect(record).toEqual(["Read"]);
+  });
+
+  test("projects host tool lifecycle events without changing execution", async () => {
+    const events: StreamEvent[] = [];
+    const { host } = makeHost({ events });
+    const result = await host.execute({ id: "evt-1", name: "EchoRead", input: { value: "hi" } });
+    expect(result.isError).toBeFalsy();
+    expect(events.map((event) => event.type)).toEqual(["tool_use_start", "tool_result"]);
   });
 
   test("an aborted signal short-circuits execution", async () => {

@@ -63,15 +63,10 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
     kind: "host-loopback",
     status: "exposed",
     reason:
-      "Only list/open/tools. These are read-or-focus, and they have a broadcast " +
-      "fallback, so they work without an owning window. invoke stays out for now " +
-      "for a DIFFERENT reason than originally recorded: the owner claim it was " +
-      "waiting on now exists and is wired (ExternalRuntimeService claims before " +
-      "the runtime starts), so the blocker is no longer technical. What is still " +
-      "missing is a per-Panel-App risk review — invoke runs third-party Panel App " +
-      "code with whatever arguments the model supplies, and argsPatterns cannot " +
-      "constrain a nested payload. Enabling it is a policy decision, not a wiring " +
-      "one, and it belongs to whoever reviews the first Panel App to be trusted.",
+      "list/open/tools plus invoke for the reviewed job-hunt-hq tool catalog. The " +
+      "invoke exception is constrained by panel id and exact tool name; the Panel " +
+      "App manifest validates the nested payload. Other Panel Apps remain " +
+      "discovery/focus-only until they receive their own review.",
   },
   {
     // NOTE the names: there is no tool called "Browser". The registry exposes
@@ -122,11 +117,10 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
       "external runtime. If that approval is ever made skippable, this entry must " +
       "go back to excluded.",
   },
-  // ── Still excluded, and for a different KIND of reason ───────────
-  // The four below are not held back out of caution — widening the allowlist
-  // does not make them work. Each is excluded by a structural property that
-  // would have to be designed away first, so listing them would produce a tool
-  // that is advertised and then fails or misbehaves.
+  // ── Delegation and state-machine exceptions ──────────────────────
+  // Agent and the two plan-state tools remain structurally excluded. DriveAgent
+  // is the reviewed exception because the external host forces it into a
+  // foreground, one-level handoff with an observable result.
   {
     tool: "Agent",
     kind: "self-contained",
@@ -140,8 +134,23 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
   {
     tool: "DriveAgent",
     kind: "self-contained",
-    status: "excluded",
-    reason: "Same recursion hazard as Agent (§12.5).",
+    status: "exposed",
+    reason:
+      "Delegates one bounded task to an installed Codex/Claude CLI. External " +
+      "sessions force foreground execution and disable automatic background " +
+      "handoff, so the parent turn receives the result instead of losing a wake-up " +
+      "inside the native Engine queue. The child CLI does not inherit this host " +
+      "bridge, which bounds nesting at one level; the outer call still requires " +
+      "the normal DriveAgent approval.",
+  },
+  {
+    tool: "DriveAgentJobs",
+    kind: "self-contained",
+    status: "exposed",
+    reason:
+      "Lets the runtime inspect or cancel retained DriveAgent jobs. New external " +
+      "delegations run in the foreground, but retained jobs from the same Session " +
+      "still need an observable cleanup surface.",
   },
   {
     tool: "EnterPlanMode",
@@ -282,17 +291,34 @@ export const FIRST_PHASE_EXPOSURE_RATIONALE: readonly ExposureRationale[] = [
  * This is a second, independent layer from the tool's own
  * `defaultPermissionRules`: those decide allow/ask for a call that IS permitted,
  * while this decides whether the action is reachable from an external runtime at
- * all. Both are narrowed to read-only actions in phase one, and `Panel.invoke`
- * additionally fails closed on owner routing — three independent barriers, by
- * design.
+ * all. `Panel.invoke` additionally fails closed on owner routing. Its exception
+ * here is limited to the reviewed job-hunt-hq panel and exact tool names; write
+ * operations still pass through Panel's schema, owner routing, permission rules,
+ * and approval handling.
  */
-const FIRST_PHASE_ARGS_PATTERNS: ReadonlyMap<string, Readonly<Record<string, string>>> = new Map([
-  // Panel.invoke remains the one action-level restriction. It runs third-party
-  // Panel App code with whatever arguments the model supplies, and argsPatterns
-  // cannot constrain a nested payload — so unlike every tool widened above, the
-  // authorization layer genuinely cannot see what is being authorized. Enabling
-  // it belongs to whoever reviews the first Panel App to be trusted.
-  ["Panel", { action: "list|open|tools" }],
+const JOB_HUNT_TOOL_NAMES = [
+  "get_job_search_context",
+  "save_candidate_context",
+  "save_job_opportunities",
+  "save_workflow_progress",
+  "save_job_research",
+  "save_interview_question_set",
+  "save_preparation_plan",
+  "save_interview_debrief",
+  "save_resume_draft",
+].join("|");
+
+const PANEL_ARGUMENT_PATTERNS: readonly Readonly<Record<string, string>>[] = [
+  { action: "list|open|tools" },
+  {
+    action: "invoke",
+    panel_id: "panel-app:job-hunt-hq",
+    tool_name: JOB_HUNT_TOOL_NAMES,
+  },
+];
+
+const FIRST_PHASE_ARGS_PATTERNS: NonNullable<ExternalToolExposurePolicy["argsPatterns"]> = new Map([
+  ["Panel", PANEL_ARGUMENT_PATTERNS],
 ]);
 
 /**
@@ -374,7 +400,9 @@ export const FIRST_PHASE_EXPOSURE: ExternalToolExposurePolicy = Object.freeze({
   argsPatterns: frozenMap(
     [...FIRST_PHASE_ARGS_PATTERNS].map(([tool, patterns]) => [
       tool,
-      Object.freeze({ ...patterns }),
+      Array.isArray(patterns)
+        ? Object.freeze(patterns.map((pattern) => Object.freeze({ ...pattern })))
+        : Object.freeze({ ...patterns }),
     ]),
   ),
 });

@@ -994,6 +994,8 @@ export interface CodeshellApi {
   pet: PetApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */
   platform: string;
+  /** Absolute local path for a File explicitly selected or dropped by the user. */
+  getPathForFile(file: File): string;
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
   log(msg: string, data?: Record<string, unknown>): void;
   run(
@@ -1430,8 +1432,18 @@ export interface CodeshellApi {
       sessionId: string;
       cwd: string;
       modelKey: string;
+      permissionMode?: string;
+      planMode?: boolean;
+      hasGoal?: boolean;
+      initialContext?: string;
+      developerInstructions?: string;
     }): Promise<{ kind: string; runtimeSessionId: string | null; tools: string[] }>;
-    send(payload: { sessionId: string; text: string }): Promise<void>;
+    send(payload: {
+      sessionId: string;
+      text: string;
+      clientMessageId?: string;
+      attachments?: InputAttachmentMeta[];
+    }): Promise<{ ok: boolean; reason?: string; text?: string; streamed?: boolean }>;
     interrupt(sessionId: string): Promise<void>;
     stop(sessionId: string): Promise<void>;
     // No onEvent: translated events are delivered through `onStreamEvent`,

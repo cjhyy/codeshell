@@ -1,11 +1,13 @@
-import { useEffect, useReducer, useState, useCallback } from "react";
+import { useEffect, useReducer, useState, useCallback, type DragEvent } from "react";
 import {
   Bot,
   ChevronDown,
   ChevronRight,
+  FileText,
   ShieldAlert,
   TerminalSquare,
   UserRound,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,13 @@ import {
   type ChatState,
 } from "@cjhyy/code-shell-web";
 import { roomMsgToEvent, ccHistoryToEvents } from "@cjhyy/code-shell-web";
+import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
+import {
+  buildMessageWithLocalFilePaths,
+  localFileBasename,
+  normalizeLocalFilePaths,
+  pathForRendererFile,
+} from "../chat/localFilePaths";
 
 /**
  * CCConversationView — one resident Claude Code (external CLI) conversation.
@@ -116,6 +125,8 @@ export function CCConversationView({
   const [chat, dispatch] = useReducer(chatReducer, undefined, initialChatState);
   const [pending, setPending] = useState<ApprovalReq[]>([]);
   const [input, setInput] = useState("");
+  const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
+  const [dragOver, setDragOver] = useState(false);
   const [takingOver, setTakingOver] = useState(false);
 
   // Approval delivery is independent of transcript tailing. PanelArea keeps
@@ -232,7 +243,11 @@ export function CCConversationView({
   }, [active, roomId, cwd, sessionId, cliKind]);
 
   const send = useCallback(async () => {
-    const text = input.trim();
+    const text = buildMessageWithLocalFilePaths(
+      input,
+      localFilePaths,
+      t("panels.room.localFilePaths"),
+    );
     if (!text || observing) return;
     // NO local echo: RoomManager.send persists the user line and broadcasts it
     // back as a `room.message`, which onRoomMessage folds into the feed. Echoing
@@ -245,6 +260,7 @@ export function CCConversationView({
         return;
       }
       setInput("");
+      setLocalFilePaths([]);
     } catch (error) {
       toast({
         message: t("panels.room.sendFailedWithReason", {
@@ -253,7 +269,32 @@ export function CCConversationView({
         variant: "error",
       });
     }
-  }, [input, observing, roomId, t, toast]);
+  }, [input, localFilePaths, observing, roomId, t, toast]);
+
+  const dragHasFiles = (dataTransfer: DataTransfer | null): boolean => {
+    if (!dataTransfer || observing) return false;
+    if (Array.from(dataTransfer.items ?? []).some((item) => item.kind === "file")) return true;
+    return Array.from(dataTransfer.types ?? []).includes(CODESHELL_PATH_DND_MIME);
+  };
+
+  const onDropFiles = (event: DragEvent<HTMLDivElement>): void => {
+    event.preventDefault();
+    setDragOver(false);
+    if (observing) return;
+    const candidates: string[] = [];
+    const internalPath = event.dataTransfer.getData(CODESHELL_PATH_DND_MIME);
+    if (internalPath) candidates.push(internalPath);
+    for (const file of Array.from(event.dataTransfer.files ?? [])) {
+      const path = pathForRendererFile(file);
+      if (path) candidates.push(path);
+    }
+    const paths = normalizeLocalFilePaths(candidates);
+    if (paths.length === 0) {
+      toast({ message: t("panels.room.filePathUnavailable"), variant: "error" });
+      return;
+    }
+    setLocalFilePaths((current) => normalizeLocalFilePaths([...current, ...paths]));
+  };
 
   const takeOver = useCallback(async () => {
     if (!onTakeOver || takingOver) return;
@@ -281,7 +322,24 @@ export function CCConversationView({
   );
 
   return (
-    <div className="flex h-full flex-col">
+    <div
+      className={cn("flex h-full flex-col", dragOver && "ring-2 ring-inset ring-primary/40")}
+      onDragEnter={(event) => {
+        if (!dragHasFiles(event.dataTransfer)) return;
+        event.preventDefault();
+        setDragOver(true);
+      }}
+      onDragOver={(event) => {
+        if (!dragHasFiles(event.dataTransfer)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      }}
+      onDragLeave={(event) => {
+        const next = event.relatedTarget as Node | null;
+        if (!next || !event.currentTarget.contains(next)) setDragOver(false);
+      }}
+      onDrop={onDropFiles}
+    >
       <div className="flex items-center justify-between border-b border-border p-2">
         <div className="text-sm font-medium">
           {cliLabel} 会话 ·{" "}
@@ -326,24 +384,57 @@ export function CCConversationView({
         </div>
       </div>
 
-      <div className="flex gap-2 border-t border-border p-2">
-        <Input
-          data-cc-room-composer="true"
-          className="flex-1"
-          value={input}
-          disabled={observing}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-          placeholder={observing ? t("panels.room.observingComposer") : `发消息给 ${cliLabel}…`}
-        />
-        <Button size="sm" disabled={observing} onClick={() => void send()}>
-          发送
-        </Button>
+      <div className="flex flex-col gap-2 border-t border-border p-2">
+        {localFilePaths.length > 0 && (
+          <div className="flex flex-wrap gap-1.5" data-cc-room-path-attachments="true">
+            {localFilePaths.map((path) => (
+              <span
+                key={path}
+                className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs"
+                title={path}
+              >
+                <FileText size={12} className="shrink-0 text-primary" aria-hidden="true" />
+                <span className="min-w-0 max-w-80">
+                  <span className="block truncate font-medium">{localFileBasename(path)}</span>
+                  <span className="block truncate text-[10px] text-muted-foreground">{path}</span>
+                </span>
+                <button
+                  type="button"
+                  className="rounded-sm text-muted-foreground hover:text-foreground"
+                  aria-label={t("panels.room.removeFile", { name: localFileBasename(path) })}
+                  onClick={() =>
+                    setLocalFilePaths((current) => current.filter((item) => item !== path))
+                  }
+                >
+                  <X size={12} aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Input
+            data-cc-room-composer="true"
+            className="flex-1"
+            value={input}
+            disabled={observing}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+            placeholder={observing ? t("panels.room.observingComposer") : `发消息给 ${cliLabel}…`}
+          />
+          <Button
+            size="sm"
+            disabled={observing || (!input.trim() && localFilePaths.length === 0)}
+            onClick={() => void send()}
+          >
+            发送
+          </Button>
+        </div>
       </div>
     </div>
   );
