@@ -451,6 +451,62 @@ function normalizeWorkspacePath(path: string): string {
   return path.replace(/[/\\]+$/, "");
 }
 
+function continuityUrls(text: string): Set<string> {
+  const urls = new Set<string>();
+  for (const raw of text.match(/https?:\/\/[^\s<>"'`，。；！？）》】』」]+/giu) ?? []) {
+    const trimmed = raw.replace(/[),.;!?\]}，。；！？）》】』」]+$/gu, "");
+    try {
+      const url = new URL(trimmed);
+      url.hash = "";
+      urls.add(url.toString());
+    } catch {
+      // A malformed URL is not a safe continuity anchor.
+    }
+  }
+  return urls;
+}
+
+/**
+ * Conservative host fallback for a manager turn that forgot session_id.
+ * Exact shared URLs are strong task identities (download URL, issue/PR, doc),
+ * while ordinary word overlap is deliberately ignored to avoid merging two
+ * unrelated tasks in the same Workspace.
+ */
+function matchingRecentSessionId(
+  context: unknown,
+  objective: string,
+  workspacePath: string | null,
+): string | undefined {
+  if (
+    !context ||
+    typeof context !== "object" ||
+    !Array.isArray((context as { recent?: unknown }).recent)
+  ) {
+    return undefined;
+  }
+  const anchors = continuityUrls(objective);
+  if (anchors.size === 0) return undefined;
+  const workspace = workspacePath === null ? null : normalizeWorkspacePath(workspacePath);
+  const recent = (context as { recent: unknown[] }).recent;
+  for (const value of recent) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const task = value as Record<string, unknown>;
+    if (
+      (task.status !== "completed" && task.status !== "failed") ||
+      typeof task.sessionId !== "string" ||
+      typeof task.objective !== "string"
+    ) {
+      continue;
+    }
+    const taskWorkspace =
+      typeof task.workspace === "string" ? normalizeWorkspacePath(task.workspace) : null;
+    if (taskWorkspace !== workspace) continue;
+    const priorAnchors = continuityUrls(task.objective);
+    if ([...anchors].some((anchor) => priorAnchors.has(anchor))) return task.sessionId;
+  }
+  return undefined;
+}
+
 function workspaceIdForPath(path: string): string {
   return `workspace-${createHash("sha256").update(path).digest("hex").slice(0, 16)}`;
 }
@@ -1377,6 +1433,7 @@ export class PetDispatchService {
             .filter(([key]) => !reservedWorldKeys.has(key))
             .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
         );
+        const longTaskContext = this.options.longTasks?.context();
         const world = {
           version: projectionWorld.version,
           generation: projectionWorld.generation,
@@ -1420,7 +1477,7 @@ export class PetDispatchService {
           ...(worldExtras.mobileRemote !== undefined
             ? { mobileRemote: worldExtras.mobileRemote }
             : {}),
-          ...(this.options.longTasks ? { longTasks: this.options.longTasks.context() } : {}),
+          ...(longTaskContext ? { longTasks: longTaskContext } : {}),
           followUps: petFollowUps,
           outboundTargets: listedOutboundTargets.slice(0, 32),
           sessions: projectionWorld.sessions,
@@ -1475,6 +1532,17 @@ export class PetDispatchService {
             let reusableSession = entry.reusableSessionId
               ? reusableSessionById.get(entry.reusableSessionId)
               : undefined;
+            if (!reusableSession && !entry.reusableSessionId) {
+              const workspacePath = workspacePathById.get(entry.workspaceId) ?? null;
+              const inferredSessionId = matchingRecentSessionId(
+                longTaskContext,
+                entry.objective,
+                workspacePath,
+              );
+              if (inferredSessionId) {
+                reusableSession = reusableSessionById.get(reusableSessionId(inferredSessionId));
+              }
+            }
             if (!reusableSession && entry.reusableSessionId) {
               const resolved = await this.options
                 .resolveReusableSessionBySelector?.(entry.reusableSessionId)

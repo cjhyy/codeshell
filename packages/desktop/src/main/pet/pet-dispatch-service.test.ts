@@ -922,6 +922,160 @@ describe("PetDispatchService", () => {
     ]);
   });
 
+  test("reuses the matching recent Work Session when Mimi omits session_id for the same URL", async () => {
+    const starts: unknown[] = [];
+    const videoUrl = "https://youtu.be/TBVjqvueeCo";
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>).find(
+            (candidate) => candidate.name === "Downloads",
+          )!;
+          return {
+            ok: true,
+            result: {
+              text: "代理已打开，继续下载。",
+              extensions: {
+                pet: {
+                  workDelegation: {
+                    workspaceId: workspace.id,
+                    objective: `继续下载同一个视频：${videoUrl}，代理已经打开。`,
+                    // Regression: the manager omitted reusableSessionId even
+                    // though this is an exact continuation of the recent task.
+                  },
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/downloads", name: "Downloads" }],
+      listReusableSessions: async () => [
+        {
+          sessionId: "work-video",
+          workspacePath: "/work/downloads",
+          title: "Download the YouTube video",
+          updatedAt: 19,
+          status: "completed",
+        },
+      ],
+      longTasks: {
+        context: () => ({
+          version: 1,
+          active: [],
+          recent: [
+            {
+              taskId: "pet-task-video",
+              objective: `下载 YouTube 视频到本地：${videoUrl}`,
+              status: "completed",
+              sessionId: "work-video",
+              workspace: "/work/downloads",
+              updatedAt: 18,
+            },
+          ],
+        }),
+      },
+      startWorkSession: async (delegation) => {
+        starts.push(delegation);
+        return { sessionId: delegation.targetSessionId!, cwd: delegation.workspacePath! };
+      },
+    });
+
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "代理已经打开了，接着下载刚才那个",
+        clientMessageId: "client-video-retry",
+      }),
+    ).toMatchObject({
+      ok: true,
+      type: "chat",
+      delegation: { sessionId: "work-video", reusedSession: true },
+    });
+    expect(starts).toEqual([
+      expect.objectContaining({
+        targetSessionId: "work-video",
+        workspacePath: "/work/downloads",
+      }),
+    ]);
+  });
+
+  test("does not infer Session reuse when the new objective has a different URL", async () => {
+    const starts: unknown[] = [];
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          const workspace = (params.petWorkspaces as Array<{ id: string; name: string }>)[0]!;
+          return {
+            ok: true,
+            result: {
+              extensions: {
+                pet: {
+                  workDelegation: {
+                    workspaceId: workspace.id,
+                    objective: "下载 https://example.com/new-video.mp4",
+                  },
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      listWorkspaces: async () => [{ path: "/work/downloads", name: "Downloads" }],
+      listReusableSessions: async () => [
+        {
+          sessionId: "work-old-video",
+          workspacePath: "/work/downloads",
+          title: "Old video",
+          updatedAt: 19,
+          status: "completed",
+        },
+      ],
+      longTasks: {
+        context: () => ({
+          version: 1,
+          active: [],
+          recent: [
+            {
+              taskId: "pet-task-old-video",
+              objective: "下载 https://example.com/old-video.mp4",
+              status: "completed",
+              sessionId: "work-old-video",
+              workspace: "/work/downloads",
+              updatedAt: 18,
+            },
+          ],
+        }),
+      },
+      startWorkSession: async (delegation) => {
+        starts.push(delegation);
+        return {
+          sessionId: delegation.targetSessionId ?? "work-new-video",
+          cwd: delegation.workspacePath!,
+        };
+      },
+    });
+
+    await service.dispatch({ type: "chat", message: "下载另一个视频" });
+    expect(starts).toEqual([
+      expect.not.objectContaining({
+        targetSessionId: "work-old-video",
+      }),
+    ]);
+  });
+
   test("binds a reusable Session whose cwd differs from its Workspace only by a trailing separator", async () => {
     let exposed: Array<{ id: string; workspaceId: string; name: string }> = [];
     const service = new PetDispatchService({

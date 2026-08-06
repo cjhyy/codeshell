@@ -71,6 +71,53 @@ function interruptReasonForCompletionKind(kind: string): string {
   }
 }
 
+function isWaitingForBackgroundResult(task: PetLongTask): boolean {
+  const latest = task.events.at(-1);
+  return (
+    task.status === "waiting" &&
+    task.phase === "waiting-worker" &&
+    latest?.kind === "waiting" &&
+    latest.phase === "waiting-worker"
+  );
+}
+
+function wasClosedWhileWaitingForBackgroundResult(task: PetLongTask): boolean {
+  if (task.status !== "completed" || task.resultSummary) return false;
+  let completedIndex = -1;
+  for (let index = task.events.length - 1; index >= 0; index -= 1) {
+    if (task.events[index]?.kind === "completed") {
+      completedIndex = index;
+      break;
+    }
+  }
+  if (completedIndex < 1) return false;
+  let priorLifecycle: PetLongTask["events"][number] | undefined;
+  for (let index = completedIndex - 1; index >= 0; index -= 1) {
+    const event = task.events[index];
+    if (
+      event &&
+      [
+        "started",
+        "progress",
+        "waiting",
+        "resumed",
+        "interrupted",
+        "completed",
+        "failed",
+        "cancelled",
+      ].includes(event.kind)
+    ) {
+      priorLifecycle = event;
+      break;
+    }
+  }
+  return (
+    (priorLifecycle?.kind === "interrupted" &&
+      priorLifecycle.message === interruptReasonForCompletionKind("background_wait")) ||
+    (priorLifecycle?.kind === "waiting" && priorLifecycle.phase === "waiting-worker")
+  );
+}
+
 function isControllable(task: PetLongTask): boolean {
   return !isTerminal(task);
 }
@@ -168,6 +215,18 @@ export class PetLongTaskCoordinator {
     if (this.started) return;
     this.started = true;
     await this.options.store.load();
+    for (const task of this.options.store.getSnapshot().tasks) {
+      if (!wasClosedWhileWaitingForBackgroundResult(task)) continue;
+      const completedAt = task.completedAt ?? task.updatedAt;
+      await this.options.store.transition(task.id, {
+        kind: "background-wait-recovered",
+        // Keep recovery ordered after the old closure without manufacturing a
+        // future timestamp that could fence a currently-running Session.
+        at: task.updatedAt,
+        attemptStartedAt: completedAt + 0.001,
+        reason: "The task was closed before its background result arrived",
+      });
+    }
     for (const task of this.options.store.getSnapshot().tasks) {
       if (isTerminal(task) && !task.closureRecordedAt) await this.notifyClosed(task);
     }
@@ -298,7 +357,11 @@ export class PetLongTaskCoordinator {
     const at = this.now();
     switch (event.type) {
       case "stream_request_start":
-        if (task.status === "queued" || task.status === "interrupted") {
+        if (
+          task.status === "queued" ||
+          task.status === "interrupted" ||
+          isWaitingForBackgroundResult(task)
+        ) {
           await this.options.store.transition(task.id, { kind: "started", at });
         }
         return;
@@ -381,7 +444,6 @@ export class PetLongTaskCoordinator {
         if (!current || current.status === "paused" || current.status === "cancelled") return;
         if (event.reason === "completed") {
           if (
-            event.completionKind === "background_wait" ||
             event.completionKind === "goal_control_stop" ||
             event.completionKind === "limit_stop"
           ) {
@@ -389,6 +451,14 @@ export class PetLongTaskCoordinator {
               kind: "interrupted",
               at,
               reason: interruptReasonForCompletionKind(event.completionKind),
+            });
+            return;
+          }
+          if (event.completionKind === "background_wait") {
+            await this.options.store.transition(task.id, {
+              kind: "waiting-worker",
+              at,
+              waitingFor: interruptReasonForCompletionKind(event.completionKind),
             });
             return;
           }
@@ -473,7 +543,7 @@ export class PetLongTaskCoordinator {
     }
     if (event.kind === "pending-remove") {
       const task = this.options.store.activeForSession(event.sessionId);
-      if (task?.status === "waiting") {
+      if (task?.status === "waiting" && task.phase === "waiting-user") {
         await this.options.store.transition(task.id, {
           kind: "resumed",
           at: event.observedAt,
@@ -490,15 +560,28 @@ export class PetLongTaskCoordinator {
     // not the outcome of the current launch.
     if (projectionPredatesCurrentAttempt(task, event.session)) return;
     if (event.session.completionKind) {
-      await this.options.store.transition(task.id, {
-        kind: "interrupted",
-        at: event.observedAt,
-        reason: interruptReasonForCompletionKind(event.session.completionKind),
-      });
+      if (event.session.completionKind === "background_wait") {
+        await this.options.store.transition(task.id, {
+          kind: "waiting-worker",
+          at: event.observedAt,
+          waitingFor: interruptReasonForCompletionKind(event.session.completionKind),
+        });
+      } else {
+        await this.options.store.transition(task.id, {
+          kind: "interrupted",
+          at: event.observedAt,
+          reason: interruptReasonForCompletionKind(event.session.completionKind),
+        });
+      }
       return;
     }
     if (event.session.terminal) {
       if (event.session.terminal.status === "completed") {
+        // A foreground turn that launched detached work writes an ordinary
+        // Session terminal before the background command exits. The retained
+        // waiting-worker transition is the more specific evidence; the next
+        // background notification starts a fresh run and clears this guard.
+        if (isWaitingForBackgroundResult(task)) return;
         if (task.verificationMode === "turn") {
           const completed = await this.options.store.transition(task.id, {
             kind: "completed",

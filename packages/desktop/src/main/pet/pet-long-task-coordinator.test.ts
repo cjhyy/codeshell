@@ -137,6 +137,84 @@ function waitForTaskStatus(
 }
 
 describe("PetLongTaskCoordinator", () => {
+  test("repairs a persisted completion that was written while background work was pending", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pet-long-task-background-recovery-"));
+    roots.push(root);
+    const filePath = join(root, "tasks.json");
+    const seed = new PetLongTaskStore(filePath, () => 2_200);
+    await seed.load();
+    const task = await seed.create({
+      id: "pet-task-background-recovery",
+      originClientMessageId: "message-background-recovery",
+      objective: "Download the file and report the result",
+      workspacePath: "/work/app",
+      sessionId: "session-background-recovery",
+      at: 1_000,
+    });
+    await seed.transition(task.id, { kind: "started", at: 1_100 });
+    await seed.transition(task.id, {
+      kind: "progress",
+      at: 2_000,
+      phase: "executing",
+      summary: "等待后台结果",
+    });
+    // Shape written by the old coordinator: background_wait became interrupted,
+    // then a generic projection terminal incorrectly promoted it to completed.
+    await seed.transition(task.id, {
+      kind: "interrupted",
+      at: 2_100,
+      reason: "The work session yielded until its background result notification arrives",
+    });
+    await seed.transition(task.id, {
+      kind: "completed",
+      at: 2_150,
+      artifacts: [{ kind: "result", label: "Completed work session", reference: task.sessionId }],
+    });
+    await seed.transition(task.id, { kind: "closure-recorded", at: 2_200 });
+    await seed.flush();
+
+    const projection = fakeProjection({
+      ...emptySnapshot(),
+      observedAt: 2_300,
+      sessions: [
+        {
+          agentSessionId: task.sessionId,
+          runState: "running",
+          queueDepth: 0,
+          lastActivityAt: 2_300,
+          pendingDecisionCount: 0,
+          freshness: { source: "live-event", observedAt: 2_300, workerState: "active" },
+        },
+      ],
+    });
+    const recoveredStore = new PetLongTaskStore(filePath, () => 2_300);
+    const closed: string[] = [];
+    const coordinator = new PetLongTaskCoordinator({
+      store: recoveredStore,
+      projection,
+      worker: {
+        hasLiveWorker: () => true,
+        requestWorker: async () => ({ ok: true as const, result: {} }),
+      },
+      launcher: {
+        start: async () => ({ sessionId: task.sessionId, cwd: "/work/app" }),
+      },
+      now: () => 2_300,
+      onTaskClosed: async (closedTask) => closed.push(closedTask.id),
+    });
+    await coordinator.start();
+
+    expect(recoveredStore.get(task.id)).toMatchObject({
+      status: "running",
+      completedAt: undefined,
+      closureRecordedAt: undefined,
+    });
+    expect(recoveredStore.get(task.id)?.artifacts).toEqual([
+      { kind: "session", label: "Work session", reference: task.sessionId },
+    ]);
+    expect(closed).toEqual([]);
+  });
+
   test("replays an unacknowledged terminal closure once after restart", async () => {
     const root = await mkdtemp(join(tmpdir(), "pet-long-task-coordinator-"));
     roots.push(root);
@@ -494,7 +572,7 @@ describe("PetLongTaskCoordinator", () => {
     },
   );
 
-  test("waits for a background notification instead of closing the task", async () => {
+  test("waits for a background notification instead of closing on the generic Session terminal", async () => {
     const h = await harness();
     const launch = await h.coordinator.startDelegation({
       clientMessageId: "message-background-wait",
@@ -510,10 +588,57 @@ describe("PetLongTaskCoordinator", () => {
     });
 
     expect(h.store.get(launch.taskId)).toMatchObject({
-      status: "interrupted",
+      status: "waiting",
+      phase: "waiting-worker",
       waitingFor: "The work session yielded until its background result notification arrives",
     });
     expect(h.closed).toEqual([]);
+
+    // Session projection writes a generic completed terminal whenever the
+    // foreground turn yields. That terminal is not evidence that the detached
+    // background command finished, so it must not close the durable task.
+    h.projection.emit({
+      kind: "session-upsert",
+      version: 2,
+      generation: 1,
+      observedAt: 2_100,
+      session: {
+        agentSessionId: launch.sessionId,
+        runState: "terminal",
+        queueDepth: 0,
+        lastActivityAt: 2_100,
+        pendingDecisionCount: 0,
+        terminal: { status: "completed", at: 2_100 },
+        freshness: { source: "live-event", observedAt: 2_100, workerState: "active" },
+      },
+    });
+    await Bun.sleep(10);
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "waiting",
+      phase: "waiting-worker",
+    });
+    expect(h.closed).toEqual([]);
+
+    // The background-result notification starts a new foreground run in the
+    // same Session. Only that run's ordinary final response closes the task.
+    h.tick(3_000);
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "stream_request_start",
+      turnNumber: 2,
+    });
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "assistant_message",
+      message: { role: "assistant", content: "The background download finished." },
+    });
+    await h.coordinator.observeSessionEvent(launch.sessionId, {
+      type: "turn_complete",
+      reason: "completed",
+    });
+    expect(h.store.get(launch.taskId)).toMatchObject({
+      status: "completed",
+      summary: "The background download finished.",
+    });
+    expect(h.closed).toEqual([{ id: launch.taskId, status: "completed" }]);
   });
 
   test("does not report a run-limit stop as ordinary completion", async () => {

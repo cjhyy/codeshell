@@ -172,6 +172,7 @@ export type PetLongTaskTransition =
   | { kind: "started"; at: number; message?: string }
   | { kind: "progress"; at: number; phase: PetLongTaskPhase; summary: string }
   | { kind: "waiting"; at: number; waitingFor: string; message?: string }
+  | { kind: "waiting-worker"; at: number; waitingFor: string; message?: string }
   | { kind: "paused"; at: number; reason?: string }
   | { kind: "resumed"; at: number; message?: string }
   | { kind: "retrying"; at: number; reason?: string }
@@ -184,6 +185,13 @@ export type PetLongTaskTransition =
       artifacts?: PetLongTaskArtifact[];
     }
   | { kind: "verification-changed"; at: number; mode: PetLongTaskVerificationMode }
+  | {
+      /** Repairs rows written by hosts that closed a foreground background_wait yield. */
+      kind: "background-wait-recovered";
+      at: number;
+      attemptStartedAt: number;
+      reason: string;
+    }
   | { kind: "interrupted"; at: number; reason: string }
   | {
       kind: "completed";
@@ -410,6 +418,7 @@ export function transitionPetLongTask(
     (transition.kind === "started" ||
       transition.kind === "progress" ||
       transition.kind === "waiting" ||
+      transition.kind === "waiting-worker" ||
       transition.kind === "resumed" ||
       transition.kind === "checkpoint" ||
       transition.kind === "interrupted" ||
@@ -423,6 +432,7 @@ export function transitionPetLongTask(
     TERMINAL.has(current.status) &&
     transition.kind !== "retrying" &&
     transition.kind !== "cancelled" &&
+    transition.kind !== "background-wait-recovered" &&
     transition.kind !== "closure-decided" &&
     transition.kind !== "continuation-started" &&
     transition.kind !== "closure-recorded"
@@ -492,6 +502,24 @@ export function transitionPetLongTask(
         at: transition.at,
         phase: "waiting-user",
         message: transition.message,
+        waitingFor: next.waitingFor,
+        nextAction: next.nextAction,
+      };
+      break;
+    case "waiting-worker":
+      Object.assign(next, {
+        status: "waiting",
+        phase: "waiting-worker",
+        waitingFor: bounded(transition.waitingFor, 500),
+        nextAction: "Wait for the background result notification",
+      });
+      event = {
+        // The public event vocabulary intentionally keeps one waiting kind;
+        // phase distinguishes a worker wait from a user decision.
+        kind: "waiting",
+        at: transition.at,
+        phase: "waiting-worker",
+        message: transition.message ?? next.waitingFor,
         waitingFor: next.waitingFor,
         nextAction: next.nextAction,
       };
@@ -589,6 +617,29 @@ export function transitionPetLongTask(
           transition.mode === "goal"
             ? "Completion now requires a verified Goal verdict"
             : "Completion now follows the ordinary Work Session result",
+      };
+      break;
+    case "background-wait-recovered":
+      Object.assign(next, {
+        status: "interrupted",
+        phase: "waiting-worker",
+        // Fence the generic terminal that caused the bad closure while still
+        // accepting a later background-notification run from the same Session.
+        startedAt: Math.max(current.createdAt, transition.attemptStartedAt),
+        completedAt: undefined,
+        closureRecordedAt: undefined,
+        closureDecision: undefined,
+        waitingFor: bounded(transition.reason, 500),
+        nextAction: "Resume from the durable work session",
+        lastError: undefined,
+        artifacts: current.artifacts.filter((artifact) => artifact.kind !== "result"),
+      });
+      event = {
+        kind: "interrupted",
+        at: transition.at,
+        phase: "waiting-worker",
+        message: next.waitingFor,
+        nextAction: next.nextAction,
       };
       break;
     case "interrupted":
