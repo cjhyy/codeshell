@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-chat",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "A standalone, transport-agnostic multi-channel chat gateway for Node.js and Bun.",
   "type": "module",
   "main": "./dist/index.js",
