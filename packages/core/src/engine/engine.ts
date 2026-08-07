@@ -64,6 +64,7 @@ import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager, type CompactStrategy } from "../context/manager.js";
 import {
   CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
+  buildAnchoredSummaryMessage,
   buildContextPackagePromptFromSerialized,
   estimateTokens,
   groupMessagesByApiRound,
@@ -3603,6 +3604,7 @@ export class Engine {
   async archiveTurnRange(
     sessionId: string,
     range: { start: number; end: number },
+    anchors?: { toClientMessageId: string; fromClientMessageId?: string; segmentId?: string },
   ): Promise<{ before: number; after: number }> {
     const effectiveSessionId = sessionId || this.lastSessionId;
     if (!effectiveSessionId) return { before: 0, after: 0 };
@@ -3624,10 +3626,89 @@ export class Engine {
 
     const archived = await contextManager.summarizeRange(sourceMessages, range);
     const after = estimateTokens(archived);
+    // Persist the boundary so a restart replays the trimmed context. Only when
+    // summarizeRange actually replaced the span (identity return means empty
+    // window / rejected summary / no summarizer available) and the caller
+    // supplied stable anchors to record it against.
+    if (anchors && archived !== sourceMessages) {
+      const clampedStart = Math.max(0, Math.min(range.start, archived.length - 1));
+      const summaryMessage = archived[clampedStart];
+      const summaryText =
+        typeof summaryMessage?.content === "string" ? summaryMessage.content : undefined;
+      if (summaryText && this.hasLiveArchiveAnchors(session, anchors)) {
+        session.transcript.appendRangeArchive({ summary: summaryText, ...anchors });
+      }
+    }
     this.compactedMessagesBySession.set(effectiveSessionId, archived);
     this.lastSessionId = effectiveSessionId;
     this.lastMessages = archived;
     return { before, after };
+  }
+
+  /**
+   * Guard against writing a marker anchored to a client message id the
+   * transcript doesn't actually contain. toMessages()'s replay silently
+   * ignores a range_archive event whose anchor doesn't resolve (fail open),
+   * so a bad anchor wouldn't corrupt anything on its own — but if the marker
+   * carries a segmentId, appendRangeArchive's idempotency check treats that
+   * segmentId as "already recorded" forever, with no retry path (e.g. a
+   * one-time migration keyed "migration-v1" would be permanently burned on
+   * its first, failed attempt). Reject before writing so the caller can
+   * retry with a corrected anchor. fromClientMessageId is optional in the
+   * data model (absent means "from the beginning"), so only validate it when
+   * present; missing it is fail-open by design, same as the replay path.
+   */
+  private hasLiveArchiveAnchors(
+    session: SessionBundle,
+    anchors: { toClientMessageId: string; fromClientMessageId?: string },
+  ): boolean {
+    if (!session.transcript.hasClientMessageId(anchors.toClientMessageId)) return false;
+    if (
+      anchors.fromClientMessageId !== undefined &&
+      !session.transcript.hasClientMessageId(anchors.fromClientMessageId)
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Persist an archive boundary WITHOUT a summarization call — the caller
+   * already has the summary text (e.g. the one-time migration built from
+   * pet journal entries). Wraps the plain text in the anchored-summary
+   * envelope so replay and rolling-merge treat it like a real archive.
+   * Returns false when the segmentId was already recorded (idempotent) OR
+   * when the anchors don't resolve to real messages in this transcript —
+   * see hasLiveArchiveAnchors for why a dead anchor must be rejected before
+   * the (potentially one-shot) segmentId gets burned.
+   */
+  async appendArchiveMarker(
+    sessionId: string,
+    marker: {
+      summary: string;
+      toClientMessageId: string;
+      fromClientMessageId?: string;
+      segmentId?: string;
+    },
+  ): Promise<boolean> {
+    const session = this.sessionManager.resume(sessionId);
+    if (!this.hasLiveArchiveAnchors(session, marker)) {
+      logger.warn("engine.archive_marker.dead_anchor", {
+        sessionId,
+        segmentId: marker.segmentId,
+        toClientMessageId: marker.toClientMessageId,
+        fromClientMessageId: marker.fromClientMessageId,
+      });
+      return false;
+    }
+    const wrapped = buildAnchoredSummaryMessage(marker.summary);
+    const content = typeof wrapped.content === "string" ? wrapped.content : marker.summary;
+    const appended = session.transcript.appendRangeArchive({ ...marker, summary: content });
+    if (!appended) return false;
+    // The in-memory cache (if any) predates the marker; drop it so the next
+    // run rebuilds from the trimmed transcript replay.
+    this.compactedMessagesBySession.delete(sessionId);
+    return true;
   }
 
   private recordCacheReadDiagnostics(sessionId: string, sample: PromptCacheDiagnosticSample): void {
