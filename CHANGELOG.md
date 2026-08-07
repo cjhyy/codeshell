@@ -8,6 +8,8 @@ breaking.
 
 ## [Unreleased]
 
+## [0.8.7] - 2026-08-07
+
 ### Added
 
 - Added Panel API v5's `automations.manage` capability for reviewed Panel Apps
@@ -15,6 +17,15 @@ breaking.
 - Added Panel API v4's permission-gated, Host-owned Cookie login flow so a
   Panel App can list matching masked accounts, open an isolated login-and-save
   window, and restore a selected login without receiving Cookie values.
+- Added an explicit Browser Runtime takeover action that reveals the exact page
+  already operated by the Agent for login, CAPTCHA, or another manual step.
+
+### Fixed
+
+- Kept long Panel App and plugin review dialogs scrollable with their action
+  buttons visible.
+- Allowed declared references inside installed Panel App Skills to load without
+  a second sensitive-path prompt while preserving credential and symlink guards.
 
 ## [0.8.1] - 2026-08-05
 
