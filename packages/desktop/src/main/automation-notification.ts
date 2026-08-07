@@ -20,9 +20,21 @@ export function automationLifecycleNotification(
     .update(String(event.job.runCount))
     .update("\0")
     .update(event.type)
+    .update("\0")
+    .update(String(event.scheduledFor ?? ""))
     .digest("hex");
   const name = clean(event.job.name, 120) || event.job.id;
   const duration = formatDuration(event.durationMs);
+  if (event.type === "job_missed") {
+    const scheduledFor = formatScheduledTime(event.scheduledFor, event.job.timezone);
+    const nextRun = formatScheduledTime(event.job.nextRun, event.job.timezone);
+    return {
+      deliveryKey,
+      type: "automation.missed",
+      title: "定时任务已错过",
+      text: `定时任务「${name}」${scheduledFor ? `错过了 ${scheduledFor} 的执行时间` : "错过了本次执行时间"}，本次不会补跑${nextRun ? `；下次执行时间为 ${nextRun}` : ""}。设备当时可能处于休眠，或 CodeShell 未在运行。`,
+    };
+  }
   if (event.type === "job_cancelled") {
     return {
       deliveryKey,
@@ -67,4 +79,21 @@ function formatDuration(durationMs: number | undefined): string {
   if (!Number.isFinite(durationMs) || (durationMs ?? -1) < 0) return "";
   const seconds = Math.max(0, Math.round((durationMs ?? 0) / 1_000));
   return `（用时 ${seconds} 秒）`;
+}
+
+function formatScheduledTime(value: number | undefined, timezone: string | undefined): string {
+  if (!Number.isFinite(value)) return "";
+  try {
+    return new Date(value as number).toLocaleString("zh-CN", {
+      ...(timezone ? { timeZone: timezone } : {}),
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  } catch {
+    return new Date(value as number).toLocaleString("zh-CN", { hour12: false });
+  }
 }

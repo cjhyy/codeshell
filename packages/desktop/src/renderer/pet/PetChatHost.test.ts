@@ -79,6 +79,81 @@ describe("PetChatHost", () => {
     ).toEqual([{ id: "a1", role: "assistant", text: "准备派发" }]);
   });
 
+  test("never flashes Mimi's post-delegation internal acknowledgement", () => {
+    expect(
+      selectPetChatRows([
+        {
+          kind: "user",
+          id: "u1",
+          text: "继续处理这个任务",
+          clientMessageId: "pet-turn-delegate",
+        },
+        { kind: "assistant", id: "a1", text: "我先确认续接目标。", done: true },
+        {
+          kind: "tool",
+          id: "tool1",
+          toolName: "DelegateWork",
+          args: "{}",
+          result: "Delegation accepted",
+          status: "succeeded",
+          startedAt: 1,
+        },
+        {
+          kind: "assistant",
+          id: "a2",
+          text: "微信消息已发送。系统提示当前没有活跃任务，待命。",
+          done: true,
+        },
+      ]),
+    ).toEqual([
+      { id: "u1", role: "user", text: "继续处理这个任务" },
+      { id: "a1", role: "assistant", text: "我先确认续接目标。" },
+    ]);
+  });
+
+  test("keeps pre-tool context when the authoritative delegation receipt arrives", () => {
+    const messages = [
+      {
+        kind: "user" as const,
+        id: "u1",
+        text: "继续处理这个任务",
+        clientMessageId: "pet-turn-delegate",
+      },
+      { kind: "assistant" as const, id: "a1", text: "我先确认续接目标。", done: true },
+      {
+        kind: "tool" as const,
+        id: "tool1",
+        toolName: "DelegateWork",
+        args: "{}",
+        result: "Delegation accepted",
+        status: "succeeded" as const,
+        startedAt: 1,
+      },
+      {
+        kind: "assistant" as const,
+        id: "a2",
+        text: "内部结束语，不应显示。",
+        done: true,
+      },
+    ];
+
+    expect(
+      selectPetChatRows(
+        messages,
+        [],
+        [],
+        [
+          {
+            clientMessageId: "pet-turn-delegate",
+            message: "原任务已继续执行，正在处理。",
+            createdAt: 2,
+            replaceAssistant: true,
+          },
+        ],
+      ).map((row) => row.text),
+    ).toEqual(["继续处理这个任务", "我先确认续接目标。", "原任务已继续执行，正在处理。"]);
+  });
+
   test("renders Mimi assistant content as sanitized GFM markdown", () => {
     const html = renderToStaticMarkup(
       React.createElement(PetChatMarkdown, {

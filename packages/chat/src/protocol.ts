@@ -29,7 +29,8 @@ export interface DesktopControlEvent {
     | "automation.completed"
     | "automation.failed"
     | "automation.stopped"
-    | "automation.cancelled";
+    | "automation.cancelled"
+    | "automation.missed";
   text: string;
   title?: string;
   button?: { text: string; url: string };

@@ -366,6 +366,81 @@ describe("CronScheduler interval absolute scheduling", () => {
     expect(live.nextRun).toBe(firstNextRun);
   });
 
+  test("a sleeping host reports a missed one-shot cron, keeps it, and persists tomorrow", async () => {
+    now = Date.parse("2026-01-01T08:59:00.000Z");
+    const job = seedJob("0 9 * * *", { timezone: "UTC", once: true });
+    const scheduler = makeScheduler();
+    const events: Array<{
+      type: string;
+      scheduledFor?: number;
+      observedAt?: number;
+      nextRun?: number;
+    }> = [];
+    let fired = 0;
+    scheduler.setExecutor(async () => {
+      fired++;
+    });
+    scheduler.setJobEventListener((event) => {
+      events.push({
+        type: event.type,
+        scheduledFor: event.scheduledFor,
+        observedAt: event.observedAt,
+        nextRun: event.job.nextRun,
+      });
+    });
+    scheduler.loadJobs();
+
+    const scheduledFor = Date.parse("2026-01-01T09:00:00.000Z");
+    now = Date.parse("2026-01-01T11:00:00.000Z");
+    jest.advanceTimersByTime(60_000);
+    await flushTimers();
+
+    const tomorrow = Date.parse("2026-01-02T09:00:00.000Z");
+    expect(fired).toBe(0);
+    expect(events).toEqual([
+      {
+        type: "job_missed",
+        scheduledFor,
+        observedAt: now,
+        nextRun: tomorrow,
+      },
+    ]);
+    expect(scheduler.get(job.id)).toMatchObject({ once: true, runCount: 0, nextRun: tomorrow });
+    expect(new CronStore(file).load().find((stored) => stored.id === job.id)?.nextRun).toBe(
+      tomorrow,
+    );
+  });
+
+  test("startup reports one occurrence missed while the app was not running", () => {
+    now = Date.parse("2026-01-01T08:59:00.000Z");
+    const job = seedJob("0 9 * * *", { timezone: "UTC", once: true });
+    now = Date.parse("2026-01-01T11:00:00.000Z");
+
+    const scheduler = makeScheduler();
+    const events: Array<{ type: string; scheduledFor?: number; nextRun?: number }> = [];
+    scheduler.setJobEventListener((event) => {
+      events.push({
+        type: event.type,
+        scheduledFor: event.scheduledFor,
+        nextRun: event.job.nextRun,
+      });
+    });
+    scheduler.loadJobs();
+
+    const tomorrow = Date.parse("2026-01-02T09:00:00.000Z");
+    expect(events).toEqual([
+      {
+        type: "job_missed",
+        scheduledFor: Date.parse("2026-01-01T09:00:00.000Z"),
+        nextRun: tomorrow,
+      },
+    ]);
+    expect(scheduler.get(job.id)).toMatchObject({ once: true, runCount: 0, nextRun: tomorrow });
+    expect(new CronStore(file).load().find((stored) => stored.id === job.id)?.nextRun).toBe(
+      tomorrow,
+    );
+  });
+
   test("worker and no-arm reload paths do not start timers or fire", async () => {
     const worker = makeScheduler();
     worker.setExecutionEnabled(false);

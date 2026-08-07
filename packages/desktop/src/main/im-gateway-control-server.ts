@@ -38,6 +38,7 @@ const GATEWAY_EVENT_TYPES = new Set<GatewayControlEventInput["type"]>([
   "automation.failed",
   "automation.stopped",
   "automation.cancelled",
+  "automation.missed",
 ]);
 
 export interface MobileRemoteOpenResult {
@@ -82,7 +83,8 @@ export interface GatewayControlEventInput {
     | "automation.completed"
     | "automation.failed"
     | "automation.stopped"
-    | "automation.cancelled";
+    | "automation.cancelled"
+    | "automation.missed";
   text: string;
   title?: string;
   button?: { text: string; url: string };

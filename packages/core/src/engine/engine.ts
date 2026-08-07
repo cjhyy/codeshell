@@ -2542,7 +2542,12 @@ export class Engine {
         disabledPlugins,
         skillAllowlist: this.config.skillAllowlist,
         memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
-        goalToolState: { hasGoal: hasRunnableGoal },
+        goalToolState:
+          !profile?.allowedToolNames ||
+          profile.allowedToolNames.has("complete_goal") ||
+          profile.allowedToolNames.has("cancel_goal")
+            ? { hasGoal: hasRunnableGoal }
+            : undefined,
         capabilityPromptSections: this.capabilityPromptSections,
         dynamicContextProviders: this.capabilityDynamicContextProviders,
         getSettingsManager: () => this.getSettingsManager(),

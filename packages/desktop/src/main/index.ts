@@ -2875,7 +2875,19 @@ app.whenReady().then(async () => {
       runner: automationRunner,
       onJobEvent: (event) => {
         const notification = automationLifecycleNotification(event);
-        if (notification) publishGatewayControlEventBestEffort(notification);
+        if (!notification) return;
+        publishGatewayControlEventBestEffort(notification);
+        if (event.type !== "job_missed") return;
+        try {
+          if (Notification.isSupported()) {
+            new Notification({
+              title: notification.title ?? "定时任务已错过",
+              body: notification.text,
+            }).show();
+          }
+        } catch {
+          // A missed-run notice is best-effort and must never affect re-arming.
+        }
       },
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).

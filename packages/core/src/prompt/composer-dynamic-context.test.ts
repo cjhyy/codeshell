@@ -56,15 +56,16 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
       goalToolState: { hasGoal: false },
     }).buildDynamicContextMessage();
     expect(withoutGoal!.role).toBe("user");
-    expect(withoutGoal!.content).toContain("当前没有 active goal");
+    expect(withoutGoal!.content).toContain("本会话没有持久 Goal");
     expect(withoutGoal!.content).toContain("不要调用 complete_goal/cancel_goal");
+    expect(withoutGoal!.content).toContain("不代表没有后台任务");
 
     const withGoal = await new PromptComposer({
       cwd,
       model: "test-model",
       goalToolState: { hasGoal: true },
     }).buildDynamicContextMessage();
-    expect(withGoal!.content).toContain("当前存在 active goal");
+    expect(withGoal!.content).toContain("本会话存在一个持久 Goal");
     expect(withGoal!.content).toContain("complete_goal");
     expect(withGoal!.content).toContain("cancel_goal");
   });
@@ -80,7 +81,7 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
       }).buildDynamicContextMessage();
       expect(msg).not.toBeNull();
       expect(msg!.role).toBe("user");
-      expect(msg!.content).toContain("当前没有 active goal");
+      expect(msg!.content).toContain("本会话没有持久 Goal");
       expect(msg!.content).not.toContain("demo-skill");
     } finally {
       rmSync(bare, { recursive: true, force: true });

@@ -101,6 +101,8 @@ export interface PetHostActionReceiptRow {
   deliveryChannel?: string;
 }
 
+const PET_AUTHORITATIVE_REPLY_TOOLS = new Set(["DelegateWork", "GatewayReply", "SendMessage"]);
+
 export function selectPetChatRows(
   messages: readonly Message[],
   segments: readonly PetChatSegmentBoundary[] = [],
@@ -137,9 +139,11 @@ export function selectPetChatRows(
   }
   const emittedDelegationReceipts = new Set<string>();
   const emittedHostReceipts = new Set<string>();
+  const turnsWithSuppressedAssistant = new Set<string>();
   const rows: PetChatRow[] = [];
   let activeClientMessageId: string | undefined;
   let activeTurnRowStart = 0;
+  let activeTurnAwaitsAuthoritativeReply = false;
   const turnRowStarts = new Map<string, number>();
   const appendDelegationReceipts = (): void => {
     if (!activeClientMessageId || emittedDelegationReceipts.has(activeClientMessageId)) return;
@@ -167,7 +171,7 @@ export function selectPetChatRows(
       turnEnd = index;
       break;
     }
-    if (hostReceipt.replaceAssistant) {
+    if (hostReceipt.replaceAssistant && !turnsWithSuppressedAssistant.has(clientMessageId)) {
       for (let index = turnEnd - 1; index >= turnStart; index -= 1) {
         if (rows[index]?.role !== "assistant") continue;
         rows.splice(index, 1);
@@ -196,6 +200,7 @@ export function selectPetChatRows(
       appendHostReceipt();
       activeClientMessageId = message.clientMessageId;
       activeTurnRowStart = rows.length;
+      activeTurnAwaitsAuthoritativeReply = false;
       if (activeClientMessageId) turnRowStarts.set(activeClientMessageId, activeTurnRowStart);
       const channel = imGatewayChannelFromClientMessageId(message.clientMessageId);
       const userRow: PetChatRow = {
@@ -222,6 +227,14 @@ export function selectPetChatRows(
       rows.push(userRow);
       continue;
     }
+    if (
+      message.kind === "tool" &&
+      message.status === "succeeded" &&
+      PET_AUTHORITATIVE_REPLY_TOOLS.has(message.toolName)
+    ) {
+      activeTurnAwaitsAuthoritativeReply = true;
+      continue;
+    }
     if (message.kind === "assistant") {
       if (persistedReplacementMessageIds.has(message.id)) {
         const replacement = parsePetHostActionReplacementDisplay(message.text);
@@ -230,7 +243,15 @@ export function selectPetChatRows(
         continue;
       }
       const text = visiblePetAssistantText(message.text);
-      if (text) rows.push({ id: message.id, role: "assistant" as const, text });
+      // DelegateWork/GatewayReply/SendMessage complete at a trusted host boundary
+      // after the model turn. Suppress the model's post-tool acknowledgement so
+      // stale claims such as "sent" or "no active task" never flash before the
+      // authoritative receipt arrives. Pre-tool reasoning remains visible.
+      if (text && !activeTurnAwaitsAuthoritativeReply) {
+        rows.push({ id: message.id, role: "assistant" as const, text });
+      } else if (text && activeClientMessageId) {
+        turnsWithSuppressedAssistant.add(activeClientMessageId);
+      }
       if (message.done) appendDelegationReceipts();
       continue;
     }

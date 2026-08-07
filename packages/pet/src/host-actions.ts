@@ -379,8 +379,9 @@ export async function gatewayReplyTool(
   if (!decision.ok) return `Error: ${decision.error ?? "Gateway reply was rejected"}`;
   return (
     "ACCEPTED EXACTLY ONCE — NOT SENT YET. The Gateway reply was recorded for host validation " +
-    "after this turn. End the turn now with only a short internal acknowledgement; do not call " +
-    "GatewayReply again, repeat the user-facing reply, or claim sent, attached, or delivered."
+    "after this turn. End the turn now without producing any assistant text; do not call " +
+    "GatewayReply again, repeat the user-facing reply, or claim sent, attached, or delivered. " +
+    "The host will supply the only visible reply."
   );
 }
 

@@ -99,11 +99,15 @@ export interface CronJob {
  * job_error carries the message `fire()` would otherwise swallow.
  */
 export interface CronJobLifecycleEvent {
-  type: "job_start" | "job_end" | "job_stopped" | "job_cancelled" | "job_error";
+  type: "job_start" | "job_end" | "job_stopped" | "job_cancelled" | "job_error" | "job_missed";
   job: CronJob;
   durationMs?: number;
   reason?: string;
   error?: string;
+  /** Planned wall-clock instant that was skipped after the host woke too late. */
+  scheduledFor?: number;
+  /** Time the scheduler observed the skipped occurrence. */
+  observedAt?: number;
 }
 
 /** Optional semantic outcome returned by an executor after a non-throwing run. */
@@ -191,10 +195,10 @@ export class CronScheduler {
   }
 
   /**
-   * Observe job execution lifecycle
-   * (job_start → job_end | job_stopped | job_cancelled | job_error). Hosts
-   * wire this to their notification surface so scheduled runs — especially
-   * failures, which `fire()` otherwise swallows — are no longer silent.
+   * Observe job execution lifecycle. A real execution emits job_start followed
+   * by one terminal event; a sleep/wake skip emits job_missed without pretending
+   * the job started. Hosts wire this to their notification surface so failures
+   * and intentionally skipped occurrences are no longer silent.
    * Listener errors are swallowed; observation never affects scheduling.
    */
   setJobEventListener(listener: ((event: CronJobLifecycleEvent) => void) | undefined): void {
@@ -273,11 +277,29 @@ export class CronScheduler {
       if (Number.isFinite(n) && n > maxId) maxId = n;
 
       if (!prev) {
+        const observedAt = Date.now();
+        const missedWhileStopped =
+          arm &&
+          this.executionEnabled &&
+          job.enabled &&
+          typeof job.nextRun === "number" &&
+          isCronMisfire(job.nextRun, observedAt)
+            ? job.nextRun
+            : undefined;
         this.jobs.set(job.id, job);
         if (arm && job.enabled) {
           this.arm(job);
         } else {
           this.refreshNextRunForDisplay(job);
+        }
+        if (missedWhileStopped !== undefined) {
+          this.persistRunStats(job);
+          this.emitJobEvent({
+            type: "job_missed",
+            job,
+            scheduledFor: missedWhileStopped,
+            observedAt,
+          });
         }
         continue;
       }
@@ -715,8 +737,11 @@ export class CronScheduler {
       // Interval jobs get the same misfire semantics cron already had: if we
       // wake far PAST the target (host slept through it), skip this occurrence
       // and re-arm on the next absolute slot instead of firing late.
-      if (isCronMisfire(scheduledFor, Date.now())) {
+      const observedAt = Date.now();
+      if (isCronMisfire(scheduledFor, observedAt)) {
         rearm();
+        this.persistRunStats(job);
+        this.emitJobEvent({ type: "job_missed", job, scheduledFor, observedAt });
         return;
       }
       void this.fire(job, rearm).then((ran) => {
@@ -752,8 +777,11 @@ export class CronScheduler {
       // resume). If we wake too far PAST the scheduled instant, this is a
       // misfire: skip running and re-arm to the next correct occurrence rather
       // than running at the wrong time.
-      if (isCronMisfire(scheduledFor, Date.now())) {
+      const observedAt = Date.now();
+      if (isCronMisfire(scheduledFor, observedAt)) {
         if (job.enabled) this.armCron(job);
+        this.persistRunStats(job);
+        this.emitJobEvent({ type: "job_missed", job, scheduledFor, observedAt });
         return;
       }
       const rearm = () => {

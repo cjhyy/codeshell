@@ -31,7 +31,9 @@ describe("automationLifecycleNotification", () => {
       text: "定时任务「每日检查」已完成（用时 1 秒）。可在 CodeShell 中查看完整结果。",
     });
     expect(completed?.deliveryKey).toMatch(/^[a-f0-9]{64}$/u);
-    expect(automationLifecycleNotification(event("job_cancelled", { durationMs: 2_600 }))).toMatchObject({
+    expect(
+      automationLifecycleNotification(event("job_cancelled", { durationMs: 2_600 })),
+    ).toMatchObject({
       type: "automation.cancelled",
       title: "自动化任务已取消",
       text: "定时任务「每日检查」已取消（用时 3 秒）。",
@@ -57,8 +59,35 @@ describe("automationLifecycleNotification", () => {
       title: "自动化任务失败",
       text: "定时任务「每日检查」执行失败（用时 1 秒）：bad token",
     });
+    const missed = automationLifecycleNotification(
+      event("job_missed", {
+        scheduledFor: Date.parse("2026-08-07T01:00:00.000Z"),
+        observedAt: Date.parse("2026-08-07T03:00:00.000Z"),
+        job: {
+          ...event("job_missed").job,
+          timezone: "Asia/Shanghai",
+          nextRun: Date.parse("2026-08-08T01:00:00.000Z"),
+        },
+      }),
+    );
+    expect(missed).toMatchObject({
+      type: "automation.missed",
+      title: "定时任务已错过",
+    });
+    expect(missed?.text).toContain("2026/08/07 09:00");
+    expect(missed?.text).toContain("本次不会补跑");
+    expect(missed?.text).toContain("2026/08/08 09:00");
     expect(automationLifecycleNotification(event("job_end"))?.deliveryKey).toBe(
       completed?.deliveryKey,
+    );
+    expect(
+      automationLifecycleNotification(
+        event("job_missed", { scheduledFor: Date.parse("2026-08-07T01:00:00.000Z") }),
+      )?.deliveryKey,
+    ).not.toBe(
+      automationLifecycleNotification(
+        event("job_missed", { scheduledFor: Date.parse("2026-08-08T01:00:00.000Z") }),
+      )?.deliveryKey,
     );
     expect(
       automationLifecycleNotification(

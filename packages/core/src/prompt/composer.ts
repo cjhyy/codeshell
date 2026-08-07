@@ -223,8 +223,8 @@ export class PromptComposer {
   private buildGoalToolContext(): string {
     if (!this.options.goalToolState) return "";
     return this.options.goalToolState.hasGoal
-      ? "当前存在 active goal。只有在目标完全完成时才可调用 complete_goal；只有用户明确要求取消/停止/放弃该目标时才可调用 cancel_goal。"
-      : "当前没有 active goal。不要调用 complete_goal/cancel_goal；如果误调用，系统会拒绝。";
+      ? "Goal 工具状态：本会话存在一个持久 Goal。只有在该 Goal 完全完成时才可调用 complete_goal；只有用户明确要求取消/停止/放弃该 Goal 时才可调用 cancel_goal。此状态不代表后台任务或其他 Session 的运行状态，不要把它改写成系统是否空闲。"
+      : "Goal 工具状态：本会话没有持久 Goal，因此不要调用 complete_goal/cancel_goal；如果误调用，系统会拒绝。这只描述 Goal 工具的可用状态，不代表没有后台任务、没有运行中的 Session 或系统正在待命，也不要向用户复述为任务状态。";
   }
 
   invalidateCache(sectionName?: string): void {
