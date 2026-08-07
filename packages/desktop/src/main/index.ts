@@ -150,7 +150,11 @@ import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpService } from "./pet/pet-follow-up-service.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
-import { PetSegmentController } from "./pet/pet-segment-controller.js";
+import {
+  PetSegmentController,
+  buildArchiveAnchors,
+  type PetArchiveAnchors,
+} from "./pet/pet-segment-controller.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
@@ -2039,12 +2043,14 @@ async function createWindow(): Promise<BrowserWindow> {
       const archivePetRange = async (
         sessionId: string,
         range: { start: number; end: number },
+        anchors?: PetArchiveAnchors,
       ): Promise<{ before: number; after: number }> => {
         const response = await petBridge.requestWorker("agent/query", {
           type: "archive_range",
           sessionId,
           start: range.start,
           end: range.end,
+          ...(anchors ?? {}),
         });
         if (!response.ok) throw new Error(response.message);
         const data = (response.result as { data?: { before?: number; after?: number } })?.data;
@@ -2089,7 +2095,8 @@ async function createWindow(): Promise<BrowserWindow> {
           void closureService
             .close(closed)
             .then(async (result) => {
-              if (result) await archivePetRange(petSessionId, result.range);
+              if (result)
+                await archivePetRange(petSessionId, result.range, buildArchiveAnchors(closed));
             })
             .catch((error) => dlog("main", "pet.closure.failed", { error: String(error) }));
         },
