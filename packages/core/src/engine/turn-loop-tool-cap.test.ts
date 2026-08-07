@@ -153,7 +153,15 @@ describe("TurnLoop per-turn tool-call cap (B-3)", () => {
   });
 });
 
-describe("TurnLoop repeated tool-batch circuit breaker", () => {
+/**
+ * Repeating one tool call with an identical result is how polling works —
+ * waiting on CI, a file, or a task. A0dd8204 briefly stopped a run after three
+ * such batches; the root cause it targeted (Pet messaging loops) is handled in
+ * ToolSearch, which tells the model not to retry an unavailable tool. These
+ * cases pin the two halves of that: repetition alone never terminates a run,
+ * and a runaway model is bounded by maxTurns rather than by repetition.
+ */
+describe("TurnLoop repeated tool batches", () => {
   const repeatedToolResponse = (id: string, query: string): LLMResponse =>
     toolResp([
       {
@@ -163,33 +171,12 @@ describe("TurnLoop repeated tool-batch circuit breaker", () => {
       },
     ]);
 
-  it("stops after three identical calls with identical results even when call ids change", async () => {
+  it("runs identical call/result batches to completion", async () => {
     const { deps, executed } = makeDeps([
       repeatedToolResponse("call-1", "SendMessage"),
       repeatedToolResponse("call-2", "SendMessage"),
       repeatedToolResponse("call-3", "SendMessage"),
-      doneResp(),
-    ]);
-
-    const result = await new TurnLoop(deps, {
-      maxTurns: 10,
-      maxToolCallsPerTurn: 10,
-    }).run([{ role: "user", content: "send it" }]);
-
-    expect(executed).toEqual(["ToolSearch", "ToolSearch", "ToolSearch"]);
-    expect(result.reason).toBe("completed");
-    expect(result.completionKind).toBe("limit_stop");
-    expect(result.text).toContain("连续重复 3 次");
-    expect(result.text).toContain("已自动停止");
-  });
-
-  it("resets the streak when the tool arguments change", async () => {
-    const { deps, executed } = makeDeps([
-      repeatedToolResponse("call-1", "SendMessage"),
-      repeatedToolResponse("call-2", "SendMessage"),
-      repeatedToolResponse("call-3", "GatewayReply"),
       repeatedToolResponse("call-4", "SendMessage"),
-      repeatedToolResponse("call-5", "SendMessage"),
       doneResp(),
     ]);
 
@@ -198,8 +185,23 @@ describe("TurnLoop repeated tool-batch circuit breaker", () => {
       maxToolCallsPerTurn: 10,
     }).run([{ role: "user", content: "send it" }]);
 
-    expect(executed).toHaveLength(5);
+    expect(executed).toEqual(["ToolSearch", "ToolSearch", "ToolSearch", "ToolSearch"]);
+    expect(result.reason).toBe("completed");
     expect(result.text).toBe("done");
     expect(result.completionKind).toBeUndefined();
+  });
+
+  it("bounds a model that never stops repeating by maxTurns, not by repetition", async () => {
+    // No terminating response: makeDeps replays the last entry forever, so the
+    // only way out is a turn limit. The breaker used to cut this off at three.
+    const { deps, executed } = makeDeps([repeatedToolResponse("call-1", "SendMessage")]);
+
+    const result = await new TurnLoop(deps, {
+      maxTurns: 6,
+      maxToolCallsPerTurn: 10,
+    }).run([{ role: "user", content: "send it" }]);
+
+    expect(executed).toHaveLength(6);
+    expect(result.reason).toBe("max_turns");
   });
 });
