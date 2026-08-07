@@ -338,6 +338,7 @@ export function PetStateProvider({
           bucket: PET_CHAT_BUCKET,
           text: event.message,
           clientMessageId: event.clientMessageId,
+          attachments: event.attachments,
         });
         return;
       }

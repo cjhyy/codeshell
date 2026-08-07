@@ -8,6 +8,7 @@
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import type { ApprovalRequestEnvelope } from "../preload/types";
+import type { PetChatAttachment } from "../shared/pet-chat-attachments";
 import { aggregateFileChangeSummary } from "./messages/fileChangeAggregator";
 import { translate } from "./i18n/translate";
 import { loadUILanguage } from "./uiLanguage";
@@ -36,6 +37,8 @@ export interface UserMessage {
   clientMessageId?: string;
   /** True until the engine echoes steer_injected for this steerId. */
   pending?: boolean;
+  /** User-supplied Mimi attachments projected for chat rendering. */
+  attachments?: PetChatAttachment[];
 }
 
 export interface AssistantMessage {
@@ -1490,6 +1493,7 @@ export function appendUserMessage(
   steerId?: string,
   pending?: boolean,
   clientMessageId?: string,
+  attachments?: PetChatAttachment[],
 ): MessagesReducerState {
   if (clientMessageId) {
     let replaced = false;
@@ -1505,6 +1509,7 @@ export function appendUserMessage(
           steerId: steerId ?? m.steerId,
           pending: pending ?? m.pending,
           clientMessageId,
+          attachments: attachments ?? m.attachments,
         };
       }
       return m;
@@ -1525,6 +1530,7 @@ export function appendUserMessage(
         steerId,
         pending,
         clientMessageId,
+        attachments,
       },
     ],
   };

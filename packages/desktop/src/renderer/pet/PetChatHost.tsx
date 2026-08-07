@@ -7,6 +7,7 @@ import {
   ChevronDown,
   FileText,
   FolderKanban,
+  ImageIcon,
   Settings,
   Sparkles,
   X,
@@ -30,6 +31,7 @@ import { visiblePetAssistantText } from "./petChatRouting";
 import { parsePetHostActionReplacementDisplay } from "../../shared/pet-host-action-receipt";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import { ModelPill, type ModelOption } from "../chat/ModelPill";
+import { Lightbox } from "../chat/Lightbox";
 import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
 import {
   buildMessageWithLocalFilePaths,
@@ -76,6 +78,96 @@ export interface PetChatRow {
   after?: number;
   delegation?: PetDelegationReceipt;
   deliveryLabel?: string;
+  images?: PetChatImage[];
+}
+
+export interface PetChatImage {
+  path: string;
+  name: string;
+  mime?: string;
+  cwd: string | null;
+  sessionId?: string;
+}
+
+const ATTACHED_FILE_BLOCK = /<attached-file\b[^>]*>[\s\S]*?<\/attached-file>/giu;
+
+function isAbsoluteLocalPath(path: string): boolean {
+  return /^(?:\/|[a-z]:[\\/]|\\\\)/iu.test(path);
+}
+
+function attachmentPathContext(path: string): { cwd: string | null; sessionId?: string } {
+  const match = /^(.*)[\\/]\.code-shell[\\/]attachments[\\/]([^\\/]+)[\\/]/u.exec(path);
+  if (!match) return { cwd: null };
+  return {
+    cwd: match[1] || (path.startsWith("/") ? "/" : null),
+    ...(match[2] ? { sessionId: match[2] } : {}),
+  };
+}
+
+function attachmentBasename(path: string): string {
+  return path.split(/[\\/]/u).at(-1) || path;
+}
+
+function attachmentMetadataValue(block: string, field: string): string | undefined {
+  const match = new RegExp(`^${field}:\\s*([^\\r\\n]+)$`, "imu").exec(block);
+  return match?.[1]?.trim();
+}
+
+function imageFromTranscriptAttachmentBlock(block: string): PetChatImage | null {
+  const path = attachmentMetadataValue(block, "absolutePath");
+  const mime = attachmentMetadataValue(block, "mime");
+  if (!path || !isAbsoluteLocalPath(path) || !mime?.toLowerCase().startsWith("image/")) {
+    return null;
+  }
+  const context = attachmentPathContext(path);
+  return {
+    path,
+    name: attachmentMetadataValue(block, "originalName") ?? attachmentBasename(path),
+    mime,
+    cwd: context.cwd,
+    ...(context.sessionId ? { sessionId: context.sessionId } : {}),
+  };
+}
+
+/**
+ * Build the visible user bubble from both live structured attachments and the
+ * durable `<attached-file>` metadata persisted in older/current transcripts.
+ * Image metadata is hidden from the bubble once it becomes a thumbnail.
+ */
+export function parsePetUserContent(message: Extract<Message, { kind: "user" }>): {
+  text: string;
+  images: PetChatImage[];
+} {
+  const images: PetChatImage[] = [];
+  const seen = new Set<string>();
+  const addImage = (image: PetChatImage): void => {
+    if (seen.has(image.path)) return;
+    seen.add(image.path);
+    images.push(image);
+  };
+
+  for (const attachment of message.attachments ?? []) {
+    if (attachment.kind !== "image" || !isAbsoluteLocalPath(attachment.absPath)) continue;
+    const context = attachmentPathContext(attachment.absPath);
+    addImage({
+      path: attachment.absPath,
+      name: attachment.originalName ?? attachmentBasename(attachment.absPath),
+      ...(attachment.mime ? { mime: attachment.mime } : {}),
+      cwd: context.cwd,
+      sessionId: attachment.sessionId || context.sessionId,
+    });
+  }
+
+  const text = message.text
+    .replace(ATTACHED_FILE_BLOCK, (block) => {
+      const image = imageFromTranscriptAttachmentBlock(block);
+      if (!image) return block;
+      addImage(image);
+      return "";
+    })
+    .replace(/\n[\t ]*\n(?:[\t ]*\n)+/gu, "\n\n")
+    .trim();
+  return { text, images };
 }
 
 /**
@@ -196,7 +288,9 @@ export function selectPetChatRows(
   };
 
   for (const message of messages) {
-    if (message.kind === "user" && message.text.trim()) {
+    if (message.kind === "user") {
+      const content = parsePetUserContent(message);
+      if (!content.text && content.images.length === 0) continue;
       appendHostReceipt();
       activeClientMessageId = message.clientMessageId;
       activeTurnRowStart = rows.length;
@@ -206,7 +300,8 @@ export function selectPetChatRows(
       const userRow: PetChatRow = {
         id: message.id,
         role: "user" as const,
-        text: message.text.trim(),
+        text: content.text,
+        ...(content.images.length > 0 ? { images: content.images } : {}),
         ...(channel ? { source: IM_GATEWAY_CHANNEL_NAMES[channel] } : {}),
       };
       const boundary =
@@ -267,6 +362,85 @@ export function selectPetChatRows(
   }
   appendHostReceipt();
   return rows;
+}
+
+function PetChatImagePreview({ image }: { image: PetChatImage }) {
+  const [src, setSrc] = React.useState<string | null>(null);
+  const [zoomed, setZoomed] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    setSrc(null);
+    if (!image.cwd)
+      return () => {
+        active = false;
+      };
+    void window.codeshell
+      .readImageDataUrl(image.path, {
+        cwd: image.cwd,
+        ...(image.sessionId ? { sessionId: image.sessionId } : {}),
+      })
+      .then((dataUrl) => {
+        if (active) setSrc(dataUrl);
+      });
+    return () => {
+      active = false;
+    };
+  }, [image.cwd, image.path, image.sessionId]);
+
+  if (!src) {
+    return (
+      <div
+        className="flex min-h-20 items-center justify-center gap-2 rounded-xl border border-primary-foreground/20 bg-black/10 px-3 py-4 text-xs text-primary-foreground/75"
+        title={image.path}
+      >
+        <ImageIcon size={16} className="shrink-0" aria-hidden="true" />
+        <span className="truncate">{image.name}</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="block w-full overflow-hidden rounded-xl border border-primary-foreground/20 bg-black/10 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/70"
+        onClick={() => setZoomed(true)}
+        aria-label={image.name}
+        title={image.name}
+      >
+        <img
+          src={src}
+          alt={image.name}
+          draggable={false}
+          className="max-h-72 w-full object-contain"
+        />
+      </button>
+      {zoomed && (
+        <Lightbox
+          src={src}
+          alt={image.name}
+          path={image.path}
+          cwd={image.cwd}
+          name={image.name}
+          onClose={() => setZoomed(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function PetChatImageGrid({ images }: { images: readonly PetChatImage[] }) {
+  return (
+    <div
+      className={`grid gap-2 ${images.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+      data-pet-chat-images="true"
+    >
+      {images.map((image) => (
+        <PetChatImagePreview key={image.path} image={image} />
+      ))}
+    </div>
+  );
 }
 
 type PetDelegationDisplayState =
@@ -457,11 +631,16 @@ function PetChatRowView({
       <div className="flex justify-end pl-10">
         <div className="max-w-[88%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm leading-6 text-primary-foreground shadow-sm">
           {row.source && (
-            <div className="mb-1 text-[10px] font-medium text-primary-foreground/70">
+            <div className="mb-1.5 text-[10px] font-medium text-primary-foreground/70">
               {row.source}
             </div>
           )}
-          <div className="whitespace-pre-wrap break-words">{row.text}</div>
+          {row.images && row.images.length > 0 && <PetChatImageGrid images={row.images} />}
+          {row.text && (
+            <div className={`whitespace-pre-wrap break-words ${row.images?.length ? "mt-2" : ""}`}>
+              {row.text}
+            </div>
+          )}
         </div>
       </div>
     );

@@ -525,6 +525,15 @@ describe("PetStateProvider", () => {
         kind: "user-submitted" as const,
         clientMessageId: "shared-submit",
         message: "visible in every Pet window",
+        attachments: [
+          {
+            kind: "image" as const,
+            path: ".code-shell/attachments/pet-one/photo.jpg",
+            absPath: "/work/.code-shell/attachments/pet-one/photo.jpg",
+            sessionId: "pet-one",
+            mime: "image/jpeg",
+          },
+        ],
         createdAt: 3,
       };
       chatListener?.(event);
@@ -535,6 +544,13 @@ describe("PetStateProvider", () => {
         (message) => message.kind === "user" && message.clientMessageId === "shared-submit",
       ),
     ).toHaveLength(1);
+    expect(
+      latest?.chatState.messages.find(
+        (message) => message.kind === "user" && message.clientMessageId === "shared-submit",
+      ),
+    ).toMatchObject({
+      attachments: [{ kind: "image", absPath: "/work/.code-shell/attachments/pet-one/photo.jpg" }],
+    });
     await act(async () => {
       const event = {
         kind: "delegation-started" as const,

@@ -7,6 +7,7 @@ import {
   buildPetMessageWithPathAttachments,
   MAX_PET_PATH_ATTACHMENTS,
   normalizePetPathAttachments,
+  parsePetUserContent,
   PetChatMarkdown,
   PetDeliveryStatusTip,
   PetDelegationCard,
@@ -464,6 +465,97 @@ describe("PetChatHost", () => {
         },
       ]),
     ).toEqual([{ id: "u-im", role: "user", text: "从微信发来的问题", source: "个人微信" }]);
+  });
+
+  test("turns a persisted IM image attachment into a Mimi chat image bubble", () => {
+    const absolutePath =
+      "/Users/maki/.code-shell/no-repo/.code-shell/attachments/pet-one/wechat-image.jpg";
+    const content = parsePetUserContent({
+      kind: "user",
+      id: "u-image",
+      text: `<attached-file path=".code-shell/attachments/pet-one/wechat-image.jpg">
+absolutePath: ${absolutePath}
+mime: image/jpeg
+size: 207674
+sha256: abc
+origin: im-gateway
+</attached-file>`,
+      clientMessageId: "im:wechat:image-one",
+    });
+
+    expect(content).toEqual({
+      text: "",
+      images: [
+        {
+          path: absolutePath,
+          name: "wechat-image.jpg",
+          mime: "image/jpeg",
+          cwd: "/Users/maki/.code-shell/no-repo",
+          sessionId: "pet-one",
+        },
+      ],
+    });
+    expect(
+      selectPetChatRows([
+        {
+          kind: "user",
+          id: "u-image",
+          text: `<attached-file path="image.jpg">\nabsolutePath: ${absolutePath}\nmime: image/jpeg\n</attached-file>`,
+          clientMessageId: "im:wechat:image-one",
+        },
+      ]),
+    ).toMatchObject([
+      {
+        id: "u-image",
+        role: "user",
+        text: "",
+        source: "\u4e2a\u4eba\u5fae\u4fe1",
+        images: [{ path: absolutePath }],
+      },
+    ]);
+  });
+
+  test("shows a live structured image immediately and keeps its caption", () => {
+    const absolutePath = "/work/.code-shell/attachments/pet-live/photo.png";
+    expect(
+      parsePetUserContent({
+        kind: "user",
+        id: "u-live-image",
+        text: "\u5e2e\u6211\u770b\u8fd9\u5f20\u56fe",
+        attachments: [
+          {
+            kind: "image",
+            path: ".code-shell/attachments/pet-live/photo.png",
+            absPath: absolutePath,
+            sessionId: "pet-live",
+            mime: "image/png",
+            originalName: "photo.png",
+          },
+        ],
+      }),
+    ).toEqual({
+      text: "\u5e2e\u6211\u770b\u8fd9\u5f20\u56fe",
+      images: [
+        {
+          path: absolutePath,
+          name: "photo.png",
+          mime: "image/png",
+          cwd: "/work",
+          sessionId: "pet-live",
+        },
+      ],
+    });
+  });
+
+  test("keeps non-image attachment metadata as text", () => {
+    const text = `<attached-file path="doc.pdf">
+absolutePath: /work/.code-shell/attachments/pet-one/doc.pdf
+mime: application/pdf
+</attached-file>`;
+    expect(parsePetUserContent({ kind: "user", id: "u-file", text })).toEqual({
+      text,
+      images: [],
+    });
   });
 
   test("inserts a segment divider and work-memory card before a boundary message", () => {

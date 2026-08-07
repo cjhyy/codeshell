@@ -5,6 +5,9 @@ import type {
   PetLongTaskControlResult,
   PetLongTaskSnapshot,
 } from "@cjhyy/code-shell-pet";
+import type { PetChatAttachment } from "../shared/pet-chat-attachments";
+
+export type { PetChatAttachment } from "../shared/pet-chat-attachments";
 
 export type {
   PetLongTask,
@@ -36,6 +39,8 @@ export type PetChatEvent =
       kind: "user-submitted";
       clientMessageId: string;
       message: string;
+      /** Attachments shown in the Mimi chat bubble; bytes remain on disk. */
+      attachments?: PetChatAttachment[];
       createdAt: number;
       origin?: {
         channel: string;

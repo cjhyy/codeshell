@@ -1,4 +1,5 @@
 import type { StreamEvent } from "@cjhyy/code-shell-core";
+import type { PetChatAttachment } from "../shared/pet-chat-attachments";
 import { timePhase } from "./perf";
 import { applyTranscriptStreamEvent } from "./transcripts";
 import {
@@ -25,6 +26,7 @@ export type TranscriptsAction =
       steerId?: string;
       clientMessageId?: string;
       pending?: boolean;
+      attachments?: PetChatAttachment[];
     }
   | { type: "stream"; bucket: string; event: StreamEvent }
   | { type: "stream_batch"; bucket: string; events: StreamEvent[]; maxSeq?: number }
@@ -114,6 +116,7 @@ export function transcriptsReducer(map: TranscriptsMap, action: TranscriptsActio
         action.steerId,
         action.pending,
         action.clientMessageId,
+        action.attachments,
       );
       break;
     case "remove_pending_steers":

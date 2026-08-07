@@ -2701,6 +2701,20 @@ async function dispatchGatewayPetChat(
     kind: "user-submitted" as const,
     clientMessageId,
     message: request.message.trim(),
+    ...(attachments.length > 0
+      ? {
+          attachments: attachments.map(
+            ({ kind, path, absPath, sessionId, mime, originalName }) => ({
+              kind,
+              path,
+              absPath,
+              sessionId,
+              ...(mime ? { mime } : {}),
+              ...(originalName ? { originalName } : {}),
+            }),
+          ),
+        }
+      : {}),
     createdAt: Date.now(),
     ...(request.origin ? { origin: request.origin } : {}),
   };
