@@ -94,3 +94,14 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 ## Commit Style
 
 Conventional commits: `feat:`, `fix:`, `style:`, `refactor:`, `test:`, `chore:`, `docs:`, optional scope in parens (e.g. `feat(desktop): ...`, `feat(ui): ...`, `feat(goal): ...`).
+
+## Job Hunt HQ
+
+- 求职资料的权威入口是 `career-data/`；面板快照是根目录的 `job-hunt-panel.json`。
+  两者都是本地个人数据，已在 `.gitignore` 中排除（只保留 `career-data/jd/README.md`
+  这类模板说明），所以全新 checkout 下它们是空的 —— 下面是处理这些数据的约定，
+  不是仓库里存在的内容。
+- 当前代码库可以作为项目证据，但只有 Git 作者归属一致且实际 diff 已核验的 Commit 才能支持个人贡献。
+- 目标岗位、工作经历、联系方式、指标和个人职责必须来自本人填写或可核验 Source；禁止从项目介绍中猜测。
+- 先维护方向级 Base Resume，再从它派生 JD Variant。公开简历与内部 `.evidence.json` 证据账本分开保存。
+- 面板生成的岗位、简历、题库、调研和复盘应写回 `job-hunt-panel.json`，原始 JD 可放入 `career-data/jd/`。
