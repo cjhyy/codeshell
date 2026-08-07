@@ -60,12 +60,13 @@ export interface PetArchiveAnchors {
 }
 
 /**
- * Derive the archive-marker anchors from a just-closed segment. Anchors are
- * only meaningful when the newly-opened segment captured a first-turn client
- * message id (`nextBoundaryMessageId`) — that id is the marker's "to" cursor.
- * Without it there is nothing locatable to anchor and the caller must degrade
- * to an in-memory-only archive (undefined anchors, same as pre-anchors
- * behavior).
+ * Derive the anchors forwarded with the archive_range worker query so the
+ * boundary persists as a range_archive event, from a just-closed segment.
+ * Anchors are only meaningful when the newly-opened segment captured a
+ * first-turn client message id (`nextBoundaryMessageId`) — that id is the
+ * marker's "to" cursor. Without it there is nothing locatable to anchor and
+ * the caller must degrade to an in-memory-only archive (undefined anchors,
+ * same as pre-anchors behavior).
  */
 export function buildArchiveAnchors(closed: PetSegmentClosed): PetArchiveAnchors | undefined {
   if (!closed.nextBoundaryMessageId) return undefined;
