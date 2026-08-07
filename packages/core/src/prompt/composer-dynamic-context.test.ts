@@ -101,6 +101,39 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
     }
   });
 
+  it("runs capability context and sources context providers concurrently", async () => {
+    // The capability provider only reports overlap=true if the sources
+    // provider has already started while it is still pending — serial awaits
+    // would hit the timeout fallback and leave the flag false.
+    let markSourcesStarted!: () => void;
+    const sourcesStarted = new Promise<void>((resolve) => {
+      markSourcesStarted = resolve;
+    });
+    let overlapped = false;
+    const composer = new PromptComposer({
+      cwd,
+      model: "test-model",
+      dynamicContextProviders: [
+        async () => {
+          overlapped = await Promise.race([
+            sourcesStarted.then(() => true),
+            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 250)),
+          ]);
+          return "capability-part";
+        },
+      ],
+      sourcesContextProvider: async () => {
+        markSourcesStarted();
+        return "sources-part";
+      },
+    });
+
+    const msg = await composer.buildDynamicContextMessage();
+    expect(msg!.content).toContain("capability-part");
+    expect(msg!.content).toContain("sources-part");
+    expect(overlapped).toBe(true);
+  });
+
   // Cache fix: memory mutates constantly (extraction / recall usage++ / approve),
   // so it must ride the trailing message, NOT the cacheable prefix.
   it("puts memory in the trailing dynamic message, never the system prefix", async () => {

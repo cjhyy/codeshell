@@ -379,7 +379,18 @@ function gatewayReplyResultFits(
  * prefix (the memory store is newest-first), while oversized strings/objects
  * are recursively shortened instead of rejecting the whole manager turn.
  */
-function stringifyBoundedPetWorld(world: Readonly<Record<string, unknown>>): string {
+export function stringifyBoundedPetWorld(world: Readonly<Record<string, unknown>>): string {
+  // Fast path: JSON.stringify already omits undefined-valued keys, so an
+  // in-budget world serializes to exactly what the per-key trimming below
+  // would produce — without the O(keys) full-size checks.
+  try {
+    const serialized = JSON.stringify(world);
+    if (typeof serialized === "string" && serialized.length <= MAX_PET_RUNTIME_CONTEXT_LENGTH) {
+      return serialized;
+    }
+  } catch {
+    // Unserializable values fall through to the per-key trimming below.
+  }
   const bounded: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(world)) {
     if (value === undefined) continue;
@@ -1332,13 +1343,15 @@ export class PetDispatchService {
         // to inject as background continuity via the pet runtime context. The
         // clientMessageId keys the new segment's boundary to this turn so the
         // chat UI can render the divider before it (see PetSegmentController).
-        const carryoverBrief = await this.options.segmentController?.beginTurn(
-          command.clientMessageId,
-        );
         // Read host extras once; canonical projection keys are reserved below
-        // so an extension cannot shadow trusted session state.
-        const worldExtras = (await this.options.worldContext?.()) ?? {};
-        const personalization = await this.currentPersonalization();
+        // so an extension cannot shadow trusted session state. The three
+        // sources are independent, so they resolve concurrently.
+        const [carryoverBrief, worldExtrasRaw, personalization] = await Promise.all([
+          this.options.segmentController?.beginTurn(command.clientMessageId),
+          this.options.worldContext?.(),
+          this.currentPersonalization(),
+        ]);
+        const worldExtras = worldExtrasRaw ?? {};
         // GatewayReply is route-bound and therefore IM-only. The other atomic
         // actions below are safe on desktop too because pet-ipc records and
         // displays the host's authoritative post-turn receipt.

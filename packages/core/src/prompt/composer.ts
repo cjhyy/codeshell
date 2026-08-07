@@ -191,17 +191,23 @@ export class PromptComposer {
     });
     const skillsListing = buildSkillListing(skills);
     const declaredSkillGap = this.buildDeclaredSkillGap(skills);
-    const capabilityContext = await this.buildSystemContext();
+    // Capability and sources context are independent I/O — resolve them
+    // concurrently instead of serially.
+    const [capabilityContext, sourcesContext] = await Promise.all([
+      this.buildSystemContext(),
+      (async () => {
+        try {
+          return (await this.options.sourcesContextProvider?.()) ?? "";
+        } catch {
+          // Optional metadata context must not make a turn fail.
+          return "";
+        }
+      })(),
+    ]);
     // Memory rides here (tail, past the cache breakpoint) — not the system
     // prefix — so a memory change (extraction / recall usage++ / approve) never
     // re-bills the cached prefix. See buildUserContextMessage for the rationale.
     const memoryContext = this.getMemoryContext();
-    let sourcesContext = "";
-    try {
-      sourcesContext = (await this.options.sourcesContextProvider?.()) ?? "";
-    } catch {
-      // Optional metadata context must not make a turn fail.
-    }
     const goalToolContext = this.buildGoalToolContext();
 
     const parts = [

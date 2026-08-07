@@ -3,7 +3,7 @@ import { BUILTIN_CHANNEL_CAPABILITIES } from "@cjhyy/code-shell-chat";
 import { validatePetRunParams } from "@cjhyy/code-shell-pet";
 import { sessionSelectorId } from "@cjhyy/code-shell-pet/disclosure";
 import type { DesktopPetProjectionSnapshot } from "./pet-state-aggregator";
-import { boundedWorld, PetDispatchService } from "./pet-dispatch-service";
+import { boundedWorld, PetDispatchService, stringifyBoundedPetWorld } from "./pet-dispatch-service";
 
 const snapshot: DesktopPetProjectionSnapshot = {
   version: 4,
@@ -1581,6 +1581,55 @@ describe("PetDispatchService", () => {
     expect(runtimeContext).toContain("重构 X");
   });
 
+  test("runs beginTurn, worldContext, and personalization concurrently before the manager turn", async () => {
+    // Each provider only resolves once all three have started (with a timeout
+    // fallback), so serial awaits would leave every overlap flag false.
+    const started = { beginTurn: false, world: false, personalization: false };
+    let release!: () => void;
+    const allStarted = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const overlap = { beginTurn: false, world: false, personalization: false };
+    const waitForAll = async (key: keyof typeof started) => {
+      started[key] = true;
+      if (started.beginTurn && started.world && started.personalization) release();
+      overlap[key] = await Promise.race([
+        allStarted.then(() => true),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 250)),
+      ]);
+    };
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: { requestWorker: async () => ({ ok: true, result: { text: "hi" } }) },
+      hostCwd: "/safe/pet",
+      segmentController: {
+        beginTurn: async () => {
+          await waitForAll("beginTurn");
+          return undefined;
+        },
+        onDelegationClosed: async () => {},
+      },
+      worldContext: async () => {
+        await waitForAll("world");
+        return {};
+      },
+      personalization: async () => {
+        await waitForAll("personalization");
+        return undefined;
+      },
+    });
+
+    expect(await service.dispatch({ type: "chat", message: "你好" })).toMatchObject({
+      ok: true,
+      type: "chat",
+    });
+    expect(overlap).toEqual({ beginTurn: true, world: true, personalization: true });
+  });
+
   test("injects fresh Mimi-only personalization without changing the user task", async () => {
     let task = "";
     let runtimeContext = "";
@@ -2734,5 +2783,50 @@ describe("PetDispatchService", () => {
       ],
     });
     expect(mutations).toBe(0);
+  });
+});
+
+describe("stringifyBoundedPetWorld", () => {
+  test("matches the plain serialization when the world fits the limit", () => {
+    const world = {
+      version: 1,
+      note: "hello",
+      list: [1, 2, 3],
+      skipped: undefined,
+      nested: { keep: true, drop: undefined },
+    };
+    expect(stringifyBoundedPetWorld(world)).toBe(JSON.stringify(world));
+  });
+
+  test("serializes an in-budget world once instead of size-checking every key", () => {
+    const world = Object.fromEntries(
+      Array.from({ length: 40 }, (_, index) => [`key-${index}`, { value: "x".repeat(100) }]),
+    );
+    const original = JSON.stringify;
+    let calls = 0;
+    JSON.stringify = ((...args: Parameters<typeof JSON.stringify>) => {
+      calls += 1;
+      return original.apply(JSON, args);
+    }) as typeof JSON.stringify;
+    try {
+      const serialized = stringifyBoundedPetWorld(world);
+      expect(serialized).toBe(original.call(JSON, world));
+      expect(calls).toBe(1);
+    } finally {
+      JSON.stringify = original;
+    }
+  });
+
+  test("still trims oversized worlds down to the protocol limit", () => {
+    const world = {
+      first: "keep-me",
+      huge: "x".repeat(40_000),
+    };
+    const serialized = stringifyBoundedPetWorld(world);
+    expect(serialized.length).toBeLessThanOrEqual(32_768);
+    const parsed = JSON.parse(serialized) as { first: string; huge: string };
+    expect(parsed.first).toBe("keep-me");
+    expect(parsed.huge.length).toBeGreaterThan(0);
+    expect(parsed.huge.length).toBeLessThan(40_000);
   });
 });
