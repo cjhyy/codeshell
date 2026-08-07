@@ -65,5 +65,11 @@ describe("browserSummary", () => {
     expect(
       browserSummary({ toolName: "browser_observe", status: "succeeded" }, { mode: "vision" }),
     ).toBe("已截取页面画面");
+    expect(
+      browserSummary(
+        { toolName: "browser_act", status: "succeeded" },
+        { action: "request_takeover" },
+      ),
+    ).toBe("已显示浏览器供用户接管");
   });
 });

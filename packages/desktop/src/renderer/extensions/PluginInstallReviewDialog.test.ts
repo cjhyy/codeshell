@@ -27,5 +27,8 @@ describe("local plugin install review UI contract", () => {
     ]) {
       expect(dialog).toContain(field);
     }
+    expect(dialog).toContain("grid-rows-[auto_minmax(0,1fr)_auto]");
+    expect(dialog).toContain("gap-0 overflow-hidden p-0");
+    expect(dialog).toContain("min-h-0 space-y-3 overflow-y-auto overscroll-contain");
   });
 });

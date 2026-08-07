@@ -99,23 +99,44 @@ const unsubscribe = window.codeshellPanel.on("context.changed", (next) => {
 
 No Host capability is granted by default.
 
-| Permission           | Capability                                                                                                          |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `context.session`    | Adds session ID and busy state to context.                                                                          |
-| `context.workspace`  | Adds workspace root and trust state to context.                                                                     |
-| `storage`            | JSON-only app storage, capped at 256 KiB per app.                                                                   |
-| `external.open`      | Opens HTTPS links after user confirmation.                                                                          |
-| `agent.submitPrompt` | Immediately queues work in the bound, idle session and renders `displayText` (or `prompt`) as an app-attributed user message; requires `context.session`. |
-| `workspace.info`     | Reads safe workspace metadata and the current Git branch.                                                           |
-| `workspace.read`     | Lists and reads allowlisted repository text/data files; requires `context.workspace`.                               |
-| `workspace.write`    | Atomically writes allowlisted repository text/data files with optimistic concurrency; requires `context.workspace`. |
-| `notifications.send` | Sends rate-limited, app-attributed system notifications.                                                            |
+| Permission            | Capability                                                                                                                                                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `context.session`     | Adds session ID and busy state to context.                                                                                                                                                                                       |
+| `context.workspace`   | Adds workspace root and trust state to context.                                                                                                                                                                                  |
+| `storage`             | JSON-only app storage, capped at 256 KiB per app.                                                                                                                                                                                |
+| `external.open`       | Opens HTTPS links after user confirmation.                                                                                                                                                                                       |
+| `agent.submitPrompt`  | Immediately queues work in the bound, idle session and renders `displayText` (or `prompt`) as an app-attributed user message; requires `context.session`.                                                                        |
+| `workspace.info`      | Reads safe workspace metadata and the current Git branch.                                                                                                                                                                        |
+| `workspace.read`      | Lists and reads allowlisted repository text/data files; requires `context.workspace`.                                                                                                                                            |
+| `workspace.write`     | Atomically writes allowlisted repository text/data files and can export the Panel's print view to a project-local PDF, with optimistic concurrency; requires `context.workspace`.                                                |
+| `notifications.send`  | Sends rate-limited, app-attributed system notifications.                                                                                                                                                                         |
+| `credentials.cookies` | Lists only masked Cookie-account metadata matching a requested HTTPS site, opens a host-owned isolated login-and-save window, and restores a selected saved login after confirmation. Cookie values never enter the Panel guest. |
+| `automations.manage`  | Lists, creates, updates, pauses, resumes, runs, and deletes recurring jobs only when they are bound to the Panel's current workspace and task; requires both context permissions.                                                |
 
 Workspace calls reject traversal, hidden paths, `node_modules`, symlinks,
 binary files, invalid UTF-8, control characters, Windows device names, and path
 segments ending in a dot or space. Existing-file writes require the revision or
 modification timestamp returned by the preceding read; blind overwrites are
 rejected.
+
+Panel API v3 adds a constrained PDF export. `workspace.exportPdf` renders the
+calling Panel App's current print view as A4 and writes only to a safe relative
+`.pdf` path inside the bound project. It requires `workspace.write` and the
+same `expectedModifiedAt` / `expectedRevision` concurrency contract as text
+writes. A new timestamped export should pass `expectedModifiedAt: null`.
+
+Panel API v4 adds host-owned Cookie login calls for apps that declare
+`credentials.cookies`: `credentials.cookies.list`,
+`credentials.cookies.loginAndSave`, and `credentials.cookies.restore`. Login
+capture, credential storage, and browser injection stay in Desktop main; the
+Panel receives only masked account labels, domains, ids, and operation counts.
+
+Panel API v5 adds project-and-task-scoped automation calls for apps that declare
+`automations.manage`: `automations.list`, `automations.create`,
+`automations.update`, `automations.pause`, `automations.resume`,
+`automations.runNow`, and `automations.delete`. Creation always binds the
+current trusted workspace and current task; follow-up calls reject an
+automation from another workspace or task.
 
 ## Enablement
 

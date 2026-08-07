@@ -52,6 +52,8 @@ export interface CreateAutomationInput {
   cwd?: string;
   timezone?: string;
   permissionLevel?: CronPermissionLevel;
+  /** Optional existing task to continue when the schedule fires. */
+  resumeSessionId?: string;
 }
 
 let scheduler: CronScheduler | null = null;
@@ -131,6 +133,7 @@ export function createAutomation(input: CreateAutomationInput): AutomationSummar
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
     ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
     ...(input.permissionLevel !== undefined ? { permissionLevel: input.permissionLevel } : {}),
+    ...(input.resumeSessionId !== undefined ? { resumeSessionId: input.resumeSessionId } : {}),
   });
   return automationSummary(job);
 }

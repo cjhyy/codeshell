@@ -157,6 +157,8 @@ function actionLabel(action: unknown): string {
       return "滚动页面";
     case "wait":
       return "等待页面";
+    case "request_takeover":
+      return "显示浏览器供用户接管";
     case "list_tabs":
       return "读取标签页";
     case "switch_tab":

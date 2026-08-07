@@ -1,4 +1,4 @@
-export const PANEL_APP_API_VERSION = 2 as const;
+export const PANEL_APP_API_VERSION = 5 as const;
 
 export type PanelAppPermission =
   | "context.session"
@@ -9,7 +9,9 @@ export type PanelAppPermission =
   | "workspace.info"
   | "workspace.read"
   | "workspace.write"
-  | "notifications.send";
+  | "notifications.send"
+  | "credentials.cookies"
+  | "automations.manage";
 
 /**
  * Mirrors core's PANEL_APP_ICONS. The renderer is isolated from core runtime
@@ -120,4 +122,13 @@ export interface PanelAppHostContext {
   cwd?: string;
   trusted?: boolean;
   apiVersion: typeof PANEL_APP_API_VERSION;
+}
+
+export interface PanelAppCookieCredential {
+  id: string;
+  label: string;
+  domain?: string;
+  platform?: string;
+  appUrl?: string;
+  autoInjectByAI?: boolean;
 }

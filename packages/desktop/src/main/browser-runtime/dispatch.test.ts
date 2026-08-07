@@ -31,6 +31,52 @@ function runtimeDispatchTestBridge(overrides: Partial<BrowserBridge> = {}): Brow
 }
 
 describe("interactive Browser Runtime dispatch", () => {
+  test("reveals the exact task-owned runtime target for human takeover", async () => {
+    let shown = 0;
+    let released = 0;
+    const acquisitions: Array<Record<string, unknown>> = [];
+    const runtime: BrowserRuntimeLike = {
+      acquire: async (options) => {
+        acquisitions.push(options);
+        return {
+          ...options,
+          backendKind: "in-app",
+          canReveal: true,
+          bridge: runtimeDispatchTestBridge(),
+          show: async () => {
+            shown += 1;
+          },
+          hide: () => undefined,
+          release: () => {
+            released += 1;
+          },
+        };
+      },
+      close: () => undefined,
+      closeAll: () => undefined,
+    };
+
+    const result = JSON.parse(
+      await dispatchInteractiveBrowserRuntimeAction(
+        "s-visible",
+        { action: "requestTakeover" },
+        runtime,
+      ),
+    );
+
+    expect(acquisitions).toEqual([
+      {
+        ownerId: "interactive:s-visible",
+        profileId: "s-visible",
+        visibility: "full",
+        title: "CodeShell Browser Runtime — 需要你接管",
+      },
+    ]);
+    expect(shown).toBe(1);
+    expect(released).toBe(1);
+    expect(result).toMatchObject({ ok: true, code: "NEEDS_HUMAN" });
+  });
+
   test("targets a task-owned in-app runtime tab, including tab operations", async () => {
     const acquisitions: Array<Record<string, unknown>> = [];
     let released = 0;

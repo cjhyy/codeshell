@@ -34,7 +34,8 @@ export const delegateWorkToolDef: ToolDefinition = {
       },
       objective: {
         type: "string",
-        description: "Self-contained objective for the Work Session.",
+        description:
+          "Faithful, self-contained objective for the Work Session. Preserve the user's inputs, permissions, and explicit constraints; do not invent new restrictions. For read-only web research, do not forbid saved authenticated access unless the user explicitly did so: prohibit new registration or asking the user to log in again while allowing a matching saved login through normal credential gates.",
       },
       executor: {
         type: "string",

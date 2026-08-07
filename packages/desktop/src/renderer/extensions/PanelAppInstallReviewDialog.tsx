@@ -27,7 +27,7 @@ export function PanelAppInstallReviewDialog({ busy, action, preview, onCancel, o
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onCancel()}>
       <DialogContent
-        className="max-h-[88vh] max-w-xl overflow-hidden p-0"
+        className="h-[calc(100vh-2rem)] max-h-[760px] w-[calc(100vw-2rem)] max-w-xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0"
         onEscapeKeyDown={(event) => busy && event.preventDefault()}
       >
         <DialogHeader className="border-b px-5 pb-4 pt-5">
@@ -46,7 +46,7 @@ export function PanelAppInstallReviewDialog({ busy, action, preview, onCancel, o
           </div>
         </DialogHeader>
 
-        <div className="space-y-3 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 space-y-3 overflow-y-scroll overscroll-contain px-5 py-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
           {preview.alreadyInstalled && action === "install" && (
             <div className="flex gap-2 rounded-lg border border-status-warn/40 bg-status-warn/10 p-3 text-sm">
               <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-status-warn" />
@@ -120,7 +120,7 @@ export function PanelAppInstallReviewDialog({ busy, action, preview, onCancel, o
           </section>
         </div>
 
-        <DialogFooter className="border-t px-5 py-4">
+        <DialogFooter className="shrink-0 border-t bg-background px-5 py-4">
           <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>
             {t("ext.panels.reviewCancel")}
           </Button>

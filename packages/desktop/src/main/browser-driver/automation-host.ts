@@ -76,7 +76,8 @@ export interface BrowserActionRequest {
     | "fetchImages"
     | "screenshot"
     | "listTabs"
-    | "switchTab";
+    | "switchTab"
+    | "requestTakeover";
   ref?: string;
   text?: string;
   url?: string;

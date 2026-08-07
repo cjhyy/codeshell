@@ -24,6 +24,51 @@ export async function dispatchInteractiveBrowserRuntimeAction(
   request: BrowserActionRequest,
   runtime: BrowserRuntimeLike = browserRuntime,
 ): Promise<string> {
+  if (request.action === "requestTakeover") {
+    if (builtInTabClaimBackend.status(sessionId).granted) {
+      return JSON.stringify({
+        ok: true,
+        code: "NEEDS_HUMAN",
+        retryable: false,
+        detail: "the granted built-in browser tab is already user-visible",
+      });
+    }
+    if (chromeExtensionBackend.status(sessionId).granted) {
+      return JSON.stringify({
+        ok: true,
+        code: "NEEDS_HUMAN",
+        retryable: false,
+        detail: "the granted Chrome tab is already user-visible",
+      });
+    }
+
+    const ownerId = interactiveBrowserRuntimeOwner(sessionId);
+    const lease = await runtime.acquire({
+      ownerId,
+      profileId: sessionId,
+      visibility: "full",
+      title: "CodeShell Browser Runtime — 需要你接管",
+    });
+    try {
+      await lease.show();
+      return JSON.stringify({
+        ok: true,
+        code: "NEEDS_HUMAN",
+        retryable: false,
+        detail: "showing the same task-owned page operated by browser tools",
+      });
+    } catch (error) {
+      return JSON.stringify({
+        ok: false,
+        code: "FAILED",
+        retryable: false,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      lease.release();
+    }
+  }
+
   const handedOff = await builtInTabClaimBackend.dispatch(sessionId, request);
   if (handedOff !== undefined) return handedOff;
   const chrome = await chromeExtensionBackend.dispatch(sessionId, request);
@@ -54,6 +99,7 @@ export function interactiveBrowserBridgeForSession(sessionId: string): BrowserBr
     return JSON.parse(json) as T;
   };
   return {
+    requestHumanTakeover: () => call({ action: "requestTakeover" }),
     snapshot: () => call({ action: "snapshot" }),
     click: (ref) => call({ action: "click", ref }),
     type: (ref, text) => call({ action: "type", ref, text }),

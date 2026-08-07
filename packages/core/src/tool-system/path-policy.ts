@@ -544,9 +544,10 @@ function isSkillTreeResource(resolved: string, skillsRoot: string): boolean {
  *
  * Keep the exception narrow:
  *   - read-only (the caller checks the operation);
- *   - user Skills, or an installed plugin recorded in the V2 registry;
+ *   - user Skills, an installed plugin recorded in the V2 registry, or a
+ *     declared Skill in the installed Panel App registry;
  *   - plugin installs must realpath beneath the managed plugin cache;
- *   - the target must remain inside a directory containing a real SKILL.md.
+ *   - the target must remain inside the registered Skill directory.
  */
 function isRegisteredSkillResourceRead(resolved: string): boolean {
   let codeShellRoot: string;
@@ -558,6 +559,8 @@ function isRegisteredSkillResourceRead(resolved: string): boolean {
   if (!isInsideDir(resolved, codeShellRoot)) return false;
 
   if (isSkillTreeResource(resolved, join(codeShellRoot, "skills"))) return true;
+
+  if (isInstalledPanelAppSkillResourceRead(resolved, codeShellRoot)) return true;
 
   let cacheRoot: string;
   try {
@@ -578,6 +581,87 @@ function isRegisteredSkillResourceRead(resolved: string): boolean {
       } catch {
         // A stale/tampered registry entry must never broaden read authority.
       }
+    }
+  }
+  return false;
+}
+
+/**
+ * Panel App Skills live under the otherwise-sensitive
+ * `~/.code-shell/panel-apps` tree. Installation already reviews and copies the
+ * package, and the Skill scanner exposes only entries declared by the app
+ * manifest. Mirror that exact boundary here so reading a Skill reference does
+ * not trigger a second approval prompt.
+ *
+ * Registry, app root, manifest, declared SKILL.md and target are all
+ * realpathed and containment-checked. This deliberately does not trust an
+ * undeclared Skill directory or a symlink escaping the installed app.
+ */
+function isInstalledPanelAppSkillResourceRead(resolved: string, codeShellRoot: string): boolean {
+  let appsRoot: string;
+  let registryPath: string;
+  try {
+    appsRoot = realpathSync(join(codeShellRoot, "panel-apps"));
+    if (!isInsideDir(appsRoot, codeShellRoot)) return false;
+    registryPath = realpathSync(join(appsRoot, "installed.json"));
+    if (!isInsideDir(registryPath, appsRoot)) return false;
+  } catch {
+    return false;
+  }
+
+  let registry: { version?: unknown; apps?: unknown };
+  try {
+    registry = JSON.parse(readFileSync(registryPath, "utf-8")) as {
+      version?: unknown;
+      apps?: unknown;
+    };
+  } catch {
+    return false;
+  }
+  if (registry.version !== 1 || !Array.isArray(registry.apps)) return false;
+
+  for (const rawEntry of registry.apps) {
+    if (!rawEntry || typeof rawEntry !== "object") continue;
+    const id = (rawEntry as { id?: unknown }).id;
+    if (typeof id !== "string" || !/^[a-z][a-z0-9-]{0,63}$/.test(id)) continue;
+
+    try {
+      const appRoot = realpathSync(join(appsRoot, id));
+      if (appRoot === appsRoot || !isInsideDir(appRoot, appsRoot)) continue;
+      const manifestPath = realpathSync(join(appRoot, ".codeshell-panel", "panel.json"));
+      if (!isInsideDir(manifestPath, appRoot) || !statSync(manifestPath).isFile()) continue;
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as {
+        schemaVersion?: unknown;
+        id?: unknown;
+        agent?: { skills?: unknown };
+      };
+      if (
+        manifest.schemaVersion !== 2 ||
+        manifest.id !== id ||
+        !Array.isArray(manifest.agent?.skills)
+      ) {
+        continue;
+      }
+
+      for (const skillEntry of manifest.agent.skills) {
+        if (typeof skillEntry !== "string") continue;
+        const segments = skillEntry.split("/");
+        if (
+          segments.length !== 4 ||
+          segments[0] !== "agent" ||
+          segments[1] !== "skills" ||
+          !/^[a-z][a-z0-9-]{0,63}$/.test(segments[2] ?? "") ||
+          segments[3] !== "SKILL.md"
+        ) {
+          continue;
+        }
+        const skillManifest = realpathSync(join(appRoot, ...segments));
+        if (!isInsideDir(skillManifest, appRoot) || !statSync(skillManifest).isFile()) continue;
+        const skillRoot = dirname(skillManifest);
+        if (isInsideDir(resolved, skillRoot)) return true;
+      }
+    } catch {
+      // A stale, malformed, or tampered Panel App entry grants no read access.
     }
   }
   return false;
@@ -679,11 +763,7 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
   // files through the ordinary Read tool as well. A credential-shaped basename
   // (.env, token.txt, key files, ...) deliberately keeps the sensitive-file
   // gate even inside a Skill tree.
-  if (
-    opts.operation === "read" &&
-    !sensitiveFile &&
-    isRegisteredSkillResourceRead(resolved)
-  ) {
+  if (opts.operation === "read" && !sensitiveFile && isRegisteredSkillResourceRead(resolved)) {
     return {
       decision: "allow",
       reason: "registered Skill resource read",

@@ -25,6 +25,7 @@ import { preparePanelApp } from "./panel-app-protocol.js";
 import {
   PANEL_APP_API_VERSION,
   type PanelAppBindInput,
+  type PanelAppCookieCredential,
   type PanelAppHostContext,
   type PanelAppAgentToolInvocation,
 } from "../shared/panel-apps.js";
@@ -34,12 +35,15 @@ const MAX_RESULT_BYTES = 256 * 1024;
 const MAX_CALLS_PER_WINDOW = 30;
 const RATE_WINDOW_MS = 10_000;
 const CALL_TIMEOUT_MS = 15_000;
+const PDF_EXPORT_TIMEOUT_MS = 30_000;
+const COOKIE_LOGIN_TIMEOUT_MS = 30 * 60 * 1_000;
 const PANEL_AGENT_RUN_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 const MAX_AGENT_PROMPT_CHARS = 20_000;
 const STORAGE_QUOTA_BYTES = 256 * 1024;
 const MAX_NOTIFICATIONS_PER_WINDOW = 5;
 const MAX_WORKSPACE_READ_BYTES = 480 * 1024;
 const MAX_WORKSPACE_WRITE_BYTES = 384 * 1024;
+const MAX_WORKSPACE_PDF_BYTES = 20 * 1024 * 1024;
 const MAX_WORKSPACE_LIST_ENTRIES = 200;
 const MAX_WORKSPACE_LIST_RESULT_BYTES = 512 * 1024;
 const AGENT_TOOL_GUEST_WAIT_MS = 4_000;
@@ -97,6 +101,67 @@ export interface PanelAppBridgeOptions {
   getAgentBridge(): AgentBridge | null;
   /** Shows a system notification; injected so tests avoid Electron Notification. */
   showNotification?(notification: { title: string; body: string }): boolean;
+  /** Host-owned Cookie login operations. Cookie values never cross into the Panel guest. */
+  cookieCredentials?: {
+    list(cwd?: string): Promise<PanelAppCookieCredential[]>;
+    loginAndSave(input: {
+      appId: string;
+      providerId: string;
+      providerLabel: string;
+      url: string;
+      cwd?: string;
+      bucket?: string;
+    }): Promise<
+      | {
+          ok: true;
+          credential: PanelAppCookieCredential;
+          cookieCount: number;
+          restoredCount: number;
+        }
+      | { ok: false; cancelled?: boolean; error?: string }
+    >;
+    restore(input: {
+      credentialId: string;
+      cwd?: string;
+      bucket?: string;
+    }): Promise<{ count: number }>;
+  };
+  /** Project- and task-scoped recurring jobs. The Panel never receives jobs from another cwd. */
+  automations?: {
+    list(): Promise<Array<{
+      id: string;
+      name: string;
+      schedule: string;
+      prompt: string;
+      enabled: boolean;
+      cwd: string | null;
+      timezone: string | null;
+      permissionLevel: string | null;
+      lastRun: number | null;
+      nextRun: number | null;
+      runCount: number;
+      resumeSessionId: string | null;
+    }>>;
+    create(input: {
+      name: string;
+      schedule: string;
+      prompt: string;
+      cwd: string;
+      timezone?: string;
+      permissionLevel: "full";
+      resumeSessionId: string;
+    }): Promise<unknown>;
+    update(id: string, patch: {
+      name?: string;
+      schedule?: string;
+      prompt?: string;
+      timezone?: string;
+    }): Promise<unknown>;
+    pause(id: string): Promise<boolean>;
+    resume(id: string): Promise<boolean>;
+    delete(id: string): Promise<boolean>;
+    runNow(id: string): Promise<boolean>;
+  };
   limits?: Partial<{
     maxParamsBytes: number;
     maxResultBytes: number;
@@ -486,7 +551,15 @@ export class PanelAppBridge {
     binding.callTimes.push(now);
 
     const operation = this.dispatch(binding, method, params);
-    const result = await withTimeout(operation, limits?.callTimeoutMs ?? CALL_TIMEOUT_MS);
+    const result = await withTimeout(
+      operation,
+      limits?.callTimeoutMs ??
+        (method === "workspace.exportPdf"
+          ? PDF_EXPORT_TIMEOUT_MS
+          : method === "credentials.cookies.loginAndSave"
+            ? COOKIE_LOGIN_TIMEOUT_MS
+            : CALL_TIMEOUT_MS),
+    );
     const resultLimit =
       limits?.maxResultBytes ??
       (method === "workspace.readText"
@@ -543,12 +616,298 @@ export class PanelAppBridge {
       case "workspace.writeText":
         this.requirePermission(binding, "workspace.write");
         return this.workspaceWriteText(binding, params);
+      case "workspace.exportPdf":
+        this.requirePermission(binding, "workspace.write");
+        return this.workspaceExportPdf(binding, params);
       case "notifications.send":
         this.requirePermission(binding, "notifications.send");
         return this.sendNotification(binding, params);
+      case "credentials.cookies.list":
+        this.requirePermission(binding, "credentials.cookies");
+        return this.listCookieCredentials(binding, params);
+      case "credentials.cookies.loginAndSave":
+        this.requirePermission(binding, "credentials.cookies");
+        return this.loginAndSaveCookieCredential(binding, params);
+      case "credentials.cookies.restore":
+        this.requirePermission(binding, "credentials.cookies");
+        return this.restoreCookieCredential(binding, params);
+      case "automations.list":
+        this.requirePermission(binding, "automations.manage");
+        return this.listPanelAutomations(binding);
+      case "automations.create":
+        this.requirePermission(binding, "automations.manage");
+        return this.createPanelAutomation(binding, params);
+      case "automations.update":
+        this.requirePermission(binding, "automations.manage");
+        return this.updatePanelAutomation(binding, params);
+      case "automations.pause":
+      case "automations.resume":
+      case "automations.delete":
+      case "automations.runNow":
+        this.requirePermission(binding, "automations.manage");
+        return this.controlPanelAutomation(binding, method, params);
       default:
         throw new Error(`unknown Panel App method: ${method}`);
     }
+  }
+
+  private panelAutomationHost(binding: GuestBinding) {
+    const host = this.options.automations;
+    if (!host) throw new Error("Panel App automation host is unavailable");
+    if (!binding.context.cwd || !binding.context.sessionId) {
+      throw new Error("Panel App automations require a bound project and task");
+    }
+    if (!binding.context.trusted) {
+      throw new Error("Panel App automations require a trusted workspace");
+    }
+    return host;
+  }
+
+  private isPanelAutomationInScope(
+    binding: GuestBinding,
+    automation: { cwd: string | null; resumeSessionId: string | null },
+  ): boolean {
+    return Boolean(
+      binding.context.cwd &&
+        binding.context.sessionId &&
+        automation.cwd &&
+        resolve(automation.cwd) === resolve(binding.context.cwd) &&
+        automation.resumeSessionId === binding.context.sessionId,
+    );
+  }
+
+  private automationId(params: unknown): string {
+    const id = (params as { id?: unknown } | null)?.id;
+    if (typeof id !== "string" || !id.trim() || id.length > 128) {
+      throw new Error("Panel App automation id is invalid");
+    }
+    return id.trim();
+  }
+
+  private async listPanelAutomations(binding: GuestBinding): Promise<unknown> {
+    const host = this.panelAutomationHost(binding);
+    const jobs = await host.list();
+    return {
+      automations: jobs.filter((job) => this.isPanelAutomationInScope(binding, job)),
+    };
+  }
+
+  private async requireScopedPanelAutomation(binding: GuestBinding, id: string) {
+    const host = this.panelAutomationHost(binding);
+    const automation = (await host.list()).find((job) => job.id === id);
+    if (!automation || !this.isPanelAutomationInScope(binding, automation)) {
+      throw new Error("Panel App automation is not available in this project task");
+    }
+    return { host, automation };
+  }
+
+  private async createPanelAutomation(binding: GuestBinding, params: unknown): Promise<unknown> {
+    const host = this.panelAutomationHost(binding);
+    const input = params as {
+      name?: unknown;
+      schedule?: unknown;
+      prompt?: unknown;
+      timezone?: unknown;
+    } | null;
+    const name = typeof input?.name === "string" ? input.name.trim() : "";
+    const schedule = typeof input?.schedule === "string" ? input.schedule.trim() : "";
+    const prompt = typeof input?.prompt === "string" ? input.prompt.trim() : "";
+    const timezone = typeof input?.timezone === "string" ? input.timezone.trim() : undefined;
+    if (!name || name.length > 120 || !schedule || schedule.length > 128) {
+      throw new Error("Panel App automation requires a valid name and schedule");
+    }
+    if (!prompt || prompt.length > MAX_AGENT_PROMPT_CHARS) {
+      throw new Error("Panel App automation prompt must be between 1 and 20000 characters");
+    }
+    if (timezone !== undefined && (!timezone || timezone.length > 120)) {
+      throw new Error("Panel App automation timezone is invalid");
+    }
+    return host.create({
+      name,
+      schedule,
+      prompt,
+      cwd: binding.context.cwd!,
+      ...(timezone ? { timezone } : {}),
+      permissionLevel: "full",
+      resumeSessionId: binding.context.sessionId!,
+    });
+  }
+
+  private async updatePanelAutomation(binding: GuestBinding, params: unknown): Promise<unknown> {
+    const id = this.automationId(params);
+    const { host } = await this.requireScopedPanelAutomation(binding, id);
+    const input = params as {
+      name?: unknown;
+      schedule?: unknown;
+      prompt?: unknown;
+      timezone?: unknown;
+    };
+    const patch: { name?: string; schedule?: string; prompt?: string; timezone?: string } = {};
+    if (input.name !== undefined) {
+      if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 120) {
+        throw new Error("Panel App automation name is invalid");
+      }
+      patch.name = input.name.trim();
+    }
+    if (input.schedule !== undefined) {
+      if (
+        typeof input.schedule !== "string" ||
+        !input.schedule.trim() ||
+        input.schedule.length > 128
+      ) {
+        throw new Error("Panel App automation schedule is invalid");
+      }
+      patch.schedule = input.schedule.trim();
+    }
+    if (input.prompt !== undefined) {
+      if (
+        typeof input.prompt !== "string" ||
+        !input.prompt.trim() ||
+        input.prompt.length > MAX_AGENT_PROMPT_CHARS
+      ) {
+        throw new Error("Panel App automation prompt is invalid");
+      }
+      patch.prompt = input.prompt.trim();
+    }
+    if (input.timezone !== undefined) {
+      if (
+        typeof input.timezone !== "string" ||
+        !input.timezone.trim() ||
+        input.timezone.length > 120
+      ) {
+        throw new Error("Panel App automation timezone is invalid");
+      }
+      patch.timezone = input.timezone.trim();
+    }
+    if (!Object.keys(patch).length) throw new Error("Panel App automation update is empty");
+    return host.update(id, patch);
+  }
+
+  private async controlPanelAutomation(
+    binding: GuestBinding,
+    method: string,
+    params: unknown,
+  ): Promise<unknown> {
+    const id = this.automationId(params);
+    const { host } = await this.requireScopedPanelAutomation(binding, id);
+    if (method === "automations.pause") return { ok: await host.pause(id) };
+    if (method === "automations.resume") return { ok: await host.resume(id) };
+    if (method === "automations.delete") return { ok: await host.delete(id) };
+    if (method === "automations.runNow") return { ok: await host.runNow(id) };
+    throw new Error("Unknown Panel App automation action");
+  }
+
+  private cookieCredentialUrl(params: unknown): URL {
+    const rawUrl = (params as { url?: unknown } | null)?.url;
+    let url: URL;
+    try {
+      url = new URL(typeof rawUrl === "string" ? rawUrl : "");
+    } catch {
+      throw new Error("Cookie login requires a valid https URL");
+    }
+    if (
+      typeof rawUrl !== "string" ||
+      rawUrl.length > 2_048 ||
+      url.protocol !== "https:" ||
+      !url.hostname ||
+      url.username ||
+      url.password
+    ) {
+      throw new Error("Cookie login requires a valid https URL");
+    }
+    return url;
+  }
+
+  private cookieCredentialDomainMatches(url: URL, credential: PanelAppCookieCredential): boolean {
+    const target = url.hostname.toLowerCase().replace(/^www\./, "");
+    const domain = String(credential.domain || "")
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .split("/")[0]
+      .split(":")[0];
+    if (!domain) return false;
+    return target === domain || target.endsWith(`.${domain}`) || domain.endsWith(`.${target}`);
+  }
+
+  private cookieCredentialHost(binding: GuestBinding) {
+    const host = this.options.cookieCredentials;
+    if (!host) throw new Error("Cookie login is unavailable in this CodeShell host");
+    if (!binding.cwd) throw new Error("Cookie login requires an active project-bound task");
+    return host;
+  }
+
+  private async listCookieCredentials(
+    binding: GuestBinding,
+    params: unknown,
+  ): Promise<{ accounts: PanelAppCookieCredential[] }> {
+    const url = this.cookieCredentialUrl(params);
+    const host = this.cookieCredentialHost(binding);
+    const accounts = (await host.list(binding.cwd)).filter((credential) =>
+      this.cookieCredentialDomainMatches(url, credential),
+    );
+    return { accounts };
+  }
+
+  private async loginAndSaveCookieCredential(
+    binding: GuestBinding,
+    params: unknown,
+  ): Promise<unknown> {
+    const input = params as {
+      providerId?: unknown;
+      providerLabel?: unknown;
+      url?: unknown;
+    } | null;
+    const providerId = typeof input?.providerId === "string" ? input.providerId.trim() : "";
+    const providerLabel =
+      typeof input?.providerLabel === "string" ? input.providerLabel.trim() : "";
+    if (!/^[a-z][a-z0-9-]{0,79}$/.test(providerId)) {
+      throw new Error("Cookie login requires a valid provider id");
+    }
+    if (!providerLabel || providerLabel.length > 80) {
+      throw new Error("Cookie login requires a provider label up to 80 characters");
+    }
+    const url = this.cookieCredentialUrl(params);
+    const host = this.cookieCredentialHost(binding);
+    return host.loginAndSave({
+      appId: binding.resource.descriptor.appId,
+      providerId,
+      providerLabel,
+      url: url.toString(),
+      cwd: binding.cwd,
+      bucket: binding.bucket,
+    });
+  }
+
+  private async restoreCookieCredential(binding: GuestBinding, params: unknown): Promise<unknown> {
+    const input = params as { credentialId?: unknown; providerLabel?: unknown } | null;
+    const credentialId = typeof input?.credentialId === "string" ? input.credentialId.trim() : "";
+    const providerLabel =
+      typeof input?.providerLabel === "string" ? input.providerLabel.trim() : "招聘渠道";
+    if (!credentialId || credentialId.length > 160) {
+      throw new Error("Cookie restore requires a saved credential id");
+    }
+    const host = this.cookieCredentialHost(binding);
+    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+    const decision = await dialog.showMessageBox(owner, {
+      type: "question",
+      buttons: ["Restore login", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      title: binding.resource.descriptor.title,
+      message: `Restore the saved login for ${providerLabel || "this channel"}?`,
+      detail:
+        "CodeShell will inject the selected Cookie credential into this task's browser. The Panel App cannot read the Cookie value.",
+      noLink: true,
+    });
+    if (decision.response !== 0) return { restored: false, cancelled: true };
+    const result = await host.restore({
+      credentialId,
+      cwd: binding.cwd,
+      bucket: binding.bucket,
+    });
+    return { restored: true, count: result.count };
   }
 
   private storagePath(binding: GuestBinding): string {
@@ -1081,6 +1440,76 @@ export class PanelAppBridge {
         "workspace.writeText requires expectedModifiedAt or expectedRevision to prevent blind overwrites",
       );
     }
+    return this.writeWorkspaceFile(
+      binding,
+      relativePath,
+      Buffer.from(content, "utf-8"),
+      expectedModifiedAt,
+      expectedRevision,
+      MAX_WORKSPACE_READ_BYTES,
+    );
+  }
+
+  private async workspaceExportPdf(binding: GuestBinding, params: unknown): Promise<unknown> {
+    const relativePath = this.workspaceRelativePath(params);
+    if (extname(relativePath).toLowerCase() !== ".pdf") {
+      throw new Error("workspace.exportPdf requires a .pdf path");
+    }
+    const expectedModifiedAt = (params as { expectedModifiedAt?: unknown } | null)
+      ?.expectedModifiedAt;
+    const expectedRevision = (params as { expectedRevision?: unknown } | null)?.expectedRevision;
+    if (
+      expectedModifiedAt !== undefined &&
+      expectedModifiedAt !== null &&
+      (typeof expectedModifiedAt !== "number" || !Number.isFinite(expectedModifiedAt))
+    ) {
+      throw new Error("expectedModifiedAt must be a number, null, or omitted");
+    }
+    if (
+      expectedRevision !== undefined &&
+      (typeof expectedRevision !== "string" || !/^sha256:[0-9a-f]{64}$/.test(expectedRevision))
+    ) {
+      throw new Error("expectedRevision must be a sha256 revision or omitted");
+    }
+    if (expectedModifiedAt === undefined && expectedRevision === undefined) {
+      throw new Error(
+        "workspace.exportPdf requires expectedModifiedAt or expectedRevision to prevent blind overwrites",
+      );
+    }
+    if (binding.guest.isDestroyed()) throw new Error("Panel App is no longer available");
+    const pdf = await binding.guest.printToPDF({
+      pageSize: "A4",
+      printBackground: true,
+      preferCSSPageSize: true,
+      displayHeaderFooter: false,
+      generateTaggedPDF: true,
+      generateDocumentOutline: true,
+    });
+    if (
+      pdf.length < 8 ||
+      pdf.length > MAX_WORKSPACE_PDF_BYTES ||
+      pdf.subarray(0, 5).toString("ascii") !== "%PDF-"
+    ) {
+      throw new Error(`exported PDF must be between 8 and ${MAX_WORKSPACE_PDF_BYTES} bytes`);
+    }
+    return this.writeWorkspaceFile(
+      binding,
+      relativePath,
+      pdf,
+      expectedModifiedAt,
+      expectedRevision,
+      MAX_WORKSPACE_PDF_BYTES,
+    );
+  }
+
+  private async writeWorkspaceFile(
+    binding: GuestBinding,
+    relativePath: string,
+    content: Uint8Array,
+    expectedModifiedAt: number | null | undefined,
+    expectedRevision: string | undefined,
+    maxExistingBytes: number,
+  ): Promise<unknown> {
     const root = await this.trustedWorkspaceRoot(binding);
     const target = resolve(root, ...relativePath.split("/"));
     if (!this.isWithinWorkspace(root, target)) throw new Error("workspace path escapes the root");
@@ -1101,7 +1530,7 @@ export class PanelAppBridge {
           const handle = await open(canonicalTarget, constants.O_RDONLY | constants.O_NOFOLLOW);
           try {
             currentRevision = workspaceRevision(
-              (await this.readBoundedWorkspaceFile(handle)).buffer,
+              (await this.readBoundedWorkspaceFile(handle, maxExistingBytes)).buffer,
             );
           } finally {
             await handle.close();
@@ -1123,7 +1552,7 @@ export class PanelAppBridge {
 
       const temporary = join(parent, `.${basename(relativePath)}.${randomUUID()}.tmp`);
       try {
-        await writeFile(temporary, content, { encoding: "utf-8", mode: 0o600 });
+        await writeFile(temporary, content, { mode: 0o600 });
         const createOnly = expectedRevision === undefined && expectedModifiedAt === null;
         if (createOnly) {
           try {

@@ -362,6 +362,12 @@ describe("pet profile host-action integration", () => {
     expect(PET_SYSTEM_PROMPT).toContain(
       "The host will not infer a Session when session_id is omitted",
     );
+    expect(PET_SYSTEM_PROMPT).toContain(
+      'never add a blanket "do not log in" / "do not use login state" rule',
+    );
+    expect(PET_SYSTEM_PROMPT).toContain(
+      "if a matching saved login is available and policy permits its use",
+    );
   });
 
   test("tells Mimi that host-mediated attachment replies are real channel sends", () => {

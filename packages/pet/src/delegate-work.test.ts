@@ -55,6 +55,14 @@ describe("DelegateWork", () => {
         ?.description,
     ).toContain("The host never infers an omitted id");
     expect(
+      (definition.inputSchema.properties as Record<string, { description?: string }>).objective
+        ?.description,
+    ).toContain("do not invent new restrictions");
+    expect(
+      (definition.inputSchema.properties as Record<string, { description?: string }>).objective
+        ?.description,
+    ).toContain("allowing a matching saved login through normal credential gates");
+    expect(
       (definition.inputSchema.properties as Record<string, { enum?: string[] }>).executor?.enum,
     ).toEqual(["codeshell"]);
     expect(delegateWorkToolDefFor(WORKSPACES).inputSchema.properties).not.toHaveProperty(

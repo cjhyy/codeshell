@@ -91,10 +91,17 @@ describe("automation-service", () => {
     expect(() => createAutomation({ name: "bad", schedule: "99 9 * * *", prompt: "p" })).toThrow();
   });
 
-  test("summary carries resumeSessionId (null when unset)", () => {
-    const created = createAutomation({ name: "n", schedule: "5m", prompt: "p" });
-    expect(created).toHaveProperty("resumeSessionId");
-    expect(created.resumeSessionId).toBeNull();
+  test("summary carries the optional task binding", () => {
+    const standalone = createAutomation({ name: "n", schedule: "5m", prompt: "p" });
+    const bound = createAutomation({
+      name: "bound",
+      schedule: "1h",
+      prompt: "p",
+      resumeSessionId: "session-job-hunt",
+    });
+    expect(standalone.resumeSessionId).toBeNull();
+    expect(bound.resumeSessionId).toBe("session-job-hunt");
+    sched.stopAll();
   });
 });
 

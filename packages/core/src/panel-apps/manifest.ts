@@ -13,6 +13,8 @@ export const PANEL_APP_PERMISSIONS = [
   "workspace.read",
   "workspace.write",
   "notifications.send",
+  "credentials.cookies",
+  "automations.manage",
 ] as const;
 
 export const PANEL_APP_ICONS = [
@@ -153,7 +155,7 @@ const PanelAppManifestFields = {
   icon: z.enum(PANEL_APP_ICONS).default("panel"),
   placement: z.literal("right-dock").default("right-dock"),
   singleton: z.boolean().default(true),
-  permissions: z.array(z.enum(PANEL_APP_PERMISSIONS)).max(8).default([]),
+  permissions: z.array(z.enum(PANEL_APP_PERMISSIONS)).max(12).default([]),
 } as const;
 
 /**
@@ -206,6 +208,17 @@ export const PanelAppManifest = z
         code: z.ZodIssueCode.custom,
         path: ["permissions"],
         message: "workspace.read and workspace.write require context.workspace",
+      });
+    }
+    if (
+      value.permissions.includes("automations.manage") &&
+      (!value.permissions.includes("context.session") ||
+        !value.permissions.includes("context.workspace"))
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["permissions"],
+        message: "automations.manage requires context.session and context.workspace",
       });
     }
   });

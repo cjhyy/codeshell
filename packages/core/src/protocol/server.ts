@@ -3730,6 +3730,7 @@ export class AgentServer {
     const call = (action: string, payload: Record<string, unknown>): Promise<any> =>
       this.requestBrowserActionForSession(session, sessionId, action, payload);
     return {
+      requestHumanTakeover: () => call("requestTakeover", {}),
       snapshot: () => call("snapshot", {}),
       click: (ref) => call("click", { ref }),
       type: (ref, text) => call("type", { ref, text }),

@@ -16,5 +16,5 @@ test("Panel App protocol and bridge pass in an isolated Electron mock process", 
     child.exited,
   ]);
   if (exitCode !== 0) throw new Error(`${stdout}\n${stderr}`.trim());
-  expect(`${stdout}\n${stderr}`).toContain("28 pass");
+  expect(`${stdout}\n${stderr}`).toContain("30 pass");
 }, 20_000);

@@ -8,6 +8,14 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+
+- Added Panel API v5's `automations.manage` capability for reviewed Panel Apps
+  to create and manage recurring jobs scoped to the bound workspace and task.
+- Added Panel API v4's permission-gated, Host-owned Cookie login flow so a
+  Panel App can list matching masked accounts, open an isolated login-and-save
+  window, and restore a selected login without receiving Cookie values.
+
 ## [0.8.1] - 2026-08-05
 
 ### Fixed
@@ -19,9 +27,9 @@ breaking.
   Claude built-ins such as `Read`, `Bash`, `Write`, and `Edit`.
 - Kept model choices local to each conversation, refreshed the Codex picker to
   GPT-5.6 Sol/Terra/Luna, and migrated saved 0.8.0 GPT-5.1 selections to Sol.
-- Allowed registered Skill reference files under user and plugin Skill roots to
-  be read without a repeated sensitive-path approval, while retaining credential
-  and symlink-escape protections.
+- Allowed registered Skill reference files under user, plugin, and installed
+  Panel App Skill roots to be read without a repeated sensitive-path approval,
+  while retaining credential and symlink-escape protections.
 - Replaced Mimi's stale "no active task" delivery text with the authoritative
   Work Session launch result after delegation succeeds.
 - Kept the desktop pet visible when double-clicking it to open Mimi; the pet now

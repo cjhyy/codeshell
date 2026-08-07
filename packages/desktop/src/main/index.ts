@@ -584,6 +584,111 @@ const panelAppBridge = new PanelAppBridge({
     new Notification({ title, body }).show();
     return true;
   },
+  cookieCredentials: {
+    list: async (cwd) => {
+      await migrateCredentialStore(cwd);
+      return new CredentialStore(cwd)
+        .listMasked()
+        .filter((credential) => credential.type === "cookie")
+        .map((credential) => ({
+          id: credential.id,
+          label: credential.label,
+          domain: credential.meta?.domain,
+          platform: credential.meta?.platform,
+          appUrl: credential.meta?.appUrl,
+          autoInjectByAI: credential.autoInjectByAI,
+        }));
+    },
+    loginAndSave: async ({ appId, providerId, providerLabel, url, cwd, bucket }) => {
+      const capture = await loginAndCaptureCookies({
+        url,
+        platform: providerLabel,
+        fullCapture: true,
+      });
+      if (!capture.ok) return capture;
+      if (capture.jar.length === 0) {
+        return { ok: false, error: "登录窗口没有捕获到 Cookie，请确认登录成功后再保存" };
+      }
+      const credentialId = `panel-${appId}__${providerId}`;
+      const accountLabel =
+        typeof capture.suggestedLabel === "string" && capture.suggestedLabel.trim()
+          ? `${providerLabel} · ${capture.suggestedLabel.trim().slice(0, 80)}`
+          : `${providerLabel} 登录`;
+      const store = new CredentialStore(cwd);
+      store.save("user", {
+        id: credentialId,
+        type: "cookie",
+        label: accountLabel,
+        secret: JSON.stringify(capture.jar),
+        meta: {
+          appUrl: url,
+          platform: providerLabel,
+          domain: capture.domain,
+          scope: "all",
+          switchMode: "merge",
+        },
+      });
+      bridge?.pushCredentialSnapshot(cwd);
+
+      let restoredCount = 0;
+      const partition = browserPartitionForBucket(bucket);
+      if (partition) {
+        const restored = await restoreCookiesToBrowser(
+          capture.jar as ElectronCookieLike[],
+          "merge",
+          partition,
+        );
+        restoredCount = restored.count;
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
+        }
+      }
+      return {
+        ok: true,
+        credential: {
+          id: credentialId,
+          label: accountLabel,
+          domain: capture.domain,
+          platform: providerLabel,
+          appUrl: url,
+        },
+        cookieCount: capture.jar.length,
+        restoredCount,
+      };
+    },
+    restore: async ({ credentialId, cwd, bucket }) => {
+      const partition = browserPartitionForBucket(bucket);
+      if (!partition) throw new Error("Cookie restore requires an active task browser");
+      await migrateCredentialStore(cwd);
+      const credential = new CredentialStore(cwd).resolve(credentialId);
+      if (!credential || credential.type !== "cookie") {
+        throw new Error(`No saved Cookie login: ${credentialId}`);
+      }
+      let jar: ElectronCookieLike[];
+      try {
+        const parsed = JSON.parse(credential.secret ?? "[]");
+        if (!Array.isArray(parsed)) throw new Error("not an array");
+        jar = parsed as ElectronCookieLike[];
+      } catch {
+        throw new Error(`Saved login “${credential.label}” is corrupted`);
+      }
+      const mode = credential.meta?.switchMode === "clear" ? "clear" : "merge";
+      const result = await restoreCookiesToBrowser(jar, mode, partition);
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
+      }
+      return { count: result.count };
+    },
+  },
+  automations: {
+    list: async () => listAutomations(),
+    create: async (input) => createAutomation(input),
+    update: async (id, patch) => updateAutomation(id, patch),
+    pause: async (id) => pauseAutomation(id),
+    resume: async (id) => resumeAutomation(id),
+    delete: async (id) => deleteAutomation(id),
+    runNow: async (id) => runAutomationNow(id),
+  },
 });
 panelAppBridge.registerIpc();
 const imGatewayService = new ImGatewayService({

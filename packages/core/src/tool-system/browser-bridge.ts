@@ -166,6 +166,9 @@ export interface BrowserImageData {
 }
 
 export interface BrowserBridge {
+  /** Reveal the exact task-owned browser target so the user can complete a
+   * login, 2FA, CAPTCHA, or another interaction that requires human control. */
+  requestHumanTakeover?(): Promise<BrowserResult>;
   snapshot(): Promise<BrowserSnapshot>;
   click(ref: string): Promise<BrowserResult>;
   type(ref: string, text: string): Promise<BrowserResult>;

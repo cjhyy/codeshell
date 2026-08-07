@@ -169,6 +169,7 @@ export function shouldHideBrowserRuntimeTool(message: ToolMessage): boolean {
   // Navigation and visual evidence are useful user-facing milestones. Routine
   // snapshot/read/extract/act/wait/scroll calls stay in the trace only.
   if (name === "browser_navigate") return false;
+  if (name === "browser_act" && args.action === "request_takeover") return false;
   if (name === "browser_observe" && (args.mode === "vision" || args.mode === "image")) {
     return false;
   }

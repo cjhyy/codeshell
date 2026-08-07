@@ -69,11 +69,13 @@ describe("Browser Runtime UI projection", () => {
     const scroll = tool("browser_act", 3, 4, { action: "scroll" });
     const navigate = tool("browser_navigate", 5, 6, { url: "https://x.test" });
     const vision = tool("browser_observe", 7, 8, { mode: "vision" });
+    const takeover = tool("browser_act", 9, 10, { action: "request_takeover" });
 
     expect(shouldHideBrowserRuntimeTool(snapshot)).toBe(true);
     expect(shouldHideBrowserRuntimeTool(scroll)).toBe(true);
     expect(shouldHideBrowserRuntimeTool(navigate)).toBe(false);
     expect(shouldHideBrowserRuntimeTool(vision)).toBe(false);
+    expect(shouldHideBrowserRuntimeTool(takeover)).toBe(false);
   });
 
   test("hidden removes every browser card while full preserves every call", () => {

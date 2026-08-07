@@ -86,7 +86,7 @@ export function PluginInstallReviewDialog({ busy, onCancel, onInstall, preview }
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onCancel()}>
       <DialogContent
-        className="max-h-[88vh] max-w-2xl overflow-hidden p-0"
+        className="max-h-[88vh] max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0"
         onEscapeKeyDown={(event) => busy && event.preventDefault()}
       >
         <DialogHeader className="border-b px-5 pb-4 pt-5">
@@ -100,7 +100,7 @@ export function PluginInstallReviewDialog({ busy, onCancel, onInstall, preview }
           </div>
         </DialogHeader>
 
-        <div className="space-y-3 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 space-y-3 overflow-y-auto overscroll-contain px-5 py-4">
           {preview.alreadyInstalled && (
             <div className="flex gap-2 rounded-lg border border-status-warn/40 bg-status-warn/10 p-3 text-sm">
               <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-status-warn" />

@@ -226,6 +226,9 @@ export const browserActToolDef: ToolDefinition = {
     "- hover {ref}: hover to reveal menus/tooltips.\n" +
     "- scroll {direction: up|down, amount?}: scroll the page, then re-observe.\n" +
     "- wait {timeout_ms?}: wait for the page to finish loading before observing.\n" +
+    "- request_takeover: reveal the exact task-owned Browser Runtime page so the " +
+    "user can see it and complete login, 2FA, CAPTCHA, or another required manual step. " +
+    "Use only when the user asks to see the page or human interaction is required.\n" +
     "- list_tabs: list open browser tabs (tabId, url, title, which is active).\n" +
     "- switch_tab {tabId}: make another tab the active one that actions drive.\n" +
     "Pass tabId on any action to target a specific tab (switches to it first). " +
@@ -243,6 +246,7 @@ export const browserActToolDef: ToolDefinition = {
           "hover",
           "scroll",
           "wait",
+          "request_takeover",
           "list_tabs",
           "switch_tab",
         ],
@@ -281,6 +285,15 @@ export async function browserActTool(
   }
 
   switch (action) {
+    case "request_takeover": {
+      if (!b.requestHumanTakeover) {
+        return "Error: this Browser Runtime cannot reveal its page for user takeover";
+      }
+      const r = await b.requestHumanTakeover();
+      return r.ok
+        ? `Browser Runtime is visible for user takeover${r.detail ? ` — ${r.detail}` : ""}`
+        : `Error: ${r.detail ?? "could not reveal Browser Runtime"}`;
+    }
     case "list_tabs": {
       const tabs = await b.listTabs();
       if (tabs.length === 0) return "(no open browser tabs)";

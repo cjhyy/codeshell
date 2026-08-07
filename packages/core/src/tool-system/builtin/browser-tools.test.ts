@@ -348,3 +348,26 @@ describe("browser_navigate", () => {
     expect(await browserNavigateTool({ url: "https://x.com" }, ctx)).toContain("Navigated to");
   });
 });
+
+describe("browser_act request_takeover", () => {
+  test("reveals the exact runtime-owned page", async () => {
+    let requested = 0;
+    const ctx = ctxWith({
+      requestHumanTakeover: async () => {
+        requested += 1;
+        return { ok: true, code: "NEEDS_HUMAN", detail: "same page shown" };
+      },
+    });
+
+    const out = await browserActTool({ action: "request_takeover" }, ctx);
+
+    expect(requested).toBe(1);
+    expect(out).toContain("visible for user takeover");
+    expect(out).toContain("same page shown");
+  });
+
+  test("fails clearly when the host cannot reveal the runtime", async () => {
+    const out = await browserActTool({ action: "request_takeover" }, ctxWith({}));
+    expect(out).toContain("cannot reveal");
+  });
+});

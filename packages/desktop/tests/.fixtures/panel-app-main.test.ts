@@ -5,6 +5,7 @@ import {
   chmodSync,
   mkdtempSync,
   mkdirSync,
+  readFileSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -531,7 +532,7 @@ describe("PanelAppBridge", () => {
       busy: true,
       theme: "dark",
       locale: "zh-CN",
-      apiVersion: 2,
+      apiVersion: 5,
     });
     expect(context.sessionId).toBe("session-1");
     expect(context.cwd).toBe("/repo");
@@ -624,6 +625,162 @@ describe("PanelAppBridge", () => {
     ).rejects.toThrow(/permission denied/);
     // Gating happens before the notification hook.
     expect(shown).toEqual([]);
+  });
+
+  test("keeps Panel Cookie login host-owned and returns only matching masked accounts", async () => {
+    const loginRequests: unknown[] = [];
+    const restoreRequests: unknown[] = [];
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => true,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      cookieCredentials: {
+        list: async () => [
+          { id: "boss-account", label: "Boss account", domain: "login.zhipin.com" },
+          { id: "other-account", label: "Other account", domain: "example.com" },
+        ],
+        loginAndSave: async (input) => {
+          loginRequests.push(input);
+          return {
+            ok: true,
+            credential: {
+              id: "panel-demo__boss",
+              label: "BOSS 直聘登录",
+              domain: "zhipin.com",
+            },
+            cookieCount: 4,
+            restoredCount: 4,
+          };
+        },
+        restore: async (input) => {
+          restoreRequests.push(input);
+          return { count: 4 };
+        },
+      },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(18);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["credentials.cookies"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(18);
+    const call = (method: string, params: unknown) =>
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        method,
+        params,
+      ) as Promise<any>;
+
+    expect(await call("credentials.cookies.list", { url: "https://www.zhipin.com" })).toEqual({
+      accounts: [{ id: "boss-account", label: "Boss account", domain: "login.zhipin.com" }],
+    });
+    expect(
+      await call("credentials.cookies.loginAndSave", {
+        providerId: "boss",
+        providerLabel: "BOSS 直聘",
+        url: "https://www.zhipin.com",
+      }),
+    ).toMatchObject({ ok: true, cookieCount: 4, restoredCount: 4 });
+    expect(loginRequests).toHaveLength(1);
+
+    panelAppElectronMock.dialogResponse = 0;
+    expect(
+      await call("credentials.cookies.restore", {
+        credentialId: "panel-demo__boss",
+        providerLabel: "BOSS 直聘",
+      }),
+    ).toEqual({ restored: true, count: 4 });
+    expect(restoreRequests).toHaveLength(1);
+  });
+
+  test("scopes Panel automations to the bound workspace and task", async () => {
+    const created: any[] = [];
+    const jobs: any[] = [
+      {
+        id: "scoped",
+        name: "Job hunt",
+        schedule: "0 9 * * *",
+        prompt: "discover",
+        enabled: true,
+        cwd: "/repo",
+        timezone: "Asia/Singapore",
+        permissionLevel: "full",
+        lastRun: null,
+        nextRun: Date.now() + 1_000,
+        runCount: 0,
+        resumeSessionId: "session-1",
+      },
+      {
+        id: "other-project",
+        name: "Other",
+        schedule: "1h",
+        prompt: "other",
+        enabled: true,
+        cwd: "/other",
+        timezone: null,
+        permissionLevel: "full",
+        lastRun: null,
+        nextRun: null,
+        runCount: 0,
+        resumeSessionId: "session-1",
+      },
+    ];
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => true,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      automations: {
+        list: async () => jobs,
+        create: async (input) => {
+          created.push(input);
+          return { id: "created", ...input, enabled: true };
+        },
+        update: async () => null,
+        pause: async () => true,
+        resume: async () => true,
+        delete: async () => true,
+        runNow: async () => true,
+      },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(28);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.session", "context.workspace", "automations.manage"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(28);
+    const call = (method: string, params: unknown) =>
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        method,
+        params,
+      ) as Promise<any>;
+
+    expect((await call("automations.list", {})).automations.map((job: any) => job.id)).toEqual([
+      "scoped",
+    ]);
+    await call("automations.create", {
+      name: "Scheduled jobs",
+      schedule: "0 9 * * 1-5",
+      prompt: "discover complete JDs",
+      timezone: "Asia/Singapore",
+    });
+    expect(created[0]).toMatchObject({
+      cwd: "/repo",
+      permissionLevel: "full",
+      resumeSessionId: "session-1",
+    });
+    await expect(
+      call("automations.pause", { id: "other-project" }),
+    ).rejects.toThrow(/not available in this project task/);
+    expect(await call("automations.pause", { id: "scoped" })).toEqual({ ok: true });
   });
 
   test("enforces payload limits and revokes a destroyed guest", async () => {
@@ -1128,9 +1285,15 @@ describe("PanelAppBridge", () => {
         isWorkspaceTrusted: (cwd) => cwd === workspaceRoot,
         isPanelAppBound: () => true,
         getAgentBridge: () => null,
+        limits: { maxCallsPerWindow: 50 },
       });
       bridge.registerIpc();
       const guest = fakeGuest(18);
+      const printOptions: unknown[] = [];
+      (guest as any).printToPDF = async (options: unknown) => {
+        printOptions.push(options);
+        return Buffer.from("%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n", "ascii");
+      };
       bridge.registerGuest(
         guest as any,
         panelAppElectronMock.ownerWindow as any,
@@ -1155,6 +1318,46 @@ describe("PanelAppBridge", () => {
       });
       expect(created.path).toBe("designs/home.codesign.json");
       expect(created.revision).toMatch(/^sha256:[0-9a-f]{64}$/);
+      const exported = await call("workspace.exportPdf", {
+        path: "career-data/resumes/base-resume.pdf",
+        expectedModifiedAt: null,
+      });
+      expect(exported).toMatchObject({
+        path: "career-data/resumes/base-resume.pdf",
+        size: 35,
+      });
+      expect(printOptions).toEqual([
+        {
+          pageSize: "A4",
+          printBackground: true,
+          preferCSSPageSize: true,
+          displayHeaderFooter: false,
+          generateTaggedPDF: true,
+          generateDocumentOutline: true,
+        },
+      ]);
+      expect(
+        readFileSync(join(workspaceRoot, "career-data", "resumes", "base-resume.pdf"))
+          .subarray(0, 5)
+          .toString("ascii"),
+      ).toBe("%PDF-");
+      await expect(
+        call("workspace.exportPdf", {
+          path: "career-data/resumes/base-resume.pdf",
+        }),
+      ).rejects.toThrow(/prevent blind overwrites/);
+      await expect(
+        call("workspace.exportPdf", {
+          path: "career-data/resumes/base-resume.txt",
+          expectedModifiedAt: null,
+        }),
+      ).rejects.toThrow(/requires a \.pdf path/);
+      await expect(
+        call("workspace.exportPdf", {
+          path: "career-data/resumes/base-resume.pdf",
+          expectedModifiedAt: null,
+        }),
+      ).rejects.toThrow(/changed since it was opened/);
       if (process.platform !== "win32") {
         for (const name of ["unsafe:name.json", "unsafe\\name.json", "unsafe\nname.json"]) {
           writeFileSync(join(workspaceRoot, "designs", name), "{}\n");
@@ -1339,6 +1542,13 @@ describe("PanelAppBridge", () => {
           { sender: readGuest },
           "workspace.writeText",
           { path: "denied.json", content: "{}\n" },
+        ),
+      ).rejects.toThrow(/workspace.write/);
+      await expect(
+        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+          { sender: readGuest },
+          "workspace.exportPdf",
+          { path: "denied.pdf", expectedModifiedAt: null },
         ),
       ).rejects.toThrow(/workspace.write/);
 
