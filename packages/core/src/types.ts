@@ -170,6 +170,13 @@ export type TranscriptEventType =
   | "tool_result"
   | "summary"
   | "context_transfer"
+  // A contiguous message span was archived into a summary. Written by
+  // Engine.archiveTurnRange / appendArchiveMarker. Anchored by client message
+  // ids (NOT indices — indices shift across restarts). toMessages() REPLACES
+  // the [fromClientMessageId, toClientMessageId) span with the summary; this
+  // is what makes topic-segment archival survive a process restart.
+  // data = { summary, toClientMessageId, fromClientMessageId?, segmentId? }
+  | "range_archive"
   | "content_replace"
   | "file_history"
   | "plan_operation"

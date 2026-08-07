@@ -292,6 +292,7 @@ const FORK_COPY_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
   "tool_result",
   "summary",
   "context_transfer",
+  "range_archive",
   "content_replace",
   "subagent",
   "external_file_changes",

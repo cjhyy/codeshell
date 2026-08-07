@@ -56,6 +56,7 @@ const CONTEXT_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
   "tool_result",
   "summary",
   "context_transfer",
+  "range_archive",
 ]);
 
 const INTERRUPTED_TOOL_RESULT_ERROR = "[Tool result missing due to interrupted session]";
@@ -305,6 +306,27 @@ export class Transcript {
     });
   }
 
+  /**
+   * Persist a range-archival boundary. Span is [fromClientMessageId,
+   * toClientMessageId) over message events; an absent from means "from the
+   * beginning". Idempotent on segmentId so a crash-replayed closure cannot
+   * double-archive.
+   */
+  appendRangeArchive(data: {
+    summary: string;
+    toClientMessageId: string;
+    fromClientMessageId?: string;
+    segmentId?: string;
+  }): TranscriptEvent | undefined {
+    if (
+      data.segmentId &&
+      this.events.some((e) => e.type === "range_archive" && e.data.segmentId === data.segmentId)
+    ) {
+      return undefined;
+    }
+    return this.append("range_archive", { ...data });
+  }
+
   appendError(error: string, details?: Record<string, unknown>): TranscriptEvent {
     return this.append("error", { error, ...details });
   }
@@ -316,14 +338,102 @@ export class Transcript {
   toMessages(): Message[] {
     const messages: Message[] = [];
     const selectedToolResults = preferredToolResults(this.events);
+    const hasRangeArchive = this.events.some((e) => e.type === "range_archive");
+
+    // Range-archive pre-pass: collect valid markers keyed by their span-opening
+    // client message id. A marker whose to-anchor no longer resolves to a
+    // message event is ignored (fail open to full history rather than
+    // swallowing the tail of the conversation). Skipped entirely for the
+    // (common) case of a session with no archive markers at all, so the
+    // resume hot path for non-Mimi sessions does not pay for two extra scans.
+    interface ArchiveSpan {
+      summary: string;
+      toClientMessageId: string;
+    }
+    const spansByFromId = new Map<string, ArchiveSpan>();
+    let openingSpan: ArchiveSpan | undefined;
+    if (hasRangeArchive) {
+      // First-occurrence event index per client message id, so a marker whose
+      // `to` does not come strictly after its `from` (out of order, or a
+      // degenerate from === to) can be rejected. Without this check the span
+      // opens at `from` but its close condition (`to`) was already passed
+      // while scanning forward, so it would never close — silently swallowing
+      // the rest of the conversation. Fail open instead: ignore the marker.
+      const firstIndexByClientId = new Map<string, number>();
+      for (const [index, event] of this.events.entries()) {
+        if (event.type === "message" && typeof event.data.clientMessageId === "string") {
+          if (!firstIndexByClientId.has(event.data.clientMessageId)) {
+            firstIndexByClientId.set(event.data.clientMessageId, index);
+          }
+        }
+      }
+      const presentClientIds = new Set(firstIndexByClientId.keys());
+      for (const event of this.events) {
+        if (event.type !== "range_archive") continue;
+        const { summary, toClientMessageId, fromClientMessageId } = event.data as {
+          summary: string;
+          toClientMessageId: string;
+          fromClientMessageId?: string;
+        };
+        if (typeof summary !== "string" || !presentClientIds.has(toClientMessageId)) continue;
+        if (fromClientMessageId === undefined) {
+          // Last-wins, matching spansByFromId's Map.set semantics below.
+          openingSpan = { summary, toClientMessageId };
+        } else if (presentClientIds.has(fromClientMessageId)) {
+          const fromIndex = firstIndexByClientId.get(fromClientMessageId)!;
+          const toIndex = firstIndexByClientId.get(toClientMessageId)!;
+          if (toIndex <= fromIndex) continue; // out of order or degenerate: fail open
+          spansByFromId.set(fromClientMessageId, { summary, toClientMessageId });
+        }
+      }
+    }
+
+    let activeSpan: ArchiveSpan | null = null;
+    if (openingSpan) {
+      activeSpan = openingSpan;
+      messages.push({ role: "user", content: openingSpan.summary });
+    }
+
+    // tool_use ids actually emitted into assistant message content blocks so
+    // far. A tool_result whose tool_use_id isn't in this set — e.g. because
+    // its opening tool_use fell inside an archived span while the (later,
+    // preferred) real result landed outside it — would be an orphaned block
+    // that breaks provider validation; skip it instead of emitting it.
+    const emittedToolUseIds = new Set<string>();
 
     for (const event of this.events) {
+      // Span bookkeeping runs on message events only: exit before entry so
+      // adjacent spans (A.to === B.from) hand over on the boundary message.
+      if (event.type === "message") {
+        const clientMessageId =
+          typeof event.data.clientMessageId === "string" ? event.data.clientMessageId : undefined;
+        if (activeSpan && clientMessageId === activeSpan.toClientMessageId) {
+          activeSpan = null;
+        }
+        if (!activeSpan && clientMessageId && spansByFromId.has(clientMessageId)) {
+          activeSpan = spansByFromId.get(clientMessageId)!;
+          // One-shot: a duplicate `from` message (e.g. from a torn JSONL
+          // reload) must not reopen this span a second time — it would have
+          // no more `to` ahead of it and swallow the rest of the transcript.
+          spansByFromId.delete(clientMessageId);
+          messages.push({ role: "user", content: activeSpan.summary });
+        }
+      }
+      if (activeSpan) continue; // archived span: drop every context event inside
+
       switch (event.type) {
         case "message": {
           const { role, content } = event.data as {
             role: string;
             content: string | ContentBlock[];
           };
+          if (role === "assistant" && Array.isArray(content)) {
+            for (const block of content as ContentBlock[]) {
+              if (block.type === "tool_use" && typeof block.id === "string") {
+                emittedToolUseIds.add(block.id);
+              }
+            }
+          }
           messages.push({ role: role as Message["role"], content });
           break;
         }
@@ -336,7 +446,8 @@ export class Transcript {
           const eventToolCallId = event.data.toolCallId;
           if (
             typeof eventToolCallId !== "string" ||
-            selectedToolResults.get(eventToolCallId) !== event
+            selectedToolResults.get(eventToolCallId) !== event ||
+            !emittedToolUseIds.has(eventToolCallId)
           ) {
             break;
           }
@@ -385,7 +496,9 @@ export class Transcript {
           break;
         }
         // turn_boundary, run_result, session_meta, file_history, plan_operation, error
-        // are not included in LLM messages
+        // are not included in LLM messages. range_archive is handled entirely
+        // by the pre-pass above (it emits the summary at span entry and drops
+        // events inside the span); it never falls through to this switch.
       }
     }
 
@@ -567,6 +680,18 @@ export class Transcript {
             content: handoffId
               ? `<system-reminder>Session handoff received:\n${summary}</system-reminder>`
               : `<system-reminder>Background context transferred from a selected conversation range:\n${summary}</system-reminder>`,
+          });
+          break;
+        }
+        case "range_archive": {
+          // A hand-picked context range is an explicit user selection: inject
+          // the archive summary as context but do NOT replace/drop the
+          // messages inside its span the way toMessages() does — the caller
+          // asked for exactly this range and expects to see it in full.
+          const { summary } = event.data as { summary: string };
+          messages.push({
+            role: "user",
+            content: `<system-reminder>Archived summary for part of this range:\n${summary}</system-reminder>`,
           });
           break;
         }
