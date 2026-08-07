@@ -244,11 +244,13 @@ function freshSettings(): typeof settings {
 
 const chatManager = new ChatSessionManager({
   runtime,
-  // resolvedLlmConfig is the bootstrap-time snapshot. When the user
-  // hot-switches models via configure() the modelPool.activeKey moves
-  // ahead of it, so newly-created sessions must re-resolve from the pool
-  // each time the factory fires; fall back to the snapshot only when the
-  // pool can't resolve (no active key — shouldn't happen in practice).
+  // resolvedLlmConfig is the bootstrap-time snapshot. Explicit global model
+  // changes can move modelPool.activeKey ahead of it, so newly-created
+  // sessions re-resolve from the pool each time the factory fires. A
+  // per-session configure intentionally does NOT move that shared key; this
+  // keeps one Session's selected model from leaking into the next Session.
+  // Fall back to the snapshot only when the pool can't resolve (no active key
+  // — shouldn't happen in practice).
   engineFactory: (slice) => {
     // Effective cwd for THIS session: explicit slice.cwd → that project; absent
     // → the no-repo sandbox (NOT the worker's stale boot cwd). See

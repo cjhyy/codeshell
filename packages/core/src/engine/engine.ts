@@ -2911,13 +2911,28 @@ export class Engine {
    * Switch the active model by pool key. Takes effect on the next run() call.
    * Returns the new model entry.
    *
+   * Per-session switches (`persist:false`) must not mutate the shared
+   * ModelPool active key. Every desktop ChatSession owns an Engine, but those
+   * Engines share one runtime pool; changing the pool selection here made the
+   * next newly-created Session inherit whichever model another Session had
+   * just selected (for example a Mimi manager model leaking into its delegated
+   * Work Session).
+   *
    * Persists settings.defaults.text (= the connection id / pool key) so the
    * next process startup defaults to the same model — without this, switches
    * only live in memory and every restart reverts to the previously persisted
    * defaults.text.
    */
   switchModel(key: string, opts?: { persist?: boolean }): ModelEntry {
-    const entry = this.modelPool.switch(key);
+    const perSession = opts?.persist === false;
+    const entry = perSession ? this.modelPool.get(key) : this.modelPool.switch(key);
+    if (!entry) {
+      const available = this.modelPool
+        .list()
+        .map((candidate) => candidate.key)
+        .join(", ");
+      throw new Error(`Model "${key}" not found. Available: ${available}`);
+    }
     // LLMConfig is pure model identity now — rotate it wholesale. Cross-model
     // runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) live on
     // this.config.clientDefaults and survive the switch untouched.
@@ -2926,7 +2941,7 @@ export class Engine {
     // persist: false is the per-session path (ChatSession) — switching one
     // session's model must not rewrite settings.defaults.text, the boot
     // default every future session inherits.
-    if (opts?.persist !== false) this.persistActiveModel(entry);
+    if (!perSession) this.persistActiveModel(entry);
     return entry;
   }
 

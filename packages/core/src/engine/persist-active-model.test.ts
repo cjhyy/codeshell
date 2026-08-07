@@ -86,8 +86,13 @@ describe("switchModel persists defaults.text", () => {
       cwd: process.cwd(),
       settingsScope: "full",
     });
+    expect(engine.getModelPool().getActiveKey()).toBe("ds");
     const entry = engine.switchModel("ds2", { persist: false });
     expect(entry.key).toBe("ds2");
+    expect(engine.getConfig().llm.model).toBe("deepseek-v4-pro");
+    // Session-local selection must not become the seed for the next Engine
+    // created from this shared runtime pool (Mimi manager -> Work Session).
+    expect(engine.getModelPool().getActiveKey()).toBe("ds");
     const s = JSON.parse(readFileSync(join(home, ".code-shell", "settings.json"), "utf-8"));
     expect(s.defaults.text).toBe("ds");
   });
