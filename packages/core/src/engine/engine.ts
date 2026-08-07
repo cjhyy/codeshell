@@ -3701,7 +3701,11 @@ export class Engine {
       });
       return false;
     }
-    const wrapped = buildAnchoredSummaryMessage(marker.summary);
+    const wrapped = buildAnchoredSummaryMessage(marker.summary, {
+      ...(session.transcript.isPersistent()
+        ? { transcriptPath: session.transcript.getFilePath() }
+        : {}),
+    });
     const content = typeof wrapped.content === "string" ? wrapped.content : marker.summary;
     const appended = session.transcript.appendRangeArchive({ ...marker, summary: content });
     if (!appended) return false;

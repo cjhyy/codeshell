@@ -81,6 +81,10 @@ describe("Engine archive persistence", () => {
     // restart. A regression that stores only the inner text would silently
     // break that contract without any of the other assertions here noticing.
     expect(String(events[0]!.data.summary)).toContain(ANCHORED_OPEN);
+    // The envelope should also carry a recovery pointer to the full transcript
+    // file, so the model can Read back exact detail on demand even if the
+    // journal-derived summary is missing or truncated.
+    expect(String(events[0]!.data.summary)).toContain(".jsonl");
     const texts = session.transcript
       .toMessages()
       .map((m: { content: unknown }) => (typeof m.content === "string" ? m.content : ""));
