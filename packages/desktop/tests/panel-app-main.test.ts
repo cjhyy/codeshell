@@ -1,5 +1,15 @@
 // Run through panel-app-protocol.test.ts in a fresh Bun process so Electron
 // ESM mocks cannot collide with the rest of the repository's test modules.
+// That spawner is the supported entry point and sets
+// CODESHELL_PANEL_APP_FIXTURE; run it, or set the variable yourself:
+//
+//   bun test packages/desktop/src/main/panel-app-protocol.test.ts
+//   CODESHELL_PANEL_APP_FIXTURE=1 bun test packages/desktop/tests/panel-app-main.test.ts
+//
+// Without the flag this file registers no tests. It previously hid in
+// `tests/.fixtures/` for the same reason, but a dot-directory is invisible to
+// `bun test` AND to CI's explicit path list, so 30 tests covering Cookie
+// credentials and workspace writes silently never ran.
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 import {
   chmodSync,
@@ -13,24 +23,30 @@ import {
 } from "node:fs";
 import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
-import { installPanelAppElectronMock, panelAppElectronMock } from "../panel-app-electron-mock.js";
+import { installPanelAppElectronMock, panelAppElectronMock } from "./panel-app-electron-mock.js";
 
-let api: typeof import("../../src/main/panel-app-protocol.js");
-let PanelAppBridge: typeof import("../../src/main/panel-app-bridge.js").PanelAppBridge;
+let api: typeof import("../src/main/panel-app-protocol.js");
+let PanelAppBridge: typeof import("../src/main/panel-app-bridge.js").PanelAppBridge;
 
-installPanelAppElectronMock();
+const isolated = process.env.CODESHELL_PANEL_APP_FIXTURE === "1";
+// `describe.skip` still registers the suite without running its bodies, so the
+// Electron mocks below never load in a shared process.
+const describeIsolated = isolated ? describe : describe.skip;
+
+if (isolated) installPanelAppElectronMock();
 
 beforeAll(async () => {
+  if (!isolated) return;
   installPanelAppElectronMock();
-  api = await import("../../src/main/panel-app-protocol.js");
-  ({ PanelAppBridge } = await import("../../src/main/panel-app-bridge.js"));
+  api = await import("../src/main/panel-app-protocol.js");
+  ({ PanelAppBridge } = await import("../src/main/panel-app-bridge.js"));
 });
 
 afterAll(() => {
-  mock.restore();
+  if (isolated) mock.restore();
 });
 
-describe("Panel App protocol", () => {
+describeIsolated("Panel App protocol", () => {
   let root = "";
 
   afterEach(() => {
@@ -190,7 +206,7 @@ async function bindBridgeGuest(guestId: number, overrides: Record<string, unknow
   );
 }
 
-describe("PanelAppBridge", () => {
+describeIsolated("PanelAppBridge", () => {
   afterEach(() => {
     panelAppElectronMock.ipcHandlers.clear();
     panelAppElectronMock.ipcListeners.clear();
@@ -637,7 +653,7 @@ describe("PanelAppBridge", () => {
       getAgentBridge: () => null,
       cookieCredentials: {
         list: async () => [
-          { id: "boss-account", label: "Boss account", domain: "login.zhipin.com" },
+          { id: "boss-account", label: "Boss account", domain: "zhipin.com" },
           { id: "other-account", label: "Other account", domain: "example.com" },
         ],
         loginAndSave: async (input) => {
@@ -676,7 +692,11 @@ describe("PanelAppBridge", () => {
       ) as Promise<any>;
 
     expect(await call("credentials.cookies.list", { url: "https://www.zhipin.com" })).toEqual({
-      accounts: [{ id: "boss-account", label: "Boss account", domain: "login.zhipin.com" }],
+      accounts: [{ id: "boss-account", label: "Boss account", domain: "zhipin.com" }],
+    });
+    // A subdomain of the saved site still resolves to the saved account.
+    expect(await call("credentials.cookies.list", { url: "https://login.zhipin.com" })).toEqual({
+      accounts: [{ id: "boss-account", label: "Boss account", domain: "zhipin.com" }],
     });
     expect(
       await call("credentials.cookies.loginAndSave", {
@@ -695,6 +715,92 @@ describe("PanelAppBridge", () => {
       }),
     ).toEqual({ restored: true, count: 4 });
     expect(restoreRequests).toHaveLength(1);
+  });
+
+  test("never resolves a Cookie account from a shorter or bare-suffix host", async () => {
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => true,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      cookieCredentials: {
+        list: async () => [
+          { id: "boss-account", label: "13800000000", domain: "zhipin.com" },
+          { id: "mail-account", label: "user@example.com", domain: "mail.example.com" },
+          { id: "bare-suffix", label: "Bare suffix entry", domain: "com" },
+        ],
+        loginAndSave: async () => ({ ok: false as const, error: "unused" }),
+        restore: async () => ({ count: 0 }),
+      },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(26);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["credentials.cookies"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(26);
+    const list = (url: string) =>
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        "credentials.cookies.list",
+        { url },
+      ) as Promise<any>;
+
+    // A bare eTLD must not sweep up every credential beneath it, and a parent
+    // domain must not resolve a credential saved for one of its subdomains.
+    // Both matched before, leaking account labels (phone numbers, emails).
+    expect(await list("https://com")).toEqual({ accounts: [] });
+    expect(await list("https://example.com")).toEqual({ accounts: [] });
+    expect(await list("https://notzhipin.com")).toEqual({ accounts: [] });
+  });
+
+  test("requires a trusted workspace before reaching saved Cookie credentials", async () => {
+    let listed = 0;
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      cookieCredentials: {
+        list: async () => {
+          listed += 1;
+          return [{ id: "boss-account", label: "13800000000", domain: "zhipin.com" }];
+        },
+        loginAndSave: async () => ({ ok: false as const, error: "unused" }),
+        restore: async () => ({ count: 0 }),
+      },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(27);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["credentials.cookies"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(27);
+    const call = (method: string, params: unknown) =>
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        method,
+        params,
+      ) as Promise<any>;
+
+    for (const [method, params] of [
+      ["credentials.cookies.list", { url: "https://www.zhipin.com" }],
+      [
+        "credentials.cookies.loginAndSave",
+        { providerId: "boss", providerLabel: "BOSS", url: "https://www.zhipin.com" },
+      ],
+      ["credentials.cookies.restore", { credentialId: "panel-demo__boss" }],
+    ] as const) {
+      await expect(call(method, params)).rejects.toThrow(/trusted workspace/);
+    }
+    // The host is never consulted for an untrusted workspace.
+    expect(listed).toBe(0);
   });
 
   test("scopes Panel automations to the bound workspace and task", async () => {
@@ -777,9 +883,9 @@ describe("PanelAppBridge", () => {
       permissionLevel: "full",
       resumeSessionId: "session-1",
     });
-    await expect(
-      call("automations.pause", { id: "other-project" }),
-    ).rejects.toThrow(/not available in this project task/);
+    await expect(call("automations.pause", { id: "other-project" })).rejects.toThrow(
+      /not available in this project task/,
+    );
     expect(await call("automations.pause", { id: "scoped" })).toEqual({ ok: true });
   });
 

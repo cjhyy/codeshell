@@ -128,20 +128,22 @@ export interface PanelAppBridgeOptions {
   };
   /** Project- and task-scoped recurring jobs. The Panel never receives jobs from another cwd. */
   automations?: {
-    list(): Promise<Array<{
-      id: string;
-      name: string;
-      schedule: string;
-      prompt: string;
-      enabled: boolean;
-      cwd: string | null;
-      timezone: string | null;
-      permissionLevel: string | null;
-      lastRun: number | null;
-      nextRun: number | null;
-      runCount: number;
-      resumeSessionId: string | null;
-    }>>;
+    list(): Promise<
+      Array<{
+        id: string;
+        name: string;
+        schedule: string;
+        prompt: string;
+        enabled: boolean;
+        cwd: string | null;
+        timezone: string | null;
+        permissionLevel: string | null;
+        lastRun: number | null;
+        nextRun: number | null;
+        runCount: number;
+        resumeSessionId: string | null;
+      }>
+    >;
     create(input: {
       name: string;
       schedule: string;
@@ -151,12 +153,15 @@ export interface PanelAppBridgeOptions {
       permissionLevel: "full";
       resumeSessionId: string;
     }): Promise<unknown>;
-    update(id: string, patch: {
-      name?: string;
-      schedule?: string;
-      prompt?: string;
-      timezone?: string;
-    }): Promise<unknown>;
+    update(
+      id: string,
+      patch: {
+        name?: string;
+        schedule?: string;
+        prompt?: string;
+        timezone?: string;
+      },
+    ): Promise<unknown>;
     pause(id: string): Promise<boolean>;
     resume(id: string): Promise<boolean>;
     delete(id: string): Promise<boolean>;
@@ -669,10 +674,10 @@ export class PanelAppBridge {
   ): boolean {
     return Boolean(
       binding.context.cwd &&
-        binding.context.sessionId &&
-        automation.cwd &&
-        resolve(automation.cwd) === resolve(binding.context.cwd) &&
-        automation.resumeSessionId === binding.context.sessionId,
+      binding.context.sessionId &&
+      automation.cwd &&
+      resolve(automation.cwd) === resolve(binding.context.cwd) &&
+      automation.resumeSessionId === binding.context.sessionId,
     );
   }
 
@@ -818,6 +823,19 @@ export class PanelAppBridge {
     return url;
   }
 
+  /**
+   * Match a login URL against a saved credential's domain, one direction only:
+   * the requested host must BE the credential domain or sit beneath it.
+   *
+   * The reverse test (credential domain ends with the requested host) must not
+   * be reintroduced — it let a short host claim every longer credential, so
+   * `https://com` matched `evil.com` and `zhipin.com` matched
+   * `mail.zhipin.com`. Since only `credential.label` (often a phone number or
+   * email) crosses back to the guest, a bad match silently leaks accounts.
+   *
+   * Requiring a dot in the credential domain keeps a bare eTLD entry (`com`,
+   * `cn`) from matching an entire suffix.
+   */
   private cookieCredentialDomainMatches(url: URL, credential: PanelAppCookieCredential): boolean {
     const target = url.hostname.toLowerCase().replace(/^www\./, "");
     const domain = String(credential.domain || "")
@@ -826,14 +844,22 @@ export class PanelAppBridge {
       .replace(/^www\./, "")
       .split("/")[0]
       .split(":")[0];
-    if (!domain) return false;
-    return target === domain || target.endsWith(`.${domain}`) || domain.endsWith(`.${target}`);
+    if (!domain || !domain.includes(".") || !target) return false;
+    return target === domain || target.endsWith(`.${domain}`);
   }
 
+  /**
+   * Reading real credentials is at least as sensitive as writing workspace
+   * files, so it takes the same trust gate those paths use
+   * (`trustedWorkspaceRoot`) rather than only checking that a cwd is bound.
+   */
   private cookieCredentialHost(binding: GuestBinding) {
     const host = this.options.cookieCredentials;
     if (!host) throw new Error("Cookie login is unavailable in this CodeShell host");
     if (!binding.cwd) throw new Error("Cookie login requires an active project-bound task");
+    if (!this.options.isWorkspaceTrusted(binding.cwd)) {
+      throw new Error("Cookie login requires a trusted workspace");
+    }
     return host;
   }
 
