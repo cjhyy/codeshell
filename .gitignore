@@ -50,6 +50,20 @@ out/
 # so a blanket `artifacts/` rule must not be used here.
 artifacts/code-review-*/
 
+# 宣传片生成产物（61M：mp4 录屏/成片、TTS 试听音频、QA 缩略图、
+# HyperFrames 合成工程）。和 video-output/ 同性质 —— 跑一遍就能重新生成，
+# 二进制大文件不该进仓库。同样只限定到这一个子目录，不能写成整个 artifacts/。
+artifacts/codeshell-intro-video/
+
+# Job Hunt HQ 的个人数据：简历素材、工作经历、面试记录、联系方式和面板快照，
+# 都是本人隐私而不是源码。CODESHELL.md 把这两个路径写成了权威入口，所以目录
+# 结构要保留 —— 只忽略内容，放行 jd/README.md 这类模板说明。
+career-data/*
+!career-data/jd/
+career-data/jd/*
+!career-data/jd/README.md
+job-hunt-panel.json
+
 # design-studio Panel App runtime output. The app writes designs into the
 # workspace at these exact paths (see its workspace.writeText calls and the
 # `designs/*.codesign.json` paths in the Panel App tests), and the HTML export
