@@ -3000,7 +3000,22 @@ export class AgentServer {
         );
         if (!archiveEngine) return;
         try {
-          const result = await archiveEngine.archiveTurnRange(archiveSessionId, { start, end });
+          const toClientMessageId =
+            typeof params.toClientMessageId === "string" ? params.toClientMessageId : undefined;
+          const anchors = toClientMessageId
+            ? {
+                toClientMessageId,
+                ...(typeof params.fromClientMessageId === "string"
+                  ? { fromClientMessageId: params.fromClientMessageId }
+                  : {}),
+                ...(typeof params.segmentId === "string" ? { segmentId: params.segmentId } : {}),
+              }
+            : undefined;
+          const result = await archiveEngine.archiveTurnRange(
+            archiveSessionId,
+            { start, end },
+            anchors,
+          );
           if (result.before > result.after) {
             const event = {
               type: "context_compact",
@@ -3020,6 +3035,50 @@ export class AgentServer {
               type: "archive_range",
               data: result,
             }),
+          );
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
+        break;
+      }
+      case "archive_marker": {
+        const markerSessionId =
+          typeof params.sessionId === "string" && params.sessionId.length > 0
+            ? params.sessionId
+            : undefined;
+        const summary = typeof params.summary === "string" ? params.summary : undefined;
+        const toClientMessageId =
+          typeof params.toClientMessageId === "string" ? params.toClientMessageId : undefined;
+        if (!markerSessionId || !summary || !toClientMessageId) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InvalidParams,
+              "archive_marker requires sessionId, summary and toClientMessageId",
+            ),
+          );
+          return;
+        }
+        const markerEngine = await this.resolveEngineForSessionQuery(
+          req,
+          markerSessionId,
+          engine,
+          "archive_marker",
+        );
+        if (!markerEngine) return;
+        try {
+          const appended = await markerEngine.appendArchiveMarker(markerSessionId, {
+            summary,
+            toClientMessageId,
+            ...(typeof params.fromClientMessageId === "string"
+              ? { fromClientMessageId: params.fromClientMessageId }
+              : {}),
+            ...(typeof params.segmentId === "string" ? { segmentId: params.segmentId } : {}),
+          });
+          this.transport.send(
+            createResponse(req.id, { type: "archive_marker", data: { appended } }),
           );
         } catch (err) {
           this.transport.send(
