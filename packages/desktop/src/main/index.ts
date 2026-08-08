@@ -150,7 +150,11 @@ import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpService } from "./pet/pet-follow-up-service.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
-import { PetSegmentController } from "./pet/pet-segment-controller.js";
+import {
+  PetSegmentController,
+  buildArchiveAnchors,
+  type PetArchiveAnchors,
+} from "./pet/pet-segment-controller.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
@@ -159,7 +163,7 @@ import {
   takeOverLinkedSessionFromIpc,
 } from "./cc-room/linked-session-ipc.js";
 import { resolveLinkedSessionFromDisk } from "./cc-room/linked-session-resolver.js";
-import { DEFAULT_SEGMENT_IDLE_MS } from "@cjhyy/code-shell-pet";
+import { DEFAULT_SEGMENT_IDLE_MS, buildMigrationSummary } from "@cjhyy/code-shell-pet";
 import { searchSessionTranscripts } from "@cjhyy/code-shell-pet/disclosure";
 import { materializeOutgoingAttachments } from "@cjhyy/code-shell-chat";
 import { createReusableSessionResolver } from "./pet/reusable-session-resolver.js";
@@ -2039,16 +2043,31 @@ async function createWindow(): Promise<BrowserWindow> {
       const archivePetRange = async (
         sessionId: string,
         range: { start: number; end: number },
+        anchors?: PetArchiveAnchors,
       ): Promise<{ before: number; after: number }> => {
         const response = await petBridge.requestWorker("agent/query", {
           type: "archive_range",
           sessionId,
           start: range.start,
           end: range.end,
+          ...(anchors ?? {}),
         });
         if (!response.ok) throw new Error(response.message);
         const data = (response.result as { data?: { before?: number; after?: number } })?.data;
         return { before: data?.before ?? 0, after: data?.after ?? 0 };
+      };
+      // Shared by the segment-closure pipeline and the startup migration below:
+      // whether the user has auto-memory extraction enabled. Extraction (not
+      // just archival) is what writes journal entries, so both consumers need
+      // the same read of this preference.
+      const autoExtractEnabled = (): boolean => {
+        try {
+          return petMemoryAutoExtractFromSettings(
+            new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
+          );
+        } catch {
+          return true; // default ON if settings are unreadable
+        }
       };
       // Segment-closure pipeline: distill a journal entry + auto-memories from
       // each closed Mimi topic segment, then archive that transcript range out
@@ -2058,15 +2077,7 @@ async function createWindow(): Promise<BrowserWindow> {
         sessionsRootDir: petSessionsRootDir,
         journal: petJournalStore,
         memory: petMemoryStoreInstance,
-        autoExtractEnabled: () => {
-          try {
-            return petMemoryAutoExtractFromSettings(
-              new SettingsManager(resolveNoRepoCwd(), "full").getForScope("user"),
-            );
-          } catch {
-            return true; // default ON if settings are unreadable
-          }
-        },
+        autoExtractEnabled,
         cwd: resolveNoRepoCwd(),
       });
       const closureService = petSegmentClosureService;
@@ -2086,10 +2097,14 @@ async function createWindow(): Promise<BrowserWindow> {
         onSegmentClosed: (closed) => {
           if (archivedSegmentIds.has(closed.segmentId)) return;
           archivedSegmentIds.add(closed.segmentId);
+          const anchors = buildArchiveAnchors(closed);
+          if (!anchors) {
+            dlog("main", "pet.closure.archive.unanchored", { segmentId: closed.segmentId });
+          }
           void closureService
             .close(closed)
             .then(async (result) => {
-              if (result) await archivePetRange(petSessionId, result.range);
+              if (result) await archivePetRange(petSessionId, result.range, anchors);
             })
             .catch((error) => dlog("main", "pet.closure.failed", { error: String(error) }));
         },
@@ -2100,9 +2115,64 @@ async function createWindow(): Promise<BrowserWindow> {
       // still has no journal entry. Recover those (journal + memory only; the
       // range was — or will be — archived by the live path, so backfill never
       // re-archives). Fire-and-forget; never blocks pet initialization.
-      void closureService
+      const backfillPromise = closureService
         .backfill(petWorkMemory.allSegments(), Date.now())
         .catch((error) => dlog("main", "pet.closure.backfill.failed", { error: String(error) }));
+      // One-time context-boundary migration for pre-existing Mimi sessions:
+      // before range_archive existed, closures trimmed context only in-memory,
+      // so every restart re-inflated the prompt to the full transcript. Seed a
+      // single persisted marker covering everything before the active segment,
+      // summarized from the journal entries we already have — no model call.
+      // Idempotent: Engine.appendArchiveMarker dedupes on segmentId, so
+      // relaunches and already-migrated sessions no-op. Waits for backfill to
+      // settle before taking the journal snapshot, so it never misses the
+      // journal entry backfill is about to write for an interrupted segment —
+      // context-migration-v1 is a one-time permanent write, so reading too
+      // early and missing an entry would not be a benign transient.
+      void (async () => {
+        // When auto-extract is off, closure only archives — it never writes a
+        // journal entry (see the closure service's extraction gate) — so any
+        // segment closed while the toggle was off has no summary to represent
+        // it here. Migrating anyway would make those segments' messages
+        // vanish from the model context with zero representation: a real
+        // visibility regression versus today's full-history behavior. Skip
+        // and leave today's (uncompacted) exposure as-is until the toggle is
+        // back on and a later launch can migrate with full coverage.
+        if (!autoExtractEnabled()) {
+          dlog("main", "pet.contextMigration.skippedAutoExtractOff", { petSessionId });
+          return;
+        }
+        await backfillPromise.catch(() => undefined);
+        const activeSegment = petWorkMemory.activeSegment();
+        // Ensure the journal is loaded before snapshotting (idempotent/memoized;
+        // same pattern as the journal.list() IPC handler above) — otherwise a
+        // slow-disk cold start could read an empty list and skip migration for
+        // this launch entirely.
+        await petJournalStore.load();
+        // PetJournalStore.list() is newest-first (sorted by endedAt desc); the
+        // migration summary must read oldest→newest, so reverse a copy here.
+        const journalEntries = [...petJournalStore.list()].reverse();
+        if (!activeSegment?.boundaryBeforeMessageId || journalEntries.length === 0) return;
+        const summary = buildMigrationSummary(journalEntries);
+        if (!summary) return;
+        const response = await petBridge.requestWorker("agent/query", {
+          type: "archive_marker",
+          sessionId: petSessionId,
+          summary,
+          toClientMessageId: activeSegment.boundaryBeforeMessageId,
+          segmentId: "context-migration-v1",
+        });
+        if (!response.ok) throw new Error(response.message);
+        const appended = (response.result as { data?: { appended?: boolean } })?.data?.appended;
+        // false covers two benign cases, not an error: this session was
+        // already migrated on a prior launch (idempotent no-op — expected on
+        // every subsequent startup), or the anchor was dead (engine already
+        // warn-logs that distinctly as engine.archive_marker.dead_anchor).
+        // This dlog is just a startup trace, not an alarm.
+        if (appended === false) {
+          dlog("main", "pet.contextMigration.notAppended", { petSessionId });
+        }
+      })().catch((error) => dlog("main", "pet.contextMigration.failed", { error: String(error) }));
       // Load/reconcile durable long tasks only after both the session projection
       // and work-memory closure sink are ready. Running tasks left idle by a
       // previous process are marked interrupted and remain resumable.

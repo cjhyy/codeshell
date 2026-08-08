@@ -395,6 +395,20 @@ export interface QueryParams {
   start?: unknown;
   /** Used by archive_range: half-open message-index window end (exclusive). */
   end?: unknown;
+  /**
+   * Used by archive_range (optional) and archive_marker (required): the
+   * clientMessageId the archived/marked span ends at. archive_range only
+   * persists a boundary when this anchor is supplied and resolves to a live
+   * message; without it, archive_range behaves exactly as before (in-memory
+   * compaction only, no persisted range_archive event).
+   */
+  toClientMessageId?: string;
+  /** Used by archive_range / archive_marker: optional start-of-span anchor. */
+  fromClientMessageId?: string;
+  /** Used by archive_range / archive_marker: optional idempotency key. */
+  segmentId?: string;
+  /** Used by archive_marker: the summary text to persist without a model call. */
+  summary?: string;
 }
 
 export interface QueryResult {

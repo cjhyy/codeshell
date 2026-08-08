@@ -30,6 +30,7 @@ export interface PetSegmentControllerOptions {
   archiveRange: (
     sessionId: string,
     range: { start: number; end: number },
+    anchors?: PetArchiveAnchors,
   ) => Promise<{ before: number; after: number }>;
   /**
    * Optional closure sink: invoked (fire-and-forget) when a long-idle boundary
@@ -49,6 +50,33 @@ export interface PetSegmentClosed {
   nextBoundaryMessageId?: string;
   startedAt: number;
   endedAt: number;
+}
+
+/** Anchors forwarded to the archive_range worker query for a persisted marker. */
+export interface PetArchiveAnchors {
+  toClientMessageId: string;
+  fromClientMessageId?: string;
+  segmentId?: string;
+}
+
+/**
+ * Derive the anchors forwarded with the archive_range worker query so the
+ * boundary persists as a range_archive event, from a just-closed segment.
+ * Anchors are only meaningful when the newly-opened segment captured a
+ * first-turn client message id (`nextBoundaryMessageId`) — that id is the
+ * marker's "to" cursor. Without it there is nothing locatable to anchor and
+ * the caller must degrade to an in-memory-only archive (undefined anchors,
+ * same as pre-anchors behavior).
+ */
+export function buildArchiveAnchors(closed: PetSegmentClosed): PetArchiveAnchors | undefined {
+  if (!closed.nextBoundaryMessageId) return undefined;
+  return {
+    toClientMessageId: closed.nextBoundaryMessageId,
+    ...(closed.closingBoundaryMessageId
+      ? { fromClientMessageId: closed.closingBoundaryMessageId }
+      : {}),
+    segmentId: closed.segmentId,
+  };
 }
 
 export interface PetDelegationClosure {

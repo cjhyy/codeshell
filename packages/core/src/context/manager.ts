@@ -714,8 +714,16 @@ export class ContextManager {
     const window = messages.slice(start, end);
     // Feed a prior anchored summary back so the LLM merge-updates rather than
     // re-summarizes from scratch, matching the rolling-summary behavior of
-    // trySummaryCompact().
-    const priorSummary = extractAnchoredSummary(messages) ?? this.lastSummary;
+    // trySummaryCompact() — but ONLY when that anchored summary sits inside
+    // the window being replaced. A summary inside [start, end) is about to be
+    // overwritten by this call, so it must be merged in or its content is
+    // lost. A summary OUTSIDE the window belongs to a different, untouched
+    // span and must NOT be merged in: doing so (via `?? this.lastSummary`,
+    // which is a single most-recent-summary carryover with no span
+    // awareness) made every subsequent range archive fold in the text of
+    // every prior one, so N archived spans produced N copies of the same
+    // growing summary instead of N independent summaries.
+    const priorSummary = extractAnchoredSummary(window);
     const prompt = buildSummarizationPrompt(window, priorSummary);
     const summary = await this.summarizeFn(prompt, opts.signal);
     if (!summary || summary.length <= 50) return messages;

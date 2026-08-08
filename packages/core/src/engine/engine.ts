@@ -65,6 +65,7 @@ import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager, type CompactStrategy } from "../context/manager.js";
 import {
   CONTEXT_PACKAGE_MAX_OUTPUT_TOKENS,
+  buildAnchoredSummaryMessage,
   buildContextPackagePromptFromSerialized,
   estimateTokens,
   groupMessagesByApiRound,
@@ -3613,25 +3614,71 @@ export class Engine {
   }
 
   /**
-   * Archive a caller-chosen contiguous message-index window `[range.start,
-   * range.end)` of a session into a single anchored summary, leaving everything
-   * outside the window untouched, and cache the result so a later
-   * forceCompact/resume reads the archived history. This is a generic
-   * range-archival facade over ContextManager.summarizeRange — the caller
-   * decides which span to collapse (the range is a half-open message-index
-   * window, matching summarizeRange). Returns token stats before/after; equal
-   * before/after means the window was empty or the summary was rejected.
+   * Archive a contiguous message window of a session into a single anchored
+   * summary, leaving everything outside the window untouched, and cache the
+   * result so a later forceCompact/resume reads the archived history. This is
+   * a generic range-archival facade over ContextManager.summarizeRange.
+   * Returns token stats before/after; equal before/after means the window was
+   * empty/unresolvable or the summary was rejected.
+   *
+   * Window resolution depends on whether the caller supplied anchors:
+   * - With `anchors`, the caller's `range` is IGNORED and the window is
+   *   resolved from the client-message-id anchors over a fresh, marker-aware
+   *   transcript replay. Callers (the pet segment closure) compute index
+   *   ranges over the RAW transcript message list, whose indices grow
+   *   forever — but the live list is trimmed by every persisted marker
+   *   (replay after restart) and by each in-process archival, so a raw index
+   *   range clamps to an empty window or, worse, onto the WRONG tail
+   *   messages, which would then be persistently mis-summarized against
+   *   correct anchors. Anchors are the only stable coordinates.
+   * - Without `anchors`, legacy behavior: `range` is a half-open index window
+   *   over the cached/in-process message list, and nothing is persisted.
    */
   async archiveTurnRange(
     sessionId: string,
     range: { start: number; end: number },
+    anchors?: { toClientMessageId: string; fromClientMessageId?: string; segmentId?: string },
   ): Promise<{ before: number; after: number }> {
     const effectiveSessionId = sessionId || this.lastSessionId;
     if (!effectiveSessionId) return { before: 0, after: 0 };
 
     const session = this.sessionManager.resume(effectiveSessionId);
-    const sourceMessages =
-      this.compactedMessagesBySession.get(effectiveSessionId) ?? session.transcript.toMessages();
+
+    let sourceMessages: Message[];
+    let window: { start: number; end: number };
+    if (anchors) {
+      const { messages: liveMessages, liveIndexByClientMessageId } =
+        session.transcript.toMessagesWithIndex();
+      sourceMessages = liveMessages;
+      // An absent from-anchor means "from the beginning" — over the live
+      // list that is index 0, which includes any previously replayed
+      // from-less summary at the head, so summarizeRange merge-feeds it
+      // (extractAnchoredSummary) instead of losing it.
+      const start =
+        anchors.fromClientMessageId !== undefined
+          ? liveIndexByClientMessageId.get(anchors.fromClientMessageId)
+          : 0;
+      const end = liveIndexByClientMessageId.get(anchors.toClientMessageId);
+      if (start === undefined || end === undefined || end <= start) {
+        // Fail open: no summarization, no persistence. Falling back to the
+        // caller's raw range is exactly the bug this path exists to fix —
+        // it would summarize the wrong messages and persist that against
+        // the (correct) anchors, with segmentId dedupe blocking correction.
+        logger.warn("engine.archive_range.anchor_window_unresolved", {
+          sessionId: effectiveSessionId,
+          segmentId: anchors.segmentId,
+          fromClientMessageId: anchors.fromClientMessageId,
+          toClientMessageId: anchors.toClientMessageId,
+        });
+        const before = estimateTokens(sourceMessages);
+        return { before, after: before };
+      }
+      window = { start, end };
+    } else {
+      sourceMessages =
+        this.compactedMessagesBySession.get(effectiveSessionId) ?? session.transcript.toMessages();
+      window = range;
+    }
     const before = estimateTokens(sourceMessages);
 
     const contextManager = await this.prepareContextManagerForSession(
@@ -3644,12 +3691,98 @@ export class Engine {
     // don't let a stale run callback retained on lastContextManager double-emit.
     contextManager.setOnCompact(() => {});
 
-    const archived = await contextManager.summarizeRange(sourceMessages, range);
+    const archived = await contextManager.summarizeRange(sourceMessages, window);
     const after = estimateTokens(archived);
+    // Persist the boundary so a restart replays the trimmed context. Only when
+    // summarizeRange actually replaced the span (identity return means empty
+    // window / rejected summary / no summarizer available) and the caller
+    // supplied stable anchors to record it against.
+    if (anchors && archived !== sourceMessages) {
+      const clampedStart = Math.max(0, Math.min(window.start, archived.length - 1));
+      const summaryMessage = archived[clampedStart];
+      const summaryText =
+        typeof summaryMessage?.content === "string" ? summaryMessage.content : undefined;
+      if (summaryText && this.hasLiveArchiveAnchors(session, anchors)) {
+        session.transcript.appendRangeArchive({ summary: summaryText, ...anchors });
+      }
+    }
+    // In the anchored path this replaces any in-process-only cache state with
+    // the fresh-replay-based result — safe, because the transcript is the
+    // superset of the cache and pressure compaction re-runs if needed.
     this.compactedMessagesBySession.set(effectiveSessionId, archived);
     this.lastSessionId = effectiveSessionId;
     this.lastMessages = archived;
     return { before, after };
+  }
+
+  /**
+   * Guard against writing a marker anchored to a client message id the
+   * transcript doesn't actually contain. toMessages()'s replay silently
+   * ignores a range_archive event whose anchor doesn't resolve (fail open),
+   * so a bad anchor wouldn't corrupt anything on its own — but if the marker
+   * carries a segmentId, appendRangeArchive's idempotency check treats that
+   * segmentId as "already recorded" forever, with no retry path (e.g. a
+   * one-time migration keyed "migration-v1" would be permanently burned on
+   * its first, failed attempt). Reject before writing so the caller can
+   * retry with a corrected anchor. fromClientMessageId is optional in the
+   * data model (absent means "from the beginning"), so only validate it when
+   * present; missing it is fail-open by design, same as the replay path.
+   */
+  private hasLiveArchiveAnchors(
+    session: SessionBundle,
+    anchors: { toClientMessageId: string; fromClientMessageId?: string },
+  ): boolean {
+    if (!session.transcript.hasClientMessageId(anchors.toClientMessageId)) return false;
+    if (
+      anchors.fromClientMessageId !== undefined &&
+      !session.transcript.hasClientMessageId(anchors.fromClientMessageId)
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Persist an archive boundary WITHOUT a summarization call — the caller
+   * already has the summary text (e.g. the one-time migration built from
+   * pet journal entries). Wraps the plain text in the anchored-summary
+   * envelope so replay and rolling-merge treat it like a real archive.
+   * Returns false when the segmentId was already recorded (idempotent) OR
+   * when the anchors don't resolve to real messages in this transcript —
+   * see hasLiveArchiveAnchors for why a dead anchor must be rejected before
+   * the (potentially one-shot) segmentId gets burned.
+   */
+  async appendArchiveMarker(
+    sessionId: string,
+    marker: {
+      summary: string;
+      toClientMessageId: string;
+      fromClientMessageId?: string;
+      segmentId?: string;
+    },
+  ): Promise<boolean> {
+    const session = this.sessionManager.resume(sessionId);
+    if (!this.hasLiveArchiveAnchors(session, marker)) {
+      logger.warn("engine.archive_marker.dead_anchor", {
+        sessionId,
+        segmentId: marker.segmentId,
+        toClientMessageId: marker.toClientMessageId,
+        fromClientMessageId: marker.fromClientMessageId,
+      });
+      return false;
+    }
+    const wrapped = buildAnchoredSummaryMessage(marker.summary, {
+      ...(session.transcript.isPersistent()
+        ? { transcriptPath: session.transcript.getFilePath() }
+        : {}),
+    });
+    const content = typeof wrapped.content === "string" ? wrapped.content : marker.summary;
+    const appended = session.transcript.appendRangeArchive({ ...marker, summary: content });
+    if (!appended) return false;
+    // The in-memory cache (if any) predates the marker; drop it so the next
+    // run rebuilds from the trimmed transcript replay.
+    this.compactedMessagesBySession.delete(sessionId);
+    return true;
   }
 
   private recordCacheReadDiagnostics(sessionId: string, sample: PromptCacheDiagnosticSample): void {

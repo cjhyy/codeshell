@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PetTopicSegment, PetWorkMemoryEntry } from "@cjhyy/code-shell-pet";
-import { PetSegmentController } from "./pet-segment-controller";
+import { buildArchiveAnchors, PetSegmentController } from "./pet-segment-controller";
 import type { PetSegmentClosed, PetWorkMemoryStoreLike } from "./pet-segment-controller";
 
 const MINUTE = 60 * 1000;
@@ -214,6 +214,46 @@ describe("PetSegmentController", () => {
       endedAt: 13 * HOUR + 13 * HOUR,
     });
     expect(closed[0]?.segmentId).toBe(store.opened[0]!.id);
+  });
+
+  test("the closed event's anchors, when built, carry exactly the boundary/segment fields for archive_range", () => {
+    // Mirrors what packages/desktop/src/main/index.ts's onSegmentClosed does
+    // with the event this controller emits: derive the archive-marker anchors
+    // and forward them into the archive_range worker query payload.
+    const closed: PetSegmentClosed = {
+      segmentId: "seg-a",
+      closingBoundaryMessageId: "pet-a",
+      nextBoundaryMessageId: "pet-b",
+      startedAt: 1,
+      endedAt: 2,
+    };
+    expect(buildArchiveAnchors(closed)).toEqual({
+      toClientMessageId: "pet-b",
+      fromClientMessageId: "pet-a",
+      segmentId: "seg-a",
+    });
+  });
+
+  test("anchors omit fromClientMessageId when the closed segment never captured a closing boundary", () => {
+    const closed: PetSegmentClosed = {
+      segmentId: "seg-a",
+      nextBoundaryMessageId: "pet-b",
+      startedAt: 1,
+      endedAt: 2,
+    };
+    const anchors = buildArchiveAnchors(closed);
+    expect(anchors).toEqual({ toClientMessageId: "pet-b", segmentId: "seg-a" });
+    expect(anchors).not.toHaveProperty("fromClientMessageId");
+  });
+
+  test("anchors are undefined (degraded in-memory-only archive) when there is no next boundary message id", () => {
+    const closed: PetSegmentClosed = {
+      segmentId: "seg-a",
+      closingBoundaryMessageId: "pet-a",
+      startedAt: 1,
+      endedAt: 2,
+    };
+    expect(buildArchiveAnchors(closed)).toBeUndefined();
   });
 
   test("no new segment within the idle window: no brief, clock still advances", async () => {
