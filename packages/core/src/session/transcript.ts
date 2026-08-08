@@ -336,7 +336,35 @@ export class Transcript {
    * This is the critical boundary: the LLM never sees the event log directly.
    */
   toMessages(): Message[] {
+    return this.toMessagesWithIndex().messages;
+  }
+
+  /**
+   * Marker-aware replay that ALSO reports, for every emitted message event
+   * carrying a clientMessageId, the LIVE index (its position in the returned
+   * messages array) of its FIRST emission. This is how the engine resolves an
+   * anchored archival window: raw transcript indices grow forever and go stale
+   * the moment a range_archive marker trims the replay, so any caller-held
+   * index range is meaningless — only client-message-id anchors resolved over
+   * THIS replay identify the right span.
+   *
+   * Contract details:
+   * - Messages dropped inside an archived span get NO index entry — they are
+   *   not in the live list, so a window anchored on them cannot be built
+   *   (the engine fails open in that case).
+   * - Only the FIRST emission of a duplicated clientMessageId is recorded
+   *   (duplicates replay as plain messages per the one-shot span rule; the
+   *   first index is the meaningful one).
+   * - The clientMessageId is deliberately NOT attached to the Message objects
+   *   themselves: Message[] is exactly what gets serialized into LLM request
+   *   payloads, and transport metadata must not leak into them.
+   */
+  toMessagesWithIndex(): {
+    messages: Message[];
+    liveIndexByClientMessageId: Map<string, number>;
+  } {
     const messages: Message[] = [];
+    const liveIndexByClientMessageId = new Map<string, number>();
     const selectedToolResults = preferredToolResults(this.events);
     const hasRangeArchive = this.events.some((e) => e.type === "range_archive");
 
@@ -377,7 +405,18 @@ export class Transcript {
         };
         if (typeof summary !== "string" || !presentClientIds.has(toClientMessageId)) continue;
         if (fromClientMessageId === undefined) {
-          // Last-wins, matching spansByFromId's Map.set semantics below.
+          // Multiple from-less markers compete for this single opening-span
+          // slot; the LAST one wins (matching spansByFromId's Map.set
+          // semantics below). Last-wins is CORRECT by construction, not
+          // merely a tiebreak: the engine resolves a from-less archival
+          // window as [0, to) over the LIVE replay, so the window that
+          // produced a LATER from-less marker began with the EARLIER
+          // marker's replayed summary message, and summarizeRange merge-fed
+          // that prior summary (extractAnchoredSummary) into the new one.
+          // The later summary therefore already contains the earlier one's
+          // content — dropping the earlier marker here loses nothing. (And
+          // in production from-less windows only advance: each new marker
+          // ends at a later boundary, so the surviving span is the widest.)
           openingSpan = { summary, toClientMessageId };
         } else if (presentClientIds.has(fromClientMessageId)) {
           const fromIndex = firstIndexByClientId.get(fromClientMessageId)!;
@@ -423,10 +462,20 @@ export class Transcript {
 
       switch (event.type) {
         case "message": {
-          const { role, content } = event.data as {
+          const { role, content, clientMessageId } = event.data as {
             role: string;
             content: string | ContentBlock[];
+            clientMessageId?: unknown;
           };
+          // Record the live index of this message's FIRST emission before
+          // pushing it (the index it is about to occupy). Dropped-in-span
+          // messages never reach this point, so they get no entry.
+          if (
+            typeof clientMessageId === "string" &&
+            !liveIndexByClientMessageId.has(clientMessageId)
+          ) {
+            liveIndexByClientMessageId.set(clientMessageId, messages.length);
+          }
           if (role === "assistant" && Array.isArray(content)) {
             for (const block of content as ContentBlock[]) {
               if (block.type === "tool_use" && typeof block.id === "string") {
@@ -502,7 +551,7 @@ export class Transcript {
       }
     }
 
-    return messages;
+    return { messages, liveIndexByClientMessageId };
   }
 
   getEvents(type?: TranscriptEventType): TranscriptEvent[] {

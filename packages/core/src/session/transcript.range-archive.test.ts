@@ -171,6 +171,57 @@ describe("Transcript range_archive", () => {
     expect(texts.some((x) => x.includes("话题C第一句"))).toBe(true);
   });
 
+  it("two from-less markers: the LAST one wins on replay", () => {
+    // Competing from-less markers share the single opening-span slot;
+    // replay uses the LAST one's summary and span. This is safe by
+    // construction, not arbitrary: the engine resolves a from-less archival
+    // window over the live replay, so the window that produced the later
+    // marker began with the earlier marker's replayed summary message and
+    // summarizeRange merge-fed that summary into the new one. At this layer
+    // we just pin which marker wins; the earlier summary text is absent
+    // here because in production it lives merged inside the later summary.
+    const t = new Transcript(join(dir, "t.jsonl"));
+    seed(t);
+    t.appendRangeArchive({
+      summary: "第一个开头摘要",
+      toClientMessageId: "m2",
+      segmentId: "seg-open-1",
+    });
+    t.appendRangeArchive({
+      summary: "第二个开头摘要",
+      toClientMessageId: "m3",
+      segmentId: "seg-open-2",
+    });
+    const texts = t.toMessages().map((m) => (typeof m.content === "string" ? m.content : ""));
+    expect(texts[0]).toBe("第二个开头摘要");
+    expect(texts.some((x) => x.includes("第一个开头摘要"))).toBe(false);
+    // The LAST marker's span applies: everything before m3 is dropped.
+    expect(texts.some((x) => x.includes("话题A第一句"))).toBe(false);
+    expect(texts.some((x) => x.includes("话题A第二句"))).toBe(false);
+    expect(texts.some((x) => x.includes("话题B第一句"))).toBe(true);
+    expect(texts.some((x) => x.includes("回B1"))).toBe(true);
+  });
+
+  it("toMessagesWithIndex maps clientMessageIds to LIVE indices, skipping archived spans", () => {
+    const t = new Transcript(join(dir, "t.jsonl"));
+    seed(t);
+    t.appendRangeArchive({
+      summary: "【归档】话题A的摘要",
+      fromClientMessageId: "m1",
+      toClientMessageId: "m3",
+      segmentId: "seg-1",
+    });
+    const { messages, liveIndexByClientMessageId } = t.toMessagesWithIndex();
+    expect(messages).toHaveLength(3); // 摘要 + m3 + 回B1
+    // The to-boundary message survives the span and sits right after the
+    // replayed summary.
+    expect(liveIndexByClientMessageId.get("m3")).toBe(1);
+    // Messages dropped inside the archived span get NO index entry — they
+    // are not in the live list.
+    expect(liveIndexByClientMessageId.has("m1")).toBe(false);
+    expect(liveIndexByClientMessageId.has("m2")).toBe(false);
+  });
+
   it("a duplicate from message (e.g. torn JSONL reload) does not reopen the span and swallow the tail", () => {
     // Same clientMessageId ("m1") appears twice as a message event — this can
     // happen across a torn JSONL write or a double-writer race; appendMessage's

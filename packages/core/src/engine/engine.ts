@@ -3592,14 +3592,25 @@ export class Engine {
   }
 
   /**
-   * Archive a caller-chosen contiguous message-index window `[range.start,
-   * range.end)` of a session into a single anchored summary, leaving everything
-   * outside the window untouched, and cache the result so a later
-   * forceCompact/resume reads the archived history. This is a generic
-   * range-archival facade over ContextManager.summarizeRange — the caller
-   * decides which span to collapse (the range is a half-open message-index
-   * window, matching summarizeRange). Returns token stats before/after; equal
-   * before/after means the window was empty or the summary was rejected.
+   * Archive a contiguous message window of a session into a single anchored
+   * summary, leaving everything outside the window untouched, and cache the
+   * result so a later forceCompact/resume reads the archived history. This is
+   * a generic range-archival facade over ContextManager.summarizeRange.
+   * Returns token stats before/after; equal before/after means the window was
+   * empty/unresolvable or the summary was rejected.
+   *
+   * Window resolution depends on whether the caller supplied anchors:
+   * - With `anchors`, the caller's `range` is IGNORED and the window is
+   *   resolved from the client-message-id anchors over a fresh, marker-aware
+   *   transcript replay. Callers (the pet segment closure) compute index
+   *   ranges over the RAW transcript message list, whose indices grow
+   *   forever — but the live list is trimmed by every persisted marker
+   *   (replay after restart) and by each in-process archival, so a raw index
+   *   range clamps to an empty window or, worse, onto the WRONG tail
+   *   messages, which would then be persistently mis-summarized against
+   *   correct anchors. Anchors are the only stable coordinates.
+   * - Without `anchors`, legacy behavior: `range` is a half-open index window
+   *   over the cached/in-process message list, and nothing is persisted.
    */
   async archiveTurnRange(
     sessionId: string,
@@ -3610,8 +3621,42 @@ export class Engine {
     if (!effectiveSessionId) return { before: 0, after: 0 };
 
     const session = this.sessionManager.resume(effectiveSessionId);
-    const sourceMessages =
-      this.compactedMessagesBySession.get(effectiveSessionId) ?? session.transcript.toMessages();
+
+    let sourceMessages: Message[];
+    let window: { start: number; end: number };
+    if (anchors) {
+      const { messages: liveMessages, liveIndexByClientMessageId } =
+        session.transcript.toMessagesWithIndex();
+      sourceMessages = liveMessages;
+      // An absent from-anchor means "from the beginning" — over the live
+      // list that is index 0, which includes any previously replayed
+      // from-less summary at the head, so summarizeRange merge-feeds it
+      // (extractAnchoredSummary) instead of losing it.
+      const start =
+        anchors.fromClientMessageId !== undefined
+          ? liveIndexByClientMessageId.get(anchors.fromClientMessageId)
+          : 0;
+      const end = liveIndexByClientMessageId.get(anchors.toClientMessageId);
+      if (start === undefined || end === undefined || end <= start) {
+        // Fail open: no summarization, no persistence. Falling back to the
+        // caller's raw range is exactly the bug this path exists to fix —
+        // it would summarize the wrong messages and persist that against
+        // the (correct) anchors, with segmentId dedupe blocking correction.
+        logger.warn("engine.archive_range.anchor_window_unresolved", {
+          sessionId: effectiveSessionId,
+          segmentId: anchors.segmentId,
+          fromClientMessageId: anchors.fromClientMessageId,
+          toClientMessageId: anchors.toClientMessageId,
+        });
+        const before = estimateTokens(sourceMessages);
+        return { before, after: before };
+      }
+      window = { start, end };
+    } else {
+      sourceMessages =
+        this.compactedMessagesBySession.get(effectiveSessionId) ?? session.transcript.toMessages();
+      window = range;
+    }
     const before = estimateTokens(sourceMessages);
 
     const contextManager = await this.prepareContextManagerForSession(
@@ -3624,14 +3669,14 @@ export class Engine {
     // don't let a stale run callback retained on lastContextManager double-emit.
     contextManager.setOnCompact(() => {});
 
-    const archived = await contextManager.summarizeRange(sourceMessages, range);
+    const archived = await contextManager.summarizeRange(sourceMessages, window);
     const after = estimateTokens(archived);
     // Persist the boundary so a restart replays the trimmed context. Only when
     // summarizeRange actually replaced the span (identity return means empty
     // window / rejected summary / no summarizer available) and the caller
     // supplied stable anchors to record it against.
     if (anchors && archived !== sourceMessages) {
-      const clampedStart = Math.max(0, Math.min(range.start, archived.length - 1));
+      const clampedStart = Math.max(0, Math.min(window.start, archived.length - 1));
       const summaryMessage = archived[clampedStart];
       const summaryText =
         typeof summaryMessage?.content === "string" ? summaryMessage.content : undefined;
@@ -3639,6 +3684,9 @@ export class Engine {
         session.transcript.appendRangeArchive({ summary: summaryText, ...anchors });
       }
     }
+    // In the anchored path this replaces any in-process-only cache state with
+    // the fresh-replay-based result — safe, because the transcript is the
+    // superset of the cache and pressure compaction re-runs if needed.
     this.compactedMessagesBySession.set(effectiveSessionId, archived);
     this.lastSessionId = effectiveSessionId;
     this.lastMessages = archived;
