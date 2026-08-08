@@ -233,6 +233,50 @@ describe("Transcript range_archive", () => {
     expect(texts.some((x) => x.includes("回B1"))).toBe(true);
   });
 
+  it("selectContextRange keeps raw messages in full and injects the archived summary as a system-reminder", () => {
+    // selectContextRange backs the UI's "view this hand-picked range" path,
+    // which is intentionally NOT the toMessages() rolling-merge replay: the
+    // caller selected this exact span and expects to see everything in it,
+    // even a span that also contains a range_archive marker left over from
+    // an earlier auto-archive. The marker's summary should additionally be
+    // surfaced as a system-reminder, but must not cause any message inside
+    // the selection to be dropped.
+    const t = new Transcript(join(dir, "t.jsonl"));
+    seed(t);
+    t.appendRangeArchive({
+      summary: "【归档】话题A的摘要",
+      fromClientMessageId: "m1",
+      toClientMessageId: "m3",
+      segmentId: "seg-1",
+    });
+    t.appendMessage("user", "话题C第一句", { clientMessageId: "m4" });
+
+    const events = t.getEvents();
+    const fromEventId = events[0]!.id; // 话题A第一句 (m1)
+    const toEventId = events.at(-1)!.id; // 话题C第一句 (m4)
+
+    const selected = Transcript.selectContextRange(events, { fromEventId, toEventId });
+    const texts = selected.messages.map((m) => (typeof m.content === "string" ? m.content : ""));
+
+    // Full retention: every raw message inside the selection survives,
+    // including the ones that toMessages() would have replaced/dropped.
+    expect(texts.some((x) => x.includes("话题A第一句"))).toBe(true);
+    expect(texts.some((x) => x.includes("回A1"))).toBe(true);
+    expect(texts.some((x) => x.includes("话题A第二句"))).toBe(true);
+    expect(texts.some((x) => x.includes("回A2"))).toBe(true);
+    expect(texts.some((x) => x.includes("话题B第一句"))).toBe(true);
+    expect(texts.some((x) => x.includes("回B1"))).toBe(true);
+    expect(texts.some((x) => x.includes("话题C第一句"))).toBe(true);
+
+    // The archived summary is surfaced too, wrapped as a system-reminder
+    // rather than replacing/hiding the messages it summarizes.
+    const summaryMessage = selected.messages.find(
+      (m) => typeof m.content === "string" && m.content.includes("【归档】话题A的摘要"),
+    );
+    expect(summaryMessage).toBeDefined();
+    expect(summaryMessage!.content).toContain("<system-reminder>");
+  });
+
   it("drops a complete tool_use/tool_result round that lies entirely inside a span", () => {
     const events: TranscriptEvent[] = [
       ev("message", { role: "user", content: "话题A第一句", clientMessageId: "m1" }),

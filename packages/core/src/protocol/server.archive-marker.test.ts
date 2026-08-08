@@ -104,6 +104,56 @@ describe("AgentServer archive_range query anchors passthrough", () => {
       { sessionId: "s-archive", range: { start: 2, end: 10 }, anchors: undefined },
     ]);
   });
+
+  it("drops a non-string fromClientMessageId while keeping the other string anchors", async () => {
+    const archiveCalls: Array<{ sessionId: string; range: unknown; anchors: unknown }> = [];
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () =>
+        ({
+          isHeadless: () => true,
+          sessionExistsOnDisk: (sessionId: string) => sessionId === "s-archive",
+          getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
+          archiveTurnRange: (sessionId: string, range: unknown, anchors: unknown) => {
+            archiveCalls.push({ sessionId, range, anchors });
+            return { before: 100, after: 10 };
+          },
+        }) as unknown as Engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 3,
+      method: "agent/query",
+      params: {
+        type: "archive_range",
+        sessionId: "s-archive",
+        start: 2,
+        end: 10,
+        toClientMessageId: "m2",
+        fromClientMessageId: 123,
+        segmentId: "seg-1",
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(archiveCalls).toEqual([
+      {
+        sessionId: "s-archive",
+        range: { start: 2, end: 10 },
+        anchors: { toClientMessageId: "m2", segmentId: "seg-1" },
+      },
+    ]);
+    expect(
+      Object.prototype.hasOwnProperty.call(
+        (archiveCalls[0]!.anchors as object) ?? {},
+        "fromClientMessageId",
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("AgentServer archive_marker query", () => {
@@ -284,6 +334,41 @@ describe("AgentServer archive_marker query", () => {
 
     expect(last(t.sent).error?.code).toBe(ErrorCodes.InternalError);
     expect(last(t.sent).error?.message).toBe("boom");
+  });
+
+  it("relays {appended: false} as a success response, not an error", async () => {
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () =>
+        ({
+          isHeadless: () => true,
+          sessionExistsOnDisk: (sessionId: string) => sessionId === "s-marker",
+          getSessionManager: () => ({ readSessionMainRoot: () => "/project/from/disk" }),
+          appendArchiveMarker: () => false,
+        }) as unknown as Engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 7,
+      method: "agent/query",
+      params: {
+        type: "archive_marker",
+        sessionId: "s-marker",
+        summary: "s",
+        toClientMessageId: "m1",
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(last(t.sent).error).toBeUndefined();
+    expect(last(t.sent).result).toEqual({
+      type: "archive_marker",
+      data: { appended: false },
+    });
   });
 
   it("returns SessionNotFound for an unknown session id", async () => {
