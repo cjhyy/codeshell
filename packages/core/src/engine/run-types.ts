@@ -35,6 +35,13 @@ export interface RunBehaviorProfile {
   /** When true, MCP servers are neither connected nor exposed for the run. */
   disableMcp?: boolean;
   /**
+   * When true, the injected persistent-memory index is trimmed to this run's
+   * project: global-layer project-type / dream-scope records tied to other
+   * projects are dropped. Meant for manager-style profiles whose runs never
+   * work inside other repos.
+   */
+  memoryCurrentProjectOnly?: boolean;
+  /**
    * Wrapper tag for host-provided runtime context injected at the system
    * prompt tail (e.g. "pet-world"). Injection happens only when both this tag
    * and profileParams.runtimeContext (a string) are present.

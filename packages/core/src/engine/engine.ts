@@ -41,6 +41,7 @@ import {
   type BuiltinToolGuard,
 } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry, type LiveChildState } from "../tool-system/builtin/agent-registry.js";
+import { skillToolDef } from "../tool-system/builtin/skill.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -2518,6 +2519,11 @@ export class Engine {
       cwd,
       sessionProfileOverrides,
     );
+    // A profile whose tool allowlist excludes the Skill tool can never invoke
+    // a skill, so the full skills listing would be dead context for every one
+    // of its turns (e.g. the Pet manager) — inject none via an empty allowlist.
+    const profileCanUseSkills =
+      !profile?.allowedToolNames || profile.allowedToolNames.has(skillToolDef.name);
     const promptComposer = new PromptComposer(
       buildPromptComposerConfig({
         cwd,
@@ -2540,8 +2546,9 @@ export class Engine {
           resolveInstructionBoundary(scanCwd, this.capabilities),
         disabledSkills,
         disabledPlugins,
-        skillAllowlist: this.config.skillAllowlist,
+        skillAllowlist: profileCanUseSkills ? this.config.skillAllowlist : [],
         memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
+        memoryCurrentProjectOnly: profile?.memoryCurrentProjectOnly,
         goalToolState:
           !profile?.allowedToolNames ||
           profile.allowedToolNames.has("complete_goal") ||

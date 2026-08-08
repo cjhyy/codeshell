@@ -108,6 +108,9 @@ export const PET_BEHAVIOR_PROFILE: RunBehaviorProfile = {
   forcePermissionMode: "default",
   disablePlanMode: true,
   disableMcp: true,
+  // Mimi manages work from one fixed vantage point and never executes inside
+  // other repos — cross-project memory records are dead context for her turns.
+  memoryCurrentProjectOnly: true,
   runtimeContextTag: "pet-world",
   runtimeContextHeading: "# Trusted Pet Runtime Context (non-durable)",
   activateForSessionKinds: ["pet"],

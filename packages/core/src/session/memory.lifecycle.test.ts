@@ -489,4 +489,60 @@ describe("buildInjectionIndex (two-layer, global + project)", () => {
       expect(MemoryManager.buildInjectionIndex({ projectDir: "/tmp/p", baseDir: base })).toBe("");
     });
   });
+
+  it("currentProjectOnly trims global project/dream records about other projects", () => {
+    withBase((base) => {
+      const projDir = "/tmp/current/project";
+      const globalMm = new MemoryManager({ baseDir: base });
+      globalMm.save({
+        name: "general-lesson",
+        description: "applies everywhere",
+        type: "feedback",
+        content: "x",
+      });
+      globalMm.save({
+        name: "other-repo-fact",
+        description: "about some other repo",
+        type: "project",
+        content: "x",
+      });
+      globalMm.save({
+        name: "this-repo-promoted",
+        description: "promoted from the current project",
+        type: "project",
+        content: "x",
+        originProjects: [projDir],
+      });
+      const globalDream = new MemoryManager({ baseDir: base, scope: "dream" });
+      globalDream.save({
+        name: "dream-consolidated",
+        description: "cross-project dream note",
+        type: "user",
+        content: "x",
+      });
+      const projMm = new MemoryManager({ baseDir: base, projectDir: projDir });
+      projMm.save({
+        name: "current-repo-fact",
+        description: "this repo's own fact",
+        type: "project",
+        content: "x",
+      });
+
+      const trimmed = MemoryManager.buildInjectionIndex({
+        projectDir: projDir,
+        baseDir: base,
+        currentProjectOnly: true,
+      });
+      expect(trimmed).toContain("general-lesson");
+      expect(trimmed).toContain("this-repo-promoted");
+      expect(trimmed).toContain("current-repo-fact");
+      expect(trimmed).not.toContain("other-repo-fact");
+      expect(trimmed).not.toContain("dream-consolidated");
+
+      // The trim is opt-in — the default index still carries everything.
+      const full = MemoryManager.buildInjectionIndex({ projectDir: projDir, baseDir: base });
+      expect(full).toContain("other-repo-fact");
+      expect(full).toContain("dream-consolidated");
+    });
+  });
 });

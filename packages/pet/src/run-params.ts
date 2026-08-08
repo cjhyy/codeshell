@@ -9,6 +9,8 @@ import type { PetFollowUpItem } from "./follow-ups.js";
 import type { PetOutboundTargetOption } from "./outbound-message.js";
 
 const MAX_RUNTIME_CONTEXT_LENGTH = 32_768;
+/** Reusable Sessions inactive longer than this are trimmed from the turn snapshot. */
+const STALE_REUSABLE_SESSION_THRESHOLD_MS = 180 * 24 * 60 * 60 * 1000;
 const MAX_WORKSPACES = 64;
 const MAX_REUSABLE_SESSIONS = 32;
 const MAX_FOLLOW_UPS = 100;
@@ -81,8 +83,18 @@ function parseWorkspaces(value: unknown): PetWorkspaceOption[] | undefined {
   return result;
 }
 
-function parseReusableSessions(value: unknown): PetReusableSessionOption[] | undefined {
+/**
+ * When `staleThresholdMs` is set, entries whose `lastActiveAt` is older than
+ * `now - staleThresholdMs` are dropped (after shape validation, so a stale
+ * entry with a malformed sibling field still fails the whole array closed).
+ * Entries without a timestamp are kept — filtering is opt-in per entry.
+ */
+function parseReusableSessions(
+  value: unknown,
+  staleThresholdMs?: number,
+): PetReusableSessionOption[] | undefined {
   if (!Array.isArray(value) || value.length > MAX_REUSABLE_SESSIONS) return undefined;
+  const staleBefore = staleThresholdMs === undefined ? undefined : Date.now() - staleThresholdMs;
   const ids = new Set<string>();
   const result: PetReusableSessionOption[] = [];
   for (const entry of value) {
@@ -90,7 +102,11 @@ function parseReusableSessions(value: unknown): PetReusableSessionOption[] | und
       !isRecord(entry) ||
       !validOpaqueId(entry.id) ||
       !validOpaqueId(entry.workspaceId) ||
-      ids.has(entry.id)
+      ids.has(entry.id) ||
+      (entry.lastActiveAt !== undefined &&
+        (typeof entry.lastActiveAt !== "number" ||
+          !Number.isFinite(entry.lastActiveAt) ||
+          entry.lastActiveAt < 0))
     ) {
       return undefined;
     }
@@ -98,11 +114,19 @@ function parseReusableSessions(value: unknown): PetReusableSessionOption[] | und
     const description = normalizedDescription(entry.description);
     if (!name || description === null) return undefined;
     ids.add(entry.id);
+    if (
+      staleBefore !== undefined &&
+      typeof entry.lastActiveAt === "number" &&
+      entry.lastActiveAt < staleBefore
+    ) {
+      continue;
+    }
     result.push({
       id: entry.id,
       workspaceId: entry.workspaceId,
       name,
       ...(description ? { description } : {}),
+      ...(typeof entry.lastActiveAt === "number" ? { lastActiveAt: entry.lastActiveAt } : {}),
     });
   }
   return result;
@@ -318,7 +342,7 @@ export function petRunOptionsFrom(profileParams: Readonly<Record<string, unknown
   const reusableSessions =
     profileParams.reusableSessions === undefined
       ? []
-      : parseReusableSessions(profileParams.reusableSessions);
+      : parseReusableSessions(profileParams.reusableSessions, STALE_REUSABLE_SESSION_THRESHOLD_MS);
   if (!workspaces || !reusableSessions) return empty;
   const workspaceIds = new Set(workspaces.map((workspace) => workspace.id));
   if (reusableSessions.some((session) => !workspaceIds.has(session.workspaceId))) return empty;

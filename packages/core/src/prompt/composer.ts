@@ -93,6 +93,13 @@ export interface ComposerOptions {
    * Undefined/0 → inject all.
    */
   memoriesMaxAgeDays?: number;
+  /**
+   * When true (set from the active behavior profile, e.g. the Pet manager),
+   * the injected memory index keeps only memories relevant to this cwd —
+   * global-layer project/dream records tied to other projects are dropped.
+   * See MemoryManager.buildInjectionIndex(currentProjectOnly).
+   */
+  memoryCurrentProjectOnly?: boolean;
 }
 
 export class PromptComposer {
@@ -375,6 +382,7 @@ export class PromptComposer {
         projectDir: this.options.cwd,
         profileDir: this.options.profileMemoryDir,
         maxAgeDays: this.options.memoriesMaxAgeDays,
+        currentProjectOnly: this.options.memoryCurrentProjectOnly,
       });
     } catch {
       return "";

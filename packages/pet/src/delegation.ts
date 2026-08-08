@@ -24,6 +24,12 @@ export interface PetReusableSessionOption {
   workspaceId: string;
   name: string;
   description?: string;
+  /**
+   * Last activity time (epoch ms), when the host knows it. Sessions inactive
+   * beyond the staleness threshold are trimmed from the per-turn snapshot;
+   * entries without a timestamp are always kept.
+   */
+  lastActiveAt?: number;
 }
 
 /** Structured decision produced only by a successful DelegateWork tool call. */

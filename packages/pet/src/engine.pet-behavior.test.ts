@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LLMClientBase } from "@cjhyy/code-shell-core/extension";
@@ -94,6 +94,14 @@ describe("Engine pet behavior", () => {
   test("persists manager identity and exposes only structured work delegation", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "engine-pet-"));
     tempDirs.push(cwd);
+    // Pet's tool allowlist has no Skill tool, so installed skills must never
+    // ride the dynamic-context message of a Mimi turn.
+    const skillDir = join(cwd, ".code-shell", "skills", "pet-invisible-skill");
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(
+      join(skillDir, "SKILL.md"),
+      "---\nname: pet-invisible-skill\ndescription: must not appear in pet context\n---\nbody",
+    );
     const model = `pet-${Date.now()}-${Math.random()}`;
     calls.set(model, []);
     const engine = new Engine({
@@ -139,6 +147,7 @@ describe("Engine pet behavior", () => {
     expect(first.systemPrompt).toContain("runtime-only-hunter2");
     expect(JSON.stringify(first.messages)).not.toContain("runtime-only-hunter2");
     expect(JSON.stringify(first.messages)).not.toContain("Goal 工具状态");
+    expect(JSON.stringify(first.messages)).not.toContain("pet-invisible-skill");
     expect(JSON.stringify(first.messages)).not.toContain("active goal");
     expect(first.tools).toEqual(["DelegateWork", "Sessions", "FollowUps", "CurrentTime"]);
     expect(result.petWorkDelegation).toEqual({

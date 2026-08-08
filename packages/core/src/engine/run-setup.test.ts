@@ -170,6 +170,7 @@ describe("buildPromptComposerConfig", () => {
       disabledPlugins: ["legacy-plugin"],
       skillAllowlist: ["approved-skill"],
       memoriesMaxAgeDays: 30,
+      memoryCurrentProjectOnly: true,
       goalToolState: { hasGoal: true },
       capabilityPromptSections: { extra: "section" },
       getSettingsManager: () => {
@@ -191,6 +192,7 @@ describe("buildPromptComposerConfig", () => {
       disabledPlugins: ["legacy-plugin"],
       skillAllowlist: ["approved-skill"],
       memoriesMaxAgeDays: 30,
+      memoryCurrentProjectOnly: true,
       goalToolState: { hasGoal: true },
       capabilityPromptSections: { extra: "section" },
     });

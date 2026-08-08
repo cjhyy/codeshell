@@ -803,6 +803,16 @@ export class MemoryManager {
     baseDir?: string;
     maxAgeDays?: number;
     now?: number;
+    /**
+     * Trim the global layer to what is relevant to this run's project:
+     * project-type and dream-scope records are per-project experience, so
+     * they are kept only when their origin metadata ties them to
+     * `projectDir`. General knowledge (user/feedback/reference in user
+     * scope) always stays; the project layer is untouched because it is
+     * already this project's own store. Set by behavior profiles whose runs
+     * never work inside other repos (e.g. a manager/dispatcher session).
+     */
+    currentProjectOnly?: boolean;
   }): string {
     const global = new MemoryManager({ baseDir: opts.baseDir });
     const project = opts.projectDir
@@ -822,7 +832,16 @@ export class MemoryManager {
         opts.now,
       ).sort(pinnedFirst);
 
-    const globalEntries = collect(global);
+    let globalEntries = collect(global);
+    if (opts.currentProjectOnly) {
+      const tiedToProject = (e: MemoryEntry): boolean =>
+        opts.projectDir !== undefined &&
+        (e.originProject === opts.projectDir ||
+          (e.originProjects?.includes(opts.projectDir) ?? false));
+      globalEntries = globalEntries.filter(
+        (e) => (e.type !== "project" && e.scope !== "dream") || tiedToProject(e),
+      );
+    }
     const profileEntries = profile ? collect(profile) : [];
     const projectEntries = project ? collect(project) : [];
 

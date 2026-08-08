@@ -59,6 +59,36 @@ describe("validatePetRunParams", () => {
     ).toBe("profileParams.reusableSessions contains an invalid or duplicate reusable Session");
   });
 
+  test("accepts a reusable Session lastActiveAt timestamp and rejects malformed ones", () => {
+    expect(
+      validatePetRunParams({
+        behaviorMode: "pet",
+        kind: "pet",
+        profileParams: {
+          workspaces: [{ id: "workspace-a", name: "Alpha" }],
+          reusableSessions: [
+            { id: "session-a", workspaceId: "workspace-a", name: "Recent", lastActiveAt: 1_000 },
+          ],
+        },
+      }),
+    ).toBeNull();
+
+    for (const lastActiveAt of ["yesterday", Number.NaN, -5, {}]) {
+      expect(
+        validatePetRunParams({
+          behaviorMode: "pet",
+          kind: "pet",
+          profileParams: {
+            workspaces: [{ id: "workspace-a", name: "Alpha" }],
+            reusableSessions: [
+              { id: "session-a", workspaceId: "workspace-a", name: "Bad", lastActiveAt },
+            ],
+          },
+        }),
+      ).toBe("profileParams.reusableSessions contains an invalid or duplicate reusable Session");
+    }
+  });
+
   test("rejects reusable Sessions outside the closed Workspace set", () => {
     expect(
       validatePetRunParams({
@@ -313,6 +343,35 @@ describe("Pet behavior profile inputs", () => {
     expect(petRunOptionsFrom({ sessionsRootDir: "" }).sessionsRootDir).toBeUndefined();
     expect(petRunOptionsFrom({ sessionsRootDir: 42 }).sessionsRootDir).toBeUndefined();
     expect(petRunOptionsFrom({ sessionsRootDir: null }).sessionsRootDir).toBeUndefined();
+  });
+
+  test("trims reusable Sessions inactive for more than 180 days", () => {
+    const now = Date.now();
+    const staleAt = now - 181 * 24 * 60 * 60 * 1000;
+    const freshAt = now - 24 * 60 * 60 * 1000;
+    const options = petRunOptionsFrom({
+      workspaces: [{ id: "workspace-a", name: "Alpha" }],
+      reusableSessions: [
+        { id: "fresh", workspaceId: "workspace-a", name: "Fresh", lastActiveAt: freshAt },
+        { id: "stale", workspaceId: "workspace-a", name: "Stale", lastActiveAt: staleAt },
+        { id: "undated", workspaceId: "workspace-a", name: "No timestamp" },
+      ],
+    });
+
+    expect(options.reusableSessions.map((session) => session.id)).toEqual(["fresh", "undated"]);
+    expect(options.reusableSessions[0]?.lastActiveAt).toBe(freshAt);
+  });
+
+  test("fails closed on a malformed reusable Session lastActiveAt", () => {
+    const options = petRunOptionsFrom({
+      workspaces: [{ id: "workspace-a", name: "Alpha" }],
+      reusableSessions: [
+        { id: "bad", workspaceId: "workspace-a", name: "Bad", lastActiveAt: "yesterday" },
+      ],
+    });
+
+    expect(options.workspaces).toEqual([]);
+    expect(options.reusableSessions).toEqual([]);
   });
 
   test("publishes the immutable GatewayReply route to tool visibility and run services", () => {
