@@ -8,6 +8,32 @@ breaking.
 
 ## [Unreleased]
 
+## [0.8.8] - 2026-08-10
+
+### Added
+
+- Added Panel API v6's permission-gated `audio.transcribe` capability so
+  reviewed Panel Apps can request microphone access and use the configured
+  speech-to-text provider without persisting recordings.
+- Added a dedicated second-level Mimi personalization page for response
+  language, user profile, communication style, and custom instructions.
+- Added image attachment rendering to Mimi manager chat.
+
+### Changed
+
+- Made Mimi's conversation archive boundary durable in the transcript, with a
+  one-time migration for older journal summaries and project-scoped reusable
+  manager sessions.
+- Reduced Mimi manager-chat preflight latency and trimmed stale reusable
+  sessions before reuse.
+
+### Fixed
+
+- Kept per-session model switches isolated from the shared model pool.
+- Anchored range archives to stable message IDs so trimming, restart replay,
+  and prior-summary merging preserve the intended conversation window.
+- Tightened Panel Cookie credential access in the desktop host.
+
 ## [0.8.7] - 2026-08-07
 
 ### Added
