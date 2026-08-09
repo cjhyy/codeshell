@@ -8,7 +8,7 @@ import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
 import { openPetTarget } from "./pet/petNavigation";
 import { PetChatHost } from "./pet/PetChatHost";
-import { PetSettingsPage } from "./pet/PetSettingsPage";
+import { PetPersonalizationPage, PetSettingsPage } from "./pet/PetSettingsPage";
 import { PetMemoryCenterPage } from "./pet/PetMemoryCenterPage";
 import { PetPeekHost } from "./pet/PetPeekHost";
 import { nextOpenCliSessionNonce } from "./cc-room/openCliSession";
@@ -2013,8 +2013,10 @@ function App() {
   const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
   const isPetView = view.viewMode === "pet";
   const isPetSettingsView = view.viewMode === "pet_settings";
+  const isPetPersonalizationView = view.viewMode === "pet_personalization";
   const isPetMemoryView = view.viewMode === "pet_memory";
-  const isPetSurface = isPetView || isPetSettingsView || isPetMemoryView;
+  const isPetSurface =
+    isPetView || isPetSettingsView || isPetPersonalizationView || isPetMemoryView;
   const isChatView = view.viewMode === "chat";
   /**
    * Does the TopBar describe a live chat Session right now?
@@ -2197,10 +2199,13 @@ function App() {
                   onSelectModel={(option) => setPetChatModelKey(option.key)}
                   onResetModel={() => setPetChatModelKey(null)}
                   onWidgetVisibleChange={setPetWidgetVisibility}
+                  onOpenPersonalization={() => setViewMode("pet_personalization")}
                   onOpenConnections={() => setViewMode("credentials")}
                   onOpenMemory={() => setViewMode("pet_memory")}
                   onBack={openPetPage}
                 />
+              ) : isPetPersonalizationView ? (
+                <PetPersonalizationPage onBack={() => setViewMode("pet_settings")} />
               ) : isPetMemoryView ? (
                 <PetMemoryCenterPage onBack={() => setViewMode("pet_settings")} />
               ) : registeredPageRender ? (

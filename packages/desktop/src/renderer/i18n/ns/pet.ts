@@ -13,6 +13,8 @@ export const pet = {
         personalizationTitle: "Mimi 个性化",
         personalizationDescription:
           "只作用于 Mimi 管理对话，不会改变普通 Work Session 里 Agent 的回复方式。",
+        personalizationBack: "返回 Mimi 设置",
+        managePersonalization: "设置个性化",
         responseLanguageLabel: "回复语言",
         responseLanguagePlaceholder: "例如：始终使用简体中文",
         userProfileLabel: "你的称呼与背景",
@@ -341,6 +343,8 @@ export const pet = {
         personalizationTitle: "Mimi personalization",
         personalizationDescription:
           "Applies only to Mimi's manager chat and does not change how agents respond in regular Work Sessions.",
+        personalizationBack: "Back to Mimi settings",
+        managePersonalization: "Customize Mimi",
         responseLanguageLabel: "Reply language",
         responseLanguagePlaceholder: "For example: Always reply in English",
         userProfileLabel: "How to address you & your background",

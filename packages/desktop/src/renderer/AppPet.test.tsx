@@ -65,6 +65,9 @@ describe("App Pet lifecycle boundaries", () => {
     expect(petSource).toContain('data-pet-page="standalone"');
     expect(appSource).toContain('const isPetView = view.viewMode === "pet"');
     expect(appSource).toContain('const isPetSettingsView = view.viewMode === "pet_settings"');
+    expect(appSource).toContain(
+      'const isPetPersonalizationView = view.viewMode === "pet_personalization"',
+    );
     expect(appSource).toContain("{isPetView ? (");
     expect(appSource).toContain("const sessionChromeVisible = !isPetSurface && isChatView");
     expect(appSource).toContain("sessionTitle={sessionChromeVisible ? sessionTitleForTop : null}");
@@ -75,9 +78,12 @@ describe("App Pet lifecycle boundaries", () => {
 
   test("opens a standalone Mimi settings page without leaking its model into work Sessions", () => {
     expect(viewSource).toContain('"pet_settings",');
+    expect(viewSource).toContain('"pet_personalization",');
     expect(petSource).toContain('data-pet-settings-page="standalone"');
+    expect(petSource).toContain('data-pet-personalization-page="standalone"');
     expect(petSource).toContain('t("pet.settings.open")');
     expect(appSource).toContain('onOpenSettings={() => setViewMode("pet_settings")}');
+    expect(appSource).toContain('onOpenPersonalization={() => setViewMode("pet_personalization")}');
     expect(appSource).toContain("hasModelOverride={petChatModelKey !== null}");
     expect(appSource).not.toContain("model: petChatModelKey");
   });

@@ -43,7 +43,7 @@ function personalizationDraft(value: PetPersonalization): PetPersonalizationDraf
   };
 }
 
-function PetPersonalizationCard() {
+function PetPersonalizationForm() {
   const { t } = useT();
   const [draft, setDraft] = useState<PetPersonalizationDraft>(EMPTY_PERSONALIZATION);
   const draftRef = useRef(draft);
@@ -77,19 +77,8 @@ function PetPersonalizationCard() {
   };
 
   return (
-    <Card data-pet-setting="personalization" className="rounded-2xl">
-      <CardHeader className="flex-row items-start gap-3 space-y-0">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Sparkles size={18} aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <CardTitle className="text-base">{t("pet.settings.personalizationTitle")}</CardTitle>
-          <CardDescription className="leading-5">
-            {t("pet.settings.personalizationDescription")}
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-5 pl-16">
+    <Card data-pet-personalization-fields="true" className="rounded-2xl">
+      <CardContent className="grid gap-5 p-6">
         <div className="grid gap-2">
           <Label htmlFor="pet-response-language">{t("pet.settings.responseLanguageLabel")}</Label>
           <Input
@@ -147,6 +136,52 @@ function PetPersonalizationCard() {
   );
 }
 
+export interface PetPersonalizationPageProps {
+  onBack: () => void;
+}
+
+export function PetPersonalizationPage({ onBack }: PetPersonalizationPageProps) {
+  const { t } = useT();
+
+  return (
+    <section
+      className="flex min-h-0 flex-1 flex-col bg-background"
+      aria-label={t("pet.settings.personalizationTitle")}
+      data-pet-personalization-page="standalone"
+    >
+      <header className="flex shrink-0 items-center gap-3 border-b border-border/70 px-5 py-4">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={t("pet.settings.personalizationBack")}
+          title={t("pet.settings.personalizationBack")}
+          onClick={onBack}
+        >
+          <ArrowLeft aria-hidden="true" />
+        </Button>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Sparkles size={22} aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight">
+            {t("pet.settings.personalizationTitle")}
+          </h1>
+          <p className="truncate text-sm text-muted-foreground">
+            {t("pet.settings.personalizationDescription")}
+          </p>
+        </div>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-3xl p-5 lg:p-8">
+          <PetPersonalizationForm />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export interface PetSettingsPageProps {
   activeModelKey: string | null;
   modelOptions: ModelOption[];
@@ -155,6 +190,7 @@ export interface PetSettingsPageProps {
   onSelectModel: (option: ModelOption) => void;
   onResetModel: () => void;
   onWidgetVisibleChange: (visible: boolean) => void;
+  onOpenPersonalization: () => void;
   onOpenConnections: () => void;
   onOpenMemory: () => void;
   onBack: () => void;
@@ -168,6 +204,7 @@ export function PetSettingsPage({
   onSelectModel,
   onResetModel,
   onWidgetVisibleChange,
+  onOpenPersonalization,
   onOpenConnections,
   onOpenMemory,
   onBack,
@@ -203,7 +240,24 @@ export function PetSettingsPage({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto grid w-full max-w-4xl gap-5 p-5 lg:p-8">
-          <PetPersonalizationCard />
+          <Card data-pet-setting="personalization" className="rounded-2xl">
+            <CardHeader className="flex-row items-start gap-3 space-y-0">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Sparkles size={18} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <CardTitle className="text-base">
+                  {t("pet.settings.personalizationTitle")}
+                </CardTitle>
+                <CardDescription className="leading-5">
+                  {t("pet.settings.personalizationDescription")}
+                </CardDescription>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={onOpenPersonalization}>
+                {t("pet.settings.managePersonalization")}
+              </Button>
+            </CardHeader>
+          </Card>
 
           <Card data-pet-setting="model" className="rounded-2xl">
             <CardHeader className="flex-row items-start gap-3 space-y-0">

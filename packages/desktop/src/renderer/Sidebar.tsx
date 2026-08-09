@@ -288,7 +288,12 @@ export function Sidebar({
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card/40">
       <nav className="flex flex-col gap-0.5 p-2">
         <PetSidebarEntry
-          active={viewMode === "pet" || viewMode === "pet_settings"}
+          active={
+            viewMode === "pet" ||
+            viewMode === "pet_settings" ||
+            viewMode === "pet_personalization" ||
+            viewMode === "pet_memory"
+          }
           pendingCount={petPendingCount}
           runningCount={petRunningCount}
           onOpen={onOpenPetPage}
