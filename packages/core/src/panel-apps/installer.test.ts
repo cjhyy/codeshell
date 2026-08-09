@@ -259,6 +259,18 @@ describe("independent Panel App installer", () => {
     );
   });
 
+  test("requires workspace context for Panel microphone transcription", async () => {
+    const manifestPath = join(source, ".codeshell-panel", "panel.json");
+    const manifest = JSON.parse(await Bun.file(manifestPath).text()) as {
+      permissions: string[];
+    };
+    manifest.permissions = ["audio.transcribe"];
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    await expect(previewLocalPanelApp({ kind: "dir", path: source })).rejects.toThrow(
+      /audio\.transcribe require context\.workspace/,
+    );
+  });
+
   test("requires a fresh review when package bytes change", async () => {
     const preview = await previewLocalPanelApp({ kind: "dir", path: source });
     writeFileSync(join(source, "app", "index.html"), "<!doctype html><title>Changed</title>");

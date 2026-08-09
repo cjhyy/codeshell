@@ -206,9 +206,51 @@ async function installProtocolForPartition(partition: string): Promise<void> {
   if (installedPartitions.has(partition)) return;
   const targetSession = session.fromPartition(partition, { cache: false });
   await targetSession.protocol.handle(PANEL_APP_SCHEME, handlePanelAppRequest);
-  targetSession.setPermissionRequestHandler((_webContents, _permission, callback) =>
-    callback(false),
+  targetSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    if (permission !== "media") {
+      callback(false);
+      return;
+    }
+    const mediaTypes = "mediaTypes" in details ? details.mediaTypes : undefined;
+    callback(
+      panelAppMayCaptureAudio(
+        webContents.getURL(),
+        details.requestingUrl,
+        details.isMainFrame,
+        Array.isArray(mediaTypes) ? mediaTypes : [],
+      ),
+    );
+  });
+  targetSession.setPermissionCheckHandler(
+    (webContents, permission, _origin, details) =>
+      permission === "media" &&
+      details.mediaType === "audio" &&
+      panelAppMayCaptureAudio(
+        webContents?.getURL() ?? "",
+        details.requestingUrl,
+        details.isMainFrame,
+        ["audio"],
+      ),
   );
-  targetSession.setPermissionCheckHandler(() => false);
   installedPartitions.add(partition);
+}
+
+/**
+ * Grant Chromium microphone access only to the reviewed main entry of a Panel
+ * App that explicitly declares `audio.transcribe`. Camera requests, subframes,
+ * stale/unregistered hosts, and ordinary browser guests remain denied.
+ */
+export function panelAppMayCaptureAudio(
+  webContentsUrl: string,
+  requestingUrl: string | undefined,
+  isMainFrame: boolean,
+  mediaTypes: readonly string[],
+): boolean {
+  if (!isMainFrame || !mediaTypes.length || mediaTypes.some((type) => type !== "audio")) {
+    return false;
+  }
+  const requested = requestingUrl || webContentsUrl;
+  const resource = validatePanelAppEntryUrl(requested);
+  if (!resource || validatePanelAppEntryUrl(webContentsUrl) !== resource) return false;
+  return resource.descriptor.permissions.includes("audio.transcribe");
 }

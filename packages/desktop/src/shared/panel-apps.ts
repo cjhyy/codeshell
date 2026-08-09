@@ -1,4 +1,4 @@
-export const PANEL_APP_API_VERSION = 5 as const;
+export const PANEL_APP_API_VERSION = 6 as const;
 
 export type PanelAppPermission =
   | "context.session"
@@ -10,6 +10,7 @@ export type PanelAppPermission =
   | "workspace.read"
   | "workspace.write"
   | "notifications.send"
+  | "audio.transcribe"
   | "credentials.cookies"
   | "automations.manage";
 

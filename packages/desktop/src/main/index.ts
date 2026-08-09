@@ -693,6 +693,18 @@ const panelAppBridge = new PanelAppBridge({
     delete: async (id) => deleteAutomation(id),
     runNow: async (id) => runAutomationNow(id),
   },
+  audioTranscription: {
+    status: (cwd) => {
+      const description = describeTranscribe(cwd);
+      return {
+        available: description.source !== "none",
+        source: description.source,
+        ...(description.model ? { model: description.model } : {}),
+      };
+    },
+    requestMicrophoneAccess: () => ensureDesktopMicrophoneAccess(),
+    transcribe: (input) => transcribeConfiguredAudio(input),
+  },
 });
 panelAppBridge.registerIpc();
 const imGatewayService = new ImGatewayService({
@@ -4054,6 +4066,42 @@ ipcMain.handle("git:check", async () => {
 // Renderer records the mic, ships raw audio bytes here; we resolve the
 // configured (or OpenAI-fallback) transcription provider and POST to its
 // /audio/transcriptions. Pure request/response — NOT an agent tool.
+async function transcribeConfiguredAudio(payload: {
+  cwd: string;
+  audio: Uint8Array;
+  mimeType?: string;
+  provider?: string;
+  language?: string;
+}): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const resolved = resolveTranscribeProvider(payload.cwd, payload.provider);
+  if (!resolved) return { ok: false, error: "no-audio-provider" };
+  const mime = payload.mimeType?.trim() || "audio/webm";
+  const ext = mime.includes("webm")
+    ? "webm"
+    : mime.includes("mp4") || mime.includes("m4a")
+      ? "m4a"
+      : mime.includes("wav")
+        ? "wav"
+        : "webm";
+  return transcribe({
+    audio: payload.audio,
+    mimeType: mime,
+    filename: `audio.${ext}`,
+    model: resolved.model,
+    creds: resolved.creds,
+    language: payload.language,
+    fetchImpl: fetch,
+  });
+}
+
+async function ensureDesktopMicrophoneAccess(): Promise<{ granted: boolean }> {
+  if (process.platform !== "darwin") return { granted: true };
+  const status = systemPreferences.getMediaAccessStatus("microphone");
+  if (status === "granted") return { granted: true };
+  const granted = await systemPreferences.askForMediaAccess("microphone");
+  return { granted };
+}
+
 ipcMain.handle(
   "stt:transcribe",
   async (
@@ -4070,25 +4118,12 @@ ipcMain.handle(
     if (typeof cwd !== "string" || !(audio instanceof ArrayBuffer)) {
       return { ok: false, error: "bad-request" };
     }
-    const resolved = resolveTranscribeProvider(cwd, provider);
-    if (!resolved) return { ok: false, error: "no-audio-provider" };
-    const mime = typeof mimeType === "string" && mimeType ? mimeType : "audio/webm";
-    // Pick a filename extension matching the mime so picky servers accept it.
-    const ext = mime.includes("webm")
-      ? "webm"
-      : mime.includes("mp4") || mime.includes("m4a")
-        ? "m4a"
-        : mime.includes("wav")
-          ? "wav"
-          : "webm";
-    return transcribe({
+    return transcribeConfiguredAudio({
+      cwd,
       audio: new Uint8Array(audio),
-      mimeType: mime,
-      filename: `audio.${ext}`,
-      model: resolved.model,
-      creds: resolved.creds,
-      language,
-      fetchImpl: fetch,
+      ...(typeof mimeType === "string" ? { mimeType } : {}),
+      ...(typeof provider === "string" ? { provider } : {}),
+      ...(typeof language === "string" ? { language } : {}),
     });
   },
 );
@@ -4106,13 +4141,7 @@ ipcMain.handle("stt:describe", async (_e, cwd: string) =>
 // so a previously-denied state is reported back (renderer then shows guidance).
 // No-op / always-true on other platforms. Returns whether access is granted.
 ipcMain.handle("stt:ensureMicAccess", async (): Promise<{ granted: boolean }> => {
-  if (process.platform !== "darwin") return { granted: true };
-  const status = systemPreferences.getMediaAccessStatus("microphone");
-  if (status === "granted") return { granted: true };
-  // "not-determined" → triggers the system prompt; "denied"/"restricted" →
-  // resolves false immediately (user must change it in System Settings).
-  const granted = await systemPreferences.askForMediaAccess("microphone");
-  return { granted };
+  return ensureDesktopMicrophoneAccess();
 });
 ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
 ipcMain.handle("marketplace:load", async (_e, name: string) => loadMarketplaceForUi(name));

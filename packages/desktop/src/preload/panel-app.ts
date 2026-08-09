@@ -11,6 +11,7 @@ interface AgentToolRequest {
 
 const MAX_AGENT_TOOL_RESULT_BYTES = 256 * 1024;
 const MAX_AGENT_TOOL_ERROR_LENGTH = 1_000;
+const MAX_AUDIO_TRANSCRIBE_BYTES = 25 * 1024 * 1024;
 
 const toolHandlers = new Map<string, ToolHandler>();
 const pendingRequests = new Map<
@@ -74,7 +75,18 @@ ipcRenderer.on(
 
 const api = Object.freeze({
   getContext: () => ipcRenderer.invoke("panel-app:get-context"),
-  call: (method: string, params?: unknown) => ipcRenderer.invoke("panel-app:call", method, params),
+  call: (method: string, params?: unknown) => {
+    if (method === "audio.transcribe") {
+      const audio = (params as { audio?: unknown } | null)?.audio;
+      if (!(audio instanceof ArrayBuffer) || audio.byteLength === 0) {
+        throw new Error("audio.transcribe requires recorded audio");
+      }
+      if (audio.byteLength > MAX_AUDIO_TRANSCRIBE_BYTES) {
+        throw new Error("audio.transcribe recording exceeds 25 MiB");
+      }
+    }
+    return ipcRenderer.invoke("panel-app:call", method, params);
+  },
   registerTool: (name: string, handler: ToolHandler) => {
     if (!/^[a-z][a-z0-9_]{0,63}$/.test(name) || typeof handler !== "function") {
       throw new Error("invalid Panel App tool registration");

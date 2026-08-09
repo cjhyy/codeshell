@@ -13,6 +13,7 @@ export const PANEL_APP_PERMISSIONS = [
   "workspace.read",
   "workspace.write",
   "notifications.send",
+  "audio.transcribe",
   "credentials.cookies",
   "automations.manage",
 ] as const;
@@ -201,13 +202,14 @@ export const PanelAppManifest = z
     }
     if (
       (value.permissions.includes("workspace.read") ||
-        value.permissions.includes("workspace.write")) &&
+        value.permissions.includes("workspace.write") ||
+        value.permissions.includes("audio.transcribe")) &&
       !value.permissions.includes("context.workspace")
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["permissions"],
-        message: "workspace.read and workspace.write require context.workspace",
+        message: "workspace.read, workspace.write, and audio.transcribe require context.workspace",
       });
     }
     if (

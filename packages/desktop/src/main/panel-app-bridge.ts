@@ -36,6 +36,7 @@ const MAX_CALLS_PER_WINDOW = 30;
 const RATE_WINDOW_MS = 10_000;
 const CALL_TIMEOUT_MS = 15_000;
 const PDF_EXPORT_TIMEOUT_MS = 30_000;
+const AUDIO_TRANSCRIBE_TIMEOUT_MS = 180_000;
 const COOKIE_LOGIN_TIMEOUT_MS = 30 * 60 * 1_000;
 const PANEL_AGENT_RUN_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 const MAX_AGENT_PROMPT_CHARS = 20_000;
@@ -46,7 +47,16 @@ const MAX_WORKSPACE_WRITE_BYTES = 384 * 1024;
 const MAX_WORKSPACE_PDF_BYTES = 20 * 1024 * 1024;
 const MAX_WORKSPACE_LIST_ENTRIES = 200;
 const MAX_WORKSPACE_LIST_RESULT_BYTES = 512 * 1024;
+const MAX_AUDIO_TRANSCRIBE_BYTES = 25 * 1024 * 1024;
+const MAX_TRANSCRIPT_CHARS = 20_000;
 const AGENT_TOOL_GUEST_WAIT_MS = 4_000;
+const AUDIO_MIME_TYPES = new Set([
+  "audio/webm",
+  "audio/mp4",
+  "audio/m4a",
+  "audio/wav",
+  "audio/x-wav",
+]);
 const WORKSPACE_TEXT_EXTENSIONS = new Set([
   ".css",
   ".csv",
@@ -166,6 +176,21 @@ export interface PanelAppBridgeOptions {
     resume(id: string): Promise<boolean>;
     delete(id: string): Promise<boolean>;
     runNow(id: string): Promise<boolean>;
+  };
+  /** Host-owned microphone consent and speech-to-text. Audio is never persisted by the bridge. */
+  audioTranscription?: {
+    status(cwd: string): {
+      available: boolean;
+      source: "connection" | "fallback" | "none";
+      model?: string;
+    };
+    requestMicrophoneAccess(): Promise<{ granted: boolean }>;
+    transcribe(input: {
+      cwd: string;
+      audio: Uint8Array;
+      mimeType: string;
+      language?: string;
+    }): Promise<{ ok: true; text: string } | { ok: false; error: string }>;
   };
   limits?: Partial<{
     maxParamsBytes: number;
@@ -561,9 +586,11 @@ export class PanelAppBridge {
       limits?.callTimeoutMs ??
         (method === "workspace.exportPdf"
           ? PDF_EXPORT_TIMEOUT_MS
-          : method === "credentials.cookies.loginAndSave"
-            ? COOKIE_LOGIN_TIMEOUT_MS
-            : CALL_TIMEOUT_MS),
+          : method === "audio.transcribe"
+            ? AUDIO_TRANSCRIBE_TIMEOUT_MS
+            : method === "credentials.cookies.loginAndSave"
+              ? COOKIE_LOGIN_TIMEOUT_MS
+              : CALL_TIMEOUT_MS),
     );
     const resultLimit =
       limits?.maxResultBytes ??
@@ -627,6 +654,15 @@ export class PanelAppBridge {
       case "notifications.send":
         this.requirePermission(binding, "notifications.send");
         return this.sendNotification(binding, params);
+      case "audio.status":
+        this.requirePermission(binding, "audio.transcribe");
+        return this.panelAudioStatus(binding);
+      case "audio.requestMicrophoneAccess":
+        this.requirePermission(binding, "audio.transcribe");
+        return this.requestPanelMicrophoneAccess(binding);
+      case "audio.transcribe":
+        this.requirePermission(binding, "audio.transcribe");
+        return this.transcribePanelAudio(binding, params);
       case "credentials.cookies.list":
         this.requirePermission(binding, "credentials.cookies");
         return this.listCookieCredentials(binding, params);
@@ -654,6 +690,67 @@ export class PanelAppBridge {
       default:
         throw new Error(`unknown Panel App method: ${method}`);
     }
+  }
+
+  private panelAudioHost(binding: GuestBinding) {
+    const host = this.options.audioTranscription;
+    if (!host) throw new Error("Panel App audio transcription host is unavailable");
+    if (!binding.context.cwd || !binding.context.trusted) {
+      throw new Error("Panel App audio transcription requires a trusted workspace");
+    }
+    return host;
+  }
+
+  private panelAudioStatus(binding: GuestBinding): unknown {
+    const host = this.panelAudioHost(binding);
+    return host.status(binding.context.cwd!);
+  }
+
+  private requestPanelMicrophoneAccess(binding: GuestBinding): Promise<{ granted: boolean }> {
+    return this.panelAudioHost(binding).requestMicrophoneAccess();
+  }
+
+  private async transcribePanelAudio(
+    binding: GuestBinding,
+    params: unknown,
+  ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+    const input = params as {
+      audio?: unknown;
+      mimeType?: unknown;
+      language?: unknown;
+    } | null;
+    if (!(input?.audio instanceof ArrayBuffer)) {
+      throw new Error("audio.transcribe requires raw ArrayBuffer audio");
+    }
+    if (input.audio.byteLength === 0 || input.audio.byteLength > MAX_AUDIO_TRANSCRIBE_BYTES) {
+      throw new Error("audio.transcribe audio must be between 1 byte and 25 MiB");
+    }
+    const mimeType = typeof input.mimeType === "string" ? input.mimeType.trim().toLowerCase() : "";
+    const baseMimeType = mimeType.split(";", 1)[0] ?? "";
+    if (!AUDIO_MIME_TYPES.has(baseMimeType)) {
+      throw new Error("audio.transcribe MIME type is not supported");
+    }
+    const language =
+      typeof input.language === "string" && input.language.trim()
+        ? input.language.trim()
+        : undefined;
+    if (language && !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/i.test(language)) {
+      throw new Error("audio.transcribe language must be an ISO language tag");
+    }
+    const host = this.panelAudioHost(binding);
+    const result = await host.transcribe({
+      cwd: binding.context.cwd!,
+      audio: new Uint8Array(input.audio),
+      mimeType,
+      ...(language ? { language } : {}),
+    });
+    if (!result.ok) return result;
+    const text = result.text.trim();
+    if (!text) return { ok: false, error: "transcription returned no text" };
+    if (text.length > MAX_TRANSCRIPT_CHARS) {
+      return { ok: false, error: "transcription exceeds the 20000 character limit" };
+    }
+    return { ok: true, text };
   }
 
   private panelAutomationHost(binding: GuestBinding) {

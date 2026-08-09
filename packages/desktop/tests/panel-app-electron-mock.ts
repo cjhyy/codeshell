@@ -2,6 +2,17 @@ import { mock } from "bun:test";
 
 export const panelAppElectronMock = {
   protocolHandler: null as ((request: Request) => Promise<Response>) | null,
+  permissionRequestHandler: null as
+    | ((
+        webContents: any,
+        permission: string,
+        callback: (granted: boolean) => void,
+        details: any,
+      ) => void)
+    | null,
+  permissionCheckHandler: null as
+    | ((webContents: any, permission: string, origin: string, details: any) => boolean)
+    | null,
   ipcHandlers: new Map<string, (event: { sender: any }, ...args: any[]) => unknown>(),
   ipcListeners: new Map<string, (event: { sender: any }, ...args: any[]) => void>(),
   trustedSender: { id: 1 },
@@ -36,8 +47,12 @@ export function installPanelAppElectronMock(): void {
             panelAppElectronMock.protocolHandler = next;
           },
         },
-        setPermissionRequestHandler: () => undefined,
-        setPermissionCheckHandler: () => undefined,
+        setPermissionRequestHandler: (handler: any) => {
+          panelAppElectronMock.permissionRequestHandler = handler;
+        },
+        setPermissionCheckHandler: (handler: any) => {
+          panelAppElectronMock.permissionCheckHandler = handler;
+        },
       }),
     },
     shell: {

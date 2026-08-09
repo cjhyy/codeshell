@@ -53,11 +53,13 @@ describeIsolated("Panel App protocol", () => {
     if (root) rmSync(root, { recursive: true, force: true });
     root = "";
     panelAppElectronMock.protocolHandler = null;
+    panelAppElectronMock.permissionRequestHandler = null;
+    panelAppElectronMock.permissionCheckHandler = null;
     panelAppElectronMock.dialogResponse = 1;
     panelAppElectronMock.openedUrls.length = 0;
   });
 
-  async function arrange(hostId: string) {
+  async function arrange(hostId: string, permissions: string[] = []) {
     root = mkdtempSync(join(tmpdir(), "cspanel-protocol-"));
     mkdirSync(join(root, "panels", "dashboard"), { recursive: true });
     writeFileSync(join(root, "panels", "dashboard", "index.html"), "<h1>safe</h1>");
@@ -69,7 +71,7 @@ describeIsolated("Panel App protocol", () => {
       version: "1.0.0",
       icon: "panel" as const,
       singleton: true,
-      permissions: [],
+      permissions: permissions as any,
       hostId,
       revision: hostId,
     };
@@ -134,6 +136,65 @@ describeIsolated("Panel App protocol", () => {
     expect(api.preparedPanelAppPartitionProjectPath("scopedhost", second.partition)).toBe(
       "/repo/beta",
     );
+  });
+
+  test("grants microphone-only media access only to a reviewed audio Panel App", async () => {
+    const prepared = await arrange("audiohost", ["context.workspace", "audio.transcribe"]);
+    const webContents = { getURL: () => prepared.src };
+    const request = (permission: string, details: Record<string, unknown>) =>
+      new Promise<boolean>((resolvePermission) => {
+        panelAppElectronMock.permissionRequestHandler!(
+          webContents,
+          permission,
+          resolvePermission,
+          details,
+        );
+      });
+
+    expect(
+      await request("media", {
+        requestingUrl: prepared.src,
+        isMainFrame: true,
+        mediaTypes: ["audio"],
+      }),
+    ).toBe(true);
+    expect(
+      await request("media", {
+        requestingUrl: prepared.src,
+        isMainFrame: true,
+        mediaTypes: ["video"],
+      }),
+    ).toBe(false);
+    expect(
+      await request("media", {
+        requestingUrl: prepared.src,
+        isMainFrame: false,
+        mediaTypes: ["audio"],
+      }),
+    ).toBe(false);
+    expect(
+      panelAppElectronMock.permissionCheckHandler!(webContents, "media", prepared.src, {
+        requestingUrl: prepared.src,
+        isMainFrame: true,
+        mediaType: "audio",
+      }),
+    ).toBe(true);
+    expect(
+      panelAppElectronMock.permissionCheckHandler!(webContents, "media", prepared.src, {
+        requestingUrl: prepared.src,
+        isMainFrame: true,
+        mediaType: "video",
+      }),
+    ).toBe(false);
+
+    const denied = await arrange("noaudiohost");
+    expect(
+      await request("media", {
+        requestingUrl: denied.src,
+        isMainFrame: true,
+        mediaTypes: ["audio"],
+      }),
+    ).toBe(false);
   });
 });
 
@@ -548,7 +609,7 @@ describeIsolated("PanelAppBridge", () => {
       busy: true,
       theme: "dark",
       locale: "zh-CN",
-      apiVersion: 5,
+      apiVersion: 6,
     });
     expect(context.sessionId).toBe("session-1");
     expect(context.cwd).toBe("/repo");
@@ -887,6 +948,138 @@ describeIsolated("PanelAppBridge", () => {
       /not available in this project task/,
     );
     expect(await call("automations.pause", { id: "scoped" })).toEqual({ ok: true });
+  });
+
+  test("transcribes bounded microphone audio only with explicit permission", async () => {
+    const transcriptions: Array<{
+      cwd: string;
+      audio: Uint8Array;
+      mimeType: string;
+      language?: string;
+    }> = [];
+    let microphoneRequests = 0;
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: (cwd) => cwd === "/repo",
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      audioTranscription: {
+        status: () => ({
+          available: true,
+          source: "connection" as const,
+          model: "gpt-4o-transcribe",
+        }),
+        requestMicrophoneAccess: async () => {
+          microphoneRequests += 1;
+          return { granted: true };
+        },
+        transcribe: async (input) => {
+          transcriptions.push(input);
+          return { ok: true as const, text: "  我用真实项目证据回答。  " };
+        },
+      },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(29);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.workspace", "audio.transcribe"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(29);
+    const call = (method: string, params: unknown = {}) =>
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        method,
+        params,
+      ) as Promise<any>;
+
+    expect(await call("audio.status")).toEqual({
+      available: true,
+      source: "connection",
+      model: "gpt-4o-transcribe",
+    });
+    expect(await call("audio.requestMicrophoneAccess")).toEqual({ granted: true });
+    expect(microphoneRequests).toBe(1);
+    expect(
+      await call("audio.transcribe", {
+        audio: Uint8Array.from([1, 2, 3]).buffer,
+        mimeType: "audio/webm;codecs=opus",
+        language: "zh-CN",
+      }),
+    ).toEqual({ ok: true, text: "我用真实项目证据回答。" });
+    expect(transcriptions).toHaveLength(1);
+    expect([...transcriptions[0]!.audio]).toEqual([1, 2, 3]);
+    expect(transcriptions[0]).toMatchObject({
+      cwd: "/repo",
+      mimeType: "audio/webm;codecs=opus",
+      language: "zh-CN",
+    });
+
+    await expect(
+      call("audio.transcribe", {
+        audio: Uint8Array.from([1]).buffer,
+        mimeType: "video/webm",
+      }),
+    ).rejects.toThrow(/MIME type/);
+    await expect(
+      call("audio.transcribe", {
+        audio: new ArrayBuffer(25 * 1024 * 1024 + 1),
+        mimeType: "audio/webm",
+      }),
+    ).rejects.toThrow(/25 MiB/);
+
+    const deniedGuest = fakeGuest(30);
+    bridge.registerGuest(
+      deniedGuest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.workspace"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(30);
+    await expect(
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: deniedGuest },
+        "audio.status",
+        {},
+      ),
+    ).rejects.toThrow(/audio.transcribe/);
+  });
+
+  test("does not expose transcription settings in an untrusted workspace", async () => {
+    let statusCalls = 0;
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => false,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+      audioTranscription: {
+        status: () => {
+          statusCalls += 1;
+          return { available: true, source: "connection" as const };
+        },
+        requestMicrophoneAccess: async () => ({ granted: true }),
+        transcribe: async () => ({ ok: true as const, text: "unused" }),
+      },
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(31);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.workspace", "audio.transcribe"]) as any,
+      "/repo",
+    );
+    await bindBridgeGuest(31);
+    await expect(
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        "audio.status",
+        {},
+      ),
+    ).rejects.toThrow(/trusted workspace/);
+    expect(statusCalls).toBe(0);
   });
 
   test("enforces payload limits and revokes a destroyed guest", async () => {
