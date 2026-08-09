@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-arena",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "description": "Optional multi-model Arena capability for CodeShell.",
   "type": "module",
   "main": "./dist/index.js",
