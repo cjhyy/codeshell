@@ -8,6 +8,28 @@ breaking.
 
 ## [Unreleased]
 
+## [0.8.9] - 2026-08-11
+
+### Added
+
+- Added Panel API v7's permission-gated process capability so reviewed Panel
+  Apps can run declared executables without shell access and stream progress.
+- Added Panel API v8's `agent.task` capability for small, bounded AI jobs with
+  per-run tool and Skill allowlists, cancellation, status events, and results
+  returned directly to the owning Panel App.
+- Added process-local ephemeral Sessions for Quick Chat and Panel Tasks so they
+  stay out of normal Session lists and do not inherit unrelated conversation,
+  project, memory, source, hook, MCP, or Skill context.
+
+### Fixed
+
+- Allowed installed Panel App Skills to read their declared package resources
+  while retaining path and symlink escape protections.
+- Recovered update checks when a local directory package has no
+  `app-update.yml` by selecting the public GitHub update provider explicitly.
+- Reported an unreachable update feed as an update status instead of a raw
+  startup error, and made transcript fork event handling exhaustive.
+
 ## [0.8.8] - 2026-08-10
 
 ### Added
