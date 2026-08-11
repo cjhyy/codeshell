@@ -60,6 +60,8 @@ describe("SessionManager side snapshot", () => {
         .transcript.getEvents("message")
         .map((event) => event.data.content),
     ).toEqual(["completed request", "completed response"]);
+    copiedMessages[0]!.data.content = "mutated child copy";
+    expect(source.transcript.getEvents("message")[0]!.data.content).toBe("completed request");
     const siblingState = sibling.resume("side-child").state;
     siblingState.title = "memory-only title";
     expect(sibling.saveState(siblingState)).toBe(true);
@@ -137,6 +139,41 @@ describe("SessionManager side snapshot", () => {
 
     expect(forked.copiedEventCount).toBe(3);
     expect(forked.lineage.throughEventId).toBe(legacyTail.id);
+  });
+
+  test("skips source-session run receipts in a completed side snapshot", () => {
+    const manager = new SessionManager(dir);
+    const source = manager.create("/project", "model", "provider", "parent-receipts");
+    source.transcript.appendMessage("user", "first request", { clientMessageId: "message-1" });
+    source.transcript.appendMessage("assistant", "first response");
+    source.transcript.appendTurnBoundary();
+    source.transcript.appendRunResult("message-1", {
+      text: "first response",
+      reason: "completed",
+      sessionId: "parent-receipts",
+      turnCount: 1,
+      usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+    });
+    source.transcript.appendMessage("user", "second request", { clientMessageId: "message-2" });
+    source.transcript.appendMessage("assistant", "second response");
+    const completedBoundary = source.transcript.appendTurnBoundary();
+    Object.assign(source.state, {
+      status: "completed",
+      completedSnapshotVersion: 1,
+      completedThroughEventId: completedBoundary.id,
+    });
+    manager.saveState(source.state);
+
+    const forked = manager.fork("parent-receipts", {
+      targetSessionId: "side-receipts",
+      snapshotMode: "completed",
+      ephemeral: true,
+    });
+
+    expect(forked.bundle.transcript.getEvents("run_result")).toEqual([]);
+    expect(
+      forked.bundle.transcript.getEvents("message").map((event) => event.data.content),
+    ).toEqual(["first request", "first response", "second request", "second response"]);
   });
 
   test("fails closed when the persisted completed cursor is not in the transcript", () => {

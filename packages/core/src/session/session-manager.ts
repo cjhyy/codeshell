@@ -286,26 +286,36 @@ interface FrozenForkSnapshot {
   copiedEvents: TranscriptEvent[];
 }
 
-const FORK_COPY_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
-  "message",
-  "tool_use",
-  "tool_result",
-  "summary",
-  "context_transfer",
-  "range_archive",
-  "content_replace",
-  "subagent",
-  "external_file_changes",
-  "goal_progress",
-  "turn_boundary",
-  "turn_stopped",
-  "error",
-]);
-const FORK_SKIP_EVENT_TYPES: ReadonlySet<TranscriptEventType> = new Set([
-  "session_meta",
-  "file_history",
-  "plan_operation",
-]);
+type ForkEventPolicy = "copy" | "skip";
+
+/**
+ * Every known transcript event must make an explicit fork decision. The
+ * `satisfies` constraint turns new TranscriptEventType additions into a
+ * compile-time error instead of a quick-chat failure discovered at runtime.
+ * The runtime fallback below still rejects unknown events from newer or
+ * malformed persisted transcripts.
+ */
+const FORK_EVENT_POLICY = {
+  message: "copy",
+  tool_use: "copy",
+  tool_result: "copy",
+  summary: "copy",
+  context_transfer: "copy",
+  range_archive: "copy",
+  content_replace: "copy",
+  file_history: "skip",
+  plan_operation: "skip",
+  session_meta: "skip",
+  subagent: "copy",
+  external_file_changes: "copy",
+  turn_boundary: "copy",
+  // Idempotency receipts belong to the source session and never contribute to
+  // model context. Copying them could replay a source response in the child.
+  run_result: "skip",
+  goal_progress: "copy",
+  turn_stopped: "copy",
+  error: "copy",
+} as const satisfies Record<TranscriptEventType, ForkEventPolicy>;
 const FORK_STAGING_NAME = /^\.pending-fork-[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}$/;
 const FORK_STAGING_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const FORK_STAGING_CLEANUP_LIMIT = 32;
@@ -1802,7 +1812,10 @@ export class SessionManager {
     throughEventId: string | undefined,
     snapshotMode: "tail" | "completed",
   ): FrozenForkSnapshot {
-    const sourceEvents = structuredClone([...events]);
+    // Both process-local and disk readers provide a snapshot array. Fork
+    // selection is synchronous, so keep event references here and clone once
+    // when the independently-owned target transcript is constructed below.
+    const sourceEvents = [...events];
     let frozen = sourceEvents;
     const effectiveCursor =
       snapshotMode === "completed" ? sourceState.completedThroughEventId : throughEventId;
@@ -1836,11 +1849,12 @@ export class SessionManager {
 
     const copiedEvents: TranscriptEvent[] = [];
     for (const event of frozen) {
-      if (FORK_SKIP_EVENT_TYPES.has(event.type)) continue;
-      if (!FORK_COPY_EVENT_TYPES.has(event.type)) {
+      const policy: ForkEventPolicy | undefined = FORK_EVENT_POLICY[event.type];
+      if (policy === "skip") continue;
+      if (policy !== "copy") {
         throw new SessionError(`Unsupported transcript event in fork: ${String(event.type)}`);
       }
-      copiedEvents.push(structuredClone(event));
+      copiedEvents.push(event);
     }
     validateForkToolPairs(copiedEvents);
     return { sourceState: structuredClone(sourceState), copiedEvents };
