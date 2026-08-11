@@ -113,6 +113,7 @@ No Host capability is granted by default.
 | `audio.transcribe`    | Lets the Panel capture microphone audio and send a bounded recording to the user's configured speech-to-text provider; requires `context.workspace`, explicit package review, and OS microphone consent.                         |
 | `credentials.cookies` | Lists only masked Cookie-account metadata matching a requested HTTPS site, opens a host-owned isolated login-and-save window, and restores a selected saved login after confirmation. Cookie values never enter the Panel guest. |
 | `automations.manage`  | Lists, creates, updates, pauses, resumes, runs, and deletes recurring jobs only when they are bound to the Panel's current workspace and task; requires both context permissions.                                                |
+| `process`             | Resolves PATH executables to opaque app-scoped handles, grants Downloads or a user-selected directory as an opaque working-directory handle, and starts/cancels bounded local processes without a shell.                         |
 
 Workspace calls reject traversal, hidden paths, `node_modules`, symlinks,
 binary files, invalid UTF-8, control characters, Windows device names, and path
@@ -146,6 +147,18 @@ frame, caps each upload at 25 MiB, accepts only common recording MIME types,
 and sends bytes directly to the user's configured OpenAI-compatible
 transcription provider. Recordings are not written to Panel storage or the
 workspace by the Host.
+
+Panel API v7 adds the atomic local-process surface for apps that declare only
+`process`: `process.find`, `process.spawn`, and `process.cancel`, plus
+`filesystem.getKnownDirectory`, `filesystem.pickDirectory`, and
+`filesystem.openDirectory` for opaque process working-directory handles. The
+Host accepts only simple executable names from PATH, never invokes a shell,
+passes arguments as separate strings, strips the child environment to a small
+system allowlist, limits concurrency/lifetime/output, and terminates the child
+tree when its Panel closes. The first execution of an executable is confirmed
+by the user and approval is scoped to the app id, installed revision, and
+resolved executable path. Domain operations such as video downloading remain
+Panel code rather than new Host methods.
 
 ## Enablement
 

@@ -22,6 +22,7 @@ import type { AgentBridge } from "./agent-bridge.js";
 import { claimPanelHostOwnerForRun } from "./panel-host-routing.js";
 import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { preparePanelApp } from "./panel-app-protocol.js";
+import { PanelAppProcessService, type PanelProcessOwner } from "./panel-app-process-service.js";
 import {
   PANEL_APP_API_VERSION,
   type PanelAppBindInput,
@@ -38,6 +39,7 @@ const CALL_TIMEOUT_MS = 15_000;
 const PDF_EXPORT_TIMEOUT_MS = 30_000;
 const AUDIO_TRANSCRIBE_TIMEOUT_MS = 180_000;
 const COOKIE_LOGIN_TIMEOUT_MS = 30 * 60 * 1_000;
+const PROCESS_CONSENT_TIMEOUT_MS = 30 * 60 * 1_000;
 const PANEL_AGENT_RUN_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 const MAX_AGENT_PROMPT_CHARS = 20_000;
 const STORAGE_QUOTA_BYTES = 256 * 1024;
@@ -232,8 +234,30 @@ export class PanelAppBridge {
   private readonly storageQueues = new Map<string, Promise<void>>();
   private readonly workspaceWriteQueues = new Map<string, Promise<void>>();
   private readonly pendingAgentToolCalls = new Map<string, PendingAgentToolCall>();
+  private readonly processService: PanelAppProcessService;
 
-  constructor(private readonly options: PanelAppBridgeOptions) {}
+  constructor(private readonly options: PanelAppBridgeOptions) {
+    this.processService = new PanelAppProcessService({
+      confirmExecution: async ({ guestId, appTitle, executable, executablePath }) => {
+        const owner = this.guests.get(guestId);
+        const window = owner ? BrowserWindow.fromId(owner.ownerWindowId) : null;
+        if (!window || window.isDestroyed()) throw new Error("owner window is unavailable");
+        const decision = await dialog.showMessageBox(window, {
+          type: "warning",
+          buttons: ["Allow", "Cancel"],
+          defaultId: 1,
+          cancelId: 1,
+          title: appTitle,
+          message: `${appTitle} wants to run ${executable}`,
+          detail:
+            `${executablePath}\n\n` +
+            "CodeShell will run it without a shell. This approval lasts until CodeShell restarts or the app updates.",
+          noLink: true,
+        });
+        return decision.response === 0;
+      },
+    });
+  }
 
   registerIpc(): void {
     ipcMain.handle("panel-apps:prepare", (event, id: string, projectPath: string) => {
@@ -308,6 +332,7 @@ export class PanelAppBridge {
   }
 
   revokeGuest(guestId: number): void {
+    this.processService.revokeGuest(guestId);
     this.guests.delete(guestId);
     for (const [requestId, pending] of this.pendingAgentToolCalls) {
       if (pending.guestId !== guestId) continue;
@@ -590,7 +615,9 @@ export class PanelAppBridge {
             ? AUDIO_TRANSCRIBE_TIMEOUT_MS
             : method === "credentials.cookies.loginAndSave"
               ? COOKIE_LOGIN_TIMEOUT_MS
-              : CALL_TIMEOUT_MS),
+              : method === "filesystem.pickDirectory" || method === "process.spawn"
+                ? PROCESS_CONSENT_TIMEOUT_MS
+                : CALL_TIMEOUT_MS),
     );
     const resultLimit =
       limits?.maxResultBytes ??
@@ -687,9 +714,66 @@ export class PanelAppBridge {
       case "automations.runNow":
         this.requirePermission(binding, "automations.manage");
         return this.controlPanelAutomation(binding, method, params);
+      case "process.find":
+        this.requirePermission(binding, "process");
+        return this.processService.findExecutable(this.processOwner(binding), params);
+      case "process.spawn":
+        this.requirePermission(binding, "process");
+        return this.processService.start(this.processOwner(binding), params);
+      case "process.cancel":
+        this.requirePermission(binding, "process");
+        return this.processService.cancel(this.processOwner(binding), params);
+      case "filesystem.getKnownDirectory":
+        this.requirePermission(binding, "process");
+        return this.getKnownProcessDirectory(binding, params);
+      case "filesystem.pickDirectory":
+        this.requirePermission(binding, "process");
+        return this.pickProcessDirectory(binding);
+      case "filesystem.openDirectory":
+        this.requirePermission(binding, "process");
+        return this.openProcessDirectory(binding, params);
       default:
         throw new Error(`unknown Panel App method: ${method}`);
     }
+  }
+
+  private processOwner(binding: GuestBinding): PanelProcessOwner {
+    return {
+      guestId: binding.guest.id,
+      appId: binding.resource.descriptor.appId,
+      appTitle: binding.resource.descriptor.title,
+      revision: binding.resource.descriptor.revision,
+      send: (event, payload) => {
+        if (binding.guest.isDestroyed()) return;
+        binding.guest.send("panel-app:event", { event, payload });
+      },
+    };
+  }
+
+  private getKnownProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
+    const name = (params as { name?: unknown } | null)?.name;
+    if (name !== "downloads") throw new Error("unsupported known directory");
+    return this.processService.grantDirectory(this.processOwner(binding), app.getPath("downloads"));
+  }
+
+  private async pickProcessDirectory(binding: GuestBinding): Promise<unknown> {
+    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+    const selected = await dialog.showOpenDialog(owner, {
+      title: "Choose output directory",
+      defaultPath: app.getPath("downloads"),
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (selected.canceled || selected.filePaths.length !== 1) return { cancelled: true };
+    return this.processService.grantDirectory(this.processOwner(binding), selected.filePaths[0]);
+  }
+
+  private async openProcessDirectory(binding: GuestBinding, params: unknown): Promise<boolean> {
+    const handle = (params as { handle?: unknown } | null)?.handle;
+    const path = this.processService.directoryPath(this.processOwner(binding), handle);
+    const error = await shell.openPath(path);
+    if (error) throw new Error(`failed to open directory: ${error}`);
+    return true;
   }
 
   private panelAudioHost(binding: GuestBinding) {

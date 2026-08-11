@@ -1,18 +1,22 @@
-export const PANEL_APP_API_VERSION = 6 as const;
+export const PANEL_APP_API_VERSION = 7 as const;
 
-export type PanelAppPermission =
-  | "context.session"
-  | "context.workspace"
-  | "storage"
-  | "external.open"
-  | "agent.submitPrompt"
-  | "workspace.info"
-  | "workspace.read"
-  | "workspace.write"
-  | "notifications.send"
-  | "audio.transcribe"
-  | "credentials.cookies"
-  | "automations.manage";
+export const PANEL_APP_PERMISSION_NAMES = [
+  "context.session",
+  "context.workspace",
+  "storage",
+  "external.open",
+  "agent.submitPrompt",
+  "workspace.info",
+  "workspace.read",
+  "workspace.write",
+  "notifications.send",
+  "audio.transcribe",
+  "credentials.cookies",
+  "automations.manage",
+  "process",
+] as const;
+
+export type PanelAppPermission = (typeof PANEL_APP_PERMISSION_NAMES)[number];
 
 /**
  * Mirrors core's PANEL_APP_ICONS. The renderer is isolated from core runtime

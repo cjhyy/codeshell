@@ -70,7 +70,17 @@ export function PanelAppHost({
     if (!view || !prepared || !projectPath) return;
     let alive = true;
     const bind = () => {
-      const guestId = view.getWebContentsId?.();
+      let guestId: number | undefined;
+      try {
+        // Re-bind on context changes even after the first dom-ready. The
+        // zero-delay best-effort call can race Electron attaching the webview;
+        // in that narrow window getWebContentsId throws. dom-ready below is
+        // the authoritative retry, so a not-ready guest must not crash the
+        // entire CodeShell renderer.
+        guestId = view.getWebContentsId?.();
+      } catch {
+        return;
+      }
       if (typeof guestId !== "number" || !Number.isFinite(guestId)) return;
       void window.codeshell
         .bindPanelApp({
