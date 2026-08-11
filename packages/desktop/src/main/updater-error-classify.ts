@@ -9,6 +9,25 @@ export function isReadOnlyInstallError(message: string): boolean {
 }
 
 /**
+ * True when an update request failed because the remote feed could not be
+ * reached. Keep this separate from HTTP/auth failures: those are actionable,
+ * while an offline or blocked GitHub connection is expected in some networks.
+ */
+export function isUpdateFeedConnectivityError(message: string): boolean {
+  return (
+    /\b(?:ENOTFOUND|EAI_AGAIN|ENETUNREACH|EHOSTUNREACH|ECONNREFUSED|ECONNRESET|ECONNABORTED|ETIMEDOUT|EPIPE)\b/i.test(
+      message,
+    ) ||
+    /\b(?:ERR_(?:CONNECTION|NAME|INTERNET|NETWORK|PROXY)[A-Z_]*|UND_ERR_CONNECT_TIMEOUT)\b/i.test(
+      message,
+    ) ||
+    /(?:connection|network) (?:error|failed|timed out)|socket hang up|client network socket disconnected|could not connect|fetch failed/i.test(
+      message,
+    )
+  );
+}
+
+/**
  * True when the error is "no update manifest is published (yet)" rather than a
  * real failure. Happens in the window between pushing a release tag and CI
  * finishing the upload of latest-*.yml: electron-updater fetches the manifest,

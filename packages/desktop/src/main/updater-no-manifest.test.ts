@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isNoUpdateManifestError } from "./updater-error-classify";
+import { isNoUpdateManifestError, isUpdateFeedConnectivityError } from "./updater-error-classify";
 
 describe("isNoUpdateManifestError", () => {
   test("matches the real GitHub 404 HttpError from a not-yet-published release", () => {
@@ -18,5 +18,21 @@ describe("isNoUpdateManifestError", () => {
     expect(isNoUpdateManifestError("Connection error.")).toBe(false);
     expect(isNoUpdateManifestError("ENOTFOUND github.com")).toBe(false);
     expect(isNoUpdateManifestError("write EPIPE")).toBe(false);
+  });
+});
+
+describe("isUpdateFeedConnectivityError", () => {
+  test("matches common GitHub-unreachable network failures", () => {
+    expect(isUpdateFeedConnectivityError("getaddrinfo ENOTFOUND github.com")).toBe(true);
+    expect(isUpdateFeedConnectivityError("connect ETIMEDOUT 20.205.243.166:443")).toBe(true);
+    expect(isUpdateFeedConnectivityError("net::ERR_CONNECTION_TIMED_OUT")).toBe(true);
+    expect(isUpdateFeedConnectivityError("Connection error.")).toBe(true);
+  });
+
+  test("does not hide HTTP, authentication, or updater configuration errors", () => {
+    expect(isUpdateFeedConnectivityError("HttpError: 401 Unauthorized")).toBe(false);
+    expect(isUpdateFeedConnectivityError("HttpError: 403 Forbidden")).toBe(false);
+    expect(isUpdateFeedConnectivityError("Cannot find latest-mac.yml: HttpError: 404")).toBe(false);
+    expect(isUpdateFeedConnectivityError("auto-update only runs in packaged builds")).toBe(false);
   });
 });

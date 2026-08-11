@@ -1011,6 +1011,8 @@ export interface CodeshellApi {
       model?: string;
       /** Stable submit-intent id used for transcript/UI idempotency. */
       clientMessageId?: string;
+      /** Main-process ownership generation for a process-local Quick Chat. */
+      quickChatClaimId?: string;
       attachments?: InputAttachmentMeta[];
       planMode?: boolean;
       behaviorMode?: "quickChatRestricted";
@@ -2444,7 +2446,7 @@ export type UpdaterStatus =
   | { kind: "downloading"; percent: number; transferred: number; total: number }
   | { kind: "downloaded"; version: string }
   | { kind: "installing"; version: string }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; reason?: "github-unreachable" };
 
 export interface DesktopSessionSummary {
   id: string;
@@ -2815,7 +2817,10 @@ declare global {
         name: string,
         handler: (args: Record<string, unknown>) => unknown | Promise<unknown>,
       ): () => void;
-      on(event: "context.changed", listener: (payload: unknown) => void): () => void;
+      on(
+        event: "context.changed" | "process.output" | "process.exit",
+        listener: (payload: unknown) => void,
+      ): () => void;
     }>;
   }
 }

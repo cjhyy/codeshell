@@ -18,7 +18,11 @@ import { BrowserWindow, app } from "electron";
 import { autoUpdater } from "electron-updater";
 import { dlog } from "./desktop-logger.js";
 import { macSignatureNeedsManualInstall, releaseUrlForVersion } from "./updater-signature.js";
-import { isNoUpdateManifestError, isReadOnlyInstallError } from "./updater-error-classify.js";
+import {
+  isNoUpdateManifestError,
+  isReadOnlyInstallError,
+  isUpdateFeedConnectivityError,
+} from "./updater-error-classify.js";
 
 type ManualInstallReason = "mac-signature" | "mac-readonly-volume";
 
@@ -31,7 +35,7 @@ export type UpdaterStatus =
   | { kind: "downloading"; percent: number; transferred: number; total: number }
   | { kind: "downloaded"; version: string }
   | { kind: "installing"; version: string }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; reason?: "github-unreachable" };
 
 let lastStatus: UpdaterStatus = { kind: "idle" };
 let configured = false;
@@ -40,6 +44,7 @@ let downloadInFlight = false;
 let activeDownloadVersion: string | null = null;
 let downloadedVersion: string | null = null;
 let installInFlight = false;
+let githubUpdateSource = true;
 
 function broadcast(): void {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -52,6 +57,26 @@ function set(status: UpdaterStatus): void {
   lastStatus = status;
   dlog("main", "updater.status", status as unknown as Record<string, unknown>);
   broadcast();
+}
+
+function isGithubUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === "github.com" || hostname.endsWith(".github.com");
+  } catch {
+    return false;
+  }
+}
+
+function updaterErrorStatus(message: string): UpdaterStatus {
+  const mentionsGithub = /(?:github\.com|githubusercontent\.com)/i.test(message);
+  return {
+    kind: "error",
+    message,
+    ...((githubUpdateSource || mentionsGithub) && isUpdateFeedConnectivityError(message)
+      ? { reason: "github-unreachable" as const }
+      : {}),
+  };
 }
 
 function macAppBundlePath(): string {
@@ -160,13 +185,17 @@ export function initUpdater(): void {
   }
 
   const feed = process.env.CODESHELL_UPDATE_FEED;
+  // The packaged fallback feed is the GitHub provider declared in package.json.
+  // An explicit generic feed only gets GitHub-specific quiet-error treatment
+  // when it actually points at GitHub.
+  githubUpdateSource = feed ? isGithubUrl(feed) : true;
   if (feed) {
     try {
       autoUpdater.setFeedURL({ provider: "generic", url: feed });
       dlog("main", "updater.feed.env", { feed });
     } catch (e) {
       dlog("main", "updater.feed.error", { message: (e as Error).message });
-      set({ kind: "error", message: (e as Error).message });
+      set(updaterErrorStatus((e as Error).message));
       return;
     }
   }
@@ -237,7 +266,7 @@ export function initUpdater(): void {
     downloadInFlight = false;
     activeDownloadVersion = null;
     installInFlight = false;
-    set({ kind: "error", message });
+    set(updaterErrorStatus(message));
   });
 
   // First check shortly after launch; then every 6h. Track the handles and
@@ -268,7 +297,7 @@ export async function checkForUpdate(): Promise<void> {
   try {
     await autoUpdater.checkForUpdates();
   } catch (e) {
-    set({ kind: "error", message: (e as Error).message });
+    set(updaterErrorStatus((e as Error).message));
   }
 }
 
@@ -295,7 +324,7 @@ export async function downloadUpdate(): Promise<void> {
   } catch (e) {
     downloadInFlight = false;
     activeDownloadVersion = null;
-    set({ kind: "error", message: (e as Error).message });
+    set(updaterErrorStatus((e as Error).message));
   }
 }
 
