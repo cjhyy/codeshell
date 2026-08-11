@@ -23,6 +23,7 @@ import {
 } from "node:fs";
 import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
+import { PANEL_APP_API_VERSION } from "../src/shared/panel-apps.js";
 import { installPanelAppElectronMock, panelAppElectronMock } from "./panel-app-electron-mock.js";
 
 let api: typeof import("../src/main/panel-app-protocol.js");
@@ -271,6 +272,72 @@ describeIsolated("PanelAppBridge", () => {
   afterEach(() => {
     panelAppElectronMock.ipcHandlers.clear();
     panelAppElectronMock.ipcListeners.clear();
+    panelAppElectronMock.openDialogResult = { canceled: true, filePaths: [] };
+    panelAppElectronMock.openedPaths.length = 0;
+  });
+
+  test("gates process primitives and scopes user-selected directory handles", async () => {
+    const previousUserDataPath = panelAppElectronMock.userDataPath;
+    const directory = mkdtempSync(join(tmpdir(), "panel-process-directory-"));
+    try {
+      panelAppElectronMock.userDataPath = directory;
+      const bridge = new PanelAppBridge({
+        isTrustedHost: () => true,
+        isWorkspaceTrusted: () => false,
+        isPanelAppBound: () => true,
+        getAgentBridge: () => null,
+      });
+      bridge.registerIpc();
+      const deniedGuest = fakeGuest(61);
+      bridge.registerGuest(
+        deniedGuest as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource() as any,
+        "/repo",
+      );
+      await bindBridgeGuest(61);
+      await expect(
+        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+          { sender: deniedGuest },
+          "process.find",
+          { name: "missing-tool" },
+        ),
+      ).rejects.toThrow(/permission denied: process/);
+
+      const guest = fakeGuest(62);
+      bridge.registerGuest(
+        guest as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource(["process"]) as any,
+        "/repo",
+      );
+      await bindBridgeGuest(62);
+      const known = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        "filesystem.getKnownDirectory",
+        { name: "downloads" },
+      )) as { handle: string; path: string };
+      expect(known.handle).toBeString();
+      expect(known.path).toContain("panel-process-directory-");
+      expect(
+        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+          { sender: guest },
+          "filesystem.openDirectory",
+          { handle: known.handle },
+        ),
+      ).toBe(true);
+      expect(panelAppElectronMock.openedPaths).toHaveLength(1);
+
+      panelAppElectronMock.openDialogResult = { canceled: false, filePaths: [directory] };
+      const picked = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        "filesystem.pickDirectory",
+      )) as { handle: string };
+      expect(picked.handle).toBeString();
+    } finally {
+      panelAppElectronMock.userDataPath = previousUserDataPath;
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   test("fails closed before prepare and after a project binding is revoked", async () => {
@@ -609,7 +676,7 @@ describeIsolated("PanelAppBridge", () => {
       busy: true,
       theme: "dark",
       locale: "zh-CN",
-      apiVersion: 6,
+      apiVersion: PANEL_APP_API_VERSION,
     });
     expect(context.sessionId).toBe("session-1");
     expect(context.cwd).toBe("/repo");

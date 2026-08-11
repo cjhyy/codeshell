@@ -31,6 +31,30 @@ afterEach(() => {
 });
 
 describe("ChatSessionManager serialized lifecycle", () => {
+  it("keeps process-local Quick Chat alive until its owner explicitly closes it", async () => {
+    let engines = 0;
+    const manager = new ChatSessionManager({
+      runtime: {} as never,
+      idleTtlMs: 0,
+      engineFactory: () => {
+        engines += 1;
+        return { isHeadless: () => false } as unknown as Engine;
+      },
+    });
+
+    const session = await manager.getOrCreate("qchat-owner-lifecycle", {} as never);
+    session.lastActivityAt = 0;
+    manager.sweepIdle();
+    await Promise.resolve();
+
+    expect(manager.get("qchat-owner-lifecycle")).toBe(session);
+    expect(manager.sessionCount()).toBe(1);
+    expect(engines).toBe(1);
+
+    await manager.close("qchat-owner-lifecycle");
+    expect(manager.get("qchat-owner-lifecycle")).toBeUndefined();
+  });
+
   it("forgets a process-local Quick Chat even when it never started a run", async () => {
     const storageDir = mkdtempSync(join(tmpdir(), "chat-ephemeral-close-"));
     tempDirs.push(storageDir);

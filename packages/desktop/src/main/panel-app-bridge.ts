@@ -22,6 +22,12 @@ import type { AgentBridge } from "./agent-bridge.js";
 import { claimPanelHostOwnerForRun } from "./panel-host-routing.js";
 import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { preparePanelApp } from "./panel-app-protocol.js";
+import { PanelAppProcessService, type PanelProcessOwner } from "./panel-app-process-service.js";
+import {
+  PanelAppAgentTaskService,
+  type PanelAgentTaskOwner,
+  type PanelAgentTaskStartInput,
+} from "./panel-app-agent-task-service.js";
 import {
   PANEL_APP_API_VERSION,
   type PanelAppBindInput,
@@ -38,6 +44,7 @@ const CALL_TIMEOUT_MS = 15_000;
 const PDF_EXPORT_TIMEOUT_MS = 30_000;
 const AUDIO_TRANSCRIBE_TIMEOUT_MS = 180_000;
 const COOKIE_LOGIN_TIMEOUT_MS = 30 * 60 * 1_000;
+const PROCESS_CONSENT_TIMEOUT_MS = 30 * 60 * 1_000;
 const PANEL_AGENT_RUN_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 const MAX_AGENT_PROMPT_CHARS = 20_000;
 const STORAGE_QUOTA_BYTES = 256 * 1024;
@@ -232,8 +239,127 @@ export class PanelAppBridge {
   private readonly storageQueues = new Map<string, Promise<void>>();
   private readonly workspaceWriteQueues = new Map<string, Promise<void>>();
   private readonly pendingAgentToolCalls = new Map<string, PendingAgentToolCall>();
+  private readonly processService: PanelAppProcessService;
+  private readonly agentTaskService: PanelAppAgentTaskService;
 
-  constructor(private readonly options: PanelAppBridgeOptions) {}
+  constructor(private readonly options: PanelAppBridgeOptions) {
+    this.processService = new PanelAppProcessService({
+      confirmExecution: async ({ guestId, appTitle, executable, executablePath }) => {
+        const owner = this.guests.get(guestId);
+        const window = owner ? BrowserWindow.fromId(owner.ownerWindowId) : null;
+        if (!window || window.isDestroyed()) throw new Error("owner window is unavailable");
+        const decision = await dialog.showMessageBox(window, {
+          type: "warning",
+          buttons: ["Allow", "Cancel"],
+          defaultId: 1,
+          cancelId: 1,
+          title: appTitle,
+          message: `${appTitle} wants to run ${executable}`,
+          detail:
+            `${executablePath}\n\n` +
+            "CodeShell will run it without a shell. This approval lasts until CodeShell restarts or the app updates.",
+          noLink: true,
+        });
+        return decision.response === 0;
+      },
+    });
+    this.agentTaskService = new PanelAppAgentTaskService(
+      {
+        run: async (input) => {
+          const bridge = this.options.getAgentBridge();
+          if (!bridge) throw new Error("agent worker is unavailable");
+          bridge.reserveHostSession(input.sessionId, input.owner.cwd);
+          bridge.rebindHostSessionBucket(input.sessionId, input.owner.bucket);
+          bridge.claimSessionPanelOwner(input.sessionId, input.owner.ownerWebContentsId);
+          const response = await bridge.requestWorker(
+            "agent/run",
+            {
+              task: input.prompt,
+              displayText: input.label,
+              clientMessageId: `panel-task:${input.owner.appId}:${input.sessionId}`,
+              sessionId: input.sessionId,
+              cwd: input.owner.cwd,
+              bucket: input.owner.bucket,
+              behaviorMode: "isolatedTask",
+              ephemeral: true,
+              toolAllowlist: input.toolNames,
+              skillAllowlist: input.skillNames,
+              maxTurns: input.maxTurns,
+              maxContextTokens: input.maxContextTokens,
+            },
+            PANEL_AGENT_RUN_TIMEOUT_MS,
+            { settleOnExit: true, failFast: true },
+          );
+          if (!response.ok) throw new Error(response.message);
+          const result = (response.result ?? {}) as {
+            text?: unknown;
+            reason?: unknown;
+            usage?: {
+              promptTokens?: unknown;
+              completionTokens?: unknown;
+              totalTokens?: unknown;
+            };
+          };
+          const usage = result.usage;
+          return {
+            text: typeof result.text === "string" ? result.text : "",
+            ...(typeof result.reason === "string" ? { reason: result.reason } : {}),
+            ...(usage &&
+            typeof usage.promptTokens === "number" &&
+            typeof usage.completionTokens === "number" &&
+            typeof usage.totalTokens === "number"
+              ? {
+                  usage: {
+                    promptTokens: usage.promptTokens,
+                    completionTokens: usage.completionTokens,
+                    totalTokens: usage.totalTokens,
+                  },
+                }
+              : {}),
+          };
+        },
+        cancel: async (sessionId) => {
+          const bridge = this.options.getAgentBridge();
+          if (!bridge) throw new Error("agent worker is unavailable");
+          const response = await bridge.requestWorker("agent/cancel", { sessionId }, 30_000, {
+            settleOnExit: true,
+            failFast: true,
+          });
+          if (!response.ok) throw new Error(response.message);
+        },
+        close: async (sessionId) => {
+          const bridge = this.options.getAgentBridge();
+          if (!bridge) return;
+          try {
+            await bridge.closeSession(sessionId);
+          } finally {
+            bridge.forgetSession(sessionId);
+          }
+        },
+        rebind: (sessionId, owner) => {
+          const bridge = this.options.getAgentBridge();
+          if (!bridge) return;
+          bridge.rebindHostSessionBucket(sessionId, owner.bucket);
+          bridge.claimSessionPanelOwner(sessionId, owner.ownerWebContentsId);
+        },
+      },
+      (owner, task) => {
+        for (const binding of this.guests.values()) {
+          if (
+            binding.guest.isDestroyed() ||
+            binding.resource.descriptor.appId !== owner.appId ||
+            binding.projectPath !== owner.projectPath
+          ) {
+            continue;
+          }
+          binding.guest.send("panel-app:event", {
+            event: "agent.task.changed",
+            payload: task,
+          });
+        }
+      },
+    );
+  }
 
   registerIpc(): void {
     ipcMain.handle("panel-apps:prepare", (event, id: string, projectPath: string) => {
@@ -308,6 +434,7 @@ export class PanelAppBridge {
   }
 
   revokeGuest(guestId: number): void {
+    this.processService.revokeGuest(guestId);
     this.guests.delete(guestId);
     for (const [requestId, pending] of this.pendingAgentToolCalls) {
       if (pending.guestId !== guestId) continue;
@@ -318,6 +445,7 @@ export class PanelAppBridge {
   }
 
   revokeAppId(appId: string): void {
+    this.agentTaskService.cancelApp(appId);
     for (const [guestId, binding] of this.guests) {
       if (binding.resource.descriptor.appId !== appId) continue;
       this.revokeGuest(guestId);
@@ -540,6 +668,9 @@ export class PanelAppBridge {
         payload: binding.context,
       });
     }
+    if (binding.resource.descriptor.permissions.includes("agent.task")) {
+      this.agentTaskService.rebind(this.agentTaskOwner(binding));
+    }
     return true;
   }
 
@@ -590,7 +721,9 @@ export class PanelAppBridge {
             ? AUDIO_TRANSCRIBE_TIMEOUT_MS
             : method === "credentials.cookies.loginAndSave"
               ? COOKIE_LOGIN_TIMEOUT_MS
-              : CALL_TIMEOUT_MS),
+              : method === "filesystem.pickDirectory" || method === "process.spawn"
+                ? PROCESS_CONSENT_TIMEOUT_MS
+                : CALL_TIMEOUT_MS),
     );
     const resultLimit =
       limits?.maxResultBytes ??
@@ -636,6 +769,27 @@ export class PanelAppBridge {
       case "agent.submitPrompt":
         this.requirePermission(binding, "agent.submitPrompt");
         return this.submitPrompt(binding, params);
+      case "agent.task.start":
+        this.requirePermission(binding, "agent.task");
+        return this.agentTaskService.start(
+          this.agentTaskOwner(binding),
+          (params ?? {}) as PanelAgentTaskStartInput,
+        );
+      case "agent.task.list":
+        this.requirePermission(binding, "agent.task");
+        return this.agentTaskService.list(this.agentTaskOwner(binding));
+      case "agent.task.get":
+        this.requirePermission(binding, "agent.task");
+        return this.agentTaskService.get(
+          this.agentTaskOwner(binding),
+          (params as { id?: unknown } | null)?.id,
+        );
+      case "agent.task.cancel":
+        this.requirePermission(binding, "agent.task");
+        return this.agentTaskService.cancel(
+          this.agentTaskOwner(binding),
+          (params as { id?: unknown } | null)?.id,
+        );
       case "workspace.info":
         this.requirePermission(binding, "workspace.info");
         return this.workspaceInfo(binding);
@@ -687,9 +841,86 @@ export class PanelAppBridge {
       case "automations.runNow":
         this.requirePermission(binding, "automations.manage");
         return this.controlPanelAutomation(binding, method, params);
+      case "process.find":
+        this.requirePermission(binding, "process");
+        return this.processService.findExecutable(this.processOwner(binding), params);
+      case "process.spawn":
+        this.requirePermission(binding, "process");
+        return this.processService.start(this.processOwner(binding), params);
+      case "process.cancel":
+        this.requirePermission(binding, "process");
+        return this.processService.cancel(this.processOwner(binding), params);
+      case "filesystem.getKnownDirectory":
+        this.requirePermission(binding, "process");
+        return this.getKnownProcessDirectory(binding, params);
+      case "filesystem.pickDirectory":
+        this.requirePermission(binding, "process");
+        return this.pickProcessDirectory(binding);
+      case "filesystem.openDirectory":
+        this.requirePermission(binding, "process");
+        return this.openProcessDirectory(binding, params);
       default:
         throw new Error(`unknown Panel App method: ${method}`);
     }
+  }
+
+  private processOwner(binding: GuestBinding): PanelProcessOwner {
+    return {
+      guestId: binding.guest.id,
+      appId: binding.resource.descriptor.appId,
+      appTitle: binding.resource.descriptor.title,
+      revision: binding.resource.descriptor.revision,
+      send: (event, payload) => {
+        if (binding.guest.isDestroyed()) return;
+        binding.guest.send("panel-app:event", { event, payload });
+      },
+    };
+  }
+
+  private agentTaskOwner(binding: GuestBinding): PanelAgentTaskOwner {
+    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+    if (!binding.bucket) throw new Error("Panel App scope is not bound");
+    const availableSkills = (binding.resource.descriptor.agent?.skills ?? []).flatMap((entry) => {
+      const match = /^agent\/skills\/([a-z][a-z0-9-]{0,63})\/SKILL\.md$/.exec(entry);
+      return match ? [`${binding.resource.descriptor.appId}:${match[1]}`] : [];
+    });
+    return {
+      guestId: binding.guest.id,
+      ownerWebContentsId: owner.webContents.id,
+      appId: binding.resource.descriptor.appId,
+      appTitle: binding.resource.descriptor.title,
+      projectPath: binding.projectPath,
+      cwd: binding.cwd ?? binding.projectPath,
+      bucket: binding.bucket,
+      availableSkills,
+    };
+  }
+
+  private getKnownProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
+    const name = (params as { name?: unknown } | null)?.name;
+    if (name !== "downloads") throw new Error("unsupported known directory");
+    return this.processService.grantDirectory(this.processOwner(binding), app.getPath("downloads"));
+  }
+
+  private async pickProcessDirectory(binding: GuestBinding): Promise<unknown> {
+    const owner = BrowserWindow.fromId(binding.ownerWindowId);
+    if (!owner || owner.isDestroyed()) throw new Error("owner window is unavailable");
+    const selected = await dialog.showOpenDialog(owner, {
+      title: "Choose output directory",
+      defaultPath: app.getPath("downloads"),
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (selected.canceled || selected.filePaths.length !== 1) return { cancelled: true };
+    return this.processService.grantDirectory(this.processOwner(binding), selected.filePaths[0]);
+  }
+
+  private async openProcessDirectory(binding: GuestBinding, params: unknown): Promise<boolean> {
+    const handle = (params as { handle?: unknown } | null)?.handle;
+    const path = this.processService.directoryPath(this.processOwner(binding), handle);
+    const error = await shell.openPath(path);
+    if (error) throw new Error(`failed to open directory: ${error}`);
+    return true;
   }
 
   private panelAudioHost(binding: GuestBinding) {

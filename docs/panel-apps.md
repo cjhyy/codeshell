@@ -106,6 +106,7 @@ No Host capability is granted by default.
 | `storage`             | JSON-only app storage, capped at 256 KiB per app.                                                                                                                                                                                |
 | `external.open`       | Opens HTTPS links after user confirmation.                                                                                                                                                                                       |
 | `agent.submitPrompt`  | Immediately queues work in the bound, idle session and renders `displayText` (or `prompt`) as an app-attributed user message; requires `context.session`.                                                                        |
+| `agent.task`          | Starts, lists, reads, and cancels bounded AI Tasks owned by this app and project. Each Task uses a fresh process-local Session with no current-chat history; results return to the Panel instead of the conversation.            |
 | `workspace.info`      | Reads safe workspace metadata and the current Git branch.                                                                                                                                                                        |
 | `workspace.read`      | Lists and reads allowlisted repository text/data files; requires `context.workspace`.                                                                                                                                            |
 | `workspace.write`     | Atomically writes allowlisted repository text/data files and can export the Panel's print view to a project-local PDF, with optimistic concurrency; requires `context.workspace`.                                                |
@@ -113,6 +114,7 @@ No Host capability is granted by default.
 | `audio.transcribe`    | Lets the Panel capture microphone audio and send a bounded recording to the user's configured speech-to-text provider; requires `context.workspace`, explicit package review, and OS microphone consent.                         |
 | `credentials.cookies` | Lists only masked Cookie-account metadata matching a requested HTTPS site, opens a host-owned isolated login-and-save window, and restores a selected saved login after confirmation. Cookie values never enter the Panel guest. |
 | `automations.manage`  | Lists, creates, updates, pauses, resumes, runs, and deletes recurring jobs only when they are bound to the Panel's current workspace and task; requires both context permissions.                                                |
+| `process`             | Resolves PATH executables to opaque app-scoped handles, grants Downloads or a user-selected directory as an opaque working-directory handle, and starts/cancels bounded local processes without a shell.                         |
 
 Workspace calls reject traversal, hidden paths, `node_modules`, symlinks,
 binary files, invalid UTF-8, control characters, Windows device names, and path
@@ -146,6 +148,53 @@ frame, caps each upload at 25 MiB, accepts only common recording MIME types,
 and sends bytes directly to the user's configured OpenAI-compatible
 transcription provider. Recordings are not written to Panel storage or the
 workspace by the Host.
+
+Panel API v7 adds the atomic local-process surface for apps that declare only
+`process`: `process.find`, `process.spawn`, and `process.cancel`, plus
+`filesystem.getKnownDirectory`, `filesystem.pickDirectory`, and
+`filesystem.openDirectory` for opaque process working-directory handles. The
+Host accepts only simple executable names from PATH, never invokes a shell,
+passes arguments as separate strings, strips the child environment to a small
+system allowlist, limits concurrency/lifetime/output, and terminates the child
+tree when its Panel closes. The first execution of an executable is confirmed
+by the user and approval is scoped to the app id, installed revision, and
+resolved executable path. Domain operations such as video downloading remain
+Panel code rather than new Host methods.
+
+Panel API v8 adds isolated AI Tasks for apps that declare `agent.task`:
+`agent.task.start`, `agent.task.list`, `agent.task.get`, and
+`agent.task.cancel`. A Task is separate from the user's current Session. It is
+created fresh, kept only in the Desktop process, omitted from normal Session
+pickers, and closed after completion. It does not receive repository or user
+instructions, persistent memory, capability context, bound sources, workspace
+profiles, hooks, MCP servers, or unrelated Skills. The app supplies a hard
+per-run tool allowlist and may select only a Skill bundled in its own reviewed
+manifest. Normal tool permission and approval policy still applies.
+
+```js
+const task = await window.codeshellPanel.call("agent.task.start", {
+  key: "repair",
+  label: "Repair local dependency",
+  prompt: "Use the bundled setup Skill and verify the result.",
+  skill: "my-panel-app:setup",
+  toolNames: ["Skill", "Bash"],
+  maxTurns: 8,
+  maxContextTokens: 16384,
+});
+
+const unsubscribe = window.codeshellPanel.on("agent.task.changed", (next) => {
+  if (next.id === task.id && next.status === "completed") {
+    renderResult(next.result.text);
+  }
+});
+```
+
+`key` optionally deduplicates one active operation per app and project. Task
+statuses are `queued`, `running`, `cancelling`, `completed`, `failed`, and
+`cancelled`. Completed results and recent state are memory-only and disappear
+when CodeShell restarts. Use `agent.submitPrompt` only when work intentionally
+belongs in the visible current conversation; use `agent.task` for short,
+app-owned AI work whose result belongs in the Panel.
 
 ## Enablement
 

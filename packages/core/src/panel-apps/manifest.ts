@@ -9,6 +9,7 @@ export const PANEL_APP_PERMISSIONS = [
   "storage",
   "external.open",
   "agent.submitPrompt",
+  "agent.task",
   "workspace.info",
   "workspace.read",
   "workspace.write",
@@ -16,6 +17,7 @@ export const PANEL_APP_PERMISSIONS = [
   "audio.transcribe",
   "credentials.cookies",
   "automations.manage",
+  "process",
 ] as const;
 
 export const PANEL_APP_ICONS = [
@@ -156,7 +158,7 @@ const PanelAppManifestFields = {
   icon: z.enum(PANEL_APP_ICONS).default("panel"),
   placement: z.literal("right-dock").default("right-dock"),
   singleton: z.boolean().default(true),
-  permissions: z.array(z.enum(PANEL_APP_PERMISSIONS)).max(12).default([]),
+  permissions: z.array(z.enum(PANEL_APP_PERMISSIONS)).max(16).default([]),
 } as const;
 
 /**

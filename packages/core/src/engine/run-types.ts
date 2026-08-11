@@ -34,6 +34,20 @@ export interface RunBehaviorProfile {
   disablePlanMode?: boolean;
   /** When true, MCP servers are neither connected nor exposed for the run. */
   disableMcp?: boolean;
+  /** Skip repository/user instruction discovery for this run. */
+  disableInstructions?: boolean;
+  /** Skip persistent-memory injection for this run. */
+  disableMemoryContext?: boolean;
+  /** Skip capability-owned volatile context providers for this run. */
+  disableCapabilityContext?: boolean;
+  /** Skip bound-source metadata injection for this run. */
+  disableSourcesContext?: boolean;
+  /** Ignore the project's default digital-human profile for this run. */
+  disableWorkspaceProfile?: boolean;
+  /** Skip SessionStart/UserPromptSubmit/SessionEnd hooks for this run. */
+  disableHooks?: boolean;
+  /** Skip auxiliary title generation for this run. */
+  disableSessionTitle?: boolean;
   /**
    * When true, the injected persistent-memory index is trimmed to this run's
    * project: global-layer project-type / dream-scope records tied to other
@@ -83,6 +97,30 @@ export const QUICK_CHAT_RESTRICTED_PROFILE: RunBehaviorProfile = {
   systemPromptAppend: QUICK_CHAT_RESTRICTED_SYSTEM_PROMPT,
 };
 
+export const ISOLATED_TASK_BEHAVIOR_MODE = "isolatedTask" as const;
+
+export const ISOLATED_TASK_SYSTEM_PROMPT = `# Isolated Task Boundary
+
+This is a bounded Task, not a continuation of any user conversation.
+- Use only the explicit Task input, the visible tool surface, and the selected Skill when one is available.
+- Do not infer or search for prior Session history, persistent memory, unrelated Skills, or other projects.
+- Do not create sub-agents or start unrelated work.
+- Finish the requested outcome, then return a concise result suitable for the owning application.`;
+
+/** Minimal, process-local run profile used by host-owned Tasks. */
+export const ISOLATED_TASK_PROFILE: RunBehaviorProfile = {
+  id: ISOLATED_TASK_BEHAVIOR_MODE,
+  systemPromptAppend: ISOLATED_TASK_SYSTEM_PROMPT,
+  disableMcp: true,
+  disableInstructions: true,
+  disableMemoryContext: true,
+  disableCapabilityContext: true,
+  disableSourcesContext: true,
+  disableWorkspaceProfile: true,
+  disableHooks: true,
+  disableSessionTitle: true,
+};
+
 export interface EngineRunOptions {
   cwd?: string;
   onStream?: StreamCallback;
@@ -99,6 +137,12 @@ export interface EngineRunOptions {
   attachments?: InputAttachmentMeta[];
   /** Named per-run behavior profile supplied by interactive product surfaces. */
   behaviorMode?: RunBehaviorMode;
+  /** Per-run hard tool allowlist. An empty list exposes no tools. */
+  toolAllowlist?: readonly string[];
+  /** Per-run hard Skill allowlist. An empty list exposes no Skills. */
+  skillAllowlist?: readonly string[];
+  /** Keep a fresh Session in process memory only and omit it from Session pickers. */
+  ephemeral?: boolean;
   /**
    * Generic per-run parameters consumed by the active behavior profile
    * (createRunServices / buildVisibilityMeta / runtime-context injection).

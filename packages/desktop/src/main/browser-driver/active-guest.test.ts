@@ -9,8 +9,11 @@ import {
   registerGuest,
   registerSessionBucket,
   activeGuestForSession,
+  browserPartitionForBucket,
+  forgetSession,
   rememberAttachedGuest,
   partitionForSession,
+  registeredPartitionForBucket,
   registerAttachedGuestMetadata,
 } from "./active-guest.js";
 
@@ -76,6 +79,19 @@ describe("bucket-aware browser guest registry", () => {
     expect(activeGuestForBucket("repo::session-b")?.guest).toBe(b);
     expect(activeGuestForSession("session-a")?.guest).toBe(a);
     expect(partitionForSession("session-a")).toBe("persist:browser:repo::session-a");
+  });
+
+  test("uses an in-memory partition for Quick Chat and releases its registry mapping", () => {
+    const bucket = "__quick_chat__::qchat-owned";
+    const partition = browserPartitionForBucket(bucket);
+    expect(partition).toBe("browser:qchat:__quick_chat__::qchat-owned");
+    registerSessionBucket("qchat-owned", bucket, partition);
+    expect(partitionForSession("qchat-owned")).toBe(partition);
+
+    forgetSession("qchat-owned");
+
+    expect(partitionForSession("qchat-owned")).toBeNull();
+    expect(registeredPartitionForBucket(bucket)).toBeNull();
   });
 
   test("tab listing and focusing are constrained to the requested bucket", () => {

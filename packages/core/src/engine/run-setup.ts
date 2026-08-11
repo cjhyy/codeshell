@@ -60,6 +60,10 @@ export interface RunPromptComposerConfigInput {
   skillAllowlist: ComposerOptions["skillAllowlist"];
   memoriesMaxAgeDays: ComposerOptions["memoriesMaxAgeDays"];
   memoryCurrentProjectOnly?: ComposerOptions["memoryCurrentProjectOnly"];
+  disableInstructions?: ComposerOptions["disableInstructions"];
+  disableMemoryContext?: ComposerOptions["disableMemoryContext"];
+  disableCapabilityContext?: ComposerOptions["disableCapabilityContext"];
+  disableSourcesContext?: ComposerOptions["disableSourcesContext"];
   goalToolState: ComposerOptions["goalToolState"];
   capabilityPromptSections: ComposerOptions["capabilityPromptSections"];
   dynamicContextProviders: ComposerOptions["dynamicContextProviders"];
@@ -87,6 +91,10 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     skillAllowlist,
     memoriesMaxAgeDays,
     memoryCurrentProjectOnly,
+    disableInstructions,
+    disableMemoryContext,
+    disableCapabilityContext,
+    disableSourcesContext,
     goalToolState,
     capabilityPromptSections,
     dynamicContextProviders,
@@ -120,6 +128,10 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
     skillAllowlist,
     memoriesMaxAgeDays,
     memoryCurrentProjectOnly,
+    disableInstructions,
+    disableMemoryContext,
+    disableCapabilityContext,
+    disableSourcesContext,
     goalToolState,
     capabilityPromptSections,
     dynamicContextProviders,

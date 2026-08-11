@@ -25,6 +25,7 @@ interface Props {
   creationError?: string;
   contextMode: QuickChatContextMode;
   sourceTitle?: string;
+  copiedEventCount?: number;
   draft: string;
   attachments: ImageAttachment[];
   permissionMode: PermissionMode;
@@ -65,6 +66,7 @@ export function QuickChatPanel({
   creationError,
   contextMode,
   sourceTitle,
+  copiedEventCount,
   draft,
   attachments,
   permissionMode,
@@ -94,9 +96,11 @@ export function QuickChatPanel({
             {t("panels.quickChat.title")}
           </div>
           <div className="truncate text-[11px] text-muted-foreground">
-            {contextMode === "full" && sourceTitle
-              ? t("panels.quickChat.fromSource", { title: sourceTitle })
-              : sessionId}
+            {contextMode === "full" && copiedEventCount === 0
+              ? t("panels.quickChat.noInheritedContext")
+              : contextMode === "full" && sourceTitle
+                ? t("panels.quickChat.fromSource", { title: sourceTitle })
+                : sessionId}
             {contextMode === "full" ? ` · ${t("panels.quickChat.sharedWorkspace")}` : ""}
           </div>
         </div>

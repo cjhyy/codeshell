@@ -11,6 +11,8 @@
 import type { Session, WebContents } from "electron";
 
 const BROWSER_PARTITION_PREFIX = "persist:browser";
+const QUICK_CHAT_PARTITION_PREFIX = "browser:qchat";
+const QUICK_CHAT_BUCKET_PREFIX = "__quick_chat__::";
 const LEGACY_BUCKET = "__legacy__";
 
 export type BrowserBucket = string;
@@ -89,7 +91,10 @@ export function sanitizeBrowserBucket(bucket: string): string {
 }
 
 export function browserPartitionForBucket(bucket: string): BrowserPartition {
-  return `${BROWSER_PARTITION_PREFIX}:${sanitizeBrowserBucket(bucket)}`;
+  const prefix = bucket.startsWith(QUICK_CHAT_BUCKET_PREFIX)
+    ? QUICK_CHAT_PARTITION_PREFIX
+    : BROWSER_PARTITION_PREFIX;
+  return `${prefix}:${sanitizeBrowserBucket(bucket)}`;
 }
 
 export function registerSessionBucket(
@@ -305,7 +310,11 @@ export function focusGuestForSession(sessionId: string | undefined, tabId: strin
 }
 
 export function forgetSession(sessionId: string): void {
+  const bucket = bucketBySessionId.get(sessionId);
   bucketBySessionId.delete(sessionId);
+  if (!bucket) return;
+  const stillReferenced = [...bucketBySessionId.values()].some((candidate) => candidate === bucket);
+  if (!stillReferenced) partitionByBucket.delete(bucket);
 }
 
 /** Legacy: current global automation target, kept for non-automation callers/tests. */

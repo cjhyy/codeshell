@@ -30,6 +30,9 @@ describe("installed Panel App Skill path policy", () => {
     );
     writeFileSync(join(skillRoot, "references", "source-quality.md"), "source rules\n");
     writeFileSync(join(skillRoot, "references", "token.txt"), "credential-shaped\n");
+    mkdirSync(join(appRoot, "app"), { recursive: true });
+    writeFileSync(join(appRoot, "app", "app.js"), "export const ready = true;\n");
+    writeFileSync(join(appRoot, "README.md"), "# Job Hunt HQ\n");
     writeFileSync(
       join(appRoot, ".codeshell-panel", "panel.json"),
       JSON.stringify({
@@ -52,9 +55,33 @@ describe("installed Panel App Skill path policy", () => {
     rmSync(outside, { recursive: true, force: true });
   });
 
-  test("declared Skill references are readable without a second approval", () => {
+  test("installed Panel App package and Skill resources are readable without approval", () => {
+    for (const path of [
+      appRoot,
+      join(appRoot, "README.md"),
+      join(appRoot, "app", "app.js"),
+      join(appRoot, ".codeshell-panel", "panel.json"),
+      join(skillRoot, "references", "source-quality.md"),
+    ]) {
+      expect(
+        classifyPath(path, {
+          workspaceRoot: workspace,
+          operation: "read",
+        }),
+      ).toMatchObject({ decision: "allow", reason: "installed Panel App resource read" });
+    }
+  });
+
+  test("user Skill references remain readable without a second approval", () => {
+    const userSkillRoot = join(home, ".code-shell", "skills", "personal-notes");
+    mkdirSync(join(userSkillRoot, "references"), { recursive: true });
+    writeFileSync(
+      join(userSkillRoot, "SKILL.md"),
+      "---\nname: personal-notes\ndescription: notes\n---\n",
+    );
+    writeFileSync(join(userSkillRoot, "references", "guide.md"), "guide\n");
     expect(
-      classifyPath(join(skillRoot, "references", "source-quality.md"), {
+      classifyPath(join(userSkillRoot, "references", "guide.md"), {
         workspaceRoot: workspace,
         operation: "read",
       }),
@@ -76,7 +103,7 @@ describe("installed Panel App Skill path policy", () => {
     ).not.toBe("allow");
   });
 
-  test("undeclared Skill trees and symlink escapes are not trusted", () => {
+  test("all installed app code is readable but symlink escapes are not trusted", () => {
     const undeclared = join(appRoot, "agent", "skills", "undeclared");
     mkdirSync(join(undeclared, "references"), { recursive: true });
     writeFileSync(
@@ -89,13 +116,29 @@ describe("installed Panel App Skill path policy", () => {
         workspaceRoot: workspace,
         operation: "read",
       }).decision,
-    ).toBe("ask");
+    ).toBe("allow");
 
     const escaped = join(outside, "escaped.md");
     writeFileSync(escaped, "outside\n");
     symlinkSync(escaped, join(skillRoot, "references", "escaped.md"));
     expect(
       classifyPath(join(skillRoot, "references", "escaped.md"), {
+        workspaceRoot: workspace,
+        operation: "read",
+      }).decision,
+    ).toBe("ask");
+  });
+
+  test("an unregistered sibling app is not trusted", () => {
+    const unregistered = join(home, ".code-shell", "panel-apps", "hidden-app");
+    mkdirSync(join(unregistered, ".codeshell-panel"), { recursive: true });
+    writeFileSync(
+      join(unregistered, ".codeshell-panel", "panel.json"),
+      JSON.stringify({ schemaVersion: 2, id: "hidden-app" }),
+    );
+    writeFileSync(join(unregistered, "README.md"), "hidden\n");
+    expect(
+      classifyPath(join(unregistered, "README.md"), {
         workspaceRoot: workspace,
         operation: "read",
       }).decision,

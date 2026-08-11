@@ -85,8 +85,14 @@ export function buildRunToolContext(args: {
         return reason;
       },
     },
+    skillAllowlist:
+      options?.skillAllowlist !== undefined
+        ? [...options.skillAllowlist]
+        : args.base.skillAllowlist,
   };
-  if (profile?.allowedToolNames) {
+  if (options?.toolAllowlist !== undefined) {
+    toolCtx.allowedToolNames = new Set(options.toolAllowlist);
+  } else if (profile?.allowedToolNames) {
     toolCtx.allowedToolNames = profile.allowedToolNames;
   }
   if (profile?.createRunServices) {

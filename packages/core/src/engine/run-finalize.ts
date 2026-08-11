@@ -173,15 +173,17 @@ export async function finalizeRunSuccess(args: {
   // the turn loop has resolved (completion, error, or abort). Handlers
   // are notify-only — any returned messages are dropped because the run
   // is already over and there's no next turn to inject into.
-  await args.emitHook(
-    "on_session_end",
-    {
-      sessionId: session.state.sessionId,
-      reason: result.reason,
-      turnCount,
-    },
-    options?.signal,
-  );
+  if (profile?.disableHooks !== true) {
+    await args.emitHook(
+      "on_session_end",
+      {
+        sessionId: session.state.sessionId,
+        reason: result.reason,
+        turnCount,
+      },
+      options?.signal,
+    );
+  }
 
   // Ephemeral side chats must never leak into durable memory, even after
   // the user explicitly elevates tool permissions for a turn. Lifecycle
@@ -203,7 +205,7 @@ export async function finalizeRunSuccess(args: {
   // Reuses the already-resolved auxSummaryClient (aux model, cheap). Best-
   // effort: failures never touch the run result. The renderer writes the
   // title into the sidebar on receipt of the session_title stream event.
-  {
+  if (profile?.disableSessionTitle !== true) {
     const messageEvents = session.transcript.getEvents("message");
     const userMsgEvents = messageEvents.filter(
       (e) => (e.data as { role?: string }).role === "user",

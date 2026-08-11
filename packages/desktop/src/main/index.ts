@@ -194,6 +194,7 @@ import {
   browserPartitionForBucket as registryPartitionForBucket,
   guestRecordForId,
   listGuestSessions,
+  partitionForSession,
   rememberAttachedGuest,
   registerAttachedGuestMetadata,
   registerSessionBucket,
@@ -1359,6 +1360,8 @@ async function createWindow(): Promise<BrowserWindow> {
             deleteDesktopSession(sessionId),
           );
         },
+        isClaimActive: ({ sessionId, ownerId, claimId }) =>
+          quickChatOwnership.isClaimActive(sessionId, ownerId, claimId),
       },
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
@@ -6070,6 +6073,7 @@ ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
 
 ipcMain.handle("sessions:list", async () => listSessions());
 async function deleteDesktopSession(id: string): Promise<void> {
+  const ephemeralBrowserPartition = id.startsWith("qchat-") ? partitionForSession(id) : null;
   // Reap the session's background shells (if any) before dropping it —
   // explicit delete is the one tab-close path that DOES kill (core §6).
   await bridge?.closeSession(id);
@@ -6085,6 +6089,18 @@ async function deleteDesktopSession(id: string): Promise<void> {
   // Drop any in-memory snapshot for the deleted session so it can't be
   // replayed into a fresh tab that happens to reuse the id.
   bridge?.forgetSession(id);
+  if (ephemeralBrowserPartition?.startsWith("browser:qchat:")) {
+    const ephemeralSession = session.fromPartition(ephemeralBrowserPartition);
+    await Promise.all([ephemeralSession.clearStorageData(), ephemeralSession.clearCache()]).catch(
+      (error) => {
+        dlog("browser", "quick_chat.partition_cleanup_failed", {
+          id,
+          partition: ephemeralBrowserPartition,
+          error: String(error),
+        });
+      },
+    );
+  }
   pendingMobileApprovals.forgetSession(id);
 }
 

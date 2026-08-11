@@ -14,11 +14,18 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { BrowserWindow, app } from "electron";
 import { autoUpdater } from "electron-updater";
 import { dlog } from "./desktop-logger.js";
+import { updaterFeedDecision } from "./updater-feed.js";
 import { macSignatureNeedsManualInstall, releaseUrlForVersion } from "./updater-signature.js";
-import { isNoUpdateManifestError, isReadOnlyInstallError } from "./updater-error-classify.js";
+import {
+  isNoUpdateManifestError,
+  isReadOnlyInstallError,
+  isUpdateFeedConnectivityError,
+} from "./updater-error-classify.js";
 
 type ManualInstallReason = "mac-signature" | "mac-readonly-volume";
 
@@ -31,7 +38,7 @@ export type UpdaterStatus =
   | { kind: "downloading"; percent: number; transferred: number; total: number }
   | { kind: "downloaded"; version: string }
   | { kind: "installing"; version: string }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; reason?: "github-unreachable" };
 
 let lastStatus: UpdaterStatus = { kind: "idle" };
 let configured = false;
@@ -40,6 +47,7 @@ let downloadInFlight = false;
 let activeDownloadVersion: string | null = null;
 let downloadedVersion: string | null = null;
 let installInFlight = false;
+let githubUpdateSource = true;
 
 function broadcast(): void {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -52,6 +60,26 @@ function set(status: UpdaterStatus): void {
   lastStatus = status;
   dlog("main", "updater.status", status as unknown as Record<string, unknown>);
   broadcast();
+}
+
+function isGithubUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === "github.com" || hostname.endsWith(".github.com");
+  } catch {
+    return false;
+  }
+}
+
+function updaterErrorStatus(message: string): UpdaterStatus {
+  const mentionsGithub = /(?:github\.com|githubusercontent\.com)/i.test(message);
+  return {
+    kind: "error",
+    message,
+    ...((githubUpdateSource || mentionsGithub) && isUpdateFeedConnectivityError(message)
+      ? { reason: "github-unreachable" as const }
+      : {}),
+  };
 }
 
 function macAppBundlePath(): string {
@@ -160,18 +188,27 @@ export function initUpdater(): void {
   }
 
   const feed = process.env.CODESHELL_UPDATE_FEED;
-  if (feed) {
+  const feedDecision = updaterFeedDecision(
+    feed,
+    existsSync(join(process.resourcesPath, "app-update.yml")),
+  );
+  // The packaged fallback feed is the GitHub provider declared in package.json.
+  // An explicit generic feed only gets GitHub-specific quiet-error treatment
+  // when it actually points at GitHub.
+  githubUpdateSource = feed ? isGithubUrl(feed) : true;
+  if (feedDecision.config) {
     try {
-      autoUpdater.setFeedURL({ provider: "generic", url: feed });
-      dlog("main", "updater.feed.env", { feed });
+      autoUpdater.setFeedURL(feedDecision.config);
+      dlog("main", `updater.feed.${feedDecision.source}`, feedDecision.config);
     } catch (e) {
       dlog("main", "updater.feed.error", { message: (e as Error).message });
-      set({ kind: "error", message: (e as Error).message });
+      set(updaterErrorStatus((e as Error).message));
       return;
     }
   }
-  // If no feed is set, electron-updater will look for the `publish`
-  // block emitted into app-update.yml by electron-builder.
+  // Release packages use app-update.yml. Directory-only macOS packages do not
+  // receive that file from electron-builder, so the decision above configures
+  // the same public GitHub provider explicitly instead of failing with ENOENT.
 
   autoUpdater.allowPrerelease = app.getVersion().includes("-");
 
@@ -237,7 +274,7 @@ export function initUpdater(): void {
     downloadInFlight = false;
     activeDownloadVersion = null;
     installInFlight = false;
-    set({ kind: "error", message });
+    set(updaterErrorStatus(message));
   });
 
   // First check shortly after launch; then every 6h. Track the handles and
@@ -268,7 +305,7 @@ export async function checkForUpdate(): Promise<void> {
   try {
     await autoUpdater.checkForUpdates();
   } catch (e) {
-    set({ kind: "error", message: (e as Error).message });
+    set(updaterErrorStatus((e as Error).message));
   }
 }
 
@@ -295,7 +332,7 @@ export async function downloadUpdate(): Promise<void> {
   } catch (e) {
     downloadInFlight = false;
     activeDownloadVersion = null;
-    set({ kind: "error", message: (e as Error).message });
+    set(updaterErrorStatus((e as Error).message));
   }
 }
 

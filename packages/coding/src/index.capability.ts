@@ -8,6 +8,7 @@ import {
   type BuiltinTool,
   type CapabilityModule,
   type RegisteredTool,
+  type ToolVisibilityContext,
 } from "@cjhyy/code-shell-core/extension";
 import { lspTool, lspToolDef } from "./tools/lsp.js";
 import { notebookEditTool, notebookEditToolDef } from "./tools/notebook-edit.js";
@@ -48,6 +49,9 @@ function defineTool(
   return { definition, execute, exposure };
 }
 
+const unavailableInQuickChat = (context: ToolVisibilityContext): boolean =>
+  context.behaviorProfile !== "quickChatRestricted";
+
 export const CODING_TOOLS: readonly BuiltinTool[] = [
   // `briefTool` remains a root compatibility export, but is deliberately not
   // model-exposed here: its Markdown return value is a tool result, not a
@@ -63,7 +67,7 @@ export const CODING_TOOLS: readonly BuiltinTool[] = [
       pathPolicy: [{ kind: "arg", arg: "attachmentPaths", operation: "read" }],
     },
     driveAgentTool,
-    { presetTags: ["general", "terminal-coding"] },
+    { presetTags: ["general", "terminal-coding"], availability: unavailableInQuickChat },
   ),
   defineTool(
     {
@@ -74,7 +78,7 @@ export const CODING_TOOLS: readonly BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     driveAgentJobsTool,
-    { presetTags: ["general", "terminal-coding"] },
+    { presetTags: ["general", "terminal-coding"], availability: unavailableInQuickChat },
   ),
   defineTool(
     {
@@ -87,7 +91,7 @@ export const CODING_TOOLS: readonly BuiltinTool[] = [
       pathPolicy: [{ kind: "arg", arg: "attachmentPaths", operation: "read" }],
     },
     driveClaudeCodeTool,
-    { presetTags: ["general", "terminal-coding"] },
+    { presetTags: ["general", "terminal-coding"], availability: unavailableInQuickChat },
   ),
   defineTool(
     {

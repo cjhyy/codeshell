@@ -7,6 +7,8 @@ interface QuickChatClaim {
 
 type DeleteSession = (sessionId: string) => Promise<void>;
 
+export const QUICK_CHAT_DELETED_TOMBSTONE_LIMIT = 4096;
+
 export class QuickChatOwnershipRegistry {
   private readonly claimsBySession = new Map<string, Map<number, QuickChatClaim>>();
   private readonly sessionsByOwner = new Map<number, Set<string>>();
@@ -145,7 +147,13 @@ export class QuickChatOwnershipRegistry {
     this.cleanupInFlight.set(sessionId, cleanup);
     try {
       await cleanup;
+      this.deletedSessions.delete(sessionId);
       this.deletedSessions.add(sessionId);
+      while (this.deletedSessions.size > QUICK_CHAT_DELETED_TOMBSTONE_LIMIT) {
+        const oldest = this.deletedSessions.values().next().value;
+        if (oldest === undefined) break;
+        this.deletedSessions.delete(oldest);
+      }
       this.claimsBySession.delete(sessionId);
       for (const [ownerId, sessions] of this.sessionsByOwner) {
         sessions.delete(sessionId);

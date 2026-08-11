@@ -560,8 +560,6 @@ function isRegisteredSkillResourceRead(resolved: string): boolean {
 
   if (isSkillTreeResource(resolved, join(codeShellRoot, "skills"))) return true;
 
-  if (isInstalledPanelAppSkillResourceRead(resolved, codeShellRoot)) return true;
-
   let cacheRoot: string;
   try {
     cacheRoot = realpathSync(join(codeShellRoot, "plugins", "cache"));
@@ -587,20 +585,25 @@ function isRegisteredSkillResourceRead(resolved: string): boolean {
 }
 
 /**
- * Panel App Skills live under the otherwise-sensitive
- * `~/.code-shell/panel-apps` tree. Installation already reviews and copies the
- * package, and the Skill scanner exposes only entries declared by the app
- * manifest. Mirror that exact boundary here so reading a Skill reference does
- * not trigger a second approval prompt.
+ * Installed Panel Apps live under the otherwise-sensitive
+ * `~/.code-shell/panel-apps` tree. Their package contents are reviewed and
+ * copied by the installer, so ordinary source, manifests, assets and declared
+ * Agent resources should not require a second approval merely because their
+ * parent directory is `~/.code-shell`.
  *
- * Registry, app root, manifest, declared SKILL.md and target are all
- * realpathed and containment-checked. This deliberately does not trust an
- * undeclared Skill directory or a symlink escaping the installed app.
+ * Keep the exception read-only at the call site and require a valid installed
+ * registry entry plus a matching V2 manifest. Registry, app root, manifest and
+ * target are all realpathed and containment-checked. Credential-shaped files
+ * are still caught by `SENSITIVE_FILE_PATTERNS` before this exception, and a
+ * symlink escaping the installed package never inherits its read authority.
  */
-function isInstalledPanelAppSkillResourceRead(resolved: string, codeShellRoot: string): boolean {
+function isInstalledPanelAppResourceRead(resolved: string): boolean {
+  let codeShellRoot: string;
   let appsRoot: string;
   let registryPath: string;
   try {
+    codeShellRoot = realpathSync(join(configuredUserHome(), ".code-shell"));
+    if (!isInsideDir(resolved, codeShellRoot)) return false;
     appsRoot = realpathSync(join(codeShellRoot, "panel-apps"));
     if (!isInsideDir(appsRoot, codeShellRoot)) return false;
     registryPath = realpathSync(join(appsRoot, "installed.json"));
@@ -633,33 +636,9 @@ function isInstalledPanelAppSkillResourceRead(resolved: string, codeShellRoot: s
       const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as {
         schemaVersion?: unknown;
         id?: unknown;
-        agent?: { skills?: unknown };
       };
-      if (
-        manifest.schemaVersion !== 2 ||
-        manifest.id !== id ||
-        !Array.isArray(manifest.agent?.skills)
-      ) {
-        continue;
-      }
-
-      for (const skillEntry of manifest.agent.skills) {
-        if (typeof skillEntry !== "string") continue;
-        const segments = skillEntry.split("/");
-        if (
-          segments.length !== 4 ||
-          segments[0] !== "agent" ||
-          segments[1] !== "skills" ||
-          !/^[a-z][a-z0-9-]{0,63}$/.test(segments[2] ?? "") ||
-          segments[3] !== "SKILL.md"
-        ) {
-          continue;
-        }
-        const skillManifest = realpathSync(join(appRoot, ...segments));
-        if (!isInsideDir(skillManifest, appRoot) || !statSync(skillManifest).isFile()) continue;
-        const skillRoot = dirname(skillManifest);
-        if (isInsideDir(resolved, skillRoot)) return true;
-      }
+      if (manifest.schemaVersion !== 2 || manifest.id !== id) continue;
+      if (isInsideDir(resolved, appRoot)) return true;
     } catch {
       // A stale, malformed, or tampered Panel App entry grants no read access.
     }
@@ -767,6 +746,14 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
     return {
       decision: "allow",
       reason: "registered Skill resource read",
+      resolvedPath: resolved,
+    };
+  }
+
+  if (opts.operation === "read" && !sensitiveFile && isInstalledPanelAppResourceRead(resolved)) {
+    return {
+      decision: "allow",
+      reason: "installed Panel App resource read",
       resolvedPath: resolved,
     };
   }

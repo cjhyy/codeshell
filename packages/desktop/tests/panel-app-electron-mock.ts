@@ -19,7 +19,9 @@ export const panelAppElectronMock = {
   ownerWindow: { id: 10, isDestroyed: () => false, webContents: { id: 1 } },
   userDataPath: "/tmp/codeshell-panel-app-test",
   dialogResponse: 1,
+  openDialogResult: { canceled: true, filePaths: [] as string[] },
   openedUrls: [] as string[],
+  openedPaths: [] as string[],
 };
 
 export function installPanelAppElectronMock(): void {
@@ -30,7 +32,10 @@ export function installPanelAppElectronMock(): void {
         sender === panelAppElectronMock.trustedSender ? panelAppElectronMock.ownerWindow : null,
       fromId: () => panelAppElectronMock.ownerWindow,
     },
-    dialog: { showMessageBox: async () => ({ response: panelAppElectronMock.dialogResponse }) },
+    dialog: {
+      showMessageBox: async () => ({ response: panelAppElectronMock.dialogResponse }),
+      showOpenDialog: async () => panelAppElectronMock.openDialogResult,
+    },
     ipcMain: {
       handle: (channel: string, handler: (event: { sender: any }, ...args: any[]) => unknown) => {
         panelAppElectronMock.ipcHandlers.set(channel, handler);
@@ -58,6 +63,10 @@ export function installPanelAppElectronMock(): void {
     shell: {
       openExternal: async (url: string) => {
         panelAppElectronMock.openedUrls.push(url);
+      },
+      openPath: async (path: string) => {
+        panelAppElectronMock.openedPaths.push(path);
+        return "";
       },
     },
   }));

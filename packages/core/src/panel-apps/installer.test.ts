@@ -271,6 +271,28 @@ describe("independent Panel App installer", () => {
     );
   });
 
+  test("accepts the atomic process permission without unrelated context permissions", async () => {
+    const manifestPath = join(source, ".codeshell-panel", "panel.json");
+    const manifest = JSON.parse(await Bun.file(manifestPath).text()) as {
+      permissions: string[];
+    };
+    manifest.permissions = ["process"];
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    const preview = await previewLocalPanelApp({ kind: "dir", path: source });
+    expect(preview.permissions).toEqual(["process"]);
+  });
+
+  test("accepts the atomic agent.task permission without Session context", async () => {
+    const manifestPath = join(source, ".codeshell-panel", "panel.json");
+    const manifest = JSON.parse(await Bun.file(manifestPath).text()) as {
+      permissions: string[];
+    };
+    manifest.permissions = ["agent.task"];
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    const preview = await previewLocalPanelApp({ kind: "dir", path: source });
+    expect(preview.permissions).toEqual(["agent.task"]);
+  });
+
   test("requires a fresh review when package bytes change", async () => {
     const preview = await previewLocalPanelApp({ kind: "dir", path: source });
     writeFileSync(join(source, "app", "index.html"), "<!doctype html><title>Changed</title>");

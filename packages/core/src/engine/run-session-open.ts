@@ -172,6 +172,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
       args.isSubAgent ? getCurrentSid() : undefined,
       args.isSubAgent ? "subagent" : args.origin,
       args.sessionKind,
+      options?.ephemeral === true,
     );
     const userMsg: Message = { role: "user", content: args.userMessageContent };
     claimClientMessageId(session, options?.clientMessageId, "submit");

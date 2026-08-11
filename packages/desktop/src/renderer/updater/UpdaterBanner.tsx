@@ -50,6 +50,13 @@ export function SidebarUpdaterButton() {
         ? { kind: "installing", version: status.version }
         : status;
 
+  // GitHub may be blocked or temporarily unreachable on the current network.
+  // Keep the diagnostic in Settings, but do not turn the persistent sidebar
+  // footer into an error state for this non-critical background check.
+  if (visibleStatus.kind === "error" && visibleStatus.reason === "github-unreachable") {
+    return null;
+  }
+
   if (visibleStatus.kind === "available") {
     const title = t("misc.updater.available", { version: visibleStatus.version });
     return (

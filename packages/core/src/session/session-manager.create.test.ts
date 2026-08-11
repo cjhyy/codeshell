@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "./session-manager.js";
@@ -36,5 +36,16 @@ describe("SessionManager.create", () => {
     session.transcript.appendMessage("user", "synthetic background reminder", { injected: true });
 
     expect(sm.list(1)[0]?.preview).toBe("real user request");
+  });
+
+  test("explicit ephemeral sessions stay process-local and out of list results", () => {
+    const sm = new SessionManager(dir);
+    const task = sm.create("/tmp/proj", "m", "p", "panel-task-test", null, "panel", "work", true);
+
+    expect(task.state.ephemeral).toBe(true);
+    expect(sm.isEphemeralSession(task.state.sessionId)).toBe(true);
+    expect(sm.exists(task.state.sessionId)).toBe(true);
+    expect(sm.list(10)).toEqual([]);
+    expect(existsSync(join(dir, task.state.sessionId))).toBe(false);
   });
 });

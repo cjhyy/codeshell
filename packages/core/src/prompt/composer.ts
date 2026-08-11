@@ -100,6 +100,14 @@ export interface ComposerOptions {
    * See MemoryManager.buildInjectionIndex(currentProjectOnly).
    */
   memoryCurrentProjectOnly?: boolean;
+  /** Isolated runs can omit repository/user instruction discovery entirely. */
+  disableInstructions?: boolean;
+  /** Isolated runs can omit persistent-memory context entirely. */
+  disableMemoryContext?: boolean;
+  /** Isolated runs can omit capability-owned volatile context providers. */
+  disableCapabilityContext?: boolean;
+  /** Isolated runs can omit bound-source metadata. */
+  disableSourcesContext?: boolean;
 }
 
 export class PromptComposer {
@@ -121,6 +129,7 @@ export class PromptComposer {
    * Build the userContext prefix message (CLAUDE.md content as <system-reminder>).
    */
   buildUserContextMessage(): Message | null {
+    if (this.options.disableInstructions === true) return null;
     const instructions = this.getInstructions();
 
     // NOTE: memory is intentionally NOT here. It used to be, but memory mutates
@@ -146,6 +155,7 @@ export class PromptComposer {
 
   /** Build volatile context contributed by installed capability modules. */
   async buildSystemContext(): Promise<string> {
+    if (this.options.disableCapabilityContext === true) return "";
     const preset = this.options.preset ?? resolveAgentPreset();
     const parts = await Promise.all(
       (this.options.dynamicContextProviders ?? []).map(async (provider) => {
@@ -203,6 +213,7 @@ export class PromptComposer {
     const [capabilityContext, sourcesContext] = await Promise.all([
       this.buildSystemContext(),
       (async () => {
+        if (this.options.disableSourcesContext === true) return "";
         try {
           return (await this.options.sourcesContextProvider?.()) ?? "";
         } catch {
@@ -373,6 +384,7 @@ export class PromptComposer {
   }
 
   private getMemoryContext(): string {
+    if (this.options.disableMemoryContext === true) return "";
     try {
       // Three-layer injection (用户拍板): a compact index merging GLOBAL +
       // DIGITAL-HUMAN + PROJECT memories. Global memories are surfaced every

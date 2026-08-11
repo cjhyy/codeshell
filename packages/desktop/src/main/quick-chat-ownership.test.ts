@@ -2,7 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { QuickChatOwnershipRegistry } from "./quick-chat-ownership";
+import {
+  QUICK_CHAT_DELETED_TOMBSTONE_LIMIT,
+  QuickChatOwnershipRegistry,
+} from "./quick-chat-ownership";
 import { deleteSessionDir, listDiskSessions } from "@cjhyy/code-shell-server/storage";
 
 const tempDirs: string[] = [];
@@ -12,6 +15,37 @@ afterEach(() => {
 });
 
 describe("QuickChatOwnershipRegistry", () => {
+  test("bounds deleted-session tombstones and evicts the oldest id", async () => {
+    const registry = new QuickChatOwnershipRegistry();
+    const deleted: string[] = [];
+    for (let index = 0; index <= QUICK_CHAT_DELETED_TOMBSTONE_LIMIT; index += 1) {
+      const sessionId = `qchat-bounded-${index}`;
+      registry.claim(sessionId, 101, `claim-${index}`);
+      await registry.cleanup(sessionId, 101, `claim-${index}`, async () => {
+        deleted.push(sessionId);
+      });
+    }
+
+    await registry.cleanup("qchat-bounded-0", 101, "claim-0", async () => {
+      deleted.push("qchat-bounded-0");
+    });
+    await registry.cleanup(
+      `qchat-bounded-${QUICK_CHAT_DELETED_TOMBSTONE_LIMIT}`,
+      101,
+      `claim-${QUICK_CHAT_DELETED_TOMBSTONE_LIMIT}`,
+      async () => {
+        deleted.push(`qchat-bounded-${QUICK_CHAT_DELETED_TOMBSTONE_LIMIT}`);
+      },
+    );
+
+    expect(deleted.filter((sessionId) => sessionId === "qchat-bounded-0")).toHaveLength(2);
+    expect(
+      deleted.filter(
+        (sessionId) => sessionId === `qchat-bounded-${QUICK_CHAT_DELETED_TOMBSTONE_LIMIT}`,
+      ),
+    ).toHaveLength(1);
+  });
+
   test("a cleanup requester cannot delete a quick chat owned by another window", async () => {
     const registry = new QuickChatOwnershipRegistry();
     const deleted: string[] = [];
