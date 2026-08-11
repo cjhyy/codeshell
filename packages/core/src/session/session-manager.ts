@@ -549,6 +549,7 @@ export class SessionManager {
     parentSessionId?: string | null,
     origin?: import("../types.js").SessionOrigin,
     kind: SessionKind = "work",
+    ephemeral = false,
   ): SessionBundle {
     // External callers may pass any string; nanoid output is trusted. Either
     // way the ID gets joined into a filesystem path, so the public entry
@@ -576,7 +577,7 @@ export class SessionManager {
       // new top-level session (key present, null) apart from a legacy session
       // (key absent) and from a sub-agent (key present, non-empty string).
       parentSessionId: parentSessionId ?? null,
-      ...(sessionId.startsWith("qchat-") ? { ephemeral: true } : {}),
+      ...(ephemeral || sessionId.startsWith("qchat-") ? { ephemeral: true } : {}),
       ...(origin ? { origin } : {}),
     };
 
@@ -1234,6 +1235,11 @@ export class SessionManager {
     } catch {
       return undefined;
     }
+  }
+
+  /** Whether a live or persisted Session is explicitly process-local. */
+  isEphemeralSession(sessionId: string): boolean {
+    return this.readSessionState(sessionId)?.ephemeral === true;
   }
 
   /**

@@ -134,6 +134,25 @@ describe("PromptComposer dynamic context (skills out of system prefix)", () => {
     expect(overlapped).toBe(true);
   });
 
+  it("can remove ambient instructions, memory, capability, source, and Skill context", async () => {
+    writeFileSync(join(cwd, "CODESHELL.md"), "ambient project instruction");
+    invalidateSkillCache();
+    const composer = new PromptComposer({
+      cwd,
+      model: "test-model",
+      skillAllowlist: [],
+      disableInstructions: true,
+      disableMemoryContext: true,
+      disableCapabilityContext: true,
+      disableSourcesContext: true,
+      dynamicContextProviders: [async () => "ambient capability context"],
+      sourcesContextProvider: async () => "ambient source context",
+    });
+
+    expect(composer.buildUserContextMessage()).toBeNull();
+    expect(await composer.buildDynamicContextMessage()).toBeNull();
+  });
+
   // Cache fix: memory mutates constantly (extraction / recall usage++ / approve),
   // so it must ride the trailing message, NOT the cacheable prefix.
   it("puts memory in the trailing dynamic message, never the system prefix", async () => {

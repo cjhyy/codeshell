@@ -158,11 +158,17 @@ export async function resolveRunWorkspace(args: {
       configCwd: args.configCwd,
       processCwd: args.processCwd,
     });
-  const profileState = resolveRunProfileState({
-    sessionWorkspaceProfile,
-    cwd,
-    settings: args.settings,
-  });
+  const profileState = profile?.disableWorkspaceProfile
+    ? {
+        workspaceProfile: undefined,
+        sessionProfileOverrides: undefined,
+        profileMemoryDir: undefined,
+      }
+    : resolveRunProfileState({
+        sessionWorkspaceProfile,
+        cwd,
+        settings: args.settings,
+      });
 
   return {
     ok: true,

@@ -9,6 +9,7 @@ export const PANEL_APP_PERMISSIONS = [
   "storage",
   "external.open",
   "agent.submitPrompt",
+  "agent.task",
   "workspace.info",
   "workspace.read",
   "workspace.write",

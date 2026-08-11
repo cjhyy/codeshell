@@ -132,6 +132,39 @@ function runInputError(params: RunParams): string | null {
   ) {
     return `invalid behavior mode: ${String(params.behaviorMode)}`;
   }
+  for (const [field, value, maxItems] of [
+    ["toolAllowlist", params.toolAllowlist, 32],
+    ["skillAllowlist", params.skillAllowlist, 8],
+  ] as const) {
+    if (value === undefined) continue;
+    if (
+      !Array.isArray(value) ||
+      value.length > maxItems ||
+      value.some(
+        (name) =>
+          typeof name !== "string" || name.length === 0 || name.length > 128 || /[\r\n]/.test(name),
+      )
+    ) {
+      return `${field} must be an array of at most ${maxItems} bounded names`;
+    }
+  }
+  if (params.ephemeral !== undefined && typeof params.ephemeral !== "boolean") {
+    return "ephemeral must be a boolean";
+  }
+  if (
+    params.maxTurns !== undefined &&
+    (!Number.isInteger(params.maxTurns) || params.maxTurns < 1 || params.maxTurns > 30)
+  ) {
+    return "maxTurns must be an integer from 1 to 30";
+  }
+  if (
+    params.maxContextTokens !== undefined &&
+    (!Number.isInteger(params.maxContextTokens) ||
+      params.maxContextTokens < 4_096 ||
+      params.maxContextTokens > 131_072)
+  ) {
+    return "maxContextTokens must be an integer from 4096 to 131072";
+  }
   if (params.kind !== undefined && (typeof params.kind !== "string" || params.kind.length === 0)) {
     return `invalid session kind: ${String(params.kind)}`;
   }
@@ -1486,6 +1519,8 @@ export class AgentServer {
     const sessionConfig = {
       cwd: params.cwd,
       projectTrusted: params.projectTrusted,
+      maxTurns: params.maxTurns,
+      maxContextTokens: params.maxContextTokens,
       goal:
         typeof params.goal === "string" || (params.goal != null && typeof params.goal === "object")
           ? (params.goal as EngineConfigSlice["goal"])
@@ -1589,6 +1624,9 @@ export class AgentServer {
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
+        toolAllowlist: params.toolAllowlist,
+        skillAllowlist: params.skillAllowlist,
+        ephemeral: params.ephemeral,
         profileParams: params.profileParams,
         workspaceProfile: params.workspaceProfile,
         sessionBrief: params.sessionBrief,
@@ -1746,6 +1784,9 @@ export class AgentServer {
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
+        toolAllowlist: params.toolAllowlist,
+        skillAllowlist: params.skillAllowlist,
+        ephemeral: params.ephemeral,
         profileParams: params.profileParams,
         workspaceProfile: params.workspaceProfile,
         sessionBrief: params.sessionBrief,

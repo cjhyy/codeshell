@@ -1145,6 +1145,11 @@ export class AgentBridge implements PetStateBridge {
     this.sessionCwd.set(sessionId, cwd);
   }
 
+  /** Rebind a main-owned Session to the browser/Panel bucket of its current host tab. */
+  rebindHostSessionBucket(sessionId: string, bucket: string): void {
+    registerSessionBucket(sessionId, bucket);
+  }
+
   /**
    * Bind a session's host-loopback surface (Panel tools) to one renderer window.
    *

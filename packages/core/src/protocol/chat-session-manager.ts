@@ -254,6 +254,8 @@ export class ChatSessionManager {
   getLiveSessionSnapshot(): LiveChatSessionSnapshot {
     const sessions: LiveChatSessionSnapshot["sessions"] = [];
     this.forEachSession((session) => {
+      const sessionManager = this.engineSessionManager(session.engine);
+      if (sessionManager?.isEphemeralSession?.(session.id)) return;
       sessions.push({
         sessionId: session.id,
         busy: session.isBusy(),
@@ -418,6 +420,7 @@ export class ChatSessionManager {
         registerSessionGeneration: (sessionId: string) => number;
         incrementSessionGeneration: (sessionId: string) => number;
         forgetEphemeralSession?: (sessionId: string) => boolean;
+        isEphemeralSession?: (sessionId: string) => boolean;
       }
     | undefined {
     const candidate = engine as Engine & {
@@ -425,6 +428,7 @@ export class ChatSessionManager {
         registerSessionGeneration?: (sessionId: string) => number;
         incrementSessionGeneration?: (sessionId: string) => number;
         forgetEphemeralSession?: (sessionId: string) => boolean;
+        isEphemeralSession?: (sessionId: string) => boolean;
       };
     };
     const manager = candidate.getSessionManager?.();
@@ -438,6 +442,7 @@ export class ChatSessionManager {
       registerSessionGeneration: (sessionId: string) => number;
       incrementSessionGeneration: (sessionId: string) => number;
       forgetEphemeralSession?: (sessionId: string) => boolean;
+      isEphemeralSession?: (sessionId: string) => boolean;
     };
   }
 }

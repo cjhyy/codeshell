@@ -1,4 +1,4 @@
-export const PANEL_APP_API_VERSION = 7 as const;
+export const PANEL_APP_API_VERSION = 8 as const;
 
 export const PANEL_APP_PERMISSION_NAMES = [
   "context.session",
@@ -6,6 +6,7 @@ export const PANEL_APP_PERMISSION_NAMES = [
   "storage",
   "external.open",
   "agent.submitPrompt",
+  "agent.task",
   "workspace.info",
   "workspace.read",
   "workspace.write",

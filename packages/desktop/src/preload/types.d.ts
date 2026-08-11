@@ -2818,7 +2818,7 @@ declare global {
         handler: (args: Record<string, unknown>) => unknown | Promise<unknown>,
       ): () => void;
       on(
-        event: "context.changed" | "process.output" | "process.exit",
+        event: "context.changed" | "process.output" | "process.exit" | "agent.task.changed",
         listener: (payload: unknown) => void,
       ): () => void;
     }>;

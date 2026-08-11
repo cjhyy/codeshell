@@ -133,6 +133,7 @@ import {
 import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
 import {
+  ISOLATED_TASK_PROFILE,
   QUICK_CHAT_RESTRICTED_PROFILE,
   type EngineRunOptions,
   type RunBehaviorProfile,
@@ -595,6 +596,7 @@ export class Engine {
     this.behaviorProfiles = new Map(
       [
         QUICK_CHAT_RESTRICTED_PROFILE,
+        ISOLATED_TASK_PROFILE,
         ...(config.behaviorProfiles ?? []),
         ...(config.extensionModules ?? []).flatMap((module) => module.behaviorProfiles ?? []),
       ].map((profile) => [profile.id, profile] as const),
@@ -1397,16 +1399,18 @@ export class Engine {
     session = openedResult.opened.session;
     this.stampRunToolContext(toolCtx, session, options);
     const sessionRun = runWithSid(session.state.sessionId, async () => {
-      const hookMessages = await this.runSessionStartHooks({
-        session,
-        task,
-        cwd,
-        runPermissionMode,
-        resumedFromDisk,
-        options,
-        taskText,
-        messages,
-      });
+      const hookMessages = profile?.disableHooks
+        ? []
+        : await this.runSessionStartHooks({
+            session,
+            task,
+            cwd,
+            runPermissionMode,
+            resumedFromDisk,
+            options,
+            taskText,
+            messages,
+          });
 
       const sid = session.state.sessionId;
       const { contextManager, llmClientPromise, toolExecutor } = this.wireRunContextAndPermission({
@@ -2523,20 +2527,25 @@ export class Engine {
     // A profile whose tool allowlist excludes the Skill tool can never invoke
     // a skill, so the full skills listing would be dead context for every one
     // of its turns (e.g. the Pet manager) — inject none via an empty allowlist.
-    const profileCanUseSkills =
-      !profile?.allowedToolNames || profile.allowedToolNames.has(skillToolDef.name);
+    const runAllowedToolNames = toolCtx.allowedToolNames;
+    const profileCanUseSkills = !runAllowedToolNames || runAllowedToolNames.has(skillToolDef.name);
     const promptComposer = new PromptComposer(
       buildPromptComposerConfig({
         cwd,
         model: this.config.llm.model,
         preset: this.preset,
-        customSystemPrompt: this.config.customSystemPrompt,
+        customSystemPrompt: profile?.disableInstructions
+          ? undefined
+          : this.config.customSystemPrompt,
         appendSystemPrompt:
-          [this.config.appendSystemPrompt, profile?.systemPromptAppend]
+          [
+            profile?.disableInstructions ? undefined : this.config.appendSystemPrompt,
+            profile?.systemPromptAppend,
+          ]
             .filter(Boolean)
             .join("\n\n") || undefined,
         responseLanguage: this.config.responseLanguage,
-        userProfile: this.config.userProfile,
+        userProfile: profile?.disableInstructions ? undefined : this.config.userProfile,
         workspaceProfile: runWorkspaceProfile,
         // Read from the Session's own persisted state, so every turn — not just
         // the first — carries the standing brief.
@@ -2547,16 +2556,22 @@ export class Engine {
           resolveInstructionBoundary(scanCwd, this.capabilities),
         disabledSkills,
         disabledPlugins,
-        skillAllowlist: profileCanUseSkills ? this.config.skillAllowlist : [],
+        skillAllowlist: profileCanUseSkills ? toolCtx.skillAllowlist : [],
         memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
         memoryCurrentProjectOnly: profile?.memoryCurrentProjectOnly,
+        disableInstructions: profile?.disableInstructions,
+        disableMemoryContext: profile?.disableMemoryContext,
+        disableCapabilityContext: profile?.disableCapabilityContext,
+        disableSourcesContext: profile?.disableSourcesContext,
         goalToolState:
-          !profile?.allowedToolNames ||
-          profile.allowedToolNames.has("complete_goal") ||
-          profile.allowedToolNames.has("cancel_goal")
+          !runAllowedToolNames ||
+          runAllowedToolNames.has("complete_goal") ||
+          runAllowedToolNames.has("cancel_goal")
             ? { hasGoal: hasRunnableGoal }
             : undefined,
-        capabilityPromptSections: this.capabilityPromptSections,
+        capabilityPromptSections: profile?.disableCapabilityContext
+          ? {}
+          : this.capabilityPromptSections,
         dynamicContextProviders: this.capabilityDynamicContextProviders,
         getSettingsManager: () => this.getSettingsManager(),
         toolCatalog: this.toolCatalog,
@@ -2616,7 +2631,7 @@ export class Engine {
       toolRewriters: this.toolRewriters,
       toolFeatureFlags: TOOL_FEATURE_FLAGS,
       applyBuiltinOverrideVisibility,
-      profileAllowedToolNames: profile?.allowedToolNames,
+      profileAllowedToolNames: runAllowedToolNames,
       runPlanMode,
     });
 

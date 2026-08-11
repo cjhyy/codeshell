@@ -23,6 +23,7 @@ import {
 } from "node:fs";
 import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
+import { PANEL_APP_API_VERSION } from "../src/shared/panel-apps.js";
 import { installPanelAppElectronMock, panelAppElectronMock } from "./panel-app-electron-mock.js";
 
 let api: typeof import("../src/main/panel-app-protocol.js");
@@ -675,7 +676,7 @@ describeIsolated("PanelAppBridge", () => {
       busy: true,
       theme: "dark",
       locale: "zh-CN",
-      apiVersion: 7,
+      apiVersion: PANEL_APP_API_VERSION,
     });
     expect(context.sessionId).toBe("session-1");
     expect(context.cwd).toBe("/repo");

@@ -151,6 +151,16 @@ export interface RunParams {
   planMode?: boolean;
   /** Named behavior profile for a product-specific per-run interaction mode. */
   behaviorMode?: RunBehaviorMode;
+  /** Host-authorized per-run hard tool allowlist. Empty means no tools. */
+  toolAllowlist?: string[];
+  /** Host-authorized per-run hard Skill allowlist. Empty means no Skills. */
+  skillAllowlist?: string[];
+  /** Keep a fresh run Session process-local and out of normal Session pickers. */
+  ephemeral?: boolean;
+  /** Optional fresh-session turn ceiling used by bounded host Tasks. */
+  maxTurns?: number;
+  /** Optional fresh-session context ceiling used by bounded host Tasks. */
+  maxContextTokens?: number;
   /**
    * Generic per-run parameters consumed by the active behavior profile
    * (delivered as non-durable run context; never appended to the task or
