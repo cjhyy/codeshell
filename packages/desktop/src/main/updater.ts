@@ -14,9 +14,12 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { BrowserWindow, app } from "electron";
 import { autoUpdater } from "electron-updater";
 import { dlog } from "./desktop-logger.js";
+import { updaterFeedDecision } from "./updater-feed.js";
 import { macSignatureNeedsManualInstall, releaseUrlForVersion } from "./updater-signature.js";
 import {
   isNoUpdateManifestError,
@@ -185,22 +188,27 @@ export function initUpdater(): void {
   }
 
   const feed = process.env.CODESHELL_UPDATE_FEED;
+  const feedDecision = updaterFeedDecision(
+    feed,
+    existsSync(join(process.resourcesPath, "app-update.yml")),
+  );
   // The packaged fallback feed is the GitHub provider declared in package.json.
   // An explicit generic feed only gets GitHub-specific quiet-error treatment
   // when it actually points at GitHub.
   githubUpdateSource = feed ? isGithubUrl(feed) : true;
-  if (feed) {
+  if (feedDecision.config) {
     try {
-      autoUpdater.setFeedURL({ provider: "generic", url: feed });
-      dlog("main", "updater.feed.env", { feed });
+      autoUpdater.setFeedURL(feedDecision.config);
+      dlog("main", `updater.feed.${feedDecision.source}`, feedDecision.config);
     } catch (e) {
       dlog("main", "updater.feed.error", { message: (e as Error).message });
       set(updaterErrorStatus((e as Error).message));
       return;
     }
   }
-  // If no feed is set, electron-updater will look for the `publish`
-  // block emitted into app-update.yml by electron-builder.
+  // Release packages use app-update.yml. Directory-only macOS packages do not
+  // receive that file from electron-builder, so the decision above configures
+  // the same public GitHub provider explicitly instead of failing with ENOENT.
 
   autoUpdater.allowPrerelease = app.getVersion().includes("-");
 
