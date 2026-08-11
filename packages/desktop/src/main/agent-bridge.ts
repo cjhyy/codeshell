@@ -75,6 +75,8 @@ import {
   compactQuerySessionId,
   forkSourceSessionId,
   quickChatForkRequest,
+  quickChatRunRequest,
+  quickChatRunSessionId,
 } from "./agent-bridge-fallback.js";
 import { QuickChatForkRouter, type QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-run-metadata.js";
@@ -495,6 +497,23 @@ export class AgentBridge implements PetStateBridge {
       // (agent/run trust) — everything else is passed through verbatim so we
       // don't re-serialize on the hot path.
       let outLine = line;
+      const quickChatRunId = quickChatRunSessionId(parsed);
+      if (quickChatRunId) {
+        const request = quickChatRunRequest(parsed, event.sender.id);
+        if (!request || this.quickChatForkLifecycle?.isClaimActive?.(request) !== true) {
+          if (parsed.id !== undefined && !event.sender.isDestroyed()) {
+            event.sender.send(
+              "agent:msg",
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id: parsed.id,
+                error: { code: -32602, message: "quick-chat claim is no longer active" },
+              }),
+            );
+          }
+          return;
+        }
+      }
       const quickChatFork = quickChatForkRequest(parsed, event.sender.id);
       let quickChatForkWireId: string | undefined;
       if (quickChatFork && this.quickChatForkRouter) {
@@ -1114,6 +1133,7 @@ export class AgentBridge implements PetStateBridge {
     browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
     builtInBrowserHandoffGrants.revoke(sessionId);
     chromeExtensionRuntimeService.revoke(sessionId);
+    forgetSessionBucket(sessionId);
   }
 
   hasKnownSession(sessionId: string): boolean {
@@ -1212,7 +1232,6 @@ export class AgentBridge implements PetStateBridge {
   /** Release everything {@link registerExternalSession} registered. */
   releaseExternalSession(sessionId: string): void {
     this.forgetSession(sessionId);
-    forgetSessionBucket(sessionId);
   }
 
   /**

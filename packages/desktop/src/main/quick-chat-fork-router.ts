@@ -1,8 +1,9 @@
-import type { QuickChatForkRequest } from "./agent-bridge-fallback.js";
+import type { QuickChatForkRequest, QuickChatRunRequest } from "./agent-bridge-fallback.js";
 
 export interface QuickChatForkLifecycle {
   begin(request: QuickChatForkRequest): boolean;
   settle(request: QuickChatForkRequest & { succeeded: boolean }): Promise<void> | void;
+  isClaimActive?(request: QuickChatRunRequest): boolean;
 }
 
 export interface QuickChatForkResponseTarget {

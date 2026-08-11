@@ -15,6 +15,7 @@ interface QuickChatPanelProps {
   creationStatus: "creating" | "ready" | "error";
   contextMode: "full" | "blank";
   sourceTitle?: string;
+  copiedEventCount?: number;
   draft: string;
   attachments: unknown[];
   permissionMode: PermissionMode;
@@ -234,6 +235,9 @@ let root: Root | null = null;
 let container: HTMLElement | null = null;
 let streamListener: ((env: any) => void) | null = null;
 let approvalListener: ((env: ApprovalRequestEnvelope) => void) | null = null;
+let lifecycleListener:
+  | ((env: { type: "restarted" | "gave_up" | "exited"; code?: number }) => void)
+  | null = null;
 let listDiskSessionsCalls = 0;
 let deleteSessionCalls: string[] = [];
 let cleanupQuickChatSessionCalls: string[] = [];
@@ -340,6 +344,8 @@ function installCodeshellStub(
   }),
   goalGet: (sessionId: string) => Promise<any> = async () => ({ ok: true, goal: null }),
   getSettings: () => Promise<Record<string, unknown>> = async () => ({}),
+  externalRuntimeKinds: string[] = [],
+  modelCatalog: Array<Record<string, unknown>> = [],
 ): void {
   const unsubscribe = () => undefined;
   const project = { path: "/tmp/repo-a", name: "Repo A", addedAt: 1 };
@@ -363,7 +369,7 @@ function installCodeshellStub(
     noRepoCwd: async () => "/tmp",
     configure: async () => undefined,
     externalRuntime: {
-      available: async () => [],
+      available: async () => externalRuntimeKinds,
     },
     markAttachmentsSent: async (payload: Record<string, unknown>) => {
       markAttachmentsSentCalls.push(payload);
@@ -441,7 +447,10 @@ function installCodeshellStub(
     onApprovalResolved: () => unsubscribe,
     onMobilePermissionMode: () => unsubscribe,
     onStatus: () => unsubscribe,
-    onAgentLifecycle: () => unsubscribe,
+    onAgentLifecycle: (listener: typeof lifecycleListener) => {
+      lifecycleListener = listener;
+      return unsubscribe;
+    },
     onWorktreeCleanupSkipped: () => unsubscribe,
     onBrowserAnchorFromPopout: () => unsubscribe,
     onBrowserAnchorRemoveFromPopout: () => unsubscribe,
@@ -450,7 +459,7 @@ function installCodeshellStub(
     onMenuEvent: () => unsubscribe,
     getSettings,
     updateSettings: async () => undefined,
-    getModelCatalog: async () => [],
+    getModelCatalog: async () => modelCatalog,
     resolveModelMeta: async () => [],
     setBadgeCount: async () => undefined,
     notify: async () => undefined,
@@ -480,6 +489,8 @@ async function mountApp(options: {
   subscribeSession?: (sessionId: string, sinceSeq?: number) => Promise<any>;
   goalGet?: (sessionId: string) => Promise<any>;
   settings?: Record<string, unknown>;
+  externalRuntimeKinds?: string[];
+  modelCatalog?: Array<Record<string, unknown>>;
 }): Promise<string> {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -512,6 +523,8 @@ async function mountApp(options: {
     options.subscribeSession,
     options.goalGet,
     async () => options.settings ?? {},
+    options.externalRuntimeKinds,
+    options.modelCatalog,
   );
   container = document.createElement("div");
   root = createRoot(container);
@@ -535,6 +548,11 @@ function emitStream(sessionId: string, event: Record<string, unknown>): void {
 function emitApproval(env: ApprovalRequestEnvelope): void {
   if (!approvalListener) throw new Error("approval listener was not registered");
   approvalListener(env);
+}
+
+function emitLifecycle(env: { type: "restarted" | "gave_up" | "exited"; code?: number }): void {
+  if (!lifecycleListener) throw new Error("lifecycle listener was not registered");
+  lifecycleListener(env);
 }
 
 function approvalEnvelope(
@@ -571,6 +589,7 @@ afterEach(async () => {
   container = null;
   streamListener = null;
   approvalListener = null;
+  lifecycleListener = null;
   listDiskSessionsCalls = 0;
   deleteSessionCalls = [];
   cleanupQuickChatSessionCalls = [];
@@ -612,9 +631,9 @@ describe("App quick-chat integration", () => {
     });
 
     expect(chatProps?.activeModelKey).toBe("codex/gpt-5.6-sol");
-    expect(
-      JSON.parse(localStorageMock.getItem("codeshell.overrides.model") ?? "{}"),
-    ).toEqual({ "repoA::session-a": "codex/gpt-5.6-sol" });
+    expect(JSON.parse(localStorageMock.getItem("codeshell.overrides.model") ?? "{}")).toEqual({
+      "repoA::session-a": "codex/gpt-5.6-sol",
+    });
   });
 
   test("keeps a main-composer model change local to its session", async () => {
@@ -646,8 +665,9 @@ describe("App quick-chat integration", () => {
 
     expect(chatProps?.sendBucket).toBe("repoA::session-b");
     expect(chatProps?.activeModelKey).toBe("default-model");
-    expect(JSON.parse(localStorageMock.getItem("codeshell.overrides.model") ?? "{}"))
-      .toEqual({ "repoA::session-a": "session-a-model" });
+    expect(JSON.parse(localStorageMock.getItem("codeshell.overrides.model") ?? "{}")).toEqual({
+      "repoA::session-a": "session-a-model",
+    });
   });
 
   test("moves same-tick composer callbacks to the draft bucket when starting a new conversation", async () => {
@@ -1015,6 +1035,46 @@ describe("App quick-chat integration", () => {
     });
   });
 
+  test("filters external Agent Runtime models out of Quick Chat and uses a native fallback", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-native-model", kind: "quickChat" }],
+      externalRuntimeKinds: ["codex"],
+      settings: {
+        defaults: { text: "codex/gpt-5.6-sol" },
+        modelConnections: [
+          {
+            id: "native-model",
+            tag: "text",
+            catalogId: "native-provider",
+            model: "native-1",
+          },
+        ],
+      },
+      modelCatalog: [
+        {
+          id: "native-provider",
+          displayName: "Native Provider",
+          modelPresets: [{ value: "native-1", label: "Native 1" }],
+        },
+      ],
+    });
+    const [quick] = currentQuickPanels();
+    if (!quick) throw new Error("quick chat session was not created");
+
+    expect(chatProps?.activeModelKey).toBe("codex/gpt-5.6-sol");
+    expect(quick.modelOptions.map((option) => option.key)).toEqual(["native-model"]);
+    expect(quick.activeModelKey).toBe("native-model");
+
+    await act(async () => {
+      quick.onSend("use the native engine");
+      await flushMicrotasks();
+    });
+    expect(runCalls.at(-1)?.opts).toEqual(
+      expect.objectContaining({ sessionId: quick.sessionId, model: "native-model" }),
+    );
+  });
+
   test("round-trips one quick chat through every elevation while another quick chat and main stay unchanged", async () => {
     await mountApp({
       withNormalSession: true,
@@ -1078,6 +1138,7 @@ describe("App quick-chat integration", () => {
       prompt: "inspect only",
       opts: expect.objectContaining({
         sessionId: quick.sessionId,
+        quickChatClaimId: quick.creationNonce,
         permissionMode: "default",
         behaviorMode: "quickChatRestricted",
       }),
@@ -1104,6 +1165,30 @@ describe("App quick-chat integration", () => {
     });
   });
 
+  test("renders a visible error and clears busy when a quick-chat run is rejected", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-run-rejection", kind: "quickChat" }],
+    });
+    const [quick] = currentQuickPanels();
+    if (!quick) throw new Error("quick chat session was not created");
+    (window.codeshell as any).run = async () => {
+      throw new Error("worker unavailable");
+    };
+
+    await act(async () => {
+      quick.onSend("show the failure");
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    const current = quickChatProps.get(quick.sessionId);
+    expect(current?.busy).toBe(false);
+    expect(current?.messages.at(-1)).toEqual(
+      expect.objectContaining({ kind: "turn_end", reason: "error", detail: "worker unavailable" }),
+    );
+  });
+
   test("defaults to a full fork of the owner engine session before becoming ready", async () => {
     await mountApp({
       withNormalSession: true,
@@ -1123,7 +1208,29 @@ describe("App quick-chat integration", () => {
     expect(panel.creationStatus).toBe("ready");
     expect(panel.contextMode).toBe("full");
     expect(panel.sourceTitle).toBe("Session A");
+    expect(panel.copiedEventCount).toBe(0);
     expect(claimQuickChatSessionCalls[0]).toBe(panel.sessionId);
+  });
+
+  test("expires process-local quick chats when their worker exits", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-worker-exit", kind: "quickChat" }],
+    });
+    const [quick] = currentQuickPanels();
+    if (!quick) throw new Error("quick chat session was not created");
+    expect(quick.creationStatus).toBe("ready");
+
+    await act(async () => {
+      emitLifecycle({ type: "exited", code: 0 });
+      await flushMicrotasks();
+    });
+
+    const expired = quickChatProps.get(quick.sessionId);
+    expect(expired?.creationStatus).toBe("error");
+    const runCount = runCalls.length;
+    expired?.onSend("must not reopen stale context");
+    expect(runCalls).toHaveLength(runCount);
   });
 
   test("starts the full quick-chat UI empty without reading the inherited target transcript", async () => {
@@ -1533,6 +1640,44 @@ describe("App quick-chat integration", () => {
 
     cleanup.resolve({ deleted: true });
     await flushApp();
+  });
+
+  test("retries transient main-process cleanup failures when a quick-chat tab closes", async () => {
+    const ownerBucket = await mountApp({
+      withNormalSession: true,
+      panelTabs: [{ id: "quickChat-cleanup-retry", kind: "quickChat" }],
+    });
+    const [quick] = currentQuickPanels();
+    const panel = panelAreaProps.get(ownerBucket);
+    if (!quick || !panel) throw new Error("quick-chat cleanup surface was not ready");
+
+    let attempts = 0;
+    (window.codeshell as any).cleanupQuickChatSession = async (
+      sessionId: string,
+      claimId: string,
+    ) => {
+      attempts += 1;
+      cleanupQuickChatSessionCalls.push(sessionId);
+      if (attempts < 3) throw new Error("temporary cleanup failure");
+      if (activeQuickChatClaims.get(sessionId) === claimId) {
+        activeQuickChatClaims.delete(sessionId);
+      }
+      return { deleted: true };
+    };
+
+    await act(async () => {
+      panel.setTabs([]);
+      panel.setActiveId(null);
+      await flushMicrotasks();
+    });
+    await flushApp(350);
+
+    expect(cleanupQuickChatSessionCalls).toEqual([
+      quick.sessionId,
+      quick.sessionId,
+      quick.sessionId,
+    ]);
+    expect(activeQuickChatClaims.has(quick.sessionId)).toBe(false);
   });
 
   test("late composer setters cannot restore state after close or replacement", async () => {

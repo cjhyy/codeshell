@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 describe("Engine quick-chat prompt guidance", () => {
-  it("injects the side boundary guidance without trimming the normal tool set", async () => {
+  it("injects the side boundary guidance and hard-disables sub-agents", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "quick-chat-restricted-"));
     tempDirs.push(cwd);
     const model = `${provider}-${Date.now()}-${Math.random()}`;
@@ -81,8 +81,9 @@ describe("Engine quick-chat prompt guidance", () => {
     expect(restricted?.systemPrompt).toContain("Do not create or invoke sub-agents");
     expect(restricted?.systemPrompt).toContain("before this boundary");
     expect(restricted?.toolNames).toEqual(
-      expect.arrayContaining(["Read", "Write", "Edit", "Bash", "Agent"]),
+      expect.arrayContaining(["Read", "Write", "Edit", "Bash"]),
     );
+    expect(restricted?.toolNames).not.toContain("Agent");
   });
 
   it("keeps guidance and normal tools when the user explicitly requests an edit", async () => {
@@ -110,7 +111,8 @@ describe("Engine quick-chat prompt guidance", () => {
 
     const elevated = calls.at(-1);
     expect(elevated?.systemPrompt).toContain("# Side Conversation Boundary");
-    expect(elevated?.toolNames).toEqual(expect.arrayContaining(["Agent", "Write", "Edit", "Bash"]));
+    expect(elevated?.toolNames).toEqual(expect.arrayContaining(["Write", "Edit", "Bash"]));
+    expect(elevated?.toolNames).not.toContain("Agent");
   });
 
   it("fails closed for unknown behavior profiles and unowned session kinds", async () => {

@@ -113,6 +113,8 @@ export interface RunParams {
   attachments?: InputAttachmentMeta[];
   /** Stable id for the user's submit intent; duplicate ids are idempotent. */
   clientMessageId?: string;
+  /** Desktop host ownership generation for process-local Quick Chat runs. */
+  quickChatClaimId?: string;
   /**
    * Host-generated system reminder. Persisted with an injected marker so disk
    * transcript readers hide it as a user bubble while retaining the assistant reply.

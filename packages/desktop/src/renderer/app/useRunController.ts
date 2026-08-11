@@ -71,6 +71,7 @@ interface Params {
     modelOverrides: Record<string, string>;
     setModelOverrides: Dispatch<SetStateAction<Record<string, string>>>;
     defaultActiveModelKey: string | null;
+    quickChatDefaultModelKey: string | null;
   };
   runtime: {
     setBusyForKey: (key: string, value: boolean) => void;
@@ -131,6 +132,7 @@ export function useRunController({
     modelOverrides,
     setModelOverrides,
     defaultActiveModelKey,
+    quickChatDefaultModelKey,
   } = preferences;
   const { dispatch, state } = transcript;
   const {
@@ -500,7 +502,11 @@ export function useRunController({
       permissionOverrides[session.ownerBucket] ??
       defaultPermissionMode ??
       "default";
-    const sendModelKey = modelOverrides[bucket] ?? defaultActiveModelKey;
+    const configuredModelKey = modelOverrides[bucket];
+    const sendModelKey =
+      configuredModelKey && !parseExternalRuntimeModelKey(configuredModelKey)
+        ? configuredModelKey
+        : quickChatDefaultModelKey;
     const cwd = session.cwd ?? noRepoCwdRef.current ?? undefined;
     const opts: {
       cwd?: string;
@@ -509,6 +515,7 @@ export function useRunController({
       browserPartition: string;
       permissionMode?: ReturnType<typeof toCorePermissionMode>;
       behaviorMode?: "quickChatRestricted";
+      quickChatClaimId: string;
       clientMessageId: string;
       attachments?: InputAttachmentMeta[];
     } = {
@@ -517,6 +524,7 @@ export function useRunController({
       browserPartition: browserPartitionForBucket(bucket),
       clientMessageId,
       behaviorMode: "quickChatRestricted",
+      quickChatClaimId: session.creationNonce,
     };
     if (cwd) opts.cwd = cwd;
     if (attachments.length > 0) opts.attachments = attachments;
@@ -554,6 +562,13 @@ export function useRunController({
         });
     }
 
+    const isLiveGeneration = (): boolean =>
+      Object.values(quickChatSessionsRef.current).some(
+        (liveSession) =>
+          liveSession.sessionId === engineSessionId &&
+          liveSession.creationNonce === session.creationNonce,
+      );
+
     void runAfterModelSwitch({
       sessionId: engineSessionId,
       model: sendModelKey,
@@ -562,13 +577,7 @@ export function useRunController({
       run: window.codeshell.run,
     })
       .then((r) => {
-        if (
-          !Object.values(quickChatSessionsRef.current).some(
-            (liveSession) => liveSession.sessionId === engineSessionId,
-          )
-        ) {
-          return;
-        }
+        if (!isLiveGeneration()) return;
         setBusyForKey(bucket, false);
         if (runningBucketRef.current === bucket) {
           runningBucketRef.current = null;
@@ -587,6 +596,7 @@ export function useRunController({
         }
       })
       .catch((err) => {
+        if (!isLiveGeneration()) return;
         setBusyForKey(bucket, false);
         if (runningBucketRef.current === bucket) {
           runningBucketRef.current = null;
@@ -596,6 +606,9 @@ export function useRunController({
           sessionId: engineSessionId,
           error: String((err as Error)?.message ?? err),
         });
+        const detail = String((err as Error)?.message ?? err) || t("misc.app.requestRejected");
+        dispatch({ type: "turn_end", bucket, reason: "error", detail });
+        toast({ message: detail, variant: "error" });
       });
   };
 

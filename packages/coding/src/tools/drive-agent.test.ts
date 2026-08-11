@@ -103,12 +103,23 @@ describe("DriveAgent tool", () => {
   });
 
   it("registers DriveAgent and DriveClaudeCode with explicit long timeouts", () => {
-    const drive = CODING_TOOLS.find((t) => t.definition.name === "DriveAgent")?.definition;
-    const alias = CODING_TOOLS.find((t) => t.definition.name === "DriveClaudeCode")?.definition;
-    const jobs = CODING_TOOLS.find((t) => t.definition.name === "DriveAgentJobs")?.definition;
+    const driveTool = CODING_TOOLS.find((t) => t.definition.name === "DriveAgent");
+    const aliasTool = CODING_TOOLS.find((t) => t.definition.name === "DriveClaudeCode");
+    const drive = driveTool?.definition;
+    const alias = aliasTool?.definition;
+    const jobsTool = CODING_TOOLS.find((t) => t.definition.name === "DriveAgentJobs");
+    const jobs = jobsTool?.definition;
     expect(drive?.timeoutMs).toBeGreaterThan(120_000);
     expect(alias?.timeoutMs).toBe(drive?.timeoutMs);
     expect(jobs?.name).toBe("DriveAgentJobs");
+    const quickChatContext = {
+      cwd: "/tmp",
+      hasGoal: false,
+      behaviorProfile: "quickChatRestricted",
+    } as const;
+    expect(driveTool?.exposure.availability?.(quickChatContext)).toBe(false);
+    expect(aliasTool?.exposure.availability?.(quickChatContext)).toBe(false);
+    expect(jobsTool?.exposure.availability?.(quickChatContext)).toBe(false);
   });
 
   it("propagates the ToolContext AbortSignal to the runner", async () => {

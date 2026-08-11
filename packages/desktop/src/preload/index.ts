@@ -507,6 +507,8 @@ contextBridge.exposeInMainWorld("codeshell", {
         workspaceRoot: string;
         workspaceProfile?: string;
       }>;
+      /** Main-process ownership generation for a process-local Quick Chat. */
+      quickChatClaimId?: string;
       clientMessageId?: string;
       attachments?: InputAttachmentMeta[];
     } & Record<string, unknown>,

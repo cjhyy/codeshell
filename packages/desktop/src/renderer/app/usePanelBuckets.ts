@@ -37,6 +37,7 @@ import type { TranscriptsAction } from "../transcriptsReducer";
 import type { ApprovalState } from "../types";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import type { PanelTab, ViewMode } from "../view";
+import { isExternalRuntimeModelKey } from "../../shared/external-runtime-models";
 import { onComposerSeedRequest } from "../chat/composerSeed";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
@@ -69,6 +70,7 @@ interface Params {
     setPermissionOverrides: Dispatch<SetStateAction<Record<string, PermissionMode>>>;
     setModelOverrides: Dispatch<SetStateAction<Record<string, string>>>;
     defaultPermissionMode: PermissionMode | null;
+    quickChatDefaultModelKey: string | null;
     resolveEngineSessionIdForBucket: (bucket: string) => string | undefined;
     dispatch: Dispatch<TranscriptsAction>;
     approvalBucketsRef: MutableRefObject<Map<string, string>>;
@@ -87,6 +89,24 @@ interface Params {
     t: ReturnType<typeof useT>["t"];
     setViewMode: (view: ViewMode) => void;
   };
+}
+
+async function cleanupQuickChatWithRetry(sessionId: string, claimId: string): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await window.codeshell.cleanupQuickChatSession(sessionId, claimId);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, attempt * 100);
+        });
+      }
+    }
+  }
+  throw lastError;
 }
 
 /** Bucket-owned panel/quick-chat lifecycle; hidden panel buckets stay mounted. */
@@ -111,6 +131,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     setPermissionOverrides,
     setModelOverrides,
     defaultPermissionMode,
+    quickChatDefaultModelKey,
     resolveEngineSessionIdForBucket,
     dispatch,
     approvalBucketsRef,
@@ -215,7 +236,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
           !quickChatSessionsRef.current[key] ||
           quickChatSessionsRef.current[key].creationNonce !== nonce
         ) {
-          await window.codeshell.cleanupQuickChatSession(sessionId, nonce);
+          await cleanupQuickChatWithRetry(sessionId, nonce);
           return;
         }
         if (session.contextMode === "blank" || !session.sourceSessionId) {
@@ -223,20 +244,27 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
             !quickChatSessionsRef.current[key] ||
             quickChatSessionsRef.current[key].creationNonce !== nonce
           ) {
-            await window.codeshell.cleanupQuickChatSession(sessionId, nonce);
+            await cleanupQuickChatWithRetry(sessionId, nonce);
             return;
           }
           engineToBucketRef.current.set(sessionId, bucket);
-          setModelOverrides((current) =>
-            current[session.ownerBucket] === undefined
-              ? current
-              : { ...current, [bucket]: current[session.ownerBucket] },
-          );
+          setModelOverrides((current) => {
+            const inherited = current[session.ownerBucket];
+            const model =
+              inherited && !isExternalRuntimeModelKey(inherited)
+                ? inherited
+                : quickChatDefaultModelKey;
+            return model && current[bucket] !== model ? { ...current, [bucket]: model } : current;
+          });
           setPermissionOverrides((current) => ({
             ...current,
             [bucket]: current[session.ownerBucket] ?? defaultPermissionMode ?? "default",
           }));
-          updateQuickChatCreation(key, nonce, (current) => ({ ...current, status: "ready" }));
+          updateQuickChatCreation(key, nonce, (current) => ({
+            ...current,
+            copiedEventCount: 0,
+            status: "ready",
+          }));
           return;
         }
 
@@ -256,7 +284,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
           !quickChatSessionsRef.current[key] ||
           quickChatSessionsRef.current[key].creationNonce !== nonce
         ) {
-          await window.codeshell.cleanupQuickChatSession(result.sessionId, nonce);
+          await cleanupQuickChatWithRetry(result.sessionId, nonce);
           return;
         }
         // Match Codex /side: inherited transcript remains in the child Engine's
@@ -264,11 +292,14 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
         // Never hydrate copied parent events into this renderer bucket.
         dispatch({ type: "hydrate", bucket, state: foldTranscript([]) });
         engineToBucketRef.current.set(result.sessionId, bucket);
-        setModelOverrides((current) =>
-          current[session.ownerBucket] === undefined
-            ? current
-            : { ...current, [bucket]: current[session.ownerBucket] },
-        );
+        setModelOverrides((current) => {
+          const inherited = current[session.ownerBucket];
+          const model =
+            inherited && !isExternalRuntimeModelKey(inherited)
+              ? inherited
+              : quickChatDefaultModelKey;
+          return model && current[bucket] !== model ? { ...current, [bucket]: model } : current;
+        });
         setPermissionOverrides((current) => ({
           ...current,
           [bucket]: current[session.ownerBucket] ?? defaultPermissionMode ?? "default",
@@ -276,11 +307,12 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
         updateQuickChatCreation(key, nonce, (current) => ({
           ...current,
           cwd: result.workspace.root,
+          copiedEventCount: "copiedEventCount" in result ? result.copiedEventCount : 0,
           status: "ready",
           error: undefined,
         }));
       } catch (err) {
-        await window.codeshell.cleanupQuickChatSession(sessionId, nonce).catch(() => undefined);
+        await cleanupQuickChatWithRetry(sessionId, nonce).catch(() => undefined);
         const error = err as Error & { code?: number };
         updateQuickChatCreation(key, nonce, (current) => ({
           ...current,
@@ -289,7 +321,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
         }));
       }
     },
-    [defaultPermissionMode, updateQuickChatCreation],
+    [defaultPermissionMode, quickChatDefaultModelKey, updateQuickChatCreation],
   );
 
   const onOpenCliSessionConsumed = useCallback(
@@ -348,14 +380,16 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     const claimKey = `${session.sessionId}\0${session.creationNonce}`;
     if (quickChatLifecycleCleanupRef.current.has(claimKey)) return;
     quickChatLifecycleCleanupRef.current.add(claimKey);
-    void window.codeshell
-      .cleanupQuickChatSession(session.sessionId, session.creationNonce)
-      .catch((error) =>
+    void cleanupQuickChatWithRetry(session.sessionId, session.creationNonce)
+      .catch((error) => {
         window.codeshell.log("quick_chat.delete_session_failed", {
           sessionId: session.sessionId,
           error: String(error),
-        }),
-      );
+        });
+      })
+      .finally(() => {
+        quickChatLifecycleCleanupRef.current.delete(claimKey);
+      });
   }, []);
 
   const restartQuickChatSession = useCallback(
@@ -367,6 +401,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
         sessionId,
         bucket,
         contextMode,
+        copiedEventCount: undefined,
         status: "creating",
         error: undefined,
         creationNonce: makeQuickChatCreationNonce(),
@@ -446,6 +481,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
   const setQuickChatModel = useCallback((bucket: string, option: ModelOption) => {
     // Side-chat model choice is ephemeral and bucket-local: unlike the main
     // composer, it must not update the global default or any sibling session.
+    if (isExternalRuntimeModelKey(option.key)) return;
     setModelOverrides((current) =>
       Object.values(quickChatSessionsRef.current).some((session) => session.bucket === bucket)
         ? { ...current, [bucket]: option.key }

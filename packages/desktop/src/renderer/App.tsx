@@ -226,6 +226,16 @@ function App() {
   // users change this global default explicitly in Settings.
   const [defaultActiveModelKey, setDefaultActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
+  const quickChatModelOptions = useMemo(
+    () => modelOptions.filter((option) => !isExternalRuntimeModelKey(option.key)),
+    [modelOptions],
+  );
+  const quickChatDefaultModelKey = useMemo(() => {
+    if (defaultActiveModelKey && !isExternalRuntimeModelKey(defaultActiveModelKey)) {
+      return defaultActiveModelKey;
+    }
+    return quickChatModelOptions[0]?.key ?? null;
+  }, [defaultActiveModelKey, quickChatModelOptions]);
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
   // Provider-agnostic image clarity (low/standard/high) from merged settings;
   // drives renderer-side downscale before send. Undefined = follow default.
@@ -1098,7 +1108,13 @@ function App() {
       setApproval,
       setPermissionOverrides,
     },
-    sessions: { setQueuedInputs, setUnreadBuckets, setSessionIndices, setProjects },
+    sessions: {
+      setQueuedInputs,
+      setUnreadBuckets,
+      setSessionIndices,
+      setProjects,
+      setQuickChatSessions,
+    },
     activity: { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys },
   });
 
@@ -1139,6 +1155,7 @@ function App() {
       modelOverrides,
       setModelOverrides,
       defaultActiveModelKey,
+      quickChatDefaultModelKey,
     },
     runtime: {
       setBusyForKey,
@@ -1220,6 +1237,7 @@ function App() {
       setPermissionOverrides,
       setModelOverrides,
       defaultPermissionMode,
+      quickChatDefaultModelKey,
       resolveEngineSessionIdForBucket,
       dispatch,
       approvalBucketsRef,
@@ -2538,10 +2556,10 @@ function App() {
                   permissionOverrides={permissionOverrides}
                   defaultPermissionMode={defaultPermissionMode}
                   modelOverrides={modelOverrides}
-                  defaultActiveModelKey={defaultActiveModelKey}
+                  defaultActiveModelKey={quickChatDefaultModelKey}
                   quickChatDrafts={quickChatDrafts}
                   quickChatAttachments={quickChatAttachments}
-                  modelOptions={modelOptions}
+                  modelOptions={quickChatModelOptions}
                   imageDetail={imageDetail}
                   setQuickChatPermission={setQuickChatPermission}
                   setQuickChatModel={setQuickChatModel}

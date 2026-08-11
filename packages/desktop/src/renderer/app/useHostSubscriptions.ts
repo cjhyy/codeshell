@@ -29,11 +29,7 @@ import { placeLiveAutomationSession } from "../automation/liveSession";
 import { planDiskRebuild } from "../automation/rebuildFromDisk";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
 import { resolveProjectCwd } from "./useAutomationSessionImport";
-import {
-  browserPartitionForBucket,
-  fromMobilePermissionMode,
-  stablePromptHash,
-} from "./appUtils";
+import { browserPartitionForBucket, fromMobilePermissionMode, stablePromptHash } from "./appUtils";
 import { titleFromWire } from "../chat/attachments";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
@@ -77,6 +73,7 @@ interface Params {
     setUnreadBuckets: Dispatch<SetStateAction<Set<string>>>;
     setSessionIndices: Dispatch<SetStateAction<Record<string, SessionIndex>>>;
     setProjects: Dispatch<SetStateAction<TrackedProject[]>>;
+    setQuickChatSessions: Dispatch<SetStateAction<Record<string, QuickChatSessionRef>>>;
   };
   activity: {
     mobileAnnounceSeqRef: MutableRefObject<number>;
@@ -116,7 +113,13 @@ export function useHostSubscriptions({
     setApproval,
     setPermissionOverrides,
   } = permissions;
-  const { setQueuedInputs, setUnreadBuckets, setSessionIndices, setProjects } = sessions;
+  const {
+    setQueuedInputs,
+    setUnreadBuckets,
+    setSessionIndices,
+    setProjects,
+    setQuickChatSessions,
+  } = sessions;
   const { mobileAnnounceSeqRef, setBusyForKey, setLifecycle, setBusyKeys } = activity;
   useEffect(() => {
     const coalescers = coalescersRef.current;
@@ -706,12 +709,41 @@ export function useHostSubscriptions({
     const offStatus = window.codeshell.onStatus((evt) => {
       window.codeshell.log("status", evt as Record<string, unknown>);
     });
+    const expireQuickChatSessions = (): void => {
+      const live = Object.values(quickChatSessionsRef.current);
+      if (live.length === 0) return;
+      const detail = t("panels.quickChat.contextExpired");
+      const next = { ...quickChatSessionsRef.current };
+      for (const session of live) {
+        next[session.key] = {
+          ...session,
+          status: "error",
+          error: { message: detail },
+        };
+        engineToBucketRef.current.delete(session.sessionId);
+      }
+      if (live.some((session) => session.bucket === runningBucketRef.current)) {
+        runningBucketRef.current = null;
+      }
+      quickChatSessionsRef.current = next;
+      setQuickChatSessions(next);
+      setBusyKeys((previous) => {
+        const updated = new Set(previous);
+        for (const session of live) updated.delete(session.bucket);
+        return updated;
+      });
+    };
     const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
       window.codeshell.log("lifecycle", evt as Record<string, unknown>);
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
-      else if (evt.type === "gave_up")
+      else if (evt.type === "gave_up") {
+        expireQuickChatSessions();
         setLifecycle("Agent crashed too many times. Quit and reopen.");
-      else if (evt.type === "exited") {
+      } else if (evt.type === "exited") {
+        // Quick Chat transcripts intentionally never touch disk, so a worker
+        // exit invalidates their context even when the process exited cleanly.
+        // Keep the panel visible, but require an explicit fresh fork/blank chat.
+        expireQuickChatSessions();
         if (evt.code === 0) setLifecycle(null);
         else setLifecycle(`Agent exited (code ${evt.code}).`);
         // Worker died — every in-flight run is dead with it. Clear busy
@@ -747,7 +779,7 @@ export function useHostSubscriptions({
     };
     // `toast` from useToast is a stable reference (memoized in ToastProvider),
     // so listing it here does not re-register these long-lived IPC listeners.
-  }, [toast]);
+  }, [t, toast]);
 
   useEffect(() => {
     const off = window.codeshell.onWorktreeCleanupSkipped((event) => {

@@ -92,6 +92,7 @@ export function QuickChatPanelHost({
       creationError={session.error?.message}
       contextMode={session.contextMode}
       sourceTitle={session.sourceTitle}
+      copiedEventCount={session.copiedEventCount}
       draft={draft}
       attachments={attachments}
       permissionMode={permissionMode}

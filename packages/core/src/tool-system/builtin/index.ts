@@ -490,7 +490,10 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       timeoutMs: 1_800_000, // 30min — sub-agent runs may execute many tool calls
     },
     execute: agentTool,
-    exposure: expose(HARNESS_TAGS, { defaultPermissionRules: allow(agentToolDef.name) }),
+    exposure: expose(HARNESS_TAGS, {
+      defaultPermissionRules: allow(agentToolDef.name),
+      availability: (ctx) => ctx.behaviorProfile !== "quickChatRestricted",
+    }),
   },
   {
     definition: {

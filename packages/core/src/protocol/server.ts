@@ -121,6 +121,12 @@ function runInputError(params: RunParams): string | null {
     return "injected must be a boolean";
   }
   if (
+    params.quickChatClaimId !== undefined &&
+    (typeof params.quickChatClaimId !== "string" || params.quickChatClaimId.length === 0)
+  ) {
+    return "quickChatClaimId must be a non-empty string";
+  }
+  if (
     params.behaviorMode !== undefined &&
     (typeof params.behaviorMode !== "string" || params.behaviorMode.length === 0)
   ) {

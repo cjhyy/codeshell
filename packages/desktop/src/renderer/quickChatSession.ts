@@ -13,6 +13,8 @@ export interface QuickChatSessionRef {
   cwd: string | null;
   sourceSessionId: string | null;
   sourceTitle?: string;
+  /** Number of completed source events inherited by the side snapshot. */
+  copiedEventCount?: number;
   contextMode: QuickChatContextMode;
   status: QuickChatCreationStatus;
   error?: { code?: number; message: string };

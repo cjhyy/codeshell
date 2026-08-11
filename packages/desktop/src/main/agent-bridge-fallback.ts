@@ -32,6 +32,39 @@ export interface QuickChatForkRequest {
   claimId: string;
 }
 
+export type QuickChatRunRequest = QuickChatForkRequest;
+
+export function quickChatRunSessionId(parsed: ParsedRpc): string | null {
+  const sessionId = parsed.params?.sessionId;
+  return parsed.method === "agent/run" &&
+    typeof sessionId === "string" &&
+    /^qchat-[A-Za-z0-9.-]+$/.test(sessionId)
+    ? sessionId
+    : null;
+}
+
+export function quickChatRunRequest(
+  parsed: ParsedRpc,
+  ownerId: number,
+): QuickChatRunRequest | null {
+  const sessionId = quickChatRunSessionId(parsed);
+  const quickChatClaimId = parsed.params?.quickChatClaimId;
+  if (
+    sessionId === null ||
+    parsed.id === undefined ||
+    typeof quickChatClaimId !== "string" ||
+    !quickChatClaimId
+  ) {
+    return null;
+  }
+  return {
+    requestId: parsed.id,
+    sessionId,
+    ownerId,
+    claimId: quickChatClaimId,
+  };
+}
+
 export function quickChatForkRequest(
   parsed: ParsedRpc,
   ownerId: number,

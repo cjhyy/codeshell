@@ -373,6 +373,11 @@ export class ChatSessionManager {
   sweepIdle(): void {
     const cutoff = Date.now() - this.idleTtlMs;
     for (const [id, s] of [...this.sessions]) {
+      // Quick Chat transcripts are process-local by design. Closing one from
+      // the generic idle sweeper destroys its inherited context while the
+      // renderer still owns (and displays) the panel. Its explicit claim/
+      // panel lifecycle is the sole authority that may close it.
+      if (id.startsWith("qchat-")) continue;
       if (s.lastActivityAt >= cutoff) continue;
       if (s.isBusy()) continue;
       if (backgroundJobRegistry.hasRunningForSession(id)) continue;

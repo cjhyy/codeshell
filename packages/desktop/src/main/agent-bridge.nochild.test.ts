@@ -18,6 +18,8 @@ import {
   compactQuerySessionId,
   forkSourceSessionId,
   quickChatForkRequest,
+  quickChatRunRequest,
+  quickChatRunSessionId,
 } from "./agent-bridge-fallback.js";
 
 describe("buildNoChildFallbackReply — no live worker", () => {
@@ -182,6 +184,32 @@ describe("forkSourceSessionId", () => {
         { id: 44, method: "agent/forkSession", params: { targetSessionId: "qchat-target-2" } },
         101,
       ),
+    ).toBeNull();
+  });
+});
+
+describe("quick-chat run ownership parsing", () => {
+  test("requires a claim on process-local runs and ignores ordinary runs", () => {
+    const parsed = {
+      id: 45,
+      method: "agent/run",
+      params: { sessionId: "qchat-run-1", quickChatClaimId: "generation-1" },
+    };
+    expect(quickChatRunSessionId(parsed)).toBe("qchat-run-1");
+    expect(quickChatRunRequest(parsed, 101)).toEqual({
+      requestId: 45,
+      sessionId: "qchat-run-1",
+      ownerId: 101,
+      claimId: "generation-1",
+    });
+    expect(
+      quickChatRunRequest(
+        { id: 46, method: "agent/run", params: { sessionId: "qchat-run-2" } },
+        101,
+      ),
+    ).toBeNull();
+    expect(
+      quickChatRunSessionId({ id: 47, method: "agent/run", params: { sessionId: "regular" } }),
     ).toBeNull();
   });
 });
