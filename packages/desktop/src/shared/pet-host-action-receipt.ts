@@ -4,10 +4,37 @@ export const PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX =
   "pet-host-action-replace-delivery-";
 export const PET_HOST_ACTION_REPLACE_DISPLAY_MARKER = "<!--PET:HOST_ACTION_REPLACE-->";
 const PET_HOST_ACTION_REPLACE_DISPLAY_PREFIX = "<!--PET:HOST_ACTION_REPLACE:";
+export const PET_HOST_ACTION_OUTBOUND_FAILURE_PREFIX = "主动消息操作失败：";
+export const PET_HOST_ACTION_OUTBOUND_ACCEPTED_SUFFIX =
+  "平台接口已接受发送请求；尚未确认收件设备已展示。";
 
 export interface PetHostActionReplacementDisplayMetadata {
   sourceClientMessageId: string;
   deliveryChannel?: string;
+}
+
+/** Single source for the durable outbound receipt rendered by Electron main. */
+export function formatPetHostActionOutboundAcceptedReceipt(
+  label: string,
+  attachmentCount: number,
+): string {
+  const subject = attachmentCount > 0 ? `消息和 ${attachmentCount} 个附件` : "消息";
+  return label
+    ? `${subject}已提交到 ${label}，${PET_HOST_ACTION_OUTBOUND_ACCEPTED_SUFFIX}`
+    : `${subject}已提交，${PET_HOST_ACTION_OUTBOUND_ACCEPTED_SUFFIX}`;
+}
+
+/** Match both current structured wording and receipts already stored by older builds. */
+export function isLegacyPetHostActionReplacementReceiptText(text: string): boolean {
+  return text.split("\n").some((line) => {
+    if (line.startsWith(PET_HOST_ACTION_OUTBOUND_FAILURE_PREFIX)) return true;
+    if (/^消息已发送(?:到 .+)?。$/u.test(line)) return true;
+    return (
+      /^(?:消息|消息和 \d+ 个附件)已提交(?:到 .+)?，/u.test(line) &&
+      (line.endsWith(PET_HOST_ACTION_OUTBOUND_ACCEPTED_SUFFIX) ||
+        line.endsWith("平台已接受发送请求。"))
+    );
+  });
 }
 
 /** Recover display-only replacement metadata from a durable receipt id. */
@@ -39,9 +66,7 @@ export function replacementReceiptDisplayMetadata(
   }
   if (
     receiptClientMessageId.startsWith(PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX) &&
-    /(?:^|\n)(?:主动消息操作失败：[^\n]*|消息已发送(?:到 [^\n。]+)?。|(?:消息|消息和 \d+ 个附件)已提交(?:到 [^\n，。]+)?，(?:平台已接受发送请求。|平台接口已接受发送请求；尚未确认收件设备已展示。))(?:$|\n)/u.test(
-      text,
-    )
+    isLegacyPetHostActionReplacementReceiptText(text)
   ) {
     const sourceClientMessageId = receiptClientMessageId.slice(
       PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX.length,

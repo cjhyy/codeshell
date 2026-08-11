@@ -857,16 +857,16 @@ let gatewayControlServer: GatewayControlServer | undefined;
  * direct sender. When the live Gateway owns the stream the hand-off is a no-op;
  * when stopped, direct-capable adapters deliver it without task-layer coupling.
  */
-function publishGatewayControlEvent(event: GatewayControlEventInput): void {
+async function publishGatewayControlEvent(event: GatewayControlEventInput): Promise<void> {
   const gateway = gatewayControlServer;
   if (!gateway) throw new Error("IM Gateway notification outbox is unavailable");
-  const published = gateway.publish(event);
+  const published = await gateway.publish(event);
   const context = gateway.eventContext();
   if (!context) return;
   void imGatewayService
     .deliverPublishedNotification(published, context)
-    .then((delivered) => {
-      if (delivered) gateway.acknowledgeDirectDelivery(published.id);
+    .then(async (delivered) => {
+      if (delivered) await gateway.acknowledgeDirectDelivery(published.id);
     })
     .catch((error) =>
       dlog("main", "im_gateway.notification_direct.failed", {
@@ -878,14 +878,12 @@ function publishGatewayControlEvent(event: GatewayControlEventInput): void {
 }
 
 function publishGatewayControlEventBestEffort(event: GatewayControlEventInput): void {
-  try {
-    publishGatewayControlEvent(event);
-  } catch (error) {
+  void publishGatewayControlEvent(event).catch((error) =>
     dlog("main", "im_gateway.notification_publish.failed", {
       type: event.type,
       error: String(error),
-    });
-  }
+    }),
+  );
 }
 // Forward tunnel status changes to every renderer so the UI can reflect
 // connected / disconnected (address invalidated) without polling.
@@ -1580,7 +1578,7 @@ async function createWindow(): Promise<BrowserWindow> {
           });
           message = enriched.text;
           const completionAttachments = enriched.attachments;
-          publishGatewayControlEvent({
+          await publishGatewayControlEvent({
             deliveryKey: createHash("sha256")
               .update("pet-task-closure\0")
               .update(task.id)
@@ -1963,7 +1961,7 @@ async function createWindow(): Promise<BrowserWindow> {
               attachmentKinds: completionTarget.replyAttachmentKinds,
             },
           );
-          publishGatewayControlEvent({
+          await publishGatewayControlEvent({
             deliveryKey: createHash("sha256")
               .update("pet-task-report\0")
               .update(event.reportId)

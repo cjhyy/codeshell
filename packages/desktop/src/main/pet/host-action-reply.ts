@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { GatewayControlEventAttachment } from "../im-gateway-control-server.js";
+import {
+  formatPetHostActionOutboundAcceptedReceipt,
+  PET_HOST_ACTION_OUTBOUND_FAILURE_PREFIX,
+} from "../../shared/pet-host-action-receipt.js";
 import type { PetHostActionExecution } from "./pet-dispatch-service.js";
 
 const MAX_KEPT_QR_FILES = 4;
@@ -67,7 +71,9 @@ export async function enrichPetChatReplyWithHostActions(
       lines.push(
         execution.kind === "gatewayReply"
           ? `Gateway 回复未发送：${execution.error ?? "未知错误"}`
-          : `${label}操作失败：${execution.error ?? "未知错误"}`,
+          : execution.kind === "outboundMessage"
+            ? `${PET_HOST_ACTION_OUTBOUND_FAILURE_PREFIX}${execution.error ?? "未知错误"}`
+            : `${label}操作失败：${execution.error ?? "未知错误"}`,
       );
       continue;
     }
@@ -248,10 +254,7 @@ function renderOutboundMessageLine(execution: PetHostActionExecution): string {
     execution.result.attachmentCount > 0
       ? execution.result.attachmentCount
       : 0;
-  const subject = attachmentCount > 0 ? `消息和 ${attachmentCount} 个附件` : "消息";
-  return label
-    ? `${subject}已提交到 ${label}，平台接口已接受发送请求；尚未确认收件设备已展示。`
-    : `${subject}已提交，平台接口已接受发送请求；尚未确认收件设备已展示。`;
+  return formatPetHostActionOutboundAcceptedReceipt(label, attachmentCount);
 }
 
 /** Render the one-time pairing URL as a PNG QR file; best-effort. */

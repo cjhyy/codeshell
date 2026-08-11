@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { ExternalAgentSessionStore } from "./external-agent-session-store.js";
@@ -35,13 +35,13 @@ function waitForStdout(child: ReturnType<typeof spawn>, text: string): Promise<v
 }
 
 describe("ExternalAgentSessionStore", () => {
-  it("persists cwd bindings keyed by cli + sessionId", () => {
+  it("persists cwd bindings keyed by cli + sessionId", async () => {
     const dir = mkdtempSync(join(tmpdir(), "external-agent-store-"));
     try {
       const file = join(dir, "sessions.json");
       const a = new ExternalAgentSessionStore(file);
-      a.record({ cli: "claude", sessionId: "S1", cwd: "/repo/a" });
-      a.record({ cli: "codex", sessionId: "S1", cwd: "/repo/b" });
+      await a.record({ cli: "claude", sessionId: "S1", cwd: "/repo/a" });
+      await a.record({ cli: "codex", sessionId: "S1", cwd: "/repo/b" });
 
       const b = new ExternalAgentSessionStore(file);
       expect(b.get("claude", "S1")?.cwd).toBe("/repo/a");
@@ -55,14 +55,14 @@ describe("ExternalAgentSessionStore", () => {
     }
   });
 
-  it("updates an existing binding and preserves optional worktree fields", () => {
+  it("updates an existing binding and preserves optional worktree fields", async () => {
     const dir = mkdtempSync(join(tmpdir(), "external-agent-store-"));
     try {
       const file = join(dir, "sessions.json");
       const store = new ExternalAgentSessionStore(file);
 
-      store.record({ cli: "claude", sessionId: "S1", cwd: "/repo/old" });
-      store.record({
+      await store.record({ cli: "claude", sessionId: "S1", cwd: "/repo/old" });
+      await store.record({
         cli: "claude",
         sessionId: "S1",
         cwd: "/repo/new",
@@ -82,7 +82,7 @@ describe("ExternalAgentSessionStore", () => {
     }
   });
 
-  it("normalizes cwd before storing", () => {
+  it("normalizes cwd before storing", async () => {
     const dir = mkdtempSync(join(tmpdir(), "external-agent-store-cwd-"));
     const prevCwd = process.cwd();
     try {
@@ -91,7 +91,7 @@ describe("ExternalAgentSessionStore", () => {
       process.chdir(dir);
       const store = new ExternalAgentSessionStore(join(dir, "sessions.json"));
 
-      store.record({ cli: "claude", sessionId: "S1", cwd: "project/" });
+      await store.record({ cli: "claude", sessionId: "S1", cwd: "project/" });
 
       expect(store.get("claude", "S1")?.cwd).toBe(realpathSync(project));
     } finally {
@@ -113,8 +113,9 @@ describe("ExternalAgentSessionStore", () => {
       // pre-fix store ignored this directory, letting B save a stale snapshot
       // that A then overwrote below.
       mkdirSync(`${file}.lock`);
+      const repositoryRoot = resolve(import.meta.dir, "../../../..");
       const moduleUrl = pathToFileURL(
-        join(process.cwd(), "packages/coding/src/cc-orchestrator/external-agent-session-store.ts"),
+        join(repositoryRoot, "packages/coding/src/cc-orchestrator/external-agent-session-store.ts"),
       ).href;
       const child = spawn(
         process.execPath,
@@ -123,7 +124,7 @@ describe("ExternalAgentSessionStore", () => {
           `
           import { ExternalAgentSessionStore } from ${JSON.stringify(moduleUrl)};
           process.stdout.write("ready\\n");
-          new ExternalAgentSessionStore(${JSON.stringify(file)}).record({
+          await new ExternalAgentSessionStore(${JSON.stringify(file)}).record({
             cli: "claude",
             sessionId: "S2",
             cwd: ${JSON.stringify(secondCwd)}
@@ -131,7 +132,7 @@ describe("ExternalAgentSessionStore", () => {
         `,
         ],
         {
-          cwd: process.cwd(),
+          cwd: repositoryRoot,
           stdio: ["ignore", "pipe", "pipe"],
         },
       );

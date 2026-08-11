@@ -31,6 +31,7 @@ import applyStyles, { type Styles, type TextStyles } from './styles.js'
 // We need to conditionally perform devtools connection to avoid
 // accidentally breaking other third-party code.
 // See https://github.com/vadimdemedes/ink/issues/384
+// eslint-disable-next-line custom-rules/no-process-env-top-level -- launch-time dev-only branch
 if (process.env.NODE_ENV === 'development') {
   try {
     // eslint-disable-next-line custom-rules/no-top-level-dynamic-import -- dev-only; NODE_ENV check is DCE'd in production

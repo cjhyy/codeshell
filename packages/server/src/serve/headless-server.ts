@@ -10,19 +10,18 @@
 //   - WorkerBridgeCore      spawns/drives ONE agent-server-stdio worker.
 //   - resolveSafe           path-traversal-safe static file resolution.
 //
-// The browser speaks the CORE protocol (agent/run, agent/approve,
-// agent/streamEvent, …) as a first-party front end: this module is a thin
-// WS ↔ worker-stdio pipe, NOT a re-implementation of the desktop mobile
-// orchestrator. Every authenticated tab sees the identical line stream
-// (same semantics as AgentBridge's renderer fan-out).
+// The browser uses a deliberately small CORE-protocol projection: the host
+// answers session list/detail itself and forwards only run/approve/cancel after
+// workspace/session authorization. Per-tab request IDs are translated so
+// responses return only to their origin; notifications fan out to all tabs.
 //
-// Restart recovery: sessions persist on disk in the worker's data dir; a
+// Restart recovery: sessions persist under the serve-owned worker data root; a
 // server restart spawns a fresh worker on the first inbound frame and the
 // browser re-lists sessions over the same protocol.
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
-import { extname, join, resolve } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
 import type { Duplex } from "node:stream";
 import { randomBytes } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -45,6 +44,11 @@ export interface HeadlessServeOptions {
   workerEntryPath: string;
   /** Session root override for tests/relocated workers. Defaults to core's canonical root. */
   sessionRootDir?: string;
+  /**
+   * Isolated data root passed to the stdio worker. Defaults to `<dataDir>/worker`.
+   * When `sessionRootDir` is supplied without this option, its parent is used.
+   */
+  workerDataRoot?: string;
   /** Runtime binary for the worker; defaults to process.execPath. */
   execPath?: string;
   /** Built web app root; when absent the server is WS/API-only. */
@@ -75,7 +79,18 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   const host = opts.host ?? "127.0.0.1";
   const log: WorkerBridgeLog = opts.log ?? (() => {});
   const workspaceCwd = resolve(opts.cwd);
-  const sessionManager = new SessionManager(opts.sessionRootDir);
+  const workerDataRoot = resolve(
+    opts.workerDataRoot ??
+      (opts.sessionRootDir ? dirname(resolve(opts.sessionRootDir)) : join(opts.dataDir, "worker")),
+  );
+  const sessionRootDir = resolve(opts.sessionRootDir ?? join(workerDataRoot, "sessions"));
+  const expectedSessionRootDir = resolve(join(workerDataRoot, "sessions"));
+  if (sessionRootDir !== expectedSessionRootDir) {
+    throw new Error(
+      `sessionRootDir must equal <workerDataRoot>/sessions (${expectedSessionRootDir}) so the host and worker authorize the same session store`,
+    );
+  }
+  const sessionManager = new SessionManager(sessionRootDir);
 
   const passcode = new AccessPasscode({ filePath: join(opts.dataDir, "access.json") });
   let generatedPasscode: string | undefined;
@@ -87,19 +102,67 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   }
 
   const tabs = new Set<WebSocket>();
+  const pendingWorkerResponses = new Map<
+    string,
+    { tab: WebSocket; originalId: string | number; tabId: number }
+  >();
+  let nextTabId = 1;
+  let nextWorkerRequestId = 1;
   const broadcast = (line: string): void => {
     for (const tab of tabs) {
       if (tab.readyState === tab.OPEN) tab.send(line);
     }
   };
 
+  const failPendingWorkerResponses = (message: string): void => {
+    for (const { tab, originalId } of pendingWorkerResponses.values()) {
+      if (tab.readyState !== tab.OPEN) continue;
+      tab.send(hostQueryError(originalId, -32000, message));
+    }
+    pendingWorkerResponses.clear();
+  };
+
+  // Notifications describe shared agent state and are broadcast. Correlated
+  // JSON-RPC responses must return only to the tab that issued the request;
+  // browser tabs all start their local counters at `web-1`, so broadcasting a
+  // response lets one tab resolve another tab's promise.
+  const routeWorkerLine = (line: string): void => {
+    let message:
+      | {
+          id?: string | number | null;
+          method?: string;
+          [key: string]: unknown;
+        }
+      | undefined;
+    try {
+      message = JSON.parse(line) as typeof message;
+    } catch {
+      log("worker.frame_dropped", { reason: "not json", raw: previewLine(line) });
+      return;
+    }
+    if (!message || message.id === undefined || message.method !== undefined) {
+      broadcast(line);
+      return;
+    }
+    const route = pendingWorkerResponses.get(String(message.id));
+    if (!route) {
+      log("worker.response_dropped", { reason: "unknown request id", id: message.id });
+      return;
+    }
+    pendingWorkerResponses.delete(String(message.id));
+    if (route.tab.readyState !== route.tab.OPEN) return;
+    route.tab.send(JSON.stringify({ ...message, id: route.originalId }));
+  };
+
   const bridge = new WorkerBridgeCore({
     entryPath: opts.workerEntryPath,
     execPath: opts.execPath,
     fallbackCwd: () => opts.cwd,
+    buildEnv: () => ({ ...process.env, CODE_SHELL_DATA_ROOT: workerDataRoot }),
     log,
     onStderr: (text) => log("worker.stderr", { text: previewLine(text) }),
     onExit: (info) => {
+      failPendingWorkerResponses("agent worker stopped");
       // Synthetic serve-level notification so the UI can show "agent worker
       // stopped" without conflating it with in-protocol agent/status.
       broadcast(
@@ -111,7 +174,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       );
     },
   });
-  bridge.subscribeLines(broadcast);
+  bridge.subscribeLines(routeWorkerLine);
 
   const serveStatic = (req: IncomingMessage, res: ServerResponse): void => {
     const root = opts.staticRootDir;
@@ -173,6 +236,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       socket.destroy();
       return;
     }
+    const tabId = nextTabId++;
     wss.handleUpgrade(req, socket, head, (ws) => {
       tabs.add(ws);
       log("tab.connected", { tabs: tabs.size });
@@ -203,16 +267,32 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           ws.send(hostReply);
           return;
         }
+        const policyReply = authorizeServeRequest(parsed, sessionManager, workspaceCwd);
+        if (policyReply) {
+          ws.send(policyReply);
+          return;
+        }
         // This host intentionally exposes one workspace. A browser must not be
         // able to escape it by supplying another cwd, and a missing cwd must
         // not silently become the worker's global no-repo conversation.
-        const workerLine =
+        const workerMessage =
           parsed.method === "agent/run"
-            ? JSON.stringify({
-                ...parsed,
-                params: { ...(parsed.params ?? {}), cwd: workspaceCwd },
-              })
-            : line;
+            ? { ...parsed, params: { ...(parsed.params ?? {}), cwd: workspaceCwd } }
+            : parsed;
+        if (workerMessage.id === null) {
+          ws.send(hostQueryError(null, -32600, "JSON-RPC request id must not be null"));
+          return;
+        }
+        if (workerMessage.id !== undefined) {
+          const workerRequestId = `serve-${tabId}-${nextWorkerRequestId++}`;
+          pendingWorkerResponses.set(workerRequestId, {
+            tab: ws,
+            originalId: workerMessage.id,
+            tabId,
+          });
+          workerMessage.id = workerRequestId;
+        }
+        const workerLine = JSON.stringify(workerMessage);
         // Spawn-on-first-frame (idempotent): the browser's first request wakes
         // the worker, mirroring the renderer's spawn-on-agent/run semantics.
         bridge.ensureWorker(opts.cwd);
@@ -220,6 +300,9 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       });
       ws.on("close", () => {
         tabs.delete(ws);
+        for (const [requestId, route] of pendingWorkerResponses) {
+          if (route.tabId === tabId) pendingWorkerResponses.delete(requestId);
+        }
         log("tab.closed", { tabs: tabs.size });
       });
       ws.on("error", () => {
@@ -326,6 +409,45 @@ function replyToHostSessionQuery(
       error instanceof Error ? error.message : "Session not found",
     );
   }
+}
+
+const SERVE_ALLOWED_WORKER_METHODS = new Set(["agent/run", "agent/approve", "agent/cancel"]);
+
+/**
+ * The no-account Web host deliberately exposes only the methods used by its
+ * bundled SPA. Passcode possession grants control of this workspace, not raw
+ * access to the worker's full local protocol surface.
+ */
+function authorizeServeRequest(
+  message: {
+    id?: string | number | null;
+    method?: string;
+    params?: Record<string, unknown>;
+  },
+  sessionManager: SessionManager,
+  workspaceCwd: string,
+): string | undefined {
+  if (!message.method || !SERVE_ALLOWED_WORKER_METHODS.has(message.method)) {
+    return hostQueryError(message.id ?? null, -32601, "Method is not available in Web serve mode");
+  }
+
+  const rawSessionId = message.params?.sessionId;
+  const sessionId =
+    typeof rawSessionId === "string" && rawSessionId.length > 0 ? rawSessionId : null;
+  if (message.method === "agent/run" && sessionId === null) return undefined;
+  if (!sessionId) {
+    return hostQueryError(message.id ?? null, -32602, "sessionId is required");
+  }
+
+  try {
+    const session = sessionManager.resume(sessionId).state;
+    if (resolve(session.cwd) === workspaceCwd) return undefined;
+  } catch {
+    // A caller may choose the id for a brand-new run. Other methods must target
+    // an already-persisted session owned by this workspace.
+    if (message.method === "agent/run") return undefined;
+  }
+  return hostQueryError(message.id ?? null, -32001, "Session not found in this workspace");
 }
 
 function hostQueryError(id: string | number | null, code: number, message: string): string {

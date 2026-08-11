@@ -2,7 +2,7 @@
 
 > A source-accurate architecture of CodeShell. This set supersedes the prior
 > `docs/archive/architecture/` documents, which are kept for history but predate
-> large subsystems and the current ten-package monorepo. Each chapter is intended
+> large subsystems and the current eleven-package monorepo. Each chapter is intended
 > to read on its own; re-check line anchors after large refactors.
 
 ## What CodeShell is
@@ -23,25 +23,26 @@ model plumbing, and memory mechanisms. Coding policy, Arena orchestration and
 Pet/Mimi behavior live in physical packages that depend on
 `@cjhyy/code-shell-core/extension`; core does not depend back on them.
 
-## The ten workspace packages
+## The eleven workspace packages
 
-| Package   | Role                                                             | Boundary                                                      |
-| --------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
-| `core`    | Engine, protocol, tools, settings, sessions, runtime mechanisms  | Stable `.`, capability `/extension`, in-repo host `/internal` |
-| `coding`  | Coding/git/LSP/worktree capability and coding worker entry       | Depends on core extension contract                            |
-| `arena`   | Multi-model Arena capability and algorithms                      | Depends on core extension contract                            |
-| `pet`     | Mimi behavior, generic DelegateWork, Pet projection and long-task state | Depends on core extension contract                       |
-| `server`  | Pure-Node remote transports, rooms, uploads, headless serve host | Host/service layer; currently also composes coding + web      |
-| `web`     | Browser-safe remote client state/reducers and SPA                | Type-only core protocol use; React peer                       |
-| `tui`     | Commander CLI, Ink REPL, headless run, custom renderer           | In-repo host over core + coding + Arena                       |
-| `desktop` | Electron broker, preload bridge, renderer and mobile host        | Private composition root                                      |
-| `cdp`     | Injected-sender CDP actions                                      | Private, zero runtime dependencies                            |
-| `chat`    | Standalone multi-channel chat gateway                            | Independent of core; optional CodeShell integration subpath   |
+| Package   | Role                                                                    | Boundary                                                      |
+| --------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `link`    | Framework-independent provider manifests and authorization guides       | Public leaf package; no CodeShell runtime dependency          |
+| `core`    | Engine, protocol, tools, settings, sessions, runtime mechanisms         | Stable `.`, capability `/extension`, in-repo host `/internal` |
+| `coding`  | Coding/git/LSP/worktree capability and coding worker entry              | Depends on core extension contract                            |
+| `arena`   | Multi-model Arena capability and algorithms                             | Depends on core extension contract                            |
+| `pet`     | Mimi behavior, generic DelegateWork, Pet projection and long-task state | Depends on core extension contract                            |
+| `server`  | Pure-Node remote transports, rooms, uploads, headless serve host        | Host/service layer; currently also composes coding + web      |
+| `web`     | Browser-safe remote client state/reducers and SPA                       | Type-only core protocol use; React peer                       |
+| `tui`     | Commander CLI, Ink REPL, headless run, custom renderer                  | In-repo host over core + coding + Arena                       |
+| `desktop` | Electron broker, preload bridge, renderer and mobile host               | Private composition root                                      |
+| `cdp`     | Injected-sender CDP actions                                             | Private, zero runtime dependencies                            |
+| `chat`    | Standalone multi-channel chat gateway                                   | Independent of core; optional CodeShell integration subpath   |
 
 `@cjhyy/code-shell` at the repository root is a meta-package. Its generated
 `dist/index.js` re-exports core and its CLI shim loads
 `@cjhyy/code-shell-tui/cli`. The standard build is topological:
-`core -> pet/arena/coding -> server/web -> tui/chat -> meta`; desktop and the
+`link -> core -> pet/arena/coding -> server/web -> tui/chat -> meta`; desktop and the
 private CDP package have separate build commands.
 
 For the package dependency graph, release boundaries, and the rationale behind
@@ -106,7 +107,7 @@ The current run path is:
 | 11  | [Feature inventory](11-feature-inventory.md)                                                | Flat capability map across desktop, TUI and supporting packages                              |
 | 12  | [Package boundaries](12-package-boundaries-and-release-units.md)                            | Dependency direction, Pet split rationale, exports and publish units                         |
 | 13  | [Plugin parity & video editor](13-plugin-parity-and-video-editor.md)                        | Codex compatibility, trust gates, remaining ecosystem gaps and the reference video plugin    |
-| 14  | [Digital humans, Sessions & Pet](14-digital-human-and-pet.md)                               | Profile binding, memory, cross-Session messages, skill layering, and Pet independence         |
+| 14  | [Digital humans, Sessions & Pet](14-digital-human-and-pet.md)                               | Profile binding, memory, cross-Session messages, skill layering, and Pet independence        |
 
 ## Cross-cutting: settings, onboarding, disk layout
 
@@ -147,4 +148,4 @@ The important anchors are: sessions resolve `CODE_SHELL_HOME || ~/.code-shell` a
 
 ## A note on accuracy
 
-This chapter was refreshed by reading the current source tree, not the archived docs. `file:line` anchors are accurate as of commit `2e32726c`; line numbers drift as code moves, so treat them as exact for this snapshot and re-check symbols before relying on them in a later tree.
+This chapter was refreshed against the source tree on 2026-08-11, not copied from the archived docs. Line numbers drift as code moves, so re-check the named symbols before relying on an anchor in a later tree.

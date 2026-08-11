@@ -14,7 +14,7 @@ export const featuresCommand: SlashCommand = {
   description: "List feature flags and their current state",
   usage: "/features",
   execute: async (_arg, ctx) => {
-    const configResult = await ctx.client.query("config");
+    const configResult = await ctx.client.query("config", ctx.sessionId);
     const config = configResult.data as { featureFlags?: Record<string, boolean> };
     const flags = config.featureFlags ?? {};
     const names = Object.keys(flags).sort();

@@ -92,10 +92,7 @@ describe("AccessPasscode", () => {
       },
       end: () => undefined,
     };
-    const allowed = ap.gate(
-      { url: "/mobile", headers: { "x-access-passcode": "correct" } },
-      res,
-    );
+    const allowed = ap.gate({ url: "/mobile", headers: { "x-access-passcode": "correct" } }, res);
     expect(allowed).toBe(true);
     expect(headers["Set-Cookie"]).toContain(`Max-Age=${7 * 24 * 60 * 60}`);
   });
@@ -240,6 +237,19 @@ describe("AccessPasscode", () => {
     expect(res.body).toContain('"X-Access-Passcode"');
     // must preserve the pairing token so submitting the passcode keeps it
     expect(res.body).toContain("tok123");
+  });
+
+  test("challenge page cannot close its inline script through a crafted request path", () => {
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("correct");
+    const { req, res } = fakeReqRes({
+      url: '/mobile</script><script id="injected">?pairing=tok123',
+    });
+    req.headers.accept = "text/html";
+
+    expect(ap.gate(req, res)).toBe(false);
+    expect(res.body).not.toContain('</script><script id="injected">');
+    expect(res.body).toContain("\\u003c/script>\\u003cscript");
   });
 
   test("gate: wrong passcode on the challenge form re-renders the form with an error", () => {

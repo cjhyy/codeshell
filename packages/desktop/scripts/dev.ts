@@ -330,7 +330,7 @@ async function buildAndWatch(): Promise<void> {
     // and CommonJS path globals when imported from an .mjs file. esbuild
     // bundles them inline but does not emulate Node's per-module wrapper.
     banner: {
-      js: "import { createRequire as __ccr } from 'node:module'; import { dirname as __ccd } from 'node:path'; import { fileURLToPath as __ccf } from 'node:url'; const require = __ccr(import.meta.url); const __filename = __ccf(import.meta.url); const __dirname = __ccd(__filename);",
+      js: "import { createRequire as __ccr } from 'node:module'; import { dirname as __ccd } from 'node:path'; import { fileURLToPath as __ccf } from 'node:url'; var require = __ccr(import.meta.url); var __filename = __ccf(import.meta.url); var __dirname = __ccd(__filename);",
     },
     plugins: [
       {

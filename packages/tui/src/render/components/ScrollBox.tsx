@@ -14,6 +14,7 @@ import Box from './Box.js';
 // the 09:12 runaway-drain incident (and any future repro) can be traced
 // to whoever is bumping pendingScrollDelta after a turn ends. Computed
 // once at module load — no per-call env lookup.
+/* eslint-disable custom-rules/no-process-env-top-level -- debug gates intentionally snapshot the launch environment once */
 const SCROLLBY_TRACE =
   process.env.CODESHELL_RENDER_DEBUG === 'verbose' ||
   process.env.CODESHELL_DEBUG_DIRTY === '1';
@@ -23,6 +24,7 @@ const SCROLLBY_TRACE =
 // Set CODESHELL_FLICKER_DEBUG=1 to turn this on without the heavier
 // SCROLLBY_TRACE stack-trace logging.
 const FLICKER_DEBUG = process.env.CODESHELL_FLICKER_DEBUG === '1';
+/* eslint-enable custom-rules/no-process-env-top-level */
 let _scrollByCount = 0;
 let _scrollToCount = 0;
 let _scrollToBottomCount = 0;

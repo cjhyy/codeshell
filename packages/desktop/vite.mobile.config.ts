@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
+import { rendererManualChunks } from "./vite-chunks";
 
 /**
  * Mobile remote web app — a SECOND vite root, separate from the Electron
@@ -38,6 +39,7 @@ export default defineConfig({
   build: {
     outDir: resolve(__dirname, "out/mobile"),
     emptyOutDir: true,
+    rollupOptions: { output: { manualChunks: rendererManualChunks } },
   },
   plugins: [react(), tailwindcss()],
   resolve: {

@@ -22,10 +22,9 @@ process.stdin.on("data", (chunk) => {
     if (!line.trim()) continue;
     let msg;
     try { msg = JSON.parse(line); } catch { continue; }
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", method: "test/received", params: { method: msg.method } }) + "\\n");
     if (msg.id !== undefined) {
-      process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { echo: msg.params ?? null } }) + "\\n");
-    } else {
-      process.stdout.write(JSON.stringify({ jsonrpc: "2.0", method: "test/received", params: { method: msg.method } }) + "\\n");
+      process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { echo: msg.params ?? null, dataRoot: process.env.CODE_SHELL_DATA_ROOT } }) + "\\n");
     }
   }
 });
@@ -217,7 +216,10 @@ describe("headless serve — WS pipe", () => {
       JSON.stringify({ jsonrpc: "2.0", id: "r1", method: "agent/run", params: { task: "hi" } }),
     );
     const reply = await nextMessage(ws, (m) => m.id === "r1");
-    expect(reply.result).toEqual({ echo: { task: "hi", cwd: dir } });
+    expect(reply.result).toEqual({
+      echo: { task: "hi", cwd: dir },
+      dataRoot: expect.stringContaining("runtime-"),
+    });
     ws.close();
   });
 
@@ -265,15 +267,17 @@ describe("headless serve — WS pipe", () => {
     const server = await boot();
     const a = await openWs(server, { "x-access-passcode": PASSCODE });
     const b = await openWs(server, { "x-access-passcode": PASSCODE });
-    // First frame from either tab spawns the worker; a notification (no id)
+    // First allowed frame from either tab spawns the worker; its notification
     // is mirrored by the echo worker as test/received to ALL tabs.
-    a.send(JSON.stringify({ jsonrpc: "2.0", method: "agent/ping", params: {} }));
+    a.send(
+      JSON.stringify({ jsonrpc: "2.0", id: "notify", method: "agent/run", params: { task: "hi" } }),
+    );
     const [gotA, gotB] = await Promise.all([
       nextMessage(a, (m) => m.method === "test/received"),
       nextMessage(b, (m) => m.method === "test/received"),
     ]);
-    expect((gotA.params as { method: string }).method).toBe("agent/ping");
-    expect((gotB.params as { method: string }).method).toBe("agent/ping");
+    expect((gotA.params as { method: string }).method).toBe("agent/run");
+    expect((gotB.params as { method: string }).method).toBe("agent/run");
     a.close();
     b.close();
   });
@@ -287,11 +291,64 @@ describe("headless serve — WS pipe", () => {
         jsonrpc: "2.0",
         id: "r2",
         method: "agent/query",
-        params: { type: "tools" },
+        params: { type: "sessions" },
       }),
     );
     const reply = await nextMessage(ws, (m) => m.id === "r2");
-    expect(reply.result).toEqual({ echo: { type: "tools" } });
+    expect(reply.result).toEqual({ type: "sessions", data: [] });
     ws.close();
+  });
+
+  test("full worker protocol methods cannot escape the Web serve policy", async () => {
+    const server = await boot({ seedSession: true });
+    const ws = await openWs(server, { "x-access-passcode": PASSCODE });
+
+    ws.send(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "set-workspace",
+        method: "agent/setWorkspace",
+        params: {
+          sessionId: "session-in-workspace",
+          workspace: { root: join(dir, "outside"), kind: "main" },
+        },
+      }),
+    );
+    const methodReply = await nextMessage(ws, (m) => m.id === "set-workspace");
+    expect((methodReply.error as { code: number }).code).toBe(-32601);
+
+    ws.send(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "outside-run",
+        method: "agent/run",
+        params: { sessionId: "session-outside-workspace", task: "escape" },
+      }),
+    );
+    const sessionReply = await nextMessage(ws, (m) => m.id === "outside-run");
+    expect((sessionReply.error as { code: number }).code).toBe(-32001);
+    expect(server.bridge.hasLiveWorker()).toBe(false);
+    ws.close();
+  });
+
+  test("worker responses are correlated to their originating tab", async () => {
+    const server = await boot();
+    const a = await openWs(server, { "x-access-passcode": PASSCODE });
+    const b = await openWs(server, { "x-access-passcode": PASSCODE });
+
+    a.send(
+      JSON.stringify({ jsonrpc: "2.0", id: "web-1", method: "agent/run", params: { task: "A" } }),
+    );
+    b.send(
+      JSON.stringify({ jsonrpc: "2.0", id: "web-1", method: "agent/run", params: { task: "B" } }),
+    );
+    const [replyA, replyB] = await Promise.all([
+      nextMessage(a, (m) => m.id === "web-1"),
+      nextMessage(b, (m) => m.id === "web-1"),
+    ]);
+    expect((replyA.result as { echo: { task: string } }).echo.task).toBe("A");
+    expect((replyB.result as { echo: { task: string } }).echo.task).toBe("B");
+    a.close();
+    b.close();
   });
 });

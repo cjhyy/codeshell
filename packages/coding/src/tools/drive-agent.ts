@@ -163,7 +163,7 @@ type Runner = (opts: {
 }) => Promise<AgentRunResult>;
 type SessionStore = {
   get(cli: DriveCli, sessionId: string): ExternalAgentSessionBinding | undefined;
-  record(binding: ExternalAgentSessionRecord): void;
+  record(binding: ExternalAgentSessionRecord): void | Promise<void>;
 };
 
 interface ManagedDriveWorktree {
@@ -517,7 +517,7 @@ function appendAttachmentPrompt(prompt: string, paths: string[]): string {
   return `${prompt}\n${lines.join("\n")}`;
 }
 
-function recordSuccessfulSession(
+async function recordSuccessfulSession(
   store: SessionStore,
   cli: DriveCli,
   cwd: string,
@@ -530,7 +530,7 @@ function recordSuccessfulSession(
     lifecycle?: WorktreeLifecycleResult;
   },
   includeErroredSession = false,
-): void {
+): Promise<void> {
   if ((!includeErroredSession && result.isError) || !result.sessionId) return;
   // When the isolation worktree directory was removed during finalization the
   // recorded cwd (the worktree path) no longer exists, so a later resume would
@@ -556,7 +556,7 @@ function recordSuccessfulSession(
         ? { worktreeBranch: metadata.worktree.session.worktreeBranch }
         : {};
   try {
-    store.record({
+    await store.record({
       cli,
       sessionId: result.sessionId,
       ...(metadata.codeShellSessionId ? { codeShellSessionId: metadata.codeShellSessionId } : {}),
@@ -642,7 +642,7 @@ function attachDriveCompletion(params: {
       if (lifecycle) {
         backgroundJobRegistry.recordWorktreeLifecycle(jobId, lifecycle.action);
       }
-      recordSuccessfulSession(
+      void recordSuccessfulSession(
         sessionStore,
         cli,
         cwd,
@@ -1097,7 +1097,7 @@ export function makeDriveAgentTool(
     }
     const r = result.kind === "completed" ? result.result : await run;
     const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
-    recordSuccessfulSession(sessionStore, cli, cwd, r, {
+    await recordSuccessfulSession(sessionStore, cli, cwd, r, {
       codeShellSessionId: ctx?.sessionId,
       workspaceRoot,
       isolation,

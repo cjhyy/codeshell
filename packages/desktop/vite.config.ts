@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
+import { rendererManualChunks } from "./vite-chunks";
 
 /**
  * Renderer-only Vite config. main + preload are built by esbuild (see
@@ -29,6 +30,10 @@ export default defineConfig({
   build: {
     outDir: resolve(__dirname, "out/renderer"),
     emptyOutDir: true,
+    // Vendor families are split below; keep the remaining application-shell
+    // chunk under an explicit 1 MB budget instead of Vite's generic 500 kB.
+    chunkSizeWarningLimit: 1_000,
+    rollupOptions: { output: { manualChunks: rendererManualChunks } },
   },
   plugins: [react(), tailwindcss()],
   // Pre-bundle every installed Radix package (+ lucide) at server start.

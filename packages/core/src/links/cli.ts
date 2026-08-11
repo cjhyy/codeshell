@@ -36,6 +36,8 @@ export interface CliLinkRunOptions {
   signal?: AbortSignal;
   timeoutMs: number;
   input?: string;
+  /** Keep the pipe alive for browser/device login CLIs that inspect stdin. */
+  keepStdinOpen?: boolean;
 }
 
 export type CliLinkCommandRunner = (
@@ -172,10 +174,13 @@ export const runCliLinkCommand: CliLinkCommandRunner = (providerId, command, arg
         resolve({ stdout: String(stdout), stderr: String(stderr) });
       },
     );
-    // All supported flows are deliberately non-interactive (browser/device
-    // authorization or machine-readable API calls). Always close stdin so a
-    // CLI cannot mistake the Electron pipe for pending JSON or a hidden prompt.
-    child.stdin?.end(options.input ?? "");
+    if (options.input !== undefined) child.stdin?.write(options.input);
+    // API calls consume a complete JSON body and must see EOF. Browser/device
+    // login is different: gh/glab prompt before opening the browser and some
+    // versions of Vercel first present a default login method. Feed one Enter
+    // below, but keep the pipe alive so those CLIs do not fail immediately with
+    // EOF while the browser authorization is still in progress.
+    if (!options.keepStdinOpen) child.stdin?.end();
   });
 
 function parseJson(result: CliLinkCommandResult, providerId: CliLinkProviderId): unknown {
@@ -416,6 +421,8 @@ export async function connectCliLink(
         cwd: options.cwd,
         signal: options.signal,
         timeoutMs: 15 * 60_000,
+        input: "\n",
+        keepStdinOpen: true,
       });
     } catch (error) {
       throw new Error(safeMessage(error) || `${config.command} browser authorization failed`, {

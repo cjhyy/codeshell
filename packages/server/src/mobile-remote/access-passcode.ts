@@ -173,6 +173,10 @@ export class AccessPasscode {
           res.end();
           return false;
         }
+        // Non-HTML/no-JS callers still use the historical GET fallback, so the
+        // passcode may appear in reverse-proxy access logs. Browser clients use
+        // the header-based fetch in challengePage and are redirected to a clean
+        // URL; deployments should redact the `passcode` query parameter in logs.
         return true;
       }
       wrongAttempt = true;
@@ -329,6 +333,10 @@ function challengePage(url: string | undefined, wrong: boolean, locked: boolean)
     : wrong
       ? "口令不正确,请重试。"
       : "请输入访问口令以继续。";
+  const cleanLocation = JSON.stringify(path + (params.size ? `?${params.toString()}` : ""))
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
   return `<!doctype html>
 <html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -374,7 +382,7 @@ function challengePage(url: string | undefined, wrong: boolean, locked: boolean)
         if (input) input.value = "";
         return;
       }
-      window.location.replace(${JSON.stringify(path + (params.size ? `?${params.toString()}` : ""))});
+      window.location.replace(${cleanLocation});
     } catch {
       if (note) note.textContent = "连接失败，请重试。";
       if (note) note.className = "err";

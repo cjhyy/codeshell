@@ -250,6 +250,21 @@ export class ChatSessionManager {
     for (const s of [...this.sessions.values()]) fn(s);
   }
 
+  /** First live Engine for legacy fallbacks that genuinely accept any owner. */
+  getAnyLiveEngine(): Engine | undefined {
+    return this.sessions.values().next().value?.engine;
+  }
+
+  /**
+   * Build a detached Engine for global model/provider/settings queries. Keeping
+   * this seam on the manager avoids protocol code reaching into its private
+   * factory and, importantly, avoids borrowing project-local state from an
+   * arbitrary live session.
+   */
+  createDetachedEngine(slice: Partial<EngineConfigSlice> = {}): Engine {
+    return this.factory(slice as EngineConfigSlice);
+  }
+
   /** Snapshot-safe, read-only source shared by query("sessions") and Pet projection. */
   getLiveSessionSnapshot(): LiveChatSessionSnapshot {
     const sessions: LiveChatSessionSnapshot["sessions"] = [];

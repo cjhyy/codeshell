@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "build": "bun run clean && tsc -p tsconfig.json && vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.app.json --noEmit",
     "build:app": "vite build",
     "dev:app": "vite dev",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true});require('node:fs').rmSync('dist-app',{recursive:true,force:true})\""

@@ -1,6 +1,6 @@
 # 12 · Package Boundaries & Release Units
 
-> Audit date: 2026-07-17. Scope: workspace manifests, package entry points,
+> Audit date: 2026-08-11. Scope: workspace manifests, package entry points,
 > production imports, build outputs and publish dry-runs. This chapter explains
 > why the current packages exist, where the boundaries are sound, and which
 > boundaries should be tightened before adding more product capabilities.
@@ -30,12 +30,12 @@ The most important conclusions are:
 5. Package builds must clean `dist` before compiling. Before this audit,
    `@cjhyy/code-shell-core` would have published stale Arena/Pet code and lint
    probes left by earlier refactors.
-6. A clean-build tarball audit of all nine public packages — Core, Pet, Arena,
+6. A clean-build tarball audit of all ten public packages — Link, Core, Pet, Arena,
    Coding, Web, Server, TUI, Chat, and the root meta package — verifies every
    export/bin target, workspace-version rewrite, focused-entry identity, and
    required copied asset. It also caught declaration-only dependency leaks.
 7. That audit is now automated by `bun run test:package-release`. The release
-   workflow runs it as a dedicated nine-tarball job before npm publication,
+   workflow runs it as a dedicated ten-tarball job before npm publication,
    without adding pack work to the normal targeted unit-test job.
 
 ## Current dependency graph
@@ -46,6 +46,8 @@ Workspace edges from production code and manifests:
 @cjhyy/code-shell (meta manifest)
   ├─> core
   └─> tui ──────────────> core + coding + arena
+
+link                     (no CodeShell runtime dependency)
 
 coding ─────────────────> core/extension
 arena ──────────────────> core/extension
@@ -75,7 +77,7 @@ There are no workspace dependency cycles. The intended layer order is:
 
 | Layer | Packages                        | Meaning                                                   |
 | ----- | ------------------------------- | --------------------------------------------------------- |
-| L0    | `core`, `chat`, `cdp`           | Foundations with no dependency on another product package |
+| L0    | `link`, `core`, `chat`, `cdp`   | Foundations with no dependency on another product package |
 | L1    | `coding`, `arena`, `pet`, `web` | Capabilities or clients built on core contracts           |
 | L2    | `tui`, `server`                 | Composition hosts                                         |
 | L3    | `desktop`, root meta package    | Product/distribution composition                          |
@@ -87,6 +89,7 @@ declares core as a regular dependency so emitted declarations can resolve.
 
 | Package   | Current release boundary                                                                  | Assessment                                                                                                                                                                                             |
 | --------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `link`    | Public manifest/guide root                                                                | Correct framework-independent leaf boundary. Hosts consume provider metadata without pulling in Core or a UI runtime.                                                                                  |
 | `core`    | Public `.`, trusted `/extension`, in-repo `/internal`, plugin runtime and worker subpaths | Correct three-surface model. The root barrel remains broad, so the documented stable API table must stay the compatibility authority.                                                                  |
 | `coding`  | Compatibility root plus `/capability`, `/git`, `/orchestration` and worker bin            | Correct physical capability split. Focused host imports no longer evaluate unrelated LSP, patch, Git, or external-agent surfaces, while the root preserves the existing SDK.                           |
 | `arena`   | Compatibility root plus `/runtime`                                                        | Correct capability split. Normal hosts use the runtime API without evaluating Iterate mode and advanced phase/strategy barrels; the root preserves those advanced exports.                             |
@@ -348,14 +351,14 @@ Suggested shape/status:
 ### Release package source and publish order
 
 `scripts/package-release-audit-config.ts` is the single declaration for every
-versioned workspace package. Nine entries are public release units; `cdp` and
+versioned workspace package. Ten entries are public release units; `cdp` and
 `desktop` are private but still participate in synchronized version and
 lockfile verification.
 
 The public list is also the npm publish order:
 
 ```text
-core -> pet -> arena -> coding -> web -> server -> tui -> chat -> root meta
+link -> core -> pet -> arena -> coding -> web -> server -> tui -> chat -> root meta
 ```
 
 Independent packages may appear anywhere after their dependencies; the
@@ -366,7 +369,7 @@ manifest without adding it to the declaration fails version verification.
 
 ### P2 — package metadata and local entry documentation
 
-- Core, Coding, Arena, Pet, Server, Web, TUI and Chat now publish repository
+- Link, Core, Coding, Arena, Pet, Server, Web, TUI and Chat now publish repository
   metadata and a Node `>=20.10` engine contract.
 - Web now has a package-local README. Pet, Coding, Arena, Server and Web
   document their focused entry contracts locally.

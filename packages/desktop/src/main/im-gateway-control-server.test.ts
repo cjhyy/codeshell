@@ -305,7 +305,7 @@ describe("GatewayControlServer", () => {
     const firstDescriptor = await first.start();
     const firstContext = first.eventContext();
     const deliveryKey = "a".repeat(64);
-    const published = first.publish({
+    const published = await first.publish({
       deliveryKey,
       type: "automation.completed",
       title: "Automation finished",
@@ -340,8 +340,32 @@ describe("GatewayControlServer", () => {
       cursor: 1,
       events: [{ id: 1, deliveryKey, text: "The scheduled work is ready." }],
     });
-    expect(second.publish({ type: "automation.failed", text: "The next run failed." }).id).toBe(2);
+    expect(
+      (await second.publish({ type: "automation.failed", text: "The next run failed." })).id,
+    ).toBe(2);
     await second.stop();
+  });
+
+  test("flushes a publication accepted immediately before shutdown", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-stop-flush-"));
+    roots.push(root);
+    const descriptorPath = join(root, "desktop-control.json");
+    const outboxPath = `${descriptorPath}.events`;
+    const server = makeServer(descriptorPath);
+    await server.start();
+
+    const publication = server.publish({
+      type: "automation.completed",
+      text: "persist before shutdown",
+    });
+    const stopping = server.stop();
+
+    await expect(publication).resolves.toMatchObject({ id: 1 });
+    await stopping;
+    expect(JSON.parse(readFileSync(outboxPath, "utf-8"))).toMatchObject({
+      nextEventId: 2,
+      events: [{ id: 1, text: "persist before shutdown" }],
+    });
   });
 
   test("never trusts insecure or malformed event outboxes and quarantines them", async () => {
@@ -394,7 +418,9 @@ describe("GatewayControlServer", () => {
 
     // Publishing works against the fresh outbox.
     expect(server.eventContext()?.streamId).toMatch(/^[a-f0-9]{32}$/);
-    expect(server.publish({ type: "automation.completed", text: "fresh outbox" }).id).toBe(1);
+    expect((await server.publish({ type: "automation.completed", text: "fresh outbox" })).id).toBe(
+      1,
+    );
     expect(JSON.parse(readFileSync(outboxPath, "utf-8"))).toMatchObject({
       nextEventId: 2,
       events: [{ id: 1, text: "fresh outbox" }],
@@ -412,9 +438,9 @@ describe("GatewayControlServer", () => {
     rmSync(outboxPath);
     mkdirSync(outboxPath);
 
-    expect(() =>
+    await expect(
       server.publish({ type: "automation.completed", text: "Must not become visible" }),
-    ).toThrow();
+    ).rejects.toThrow();
     const page = await call(descriptor, "GET", "/v1/events?after=0&waitMs=0");
     expect(await page.json()).toMatchObject({ cursor: 0, events: [] });
     await server.stop();
@@ -429,9 +455,9 @@ describe("GatewayControlServer", () => {
 
     await expect(server.start()).rejects.toThrow();
     expect(server.eventContext()?.streamId).toMatch(/^[a-f0-9]{32}$/);
-    expect(server.publish({ type: "automation.completed", text: "Persist without HTTP" }).id).toBe(
-      1,
-    );
+    expect(
+      (await server.publish({ type: "automation.completed", text: "Persist without HTTP" })).id,
+    ).toBe(1);
     expect(JSON.parse(readFileSync(`${descriptorPath}.events`, "utf-8"))).toMatchObject({
       nextEventId: 2,
       events: [{ id: 1, text: "Persist without HTTP" }],
@@ -466,9 +492,9 @@ describe("GatewayControlServer", () => {
     const server = makeServer(descriptorPath);
     const descriptor = await server.start();
 
-    expect(() =>
+    await expect(
       server.publish({ type: "automation.completed", text: "must wait for acknowledgement" }),
-    ).toThrow("200 unacknowledged events");
+    ).rejects.toThrow("200 unacknowledged events");
 
     // A cursor from another/replaced stream must reveal this streamId without
     // deleting anything from the current outbox.
@@ -492,9 +518,9 @@ describe("GatewayControlServer", () => {
     const page = (await acknowledgedPage.json()) as { events: Array<{ id: number }> };
     expect(page.events).toHaveLength(100);
     expect(page.events[0]?.id).toBe(101);
-    expect(server.publish({ type: "automation.completed", text: "accepted after ack" }).id).toBe(
-      201,
-    );
+    expect(
+      (await server.publish({ type: "automation.completed", text: "accepted after ack" })).id,
+    ).toBe(201);
     const afterAcknowledgement = JSON.parse(readFileSync(outboxPath, "utf-8")) as {
       version: number;
       streamId: string;
@@ -537,12 +563,15 @@ describe("GatewayControlServer", () => {
     const outboxPath = `${descriptorPath}.events`;
     const server = makeServer(descriptorPath);
     await server.start();
-    const first = server.publish({ type: "automation.completed", text: "first" });
-    const second = server.publish({ type: "automation.completed", text: "second" });
+    const first = await server.publish({ type: "automation.completed", text: "first" });
+    const second = await server.publish({ type: "automation.completed", text: "second" });
+    expect(first.deliveryKey).toMatch(/^[a-f0-9]{64}$/u);
+    expect(second.deliveryKey).toMatch(/^[a-f0-9]{64}$/u);
+    expect(second.deliveryKey).not.toBe(first.deliveryKey);
 
-    expect(server.acknowledgeDirectDelivery(second.id)).toBe(false);
-    expect(server.acknowledgeDirectDelivery(Number.NaN)).toBe(false);
-    expect(server.acknowledgeDirectDelivery(first.id)).toBe(true);
+    expect(await server.acknowledgeDirectDelivery(second.id)).toBe(false);
+    expect(await server.acknowledgeDirectDelivery(Number.NaN)).toBe(false);
+    expect(await server.acknowledgeDirectDelivery(first.id)).toBe(true);
     let state = JSON.parse(readFileSync(outboxPath, "utf-8")) as {
       acknowledgedEventId: number;
       events: Array<{ id: number }>;
@@ -550,12 +579,12 @@ describe("GatewayControlServer", () => {
     expect(state.acknowledgedEventId).toBe(first.id);
     expect(state.events.map(({ id }) => id)).toEqual([second.id]);
 
-    expect(server.acknowledgeDirectDelivery(second.id)).toBe(true);
+    expect(await server.acknowledgeDirectDelivery(second.id)).toBe(true);
     state = JSON.parse(readFileSync(outboxPath, "utf-8")) as typeof state;
     expect(state.acknowledgedEventId).toBe(second.id);
     expect(state.events).toEqual([]);
     expect(
-      server.publish({ type: "automation.completed", text: "third after direct ack" }).id,
+      (await server.publish({ type: "automation.completed", text: "third after direct ack" })).id,
     ).toBe(3);
     await server.stop();
   });

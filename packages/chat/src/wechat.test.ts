@@ -210,6 +210,56 @@ describe("personal WeChat ClawBot", () => {
     });
   });
 
+  test("retries a held inbound batch even after the message age window expires", async () => {
+    const controller = new AbortController();
+    const store = memoryStore({ cursor: "cursor-1", contextTokens: {} });
+    let now = 1_000;
+    let handlerCalls = 0;
+    const adapter = new WechatAdapter(
+      { accountId: "aged-retry-im-bot", token: "bot-secret" },
+      {
+        now: () => now,
+        maxMessageAgeMs: 100,
+        stateStore: store,
+        sleep: async () => undefined,
+        fetch: async (input) => {
+          const url = String(input);
+          if (url.endsWith("/ilink/bot/msg/notifystart")) return Response.json({ ret: 0 });
+          if (url.endsWith("/ilink/bot/msg/notifystop")) return Response.json({ ret: 0 });
+          if (url.endsWith("/ilink/bot/getupdates")) {
+            return Response.json({
+              ret: 0,
+              get_updates_buf: "cursor-2",
+              msgs: [
+                {
+                  message_id: 79,
+                  from_user_id: "owner-user",
+                  create_time_ms: 1_000,
+                  message_type: 1,
+                  message_state: 2,
+                  item_list: [{ type: 1, text_item: { text: "do not lose me" } }],
+                },
+              ],
+            });
+          }
+          throw new Error(`unexpected request: ${url}`);
+        },
+      },
+    );
+
+    await adapter.run(async () => {
+      handlerCalls += 1;
+      if (handlerCalls === 1) {
+        now += 1_000;
+        throw new Error("handler stalled past maxMessageAgeMs");
+      }
+      controller.abort();
+    }, controller.signal);
+
+    expect(handlerCalls).toBe(2);
+    expect(store.current().cursor).toBe("cursor-2");
+  });
+
   test("stops polling instead of resurrecting state after a QR rebind takes over the state file", async () => {
     const directory = mkdtempSync(join(tmpdir(), "codeshell-wechat-rebind-"));
     const statePath = join(directory, "owner.state.json");

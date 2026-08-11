@@ -57,6 +57,7 @@ function getStream(): WriteStream | null {
   if (stream) return stream;
   const dir = join(homedir(), ".code-shell", "logs", "ui-ink");
   try {
+    // eslint-disable-next-line custom-rules/no-sync-fs -- one-time opt-in debug logger initialization
     mkdirSync(dir, { recursive: true });
     stream = createWriteStream(join(dir, "render-perf.log"), { flags: "a" });
   } catch {

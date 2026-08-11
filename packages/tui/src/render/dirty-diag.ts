@@ -19,6 +19,7 @@
 import type { DOMElement } from './dom.js'
 import { logForDebugging } from "@cjhyy/code-shell-core/internal"
 
+// eslint-disable-next-line custom-rules/no-process-env-top-level -- immutable launch-time debug gate
 const ENABLED = process.env.CODESHELL_DEBUG_DIRTY === '1'
 
 interface DirtySource {

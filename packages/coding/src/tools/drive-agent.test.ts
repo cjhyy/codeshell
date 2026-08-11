@@ -537,7 +537,7 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       mkdirSync(storedCwd);
       mkdirSync(callerCwd);
       const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
-      store.record({ cli: "claude", sessionId: "CC-OLD", cwd: storedCwd });
+      await store.record({ cli: "claude", sessionId: "CC-OLD", cwd: storedCwd });
       let seenCwd = "";
       const tool = makeDriveClaudeCodeTool(
         async (o) => {
@@ -574,7 +574,7 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       mkdirSync(storedCwd);
       process.chdir(tmp);
       const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
-      store.record({ cli: "claude", sessionId: "CC-SAME", cwd: storedCwd });
+      await store.record({ cli: "claude", sessionId: "CC-SAME", cwd: storedCwd });
       let seenCwd = "";
       const tool = makeDriveClaudeCodeTool(
         async (o) => {
@@ -613,7 +613,7 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     try {
       const missingCwd = join(tmp, "deleted");
       const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
-      store.record({ cli: "claude", sessionId: "CC-GONE", cwd: missingCwd });
+      await store.record({ cli: "claude", sessionId: "CC-GONE", cwd: missingCwd });
       let ran = false;
       const tool = makeDriveClaudeCodeTool(
         async () => {
@@ -649,7 +649,7 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       const fileCwd = join(tmp, "not-a-dir");
       writeFileSync(fileCwd, "not a directory");
       const store = new ExternalAgentSessionStore(join(tmp, "sessions.json"));
-      store.record({ cli: "claude", sessionId: "CC-FILE", cwd: fileCwd });
+      await store.record({ cli: "claude", sessionId: "CC-FILE", cwd: fileCwd });
       let ran = false;
       const tool = makeDriveClaudeCodeTool(
         async () => {

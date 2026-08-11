@@ -318,7 +318,7 @@ export const coreCommands: SlashCommand[] = [
     description: "List available tools",
     execute: async (_arg, ctx) => {
       try {
-        const result = await ctx.client.query("tools");
+        const result = await ctx.client.query("tools", ctx.sessionId);
         const tools = (result.data as any[]) ?? [];
         ctx.addStatus(
           `Available Tools (${tools.length}):\n  ${tools.map((t: any) => t.name).join(", ")}`,
@@ -630,7 +630,7 @@ export const coreCommands: SlashCommand[] = [
         );
       } else if (arg === "doctor" || arg === "diagnostic") {
         try {
-          const configResult = await ctx.client.query("config");
+          const configResult = await ctx.client.query("config", ctx.sessionId);
           const config = configResult.data as any;
           const checks: string[] = [`Runtime:  ${process.version} — OK`];
           try {
@@ -642,7 +642,7 @@ export const coreCommands: SlashCommand[] = [
           checks.push(`Model:    ${config.model ?? ctx.model}`);
           checks.push(`CWD:      ${config.cwd ?? ctx.cwd}`);
           try {
-            const toolsResult = await ctx.client.query("tools");
+            const toolsResult = await ctx.client.query("tools", ctx.sessionId);
             checks.push(`Tools:    ${((toolsResult.data as any[]) ?? []).length} registered`);
           } catch {
             checks.push(`Tools:    unknown`);
@@ -662,9 +662,9 @@ export const coreCommands: SlashCommand[] = [
         }
       } else {
         try {
-          const configResult = await ctx.client.query("config");
+          const configResult = await ctx.client.query("config", ctx.sessionId);
           const config = configResult.data as any;
-          const toolsResult = await ctx.client.query("tools");
+          const toolsResult = await ctx.client.query("tools", ctx.sessionId);
           const tools = (toolsResult.data as any[]) ?? [];
           const lines = [
             `Model:       ${ctx.model}`,

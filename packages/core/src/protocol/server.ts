@@ -2853,7 +2853,7 @@ export class AgentServer {
         }
         resolved = session.engine;
       } else {
-        resolved = this.anyEngine();
+        resolved ??= this.anyEngine();
       }
     }
 
@@ -2872,23 +2872,21 @@ export class AgentServer {
 
   private async handleQuery(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as QueryParams;
-    // For query operations we prefer the legacyEngine; if absent borrow any
-    // session engine from the manager (model pool, settings are shared).
-    const engine = this.legacyEngine ?? this.anyEngine();
+    // Global queries use a detached manager-owned engine. Session-scoped cases
+    // below resolve the exact owner from params.sessionId instead of borrowing
+    // whichever live project's engine happens to be first in a Map.
+    const engine = this.legacyEngine ?? this.detachedQueryEngine();
 
     switch (params.type) {
       case "tools": {
-        if (!engine) {
-          this.transport.send(
-            createErrorResponse(
-              req.id,
-              ErrorCodes.InternalError,
-              "No engine available for tools query",
-            ),
-          );
-          return;
-        }
-        const registry = engine.getToolRegistry();
+        const toolsEngine = await this.resolveEngineForSessionQuery(
+          req,
+          params.sessionId,
+          engine,
+          "tools",
+        );
+        if (!toolsEngine) return;
+        const registry = toolsEngine.getToolRegistry();
         const tools =
           typeof registry.listToolsDetailed === "function"
             ? registry
@@ -2914,23 +2912,20 @@ export class AgentServer {
         break;
       }
       case "config": {
-        if (!engine) {
-          this.transport.send(
-            createErrorResponse(
-              req.id,
-              ErrorCodes.InternalError,
-              "No engine available for config query",
-            ),
-          );
-          return;
-        }
-        const config = engine.getConfig();
+        const configEngine = await this.resolveEngineForSessionQuery(
+          req,
+          params.sessionId,
+          engine,
+          "config",
+        );
+        if (!configEngine) return;
+        const config = configEngine.getConfig();
         this.transport.send(
           createResponse(req.id, {
             type: "config",
             data: {
               permissionMode: config.permissionMode ?? "default",
-              planMode: engine.planMode ?? false,
+              planMode: configEngine.planMode ?? false,
               preset: config.preset,
               model: config.llm.model,
               cwd: config.cwd,
@@ -2940,28 +2935,25 @@ export class AgentServer {
               llm: redactLlmConfig(config.llm),
               // Resolved feature flags (defaults merged with settings overlay)
               // so the /features command can list current state.
-              featureFlags: engine.getFeatureFlags(),
+              featureFlags: configEngine.getFeatureFlags(),
               // Effective permission rules so /permissions can list them (TODO 5.1).
-              permissionRules: engine.getPermissionRules(),
+              permissionRules: configEngine.getPermissionRules(),
             },
           }),
         );
         break;
       }
       case "session_detail": {
-        if (!engine) {
-          this.transport.send(
-            createErrorResponse(
-              req.id,
-              ErrorCodes.InternalError,
-              "No engine available for session_detail query",
-            ),
-          );
-          return;
-        }
         if (params.sessionId) {
+          const detailEngine = await this.resolveEngineForSessionQuery(
+            req,
+            params.sessionId,
+            engine,
+            "session_detail",
+          );
+          if (!detailEngine) return;
           try {
-            const bundle = engine.getSessionManager().resume(params.sessionId);
+            const bundle = detailEngine.getSessionManager().resume(params.sessionId);
             const data = {
               state: bundle.state,
               transcript: bundle.transcript.getEvents(),
@@ -4203,16 +4195,16 @@ export class AgentServer {
    */
   private anyEngine(): Engine | null {
     if (!this.chatManager) return null;
-    const sessions: Map<string, any> = (this.chatManager as any).sessions;
-    const first = sessions.values().next().value;
-    if (first) return first.engine as Engine;
-    if (this.globalQueryEngine) return this.globalQueryEngine;
+    const live = this.chatManager.getAnyLiveEngine();
+    if (live) return live;
+    return this.detachedQueryEngine();
+  }
 
-    const factory = (this.chatManager as any).factory as
-      | ((slice: Partial<EngineConfig>) => Engine)
-      | undefined;
-    if (typeof factory !== "function") return null;
-    this.globalQueryEngine = factory({});
+  /** Neutral engine for truly global queries; never inherits a live project's cwd or policy. */
+  private detachedQueryEngine(): Engine | null {
+    if (!this.chatManager) return null;
+    if (this.globalQueryEngine) return this.globalQueryEngine;
+    this.globalQueryEngine = this.chatManager.createDetachedEngine();
     return this.globalQueryEngine;
   }
 

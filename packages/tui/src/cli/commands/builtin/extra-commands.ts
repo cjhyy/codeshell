@@ -165,7 +165,7 @@ export const extraCommands: SlashCommand[] = [
     description: "Show MCP server connection status",
     usage: "/mcp [list|status]",
     execute: async (_arg, ctx) => {
-      const configResult = await ctx.client.query("config");
+      const configResult = await ctx.client.query("config", ctx.sessionId);
       const config = configResult.data as any;
       const servers = config.mcpServers ?? {};
       const names = Object.keys(servers);

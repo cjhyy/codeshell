@@ -44,12 +44,8 @@ export const utilityCommands: SlashCommand[] = [
     usage: "/undo [all] [confirm]",
     execute: async (arg, ctx) => {
       try {
-        const {
-          FileHistory,
-          latestTurnUndoTargets,
-          earliestSnapshotsPerFile,
-          renderDiffPreview,
-        } = await import("@cjhyy/code-shell-core");
+        const { FileHistory, latestTurnUndoTargets, earliestSnapshotsPerFile, renderDiffPreview } =
+          await import("@cjhyy/code-shell-core");
         const { join } = await import("node:path");
         const { homedir } = await import("node:os");
         const { readFileSync, existsSync } = await import("node:fs");
@@ -59,7 +55,7 @@ export const utilityCommands: SlashCommand[] = [
           return;
         }
 
-        const configResult = await ctx.client.query("config");
+        const configResult = await ctx.client.query("config", ctx.sessionId);
         const config = configResult.data as any;
         const sessionDir = join(
           config.sessionStorageDir ?? join(homedir(), ".code-shell", "sessions"),
@@ -72,8 +68,7 @@ export const utilityCommands: SlashCommand[] = [
         const isAll = tokens.includes("all");
         const confirm = tokens.includes("confirm");
 
-        const readFile = (p: string): string =>
-          existsSync(p) ? readFileSync(p, "utf-8") : "";
+        const readFile = (p: string): string => (existsSync(p) ? readFileSync(p, "utf-8") : "");
 
         if (isAll) {
           // Whole session: each tracked file → its EARLIEST snapshot (content
@@ -168,7 +163,8 @@ export const utilityCommands: SlashCommand[] = [
 
   {
     name: "/fullscreen",
-    description: "Toggle fullscreen UI mode (alt-screen + ScrollBox) vs flow mode (native terminal scrollback)",
+    description:
+      "Toggle fullscreen UI mode (alt-screen + ScrollBox) vs flow mode (native terminal scrollback)",
     usage: "/fullscreen [on|off|toggle]",
     execute: (arg, ctx) => {
       if (ctx.fullscreen === undefined || !ctx.setFullscreen) {
@@ -217,7 +213,9 @@ export const utilityCommands: SlashCommand[] = [
             `${head}\nWill install on exit. (Or run now: npm install -g @cjhyy/code-shell@${info.latestVersion})`,
           );
         } else {
-          ctx.addStatus(`${head}\nRun: sudo npm install -g @cjhyy/code-shell@${info.latestVersion}`);
+          ctx.addStatus(
+            `${head}\nRun: sudo npm install -g @cjhyy/code-shell@${info.latestVersion}`,
+          );
         }
       } catch (err) {
         ctx.addStatus(`Update check failed: ${(err as Error).message}`);

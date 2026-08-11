@@ -1,12 +1,5 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { codeShellHome, logger, normalizeCwdPath } from "@cjhyy/code-shell-core/extension";
 
@@ -51,60 +44,49 @@ export function defaultExternalAgentSessionStorePath(): string {
 }
 
 export class ExternalAgentSessionStore {
+  private readonly pendingBindings = new Map<string, ExternalAgentSessionBinding>();
+
   constructor(private readonly file = defaultExternalAgentSessionStorePath()) {}
 
   /** Snapshot all known bindings. Returned objects are detached from the
    *  persisted array so read-only consumers (for example room discovery) can
    *  correlate worktree sessions without gaining a mutation path. */
   list(): ExternalAgentSessionBinding[] {
-    return this.load().map((binding) => ({ ...binding }));
+    const merged = new Map(this.load().map((binding) => [bindingKey(binding), binding]));
+    for (const [key, binding] of this.pendingBindings) merged.set(key, binding);
+    return [...merged.values()].map((binding) => ({ ...binding }));
   }
 
   get(cli: ExternalAgentCli, sessionId: string): ExternalAgentSessionBinding | undefined {
     if (!sessionId) return undefined;
-    return this.load().find((s) => s.cli === cli && s.sessionId === sessionId);
+    const pending = this.pendingBindings.get(bindingKey({ cli, sessionId }));
+    return pending ?? this.load().find((s) => s.cli === cli && s.sessionId === sessionId);
   }
 
-  record(binding: ExternalAgentSessionRecord): void {
+  async record(binding: ExternalAgentSessionRecord): Promise<void> {
     if (!binding.sessionId || !binding.cwd) return;
-    this.withLock(() => {
-      const loaded = this.load();
-      const existing = loaded.find(
-        (s) => s.cli === binding.cli && s.sessionId === binding.sessionId,
-      );
-      const now = binding.lastUsedAt ?? binding.updatedAt ?? Date.now();
-      const next: ExternalAgentSessionBinding = {
-        cli: binding.cli,
-        sessionId: binding.sessionId,
-        ...((binding.codeShellSessionId ?? existing?.codeShellSessionId)
-          ? { codeShellSessionId: binding.codeShellSessionId ?? existing?.codeShellSessionId }
-          : {}),
-        cwd: normalizeCwdPath(binding.cwd),
-        ...((binding.workspaceRoot ?? existing?.workspaceRoot)
-          ? { workspaceRoot: normalizeCwdPath(binding.workspaceRoot ?? existing!.workspaceRoot!) }
-          : {}),
-        ...((binding.worktreePath ?? existing?.worktreePath)
-          ? { worktreePath: normalizeCwdPath(binding.worktreePath ?? existing!.worktreePath!) }
-          : {}),
-        ...((binding.worktreeBranch ?? existing?.worktreeBranch)
-          ? { worktreeBranch: binding.worktreeBranch ?? existing?.worktreeBranch }
-          : {}),
-        ...((binding.worktreeBaseRef ?? existing?.worktreeBaseRef)
-          ? { worktreeBaseRef: binding.worktreeBaseRef ?? existing?.worktreeBaseRef }
-          : {}),
-        ...((binding.isolation ?? existing?.isolation)
-          ? { isolation: binding.isolation ?? existing?.isolation }
-          : {}),
-        createdAt: binding.createdAt ?? existing?.createdAt ?? now,
-        lastUsedAt: now,
-        updatedAt: now,
-      };
-      const sessions = loaded.filter(
-        (s) => !(s.cli === binding.cli && s.sessionId === binding.sessionId),
-      );
-      sessions.push(next);
-      this.save(sessions);
-    });
+    const key = bindingKey(binding);
+    // Preserve the old immediate-read contract while disk persistence proceeds
+    // without blocking the event loop. This instance overlays the pending value
+    // on list/get until the atomic write finishes.
+    const optimistic = mergeBinding(binding, this.get(binding.cli, binding.sessionId));
+    this.pendingBindings.set(key, optimistic);
+    try {
+      await this.withLock(async () => {
+        const loaded = await this.loadForWrite();
+        const existing = loaded.find(
+          (s) => s.cli === binding.cli && s.sessionId === binding.sessionId,
+        );
+        const next = mergeBinding(binding, existing);
+        const sessions = loaded.filter(
+          (s) => !(s.cli === binding.cli && s.sessionId === binding.sessionId),
+        );
+        sessions.push(next);
+        await this.save(sessions);
+      });
+    } finally {
+      if (this.pendingBindings.get(key) === optimistic) this.pendingBindings.delete(key);
+    }
   }
 
   private load(): ExternalAgentSessionBinding[] {
@@ -124,52 +106,104 @@ export class ExternalAgentSessionStore {
     }
   }
 
-  private save(sessions: ExternalAgentSessionBinding[]): void {
+  private async loadForWrite(): Promise<ExternalAgentSessionBinding[]> {
+    try {
+      const raw = await readFile(this.file, "utf-8");
+      const parsed = JSON.parse(raw) as Partial<ExternalAgentSessionSnapshot>;
+      if (!parsed || !Array.isArray(parsed.sessions)) return [];
+      return parsed.sessions.filter(isBinding).map(normalizeBinding);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+      logger.warn("external_agent_session_store.load_failed", {
+        cat: "cc",
+        file: this.file,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return [];
+    }
+  }
+
+  private async save(sessions: ExternalAgentSessionBinding[]): Promise<void> {
     const dir = dirname(this.file);
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    await mkdir(dir, { recursive: true });
 
     const snapshot: ExternalAgentSessionSnapshot = { version: 2, sessions };
     const tmp = `${this.file}.${process.pid}.${Date.now()}.tmp`;
     try {
-      writeFileSync(tmp, JSON.stringify(snapshot, null, 2) + "\n", "utf-8");
-      renameSync(tmp, this.file);
+      await writeFile(tmp, JSON.stringify(snapshot, null, 2) + "\n", "utf-8");
+      await rename(tmp, this.file);
     } catch (err) {
-      rmSync(tmp, { force: true });
+      await rm(tmp, { force: true }).catch(() => undefined);
       throw err;
     }
   }
 
-  private withLock<T>(fn: () => T): T {
+  private async withLock<T>(fn: () => Promise<T> | T): Promise<T> {
     const dir = dirname(this.file);
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    await mkdir(dir, { recursive: true });
 
-    // TODO: move this sync polling lock to an async write queue; callers can
-    // otherwise block the event loop for up to LOCK_WAIT_MS under contention.
     const lockDir = `${this.file}.lock`;
     const deadline = Date.now() + LOCK_WAIT_MS;
     while (true) {
       try {
-        mkdirSync(lockDir);
+        await mkdir(lockDir);
         break;
       } catch (err) {
         const code = (err as NodeJS.ErrnoException).code;
         if (code !== "EEXIST") throw err;
-        if (removeStaleLock(lockDir)) continue;
+        if (await removeStaleLock(lockDir)) continue;
         if (Date.now() >= deadline) {
           throw new Error(`timed out waiting for external agent session store lock: ${lockDir}`, {
             cause: err,
           });
         }
-        sleepSync(LOCK_POLL_MS);
+        await delay(LOCK_POLL_MS);
       }
     }
 
     try {
-      return fn();
+      return await fn();
     } finally {
-      rmSync(lockDir, { recursive: true, force: true });
+      await rm(lockDir, { recursive: true, force: true });
     }
   }
+}
+
+function bindingKey(binding: Pick<ExternalAgentSessionRecord, "cli" | "sessionId">): string {
+  return `${binding.cli}\0${binding.sessionId}`;
+}
+
+function mergeBinding(
+  binding: ExternalAgentSessionRecord,
+  existing?: ExternalAgentSessionBinding,
+): ExternalAgentSessionBinding {
+  const now = binding.lastUsedAt ?? binding.updatedAt ?? Date.now();
+  return {
+    cli: binding.cli,
+    sessionId: binding.sessionId,
+    ...((binding.codeShellSessionId ?? existing?.codeShellSessionId)
+      ? { codeShellSessionId: binding.codeShellSessionId ?? existing?.codeShellSessionId }
+      : {}),
+    cwd: normalizeCwdPath(binding.cwd),
+    ...((binding.workspaceRoot ?? existing?.workspaceRoot)
+      ? { workspaceRoot: normalizeCwdPath(binding.workspaceRoot ?? existing!.workspaceRoot!) }
+      : {}),
+    ...((binding.worktreePath ?? existing?.worktreePath)
+      ? { worktreePath: normalizeCwdPath(binding.worktreePath ?? existing!.worktreePath!) }
+      : {}),
+    ...((binding.worktreeBranch ?? existing?.worktreeBranch)
+      ? { worktreeBranch: binding.worktreeBranch ?? existing?.worktreeBranch }
+      : {}),
+    ...((binding.worktreeBaseRef ?? existing?.worktreeBaseRef)
+      ? { worktreeBaseRef: binding.worktreeBaseRef ?? existing?.worktreeBaseRef }
+      : {}),
+    ...((binding.isolation ?? existing?.isolation)
+      ? { isolation: binding.isolation ?? existing?.isolation }
+      : {}),
+    createdAt: binding.createdAt ?? existing?.createdAt ?? now,
+    lastUsedAt: now,
+    updatedAt: now,
+  };
 }
 
 function normalizeBinding(binding: ExternalAgentSessionBinding): ExternalAgentSessionBinding {
@@ -191,10 +225,10 @@ function finiteTimestamp(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function removeStaleLock(lockDir: string): boolean {
+async function removeStaleLock(lockDir: string): Promise<boolean> {
   try {
-    if (Date.now() - statSync(lockDir).mtimeMs <= LOCK_STALE_MS) return false;
-    rmSync(lockDir, { recursive: true, force: true });
+    if (Date.now() - (await stat(lockDir)).mtimeMs <= LOCK_STALE_MS) return false;
+    await rm(lockDir, { recursive: true, force: true });
     return true;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return true;
@@ -202,16 +236,8 @@ function removeStaleLock(lockDir: string): boolean {
   }
 }
 
-function sleepSync(ms: number): void {
-  try {
-    const view = new Int32Array(new SharedArrayBuffer(4));
-    Atomics.wait(view, 0, 0, ms);
-  } catch {
-    const until = Date.now() + ms;
-    while (Date.now() < until) {
-      // fallback for runtimes where Atomics.wait is unavailable
-    }
-  }
+function delay(ms: number): Promise<void> {
+  return new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
 }
 
 function isBinding(value: unknown): value is ExternalAgentSessionBinding {

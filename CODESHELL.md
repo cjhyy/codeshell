@@ -44,7 +44,7 @@ bun run dev            # = dev:desktop (launches the Electron app)
 bun run dev:tui        # CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 packages/tui/src/cli/main.ts
 bun test               # bun test runner (NOT vitest/jest)
 bun test -- -t 'name'  # run tests matching a pattern
-bun run typecheck      # tsc --noEmit at root (desktop has its own; see packages/desktop)
+bun run typecheck      # builds dependency declarations, then checks all workspaces + Web SPA
 bun run lint           # eslint packages/
 bun run lint:engine-bypass  # guard: every internal `new Engine(` must be allowlisted
 bun run format         # prettier --write 'packages/**/*.ts'
@@ -65,12 +65,18 @@ bun run bench:render   # render benchmarks (tail / streaming / spinner / wheel)
 - **Terminal UI is Ink** (React for CLI). `packages/tui/src/ui/**.tsx` are Ink React components, NOT browser DOM.
 - **Core is `packages/core/`** (package name `@cjhyy/code-shell-core`). Coding policy lives in
   `packages/coding/`; hosts compose that package explicitly. There is no `src/core` directory.
-- **Root typecheck is a clean gate**: keep `bun run typecheck` passing. Desktop also has its own
-  package-level typecheck and should be verified when Electron code changes.
+- **Root typecheck is a clean-checkout gate**: `bun run typecheck` first builds package declaration
+  boundaries, then checks all 11 workspace packages, including Desktop's main/preload/renderer/mobile
+  configs and the standalone Web SPA. `bun run typecheck:workspaces` is the faster no-emit-only pass
+  when dependency packages are already built.
 - **Two hard ESLint guardrails** (in `eslint.config.js`):
   - `packages/core/**` MUST NOT import `@cjhyy/code-shell-tui` (core is UI-agnostic).
-  - `packages/desktop/src/renderer/**` MUST NOT runtime-import any codeshell package — talk to main via `window.codeshell.*`. Type-only imports are allowed and used to share `StreamEvent`/`TaskInfo` shapes.
-- **Custom ESLint rules are stubbed** (`no-sync-fs`, `no-top-level-side-effects`, `no-top-level-dynamic-import`, `no-process-exit`, `no-process-cwd`, `no-process-env-top-level`) — they declare intent but don't actually lint. Follow them by convention.
+  - `packages/desktop/src/renderer/**` may runtime-import only the reviewed browser-safe
+    `@cjhyy/code-shell-core/browser/panel-app-runtime` and `@cjhyy/code-shell-web` entries.
+    Everything else must cross `window.codeshell.*`; type-only imports remain allowed.
+- **Custom ESLint runtime-safety rules are active** for TUI renderer production code:
+  `no-sync-fs`, `no-top-level-side-effects`, `no-top-level-dynamic-import`, `no-process-exit`,
+  `no-process-cwd`, and `no-process-env-top-level`. A suppression needs a local reason.
 - **`sync-models.ts` exists** at `scripts/sync-models.ts` but is NOT run automatically by `bun run build`. Run it manually to refresh OpenRouter model data (`bun run scripts/sync-models.ts`).
 - **Markdown rendering stacks differ**: Desktop uses `react-markdown + remark-gfm + rehype-highlight` (streaming phase uses plain/pre without live parse); TUI uses `marked + marked-terminal`. Don't assume they render identically.
 - **MCP servers may be project-scoped**: `SettingsManager` defaults to `project` scope and reads `${cwd}/.code-shell/settings.json` + `.local.json`. It does NOT read `~/.code-shell/settings.json` unless explicitly configured. Local-first is the intended pattern.

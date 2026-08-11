@@ -6,6 +6,7 @@
 
 import { build as viteBuild } from "vite";
 import esbuild from "esbuild";
+import { rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,12 +14,17 @@ const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
 
 async function buildMain(): Promise<void> {
+  await rm(resolve(root, "out/main"), { recursive: true, force: true });
   await esbuild.build({
     entryPoints: [resolve(root, "src/main/index.ts")],
     bundle: true,
     platform: "node",
     format: "esm",
-    outfile: resolve(root, "out/main/index.mjs"),
+    outdir: resolve(root, "out/main"),
+    entryNames: "index",
+    chunkNames: "chunks/[name]-[hash]",
+    outExtension: { ".js": ".mjs" },
+    splitting: true,
     external: [
       "electron",
       "playwright-core",
@@ -31,7 +37,7 @@ async function buildMain(): Promise<void> {
       // per-module __filename/__dirname globals they normally receive from
       // Node. A few SDKs read those globals during module initialization, so
       // provide bundle-relative fallbacks alongside the existing require shim.
-      js: "import { createRequire as __ccr } from 'node:module'; import { dirname as __ccd } from 'node:path'; import { fileURLToPath as __ccf } from 'node:url'; const require = __ccr(import.meta.url); const __filename = __ccf(import.meta.url); const __dirname = __ccd(__filename);",
+      js: "import { createRequire as __ccr } from 'node:module'; import { dirname as __ccd } from 'node:path'; import { fileURLToPath as __ccf } from 'node:url'; var require = __ccr(import.meta.url); var __filename = __ccf(import.meta.url); var __dirname = __ccd(__filename);",
     },
     minify: false,
     logLevel: "info",

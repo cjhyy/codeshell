@@ -9,9 +9,11 @@ const packageRoot = (...parts) => `${toPosixPath(path.join(repoRoot, ...parts))}
 
 const coreSrcRoot = packageRoot("packages", "core", "src");
 const tuiRoot = packageRoot("packages", "tui");
+const desktopRoot = packageRoot("packages", "desktop");
 const desktopRendererRoot = packageRoot("packages", "desktop", "src", "renderer");
 const coreRoot = packageRoot("packages", "core");
 const workspacePackageRoots = [
+  "link",
   "core",
   "coding",
   "arena",
@@ -50,7 +52,163 @@ function isCodeShellPackage(specifier) {
 
 const rendererBrowserSafeRuntimeImports = new Set([
   "@cjhyy/code-shell-core/browser/panel-app-runtime",
+  "@cjhyy/code-shell-web",
 ]);
+
+function isInsideFunction(node) {
+  for (let current = node.parent; current; current = current.parent) {
+    if (
+      current.type === "FunctionDeclaration" ||
+      current.type === "FunctionExpression" ||
+      current.type === "ArrowFunctionExpression"
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isProcessMember(node, property) {
+  return (
+    node?.type === "MemberExpression" &&
+    node.computed === false &&
+    node.object?.type === "Identifier" &&
+    node.object.name === "process" &&
+    node.property?.type === "Identifier" &&
+    node.property.name === property
+  );
+}
+
+const syncFsMethods = new Set([
+  "accessSync",
+  "appendFileSync",
+  "chmodSync",
+  "chownSync",
+  "closeSync",
+  "copyFileSync",
+  "cpSync",
+  "existsSync",
+  "fchmodSync",
+  "fchownSync",
+  "fdatasyncSync",
+  "fstatSync",
+  "fsyncSync",
+  "ftruncateSync",
+  "futimesSync",
+  "lchmodSync",
+  "lchownSync",
+  "linkSync",
+  "lstatSync",
+  "lutimesSync",
+  "mkdirSync",
+  "mkdtempSync",
+  "openSync",
+  "opendirSync",
+  "readFileSync",
+  "readdirSync",
+  "readlinkSync",
+  "readSync",
+  "readvSync",
+  "realpathSync",
+  "renameSync",
+  "rmSync",
+  "rmdirSync",
+  "statSync",
+  "statfsSync",
+  "symlinkSync",
+  "truncateSync",
+  "unlinkSync",
+  "utimesSync",
+  "writeFileSync",
+  "writeSync",
+  "writevSync",
+]);
+
+const noSyncFsRule = {
+  meta: { type: "problem", messages: { forbidden: "avoid synchronous filesystem I/O" } },
+  create(context) {
+    const importedNames = new Set();
+    const namespaceNames = new Set();
+    return {
+      ImportDeclaration(node) {
+        if (node.source.value !== "node:fs" && node.source.value !== "fs") return;
+        for (const specifier of node.specifiers) {
+          if (
+            specifier.type === "ImportSpecifier" &&
+            specifier.imported.type === "Identifier" &&
+            syncFsMethods.has(specifier.imported.name)
+          ) {
+            importedNames.add(specifier.local.name);
+          } else if (
+            specifier.type === "ImportNamespaceSpecifier" ||
+            specifier.type === "ImportDefaultSpecifier"
+          ) {
+            namespaceNames.add(specifier.local.name);
+          }
+        }
+      },
+      CallExpression(node) {
+        const direct = node.callee.type === "Identifier" && importedNames.has(node.callee.name);
+        const member =
+          node.callee.type === "MemberExpression" &&
+          node.callee.object.type === "Identifier" &&
+          namespaceNames.has(node.callee.object.name) &&
+          node.callee.property.type === "Identifier" &&
+          syncFsMethods.has(node.callee.property.name);
+        if (direct || member) context.report({ node, messageId: "forbidden" });
+      },
+    };
+  },
+};
+
+const noProcessExitRule = {
+  meta: { type: "problem", messages: { forbidden: "set exitCode or use the host exit seam" } },
+  create: (context) => ({
+    CallExpression(node) {
+      if (isProcessMember(node.callee, "exit")) context.report({ node, messageId: "forbidden" });
+    },
+  }),
+};
+
+const noProcessCwdRule = {
+  meta: { type: "problem", messages: { forbidden: "use the injected workspace cwd" } },
+  create: (context) => ({
+    CallExpression(node) {
+      if (isProcessMember(node.callee, "cwd")) context.report({ node, messageId: "forbidden" });
+    },
+  }),
+};
+
+const noProcessEnvTopLevelRule = {
+  meta: { type: "problem", messages: { forbidden: "read process.env inside a function" } },
+  create: (context) => ({
+    MemberExpression(node) {
+      if (isProcessMember(node, "env") && !isInsideFunction(node)) {
+        context.report({ node, messageId: "forbidden" });
+      }
+    },
+  }),
+};
+
+const noTopLevelDynamicImportRule = {
+  meta: { type: "problem", messages: { forbidden: "move dynamic import inside a function" } },
+  create: (context) => ({
+    ImportExpression(node) {
+      if (!isInsideFunction(node)) context.report({ node, messageId: "forbidden" });
+    },
+  }),
+};
+
+const noTopLevelSideEffectsRule = {
+  meta: { type: "problem", messages: { forbidden: "move module initialization behind a seam" } },
+  create: (context) => ({
+    ExpressionStatement(node) {
+      if (node.parent.type === "Program" && typeof node.directive !== "string") {
+        context.report({ node, messageId: "forbidden" });
+      }
+    },
+  }),
+};
 
 const codeshellBoundaryImportsRule = {
   meta: {
@@ -64,7 +222,7 @@ const codeshellBoundaryImportsRule = {
       capabilityToWorkspace:
         "capability packages must not depend on another CodeShell product or host package",
       rendererToCodeshell:
-        "renderer must not import codeshell packages at runtime — talk to main via window.codeShell.* (type-only imports are allowed)",
+        "renderer must not import codeshell packages at runtime — talk to main via window.codeshell.* (type-only imports are allowed)",
     },
   },
   create(context) {
@@ -126,13 +284,11 @@ const codeshellBoundaryImportsRule = {
         if (isTypeOnly) return;
         if (rendererBrowserSafeRuntimeImports.has(specifier)) return;
         if (
-          matchesPackage(specifier, [
-            "@cjhyy/code-shell-core",
-            "@cjhyy/code-shell-tui",
-            "@cjhyy/code-shell",
-          ]) ||
-          resolvesInsideRoot(filename, specifier, coreRoot) ||
-          resolvesInsideRoot(filename, specifier, tuiRoot)
+          isCodeShellPackage(specifier) ||
+          (specifier.startsWith(".") &&
+            workspacePackageRoots.some(
+              (root) => root !== desktopRoot && resolvesInsideRoot(filename, specifier, root),
+            ))
         ) {
           context.report({ node, messageId: "rendererToCodeshell" });
         }
@@ -178,12 +334,12 @@ export default [
     plugins: {
       "custom-rules": {
         rules: {
-          "no-sync-fs": { create: () => ({}) },
-          "no-top-level-side-effects": { create: () => ({}) },
-          "no-top-level-dynamic-import": { create: () => ({}) },
-          "no-process-exit": { create: () => ({}) },
-          "no-process-cwd": { create: () => ({}) },
-          "no-process-env-top-level": { create: () => ({}) },
+          "no-sync-fs": noSyncFsRule,
+          "no-top-level-side-effects": noTopLevelSideEffectsRule,
+          "no-top-level-dynamic-import": noTopLevelDynamicImportRule,
+          "no-process-exit": noProcessExitRule,
+          "no-process-cwd": noProcessCwdRule,
+          "no-process-env-top-level": noProcessEnvTopLevelRule,
           "codeshell-boundary-imports": codeshellBoundaryImportsRule,
         },
       },
@@ -315,6 +471,29 @@ export default [
         },
       ],
       "custom-rules/codeshell-boundary-imports": "error",
+    },
+  },
+  {
+    files: [
+      "packages/desktop/src/renderer/**/*.{test,spec}.{ts,tsx}",
+      "packages/desktop/src/renderer/test-utils/**/*.{ts,tsx}",
+    ],
+    rules: {
+      // Test harnesses may reuse browser-safe source fixtures directly. The
+      // production renderer override above remains strict for shipped code.
+      "custom-rules/codeshell-boundary-imports": "off",
+    },
+  },
+  {
+    files: ["packages/tui/src/render/**/*.{ts,tsx}"],
+    ignores: ["packages/tui/src/render/**/*.{test,spec}.{ts,tsx}"],
+    rules: {
+      "custom-rules/no-sync-fs": "error",
+      "custom-rules/no-top-level-side-effects": "error",
+      "custom-rules/no-top-level-dynamic-import": "error",
+      "custom-rules/no-process-exit": "error",
+      "custom-rules/no-process-cwd": "error",
+      "custom-rules/no-process-env-top-level": "error",
     },
   },
   {

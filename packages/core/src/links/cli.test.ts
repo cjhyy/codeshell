@@ -35,13 +35,14 @@ describe("CLI Link sessions", () => {
   test("uses GitLab browser login and returns only safe validation metadata", async () => {
     let authenticated = false;
     const calls: string[][] = [];
-    const run: CliLinkCommandRunner = async (_provider, command, args) => {
+    const run: CliLinkCommandRunner = async (_provider, command, args, options) => {
       calls.push([command, ...args]);
       if (args[0] === "auth" && args[1] === "status") {
         if (!authenticated) throw Object.assign(new Error("signed out"), { stderr: "signed out" });
         return { stdout: "signed in", stderr: "" };
       }
       if (args[0] === "auth" && args[1] === "login") {
+        expect(options).toMatchObject({ input: "\n", keepStdinOpen: true });
         authenticated = true;
         return { stdout: "", stderr: "" };
       }
@@ -243,6 +244,26 @@ describe("CLI Link sessions", () => {
       { timeoutMs: 5_000 },
     );
     expect(result.stdout).toBe("false");
+  });
+
+  test("keeps login stdin open after supplying the default prompt response", async () => {
+    const result = await runCliLinkCommand(
+      "github",
+      process.execPath,
+      [
+        "-e",
+        [
+          'process.stdin.setEncoding("utf8")',
+          'let input = ""',
+          "let ended = false",
+          'process.stdin.on("data", chunk => { input += chunk })',
+          'process.stdin.on("end", () => { ended = true })',
+          "setTimeout(() => { process.stdout.write(JSON.stringify({ input, ended })); process.exit(0) }, 30)",
+        ].join(";"),
+      ],
+      { timeoutMs: 5_000, input: "\n", keepStdinOpen: true },
+    );
+    expect(JSON.parse(result.stdout)).toEqual({ input: "\n", ended: false });
   });
 
   test("rejects dot-segment path params before invoking any CLI", async () => {

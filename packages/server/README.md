@@ -54,21 +54,22 @@ headless serve（本包 serve/）
 agent-server-stdio worker（@cjhyy/code-shell-capability-coding）
 ```
 
-- 浏览器是 core 协议的一等前端（`agent/run` / `agent/streamEvent` / `agent/approvalRequest` / `agent/approve` / `agent/cancel`），serve 只是一根经过认证的薄管道；所有已认证 tab 看到同一条事件流。
+- 浏览器使用受限的 core 协议投影：serve 自己处理会话列表/详情，只允许向 worker 转发 `agent/run`、`agent/approve`、`agent/cancel`，并在转发前校验 workspace 与 session 归属。配置修改、任意 workspace 切换等原始 RPC 不对 Web 开放。
+- 每个 tab 的请求 ID 会在 host 内重写，响应只回到发起 tab；`agent/streamEvent` 等通知才广播给所有已认证 tab，避免多 tab 使用相同本地 ID 时串包。
 - **访问控制只有 passcode + remember-cookie**（决策见 TODO 约束边界「服务端部署不做账号体系」）：scrypt 哈希存储、防爆破锁定、轮换口令使所有旧 cookie 失效。无注册登录、无多用户。
 - 默认只绑 `127.0.0.1`；`--host 0.0.0.0` 暴露到局域网是运维者的显式选择。公网建议走反向代理/tunnel 终结 TLS。
-- 会话持久在磁盘（worker 的数据目录）；serve 或 worker 重启后浏览器重连即恢复列表，worker 在下一条消息时按需重启。
+- 会话、设置与凭据持久在 serve 独占的 worker data root（默认 `<data-dir>/worker`），不再读取宿主机默认 `~/.code-shell`；serve 或 worker 重启后浏览器重连即可恢复列表。
 
 ### CLI 参数
 
-| 参数            | 默认                  | 说明                   |
-| --------------- | --------------------- | ---------------------- |
-| `--cwd`         | 当前目录              | worker 的 workspace 根 |
-| `--port`        | 8790                  | 监听端口               |
-| `--host`        | 127.0.0.1             | 监听地址               |
-| `--passcode`    | （生成）              | 设置/轮换访问口令      |
-| `--data-dir`    | `~/.code-shell/serve` | access.json 位置       |
-| `--static-root` | 自动解析 web dist-app | 覆盖静态资源目录       |
+| 参数            | 默认                  | 说明                                         |
+| --------------- | --------------------- | -------------------------------------------- |
+| `--cwd`         | 当前目录              | worker 的 workspace 根                       |
+| `--port`        | 8790                  | 监听端口                                     |
+| `--host`        | 127.0.0.1             | 监听地址                                     |
+| `--passcode`    | （生成）              | 设置/轮换访问口令                            |
+| `--data-dir`    | `~/.code-shell/serve` | access.json 与隔离 worker data root 的父目录 |
+| `--static-root` | 自动解析 web dist-app | 覆盖静态资源目录                             |
 
 ### Web 客户端开发
 

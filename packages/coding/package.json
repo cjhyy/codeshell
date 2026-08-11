@@ -34,6 +34,7 @@
   ],
   "scripts": {
     "build": "bun run clean && tsc -p tsconfig.json && bun run copy-assets",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "copy-assets": "node ../../scripts/copy-assets.mjs dist/prompt src/prompt/*.md && node ../../scripts/copy-assets.mjs dist/tools/apply-patch src/tools/apply-patch/NOTICE.md src/tools/apply-patch/LICENSE-codex",
     "dev": "bun run copy-assets && tsc -p tsconfig.json --watch --preserveWatchOutput",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""

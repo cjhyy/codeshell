@@ -12,6 +12,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { chmod, lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { dirname, isAbsolute } from "node:path";
 import { dlog } from "./desktop-logger.js";
@@ -200,6 +201,7 @@ export class GatewayControlServer {
   private eventStreamId = "";
   private nextEventId = 1;
   private eventOutboxReady = false;
+  private eventMutationTail: Promise<void> = Promise.resolve();
 
   constructor(private readonly opts: GatewayControlServerOptions) {}
 
@@ -226,7 +228,7 @@ export class GatewayControlServer {
         events: [],
       } satisfies GatewayControlEventOutbox);
     // Also rewrites a validated v1 file into the current schema atomically.
-    this.writeEventOutbox(outbox);
+    await this.writeEventOutbox(outbox);
     this.restoreEventOutbox(outbox);
     this.eventOutboxReady = true;
     const token = randomBytes(32).toString("hex");
@@ -272,41 +274,52 @@ export class GatewayControlServer {
     const descriptor = this.descriptor;
     this.server = undefined;
     this.descriptor = undefined;
-    this.eventOutboxReady = false;
     this.wakeEventWaiters();
 
     if (server) await closeServer(server);
+    // A caller may have started a durable publication immediately before
+    // shutdown. Let the already-queued mutation reach disk before marking the
+    // outbox unavailable; otherwise the queued callback would observe false
+    // and reject even though publish() was accepted while the server was live.
+    await this.eventMutationTail.catch(() => undefined);
+    this.eventOutboxReady = false;
     if (descriptor) this.removeOwnDescriptor(descriptor.token);
   }
 
-  publish(event: GatewayControlEventInput): GatewayControlEvent {
-    if (!this.eventOutboxReady || !this.eventStreamId) {
-      throw new Error("Gateway control event stream is not started");
-    }
-    if (this.events.length >= MAX_GATEWAY_EVENTS) {
-      throw new Error(
-        `Gateway control event outbox is full (${MAX_GATEWAY_EVENTS} unacknowledged events)`,
-      );
-    }
-    const stored = parseGatewayControlEvent({
-      ...event,
-      id: this.nextEventId,
-      createdAt: Date.now(),
+  publish(event: GatewayControlEventInput): Promise<GatewayControlEvent> {
+    return this.enqueueEventMutation(async () => {
+      if (!this.eventOutboxReady || !this.eventStreamId) {
+        throw new Error("Gateway control event stream is not started");
+      }
+      if (this.events.length >= MAX_GATEWAY_EVENTS) {
+        throw new Error(
+          `Gateway control event outbox is full (${MAX_GATEWAY_EVENTS} unacknowledged events)`,
+        );
+      }
+      const stored = parseGatewayControlEvent({
+        ...event,
+        // Every event needs an identity independent of streamId:id. This keeps
+        // notification progress safe when a client resets a cursor against a
+        // restored/rolled-back stream whose numeric ids may be reused.
+        deliveryKey: event.deliveryKey ?? randomBytes(32).toString("hex"),
+        id: this.nextEventId,
+        createdAt: Date.now(),
+      });
+      const events = [...this.events, stored];
+      const outbox: GatewayControlEventOutbox = {
+        version: GATEWAY_EVENT_OUTBOX_VERSION,
+        streamId: this.eventStreamId,
+        acknowledgedEventId: this.events.at(0)?.id ? this.events[0]!.id - 1 : stored.id - 1,
+        nextEventId: stored.id + 1,
+        events,
+      };
+      // Persist before making the event observable. Once publish() resolves, a
+      // process restart can recover the same stream/id and retry the notification.
+      await this.writeEventOutbox(outbox);
+      this.restoreEventOutbox(outbox);
+      this.wakeEventWaiters();
+      return stored;
     });
-    const events = [...this.events, stored];
-    const outbox: GatewayControlEventOutbox = {
-      version: GATEWAY_EVENT_OUTBOX_VERSION,
-      streamId: this.eventStreamId,
-      acknowledgedEventId: this.events.at(0)?.id ? this.events[0]!.id - 1 : stored.id - 1,
-      nextEventId: stored.id + 1,
-      events,
-    };
-    // Persist before making the event observable. Once publish() returns, a
-    // process restart can recover the same stream/id and retry the notification.
-    this.writeEventOutbox(outbox);
-    this.restoreEventOutbox(outbox);
-    this.wakeEventWaiters();
-    return stored;
   }
 
   /** Stable identity required by delivery checkpoints for this durable event stream. */
@@ -322,12 +335,14 @@ export class GatewayControlServer {
    * accepting only the current head preserves the same contiguous-ack rule as
    * the HTTP cursor.
    */
-  acknowledgeDirectDelivery(eventId: number): boolean {
-    if (!Number.isSafeInteger(eventId) || eventId < 1 || this.events.at(0)?.id !== eventId) {
-      return false;
-    }
-    this.acknowledgeEvents(eventId);
-    return true;
+  acknowledgeDirectDelivery(eventId: number): Promise<boolean> {
+    return this.enqueueEventMutation(async () => {
+      if (!Number.isSafeInteger(eventId) || eventId < 1 || this.events.at(0)?.id !== eventId) {
+        return false;
+      }
+      await this.persistAcknowledgement(eventId);
+      return true;
+    });
   }
 
   private async handleRequest(
@@ -364,7 +379,7 @@ export class GatewayControlServer {
         );
         const waitMs = parseBoundedInteger(url.searchParams.get("waitMs"), 0, 25_000);
         const resetCursor = after > this.nextEventId - 1;
-        if (!resetCursor) this.acknowledgeEvents(after);
+        if (!resetCursor) await this.acknowledgeEvents(after);
         const events = resetCursor ? [] : await this.eventsAfter(after, waitMs);
         sendJson(res, 200, {
           streamId: this.eventStreamId,
@@ -503,7 +518,7 @@ export class GatewayControlServer {
     });
   }
 
-  private writeEventOutbox(outbox: GatewayControlEventOutbox): void {
+  private async writeEventOutbox(outbox: GatewayControlEventOutbox): Promise<void> {
     const validated = parseGatewayControlEventOutbox(JSON.stringify(outbox), "memory");
     const serialized = `${JSON.stringify(validated)}\n`;
     if (Buffer.byteLength(serialized, "utf-8") > MAX_GATEWAY_EVENT_OUTBOX_BYTES) {
@@ -511,32 +526,32 @@ export class GatewayControlServer {
     }
     const path = this.eventOutboxPath();
     const dir = dirname(path);
-    mkdirSync(dir, { recursive: true, mode: 0o700 });
-    const dirInfo = lstatSync(dir);
+    await mkdir(dir, { recursive: true, mode: 0o700 });
+    const dirInfo = await lstat(dir);
     if (dirInfo.isSymbolicLink() || !dirInfo.isDirectory()) {
       throw new Error(`Gateway event outbox parent is not a regular directory: ${dir}`);
     }
     try {
-      chmodSync(dir, 0o700);
+      await chmod(dir, 0o700);
     } catch {
       // Best-effort on platforms without POSIX modes.
     }
 
     const temporary = `${path}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
     try {
-      writeFileSync(temporary, serialized, {
+      await writeFile(temporary, serialized, {
         encoding: "utf-8",
         mode: 0o600,
         flag: "wx",
       });
-      renameSync(temporary, path);
+      await rename(temporary, path);
       try {
-        chmodSync(path, 0o600);
+        await chmod(path, 0o600);
       } catch {
         // Best-effort on platforms without POSIX modes.
       }
     } catch (error) {
-      rmSync(temporary, { force: true });
+      await rm(temporary, { force: true }).catch(() => undefined);
       throw error;
     }
   }
@@ -547,7 +562,11 @@ export class GatewayControlServer {
     this.events.splice(0, this.events.length, ...outbox.events);
   }
 
-  private acknowledgeEvents(after: number): void {
+  private acknowledgeEvents(after: number): Promise<void> {
+    return this.enqueueEventMutation(() => this.persistAcknowledgement(after));
+  }
+
+  private async persistAcknowledgement(after: number): Promise<void> {
     const acknowledgedEventId = this.events.at(0)?.id
       ? this.events[0]!.id - 1
       : this.nextEventId - 1;
@@ -563,8 +582,17 @@ export class GatewayControlServer {
       nextEventId: this.nextEventId,
       events: this.events.filter((event) => event.id > after),
     };
-    this.writeEventOutbox(outbox);
+    await this.writeEventOutbox(outbox);
     this.restoreEventOutbox(outbox);
+  }
+
+  private enqueueEventMutation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.eventMutationTail.catch(() => undefined).then(operation);
+    this.eventMutationTail = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
   }
 
   private async eventsAfter(after: number, waitMs: number): Promise<GatewayControlEvent[]> {

@@ -21,7 +21,7 @@ export const permissionsCommand: SlashCommand = {
   description: "Show or change permission mode; list active rules",
   usage: "/permissions [mode|rules]",
   execute: async (_arg, ctx) => {
-    const configResult = await ctx.client.query("config");
+    const configResult = await ctx.client.query("config", ctx.sessionId);
     const config = configResult.data as any;
     const currentMode = config.permissionMode ?? "acceptEdits";
 
@@ -42,7 +42,10 @@ export const permissionsCommand: SlashCommand = {
       const lines = [`Active permission rules (${rules.length}), in match order:`, ""];
       for (const r of rules) {
         const pat = r.argsPattern
-          ? " " + Object.entries(r.argsPattern).map(([k, v]) => `${k}~/${v}/`).join(" ")
+          ? " " +
+            Object.entries(r.argsPattern)
+              .map(([k, v]) => `${k}~/${v}/`)
+              .join(" ")
           : "";
         lines.push(`  [${r.decision}] ${r.tool}${pat}${r.reason ? `  — ${r.reason}` : ""}`);
       }

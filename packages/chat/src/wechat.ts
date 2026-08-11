@@ -205,6 +205,8 @@ export class WechatAdapter implements ChannelAdapter {
   /** Preserve visible ordering and keep context/media state mutations single-writer. */
   private outboundQueue: Promise<void> = Promise.resolve();
   private readonly seenMessageIds = new Set<string>();
+  /** Cursor whose batch was rejected by the handler and therefore must retry even after max age. */
+  private heldCursor?: string;
   private readonly delivery = new OutgoingDeliveryTracker();
 
   constructor(
@@ -270,6 +272,8 @@ export class WechatAdapter implements ChannelAdapter {
           );
         }
         try {
+          const requestedCursor = this.state.cursor ?? "";
+          const retryingHeldBatch = this.heldCursor === requestedCursor;
           const response = await this.post<GetUpdatesResponse>(
             "ilink/bot/getupdates",
             {
@@ -292,7 +296,7 @@ export class WechatAdapter implements ChannelAdapter {
           }
           let batchAccepted = true;
           for (const raw of response.msgs ?? []) {
-            const message = this.normalizeInbound(raw);
+            const message = this.normalizeInbound(raw, retryingHeldBatch);
             if (!message || this.isDuplicate(message.messageId)) continue;
             try {
               if (raw.context_token) {
@@ -310,11 +314,13 @@ export class WechatAdapter implements ChannelAdapter {
             }
           }
           if (!batchAccepted) {
+            this.heldCursor = requestedCursor;
             throw new Error("微信消息未被上层接收，保留游标等待重投");
           }
           if (response.get_updates_buf) {
             await this.commitCursor(response.get_updates_buf);
           }
+          if (this.heldCursor === requestedCursor) this.heldCursor = undefined;
         } catch (error) {
           if (signal.aborted) return;
           if (error instanceof WechatRequestTimeoutError) continue;
@@ -647,13 +653,17 @@ export class WechatAdapter implements ChannelAdapter {
     throw lastError instanceof Error ? lastError : new Error("微信附件上传失败");
   }
 
-  private normalizeInbound(raw: WechatWireMessage): ChannelMessage | undefined {
+  private normalizeInbound(
+    raw: WechatWireMessage,
+    allowExpiredRetry = false,
+  ): ChannelMessage | undefined {
     if (raw.message_type !== undefined && raw.message_type !== MESSAGE_TYPE_USER) return undefined;
     if (raw.message_state === MESSAGE_STATE_GENERATING) return undefined;
     const senderId = raw.from_user_id?.trim();
     if (!senderId) return undefined;
     if (
       raw.create_time_ms !== undefined &&
+      !allowExpiredRetry &&
       this.maxMessageAgeMs >= 0 &&
       this.now() - raw.create_time_ms > this.maxMessageAgeMs
     ) {

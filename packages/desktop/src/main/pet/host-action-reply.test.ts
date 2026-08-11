@@ -3,6 +3,10 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { enrichPetChatReplyWithHostActions } from "./host-action-reply";
+import {
+  PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX,
+  replacementReceiptSourceClientMessageId,
+} from "../../shared/pet-host-action-receipt";
 
 describe("enrichPetChatReplyWithHostActions", () => {
   test("returns the base reply untouched without host actions", async () => {
@@ -171,6 +175,35 @@ describe("enrichPetChatReplyWithHostActions", () => {
       "消息和 1 个附件已提交到 微信，平台接口已接受发送请求；尚未确认收件设备已展示",
     );
     expect(enriched.attachments).toEqual([]);
+  });
+
+  test("keeps outbound receipt generation and legacy replacement recognition in one contract", async () => {
+    const sourceClientMessageId = "message-with-punctuation";
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "",
+      [
+        {
+          kind: "outboundMessage",
+          payload: { targetId: "owner-one", text: "done" },
+          ok: true,
+          result: { label: "微信，项目。群", accepted: true, attachmentCount: 0 },
+        },
+      ],
+      { qrDir: join(tmpdir(), "unused"), attachmentKinds: [] },
+    );
+
+    expect(
+      replacementReceiptSourceClientMessageId(
+        `${PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX}${sourceClientMessageId}`,
+        enriched.text,
+      ),
+    ).toBe(sourceClientMessageId);
+    expect(
+      replacementReceiptSourceClientMessageId(
+        `${PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX}${sourceClientMessageId}`,
+        "消息已发送到 微信，项目。群。",
+      ),
+    ).toBe(sourceClientMessageId);
   });
 
   test("discards Mimi's premature delivery claim when outbound delivery fails", async () => {
