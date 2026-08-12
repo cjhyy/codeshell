@@ -7,6 +7,9 @@ import { PanelAppHost } from "./PanelAppHost";
 let root: Root | null = null;
 let container: HTMLElement;
 let attached = false;
+let guestIdReads = 0;
+let prepareError: Error | null = null;
+let prepareCalls = 0;
 const bindings: Array<Record<string, unknown>> = [];
 
 function findElement(node: unknown, tagName: string): HTMLElement | null {
@@ -67,6 +70,7 @@ beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "getWebContentsId", {
     configurable: true,
     value() {
+      guestIdReads += 1;
       if (!attached) {
         throw new Error(
           "The WebView must be attached to the DOM and the dom-ready event emitted before this method can be called.",
@@ -76,15 +80,22 @@ beforeEach(() => {
     },
   });
   attached = false;
+  guestIdReads = 0;
+  prepareError = null;
+  prepareCalls = 0;
   bindings.length = 0;
   Object.assign(window, {
     codeshell: {
-      preparePanelApp: async () => ({
-        id: descriptor.id,
-        src: "cspanel://job-hunt-hq-host/app/index.html",
-        partition: "cspanel:job-hunt-hq-host:project",
-        revision: descriptor.revision,
-      }),
+      preparePanelApp: async () => {
+        prepareCalls += 1;
+        if (prepareError) throw prepareError;
+        return {
+          id: descriptor.id,
+          src: "cspanel://job-hunt-hq-host/app/index.html",
+          partition: "cspanel:job-hunt-hq-host:project",
+          revision: descriptor.revision,
+        };
+      },
       bindPanelApp: async (binding: Record<string, unknown>) => {
         bindings.push(binding);
       },
@@ -105,13 +116,14 @@ afterEach(async () => {
 });
 
 describe("PanelAppHost webview readiness", () => {
-  test("waits for dom-ready when Electron rejects the early guest-id lookup", async () => {
+  test("does not read the guest id until dom-ready", async () => {
     await render();
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(bindings).toEqual([]);
+    expect(guestIdReads).toBe(0);
 
     const webview = findElement(container, "webview");
     expect(webview).not.toBeNull();
@@ -122,6 +134,7 @@ describe("PanelAppHost webview readiness", () => {
     });
 
     expect(bindings).toHaveLength(1);
+    expect(guestIdReads).toBe(1);
     expect(bindings[0]).toMatchObject({
       guestId: 42,
       appDescriptorId: descriptor.id,
@@ -146,5 +159,13 @@ describe("PanelAppHost webview readiness", () => {
       await flushMicrotasks();
     });
     expect(bindings.at(-1)).toMatchObject({ visible: true });
+  });
+
+  test("renders an in-place retry after a transient prepare failure", async () => {
+    prepareError = new Error("temporary prepare failure");
+    await render();
+    expect(prepareCalls).toBe(1);
+    expect(findElement(container, "webview")).toBeNull();
+    expect(findElement(container, "button")).not.toBeNull();
   });
 });

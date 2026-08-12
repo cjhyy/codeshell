@@ -1,8 +1,8 @@
-import { protocol, session } from "electron";
+import { session } from "electron";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
 import { themeInstallDir } from "@cjhyy/code-shell-core";
-import { THEME_ASSET_SCHEME, parseThemeUrl, themeAssetUrl } from "./theme-asset-url.js";
+import { THEME_ASSET_SCHEME, parseThemeUrl } from "./theme-asset-url.js";
 
 /**
  * `cstheme://` serves an installed theme pack's image assets to the renderer.
@@ -24,20 +24,7 @@ const IMAGE_MIME: Readonly<Record<string, string>> = {
   ".gif": "image/gif",
 };
 
-let schemeRegistered = false;
 const handledSessions = new WeakSet<Electron.Session>();
-
-/** Must run before app `ready` (privileged scheme registration requirement). */
-export function registerThemeAssetSchemePrivileges(): void {
-  if (schemeRegistered) return;
-  protocol.registerSchemesAsPrivileged([
-    {
-      scheme: THEME_ASSET_SCHEME,
-      privileges: { standard: true, secure: true, supportFetchAPI: false, corsEnabled: false },
-    },
-  ]);
-  schemeRegistered = true;
-}
 
 function response(status: number, body?: BodyInit, contentType = "text/plain; charset=utf-8") {
   return new Response(body, {

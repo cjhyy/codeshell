@@ -239,6 +239,7 @@ export function BrowserPanel({
   // evicted the <webview> is unmounted (its renderer process freed); becoming
   // visible again clears this and remounts WebviewHost, reloading the tab url.
   const evicted = useIdleEvict(visible);
+  const showingNewTab = active.url === NEW_TAB;
 
   // Element-picking ("圈选").
   const { selecting, picked, setPicked, startPicking } = useElementPicking(
@@ -257,6 +258,7 @@ export function BrowserPanel({
     expiresAt?: number;
   }>({ granted: false, sessionId: engineSessionId ?? "" });
   const [handoffBusy, setHandoffBusy] = useState(false);
+  const [readyGuestTabId, setReadyGuestTabId] = useState<string | null>(null);
   const [chromeRuntime, setChromeRuntime] = useState<{
     sessionId: string;
     connected: boolean;
@@ -271,6 +273,12 @@ export function BrowserPanel({
   }>({ sessionId: engineSessionId ?? "", connected: false });
   const [chromeBusy, setChromeBusy] = useState(false);
   const [chromeExtensionPath, setChromeExtensionPath] = useState<string | undefined>();
+
+  const handleActiveGuestDomReady = useCallback(() => {
+    setReadyGuestTabId(activeId);
+  }, [activeId]);
+  const activeGuestReady =
+    readyGuestTabId === activeId && !evicted && !showingNewTab;
 
   useEffect(() => {
     let cancelled = false;
@@ -306,7 +314,7 @@ export function BrowserPanel({
   }, [activeId, engineSessionId]);
 
   const toggleRuntimeHandoff = useCallback(async (): Promise<void> => {
-    if (!engineSessionId || handoffBusy) return;
+    if (!engineSessionId || handoffBusy || !activeGuestReady) return;
     setHandoffBusy(true);
     try {
       if (handoff.granted) {
@@ -316,10 +324,7 @@ export function BrowserPanel({
         return;
       }
       const view = viewRef.current;
-      const guestId =
-        view && typeof view.getWebContentsId === "function"
-          ? view.getWebContentsId()
-          : undefined;
+      const guestId = view?.getWebContentsId?.();
       if (!Number.isFinite(guestId)) throw new Error("browser guest is not attached");
       const status = await window.codeshell.grantBuiltInBrowserToRuntime({
         sessionId: engineSessionId,
@@ -337,7 +342,7 @@ export function BrowserPanel({
     } finally {
       setHandoffBusy(false);
     }
-  }, [engineSessionId, handoff.granted, handoffBusy, t, toast, viewRef]);
+  }, [activeGuestReady, engineSessionId, handoff.granted, handoffBusy, t, toast, viewRef]);
 
   const toggleChromeRuntime = useCallback(async (): Promise<void> => {
     if (!engineSessionId || chromeBusy) return;
@@ -552,7 +557,7 @@ export function BrowserPanel({
         {engineSessionId && (
           <IconBtn
             onClick={() => void toggleRuntimeHandoff()}
-            disabled={active.url === NEW_TAB || handoffBusy}
+            disabled={active.url === NEW_TAB || handoffBusy || !activeGuestReady}
             label={t(
               handoff.granted
                 ? "panels.browser.revokeRuntimeHandoff"
@@ -665,6 +670,7 @@ export function BrowserPanel({
             partition={partition}
             bucket={bucket}
             engineSessionId={engineSessionId}
+            onDomReady={handleActiveGuestDomReady}
           />
         )}
 

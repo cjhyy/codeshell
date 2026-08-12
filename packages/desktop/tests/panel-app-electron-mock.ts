@@ -1,6 +1,9 @@
 import { mock } from "bun:test";
 
 export const panelAppElectronMock = {
+  privilegedSchemeRegistrations: [] as Array<
+    Array<{ scheme: string; privileges?: Record<string, boolean> }>
+  >,
   protocolHandler: null as ((request: Request) => Promise<Response>) | null,
   permissionRequestHandler: null as
     | ((
@@ -44,7 +47,13 @@ export function installPanelAppElectronMock(): void {
         panelAppElectronMock.ipcListeners.set(channel, listener);
       },
     },
-    protocol: { registerSchemesAsPrivileged: () => undefined },
+    protocol: {
+      registerSchemesAsPrivileged: (
+        schemes: Array<{ scheme: string; privileges?: Record<string, boolean> }>,
+      ) => {
+        panelAppElectronMock.privilegedSchemeRegistrations.push(schemes);
+      },
+    },
     session: {
       fromPartition: () => ({
         protocol: {

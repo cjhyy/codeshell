@@ -39,11 +39,14 @@ export function PanelAppHost({
   const { lang } = useT();
   const theme = usePanelAppTheme();
   const viewRef = useRef<WebviewElement | null>(null);
+  const guestReadyRef = useRef(false);
   const [prepared, setPrepared] = useState<PreparedPanelApp | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     let alive = true;
+    guestReadyRef.current = false;
     setPrepared(null);
     setError(null);
     if (!projectPath) {
@@ -63,24 +66,14 @@ export function PanelAppHost({
     return () => {
       alive = false;
     };
-  }, [cwd, descriptor.hostId, descriptor.id, projectPath]);
+  }, [cwd, descriptor.hostId, descriptor.id, projectPath, retryNonce]);
 
   useEffect(() => {
     const view = viewRef.current;
     if (!view || !prepared || !projectPath) return;
     let alive = true;
     const bind = () => {
-      let guestId: number | undefined;
-      try {
-        // Re-bind on context changes even after the first dom-ready. The
-        // zero-delay best-effort call can race Electron attaching the webview;
-        // in that narrow window getWebContentsId throws. dom-ready below is
-        // the authoritative retry, so a not-ready guest must not crash the
-        // entire CodeShell renderer.
-        guestId = view.getWebContentsId?.();
-      } catch {
-        return;
-      }
+      const guestId = view.getWebContentsId?.();
       if (typeof guestId !== "number" || !Number.isFinite(guestId)) return;
       void window.codeshell
         .bindPanelApp({
@@ -105,16 +98,19 @@ export function PanelAppHost({
           },
         );
     };
+    const ready = () => {
+      guestReadyRef.current = true;
+      bind();
+    };
     const crashed = () => {
       if (alive) setError("Panel App process exited.");
     };
-    const timer = window.setTimeout(bind, 0);
-    view.addEventListener("dom-ready", bind);
+    if (guestReadyRef.current) bind();
+    view.addEventListener("dom-ready", ready);
     view.addEventListener("render-process-gone", crashed);
     return () => {
       alive = false;
-      window.clearTimeout(timer);
-      view.removeEventListener("dom-ready", bind);
+      view.removeEventListener("dom-ready", ready);
       view.removeEventListener("render-process-gone", crashed);
     };
   }, [
@@ -133,8 +129,18 @@ export function PanelAppHost({
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
-        Panel App failed to load: {error}
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
+        <div>
+          {lang.toLowerCase().startsWith("zh") ? "Panel App 打开失败" : "Panel App failed to load"}
+          {`: ${error}`}
+        </div>
+        <button
+          type="button"
+          className="rounded-md border border-border bg-background px-3 py-1.5 text-foreground hover:bg-muted"
+          onClick={() => setRetryNonce((value) => value + 1)}
+        >
+          {lang.toLowerCase().startsWith("zh") ? "重试打开" : "Try again"}
+        </button>
       </div>
     );
   }

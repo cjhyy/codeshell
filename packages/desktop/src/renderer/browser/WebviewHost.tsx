@@ -17,9 +17,15 @@ import type { WebviewElement } from "./types";
  */
 export const WebviewHost = React.forwardRef<
   WebviewElement,
-  { initialUrl: string; partition?: string; bucket?: string; engineSessionId?: string | null }
+  {
+    initialUrl: string;
+    partition?: string;
+    bucket?: string;
+    engineSessionId?: string | null;
+    onDomReady?: () => void;
+  }
 >(function WebviewHost(
-  { initialUrl, partition = "persist:browser", bucket, engineSessionId },
+  { initialUrl, partition = "persist:browser", bucket, engineSessionId, onDomReady },
   ref,
 ) {
   const viewRef = useRef<WebviewElement | null>(null);
@@ -32,8 +38,7 @@ export const WebviewHost = React.forwardRef<
   const frozenPartition = useRef(partition).current;
 
   useEffect(() => {
-    if (!bucket) return;
-    if (engineSessionId) {
+    if (bucket && engineSessionId) {
       window.codeshell.registerBrowserSessionBucket({
         sessionId: engineSessionId,
         bucket,
@@ -43,12 +48,8 @@ export const WebviewHost = React.forwardRef<
     const view = viewRef.current;
     if (!view) return;
     const registerGuest = () => {
+      if (!bucket) return;
       try {
-        // The zero-delay best-effort registration may run after React attached
-        // the element but before Electron emitted dom-ready. getWebContentsId
-        // throws in that narrow window; dom-ready below is the authoritative
-        // retry, so suppress only this not-ready state instead of surfacing an
-        // uncaught renderer pageerror.
         const guestId = view.getWebContentsId?.();
         if (typeof guestId !== "number" || !Number.isFinite(guestId)) return;
         window.codeshell.registerBrowserGuest({
@@ -61,13 +62,15 @@ export const WebviewHost = React.forwardRef<
         // Not attached/dom-ready yet. The event listener retries safely.
       }
     };
-    const timer = window.setTimeout(registerGuest, 0);
-    view.addEventListener("dom-ready", registerGuest);
-    return () => {
-      window.clearTimeout(timer);
-      view.removeEventListener("dom-ready", registerGuest);
+    const handleDomReady = () => {
+      onDomReady?.();
+      registerGuest();
     };
-  }, [bucket, engineSessionId, frozenPartition]);
+    view.addEventListener("dom-ready", handleDomReady);
+    return () => {
+      view.removeEventListener("dom-ready", handleDomReady);
+    };
+  }, [bucket, engineSessionId, frozenPartition, onDomReady]);
 
   return (
     <webview

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { extname, posix, resolve, sep } from "node:path";
 import type { PanelAppDescriptor, PreparedPanelApp } from "../shared/panel-apps.js";
+import { THEME_ASSET_SCHEME } from "./theme-asset-url.js";
 
 export const PANEL_APP_SCHEME = "cspanel";
 const CSP =
@@ -46,6 +47,15 @@ export function registerPanelAppSchemePrivileges(): void {
         supportFetchAPI: false,
         corsEnabled: false,
         stream: true,
+      },
+    },
+    {
+      scheme: THEME_ASSET_SCHEME,
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: false,
+        corsEnabled: false,
       },
     },
   ]);

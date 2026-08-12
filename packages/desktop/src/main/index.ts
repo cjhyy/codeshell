@@ -380,7 +380,6 @@ import {
 } from "./panel-app-protocol.js";
 import {
   installThemeAssetProtocol,
-  registerThemeAssetSchemePrivileges,
   themeAssetUrl,
 } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
@@ -525,12 +524,9 @@ if (chromeNativeMessagingOrigin) {
     });
 }
 
-// Custom schemes must be privileged before app.ready. The request handler is
-// installed later on each Panel App guest's isolated session partition.
+// Electron accepts privileged custom schemes in one pre-ready registration.
+// The request handlers are installed later on their respective sessions.
 registerPanelAppSchemePrivileges();
-// cstheme:// serves installed theme-pack image assets to the renderer; the
-// handler is installed on the default session once the app is ready.
-registerThemeAssetSchemePrivileges();
 
 // Override the runtime app name. In dev (`electron .`) the default is
 // "Electron"; this makes the macOS menu bar, Dock tooltip, and About

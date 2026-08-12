@@ -56,6 +56,7 @@ describeIsolated("Panel App protocol", () => {
     panelAppElectronMock.protocolHandler = null;
     panelAppElectronMock.permissionRequestHandler = null;
     panelAppElectronMock.permissionCheckHandler = null;
+    panelAppElectronMock.privilegedSchemeRegistrations.length = 0;
     panelAppElectronMock.dialogResponse = 1;
     panelAppElectronMock.openedUrls.length = 0;
   });
@@ -81,6 +82,15 @@ describeIsolated("Panel App protocol", () => {
     expect(panelAppElectronMock.protocolHandler).not.toBeNull();
     return prepared;
   }
+
+  test("registers Panel and theme schemes together as secure before app readiness", () => {
+    api.registerPanelAppSchemePrivileges();
+
+    expect(panelAppElectronMock.privilegedSchemeRegistrations).toHaveLength(1);
+    const schemes = panelAppElectronMock.privilegedSchemeRegistrations[0];
+    expect(schemes.map(({ scheme }) => scheme)).toEqual(["cspanel", "cstheme"]);
+    expect(schemes.every(({ privileges }) => privileges?.standard && privileges.secure)).toBe(true);
+  });
 
   test("serves declared static assets with strict security headers", async () => {
     const prepared = await arrange("safehost");
