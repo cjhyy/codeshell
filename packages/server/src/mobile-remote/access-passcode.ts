@@ -1,12 +1,29 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  closeSync,
+  existsSync,
+  fstatSync,
+  mkdirSync,
+  openSync,
+  readSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname } from "node:path";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
+/** Malformed submissions allowed per `maxAttempts` before throttling kicks in. */
+const MALFORMED_ATTEMPT_MULTIPLIER = 20;
 const DEFAULT_LOCKOUT_MS = 60_000;
 const DEFAULT_TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const COOKIE_NAME = "cs_access";
 const SCRYPT_KEYLEN = 32;
+export const MIN_ACCESS_PASSCODE_LENGTH = 4;
+export const MAX_ACCESS_PASSCODE_LENGTH = 256;
+const MAX_REMEMBER_TOKEN_LENGTH = 128;
+const MAX_ACCESS_RECORD_BYTES = 4 * 1024;
 
 /** On-disk shape. We persist a scrypt hash + salt (never the plaintext) and a
  *  rotating `secret` used to sign remember-tokens — rotating it on every `set`
@@ -62,9 +79,16 @@ export class AccessPasscode {
   private readonly lockoutMs: number;
   private readonly tokenMaxAgeMs: number;
   private failures = 0;
+  private malformed = 0;
   private lockedUntil = 0;
 
   constructor(opts: AccessPasscodeOptions) {
+    if (!opts || typeof opts.filePath !== "string" || !opts.filePath) {
+      throw new Error("Access passcode filePath is required");
+    }
+    assertPositiveSafeInteger("maxAttempts", opts.maxAttempts);
+    assertPositiveSafeInteger("lockoutMs", opts.lockoutMs);
+    assertPositiveSafeInteger("tokenMaxAgeMs", opts.tokenMaxAgeMs);
     this.filePath = opts.filePath;
     this.now = opts.now ?? Date.now;
     this.maxAttempts = opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
@@ -78,6 +102,11 @@ export class AccessPasscode {
 
   /** Set (or rotate) the passcode. Rotating `secret` invalidates old tokens. */
   set(passcode: string): void {
+    if (!isValidPasscode(passcode)) {
+      throw new Error(
+        `Access passcode must be ${MIN_ACCESS_PASSCODE_LENGTH}-${MAX_ACCESS_PASSCODE_LENGTH} characters`,
+      );
+    }
     const salt = randomBytes(16).toString("hex");
     const hash = this.hashPasscode(passcode, salt);
     const secret = randomBytes(32).toString("hex");
@@ -95,13 +124,22 @@ export class AccessPasscode {
     const record = this.read();
     if (!record) return null;
     if (this.isLocked()) return null;
+    // Malformed input is rejected before the expensive hash, but it must NOT
+    // spend the credential-guessing budget. A value outside the length bounds
+    // is not a candidate passcode — no 4..256 check can be "guessed" by a
+    // 1-character string — so counting it deterred no attack while handing an
+    // unauthenticated caller a free lockout: five `?passcode=1` requests locked
+    // the legitimate owner out for the whole window, repeatable indefinitely.
+    // It still costs an attempt against a much larger malformed-input budget,
+    // so a script hammering junk is not free either.
+    if (!isValidPasscode(passcode)) {
+      this.recordMalformed();
+      return null;
+    }
 
     const candidate = this.hashPasscode(passcode, record.salt);
     if (!safeEqualHex(candidate, record.hash)) {
-      this.failures++;
-      if (this.failures >= this.maxAttempts) {
-        this.lockedUntil = this.now() + this.lockoutMs;
-      }
+      this.recordFailure();
       return null;
     }
     this.failures = 0;
@@ -114,6 +152,13 @@ export class AccessPasscode {
    *  issue timestamp must be within the validity window (so a stolen/synced
    *  cookie cannot grant access indefinitely). */
   verifyToken(token: string): boolean {
+    if (
+      typeof token !== "string" ||
+      token.length === 0 ||
+      token.length > MAX_REMEMBER_TOKEN_LENGTH
+    ) {
+      return false;
+    }
     const record = this.read();
     if (!record) return false;
     const dot = token.lastIndexOf(".");
@@ -126,7 +171,8 @@ export class AccessPasscode {
     // signature checks out.
     const issuedAt = Number(payload.slice(payload.indexOf(".") + 1));
     if (!Number.isFinite(issuedAt)) return false;
-    return this.now() - issuedAt <= this.tokenMaxAgeMs;
+    const age = this.now() - issuedAt;
+    return age >= 0 && age <= this.tokenMaxAgeMs;
   }
 
   /**
@@ -218,6 +264,29 @@ export class AccessPasscode {
     return true;
   }
 
+  private recordFailure(): void {
+    this.failures++;
+    if (this.failures >= this.maxAttempts) {
+      this.lockedUntil = this.now() + this.lockoutMs;
+    }
+  }
+
+  /**
+   * Count a request whose passcode could not even be a passcode.
+   *
+   * Kept separate from `recordFailure` so junk traffic cannot spend the
+   * credential-guessing budget and lock out the owner. The budget is a large
+   * multiple of `maxAttempts`: a determined flood is still throttled, but the
+   * handful of malformed submissions a real client produces never is.
+   */
+  private recordMalformed(): void {
+    this.malformed++;
+    if (this.malformed >= this.maxAttempts * MALFORMED_ATTEMPT_MULTIPLIER) {
+      this.malformed = 0;
+      this.lockedUntil = this.now() + this.lockoutMs;
+    }
+  }
+
   private issueToken(record: AccessRecord): string {
     const payload = `${randomBytes(12).toString("hex")}.${this.now()}`;
     const sig = this.sign(payload, record.secret);
@@ -234,20 +303,91 @@ export class AccessPasscode {
 
   private read(): AccessRecord | undefined {
     if (!existsSync(this.filePath)) return undefined;
+    let fd: number | undefined;
     try {
-      const parsed = JSON.parse(readFileSync(this.filePath, "utf-8")) as Partial<AccessRecord>;
-      if (parsed.hash && parsed.salt && parsed.secret) {
-        return { hash: parsed.hash, salt: parsed.salt, secret: parsed.secret };
+      fd = openSync(this.filePath, "r");
+      const stat = fstatSync(fd);
+      if (!stat.isFile() || stat.size > MAX_ACCESS_RECORD_BYTES) return undefined;
+      const buffer = Buffer.allocUnsafe(MAX_ACCESS_RECORD_BYTES + 1);
+      let total = 0;
+      while (total < buffer.byteLength) {
+        const count = readSync(fd, buffer, total, buffer.byteLength - total, total);
+        if (count === 0) break;
+        total += count;
+      }
+      if (total > MAX_ACCESS_RECORD_BYTES) return undefined;
+      const parsed = JSON.parse(buffer.subarray(0, total).toString("utf8")) as unknown;
+      if (isAccessRecord(parsed)) {
+        return parsed;
       }
       return undefined;
     } catch {
       return undefined;
+    } finally {
+      if (fd !== undefined) closeSync(fd);
     }
   }
 
   private write(record: AccessRecord): void {
-    mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify(record, null, 2), "utf-8");
+    const parent = dirname(this.filePath);
+    mkdirSync(parent, { recursive: true, mode: 0o700 });
+    try {
+      chmodSync(parent, 0o700);
+    } catch {
+      // Best effort on platforms/filesystems without POSIX permissions.
+    }
+
+    // access.json contains the HMAC signing secret. A direct overwrite can
+    // truncate the only valid record if the process crashes mid-write, and the
+    // default umask can make a newly-created file group/world-readable.
+    const tempPath = `${this.filePath}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
+    try {
+      writeFileSync(tempPath, JSON.stringify(record, null, 2), {
+        encoding: "utf-8",
+        flag: "wx",
+        mode: 0o600,
+      });
+      renameSync(tempPath, this.filePath);
+      try {
+        chmodSync(this.filePath, 0o600);
+      } catch {
+        // Best effort on platforms/filesystems without POSIX permissions.
+      }
+    } finally {
+      try {
+        rmSync(tempPath, { force: true });
+      } catch {
+        // Never hide the original write/rename error with cleanup failure.
+      }
+    }
+  }
+}
+
+function isAccessRecord(value: unknown): value is AccessRecord {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.hash === "string" &&
+    /^[0-9a-f]{64}$/i.test(record.hash) &&
+    typeof record.salt === "string" &&
+    /^[0-9a-f]{32}$/i.test(record.salt) &&
+    typeof record.secret === "string" &&
+    /^[0-9a-f]{64}$/i.test(record.secret)
+  );
+}
+
+function isValidPasscode(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length >= MIN_ACCESS_PASSCODE_LENGTH &&
+    value.length <= MAX_ACCESS_PASSCODE_LENGTH
+  );
+}
+
+function assertPositiveSafeInteger(name: string, value: number | undefined): void {
+  if (value === undefined) return;
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`${name} must be a positive safe integer`);
   }
 }
 
@@ -360,7 +500,7 @@ function challengePage(url: string | undefined, wrong: boolean, locked: boolean)
   <h1>手机遥控</h1>
   <p class="${wrong || locked ? "err" : ""}">${note}</p>
   ${hidden}
-  <input id="passcode" type="password" name="passcode" placeholder="访问口令" autofocus required ${locked ? "disabled" : ""}>
+  <input id="passcode" type="password" name="passcode" placeholder="访问口令" minlength="${MIN_ACCESS_PASSCODE_LENGTH}" maxlength="${MAX_ACCESS_PASSCODE_LENGTH}" autofocus required ${locked ? "disabled" : ""}>
   <button type="submit" ${locked ? "disabled" : ""}>进入</button>
 </form>
 <script>

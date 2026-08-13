@@ -1,4 +1,12 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -17,6 +25,19 @@ function freshFile(): string {
 }
 
 describe("AccessPasscode", () => {
+  test("rejects invalid security limits instead of silently disabling protection", () => {
+    const file = freshFile();
+    expect(() => new AccessPasscode({ filePath: file, maxAttempts: 0 })).toThrow("maxAttempts");
+    expect(() => new AccessPasscode({ filePath: file, maxAttempts: Number.NaN })).toThrow(
+      "maxAttempts",
+    );
+    expect(() => new AccessPasscode({ filePath: file, lockoutMs: -1 })).toThrow("lockoutMs");
+    expect(() => new AccessPasscode({ filePath: file, tokenMaxAgeMs: Infinity })).toThrow(
+      "tokenMaxAgeMs",
+    );
+    expect(() => new AccessPasscode({ filePath: "" })).toThrow("filePath");
+  });
+
   test("isSet false before set, true after", () => {
     const ap = new AccessPasscode({ filePath: freshFile() });
     expect(ap.isSet()).toBe(false);
@@ -34,6 +55,84 @@ describe("AccessPasscode", () => {
     expect(parsed.hash).toBeDefined();
     expect(parsed.salt).toBeDefined();
     expect(parsed.passcode).toBeUndefined();
+  });
+
+  test("rejects invalid set/verify inputs before expensive hashing", () => {
+    const file = freshFile();
+    const ap = new AccessPasscode({ filePath: file, maxAttempts: 2 });
+    ap.set("valid-passcode");
+    const original = readFileSync(file, "utf-8");
+
+    expect(() => ap.set("abc")).toThrow("4-256");
+    expect(() => ap.set("x".repeat(257))).toThrow("4-256");
+    expect(() => ap.set(123 as unknown as string)).toThrow("4-256");
+    expect(readFileSync(file, "utf-8")).toBe(original);
+
+    expect(ap.verify("x".repeat(257))).toBeNull();
+    expect(ap.verify(123 as unknown as string)).toBeNull();
+    // Malformed input is throttled on its own budget, so a couple of junk
+    // submissions must not burn the (much smaller) credential-guess budget.
+    expect(ap.verify("valid-passcode")).not.toBeNull();
+  });
+
+  test("malformed input cannot lock the owner out on the credential budget", () => {
+    // An unauthenticated caller sending `?passcode=1` supplies something that
+    // could never be a valid passcode. Charging those to the lockout counter
+    // let anyone lock the real user out for the full window, repeatedly, with
+    // no credential and without paying for a single hash.
+    const ap = new AccessPasscode({ filePath: freshFile(), maxAttempts: 5 });
+    ap.set("valid-passcode");
+
+    for (let i = 0; i < 20; i++) expect(ap.verify("1")).toBeNull();
+
+    expect(ap.verify("valid-passcode")).not.toBeNull();
+  });
+
+  test("a sustained malformed flood is still throttled", () => {
+    const ap = new AccessPasscode({ filePath: freshFile(), maxAttempts: 2 });
+    ap.set("valid-passcode");
+    // Well past maxAttempts * MALFORMED_ATTEMPT_MULTIPLIER.
+    for (let i = 0; i < 41; i++) ap.verify("1");
+    expect(ap.verify("valid-passcode")).toBeNull();
+  });
+
+  test("rejects oversized or non-string remember tokens without throwing", () => {
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("valid-passcode");
+    expect(ap.verifyToken("x".repeat(129))).toBe(false);
+    expect(ap.verifyToken(null as unknown as string)).toBe(false);
+  });
+
+  test("persists the signing secret atomically with owner-only permissions", () => {
+    const file = freshFile();
+    const ap = new AccessPasscode({ filePath: file });
+    ap.set("first");
+    chmodSync(file, 0o644);
+
+    ap.set("second");
+
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    expect(readdirSync(dir!).filter((name) => name.includes(".tmp"))).toEqual([]);
+    expect(ap.verify("second")).toBeString();
+  });
+
+  test("malformed records fail closed instead of reaching crypto with invalid types", () => {
+    const file = freshFile();
+    writeFileSync(file, JSON.stringify({ hash: 1, salt: {}, secret: true }));
+    const ap = new AccessPasscode({ filePath: file });
+
+    expect(ap.isSet()).toBe(false);
+    expect(ap.verify("anything")).toBeNull();
+    expect(ap.verifyToken("payload.signature")).toBe(false);
+  });
+
+  test("oversized access records fail closed without being parsed", () => {
+    const file = freshFile();
+    writeFileSync(file, "x".repeat(5 * 1024));
+    const ap = new AccessPasscode({ filePath: file });
+
+    expect(ap.isSet()).toBe(false);
+    expect(ap.verify("anything")).toBeNull();
   });
 
   test("wrong passcode → verify returns null", () => {
@@ -77,7 +176,7 @@ describe("AccessPasscode", () => {
   });
 
   test("gate: remember-cookie Max-Age matches the token validity window", () => {
-    let now = 1_000_000_000_000;
+    const now = 1_000_000_000_000;
     const ap = new AccessPasscode({
       filePath: freshFile(),
       now: () => now,

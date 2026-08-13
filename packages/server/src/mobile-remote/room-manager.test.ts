@@ -1,4 +1,12 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -138,6 +146,26 @@ describe("RoomManager", () => {
     expect(room.kind).toBe("claude-code");
     expect(mgr.listRooms()).toHaveLength(1);
     expect(mgr.getRoom(room.id)?.permissionMode).toBe("bypassPermissions");
+    if (process.platform !== "win32") {
+      expect(statSync(join(dir!, room.id)).mode & 0o777).toBe(0o700);
+      expect(statSync(join(dir!, room.id, "room.json")).mode & 0o777).toBe(0o600);
+      expect(statSync(join(dir!, room.id, "messages.jsonl")).mode & 0o777).toBe(0o600);
+    }
+    expect(readdirSync(join(dir!, room.id)).some((name) => name.endsWith(".tmp"))).toBe(false);
+  });
+
+  test("a post-crash append survives a torn JSONL tail", () => {
+    const { mgr } = makeManager();
+    const room = mgr.createRoom({ cwd: "/repo" });
+    appendFileSync(join(dir!, room.id, "messages.jsonl"), '{"seq":999');
+
+    mgr.ingestTranscriptMessages(room.id, []); // no-op keeps public path untouched
+    const append = (mgr as unknown as {
+      append: (id: string, message: Omit<RoomMessage, "seq" | "ts">) => RoomMessage;
+    }).append.bind(mgr);
+    append(room.id, { from: "system", type: "recovered", text: "survives" });
+
+    expect(mgr.getMessages(room.id).at(-1)).toMatchObject({ type: "recovered", text: "survives" });
   });
 
   test("send persists user msg + agent reply with monotonic seq", () => {
@@ -239,6 +267,56 @@ describe("RoomManager", () => {
     expect(after).toHaveLength(all.length - 1);
   });
 
+  test("bounds returned history and ignores malformed message records", () => {
+    const { mgr } = makeManager();
+    const room = mgr.createRoom({ cwd: "/repo" });
+    const records = Array.from({ length: 10_050 }, (_, index) =>
+      JSON.stringify({
+        seq: index + 1,
+        ts: index,
+        from: "agent",
+        type: "text",
+        text: `m${index + 1}`,
+      }),
+    );
+    records.splice(25, 0, JSON.stringify({ seq: "forged", from: "agent", type: "text" }));
+    writeFileSync(join(dir!, room.id, "messages.jsonl"), `${records.join("\n")}\n`);
+
+    const messages = mgr.getMessages(room.id, 0);
+    expect(messages).toHaveLength(10_000);
+    expect(messages[0]?.seq).toBe(51);
+    expect(messages.at(-1)?.seq).toBe(10_050);
+  });
+
+  test("restores the cached sequence after an oversized append fails", () => {
+    const { mgr } = makeManager();
+    const room = mgr.createRoom({ cwd: "/repo" });
+    const append = (mgr as unknown as {
+      append: (id: string, message: Omit<RoomMessage, "seq" | "ts">) => RoomMessage;
+    }).append.bind(mgr);
+
+    expect(() =>
+      append(room.id, { from: "agent", type: "text", text: "x".repeat(4 * 1024 * 1024 + 1) }),
+    ).toThrow(/size limit/);
+    expect(append(room.id, { from: "agent", type: "text", text: "after" }).seq).toBe(2);
+    expect(mgr.getMessages(room.id).map((message) => message.seq)).toEqual([1, 2]);
+  });
+
+  test("a throwing live-push callback does not report a persisted message as failed", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-push-failure-"));
+    const mgr = new RoomManager({
+      rootDir: dir,
+      createAgent: (_room, onEvent) => new FakeAgent(onEvent),
+      onMessage: () => {
+        throw new Error("socket closed");
+      },
+    });
+
+    const room = mgr.createRoom({ cwd: "/repo" });
+    expect(mgr.send(room.id, "hello")).toBe(true);
+    expect(mgr.getMessages(room.id).some((message) => message.text === "hello")).toBe(true);
+  });
+
   test("open starts agent once; isOpen reflects state; close stops", () => {
     const { mgr, agents } = makeManager();
     const room = mgr.createRoom({ cwd: "/repo" });
@@ -248,6 +326,60 @@ describe("RoomManager", () => {
     expect(mgr.isOpen(room.id)).toBe(true);
     mgr.close(room.id);
     expect(mgr.isOpen(room.id)).toBe(false);
+  });
+
+  test("a throwing agent start is removed so the room can retry cleanly", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-start-failure-"));
+    let creations = 0;
+    const mgr = new RoomManager({
+      rootDir: dir,
+      createAgent: () => {
+        creations += 1;
+        return {
+          start() {
+            throw new Error("spawn failed");
+          },
+          send: () => true,
+          isRunning: () => false,
+          stop() {},
+        };
+      },
+      onMessage: () => undefined,
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+
+    expect(() => mgr.open(room.id)).toThrow("spawn failed");
+    expect(mgr.isOpen(room.id)).toBe(false);
+    expect(() => mgr.open(room.id)).toThrow("spawn failed");
+    expect(creations).toBe(2);
+  });
+
+  test("a throwing send clears synchronous event buffers", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-send-failure-"));
+    let emit!: (event: ResidentAgentEvent) => void;
+    const mgr = new RoomManager({
+      rootDir: dir,
+      createAgent: (_room, onEvent) => {
+        emit = onEvent;
+        return {
+          start() {},
+          send() {
+            emit({ type: "text", text: "must be discarded" });
+            throw new Error("send failed");
+          },
+          isRunning: () => true,
+          stop() {},
+        };
+      },
+      onMessage: () => undefined,
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+
+    expect(() => mgr.send(room.id, "hello")).toThrow("send failed");
+    expect(mgr.getMessages(room.id).map((message) => message.type)).toEqual(["room_created"]);
+    expect(
+      (mgr as unknown as { deferredEmits: Map<string, unknown> }).deferredEmits.size,
+    ).toBe(0);
   });
 
   test("open missing room reports missing", () => {
@@ -779,6 +911,49 @@ describe("RoomManager", () => {
     expect(mgr.respondApproval("nope", "req-x", { behavior: "deny", message: "no" })).toBe(false);
   });
 
+  test("approval replays the server-observed input and ignores client substitution", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let emit!: (event: ResidentAgentEvent) => void;
+    const calls: { requestId: string; decision: unknown }[] = [];
+    const mgr = new RoomManager({
+      rootDir: dir,
+      createAgent: (_room, onEvent) => {
+        emit = onEvent;
+        return {
+          start() {},
+          send: () => true,
+          isRunning: () => true,
+          stop() {},
+          respondControl: (requestId, decision) => calls.push({ requestId, decision }),
+        };
+      },
+      onMessage: () => {},
+      onApprovalRequest: () => {},
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.open(room.id);
+    emit({
+      type: "approval_request",
+      requestId: "req-safe",
+      toolName: "Bash",
+      input: { command: "printf safe" },
+      description: "Run safe command",
+    });
+
+    expect(
+      mgr.respondApproval(room.id, "req-safe", {
+        behavior: "allow",
+        updatedInput: { command: "rm -rf /" },
+      }),
+    ).toBe(true);
+    expect(calls).toEqual([
+      {
+        requestId: "req-safe",
+        decision: { behavior: "allow", updatedInput: { command: "printf safe" } },
+      },
+    ]);
+  });
+
   test("agent text/tool events persist with correct shape", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-"));
     let emit!: (e: ResidentAgentEvent) => void;
@@ -883,5 +1058,45 @@ describe("RoomManager roomId path-traversal guard", () => {
     expect(() => mgr.close(evil)).not.toThrow();
     // No directory/file created outside the rooms rootDir.
     expect(existsSync(join(dir!, "..", "..", "..", "pwned"))).toBe(false);
+  });
+
+  test("does not follow a symlinked room directory outside the storage root", () => {
+    if (process.platform === "win32") return;
+    const { mgr } = makeManager();
+    const room = mgr.createRoom({ cwd: "/repo" });
+    const outside = mkdtempSync(join(tmpdir(), "rooms-outside-"));
+    try {
+      rmSync(join(dir!, room.id), { recursive: true, force: true });
+      writeFileSync(join(outside, "room.json"), JSON.stringify(room));
+      symlinkSync(outside, join(dir!, room.id));
+
+      expect(mgr.getRoom(room.id)).toBeUndefined();
+      expect(mgr.listRooms()).toEqual([]);
+      expect(mgr.send(room.id, "must not escape")).toBe(false);
+      expect(() => mgr.createRoom({ cwd: "/repo/new" })).not.toThrow();
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects a symlinked storage root at construction", () => {
+    if (process.platform === "win32") return;
+    const base = mkdtempSync(join(tmpdir(), "rooms-root-link-"));
+    const outside = mkdtempSync(join(tmpdir(), "rooms-root-target-"));
+    const linked = join(base, "rooms");
+    try {
+      symlinkSync(outside, linked);
+      expect(
+        () =>
+          new RoomManager({
+            rootDir: linked,
+            createAgent: () => new FakeAgent(() => undefined),
+            onMessage: () => undefined,
+          }),
+      ).toThrow(/storage root/i);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 });

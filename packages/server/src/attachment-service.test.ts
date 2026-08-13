@@ -382,6 +382,41 @@ describe("attachment-service", () => {
     }
   });
 
+  test("rejects a non-file entry matching the attachment hash", async () => {
+    const sessionDir = join(cwd, ".code-shell", "attachments", "sid-1");
+    mkdirSync(sessionDir, { recursive: true });
+    const sha16 = createHash("sha256")
+      .update(IMAGE_FIXTURES["image/png"])
+      .digest("hex")
+      .slice(0, 16);
+    mkdirSync(join(sessionDir, `${sha16}-directory.png`));
+
+    await expect(
+      stageImageDataUrl({
+        cwd,
+        sessionId: "sid-1",
+        name: "a.png",
+        mime: "image/png",
+        dataUrl: PNG_URL,
+        origin: "paste",
+      }),
+    ).rejects.toThrow(/regular file/i);
+  });
+
+  test("rejects oversized attachment metadata before writing a manifest", async () => {
+    await expect(
+      stageFileBytes({
+        cwd,
+        sessionId: "sid-large-meta",
+        name: "x".repeat(1_025),
+        mime: "text/plain",
+        bytes: Buffer.from("small"),
+        origin: "picker",
+      }),
+    ).rejects.toThrow(/metadata/i);
+    expect(existsSync(join(cwd, ".code-shell", "attachments", "sid-large-meta"))).toBe(false);
+  });
+
   test("writes .code-shell/.gitignore without touching the repo root gitignore", async () => {
     await stageImageDataUrl({
       cwd,

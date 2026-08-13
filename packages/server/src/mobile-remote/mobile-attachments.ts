@@ -1,11 +1,18 @@
 import { stageImageBytes, type InputAttachmentMeta } from "../attachment-service.js";
 import type { MobileAttachmentSummary, MobileImageAttachment, MobileImageMime } from "./types.js";
 import type { ClaimedMobileUpload, MobileUploadService } from "./mobile-upload-service.js";
-
-export const MAX_MOBILE_ATTACHMENTS = 4;
-export const MAX_MOBILE_INLINE_IMAGE_BYTES = 256 * 1024;
-export const MAX_MOBILE_INLINE_TOTAL_BYTES = 512 * 1024;
-export const MAX_MOBILE_ATTACHMENT_TOTAL_BYTES = 20 * 1024 * 1024;
+import {
+  MAX_MOBILE_ATTACHMENTS,
+  MAX_MOBILE_ATTACHMENT_TOTAL_BYTES,
+  MAX_MOBILE_INLINE_IMAGE_BYTES,
+  MAX_MOBILE_INLINE_TOTAL_BYTES,
+} from "./mobile-limits.js";
+export {
+  MAX_MOBILE_ATTACHMENTS,
+  MAX_MOBILE_ATTACHMENT_TOTAL_BYTES,
+  MAX_MOBILE_INLINE_IMAGE_BYTES,
+  MAX_MOBILE_INLINE_TOTAL_BYTES,
+} from "./mobile-limits.js";
 
 const ALLOWED_MIMES = new Set<MobileImageMime>([
   "image/png",

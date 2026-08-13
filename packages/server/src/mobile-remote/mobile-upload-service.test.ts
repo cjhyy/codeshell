@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
-import { existsSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -130,6 +138,10 @@ describe("MobileUploadService", () => {
     expect(claimed.size).toBe(bytes.byteLength);
     expect(claimed.sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(existsSync(claimed.path)).toBe(true);
+    if (process.platform !== "win32") {
+      expect(statSync(roots.at(-1)!).mode & 0o777).toBe(0o700);
+      expect(statSync(claimed.path).mode & 0o777).toBe(0o600);
+    }
     expect(() => service.claim("device-a", ticket.uploadId)).toThrow(/claimed|ready/i);
     await expect(service.finalize("device-a", ticket.uploadId, "wrong-owner")).rejects.toThrow(
       /claim/i,

@@ -1,6 +1,7 @@
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createServer } from "node:http";
 import { afterEach, describe, expect, test } from "bun:test";
 import { RemoteHostManager, resolveLanHost } from "./remote-host-manager.js";
 import { TrustedDeviceStore } from "./trusted-device-store.js";
@@ -41,6 +42,50 @@ describe("RemoteHostManager", () => {
     // Serves the built mobile app's index.html (React SPA, not inline string).
     expect(html).toContain("<title>CodeShell Remote</title>");
     expect(html).toContain('id="app"');
+    await host.stop();
+  });
+
+  test("coalesces concurrent starts into one listener", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-start-once-"));
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+      mobileRootDir: mobileFixture(dir),
+    });
+
+    const [first, second] = await Promise.all([
+      host.start({ host: "127.0.0.1", port: 0 }),
+      host.start({ host: "127.0.0.1", port: 0 }),
+    ]);
+    expect(second).toEqual(first);
+    expect((await fetch(`${first.url}/health`)).status).toBe(200);
+    await host.stop();
+  });
+
+  test("cleans a failed bind so the same manager can retry", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-retry-"));
+    const blocker = createServer();
+    await new Promise<void>((resolve) => blocker.listen(0, "127.0.0.1", resolve));
+    const address = blocker.address();
+    if (!address || typeof address === "string") throw new Error("missing blocker port");
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+    });
+
+    let rejected = false;
+    try {
+      await host.start({ host: "127.0.0.1", port: address.port });
+    } catch {
+      rejected = true;
+    } finally {
+      await new Promise<void>((resolve) => blocker.close(() => resolve()));
+    }
+    expect(rejected).toBe(true);
+    expect(host.status()).toBeUndefined();
+
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    expect(started.port).toBeGreaterThan(0);
     await host.stop();
   });
 
@@ -151,6 +196,62 @@ describe("RemoteHostManager", () => {
       secretHash: "h1",
     });
     expect(authed?.type).toBe("auth.ok");
+    await host.stop();
+  });
+
+  test("invalid runtime event shapes are rejected without throwing or dispatching", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const seen: unknown[] = [];
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: (event) => seen.push(event),
+    });
+
+    expect(() => host.handleClientEvent(null)).not.toThrow();
+    expect(host.handleClientEvent(null)).toEqual({
+      type: "error",
+      message: "Invalid client event",
+    });
+    expect(host.handleClientEvent({ type: "auth.device", deviceId: {}, secretHash: 3 })).toEqual({
+      type: "error",
+      message: "Invalid client event",
+    });
+    expect(
+      host.handleClientEvent({
+        type: "approval.respond",
+        approvalId: "a",
+        decision: "root",
+      }),
+    ).toEqual({ type: "error", message: "Invalid client event" });
+    expect(seen).toEqual([]);
+  });
+
+  test("pairing storage failure does not consume the one-time token", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const file = join(dir, "devices.json");
+    writeFileSync(file, "{corrupt");
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(file),
+      onClientEvent: () => {},
+    });
+    await host.start({ host: "127.0.0.1", port: 0 });
+    const pairing = host.createPairingUrl();
+    const event = {
+      type: "pair.complete" as const,
+      token: pairing.token,
+      name: "iPhone",
+      secretHash: "h1",
+    };
+
+    expect(host.handleClientEvent(event)).toEqual({
+      type: "pair.failed",
+      message: "Trusted device store is unavailable",
+    });
+    expect(readFileSync(file, "utf-8")).toBe("{corrupt");
+
+    writeFileSync(file, "[]");
+    expect(host.handleClientEvent(event)?.type).toBe("pair.ok");
+    expect(host.handleClientEvent(event)?.type).toBe("pair.failed");
     await host.stop();
   });
 
@@ -354,6 +455,44 @@ describe("RemoteHostManager", () => {
       second.terminate();
       await host.stop();
     }
+  });
+
+  test("async dispatcher rejection becomes a socket error instead of an unhandled rejection", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const store = new TrustedDeviceStore(join(dir, "devices.json"));
+    const device = store.addDevice({ name: "Phone", secretHash: "secret" });
+    const host = new RemoteHostManager({
+      devices: store,
+      onClientEvent: async () => {
+        await Promise.resolve();
+        throw new Error("dispatcher failed");
+      },
+    });
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    const { WebSocket: WS } = await import("ws");
+    const socket = new WS(`${started.url.replace(/^http/, "ws")}/ws`);
+    const messages: Array<{ type?: string; message?: string }> = [];
+    const failed = new Promise<void>((resolve) => {
+      socket.on("message", (raw) => {
+        const message = JSON.parse(String(raw)) as { type?: string; message?: string };
+        messages.push(message);
+        if (message.type === "auth.ok") {
+          socket.send(JSON.stringify({ type: "session.list" }));
+        } else if (message.message === "Client event failed") {
+          resolve();
+        }
+      });
+    });
+    socket.on("open", () =>
+      socket.send(
+        JSON.stringify({ type: "auth.device", deviceId: device.id, secretHash: "secret" }),
+      ),
+    );
+
+    await failed;
+    expect(messages.some((message) => message.message === "Client event failed")).toBe(true);
+    socket.close();
+    await host.stop();
   });
 
   test("resolveLanHost never returns loopback/link-local/VPN ranges", () => {

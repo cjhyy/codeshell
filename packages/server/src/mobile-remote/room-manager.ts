@@ -1,13 +1,22 @@
 import {
+  chmodSync,
+  closeSync,
   existsSync,
+  fchmodSync,
+  fstatSync,
+  lstatSync,
   mkdirSync,
-  readFileSync,
+  openSync,
+  readSync,
+  realpathSync,
   readdirSync,
+  renameSync,
   writeFileSync,
   appendFileSync,
   rmSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { randomUUID } from "node:crypto";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { ResidentAgentEvent } from "./resident-agent.js";
 import type { InputAttachmentMeta } from "../attachment-service.js";
 
@@ -26,6 +35,111 @@ const ROOM_ID_RE = /^room_[a-z0-9]+_[a-z0-9]+$/;
  * per message bought nothing and cost a full file rewrite each time.
  */
 const LAST_ACTIVE_THROTTLE_MS = 10_000;
+const MAX_ROOM_META_BYTES = 64 * 1024;
+const MAX_ROOM_ENTRIES = 10_000;
+const MAX_ROOM_MESSAGE_BYTES = 4 * 1024 * 1024;
+const MAX_ROOM_HISTORY_SCAN_BYTES = 32 * 1024 * 1024;
+const MAX_ROOM_HISTORY_MESSAGES = 10_000;
+
+function isContained(root: string, target: string): boolean {
+  const rel = relative(root, target);
+  return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+function readBoundedUtf8File(path: string, maxBytes: number): string {
+  const fd = openSync(path, "r");
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.size > maxBytes) throw new Error("file exceeds the size limit");
+    const buffer = Buffer.allocUnsafe(maxBytes + 1);
+    let total = 0;
+    while (total < buffer.byteLength) {
+      const count = readSync(fd, buffer, total, buffer.byteLength - total, total);
+      if (count === 0) break;
+      total += count;
+    }
+    if (total > maxBytes) throw new Error("file exceeds the size limit");
+    return buffer.subarray(0, total).toString("utf8");
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function parseRoomMeta(value: unknown, expectedId?: string): RoomMeta | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.id !== "string" ||
+    !isValidRoomId(raw.id) ||
+    (expectedId !== undefined && raw.id !== expectedId) ||
+    typeof raw.name !== "string" ||
+    !raw.name ||
+    raw.name.length > 512 ||
+    raw.name.includes("\0") ||
+    typeof raw.cwd !== "string" ||
+    !raw.cwd ||
+    raw.cwd.length > 32_768 ||
+    raw.cwd.includes("\0") ||
+    (raw.kind !== "claude-code" && raw.kind !== "codex") ||
+    (raw.permissionMode !== "default" &&
+      raw.permissionMode !== "acceptEdits" &&
+      raw.permissionMode !== "bypassPermissions") ||
+    typeof raw.createdAt !== "number" ||
+    !Number.isFinite(raw.createdAt) ||
+    typeof raw.lastActiveAt !== "number" ||
+    !Number.isFinite(raw.lastActiveAt) ||
+    (raw.claudeSessionId !== undefined &&
+      (typeof raw.claudeSessionId !== "string" ||
+        raw.claudeSessionId.length > 4_096 ||
+        raw.claudeSessionId.includes("\0"))) ||
+    (raw.linkedSessionMode !== undefined && raw.linkedSessionMode !== "observe-only")
+  ) {
+    return undefined;
+  }
+  return {
+    id: raw.id,
+    name: raw.name,
+    cwd: raw.cwd,
+    kind: raw.kind,
+    permissionMode: raw.permissionMode,
+    createdAt: raw.createdAt,
+    lastActiveAt: raw.lastActiveAt,
+    ...(typeof raw.claudeSessionId === "string"
+      ? { claudeSessionId: raw.claudeSessionId }
+      : {}),
+    ...(raw.linkedSessionMode === "observe-only"
+      ? { linkedSessionMode: raw.linkedSessionMode }
+      : {}),
+  };
+}
+
+function parseRoomMessage(value: unknown): RoomMessage | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.seq !== "number" ||
+    !Number.isSafeInteger(raw.seq) ||
+    raw.seq <= 0 ||
+    typeof raw.ts !== "number" ||
+    !Number.isFinite(raw.ts) ||
+    (raw.from !== "user" && raw.from !== "agent" && raw.from !== "system") ||
+    typeof raw.type !== "string" ||
+    !raw.type ||
+    raw.type.length > 128
+  ) {
+    return undefined;
+  }
+  for (const field of ["text", "tool", "summary", "reason", "toolId"] as const) {
+    const item = raw[field];
+    if (item !== undefined && (typeof item !== "string" || item.includes("\0"))) return undefined;
+  }
+  if (raw.isError !== undefined && typeof raw.isError !== "boolean") return undefined;
+  if (raw.args !== undefined && (!raw.args || typeof raw.args !== "object" || Array.isArray(raw.args))) {
+    return undefined;
+  }
+  if (raw.attachments !== undefined && !Array.isArray(raw.attachments)) return undefined;
+  return raw as unknown as RoomMessage;
+}
 
 export function isValidRoomId(id: unknown): id is string {
   return typeof id === "string" && ROOM_ID_RE.test(id);
@@ -262,6 +376,9 @@ export class RoomManager {
    *  Holds the raw tool input so respondApproval can bake the user's answer into
    *  the `answers` record the CLI expects. Cleared on response. */
   private pendingAskUser = new Map<string, unknown>();
+  /** Original server-observed tool inputs for ordinary approvals. The response
+   * client may approve or deny, but must not replace the command/path it saw. */
+  private pendingApprovalInputs = new Map<string, unknown>();
   /** User turns are echoed immediately for responsive room UX. When a
    * transcript follower later sees the same CLI-written user line, this queue
    * suppresses that duplicate. */
@@ -286,21 +403,42 @@ export class RoomManager {
   private pendingLastActive = new Map<string, number>();
   private lastActiveWrittenAt = new Map<string, number>();
   private now: () => number;
+  private readonly rootRealPath: string;
 
   /** Drop all pending AskUser entries for a room. Called when its agent goes
    *  away (exit/close) so a request that can no longer be answered doesn't leak
    *  in the map (small memory leak) and its approval card doesn't hang until the
    *  5-min timeout. Keys are `${roomId}:${requestId}`. */
-  private clearPendingAskUser(roomId: string): void {
+  private clearPendingApprovals(roomId: string): void {
     const prefix = `${roomId}:`;
     for (const key of this.pendingAskUser.keys()) {
       if (key.startsWith(prefix)) this.pendingAskUser.delete(key);
+    }
+    for (const key of this.pendingApprovalInputs.keys()) {
+      if (key.startsWith(prefix)) this.pendingApprovalInputs.delete(key);
     }
   }
 
   constructor(private readonly opts: RoomManagerOptions) {
     this.now = opts.now ?? (() => Date.now());
-    mkdirSync(opts.rootDir, { recursive: true });
+    mkdirSync(opts.rootDir, { recursive: true, mode: 0o700 });
+    const rootInfo = lstatSync(opts.rootDir);
+    if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) {
+      throw new Error(`invalid room storage root: ${opts.rootDir}`);
+    }
+    this.rootRealPath = realpathSync(opts.rootDir);
+    if (process.platform !== "win32") chmodSync(opts.rootDir, 0o700);
+  }
+
+  private assertRootUnchanged(): void {
+    const info = lstatSync(this.opts.rootDir);
+    if (
+      info.isSymbolicLink() ||
+      !info.isDirectory() ||
+      realpathSync(this.opts.rootDir) !== this.rootRealPath
+    ) {
+      throw new Error(`invalid room storage root: ${this.opts.rootDir}`);
+    }
   }
 
   private roomDir(id: string): string {
@@ -313,13 +451,73 @@ export class RoomManager {
     if (!isValidRoomId(id)) {
       throw new Error(`invalid roomId: ${JSON.stringify(id)}`);
     }
-    return join(this.opts.rootDir, id);
+    this.assertRootUnchanged();
+    const dir = join(this.opts.rootDir, id);
+    if (existsSync(dir)) {
+      const info = lstatSync(dir);
+      if (
+        info.isSymbolicLink() ||
+        !info.isDirectory() ||
+        !isContained(this.rootRealPath, realpathSync(dir))
+      ) {
+        throw new Error(`invalid room directory: ${dir}`);
+      }
+    }
+    return dir;
+  }
+  private checkedRoomFile(id: string, name: "room.json" | "messages.jsonl"): string {
+    const path = join(this.roomDir(id), name);
+    if (existsSync(path)) {
+      const info = lstatSync(path);
+      if (info.isSymbolicLink() || !info.isFile()) throw new Error(`invalid room file: ${path}`);
+    }
+    return path;
   }
   private metaPath(id: string): string {
-    return join(this.roomDir(id), "room.json");
+    return this.checkedRoomFile(id, "room.json");
   }
   private msgPath(id: string): string {
-    return join(this.roomDir(id), "messages.jsonl");
+    return this.checkedRoomFile(id, "messages.jsonl");
+  }
+
+  private writeRoomMeta(id: string, meta: RoomMeta): void {
+    const target = this.metaPath(id);
+    const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+    try {
+      writeFileSync(temporary, `${JSON.stringify(meta, null, 2)}\n`, {
+        encoding: "utf-8",
+        mode: 0o600,
+      });
+      renameSync(temporary, target);
+    } finally {
+      try {
+        rmSync(temporary, { force: true });
+      } catch {
+        // Preserve the original metadata persistence error.
+      }
+    }
+  }
+
+  private appendRoomMessage(id: string, msg: RoomMessage): void {
+    const target = this.msgPath(id);
+    const serialized = JSON.stringify(msg);
+    if (Buffer.byteLength(serialized, "utf8") > MAX_ROOM_MESSAGE_BYTES) {
+      throw new Error("room message exceeds the size limit");
+    }
+    const fd = openSync(target, "a+", 0o600);
+    try {
+      if (process.platform !== "win32") fchmodSync(fd, 0o600);
+      const size = fstatSync(fd).size;
+      let prefix = "";
+      if (size > 0) {
+        const lastByte = Buffer.allocUnsafe(1);
+        readSync(fd, lastByte, 0, 1, size - 1);
+        if (lastByte[0] !== 0x0a) prefix = "\n";
+      }
+      appendFileSync(fd, `${prefix}${serialized}\n`, "utf-8");
+    } finally {
+      closeSync(fd);
+    }
   }
 
   createRoom(input: {
@@ -330,6 +528,30 @@ export class RoomManager {
     claudeSessionId?: string;
     linkedSessionMode?: "observe-only";
   }): RoomMeta {
+    if (
+      !input ||
+      typeof input.cwd !== "string" ||
+      !input.cwd ||
+      input.cwd.length > 32_768 ||
+      input.cwd.includes("\0") ||
+      (input.name !== undefined &&
+        (typeof input.name !== "string" ||
+          !input.name.trim() ||
+          input.name.length > 512 ||
+          input.name.includes("\0"))) ||
+      (input.kind !== undefined && input.kind !== "claude-code" && input.kind !== "codex") ||
+      (input.permissionMode !== undefined &&
+        input.permissionMode !== "default" &&
+        input.permissionMode !== "acceptEdits" &&
+        input.permissionMode !== "bypassPermissions") ||
+      (input.claudeSessionId !== undefined &&
+        (typeof input.claudeSessionId !== "string" ||
+          input.claudeSessionId.length > 4_096 ||
+          input.claudeSessionId.includes("\0"))) ||
+      (input.linkedSessionMode !== undefined && input.linkedSessionMode !== "observe-only")
+    ) {
+      throw new Error("invalid room metadata");
+    }
     const id = `room_${this.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
     const meta: RoomMeta = {
       id,
@@ -342,8 +564,8 @@ export class RoomManager {
       claudeSessionId: input.claudeSessionId,
       linkedSessionMode: input.linkedSessionMode,
     };
-    mkdirSync(this.roomDir(id), { recursive: true });
-    writeFileSync(this.metaPath(id), JSON.stringify(meta, null, 2), "utf-8");
+    mkdirSync(this.roomDir(id), { recursive: true, mode: 0o700 });
+    this.writeRoomMeta(id, meta);
     // Audit anchor: the first line records how the room was opened (cwd +
     // permission mode), so messages.jsonl is self-describing for "what could
     // this room do" forensics.
@@ -358,11 +580,14 @@ export class RoomManager {
   listRooms(): RoomMeta[] {
     if (!existsSync(this.opts.rootDir)) return [];
     const rooms: RoomMeta[] = [];
-    for (const entry of readdirSync(this.opts.rootDir)) {
-      const p = join(this.opts.rootDir, entry, "room.json");
-      if (!existsSync(p)) continue;
+    this.assertRootUnchanged();
+    for (const entry of readdirSync(this.opts.rootDir).slice(0, MAX_ROOM_ENTRIES)) {
+      if (!isValidRoomId(entry)) continue;
       try {
-        rooms.push(JSON.parse(readFileSync(p, "utf-8")) as RoomMeta);
+        const p = this.metaPath(entry);
+        if (!existsSync(p)) continue;
+        const room = parseRoomMeta(JSON.parse(readBoundedUtf8File(p, MAX_ROOM_META_BYTES)), entry);
+        if (room) rooms.push(room);
       } catch {
         /* skip corrupt */
       }
@@ -375,10 +600,10 @@ export class RoomManager {
     // event handlers (which call this first) degrade to a missing response
     // instead of crashing on a malicious roomId.
     if (!isValidRoomId(id)) return undefined;
-    const p = this.metaPath(id);
-    if (!existsSync(p)) return undefined;
     try {
-      return JSON.parse(readFileSync(p, "utf-8")) as RoomMeta;
+      const p = this.metaPath(id);
+      if (!existsSync(p)) return undefined;
+      return parseRoomMeta(JSON.parse(readBoundedUtf8File(p, MAX_ROOM_META_BYTES)), id);
     } catch {
       return undefined;
     }
@@ -407,12 +632,29 @@ export class RoomManager {
 
   private append(id: string, partial: Omit<RoomMessage, "seq" | "ts">): RoomMessage {
     const ts = this.now();
-    const msg: RoomMessage = { seq: this.nextSeq(id), ts, ...partial };
-    appendFileSync(this.msgPath(id), JSON.stringify(msg) + "\n", "utf-8");
+    const previousCachedSeq = this.lastSeqByRoom.get(id);
+    const seq = this.nextSeq(id);
+    const msg: RoomMessage = { seq, ts, ...partial };
+    try {
+      this.appendRoomMessage(id, msg);
+    } catch (error) {
+      // Sequence assignment is a commit effect, not an attempt counter. A
+      // failed serialization/write must not leave a phantom gap in memory.
+      if (this.lastSeqByRoom.get(id) === seq) {
+        if (previousCachedSeq === undefined) this.lastSeqByRoom.delete(id);
+        else this.lastSeqByRoom.set(id, previousCachedSeq);
+      }
+      throw error;
+    }
     // Touch lastActiveAt so idle-based pruning measures real activity, not just
     // creation time — a room chatted with daily should never be reaped.
     this.touchLastActive(id, ts);
-    this.opts.onMessage(id, msg);
+    try {
+      this.opts.onMessage(id, msg);
+    } catch {
+      // Persistence is authoritative. A broken live-push subscriber must not
+      // make the caller retry a message that is already safely on disk.
+    }
     return msg;
   }
 
@@ -443,11 +685,7 @@ export class RoomManager {
     const meta = this.getRoom(id);
     if (!meta) return;
     this.lastActiveWrittenAt.set(id, ts);
-    writeFileSync(
-      this.metaPath(id),
-      JSON.stringify({ ...meta, lastActiveAt: ts }, null, 2),
-      "utf-8",
-    );
+    this.writeRoomMeta(id, { ...meta, lastActiveAt: ts });
   }
 
   /** Persist the room's resume id (claude session_id / codex thread_id) so the
@@ -455,28 +693,52 @@ export class RoomManager {
   setRoomSessionId(id: string, sessionId: string): void {
     const meta = this.getRoom(id);
     if (!meta || meta.claudeSessionId === sessionId) return;
-    writeFileSync(
-      this.metaPath(id),
-      JSON.stringify({ ...meta, claudeSessionId: sessionId }, null, 2),
-      "utf-8",
-    );
+    this.writeRoomMeta(id, { ...meta, claudeSessionId: sessionId });
   }
 
   getMessages(id: string, sinceSeq = 0): RoomMessage[] {
     if (!isValidRoomId(id)) return [];
-    const p = this.msgPath(id);
-    if (!existsSync(p)) return [];
-    const out: RoomMessage[] = [];
-    for (const line of readFileSync(p, "utf-8").split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        const m = JSON.parse(line) as RoomMessage;
-        if (m.seq > sinceSeq) out.push(m);
-      } catch {
-        /* skip */
+    const cursor = Number.isSafeInteger(sinceSeq) && sinceSeq >= 0 ? sinceSeq : 0;
+    let fd: number | undefined;
+    try {
+      const p = this.msgPath(id);
+      if (!existsSync(p)) return [];
+      fd = openSync(p, "r");
+      const size = fstatSync(fd).size;
+      const start = Math.max(0, size - MAX_ROOM_HISTORY_SCAN_BYTES);
+      const length = size - start;
+      const buffer = Buffer.allocUnsafe(length);
+      let total = 0;
+      while (total < length) {
+        const count = readSync(fd, buffer, total, length - total, start + total);
+        if (count === 0) break;
+        total += count;
       }
+      let window = buffer.subarray(0, total);
+      if (start > 0) {
+        const firstNewline = window.indexOf(0x0a);
+        if (firstNewline < 0) return [];
+        window = window.subarray(firstNewline + 1);
+      }
+      const out: RoomMessage[] = [];
+      for (const line of window.toString("utf8").split("\n")) {
+        if (!line.trim() || Buffer.byteLength(line, "utf8") > MAX_ROOM_MESSAGE_BYTES) continue;
+        try {
+          const message = parseRoomMessage(JSON.parse(line) as unknown);
+          if (message && message.seq > cursor) out.push(message);
+        } catch {
+          /* skip malformed/torn lines */
+        }
+        if (out.length > MAX_ROOM_HISTORY_MESSAGES * 2) {
+          out.splice(0, out.length - MAX_ROOM_HISTORY_MESSAGES);
+        }
+      }
+      return out.slice(-MAX_ROOM_HISTORY_MESSAGES);
+    } catch {
+      return [];
+    } finally {
+      if (fd !== undefined) closeSync(fd);
     }
-    return out;
   }
 
   latestSeq(id: string): number {
@@ -544,11 +806,7 @@ export class RoomManager {
     // otherwise reopening keeps the running process and the picked mode would be
     // silently ignored (the "bypassPermissions still prompts" bug).
     if (existing && existing.permissionMode !== mode) {
-      writeFileSync(
-        this.metaPath(meta.id),
-        JSON.stringify({ ...meta, permissionMode: mode }, null, 2),
-        "utf-8",
-      );
+      this.writeRoomMeta(meta.id, { ...meta, permissionMode: mode });
       this.close(meta.id); // stop the old-mode process so open() respawns fresh
     }
     const { status } = this.open(meta.id);
@@ -591,7 +849,7 @@ export class RoomManager {
       // rooms are observed transiently and remain writable through the normal
       // open flow.
       if (meta.cwd !== existing.cwd) {
-        writeFileSync(this.metaPath(meta.id), JSON.stringify(meta, null, 2), "utf-8");
+        this.writeRoomMeta(meta.id, meta);
       }
     } else {
       meta = this.createRoom({
@@ -640,7 +898,7 @@ export class RoomManager {
       permissionMode: "default",
       linkedSessionMode: undefined,
     };
-    writeFileSync(this.metaPath(roomId), JSON.stringify(controllableMeta, null, 2), "utf-8");
+    this.writeRoomMeta(roomId, controllableMeta);
     const { status } = this.open(roomId);
     if (status !== "running") {
       throw new Error("linked session room is unavailable");
@@ -694,8 +952,12 @@ export class RoomManager {
     // until its timeout). Deleting up front is safe: a missing agent means the
     // request can no longer be answered anyway.
     const askKey = `${roomId}:${requestId}`;
+    const hasPendingAsk = this.pendingAskUser.has(askKey);
     const pending = this.pendingAskUser.get(askKey);
-    if (pending !== undefined) this.pendingAskUser.delete(askKey);
+    this.pendingAskUser.delete(askKey);
+    const hasOriginalInput = this.pendingApprovalInputs.has(askKey);
+    const originalInput = this.pendingApprovalInputs.get(askKey);
+    this.pendingApprovalInputs.delete(askKey);
 
     const agent = this.agents.get(roomId);
     if (!agent?.respondControl) return false;
@@ -705,7 +967,7 @@ export class RoomManager {
     // question text — the only shape the CLI accepts. The raw input was stashed
     // on approval_request. Deny passes through (claude treats it as "did not
     // answer", same as the desktop CLI's own cancel).
-    if (pending !== undefined) {
+    if (hasPendingAsk) {
       if (decision.behavior === "deny") {
         agent.respondControl(requestId, decision);
         return true;
@@ -719,7 +981,15 @@ export class RoomManager {
       return true;
     }
 
-    agent.respondControl(requestId, decision);
+    if (decision.behavior === "allow" && hasOriginalInput) {
+      const updatedInput =
+        originalInput && typeof originalInput === "object" && !Array.isArray(originalInput)
+          ? originalInput
+          : {};
+      agent.respondControl(requestId, { behavior: "allow", updatedInput });
+    } else {
+      agent.respondControl(requestId, decision);
+    }
     return true;
   }
 
@@ -732,7 +1002,21 @@ export class RoomManager {
     if (!this.agents.has(id)) {
       const agent = this.opts.createAgent(meta, (event) => this.onAgentEvent(id, event));
       this.agents.set(id, agent);
-      agent.start();
+      try {
+        agent.start();
+      } catch (error) {
+        if (this.agents.get(id) === agent) this.agents.delete(id);
+        this.clearPendingApprovals(id);
+        try {
+          agent.stop();
+        } catch {
+          // Preserve the original start error.
+        }
+        throw error;
+      }
+      // A start implementation may synchronously emit exit. Do not report a
+      // running room after that callback already removed this exact agent.
+      if (this.agents.get(id) !== agent || !agent.isRunning()) return { status: "missing" };
     }
     return { status: "running" };
   }
@@ -826,12 +1110,13 @@ export class RoomManager {
           tool: event.toolName,
           summary: event.description ?? "",
         });
+        this.pendingApprovalInputs.set(`${id}:${event.requestId}`, event.input);
         this.opts.onApprovalRequest?.(id, event);
         break;
       }
       case "exit":
         this.agents.delete(id);
-        this.clearPendingAskUser(id);
+        this.clearPendingApprovals(id);
         // Let the transcript follower synchronously drain final file bytes
         // before appending the terminal marker. Otherwise an exit that beats
         // watchFile's poll can drop the last assistant line or place it after
@@ -876,9 +1161,12 @@ export class RoomManager {
     if (!agent) return false;
 
     this.deferredEmitRooms.add(id);
-    let accepted = false;
+    let accepted: boolean;
     try {
       accepted = agent.send(agentText);
+    } catch (error) {
+      this.deferredEmits.delete(id);
+      throw error;
     } finally {
       this.deferredEmitRooms.delete(id);
     }
@@ -912,21 +1200,44 @@ export class RoomManager {
     // A room going quiet must record its REAL last activity, not the last
     // throttled write.
     this.flushLastActive(id);
-    this.agents.get(id)?.stop();
-    this.agents.delete(id);
-    this.clearPendingAskUser(id);
-    this.pendingTranscriptUserEchoes.delete(id);
-    this.opts.onRoomEnded?.(id);
+    const agent = this.agents.get(id);
+    try {
+      agent?.stop();
+    } finally {
+      if (!agent || this.agents.get(id) === agent) this.agents.delete(id);
+      this.clearPendingApprovals(id);
+      this.pendingTranscriptUserEchoes.delete(id);
+      this.deferredEmitRooms.delete(id);
+      this.deferredEmits.delete(id);
+      this.opts.onRoomEnded?.(id);
+    }
   }
 
   closeAll(): void {
     const ids = new Set([...this.agents.keys(), ...this.transcriptFollowedRooms]);
-    for (const agent of this.agents.values()) agent.stop();
+    let firstError: unknown;
+    for (const agent of this.agents.values()) {
+      try {
+        agent.stop();
+      } catch (error) {
+        firstError ??= error;
+      }
+    }
     this.agents.clear();
     this.pendingAskUser.clear();
+    this.pendingApprovalInputs.clear();
     this.pendingTranscriptUserEchoes.clear();
-    for (const id of ids) this.opts.onRoomEnded?.(id);
+    this.deferredEmitRooms.clear();
+    this.deferredEmits.clear();
+    for (const id of ids) {
+      try {
+        this.opts.onRoomEnded?.(id);
+      } catch (error) {
+        firstError ??= error;
+      }
+    }
     this.transcriptFollowedRooms.clear();
+    if (firstError) throw firstError;
   }
 
   isOpen(id: string): boolean {

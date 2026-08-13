@@ -8,9 +8,10 @@ import { serveMobile } from "./mobile-static.js";
 import { PairingTokenManager } from "./pairing.js";
 import type { AccessPasscode } from "./access-passcode.js";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
-import type { MobileClientEvent, MobileServerEvent } from "./types.js";
+import type { MobileServerEvent } from "./types.js";
 import type { MobileViewerIdentity } from "./viewer-identity.js";
 import type { MobileUploadService } from "./mobile-upload-service.js";
+import { parseMobileClientEvent } from "./mobile-client-event-validator.js";
 
 /**
  * Pick the Mac's real LAN IPv4 so a phone on the same Wi-Fi can reach the
@@ -61,7 +62,7 @@ export interface RemoteHostStarted {
 
 export interface RemoteHostManagerOptions {
   devices: TrustedDeviceStore;
-  onClientEvent: (event: unknown, ws: WebSocket) => void;
+  onClientEvent: (event: unknown, ws: WebSocket) => void | Promise<void>;
   /**
    * Absolute path to the built mobile app (out/mobile). Defaults to the
    * sibling of the bundled main (out/main → ../mobile). Overridable for tests.
@@ -80,6 +81,7 @@ export class RemoteHostManager extends EventEmitter {
   private server?: Server;
   private wss?: WebSocketServer;
   private started?: RemoteHostStarted;
+  private starting?: Promise<RemoteHostStarted>;
   private pairing = new PairingTokenManager();
   /** ws → authenticated device id. A socket absent here is unauthenticated. */
   private authed = new WeakMap<WebSocket, string>();
@@ -135,6 +137,17 @@ export class RemoteHostManager extends EventEmitter {
 
   async start(options: RemoteHostStartOptions): Promise<RemoteHostStarted> {
     if (this.started) return this.started;
+    if (this.starting) return this.starting;
+    const attempt = this.startOnce(options);
+    this.starting = attempt;
+    try {
+      return await attempt;
+    } finally {
+      if (this.starting === attempt) this.starting = undefined;
+    }
+  }
+
+  private async startOnce(options: RemoteHostStartOptions): Promise<RemoteHostStarted> {
     const tunnel = options.mode === "tunnel";
     this.passcode = tunnel ? options.passcode : undefined;
     const gate = this.passcode;
@@ -180,9 +193,18 @@ export class RemoteHostManager extends EventEmitter {
     this.wss = gate
       ? new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 })
       : new WebSocketServer({ server, path: "/ws", maxPayload: 1024 * 1024 });
+    // ws re-emits its HTTP server's bind errors. Without an error listener a
+    // handled EADDRINUSE rejection still becomes an uncaught EventEmitter error.
+    this.wss.on("error", (error) => this.emit("host-error", error));
     if (gate) {
       server.on("upgrade", (req, socket, head) => {
-        if (!req.url?.startsWith("/ws")) {
+        let isWebSocketPath = false;
+        try {
+          isWebSocketPath = new URL(req.url ?? "", "http://localhost").pathname === "/ws";
+        } catch {
+          // Invalid request targets are not valid WebSocket endpoints.
+        }
+        if (!isWebSocketPath) {
           socket.destroy();
           return;
         }
@@ -207,17 +229,28 @@ export class RemoteHostManager extends EventEmitter {
       const viewerId = `viewer-${this.nextViewerId++}`;
       this.viewers.set(ws, viewerId);
       ws.on("message", (raw) => {
-        let event: MobileClientEvent;
+        let parsed: unknown;
         try {
-          event = JSON.parse(String(raw)) as MobileClientEvent;
+          parsed = JSON.parse(String(raw));
         } catch {
           ws.send(JSON.stringify({ type: "error", message: "Invalid JSON" }));
+          return;
+        }
+        const event = parseMobileClientEvent(parsed);
+        if (!event) {
+          ws.send(JSON.stringify({ type: "error", message: "Invalid client event" }));
           return;
         }
         // Pairing/auth are handled inline and bind device identity to this
         // socket. Everything else is gated: an unauthenticated socket cannot
         // send chat/approval/run/job events (design §6.1).
-        const reply = this.handleClientEvent(event);
+        let reply: MobileServerEvent | undefined;
+        try {
+          reply = this.handleClientEvent(event);
+        } catch {
+          ws.send(JSON.stringify({ type: "error", message: "Client event failed" }));
+          return;
+        }
         if (event.type === "auth.device" && reply?.type === "auth.ok") {
           if (!this.authed.has(ws)) this.markOnline(reply.device.id);
           this.authed.set(ws, reply.device.id);
@@ -237,10 +270,19 @@ export class RemoteHostManager extends EventEmitter {
         }
         // Authenticated, non-auth event → hand to the main dispatcher, which
         // routes chat/approval into the existing run/permission path.
-        this.opts.onClientEvent(
-          { ...event, deviceId: this.authed.get(ws), viewerId: this.viewers.get(ws) },
-          ws,
-        );
+        try {
+          const dispatched = this.opts.onClientEvent(
+            { ...event, deviceId: this.authed.get(ws), viewerId: this.viewers.get(ws) },
+            ws,
+          );
+          void Promise.resolve(dispatched).catch(() => {
+            if (ws.readyState === ws.OPEN) {
+              ws.send(JSON.stringify({ type: "error", message: "Client event failed" }));
+            }
+          });
+        } catch {
+          ws.send(JSON.stringify({ type: "error", message: "Client event failed" }));
+        }
       });
       ws.on("close", () => {
         this.releaseSocket(ws);
@@ -255,10 +297,31 @@ export class RemoteHostManager extends EventEmitter {
       : options.host === "lan"
         ? (resolveLanHost() ?? "127.0.0.1")
         : options.host;
-    await new Promise<void>((resolve, reject) => {
-      server.once("error", reject);
-      server.listen(options.port, bindHost, () => resolve());
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const onError = (error: Error) => reject(error);
+        server.once("error", onError);
+        server.listen(options.port, bindHost, () => {
+          server.off("error", onError);
+          resolve();
+        });
+      });
+    } catch (error) {
+      for (const client of this.wss?.clients ?? []) client.terminate();
+      try {
+        this.wss?.close();
+      } catch {
+        // A noServer WebSocketServer may not have entered a running state yet.
+      }
+      server.closeAllConnections?.();
+      if (server.listening) {
+        await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
+      }
+      if (this.server === server) this.server = undefined;
+      this.wss = undefined;
+      this.passcode = undefined;
+      throw error;
+    }
     const addr = server.address();
     const port = typeof addr === "object" && addr ? addr.port : options.port;
     this.started = {
@@ -297,19 +360,33 @@ export class RemoteHostManager extends EventEmitter {
    * trusted-device store (which rejects revoked devices), so the remote host
    * never executes tools itself — it only gates transport.
    */
-  handleClientEvent(event: MobileClientEvent): MobileServerEvent | undefined {
+  handleClientEvent(input: unknown): MobileServerEvent | undefined {
+    const event = parseMobileClientEvent(input);
+    if (!event) return { type: "error", message: "Invalid client event" };
     if (event.type === "pair.complete") {
-      if (!this.pairing.consume(event.token)) {
+      let device;
+      try {
+        device = this.pairing.commit(event.token, () =>
+          this.opts.devices.addDevice({
+            name: event.name,
+            secretHash: event.secretHash,
+          }),
+        );
+      } catch {
+        return { type: "pair.failed", message: "Trusted device store is unavailable" };
+      }
+      if (!device) {
         return { type: "pair.failed", message: "Pairing token expired or invalid" };
       }
-      const device = this.opts.devices.addDevice({
-        name: event.name,
-        secretHash: event.secretHash,
-      });
       return { type: "pair.ok", device };
     }
     if (event.type === "auth.device") {
-      const device = this.opts.devices.authenticate(event.deviceId, event.secretHash);
+      let device;
+      try {
+        device = this.opts.devices.authenticate(event.deviceId, event.secretHash);
+      } catch {
+        return { type: "auth.failed", message: "Trusted device store is unavailable" };
+      }
       if (!device) return { type: "auth.failed", message: "Device is not trusted" };
       return { type: "auth.ok", device };
     }
@@ -367,6 +444,7 @@ export class RemoteHostManager extends EventEmitter {
   }
 
   async stop(): Promise<void> {
+    if (this.starting) await this.starting.catch(() => undefined);
     const server = this.server;
     // Forcibly drop live WS sockets first. wss.close() alone waits for clients
     // to disconnect, so a phone left connected would hang stop() indefinitely.

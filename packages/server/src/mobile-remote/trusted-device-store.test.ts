@@ -1,8 +1,19 @@
-import { mkdtempSync, rmSync, statSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import { TrustedDeviceStore } from "./trusted-device-store.js";
+
+const TRUSTED_DEVICE_MODULE = join(import.meta.dir, "trusted-device-store.ts");
 
 let dir: string | undefined;
 
@@ -104,7 +115,24 @@ describe("TrustedDeviceStore", () => {
     expect(store.rename("nope", "x")).toBe(false);
     // blank name is rejected
     expect(store.rename(a.id, "   ")).toBe(false);
+    expect(store.rename(a.id, "x".repeat(513))).toBe(false);
+    expect(store.rename(a.id, "bad\0name")).toBe(false);
     expect(store.listDevices()[0]?.name).toBe("我的工作手机");
+  });
+
+  test("rejects invalid direct-call inputs before they can grow the credential store", () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-devices-inputs-"));
+    const store = new TrustedDeviceStore(join(dir, "devices.json"));
+
+    expect(() => store.addDevice({ name: "   ", secretHash: "secret" })).toThrow(
+      "Invalid trusted device name",
+    );
+    expect(() => store.addDevice({ name: "phone", secretHash: "x".repeat(4_097) })).toThrow(
+      "Invalid trusted device secret",
+    );
+    expect(store.authenticate("x".repeat(513), "secret")).toBeUndefined();
+    expect(store.authenticate("id", "x".repeat(4_097))).toBeUndefined();
+    expect(store.listDevices()).toEqual([]);
   });
 
   test("devices.json is written owner-only (0o600) — it holds the device secretHash", () => {
@@ -113,5 +141,90 @@ describe("TrustedDeviceStore", () => {
     const store = new TrustedDeviceStore(file);
     store.addDevice({ name: "phone", secretHash: "sekret" });
     expect(statSync(file).mode & 0o777).toBe(0o600);
+
+    chmodSync(file, 0o644);
+    store.rename(store.listDevices()[0]!.id, "renamed");
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    expect(readdirSync(dir).filter((name) => name.includes(".tmp"))).toEqual([]);
   });
+
+  test("corrupt data fails closed and is never silently overwritten", () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-devices-corrupt-"));
+    const file = join(dir, "devices.json");
+    const corrupt = JSON.stringify({ devices: "not-an-array" });
+    writeFileSync(file, corrupt);
+    const store = new TrustedDeviceStore(file);
+
+    expect(() => store.listDevices()).toThrow("Trusted device store is corrupt");
+    expect(() => store.authenticate("id", "secret")).toThrow("Trusted device store is corrupt");
+    expect(() => store.addDevice({ name: "phone", secretHash: "secret" })).toThrow(
+      "Trusted device store is corrupt",
+    );
+    expect(readFileSync(file, "utf-8")).toBe(corrupt);
+  });
+
+  test("oversized persisted fields fail closed instead of being loaded into authentication", () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-devices-corrupt-field-"));
+    const file = join(dir, "devices.json");
+    const corrupt = JSON.stringify([
+      {
+        id: "id",
+        name: "x".repeat(513),
+        secretHash: "secret",
+        createdAt: Date.now(),
+      },
+    ]);
+    writeFileSync(file, corrupt);
+    const store = new TrustedDeviceStore(file);
+
+    expect(() => store.listDevices()).toThrow("Trusted device store is corrupt");
+    expect(readFileSync(file, "utf-8")).toBe(corrupt);
+  });
+
+  test("refuses linked device files without reading or replacing their targets", () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-devices-linked-"));
+    const outside = join(dir, "outside.json");
+    const file = join(dir, "devices.json");
+    writeFileSync(outside, JSON.stringify([]));
+    symlinkSync(outside, file);
+    const store = new TrustedDeviceStore(file);
+
+    expect(() => store.listDevices()).toThrow("Trusted device store is corrupt");
+    expect(() => store.addDevice({ name: "phone", secretHash: "secret" })).toThrow(
+      "Trusted device store is corrupt",
+    );
+    expect(JSON.parse(readFileSync(outside, "utf8"))).toEqual([]);
+  });
+
+  test(
+    "concurrent processes preserve every independently paired device",
+    async () => {
+      dir = mkdtempSync(join(tmpdir(), "mobile-devices-concurrent-"));
+      const file = join(dir, "devices.json");
+      const total = 16;
+      const children = Array.from({ length: total }, (_, index) => {
+        const script = `
+          import { TrustedDeviceStore } from ${JSON.stringify(TRUSTED_DEVICE_MODULE)};
+          new TrustedDeviceStore(${JSON.stringify(file)}).addDevice({
+            name: ${JSON.stringify(`Phone ${index}`)},
+            secretHash: ${JSON.stringify(`secret-${index}`)},
+          });
+        `;
+        return Bun.spawn([process.execPath, "-e", script], {
+          env: { ...process.env },
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+      });
+      expect((await Promise.all(children.map((child) => child.exited))).every((code) => code === 0)).toBe(
+        true,
+      );
+      const devices = new TrustedDeviceStore(file).listDevices();
+      expect(devices).toHaveLength(total);
+      expect(devices.map((device) => device.name).sort()).toEqual(
+        Array.from({ length: total }, (_, index) => `Phone ${index}`).sort(),
+      );
+    },
+    60_000,
+  );
 });

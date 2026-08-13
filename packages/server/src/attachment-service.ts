@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
+import { constants as fsConstants } from "node:fs";
 import {
   appendFile,
   lstat,
   mkdir,
+  open,
   readdir,
-  readFile,
   realpath,
   rename,
   rm,
@@ -122,6 +123,44 @@ export const DRAFT_ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;
 export const SENT_ATTACHMENT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const MAX_STAGED_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_STAGED_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_ATTACHMENT_NAME_CHARS = 1_024;
+const MAX_ATTACHMENT_MIME_CHARS = 256;
+const MAX_MANIFEST_LINE_BYTES = 128 * 1024;
+const MAX_MANIFEST_SCAN_BYTES = 32 * 1024 * 1024;
+const MAX_MANIFEST_RECORDS = 50_000;
+const MAX_ATTACHMENT_SESSION_DIRS = 10_000;
+
+const ATTACHMENT_ORIGINS = new Set<InputAttachmentOrigin>([
+  "paste",
+  "os-drop",
+  "file-panel",
+  "picker",
+  "mention",
+  "generated",
+  "mobile",
+  "im-gateway",
+  "tool",
+]);
+
+function assertAttachmentLabels(input: {
+  name?: string;
+  mime?: string;
+  origin: InputAttachmentOrigin;
+}): void {
+  if (
+    (input.name !== undefined &&
+      (typeof input.name !== "string" ||
+        input.name.length > MAX_ATTACHMENT_NAME_CHARS ||
+        input.name.includes("\0"))) ||
+    (input.mime !== undefined &&
+      (typeof input.mime !== "string" ||
+        input.mime.length > MAX_ATTACHMENT_MIME_CHARS ||
+        input.mime.includes("\0"))) ||
+    !ATTACHMENT_ORIGINS.has(input.origin)
+  ) {
+    throw new Error("invalid attachment metadata");
+  }
+}
 
 const IMAGE_MIME_EXT: Record<string, string> = {
   "image/png": ".png",
@@ -150,6 +189,7 @@ export async function stageImageDataUrl(
 
 /** Stage already-transferred bytes without expanding them back through base64. */
 export async function stageImageBytes(input: StageImageBytesInput): Promise<InputAttachmentMeta> {
+  assertAttachmentLabels(input);
   const mime = normalizeMime(input.mime);
   if (!ALLOWED_IMAGE_MIMES.has(mime)) throw new Error(`unsupported image MIME ${input.mime}`);
   if ((input.bytes === undefined) === (input.sourceFile === undefined)) {
@@ -157,16 +197,30 @@ export async function stageImageBytes(input: StageImageBytesInput): Promise<Inpu
   }
   let buffer: Buffer;
   if (input.sourceFile !== undefined) {
-    const source = await lstat(input.sourceFile);
-    if (!source.isFile() || source.isSymbolicLink()) {
-      throw new Error("image source must be a regular file");
+    if (
+      typeof input.sourceFile !== "string" ||
+      !input.sourceFile ||
+      input.sourceFile.length > 32_768 ||
+      input.sourceFile.includes("\0")
+    ) {
+      throw new Error("image source path is invalid");
     }
-    if (source.size > MAX_STAGED_IMAGE_BYTES) {
-      throw new Error(
-        `image attachment exceeds size limit (${formatBytes(MAX_STAGED_IMAGE_BYTES)})`,
-      );
+    const handle = await open(
+      input.sourceFile,
+      fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0),
+    );
+    try {
+      const source = await handle.stat();
+      if (!source.isFile()) throw new Error("image source must be a regular file");
+      if (source.size > MAX_STAGED_IMAGE_BYTES) {
+        throw new Error(
+          `image attachment exceeds size limit (${formatBytes(MAX_STAGED_IMAGE_BYTES)})`,
+        );
+      }
+      buffer = await handle.readFile();
+    } finally {
+      await handle.close();
     }
-    buffer = await readFile(input.sourceFile);
   } else {
     buffer = Buffer.from(input.bytes!);
   }
@@ -183,6 +237,7 @@ async function stageImageBuffer(
   mime: string,
   buffer: Buffer,
 ): Promise<InputAttachmentMeta> {
+  assertAttachmentLabels(input);
   const cwd = await resolveExistingDirectory(input.cwd, "cwd");
   assertSafeSessionId(input.sessionId);
   if (buffer.byteLength > MAX_STAGED_IMAGE_BYTES) {
@@ -243,6 +298,7 @@ async function stageImageBuffer(
 
 /** Stage an untrusted non-image file inside the canonical attachment root. */
 export async function stageFileBytes(input: StageFileBytesInput): Promise<InputAttachmentMeta> {
+  assertAttachmentLabels(input);
   const cwd = await resolveExistingDirectory(input.cwd, "cwd");
   assertSafeSessionId(input.sessionId);
   const buffer = Buffer.from(input.bytes);
@@ -638,32 +694,117 @@ async function findExistingSessionFile(sessionDir: string, sha16: string): Promi
   } catch {
     return null;
   }
-  return entries.find((entry) => entry.startsWith(`${sha16}-`) && entry !== MANIFEST_FILE) ?? null;
+  for (const entry of entries) {
+    if (!entry.startsWith(`${sha16}-`) || entry === MANIFEST_FILE) continue;
+    const info = await lstat(join(sessionDir, entry));
+    if (info.isSymbolicLink() || !info.isFile()) {
+      throw new Error("existing attachment hash entry must be a regular file, not a symlink");
+    }
+    return entry;
+  }
+  return null;
 }
 
 async function appendManifest(sessionDir: string, record: ManifestRecord): Promise<void> {
   const manifest = await safeJoin(sessionDir, MANIFEST_FILE, sessionDir);
-  await appendFile(manifest, `${JSON.stringify(record)}\n`, "utf-8");
+  const serialized = JSON.stringify(record);
+  if (Buffer.byteLength(serialized, "utf8") > MAX_MANIFEST_LINE_BYTES) {
+    throw new Error("attachment manifest record exceeds the size limit");
+  }
+  await appendFile(manifest, `${serialized}\n`, { encoding: "utf-8", mode: 0o600 });
 }
 
 async function readManifest(sessionDir: string): Promise<ManifestRecord[]> {
   try {
     const manifest = await safeJoin(sessionDir, MANIFEST_FILE, sessionDir);
-    const raw = await readFile(manifest, "utf-8");
+    const handle = await open(manifest, "r");
+    let raw: string;
+    try {
+      const stat = await handle.stat();
+      if (!stat.isFile()) return [];
+      const length = Math.min(stat.size, MAX_MANIFEST_SCAN_BYTES);
+      const start = stat.size - length;
+      const buffer = Buffer.allocUnsafe(length);
+      let total = 0;
+      while (total < length) {
+        const { bytesRead } = await handle.read(buffer, total, length - total, start + total);
+        if (bytesRead === 0) break;
+        total += bytesRead;
+      }
+      let window = buffer.subarray(0, total);
+      if (start > 0) {
+        const newline = window.indexOf(0x0a);
+        if (newline < 0) return [];
+        window = window.subarray(newline + 1);
+      }
+      raw = window.toString("utf8");
+    } finally {
+      await handle.close();
+    }
     return raw
       .split("\n")
-      .filter(Boolean)
+      .filter((line) => line.length > 0 && Buffer.byteLength(line, "utf8") <= MAX_MANIFEST_LINE_BYTES)
       .map((line) => {
         try {
-          return JSON.parse(line) as ManifestRecord;
+          return parseManifestRecord(JSON.parse(line) as unknown);
         } catch {
           return null;
         }
       })
-      .filter((record): record is ManifestRecord => !!record);
+      .filter((record): record is ManifestRecord => !!record)
+      .slice(-MAX_MANIFEST_RECORDS);
   } catch {
     return [];
   }
+}
+
+function parseManifestRecord(value: unknown): ManifestRecord | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (
+    (raw.event !== "staged" &&
+      raw.event !== "sent" &&
+      raw.event !== "removedFromDraft" &&
+      raw.event !== "cleanup") ||
+    typeof raw.sessionId !== "string"
+  ) {
+    return null;
+  }
+  try {
+    assertSafeSessionId(raw.sessionId);
+  } catch {
+    return null;
+  }
+  for (const field of [
+    "id",
+    "path",
+    "absPath",
+    "relPath",
+    "mime",
+    "sha256",
+    "originalName",
+  ] as const) {
+    const item = raw[field];
+    if (item !== undefined && (typeof item !== "string" || item.length > 32_768 || item.includes("\0"))) {
+      return null;
+    }
+  }
+  if (
+    raw.kind !== undefined &&
+    raw.kind !== "image" &&
+    raw.kind !== "file" &&
+    raw.kind !== "directory"
+  ) {
+    return null;
+  }
+  if (raw.origin !== undefined && !ATTACHMENT_ORIGINS.has(raw.origin as InputAttachmentOrigin)) {
+    return null;
+  }
+  for (const field of ["size", "createdAt", "sentAt", "removedAt", "cleanedAt"] as const) {
+    const item = raw[field];
+    if (item !== undefined && (typeof item !== "number" || !Number.isFinite(item))) return null;
+  }
+  return raw as unknown as ManifestRecord;
 }
 
 async function listSafeSessionDirs(root: string): Promise<string[]> {
@@ -675,6 +816,7 @@ async function listSafeSessionDirs(root: string): Promise<string[]> {
   }
   return entries
     .filter((entry) => entry.isDirectory())
+    .slice(0, MAX_ATTACHMENT_SESSION_DIRS)
     .map((entry) => entry.name)
     .filter((name) => {
       try {

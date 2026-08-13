@@ -1,13 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { mkdir, readdir, rename, rm, stat } from "node:fs/promises";
+import { chmod, mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Transform } from "node:stream";
 import type { MobileImageBase, MobileImageMime } from "./types.js";
+import { MAX_MOBILE_IMAGE_BYTES } from "./mobile-limits.js";
+export { MAX_MOBILE_IMAGE_BYTES } from "./mobile-limits.js";
 
-export const MAX_MOBILE_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MOBILE_UPLOAD_TTL_MS = 5 * 60 * 1000;
 export const MAX_MOBILE_UPLOAD_TICKETS_PER_DEVICE = 16;
 export const MAX_MOBILE_UPLOAD_CLAIM_ATTEMPTS = 3;
@@ -185,7 +186,7 @@ export class MobileUploadService {
     // receives the existing 409 above while this first request runs normally.
     record.status = "uploading";
     try {
-      await mkdir(this.opts.rootDir, { recursive: true });
+      await this.ensurePrivateRoot();
     } catch {
       if (this.uploads.get(uploadId) === record && record.status === "uploading") {
         record.status = "pending";
@@ -218,9 +219,14 @@ export class MobileUploadService {
       Math.max(0, record.expiresAt - this.now()),
     );
     deadline.unref?.();
-    const transfer = pipeline(req, counter, createWriteStream(partPath, { flags: "wx" }), {
+    const transfer = pipeline(
+      req,
+      counter,
+      createWriteStream(partPath, { flags: "wx", mode: 0o600 }),
+      {
       signal: controller.signal,
-    });
+      },
+    );
     this.activeTransfers.set(uploadId, { controller, done: transfer });
     try {
       await transfer;
@@ -380,7 +386,7 @@ export class MobileUploadService {
 
   private async cleanupOrphanSpools(now: number, removeAll: boolean): Promise<void> {
     try {
-      await mkdir(this.opts.rootDir, { recursive: true });
+      await this.ensurePrivateRoot();
     } catch {
       return;
     }
@@ -400,6 +406,11 @@ export class MobileUploadService {
         await rm(path, { force: true });
       }),
     );
+  }
+
+  private async ensurePrivateRoot(): Promise<void> {
+    await mkdir(this.opts.rootDir, { recursive: true, mode: 0o700 });
+    if (process.platform !== "win32") await chmod(this.opts.rootDir, 0o700);
   }
 
   private assertClaimOwner(deviceId: string, uploadId: string, claimId: string): UploadRecord {
