@@ -269,19 +269,63 @@ export async function installReviewedLocalTheme(
         },
       );
     }
-    await rm(finalDir, { recursive: true, force: true });
-    await rename(staging, finalDir);
+
+    const entry: RegistryEntry = {
+      id: manifest.id,
+      name: manifest.name,
+      version: manifest.version,
+      installedAt: Date.now(),
+    };
+    await withRegistryLock(async (registry) => {
+      const next: Registry = {
+        version: 1,
+        themes: [...registry.themes.filter((theme) => theme.id !== entry.id), entry],
+      };
+      assertRegistryCount(next);
+
+      // Keep the previous install recoverable until the registry commit has
+      // succeeded. Reading/validating the registry above happens before any
+      // directory mutation, so corrupt legacy state cannot delete a theme.
+      const backup = `${finalDir}.replace-${process.pid}-${randomUUID()}`;
+      let hasBackup = false;
+      let installedNew = false;
+      try {
+        try {
+          const existing = await lstat(finalDir);
+          if (existing.isSymbolicLink() || !existing.isDirectory()) {
+            throw new Error("installed theme target must be a real directory");
+          }
+          await rename(finalDir, backup);
+          hasBackup = true;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        }
+        await rename(staging, finalDir);
+        installedNew = true;
+        await writeRegistry(next);
+      } catch (error) {
+        if (installedNew) await rm(finalDir, { recursive: true, force: true });
+        if (hasBackup) {
+          try {
+            await rename(backup, finalDir);
+            hasBackup = false;
+          } catch {
+            throw new Error("theme install failed and the previous version could not be restored", {
+              cause: error,
+            });
+          }
+        }
+        throw error;
+      }
+      // A committed install remains valid even if best-effort cleanup of the
+      // hidden old directory is interrupted; a later maintenance pass can
+      // safely remove the orphan.
+      if (hasBackup) await rm(backup, { recursive: true, force: true }).catch(() => undefined);
+    });
   } catch (error) {
     await rm(staging, { recursive: true, force: true }).catch(() => undefined);
     throw error;
   }
-
-  await appendRegistryEntry({
-    id: manifest.id,
-    name: manifest.name,
-    version: manifest.version,
-    installedAt: Date.now(),
-  });
   return toInstalledTheme(canonicalManifestFor(manifest, assets));
 }
 
@@ -394,14 +438,14 @@ async function writeRegistry(registry: Registry): Promise<void> {
   const tmp = `${path}.${process.pid}.${randomUUID()}.tmp`;
   try {
     await writeFile(tmp, serialized, { mode: 0o600, flag: "wx" });
+    if (process.platform !== "win32") await chmod(tmp, 0o600);
     await rename(tmp, path);
-    if (process.platform !== "win32") await chmod(path, 0o600);
   } finally {
     await rm(tmp, { force: true }).catch(() => undefined);
   }
 }
 
-async function mutateRegistry(change: (registry: Registry) => void): Promise<void> {
+async function withRegistryLock<T>(operation: (registry: Registry) => Promise<T> | T): Promise<T> {
   const directory = dirname(themesRegistryPath());
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const metadata = await lstat(directory);
@@ -415,21 +459,16 @@ async function mutateRegistry(change: (registry: Registry) => void): Promise<voi
   });
   try {
     const registry = await readRegistry();
-    change(registry);
-    if (registry.themes.length > MAX_INSTALLED_THEMES) {
-      throw new Error("too many installed themes");
-    }
-    await writeRegistry(registry);
+    return await operation(registry);
   } finally {
     await release();
   }
 }
 
-async function appendRegistryEntry(entry: RegistryEntry): Promise<void> {
-  await mutateRegistry((registry) => {
-    registry.themes = registry.themes.filter((t) => t.id !== entry.id);
-    registry.themes.push(entry);
-  });
+function assertRegistryCount(registry: Registry): void {
+  if (registry.themes.length > MAX_INSTALLED_THEMES) {
+    throw new Error("too many installed themes");
+  }
 }
 
 /** Read all installed themes (manifest re-read from disk), skipping broken ones. */
@@ -458,8 +497,36 @@ export async function listInstalledThemes(): Promise<InstalledTheme[]> {
 /** Remove an installed theme and its registry entry. */
 export async function uninstallTheme(id: string): Promise<void> {
   assertSafeThemeName(id);
-  await rm(themeInstallDir(id), { recursive: true, force: true });
-  await mutateRegistry((registry) => {
-    registry.themes = registry.themes.filter((t) => t.id !== id);
+  const finalDir = themeInstallDir(id);
+  await withRegistryLock(async (registry) => {
+    const next: Registry = {
+      version: 1,
+      themes: registry.themes.filter((theme) => theme.id !== id),
+    };
+    const quarantine = `${finalDir}.remove-${process.pid}-${randomUUID()}`;
+    let quarantined = false;
+    try {
+      const existing = await lstat(finalDir);
+      if (existing.isSymbolicLink() || !existing.isDirectory()) {
+        throw new Error("installed theme target must be a real directory");
+      }
+      await rename(finalDir, quarantine);
+      quarantined = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    try {
+      await writeRegistry(next);
+    } catch (error) {
+      if (quarantined) {
+        await rename(quarantine, finalDir);
+      }
+      throw error;
+    }
+    // Registry commit is authoritative. Directory cleanup is retryable and
+    // must not turn a successful uninstall into a registry/files mismatch.
+    if (quarantined) {
+      await rm(quarantine, { recursive: true, force: true }).catch(() => undefined);
+    }
   });
 }

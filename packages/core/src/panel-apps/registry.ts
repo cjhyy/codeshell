@@ -57,17 +57,17 @@ async function checkedRegistryDirectory(): Promise<string> {
 
 async function readRegistryUnlocked(strict = false): Promise<InstalledPanelAppRecord[]> {
   const path = panelAppsRegistryPath();
-  const metadata = await registryEntry(path);
-  if (!metadata) return [];
-  if (
-    metadata.isSymbolicLink() ||
-    !metadata.isFile() ||
-    metadata.size > MAX_PANEL_APP_REGISTRY_BYTES
-  ) {
-    throw new Error("Panel App registry must be a bounded regular file");
-  }
   let handle: Awaited<ReturnType<typeof open>> | undefined;
   try {
+    const metadata = await registryEntry(path);
+    if (!metadata) return [];
+    if (
+      metadata.isSymbolicLink() ||
+      !metadata.isFile() ||
+      metadata.size > MAX_PANEL_APP_REGISTRY_BYTES
+    ) {
+      throw new Error("Panel App registry must be a bounded regular file");
+    }
     handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     const opened = await handle.stat();
     if (!opened.isFile() || opened.size > MAX_PANEL_APP_REGISTRY_BYTES) {
@@ -75,7 +75,10 @@ async function readRegistryUnlocked(strict = false): Promise<InstalledPanelAppRe
     }
     return Registry.parse(JSON.parse(await handle.readFile("utf8"))).apps;
   } catch (error) {
-    if (strict) throw new Error("Panel App registry is corrupt", { cause: error });
+    if (strict) {
+      const detail = error instanceof Error ? `: ${error.message}` : "";
+      throw new Error(`Panel App registry is corrupt${detail}`, { cause: error });
+    }
     return [];
   } finally {
     await handle?.close().catch(() => undefined);

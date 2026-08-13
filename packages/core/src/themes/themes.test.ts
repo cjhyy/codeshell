@@ -10,7 +10,12 @@ import {
   previewLocalTheme,
   uninstallTheme,
 } from "./installer.js";
-import { THEME_ASSET_DIR, ThemeReviewChangedError } from "./paths.js";
+import {
+  THEME_ASSET_DIR,
+  ThemeReviewChangedError,
+  themeInstallDir,
+  themesRegistryPath,
+} from "./paths.js";
 
 const INSTALLER_MODULE = join(import.meta.dir, "installer.ts");
 
@@ -216,6 +221,57 @@ describe("theme installer", () => {
     expect(installed.wallpaper).toBeUndefined();
   });
 
+  test("a corrupt registry cannot delete an installed theme during uninstall", async () => {
+    const src = await writePack({
+      ".cs-theme.json": JSON.stringify({
+        schemaVersion: 1,
+        id: "atomic-uninstall",
+        name: "Atomic Uninstall",
+        version: "1",
+        colors: { light: { "--cs-primary": "210 80% 45%" } },
+      }),
+    });
+    const preview = await previewLocalTheme(src);
+    await installReviewedLocalTheme(src, preview.reviewToken);
+    const manifestPath = join(themeInstallDir("atomic-uninstall"), ".cs-theme.json");
+    const before = await readFile(manifestPath, "utf8");
+    await writeFile(themesRegistryPath(), "{broken");
+
+    await expect(uninstallTheme("atomic-uninstall")).rejects.toThrow();
+    expect(await readFile(manifestPath, "utf8")).toBe(before);
+  });
+
+  test("a corrupt registry cannot replace an existing theme", async () => {
+    const original = await writePack({
+      ".cs-theme.json": JSON.stringify({
+        schemaVersion: 1,
+        id: "atomic-replace",
+        name: "Original",
+        version: "1",
+        colors: { light: { "--cs-primary": "210 80% 45%" } },
+      }),
+    });
+    let preview = await previewLocalTheme(original);
+    await installReviewedLocalTheme(original, preview.reviewToken);
+    const manifestPath = join(themeInstallDir("atomic-replace"), ".cs-theme.json");
+    const before = await readFile(manifestPath, "utf8");
+
+    const replacement = await writePack({
+      ".cs-theme.json": JSON.stringify({
+        schemaVersion: 1,
+        id: "atomic-replace",
+        name: "Replacement",
+        version: "2",
+        colors: { light: { "--cs-primary": "310 80% 50%" } },
+      }),
+    });
+    preview = await previewLocalTheme(replacement);
+    await writeFile(themesRegistryPath(), "{broken");
+
+    await expect(installReviewedLocalTheme(replacement, preview.reviewToken)).rejects.toThrow();
+    expect(await readFile(manifestPath, "utf8")).toBe(before);
+  });
+
   test("does not follow a linked manifest outside the reviewed pack", async () => {
     const src = await writePack({ ".cs-theme.json": JSON.stringify(FULL_MANIFEST) });
     const outside = join(home, "outside-theme.json");
@@ -252,9 +308,9 @@ describe("theme installer", () => {
         stderr: "pipe",
       });
     });
-    expect((await Promise.all(children.map((child) => child.exited))).every((code) => code === 0)).toBe(
-      true,
-    );
+    expect(
+      (await Promise.all(children.map((child) => child.exited))).every((code) => code === 0),
+    ).toBe(true);
     expect((await listInstalledThemes()).map((theme) => theme.id).sort()).toEqual(
       Array.from({ length: total }, (_, index) => `concurrent-${index}`).sort(),
     );

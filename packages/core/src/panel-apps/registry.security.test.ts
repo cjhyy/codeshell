@@ -2,10 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  readInstalledPanelAppsRegistry,
-  upsertInstalledPanelAppRecord,
-} from "./registry.js";
+import { readInstalledPanelAppsRegistry, upsertInstalledPanelAppRecord } from "./registry.js";
 import { panelAppsRegistryPath } from "./paths.js";
 
 let root: string;
@@ -52,8 +49,10 @@ describe("Panel App registry persistence", () => {
     const outside = join(root, "outside.json");
     await writeFile(outside, JSON.stringify({ keep: true }));
     await symlink(outside, path);
-    await expect(readInstalledPanelAppsRegistry()).rejects.toThrow(/bounded regular file/);
-    await expect(upsertInstalledPanelAppRecord(record)).rejects.toThrow(/bounded regular file/);
+    expect(await readInstalledPanelAppsRegistry()).toEqual([]);
+    await expect(upsertInstalledPanelAppRecord(record)).rejects.toThrow(
+      /corrupt.*bounded regular/i,
+    );
     expect(JSON.parse(await readFile(outside, "utf8"))).toEqual({ keep: true });
   });
 
@@ -61,6 +60,9 @@ describe("Panel App registry persistence", () => {
     const path = panelAppsRegistryPath();
     await mkdir(join(path, ".."), { recursive: true });
     await writeFile(path, "x".repeat(4 * 1024 * 1024 + 1));
-    await expect(readInstalledPanelAppsRegistry()).rejects.toThrow(/bounded regular file/);
+    expect(await readInstalledPanelAppsRegistry()).toEqual([]);
+    await expect(upsertInstalledPanelAppRecord(record)).rejects.toThrow(
+      /corrupt.*bounded regular/i,
+    );
   });
 });
