@@ -137,9 +137,14 @@ need unavailable providers, credentials, cookies, or an active goal.
 - **Shell / execution**: `Bash`, `BashOutput`, `KillShell`, `ListShells`, `PowerShell`, `REPL`, `Sleep`
 - **Web / media / browser**: `browser_observe`, `browser_act`, `browser_navigate`, `WebSearch`, `WebFetch`, `GenerateImage`, `GenerateVideo`
 - **Planning / orchestration**: `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Agent`, `AgentCancel`, `DriveAgent`, `DriveClaudeCode`, `CheckQuota`
-- **Automation / integration**: `CronCreate`, `CronDelete`, `CronList`, `Config`, `Skill`, `AddMarketplace`, `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `EditModelCatalog`
+- **Automation / integration**: `CronCreate`, `CronDelete`, `CronList`, `Config`, `Skill`, `AddMarketplace`, `InstallCapability`, `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `EditModelCatalog`
 - **Memory / credentials / goals**: `MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`, `UseCredential`, `InjectCredential`, `complete_goal`, `cancel_goal`
 - **Terminal-coding preset extras**: `EnterWorktree`, `ExitWorktree`, `NotebookEdit`, `LSP`, `Brief`, `Arena`
+
+`InstallCapability` lets a conversation list, inspect, install, update, enable, disable, and
+uninstall marketplace plugins, standalone project Skills, and MCP servers. MCP configuration
+supports private-local, shared-project, and user-wide scopes; mutations and external Skill
+repository inspection remain approval-gated.
 
 ---
 

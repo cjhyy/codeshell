@@ -34,6 +34,16 @@ compatible plugin-root aliases.
 
 **Install records.** Both families write the shared V2 manifest at `~/.code-shell/plugins/installed_plugins.json` (`installedPlugins.ts:15`, `installedPlugins.ts:21`, `installedPlugins.ts:45`). Marketplace installs key entries as `<plugin>@<marketplace>` (`pluginInstaller.ts:339`), while local/direct installs key them as `<name>@local` (`install.ts:84`). Local plugin listing reads `.cs-meta.json` and skips cache entries without it (`list.ts:14`, `list.ts:23`).
 
+**Conversational lifecycle.** `InstallCapability` exposes list, inspect, install,
+update, enable, disable, and uninstall actions for marketplace plugins,
+standalone project Skills, and MCP servers. Plugin installs reuse
+`pluginInstaller`; Skill operations use the reviewed `skills` CLI argument
+builders and collision checks; MCP writes go through `SettingsManager` at the
+local-private, project-shared, or user layer. Lists and plugin/MCP inspection
+are preset-allowed reads. Mutations and external Skill repository discovery are
+approval-gated, secret values are rejected from MCP arguments, and installed
+capabilities notify live hosts to refresh for the next message.
+
 **Runtime surfaces.** Installed plugins can contribute five runtime surfaces:
 
 - **Hooks**: CC event names are mapped to CodeShell hook names

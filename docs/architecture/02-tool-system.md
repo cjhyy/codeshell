@@ -123,9 +123,15 @@ Registered builtin tools by category:
 - **Shell/runtime**: `Bash`, `PowerShell`, `REPL`, `BashOutput`, `KillShell`, `ListShells`
 - **Web/media/browser**: `WebSearch`, `WebFetch`, `GenerateImage`, `GenerateVideo`, `browser_observe`, `browser_act`, `browser_navigate`
 - **Agent/multi-model/orchestration**: `Agent`, `AgentStatus`, `AgentCancel`, `AgentSendInput`, `Arena`
-- **Planning/coordination**: `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Sleep`, `Config`, `complete_goal`, `cancel_goal`, `AddMarketplace`
+- **Planning/coordination**: `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode`, `ToolSearch`, `TodoWrite`, `Sleep`, `Config`, `complete_goal`, `cancel_goal`, `AddMarketplace`, `InstallCapability`
 - **MCP/credentials**: `MCPTool`, `ListMcpResources`, `ReadMcpResource`, `UseCredential`, `InjectCredential`
 - **Automation/memory**: `CronCreate`, `CronDelete`, `CronList`, `MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`
+
+`InstallCapability` is the conversational lifecycle surface for marketplace plugins, standalone
+project Skills, and MCP servers. It reuses the existing plugin installer, Skill CLI contract, and
+settings manager rather than emitting ad-hoc shell/config edits. Lists plus plugin/MCP inspection
+are read-only; installation, update, enable/disable, uninstall, and external Skill repository
+inspection are approval-gated. MCP writes support local-private, project-shared, and user scopes.
 
 The optional coding package contributes `ApplyPatch`, `NotebookEdit`, `LSP`, `Brief`, `EnterWorktree`, `ExitWorktree`, `SwitchSessionWorkspace`, `DriveAgent`, `DriveAgentJobs`, `DriveClaudeCode`, and `CheckQuota`. Their implementations and repository-specific runtime services are not shipped as core source.
 

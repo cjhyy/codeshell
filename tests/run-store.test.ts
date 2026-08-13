@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { FileRunStore } from "../packages/core/src/run/FileRunStore.js";
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+  appendFileSync,
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type {
@@ -58,6 +66,30 @@ describe("FileRunStore", () => {
     expect(got!.objective).toBe("Test objective");
   });
 
+  it("stores run snapshots and logs owner-only, including legacy rewrites", async () => {
+    await store.create(makeSnapshot());
+    const runDir = join(tmpDir, "test-run-001");
+    const snapshot = join(runDir, "run.json");
+    if (process.platform !== "win32") {
+      expect(statSync(runDir).mode & 0o777).toBe(0o700);
+      expect(statSync(snapshot).mode & 0o777).toBe(0o600);
+      chmodSync(snapshot, 0o644);
+    }
+
+    await store.update(makeSnapshot({ updatedAt: Date.now() + 1 }));
+    await store.appendEvent({
+      eventId: "private-event",
+      runId: "test-run-001",
+      type: "run_created",
+      timestamp: Date.now(),
+      data: { prompt: "secret" },
+    });
+    if (process.platform !== "win32") {
+      expect(statSync(snapshot).mode & 0o777).toBe(0o600);
+      expect(statSync(join(runDir, "events.jsonl")).mode & 0o777).toBe(0o600);
+    }
+  });
+
   it("updates a snapshot", async () => {
     const snap = makeSnapshot();
     await store.create(snap);
@@ -92,6 +124,15 @@ describe("FileRunStore", () => {
     expect(list[0].runId).toBe("run-b");
     expect(list[1].runId).toBe("run-c");
     expect(list[2].runId).toBe("run-a");
+  });
+
+  it("keeps healthy runs visible when one snapshot is corrupt", async () => {
+    await store.create(makeSnapshot({ runId: "healthy", createdAt: 1000 }));
+    const corruptDir = join(tmpDir, "corrupt");
+    mkdirSync(corruptDir, { recursive: true });
+    writeFileSync(join(corruptDir, "run.json"), '{"runId":"corrupt"');
+
+    expect((await store.list()).map((run) => run.runId)).toEqual(["healthy"]);
   });
 
   it("filters by status", async () => {
@@ -146,6 +187,31 @@ describe("FileRunStore", () => {
     expect(events).toHaveLength(2);
     expect(events[0].eventId).toBe("evt-1");
     expect(events[1].type).toBe("run_started");
+  });
+
+  it("keeps later events readable after a crash leaves a torn JSONL tail", async () => {
+    await store.create(makeSnapshot());
+    const first: RunEvent = {
+      eventId: "evt-before-crash",
+      runId: "test-run-001",
+      type: "run_created",
+      timestamp: 1,
+      data: {},
+    };
+    await store.appendEvent(first);
+    appendFileSync(join(tmpDir, "test-run-001", "events.jsonl"), '{"eventId":"torn"');
+
+    await store.appendEvent({
+      ...first,
+      eventId: "evt-after-restart",
+      type: "run_started",
+      timestamp: 2,
+    });
+
+    expect((await store.listEvents("test-run-001")).map((event) => event.eventId)).toEqual([
+      "evt-before-crash",
+      "evt-after-restart",
+    ]);
   });
 
   // ─── Checkpoints ───────────────────────────────────────────────
