@@ -9,7 +9,7 @@
  * No remote source this version (design doc §5).
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { userHome } from "../settings/manager.js";
 import { logger } from "../logging/logger.js";
@@ -19,6 +19,8 @@ import { userCatalogFileSchema, type CatalogEntry } from "./types.js";
 export type { CatalogEntry } from "./types.js";
 export { BUILTIN_CATALOG } from "./builtin.js";
 export { saveCatalogEntry, deleteUserCatalogEntry } from "./save-entry.js";
+
+const MAX_USER_CATALOG_BYTES = 4 * 1024 * 1024;
 
 /** Path to the user catalog file (source B). */
 export function userCatalogPath(): string {
@@ -31,9 +33,18 @@ export function userCatalogPath(): string {
  */
 export function loadUserCatalog(): CatalogEntry[] {
   const path = userCatalogPath();
-  if (!existsSync(path)) return [];
+  let descriptor: number | undefined;
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf-8"));
+    const metadata = lstatSync(path);
+    if (metadata.isSymbolicLink() || !metadata.isFile() || metadata.size > MAX_USER_CATALOG_BYTES) {
+      throw new Error("model catalog must be a bounded regular file");
+    }
+    descriptor = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size > MAX_USER_CATALOG_BYTES) {
+      throw new Error("model catalog must be a bounded regular file");
+    }
+    const parsed = JSON.parse(readFileSync(descriptor, "utf-8"));
     const result = userCatalogFileSchema.safeParse(parsed);
     if (!result.success) {
       logger.warn("model_catalog_user_invalid", { path, issues: result.error.issues.length });
@@ -41,8 +52,11 @@ export function loadUserCatalog(): CatalogEntry[] {
     }
     return result.data;
   } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     logger.warn("model_catalog_user_read_failed", { path, error: (err as Error).message });
     return [];
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
 }
 

@@ -14,6 +14,11 @@
 
 import { z } from "zod";
 
+const id = z.string().min(1).max(128);
+const shortText = z.string().max(256);
+const longText = z.string().max(32_768);
+const boundedNumber = z.number().finite().min(0).max(1_000_000_000);
+
 /**
  * How the param maps onto the outgoing request body. `field` is the request
  * field this param lands on — same param name can land differently per
@@ -22,7 +27,7 @@ import { z } from "zod";
  * in `if (kind === ...)` branches in the engine. Minimal v1: field only.
  */
 export const wireSpecSchema = z.object({
-  field: z.string(),
+  field: id,
 });
 
 /**
@@ -35,18 +40,18 @@ export const wireSpecSchema = z.object({
  */
 export const paramSpecSchema = z.object({
   /** Logical name, e.g. "reasoning" / "size" / "quality" / "temperature". */
-  name: z.string(),
+  name: id,
   /** UI control label (falls back to `name`). */
-  label: z.string().optional(),
+  label: shortText.optional(),
   control: z.enum(["enum", "number", "toggle", "text"]),
   /** control=enum allowed values, e.g. ["low","medium","high","xhigh"]. */
-  options: z.array(z.string()).optional(),
+  options: z.array(shortText).max(64).optional(),
   /** control=number bounds. */
-  min: z.number().optional(),
-  max: z.number().optional(),
-  default: z.union([z.string(), z.number(), z.boolean()]).optional(),
+  min: boundedNumber.optional(),
+  max: boundedNumber.optional(),
+  default: z.union([shortText, boundedNumber, z.boolean()]).optional(),
   /** Natural-language usage note → injected into the tool description. */
-  doc: z.string().optional(),
+  doc: z.string().max(4_096).optional(),
   /** How this param lands on the request body. */
   wire: wireSpecSchema.optional(),
 });
@@ -59,20 +64,20 @@ export type ParamSpec = z.infer<typeof paramSpecSchema>;
  * can expose different params, since gateways normalize differently).
  */
 export const modelPresetSchema = z.object({
-  value: z.string(),
-  label: z.string().optional(),
-  maxContextTokens: z.number().optional(),
-  maxOutputTokens: z.number().optional(),
+  value: id,
+  label: shortText.optional(),
+  maxContextTokens: boundedNumber.optional(),
+  maxOutputTokens: boundedNumber.optional(),
   supportsVision: z.boolean().optional(),
   /** Params this model supports; absent → no adjustable knobs. */
-  params: z.array(paramSpecSchema).optional(),
+  params: z.array(paramSpecSchema).max(64).optional(),
 });
 
 export type ModelPreset = z.infer<typeof modelPresetSchema>;
 
 export const catalogEntrySchema = z.object({
   /** Template id, e.g. "openai" / "openai-images" / "fal-video". */
-  id: z.string(),
+  id,
   /** Which 连接 page group this lands in. (audio = speech-to-text / voice input.) */
   tag: z.enum(["text", "image", "video", "audio"]),
   /**
@@ -80,15 +85,15 @@ export const catalogEntrySchema = z.object({
    * runtime adapter for image/video. OpenRouter is `openrouter` even though its
    * text protocol is `openai-compat`.
    */
-  adapterKind: z.string(),
+  adapterKind: id,
   /** LLM client protocol (text entries). */
   protocol: z.enum(["openai-compat", "anthropic-style"]).optional(),
   /** HTTP shape — documentation/future only; runtime dispatches on adapterKind. */
   shape: z.enum(["generic-sync", "fal-queue"]).optional(),
-  displayName: z.string(),
-  description: z.string(),
-  defaultBaseUrl: z.string(),
-  defaultModel: z.string().optional(),
+  displayName: z.string().min(1).max(256),
+  description: z.string().max(4_096),
+  defaultBaseUrl: z.string().max(4_096),
+  defaultModel: shortText.optional(),
   /** Whether this provider needs an API key (ollama/local = false). */
   needsKey: z.boolean().optional(),
   /**
@@ -98,8 +103,8 @@ export const catalogEntrySchema = z.object({
    * `value`, so future built-in models remain visible.
    */
   modelPresetsMode: z.enum(["replace", "merge"]).optional(),
-  modelPresets: z.array(modelPresetSchema).optional(),
-  signupUrl: z.string().optional(),
+  modelPresets: z.array(modelPresetSchema).max(512).optional(),
+  signupUrl: z.string().max(4_096).optional(),
   /** Whether the 连接 card offers a "测试" button (image=true, video=false). */
   test: z.boolean().optional(),
   /**
@@ -107,10 +112,10 @@ export const catalogEntrySchema = z.object({
    * the agent via the dynamic GenerateImage/GenerateVideo tool description so it
    * knows what a configured model accepts (different models differ).
    */
-  paramsDoc: z.string().optional(),
+  paramsDoc: longText.optional(),
 });
 
 export type CatalogEntry = z.infer<typeof catalogEntrySchema>;
 
 /** A user-catalog file is just an array of entries (zod-validated on load). */
-export const userCatalogFileSchema = z.array(catalogEntrySchema);
+export const userCatalogFileSchema = z.array(catalogEntrySchema).max(256);

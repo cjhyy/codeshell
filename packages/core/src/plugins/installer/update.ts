@@ -9,9 +9,9 @@ import { installPluginFromSource } from "./installFromSource.js";
 import { parseSource } from "./parseSource.js";
 import {
   pluginInstallKey,
+  mutateInstalledPlugins,
   readInstalledPlugins,
   removeInstallEntries,
-  writeInstalledPlugins,
 } from "../installedPlugins.js";
 import { pluginHookInstallRecord } from "../pluginHookIntegrity.js";
 import { pluginMcpInstallRecord } from "../pluginMcpIntegrity.js";
@@ -62,49 +62,49 @@ export async function reinstallAtomic(
   try {
     await doInstall();
     if (savedEntries) {
-      const data = readInstalledPlugins();
-      const installed = data.plugins[key] ?? [];
-      let changed = false;
-      for (const entry of installed) {
-        const next = pluginHookInstallRecord(entry.installPath, savedEntries);
-        const nextMcp = pluginMcpInstallRecord(
-          entry.installPath,
-          Object.keys(readPluginMcp(entry.installPath, name)).length > 0,
-          savedEntries,
-        );
-        if (
-          entry.hookDigest !== next.hookDigest ||
-          entry.approvedHookDigest !== next.approvedHookDigest ||
-          JSON.stringify(entry.approvedHookSnapshot) !==
-            JSON.stringify(next.approvedHookSnapshot) ||
-          entry.mcpDigest !== nextMcp.mcpDigest ||
-          entry.approvedMcpDigest !== nextMcp.approvedMcpDigest
-        ) {
-          entry.hookDigest = next.hookDigest;
-          if (next.approvedHookDigest) entry.approvedHookDigest = next.approvedHookDigest;
-          else delete entry.approvedHookDigest;
-          if (next.approvedHookSnapshot) entry.approvedHookSnapshot = next.approvedHookSnapshot;
-          else delete entry.approvedHookSnapshot;
-          entry.mcpDigest = nextMcp.mcpDigest;
-          if (nextMcp.approvedMcpDigest) entry.approvedMcpDigest = nextMcp.approvedMcpDigest;
-          else delete entry.approvedMcpDigest;
-          changed = true;
+      mutateInstalledPlugins((data) => {
+        const installed = data.plugins[key] ?? [];
+        let changed = false;
+        for (const entry of installed) {
+          const next = pluginHookInstallRecord(entry.installPath, savedEntries);
+          const nextMcp = pluginMcpInstallRecord(
+            entry.installPath,
+            Object.keys(readPluginMcp(entry.installPath, name)).length > 0,
+            savedEntries,
+          );
+          if (
+            entry.hookDigest !== next.hookDigest ||
+            entry.approvedHookDigest !== next.approvedHookDigest ||
+            JSON.stringify(entry.approvedHookSnapshot) !==
+              JSON.stringify(next.approvedHookSnapshot) ||
+            entry.mcpDigest !== nextMcp.mcpDigest ||
+            entry.approvedMcpDigest !== nextMcp.approvedMcpDigest
+          ) {
+            entry.hookDigest = next.hookDigest;
+            if (next.approvedHookDigest) entry.approvedHookDigest = next.approvedHookDigest;
+            else delete entry.approvedHookDigest;
+            if (next.approvedHookSnapshot) entry.approvedHookSnapshot = next.approvedHookSnapshot;
+            else delete entry.approvedHookSnapshot;
+            entry.mcpDigest = nextMcp.mcpDigest;
+            if (nextMcp.approvedMcpDigest) entry.approvedMcpDigest = nextMcp.approvedMcpDigest;
+            else delete entry.approvedMcpDigest;
+            changed = true;
+          }
         }
-      }
-      if (changed) writeInstalledPlugins(data);
+        return changed ? { value: data } : {};
+      });
     }
   } catch (err) {
     // Roll back: drop any partial install, restore the old dir + its entries.
     await rm(dir, { recursive: true, force: true });
     await rename(backup, dir);
     if (savedEntries) {
-      // Restore in a single read-modify-write rather than one append per entry,
-      // which both narrows the race window against any concurrent writer and
-      // avoids re-appending onto whatever partial state doInstall() may have
-      // left for this key.
-      const data = readInstalledPlugins();
-      data.plugins[key] = savedEntries;
-      writeInstalledPlugins(data);
+      // Restore under the registry lock so a concurrent install of a different
+      // plugin cannot be lost while this plugin rolls back.
+      mutateInstalledPlugins((data) => {
+        data.plugins[key] = savedEntries;
+        return { value: data };
+      });
     }
     throw new PluginInstallError(
       `update failed; the old version of '${name}' was kept: ` +

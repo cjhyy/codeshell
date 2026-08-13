@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { constants, existsSync } from "node:fs";
 import {
   cp,
   lstat,
   mkdir,
   mkdtemp,
-  readFile,
+  open,
   readdir,
   realpath,
   rename,
@@ -417,24 +417,45 @@ async function walkBoundedTree(
 }
 
 async function readManifest(sourceRoot: string): Promise<PanelAppManifest> {
-  const file = join(sourceRoot, PANEL_APP_MANIFEST_FILE);
-  let info: Awaited<ReturnType<typeof stat>>;
   try {
-    info = await stat(file);
-  } catch {
-    throw new PanelAppInstallError(`missing ${PANEL_APP_MANIFEST_FILE}`);
-  }
-  if (!info.isFile() || info.size > MAX_MANIFEST_BYTES) {
-    throw new PanelAppInstallError(
-      `${PANEL_APP_MANIFEST_FILE} must be a regular file no larger than 1 MiB`,
+    const raw = await readBoundedPackageFile(
+      sourceRoot,
+      PANEL_APP_MANIFEST_FILE,
+      MAX_MANIFEST_BYTES,
     );
-  }
-  try {
-    return PanelAppManifest.parse(JSON.parse(await readFile(file, "utf-8")));
+    return PanelAppManifest.parse(JSON.parse(raw.toString("utf8")));
   } catch (error) {
     throw new PanelAppInstallError(
       `invalid Panel App manifest: ${error instanceof Error ? error.message : String(error)}`,
     );
+  }
+}
+
+async function readBoundedPackageFile(
+  root: string,
+  relativePath: string,
+  maxBytes: number,
+): Promise<Buffer> {
+  const candidate = join(root, ...relativePath.split("/"));
+  const metadata = await lstat(candidate);
+  if (metadata.isSymbolicLink() || !metadata.isFile() || metadata.size > maxBytes) {
+    throw new PanelAppInstallError(`Panel App file is not a bounded regular file: ${relativePath}`);
+  }
+  const physical = await realpath(candidate);
+  if (physical !== root && !physical.startsWith(`${root}${sep}`)) {
+    throw new PanelAppInstallError(`Panel App file escapes its package: ${relativePath}`);
+  }
+  const handle = await open(candidate, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size > maxBytes) {
+      throw new PanelAppInstallError(
+        `Panel App file is not a bounded regular file: ${relativePath}`,
+      );
+    }
+    return await handle.readFile();
+  } finally {
+    await handle.close();
   }
 }
 
@@ -474,12 +495,13 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
     if (!files.includes(skillEntry)) {
       throw new PanelAppInstallError(`declared Panel App skill is missing: ${skillEntry}`);
     }
-    const skillInfo = await stat(join(root, ...skillEntry.split("/")));
+    const skillInfo = await lstat(join(root, ...skillEntry.split("/")));
     if (!skillInfo.isFile() || skillInfo.size > MAX_AGENT_SKILL_BYTES) {
       throw new PanelAppInstallError(
         `declared Panel App skill must be a file no larger than 256 KiB: ${skillEntry}`,
       );
     }
+    await readBoundedPackageFile(root, skillEntry, MAX_AGENT_SKILL_BYTES);
   }
   for (const file of files) {
     if (file === PANEL_APP_MANIFEST_FILE || file === PANEL_APP_META_FILE) continue;
@@ -507,7 +529,13 @@ async function inspectPanelAppSource(sourceRoot: string): Promise<{
     hash
       .update(file)
       .update("\0")
-      .update(await readFile(join(root, ...file.split("/"))));
+      .update(
+        await readBoundedPackageFile(
+          root,
+          file,
+          file === PANEL_APP_MANIFEST_FILE ? MAX_MANIFEST_BYTES : MAX_FILE_BYTES,
+        ),
+      );
   }
   return { manifest, files, digest: hash.digest("hex") };
 }

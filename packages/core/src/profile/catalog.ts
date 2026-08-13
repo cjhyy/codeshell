@@ -9,7 +9,15 @@
  *
  * 本模块只做**读取与校验**，克隆/更新由 host 驱动（涉及网络与磁盘写入）。
  */
-import { existsSync, readFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { WorkspaceProfileSchema, type WorkspaceProfile } from "./types.js";
 
@@ -18,6 +26,11 @@ export const CATALOG_REPO_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9][A-Za
 
 /** 单个目录段的安全名，挡住 `..`、分隔符与 NUL。 */
 const SAFE_SEGMENT_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const MAX_MANIFEST_BYTES = 1024 * 1024;
+const MAX_PROFILE_BYTES = 256 * 1024;
+const MAX_MANIFEST_HUMANS = 1_000;
+const MAX_MANIFEST_TEAMS = 500;
+const MAX_ENTRY_TAGS = 64;
 
 export interface HumansManifestEntry {
   name: string;
@@ -89,38 +102,58 @@ export function sourceToRepoKey(repo: string): string {
 export function parseHumansManifest(raw: string): HumansManifest {
   const value = JSON.parse(raw) as Record<string, unknown>;
   const rawHumans = Array.isArray(value.humans) ? value.humans : [];
+  if (rawHumans.length > MAX_MANIFEST_HUMANS) throw new Error("too many humans in manifest");
   const humans: HumansManifestEntry[] = [];
   for (const item of rawHumans) {
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
     const entry = item as Record<string, unknown>;
-    if (typeof entry.name !== "string" || !entry.name) continue;
+    if (typeof entry.name !== "string" || !entry.name || entry.name.length > 64) continue;
     humans.push({
       name: entry.name,
-      ...(typeof entry.label === "string" ? { label: entry.label } : {}),
-      ...(typeof entry.description === "string" ? { description: entry.description } : {}),
-      ...(typeof entry.category === "string" ? { category: entry.category } : {}),
+      ...(typeof entry.label === "string" && entry.label.length <= 120
+        ? { label: entry.label }
+        : {}),
+      ...(typeof entry.description === "string" && entry.description.length <= 4_096
+        ? { description: entry.description }
+        : {}),
+      ...(typeof entry.category === "string" && entry.category.length <= 120
+        ? { category: entry.category }
+        : {}),
       tags: Array.isArray(entry.tags)
-        ? entry.tags.filter((t): t is string => typeof t === "string")
+        ? entry.tags
+            .slice(0, MAX_ENTRY_TAGS)
+            .filter((t): t is string => typeof t === "string" && t.length <= 120)
         : [],
     });
   }
   const rawTeams = Array.isArray(value.teams) ? value.teams : [];
+  if (rawTeams.length > MAX_MANIFEST_TEAMS) throw new Error("too many teams in manifest");
   const teams: HumansManifestTeam[] = [];
   for (const item of rawTeams) {
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
     const entry = item as Record<string, unknown>;
-    if (typeof entry.id !== "string" || !entry.id) continue;
-    if (typeof entry.name !== "string" || !entry.name) continue;
+    if (typeof entry.id !== "string" || !entry.id || entry.id.length > 64) continue;
+    if (typeof entry.name !== "string" || !entry.name || entry.name.length > 120) continue;
     const rawMembers = Array.isArray(entry.members) ? entry.members : [];
-    const members = rawMembers.filter((m): m is string => typeof m === "string" && m.length > 0);
-    if (members.length < 2) continue;
+    const members = rawMembers.filter(
+      (m): m is string => typeof m === "string" && SAFE_SEGMENT_RE.test(m),
+    );
+    if (members.length < 2 || members.length > 8 || new Set(members).size !== members.length) {
+      continue;
+    }
     teams.push({
       id: entry.id,
       name: entry.name,
-      ...(typeof entry.description === "string" ? { description: entry.description } : {}),
+      ...(typeof entry.description === "string" && entry.description.length <= 1_000
+        ? { description: entry.description }
+        : {}),
       members,
-      ...(typeof entry.lead === "string" && entry.lead ? { lead: entry.lead } : {}),
-      ...(typeof entry.playbook === "string" && entry.playbook ? { playbook: entry.playbook } : {}),
+      ...(typeof entry.lead === "string" && SAFE_SEGMENT_RE.test(entry.lead)
+        ? { lead: entry.lead }
+        : {}),
+      ...(typeof entry.playbook === "string" && entry.playbook.length <= 4_000
+        ? { playbook: entry.playbook }
+        : {}),
     });
   }
   return {
@@ -129,6 +162,21 @@ export function parseHumansManifest(raw: string): HumansManifest {
     humans,
     teams,
   };
+}
+
+function readBoundedRegularFile(path: string, maxBytes: number): string {
+  const pathInfo = lstatSync(path);
+  if (pathInfo.isSymbolicLink() || !pathInfo.isFile() || pathInfo.size > maxBytes) {
+    throw new Error("not a bounded regular file");
+  }
+  const descriptor = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size > maxBytes) throw new Error("not a bounded regular file");
+    return readFileSync(descriptor, "utf8");
+  } finally {
+    closeSync(descriptor);
+  }
 }
 
 /** 读取一个已克隆的数字人仓库目录。 */
@@ -140,7 +188,7 @@ export function readCatalogFromDir(dir: string, sourceRepo: string): CatalogRead
 
   let manifest: HumansManifest;
   try {
-    manifest = parseHumansManifest(readFileSync(manifestPath, "utf-8"));
+    manifest = parseHumansManifest(readBoundedRegularFile(manifestPath, MAX_MANIFEST_BYTES));
   } catch (error) {
     return {
       entries: [],
@@ -160,7 +208,9 @@ export function readCatalogFromDir(dir: string, sourceRepo: string): CatalogRead
     }
     const profilePath = join(dir, "humans", item.name, "profile.json");
     try {
-      const profile = WorkspaceProfileSchema.parse(JSON.parse(readFileSync(profilePath, "utf-8")));
+      const profile = WorkspaceProfileSchema.parse(
+        JSON.parse(readBoundedRegularFile(profilePath, MAX_PROFILE_BYTES)),
+      );
       entries.push({
         profile,
         sourceRepo,

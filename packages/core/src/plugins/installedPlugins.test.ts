@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   installedPluginsPath,
+  appendInstallEntry,
   readInstalledPlugins,
   writeInstalledPlugins,
 } from "./installedPlugins.js";
+
+const MODULE = join(import.meta.dir, "installedPlugins.ts");
 
 describe("installed plugin registry persistence", () => {
   let home: string;
@@ -146,4 +149,48 @@ describe("installed plugin registry persistence", () => {
       },
     });
   });
+
+  test("refuses a linked registry without touching its target", () => {
+    const path = installedPluginsPath();
+    mkdirSync(dirname(path), { recursive: true });
+    const outside = join(home, "outside.json");
+    writeFileSync(outside, JSON.stringify({ version: 2, plugins: {} }));
+    symlinkSync(outside, path);
+    expect(readInstalledPlugins()).toEqual({ version: 2, plugins: {} });
+    expect(() =>
+      appendInstallEntry("demo@local", {
+        scope: "user",
+        installPath: join(home, "demo"),
+        version: "1",
+        installedAt: "now",
+        lastUpdated: "now",
+      }),
+    ).toThrow(/bounded regular file/);
+    expect(JSON.parse(readFileSync(outside, "utf8"))).toEqual({ version: 2, plugins: {} });
+  });
+
+  test("concurrent processes preserve every independently installed plugin", async () => {
+    const total = 16;
+    const children = Array.from({ length: total }, (_, index) => {
+      const script = `
+        import { appendInstallEntry } from ${JSON.stringify(MODULE)};
+        appendInstallEntry(${JSON.stringify(`plugin-${index}@local`)}, {
+          scope: "user",
+          installPath: ${JSON.stringify(join(home, `plugin-${index}`))},
+          version: "1",
+          installedAt: "now",
+          lastUpdated: "now"
+        });
+      `;
+      return Bun.spawn([process.execPath, "-e", script], {
+        env: { ...process.env, HOME: home },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+    });
+    expect((await Promise.all(children.map((child) => child.exited))).every((code) => code === 0)).toBe(
+      true,
+    );
+    expect(Object.keys(readInstalledPlugins().plugins)).toHaveLength(total);
+  }, 60_000);
 });

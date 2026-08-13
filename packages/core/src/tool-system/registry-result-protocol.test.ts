@@ -141,7 +141,7 @@ describe("ToolRegistry result protocol", () => {
       "MCP tool error: rejected",
       "REPL aborted by signal",
       "REPL timed out after 100ms",
-      'Skill "missing" not found. Run /skills to list available skills.',
+      "Skill \"missing\" not found. Run /skills to list available skills. If the user asked to add it and you know its trusted GitHub source, use InstallCapability with kind='skill' instead of constructing a shell command.",
       'Skill "disabled" is disabled. Enable it in Customize.',
       'Skill "denied" is not available to this sub-agent.',
       { error: "structured failure" },

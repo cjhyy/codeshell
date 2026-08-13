@@ -12,6 +12,8 @@ import {
 } from "./installer.js";
 import { THEME_ASSET_DIR, ThemeReviewChangedError } from "./paths.js";
 
+const INSTALLER_MODULE = join(import.meta.dir, "installer.ts");
+
 // A minimal valid 1x1 PNG.
 const PNG_1x1 = Buffer.from(
   "89504e470d0a1a0a0000000d494844520000000100000001080600000" +
@@ -213,4 +215,48 @@ describe("theme installer", () => {
     expect(installed.pet).toEqual({});
     expect(installed.wallpaper).toBeUndefined();
   });
+
+  test("does not follow a linked manifest outside the reviewed pack", async () => {
+    const src = await writePack({ ".cs-theme.json": JSON.stringify(FULL_MANIFEST) });
+    const outside = join(home, "outside-theme.json");
+    await writeFile(outside, JSON.stringify({ ...FULL_MANIFEST, name: "Outside" }));
+    await rm(join(src, ".cs-theme.json"));
+    await symlink(outside, join(src, ".cs-theme.json"));
+    await expect(previewLocalTheme(src)).rejects.toThrow();
+  });
+
+  test("concurrent theme installs preserve every registry entry", async () => {
+    const total = 8;
+    const sources = await Promise.all(
+      Array.from({ length: total }, (_, index) =>
+        writePack({
+          ".cs-theme.json": JSON.stringify({
+            schemaVersion: 1,
+            id: `concurrent-${index}`,
+            name: `Concurrent ${index}`,
+            version: "1",
+            colors: { light: { "--cs-primary": "210 80% 45%" } },
+          }),
+        }),
+      ),
+    );
+    const children = sources.map((source) => {
+      const script = `
+        import { previewLocalTheme, installReviewedLocalTheme } from ${JSON.stringify(INSTALLER_MODULE)};
+        const preview = await previewLocalTheme(${JSON.stringify(source)});
+        await installReviewedLocalTheme(${JSON.stringify(source)}, preview.reviewToken);
+      `;
+      return Bun.spawn([process.execPath, "-e", script], {
+        env: { ...process.env, CODE_SHELL_HOME: home },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+    });
+    expect((await Promise.all(children.map((child) => child.exited))).every((code) => code === 0)).toBe(
+      true,
+    );
+    expect((await listInstalledThemes()).map((theme) => theme.id).sort()).toEqual(
+      Array.from({ length: total }, (_, index) => `concurrent-${index}`).sort(),
+    );
+  }, 60_000);
 });

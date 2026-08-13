@@ -2,7 +2,9 @@
  * Cron tools — CronCreate, CronDelete, CronList.
  */
 
+import { resolve } from "node:path";
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 import { cronScheduler } from "../../automation/scheduler.js";
 import type { CronPermissionLevel } from "../../automation/scheduler.js";
 import { getCurrentSid } from "../../logging/logger.js";
@@ -101,11 +103,19 @@ export const cronCreateToolDef: ToolDefinition = {
   },
 };
 
-export async function cronCreateTool(args: Record<string, unknown>): Promise<string> {
-  const name = args.name as string;
-  const schedule = args.schedule as string;
-  const prompt = args.prompt as string;
-  if (!name || !schedule || !prompt) return "Error: name, schedule, and prompt are required";
+export async function cronCreateTool(
+  args: Record<string, unknown>,
+  context?: ToolContext,
+): Promise<string> {
+  const name = typeof args.name === "string" ? args.name : "";
+  const schedule = typeof args.schedule === "string" ? args.schedule : "";
+  const prompt = typeof args.prompt === "string" ? args.prompt : "";
+  if (!name.trim() || !schedule.trim() || !prompt.trim()) {
+    return "Error: name, schedule, and prompt are required";
+  }
+  if (name.length > 512 || schedule.length > 512 || prompt.length > 1024 * 1024) {
+    return "Error: automation payload is too large";
+  }
   const timezone =
     typeof args.timezone === "string"
       ? args.timezone
@@ -116,7 +126,15 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
             return undefined;
           }
         })();
-  const cwd = typeof args.cwd === "string" ? args.cwd : undefined;
+  const requestedCwd = typeof args.cwd === "string" && args.cwd ? args.cwd : undefined;
+  if (requestedCwd && requestedCwd.length > 32_768) return "Error: automation cwd is too long";
+  if (context && requestedCwd && resolve(requestedCwd) !== resolve(context.cwd)) {
+    return "Error: CronCreate cannot schedule work outside the current session workspace";
+  }
+  // The model may omit cwd, but production tool calls always have a host-owned
+  // context. Bind to that authoritative workspace instead of creating a job
+  // that later falls back to an unrelated process cwd.
+  const cwd = context?.cwd ?? requestedCwd;
   const once = args.once === true;
   const permissionLevel =
     args.permissionLevel === "read-only" ||

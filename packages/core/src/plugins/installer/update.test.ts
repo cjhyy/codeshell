@@ -11,14 +11,14 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
-import { updatePluginByName } from "./update.js";
+import { reinstallAtomic, updatePluginByName } from "./update.js";
 import { installPluginFromPath } from "./install.js";
 import { installPluginFromSource } from "./installFromSource.js";
 import { parseSource } from "./parseSource.js";
 import { PluginInstallError } from "./types.js";
 import { approvePluginHooks, reviewPluginHooks } from "../pluginHookApproval.js";
 import { approvePluginMcp } from "../pluginMcpApproval.js";
-import { readInstalledPlugins } from "../installedPlugins.js";
+import { appendInstallEntry, readInstalledPlugins } from "../installedPlugins.js";
 
 /** Any leftover backup dirs (`.bak-*`) in the plugins root — must be empty after both success and failure. */
 function leftoverBaks(home: string): string[] {
@@ -107,6 +107,44 @@ describe("updatePluginByName", () => {
     );
     expect(meta.version).toBe("3.0.0");
     expect(leftoverBaks(home).length).toBe(0);
+  });
+
+  test("keeps an unrelated plugin registration added during a reinstall", async () => {
+    const unrelated = {
+      scope: "user" as const,
+      installPath: join(home, ".code-shell", "plugins", "other"),
+      version: "1.0.0",
+      installedAt: "t1",
+      lastUpdated: "t1",
+    };
+
+    await reinstallAtomic("u", src, async () => {
+      await installPluginFromPath(src, "u", "t2");
+      appendInstallEntry("other@local", unrelated);
+    });
+
+    expect(readInstalledPlugins().plugins["other@local"]).toEqual([unrelated]);
+    expect(readInstalledPlugins().plugins["u@local"]).toHaveLength(1);
+  });
+
+  test("keeps an unrelated plugin registration when a reinstall rolls back", async () => {
+    const unrelated = {
+      scope: "user" as const,
+      installPath: join(home, ".code-shell", "plugins", "other"),
+      version: "1.0.0",
+      installedAt: "t1",
+      lastUpdated: "t1",
+    };
+
+    await expect(
+      reinstallAtomic("u", src, async () => {
+        appendInstallEntry("other@local", unrelated);
+        throw new Error("simulated install failure");
+      }),
+    ).rejects.toThrow(/old version.*kept/i);
+
+    expect(readInstalledPlugins().plugins["other@local"]).toEqual([unrelated]);
+    expect(readInstalledPlugins().plugins["u@local"]).toHaveLength(1);
   });
 
   test("does not remove an unrelated stale backup while staging an update", async () => {

@@ -115,6 +115,11 @@ describe("preset builtin tool whitelist", () => {
     expect(general.builtinTools).toContain("AddMarketplace");
   });
 
+  it("the general preset offers approval-gated conversational capability installs", () => {
+    const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
+    expect(general.builtinTools).toContain("InstallCapability");
+  });
+
   it("any preset offering Bash also offers its background-shell companions", () => {
     // If Bash(run_in_background=true) is available, BashOutput/KillShell/ListShells
     // must be too — otherwise the model can launch a background shell it can never

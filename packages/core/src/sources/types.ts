@@ -13,12 +13,12 @@ export type SourceKind = (typeof SOURCE_KINDS)[number];
 export const SourceDefinitionSchema = z.object({
   id: z.string().regex(SOURCE_ID_RE),
   kind: z.enum(SOURCE_KINDS),
-  label: z.string().min(1),
-  description: z.string().optional(),
+  label: z.string().min(1).max(512).refine((value) => !value.includes("\0")),
+  description: z.string().max(4_096).refine((value) => !value.includes("\0")).optional(),
   /** 按 kind 的 adapter 配置（如 mcp-resource: { server }）。 */
   adapterConfig: z.record(z.unknown()).default({}),
   /** 指向全局 CredentialStore 的 id；local-files/mock 不需要。 */
-  credentialRef: z.string().optional(),
+  credentialRef: z.string().min(1).max(128).regex(/^[A-Za-z0-9_.-]+$/).optional(),
   enabled: z.boolean().default(true),
 });
 export type SourceDefinition = z.infer<typeof SourceDefinitionSchema>;
@@ -26,7 +26,10 @@ export type SourceDefinition = z.infer<typeof SourceDefinitionSchema>;
 export const WorkspaceSourceBindingSchema = z.object({
   sourceId: z.string().regex(SOURCE_ID_RE),
   /** 显式勾选的 scope id；空数组 = 什么都不可见（不是"全部"）。 */
-  scopes: z.array(z.string()),
+  scopes: z
+    .array(z.string().min(1).max(512).refine((value) => !value.includes("\0")))
+    .max(1_000)
+    .refine((scopes) => new Set(scopes).size === scopes.length, "source scopes must be unique"),
   /** ask（默认，ReadSource 每次审批）| deny（只许 list metadata，禁读内容）。无 allow 档（ADR §1.2）。 */
   readPolicy: z.enum(["ask", "deny"]).default("ask"),
 });

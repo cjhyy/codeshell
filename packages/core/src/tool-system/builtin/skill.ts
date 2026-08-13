@@ -80,7 +80,11 @@ export async function skillTool(args: Record<string, unknown>, ctx?: ToolContext
   const found = skills.find((s) => s.name === skillName);
 
   if (!found) {
-    return `Skill "${skillName}" not found. Run /skills to list available skills.`;
+    return (
+      `Skill "${skillName}" not found. Run /skills to list available skills. ` +
+      "If the user asked to add it and you know its trusted GitHub source, use " +
+      "InstallCapability with kind='skill' instead of constructing a shell command."
+    );
   }
 
   const skillDir = dirname(found.filePath);

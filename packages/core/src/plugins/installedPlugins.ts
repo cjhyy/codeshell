@@ -4,11 +4,19 @@
  * fields on each install entry.
  */
 
-import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import {
+  chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+} from "node:fs";
+import { join } from "node:path";
 import { homedir } from "node:os";
 import type { InstalledPluginsV2, PluginInstallEntry, StoredPluginHookReview } from "./types.js";
+import { mutateJsonFile } from "../utils/file-mutex.js";
 
 const MAX_PLUGIN_KEYS = 2_048;
 const MAX_INSTALLS_PER_KEY = 16;
@@ -19,6 +27,7 @@ const DIGEST_RE = /^[a-f0-9]{64}$/;
 const MAX_HOOK_REVIEW_ITEMS = 256;
 const MAX_HOOK_REVIEW_COMMAND_LENGTH = 4_096;
 const MAX_HOOK_REVIEW_MATCHER_LENGTH = 4_096;
+const MAX_INSTALLED_PLUGINS_FILE_BYTES = 16 * 1024 * 1024;
 
 function userHome(): string {
   return process.env.HOME ?? homedir();
@@ -149,30 +158,62 @@ function registryOf(value: unknown): InstalledPluginsV2 | undefined {
 
 export function readInstalledPlugins(): InstalledPluginsV2 {
   const path = installedPluginsPath();
-  if (!existsSync(path)) return { version: 2, plugins: {} };
+  let descriptor: number | undefined;
   try {
-    const parsed = registryOf(JSON.parse(readFileSync(path, "utf-8")));
+    const metadata = lstatSync(path);
+    if (
+      metadata.isSymbolicLink() ||
+      !metadata.isFile() ||
+      metadata.size > MAX_INSTALLED_PLUGINS_FILE_BYTES
+    ) {
+      return { version: 2, plugins: {} };
+    }
+    descriptor = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size > MAX_INSTALLED_PLUGINS_FILE_BYTES) {
+      return { version: 2, plugins: {} };
+    }
+    const parsed = registryOf(JSON.parse(readFileSync(descriptor, "utf-8")));
     if (parsed) return parsed;
   } catch {
     // Corrupt — treat as empty so the user can re-install.
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
   return { version: 2, plugins: {} };
 }
 
 export function writeInstalledPlugins(data: InstalledPluginsV2): void {
   const path = installedPluginsPath();
-  mkdirSync(dirname(path), { recursive: true });
-  const tmp = `${path}.${process.pid}.${randomUUID()}.tmp`;
-  try {
-    writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n", {
-      encoding: "utf-8",
-      flag: "wx",
-      mode: 0o600,
-    });
-    renameSync(tmp, path);
-  } finally {
-    rmSync(tmp, { force: true });
-  }
+  const normalized = registryOf(data);
+  if (!normalized) throw new Error("invalid installed plugins registry");
+  mutateJsonFile<InstalledPluginsV2>(path, {
+    parse: parseInstalledPlugins,
+    serialize: (value) => `${JSON.stringify(value, null, 2)}\n`,
+    mutation: () => ({ value: normalized }),
+    mode: 0o600,
+    maxBytes: MAX_INSTALLED_PLUGINS_FILE_BYTES,
+  });
+  if (process.platform !== "win32") chmodSync(path, 0o600);
+}
+
+function parseInstalledPlugins(raw: string | undefined): InstalledPluginsV2 {
+  if (raw === undefined) return { version: 2, plugins: {} };
+  const parsed = registryOf(JSON.parse(raw));
+  if (!parsed) throw new Error("installed plugins registry is corrupt");
+  return parsed;
+}
+
+export function mutateInstalledPlugins<R>(
+  mutation: (current: InstalledPluginsV2) => { value?: InstalledPluginsV2; result?: R },
+): R | undefined {
+  return mutateJsonFile<InstalledPluginsV2, R>(installedPluginsPath(), {
+    parse: parseInstalledPlugins,
+    serialize: (value) => `${JSON.stringify(value, null, 2)}\n`,
+    mutation,
+    mode: 0o600,
+    maxBytes: MAX_INSTALLED_PLUGINS_FILE_BYTES,
+  });
 }
 
 /**
@@ -180,19 +221,28 @@ export function writeInstalledPlugins(data: InstalledPluginsV2): void {
  * for the same key are allowed (different scopes); MVP only writes scope:"user".
  */
 export function appendInstallEntry(key: string, entry: PluginInstallEntry): void {
-  const data = readInstalledPlugins();
-  const list = data.plugins[key] ?? [];
-  list.push(entry);
-  data.plugins[key] = list;
-  writeInstalledPlugins(data);
+  if (key.length === 0 || key.length > MAX_KEY_LENGTH || key.includes("\0")) {
+    throw new Error("invalid plugin install key");
+  }
+  const normalized = installEntryOf(entry);
+  if (!normalized) throw new Error("invalid plugin install entry");
+  mutateInstalledPlugins((data) => {
+    const list = [...(data.plugins[key] ?? [])];
+    if (list.length >= MAX_INSTALLS_PER_KEY) throw new Error("too many plugin installs for key");
+    list.push(normalized);
+    data.plugins[key] = list;
+    return { value: data };
+  });
 }
 
 export function removeInstallEntries(key: string): boolean {
-  const data = readInstalledPlugins();
-  if (!(key in data.plugins)) return false;
-  delete data.plugins[key];
-  writeInstalledPlugins(data);
-  return true;
+  return (
+    mutateInstalledPlugins<boolean>((data) => {
+      if (!Object.prototype.hasOwnProperty.call(data.plugins, key)) return { result: false };
+      delete data.plugins[key];
+      return { value: data, result: true };
+    }) ?? false
+  );
 }
 
 export function pluginInstallKey(plugin: string, marketplace: string): string {

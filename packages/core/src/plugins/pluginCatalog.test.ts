@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { InstalledPluginsV2, PluginInstallEntry } from "./types.js";
@@ -126,6 +126,32 @@ describe("loadPluginCatalog", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test("does not follow a canonical manifest symlink outside the plugin", () => {
+    const root = mkdtempSync(join(tmpdir(), "cs-plugin-catalog-link-"));
+    const plugin = join(root, "linked");
+    const outside = join(root, "outside.json");
+    try {
+      mkdirSync(plugin, { recursive: true });
+      writeFileSync(
+        outside,
+        JSON.stringify({ schemaVersion: 1, name: "outside", version: "1" }),
+      );
+      symlinkSync(outside, join(plugin, ".cs-plugin-manifest.json"));
+      const catalog = loadPluginCatalog({
+        root,
+        installed: {
+          version: 2,
+          plugins: { "linked@local": [installEntry(plugin)] },
+        },
+      });
+      expect(catalog).toHaveLength(1);
+      expect(catalog[0].manifest).toBeNull();
+      expect(catalog[0].automationTemplates).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

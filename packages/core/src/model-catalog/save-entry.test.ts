@@ -5,10 +5,12 @@
  * ~/.code-shell. See docs/.../2026-06-15-unified-model-catalog-design.md §7.
  */
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync, mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync, mkdirSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { saveCatalogEntry, deleteUserCatalogEntry } from "./save-entry.js";
+
+const SAVE_ENTRY_MODULE = join(import.meta.dir, "save-entry.ts");
 
 let dir: string;
 let file: string;
@@ -103,6 +105,45 @@ describe("saveCatalogEntry", () => {
     expect(baks.length).toBeGreaterThan(0);
     expect(readFileSync(join(dir, baks[0]!), "utf-8")).toBe("{ not json");
   });
+
+  test("refuses a linked catalog without reading or replacing its target", () => {
+    const outside = join(dir, "outside.json");
+    writeFileSync(outside, JSON.stringify([ENTRY]));
+    symlinkSync(outside, file);
+    const result = saveCatalogEntry({ ...ENTRY, displayName: "Changed" }, { path: file, stamp: "T8" });
+    expect(result.ok).toBe(false);
+    expect(JSON.parse(readFileSync(outside, "utf8"))[0].displayName).toBe("My Prov");
+  });
+
+  test("rejects path-shaped backup stamps", () => {
+    const result = saveCatalogEntry(ENTRY, { path: file, stamp: "../../outside" });
+    expect(result).toMatchObject({ ok: false, error: "invalid backup stamp" });
+    expect(existsSync(file)).toBe(false);
+  });
+
+  test("concurrent processes preserve every independently added entry", async () => {
+    const total = 16;
+    const children = Array.from({ length: total }, (_, index) => {
+      const script = `
+        import { saveCatalogEntry } from ${JSON.stringify(SAVE_ENTRY_MODULE)};
+        const result = saveCatalogEntry({
+          id: ${JSON.stringify(`provider-${index}`)},
+          tag: "text",
+          adapterKind: "openai",
+          displayName: ${JSON.stringify(`Provider ${index}`)},
+          description: "",
+          defaultBaseUrl: "https://example.com/v1"
+        }, { path: ${JSON.stringify(file)}, stamp: ${JSON.stringify(`child-${index}`)} });
+        if (!result.ok) throw new Error(result.error);
+      `;
+      return Bun.spawn([process.execPath, "-e", script], { stdout: "pipe", stderr: "pipe" });
+    });
+    expect((await Promise.all(children.map((child) => child.exited))).every((code) => code === 0)).toBe(
+      true,
+    );
+    const entries = JSON.parse(readFileSync(file, "utf8")) as Array<{ id: string }>;
+    expect(entries).toHaveLength(total);
+  }, 60_000);
 });
 
 describe("deleteUserCatalogEntry", () => {

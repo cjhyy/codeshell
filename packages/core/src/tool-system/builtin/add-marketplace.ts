@@ -10,6 +10,7 @@
 
 import type { ToolDefinition } from "../../types.js";
 import { addMarketplace } from "../../plugins/marketplaceManager.js";
+import { isValidMarketplaceName } from "../../plugins/knownMarketplaces.js";
 import type { MarketplaceSource } from "../../plugins/types.js";
 
 export const addMarketplaceToolDef: ToolDefinition = {
@@ -50,6 +51,15 @@ export async function addMarketplaceTool(args: Record<string, unknown>): Promise
   if (typeof name !== "string" || !name.trim()) {
     return "Error: name is required";
   }
+  // Validate against the SAME rule the registry enforces on read. Accepting a
+  // name here that knownMarketplaces later rejects would clone the repo and
+  // then fail to persist it, leaving an orphaned directory behind.
+  if (!isValidMarketplaceName(name)) {
+    return (
+      `Error: marketplace name '${name}' is not valid. Use letters or digits, ` +
+      "then letters, digits, '.', '_' or '-' (max 128 characters)."
+    );
+  }
   const sourceType = args.source_type;
   let source: MarketplaceSource;
   if (sourceType === "github") {
@@ -73,7 +83,19 @@ export async function addMarketplaceTool(args: Record<string, unknown>): Promise
     if (!result.ok) {
       return `Error adding marketplace ${name}: ${result.error}`;
     }
-    return `Marketplace '${name}' added. The user can now browse and install plugins from it in the Extensions → Market UI.`;
+    const preview = result.marketplace.plugins
+      .slice(0, 25)
+      .map((plugin) => `- ${plugin.name}${plugin.description ? ` — ${plugin.description}` : ""}`)
+      .join("\n");
+    const omitted = Math.max(0, result.marketplace.plugins.length - 25);
+    return [
+      `Marketplace '${name}' added (${result.marketplace.plugins.length} plugins).`,
+      preview,
+      omitted > 0 ? `… ${omitted} more plugins; browse them in Extensions → Market.` : "",
+      "To install one in this conversation, call InstallCapability with kind='plugin', its exact plugin name, and this marketplace name.",
+    ]
+      .filter(Boolean)
+      .join("\n");
   } catch (err) {
     return `Error adding marketplace ${name}: ${(err as Error).message}`;
   }

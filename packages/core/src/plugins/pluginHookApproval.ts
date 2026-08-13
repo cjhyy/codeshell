@@ -1,4 +1,4 @@
-import { readInstalledPlugins, writeInstalledPlugins } from "./installedPlugins.js";
+import { mutateInstalledPlugins, readInstalledPlugins } from "./installedPlugins.js";
 import {
   inspectPluginHooks,
   pluginHookReviewSnapshot,
@@ -132,47 +132,45 @@ export function reviewPluginHooks(target: string): PluginHookReview[] {
 
 /** Approve the exact install-time digest; changed-on-disk hooks cannot be blessed. */
 export function approvePluginHooks(target: string): PluginHookApprovalResult[] {
-  const data = readInstalledPlugins();
-  const keys = matchingInstallKeys(data, target);
-  const out: PluginHookApprovalResult[] = [];
-  let writeNeeded = false;
-
-  for (const installKey of keys) {
-    for (const entry of data.plugins[installKey] ?? []) {
-      let entryChanged = false;
-      const snapshot = inspectPluginHooks(entry.installPath);
-      if (snapshot.state === "invalid") {
-        throw new Error(
-          `plugin "${installKey}" hooks definition is invalid and cannot be approved: ${snapshot.error ?? "unknown error"}`,
-        );
+  return (
+    mutateInstalledPlugins((data) => {
+      const keys = matchingInstallKeys(data, target);
+      const out: PluginHookApprovalResult[] = [];
+      let writeNeeded = false;
+      for (const installKey of keys) {
+        for (const entry of data.plugins[installKey] ?? []) {
+          let entryChanged = false;
+          const snapshot = inspectPluginHooks(entry.installPath);
+          if (snapshot.state === "invalid") {
+            throw new Error(
+              `plugin "${installKey}" hooks definition is invalid and cannot be approved: ${snapshot.error ?? "unknown error"}`,
+            );
+          }
+          if (entry.hookDigest && snapshot.digest !== entry.hookDigest) {
+            throw new Error(
+              `plugin "${installKey}" hooks changed after install; reinstall or update before approving`,
+            );
+          }
+          if (!entry.hookDigest) {
+            entry.hookDigest = snapshot.digest;
+            entryChanged = true;
+          }
+          if (entry.approvedHookDigest !== entry.hookDigest) {
+            entry.approvedHookDigest = entry.hookDigest;
+            entryChanged = true;
+          }
+          const nextReview = pluginHookReviewSnapshot(snapshot);
+          if (JSON.stringify(entry.approvedHookSnapshot) !== JSON.stringify(nextReview)) {
+            entry.approvedHookSnapshot = nextReview;
+            entryChanged = true;
+          }
+          writeNeeded ||= entryChanged;
+          out.push(result(installKey, entry, entryChanged, snapshot));
+        }
       }
-      if (entry.hookDigest && snapshot.digest !== entry.hookDigest) {
-        throw new Error(
-          `plugin "${installKey}" hooks changed after install; reinstall or update before approving`,
-        );
-      }
-      if (!entry.hookDigest) {
-        entry.hookDigest = snapshot.digest;
-        entryChanged = true;
-        writeNeeded = true;
-      }
-      if (entry.approvedHookDigest !== entry.hookDigest) {
-        entry.approvedHookDigest = entry.hookDigest;
-        entryChanged = true;
-        writeNeeded = true;
-      }
-      const nextReview = pluginHookReviewSnapshot(snapshot);
-      if (JSON.stringify(entry.approvedHookSnapshot) !== JSON.stringify(nextReview)) {
-        entry.approvedHookSnapshot = nextReview;
-        entryChanged = true;
-        writeNeeded = true;
-      }
-      out.push(result(installKey, entry, entryChanged, snapshot));
-    }
-  }
-
-  if (writeNeeded) writeInstalledPlugins(data);
-  return out;
+      return { ...(writeNeeded ? { value: data } : {}), result: out };
+    }) ?? []
+  );
 }
 
 /**
@@ -180,33 +178,33 @@ export function approvePluginHooks(target: string): PluginHookApprovalResult[] {
  * digest so revocation fails closed instead of falling back to legacy trust.
  */
 export function revokePluginHooks(target: string): PluginHookApprovalResult[] {
-  const data = readInstalledPlugins();
-  const keys = matchingInstallKeys(data, target);
-  const out: PluginHookApprovalResult[] = [];
-  let writeNeeded = false;
-
-  for (const installKey of keys) {
-    for (const entry of data.plugins[installKey] ?? []) {
-      let entryChanged = false;
-      const snapshot = inspectPluginHooks(entry.installPath);
-      if (!entry.hookDigest) {
-        entry.hookDigest = snapshot.digest;
-        entryChanged = true;
-      }
-      if (snapshot.hasExecutableHooks || snapshot.state === "invalid") {
-        if (entry.approvedHookDigest !== undefined) {
-          delete entry.approvedHookDigest;
-          entryChanged = true;
+  return (
+    mutateInstalledPlugins((data) => {
+      const keys = matchingInstallKeys(data, target);
+      const out: PluginHookApprovalResult[] = [];
+      let writeNeeded = false;
+      for (const installKey of keys) {
+        for (const entry of data.plugins[installKey] ?? []) {
+          let entryChanged = false;
+          const snapshot = inspectPluginHooks(entry.installPath);
+          if (!entry.hookDigest) {
+            entry.hookDigest = snapshot.digest;
+            entryChanged = true;
+          }
+          if (snapshot.hasExecutableHooks || snapshot.state === "invalid") {
+            if (entry.approvedHookDigest !== undefined) {
+              delete entry.approvedHookDigest;
+              entryChanged = true;
+            }
+          } else if (entry.approvedHookDigest !== entry.hookDigest) {
+            entry.approvedHookDigest = entry.hookDigest;
+            entryChanged = true;
+          }
+          writeNeeded ||= entryChanged;
+          out.push(result(installKey, entry, entryChanged, snapshot));
         }
-      } else if (entry.approvedHookDigest !== entry.hookDigest) {
-        entry.approvedHookDigest = entry.hookDigest;
-        entryChanged = true;
       }
-      writeNeeded ||= entryChanged;
-      out.push(result(installKey, entry, entryChanged, snapshot));
-    }
-  }
-
-  if (writeNeeded) writeInstalledPlugins(data);
-  return out;
+      return { ...(writeNeeded ? { value: data } : {}), result: out };
+    }) ?? []
+  );
 }

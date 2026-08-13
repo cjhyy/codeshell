@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { chmod, lstat, mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
 import { panelAppsRegistryPath } from "./paths.js";
@@ -32,33 +32,80 @@ const Registry = z
   })
   .strict();
 
+const MAX_PANEL_APP_REGISTRY_BYTES = 4 * 1024 * 1024;
+
 export type InstalledPanelAppRecord = z.infer<typeof RegistryEntry>;
 
-async function readRegistryUnlocked(): Promise<InstalledPanelAppRecord[]> {
-  const path = panelAppsRegistryPath();
-  if (!existsSync(path)) return [];
+async function registryEntry(path: string): Promise<Awaited<ReturnType<typeof lstat>> | null> {
   try {
-    return Registry.parse(JSON.parse(await readFile(path, "utf-8"))).apps;
-  } catch {
+    return await lstat(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function checkedRegistryDirectory(): Promise<string> {
+  const directory = dirname(panelAppsRegistryPath());
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  const metadata = await lstat(directory);
+  if (metadata.isSymbolicLink() || !metadata.isDirectory()) {
+    throw new Error("Panel App registry directory must be a real directory");
+  }
+  return directory;
+}
+
+async function readRegistryUnlocked(strict = false): Promise<InstalledPanelAppRecord[]> {
+  const path = panelAppsRegistryPath();
+  const metadata = await registryEntry(path);
+  if (!metadata) return [];
+  if (
+    metadata.isSymbolicLink() ||
+    !metadata.isFile() ||
+    metadata.size > MAX_PANEL_APP_REGISTRY_BYTES
+  ) {
+    throw new Error("Panel App registry must be a bounded regular file");
+  }
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size > MAX_PANEL_APP_REGISTRY_BYTES) {
+      throw new Error("Panel App registry must be a bounded regular file");
+    }
+    return Registry.parse(JSON.parse(await handle.readFile("utf8"))).apps;
+  } catch (error) {
+    if (strict) throw new Error("Panel App registry is corrupt", { cause: error });
     return [];
+  } finally {
+    await handle?.close().catch(() => undefined);
   }
 }
 
 async function writeRegistryUnlocked(apps: InstalledPanelAppRecord[]): Promise<void> {
   const path = panelAppsRegistryPath();
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  await checkedRegistryDirectory();
+  const target = await registryEntry(path);
+  if (target && (target.isSymbolicLink() || !target.isFile())) {
+    throw new Error("Panel App registry target must be a regular file");
+  }
   const tmp = `${path}.${process.pid}.${randomUUID()}.tmp`;
   try {
     const registry = Registry.parse({
       version: 1,
       apps: [...apps].sort((left, right) => left.id.localeCompare(right.id)),
     });
-    await writeFile(tmp, `${JSON.stringify(registry, null, 2)}\n`, {
+    const serialized = `${JSON.stringify(registry, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, "utf8") > MAX_PANEL_APP_REGISTRY_BYTES) {
+      throw new Error("Panel App registry is too large");
+    }
+    await writeFile(tmp, serialized, {
       encoding: "utf-8",
       flag: "wx",
       mode: 0o600,
     });
     await rename(tmp, path);
+    if (process.platform !== "win32") await chmod(path, 0o600);
   } finally {
     await rm(tmp, { force: true });
   }
@@ -70,15 +117,14 @@ async function mutateRegistry<T>(
     result: T;
   },
 ): Promise<T> {
-  const directory = dirname(panelAppsRegistryPath());
-  await mkdir(directory, { recursive: true, mode: 0o700 });
+  const directory = await checkedRegistryDirectory();
   const release = await lock(directory, {
     realpath: true,
     stale: 10_000,
     retries: { retries: 8, minTimeout: 10, maxTimeout: 120, factor: 1.5 },
   });
   try {
-    const next = mutation(await readRegistryUnlocked());
+    const next = mutation(await readRegistryUnlocked(true));
     await writeRegistryUnlocked(next.apps);
     return next.result;
   } finally {

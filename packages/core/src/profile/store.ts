@@ -5,9 +5,13 @@
  */
 import { randomUUID } from "node:crypto";
 import {
+  closeSync,
+  constants,
+  fstatSync,
   lstatSync,
   mkdirSync,
-  readdirSync,
+  openSync,
+  opendirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -23,6 +27,9 @@ import {
   type WorkspaceProfile,
   type WorkspaceProfileInput,
 } from "./types.js";
+
+const MAX_PROFILE_FILE_BYTES = 256 * 1024;
+const MAX_PROFILE_LIBRARY_ENTRIES = 10_000;
 
 export function workspaceProfilesRoot(): string {
   return join(codeShellHome(), "profiles");
@@ -90,7 +97,7 @@ function checkedProfileFile(name: string): string | undefined {
   const path = join(dir, "profile.json");
   const info = lstatIfPresent(path);
   if (!info) return undefined;
-  if (info.isSymbolicLink() || !info.isFile()) {
+  if (info.isSymbolicLink() || !info.isFile() || info.size > MAX_PROFILE_FILE_BYTES) {
     throw new Error(`Invalid workspace profile file: ${path}`);
   }
   return path;
@@ -99,10 +106,16 @@ function checkedProfileFile(name: string): string | undefined {
 export function readWorkspaceProfile(name: string): WorkspaceProfile | undefined {
   if (!WORKSPACE_PROFILE_NAME_RE.test(name)) return undefined;
   const path = join(workspaceProfileDir(name), "profile.json");
+  let descriptor: number | undefined;
   try {
     const checkedPath = checkedProfileFile(name);
     if (!checkedPath) return undefined;
-    return WorkspaceProfileSchema.parse(JSON.parse(readFileSync(checkedPath, "utf-8")));
+    descriptor = openSync(checkedPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size > MAX_PROFILE_FILE_BYTES) {
+      throw new Error("workspace profile file is too large");
+    }
+    return WorkspaceProfileSchema.parse(JSON.parse(readFileSync(descriptor, "utf-8")));
   } catch (error) {
     throw new Error(
       `Invalid workspace profile "${name}" at ${path}: ${
@@ -110,6 +123,8 @@ export function readWorkspaceProfile(name: string): WorkspaceProfile | undefined
       }`,
       { cause: error },
     );
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
 }
 
@@ -117,27 +132,39 @@ export function listWorkspaceProfiles(): WorkspaceProfile[] {
   const root = checkedProfilesRoot();
   if (!root) return [];
   const out: WorkspaceProfile[] = [];
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
-    if (!entry.isDirectory()) {
-      if (entry.isSymbolicLink()) {
+  const directory = opendirSync(root);
+  let seen = 0;
+  try {
+    for (;;) {
+      const entry = directory.readSync();
+      if (!entry) break;
+      seen += 1;
+      if (seen > MAX_PROFILE_LIBRARY_ENTRIES) {
+        throw new Error("Workspace profile library contains too many entries");
+      }
+      if (!entry.isDirectory()) {
+        if (entry.isSymbolicLink()) {
+          logger.warn("profile.library_entry_invalid", {
+            cat: "profile",
+            name: entry.name,
+            error: "symbolic links are not allowed",
+          });
+        }
+        continue;
+      }
+      try {
+        const profile = readWorkspaceProfile(entry.name);
+        if (profile) out.push(profile);
+      } catch (error) {
         logger.warn("profile.library_entry_invalid", {
           cat: "profile",
           name: entry.name,
-          error: "symbolic links are not allowed",
+          error: error instanceof Error ? error.message : String(error),
         });
       }
-      continue;
     }
-    try {
-      const profile = readWorkspaceProfile(entry.name);
-      if (profile) out.push(profile);
-    } catch (error) {
-      logger.warn("profile.library_entry_invalid", {
-        cat: "profile",
-        name: entry.name,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+  } finally {
+    directory.closeSync();
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -164,7 +191,11 @@ export function saveWorkspaceProfile(profile: WorkspaceProfileInput): void {
 
   const tmp = `${path}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    writeFileSync(tmp, `${JSON.stringify(parsed, null, 2)}\n`, {
+    const serialized = `${JSON.stringify(parsed, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, "utf8") > MAX_PROFILE_FILE_BYTES) {
+      throw new Error("workspace profile file is too large");
+    }
+    writeFileSync(tmp, serialized, {
       encoding: "utf-8",
       mode: 0o600,
       flag: "wx",

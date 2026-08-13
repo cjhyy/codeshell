@@ -92,6 +92,11 @@ export class ToolRegistry {
     const fork = new ToolRegistry({ builtinTools: [] });
     fork.tools = new Map(this.tools);
     fork.builtinExecutors = new Map(this.builtinExecutors);
+    // Availability is part of the executable tool contract, not just prompt
+    // decoration. Engine instances run against this fork, so dropping the
+    // guards here lets a model invoke a tool that was correctly hidden from
+    // its current turn (for example GatewayReply in a desktop Mimi chat).
+    fork.availabilityGuards = new Map(this.availabilityGuards);
     return fork;
   }
 

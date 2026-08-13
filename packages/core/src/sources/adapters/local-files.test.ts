@@ -93,6 +93,23 @@ describe("local-files adapter", () => {
 
     expect(listLocalFiles(cwd)).toEqual([]);
   });
+
+  test("does not list or read through a symlinked uploads directory", async () => {
+    if (process.platform === "win32") return;
+    const outside = mkdtempSync(join(tmpdir(), "cs-uploads-outside-"));
+    try {
+      rmSync(uploadsDir(cwd), { recursive: true, force: true });
+      writeFileSync(join(outside, "secret.txt"), "secret");
+      symlinkSync(outside, uploadsDir(cwd));
+
+      expect(listLocalFiles(cwd)).toEqual([]);
+      await expect(
+        localFilesAdapter.read(localFilesSourceFor(cwd), "secret.txt", { cwd, maxBytes: 100 }),
+      ).rejects.toThrow(/uploads directory/i);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("resolveUploadTarget", () => {

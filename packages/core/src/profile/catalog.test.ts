@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseHumansManifest, readCatalogFromDir, sourceToRepoKey } from "./catalog.js";
@@ -122,6 +122,29 @@ describe("readCatalogFromDir", () => {
       const result = readCatalogFromDir(root, "o/r");
       expect(result.entries).toEqual([]);
       expect(result.errors).toHaveLength(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects linked and oversized files from an untrusted cloned repo", () => {
+    const root = mkdtempSync(join(tmpdir(), "dh-catalog-files-"));
+    const outside = join(root, "outside.json");
+    try {
+      writeFileSync(outside, JSON.stringify({ humans: [] }));
+      symlinkSync(outside, join(root, "humans.json"));
+      expect(readCatalogFromDir(root, "o/r").errors.join(" ")).toContain("bounded regular file");
+
+      rmSync(join(root, "humans.json"));
+      seedRepo(
+        root,
+        { humans: [{ name: "large" }] },
+        { large: validProfile("large") },
+      );
+      writeFileSync(join(root, "humans", "large", "profile.json"), "x".repeat(256 * 1024 + 1));
+      const result = readCatalogFromDir(root, "o/r");
+      expect(result.entries).toEqual([]);
+      expect(result.errors.join(" ")).toContain("bounded regular file");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

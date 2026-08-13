@@ -84,6 +84,7 @@ import {
 import { completeGoalToolDef, completeGoalTool } from "./complete-goal.js";
 import { cancelGoalToolDef, cancelGoalTool } from "./cancel-goal.js";
 import { addMarketplaceToolDef, addMarketplaceTool } from "./add-marketplace.js";
+import { installCapabilityToolDef, installCapabilityTool } from "./install-capability.js";
 import {
   bashOutputToolDef,
   bashOutputTool,
@@ -828,6 +829,49 @@ const BUILTIN_CONTRIBUTIONS: Array<{
     },
     execute: addMarketplaceTool,
     exposure: expose(GENERAL_TAGS),
+  },
+  // ─── Conversational capability installation ───────────────────
+  // Mirrors the host-owned install lifecycle used by the settings UI: the
+  // exact plugin/Skill/MCP source is visible in the approval card, then the
+  // implementation delegates to the existing installer/settings services.
+  {
+    definition: {
+      ...installCapabilityToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+      timeoutMs: 190_000,
+    },
+    execute: installCapabilityTool,
+    exposure: expose(GENERAL_TAGS, {
+      defaultPermissionRules: [
+        {
+          tool: installCapabilityToolDef.name,
+          argsPattern: { action: "^list$" },
+          decision: "allow",
+          reason: "Capability listing is read-only",
+        },
+        {
+          tool: installCapabilityToolDef.name,
+          argsPattern: { action: "^inspect$", kind: "^(plugin|mcp)$" },
+          decision: "allow",
+          reason: "Installed configuration and marketplace metadata inspection are read-only",
+        },
+        {
+          tool: installCapabilityToolDef.name,
+          argsPattern: { action: "^inspect$", kind: "^skill$" },
+          decision: "ask",
+          reason: "Skill repository inspection starts an external discovery command",
+        },
+        {
+          tool: installCapabilityToolDef.name,
+          argsPattern: { action: "^(install|update|enable|disable|uninstall)$" },
+          decision: "ask",
+          reason: "Capability lifecycle mutations change installed code or settings",
+        },
+      ],
+    }),
   },
   // Browser automation — 3 semantic tools driving the in-app webview via the
   // BrowserBridge (CDP). All serial on one webview (isConcurrencySafe:false).

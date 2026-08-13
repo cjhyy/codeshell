@@ -65,6 +65,15 @@ describe("workspace profile store", () => {
     expect(() => readWorkspaceProfile("bad")).toThrow(/bad/);
   });
 
+  test("rejects an oversized profile before parsing it", () => {
+    mkdirSync(join(home, "profiles", "oversized"), { recursive: true });
+    writeFileSync(
+      join(home, "profiles", "oversized", "profile.json"),
+      "x".repeat(256 * 1024 + 1),
+    );
+    expect(() => readWorkspaceProfile("oversized")).toThrow(/profile file/);
+  });
+
   test("read rejects names failing the name regex without touching disk", () => {
     expect(readWorkspaceProfile("../evil")).toBeUndefined();
   });

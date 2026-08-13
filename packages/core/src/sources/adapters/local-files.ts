@@ -3,7 +3,7 @@
  * 文件在 ${cwd}/.code-shell/uploads/ 内；读取前规范化 resourceId，
  * 并校验消解 symlink 后的真实路径仍在 uploads 目录内。
  */
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import type { ConnectorAdapter } from "../adapter.js";
 import { truncateUtf8Bytes } from "../truncate-utf8.js";
@@ -95,9 +95,32 @@ function resolveInsideUploads(
   path: string;
   resourceId: string;
 } {
-  const root = realpathSync(uploadsDir(cwd));
+  const workspace = realpathSync(resolve(cwd));
+  const stateDir = join(workspace, ".code-shell");
+  const stateInfo = lstatSync(stateDir);
+  if (stateInfo.isSymbolicLink() || !stateInfo.isDirectory()) {
+    throw new Error("project state directory must be a regular directory");
+  }
+  const stateReal = realpathSync(stateDir);
+  if (relative(workspace, stateReal).startsWith(`..${sep}`) || relative(workspace, stateReal) === "..") {
+    throw new Error("project state directory escapes cwd");
+  }
+  const uploadPath = join(stateReal, "uploads");
+  const uploadInfo = lstatSync(uploadPath);
+  if (uploadInfo.isSymbolicLink() || !uploadInfo.isDirectory()) {
+    throw new Error("uploads directory must be a regular directory");
+  }
+  const root = realpathSync(uploadPath);
+  const uploadRel = relative(stateReal, root);
+  if (uploadRel === ".." || uploadRel.startsWith(`..${sep}`) || isAbsolute(uploadRel)) {
+    throw new Error("uploads directory escapes cwd");
+  }
   const canonicalId = canonicalResourceId(resourceId);
   const candidate = resolve(root, ...canonicalId.split("/"));
+  const candidateInfo = lstatSync(candidate);
+  if (candidateInfo.isSymbolicLink() || !candidateInfo.isFile()) {
+    throw new Error(`resource escapes uploads or is not a regular file: ${resourceId}`);
+  }
   const real = realpathSync(candidate);
 
   if (real !== root && !real.startsWith(`${root}${sep}`)) {
@@ -144,13 +167,36 @@ export function listLocalFiles(cwd: string): SourceResourceMeta[] {
   const directory = uploadsDir(cwd);
   if (!existsSync(directory)) return [];
 
-  return readdirSync(directory, { withFileTypes: true })
+  let workspace: string;
+  let directoryReal: string;
+  try {
+    workspace = realpathSync(resolve(cwd));
+    const stateDir = join(workspace, ".code-shell");
+    const stateInfo = lstatSync(stateDir);
+    const directoryInfo = lstatSync(directory);
+    if (
+      stateInfo.isSymbolicLink() ||
+      !stateInfo.isDirectory() ||
+      directoryInfo.isSymbolicLink() ||
+      !directoryInfo.isDirectory()
+    ) {
+      return [];
+    }
+    directoryReal = realpathSync(directory);
+    const rel = relative(workspace, directoryReal);
+    if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return [];
+  } catch {
+    return [];
+  }
+
+  return readdirSync(directoryReal, { withFileTypes: true })
     .filter((entry) => entry.isFile())
+    .slice(0, 10_000)
     .sort((left, right) => left.name.localeCompare(right.name))
     .map((entry) => ({
       id: entry.name,
       scopeId: "uploads",
       name: entry.name,
-      sizeBytes: statSync(join(directory, entry.name)).size,
+      sizeBytes: statSync(join(directoryReal, entry.name)).size,
     }));
 }

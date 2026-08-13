@@ -37,6 +37,22 @@ describe("ToolRegistry default built-ins", () => {
     expect(base.hasTool("Arena")).toBe(false);
   });
 
+  it("preserves availability guards in engine-local forks", () => {
+    const availability = () => false;
+    const base = new ToolRegistry({
+      toolCatalog: [
+        {
+          definition: definition("RouteBoundReply"),
+          execute: async () => "should not run",
+          exposure: { presetTags: [], availability },
+        },
+      ],
+    });
+
+    expect(base.getAvailabilityGuard("RouteBoundReply")).toBe(availability);
+    expect(base.fork().getAvailabilityGuard("RouteBoundReply")).toBe(availability);
+  });
+
   it("fails loud on duplicate capability names", () => {
     const registry = new ToolRegistry({ builtinTools: [] });
     const module = (id: string): ExtensionModule => ({ id, tools: [] });

@@ -8,9 +8,13 @@
  * executable content, so there are no hooks/mcp/skills to approve.
  */
 import { createHash, randomUUID } from "node:crypto";
+import { constants } from "node:fs";
 import {
+  chmod,
+  lstat,
   mkdir,
   mkdtemp,
+  open,
   readFile,
   readdir,
   realpath,
@@ -19,7 +23,6 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { detectThemeImage } from "./image.js";
 import { parseThemeManifest, type ThemeManifest } from "./manifest.js";
@@ -32,9 +35,13 @@ import {
   themesRegistryPath,
   themesRoot,
 } from "./paths.js";
+import { lock } from "../utils/lockfile.js";
 
 const MANIFEST_FILE = ".cs-theme.json";
 const MAX_ASSET_BYTES = 8 * 1024 * 1024;
+const MAX_MANIFEST_BYTES = 1024 * 1024;
+const MAX_REGISTRY_BYTES = 1024 * 1024;
+const MAX_INSTALLED_THEMES = 1_000;
 type PetState = "idle" | "running" | "alert";
 type WallpaperMode = "light" | "dark";
 
@@ -155,7 +162,7 @@ function digestProjection(manifest: ThemeManifest, bytesByName: Map<string, Buff
 async function loadManifest(sourceDir: string): Promise<ThemeManifest> {
   let raw: string;
   try {
-    raw = await readFile(join(sourceDir, MANIFEST_FILE), "utf-8");
+    raw = await readBoundedText(join(sourceDir, MANIFEST_FILE), MAX_MANIFEST_BYTES);
   } catch {
     throw new ThemeInstallError(`missing ${MANIFEST_FILE}`);
   }
@@ -166,6 +173,23 @@ async function loadManifest(sourceDir: string): Promise<ThemeManifest> {
     throw new ThemeInstallError(`${MANIFEST_FILE} is not valid JSON`);
   }
   return parseThemeManifest(json);
+}
+
+async function readBoundedText(path: string, maxBytes: number): Promise<string> {
+  const metadata = await lstat(path);
+  if (metadata.isSymbolicLink() || !metadata.isFile() || metadata.size > maxBytes) {
+    throw new Error("state must be a bounded regular file");
+  }
+  const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size > maxBytes) {
+      throw new Error("state must be a bounded regular file");
+    }
+    return await handle.readFile("utf8");
+  } finally {
+    await handle.close();
+  }
 }
 
 function previewOf(
@@ -318,27 +342,94 @@ function toInstalledTheme(manifest: ThemeManifest): InstalledTheme {
 
 async function readRegistry(): Promise<Registry> {
   try {
-    const raw = await readFile(themesRegistryPath(), "utf-8");
+    const raw = await readBoundedText(themesRegistryPath(), MAX_REGISTRY_BYTES);
     const parsed = JSON.parse(raw) as Registry;
-    if (parsed?.version === 1 && Array.isArray(parsed.themes)) return parsed;
-  } catch {
-    /* missing/corrupt → empty */
+    if (
+      parsed?.version === 1 &&
+      Array.isArray(parsed.themes) &&
+      parsed.themes.length <= MAX_INSTALLED_THEMES &&
+      parsed.themes.every(
+        (theme) =>
+          theme &&
+          typeof theme === "object" &&
+          typeof theme.id === "string" &&
+          typeof theme.name === "string" &&
+          theme.name.length <= 256 &&
+          typeof theme.version === "string" &&
+          theme.version.length <= 128 &&
+          Number.isSafeInteger(theme.installedAt) &&
+          theme.installedAt >= 0,
+      )
+    ) {
+      for (const theme of parsed.themes) assertSafeThemeName(theme.id);
+      return parsed;
+    }
+    throw new Error("theme registry is corrupt");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { version: 1, themes: [] };
+    throw error;
   }
-  return { version: 1, themes: [] };
 }
 
 async function writeRegistry(registry: Registry): Promise<void> {
-  await mkdir(dirname(themesRegistryPath()), { recursive: true, mode: 0o700 });
-  const tmp = `${themesRegistryPath()}.${process.pid}.${randomUUID()}.tmp`;
-  await writeFile(tmp, `${JSON.stringify(registry, null, 2)}\n`, { mode: 0o600 });
-  await rename(tmp, themesRegistryPath());
+  const path = themesRegistryPath();
+  const parent = dirname(path);
+  await mkdir(parent, { recursive: true, mode: 0o700 });
+  const parentInfo = await lstat(parent);
+  if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
+    throw new Error("theme registry parent must be a real directory");
+  }
+  try {
+    const target = await lstat(path);
+    if (target.isSymbolicLink() || !target.isFile()) {
+      throw new Error("theme registry target must be a regular file");
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  const serialized = `${JSON.stringify(registry, null, 2)}\n`;
+  if (Buffer.byteLength(serialized, "utf8") > MAX_REGISTRY_BYTES) {
+    throw new Error("theme registry is too large");
+  }
+  const tmp = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(tmp, serialized, { mode: 0o600, flag: "wx" });
+    await rename(tmp, path);
+    if (process.platform !== "win32") await chmod(path, 0o600);
+  } finally {
+    await rm(tmp, { force: true }).catch(() => undefined);
+  }
+}
+
+async function mutateRegistry(change: (registry: Registry) => void): Promise<void> {
+  const directory = dirname(themesRegistryPath());
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  const metadata = await lstat(directory);
+  if (metadata.isSymbolicLink() || !metadata.isDirectory()) {
+    throw new Error("theme registry parent must be a real directory");
+  }
+  const release = await lock(directory, {
+    realpath: true,
+    stale: 10_000,
+    retries: { retries: 80, minTimeout: 10, maxTimeout: 120, factor: 1.3 },
+  });
+  try {
+    const registry = await readRegistry();
+    change(registry);
+    if (registry.themes.length > MAX_INSTALLED_THEMES) {
+      throw new Error("too many installed themes");
+    }
+    await writeRegistry(registry);
+  } finally {
+    await release();
+  }
 }
 
 async function appendRegistryEntry(entry: RegistryEntry): Promise<void> {
-  const registry = await readRegistry();
-  registry.themes = registry.themes.filter((t) => t.id !== entry.id);
-  registry.themes.push(entry);
-  await writeRegistry(registry);
+  await mutateRegistry((registry) => {
+    registry.themes = registry.themes.filter((t) => t.id !== entry.id);
+    registry.themes.push(entry);
+  });
 }
 
 /** Read all installed themes (manifest re-read from disk), skipping broken ones. */
@@ -368,7 +459,7 @@ export async function listInstalledThemes(): Promise<InstalledTheme[]> {
 export async function uninstallTheme(id: string): Promise<void> {
   assertSafeThemeName(id);
   await rm(themeInstallDir(id), { recursive: true, force: true });
-  const registry = await readRegistry();
-  registry.themes = registry.themes.filter((t) => t.id !== id);
-  await writeRegistry(registry);
+  await mutateRegistry((registry) => {
+    registry.themes = registry.themes.filter((t) => t.id !== id);
+  });
 }

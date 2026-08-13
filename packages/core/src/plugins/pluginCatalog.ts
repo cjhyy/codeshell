@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { readInstalledPlugins } from "./installedPlugins.js";
@@ -11,6 +11,8 @@ import {
 } from "./installer/types.js";
 import { resolveSafePluginPath } from "./pluginInstaller.js";
 import type { InstalledPluginsV2 } from "./types.js";
+
+const MAX_CANONICAL_MANIFEST_BYTES = 4 * 1024 * 1024;
 
 /** Core-owned, trusted view of one installed plugin. */
 export interface PluginCatalogEntry {
@@ -62,11 +64,24 @@ export function pluginAutomationTemplateRevision(
 
 function readCanonicalManifest(installPath: string): CanonicalPluginManifestData | null {
   const file = join(installPath, CANONICAL_PLUGIN_MANIFEST_FILE);
-  if (!existsSync(file)) return null;
+  let descriptor: number | undefined;
   try {
-    return CanonicalPluginManifest.parse(JSON.parse(readFileSync(file, "utf-8")));
+    const metadata = lstatSync(file);
+    if (
+      metadata.isSymbolicLink() ||
+      !metadata.isFile() ||
+      metadata.size > MAX_CANONICAL_MANIFEST_BYTES
+    ) {
+      return null;
+    }
+    descriptor = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size > MAX_CANONICAL_MANIFEST_BYTES) return null;
+    return CanonicalPluginManifest.parse(JSON.parse(readFileSync(descriptor, "utf-8")));
   } catch {
     return null;
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
 }
 

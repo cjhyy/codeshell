@@ -568,6 +568,7 @@ export class ToolExecutor {
       toolCallId: call.id,
       result: observerResult,
       error: result.error,
+      isError: result.isError,
       signal: this.signal ?? this.toolCtx?.signal,
     });
 

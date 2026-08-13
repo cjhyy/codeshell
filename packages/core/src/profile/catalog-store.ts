@@ -9,8 +9,13 @@
  *   ~/.code-shell/human-repos/<key>/      —— 各仓库的浅克隆
  */
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
+  lstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -48,6 +53,7 @@ export interface HumanRepoListEntry extends RegisteredHumanRepo {
 }
 
 const MAX_REPOS = 32;
+const MAX_REPO_REGISTRY_BYTES = 256 * 1024;
 
 export function humanReposRoot(): string {
   return join(codeShellHome(), "human-repos");
@@ -62,11 +68,29 @@ export function humanRepoDir(repo: string): string {
 }
 
 export function listHumanRepos(): RegisteredHumanRepo[] {
+  let descriptor: number | undefined;
   try {
     // Missing or corrupt registry reads as "no repos" — never fatal.
-    return parseRegistry(readFileSync(registryPath(), "utf-8"));
-  } catch {
+    const path = registryPath();
+    const metadata = lstatSync(path);
+    if (
+      metadata.isSymbolicLink() ||
+      !metadata.isFile() ||
+      metadata.size > MAX_REPO_REGISTRY_BYTES
+    ) {
+      throw new Error("invalid digital-human repo registry");
+    }
+    descriptor = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size > MAX_REPO_REGISTRY_BYTES) {
+      throw new Error("invalid digital-human repo registry");
+    }
+    return parseRegistry(readFileSync(descriptor, "utf-8"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
     return [];
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
 }
 
@@ -75,7 +99,9 @@ function parseRegistry(raw: string | undefined): RegisteredHumanRepo[] {
   try {
     const parsed = JSON.parse(raw) as { repos?: unknown };
     if (!Array.isArray(parsed.repos)) return [];
+    const seen = new Set<string>();
     return parsed.repos
+      .slice(0, MAX_REPOS)
       .filter(
         (r): r is RegisteredHumanRepo =>
           !!r &&
@@ -83,7 +109,19 @@ function parseRegistry(raw: string | undefined): RegisteredHumanRepo[] {
           typeof (r as RegisteredHumanRepo).repo === "string" &&
           CATALOG_REPO_RE.test((r as RegisteredHumanRepo).repo),
       )
-      .map((r) => ({ repo: r.repo, addedAt: Number(r.addedAt) || 0 }));
+      .filter((r) => {
+        const normalized = r.repo.toLowerCase();
+        if (seen.has(normalized)) return false;
+        seen.add(normalized);
+        return true;
+      })
+      .map((r) => ({
+        repo: r.repo,
+        addedAt:
+          typeof r.addedAt === "number" && Number.isSafeInteger(r.addedAt) && r.addedAt >= 0
+            ? r.addedAt
+            : 0,
+      }));
   } catch {
     return [];
   }
@@ -136,6 +174,7 @@ function updateRegistry(
     serialize: (repos) => `${JSON.stringify({ repos }, null, 2)}\n`,
     mutation: (current) => ({ value: change(current) }),
     mode: 0o600,
+    maxBytes: MAX_REPO_REGISTRY_BYTES,
   });
 }
 

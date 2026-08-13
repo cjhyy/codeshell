@@ -2,6 +2,7 @@ import { describe, test, expect, afterEach } from "bun:test";
 import { cronCreateTool, cronCreateToolDef, cronListTool } from "./cron.js";
 import { cronScheduler } from "../../automation/scheduler.js";
 import { runWithSid } from "../../logging/logger.js";
+import type { ToolContext } from "../context.js";
 
 // The tools operate on the shared cronScheduler singleton. Clean up jobs we
 // create so tests don't leak timers/state into each other.
@@ -49,6 +50,33 @@ describe("CronCreate tool — conversational config", () => {
     expect(out).toContain("poll");
     const job = cronScheduler.list().find((j) => j.name === "poll");
     expect(job!.schedule).toBe("1h");
+  });
+
+  test("binds production calls to the host cwd and rejects model-supplied cwd escapes", async () => {
+    const context = { cwd: "/tmp/current-project" } as ToolContext;
+    const created = await cronCreateTool(
+      { name: "local", schedule: "1h", prompt: "check" },
+      context,
+    );
+    expect(created).toContain("local");
+    expect(cronScheduler.list().find((job) => job.name === "local")?.cwd).toBe(
+      "/tmp/current-project",
+    );
+
+    const escaped = await cronCreateTool(
+      { name: "escape", schedule: "1h", prompt: "check", cwd: "/tmp/other-project" },
+      context,
+    );
+    expect(escaped).toMatch(/error.*outside/i);
+    expect(cronScheduler.list().find((job) => job.name === "escape")).toBeUndefined();
+  });
+
+  test("rejects non-string and oversized payloads without creating a job", async () => {
+    expect(await cronCreateTool({ name: 42, schedule: "1h", prompt: "check" })).toMatch(/error/i);
+    expect(
+      await cronCreateTool({ name: "huge", schedule: "1h", prompt: "x".repeat(1024 * 1024 + 1) }),
+    ).toMatch(/error.*large/i);
+    expect(cronScheduler.list()).toEqual([]);
   });
 
   test("rejects an invalid schedule with an error message (not a throw)", async () => {

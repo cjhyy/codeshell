@@ -1,4 +1,4 @@
-import { readInstalledPlugins, writeInstalledPlugins } from "./installedPlugins.js";
+import { mutateInstalledPlugins, readInstalledPlugins } from "./installedPlugins.js";
 import { readPluginMcp } from "./installer/loadPluginMcp.js";
 import {
   pluginMcpApprovalState,
@@ -66,35 +66,35 @@ export function listPluginMcpTrust(): PluginMcpTrustEntry[] {
 
 /** Approve only the install-time MCP bytes; tampered bytes require update/reinstall. */
 export function approvePluginMcp(target: string): PluginMcpApprovalResult[] {
-  const data = readInstalledPlugins();
-  const keys = matchingInstallKeys(data, target);
-  const out: PluginMcpApprovalResult[] = [];
-  let writeNeeded = false;
-
-  for (const installKey of keys) {
-    for (const entry of data.plugins[installKey] ?? []) {
-      let entryChanged = false;
-      const currentDigest = pluginMcpDigest(entry.installPath);
-      if (entry.mcpDigest && currentDigest !== entry.mcpDigest) {
-        throw new Error(
-          `plugin "${installKey}" MCP config changed after install; reinstall or update before approving`,
-        );
+  return (
+    mutateInstalledPlugins((data) => {
+      const keys = matchingInstallKeys(data, target);
+      const out: PluginMcpApprovalResult[] = [];
+      let writeNeeded = false;
+      for (const installKey of keys) {
+        for (const entry of data.plugins[installKey] ?? []) {
+          let entryChanged = false;
+          const currentDigest = pluginMcpDigest(entry.installPath);
+          if (entry.mcpDigest && currentDigest !== entry.mcpDigest) {
+            throw new Error(
+              `plugin "${installKey}" MCP config changed after install; reinstall or update before approving`,
+            );
+          }
+          if (!entry.mcpDigest) {
+            entry.mcpDigest = currentDigest;
+            entryChanged = true;
+          }
+          if (entry.approvedMcpDigest !== entry.mcpDigest) {
+            entry.approvedMcpDigest = entry.mcpDigest;
+            entryChanged = true;
+          }
+          writeNeeded ||= entryChanged;
+          out.push(trustEntry(installKey, entry, entryChanged) as PluginMcpApprovalResult);
+        }
       }
-      if (!entry.mcpDigest) {
-        entry.mcpDigest = currentDigest;
-        entryChanged = true;
-      }
-      if (entry.approvedMcpDigest !== entry.mcpDigest) {
-        entry.approvedMcpDigest = entry.mcpDigest;
-        entryChanged = true;
-      }
-      writeNeeded ||= entryChanged;
-      out.push(trustEntry(installKey, entry, entryChanged) as PluginMcpApprovalResult);
-    }
-  }
-
-  if (writeNeeded) writeInstalledPlugins(data);
-  return out;
+      return { ...(writeNeeded ? { value: data } : {}), result: out };
+    }) ?? []
+  );
 }
 
 /**
@@ -102,35 +102,35 @@ export function approvePluginMcp(target: string): PluginMcpApprovalResult[] {
  * digest, preventing revocation from falling back to legacy compatibility.
  */
 export function revokePluginMcp(target: string): PluginMcpApprovalResult[] {
-  const data = readInstalledPlugins();
-  const keys = matchingInstallKeys(data, target);
-  const out: PluginMcpApprovalResult[] = [];
-  let writeNeeded = false;
-
-  for (const installKey of keys) {
-    const plugin = pluginNameFromKey(installKey);
-    for (const entry of data.plugins[installKey] ?? []) {
-      let entryChanged = false;
-      const hasServers = Object.keys(readPluginMcp(entry.installPath, plugin)).length > 0;
-      const currentDigest = pluginMcpDigest(entry.installPath);
-      if (!entry.mcpDigest) {
-        entry.mcpDigest = currentDigest;
-        entryChanged = true;
-      }
-      if (hasServers || currentDigest !== entry.mcpDigest) {
-        if (entry.approvedMcpDigest !== undefined) {
-          delete entry.approvedMcpDigest;
-          entryChanged = true;
+  return (
+    mutateInstalledPlugins((data) => {
+      const keys = matchingInstallKeys(data, target);
+      const out: PluginMcpApprovalResult[] = [];
+      let writeNeeded = false;
+      for (const installKey of keys) {
+        const plugin = pluginNameFromKey(installKey);
+        for (const entry of data.plugins[installKey] ?? []) {
+          let entryChanged = false;
+          const hasServers = Object.keys(readPluginMcp(entry.installPath, plugin)).length > 0;
+          const currentDigest = pluginMcpDigest(entry.installPath);
+          if (!entry.mcpDigest) {
+            entry.mcpDigest = currentDigest;
+            entryChanged = true;
+          }
+          if (hasServers || currentDigest !== entry.mcpDigest) {
+            if (entry.approvedMcpDigest !== undefined) {
+              delete entry.approvedMcpDigest;
+              entryChanged = true;
+            }
+          } else if (entry.approvedMcpDigest !== entry.mcpDigest) {
+            entry.approvedMcpDigest = entry.mcpDigest;
+            entryChanged = true;
+          }
+          writeNeeded ||= entryChanged;
+          out.push(trustEntry(installKey, entry, entryChanged) as PluginMcpApprovalResult);
         }
-      } else if (entry.approvedMcpDigest !== entry.mcpDigest) {
-        entry.approvedMcpDigest = entry.mcpDigest;
-        entryChanged = true;
       }
-      writeNeeded ||= entryChanged;
-      out.push(trustEntry(installKey, entry, entryChanged) as PluginMcpApprovalResult);
-    }
-  }
-
-  if (writeNeeded) writeInstalledPlugins(data);
-  return out;
+      return { ...(writeNeeded ? { value: data } : {}), result: out };
+    }) ?? []
+  );
 }
