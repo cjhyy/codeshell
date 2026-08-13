@@ -177,6 +177,18 @@ interface WorktreeLifecycleResult {
   note: string;
 }
 
+interface ForegroundDriveLease {
+  leaseId: string;
+  effectiveWorkspaceRoot: string;
+  workspaceRoot: string;
+  label: string;
+}
+
+/** Foreground runs are not background jobs until the handoff deadline. Keep
+ * them visible to conflict detection during that window so another session
+ * cannot launch a writer into the same workspace. */
+const foregroundDriveLeases = new Map<string, ForegroundDriveLease>();
+
 export interface DriveAgentToolOptions {
   foregroundHandoffMs?: number;
   sessionStore?: SessionStore;
@@ -243,14 +255,27 @@ async function resolveDriveWorkspaceRoot(cwd: string): Promise<string> {
 
 function hasRunningDriveWriter(workspaceCwd: string, workspaceRoot: string): boolean {
   if (backgroundJobRegistry.listRunningByCwd(workspaceCwd).some(isDriveAgentJob)) return true;
-  return backgroundJobRegistry
-    .list()
-    .some(
-      (job) =>
-        (job.status === "running" || job.status === "cancelling") &&
-        isDriveAgentJob(job) &&
-        job.workspaceRoot === workspaceRoot,
-    );
+  if (
+    backgroundJobRegistry
+      .list()
+      .some(
+        (job) =>
+          (job.status === "running" || job.status === "cancelling") &&
+          isDriveAgentJob(job) &&
+          job.workspaceRoot === workspaceRoot,
+      )
+  ) {
+    return true;
+  }
+  for (const lease of foregroundDriveLeases.values()) {
+    if (
+      lease.effectiveWorkspaceRoot === workspaceRoot ||
+      lease.workspaceRoot === workspaceRoot
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 async function prepareDriveWorktree(params: {
@@ -576,21 +601,53 @@ async function recordSuccessfulSession(
   }
 }
 
-function duplicateCwdWarning(effectiveWorkspaceCwd: string, writable: boolean): string | undefined {
+function duplicateCwdError(
+  effectiveWorkspaceCwd: string,
+  effectiveWorkspaceRoot: string,
+  writable: boolean,
+): string | undefined {
   if (!writable) return undefined;
   const running = backgroundJobRegistry
     .listRunningByCwd(effectiveWorkspaceCwd)
     .filter(isDriveAgentJob);
-  if (running.length === 0) return undefined;
-  const jobs = running.map(formatDriveJobListLine).join("; ");
-  const workspaceRoot =
-    running[0]?.effectiveWorkspaceRoot ?? normalizeCwdPath(effectiveWorkspaceCwd);
+  const foreground = [...foregroundDriveLeases.values()].filter(
+    (lease) => lease.effectiveWorkspaceRoot === effectiveWorkspaceRoot,
+  );
+  if (running.length === 0 && foreground.length === 0) return undefined;
+  const jobs = [
+    ...running.map(formatDriveJobListLine),
+    ...foreground.map((lease) => `${lease.leaseId}  status=foreground  ${lease.label}`),
+  ].join("; ");
   return (
-    `Warning: another DriveAgent job is already running in effective workspace ${workspaceRoot}. ` +
-    "Concurrent writable agents in the same workspace can overwrite each other's work. " +
+    `Error: another writable DriveAgent is already running in effective workspace ${effectiveWorkspaceRoot}. ` +
+    "Refusing to start a concurrent writer because it could overwrite the other agent's work. " +
     `Run DriveAgentJobs(action:"list", cwd:"${effectiveWorkspaceCwd}") before dispatching parallel work for details/cancellation. ` +
     `Running: ${jobs}`
   );
+}
+
+function acquireForegroundDriveLease(params: {
+  effectiveWorkspaceCwd: string;
+  effectiveWorkspaceRoot: string;
+  workspaceRoot: string;
+  label: string;
+  writable: boolean;
+}): { release: () => void } | { error: string } {
+  const conflict = duplicateCwdError(
+    params.effectiveWorkspaceCwd,
+    params.effectiveWorkspaceRoot,
+    params.writable,
+  );
+  if (conflict) return { error: conflict };
+  if (!params.writable) return { release: () => undefined };
+  const leaseId = newDriveJobId();
+  const lease: ForegroundDriveLease = { leaseId, ...params };
+  foregroundDriveLeases.set(leaseId, lease);
+  return {
+    release: () => {
+      if (foregroundDriveLeases.get(leaseId) === lease) foregroundDriveLeases.delete(leaseId);
+    },
+  };
 }
 
 function attachDriveCompletion(params: {
@@ -754,6 +811,7 @@ function trackBackgroundRun(params: {
   cli: DriveCli;
   cwd: string;
   effectiveWorkspaceCwd: string;
+  effectiveWorkspaceRoot: string;
   workspaceRoot: string;
   isolation: DriveIsolation;
   worktree?: ManagedDriveWorktree;
@@ -765,35 +823,59 @@ function trackBackgroundRun(params: {
   readChangedFiles: typeof readExternalChangedFiles;
   recordExternalFileChanges?: ToolContext["recordExternalFileChanges"];
   originClientMessageId?: string;
-}): { jobId: string; warning?: string } {
-  const warning = duplicateCwdWarning(params.effectiveWorkspaceCwd, params.writable);
+}): { jobId: string } | { error: string } {
+  const conflict = duplicateCwdError(
+    params.effectiveWorkspaceCwd,
+    params.effectiveWorkspaceRoot,
+    params.writable,
+  );
+  if (conflict) return { error: conflict };
   const jobId = newDriveJobId();
-  const run = params.start();
-  backgroundJobRegistry.start(jobId, params.sessionId, params.label, {
-    kind: "drive-agent",
-    launchCwd: params.cwd,
-    effectiveWorkspaceCwd: params.effectiveWorkspaceCwd,
-    workspaceRoot: params.workspaceRoot,
-    isolation: params.isolation,
-    ...(params.worktree
-      ? {
-          worktreePath: params.worktree.session.worktreePath,
-          worktreeBranch: params.worktree.session.worktreeBranch,
-          worktreeBaseRef: params.worktree.session.baseRef,
-          worktreeCleanup: params.worktree.cleanup,
-          worktreeBranchPrefix: params.worktree.branchPrefix,
-        }
-      : {}),
-    cli: params.cli,
-    promptSummary: params.promptSummary,
-    originClientMessageId: params.originClientMessageId,
-    abort: async () => {
-      params.abort();
-      await run.catch(() => undefined);
-    },
-  });
+  let run: Promise<AgentRunResult> | undefined;
+  try {
+    // Publish ownership before starting the external process. Registry
+    // listeners are synchronous and may re-enter session teardown from the
+    // start notification; starting first would leave that process orphaned.
+    backgroundJobRegistry.start(jobId, params.sessionId, params.label, {
+      kind: "drive-agent",
+      launchCwd: params.cwd,
+      effectiveWorkspaceCwd: params.effectiveWorkspaceCwd,
+      workspaceRoot: params.workspaceRoot,
+      isolation: params.isolation,
+      ...(params.worktree
+        ? {
+            worktreePath: params.worktree.session.worktreePath,
+            worktreeBranch: params.worktree.session.worktreeBranch,
+            worktreeBaseRef: params.worktree.session.baseRef,
+            worktreeCleanup: params.worktree.cleanup,
+            worktreeBranchPrefix: params.worktree.branchPrefix,
+          }
+        : {}),
+      cli: params.cli,
+      promptSummary: params.promptSummary,
+      originClientMessageId: params.originClientMessageId,
+      abort: async () => {
+        params.abort();
+        await run?.catch(() => undefined);
+      },
+    });
+  } catch (error) {
+    return {
+      error: `Error: failed to register DriveAgent job: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+  if (backgroundJobRegistry.get(jobId)?.status !== "running") {
+    return { error: "Error: DriveAgent owner session closed before the job could start." };
+  }
+  try {
+    run = params.start();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    backgroundJobRegistry.finish(jobId, { status: "failed", finalText: message });
+    return { error: `Error: failed to start DriveAgent job: ${message}` };
+  }
   attachDriveCompletion({ ...params, jobId, run });
-  return { jobId, ...(warning ? { warning } : {}) };
+  return { jobId };
 }
 
 async function waitForForegroundOrHandoff(
@@ -875,12 +957,24 @@ export function makeDriveAgentTool(
           : process.cwd();
     const requestedCwd = normalizeCwdPath(rawRequestedCwd);
     const requestedWorkspaceRoot = await resolveDriveWorkspaceRoot(requestedCwd);
+    const declaredEffectiveWorkspaceCwd =
+      typeof args.effectiveWorkspaceCwd === "string" && args.effectiveWorkspaceCwd.trim()
+        ? normalizeCwdPath(args.effectiveWorkspaceCwd)
+        : undefined;
+    const conflictCwd = declaredEffectiveWorkspaceCwd ?? requestedCwd;
+    const conflictWorkspaceRoot =
+      conflictCwd === requestedCwd
+        ? requestedWorkspaceRoot
+        : await resolveDriveWorkspaceRoot(conflictCwd);
     const requestedIsolation = driveIsolationArg(args.isolation);
     const hasParallelWriter =
       !resumeSessionId &&
       isWritableRun &&
-      hasRunningDriveWriter(requestedCwd, requestedWorkspaceRoot);
-    let isolation: DriveIsolation = requestedIsolation ?? (hasParallelWriter ? "worktree" : "none");
+      hasRunningDriveWriter(conflictCwd, conflictWorkspaceRoot);
+    const canAutoIsolateEffectiveWorkspace = conflictWorkspaceRoot === requestedWorkspaceRoot;
+    let isolation: DriveIsolation =
+      requestedIsolation ??
+      (hasParallelWriter && canAutoIsolateEffectiveWorkspace ? "worktree" : "none");
     let cwd =
       isolation === "current" && typeof ctx?.cwd === "string" && ctx.cwd
         ? normalizeCwdPath(ctx.cwd)
@@ -967,22 +1061,16 @@ export function makeDriveAgentTool(
         cwd = managedWorktree.session.worktreePath;
         workspaceRoot = managedWorktree.session.originalCwd;
       } catch (error) {
-        if (requestedIsolation === "worktree") {
-          return `Error: failed to create DriveAgent isolation worktree: ${error instanceof Error ? error.message : String(error)}`;
-        }
-        isolation = "none";
-        cwd = requestedCwd;
-        workspaceRoot = requestedWorkspaceRoot;
-        resumeNote =
-          `Note: parallel worktree isolation was unavailable; continuing in ${requestedCwd}. ` +
-          `${error instanceof Error ? error.message : String(error)}`;
+        const detail = error instanceof Error ? error.message : String(error);
+        return requestedIsolation === "worktree"
+          ? `Error: failed to create DriveAgent isolation worktree: ${detail}`
+          : `Error: another writable DriveAgent already targets this workspace, and automatic worktree isolation failed. Refusing to run both writers in ${requestedCwd}: ${detail}`;
       }
     }
     const effectiveWorkspaceCwd = managedWorktree
       ? managedWorktree.session.worktreePath
-      : typeof args.effectiveWorkspaceCwd === "string" && args.effectiveWorkspaceCwd.trim()
-        ? normalizeCwdPath(args.effectiveWorkspaceCwd)
-        : cwd;
+      : (declaredEffectiveWorkspaceCwd ?? cwd);
+    const effectiveWorkspaceRoot = await resolveDriveWorkspaceRoot(effectiveWorkspaceCwd);
     // Default to bypassPermissions: this tool is a fire-one-turn delegation to
     // an external CLI with nobody watching for approvals, and there is no
     // interactive approval loop here — so under "default" a tool that needs
@@ -1032,6 +1120,7 @@ export function makeDriveAgentTool(
         cli,
         cwd,
         effectiveWorkspaceCwd,
+        effectiveWorkspaceRoot,
         workspaceRoot,
         isolation,
         worktree: managedWorktree,
@@ -1044,15 +1133,29 @@ export function makeDriveAgentTool(
         recordExternalFileChanges: ctx?.recordExternalFileChanges,
         originClientMessageId: ctx?.originClientMessageId,
       });
+      if ("error" in tracked) {
+        const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
+        return appendLifecycleNote(tracked.error, lifecycle);
+      }
       ctx?.runYield?.request("background_notification");
       return [
         resumeNote,
         `已在后台启动 ${cliName}（jobId ${tracked.jobId}）。完成后会通知你结果，无需轮询。`,
         worktreeStartNote(managedWorktree),
-        tracked.warning,
       ]
         .filter(Boolean)
         .join("\n");
+    }
+    const lease = acquireForegroundDriveLease({
+      effectiveWorkspaceCwd,
+      effectiveWorkspaceRoot,
+      workspaceRoot,
+      label,
+      writable: isWritableRun,
+    });
+    if ("error" in lease) {
+      const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
+      return appendLifecycleNote(lease.error, lifecycle);
     }
     const foregroundAbort = makeAbortController(callerSignal, true);
     const run = startRun(runner, { ...runOptsBase, signal: foregroundAbort.signal });
@@ -1061,18 +1164,24 @@ export function makeDriveAgentTool(
       result = await waitForForegroundOrHandoff(run, foregroundHandoffMs);
     } catch (error) {
       const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
+      lease.release();
       return appendLifecycleNote(
         `${cliName} 运行出错：${error instanceof Error ? error.message : String(error)}`,
         lifecycle,
       );
     }
     if (result.kind === "handoff" && isValidSessionId(ctx?.sessionId)) {
+      // Registration below is synchronous. Release the foreground lease and
+      // replace it with the background registry entry in the same event-loop
+      // turn, so another dispatch cannot slip into a gap.
+      lease.release();
       const tracked = trackBackgroundRun({
         sessionId: ctx.sessionId,
         label,
         cli,
         cwd,
         effectiveWorkspaceCwd,
+        effectiveWorkspaceRoot,
         workspaceRoot,
         isolation,
         worktree: managedWorktree,
@@ -1085,29 +1194,38 @@ export function makeDriveAgentTool(
         recordExternalFileChanges: ctx?.recordExternalFileChanges,
         originClientMessageId: ctx?.originClientMessageId,
       });
+      if ("error" in tracked) {
+        foregroundAbort.abort();
+        const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
+        return appendLifecycleNote(tracked.error, lifecycle);
+      }
       ctx?.runYield?.request("background_notification");
       return [
         resumeNote,
         `${cliName} foreground run exceeded ${foregroundHandoffMs}ms; moved it to background (jobId ${tracked.jobId}). Completion will notify this session, so do not poll.`,
         worktreeStartNote(managedWorktree),
-        tracked.warning,
       ]
         .filter(Boolean)
         .join("\n");
     }
-    const r = result.kind === "completed" ? result.result : await run;
-    const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
-    await recordSuccessfulSession(sessionStore, cli, cwd, r, {
-      codeShellSessionId: ctx?.sessionId,
-      workspaceRoot,
-      isolation,
-      worktree: managedWorktree,
-      lifecycle,
-    });
-    const prefix = resumeNote ? `${resumeNote}\n` : "";
-    const finalText = appendLifecycleNote(r.finalText, lifecycle);
-    if (r.isError) return `${prefix}${cliName} 运行出错（session ${r.sessionId}）：\n${finalText}`;
-    return `${prefix}${cliName} 完成（session ${r.sessionId}）：\n${finalText}`;
+    try {
+      const r = result.kind === "completed" ? result.result : await run;
+      const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
+      await recordSuccessfulSession(sessionStore, cli, cwd, r, {
+        codeShellSessionId: ctx?.sessionId,
+        workspaceRoot,
+        isolation,
+        worktree: managedWorktree,
+        lifecycle,
+      });
+      const prefix = resumeNote ? `${resumeNote}\n` : "";
+      const finalText = appendLifecycleNote(r.finalText, lifecycle);
+      if (r.isError)
+        return `${prefix}${cliName} 运行出错（session ${r.sessionId}）：\n${finalText}`;
+      return `${prefix}${cliName} 完成（session ${r.sessionId}）：\n${finalText}`;
+    } finally {
+      lease.release();
+    }
   };
 }
 

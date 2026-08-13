@@ -227,6 +227,35 @@ describe("DriveAgent tool", () => {
       rmSync(tmp, { recursive: true, force: true });
     }
   });
+
+  it("does not start an external process when registry notification closes its owner session", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-reentrant-close-"));
+    let ran = false;
+    const unsubscribe = backgroundJobRegistry.subscribe(() => {
+      if (backgroundJobRegistry.hasRunningForSession("S-REENTRANT-CLOSE")) {
+        backgroundJobRegistry.dropForSession("S-REENTRANT-CLOSE");
+      }
+    });
+    try {
+      const tool = makeDriveAgentTool(async () => {
+        ran = true;
+        return { sessionId: "orphan", finalText: "late", isError: false, exitCode: 0, lines: [] };
+      });
+      const output = await tool(
+        { prompt: "do not orphan", cwd: tmp } as any,
+        { cwd: tmp, sessionId: "S-REENTRANT-CLOSE" } as any,
+      );
+
+      expect(output).toContain("closed before the job could start");
+      expect(ran).toBe(false);
+      expect(backgroundJobRegistry.listForSession("S-REENTRANT-CLOSE")).toEqual([]);
+    } finally {
+      unsubscribe();
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("DriveClaudeCode alias (back-compat)", () => {
@@ -414,7 +443,7 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     }
   });
 
-  it("warns when a new writable background DriveAgent starts in a cwd already used by a running job", async () => {
+  it("rejects a second writable background DriveAgent when a non-git cwd cannot be isolated", async () => {
     backgroundJobRegistry.reset?.();
     const tmp = mkdtempSync(join(tmpdir(), "drive-cwd-"));
     try {
@@ -431,12 +460,10 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       );
 
       expect(first).not.toContain("Warning");
-      expect(second).toContain("Warning");
+      expect(second).toContain("Error:");
+      expect(second).toContain("Refusing to run both writers");
       expect(second).toContain(realpathSync(tmp));
-      expect(second).toContain("DriveAgentJobs");
-      expect(second).toContain("first");
       expect(backgroundJobRegistry.listRunningForSession("S-CWD").map((j) => j.cwd)).toEqual([
-        realpathSync(tmp),
         realpathSync(tmp),
       ]);
     } finally {
@@ -455,7 +482,11 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       mkdirSync(launchCwd);
       mkdirSync(firstWorkspace);
       mkdirSync(secondWorkspace);
-      const never = () => new Promise<any>(() => {});
+      let runnerCalls = 0;
+      const never = () => {
+        runnerCalls += 1;
+        return new Promise<any>(() => {});
+      };
       const tool = makeDriveAgentTool(never as any);
 
       const first = await tool(
@@ -473,8 +504,11 @@ describe("DriveClaudeCode alias (back-compat)", () => {
 
       expect(first).not.toContain("Warning");
       expect(second).not.toContain("Warning");
-      expect(third).toContain("Warning");
+      expect(third).toContain("Error:");
+      expect(third).toContain("Refusing to start a concurrent writer");
       expect(third).toContain(realpathSync(firstWorkspace));
+      expect(backgroundJobRegistry.list()).toHaveLength(2);
+      expect(runnerCalls).toBe(2);
     } finally {
       backgroundJobRegistry.reset?.();
       rmSync(tmp, { recursive: true, force: true });
@@ -496,7 +530,7 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     }
   });
 
-  it("warns for the same running cwd even when one caller uses a relative path with a trailing slash", async () => {
+  it("rejects the same busy non-git cwd when one caller uses a relative path with a trailing slash", async () => {
     backgroundJobRegistry.reset?.();
     const tmp = mkdtempSync(join(tmpdir(), "drive-cwd-normalized-"));
     const prevCwd = process.cwd();
@@ -516,14 +550,68 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       );
 
       expect(first).not.toContain("Warning");
-      expect(second).toContain("Warning");
+      expect(second).toContain("Error:");
+      expect(second).toContain("Refusing to run both writers");
       expect(second).toContain(realpathSync(tmp));
       expect(backgroundJobRegistry.listRunningForSession("S-CWD-NORM").map((j) => j.cwd)).toEqual([
-        realpathSync(tmp),
         realpathSync(tmp),
       ]);
     } finally {
       process.chdir(prevCwd);
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("protects the workspace while a writable foreground run is still attached", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-foreground-lease-"));
+    let finishFirst!: (result: any) => void;
+    let markStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    let calls = 0;
+    try {
+      const tool = makeDriveAgentTool((_options) => {
+        calls += 1;
+        if (calls === 1) {
+          markStarted();
+          return new Promise((resolve) => {
+            finishFirst = resolve;
+          });
+        }
+        return Promise.resolve({
+          sessionId: "unexpected-second",
+          finalText: "should not start",
+          isError: false,
+          exitCode: 0,
+          lines: [],
+        });
+      });
+
+      const first = tool(
+        { prompt: "first", cwd: tmp, background: false },
+        { cwd: tmp, sessionId: "S-FG-FIRST" } as any,
+      );
+      await started;
+      const second = await tool(
+        { prompt: "second", cwd: tmp, background: false },
+        { cwd: tmp, sessionId: "S-FG-SECOND" } as any,
+      );
+
+      expect(second).toContain("Error:");
+      expect(second).toContain("Refusing to run both writers");
+      expect(calls).toBe(1);
+      finishFirst({
+        sessionId: "foreground-first",
+        finalText: "done",
+        isError: false,
+        exitCode: 0,
+        lines: [],
+      });
+      expect(await first).toContain("done");
+    } finally {
       backgroundJobRegistry.reset?.();
       rmSync(tmp, { recursive: true, force: true });
     }

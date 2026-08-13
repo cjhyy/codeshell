@@ -52,12 +52,10 @@ const result = (subtype: string, isError = false) => ({
 });
 
 describe("ClaudeEventTranslator", () => {
-  test("system/init yields session_started and records the resume id", () => {
+  test("system/init keeps the business session id and records Claude's resume id separately", () => {
     const t = translator();
     const events = t.translate(INIT);
-    expect(events).toEqual([
-      { type: "session_started", sessionId: INIT.session_id, promptTokens: 0 },
-    ]);
+    expect(events).toEqual([{ type: "session_started", sessionId: "sess-a", promptTokens: 0 }]);
     expect(t.runtimeSessionId).toBe(INIT.session_id);
   });
 

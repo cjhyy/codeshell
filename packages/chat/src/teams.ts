@@ -1,5 +1,18 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  chmodSync,
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname } from "node:path";
 import {
   ActivityTypes,
@@ -20,6 +33,10 @@ export interface TeamsAdapterConfig {
   tenantId?: string;
   statePath?: string;
 }
+
+const MAX_TEAMS_STATE_BYTES = 4 * 1024 * 1024;
+const MAX_TEAMS_REFERENCES = 1_000;
+const MAX_TEAMS_REFERENCE_BYTES = 64 * 1024;
 
 export class TeamsAdapter implements WebhookChannelAdapter {
   readonly channel = "teams";
@@ -169,14 +186,20 @@ export class TeamsAdapter implements WebhookChannelAdapter {
 
   private loadReferences(): void {
     if (!this.statePath) return;
+    let fd: number | undefined;
     try {
-      const parsed = JSON.parse(readFileSync(this.statePath, "utf-8")) as unknown;
+      const entry = lstatSync(this.statePath);
+      if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_TEAMS_STATE_BYTES) return;
+      fd = openSync(this.statePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      const opened = fstatSync(fd);
+      if (!opened.isFile() || opened.size > MAX_TEAMS_STATE_BYTES) return;
+      const parsed = JSON.parse(readFileSync(fd, "utf-8")) as unknown;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
       for (const [target, reference] of Object.entries(parsed as Record<string, unknown>).slice(
         0,
-        1_000,
+        MAX_TEAMS_REFERENCES,
       )) {
-        if (target && reference && typeof reference === "object" && !Array.isArray(reference)) {
+        if (validTeamsConversationReference(target, reference)) {
           this.references.set(
             target,
             reference as ReturnType<typeof TurnContext.getConversationReference>,
@@ -185,21 +208,75 @@ export class TeamsAdapter implements WebhookChannelAdapter {
       }
     } catch {
       // First run, malformed legacy state, or an unavailable home directory.
+    } finally {
+      if (fd !== undefined) closeSync(fd);
     }
   }
 
   private saveReferences(): void {
     if (!this.statePath) return;
-    const entries = [...this.references.entries()].slice(-1_000);
-    mkdirSync(dirname(this.statePath), { recursive: true, mode: 0o700 });
-    const temporary = `${this.statePath}.${process.pid}.tmp`;
-    writeFileSync(temporary, `${JSON.stringify(Object.fromEntries(entries))}\n`, {
-      encoding: "utf-8",
-      mode: 0o600,
-    });
-    renameSync(temporary, this.statePath);
-    if (process.platform !== "win32") chmodSync(this.statePath, 0o600);
+    const entries = [...this.references.entries()]
+      .filter(([target, reference]) => validTeamsConversationReference(target, reference))
+      .slice(-MAX_TEAMS_REFERENCES);
+    const serialized = `${JSON.stringify(Object.fromEntries(entries))}\n`;
+    if (Buffer.byteLength(serialized, "utf8") > MAX_TEAMS_STATE_BYTES) {
+      throw new Error("Teams conversation state is too large");
+    }
+    const parent = dirname(this.statePath);
+    mkdirSync(parent, { recursive: true, mode: 0o700 });
+    const parentInfo = lstatSync(parent);
+    if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
+      throw new Error("Teams conversation state parent must be a real directory");
+    }
+    try {
+      const targetInfo = lstatSync(this.statePath);
+      if (targetInfo.isSymbolicLink() || !targetInfo.isFile()) {
+        throw new Error("Teams conversation state must be a regular file");
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    const temporary = `${this.statePath}.${process.pid}.${randomUUID()}.tmp`;
+    try {
+      writeFileSync(temporary, serialized, { encoding: "utf-8", mode: 0o600, flag: "wx" });
+      renameSync(temporary, this.statePath);
+      if (process.platform !== "win32") chmodSync(this.statePath, 0o600);
+    } finally {
+      rmSync(temporary, { force: true });
+    }
   }
+}
+
+function validTeamsConversationReference(target: string, value: unknown): boolean {
+  if (!target || target.length > 4_096 || /[\0\r\n]/u.test(target)) return false;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    return false;
+  }
+  if (Buffer.byteLength(serialized, "utf8") > MAX_TEAMS_REFERENCE_BYTES) return false;
+  const reference = value as Record<string, unknown>;
+  if (reference.channelId !== "msteams" || typeof reference.serviceUrl !== "string") return false;
+  if (reference.serviceUrl.length > 2_048) return false;
+  try {
+    const url = new URL(reference.serviceUrl);
+    if (url.protocol !== "https:" || url.username || url.password || !url.hostname) return false;
+    if (url.hostname === "localhost" || url.hostname.endsWith(".localhost")) return false;
+    if (/^(?:127\.|0\.|10\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/u.test(url.hostname)) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  const conversation = reference.conversation;
+  return (
+    Boolean(conversation) &&
+    typeof conversation === "object" &&
+    !Array.isArray(conversation) &&
+    (conversation as Record<string, unknown>).id === target
+  );
 }
 
 class BotFrameworkResponse {

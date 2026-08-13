@@ -1,5 +1,6 @@
 import { execFile as nodeExecFile } from "node:child_process";
-import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { chmod, lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -118,7 +119,7 @@ export class GatewayServiceManager {
   private async installLaunchd(): Promise<GatewayServiceStatus> {
     const path = this.launchdPath();
     const logDir = join(this.home, ".code-shell", "im-gateway", "logs");
-    await mkdir(logDir, { recursive: true, mode: 0o700 });
+    await ensureRealDirectory(logDir);
     await writeOwnerFile(
       path,
       renderLaunchdService({
@@ -239,18 +240,46 @@ WantedBy=default.target
 }
 
 async function writeOwnerFile(path: string, contents: string): Promise<void> {
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  await writeFile(path, contents, { encoding: "utf-8", mode: 0o600 });
-  if (process.platform !== "win32") await chmod(path, 0o600);
+  const parent = dirname(path);
+  await ensureRealDirectory(parent);
+  try {
+    const targetInfo = await lstat(path);
+    if (targetInfo.isSymbolicLink() || !targetInfo.isFile()) {
+      throw new Error(`service definition must be a regular file: ${path}`);
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, contents, {
+      encoding: "utf-8",
+      mode: 0o600,
+      flag: "wx",
+    });
+    await rename(temporary, path);
+    if (process.platform !== "win32") await chmod(path, 0o600);
+  } finally {
+    await rm(temporary, { force: true }).catch(() => undefined);
+  }
 }
 
 async function fileExists(path: string): Promise<boolean> {
   try {
-    await readFile(path);
-    return true;
+    const info = await lstat(path);
+    return !info.isSymbolicLink() && info.isFile();
   } catch {
     return false;
   }
+}
+
+async function ensureRealDirectory(path: string): Promise<void> {
+  await mkdir(path, { recursive: true, mode: 0o700 });
+  const info = await lstat(path);
+  if (info.isSymbolicLink() || !info.isDirectory()) {
+    throw new Error(`service directory must be a real directory: ${path}`);
+  }
+  if (process.platform !== "win32") await chmod(path, 0o700);
 }
 
 function escapeXml(value: string): string {

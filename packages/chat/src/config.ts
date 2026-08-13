@@ -1,4 +1,13 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  statSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { defaultWechatDataDirectory, FileWechatCredentialStore } from "./wechat-storage.js";
@@ -156,6 +165,10 @@ export interface LoadGatewayConfigOptions {
 }
 
 type RawSection = Record<string, unknown>;
+
+const MAX_CONFIG_BYTES = 4 * 1024 * 1024;
+const MAX_CONFIG_STRING_CHARS = 32_768;
+const MAX_CONFIG_LIST_ITEMS = 10_000;
 
 interface RawGatewayConfig {
   telegram?: RawSection;
@@ -317,12 +330,12 @@ export function loadGatewayConfig(opts: LoadGatewayConfigOptions = {}): GatewayC
       autoLaunch: raw.desktop?.autoLaunch !== false,
       command: configuredCommand ?? defaultLaunch.command,
       args: configuredArgs ?? (configuredCommand ? [] : defaultLaunch.args),
-      startupTimeoutMs: readPositiveNumber(raw.desktop?.startupTimeoutMs) ?? 30_000,
+      startupTimeoutMs: readPositiveNumber(raw.desktop?.startupTimeoutMs, 5 * 60_000) ?? 30_000,
     },
     webhook: {
       host: readNonEmptyString(raw.webhook?.host) ?? "127.0.0.1",
       port: readPort(raw.webhook?.port) ?? 8787,
-      maxBodyBytes: readPositiveNumber(raw.webhook?.maxBodyBytes) ?? 1_048_576,
+      maxBodyBytes: readPositiveNumber(raw.webhook?.maxBodyBytes, 16 * 1024 * 1024) ?? 1_048_576,
     },
     runtime: {
       lockPath:
@@ -334,13 +347,15 @@ export function loadGatewayConfig(opts: LoadGatewayConfigOptions = {}): GatewayC
       eventCursorPath:
         readNonEmptyString(raw.runtime?.eventCursorPath) ??
         join(resolveHome(env), ".code-shell", "im-gateway", "desktop-events.json"),
-      maxPending: readPositiveInteger(raw.runtime?.maxPending) ?? 1_000,
-      maxConcurrent: readPositiveInteger(raw.runtime?.maxConcurrent) ?? 4,
-      maxPerTarget: readPositiveInteger(raw.runtime?.maxPerTarget) ?? 1,
+      maxPending: readPositiveInteger(raw.runtime?.maxPending, 100_000) ?? 1_000,
+      maxConcurrent: readPositiveInteger(raw.runtime?.maxConcurrent, 64) ?? 4,
+      maxPerTarget: readPositiveInteger(raw.runtime?.maxPerTarget, 16) ?? 1,
       maxMessagesPerUserPerMinute:
-        readPositiveInteger(raw.runtime?.maxMessagesPerUserPerMinute) ?? 20,
-      adapterRestartBaseMs: readPositiveInteger(raw.runtime?.adapterRestartBaseMs) ?? 1_000,
-      adapterRestartMaxMs: readPositiveInteger(raw.runtime?.adapterRestartMaxMs) ?? 30_000,
+        readPositiveInteger(raw.runtime?.maxMessagesPerUserPerMinute, 100_000) ?? 20,
+      adapterRestartBaseMs:
+        readPositiveInteger(raw.runtime?.adapterRestartBaseMs, 24 * 60 * 60_000) ?? 1_000,
+      adapterRestartMaxMs:
+        readPositiveInteger(raw.runtime?.adapterRestartMaxMs, 24 * 60 * 60_000) ?? 30_000,
     },
     notifications: [],
   };
@@ -746,18 +761,30 @@ function loadAllowlist(
 }
 
 function readRawConfig(configPath: string): RawGatewayConfig {
-  if (!existsSync(configPath)) return {};
+  let fd: number | undefined;
   try {
-    const parsed = JSON.parse(readFileSync(configPath, "utf-8"));
+    const entry = lstatSync(configPath);
+    if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_CONFIG_BYTES) {
+      throw new Error(`config must be a regular file no larger than ${MAX_CONFIG_BYTES} bytes`);
+    }
+    fd = openSync(configPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(fd);
+    if (!opened.isFile() || opened.size > MAX_CONFIG_BYTES) {
+      throw new Error(`config must be a regular file no larger than ${MAX_CONFIG_BYTES} bytes`);
+    }
+    const parsed = JSON.parse(readFileSync(fd, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new Error("top-level value must be an object");
     }
     return parsed as RawGatewayConfig;
   } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
     throw new Error(
       `无法读取 IM gateway 配置 ${configPath}：${error instanceof Error ? error.message : String(error)}`,
       { cause: error },
     );
+  } finally {
+    if (fd !== undefined) closeSync(fd);
   }
 }
 
@@ -779,7 +806,9 @@ function envString(env: NodeJS.ProcessEnv, key: string): string | undefined {
 }
 
 function readNonEmptyString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  return typeof value === "string" && value.length <= MAX_CONFIG_STRING_CHARS && value.trim()
+    ? value.trim()
+    : undefined;
 }
 
 function readStringList(value: unknown): string[];
@@ -787,6 +816,9 @@ function readStringList(value: unknown, fallbackToEmpty: false): string[] | unde
 function readStringList(value: unknown, fallbackToEmpty = true): string[] | undefined {
   if (value === undefined && !fallbackToEmpty) return undefined;
   if (!Array.isArray(value)) return [];
+  if (value.length > MAX_CONFIG_LIST_ITEMS) {
+    throw new Error(`配置列表最多包含 ${MAX_CONFIG_LIST_ITEMS} 项`);
+  }
   return [
     ...new Set(value.map(readNonEmptyString).filter((item): item is string => Boolean(item))),
   ];
@@ -794,7 +826,8 @@ function readStringList(value: unknown, fallbackToEmpty = true): string[] | unde
 
 function readCsvOverride(value: string | undefined): string[] | undefined {
   if (value === undefined) return undefined;
-  return [
+  if (value.length > MAX_CONFIG_BYTES) throw new Error("环境变量白名单过长");
+  const result = [
     ...new Set(
       value
         .split(",")
@@ -802,14 +835,22 @@ function readCsvOverride(value: string | undefined): string[] | undefined {
         .filter(Boolean),
     ),
   ];
+  if (result.length > MAX_CONFIG_LIST_ITEMS) {
+    throw new Error(`环境变量白名单最多包含 ${MAX_CONFIG_LIST_ITEMS} 项`);
+  }
+  return result;
 }
 
-function readPositiveNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+function readPositiveNumber(value: unknown, max: number): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= max
+    ? value
+    : undefined;
 }
 
-function readPositiveInteger(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
+function readPositiveInteger(value: unknown, max: number): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 && value <= max
+    ? value
+    : undefined;
 }
 
 function readPort(value: unknown): number | undefined {

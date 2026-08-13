@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { acquireGatewayInstanceLock, GatewayAlreadyRunningError } from "./instance-lock.js";
@@ -32,7 +39,7 @@ describe("gateway instance lock", () => {
         version: 1,
         pid: 2_147_483_647,
         owner: "dead",
-        token: "dead-token",
+        token: "00000000-0000-4000-8000-000000000000",
         startedAt: 1,
       }),
     );
@@ -42,6 +49,48 @@ describe("gateway instance lock", () => {
     writeFileSync(path, "not-json");
     expect(() => acquireGatewayInstanceLock(path, "unsafe-replacement")).toThrow(
       GatewayAlreadyRunningError,
+    );
+  });
+
+  test("fails closed on linked and oversized lock files", () => {
+    const path = lockPath();
+    const outside = `${path}.outside`;
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(
+      outside,
+      JSON.stringify({
+        version: 1,
+        pid: 2_147_483_647,
+        owner: "dead",
+        token: "00000000-0000-4000-8000-000000000000",
+        startedAt: 1,
+      }),
+    );
+    symlinkSync(outside, path);
+    expect(() => acquireGatewayInstanceLock(path, "replacement")).toThrow(
+      GatewayAlreadyRunningError,
+    );
+    expect(JSON.parse(readFileSync(outside, "utf8")).owner).toBe("dead");
+
+    rmSync(path);
+    writeFileSync(path, "x".repeat(64 * 1024 + 1));
+    expect(() => acquireGatewayInstanceLock(path, "replacement")).toThrow(
+      GatewayAlreadyRunningError,
+    );
+  });
+
+  test("rejects linked parents and invalid owner labels", () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-gateway-lock-parent-"));
+    roots.push(root);
+    const outside = join(root, "outside");
+    const linked = join(root, "linked");
+    mkdirSync(outside);
+    symlinkSync(outside, linked);
+    expect(() => acquireGatewayInstanceLock(join(linked, "gateway.lock"), "owner")).toThrow(
+      /real directory/,
+    );
+    expect(() => acquireGatewayInstanceLock(join(root, "gateway.lock"), "x\nforged")).toThrow(
+      /owner is invalid/,
     );
   });
 });

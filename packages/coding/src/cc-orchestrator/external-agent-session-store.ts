@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { codeShellHome, logger, normalizeCwdPath } from "@cjhyy/code-shell-core/extension";
 
@@ -110,37 +111,44 @@ export class ExternalAgentSessionStore {
     try {
       const raw = await readFile(this.file, "utf-8");
       const parsed = JSON.parse(raw) as Partial<ExternalAgentSessionSnapshot>;
-      if (!parsed || !Array.isArray(parsed.sessions)) return [];
+      if (!parsed || !Array.isArray(parsed.sessions)) {
+        throw new Error("external agent session store has an invalid root");
+      }
       return parsed.sessions.filter(isBinding).map(normalizeBinding);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-      logger.warn("external_agent_session_store.load_failed", {
+      logger.warn("external_agent_session_store.write_read_failed", {
         cat: "cc",
         file: this.file,
         error: err instanceof Error ? err.message : String(err),
       });
-      return [];
+      throw err;
     }
   }
 
   private async save(sessions: ExternalAgentSessionBinding[]): Promise<void> {
     const dir = dirname(this.file);
-    await mkdir(dir, { recursive: true });
+    await mkdir(dir, { recursive: true, mode: 0o700 });
+    if (process.platform !== "win32") await chmod(dir, 0o700);
 
     const snapshot: ExternalAgentSessionSnapshot = { version: 2, sessions };
-    const tmp = `${this.file}.${process.pid}.${Date.now()}.tmp`;
+    const tmp = `${this.file}.${process.pid}.${randomUUID()}.tmp`;
     try {
-      await writeFile(tmp, JSON.stringify(snapshot, null, 2) + "\n", "utf-8");
+      await writeFile(tmp, JSON.stringify(snapshot, null, 2) + "\n", {
+        encoding: "utf-8",
+        mode: 0o600,
+        flag: "wx",
+      });
       await rename(tmp, this.file);
-    } catch (err) {
+    } finally {
       await rm(tmp, { force: true }).catch(() => undefined);
-      throw err;
     }
   }
 
   private async withLock<T>(fn: () => Promise<T> | T): Promise<T> {
     const dir = dirname(this.file);
-    await mkdir(dir, { recursive: true });
+    await mkdir(dir, { recursive: true, mode: 0o700 });
+    if (process.platform !== "win32") await chmod(dir, 0o700);
 
     const lockDir = `${this.file}.lock`;
     const deadline = Date.now() + LOCK_WAIT_MS;

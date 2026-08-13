@@ -44,7 +44,7 @@ export const utilityCommands: SlashCommand[] = [
     usage: "/undo [all] [confirm]",
     execute: async (arg, ctx) => {
       try {
-        const { FileHistory, latestTurnUndoTargets, earliestSnapshotsPerFile, renderDiffPreview } =
+        const { FileHistory, earliestSnapshotsPerFile, renderDiffPreview } =
           await import("@cjhyy/code-shell-core");
         const { join } = await import("node:path");
         const { homedir } = await import("node:os");
@@ -113,24 +113,30 @@ export const utilityCommands: SlashCommand[] = [
         // Edits from earlier turns stay intact. Files re-edited within the turn
         // still revert to the turn-start baseline (latestTurnUndoTargets picks
         // the earliest snapshot of the latest turn per file).
-        const targets = latestTurnUndoTargets(history.getAllSnapshots());
-        if (targets.length === 0) {
+        const plan = history.getLatestTurnUndoPlan();
+        if (!plan) {
           ctx.addStatus("没有可撤销的文件修改。");
           return;
         }
         if (!confirm) {
           const MAX_PREVIEW = 5;
-          const shown = targets.slice(0, MAX_PREVIEW);
-          const blocks = shown.map((t) => {
-            const backup = existsSync(t.backupPath) ? readFileSync(t.backupPath, "utf-8") : "";
-            const diff = renderDiffPreview(readFile(t.filePath), backup);
-            return `\`${t.filePath}\`\n` + (diff ? "```diff\n" + diff + "\n```" : "_(无变化)_");
+          const snapshots = new Map(plan.snapshots.map((snapshot) => [snapshot.filePath, snapshot]));
+          const shown = plan.filePaths.slice(0, MAX_PREVIEW);
+          const blocks = shown.map((filePath) => {
+            const snapshot = snapshots.get(filePath);
+            const backup =
+              snapshot && existsSync(snapshot.backupPath)
+                ? readFileSync(snapshot.backupPath, "utf-8")
+                : "";
+            const diff = renderDiffPreview(readFile(filePath), backup);
+            return `\`${filePath}\`\n` + (diff ? "```diff\n" + diff + "\n```" : "_(无变化)_");
           });
           const more =
-            targets.length > MAX_PREVIEW
-              ? `\n\n…以及另外 ${targets.length - MAX_PREVIEW} 个文件。`
+            plan.filePaths.length > MAX_PREVIEW
+              ? `\n\n…以及另外 ${plan.filePaths.length - MAX_PREVIEW} 个文件。`
               : "";
-          const fileWord = targets.length > 1 ? `${targets.length} 个文件` : "1 个文件";
+          const fileWord =
+            plan.filePaths.length > 1 ? `${plan.filePaths.length} 个文件` : "1 个文件";
           ctx.addMessage(
             `**/undo 预览** — 将把最近一轮对话改动的 ${fileWord}还原到该轮编辑前:\n\n` +
               blocks.join("\n\n") +
@@ -139,7 +145,7 @@ export const utilityCommands: SlashCommand[] = [
           );
           return;
         }
-        const results = history.undoLatestTurn(targets);
+        const results = history.undoLatestTurn(plan.snapshots);
         const failed = results.filter((r) => !r.ok);
         ctx.addStatus(
           failed.length === 0

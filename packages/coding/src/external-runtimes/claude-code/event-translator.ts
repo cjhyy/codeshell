@@ -97,13 +97,16 @@ export class ClaudeEventTranslator {
 
   private onSystem(message: Record<string, unknown>): StreamEvent[] {
     if (str(message.subtype) !== "init") return [];
-    const sessionId = str(message.session_id);
-    if (sessionId) this.runtimeSessionId = sessionId;
+    const runtimeSessionId = str(message.session_id);
+    if (runtimeSessionId) this.runtimeSessionId = runtimeSessionId;
     if (this.sessionStarted) return [];
     this.sessionStarted = true;
+    if (!runtimeSessionId) return [];
     // promptTokens is unknown at init; the field is required, and 0 is honest
-    // here rather than a guess.
-    return sessionId ? [{ type: "session_started", sessionId, promptTokens: 0 }] : [];
+    // here rather than a guess. The StreamEvent identity is CodeShell's stable
+    // business session id; Claude's id is a resume key only and must never
+    // replace the renderer's engineSessionId.
+    return [{ type: "session_started", sessionId: this.options.sessionId, promptTokens: 0 }];
   }
 
   private onStreamEvent(message: Record<string, unknown>): StreamEvent[] {

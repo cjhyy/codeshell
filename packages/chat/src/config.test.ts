@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gatewayConfigTemplate, loadGatewayConfig } from "./config.js";
@@ -46,6 +53,74 @@ describe("loadGatewayConfig", () => {
     chmodSync(file, 0o644);
     expect(() => loadGatewayConfig({ configPath: file, env: {}, platform: "linux" })).toThrow(
       "0600",
+    );
+  });
+
+  test("rejects linked and oversized config files before parsing", () => {
+    const root = tempRoot();
+    const outside = join(root, "outside.json");
+    const linked = join(root, "linked.json");
+    writeFileSync(
+      outside,
+      JSON.stringify({ telegram: { botToken: "secret", allowedChatIds: ["1"] } }),
+      { mode: 0o600 },
+    );
+    symlinkSync(outside, linked);
+    expect(() => loadGatewayConfig({ configPath: linked, env: {}, platform: "win32" })).toThrow(
+      /regular file/,
+    );
+
+    const oversized = join(root, "oversized.json");
+    writeFileSync(oversized, "x".repeat(4 * 1024 * 1024 + 1), { mode: 0o600 });
+    expect(() =>
+      loadGatewayConfig({ configPath: oversized, env: {}, platform: "win32" }),
+    ).toThrow(/no larger/);
+  });
+
+  test("falls back to bounded runtime defaults for excessive numeric limits", () => {
+    const root = tempRoot();
+    const file = join(root, "config.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        telegram: { botToken: "secret", allowedChatIds: ["1"] },
+        desktop: { startupTimeoutMs: Number.MAX_SAFE_INTEGER },
+        webhook: { maxBodyBytes: Number.MAX_SAFE_INTEGER },
+        runtime: {
+          maxPending: Number.MAX_SAFE_INTEGER,
+          maxConcurrent: Number.MAX_SAFE_INTEGER,
+          maxPerTarget: Number.MAX_SAFE_INTEGER,
+          maxMessagesPerUserPerMinute: Number.MAX_SAFE_INTEGER,
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const config = loadGatewayConfig({ configPath: file, env: {}, platform: "win32" });
+    expect(config.desktop.startupTimeoutMs).toBe(30_000);
+    expect(config.webhook.maxBodyBytes).toBe(1_048_576);
+    expect(config.runtime).toMatchObject({
+      maxPending: 1_000,
+      maxConcurrent: 4,
+      maxPerTarget: 1,
+      maxMessagesPerUserPerMinute: 20,
+    });
+  });
+
+  test("rejects allowlists with excessive item counts", () => {
+    const root = tempRoot();
+    const file = join(root, "config.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        telegram: {
+          botToken: "secret",
+          allowedChatIds: Array.from({ length: 10_001 }, (_, index) => String(index)),
+        },
+      }),
+      { mode: 0o600 },
+    );
+    expect(() => loadGatewayConfig({ configPath: file, env: {}, platform: "win32" })).toThrow(
+      /最多包含/,
     );
   });
 

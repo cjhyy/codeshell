@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -61,6 +68,33 @@ describe("gateway service manager", () => {
         args: ["--user", "enable", "--now", "codeshell-chat.service"],
       },
     ]);
+  });
+
+  test("refuses to overwrite a linked service definition", async () => {
+    const home = tempRoot();
+    const serviceDir = join(home, ".config", "systemd", "user");
+    const definition = join(serviceDir, "codeshell-chat.service");
+    const outside = join(home, "outside.service");
+    mkdirSync(serviceDir, { recursive: true });
+    writeFileSync(outside, "keep");
+    symlinkSync(outside, definition);
+    const calls: string[] = [];
+    const manager = new GatewayServiceManager({
+      configPath: join(home, "config.json"),
+      platform: "linux",
+      home,
+      executable: "/usr/bin/node",
+      cliPath: "/opt/codeshell/chat.js",
+      run: async (command) => {
+        calls.push(command);
+        return {};
+      },
+    });
+
+    await expect(manager.install()).rejects.toThrow(/regular file/);
+    expect(readFileSync(outside, "utf8")).toBe("keep");
+    expect(calls).toEqual([]);
+    await expect(manager.status()).resolves.toMatchObject({ installed: false, running: false });
   });
 
   test("creates a Windows ONLOGON task with argument-array execution", async () => {

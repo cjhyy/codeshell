@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loginCodeShellWechat } from "./wechat-login.js";
@@ -38,6 +46,50 @@ describe("loginCodeShellWechat", () => {
       "owner-account",
     ]);
     if (process.platform !== "win32") expect(statSync(configPath).mode & 0o777).toBe(0o600);
+  });
+
+  test("rejects an unsafe config before login or credential mutation", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-wechat-login-boundary-"));
+    const configDir = join(root, "gateway");
+    const configPath = join(configDir, "config.json");
+    const outside = join(root, "outside.json");
+    const credentialsDir = join(root, "wechat");
+    mkdirSync(configDir);
+    writeFileSync(outside, "{}", { mode: 0o600 });
+    symlinkSync(outside, configPath);
+    let loginCalls = 0;
+
+    await expect(
+      loginCodeShellWechat({
+        configPath,
+        credentialsDir,
+        login: async () => {
+          loginCalls += 1;
+          throw new Error("must not run");
+        },
+      }),
+    ).rejects.toThrow(/普通文件|linked/);
+    expect(loginCalls).toBe(0);
+    expect(existsSync(join(credentialsDir, "accounts.json"))).toBe(false);
+    expect(readFileSync(outside, "utf8")).toBe("{}");
+  });
+
+  test("rejects oversized config before login", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-wechat-login-boundary-"));
+    const configPath = join(root, "config.json");
+    writeFileSync(configPath, "x".repeat(4 * 1024 * 1024 + 1), { mode: 0o600 });
+    let loginCalls = 0;
+    await expect(
+      loginCodeShellWechat({
+        configPath,
+        credentialsDir: join(root, "wechat"),
+        login: async () => {
+          loginCalls += 1;
+          throw new Error("must not run");
+        },
+      }),
+    ).rejects.toThrow(/有限大小/);
+    expect(loginCalls).toBe(0);
   });
 
   test("resets credential-bound state when a QR rebind rotates the token", async () => {

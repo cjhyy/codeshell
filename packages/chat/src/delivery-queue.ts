@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { chmod, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { constants, type Dirent } from "node:fs";
+import { chmod, lstat, mkdir, open, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { ChannelMessage } from "./channel.js";
 
@@ -55,6 +56,12 @@ interface DeliveryStateFile {
   completed: Record<string, number>;
 }
 
+const MAX_DELIVERY_STATE_BYTES = 64 * 1024 * 1024;
+const MAX_COMPLETED_KEYS = 100_000;
+const MAX_SPOOLED_ATTACHMENTS = 32;
+const MAX_SPOOL_SCAN_ENTRIES = 100_000;
+const SPOOL_FILE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.\d{1,3}$/iu;
+
 export interface DeliveryQueueStatus {
   pending: number;
   inFlight: number;
@@ -92,6 +99,7 @@ export class DeliveryQueue {
   private readonly targetInFlight = new Map<string, number>();
   private mutation = Promise.resolve();
   private retryTimer?: ReturnType<typeof setTimeout>;
+  private persistRetryTimer?: ReturnType<typeof setTimeout>;
   private stopped = true;
 
   constructor(
@@ -114,6 +122,8 @@ export class DeliveryQueue {
     this.stopped = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
+    if (this.persistRetryTimer) clearTimeout(this.persistRetryTimer);
+    this.persistRetryTimer = undefined;
   }
 
   status(): DeliveryQueueStatus {
@@ -148,21 +158,42 @@ export class DeliveryQueue {
       // the adapter had already acked it. Spool the bytes instead: the record
       // then persists like any other, carrying file paths in place of closures.
       const spooled = await this.spoolAttachments(id, message);
-      const persistent = Boolean(
-        this.config.path && (!message.attachments?.length || spooled !== undefined),
-      );
-      const safeMessage = persistent ? serializableMessage(message, spooled) : message;
-      this.pending.push({
-        id,
-        ...(dedupeKey ? { dedupeKey } : {}),
-        adapterId,
-        message: safeMessage,
-        attempts: 0,
-        nextAttemptAt: Date.now(),
-        persistent,
-        ...(spooled ? { spooled } : {}),
-      });
-      if (persistent) await this.persist();
+      let record: DeliveryRecord | undefined;
+      try {
+        const persistent = Boolean(
+          this.config.path && (!message.attachments?.length || spooled !== undefined),
+        );
+        const safeMessage = persistent ? serializableMessage(message, spooled) : message;
+        record = {
+          id,
+          ...(dedupeKey ? { dedupeKey } : {}),
+          adapterId,
+          message: safeMessage,
+          attempts: 0,
+          nextAttemptAt: Date.now(),
+          persistent,
+          ...(spooled ? { spooled } : {}),
+        };
+        this.pending.push(record);
+        if (persistent) await this.persist();
+      } catch (error) {
+        if (record) {
+          const index = this.pending.findIndex((candidate) => candidate.id === record?.id);
+          if (index >= 0) this.pending.splice(index, 1);
+          await this.discardSpool(record);
+        } else if (spooled) {
+          await this.discardSpool({
+            id,
+            adapterId,
+            message,
+            attempts: 0,
+            nextAttemptAt: 0,
+            persistent: false,
+            spooled,
+          });
+        }
+        throw error;
+      }
     });
     this.pump();
     return result;
@@ -206,36 +237,59 @@ export class DeliveryQueue {
       this.onError(caught, entry.message);
     }
 
-    await this.withMutation(async () => {
-      this.inFlight.delete(entry.id);
-      const key = targetKey(entry.message);
-      const targetCount = (this.targetInFlight.get(key) ?? 1) - 1;
-      if (targetCount <= 0) this.targetInFlight.delete(key);
-      else this.targetInFlight.set(key, targetCount);
+    const terminal = error === undefined || error instanceof UnroutableDeliveryError;
+    try {
+      await this.withMutation(async () => {
+        this.inFlight.delete(entry.id);
+        const key = targetKey(entry.message);
+        const targetCount = (this.targetInFlight.get(key) ?? 1) - 1;
+        if (targetCount <= 0) this.targetInFlight.delete(key);
+        else this.targetInFlight.set(key, targetCount);
 
-      if (error === undefined || error instanceof UnroutableDeliveryError) {
-        // Success, or a permanently unroutable record: drop it so a message
-        // that can never be delivered does not retry (and re-log) forever.
-        const index = this.pending.findIndex((candidate) => candidate.id === entry.id);
-        if (index >= 0) this.pending.splice(index, 1);
-        if (error === undefined && entry.dedupeKey) this.completed.set(entry.dedupeKey, Date.now());
-        // Terminal outcome — the bytes will never be needed again. Cleaning up
-        // here (rather than on a TTL sweep) keeps the spool bounded by what is
-        // actually pending.
-        await this.discardSpool(entry);
-      } else {
-        entry.attempts += 1;
-        entry.nextAttemptAt =
-          Date.now() +
-          Math.min(
-            this.config.retryMaxMs,
-            this.config.retryBaseMs * 2 ** Math.min(entry.attempts - 1, 10),
-          );
-      }
-      this.pruneCompleted();
-      if (entry.persistent) await this.persist();
-    });
+        if (terminal) {
+          // Success, or a permanently unroutable record: drop it so a message
+          // that can never be delivered does not retry (and re-log) forever.
+          const index = this.pending.findIndex((candidate) => candidate.id === entry.id);
+          if (index >= 0) this.pending.splice(index, 1);
+          if (error === undefined && entry.dedupeKey) this.completed.set(entry.dedupeKey, Date.now());
+        } else {
+          entry.attempts += 1;
+          entry.nextAttemptAt =
+            Date.now() +
+            Math.min(
+              this.config.retryMaxMs,
+              this.config.retryBaseMs * 2 ** Math.min(entry.attempts - 1, 10),
+            );
+        }
+        this.pruneCompleted();
+        // Persist the terminal removal BEFORE deleting attachment bytes. If the
+        // state write fails, the durable record still has everything needed for
+        // at-least-once recovery after a crash.
+        if (entry.persistent) await this.persist();
+        if (terminal) await this.discardSpool(entry);
+      });
+    } catch (persistError) {
+      this.onError(persistError, entry.message);
+      this.schedulePersistRetry(entry.message, terminal ? entry : undefined);
+    }
     this.pump();
+  }
+
+  private schedulePersistRetry(message: ChannelMessage, cleanup?: DeliveryRecord): void {
+    if (this.stopped || !this.config.path || this.persistRetryTimer) return;
+    const delay = Math.max(10, Math.min(this.config.retryBaseMs, this.config.retryMaxMs));
+    this.persistRetryTimer = setTimeout(() => {
+      this.persistRetryTimer = undefined;
+      if (this.stopped) return;
+      void this.withMutation(async () => {
+        await this.persist();
+        if (cleanup) await this.discardSpool(cleanup);
+      }).catch((error) => {
+        this.onError(error, message);
+        this.schedulePersistRetry(message, cleanup);
+      });
+    }, delay);
+    this.persistRetryTimer.unref?.();
   }
 
   /** Directory holding spooled attachment bytes, or undefined when not durable. */
@@ -259,16 +313,20 @@ export class DeliveryQueue {
     const dir = this.spoolDir();
     if (!attachments?.length || !dir) return undefined;
     const limit = this.config.maxSpooledAttachmentBytes ?? 16 * 1024 * 1024;
+    const written: string[] = [];
     try {
-      await mkdir(dir, { recursive: true, mode: 0o700 });
+      if (attachments.length > MAX_SPOOLED_ATTACHMENTS) return undefined;
+      await ensureRealDirectory(dir);
       const spooled: SpooledAttachment[] = [];
       for (const [index, attachment] of attachments.entries()) {
         const bytes = await attachment.load();
         // Oversized payloads stay in memory: spooling them would trade a lost
         // message for unbounded disk use.
-        if (bytes.byteLength > limit) return undefined;
+        if (bytes.byteLength > limit) throw new Error("attachment exceeds spool limit");
         const file = `${recordId}.${index}`;
-        await writeFile(`${dir}/${file}`, bytes, { mode: 0o600 });
+        const target = `${dir}/${file}`;
+        await writeFile(target, bytes, { mode: 0o600, flag: "wx" });
+        written.push(target);
         spooled.push({
           id: attachment.id,
           kind: attachment.kind,
@@ -281,6 +339,7 @@ export class DeliveryQueue {
       return spooled;
     } catch {
       // Spooling is an availability improvement, never a new failure mode.
+      await Promise.all(written.map((target) => rm(target, { force: true }).catch(() => undefined)));
       return undefined;
     }
   }
@@ -297,7 +356,15 @@ export class DeliveryQueue {
       ...(entry.name ? { name: entry.name } : {}),
       ...(entry.mimeType ? { mimeType: entry.mimeType } : {}),
       size: entry.size,
-      load: async () => new Uint8Array(await readFile(`${dir}/${entry.file}`)),
+      load: async () =>
+        new Uint8Array(
+          await readBoundedSpoolFile(
+            dir,
+            entry.file,
+            entry.size,
+            this.config.maxSpooledAttachmentBytes ?? 16 * 1024 * 1024,
+          ),
+        ),
     }));
   }
 
@@ -319,16 +386,24 @@ export class DeliveryQueue {
     for (const entry of this.pending) {
       for (const attachment of entry.spooled ?? []) referenced.add(attachment.file);
     }
-    let files: string[];
+    let files: Dirent[];
     try {
-      files = await readdir(dir);
-    } catch {
+      await assertRealDirectory(dir);
+      files = await readdir(dir, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       return; // No spool directory yet — nothing to sweep.
+    }
+    if (files.length > MAX_SPOOL_SCAN_ENTRIES) {
+      throw new Error("Chat Gateway attachment spool has too many entries");
     }
     await Promise.all(
       files
-        .filter((file) => !referenced.has(file))
-        .map((file) => rm(`${dir}/${file}`, { force: true }).catch(() => undefined)),
+        .filter(
+          (entry) =>
+            entry.isFile() && SPOOL_FILE_RE.test(entry.name) && !referenced.has(entry.name),
+        )
+        .map((entry) => rm(`${dir}/${entry.name}`, { force: true }).catch(() => undefined)),
     );
   }
 
@@ -336,20 +411,56 @@ export class DeliveryQueue {
   private async discardSpool(entry: DeliveryRecord): Promise<void> {
     const dir = this.spoolDir();
     if (!entry.spooled?.length || !dir) return;
+    try {
+      await assertRealDirectory(dir);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
     await Promise.all(
-      entry.spooled.map((attachment) =>
-        rm(`${dir}/${attachment.file}`, { force: true }).catch(() => undefined),
-      ),
+      entry.spooled
+        .filter((attachment) => SPOOL_FILE_RE.test(attachment.file))
+        .map(async (attachment) => {
+          const target = `${dir}/${attachment.file}`;
+          try {
+            const info = await lstat(target);
+            if (!info.isSymbolicLink() && info.isFile()) await rm(target, { force: true });
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+          }
+        }),
     );
   }
 
   private async load(): Promise<void> {
     if (!this.config.path) return;
     try {
-      const parsed = JSON.parse(await readFile(this.config.path, "utf-8")) as DeliveryStateFile;
-      if (parsed.version !== 1 || !Array.isArray(parsed.pending) || !parsed.completed) return;
+      const parsed = JSON.parse(
+        await readBoundedRegularFile(
+          this.config.path,
+          MAX_DELIVERY_STATE_BYTES,
+          "Chat Gateway inbox",
+        ),
+      ) as DeliveryStateFile;
+      if (
+        parsed.version !== 1 ||
+        !Array.isArray(parsed.pending) ||
+        parsed.pending.length > this.config.maxPending ||
+        !parsed.completed ||
+        typeof parsed.completed !== "object" ||
+        Array.isArray(parsed.completed)
+      ) {
+        throw new Error("invalid delivery state root");
+      }
       for (const entry of parsed.pending) {
-        if (!validStoredEntry(entry)) continue;
+        if (
+          !validStoredEntry(
+            entry,
+            this.config.maxSpooledAttachmentBytes ?? 16 * 1024 * 1024,
+          )
+        ) {
+          continue;
+        }
         // Turn spooled metadata back into real attachments whose load() reads
         // the file. This is the whole point of the spool: after a restart the
         // upstream will not resend, so the bytes have to come from disk.
@@ -361,8 +472,17 @@ export class DeliveryQueue {
           nextAttemptAt: Date.now(),
         });
       }
-      for (const [key, timestamp] of Object.entries(parsed.completed)) {
-        if (typeof timestamp === "number") this.completed.set(key, timestamp);
+      const completed = Object.entries(parsed.completed);
+      if (completed.length > MAX_COMPLETED_KEYS) throw new Error("too many completed deliveries");
+      for (const [key, timestamp] of completed) {
+        if (
+          key.length <= 16_384 &&
+          typeof timestamp === "number" &&
+          Number.isSafeInteger(timestamp) &&
+          timestamp >= 0
+        ) {
+          this.completed.set(key, timestamp);
+        }
       }
       this.pruneCompleted();
     } catch (error) {
@@ -391,10 +511,15 @@ export class DeliveryQueue {
       completed: Object.fromEntries(this.completed),
     };
     const serialized = `${JSON.stringify(state)}\n`;
-    await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+    if (Buffer.byteLength(serialized, "utf8") > MAX_DELIVERY_STATE_BYTES) {
+      throw new DeliveryBackpressureError(this.config.maxPending);
+    }
+    const parent = dirname(path);
+    await ensureRealDirectory(parent);
+    await assertSafeRegularTarget(path);
     const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
     try {
-      await writeFile(temporary, serialized, { encoding: "utf-8", mode: 0o600 });
+      await writeFile(temporary, serialized, { encoding: "utf-8", mode: 0o600, flag: "wx" });
       await rename(temporary, path);
       await chmod(path, 0o600).catch(() => undefined);
     } catch (error) {
@@ -457,19 +582,140 @@ function serializableMessage(
   return parsed;
 }
 
-function validStoredEntry(entry: unknown): entry is Omit<DeliveryRecord, "persistent"> {
-  if (!entry || typeof entry !== "object") return false;
+function validStoredEntry(
+  entry: unknown,
+  maxAttachmentBytes: number,
+): entry is Omit<DeliveryRecord, "persistent"> {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
   const value = entry as Partial<DeliveryRecord>;
-  return (
-    typeof value.id === "string" &&
-    typeof value.adapterId === "string" &&
-    typeof value.attempts === "number" &&
-    typeof value.nextAttemptAt === "number" &&
-    Boolean(value.message) &&
-    typeof value.message?.channel === "string" &&
-    typeof value.message?.target === "string" &&
-    typeof value.message?.senderId === "string" &&
-    typeof value.message?.text === "string" &&
-    !value.message?.attachments
-  );
+  if (
+    typeof value.id !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value.id,
+    ) ||
+    typeof value.adapterId !== "string" ||
+    value.adapterId.length === 0 ||
+    value.adapterId.length > 256 ||
+    !Number.isSafeInteger(value.attempts) ||
+    (value.attempts ?? -1) < 0 ||
+    (value.attempts ?? 0) > 10_000 ||
+    !Number.isSafeInteger(value.nextAttemptAt) ||
+    (value.nextAttemptAt ?? -1) < 0 ||
+    !value.message ||
+    typeof value.message !== "object" ||
+    typeof value.message.channel !== "string" ||
+    value.message.channel.length === 0 ||
+    value.message.channel.length > 64 ||
+    typeof value.message.target !== "string" ||
+    value.message.target.length === 0 ||
+    value.message.target.length > 4_096 ||
+    typeof value.message.senderId !== "string" ||
+    value.message.senderId.length === 0 ||
+    value.message.senderId.length > 4_096 ||
+    typeof value.message.text !== "string" ||
+    value.message.text.length > 1_048_576 ||
+    value.message.attachments
+  ) {
+    return false;
+  }
+  if (value.dedupeKey !== undefined && (typeof value.dedupeKey !== "string" || value.dedupeKey.length > 16_384)) {
+    return false;
+  }
+  if (value.spooled === undefined) return true;
+  if (!Array.isArray(value.spooled) || value.spooled.length > MAX_SPOOLED_ATTACHMENTS) return false;
+  const files = new Set<string>();
+  for (const attachment of value.spooled) {
+    if (
+      !attachment ||
+      typeof attachment !== "object" ||
+      typeof attachment.id !== "string" ||
+      attachment.id.length === 0 ||
+      attachment.id.length > 4_096 ||
+      typeof attachment.kind !== "string" ||
+      attachment.kind.length === 0 ||
+      attachment.kind.length > 64 ||
+      (attachment.name !== undefined &&
+        (typeof attachment.name !== "string" || attachment.name.length > 4_096)) ||
+      (attachment.mimeType !== undefined &&
+        (typeof attachment.mimeType !== "string" || attachment.mimeType.length > 1_024)) ||
+      !Number.isSafeInteger(attachment.size) ||
+      attachment.size < 0 ||
+      attachment.size > maxAttachmentBytes ||
+      typeof attachment.file !== "string" ||
+      !SPOOL_FILE_RE.test(attachment.file) ||
+      !attachment.file.startsWith(`${value.id}.`) ||
+      files.has(attachment.file)
+    ) {
+      return false;
+    }
+    files.add(attachment.file);
+  }
+  return true;
+}
+
+async function ensureRealDirectory(path: string): Promise<void> {
+  await mkdir(path, { recursive: true, mode: 0o700 });
+  await assertRealDirectory(path);
+}
+
+async function assertRealDirectory(path: string): Promise<void> {
+  const info = await lstat(path);
+  if (info.isSymbolicLink() || !info.isDirectory()) {
+    throw new Error(`Chat Gateway storage path is not a real directory: ${path}`);
+  }
+}
+
+async function assertSafeRegularTarget(path: string): Promise<void> {
+  try {
+    const info = await lstat(path);
+    if (info.isSymbolicLink() || !info.isFile()) {
+      throw new Error(`Chat Gateway storage target is not a regular file: ${path}`);
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
+
+async function readBoundedRegularFile(path: string, maxBytes: number, label: string): Promise<string> {
+  const entry = await lstat(path);
+  if (entry.isSymbolicLink() || !entry.isFile() || entry.size > maxBytes) {
+    throw new Error(`${label} is not a bounded regular file`);
+  }
+  const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size > maxBytes) {
+      throw new Error(`${label} is not a bounded regular file`);
+    }
+    return await handle.readFile("utf8");
+  } finally {
+    await handle.close();
+  }
+}
+
+async function readBoundedSpoolFile(
+  dir: string,
+  file: string,
+  expectedBytes: number,
+  maxBytes: number,
+): Promise<Buffer> {
+  if (!SPOOL_FILE_RE.test(file) || expectedBytes < 0 || expectedBytes > maxBytes) {
+    throw new Error("invalid Chat Gateway attachment spool reference");
+  }
+  await assertRealDirectory(dir);
+  const target = `${dir}/${file}`;
+  const entry = await lstat(target);
+  if (entry.isSymbolicLink() || !entry.isFile() || entry.size !== expectedBytes) {
+    throw new Error("Chat Gateway attachment spool file is invalid");
+  }
+  const handle = await open(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size !== expectedBytes || opened.size > maxBytes) {
+      throw new Error("Chat Gateway attachment spool file is invalid");
+    }
+    return await handle.readFile();
+  } finally {
+    await handle.close();
+  }
 }

@@ -1,5 +1,14 @@
 import { describe, it, expect } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -50,6 +59,8 @@ describe("ExternalAgentSessionStore", () => {
         { cli: "claude", sessionId: "S1", cwd: "/repo/a" },
         { cli: "codex", sessionId: "S1", cwd: "/repo/b" },
       ]);
+      if (process.platform !== "win32") expect(statSync(file).mode & 0o777).toBe(0o600);
+      expect(readdirSync(dir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -183,6 +194,20 @@ describe("ExternalAgentSessionStore", () => {
     try {
       const store = new ExternalAgentSessionStore(join(dir, "sessions.json"));
       expect(store.get("claude", "missing")).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses to overwrite a corrupt store during an upsert", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "external-agent-store-corrupt-"));
+    try {
+      const file = join(dir, "sessions.json");
+      writeFileSync(file, "{ torn", "utf-8");
+      const store = new ExternalAgentSessionStore(file);
+      await expect(store.record({ cli: "claude", sessionId: "S1", cwd: dir })).rejects.toThrow();
+      expect(readFileSync(file, "utf-8")).toBe("{ torn");
+      expect(readdirSync(dir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

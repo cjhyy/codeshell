@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   DeliveryBackpressureError,
   DeliveryQueue,
@@ -110,6 +120,31 @@ describe("durable delivery queue", () => {
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(attempts).toBe(1);
     expect(errors).toHaveLength(1);
+    expect(queue.status().pending).toBe(0);
+    queue.stop();
+  });
+
+  test("retries a failed terminal state write instead of leaving the queue stuck", async () => {
+    const path = inboxPath();
+    const delivered = deferred<void>();
+    const errors: unknown[] = [];
+    const queue = new DeliveryQueue(
+      { ...config(path), retryBaseMs: 50, retryMaxMs: 50 },
+      async () => delivered.promise,
+      (error) => void errors.push(error),
+    );
+    await queue.start();
+    await queue.enqueue("line:0", incoming("m-persist-retry", "once"));
+
+    const backup = `${path}.backup`;
+    renameSync(path, backup);
+    mkdirSync(path);
+    delivered.resolve();
+    await waitUntil(() => errors.length > 0);
+
+    rmSync(path, { recursive: true });
+    renameSync(backup, path);
+    await waitUntil(() => persistedPending(path) === 0);
     expect(queue.status().pending).toBe(0);
     queue.stop();
   });
@@ -304,8 +339,8 @@ describe("attachment durability", () => {
     first.stop();
 
     // Simulate leftovers from a crashed run.
-    writeFileSync(join(spoolDir, "orphan-a.0"), "stale");
-    writeFileSync(join(spoolDir, "orphan-b.0"), "stale");
+    writeFileSync(join(spoolDir, "00000000-0000-4000-8000-000000000001.0"), "stale");
+    writeFileSync(join(spoolDir, "00000000-0000-4000-8000-000000000002.0"), "stale");
     expect(readdirSync(spoolDir)).toHaveLength(3);
 
     const second = new DeliveryQueue(
@@ -318,8 +353,62 @@ describe("attachment durability", () => {
     // Only the file the surviving record points at remains.
     const remaining = readdirSync(spoolDir);
     expect(remaining).toHaveLength(1);
-    expect(remaining[0]).not.toContain("orphan");
+    expect(remaining[0]).not.toContain("00000000");
     second.stop();
+  });
+
+  test("never follows persisted spool traversal or deletes unrelated files", async () => {
+    const path = inboxPath();
+    const root = dirname(path);
+    mkdirSync(root, { recursive: true });
+    const outside = join(root, "outside.txt");
+    writeFileSync(outside, "keep");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        version: 1,
+        pending: [
+          {
+            id: "00000000-0000-4000-8000-000000000001",
+            adapterId: "line:0",
+            message: { channel: "line", target: "owner", senderId: "sender", text: "bad" },
+            attempts: 0,
+            nextAttemptAt: 0,
+            spooled: [
+              { id: "a", kind: "file", size: 4, file: "../../outside.txt" },
+            ],
+          },
+        ],
+        completed: {},
+      }),
+    );
+    const delivered: string[] = [];
+    const queue = new DeliveryQueue(
+      config(path),
+      async (_adapter, message) => void delivered.push(message.text),
+      () => undefined,
+    );
+    await queue.start();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(delivered).toEqual([]);
+    expect(readFileSync(outside, "utf8")).toBe("keep");
+    queue.stop();
+  });
+
+  test("rejects a linked spool directory without touching its contents", async () => {
+    const path = inboxPath();
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, JSON.stringify({ version: 1, pending: [], completed: {} }));
+    const outside = `${path}.outside`;
+    mkdirSync(outside);
+    writeFileSync(join(outside, "00000000-0000-4000-8000-000000000001.0"), "keep");
+    symlinkSync(outside, `${path}.attachments`);
+    const queue = new DeliveryQueue(config(path), async () => undefined, () => undefined);
+    await expect(queue.start()).rejects.toThrow(/real directory/);
+    expect(readFileSync(join(outside, "00000000-0000-4000-8000-000000000001.0"), "utf8")).toBe(
+      "keep",
+    );
+    queue.stop();
   });
 
   test("text-only messages are unaffected", async () => {
