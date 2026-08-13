@@ -24,7 +24,9 @@ mock.module("./ChatView", () => ({
   },
 }));
 
-mock.module("./Sidebar", () => ({ Sidebar: () => <div data-testid="sidebar" /> }));
+mock.module("./app/AppSidebar", () => ({
+  Sidebar: () => <div data-testid="sidebar" />,
+}));
 mock.module("./panels/PanelArea", () => ({ PanelArea: () => <div data-testid="panel" /> }));
 mock.module("./workspace-trust/TrustGate", () => ({ TrustGate: () => null }));
 mock.module("./shell/SearchBar", () => ({ SearchBar: () => <div data-testid="search" /> }));
@@ -35,8 +37,6 @@ mock.module("./shell/CommandPalette", () => ({
 mock.module("./shell/SessionSearchModal", () => ({
   SessionSearchModal: () => <div data-testid="session-search" />,
 }));
-mock.module("./assets/codeshell-dog-icon.png", () => ({ default: "dog.png" }));
-
 const { App } = await import("./App");
 
 class MemoryLocalStorage {

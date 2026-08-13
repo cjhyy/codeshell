@@ -1684,7 +1684,7 @@ export interface CodeshellApi {
   /** Abort the in-flight run of cron job `id`, if any. Returns false when no
    *  run is in flight. Used by session delete to stop a still-running run. */
   cancelAutomationRun(id: string): Promise<boolean>;
-  listSkills(cwd: string, opts?: { includeDisabled?: boolean }): Promise<SkillSummary[]>;
+  listSkills(cwd: string | null, opts?: { includeDisabled?: boolean }): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
   getPluginMedia(installKey: string, includeScreenshots?: boolean): Promise<PluginMediaDto | null>;
   listPluginCommands(cwd: string): Promise<PluginCommandDescriptor[]>;

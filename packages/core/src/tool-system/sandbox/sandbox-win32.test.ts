@@ -1,6 +1,5 @@
 import { describe, test, expect, afterEach } from "bun:test";
-import { tmpdir } from "node:os";
-import { defaultSandboxConfig, resolveSandboxBackend } from "./index.js";
+import { defaultSandboxConfig, defaultSandboxTempRoots, resolveSandboxBackend } from "./index.js";
 
 // P5: Windows has no OS sandbox backend. `auto` must fail-OPEN (downgrade to
 // the `off` backend, run unsandboxed + warn) rather than fail-closed/throw —
@@ -24,15 +23,12 @@ describe("sandbox on Windows (P5)", () => {
   });
 
   test("defaultSandboxConfig uses the OS temp dir on Windows, not /tmp", () => {
-    setPlatform("win32");
-    const cfg = defaultSandboxConfig("auto");
-    expect(cfg.writableRoots).toContain(tmpdir());
-    expect(cfg.writableRoots).not.toContain("/tmp");
+    expect(defaultSandboxTempRoots("win32", "C:\\Users\\runner\\AppData\\Local\\Temp")).toEqual([
+      "C:\\Users\\runner\\AppData\\Local\\Temp",
+    ]);
   });
 
   test("POSIX still lists the /tmp family", () => {
-    setPlatform("linux");
-    const cfg = defaultSandboxConfig("auto");
-    expect(cfg.writableRoots).toContain("/tmp");
+    expect(defaultSandboxTempRoots("linux", "/custom/tmp")).toContain("/tmp");
   });
 });

@@ -5,11 +5,15 @@ export interface ProjectLike {
 }
 
 /** True on platforms whose filesystems are case-insensitive by default. */
-export function isCaseInsensitivePlatform(): boolean {
-  const p =
-    typeof navigator !== "undefined" && typeof navigator.platform === "string"
-      ? navigator.platform.toLowerCase()
-      : "";
+export function isCaseInsensitivePlatform(platform?: string): boolean {
+  const detected =
+    platform ??
+    (typeof window !== "undefined" && typeof window.codeshell?.platform === "string"
+      ? window.codeshell.platform
+      : typeof navigator !== "undefined" && typeof navigator.platform === "string"
+        ? navigator.platform
+        : "");
+  const p = detected.toLowerCase();
   // darwin ("MacIntel"/"MacARM") + windows ("Win32") → case-insensitive.
   // Linux ("Linux x86_64") → case-sensitive. Unknown → insensitive (safer:
   // we'd rather over-match an existing repo than wrongly auto-create one).

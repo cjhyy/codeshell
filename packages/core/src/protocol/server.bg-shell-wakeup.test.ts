@@ -8,6 +8,8 @@ import { SessionManager } from "../session/session-manager.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
 
+const SID = "bg-shell-wakeup-session";
+
 /**
  * Bug: a background shell (run_in_background Bash, e.g. a yt-dlp download) that
  * finishes while the agent is idle enqueues a completion notification but
@@ -53,7 +55,7 @@ function makeFakeEngine() {
       return {
         text: "ok",
         reason: "completed",
-        sessionId: "sess-1",
+        sessionId: SID,
         turnCount: 1,
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       };
@@ -64,7 +66,7 @@ function makeFakeEngine() {
 
 function makeRehydratableEngineFactory(
   existsOnDisk: boolean | ((sessionId: string) => boolean),
-  resultSessionId = "sess-1",
+  resultSessionId = SID,
 ) {
   const runs: Array<{ engineId: number; task: string; cwd?: string; injected?: boolean }> = [];
   const slices: EngineConfigSlice[] = [];
@@ -127,20 +129,20 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       engineFactory: () => engine,
     });
     // Materialize the session so chatManager.get(sid) finds it.
-    await chatManager.getOrCreate("sess-1", {} as never);
+    await chatManager.getOrCreate(SID, {} as never);
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
 
     expect(runs.length).toBe(0);
 
-    enqueueShellExit("sess-1");
+    enqueueShellExit(SID);
     await new Promise((r) => setTimeout(r, 20));
 
     // Exactly one wakeup run, and its task surfaces the completion.
     expect(runs.length).toBe(1);
     expect(runs[0]).toContain("Background shell exited");
     // Drained: the queue is empty so it isn't re-delivered.
-    expect(notificationQueue.getSnapshot("sess-1").length).toBe(0);
+    expect(notificationQueue.getSnapshot(SID).length).toBe(0);
   });
 
   it("does NOT wake a busy session (the in-flight run drains it at end)", async () => {
@@ -158,7 +160,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
         return {
           text: "ok",
           reason: "completed",
-          sessionId: "sess-1",
+          sessionId: SID,
           turnCount: 1,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };
@@ -168,7 +170,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       runtime: {} as never,
       engineFactory: () => engine,
     });
-    const session = await chatManager.getOrCreate("sess-1", {} as never);
+    const session = await chatManager.getOrCreate(SID, {} as never);
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
 
@@ -179,10 +181,10 @@ describe("AgentServer — background shell completion wakes an idle session", ()
 
     // Completion arrives while busy → must NOT start a second run; the
     // notification stays queued for the in-flight run's end-of-turn drain.
-    enqueueShellExit("sess-1");
+    enqueueShellExit(SID);
     await new Promise((r) => setTimeout(r, 20));
     expect(runs.length).toBe(1);
-    expect(notificationQueue.getSnapshot("sess-1").length).toBe(1);
+    expect(notificationQueue.getSnapshot(SID).length).toBe(1);
 
     release();
   });
@@ -205,11 +207,11 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       runtime: {} as never,
       engineFactory: () => engine,
     });
-    await chatManager.getOrCreate("sess-1", {} as never);
+    await chatManager.getOrCreate(SID, {} as never);
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
 
-    enqueueShellExit("sess-1");
+    enqueueShellExit(SID);
     await new Promise((r) => setTimeout(r, 20));
 
     // An `error` StreamEvent for this session must have been sent so the
@@ -217,7 +219,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     const terminal = t.sent.find(
       (m: any) =>
         m?.method === "agent/streamEvent" &&
-        m?.params?.sessionId === "sess-1" &&
+        m?.params?.sessionId === SID &&
         m?.params?.event?.type === "error",
     );
     expect(terminal).toBeDefined();
@@ -225,7 +227,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     const falseComplete = t.sent.find(
       (m: any) =>
         m?.method === "agent/streamEvent" &&
-        m?.params?.sessionId === "sess-1" &&
+        m?.params?.sessionId === SID &&
         m?.params?.event?.type === "turn_complete",
     );
     expect(falseComplete).toBeUndefined();
@@ -237,7 +239,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
       runtime: {} as never,
       engineFactory: () => engine,
     });
-    const session = await chatManager.getOrCreate("sess-1", {} as never);
+    const session = await chatManager.getOrCreate(SID, {} as never);
     const t = makeTransport();
     servers.push(new AgentServer({ transport: t.transport, chatManager }));
 
@@ -246,16 +248,16 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     expect(session.isBusy()).toBe(false);
 
     // A background shell finishing right after Stop must NOT restart the agent.
-    enqueueShellExit("sess-1");
+    enqueueShellExit(SID);
     await new Promise((r) => setTimeout(r, 20));
     expect(runs.length).toBe(0);
     // The notification is left queued (a later user send will drain it).
-    expect(notificationQueue.getSnapshot("sess-1").length).toBe(1);
+    expect(notificationQueue.getSnapshot(SID).length).toBe(1);
 
     // After the user engages again, wakeups resume.
     await session.enqueueTurn("user is back", {});
     expect(runs.length).toBe(1);
-    enqueueShellExit("sess-1", "bg_second");
+    enqueueShellExit(SID, "bg_second");
     await new Promise((r) => setTimeout(r, 20));
     expect(runs.length).toBe(2);
   });

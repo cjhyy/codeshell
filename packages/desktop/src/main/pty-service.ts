@@ -168,6 +168,27 @@ interface Session {
 
 const sessions = new Map<string, Session>();
 
+/**
+ * PTY ids are renderer-local composite keys, not persisted Engine session ids.
+ * PanelRegistry deliberately builds them as
+ * `term:<project>::<session>:<tab>@<window>`, so keep the alphabet path-safe
+ * while accepting the separators used by that canonical format.
+ */
+export function isValidPtySessionId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 512 &&
+    value.startsWith("term:") &&
+    !value.includes("..") &&
+    /^[A-Za-z0-9_.:@-]+$/.test(value)
+  );
+}
+
+export function assertValidPtySessionId(value: unknown): asserts value is string {
+  if (!isValidPtySessionId(value)) throw new Error("invalid pty sessionId");
+}
+
 /** Cap the replay buffer so a long-running shell can't grow main unbounded. */
 const MAX_BUFFER = 256 * 1024; // 256 KB
 

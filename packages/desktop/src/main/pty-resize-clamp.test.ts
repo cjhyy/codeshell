@@ -5,11 +5,27 @@ import { join } from "node:path";
 import {
   _resetPtyGitBashCache,
   clampPtyDim,
+  isValidPtySessionId,
   resolvePtyCwd,
   resolveGitBashForPty,
   resolveShell,
   shellArgs,
 } from "./pty-service.js";
+
+describe("isValidPtySessionId", () => {
+  test("accepts the canonical panel, bucket, tab, and window composite id", () => {
+    expect(isValidPtySessionId("term:project-1::s-abc123:terminal-4@window-7")).toBe(true);
+  });
+
+  test("rejects paths, control characters, empty values, and oversized ids", () => {
+    expect(isValidPtySessionId("terminal")).toBe(false);
+    expect(isValidPtySessionId("term:../terminal")).toBe(false);
+    expect(isValidPtySessionId("term:terminal/other")).toBe(false);
+    expect(isValidPtySessionId("term:terminal\nother")).toBe(false);
+    expect(isValidPtySessionId("")).toBe(false);
+    expect(isValidPtySessionId(`term:${"x".repeat(508)}`)).toBe(false);
+  });
+});
 
 const realPlatform = process.platform;
 const realPath = process.env.PATH;

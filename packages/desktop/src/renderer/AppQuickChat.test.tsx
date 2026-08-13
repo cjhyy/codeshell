@@ -165,7 +165,7 @@ mock.module("./panels/PanelArea", () => ({
   },
 }));
 
-mock.module("./Sidebar", () => ({
+mock.module("./app/AppSidebar", () => ({
   Sidebar(props: SidebarProps) {
     sidebarProps = props;
     return <div data-testid="sidebar" />;
@@ -180,8 +180,7 @@ mock.module("./shell/CommandPalette", () => ({
 mock.module("./shell/SessionSearchModal", () => ({
   SessionSearchModal: () => <div data-testid="session-search" />,
 }));
-mock.module("./assets/codeshell-dog-icon.png", () => ({ default: "dog.png" }));
-mock.module("./petSprite", () => ({ usePetSprite: () => "dog.png" }));
+mock.module("./app/useAppPetSprite", () => ({ usePetSprite: () => "dog.png" }));
 
 const { App } = await import("./App");
 

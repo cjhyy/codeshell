@@ -117,7 +117,11 @@ async function openProjectSettings(win) {
     }
   });
   const viewOnly = win.getByRole("button", { name: /仅查看|View only/i });
-  if (await viewOnly.isVisible().catch(() => false)) await viewOnly.click();
+  const trustDialogOpened = await viewOnly
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (trustDialogOpened) await viewOnly.click();
 }
 
 async function assertNoHorizontalOverflow(win, label) {

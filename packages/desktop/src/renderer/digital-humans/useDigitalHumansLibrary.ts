@@ -10,7 +10,7 @@ export interface DigitalHumansLibraryApi {
   listProfiles(cwd?: string): Promise<DigitalHumanProfileEntry[]>;
   listProfileCatalog(): Promise<DigitalHumanCatalogEntry[]>;
   listDigitalHumanTeams(): Promise<DigitalHumanTeam[]>;
-  listSkills(cwd: string, options: { includeDisabled: true }): Promise<DigitalHumanSkillEntry[]>;
+  listSkills(cwd: string | null, options: { includeDisabled: true }): Promise<DigitalHumanSkillEntry[]>;
 }
 
 export type DigitalHumansLibraryStatus = "loading" | "refreshing" | "ready" | "error";
@@ -58,7 +58,7 @@ export function useDigitalHumansLibrary(
         api.listProfiles(activeProjectPath ?? undefined),
         api.listProfileCatalog(),
         api.listDigitalHumanTeams(),
-        api.listSkills(activeProjectPath ?? "/", { includeDisabled: true }),
+        api.listSkills(activeProjectPath, { includeDisabled: true }),
       ]);
       if (generation !== requestGeneration.current) return false;
       setProfiles(nextProfiles);

@@ -239,6 +239,7 @@ import {
   ptyKill,
   ptyKillAll,
   ptyReapDestroyed,
+  assertValidPtySessionId,
 } from "./pty-service.js";
 import {
   listCookieDomains,
@@ -3137,8 +3138,8 @@ app.whenReady().then(async () => {
   setInterval(() => void sweepStaleWorktrees("interval"), 60 * 60_000);
 });
 
-ipcMain.handle("skills:list", async (_e, cwd: string, opts?: { includeDisabled?: boolean }) =>
-  listSkills(await requireRendererProjectPath(cwd), {
+ipcMain.handle("skills:list", async (_e, cwd: string | null, opts?: { includeDisabled?: boolean }) =>
+  listSkills(await requireRendererProjectPath(cwd ?? resolveNoRepoCwd()), {
     includeDisabled: opts?.includeDisabled === true,
   }),
 );
@@ -6246,24 +6247,24 @@ ipcMain.handle(
     if (!opts) {
       throw new Error("pty:start requires sessionId");
     }
-    assertDesktopSessionId(opts.sessionId);
+    assertValidPtySessionId(opts.sessionId);
     const cwd = await requireRendererProjectPath(opts.cwd ?? resolveNoRepoCwd());
     return ptyStart(e.sender, { ...opts, cwd });
   },
 );
 ipcMain.handle("pty:write", (e, sessionId: string, data: string) => {
-  assertDesktopSessionId(sessionId);
+  assertValidPtySessionId(sessionId);
   if (typeof data !== "string" || data.length > 1024 * 1024) {
     throw new Error("invalid pty input");
   }
   ptyWrite(e.sender, sessionId, data);
 });
 ipcMain.handle("pty:resize", (e, sessionId: string, cols: number, rows: number) => {
-  assertDesktopSessionId(sessionId);
+  assertValidPtySessionId(sessionId);
   ptyResize(e.sender, sessionId, cols, rows);
 });
 ipcMain.handle("pty:kill", (e, sessionId: string) => {
-  assertDesktopSessionId(sessionId);
+  assertValidPtySessionId(sessionId);
   ptyKill(e.sender, sessionId);
 });
 

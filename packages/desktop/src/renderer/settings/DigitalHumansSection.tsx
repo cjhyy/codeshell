@@ -56,7 +56,7 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
     // editor's skill picker, so it must not discard a fetched profile list.
     const [profileResult, skillResult] = await Promise.allSettled([
       window.codeshell.listProfiles(projectPath ?? undefined),
-      window.codeshell.listSkills(projectPath ?? "/", { includeDisabled: true }),
+      window.codeshell.listSkills(projectPath, { includeDisabled: true }),
     ]);
     if (profileResult.status === "fulfilled") {
       setProfiles(profileResult.value);

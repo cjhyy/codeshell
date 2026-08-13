@@ -19,8 +19,9 @@ describe("architecture growth budgets", () => {
     // Exact 2026-08-13 post-security-audit baselines: decreases are welcome;
     // any growth must extract a module or consciously update this decision.
     // The IPC count stayed flat; the line increase is the reviewed per-channel
-    // renderer ownership, path-containment, and bounded-input enforcement.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_842);
+    // renderer ownership, path-containment, bounded-input enforcement, and the
+    // extracted PTY composite-id assertion at the IPC boundary.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_843);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
       289,
     );

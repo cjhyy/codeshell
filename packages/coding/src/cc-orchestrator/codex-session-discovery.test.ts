@@ -98,6 +98,10 @@ describe("discoverCodexSessions", () => {
       metaLine("id-new", cwd, "2026-06-24T00:00:00.000Z"),
       userItem("new"),
     ]);
+    const oldFile = join(home, "sessions", "2026", "06", "20", "rollout-old.jsonl");
+    const newFile = join(home, "sessions", "2026", "06", "24", "rollout-new.jsonl");
+    utimesSync(oldFile, new Date(1_000), new Date(1_000));
+    utimesSync(newFile, new Date(2_000), new Date(2_000));
     const got = discoverCodexSessions(cwd, home);
     expect(got.map((s) => s.sessionId)).toEqual(["id-new", "id-old"]);
   });
@@ -150,6 +154,10 @@ describe("discoverRecentCodexSessions", () => {
       metaLine("thread-b", "/tmp/proj-b", "2026-07-20T10:00:00Z"),
       userItem("write release notes"),
     ]);
+    const first = join(home, "sessions", "2026", "07", "19", "rollout-a.jsonl");
+    const second = join(home, "sessions", "2026", "07", "20", "rollout-b.jsonl");
+    utimesSync(first, new Date(1_000), new Date(1_000));
+    utimesSync(second, new Date(2_000), new Date(2_000));
 
     const sessions = discoverRecentCodexSessions({}, home);
     expect(sessions.map((s) => s.sessionId)).toEqual(["thread-b", "thread-a"]);

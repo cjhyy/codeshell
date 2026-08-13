@@ -92,7 +92,7 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
           );
           return;
         }
-        void window.codeshell.ptyResize(sessionId, term.cols, term.rows);
+        void window.codeshell.ptyResize(sessionId, term.cols, term.rows).catch(() => undefined);
       })
       .catch((e) => {
         if (!disposed) {
@@ -106,7 +106,10 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
     const ro = new ResizeObserver(() => {
       try {
         fit.fit();
-        void window.codeshell.ptyResize(sessionId, term.cols, term.rows);
+        // Resize is best-effort: the process may exit between the observer
+        // callback and main's lookup, or the window may be closing. Never turn
+        // that normal lifecycle race into an unhandled renderer page error.
+        void window.codeshell.ptyResize(sessionId, term.cols, term.rows).catch(() => undefined);
       } catch {
         /* host detached mid-resize */
       }

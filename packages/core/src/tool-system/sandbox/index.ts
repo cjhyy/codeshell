@@ -163,12 +163,19 @@ function warnAutoDowngrade(): void {
   );
 }
 
+export function defaultSandboxTempRoots(
+  platform: NodeJS.Platform = process.platform,
+  systemTempDir = tmpdir(),
+): string[] {
+  return platform === "win32" ? [systemTempDir] : ["/tmp", "/private/tmp", "/var/tmp"];
+}
+
 export function defaultSandboxConfig(mode: SandboxMode = "auto"): SandboxConfig {
   // Temp roots are writable so tool-result spillover / scratch files land
   // somewhere. POSIX: the canonical /tmp family. Windows has no OS sandbox
   // backend (auto → off), so writableRoots is effectively unused there, but
   // keep it host-correct by using the platform temp dir instead of /tmp.
-  const tmpRoots = process.platform === "win32" ? [tmpdir()] : ["/tmp", "/private/tmp", "/var/tmp"];
+  const tmpRoots = defaultSandboxTempRoots();
   return {
     mode,
     writableRoots: ["${workspace}", ...tmpRoots],

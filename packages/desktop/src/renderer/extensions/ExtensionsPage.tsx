@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DiscoverHome } from "./DiscoverHome";
 import { ManagePage, type TabKey } from "./ManagePage";
 import { useT } from "../i18n/I18nProvider";
@@ -24,8 +24,21 @@ type View = { mode: "home" } | { mode: "manage"; tab: TabKey; query?: string };
  */
 export function ExtensionsPage({ activeProjectPath, showDiscover = true }: Props) {
   const { t } = useT();
-  const cwd = activeProjectPath ?? "/";
+  const [noRepoCwd, setNoRepoCwd] = useState<string | null>(null);
+  useEffect(() => {
+    if (activeProjectPath) return;
+    let alive = true;
+    void window.codeshell.noRepoCwd().then((path) => {
+      if (alive) setNoRepoCwd(path);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [activeProjectPath]);
+  const cwd = activeProjectPath ?? noRepoCwd;
   const [view, setView] = useState<View>({ mode: "home" });
+
+  if (!cwd) return null;
 
   if (!showDiscover) {
     return (

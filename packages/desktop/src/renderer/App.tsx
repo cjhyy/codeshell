@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } 
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
-import { Sidebar } from "./Sidebar";
+import { Sidebar } from "./app/AppSidebar";
 import { PetPage } from "./pet/PetPage";
 import { useOptionalPetState } from "./pet/PetStateProvider";
 import { PetWorldPane } from "./pet/PetWorldPane";
@@ -19,7 +19,7 @@ import {
   parsePetWidgetReceiptState,
 } from "./pet/petWidgetActivity";
 import { TopBar } from "./TopBar";
-import { usePetSprite } from "./petSprite";
+import { usePetSprite } from "./app/useAppPetSprite";
 import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).

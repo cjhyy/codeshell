@@ -65,8 +65,10 @@ describe("matchProjectIdForCwd", () => {
 });
 
 describe("isCaseInsensitivePlatform", () => {
-  it("defaults to insensitive when navigator.platform is unavailable", () => {
-    // In the bun test environment navigator is undefined → safe default true.
-    expect(isCaseInsensitivePlatform()).toBe(true);
+  it("uses explicit host platforms and keeps the unknown fallback conservative", () => {
+    expect(isCaseInsensitivePlatform("MacIntel")).toBe(true);
+    expect(isCaseInsensitivePlatform("Win32")).toBe(true);
+    expect(isCaseInsensitivePlatform("Linux x86_64")).toBe(false);
+    expect(isCaseInsensitivePlatform("")).toBe(true);
   });
 });

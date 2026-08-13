@@ -62,6 +62,17 @@ async function seedFixture() {
     `${JSON.stringify({ autoUpdates: false }, null, 2)}\n`,
     { mode: 0o600 },
   );
+  const desktopStateDirectory = join(isolated.codeShellHome, "desktop");
+  await mkdir(desktopStateDirectory, { recursive: true });
+  await writeFile(
+    join(desktopStateDirectory, "recents.json"),
+    `${JSON.stringify(
+      [{ path: fixtureProjectPath, name: "Digital Human Lab", lastOpenedAt: Date.now() }],
+      null,
+      2,
+    )}\n`,
+    { mode: 0o600 },
+  );
   for (const profile of profiles) {
     const directory = join(isolated.codeShellHome, "profiles", profile.name);
     await mkdir(directory, { recursive: true });
@@ -186,10 +197,6 @@ try {
   const rendererErrors = captureRendererErrors(win);
   await win.setViewportSize({ width: 1_440, height: 960 });
   await win.locator("#root").waitFor({ state: "visible", timeout: 20_000 });
-  await win.evaluate(({ path, name }) => globalThis.window.codeshell.projects.add({ path, name }), {
-    path: fixtureProjectPath,
-    name: "Digital Human Lab",
-  });
   const fixtureProject = win
     .locator("aside")
     .getByRole("button", { name: "Digital Human Lab", exact: true });
@@ -198,7 +205,11 @@ try {
   const trustDialog = win
     .getByRole("dialog")
     .filter({ has: win.getByRole("heading", { name: /信任此项目|Trust this project/i }) });
-  if (await trustDialog.isVisible()) {
+  const trustDialogOpened = await trustDialog
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (trustDialogOpened) {
     await trustDialog.getByRole("button", { name: /信任并继续|Trust and continue/i }).click();
     await trustDialog.waitFor({ state: "hidden" });
   }

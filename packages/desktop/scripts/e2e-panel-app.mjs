@@ -236,6 +236,17 @@ try {
     join(projectDir, ".code-shell", "settings.json"),
     `${JSON.stringify({ panelAppBindings: ["panel-e2e"] })}\n`,
   );
+  const desktopStateDirectory = join(home, ".code-shell", "desktop");
+  await mkdir(desktopStateDirectory, { recursive: true });
+  await writeFile(
+    join(desktopStateDirectory, "recents.json"),
+    `${JSON.stringify(
+      [{ path: projectDir, name: "project-e2e", lastOpenedAt: Date.now() }],
+      null,
+      2,
+    )}\n`,
+    { mode: 0o600 },
+  );
   app = await launchCodeShellElectron({
     // Electron's instance lock follows userData, while core's plugin catalog
     // follows HOME. Isolate both so a developer's running CodeShell instance
