@@ -37,6 +37,11 @@ export interface TurnOpts {
   injected?: boolean;
   /** Stable id for this user-intent; forwarded to Engine.run for idempotency. */
   clientMessageId?: string;
+  /** Archive history before this turn at the engine's pre-model safe point. */
+  archiveBeforeCurrentTurn?: {
+    fromClientMessageId?: string;
+    segmentId?: string;
+  };
   /** Structured input attachments for this turn. */
   attachments?: InputAttachmentMeta[];
   /** Permission mode snapshot for this queued turn only. */
@@ -386,6 +391,7 @@ export class ChatSession {
         goal: next.opts.goal,
         injected: next.opts.injected,
         clientMessageId: next.opts.clientMessageId,
+        archiveBeforeCurrentTurn: next.opts.archiveBeforeCurrentTurn,
         attachments: next.opts.attachments,
         permissionMode: next.opts.permissionMode,
         planMode: next.opts.planMode,

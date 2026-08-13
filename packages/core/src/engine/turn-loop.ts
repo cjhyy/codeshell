@@ -69,6 +69,7 @@ import {
   recordGoalUsage,
   goalBudgetTerminationReason,
   applyGoalExtension,
+  extendGoalLimit,
   limitProximity,
   isSameGoalVersion,
   normalizeGoal,
@@ -365,6 +366,9 @@ export class TurnLoop {
     timeBudgetMs?: number;
     maxStopBlocks: number;
   } {
+    const previousMaxTurns = this.config.maxTurns;
+    const previousTokenBudget = this.goalTracker?.goal.tokenBudget;
+    const previousTimeBudgetMs = this.goalTracker?.goal.timeBudgetMs;
     const elapsedMs = this.goalTracker ? Date.now() - this.goalTracker.startedAtMs : 0;
     const next = applyGoalExtension(
       this.config.maxTurns,
@@ -389,10 +393,7 @@ export class TurnLoop {
     // limit that actually bites, so an extend that only bumped maxTurns/budgets
     // couldn't keep it going. Resolve the current cap the same way the loop does.
     const curCap = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
-    const nextCap =
-      typeof opts.addStopBlocks === "number" && opts.addStopBlocks > 0
-        ? curCap + Math.floor(opts.addStopBlocks)
-        : curCap;
+    const nextCap = extendGoalLimit(curCap, opts.addStopBlocks);
     this.config = { ...this.config, maxStopBlocks: nextCap };
 
     // ANY extension resets the consecutive stop-block streak: the user just
@@ -400,10 +401,10 @@ export class TurnLoop {
     // immediately re-capped. (Previously only addTurns reset it, leaving a
     // budget-only extension unable to un-stick a capped goal.)
     const extended =
-      (opts.addTurns ?? 0) > 0 ||
-      (opts.addStopBlocks ?? 0) > 0 ||
-      (opts.addTokenBudget ?? 0) > 0 ||
-      (opts.addTimeBudgetMs ?? 0) > 0;
+      next.maxTurns !== previousMaxTurns ||
+      nextCap !== curCap ||
+      next.tokenBudget !== previousTokenBudget ||
+      next.timeBudgetMs !== previousTimeBudgetMs;
     if (extended) {
       this.stopBlockCount = 0;
       // Let the next approach re-announce against the raised ceilings.

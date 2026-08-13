@@ -96,6 +96,27 @@ export type GoalLifecycleV1 =
 
 export type GoalLifecyclePhase = GoalLifecycleV1["phase"];
 
+function positiveSafeNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= Number.MAX_SAFE_INTEGER;
+}
+
+function positiveSafeInteger(value: unknown): number | undefined {
+  if (!positiveSafeNumber(value)) return undefined;
+  const integer = Math.floor(value);
+  return integer >= 1 ? integer : undefined;
+}
+
+/** Add a user-controlled positive integer delta without producing Infinity or an unsafe integer. */
+export function extendGoalLimit(current: number, addition: unknown): number {
+  const delta = positiveSafeInteger(addition);
+  if (delta === undefined) return current;
+  const safeCurrent =
+    typeof current === "number" && Number.isFinite(current) && current >= 0
+      ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(current))
+      : Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, safeCurrent + delta);
+}
+
 function goalLifecycleConfig(goal: GoalConfig): GoalLifecycleConfig {
   const { goalId: _goalId, revision: _revision, paused: _paused, ...config } = goal;
   return config;
@@ -112,7 +133,7 @@ export function createGoalLifecycle(
   const base: GoalLifecycleBaseV1 = {
     version: 1,
     goalId: goal.goalId ?? randomUUID(),
-    revision: Math.max(1, Math.floor(goal.revision ?? 1)),
+    revision: positiveSafeInteger(goal.revision) ?? 1,
     config: goalLifecycleConfig(goal),
     updatedAtMs: nowMs,
   };
@@ -145,7 +166,7 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
   if (typeof candidate.goalId !== "string" || candidate.goalId.length === 0) return undefined;
   if (
     typeof candidate.revision !== "number" ||
-    !Number.isInteger(candidate.revision) ||
+    !Number.isSafeInteger(candidate.revision) ||
     candidate.revision < 1
   ) {
     return undefined;
@@ -177,18 +198,20 @@ export function decodeGoalLifecycle(value: unknown): GoalLifecycleV1 | undefined
     const field = config[key];
     if (
       field !== undefined &&
-      (typeof field !== "number" || !Number.isFinite(field) || field <= 0)
+      !positiveSafeNumber(field)
     ) {
       return undefined;
     }
   }
   for (const key of ["maxTurns", "maxStopBlocks"]) {
     const field = config[key];
-    if (field !== undefined && !Number.isInteger(field)) return undefined;
+    if (field !== undefined && !Number.isSafeInteger(field)) return undefined;
   }
   if (
     config.setAtMs !== undefined &&
-    (typeof config.setAtMs !== "number" || !Number.isFinite(config.setAtMs) || config.setAtMs < 0)
+    (typeof config.setAtMs !== "number" ||
+      !Number.isSafeInteger(config.setAtMs) ||
+      config.setAtMs < 0)
   ) {
     return undefined;
   }
@@ -485,10 +508,10 @@ export function resolveMaxStopBlocks(
   configMaxStopBlocks: number | undefined,
   goal: GoalConfig | undefined,
 ): number {
-  if (typeof configMaxStopBlocks === "number" && configMaxStopBlocks > 0) {
-    return Math.floor(configMaxStopBlocks);
-  }
-  if (goal?.maxStopBlocks && goal.maxStopBlocks > 0) return goal.maxStopBlocks;
+  const configLimit = positiveSafeInteger(configMaxStopBlocks);
+  if (configLimit !== undefined) return configLimit;
+  const goalLimit = positiveSafeInteger(goal?.maxStopBlocks);
+  if (goalLimit !== undefined) return goalLimit;
   return goal ? GOAL_DEFAULT_MAX_STOP_BLOCKS : INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS;
 }
 
@@ -514,21 +537,19 @@ export function normalizeGoal(raw: string | GoalConfig | undefined): GoalConfig 
   if (!objective) return undefined;
   const out: GoalConfig = { objective };
   if (typeof obj.goalId === "string" && obj.goalId.trim()) out.goalId = obj.goalId;
-  if (typeof obj.revision === "number" && obj.revision > 0) {
-    out.revision = Math.floor(obj.revision);
-  }
+  const revision = positiveSafeInteger(obj.revision);
+  if (revision !== undefined) out.revision = revision;
   if (obj.paused === true) out.paused = true;
-  if (typeof obj.tokenBudget === "number" && obj.tokenBudget > 0) out.tokenBudget = obj.tokenBudget;
-  if (typeof obj.timeBudgetMs === "number" && obj.timeBudgetMs > 0)
-    out.timeBudgetMs = obj.timeBudgetMs;
-  if (typeof obj.maxTurns === "number" && obj.maxTurns > 0) out.maxTurns = Math.floor(obj.maxTurns);
-  if (typeof obj.maxStopBlocks === "number" && obj.maxStopBlocks > 0) {
-    out.maxStopBlocks = Math.floor(obj.maxStopBlocks);
-  }
+  if (positiveSafeNumber(obj.tokenBudget)) out.tokenBudget = obj.tokenBudget;
+  if (positiveSafeNumber(obj.timeBudgetMs)) out.timeBudgetMs = obj.timeBudgetMs;
+  const maxTurns = positiveSafeInteger(obj.maxTurns);
+  if (maxTurns !== undefined) out.maxTurns = maxTurns;
+  const maxStopBlocks = positiveSafeInteger(obj.maxStopBlocks);
+  if (maxStopBlocks !== undefined) out.maxStopBlocks = maxStopBlocks;
   // Preserve a positive goal-set timestamp so a resumed/inherited goal keeps
   // the anchor for relative deadlines. Non-positive/junk is dropped, matching
   // the budget fields (a bogus anchor is worse than none).
-  if (typeof obj.setAtMs === "number" && obj.setAtMs > 0) out.setAtMs = obj.setAtMs;
+  if (positiveSafeInteger(obj.setAtMs) !== undefined) out.setAtMs = obj.setAtMs;
   return out;
 }
 
@@ -571,8 +592,9 @@ export function resolveMaxTurns(
   configMaxTurns: number | undefined,
   goal: GoalConfig | undefined,
 ): number {
-  if (typeof configMaxTurns === "number" && configMaxTurns > 0) return configMaxTurns;
-  if (goal) return goal.maxTurns ?? GOAL_DEFAULT_MAX_TURNS;
+  const configLimit = positiveSafeInteger(configMaxTurns);
+  if (configLimit !== undefined) return configLimit;
+  if (goal) return positiveSafeInteger(goal.maxTurns) ?? GOAL_DEFAULT_MAX_TURNS;
   return INTERACTIVE_DEFAULT_MAX_TURNS;
 }
 
@@ -653,19 +675,17 @@ export function applyGoalExtension(
   ext: GoalExtension,
 ): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number } {
   let maxTurns = currentMaxTurns;
-  if (typeof ext.addTurns === "number" && ext.addTurns > 0) {
-    maxTurns += Math.floor(ext.addTurns);
-  }
+  maxTurns = extendGoalLimit(maxTurns, ext.addTurns);
   let tokenBudget = goal?.tokenBudget;
   let timeBudgetMs = goal?.timeBudgetMs;
   if (goal) {
-    if (typeof ext.addTokenBudget === "number" && ext.addTokenBudget > 0) {
-      tokenBudget = (tokenBudget ?? tokensUsed) + Math.floor(ext.addTokenBudget);
+    if (positiveSafeInteger(ext.addTokenBudget) !== undefined) {
+      tokenBudget = extendGoalLimit(tokenBudget ?? tokensUsed, ext.addTokenBudget);
     }
-    if (typeof ext.addTimeBudgetMs === "number" && ext.addTimeBudgetMs > 0) {
+    if (positiveSafeInteger(ext.addTimeBudgetMs) !== undefined) {
       // Seed an unset cap from elapsed time (not 0), mirroring the token branch,
       // so the new cap lands above current usage. Fixes B1.
-      timeBudgetMs = (timeBudgetMs ?? elapsedMs) + Math.floor(ext.addTimeBudgetMs);
+      timeBudgetMs = extendGoalLimit(timeBudgetMs ?? elapsedMs, ext.addTimeBudgetMs);
     }
   }
   return { maxTurns, tokenBudget, timeBudgetMs };
@@ -686,7 +706,9 @@ export function createGoalBudgetTracker(goal: GoalConfig, nowMs: number): GoalBu
 
 /** Add this turn's token usage to the running total. */
 export function recordGoalUsage(tracker: GoalBudgetTracker, turnTokens: number): void {
-  if (turnTokens > 0) tracker.tokensUsed += turnTokens;
+  if (positiveSafeInteger(turnTokens) !== undefined) {
+    tracker.tokensUsed = extendGoalLimit(tracker.tokensUsed, turnTokens);
+  }
 }
 
 /**

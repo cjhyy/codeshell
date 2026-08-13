@@ -42,6 +42,7 @@ import { StdioTransport } from "../protocol/transport.js";
 import { createNotification, Methods } from "../protocol/types.js";
 import { setCronChangedSink } from "../tool-system/builtin/cron.js";
 import { setModelCatalogChangedSink } from "../tool-system/builtin/edit-model-catalog.js";
+import { setCapabilityChangedSink } from "../tool-system/builtin/install-capability.js";
 import { SettingsManager, noRepoDir } from "../settings/manager.js";
 import { personalizationFrom } from "../settings/personalization.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
@@ -373,6 +374,13 @@ setCronChangedSink(() => {
 // and connection pages live in the desktop renderer. Notify them immediately
 // after a successful write instead of relying on a later turn_complete event.
 setModelCatalogChangedSink(() => {
+  stdioTransport.send(createNotification(Methods.SettingsChanged, {}));
+});
+
+// Conversational Plugin/Skill/MCP installs happen inside this worker. Tell the
+// mounted Desktop renderer to refresh catalogs and push a fresh settings patch
+// back to all live sessions, matching installs initiated from Extensions.
+setCapabilityChangedSink(() => {
   stdioTransport.send(createNotification(Methods.SettingsChanged, {}));
 });
 

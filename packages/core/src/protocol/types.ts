@@ -113,6 +113,14 @@ export interface RunParams {
   attachments?: InputAttachmentMeta[];
   /** Stable id for the user's submit intent; duplicate ids are idempotent. */
   clientMessageId?: string;
+  /**
+   * Archive the preceding history after this message is durably appended and
+   * before its first model call. `clientMessageId` is the exclusive end anchor.
+   */
+  archiveBeforeCurrentTurn?: {
+    fromClientMessageId?: string;
+    segmentId?: string;
+  };
   /** Desktop host ownership generation for process-local Quick Chat runs. */
   quickChatClaimId?: string;
   /**

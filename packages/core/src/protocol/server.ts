@@ -126,6 +126,29 @@ function runInputError(params: RunParams): string | null {
   ) {
     return "quickChatClaimId must be a non-empty string";
   }
+  if (params.archiveBeforeCurrentTurn !== undefined) {
+    const archive = params.archiveBeforeCurrentTurn;
+    if (!archive || typeof archive !== "object" || Array.isArray(archive)) {
+      return "archiveBeforeCurrentTurn must be an object";
+    }
+    if (typeof params.clientMessageId !== "string" || params.clientMessageId.length === 0) {
+      return "archiveBeforeCurrentTurn requires clientMessageId";
+    }
+    for (const [field, value] of [
+      ["fromClientMessageId", archive.fromClientMessageId],
+      ["segmentId", archive.segmentId],
+    ] as const) {
+      if (
+        value !== undefined &&
+        (typeof value !== "string" ||
+          value.length === 0 ||
+          value.length > 256 ||
+          /[\r\n]/.test(value))
+      ) {
+        return `archiveBeforeCurrentTurn.${field} must be a bounded non-empty string`;
+      }
+    }
+  }
   if (
     params.behaviorMode !== undefined &&
     (typeof params.behaviorMode !== "string" || params.behaviorMode.length === 0)
@@ -179,6 +202,20 @@ function runInputError(params: RunParams): string | null {
   // Domain-specific run-param validation (e.g. behavior-mode vocabularies and
   // extension-owned param shapes) lives in ExtensionModule.validateRunParams.
   return null;
+}
+
+function goalExtensionInputError(params: Record<string, unknown>): string | null {
+  const fields = ["addTurns", "addTokenBudget", "addTimeBudgetMs", "addStopBlocks"] as const;
+  let supplied = false;
+  for (const field of fields) {
+    const value = params[field];
+    if (value === undefined) continue;
+    supplied = true;
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+      return `${field} must be a positive safe integer`;
+    }
+  }
+  return supplied ? null : "at least one goal extension is required";
 }
 
 const COMPACT_STREAM_STRATEGIES = new Set<ContextCompactStreamEvent["strategy"]>([
@@ -1621,6 +1658,7 @@ export class AgentServer {
         },
         clientMessageId:
           typeof params.clientMessageId === "string" ? params.clientMessageId : undefined,
+        archiveBeforeCurrentTurn: params.archiveBeforeCurrentTurn,
         permissionMode: params.permissionMode,
         planMode: params.planMode,
         behaviorMode: params.behaviorMode,
@@ -1983,7 +2021,19 @@ export class AgentServer {
    * limits, or an error if no session / no active run.
    */
   private handleGoalExtend(req: RpcRequest): void {
-    const params = (req.params ?? {}) as {
+    const rawParams = req.params;
+    if (!rawParams || typeof rawParams !== "object" || Array.isArray(rawParams)) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "goal extension params are required"),
+      );
+      return;
+    }
+    const inputError = goalExtensionInputError(rawParams as Record<string, unknown>);
+    if (inputError) {
+      this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, inputError));
+      return;
+    }
+    const params = rawParams as {
       sessionId?: string;
       addTurns?: number;
       addTokenBudget?: number;

@@ -1364,10 +1364,6 @@ export class Engine {
     // surfacing as `[-32603] Session not found: <sid>` on the very first
     // TUI turn. Detection now uses `sessionManager.exists()` (one stat
     // call) instead of a try/catch on resume.
-    // wrappedOnStream (defined before the session opens, executed only after)
-    // closes over `session`, so keep the declaration here and assign from the
-    // opener's result.
-    let session!: SessionBundle;
     const openedResult = openRunSession({
       sessionManager: this.sessionManager,
       options,
@@ -1390,13 +1386,60 @@ export class Engine {
     });
     if (!openedResult.ok) return openedResult.result;
     const {
-      messages,
+      messages: openedMessages,
       freshImageMessage,
       resumedFromDisk,
       claimClientMessageId,
       releaseClientMessageId,
     } = openedResult.opened;
-    session = openedResult.opened.session;
+    const session = openedResult.opened.session;
+    let messages = openedMessages;
+
+    // A host-owned time/topic boundary must be applied only after the current
+    // user message exists in the transcript (it is the exclusive end anchor),
+    // yet before this turn assembles prompts or calls the model. Doing this as
+    // a separate host query races both sides of that boundary: too early and
+    // the anchor is dead; too late and the first new-topic prompt still sees
+    // the entire old topic. Fail open to full history if summarization fails.
+    if (options?.archiveBeforeCurrentTurn && options.clientMessageId) {
+      try {
+        const archived = await this.archiveTurnRange(
+          session.state.sessionId,
+          { start: 0, end: 0 },
+          {
+            toClientMessageId: options.clientMessageId,
+            ...(options.archiveBeforeCurrentTurn.fromClientMessageId
+              ? {
+                  fromClientMessageId: options.archiveBeforeCurrentTurn.fromClientMessageId,
+                }
+              : {}),
+            ...(options.archiveBeforeCurrentTurn.segmentId
+              ? { segmentId: options.archiveBeforeCurrentTurn.segmentId }
+              : {}),
+          },
+        );
+        if (archived.before > archived.after) {
+          options.onStream?.({
+            type: "context_compact",
+            strategy: "range",
+            before: archived.before,
+            after: archived.after,
+          });
+        }
+        // openRunSession captured the pre-marker replay. Rebuild from the
+        // persisted marker so this very first post-boundary model call gets
+        // the archived view rather than waiting until the following turn.
+        messages =
+          this.compactedMessagesBySession.get(session.state.sessionId) ??
+          this.sessionManager.resume(session.state.sessionId).transcript.toMessages();
+      } catch (error) {
+        logger.warn("engine.pre_run_archive.failed", {
+          sessionId: session.state.sessionId,
+          segmentId: options.archiveBeforeCurrentTurn.segmentId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
     this.stampRunToolContext(toolCtx, session, options);
     const sessionRun = runWithSid(session.state.sessionId, async () => {
       const hookMessages = profile?.disableHooks

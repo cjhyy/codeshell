@@ -16,13 +16,19 @@ export function registerFileHistoryHook(
   options: RegisterFileHistoryHookOptions,
 ): RunScopedDisposer {
   const history = FileHistory.loadFromDir(options.sessionDir);
-  const handler: HookHandler = async (context) => {
+  const pendingCreates = new Map<string, ReturnType<FileHistory["prepareCreated"]>>();
+  const startHandler: HookHandler = async (context) => {
     const toolName = context.data?.toolName as string;
     const args = context.data?.args as Record<string, unknown> | undefined;
+    const toolCallId = context.data?.toolCallId;
     const turnSeq = options.getTurnSeq();
     if ((toolName === "Write" || toolName === "Edit") && typeof args?.file_path === "string") {
-      if (history.saveSnapshot(args.file_path, turnSeq) === null && turnSeq !== undefined) {
-        history.recordCreated(args.file_path, turnSeq);
+      const marker =
+        turnSeq === undefined ? null : history.prepareCreated(args.file_path, turnSeq);
+      if (marker && typeof toolCallId === "string") {
+        pendingCreates.set(toolCallId, marker);
+      } else {
+        history.saveSnapshot(args.file_path, turnSeq);
       }
     } else if (args) {
       const contribution = options.contributions?.find((item) => item.toolName === toolName);
@@ -32,14 +38,25 @@ export function registerFileHistoryHook(
     }
     return {};
   };
-  options.hooks.register("on_tool_start", handler, 100, "file_history_backup");
+  const endHandler: HookHandler = async (context) => {
+    const toolCallId = context.data?.toolCallId;
+    if (typeof toolCallId !== "string") return {};
+    const marker = pendingCreates.get(toolCallId);
+    pendingCreates.delete(toolCallId);
+    if (marker && context.data?.isError !== true) history.commitCreated(marker);
+    return {};
+  };
+  options.hooks.register("on_tool_start", startHandler, 100, "file_history_backup");
+  options.hooks.register("on_tool_end", endHandler, 100, "file_history_backup");
 
   let disposed = false;
   return {
     dispose() {
       if (disposed) return;
       disposed = true;
-      options.hooks.unregister("on_tool_start", handler);
+      pendingCreates.clear();
+      options.hooks.unregister("on_tool_start", startHandler);
+      options.hooks.unregister("on_tool_end", endHandler);
     },
   };
 }

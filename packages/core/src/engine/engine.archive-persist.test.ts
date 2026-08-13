@@ -16,10 +16,12 @@ const ANCHORED_OPEN = "<anchored-summary";
 const fakeProvider = "fake-archive-persist";
 const SUMMARY_TEXT =
   "The user and assistant discussed the old topic at length before moving on to the new topic.";
+const fakeRequests: CreateMessageOptions[] = [];
 
 class FakeSummarizerClient extends LLMClientBase {
   protected initClient(): void {}
-  async createMessage(_options: CreateMessageOptions): Promise<LLMResponse> {
+  async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
+    fakeRequests.push(options);
     this.recordUsage({ promptTokens: 1, completionTokens: 1, totalTokens: 2 });
     return {
       text: SUMMARY_TEXT,
@@ -213,6 +215,66 @@ describe("Engine archive persistence", () => {
       expect(texts.some((x: string) => x === "新话题")).toBe(true);
     } finally {
       rmSync(summarizerDir, { recursive: true, force: true });
+    }
+  });
+
+  it("archives history after appending the boundary message but before its first model call", async () => {
+    const summarizerDir = mkdtempSync(join(tmpdir(), "cs-eng-pre-run-archive-"));
+    const summarizerEngine = new Engine({
+      llm: {
+        provider: fakeProvider,
+        model: "fake-model",
+        apiKey: "test",
+      } satisfies LLMConfig,
+      cwd: summarizerDir,
+      sessionStorageDir: join(summarizerDir, "sessions"),
+      headless: true,
+    });
+    (summarizerEngine as any).hooks.clear();
+    fakeRequests.length = 0;
+    try {
+      const bundle = (summarizerEngine as any).sessionManager.create(
+        summarizerDir,
+        "fake-model",
+        fakeProvider,
+      );
+      bundle.transcript.appendMessage("user", "OLD TOPIC MUST DISAPPEAR", {
+        clientMessageId: "old-boundary",
+      });
+      bundle.transcript.appendMessage("assistant", "OLD REPLY MUST DISAPPEAR");
+
+      await summarizerEngine.run("BRAND NEW TOPIC", {
+        sessionId: bundle.state.sessionId,
+        clientMessageId: "new-boundary",
+        archiveBeforeCurrentTurn: {
+          fromClientMessageId: "old-boundary",
+          segmentId: "seg-pre-run",
+        },
+      });
+
+      const modelRequest = fakeRequests.find((request) =>
+        request.messages.some((message) => String(message.content).includes("BRAND NEW TOPIC")),
+      );
+      expect(modelRequest).toBeDefined();
+      const firstTurnHistory = modelRequest!.messages.map((message) => String(message.content));
+      expect(firstTurnHistory.some((text) => text.includes(SUMMARY_TEXT))).toBe(true);
+      expect(firstTurnHistory.some((text) => text.includes("OLD TOPIC MUST DISAPPEAR"))).toBe(
+        false,
+      );
+      expect(firstTurnHistory.some((text) => text.includes("OLD REPLY MUST DISAPPEAR"))).toBe(
+        false,
+      );
+      const persisted = (summarizerEngine as any).sessionManager.resume(bundle.state.sessionId);
+      expect(
+        persisted.transcript
+          .getEvents("range_archive")
+          .some(
+            (event: { data: Record<string, unknown> }) => event.data.segmentId === "seg-pre-run",
+          ),
+      ).toBe(true);
+    } finally {
+      rmSync(summarizerDir, { recursive: true, force: true });
+      fakeRequests.length = 0;
     }
   });
 

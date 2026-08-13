@@ -8,6 +8,7 @@ import {
   resolveMaxStopBlocks,
   resolveGoalSetAt,
   applyGoalExtension,
+  extendGoalLimit,
   limitProximity,
   GOAL_DEFAULT_MAX_TURNS,
   GOAL_DEFAULT_MAX_STOP_BLOCKS,
@@ -216,6 +217,21 @@ describe("applyGoalExtension (TODO 3.1 — 运行中续轮/加预算)", () => {
     applyGoalExtension(100, goal, 0, 0, { addTokenBudget: 500 });
     expect(goal.tokenBudget).toBe(1000);
   });
+
+  test("rejects non-finite deltas and saturates additions at the safe-integer ceiling", () => {
+    const goal: GoalConfig = { objective: "x", tokenBudget: Number.MAX_SAFE_INTEGER - 2 };
+    const invalid = applyGoalExtension(100, goal, 0, 0, {
+      addTurns: Number.POSITIVE_INFINITY,
+      addTokenBudget: Number.NaN,
+      addTimeBudgetMs: Number.MAX_SAFE_INTEGER + 1,
+    });
+    expect(invalid).toEqual({
+      maxTurns: 100,
+      tokenBudget: Number.MAX_SAFE_INTEGER - 2,
+      timeBudgetMs: undefined,
+    });
+    expect(extendGoalLimit(Number.MAX_SAFE_INTEGER - 2, 10)).toBe(Number.MAX_SAFE_INTEGER);
+  });
 });
 
 describe("resolveGoalSetAt (goal-set anchor for relative deadlines)", () => {
@@ -259,6 +275,18 @@ describe("normalizeGoal", () => {
     expect(normalizeGoal({ objective: "x", tokenBudget: 0, timeBudgetMs: -1 })).toEqual({
       objective: "x",
     });
+  });
+  test("non-finite and unsafe numeric limits are dropped", () => {
+    expect(
+      normalizeGoal({
+        objective: "x",
+        revision: Number.POSITIVE_INFINITY,
+        tokenBudget: Number.POSITIVE_INFINITY,
+        timeBudgetMs: Number.MAX_SAFE_INTEGER + 1,
+        maxTurns: Number.POSITIVE_INFINITY,
+        maxStopBlocks: Number.MAX_SAFE_INTEGER + 1,
+      }),
+    ).toEqual({ objective: "x" });
   });
   test("setAtMs (goal-set timestamp) is preserved when positive, dropped otherwise", () => {
     // Preserved so a resumed/inherited goal keeps the moment the user set it —

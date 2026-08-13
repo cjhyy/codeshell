@@ -20,6 +20,34 @@ function makeTransport() {
 }
 
 describe("AgentServer goal controls", () => {
+  it("rejects empty, non-finite, and unsafe goal extensions before reaching a session", () => {
+    let extendCalls = 0;
+    const transport = makeTransport();
+    new AgentServer({
+      transport: transport.transport,
+      chatManager: {
+        get: () => ({
+          extendGoalRun: () => {
+            extendCalls += 1;
+            return { maxTurns: 100, maxStopBlocks: 25 };
+          },
+        }),
+      } as any,
+    });
+
+    for (const [id, params] of [
+      ["empty-extension", { sessionId: "s-1" }],
+      ["infinite-extension", { sessionId: "s-1", addTurns: Number.POSITIVE_INFINITY }],
+      ["unsafe-extension", { sessionId: "s-1", addStopBlocks: Number.MAX_SAFE_INTEGER + 1 }],
+    ] as const) {
+      transport.deliver({ jsonrpc: "2.0", id, method: Methods.GoalExtend, params });
+      expect(transport.sent.find((message) => message.id === id)?.error?.code).toBe(
+        ErrorCodes.InvalidParams,
+      );
+    }
+    expect(extendCalls).toBe(0);
+  });
+
   it("treats resume on an unpaused idle Goal as an explicit drive request", async () => {
     const before = {
       objective: "idle objective",

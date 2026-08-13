@@ -134,6 +134,15 @@ export interface EngineRunOptions {
   goal?: string | GoalConfig;
   injected?: boolean;
   clientMessageId?: string;
+  /**
+   * Host-requested history boundary to archive after this run's user message
+   * has been appended, but before the first model call. The current
+   * `clientMessageId` is the exclusive end anchor.
+   */
+  archiveBeforeCurrentTurn?: {
+    fromClientMessageId?: string;
+    segmentId?: string;
+  };
   attachments?: InputAttachmentMeta[];
   /** Named per-run behavior profile supplied by interactive product surfaces. */
   behaviorMode?: RunBehaviorMode;
