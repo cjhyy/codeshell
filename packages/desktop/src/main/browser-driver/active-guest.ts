@@ -247,6 +247,16 @@ export function bucketForSession(sessionId: string | undefined): BrowserBucket |
   return bucketBySessionId.get(sessionId) ?? null;
 }
 
+/** Session identities currently mapped to a browser bucket (renderer authorization seam). */
+export function sessionIdsForBucket(bucket: string | undefined): string[] {
+  if (!bucket) return [];
+  const ids: string[] = [];
+  for (const [sessionId, candidate] of bucketBySessionId) {
+    if (candidate === bucket) ids.push(sessionId);
+  }
+  return ids;
+}
+
 export function bucketForGuestId(guestId: number): BrowserBucket | null {
   return liveRecord(guestId)?.bucket ?? null;
 }

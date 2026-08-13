@@ -193,7 +193,7 @@ describe("resolveLinkedSessionFromDisk", () => {
           starts += 1;
         },
         send: () => true,
-        isRunning: () => false,
+        isRunning: () => starts > 0,
         stop: () => {},
       }),
       onMessage: () => {},

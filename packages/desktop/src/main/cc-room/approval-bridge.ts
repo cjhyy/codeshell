@@ -46,12 +46,23 @@ export class ApprovalBridge {
       const timer = setTimeout(() => {
         if (this.pending.delete(k)) {
           const decision: ApprovalDecision = { behavior: "deny", message: "approval timed out" };
-          this.opts.onResolve?.(roomId, requestId, decision);
+          this.publishResolution(roomId, requestId, decision);
           resolve(decision);
         }
       }, this.timeoutMs);
       this.pending.set(k, { resolve, timer });
-      this.opts.onPush(roomId, { ...payload, requestId });
+      try {
+        this.opts.onPush(roomId, { ...payload, requestId });
+      } catch {
+        if (!this.pending.delete(k)) return;
+        clearTimeout(timer);
+        const decision: ApprovalDecision = {
+          behavior: "deny",
+          message: "approval prompt could not be delivered",
+        };
+        this.publishResolution(roomId, requestId, decision);
+        resolve(decision);
+      }
     });
   }
 
@@ -61,8 +72,40 @@ export class ApprovalBridge {
     if (!p) return false;
     clearTimeout(p.timer);
     this.pending.delete(k);
-    this.opts.onResolve?.(roomId, requestId, decision);
+    this.publishResolution(roomId, requestId, decision);
     p.resolve(decision);
     return true;
+  }
+
+  /** Deny every request owned by a room that can no longer answer controls. */
+  cancelRoom(roomId: string): number {
+    const prefix = `${roomId}:`;
+    let cancelled = 0;
+    for (const [key, pending] of [...this.pending]) {
+      if (!key.startsWith(prefix)) continue;
+      const requestId = key.slice(prefix.length);
+      this.pending.delete(key);
+      clearTimeout(pending.timer);
+      const decision: ApprovalDecision = {
+        behavior: "deny",
+        message: "room closed before approval was answered",
+      };
+      this.publishResolution(roomId, requestId, decision);
+      pending.resolve(decision);
+      cancelled += 1;
+    }
+    return cancelled;
+  }
+
+  private publishResolution(
+    roomId: string,
+    requestId: string,
+    decision: ApprovalDecision,
+  ): void {
+    try {
+      this.opts.onResolve?.(roomId, requestId, decision);
+    } catch {
+      // UI transport failures must never strand the control-response promise.
+    }
   }
 }

@@ -37,6 +37,71 @@ interface TaskInfoLike {
   status: TodoStatus;
 }
 
+const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
+const MAX_SESSION_ID_LENGTH = 128;
+const MAX_FOLDED_TRANSCRIPT_SCAN_BYTES = 128 * 1024 * 1024;
+const MAX_SUBAGENT_TRANSCRIPT_SCAN_BYTES = 32 * 1024 * 1024;
+const MAX_SUBAGENT_STATE_BYTES = 2 * 1024 * 1024;
+const MAX_FOLD_ITEMS = 100_000;
+const MAX_ENRICHED_SUBAGENTS = 1_000;
+const MAX_SUBAGENT_RESULT_CHARS = 2 * 1024 * 1024;
+
+function isSafeSessionId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_SESSION_ID_LENGTH &&
+    value !== "." &&
+    value !== ".." &&
+    SAFE_ID.test(value)
+  );
+}
+
+async function readBoundedFile(file: string, maxBytes: number): Promise<string> {
+  const handle = await fs.open(file, "r");
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile() || stat.size > maxBytes) throw new Error("file exceeds the size limit");
+    const buffer = Buffer.allocUnsafe(maxBytes + 1);
+    let total = 0;
+    while (total < buffer.byteLength) {
+      const { bytesRead } = await handle.read(buffer, total, buffer.byteLength - total, total);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+    }
+    if (total > maxBytes) throw new Error("file exceeds the size limit");
+    return buffer.subarray(0, total).toString("utf8");
+  } finally {
+    await handle.close();
+  }
+}
+
+async function readTailFile(file: string, maxBytes: number): Promise<string> {
+  const handle = await fs.open(file, "r");
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile()) throw new Error("not a regular file");
+    const length = Math.min(stat.size, maxBytes);
+    const start = stat.size - length;
+    const buffer = Buffer.allocUnsafe(length);
+    let total = 0;
+    while (total < length) {
+      const { bytesRead } = await handle.read(buffer, total, length - total, start + total);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+    }
+    let window = buffer.subarray(0, total);
+    if (start > 0) {
+      const newline = window.indexOf(0x0a);
+      if (newline < 0) return "";
+      window = window.subarray(newline + 1);
+    }
+    return window.toString("utf8");
+  } finally {
+    await handle.close();
+  }
+}
+
 /**
  * Convert a TodoWrite tool_use's `args.todos` into the TaskInfo[] the renderer's
  * task_update reducer expects, or null when the args carry no valid todo array.
@@ -98,7 +163,30 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
     if (!line) continue;
     let ev: TranscriptEvent;
     try {
-      ev = JSON.parse(line) as TranscriptEvent;
+      const parsed = JSON.parse(line) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      const rawEvent = parsed as Record<string, unknown>;
+      if (
+        typeof rawEvent.type !== "string" ||
+        rawEvent.type.length > 256 ||
+        (rawEvent.data !== undefined &&
+          (!rawEvent.data || typeof rawEvent.data !== "object" || Array.isArray(rawEvent.data)))
+      ) {
+        continue;
+      }
+      ev = {
+        id: typeof rawEvent.id === "string" ? rawEvent.id.slice(0, 512) : "",
+        type: rawEvent.type,
+        timestamp:
+          typeof rawEvent.timestamp === "number" && Number.isFinite(rawEvent.timestamp)
+            ? rawEvent.timestamp
+            : 0,
+        turnNumber:
+          typeof rawEvent.turnNumber === "number" && Number.isSafeInteger(rawEvent.turnNumber)
+            ? rawEvent.turnNumber
+            : 0,
+        data: (rawEvent.data ?? {}) as Record<string, unknown>,
+      };
     } catch {
       continue; // skip malformed lines, mirroring core Transcript.loadFromFile
     }
@@ -363,6 +451,9 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
         break;
       // session lifecycle events with no renderer representation are ignored.
     }
+    if (items.length > MAX_FOLD_ITEMS * 2) {
+      items.splice(0, items.length - MAX_FOLD_ITEMS);
+    }
   }
   // Close the final turn if its content (the trailing summary message and any
   // late tools) arrived after the last turn_boundary. Without this the last
@@ -375,7 +466,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
       timestamp: lastTs,
     });
   }
-  return items;
+  return items.slice(-MAX_FOLD_ITEMS);
 }
 
 /**
@@ -383,16 +474,18 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
  * tests; defaults to core's CODE_SHELL_HOME-aware sessions root. Returns []
  * when absent/empty.
  */
-const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
-
 export async function getSessionTranscript(
   sessionId: string,
   baseDir: string = sessionsRoot(),
 ): Promise<FoldItem[]> {
-  if (!SAFE_ID.test(sessionId) || sessionId === "." || sessionId === "..") return [];
+  if (!isSafeSessionId(sessionId)) return [];
   const file = path.join(baseDir, sessionId, "transcript.jsonl");
   try {
-    const jsonl = await fs.readFile(file, "utf8");
+    const sessionInfo = await fs.lstat(path.join(baseDir, sessionId));
+    if (sessionInfo.isSymbolicLink() || !sessionInfo.isDirectory()) return [];
+    const transcriptInfo = await fs.lstat(file);
+    if (transcriptInfo.isSymbolicLink() || !transcriptInfo.isFile()) return [];
+    const jsonl = await readTailFile(file, MAX_FOLDED_TRANSCRIPT_SCAN_BYTES);
     const items = transcriptToFoldItems(jsonl);
     return await enrichSubagentCards(items, baseDir);
   } catch (e) {
@@ -424,36 +517,51 @@ const SUBAGENT_DONE_STATUSES = new Set([
  */
 async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<FoldItem[]> {
   const out: FoldItem[] = [];
+  let enriched = 0;
   for (const item of items) {
     out.push(item);
     if (item.kind !== "stream" || item.event.type !== "agent_start") continue;
     const agentId = item.event.agentId;
-    if (!agentId || !SAFE_ID.test(agentId)) continue;
+    if (!isSafeSessionId(agentId) || enriched >= MAX_ENRICHED_SUBAGENTS) continue;
+    enriched += 1;
 
     let status: string;
     let resultText = "";
     try {
+      const agentDir = path.join(baseDir, agentId);
+      const agentDirInfo = await fs.lstat(agentDir);
+      if (agentDirInfo.isSymbolicLink() || !agentDirInfo.isDirectory()) continue;
+      const stateFile = path.join(agentDir, "state.json");
+      const stateInfo = await fs.lstat(stateFile);
+      if (stateInfo.isSymbolicLink() || !stateInfo.isFile()) continue;
       const state = JSON.parse(
-        await fs.readFile(path.join(baseDir, agentId, "state.json"), "utf8"),
+        await readBoundedFile(stateFile, MAX_SUBAGENT_STATE_BYTES),
       ) as { status?: string };
       status = typeof state.status === "string" ? state.status : "active";
     } catch {
       continue; // no sub-agent session on disk → leave bare agent_start
     }
     try {
-      const subJsonl = await fs.readFile(path.join(baseDir, agentId, "transcript.jsonl"), "utf8");
+      const transcriptFile = path.join(baseDir, agentId, "transcript.jsonl");
+      const transcriptInfo = await fs.lstat(transcriptFile);
+      if (transcriptInfo.isSymbolicLink() || !transcriptInfo.isFile()) throw new Error("invalid");
+      const subJsonl = await readTailFile(transcriptFile, MAX_SUBAGENT_TRANSCRIPT_SCAN_BYTES);
       // Last assistant message in the sub-agent's own transcript = its output.
       for (const raw of subJsonl.split("\n")) {
         const line = raw.trim();
         if (!line) continue;
         let ev: TranscriptEvent;
         try {
-          ev = JSON.parse(line) as TranscriptEvent;
+          const parsed = JSON.parse(line) as unknown;
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+          ev = parsed as TranscriptEvent;
         } catch {
           continue;
         }
         if (ev.type === "message" && (ev.data as { role?: string })?.role === "assistant") {
-          resultText = textOf((ev.data as { content?: unknown }).content);
+          resultText = textOf((ev.data as { content?: unknown }).content).slice(
+            -MAX_SUBAGENT_RESULT_CHARS,
+          );
         }
       }
     } catch {

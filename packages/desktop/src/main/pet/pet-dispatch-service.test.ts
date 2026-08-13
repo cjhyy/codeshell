@@ -241,6 +241,42 @@ describe("PetDispatchService", () => {
     ).toBe("/tmp/x");
   });
 
+  test("marks desktop chat explicitly and withholds the route-bound reply capability", async () => {
+    let request: { method: string; params: Record<string, unknown> } | undefined;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (method, params) => {
+          request = { method, params };
+          return { ok: true, result: { text: "desktop answer" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        gatewayReply: async () => ({ text: "must not run" }),
+      },
+    });
+
+    expect(
+      await service.dispatch({
+        type: "chat",
+        message: "answer directly",
+        clientMessageId: "desktop:one",
+      }),
+    ).toMatchObject({ ok: true, type: "chat", result: { text: "desktop answer" } });
+    expect(String(request?.params.petRuntimeContext)).toContain(
+      '"currentMessageSource":{"kind":"desktop","channel":"mimi"}',
+    );
+    expect(request?.params.profileParams).not.toHaveProperty("gatewayReply");
+    expect(
+      (request?.params.profileParams as { hostActions?: string[] } | undefined)?.hostActions ?? [],
+    ).not.toContain("gatewayReply");
+  });
+
   test("uses only the validated DelegateWork result for automatic delegation", async () => {
     const starts: unknown[] = [];
     const service = new PetDispatchService({
@@ -1571,7 +1607,8 @@ describe("PetDispatchService", () => {
       },
       hostCwd: "/safe/pet",
       segmentController: {
-        beginTurn: async () => "未完成任务:\n- 重构 X",
+        beginTurn: async () => ({ carryoverBrief: "未完成任务:\n- 重构 X" }),
+        completeSegmentClosure: async () => {},
         onDelegationClosed: async () => {},
       },
     });
@@ -1611,6 +1648,7 @@ describe("PetDispatchService", () => {
           await waitForAll("beginTurn");
           return undefined;
         },
+        completeSegmentClosure: async () => {},
         onDelegationClosed: async () => {},
       },
       worldContext: async () => {
@@ -1680,12 +1718,58 @@ describe("PetDispatchService", () => {
           beginTurnArgs.push(clientMessageId);
           return undefined;
         },
+        completeSegmentClosure: async () => {},
         onDelegationClosed: async () => {},
       },
     });
 
     await service.dispatch({ type: "chat", message: "你好", clientMessageId: "client-turn-1" });
     expect(beginTurnArgs).toEqual(["client-turn-1"]);
+  });
+
+  test("archives a timed-out segment before the boundary turn model call", async () => {
+    let runParams: Record<string, unknown> | undefined;
+    const completed: string[] = [];
+    const closedSegment = {
+      segmentId: "seg-old",
+      closingBoundaryMessageId: "client-old",
+      nextBoundaryMessageId: "client-new",
+      startedAt: 1,
+      endedAt: 2,
+    };
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          runParams = params;
+          return { ok: true, result: { text: "new topic reply" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      segmentController: {
+        beginTurn: async () => ({ closedSegment }),
+        completeSegmentClosure: async (closed) => {
+          completed.push(closed.segmentId);
+        },
+        onDelegationClosed: async () => {},
+      },
+    });
+
+    await service.dispatch({
+      type: "chat",
+      message: "new topic",
+      clientMessageId: "client-new",
+    });
+
+    expect(runParams?.archiveBeforeCurrentTurn).toEqual({
+      fromClientMessageId: "client-old",
+      segmentId: "seg-old",
+    });
+    expect(completed).toEqual(["seg-old"]);
   });
 
   test("does not record launch acceptance as a completed work-memory closure", async () => {
@@ -1721,6 +1805,7 @@ describe("PetDispatchService", () => {
       }),
       segmentController: {
         beginTurn: async () => undefined,
+        completeSegmentClosure: async () => {},
         onDelegationClosed: async (closure) => {
           closures.push(closure as unknown as Record<string, unknown>);
         },

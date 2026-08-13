@@ -2472,6 +2472,8 @@ export interface GithubDetectedSkill {
 }
 
 export interface GithubRepoInspection {
+  /** Opaque, short-lived proof that this exact preview came from main. */
+  reviewToken: string;
   url: GithubUrlInfo;
   defaultBranch: string;
   skills: GithubDetectedSkill[];

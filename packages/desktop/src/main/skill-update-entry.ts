@@ -13,6 +13,7 @@ import {
   type SkillUpdateCheck,
   type SkillUpdateResult,
 } from "./github-skill-service.js";
+import { assertCodeShellMarkdownPath } from "./safe-read.js";
 
 /**
  * IPC-facing wrapper for the one-click skill update (the manual "update"
@@ -27,6 +28,10 @@ export async function updateSkillEntry(
   if (typeof filePath !== "string" || !filePath) {
     throw new Error("updateSkillEntry requires a filePath");
   }
+  // Updating atomically renames/replaces the entire parent directory. Accept
+  // only a canonical SKILL.md path previously emitted by listSkills; otherwise
+  // a forged renderer path plus sidecar could replace an arbitrary directory.
+  assertCodeShellMarkdownPath(filePath);
   return updateSkillFromSource(filePath);
 }
 
@@ -41,6 +46,7 @@ export async function checkSkillUpdateEntry(
     };
   }
   try {
+    assertCodeShellMarkdownPath(filePath);
     return await checkSkillUpdate(filePath);
   } catch (e) {
     return {

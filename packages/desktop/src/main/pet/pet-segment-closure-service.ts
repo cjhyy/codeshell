@@ -3,9 +3,9 @@
  *
  * When a long-idle boundary closes a topic segment, this service turns that
  * segment's slice of the Mimi conversation into ONE journal entry (title +
- * summary) plus up to two durable memory candidates, then hands the caller the
- * transcript range so the model context can be archived. It is the single
- * aux-model touch point for the "event archive" + auto-memory feature.
+ * summary) plus up to two durable memory candidates. Model-context archival is
+ * performed independently at the boundary turn's pre-model safe point; this is
+ * the single aux-model touch point for the journal + auto-memory feature.
  *
  * The LLM plumbing mirrors pet-summary-service: read settings fresh, resolve the
  * aux text model (falling back to defaults.text via resolveLLMConfigForTag),
@@ -141,8 +141,8 @@ export interface ClosedSegmentDescriptor {
 export interface PetSegmentClosureService {
   /**
    * Distill and persist the closed segment. Returns the transcript range so the
-   * caller can archive it, or null when nothing was written (too short, no
-   * model, parse/aux failure) — the caller then skips archival.
+   * journal can retain its raw-source coordinates, or null when the segment is
+   * too short or its transcript window cannot be located.
    */
   close(input: SegmentClosureInput): Promise<SegmentClosureResult | null>;
 

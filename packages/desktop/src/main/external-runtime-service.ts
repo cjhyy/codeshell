@@ -72,6 +72,8 @@ export interface ExternalRuntimeServiceDeps {
   releaseSession: (sessionId: string) => void;
   /** Forward translated events to the renderer. */
   emit: (sessionId: string, event: StreamEvent) => void;
+  /** Injectable for deterministic tests; production reads the fail-closed sync cache. */
+  projectTrust?: (cwd: string) => "trusted" | "untrusted" | "unknown";
   /** Host seams the exposed tools need (panels, browser, …). */
   toolContextOverrides?: (sessionId: string) => Record<string, unknown>;
   /**
@@ -88,6 +90,8 @@ export interface ExternalRuntimeServiceDeps {
   ) => Promise<{ approved: boolean; reason?: string; answer?: string }>;
   /** Drop any prompt still on screen for a session that is going away. */
   cancelApprovals?: (sessionId: string) => void;
+  /** Injectable sidecar writer; failure must never orphan an otherwise-live runtime. */
+  writeBinding?: typeof writeExternalRuntimeBinding;
 }
 
 /**
@@ -105,8 +109,16 @@ export class ExternalRuntimeService {
       kind: ExternalRuntimeKind;
       cwd: string;
       model?: string;
+      ownerWebContentsId?: number;
+      forwardEvent: (event: StreamEvent) => void;
+      /** Serializes turns so one recorder can never be reset by an overlapping send. */
+      turnTail: Promise<void>;
+      /** Invalidated before close so late provider events cannot enter a replacement session. */
+      lifecycle: { active: boolean; turnActive: boolean };
     }
   >();
+  /** Serializes start/stop for one business id, including concurrent IPC calls. */
+  private readonly lifecycleTails = new Map<string, Promise<void>>();
 
   constructor(private readonly deps: ExternalRuntimeServiceDeps) {}
 
@@ -124,6 +136,78 @@ export class ExternalRuntimeService {
     return this.sessions.get(sessionId)?.session;
   }
 
+  /** Canonical project root for validating renderer-supplied turn attachments. */
+  getCwd(sessionId: string, callerWebContentsId?: number): string | undefined {
+    this.assertOwner(sessionId, callerWebContentsId);
+    return this.sessions.get(sessionId)?.cwd;
+  }
+
+  private assertOwner(sessionId: string, callerWebContentsId?: number): void {
+    if (callerWebContentsId === undefined) return; // trusted main-process caller
+    const entry = this.sessions.get(sessionId);
+    // An existing ownerless session was created by trusted main-process code;
+    // renderer IPC must not claim it merely because its owner field is absent.
+    if (entry && entry.ownerWebContentsId !== callerWebContentsId) {
+      throw new Error(`external runtime session is owned by another window: ${sessionId}`);
+    }
+  }
+
+  private enqueueLifecycle<T>(sessionId: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.lifecycleTails.get(sessionId) ?? Promise.resolve();
+    const result = previous.then(operation, operation);
+    const tail = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.lifecycleTails.set(sessionId, tail);
+    void tail.then(() => {
+      if (this.lifecycleTails.get(sessionId) === tail) this.lifecycleTails.delete(sessionId);
+    });
+    return result;
+  }
+
+  private emitSafely(sessionId: string, event: StreamEvent): void {
+    try {
+      this.deps.emit(sessionId, event);
+    } catch (error) {
+      dlog("external-runtime", "event.emit_failed", {
+        sessionId,
+        eventType: event.type,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private persistBindingSafely(
+    sessionId: string,
+    binding: Parameters<typeof writeExternalRuntimeBinding>[1],
+  ): void {
+    try {
+      (this.deps.writeBinding ?? writeExternalRuntimeBinding)(sessionId, binding);
+    } catch (error) {
+      dlog("external-runtime", "binding.write_failed", {
+        sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /** Always attempt both registry and approval cleanup; return the first failure. */
+  private releaseHostSession(sessionId: string): unknown {
+    let firstError: unknown;
+    try {
+      this.deps.releaseSession(sessionId);
+    } catch (error) {
+      firstError = error;
+    }
+    try {
+      this.deps.cancelApprovals?.(sessionId);
+    } catch (error) {
+      firstError ??= error;
+    }
+    return firstError;
+  }
+
   /**
    * Start (or restart) an external-runtime session.
    *
@@ -131,7 +215,13 @@ export class ExternalRuntimeService {
    * native Engine: a caller that asked for Codex and got the native engine without
    * being told would be debugging the wrong thing.
    */
-  async start(request: ExternalRuntimeStartRequest): Promise<ExternalRuntimeSession> {
+  start(request: ExternalRuntimeStartRequest): Promise<ExternalRuntimeSession> {
+    return this.enqueueLifecycle(request.sessionId, () => this.startExclusive(request));
+  }
+
+  private async startExclusive(
+    request: ExternalRuntimeStartRequest,
+  ): Promise<ExternalRuntimeSession> {
     if (!this.isEnabled()) {
       throw new Error(
         "External Agent Runtimes are disabled. Enable the `external_agent_runtime` " +
@@ -139,14 +229,17 @@ export class ExternalRuntimeService {
       );
     }
 
+    const ownerId = request.ownerWindow?.webContents.id;
+    this.assertOwner(request.sessionId, ownerId);
+
     // Replacing an existing session: close the old one first so two runtimes
     // cannot interleave turns on the same business session.
-    await this.stop(request.sessionId);
+    await this.stopExclusive(request.sessionId);
 
     // Trust is resolved HERE, from the store Desktop owns. `permissions` is the
     // first DANGEROUS_PROJECT_FIELD, so an untrusted project's rules must be
     // stripped — and the layers below deliberately have no default for this.
-    const projectTrusted = getTrustCachedSync(request.cwd) === "trusted";
+    const projectTrusted = (this.deps.projectTrust ?? getTrustCachedSync)(request.cwd) === "trusted";
 
     // Host tools are gated by their OWN flag, so the runtime can be trialled with
     // no tool surface at all (§20). An empty allowlist is the honest expression of
@@ -154,12 +247,6 @@ export class ExternalRuntimeService {
     const exposure = this.areHostToolsEnabled()
       ? undefined // the reviewed first-phase allowlist
       : { mode: "allowlist" as const, toolNames: new Set<string>() };
-
-    // Register BEFORE the runtime starts: a host tool call on the very first
-    // turn would otherwise find no bucket and no owning window, and fail with
-    // "no panel bucket registered" rather than doing its job (§9.3.2).
-    const ownerId = request.ownerWindow?.webContents.id;
-    this.deps.registerSession(request.sessionId, request.cwd, ownerId);
 
     // The registry must actually CONTAIN the tools the exposure policy allows.
     // `new ToolRegistry({})` registers none, which would make the allowlist
@@ -207,9 +294,30 @@ export class ExternalRuntimeService {
       request.modelKey ?? `${request.kind}/${request.model ?? "default"}`,
       request.kind,
     );
+    const lifecycle = { active: true, turnActive: false };
     const forwardEvent = (event: StreamEvent): void => {
-      recorder.onEvent(event);
-      this.deps.emit(request.sessionId, event);
+      // A provider process may flush buffered output while close() is in flight.
+      // Once this concrete runtime has been stopped/replaced, its events belong
+      // to the old generation and must not enter the new business-session stream.
+      if (!lifecycle.active) return;
+      // Once a turn has reached its terminal boundary, buffered provider output
+      // belongs to that closed generation and must not bleed into the next turn.
+      if (!lifecycle.turnActive && recorder.isTurnFinished && event.type !== "session_started") {
+        return;
+      }
+      // Provider thread/session ids are resume keys, not CodeShell identities.
+      // Normalize at the Desktop boundary as defense-in-depth even though each
+      // translator should already honor this contract.
+      const normalized: StreamEvent =
+        event.type === "session_started" && event.sessionId !== request.sessionId
+          ? { ...event, sessionId: request.sessionId }
+          : event;
+      try {
+        recorder.onEvent(normalized);
+      } finally {
+        this.emitSafely(request.sessionId, normalized);
+        if (normalized.type === "turn_complete") lifecycle.turnActive = false;
+      }
     };
     const contextOverrides = {
       ...(this.deps.toolContextOverrides?.(request.sessionId) ?? {}),
@@ -231,6 +339,10 @@ export class ExternalRuntimeService {
     };
 
     let session: ExternalRuntimeSession;
+    // Register immediately before the runtime starts: a host tool call on the
+    // first turn needs its bucket, while all fallible preparation above should
+    // happen before this externally visible reservation is made.
+    this.deps.registerSession(request.sessionId, request.cwd, ownerId);
     try {
       session = await startExternalRuntimeSession({
         kind: request.kind,
@@ -324,9 +436,25 @@ export class ExternalRuntimeService {
         log: (event, data) => dlog("external-runtime", event, data),
       });
     } catch (error) {
-      this.deps.releaseSession(request.sessionId);
-      this.deps.cancelApprovals?.(request.sessionId);
+      lifecycle.active = false;
+      const cleanupError = this.releaseHostSession(request.sessionId);
+      if (cleanupError) {
+        dlog("external-runtime", "session.start_cleanup_failed", {
+          sessionId: request.sessionId,
+          error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+        });
+      }
       throw error;
+    }
+
+    if (request.ownerWindow?.isDestroyed?.()) {
+      lifecycle.active = false;
+      try {
+        await session.close();
+      } finally {
+        this.releaseHostSession(request.sessionId);
+      }
+      throw new Error(`external runtime owner window closed while starting: ${request.sessionId}`);
     }
 
     this.sessions.set(request.sessionId, {
@@ -334,10 +462,14 @@ export class ExternalRuntimeService {
       recorder,
       kind: request.kind,
       cwd: request.cwd,
+      turnTail: Promise.resolve(),
+      lifecycle,
+      forwardEvent,
+      ...(ownerId !== undefined ? { ownerWebContentsId: ownerId } : {}),
       ...(request.model ? { model: request.model } : {}),
     });
     if (session.runtimeSessionId) {
-      writeExternalRuntimeBinding(request.sessionId, {
+      this.persistBindingSafely(request.sessionId, {
         kind: request.kind,
         cwd: request.cwd,
         runtimeSessionId: session.runtimeSessionId,
@@ -358,55 +490,120 @@ export class ExternalRuntimeService {
   async send(
     sessionId: string,
     input: ExternalRuntimeTurnInput | string,
+    callerWebContentsId?: number,
   ): Promise<ExternalRuntimeTurnOutcome> {
+    this.assertOwner(sessionId, callerWebContentsId);
     const entry = this.sessions.get(sessionId);
     if (!entry) throw new Error(`no external runtime session for ${sessionId}`);
     const turnInput = typeof input === "string" ? { text: input } : input;
-    entry.recorder.beginTurn(turnInput);
-    try {
-      const turn = await entry.session.send(turnInput);
-      await turn.done;
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      const errorEvent = { type: "error" as const, error: detail };
-      const terminalEvent = { type: "turn_complete" as const, reason: "model_error" as const };
-      entry.recorder.onEvent(errorEvent);
-      this.deps.emit(sessionId, errorEvent);
-      entry.recorder.onEvent(terminalEvent);
-      this.deps.emit(sessionId, terminalEvent);
-      return entry.recorder.finishIfMissing();
-    }
-    if (entry.session.runtimeSessionId) {
-      writeExternalRuntimeBinding(sessionId, {
-        kind: entry.kind,
-        cwd: entry.cwd,
-        runtimeSessionId: entry.session.runtimeSessionId,
-        ...(entry.model ? { model: entry.model } : {}),
-      });
-    }
-    return entry.recorder.finishIfMissing();
+    const runTurn = async (): Promise<ExternalRuntimeTurnOutcome> => {
+      if (this.sessions.get(sessionId) !== entry) {
+        throw new Error(
+          `external runtime session was replaced before its queued turn: ${sessionId}`,
+        );
+      }
+      entry.lifecycle.turnActive = true;
+      try {
+        try {
+          entry.recorder.beginTurn(turnInput);
+          const turn = await entry.session.send(turnInput);
+          await turn.done;
+        } catch (error) {
+          if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
+            return entry.recorder.finishIfMissing();
+          }
+          const detail = error instanceof Error ? error.message : String(error);
+          const errorEvent = { type: "error" as const, error: detail };
+          const terminalEvent = { type: "turn_complete" as const, reason: "model_error" as const };
+          entry.forwardEvent(errorEvent);
+          entry.forwardEvent(terminalEvent);
+          return entry.recorder.finishIfMissing();
+        }
+        if (!entry.lifecycle.active || this.sessions.get(sessionId) !== entry) {
+          return entry.recorder.finishIfMissing();
+        }
+        if (entry.session.runtimeSessionId) {
+          this.persistBindingSafely(sessionId, {
+            kind: entry.kind,
+            cwd: entry.cwd,
+            runtimeSessionId: entry.session.runtimeSessionId,
+            ...(entry.model ? { model: entry.model } : {}),
+          });
+        }
+        if (!entry.recorder.isTurnFinished) {
+          // Keep `streamed: true` honest even for a provider that resolves `done`
+          // without delivering its documented terminal callback.
+          entry.forwardEvent({ type: "turn_complete", reason: "completed" });
+        }
+        return entry.recorder.finishIfMissing();
+      } finally {
+        entry.lifecycle.turnActive = false;
+      }
+    };
+    const outcome = entry.turnTail.then(runTurn, runTurn);
+    entry.turnTail = outcome.then(
+      () => undefined,
+      () => undefined,
+    );
+    return outcome;
   }
 
-  async interrupt(sessionId: string): Promise<void> {
+  async interrupt(sessionId: string, callerWebContentsId?: number): Promise<void> {
+    this.assertOwner(sessionId, callerWebContentsId);
     await this.sessions.get(sessionId)?.session.interrupt();
   }
 
   /** Close one session. Safe when there is none. */
-  async stop(sessionId: string): Promise<void> {
+  async stop(sessionId: string, callerWebContentsId?: number): Promise<void> {
+    await this.enqueueLifecycle(sessionId, () => {
+      // Ownership must be checked after earlier lifecycle work has settled. A
+      // renderer can enqueue stop() while start() is awaiting provider startup,
+      // before the new entry is visible in `sessions`; checking only at call
+      // time would let that queued request close another window's fresh runtime.
+      this.assertOwner(sessionId, callerWebContentsId);
+      return this.stopExclusive(sessionId);
+    });
+  }
+
+  private async stopExclusive(sessionId: string): Promise<void> {
     const entry = this.sessions.get(sessionId);
     if (!entry) return;
+    if (entry.lifecycle.turnActive) {
+      // Persist and stream an explicit terminal boundary before invalidating the
+      // provider callbacks. Otherwise app shutdown / deletion can leave Session
+      // state "active" forever and the next launch restores a phantom busy turn.
+      const terminalEvent = {
+        type: "turn_complete" as const,
+        reason: "aborted_streaming" as const,
+      };
+      try {
+        entry.recorder.onEvent(terminalEvent);
+      } catch (error) {
+        dlog("external-runtime", "session.stop_record_failed", {
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        this.emitSafely(sessionId, terminalEvent);
+        entry.lifecycle.turnActive = false;
+      }
+    }
+    // Invalidate callbacks before awaiting close(): close may itself trigger a
+    // final provider event, and a restart can claim the same business id as soon
+    // as this method returns.
+    entry.lifecycle.active = false;
     this.sessions.delete(sessionId);
+    let closeError: unknown;
     try {
       await entry.session.close();
-    } finally {
-      // In `finally` because a close() that throws must still release the host
-      // registries — otherwise the bucket and the reserved session leak for the
-      // life of the process, and a later session reusing the id inherits them.
-      this.deps.releaseSession(sessionId);
-      // Any prompt still on screen belongs to a runtime that no longer exists;
-      // leaving it would park its tool call forever.
-      this.deps.cancelApprovals?.(sessionId);
+    } catch (error) {
+      closeError = error;
     }
+    // A close failure must not skip host cleanup, and a registry cleanup failure
+    // must not skip approval cancellation.
+    const cleanupError = this.releaseHostSession(sessionId);
+    if (closeError) throw closeError;
+    if (cleanupError) throw cleanupError;
     dlog("external-runtime", "session.stopped", { sessionId });
   }
 
@@ -415,7 +612,19 @@ export class ExternalRuntimeService {
    * and a listening port, and neither dies with the parent on Windows.
    */
   async stopAll(): Promise<void> {
-    const ids = [...this.sessions.keys()];
-    await Promise.all(ids.map((id) => this.stop(id)));
+    const ids = [...new Set([...this.sessions.keys(), ...this.lifecycleTails.keys()])];
+    const results = await Promise.allSettled(ids.map((id) => this.stop(id)));
+    const failures = results.flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : [],
+    );
+    if (failures.length > 0) throw new AggregateError(failures, "failed to stop external runtimes");
+  }
+
+  /** Reap every runtime whose renderer disappeared (notably on macOS, where the app stays alive). */
+  async stopOwnedBy(ownerWebContentsId: number): Promise<void> {
+    const ids = [...this.sessions]
+      .filter(([, entry]) => entry.ownerWebContentsId === ownerWebContentsId)
+      .map(([sessionId]) => sessionId);
+    await Promise.allSettled(ids.map((sessionId) => this.stop(sessionId)));
   }
 }

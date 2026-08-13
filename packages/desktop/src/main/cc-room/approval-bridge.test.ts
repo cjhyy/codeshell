@@ -56,4 +56,44 @@ describe("ApprovalBridge onResolve", () => {
     expect(bridge.respond("nope", "nope", { behavior: "allow" })).toBe(false);
     expect(resolved).toHaveLength(0);
   });
+
+  test("resolution callback failures cannot strand the approval", async () => {
+    const bridge = new ApprovalBridge({
+      onPush: () => {},
+      onResolve: () => {
+        throw new Error("renderer gone");
+      },
+    });
+    const pending = bridge.request("room", "req", { toolName: "Bash", input: {} });
+    expect(bridge.respond("room", "req", { behavior: "allow" })).toBe(true);
+    await expect(pending).resolves.toEqual({ behavior: "allow" });
+  });
+
+  test("cancelRoom denies all of that room's requests and leaves other rooms live", async () => {
+    const bridge = new ApprovalBridge({ onPush: () => {} });
+    const first = bridge.request("room-a", "req-1", { toolName: "Bash", input: {} });
+    const second = bridge.request("room-a", "req-2", { toolName: "Write", input: {} });
+    const other = bridge.request("room-b", "req-3", { toolName: "Read", input: {} });
+
+    expect(bridge.cancelRoom("room-a")).toBe(2);
+    await expect(first).resolves.toMatchObject({ behavior: "deny" });
+    await expect(second).resolves.toMatchObject({ behavior: "deny" });
+    expect(bridge.respond("room-b", "req-3", { behavior: "allow" })).toBe(true);
+    await expect(other).resolves.toEqual({ behavior: "allow" });
+  });
+
+  test("a failed prompt delivery denies immediately and clears the request", async () => {
+    const bridge = new ApprovalBridge({
+      onPush: () => {
+        throw new Error("no transport");
+      },
+    });
+    await expect(
+      bridge.request("room", "req", { toolName: "Edit", input: {} }),
+    ).resolves.toEqual({
+      behavior: "deny",
+      message: "approval prompt could not be delivered",
+    });
+    expect(bridge.respond("room", "req", { behavior: "allow" })).toBe(false);
+  });
 });

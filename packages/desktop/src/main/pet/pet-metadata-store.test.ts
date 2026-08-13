@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PetMetadataStore } from "./pet-metadata-store";
@@ -25,6 +25,7 @@ describe("PetMetadataStore", () => {
       });
       expect(second).toEqual(first);
       expect(JSON.parse(await readFile(filePath, "utf8"))).toEqual(first);
+      if (process.platform !== "win32") expect((await stat(filePath)).mode & 0o777).toBe(0o600);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -46,6 +47,26 @@ describe("PetMetadataStore", () => {
 
       expect((await store.ensure()).petSessionId).toBe("pet-rebuilt");
       expect(await readFile(workFile, "utf8")).toBe("keep");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("retries after a transient first persistence failure", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codeshell-pet-retry-"));
+    try {
+      const parent = join(root, "pet");
+      const filePath = join(parent, "metadata.json");
+      await writeFile(parent, "blocks mkdir", "utf8");
+      let sequence = 0;
+      const store = new PetMetadataStore(filePath, {
+        now: () => 789,
+        createSessionId: () => `pet-retry-${++sequence}`,
+      });
+
+      await expect(store.ensure()).rejects.toThrow();
+      await rm(parent, { force: true });
+      expect((await store.ensure()).petSessionId).toBe("pet-retry-2");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

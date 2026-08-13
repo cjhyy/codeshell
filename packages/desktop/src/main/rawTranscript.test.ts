@@ -40,9 +40,10 @@ describe("parseRawTranscriptEvents", () => {
   });
 
   it("skips malformed lines instead of throwing", () => {
-    const jsonl = `${JSON.stringify(events[0])}\n{not json\n${JSON.stringify(events[1])}`;
+    const jsonl = `${JSON.stringify(events[0])}\n{not json\nnull\n[]\n${JSON.stringify(events[1])}`;
     const out = parseRawTranscriptEvents(jsonl);
     expect(out.map((e) => e.id)).toEqual(["a", "b"]);
+    expect(() => parseRawTranscriptEvents(jsonl, "a")).not.toThrow();
   });
 
   it("returns [] for empty input", () => {
@@ -63,6 +64,7 @@ describe("getSessionEvents (filesystem)", () => {
   it("returns [] for an unsafe session id (path traversal)", async () => {
     expect(await getSessionEvents("../etc", undefined, dir)).toEqual([]);
     expect(await getSessionEvents("..", undefined, dir)).toEqual([]);
+    expect(await getSessionEvents("a".repeat(129), undefined, dir)).toEqual([]);
   });
 
   it("reads raw events from a session dir transcript.jsonl", async () => {
@@ -79,5 +81,20 @@ describe("getSessionEvents (filesystem)", () => {
     expect(out.map((e) => e.id)).toEqual(["a", "b"]);
     const tail = await getSessionEvents("sess-9", "a", dir);
     expect(tail.map((e) => e.id)).toEqual(["b"]);
+  });
+
+  it("does not follow a symlinked session directory", async () => {
+    if (process.platform === "win32") return;
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "cs-raw-outside-"));
+    try {
+      fs.writeFileSync(
+        path.join(outside, "transcript.jsonl"),
+        j([{ id: "secret", type: "message", timestamp: 1, turnNumber: 0, data: {} }]),
+      );
+      fs.symlinkSync(outside, path.join(dir, "linked"));
+      expect(await getSessionEvents("linked", undefined, dir)).toEqual([]);
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
   });
 });

@@ -113,7 +113,8 @@ describe("PetSegmentController", () => {
       now: () => 13 * HOUR,
       idleMs: 12 * HOUR,
     });
-    const brief = await controller.beginTurn("pet-msg-1");
+    const turn = await controller.beginTurn("pet-msg-1");
+    const brief = turn?.carryoverBrief;
     expect(brief).toContain("重构 X");
     // A fresh segment must have been opened and the interaction clock advanced.
     expect(store.activeSegment()).toBeDefined();
@@ -161,6 +162,7 @@ describe("PetSegmentController", () => {
     // though the idle gap since epoch nominally exceeds idleMs.
     const first = await controller.beginTurn("pet-first");
     expect(first).toBeUndefined();
+    expect(store.activeSegment()).toBeDefined();
     expect(store.segmentBoundaries()).toEqual([]);
     expect(store.lastInteractionAt()).toBe(HOUR);
 
@@ -187,7 +189,7 @@ describe("PetSegmentController", () => {
     expect(store.segmentBoundaries()).toEqual([]);
   });
 
-  test("opening a new segment fires onSegmentClosed for the segment that just closed", async () => {
+  test("a closed segment is distilled only after the boundary turn completes", async () => {
     const store = new FakePetWorkMemoryStore();
     store.seed({ lastInteractionAt: 30 * MINUTE, entries: [] });
     const closed: PetSegmentClosed[] = [];
@@ -205,7 +207,10 @@ describe("PetSegmentController", () => {
     expect(closed).toHaveLength(0);
     // Second idle crossing closes seg A (keyed to pet-a) and opens seg B.
     now = 13 * HOUR + 13 * HOUR;
-    await controller.beginTurn("pet-b");
+    const turn = await controller.beginTurn("pet-b");
+    expect(closed).toHaveLength(0);
+    expect(turn?.closedSegment).toBeDefined();
+    await controller.completeSegmentClosure(turn!.closedSegment!);
     expect(closed).toHaveLength(1);
     expect(closed[0]).toMatchObject({
       closingBoundaryMessageId: "pet-a",
@@ -269,9 +274,10 @@ describe("PetSegmentController", () => {
       now: () => 13 * HOUR,
       idleMs: 12 * HOUR,
     });
-    const brief = await controller.beginTurn("pet-msg-1");
+    const turn = await controller.beginTurn("pet-msg-1");
+    const brief = turn?.carryoverBrief;
     expect(brief).toBeUndefined();
-    expect(store.activeSegment()).toBeUndefined();
+    expect(store.activeSegment()).toBeDefined();
     expect(store.lastInteractionAt()).toBe(13 * HOUR);
     expect(store.segmentBoundaries()).toEqual([]);
   });
@@ -304,7 +310,10 @@ describe("PetSegmentController", () => {
     });
 
     // Two turns cross the idle boundary at the same instant.
-    await Promise.all([controller.beginTurn("pet-a"), controller.beginTurn("pet-b")]);
+    const turns = await Promise.all([controller.beginTurn("pet-a"), controller.beginTurn("pet-b")]);
+    const boundaryTurn = turns.find((turn) => turn?.closedSegment);
+    expect(boundaryTurn?.closedSegment).toBeDefined();
+    await controller.completeSegmentClosure(boundaryTurn!.closedSegment!);
 
     // Exactly one NEW segment opened (plus the seeded one) and the close fired once.
     expect(store.opened.filter((s) => s.id !== "seg-old")).toHaveLength(1);

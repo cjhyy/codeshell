@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { PetLongTaskStore } from "./pet-long-task-store.js";
@@ -41,6 +41,10 @@ describe("PetLongTaskStore", () => {
       version: 1,
       revision: 3,
     });
+    if (process.platform !== "win32") {
+      expect((await stat(join(root, "tasks.json"))).mode & 0o777).toBe(0o600);
+    }
+    expect((await readdir(root)).some((name) => name.endsWith(".tmp"))).toBe(false);
 
     const reloaded = new PetLongTaskStore(join(root, "tasks.json"));
     await reloaded.load();

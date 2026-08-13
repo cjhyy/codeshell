@@ -8,6 +8,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS,
   EXTERNAL_RUNTIME_MODELS,
   externalRuntimeModelEntries,
   externalRuntimeModelKey,
@@ -96,6 +97,12 @@ describe("external runtime model keys", () => {
       expect(parseExternalRuntimeModelKey(entry.key)?.kind).toBe(entry.kind);
       expect(entry.label.length).toBeGreaterThan(0);
     }
+  });
+
+  test("falls back to a 1000k context window when runtime metadata is unavailable", () => {
+    const entries = externalRuntimeModelEntries(["codex", "claude-code"]);
+    expect(EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS).toBe(1_000_000);
+    expect(entries.every((entry) => entry.maxContextTokens === 1_000_000)).toBe(true);
   });
 
   test("offers the current recommended Codex family instead of retired 5.1 entries", () => {

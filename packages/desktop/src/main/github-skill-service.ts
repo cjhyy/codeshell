@@ -60,6 +60,12 @@ const GITHUB_API_BASE = "https://api.github.com";
 const USER_AGENT = "code-shell-desktop";
 const INSPECT_TIMEOUT_MS = 15_000;
 const INSTALL_TIMEOUT_MS = 60_000;
+const MAX_API_RESPONSE_BYTES = 16 * 1024 * 1024;
+const MAX_SKILL_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_SKILL_TOTAL_BYTES = 50 * 1024 * 1024;
+const MAX_FRONTMATTER_FILE_BYTES = 2 * 1024 * 1024;
+const MAX_SOURCE_META_BYTES = 64 * 1024;
+const MAX_ERROR_RESPONSE_BYTES = 64 * 1024;
 
 /** Filename of the source-meta sidecar written next to an installed SKILL.md. */
 export const SKILL_META_FILE = ".cs-skill-meta.json";
@@ -91,30 +97,179 @@ export interface SkillUpdateCheck {
 }
 
 export function parseGithubUrl(raw: string): GithubUrlInfo {
-  if (!raw) throw new Error("URL 不能为空");
+  if (!raw || raw.length > 8_192 || raw.includes("\0")) throw new Error("URL 不能为空或过长");
+  // WHATWG URL parsing normalizes literal and percent-encoded dot segments
+  // before exposing pathname, so reject them from the original input first.
+  if (/(?:^|\/)(?:\.|%2e){1,2}(?:\/|$|[?#])/i.test(raw.trim())) {
+    throw new Error("GitHub URL 路径包含越界片段");
+  }
   let url: URL;
   try {
     url = new URL(raw.trim());
   } catch {
     throw new Error("不是有效的 URL");
   }
-  if (url.hostname !== "github.com") {
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== "github.com" ||
+    url.port ||
+    url.username ||
+    url.password
+  ) {
     throw new Error("当前只支持 github.com 的仓库地址");
   }
-  const parts = url.pathname.replace(/^\/+|\/+$/g, "").split("/");
+  let parts: string[];
+  try {
+    parts = url.pathname
+      .replace(/^\/+|\/+$/g, "")
+      .split("/")
+      .map((part) => decodeURIComponent(part));
+  } catch {
+    throw new Error("GitHub URL 路径编码无效");
+  }
   if (parts.length < 2) throw new Error("URL 缺少 owner/repo");
   const [owner, repoRaw, marker, ref, ...subparts] = parts;
   const repo = repoRaw.replace(/\.git$/, "");
   if (!owner || !repo) throw new Error("URL 缺少 owner/repo");
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(owner)) {
+    throw new Error("GitHub owner 格式无效");
+  }
+  if (!/^[A-Za-z0-9_.-]{1,100}$/.test(repo)) throw new Error("GitHub repo 格式无效");
   if (marker && marker !== "tree" && marker !== "blob") {
     throw new Error(`暂不支持 GitHub URL 类型：${marker}（仅支持仓库或 /tree/）`);
+  }
+  const subpath = subparts.length > 0 ? subparts.join("/") : undefined;
+  if (ref && (ref.length > 512 || ref.includes("\0"))) throw new Error("GitHub ref 过长");
+  if (subpath && (!safeRepoPath(subpath) || subpath.length > 4_096)) {
+    throw new Error("GitHub 子路径无效");
   }
   return {
     owner,
     repo,
     ref: ref || undefined,
-    subpath: subparts.length > 0 ? subparts.join("/") : undefined,
+    subpath,
   };
+}
+
+function safeRepoPath(value: string): boolean {
+  if (!value || value.startsWith("/") || value.startsWith("\\") || value.includes("\0")) {
+    return false;
+  }
+  return value.split(/[\\/]/).every((part) => part !== "" && part !== "." && part !== "..");
+}
+
+function assertGithubInfo(info: GithubUrlInfo, ref?: string): void {
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(info.owner)) {
+    throw new Error("invalid GitHub owner");
+  }
+  if (!/^[A-Za-z0-9_.-]{1,100}$/.test(info.repo)) throw new Error("invalid GitHub repo");
+  if (ref !== undefined && (!ref || ref.length > 512 || ref.includes("\0"))) {
+    throw new Error("invalid GitHub ref");
+  }
+}
+
+function parseSkillSourceMeta(value: unknown): SkillSourceMeta | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (
+    raw.kind !== "github" ||
+    typeof raw.owner !== "string" ||
+    typeof raw.repo !== "string" ||
+    typeof raw.ref !== "string" ||
+    typeof raw.dirInRepo !== "string" ||
+    typeof raw.commit !== "string" ||
+    !raw.commit ||
+    raw.commit.length > 128 ||
+    raw.commit.includes("\0") ||
+    typeof raw.installedAt !== "string" ||
+    raw.installedAt.length > 128 ||
+    !safeRepoPath(raw.dirInRepo) ||
+    raw.dirInRepo.length > 4_096
+  ) {
+    return null;
+  }
+  try {
+    assertGithubInfo({ owner: raw.owner, repo: raw.repo }, raw.ref);
+  } catch {
+    return null;
+  }
+  return {
+    kind: "github",
+    owner: raw.owner,
+    repo: raw.repo,
+    ref: raw.ref,
+    dirInRepo: raw.dirInRepo,
+    commit: raw.commit,
+    installedAt: raw.installedAt,
+  };
+}
+
+function isTreeNode(value: unknown): value is TreeNode {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const node = value as Record<string, unknown>;
+  return (
+    typeof node.path === "string" &&
+    node.path.length <= 4_096 &&
+    safeRepoPath(node.path) &&
+    (node.type === "blob" || node.type === "tree" || node.type === "commit") &&
+    typeof node.sha === "string" &&
+    node.sha.length <= 128
+  );
+}
+
+async function readBoundedResponse(
+  response: Response,
+  maxBytes: number,
+  label: string,
+): Promise<Buffer> {
+  const declared = response.headers.get("content-length");
+  if (declared) {
+    const size = Number(declared);
+    if (!Number.isSafeInteger(size) || size < 0 || size > maxBytes) {
+      throw new Error(`${label} exceeds the ${maxBytes}-byte limit`);
+    }
+  }
+  if (!response.body) {
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.byteLength > maxBytes) throw new Error(`${label} exceeds the size limit`);
+    return buffer;
+  }
+  const reader = response.body.getReader();
+  const chunks: Buffer[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = Buffer.from(value);
+      total += chunk.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error(`${label} exceeds the ${maxBytes}-byte limit`);
+      }
+      chunks.push(chunk);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks, total);
+}
+
+async function readBoundedFile(filePath: string, maxBytes: number): Promise<string> {
+  const handle = await fs.open(filePath, "r");
+  try {
+    const buffer = Buffer.allocUnsafe(maxBytes + 1);
+    let total = 0;
+    while (total < buffer.byteLength) {
+      const { bytesRead } = await handle.read(buffer, total, buffer.byteLength - total, total);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+    }
+    if (total > maxBytes) throw new Error("file exceeds the size limit");
+    return buffer.subarray(0, total).toString("utf8");
+  } finally {
+    await handle.close();
+  }
 }
 
 async function fetchJson(url: string, timeoutMs: number): Promise<unknown> {
@@ -127,7 +282,9 @@ async function fetchJson(url: string, timeoutMs: number): Promise<unknown> {
     });
     if (res.status === 404) throw new Error("找不到仓库（404）");
     if (res.status === 403) {
-      const body = await res.text();
+      const body = (
+        await readBoundedResponse(res, MAX_ERROR_RESPONSE_BYTES, "GitHub error response")
+      ).toString("utf8");
       throw new Error(
         /rate limit/i.test(body)
           ? "GitHub API 速率限制（每小时 60 次未鉴权请求），稍后再试"
@@ -135,7 +292,11 @@ async function fetchJson(url: string, timeoutMs: number): Promise<unknown> {
       );
     }
     if (!res.ok) throw new Error(`GitHub API ${res.status} ${res.statusText}`);
-    return await res.json();
+    return JSON.parse(
+      (await readBoundedResponse(res, MAX_API_RESPONSE_BYTES, "GitHub API response")).toString(
+        "utf8",
+      ),
+    ) as unknown;
   } finally {
     clearTimeout(t);
   }
@@ -158,8 +319,9 @@ interface TreeResponse {
 }
 
 async function getRepoMeta(info: GithubUrlInfo): Promise<RepoMeta> {
+  assertGithubInfo(info);
   return (await fetchJson(
-    `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}`,
+    `${GITHUB_API_BASE}/repos/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}`,
     INSPECT_TIMEOUT_MS,
   )) as RepoMeta;
 }
@@ -168,8 +330,9 @@ async function getRepoTree(
   info: GithubUrlInfo,
   ref: string,
 ): Promise<TreeResponse> {
+  assertGithubInfo(info, ref);
   return (await fetchJson(
-    `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`,
+    `${GITHUB_API_BASE}/repos/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/git/trees/${encodeURIComponent(ref)}?recursive=1`,
     INSPECT_TIMEOUT_MS,
   )) as TreeResponse;
 }
@@ -187,11 +350,12 @@ export async function getRefCommit(
   info: GithubUrlInfo,
   ref: string,
 ): Promise<string> {
+  assertGithubInfo(info, ref);
   const res = (await fetchJson(
-    `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}/commits/${encodeURIComponent(ref)}`,
+    `${GITHUB_API_BASE}/repos/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/commits/${encodeURIComponent(ref)}`,
     INSPECT_TIMEOUT_MS,
   )) as CommitResponse;
-  if (!res || typeof res.sha !== "string" || !res.sha) {
+  if (!res || typeof res.sha !== "string" || !res.sha || res.sha.length > 128) {
     throw new Error("GitHub commits 响应缺少 sha");
   }
   return res.sha;
@@ -202,15 +366,22 @@ async function getRawFile(
   ref: string,
   pathInRepo: string,
 ): Promise<string> {
+  assertGithubInfo(info, ref);
+  if (!safeRepoPath(pathInRepo) || pathInRepo.length > 4_096) {
+    throw new Error("invalid GitHub file path");
+  }
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), INSPECT_TIMEOUT_MS);
   try {
     const res = await fetch(
-      `https://raw.githubusercontent.com/${info.owner}/${info.repo}/${encodeURIComponent(ref)}/${pathInRepo}`,
+      `https://raw.githubusercontent.com/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/${encodeURIComponent(ref)}/${pathInRepo
+        .split("/")
+        .map(encodeURIComponent)
+        .join("/")}`,
       { headers: { "User-Agent": USER_AGENT }, signal: controller.signal },
     );
     if (!res.ok) throw new Error(`raw fetch ${res.status} ${res.statusText}`);
-    return await res.text();
+    return (await readBoundedResponse(res, MAX_FRONTMATTER_FILE_BYTES, "SKILL.md preview")).toString("utf8");
   } finally {
     clearTimeout(t);
   }
@@ -235,8 +406,8 @@ function parseFrontmatter(md: string): ParsedFrontmatter {
     if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
       v = v.slice(1, -1);
     }
-    if (k === "name") out.name = v;
-    else if (k === "description") out.description = v;
+    if (k === "name") out.name = v.slice(0, 512);
+    else if (k === "description") out.description = v.slice(0, 4_096);
   }
   return out;
 }
@@ -247,17 +418,22 @@ export async function inspectRepo(
 ): Promise<RepoInspection> {
   const info = parseGithubUrl(rawUrl);
   const meta = await getRepoMeta(info);
+  if (!meta || typeof meta.default_branch !== "string" || !meta.default_branch || meta.default_branch.length > 512) {
+    throw new Error("GitHub repository response has an invalid default branch");
+  }
   const ref = info.ref || meta.default_branch;
   const tree = await getRepoTree(info, ref);
+  if (!tree || !Array.isArray(tree.tree)) throw new Error("GitHub tree response is invalid");
+  const nodes = tree.tree.filter(isTreeNode);
 
-  const skillBlobs = tree.tree.filter(
+  const skillBlobs = nodes.filter(
     (n) =>
       n.type === "blob" &&
       n.path.endsWith("SKILL.md") &&
       (!info.subpath || n.path.startsWith(info.subpath.replace(/\/$/, "") + "/") || n.path === info.subpath),
   );
 
-  const isPlugin = tree.tree.some((n) => n.type === "blob" && n.path === "plugin.json");
+  const isPlugin = nodes.some((n) => n.type === "blob" && n.path === "plugin.json");
 
   // Limit how many frontmatter fetches we issue (rate limit).
   const MAX_DETAILED = 25;
@@ -323,9 +499,15 @@ export async function downloadSkillTree(
   dirInRepo: string,
   destDir: string,
 ): Promise<void> {
+  assertGithubInfo(info, ref);
+  if (!safeRepoPath(dirInRepo) || dirInRepo.length > 4_096) {
+    throw new Error("invalid skill directory path");
+  }
   const tree = await getRepoTree(info, ref);
+  if (!tree || !Array.isArray(tree.tree)) throw new Error("GitHub tree response is invalid");
+  const nodes = tree.tree.filter(isTreeNode);
   const prefix = dirInRepo.replace(/\/$/, "") + "/";
-  const files = tree.tree.filter(
+  const files = nodes.filter(
     (n) => n.type === "blob" && (n.path === dirInRepo || n.path.startsWith(prefix)),
   );
   if (files.length === 0) throw new Error(`目录在仓库中为空：${dirInRepo}`);
@@ -336,20 +518,31 @@ export async function downloadSkillTree(
     throw new Error(`skill 目录文件数 (${files.length}) 超过限制 ${MAX_FILES}`);
   }
 
+  let downloadedBytes = 0;
   for (const f of files) {
     const relPath = f.path === dirInRepo ? path.basename(f.path) : f.path.slice(prefix.length);
-    if (relPath.includes("..")) throw new Error(`拒绝下载越界路径：${f.path}`);
+    if (!safeRepoPath(relPath)) throw new Error(`拒绝下载越界路径：${f.path}`);
     const localPath = path.join(destDir, relPath);
     await fs.mkdir(path.dirname(localPath), { recursive: true });
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), INSTALL_TIMEOUT_MS);
     try {
       const res = await fetch(
-        `https://raw.githubusercontent.com/${info.owner}/${info.repo}/${encodeURIComponent(ref)}/${f.path}`,
+        `https://raw.githubusercontent.com/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/${encodeURIComponent(ref)}/${f.path
+          .split("/")
+          .map(encodeURIComponent)
+          .join("/")}`,
         { headers: { "User-Agent": USER_AGENT }, signal: controller.signal },
       );
       if (!res.ok) throw new Error(`raw fetch ${res.status} ${res.statusText} for ${f.path}`);
-      const buf = Buffer.from(await res.arrayBuffer());
+      const remaining = MAX_SKILL_TOTAL_BYTES - downloadedBytes;
+      if (remaining <= 0) throw new Error("skill download exceeds the total size limit");
+      const buf = await readBoundedResponse(
+        res,
+        Math.min(MAX_SKILL_FILE_BYTES, remaining),
+        `skill file ${f.path}`,
+      );
+      downloadedBytes += buf.byteLength;
       await fs.writeFile(localPath, buf);
     } finally {
       clearTimeout(t);
@@ -372,20 +565,29 @@ export async function installFromGithub(
   input: InstallFromGithubInput,
 ): Promise<InstalledSkill> {
   const { inspection, selected, scope, cwd, installName } = input;
+  const reviewedSelection = inspection.skills.find(
+    (candidate) =>
+      candidate.name === selected.name &&
+      candidate.pathInRepo === selected.pathInRepo &&
+      candidate.dirInRepo === selected.dirInRepo,
+  );
+  if (!reviewedSelection) {
+    throw new Error("selected skill was not part of the inspected repository preview");
+  }
   const ref = inspection.url.ref || inspection.defaultBranch;
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeshell-gh-skill-"));
   try {
-    await downloadSkillTree(inspection.url, ref, selected.dirInRepo, tmpRoot);
+    await downloadSkillTree(inspection.url, ref, reviewedSelection.dirInRepo, tmpRoot);
     try {
       await fs.access(path.join(tmpRoot, "SKILL.md"));
     } catch {
-      throw new Error(`下载结果缺少 SKILL.md：${selected.dirInRepo}`);
+      throw new Error(`下载结果缺少 SKILL.md：${reviewedSelection.dirInRepo}`);
     }
     const installed = await installSkillFromDirectory(
       tmpRoot,
       scope,
       cwd,
-      installName || selected.name,
+      installName || reviewedSelection.name,
     );
 
     // Record source provenance so the skill is update-checkable later. A
@@ -399,7 +601,7 @@ export async function installFromGithub(
         owner: inspection.url.owner,
         repo: inspection.url.repo,
         ref,
-        dirInRepo: selected.dirInRepo,
+        dirInRepo: reviewedSelection.dirInRepo,
         commit,
         installedAt: new Date().toISOString(),
       };
@@ -438,21 +640,26 @@ export async function checkSkillUpdate(
 
   let raw: string;
   try {
-    raw = await fs.readFile(metaPath, "utf8");
+    raw = await readBoundedFile(metaPath, MAX_SOURCE_META_BYTES);
   } catch {
     return { filePath, updateAvailable: false, reason: "no source metadata" };
   }
 
-  let meta: SkillSourceMeta;
+  let parsed: unknown;
   try {
-    meta = JSON.parse(raw) as SkillSourceMeta;
+    parsed = JSON.parse(raw) as unknown;
   } catch {
     return { filePath, updateAvailable: false, reason: "no source metadata" };
   }
 
-  if (!meta || meta.kind !== "github") {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { filePath, updateAvailable: false, reason: "no source metadata" };
+  }
+  if ((parsed as Record<string, unknown>).kind !== "github") {
     return { filePath, updateAvailable: false, reason: "not a github source" };
   }
+  const meta = parseSkillSourceMeta(parsed);
+  if (!meta) return { filePath, updateAvailable: false, reason: "invalid source metadata" };
 
   let latest: string;
   try {
@@ -532,21 +739,26 @@ export async function updateSkillFromSource(
 
   let raw: string;
   try {
-    raw = await fs.readFile(metaPath, "utf8");
+    raw = await readBoundedFile(metaPath, MAX_SOURCE_META_BYTES);
   } catch {
     return { updated: false, reason: "no source metadata" };
   }
 
-  let meta: SkillSourceMeta;
+  let parsed: unknown;
   try {
-    meta = JSON.parse(raw) as SkillSourceMeta;
+    parsed = JSON.parse(raw) as unknown;
   } catch {
     return { updated: false, reason: "no source metadata" };
   }
 
-  if (!meta || meta.kind !== "github") {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { updated: false, reason: "no source metadata" };
+  }
+  if ((parsed as Record<string, unknown>).kind !== "github") {
     return { updated: false, reason: "not a github skill" };
   }
+  const meta = parseSkillSourceMeta(parsed);
+  if (!meta) return { updated: false, reason: "invalid source metadata" };
 
   const info: GithubUrlInfo = { owner: meta.owner, repo: meta.repo, ref: meta.ref };
 

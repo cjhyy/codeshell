@@ -4,7 +4,10 @@
  * hole. Every "cannot ask" path below is asserted to deny.
  */
 import { describe, expect, test } from "bun:test";
-import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
+import {
+  ExternalRuntimeApprovals,
+  parseExternalApprovalDecision,
+} from "./external-runtime-approvals.js";
 
 interface FakeWindow {
   isDestroyed(): boolean;
@@ -29,6 +32,24 @@ function router(windows: FakeWindow[], owner?: (sessionId: string) => number | u
 const request = { toolName: "Bash", riskLevel: "high" as const };
 
 describe("ExternalRuntimeApprovals", () => {
+  test("parses only the bounded renderer decision fields", () => {
+    expect(
+      parseExternalApprovalDecision({
+        approved: true,
+        reason: "ok",
+        scope: "session",
+        pathScope: "dir",
+        ignored: "value",
+      }),
+    ).toEqual({ approved: true, reason: "ok", scope: "session", pathScope: "dir" });
+    expect(
+      parseExternalApprovalDecision({
+        approved: true,
+        reason: "x".repeat(512 * 1024 + 1),
+        answer: "x".repeat(512 * 1024 + 1),
+      }),
+    ).toEqual({ approved: true });
+  });
   test("sends the prompt to the renderer and resolves with the decision", async () => {
     const { window, sent } = fakeWindow(1);
     const approvals = router([window]);
@@ -61,6 +82,25 @@ describe("ExternalRuntimeApprovals", () => {
     }
     const approvals = router([dead]);
     await expect(approvals.request("sess-1", request)).resolves.toMatchObject({ approved: false });
+  });
+
+  test("denies immediately when prompt delivery throws", async () => {
+    const broken: FakeWindow = {
+      isDestroyed: () => false,
+      webContents: {
+        id: 9,
+        send: () => {
+          throw new Error("renderer disappeared");
+        },
+      },
+    };
+    const approvals = router([broken]);
+
+    await expect(approvals.request("sess-1", request)).resolves.toMatchObject({
+      approved: false,
+      reason: "approval prompt could not be delivered",
+    });
+    expect(approvals.pendingCount).toBe(0);
   });
 
   test("prefers the session's owning window", () => {
@@ -96,6 +136,19 @@ describe("ExternalRuntimeApprovals", () => {
     // A duplicate must not flip an already-granted decision, nor throw.
     expect(approvals.settle(requestId, { approved: false })).toBe(false);
     await expect(pending).resolves.toMatchObject({ approved: true });
+  });
+
+  test("only the renderer that received a prompt can settle it", async () => {
+    const owner = fakeWindow(1);
+    const other = fakeWindow(2);
+    const approvals = router([owner.window, other.window], () => 1);
+    const pending = approvals.request("sess-1", request);
+    const { requestId } = owner.sent[0]!.payload as { requestId: string };
+
+    expect(approvals.settle(requestId, { approved: true }, 2)).toBe(false);
+    expect(approvals.pendingCount).toBe(1);
+    expect(approvals.settle(requestId, { approved: false }, 1)).toBe(true);
+    await expect(pending).resolves.toMatchObject({ approved: false });
   });
 
   test("closing a session denies its pending prompts", async () => {

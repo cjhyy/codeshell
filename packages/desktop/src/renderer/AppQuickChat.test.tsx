@@ -227,6 +227,25 @@ function deferred<T>(): {
   return { promise, resolve, reject };
 }
 
+function reactPropsOf(node: unknown): Record<string, any> {
+  const current = node as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactProps$"));
+  return key ? current[key] : {};
+}
+
+function findElement(
+  node: unknown,
+  predicate: (node: { tagName?: string; childNodes?: unknown[] }) => boolean,
+): { tagName?: string; childNodes?: unknown[] } | null {
+  const current = node as { tagName?: string; childNodes?: unknown[] };
+  if (predicate(current)) return current;
+  for (const child of current.childNodes ?? []) {
+    const found = findElement(child, predicate);
+    if (found) return found;
+  }
+  return null;
+}
+
 const localStorageMock = new MemoryLocalStorage();
 const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
 const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
@@ -250,6 +269,8 @@ let getSessionTranscriptCalls: string[] = [];
 let runCalls: Array<{ prompt: string; opts: Record<string, unknown> }> = [];
 let markAttachmentsSentCalls: Array<Record<string, unknown>> = [];
 let browserSessionRegistrations: Array<Record<string, unknown>> = [];
+let configureCalls: Array<Record<string, unknown>> = [];
+let externalRuntimeStopCalls: string[] = [];
 
 function restoreGlobalProperty(
   key: "localStorage" | "window",
@@ -367,9 +388,14 @@ function installCodeshellStub(
       notifyApprovalResolved: async () => undefined,
     },
     noRepoCwd: async () => "/tmp",
-    configure: async () => undefined,
+    configure: async (payload: Record<string, unknown>) => {
+      configureCalls.push(payload);
+    },
     externalRuntime: {
       available: async () => externalRuntimeKinds,
+      stop: async (sessionId: string) => {
+        externalRuntimeStopCalls.push(sessionId);
+      },
     },
     markAttachmentsSent: async (payload: Record<string, unknown>) => {
       markAttachmentsSentCalls.push(payload);
@@ -602,6 +628,8 @@ afterEach(async () => {
   runCalls = [];
   markAttachmentsSentCalls = [];
   browserSessionRegistrations = [];
+  configureCalls = [];
+  externalRuntimeStopCalls = [];
   chatProps = null;
   sidebarProps = null;
   quickChatProps.clear();
@@ -634,6 +662,52 @@ describe("App quick-chat integration", () => {
     expect(JSON.parse(localStorageMock.getItem("codeshell.overrides.model") ?? "{}")).toEqual({
       "repoA::session-a": "codex/gpt-5.6-sol",
     });
+  });
+
+  test("switches external to native without configuring the worker with an external key", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      externalRuntimeKinds: ["codex"],
+      modelOverrides: { "repoA::session-a": "codex/gpt-5.6-sol" },
+    });
+    if (!chatProps) throw new Error("main chat controls were not rendered");
+
+    await act(async () => {
+      chatProps?.onModelChange({ key: "native-model", label: "Native", provider: "test" });
+      await flushMicrotasks();
+    });
+
+    expect(externalRuntimeStopCalls).toEqual(["session-a"]);
+    expect(configureCalls).toEqual([{ sessionId: "session-a", model: "native-model" }]);
+    const index = JSON.parse(
+      localStorageMock.getItem("codeshell.sessionIndex.repoA") ?? "null",
+    ) as { sessions: Array<{ id: string; engineSessionId?: string }> };
+    expect(index.sessions.find((session) => session.id === "session-a")?.engineSessionId).toBe(
+      "session-a",
+    );
+  });
+
+  test("selecting an external model does not send its key to native configure", async () => {
+    await mountApp({
+      withNormalSession: true,
+      panelTabs: [],
+      externalRuntimeKinds: ["codex"],
+      settings: { defaults: { text: "native-model" } },
+    });
+    if (!chatProps) throw new Error("main chat controls were not rendered");
+
+    await act(async () => {
+      chatProps?.onModelChange({
+        key: "codex/gpt-5.6-sol",
+        label: "Codex",
+        provider: "Codex",
+      });
+      await flushMicrotasks();
+    });
+
+    expect(configureCalls).toEqual([]);
+    expect(externalRuntimeStopCalls).toEqual([]);
   });
 
   test("keeps a main-composer model change local to its session", async () => {
@@ -688,6 +762,39 @@ describe("App quick-chat integration", () => {
 
     expect(chatProps?.sendBucket).toBe("repoA::_none_");
     expect(chatProps?.draft).toBe("fresh draft");
+  });
+
+  test("materializes a draft when its panel is opened without sending a message", async () => {
+    await mountApp({
+      withNormalSession: true,
+      startInDraft: true,
+      panelTabs: [],
+    });
+    if (!chatProps) throw new Error("draft chat controls were not rendered");
+    expect(chatProps.sendBucket).toBe("repoA::_none_");
+    const panelButton = findElement(
+      container,
+      (node) => reactPropsOf(node)["data-panel-action"] === "toggle",
+    );
+    expect(panelButton).not.toBeNull();
+    expect(runCalls).toEqual([]);
+
+    await act(async () => {
+      chatProps?.onDraftChange("keep this draft");
+      reactPropsOf(panelButton).onClick();
+      await flushMicrotasks();
+    });
+    await flushApp();
+
+    const index = JSON.parse(
+      localStorageMock.getItem("codeshell.sessionIndex.repoA") ?? "null",
+    ) as { activeSessionId: string | null };
+    expect(index.activeSessionId).not.toBeNull();
+    const sessionBucket = `repoA::${index.activeSessionId}`;
+    expect(chatProps?.sendBucket).toBe(sessionBucket);
+    expect(chatProps?.draft).toBe("keep this draft");
+    expect(panelAreaProps.get(sessionBucket)?.engineSessionId).toBe(index.activeSessionId);
+    expect(runCalls).toEqual([]);
   });
 
   test("routes a same-tick send after new conversation away from the previous session", async () => {

@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebContents } from "electron";
 import { resolvePanelAppBindingProjectPath, validateToolArgsStrict } from "@cjhyy/code-shell-core";
+import { acquireLockOnPath } from "@cjhyy/code-shell-core/internal";
 import { createHash, randomUUID } from "node:crypto";
 import { constants, type Stats } from "node:fs";
 import {
@@ -8,7 +9,6 @@ import {
   lstat,
   mkdir,
   open,
-  readFile,
   readdir,
   realpath,
   rename,
@@ -23,6 +23,14 @@ import { claimPanelHostOwnerForRun } from "./panel-host-routing.js";
 import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { preparePanelApp } from "./panel-app-protocol.js";
 import { PanelAppProcessService, type PanelProcessOwner } from "./panel-app-process-service.js";
+import {
+  DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
+  panelAppStorageKey,
+  panelAppStorageQuotaBytes,
+  preparePanelAppStorage,
+  readPanelAppStorage,
+  writePanelAppStorage,
+} from "./panel-app-storage-store.js";
 import {
   PanelAppAgentTaskService,
   type PanelAgentTaskOwner,
@@ -47,7 +55,6 @@ const COOKIE_LOGIN_TIMEOUT_MS = 30 * 60 * 1_000;
 const PROCESS_CONSENT_TIMEOUT_MS = 30 * 60 * 1_000;
 const PANEL_AGENT_RUN_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 const MAX_AGENT_PROMPT_CHARS = 20_000;
-const STORAGE_QUOTA_BYTES = 256 * 1024;
 const MAX_NOTIFICATIONS_PER_WINDOW = 5;
 const MAX_WORKSPACE_READ_BYTES = 480 * 1024;
 const MAX_WORKSPACE_WRITE_BYTES = 384 * 1024;
@@ -697,7 +704,7 @@ export class PanelAppBridge {
       (method === "workspace.writeText"
         ? MAX_WORKSPACE_WRITE_BYTES * 6 + 8 * 1024
         : method === "storage.set"
-          ? (limits?.storageQuotaBytes ?? STORAGE_QUOTA_BYTES) + 8 * 1024
+          ? this.storageQuotaBytes() + 8 * 1024
           : MAX_PARAMS_BYTES);
     if (jsonBytes(params) > paramsLimit) {
       throw new Error("Panel App params are too large");
@@ -1276,24 +1283,23 @@ export class PanelAppBridge {
   }
 
   private async readStorage(binding: GuestBinding): Promise<Record<string, unknown>> {
-    try {
-      const parsed = JSON.parse(await readFile(this.storagePath(binding), "utf-8"));
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-    } catch {
-      return {};
-    }
+    return readPanelAppStorage(this.storagePath(binding), this.storageQuotaBytes());
   }
 
   private storageKey(params: unknown): string {
-    const key = (params as { key?: unknown } | null)?.key;
-    if (typeof key !== "string" || !/^[a-zA-Z0-9._-]{1,80}$/.test(key)) {
-      throw new Error("storage key must match [a-zA-Z0-9._-]{1,80}");
-    }
-    return key;
+    return panelAppStorageKey(params);
+  }
+
+  private storageQuotaBytes(): number {
+    return panelAppStorageQuotaBytes(
+      this.options.limits?.storageQuotaBytes ?? DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
+    );
   }
 
   private async storageGet(binding: GuestBinding, params: unknown): Promise<unknown> {
-    return (await this.readStorage(binding))[this.storageKey(params)] ?? null;
+    const storage = await this.readStorage(binding);
+    const key = this.storageKey(params);
+    return Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null;
   }
 
   private async storageSet(binding: GuestBinding, params: unknown): Promise<boolean> {
@@ -1322,23 +1328,7 @@ export class PanelAppBridge {
   }
 
   private async writeStorage(file: string, storage: Record<string, unknown>): Promise<void> {
-    const serialized = `${JSON.stringify(storage)}\n`;
-    if (
-      Buffer.byteLength(serialized, "utf-8") >
-      (this.options.limits?.storageQuotaBytes ?? STORAGE_QUOTA_BYTES)
-    ) {
-      throw new Error("Panel App storage quota exceeded");
-    }
-    await mkdir(dirname(file), { recursive: true, mode: 0o700 });
-    const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
-    try {
-      await writeFile(temporary, serialized, { encoding: "utf-8", mode: 0o600 });
-      await rename(temporary, file);
-      await chmod(file, 0o600).catch(() => undefined);
-    } catch (error) {
-      await rm(temporary, { force: true }).catch(() => undefined);
-      throw error;
-    }
+    await writePanelAppStorage(file, storage, this.storageQuotaBytes());
   }
 
   private async withStorageMutation<T>(
@@ -1354,9 +1344,18 @@ export class PanelAppBridge {
     const tail = ready.then(() => gate);
     this.storageQueues.set(file, tail);
     await ready;
+    let releaseFileLock: (() => void) | undefined;
     try {
+      await preparePanelAppStorage(file);
+      // Lock THIS file, not its directory. Every panel app's storage lives in
+      // one `panel-app-storage/` directory, so a directory lock made unrelated
+      // apps contend. The lock is held across `await mutate(file)` and its
+      // retry uses a synchronous Atomics.wait, which froze the Electron main
+      // thread (measured ~10s, event loop fully stalled) until the 30s timeout.
+      releaseFileLock = acquireLockOnPath(file);
       return await mutate(file);
     } finally {
+      releaseFileLock?.();
       release();
       if (this.storageQueues.get(file) === tail) this.storageQueues.delete(file);
     }

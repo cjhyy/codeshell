@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -62,6 +71,47 @@ describe("ImGatewayService", () => {
     expect(service.status().channelStatuses.every(({ state }) => state === "disabled")).toBe(true);
     expect(service.status().recentActivity).toEqual([]);
     if (process.platform !== "win32") expect(statSync(configPath).mode & 0o777).toBe(0o600);
+  });
+
+  test("rejects linked and oversized gateway configs", () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-boundary-"));
+    const outside = join(root, "outside.json");
+    const linked = join(root, "nested", "config.json");
+    mkdirSync(join(root, "nested"));
+    writeFileSync(outside, "{}", { mode: 0o600 });
+    symlinkSync(outside, linked);
+
+    const linkedService = new ImGatewayService({ configPath: linked });
+    expect(() => linkedService.ensureConfig()).toThrow(/普通文件/);
+    expect(readFileSync(outside, "utf8")).toBe("{}");
+
+    const oversized = join(root, "oversized.json");
+    writeFileSync(oversized, "x".repeat(4 * 1024 * 1024 + 1), { mode: 0o600 });
+    expect(new ImGatewayService({ configPath: oversized }).status().error).toMatch(/有限大小/);
+  });
+
+  test("bounds structured DingTalk setup values", () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-im-gateway-setup-bounds-"));
+    const service = new ImGatewayService({
+      configPath: join(root, "config.json"),
+      credentialStore: new MemoryCredentialStore(),
+    });
+    expect(() =>
+      service.saveDingTalkSetup({
+        enabled: false,
+        clientId: "x".repeat(4_097),
+        allowedConversationIds: [],
+        allowedUserIds: [],
+      }),
+    ).toThrow(/过长/);
+    expect(() =>
+      service.saveDingTalkSetup({
+        enabled: false,
+        clientId: "client",
+        allowedConversationIds: Array.from({ length: 1_001 }, (_, index) => String(index)),
+        allowedUserIds: [],
+      }),
+    ).toThrow(/最多包含/);
   });
 
   test("reports configured channels without exposing their secrets", () => {

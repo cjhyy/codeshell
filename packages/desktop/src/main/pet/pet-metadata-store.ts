@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 export interface LocalPetMetadata {
@@ -22,8 +22,15 @@ export class PetMetadataStore {
   ) {}
 
   ensure(): Promise<LocalPetMetadata> {
-    this.current ??= this.loadOrCreate();
-    return this.current;
+    if (this.current) return this.current;
+    const attempt = this.loadOrCreate();
+    this.current = attempt;
+    void attempt.catch(() => {
+      // A transient disk error must be retryable on the next ensure(). Keep
+      // newer concurrent attempts intact if one was started meanwhile.
+      if (this.current === attempt) this.current = null;
+    });
+    return attempt;
   }
 
   private async loadOrCreate(): Promise<LocalPetMetadata> {
@@ -42,7 +49,7 @@ export class PetMetadataStore {
       throw new Error("invalid local pet metadata");
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        await rename(this.filePath, `${this.filePath}.corrupt-${Date.now()}`).catch(() => {});
+        await rename(this.filePath, `${this.filePath}.corrupt-${randomUUID()}`).catch(() => {});
       }
     }
 
@@ -53,10 +60,18 @@ export class PetMetadataStore {
       petSessionId: this.options.createSessionId?.() ?? `pet-${randomUUID()}`,
       createdAt: (this.options.now ?? Date.now)(),
     };
-    await mkdir(dirname(this.filePath), { recursive: true });
+    await mkdir(dirname(this.filePath), { recursive: true, mode: 0o700 });
     const temporary = `${this.filePath}.tmp-${process.pid}-${randomUUID()}`;
-    await writeFile(temporary, `${JSON.stringify(metadata, null, 2)}\n`, "utf8");
-    await rename(temporary, this.filePath);
-    return metadata;
+    try {
+      await writeFile(temporary, `${JSON.stringify(metadata, null, 2)}\n`, {
+        encoding: "utf8",
+        mode: 0o600,
+        flag: "wx",
+      });
+      await rename(temporary, this.filePath);
+      return metadata;
+    } finally {
+      await rm(temporary, { force: true }).catch(() => undefined);
+    }
   }
 }

@@ -7,6 +7,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import {
   forgetExternalRuntimeSession,
+  resolveRunSessionId,
   resetExternalRuntimeSessions,
   runExternalRuntimeTurn,
   type ExternalRuntimeBridge,
@@ -33,6 +34,12 @@ const base = { sessionId: "sess-1", cwd: "/tmp/project", modelKey: "codex/gpt-5.
 beforeEach(() => resetExternalRuntimeSessions());
 
 describe("runExternalRuntimeTurn", () => {
+  test("keeps external business identity on the UI session id", () => {
+    expect(resolveRunSessionId("ui-session", "leaked-provider-id", true)).toBe("ui-session");
+    expect(resolveRunSessionId("ui-session", "legacy-engine-id", false)).toBe("legacy-engine-id");
+    expect(resolveRunSessionId("ui-session", undefined, false)).toBe("ui-session");
+  });
+
   test("starts once, then reuses the session for later turns", async () => {
     // Restarting per turn would hand the model an empty context each time —
     // the conversation would appear to forget everything after each reply.
@@ -41,6 +48,31 @@ describe("runExternalRuntimeTurn", () => {
     await runExternalRuntimeTurn({ ...base, text: "two", runtime: impl });
     expect(starts).toHaveLength(1);
     expect(sends.map((s) => s.text)).toEqual(["one", "two"]);
+  });
+
+  test("serializes concurrent first turns so they start the runtime only once", async () => {
+    let releaseStart!: () => void;
+    const startReady = new Promise<void>((resolve) => {
+      releaseStart = resolve;
+    });
+    const { impl, starts, sends } = bridge({
+      start: async ({ sessionId, modelKey }) => {
+        starts.push({ sessionId, modelKey });
+        await startReady;
+        return { kind: "codex", runtimeSessionId: "t-1", tools: [] };
+      },
+    });
+
+    const first = runExternalRuntimeTurn({ ...base, text: "one", runtime: impl });
+    await Promise.resolve();
+    const second = runExternalRuntimeTurn({ ...base, text: "two", runtime: impl });
+    await Promise.resolve();
+    expect(starts).toHaveLength(1);
+
+    releaseStart();
+    await Promise.all([first, second]);
+    expect(starts).toHaveLength(1);
+    expect(sends.map((send) => send.text)).toEqual(["one", "two"]);
   });
 
   test("restarts when the model key changes", async () => {
@@ -54,10 +86,7 @@ describe("runExternalRuntimeTurn", () => {
       text: "two",
       runtime: impl,
     });
-    expect(starts.map((s) => s.modelKey)).toEqual([
-      "codex/gpt-5.6-sol",
-      "claude-code/sonnet",
-    ]);
+    expect(starts.map((s) => s.modelKey)).toEqual(["codex/gpt-5.6-sol", "claude-code/sonnet"]);
   });
 
   test("tracks sessions independently", async () => {
@@ -111,5 +140,30 @@ describe("runExternalRuntimeTurn", () => {
     forgetExternalRuntimeSession("sess-1");
     await runExternalRuntimeTurn({ ...base, text: "two", runtime: impl });
     expect(starts).toHaveLength(2);
+  });
+
+  test("forgetting during start prevents the stale request from restoring the cache", async () => {
+    let releaseStart!: () => void;
+    const startReady = new Promise<void>((resolve) => {
+      releaseStart = resolve;
+    });
+    const { impl, starts, sends } = bridge({
+      start: async ({ sessionId, modelKey }) => {
+        starts.push({ sessionId, modelKey });
+        await startReady;
+        return { kind: "codex", runtimeSessionId: "t-1", tools: [] };
+      },
+    });
+
+    const stale = runExternalRuntimeTurn({ ...base, text: "stale", runtime: impl });
+    await Promise.resolve();
+    forgetExternalRuntimeSession("sess-1");
+    releaseStart();
+    expect((await stale).ok).toBe(false);
+    expect(sends).toHaveLength(0);
+
+    await runExternalRuntimeTurn({ ...base, text: "fresh", runtime: impl });
+    expect(starts).toHaveLength(2);
+    expect(sends.map((send) => send.text)).toEqual(["fresh"]);
   });
 });

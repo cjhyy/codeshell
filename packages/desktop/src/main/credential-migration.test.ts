@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -158,5 +158,24 @@ describe("credential migration", () => {
       { id: "a", secret: "secret-a" },
       { id: "b", secret: "secret-b" },
     ]);
+  });
+
+  test("refuses a linked legacy store without reading or replacing its target", async () => {
+    setDefaultCredentialCipher(new FakeSafeCipher());
+    const parent = join(home, ".code-shell");
+    const file = join(parent, "credentials.json");
+    const outside = join(home, "outside.json");
+    mkdirSync(parent, { recursive: true });
+    writeFileSync(
+      outside,
+      JSON.stringify({
+        version: 1,
+        credentials: [{ id: "outside", type: "token", label: "Outside", secret: "bare" }],
+      }),
+    );
+    symlinkSync(outside, file);
+
+    await expect(migrateCredentialStore()).rejects.toThrow(/bounded regular file/);
+    expect(JSON.parse(readFileSync(outside, "utf8")).credentials[0].secret).toBe("bare");
   });
 });

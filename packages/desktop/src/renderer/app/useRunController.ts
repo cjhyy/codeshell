@@ -44,7 +44,11 @@ import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
 import { NO_REPO_KEY } from "../transcripts";
 import { parseExternalRuntimeModelKey } from "../../shared/external-runtime-models";
-import { buildExternalRuntimeHandoff, runExternalRuntimeTurn } from "../externalRuntimeRun";
+import {
+  buildExternalRuntimeHandoff,
+  resolveRunSessionId,
+  runExternalRuntimeTurn,
+} from "../externalRuntimeRun";
 
 interface Params {
   shell: {
@@ -229,7 +233,12 @@ export function useRunController({
     const summary =
       sessionIndices[projectBucketSegment]?.sessions.find((s) => s.id === sid) ??
       loadSessionIndex(targetProjectId).sessions.find((s) => s.id === sid);
-    const engineSessionId = summary?.engineSessionId ?? sid;
+    const externalRuntime = parseExternalRuntimeModelKey(sendModelKey);
+    // External provider ids (Codex thread / Claude session) are resume keys,
+    // never CodeShell business ids. Always anchor an external run to the stable
+    // UI session id; this also self-heals indices polluted by older builds that
+    // persisted a provider id from session_started as engineSessionId.
+    const engineSessionId = resolveRunSessionId(sid, summary?.engineSessionId, !!externalRuntime);
 
     window.codeshell.log("send", {
       textLen: text.length,
@@ -385,7 +394,6 @@ export function useRunController({
     // — busy clearing, error surfacing, the whole .then chain below — because
     // the two paths differ only in who produces the stream, and duplicating the
     // bookkeeping is how one path ends up permanently "busy" after a failure.
-    const externalRuntime = parseExternalRuntimeModelKey(bucketModel);
     const activeGoal = opts.goal ?? state.activeGoal?.objective;
     const externalDeveloperInstructions = [
       opts.sessionBrief ? `CodeShell Session brief:\n${opts.sessionBrief}` : undefined,
@@ -621,6 +629,11 @@ export function useRunController({
       // A relay (打断重发) was requested for this bucket: don't steer — the abort
       // is in flight and the !busy branch will drain+re-send once it lands.
       if (relayingBuckets.has(activeBucket)) return;
+      // External runtimes do not implement the native Engine's step-boundary
+      // steer RPC. Leave the draft in the queue; the !busy branch sends it as
+      // the next serialized turn after the current provider turn completes.
+      const queuedModelKey = modelOverrides[activeBucket] ?? defaultActiveModelKey;
+      if (parseExternalRuntimeModelKey(queuedModelKey)) return;
       // Step-gap steering (默认, 不打断): hand each not-yet-sent queued draft to
       // the engine, which splices it into the running turn at its NEXT step
       // boundary. The item STAYS in the panel (visible + revocable) — it's only

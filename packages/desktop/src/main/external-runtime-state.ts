@@ -1,5 +1,17 @@
-import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { randomUUID } from "node:crypto";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import {
   SessionManager,
   sessionsRoot,
@@ -14,6 +26,15 @@ import {
 } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 
 const BINDING_FILE = "external-runtime.json";
+const MAX_BINDING_BYTES = 64 * 1024;
+
+function canonicalCwd(path: string): string {
+  try {
+    return resolve(realpathSync(path));
+  } catch {
+    return resolve(path);
+  }
+}
 
 export interface ExternalRuntimeBinding {
   version: 1;
@@ -25,25 +46,97 @@ export interface ExternalRuntimeBinding {
 }
 
 function bindingPath(sessionId: string): string {
-  if (!/^[A-Za-z0-9._-]+$/.test(sessionId)) throw new Error("invalid external session id");
-  return join(sessionsRoot(), sessionId, BINDING_FILE);
+  if (
+    typeof sessionId !== "string" ||
+    sessionId.length === 0 ||
+    sessionId.length > 128 ||
+    sessionId === "." ||
+    sessionId === ".." ||
+    sessionId.includes("..") ||
+    !/^[A-Za-z0-9._-]+$/.test(sessionId)
+  ) {
+    throw new Error("invalid external session id");
+  }
+  const root = sessionsRoot();
+  const rootInfo = lstatSync(root);
+  if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) {
+    throw new Error("invalid sessions root");
+  }
+  const rootReal = realpathSync(root);
+  const sessionDir = join(root, sessionId);
+  const sessionInfo = lstatSync(sessionDir);
+  if (sessionInfo.isSymbolicLink() || !sessionInfo.isDirectory()) {
+    throw new Error("invalid external session directory");
+  }
+  const sessionReal = realpathSync(sessionDir);
+  const rel = relative(rootReal, sessionReal);
+  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+    throw new Error("external session directory escapes sessions root");
+  }
+  const target = join(sessionDir, BINDING_FILE);
+  if (existsSync(target)) {
+    const fileInfo = lstatSync(target);
+    if (fileInfo.isSymbolicLink() || !fileInfo.isFile()) {
+      throw new Error("invalid external runtime binding file");
+    }
+  }
+  return target;
+}
+
+function readBindingFile(path: string): string {
+  const fd = openSync(path, "r");
+  try {
+    const info = fstatSync(fd);
+    if (!info.isFile() || info.size > MAX_BINDING_BYTES) throw new Error("binding is too large");
+    const buffer = Buffer.allocUnsafe(MAX_BINDING_BYTES + 1);
+    let total = 0;
+    while (total < buffer.byteLength) {
+      const count = readSync(fd, buffer, total, buffer.byteLength - total, total);
+      if (count === 0) break;
+      total += count;
+    }
+    if (total > MAX_BINDING_BYTES) throw new Error("binding is too large");
+    return buffer.subarray(0, total).toString("utf8");
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function parseBinding(value: unknown): ExternalRuntimeBinding | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  if (
+    raw.version !== 1 ||
+    (raw.kind !== "codex" && raw.kind !== "claude-code") ||
+    typeof raw.cwd !== "string" ||
+    !raw.cwd ||
+    raw.cwd.length > 32_768 ||
+    raw.cwd.includes("\0") ||
+    typeof raw.runtimeSessionId !== "string" ||
+    !raw.runtimeSessionId ||
+    raw.runtimeSessionId.length > 4_096 ||
+    raw.runtimeSessionId.includes("\0") ||
+    (raw.model !== undefined &&
+      (typeof raw.model !== "string" || raw.model.length > 1_024 || raw.model.includes("\0"))) ||
+    typeof raw.updatedAt !== "number" ||
+    !Number.isFinite(raw.updatedAt) ||
+    raw.updatedAt < 0
+  ) {
+    return undefined;
+  }
+  return {
+    version: 1,
+    kind: raw.kind,
+    cwd: raw.cwd,
+    runtimeSessionId: raw.runtimeSessionId,
+    updatedAt: raw.updatedAt,
+    ...(typeof raw.model === "string" ? { model: raw.model } : {}),
+  };
 }
 
 export function readExternalRuntimeBinding(sessionId: string): ExternalRuntimeBinding | undefined {
   try {
-    const value = JSON.parse(
-      readFileSync(bindingPath(sessionId), "utf8"),
-    ) as Partial<ExternalRuntimeBinding>;
-    if (
-      value.version !== 1 ||
-      (value.kind !== "codex" && value.kind !== "claude-code") ||
-      typeof value.cwd !== "string" ||
-      typeof value.runtimeSessionId !== "string" ||
-      !value.runtimeSessionId
-    ) {
-      return undefined;
-    }
-    return value as ExternalRuntimeBinding;
+    return parseBinding(JSON.parse(readBindingFile(bindingPath(sessionId))) as unknown);
   } catch {
     return undefined;
   }
@@ -54,14 +147,19 @@ export function writeExternalRuntimeBinding(
   binding: Omit<ExternalRuntimeBinding, "version" | "updatedAt">,
 ): void {
   const target = bindingPath(sessionId);
-  if (!existsSync(join(sessionsRoot(), sessionId))) return;
-  const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
-  writeFileSync(
-    temporary,
-    JSON.stringify({ version: 1, ...binding, updatedAt: Date.now() }, null, 2),
-    { encoding: "utf8", mode: 0o600 },
-  );
-  renameSync(temporary, target);
+  const validated = parseBinding({ version: 1, ...binding, updatedAt: Date.now() });
+  if (!validated) throw new Error("invalid external runtime binding");
+  const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(
+      temporary,
+      JSON.stringify(validated, null, 2),
+      { encoding: "utf8", mode: 0o600, flag: "wx" },
+    );
+    renameSync(temporary, target);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
 }
 
 export function removeExternalRuntimeBinding(sessionId: string): void {
@@ -119,6 +217,9 @@ export class ExternalRuntimeSessionRecorder {
     const bundle = this.manager.exists(sessionId)
       ? this.manager.resume(sessionId)
       : this.manager.create(cwd, model, provider, sessionId, null, "desktop");
+    if (canonicalCwd(bundle.state.cwd) !== canonicalCwd(cwd)) {
+      throw new Error(`external runtime session project mismatch: ${sessionId}`);
+    }
     this.transcript = bundle.transcript;
     const sameModel = bundle.state.model === model && bundle.state.provider === provider;
     this.usage = sameModel
@@ -250,6 +351,11 @@ export class ExternalRuntimeSessionRecorder {
   finishIfMissing(): ExternalRuntimeTurnOutcome {
     if (!this.outcome) this.finish(this.lastError ? "model_error" : "completed");
     return this.outcome!;
+  }
+
+  /** Whether this turn already received (or synthesized) its terminal boundary. */
+  get isTurnFinished(): boolean {
+    return this.outcome !== undefined;
   }
 
   private flushAssistantText(): void {

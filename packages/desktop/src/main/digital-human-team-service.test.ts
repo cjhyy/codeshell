@@ -255,4 +255,11 @@ describe("digital-human team service", () => {
       rmSync(outside, { recursive: true, force: true });
     }
   });
+
+  test("rejects oversized team files before parsing them", () => {
+    const dir = join(home, "digital-human-teams", "oversized-team");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "team.json"), "x".repeat(64 * 1024 + 1));
+    expect(() => readDigitalHumanTeam("oversized-team")).toThrow(/team file/);
+  });
 });

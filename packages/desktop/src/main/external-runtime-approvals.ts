@@ -33,8 +33,33 @@ export interface ExternalApprovalDecision {
   pathScope?: "file" | "dir" | "tool";
 }
 
+const MAX_APPROVAL_RESPONSE_CHARS = 512 * 1024;
+
+function boundedResponseText(value: unknown): value is string {
+  return typeof value === "string" && value.length <= MAX_APPROVAL_RESPONSE_CHARS;
+}
+
+export function parseExternalApprovalDecision(
+  payload: Record<string, unknown> | null | undefined,
+): ExternalApprovalDecision {
+  return {
+    approved: payload?.approved === true,
+    ...(boundedResponseText(payload?.reason) ? { reason: payload.reason } : {}),
+    ...(boundedResponseText(payload?.answer) ? { answer: payload.answer } : {}),
+    ...(payload?.scope === "once" || payload?.scope === "session" || payload?.scope === "project"
+      ? { scope: payload.scope }
+      : {}),
+    ...(payload?.pathScope === "file" ||
+    payload?.pathScope === "dir" ||
+    payload?.pathScope === "tool"
+      ? { pathScope: payload.pathScope }
+      : {}),
+  };
+}
+
 interface Pending {
   sessionId: string;
+  targetWebContentsId: number;
   resolve: (decision: ExternalApprovalDecision) => void;
   timer: ReturnType<typeof setTimeout>;
 }
@@ -91,12 +116,29 @@ export class ExternalRuntimeApprovals {
       // `unref` so a parked prompt cannot keep the process alive at quit.
       (timer as unknown as { unref?: () => void }).unref?.();
 
-      this.pending.set(requestId, { sessionId, resolve, timer });
-      target.webContents.send("externalRuntime:approvalRequest", {
+      this.pending.set(requestId, {
         sessionId,
-        requestId,
-        request,
+        targetWebContentsId: target.webContents.id,
+        resolve,
+        timer,
       });
+      try {
+        target.webContents.send("externalRuntime:approvalRequest", {
+          sessionId,
+          requestId,
+          request,
+        });
+      } catch (error) {
+        this.pending.delete(requestId);
+        clearTimeout(timer);
+        dlog("external-runtime", "approval.delivery_failed", {
+          sessionId,
+          requestId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        resolve({ approved: false, reason: "approval prompt could not be delivered" });
+        return;
+      }
       dlog("external-runtime", "approval.requested", {
         sessionId,
         requestId,
@@ -110,9 +152,20 @@ export class ExternalRuntimeApprovals {
    * a timeout (or twice) must not throw at the renderer, which cannot know the
    * prompt already settled.
    */
-  settle(requestId: string, decision: ExternalApprovalDecision): boolean {
+  settle(
+    requestId: string,
+    decision: ExternalApprovalDecision,
+    callerWebContentsId?: number,
+  ): boolean {
     const entry = this.pending.get(requestId);
     if (!entry) return false;
+    if (
+      callerWebContentsId !== undefined &&
+      entry.targetWebContentsId !== callerWebContentsId
+    ) {
+      dlog("external-runtime", "approval.wrong_window", { requestId });
+      return false;
+    }
     this.pending.delete(requestId);
     clearTimeout(entry.timer);
     entry.resolve(decision);

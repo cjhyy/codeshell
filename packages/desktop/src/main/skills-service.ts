@@ -82,6 +82,10 @@ export function listSkills(cwd: string, opts?: { includeDisabled?: boolean }): S
 
 export async function readSkillBody(filePath: string): Promise<string> {
   assertCodeShellMarkdownPath(filePath);
+  const info = await fs.stat(filePath);
+  if (!info.isFile() || info.size > 2 * 1024 * 1024) {
+    throw new Error("skill file is not a bounded regular file");
+  }
   return fs.readFile(filePath, "utf8");
 }
 

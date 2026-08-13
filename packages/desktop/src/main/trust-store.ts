@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
-import { readFileSync } from "node:fs";
+import { constants, readFileSync, realpathSync } from "node:fs";
 import * as path from "node:path";
-import * as os from "node:os";
+import { codeShellHome } from "@cjhyy/code-shell-core";
+import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
 
 export type TrustLevel = "trusted" | "untrusted";
 
@@ -9,70 +11,175 @@ interface TrustMap {
   [path: string]: TrustLevel;
 }
 
-const FILE = path.join(os.homedir(), ".code-shell", "desktop", "trust.json");
+const MAX_TRUST_ENTRIES = 20_000;
+const MAX_PATH_LENGTH = 32_768;
+const MAX_TRUST_FILE_BYTES = 4 * 1024 * 1024;
 
-/**
- * In-memory mirror of the trust map, kept in sync by every load()/setTrust().
- * Exists so the agent-bridge's synchronous `agent:msg` IPC handler can resolve
- * a project's trust without awaiting a disk read (it can't await — reordering
- * run vs approve/cancel would break). Warmed on startup via {@link warmTrustCache}.
- */
+function defaultFile(): string {
+  return path.join(codeShellHome(), "desktop", "trust.json");
+}
+
+let file = defaultFile();
 let cache: TrustMap = {};
+let mutationQueue: Promise<void> = Promise.resolve();
 
-async function load(): Promise<TrustMap> {
+/** Test-only isolation hook. */
+export function __setTrustFileForTest(next: string | null): void {
+  file = next ?? defaultFile();
+  cache = {};
+  mutationQueue = Promise.resolve();
+}
+
+function validTrustPath(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_PATH_LENGTH &&
+    !value.includes("\0") &&
+    path.isAbsolute(value)
+  );
+}
+
+function canonicalTrustPath(projectPath: string): string {
   try {
-    const raw = await fs.readFile(FILE, "utf8");
-    cache = JSON.parse(raw) as TrustMap;
-    return cache;
+    return path.resolve(realpathSync(projectPath));
   } catch {
+    return path.resolve(projectPath);
+  }
+}
+
+function parseTrustMap(value: unknown): TrustMap {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("trust registry root must be an object");
+  }
+  const result: TrustMap = {};
+  const entries = Object.entries(value);
+  if (entries.length > MAX_TRUST_ENTRIES) throw new Error("trust registry is too large");
+  for (const [projectPath, level] of entries) {
+    if (!validTrustPath(projectPath) || (level !== "trusted" && level !== "untrusted")) {
+      throw new Error("trust registry contains an invalid entry");
+    }
+    const canonical = canonicalTrustPath(projectPath);
+    // Conflicting legacy aliases fail closed: an explicit untrusted record wins.
+    result[canonical] = result[canonical] === "untrusted" ? "untrusted" : level;
+  }
+  return result;
+}
+
+/** Every read refreshes the sync cache; any failure clears it (fail closed). */
+async function load(target = file): Promise<TrustMap> {
+  let handle: Awaited<ReturnType<typeof fs.open>> | undefined;
+  try {
+    const entry = await fs.lstat(target);
+    if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_TRUST_FILE_BYTES) {
+      throw new Error("trust registry must be a bounded regular file");
+    }
+    handle = await fs.open(target, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size > MAX_TRUST_FILE_BYTES) {
+      throw new Error("trust registry must be a bounded regular file");
+    }
+    const next = parseTrustMap(JSON.parse(await handle.readFile("utf8")) as unknown);
+    cache = next;
+    return next;
+  } catch {
+    cache = {};
     return {};
+  } finally {
+    await handle?.close().catch(() => undefined);
   }
 }
 
-async function save(map: TrustMap): Promise<void> {
+async function assertSafeTrustParent(target: string): Promise<void> {
+  const parent = path.dirname(target);
+  await fs.mkdir(parent, { recursive: true, mode: 0o700 });
+  const parentInfo = await fs.lstat(parent);
+  if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
+    throw new Error("trust registry directory must be a real directory");
+  }
+}
+
+async function save(target: string, map: TrustMap): Promise<void> {
+  const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    await fs.mkdir(path.dirname(FILE), { recursive: true });
-    await fs.writeFile(FILE, JSON.stringify(map, null, 2), "utf8");
-  } catch {
-    // best effort
+    await assertSafeTrustParent(target);
+    try {
+      const targetInfo = await fs.lstat(target);
+      if (targetInfo.isSymbolicLink() || !targetInfo.isFile()) {
+        throw new Error("trust registry target must be a regular file");
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    const serialized = `${JSON.stringify(map, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, "utf8") > MAX_TRUST_FILE_BYTES) {
+      throw new Error("trust registry is too large");
+    }
+    await fs.writeFile(temporary, serialized, {
+      encoding: "utf8",
+      mode: 0o600,
+      flag: "wx",
+    });
+    await fs.rename(temporary, target);
+  } finally {
+    await fs.rm(temporary, { force: true }).catch(() => undefined);
   }
 }
 
-export async function getTrust(p: string): Promise<TrustLevel | "unknown"> {
+function serializeMutation(mutation: (target: string) => Promise<void>): Promise<void> {
+  const target = file;
+  const result = mutationQueue.then(() => mutation(target));
+  mutationQueue = result.catch(() => undefined);
+  return result;
+}
+
+export async function getTrust(projectPath: string): Promise<TrustLevel | "unknown"> {
+  if (!validTrustPath(projectPath)) return "unknown";
+  await mutationQueue.catch(() => undefined);
   const map = await load();
-  return map[p] ?? "unknown";
+  return map[canonicalTrustPath(projectPath)] ?? "unknown";
 }
 
-export async function setTrust(p: string, level: TrustLevel): Promise<void> {
-  const map = await load();
-  map[p] = level;
-  cache = map;
-  await save(map);
+export function setTrust(projectPath: string, level: TrustLevel): Promise<void> {
+  if (!validTrustPath(projectPath)) throw new Error("invalid trust path");
+  if (level !== "trusted" && level !== "untrusted") throw new Error("invalid trust level");
+  const canonical = canonicalTrustPath(projectPath);
+  return serializeMutation(async (target) => {
+    await assertSafeTrustParent(target);
+    const release = acquireFileLock(target);
+    try {
+      // Re-read while holding the cross-process lock. Atomic rename alone does
+      // not stop two desktop instances from both writing a stale snapshot.
+      const map = { ...(await load(target)) };
+      if (!(canonical in map) && Object.keys(map).length >= MAX_TRUST_ENTRIES) {
+        throw new Error("trust registry is full");
+      }
+      map[canonical] = level;
+      // Only publish trusted state to the sync path after durable persistence.
+      await save(target, map);
+      cache = map;
+    } finally {
+      release();
+    }
+  });
 }
 
-/**
- * Synchronous trust lookup from the in-memory cache. Returns "unknown" if the
- * path was never trusted OR the cache hasn't been warmed yet — both map to
- * fail-closed (untrusted) at the call site. Use this only where you can't await
- * (the agent-bridge sync IPC handler); prefer {@link getTrust} otherwise.
- */
-export function getTrustCachedSync(p: string): TrustLevel | "unknown" {
-  return cache[p] ?? "unknown";
+/** Synchronous, fail-closed lookup used by the agent bridge's ordered IPC path. */
+export function getTrustCachedSync(projectPath: string): TrustLevel | "unknown" {
+  return validTrustPath(projectPath)
+    ? (cache[canonicalTrustPath(projectPath)] ?? "unknown")
+    : "unknown";
 }
 
-/** Prime the in-memory cache from disk. Call once during main startup. */
+/** Prime the cache from disk before accepting renderer run requests. */
 export async function warmTrustCache(): Promise<void> {
+  await mutationQueue.catch(() => undefined);
   await load();
 }
 
 /**
- * Summary of the dangerous config a project would apply IF trusted — shown in
- * the trust dialog so the user sees the risk before granting trust (mirrors
- * Claude Code's TrustDialog, which lists Bash rules / env / hooks / MCP). These
- * are exactly the fields core strips from an untrusted project
- * (DANGEROUS_PROJECT_FIELDS): permissions.rules, env, hooks, mcpServers,
- * localEnvironment.setupScripts. All counts are 0 when the repo ships no
- * `.code-shell` settings — the common, low-risk case.
+ * Summary of dangerous config a project would apply if trusted. This reads raw
+ * project files deliberately so malformed configuration is still surfaced.
  */
 export interface ProjectTrustRisks {
   permissionRules: number;
@@ -82,22 +189,17 @@ export interface ProjectTrustRisks {
   setupScripts: boolean;
 }
 
-function readJsonObject(p: string): Record<string, unknown> {
+function readJsonObject(target: string): Record<string, unknown> {
   try {
-    const raw = readFileSync(p, "utf8");
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    const parsed: unknown = JSON.parse(readFileSync(target, "utf8"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
   } catch {
     return {};
   }
 }
 
-/**
- * Read a project's own `.code-shell/settings.{json,local.json}` (local over
- * project) and summarize its dangerous fields. Raw file read — deliberately no
- * schema validation, so we surface risk even from a malformed file. Never
- * throws; missing files → all-zero.
- */
 export function summarizeProjectTrustRisks(cwd: string): ProjectTrustRisks {
   const dir = path.join(cwd, ".code-shell");
   const merged: Record<string, unknown> = {
@@ -110,10 +212,10 @@ export function summarizeProjectTrustRisks(cwd: string): ProjectTrustRisks {
   const mcp = merged.mcpServers as Record<string, unknown> | undefined;
   const localEnv = merged.localEnvironment as { setupScripts?: unknown } | undefined;
   return {
-    permissionRules: Array.isArray(perms?.rules) ? perms!.rules!.length : 0,
+    permissionRules: Array.isArray(perms?.rules) ? perms.rules.length : 0,
     envKeys: env && typeof env === "object" ? Object.keys(env) : [],
     hooks: Array.isArray(hooks) ? hooks.length : 0,
     mcpServers: mcp && typeof mcp === "object" ? Object.keys(mcp) : [],
-    setupScripts: !!(localEnv && typeof localEnv === "object" && localEnv.setupScripts),
+    setupScripts: Boolean(localEnv && typeof localEnv === "object" && localEnv.setupScripts),
   };
 }

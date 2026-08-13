@@ -90,17 +90,16 @@ function workspaceOwners(sm: SessionManager): WorktreeWorkspaceOwner[] {
   }));
 }
 
-async function mainRootFor(sm: SessionManager, sessionId: string, cwd: string): Promise<string> {
+async function mainRootFor(sm: SessionManager, sessionId: string): Promise<string> {
   const fromSession = sm.readSessionMainRoot(sessionId);
-  if (fromSession) {
-    const sessionRoot = await findMainWorktreeRootIfUsable(fromSession);
-    if (sessionRoot) return fromSession;
+  if (!fromSession) {
+    throw new Error("session exists but has no valid state — cannot resolve workspace root");
   }
-  if (!fromSession || resolve(cwd) !== resolve(fromSession)) {
-    const cwdRoot = await findMainWorktreeRootIfUsable(cwd);
-    if (cwdRoot) return cwdRoot;
-  }
-  return fromSession ?? cwd;
+  // Probe Git usability, but preserve the persisted spelling. On macOS Git may
+  // canonicalize /var to /private/var; rewriting that into Session state breaks
+  // stable workspace identity and creates a spurious handoff.
+  await findMainWorktreeRootIfUsable(fromSession);
+  return fromSession;
 }
 
 async function findMainWorktreeRootIfUsable(cwd: string): Promise<string | undefined> {
@@ -165,19 +164,21 @@ function releaseError(sessionId: string, err: unknown): FailedSessionWorkspaceRe
 
 export async function getSessionWorkspaceForUi(
   sessionId: string,
-  cwd: string,
+  _cwd: string,
 ): Promise<SessionWorkspace> {
   const sm = sessions();
-  const mainRoot = await mainRootFor(sm, sessionId, cwd);
+  requireKnownSession(sm, sessionId);
+  const mainRoot = await mainRootFor(sm, sessionId);
   return currentWorkspaceFor(sm, sessionId, mainRoot);
 }
 
 export async function listSessionWorktreesForUi(
   sessionId: string,
-  cwd: string,
+  _cwd: string,
 ): Promise<SessionWorkspaceList> {
   const sm = sessions();
-  const mainRoot = await mainRootFor(sm, sessionId, cwd);
+  requireKnownSession(sm, sessionId);
+  const mainRoot = await mainRootFor(sm, sessionId);
   const current = currentWorkspaceFor(sm, sessionId, mainRoot);
   const prefix = worktreeBranchPrefix(mainRoot);
   return {
@@ -197,6 +198,11 @@ export async function getSessionWorktreeDiffForUi(
 ): Promise<WorktreeDiffSummary> {
   const sm = sessions();
   requireKnownSession(sm, sessionId);
+  const mainRoot = await mainRootFor(sm, sessionId);
+  const entries = await listWorktreesFast(mainRoot, { prefix: worktreeBranchPrefix(mainRoot) });
+  if (!entries.some((entry) => resolve(entry.path) === resolve(worktreePath))) {
+    throw new Error(`worktree is outside the session repository: ${worktreePath}`);
+  }
   const current = sm.getSessionWorkspace(sessionId);
   const baseRef =
     current?.kind === "worktree" && resolve(current.root) === resolve(worktreePath)
@@ -207,7 +213,7 @@ export async function getSessionWorktreeDiffForUi(
 
 export async function switchSessionWorkspaceForUi(
   sessionId: string,
-  cwd: string,
+  _cwd: string,
   target: string,
   opts: SessionWorkspaceMutationOptions = {},
 ): Promise<SessionWorkspaceList> {
@@ -215,7 +221,7 @@ export async function switchSessionWorkspaceForUi(
   requireKnownSession(sm, sessionId);
   const trimmed = target.trim();
   if (!trimmed) throw new Error("target is required");
-  const mainRoot = await mainRootFor(sm, sessionId, cwd);
+  const mainRoot = await mainRootFor(sm, sessionId);
   const from = currentWorkspaceFor(sm, sessionId, mainRoot);
 
   let next: SessionWorkspace;
@@ -273,8 +279,7 @@ export async function releaseSessionWorkspaceForUi(
     return { sessionId, ok: true, status: "missing", reason: missing };
   }
   try {
-    const persistedMainRoot = sm.readSessionMainRoot(sessionId);
-    const mainRoot = await mainRootFor(sm, sessionId, persistedMainRoot ?? process.cwd());
+    const mainRoot = await mainRootFor(sm, sessionId);
     const from = currentWorkspaceFor(sm, sessionId, mainRoot);
     const next: SessionWorkspace = { root: mainRoot, kind: "main" };
     if (from.kind === "main" && resolve(from.root) === resolve(mainRoot)) {
@@ -302,7 +307,7 @@ export async function releaseManySessionWorkspacesForUi(
 
 export async function cleanupSessionWorktreeForUi(
   sessionId: string,
-  cwd: string,
+  _cwd: string,
   worktreePath: string,
   action: WorkspaceCleanupAction,
   opts: SessionWorkspaceMutationOptions = {},
@@ -312,7 +317,7 @@ export async function cleanupSessionWorktreeForUi(
   }
   const sm = sessions();
   requireKnownSession(sm, sessionId);
-  const mainRoot = await mainRootFor(sm, sessionId, cwd);
+  const mainRoot = await mainRootFor(sm, sessionId);
   const prefix = worktreeBranchPrefix(mainRoot);
   const current = currentWorkspaceFor(sm, sessionId, mainRoot);
   const entries = await listWorktreesFast(mainRoot, {

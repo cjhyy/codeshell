@@ -9,6 +9,7 @@ describe("isDomainAllowed", () => {
   test("exact host match", () => {
     const p = { allowedDomains: ["xiaohongshu.com"] };
     expect(isDomainAllowed("https://xiaohongshu.com/explore", p)).toBe(true);
+    expect(isDomainAllowed("https://xiaohongshu.com:8443/explore", p)).toBe(true);
     expect(isDomainAllowed("https://www.xiaohongshu.com/explore", p)).toBe(false); // exact only
     expect(isDomainAllowed("https://evil.com", p)).toBe(false);
   });

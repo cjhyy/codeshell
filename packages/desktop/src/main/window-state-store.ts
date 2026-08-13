@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as os from "node:os";
+import { codeShellHome } from "@cjhyy/code-shell-core";
 
 export interface WindowState {
   width: number;
@@ -10,7 +11,18 @@ export interface WindowState {
   maximized?: boolean;
 }
 
-const FILE = path.join(os.homedir(), ".code-shell", "desktop", "window.json");
+function defaultFile(): string {
+  return path.join(codeShellHome(), "desktop", "window.json");
+}
+
+let file = defaultFile();
+let writeQueue: Promise<void> = Promise.resolve();
+
+/** Test-only isolation hook. */
+export function __setWindowStateFileForTest(next: string | null): void {
+  file = next ?? defaultFile();
+  writeQueue = Promise.resolve();
+}
 const DEFAULT: WindowState = { width: 1180, height: 800 };
 
 const MIN_DIM = 200;
@@ -41,8 +53,9 @@ export function sanitizeWindowState(parsed: unknown): WindowState {
 }
 
 export async function loadWindowState(): Promise<WindowState> {
+  await writeQueue.catch(() => undefined);
   try {
-    const raw = await fs.readFile(FILE, "utf8");
+    const raw = await fs.readFile(file, "utf8");
     return sanitizeWindowState(JSON.parse(raw));
   } catch {
     return DEFAULT;
@@ -50,10 +63,23 @@ export async function loadWindowState(): Promise<WindowState> {
 }
 
 export async function saveWindowState(s: WindowState): Promise<void> {
-  try {
-    await fs.mkdir(path.dirname(FILE), { recursive: true });
-    await fs.writeFile(FILE, JSON.stringify(s, null, 2), "utf8");
-  } catch {
-    // best effort
-  }
+  const target = file;
+  const operation = writeQueue.then(async () => {
+    const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+    try {
+      await fs.mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+      await fs.writeFile(temporary, `${JSON.stringify(sanitizeWindowState(s), null, 2)}\n`, {
+        encoding: "utf8",
+        mode: 0o600,
+        flag: "wx",
+      });
+      await fs.rename(temporary, target);
+    } finally {
+      await fs.rm(temporary, { force: true }).catch(() => undefined);
+    }
+  });
+  // Window persistence stays best-effort, but its queue must recover so one
+  // transient failure does not suppress every later move/resize snapshot.
+  writeQueue = operation.catch(() => undefined);
+  await writeQueue;
 }

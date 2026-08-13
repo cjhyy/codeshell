@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -118,5 +127,33 @@ describe("desktop sources service", () => {
       expect(() => deleteUpload(cwd, name)).toThrow(/invalid upload name/i);
     }
     expect(readFileSync(outside, "utf8")).toBe("keep");
+  });
+
+  test("refuses a symlinked uploads directory instead of writing outside the project", () => {
+    if (process.platform === "win32") return;
+    const picked = join(sourceDir, "brief.md");
+    const outside = join(home, "outside-uploads");
+    mkdirSync(join(cwd, ".code-shell"), { recursive: true });
+    mkdirSync(outside);
+    symlinkSync(outside, join(cwd, ".code-shell", "uploads"));
+    writeFileSync(picked, "private");
+    writeFileSync(join(outside, "brief.md"), "keep");
+
+    expect(() => uploadFiles(cwd, [picked])).toThrow(/uploads directory/i);
+    expect(() => deleteUpload(cwd, "brief.md")).toThrow(/uploads directory/i);
+    expect(readFileSync(join(outside, "brief.md"), "utf8")).toBe("keep");
+    expect(workspaceAccess(cwd).uploads).toEqual([]);
+  });
+
+  test("atomically overwrites without leaving temporary files", () => {
+    const picked = join(sourceDir, "brief.md");
+    writeFileSync(picked, "first");
+    uploadFiles(cwd, [picked]);
+    writeFileSync(picked, "second");
+    uploadFiles(cwd, [picked]);
+
+    const root = join(cwd, ".code-shell", "uploads");
+    expect(readFileSync(join(root, "brief.md"), "utf8")).toBe("second");
+    expect(readdirSync(root).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
 });

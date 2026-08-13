@@ -1736,7 +1736,7 @@ export function MobileRemoteSection() {
   }
 
   async function savePasscode() {
-    if (passcodeInput.length < 4) {
+    if (passcodeInput.length < 4 || passcodeInput.length > 256) {
       toast({ message: t("settingsX.adv.passcodeMin"), variant: "error" });
       return;
     }
@@ -1858,6 +1858,7 @@ export function MobileRemoteSection() {
               <Input
                 type="password"
                 value={passcodeInput}
+                maxLength={256}
                 onChange={(e) => setPasscodeInput(e.target.value)}
                 placeholder={
                   passcodeSet

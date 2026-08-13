@@ -1,6 +1,6 @@
 import { createServer, type Server, type Socket } from "node:net";
-import { randomBytes } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { randomBytes, randomUUID } from "node:crypto";
+import { chmod, lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import {
   CODESHELL_CHROME_EXTENSION_ORIGIN,
@@ -56,22 +56,33 @@ export class ChromeNativeBridgeServer {
     this.token = randomBytes(32).toString("hex");
     const server = createServer((socket) => this.accept(socket));
     this.server = server;
-    await new Promise<void>((resolve, reject) => {
-      server.once("error", reject);
-      server.listen(0, "127.0.0.1", () => resolve());
-    });
-    const address = server.address();
-    if (!address || typeof address === "string") throw new Error("native bridge has no TCP port");
-    this.port = address.port;
-    const state: ChromeNativeServerState = {
-      version: 1,
-      port: address.port,
-      token: this.token,
-      pid: process.pid,
-    };
-    await mkdir(path.dirname(this.statePath), { recursive: true, mode: 0o700 });
-    await writeFile(this.statePath, JSON.stringify(state), { mode: 0o600 });
-    return this.status();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(0, "127.0.0.1", () => resolve());
+      });
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        throw new Error("native bridge has no TCP port");
+      }
+      this.port = address.port;
+      const state: ChromeNativeServerState = {
+        version: 1,
+        port: address.port,
+        token: this.token,
+        pid: process.pid,
+      };
+      await writeNativeStateAtomic(this.statePath, state);
+      return this.status();
+    } catch (error) {
+      if (server.listening) {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+      this.server = undefined;
+      this.port = undefined;
+      this.token = undefined;
+      throw error;
+    }
   }
 
   async stop(): Promise<void> {
@@ -197,5 +208,33 @@ export class ChromeNativeBridgeServer {
 
   private send(socket: Socket, message: unknown): void {
     socket.write(`${JSON.stringify(message)}\n`);
+  }
+}
+
+async function writeNativeStateAtomic(
+  statePath: string,
+  state: ChromeNativeServerState,
+): Promise<void> {
+  const parent = path.dirname(statePath);
+  await mkdir(parent, { recursive: true, mode: 0o700 });
+  const parentInfo = await lstat(parent);
+  if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
+    throw new Error("native bridge state parent must be a real directory");
+  }
+  try {
+    const target = await lstat(statePath);
+    if (target.isSymbolicLink() || !target.isFile()) {
+      throw new Error("native bridge state target must be a regular file");
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  const temporary = `${statePath}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, `${JSON.stringify(state)}\n`, { mode: 0o600, flag: "wx" });
+    await rename(temporary, statePath);
+    if (process.platform !== "win32") await chmod(statePath, 0o600);
+  } finally {
+    await rm(temporary, { force: true }).catch(() => undefined);
   }
 }

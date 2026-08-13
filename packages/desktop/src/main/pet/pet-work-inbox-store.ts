@@ -1,6 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readBoundedJson, writeOwnerJsonAtomic } from "./bounded-json-store.js";
 import {
   MAX_PET_WORK_INBOX_DISMISSED_ITEMS,
   MAX_PET_WORK_ITEM_ID_LENGTH,
@@ -27,6 +25,8 @@ interface PetWorkInboxFile {
   revision: number;
   dismissedIds: string[];
 }
+
+const MAX_WORK_INBOX_FILE_BYTES = 1024 * 1024;
 
 function normalizeIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -65,7 +65,11 @@ export class PetWorkInboxStore {
 
   async load(): Promise<void> {
     try {
-      const parsed = JSON.parse(await readFile(this.filePath, "utf8")) as Partial<PetWorkInboxFile>;
+      const parsed = (await readBoundedJson(
+        this.filePath,
+        MAX_WORK_INBOX_FILE_BYTES,
+      )) as Partial<PetWorkInboxFile> | undefined;
+      if (!parsed) return;
       const revision = parsed.revision;
       if (
         parsed.version !== 1 ||
@@ -253,23 +257,11 @@ export class PetWorkInboxStore {
   }
 
   private async persist(snapshot = this.getSnapshot()): Promise<void> {
-    await mkdir(dirname(this.filePath), { recursive: true, mode: 0o700 });
-    const temporary = `${this.filePath}.${process.pid}.${randomUUID()}.tmp`;
     const file: PetWorkInboxFile = {
       version: 1,
       revision: snapshot.revision,
       dismissedIds: snapshot.dismissedIds,
     };
-    try {
-      await writeFile(temporary, `${JSON.stringify(file, null, 2)}\n`, {
-        encoding: "utf8",
-        mode: 0o600,
-      });
-      await rename(temporary, this.filePath);
-      await chmod(this.filePath, 0o600).catch(() => undefined);
-    } catch (error) {
-      await rm(temporary, { force: true }).catch(() => undefined);
-      throw error;
-    }
+    await writeOwnerJsonAtomic(this.filePath, file, MAX_WORK_INBOX_FILE_BYTES);
   }
 }

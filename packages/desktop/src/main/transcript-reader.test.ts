@@ -289,7 +289,13 @@ describe("transcriptToFoldItems", () => {
   });
 
   it("skips malformed lines without throwing", () => {
-    const jsonl = ["not json", line("message", { role: "user", content: "ok" })].join("\n");
+    const jsonl = [
+      "not json",
+      "null",
+      "[]",
+      JSON.stringify({ type: "message", data: null }),
+      line("message", { role: "user", content: "ok" }),
+    ].join("\n");
     const items = transcriptToFoldItems(jsonl);
     expect(items).toEqual([{ kind: "user", text: "ok", timestamp: 1 }]);
   });
@@ -464,6 +470,22 @@ describe("getSessionTranscript", () => {
 
   it("returns [] for a missing session", async () => {
     expect(await getSessionTranscript("nope", dir)).toEqual([]);
+    expect(await getSessionTranscript("a".repeat(129), dir)).toEqual([]);
+  });
+
+  it("does not follow a symlinked session directory", async () => {
+    if (process.platform === "win32") return;
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "cs-tr-outside-"));
+    try {
+      fs.writeFileSync(
+        path.join(outside, "transcript.jsonl"),
+        line("message", { role: "user", content: "secret" }),
+      );
+      fs.symlinkSync(outside, path.join(dir, "linked"));
+      expect(await getSessionTranscript("linked", dir)).toEqual([]);
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
   });
 
   it("reads a session dir transcript.jsonl", async () => {

@@ -1,8 +1,22 @@
 import { createHash, randomUUID } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { IpcMain } from "electron";
 import { CredentialStore, type Credential } from "@cjhyy/code-shell-core";
+import { acquireFileLock } from "@cjhyy/code-shell-core/internal";
 import {
   acquireGatewayInstanceLock,
   BUILTIN_CHANNEL_CAPABILITIES,
@@ -207,6 +221,10 @@ interface ActiveDingTalkDiscovery {
 }
 
 const DINGTALK_CREDENTIAL_ID = "im-gateway-dingtalk";
+const MAX_GATEWAY_CONFIG_BYTES = 4 * 1024 * 1024;
+const MAX_SETUP_LIST_ITEMS = 1_000;
+const MAX_SETUP_VALUE_CHARS = 4_096;
+const MAX_SETUP_SECRET_CHARS = 64 * 1024;
 
 function resolveCredentialStore(
   credentialStore?: ImGatewayCredentialStore,
@@ -915,15 +933,13 @@ export class ImGatewayService {
   }
 
   ensureConfig(): string {
-    if (existsSync(this.configPath)) return this.configPath;
-    mkdirSync(dirname(this.configPath), { recursive: true, mode: 0o700 });
-    const temporary = `${this.configPath}.${process.pid}.tmp`;
-    writeFileSync(temporary, `${JSON.stringify(gatewayConfigTemplate(), null, 2)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    });
-    renameSync(temporary, this.configPath);
-    if (process.platform !== "win32") chmodSync(this.configPath, 0o600);
+    if (existsSync(this.configPath)) {
+      readGatewayConfigRecord(this.configPath);
+      return this.configPath;
+    }
+    mutateGatewayConfigRecord(this.configPath, (current) =>
+      Object.keys(current).length === 0 ? gatewayConfigTemplate() : current,
+    );
     this.emitStatus();
     return this.configPath;
   }
@@ -958,6 +974,10 @@ export class ImGatewayService {
     const enabled = Boolean(input.enabled);
     const clientId = input.clientId.trim();
     const incomingSecret = input.clientSecret?.trim();
+    if (clientId.length > MAX_SETUP_VALUE_CHARS) throw new Error("钉钉 Client ID 过长");
+    if (incomingSecret && incomingSecret.length > MAX_SETUP_SECRET_CHARS) {
+      throw new Error("钉钉 Client Secret 过长");
+    }
     const allowedConversationIds = uniqueTrimmedStrings(input.allowedConversationIds);
     const allowedUserIds = uniqueTrimmedStrings(input.allowedUserIds);
     const raw = readGatewayConfigRecord(this.ensureConfig());
@@ -992,8 +1012,11 @@ export class ImGatewayService {
       allowedUserIds,
     };
     delete nextSection.clientSecret;
-    raw.dingtalk = nextSection;
-    writeGatewayConfigRecord(this.configPath, raw);
+    mutateGatewayConfigRecord(this.configPath, (current) => {
+      current.dingtalk = { ...readRecord(current.dingtalk), ...nextSection };
+      delete readRecord(current.dingtalk).clientSecret;
+      return current;
+    });
     this.lastError = undefined;
     this.emitStatus();
     return this.getDingTalkSetup();
@@ -1345,23 +1368,78 @@ function activityPreview(text: string): string {
 }
 
 function readGatewayConfigRecord(configPath: string): Record<string, unknown> {
-  if (!existsSync(configPath)) return {};
-  const parsed = JSON.parse(readFileSync(configPath, "utf8")) as unknown;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("IM gateway 配置必须是 JSON 对象");
+  let fd: number | undefined;
+  try {
+    const entry = lstatSync(configPath);
+    if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_GATEWAY_CONFIG_BYTES) {
+      throw new Error("IM gateway 配置必须是有限大小的普通文件");
+    }
+    fd = openSync(configPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(fd);
+    if (!opened.isFile() || opened.size > MAX_GATEWAY_CONFIG_BYTES) {
+      throw new Error("IM gateway 配置必须是有限大小的普通文件");
+    }
+    const parsed = JSON.parse(readFileSync(fd, "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("IM gateway 配置必须是 JSON 对象");
+    }
+    return parsed as Record<string, unknown>;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
   }
-  return parsed as Record<string, unknown>;
 }
 
-function writeGatewayConfigRecord(configPath: string, config: Record<string, unknown>): void {
-  mkdirSync(dirname(configPath), { recursive: true, mode: 0o700 });
+function writeGatewayConfigRecordUnlocked(
+  configPath: string,
+  config: Record<string, unknown>,
+): void {
+  assertSafeGatewayConfigTarget(configPath);
+  const serialized = `${JSON.stringify(config, null, 2)}\n`;
+  if (Buffer.byteLength(serialized, "utf8") > MAX_GATEWAY_CONFIG_BYTES) {
+    throw new Error("IM gateway 配置过大");
+  }
   const temporary = `${configPath}.${process.pid}.${randomUUID()}.tmp`;
-  writeFileSync(temporary, `${JSON.stringify(config, null, 2)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  renameSync(temporary, configPath);
-  if (process.platform !== "win32") chmodSync(configPath, 0o600);
+  try {
+    writeFileSync(temporary, serialized, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    renameSync(temporary, configPath);
+    if (process.platform !== "win32") chmodSync(configPath, 0o600);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
+}
+
+function mutateGatewayConfigRecord(
+  configPath: string,
+  mutate: (current: Record<string, unknown>) => Record<string, unknown>,
+): void {
+  assertSafeGatewayConfigTarget(configPath);
+  const release = acquireFileLock(configPath);
+  try {
+    assertSafeGatewayConfigTarget(configPath);
+    writeGatewayConfigRecordUnlocked(configPath, mutate(readGatewayConfigRecord(configPath)));
+  } finally {
+    release();
+  }
+}
+
+function assertSafeGatewayConfigTarget(configPath: string): void {
+  const parent = dirname(configPath);
+  mkdirSync(parent, { recursive: true, mode: 0o700 });
+  const parentInfo = lstatSync(parent);
+  if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
+    throw new Error("IM gateway 配置目录必须是普通目录");
+  }
+  try {
+    const targetInfo = lstatSync(configPath);
+    if (targetInfo.isSymbolicLink() || !targetInfo.isFile()) {
+      throw new Error("IM gateway 配置必须是普通文件");
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
 }
 
 function readRecord(value: unknown): Record<string, unknown> {
@@ -1379,9 +1457,16 @@ function readUniqueStringList(value: unknown): string[] {
 }
 
 function uniqueTrimmedStrings(values: readonly unknown[]): string[] {
+  if (values.length > MAX_SETUP_LIST_ITEMS) {
+    throw new Error(`白名单最多包含 ${MAX_SETUP_LIST_ITEMS} 项`);
+  }
   return [
     ...new Set(
-      values.flatMap((value) => (typeof value === "string" && value.trim() ? [value.trim()] : [])),
+      values.flatMap((value) =>
+        typeof value === "string" && value.trim() && value.length <= MAX_SETUP_VALUE_CHARS
+          ? [value.trim()]
+          : [],
+      ),
     ),
   ];
 }
@@ -1392,10 +1477,7 @@ function isImGatewayChannel(value: string): value is ImGatewayChannel {
 
 function readEnabledChannels(configPath: string): Set<ImGatewayChannel> {
   const enabled = new Set<ImGatewayChannel>();
-  if (!existsSync(configPath)) return enabled;
-  const raw = JSON.parse(readFileSync(configPath, "utf8")) as unknown;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return enabled;
-  const record = raw as Record<string, unknown>;
+  const record = readGatewayConfigRecord(configPath);
   for (const channel of IM_GATEWAY_CHANNELS) {
     const section = record[channel];
     if (!section || typeof section !== "object" || Array.isArray(section)) continue;

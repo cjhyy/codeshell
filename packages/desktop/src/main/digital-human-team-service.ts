@@ -1,9 +1,13 @@
-import { readAllHumanRepoEntries } from "@cjhyy/code-shell-core/internal";
+import { acquireFileLock, readAllHumanRepoEntries } from "@cjhyy/code-shell-core/internal";
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
-  readdirSync,
+  openSync,
+  opendirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -19,6 +23,9 @@ import {
   parseDigitalHumanTeam,
   type DigitalHumanTeam,
 } from "../shared/digital-human-team.js";
+
+const MAX_TEAM_FILE_BYTES = 64 * 1024;
+const MAX_LOCAL_TEAM_DIRECTORIES = 10_000;
 
 export function digitalHumanTeamsRoot(): string {
   return join(codeShellHome(), "digital-human-teams");
@@ -66,7 +73,7 @@ function checkedTeamFile(id: string): string | undefined {
   const path = join(dir, "team.json");
   if (!existsSync(path)) return undefined;
   const info = lstatSync(path);
-  if (info.isSymbolicLink() || !info.isFile()) {
+  if (info.isSymbolicLink() || !info.isFile() || info.size > MAX_TEAM_FILE_BYTES) {
     throw new Error(`Invalid digital-human team file: ${path}`);
   }
   return path;
@@ -76,8 +83,14 @@ export function readDigitalHumanTeam(id: string): DigitalHumanTeam | undefined {
   if (!DIGITAL_HUMAN_TEAM_ID_RE.test(id)) return undefined;
   const path = checkedTeamFile(id);
   if (!path) return undefined;
+  let descriptor: number | undefined;
   try {
-    return parseDigitalHumanTeam(JSON.parse(readFileSync(path, "utf-8")));
+    descriptor = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const metadata = fstatSync(descriptor);
+    if (!metadata.isFile() || metadata.size > MAX_TEAM_FILE_BYTES) {
+      throw new Error("team file is too large");
+    }
+    return parseDigitalHumanTeam(JSON.parse(readFileSync(descriptor, "utf-8")));
   } catch (error) {
     throw new Error(
       `Invalid digital-human team "${id}" at ${path}: ${
@@ -85,6 +98,8 @@ export function readDigitalHumanTeam(id: string): DigitalHumanTeam | undefined {
       }`,
       { cause: error },
     );
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
 }
 
@@ -100,19 +115,31 @@ export function listDigitalHumanTeams(options?: {
   const root = checkedTeamsRoot();
   const teams: DigitalHumanTeam[] = [];
   if (root) {
-    for (const entry of readdirSync(root, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      try {
-        const team = readDigitalHumanTeam(entry.name);
-        if (team) teams.push(team);
-      } catch (error) {
-        // One broken local team must not hide the rest of the library.
-        options?.onInvalidTeam?.({
-          id: entry.name,
-          path: teamFile(entry.name),
-          error: error instanceof Error ? error.message : String(error),
-        });
+    const directory = opendirSync(root);
+    let seen = 0;
+    try {
+      for (;;) {
+        const entry = directory.readSync();
+        if (!entry) break;
+        seen += 1;
+        if (seen > MAX_LOCAL_TEAM_DIRECTORIES) {
+          throw new Error("Too many entries in the digital-human teams root");
+        }
+        if (!entry.isDirectory()) continue;
+        try {
+          const team = readDigitalHumanTeam(entry.name);
+          if (team) teams.push(team);
+        } catch (error) {
+          // One broken local team must not hide the rest of the library.
+          options?.onInvalidTeam?.({
+            id: entry.name,
+            path: teamFile(entry.name),
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
+    } finally {
+      directory.closeSync();
     }
   }
   // Repo-provided teams sit alongside locally-authored ones. A local team with
@@ -153,31 +180,49 @@ export function saveDigitalHumanTeam(input: DigitalHumanTeam): DigitalHumanTeam 
   const knownProfiles = new Set(listWorkspaceProfiles().map((profile) => profile.name));
   const missing = team.members.find((member) => !knownProfiles.has(member));
   if (missing) throw new Error(`Digital human "${missing}" does not exist`);
-  const dir = checkedTeamDirectory(team.id, true);
-  if (!dir) throw new Error(`Unable to create digital-human team directory: ${team.id}`);
-  const path = join(dir, "team.json");
-  if (existsSync(path)) {
-    const fileInfo = lstatSync(path);
-    if (fileInfo.isSymbolicLink() || !fileInfo.isFile()) {
-      throw new Error(`Invalid digital-human team file: ${path}`);
-    }
-  }
-  const tmp = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  const root = checkedTeamsRoot(true);
+  if (!root) throw new Error("Unable to create digital-human teams root");
+  const release = acquireFileLock(join(root, ".mutation"));
   try {
-    writeFileSync(tmp, `${JSON.stringify(team, null, 2)}\n`, {
-      encoding: "utf-8",
-      mode: 0o600,
-      flag: "wx",
-    });
-    renameSync(tmp, path);
+    const dir = checkedTeamDirectory(team.id, true);
+    if (!dir) throw new Error(`Unable to create digital-human team directory: ${team.id}`);
+    const path = join(dir, "team.json");
+    if (existsSync(path)) {
+      const fileInfo = lstatSync(path);
+      if (fileInfo.isSymbolicLink() || !fileInfo.isFile()) {
+        throw new Error(`Invalid digital-human team file: ${path}`);
+      }
+    }
+    const serialized = `${JSON.stringify(team, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, "utf8") > MAX_TEAM_FILE_BYTES) {
+      throw new Error("digital-human team file is too large");
+    }
+    const tmp = `${path}.${process.pid}.${randomUUID()}.tmp`;
+    try {
+      writeFileSync(tmp, serialized, {
+        encoding: "utf-8",
+        mode: 0o600,
+        flag: "wx",
+      });
+      renameSync(tmp, path);
+    } finally {
+      rmSync(tmp, { force: true });
+    }
   } finally {
-    rmSync(tmp, { force: true });
+    release();
   }
   return team;
 }
 
 export function deleteDigitalHumanTeam(id: string): void {
   if (!DIGITAL_HUMAN_TEAM_ID_RE.test(id)) throw new Error("invalid digital-human team id");
-  const dir = checkedTeamDirectory(id);
-  if (dir) rmSync(dir, { recursive: true, force: true });
+  const root = checkedTeamsRoot();
+  if (!root) return;
+  const release = acquireFileLock(join(root, ".mutation"));
+  try {
+    const dir = checkedTeamDirectory(id);
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  } finally {
+    release();
+  }
 }

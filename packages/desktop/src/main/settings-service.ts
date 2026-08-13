@@ -23,6 +23,8 @@ export interface SettingsLocation {
   path: string;
 }
 
+const FORBIDDEN_SETTING_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
 export function resolveSettingsPath(scope: SettingsScope, projectPath?: string): string {
   if (scope === "user") return path.join(os.homedir(), ".code-shell", "settings.json");
   if (!projectPath) throw new Error("project scope requires cwd");
@@ -42,7 +44,9 @@ export async function readSettings(
     throw e;
   }
   try {
-    return JSON.parse(raw) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isPlainRecord(parsed)) throw new Error("settings root must be an object");
+    return sanitizeStoredSettings(parsed) as Record<string, unknown>;
   } catch {
     // Corrupt settings.json (crash mid-write, manual mis-edit, half-written
     // disk). Don't throw — that would reject settings:get and break the whole
@@ -84,11 +88,30 @@ const writeChains = new Map<string, Promise<void>>();
 const LOCK_STALE_MS = 10_000;
 const LOCK_RETRIES = { retries: 10, factor: 1.5, minTimeout: 20, maxTimeout: 500 };
 
+async function writeSettingsFileAtomic(file: string, data: Record<string, unknown>): Promise<void> {
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    // settings.json can still contain legacy plaintext provider keys. Create
+    // the staging inode owner-only; rename preserves that mode and tightens a
+    // pre-fix 0644 target without an observable chmod window.
+    await fs.writeFile(temporary, JSON.stringify(data, null, 2) + "\n", {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+    await fs.rename(temporary, file);
+  } finally {
+    // rename removes the source on success; force makes cleanup a no-op then.
+    await fs.rm(temporary, { force: true }).catch(() => undefined);
+  }
+}
+
 export async function writeSettings(
   scope: SettingsScope,
   patch: Record<string, unknown>,
   projectPath?: string,
 ): Promise<void> {
+  if (!isPlainRecord(patch)) throw new Error("settings patch must be a plain object");
+  assertSafePatch(patch);
   const p = resolveSettingsPath(scope, projectPath);
   // Serialize per file. Tail off the previous write (ignoring its rejection so
   // one failure doesn't poison the chain) before doing our read-modify-write.
@@ -106,9 +129,7 @@ export async function writeSettings(
         normalizeWorktreeBranchPrefixIfPatched(patch, merged);
         // Unique temp name so a concurrent writer for the same file can't clobber
         // our half-written temp and produce corrupt JSON after rename.
-        const tmp = p + "." + randomUUID() + ".tmp";
-        await fs.writeFile(tmp, JSON.stringify(merged, null, 2) + "\n", "utf8");
-        await fs.rename(tmp, p);
+        await writeSettingsFileAtomic(p, merged);
       } finally {
         await release();
       }
@@ -162,10 +183,44 @@ function stripNulls(value: unknown): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (FORBIDDEN_SETTING_KEYS.has(k)) continue;
     if (v === null) continue;
     out[k] = stripNulls(v);
   }
   return out;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+/** Remove keys that can affect object prototypes from a legacy on-disk file. */
+function sanitizeStoredSettings(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sanitizeStoredSettings);
+  if (!isPlainRecord(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (FORBIDDEN_SETTING_KEYS.has(key)) continue;
+    out[key] = sanitizeStoredSettings(child);
+  }
+  return out;
+}
+
+/** IPC patches are untrusted input: fail closed instead of silently changing intent. */
+function assertSafePatch(value: unknown): void {
+  if (Array.isArray(value)) {
+    for (const child of value) assertSafePatch(child);
+    return;
+  }
+  if (!isPlainRecord(value)) return;
+  for (const [key, child] of Object.entries(value)) {
+    if (FORBIDDEN_SETTING_KEYS.has(key)) {
+      throw new Error(`invalid settings key: ${key}`);
+    }
+    assertSafePatch(child);
+  }
 }
 
 function normalizeWorktreeBranchPrefixIfPatched(

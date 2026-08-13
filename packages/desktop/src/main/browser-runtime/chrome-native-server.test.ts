@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createConnection } from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -7,6 +7,7 @@ import { ChromeNativeBridgeServer } from "./chrome-native-server.js";
 import {
   CODESHELL_CHROME_EXTENSION_ORIGIN,
   JsonLineDecoder,
+  runChromeNativeMessagingHost,
   type ChromeNativeServerState,
 } from "./chrome-native-protocol.js";
 
@@ -65,6 +66,27 @@ describe("ChromeNativeBridgeServer", () => {
     );
     expect(await requestPromise).toEqual({ id: 9 });
     socket.destroy();
+  });
+
+  test("refuses linked state, rolls back the listener, and never reads the target token", async () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "codeshell-chrome-native-link-"));
+    temporaryDirectories.push(directory);
+    const statePath = path.join(directory, "state.json");
+    const outside = path.join(directory, "outside.json");
+    writeFileSync(
+      outside,
+      JSON.stringify({ version: 1, port: 1234, token: "a".repeat(64), pid: process.pid }),
+    );
+    symlinkSync(outside, statePath);
+    const server = new ChromeNativeBridgeServer({ statePath });
+    servers.push(server);
+
+    await expect(server.start()).rejects.toThrow(/target/);
+    expect(server.status()).toMatchObject({ listening: false, connected: false });
+    await expect(
+      runChromeNativeMessagingHost(CODESHELL_CHROME_EXTENSION_ORIGIN, statePath),
+    ).rejects.toThrow(/state is invalid/);
+    expect(JSON.parse(readFileSync(outside, "utf8"))).toMatchObject({ port: 1234 });
   });
 });
 

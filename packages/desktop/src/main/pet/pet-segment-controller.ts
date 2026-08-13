@@ -33,13 +33,11 @@ export interface PetSegmentControllerOptions {
     anchors?: PetArchiveAnchors,
   ) => Promise<{ before: number; after: number }>;
   /**
-   * Optional closure sink: invoked (fire-and-forget) when a long-idle boundary
-   * closes a segment, before the new one is opened. Receives the just-closed
-   * segment plus the newly-opened segment's first-turn client message id so the
-   * host can locate the closed window in the transcript. Distilling the journal
-   * entry + auto-memories and archiving the range is the sink's responsibility.
+   * Optional journal/memory sink for a settled segment. The dispatcher invokes
+   * it after the boundary turn finishes, when both transcript anchors exist.
+   * Context archival itself runs at the engine's pre-model safe point.
    */
-  onSegmentClosed?: (closed: PetSegmentClosed) => void;
+  onSegmentClosed?: (closed: PetSegmentClosed) => void | Promise<void>;
   now: () => number;
   idleMs: number;
 }
@@ -50,6 +48,12 @@ export interface PetSegmentClosed {
   nextBoundaryMessageId?: string;
   startedAt: number;
   endedAt: number;
+}
+
+/** Boundary work returned to the dispatcher for one newly-opened segment. */
+export interface PetSegmentTurnStart {
+  carryoverBrief?: string;
+  closedSegment?: PetSegmentClosed;
 }
 
 /** Anchors forwarded to the archive_range worker query for a persisted marker. */
@@ -104,18 +108,17 @@ export interface PetDelegationClosure {
  *   work-memory entry; if (and only if) a concrete turnRange was supplied,
  *   collapse those turns of the Mimi conversation via archiveRange.
  * - beginTurn: called before each Mimi chat turn. If the idle gap since the
- *   last interaction crosses idleMs, open a fresh segment and return a carryover
- *   brief (open tasks + recent conclusions) for injection; otherwise return
- *   undefined. Either way the interaction clock advances.
+ *   last interaction crosses idleMs, open a fresh segment and return the closed
+ *   boundary plus a carryover brief; otherwise return undefined. Either way the
+ *   interaction clock advances.
  */
 export class PetSegmentController {
   /**
    * Serializes beginTurn so its read-decide-write of lastInteractionAt is
    * atomic. Two chat entry points (desktop IPC + IM gateway) hit the same pet
    * session; without this, concurrent turns both read the old lastInteractionAt,
-   * both decide to open a new segment, and both fire onSegmentClosed → the same
-   * transcript range gets archived twice (the second archive uses now-shifted
-   * absolute indices and removes the wrong turns).
+   * both decide to open a new segment, and both return the same closed boundary
+   * for archival/distillation.
    */
   private beginTurnQueue: Promise<unknown> = Promise.resolve();
 
@@ -146,7 +149,7 @@ export class PetSegmentController {
    * crossed we open a fresh segment keyed to that id so the chat UI can render a
    * divider (+ optional brief card) immediately before the turn.
    */
-  async beginTurn(clientMessageId?: string): Promise<string | undefined> {
+  async beginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined> {
     // Chain on the queue so overlapping turns run one-at-a-time. A failure in
     // one turn must not poison the chain, so swallow the tail's rejection.
     const run = this.beginTurnQueue
@@ -156,7 +159,7 @@ export class PetSegmentController {
     return run;
   }
 
-  private async runBeginTurn(clientMessageId?: string): Promise<string | undefined> {
+  private async runBeginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined> {
     const now = this.options.now();
     const lastInteractionAt = this.options.store.lastInteractionAt();
     // The very first interaction has no preceding segment to close, so it only
@@ -170,24 +173,31 @@ export class PetSegmentController {
       !isFirstInteraction &&
       shouldStartNewSegment({ lastInteractionAt, now, idleMs: this.options.idleMs });
     if (!openNew) {
+      // Establish an invisible base segment on the first observed turn. It has
+      // no UI boundary, but gives the next long-idle crossing a real segment
+      // to close and archive from the beginning of the conversation.
+      if (!this.options.store.activeSegment()) {
+        await this.options.store.openSegment({
+          id: `seg-${randomUUID()}`,
+          startedAt: now,
+        });
+      }
       await this.options.store.setLastInteractionAt(now);
       return undefined;
     }
     // Capture the segment that is about to close before we append the new one.
-    // Only a segment that actually captured a first-turn message id yields a
-    // locatable transcript window; a legacy/time-only segment closes silently.
     const closing = this.options.store.activeSegment();
-    if (closing && this.options.onSegmentClosed) {
-      this.options.onSegmentClosed({
-        segmentId: closing.id,
-        ...(closing.boundaryBeforeMessageId
-          ? { closingBoundaryMessageId: closing.boundaryBeforeMessageId }
-          : {}),
-        ...(clientMessageId ? { nextBoundaryMessageId: clientMessageId } : {}),
-        startedAt: closing.startedAt,
-        endedAt: now,
-      });
-    }
+    const closedSegment = closing
+      ? {
+          segmentId: closing.id,
+          ...(closing.boundaryBeforeMessageId
+            ? { closingBoundaryMessageId: closing.boundaryBeforeMessageId }
+            : {}),
+          ...(clientMessageId ? { nextBoundaryMessageId: clientMessageId } : {}),
+          startedAt: closing.startedAt,
+          endedAt: now,
+        }
+      : undefined;
     const brief = this.buildBrief();
     const briefText = brief.length > 0 ? brief : undefined;
     await this.options.store.openSegment({
@@ -197,7 +207,15 @@ export class PetSegmentController {
       ...(briefText ? { brief: briefText } : {}),
     });
     await this.options.store.setLastInteractionAt(now);
-    return briefText;
+    return {
+      ...(briefText ? { carryoverBrief: briefText } : {}),
+      ...(closedSegment ? { closedSegment } : {}),
+    };
+  }
+
+  /** Distill a segment only after its exclusive end anchor has been persisted. */
+  async completeSegmentClosure(closed: PetSegmentClosed): Promise<void> {
+    await this.options.onSegmentClosed?.(closed);
   }
 
   /** Message-keyed topic-segment boundaries for the Mimi chat UI (oldest → newest). */

@@ -41,26 +41,31 @@ mock.module("@cjhyy/code-shell-capability-coding/external-runtimes", () => ({
 }));
 
 let trust: "trusted" | "untrusted" = "trusted";
-mock.module("./trust-store.js", () => ({
-  getTrustCachedSync: () => trust,
-}));
 
 const { ExternalRuntimeService } = await import("./external-runtime-service.js");
 
 const claims: Array<{ sessionId: string; webContentsId?: number }> = [];
 const released: string[] = [];
-const emitted: Array<{ sessionId: string; type: string }> = [];
+const emitted: Array<{ sessionId: string; type: string; eventSessionId?: string }> = [];
 
 function service(
   flags: Record<string, boolean>,
   requestApproval?: () => Promise<{ approved: boolean; answer?: string }>,
+  overrides: Record<string, unknown> = {},
 ) {
   return new ExternalRuntimeService({
     featureFlags: () => flags as never,
     registerSession: (sessionId, _cwd, webContentsId) => claims.push({ sessionId, webContentsId }),
     releaseSession: (sessionId) => released.push(sessionId),
-    emit: (sessionId, event) => emitted.push({ sessionId, type: event.type }),
+    emit: (sessionId, event) =>
+      emitted.push({
+        sessionId,
+        type: event.type,
+        ...(event.type === "session_started" ? { eventSessionId: event.sessionId } : {}),
+      }),
+    projectTrust: () => trust,
     ...(requestApproval ? { requestApproval } : {}),
+    ...overrides,
   });
 }
 
@@ -150,6 +155,44 @@ describe("ExternalRuntimeService", () => {
     expect(claims).toEqual([{ sessionId: "sess-1", webContentsId: 77 }]);
   });
 
+  test("fallible preparation happens before the host session is registered", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      toolContextOverrides: () => {
+        throw new Error("context setup failed");
+      },
+    });
+
+    await expect(svc.start(request)).rejects.toThrow(/context setup failed/);
+    expect(claims).toEqual([]);
+    expect(starts).toEqual([]);
+  });
+
+  test("binding sidecar failures do not orphan or fail a live runtime", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      writeBinding: () => {
+        throw new Error("sidecar disk full");
+      },
+    });
+
+    await expect(svc.start(request)).resolves.toBeDefined();
+    await expect(svc.send("sess-1", "still runs")).resolves.toMatchObject({ ok: true });
+    expect(svc.get("sess-1")).toBeDefined();
+    await svc.stop("sess-1");
+  });
+
+  test("closes a runtime whose owner window disappeared during startup", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    const ownerWindow = {
+      webContents: { id: 77 },
+      isDestroyed: () => true,
+    } as never;
+
+    await expect(svc.start({ ...request, ownerWindow })).rejects.toThrow(/owner window closed/i);
+    expect(closed).toEqual(["sess-1"]);
+    expect(released).toEqual(["sess-1"]);
+    expect(svc.get("sess-1")).toBeUndefined();
+  });
+
   test("starts without an owner window, leaving invoke to fail closed", async () => {
     // Headless/mobile sessions have no renderer. That must not block the runtime —
     // only Panel.invoke is unavailable, which the bridge reports on its own.
@@ -170,12 +213,182 @@ describe("ExternalRuntimeService", () => {
     expect(starts).toHaveLength(2);
   });
 
+  test("serializes concurrent starts for the same business session", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await Promise.all([svc.start(request), svc.start(request)]);
+
+    expect(starts).toHaveLength(2);
+    expect(closed).toEqual(["sess-1"]);
+    expect(released).toEqual(["sess-1"]);
+  });
+
+  test("another renderer window cannot replace or control an owned session", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    const otherWindow = { webContents: { id: 88 } } as never;
+
+    await expect(svc.start({ ...request, ownerWindow: otherWindow })).rejects.toThrow(
+      /owned by another window/i,
+    );
+    await expect(svc.send("sess-1", "hijack", 88)).rejects.toThrow(/owned by another window/i);
+    await expect(svc.interrupt("sess-1", 88)).rejects.toThrow(/owned by another window/i);
+    await expect(svc.stop("sess-1", 88)).rejects.toThrow(/owned by another window/i);
+    expect(svc.get("sess-1")).toBeDefined();
+    expect(closed).toEqual([]);
+  });
+
+  test("rechecks stop ownership after an in-flight start becomes visible", async () => {
+    let queuedStop: Promise<void> | undefined;
+    let svc!: ExternalRuntimeService;
+    svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      registerSession: () => {
+        // Registration happens before the awaited provider start and before the
+        // live entry is published. This is the exact gap where the old call-time
+        // check saw no owner and allowed another window's stop into the queue.
+        queuedStop = svc.stop("sess-1", 88);
+      },
+    });
+
+    await svc.start(request);
+    expect(queuedStop).toBeDefined();
+    await expect(queuedStop!).rejects.toThrow(/owned by another window/i);
+    expect(svc.get("sess-1")).toBeDefined();
+    expect(closed).toEqual([]);
+  });
+
+  test("the owning renderer and trusted main-process callers keep control", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+
+    await expect(svc.send("sess-1", "owner", 77)).resolves.toMatchObject({ ok: true });
+    await expect(svc.interrupt("sess-1", 77)).resolves.toBeUndefined();
+    await expect(svc.stop("sess-1")).resolves.toBeUndefined();
+  });
+
+  test("a renderer cannot claim an existing ownerless main-process session", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start({ ...request, ownerWindow: undefined });
+
+    await expect(svc.send("sess-1", "hijack", 77)).rejects.toThrow(/owned by another window/i);
+    await expect(svc.stop("sess-1", 77)).rejects.toThrow(/owned by another window/i);
+    expect(svc.get("sess-1")).toBeDefined();
+  });
+
   test("forwards translated events tagged with the session id", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     await svc.start(request);
     const hooks = starts[0]!.hooks as { onEvent: (event: { type: string }) => void };
     hooks.onEvent({ type: "text_delta" });
     expect(emitted).toEqual([{ sessionId: "sess-1", type: "text_delta" }]);
+  });
+
+  test("normalizes a provider session_started id to the CodeShell business id", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    const hooks = starts[0]!.hooks as {
+      onEvent: (event: {
+        type: "session_started";
+        sessionId: string;
+        promptTokens: number;
+      }) => void;
+    };
+    hooks.onEvent({ type: "session_started", sessionId: "provider-thread-id", promptTokens: 0 });
+    expect(emitted).toEqual([
+      { sessionId: "sess-1", type: "session_started", eventSessionId: "sess-1" },
+    ]);
+  });
+
+  test("drops late events from a runtime after the business session is restarted", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    const oldHooks = starts[0]!.hooks as { onEvent: (event: { type: string }) => void };
+
+    await svc.start(request);
+    const currentHooks = starts[1]!.hooks as { onEvent: (event: { type: string }) => void };
+    emitted.length = 0;
+    oldHooks.onEvent({ type: "text_delta" });
+    currentHooks.onEvent({ type: "text_delta" });
+
+    expect(emitted).toEqual([{ sessionId: "sess-1", type: "text_delta" }]);
+  });
+
+  test("drops provider events emitted while a stopped runtime is closing", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    const hooks = starts[0]!.hooks as { onEvent: (event: { type: string }) => void };
+    const runtime = svc.get("sess-1") as unknown as { close: () => Promise<void> };
+    runtime.close = async () => hooks.onEvent({ type: "text_delta" });
+
+    emitted.length = 0;
+    await svc.stop("sess-1");
+
+    expect(emitted).toEqual([]);
+  });
+
+  test("records an aborted terminal event when an active turn is stopped", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    const runtime = svc.get("sess-1") as unknown as {
+      send: () => Promise<{ done: Promise<void> }>;
+    };
+    let finishTurn!: () => void;
+    const done = new Promise<void>((resolve) => {
+      finishTurn = resolve;
+    });
+    runtime.send = async () => ({ done });
+
+    const sending = svc.send("sess-1", "running");
+    await Promise.resolve();
+    await svc.stop("sess-1");
+    finishTurn();
+
+    await expect(sending).resolves.toMatchObject({
+      ok: false,
+      reason: "aborted_streaming",
+      streamed: true,
+    });
+    expect(emitted).toEqual([{ sessionId: "sess-1", type: "turn_complete" }]);
+  });
+
+  test("serializes overlapping sends before resetting the shared turn recorder", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    const runtime = svc.get("sess-1") as unknown as {
+      send: (input: { text: string }) => Promise<{ done: Promise<void> }>;
+    };
+    const sent: string[] = [];
+    let finishFirst!: () => void;
+    const firstDone = new Promise<void>((resolve) => {
+      finishFirst = resolve;
+    });
+    runtime.send = async (input) => {
+      sent.push(input.text);
+      return { done: input.text === "first" ? firstDone : Promise.resolve() };
+    };
+
+    const first = svc.send("sess-1", "first");
+    await Promise.resolve();
+    const second = svc.send("sess-1", "second");
+    await Promise.resolve();
+    expect(sent).toEqual(["first"]);
+
+    finishFirst();
+    await Promise.all([first, second]);
+    expect(sent).toEqual(["first", "second"]);
+  });
+
+  test("a provider turn with no terminal callback is completed only once", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+
+    emitted.length = 0;
+    const outcome = await svc.send("sess-1", "completed without callback");
+    expect(emitted).toEqual([{ sessionId: "sess-1", type: "turn_complete" }]);
+    emitted.length = 0;
+    await svc.stop("sess-1");
+
+    expect(outcome).toMatchObject({ ok: true, reason: "completed", streamed: true });
+    expect(emitted).toEqual([]);
   });
 
   test("send() on an unknown session is an error, not a silent no-op", async () => {
@@ -192,6 +405,22 @@ describe("ExternalRuntimeService", () => {
     await svc.stopAll();
     expect(closed.sort()).toEqual(["sess-b", "sess-1"].sort());
     expect(svc.get("sess-1")).toBeUndefined();
+  });
+
+  test("closing one owner window reaps only that window's runtimes", async () => {
+    const svc = service({ external_agent_runtime: true, external_host_tools: true });
+    await svc.start(request);
+    await svc.start({
+      ...request,
+      sessionId: "sess-b",
+      ownerWindow: { webContents: { id: 88 } } as never,
+    });
+
+    await svc.stopOwnedBy(77);
+
+    expect(svc.get("sess-1")).toBeUndefined();
+    expect(svc.get("sess-b")).toBeDefined();
+    expect(closed).toEqual(["sess-1"]);
   });
 
   test("stop() on an unknown session is a no-op", async () => {
@@ -218,6 +447,24 @@ describe("ExternalRuntimeService", () => {
     await expect(svc.stop("sess-1")).rejects.toThrow(/died badly/);
     // The throw propagates (callers should see it), but the leak does not.
     expect(released).toEqual(["sess-1"]);
+    expect(svc.get("sess-1")).toBeUndefined();
+  });
+
+  test("a release failure still cancels approvals and removes the live session", async () => {
+    let cancelled = 0;
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      releaseSession: () => {
+        throw new Error("release failed");
+      },
+      cancelApprovals: () => {
+        cancelled += 1;
+      },
+    });
+    await svc.start(request);
+
+    await expect(svc.stop("sess-1")).rejects.toThrow(/release failed/);
+    expect(cancelled).toBe(1);
+    expect(closed).toEqual(["sess-1"]);
     expect(svc.get("sess-1")).toBeUndefined();
   });
 

@@ -26,6 +26,7 @@ import {
   type QuickChatSessionRef,
 } from "../quickChatSession";
 import {
+  clearPanelState,
   loadSessionIndex,
   bucketKey,
   projectBucketSegment as projectBucketSegmentFor,
@@ -57,6 +58,8 @@ interface Params {
     sessionIndices: Record<string, SessionIndex>;
     sessionIndicesRef: MutableRefObject<Record<string, SessionIndex>>;
     setSessionIndices: Dispatch<SetStateAction<Record<string, SessionIndex>>>;
+    /** Materialize the active draft and return its real session bucket. */
+    materializeActiveSessionForPanel: () => string | null;
   };
   quickChat: {
     quickChatSessions: Record<string, QuickChatSessionRef>;
@@ -118,6 +121,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     sessionIndices,
     sessionIndicesRef,
     setSessionIndices,
+    materializeActiveSessionForPanel,
   } = sessions;
   const {
     quickChatSessions,
@@ -645,8 +649,44 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     return [...buckets];
   }, [activeBucket, activePanelState.open, activePanelState.tabs.length, panelByBucket]);
 
+  /**
+   * Apply a user-initiated panel action to a real session. Opening the dock is
+   * itself meaningful session work, so a draft must materialize here instead
+   * of forcing the user to send a throwaway first message. Draft panel state is
+   * deliberately discarded; only composer controls and annotations migrate.
+   */
+  const updateActivePanelBucket = useCallback(
+    (updater: (state: PanelBucketState) => PanelBucketState): void => {
+      const sourceBucket = activeBucketRef.current;
+      const targetBucket = materializeActiveSessionForPanel();
+      if (!targetBucket) return;
+      if (sourceBucket === targetBucket) {
+        updatePanelBucket(targetBucket, updater);
+        return;
+      }
+
+      clearPanelState(sourceBucket);
+      setAnchorsByBucket((current) => {
+        const draftAnchors = current[sourceBucket];
+        if (!draftAnchors?.length) return current;
+        const next = { ...current };
+        delete next[sourceBucket];
+        next[targetBucket] = [...(next[targetBucket] ?? []), ...draftAnchors];
+        return next;
+      });
+      setPanelByBucket((current) => {
+        const next = { ...current };
+        delete next[sourceBucket];
+        const target = next[targetBucket] ?? hydratePanelBucketState(targetBucket);
+        next[targetBucket] = updater(target);
+        return next;
+      });
+    },
+    [materializeActiveSessionForPanel, updatePanelBucket],
+  );
+
   const togglePanel = (): void =>
-    updatePanelBucket(activeBucket, (state) => {
+    updateActivePanelBucket((state) => {
       const open = !state.open;
       return {
         ...state,
@@ -658,7 +698,7 @@ export function usePanelBuckets({ sessions, quickChat, controls, stream, shell }
     });
 
   const openPanel = (kind: PanelTab): void =>
-    updatePanelBucket(activeBucket, (state) => ({
+    updateActivePanelBucket((state) => ({
       ...state,
       open: true,
       requestNonce: state.requestNonce + 1,

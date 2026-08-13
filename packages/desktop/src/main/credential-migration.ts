@@ -5,7 +5,8 @@ import {
   type CredentialStoreFile,
   type EncryptionCipher,
 } from "@cjhyy/code-shell-core";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mutateJsonFile } from "@cjhyy/code-shell-core/internal";
+import { lstatSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 export interface CredentialMigrationResult {
@@ -15,6 +16,8 @@ export interface CredentialMigrationResult {
 
 const fileQueues = new Map<string, Promise<void>>();
 const PROBE_SECRET = "__codeshell_migration_probe__";
+const MAX_CREDENTIAL_FILE_BYTES = 32 * 1024 * 1024;
+const MAX_CREDENTIALS = 4_096;
 
 export async function migrateCredentialStore(cwd?: string): Promise<CredentialMigrationResult> {
   const result: CredentialMigrationResult = { stores: 0, credentials: 0 };
@@ -73,47 +76,51 @@ function enqueueForFile<T>(filePath: string, work: () => T | Promise<T>): Promis
 }
 
 function rewriteCredentialFile(filePath: string): number {
-  const file = readRawCredentialFile(filePath);
-  if (!file) return 0;
-  const cipher = getDefaultCredentialCipher();
-  let count = 0;
-  const credentials = file.credentials.map((cred) => {
-    if (!shouldRewriteCredential(cred, cipher)) return cred;
-    const secret = cred.secret;
-    if (typeof secret !== "string" || secret.length === 0) return cred;
-    let plaintext: string;
-    try {
-      plaintext = cipher.decrypt(secret);
-    } catch {
-      return cred;
-    }
-    const rewritten = cipher.encrypt(plaintext);
-    count += 1;
-    return { ...cred, secret: rewritten };
-  });
-  if (count === 0) return 0;
-  writeRawCredentialFile(filePath, { version: 1, credentials });
-  return count;
-}
-
-function readRawCredentialFile(filePath: string): CredentialStoreFile | undefined {
-  if (!existsSync(filePath)) return undefined;
-  try {
-    const raw = JSON.parse(readFileSync(filePath, "utf8")) as Partial<CredentialStoreFile>;
-    return {
-      version: 1,
-      credentials: Array.isArray(raw.credentials) ? (raw.credentials as Credential[]) : [],
-    };
-  } catch {
-    return undefined;
+  const parent = dirname(filePath);
+  mkdirSync(parent, { recursive: true, mode: 0o700 });
+  const parentInfo = lstatSync(parent);
+  if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
+    throw new Error("credential migration parent must be a real directory");
   }
-}
-
-function writeRawCredentialFile(filePath: string, file: CredentialStoreFile): void {
-  mkdirSync(dirname(filePath), { recursive: true });
-  const tmp = `${filePath}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
-  writeFileSync(tmp, JSON.stringify(file, null, 2), { mode: 0o600 });
-  renameSync(tmp, filePath);
+  const cipher = getDefaultCredentialCipher();
+  return (
+    mutateJsonFile<CredentialStoreFile, number>(filePath, {
+      parse: (raw) => {
+        if (raw === undefined) return { version: 1, credentials: [] };
+        const parsed = JSON.parse(raw) as Partial<CredentialStoreFile>;
+        if (!Array.isArray(parsed.credentials) || parsed.credentials.length > MAX_CREDENTIALS) {
+          throw new Error("credential store is invalid");
+        }
+        return { version: 1, credentials: parsed.credentials as Credential[] };
+      },
+      serialize: (file) => `${JSON.stringify(file, null, 2)}\n`,
+      mutation: (file) => {
+        let count = 0;
+        const credentials = file.credentials.map((cred) => {
+          if (!cred || typeof cred !== "object" || !shouldRewriteCredential(cred, cipher)) {
+            return cred;
+          }
+          const secret = cred.secret;
+          if (typeof secret !== "string" || secret.length === 0) return cred;
+          let plaintext: string;
+          try {
+            plaintext = cipher.decrypt(secret);
+          } catch {
+            return cred;
+          }
+          const rewritten = cipher.encrypt(plaintext);
+          count += 1;
+          return { ...cred, secret: rewritten };
+        });
+        return {
+          ...(count > 0 ? { value: { version: 1 as const, credentials } } : {}),
+          result: count,
+        };
+      },
+      mode: 0o600,
+      maxBytes: MAX_CREDENTIAL_FILE_BYTES,
+    }) ?? 0
+  );
 }
 
 export function shouldRewriteCredential(

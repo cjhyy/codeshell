@@ -1,5 +1,14 @@
 import { describe, it, expect } from "bun:test";
-import { mkdtemp, writeFile, mkdir, readFile, readdir, rm } from "node:fs/promises";
+import {
+  chmod,
+  mkdtemp,
+  writeFile,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  stat,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readSettings, writeSettings, resolveSettingsPath } from "./settings-service.js";
@@ -40,6 +49,49 @@ describe("settings-service", () => {
       // And a subsequent write succeeds (the bad file no longer blocks it).
       await writeSettings("project", { model: { name: "x" } }, cwd);
       expect(await readSettings("project", cwd)).toEqual({ model: { name: "x" } });
+    });
+  });
+
+  it("quarantines a syntactically valid non-object settings root", async () => {
+    await withCwd(async (cwd) => {
+      const p = resolveSettingsPath("project", cwd);
+      await mkdir(join(cwd, ".code-shell"), { recursive: true });
+      await writeFile(p, "[]\n", "utf8");
+
+      expect(await readSettings("project", cwd)).toBeNull();
+      expect((await readdir(join(cwd, ".code-shell"))).some((name) => name.includes(".corrupt-"))).toBe(
+        true,
+      );
+    });
+  });
+
+  it("drops dangerous legacy keys and rejects them in new patches", async () => {
+    await withCwd(async (cwd) => {
+      const p = resolveSettingsPath("project", cwd);
+      await mkdir(join(cwd, ".code-shell"), { recursive: true });
+      await writeFile(
+        p,
+        '{"safe":true,"__proto__":{"polluted":true},"nested":{"constructor":{"prototype":{"polluted":true}},"keep":1}}',
+        "utf8",
+      );
+
+      expect(await readSettings("project", cwd)).toEqual({ safe: true, nested: { keep: 1 } });
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+      const dangerous = JSON.parse('{"nested":{"__proto__":{"polluted":true}}}') as Record<
+        string,
+        unknown
+      >;
+      await expect(writeSettings("project", dangerous, cwd)).rejects.toThrow(/invalid settings key/);
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    });
+  });
+
+  it("rejects an array-shaped patch root", async () => {
+    await withCwd(async (cwd) => {
+      await expect(
+        writeSettings("project", [] as unknown as Record<string, unknown>, cwd),
+      ).rejects.toThrow(/plain object/);
+      expect(await readSettings("project", cwd)).toBeNull();
     });
   });
 
@@ -86,6 +138,21 @@ describe("settings-service", () => {
       const raw = await readFile(p, "utf8");
       // The final file must be valid JSON (never a half-written interleave).
       expect(() => JSON.parse(raw)).not.toThrow();
+    });
+  });
+
+  it("creates settings owner-only and tightens a legacy world-readable file", async () => {
+    await withCwd(async (cwd) => {
+      const p = resolveSettingsPath("project", cwd);
+      await writeSettings("project", { credentials: [{ apiKey: "sk-secret" }] }, cwd);
+      if (process.platform !== "win32") expect((await stat(p)).mode & 0o777).toBe(0o600);
+
+      await chmod(p, 0o644);
+      await writeSettings("project", { another: true }, cwd);
+      if (process.platform !== "win32") expect((await stat(p)).mode & 0o777).toBe(0o600);
+      expect((await readdir(join(cwd, ".code-shell"))).some((name) => name.endsWith(".tmp"))).toBe(
+        false,
+      );
     });
   });
 

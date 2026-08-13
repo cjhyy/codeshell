@@ -18,6 +18,7 @@ import {
 import { computeEffectiveDisabledLists } from "@cjhyy/code-shell-core/internal";
 import { assertCodeShellMarkdownPath, rememberCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
+import { randomUUID } from "node:crypto";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -62,7 +63,7 @@ function agentsRootFor(opts?: { scope?: "user" | "project"; cwd?: string }): str
  * clutter the list (mirrors the engine, which passes disabledPlugins too).
  */
 export function listAgents(cwd: string): AgentSummary[] {
-  let disabledPlugins: string[] = [];
+  let disabledPlugins: string[];
   try {
     disabledPlugins = computeEffectiveDisabledLists(
       new SettingsManager(cwd || process.cwd(), "full"),
@@ -91,6 +92,10 @@ export function listAgents(cwd: string): AgentSummary[] {
 
 export async function readAgentBody(filePath: string): Promise<string> {
   assertCodeShellMarkdownPath(filePath);
+  const info = await fs.stat(filePath);
+  if (!info.isFile() || info.size > 2 * 1024 * 1024) {
+    throw new Error("agent file is not a bounded regular file");
+  }
   return fs.readFile(filePath, "utf8");
 }
 
@@ -105,6 +110,46 @@ function normalizeAgentName(input: string): string {
   return name;
 }
 
+function assertAgentDefinition(def: AgentDefinition): void {
+  if (
+    typeof def.description !== "string" ||
+    def.description.length > 4_096 ||
+    def.description.includes("\0") ||
+    (def.model !== undefined &&
+      (typeof def.model !== "string" || def.model.length > 512 || def.model.includes("\0"))) ||
+    (def.maxTurns !== undefined &&
+      (!Number.isSafeInteger(def.maxTurns) || def.maxTurns < 1 || def.maxTurns > 1_000)) ||
+    (def.systemPrompt !== undefined &&
+      (typeof def.systemPrompt !== "string" || def.systemPrompt.length > 1024 * 1024)) ||
+    (def.tools !== undefined &&
+      (!Array.isArray(def.tools) ||
+        def.tools.length > 256 ||
+        def.tools.some(
+          (tool) =>
+            typeof tool !== "string" || !tool || tool.length > 512 || tool.includes("\0"),
+        )))
+  ) {
+    throw new Error("invalid or unbounded agent definition");
+  }
+}
+
+async function safeAgentsRootFor(opts?: {
+  scope?: "user" | "project";
+  cwd?: string;
+}): Promise<string> {
+  const root = agentsRootFor(opts);
+  await fs.mkdir(root, { recursive: true, mode: 0o700 });
+  const realRoot = await fs.realpath(root);
+  if (opts?.scope === "project") {
+    const realProject = await fs.realpath(opts.cwd ?? "");
+    const rel = path.relative(realProject, realRoot);
+    if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) {
+      throw new Error("project agents directory escapes the project root");
+    }
+  }
+  return realRoot;
+}
+
 /**
  * Write an agent definition as <name>.md (atomic: .tmp + rename). Default
  * scope is "user" (~/.code-shell/agents) — back-compat for existing callers.
@@ -115,6 +160,7 @@ export async function saveAgent(
   def: AgentDefinition,
   opts?: { scope?: "user" | "project"; cwd?: string },
 ): Promise<AgentSummary> {
+  assertAgentDefinition(def);
   const name = normalizeAgentName(def.name);
   const clean: AgentDefinition = {
     name,
@@ -124,15 +170,18 @@ export async function saveAgent(
     tools: Array.isArray(def.tools) && def.tools.length > 0 ? def.tools : undefined,
     systemPrompt: def.systemPrompt ?? "",
   };
-  const root = agentsRootFor(opts);
-  await fs.mkdir(root, { recursive: true });
+  const root = await safeAgentsRootFor(opts);
   const target = path.join(root, `${name}.md`);
   if (!target.startsWith(root + path.sep)) {
     throw new Error(`refuse to write outside agents dir: ${target}`);
   }
-  const tmp = `${target}.tmp`;
-  await fs.writeFile(tmp, serializeAgentDefinition(clean), "utf8");
-  await fs.rename(tmp, target);
+  const tmp = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(tmp, serializeAgentDefinition(clean), { encoding: "utf8", mode: 0o600 });
+    await fs.rename(tmp, target);
+  } finally {
+    await fs.rm(tmp, { force: true }).catch(() => undefined);
+  }
   rememberCodeShellMarkdownPath(target);
   return {
     name,
@@ -158,7 +207,7 @@ export async function deleteAgent(
   opts?: { scope?: "user" | "project"; cwd?: string },
 ): Promise<void> {
   const safe = normalizeAgentName(name);
-  const root = agentsRootFor(opts);
+  const root = await safeAgentsRootFor(opts);
   const target = path.join(root, `${safe}.md`);
   if (!target.startsWith(root + path.sep)) {
     throw new Error(`refuse to delete outside agents dir: ${target}`);

@@ -1,6 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readBoundedJson, writeOwnerJsonAtomic } from "./bounded-json-store.js";
 import {
   PET_LONG_TASK_SCHEMA_VERSION,
   createPetLongTask,
@@ -13,6 +11,8 @@ import {
 } from "@cjhyy/code-shell-pet";
 
 const MAX_STORED_TASKS = 500;
+const MAX_LONG_TASK_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_LOADED_TASK_ROWS = 5_000;
 
 interface PetLongTaskFile {
   version: typeof PET_LONG_TASK_SCHEMA_VERSION;
@@ -44,8 +44,13 @@ export class PetLongTaskStore {
 
   async load(): Promise<void> {
     try {
-      const parsed = JSON.parse(await readFile(this.filePath, "utf8")) as Partial<PetLongTaskFile>;
+      const parsed = (await readBoundedJson(
+        this.filePath,
+        MAX_LONG_TASK_FILE_BYTES,
+      )) as Partial<PetLongTaskFile> | undefined;
+      if (!parsed) return;
       if (parsed.version !== PET_LONG_TASK_SCHEMA_VERSION || !Array.isArray(parsed.tasks)) return;
+      if (parsed.tasks.length > MAX_LOADED_TASK_ROWS) return;
       this.tasks.clear();
       for (const row of parsed.tasks) {
         const task = parsePetLongTask(row);
@@ -106,6 +111,9 @@ export class PetLongTaskStore {
     return this.enqueueMutation(async () => {
       const existing = this.findByOriginClientMessageId(input.originClientMessageId);
       if (existing) return existing;
+      if ([...this.tasks.values()].filter(isActive).length >= MAX_STORED_TASKS) {
+        throw new Error(`Pet long task store is full (${MAX_STORED_TASKS} active tasks)`);
+      }
       const task = createPetLongTask(input);
       const beforeRevision = this.revision;
       const beforeObservedAt = this.observedAt;
@@ -219,7 +227,10 @@ export class PetLongTaskStore {
 
   private trim(): void {
     if (this.tasks.size <= MAX_STORED_TASKS) return;
-    const active = [...this.tasks.values()].filter(isActive);
+    const active = [...this.tasks.values()]
+      .filter(isActive)
+      .sort((left, right) => right.updatedAt - left.updatedAt)
+      .slice(0, MAX_STORED_TASKS);
     const terminal = [...this.tasks.values()]
       .filter((task) => !isActive(task))
       .sort((left, right) => right.updatedAt - left.updatedAt)
@@ -238,14 +249,6 @@ export class PetLongTaskStore {
   }
 
   private async persist(snapshot: PetLongTaskFile): Promise<void> {
-    await mkdir(dirname(this.filePath), { recursive: true });
-    const temporary = `${this.filePath}.tmp-${process.pid}-${randomUUID()}`;
-    try {
-      await writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
-      await rename(temporary, this.filePath);
-    } catch (error) {
-      await unlink(temporary).catch(() => undefined);
-      throw error;
-    }
+    await writeOwnerJsonAtomic(this.filePath, snapshot, MAX_LONG_TASK_FILE_BYTES);
   }
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { PetTopicSegment, PetWorkMemoryEntry } from "@cjhyy/code-shell-pet";
 
@@ -193,10 +193,15 @@ export class PetWorkMemoryStore {
     // holds distilled conversation work memory and shouldn't be world-readable.
     await mkdir(dirname(this.filePath), { recursive: true, mode: 0o700 });
     const temporary = `${this.filePath}.tmp-${process.pid}-${randomUUID()}`;
-    await writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    });
-    await rename(temporary, this.filePath);
+    try {
+      await writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, {
+        encoding: "utf8",
+        mode: 0o600,
+        flag: "wx",
+      });
+      await rename(temporary, this.filePath);
+    } finally {
+      await rm(temporary, { force: true }).catch(() => undefined);
+    }
   }
 }

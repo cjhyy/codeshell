@@ -1,5 +1,6 @@
 import { createConnection, type Socket } from "node:net";
-import { readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, open } from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 
@@ -9,6 +10,7 @@ export const CODESHELL_CHROME_EXTENSION_ORIGIN =
   `chrome-extension://${CODESHELL_CHROME_EXTENSION_ID}/`;
 export const MAX_NATIVE_HOST_TO_EXTENSION_BYTES = 1024 * 1024;
 export const MAX_EXTENSION_TO_NATIVE_HOST_BYTES = 64 * 1024 * 1024;
+const MAX_NATIVE_STATE_BYTES = 64 * 1024;
 
 export interface ChromeNativeServerState {
   version: 1;
@@ -85,13 +87,30 @@ export async function runChromeNativeMessagingHost(
   if (origin !== CODESHELL_CHROME_EXTENSION_ORIGIN) {
     throw new Error(`native messaging origin is not allowed: ${origin}`);
   }
-  const state = JSON.parse(await readFile(statePath, "utf8")) as ChromeNativeServerState;
+  const metadata = await lstat(statePath);
+  if (metadata.isSymbolicLink() || !metadata.isFile() || metadata.size > MAX_NATIVE_STATE_BYTES) {
+    throw new Error("CodeShell native bridge state is invalid");
+  }
+  const handle = await open(statePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  let state: ChromeNativeServerState;
+  try {
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size > MAX_NATIVE_STATE_BYTES) {
+      throw new Error("CodeShell native bridge state is invalid");
+    }
+    state = JSON.parse(await handle.readFile("utf8")) as ChromeNativeServerState;
+  } finally {
+    await handle.close();
+  }
   if (
     state.version !== 1 ||
-    !Number.isInteger(state.port) ||
+    !Number.isSafeInteger(state.port) ||
     state.port <= 0 ||
+    state.port > 65_535 ||
     typeof state.token !== "string" ||
-    !state.token
+    !/^[a-f0-9]{64}$/.test(state.token) ||
+    !Number.isSafeInteger(state.pid) ||
+    state.pid <= 0
   ) {
     throw new Error("CodeShell native bridge state is invalid");
   }

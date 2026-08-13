@@ -12,6 +12,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
+const MAX_TRANSCRIPT_SCAN_BYTES = 64 * 1024 * 1024;
+const MAX_RAW_TRANSCRIPT_EVENTS = 20_000;
 
 export interface RawTranscriptEvent {
   id: string;
@@ -33,14 +35,66 @@ export function parseRawTranscriptEvents(jsonl: string, sinceId?: string): RawTr
     const line = raw.trim();
     if (!line) continue;
     try {
-      all.push(JSON.parse(line) as RawTranscriptEvent);
+      const parsed = JSON.parse(line) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      const event = parsed as Record<string, unknown>;
+      if (
+        typeof event.id !== "string" ||
+        !event.id ||
+        event.id.length > 512 ||
+        event.id.includes("\0") ||
+        typeof event.type !== "string" ||
+        !event.type ||
+        event.type.length > 256 ||
+        typeof event.timestamp !== "number" ||
+        !Number.isFinite(event.timestamp) ||
+        typeof event.turnNumber !== "number" ||
+        !Number.isSafeInteger(event.turnNumber) ||
+        event.turnNumber < 0 ||
+        !event.data ||
+        typeof event.data !== "object" ||
+        Array.isArray(event.data)
+      ) {
+        continue;
+      }
+      all.push(event as unknown as RawTranscriptEvent);
+      if (all.length > MAX_RAW_TRANSCRIPT_EVENTS * 2) {
+        all.splice(0, all.length - MAX_RAW_TRANSCRIPT_EVENTS);
+      }
     } catch {
       continue;
     }
   }
-  if (!sinceId) return all;
-  const idx = all.findIndex((e) => e.id === sinceId);
-  return idx >= 0 ? all.slice(idx + 1) : all;
+  const bounded = all.slice(-MAX_RAW_TRANSCRIPT_EVENTS);
+  if (!sinceId) return bounded;
+  const idx = bounded.findIndex((e) => e.id === sinceId);
+  return idx >= 0 ? bounded.slice(idx + 1) : bounded;
+}
+
+async function readTranscriptTail(file: string): Promise<string> {
+  const handle = await fs.open(file, "r");
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile()) throw new Error("transcript is not a regular file");
+    const length = Math.min(stat.size, MAX_TRANSCRIPT_SCAN_BYTES);
+    const start = stat.size - length;
+    const buffer = Buffer.allocUnsafe(length);
+    let total = 0;
+    while (total < length) {
+      const { bytesRead } = await handle.read(buffer, total, length - total, start + total);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+    }
+    let window = buffer.subarray(0, total);
+    if (start > 0) {
+      const newline = window.indexOf(0x0a);
+      if (newline < 0) return "";
+      window = window.subarray(newline + 1);
+    }
+    return window.toString("utf8");
+  } finally {
+    await handle.close();
+  }
 }
 
 /**
@@ -53,10 +107,25 @@ export async function getSessionEvents(
   sinceId?: string,
   baseDir: string = sessionsRoot(),
 ): Promise<RawTranscriptEvent[]> {
-  if (!SAFE_ID.test(sessionId) || sessionId === "." || sessionId === "..") return [];
+  if (
+    typeof sessionId !== "string" ||
+    sessionId.length === 0 ||
+    sessionId.length > 128 ||
+    !SAFE_ID.test(sessionId) ||
+    sessionId === "." ||
+    sessionId === ".." ||
+    (sinceId !== undefined &&
+      (typeof sinceId !== "string" || sinceId.length > 512 || sinceId.includes("\0")))
+  ) {
+    return [];
+  }
   const file = path.join(baseDir, sessionId, "transcript.jsonl");
   try {
-    const jsonl = await fs.readFile(file, "utf8");
+    const sessionInfo = await fs.lstat(path.join(baseDir, sessionId));
+    if (sessionInfo.isSymbolicLink() || !sessionInfo.isDirectory()) return [];
+    const fileInfo = await fs.lstat(file);
+    if (fileInfo.isSymbolicLink() || !fileInfo.isFile()) return [];
+    const jsonl = await readTranscriptTail(file);
     return parseRawTranscriptEvents(jsonl, sinceId);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];

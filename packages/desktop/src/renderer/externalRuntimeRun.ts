@@ -75,6 +75,10 @@ export interface ExternalRuntimeRunResult {
  * durable as well would create a second, stale source of truth.
  */
 const startedSessions = new Map<string, string>();
+/** Serializes the renderer's start-if-needed + send transaction per session. */
+const turnTails = new Map<string, Promise<void>>();
+/** Invalidates queued/in-flight cache updates when a session is forgotten. */
+const sessionEpochs = new Map<string, number>();
 
 const MAX_HANDOFF_CHARS = 48_000;
 
@@ -118,11 +122,28 @@ export function buildExternalRuntimeHandoff(messages: readonly Message[]): strin
 /** Forget a session's runtime binding (session deleted, or runtime stopped). */
 export function forgetExternalRuntimeSession(sessionId: string): void {
   startedSessions.delete(sessionId);
+  turnTails.delete(sessionId);
+  sessionEpochs.set(sessionId, (sessionEpochs.get(sessionId) ?? 0) + 1);
 }
 
 /** Test seam — the module-level cache would otherwise leak between cases. */
 export function resetExternalRuntimeSessions(): void {
   startedSessions.clear();
+  turnTails.clear();
+  sessionEpochs.clear();
+}
+
+/**
+ * Provider-side thread ids must never become CodeShell business session ids.
+ * External runs are anchored to the stable UI id; native legacy sessions keep
+ * honoring their existing engine binding.
+ */
+export function resolveRunSessionId(
+  uiSessionId: string,
+  boundEngineSessionId: string | undefined,
+  externalRuntime: boolean,
+): string {
+  return externalRuntime ? uiSessionId : (boundEngineSessionId ?? uiSessionId);
 }
 
 /**
@@ -132,7 +153,26 @@ export function resetExternalRuntimeSessions(): void {
  * resolution as "the turn is over", and resolving early would clear busy while
  * the model is still streaming.
  */
-export async function runExternalRuntimeTurn({
+export function runExternalRuntimeTurn(args: ExternalRuntimeTurnArgs): Promise<ExternalRuntimeRunResult> {
+  const { sessionId } = args;
+  const epoch = sessionEpochs.get(sessionId) ?? 0;
+  const previous = turnTails.get(sessionId) ?? Promise.resolve();
+  const result = previous.then(
+    () => runExternalRuntimeTurnExclusive(args, epoch),
+    () => runExternalRuntimeTurnExclusive(args, epoch),
+  );
+  const tail = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  turnTails.set(sessionId, tail);
+  void tail.then(() => {
+    if (turnTails.get(sessionId) === tail) turnTails.delete(sessionId);
+  });
+  return result;
+}
+
+async function runExternalRuntimeTurnExclusive({
   sessionId,
   cwd,
   modelKey,
@@ -145,8 +185,15 @@ export async function runExternalRuntimeTurn({
   initialContext,
   developerInstructions,
   runtime,
-}: ExternalRuntimeTurnArgs): Promise<ExternalRuntimeRunResult> {
+}: ExternalRuntimeTurnArgs, epoch: number): Promise<ExternalRuntimeRunResult> {
   try {
+    if ((sessionEpochs.get(sessionId) ?? 0) !== epoch) {
+      return {
+        ok: false,
+        reason: "external_runtime_error",
+        text: "External runtime session was closed before its queued turn started.",
+      };
+    }
     // Restart only when the model actually changed. Switching Codex → Claude
     // mid-session has to rebuild the backend; re-sending on the same one must
     // not, or every turn would begin with an empty context.
@@ -162,6 +209,13 @@ export async function runExternalRuntimeTurn({
         ...(initialContext ? { initialContext } : {}),
         ...(developerInstructions ? { developerInstructions } : {}),
       });
+      if ((sessionEpochs.get(sessionId) ?? 0) !== epoch) {
+        return {
+          ok: false,
+          reason: "external_runtime_error",
+          text: "External runtime session was closed while it was starting.",
+        };
+      }
       startedSessions.set(sessionId, configurationKey);
     }
     const result = await runtime.send({
@@ -170,13 +224,19 @@ export async function runExternalRuntimeTurn({
       ...(clientMessageId ? { clientMessageId } : {}),
       ...(attachments && attachments.length > 0 ? { attachments } : {}),
     });
-    if (result && !result.ok) startedSessions.delete(sessionId);
+    if (
+      result &&
+      !result.ok &&
+      (sessionEpochs.get(sessionId) ?? 0) === epoch
+    ) {
+      startedSessions.delete(sessionId);
+    }
     return result ?? { ok: true };
   } catch (error) {
     // A failed start leaves no usable session — drop the binding so the next
     // attempt retries the start instead of sending into a runtime that is not
     // there.
-    startedSessions.delete(sessionId);
+    if ((sessionEpochs.get(sessionId) ?? 0) === epoch) startedSessions.delete(sessionId);
     const message = error instanceof Error ? error.message : String(error);
     return { ok: false, reason: "external_runtime_error", text: message };
   }

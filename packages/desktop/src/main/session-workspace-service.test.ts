@@ -133,6 +133,37 @@ describe("cleanupSessionWorktreeForUi", () => {
     expect(git(repo, ["branch", "--list", `worktree/${slug}-${sessionId.slice(0, 8)}`])).toBe("");
   });
 
+  test("current and list reject unknown or corrupt sessions", async () => {
+    await expect(getSessionWorkspaceForUi("missing-session", repo)).rejects.toThrow(
+      /unknown session/i,
+    );
+    await expect(listSessionWorktreesForUi("missing-session", repo)).rejects.toThrow(
+      /unknown session/i,
+    );
+    mkdirSync(join(sessionsDir, "corruptread"), { recursive: true });
+    await expect(getSessionWorkspaceForUi("corruptread", repo)).rejects.toThrow(/valid state/i);
+    await expect(listSessionWorktreesForUi("corruptread", repo)).rejects.toThrow(/valid state/i);
+  });
+
+  test("workspace reads ignore a renderer-supplied cwd outside the persisted session root", async () => {
+    const sessionId = "readroot";
+    const outside = mkdtempSync(join(tmpdir(), "cs-desktop-ws-outside-"));
+    try {
+      const sm = new SessionManager(sessionsDir);
+      sm.create(repo, "m", "p", sessionId);
+      expect(await getSessionWorkspaceForUi(sessionId, outside)).toEqual({
+        root: repo,
+        kind: "main",
+      });
+      expect((await listSessionWorktreesForUi(sessionId, outside)).mainRoot).toBe(repo);
+      await expect(getSessionWorktreeDiffForUi(sessionId, outside)).rejects.toThrow(
+        /outside the session repository/i,
+      );
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
   test("rejects unknown-session cleanup before removing a matched worktree", async () => {
     const ownerSessionId = "desktopowner";
     const sm = new SessionManager(sessionsDir);

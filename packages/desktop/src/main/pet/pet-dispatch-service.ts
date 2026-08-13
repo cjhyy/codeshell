@@ -25,6 +25,7 @@ import type {
 import type { InputAttachmentMeta } from "@cjhyy/code-shell-server/storage";
 import type { PetHostActionReceiptStore } from "./pet-host-action-receipts.js";
 import type { PetPersonalization } from "../../shared/pet-settings.js";
+import type { PetSegmentClosed, PetSegmentTurnStart } from "./pet-segment-controller.js";
 
 export interface PetAutoDelegation {
   clientMessageId: string;
@@ -249,7 +250,8 @@ interface PetDispatchOptions {
    * records a work-memory entry when a delegated Work Session launches.
    */
   segmentController?: {
-    beginTurn(clientMessageId?: string): Promise<string | undefined>;
+    beginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined>;
+    completeSegmentClosure(closed: PetSegmentClosed): Promise<void>;
     onDelegationClosed(closure: {
       objective: string;
       outcome: "completed" | "pending-decided" | "failed";
@@ -1346,11 +1348,12 @@ export class PetDispatchService {
         // Read host extras once; canonical projection keys are reserved below
         // so an extension cannot shadow trusted session state. The three
         // sources are independent, so they resolve concurrently.
-        const [carryoverBrief, worldExtrasRaw, personalization] = await Promise.all([
+        const [segmentTurn, worldExtrasRaw, personalization] = await Promise.all([
           this.options.segmentController?.beginTurn(command.clientMessageId),
           this.options.worldContext?.(),
           this.currentPersonalization(),
         ]);
+        const carryoverBrief = segmentTurn?.carryoverBrief;
         const worldExtras = worldExtrasRaw ?? {};
         // GatewayReply is route-bound and therefore IM-only. The other atomic
         // actions below are safe on desktop too because pet-ipc records and
@@ -1397,14 +1400,16 @@ export class PetDispatchService {
           observedAt: projectionWorld.observedAt,
           workerState: projectionWorld.workerState,
           ...(personalization ? { personalization } : {}),
-          ...(command.source
+          // Always state the source explicitly. Mimi reuses one long-lived
+          // Session across desktop and IM turns; omitting this field on
+          // desktop makes old IM history an ambiguous signal and can tempt the
+          // model to hallucinate a route-bound GatewayReply call.
+          currentMessageSource: command.source
             ? {
-                currentMessageSource: {
-                  kind: command.source.kind,
-                  channel: command.source.channel.slice(0, 32),
-                },
+                kind: command.source.kind,
+                channel: command.source.channel.slice(0, 32),
               }
-            : {}),
+            : { kind: "desktop", channel: "mimi" },
           ...(gatewayCatalog
             ? {
                 currentMessageCapabilities: {
@@ -1445,34 +1450,56 @@ export class PetDispatchService {
           ...remainingWorldExtras,
         };
         const runtimeContext = stringifyBoundedPetWorld(world);
-        const response = await this.options.worker.requestWorker("agent/run", {
-          sessionId: metadata.petSessionId,
-          task: command.message.trim(),
-          ...(managerModel ? { model: managerModel } : {}),
-          ...(attachments.length > 0 ? { attachments } : {}),
-          petRuntimeContext: runtimeContext,
-          petWorkspaces,
-          profileParams: {
-            runtimeContext,
-            workspaces: petWorkspaces,
-            reusableSessions: petReusableSessions,
-            ...(hostActionKinds.length > 0 ? { hostActions: hostActionKinds } : {}),
-            ...(gatewayCatalog ? { gateway: gatewayCatalog } : {}),
-            ...(gatewayReplyCapability && hostActionKinds.includes("gatewayReply")
-              ? { gatewayReply: gatewayReplyCapability }
+        const response = await this.options.worker
+          .requestWorker("agent/run", {
+            sessionId: metadata.petSessionId,
+            task: command.message.trim(),
+            ...(managerModel ? { model: managerModel } : {}),
+            ...(attachments.length > 0 ? { attachments } : {}),
+            petRuntimeContext: runtimeContext,
+            petWorkspaces,
+            profileParams: {
+              runtimeContext,
+              workspaces: petWorkspaces,
+              reusableSessions: petReusableSessions,
+              ...(hostActionKinds.length > 0 ? { hostActions: hostActionKinds } : {}),
+              ...(gatewayCatalog ? { gateway: gatewayCatalog } : {}),
+              ...(gatewayReplyCapability && hostActionKinds.includes("gatewayReply")
+                ? { gatewayReply: gatewayReplyCapability }
+                : {}),
+              ...(this.options.sessionsRootDir
+                ? { sessionsRootDir: this.options.sessionsRootDir }
+                : {}),
+              followUps: petFollowUps,
+              outboundTargets: listedOutboundTargets.slice(0, 32),
+            },
+            cwd: this.options.hostCwd,
+            behaviorMode: "pet",
+            kind: "pet",
+            permissionMode: "default",
+            clientMessageId: command.clientMessageId,
+            ...(segmentTurn?.closedSegment && command.clientMessageId
+              ? {
+                  archiveBeforeCurrentTurn: {
+                    ...(segmentTurn.closedSegment.closingBoundaryMessageId
+                      ? {
+                          fromClientMessageId: segmentTurn.closedSegment.closingBoundaryMessageId,
+                        }
+                      : {}),
+                    segmentId: segmentTurn.closedSegment.segmentId,
+                  },
+                }
               : {}),
-            ...(this.options.sessionsRootDir
-              ? { sessionsRootDir: this.options.sessionsRootDir }
-              : {}),
-            followUps: petFollowUps,
-            outboundTargets: listedOutboundTargets.slice(0, 32),
-          },
-          cwd: this.options.hostCwd,
-          behaviorMode: "pet",
-          kind: "pet",
-          permissionMode: "default",
-          clientMessageId: command.clientMessageId,
-        });
+          })
+          .finally(() => {
+            if (!segmentTurn?.closedSegment?.nextBoundaryMessageId) return;
+            // Journal/memory extraction is intentionally background work. It
+            // starts only after agent/run has settled, so its end anchor is no
+            // longer racing the transcript append.
+            void this.options.segmentController
+              ?.completeSegmentClosure(segmentTurn.closedSegment)
+              .catch(() => undefined);
+          });
         if (!response.ok) {
           return { ok: false, code: "worker-error", message: response.message };
         }

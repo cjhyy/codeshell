@@ -14,8 +14,6 @@
 import * as path from "node:path";
 import {
   FileHistory,
-  latestTurnUndoTargets,
-  latestRedoTargets,
   sessionsRoot,
 } from "@cjhyy/code-shell-core";
 
@@ -44,11 +42,11 @@ function historyFor(sessionId: string): FileHistory | null {
 export function turnUndoState(sessionId: string): TurnUndoState {
   const history = historyFor(sessionId);
   if (!history) return { undoable: false, redoable: false, fileCount: 0 };
-  const undoTargets = latestTurnUndoTargets(history.getAllSnapshots());
-  if (undoTargets.length > 0) {
-    return { undoable: true, redoable: false, fileCount: undoTargets.length };
+  const undoPlan = history.getLatestTurnUndoPlan();
+  if (undoPlan) {
+    return { undoable: true, redoable: false, fileCount: undoPlan.filePaths.length };
   }
-  const redoTargets = latestRedoTargets(history.getRedoRecords(), history.getAllSnapshots());
+  const redoTargets = history.getLatestRedoRecords();
   if (redoTargets.length > 0) {
     return { undoable: false, redoable: true, fileCount: redoTargets.length };
   }
@@ -59,16 +57,16 @@ export function turnUndoState(sessionId: string): TurnUndoState {
 export function undoTurn(sessionId: string): TurnUndoResult[] {
   const history = historyFor(sessionId);
   if (!history) return [];
-  const targets = latestTurnUndoTargets(history.getAllSnapshots());
-  if (targets.length === 0) return [];
-  return history.undoLatestTurn(targets);
+  const plan = history.getLatestTurnUndoPlan();
+  if (!plan) return [];
+  return history.undoLatestTurn(plan.snapshots);
 }
 
 /** Re-apply the most recently undone turn's file changes. Per-file results. */
 export function redoTurn(sessionId: string): TurnUndoResult[] {
   const history = historyFor(sessionId);
   if (!history) return [];
-  const targets = latestRedoTargets(history.getRedoRecords(), history.getAllSnapshots());
+  const targets = history.getLatestRedoRecords();
   if (targets.length === 0) return [];
   return history.redoLatestTurn(targets);
 }

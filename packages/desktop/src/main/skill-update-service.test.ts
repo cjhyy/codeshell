@@ -13,11 +13,12 @@ import * as os from "node:os";
 import * as path from "node:path";
 import {
   checkSkillUpdate,
+  parseGithubUrl,
   updateSkillFromSource,
   type SkillSourceMeta,
   type SkillUpdateDeps,
 } from "./github-skill-service.js";
-import { checkSkillUpdateEntry } from "./skill-update-entry.js";
+import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
 
 const realFetch = globalThis.fetch;
 
@@ -58,6 +59,25 @@ beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "skill-update-test-"));
   skillFile = path.join(tmpDir, "SKILL.md");
   await fs.writeFile(skillFile, "---\nname: foo\n---\nbody\n", "utf8");
+});
+
+describe("parseGithubUrl", () => {
+  it("accepts a bounded GitHub tree URL and decodes its subpath", () => {
+    expect(parseGithubUrl("https://github.com/acme/skills/tree/main/foo%20bar")).toEqual({
+      owner: "acme",
+      repo: "skills",
+      ref: "main",
+      subpath: "foo bar",
+    });
+  });
+
+  it("rejects credentials, non-HTTPS URLs and traversal paths", () => {
+    expect(() => parseGithubUrl("https://user@github.com/acme/skills")).toThrow();
+    expect(() => parseGithubUrl("http://github.com/acme/skills")).toThrow();
+    expect(() =>
+      parseGithubUrl("https://github.com/acme/skills/tree/main/%2e%2e/escape"),
+    ).toThrow(/path|路径/i);
+  });
 });
 
 afterEach(async () => {
@@ -123,6 +143,30 @@ describe("checkSkillUpdate", () => {
 
     const res = await checkSkillUpdate(skillFile);
     expect(res.updateAvailable).toBe(false);
+  });
+
+  it("rejects malformed github metadata without issuing a network request", async () => {
+    await writeSidecar(baseMeta({ commit: undefined as unknown as string }));
+    let fetched = false;
+    globalThis.fetch = (async () => {
+      fetched = true;
+      return new Response("{}");
+    }) as typeof fetch;
+
+    const res = await checkSkillUpdate(skillFile);
+    expect(res).toEqual({
+      filePath: skillFile,
+      updateAvailable: false,
+      reason: "invalid source metadata",
+    });
+    expect(fetched).toBe(false);
+  });
+
+  it("rejects oversized source metadata before parsing", async () => {
+    await fs.writeFile(path.join(tmpDir, ".cs-skill-meta.json"), "x".repeat(70 * 1024));
+    const res = await checkSkillUpdate(skillFile);
+    expect(res.updateAvailable).toBe(false);
+    expect(res.reason).toMatch(/metadata/i);
   });
 });
 
@@ -274,6 +318,26 @@ describe("updateSkillFromSource", () => {
     expect(res.updated).toBe(false);
     expect(res.reason).toMatch(/github/i);
   });
+
+  it("does not pass a forged traversal directory to update dependencies", async () => {
+    await writeSidecar(baseMeta({ dirInRepo: "../escape" }));
+    let called = false;
+    const deps: SkillUpdateDeps = {
+      getRefCommit: async () => {
+        called = true;
+        return "new";
+      },
+      downloadSkillTree: async () => {
+        called = true;
+      },
+    };
+
+    expect(await updateSkillFromSource(skillFile, deps)).toEqual({
+      updated: false,
+      reason: "invalid source metadata",
+    });
+    expect(called).toBe(false);
+  });
 });
 
 describe("checkSkillUpdateEntry", () => {
@@ -293,5 +357,21 @@ describe("checkSkillUpdateEntry", () => {
     );
     expect(res.updateAvailable).toBe(false);
     expect(res.reason).toBeTruthy();
+  });
+
+  it("does not inspect or replace a renderer-forged unlisted directory", async () => {
+    let fetched = false;
+    globalThis.fetch = (async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
+    }) as typeof fetch;
+    await writeSidecar(baseMeta());
+
+    const checked = await checkSkillUpdateEntry(skillFile);
+    expect(checked.updateAvailable).toBe(false);
+    expect(checked.reason).toMatch(/unlisted|outside/i);
+    expect(fetched).toBe(false);
+    await expect(updateSkillEntry(skillFile)).rejects.toThrow(/unlisted|outside/i);
+    expect(await fs.readFile(skillFile, "utf8")).toContain("name: foo");
   });
 });

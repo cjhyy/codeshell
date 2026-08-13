@@ -15,6 +15,7 @@ import {
   partitionForSession,
   registeredPartitionForBucket,
   registerAttachedGuestMetadata,
+  sessionIdsForBucket,
 } from "./active-guest.js";
 
 class FakeGuest extends EventEmitter {
@@ -79,6 +80,8 @@ describe("bucket-aware browser guest registry", () => {
     expect(activeGuestForBucket("repo::session-b")?.guest).toBe(b);
     expect(activeGuestForSession("session-a")?.guest).toBe(a);
     expect(partitionForSession("session-a")).toBe("persist:browser:repo::session-a");
+    expect(sessionIdsForBucket("repo::session-a")).toEqual(["session-a"]);
+    expect(sessionIdsForBucket("missing")).toEqual([]);
   });
 
   test("uses an in-memory partition for Quick Chat and releases its registry mapping", () => {

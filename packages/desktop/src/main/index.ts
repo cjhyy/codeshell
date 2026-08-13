@@ -111,10 +111,17 @@ import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
 import { removeExternalRuntimeBinding } from "./external-runtime-state.js";
-import { ExternalRuntimeApprovals } from "./external-runtime-approvals.js";
+import {
+  ExternalRuntimeApprovals,
+  parseExternalApprovalDecision,
+} from "./external-runtime-approvals.js";
 import { availableExternalRuntimes } from "./external-runtime-availability.js";
 import type { ExternalRuntimeAttachment } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
+import {
+  requireRendererProjectEntryPath,
+  requireRendererProjectPath,
+} from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
 import {
@@ -150,11 +157,7 @@ import { PetHostActionReceiptStore } from "./pet/pet-host-action-receipts.js";
 import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpService } from "./pet/pet-follow-up-service.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
-import {
-  PetSegmentController,
-  buildArchiveAnchors,
-  type PetArchiveAnchors,
-} from "./pet/pet-segment-controller.js";
+import { PetSegmentController, type PetArchiveAnchors } from "./pet/pet-segment-controller.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
@@ -198,6 +201,7 @@ import {
   rememberAttachedGuest,
   registerAttachedGuestMetadata,
   registerSessionBucket,
+  sessionIdsForBucket,
 } from "./browser-driver/active-guest.js";
 import {
   browserRuntime,
@@ -450,6 +454,7 @@ import {
   installFromGithub,
   type InstallFromGithubInput,
 } from "./github-skill-service.js";
+import { GithubSkillReviewStore } from "./github-skill-review.js";
 import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
 import { resolveModelMeta } from "./model-meta-service.js";
 import { listRuns, getRun, deleteRunDir } from "./runs-service.js";
@@ -823,11 +828,11 @@ const mobileRemote = new RemoteHostManager({
   // bundled out/main) — pass it explicitly now that RemoteHostManager lives in
   // @cjhyy/code-shell-server and can no longer derive it from its own location.
   mobileRootDir: resolve(__dirname, "../mobile"),
-  onClientEvent: (event) => {
+  onClientEvent: async (event) => {
     // The remote host tags authenticated events with both the device id and a
     // per-socket viewer id. Device state/replies remain shared per phone, while
     // transcript ownership follows the exact tab that subscribed.
-    void mobileOrchestrator.handleMobileClientEvent(event as AuthenticatedMobileClientEvent);
+    await mobileOrchestrator.handleMobileClientEvent(event as AuthenticatedMobileClientEvent);
   },
 });
 const pendingMobileApprovals = new PendingMobileApprovals();
@@ -983,7 +988,10 @@ const roomManager = new RoomManager({
       })
       .then((decision) => roomManager.respondApproval(roomId, ev.requestId, decision));
   },
-  onRoomEnded: (roomId) => transcriptSubscriptions.endRoom(roomId),
+  onRoomEnded: (roomId) => {
+    approvalBridge.cancelRoom(roomId);
+    transcriptSubscriptions.endRoom(roomId);
+  },
 });
 const transcriptSubscriptions = new TranscriptSubscriptionManager({
   onStart: (roomId) => roomManager.beginTranscriptFollow(roomId),
@@ -1334,7 +1342,9 @@ async function createWindow(): Promise<BrowserWindow> {
   // macOS keeps the app alive after the last window closes, so ptys whose
   // window is gone would otherwise leak until quit. Reap them once the
   // webContents is actually torn down (next tick after `closed`).
+  const ownerWebContentsId = win.webContents.id;
   win.on("closed", () => {
+    void externalRuntimeService?.stopOwnedBy(ownerWebContentsId);
     mainWindows.delete(win);
     if (process.platform !== "darwin" && mainWindows.size === 0) {
       browserRuntime.closeAll();
@@ -1721,6 +1731,8 @@ async function createWindow(): Promise<BrowserWindow> {
           }
           return brief;
         },
+        completeSegmentClosure: (closed) =>
+          petSegmentController?.completeSegmentClosure(closed) ?? Promise.resolve(),
         onDelegationClosed: (closure) =>
           petSegmentController?.onDelegationClosed(closure) ?? Promise.resolve(),
       },
@@ -2079,8 +2091,9 @@ async function createWindow(): Promise<BrowserWindow> {
         }
       };
       // Segment-closure pipeline: distill a journal entry + auto-memories from
-      // each closed Mimi topic segment, then archive that transcript range out
-      // of the live model context so the conversation cannot grow without bound.
+      // each closed Mimi topic segment. Context archival is requested on the
+      // boundary agent/run itself, after its user message is appended and
+      // before the first model call, so the end anchor cannot race turn startup.
       petSegmentClosureService = createPetSegmentClosureService({
         petSessionId,
         sessionsRootDir: petSessionsRootDir,
@@ -2095,26 +2108,18 @@ async function createWindow(): Promise<BrowserWindow> {
       // same segment would run on now-shifted indices and remove the wrong
       // turns. The controller serializes beginTurn to prevent a double close,
       // and this set guarantees at-most-once archival per segment regardless.
-      const archivedSegmentIds = new Set<string>();
+      const closedSegmentIds = new Set<string>();
       petSegmentController = new PetSegmentController({
         store: petWorkMemory,
         petSessionId,
         archiveRange: archivePetRange,
-        // A long-idle boundary just closed the previous segment. Distill + record
-        // it, then archive its range — fire-and-forget so the new turn is never
-        // blocked. Extraction failures degrade to a plain context archive.
-        onSegmentClosed: (closed) => {
-          if (archivedSegmentIds.has(closed.segmentId)) return;
-          archivedSegmentIds.add(closed.segmentId);
-          const anchors = buildArchiveAnchors(closed);
-          if (!anchors) {
-            dlog("main", "pet.closure.archive.unanchored", { segmentId: closed.segmentId });
-          }
-          void closureService
+        // The dispatcher calls this after the boundary turn settles, so the
+        // exclusive-end message is guaranteed to exist for journal range math.
+        onSegmentClosed: async (closed) => {
+          if (closedSegmentIds.has(closed.segmentId)) return;
+          closedSegmentIds.add(closed.segmentId);
+          await closureService
             .close(closed)
-            .then(async (result) => {
-              if (result) await archivePetRange(petSessionId, result.range, anchors);
-            })
             .catch((error) => dlog("main", "pet.closure.failed", { error: String(error) }));
         },
         now: Date.now,
@@ -2582,6 +2587,8 @@ async function openPetOverviewFromWidget(request?: unknown): Promise<void> {
 
 /** Tracks the popout browser windows so we can route anchors back to a parent. */
 const popoutParents = new Map<number, number>(); // popout wc id -> parent window id
+const browserAnchorsByParent = new Map<number, unknown[]>();
+const browserAnchorParentCleanupRegistered = new Set<number>();
 
 /**
  * Open a standalone browser window (the popout). It loads the same renderer
@@ -2605,6 +2612,13 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
   const wcId = win.webContents.id;
   popoutParents.set(wcId, parent.id);
   win.on("closed", () => popoutParents.delete(wcId));
+  if (!browserAnchorParentCleanupRegistered.has(parent.id)) {
+    browserAnchorParentCleanupRegistered.add(parent.id);
+    parent.once("closed", () => {
+      browserAnchorParentCleanupRegistered.delete(parent.id);
+      browserAnchorsByParent.delete(parent.id);
+    });
+  }
 
   // Same guest hardening as the main window — the popout hosts a BrowserPanel
   // too, so without this its <webview> guest landed in defaultSession and got
@@ -2636,7 +2650,7 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
     // Seed the freshly-loaded popout with the current anchor snapshot so it
     // echoes annotations made before it was opened (state-down pipe).
     if (!win.isDestroyed()) {
-      win.webContents.send("browser:anchors-state", browserAnchorsSnapshot);
+      win.webContents.send("browser:anchors-state", browserAnchorsByParent.get(parent.id) ?? []);
     }
   } catch (e) {
     dlog("main", "browser-popout.load-threw", { error: String(e) });
@@ -3124,16 +3138,18 @@ app.whenReady().then(async () => {
 });
 
 ipcMain.handle("skills:list", async (_e, cwd: string, opts?: { includeDisabled?: boolean }) =>
-  listSkills(cwd, { includeDisabled: opts?.includeDisabled === true }),
+  listSkills(await requireRendererProjectPath(cwd), {
+    includeDisabled: opts?.includeDisabled === true,
+  }),
 );
 ipcMain.handle("capabilities:list", async (_e, cwd: string) => {
-  if (typeof cwd !== "string") throw new Error("capabilities:list requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   return listCapabilities(cwd);
 });
 ipcMain.handle(
   "capabilities:setEnabled",
   async (_e, cwd: string, id: string, on: boolean, opts?: { scope?: "user" | "project" }) => {
-    if (typeof cwd !== "string") throw new Error("capabilities:setEnabled requires cwd");
+    cwd = await requireRendererProjectPath(cwd);
     if (typeof id !== "string") throw new Error("capabilities:setEnabled requires id");
     setCapabilityEnabled(cwd, id, Boolean(on), opts);
   },
@@ -3141,7 +3157,7 @@ ipcMain.handle(
 ipcMain.handle(
   "capabilities:setOverride",
   async (_e, cwd: string, id: string, state: "inherit" | "on" | "off") => {
-    if (typeof cwd !== "string") throw new Error("capabilities:setOverride requires cwd");
+    cwd = await requireRendererProjectPath(cwd);
     if (typeof id !== "string") throw new Error("capabilities:setOverride requires id");
     if (state !== "inherit" && state !== "on" && state !== "off")
       throw new Error("capabilities:setOverride requires state inherit|on|off");
@@ -3160,18 +3176,18 @@ ipcMain.handle("sources:catalogDelete", async (_e, id: string) => {
   deleteSourceCatalog(id);
 });
 ipcMain.handle("sources:workspaceAccess", async (_e, cwd: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("sources:workspaceAccess requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   return workspaceSourceAccess(cwd);
 });
 ipcMain.handle("sources:bind", async (_e, cwd: string, binding: unknown) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("sources:bind requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   if (typeof binding !== "object" || binding === null || Array.isArray(binding)) {
     throw new Error("sources:bind requires binding");
   }
   bindSource(cwd, binding as Parameters<typeof bindSource>[1]);
 });
 ipcMain.handle("sources:unbind", async (_e, cwd: string, sourceId: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("sources:unbind requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   if (typeof sourceId !== "string" || !sourceId) {
     throw new Error("sources:unbind requires sourceId");
   }
@@ -3184,9 +3200,7 @@ ipcMain.handle("sources:listScopes", async (_e, sourceId: string) => {
   return listSourceScopes(sourceId);
 });
 ipcMain.handle("sources:pickAndUpload", async (_e, cwd: string) => {
-  if (typeof cwd !== "string" || !cwd) {
-    throw new Error("sources:pickAndUpload requires cwd");
-  }
+  cwd = await requireRendererProjectPath(cwd);
   const result = await dialog.showOpenDialog({
     title: "选择数据源文件",
     properties: ["openFile", "multiSelections"],
@@ -3195,7 +3209,7 @@ ipcMain.handle("sources:pickAndUpload", async (_e, cwd: string) => {
   return uploadFiles(cwd, result.filePaths);
 });
 ipcMain.handle("sources:deleteUpload", async (_e, cwd: string, name: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("sources:deleteUpload requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   if (typeof name !== "string" || !name) throw new Error("sources:deleteUpload requires name");
   deleteUpload(cwd, name);
 });
@@ -3203,21 +3217,19 @@ ipcMain.handle("profiles:list", async (_e, cwd?: string) => {
   if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
     throw new Error("profiles:list cwd must be a non-empty string");
   }
-  return listProfiles(cwd);
+  return listProfiles(cwd ? await requireRendererProjectPath(cwd) : undefined);
 });
 ipcMain.handle("profiles:activate", async (_e, cwd: string, name: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("profiles:activate requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   if (typeof name !== "string" || !name) throw new Error("profiles:activate requires name");
   activateProfile(cwd, name);
 });
 ipcMain.handle("profiles:deactivate", async (_e, cwd: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("profiles:deactivate requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   deactivateProfile(cwd);
 });
 ipcMain.handle("profiles:setSession", async (_e, sessionId: unknown, profileName: unknown) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("profiles:setSession requires sessionId");
-  }
+  assertDesktopSessionId(sessionId);
   // "" is the unbind signal — a bare falsy check rejected it, so cancelling a
   // Session's digital human threw instead of clearing it.
   if (typeof profileName !== "string") {
@@ -3244,31 +3256,28 @@ ipcMain.handle("profiles:forceDelete", async (_e, name: string, cwd?: string) =>
   if (cwd !== undefined && typeof cwd !== "string") {
     throw new Error("profiles:forceDelete cwd must be a string");
   }
-  return forceDeleteProfile(name, cwd ? { cwd } : {});
+  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
+  return forceDeleteProfile(name, authorizedCwd ? { cwd: authorizedCwd } : {});
 });
 ipcMain.handle("profiles:previewDeletion", async (_e, name: string, cwd?: string) => {
   if (typeof name !== "string" || !name) throw new Error("profiles:previewDeletion requires name");
   if (cwd !== undefined && typeof cwd !== "string") {
     throw new Error("profiles:previewDeletion cwd must be a string");
   }
-  return previewProfileDeletion(name, cwd);
+  return previewProfileDeletion(name, cwd ? await requireRendererProjectPath(cwd) : undefined);
 });
 ipcMain.handle("profiles:previewRequirements", async (_e, name: string, cwd: string) => {
   if (typeof name !== "string" || !name) {
     throw new Error("profiles:previewRequirements requires name");
   }
-  if (typeof cwd !== "string" || !cwd) {
-    throw new Error("profiles:previewRequirements requires cwd");
-  }
+  cwd = await requireRendererProjectPath(cwd);
   return previewProfileRequirements(name, cwd);
 });
 ipcMain.handle("profiles:installRequirements", async (_e, name: string, cwd: string) => {
   if (typeof name !== "string" || !name) {
     throw new Error("profiles:installRequirements requires name");
   }
-  if (typeof cwd !== "string" || !cwd) {
-    throw new Error("profiles:installRequirements requires cwd");
-  }
+  cwd = await requireRendererProjectPath(cwd);
   return installProfileRequirements(name, cwd);
 });
 ipcMain.handle("profiles:save", async (_e, profile: unknown, cwd?: unknown) => {
@@ -3278,10 +3287,8 @@ ipcMain.handle("profiles:save", async (_e, profile: unknown, cwd?: unknown) => {
   if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
     throw new Error("profiles:save cwd must be a non-empty string");
   }
-  saveProfile(
-    profile as Parameters<typeof saveProfile>[0],
-    cwd as Parameters<typeof saveProfile>[1],
-  );
+  const authorizedCwd = cwd === undefined ? undefined : await requireRendererProjectPath(cwd);
+  saveProfile(profile as Parameters<typeof saveProfile>[0], authorizedCwd);
 });
 ipcMain.handle("profiles:pickDefinitionImport", async (event) => {
   const options: OpenDialogOptions = {
@@ -3311,12 +3318,13 @@ ipcMain.handle("profiles:importReviewedDefinition", async (_e, input: unknown, c
   if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
     throw new Error("profiles:importReviewedDefinition cwd must be a non-empty string");
   }
+  const authorizedCwd = cwd === undefined ? undefined : await requireRendererProjectPath(cwd);
   return importReviewedProfileDefinition(
     {
       reviewToken: candidate.reviewToken,
       ...(candidate.overwrite === undefined ? {} : { overwrite: candidate.overwrite }),
     },
-    cwd as string | undefined,
+    authorizedCwd,
   );
 });
 ipcMain.handle("profiles:exportDefinition", async (event, name: string) => {
@@ -3382,8 +3390,7 @@ ipcMain.handle("digital-human-teams:delete", async (_e, id: string) => {
   deleteDigitalHumanTeam(id);
 });
 ipcMain.handle("plugins:list", async (_e, cwd: string) => {
-  if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");
-  return listPlugins(cwd);
+  return listPlugins(await requireRendererProjectPath(cwd));
 });
 ipcMain.handle("plugins:media", async (_e, installKey: string, includeScreenshots?: boolean) => {
   if (typeof installKey !== "string" || !installKey) {
@@ -3395,63 +3402,69 @@ ipcMain.handle("plugins:media", async (_e, installKey: string, includeScreenshot
   return getPluginMedia(installKey, includeScreenshots === true);
 });
 ipcMain.handle("plugin-commands:list", async (_e, cwd: string) => {
-  if (typeof cwd !== "string") throw new Error("plugin-commands:list requires cwd");
-  return listPluginCommands(cwd);
+  return listPluginCommands(await requireRendererProjectPath(cwd));
 });
 ipcMain.handle(
   "plugin-commands:expand",
   async (_e, cwd: string, name: string, rawArguments: string) => {
-    if (typeof cwd !== "string") throw new Error("plugin-commands:expand requires cwd");
-    if (typeof name !== "string" || !name) {
+    cwd = await requireRendererProjectPath(cwd);
+    if (typeof name !== "string" || !name || name.length > 512) {
       throw new Error("plugin-commands:expand requires name");
     }
-    if (typeof rawArguments !== "string") {
+    if (typeof rawArguments !== "string" || rawArguments.length > 512 * 1024) {
       throw new Error("plugin-commands:expand requires rawArguments");
     }
     return expandPluginCommand(cwd, name, rawArguments);
   },
 );
 ipcMain.handle("panel-apps:list", async (_e, cwd: string, locale: string) => {
-  if (typeof cwd !== "string") throw new Error("panel-apps:list requires cwd");
-  if (typeof locale !== "string") throw new Error("panel-apps:list requires locale");
+  cwd = await requireRendererProjectPath(cwd);
+  if (typeof locale !== "string" || locale.length > 64) {
+    throw new Error("panel-apps:list requires locale");
+  }
   return listPanelApps(cwd, locale);
 });
 ipcMain.handle("panel-apps:listExtensions", async (_e, cwd: string, locale: string) => {
-  if (typeof cwd !== "string") throw new Error("panel-apps:listExtensions requires cwd");
-  if (typeof locale !== "string") throw new Error("panel-apps:listExtensions requires locale");
+  cwd = await requireRendererProjectPath(cwd);
+  if (typeof locale !== "string" || locale.length > 64) {
+    throw new Error("panel-apps:listExtensions requires locale");
+  }
   return listPanelAppExtensions(cwd, locale);
 });
 ipcMain.handle("panel-apps:listForProjects", async (_e, projectPaths: string[], locale: string) => {
-  if (!Array.isArray(projectPaths)) {
+  if (!Array.isArray(projectPaths) || projectPaths.length > 64) {
     throw new Error("panel-apps:listForProjects requires projectPaths");
   }
-  if (typeof locale !== "string") {
+  if (typeof locale !== "string" || locale.length > 64) {
     throw new Error("panel-apps:listForProjects requires locale");
   }
-  return listPanelAppsForProjects(
-    projectPaths.filter((value): value is string => typeof value === "string"),
-    locale,
+  const authorizedPaths = await Promise.all(
+    projectPaths.map((path) => requireRendererProjectPath(path)),
   );
+  return listPanelAppsForProjects(authorizedPaths, locale);
 });
 
 // ── Credentials (token/link store + cookie capture) ──────────────────
 // cwd may be "" for no-repo contexts; project scope no-ops without a cwd.
 ipcMain.handle("credentials:list", async (_e, cwd: string) => {
-  await migrateCredentialStore(cwd || undefined);
-  return new CredentialStore(cwd || undefined).listMasked();
+  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+  await migrateCredentialStore(authorizedCwd || undefined);
+  return new CredentialStore(authorizedCwd || undefined).listMasked();
 });
 ipcMain.handle(
   "credentials:save",
   async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
-    new CredentialStore(cwd || undefined).save(scope, cred);
-    bridge?.pushCredentialSnapshot(cwd || undefined);
+    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    new CredentialStore(authorizedCwd || undefined).save(scope, cred);
+    bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
 ipcMain.handle(
   "credentials:remove",
   async (_e, cwd: string, scope: CredentialScope, id: string) => {
-    new CredentialStore(cwd || undefined).remove(scope, id);
-    bridge?.pushCredentialSnapshot(cwd || undefined);
+    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    new CredentialStore(authorizedCwd || undefined).remove(scope, id);
+    bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
 ipcMain.handle("links:listLocalProviders", () => listDesktopLinkProviders());
@@ -3589,7 +3602,10 @@ async function persistCliLinkCredential(input: {
 
 ipcMain.handle("links:cliStatus", async (_e, rawProviderId: unknown, rawCwd: unknown) => {
   const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
-  const cwd = typeof rawCwd === "string" ? rawCwd : undefined;
+  const cwd =
+    typeof rawCwd === "string" && rawCwd
+      ? await requireRendererProjectPath(rawCwd)
+      : undefined;
   if (!isCliLinkProvider(providerId)) throw new Error("Unsupported CLI Link provider");
   return getCliLinkStatus(providerId, { cwd });
 });
@@ -3641,7 +3657,8 @@ ipcMain.handle("links:completeBrowserAuth", async (_e, raw: unknown) => {
   }
   const input = raw as Record<string, unknown>;
   const attemptId = typeof input.attemptId === "string" ? input.attemptId.trim() : "";
-  const cwd = typeof input.cwd === "string" ? input.cwd : "";
+  const rawCwd = typeof input.cwd === "string" ? input.cwd : "";
+  const cwd = rawCwd ? await requireRendererProjectPath(rawCwd) : "";
   const providerId = typeof input.providerId === "string" ? input.providerId.trim() : "";
   const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
   const label = typeof input.label === "string" ? input.label.trim() : "";
@@ -3679,7 +3696,8 @@ ipcMain.handle("links:connectCli", async (_e, raw: unknown) => {
     throw new Error("links:connectCli requires a connection request");
   }
   const input = raw as Record<string, unknown>;
-  const cwd = typeof input.cwd === "string" ? input.cwd : "";
+  const rawCwd = typeof input.cwd === "string" ? input.cwd : "";
+  const cwd = rawCwd ? await requireRendererProjectPath(rawCwd) : "";
   const rawProviderId = typeof input.providerId === "string" ? input.providerId.trim() : "";
   const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
   const label = typeof input.label === "string" ? input.label.trim() : "";
@@ -3704,7 +3722,8 @@ ipcMain.handle("links:connectLocal", async (_e, raw: unknown) => {
     throw new Error("links:connectLocal requires a connection request");
   }
   const input = raw as Record<string, unknown>;
-  const cwd = typeof input.cwd === "string" ? input.cwd : "";
+  const rawCwd = typeof input.cwd === "string" ? input.cwd : "";
+  const cwd = rawCwd ? await requireRendererProjectPath(rawCwd) : "";
   const providerId = typeof input.providerId === "string" ? input.providerId.trim() : "";
   const methodId = typeof input.methodId === "string" ? input.methodId.trim() : "";
   const label = typeof input.label === "string" ? input.label.trim() : "";
@@ -3745,9 +3764,15 @@ ipcMain.handle(
       meta?: unknown;
     },
   ) => {
-    if (typeof id !== "string" || !id) throw new Error("credentials:patchMeta requires id");
-    new CredentialStore(cwd || undefined).patch(scope, id, fields as never);
-    bridge?.pushCredentialSnapshot(cwd || undefined);
+    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
+      throw new Error("credentials:patchMeta requires id");
+    }
+    if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
+      throw new Error("credentials:patchMeta requires fields");
+    }
+    new CredentialStore(authorizedCwd || undefined).patch(scope, id, fields as never);
+    bridge?.pushCredentialSnapshot(authorizedCwd || undefined);
   },
 );
 ipcMain.handle("mcpOAuth:login", (_e, raw: unknown) =>
@@ -3766,20 +3791,53 @@ ipcMain.handle("mcpOAuth:logout", (_e, credentialId: unknown) => {
   return getMcpOAuthService().logout(credentialId);
 });
 function browserPartitionForBucket(bucket: unknown): string | undefined {
-  if (typeof bucket !== "string" || !bucket) return undefined;
+  if (typeof bucket !== "string" || !bucket || bucket.length > 512 || bucket.includes("\0")) {
+    return undefined;
+  }
   // MUST match PanelArea/WebviewHost's partition exactly (no trim), or
   // capture/restore would target a different partition than the panel writes.
   return registryPartitionForBucket(bucket);
 }
 
+function assertRendererSessionAccess(sessionId: unknown, senderWebContentsId: number): string {
+  assertDesktopSessionId(sessionId);
+  if (!bridge?.hasKnownSession(sessionId)) {
+    throw new Error("browser operation requires a live CodeShell task");
+  }
+  const ownerId = bridge.panelOwnerWebContentsId(sessionId);
+  // Headless/mobile sessions intentionally have no panel owner and may be
+  // presented by a desktop window. Once a session has an owner, however, a
+  // second window must never rebind or control its browser capability.
+  if (ownerId !== undefined && ownerId !== senderWebContentsId) {
+    throw new Error("browser operation belongs to another window");
+  }
+  return sessionId;
+}
+
+function requireRendererBrowserPartition(bucket: unknown, senderWebContentsId: number): string {
+  const partition = browserPartitionForBucket(bucket);
+  if (!partition || typeof bucket !== "string") {
+    throw new Error("a bounded browser bucket is required");
+  }
+  const sessionIds = sessionIdsForBucket(bucket);
+  const authorized = sessionIds.some((sessionId) => {
+    if (!bridge?.hasKnownSession(sessionId)) return false;
+    const ownerId = bridge.panelOwnerWebContentsId(sessionId);
+    return ownerId === undefined || ownerId === senderWebContentsId;
+  });
+  if (!authorized) throw new Error("browser bucket belongs to another window");
+  return partition;
+}
+
 ipcMain.on(
   "browser:register-session-bucket",
-  (_e, payload: { sessionId?: unknown; bucket?: unknown; partition?: unknown }) => {
+  (event, payload: { sessionId?: unknown; bucket?: unknown; partition?: unknown }) => {
     try {
       const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
       const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
       const partition = typeof payload?.partition === "string" ? payload.partition : undefined;
-      if (!sessionId || !bucket) return;
+      if (!sessionId || !bucket || bucket.length > 512 || bucket.includes("\0")) return;
+      if (partition !== undefined && (partition.length > 1_024 || partition.includes("\0"))) return;
       const existingBucket = bucketForSession(sessionId);
       if (!existingBucket) {
         if (!bridge?.hasKnownSession(sessionId)) {
@@ -3789,9 +3847,11 @@ ipcMain.on(
           });
           return;
         }
+        assertRendererSessionAccess(sessionId, event.sender.id);
         registerSessionBucket(sessionId, bucket, partition);
         return;
       }
+      assertRendererSessionAccess(sessionId, event.sender.id);
       if (existingBucket !== bucket) {
         // External runtimes intentionally own an isolated browser partition.
         // A late renderer effect must never rebind it to the visible session
@@ -3825,9 +3885,23 @@ ipcMain.on(
         typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
       const bucket = typeof payload?.bucket === "string" ? payload.bucket : "";
       const partition = typeof payload?.partition === "string" ? payload.partition : "";
-      if (!Number.isFinite(guestId) || !bucket || !partition) return;
+      if (
+        !Number.isSafeInteger(guestId) ||
+        guestId <= 0 ||
+        !bucket ||
+        bucket.length > 512 ||
+        bucket.includes("\0") ||
+        !partition ||
+        partition.length > 1_024 ||
+        partition.includes("\0")
+      ) {
+        return;
+      }
       const ownerWindow = BrowserWindow.fromWebContents(e.sender);
       if (!ownerWindow) return;
+      if (payload?.engineSessionId !== undefined) {
+        assertRendererSessionAccess(payload.engineSessionId, e.sender.id);
+      }
       registerAttachedGuestMetadata({
         guestId,
         bucket,
@@ -3846,10 +3920,10 @@ ipcMain.on(
 ipcMain.handle(
   "browser-runtime:grant-built-in",
   (e, payload: { sessionId?: unknown; guestId?: unknown; ttlMs?: unknown }) => {
-    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+    const sessionId = assertRendererSessionAccess(payload?.sessionId, e.sender.id);
     const guestId =
       typeof payload?.guestId === "number" ? payload.guestId : Number(payload?.guestId);
-    if (!sessionId || !Number.isFinite(guestId) || !bridge?.hasKnownSession(sessionId)) {
+    if (!Number.isSafeInteger(guestId) || guestId <= 0) {
       throw new Error("browser handoff requires a live task and browser tab");
     }
     const ownerWindow = BrowserWindow.fromWebContents(e.sender);
@@ -3859,7 +3933,9 @@ ipcMain.handle(
       guestId,
       sourceWindowId: ownerWindow.id,
       ttlMs:
-        typeof payload.ttlMs === "number" && Number.isFinite(payload.ttlMs)
+        typeof payload.ttlMs === "number" &&
+        Number.isSafeInteger(payload.ttlMs) &&
+        payload.ttlMs > 0
           ? payload.ttlMs
           : undefined,
     });
@@ -3871,27 +3947,26 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("browser-runtime:revoke-built-in", (_e, sessionId: unknown) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("browser handoff revoke requires sessionId");
-  }
+ipcMain.handle("browser-runtime:revoke-built-in", (event, rawSessionId: unknown) => {
+  const sessionId = assertRendererSessionAccess(rawSessionId, event.sender.id);
   builtInBrowserHandoffGrants.revoke(sessionId);
   return builtInBrowserHandoffGrants.status(sessionId);
 });
 
-ipcMain.handle("browser-runtime:handoff-status", (_e, sessionId: unknown) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    return { granted: false, sessionId: "" };
-  }
+ipcMain.handle("browser-runtime:handoff-status", (event, rawSessionId: unknown) => {
+  const sessionId = assertRendererSessionAccess(rawSessionId, event.sender.id);
   return builtInBrowserHandoffGrants.status(sessionId);
 });
 
 ipcMain.handle(
   "browser-runtime:chrome-begin-pairing",
-  (_e, payload: { sessionId?: unknown; label?: unknown }) => {
-    const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
-    if (!sessionId || !bridge?.hasKnownSession(sessionId)) {
-      throw new Error("Chrome pairing requires a live CodeShell task");
+  (event, payload: { sessionId?: unknown; label?: unknown }) => {
+    const sessionId = assertRendererSessionAccess(payload?.sessionId, event.sender.id);
+    if (
+      payload?.label !== undefined &&
+      (typeof payload.label !== "string" || payload.label.length > 200 || payload.label.includes("\0"))
+    ) {
+      throw new Error("Chrome pairing label is invalid");
     }
     return chromeExtensionRuntimeService.beginPairing(
       sessionId,
@@ -3900,17 +3975,13 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("browser-runtime:chrome-status", (_e, sessionId: unknown) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    return { sessionId: "", connected: false };
-  }
+ipcMain.handle("browser-runtime:chrome-status", (event, rawSessionId: unknown) => {
+  const sessionId = assertRendererSessionAccess(rawSessionId, event.sender.id);
   return chromeExtensionRuntimeService.status(sessionId);
 });
 
-ipcMain.handle("browser-runtime:chrome-revoke", (_e, sessionId: unknown) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("Chrome revoke requires sessionId");
-  }
+ipcMain.handle("browser-runtime:chrome-revoke", (event, rawSessionId: unknown) => {
+  const sessionId = assertRendererSessionAccess(rawSessionId, event.sender.id);
   return chromeExtensionRuntimeService.revoke(sessionId);
 });
 
@@ -3925,27 +3996,36 @@ ipcMain.handle("browser-runtime:chrome-installation", () => ({
   }),
 }));
 
-ipcMain.handle("credentials:cookieDomains", async (_e, bucket?: string) =>
-  listCookieDomains(browserPartitionForBucket(bucket)),
+ipcMain.handle("credentials:cookieDomains", async (event, bucket?: string) =>
+  listCookieDomains(requireRendererBrowserPartition(bucket, event.sender.id)),
 );
-ipcMain.handle("credentials:cookiePreview", async (_e, domain: string, bucket?: string) => {
+ipcMain.handle("credentials:cookiePreview", async (event, domain: string, bucket?: string) => {
+  if (typeof domain !== "string" || !domain.trim() || domain.length > 253 || domain.includes("\0")) {
+    throw new Error("credentials:cookiePreview requires a bounded domain");
+  }
   // Preview only: just count the cookies in the partition. No lease file is
   // materialized here — the actual cookies.txt is created on demand by the
   // (deferred) UseGate when a tool call is approved.
-  const cookies = await getCookiesForDomain(domain, browserPartitionForBucket(bucket));
+  const cookies = await getCookiesForDomain(
+    domain.trim(),
+    requireRendererBrowserPartition(bucket, event.sender.id),
+  );
   return { count: cookies.length };
 });
 // 第二期:按域拓取 cookie jar(renderer 拿去组装成 cookie 凭证存进 CredentialStore)。
-ipcMain.handle("credentials:captureCookieJar", async (_e, domain: string, bucket?: string) => {
-  if (typeof domain !== "string" || !domain.trim()) {
+ipcMain.handle("credentials:captureCookieJar", async (event, domain: string, bucket?: string) => {
+  if (typeof domain !== "string" || !domain.trim() || domain.length > 253 || domain.includes("\0")) {
     throw new Error("credentials:captureCookieJar requires a domain");
   }
-  const jar = await captureCookieJar(domain.trim(), browserPartitionForBucket(bucket));
+  const jar = await captureCookieJar(
+    domain.trim(),
+    requireRendererBrowserPartition(bucket, event.sender.id),
+  );
   return { jar, count: jar.length };
 });
 // 第二期+:全量拓取当前 chat session 的浏览器分区所有 cookie(不按域过滤)。
-ipcMain.handle("credentials:captureAllCookies", async (_e, bucket?: string) => {
-  const jar = await captureAllCookies(browserPartitionForBucket(bucket));
+ipcMain.handle("credentials:captureAllCookies", async (event, bucket?: string) => {
+  const jar = await captureAllCookies(requireRendererBrowserPartition(bucket, event.sender.id));
   return { jar, count: jar.length };
 });
 // 第二期+:兜底拓取所有当前活着的浏览器面板 session,去重合并。
@@ -3956,13 +4036,13 @@ ipcMain.handle("credentials:captureAllCookiesAllSessions", async () => {
 // 然后广播 browser:reload 让浏览器面板刷新成该账号身份。
 ipcMain.handle(
   "credentials:restoreCookieToBrowser",
-  async (_e, cwd: string, id: string, bucket?: string) => {
-    if (typeof id !== "string" || !id)
+  async (event, cwd: string, id: string, bucket?: string) => {
+    const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : "";
+    if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0"))
       throw new Error("credentials:restoreCookieToBrowser requires id");
-    const partition = browserPartitionForBucket(bucket);
-    if (!partition) throw new Error("credentials:restoreCookieToBrowser requires bucket");
-    await migrateCredentialStore(cwd || undefined);
-    const cred = new CredentialStore(cwd || undefined).resolve(id);
+    const partition = requireRendererBrowserPartition(bucket, event.sender.id);
+    await migrateCredentialStore(authorizedCwd || undefined);
+    const cred = new CredentialStore(authorizedCwd || undefined).resolve(id);
     if (!cred || cred.type !== "cookie") throw new Error(`无 cookie 凭证: "${id}"`);
     let jar: ElectronCookieLike[];
     try {
@@ -4015,8 +4095,14 @@ ipcMain.handle(
     ) {
       throw new Error("installKey, templateId and expectedRevision are required");
     }
-    const normalizedCwd =
-      typeof cwd === "string" && cwd.length > 0 ? resolveProjectRoot(cwd) : undefined;
+    if (
+      installKey.length > 512 ||
+      templateId.length > 512 ||
+      expectedRevision.length > 512
+    ) {
+      throw new Error("plugin automation identifiers are too long");
+    }
+    const normalizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
     return createAutomationFromPluginTemplate(
       installKey,
       templateId,
@@ -4112,11 +4198,20 @@ ipcMain.handle(
     },
   ): Promise<{ ok: true; text: string } | { ok: false; error: string }> => {
     const { cwd, audio, mimeType, provider, language } = payload ?? {};
-    if (typeof cwd !== "string" || !(audio instanceof ArrayBuffer)) {
+    if (
+      typeof cwd !== "string" ||
+      !(audio instanceof ArrayBuffer) ||
+      audio.byteLength === 0 ||
+      audio.byteLength > 25 * 1024 * 1024 ||
+      (mimeType !== undefined && (typeof mimeType !== "string" || mimeType.length > 256)) ||
+      (provider !== undefined && (typeof provider !== "string" || provider.length > 512)) ||
+      (language !== undefined && (typeof language !== "string" || language.length > 64))
+    ) {
       return { ok: false, error: "bad-request" };
     }
+    const authorizedCwd = await requireRendererProjectPath(cwd);
     return transcribeConfiguredAudio({
-      cwd,
+      cwd: authorizedCwd,
       audio: new Uint8Array(audio),
       ...(typeof mimeType === "string" ? { mimeType } : {}),
       ...(typeof provider === "string" ? { provider } : {}),
@@ -4125,13 +4220,13 @@ ipcMain.handle(
   },
 );
 ipcMain.handle("stt:available", async (_e, cwd: string) => ({
-  available: typeof cwd === "string" ? isTranscribeAvailable(cwd) : false,
+  available: isTranscribeAvailable(await requireRendererProjectPath(cwd)),
 }));
 // What voice input will ACTUALLY use right now (configured connection vs reused
 // OpenAI key vs none) — key already masked in core. Lets the connection page
 // show the active/fallback config instead of looking unconfigured.
 ipcMain.handle("stt:describe", async (_e, cwd: string) =>
-  typeof cwd === "string" ? describeTranscribe(cwd) : { source: "none" as const },
+  describeTranscribe(await requireRendererProjectPath(cwd)),
 );
 // macOS gates microphone access at the OS level (TCC). Ask BEFORE getUserMedia
 // so the user gets the system prompt with our NSMicrophoneUsageDescription, and
@@ -4199,10 +4294,13 @@ ipcMain.handle(
   },
 );
 ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
-  if (typeof id !== "string" || !id) throw new Error("panel-apps:uninstall requires id");
+  if (typeof id !== "string" || !id || id.length > 512 || id.includes("\0")) {
+    throw new Error("panel-apps:uninstall requires id");
+  }
   if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
     throw new Error("panel-apps:uninstall cwd must be a non-empty string");
   }
+  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
   await uninstallPanelAppForUi(id);
   panelAppBridge.revokeAppId(id);
   try {
@@ -4213,8 +4311,8 @@ ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
         disabledPanelApps: disabled.filter((candidate) => candidate !== id),
       });
     }
-    if (cwd) {
-      const projectSettings = (await readSettings("project", cwd)) ?? {};
+    if (authorizedCwd) {
+      const projectSettings = (await readSettings("project", authorizedCwd)) ?? {};
       const bindings = Array.isArray(projectSettings.panelAppBindings)
         ? projectSettings.panelAppBindings.filter(
             (candidate): candidate is string => typeof candidate === "string" && candidate !== id,
@@ -4238,7 +4336,7 @@ ipcMain.handle("panel-apps:uninstall", async (_e, id: string, cwd?: string) => {
           panelAppBindings: bindings,
           panelAppOverrides: overrides,
         },
-        cwd,
+        authorizedCwd,
       );
     }
   } catch (error) {
@@ -4341,8 +4439,9 @@ ipcMain.handle("skills:checkUpdate", async (_e, filePath: string) =>
 );
 ipcMain.handle("skills:update", async (_e, filePath: string) => updateSkillEntry(filePath));
 ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
-  if (typeof cwd !== "string") throw new Error("files:search requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   const q = typeof query === "string" ? query : "";
+  if (q.length > 512) throw new Error("files:search query is too long");
   return searchFiles(cwd, q);
 });
 ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
@@ -4422,6 +4521,10 @@ ipcMain.handle(
     if (typeof payload.dataUrl !== "string") {
       throw new Error("attachments:stageImageDataUrl requires dataUrl");
     }
+    const cwd = await requireRendererProjectPath(payload.cwd);
+    if (payload.dataUrl.length > Math.ceil((10 * 1024 * 1024 * 4) / 3) + 1_024) {
+      throw new Error("attachments:stageImageDataUrl exceeds the encoded size limit");
+    }
     const origin =
       payload.origin === "paste" ||
       payload.origin === "os-drop" ||
@@ -4432,9 +4535,10 @@ ipcMain.handle(
       payload.origin === "tool"
         ? payload.origin
         : "paste";
-    return runClaimBoundAttachmentOperation(event.sender.id, payload, () =>
+    const authorizedPayload = { ...payload, cwd };
+    return runClaimBoundAttachmentOperation(event.sender.id, authorizedPayload, () =>
       stageImageDataUrl({
-        cwd: payload.cwd!,
+        cwd,
         sessionId: payload.sessionId!,
         name: payload.name,
         mime: payload.mime,
@@ -4450,10 +4554,10 @@ ipcMain.handle(
     if (!payload || typeof payload.cwd !== "string") {
       throw new Error("attachments:cleanup requires cwd");
     }
+    const cwd = await requireRendererProjectPath(payload.cwd);
     return cleanupAttachments({
-      cwd: payload.cwd,
+      cwd,
       sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
-      now: typeof payload.now === "number" ? payload.now : undefined,
     });
   },
 );
@@ -4461,8 +4565,9 @@ ipcMain.handle("attachments:inspect", async (_e, payload: { cwd?: string; sessio
   if (!payload || typeof payload.cwd !== "string") {
     throw new Error("attachments:inspect requires cwd");
   }
+  const cwd = await requireRendererProjectPath(payload.cwd);
   return listRecentAttachments({
-    cwd: payload.cwd,
+    cwd,
     sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined,
   });
 });
@@ -4480,9 +4585,12 @@ ipcMain.handle(
     if (!payload || typeof payload.cwd !== "string" || typeof payload.sessionId !== "string") {
       throw new Error("attachments:markSent requires cwd and sessionId");
     }
+    const cwd = await requireRendererProjectPath(payload.cwd);
     const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
-    return runClaimBoundAttachmentOperation(event.sender.id, payload, async () => {
-      await markAttachmentsSent(payload.cwd!, payload.sessionId!, attachments);
+    if (attachments.length > 32) throw new Error("too many attachments to mark sent");
+    const authorizedPayload = { ...payload, cwd };
+    return runClaimBoundAttachmentOperation(event.sender.id, authorizedPayload, async () => {
+      await markAttachmentsSent(cwd, payload.sessionId!, attachments);
       return { ok: true } as const;
     });
   },
@@ -4504,7 +4612,8 @@ ipcMain.handle(
       ) {
         throw new Error("invalid source");
       }
-      return uninstallListedSkill(input, source, typeof cwd === "string" ? cwd : undefined);
+      const authorizedCwd = await requireRendererProjectPath(cwd);
+      return uninstallListedSkill(input, source, authorizedCwd);
     }
     if (!input || typeof input !== "object") {
       throw new Error("skills:uninstall requires { scope, cwd, skillName }");
@@ -4514,16 +4623,22 @@ ipcMain.handle(
     if (typeof input.skillName !== "string") {
       throw new Error("skills:uninstall requires skillName");
     }
+    const authorizedCwd =
+      scope === "project"
+        ? await requireRendererProjectPath(input.cwd)
+        : typeof input.cwd === "string" && input.cwd
+          ? await requireRendererProjectPath(input.cwd)
+          : undefined;
     return uninstallSkill({
       scope,
-      cwd: typeof input.cwd === "string" ? input.cwd : undefined,
+      cwd: authorizedCwd,
       skillName: input.skillName,
     });
   },
 );
 
 ipcMain.handle("agents:list", async (_e, cwd: string) => {
-  if (typeof cwd !== "string") throw new Error("agents:list requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   return listAgents(cwd);
 });
 ipcMain.handle("agents:read", async (_e, filePath: string) => {
@@ -4537,8 +4652,12 @@ ipcMain.handle(
     _e,
     payload: { absPath?: unknown; cwd?: unknown; sessionId?: unknown },
   ): Promise<string | null> => {
+    const cwd =
+      typeof payload?.cwd === "string" && payload.cwd
+        ? await requireRendererProjectPath(payload.cwd)
+        : undefined;
     return readImageDataUrl(typeof payload?.absPath === "string" ? payload.absPath : "", {
-      cwd: typeof payload?.cwd === "string" ? payload.cwd : undefined,
+      cwd,
       sessionId: typeof payload?.sessionId === "string" ? payload.sessionId : undefined,
     });
   },
@@ -4552,6 +4671,9 @@ ipcMain.handle(
   "images:save",
   async (e, src: string, opts?: { name?: string; mime?: string }): Promise<string | null> => {
     if (typeof src !== "string" || !src) throw new Error("images:save requires src");
+    if (src.length > Math.ceil((10 * 1024 * 1024 * 4) / 3) + 1_024) {
+      throw new Error("images:save exceeds the encoded size limit");
+    }
     const parsed = parseDataUrl(src);
     if (!parsed) throw new Error("images:save: src is not a data URL");
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -4575,35 +4697,81 @@ ipcMain.handle(
     if (!def || typeof def !== "object") throw new Error("agents:save requires def");
     if (typeof def.name !== "string" || typeof def.description !== "string")
       throw new Error("agents:save: name and description are required");
-    return saveAgent(def, opts);
+    if (opts?.scope !== undefined && opts.scope !== "user" && opts.scope !== "project") {
+      throw new Error("invalid agent scope");
+    }
+    const cwd =
+      opts?.scope === "project"
+        ? await requireRendererProjectPath(opts.cwd)
+        : typeof opts?.cwd === "string" && opts.cwd
+          ? await requireRendererProjectPath(opts.cwd)
+          : undefined;
+    return saveAgent(def, { ...opts, cwd });
   },
 );
 ipcMain.handle(
   "agents:delete",
   async (_e, name: string, opts?: { scope?: "user" | "project"; cwd?: string }) => {
     if (typeof name !== "string" || !name) throw new Error("agents:delete requires name");
-    return deleteAgent(name, opts);
+    if (opts?.scope !== undefined && opts.scope !== "user" && opts.scope !== "project") {
+      throw new Error("invalid agent scope");
+    }
+    const cwd =
+      opts?.scope === "project"
+        ? await requireRendererProjectPath(opts.cwd)
+        : typeof opts?.cwd === "string" && opts.cwd
+          ? await requireRendererProjectPath(opts.cwd)
+          : undefined;
+    return deleteAgent(name, { ...opts, cwd });
   },
 );
 
-ipcMain.handle("skills:inspectGithub", async (_e, url: string, existingNames?: unknown) => {
-  if (typeof url !== "string" || !url) {
+const githubSkillReviews = new GithubSkillReviewStore();
+
+ipcMain.handle("skills:inspectGithub", async (event, url: string, existingNames?: unknown) => {
+  if (typeof url !== "string" || !url || url.length > 8_192 || url.includes("\0")) {
     throw new Error("skills:inspectGithub requires url");
   }
-  const names = Array.isArray(existingNames)
-    ? existingNames.filter((n): n is string => typeof n === "string")
-    : [];
-  return inspectRepo(url, names);
+  if (!Array.isArray(existingNames) && existingNames !== undefined) {
+    throw new Error("skills:inspectGithub existingNames must be an array");
+  }
+  const names = existingNames ?? [];
+  if (
+    names.length > 4_096 ||
+    names.some((name) => typeof name !== "string" || name.length > 512 || name.includes("\0"))
+  ) {
+    throw new Error("skills:inspectGithub existingNames are invalid");
+  }
+  return githubSkillReviews.issue(event.sender.id, await inspectRepo(url, names as string[]));
 });
 
-ipcMain.handle("skills:installFromGithub", async (_e, input: unknown) => {
+ipcMain.handle("skills:installFromGithub", async (event, input: unknown) => {
   if (!input || typeof input !== "object") {
     throw new Error("skills:installFromGithub requires { inspection, selected, scope }");
   }
   const i = input as InstallFromGithubInput;
   if (!i.inspection || !i.selected) throw new Error("missing inspection/selected");
   if (i.scope !== "user" && i.scope !== "project") throw new Error("invalid scope");
-  return installFromGithub(i);
+  if (
+    i.installName !== undefined &&
+    (typeof i.installName !== "string" || i.installName.length > 512 || i.installName.includes("\0"))
+  ) {
+    throw new Error("invalid skill install name");
+  }
+  const cwd =
+    i.scope === "project"
+      ? await requireRendererProjectPath(i.cwd)
+      : typeof i.cwd === "string" && i.cwd
+        ? await requireRendererProjectPath(i.cwd)
+        : undefined;
+  const reviewToken = (i.inspection as { reviewToken?: unknown }).reviewToken;
+  const reviewed = githubSkillReviews.consume(event.sender.id, reviewToken, i.selected);
+  return installFromGithub({
+    ...i,
+    inspection: reviewed.inspection,
+    selected: reviewed.selected,
+    cwd,
+  });
 });
 
 ipcMain.handle(
@@ -4613,7 +4781,13 @@ ipcMain.handle(
       throw new Error("skills:installLocal requires sourceDir");
     }
     if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-    return installSkillFromDirectory(sourceDir, scope, cwd, name);
+    const authorizedCwd =
+      scope === "project"
+        ? await requireRendererProjectPath(cwd)
+        : typeof cwd === "string" && cwd
+          ? await requireRendererProjectPath(cwd)
+          : undefined;
+    return installSkillFromDirectory(sourceDir, scope, authorizedCwd, name);
   },
 );
 
@@ -4640,7 +4814,10 @@ ipcMain.handle(
     // Fold project capabilityOverrides over the renderer's raw global list when
     // a cwd is known — the pluginDisabled flag must reflect the EFFECTIVE state
     // (能力总览 project "on" overrides global off), matching the engine's merge.
-    const cwd = typeof rawCwd === "string" && rawCwd ? rawCwd : undefined;
+    const cwd =
+      typeof rawCwd === "string" && rawCwd
+        ? await requireRendererProjectPath(rawCwd)
+        : undefined;
     const disabledPlugins = cwd
       ? computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd).disabledPlugins
       : rawList;
@@ -4944,8 +5121,8 @@ ipcMain.handle("mobileRemote:passcodeStatus", async () => ({
   isSet: accessPasscode.isSet(),
 }));
 ipcMain.handle("mobileRemote:setPasscode", async (_e, passcode: string) => {
-  if (!passcode || passcode.length < 4) {
-    throw new Error("访问口令至少需要 4 个字符");
+  if (typeof passcode !== "string" || passcode.length < 4 || passcode.length > 256) {
+    throw new Error("访问口令需要 4 到 256 个字符");
   }
   accessPasscode.set(passcode);
   return true;
@@ -4983,7 +5160,8 @@ ipcMain.handle("projects:resolveRoot", async (_e, path: string) => {
   return { path: root, name: basename(root) };
 });
 ipcMain.handle("projects:add", async (_e, project: { path: string; name: string }) => {
-  const path = resolveProjectRoot(project.path);
+  const path = await requireRendererProjectPath(project?.path).catch(() => undefined);
+  if (!path) return;
   await pushRecent({ path, name: project.name || basename(path), lastOpenedAt: Date.now() });
   await mobileOrchestrator.broadcastProjects();
 });
@@ -5012,10 +5190,14 @@ ipcMain.handle(
       permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
     },
   ) => {
-    const permissionMode = await resolveRoomPermissionMode(input.cwd, input.permissionMode);
+    const cwd = await requireRendererProjectPath(input?.cwd);
+    if (input.name !== undefined && (typeof input.name !== "string" || input.name.length > 512)) {
+      throw new Error("invalid room name");
+    }
+    const permissionMode = await resolveRoomPermissionMode(cwd, input.permissionMode);
     const room = roomManager.createRoom({
       name: input.name,
-      cwd: input.cwd,
+      cwd,
       kind: input.kind,
       permissionMode,
     });
@@ -5026,9 +5208,12 @@ ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(room
 ipcMain.handle("rooms:close", async (_e, roomId: string) => {
   roomManager.close(roomId);
 });
-ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) =>
-  roomManager.send(roomId, text),
-);
+ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => {
+  if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
+    throw new Error("invalid room message");
+  }
+  return roomManager.send(roomId, text);
+});
 ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
   roomManager.getMessages(roomId, sinceSeq ?? 0),
 );
@@ -5040,12 +5225,14 @@ ipcMain.handle("ccRoom:codexProbe", async (_e, force?: boolean) => probeCodexCli
 // doesn't deep-read every session file on open. `all:true` returns everything
 // (the "load more" path). `total` lets the UI show how many are hidden.
 ipcMain.handle("ccRoom:listSessions", async (_e, cwd: string, all?: boolean) => {
+  cwd = await requireRendererProjectPath(cwd);
   const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
   const sessions = discoverRelatedSessions("claude", cwd, opts);
   const total = all ? sessions.length : countRelatedSessions("claude", cwd);
   return { sessions, total };
 });
 ipcMain.handle("ccRoom:listCodexSessions", async (_e, cwd: string, all?: boolean) => {
+  cwd = await requireRendererProjectPath(cwd);
   const opts = all ? {} : { limit: DEFAULT_DISCOVER_LIMIT, sinceMs: DEFAULT_DISCOVER_SINCE_MS };
   const sessions = discoverRelatedSessions("codex", cwd, opts);
   const total = all ? sessions.length : countRelatedSessions("codex", cwd);
@@ -5059,17 +5246,26 @@ ipcMain.handle(
     cwd: string,
     mode: "default" | "acceptEdits" | "bypassPermissions",
     kind?: "claude-code" | "codex",
-  ) => roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code"),
+  ) => {
+    cwd = await requireRendererProjectPath(cwd);
+    return roomManager.openForSession(claudeSessionId, cwd, mode, kind ?? "claude-code");
+  },
 );
 ipcMain.handle(
   "ccRoom:openLinkedSession",
   async (_e, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-    openLinkedSessionFromIpc(roomManager, externalSessionId, cwd, kind),
+    openLinkedSessionFromIpc(roomManager, externalSessionId, await requireRendererProjectPath(cwd), kind),
 );
 ipcMain.handle(
   "ccRoom:takeOverLinkedSession",
   async (_e, roomId: unknown, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-    takeOverLinkedSessionFromIpc(roomManager, roomId, externalSessionId, cwd, kind),
+    takeOverLinkedSessionFromIpc(
+      roomManager,
+      roomId,
+      externalSessionId,
+      await requireRendererProjectPath(cwd),
+      kind,
+    ),
 );
 const transcriptCleanupSenders = new Set<number>();
 ipcMain.handle(
@@ -5082,6 +5278,7 @@ ipcMain.handle(
     kind: "claude-code" | "codex",
     limit: number,
   ) => {
+    cwd = await requireRendererProjectPath(cwd);
     if (!mobileOrchestrator.roomMatchesTranscript(roomId, cwd, sessionId, kind)) {
       throw new Error("cc-room transcript subscription does not match the opened room");
     }
@@ -5107,9 +5304,12 @@ ipcMain.handle(
 ipcMain.handle("ccRoom:unsubscribeTranscript", async (event, roomId: string) => {
   transcriptSubscriptions!.unsubscribe(`desktop:${event.sender.id}`, roomId);
 });
-ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) =>
-  roomManager.send(roomId, text),
-);
+ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => {
+  if (typeof text !== "string" || text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
+    throw new Error("invalid room message");
+  }
+  return roomManager.send(roomId, text);
+});
 ipcMain.handle(
   "ccRoom:respondApproval",
   async (
@@ -5124,13 +5324,18 @@ ipcMain.handle(
 ipcMain.handle("ccRoom:roomHistory", async (_e, roomId: string, sinceSeq?: number) =>
   roomManager.getMessages(roomId, sinceSeq ?? 0),
 );
-ipcMain.handle("ccRoom:readHistory", async (_e, cwd: string, sessionId: string, limit: number) =>
-  readRecentHistory(cwd, sessionId, limit),
-);
+ipcMain.handle("ccRoom:readHistory", async (_e, cwd: string, sessionId: string, limit: number) => {
+  cwd = await requireRendererProjectPath(cwd);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) throw new Error("invalid limit");
+  return readRecentHistory(cwd, sessionId, limit);
+});
 ipcMain.handle(
   "ccRoom:readCodexHistory",
-  async (_e, cwd: string, threadId: string, limit: number) =>
-    readCodexRecentHistory(cwd, threadId, limit),
+  async (_e, cwd: string, threadId: string, limit: number) => {
+    cwd = await requireRendererProjectPath(cwd);
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) throw new Error("invalid limit");
+    return readCodexRecentHistory(cwd, threadId, limit);
+  },
 );
 ipcMain.handle("ccRoom:closeSession", async (_e, roomId: string) => {
   transcriptSubscriptions?.endRoom(roomId);
@@ -5343,8 +5548,19 @@ ipcMain.handle("pet:widget-open-overview", async (_event, request?: unknown) => 
 // element-pick anchors route back to that window's composer.
 ipcMain.handle("browser:popout", async (e, initialUrl?: string) => {
   const parent = BrowserWindow.fromWebContents(e.sender);
-  if (!parent) return;
-  await createBrowserPopout(parent, typeof initialUrl === "string" ? initialUrl : undefined);
+  if (!parent || !mainWindows.has(parent)) return;
+  let normalizedUrl: string | undefined;
+  if (initialUrl !== undefined) {
+    if (typeof initialUrl !== "string" || initialUrl.length > 8_192 || initialUrl.includes("\0")) {
+      throw new Error("invalid browser popout URL");
+    }
+    const parsed = new URL(initialUrl);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error("browser popout URL must use HTTP or HTTPS");
+    }
+    normalizedUrl = parsed.toString();
+  }
+  await createBrowserPopout(parent, normalizedUrl);
 });
 
 // Common dev-server ports (subset of Codex's list). Probed in main via real TCP
@@ -5357,6 +5573,24 @@ const CANDIDATE_DEV_PORTS = [
 // ─── External Agent Runtimes (Codex / Claude Code) ────────────────
 // The renderer picks these like any other model (`codex/gpt-5.6-sol`); these
 // handlers are what makes such a key actually run something.
+const MAX_EXTERNAL_RUNTIME_TEXT_CHARS = 512 * 1024;
+const MAX_EXTERNAL_RUNTIME_CONTEXT_CHARS = 512 * 1024;
+const MAX_EXTERNAL_RUNTIME_ATTACHMENTS = 32;
+const MAX_EXTERNAL_RUNTIME_ID_CHARS = 512;
+
+function assertDesktopSessionId(value: unknown): asserts value is string {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > 128 ||
+    value === "." ||
+    value === ".." ||
+    value.includes("..") ||
+    !/^[A-Za-z0-9_.-]+$/.test(value)
+  ) {
+    throw new Error("invalid desktop sessionId");
+  }
+}
 
 /** Which runtimes this machine can run — gates the model picker entries. */
 ipcMain.handle("externalRuntime:available", () => {
@@ -5389,9 +5623,12 @@ ipcMain.handle(
     const service = externalRuntimeService;
     if (!service) throw new Error("external runtime service is unavailable");
     const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
-    const cwd = typeof payload?.cwd === "string" ? payload.cwd : "";
+    assertDesktopSessionId(sessionId);
+    const cwd = await requireRendererProjectPath(payload?.cwd);
     const modelKey = typeof payload?.modelKey === "string" ? payload.modelKey : "";
-    if (!sessionId || !cwd) throw new Error("sessionId and cwd are required");
+    if (!modelKey || modelKey.length > MAX_EXTERNAL_RUNTIME_ID_CHARS) {
+      throw new Error("a bounded modelKey is required");
+    }
     const parsed = parseExternalRuntimeModelKey(modelKey);
     if (!parsed) throw new Error(`not an external runtime model: ${modelKey}`);
     const permissionMode =
@@ -5402,7 +5639,22 @@ ipcMain.handle(
         ? payload.permissionMode
         : "default";
 
-    const ownerWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const initialContext =
+      typeof payload?.initialContext === "string" ? payload.initialContext : undefined;
+    const developerInstructions =
+      typeof payload?.developerInstructions === "string"
+        ? payload.developerInstructions
+        : undefined;
+    if (
+      (initialContext?.length ?? 0) > MAX_EXTERNAL_RUNTIME_CONTEXT_CHARS ||
+      (developerInstructions?.length ?? 0) > MAX_EXTERNAL_RUNTIME_CONTEXT_CHARS
+    ) {
+      throw new Error("external runtime context is too large");
+    }
+    const ownerWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!ownerWindow || ownerWindow.isDestroyed()) {
+      throw new Error("external runtime requires a live owner window");
+    }
     const session = await service.start({
       kind: parsed.kind,
       sessionId,
@@ -5411,14 +5663,10 @@ ipcMain.handle(
       permissionMode,
       planMode: payload?.planMode === true,
       hasGoal: payload?.hasGoal === true,
-      ...(typeof payload?.initialContext === "string"
-        ? { initialContext: payload.initialContext }
-        : {}),
-      ...(typeof payload?.developerInstructions === "string"
-        ? { developerInstructions: payload.developerInstructions }
-        : {}),
+      ...(initialContext ? { initialContext } : {}),
+      ...(developerInstructions ? { developerInstructions } : {}),
       ...(parsed.model ? { model: parsed.model } : {}),
-      ...(ownerWindow ? { ownerWindow } : {}),
+      ownerWindow,
     });
     return {
       kind: session.kind,
@@ -5431,7 +5679,7 @@ ipcMain.handle(
 ipcMain.handle(
   "externalRuntime:send",
   async (
-    _e,
+    event,
     payload: {
       sessionId?: unknown;
       text?: unknown;
@@ -5442,82 +5690,107 @@ ipcMain.handle(
     const service = externalRuntimeService;
     if (!service) throw new Error("external runtime service is unavailable");
     const sessionId = typeof payload?.sessionId === "string" ? payload.sessionId : "";
+    assertDesktopSessionId(sessionId);
     const text = typeof payload?.text === "string" ? payload.text : "";
-    if (!sessionId) throw new Error("sessionId is required");
-    const attachments: ExternalRuntimeAttachment[] = Array.isArray(payload?.attachments)
-      ? payload.attachments.flatMap((value) => {
-          if (!value || typeof value !== "object") return [];
-          const attachment = value as Record<string, unknown>;
-          const path =
-            typeof attachment.absPath === "string"
-              ? attachment.absPath
-              : typeof attachment.path === "string"
-                ? attachment.path
-                : "";
-          if (!path) return [];
-          const detail =
-            attachment.vision && typeof attachment.vision === "object"
-              ? (attachment.vision as { detail?: unknown }).detail
-              : undefined;
-          return [
-            {
-              path,
-              ...(attachment.kind === "image" ||
-              attachment.kind === "file" ||
-              attachment.kind === "directory"
-                ? { kind: attachment.kind }
-                : {}),
-              ...(typeof attachment.mime === "string" ? { mime: attachment.mime } : {}),
-              ...(detail === "low" || detail === "standard" || detail === "high" ? { detail } : {}),
-            } satisfies ExternalRuntimeAttachment,
-          ];
-        })
-      : [];
-    return await service.send(sessionId, {
-      text,
-      ...(typeof payload?.clientMessageId === "string"
-        ? { clientMessageId: payload.clientMessageId }
-        : {}),
-      ...(attachments.length > 0 ? { attachments } : {}),
-    });
+    if (text.length > MAX_EXTERNAL_RUNTIME_TEXT_CHARS) {
+      throw new Error("external runtime message is too large");
+    }
+    const clientMessageId =
+      typeof payload?.clientMessageId === "string" ? payload.clientMessageId : undefined;
+    if (
+      clientMessageId !== undefined &&
+      (!clientMessageId ||
+        clientMessageId.length > MAX_EXTERNAL_RUNTIME_ID_CHARS ||
+        clientMessageId.includes("\0"))
+    ) {
+      throw new Error("invalid external runtime clientMessageId");
+    }
+    if (payload?.attachments !== undefined && !Array.isArray(payload.attachments)) {
+      throw new Error("external runtime attachments must be an array");
+    }
+    const attachmentValues = payload?.attachments ?? [];
+    if (attachmentValues.length > MAX_EXTERNAL_RUNTIME_ATTACHMENTS) {
+      throw new Error("too many external runtime attachments");
+    }
+    // The service owns the canonical cwd; use the renderer payload only for
+    // turn content, never to retarget an existing runtime.
+    const entryCwd = service.getCwd(sessionId, event.sender.id);
+    if (!entryCwd) throw new Error("external runtime session has no authorized project");
+    const attachments: ExternalRuntimeAttachment[] = await Promise.all(
+      attachmentValues.map(async (value) => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) {
+          throw new Error("invalid external runtime attachment");
+        }
+        const attachment = value as Record<string, unknown>;
+        const path =
+          typeof attachment.absPath === "string"
+            ? attachment.absPath
+            : typeof attachment.path === "string"
+              ? attachment.path
+              : "";
+        const authorizedPath = await requireRendererProjectEntryPath(path, entryCwd);
+        const detail =
+          attachment.vision && typeof attachment.vision === "object"
+            ? (attachment.vision as { detail?: unknown }).detail
+            : undefined;
+        if (
+          attachment.mime !== undefined &&
+          (typeof attachment.mime !== "string" || attachment.mime.length > 256)
+        ) {
+          throw new Error("invalid external runtime attachment MIME");
+        }
+        return {
+          path: authorizedPath,
+          ...(attachment.kind === "image" ||
+          attachment.kind === "file" ||
+          attachment.kind === "directory"
+            ? { kind: attachment.kind }
+            : {}),
+          ...(typeof attachment.mime === "string" ? { mime: attachment.mime } : {}),
+          ...(detail === "low" || detail === "standard" || detail === "high" ? { detail } : {}),
+        } satisfies ExternalRuntimeAttachment;
+      }),
+    );
+    if (!text.trim() && attachments.length === 0) {
+      throw new Error("external runtime message or attachment is required");
+    }
+    return await service.send(
+      sessionId,
+      {
+        text,
+        ...(clientMessageId ? { clientMessageId } : {}),
+        ...(attachments.length > 0 ? { attachments } : {}),
+      },
+      event.sender.id,
+    );
   },
 );
 
-ipcMain.handle("externalRuntime:interrupt", async (_e, sessionId: unknown) => {
-  if (typeof sessionId !== "string") throw new Error("sessionId is required");
-  await externalRuntimeService?.interrupt(sessionId);
+ipcMain.handle("externalRuntime:interrupt", async (event, sessionId: unknown) => {
+  assertDesktopSessionId(sessionId);
+  await externalRuntimeService?.interrupt(sessionId, event.sender.id);
 });
 
 /** The renderer answering a prompt this session's runtime is parked on. */
 ipcMain.on(
   "externalRuntime:approvalDecision",
-  (_e, payload: { requestId?: unknown; approved?: unknown; [key: string]: unknown }) => {
+  (event, payload: { requestId?: unknown; approved?: unknown; [key: string]: unknown }) => {
     const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
     if (!requestId) return;
-    externalRuntimeApprovals?.settle(requestId, {
-      approved: payload?.approved === true,
-      ...(typeof payload?.reason === "string" ? { reason: payload.reason } : {}),
-      ...(typeof payload?.answer === "string" ? { answer: payload.answer } : {}),
-      ...(payload?.scope === "once" || payload?.scope === "session" || payload?.scope === "project"
-        ? { scope: payload.scope }
-        : {}),
-      ...(payload?.pathScope === "file" ||
-      payload?.pathScope === "dir" ||
-      payload?.pathScope === "tool"
-        ? { pathScope: payload.pathScope }
-        : {}),
-    });
+    externalRuntimeApprovals?.settle(requestId, parseExternalApprovalDecision(payload), event.sender.id);
   },
 );
 
-ipcMain.handle("externalRuntime:stop", async (_e, sessionId: unknown) => {
-  if (typeof sessionId !== "string") throw new Error("sessionId is required");
-  await externalRuntimeService?.stop(sessionId);
+ipcMain.handle("externalRuntime:stop", async (event, sessionId: unknown) => {
+  assertDesktopSessionId(sessionId);
+  await externalRuntimeService?.stop(sessionId, event.sender.id);
 });
 
 ipcMain.handle("browser:probePorts", async (_e, ports?: unknown) => {
   const candidates =
-    Array.isArray(ports) && ports.every((p) => typeof p === "number")
+    Array.isArray(ports) &&
+    ports.length <= 64 &&
+    ports.every((p) => Number.isSafeInteger(p) && (p as number) >= 1 && (p as number) <= 65_535)
       ? (ports as number[])
       : CANDIDATE_DEV_PORTS;
   return probeLocalhostPorts(candidates);
@@ -5528,6 +5801,11 @@ ipcMain.handle("browser:probePorts", async (_e, ports?: unknown) => {
 ipcMain.on("browser:anchor", (e, anchor: unknown) => {
   const parentId = popoutParents.get(e.sender.id);
   if (parentId === undefined) return;
+  try {
+    if (Buffer.byteLength(JSON.stringify(anchor)) > 256 * 1024) return;
+  } catch {
+    return;
+  }
   const parent = BrowserWindow.fromId(parentId);
   if (parent && !parent.isDestroyed())
     parent.webContents.send("browser:anchor-from-popout", anchor);
@@ -5535,30 +5813,42 @@ ipcMain.on("browser:anchor", (e, anchor: unknown) => {
 
 // ── Browser-anchor hub(圈选统一架构,spec 2026-06-12)─────────────────────
 // The MAIN WINDOW owns anchor state (per session bucket); it pushes the active
-// bucket's browser anchors here on every change. We keep the latest snapshot
-// and broadcast it to every popout window — and seed newly-opened popouts — so
+// bucket's browser anchors here on every change. We keep one snapshot per
+// parent and broadcast it only to that parent's popouts — and seed newly-opened popouts — so
 // all browser surfaces echo the same annotation set (and all clear together
 // when a message sends). Ops flow the other way: a popout's add/remove is
 // forwarded to its parent window, which mutates state; the loop closes via the
 // next sync. Full-state-down means a late-opened popout can never drift.
-let browserAnchorsSnapshot: unknown[] = [];
-
-function broadcastBrowserAnchors(): void {
-  for (const popoutWcId of popoutParents.keys()) {
+function broadcastBrowserAnchors(parentId: number, snapshot: unknown[]): void {
+  for (const [popoutWcId, candidateParentId] of popoutParents) {
+    if (candidateParentId !== parentId) continue;
     const wc = webContents.fromId(popoutWcId);
-    if (wc && !wc.isDestroyed()) wc.send("browser:anchors-state", browserAnchorsSnapshot);
+    if (wc && !wc.isDestroyed()) wc.send("browser:anchors-state", snapshot);
   }
 }
 
-ipcMain.on("browser:anchors-sync", (_e, anchors: unknown) => {
-  browserAnchorsSnapshot = Array.isArray(anchors) ? anchors : [];
-  broadcastBrowserAnchors();
+ipcMain.on("browser:anchors-sync", (event, anchors: unknown) => {
+  const parent = BrowserWindow.fromWebContents(event.sender);
+  if (!parent || !mainWindows.has(parent) || !Array.isArray(anchors) || anchors.length > 256) return;
+  let snapshot: unknown[];
+  try {
+    const encoded = JSON.stringify(anchors);
+    if (Buffer.byteLength(encoded) > 1024 * 1024) return;
+    snapshot = JSON.parse(encoded) as unknown[];
+  } catch {
+    return;
+  }
+  browserAnchorsByParent.set(parent.id, snapshot);
+  broadcastBrowserAnchors(parent.id, snapshot);
 });
 
 // A popout asked to remove an anchor → forward to the owner (parent window).
 ipcMain.on("browser:anchor-remove", (e, anchorId: unknown) => {
   const parentId = popoutParents.get(e.sender.id);
   if (parentId === undefined) return;
+  if (typeof anchorId !== "string" || !anchorId || anchorId.length > 512 || anchorId.includes("\0")) {
+    return;
+  }
   const parent = BrowserWindow.fromId(parentId);
   if (parent && !parent.isDestroyed()) {
     parent.webContents.send("browser:anchor-remove-from-popout", anchorId);
@@ -5569,6 +5859,13 @@ ipcMain.on("browser:anchor-remove", (e, anchorId: unknown) => {
 ipcMain.on("browser:anchor-update", (e, update: unknown) => {
   const parentId = popoutParents.get(e.sender.id);
   if (parentId === undefined) return;
+  try {
+    if (!update || typeof update !== "object" || Buffer.byteLength(JSON.stringify(update)) > 64 * 1024) {
+      return;
+    }
+  } catch {
+    return;
+  }
   const parent = BrowserWindow.fromId(parentId);
   if (parent && !parent.isDestroyed()) {
     parent.webContents.send("browser:anchor-update-from-popout", update);
@@ -5576,50 +5873,61 @@ ipcMain.on("browser:anchor-update", (e, update: unknown) => {
 });
 
 ipcMain.handle("git:status", async (_e, cwd: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:status requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   return getGitStatus(cwd);
 });
 
 ipcMain.handle("git:numstat", async (_e, cwd: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:numstat requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   return getGitNumstat(cwd);
 });
 
 ipcMain.handle("git:rangeChanges", async (_e, cwd: string, range: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:rangeChanges requires cwd");
-  if (typeof range !== "string" || !range) throw new Error("git:rangeChanges requires range");
+  cwd = await requireRendererProjectPath(cwd);
+  if (typeof range !== "string" || !range || range.length > 512 || range.includes("\0")) {
+    throw new Error("git:rangeChanges requires a bounded range");
+  }
   return getGitRangeChanges(cwd, range);
 });
 
 ipcMain.handle("git:branchBase", async (_e, cwd: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:branchBase requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   return getGitBranchBase(cwd);
 });
 
 ipcMain.handle("git:branches", async (_e, cwd: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:branches requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   return getGitBranches(cwd);
 });
 
 ipcMain.handle("git:switchBranch", async (_e, cwd: string, branch: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:switchBranch requires cwd");
-  if (typeof branch !== "string" || !branch) throw new Error("git:switchBranch requires branch");
+  cwd = await requireRendererProjectPath(cwd);
+  if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
+    throw new Error("git:switchBranch requires a bounded branch");
+  }
   return switchGitBranch(cwd, branch);
 });
 
 ipcMain.handle("git:stashAndSwitchBranch", async (_e, cwd: string, branch: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:stashAndSwitchBranch requires cwd");
-  if (typeof branch !== "string" || !branch)
-    throw new Error("git:stashAndSwitchBranch requires branch");
+  cwd = await requireRendererProjectPath(cwd);
+  if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
+    throw new Error("git:stashAndSwitchBranch requires a bounded branch");
+  }
   return stashAndSwitchGitBranch(cwd, branch);
 });
 
 ipcMain.handle(
   "git:createWorktree",
   async (_e, cwd: string, name: string, branchPrefix?: string) => {
-    if (typeof cwd !== "string" || !cwd) throw new Error("git:createWorktree requires cwd");
-    if (typeof name !== "string" || !name.trim())
+    cwd = await requireRendererProjectPath(cwd);
+    if (typeof name !== "string" || !name.trim() || name.length > 512 || name.includes("\0"))
       throw new Error("git:createWorktree requires name");
+    if (
+      branchPrefix !== undefined &&
+      (typeof branchPrefix !== "string" || branchPrefix.length > 512 || branchPrefix.includes("\0"))
+    ) {
+      throw new Error("git:createWorktree branchPrefix is invalid");
+    }
     const prefix =
       typeof branchPrefix === "string" && branchPrefix.trim()
         ? branchPrefix
@@ -5655,7 +5963,9 @@ ipcMain.handle("git:setPrefs", async (_e, prefs: MainGitPrefs) => {
     branchPrefix,
     autoDeleteWorktrees: prefs.autoDeleteWorktrees === true,
     autoDeleteWorktreesGraceMins:
-      Number.isFinite(grace) && grace >= 1 ? Math.floor(grace) : 60 * 24 * 7,
+      Number.isSafeInteger(grace) && grace >= 1
+        ? Math.min(grace, 60 * 24 * 365 * 10)
+        : 60 * 24 * 7,
   };
   dlog("main", "git.prefs.updated", { ...gitPrefsCache });
 });
@@ -5706,49 +6016,44 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
 }
 
 ipcMain.handle("git:listWorktrees", async (_e, cwd: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:listWorktrees requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
   knownGitRoots.add(cwd);
   return listGitWorktrees(cwd);
 });
 
 ipcMain.handle("workspace:current", async (_e, sessionId: string, cwd: string) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("workspace:current requires sessionId");
-  }
+  assertDesktopSessionId(sessionId);
   if (typeof cwd !== "string" || !cwd) throw new Error("workspace:current requires cwd");
-  knownGitRoots.add(cwd);
   return await getSessionWorkspaceForUi(sessionId, cwd);
 });
 
 ipcMain.handle("workspace:list", async (_e, sessionId: string, cwd: string) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("workspace:list requires sessionId");
-  }
+  assertDesktopSessionId(sessionId);
   if (typeof cwd !== "string" || !cwd) throw new Error("workspace:list requires cwd");
-  knownGitRoots.add(cwd);
-  return await listSessionWorktreesForUi(sessionId, cwd);
+  const list = await listSessionWorktreesForUi(sessionId, cwd);
+  knownGitRoots.add(list.mainRoot);
+  return list;
 });
 
 ipcMain.handle("workspace:diff", async (_e, sessionId: string, worktreePath: string) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("workspace:diff requires sessionId");
-  }
-  if (typeof worktreePath !== "string" || !worktreePath) {
+  assertDesktopSessionId(sessionId);
+  if (
+    typeof worktreePath !== "string" ||
+    !worktreePath ||
+    worktreePath.length > 32_768 ||
+    worktreePath.includes("\0")
+  ) {
     throw new Error("workspace:diff requires worktreePath");
   }
-  knownGitRoots.add(worktreePath);
   return await getSessionWorktreeDiffForUi(sessionId, worktreePath);
 });
 
 ipcMain.handle("workspace:switch", async (_e, sessionId: string, cwd: string, target: string) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("workspace:switch requires sessionId");
-  }
+  assertDesktopSessionId(sessionId);
   if (typeof cwd !== "string" || !cwd) throw new Error("workspace:switch requires cwd");
-  if (typeof target !== "string" || !target.trim()) {
+  if (typeof target !== "string" || !target.trim() || target.length > 32_768 || target.includes("\0")) {
     throw new Error("workspace:switch requires target");
   }
-  knownGitRoots.add(cwd);
   const currentBridge = bridge;
   const list = await switchSessionWorkspaceForUi(sessionId, cwd, target, {
     setLiveWorkspace:
@@ -5756,14 +6061,13 @@ ipcMain.handle("workspace:switch", async (_e, sessionId: string, cwd: string, ta
         ? (id, workspace) => currentBridge.setWorkspace(id, workspace)
         : undefined,
   });
+  knownGitRoots.add(list.mainRoot);
   broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
   return list;
 });
 
 ipcMain.handle("workspace:release", async (_e, sessionId: string) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("workspace:release requires sessionId");
-  }
+  assertDesktopSessionId(sessionId);
   const currentBridge = bridge;
   const released = await releaseSessionWorkspaceForUi(sessionId, {
     releaseLiveWorkspace:
@@ -5778,10 +6082,11 @@ ipcMain.handle("workspace:release", async (_e, sessionId: string) => {
 });
 
 ipcMain.handle("workspace:releaseMany", async (_e, sessionIds: string[]) => {
-  if (!Array.isArray(sessionIds)) {
+  if (!Array.isArray(sessionIds) || sessionIds.length > 500) {
     throw new Error("workspace:releaseMany requires sessionIds");
   }
-  const ids = sessionIds.filter((id) => typeof id === "string" && id.length > 0);
+  for (const id of sessionIds) assertDesktopSessionId(id);
+  const ids = [...new Set(sessionIds)];
   const currentBridge = bridge;
   const released = await releaseManySessionWorkspacesForUi(ids, {
     releaseLiveWorkspace: currentBridge
@@ -5808,17 +6113,19 @@ ipcMain.handle(
     worktreePath: string,
     action: WorkspaceCleanupAction,
   ) => {
-    if (typeof sessionId !== "string" || !sessionId) {
-      throw new Error("workspace:cleanup requires sessionId");
-    }
+    assertDesktopSessionId(sessionId);
     if (typeof cwd !== "string" || !cwd) throw new Error("workspace:cleanup requires cwd");
-    if (typeof worktreePath !== "string" || !worktreePath) {
+    if (
+      typeof worktreePath !== "string" ||
+      !worktreePath ||
+      worktreePath.length > 32_768 ||
+      worktreePath.includes("\0")
+    ) {
       throw new Error("workspace:cleanup requires worktreePath");
     }
     if (action !== "detach" && action !== "discard") {
       throw new Error("workspace:cleanup requires action detach or discard");
     }
-    knownGitRoots.add(cwd);
     const currentBridge = bridge;
     const list = await cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action, {
       setLiveWorkspace:
@@ -5826,6 +6133,7 @@ ipcMain.handle(
           ? (id, workspace) => currentBridge.setWorkspace(id, workspace)
           : undefined,
     });
+    knownGitRoots.add(list.mainRoot);
     broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
     return list;
   },
@@ -5834,46 +6142,75 @@ ipcMain.handle(
 ipcMain.handle(
   "git:diff",
   async (_e, cwd: string, file?: string, mode?: "unstaged" | "staged" | "all") => {
-    if (typeof cwd !== "string" || !cwd) throw new Error("git:diff requires cwd");
+    cwd = await requireRendererProjectPath(cwd);
+    if (file !== undefined && (typeof file !== "string" || file.length > 32_768 || file.includes("\0"))) {
+      throw new Error("git:diff file is invalid");
+    }
     return getGitDiff(cwd, file, mode);
   },
 );
 
 ipcMain.handle("git:recentCommits", async (_e, cwd: string, limit?: number) => {
-  if (typeof cwd !== "string" || !cwd) return [];
-  return getGitRecentCommits(cwd, typeof limit === "number" ? limit : undefined);
+  cwd = await requireRendererProjectPath(cwd);
+  const boundedLimit =
+    typeof limit === "number" && Number.isSafeInteger(limit) && limit > 0
+      ? Math.min(limit, 100)
+      : undefined;
+  return getGitRecentCommits(cwd, boundedLimit);
 });
 
 ipcMain.handle("git:rangeDiff", async (_e, cwd: string, range: string, file?: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:rangeDiff requires cwd");
+  cwd = await requireRendererProjectPath(cwd);
+  if (typeof range !== "string" || !range || range.length > 512 || range.includes("\0")) {
+    throw new Error("git:rangeDiff requires a bounded range");
+  }
+  if (file !== undefined && (typeof file !== "string" || file.length > 32_768 || file.includes("\0"))) {
+    throw new Error("git:rangeDiff file is invalid");
+  }
   return getGitRangeDiff(cwd, range, file);
 });
 
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {
-  if (typeof url !== "string") throw new Error("openExternal requires url");
+  if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
+    throw new Error("openExternal requires a bounded url");
+  }
   await openExternal(url);
 });
 
 ipcMain.handle("shell:revealInFinder", async (_e, p: string, cwd?: string) => {
-  if (typeof p !== "string") throw new Error("revealInFinder requires path");
-  await revealInFinder(p, typeof cwd === "string" ? cwd : undefined);
+  if (typeof p !== "string" || !p || p.length > 32_768 || p.includes("\0")) {
+    throw new Error("revealInFinder requires a bounded path");
+  }
+  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
+  await revealInFinder(p, authorizedCwd);
 });
 
 ipcMain.handle("shell:openPath", async (_e, p: string, cwd?: string) => {
-  if (typeof p !== "string" || !p) throw new Error("openPath requires path");
-  return openPath(p, typeof cwd === "string" ? cwd : undefined);
+  if (typeof p !== "string" || !p || p.length > 32_768 || p.includes("\0")) {
+    throw new Error("openPath requires a bounded path");
+  }
+  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
+  return openPath(p, authorizedCwd);
 });
 
 ipcMain.handle("shell:openInEditor", async (_e, p: string, cwd?: string) => {
-  if (typeof p !== "string" || !p) throw new Error("openInEditor requires path");
-  return openInEditor(p, typeof cwd === "string" ? cwd : undefined);
+  if (typeof p !== "string" || !p || p.length > 32_768 || p.includes("\0")) {
+    throw new Error("openInEditor requires a bounded path");
+  }
+  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
+  return openInEditor(p, authorizedCwd);
 });
 
 ipcMain.handle(
   "files:undo",
   async (_e, cwd: string, paths: string[]): Promise<UndoFilesResult[]> => {
-    if (typeof cwd !== "string" || !cwd) throw new Error("files:undo requires cwd");
-    if (!Array.isArray(paths) || paths.length === 0) {
+    cwd = await requireRendererProjectPath(cwd);
+    if (
+      !Array.isArray(paths) ||
+      paths.length === 0 ||
+      paths.length > 100 ||
+      paths.some((path) => typeof path !== "string" || path.length > 32_768 || path.includes("\0"))
+    ) {
       throw new Error("files:undo requires non-empty paths");
     }
     return undoFiles(cwd, paths);
@@ -5905,35 +6242,44 @@ ipcMain.handle("files:redoTurn", async (_e, sessionId: string) => {
 // Output streams back to the requesting webContents via "pty:data"/"pty:exit".
 ipcMain.handle(
   "pty:start",
-  (e, opts: { sessionId: string; cwd?: string; cols?: number; rows?: number }) => {
-    if (!opts || typeof opts.sessionId !== "string" || !opts.sessionId) {
+  async (e, opts: { sessionId: string; cwd?: string; cols?: number; rows?: number }) => {
+    if (!opts) {
       throw new Error("pty:start requires sessionId");
     }
-    return ptyStart(e.sender, opts);
+    assertDesktopSessionId(opts.sessionId);
+    const cwd = await requireRendererProjectPath(opts.cwd ?? resolveNoRepoCwd());
+    return ptyStart(e.sender, { ...opts, cwd });
   },
 );
 ipcMain.handle("pty:write", (e, sessionId: string, data: string) => {
+  assertDesktopSessionId(sessionId);
+  if (typeof data !== "string" || data.length > 1024 * 1024) {
+    throw new Error("invalid pty input");
+  }
   ptyWrite(e.sender, sessionId, data);
 });
 ipcMain.handle("pty:resize", (e, sessionId: string, cols: number, rows: number) => {
+  assertDesktopSessionId(sessionId);
   ptyResize(e.sender, sessionId, cols, rows);
 });
 ipcMain.handle("pty:kill", (e, sessionId: string) => {
+  assertDesktopSessionId(sessionId);
   ptyKill(e.sender, sessionId);
 });
 
 // ── Filesystem reads — file-browser panel ──────────────────────────────────
 ipcMain.handle("fs:readDir", async (_e, root: string, dir: string) => {
-  if (typeof root !== "string" || !root) throw new Error("fs:readDir requires root");
+  root = await requireRendererProjectPath(root);
   return readDirectory(root, typeof dir === "string" && dir ? dir : root);
 });
 ipcMain.handle("fs:readFile", async (_e, root: string, path: string) => {
-  if (typeof root !== "string" || !root) throw new Error("fs:readFile requires root");
+  root = await requireRendererProjectPath(root);
   if (typeof path !== "string" || !path) throw new Error("fs:readFile requires path");
   return fsReadFile(root, path);
 });
 ipcMain.handle("fs:exists", async (_e, root: string, path: string) => {
-  if (typeof root !== "string" || !root) return false;
+  root = await requireRendererProjectPath(root).catch(() => "");
+  if (!root) return false;
   if (typeof path !== "string" || !path) return false;
   return fsFileExists(root, path);
 });
@@ -5945,15 +6291,29 @@ ipcMain.handle("no-repo:cwd", async () => resolveNoRepoCwd());
 
 ipcMain.handle("settings:get", async (_e, scope: SettingsScope, projectPath?: string) => {
   if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-  return readSettings(scope, projectPath);
+  return readSettings(scope, scope === "project" ? await requireRendererProjectPath(projectPath) : undefined);
 });
 
 ipcMain.handle(
   "settings:set",
   async (_e, scope: SettingsScope, patch: Record<string, unknown>, projectPath?: string) => {
     if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-    if (!patch || typeof patch !== "object") throw new Error("patch must be object");
-    await writeSettings(scope, patch, projectPath);
+    if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+      throw new Error("patch must be object");
+    }
+    try {
+      if (Buffer.byteLength(JSON.stringify(patch)) > 2 * 1024 * 1024) {
+        throw new Error("settings patch is too large");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === "settings patch is too large") throw error;
+      throw new Error("settings patch must be JSON-serializable", { cause: error });
+    }
+    await writeSettings(
+      scope,
+      patch,
+      scope === "project" ? await requireRendererProjectPath(projectPath) : undefined,
+    );
     // git.path may have changed — re-apply to core's git resolver immediately.
     if ("git" in patch) void applyGitPathFromSettings();
     // Re-tune immediately for both the user baseline and per-project override.
@@ -5993,10 +6353,16 @@ ipcMain.handle(
   "memory:list",
   async (_e, level: unknown, scope: unknown, cwd?: string, profileName?: string) => {
     const v = validateMemoryArgs(level, scope);
+    const authorizedCwd =
+      v.level === "project"
+        ? await requireRendererProjectPath(cwd)
+        : typeof cwd === "string" && cwd
+          ? await requireRendererProjectPath(cwd)
+          : undefined;
     return listMemory(
       v.level,
       v.scope,
-      typeof cwd === "string" ? cwd : undefined,
+      authorizedCwd,
       typeof profileName === "string" ? profileName : undefined,
     );
   },
@@ -6006,12 +6372,20 @@ ipcMain.handle(
   "memory:read",
   async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string, profileName?: string) => {
     const v = validateMemoryArgs(level, scope);
-    if (typeof name !== "string" || !name) throw new Error("memory name required");
+    if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
+      throw new Error("bounded memory name required");
+    }
+    const authorizedCwd =
+      v.level === "project"
+        ? await requireRendererProjectPath(cwd)
+        : typeof cwd === "string" && cwd
+          ? await requireRendererProjectPath(cwd)
+          : undefined;
     return readMemory(
       v.level,
       v.scope,
       name,
-      typeof cwd === "string" ? cwd : undefined,
+      authorizedCwd,
       typeof profileName === "string" ? profileName : undefined,
     );
   },
@@ -6020,19 +6394,48 @@ ipcMain.handle(
 ipcMain.handle("memory:save", async (_e, input: SaveMemoryInput) => {
   if (!input || typeof input !== "object") throw new Error("memory:save requires input");
   const v = validateMemoryArgs(input.level, input.scope);
-  return saveMemory({ ...input, level: v.level, scope: v.scope });
+  if (
+    typeof input.name !== "string" ||
+    !input.name.trim() ||
+    input.name.length > 512 ||
+    typeof input.description !== "string" ||
+    input.description.length > 4_096 ||
+    typeof input.content !== "string" ||
+    input.content.length > 1024 * 1024 ||
+    (input.type !== "user" &&
+      input.type !== "feedback" &&
+      input.type !== "project" &&
+      input.type !== "reference")
+  ) {
+    throw new Error("invalid memory payload");
+  }
+  const cwd =
+    v.level === "project"
+      ? await requireRendererProjectPath(input.cwd)
+      : typeof input.cwd === "string" && input.cwd
+        ? await requireRendererProjectPath(input.cwd)
+        : undefined;
+  return saveMemory({ ...input, level: v.level, scope: v.scope, cwd });
 });
 
 ipcMain.handle(
   "memory:delete",
   async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string, profileName?: string) => {
     const v = validateMemoryArgs(level, scope);
-    if (typeof name !== "string" || !name) throw new Error("memory name required");
+    if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
+      throw new Error("bounded memory name required");
+    }
+    const authorizedCwd =
+      v.level === "project"
+        ? await requireRendererProjectPath(cwd)
+        : typeof cwd === "string" && cwd
+          ? await requireRendererProjectPath(cwd)
+          : undefined;
     return deleteMemory(
       v.level,
       v.scope,
       name,
-      typeof cwd === "string" ? cwd : undefined,
+      authorizedCwd,
       typeof profileName === "string" ? profileName : undefined,
     );
   },
@@ -6041,28 +6444,42 @@ ipcMain.handle(
 // 审批门 (pending global memories)
 ipcMain.handle("memory:pending:list", async () => listPendingMemory());
 ipcMain.handle("memory:pending:approve", async (_e, name: unknown) => {
-  if (typeof name !== "string" || !name) throw new Error("memory name required");
+  if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
+    throw new Error("bounded memory name required");
+  }
   return approvePendingMemory(name);
 });
 ipcMain.handle("memory:pending:demote", async (_e, name: unknown) => {
-  if (typeof name !== "string" || !name) throw new Error("memory name required");
+  if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
+    throw new Error("bounded memory name required");
+  }
   return demotePendingMemory(name);
 });
 ipcMain.handle("memory:pending:reject", async (_e, name: unknown) => {
-  if (typeof name !== "string" || !name) throw new Error("memory name required");
+  if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
+    throw new Error("bounded memory name required");
+  }
   return rejectPendingMemory(name);
 });
 ipcMain.handle("memory:promote", async (_e, cwd: unknown, name: unknown) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("memory promote requires cwd");
-  if (typeof name !== "string" || !name) throw new Error("memory name required");
-  return promoteMemoryToGlobal(cwd, name);
+  const authorizedCwd = await requireRendererProjectPath(cwd);
+  if (typeof name !== "string" || !name || name.length > 512 || name.includes("\0")) {
+    throw new Error("bounded memory name required");
+  }
+  return promoteMemoryToGlobal(authorizedCwd, name);
 });
 
 ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
   if (level !== "user" && level !== "project") {
     throw new Error(`dream level must be "user" or "project", got ${String(level)}`);
   }
-  return runDream(level, typeof cwd === "string" ? cwd : undefined);
+  const authorizedCwd =
+    level === "project"
+      ? await requireRendererProjectPath(cwd)
+      : typeof cwd === "string" && cwd
+        ? await requireRendererProjectPath(cwd)
+        : undefined;
+  return runDream(level, authorizedCwd);
 });
 
 ipcMain.handle("sessions:list", async () => listSessions());
@@ -6099,7 +6516,7 @@ async function deleteDesktopSession(id: string): Promise<void> {
 }
 
 ipcMain.handle("sessions:delete", async (_e, id: string) => {
-  if (typeof id !== "string") throw new Error("session id required");
+  assertDesktopSessionId(id);
   await deleteDesktopSession(id);
 });
 function assertQuickChatClaim(id: unknown, claimId: unknown): asserts id is string {
@@ -6145,9 +6562,11 @@ ipcMain.handle("quickChat:cleanupSession", async (event, id: unknown, claimId: u
  * renderer. Returns { events: [{seq,event}], nextSeq }.
  */
 ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: number) => {
-  if (typeof sessionId !== "string") throw new Error("sessionId required");
+  assertDesktopSessionId(sessionId);
+  const cursor =
+    typeof sinceSeq === "number" && Number.isSafeInteger(sinceSeq) && sinceSeq >= 0 ? sinceSeq : 0;
   return (
-    bridge?.getSnapshot(sessionId, typeof sinceSeq === "number" ? sinceSeq : 0) ?? {
+    bridge?.getSnapshot(sessionId, cursor) ?? {
       events: [],
       nextSeq: 1,
       topLevelRunning: false,
@@ -6156,8 +6575,10 @@ ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: numbe
 });
 ipcMain.handle("sessions:titles", async () => listTitles());
 ipcMain.handle("sessions:rename", async (_e, id: string, title: string) => {
-  if (typeof id !== "string") throw new Error("session id required");
-  if (typeof title !== "string") throw new Error("title must be string");
+  assertDesktopSessionId(id);
+  if (typeof title !== "string" || title.length > 1_024 || title.includes("\0")) {
+    throw new Error("title must be a bounded string");
+  }
   await setTitle(id, title);
 });
 
@@ -6165,7 +6586,11 @@ ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {
   if (bucket !== "ui-ink" && bucket !== "engine" && bucket !== "desktop") {
     throw new Error("invalid bucket");
   }
-  return tailLog(bucket, lines);
+  const boundedLines =
+    typeof lines === "number" && Number.isSafeInteger(lines) && lines > 0
+      ? Math.min(lines, 10_000)
+      : undefined;
+  return tailLog(bucket, boundedLines);
 });
 
 ipcMain.handle("runs:list", async () => listRuns());
@@ -6174,18 +6599,33 @@ ipcMain.handle("runs:get", async (_e, runId: string) => {
   return getRun(runId);
 });
 ipcMain.handle("sessions:transcript", async (_e, sessionId: string) => {
-  if (typeof sessionId !== "string") throw new Error("sessionId required");
+  assertDesktopSessionId(sessionId);
   return getSessionTranscript(sessionId);
 });
 ipcMain.handle("sessions:listDisk", async (_e, opts: { limit?: number; cursor?: string }) => {
-  const limit = typeof opts?.limit === "number" && opts.limit > 0 ? Math.min(opts.limit, 200) : 30;
+  const limit =
+    typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0
+      ? Math.min(opts.limit, 200)
+      : 30;
+  if (
+    opts?.cursor !== undefined &&
+    (typeof opts.cursor !== "string" || opts.cursor.length > 512 || opts.cursor.includes("\0"))
+  ) {
+    throw new Error("invalid session cursor");
+  }
   return listDiskSessions({
     limit,
     cursor: typeof opts?.cursor === "string" ? opts.cursor : undefined,
   });
 });
 ipcMain.handle("sessions:rawEvents", async (_e, sessionId: string, sinceId?: string) => {
-  if (typeof sessionId !== "string") throw new Error("sessionId required");
+  assertDesktopSessionId(sessionId);
+  if (
+    sinceId !== undefined &&
+    (typeof sinceId !== "string" || sinceId.length > 512 || sinceId.includes("\0"))
+  ) {
+    throw new Error("invalid transcript cursor");
+  }
   return getSessionEvents(sessionId, typeof sinceId === "string" ? sinceId : undefined);
 });
 ipcMain.handle("runs:delete", async (_e, runId: string) => {
@@ -6194,9 +6634,22 @@ ipcMain.handle("runs:delete", async (_e, runId: string) => {
 });
 
 // ─── Automation (Phase 3 UI) ─────────────────────────────────────
+function assertAutomationId(value: unknown): asserts value is string {
+  if (
+    typeof value !== "string" ||
+    !value ||
+    value.length > 128 ||
+    value.includes("\0") ||
+    value.includes("/") ||
+    value.includes("\\")
+  ) {
+    throw new Error("bounded automation id required");
+  }
+}
+
 ipcMain.handle("automation:list", async () => listAutomations());
 ipcMain.handle("automation:get", async (_e, id: string) => {
-  if (typeof id !== "string") throw new Error("id required");
+  assertAutomationId(id);
   return getAutomation(id);
 });
 ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => {
@@ -6208,50 +6661,87 @@ ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => 
   ) {
     throw new Error("name, schedule and prompt are required");
   }
-  const normalized = input.cwd ? { ...input, cwd: resolveProjectRoot(input.cwd) } : input;
+  if (
+    !input.name.trim() ||
+    input.name.length > 512 ||
+    !input.schedule.trim() ||
+    input.schedule.length > 512 ||
+    input.prompt.length > 1024 * 1024 ||
+    (input.timezone !== undefined &&
+      (typeof input.timezone !== "string" || input.timezone.length > 128)) ||
+    (input.permissionLevel !== undefined &&
+      input.permissionLevel !== "read-only" &&
+      input.permissionLevel !== "workspace-write" &&
+      input.permissionLevel !== "full")
+  ) {
+    throw new Error("invalid automation payload");
+  }
+  if (input.resumeSessionId !== undefined) assertDesktopSessionId(input.resumeSessionId);
+  const normalized = input.cwd
+    ? { ...input, cwd: await requireRendererProjectPath(input.cwd) }
+    : input;
   return createAutomation(normalized);
 });
 ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomationInput) => {
-  if (typeof id !== "string") throw new Error("id required");
-  if (!patch || typeof patch !== "object") throw new Error("patch required");
-  const normalized = patch.cwd ? { ...patch, cwd: resolveProjectRoot(patch.cwd) } : patch;
+  assertAutomationId(id);
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) throw new Error("patch required");
+  if (
+    (patch.name !== undefined &&
+      (typeof patch.name !== "string" || !patch.name.trim() || patch.name.length > 512)) ||
+    (patch.prompt !== undefined &&
+      (typeof patch.prompt !== "string" || patch.prompt.length > 1024 * 1024)) ||
+    (patch.schedule !== undefined &&
+      (typeof patch.schedule !== "string" || !patch.schedule.trim() || patch.schedule.length > 512)) ||
+    (patch.timezone !== undefined &&
+      (typeof patch.timezone !== "string" || patch.timezone.length > 128)) ||
+    (patch.permissionLevel !== undefined &&
+      patch.permissionLevel !== "read-only" &&
+      patch.permissionLevel !== "workspace-write" &&
+      patch.permissionLevel !== "full")
+  ) {
+    throw new Error("invalid automation patch");
+  }
+  const normalized =
+    patch.cwd === undefined
+      ? patch
+      : { ...patch, cwd: patch.cwd ? await requireRendererProjectPath(patch.cwd) : "" };
   return updateAutomation(id, normalized);
 });
 ipcMain.handle("automation:delete", async (_e, id: string) => {
-  if (typeof id !== "string") throw new Error("id required");
+  assertAutomationId(id);
   return deleteAutomation(id);
 });
 ipcMain.handle("automation:pause", async (_e, id: string) => {
-  if (typeof id !== "string") throw new Error("id required");
+  assertAutomationId(id);
   return pauseAutomation(id);
 });
 ipcMain.handle("automation:resume", async (_e, id: string) => {
-  if (typeof id !== "string") throw new Error("id required");
+  assertAutomationId(id);
   return resumeAutomation(id);
 });
 ipcMain.handle("automation:runNow", async (_e, id: string) => {
-  if (typeof id !== "string") throw new Error("id required");
+  assertAutomationId(id);
   return runAutomationNow(id);
 });
 ipcMain.handle("automation:cancelRun", async (_e, id: string) => {
-  if (typeof id !== "string") throw new Error("id required");
+  assertAutomationId(id);
   return cancelAutomationRun(id);
 });
 
 ipcMain.handle("trust:get", async (_e, p: string) => {
   if (typeof p !== "string") throw new Error("trust:get requires path");
-  return getTrust(p);
+  return getTrust(await requireRendererProjectPath(p));
 });
 
 ipcMain.handle("trust:set", async (_e, p: string, level: TrustLevel) => {
   if (typeof p !== "string") throw new Error("trust:set requires path");
   if (level !== "trusted" && level !== "untrusted") throw new Error("invalid level");
-  await setTrust(p, level);
+  await setTrust(await requireRendererProjectPath(p), level);
 });
 
 ipcMain.handle("trust:risks", async (_e, p: string) => {
   if (typeof p !== "string") throw new Error("trust:risks requires path");
-  return summarizeProjectTrustRisks(p);
+  return summarizeProjectTrustRisks(await requireRendererProjectPath(p));
 });
 
 ipcMain.handle("recents:list", async () => loadRecents());
@@ -6259,7 +6749,17 @@ ipcMain.handle("recents:list", async () => loadRecents());
 ipcMain.handle(
   "notify:show",
   async (_e, opts: { title: string; body?: string; subtitle?: string }) => {
-    if (!opts || typeof opts.title !== "string") throw new Error("notify:show requires title");
+    if (
+      !opts ||
+      typeof opts.title !== "string" ||
+      !opts.title ||
+      opts.title.length > 512 ||
+      (opts.body !== undefined && (typeof opts.body !== "string" || opts.body.length > 4_096)) ||
+      (opts.subtitle !== undefined &&
+        (typeof opts.subtitle !== "string" || opts.subtitle.length > 1_024))
+    ) {
+      throw new Error("notify:show requires bounded text");
+    }
     if (!Notification.isSupported()) return;
     new Notification(opts).show();
   },

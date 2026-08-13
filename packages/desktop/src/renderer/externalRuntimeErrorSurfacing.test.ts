@@ -75,4 +75,18 @@ describe("external runtime failures surface to the user", () => {
       expect(branch).toContain(reason);
     }
   });
+
+  test("queued external-runtime input waits instead of calling the native steer RPC", () => {
+    const busyStart = controllerSource.indexOf("if (busy) {");
+    const idleStart = controllerSource.indexOf("// !busy:", busyStart);
+    expect(busyStart).toBeGreaterThan(-1);
+    expect(idleStart).toBeGreaterThan(busyStart);
+    const busyQueueBranch = controllerSource.slice(busyStart, idleStart);
+    const externalGuard = busyQueueBranch.indexOf(
+      "if (parseExternalRuntimeModelKey(queuedModelKey)) return;",
+    );
+    const steerCall = busyQueueBranch.indexOf(".steer(engineSessionId");
+    expect(externalGuard).toBeGreaterThan(-1);
+    expect(steerCall).toBeGreaterThan(externalGuard);
+  });
 });

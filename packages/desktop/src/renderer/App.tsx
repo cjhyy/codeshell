@@ -123,6 +123,7 @@ import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
 import { usePanelBuckets } from "./app/usePanelBuckets";
 import { AppMainView, AppShell } from "./app/AppShell";
+import { switchActiveModel } from "./app/switchActiveModel";
 
 // Large, low-frequency pages stay off the chat startup path. Each route keeps
 // its own visible loading state through the Suspense boundaries below.
@@ -577,17 +578,24 @@ function App() {
   }, [activeProject?.path, lang, projectPathsKey]);
 
   function prepareAttachmentSession(): { cwd: string; sessionId: string } | null {
-    const cwd = activeProject?.path ?? noRepoCwdRef.current;
+    // The ref is updated synchronously by navigation actions, while the
+    // render-time activeProjectId/activeSessionId can lag until React commits.
+    // Treat it as the source of truth so a rapid follow-up action cannot attach
+    // to the session the user just left.
+    const liveBucket = parsePanelBucket(activeBucketRef.current);
+    const projectId = liveBucket.projectId;
+    const project = projects.find((candidate) => candidate.id === projectId) ?? null;
+    const cwd = project?.path ?? (projectId === null ? noRepoCwdRef.current : null);
     if (!cwd) return null;
-    if (activeSessionId) {
+    if (liveBucket.sessionId) {
       const sessionId = resolveAttachmentSessionId(
-        activeSessionId,
-        sessionIndices[activeProjectBucketSegment]?.sessions ?? [],
+        liveBucket.sessionId,
+        sessionIndices[projectBucketSegmentFor(projectId)]?.sessions ??
+          loadSessionIndex(projectId).sessions,
       );
-      if (sessionId) return { cwd, sessionId };
+      return { cwd, sessionId: sessionId ?? liveBucket.sessionId };
     }
 
-    const projectId = activeProjectId;
     const draftBucket = bucketKey(projectId, null);
     const { index, sessionId } = createSession(projectId);
     const nextBucket = bucketKey(projectId, sessionId);
@@ -604,6 +612,12 @@ function App() {
     setModelOverrides((prev) => migrateBucketOverride(prev, draftBucket, nextBucket));
     return { cwd, sessionId };
   }
+
+  const materializeActiveSessionForPanel = (): string | null => {
+    const current = parsePanelBucket(activeBucketRef.current);
+    if (current.sessionId) return activeBucketRef.current;
+    return prepareAttachmentSession() ? activeBucketRef.current : null;
+  };
 
   function pathForModel(absPath: string, cwd: string): string {
     const normalizedPath = absPath.replace(/\\/g, "/");
@@ -1224,6 +1238,7 @@ function App() {
       sessionIndices,
       sessionIndicesRef,
       setSessionIndices,
+      materializeActiveSessionForPanel,
     },
     quickChat: {
       quickChatSessions,
@@ -1470,6 +1485,7 @@ function App() {
               key: entry.key,
               label: entry.label,
               provider: entry.provider,
+              maxContextTokens: entry.maxContextTokens,
             }),
           ),
         ];
@@ -1602,33 +1618,19 @@ function App() {
   };
 
   const onModelChange = (opt: ModelOption): void => {
-    // Pin the choice to THIS session's bucket. The pill reads
-    //    `modelOverrides[activeBucket] ?? defaultActiveModelKey`, so this is
-    //    what makes the switch local — other sessions keep their own model.
-    setModelOverrides((prev) => ({ ...prev, [activeBucket]: opt.key }));
-    // Clear only the single-turn cache metric. Whole-session cumulative
-    // counters are monotonic from session start and must not reset here.
-    dispatch({
-      type: "stream",
-      bucket: activeBucket,
-      event: {
-        type: "usage_update",
-        promptTokens: state.promptTokens,
-        singleTurnPromptTokens: 0,
-        singleTurnCacheReadTokens: 0,
-        singleTurnCacheCreationTokens: 0,
-      } as StreamEvent,
+    switchActiveModel({
+      currentModelKey: activeModelKey,
+      nextModelKey: opt.key,
+      activeBucket,
+      activeProjectId,
+      activeProjectBucketSegment,
+      activeSessionId,
+      engineSessionId: engineSessionIdForActive(),
+      promptTokens: state.promptTokens,
+      setModelOverrides,
+      setSessionIndices,
+      dispatch,
     });
-    // Hot-switch the running worker. Scope it to THIS session's engine so
-    //    we don't swap the model under any OTHER live session. The backend
-    //    (server.ts handleConfigure) routes a sessionId'd configure to
-    //    ChatSession.requestModelSwitch (applies when idle, defers past a
-    //    running turn). For a draft (no engine session bound yet) there's
-    //    nothing live to notify — the model rides along via send()'s opts.
-    const engineId = engineSessionIdForActive();
-    if (engineId) {
-      void window.codeshell.configure({ sessionId: engineId, model: opt.key });
-    }
   };
 
   /**
@@ -2101,13 +2103,9 @@ function App() {
             onTogglePanel={togglePanel}
             isMac={isMac}
             isFullscreen={isFullscreen}
-            // Draft state (no active session yet) has no conversation/context to
-            // attach panels to — hide the dock toggle until a real session exists.
-            // The dock lives alongside chat only; other full-screen views
-            // (credentials / automation / …) reuse this render tree (incl. TopBar)
-            // but have no panel area, so also gate on the chat viewMode — otherwise
-            // the toggle wrongly shows on those pages whenever a session is active.
-            panelAvailable={activeSessionId !== null && isChatView}
+            // Opening a panel is allowed from a draft and materializes its
+            // session on demand. Non-chat pages still have no panel dock.
+            panelAvailable={isChatView}
             statusAvailable={sessionChromeVisible}
             contextSelectionAvailable={
               activeSessionId !== null && isChatView && !busy && !awaitingHydration

@@ -1,11 +1,12 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readBoundedJson, writeOwnerJsonAtomic } from "./bounded-json-store.js";
 
 interface ReceiptRecord {
   key: string;
   state: string;
   at: number;
 }
+
+const MAX_RECEIPT_FILE_BYTES = 1024 * 1024;
 
 export class PetReceiptStore {
   private readonly records = new Map<string, ReceiptRecord>();
@@ -18,14 +19,15 @@ export class PetReceiptStore {
 
   async load(): Promise<void> {
     try {
-      const parsed = JSON.parse(await readFile(this.filePath, "utf8")) as unknown;
+      const parsed = await readBoundedJson(this.filePath, MAX_RECEIPT_FILE_BYTES);
       if (!Array.isArray(parsed)) return;
       for (const item of parsed.slice(-1_000)) {
         const record = item as Partial<ReceiptRecord>;
         if (
-          typeof record.key === "string" &&
-          typeof record.state === "string" &&
-          typeof record.at === "number"
+          validReceiptKey(record.key) &&
+          validReceiptState(record.state) &&
+          Number.isSafeInteger(record.at) &&
+          (record.at ?? -1) >= 0
         ) {
           this.records.set(record.key, record as ReceiptRecord);
         }
@@ -36,13 +38,20 @@ export class PetReceiptStore {
   }
 
   has(key: string): boolean {
-    return this.records.has(key);
+    return validReceiptKey(key) && this.records.has(key);
   }
 
   mark(key: string, state = "seen"): void {
-    this.records.set(key, { key, state, at: this.now() });
+    if (!validReceiptKey(key) || !validReceiptState(state)) {
+      throw new Error("invalid Pet receipt");
+    }
+    const at = this.now();
+    if (!Number.isSafeInteger(at) || at < 0) throw new Error("invalid Pet receipt timestamp");
+    this.records.set(key, { key, state, at });
     while (this.records.size > 1_000) this.records.delete(this.records.keys().next().value!);
-    this.writeQueue = this.writeQueue.then(() => this.persist()).catch(() => {});
+    const write = this.writeQueue.catch(() => undefined).then(() => this.persist());
+    void write.catch(() => undefined);
+    this.writeQueue = write;
   }
 
   flush(): Promise<void> {
@@ -50,9 +59,14 @@ export class PetReceiptStore {
   }
 
   private async persist(): Promise<void> {
-    await mkdir(dirname(this.filePath), { recursive: true });
-    const temporary = `${this.filePath}.tmp-${process.pid}`;
-    await writeFile(temporary, `${JSON.stringify([...this.records.values()], null, 2)}\n`, "utf8");
-    await rename(temporary, this.filePath);
+    await writeOwnerJsonAtomic(this.filePath, [...this.records.values()], MAX_RECEIPT_FILE_BYTES);
   }
+}
+
+function validReceiptKey(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= 4_096;
+}
+
+function validReceiptState(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= 128 && !value.includes("\0");
 }

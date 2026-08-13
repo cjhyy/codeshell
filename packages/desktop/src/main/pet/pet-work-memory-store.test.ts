@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PetWorkMemoryStore } from "./pet-work-memory-store";
@@ -20,6 +20,8 @@ describe("PetWorkMemoryStore", () => {
       await reopened.load();
       expect(reopened.entries()).toHaveLength(1);
       expect(reopened.activeSegment()?.id).toBe("s1");
+      if (process.platform !== "win32") expect((await stat(filePath)).mode & 0o777).toBe(0o600);
+      expect((await readdir(join(root, "pet"))).some((name) => name.endsWith(".tmp"))).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

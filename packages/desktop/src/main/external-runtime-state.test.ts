@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "@cjhyy/code-shell-core";
@@ -108,6 +115,98 @@ describe("external runtime durable state", () => {
     });
     removeExternalRuntimeBinding("external-binding-test");
     expect(readExternalRuntimeBinding("external-binding-test")).toBeUndefined();
+  });
+
+  test("refuses to retarget an existing business session to another project", () => {
+    new ExternalRuntimeSessionRecorder(
+      "external-project-fence-test",
+      "/tmp/project-a",
+      "codex/gpt-test",
+      "codex",
+    );
+    expect(
+      () =>
+        new ExternalRuntimeSessionRecorder(
+          "external-project-fence-test",
+          "/tmp/project-b",
+          "codex/gpt-test",
+          "codex",
+        ),
+    ).toThrow(/project mismatch/);
+  });
+
+  test("cleans up the atomic-write temp file when binding replacement fails", () => {
+    const sessionId = "external-binding-failure-test";
+    new ExternalRuntimeSessionRecorder(
+      sessionId,
+      "/tmp/project",
+      "codex/gpt-test",
+      "codex",
+    );
+    const sessionDir = join(testHome, "sessions", sessionId);
+    mkdirSync(join(sessionDir, "external-runtime.json"));
+
+    expect(() =>
+      writeExternalRuntimeBinding(sessionId, {
+        kind: "codex",
+        cwd: "/tmp/project",
+        model: "gpt-test",
+        runtimeSessionId: "thread-123",
+      }),
+    ).toThrow();
+    expect(readdirSync(sessionDir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  });
+
+  test("rejects dot-segment session ids and oversized or malformed bindings", () => {
+    expect(readExternalRuntimeBinding(".")).toBeUndefined();
+    expect(readExternalRuntimeBinding("..")).toBeUndefined();
+
+    const sessionId = "external-invalid-binding";
+    new ExternalRuntimeSessionRecorder(sessionId, "/tmp/project", "codex/gpt-test", "codex");
+    const file = join(testHome, "sessions", sessionId, "external-runtime.json");
+    writeFileSync(file, "x".repeat(65 * 1024));
+    expect(readExternalRuntimeBinding(sessionId)).toBeUndefined();
+    writeFileSync(
+      file,
+      JSON.stringify({
+        version: 1,
+        kind: "codex",
+        cwd: "/tmp/project",
+        runtimeSessionId: { forged: true },
+        updatedAt: 1,
+      }),
+    );
+    expect(readExternalRuntimeBinding(sessionId)).toBeUndefined();
+  });
+
+  test("does not follow a symlinked session directory", () => {
+    if (process.platform === "win32") return;
+    const root = join(testHome, "sessions");
+    mkdirSync(root, { recursive: true });
+    const outside = mkdtempSync(join(tmpdir(), "codeshell-external-outside-"));
+    try {
+      writeFileSync(
+        join(outside, "external-runtime.json"),
+        JSON.stringify({
+          version: 1,
+          kind: "codex",
+          cwd: "/tmp/project",
+          runtimeSessionId: "secret-thread",
+          updatedAt: 1,
+        }),
+      );
+      symlinkSync(outside, join(root, "linked-session"));
+      expect(readExternalRuntimeBinding("linked-session")).toBeUndefined();
+      expect(() =>
+        writeExternalRuntimeBinding("linked-session", {
+          kind: "codex",
+          cwd: "/tmp/project",
+          runtimeSessionId: "replacement",
+        }),
+      ).toThrow(/session directory/i);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 
   test("accumulates providers that report per-turn rather than cumulative usage", () => {

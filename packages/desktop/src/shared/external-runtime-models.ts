@@ -34,6 +34,13 @@ export const EXTERNAL_RUNTIME_PROVIDERS: Readonly<Record<ExternalRuntimeModelKin
 
 const PREFIXES: readonly ExternalRuntimeModelKind[] = ["codex", "claude-code"];
 
+/**
+ * External runtimes do not expose a stable model-metadata endpoint today. Keep
+ * their context ring useful until a runtime/model reports a real window; an
+ * explicit per-model value below always wins over this fallback.
+ */
+export const EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS = 1_000_000;
+
 /** 0.8.0 shipped these stale picker values; keep saved sessions usable after upgrade. */
 const LEGACY_CODEX_MODELS: Readonly<Record<string, string>> = Object.freeze({
   "gpt-5.1-codex-max": "gpt-5.6-sol",
@@ -100,7 +107,10 @@ export function isExternalRuntimeModelKey(key: string | null | undefined): boole
  * self-explanatory; a missing entry is invisible.
  */
 export const EXTERNAL_RUNTIME_MODELS: Readonly<
-  Record<ExternalRuntimeModelKind, readonly { model: string; label: string }[]>
+  Record<
+    ExternalRuntimeModelKind,
+    readonly { model: string; label: string; maxContextTokens?: number }[]
+  >
 > = Object.freeze({
   codex: Object.freeze([
     { model: "gpt-5.6-sol", label: "Codex · GPT-5.6 Sol" },
@@ -119,6 +129,7 @@ export interface ExternalRuntimeModelEntry {
   label: string;
   provider: string;
   kind: ExternalRuntimeModelKind;
+  maxContextTokens: number;
 }
 
 /**
@@ -136,12 +147,13 @@ export function externalRuntimeModelEntries(
   const entries: ExternalRuntimeModelEntry[] = [];
   for (const kind of PREFIXES) {
     if (!available.includes(kind)) continue;
-    for (const { model, label } of EXTERNAL_RUNTIME_MODELS[kind]) {
+    for (const { model, label, maxContextTokens } of EXTERNAL_RUNTIME_MODELS[kind]) {
       entries.push({
         key: externalRuntimeModelKey(kind, model),
         label,
         provider: EXTERNAL_RUNTIME_PROVIDERS[kind],
         kind,
+        maxContextTokens: maxContextTokens ?? EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS,
       });
     }
   }

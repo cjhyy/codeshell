@@ -20,6 +20,8 @@ export interface BrowserAutomationPolicy {
 }
 
 export const DEFAULT_POLICY: BrowserAutomationPolicy = { allowedDomains: [] };
+/** Internal fail-closed sentinel: a non-empty pattern list with no match. */
+export const DENY_ALL_POLICY: BrowserAutomationPolicy = { allowedDomains: [""] };
 
 /** True if `url`'s host is allowed by the policy. Empty whitelist → allow all. */
 export function isDomainAllowed(url: string, policy: BrowserAutomationPolicy): boolean {
@@ -27,7 +29,9 @@ export function isDomainAllowed(url: string, policy: BrowserAutomationPolicy): b
   if (!list || list.length === 0) return true; // whitelist disabled
   let host: string;
   try {
-    host = new URL(url).host.toLowerCase();
+    // Match the domain, not host-with-port. A whitelist entry for example.com
+    // should apply equally to https://example.com:8443.
+    host = new URL(url).hostname.toLowerCase();
   } catch {
     return false; // unparseable URL → not allowed under an active whitelist
   }

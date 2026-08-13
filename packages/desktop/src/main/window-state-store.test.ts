@@ -1,5 +1,20 @@
-import { describe, test, expect } from "bun:test";
-import { sanitizeWindowState } from "./window-state-store.js";
+import { afterEach, describe, test, expect } from "bun:test";
+import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  __setWindowStateFileForTest,
+  loadWindowState,
+  sanitizeWindowState,
+  saveWindowState,
+} from "./window-state-store.js";
+
+const roots: string[] = [];
+
+afterEach(async () => {
+  __setWindowStateFileForTest(null);
+  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
 
 // Regression: loadWindowState spread the parsed file over DEFAULT with no
 // validation, so a corrupt window.json (NaN/negative/wrong-typed dims) flowed
@@ -29,5 +44,27 @@ describe("sanitizeWindowState", () => {
   test("handles non-object input", () => {
     expect(sanitizeWindowState(null)).toEqual({ width: 1180, height: 800 });
     expect(sanitizeWindowState("garbage")).toEqual({ width: 1180, height: 800 });
+  });
+});
+
+describe("window-state persistence", () => {
+  test("serializes rapid snapshots and leaves one private valid JSON file", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codeshell-window-state-"));
+    roots.push(root);
+    const file = join(root, "desktop", "window.json");
+    __setWindowStateFileForTest(file);
+
+    await Promise.all(
+      Array.from({ length: 30 }, (_, index) =>
+        saveWindowState({ width: 1_000 + index, height: 700 + index }),
+      ),
+    );
+    expect(await loadWindowState()).toEqual({ width: 1_029, height: 729 });
+    const raw = await readFile(file, "utf8");
+    expect(() => JSON.parse(raw)).not.toThrow();
+    expect((await readdir(join(root, "desktop"))).some((name) => name.endsWith(".tmp"))).toBe(
+      false,
+    );
+    if (process.platform !== "win32") expect((await stat(file)).mode & 0o777).toBe(0o600);
   });
 });

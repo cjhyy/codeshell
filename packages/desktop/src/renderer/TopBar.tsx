@@ -27,9 +27,8 @@ interface Props {
   onTogglePanel: () => void;
   isMac: boolean;
   isFullscreen: boolean;
-  /** Whether the panel dock can be opened at all. False in draft state (no
-   *  active session yet) — panels need a real conversation/context, so the
-   *  toggle is hidden entirely rather than opening an empty dock. */
+  /** Whether the panel dock can be opened on the current surface. Draft chats
+   *  may expose it because the opening action materializes their session. */
   panelAvailable?: boolean;
   /** Hide session-owned status UI on first-class non-session pages. */
   statusAvailable?: boolean;
