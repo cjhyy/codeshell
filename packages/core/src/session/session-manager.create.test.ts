@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "./session-manager.js";
@@ -26,6 +26,28 @@ describe("SessionManager.create", () => {
     const resumed = sm.resume("same-id");
     expect(resumed.state.cwd).toBe("/tmp/old");
     expect(resumed.transcript.toMessages().some((m) => m.role === "user")).toBe(true);
+  });
+
+  test("stores session state and transcripts owner-only and tightens legacy files", () => {
+    const sm = new SessionManager(dir);
+    sm.create("/tmp/project", "m", "p", "private-session");
+    const sessionDir = join(dir, "private-session");
+    const stateFile = join(sessionDir, "state.json");
+    const transcriptFile = join(sessionDir, "transcript.jsonl");
+    if (process.platform !== "win32") {
+      expect(statSync(dir).mode & 0o777).toBe(0o700);
+      expect(statSync(sessionDir).mode & 0o777).toBe(0o700);
+      expect(statSync(stateFile).mode & 0o777).toBe(0o600);
+      expect(statSync(transcriptFile).mode & 0o777).toBe(0o600);
+      chmodSync(stateFile, 0o644);
+      chmodSync(transcriptFile, 0o644);
+    }
+
+    sm.resume("private-session");
+    if (process.platform !== "win32") {
+      expect(statSync(stateFile).mode & 0o777).toBe(0o600);
+      expect(statSync(transcriptFile).mode & 0o777).toBe(0o600);
+    }
   });
 
   test("list preview skips injected user-role transcript messages", () => {

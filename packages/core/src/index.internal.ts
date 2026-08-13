@@ -31,6 +31,7 @@ export {
 } from "./utils/exec.js";
 export { gte } from "./utils/semver.js";
 export { lock, lockSync, unlock, check } from "./utils/lockfile.js";
+export { acquireFileLock, acquireLockOnPath, mutateJsonFile } from "./utils/file-mutex.js";
 export { logForDebugging } from "./utils/debug.js";
 export {
   isEnvTruthy,

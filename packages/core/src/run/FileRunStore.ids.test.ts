@@ -1,5 +1,12 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { FileRunStore } from "./FileRunStore.js";
@@ -74,5 +81,36 @@ describe("run id path safety", () => {
 
     expect(existsSync(fixedTmp)).toBe(true);
     expect(readFileSync(fixedTmp, "utf-8")).toBe("sentinel");
+  });
+
+  test("refuses a linked run directory without writing outside the store", async () => {
+    const store = new FileRunStore(dir);
+    const outside = mkdtempSync(join(tmpdir(), "cs-runids-outside-"));
+    try {
+      symlinkSync(outside, join(dir, "run-linked"));
+      await expect(store.create(snapshot("run-linked"))).rejects.toThrow(/real directory/);
+      expect(existsSync(join(outside, "run.json"))).toBe(false);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test("refuses a linked event log without appending to its target", async () => {
+    const store = new FileRunStore(dir);
+    await store.create(snapshot("run-safe"));
+    const outside = join(dir, "outside.log");
+    writeFileSync(outside, "keep\n");
+    symlinkSync(outside, join(dir, "run-safe", "events.jsonl"));
+
+    await expect(
+      store.appendEvent({
+        eventId: "event-1",
+        runId: "run-safe",
+        type: "run.created",
+        timestamp: 1,
+        data: {},
+      }),
+    ).rejects.toThrow(/regular file/);
+    expect(readFileSync(outside, "utf8")).toBe("keep\n");
   });
 });

@@ -5,7 +5,15 @@
  * $HOME. Default (no override) behavior is covered by existing tests.
  */
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, existsSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -51,5 +59,38 @@ describe("session-memory service — injected base dir", () => {
     } finally {
       rmSync(otherDir, { recursive: true, force: true });
     }
+  });
+
+  test("rejects traversal ids and linked memory storage", () => {
+    expect(() => saveSessionMemory(entry("../escape", "bad"), baseDir)).toThrow(/invalid/);
+    expect(existsSync(join(baseDir, "escape.json"))).toBe(false);
+
+    const outside = mkdtempSync(join(tmpdir(), "csh-session-mem-outside-"));
+    try {
+      symlinkSync(outside, join(baseDir, "session-memories"));
+      expect(() => saveSessionMemory(entry("sess-linked", "bad"), baseDir)).toThrow(
+        /real directory/,
+      );
+      expect(existsSync(join(outside, "sess-linked.json"))).toBe(false);
+    } finally {
+      rmSync(join(baseDir, "session-memories"), { force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test("ignores linked or malformed memory files without replacing them", () => {
+    const dir = join(baseDir, "session-memories");
+    mkdirSync(dir);
+    const outside = join(baseDir, "outside.json");
+    writeFileSync(outside, JSON.stringify(entry("sess-link", "outside")));
+    symlinkSync(outside, join(dir, "sess-link.json"));
+    expect(loadSessionMemory("sess-link", baseDir)).toBeNull();
+    expect(() => saveSessionMemory(entry("sess-link", "changed"), baseDir)).toThrow(
+      /regular file/,
+    );
+    expect(JSON.parse(readFileSync(outside, "utf8")).summary).toBe("outside");
+
+    writeFileSync(join(dir, "malformed.json"), JSON.stringify({ sessionId: "malformed" }));
+    expect(listSessionMemories(50, baseDir)).toEqual([]);
   });
 });

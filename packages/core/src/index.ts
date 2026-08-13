@@ -281,7 +281,12 @@ export {
   type ForkSessionOptions,
   type ForkSessionResult,
 } from "./session/session-manager.js";
-export { FileHistory } from "./session/file-history.js";
+export {
+  FileHistory,
+  type FileSnapshot,
+  type RedoRecord,
+  type TurnUndoPlan,
+} from "./session/file-history.js";
 export {
   latestUndoTarget,
   earliestSnapshotsPerFile,
@@ -313,8 +318,6 @@ export {
   type OAuthRefreshOptions,
   type HardenedOAuthFetchOptions,
 } from "./services/oauth.js";
-export type { FileSnapshot, RedoRecord } from "./session/file-history.js";
-
 // ─── Prompt ──────────────────────────────────────────────────────
 
 export { PromptComposer } from "./prompt/composer.js";

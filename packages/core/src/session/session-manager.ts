@@ -4,6 +4,7 @@
 
 import {
   closeSync,
+  chmodSync,
   existsSync,
   mkdirSync,
   lstatSync,
@@ -469,7 +470,8 @@ export class SessionManager {
       resolveCapabilities()
         .map((capability) => capability.sessionWorkspace)
         .find((candidate) => candidate !== undefined);
-    mkdirSync(this.sessionsDir, { recursive: true });
+    mkdirSync(this.sessionsDir, { recursive: true, mode: 0o700 });
+    if (process.platform !== "win32") chmodSync(this.sessionsDir, 0o700);
     this.cleanupStaleForkStaging();
   }
 
@@ -594,6 +596,9 @@ export class SessionManager {
         startedAt: state.startedAt,
         kind,
       });
+      if (transcript.flushFailed()) {
+        throw new SessionError(`Failed to persist initial transcript for ${sessionId}`);
+      }
       const bundle = { state, transcript };
       this.storeProcessLocalBundle(bundle);
       return bundle;
@@ -601,7 +606,7 @@ export class SessionManager {
 
     const sessionDir = join(this.sessionsDir, sessionId);
     try {
-      mkdirSync(sessionDir);
+      mkdirSync(sessionDir, { mode: 0o700 });
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "EEXIST") {
         throw new SessionError(`Session already exists: ${sessionId}`);
@@ -611,22 +616,27 @@ export class SessionManager {
 
     // Atomic write (tmp+rename) like saveState, so a crash during this one-time
     // create can't leave a torn state.json that resume() then fails to parse.
-    const stateTarget = join(sessionDir, "state.json");
-    const stateTmp = `${stateTarget}.${process.pid}.${Date.now()}.create.tmp`;
-    writeFileSync(stateTmp, JSON.stringify(state, null, 2), "utf-8");
-    renameSync(stateTmp, stateTarget);
+    try {
+      const stateTarget = join(sessionDir, "state.json");
+      this.writeStateAtomically(stateTarget, state, "create");
 
-    const transcript = new Transcript(join(sessionDir, "transcript.jsonl"));
-    transcript.append("session_meta", {
-      sessionId,
-      cwd,
-      model,
-      provider,
-      startedAt: state.startedAt,
-      kind,
-    });
+      const transcript = new Transcript(join(sessionDir, "transcript.jsonl"));
+      transcript.append("session_meta", {
+        sessionId,
+        cwd,
+        model,
+        provider,
+        startedAt: state.startedAt,
+        kind,
+      });
 
-    return { state, transcript };
+      return { state, transcript };
+    } catch (error) {
+      // A failed first materialization must not reserve the session id forever
+      // with an empty/partial directory.
+      rmSync(sessionDir, { recursive: true, force: true });
+      throw error;
+    }
   }
 
   /** Whether a persisted or process-local session exists. */
@@ -924,7 +934,6 @@ export class SessionManager {
         `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
-
     const mainRoot = sessionMainRoot(state);
     const legacyMain = mainRoot ? ({ root: mainRoot, kind: "main" } as const) : undefined;
     const workspace = isSessionWorkspace(state.workspace) ? state.workspace : legacyMain;
@@ -1201,6 +1210,10 @@ export class SessionManager {
       );
     }
     const transcriptFile = join(sessionDir, "transcript.jsonl");
+    if (process.platform !== "win32") {
+      chmodSync(sessionDir, 0o700);
+      chmodSync(stateFile, 0o600);
+    }
     const transcript = Transcript.loadFromFile(transcriptFile);
 
     state.kind = normalizedSessionKind(state.kind);
@@ -1579,15 +1592,30 @@ export class SessionManager {
       }
 
       state.stateRevision = (persistedRevision ?? incomingRevision ?? 0) + 1;
-      const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-      writeFileSync(tmp, JSON.stringify(stateForPersistence(state), null, 2), "utf-8");
-      renameSync(tmp, target);
+      this.writeStateAtomically(target, stateForPersistence(state));
       return { ok: true };
     } finally {
       try {
         release();
       } catch {
         // A compromised/reaped lease must not mask the persistence result.
+      }
+    }
+  }
+
+  private writeStateAtomically(target: string, state: SessionState, label = "state"): void {
+    const tmp = `${target}.${process.pid}.${nanoid(8)}.${label}.tmp`;
+    try {
+      writeFileSync(tmp, JSON.stringify(state, null, 2), {
+        encoding: "utf-8",
+        mode: 0o600,
+      });
+      renameSync(tmp, target);
+    } finally {
+      try {
+        rmSync(tmp, { force: true });
+      } catch {
+        // Preserve the original write/rename error; cleanup is best effort.
       }
     }
   }
@@ -1887,7 +1915,7 @@ export class SessionManager {
     const stagingDir = join(this.sessionsDir, `.pending-fork-${targetSessionId}-${nanoid(8)}`);
     let published = false;
     try {
-      mkdirSync(stagingDir);
+      mkdirSync(stagingDir, { mode: 0o700 });
       writeFileSync(join(stagingDir, "state.json"), JSON.stringify(state, null, 2), {
         encoding: "utf-8",
         mode: 0o600,

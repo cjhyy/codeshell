@@ -1,5 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  rmSync,
+  existsSync,
+  readFileSync,
+  mkdirSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { CredentialStore } from "./store.js";
@@ -86,6 +94,98 @@ describe("CredentialStore", () => {
     store.remove("user", "tok-a");
     expect(store.resolve("tok-a")).toBeUndefined();
   });
+
+  test("keeps valid credentials when a sibling row on disk is malformed", () => {
+    const dir = join(home, ".code-shell");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "credentials.json"),
+      JSON.stringify({
+        version: 1,
+        credentials: [
+          null,
+          { id: "keep", type: "token", label: "Keep", secret: "secret" },
+          { id: "bad", type: "executable", label: "Bad", secret: "ignored" },
+        ],
+      }),
+    );
+
+    const store = new CredentialStore(cwd);
+    expect(store.list().map((credential) => credential.id)).toEqual(["keep"]);
+    store.save("user", { id: "new", type: "token", label: "New", secret: "n" });
+    expect(store.list().map((credential) => credential.id)).toEqual(["keep", "new"]);
+  });
+
+  test("rejects malformed or unbounded credentials before touching disk", () => {
+    const store = new CredentialStore(cwd);
+    expect(() =>
+      store.save("user", {
+        id: "bad\0id",
+        type: "token",
+        label: "Bad",
+        secret: "secret",
+      }),
+    ).toThrow(/invalid credential/i);
+    expect(() =>
+      store.save("user", {
+        id: "too-large",
+        type: "token",
+        label: "Large",
+        secret: "x".repeat(16 * 1024 * 1024 + 1),
+      }),
+    ).toThrow(/invalid credential/i);
+    expect(existsSync(join(home, ".code-shell", "credentials.json"))).toBe(false);
+  });
+
+  test("does not read or replace a linked credential file", () => {
+    const dir = join(home, ".code-shell");
+    mkdirSync(dir, { recursive: true });
+    const outside = join(home, "outside.json");
+    const target = join(dir, "credentials.json");
+    writeFileSync(
+      outside,
+      JSON.stringify({
+        version: 1,
+        credentials: [{ id: "outside", type: "token", label: "Outside", secret: "secret" }],
+      }),
+    );
+    symlinkSync(outside, target);
+    const store = new CredentialStore(cwd);
+    expect(store.list()).toEqual([]);
+    // A symlinked store is refused as unreadable: the save must not follow the
+    // link, and must not replace it with a fresh single-entry file either.
+    expect(() =>
+      store.save("user", { id: "new", type: "token", label: "New", secret: "new-secret" }),
+    ).toThrow(/regular file|unreadable/i);
+    expect(JSON.parse(readFileSync(outside, "utf8")).credentials[0].id).toBe("outside");
+  });
+
+  test("concurrent processes do not lose independent credential saves", async () => {
+    const modulePath = join(import.meta.dir, "store.ts");
+    const total = 32;
+    const processes = Array.from({ length: total }, (_, index) => {
+      const script = `
+        import { CredentialStore } from ${JSON.stringify(modulePath)};
+        new CredentialStore().save("user", {
+          id: ${JSON.stringify("concurrent-")} + ${JSON.stringify(index)},
+          type: "token",
+          label: "Concurrent",
+          secret: "secret",
+        });
+      `;
+      return Bun.spawn([process.execPath, "-e", script], {
+        env: { ...process.env, HOME: home },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+    });
+    const codes = await Promise.all(processes.map((process) => process.exited));
+    expect(codes.every((code) => code === 0)).toBe(true);
+    const ids = new Set(new CredentialStore(cwd).list().map((credential) => credential.id));
+    for (let index = 0; index < total; index += 1) {
+      expect(ids.has(`concurrent-${index}`)).toBe(true);
+    }
+  }, 60_000);
 
   // envExposures: the missing wiring for Credential.exposeAsEnv. A credential
   // flagged "expose as env var" must surface { ENV_NAME: secret } so the engine
@@ -365,5 +465,45 @@ describe("CredentialStore", () => {
     expect(ids).toContain("xiaohongshu__accountA");
     expect(ids).toContain("xiaohongshu__accountB");
     expect(ids).toHaveLength(2);
+  });
+
+  describe("unreadable / unrecognized state is never committed over", () => {
+    const credentialsPath = () => join(home, ".code-shell", "credentials.json");
+
+    test("a corrupt store refuses the save instead of wiping every credential", () => {
+      const store = new CredentialStore(cwd);
+      store.save("user", { id: "k1", type: "token", label: "k1", secret: "s1" });
+      store.save("user", { id: "k2", type: "token", label: "k2", secret: "s2" });
+
+      // Simulate a torn write / crash mid-rename.
+      const good = readFileSync(credentialsPath(), "utf-8");
+      writeFileSync(credentialsPath(), good.slice(0, Math.floor(good.length / 2)));
+
+      expect(() =>
+        store.save("user", { id: "k3", type: "token", label: "k3", secret: "s3" }),
+      ).toThrow(/unreadable/i);
+
+      // The damaged bytes are left alone for recovery rather than replaced by
+      // a single-entry file that silently drops k1 and k2.
+      expect(readFileSync(credentialsPath(), "utf-8")).not.toContain("k3");
+    });
+
+    test("a credential type this build does not recognize survives an unrelated save", () => {
+      const store = new CredentialStore(cwd);
+      store.save("user", { id: "known", type: "token", label: "known", secret: "s" });
+
+      const onDisk = JSON.parse(readFileSync(credentialsPath(), "utf-8"));
+      onDisk.credentials.push({ id: "from-newer-build", type: "future-kind", label: "x" });
+      writeFileSync(credentialsPath(), JSON.stringify(onDisk, null, 2));
+
+      store.save("user", { id: "fresh", type: "token", label: "fresh", secret: "s" });
+
+      const ids = JSON.parse(readFileSync(credentialsPath(), "utf-8")).credentials.map(
+        (c: { id: string }) => c.id,
+      );
+      expect(ids).toContain("from-newer-build");
+      expect(ids).toContain("known");
+      expect(ids).toContain("fresh");
+    });
   });
 });

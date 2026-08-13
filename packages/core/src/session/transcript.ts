@@ -3,7 +3,19 @@
  * toMessages() derives Message[] from events for sending to LLM.
  */
 
-import { appendFileSync, readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  chmodSync,
+  closeSync,
+  existsSync,
+  fchmodSync,
+  fstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname } from "node:path";
 import { nanoid } from "nanoid";
 import type { TranscriptEvent, TranscriptEventType, Message, ContentBlock } from "../types.js";
@@ -13,6 +25,31 @@ import { logger } from "../logging/logger.js";
 type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => void;
 
 type ParsedEvents = { events: TranscriptEvent[]; malformedLineCount: number };
+
+function appendTranscriptLine(filePath: string, data: string): void {
+  // Use one append-mode descriptor so concurrent OS writers cannot overwrite
+  // one another. Also repair the record boundary after a crash-torn final line;
+  // otherwise the next valid event is concatenated to the fragment and both
+  // are discarded on replay.
+  const fd = openSync(filePath, "a+", 0o600);
+  try {
+    if (process.platform !== "win32") fchmodSync(fd, 0o600);
+    const size = fstatSync(fd).size;
+    let prefix = "";
+    if (size > 0) {
+      const lastByte = Buffer.allocUnsafe(1);
+      readSync(fd, lastByte, 0, 1, size - 1);
+      if (lastByte[0] !== 0x0a) prefix = "\n";
+    }
+    appendFileSync(fd, prefix + data, "utf-8");
+  } finally {
+    closeSync(fd);
+  }
+}
+
+const defaultTranscriptWriter: TranscriptWriter = (filePath, data) => {
+  appendTranscriptLine(filePath, data);
+};
 
 export interface TranscriptFlushFailure {
   errno: string | number;
@@ -125,7 +162,7 @@ export class Transcript {
 
   constructor(
     filePath: string,
-    writer: TranscriptWriter = appendFileSync,
+    writer: TranscriptWriter = defaultTranscriptWriter,
     options: { persistent?: boolean } = {},
   ) {
     this.filePath = filePath;
@@ -134,7 +171,10 @@ export class Transcript {
     if (!this.persistent) return;
     mkdirSync(dirname(filePath), { recursive: true });
     if (!existsSync(filePath)) {
-      writeFileSync(filePath, "", "utf-8");
+      writeFileSync(filePath, "", { encoding: "utf-8", mode: 0o600 });
+    } else if (process.platform !== "win32") {
+      // Tighten transcripts created by older releases on first use.
+      chmodSync(filePath, 0o600);
     }
   }
 

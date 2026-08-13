@@ -136,6 +136,71 @@ export interface UpdateJobPatch {
   permissionLevel?: CronPermissionLevel;
 }
 
+const MAX_JOB_NAME_CHARS = 512;
+const MAX_JOB_SCHEDULE_CHARS = 512;
+const MAX_JOB_PROMPT_CHARS = 1024 * 1024;
+const MAX_JOB_CWD_CHARS = 32_768;
+const MAX_JOB_TIMEZONE_CHARS = 128;
+
+function validateJobFields(input: {
+  name?: unknown;
+  schedule?: unknown;
+  prompt?: unknown;
+  cwd?: unknown;
+  timezone?: unknown;
+  permissionLevel?: unknown;
+}): void {
+  if (
+    input.name !== undefined &&
+    (typeof input.name !== "string" ||
+      !input.name.trim() ||
+      input.name.length > MAX_JOB_NAME_CHARS ||
+      input.name.includes("\0"))
+  ) {
+    throw new Error("automation name must be a bounded non-empty string");
+  }
+  if (
+    input.schedule !== undefined &&
+    (typeof input.schedule !== "string" ||
+      !input.schedule.trim() ||
+      input.schedule.length > MAX_JOB_SCHEDULE_CHARS ||
+      input.schedule.includes("\0"))
+  ) {
+    throw new Error("automation schedule must be a bounded non-empty string");
+  }
+  if (
+    input.prompt !== undefined &&
+    (typeof input.prompt !== "string" ||
+      !input.prompt.trim() ||
+      input.prompt.length > MAX_JOB_PROMPT_CHARS ||
+      input.prompt.includes("\0"))
+  ) {
+    throw new Error("automation prompt must be a bounded non-empty string");
+  }
+  if (
+    input.cwd !== undefined &&
+    (typeof input.cwd !== "string" || input.cwd.length > MAX_JOB_CWD_CHARS || input.cwd.includes("\0"))
+  ) {
+    throw new Error("automation cwd must be a bounded string");
+  }
+  if (
+    input.timezone !== undefined &&
+    (typeof input.timezone !== "string" ||
+      input.timezone.length > MAX_JOB_TIMEZONE_CHARS ||
+      input.timezone.includes("\0"))
+  ) {
+    throw new Error("automation timezone must be a bounded string");
+  }
+  if (
+    input.permissionLevel !== undefined &&
+    input.permissionLevel !== "read-only" &&
+    input.permissionLevel !== "workspace-write" &&
+    input.permissionLevel !== "full"
+  ) {
+    throw new Error("invalid automation permission level");
+  }
+}
+
 export class CronScheduler {
   private jobs = new Map<string, CronJob>();
   private timers = new Map<string, NodeJS.Timeout>();
@@ -417,6 +482,7 @@ export class CronScheduler {
   }
 
   create(name: string, schedule: string, prompt: string, opts?: CreateJobOptions): CronJob {
+    validateJobFields({ name, schedule, prompt, ...opts });
     // Validate the schedule up front (interval or cron expr) so a bad string
     // surfaces at create time, not silently at the first missed tick.
     validateSchedule(schedule, opts?.timezone);
@@ -582,6 +648,10 @@ export class CronScheduler {
    * or null if the id is unknown.
    */
   update(id: string, patch: UpdateJobPatch): CronJob | null {
+    if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+      throw new Error("automation update patch must be an object");
+    }
+    validateJobFields(patch);
     if (this.store) {
       const tx = this.store.mutate((jobs) => {
         let updated: CronJob | null = null;

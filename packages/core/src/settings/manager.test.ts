@@ -8,6 +8,7 @@ import {
   readFileSync,
   statSync,
   chmodSync,
+  symlinkSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -303,6 +304,10 @@ describe("SettingsManager project writes", () => {
     return JSON.parse(readFileSync(join(cwd, ".code-shell", "settings.json"), "utf-8"));
   }
 
+  function localJson(): any {
+    return JSON.parse(readFileSync(join(cwd, ".code-shell", "settings.local.json"), "utf-8"));
+  }
+
   test("saveProjectSetting writes dotted path to project settings.json", () => {
     const sm = new SettingsManager(cwd, "project");
     sm.saveProjectSetting("capabilityOverrides.skills.helper", "on", cwd);
@@ -313,6 +318,36 @@ describe("SettingsManager project writes", () => {
     const sm = new SettingsManager(cwd, "project");
     sm.saveProjectSetting("capabilityOverrides.mcp.playwright", "off", cwd);
     expect(existsSync(join(cwd, ".code-shell", "settings.json"))).toBe(true);
+  });
+
+  test("saveLocalSetting writes a machine-private project layer", () => {
+    const sm = new SettingsManager(cwd, "project");
+    sm.saveLocalSetting("mcpServers.private", { command: "private-mcp" }, cwd);
+    expect(localJson().mcpServers.private.command).toBe("private-mcp");
+    expect(sm.getForScope("local", cwd).mcpServers?.private?.command).toBe("private-mcp");
+    expect(sm.getForScope("project", cwd).mcpServers).toBeUndefined();
+  });
+
+  test("saveLocalSetting writes the file owner-only (0o600)", () => {
+    const sm = new SettingsManager(cwd, "project");
+    sm.saveLocalSetting("mcpServers.private", { command: "private-mcp" }, cwd);
+    const mode = statSync(join(cwd, ".code-shell", "settings.local.json")).mode & 0o777;
+    expect(mode).toBe(0o600);
+  });
+
+  test("local and user dotted deletes preserve sibling settings", () => {
+    const sm = new SettingsManager(cwd, "full");
+    sm.saveLocalSetting("mcpServers.first", { command: "first" }, cwd);
+    sm.saveLocalSetting("mcpServers.second", { command: "second" }, cwd);
+    sm.saveUserSetting("mcpServers.first", { command: "first" });
+    sm.saveUserSetting("mcpServers.second", { command: "second" });
+
+    sm.deleteLocalSetting("mcpServers.first", cwd);
+    sm.deleteUserSetting("mcpServers.first");
+
+    expect(localJson().mcpServers).toEqual({ second: { command: "second" } });
+    const user = JSON.parse(readFileSync(join(home, ".code-shell", "settings.json"), "utf-8"));
+    expect(user.mcpServers).toEqual({ second: { command: "second" } });
   });
 
   test("saveProjectSetting writes the file owner-only (0o600) — no plaintext key world-readable", () => {
@@ -414,6 +449,58 @@ describe("SettingsManager project writes", () => {
   test("getForScope('project') returns {} when no project file", () => {
     const sm = new SettingsManager(cwd, "project");
     expect(sm.getForScope("project", cwd)).toEqual({});
+  });
+
+  test("linked project state directory is ignored on read and rejected on write", () => {
+    const outside = mkdtempSync(join(tmpdir(), "cs-settings-outside-"));
+    try {
+      writeFileSync(
+        join(outside, "settings.json"),
+        JSON.stringify({ mcpServers: { escaped: { command: "outside" } } }),
+      );
+      symlinkSync(outside, join(cwd, ".code-shell"));
+
+      const sm = new SettingsManager(cwd, "project");
+      expect(sm.get().mcpServers?.escaped).toBeUndefined();
+      expect(() => sm.saveProjectSetting("agent.appendSystemPrompt", "changed", cwd)).toThrow(
+        /real directory/,
+      );
+      expect(JSON.parse(readFileSync(join(outside, "settings.json"), "utf8"))).toEqual({
+        mcpServers: { escaped: { command: "outside" } },
+      });
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test("linked settings file is ignored and never replaced by a write", () => {
+    const outside = join(home, "outside-settings.json");
+    mkdirSync(join(cwd, ".code-shell"));
+    writeFileSync(outside, JSON.stringify({ agent: { appendSystemPrompt: "outside" } }));
+    symlinkSync(outside, join(cwd, ".code-shell", "settings.json"));
+
+    const sm = new SettingsManager(cwd, "project");
+    expect(sm.get().agent?.appendSystemPrompt).not.toBe("outside");
+    expect(() => sm.saveProjectSetting("agent.appendSystemPrompt", "changed", cwd)).toThrow(
+      /regular file/,
+    );
+    expect(JSON.parse(readFileSync(outside, "utf8"))).toEqual({
+      agent: { appendSystemPrompt: "outside" },
+    });
+  });
+
+  test("oversized settings are skipped and oversized writes fail without a partial file", () => {
+    mkdirSync(join(cwd, ".code-shell"));
+    const path = join(cwd, ".code-shell", "settings.json");
+    writeFileSync(path, JSON.stringify({ agent: { appendSystemPrompt: "x".repeat(4 * 1024 * 1024) } }));
+    expect(new SettingsManager(cwd, "project").get().agent?.appendSystemPrompt).toBeUndefined();
+
+    rmSync(path);
+    const sm = new SettingsManager(cwd, "project");
+    expect(() =>
+      sm.saveProjectSetting("agent.appendSystemPrompt", "x".repeat(4 * 1024 * 1024), cwd),
+    ).toThrow(/exceeds/);
+    expect(existsSync(path)).toBe(false);
   });
 });
 

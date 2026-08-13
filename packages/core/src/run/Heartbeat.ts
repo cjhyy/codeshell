@@ -9,9 +9,22 @@
  * Content: JSON { pid, timestamp, runId }
  */
 
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
+import { randomUUID } from "node:crypto";
 import { assertSafeRunId } from "./ids.js";
 
 export interface HeartbeatConfig {
@@ -25,6 +38,8 @@ export interface HeartbeatData {
   timestamp: number;
   runId: string;
 }
+
+const MAX_HEARTBEAT_BYTES = 64 * 1024;
 
 export class Heartbeat {
   private readonly runsDir: string;
@@ -86,11 +101,35 @@ export class Heartbeat {
   read(runId: string): HeartbeatData | null {
     assertSafeRunId(runId);
     const filePath = this.filePath(runId);
-    if (!existsSync(filePath)) return null;
     try {
-      return JSON.parse(readFileSync(filePath, "utf-8")) as HeartbeatData;
+      const parentInfo = lstatSync(dirname(filePath));
+      if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) return null;
     } catch {
       return null;
+    }
+    if (!existsSync(filePath)) return null;
+    let fd: number | undefined;
+    try {
+      const entry = lstatSync(filePath);
+      if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_HEARTBEAT_BYTES) return null;
+      fd = openSync(filePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      const opened = fstatSync(fd);
+      if (!opened.isFile() || opened.size > MAX_HEARTBEAT_BYTES) return null;
+      const value = JSON.parse(readFileSync(fd, "utf-8")) as Partial<HeartbeatData>;
+      if (
+        value.runId !== runId ||
+        !Number.isSafeInteger(value.pid) ||
+        (value.pid ?? 0) <= 0 ||
+        !Number.isSafeInteger(value.timestamp) ||
+        (value.timestamp ?? -1) < 0
+      ) {
+        return null;
+      }
+      return value as HeartbeatData;
+    } catch {
+      return null;
+    } finally {
+      if (fd !== undefined) closeSync(fd);
     }
   }
 
@@ -128,17 +167,39 @@ export class Heartbeat {
       timestamp: Date.now(),
       runId,
     };
+    const filePath = this.filePath(runId);
+    const temporary = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
     try {
-      writeFileSync(this.filePath(runId), JSON.stringify(data), "utf-8");
+      const parent = dirname(filePath);
+      const parentInfo = lstatSync(parent);
+      if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) return;
+      try {
+        const targetInfo = lstatSync(filePath);
+        if (targetInfo.isSymbolicLink() || !targetInfo.isFile()) return;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") return;
+      }
+      writeFileSync(temporary, JSON.stringify(data), {
+        encoding: "utf8",
+        mode: 0o600,
+        flag: "wx",
+      });
+      renameSync(temporary, filePath);
     } catch {
       // Run directory may have been deleted
+    } finally {
+      rmSync(temporary, { force: true });
     }
   }
 
   private remove(runId: string): void {
     try {
       const filePath = this.filePath(runId);
+      const parentInfo = lstatSync(dirname(filePath));
+      if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) return;
       if (existsSync(filePath)) {
+        const targetInfo = lstatSync(filePath);
+        if (targetInfo.isSymbolicLink() || !targetInfo.isFile()) return;
         unlinkSync(filePath);
       }
     } catch {

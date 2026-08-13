@@ -1,5 +1,14 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  rmSync,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CronStore } from "./store.js";
@@ -62,6 +71,32 @@ describe("CronStore", () => {
     expect(new CronStore(file).load()).toEqual([]);
   });
 
+  test("isolates malformed persisted jobs instead of discarding valid siblings", () => {
+    writeFileSync(
+      file,
+      JSON.stringify({
+        version: 1,
+        jobs: [
+          job({ id: "keep" }),
+          null,
+          job({ id: "bad-schedule", schedule: "every whenever" }),
+          { ...job({ id: "bad-prompt" }), prompt: 42 },
+        ],
+      }),
+      "utf-8",
+    );
+    expect(new CronStore(file).load().map((entry) => entry.id)).toEqual(["keep"]);
+  });
+
+  test("rejects duplicate ids and oversized automation payloads on save", () => {
+    const store = new CronStore(file);
+    expect(() => store.save([job(), job()])).toThrow(/duplicate/i);
+    expect(() => store.save([job({ prompt: "x".repeat(1024 * 1024 + 1) })])).toThrow(
+      /invalid cron job/i,
+    );
+    expect(existsSync(file)).toBe(false);
+  });
+
   test("save is atomic — leaves no .tmp file behind", () => {
     const store = new CronStore(file);
     store.save([job()]);
@@ -69,6 +104,17 @@ describe("CronStore", () => {
     // No dangling tmp siblings.
     const leftovers = readFileSync(file, "utf-8");
     expect(leftovers).toContain("nightly");
+    expect(readdirSync(dir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  });
+
+  test("stores automation prompts owner-only and tightens legacy rewrites", () => {
+    const store = new CronStore(file);
+    store.save([job({ prompt: "private prompt" })]);
+    if (process.platform === "win32") return;
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    chmodSync(file, 0o644);
+    store.save([job({ prompt: "still private" })]);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 
   test("save writes pretty JSON with a stable shape", () => {

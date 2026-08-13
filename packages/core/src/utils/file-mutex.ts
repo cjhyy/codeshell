@@ -20,7 +20,19 @@
  * means a writer that creates the file for the first time is still serialized.
  */
 
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { lockSync } from "./lockfile.js";
@@ -41,6 +53,7 @@ const LOCK_STALE_MS = 10_000;
 /** Backoff bounds for the retry loop (see acquireLockOn). */
 const LOCK_RETRY_MIN_MS = 5;
 const LOCK_RETRY_MAX_MS = 50;
+const DEFAULT_JSON_FILE_MAX_BYTES = 16 * 1024 * 1024;
 
 // Atomics.wait only ever reads slot 0, which stays 0, so one shared buffer is
 // safe and avoids allocating per retry.
@@ -134,20 +147,44 @@ export function mutateJsonFile<T, R = void>(
     serialize: (value: T) => string;
     mutation: (current: T) => { value?: T; result?: R };
     mode?: number;
+    /** Bounds both the current file and newly serialized state. */
+    maxBytes?: number;
   },
 ): R | undefined {
+  const maxBytes = options.maxBytes ?? DEFAULT_JSON_FILE_MAX_BYTES;
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
+    throw new Error("JSON state maxBytes must be a positive safe integer");
+  }
   const release = acquireFileLock(file);
   try {
     let raw: string | undefined;
     try {
-      raw = readFileSync(file, "utf-8");
-    } catch {
+      const pathInfo = lstatSync(file);
+      if (pathInfo.isSymbolicLink() || !pathInfo.isFile() || pathInfo.size > maxBytes) {
+        throw new Error(`JSON state is not a bounded regular file: ${file}`);
+      }
+      const descriptor = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      try {
+        const opened = fstatSync(descriptor);
+        if (!opened.isFile() || opened.size > maxBytes) {
+          throw new Error(`JSON state is not a bounded regular file: ${file}`);
+        }
+        raw = readFileSync(descriptor, "utf-8");
+      } finally {
+        closeSync(descriptor);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       raw = undefined;
     }
     const current = options.parse(raw);
     const { value, result } = options.mutation(current);
     if (value !== undefined) {
-      writeFileAtomic(file, options.serialize(value), options.mode);
+      const serialized = options.serialize(value);
+      if (Buffer.byteLength(serialized, "utf8") > maxBytes) {
+        throw new Error(`JSON state exceeds ${maxBytes} bytes`);
+      }
+      writeFileAtomic(file, serialized, options.mode);
     }
     return result;
   } finally {

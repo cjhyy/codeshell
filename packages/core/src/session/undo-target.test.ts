@@ -22,11 +22,7 @@ const snap = (
   ...(undone === undefined ? {} : { undone }),
 });
 
-const redo = (
-  filePath: string,
-  turnSeq: number,
-  existedBefore = true,
-): RedoRecord => ({
+const redo = (filePath: string, turnSeq: number, existedBefore = true): RedoRecord => ({
   filePath,
   turnSeq,
   backupPath: `/redo/${filePath}.${turnSeq}`,
@@ -73,11 +69,7 @@ describe("earliestSnapshotsPerFile", () => {
   });
 
   test("ordered by each file's first-edit time, oldest first", () => {
-    const out = earliestSnapshotsPerFile([
-      snap("b.ts", 300),
-      snap("a.ts", 100),
-      snap("c.ts", 200),
-    ]);
+    const out = earliestSnapshotsPerFile([snap("b.ts", 300), snap("a.ts", 100), snap("c.ts", 200)]);
     expect(out.map((s) => s.filePath)).toEqual(["a.ts", "c.ts", "b.ts"]);
   });
 
@@ -202,12 +194,16 @@ describe("latestRedoTargets", () => {
     expect(out.map((r) => r.filePath).sort()).toEqual(["a.ts", "b.ts"]);
   });
 
-  test("picks only the GREATEST turnSeq among redo records", () => {
+  test("picks only the LOWEST pending turnSeq — the most recently undone turn", () => {
+    // Both turns are pending, so undo ran 2 then 1 and redo must retrace that
+    // in reverse: turn 1 first. Previously this selected the greatest turnSeq
+    // (b.ts/turn 2), which skipped turn 1's state and left its record stranded
+    // — with two files that yields a combination that never existed on disk.
     const records = [redo("a.ts", 1), redo("b.ts", 2)];
     const snaps = [snap("a.ts", 100, 1, true), snap("b.ts", 200, 2, true)];
     const out = latestRedoTargets(records, snaps);
     expect(out).toHaveLength(1);
-    expect(out[0]!.filePath).toBe("b.ts");
+    expect(out[0]!.filePath).toBe("a.ts");
   });
 
   test("a newer LIVE turn supersedes the redo turn → []", () => {
@@ -228,5 +224,33 @@ describe("latestRedoTargets", () => {
     const out = latestRedoTargets(records, []);
     expect(out).toHaveLength(1);
     expect(out[0]!.existedBefore).toBe(false);
+  });
+
+  test("several undone turns redo in stack order, newest-undone first", () => {
+    // undo(2) then undo(1) leaves BOTH pending. Undo pops the stack downward,
+    // so the next redo is turn 1 — the most recently undone. Selecting the
+    // greatest turnSeq instead skipped turn 1's state entirely and stranded its
+    // record, making the intermediate state permanently unreachable.
+    const records = [redo("a.ts", 2), redo("a.ts", 1)];
+    const snaps = [snap("a.ts", 100, 1, true), snap("a.ts", 250, 2, true)];
+
+    const first = latestRedoTargets(records, snaps);
+    expect(first.map((r) => r.turnSeq)).toEqual([1]);
+
+    // After turn 1 is re-applied its record is consumed; turn 2 comes next.
+    const remaining = records.filter((r) => r.turnSeq !== 1);
+    expect(latestRedoTargets(remaining, snaps).map((r) => r.turnSeq)).toEqual([2]);
+  });
+
+  test("a fresh live turn still invalidates the whole pending redo chain", () => {
+    // Supersession is judged against the NEWEST pending redo turn, so a live
+    // edit after the undos kills every pending redo, not just the newest.
+    const records = [redo("a.ts", 2), redo("a.ts", 1)];
+    const snaps = [
+      snap("a.ts", 100, 1, true),
+      snap("a.ts", 250, 2, true),
+      snap("c.ts", 400, 3), // live turn 3
+    ];
+    expect(latestRedoTargets(records, snaps)).toEqual([]);
   });
 });

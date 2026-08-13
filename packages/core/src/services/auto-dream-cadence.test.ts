@@ -10,7 +10,7 @@
 // sessions finishing DURING a run were erased instead of counting toward the
 // next cycle.
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { recordDreamComplete, recordSession, sessionsSinceLastDream } from "./auto-dream.js";
@@ -70,6 +70,20 @@ describe("AutoDream cadence", () => {
     recordSession();
     recordDreamComplete(50);
     expect(sessionsSinceLastDream()).toBe(0);
+  });
+
+  test("ignores invalid counters and refuses to mutate linked state", () => {
+    const state = join(home, "auto-dream-state.json");
+    writeFileSync(state, JSON.stringify({ sessionsSinceLastDream: -50, lastDreamAt: {} }));
+    expect(sessionsSinceLastDream()).toBe(0);
+
+    rmSync(state);
+    const outside = join(home, "outside.json");
+    writeFileSync(outside, JSON.stringify({ sessionsSinceLastDream: 99 }));
+    symlinkSync(outside, state);
+    expect(sessionsSinceLastDream()).toBe(0);
+    expect(() => recordSession()).toThrow(/bounded regular file/);
+    expect(JSON.parse(readFileSync(outside, "utf8"))).toEqual({ sessionsSinceLastDream: 99 });
   });
 
   test("48 concurrent PROCESSES record all 48 increments", async () => {

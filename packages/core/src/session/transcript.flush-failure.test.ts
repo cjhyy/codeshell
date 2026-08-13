@@ -1,5 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { appendFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  appendFileSync,
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -12,6 +20,28 @@ function injectedError(code: "ENOSPC" | "EACCES" | "EPERM"): NodeJS.ErrnoExcepti
 }
 
 describe("Transcript flush failures", () => {
+  it("keeps a post-crash event readable and stores transcripts owner-only", () => {
+    const dir = mkdtempSync(join(tmpdir(), "transcript-torn-tail-"));
+    const file = join(dir, "transcript.jsonl");
+    try {
+      writeFileSync(file, '{"id":"torn"', { mode: 0o644 });
+      const transcript = Transcript.loadFromFile(file);
+      transcript.appendMessage("user", "survives restart");
+
+      const reloaded = Transcript.loadFromFile(file);
+      expect(reloaded.toMessages()).toEqual([{ role: "user", content: "survives restart" }]);
+      if (process.platform !== "win32") expect(statSync(file).mode & 0o777).toBe(0o600);
+
+      if (process.platform !== "win32") {
+        chmodSync(file, 0o644);
+        Transcript.loadFromFile(file);
+        expect(statSync(file).mode & 0o777).toBe(0o600);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   for (const code of ["ENOSPC", "EACCES", "EPERM"] as const) {
     it(`retries ${code} once, keeps the event in memory, and records a structured failure`, () => {
       const dir = mkdtempSync(join(tmpdir(), "transcript-flush-failure-"));

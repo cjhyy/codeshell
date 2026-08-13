@@ -9,7 +9,7 @@
 // These tests spawn REAL processes so the cross-process path is what is
 // exercised — an in-process test would pass even with no lock at all.
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mutateJsonFile, writeFileAtomic } from "./file-mutex.js";
@@ -84,6 +84,48 @@ describe("mutateJsonFile", () => {
       });
       expect(result).toBe("no-op");
       expect(readFileSync(file, "utf-8")).toBe(before);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects linked and oversized state before reading it", () => {
+    const dir = tmp();
+    try {
+      const outside = join(dir, "outside.json");
+      const linked = join(dir, "linked.json");
+      writeFileSync(outside, JSON.stringify({ keep: true }));
+      symlinkSync(outside, linked);
+      const mutate = (file: string) =>
+        mutateJsonFile<Record<string, unknown>>(file, {
+          parse: (raw) => (raw ? JSON.parse(raw) : {}),
+          serialize: JSON.stringify,
+          mutation: (current) => ({ value: { ...current, changed: true } }),
+          maxBytes: 32,
+        });
+
+      expect(() => mutate(linked)).toThrow(/bounded regular file/);
+      expect(JSON.parse(readFileSync(outside, "utf8"))).toEqual({ keep: true });
+      const oversized = join(dir, "oversized.json");
+      writeFileSync(oversized, "x".repeat(33));
+      expect(() => mutate(oversized)).toThrow(/bounded regular file/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects serialized state beyond the configured bound", () => {
+    const dir = tmp();
+    try {
+      const file = join(dir, "state.json");
+      expect(() =>
+        mutateJsonFile(file, {
+          parse: () => ({}),
+          serialize: () => "x".repeat(33),
+          mutation: () => ({ value: {} }),
+          maxBytes: 32,
+        }),
+      ).toThrow(/exceeds/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

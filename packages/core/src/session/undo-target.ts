@@ -112,12 +112,21 @@ export function latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[]
  * `redoLatestTurn` should re-apply — but ONLY when that turn is still the latest
  * undone state (i.e. nothing newer happened since the undo). Otherwise [].
  *
- * Rule: let R = the greatest turnSeq present in `redoRecords` (a RedoRecord
- * exists only for a turn that was undone and not yet redone). R is redoable iff
- * NO snapshot belongs to a strictly newer LIVE (non-undone) turn — a fresh edit
- * after the undo supersedes the redo and invalidates it (spec: "新轮使 redo
- * 失效"). Created-only turns have no pre-turn snapshot, so the RedoRecord itself
- * is the sole evidence and is honoured as long as nothing newer superseded it.
+ * Rule: let R = the LOWEST turnSeq present in `redoRecords` (a RedoRecord exists
+ * only for a turn that was undone and not yet redone). Undo walks BACKWARD down
+ * the turn stack, so after `undo(2); undo(1)` both records are pending and the
+ * one to re-apply first is turn 1 — the most recently undone, i.e. the lowest.
+ * Selecting the greatest instead replayed turns out of order: `redo` jumped
+ * straight to turn 2, skipping turn 1's state entirely and stranding turn 1's
+ * record forever (its snapshots stay `undone`, so it never becomes selectable).
+ * With two files that also produced a state that never existed — turn 1 still
+ * reverted while turn 2 was applied.
+ *
+ * R is redoable iff NO snapshot belongs to a strictly newer LIVE (non-undone)
+ * turn — a fresh edit after the undo supersedes the redo and invalidates it
+ * (spec: "新轮使 redo 失效"). Created-only turns have no pre-turn snapshot, so
+ * the RedoRecord itself is the sole evidence and is honoured as long as nothing
+ * newer superseded it.
  *
  * Empty `redoRecords` → []. fs-free so /redo's target decision is unit-testable.
  */
@@ -127,18 +136,25 @@ export function latestRedoTargets(
 ): RedoRecord[] {
   if (redoRecords.length === 0) return [];
 
+  // The most recently undone turn is the LOWEST pending one (undo pops the
+  // stack from the top down), and it is the next one to re-apply.
+  let nextRedoTurn = Infinity;
+  for (const r of redoRecords) {
+    if (r.turnSeq < nextRedoTurn) nextRedoTurn = r.turnSeq;
+  }
+
+  // Supersession is still judged against the NEWEST pending redo turn: a live
+  // snapshot newer than that is a fresh edit made after the undo, which
+  // invalidates the whole pending redo chain rather than just one turn.
   let maxRedoTurn = -Infinity;
   for (const r of redoRecords) {
     if (r.turnSeq > maxRedoTurn) maxRedoTurn = r.turnSeq;
   }
-
-  // If any LIVE snapshot belongs to a strictly newer turn, the redo turn is no
-  // longer the latest undone state → not redoable.
   for (const s of snapshots) {
     if (s.undone) continue;
     const k = s.turnSeq ?? -Infinity;
     if (k > maxRedoTurn) return [];
   }
 
-  return redoRecords.filter((r) => r.turnSeq === maxRedoTurn);
+  return redoRecords.filter((r) => r.turnSeq === nextRedoTurn);
 }

@@ -5,7 +5,15 @@
  * similar to the /dream command but running automatically.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { resolveMemoryBaseDir } from "../session/memory.js";
 import { mutateJsonFile } from "../utils/file-mutex.js";
@@ -30,6 +38,9 @@ interface DreamState {
   sessionsSinceLastDream: number;
 }
 
+const MAX_DREAM_STATE_BYTES = 64 * 1024;
+const MAX_SESSION_COUNT = 1_000_000;
+
 // Co-locate the dream-cadence state with the memories it tracks: both resolve
 // through resolveMemoryBaseDir (CODE_SHELL_HOME ?? $HOME ?? homedir()), so a
 // relocated/test HOME moves them together and never writes the real ~/.code-shell.
@@ -39,18 +50,38 @@ function getStateFile(): string {
 
 function loadState(): DreamState {
   const stateFile = getStateFile();
-  if (existsSync(stateFile)) {
-    try {
-      return JSON.parse(readFileSync(stateFile, "utf-8"));
-    } catch {}
+  let descriptor: number | undefined;
+  try {
+    const pathInfo = lstatSync(stateFile);
+    if (pathInfo.isSymbolicLink() || !pathInfo.isFile() || pathInfo.size > MAX_DREAM_STATE_BYTES) {
+      return { lastDreamAt: null, sessionsSinceLastDream: 0 };
+    }
+    descriptor = openSync(stateFile, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size > MAX_DREAM_STATE_BYTES) {
+      return { lastDreamAt: null, sessionsSinceLastDream: 0 };
+    }
+    return parseDreamState(readFileSync(descriptor, "utf-8"));
+  } catch {
+    return { lastDreamAt: null, sessionsSinceLastDream: 0 };
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
-  return { lastDreamAt: null, sessionsSinceLastDream: 0 };
 }
 
-function saveState(state: DreamState): void {
-  const stateFile = getStateFile();
-  mkdirSync(resolveMemoryBaseDir(), { recursive: true });
-  writeFileSync(stateFile, JSON.stringify(state, null, 2), "utf-8");
+function parseDreamState(raw: string): DreamState {
+  const parsed = JSON.parse(raw) as Partial<DreamState>;
+  const timestamp = typeof parsed.lastDreamAt === "string" ? parsed.lastDreamAt : null;
+  const lastDreamAt =
+    timestamp && timestamp.length <= 64 && Number.isFinite(Date.parse(timestamp)) ? timestamp : null;
+  const count = parsed.sessionsSinceLastDream;
+  return {
+    lastDreamAt,
+    sessionsSinceLastDream:
+      typeof count === "number" && Number.isSafeInteger(count) && count >= 0
+        ? Math.min(count, MAX_SESSION_COUNT)
+        : 0,
+  };
 }
 
 /**
@@ -65,17 +96,14 @@ function mutateState(change: (current: DreamState) => DreamState): void {
     parse: (raw) => {
       if (raw === undefined) return { lastDreamAt: null, sessionsSinceLastDream: 0 };
       try {
-        const parsed = JSON.parse(raw) as Partial<DreamState>;
-        return {
-          lastDreamAt: parsed.lastDreamAt ?? null,
-          sessionsSinceLastDream: Number(parsed.sessionsSinceLastDream) || 0,
-        };
+        return parseDreamState(raw);
       } catch {
         return { lastDreamAt: null, sessionsSinceLastDream: 0 };
       }
     },
     serialize: (state) => JSON.stringify(state, null, 2),
     mutation: (current) => ({ value: change(current) }),
+    maxBytes: MAX_DREAM_STATE_BYTES,
   });
 }
 
@@ -120,7 +148,7 @@ export function recordSession(): void {
   // reached its threshold and auto-consolidation silently stopped happening.
   mutateState((state) => ({
     ...state,
-    sessionsSinceLastDream: state.sessionsSinceLastDream + 1,
+    sessionsSinceLastDream: Math.min(MAX_SESSION_COUNT, state.sessionsSinceLastDream + 1),
   }));
 }
 
@@ -133,10 +161,14 @@ export function recordSession(): void {
  * resetting to 0 threw away increments that belonged to the next cycle.
  */
 export function recordDreamComplete(consumed?: number): void {
+  const safeConsumed =
+    typeof consumed === "number" && Number.isSafeInteger(consumed) && consumed >= 0
+      ? consumed
+      : undefined;
   mutateState((state) => ({
     lastDreamAt: new Date().toISOString(),
     sessionsSinceLastDream:
-      consumed === undefined ? 0 : Math.max(0, state.sessionsSinceLastDream - consumed),
+      safeConsumed === undefined ? 0 : Math.max(0, state.sessionsSinceLastDream - safeConsumed),
   }));
 }
 

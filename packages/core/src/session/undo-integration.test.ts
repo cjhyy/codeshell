@@ -12,6 +12,11 @@ import {
   readFileSync,
   mkdirSync,
   existsSync,
+  readdirSync,
+  statSync,
+  symlinkSync,
+  chmodSync,
+  renameSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,11 +56,170 @@ test("snapshot → edit → latestUndoTarget → restore brings content back", (
 
   // The backup holds the pre-edit content.
   expect(readFileSync(target!.backupPath, "utf-8")).toBe("original\n");
+  if (process.platform !== "win32") expect(statSync(target!.backupPath).mode & 0o777).toBe(0o600);
   expect(readFileSync(file, "utf-8")).toBe("modified\n");
 
   // Restore → file is back to pre-edit.
   expect(fh.restoreLatest(target!.filePath)).toBe(true);
   expect(readFileSync(file, "utf-8")).toBe("original\n");
+  const indexFile = join(sessionDir, "file-history", "index.json");
+  if (process.platform !== "win32") expect(statSync(indexFile).mode & 0o777).toBe(0o600);
+  expect(readdirSync(join(sessionDir, "file-history")).some((name) => name.endsWith(".tmp"))).toBe(
+    false,
+  );
+});
+
+test("load drops forged backups outside history and symlink backups", () => {
+  const target = join(workDir, "target.txt");
+  const outside = join(root, "outside-secret.txt");
+  const historyDir = join(sessionDir, "file-history");
+  mkdirSync(historyDir, { recursive: true });
+  writeFileSync(target, "safe\n", "utf-8");
+  writeFileSync(outside, "secret\n", "utf-8");
+  const symlinkBackup = join(historyDir, "symlink-backup");
+  if (process.platform !== "win32") symlinkSync(outside, symlinkBackup);
+  const records = [
+    {
+      filePath: target,
+      timestamp: 1,
+      backupPath: outside,
+      hash: "x",
+      size: 7,
+    },
+    ...(process.platform === "win32"
+      ? []
+      : [
+          {
+            filePath: target,
+            timestamp: 2,
+            backupPath: symlinkBackup,
+            hash: "y",
+            size: 7,
+          },
+        ]),
+  ];
+  writeFileSync(
+    join(historyDir, "index.json"),
+    JSON.stringify({ snapshots: records, redoRecords: [], created: [] }),
+    "utf-8",
+  );
+
+  const loaded = FileHistory.loadFromDir(sessionDir);
+  expect(loaded.getAllSnapshots()).toEqual([]);
+  expect(loaded.restoreLatest(target)).toBe(false);
+  expect(readFileSync(target, "utf-8")).toBe("safe\n");
+});
+
+test("returned snapshots cannot be mutated into an arbitrary restore target", () => {
+  const tracked = join(workDir, "tracked.txt");
+  const outside = join(root, "outside.txt");
+  writeFileSync(tracked, "tracked-before\n", "utf-8");
+  writeFileSync(outside, "outside-safe\n", "utf-8");
+  const fh = FileHistory.loadFromDir(sessionDir);
+  fh.saveSnapshot(tracked, 1);
+  writeFileSync(tracked, "tracked-after\n", "utf-8");
+
+  const forged = fh.getAllSnapshots()[0]!;
+  forged.filePath = outside;
+
+  expect(fh.restore(forged)).toBe(false);
+  expect(readFileSync(outside, "utf-8")).toBe("outside-safe\n");
+  expect(fh.getAllSnapshots()[0]!.filePath).toBe(tracked);
+});
+
+test("saveSnapshot returns a value copy, not the mutable internal record", () => {
+  const tracked = join(workDir, "tracked.txt");
+  const outside = join(root, "outside.txt");
+  writeFileSync(tracked, "before\n", "utf-8");
+  const fh = FileHistory.loadFromDir(sessionDir);
+  const returned = fh.saveSnapshot(tracked, 1)!;
+  returned.filePath = outside;
+
+  expect(fh.getAllSnapshots()[0]!.filePath).toBe(tracked);
+  expect(fh.restore(returned)).toBe(false);
+});
+
+test("stale FileHistory instances merge snapshots instead of losing updates", () => {
+  const a = join(workDir, "a.txt");
+  const b = join(workDir, "b.txt");
+  writeFileSync(a, "a-before\n", "utf-8");
+  writeFileSync(b, "b-before\n", "utf-8");
+  const first = FileHistory.loadFromDir(sessionDir);
+  const second = FileHistory.loadFromDir(sessionDir);
+
+  expect(first.saveSnapshot(a, 1)).not.toBeNull();
+  expect(second.saveSnapshot(b, 1)).not.toBeNull();
+
+  const reloaded = FileHistory.loadFromDir(sessionDir);
+  expect(reloaded.getAllSnapshots().map((snapshot) => snapshot.filePath).sort()).toEqual(
+    [a, b].sort(),
+  );
+});
+
+test("undo and redo preserve executable permission bits while backups remain private", () => {
+  if (process.platform === "win32") return;
+  const script = join(workDir, "run.sh");
+  writeFileSync(script, "#!/bin/sh\necho before\n", { mode: 0o755 });
+  chmodSync(script, 0o755);
+  const fh = FileHistory.loadFromDir(sessionDir);
+  const snapshot = fh.saveSnapshot(script, 6)!;
+  expect(statSync(snapshot.backupPath).mode & 0o777).toBe(0o600);
+  writeFileSync(script, "#!/bin/sh\necho after\n", "utf-8");
+  chmodSync(script, 0o700);
+
+  expect(fh.undoLatestTurn(fh.getLatestTurnUndoPlan()!.snapshots)[0]?.ok).toBe(true);
+  expect(statSync(script).mode & 0o777).toBe(0o755);
+
+  expect(fh.redoLatestTurn(fh.getLatestRedoRecords())[0]?.ok).toBe(true);
+  expect(statSync(script).mode & 0o777).toBe(0o700);
+});
+
+test("legacy snapshots without turnSeq can undo, reload, and redo", () => {
+  const tracked = join(workDir, "legacy.txt");
+  writeFileSync(tracked, "legacy-before\n", "utf-8");
+  const fh = FileHistory.loadFromDir(sessionDir);
+  fh.saveSnapshot(tracked);
+  writeFileSync(tracked, "legacy-after\n", "utf-8");
+
+  expect(fh.undoLatestTurn(fh.getLatestTurnUndoPlan()!.snapshots)[0]?.ok).toBe(true);
+  expect(readFileSync(tracked, "utf-8")).toBe("legacy-before\n");
+
+  const reloaded = FileHistory.loadFromDir(sessionDir);
+  expect(reloaded.getLatestRedoRecords()).toHaveLength(1);
+  expect(reloaded.redoLatestTurn(reloaded.getLatestRedoRecords())[0]?.ok).toBe(true);
+  expect(readFileSync(tracked, "utf-8")).toBe("legacy-after\n");
+});
+
+test("restore refuses a destination whose parent was replaced by a symlink", () => {
+  if (process.platform === "win32") return;
+  const parent = join(workDir, "parent");
+  const movedParent = join(workDir, "parent-real");
+  const tracked = join(parent, "tracked.txt");
+  mkdirSync(parent);
+  writeFileSync(tracked, "before\n", "utf-8");
+  const fh = FileHistory.loadFromDir(sessionDir);
+  const snapshot = fh.saveSnapshot(tracked, 1)!;
+  writeFileSync(tracked, "after\n", "utf-8");
+  renameSync(parent, movedParent);
+  symlinkSync(movedParent, parent);
+
+  expect(fh.restore(snapshot)).toBe(false);
+  expect(readFileSync(join(movedParent, "tracked.txt"), "utf-8")).toBe("after\n");
+});
+
+test("restore refuses to follow a destination symlink", () => {
+  if (process.platform === "win32") return;
+  const tracked = join(workDir, "tracked.txt");
+  const outside = join(root, "outside.txt");
+  writeFileSync(tracked, "tracked-before\n", "utf-8");
+  writeFileSync(outside, "outside-safe\n", "utf-8");
+  const fh = FileHistory.loadFromDir(sessionDir);
+  const snapshot = fh.saveSnapshot(tracked, 1)!;
+  rmSync(tracked);
+  symlinkSync(outside, tracked);
+
+  expect(fh.restore(snapshot)).toBe(false);
+  expect(readFileSync(outside, "utf-8")).toBe("outside-safe\n");
 });
 
 test("restoreAllToEarliest reverts every file to its pre-first-edit content", () => {
@@ -181,6 +345,42 @@ describe("redo (turn-level)", () => {
     expect(undoAgain.map((t) => t.filePath)).toEqual([a]);
   });
 
+  test("forged redo values cannot overwrite or delete an outside file", () => {
+    const a = join(workDir, "a.txt");
+    const outside = join(root, "outside.txt");
+    writeFileSync(a, "a-orig\n", "utf-8");
+    writeFileSync(outside, "outside-safe\n", "utf-8");
+    const fh = FileHistory.loadFromDir(sessionDir);
+    fh.saveSnapshot(a, 5);
+    writeFileSync(a, "a-turn5\n", "utf-8");
+    fh.undoLatestTurn(latestTurnUndoTargets(fh.getAllSnapshots()));
+
+    const forged = fh.getRedoRecords()[0]!;
+    forged.filePath = outside;
+    forged.backupPath = outside;
+    expect(fh.redoLatestTurn([forged])).toEqual([{ filePath: outside, ok: false }]);
+    expect(readFileSync(outside, "utf-8")).toBe("outside-safe\n");
+    expect(fh.getRedoRecords()).toHaveLength(1);
+  });
+
+  test("failed redo keeps its material so the operation can be retried", () => {
+    const a = join(workDir, "a.txt");
+    writeFileSync(a, "a-orig\n", "utf-8");
+    const fh = FileHistory.loadFromDir(sessionDir);
+    fh.saveSnapshot(a, 5);
+    writeFileSync(a, "a-turn5\n", "utf-8");
+    fh.undoLatestTurn(latestTurnUndoTargets(fh.getAllSnapshots()));
+    const redo = fh.getRedoRecords()[0]!;
+    rmSync(redo.backupPath);
+
+    expect(fh.redoLatestTurn([redo])).toEqual([{ filePath: a, ok: false }]);
+    expect(fh.getRedoRecords()).toHaveLength(1);
+
+    writeFileSync(redo.backupPath, "a-turn5\n", "utf-8");
+    expect(fh.redoLatestTurn(fh.getRedoRecords())).toEqual([{ filePath: a, ok: true }]);
+    expect(readFileSync(a, "utf-8")).toBe("a-turn5\n");
+  });
+
   test("created file: undo deletes it, redo recreates it with content", () => {
     const f = join(workDir, "created.txt");
     expect(existsSync(f)).toBe(false);
@@ -194,8 +394,9 @@ describe("redo (turn-level)", () => {
     writeFileSync(f, "brand new\n", "utf-8");
 
     // Undo turn 3 → the created file is DELETED.
-    const targets = latestTurnUndoTargets(fh.getAllSnapshots());
-    fh.undoLatestTurn(targets);
+    const plan = fh.getLatestTurnUndoPlan();
+    expect(plan?.filePaths).toEqual([f]);
+    fh.undoLatestTurn(plan!.snapshots);
     expect(existsSync(f)).toBe(false);
 
     // Redo turn 3 → the file reappears with its content.
@@ -205,6 +406,103 @@ describe("redo (turn-level)", () => {
     fh.redoLatestTurn(redoTargets);
     expect(existsSync(f)).toBe(true);
     expect(readFileSync(f, "utf-8")).toBe("brand new\n");
+  });
+
+  test("undo refuses a created path whose parent was replaced by a symlink", () => {
+    if (process.platform === "win32") return;
+    const parent = join(workDir, "parent");
+    const movedParent = join(workDir, "parent-original");
+    const outsideParent = join(root, "outside-parent");
+    const created = join(parent, "created.txt");
+    mkdirSync(parent);
+    mkdirSync(outsideParent);
+    const fh = FileHistory.loadFromDir(sessionDir);
+    fh.recordCreated(created, 3);
+    writeFileSync(created, "turn-created\n", "utf-8");
+    renameSync(parent, movedParent);
+    writeFileSync(join(outsideParent, "created.txt"), "outside-safe\n", "utf-8");
+    symlinkSync(outsideParent, parent);
+
+    const plan = fh.getLatestTurnUndoPlan()!;
+    expect(fh.undoLatestTurn(plan.snapshots)).toEqual([{ filePath: created, ok: false }]);
+    expect(readFileSync(join(outsideParent, "created.txt"), "utf-8")).toBe("outside-safe\n");
+    expect(readFileSync(join(movedParent, "created.txt"), "utf-8")).toBe("turn-created\n");
+    expect(fh.getRedoRecords()).toEqual([]);
+  });
+
+  test("a create-only latest turn wins over an older snapshot turn", () => {
+    const old = join(workDir, "old.txt");
+    const created = join(workDir, "created.txt");
+    writeFileSync(old, "old-before\n", "utf-8");
+    const fh = FileHistory.loadFromDir(sessionDir);
+    fh.saveSnapshot(old, 1);
+    writeFileSync(old, "old-after\n", "utf-8");
+    fh.recordCreated(created, 2);
+    writeFileSync(created, "new\n", "utf-8");
+
+    const plan = fh.getLatestTurnUndoPlan();
+    expect(plan?.turnSeq).toBe(2);
+    expect(plan?.snapshots).toEqual([]);
+    expect(plan?.filePaths).toEqual([created]);
+    expect(fh.undoLatestTurn(plan!.snapshots)).toEqual([{ filePath: created, ok: true }]);
+    expect(existsSync(created)).toBe(false);
+    expect(readFileSync(old, "utf-8")).toBe("old-after\n");
+  });
+
+  test("a deleted file round-trips through undo and redo", () => {
+    const f = join(workDir, "deleted.txt");
+    writeFileSync(f, "before-delete\n", "utf-8");
+    const fh = FileHistory.loadFromDir(sessionDir);
+    fh.saveSnapshot(f, 4);
+    rmSync(f);
+
+    const plan = fh.getLatestTurnUndoPlan()!;
+    expect(fh.undoLatestTurn(plan.snapshots)).toEqual([{ filePath: f, ok: true }]);
+    expect(readFileSync(f, "utf-8")).toBe("before-delete\n");
+
+    const redo = fh.getRedoRecords();
+    expect(redo[0]?.existedAfter).toBe(false);
+    expect(fh.redoLatestTurn(redo)).toEqual([{ filePath: f, ok: true }]);
+    expect(existsSync(f)).toBe(false);
+  });
+
+  test("forged undo values cannot redirect an undo to another file", () => {
+    const tracked = join(workDir, "tracked.txt");
+    const outside = join(root, "outside.txt");
+    writeFileSync(tracked, "before\n", "utf-8");
+    writeFileSync(outside, "outside-safe\n", "utf-8");
+    const fh = FileHistory.loadFromDir(sessionDir);
+    fh.saveSnapshot(tracked, 8);
+    writeFileSync(tracked, "after\n", "utf-8");
+    const forged = fh.getLatestTurnUndoPlan()!.snapshots;
+    forged[0]!.filePath = outside;
+
+    expect(fh.undoLatestTurn(forged).every((result) => !result.ok)).toBe(true);
+    expect(readFileSync(outside, "utf-8")).toBe("outside-safe\n");
+    expect(readFileSync(tracked, "utf-8")).toBe("after\n");
+  });
+
+  test("failed redo capture leaves files untouched and discards partial material", () => {
+    if (process.platform === "win32") return;
+    const a = join(workDir, "a.txt");
+    const b = join(workDir, "b.txt");
+    const outside = join(root, "outside.txt");
+    writeFileSync(a, "a-before\n", "utf-8");
+    writeFileSync(b, "b-before\n", "utf-8");
+    writeFileSync(outside, "outside-safe\n", "utf-8");
+    const fh = FileHistory.loadFromDir(sessionDir);
+    fh.saveSnapshot(a, 9);
+    fh.saveSnapshot(b, 9);
+    writeFileSync(a, "a-after\n", "utf-8");
+    rmSync(b);
+    symlinkSync(outside, b);
+
+    const result = fh.undoLatestTurn(fh.getLatestTurnUndoPlan()!.snapshots);
+    expect(result.every((item) => !item.ok)).toBe(true);
+    expect(readFileSync(a, "utf-8")).toBe("a-after\n");
+    expect(readFileSync(outside, "utf-8")).toBe("outside-safe\n");
+    expect(fh.getRedoRecords()).toEqual([]);
+    expect(fh.getLatestRedoRecords()).toEqual([]);
   });
 
   test("created file recorded once even if built then edited in the same turn", () => {
@@ -249,6 +547,23 @@ describe("redo (turn-level)", () => {
     fh.saveSnapshot(a, 2);
     writeFileSync(a, "a-turn2\n", "utf-8");
     expect(latestRedoTargets(fh.getRedoRecords(), fh.getAllSnapshots())).toEqual([]);
+  });
+
+  test("a new create-only turn after undo also invalidates redo", () => {
+    const a = join(workDir, "a.txt");
+    const created = join(workDir, "created.txt");
+    writeFileSync(a, "a-orig\n", "utf-8");
+    const fh = FileHistory.loadFromDir(sessionDir);
+    fh.saveSnapshot(a, 1);
+    writeFileSync(a, "a-turn1\n", "utf-8");
+    fh.undoLatestTurn(fh.getLatestTurnUndoPlan()!.snapshots);
+    expect(fh.getLatestRedoRecords()).toHaveLength(1);
+
+    fh.recordCreated(created, 2);
+    writeFileSync(created, "new turn\n", "utf-8");
+    expect(fh.getLatestRedoRecords()).toEqual([]);
+    expect(fh.redoLatestTurn(fh.getRedoRecords()).every((result) => !result.ok)).toBe(true);
+    expect(readFileSync(a, "utf-8")).toBe("a-orig\n");
   });
 
   test("/undo all (earliest) ignores undone turns and redo material", () => {

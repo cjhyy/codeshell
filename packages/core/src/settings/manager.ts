@@ -5,12 +5,15 @@
  */
 
 import {
-  readFileSync,
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
+  lstatSync,
   mkdirSync,
-  writeFileSync,
-  renameSync,
-  copyFileSync,
+  openSync,
+  readFileSync,
+  realpathSync,
 } from "node:fs";
 import { join, dirname, extname } from "node:path";
 import { homedir } from "node:os";
@@ -18,7 +21,7 @@ import { parse as parseYaml } from "yaml";
 import { validateSettings, type ValidatedSettings } from "./schema.js";
 import { migrateModels } from "../migrate-models.js";
 import { migrateConfig, CONFIG_VERSION_KEY } from "./migrate-config.js";
-import { acquireFileLock } from "../utils/file-mutex.js";
+import { acquireFileLock, writeFileAtomic } from "../utils/file-mutex.js";
 
 /**
  * Resolve the user's home directory. Prefers `process.env.HOME` so that
@@ -64,6 +67,7 @@ export function isProtectedSettingKey(key: string): boolean {
 }
 
 const FORBIDDEN_SETTING_KEY_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
+const MAX_SETTINGS_FILE_BYTES = 4 * 1024 * 1024;
 
 function isForbiddenSettingKeySegment(key: string): boolean {
   return FORBIDDEN_SETTING_KEY_SEGMENTS.has(key);
@@ -259,10 +263,12 @@ export class SettingsManager {
 
     if (readProject) {
       // 3. Project
-      this.loadJsonFile(join(this.cwd, ".code-shell", "settings.json"), "project", 2);
+      const projectPath = this.tryProjectSettingsPath(this.cwd, "settings.json");
+      if (projectPath) this.loadJsonFile(projectPath, "project", 2);
 
       // 4. Local
-      this.loadJsonFile(join(this.cwd, ".code-shell", "settings.local.json"), "local", 3);
+      const localPath = this.tryProjectSettingsPath(this.cwd, "settings.local.json");
+      if (localPath) this.loadJsonFile(localPath, "local", 3);
     }
 
     // 5. CLI flags (highest priority)
@@ -283,7 +289,8 @@ export class SettingsManager {
       this.applyConfigMigration(join(this.userConfigDir(), "settings.json"), "user");
     }
     if (readProject) {
-      this.applyConfigMigration(join(this.cwd, ".code-shell", "settings.json"), "project");
+      const projectPath = this.tryProjectSettingsPath(this.cwd, "settings.json");
+      if (projectPath) this.applyConfigMigration(projectPath, "project");
     }
 
     // Workspace-trust gate: an untrusted project must not influence execution
@@ -309,17 +316,16 @@ export class SettingsManager {
     // single physical file. Gated on readUser: under non-full scope we must
     // not read — let alone rewrite — the host's ~/.code-shell/settings.json.
     const userPath = join(this.userConfigDir(), "settings.json");
-    if (readUser && existsSync(userPath)) {
+    if (readUser && resolveConfigPath(userPath) === userPath) {
       try {
-        const userRaw = sanitizeSettingsObject(
-          JSON.parse(readFileSync(userPath, "utf-8")) as Record<string, unknown>,
-        );
+        const userRaw = parseConfigFile(userPath);
+        if (!userRaw) throw new Error("invalid user settings");
         const result = migrateModels({
           providers: (userRaw.providers as never) ?? [],
           models: (userRaw.models as never) ?? [],
         });
         if (result.changed) {
-          copyFileSync(userPath, `${userPath}.bak`);
+          this.writeBackup(userPath);
           const migrated = {
             ...userRaw,
             providers: result.providers,
@@ -356,9 +362,9 @@ export class SettingsManager {
    * so this load() already sees the migrated shape.
    */
   private applyConfigMigration(path: string, sourceName: SettingsSourceName): void {
-    if (!existsSync(path)) return;
+    if (resolveConfigPath(path) !== path) return;
     try {
-      const parsed = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+      const parsed = parseConfigFile(path) as unknown;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
       const raw = sanitizeSettingsObject(parsed as Record<string, unknown>);
       const result = migrateConfig(raw);
@@ -370,7 +376,7 @@ export class SettingsManager {
         return rest;
       };
       if (JSON.stringify(stripStamp(raw)) === JSON.stringify(stripStamp(result.config))) return;
-      copyFileSync(path, `${path}.bak`);
+      this.writeBackup(path);
       // Atomic write (tmp+rename) so a concurrent load can't read a half-written
       // migrated file — matches the normal save path (atomicWriteJson). The file
       // exists here (existsSync guard above), so the recursive mkdir is a no-op.
@@ -408,25 +414,14 @@ export class SettingsManager {
    */
   saveUserSetting(key: string, value: unknown): void {
     const path = join(this.userConfigDir(), "settings.json");
-    mkdirSync(dirname(path), { recursive: true });
+    assertSafeSettingsWriteTarget(path);
     // Lock spans read → modify → write; see mutateSettingsFile for why the
     // atomic rename alone was not enough. This path keeps its own sanitizing
     // read (readJsonObject does not sanitize) so behaviour is unchanged apart
     // from the added serialization.
     const release = acquireFileLock(path);
     try {
-      let current: Record<string, unknown> = {};
-      if (existsSync(path)) {
-        try {
-          const raw = readFileSync(path, "utf-8");
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            current = sanitizeSettingsObject(parsed);
-          }
-        } catch {
-          // Corrupt file — overwrite rather than crash.
-        }
-      }
+      const current = parseConfigFile(path) ?? {};
 
       setDottedSetting(current, key, value);
 
@@ -434,9 +429,7 @@ export class SettingsManager {
       // catch a half-written file. mode 0o600 — settings.json can hold plaintext
       // API keys, so it must be owner-only like credentials.json (store.ts:56),
       // not world-readable (default umask leaves 0o644 otherwise).
-      const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
-      writeFileSync(tmp, JSON.stringify(current, null, 2), { encoding: "utf-8", mode: 0o600 });
-      renameSync(tmp, path);
+      this.atomicWriteJson(path, current);
     } finally {
       release();
     }
@@ -451,13 +444,30 @@ export class SettingsManager {
    * cache invalidation mirror saveUserSetting.
    */
   saveProjectSetting(key: string, value: unknown, cwd: string): void {
-    // projectSettingsPath throws on an empty cwd (boundary guard) — keep that.
-    const path = this.projectSettingsPath(cwd);
+    this.validateProjectCwd(cwd, "project");
     // Don't resurrect a deleted project root: atomicWriteJson's recursive mkdir
     // of <cwd>/.code-shell recreates `cwd` itself as an empty shell when cwd is
     // gone. A non-empty cwd that no longer exists means the project was deleted
     // — skip the write rather than recreate it.
     if (!existsSync(cwd)) return;
+    const path = this.projectSettingsPath(cwd);
+    this.mutateSettingsFile(path, (current) => {
+      setDottedSetting(current, key, value);
+    });
+    this.invalidate();
+  }
+
+  /**
+   * Persist a machine-private setting for one project. The local layer has
+   * higher precedence than the shared project layer and lives at
+   * `${cwd}/.code-shell/settings.local.json`, matching the file already read
+   * by {@link load}. It is useful for MCP endpoints or policy that should not
+   * be shared with collaborators.
+   */
+  saveLocalSetting(key: string, value: unknown, cwd: string): void {
+    this.validateProjectCwd(cwd, "local");
+    if (!existsSync(cwd)) return;
+    const path = this.localSettingsPath(cwd);
     this.mutateSettingsFile(path, (current) => {
       setDottedSetting(current, key, value);
     });
@@ -471,6 +481,22 @@ export class SettingsManager {
    */
   deleteProjectSetting(key: string, cwd: string): void {
     const path = this.projectSettingsPath(cwd);
+    this.deleteSettingFromFile(path, key);
+  }
+
+  /** Delete one dotted key from the machine-private project settings layer. */
+  deleteLocalSetting(key: string, cwd: string): void {
+    const path = this.localSettingsPath(cwd);
+    this.deleteSettingFromFile(path, key);
+  }
+
+  /** Delete one dotted key from the user settings layer. */
+  deleteUserSetting(key: string): void {
+    const path = join(this.userConfigDir(), "settings.json");
+    this.deleteSettingFromFile(path, key);
+  }
+
+  private deleteSettingFromFile(path: string, key: string): void {
     // Must be YAML-aware, symmetric with saveProjectSetting: a project with only
     // settings.yaml has no .json, so the old `existsSync(path)` guard returned
     // here and the override survived (read/merge ARE yaml-aware → UI shows
@@ -499,35 +525,74 @@ export class SettingsManager {
    * overlay math needs the project overlay and the user/global baseline
    * separately — the merged get() collapses provenance and can't express
    * tri-state inheritance. user → ~/.code-shell/settings.json, project →
-   * ${cwd}/.code-shell/settings.json. Only keys actually present in the file
-   * are returned (defaults are not synthesized), so an absent file → {}.
+   * ${cwd}/.code-shell/settings.json, local →
+   * ${cwd}/.code-shell/settings.local.json. Only keys actually present in the
+   * file are returned (defaults are not synthesized), so an absent file → {}.
    */
-  getForScope(scope: "user" | "project", cwd?: string): Partial<ValidatedSettings> {
+  getForScope(scope: "user" | "project" | "local", cwd?: string): Partial<ValidatedSettings> {
     const path =
       scope === "user"
         ? join(this.userConfigDir(), "settings.json")
-        : this.projectSettingsPath(cwd ?? this.cwd);
+        : scope === "local"
+          ? this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.local.json")
+          : this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.json");
+    if (!path) return {};
     const raw = this.readJsonObject(path);
     // validateSettings applies defaults; for a scope view we want only the
     // file's own keys, so validate then project back the present keys.
     const validated = validateSettings(raw) as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const k of Object.keys(raw)) out[k] = validated[k];
-    // Same workspace-trust gate as load(): getForScope("project") is a direct
-    // file read that bypasses the merge, so an untrusted project's dangerous
-    // fields (e.g. localEnvironment.setupScripts — shell run at worktree setup)
-    // must be stripped here too. See DANGEROUS_PROJECT_FIELDS.
-    if (scope === "project" && !this.projectTrusted) {
+    // Same workspace-trust gate as load(): project/local scope reads bypass the
+    // merge, so an untrusted project's dangerous fields (for example an MCP
+    // server or setup script) must be stripped here too.
+    if ((scope === "project" || scope === "local") && !this.projectTrusted) {
       for (const field of DANGEROUS_PROJECT_FIELDS) delete out[field];
     }
     return out as Partial<ValidatedSettings>;
   }
 
   private projectSettingsPath(cwd: string): string {
+    const path = this.tryProjectSettingsPath(cwd, "settings.json", true);
+    if (!path) throw new Error("unsafe project settings directory");
+    return path;
+  }
+
+  private localSettingsPath(cwd: string): string {
+    const path = this.tryProjectSettingsPath(cwd, "settings.local.json", true);
+    if (!path) throw new Error("unsafe local settings directory");
+    return path;
+  }
+
+  private validateProjectCwd(cwd: string, layer: "project" | "local"): void {
     if (!cwd || cwd.trim().length === 0) {
-      throw new Error("project setting write requires a non-empty cwd");
+      throw new Error(`${layer} setting write requires a non-empty cwd`);
     }
-    return join(cwd, ".code-shell", "settings.json");
+  }
+
+  /** Resolve the project root once and refuse a linked/non-directory state root. */
+  private tryProjectSettingsPath(
+    cwd: string,
+    filename: "settings.json" | "settings.local.json",
+    strict = false,
+  ): string | null {
+    this.validateProjectCwd(cwd, filename === "settings.json" ? "project" : "local");
+    if (!existsSync(cwd)) return join(cwd, ".code-shell", filename);
+    try {
+      const root = realpathSync(cwd);
+      if (!lstatSync(root).isDirectory()) throw new Error("project root is not a directory");
+      const stateDir = join(root, ".code-shell");
+      if (existsSync(stateDir)) {
+        const info = lstatSync(stateDir);
+        if (info.isSymbolicLink() || !info.isDirectory()) {
+          throw new Error("project .code-shell must be a real directory");
+        }
+      }
+      return join(stateDir, filename);
+    } catch (error) {
+      if (strict) throw error;
+      return null;
+    }
   }
 
   private readJsonObject(path: string): Record<string, unknown> {
@@ -539,12 +604,22 @@ export class SettingsManager {
   }
 
   private atomicWriteJson(path: string, data: Record<string, unknown>): void {
-    mkdirSync(dirname(path), { recursive: true });
+    assertSafeSettingsWriteTarget(path);
+    const serialized = JSON.stringify(data, null, 2);
+    if (Buffer.byteLength(serialized, "utf8") > MAX_SETTINGS_FILE_BYTES) {
+      throw new Error(`settings file exceeds ${MAX_SETTINGS_FILE_BYTES} bytes`);
+    }
     // mode 0o600: settings.json may hold plaintext API keys — owner-only, see
     // saveUserSetting above and credentials/store.ts.
-    const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
-    writeFileSync(tmp, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 0o600 });
-    renameSync(tmp, path);
+    writeFileAtomic(path, serialized, 0o600);
+  }
+
+  private writeBackup(path: string): void {
+    const content = readBoundedRegularFile(path);
+    if (content === null) throw new Error("settings backup source is unsafe");
+    const backupPath = `${path}.bak`;
+    assertSafeSettingsWriteTarget(backupPath);
+    writeFileAtomic(backupPath, content, 0o600);
   }
 
   /**
@@ -568,9 +643,10 @@ export class SettingsManager {
     path: string,
     mutate: (current: Record<string, unknown>) => boolean | void,
   ): void {
-    mkdirSync(dirname(path), { recursive: true });
+    assertSafeSettingsWriteTarget(path);
     const release = acquireFileLock(path);
     try {
+      assertSafeSettingsWriteTarget(path);
       // Re-read INSIDE the lock: a snapshot taken before acquiring it would be
       // exactly the stale value that drops the other writer's key.
       const current = this.readJsonObject(path);
@@ -634,9 +710,9 @@ export class SettingsManager {
  * what an absent/empty layer means.
  */
 function parseConfigFile(path: string): Record<string, unknown> | null {
-  if (!existsSync(path)) return null;
   try {
-    const content = readFileSync(path, "utf-8");
+    const content = readBoundedRegularFile(path);
+    if (content === null) return null;
     const ext = extname(path).toLowerCase();
     const parsed = ext === ".yaml" || ext === ".yml" ? parseYaml(content) : JSON.parse(content);
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
@@ -648,6 +724,44 @@ function parseConfigFile(path: string): Record<string, unknown> | null {
   return null;
 }
 
+/** Read through a no-follow descriptor so a settings-file symlink cannot escape its layer. */
+function readBoundedRegularFile(path: string): string | null {
+  let fd: number | undefined;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const info = fstatSync(fd);
+    if (!info.isFile() || info.size > MAX_SETTINGS_FILE_BYTES) return null;
+    return readFileSync(fd, "utf8");
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
+
+/**
+ * Writers must never follow a linked settings directory or replace an unusual
+ * filesystem object. Atomic rename protects the file contents, but without
+ * this boundary check a project-controlled `.code-shell` directory symlink
+ * redirects the entire write outside the workspace.
+ */
+function assertSafeSettingsWriteTarget(path: string): void {
+  const parent = dirname(path);
+  if (!existsSync(parent)) mkdirSync(parent, { recursive: true });
+  const parentInfo = lstatSync(parent);
+  if (parentInfo.isSymbolicLink() || !parentInfo.isDirectory()) {
+    throw new Error("settings directory must be a real directory");
+  }
+  try {
+    const targetInfo = lstatSync(path);
+    if (targetInfo.isSymbolicLink() || !targetInfo.isFile()) {
+      throw new Error("settings target must be a regular file");
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
+
 /**
  * Given the JSON path for a settings layer (e.g. .../settings.json or
  * .../settings.local.json), return the path that should actually be read:
@@ -656,13 +770,28 @@ function parseConfigFile(path: string): Record<string, unknown> | null {
  * hand-written read-only alternative. Returns null when no layer file exists.
  */
 function resolveConfigPath(jsonPath: string): string | null {
-  if (existsSync(jsonPath)) return jsonPath;
+  const jsonStatus = configCandidateStatus(jsonPath);
+  if (jsonStatus === "safe") return jsonPath;
+  if (jsonStatus === "unsafe") return null;
   const base = jsonPath.replace(/\.json$/, "");
   for (const ext of [".yaml", ".yml"]) {
     const candidate = `${base}${ext}`;
-    if (existsSync(candidate)) return candidate;
+    const status = configCandidateStatus(candidate);
+    if (status === "safe") return candidate;
+    if (status === "unsafe") return null;
   }
   return null;
+}
+
+function configCandidateStatus(path: string): "missing" | "safe" | "unsafe" {
+  try {
+    const info = lstatSync(path);
+    return !info.isSymbolicLink() && info.isFile() && info.size <= MAX_SETTINGS_FILE_BYTES
+      ? "safe"
+      : "unsafe";
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT" ? "missing" : "unsafe";
+  }
 }
 
 function merge(
