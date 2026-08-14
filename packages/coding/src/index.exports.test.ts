@@ -11,6 +11,7 @@ describe("Coding package public entry contracts", () => {
       "CODING_GENERAL_PRESET",
       "CODING_TOOLS",
       "TERMINAL_CODING_PRESET",
+      "createCodingModule",
     ]);
     expect(capabilityApi.CODING_CAPABILITY).toBe(rootApi.CODING_CAPABILITY);
     expect(capabilityApi.CODING_TOOLS).toBe(rootApi.CODING_TOOLS);

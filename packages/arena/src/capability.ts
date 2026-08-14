@@ -11,6 +11,7 @@
 
 import {
   SettingsManager,
+  type AgentModule,
   type ExtensionModule,
   type LLMConfig,
   type ModelEntry,
@@ -529,25 +530,40 @@ export async function arenaTool(args: Record<string, unknown>, ctx?: ToolContext
   }
 }
 
-/** Create the explicit Arena product capability. Core does not import this package. */
+const ARENA_TOOL = {
+  definition: {
+    ...arenaToolDef,
+    source: "builtin" as const,
+    permissionDefault: "ask" as const,
+    isReadOnly: true,
+    isConcurrencySafe: false,
+    timeoutMs: 1_800_000,
+  },
+  execute: arenaTool,
+};
+
+const ARENA_QUERIES = {
+  arena_status: () => getArenaStatus(),
+};
+
+/** The Arena product as a unified AgentModule. Core does not import this package. */
+export function createArenaModule(): AgentModule {
+  return {
+    id: "arena",
+    engine: {
+      tools: [{ kind: "always" as const, tool: ARENA_TOOL }],
+    },
+    protocol: {
+      queries: ARENA_QUERIES,
+    },
+  };
+}
+
+/** @deprecated Cutover-only legacy view; use createArenaModule(). */
 export function createArenaCapability(): ExtensionModule {
   return {
     id: "arena",
-    tools: [
-      {
-        definition: {
-          ...arenaToolDef,
-          source: "builtin",
-          permissionDefault: "ask",
-          isReadOnly: true,
-          isConcurrencySafe: false,
-          timeoutMs: 1_800_000,
-        },
-        execute: arenaTool,
-      },
-    ],
-    queries: {
-      arena_status: () => getArenaStatus(),
-    },
+    tools: [ARENA_TOOL],
+    queries: ARENA_QUERIES,
   };
 }

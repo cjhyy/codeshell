@@ -15,9 +15,9 @@ import { describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { CODING_CAPABILITY } from "@cjhyy/code-shell-capability-coding";
-import { createArenaCapability } from "@cjhyy/code-shell-arena";
-import { createPetCapability } from "@cjhyy/code-shell-pet";
+import { CODING_CAPABILITY, createCodingModule } from "@cjhyy/code-shell-capability-coding";
+import { createArenaCapability, createArenaModule } from "@cjhyy/code-shell-arena";
+import { createPetCapability, createPetModule } from "@cjhyy/code-shell-pet";
 import { BUILTIN_TOOLS } from "../packages/core/src/tool-system/builtin/index.js";
 import {
   composeCapabilityEngineHooks,
@@ -149,6 +149,14 @@ describe("composition golden baseline", () => {
         fromCapabilityModule(coding),
         ...extensionModules.map((m) => fromExtensionModule(m)),
       ],
+      expectedModules: ["coding", "arena", "pet"],
+    });
+    expect(toCompositionSnapshot(composition)).toEqual(legacy);
+  });
+
+  test("product AgentModule factories reproduce the same composition", () => {
+    const composition = compileComposition({
+      modules: [createCodingModule(), createArenaModule(), createPetModule()],
       expectedModules: ["coding", "arena", "pet"],
     });
     expect(toCompositionSnapshot(composition)).toEqual(legacy);

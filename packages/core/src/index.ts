@@ -63,8 +63,21 @@ export {
   SessionError,
   TranscriptError,
   ConfigError,
+  CompositionError,
   SandboxUnavailableError,
 } from "./exceptions.js";
+
+// ─── Composition (AgentModule / ResolvedComposition) ─────────────
+export { compileComposition } from "./composition/compiler.js";
+export { toCompositionSnapshot, computeCompositionDigest } from "./composition/snapshot.js";
+export type {
+  AgentModule,
+  AgentEngineContributions,
+  AgentProtocolContributions,
+  AgentModuleToolContribution,
+  ResolvedComposition,
+  CompositionSnapshot,
+} from "./composition/types.js";
 
 // ─── Engine (primary API) ────────────────────────────────────────
 

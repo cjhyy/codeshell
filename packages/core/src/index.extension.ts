@@ -95,6 +95,13 @@ export type {
   CapabilityModule,
   CapabilityToolServiceHost,
 } from "./capabilities/index.js";
+export type {
+  AgentModule,
+  AgentEngineContributions,
+  AgentProtocolContributions,
+  AgentModuleToolContribution,
+  ResolvedComposition,
+} from "./composition/types.js";
 export { BUILTIN_AGENT_PRESETS } from "./preset/index.js";
 export type { AgentPreset } from "./preset/index.js";
 export { BUILTIN_TOOLS, derivePresetExposure } from "./tool-system/builtin/index.js";

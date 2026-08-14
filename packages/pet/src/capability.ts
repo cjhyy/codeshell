@@ -12,7 +12,11 @@
  * tool joins the composed tool catalog with full exposure metadata.
  */
 
-import type { ExtensionModule, ProtocolObserverHost } from "@cjhyy/code-shell-core/extension";
+import type {
+  AgentModule,
+  ExtensionModule,
+  ProtocolObserverHost,
+} from "@cjhyy/code-shell-core/extension";
 import {
   delegateWorkAvailability,
   delegateWorkTool,
@@ -71,6 +75,28 @@ import {
   type PetReportToMimiSink,
 } from "./report-to-mimi.js";
 import { validatePetRunParams } from "./run-params.js";
+
+/**
+ * The Pet domain as a unified AgentModule. Wraps the legacy factory so the
+ * report-to-mimi sink closure keeps binding the observer to the tools of the
+ * SAME module instance.
+ */
+export function createPetModule(): AgentModule {
+  const legacy = createPetCapability();
+  return {
+    id: legacy.id,
+    engine: {
+      tools: (legacy.catalogTools ?? []).map((tool) => ({ kind: "preset-tags" as const, tool })),
+      behaviorProfiles: legacy.behaviorProfiles,
+    },
+    protocol: {
+      queries: legacy.queries,
+      createObserver: legacy.createProtocolObserver,
+      validateRunParams: legacy.validateRunParams,
+      hiddenSessionKinds: legacy.hiddenSessionKinds,
+    },
+  };
+}
 
 export function createPetCapability(): ExtensionModule {
   let reportToMimi: PetReportToMimiSink | undefined;

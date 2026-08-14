@@ -4,6 +4,7 @@ import {
   BUILTIN_AGENT_PRESETS,
   BUILTIN_TOOLS,
   derivePresetExposure,
+  type AgentModule,
   type AgentPreset,
   type BuiltinTool,
   type CapabilityModule,
@@ -231,33 +232,62 @@ export const TERMINAL_CODING_PRESET: AgentPreset = {
   ],
 };
 
+const CODING_PROMPT_SECTIONS = {
+  coding: readFileSync(new URL("./prompt/coding.md", import.meta.url), "utf-8"),
+} as const;
+
+const CODING_FILE_HISTORY = [
+  {
+    toolName: "ApplyPatch",
+    resolveTargets: (args: Record<string, unknown>, cwd: string) =>
+      typeof args.patch === "string" ? patchBackupTargets(args.patch, cwd) : [],
+  },
+] as const;
+
+const CODING_SESSION_WORKSPACE = {
+  validateRoot: (root: string) => isGitWorktreeRoot(root),
+  branchExists: (mainRoot: string, branch: string) => branchExists(mainRoot, branch),
+} as const;
+
+function codingAdjustToolSelection(names: Set<string>, context: { host?: string }): void {
+  if (context.host !== "desktop") return;
+  names.delete("EnterWorktree");
+  names.delete("ExitWorktree");
+  names.add("SwitchSessionWorkspace");
+}
+
+/** The coding product as a unified AgentModule. */
+export function createCodingModule(): AgentModule {
+  return {
+    id: "coding",
+    engine: {
+      tools: CODING_TOOLS.map((tool) => ({ kind: "preset-tags" as const, tool })),
+      presets: [CODING_GENERAL_PRESET, TERMINAL_CODING_PRESET],
+      defaultPreset: "terminal-coding",
+      promptSections: CODING_PROMPT_SECTIONS,
+      dynamicContextProviders: [gitDynamicContextProvider],
+      instructionBoundary: findCodingInstructionBoundary,
+      createToolService: createCodingToolService,
+      artifactDetectors: [codingArtifactDetector],
+      fileHistory: CODING_FILE_HISTORY,
+      sessionWorkspace: CODING_SESSION_WORKSPACE,
+      adjustToolSelection: codingAdjustToolSelection,
+    },
+  };
+}
+
+/** @deprecated Cutover-only legacy view; use createCodingModule(). */
 export const CODING_CAPABILITY: CapabilityModule = {
   id: "coding",
   defaultPreset: "terminal-coding",
   tools: CODING_TOOLS,
   presets: [CODING_GENERAL_PRESET, TERMINAL_CODING_PRESET],
-  promptSections: {
-    coding: readFileSync(new URL("./prompt/coding.md", import.meta.url), "utf-8"),
-  },
+  promptSections: CODING_PROMPT_SECTIONS,
   dynamicContextProviders: [gitDynamicContextProvider],
   instructionBoundary: findCodingInstructionBoundary,
   createToolService: createCodingToolService,
   artifactDetectors: [codingArtifactDetector],
-  fileHistory: [
-    {
-      toolName: "ApplyPatch",
-      resolveTargets: (args, cwd) =>
-        typeof args.patch === "string" ? patchBackupTargets(args.patch, cwd) : [],
-    },
-  ],
-  sessionWorkspace: {
-    validateRoot: (root) => isGitWorktreeRoot(root),
-    branchExists: (mainRoot, branch) => branchExists(mainRoot, branch),
-  },
-  adjustToolSelection: (names, context) => {
-    if (context.host !== "desktop") return;
-    names.delete("EnterWorktree");
-    names.delete("ExitWorktree");
-    names.add("SwitchSessionWorkspace");
-  },
+  fileHistory: CODING_FILE_HISTORY,
+  sessionWorkspace: CODING_SESSION_WORKSPACE,
+  adjustToolSelection: codingAdjustToolSelection,
 };
