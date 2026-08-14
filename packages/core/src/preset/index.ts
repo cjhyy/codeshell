@@ -15,7 +15,7 @@ import {
   deriveToolGatedPromptSections,
   type BuiltinTool,
 } from "../tool-system/builtin/index.js";
-import type { CapabilityModule } from "../capabilities/index.js";
+import type { CapabilityModule, CapabilityToolSelectionContext } from "../capabilities/index.js";
 
 export const AGENT_PRESET_NAMES = ["harness-min", "general"] as const;
 /** Built-in preset names. Custom presets use arbitrary strings via registerPreset(). */
@@ -196,6 +196,31 @@ export function buildPresetSystemPrompt(
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+/**
+ * Composition-era tool-name resolution: the caller resolves the preset
+ * object first (resolvePresetFromComposition) and passes explicit
+ * adjusters instead of whole capability modules.
+ */
+export function resolveToolNamesForPreset(options: {
+  preset: AgentPreset;
+  host?: string;
+  enabledBuiltinTools?: readonly string[];
+  disabledBuiltinTools?: readonly string[];
+  adjusters?: readonly ((names: Set<string>, context: CapabilityToolSelectionContext) => void)[];
+}): string[] {
+  const names = new Set(options.preset.builtinTools);
+  for (const name of options.enabledBuiltinTools ?? []) {
+    names.add(name);
+  }
+  for (const adjust of options.adjusters ?? []) {
+    adjust(names, { preset: options.preset.name, host: options.host });
+  }
+  for (const name of options.disabledBuiltinTools ?? []) {
+    names.delete(name);
+  }
+  return [...names];
 }
 
 export function resolveBuiltinToolNames(options?: {

@@ -30,6 +30,7 @@ import type { HookEventName } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import type { CapabilityModule } from "../capabilities/index.js";
 import type { ExtensionModule } from "../tool-system/capability-module.js";
+import type { AgentModule, ResolvedComposition } from "../composition/types.js";
 import type { RunBehaviorProfile } from "./run-types.js";
 import type { LegacyPetWorkDelegation } from "../types.js";
 
@@ -53,9 +54,17 @@ export interface EngineConfig {
   preset?: AgentPresetName;
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
-  /** Trusted optional product capabilities installed by the owning host. */
+  /**
+   * Precompiled composition from the host root — the single source of truth
+   * for module contributions. Mutually exclusive with modules / capabilities
+   * / extensionModules.
+   */
+  composition?: ResolvedComposition;
+  /** AgentModules for library consumers; Engine compiles them once. */
+  modules?: readonly AgentModule[];
+  /** @deprecated Cutover-only; deleted with CapabilityModule. */
   capabilities?: readonly CapabilityModule[];
-  /** Lightweight runtime tools and queries loaded by the host process. */
+  /** @deprecated Cutover-only; deleted with ExtensionModule. */
   extensionModules?: readonly ExtensionModule[];
   /**
    * Named per-run behavior profiles selectable via EngineRunOptions.behaviorMode

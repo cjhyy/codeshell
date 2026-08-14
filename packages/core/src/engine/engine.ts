@@ -13,10 +13,6 @@ import type {
 } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
-import {
-  queryExtensionModules,
-  registerExtensionModules,
-} from "../tool-system/capability-module.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
@@ -34,7 +30,6 @@ import {
 } from "./steer-queue.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
 import {
-  BUILTIN_TOOLS,
   type BuiltinTool,
   type BuiltinToolExposure,
   type BuiltinToolFn,
@@ -109,17 +104,22 @@ import {
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
-import { resolveAgentPreset, resolveBuiltinToolNames, type AgentPreset } from "../preset/index.js";
+import { resolveToolNamesForPreset, type AgentPreset } from "../preset/index.js";
 import {
-  composeDynamicContextProviders,
-  composeCapabilityEngineHooks,
-  composePromptSections,
-  composeToolCatalog,
   resolveCapabilities,
-  resolveInstructionBoundary,
   type CapabilityDynamicContextProvider,
   type CapabilityModule,
 } from "../capabilities/index.js";
+import { resolveEngineComposition } from "../composition/legacy-bridge.js";
+import {
+  compositionPromptSections,
+  compositionToolCatalog,
+  presetInjectedTools,
+  registerAlwaysTools,
+  resolveCompositionInstructionBoundary,
+  resolvePresetFromComposition,
+} from "../composition/resolve-preset.js";
+import type { ResolvedComposition } from "../composition/types.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
@@ -295,6 +295,8 @@ export class Engine {
   /** Engine-local view containing only this Engine's capability modules. */
   private toolRegistry: ToolRegistry;
   private readonly capabilities: readonly CapabilityModule[];
+  /** Compiled module contributions — the single composition fact source. */
+  private readonly composition: ResolvedComposition;
   private readonly toolCatalog: readonly BuiltinTool[];
   private readonly toolGuards: ReadonlyMap<string, BuiltinToolGuard>;
   /** Per-turn dynamic definition rewriters contributed by builtin exposures. */
@@ -572,11 +574,9 @@ export class Engine {
 
     this.capabilities = resolveCapabilities(config.capabilities);
     this.config = { ...config, capabilities: this.capabilities };
-    this.toolCatalog = composeToolCatalog(
-      BUILTIN_TOOLS,
-      this.capabilities,
-      config.extensionModules ?? [],
-    );
+    // Single composition fact source; legacy configs bridge through the compiler.
+    this.composition = resolveEngineComposition(config, this.capabilities);
+    this.toolCatalog = compositionToolCatalog(this.composition);
     this.toolGuards = new Map(
       this.toolCatalog.flatMap((tool) =>
         tool.exposure.availability
@@ -592,37 +592,35 @@ export class Engine {
       ),
     );
     // Behavior profile registry: core defaults first, then host config, then
-    // extension modules — later registrations override earlier ones by id.
+    // module contributions — later registrations override earlier ones by id.
+    const moduleProfiles = this.composition.engine.behaviorProfiles;
     this.behaviorProfiles = new Map(
       [
-        QUICK_CHAT_RESTRICTED_PROFILE,
-        ISOLATED_TASK_PROFILE,
+        ...moduleProfiles.filter((p) => p.moduleId === "core").map((p) => p.value),
         ...(config.behaviorProfiles ?? []),
-        ...(config.extensionModules ?? []).flatMap((module) => module.behaviorProfiles ?? []),
+        ...moduleProfiles.filter((p) => p.moduleId !== "core").map((p) => p.value),
       ].map((profile) => [profile.id, profile] as const),
     );
-    this.capabilityPromptSections = composePromptSections(this.capabilities);
-    this.capabilityDynamicContextProviders = composeDynamicContextProviders(this.capabilities);
-    this.preset = resolveAgentPreset(config.preset, this.capabilities);
-    // Extension catalogTools join the active preset regardless of its name:
-    // presets snapshot their tool lists from the catalogs known at module
-    // load, which can never include extension packages. Visibility stays
-    // gated by each tool's exposure.availability guard.
-    const extensionCatalogTools = (config.extensionModules ?? []).flatMap((module) => [
-      ...(module.catalogTools ?? []),
-    ]);
-    if (extensionCatalogTools.length > 0) {
+    this.capabilityPromptSections = compositionPromptSections(this.composition);
+    this.capabilityDynamicContextProviders = this.composition.engine.dynamicContextProviders.map(
+      (c) => c.value,
+    );
+    this.preset = resolvePresetFromComposition(this.composition, config.preset);
+    // Catalog tools owned by modules that contribute no presets join the
+    // active preset regardless of its name: presets snapshot their tool lists
+    // from catalogs known at module authoring time, which can never include
+    // such packages. Visibility stays gated by exposure.availability.
+    const injectedTools = presetInjectedTools(this.composition);
+    if (injectedTools.length > 0) {
       this.preset = {
         ...this.preset,
         builtinTools: [
           ...this.preset.builtinTools,
-          ...extensionCatalogTools.map((tool) => tool.definition.name),
+          ...injectedTools.map((tool) => tool.definition.name),
         ],
         defaultPermissionRules: [
           ...this.preset.defaultPermissionRules,
-          ...extensionCatalogTools.flatMap((tool) => [
-            ...(tool.exposure.defaultPermissionRules ?? []),
-          ]),
+          ...injectedTools.flatMap((tool) => [...(tool.exposure.defaultPermissionRules ?? [])]),
         ],
       };
     }
@@ -656,22 +654,22 @@ export class Engine {
     this.runtimeToolRegistry =
       config.runtime?.toolRegistry ??
       new ToolRegistry({
-        builtinTools: resolveBuiltinToolNames({
-          preset: this.preset.name,
+        builtinTools: resolveToolNamesForPreset({
+          preset: this.preset,
           host: config.builtinToolHost,
           enabledBuiltinTools: [
             ...builtinLists.enabledBuiltinTools,
-            // Extension catalogTools are preset-agnostic (see preset merge
+            // Injected catalog tools are preset-agnostic (see preset merge
             // above); their availability guards gate actual visibility.
-            ...extensionCatalogTools.map((tool) => tool.definition.name),
+            ...injectedTools.map((tool) => tool.definition.name),
           ],
           disabledBuiltinTools: builtinLists.disabledBuiltinTools,
-          capabilities: this.capabilities,
+          adjusters: this.composition.engine.toolSelectionAdjusters.map((a) => a.value),
         }),
         toolCatalog: this.toolCatalog,
       });
     this.toolRegistry = this.runtimeToolRegistry.fork();
-    registerExtensionModules(this.toolRegistry, config.extensionModules ?? []);
+    registerAlwaysTools(this.composition, this.toolRegistry);
     this.hooks = new HookRegistry();
     // Installed-plugin hooks — declared in each plugin's hooks/hooks.json.
     // Registered first (priority 80) so user-authored hooks at lower
@@ -694,7 +692,7 @@ export class Engine {
     // settings.hooks → shell-command wrappers. Chain order:
     // plugin (80) → shell (50) → capability (20) → SDK code (default 0).
     this.registerSettingsHooks();
-    for (const hook of composeCapabilityEngineHooks(this.capabilities)) {
+    for (const hook of this.composition.engine.hooks) {
       this.hooks.register(hook.event, hook.handler, hook.priority, hook.name);
     }
     for (const hook of config.hooks ?? []) {
@@ -702,9 +700,7 @@ export class Engine {
     }
     this.sessionManager = new SessionManager(
       config.sessionStorageDir,
-      this.capabilities
-        .map((capability) => capability.sessionWorkspace)
-        .find((candidate) => candidate !== undefined),
+      this.composition.engine.sessionWorkspaces[0]?.value,
     );
     // Initialize model pool — prefer runtime's shared pool, fall back to self-constructed.
     this.modelPool = config.runtime?.modelPool ?? new ModelPool();
@@ -874,11 +870,13 @@ export class Engine {
   }
 
   /** Dispatch a host-installed capability query without teaching core its name. */
-  queryCapability(
+  async queryCapability(
     type: string,
     params: Readonly<Record<string, unknown>> = {},
   ): Promise<{ handled: false } | { handled: true; data: unknown }> {
-    return queryExtensionModules(this.config.extensionModules ?? [], type, params);
+    const handler = this.composition.protocol.queries.find((q) => q.key === type)?.value;
+    if (!handler) return { handled: false };
+    return { handled: true, data: await handler(params) };
   }
 
   /**
@@ -2280,9 +2278,7 @@ export class Engine {
           ),
           cwd,
           getTurnSeq: () => session.state.turnSeq,
-          contributions: this.capabilities.flatMap((capability) => [
-            ...(capability.fileHistory ?? []),
-          ]),
+          contributions: this.composition.engine.fileHistory.map((c) => c.value),
         });
 
     // Hook: agent start
@@ -2596,7 +2592,7 @@ export class Engine {
         profileMemoryDir,
         instructionCompatFileNames: compatFileNamesFrom(this.config.instructions),
         instructionBoundaryFinder: (scanCwd) =>
-          resolveInstructionBoundary(scanCwd, this.capabilities),
+          resolveCompositionInstructionBoundary(this.composition, scanCwd),
         disabledSkills,
         disabledPlugins,
         skillAllowlist: profileCanUseSkills ? toolCtx.skillAllowlist : [],
@@ -3265,22 +3261,23 @@ export class Engine {
     // (rebuilt per turn from this.preset) reflects the new preset's system
     // prompt / behavior. Only when the preset actually changed.
     if (patch.preset !== undefined && patch.preset !== prevPresetName) {
-      const nextPreset = resolveAgentPreset(this.config.preset, this.capabilities);
+      const nextPreset = resolvePresetFromComposition(this.composition, this.config.preset);
       // The builtin tool SET is ctor-frozen and may be shared via runtime — we
       // do NOT rebuild it here. If the new preset implies a different builtin
       // tool set, that part of the change only lands on session restart.
-      const prevTools = resolveBuiltinToolNames({
-        preset: prevPresetName,
+      const adjusters = this.composition.engine.toolSelectionAdjusters.map((a) => a.value);
+      const prevTools = resolveToolNamesForPreset({
+        preset: resolvePresetFromComposition(this.composition, prevPresetName),
         host: this.config.builtinToolHost,
-        capabilities: this.capabilities,
+        adjusters,
       })
         .slice()
         .sort()
         .join(",");
-      const nextTools = resolveBuiltinToolNames({
-        preset: nextPreset.name,
+      const nextTools = resolveToolNamesForPreset({
+        preset: nextPreset,
         host: this.config.builtinToolHost,
-        capabilities: this.capabilities,
+        adjusters,
       })
         .slice()
         .sort()
@@ -4106,16 +4103,15 @@ export class Engine {
       explicitProfileOverrides,
     );
     const capabilityServices = Object.fromEntries(
-      this.capabilities.flatMap((capability) => {
-        if (!capability.createToolService) return [];
-        const service = capability.createToolService({
+      this.composition.engine.toolServices.map(({ moduleId, value }) => {
+        const service = value({
           isSubAgent: this.config.isSubAgent === true,
           settings: this.getSettingsManager(),
           resolveSandbox: (cwd) => this.runEnvironmentResolver.resolveSandbox(cwd),
           readShellEnv: (cwd) => this.runEnvironmentResolver.readShellEnv(cwd),
           getSessionManager: () => this.sessionManager,
         });
-        return [[capability.id, service] as const];
+        return [moduleId, service] as const;
       }),
     );
     const ctx: ToolContext = {
