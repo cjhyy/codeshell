@@ -1,0 +1,748 @@
+{
+  "baselineCommit": "35e0f7c4db3cc1aec61d08b41429443572a298cd",
+  "snapshot": {
+    "version": 1,
+    "modules": [
+      {
+        "id": "core",
+        "order": 0,
+        "source": "core"
+      },
+      {
+        "id": "coding",
+        "order": 1,
+        "source": "host"
+      },
+      {
+        "id": "arena",
+        "order": 2,
+        "source": "host"
+      },
+      {
+        "id": "pet",
+        "order": 3,
+        "source": "host"
+      }
+    ],
+    "tools": [
+      {
+        "name": "Read",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Write",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "EditModelCatalog",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "GenerateImage",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "GenerateVideo",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "view_image",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "Edit",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Glob",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Grep",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Bash",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "BashOutput",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "KillShell",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ListShells",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "WebSearch",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "WebFetch",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "AskUserQuestion",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Agent",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "AgentStatus",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": []
+      },
+      {
+        "name": "AgentCancel",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "AgentSendInput",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": []
+      },
+      {
+        "name": "EnterPlanMode",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "ExitPlanMode",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "ToolSearch",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "TodoWrite",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Sleep",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Config",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "CronCreate",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "CronDelete",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "CronList",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "Skill",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "MCPTool",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ListMcpResources",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ReadMcpResource",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ListSources",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ReadSource",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "REPL",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "PowerShell",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "MemoryList",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "MemoryRead",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "MemorySave",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "MemoryDelete",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "complete_goal",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "cancel_goal",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "AddMarketplace",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "InstallCapability",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "browser_observe",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "browser_act",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "browser_navigate",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "Panel",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "SendMessageToSession",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "UseCredential",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "LinkAction",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "InjectCredential",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
+        "name": "DriveAgent",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general",
+          "terminal-coding"
+        ]
+      },
+      {
+        "name": "DriveAgentJobs",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general",
+          "terminal-coding"
+        ]
+      },
+      {
+        "name": "DriveClaudeCode",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general",
+          "terminal-coding"
+        ]
+      },
+      {
+        "name": "CheckQuota",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "terminal-coding"
+        ]
+      },
+      {
+        "name": "EnterWorktree",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "terminal-coding"
+        ]
+      },
+      {
+        "name": "ExitWorktree",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "terminal-coding"
+        ]
+      },
+      {
+        "name": "SwitchSessionWorkspace",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": []
+      },
+      {
+        "name": "ApplyPatch",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "terminal-coding"
+        ]
+      },
+      {
+        "name": "NotebookEdit",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "terminal-coding"
+        ]
+      },
+      {
+        "name": "LSP",
+        "moduleId": "coding",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "terminal-coding"
+        ]
+      },
+      {
+        "name": "RequestMimiDelivery",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ReportToMimi",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "DelegateWork",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "MobileRemote",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ControlLongTask",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Memory",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Gateway",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "GatewayReply",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Sessions",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "FollowUps",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ManageFollowUp",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "ManageSessions",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "CurrentTime",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "SendMessage",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "Arena",
+        "moduleId": "arena",
+        "exposure": "always",
+        "presetTags": []
+      }
+    ],
+    "presets": [
+      {
+        "name": "harness-min",
+        "moduleId": "core",
+        "isDefault": false
+      },
+      {
+        "name": "general",
+        "moduleId": "coding",
+        "isDefault": false
+      },
+      {
+        "name": "terminal-coding",
+        "moduleId": "coding",
+        "isDefault": true
+      }
+    ],
+    "promptSections": [
+      {
+        "name": "coding",
+        "moduleId": "coding"
+      }
+    ],
+    "hooks": [],
+    "behaviorProfiles": [
+      {
+        "id": "quickChatRestricted",
+        "moduleId": "core"
+      },
+      {
+        "id": "isolatedTask",
+        "moduleId": "core"
+      },
+      {
+        "id": "pet",
+        "moduleId": "pet"
+      }
+    ],
+    "queries": [
+      {
+        "type": "arena_status",
+        "moduleId": "arena"
+      }
+    ],
+    "observers": [
+      "pet"
+    ],
+    "runValidators": [
+      "pet"
+    ],
+    "hiddenSessionKinds": [
+      {
+        "kind": "pet",
+        "moduleId": "pet"
+      }
+    ]
+  }
+}

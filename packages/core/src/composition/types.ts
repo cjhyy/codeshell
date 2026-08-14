@@ -128,7 +128,11 @@ export interface ResolvedProtocolComposition {
 }
 
 export interface CompositionDiagnostic {
-  readonly code: "empty_module" | "engine_only_module" | "protocol_only_module";
+  readonly code:
+    | "empty_module"
+    | "engine_only_module"
+    | "protocol_only_module"
+    | "core_preset_shadowed";
   readonly moduleId: string;
   readonly message: string;
 }

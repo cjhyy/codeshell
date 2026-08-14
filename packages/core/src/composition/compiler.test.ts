@@ -200,6 +200,20 @@ describe("compileComposition contributions", () => {
     ).toThrow(CompositionError);
   });
 
+  test("host module may shadow a core preset with a diagnostic", () => {
+    const shadow = compileComposition({
+      modules: [{ id: "alpha", engine: { presets: [preset("general")] } }],
+    });
+    const rows = shadow.engine.presets.filter((p) => p.key === "general");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.moduleId).toBe("alpha");
+    expect(shadow.diagnostics).toContainEqual({
+      code: "core_preset_shadowed",
+      moduleId: "alpha",
+      message: 'Module "alpha" shadows core preset "general"',
+    });
+  });
+
   test("hooks get capability-prefixed deterministic names and priority 20 default", () => {
     const handler = (async () => ({})) as unknown as HookHandler;
     const result = compileComposition({

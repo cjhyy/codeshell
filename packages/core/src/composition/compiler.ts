@@ -1,5 +1,5 @@
 import { CompositionError } from "../exceptions.js";
-import { DEFAULT_AGENT_PRESET } from "../preset/index.js";
+import { DEFAULT_AGENT_PRESET, type AgentPreset } from "../preset/index.js";
 import { CORE_AGENT_MODULE } from "./core-module.js";
 import { computeCompositionDigest, toCompositionSnapshot } from "./snapshot.js";
 import type {
@@ -143,7 +143,10 @@ function collectMany<T>(
   );
 }
 
-function collectEngine(registered: RegisteredModule[]): ResolvedEngineComposition {
+function collectEngine(
+  registered: RegisteredModule[],
+  diagnostics: CompositionDiagnostic[],
+): ResolvedEngineComposition {
   // Tools: preset-tags join the composed catalog (module order), always tools
   // are appended afterwards — mirroring composeToolCatalog() followed by
   // registerExtensionModules() in the current engine constructor.
@@ -165,9 +168,33 @@ function collectEngine(registered: RegisteredModule[]): ResolvedEngineCompositio
   }
   const tools = [...presetTagTools, ...alwaysTools];
 
-  const presets = collectKeyed(registered, "preset", (m) =>
-    (m.engine?.presets ?? []).map((p) => [p.name, p] as const),
-  );
+  // Presets: a host module may shadow a CORE preset of the same name — this
+  // mirrors resolveAgentPreset(), which resolves capability-contributed
+  // presets before builtins (e.g. coding's extended "general"). The shadow is
+  // surfaced as a diagnostic; host-vs-host duplicates still fail loud.
+  const presets: Array<ResolvedContribution<AgentPreset>> = [];
+  const presetIndex = new Map<string, number>();
+  const coreModuleId = registered[0]?.resolved.id ?? "core";
+  for (const { module } of registered) {
+    for (const preset of module.engine?.presets ?? []) {
+      const existing = presetIndex.get(preset.name);
+      if (existing === undefined) {
+        presetIndex.set(preset.name, presets.length);
+        presets.push({ key: preset.name, moduleId: module.id, value: preset });
+        continue;
+      }
+      const owner = presets[existing];
+      if (!owner || owner.moduleId !== coreModuleId) {
+        throw duplicate("preset", preset.name, owner?.moduleId ?? coreModuleId, module.id);
+      }
+      presets[existing] = { key: preset.name, moduleId: module.id, value: preset };
+      diagnostics.push({
+        code: "core_preset_shadowed",
+        moduleId: module.id,
+        message: `Module "${module.id}" shadows core preset "${preset.name}"`,
+      });
+    }
+  }
 
   // Default preset: at most one distinct declaration wins; none → core default.
   let defaultPreset: { name: string; moduleId: string } | undefined;
@@ -267,7 +294,7 @@ function collectProtocol(registered: RegisteredModule[]): ResolvedProtocolCompos
 export function compileComposition(options: CompileCompositionOptions = {}): ResolvedComposition {
   const registered = registerModules(options);
   const diagnostics = moduleDiagnostics(registered);
-  const engine = collectEngine(registered);
+  const engine = collectEngine(registered, diagnostics);
   const protocol = collectProtocol(registered);
   const draft = {
     version: 1 as const,
