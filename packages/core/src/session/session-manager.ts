@@ -51,7 +51,7 @@ import {
   type PersistedGoalTerminationReason,
 } from "../goal/lifecycle.js";
 import { lockSync } from "../utils/lockfile.js";
-import { resolveCapabilities, type SessionWorkspaceCapability } from "../capabilities/index.js";
+import type { SessionWorkspaceCapability } from "../capabilities/index.js";
 
 // Shared close epochs for SessionManager instances in this process. Concurrent
 // Engines bind the same epoch; only close advances it. This intentionally does
@@ -465,11 +465,9 @@ export class SessionManager {
 
   constructor(storageDir?: string, workspaceCapability?: SessionWorkspaceCapability) {
     this.sessionsDir = storageDir ?? sessionsRoot();
-    this.workspaceCapability =
-      workspaceCapability ??
-      resolveCapabilities()
-        .map((capability) => capability.sessionWorkspace)
-        .find((candidate) => candidate !== undefined);
+    // No process-global fallback: the workspace capability comes from the
+    // owner's compiled composition (Engine passes it explicitly).
+    this.workspaceCapability = workspaceCapability;
     mkdirSync(this.sessionsDir, { recursive: true, mode: 0o700 });
     if (process.platform !== "win32") chmodSync(this.sessionsDir, 0o700);
     this.cleanupStaleForkStaging();

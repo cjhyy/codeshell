@@ -72,6 +72,9 @@ import type {
   ProtocolObserver,
   ProtocolObserverHost,
 } from "../tool-system/capability-module.js";
+import { resolveServerProtocol } from "../composition/legacy-bridge.js";
+import { attachProtocolContributions } from "../composition/protocol-attach.js";
+import type { ResolvedComposition } from "../composition/types.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import {
   describePluginCommands,
@@ -484,11 +487,12 @@ export interface AgentServerOptions {
   /** Shared owner router; injectable for hosts/tests, process singleton by default. */
   approvalRouter?: ApprovalRouter;
   /**
-   * Extension modules whose protocol observers / run-param validators /
-   * hidden session kinds this server applies. Defaults to core's built-in
-   * pet extension so existing hosts keep the Pet projection channel.
-   * TODO(pet-out-of-core): drop the default once hosts register it explicitly.
+   * Compiled composition from the host root. The server consumes its
+   * protocol surface: observers, run-param validators, queries, hidden
+   * session kinds. Mutually exclusive with extensionModules.
    */
+  composition?: ResolvedComposition;
+  /** @deprecated Cutover-only; use composition. */
   extensionModules?: readonly ExtensionModule[];
 }
 
@@ -533,13 +537,13 @@ export class AgentServer {
     string,
     ApprovalRouteTarget & { requestId: string }
   >();
-  /** Extension modules this server consults for protocol-level hooks. */
-  private readonly extensionModules: readonly ExtensionModule[];
-  /** Protocol lifecycle observers created by extension modules (registration order). */
+  /** Module run-param validators from the resolved protocol composition. */
+  private readonly runValidators: ResolvedComposition["protocol"]["runValidators"];
+  /** Protocol lifecycle observers created by module factories (module order). */
   private readonly protocolObservers: ProtocolObserver[] = [];
   /** Extension-registered protocol method/query aliases (compat channel). */
   private readonly protocolQueryHandlers = new Map<string, ExtensionQueryHandler>();
-  /** Union of extension hiddenSessionKinds, excluded from generic session lists. */
+  /** Union of module hiddenSessionKinds, excluded from generic session lists. */
   private readonly hiddenSessionKinds: readonly string[];
   /**
    * Last per-session EngineConfigSlice supplied by agent/run. Kept even after
@@ -643,14 +647,12 @@ export class AgentServer {
 
     this.transport = options.transport;
 
-    // Protocol lifecycle observers. Each configured extension module may
-    // attach one; the server calls them at every lifecycle hook point and
-    // isolates per-observer failures. Core default-loads the pet extension
-    // until the pet domain moves out of core (see AgentServerOptions).
-    this.extensionModules = options.extensionModules ?? [];
-    this.hiddenSessionKinds = [
-      ...new Set(this.extensionModules.flatMap((module) => module.hiddenSessionKinds ?? [])),
-    ];
+    // Protocol surface from the compiled composition. Each contributing
+    // module may attach one observer; the server calls them at every
+    // lifecycle hook point and isolates per-observer failures.
+    const protocol = resolveServerProtocol(options);
+    this.runValidators = protocol.runValidators;
+    this.hiddenSessionKinds = protocol.hiddenSessionKinds.map((k) => k.key);
     const observerHost: ProtocolObserverHost = {
       getLiveSessionSnapshot: () => this.chatManager?.getLiveSessionSnapshot().sessions ?? [],
       projectionGeneration: () => this.workerGeneration(),
@@ -671,16 +673,13 @@ export class AgentServer {
         this.protocolQueryHandlers.set(type, handler);
       },
     };
-    for (const module of this.extensionModules) {
-      if (!module.createProtocolObserver) continue;
-      try {
-        this.protocolObservers.push(module.createProtocolObserver(observerHost));
-      } catch (err) {
-        logger.warn(
-          `protocol observer init failed for extension ${module.id}: ${(err as Error).message}`,
-        );
-      }
-    }
+    attachProtocolContributions({
+      protocol,
+      host: observerHost,
+      observers: this.protocolObservers,
+      queryHandlers: this.protocolQueryHandlers,
+      warn: (message) => logger.warn(message),
+    });
 
     // Wire up incoming messages
     this.transport.onMessage((msg) => {
@@ -1244,13 +1243,12 @@ export class AgentServer {
     this.forEachObserver("onServerClose", (observer) => observer.onServerClose?.());
   }
 
-  /** Generic run-param shape checks plus each extension's domain validation. */
+  /** Generic run-param shape checks plus each module's domain validation. */
   private validateRunInput(params: RunParams): string | null {
     const generic = runInputError(params);
     if (generic) return generic;
-    for (const module of this.extensionModules) {
-      if (!module.validateRunParams) continue;
-      const error = module.validateRunParams(params as unknown as Record<string, unknown>);
+    for (const validator of this.runValidators) {
+      const error = validator.value(params as unknown as Record<string, unknown>);
       if (error) return error;
     }
     return null;

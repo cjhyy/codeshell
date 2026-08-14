@@ -24,6 +24,7 @@ import type { LLMConfig, PermissionMode } from "../types.js";
 import type { EngineConfig, EngineHookConfig } from "../engine/types.js";
 import type { Evaluator } from "./Evaluator.js";
 import type { CapabilityModule } from "../capabilities/index.js";
+import type { AgentModule } from "../composition/types.js";
 import { RunManager } from "./RunManager.js";
 import { FileRunStore } from "./FileRunStore.js";
 
@@ -86,8 +87,10 @@ export interface CreateRunManagerOptions {
    * the interactive run-aware backend.
    */
   approvalBackend?: import("../tool-system/permission.js").ApprovalBackend;
-  /** Product/domain capabilities installed into each Engine. */
+  /** @deprecated Cutover-only; use modules. */
   capabilities?: readonly CapabilityModule[];
+  /** AgentModules installed into each Engine. */
+  modules?: readonly AgentModule[];
 }
 
 /**
@@ -113,6 +116,7 @@ export function createRunManager(options: CreateRunManagerOptions): RunManager {
       appendSystemPrompt: options.appendSystemPrompt,
       hooks: options.hooks,
       capabilities: options.capabilities,
+      modules: options.modules,
       ...(options.approvalBackend ? { approvalBackend: options.approvalBackend } : {}),
     },
     concurrency: options.concurrency ?? 1,
@@ -121,5 +125,6 @@ export function createRunManager(options: CreateRunManagerOptions): RunManager {
     defaultTags: options.defaultTags,
     defaultMetadata: options.defaultMetadata,
     capabilities: options.capabilities,
+    modules: options.modules,
   });
 }

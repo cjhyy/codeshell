@@ -62,6 +62,24 @@ export function fromCapabilityModule(capability: CapabilityModule): AgentModule 
   };
 }
 
+/** Resolve the AgentServer's protocol surface from its options. */
+export function resolveServerProtocol(options: {
+  composition?: ResolvedComposition;
+  extensionModules?: readonly ExtensionModule[];
+}): ResolvedComposition["protocol"] {
+  if (options.composition && options.extensionModules) {
+    throw new ConfigError(
+      "AgentServerOptions.composition is mutually exclusive with extensionModules",
+    );
+  }
+  return (
+    options.composition?.protocol ??
+    compileComposition({
+      modules: (options.extensionModules ?? []).map(fromExtensionModule),
+    }).protocol
+  );
+}
+
 export function fromExtensionModule(module: ExtensionModule): AgentModule {
   return {
     id: module.id,

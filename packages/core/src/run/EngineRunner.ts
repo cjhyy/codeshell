@@ -20,6 +20,7 @@ import {
 import { createInProcessClient } from "../protocol/helpers.js";
 import type { ApprovalBackend } from "../tool-system/permission.js";
 import type { CapabilityModule } from "../capabilities/index.js";
+import type { AgentModule } from "../composition/types.js";
 
 /** Unattended runs (those with an injected approval backend) run headless so
  *  the in-process AgentServer does not wire an interactive askUser. Exported
@@ -113,7 +114,10 @@ export interface EngineRunnerConfig {
   permissionMode?: EngineConfig["permissionMode"];
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
+  /** @deprecated Cutover-only; use modules. */
   capabilities?: readonly CapabilityModule[];
+  /** AgentModules installed into each Engine this runner builds. */
+  modules?: readonly AgentModule[];
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
   mcpServers?: EngineConfig["mcpServers"];
@@ -192,6 +196,7 @@ export class EngineRunner implements RunExecutor {
       enabledBuiltinTools: this.config.enabledBuiltinTools,
       disabledBuiltinTools: this.config.disabledBuiltinTools,
       capabilities: this.config.capabilities,
+      modules: this.config.modules,
       customSystemPrompt: this.config.customSystemPrompt,
       // NOTE: callers must not pass appendSystemPrompt in engineConfigOverrides
       // below, or it will clobber this composed (automation note + host) value.

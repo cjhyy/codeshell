@@ -36,7 +36,7 @@
 
 import type { LLMConfig, PermissionMode } from "../types.js";
 import type { AgentPreset } from "../preset/index.js";
-import { registerPreset } from "../preset/index.js";
+import type { AgentModule } from "../composition/types.js";
 import { CompositeEvaluator, NoopEvaluator, type Evaluator } from "../run/Evaluator.js";
 import { RunManager } from "../run/RunManager.js";
 import { FileRunStore } from "../run/FileRunStore.js";
@@ -122,7 +122,13 @@ export function defineProduct(
     defaultPermissionRules: permissionRules,
   };
 
-  registerPreset(agentPreset);
+  // The product's preset travels as a synthesized AgentModule instead of a
+  // process-global registerPreset(): each Engine the runner builds resolves
+  // presets from its own compiled composition.
+  const productModule: AgentModule = {
+    id: "product",
+    engine: { presets: [agentPreset], defaultPreset: agentPreset.name },
+  };
 
   // ── 2. Build evaluator from contract ──────────────────────────
 
@@ -165,6 +171,7 @@ export function defineProduct(
       appendSystemPrompt: presetDef.appendPrompt,
       hooks: adapter?.hooks,
       customTools: customToolEntries.length > 0 ? customToolEntries : undefined,
+      modules: [productModule],
     },
     concurrency: contract?.concurrency ?? 1,
     runsDir,

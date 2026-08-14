@@ -45,12 +45,12 @@ import type {
 } from "./types.js";
 import { VALID_TRANSITIONS } from "./types.js";
 import {
-  composeArtifactDetectors,
   resolveCapabilities,
   type CapabilityArtifactDetector,
   type CapabilityModule,
 } from "../capabilities/index.js";
-import { resolveAgentPreset } from "../preset/index.js";
+import { resolveEngineComposition } from "../composition/legacy-bridge.js";
+import type { AgentModule } from "../composition/types.js";
 
 function hasOwnString<T extends object, K extends PropertyKey>(
   value: T | undefined,
@@ -84,8 +84,10 @@ export interface RunManagerConfig {
   defaultTags?: string[];
   /** Metadata merged into every submitted run. Submit input wins on conflicts. */
   defaultMetadata?: Record<string, unknown>;
-  /** Product/domain capabilities used by the built-in runner and artifact tracker. */
+  /** @deprecated Cutover-only; use modules. */
   capabilities?: readonly CapabilityModule[];
+  /** AgentModules installed into the built-in runner and artifact tracker. */
+  modules?: readonly AgentModule[];
 }
 
 export class RunManager {
@@ -129,11 +131,14 @@ export class RunManager {
     const localCapabilities =
       config.capabilities ??
       (isRunExecutor(config.executor) ? [] : (config.executor.capabilities ?? []));
+    const localModules =
+      config.modules ?? (isRunExecutor(config.executor) ? [] : (config.executor.modules ?? []));
     const capabilities = resolveCapabilities(localCapabilities);
+    const composition = resolveEngineComposition({ modules: localModules }, capabilities);
     // Accept either a RunExecutor instance or an EngineRunnerConfig
     this.runner = isRunExecutor(config.executor)
       ? config.executor
-      : new EngineRunner({ ...config.executor, capabilities });
+      : new EngineRunner({ ...config.executor, capabilities, modules: localModules });
     this.lock = new RunLock({
       runsDir: config.runsDir,
       staleMs: config.staleLockMs,
@@ -145,8 +150,8 @@ export class RunManager {
     this.evaluator = config.evaluator ?? new NoopEvaluator();
     this.defaultTags = config.defaultTags ?? [];
     this.defaultMetadata = config.defaultMetadata ?? {};
-    this.defaultPreset = resolveAgentPreset(undefined, capabilities).name;
-    this.artifactDetectors = composeArtifactDetectors(capabilities);
+    this.defaultPreset = composition.engine.defaultPreset;
+    this.artifactDetectors = composition.engine.artifactDetectors.map((c) => c.value);
 
     // Wire queue executor
     this.queue.setExecutor((runId) => this.executeRun(runId));
