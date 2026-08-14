@@ -122,6 +122,18 @@ export class ConfigError extends FrameworkError {
   }
 }
 
+/**
+ * Thrown by compileComposition() on any conflicting or invalid module
+ * contribution. Structured details carry at least { code, key } plus the
+ * owning module ids so hosts can render actionable errors.
+ */
+export class CompositionError extends FrameworkError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, details);
+    this.name = "CompositionError";
+  }
+}
+
 // ─── Sandbox Errors ───────────────────────────────────────────────
 
 /**
