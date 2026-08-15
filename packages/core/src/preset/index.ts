@@ -15,12 +15,12 @@ import {
   deriveToolGatedPromptSections,
   type BuiltinTool,
 } from "../tool-system/builtin/index.js";
-import type { CapabilityModule, CapabilityToolSelectionContext } from "../capabilities/index.js";
+import type { CapabilityToolSelectionContext } from "../capabilities/index.js";
 
 export const AGENT_PRESET_NAMES = ["harness-min", "general"] as const;
-/** Built-in preset names. Custom presets use arbitrary strings via registerPreset(). */
+/** Built-in preset names. Module presets use arbitrary strings via AgentModule.engine.presets. */
 export type BuiltinPresetName = (typeof AGENT_PRESET_NAMES)[number];
-/** Any preset name — built-in or custom-registered. */
+/** Any preset name — built-in or module-contributed. */
 export type AgentPresetName = BuiltinPresetName | (string & {});
 
 export interface AgentPreset {
@@ -59,81 +59,19 @@ export const BUILTIN_AGENT_PRESETS: Record<BuiltinPresetName, AgentPreset> = {
 };
 
 export const DEFAULT_AGENT_PRESET: AgentPresetName = "harness-min";
-/** @deprecated Product hosts should install a capability with `defaultPreset`. */
+/** @deprecated Product hosts should ship a module declaring `defaultPreset`. */
 export const DEFAULT_CLI_PRESET: AgentPresetName = DEFAULT_AGENT_PRESET;
 
-/** Registry of custom presets registered by external consumers. */
-const _customPresets = new Map<string, AgentPreset>();
-
-/**
- * Register a custom agent preset.
- *
- * External repos can call this to add their own presets:
- * ```ts
- * import { registerPreset } from "code-shell";
- *
- * registerPreset({
- *   name: "data-pipeline" as AgentPresetName,
- *   label: "Data Pipeline Orchestrator",
- *   description: "Manages ETL workflows and data quality checks.",
- *   promptSections: ["base", "orchestration"],
- *   builtinTools: ["Read", "Write", "Bash", "Glob", "Grep", "Agent"],
- *   defaultPermissionRules: [{ tool: "Read", decision: "allow" }],
- * });
- * ```
- */
-export function registerPreset(preset: AgentPreset): void {
-  _customPresets.set(preset.name, preset);
+/** List the built-in preset names. Module-contributed presets live in the composition. */
+export function listPresetNames(): string[] {
+  return [...AGENT_PRESET_NAMES];
 }
 
-/** List all available preset names (built-in + custom). */
-export function listPresetNames(capabilities: readonly CapabilityModule[] = []): string[] {
-  return [
-    ...new Set([
-      ...AGENT_PRESET_NAMES,
-      ..._customPresets.keys(),
-      ...capabilities.flatMap((capability) =>
-        (capability.presets ?? []).map((preset) => preset.name),
-      ),
-    ]),
-  ];
-}
-
-export function resolveAgentPreset(
-  name?: string,
-  capabilities: readonly CapabilityModule[] = [],
-): AgentPreset {
-  let resolvedName = name;
-  if (!resolvedName) {
-    const defaults = [
-      ...new Set(
-        capabilities
-          .map((capability) => capability.defaultPreset)
-          .filter((preset): preset is string => Boolean(preset)),
-      ),
-    ];
-    if (defaults.length > 1) {
-      throw new Error(
-        `Capabilities contributed conflicting default presets: ${defaults.join(", ")}`,
-      );
-    }
-    resolvedName = defaults[0] ?? DEFAULT_AGENT_PRESET;
-  }
-
-  const contributed = capabilities
-    .flatMap((capability) => [...(capability.presets ?? [])])
-    .find((preset) => preset.name === resolvedName);
-  if (contributed) return contributed;
-
-  // Check built-in first
+export function resolveAgentPreset(name?: string): AgentPreset {
+  const resolvedName = name ?? DEFAULT_AGENT_PRESET;
   const builtin = BUILTIN_AGENT_PRESETS[resolvedName as BuiltinPresetName];
   if (builtin) return builtin;
-
-  // Check custom presets
-  const custom = _customPresets.get(resolvedName);
-  if (custom) return custom;
-
-  const allowed = listPresetNames(capabilities).join(", ");
+  const allowed = listPresetNames().join(", ");
   throw new Error(`Unknown agent preset "${resolvedName}". Available presets: ${allowed}`);
 }
 
@@ -228,25 +166,11 @@ export function resolveBuiltinToolNames(options?: {
   host?: string;
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
-  capabilities?: readonly CapabilityModule[];
 }): string[] {
-  const preset = resolveAgentPreset(options?.preset, options?.capabilities);
-  const names = new Set(preset.builtinTools);
-
-  for (const name of options?.enabledBuiltinTools ?? []) {
-    names.add(name);
-  }
-
-  for (const capability of options?.capabilities ?? []) {
-    capability.adjustToolSelection?.(names, {
-      preset: preset.name,
-      host: options?.host,
-    });
-  }
-
-  for (const name of options?.disabledBuiltinTools ?? []) {
-    names.delete(name);
-  }
-
-  return [...names];
+  return resolveToolNamesForPreset({
+    preset: resolveAgentPreset(options?.preset),
+    host: options?.host,
+    enabledBuiltinTools: options?.enabledBuiltinTools,
+    disabledBuiltinTools: options?.disabledBuiltinTools,
+  });
 }

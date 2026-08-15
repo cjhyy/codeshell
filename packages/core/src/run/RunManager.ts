@@ -44,12 +44,8 @@ import type {
   RunExecutionContext,
 } from "./types.js";
 import { VALID_TRANSITIONS } from "./types.js";
-import {
-  resolveCapabilities,
-  type CapabilityArtifactDetector,
-  type CapabilityModule,
-} from "../capabilities/index.js";
-import { resolveEngineComposition } from "../composition/legacy-bridge.js";
+import { type CapabilityArtifactDetector } from "../capabilities/index.js";
+import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
 
 function hasOwnString<T extends object, K extends PropertyKey>(
@@ -84,8 +80,6 @@ export interface RunManagerConfig {
   defaultTags?: string[];
   /** Metadata merged into every submitted run. Submit input wins on conflicts. */
   defaultMetadata?: Record<string, unknown>;
-  /** @deprecated Cutover-only; use modules. */
-  capabilities?: readonly CapabilityModule[];
   /** AgentModules installed into the built-in runner and artifact tracker. */
   modules?: readonly AgentModule[];
 }
@@ -128,17 +122,13 @@ export class RunManager {
   constructor(config: RunManagerConfig) {
     this.store = config.store;
     this.queue = new RunQueue({ concurrency: config.concurrency ?? 1 });
-    const localCapabilities =
-      config.capabilities ??
-      (isRunExecutor(config.executor) ? [] : (config.executor.capabilities ?? []));
     const localModules =
       config.modules ?? (isRunExecutor(config.executor) ? [] : (config.executor.modules ?? []));
-    const capabilities = resolveCapabilities(localCapabilities);
-    const composition = resolveEngineComposition({ modules: localModules }, capabilities);
+    const composition = compileComposition({ modules: localModules });
     // Accept either a RunExecutor instance or an EngineRunnerConfig
     this.runner = isRunExecutor(config.executor)
       ? config.executor
-      : new EngineRunner({ ...config.executor, capabilities, modules: localModules });
+      : new EngineRunner({ ...config.executor, modules: localModules });
     this.lock = new RunLock({
       runsDir: config.runsDir,
       staleMs: config.staleLockMs,

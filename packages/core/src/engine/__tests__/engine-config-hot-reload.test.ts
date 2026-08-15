@@ -2,11 +2,12 @@ import { describe, it, expect } from "bun:test";
 import { Engine } from "../engine.js";
 import { PromptComposer } from "../../prompt/composer.js";
 import { buildPresetSystemPrompt, BUILTIN_AGENT_PRESETS } from "../../preset/index.js";
-import type { CapabilityModule } from "../../capabilities/index.js";
+import type { AgentModule } from "../../composition/types.js";
 
 const TEST_PRESET_NAME = "test-focused";
-const TEST_CAPABILITY: CapabilityModule = {
+const TEST_MODULE: AgentModule = {
   id: "test-preset-hot-reload",
+  engine: {
   presets: [
     {
       ...BUILTIN_AGENT_PRESETS.general,
@@ -16,6 +17,7 @@ const TEST_CAPABILITY: CapabilityModule = {
       promptSections: ["base"],
     },
   ],
+  },
 };
 
 /**
@@ -30,7 +32,7 @@ function buildEngine(preset: string): Engine {
     llm: { provider: "openai", model: "model-a", apiKey: "x", baseUrl: "http://localhost" },
     cwd: process.cwd(),
     preset,
-    capabilities: [TEST_CAPABILITY],
+    modules: [TEST_MODULE],
   } as any);
 }
 

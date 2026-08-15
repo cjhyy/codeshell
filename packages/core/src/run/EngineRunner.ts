@@ -19,7 +19,6 @@ import {
 } from "./RunApprovalBackend.js";
 import { createInProcessClient } from "../protocol/helpers.js";
 import type { ApprovalBackend } from "../tool-system/permission.js";
-import type { CapabilityModule } from "../capabilities/index.js";
 import type { AgentModule } from "../composition/types.js";
 
 /** Unattended runs (those with an injected approval backend) run headless so
@@ -114,8 +113,6 @@ export interface EngineRunnerConfig {
   permissionMode?: EngineConfig["permissionMode"];
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
-  /** @deprecated Cutover-only; use modules. */
-  capabilities?: readonly CapabilityModule[];
   /** AgentModules installed into each Engine this runner builds. */
   modules?: readonly AgentModule[];
   customSystemPrompt?: string;
@@ -195,7 +192,6 @@ export class EngineRunner implements RunExecutor {
       preset: run.preset,
       enabledBuiltinTools: this.config.enabledBuiltinTools,
       disabledBuiltinTools: this.config.disabledBuiltinTools,
-      capabilities: this.config.capabilities,
       modules: this.config.modules,
       customSystemPrompt: this.config.customSystemPrompt,
       // NOTE: callers must not pass appendSystemPrompt in engineConfigOverrides

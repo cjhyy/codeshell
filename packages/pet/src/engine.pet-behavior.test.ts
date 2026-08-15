@@ -8,7 +8,7 @@ import type { CreateMessageOptions } from "@cjhyy/code-shell-core/extension";
 import type { LLMResponse, Message } from "@cjhyy/code-shell-core/extension";
 import type { ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { Engine } from "@cjhyy/code-shell-core";
-import { createPetCapability } from "./capability.js";
+import { createPetModule } from "./capability.js";
 
 const provider = "fake-pet-behavior";
 const calls = new Map<
@@ -107,7 +107,7 @@ describe("Engine pet behavior", () => {
     const engine = new Engine({
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
-      extensionModules: [createPetCapability()],
+      modules: [createPetModule()],
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",
@@ -181,7 +181,7 @@ describe("Engine pet behavior", () => {
     const engine = new Engine({
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
-      extensionModules: [createPetCapability()],
+      modules: [createPetModule()],
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",
@@ -211,7 +211,7 @@ describe("Engine pet behavior", () => {
     const engine = new Engine({
       llm: { provider, model, apiKey: "test" } as never,
       cwd,
-      extensionModules: [createPetCapability()],
+      modules: [createPetModule()],
       sessionStorageDir: join(cwd, "sessions"),
       permissionMode: "bypassPermissions",
       settingsScope: "isolated",

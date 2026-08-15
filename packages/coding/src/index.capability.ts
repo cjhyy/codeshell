@@ -7,7 +7,6 @@ import {
   type AgentModule,
   type AgentPreset,
   type BuiltinTool,
-  type CapabilityModule,
   type RegisteredTool,
   type ToolVisibilityContext,
 } from "@cjhyy/code-shell-core/extension";
@@ -275,19 +274,3 @@ export function createCodingModule(): AgentModule {
     },
   };
 }
-
-/** @deprecated Cutover-only legacy view; use createCodingModule(). */
-export const CODING_CAPABILITY: CapabilityModule = {
-  id: "coding",
-  defaultPreset: "terminal-coding",
-  tools: CODING_TOOLS,
-  presets: [CODING_GENERAL_PRESET, TERMINAL_CODING_PRESET],
-  promptSections: CODING_PROMPT_SECTIONS,
-  dynamicContextProviders: [gitDynamicContextProvider],
-  instructionBoundary: findCodingInstructionBoundary,
-  createToolService: createCodingToolService,
-  artifactDetectors: [codingArtifactDetector],
-  fileHistory: CODING_FILE_HISTORY,
-  sessionWorkspace: CODING_SESSION_WORKSPACE,
-  adjustToolSelection: codingAdjustToolSelection,
-};

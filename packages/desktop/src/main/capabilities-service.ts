@@ -33,17 +33,17 @@ import { createCodingModule } from "@cjhyy/code-shell-capability-coding/capabili
 const composition = compileComposition({ modules: [createCodingModule()] });
 const adjusters = composition.engine.toolSelectionAdjusters.map((a) => a.value);
 
-function resolveNames(options: {
+function resolveNames(options?: {
   preset?: string;
   host?: string;
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
 }): string[] {
   return resolveToolNamesForPreset({
-    preset: resolvePresetFromComposition(composition, options.preset),
-    host: options.host,
-    enabledBuiltinTools: options.enabledBuiltinTools,
-    disabledBuiltinTools: options.disabledBuiltinTools,
+    preset: resolvePresetFromComposition(composition, options?.preset),
+    host: options?.host,
+    enabledBuiltinTools: options?.enabledBuiltinTools,
+    disabledBuiltinTools: options?.disabledBuiltinTools,
     adjusters,
   });
 }

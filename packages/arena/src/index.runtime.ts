@@ -8,7 +8,6 @@ export {
   arenaTool,
   arenaToolDef,
   ArenaCapabilitySettingsSchema,
-  createArenaCapability,
   createArenaModule,
   getArenaStatus,
   saveArenaSettingsByKeys,

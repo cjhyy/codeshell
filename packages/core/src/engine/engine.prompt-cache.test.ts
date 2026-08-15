@@ -14,7 +14,7 @@ import type {
   PromptCacheDiagnosticSample,
   PromptPrefixFingerprint,
 } from "./prompt-cache-diagnostics.js";
-import type { CapabilityModule } from "../capabilities/index.js";
+import type { AgentModule } from "../composition/types.js";
 
 const provider = "fake-engine-prompt-cache";
 const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
@@ -32,14 +32,16 @@ type Scenario = {
 
 const scenarios = new Map<string, Scenario>();
 
-const dynamicContextCapability: CapabilityModule = {
+const dynamicContextModule: AgentModule = {
   id: "prompt-cache-test-context",
-  dynamicContextProviders: [
-    ({ cwd }) =>
-      readdirSync(cwd)
-        .filter((name) => /(?:first|second|summary)-dynamic-.*\.txt$/.test(name))
-        .join("\n"),
-  ],
+  engine: {
+    dynamicContextProviders: [
+      ({ cwd }) =>
+        readdirSync(cwd)
+          .filter((name) => /(?:first|second|summary)-dynamic-.*\.txt$/.test(name))
+          .join("\n"),
+    ],
+  },
 };
 
 function diagnosticSample(
@@ -181,7 +183,7 @@ describe("Engine prompt-cache hygiene", () => {
         sessionStorageDir: sessions,
         enabledBuiltinTools: [],
         preset: "general",
-        capabilities: [dynamicContextCapability],
+        modules: [dynamicContextModule],
         headless: true,
       });
       (engine as any).hooks.clear();
@@ -264,7 +266,7 @@ describe("Engine prompt-cache hygiene", () => {
         sessionStorageDir: sessions,
         enabledBuiltinTools: [],
         preset: "general",
-        capabilities: [dynamicContextCapability],
+        modules: [dynamicContextModule],
         headless: true,
         maxContextTokens: 10_000,
       });

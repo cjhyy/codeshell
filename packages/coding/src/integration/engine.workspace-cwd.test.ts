@@ -16,7 +16,7 @@ import {
   type LLMResponse,
 } from "@cjhyy/code-shell-core";
 import {
-  CODING_CAPABILITY,
+  createCodingModule,
   CODING_TOOLS,
   createWorktree,
   removeWorktree,
@@ -136,7 +136,7 @@ describe("Engine workspace cwd resolution", () => {
       responses: [toolUse([{ id: "pwd-1", toolName: "Bash", args: { command: "pwd" } }]), stop()],
     });
     const engine = new Engine({
-      capabilities: [CODING_CAPABILITY],
+      modules: [createCodingModule()],
       llm: { provider, model, apiKey: "test" } as never,
       cwd: repo,
       sessionStorageDir: sessions,
@@ -184,7 +184,7 @@ describe("Engine workspace cwd resolution", () => {
       ],
     });
     const engine = new Engine({
-      capabilities: [CODING_CAPABILITY],
+      modules: [createCodingModule()],
       llm: { provider, model, apiKey: "test" } as never,
       cwd: repo,
       sessionStorageDir: sessions,
@@ -215,7 +215,7 @@ describe("Engine workspace cwd resolution", () => {
       ],
     });
     const engine = new Engine({
-      capabilities: [CODING_CAPABILITY],
+      modules: [createCodingModule()],
       llm: { provider, model, apiKey: "test" } as never,
       cwd: repo,
       sessionStorageDir: sessions,
@@ -264,7 +264,7 @@ describe("Engine workspace cwd resolution", () => {
     });
     const runtime = new CapturingRuntime();
     const engine = new Engine({
-      capabilities: [CODING_CAPABILITY],
+      modules: [createCodingModule()],
       llm: { provider, model, apiKey: "test" } as never,
       cwd: repo,
       sessionStorageDir: sessions,
@@ -337,7 +337,7 @@ describe("Engine workspace cwd resolution", () => {
     const wt = await createWorktree(repo, "bridge", "bridge-session");
     const runtime = new CapturingRuntime();
     const engine = new Engine({
-      capabilities: [CODING_CAPABILITY],
+      modules: [createCodingModule()],
       llm: { provider, model, apiKey: "test" } as never,
       cwd: repo,
       sessionStorageDir: sessions,
@@ -409,7 +409,7 @@ describe("Engine workspace cwd resolution", () => {
     const model = uniqueModel("active-release");
     scenarios.set(model, { calls: 0, responses: [stop()] });
     const engine = new Engine({
-      capabilities: [CODING_CAPABILITY],
+      modules: [createCodingModule()],
       llm: { provider, model, apiKey: "test" } as never,
       cwd: repo,
       sessionStorageDir: sessions,

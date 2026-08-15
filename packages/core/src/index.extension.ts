@@ -74,7 +74,6 @@ export { webSearchTool } from "./tool-system/builtin/web-search.js";
 export { webFetchTool } from "./tool-system/builtin/web-fetch.js";
 export { extractJSON, extractJSONArray } from "./utils/json.js";
 export type {
-  ExtensionModule,
   ExtensionQueryHandler,
   ExtensionTool,
 } from "./tool-system/capability-module.js";
@@ -88,11 +87,9 @@ export type {
 // backgroundJobRegistry are process-level singletons — identity must
 // stay consistent across entry points).
 export type { SessionWorkspace } from "./types.js";
-export { registerCapability } from "./capabilities/index.js";
 export type {
   CapabilityArtifactDetector,
   CapabilityDynamicContextProvider,
-  CapabilityModule,
   CapabilityToolServiceHost,
 } from "./capabilities/index.js";
 export type {

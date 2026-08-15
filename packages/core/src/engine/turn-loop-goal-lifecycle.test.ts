@@ -18,15 +18,18 @@ import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { ToolRegistry } from "../tool-system/registry.js";
-import type { CapabilityModule } from "../capabilities/index.js";
+import type { AgentModule } from "../composition/types.js";
 import { Engine } from "./engine.js";
 import { goalConfigFromLifecycle } from "../goal/lifecycle.js";
 import { TurnLoop, type TurnLoopConfig, type TurnLoopDeps } from "./turn-loop.js";
 
-const TEST_WORKSPACE_CAPABILITY: CapabilityModule = {
+const TEST_WORKSPACE_MODULE: AgentModule = {
   id: "test-workspace-switch",
+  engine: {
   tools: [
     {
+      kind: "preset-tags" as const,
+      tool: {
       definition: {
         name: "SwitchSessionWorkspace",
         description: "Switch the current test session through the generic workspace bridge.",
@@ -49,10 +52,12 @@ const TEST_WORKSPACE_CAPABILITY: CapabilityModule = {
         ctx.setSessionWorkspace?.(workspace);
         return `Switched session workspace to ${workspace.root}`;
       },
+      },
     },
   ],
   adjustToolSelection: (names) => {
     names.add("SwitchSessionWorkspace");
+  },
   },
 };
 
@@ -2467,7 +2472,7 @@ describe("Engine persisted goal lifecycle", () => {
         sessionStorageDir: sessionsDir,
         permissionMode: "bypassPermissions",
         builtinToolHost: "desktop",
-        capabilities: [TEST_WORKSPACE_CAPABILITY],
+        modules: [TEST_WORKSPACE_MODULE],
         workspaceBridge: {
           switch: async () => {
             // The desktop main-process bridge persists through its own
@@ -2537,7 +2542,7 @@ describe("Engine persisted goal lifecycle", () => {
         sessionStorageDir: sessionsDir,
         permissionMode: "bypassPermissions",
         builtinToolHost: "desktop",
-        capabilities: [TEST_WORKSPACE_CAPABILITY],
+        modules: [TEST_WORKSPACE_MODULE],
         workspaceBridge: {
           switch: async () => {
             engine.getSessionManager().setSessionWorkspace(sessionId, workspace);

@@ -20,21 +20,9 @@ const BUILTIN_SECTIONS: Record<string, string> = {
   tone: readSectionFile("tone"),
 };
 
-/** Registry for custom sections added at runtime. */
-const _customSections = new Map<string, string>();
-
-/**
- * Register a custom prompt section at runtime.
- * This allows external presets to add their own sections.
- */
-export function registerSection(name: string, content: string): void {
-  _customSections.set(name, content);
-}
-
 /**
  * Read a named prompt section. Returns the trimmed markdown content.
- * Looks up built-in sections first, then custom-registered sections.
- * Throws if the section name is not found.
+ * Contributed (module) sections win over built-ins; throws on unknown names.
  */
 export function loadSection(name: string, sections?: Readonly<Record<string, string>>): string {
   const contributed = sections?.[name];
@@ -43,10 +31,7 @@ export function loadSection(name: string, sections?: Readonly<Record<string, str
   const builtin = BUILTIN_SECTIONS[name];
   if (builtin !== undefined) return builtin.trim();
 
-  const custom = _customSections.get(name);
-  if (custom !== undefined) return custom.trim();
-
-  const available = [...Object.keys(BUILTIN_SECTIONS), ..._customSections.keys()].join(", ");
+  const available = Object.keys(BUILTIN_SECTIONS).join(", ");
   throw new Error(`Unknown prompt section "${name}". Available sections: ${available}`);
 }
 
@@ -61,8 +46,8 @@ export function loadSections(
 }
 
 /**
- * List all available section names (built-in + custom).
+ * List the built-in section names.
  */
 export function availableSections(): string[] {
-  return [...Object.keys(BUILTIN_SECTIONS), ..._customSections.keys()];
+  return [...Object.keys(BUILTIN_SECTIONS)];
 }

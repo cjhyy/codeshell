@@ -1,9 +1,9 @@
-import { createPetCapability } from "./capability.js";
+import { createPetModule } from "./capability.js";
 import { describe, expect, spyOn, test } from "bun:test";
 import type { Engine } from "@cjhyy/code-shell-core";
 import { ApprovalRouter } from "@cjhyy/code-shell-core/extension";
 import { ChatSessionManager } from "@cjhyy/code-shell-core";
-import { AgentServer } from "@cjhyy/code-shell-core";
+import { AgentServer, compileComposition } from "@cjhyy/code-shell-core";
 import { Methods } from "@cjhyy/code-shell-core";
 
 function makeTransport() {
@@ -54,7 +54,7 @@ describe("AgentServer Pet pending projection", () => {
     const server = new AgentServer({
       transport: t.transport,
       chatManager: manager,
-      extensionModules: [createPetCapability()],
+      composition: compileComposition({ modules: [createPetModule()] }),
     });
 
     const decision = (server as any).requestApprovalFromClient({
@@ -125,7 +125,7 @@ describe("AgentServer Pet pending projection", () => {
     const server = new AgentServer({
       transport: t.transport,
       chatManager: manager,
-      extensionModules: [createPetCapability()],
+      composition: compileComposition({ modules: [createPetModule()] }),
     });
 
     void (server as any).requestAskUserForSession(
@@ -178,7 +178,7 @@ describe("AgentServer Pet pending projection", () => {
       const server = new AgentServer({
         transport: t.transport,
         chatManager: manager,
-        extensionModules: [createPetCapability()],
+        composition: compileComposition({ modules: [createPetModule()] }),
       });
 
       void (server as any).requestApprovalFromClient({
@@ -229,7 +229,7 @@ describe("AgentServer Pet pending projection", () => {
     const router = new ApprovalRouter();
     const t = makeTransport();
     const server = new AgentServer({
-      extensionModules: [createPetCapability()],
+      composition: compileComposition({ modules: [createPetModule()] }),
       transport: t.transport,
       chatManager: manager,
       approvalRouter: router,

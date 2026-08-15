@@ -67,12 +67,11 @@ import { assertSafeSessionId, SessionManager } from "../session/session-manager.
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
 import type {
-  ExtensionModule,
   ExtensionQueryHandler,
   ProtocolObserver,
   ProtocolObserverHost,
 } from "../tool-system/capability-module.js";
-import { resolveServerProtocol } from "../composition/legacy-bridge.js";
+import { compileComposition } from "../composition/compiler.js";
 import { attachProtocolContributions } from "../composition/protocol-attach.js";
 import type { ResolvedComposition } from "../composition/types.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
@@ -203,7 +202,7 @@ function runInputError(params: RunParams): string | null {
     return "profileParams must be an object";
   }
   // Domain-specific run-param validation (e.g. behavior-mode vocabularies and
-  // extension-owned param shapes) lives in ExtensionModule.validateRunParams.
+  // extension-owned param shapes) lives in AgentModule protocol.validateRunParams.
   return null;
 }
 
@@ -489,11 +488,9 @@ export interface AgentServerOptions {
   /**
    * Compiled composition from the host root. The server consumes its
    * protocol surface: observers, run-param validators, queries, hidden
-   * session kinds. Mutually exclusive with extensionModules.
+   * session kinds. Omitted → core-only (no protocol contributions).
    */
   composition?: ResolvedComposition;
-  /** @deprecated Cutover-only; use composition. */
-  extensionModules?: readonly ExtensionModule[];
 }
 
 export class AgentServer {
@@ -650,7 +647,8 @@ export class AgentServer {
     // Protocol surface from the compiled composition. Each contributing
     // module may attach one observer; the server calls them at every
     // lifecycle hook point and isolates per-observer failures.
-    const protocol = resolveServerProtocol(options);
+    const protocol =
+      options.composition?.protocol ?? compileComposition({}).protocol;
     this.runValidators = protocol.runValidators;
     this.hiddenSessionKinds = protocol.hiddenSessionKinds.map((k) => k.key);
     const observerHost: ProtocolObserverHost = {

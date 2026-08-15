@@ -3,14 +3,14 @@ import type { Engine, EngineResult } from "@cjhyy/code-shell-core";
 import { AgentClient } from "@cjhyy/code-shell-core";
 import { ChatSessionManager } from "@cjhyy/code-shell-core";
 import { AgentServer } from "@cjhyy/code-shell-core";
-import { createInProcessTransport } from "@cjhyy/code-shell-core";
+import { createInProcessTransport, compileComposition } from "@cjhyy/code-shell-core";
 import {
   GET_PET_PROJECTION_SNAPSHOT_METHOD,
   PET_PROJECTION_DELTA_METHOD,
   type PetProjectionDelta,
   type PetProjectionSnapshotResult,
 } from "./protocol.js";
-import { createPetCapability } from "./capability.js";
+import { createPetModule } from "./capability.js";
 
 function makeEngine(sessionId: string, kind: "work" | "pet" = "work"): Engine {
   return {
@@ -50,7 +50,7 @@ function makePair(sessionIds = ["session-a", "session-b"], kind: "work" | "pet" 
     engineFactory: () => engines.shift() ?? makeEngine("fallback"),
   });
   const [clientTransport, serverTransport] = createInProcessTransport();
-  const server = new AgentServer({ transport: serverTransport, chatManager: manager, extensionModules: [createPetCapability()] });
+  const server = new AgentServer({ transport: serverTransport, chatManager: manager, composition: compileComposition({ modules: [createPetModule()] }) });
   const client = new AgentClient({ transport: clientTransport });
   return { client, manager, server };
 }

@@ -4,7 +4,7 @@ import type {
   ToolContext,
   ToolVisibilityContext,
 } from "@cjhyy/code-shell-core/extension";
-import { createPetCapability } from "./capability.js";
+import { createPetModule } from "./capability.js";
 import { PET_REPORT_TO_MIMI_METHOD, type PetReportToMimiEvent } from "./protocol.js";
 import {
   REPORT_TO_MIMI_TOOL_NAME,
@@ -92,8 +92,8 @@ describe("ReportToMimi tool", () => {
 
   test("routes the catalog tool through the protocol observer notification", async () => {
     const notifications: Array<{ method: string; params: Record<string, unknown> }> = [];
-    const capability = createPetCapability();
-    const observer = capability.createProtocolObserver?.({
+    const module_ = createPetModule();
+    const observer = module_.protocol?.createObserver?.({
       getLiveSessionSnapshot: () => [],
       projectionGeneration: () => 1,
       getSessionKind: () => undefined,
@@ -101,9 +101,8 @@ describe("ReportToMimi tool", () => {
       notify: (method, params) => notifications.push({ method, params }),
       registerQuery: () => undefined,
     } satisfies ProtocolObserverHost);
-    const tool = capability.catalogTools?.find(
-      (candidate) => candidate.definition.name === REPORT_TO_MIMI_TOOL_NAME,
-    );
+    const tool = module_.engine?.tools?.flatMap((c) => (c.kind === "preset-tags" ? [c.tool] : []))
+      .find((candidate) => candidate.definition.name === REPORT_TO_MIMI_TOOL_NAME);
 
     expect(tool).toBeDefined();
     expect(tool?.exposure.availability?.(visibility())).toBe(true);
@@ -129,10 +128,9 @@ describe("RequestMimiDelivery tool", () => {
     expect(requestMimiDeliveryAvailability(visibility({ behaviorProfile: "pet" }))).toBe(false);
     expect(requestMimiDeliveryAvailability(visibility({ isSubAgent: true }))).toBe(false);
 
-    const capability = createPetCapability();
-    const tool = capability.catalogTools?.find(
-      (candidate) => candidate.definition.name === REQUEST_MIMI_DELIVERY_TOOL_NAME,
-    );
+    const module_ = createPetModule();
+    const tool = module_.engine?.tools?.flatMap((c) => (c.kind === "preset-tags" ? [c.tool] : []))
+      .find((candidate) => candidate.definition.name === REQUEST_MIMI_DELIVERY_TOOL_NAME);
     expect(tool?.definition.permissionDefault).toBe("ask");
     expect(tool?.exposure.defaultPermissionRules).toBeUndefined();
   });

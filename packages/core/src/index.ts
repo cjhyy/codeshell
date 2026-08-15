@@ -195,11 +195,6 @@ export {
   type ToolRegistryHarness,
   type ToolRegistryHarnessOptions,
 } from "./tool-system/testing/tool-registry-harness.js";
-export {
-  registerCapability,
-  unregisterCapability,
-  listRegisteredCapabilities,
-} from "./capabilities/index.js";
 export type {
   CapabilityArtifact,
   CapabilityArtifactDetectionContext,
@@ -209,7 +204,6 @@ export type {
   CapabilityFileHistoryContribution,
   CapabilityEngineHookContribution,
   CapabilityInstructionBoundaryFinder,
-  CapabilityModule,
   CapabilityToolServiceHost,
   CapabilityToolSelectionContext,
   SessionWorkspaceCapability,
@@ -223,16 +217,11 @@ export {
 } from "./tool-system/mcp-manager.js";
 export type { AskUserFn } from "./tool-system/builtin/ask-user.js";
 export type {
-  ExtensionModule,
   ExtensionQueryHandler,
   ExtensionTool,
   ProtocolLiveSession,
   ProtocolObserver,
   ProtocolObserverHost,
-} from "./tool-system/capability-module.js";
-export {
-  registerExtensionModules,
-  queryExtensionModules,
 } from "./tool-system/capability-module.js";
 // taskManager singleton removed in the TodoWrite refactor; task state
 // lives in the transcript now. Type re-exports stay for SDK consumers
@@ -352,16 +341,10 @@ export {
   resolveBuiltinToolNames,
   resolveToolNamesForPreset,
   buildPresetSystemPrompt,
-  registerPreset,
   listPresetNames,
 } from "./preset/index.js";
 export type { AgentPreset, AgentPresetName } from "./preset/index.js";
-export {
-  loadSection,
-  loadSections,
-  availableSections,
-  registerSection,
-} from "./prompt/section-loader.js";
+export { loadSection, loadSections, availableSections } from "./prompt/section-loader.js";
 
 // ─── Context ─────────────────────────────────────────────────────
 

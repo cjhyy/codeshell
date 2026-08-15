@@ -10,7 +10,8 @@ import type {
   CapabilityEngineHookContribution,
   CapabilityFileHistoryContribution,
   CapabilityInstructionBoundaryFinder,
-  CapabilityModule,
+  CapabilityToolSelectionContext,
+  CapabilityToolServiceHost,
   SessionWorkspaceCapability,
 } from "../capabilities/index.js";
 import type { AgentPreset } from "../preset/index.js";
@@ -46,9 +47,12 @@ export interface AgentEngineContributions {
   readonly sessionWorkspace?: SessionWorkspaceCapability;
   readonly hooks?: readonly CapabilityEngineHookContribution[];
   readonly behaviorProfiles?: readonly RunBehaviorProfile[];
-  readonly adjustToolSelection?: CapabilityModule["adjustToolSelection"];
+  readonly adjustToolSelection?: (
+    names: Set<string>,
+    context: CapabilityToolSelectionContext,
+  ) => void;
   /** Phase C renames this to privateService with owned lifetime. */
-  readonly createToolService?: CapabilityModule["createToolService"];
+  readonly createToolService?: (host: CapabilityToolServiceHost) => unknown;
 }
 
 export interface AgentProtocolContributions {
@@ -109,10 +113,10 @@ export interface ResolvedEngineComposition {
   readonly hooks: readonly ResolvedEngineHook[];
   readonly behaviorProfiles: readonly ResolvedContribution<RunBehaviorProfile>[];
   readonly toolSelectionAdjusters: readonly ResolvedContribution<
-    NonNullable<CapabilityModule["adjustToolSelection"]>
+    NonNullable<AgentEngineContributions["adjustToolSelection"]>
   >[];
   readonly toolServices: readonly ResolvedContribution<
-    NonNullable<CapabilityModule["createToolService"]>
+    NonNullable<AgentEngineContributions["createToolService"]>
   >[];
 }
 

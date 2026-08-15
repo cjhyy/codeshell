@@ -16,7 +16,7 @@ import * as rootApi from "./index.js";
 
 describe("Pet package public entry contracts", () => {
   it("keeps focused runtime surfaces with root-entry identity", () => {
-    expect(Object.keys(capabilityApi).sort()).toEqual(["createPetCapability"]);
+    expect(Object.keys(capabilityApi).sort()).toEqual(["createPetModule"]);
     expect(Object.keys(protocolApi).sort()).toEqual([
       "GET_PET_PROJECTION_SNAPSHOT_METHOD",
       "LOCAL_PET_OWNER",
@@ -29,7 +29,7 @@ describe("Pet package public entry contracts", () => {
       "parseDigitalHumanTeam",
     ]);
 
-    expect(capabilityApi.createPetCapability).toBe(rootApi.createPetCapability);
+    expect(capabilityApi.createPetModule).toBe(rootApi.createPetModule);
     expect(protocolApi.PET_PROJECTION_DELTA_METHOD).toBe(rootApi.PET_PROJECTION_DELTA_METHOD);
     expect(protocolApi.PET_REPORT_TO_MIMI_METHOD).toBe(rootApi.PET_REPORT_TO_MIMI_METHOD);
     expect(protocolApi.GET_PET_PROJECTION_SNAPSHOT_METHOD).toBe(
@@ -45,7 +45,7 @@ describe("Pet package public entry contracts", () => {
     expect(protocolApi).not.toHaveProperty("SessionIndex");
     expect(protocolApi).not.toHaveProperty("PendingDecisionIndex");
     expect(protocolApi).not.toHaveProperty("createPetProjectionObserver");
-    expect(teamApi).not.toHaveProperty("createPetCapability");
+    expect(teamApi).not.toHaveProperty("createPetModule");
   });
 
   it("declares exact package exports and source aliases without a deep-import wildcard", async () => {

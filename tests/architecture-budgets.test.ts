@@ -42,10 +42,10 @@ describe("architecture growth budgets", () => {
 
   test("published entry points cannot silently expand their compatibility surface", () => {
     const exportBudgets: Record<string, number> = {
-      // +2 for the composition cutover (compileComposition/snapshot + types);
-      // re-tightened when the legacy capability/extension exports are deleted.
-      "packages/core/src/index.ts": 126,
-      "packages/core/src/index.extension.ts": 47,
+      // Re-tightened after the composition cutover deleted the legacy
+      // registerCapability/registerPreset/registerSection export surface.
+      "packages/core/src/index.ts": 123,
+      "packages/core/src/index.extension.ts": 46,
       // Shared crash-safe persistence primitives are host-only API.
       "packages/core/src/index.internal.ts": 80,
       "packages/coding/src/index.ts": 12,

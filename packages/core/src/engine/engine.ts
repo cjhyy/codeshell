@@ -105,12 +105,9 @@ import { computeEffectiveDisabledLists } from "../capability-control/disabled-li
 import { registerFileHistoryHook } from "./file-history-hook.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { resolveToolNamesForPreset, type AgentPreset } from "../preset/index.js";
-import {
-  resolveCapabilities,
-  type CapabilityDynamicContextProvider,
-  type CapabilityModule,
-} from "../capabilities/index.js";
-import { resolveEngineComposition } from "../composition/legacy-bridge.js";
+import { type CapabilityDynamicContextProvider } from "../capabilities/index.js";
+import { compileComposition } from "../composition/compiler.js";
+import { ConfigError } from "../exceptions.js";
 import {
   compositionPromptSections,
   compositionToolCatalog,
@@ -294,7 +291,6 @@ export class Engine {
   private runtimeToolRegistry: ToolRegistry;
   /** Engine-local view containing only this Engine's capability modules. */
   private toolRegistry: ToolRegistry;
-  private readonly capabilities: readonly CapabilityModule[];
   /** Compiled module contributions — the single composition fact source. */
   private readonly composition: ResolvedComposition;
   private readonly toolCatalog: readonly BuiltinTool[];
@@ -572,10 +568,12 @@ export class Engine {
       ...(this.runtime ? { runtime: this.runtime } : {}),
     });
 
-    this.capabilities = resolveCapabilities(config.capabilities);
-    this.config = { ...config, capabilities: this.capabilities };
-    // Single composition fact source; legacy configs bridge through the compiler.
-    this.composition = resolveEngineComposition(config, this.capabilities);
+    if (config.composition && config.modules) {
+      throw new ConfigError("EngineConfig.composition is mutually exclusive with modules");
+    }
+    // Single composition fact source for every module contribution.
+    this.composition =
+      config.composition ?? compileComposition({ modules: config.modules ?? [] });
     this.toolCatalog = compositionToolCatalog(this.composition);
     this.toolGuards = new Map(
       this.toolCatalog.flatMap((tool) =>

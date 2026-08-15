@@ -1,13 +1,24 @@
 import { describe, expect, it } from "bun:test";
-import { resolveBuiltinToolNames } from "@cjhyy/code-shell-core";
 import {
-  CODING_CAPABILITY,
-  CODING_GENERAL_PRESET,
-  CODING_TOOLS,
-  TERMINAL_CODING_PRESET,
-} from "./index.js";
+  compileComposition,
+  resolvePresetFromComposition,
+  resolveToolNamesForPreset,
+} from "@cjhyy/code-shell-core";
+import { CODING_GENERAL_PRESET, CODING_TOOLS, TERMINAL_CODING_PRESET } from "./index.js";
+import { createCodingModule } from "./index.js";
 
-describe("coding capability presets", () => {
+const composition = compileComposition({ modules: [createCodingModule()] });
+const adjusters = composition.engine.toolSelectionAdjusters.map((a) => a.value);
+
+function composedToolNames(host?: string): string[] {
+  return resolveToolNamesForPreset({
+    preset: resolvePresetFromComposition(composition, "terminal-coding"),
+    host,
+    adjusters,
+  });
+}
+
+describe("coding module presets", () => {
   it("derives every contributed preset tool from coding tool metadata", () => {
     for (const [tag, preset] of [
       ["general", CODING_GENERAL_PRESET],
@@ -28,21 +39,14 @@ describe("coding capability presets", () => {
   });
 
   it("desktop composition swaps terminal worktree tools for its scoped bridge", () => {
-    const tools = resolveBuiltinToolNames({
-      preset: "terminal-coding",
-      host: "desktop",
-      capabilities: [CODING_CAPABILITY],
-    });
+    const tools = composedToolNames("desktop");
     expect(tools).toContain("SwitchSessionWorkspace");
     expect(tools).not.toContain("EnterWorktree");
     expect(tools).not.toContain("ExitWorktree");
   });
 
   it("non-desktop composition keeps terminal worktree tools", () => {
-    const tools = resolveBuiltinToolNames({
-      preset: "terminal-coding",
-      capabilities: [CODING_CAPABILITY],
-    });
+    const tools = composedToolNames();
     expect(tools).toContain("EnterWorktree");
     expect(tools).toContain("ExitWorktree");
     expect(tools).not.toContain("SwitchSessionWorkspace");

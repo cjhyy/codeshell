@@ -4,8 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { Engine } from "../engine/engine.js";
-import type { ExtensionModule } from "./capability-module.js";
-import { registerExtensionModules } from "./capability-module.js";
+import { compileComposition } from "../composition/compiler.js";
+import { registerAlwaysTools } from "../composition/resolve-preset.js";
+import type { AgentModule } from "../composition/types.js";
 import { ToolRegistry } from "./registry.js";
 
 const definition = (name: string) => ({
@@ -53,30 +54,39 @@ describe("ToolRegistry default built-ins", () => {
     expect(base.fork().getAvailabilityGuard("RouteBoundReply")).toBe(availability);
   });
 
-  it("fails loud on duplicate capability names", () => {
+  it("fails loud on duplicate module contributions and registry conflicts", () => {
     const registry = new ToolRegistry({ builtinTools: [] });
-    const module = (id: string): ExtensionModule => ({ id, tools: [] });
-    expect(() => registerExtensionModules(registry, [module("arena"), module("arena")])).toThrow(
-      "Duplicate capability module id",
+    const module = (id: string): AgentModule => ({ id });
+    expect(() => compileComposition({ modules: [module("arena"), module("arena")] })).toThrow(
+      "Duplicate module id",
     );
     expect(() =>
-      registerExtensionModules(registry, [
-        { id: "left", queries: { inspect: async () => 1 } },
-        { id: "right", queries: { inspect: async () => 2 } },
-      ]),
-    ).toThrow("Duplicate capability query");
+      compileComposition({
+        modules: [
+          { id: "left", protocol: { queries: { inspect: async () => 1 } } },
+          { id: "right", protocol: { queries: { inspect: async () => 2 } } },
+        ],
+      }),
+    ).toThrow('Duplicate query "inspect"');
+    const alwaysTool = (name: string) => ({
+      kind: "always" as const,
+      tool: { definition: definition(name), execute: async () => 1 },
+    });
     expect(() =>
-      registerExtensionModules(registry, [
-        { id: "left-tool", tools: [{ definition: definition("same"), execute: async () => 1 }] },
-        { id: "right-tool", tools: [{ definition: definition("same"), execute: async () => 2 }] },
-      ]),
-    ).toThrow("Duplicate capability tool");
+      compileComposition({
+        modules: [
+          { id: "left-tool", engine: { tools: [alwaysTool("same")] } },
+          { id: "right-tool", engine: { tools: [alwaysTool("same")] } },
+        ],
+      }),
+    ).toThrow('Duplicate tool "same"');
     registry.registerTool(definition("existing"));
-    expect(() =>
-      registerExtensionModules(registry, [
-        { id: "conflict", tools: [{ definition: definition("existing"), execute: async () => 1 }] },
-      ]),
-    ).toThrow("conflicts with registered tool");
+    const conflicting = compileComposition({
+      modules: [{ id: "conflict", engine: { tools: [alwaysTool("existing")] } }],
+    });
+    expect(() => registerAlwaysTools(conflicting, registry)).toThrow(
+      "conflicts with registered tool",
+    );
   });
 
   it("keeps seed capabilities out of the registry exported to EngineRuntime", () => {
@@ -86,10 +96,17 @@ describe("ToolRegistry default built-ins", () => {
         llm: { provider: "openai", model: "test", apiKey: "test" },
         cwd: dir,
         sessionStorageDir: join(dir, "sessions"),
-        extensionModules: [
+        modules: [
           {
             id: "arena",
-            tools: [{ definition: definition("Arena"), execute: async () => "ok" }],
+            engine: {
+              tools: [
+                {
+                  kind: "always" as const,
+                  tool: { definition: definition("Arena"), execute: async () => "ok" },
+                },
+              ],
+            },
           },
         ],
       });

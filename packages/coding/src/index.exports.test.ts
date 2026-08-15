@@ -7,13 +7,12 @@ import * as rootApi from "./index.js";
 describe("Coding package public entry contracts", () => {
   it("keeps the capability surface focused and root-compatible", () => {
     expect(Object.keys(capabilityApi).sort()).toEqual([
-      "CODING_CAPABILITY",
       "CODING_GENERAL_PRESET",
       "CODING_TOOLS",
       "TERMINAL_CODING_PRESET",
       "createCodingModule",
     ]);
-    expect(capabilityApi.CODING_CAPABILITY).toBe(rootApi.CODING_CAPABILITY);
+    expect(capabilityApi.createCodingModule).toBe(rootApi.createCodingModule);
     expect(capabilityApi.CODING_TOOLS).toBe(rootApi.CODING_TOOLS);
     expect(capabilityApi).not.toHaveProperty("createWorktree");
     expect(capabilityApi).not.toHaveProperty("probeClaudeCli");
@@ -23,13 +22,13 @@ describe("Coding package public entry contracts", () => {
     expect(gitApi.resolveProjectRoot).toBe(rootApi.resolveProjectRoot);
     expect(gitApi.createWorktree).toBe(rootApi.createWorktree);
     expect(gitApi.buildReviewPrompt).toBe(rootApi.buildReviewPrompt);
-    expect(gitApi).not.toHaveProperty("CODING_CAPABILITY");
+    expect(gitApi).not.toHaveProperty("createCodingModule");
     expect(gitApi).not.toHaveProperty("probeClaudeCli");
 
     expect(orchestrationApi.probeClaudeCli).toBe(rootApi.probeClaudeCli);
     expect(orchestrationApi.CC_COST_GUARD_PROMPT).toBe(rootApi.CC_COST_GUARD_PROMPT);
     expect(orchestrationApi.resolveQuotaCredentials).toBe(rootApi.resolveQuotaCredentials);
-    expect(orchestrationApi).not.toHaveProperty("CODING_CAPABILITY");
+    expect(orchestrationApi).not.toHaveProperty("createCodingModule");
     expect(orchestrationApi).not.toHaveProperty("createWorktree");
     expect(orchestrationApi).not.toHaveProperty("LSPClient");
   });

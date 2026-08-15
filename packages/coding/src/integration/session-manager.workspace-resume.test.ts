@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { SessionManager } from "@cjhyy/code-shell-core";
 import {
-  CODING_CAPABILITY,
+  createCodingModule,
   createWorktree,
   removeWorktree,
 } from "@cjhyy/code-shell-capability-coding";
@@ -28,7 +28,7 @@ describe("SessionManager workspace resume resolution", () => {
     sessions = join(testRoot, "sessions");
     mkdirSync(repo, { recursive: true });
     mkdirSync(sessions, { recursive: true });
-    sm = new SessionManager(sessions, CODING_CAPABILITY.sessionWorkspace);
+    sm = new SessionManager(sessions, createCodingModule().engine?.sessionWorkspace);
     git(repo, ["init", "-q"]);
     git(repo, ["config", "user.email", "t@t.t"]);
     git(repo, ["config", "user.name", "t"]);

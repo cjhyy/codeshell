@@ -12,7 +12,6 @@
 import {
   SettingsManager,
   type AgentModule,
-  type ExtensionModule,
   type LLMConfig,
   type ModelEntry,
   type ModelPool,
@@ -559,11 +558,3 @@ export function createArenaModule(): AgentModule {
   };
 }
 
-/** @deprecated Cutover-only legacy view; use createArenaModule(). */
-export function createArenaCapability(): ExtensionModule {
-  return {
-    id: "arena",
-    tools: [ARENA_TOOL],
-    queries: ARENA_QUERIES,
-  };
-}

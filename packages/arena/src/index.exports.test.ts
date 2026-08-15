@@ -5,7 +5,7 @@ import * as runtimeApi from "./index.runtime.js";
 describe("Arena package public entry contracts", () => {
   it("keeps the host runtime focused and root-compatible", () => {
     expect(runtimeApi.Arena).toBe(rootApi.Arena);
-    expect(runtimeApi.createArenaCapability).toBe(rootApi.createArenaCapability);
+    expect(runtimeApi.createArenaModule).toBe(rootApi.createArenaModule);
     expect(runtimeApi.formatArenaResultForSession).toBe(rootApi.formatArenaResultForSession);
     expect(runtimeApi.MODEL_PRESETS).toBe(rootApi.MODEL_PRESETS);
 

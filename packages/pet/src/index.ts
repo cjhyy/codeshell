@@ -120,7 +120,7 @@ export {
   type PetHostActionRequest,
   type PetHostActionDecision,
 } from "./host-actions.js";
-export { createPetCapability, createPetModule } from "./capability.js";
+export { createPetModule } from "./capability.js";
 export * from "./topic-segment.js";
 export * from "./segment-closure.js";
 export * from "./long-task.js";

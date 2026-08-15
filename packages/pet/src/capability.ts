@@ -2,10 +2,9 @@
  * The Pet domain packaged as a self-contained core extension module.
  *
  * Hosts opt in explicitly:
- *   - desktop injects `CODE_SHELL_CAPABILITY_MODULES=@cjhyy/code-shell-pet#createPetCapability`
+ *   - desktop injects `CODE_SHELL_CAPABILITY_MODULES=@cjhyy/code-shell-pet#createPetModule`
  *     into the stdio worker env (loaded by core's agent-server-stdio cli);
- *   - in-process hosts/tests pass `extensionModules: [createPetCapability()]`
- *     to EngineConfig / AgentServer options.
+ *   - in-process hosts/tests compile `createPetModule()` into their composition.
  *
  * Core itself is pet-free: behavior comes from the generic RunBehaviorProfile
  * registry, protocol observation from ProtocolObserver, and the DelegateWork
@@ -14,7 +13,8 @@
 
 import type {
   AgentModule,
-  ExtensionModule,
+  BuiltinTool,
+  ProtocolObserver,
   ProtocolObserverHost,
 } from "@cjhyy/code-shell-core/extension";
 import {
@@ -82,7 +82,7 @@ import { validatePetRunParams } from "./run-params.js";
  * SAME module instance.
  */
 export function createPetModule(): AgentModule {
-  const legacy = createPetCapability();
+  const legacy = buildPetParts();
   return {
     id: legacy.id,
     engine: {
@@ -98,7 +98,17 @@ export function createPetModule(): AgentModule {
   };
 }
 
-export function createPetCapability(): ExtensionModule {
+interface PetParts {
+  id: string;
+  behaviorProfiles: NonNullable<AgentModule["engine"]>["behaviorProfiles"];
+  createProtocolObserver: (host: ProtocolObserverHost) => ProtocolObserver;
+  validateRunParams: (params: Record<string, unknown>) => string | null;
+  hiddenSessionKinds: readonly string[];
+  catalogTools: BuiltinTool[];
+  queries?: Readonly<Record<string, never>>;
+}
+
+function buildPetParts(): PetParts {
   let reportToMimi: PetReportToMimiSink | undefined;
   const createProtocolObserver = (host: ProtocolObserverHost) => {
     reportToMimi = (event) =>

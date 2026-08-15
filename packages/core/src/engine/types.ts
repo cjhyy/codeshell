@@ -28,8 +28,6 @@ import type { SettingsScope } from "../settings/manager.js";
 import type { EngineRuntime } from "./runtime.js";
 import type { HookEventName } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
-import type { CapabilityModule } from "../capabilities/index.js";
-import type { ExtensionModule } from "../tool-system/capability-module.js";
 import type { AgentModule, ResolvedComposition } from "../composition/types.js";
 import type { RunBehaviorProfile } from "./run-types.js";
 import type { LegacyPetWorkDelegation } from "../types.js";
@@ -62,10 +60,6 @@ export interface EngineConfig {
   composition?: ResolvedComposition;
   /** AgentModules for library consumers; Engine compiles them once. */
   modules?: readonly AgentModule[];
-  /** @deprecated Cutover-only; deleted with CapabilityModule. */
-  capabilities?: readonly CapabilityModule[];
-  /** @deprecated Cutover-only; deleted with ExtensionModule. */
-  extensionModules?: readonly ExtensionModule[];
   /**
    * Named per-run behavior profiles selectable via EngineRunOptions.behaviorMode
    * or a profile's activateForSessionKinds. Merged (by id, later wins) over the

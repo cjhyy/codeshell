@@ -273,7 +273,6 @@ const hostOnlySamples = [
 
 // Runtime members of the /extension capability contract (coding/arena imports).
 const extensionRuntimeContract = [
-  "registerCapability",
   "SessionManager",
   "SettingsManager",
   "codeShellHome",
