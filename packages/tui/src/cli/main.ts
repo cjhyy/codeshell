@@ -10,15 +10,11 @@ import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { resolveTaskFromArgOrStdin } from "./input/read-stdin.js";
 import { setup } from "../bootstrap/setup.js";
-import { costTracker, installCostTracking, registerCapability } from "@cjhyy/code-shell-core";
+import { costTracker, installCostTracking } from "@cjhyy/code-shell-core";
 import { getCurrentVersion } from "@cjhyy/code-shell-core/internal";
-import { CODING_CAPABILITY } from "@cjhyy/code-shell-capability-coding/capability";
 import { CHALK_COLORIZER } from "../utils/colorizer.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import type { SessionStatus } from "@cjhyy/code-shell-core";
-
-// TUI is a product composition root: generic core + the coding capability pack.
-registerCapability(CODING_CAPABILITY);
 
 function formatSessionStatus(s: SessionStatus): string {
   switch (s) {

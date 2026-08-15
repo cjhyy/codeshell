@@ -22,7 +22,6 @@
       "types": "./dist/index.orchestration.d.ts",
       "import": "./dist/index.orchestration.js"
     },
-    "./bin/agent-server-stdio": "./dist/bin/agent-server-stdio.js",
     "./external-runtimes": {
       "types": "./dist/external-runtimes/index.d.ts",
       "import": "./dist/external-runtimes/index.js"

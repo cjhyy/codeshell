@@ -32,7 +32,9 @@ import {
   type CronRunResult,
 } from "@cjhyy/code-shell-core/internal";
 import { resolveMaxContextTokens } from "./max-context-tokens.js";
-import { createArenaCapability } from "@cjhyy/code-shell-arena/runtime";
+import { compileComposition } from "@cjhyy/code-shell-core";
+import { createArenaModule } from "@cjhyy/code-shell-arena/runtime";
+import { createCodingModule } from "@cjhyy/code-shell-capability-coding/capability";
 
 export type EffortLevel = "low" | "medium" | "high" | "max";
 
@@ -147,7 +149,13 @@ export async function replCommand(options: ReplOptions): Promise<void> {
 
   const permissionMode = (options.permissionMode ?? "acceptEdits") as PermissionMode;
   const maxContextTokens = resolveMaxContextTokens(llmConfig, settings.context.maxTokens);
-  const extensionModules = [createArenaCapability()] as const;
+  // TUI is a product composition root: coding + arena, compiled once. The
+  // cron engine gets its own coding-only composition (arena is interactive).
+  const composition = compileComposition({
+    modules: [createCodingModule(), createArenaModule()],
+    expectedModules: ["coding", "arena"],
+  });
+  const cronComposition = compileComposition({ modules: [createCodingModule()] });
 
   // ── Shared config passed into every session engine ─────────────
   const sharedCfg = {
@@ -155,7 +163,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     preset: options.preset ?? settings.agent.preset,
     enabledBuiltinTools: settings.agent.enabledBuiltinTools,
     disabledBuiltinTools: settings.agent.disabledBuiltinTools,
-    extensionModules,
+    composition,
     permissionMode,
     customSystemPrompt: settings.agent.customSystemPrompt,
     appendSystemPrompt: settings.agent.appendSystemPrompt,
@@ -184,7 +192,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     llm: llmConfig,
     clientDefaults,
     cwd,
-    extensionModules,
+    composition,
     settingsScope: "full",
   });
 
@@ -245,11 +253,15 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   // Must use the same configured root as every Engine created above; otherwise
   // /resume can display/control a different state.json tree when users override
   // session.storageDir.
-  const goalDiskManager = new SessionManager(settings.session.storageDir);
+  const goalDiskManager = new SessionManager(
+    settings.session.storageDir,
+    composition.engine.sessionWorkspaces[0]?.value,
+  );
 
   // 6. Wire up AgentServer (wraps chatManager, handles protocol)
   const _server = new AgentServer({
     chatManager,
+    composition,
     transport: serverTransport,
     settingsReader: () => settingsManager.load(),
     readActiveGoalFromDisk: (sessionId) => goalDiskManager.readActiveGoal(sessionId),
@@ -276,7 +288,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
       cwd,
       runtime,
       ...sharedCfg,
-      extensionModules: [],
+      composition: cronComposition,
       // Override the REPL's interactive backend/mode with the read-only
       // contract from cron-runtime — cron is unattended.
       permissionMode: req.permissionMode,

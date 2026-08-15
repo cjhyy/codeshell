@@ -25,6 +25,7 @@ import {
   resolveLLMConfigForTag,
   resolveAuxKey,
 } from "@cjhyy/code-shell-core";
+import { createCodingModule } from "@cjhyy/code-shell-capability-coding/capability";
 import { dlog } from "./desktop-logger.js";
 
 export type DreamLevel = "user" | "project";
@@ -74,6 +75,9 @@ export async function runDream(level: DreamLevel, cwd?: string): Promise<DreamRe
     llm: llmConfig,
     cwd: seedCwd,
     settingsScope: "full",
+    // The dream loop used to inherit coding from the process-global registry
+    // (default preset terminal-coding); keep that composition explicitly.
+    modules: [createCodingModule()],
     // Memory tools aren't in the default agent preset, so a plain seed Engine's
     // registry lacks them and runDreamConsolidation would bail with "缺少记忆
     // 工具". Enable them explicitly — the dream loop only ever calls these four.

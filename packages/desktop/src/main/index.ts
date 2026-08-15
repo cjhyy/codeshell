@@ -47,7 +47,6 @@ import {
   sessionsRoot,
   // Quota — remaining CC/Codex subscription usage.
   ErrorCodes,
-  registerCapability,
   WORKSPACE_PROFILE_NAME_RE,
   previewLocalTheme,
   installReviewedLocalTheme,
@@ -102,7 +101,6 @@ import {
   type ExternalSessionDiscoveryScope,
   type QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
-import { CODING_CAPABILITY } from "@cjhyy/code-shell-capability-coding/capability";
 import {
   normalizeWorktreeBranchPrefix,
   resolveProjectRoot,
@@ -515,9 +513,6 @@ import {
   switchSessionWorkspaceForUi,
   type WorkspaceCleanupAction,
 } from "./session-workspace-service.js";
-
-// Desktop is assembled from the reusable core plus product capability packs.
-registerCapability(CODING_CAPABILITY);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);

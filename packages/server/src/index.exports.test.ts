@@ -99,7 +99,8 @@ describe("Server package public entry contracts", () => {
     expect(compositionImports).toEqual([]);
 
     const serveCli = readFileSync(join(repoRoot, "packages/server/src/serve/cli.ts"), "utf8");
-    expect(serveCli).toContain("@cjhyy/code-shell-capability-coding/bin/agent-server-stdio");
+    expect(serveCli).toContain("@cjhyy/code-shell-core/bin/agent-server-stdio");
+    expect(serveCli).toContain("#createCodingModule");
     expect(serveCli).toContain("@cjhyy/code-shell-web/package.json");
   });
 });

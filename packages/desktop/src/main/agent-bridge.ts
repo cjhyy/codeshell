@@ -134,14 +134,14 @@ function describePanelFailure(result: AgentPanelHostResult): string {
 export type { QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 
 const require = createRequire(import.meta.url);
-const agentEntry = require.resolve("@cjhyy/code-shell-capability-coding/bin/agent-server-stdio");
-// Resolve host-owned capabilities from the desktop package before spawning the
+const agentEntry = require.resolve("@cjhyy/code-shell-core/bin/agent-server-stdio");
+// Resolve host-owned AgentModules from the desktop package before spawning the
 // worker. In a workspace install Node dereferences the coding/core symlinks, so
 // a dynamic import performed from packages/core cannot see dependencies that
 // are linked only under packages/desktop/node_modules (Pet is one of them).
 // Passing absolute import URLs keeps development and packaged resolution
-// identical and prevents a silently skipped capability from surfacing later as
-// `unknown behavior profile: pet`.
+// identical; the worker's loader fails loud on a missing module.
+const codingModule = import.meta.resolve("@cjhyy/code-shell-capability-coding");
 const arenaCapabilityModule = import.meta.resolve("@cjhyy/code-shell-arena");
 const petCapabilityModule = import.meta.resolve("@cjhyy/code-shell-pet/capability");
 
@@ -277,8 +277,9 @@ export class AgentBridge implements PetStateBridge {
         ELECTRON_RUN_AS_NODE: "1",
         CODESHELL_AGENT_STDIO: "1",
         CODE_SHELL_CAPABILITY_MODULES:
-          `${arenaCapabilityModule}#createArenaCapability,` +
-          `${petCapabilityModule}#createPetCapability`,
+          `${codingModule}#createCodingModule,` +
+          `${arenaCapabilityModule}#createArenaModule,` +
+          `${petCapabilityModule}#createPetModule`,
       }),
       fallbackCwd: resolveNoRepoCwd,
       log: (event, data) => dlog("bridge", event, data),

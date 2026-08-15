@@ -16,25 +16,44 @@
  */
 
 import {
-  BUILTIN_TOOLS,
   SettingsManager,
   ToolRegistry,
   scanSkills,
   readInstalledPlugins,
-  resolveBuiltinToolNames,
+  compileComposition,
+  compositionToolCatalog,
+  resolvePresetFromComposition,
+  resolveToolNamesForPreset,
   loadAgentDefinitionsForCwd,
   type CapabilityDescriptor,
 } from "@cjhyy/code-shell-core";
 import { CapabilityService } from "@cjhyy/code-shell-core/internal";
-import { CODING_CAPABILITY, CODING_TOOLS } from "@cjhyy/code-shell-capability-coding/capability";
+import { createCodingModule } from "@cjhyy/code-shell-capability-coding/capability";
+
+const composition = compileComposition({ modules: [createCodingModule()] });
+const adjusters = composition.engine.toolSelectionAdjusters.map((a) => a.value);
+
+function resolveNames(options: {
+  preset?: string;
+  host?: string;
+  enabledBuiltinTools?: string[];
+  disabledBuiltinTools?: string[];
+}): string[] {
+  return resolveToolNamesForPreset({
+    preset: resolvePresetFromComposition(composition, options.preset),
+    host: options.host,
+    enabledBuiltinTools: options.enabledBuiltinTools,
+    disabledBuiltinTools: options.disabledBuiltinTools,
+    adjusters,
+  });
+}
 
 function makeService(cwd: string): CapabilityService {
   const settings = new SettingsManager(cwd, "full");
   const preset = (settings.get() as { agent?: { preset?: string } }).agent?.preset;
-  const capabilities = [CODING_CAPABILITY];
   const registry = new ToolRegistry({
-    builtinTools: resolveBuiltinToolNames({ preset, host: "desktop", capabilities }),
-    toolCatalog: [...BUILTIN_TOOLS, ...CODING_TOOLS],
+    builtinTools: resolveNames({ preset, host: "desktop" }),
+    toolCatalog: compositionToolCatalog(composition),
   });
   return new CapabilityService({
     registry,
@@ -46,7 +65,7 @@ function makeService(cwd: string): CapabilityService {
     // tolerates an empty cwd (skips the project dir → user roles only).
     scanAgents: (c: string) => loadAgentDefinitionsForCwd(c, [], []).list(),
     readInstalledPlugins,
-    resolveBuiltinToolNames: (options) => resolveBuiltinToolNames({ ...options, capabilities }),
+    resolveBuiltinToolNames: (options) => resolveNames(options),
     builtinToolHost: "desktop",
   });
 }

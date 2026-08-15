@@ -56,32 +56,33 @@ import { cronScheduler } from "../automation/scheduler.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
 import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
 import { createIpcCredentialAccess, setDefaultCredentialAccess } from "../credentials/access.js";
-import type { ExtensionModule } from "../tool-system/capability-module.js";
+import { compileComposition } from "../composition/compiler.js";
+import type { AgentModule } from "../composition/types.js";
 
-async function loadConfiguredExtensionModules(): Promise<ExtensionModule[]> {
+/**
+ * Load AgentModules from CODE_SHELL_CAPABILITY_MODULES: comma-separated
+ * "specifier#exportName" entries (exportName defaults to createModule).
+ * Fail loud — a silently skipped module used to surface much later as an
+ * unexplained missing tool or "unknown behavior profile: pet".
+ */
+async function loadConfiguredAgentModules(): Promise<AgentModule[]> {
   const specs = (process.env.CODE_SHELL_CAPABILITY_MODULES ?? "")
     .split(",")
     .map((entry) => entry.trim())
     .filter(Boolean);
-  const modules: ExtensionModule[] = [];
+  const modules: AgentModule[] = [];
 
   for (const spec of specs) {
-    const [moduleId, exportName = "createCapability"] = spec.split("#", 2);
+    const [moduleId, exportName = "createModule"] = spec.split("#", 2);
     if (!moduleId) continue;
-    try {
-      const loaded = (await import(moduleId)) as Record<string, unknown>;
-      const factory = loaded[exportName];
-      if (typeof factory !== "function") {
-        throw new Error(`export ${exportName} is not a capability factory`);
-      }
-      modules.push((factory as () => ExtensionModule)());
-    } catch (err) {
-      logger.warn("capability.module_unavailable", {
-        moduleId,
-        exportName,
-        error: err instanceof Error ? err.message : String(err),
-      });
+    const loaded = (await import(moduleId)) as Record<string, unknown>;
+    const factory = loaded[exportName];
+    if (typeof factory !== "function") {
+      throw new Error(
+        `CODE_SHELL_CAPABILITY_MODULES: export ${exportName} of ${moduleId} is not an AgentModule factory`,
+      );
     }
+    modules.push((factory as () => AgentModule)());
   }
   return modules;
 }
@@ -119,7 +120,9 @@ export function resolveSessionCwd(slice: EngineConfigSlice): string {
 // ─── Read base config from environment / settings ─────────────────
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
-const extensionModules = await loadConfiguredExtensionModules();
+// Compile ONCE at the host root; seed engine, per-session engines and the
+// AgentServer all consume this same composition (design §9.3).
+const composition = compileComposition({ modules: await loadConfiguredAgentModules() });
 
 // Injectable data root (identity dimension foundations, Task 3). Server
 // Phase 2 per-user workers spawn this entry with CODE_SHELL_DATA_ROOT set to
@@ -178,7 +181,7 @@ const seedEngine = new Engine({
   enabledBuiltinTools: settings.agent.enabledBuiltinTools,
   disabledBuiltinTools: settings.agent.disabledBuiltinTools,
   builtinToolHost: "desktop",
-  extensionModules,
+  composition,
   settingsScope: "full",
   // No runtime — Engine.populateModelPoolFromSettings() runs in ctor.
 });
@@ -293,7 +296,7 @@ const chatManager = new ChatSessionManager({
       // session it creates is a desktop-origin session.
       origin: "desktop",
       builtinToolHost: "desktop",
-      extensionModules,
+      composition,
       // Inherit full scope so spawned subagents read user config too.
       settingsScope: "full",
       // MCP servers from settings — the worker reads the full disk
@@ -389,12 +392,15 @@ setCapabilityChangedSink(() => {
 // ChatSession (that only happens on a send), so chatManager.get() misses. This
 // reads the same ~/.code-shell/sessions/<id>/state.json every Engine writes, so
 // the goal block re-surfaces on load ("goal 还在但页面不显示" fix).
-const goalDiskReader = new SessionManager(dataSessionsDir);
+const goalDiskReader = new SessionManager(
+  dataSessionsDir,
+  composition.engine.sessionWorkspaces[0]?.value,
+);
 
 const agentServer = new AgentServer({
   chatManager,
   transport: stdioTransport,
-  extensionModules,
+  composition,
   workspaceBridge: true,
   panelBridge: true,
   // Cold background-wakeup rehydrate must read the same sessions store the

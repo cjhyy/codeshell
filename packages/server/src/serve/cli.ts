@@ -77,7 +77,16 @@ export function parseServeArgs(argv: string[], env: NodeJS.ProcessEnv = process.
 /** Locate the stdio worker entry the same way desktop's AgentBridge does. */
 export function resolveWorkerEntry(): string {
   const require = createRequire(import.meta.url);
-  return require.resolve("@cjhyy/code-shell-capability-coding/bin/agent-server-stdio");
+  return require.resolve("@cjhyy/code-shell-core/bin/agent-server-stdio");
+}
+
+/**
+ * AgentModule spec string for the worker env — headless serve ships the
+ * coding module (matches the pre-cutover behavior where the coding bin
+ * wrapper registered it; arena/pet stay desktop-only).
+ */
+export function resolveWorkerCapabilityModules(): string {
+  return `${import.meta.resolve("@cjhyy/code-shell-capability-coding")}#createCodingModule`;
 }
 
 /** Locate the built browser app (packages/web `app` build), when present. */
@@ -108,6 +117,7 @@ export async function runServeCli(argv: string[] = process.argv.slice(2)): Promi
     cwd: parsed.cwd,
     dataDir: parsed.dataDir,
     workerEntryPath: resolveWorkerEntry(),
+    workerCapabilityModules: resolveWorkerCapabilityModules(),
     ...(staticRootDir ? { staticRootDir } : {}),
     ...(parsed.passcode ? { passcode: parsed.passcode } : {}),
     log: (event, data) =>

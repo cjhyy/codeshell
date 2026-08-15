@@ -68,8 +68,13 @@ export {
 } from "./exceptions.js";
 
 // ─── Composition (AgentModule / ResolvedComposition) ─────────────
-export { compileComposition } from "./composition/compiler.js";
-export { toCompositionSnapshot, computeCompositionDigest } from "./composition/snapshot.js";
+export {
+  compileComposition,
+  toCompositionSnapshot,
+  computeCompositionDigest,
+  compositionToolCatalog,
+  resolvePresetFromComposition,
+} from "./composition/index.js";
 export type {
   AgentModule,
   AgentEngineContributions,
@@ -345,6 +350,7 @@ export {
   DEFAULT_CLI_PRESET,
   resolveAgentPreset,
   resolveBuiltinToolNames,
+  resolveToolNamesForPreset,
   buildPresetSystemPrompt,
   registerPreset,
   listPresetNames,

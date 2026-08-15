@@ -73,7 +73,6 @@ export const RELEASE_PACKAGES: readonly ReleasePackageDefinition[] = [
     directory: "packages/coding",
     name: "@cjhyy/code-shell-capability-coding",
     publish: true,
-    runtimeExcludedSubpaths: ["./bin/agent-server-stdio"],
   },
   {
     directory: "packages/web",

@@ -42,6 +42,8 @@ export interface HeadlessServeOptions {
   dataDir: string;
   /** Absolute path of the agent-server-stdio worker entry. */
   workerEntryPath: string;
+  /** CODE_SHELL_CAPABILITY_MODULES spec injected into the worker env. */
+  workerCapabilityModules?: string;
   /** Session root override for tests/relocated workers. Defaults to core's canonical root. */
   sessionRootDir?: string;
   /**
@@ -158,7 +160,13 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     entryPath: opts.workerEntryPath,
     execPath: opts.execPath,
     fallbackCwd: () => opts.cwd,
-    buildEnv: () => ({ ...process.env, CODE_SHELL_DATA_ROOT: workerDataRoot }),
+    buildEnv: () => ({
+      ...process.env,
+      CODE_SHELL_DATA_ROOT: workerDataRoot,
+      ...(opts.workerCapabilityModules
+        ? { CODE_SHELL_CAPABILITY_MODULES: opts.workerCapabilityModules }
+        : {}),
+    }),
     log,
     onStderr: (text) => log("worker.stderr", { text: previewLine(text) }),
     onExit: (info) => {
