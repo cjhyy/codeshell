@@ -101,7 +101,8 @@ describe("ReportToMimi tool", () => {
       notify: (method, params) => notifications.push({ method, params }),
       registerQuery: () => undefined,
     } satisfies ProtocolObserverHost);
-    const tool = module_.engine?.tools?.flatMap((c) => (c.kind === "preset-tags" ? [c.tool] : []))
+    const tool = module_.engine?.tools
+      ?.flatMap((c) => (c.kind === "preset-tags" ? [c.tool] : []))
       .find((candidate) => candidate.definition.name === REPORT_TO_MIMI_TOOL_NAME);
 
     expect(tool).toBeDefined();
@@ -129,7 +130,8 @@ describe("RequestMimiDelivery tool", () => {
     expect(requestMimiDeliveryAvailability(visibility({ isSubAgent: true }))).toBe(false);
 
     const module_ = createPetModule();
-    const tool = module_.engine?.tools?.flatMap((c) => (c.kind === "preset-tags" ? [c.tool] : []))
+    const tool = module_.engine?.tools
+      ?.flatMap((c) => (c.kind === "preset-tags" ? [c.tool] : []))
       .find((candidate) => candidate.definition.name === REQUEST_MIMI_DELIVERY_TOOL_NAME);
     expect(tool?.definition.permissionDefault).toBe("ask");
     expect(tool?.exposure.defaultPermissionRules).toBeUndefined();

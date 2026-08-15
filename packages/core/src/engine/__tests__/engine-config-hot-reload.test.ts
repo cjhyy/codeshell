@@ -8,15 +8,15 @@ const TEST_PRESET_NAME = "test-focused";
 const TEST_MODULE: AgentModule = {
   id: "test-preset-hot-reload",
   engine: {
-  presets: [
-    {
-      ...BUILTIN_AGENT_PRESETS.general,
-      name: TEST_PRESET_NAME,
-      label: "Focused test preset",
-      description: "A small product-contributed preset used to verify hot reloads.",
-      promptSections: ["base"],
-    },
-  ],
+    presets: [
+      {
+        ...BUILTIN_AGENT_PRESETS.general,
+        name: TEST_PRESET_NAME,
+        label: "Focused test preset",
+        description: "A small product-contributed preset used to verify hot reloads.",
+        promptSections: ["base"],
+      },
+    ],
   },
 };
 
