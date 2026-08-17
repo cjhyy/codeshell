@@ -693,6 +693,52 @@ describeIsolated("PanelAppBridge", () => {
     expect(context.trusted).toBe(true);
   });
 
+  test("holds startup context and capability calls until the project scope is bound", async () => {
+    const bridge = new PanelAppBridge({
+      isTrustedHost: () => true,
+      isWorkspaceTrusted: () => true,
+      isPanelAppBound: () => true,
+      getAgentBridge: () => null,
+    });
+    bridge.registerIpc();
+    const guest = fakeGuest(31);
+    bridge.registerGuest(
+      guest as any,
+      panelAppElectronMock.ownerWindow as any,
+      bridgeResource(["context.workspace", "workspace.info"]) as any,
+      "/repo",
+    );
+
+    let contextSettled = false;
+    let callSettled = false;
+    const contextPromise = Promise.resolve(
+      panelAppElectronMock.ipcHandlers.get("panel-app:get-context")!({ sender: guest }),
+    ).finally(() => {
+      contextSettled = true;
+    });
+    const callPromise = Promise.resolve(
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        "workspace.info",
+      ),
+    ).finally(() => {
+      callSettled = true;
+    });
+
+    await Promise.resolve();
+    expect(contextSettled).toBe(false);
+    expect(callSettled).toBe(false);
+
+    await bindBridgeGuest(31);
+
+    await expect(contextPromise).resolves.toMatchObject({
+      appId: "demo",
+      cwd: "/repo",
+      trusted: true,
+    });
+    await expect(callPromise).resolves.toMatchObject({ name: "repo", root: "/repo" });
+  });
+
   test("defaults to zero call permissions and rejects an unbound sender", async () => {
     const bridge = new PanelAppBridge({
       isTrustedHost: () => true,

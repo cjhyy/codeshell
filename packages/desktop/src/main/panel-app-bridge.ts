@@ -64,6 +64,7 @@ const MAX_WORKSPACE_LIST_RESULT_BYTES = 512 * 1024;
 const MAX_AUDIO_TRANSCRIBE_BYTES = 25 * 1024 * 1024;
 const MAX_TRANSCRIPT_CHARS = 20_000;
 const AGENT_TOOL_GUEST_WAIT_MS = 4_000;
+const PANEL_GUEST_SCOPE_WAIT_MS = 4_000;
 const AUDIO_MIME_TYPES = new Set([
   "audio/webm",
   "audio/mp4",
@@ -687,16 +688,42 @@ export class PanelAppBridge {
     return binding;
   }
 
-  private contextFor(sender: WebContents): PanelAppHostContext {
+  private waitForBoundGuest(binding: GuestBinding): Promise<GuestBinding> {
+    if (binding.bucket) return Promise.resolve(binding);
+    return new Promise((resolveBinding, reject) => {
+      const startedAt = Date.now();
+      const check = (): void => {
+        const current = this.guests.get(binding.guest.id);
+        if (current !== binding || binding.guest.isDestroyed()) {
+          reject(new Error("Panel App closed before its project scope was bound"));
+          return;
+        }
+        if (binding.bucket) {
+          resolveBinding(binding);
+          return;
+        }
+        if (Date.now() - startedAt >= PANEL_GUEST_SCOPE_WAIT_MS) {
+          reject(new Error("Panel App project scope binding timed out"));
+          return;
+        }
+        setTimeout(check, 25);
+      };
+      setTimeout(check, 0);
+    });
+  }
+
+  private contextFor(sender: WebContents): PanelAppHostContext | Promise<PanelAppHostContext> {
     const binding = this.bindingFor(sender);
-    this.assertProjectBinding(binding);
-    return { ...binding.context };
+    const readContext = (bound: GuestBinding): PanelAppHostContext => {
+      this.assertProjectBinding(bound);
+      return { ...bound.context };
+    };
+    return binding.bucket ? readContext(binding) : this.waitForBoundGuest(binding).then(readContext);
   }
 
   private async call(sender: WebContents, method: string, params?: unknown): Promise<unknown> {
-    const binding = this.bindingFor(sender);
+    const binding = await this.waitForBoundGuest(this.bindingFor(sender));
     this.assertProjectBinding(binding);
-    if (!binding.bucket) throw new Error("Panel App scope is not bound");
     if (typeof method !== "string" || method.length > 64) throw new Error("invalid bridge method");
     const limits = this.options.limits;
     const paramsLimit =
