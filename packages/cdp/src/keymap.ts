@@ -43,16 +43,40 @@ const KEY_MAP: Record<string, [string, number | null]> = {
   Meta: ["MetaLeft", 91],
   MetaLeft: ["MetaLeft", 91],
   MetaRight: ["MetaRight", 92],
-  F1: ["F1", 112], F2: ["F2", 113], F3: ["F3", 114], F4: ["F4", 115],
-  F5: ["F5", 116], F6: ["F6", 117], F7: ["F7", 118], F8: ["F8", 119],
-  F9: ["F9", 120], F10: ["F10", 121], F11: ["F11", 122], F12: ["F12", 123],
-  F13: ["F13", 124], F14: ["F14", 125], F15: ["F15", 126], F16: ["F16", 127],
-  F17: ["F17", 128], F18: ["F18", 129], F19: ["F19", 130], F20: ["F20", 131],
-  F21: ["F21", 132], F22: ["F22", 133], F23: ["F23", 134], F24: ["F24", 135],
+  F1: ["F1", 112],
+  F2: ["F2", 113],
+  F3: ["F3", 114],
+  F4: ["F4", 115],
+  F5: ["F5", 116],
+  F6: ["F6", 117],
+  F7: ["F7", 118],
+  F8: ["F8", 119],
+  F9: ["F9", 120],
+  F10: ["F10", 121],
+  F11: ["F11", 122],
+  F12: ["F12", 123],
+  F13: ["F13", 124],
+  F14: ["F14", 125],
+  F15: ["F15", 126],
+  F16: ["F16", 127],
+  F17: ["F17", 128],
+  F18: ["F18", 129],
+  F19: ["F19", 130],
+  F20: ["F20", 131],
+  F21: ["F21", 132],
+  F22: ["F22", 133],
+  F23: ["F23", 134],
+  F24: ["F24", 135],
   NumLock: ["NumLock", 144],
-  Numpad0: ["Numpad0", 96], Numpad1: ["Numpad1", 97], Numpad2: ["Numpad2", 98],
-  Numpad3: ["Numpad3", 99], Numpad4: ["Numpad4", 100], Numpad5: ["Numpad5", 101],
-  Numpad6: ["Numpad6", 102], Numpad7: ["Numpad7", 103], Numpad8: ["Numpad8", 104],
+  Numpad0: ["Numpad0", 96],
+  Numpad1: ["Numpad1", 97],
+  Numpad2: ["Numpad2", 98],
+  Numpad3: ["Numpad3", 99],
+  Numpad4: ["Numpad4", 100],
+  Numpad5: ["Numpad5", 101],
+  Numpad6: ["Numpad6", 102],
+  Numpad7: ["Numpad7", 103],
+  Numpad8: ["Numpad8", 104],
   Numpad9: ["Numpad9", 105],
   NumpadMultiply: ["NumpadMultiply", 106],
   "*": ["NumpadMultiply", 106],
@@ -62,21 +86,32 @@ const KEY_MAP: Record<string, [string, number | null]> = {
   NumpadDivide: ["NumpadDivide", 111],
   CapsLock: ["CapsLock", 20],
   ScrollLock: ["ScrollLock", 145],
-  Semicolon: ["Semicolon", 186], ";": ["Semicolon", 186],
-  Equal: ["Equal", 187], "=": ["Equal", 187],
-  Comma: ["Comma", 188], ",": ["Comma", 188],
-  Minus: ["Minus", 189], "-": ["Minus", 189],
-  Period: ["Period", 190], ".": ["Period", 190],
-  Slash: ["Slash", 191], "/": ["Slash", 191],
-  Backquote: ["Backquote", 192], "`": ["Backquote", 192],
-  BracketLeft: ["BracketLeft", 219], "[": ["BracketLeft", 219],
-  Backslash: ["Backslash", 220], "\\": ["Backslash", 220],
-  BracketRight: ["BracketRight", 221], "]": ["BracketRight", 221],
-  Quote: ["Quote", 222], "'": ["Quote", 222],
+  Semicolon: ["Semicolon", 186],
+  ";": ["Semicolon", 186],
+  Equal: ["Equal", 187],
+  "=": ["Equal", 187],
+  Comma: ["Comma", 188],
+  ",": ["Comma", 188],
+  Minus: ["Minus", 189],
+  "-": ["Minus", 189],
+  Period: ["Period", 190],
+  ".": ["Period", 190],
+  Slash: ["Slash", 191],
+  "/": ["Slash", 191],
+  Backquote: ["Backquote", 192],
+  "`": ["Backquote", 192],
+  BracketLeft: ["BracketLeft", 219],
+  "[": ["BracketLeft", 219],
+  Backslash: ["Backslash", 220],
+  "\\": ["Backslash", 220],
+  BracketRight: ["BracketRight", 221],
+  "]": ["BracketRight", 221],
+  Quote: ["Quote", 222],
+  "'": ["Quote", 222],
   "!": ["Digit1", 49],
   "@": ["Digit2", 50],
   "#": ["Digit3", 51],
-  "$": ["Digit4", 52],
+  $: ["Digit4", 52],
   "%": ["Digit5", 53],
   "^": ["Digit6", 54],
   "&": ["Digit7", 55],
@@ -88,7 +123,7 @@ const KEY_MAP: Record<string, [string, number | null]> = {
   "|": ["Backslash", 220],
   "}": ["BracketRight", 221],
   ":": ["Semicolon", 186],
-  "\"": ["Quote", 222],
+  '"': ["Quote", 222],
   "<": ["Comma", 188],
   ">": ["Period", 190],
   "?": ["Slash", 191],
@@ -151,7 +186,7 @@ const SHIFT_TEXT: Record<string, string> = {
   "\\": "|",
   "]": "}",
   ";": ":",
-  "'": "\"",
+  "'": '"',
   ",": "<",
   ".": ">",
   "/": "?",
@@ -187,6 +222,13 @@ const NAMED_PRINTABLE_TEXT: Record<string, string> = {
   Quote: "'",
 };
 
+/** Named non-printable keys that still need a CDP `text` payload for Chrome to
+ * perform their native default action. Without CR on Enter, pages receive only
+ * keydown/keyup: forms do not submit and focused buttons do not activate. */
+const NAMED_ACTION_TEXT: Record<string, string> = {
+  Enter: "\r",
+};
+
 /** Resolve a single token (alias or canonical) to its canonical key name. */
 export function normalizeKey(token: string): string {
   const t = token.trim();
@@ -199,7 +241,10 @@ export function keyInfo(key: string): KeyInfo {
   if (hit) return { code: hit[0], windowsVirtualKeyCode: hit[1] };
   if (key.length === 1) {
     if (/[a-zA-Z]/.test(key)) {
-      return { code: `Key${key.toUpperCase()}`, windowsVirtualKeyCode: key.toUpperCase().charCodeAt(0) };
+      return {
+        code: `Key${key.toUpperCase()}`,
+        windowsVirtualKeyCode: key.toUpperCase().charCodeAt(0),
+      };
     }
     if (/[0-9]/.test(key)) {
       return { code: `Digit${key}`, windowsVirtualKeyCode: key.charCodeAt(0) };
@@ -242,7 +287,10 @@ function printableText(key: string, modifiers = 0): string | null {
  * (with bitmask) → main keyUp (with bitmask) → modifier keyUps (reversed).
  */
 export function planKeySequence(spec: string): KeyEvent[] {
-  const parts = spec.split("+").map(normalizeKey).filter((p) => p.length > 0);
+  const parts = spec
+    .split("+")
+    .map(normalizeKey)
+    .filter((p) => p.length > 0);
   if (parts.length === 0) return [];
 
   const main = parts[parts.length - 1]!;
@@ -257,7 +305,8 @@ export function planKeySequence(spec: string): KeyEvent[] {
       e.nativeVirtualKeyCode = info.windowsVirtualKeyCode;
     }
     if (modifiers) e.modifiers = modifiers;
-    const text = type === "keyDown" ? printableText(key, modifiers) : null;
+    const text =
+      type === "keyDown" ? (NAMED_ACTION_TEXT[key] ?? printableText(key, modifiers)) : null;
     if (text !== null) {
       e.text = text;
       e.unmodifiedText = text;
@@ -272,6 +321,9 @@ export function planKeySequence(spec: string): KeyEvent[] {
     ...modifiers.map((mod) => ev("keyDown", mod)),
     ev("keyDown", main, bitmask),
     ev("keyUp", main, bitmask),
-    ...modifiers.slice().reverse().map((mod) => ev("keyUp", mod)),
+    ...modifiers
+      .slice()
+      .reverse()
+      .map((mod) => ev("keyUp", mod)),
   ];
 }

@@ -83,6 +83,9 @@ function fakeXiaohongshu() {
       page = "home";
       return {};
     },
+    "DOM.resolveNode": () => ({ object: { objectId: "search-input" } }),
+    "Runtime.callFunctionOn": () => ({ result: { value: { ok: true } } }),
+    "DOM.focus": () => ({}),
     "DOM.enable": () => ({}),
     "Accessibility.enable": () => ({}),
     "DOM.scrollIntoViewIfNeeded": () => ({}),

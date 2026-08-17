@@ -167,52 +167,62 @@ export class CdpActionsDriver {
   }
 
   async typeNode(backendNodeId: number, text: string): Promise<CdpActionResult> {
-    const c = await this.centerOf(backendNodeId);
-    if (!c) return { ok: false, detail: "element has no layout box", staleRef: true };
     try {
-      await this.send("Input.dispatchMouseEvent", {
-        type: "mousePressed",
-        x: c.x,
-        y: c.y,
-        button: "left",
-        clickCount: 1,
-      });
-      await this.send("Input.dispatchMouseEvent", {
-        type: "mouseReleased",
-        x: c.x,
-        y: c.y,
-        button: "left",
-        clickCount: 1,
-      });
+      await this.ensureEnabled();
+      await this.send("DOM.scrollIntoViewIfNeeded", { backendNodeId }).catch(() => undefined);
+      const { object } = (await this.send("DOM.resolveNode", { backendNodeId })) as {
+        object?: { objectId?: string };
+      };
+      if (!object?.objectId) {
+        return { ok: false, detail: "text element not resolvable", staleRef: true };
+      }
+
+      // Match Playwright's `fill` semantics: focus without activating the
+      // element, select its existing value, then insert the replacement text.
+      // A mouse click here was both brittle (overlays/animation) and observable
+      // by the page as an extra action before typing.
+      const prepared = (await this.send("Runtime.callFunctionOn", {
+        objectId: object.objectId,
+        functionDeclaration: PREPARE_TEXT_INPUT_FN,
+        returnByValue: true,
+      })) as { result?: { value?: { ok?: boolean; detail?: string } } };
+      const prep = prepared.result?.value;
+      if (!prep?.ok) {
+        return {
+          ok: false,
+          code: "BLOCKED",
+          retryable: false,
+          detail: prep?.detail ?? "element is not an editable text control",
+        };
+      }
+
       await this.send("Input.insertText", { text });
-      return { ok: true };
+      return { ok: true, code: "OK" };
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
     }
   }
 
-  /** Focus a node by clicking its center (so subsequent key events land there). */
+  /** Focus a node without activating it (so subsequent key events land there).
+   *  Clicking here made pressKey(ref) activate buttons/links once before the
+   *  requested key was even dispatched. DOM.focus is the native CDP operation
+   *  for this job and avoids the accidental double action. */
   async focusNode(backendNodeId: number): Promise<CdpActionResult> {
-    const c = await this.centerOf(backendNodeId);
-    if (!c) return { ok: false, detail: "element has no layout box", staleRef: true };
     try {
-      await this.send("Input.dispatchMouseEvent", {
-        type: "mousePressed",
-        x: c.x,
-        y: c.y,
-        button: "left",
-        clickCount: 1,
-      });
-      await this.send("Input.dispatchMouseEvent", {
-        type: "mouseReleased",
-        x: c.x,
-        y: c.y,
-        button: "left",
-        clickCount: 1,
-      });
-      return { ok: true };
+      await this.ensureEnabled();
+      await this.send("DOM.scrollIntoViewIfNeeded", { backendNodeId }).catch(() => undefined);
+      await this.send("DOM.focus", { backendNodeId });
+      return { ok: true, code: "OK" };
     } catch (e) {
-      return { ok: false, detail: errMsg(e) };
+      const detail = errMsg(e);
+      const staleRef = /could not find|no node|not found|detached/i.test(detail);
+      return {
+        ok: false,
+        code: staleRef ? "STALE_SNAPSHOT" : "FAILED",
+        retryable: staleRef,
+        staleRef: staleRef || undefined,
+        detail,
+      };
     }
   }
 
@@ -932,6 +942,53 @@ export function buildExtractScript(cap = EXTRACT_LINK_CAP): string {
     return {links:links,images:images,videos:videos,truncated:lt||it||vt};
   })()`;
 }
+
+/**
+ * Prepare a text-like control for replacement input. This runs on the resolved
+ * node so no selector lookup can drift to a different element between snapshot
+ * and action. It deliberately focuses/selects without a synthetic mouse click.
+ */
+const PREPARE_TEXT_INPUT_FN = `function(){
+  if (!this || typeof this.focus !== 'function') {
+    return { ok:false, detail:'element cannot be focused' };
+  }
+  var tag = String(this.tagName || '').toUpperCase();
+  var isInput = tag === 'INPUT';
+  var isTextarea = tag === 'TEXTAREA';
+  var isEditable = !!this.isContentEditable;
+  if (!isInput && !isTextarea && !isEditable) {
+    return { ok:false, detail:'element is not an editable text control' };
+  }
+  if (this.disabled) return { ok:false, detail:'text control is disabled' };
+  if (this.readOnly) return { ok:false, detail:'text control is read-only' };
+  if (isInput) {
+    var type = String(this.type || 'text').toLowerCase();
+    var unsupported = {
+      button:1, checkbox:1, color:1, file:1, hidden:1, image:1,
+      radio:1, range:1, reset:1, submit:1
+    };
+    if (unsupported[type]) {
+      return { ok:false, detail:'input type ' + type + ' does not accept text' };
+    }
+  }
+  this.focus();
+  if (isInput || isTextarea) {
+    try { this.select(); }
+    catch (_) {
+      // Some input types (notably number) reject select(). Clear them through
+      // the value property so Input.insertText still has fill semantics.
+      try { this.value = ''; } catch (_) {}
+    }
+  } else {
+    var selection = window.getSelection && window.getSelection();
+    if (!selection) return { ok:false, detail:'contenteditable selection is unavailable' };
+    var range = document.createRange();
+    range.selectNodeContents(this);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  return { ok:true };
+}`;
 
 /**
  * In-page function (runs on the <select> node via Runtime.callFunctionOn) that

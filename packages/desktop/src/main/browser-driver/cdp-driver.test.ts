@@ -18,7 +18,9 @@ const AX_TWO = {
     { nodeId: "2", role: { value: "button" }, name: { value: "搜索" }, backendDOMNodeId: 20 },
   ],
 };
-const BOX = (id: number) => ({ model: { content: [0, 0, 100, 0, 100, 40, 0, 40], width: 100, height: 40, _id: id } });
+const BOX = (id: number) => ({
+  model: { content: [0, 0, 100, 0, 100, 40, 0, 40], width: 100, height: 40, _id: id },
+});
 
 describe("CdpBrowserDriver.snapshot", () => {
   test("enables domains once, flattens AX tree, maps refs", async () => {
@@ -46,7 +48,14 @@ describe("CdpBrowserDriver.snapshot", () => {
   test("flags needsHuman when a password field is present", async () => {
     const { send } = fakeCdp({
       "Accessibility.getFullAXTree": () => ({
-        nodes: [{ nodeId: "1", role: { value: "textbox" }, name: { value: "password" }, backendDOMNodeId: 5 }],
+        nodes: [
+          {
+            nodeId: "1",
+            role: { value: "textbox" },
+            name: { value: "password" },
+            backendDOMNodeId: 5,
+          },
+        ],
       }),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com/login" }));
@@ -71,7 +80,9 @@ describe("CdpBrowserDriver.click", () => {
     // box was queried for the e2 → backend 20
     expect(calls.find((c) => c.method === "DOM.getBoxModel")?.params.backendNodeId).toBe(20);
     // a real press + release was dispatched at the box center (50,20)
-    const press = calls.find((c) => c.method === "Input.dispatchMouseEvent" && c.params.type === "mousePressed");
+    const press = calls.find(
+      (c) => c.method === "Input.dispatchMouseEvent" && c.params.type === "mousePressed",
+    );
     expect(press?.params).toMatchObject({ x: 50, y: 20, button: "left" });
     expect(calls.some((c) => c.params?.type === "mouseReleased")).toBe(true);
   });
@@ -123,10 +134,11 @@ describe("CdpBrowserDriver.click", () => {
 });
 
 describe("CdpBrowserDriver.type", () => {
-  test("focuses then inserts real text", async () => {
+  test("fills through the resolved node without an accidental click", async () => {
     const { send, calls } = fakeCdp({
       "Accessibility.getFullAXTree": () => AX_TWO,
-      "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
+      "DOM.resolveNode": () => ({ object: { objectId: "input-1" } }),
+      "Runtime.callFunctionOn": () => ({ result: { value: { ok: true } } }),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
     const snap = await d.snapshot();
@@ -134,6 +146,7 @@ describe("CdpBrowserDriver.type", () => {
     const r = await d.type(snap.elements[0]!.ref, "hello");
     expect(r.ok).toBe(true);
     expect(calls.find((c) => c.method === "Input.insertText")?.params.text).toBe("hello");
+    expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(false);
   });
 });
 
@@ -195,7 +208,9 @@ describe("CdpBrowserDriver.readContent / waitForLoad / pressKey / select / hover
   });
 
   test("waitForLoad resolves when readyState is complete", async () => {
-    const { send, calls } = fakeCdp({ "Runtime.evaluate": () => ({ result: { value: "complete" } }) });
+    const { send, calls } = fakeCdp({
+      "Runtime.evaluate": () => ({ result: { value: "complete" } }),
+    });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
     const r = await d.waitForLoad(1000);
     expect(r.ok).toBe(true);
@@ -212,24 +227,31 @@ describe("CdpBrowserDriver.readContent / waitForLoad / pressKey / select / hover
     expect(downs[0]!.params.key).toBe("Enter");
   });
 
-  test("pressKey on a focused ref clicks it first", async () => {
+  test("pressKey on a focused ref does not activate it before the key", async () => {
     const { send, calls } = fakeCdp({
       "Accessibility.getFullAXTree": () => AX_TWO,
-      "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
     const snap = await d.snapshot();
     calls.length = 0;
     const r = await d.pressKey("Enter", snap.elements[0]!.ref);
     expect(r.ok).toBe(true);
-    expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(true); // focused via click
+    expect(calls.find((c) => c.method === "DOM.focus")?.params).toEqual({ backendNodeId: 10 });
+    expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(false);
     expect(calls.some((c) => c.method === "Input.dispatchKeyEvent")).toBe(true);
   });
 
   test("selectOption sets value on the <select> node and reports match", async () => {
     const { send, calls } = fakeCdp({
       "Accessibility.getFullAXTree": () => ({
-        nodes: [{ nodeId: "1", role: { value: "combobox" }, name: { value: "国家" }, backendDOMNodeId: 30 }],
+        nodes: [
+          {
+            nodeId: "1",
+            role: { value: "combobox" },
+            name: { value: "国家" },
+            backendDOMNodeId: 30,
+          },
+        ],
       }),
       "DOM.resolveNode": () => ({ object: { objectId: "sel-1" } }),
       "Runtime.callFunctionOn": () => ({ result: { value: { ok: true, matched: "中国" } } }),
@@ -257,12 +279,19 @@ describe("CdpBrowserDriver.readContent / waitForLoad / pressKey / select / hover
 
   test("fetchImages returns base64 per ref (in-page fetch)", async () => {
     const { send } = fakeCdp({
-      "Runtime.evaluate": () => ({ result: { value: { ok: true, dataUrl: "data:image/jpeg;base64,QUJD" } } }),
+      "Runtime.evaluate": () => ({
+        result: { value: { ok: true, dataUrl: "data:image/jpeg;base64,QUJD" } },
+      }),
     });
     const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
     const out = await d.fetchImages(["img1", "img2"]);
     expect(out).toHaveLength(2);
-    expect(out[0]).toMatchObject({ ok: true, base64: "QUJD", mediaType: "image/jpeg", ref: "img1" });
+    expect(out[0]).toMatchObject({
+      ok: true,
+      base64: "QUJD",
+      mediaType: "image/jpeg",
+      ref: "img1",
+    });
   });
 
   test("screenshot of a ref resolves backendId then captures", async () => {

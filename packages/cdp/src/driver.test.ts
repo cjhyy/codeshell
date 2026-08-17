@@ -126,15 +126,66 @@ describe("CdpActionsDriver.clickNode", () => {
 });
 
 describe("CdpActionsDriver.typeNode", () => {
-  test("focuses by click then inserts text", async () => {
-    const { send, calls } = fakeCdp({ "DOM.getBoxModel": () => BOX });
+  test("focuses and replaces text without dispatching an accidental mouse click", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.resolveNode": () => ({ object: { objectId: "input-1" } }),
+      "Runtime.callFunctionOn": () => ({
+        result: { value: { ok: true } },
+      }),
+    });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
 
     const r = await d.typeNode(10, "hello");
-    expect(r.ok).toBe(true);
+    expect(r).toMatchObject({ ok: true, code: "OK" });
+    expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(false);
+    expect(calls.find((c) => c.method === "DOM.resolveNode")?.params).toEqual({
+      backendNodeId: 10,
+    });
+    const functions = calls.filter((c) => c.method === "Runtime.callFunctionOn");
+    expect(functions).toHaveLength(1);
+    expect(functions[0]?.params?.functionDeclaration).toContain("this.select()");
     expect(calls.some((c) => c.method === "Input.insertText" && c.params?.text === "hello")).toBe(
       true,
     );
+  });
+
+  test("rejects a disabled/read-only/non-text control before inserting", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.resolveNode": () => ({ object: { objectId: "input-1" } }),
+      "Runtime.callFunctionOn": () => ({
+        result: { value: { ok: false, detail: "text control is read-only" } },
+      }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    expect(await d.typeNode(10, "hello")).toMatchObject({
+      ok: false,
+      code: "BLOCKED",
+      retryable: false,
+      detail: "text control is read-only",
+    });
+    expect(calls.some((c) => c.method === "Input.insertText")).toBe(false);
+  });
+
+  test("marks an unresolvable text node stale", async () => {
+    const { send, calls } = fakeCdp({ "DOM.resolveNode": () => ({}) });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    expect(await d.typeNode(10, "hello")).toMatchObject({ ok: false, staleRef: true });
+    expect(calls.some((c) => c.method === "Input.insertText")).toBe(false);
+  });
+});
+
+describe("CdpActionsDriver.focusNode", () => {
+  test("uses DOM.focus without activating the element", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    expect(await d.focusNode(20)).toMatchObject({ ok: true, code: "OK" });
+    expect(calls.find((c) => c.method === "DOM.focus")?.params).toEqual({
+      backendNodeId: 20,
+    });
+    expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(false);
   });
 });
 
@@ -255,7 +306,7 @@ describe("CdpActionsDriver.hoverNode", () => {
 });
 
 describe("CdpActionsDriver.pressKey", () => {
-  test("sends text payloads for printable keys only", async () => {
+  test("sends text payloads for printable keys and Enter's native action", async () => {
     const { send, calls } = fakeCdp();
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
 
@@ -275,9 +326,14 @@ describe("CdpActionsDriver.pressKey", () => {
     const control = await d.pressKey("Enter");
     expect(control.ok).toBe(true);
     const controlKeys = calls.filter((c) => c.method === "Input.dispatchKeyEvent");
-    expect(controlKeys[0]?.params).toMatchObject({ type: "keyDown", key: "Enter" });
-    expect(controlKeys[0]?.params).not.toHaveProperty("text");
-    expect(controlKeys[0]?.params).not.toHaveProperty("unmodifiedText");
+    expect(controlKeys[0]?.params).toMatchObject({
+      type: "keyDown",
+      key: "Enter",
+      text: "\r",
+      unmodifiedText: "\r",
+    });
+    expect(controlKeys[1]?.params).not.toHaveProperty("text");
+    expect(controlKeys[1]?.params).not.toHaveProperty("unmodifiedText");
   });
 
   test("dispatches the planned sequence for a combination", async () => {

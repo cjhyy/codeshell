@@ -29,7 +29,14 @@ describe("planKeySequence", () => {
   test("single key → keyDown + keyUp", () => {
     const seq = planKeySequence("Enter");
     expect(seq.map((e) => e.type)).toEqual(["keyDown", "keyUp"]);
-    expect(seq[0]).toMatchObject({ key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+    expect(seq[0]).toMatchObject({
+      key: "Enter",
+      code: "Enter",
+      windowsVirtualKeyCode: 13,
+      text: "\r",
+      unmodifiedText: "\r",
+    });
+    expect(seq[1]).not.toHaveProperty("text");
   });
 
   test("combination → modifier down, main down/up with bitmask, modifier up reversed", () => {
