@@ -61,6 +61,10 @@
     ],
     "extraResources": [
       {
+        "from": "resources/app-update.yml",
+        "to": "app-update.yml"
+      },
+      {
         "from": "THIRD_PARTY_NOTICES.md",
         "to": "THIRD_PARTY_NOTICES.md"
       },

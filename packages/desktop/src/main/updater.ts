@@ -206,9 +206,9 @@ export function initUpdater(): void {
       return;
     }
   }
-  // Release packages use app-update.yml. Directory-only macOS packages do not
-  // receive that file from electron-builder, so the decision above configures
-  // the same public GitHub provider explicitly instead of failing with ENOENT.
+  // New packages always include app-update.yml as an extra resource. Keep this
+  // fallback for legacy or malformed packages so checking still reaches the
+  // same public GitHub provider instead of failing immediately with ENOENT.
 
   autoUpdater.allowPrerelease = app.getVersion().includes("-");
 

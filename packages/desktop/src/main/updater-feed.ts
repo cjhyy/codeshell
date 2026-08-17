@@ -11,9 +11,9 @@ export type UpdaterFeedDecision =
 
 /**
  * Resolve updater configuration without claiming that the installed version is
- * current. Directory-only macOS builds do not receive app-update.yml from
- * electron-builder, so they need the same public GitHub feed as release builds
- * in order to perform a real version comparison.
+ * current. Legacy or malformed packages may not contain app-update.yml, so
+ * they need the same public GitHub feed as release builds in order to perform
+ * a real version comparison.
  */
 export function updaterFeedDecision(
   explicitFeed: string | undefined,

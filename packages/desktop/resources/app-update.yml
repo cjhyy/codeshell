@@ -1,0 +1,4 @@
+owner: cjhyy
+repo: codeshell
+provider: github
+updaterCacheDirName: '@cjhyycode-shell-desktop-updater'
