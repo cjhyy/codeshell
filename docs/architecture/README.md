@@ -1,11 +1,13 @@
 # CodeShell Architecture
 
 Source-accurate architecture of CodeShell, written against the current tree. This
-directory holds two complementary views:
+directory holds three complementary views:
 
-- **The chapters** (`00`–`14`) describe _how the system works_ — each subsystem's
+- **The subsystem chapters** (`00`–`14`) describe _how the system works_ — each subsystem's
   mechanism, anchored to real `file:line` locations. Read `00-overview.md` first;
   the rest stand on their own.
+- **Chapter 15** compares the current harness with Codex's public integration
+  surface and separates present evidence from proposed evolution work.
 - **[`11-feature-inventory.md`](11-feature-inventory.md)** is the _breadth map_ — a flat
   inventory of what CodeShell can do today (179 capabilities across desktop main /
   renderer / TUI), each with entry point and usage. It answers "does capability X
@@ -15,7 +17,8 @@ Most subsystem chapters embed generated PNG architecture diagrams under
 [`images/`](images/); newer focused chapters may use source-controlled Mermaid
 when that keeps the relationship easier to maintain.
 
-Both describe the as-built system. For _what changed in which release_ see the
+The subsystem chapters and feature inventory describe the as-built system. For
+_what changed in which release_ see the
 repo-root [`CHANGELOG.md`](../../CHANGELOG.md); for _planned / not-yet-built_ work
 see [`docs/todo/`](../todo/README.md).
 
@@ -38,6 +41,7 @@ see [`docs/todo/`](../todo/README.md).
 | 12  | [Package Boundaries & Release Units](12-package-boundaries-and-release-units.md)            | Monorepo dependency direction, Pet split rationale, exports and publish boundaries           |
 | 13  | [Plugin Parity & Video Editor](13-plugin-parity-and-video-editor.md)                        | Codex compatibility matrix, remaining gaps, and the video-editor reference plugin            |
 | 14  | [Digital Humans, Sessions & Pet](14-digital-human-and-pet.md)                               | Session binding, long-term memory, cross-Session messages, and the Pet independence boundary |
+| 15  | [Codex Open Harness Comparison & Roadmap](15-codex-harness-comparison-and-roadmap.md)       | Source-backed comparison, gaps, non-goals, priorities, and phased evolution plan             |
 
 ## Reference
 
