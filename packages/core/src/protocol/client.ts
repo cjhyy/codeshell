@@ -73,6 +73,7 @@ export interface AgentRunOptions {
   model?: string;
   planMode?: boolean;
   behaviorMode?: RunBehaviorMode;
+  preset?: string;
   kind?: SessionKind;
 }
 

@@ -40,6 +40,7 @@ import {
 } from "./types.js";
 import type { Engine, EngineConfig } from "../engine/engine.js";
 import { diskDefaultsFrom } from "../engine/engine.js";
+import { ISOLATED_TASK_BEHAVIOR_MODE } from "../engine/run-types.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { isProtectedSettingKey, SettingsManager } from "../settings/manager.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
@@ -156,6 +157,15 @@ function runInputError(params: RunParams): string | null {
     (typeof params.behaviorMode !== "string" || params.behaviorMode.length === 0)
   ) {
     return `invalid behavior mode: ${String(params.behaviorMode)}`;
+  }
+  if (
+    params.preset !== undefined &&
+    (typeof params.preset !== "string" ||
+      params.preset.length === 0 ||
+      params.preset.length > 128 ||
+      /[\r\n]/.test(params.preset))
+  ) {
+    return "preset must be a bounded non-empty string";
   }
   for (const [field, value, maxItems] of [
     ["toolAllowlist", params.toolAllowlist, 32],
@@ -647,8 +657,7 @@ export class AgentServer {
     // Protocol surface from the compiled composition. Each contributing
     // module may attach one observer; the server calls them at every
     // lifecycle hook point and isolates per-observer failures.
-    const protocol =
-      options.composition?.protocol ?? compileComposition({}).protocol;
+    const protocol = options.composition?.protocol ?? compileComposition({}).protocol;
     this.runValidators = protocol.runValidators;
     this.hiddenSessionKinds = protocol.hiddenSessionKinds.map((k) => k.key);
     const observerHost: ProtocolObserverHost = {
@@ -1552,6 +1561,9 @@ export class AgentServer {
     const sessionConfig = {
       cwd: params.cwd,
       projectTrusted: params.projectTrusted,
+      preset:
+        params.preset ??
+        (params.behaviorMode === ISOLATED_TASK_BEHAVIOR_MODE ? "general" : undefined),
       maxTurns: params.maxTurns,
       maxContextTokens: params.maxContextTokens,
       goal:

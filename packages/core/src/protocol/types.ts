@@ -159,6 +159,11 @@ export interface RunParams {
   planMode?: boolean;
   /** Named behavior profile for a product-specific per-run interaction mode. */
   behaviorMode?: RunBehaviorMode;
+  /**
+   * Preset used when creating this run's fresh Session. Host-owned bounded
+   * Tasks use this to avoid inheriting the interactive product default.
+   */
+  preset?: string;
   /** Host-authorized per-run hard tool allowlist. Empty means no tools. */
   toolAllowlist?: string[];
   /** Host-authorized per-run hard Skill allowlist. Empty means no Skills. */

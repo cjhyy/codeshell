@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
+import type { EngineConfigSlice } from "./chat-session-manager.js";
 import { ErrorCodes } from "./types.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
 
@@ -47,6 +48,36 @@ function makeEngine(opts: { failSwitch?: boolean } = {}) {
 }
 
 describe("agent/run model", () => {
+  it("uses the general preset for a fresh isolated Task instead of inheriting coding", async () => {
+    const { engine } = makeEngine();
+    let createdWith: EngineConfigSlice | undefined;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: (slice) => {
+        createdWith = slice;
+        return engine;
+      },
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 0,
+      method: "agent/run",
+      params: {
+        sessionId: "panel-task-1",
+        task: "initialize",
+        behaviorMode: "isolatedTask",
+        ephemeral: true,
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(createdWith?.preset).toBe("general");
+    expect(t.sent.find((message) => message.id === 0)?.result?.text).toBe("ok");
+  });
+
   it("applies the requested model before the first turn starts", async () => {
     const { engine, calls } = makeEngine();
     const chatManager = new ChatSessionManager({
