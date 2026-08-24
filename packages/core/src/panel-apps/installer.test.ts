@@ -354,6 +354,10 @@ describe("independent Panel App installer", () => {
     const previousFetch = globalThis.fetch;
     try {
       writePanelApp(appRoot, { id: "remote-panel", version: "1.0.0" });
+      writePanelApp(join(repository, "examples", "other-panel"), {
+        id: "other-panel",
+        version: "1.0.0",
+      });
       runGit(repository, "init", "--initial-branch=main");
       runGit(repository, "config", "user.email", "panel-tests@codeshell.local");
       runGit(repository, "config", "user.name", "Panel Tests");
@@ -378,6 +382,16 @@ describe("independent Panel App installer", () => {
           },
         });
       });
+
+      const monorepoError = await previewLocalPanelApp({
+        kind: "git",
+        url: cloneUrl,
+        ref: "main",
+      }).catch((error) => error);
+      expect(String(monorepoError)).toMatch(
+        /multiple Panel Apps found.*examples\/other-panel.*examples\/panel-app/,
+      );
+      expect(String(monorepoError)).not.toContain("panel-source-main/");
 
       const source = {
         kind: "git" as const,

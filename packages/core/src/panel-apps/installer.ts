@@ -45,6 +45,9 @@ const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_DEPTH = 16;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MAX_AGENT_SKILL_BYTES = 256 * 1024;
+const MAX_PANEL_DISCOVERY_DEPTH = 4;
+const MAX_PANEL_DISCOVERY_DIRECTORIES = 512;
+const MAX_PANEL_DISCOVERY_RESULTS = 16;
 const REVIEWED_GIT_SNAPSHOT_TTL_MS = 10 * 60 * 1000;
 const MAX_REVIEWED_GIT_SNAPSHOTS = 8;
 const ALLOWED_ASSET_EXTENSIONS = new Set([
@@ -248,15 +251,50 @@ function looksLikePanelAppRoot(directory: string): boolean {
   return existsSync(join(directory, PANEL_APP_MANIFEST_FILE));
 }
 
+async function discoverPanelAppRoots(directory: string): Promise<string[]> {
+  const found: string[] = [];
+  const pending = [{ directory, depth: 0 }];
+  let visited = 0;
+  while (
+    pending.length > 0 &&
+    visited < MAX_PANEL_DISCOVERY_DIRECTORIES &&
+    found.length < MAX_PANEL_DISCOVERY_RESULTS
+  ) {
+    const current = pending.shift()!;
+    visited += 1;
+    if (looksLikePanelAppRoot(current.directory)) {
+      found.push(current.directory);
+      continue;
+    }
+    if (current.depth >= MAX_PANEL_DISCOVERY_DEPTH) continue;
+    const entries = await readdir(current.directory, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name === "node_modules") {
+        continue;
+      }
+      pending.push({ directory: join(current.directory, entry.name), depth: current.depth + 1 });
+    }
+  }
+  return found;
+}
+
 async function findPanelAppRoot(directory: string): Promise<string> {
   if (looksLikePanelAppRoot(directory)) return directory;
-  const entries = await readdir(directory, { withFileTypes: true });
-  const children = entries.filter((entry) => entry.isDirectory() && !entry.name.startsWith("."));
-  if (children.length === 1) {
-    const nested = join(directory, children[0].name);
-    if (looksLikePanelAppRoot(nested)) return nested;
+  const found = await discoverPanelAppRoots(directory);
+  if (found.length === 1) return found[0];
+  if (found.length > 1) {
+    const candidates = found
+      .map((root) => relative(directory, root).split(sep).join(posix.sep))
+      .sort()
+      .join(", ");
+    throw new PanelAppInstallError(
+      `multiple Panel Apps found; choose an app subdirectory: ${candidates}`,
+    );
   }
-  throw new PanelAppInstallError(`no Panel App found (expected ${PANEL_APP_MANIFEST_FILE})`);
+  throw new PanelAppInstallError(
+    `no Panel App found (expected ${PANEL_APP_MANIFEST_FILE}); ` +
+      "for a monorepo, provide the app subdirectory or a GitHub /tree/<ref>/<path> URL",
+  );
 }
 
 async function openGitPanelAppSource(

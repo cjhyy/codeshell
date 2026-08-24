@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   PanelAppProcessService,
+  panelExecutableDirectories,
   panelProcessInfo,
   resolvePanelExecutable,
   type PanelProcessOwner,
@@ -61,6 +62,19 @@ describe("PanelAppProcessService", () => {
       platform: "darwin",
       arch: "arm64",
     });
+  });
+
+  test("adds Windows package-manager links without relying on the startup PATH", () => {
+    expect(
+      panelExecutableDirectories("C:\\CodeShell\\bin", {
+        platform: "win32",
+        env: { LOCALAPPDATA: "C:\\Users\\Mimi\\AppData\\Local" },
+      }),
+    ).toEqual([
+      "C:\\CodeShell\\bin",
+      "C:\\Users\\Mimi\\AppData\\Local/Microsoft/WinGet/Links",
+      "C:\\Users\\Mimi\\AppData\\Local/Microsoft/WindowsApps",
+    ]);
   });
 
   test("runs argv without a shell and streams output to the owning guest", async () => {

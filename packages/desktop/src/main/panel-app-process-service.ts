@@ -72,6 +72,30 @@ export function panelProcessInfo(
   return { platform, arch, libc };
 }
 
+export function panelExecutableDirectories(
+  managedBin: string,
+  options: {
+    platform?: NodeJS.Platform;
+    env?: NodeJS.ProcessEnv;
+    home?: string;
+  } = {},
+): string[] {
+  const platform = options.platform ?? process.platform;
+  const env = options.env ?? process.env;
+  const directories = [managedBin];
+  if (platform === "win32") {
+    const localAppData =
+      env.LOCALAPPDATA || (options.home ? join(options.home, "AppData", "Local") : "");
+    if (localAppData) {
+      directories.push(
+        join(localAppData, "Microsoft", "WinGet", "Links"),
+        join(localAppData, "Microsoft", "WindowsApps"),
+      );
+    }
+  }
+  return [...new Set(directories.filter(Boolean))];
+}
+
 function safeProcessEnv(
   source: NodeJS.ProcessEnv,
   extraPathDirectories: readonly string[] = [],
