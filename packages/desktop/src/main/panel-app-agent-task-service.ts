@@ -31,6 +31,7 @@ export interface PanelAgentTaskView {
   key?: string;
   label: string;
   status: PanelAgentTaskStatus;
+  model?: string;
   skill?: string;
   createdAt: number;
   updatedAt: number;
@@ -59,6 +60,7 @@ export interface PanelAgentTaskStartInput {
   prompt?: unknown;
   label?: unknown;
   key?: unknown;
+  model?: unknown;
   skill?: unknown;
   toolNames?: unknown;
   maxTurns?: unknown;
@@ -71,6 +73,7 @@ export interface PanelAgentTaskRuntime {
     owner: PanelAgentTaskOwner;
     prompt: string;
     label: string;
+    model?: string;
     toolNames: string[];
     skillNames: string[];
     maxTurns: number;
@@ -91,6 +94,7 @@ interface StoredPanelAgentTask extends PanelAgentTaskView {
   sessionId: string;
   owner: PanelAgentTaskOwner;
   prompt: string;
+  model?: string;
   toolNames: string[];
   skillNames: string[];
   maxTurns: number;
@@ -135,6 +139,7 @@ function publicTask(task: StoredPanelAgentTask): PanelAgentTaskView {
     ...(task.key ? { key: task.key } : {}),
     label: task.label,
     status: task.status,
+    ...(task.model ? { model: task.model } : {}),
     ...(task.skill ? { skill: task.skill } : {}),
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
@@ -171,6 +176,10 @@ export class PanelAppAgentTaskService {
     const key = raw.key === undefined ? undefined : String(raw.key);
     if (key !== undefined && !TASK_KEY.test(key)) {
       throw new Error("agent.task.start key must match ^[a-z][a-z0-9_-]{0,63}$");
+    }
+    const model = raw.model === undefined ? undefined : String(raw.model).trim();
+    if (model !== undefined && (!model || model.length > 256 || /[\r\n\0]/.test(model))) {
+      throw new Error("agent.task.start model must be a bounded non-empty connection id");
     }
     const skill = raw.skill === undefined ? undefined : String(raw.skill);
     if (skill !== undefined && !owner.availableSkills.includes(skill)) {
@@ -214,6 +223,7 @@ export class PanelAppAgentTaskService {
       ...(key ? { key } : {}),
       label,
       status: "queued",
+      ...(model ? { model } : {}),
       ...(skill ? { skill } : {}),
       createdAt,
       updatedAt: createdAt,
@@ -292,6 +302,7 @@ export class PanelAppAgentTaskService {
         owner: task.owner,
         prompt: task.prompt,
         label: task.label,
+        ...(task.model ? { model: task.model } : {}),
         toolNames: task.toolNames,
         skillNames: task.skillNames,
         maxTurns: task.maxTurns,

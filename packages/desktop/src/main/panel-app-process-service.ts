@@ -44,6 +44,8 @@ interface RunningProcess {
 export interface PanelAppProcessServiceOptions {
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
+  /** Host-owned executable directories (for example CodeShell's managed bin). */
+  extraPathDirectories?: () => readonly string[];
   confirmExecution(input: {
     guestId: number;
     appId: string;
@@ -53,7 +55,27 @@ export interface PanelAppProcessServiceOptions {
   }): Promise<boolean>;
 }
 
-function safeProcessEnv(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+export function panelProcessInfo(
+  platform: NodeJS.Platform = process.platform,
+  arch: string = process.arch,
+  report: unknown = process.report?.getReport(),
+): { platform: NodeJS.Platform; arch: string; libc?: "glibc" | "musl" } {
+  if (platform !== "linux") return { platform, arch };
+  const header =
+    report && typeof report === "object"
+      ? (report as { header?: { glibcVersionRuntime?: unknown } }).header
+      : undefined;
+  const libc =
+    typeof header?.glibcVersionRuntime === "string" && header.glibcVersionRuntime
+      ? "glibc"
+      : "musl";
+  return { platform, arch, libc };
+}
+
+function safeProcessEnv(
+  source: NodeJS.ProcessEnv,
+  extraPathDirectories: readonly string[] = [],
+): NodeJS.ProcessEnv {
   const allowed = [
     "PATH",
     "HOME",
@@ -68,9 +90,14 @@ function safeProcessEnv(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     "SSL_CERT_FILE",
     "SSL_CERT_DIR",
   ];
-  return Object.fromEntries(
+  const safe = Object.fromEntries(
     allowed.flatMap((key) => (source[key] === undefined ? [] : [[key, source[key]]])),
   );
+  const currentPath = safe.PATH ?? "";
+  safe.PATH = [...extraPathDirectories.filter(Boolean), currentPath]
+    .filter(Boolean)
+    .join(delimiter);
+  return safe;
 }
 
 function executableCandidates(name: string, platform: NodeJS.Platform, env: NodeJS.ProcessEnv) {
@@ -84,13 +111,21 @@ function executableCandidates(name: string, platform: NodeJS.Platform, env: Node
 
 export async function resolvePanelExecutable(
   name: string,
-  options: { env?: NodeJS.ProcessEnv; platform?: NodeJS.Platform } = {},
+  options: {
+    env?: NodeJS.ProcessEnv;
+    platform?: NodeJS.Platform;
+    extraPathDirectories?: readonly string[];
+  } = {},
 ): Promise<string | null> {
   if (!EXECUTABLE_NAME.test(name)) throw new Error("invalid executable name");
   const env = options.env ?? process.env;
   const platform = options.platform ?? process.platform;
   const pathValue = env.PATH || "";
-  for (const directory of pathValue.split(delimiter).filter(Boolean)) {
+  const directories = [
+    ...(options.extraPathDirectories ?? []),
+    ...pathValue.split(delimiter).filter(Boolean),
+  ];
+  for (const directory of [...new Set(directories)]) {
     for (const candidateName of executableCandidates(name, platform, env)) {
       const candidate = join(directory, candidateName);
       try {
@@ -137,7 +172,10 @@ export class PanelAppProcessService {
     if (typeof name !== "string" || !EXECUTABLE_NAME.test(name)) {
       throw new Error("process.find requires a simple executable name");
     }
-    const path = await resolvePanelExecutable(name, this.options);
+    const path = await resolvePanelExecutable(name, {
+      ...this.options,
+      extraPathDirectories: this.options.extraPathDirectories?.(),
+    });
     if (!path) return { available: false, name };
     const handle = randomUUID();
     this.executables.set(handle, { guestId: owner.guestId, name, path });
@@ -207,7 +245,10 @@ export class PanelAppProcessService {
     const child = spawn(executable.path, args, {
       cwd,
       detached: process.platform !== "win32",
-      env: safeProcessEnv(this.options.env ?? process.env),
+      env: safeProcessEnv(
+        this.options.env ?? process.env,
+        this.options.extraPathDirectories?.() ?? [],
+      ),
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,

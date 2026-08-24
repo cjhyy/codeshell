@@ -90,8 +90,9 @@ describe("deleteSessionDir", () => {
     expect(fs.existsSync(nonQuickStage)).toBe(true);
   });
 
-  it("does not expose legacy flat qchat records in the sessions view", async () => {
+  it("does not expose legacy flat ephemeral records in the sessions view", async () => {
     fs.writeFileSync(path.join(dir, "qchat-hidden.jsonl"), "quick transcript");
+    fs.writeFileSync(path.join(dir, "panel-task-hidden.jsonl"), "panel task transcript");
     fs.writeFileSync(path.join(dir, "normal-visible.jsonl"), "normal transcript");
 
     expect((await listSessions(dir)).map((session) => session.id)).toEqual(["normal-visible"]);

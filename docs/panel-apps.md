@@ -171,10 +171,23 @@ profiles, hooks, MCP servers, or unrelated Skills. The app supplies a hard
 per-run tool allowlist and may select only a Skill bundled in its own reviewed
 manifest. Normal tool permission and approval policy still applies.
 
+Panel API v9 adds `agent.task.models`, which returns only secret-free configured
+text connections as `{ id, providerId, provider, model, label }` rows plus the
+effective `defaultModel`. Passing one returned connection `id` as the optional
+`model` field of `agent.task.start` selects it for that Task; omitting `model`
+continues to follow the effective CodeShell default. Provider credentials,
+endpoints, and model parameter values never cross the Panel guest boundary.
+It also adds secret-free `process.info` (`platform`, `arch`, and Linux `libc`) and the
+`user-bin` known directory. The latter is a Host-owned per-user executable
+directory automatically included in Panel process lookup and child `PATH`, so
+reviewed apps can install a verified standalone tool without guessing a system
+directory or changing the user's shell profile.
+
 ```js
 const task = await window.codeshellPanel.call("agent.task.start", {
   key: "repair",
   label: "Repair local dependency",
+  model: "my-fast-model",
   prompt: "Use the bundled setup Skill and verify the result.",
   skill: "my-panel-app:setup",
   toolNames: ["Skill", "Bash"],

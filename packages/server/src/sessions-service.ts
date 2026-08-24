@@ -19,9 +19,14 @@ export interface DesktopSessionSummary {
 
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 const QUICK_CHAT_SESSION_PREFIX = "qchat-";
+const PANEL_TASK_SESSION_PREFIX = "panel-task-";
 
 function isQuickChatSessionId(id: string): boolean {
   return id.startsWith(QUICK_CHAT_SESSION_PREFIX);
+}
+
+function isInternalEphemeralSessionId(id: string): boolean {
+  return isQuickChatSessionId(id) || id.startsWith(PANEL_TASK_SESSION_PREFIX);
 }
 
 export async function listSessions(
@@ -34,7 +39,7 @@ export async function listSessions(
       if (!e.isFile()) continue;
       if (!e.name.endsWith(".jsonl") && !e.name.endsWith(".json")) continue;
       const id = e.name.replace(/\.jsonl?$/, "");
-      if (isQuickChatSessionId(id)) continue;
+      if (isInternalEphemeralSessionId(id)) continue;
       const full = path.join(baseDir, e.name);
       try {
         const st = await fs.stat(full);
@@ -208,7 +213,7 @@ export async function listDiskSessions(
     throw e;
   }
   const candidates = entries.filter(
-    (e) => e.isDirectory() && SAFE_ID.test(e.name) && !isQuickChatSessionId(e.name),
+    (e) => e.isDirectory() && SAFE_ID.test(e.name) && !isInternalEphemeralSessionId(e.name),
   );
   const stats = await Promise.all(
     candidates.map(async (e) => {
