@@ -24,6 +24,7 @@ import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { preparePanelApp } from "./panel-app-protocol.js";
 import {
   PanelAppProcessService,
+  panelExecutableDirectories,
   panelProcessInfo,
   type PanelProcessOwner,
 } from "./panel-app-process-service.js";
@@ -345,7 +346,8 @@ export class PanelAppBridge {
 
   constructor(private readonly options: PanelAppBridgeOptions) {
     this.processService = new PanelAppProcessService({
-      extraPathDirectories: () => [this.managedBinDirectory()],
+      extraPathDirectories: () =>
+        panelExecutableDirectories(this.managedBinDirectory(), { home: app.getPath("home") }),
       confirmExecution: async ({ guestId, appTitle, executable, executablePath }) => {
         const owner = this.guests.get(guestId);
         const window = owner ? BrowserWindow.fromId(owner.ownerWindowId) : null;
