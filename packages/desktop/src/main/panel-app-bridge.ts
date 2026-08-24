@@ -22,7 +22,11 @@ import type { AgentBridge } from "./agent-bridge.js";
 import { claimPanelHostOwnerForRun } from "./panel-host-routing.js";
 import type { PanelAppProtocolResource } from "./panel-app-protocol.js";
 import { preparePanelApp } from "./panel-app-protocol.js";
-import { PanelAppProcessService, type PanelProcessOwner } from "./panel-app-process-service.js";
+import {
+  PanelAppProcessService,
+  panelProcessInfo,
+  type PanelProcessOwner,
+} from "./panel-app-process-service.js";
 import {
   DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
   panelAppStorageKey,
@@ -37,6 +41,7 @@ import {
   type PanelAgentTaskProgressInput,
   type PanelAgentTaskStartInput,
 } from "./panel-app-agent-task-service.js";
+import type { PanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
   PANEL_APP_API_VERSION,
   type PanelAppBindInput,
@@ -125,6 +130,8 @@ export interface PanelAppBridgeOptions {
   /** Rechecked on prepare, bind, Agent invocation, and every Host call. */
   isPanelAppBound(projectPath: string, appId: string): boolean;
   getAgentBridge(): AgentBridge | null;
+  /** Secret-free configured text connections available to isolated Panel Tasks. */
+  agentTaskModels?(cwd: string): PanelAgentTaskModelCatalog | Promise<PanelAgentTaskModelCatalog>;
   /** Shows a system notification; injected so tests avoid Electron Notification. */
   showNotification?(notification: { title: string; body: string }): boolean;
   /** Host-owned Cookie login operations. Cookie values never cross into the Panel guest. */
@@ -338,6 +345,7 @@ export class PanelAppBridge {
 
   constructor(private readonly options: PanelAppBridgeOptions) {
     this.processService = new PanelAppProcessService({
+      extraPathDirectories: () => [this.managedBinDirectory()],
       confirmExecution: async ({ guestId, appTitle, executable, executablePath }) => {
         const owner = this.guests.get(guestId);
         const window = owner ? BrowserWindow.fromId(owner.ownerWindowId) : null;
@@ -384,6 +392,7 @@ export class PanelAppBridge {
                 bucket: input.owner.bucket,
                 behaviorMode: "isolatedTask",
                 ephemeral: true,
+                ...(input.model ? { model: input.model } : {}),
                 toolAllowlist: input.toolNames,
                 skillAllowlist: input.skillNames,
                 maxTurns: input.maxTurns,
@@ -816,7 +825,9 @@ export class PanelAppBridge {
       this.assertProjectBinding(bound);
       return { ...bound.context };
     };
-    return binding.bucket ? readContext(binding) : this.waitForBoundGuest(binding).then(readContext);
+    return binding.bucket
+      ? readContext(binding)
+      : this.waitForBoundGuest(binding).then(readContext);
   }
 
   private async call(sender: WebContents, method: string, params?: unknown): Promise<unknown> {
@@ -907,6 +918,9 @@ export class PanelAppBridge {
           this.agentTaskOwner(binding),
           (params ?? {}) as PanelAgentTaskStartInput,
         );
+      case "agent.task.models":
+        this.requirePermission(binding, "agent.task");
+        return this.options.agentTaskModels?.(binding.cwd ?? binding.projectPath) ?? { models: [] };
       case "agent.task.list":
         this.requirePermission(binding, "agent.task");
         return this.agentTaskService.list(this.agentTaskOwner(binding));
@@ -976,6 +990,9 @@ export class PanelAppBridge {
       case "process.find":
         this.requirePermission(binding, "process");
         return this.processService.findExecutable(this.processOwner(binding), params);
+      case "process.info":
+        this.requirePermission(binding, "process");
+        return panelProcessInfo();
       case "process.spawn":
         this.requirePermission(binding, "process");
         return this.processService.start(this.processOwner(binding), params);
@@ -1031,8 +1048,26 @@ export class PanelAppBridge {
 
   private getKnownProcessDirectory(binding: GuestBinding, params: unknown): Promise<unknown> {
     const name = (params as { name?: unknown } | null)?.name;
-    if (name !== "downloads") throw new Error("unsupported known directory");
-    return this.processService.grantDirectory(this.processOwner(binding), app.getPath("downloads"));
+    if (name === "downloads") {
+      return this.processService.grantDirectory(
+        this.processOwner(binding),
+        app.getPath("downloads"),
+      );
+    }
+    if (name === "user-bin") {
+      return this.grantManagedBinDirectory(binding);
+    }
+    throw new Error("unsupported known directory");
+  }
+
+  private managedBinDirectory(): string {
+    return join(app.getPath("userData"), "bin");
+  }
+
+  private async grantManagedBinDirectory(binding: GuestBinding): Promise<unknown> {
+    const path = this.managedBinDirectory();
+    await mkdir(path, { recursive: true, mode: 0o700 });
+    return this.processService.grantDirectory(this.processOwner(binding), path);
   }
 
   private async pickProcessDirectory(binding: GuestBinding): Promise<unknown> {

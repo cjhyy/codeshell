@@ -28,6 +28,7 @@ describe("desktop session services CODE_SHELL_HOME routing", () => {
     const manager = new SessionManager();
     manager.create(cwd, "model", "provider", "normal-in-custom-home", null, "desktop");
     manager.create(cwd, "model", "provider", "qchat-in-custom-home", null, "desktop");
+    manager.create(cwd, "model", "provider", "panel-task-legacy", null, "desktop");
 
     expect(sessionsRoot()).toBe(join(codeShellHome, "sessions"));
     expect((await listDiskSessions({ limit: 10 })).sessions.map((session) => session.id)).toEqual([

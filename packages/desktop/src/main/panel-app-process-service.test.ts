@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   PanelAppProcessService,
+  panelProcessInfo,
   resolvePanelExecutable,
   type PanelProcessOwner,
 } from "./panel-app-process-service.js";
@@ -33,6 +34,33 @@ describe("PanelAppProcessService", () => {
     await expect(resolvePanelExecutable("../demo-tool", { env: { PATH: root } })).rejects.toThrow(
       /invalid executable name/,
     );
+  });
+
+  test("resolves Host-managed executables outside the inherited PATH", async () => {
+    const path = executable("managed-tool", 'printf "ok\\n"');
+    expect(
+      await resolvePanelExecutable("managed-tool", {
+        env: { PATH: "" },
+        extraPathDirectories: [root],
+      }),
+    ).toBe(realpathSync(path));
+  });
+
+  test("reports Linux libc without exposing other process details", () => {
+    expect(panelProcessInfo("linux", "x64", { header: { glibcVersionRuntime: "2.39" } })).toEqual({
+      platform: "linux",
+      arch: "x64",
+      libc: "glibc",
+    });
+    expect(panelProcessInfo("linux", "arm64", { header: {} })).toEqual({
+      platform: "linux",
+      arch: "arm64",
+      libc: "musl",
+    });
+    expect(panelProcessInfo("darwin", "arm64", {})).toEqual({
+      platform: "darwin",
+      arch: "arm64",
+    });
   });
 
   test("runs argv without a shell and streams output to the owning guest", async () => {

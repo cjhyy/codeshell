@@ -386,6 +386,7 @@ import {
   themeAssetUrl,
 } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
+import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
   listMarketplacesForUi,
   loadMarketplaceForUi,
@@ -580,6 +581,11 @@ const panelAppBridge = new PanelAppBridge({
   isWorkspaceTrusted: (cwd) => getTrustCachedSync(cwd) === "trusted",
   isPanelAppBound: isPanelAppBoundToProject,
   getAgentBridge: () => bridge,
+  agentTaskModels: (cwd) =>
+    buildPanelAgentTaskModelCatalog(
+      new SettingsManager(cwd, "full", getTrustCachedSync(cwd) === "trusted").get(),
+      getMergedCatalog(),
+    ),
   showNotification: ({ title, body }) => {
     if (!Notification.isSupported()) return false;
     // Best-effort, same as the app's own agent notifications.

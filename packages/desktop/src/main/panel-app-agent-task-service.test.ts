@@ -47,6 +47,7 @@ describe("PanelAppAgentTaskService", () => {
       prompt: "initialize",
       label: "Initialize downloader",
       key: "setup",
+      model: "fast-model",
       skill: "video-download:video-download-setup",
       toolNames: ["Panel", "Bash"],
       maxTurns: 12,
@@ -59,12 +60,14 @@ describe("PanelAppAgentTaskService", () => {
     expect(completed.result?.text).toBe("ready");
     expect(calls[0]).toMatchObject({
       sessionId: "panel-task-2",
+      model: "fast-model",
       toolNames: ["Panel", "Bash", "Skill"],
       skillNames: ["video-download:video-download-setup"],
       maxTurns: 12,
       maxContextTokens: 32768,
     });
     expect(events.map((event) => event.status)).toEqual(["queued", "running", "completed"]);
+    expect(completed.model).toBe("fast-model");
   });
 
   test("deduplicates an active key and rejects another app's Skill", async () => {
@@ -92,6 +95,9 @@ describe("PanelAppAgentTaskService", () => {
         skill: "other:secret",
       }),
     ).toThrow(/not bundled/);
+    expect(() => service.start(owner(), { prompt: "x", label: "X", model: "bad\nmodel" })).toThrow(
+      /connection id/,
+    );
     finish();
   });
 
