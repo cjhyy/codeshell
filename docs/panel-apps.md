@@ -183,6 +183,16 @@ directory automatically included in Panel process lookup and child `PATH`, so
 reviewed apps can install a verified standalone tool without guessing a system
 directory or changing the user's shell profile.
 
+Panel API v10 adds `credentials.cookies.authorizeProcess` for apps that declare
+both `credentials.cookies` and `process`. After explicit user confirmation, the
+Host materializes a selected saved login into an owner-only temporary Netscape
+Cookie file and returns only an opaque, executable-bound file-argument handle.
+Passing that handle in `process.spawn.fileArgumentHandles` inserts the fixed
+`--cookies` option and private file path inside Desktop main; neither the Cookie values
+nor the path cross into the Panel guest. Grants are scoped to one guest and one
+resolved executable, and their temporary files are removed when the Panel
+closes.
+
 ```js
 const task = await window.codeshellPanel.call("agent.task.start", {
   key: "repair",
