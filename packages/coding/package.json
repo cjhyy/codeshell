@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-capability-coding",
-  "version": "0.8.11",
+  "version": "0.8.12",
   "description": "Coding capability pack for the generic code-shell agent core.",
   "type": "module",
   "main": "./dist/index.js",
