@@ -159,6 +159,10 @@ export interface PanelAppBridgeOptions {
       cwd?: string;
       bucket?: string;
     }): Promise<{ count: number } | { invalid: true }>;
+    materialize?(input: {
+      credentialId: string;
+      cwd?: string;
+    }): Promise<{ filePath: string; count: number; cleanup: () => void } | { invalid: true }>;
   };
   /** Project- and task-scoped recurring jobs. The Panel never receives jobs from another cwd. */
   automations?: {
@@ -866,7 +870,9 @@ export class PanelAppBridge {
             ? AUDIO_TRANSCRIBE_TIMEOUT_MS
             : method === "credentials.cookies.loginAndSave"
               ? COOKIE_LOGIN_TIMEOUT_MS
-              : method === "filesystem.pickDirectory" || method === "process.spawn"
+              : method === "filesystem.pickDirectory" ||
+                  method === "process.spawn" ||
+                  method === "credentials.cookies.authorizeProcess"
                 ? PROCESS_CONSENT_TIMEOUT_MS
                 : CALL_TIMEOUT_MS),
     );
@@ -980,6 +986,10 @@ export class PanelAppBridge {
       case "credentials.cookies.restore":
         this.requirePermission(binding, "credentials.cookies");
         return this.restoreCookieCredential(binding, params);
+      case "credentials.cookies.authorizeProcess":
+        this.requirePermission(binding, "credentials.cookies");
+        this.requirePermission(binding, "process");
+        return this.authorizeCookieCredentialForProcess(binding, params);
       case "automations.list":
         this.requirePermission(binding, "automations.manage");
         return this.listPanelAutomations(binding);
@@ -1438,6 +1448,67 @@ export class PanelAppBridge {
     });
     if ("invalid" in result) return { restored: false, invalid: true };
     return { restored: true, count: result.count };
+  }
+
+  private async authorizeCookieCredentialForProcess(
+    binding: GuestBinding,
+    params: unknown,
+  ): Promise<unknown> {
+    const input = params as {
+      credentialId?: unknown;
+      url?: unknown;
+      executableHandle?: unknown;
+    } | null;
+    const credentialId = typeof input?.credentialId === "string" ? input.credentialId.trim() : "";
+    if (!credentialId || credentialId.length > 160) {
+      throw new Error("Cookie process authorization requires a saved credential id");
+    }
+    const url = this.cookieCredentialUrl(params);
+    const host = this.cookieCredentialHost(binding);
+    if (!host.materialize) {
+      throw new Error("Cookie process authorization is unavailable in this CodeShell host");
+    }
+    const account = (await host.list(binding.cwd)).find(
+      (credential) =>
+        credential.id === credentialId && this.cookieCredentialDomainMatches(url, credential),
+    );
+    if (!account) throw new Error("The selected Cookie login does not match this site");
+    if (account.health === "corrupted") {
+      throw new Error("The selected Cookie login is corrupted; sign in and save it again");
+    }
+    const owner = this.processOwner(binding);
+    const executable = this.processService.executableName(owner, input?.executableHandle);
+    const window = BrowserWindow.fromId(binding.ownerWindowId);
+    if (!window || window.isDestroyed()) throw new Error("owner window is unavailable");
+    const decision = await dialog.showMessageBox(window, {
+      type: "question",
+      buttons: ["Use saved login", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      title: binding.resource.descriptor.title,
+      message: `Use “${account.label}” with ${executable}?`,
+      detail:
+        "CodeShell will create a temporary owner-only Cookie file and pass it directly to the selected local program. The Panel App receives only an opaque handle, never the Cookie contents or file path. The file is removed when the Panel closes.",
+      noLink: true,
+    });
+    if (decision.response !== 0) return { authorized: false, cancelled: true };
+
+    const materialized = await host.materialize({ credentialId, cwd: binding.cwd });
+    if ("invalid" in materialized) {
+      return { authorized: false, invalid: true };
+    }
+    try {
+      const grant = await this.processService.grantFileArgument(owner, {
+        executableHandle: input?.executableHandle,
+        argumentName: "--cookies",
+        path: materialized.filePath,
+        cleanup: materialized.cleanup,
+      });
+      return { authorized: true, fileArgumentHandle: grant.handle, count: materialized.count };
+    } catch (error) {
+      materialized.cleanup();
+      throw error;
+    }
   }
 
   private storagePath(binding: GuestBinding): string {

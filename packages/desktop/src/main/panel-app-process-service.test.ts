@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -144,5 +144,79 @@ describe("PanelAppProcessService", () => {
         args: [],
       }),
     ).rejects.toThrow(/belongs to another Panel App/);
+  });
+
+  test("passes sealed files only to their bound executable and cleans them on revoke", async () => {
+    executable(
+      "cookie-tool",
+      'printf "flag:%s\\n" "$1"; { IFS= read -r first; IFS= read -r second; printf "cookie:%s\\n" "$second"; } < "$2"; printf "tail:%s\\n" "$3"',
+    );
+    executable("other-tool", 'printf "should-not-run\\n"');
+    const secretFile = join(root, "cookies.txt");
+    writeFileSync(
+      secretFile,
+      "# Netscape HTTP Cookie File\n.example.com\\tTRUE\\t/\\tTRUE\\t0\\tsid\\tcookie-secret\n",
+      {
+        mode: 0o600,
+      },
+    );
+    const events: Array<{ event: string; payload: Record<string, unknown> }> = [];
+    let resolveExit = (): void => undefined;
+    const exited = new Promise<void>((resolve) => {
+      resolveExit = resolve;
+    });
+    const owner: PanelProcessOwner = {
+      guestId: 9,
+      appId: "cookie-demo",
+      appTitle: "Cookie Demo",
+      revision: "r1",
+      send: (event, payload) => {
+        events.push({ event, payload });
+        if (event === "process.exit") resolveExit();
+      },
+    };
+    const service = new PanelAppProcessService({
+      env: { PATH: root },
+      confirmExecution: async () => true,
+    });
+    const executableGrant = await service.findExecutable(owner, { name: "cookie-tool" });
+    const otherExecutable = await service.findExecutable(owner, { name: "other-tool" });
+    const directory = await service.grantDirectory(owner, root);
+    const sealed = await service.grantFileArgument(owner, {
+      executableHandle: executableGrant.handle,
+      argumentName: "--cookies",
+      path: secretFile,
+      cleanup: () => rmSync(secretFile, { force: true }),
+    });
+    expect(sealed).toEqual({ handle: expect.any(String) });
+    expect(JSON.stringify(sealed)).not.toContain(secretFile);
+
+    await expect(
+      service.start(owner, {
+        executableHandle: otherExecutable.handle,
+        directoryHandle: directory.handle,
+        fileArgumentHandles: [sealed.handle],
+        args: [],
+      }),
+    ).rejects.toThrow(/bound to a different executable/);
+
+    await service.start(owner, {
+      executableHandle: executableGrant.handle,
+      directoryHandle: directory.handle,
+      fileArgumentHandles: [sealed.handle],
+      args: ["last"],
+    });
+    await exited;
+    const output = events
+      .filter((entry) => entry.event === "process.output")
+      .map((entry) => entry.payload.text)
+      .join("");
+    expect(output).toContain("flag:--cookies");
+    expect(output).toContain("cookie:.example.com");
+    expect(output).toContain("tail:last");
+    expect(existsSync(secretFile)).toBe(true);
+
+    service.revokeGuest(owner.guestId);
+    expect(existsSync(secretFile)).toBe(false);
   });
 });

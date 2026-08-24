@@ -13,6 +13,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 import {
   chmodSync,
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -22,7 +23,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, delimiter, dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { PANEL_APP_API_VERSION } from "../src/shared/panel-apps.js";
 import { installPanelAppElectronMock, panelAppElectronMock } from "./panel-app-electron-mock.js";
@@ -929,6 +930,77 @@ describeIsolated("PanelAppBridge", () => {
       }),
     ).toEqual({ restored: false, invalid: true });
     expect(restoreRequests).toHaveLength(2);
+  });
+
+  test("authorizes a Cookie as an opaque executable-bound process argument", async () => {
+    const executableRoot = mkdtempSync(join(tmpdir(), "panel-cookie-process-"));
+    const previousPath = process.env.PATH;
+    const cookieFile = join(executableRoot, "cookies.txt");
+    try {
+      const executableName = basename(process.execPath);
+      process.env.PATH = `${dirname(process.execPath)}${delimiter}${previousPath ?? ""}`;
+      writeFileSync(
+        cookieFile,
+        "# Netscape HTTP Cookie File\n.example.com\tTRUE\t/\tTRUE\t0\tsid\tsecret\n",
+        {
+          mode: 0o600,
+        },
+      );
+      const bridge = new PanelAppBridge({
+        isTrustedHost: () => true,
+        isWorkspaceTrusted: () => true,
+        isPanelAppBound: () => true,
+        getAgentBridge: () => null,
+        cookieCredentials: {
+          list: async () => [
+            { id: "video-account", label: "Video account", domain: "example.com" },
+          ],
+          loginAndSave: async () => ({ ok: false as const, error: "unused" }),
+          restore: async () => ({ count: 0 }),
+          materialize: async () => ({
+            filePath: cookieFile,
+            count: 1,
+            cleanup: () => rmSync(cookieFile, { force: true }),
+          }),
+        },
+      });
+      bridge.registerIpc();
+      const guest = fakeGuest(28);
+      bridge.registerGuest(
+        guest as any,
+        panelAppElectronMock.ownerWindow as any,
+        bridgeResource(["credentials.cookies", "process"]) as any,
+        "/repo",
+      );
+      await bindBridgeGuest(28);
+      const call = (method: string, params: unknown) =>
+        panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+          { sender: guest },
+          method,
+          params,
+        ) as Promise<any>;
+      const executable = await call("process.find", { name: executableName });
+      panelAppElectronMock.dialogResponse = 0;
+      const authorization = await call("credentials.cookies.authorizeProcess", {
+        credentialId: "video-account",
+        url: "https://media.example.com/watch/1",
+        executableHandle: executable.handle,
+      });
+
+      expect(authorization).toEqual({
+        authorized: true,
+        fileArgumentHandle: expect.any(String),
+        count: 1,
+      });
+      expect(JSON.stringify(authorization)).not.toContain(cookieFile);
+      expect(JSON.stringify(authorization)).not.toContain("secret");
+      expect(existsSync(cookieFile)).toBe(true);
+      bridge.revokeGuest(28);
+      expect(existsSync(cookieFile)).toBe(false);
+    } finally {
+      process.env.PATH = previousPath;
+      rmSync(executableRoot, { recursive: true, force: true });
+    }
   });
 
   test("never resolves a Cookie account from a shorter or bare-suffix host", async () => {

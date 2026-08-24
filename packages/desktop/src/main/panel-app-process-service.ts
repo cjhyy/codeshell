@@ -6,10 +6,12 @@ import { basename, delimiter, extname, join } from "node:path";
 import { killProcessGroup } from "@cjhyy/code-shell-core/extension";
 
 const EXECUTABLE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._+-]{0,127}$/;
+const FILE_ARGUMENT_NAME = /^--[a-zA-Z][a-zA-Z0-9-]{0,63}$/;
 const MAX_ARGUMENTS = 256;
 const MAX_ARGUMENT_LENGTH = 8_192;
 const MAX_ARGUMENT_BYTES = 64 * 1024;
 const MAX_CONCURRENT_PROCESSES = 3;
+const MAX_FILE_ARGUMENTS = 8;
 const MAX_EVENT_CHARS = 16_384;
 const MAX_PROCESS_OUTPUT_BYTES = 4 * 1024 * 1024;
 const PROCESS_LIFETIME_MS = 24 * 60 * 60 * 1_000;
@@ -31,6 +33,14 @@ interface ExecutableGrant {
 interface DirectoryGrant {
   guestId: number;
   path: string;
+}
+
+interface FileArgumentGrant {
+  guestId: number;
+  executablePath: string;
+  argumentName: string;
+  path: string;
+  cleanup: () => void;
 }
 
 interface RunningProcess {
@@ -180,9 +190,27 @@ function validateArguments(raw: unknown): string[] {
   return args;
 }
 
+function validateFileArgumentHandles(raw: unknown): string[] {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw) || raw.length > MAX_FILE_ARGUMENTS) {
+    throw new Error(`process.spawn accepts at most ${MAX_FILE_ARGUMENTS} sealed file arguments`);
+  }
+  const handles = raw.map((value) => {
+    if (typeof value !== "string" || !value || value.length > 160) {
+      throw new Error("process.spawn sealed file argument handles must be bounded strings");
+    }
+    return value;
+  });
+  if (new Set(handles).size !== handles.length) {
+    throw new Error("process.spawn sealed file argument handles must be unique");
+  }
+  return handles;
+}
+
 export class PanelAppProcessService {
   private readonly executables = new Map<string, ExecutableGrant>();
   private readonly directories = new Map<string, DirectoryGrant>();
+  private readonly fileArguments = new Map<string, FileArgumentGrant>();
   private readonly processes = new Map<string, RunningProcess>();
   private readonly approvedExecutables = new Set<string>();
 
@@ -218,6 +246,48 @@ export class PanelAppProcessService {
     return { handle, path: resolved, name: basename(resolved) || resolved };
   }
 
+  executableName(owner: PanelProcessOwner, handle: unknown): string {
+    if (typeof handle !== "string") throw new Error("executable handle is required");
+    const executable = this.executables.get(handle);
+    if (!executable || executable.guestId !== owner.guestId) {
+      throw new Error("executable handle is invalid or belongs to another Panel App");
+    }
+    return executable.name;
+  }
+
+  async grantFileArgument(
+    owner: PanelProcessOwner,
+    input: {
+      executableHandle: unknown;
+      argumentName: unknown;
+      path: string;
+      cleanup?: () => void;
+    },
+  ): Promise<{ handle: string }> {
+    if (typeof input.executableHandle !== "string") {
+      throw new Error("sealed file arguments require an executable handle");
+    }
+    const executable = this.executables.get(input.executableHandle);
+    if (!executable || executable.guestId !== owner.guestId) {
+      throw new Error("executable handle is invalid or belongs to another Panel App");
+    }
+    if (typeof input.argumentName !== "string" || !FILE_ARGUMENT_NAME.test(input.argumentName)) {
+      throw new Error("sealed file arguments require a simple long-option name");
+    }
+    const resolved = await realpath(input.path);
+    const info = await stat(resolved);
+    if (!info.isFile()) throw new Error("sealed process input is not a file");
+    const handle = randomUUID();
+    this.fileArguments.set(handle, {
+      guestId: owner.guestId,
+      executablePath: executable.path,
+      argumentName: input.argumentName,
+      path: resolved,
+      cleanup: input.cleanup ?? (() => undefined),
+    });
+    return { handle };
+  }
+
   directoryPath(owner: PanelProcessOwner, handle: unknown): string {
     if (typeof handle !== "string") throw new Error("directory handle is required");
     const grant = this.directories.get(handle);
@@ -235,6 +305,7 @@ export class PanelAppProcessService {
       executableHandle?: unknown;
       directoryHandle?: unknown;
       args?: unknown;
+      fileArgumentHandles?: unknown;
     } | null;
     if (!input || typeof input.executableHandle !== "string") {
       throw new Error("process.spawn requires an executable handle from process.find");
@@ -244,7 +315,20 @@ export class PanelAppProcessService {
       throw new Error("executable handle is invalid or belongs to another Panel App");
     }
     const cwd = this.directoryPath(owner, input.directoryHandle);
-    const args = validateArguments(input.args);
+    const rawArgs = validateArguments(input.args);
+    const fileArgumentHandles = validateFileArgumentHandles(input.fileArgumentHandles);
+    const sealedArgs: string[] = [];
+    for (const handle of fileArgumentHandles) {
+      const grant = this.fileArguments.get(handle);
+      if (!grant || grant.guestId !== owner.guestId) {
+        throw new Error("sealed file argument handle is invalid or belongs to another Panel App");
+      }
+      if (grant.executablePath !== executable.path) {
+        throw new Error("sealed file argument is bound to a different executable");
+      }
+      sealedArgs.push(grant.argumentName, grant.path);
+    }
+    const args = validateArguments([...sealedArgs, ...rawArgs]);
     const active = [...this.processes.values()].filter(
       (process) => process.guestId === owner.guestId,
     ).length;
@@ -352,6 +436,15 @@ export class PanelAppProcessService {
       clearTimeout(running.lifetime);
       this.terminate(running);
       this.processes.delete(processId);
+    }
+    for (const [handle, grant] of this.fileArguments) {
+      if (grant.guestId !== guestId) continue;
+      this.fileArguments.delete(handle);
+      try {
+        grant.cleanup();
+      } catch {
+        // Credential-backed temporary inputs are best-effort cleanup only.
+      }
     }
   }
 

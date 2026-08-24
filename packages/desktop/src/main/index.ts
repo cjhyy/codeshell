@@ -35,6 +35,7 @@ import {
   writeSettingsSchemaFile,
   userHome,
   CredentialStore,
+  materializeCookieSecret,
   type Credential,
   type CredentialScope,
   validateLocalLinkToken,
@@ -250,6 +251,7 @@ import {
   captureAllCookies,
   captureAllCookiesFromSessions,
   restoreCookiesToBrowser,
+  cleanupLease,
   sweepStaleLeases,
   BROWSER_PARTITION,
   type ElectronCookieLike,
@@ -700,6 +702,23 @@ const panelAppBridge = new PanelAppBridge({
         if (!window.isDestroyed()) window.webContents.send("browser:reload", { bucket });
       }
       return { count: result.count };
+    },
+    materialize: async ({ credentialId, cwd }) => {
+      await migrateCredentialStore(cwd);
+      const credential = new CredentialStore(cwd).resolve(credentialId);
+      if (!credential || credential.type !== "cookie") {
+        throw new Error(`No saved Cookie login: ${credentialId}`);
+      }
+      try {
+        const materialized = materializeCookieSecret(credential.id, credential.secret ?? "");
+        return {
+          filePath: materialized.cookiesFile,
+          count: materialized.count,
+          cleanup: () => cleanupLease(materialized.cookiesFile),
+        };
+      } catch {
+        return { invalid: true as const };
+      }
     },
   },
   automations: {
