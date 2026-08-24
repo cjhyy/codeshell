@@ -15,6 +15,8 @@ import type {
   SourceScope,
   WorkspaceSourceBinding,
   WorkspaceProfile,
+  GitPanelAppDiscovery,
+  GitPanelAppSourceInput,
   LocalPanelAppSourceInput,
   PanelAppSourceInput,
   PanelAppPreview,
@@ -57,7 +59,13 @@ export type {
   PanelAppHostContext,
   PreparedPanelApp,
 };
-export type { LocalPanelAppSourceInput, PanelAppSourceInput, PanelAppPreview };
+export type {
+  GitPanelAppDiscovery,
+  GitPanelAppSourceInput,
+  LocalPanelAppSourceInput,
+  PanelAppSourceInput,
+  PanelAppPreview,
+};
 export type { ExpandedPluginCommand, PluginCommandDescriptor };
 export type { PluginMediaAvailability, PluginMediaDto };
 export type {
@@ -2024,6 +2032,10 @@ export interface CodeshellApi {
   previewLocalPanelApp(
     input: PanelAppSourceInput,
   ): Promise<{ ok: true; preview: PanelAppPreview } | { ok: false; error: string }>;
+  /** Discover every installable Panel App in a public GitHub repository. */
+  discoverGitPanelApps(
+    input: GitPanelAppSourceInput,
+  ): Promise<{ ok: true; discovery: GitPanelAppDiscovery } | { ok: false; error: string }>;
   /** Revalidate the original folder, archive, or GitHub source for an installed Panel App. */
   previewPanelAppUpdate(
     id: string,

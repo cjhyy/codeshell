@@ -53,6 +53,7 @@ import {
   listInstalledThemes,
   uninstallTheme,
   type InstalledTheme,
+  type GitPanelAppSourceInput,
   type PanelAppSourceInput,
   type ThemePreview,
 } from "@cjhyy/code-shell-core";
@@ -370,6 +371,7 @@ import {
   listPanelAppsForProjects,
 } from "./panel-apps-service.js";
 import {
+  discoverGitPanelAppsForUi,
   installPanelAppUpdateForUi,
   installLocalPanelAppForUi,
   previewPanelAppUpdateForUi,
@@ -4288,6 +4290,9 @@ ipcMain.handle("plugins:previewLocal", async (_e, input: { kind: "dir" | "zip"; 
 );
 ipcMain.handle("panel-apps:previewLocal", async (_e, input: PanelAppSourceInput) =>
   previewLocalPanelAppForUi(input),
+);
+ipcMain.handle("panel-apps:discoverGit", async (_e, input: GitPanelAppSourceInput) =>
+  discoverGitPanelAppsForUi(input),
 );
 ipcMain.handle("panel-apps:previewUpdate", async (_e, id: string) => {
   if (typeof id !== "string" || !id) throw new Error("panel-apps:previewUpdate requires id");

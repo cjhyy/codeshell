@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import {
   PanelAppInstallError,
   PanelAppReviewChangedError,
+  discoverGitPanelApps,
   installReviewedLocalPanelApp,
   installReviewedPanelAppUpdate,
   listInstalledPanelApps,
@@ -382,6 +383,42 @@ describe("independent Panel App installer", () => {
           },
         });
       });
+
+      const discovery = await discoverGitPanelApps({
+        kind: "git",
+        url: cloneUrl,
+        ref: "main",
+      });
+      expect(
+        discovery.panels.map((panel) => ({
+          id: panel.id,
+          subdir: panel.subdir,
+          sourceSubdir: panel.source.subdir,
+        })),
+      ).toEqual([
+        {
+          id: "other-panel",
+          subdir: "examples/other-panel",
+          sourceSubdir: "examples/other-panel",
+        },
+        {
+          id: "remote-panel",
+          subdir: "examples/panel-app",
+          sourceSubdir: "examples/panel-app",
+        },
+      ]);
+      expect(discovery.issues).toEqual([]);
+
+      const scopedDiscovery = await discoverGitPanelApps({
+        kind: "git",
+        url: cloneUrl,
+        ref: "main",
+        subdir: "examples",
+      });
+      expect(scopedDiscovery.panels.map((panel) => panel.source.subdir)).toEqual([
+        "examples/other-panel",
+        "examples/panel-app",
+      ]);
 
       const monorepoError = await previewLocalPanelApp({
         kind: "git",

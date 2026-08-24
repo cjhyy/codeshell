@@ -13,6 +13,8 @@ import {
   Trash2,
 } from "lucide-react";
 import type {
+  GitPanelAppDiscovery,
+  GitPanelAppSourceInput,
   PanelAppExtensionSummary,
   PanelAppPreview,
   PanelAppSourceInput,
@@ -67,6 +69,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const [gitUrl, setGitUrl] = useState("");
   const [gitRef, setGitRef] = useState("");
   const [gitSubdir, setGitSubdir] = useState("");
+  const [gitDiscovery, setGitDiscovery] = useState<GitPanelAppDiscovery | null>(null);
   const [review, setReview] = useState<PanelAppReviewState | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [projects, setProjects] = useState<TrackedProject[]>(() => loadProjects());
@@ -220,21 +223,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     }
   };
 
-  const reviewGit = async () => {
-    if (!activeProjectPath) {
-      setError(t("ext.panels.projectRequired"));
-      return;
-    }
-    if (!gitUrl.trim()) {
-      setError(t("ext.panels.githubUrlRequired"));
-      return;
-    }
-    const source: PanelAppSourceInput = {
-      kind: "git",
-      url: gitUrl.trim(),
-      ...(gitRef.trim() ? { ref: gitRef.trim() } : {}),
-      ...(gitSubdir.trim() ? { subdir: gitSubdir.trim() } : {}),
-    };
+  const reviewGitCandidate = async (source: GitPanelAppSourceInput) => {
     setInstallBusy("git");
     setError(null);
     try {
@@ -244,6 +233,47 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         return;
       }
       setReview({ mode: "install", source, preview: result.preview });
+    } catch (cause) {
+      setError(String((cause as Error)?.message ?? cause));
+    } finally {
+      setInstallBusy(null);
+    }
+  };
+
+  const discoverGit = async () => {
+    if (!activeProjectPath) {
+      setError(t("ext.panels.projectRequired"));
+      return;
+    }
+    if (!gitUrl.trim()) {
+      setError(t("ext.panels.githubUrlRequired"));
+      return;
+    }
+    const source: GitPanelAppSourceInput = {
+      kind: "git",
+      url: gitUrl.trim(),
+      ...(gitRef.trim() ? { ref: gitRef.trim() } : {}),
+      ...(gitSubdir.trim() ? { subdir: gitSubdir.trim() } : {}),
+    };
+    setInstallBusy("git");
+    setError(null);
+    setGitDiscovery(null);
+    try {
+      const result = await window.codeshell.discoverGitPanelApps(source);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setGitDiscovery(result.discovery);
+      if (result.discovery.panels.length === 1) {
+        const candidate = result.discovery.panels[0];
+        const preview = await window.codeshell.previewLocalPanelApp(candidate.source);
+        if (!preview.ok) {
+          setError(preview.error);
+          return;
+        }
+        setReview({ mode: "install", source: candidate.source, preview: preview.preview });
+      }
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
     } finally {
@@ -327,6 +357,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       setExpanded((current) => new Set(current).add(preview.id));
       setReview(null);
       if (source.kind === "git") setGitOpen(false);
+      if (source.kind === "git") setGitDiscovery(null);
       setReloadKey((key) => key + 1);
       toast({
         message: t("ext.panels.installedAndBoundToast", {
@@ -497,7 +528,10 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
               <Input
                 value={gitUrl}
                 placeholder="https://github.com/owner/repository"
-                onChange={(event) => setGitUrl(event.target.value)}
+                onChange={(event) => {
+                  setGitUrl(event.target.value);
+                  setGitDiscovery(null);
+                }}
               />
             </label>
             <label className="space-y-1">
@@ -507,7 +541,10 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
               <Input
                 value={gitRef}
                 placeholder="main"
-                onChange={(event) => setGitRef(event.target.value)}
+                onChange={(event) => {
+                  setGitRef(event.target.value);
+                  setGitDiscovery(null);
+                }}
               />
             </label>
             <label className="space-y-1">
@@ -517,7 +554,10 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
               <Input
                 value={gitSubdir}
                 placeholder="apps/design-studio"
-                onChange={(event) => setGitSubdir(event.target.value)}
+                onChange={(event) => {
+                  setGitSubdir(event.target.value);
+                  setGitDiscovery(null);
+                }}
               />
             </label>
             <div className="flex items-end">
@@ -526,19 +566,75 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                 size="sm"
                 className="w-full gap-1.5 sm:w-auto"
                 disabled={installBusy !== null}
-                onClick={() => void reviewGit()}
+                onClick={() => void discoverGit()}
               >
                 {installBusy === "git" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Github className="h-3.5 w-3.5" />
                 )}
-                {t("ext.panels.reviewGithub")}
+                {t("ext.panels.discoverGithub")}
               </Button>
             </div>
             <div className="text-xs text-muted-foreground sm:col-span-4">
               {t("ext.panels.githubHint")}
             </div>
+            {gitDiscovery && (
+              <div className="space-y-2 border-t pt-3 sm:col-span-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs font-medium text-foreground">
+                    {t("ext.panels.githubDiscovered", {
+                      count: gitDiscovery.panels.length,
+                    })}
+                  </div>
+                  {gitDiscovery.issues.length > 0 && (
+                    <div className="text-xs text-status-warn">
+                      {t("ext.panels.githubInvalid", {
+                        count: gitDiscovery.issues.length,
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {gitDiscovery.panels.map((candidate) => {
+                    const title =
+                      (lang === "zh" ? candidate.title["zh-CN"] : candidate.title.en) ??
+                      candidate.title.default;
+                    return (
+                      <button
+                        key={`${candidate.id}:${candidate.subdir}`}
+                        type="button"
+                        className="flex min-w-0 items-start gap-3 rounded-lg border bg-background px-3 py-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={installBusy !== null}
+                        onClick={() => void reviewGitCandidate(candidate.source)}
+                      >
+                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                          <PanelTop className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-sm font-medium text-foreground">
+                              {title}
+                            </span>
+                            <Badge variant="outline" className="shrink-0 text-[10px]">
+                              v{candidate.version}
+                            </Badge>
+                          </span>
+                          <span className="mt-0.5 block truncate font-mono text-[11px] text-muted-foreground">
+                            {candidate.subdir}
+                          </span>
+                          {candidate.description && (
+                            <span className="mt-1 line-clamp-2 block text-xs leading-5 text-muted-foreground">
+                              {candidate.description}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div className="mt-3 grid gap-2 border-t pt-3 text-xs text-muted-foreground sm:grid-cols-3">

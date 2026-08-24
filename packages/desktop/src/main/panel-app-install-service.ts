@@ -1,6 +1,7 @@
 import {
   PanelAppAlreadyInstalledError,
   PanelAppReviewChangedError,
+  discoverGitPanelApps,
   installReviewedLocalPanelApp,
   installReviewedPanelAppUpdate,
   previewInstalledPanelAppUpdate,
@@ -8,7 +9,22 @@ import {
   uninstallPanelApp,
   type PanelAppSourceInput,
   type PanelAppPreview,
+  type GitPanelAppDiscovery,
+  type GitPanelAppSourceInput,
 } from "@cjhyy/code-shell-core";
+
+export async function discoverGitPanelAppsForUi(
+  input: GitPanelAppSourceInput,
+): Promise<{ ok: true; discovery: GitPanelAppDiscovery } | { ok: false; error: string }> {
+  try {
+    return { ok: true, discovery: await discoverGitPanelApps(input) };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
 
 export async function previewLocalPanelAppForUi(
   input: PanelAppSourceInput,
