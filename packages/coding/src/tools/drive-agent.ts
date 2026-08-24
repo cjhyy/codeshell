@@ -268,10 +268,7 @@ function hasRunningDriveWriter(workspaceCwd: string, workspaceRoot: string): boo
     return true;
   }
   for (const lease of foregroundDriveLeases.values()) {
-    if (
-      lease.effectiveWorkspaceRoot === workspaceRoot ||
-      lease.workspaceRoot === workspaceRoot
-    ) {
+    if (lease.effectiveWorkspaceRoot === workspaceRoot || lease.workspaceRoot === workspaceRoot) {
       return true;
     }
   }
@@ -940,10 +937,21 @@ export function makeDriveAgentTool(
           ? "default"
           : "bypassPermissions";
     const isWritableRun = permissionMode !== "default";
-    // External runtimes do not participate in the native Engine's wake-up loop.
-    // A detached result would be queued for an Engine that is not driving this
-    // turn, so keep delegation attached to the parent runtime.
-    const background = isExternalRuntimeContext(ctx) ? false : args.background !== false;
+    const externalRuntime = isExternalRuntimeContext(ctx);
+    const background = args.background !== false;
+    // A detached external-runtime job is safe only when its host explicitly
+    // promises to drain notificationQueue and inject the result into a later
+    // runtime turn. Silently changing background:true into a foreground wait is
+    // incorrect: Codex's yieldable exec wrapper can return control to the model
+    // while the nested MCP call remains pending, producing concurrent work that
+    // looks as though it came from the delegated agent.
+    if (externalRuntime && background && ctx?.externalRuntimeBackgroundDelivery !== true) {
+      return (
+        `Error: background ${cli === "codex" ? "Codex" : "Claude Code"} delegation is not ` +
+        "supported by this external-runtime host because it cannot deliver the completion. " +
+        "Retry with background:false."
+      );
+    }
     const cliName = cli === "codex" ? "Codex" : "Claude Code";
     if (background && !isValidSessionId(ctx?.sessionId)) {
       return `Error: cannot start a background ${cliName} job without a session — its result notification would be dropped. Retry with background:false, or ensure the tool runs inside a session.`;
@@ -1104,7 +1112,7 @@ export function makeDriveAgentTool(
       permissionMode,
       imagePaths,
     };
-    const foregroundHandoffMs = isExternalRuntimeContext(ctx)
+    const foregroundHandoffMs = externalRuntime
       ? Number.POSITIVE_INFINITY
       : (options.foregroundHandoffMs ?? DRIVE_AGENT_FOREGROUND_HANDOFF_MS);
     if (background) {
@@ -1141,6 +1149,11 @@ export function makeDriveAgentTool(
       return [
         resumeNote,
         `已在后台启动 ${cliName}（jobId ${tracked.jobId}）。完成后会通知你结果，无需轮询。`,
+        ...(externalRuntime
+          ? [
+              "除非用户明确要求并行工作，否则不要在本地重复执行已委派的任务；请结束当前回复，等待完成通知触发续接。",
+            ]
+          : []),
         worktreeStartNote(managedWorktree),
       ]
         .filter(Boolean)

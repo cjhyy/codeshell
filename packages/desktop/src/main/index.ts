@@ -66,6 +66,9 @@ import {
   CronStore,
   defaultCronStorePath,
   agentNotificationBus,
+  backgroundJobRegistry,
+  buildNotificationMessage,
+  notificationQueue,
   type AutomationHandle,
   getMergedCatalog,
   saveCatalogEntry,
@@ -381,10 +384,7 @@ import {
   registerPanelAppSchemePrivileges,
   validatePanelAppEntryUrl,
 } from "./panel-app-protocol.js";
-import {
-  installThemeAssetProtocol,
-  themeAssetUrl,
-} from "./theme-asset-protocol.js";
+import { installThemeAssetProtocol, themeAssetUrl } from "./theme-asset-protocol.js";
 import { PanelAppBridge } from "./panel-app-bridge.js";
 import { buildPanelAgentTaskModelCatalog } from "./panel-app-agent-task-models.js";
 import {
@@ -596,16 +596,27 @@ const panelAppBridge = new PanelAppBridge({
     list: async (cwd) => {
       await migrateCredentialStore(cwd);
       return new CredentialStore(cwd)
-        .listMasked()
+        .list()
         .filter((credential) => credential.type === "cookie")
-        .map((credential) => ({
-          id: credential.id,
-          label: credential.label,
-          domain: credential.meta?.domain,
-          platform: credential.meta?.platform,
-          appUrl: credential.meta?.appUrl,
-          autoInjectByAI: credential.autoInjectByAI,
-        }));
+        .map((credential) => {
+          let health: "ready" | "corrupted" = "corrupted";
+          try {
+            const parsed = JSON.parse(credential.secret ?? "[]");
+            if (Array.isArray(parsed)) health = "ready";
+          } catch {
+            // CredentialStore deliberately preserves undecryptable ciphertext.
+            // Keep that value Host-only and expose only an actionable health bit.
+          }
+          return {
+            id: credential.id,
+            label: credential.label,
+            health,
+            domain: credential.meta?.domain,
+            platform: credential.meta?.platform,
+            appUrl: credential.meta?.appUrl,
+            autoInjectByAI: credential.autoInjectByAI,
+          };
+        });
     },
     loginAndSave: async ({ appId, providerId, providerLabel, url, cwd, bucket }) => {
       const capture = await loginAndCaptureCookies({
@@ -656,6 +667,7 @@ const panelAppBridge = new PanelAppBridge({
         credential: {
           id: credentialId,
           label: accountLabel,
+          health: "ready",
           domain: capture.domain,
           platform: providerLabel,
           appUrl: url,
@@ -678,7 +690,7 @@ const panelAppBridge = new PanelAppBridge({
         if (!Array.isArray(parsed)) throw new Error("not an array");
         jar = parsed as ElectronCookieLike[];
       } catch {
-        throw new Error(`Saved login “${credential.label}” is corrupted`);
+        return { invalid: true };
       }
       const mode = credential.meta?.switchMode === "clear" ? "clear" : "merge";
       const result = await restoreCookiesToBrowser(jar, mode, partition);
@@ -1416,6 +1428,18 @@ async function createWindow(): Promise<BrowserWindow> {
       }),
       requestApproval: (sessionId, request) => approvals.request(sessionId, request),
       cancelApprovals: (sessionId) => approvals.cancelSession(sessionId),
+      backgroundWork: {
+        subscribe: (listener) => agentNotificationBus.subscribe(listener),
+        drainMessage: (sessionId) => {
+          const pending = notificationQueue.drainAll(sessionId);
+          return pending.length > 0 ? buildNotificationMessage(pending) : undefined;
+        },
+        hasPending: (sessionId) => notificationQueue.getSnapshot(sessionId).length > 0,
+        dropSession: (sessionId) => {
+          backgroundJobRegistry.dropForSession(sessionId);
+          notificationQueue.reset(sessionId);
+        },
+      },
     });
 
     // Mirror every worker→renderer line onto any connected mobile clients, so
@@ -3139,10 +3163,12 @@ app.whenReady().then(async () => {
   setInterval(() => void sweepStaleWorktrees("interval"), 60 * 60_000);
 });
 
-ipcMain.handle("skills:list", async (_e, cwd: string | null, opts?: { includeDisabled?: boolean }) =>
-  listSkills(await requireRendererProjectPath(cwd ?? resolveNoRepoCwd()), {
-    includeDisabled: opts?.includeDisabled === true,
-  }),
+ipcMain.handle(
+  "skills:list",
+  async (_e, cwd: string | null, opts?: { includeDisabled?: boolean }) =>
+    listSkills(await requireRendererProjectPath(cwd ?? resolveNoRepoCwd()), {
+      includeDisabled: opts?.includeDisabled === true,
+    }),
 );
 ipcMain.handle("capabilities:list", async (_e, cwd: string) => {
   cwd = await requireRendererProjectPath(cwd);
@@ -3605,9 +3631,7 @@ async function persistCliLinkCredential(input: {
 ipcMain.handle("links:cliStatus", async (_e, rawProviderId: unknown, rawCwd: unknown) => {
   const providerId = typeof rawProviderId === "string" ? rawProviderId.trim() : "";
   const cwd =
-    typeof rawCwd === "string" && rawCwd
-      ? await requireRendererProjectPath(rawCwd)
-      : undefined;
+    typeof rawCwd === "string" && rawCwd ? await requireRendererProjectPath(rawCwd) : undefined;
   if (!isCliLinkProvider(providerId)) throw new Error("Unsupported CLI Link provider");
   return getCliLinkStatus(providerId, { cwd });
 });
@@ -3966,7 +3990,9 @@ ipcMain.handle(
     const sessionId = assertRendererSessionAccess(payload?.sessionId, event.sender.id);
     if (
       payload?.label !== undefined &&
-      (typeof payload.label !== "string" || payload.label.length > 200 || payload.label.includes("\0"))
+      (typeof payload.label !== "string" ||
+        payload.label.length > 200 ||
+        payload.label.includes("\0"))
     ) {
       throw new Error("Chrome pairing label is invalid");
     }
@@ -4002,7 +4028,12 @@ ipcMain.handle("credentials:cookieDomains", async (event, bucket?: string) =>
   listCookieDomains(requireRendererBrowserPartition(bucket, event.sender.id)),
 );
 ipcMain.handle("credentials:cookiePreview", async (event, domain: string, bucket?: string) => {
-  if (typeof domain !== "string" || !domain.trim() || domain.length > 253 || domain.includes("\0")) {
+  if (
+    typeof domain !== "string" ||
+    !domain.trim() ||
+    domain.length > 253 ||
+    domain.includes("\0")
+  ) {
     throw new Error("credentials:cookiePreview requires a bounded domain");
   }
   // Preview only: just count the cookies in the partition. No lease file is
@@ -4016,7 +4047,12 @@ ipcMain.handle("credentials:cookiePreview", async (event, domain: string, bucket
 });
 // 第二期:按域拓取 cookie jar(renderer 拿去组装成 cookie 凭证存进 CredentialStore)。
 ipcMain.handle("credentials:captureCookieJar", async (event, domain: string, bucket?: string) => {
-  if (typeof domain !== "string" || !domain.trim() || domain.length > 253 || domain.includes("\0")) {
+  if (
+    typeof domain !== "string" ||
+    !domain.trim() ||
+    domain.length > 253 ||
+    domain.includes("\0")
+  ) {
     throw new Error("credentials:captureCookieJar requires a domain");
   }
   const jar = await captureCookieJar(
@@ -4097,11 +4133,7 @@ ipcMain.handle(
     ) {
       throw new Error("installKey, templateId and expectedRevision are required");
     }
-    if (
-      installKey.length > 512 ||
-      templateId.length > 512 ||
-      expectedRevision.length > 512
-    ) {
+    if (installKey.length > 512 || templateId.length > 512 || expectedRevision.length > 512) {
       throw new Error("plugin automation identifiers are too long");
     }
     const normalizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
@@ -4756,7 +4788,9 @@ ipcMain.handle("skills:installFromGithub", async (event, input: unknown) => {
   if (i.scope !== "user" && i.scope !== "project") throw new Error("invalid scope");
   if (
     i.installName !== undefined &&
-    (typeof i.installName !== "string" || i.installName.length > 512 || i.installName.includes("\0"))
+    (typeof i.installName !== "string" ||
+      i.installName.length > 512 ||
+      i.installName.includes("\0"))
   ) {
     throw new Error("invalid skill install name");
   }
@@ -4817,9 +4851,7 @@ ipcMain.handle(
     // a cwd is known — the pluginDisabled flag must reflect the EFFECTIVE state
     // (能力总览 project "on" overrides global off), matching the engine's merge.
     const cwd =
-      typeof rawCwd === "string" && rawCwd
-        ? await requireRendererProjectPath(rawCwd)
-        : undefined;
+      typeof rawCwd === "string" && rawCwd ? await requireRendererProjectPath(rawCwd) : undefined;
     const disabledPlugins = cwd
       ? computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd).disabledPlugins
       : rawList;
@@ -5256,7 +5288,12 @@ ipcMain.handle(
 ipcMain.handle(
   "ccRoom:openLinkedSession",
   async (_e, externalSessionId: unknown, cwd: unknown, kind: unknown) =>
-    openLinkedSessionFromIpc(roomManager, externalSessionId, await requireRendererProjectPath(cwd), kind),
+    openLinkedSessionFromIpc(
+      roomManager,
+      externalSessionId,
+      await requireRendererProjectPath(cwd),
+      kind,
+    ),
 );
 ipcMain.handle(
   "ccRoom:takeOverLinkedSession",
@@ -5779,7 +5816,11 @@ ipcMain.on(
   (event, payload: { requestId?: unknown; approved?: unknown; [key: string]: unknown }) => {
     const requestId = typeof payload?.requestId === "string" ? payload.requestId : "";
     if (!requestId) return;
-    externalRuntimeApprovals?.settle(requestId, parseExternalApprovalDecision(payload), event.sender.id);
+    externalRuntimeApprovals?.settle(
+      requestId,
+      parseExternalApprovalDecision(payload),
+      event.sender.id,
+    );
   },
 );
 
@@ -5831,7 +5872,8 @@ function broadcastBrowserAnchors(parentId: number, snapshot: unknown[]): void {
 
 ipcMain.on("browser:anchors-sync", (event, anchors: unknown) => {
   const parent = BrowserWindow.fromWebContents(event.sender);
-  if (!parent || !mainWindows.has(parent) || !Array.isArray(anchors) || anchors.length > 256) return;
+  if (!parent || !mainWindows.has(parent) || !Array.isArray(anchors) || anchors.length > 256)
+    return;
   let snapshot: unknown[];
   try {
     const encoded = JSON.stringify(anchors);
@@ -5848,7 +5890,12 @@ ipcMain.on("browser:anchors-sync", (event, anchors: unknown) => {
 ipcMain.on("browser:anchor-remove", (e, anchorId: unknown) => {
   const parentId = popoutParents.get(e.sender.id);
   if (parentId === undefined) return;
-  if (typeof anchorId !== "string" || !anchorId || anchorId.length > 512 || anchorId.includes("\0")) {
+  if (
+    typeof anchorId !== "string" ||
+    !anchorId ||
+    anchorId.length > 512 ||
+    anchorId.includes("\0")
+  ) {
     return;
   }
   const parent = BrowserWindow.fromId(parentId);
@@ -5862,7 +5909,11 @@ ipcMain.on("browser:anchor-update", (e, update: unknown) => {
   const parentId = popoutParents.get(e.sender.id);
   if (parentId === undefined) return;
   try {
-    if (!update || typeof update !== "object" || Buffer.byteLength(JSON.stringify(update)) > 64 * 1024) {
+    if (
+      !update ||
+      typeof update !== "object" ||
+      Buffer.byteLength(JSON.stringify(update)) > 64 * 1024
+    ) {
       return;
     }
   } catch {
@@ -5965,9 +6016,7 @@ ipcMain.handle("git:setPrefs", async (_e, prefs: MainGitPrefs) => {
     branchPrefix,
     autoDeleteWorktrees: prefs.autoDeleteWorktrees === true,
     autoDeleteWorktreesGraceMins:
-      Number.isSafeInteger(grace) && grace >= 1
-        ? Math.min(grace, 60 * 24 * 365 * 10)
-        : 60 * 24 * 7,
+      Number.isSafeInteger(grace) && grace >= 1 ? Math.min(grace, 60 * 24 * 365 * 10) : 60 * 24 * 7,
   };
   dlog("main", "git.prefs.updated", { ...gitPrefsCache });
 });
@@ -6053,7 +6102,12 @@ ipcMain.handle("workspace:diff", async (_e, sessionId: string, worktreePath: str
 ipcMain.handle("workspace:switch", async (_e, sessionId: string, cwd: string, target: string) => {
   assertDesktopSessionId(sessionId);
   if (typeof cwd !== "string" || !cwd) throw new Error("workspace:switch requires cwd");
-  if (typeof target !== "string" || !target.trim() || target.length > 32_768 || target.includes("\0")) {
+  if (
+    typeof target !== "string" ||
+    !target.trim() ||
+    target.length > 32_768 ||
+    target.includes("\0")
+  ) {
     throw new Error("workspace:switch requires target");
   }
   const currentBridge = bridge;
@@ -6145,7 +6199,10 @@ ipcMain.handle(
   "git:diff",
   async (_e, cwd: string, file?: string, mode?: "unstaged" | "staged" | "all") => {
     cwd = await requireRendererProjectPath(cwd);
-    if (file !== undefined && (typeof file !== "string" || file.length > 32_768 || file.includes("\0"))) {
+    if (
+      file !== undefined &&
+      (typeof file !== "string" || file.length > 32_768 || file.includes("\0"))
+    ) {
       throw new Error("git:diff file is invalid");
     }
     return getGitDiff(cwd, file, mode);
@@ -6166,7 +6223,10 @@ ipcMain.handle("git:rangeDiff", async (_e, cwd: string, range: string, file?: st
   if (typeof range !== "string" || !range || range.length > 512 || range.includes("\0")) {
     throw new Error("git:rangeDiff requires a bounded range");
   }
-  if (file !== undefined && (typeof file !== "string" || file.length > 32_768 || file.includes("\0"))) {
+  if (
+    file !== undefined &&
+    (typeof file !== "string" || file.length > 32_768 || file.includes("\0"))
+  ) {
     throw new Error("git:rangeDiff file is invalid");
   }
   return getGitRangeDiff(cwd, range, file);
@@ -6293,7 +6353,10 @@ ipcMain.handle("no-repo:cwd", async () => resolveNoRepoCwd());
 
 ipcMain.handle("settings:get", async (_e, scope: SettingsScope, projectPath?: string) => {
   if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-  return readSettings(scope, scope === "project" ? await requireRendererProjectPath(projectPath) : undefined);
+  return readSettings(
+    scope,
+    scope === "project" ? await requireRendererProjectPath(projectPath) : undefined,
+  );
 });
 
 ipcMain.handle(
@@ -6686,14 +6749,17 @@ ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => 
 });
 ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomationInput) => {
   assertAutomationId(id);
-  if (!patch || typeof patch !== "object" || Array.isArray(patch)) throw new Error("patch required");
+  if (!patch || typeof patch !== "object" || Array.isArray(patch))
+    throw new Error("patch required");
   if (
     (patch.name !== undefined &&
       (typeof patch.name !== "string" || !patch.name.trim() || patch.name.length > 512)) ||
     (patch.prompt !== undefined &&
       (typeof patch.prompt !== "string" || patch.prompt.length > 1024 * 1024)) ||
     (patch.schedule !== undefined &&
-      (typeof patch.schedule !== "string" || !patch.schedule.trim() || patch.schedule.length > 512)) ||
+      (typeof patch.schedule !== "string" ||
+        !patch.schedule.trim() ||
+        patch.schedule.length > 512)) ||
     (patch.timezone !== undefined &&
       (typeof patch.timezone !== "string" || patch.timezone.length > 128)) ||
     (patch.permissionLevel !== undefined &&

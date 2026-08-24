@@ -16,6 +16,7 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -284,6 +285,7 @@ describeIsolated("PanelAppBridge", () => {
     panelAppElectronMock.ipcListeners.clear();
     panelAppElectronMock.openDialogResult = { canceled: true, filePaths: [] };
     panelAppElectronMock.openedPaths.length = 0;
+    panelAppElectronMock.revealedPaths.length = 0;
   });
 
   test("gates process primitives and scopes user-selected directory handles", async () => {
@@ -717,10 +719,7 @@ describeIsolated("PanelAppBridge", () => {
       contextSettled = true;
     });
     const callPromise = Promise.resolve(
-      panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
-        { sender: guest },
-        "workspace.info",
-      ),
+      panelAppElectronMock.ipcHandlers.get("panel-app:call")!({ sender: guest }, "workspace.info"),
     ).finally(() => {
       callSettled = true;
     });
@@ -838,6 +837,12 @@ describeIsolated("PanelAppBridge", () => {
       cookieCredentials: {
         list: async () => [
           { id: "boss-account", label: "Boss account", domain: "zhipin.com" },
+          {
+            id: "broken-boss-account",
+            label: "Old Boss account",
+            health: "corrupted",
+            domain: "zhipin.com",
+          },
           { id: "other-account", label: "Other account", domain: "example.com" },
         ],
         loginAndSave: async (input) => {
@@ -855,6 +860,7 @@ describeIsolated("PanelAppBridge", () => {
         },
         restore: async (input) => {
           restoreRequests.push(input);
+          if (input.credentialId === "broken-boss-account") return { invalid: true as const };
           return { count: 4 };
         },
       },
@@ -876,11 +882,27 @@ describeIsolated("PanelAppBridge", () => {
       ) as Promise<any>;
 
     expect(await call("credentials.cookies.list", { url: "https://www.zhipin.com" })).toEqual({
-      accounts: [{ id: "boss-account", label: "Boss account", domain: "zhipin.com" }],
+      accounts: [
+        { id: "boss-account", label: "Boss account", domain: "zhipin.com" },
+        {
+          id: "broken-boss-account",
+          label: "Old Boss account",
+          health: "corrupted",
+          domain: "zhipin.com",
+        },
+      ],
     });
     // A subdomain of the saved site still resolves to the saved account.
     expect(await call("credentials.cookies.list", { url: "https://login.zhipin.com" })).toEqual({
-      accounts: [{ id: "boss-account", label: "Boss account", domain: "zhipin.com" }],
+      accounts: [
+        { id: "boss-account", label: "Boss account", domain: "zhipin.com" },
+        {
+          id: "broken-boss-account",
+          label: "Old Boss account",
+          health: "corrupted",
+          domain: "zhipin.com",
+        },
+      ],
     });
     expect(
       await call("credentials.cookies.loginAndSave", {
@@ -899,6 +921,14 @@ describeIsolated("PanelAppBridge", () => {
       }),
     ).toEqual({ restored: true, count: 4 });
     expect(restoreRequests).toHaveLength(1);
+
+    expect(
+      await call("credentials.cookies.restore", {
+        credentialId: "broken-boss-account",
+        providerLabel: "BOSS 直聘",
+      }),
+    ).toEqual({ restored: false, invalid: true });
+    expect(restoreRequests).toHaveLength(2);
   });
 
   test("never resolves a Cookie account from a shorter or bare-suffix host", async () => {
@@ -1763,6 +1793,22 @@ describeIsolated("PanelAppBridge", () => {
           .subarray(0, 5)
           .toString("ascii"),
       ).toBe("%PDF-");
+      expect(
+        await call("workspace.openPath", {
+          path: "career-data/resumes/base-resume.pdf",
+        }),
+      ).toBe(true);
+      expect(panelAppElectronMock.openedPaths).toEqual([
+        realpathSync(join(workspaceRoot, "career-data", "resumes", "base-resume.pdf")),
+      ]);
+      expect(
+        await call("workspace.revealPath", {
+          path: "career-data/resumes/base-resume.pdf",
+        }),
+      ).toBe(true);
+      expect(panelAppElectronMock.revealedPaths).toEqual([
+        realpathSync(join(workspaceRoot, "career-data", "resumes", "base-resume.pdf")),
+      ]);
       await expect(
         call("workspace.exportPdf", {
           path: "career-data/resumes/base-resume.pdf",

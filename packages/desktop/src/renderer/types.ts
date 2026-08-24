@@ -683,6 +683,27 @@ export function applyStreamEvent(
         return { ...state, messages: msgs };
       }
       if (!state.streamingAssistantId) return state;
+      const streamingAssistant = state.messages.find(
+        (message): message is AssistantMessage =>
+          message.kind === "assistant" && message.id === state.streamingAssistantId,
+      );
+      // External runtimes open one provider stream for the whole turn, even
+      // though that turn can contain several assistant text segments separated
+      // by tools. tool_use_start finalizes the current segment but deliberately
+      // keeps its id as the live-turn anchor; the next delta opens a fresh
+      // AssistantMessage here. Native Engine streams still open their next
+      // segment explicitly with stream_request_start, so both paths converge.
+      if (!streamingAssistant || streamingAssistant.done) {
+        const id = freshId("assistant");
+        return {
+          ...state,
+          messages: [
+            ...state.messages,
+            { kind: "assistant", id, text: event.text, done: false, createdAt: now() },
+          ],
+          streamingAssistantId: id,
+        };
+      }
       return {
         ...state,
         messages: state.messages.map((m) =>
@@ -720,6 +741,7 @@ export function applyStreamEvent(
 
     case "tool_use_start": {
       const id = event.toolCall.id;
+      const startedAt = now();
       const toolMsg: ToolMessage = {
         kind: "tool",
         id,
@@ -733,7 +755,7 @@ export function applyStreamEvent(
         // stretch to "now" and grow on every reopen. Fall back to 0 (never the
         // replay clock) for legacy items with no timestamp — turnSpanMs/
         // spanDurationMs filter 0/non-finite stamps out.
-        startedAt: now() ?? 0,
+        startedAt: startedAt ?? 0,
       };
       if (event.agentId) {
         const idx = state.agentMessageIndex[event.agentId];
@@ -754,7 +776,27 @@ export function applyStreamEvent(
       }
       // Idempotent guard (see above) for the main feed.
       if (state.messages.some((m) => m.kind === "tool" && m.id === id)) return state;
-      return { ...state, messages: [...state.messages, toolMsg] };
+      // A top-level tool begins a new visible segment. Finalize the prose that
+      // preceded it so later text cannot be appended back above this card. This
+      // is observable on Codex/Claude external runtimes, which use a single
+      // stream_request_start for text → tool → text sequences. Drop an empty
+      // placeholder (tool-first response); streamingAssistantId remains the
+      // live-turn anchor so the next text_delta can create a new segment.
+      const messages = state.streamingAssistantId
+        ? state.messages.flatMap((message) => {
+            if (
+              message.kind !== "assistant" ||
+              message.id !== state.streamingAssistantId ||
+              message.done
+            ) {
+              return [message];
+            }
+            return message.text.length === 0
+              ? []
+              : [{ ...message, done: true, doneAt: message.doneAt ?? startedAt }];
+          })
+        : state.messages;
+      return { ...state, messages: [...messages, toolMsg] };
     }
 
     case "tool_use_args_delta": {

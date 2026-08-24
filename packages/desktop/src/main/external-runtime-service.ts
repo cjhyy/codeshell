@@ -56,6 +56,20 @@ export interface ExternalRuntimeStartRequest {
   ownerWindow?: BrowserWindow;
 }
 
+/**
+ * Main-process delivery path for notificationQueue work launched by an external
+ * runtime. Kept as an injected dependency so the service is testable without
+ * subscribing every test instance to process-global singletons.
+ */
+export interface ExternalRuntimeBackgroundWorkDelivery {
+  subscribe(listener: (sessionId: string, event: StreamEvent) => void): () => void;
+  /** Drain and format all pending results for one injected continuation turn. */
+  drainMessage(sessionId: string): string | undefined;
+  hasPending(sessionId: string): boolean;
+  /** Abort jobs and clear queued results when their owning Session closes. */
+  dropSession(sessionId: string): void;
+}
+
 export interface ExternalRuntimeServiceDeps {
   /** Resolved feature flags for this workspace. */
   featureFlags: () => FeatureFlagOverrides;
@@ -90,6 +104,8 @@ export interface ExternalRuntimeServiceDeps {
   ) => Promise<{ approved: boolean; reason?: string; answer?: string }>;
   /** Drop any prompt still on screen for a session that is going away. */
   cancelApprovals?: (sessionId: string) => void;
+  /** Enables real DriveAgent background delivery for external runtimes. */
+  backgroundWork?: ExternalRuntimeBackgroundWorkDelivery;
   /** Injectable sidecar writer; failure must never orphan an otherwise-live runtime. */
   writeBinding?: typeof writeExternalRuntimeBinding;
 }
@@ -119,8 +135,21 @@ export class ExternalRuntimeService {
   >();
   /** Serializes start/stop for one business id, including concurrent IPC calls. */
   private readonly lifecycleTails = new Map<string, Promise<void>>();
+  /** At most one notification-drain continuation may be scheduled per Session. */
+  private readonly backgroundWakeups = new Set<string>();
+  private backgroundWorkUnsubscribe?: () => void;
 
-  constructor(private readonly deps: ExternalRuntimeServiceDeps) {}
+  constructor(private readonly deps: ExternalRuntimeServiceDeps) {
+    this.backgroundWorkUnsubscribe = deps.backgroundWork?.subscribe((sessionId, event) => {
+      if (!this.sessions.has(sessionId)) return;
+      // Completion/progress is observational and belongs to the async job, not
+      // the provider turn that happens to be active when it arrives.
+      this.emitSafely(sessionId, event);
+      if (event.type === "background_agent_completed") {
+        this.maybeWakeForBackgroundWork(sessionId);
+      }
+    });
+  }
 
   /** Whether the product currently permits an external runtime at all. */
   isEnabled(): boolean {
@@ -205,7 +234,50 @@ export class ExternalRuntimeService {
     } catch (error) {
       firstError ??= error;
     }
+    try {
+      this.deps.backgroundWork?.dropSession(sessionId);
+    } catch (error) {
+      firstError ??= error;
+    }
     return firstError;
+  }
+
+  /**
+   * Queue one synthetic continuation after the current provider turn. The queue
+   * is drained only after that turn settles, so stopping/replacing the Session
+   * while a job is running does not consume a result nobody can receive.
+   */
+  private maybeWakeForBackgroundWork(sessionId: string): void {
+    if (!this.deps.backgroundWork || this.backgroundWakeups.has(sessionId)) return;
+    this.backgroundWakeups.add(sessionId);
+    void this.wakeForBackgroundWork(sessionId)
+      .catch((error) => {
+        dlog("external-runtime", "background_wakeup.failed", {
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      })
+      .finally(() => {
+        this.backgroundWakeups.delete(sessionId);
+        if (this.sessions.has(sessionId) && this.deps.backgroundWork?.hasPending(sessionId)) {
+          this.maybeWakeForBackgroundWork(sessionId);
+        }
+      });
+  }
+
+  private async wakeForBackgroundWork(sessionId: string): Promise<void> {
+    const entry = this.sessions.get(sessionId);
+    if (!entry || !entry.lifecycle.active || !this.deps.backgroundWork) return;
+    // A completion can arrive before the launching turn reaches its terminal
+    // callback. Never overlap recorder state or provider turns.
+    await entry.turnTail;
+    if (this.sessions.get(sessionId) !== entry || !entry.lifecycle.active) return;
+    const message = this.deps.backgroundWork.drainMessage(sessionId);
+    if (!message) return;
+    await this.send(sessionId, {
+      text: `<system-reminder>\n${message}\n</system-reminder>`,
+      injected: true,
+    });
   }
 
   /**
@@ -239,7 +311,8 @@ export class ExternalRuntimeService {
     // Trust is resolved HERE, from the store Desktop owns. `permissions` is the
     // first DANGEROUS_PROJECT_FIELD, so an untrusted project's rules must be
     // stripped — and the layers below deliberately have no default for this.
-    const projectTrusted = (this.deps.projectTrust ?? getTrustCachedSync)(request.cwd) === "trusted";
+    const projectTrusted =
+      (this.deps.projectTrust ?? getTrustCachedSync)(request.cwd) === "trusted";
 
     // Host tools are gated by their OWN flag, so the runtime can be trialled with
     // no tool surface at all (§20). An empty allowlist is the honest expression of
@@ -276,7 +349,10 @@ export class ExternalRuntimeService {
         "credentials, memory, skills, and DriveAgent delegation. Do not use the " +
         "Codex desktop in-app-browser plugin: this host provides browser_navigate, " +
         "browser_observe, and browser_act with the owning CodeShell session. Never " +
-        "claim that a sub-agent was dispatched unless DriveAgent returned success.",
+        "claim that a sub-agent was dispatched unless DriveAgent returned success. " +
+        "When DriveAgent returns a background jobId, do not poll it or duplicate its work " +
+        "locally. Unless the user explicitly requested concurrent work, finish the current " +
+        "turn; CodeShell will inject the completion and continue this same task automatically.",
       request.developerInstructions,
     ]
       .filter(Boolean)
@@ -322,6 +398,7 @@ export class ExternalRuntimeService {
     const contextOverrides = {
       ...(this.deps.toolContextOverrides?.(request.sessionId) ?? {}),
       streamCallback: forwardEvent,
+      externalRuntimeBackgroundDelivery: this.deps.backgroundWork !== undefined,
       ...(this.deps.requestApproval
         ? {
             askUser: async (question: string, options?: Record<string, unknown>) => {
@@ -614,6 +691,8 @@ export class ExternalRuntimeService {
   async stopAll(): Promise<void> {
     const ids = [...new Set([...this.sessions.keys(), ...this.lifecycleTails.keys()])];
     const results = await Promise.allSettled(ids.map((id) => this.stop(id)));
+    this.backgroundWorkUnsubscribe?.();
+    this.backgroundWorkUnsubscribe = undefined;
     const failures = results.flatMap((result) =>
       result.status === "rejected" ? [result.reason] : [],
     );

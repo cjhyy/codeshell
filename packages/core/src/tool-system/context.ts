@@ -242,10 +242,16 @@ export interface ToolContext {
   cwd: string;
   /**
    * True when this call belongs to an external Agent Runtime rather than the
-   * native Engine loop. Async handoff tools use this to keep their result on
-   * the current turn instead of queueing a wake-up only the Engine can consume.
+   * native Engine loop.
    */
   externalRuntime?: boolean;
+  /**
+   * The external-runtime host can route notificationQueue completions back into
+   * this business Session as an injected continuation turn. Async tools must
+   * require this capability before detaching work: `externalRuntime` alone says
+   * who owns the turn, not whether anybody can deliver a later result.
+   */
+  externalRuntimeBackgroundDelivery?: boolean;
   /**
    * Active digital-human profile's portable memory root. Present only when
    * the resolved WorkspaceProfile enables portableMemory for this run.

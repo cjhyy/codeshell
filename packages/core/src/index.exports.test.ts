@@ -102,6 +102,7 @@ const expectedRuntimeExportsByPartition = {
     "fileCache",
     "validateToolArgs",
     "asyncAgentRegistry",
+    "backgroundJobRegistry",
     "backgroundShellManager",
     "BackgroundShellManager",
     "ENV_DENY_REGEX",

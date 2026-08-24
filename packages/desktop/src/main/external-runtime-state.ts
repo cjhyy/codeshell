@@ -151,11 +151,11 @@ export function writeExternalRuntimeBinding(
   if (!validated) throw new Error("invalid external runtime binding");
   const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    writeFileSync(
-      temporary,
-      JSON.stringify(validated, null, 2),
-      { encoding: "utf8", mode: 0o600, flag: "wx" },
-    );
+    writeFileSync(temporary, JSON.stringify(validated, null, 2), {
+      encoding: "utf8",
+      mode: 0o600,
+      flag: "wx",
+    });
     renameSync(temporary, target);
   } finally {
     rmSync(temporary, { force: true });
@@ -252,6 +252,7 @@ export class ExternalRuntimeSessionRecorder {
     const persistedText = textWithAttachmentReferences(input);
     this.transcript.appendMessage("user", persistedText, {
       ...(input.clientMessageId ? { clientMessageId: input.clientMessageId } : {}),
+      ...(input.injected === true ? { injected: true } : {}),
     });
     const state = this.manager.readSessionState(this.sessionId);
     this.manager.updateSessionState(this.sessionId, {

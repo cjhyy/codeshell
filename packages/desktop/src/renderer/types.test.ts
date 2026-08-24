@@ -220,6 +220,65 @@ const turnComplete: StreamEvent = { type: "turn_complete", reason: "completed" }
 // ── tests ───────────────────────────────────────────────────────────
 
 describe("applyStreamEvent — tool_use_start idempotency", () => {
+  test("keeps live assistant text interleaved with external-runtime tool cards", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("stream_request_start", { turnNumber: 1, messageId: "assistant-first" } as any),
+      ev("text_delta", { text: "先检查文件。" } as any),
+      ev("tool_use_start", {
+        toolCall: { id: "command-1", toolName: "commandExecution", args: { command: "rg foo" } },
+      } as any),
+      ev("tool_result", {
+        result: { id: "command-1", toolName: "commandExecution", result: "found" },
+      } as any),
+      ev("text_delta", { text: "再检查调用方。" } as any),
+      ev("tool_use_start", {
+        toolCall: { id: "command-2", toolName: "commandExecution", args: { command: "rg bar" } },
+      } as any),
+      ev("tool_result", {
+        result: { id: "command-2", toolName: "commandExecution", result: "found" },
+      } as any),
+      ev("text_delta", { text: "结论。" } as any),
+      turnComplete,
+    ]);
+
+    expect(s.messages.map((message) => message.kind)).toEqual([
+      "assistant",
+      "tool",
+      "assistant",
+      "tool",
+      "assistant",
+    ]);
+    expect(
+      s.messages
+        .filter((message): message is AssistantMessage => message.kind === "assistant")
+        .map((message) => ({ text: message.text, done: message.done })),
+    ).toEqual([
+      { text: "先检查文件。", done: true },
+      { text: "再检查调用方。", done: true },
+      { text: "结论。", done: true },
+    ]);
+  });
+
+  test("drops a tool-first empty assistant placeholder before live rendering", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("stream_request_start", { turnNumber: 1, messageId: "assistant-empty" } as any),
+      ev("tool_use_start", {
+        toolCall: { id: "command-1", toolName: "commandExecution", args: {} },
+      } as any),
+      ev("tool_result", {
+        result: { id: "command-1", toolName: "commandExecution", result: "done" },
+      } as any),
+      ev("text_delta", { text: "工具之后的说明。" } as any),
+    ]);
+
+    expect(s.messages.map((message) => message.kind)).toEqual(["tool", "assistant"]);
+    expect(s.messages[1]).toMatchObject({
+      kind: "assistant",
+      text: "工具之后的说明。",
+      done: false,
+    });
+  });
+
   test("preserves host-projected Browser Runtime visibility through the result", () => {
     let state = applyStreamEvent(
       INITIAL_STATE,
@@ -885,7 +944,7 @@ describe("applyStreamEvent — turn_complete files_changed + turnEpoch", () => {
 });
 
 describe("applyStreamEvent — message timestamps", () => {
-  test("a new top-level request seals the previous assistant at the new start time", () => {
+  test("a tool boundary seals the previous assistant before the next request", () => {
     let replayNow = 100;
     let s = applyStreamEvent(
       INITIAL_STATE,
@@ -909,7 +968,7 @@ describe("applyStreamEvent — message timestamps", () => {
     );
 
     const assistants = s.messages.filter((m): m is AssistantMessage => m.kind === "assistant");
-    expect(assistants.find((m) => m.id === "a1")).toMatchObject({ done: true, doneAt: 200 });
+    expect(assistants.find((m) => m.id === "a1")).toMatchObject({ done: true, doneAt: 100 });
     expect(assistants.find((m) => m.id === "a2")).toMatchObject({
       done: false,
       createdAt: 200,

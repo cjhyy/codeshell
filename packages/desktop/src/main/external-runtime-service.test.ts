@@ -377,6 +377,95 @@ describe("ExternalRuntimeService", () => {
     expect(sent).toEqual(["first", "second"]);
   });
 
+  test("waits for the launching turn before injecting a background completion", async () => {
+    let listener:
+      | ((
+          sessionId: string,
+          event: {
+            type: "background_agent_completed";
+            agentId: string;
+            description: string;
+            status: "completed";
+            enqueuedAt: number;
+          },
+        ) => void)
+      | undefined;
+    const pending = new Map<string, string>();
+    const dropped: string[] = [];
+    const svc = service({ external_agent_runtime: true, external_host_tools: true }, undefined, {
+      backgroundWork: {
+        subscribe: (next: typeof listener) => {
+          listener = next;
+          return () => {
+            listener = undefined;
+          };
+        },
+        drainMessage: (sessionId: string) => {
+          const message = pending.get(sessionId);
+          pending.delete(sessionId);
+          return message;
+        },
+        hasPending: (sessionId: string) => pending.has(sessionId),
+        dropSession: (sessionId: string) => {
+          dropped.push(sessionId);
+          pending.delete(sessionId);
+        },
+      },
+    });
+    await svc.start(request);
+    expect(
+      (starts[0]!.contextOverrides as { externalRuntimeBackgroundDelivery?: boolean })
+        .externalRuntimeBackgroundDelivery,
+    ).toBe(true);
+
+    const runtime = svc.get("sess-1") as unknown as {
+      send: (input: { text: string; injected?: boolean }) => Promise<{ done: Promise<void> }>;
+    };
+    const sent: Array<{ text: string; injected?: boolean }> = [];
+    let finishFirst!: () => void;
+    const firstDone = new Promise<void>((resolve) => {
+      finishFirst = resolve;
+    });
+    runtime.send = async (input) => {
+      sent.push(input);
+      return { done: input.text === "launch background review" ? firstDone : Promise.resolve() };
+    };
+
+    const launching = svc.send("sess-1", "launch background review");
+    await Promise.resolve();
+    pending.set("sess-1", '<agent-result job-id="cc-1">review complete</agent-result>');
+    listener?.("sess-1", {
+      type: "background_agent_completed",
+      agentId: "cc-1",
+      description: "review complete",
+      status: "completed",
+      enqueuedAt: Date.now(),
+    });
+    await Promise.resolve();
+
+    expect(sent).toEqual([{ text: "launch background review" }]);
+    expect(emitted).toContainEqual({
+      sessionId: "sess-1",
+      type: "background_agent_completed",
+    });
+
+    finishFirst();
+    await launching;
+    for (let index = 0; index < 10 && sent.length < 2; index += 1) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+    expect(sent).toHaveLength(2);
+    expect(sent[1]).toMatchObject({
+      injected: true,
+    });
+    expect(sent[1]!.text).toContain("<system-reminder>");
+    expect(sent[1]!.text).toContain("review complete");
+
+    await svc.stopAll();
+    expect(dropped).toContain("sess-1");
+    expect(listener).toBeUndefined();
+  });
+
   test("a provider turn with no terminal callback is completed only once", async () => {
     const svc = service({ external_agent_runtime: true, external_host_tools: true });
     await svc.start(request);

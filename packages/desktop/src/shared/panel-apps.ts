@@ -133,6 +133,8 @@ export interface PanelAppHostContext {
 export interface PanelAppCookieCredential {
   id: string;
   label: string;
+  /** Whether the Host can still decrypt and parse the saved Cookie jar. */
+  health?: "ready" | "corrupted";
   domain?: string;
   platform?: string;
   appUrl?: string;

@@ -355,7 +355,28 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     expect(seen).toBe("default");
   });
 
-  it("keeps external-runtime delegation in the foreground with safe defaults", async () => {
+  it("rejects external-runtime background delegation when the host cannot deliver it", async () => {
+    let ran = false;
+    const tool = makeDriveAgentTool(async () => {
+      ran = true;
+      return {
+        sessionId: "unexpected",
+        finalText: "unexpected",
+        isError: false,
+        exitCode: 0,
+        lines: [],
+      };
+    });
+    const output = await tool(
+      { prompt: "research", cli: "codex", cwd: process.cwd(), background: true },
+      { cwd: process.cwd(), sessionId: "S-EXTERNAL", externalRuntime: true } as any,
+    );
+    expect(output).toContain("Error:");
+    expect(output).toContain("cannot deliver the completion");
+    expect(ran).toBe(false);
+  });
+
+  it("keeps explicit external-runtime foreground delegation inline with safe defaults", async () => {
     backgroundJobRegistry.reset?.();
     let seenPermission: string | undefined;
     const tool = makeDriveAgentTool(
@@ -374,13 +395,59 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       { foregroundHandoffMs: 1 },
     );
     const output = await tool(
-      { prompt: "research", cli: "codex", cwd: process.cwd(), background: true },
+      { prompt: "research", cli: "codex", cwd: process.cwd(), background: false },
       { cwd: process.cwd(), sessionId: "S-EXTERNAL", externalRuntime: true } as any,
     );
     expect(output).toContain("repo research complete");
     expect(output).not.toContain("jobId");
     expect(seenPermission).toBe("default");
     expect(backgroundJobRegistry.hasRunningForSession("S-EXTERNAL")).toBe(false);
+  });
+
+  it("detaches external-runtime background work when its host can deliver completion", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.reset("S-EXTERNAL-BG");
+    let finish!: (result: any) => void;
+    let seenPermission: string | undefined;
+    try {
+      const tool = makeDriveAgentTool(
+        (options) => {
+          seenPermission = options.permissionMode;
+          return new Promise((resolve) => {
+            finish = resolve;
+          });
+        },
+        undefined,
+        { foregroundHandoffMs: 1 },
+      );
+      const output = await tool(
+        { prompt: "research", cli: "codex", cwd: process.cwd(), background: true },
+        {
+          cwd: process.cwd(),
+          sessionId: "S-EXTERNAL-BG",
+          externalRuntime: true,
+          externalRuntimeBackgroundDelivery: true,
+        } as any,
+      );
+      expect(output).toContain("jobId");
+      expect(output).toContain("等待完成通知触发续接");
+      expect(seenPermission).toBe("default");
+      expect(backgroundJobRegistry.hasRunningForSession("S-EXTERNAL-BG")).toBe(true);
+
+      finish({
+        sessionId: "CODEX-BG",
+        finalText: "repo research complete",
+        isError: false,
+        exitCode: 0,
+        lines: [],
+      });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(backgroundJobRegistry.hasRunningForSession("S-EXTERNAL-BG")).toBe(false);
+      expect(notificationQueue.getSnapshot("S-EXTERNAL-BG")).toHaveLength(1);
+    } finally {
+      backgroundJobRegistry.reset?.();
+      notificationQueue.reset("S-EXTERNAL-BG");
+    }
   });
 
   it("background:false auto-hands off to a tracked background job after the foreground threshold", async () => {
@@ -590,15 +657,15 @@ describe("DriveClaudeCode alias (back-compat)", () => {
         });
       });
 
-      const first = tool(
-        { prompt: "first", cwd: tmp, background: false },
-        { cwd: tmp, sessionId: "S-FG-FIRST" } as any,
-      );
+      const first = tool({ prompt: "first", cwd: tmp, background: false }, {
+        cwd: tmp,
+        sessionId: "S-FG-FIRST",
+      } as any);
       await started;
-      const second = await tool(
-        { prompt: "second", cwd: tmp, background: false },
-        { cwd: tmp, sessionId: "S-FG-SECOND" } as any,
-      );
+      const second = await tool({ prompt: "second", cwd: tmp, background: false }, {
+        cwd: tmp,
+        sessionId: "S-FG-SECOND",
+      } as any);
 
       expect(second).toContain("Error:");
       expect(second).toContain("Refusing to run both writers");

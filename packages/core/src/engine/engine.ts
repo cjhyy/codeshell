@@ -2606,9 +2606,11 @@ export class Engine {
           runAllowedToolNames.has("cancel_goal")
             ? { hasGoal: hasRunnableGoal }
             : undefined,
-        capabilityPromptSections: profile?.disableCapabilityContext
-          ? {}
-          : this.capabilityPromptSections,
+        // Static sections named by the active preset are part of that preset's
+        // contract. `disableCapabilityContext` suppresses ambient/dynamic
+        // capability context, but removing these definitions leaves presets
+        // with dangling section names (for example terminal-coding → coding).
+        capabilityPromptSections: this.capabilityPromptSections,
         dynamicContextProviders: this.capabilityDynamicContextProviders,
         getSettingsManager: () => this.getSettingsManager(),
         toolCatalog: this.toolCatalog,

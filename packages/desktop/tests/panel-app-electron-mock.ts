@@ -25,6 +25,7 @@ export const panelAppElectronMock = {
   openDialogResult: { canceled: true, filePaths: [] as string[] },
   openedUrls: [] as string[],
   openedPaths: [] as string[],
+  revealedPaths: [] as string[],
 };
 
 export function installPanelAppElectronMock(): void {
@@ -76,6 +77,9 @@ export function installPanelAppElectronMock(): void {
       openPath: async (path: string) => {
         panelAppElectronMock.openedPaths.push(path);
         return "";
+      },
+      showItemInFolder: (path: string) => {
+        panelAppElectronMock.revealedPaths.push(path);
       },
     },
   }));

@@ -85,6 +85,7 @@ export {
   notificationItemToStreamEvent,
   type NotificationItem,
 } from "./tool-system/builtin/agent-notifications.js";
+export { backgroundJobRegistry } from "./tool-system/builtin/background-jobs.js";
 export type { BackgroundAgentCompletedEvent } from "./types.js";
 export {
   startAutomation,

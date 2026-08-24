@@ -1,12 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  mkdtempSync,
-  mkdirSync,
-  readdirSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, mkdirSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "@cjhyy/code-shell-core";
@@ -96,6 +89,27 @@ describe("external runtime durable state", () => {
     });
   });
 
+  test("marks an injected continuation so replay does not present it as user input", () => {
+    const recorder = new ExternalRuntimeSessionRecorder(
+      "external-injected-turn-test",
+      "/tmp/project",
+      "codex/gpt-test",
+      "codex",
+    );
+    recorder.beginTurn({
+      text: "<system-reminder>background review complete</system-reminder>",
+      injected: true,
+    });
+    recorder.onEvent({ type: "turn_complete", reason: "completed" });
+
+    const events = new SessionManager()
+      .resume("external-injected-turn-test")
+      .transcript.getEvents();
+    expect(
+      events.find((event) => event.type === "message" && event.data.role === "user"),
+    ).toMatchObject({ data: { injected: true } });
+  });
+
   test("writes, reads, and removes the runtime thread binding", () => {
     new ExternalRuntimeSessionRecorder(
       "external-binding-test",
@@ -137,12 +151,7 @@ describe("external runtime durable state", () => {
 
   test("cleans up the atomic-write temp file when binding replacement fails", () => {
     const sessionId = "external-binding-failure-test";
-    new ExternalRuntimeSessionRecorder(
-      sessionId,
-      "/tmp/project",
-      "codex/gpt-test",
-      "codex",
-    );
+    new ExternalRuntimeSessionRecorder(sessionId, "/tmp/project", "codex/gpt-test", "codex");
     const sessionDir = join(testHome, "sessions", sessionId);
     mkdirSync(join(sessionDir, "external-runtime.json"));
 

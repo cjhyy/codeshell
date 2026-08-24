@@ -10,6 +10,8 @@ export interface ExternalRuntimeTurnInput {
   text: string;
   clientMessageId?: string;
   attachments?: readonly ExternalRuntimeAttachment[];
+  /** Host-injected continuation (for example, a background-job completion). */
+  injected?: boolean;
 }
 
 export function textWithAttachmentReferences(input: ExternalRuntimeTurnInput): string {

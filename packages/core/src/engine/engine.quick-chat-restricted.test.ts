@@ -8,12 +8,14 @@ import { LLMClientBase } from "../llm/client-base.js";
 import { registerProvider } from "../llm/client-factory.js";
 import type { CreateMessageOptions } from "../llm/types.js";
 import type { LLMResponse } from "../types.js";
+import type { AgentModule } from "../composition/types.js";
 
 const provider = "fake-quick-chat-restricted";
 
 interface CapturedCall {
   systemPrompt: string;
   toolNames: string[];
+  messageText: string;
 }
 
 const callsByModel = new Map<string, CapturedCall[]>();
@@ -27,6 +29,7 @@ class QuickChatRestrictedClient extends LLMClientBase {
       callsByModel.get(this.model)?.push({
         systemPrompt: options.systemPrompt,
         toolNames: (options.tools ?? []).map((tool) => tool.name),
+        messageText: JSON.stringify(options.messages),
       });
     }
     const response: LLMResponse = {
@@ -48,6 +51,55 @@ afterEach(() => {
 });
 
 describe("Engine quick-chat prompt guidance", () => {
+  it("keeps preset-required capability sections in isolated tasks", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "isolated-capability-section-"));
+    tempDirs.push(cwd);
+    const model = `${provider}-${Date.now()}-${Math.random()}`;
+    const calls: CapturedCall[] = [];
+    callsByModel.set(model, calls);
+    const capability: AgentModule = {
+      id: "test-capability",
+      engine: {
+        presets: [
+          {
+            name: "isolated-with-capability-section",
+            label: "Isolated capability test",
+            description: "Exercises a preset-owned prompt section.",
+            promptSections: ["base", "test-capability-section"],
+            builtinTools: [],
+            defaultPermissionRules: [],
+          },
+        ],
+        defaultPreset: "isolated-with-capability-section",
+        promptSections: {
+          "test-capability-section": "# Required Capability Guidance\n\nKeep this static guidance.",
+        },
+        dynamicContextProviders: [async () => "# Ambient Capability Context"],
+      },
+    };
+    const engine = new Engine({
+      llm: { provider, model, apiKey: "test" } as never,
+      cwd,
+      sessionStorageDir: join(cwd, "sessions"),
+      permissionMode: "bypassPermissions",
+      settingsScope: "isolated",
+      headless: true,
+      maxTurns: 2,
+      modules: [capability],
+    });
+    (engine as any).hooks.clear();
+
+    await engine.run("Run the isolated task", {
+      sessionId: "isolated-capability-section",
+      behaviorMode: "isolatedTask",
+    });
+
+    const isolated = calls.at(-1);
+    expect(isolated?.systemPrompt).toContain("# Required Capability Guidance");
+    expect(isolated?.systemPrompt).toContain("# Isolated Task Boundary");
+    expect(isolated?.messageText).not.toContain("# Ambient Capability Context");
+  });
+
   it("injects the side boundary guidance and hard-disables sub-agents", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "quick-chat-restricted-"));
     tempDirs.push(cwd);

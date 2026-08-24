@@ -157,7 +157,7 @@ export interface PanelAppBridgeOptions {
       credentialId: string;
       cwd?: string;
       bucket?: string;
-    }): Promise<{ count: number }>;
+    }): Promise<{ count: number } | { invalid: true }>;
   };
   /** Project- and task-scoped recurring jobs. The Panel never receives jobs from another cwd. */
   automations?: {
@@ -945,6 +945,12 @@ export class PanelAppBridge {
       case "workspace.readText":
         this.requirePermission(binding, "workspace.read");
         return this.workspaceReadText(binding, params);
+      case "workspace.openPath":
+        this.requirePermission(binding, "workspace.read");
+        return this.workspaceOpenPath(binding, params);
+      case "workspace.revealPath":
+        this.requirePermission(binding, "workspace.read");
+        return this.workspaceRevealPath(binding, params);
       case "workspace.writeText":
         this.requirePermission(binding, "workspace.write");
         return this.workspaceWriteText(binding, params);
@@ -1428,6 +1434,7 @@ export class PanelAppBridge {
       cwd: binding.cwd,
       bucket: binding.bucket,
     });
+    if ("invalid" in result) return { restored: false, invalid: true };
     return { restored: true, count: result.count };
   }
 
@@ -1869,6 +1876,34 @@ export class PanelAppBridge {
     } finally {
       await handle.close();
     }
+  }
+
+  private async resolveWorkspaceFileForShell(
+    binding: GuestBinding,
+    params: unknown,
+  ): Promise<string> {
+    const relativePath = this.workspaceRelativePath(params);
+    const root = await this.trustedWorkspaceRoot(binding);
+    const target = await this.resolveExistingWorkspacePath(root, relativePath);
+    if (!this.isWithinWorkspace(root, target)) throw new Error("workspace path escapes the root");
+    const metadata = await lstat(target);
+    if (!metadata.isFile() || metadata.isSymbolicLink()) {
+      throw new Error("workspace path is not a file");
+    }
+    return target;
+  }
+
+  private async workspaceOpenPath(binding: GuestBinding, params: unknown): Promise<boolean> {
+    const target = await this.resolveWorkspaceFileForShell(binding, params);
+    const error = await shell.openPath(target);
+    if (error) throw new Error(`failed to open workspace file: ${error}`);
+    return true;
+  }
+
+  private async workspaceRevealPath(binding: GuestBinding, params: unknown): Promise<boolean> {
+    const target = await this.resolveWorkspaceFileForShell(binding, params);
+    shell.showItemInFolder(target);
+    return true;
   }
 
   private async readBoundedWorkspaceFile(
