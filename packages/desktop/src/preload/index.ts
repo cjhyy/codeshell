@@ -1235,6 +1235,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     | { ok: true; preview: import("@cjhyy/code-shell-core").PanelAppPreview }
     | { ok: false; error: string }
   > => ipcRenderer.invoke("panel-apps:previewLocal", input),
+  discoverGitPanelApps: (
+    input: import("@cjhyy/code-shell-core").GitPanelAppSourceInput,
+  ): Promise<
+    | {
+        ok: true;
+        discovery: import("@cjhyy/code-shell-core").GitPanelAppDiscovery;
+      }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke("panel-apps:discoverGit", input),
   previewPanelAppUpdate: (
     id: string,
   ): Promise<

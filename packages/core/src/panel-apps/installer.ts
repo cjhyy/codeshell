@@ -108,6 +108,28 @@ export interface PanelAppPreview {
   warnings: string[];
 }
 
+export interface GitPanelAppDiscoveryCandidate {
+  /** Repository-relative path, or "." when the repository root is the app. */
+  subdir: string;
+  source: GitPanelAppSourceInput;
+  id: string;
+  version: string;
+  title: { default: string; en?: string; "zh-CN"?: string };
+  description?: string;
+  icon: PanelAppManifest["icon"];
+}
+
+export interface GitPanelAppDiscoveryIssue {
+  subdir: string;
+  error: string;
+}
+
+export interface GitPanelAppDiscovery {
+  source: GitPanelAppSourceInput;
+  panels: GitPanelAppDiscoveryCandidate[];
+  issues: GitPanelAppDiscoveryIssue[];
+}
+
 export interface InstalledPanelApp {
   id: string;
   version: string;
@@ -133,6 +155,12 @@ interface OpenedGitPanelAppSource {
   source: GitPanelAppSourceInput;
   sourceKey: string;
   sourceRoot: string;
+  temporaryRoot: string;
+}
+
+interface OpenedGitPanelAppArchive {
+  source: GitPanelAppSourceInput;
+  extractedRoot: string;
   temporaryRoot: string;
 }
 
@@ -297,9 +325,14 @@ async function findPanelAppRoot(directory: string): Promise<string> {
   );
 }
 
-async function openGitPanelAppSource(
+function joinedPanelAppSubdirectory(base: string | undefined, nested: string): string | undefined {
+  const parts = [base, nested].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join("/") : undefined;
+}
+
+async function openGitPanelAppArchive(
   input: GitPanelAppSourceInput,
-): Promise<OpenedGitPanelAppSource> {
+): Promise<OpenedGitPanelAppArchive> {
   const source = normalizeGitPanelAppSource(input);
   const temporaryRoot = await mkdtemp(join(tmpdir(), "cs-panel-app-git-"));
   try {
@@ -309,15 +342,90 @@ async function openGitPanelAppSource(
     await downloadGitHubPanelAppArchive(source, archivePath);
     await extractZipSubdirectory(archivePath, extractedRoot, source.subdir);
     await rm(archivePath, { force: true });
-    return {
-      source,
-      sourceKey: JSON.stringify(source),
-      sourceRoot: await findPanelAppRoot(extractedRoot),
-      temporaryRoot,
-    };
+    return { source, extractedRoot, temporaryRoot };
   } catch (error) {
     await rm(temporaryRoot, { recursive: true, force: true }).catch(() => undefined);
     throw error;
+  }
+}
+
+async function openGitPanelAppSource(
+  input: GitPanelAppSourceInput,
+): Promise<OpenedGitPanelAppSource> {
+  const opened = await openGitPanelAppArchive(input);
+  try {
+    return {
+      source: opened.source,
+      sourceKey: JSON.stringify(opened.source),
+      sourceRoot: await findPanelAppRoot(opened.extractedRoot),
+      temporaryRoot: opened.temporaryRoot,
+    };
+  } catch (error) {
+    await rm(opened.temporaryRoot, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
+  }
+}
+
+/**
+ * Download a public GitHub repository once and enumerate every independently
+ * installable Panel App beneath it. Discovery is read-only: selecting a result
+ * still runs the normal full review and digest-bound install flow.
+ */
+export async function discoverGitPanelApps(
+  input: GitPanelAppSourceInput,
+): Promise<GitPanelAppDiscovery> {
+  const opened = await openGitPanelAppArchive(input);
+  try {
+    const roots = await discoverPanelAppRoots(opened.extractedRoot);
+    if (roots.length === 0) {
+      throw new PanelAppInstallError(
+        `no Panel App found (expected ${PANEL_APP_MANIFEST_FILE}); ` +
+          "check the repository, branch, or optional search subdirectory",
+      );
+    }
+    const panels: GitPanelAppDiscoveryCandidate[] = [];
+    const issues: GitPanelAppDiscoveryIssue[] = [];
+    for (const root of roots) {
+      const nested = relative(opened.extractedRoot, root).split(sep).join(posix.sep);
+      const subdir = joinedPanelAppSubdirectory(opened.source.subdir, nested);
+      const label = subdir ?? ".";
+      try {
+        const inspected = await inspectPanelAppSource(root);
+        panels.push({
+          subdir: label,
+          source: {
+            kind: "git",
+            url: opened.source.url,
+            ...(opened.source.ref ? { ref: opened.source.ref } : {}),
+            ...(subdir ? { subdir } : {}),
+          },
+          id: inspected.manifest.id,
+          version: inspected.manifest.version,
+          title: inspected.manifest.title,
+          ...(inspected.manifest.description
+            ? { description: inspected.manifest.description }
+            : {}),
+          icon: inspected.manifest.icon,
+        });
+      } catch (error) {
+        issues.push({
+          subdir: label,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    panels.sort((left, right) => left.subdir.localeCompare(right.subdir));
+    issues.sort((left, right) => left.subdir.localeCompare(right.subdir));
+    if (panels.length === 0) {
+      throw new PanelAppInstallError(
+        `found ${issues.length} Panel App manifest(s), but none passed validation: ${issues
+          .map((issue) => `${issue.subdir}: ${issue.error}`)
+          .join("; ")}`,
+      );
+    }
+    return { source: opened.source, panels, issues };
+  } finally {
+    await rm(opened.temporaryRoot, { recursive: true, force: true }).catch(() => undefined);
   }
 }
 

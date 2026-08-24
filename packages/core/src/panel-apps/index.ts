@@ -19,6 +19,7 @@ export {
   panelAppsRoot,
 } from "./paths.js";
 export {
+  discoverGitPanelApps,
   installReviewedLocalPanelApp,
   installReviewedPanelAppUpdate,
   listInstalledPanelApps,
@@ -28,6 +29,9 @@ export {
   type InstalledPanelApp,
   type InstalledPanelAppSource,
   type GitPanelAppSourceInput,
+  type GitPanelAppDiscovery,
+  type GitPanelAppDiscoveryCandidate,
+  type GitPanelAppDiscoveryIssue,
   type LocalPanelAppSourceInput,
   type PanelAppSourceInput,
   type PanelAppPreview,
