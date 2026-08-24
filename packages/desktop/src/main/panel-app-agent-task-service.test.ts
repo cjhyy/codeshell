@@ -127,4 +127,57 @@ describe("PanelAppAgentTaskService", () => {
     expect(cancelled).toEqual(["panel-task-fixed"]);
     expect(service.get(nextOwner, started.id).status).toBe("cancelled");
   });
+
+  test("publishes bounded progress and marks a model error as failed", async () => {
+    const events: Array<{ status: string; activity: number; error?: string }> = [];
+    const runtime: PanelAgentTaskRuntime = {
+      run: async (input) => {
+        input.onProgress({
+          kind: "model",
+          status: "running",
+          message: "AI is planning the next step",
+        });
+        input.onProgress({
+          kind: "tool",
+          status: "running",
+          message: "Running Bash",
+          toolName: "Bash",
+        });
+        input.onProgress({
+          kind: "error",
+          status: "failed",
+          message: "Authentication failed — the API key was rejected.",
+        });
+        return {
+          text: "",
+          reason: "model_error",
+          error: "Authentication failed — the API key was rejected.",
+        };
+      },
+      cancel: async () => undefined,
+      close: async () => undefined,
+      rebind: () => undefined,
+    };
+    const service = new PanelAppAgentTaskService(runtime, (_owner, task) => {
+      events.push({
+        status: task.status,
+        activity: task.activity?.length ?? 0,
+        ...(task.error ? { error: task.error } : {}),
+      });
+    });
+
+    const started = service.start(owner(), { prompt: "initialize", label: "Initialize" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const failed = service.get(owner(), started.id);
+    expect(failed.status).toBe("failed");
+    expect(failed.error).toContain("API key was rejected");
+    expect(failed.activity).toHaveLength(3);
+    expect(failed.activity?.[1]).toMatchObject({
+      kind: "tool",
+      status: "running",
+      toolName: "Bash",
+    });
+    expect(events.at(-1)).toMatchObject({ status: "failed", activity: 3 });
+  });
 });

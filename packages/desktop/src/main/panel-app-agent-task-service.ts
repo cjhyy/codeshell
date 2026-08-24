@@ -8,6 +8,24 @@ export type PanelAgentTaskStatus =
   | "failed"
   | "cancelled";
 
+export type PanelAgentTaskActivityKind = "model" | "tool" | "plan" | "error";
+export type PanelAgentTaskActivityStatus = "running" | "completed" | "failed";
+
+export interface PanelAgentTaskActivity {
+  kind: PanelAgentTaskActivityKind;
+  status: PanelAgentTaskActivityStatus;
+  message: string;
+  toolName?: string;
+  at: number;
+}
+
+export interface PanelAgentTaskProgressInput {
+  kind: PanelAgentTaskActivityKind;
+  status: PanelAgentTaskActivityStatus;
+  message: string;
+  toolName?: string;
+}
+
 export interface PanelAgentTaskView {
   id: string;
   key?: string;
@@ -23,6 +41,7 @@ export interface PanelAgentTaskView {
     usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
   };
   error?: string;
+  activity?: PanelAgentTaskActivity[];
 }
 
 export interface PanelAgentTaskOwner {
@@ -56,9 +75,11 @@ export interface PanelAgentTaskRuntime {
     skillNames: string[];
     maxTurns: number;
     maxContextTokens: number;
+    onProgress: (progress: PanelAgentTaskProgressInput) => void;
   }): Promise<{
     text: string;
     reason?: string;
+    error?: string;
     usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
   }>;
   cancel(sessionId: string): Promise<void>;
@@ -80,12 +101,32 @@ interface StoredPanelAgentTask extends PanelAgentTaskView {
 const MAX_TASKS = 200;
 const MAX_PROMPT_CHARS = 20_000;
 const MAX_RESULT_CHARS = 64_000;
+const MAX_ACTIVITY_ITEMS = 40;
+const MAX_ACTIVITY_MESSAGE_CHARS = 500;
 const TERMINAL_STATUSES = new Set<PanelAgentTaskStatus>(["completed", "failed", "cancelled"]);
 const TOOL_NAME = /^[A-Za-z][A-Za-z0-9_.:-]{0,127}$/;
 const TASK_KEY = /^[a-z][a-z0-9_-]{0,63}$/;
 
 function cleanError(error: unknown): string {
   return (error instanceof Error ? error.message : String(error || "Task failed")).slice(0, 1_000);
+}
+
+function failureForReason(reason: string | undefined): string {
+  switch (reason) {
+    case "model_error":
+      return "The AI model request failed. Check the selected model and its API credentials.";
+    case "prompt_too_long":
+      return "The Task prompt exceeded the model context limit.";
+    case "max_turns":
+      return "The Task reached its turn limit before finishing.";
+    case "goal_budget_exhausted":
+      return "The Task reached its configured budget before finishing.";
+    case "aborted_streaming":
+    case "aborted_tools":
+      return "The Task was interrupted before finishing.";
+    default:
+      return reason ? `The Task ended before completion (${reason}).` : "Task failed";
+  }
 }
 
 function publicTask(task: StoredPanelAgentTask): PanelAgentTaskView {
@@ -100,6 +141,7 @@ function publicTask(task: StoredPanelAgentTask): PanelAgentTaskView {
     ...(task.completedAt ? { completedAt: task.completedAt } : {}),
     ...(task.result ? { result: structuredClone(task.result) } : {}),
     ...(task.error ? { error: task.error } : {}),
+    ...(task.activity?.length ? { activity: structuredClone(task.activity) } : {}),
   };
 }
 
@@ -183,6 +225,7 @@ export class PanelAppAgentTaskService {
       maxTurns,
       maxContextTokens,
       cancelRequested: false,
+      activity: [],
     };
     this.tasks.set(task.id, task);
     this.trimHistory();
@@ -253,13 +296,21 @@ export class PanelAppAgentTaskService {
         skillNames: task.skillNames,
         maxTurns: task.maxTurns,
         maxContextTokens: task.maxContextTokens,
+        onProgress: (progress) => this.recordProgress(task, progress),
       });
-      task.status = task.cancelRequested ? "cancelled" : "completed";
       task.result = {
         text: String(result.text || "").slice(0, MAX_RESULT_CHARS),
         ...(result.reason ? { reason: result.reason } : {}),
         ...(result.usage ? { usage: result.usage } : {}),
       };
+      if (task.cancelRequested) {
+        task.status = "cancelled";
+      } else if (result.reason && result.reason !== "completed") {
+        task.status = "failed";
+        task.error = cleanError(result.error || result.text || failureForReason(result.reason));
+      } else {
+        task.status = "completed";
+      }
     } catch (error) {
       task.status = task.cancelRequested ? "cancelled" : "failed";
       task.error = cleanError(error);
@@ -280,6 +331,37 @@ export class PanelAppAgentTaskService {
 
   private emit(task: StoredPanelAgentTask): void {
     this.emitChanged(task.owner, publicTask(task));
+  }
+
+  private recordProgress(task: StoredPanelAgentTask, progress: PanelAgentTaskProgressInput): void {
+    if (TERMINAL_STATUSES.has(task.status)) return;
+    const message = String(progress.message || "")
+      .trim()
+      .slice(0, MAX_ACTIVITY_MESSAGE_CHARS);
+    if (!message) return;
+    const toolName = progress.toolName?.trim().slice(0, 128);
+    const previous = task.activity?.at(-1);
+    if (
+      previous?.kind === progress.kind &&
+      previous.status === progress.status &&
+      previous.message === message &&
+      previous.toolName === toolName
+    ) {
+      return;
+    }
+    task.activity ??= [];
+    task.activity.push({
+      kind: progress.kind,
+      status: progress.status,
+      message,
+      ...(toolName ? { toolName } : {}),
+      at: this.now(),
+    });
+    if (task.activity.length > MAX_ACTIVITY_ITEMS) {
+      task.activity.splice(0, task.activity.length - MAX_ACTIVITY_ITEMS);
+    }
+    task.updatedAt = this.now();
+    this.emit(task);
   }
 
   private trimHistory(): void {

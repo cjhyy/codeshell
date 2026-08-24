@@ -183,7 +183,9 @@ const task = await window.codeshellPanel.call("agent.task.start", {
 });
 
 const unsubscribe = window.codeshellPanel.on("agent.task.changed", (next) => {
-  if (next.id === task.id && next.status === "completed") {
+  if (next.id !== task.id) return;
+  renderActivity(next.activity ?? []);
+  if (next.status === "completed") {
     renderResult(next.result.text);
   }
 });
@@ -191,10 +193,13 @@ const unsubscribe = window.codeshellPanel.on("agent.task.changed", (next) => {
 
 `key` optionally deduplicates one active operation per app and project. Task
 statuses are `queued`, `running`, `cancelling`, `completed`, `failed`, and
-`cancelled`. Completed results and recent state are memory-only and disappear
-when CodeShell restarts. Use `agent.submitPrompt` only when work intentionally
-belongs in the visible current conversation; use `agent.task` for short,
-app-owned AI work whose result belongs in the Panel.
+`cancelled`. The optional bounded `activity` list exposes coarse `model`,
+`plan`, `tool`, and `error` milestones with a status, message, and timestamp;
+it never exposes hidden model reasoning or tool arguments/results. Completed
+results and recent state are memory-only and disappear when CodeShell restarts.
+Use `agent.submitPrompt` only when work intentionally belongs in the visible
+current conversation; use `agent.task` for short, app-owned AI work whose result
+belongs in the Panel.
 
 ## Enablement
 
