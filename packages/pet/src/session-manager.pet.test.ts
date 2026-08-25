@@ -40,7 +40,10 @@ describe("SessionManager pet kind", () => {
       "hello pet",
       "hello human",
     ]);
-    expect(manager.list().map((session) => session.sessionId)).not.toContain("local-pet");
+    expect(manager.list().map((session) => session.sessionId)).toContain("local-pet");
+    expect(
+      manager.list(20, { excludeKinds: ["pet"] }).map((session) => session.sessionId),
+    ).not.toContain("local-pet");
   });
 
   test("normalizes legacy sessions to work and never rewrites an existing kind", () => {

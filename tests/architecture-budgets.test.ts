@@ -20,21 +20,26 @@ describe("architecture growth budgets", () => {
     // any growth must extract a module or consciously update this decision.
     // The IPC count stayed flat; the line increase is the reviewed per-channel
     // renderer ownership, path-containment, bounded-input enforcement, and the
-    // extracted PTY composite-id assertion at the IPC boundary.
-    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_843);
+    // extracted PTY composite-id assertion at the IPC boundary. The Panel task
+    // host and saved-cookie authorization then landed in v0.8.17; the follow-up
+    // security pass removed nine lines while retaining those reviewed seams.
+    expect(lines("packages/desktop/src/main/index.ts")).toBeLessThanOrEqual(6_925);
     expect(matches("packages/desktop/src/main/index.ts", /ipcMain\.handle\(/g)).toBeLessThanOrEqual(
-      289,
+      290,
     );
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_814);
+    // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
+    // surfaces, including one new invoke without widening renderer imports.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_823);
     expect(
       matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g),
-    ).toBeLessThanOrEqual(298);
-    // GitHub skill previews now carry one main-issued review token field.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_830);
+    ).toBeLessThanOrEqual(299);
+    // GitHub skill previews and Panel task hosting carry main-issued review and
+    // ownership fields across the typed preload boundary.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_842);
     expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_686);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
     // ingress instead of trusting arbitrary numeric/object payloads.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_492);
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_497);
     // Topic-boundary archival is deliberately inside run startup so it cannot
     // race the current turn's exclusive-end anchor.
     expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_251);
@@ -46,8 +51,9 @@ describe("architecture growth budgets", () => {
       // registerCapability/registerPreset/registerSection export surface.
       "packages/core/src/index.ts": 123,
       "packages/core/src/index.extension.ts": 46,
-      // Shared crash-safe persistence primitives are host-only API.
-      "packages/core/src/index.internal.ts": 80,
+      // Shared crash-safe persistence primitives and the Desktop-owned
+      // background job registry are host-only API.
+      "packages/core/src/index.internal.ts": 81,
       "packages/coding/src/index.ts": 12,
       "packages/arena/src/index.ts": 19,
       "packages/pet/src/index.ts": 24,
