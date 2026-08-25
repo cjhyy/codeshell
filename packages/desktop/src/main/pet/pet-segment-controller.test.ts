@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { PetTopicSegment, PetWorkMemoryEntry } from "@cjhyy/code-shell-pet";
-import { buildArchiveAnchors, PetSegmentController } from "./pet-segment-controller";
+import {
+  buildArchiveAnchors,
+  PET_MANUAL_CLEAR_ARCHIVE_SUMMARY,
+  PetSegmentController,
+} from "./pet-segment-controller";
 import type { PetSegmentClosed, PetWorkMemoryStoreLike } from "./pet-segment-controller";
 
 const MINUTE = 60 * 1000;
@@ -170,6 +174,38 @@ describe("PetSegmentController", () => {
     now = HOUR + 13 * HOUR;
     await controller.beginTurn("pet-second");
     expect(store.segmentBoundaries()).toEqual([{ boundaryBeforeMessageId: "pet-second" }]);
+  });
+
+  test("manual clear opens a fresh segment without carrying the old topic forward", async () => {
+    const store = new FakePetWorkMemoryStore();
+    let now = HOUR;
+    const controller = new PetSegmentController({
+      store,
+      petSessionId: "pet-1",
+      archiveRange: async () => ({ before: 0, after: 0 }),
+      now: () => now,
+      idleMs: 12 * HOUR,
+    });
+    await controller.beginTurn("pet-old");
+    await store.append({
+      segmentId: store.activeSegment()!.id,
+      objective: "旧话题结论",
+      outcome: "completed",
+      at: now,
+    });
+
+    now = HOUR + MINUTE;
+    await controller.requestContextClear();
+    now = HOUR + 2 * MINUTE;
+    const turn = await controller.beginTurn("pet-new");
+
+    expect(turn?.archiveSummary).toBe(PET_MANUAL_CLEAR_ARCHIVE_SUMMARY);
+    expect(turn?.carryoverBrief).toBeUndefined();
+    expect(turn?.closedSegment).toMatchObject({
+      nextBoundaryMessageId: "pet-new",
+    });
+    expect(store.activeSegment()?.boundaryBeforeMessageId).toBe("pet-new");
+    expect(store.activeSegment()?.brief).toBeUndefined();
   });
 
   test("a segment opened without a message id records no UI boundary", async () => {

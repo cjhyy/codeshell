@@ -405,6 +405,7 @@ export function registerPetIpc(options: {
                 petSessionId: result.petSessionId,
                 clientMessageId: command.clientMessageId,
                 executions: result.hostActions ?? [],
+                ...(result.contextCleared ? { userMessage: command.message.trim() } : {}),
                 ...(result.authoritativeReply
                   ? {
                       baseMessage: result.authoritativeReply,

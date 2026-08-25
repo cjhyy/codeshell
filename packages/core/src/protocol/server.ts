@@ -148,6 +148,15 @@ function runInputError(params: RunParams): string | null {
         return `archiveBeforeCurrentTurn.${field} must be a bounded non-empty string`;
       }
     }
+    if (
+      archive.summary !== undefined &&
+      (typeof archive.summary !== "string" ||
+        archive.summary.trim().length === 0 ||
+        archive.summary.length > 4_000 ||
+        /[\u0000]/u.test(archive.summary))
+    ) {
+      return "archiveBeforeCurrentTurn.summary must be a non-empty string up to 4000 characters";
+    }
   }
   if (
     params.behaviorMode !== undefined &&

@@ -54,7 +54,12 @@ export interface PetSegmentClosed {
 export interface PetSegmentTurnStart {
   carryoverBrief?: string;
   closedSegment?: PetSegmentClosed;
+  /** Fixed host summary used for a manual context reset instead of an LLM summary. */
+  archiveSummary?: string;
 }
+
+export const PET_MANUAL_CLEAR_ARCHIVE_SUMMARY =
+  "The user explicitly cleared the previous Mimi conversation. Treat the next message as a fresh topic. Do not infer or continue details from the cleared conversation.";
 
 /** Anchors forwarded to the archive_range worker query for a persisted marker. */
 export interface PetArchiveAnchors {
@@ -121,6 +126,7 @@ export class PetSegmentController {
    * for archival/distillation.
    */
   private beginTurnQueue: Promise<unknown> = Promise.resolve();
+  private manualClearPending = false;
 
   constructor(private readonly options: PetSegmentControllerOptions) {}
 
@@ -159,9 +165,33 @@ export class PetSegmentController {
     return run;
   }
 
+  /**
+   * Mark the next real chat turn as a manual topic reset. The actual archive
+   * must wait for that turn's clientMessageId, which is the durable exclusive
+   * end anchor used by Core before the model sees any history.
+   */
+  async requestContextClear(): Promise<void> {
+    const run = this.beginTurnQueue
+      .catch(() => undefined)
+      .then(async () => {
+        const now = this.options.now();
+        if (!this.options.store.activeSegment()) {
+          await this.options.store.openSegment({
+            id: `seg-${randomUUID()}`,
+            startedAt: now,
+          });
+        }
+        await this.options.store.setLastInteractionAt(now);
+        this.manualClearPending = true;
+      });
+    this.beginTurnQueue = run.catch(() => undefined);
+    await run;
+  }
+
   private async runBeginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined> {
     const now = this.options.now();
     const lastInteractionAt = this.options.store.lastInteractionAt();
+    const manualClear = this.manualClearPending;
     // The very first interaction has no preceding segment to close, so it only
     // establishes the interaction baseline — never a visible boundary. Without
     // this guard `shouldStartNewSegment(0, now, idleMs)` is always true and the
@@ -170,8 +200,9 @@ export class PetSegmentController {
     // the idle gap opens a visible new segment.
     const isFirstInteraction = lastInteractionAt === 0;
     const openNew =
-      !isFirstInteraction &&
-      shouldStartNewSegment({ lastInteractionAt, now, idleMs: this.options.idleMs });
+      manualClear ||
+      (!isFirstInteraction &&
+        shouldStartNewSegment({ lastInteractionAt, now, idleMs: this.options.idleMs }));
     if (!openNew) {
       // Establish an invisible base segment on the first observed turn. It has
       // no UI boundary, but gives the next long-idle crossing a real segment
@@ -198,7 +229,7 @@ export class PetSegmentController {
           endedAt: now,
         }
       : undefined;
-    const brief = this.buildBrief();
+    const brief = manualClear ? "" : this.buildBrief();
     const briefText = brief.length > 0 ? brief : undefined;
     await this.options.store.openSegment({
       id: `seg-${randomUUID()}`,
@@ -207,9 +238,11 @@ export class PetSegmentController {
       ...(briefText ? { brief: briefText } : {}),
     });
     await this.options.store.setLastInteractionAt(now);
+    if (manualClear) this.manualClearPending = false;
     return {
       ...(briefText ? { carryoverBrief: briefText } : {}),
       ...(closedSegment ? { closedSegment } : {}),
+      ...(manualClear ? { archiveSummary: PET_MANUAL_CLEAR_ARCHIVE_SUMMARY } : {}),
     };
   }
 

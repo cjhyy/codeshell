@@ -207,6 +207,7 @@ export type PetDispatchResult =
       type: "chat";
       petSessionId: string;
       result: unknown;
+      contextCleared?: boolean;
       delegation?: PetDelegationReceipt;
       delegations?: PetDelegationReceipt[];
       delegationError?: string;

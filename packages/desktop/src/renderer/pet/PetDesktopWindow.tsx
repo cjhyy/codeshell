@@ -5,7 +5,12 @@ import { Markdown } from "../Markdown";
 import { useT } from "../i18n";
 import type { Message } from "../types";
 import { PetActivityPreview } from "./PetActivityPreview";
-import { PetDelegationCard, selectPetChatRows, type PetChatRow } from "./PetChatHost";
+import {
+  PetDelegationCard,
+  selectPetChatRows,
+  type PetChatRow,
+  type PetHostActionReceiptRow,
+} from "./PetChatHost";
 import { PET_CHAT_BUCKET, usePetState } from "./PetStateProvider";
 import { PetWidget } from "./PetWidget";
 import { petExternalSessionLocator } from "./petExternalSession";
@@ -49,9 +54,10 @@ export function selectMiniChatRows(
   segments: readonly PetWorkMemorySegment[] = [],
   longTasks: PetLongTaskSnapshot | null = null,
   workReceipts: PetWidgetReceiptState | null = null,
+  hostActionReceipts: readonly PetHostActionReceiptRow[] = [],
 ): PetChatRow[] {
   const visibleMessages = messagesAfterSeenCompletion(messages, longTasks, workReceipts);
-  const rows = selectPetChatRows(visibleMessages, segments, delegationReceipts);
+  const rows = selectPetChatRows(visibleMessages, segments, delegationReceipts, hostActionReceipts);
   let latestBoundary = -1;
   for (let index = rows.length - 1; index >= 0; index -= 1) {
     if (rows[index]?.role !== "history-boundary" && rows[index]?.role !== "segment-divider") {
@@ -116,6 +122,7 @@ export function PetDesktopWindow() {
     chatBusy,
     setChatBusy,
     delegationReceipts,
+    hostActionReceipts,
     longTasks,
   } = usePetState();
   // The provider already runs the projection subscription + snapshot fetch, so
@@ -143,8 +150,16 @@ export function PetDesktopWindow() {
         state.projection?.workMemorySegments ?? [],
         longTasks,
         workReceipts,
+        hostActionReceipts,
       ),
-    [chatState.messages, delegationReceipts, longTasks, state.projection, workReceipts],
+    [
+      chatState.messages,
+      delegationReceipts,
+      hostActionReceipts,
+      longTasks,
+      state.projection,
+      workReceipts,
+    ],
   );
 
   React.useEffect(() => {

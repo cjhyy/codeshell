@@ -1769,6 +1769,10 @@ async function createWindow(): Promise<BrowserWindow> {
       personalization: async () =>
         petPersonalizationFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {
+        requestContextClear: async () => {
+          if (!petSegmentController) throw new Error("Pet work-memory sink is not ready");
+          await petSegmentController.requestContextClear();
+        },
         beginTurn: async (clientMessageId) => {
           if (!petSegmentController) return undefined;
           const before = petSegmentController.segmentBoundaries().length;
@@ -2879,7 +2883,7 @@ async function dispatchGatewayPetChat(
   // state changes, memory confirmations) are appended here so the IM reply
   // carries what Mimi could only promise during her turn.
   const enriched = await enrichPetChatReplyWithHostActions(
-    typeof worker?.text === "string" ? worker.text : "",
+    result.authoritativeReply ?? (typeof worker?.text === "string" ? worker.text : ""),
     result.hostActions,
     {
       qrDir: resolve(app.getPath("userData"), "pet", "qr"),
@@ -2905,6 +2909,7 @@ async function dispatchGatewayPetChat(
         clientMessageId,
         executions: result.hostActions ?? [],
         authoritativeMessage: enriched.text,
+        ...(result.contextCleared ? { userMessage: request.message.trim() } : {}),
         ...(replacesGatewayTurn
           ? {
               replaceAssistant: true,

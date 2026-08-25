@@ -120,6 +120,8 @@ export interface RunParams {
   archiveBeforeCurrentTurn?: {
     fromClientMessageId?: string;
     segmentId?: string;
+    /** Host-authored replacement for the archived span; skips the summarizer. */
+    summary?: string;
   };
   /** Desktop host ownership generation for process-local Quick Chat runs. */
   quickChatClaimId?: string;

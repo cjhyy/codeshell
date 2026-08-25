@@ -278,6 +278,55 @@ describe("Engine archive persistence", () => {
     }
   });
 
+  it("uses a host-authored pre-run archive summary without asking the summarizer", async () => {
+    const summarizerDir = mkdtempSync(join(tmpdir(), "cs-eng-pre-run-fixed-archive-"));
+    const summarizerEngine = new Engine({
+      llm: {
+        provider: fakeProvider,
+        model: "fake-model",
+        apiKey: "test",
+      } satisfies LLMConfig,
+      cwd: summarizerDir,
+      sessionStorageDir: join(summarizerDir, "sessions"),
+      headless: true,
+    });
+    (summarizerEngine as any).hooks.clear();
+    fakeRequests.length = 0;
+    try {
+      const bundle = (summarizerEngine as any).sessionManager.create(
+        summarizerDir,
+        "fake-model",
+        fakeProvider,
+      );
+      bundle.transcript.appendMessage("user", "SECRET OLD TOPIC", {
+        clientMessageId: "old-boundary",
+      });
+      bundle.transcript.appendMessage("assistant", "SECRET OLD REPLY");
+
+      await summarizerEngine.run("FRESH TOPIC", {
+        sessionId: bundle.state.sessionId,
+        clientMessageId: "new-boundary",
+        archiveBeforeCurrentTurn: {
+          fromClientMessageId: "old-boundary",
+          segmentId: "seg-manual-clear",
+          summary: "The user explicitly cleared the prior topic.",
+        },
+      });
+
+      // Only the actual fresh turn reaches the provider. A generated archive
+      // summary would add a second request and leak the cleared topic to it.
+      expect(fakeRequests).toHaveLength(1);
+      const firstTurnHistory = fakeRequests[0]!.messages.map((message) => String(message.content));
+      expect(firstTurnHistory.some((text) => text.includes("prior topic"))).toBe(true);
+      expect(firstTurnHistory.some((text) => text.includes("SECRET OLD TOPIC"))).toBe(false);
+      expect(firstTurnHistory.some((text) => text.includes("SECRET OLD REPLY"))).toBe(false);
+      expect(firstTurnHistory.some((text) => text.includes("FRESH TOPIC"))).toBe(true);
+    } finally {
+      rmSync(summarizerDir, { recursive: true, force: true });
+      fakeRequests.length = 0;
+    }
+  });
+
   it("archiveTurnRange with a dead anchor still summarizes but persists no marker", async () => {
     const summarizerDir = mkdtempSync(join(tmpdir(), "cs-eng-arch-sum-dead-"));
     const summarizerEngine = new Engine({

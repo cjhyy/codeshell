@@ -41,6 +41,8 @@ export interface TurnOpts {
   archiveBeforeCurrentTurn?: {
     fromClientMessageId?: string;
     segmentId?: string;
+    /** Host-authored replacement for the archived span; skips the summarizer. */
+    summary?: string;
   };
   /** Structured input attachments for this turn. */
   attachments?: InputAttachmentMeta[];

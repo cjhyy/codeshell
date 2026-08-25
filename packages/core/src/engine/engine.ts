@@ -1397,21 +1397,33 @@ export class Engine {
     // the entire old topic. Fail open to full history if summarization fails.
     if (options?.archiveBeforeCurrentTurn && options.clientMessageId) {
       try {
-        const archived = await this.archiveTurnRange(
-          session.state.sessionId,
-          { start: 0, end: 0 },
-          {
-            toClientMessageId: options.clientMessageId,
-            ...(options.archiveBeforeCurrentTurn.fromClientMessageId
-              ? {
-                  fromClientMessageId: options.archiveBeforeCurrentTurn.fromClientMessageId,
-                }
-              : {}),
-            ...(options.archiveBeforeCurrentTurn.segmentId
-              ? { segmentId: options.archiveBeforeCurrentTurn.segmentId }
-              : {}),
-          },
-        );
+        const anchors = {
+          toClientMessageId: options.clientMessageId,
+          ...(options.archiveBeforeCurrentTurn.fromClientMessageId
+            ? {
+                fromClientMessageId: options.archiveBeforeCurrentTurn.fromClientMessageId,
+              }
+            : {}),
+          ...(options.archiveBeforeCurrentTurn.segmentId
+            ? { segmentId: options.archiveBeforeCurrentTurn.segmentId }
+            : {}),
+        };
+        const before = estimateTokens(messages);
+        if (options.archiveBeforeCurrentTurn.summary) {
+          await this.appendArchiveMarker(session.state.sessionId, {
+            ...anchors,
+            summary: options.archiveBeforeCurrentTurn.summary,
+          });
+        } else {
+          await this.archiveTurnRange(session.state.sessionId, { start: 0, end: 0 }, anchors);
+        }
+        // openRunSession captured the pre-marker replay. Rebuild from the
+        // persisted marker so this very first post-boundary model call gets
+        // the archived view rather than waiting until the following turn.
+        messages =
+          this.compactedMessagesBySession.get(session.state.sessionId) ??
+          this.sessionManager.resume(session.state.sessionId).transcript.toMessages();
+        const archived = { before, after: estimateTokens(messages) };
         if (archived.before > archived.after) {
           options.onStream?.({
             type: "context_compact",
@@ -1420,12 +1432,6 @@ export class Engine {
             after: archived.after,
           });
         }
-        // openRunSession captured the pre-marker replay. Rebuild from the
-        // persisted marker so this very first post-boundary model call gets
-        // the archived view rather than waiting until the following turn.
-        messages =
-          this.compactedMessagesBySession.get(session.state.sessionId) ??
-          this.sessionManager.resume(session.state.sessionId).transcript.toMessages();
       } catch (error) {
         logger.warn("engine.pre_run_archive.failed", {
           sessionId: session.state.sessionId,

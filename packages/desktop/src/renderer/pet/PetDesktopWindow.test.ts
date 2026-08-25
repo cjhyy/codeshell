@@ -85,6 +85,42 @@ describe("Pet desktop mini chat", () => {
     expect(source).toContain("onOpen={() => openDelegation");
   });
 
+  test("renders authoritative host results in the mini chat", () => {
+    const rows = selectMiniChatRows(
+      [
+        {
+          kind: "user",
+          id: "u-archive",
+          text: "清理掉老 session 吧",
+          clientMessageId: "client-archive",
+        },
+        {
+          kind: "assistant",
+          id: "a-pending",
+          text: "清理请求已提交，等待 host 确认。",
+          done: true,
+        },
+      ],
+      [],
+      [],
+      null,
+      null,
+      [
+        {
+          clientMessageId: "client-archive",
+          message: "已归档 7 个工作 Session。",
+          createdAt: 42,
+        },
+      ],
+    );
+
+    expect(rows.map((row) => row.text)).toEqual([
+      "清理掉老 session 吧",
+      "清理请求已提交，等待 host 确认。",
+      "已归档 7 个工作 Session。",
+    ]);
+  });
+
   test("omits all transcript rows hidden by the latest context compaction", () => {
     const rows = selectMiniChatRows([
       { kind: "user", id: "old-u", text: "旧问题" },
