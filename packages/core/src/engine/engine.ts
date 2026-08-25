@@ -130,8 +130,6 @@ import {
 import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
 import {
-  ISOLATED_TASK_PROFILE,
-  QUICK_CHAT_RESTRICTED_PROFILE,
   type EngineRunOptions,
   type RunBehaviorProfile,
 } from "./run-types.js";
