@@ -409,6 +409,16 @@ describe("independent Panel App installer", () => {
       ]);
       expect(discovery.issues).toEqual([]);
 
+      const shorthandDiscovery = await discoverGitPanelApps({
+        kind: "git",
+        url: "codeshell-tests/panel-source",
+      });
+      expect(shorthandDiscovery.source.url).toBe(cloneUrl);
+      expect(shorthandDiscovery.panels.map((panel) => panel.id)).toEqual([
+        "other-panel",
+        "remote-panel",
+      ]);
+
       const scopedDiscovery = await discoverGitPanelApps({
         kind: "git",
         url: cloneUrl,

@@ -48,15 +48,43 @@ export const extensions = {
         fromDir: "选择源码文件夹",
         fromZip: "从压缩包",
         fromGithub: "从 GitHub",
+        recommendedTitle: "推荐面板",
+        recommendedOfficial: "官方精选",
+        recommendedDesc:
+          "来自 CodeShell 官方面板仓库；点击后会读取最新版本和权限，再由你确认安装。",
+        recommendedBrowseAll: "查看仓库全部面板",
+        recommendedInstalled: "已安装",
+        recommendedLoading: "正在读取…",
+        recommendedReview: "查看并安装",
+        recommendedApps: {
+          videoDownload: {
+            title: "Mimi Download",
+            description: "粘贴链接下载视频，可选 Cookie、画质与字幕，失败时再让 AI 分析。",
+          },
+          designStudio: {
+            title: "设计工作台",
+            description: "在项目中制作界面、原型，并把设计直接交付为前端实现。",
+          },
+          jobHunt: {
+            title: "求职作战室",
+            description: "长期保存职位、简历、题库、练习与面试复盘。",
+          },
+          quantLab: {
+            title: "量化实验室",
+            description: "使用项目内的本地数据研究股票策略并进行回测。",
+          },
+        },
         githubUrl: "GitHub 仓库",
+        githubUrlPlaceholder: "owner/repository 或完整 GitHub 地址",
         githubRef: "分支或标签（可选）",
         githubSubdir: "面板子目录（可选）",
+        githubAdvanced: "高级定位（分支、子目录）",
         reviewGithub: "拉取并审查",
         discoverGithub: "查找面板",
         githubDiscovered: "发现 {count} 个 Panel App，选择一个继续审查",
         githubInvalid: "另有 {count} 个目录未通过校验",
         githubHint:
-          "只填写公开 GitHub 仓库地址即可自动查找其中的 Panel App；子目录仅用于缩小查找范围。",
+          "粘贴公开 GitHub 仓库地址即可扫描仓库中的全部 Panel App；无需先填写分支或子目录。",
         githubUrlRequired: "请输入 GitHub 仓库地址。",
         addStepManifest: "创建 .codeshell-panel/panel.json",
         addStepApp: "把 HTML、JS、CSS 放进 app/ 目录",
@@ -928,15 +956,46 @@ export const extensions = {
         fromDir: "Choose source folder",
         fromZip: "From archive",
         fromGithub: "From GitHub",
+        recommendedTitle: "Recommended panels",
+        recommendedOfficial: "Official picks",
+        recommendedDesc:
+          "From the official CodeShell panel repository. CodeShell fetches the latest version and permissions for your review before installation.",
+        recommendedBrowseAll: "Browse all repository panels",
+        recommendedInstalled: "Installed",
+        recommendedLoading: "Fetching…",
+        recommendedReview: "Review and install",
+        recommendedApps: {
+          videoDownload: {
+            title: "Mimi Download",
+            description:
+              "Paste a video link, then choose Cookies, quality, and subtitles. Ask AI only when a download fails.",
+          },
+          designStudio: {
+            title: "Design Studio",
+            description:
+              "Create product UI and prototypes in a project, then hand them off as frontend implementation.",
+          },
+          jobHunt: {
+            title: "Job Hunt HQ",
+            description:
+              "Keep jobs, resumes, question banks, practice, and interview debriefs together over time.",
+          },
+          quantLab: {
+            title: "Quant Lab",
+            description: "Research and backtest stock strategies against local project data.",
+          },
+        },
         githubUrl: "GitHub repository",
+        githubUrlPlaceholder: "owner/repository or a full GitHub URL",
         githubRef: "Branch or tag (optional)",
         githubSubdir: "App subdirectory (optional)",
+        githubAdvanced: "Advanced location (branch and subdirectory)",
         reviewGithub: "Fetch and review",
         discoverGithub: "Find panels",
         githubDiscovered: "Found {count} Panel App(s). Choose one to continue reviewing.",
         githubInvalid: "{count} other folder(s) failed validation",
         githubHint:
-          "Enter only a public GitHub repository URL to find its Panel Apps automatically. The subdirectory only narrows the search.",
+          "Paste a public GitHub repository to scan every Panel App in it. You do not need to enter a branch or subdirectory first.",
         githubUrlRequired: "Enter a GitHub repository URL.",
         addStepManifest: "Create .codeshell-panel/panel.json",
         addStepApp: "Put HTML, JS, and CSS under app/",
