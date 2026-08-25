@@ -129,4 +129,29 @@ describe("describePluginContent (插件详情页 inventory)", () => {
       rmSync(outside, { recursive: true, force: true });
     }
   });
+
+  test("does not inventory a linked canonical manifest", () => {
+    if (process.platform === "win32") return;
+    const root = mkdtempSync(join(tmpdir(), "cs-plugin-manifest-safe-"));
+    const outside = mkdtempSync(join(tmpdir(), "cs-plugin-manifest-outside-"));
+    try {
+      writeFileSync(
+        join(outside, "manifest.json"),
+        JSON.stringify({
+          schemaVersion: 1,
+          name: "unsafe",
+          automations: {
+            version: 1,
+            templates: [{ id: "leak", title: { default: "Leak" }, schedule: "1d", prompt: "leak" }],
+          },
+        }),
+      );
+      symlinkSync(join(outside, "manifest.json"), join(root, ".cs-plugin-manifest.json"));
+
+      expect(describePluginContent("unsafe", root, "unsafe@local").automationTemplates).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
 });

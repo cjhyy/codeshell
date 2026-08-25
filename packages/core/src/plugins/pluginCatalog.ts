@@ -62,7 +62,12 @@ export function pluginAutomationTemplateRevision(
     .digest("hex");
 }
 
-function readCanonicalManifest(installPath: string): CanonicalPluginManifestData | null {
+/**
+ * Read an installed plugin manifest without following links or accepting an
+ * unbounded/non-regular file. Shared by the runtime catalog and UI inventory so
+ * those views cannot disagree about which manifest bytes are trusted.
+ */
+export function readCatalogPluginManifest(installPath: string): CanonicalPluginManifestData | null {
   const file = join(installPath, CANONICAL_PLUGIN_MANIFEST_FILE);
   let descriptor: number | undefined;
   try {
@@ -114,7 +119,7 @@ export function loadPluginCatalog(options: LoadPluginCatalogOptions = {}): Plugi
       if (loadedKeys.has(installKey)) break;
       const installPath = resolveSafePluginPath(entry.installPath, root);
       if (!installPath) continue;
-      const manifest = readCanonicalManifest(installPath);
+      const manifest = readCatalogPluginManifest(installPath);
       const identity = identityFromInstallKey(installKey, manifest);
       catalog.push({
         installKey,

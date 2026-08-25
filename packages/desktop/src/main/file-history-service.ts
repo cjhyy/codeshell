@@ -12,10 +12,7 @@
  * separate client-side counter).
  */
 import * as path from "node:path";
-import {
-  FileHistory,
-  sessionsRoot,
-} from "@cjhyy/code-shell-core";
+import { FileHistory, sessionsRoot } from "@cjhyy/code-shell-core";
 
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 
@@ -34,7 +31,15 @@ export interface TurnUndoResult {
 }
 
 function historyFor(sessionId: string): FileHistory | null {
-  if (typeof sessionId !== "string" || !SAFE_ID.test(sessionId)) return null;
+  if (
+    typeof sessionId !== "string" ||
+    sessionId === "." ||
+    sessionId === ".." ||
+    sessionId.includes("..") ||
+    !SAFE_ID.test(sessionId)
+  ) {
+    return null;
+  }
   return FileHistory.loadFromDir(path.join(sessionsRoot(), sessionId));
 }
 

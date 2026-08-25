@@ -2,21 +2,15 @@
 
 > 已完成项一律删除（记录在 git 历史与记忆里）。本文件只保留**未完成**的待办。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-08-11（全仓架构、边界、CI、headless 安全与代码内待办复核）。
+> 最近一次核对：2026-08-25（全仓架构、边界、CI、headless 安全与代码内待办复核）。
 > **仓库状态（2026-07-27 实测）**：main 与 origin/main 完全同步（ahead/behind 均为 0），工作区干净。本文件历史版本多处写的「未 commit / 在工作树 / 未 push」均已过期作废——包括 2026-07-15 模块边界大拆分、07-16 优化冲刺 2、07-20 Pet 外部会话，全部已进 main 并推送。
 > 2026-07-15 模块边界大拆分（已合入 main）：core 去领域化（pet 迁出为 `packages/pet`，经通用 extension 钩子组合；三入口导出面收敛；protocol↔engine/session↔engine/settings→engine 四组倒置消除；goal/session-usage 下沉）、desktop 传输层抽出 `packages/server`、AgentBridge 拆出纯 Node `WorkerBridgeCore`、mobile 逻辑层抽出 `packages/web`、identity/data-root 注入基础落地（服务端部署项现状段已同步更新）。monorepo 现为 11 包（arena/cdp/chat/coding/core/desktop/link/pet/server/tui/web）。实施计划：`docs/superpowers/plans/2026-07-15-*.md`。
 >
-> **验收门实测（2026-08-11）**：根 `bun run typecheck` 已覆盖全部 11 个 workspace（含 Desktop 与 Web SPA）；CI 使用固定 Bun 版本并执行全量测试。本轮唯一开放的实现级 `TODO` ——外部 agent session binding 的同步锁——已换成异步原子持久化；源码中余下的 `TODO:` 只是软换行/任务归属两个未来功能的设计注释，未宣称当前存在已实现却未完成的路径。
+> **验收门实测（2026-08-25）**：根 `bun run typecheck` 已覆盖全部 11 个 workspace（含 Desktop 与 Web SPA）；本轮复核的 8 项安全/健壮性遗留已全部修复，并通过全量测试、lint、类型检查与生产构建。源码中的编号式 `TODO` 绝大多数是已完成功能的追溯标签；真正的 future 注释仅保留在明确的产品/架构边界（TUI 软换行与任务归属、runtime 级 MCP/成本聚合、arena 连接迁移、cc-room 列表收敛），不表示当前路径处于半实现状态。
 
 ---
 
 ## 小 feature（体量 M 及以下，现在可直接着手）
-
-> 2026-08-13：安全加固两轮（08-12/08-13）提交前独立复查，修复 6 项（凭据库损坏
-> 即全量丢失、marketplace 注册表清空并锁死、Panel App 目录锁冻结 Electron 主线程、
-> undo/redo 乱序、口令锁定 DoS、MCP `command` 密钥泄漏），各补回归测试。
-> **剩余 10 项待修记录在 `docs/todo/bug-followups-2026-08-13.md`**，按 P1/P2/P3 分级，
-> 其中 P1 两项（主题卸载先删后记账、Panel App registry `strict` 失效）会造成状态损坏。
 
 > 2026-07-12：上一批 12 项小 feature 已全部落地并合并回 main——core 引擎 5 项（goal-judge 上下文重构、prompt-cache 归因、拆 engine.ts、子 agent sandbox/mcp、密钥脱敏硬化）、desktop 2 项（review-panel workspace + fork busy-guard）、跨层 5 项（MCP OAuth 闭环、浏览器复制地址、DriveAgent 跳转、手机发图、命名收敛第一批）、快聊对齐 codex `/side`（修主聊消息串漏）。逐线只读 codex 复审+修复+复核全绿。实施记录见 `docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-*.md`。
 

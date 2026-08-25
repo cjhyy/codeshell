@@ -60,7 +60,9 @@ async function hasPersistedSessionRoot(sessionRoot: string, requested: string): 
   for (const entry of entries.slice(0, MAX_SESSION_DIRS_TO_SCAN)) {
     if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
     try {
-      const state = JSON.parse(await readFile(join(sessionRoot, entry.name, "state.json"), "utf8")) as {
+      const state = JSON.parse(
+        await readFile(join(sessionRoot, entry.name, "state.json"), "utf8"),
+      ) as {
         cwd?: unknown;
       };
       const root = await canonicalDirectory(state.cwd);
@@ -103,6 +105,19 @@ export async function requireRendererProjectPath(
     return requested;
   }
   throw new Error(`project path is not registered with CodeShell: ${String(input)}`);
+}
+
+/**
+ * Preserve the explicit empty-string sentinel used by settings IPCs for the
+ * user/global scope; every non-global value still goes through project-path
+ * authorization. Do not use this for IPCs that always require a project.
+ */
+export async function requireRendererProjectPathOrGlobal(
+  input: unknown,
+  options: RendererProjectPathOptions = {},
+): Promise<string> {
+  if (input === "") return "";
+  return requireRendererProjectPath(input, options);
 }
 
 /** Resolve a renderer-supplied attachment only when its real target stays inside the project. */

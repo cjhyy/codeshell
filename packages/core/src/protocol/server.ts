@@ -82,9 +82,6 @@ import {
   scanPluginCommands,
   MAX_PLUGIN_COMMAND_ARGUMENT_CHARS,
 } from "../plugins/pluginCommandsLoader.js";
-// TODO(pet-out-of-core): the pet extension is default-loaded here only until
-// the pet domain leaves core; hosts will then register it explicitly.
-
 type ContextCompactStreamEvent = Extract<StreamEvent, { type: "context_compact" }>;
 
 function isValidRunAttachment(value: unknown): value is InputAttachmentMeta {

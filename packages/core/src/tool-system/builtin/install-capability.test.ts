@@ -612,4 +612,140 @@ describe("InstallCapability tool", () => {
     );
     expect(inlineToken).toContain("inline credential");
   });
+
+  it("reports dotted project override names as unsupported instead of a false success", async () => {
+    const writes: string[] = [];
+    const cwd = process.cwd();
+    const installedEntry = {
+      scope: "user" as const,
+      installPath: "/tmp/dotted",
+      version: "1.0.0",
+      installedAt: "now",
+      lastUpdated: "now",
+    };
+    const projectDeps = deps({
+      listInstalled: () => [{ key: "a.b@official", entry: installedEntry }],
+      scanSkills: () => [
+        {
+          name: "skill.with.dot",
+          description: "dotted",
+          content: "",
+          filePath: `${cwd}/.agents/skills/skill.with.dot/SKILL.md`,
+          source: "project",
+        },
+      ],
+      makeSettingsManager: () =>
+        ({
+          getForScope: () => ({}),
+          saveProjectSetting: (key: string) => writes.push(key),
+        }) as unknown as SettingsManager,
+    });
+
+    const plugin = await installCapabilityWithDeps(
+      {
+        action: "disable",
+        kind: "plugin",
+        plugin: "a.b",
+        marketplace: "official",
+        scope: "project",
+      },
+      ctx(cwd),
+      projectDeps,
+    );
+    const skill = await installCapabilityWithDeps(
+      { action: "disable", kind: "skill", skills: ["skill.with.dot"], scope: "project" },
+      ctx(cwd),
+      projectDeps,
+    );
+
+    expect(plugin).toContain("do not support dots");
+    expect(skill).toContain("do not support dots");
+    expect(writes).toEqual([]);
+  });
+
+  it("fails closed for every user-scope mutation when settingsScope is missing", async () => {
+    const cwd = process.cwd();
+    const restricted = { cwd } as ToolContext;
+    let pluginInstalls = 0;
+    const installedEntry = {
+      scope: "user" as const,
+      installPath: "/tmp/docs",
+      version: "1.0.0",
+      installedAt: "now",
+      lastUpdated: "now",
+    };
+    const restrictedDeps = deps({
+      installPlugin: async () => {
+        pluginInstalls += 1;
+        return {
+          ok: true,
+          entry: installedEntry,
+          freshlyCloned: true,
+          varRewrite: { filesScanned: 0, filesRewritten: 0 },
+        };
+      },
+      listInstalled: () => [{ key: "docs@official", entry: installedEntry }],
+      scanSkills: () => [
+        {
+          name: "pdf",
+          description: "PDF",
+          content: "",
+          filePath: `${cwd}/.agents/skills/pdf/SKILL.md`,
+          source: "project",
+        },
+      ],
+      makeSettingsManager: () =>
+        ({
+          getForScope: () => ({}),
+          saveProjectSetting: () => {
+            throw new Error("must not write");
+          },
+          saveUserSetting: () => {
+            throw new Error("must not write");
+          },
+        }) as unknown as SettingsManager,
+    });
+
+    const results = await Promise.all([
+      installCapabilityWithDeps(
+        { action: "install", kind: "plugin", plugin: "docs", marketplace: "official" },
+        restricted,
+        restrictedDeps,
+      ),
+      installCapabilityWithDeps(
+        {
+          action: "update",
+          kind: "plugin",
+          plugin: "docs",
+          marketplace: "official",
+        },
+        restricted,
+        restrictedDeps,
+      ),
+      installCapabilityWithDeps(
+        {
+          action: "disable",
+          kind: "plugin",
+          plugin: "docs",
+          marketplace: "official",
+          scope: "user",
+        },
+        restricted,
+        restrictedDeps,
+      ),
+      installCapabilityWithDeps(
+        { action: "disable", kind: "skill", skills: ["pdf"], scope: "user" },
+        restricted,
+        restrictedDeps,
+      ),
+      installCapabilityWithDeps(
+        { action: "install", kind: "mcp", name: "docs", command: "npx", scope: "user" },
+        restricted,
+        restrictedDeps,
+      ),
+    ]);
+
+    expect(results.every((result) => result.includes("isolates user settings"))).toBe(true);
+    expect(pluginInstalls).toBe(0);
+  });
 });

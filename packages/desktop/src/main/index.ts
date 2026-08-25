@@ -124,6 +124,7 @@ import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.
 import {
   requireRendererProjectEntryPath,
   requireRendererProjectPath,
+  requireRendererProjectPathOrGlobal,
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
@@ -1381,6 +1382,7 @@ async function createWindow(): Promise<BrowserWindow> {
   win.on("closed", () => {
     void externalRuntimeService?.stopOwnedBy(ownerWebContentsId);
     mainWindows.delete(win);
+    browserAnchorsByParent.delete(win.id);
     if (process.platform !== "darwin" && mainWindows.size === 0) {
       browserRuntime.closeAll();
     }
@@ -2635,7 +2637,6 @@ async function openPetOverviewFromWidget(request?: unknown): Promise<void> {
 /** Tracks the popout browser windows so we can route anchors back to a parent. */
 const popoutParents = new Map<number, number>(); // popout wc id -> parent window id
 const browserAnchorsByParent = new Map<number, unknown[]>();
-const browserAnchorParentCleanupRegistered = new Set<number>();
 
 /**
  * Open a standalone browser window (the popout). It loads the same renderer
@@ -2659,14 +2660,6 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
   const wcId = win.webContents.id;
   popoutParents.set(wcId, parent.id);
   win.on("closed", () => popoutParents.delete(wcId));
-  if (!browserAnchorParentCleanupRegistered.has(parent.id)) {
-    browserAnchorParentCleanupRegistered.add(parent.id);
-    parent.once("closed", () => {
-      browserAnchorParentCleanupRegistered.delete(parent.id);
-      browserAnchorsByParent.delete(parent.id);
-    });
-  }
-
   // Same guest hardening as the main window — the popout hosts a BrowserPanel
   // too, so without this its <webview> guest landed in defaultSession and got
   // our renderer CSP (refusing the site's own fonts). Pins it to persist:browser.
@@ -3191,16 +3184,23 @@ ipcMain.handle(
       includeDisabled: opts?.includeDisabled === true,
     }),
 );
-ipcMain.handle("capabilities:list", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  return listCapabilities(cwd);
+ipcMain.handle("capabilities:list", async (_e, cwd: unknown) => {
+  const resolvedCwd = await requireRendererProjectPathOrGlobal(cwd);
+  return listCapabilities(resolvedCwd);
 });
 ipcMain.handle(
   "capabilities:setEnabled",
-  async (_e, cwd: string, id: string, on: boolean, opts?: { scope?: "user" | "project" }) => {
-    cwd = await requireRendererProjectPath(cwd);
+  async (_e, cwd: unknown, id: string, on: boolean, opts?: { scope?: "user" | "project" }) => {
+    const scope = opts?.scope ?? "user";
+    if (scope !== "user" && scope !== "project") {
+      throw new Error("capabilities:setEnabled requires scope user|project");
+    }
+    const resolvedCwd =
+      scope === "user"
+        ? await requireRendererProjectPathOrGlobal(cwd)
+        : await requireRendererProjectPath(cwd);
     if (typeof id !== "string") throw new Error("capabilities:setEnabled requires id");
-    setCapabilityEnabled(cwd, id, Boolean(on), opts);
+    setCapabilityEnabled(resolvedCwd, id, Boolean(on), { scope });
   },
 );
 ipcMain.handle(
@@ -6305,23 +6305,14 @@ ipcMain.handle(
 
 // Turn-level undo/redo via core FileHistory snapshots (keyed by sessionId, not
 // cwd). Always operates on the latest turn internally — see file-history-service.
-ipcMain.handle("files:turnUndoState", async (_e, sessionId: string) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    return { undoable: false, redoable: false, fileCount: 0 };
-  }
-  return turnUndoState(sessionId);
+ipcMain.handle("files:turnUndoState", async (event, sessionId: unknown) => {
+  return turnUndoState(assertRendererSessionAccess(sessionId, event.sender.id));
 });
-ipcMain.handle("files:undoTurn", async (_e, sessionId: string) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("files:undoTurn requires sessionId");
-  }
-  return undoTurn(sessionId);
+ipcMain.handle("files:undoTurn", async (event, sessionId: unknown) => {
+  return undoTurn(assertRendererSessionAccess(sessionId, event.sender.id));
 });
-ipcMain.handle("files:redoTurn", async (_e, sessionId: string) => {
-  if (typeof sessionId !== "string" || !sessionId) {
-    throw new Error("files:redoTurn requires sessionId");
-  }
-  return redoTurn(sessionId);
+ipcMain.handle("files:redoTurn", async (event, sessionId: unknown) => {
+  return redoTurn(assertRendererSessionAccess(sessionId, event.sender.id));
 });
 
 // ── Terminal (pty) — interactive shell panel ───────────────────────────────

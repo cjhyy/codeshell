@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   requireRendererProjectEntryPath,
   requireRendererProjectPath,
+  requireRendererProjectPathOrGlobal,
 } from "./renderer-project-path.js";
 
 const roots: string[] = [];
@@ -82,6 +83,19 @@ describe("requireRendererProjectPath", () => {
     await expect(requireRendererProjectPath(file, options)).rejects.toThrow(/directory/);
   });
 
+  test("accepts only the explicit empty-string sentinel for global settings scope", async () => {
+    const { root, sessions } = await fixture();
+    const options = {
+      registeredPaths: [],
+      noRepoPath: join(root, "no-repo"),
+      sessionRoot: sessions,
+    };
+
+    await expect(requireRendererProjectPathOrGlobal("", options)).resolves.toBe("");
+    await expect(requireRendererProjectPathOrGlobal(" ", options)).rejects.toThrow(/absolute/);
+    await expect(requireRendererProjectPathOrGlobal(null, options)).rejects.toThrow(/absolute/);
+  });
+
   test("accepts project entries but rejects paths and symlinks that escape the project", async () => {
     const { root, project } = await fixture();
     const inside = join(project, "inside.txt");
@@ -96,7 +110,9 @@ describe("requireRendererProjectPath", () => {
     if (process.platform !== "win32") {
       const escapingLink = join(project, "escaping-link");
       await symlink(outside, escapingLink, "file");
-      await expect(requireRendererProjectEntryPath(escapingLink, project)).rejects.toThrow(/outside/);
+      await expect(requireRendererProjectEntryPath(escapingLink, project)).rejects.toThrow(
+        /outside/,
+      );
     }
   });
 });

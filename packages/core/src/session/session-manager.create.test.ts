@@ -70,4 +70,23 @@ describe("SessionManager.create", () => {
     expect(sm.list(10)).toEqual([]);
     expect(existsSync(join(dir, task.state.sessionId))).toBe(false);
   });
+
+  test("generic lists only hide extension-owned kinds when the host asks", () => {
+    const sm = new SessionManager(dir);
+    sm.create("/tmp/proj", "m", "p", "normal-session", null, "desktop");
+    sm.create("/tmp/proj", "m", "p", "pet-session", null, undefined, "pet");
+
+    expect(
+      sm
+        .list(10)
+        .map((session) => session.sessionId)
+        .sort(),
+    ).toEqual(["normal-session", "pet-session"]);
+    expect(
+      sm
+        .list(10, { excludeKinds: ["pet"] })
+        .map((session) => session.sessionId)
+        .sort(),
+    ).toEqual(["normal-session"]);
+  });
 });

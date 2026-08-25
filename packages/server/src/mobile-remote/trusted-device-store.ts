@@ -50,10 +50,11 @@ export class TrustedDeviceStore {
       // Get-or-create by secretHash. A phone's secret is stable per browser
       // (persisted in localStorage as cs.deviceSecret), so re-scanning the QR
       // code must reuse its live row rather than accumulating duplicates.
-      const existing = devices.find(
-        (d) => d.secretHash === input.secretHash && !d.revokedAt,
-      );
+      const existing = devices.find((d) => secretHashEquals(d.secretHash, input.secretHash));
       if (existing) {
+        if (existing.revokedAt) {
+          throw new Error("Trusted device was revoked; remove it before pairing again");
+        }
         existing.name = name;
         existing.lastSeenAt = Date.now();
         return { result: this.toPublic(existing), changed: true };
@@ -129,9 +130,7 @@ export class TrustedDeviceStore {
   }
 
   /** Serialize read-modify-write across desktop/server processes. */
-  private mutate<R>(
-    mutation: (devices: TrustedDevice[]) => { result: R; changed: boolean },
-  ): R {
+  private mutate<R>(mutation: (devices: TrustedDevice[]) => { result: R; changed: boolean }): R {
     this.ensurePrivateParent();
     const release = acquireFileLock(this.filePath);
     try {

@@ -12,12 +12,8 @@ import { parseFrontmatter } from "../skills/frontmatter.js";
 import { listPluginHooks, type PluginHookEntry } from "./loadPluginHooks.js";
 import { reviewPluginHooks, type PluginHookReview } from "./pluginHookApproval.js";
 import { readPluginMcp } from "./installer/loadPluginMcp.js";
-import {
-  CANONICAL_PLUGIN_MANIFEST_FILE,
-  CanonicalPluginManifest,
-  type PluginAutomationTemplate,
-} from "./installer/types.js";
-import { pluginAutomationTemplateRevision } from "./pluginCatalog.js";
+import type { PluginAutomationTemplate } from "./installer/types.js";
+import { pluginAutomationTemplateRevision, readCatalogPluginManifest } from "./pluginCatalog.js";
 
 export type PluginAutomationTemplateDescriptor = PluginAutomationTemplate & {
   revision: string;
@@ -138,15 +134,7 @@ export function describePluginContent(
       return undefined;
     }
   })();
-  const manifest = (() => {
-    try {
-      return CanonicalPluginManifest.parse(
-        JSON.parse(readFileSync(join(installPath, CANONICAL_PLUGIN_MANIFEST_FILE), "utf-8")),
-      );
-    } catch {
-      return null;
-    }
-  })();
+  const manifest = readCatalogPluginManifest(installPath);
   return {
     skills: listSkills(installPath),
     commands: listMdNames(installPath, "commands"),

@@ -1,8 +1,10 @@
-# 安全加固遗留问题 — 待修复（2026-08-13）
+# 安全加固遗留问题 — 已完成（2026-08-25）
 
 > 来源：2026-08-12/08-13 两轮全仓安全加固（191 files, +12k）提交前的独立复查。
-> 本轮已修的项见提交历史；本文件只记录**尚未修复**的项。
-> 每条都已在源码中核对过 file:line，未修复者不要当作已知无害。
+> 2026-08-25 复核并完成余下 8 项：统一 manifest 安全读取、拒绝点号名称假成功、
+> undo/redo 会话与窗口校验、撤销设备防复活、browser anchor 生命周期清理、
+> DeliveryQueue 逐记录清理重试与锁外附件下载、user scope fail-closed。
+> 本文件移入 archive，以下保留修复前的问题与验收依据。
 
 ## 共同根因
 
@@ -17,9 +19,10 @@
 
 ---
 
-## P2 — 加固不一致（非当前可利用，但破坏了本轮建立的不变量）
+## P2 — 加固不一致（修复前记录）
 
 ### 1. `pluginContent.ts` 是唯一仍在裸读 manifest 的路径
+
 - 位置：`packages/core/src/plugins/pluginContent.ts:144`
 - 现状：`JSON.parse(readFileSync(join(installPath, CANONICAL_PLUGIN_MANIFEST_FILE)))`
   没有 lstat / 大小上限 / `O_NOFOLLOW`，而同一文件同一 schema 的兄弟路径
@@ -31,6 +34,7 @@
 - 建议：复用 `pluginCatalog` 的读取函数，删掉这条独立路径。
 
 ### 2. 带点号的插件/Skill 名会静默 no-op 却报告成功
+
 - 位置：`packages/core/src/tool-system/builtin/install-capability.ts:556-560`、`791-797`
 - 现状：`SAFE_PLUGIN_SEGMENT_RE`(`:34`)/`SAFE_SKILL_NAME_RE`(`:35`) 允许 `.`，
   名字被插进点分设置键 `capabilityOverrides.plugins.${plugin}`；
@@ -41,6 +45,7 @@
 - 建议：禁止名字中的 `.`，或改用非点分的键写入方式。
 
 ### 3. 三个 `files:*Turn` IPC handler 未接入统一会话校验
+
 - 位置：`packages/desktop/src/main/index.ts:6222`、`:6228`、`:6234`
 - 现状：`files:turnUndoState` / `files:undoTurn` / `files:redoTurn` 仍用旧的
   `typeof sessionId !== "string"` 检查并丢弃 `_e`（无 sender 绑定），而同文件
@@ -51,9 +56,10 @@
   但 `undoTurn`/`redoTurn` 是**对工作区的破坏性写入**，是本轮中校验最弱的一组。
 - 建议：接入 `assertDesktopSessionId` + sender 绑定，并收紧 `SAFE_ID` 排除 `..`。
 
-## P3 — 健壮性 / 资源
+## P3 — 健壮性 / 资源（修复前记录）
 
 ### 4. 已撤销设备可通过再次配对复活
+
 - 位置：`packages/server/src/mobile-remote/trusted-device-store.ts:53-63`
 - 现状：`addDevice` 只在 `!d.revokedAt` 时复用行，撤销行留在文件里，**相同
   secretHash** 会走到 `devices.push(...)` 新建一个未撤销的行（新 id、同密钥）。
@@ -66,6 +72,7 @@
   `secretHashEquals`。
 
 ### 5. `browserAnchorsByParent` 随窗口开关无界增长
+
 - 位置：`packages/desktop/src/main/index.ts:5841`（写入）、`:2615-2620`（唯一删除）
 - 现状：删除只注册在 `createBrowserPopout` 内，主窗口自身的 `closed`
   处理（`:1346-1353`）不清理该 map。从未点过 popout 的窗口，其 anchor 快照
@@ -74,6 +81,7 @@
   `browserAnchorParentCleanupRegistered`(`:2591`)。
 
 ### 6. DeliveryQueue 全局单次 persist 重试会漏掉其他记录的 spool 清理
+
 - 位置：`packages/chat/src/delivery-queue.ts:279`
 - 现状：`schedulePersistRetry` 用 `if (this.persistRetryTimer) return` 保证全局
   只有一个待重试，且 cleanup 闭包按记录捕获。若记录 X 失败已排程、记录 Y 随后
@@ -84,6 +92,7 @@
 - 建议：改为按记录排队重试，而非单一全局定时器。
 
 ### 7. 附件下载在全局互斥锁内进行
+
 - 位置：`packages/chat/src/delivery-queue.ts:160`（`spoolAttachments` 在 `withMutation` 内）、`:322`
 - 现状：`attachment.load()` 是无界网络拉取，却持有与 `process()` 记录终态
   （`:242`）相同的锁。一个慢附件会阻塞其他 enqueue 与终态持久化，
@@ -91,6 +100,7 @@
 - 建议：把下载移到锁外，只在写入状态时短暂持锁。
 
 ### 8. `install-capability.ts` 的 user scope 守卫是 fail-open 形态
+
 - 位置：`packages/core/src/tool-system/builtin/install-capability.ts`（`ctx?.settingsScope && ctx.settingsScope !== "full"`）
 - 现状：`settingsScope` 为 `undefined` 时条件短路，走向放行。当前经 `engine.ts:2664`
   与 `subagent-spawner.ts:346` 都会填默认 `"project"`，正常引擎路径不可达，

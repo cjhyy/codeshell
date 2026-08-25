@@ -60,7 +60,8 @@ const MAX_DELIVERY_STATE_BYTES = 64 * 1024 * 1024;
 const MAX_COMPLETED_KEYS = 100_000;
 const MAX_SPOOLED_ATTACHMENTS = 32;
 const MAX_SPOOL_SCAN_ENTRIES = 100_000;
-const SPOOL_FILE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.\d{1,3}$/iu;
+const SPOOL_FILE_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.\d{1,3}$/iu;
 
 export interface DeliveryQueueStatus {
   pending: number;
@@ -94,12 +95,19 @@ export class UnroutableDeliveryError extends Error {
  */
 export class DeliveryQueue {
   private readonly pending: DeliveryRecord[] = [];
+  /** Enqueues that reserved capacity while attachments are materialized outside the mutation lock. */
+  private readonly preparing = new Map<string, string | undefined>();
   private readonly completed = new Map<string, number>();
   private readonly inFlight = new Set<string>();
   private readonly targetInFlight = new Map<string, number>();
   private mutation = Promise.resolve();
   private retryTimer?: ReturnType<typeof setTimeout>;
   private persistRetryTimer?: ReturnType<typeof setTimeout>;
+  /** Terminal records whose spool may be deleted after a successful state retry. */
+  private readonly persistRetryCleanups = new Map<
+    string,
+    { entry: DeliveryRecord; message: ChannelMessage }
+  >();
   private stopped = true;
 
   constructor(
@@ -138,65 +146,77 @@ export class DeliveryQueue {
   async enqueue(adapterId: string, message: ChannelMessage): Promise<"queued" | "duplicate"> {
     if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
     const dedupeKey = deliveryDedupeKey(message);
-    let result: "queued" | "duplicate" = "queued";
-    await this.withMutation(async () => {
+    const id = randomUUID();
+    const reserved = await this.withMutation(async () => {
+      if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
       this.pruneCompleted();
       if (
         dedupeKey &&
         (this.completed.has(dedupeKey) ||
-          this.pending.some((entry) => entry.dedupeKey === dedupeKey))
+          this.pending.some((entry) => entry.dedupeKey === dedupeKey) ||
+          [...this.preparing.values()].some((candidate) => candidate === dedupeKey))
       ) {
-        result = "duplicate";
-        return;
+        return false;
       }
-      if (this.pending.length >= this.config.maxPending) {
+      if (this.pending.length + this.preparing.size >= this.config.maxPending) {
         throw new DeliveryBackpressureError(this.config.maxPending);
       }
-      const id = randomUUID();
-      // Attachments used to make a record non-persistent outright, because
-      // `load()` cannot be serialized — so the message lived in memory only while
-      // the adapter had already acked it. Spool the bytes instead: the record
-      // then persists like any other, carrying file paths in place of closures.
-      const spooled = await this.spoolAttachments(id, message);
-      let record: DeliveryRecord | undefined;
-      try {
-        const persistent = Boolean(
-          this.config.path && (!message.attachments?.length || spooled !== undefined),
-        );
-        const safeMessage = persistent ? serializableMessage(message, spooled) : message;
-        record = {
-          id,
-          ...(dedupeKey ? { dedupeKey } : {}),
-          adapterId,
-          message: safeMessage,
-          attempts: 0,
-          nextAttemptAt: Date.now(),
-          persistent,
-          ...(spooled ? { spooled } : {}),
-        };
-        this.pending.push(record);
-        if (persistent) await this.persist();
-      } catch (error) {
-        if (record) {
-          const index = this.pending.findIndex((candidate) => candidate.id === record?.id);
-          if (index >= 0) this.pending.splice(index, 1);
-          await this.discardSpool(record);
-        } else if (spooled) {
-          await this.discardSpool({
-            id,
-            adapterId,
-            message,
-            attempts: 0,
-            nextAttemptAt: 0,
-            persistent: false,
-            spooled,
-          });
-        }
-        throw error;
-      }
+      this.preparing.set(id, dedupeKey);
+      return true;
     });
+    if (!reserved) return "duplicate";
+
+    // attachment.load() may perform an unbounded network read. The reservation
+    // above preserves dedupe/backpressure, while doing the I/O here prevents one
+    // slow attachment from blocking every enqueue and terminal state write.
+    const spooled = await this.spoolAttachments(id, message);
+    let record: DeliveryRecord | undefined;
+    try {
+      await this.withMutation(async () => {
+        try {
+          if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
+          const persistent = Boolean(
+            this.config.path && (!message.attachments?.length || spooled !== undefined),
+          );
+          const safeMessage = persistent ? serializableMessage(message, spooled) : message;
+          record = {
+            id,
+            ...(dedupeKey ? { dedupeKey } : {}),
+            adapterId,
+            message: safeMessage,
+            attempts: 0,
+            nextAttemptAt: Date.now(),
+            persistent,
+            ...(spooled ? { spooled } : {}),
+          };
+          this.pending.push(record);
+          if (persistent) await this.persist();
+        } catch (error) {
+          if (record) {
+            const index = this.pending.findIndex((candidate) => candidate.id === record?.id);
+            if (index >= 0) this.pending.splice(index, 1);
+          }
+          throw error;
+        } finally {
+          this.preparing.delete(id);
+        }
+      });
+    } catch (error) {
+      await this.discardSpool(
+        record ?? {
+          id,
+          adapterId,
+          message,
+          attempts: 0,
+          nextAttemptAt: 0,
+          persistent: false,
+          ...(spooled ? { spooled } : {}),
+        },
+      );
+      throw error;
+    }
     this.pump();
-    return result;
+    return "queued";
   }
 
   private pump(): void {
@@ -251,7 +271,8 @@ export class DeliveryQueue {
           // that can never be delivered does not retry (and re-log) forever.
           const index = this.pending.findIndex((candidate) => candidate.id === entry.id);
           if (index >= 0) this.pending.splice(index, 1);
-          if (error === undefined && entry.dedupeKey) this.completed.set(entry.dedupeKey, Date.now());
+          if (error === undefined && entry.dedupeKey)
+            this.completed.set(entry.dedupeKey, Date.now());
         } else {
           entry.attempts += 1;
           entry.nextAttemptAt =
@@ -276,6 +297,7 @@ export class DeliveryQueue {
   }
 
   private schedulePersistRetry(message: ChannelMessage, cleanup?: DeliveryRecord): void {
+    if (cleanup) this.persistRetryCleanups.set(cleanup.id, { entry: cleanup, message });
     if (this.stopped || !this.config.path || this.persistRetryTimer) return;
     const delay = Math.max(10, Math.min(this.config.retryBaseMs, this.config.retryMaxMs));
     this.persistRetryTimer = setTimeout(() => {
@@ -283,10 +305,14 @@ export class DeliveryQueue {
       if (this.stopped) return;
       void this.withMutation(async () => {
         await this.persist();
-        if (cleanup) await this.discardSpool(cleanup);
+        for (const [id, pendingCleanup] of this.persistRetryCleanups) {
+          await this.discardSpool(pendingCleanup.entry);
+          this.persistRetryCleanups.delete(id);
+        }
       }).catch((error) => {
-        this.onError(error, message);
-        this.schedulePersistRetry(message, cleanup);
+        const relatedMessage = this.persistRetryCleanups.values().next().value?.message ?? message;
+        this.onError(error, relatedMessage);
+        this.schedulePersistRetry(relatedMessage);
       });
     }, delay);
     this.persistRetryTimer.unref?.();
@@ -339,7 +365,9 @@ export class DeliveryQueue {
       return spooled;
     } catch {
       // Spooling is an availability improvement, never a new failure mode.
-      await Promise.all(written.map((target) => rm(target, { force: true }).catch(() => undefined)));
+      await Promise.all(
+        written.map((target) => rm(target, { force: true }).catch(() => undefined)),
+      );
       return undefined;
     }
   }
@@ -453,12 +481,7 @@ export class DeliveryQueue {
         throw new Error("invalid delivery state root");
       }
       for (const entry of parsed.pending) {
-        if (
-          !validStoredEntry(
-            entry,
-            this.config.maxSpooledAttachmentBytes ?? 16 * 1024 * 1024,
-          )
-        ) {
+        if (!validStoredEntry(entry, this.config.maxSpooledAttachmentBytes ?? 16 * 1024 * 1024)) {
           continue;
         }
         // Turn spooled metadata back into real attachments whose load() reads
@@ -590,9 +613,7 @@ function validStoredEntry(
   const value = entry as Partial<DeliveryRecord>;
   if (
     typeof value.id !== "string" ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
-      value.id,
-    ) ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value.id) ||
     typeof value.adapterId !== "string" ||
     value.adapterId.length === 0 ||
     value.adapterId.length > 256 ||
@@ -618,7 +639,10 @@ function validStoredEntry(
   ) {
     return false;
   }
-  if (value.dedupeKey !== undefined && (typeof value.dedupeKey !== "string" || value.dedupeKey.length > 16_384)) {
+  if (
+    value.dedupeKey !== undefined &&
+    (typeof value.dedupeKey !== "string" || value.dedupeKey.length > 16_384)
+  ) {
     return false;
   }
   if (value.spooled === undefined) return true;
@@ -676,7 +700,11 @@ async function assertSafeRegularTarget(path: string): Promise<void> {
   }
 }
 
-async function readBoundedRegularFile(path: string, maxBytes: number, label: string): Promise<string> {
+async function readBoundedRegularFile(
+  path: string,
+  maxBytes: number,
+  label: string,
+): Promise<string> {
   const entry = await lstat(path);
   if (entry.isSymbolicLink() || !entry.isFile() || entry.size > maxBytes) {
     throw new Error(`${label} is not a bounded regular file`);

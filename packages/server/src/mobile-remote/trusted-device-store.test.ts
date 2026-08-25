@@ -59,16 +59,23 @@ describe("TrustedDeviceStore", () => {
     expect(store.listDevices()).toHaveLength(2);
   });
 
-  // A revoked device must not be reused — re-pairing after a revoke should
-  // produce a fresh, non-revoked row.
-  test("a revoked device is not reused; re-pairing creates a fresh row", () => {
+  // Revocation is a durable tombstone. A fresh pairing ceremony must not
+  // silently resurrect the same browser credential; explicit removal is the
+  // local approval step that permits that credential to pair again.
+  test("a revoked credential stays revoked until its tombstone is removed", () => {
     dir = mkdtempSync(join(tmpdir(), "mobile-devices-"));
     const store = new TrustedDeviceStore(join(dir, "devices.json"));
     const first = store.addDevice({ name: "iPhone", secretHash: "hashA" });
     store.revoke(first.id);
-    const second = store.addDevice({ name: "iPhone", secretHash: "hashA" });
-    expect(second.id).not.toBe(first.id);
-    expect(store.listDevices()).toHaveLength(2);
+    expect(() => store.addDevice({ name: "iPhone", secretHash: "hashA" })).toThrow(
+      "Trusted device was revoked",
+    );
+    expect(store.listDevices()).toHaveLength(1);
+
+    expect(store.remove(first.id)).toBe(true);
+    const repaired = store.addDevice({ name: "iPhone", secretHash: "hashA" });
+    expect(repaired.id).not.toBe(first.id);
+    expect(store.listDevices()).toHaveLength(1);
   });
 
   test("remove() hard-deletes a device row (no zombie left in the list)", () => {
@@ -196,35 +203,31 @@ describe("TrustedDeviceStore", () => {
     expect(JSON.parse(readFileSync(outside, "utf8"))).toEqual([]);
   });
 
-  test(
-    "concurrent processes preserve every independently paired device",
-    async () => {
-      dir = mkdtempSync(join(tmpdir(), "mobile-devices-concurrent-"));
-      const file = join(dir, "devices.json");
-      const total = 16;
-      const children = Array.from({ length: total }, (_, index) => {
-        const script = `
+  test("concurrent processes preserve every independently paired device", async () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-devices-concurrent-"));
+    const file = join(dir, "devices.json");
+    const total = 16;
+    const children = Array.from({ length: total }, (_, index) => {
+      const script = `
           import { TrustedDeviceStore } from ${JSON.stringify(TRUSTED_DEVICE_MODULE)};
           new TrustedDeviceStore(${JSON.stringify(file)}).addDevice({
             name: ${JSON.stringify(`Phone ${index}`)},
             secretHash: ${JSON.stringify(`secret-${index}`)},
           });
         `;
-        return Bun.spawn([process.execPath, "-e", script], {
-          env: { ...process.env },
-          stdout: "pipe",
-          stderr: "pipe",
-        });
+      return Bun.spawn([process.execPath, "-e", script], {
+        env: { ...process.env },
+        stdout: "pipe",
+        stderr: "pipe",
       });
-      expect((await Promise.all(children.map((child) => child.exited))).every((code) => code === 0)).toBe(
-        true,
-      );
-      const devices = new TrustedDeviceStore(file).listDevices();
-      expect(devices).toHaveLength(total);
-      expect(devices.map((device) => device.name).sort()).toEqual(
-        Array.from({ length: total }, (_, index) => `Phone ${index}`).sort(),
-      );
-    },
-    60_000,
-  );
+    });
+    expect(
+      (await Promise.all(children.map((child) => child.exited))).every((code) => code === 0),
+    ).toBe(true);
+    const devices = new TrustedDeviceStore(file).listDevices();
+    expect(devices).toHaveLength(total);
+    expect(devices.map((device) => device.name).sort()).toEqual(
+      Array.from({ length: total }, (_, index) => `Phone ${index}`).sort(),
+    );
+  }, 60_000);
 });

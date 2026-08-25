@@ -301,6 +301,68 @@ describe("attachment durability", () => {
     second.stop();
   });
 
+  test("a slow attachment load does not hold the queue mutation lock", async () => {
+    const path = inboxPath();
+    const loadStarted = deferred<void>();
+    const releaseLoad = deferred<Uint8Array>();
+    const slow = withAttachment("m-slow", [1]);
+    slow.attachments![0]!.load = async () => {
+      loadStarted.resolve(undefined);
+      return releaseLoad.promise;
+    };
+    const queue = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0 },
+      async () => undefined,
+      () => undefined,
+    );
+    await queue.start();
+
+    const slowEnqueue = queue.enqueue("line:0", slow);
+    await loadStarted.promise;
+    await expect(queue.enqueue("line:0", incoming("m-fast", "fast"))).resolves.toBe("queued");
+    expect(persistedPending(path)).toBe(1);
+
+    releaseLoad.resolve(Uint8Array.from([1]));
+    await expect(slowEnqueue).resolves.toBe("queued");
+    expect(persistedPending(path)).toBe(2);
+    queue.stop();
+  });
+
+  test("one persist retry cleans the spool for every terminal record", async () => {
+    const path = inboxPath();
+    const spoolDir = `${path}.attachments`;
+    const releaseDelivery = deferred<void>();
+    let started = 0;
+    const errors: unknown[] = [];
+    const queue = new DeliveryQueue(
+      { ...config(path), maxPerTarget: 2, retryBaseMs: 100, retryMaxMs: 100 },
+      async () => {
+        started += 1;
+        await releaseDelivery.promise;
+      },
+      (error) => errors.push(error),
+    );
+    await queue.start();
+    await queue.enqueue("line:0", withAttachment("m-cleanup-1", [1]));
+    await queue.enqueue("line:0", {
+      ...withAttachment("m-cleanup-2", [2]),
+      target: "another-room",
+    });
+    await waitUntil(() => started === 2);
+    expect(readdirSync(spoolDir)).toHaveLength(2);
+
+    const backup = `${path}.backup`;
+    renameSync(path, backup);
+    mkdirSync(path);
+    releaseDelivery.resolve(undefined);
+    await waitUntil(() => errors.length >= 2);
+
+    rmSync(path, { recursive: true });
+    renameSync(backup, path);
+    await waitUntil(() => persistedPending(path) === 0 && readdirSync(spoolDir).length === 0);
+    queue.stop();
+  });
+
   test("an oversized attachment falls back to memory rather than filling the disk", async () => {
     const path = inboxPath();
     const queue = new DeliveryQueue(
@@ -319,7 +381,6 @@ describe("attachment durability", () => {
     expect(pending).toHaveLength(0);
     queue.stop();
   });
-
 
   test("orphaned spool files are reclaimed on startup", async () => {
     // discardSpool covers the normal path, but bytes can still be orphaned: a
@@ -374,9 +435,7 @@ describe("attachment durability", () => {
             message: { channel: "line", target: "owner", senderId: "sender", text: "bad" },
             attempts: 0,
             nextAttemptAt: 0,
-            spooled: [
-              { id: "a", kind: "file", size: 4, file: "../../outside.txt" },
-            ],
+            spooled: [{ id: "a", kind: "file", size: 4, file: "../../outside.txt" }],
           },
         ],
         completed: {},
@@ -403,7 +462,11 @@ describe("attachment durability", () => {
     mkdirSync(outside);
     writeFileSync(join(outside, "00000000-0000-4000-8000-000000000001.0"), "keep");
     symlinkSync(outside, `${path}.attachments`);
-    const queue = new DeliveryQueue(config(path), async () => undefined, () => undefined);
+    const queue = new DeliveryQueue(
+      config(path),
+      async () => undefined,
+      () => undefined,
+    );
     await expect(queue.start()).rejects.toThrow(/real directory/);
     expect(readFileSync(join(outside, "00000000-0000-4000-8000-000000000001.0"), "utf8")).toBe(
       "keep",

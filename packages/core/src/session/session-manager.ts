@@ -1936,11 +1936,11 @@ export class SessionManager {
 
   list(limit = 20, opts?: { excludeKinds?: readonly string[] }): SessionListEntry[] {
     if (!existsSync(this.sessionsDir)) return [];
-    // Extension-owned session kinds stay out of generic lists. Defaults to
-    // hiding "pet" so default-arg callers keep today's behavior.
-    // TODO(pet-out-of-core): drop the default once every caller passes the
-    // host's hidden-kind union explicitly.
-    const excludeKinds = opts?.excludeKinds ?? ["pet"];
+    // Core is domain-agnostic: only the composition root knows which
+    // extension-owned kinds belong outside its generic list. AgentServer passes
+    // the resolved hidden-kind union explicitly; direct SDK callers see every
+    // kind unless they choose exclusions themselves.
+    const excludeKinds = opts?.excludeKinds ?? [];
 
     const dirs = readdirSync(this.sessionsDir, { withFileTypes: true })
       .filter(

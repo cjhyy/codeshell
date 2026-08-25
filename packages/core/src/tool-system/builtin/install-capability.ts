@@ -33,6 +33,7 @@ import { resolveExecutable } from "../../utils/exec.js";
 const SAFE_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const SAFE_PLUGIN_SEGMENT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 const SAFE_SKILL_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+const SAFE_OVERRIDE_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
 const ENV_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
 const HEADER_NAME_RE = /^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,128}$/;
 const MCP_TOOL_NAME_RE = /^[^\s\u0000-\u001F\u007F]{1,256}$/;
@@ -394,10 +395,14 @@ function isSafeRemoteUrl(raw: string): boolean {
 
 async function installMarketplacePlugin(
   args: Record<string, unknown>,
+  ctx: ToolContext | undefined,
   deps: InstallCapabilityDeps,
 ): Promise<string> {
   if (args.scope !== undefined && args.scope !== "user") {
     return "Error: marketplace plugins currently install at user scope; omit scope or use scope='user'.";
+  }
+  if (ctx?.settingsScope !== "full") {
+    return "Error: this host isolates user settings; marketplace plugins cannot be installed.";
   }
   const plugin = safePluginSegment(args.plugin);
   const marketplace = safePluginSegment(args.marketplace);
@@ -513,6 +518,10 @@ async function mutateMarketplacePlugin(
     return `Error: plugin ${installKey} is not installed.`;
   }
 
+  if ((action === "update" || action === "uninstall") && ctx?.settingsScope !== "full") {
+    return "Error: this host isolates user settings; marketplace plugins cannot be changed.";
+  }
+
   if (action === "update") {
     const refreshed = await deps.refreshMarketplace(marketplace);
     if (!refreshed.ok) {
@@ -547,12 +556,15 @@ async function mutateMarketplacePlugin(
   if (args.scope !== undefined && args.scope !== "project" && args.scope !== "user") {
     return "Error: plugin enable/disable scope must be `project` or `user`.";
   }
-  if (scope === "user" && ctx?.settingsScope && ctx.settingsScope !== "full") {
+  if (scope === "user" && ctx?.settingsScope !== "full") {
     return "Error: this host isolates user settings; use project scope.";
   }
   const manager = deps.makeSettingsManager(cwd, scope === "user" ? "full" : "project");
   const enabled = action === "enable";
   if (scope === "project") {
+    if (!SAFE_OVERRIDE_NAME_RE.test(plugin)) {
+      return "Error: project-scoped plugin overrides do not support dots in plugin names; use user scope.";
+    }
     manager.saveProjectSetting(
       `capabilityOverrides.plugins.${plugin}`,
       enabled ? "on" : "off",
@@ -782,12 +794,16 @@ async function mutateProjectSkills(
   if (args.scope !== undefined && args.scope !== "project" && args.scope !== "user") {
     return "Error: Skill enable/disable scope must be `project` or `user`.";
   }
-  if (scope === "user" && ctx?.settingsScope && ctx.settingsScope !== "full") {
+  if (scope === "user" && ctx?.settingsScope !== "full") {
     return "Error: this host isolates user settings; use project scope.";
   }
   const manager = deps.makeSettingsManager(cwd, scope === "user" ? "full" : "project");
   const enabled = action === "enable";
   if (scope === "project") {
+    const unsafe = skills.filter((skill) => !SAFE_OVERRIDE_NAME_RE.test(skill));
+    if (unsafe.length > 0) {
+      return `Error: project-scoped Skill overrides do not support dots in names: ${unsafe.join(", ")}.`;
+    }
     for (const skill of skills) {
       manager.saveProjectSetting(
         `capabilityOverrides.skills.${skill}`,
@@ -928,7 +944,7 @@ async function installMcpServer(
   const resolved = mcpScope(args);
   if (!resolved.ok) return `Error: ${resolved.error}`;
   const scope = resolved.scope;
-  if (scope === "user" && ctx?.settingsScope && ctx.settingsScope !== "full") {
+  if (scope === "user" && ctx?.settingsScope !== "full") {
     return "Error: this host isolates user settings; install the MCP server at local or project scope.";
   }
   const built = buildMcpConfig(args);
@@ -1066,7 +1082,7 @@ function mcpDetailLines(
 
 function listMcpServers(ctx: ToolContext | undefined, deps: InstallCapabilityDeps): string {
   const cwd = ctx?.cwd ?? process.cwd();
-  const full = !ctx?.settingsScope || ctx.settingsScope === "full";
+  const full = ctx?.settingsScope === "full";
   const manager = deps.makeSettingsManager(cwd, full ? "full" : "project");
   const scopes: Array<"local" | "project" | "user"> = full
     ? ["local", "project", "user"]
@@ -1097,7 +1113,7 @@ function inspectMcpServer(
   if (!name) return "Error: kind=mcp action=inspect requires a safe `name`.";
   const resolved = mcpScope(args);
   if (!resolved.ok) return `Error: ${resolved.error}`;
-  if (resolved.scope === "user" && ctx?.settingsScope && ctx.settingsScope !== "full") {
+  if (resolved.scope === "user" && ctx?.settingsScope !== "full") {
     return "Error: this host isolates user settings; user MCP configuration is unavailable.";
   }
   const manager = deps.makeSettingsManager(cwd, resolved.scope === "user" ? "full" : "project");
@@ -1128,7 +1144,7 @@ async function mutateMcpServer(
   if (!name) return `Error: kind=mcp action=${action} requires a safe \`name\`.`;
   const resolved = mcpScope(args);
   if (!resolved.ok) return `Error: ${resolved.error}`;
-  if (resolved.scope === "user" && ctx?.settingsScope && ctx.settingsScope !== "full") {
+  if (resolved.scope === "user" && ctx?.settingsScope !== "full") {
     return "Error: this host isolates user settings; use local or project scope.";
   }
   const manager = deps.makeSettingsManager(cwd, resolved.scope === "user" ? "full" : "project");
@@ -1191,7 +1207,7 @@ export async function installCapabilityWithDeps(
     return inspectMcpServer(args, ctx, deps);
   }
   if (action === "install") {
-    if (args.kind === "plugin") return installMarketplacePlugin(args, deps);
+    if (args.kind === "plugin") return installMarketplacePlugin(args, ctx, deps);
     if (args.kind === "skill") return installGithubSkills(args, ctx, deps);
     return installMcpServer(args, ctx, deps);
   }

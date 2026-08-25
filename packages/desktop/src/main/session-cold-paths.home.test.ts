@@ -31,6 +31,15 @@ describe("desktop cold session paths honor CODE_SHELL_HOME", () => {
     rmSync(legacySessionDir, { recursive: true, force: true });
   });
 
+  test("file history rejects traversal-like session ids", () => {
+    expect(turnUndoState("..")).toEqual({ undoable: false, redoable: false, fileCount: 0 });
+    expect(turnUndoState("session..other")).toEqual({
+      undoable: false,
+      redoable: false,
+      fileCount: 0,
+    });
+  });
+
   test("cold transcript, raw replay, and desktop undo use the canonical sessions root", async () => {
     const manager = new SessionManager();
     const session = manager.create(cwd, "model", "provider", sessionId, null, "desktop");
