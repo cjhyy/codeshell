@@ -192,9 +192,14 @@ function normalizeGitPanelAppSource(input: GitPanelAppSourceInput): GitPanelAppS
   if (!raw || raw.length > MAX_SOURCE_PATH || raw.includes("\0")) {
     throw new PanelAppInstallError("GitHub repository URL is invalid");
   }
+  const urlText = /^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}(?:\.git)?\/?$/.test(raw)
+    ? `https://github.com/${raw}`
+    : /^github\.com\//i.test(raw)
+      ? `https://${raw}`
+      : raw;
   let parsed: URL;
   try {
-    parsed = new URL(raw);
+    parsed = new URL(urlText);
   } catch {
     throw new PanelAppInstallError("GitHub repository URL is invalid");
   }

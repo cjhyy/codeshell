@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  Briefcase,
   ChevronDown,
   ChevronRight,
   Code2,
+  Download,
   FileArchive,
   FolderPlus,
   Github,
+  LineChart,
   Loader2,
+  Palette,
   PanelTop,
   RefreshCw,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import type {
@@ -35,6 +40,12 @@ import {
   withoutLegacyOverride,
   type ProjectSettingsMap,
 } from "./panelAppBindings";
+import {
+  OFFICIAL_PANEL_APP_REPOSITORY,
+  recommendedPanelApps,
+  recommendedPanelSource,
+  type RecommendedPanelApp,
+} from "./panelAppRecommendations";
 
 interface Props {
   cwd: string;
@@ -57,6 +68,14 @@ export function nextPanelAppBindings(value: unknown, appId: string, bound: boole
   return [...bindings].sort();
 }
 
+function RecommendedPanelIcon({ icon }: { icon: RecommendedPanelApp["icon"] }) {
+  const className = "h-4 w-4";
+  if (icon === "download") return <Download className={className} aria-hidden="true" />;
+  if (icon === "palette") return <Palette className={className} aria-hidden="true" />;
+  if (icon === "briefcase") return <Briefcase className={className} aria-hidden="true" />;
+  return <LineChart className={className} aria-hidden="true" />;
+}
+
 /** Desktop Panel Apps with optional sandboxed Agent tools and bundled Skills. */
 export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const { t, lang } = useT();
@@ -69,6 +88,8 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   const [gitUrl, setGitUrl] = useState("");
   const [gitRef, setGitRef] = useState("");
   const [gitSubdir, setGitSubdir] = useState("");
+  const [gitAdvancedOpen, setGitAdvancedOpen] = useState(false);
+  const [gitBusyTarget, setGitBusyTarget] = useState<string | null>(null);
   const [gitDiscovery, setGitDiscovery] = useState<GitPanelAppDiscovery | null>(null);
   const [review, setReview] = useState<PanelAppReviewState | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -224,6 +245,11 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
   };
 
   const reviewGitCandidate = async (source: GitPanelAppSourceInput) => {
+    if (!activeProjectPath) {
+      setError(t("ext.panels.projectRequired"));
+      return;
+    }
+    setGitBusyTarget(source.subdir ?? source.url);
     setInstallBusy("git");
     setError(null);
     try {
@@ -236,25 +262,17 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
     } finally {
+      setGitBusyTarget(null);
       setInstallBusy(null);
     }
   };
 
-  const discoverGit = async () => {
+  const discoverGitSource = async (source: GitPanelAppSourceInput) => {
     if (!activeProjectPath) {
       setError(t("ext.panels.projectRequired"));
       return;
     }
-    if (!gitUrl.trim()) {
-      setError(t("ext.panels.githubUrlRequired"));
-      return;
-    }
-    const source: GitPanelAppSourceInput = {
-      kind: "git",
-      url: gitUrl.trim(),
-      ...(gitRef.trim() ? { ref: gitRef.trim() } : {}),
-      ...(gitSubdir.trim() ? { subdir: gitSubdir.trim() } : {}),
-    };
+    setGitBusyTarget("discovery");
     setInstallBusy("git");
     setError(null);
     setGitDiscovery(null);
@@ -265,20 +283,34 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         return;
       }
       setGitDiscovery(result.discovery);
-      if (result.discovery.panels.length === 1) {
-        const candidate = result.discovery.panels[0];
-        const preview = await window.codeshell.previewLocalPanelApp(candidate.source);
-        if (!preview.ok) {
-          setError(preview.error);
-          return;
-        }
-        setReview({ mode: "install", source: candidate.source, preview: preview.preview });
-      }
     } catch (cause) {
       setError(String((cause as Error)?.message ?? cause));
     } finally {
+      setGitBusyTarget(null);
       setInstallBusy(null);
     }
+  };
+
+  const discoverGit = async () => {
+    if (!gitUrl.trim()) {
+      setError(t("ext.panels.githubUrlRequired"));
+      return;
+    }
+    await discoverGitSource({
+      kind: "git",
+      url: gitUrl.trim(),
+      ...(gitRef.trim() ? { ref: gitRef.trim() } : {}),
+      ...(gitSubdir.trim() ? { subdir: gitSubdir.trim() } : {}),
+    });
+  };
+
+  const browseOfficialPanels = async () => {
+    setGitOpen(true);
+    setGitAdvancedOpen(false);
+    setGitUrl(OFFICIAL_PANEL_APP_REPOSITORY);
+    setGitRef("");
+    setGitSubdir("");
+    await discoverGitSource({ kind: "git", url: OFFICIAL_PANEL_APP_REPOSITORY });
   };
 
   const installReviewed = async () => {
@@ -428,6 +460,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
         ...(app.agent?.tools.map((tool) => tool.name) ?? []),
       ].some((value) => value.toLowerCase().includes(needle)),
   );
+  const installedAppIds = useMemo(() => new Set((apps ?? []).map((app) => app.appId)), [apps]);
 
   const bindingsByApp = useMemo(() => {
     const map = new Map<string, ReturnType<typeof computeProjectBindings>>();
@@ -519,56 +552,117 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
             {t("ext.panels.fromGithub")}
           </Button>
         </div>
+
+        <div className="mt-4 border-t pt-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                {t("ext.panels.recommendedTitle")}
+                <Badge variant="secondary" className="text-[10px]">
+                  {t("ext.panels.recommendedOfficial")}
+                </Badge>
+              </div>
+              <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                {t("ext.panels.recommendedDesc")}
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1.5 px-2 text-xs"
+              disabled={installBusy !== null || !activeProjectPath}
+              onClick={() => void browseOfficialPanels()}
+            >
+              {gitBusyTarget === "discovery" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Github className="h-3.5 w-3.5" />
+              )}
+              {t("ext.panels.recommendedBrowseAll")}
+            </Button>
+          </div>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {recommendedPanelApps.map((recommendation) => {
+              const installed = installedAppIds.has(recommendation.id);
+              const reviewing = gitBusyTarget === recommendation.subdir;
+              return (
+                <button
+                  key={recommendation.id}
+                  type="button"
+                  className="group flex min-h-[112px] min-w-0 flex-col rounded-lg border bg-background p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={installBusy !== null || !activeProjectPath || installed}
+                  onClick={() => void reviewGitCandidate(recommendedPanelSource(recommendation))}
+                >
+                  <span className="flex w-full items-start gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <RecommendedPanelIcon icon={recommendation.icon} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-foreground">
+                        {t(`ext.panels.recommendedApps.${recommendation.i18nKey}.title`)}
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">
+                        {t(`ext.panels.recommendedApps.${recommendation.i18nKey}.description`)}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="mt-auto flex w-full items-center justify-between pt-2 text-xs font-medium text-primary">
+                    <span>
+                      {installed
+                        ? t("ext.panels.recommendedInstalled")
+                        : reviewing
+                          ? t("ext.panels.recommendedLoading")
+                          : t("ext.panels.recommendedReview")}
+                    </span>
+                    {reviewing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : installed ? (
+                      <Badge variant="success" className="text-[10px]">
+                        {t("ext.panels.recommendedInstalled")}
+                      </Badge>
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {gitOpen && (
-          <div className="mt-3 grid gap-2 rounded-lg border bg-muted/15 p-3 sm:grid-cols-[2fr_1fr_2fr_auto]">
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-foreground">
-                {t("ext.panels.githubUrl")}
-              </span>
-              <Input
-                value={gitUrl}
-                placeholder="https://github.com/owner/repository"
-                onChange={(event) => {
-                  setGitUrl(event.target.value);
-                  setGitDiscovery(null);
-                }}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-foreground">
-                {t("ext.panels.githubRef")}
-              </span>
-              <Input
-                value={gitRef}
-                placeholder="main"
-                onChange={(event) => {
-                  setGitRef(event.target.value);
-                  setGitDiscovery(null);
-                }}
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-foreground">
-                {t("ext.panels.githubSubdir")}
-              </span>
-              <Input
-                value={gitSubdir}
-                placeholder="apps/design-studio"
-                onChange={(event) => {
-                  setGitSubdir(event.target.value);
-                  setGitDiscovery(null);
-                }}
-              />
-            </label>
-            <div className="flex items-end">
+          <form
+            className="mt-3 space-y-2 rounded-lg border bg-muted/15 p-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void discoverGit();
+            }}
+          >
+            <div className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <label className="space-y-1">
+                <span className="text-xs font-medium text-foreground">
+                  {t("ext.panels.githubUrl")}
+                </span>
+                <Input
+                  value={gitUrl}
+                  placeholder={t("ext.panels.githubUrlPlaceholder")}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  onChange={(event) => {
+                    setGitUrl(event.target.value);
+                    setGitDiscovery(null);
+                  }}
+                />
+              </label>
               <Button
-                type="button"
+                type="submit"
                 size="sm"
                 className="w-full gap-1.5 sm:w-auto"
                 disabled={installBusy !== null}
-                onClick={() => void discoverGit()}
               >
-                {installBusy === "git" ? (
+                {gitBusyTarget === "discovery" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Github className="h-3.5 w-3.5" />
@@ -576,11 +670,56 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                 {t("ext.panels.discoverGithub")}
               </Button>
             </div>
-            <div className="text-xs text-muted-foreground sm:col-span-4">
+            <div className="text-xs leading-5 text-muted-foreground">
               {t("ext.panels.githubHint")}
             </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
+              onClick={() => setGitAdvancedOpen((open) => !open)}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("ext.panels.githubAdvanced")}
+              {gitAdvancedOpen ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+            </Button>
+            {gitAdvancedOpen && (
+              <div className="grid gap-2 rounded-md border bg-background/60 p-2 sm:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-foreground">
+                    {t("ext.panels.githubRef")}
+                  </span>
+                  <Input
+                    value={gitRef}
+                    placeholder="main"
+                    onChange={(event) => {
+                      setGitRef(event.target.value);
+                      setGitDiscovery(null);
+                    }}
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-foreground">
+                    {t("ext.panels.githubSubdir")}
+                  </span>
+                  <Input
+                    value={gitSubdir}
+                    placeholder="apps/design-studio"
+                    onChange={(event) => {
+                      setGitSubdir(event.target.value);
+                      setGitDiscovery(null);
+                    }}
+                  />
+                </label>
+              </div>
+            )}
             {gitDiscovery && (
-              <div className="space-y-2 border-t pt-3 sm:col-span-4">
+              <div className="space-y-2 border-t pt-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-medium text-foreground">
                     {t("ext.panels.githubDiscovered", {
@@ -609,7 +748,11 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                         onClick={() => void reviewGitCandidate(candidate.source)}
                       >
                         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                          <PanelTop className="h-4 w-4" aria-hidden="true" />
+                          {gitBusyTarget === candidate.subdir ? (
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <PanelTop className="h-4 w-4" aria-hidden="true" />
+                          )}
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-2">
@@ -635,7 +778,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
                 </div>
               </div>
             )}
-          </div>
+          </form>
         )}
         <div className="mt-3 grid gap-2 border-t pt-3 text-xs text-muted-foreground sm:grid-cols-3">
           {[
