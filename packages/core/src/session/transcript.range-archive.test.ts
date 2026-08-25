@@ -355,4 +355,31 @@ describe("Transcript range_archive", () => {
     expect(texts.some((x) => x.includes("话题B"))).toBe(true);
     expect(texts.some((x) => x.includes("回B1"))).toBe(true);
   });
+
+  it("loads only the live tail for a large transcript with a manual clear boundary", () => {
+    const file = join(dir, "context-tail.jsonl");
+    const full = new Transcript(file);
+    full.appendMessage("user", "SECRET OLD TOPIC", { clientMessageId: "old" });
+    full.appendMessage("assistant", `SECRET OLD REPLY ${"x".repeat(4_096)}`);
+    full.appendTurnBoundary();
+    full.appendMessage("user", "FRESH TOPIC", { clientMessageId: "fresh" });
+    full.appendRangeArchive({
+      summary: "The user explicitly cleared the previous conversation.",
+      toClientMessageId: "fresh",
+      segmentId: "manual-clear",
+    });
+    full.appendMessage("assistant", "FRESH REPLY");
+
+    const active = Transcript.loadContextFromFile(file, 1_024);
+    const activeEvents = active.getEvents();
+    const texts = active.toMessages().map((message) => String(message.content));
+
+    expect(activeEvents.length).toBeLessThan(full.eventCount);
+    expect(texts.some((text) => text.includes("SECRET OLD TOPIC"))).toBe(false);
+    expect(texts.some((text) => text.includes("SECRET OLD REPLY"))).toBe(false);
+    expect(texts.some((text) => text.includes("explicitly cleared"))).toBe(true);
+    expect(texts.some((text) => text.includes("FRESH TOPIC"))).toBe(true);
+    expect(texts.some((text) => text.includes("FRESH REPLY"))).toBe(true);
+    expect(active.turnNumber).toBe(full.turnNumber);
+  });
 });

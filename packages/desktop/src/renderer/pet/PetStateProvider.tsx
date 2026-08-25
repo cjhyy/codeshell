@@ -51,6 +51,10 @@ export interface PetStateContextValue {
     replaceAssistant?: boolean;
     deliveryChannel?: string;
   }>;
+  chatHistoryLoadedBytes: number;
+  chatHistoryHasMore: boolean;
+  chatHistoryLoading: boolean;
+  loadOlderChatHistory: () => Promise<boolean>;
   longTasks: PetLongTaskSnapshot;
   longTaskBusyIds: ReadonlySet<string>;
   longTaskCleanupBusy: boolean;
@@ -69,6 +73,8 @@ export interface PetStateContextValue {
 export const PET_CHAT_BUCKET = "__codeshell_pet_chat__";
 /** Max simultaneously-stacked peeks; older ones drop off the bottom. */
 const PET_PEEK_LIMIT = 12;
+const INITIAL_PET_HISTORY_BYTES = 512 * 1024;
+const MAX_PET_HISTORY_BYTES = 128 * 1024 * 1024;
 
 const PetStateContext = React.createContext<PetStateContextValue | null>(null);
 
@@ -152,6 +158,10 @@ export function PetStateProvider({
     transcriptsReducer,
     {} as TranscriptsMap,
   );
+  const [chatHistoryLoadedBytes, setChatHistoryLoadedBytes] = React.useState(0);
+  const [chatHistoryHasMore, setChatHistoryHasMore] = React.useState(false);
+  const [chatHistoryLoading, setChatHistoryLoading] = React.useState(false);
+  const chatHistoryLoadingRef = React.useRef(false);
 
   React.useEffect(() => {
     let active = true;
@@ -295,18 +305,29 @@ export function PetStateProvider({
           const sessionId = result.petSessionId;
           knownPetSessionId = sessionId;
           setPetSessionId(sessionId);
+          setChatHistoryLoadedBytes(0);
+          setChatHistoryHasMore(false);
           if (!shell?.getSessionTranscript) {
             finishHydration(sessionId);
             return;
           }
           try {
-            const transcript = await shell.getSessionTranscript(sessionId);
+            const page = shell.getSessionTranscriptPage
+              ? await shell.getSessionTranscriptPage(sessionId, {
+                  maxBytes: INITIAL_PET_HISTORY_BYTES,
+                })
+              : null;
+            const transcript = page?.items ?? (await shell.getSessionTranscript(sessionId));
             if (active && knownPetSessionId === sessionId) {
               chatDispatch({
                 type: "hydrate",
                 bucket: PET_CHAT_BUCKET,
                 state: foldTranscript(transcript),
               });
+              setChatHistoryLoadedBytes(page?.loadedBytes ?? 0);
+              setChatHistoryHasMore(
+                Boolean(page?.hasMore && page.loadedBytes < MAX_PET_HISTORY_BYTES),
+              );
             }
           } catch {
             // A new Pet has no transcript yet; the first chat turn creates it.
@@ -328,6 +349,43 @@ export function PetStateProvider({
       unsubscribeStream?.();
     };
   }, [api, snapshotRetryDelay]);
+
+  const loadOlderChatHistory = React.useCallback(async (): Promise<boolean> => {
+    const shell = globalThis.window?.codeshell;
+    if (
+      !petSessionId ||
+      !shell?.getSessionTranscriptPage ||
+      !chatHistoryHasMore ||
+      chatHistoryLoadingRef.current
+    ) {
+      return false;
+    }
+    const previousBytes = chatHistoryLoadedBytes;
+    const nextBytes = Math.min(
+      MAX_PET_HISTORY_BYTES,
+      Math.max(INITIAL_PET_HISTORY_BYTES, previousBytes * 2),
+    );
+    if (nextBytes <= previousBytes) return false;
+    chatHistoryLoadingRef.current = true;
+    setChatHistoryLoading(true);
+    try {
+      const page = await shell.getSessionTranscriptPage(petSessionId, { maxBytes: nextBytes });
+      chatDispatch({
+        type: "hydrate",
+        bucket: PET_CHAT_BUCKET,
+        state: foldTranscript(page.items),
+      });
+      setChatHistoryLoadedBytes(page.loadedBytes);
+      setChatHistoryHasMore(page.hasMore && page.loadedBytes < MAX_PET_HISTORY_BYTES);
+      return page.loadedBytes > previousBytes;
+    } catch (error) {
+      window.codeshell.log("pet.chat.history.page.failed", { error: String(error) });
+      return false;
+    } finally {
+      chatHistoryLoadingRef.current = false;
+      setChatHistoryLoading(false);
+    }
+  }, [chatHistoryHasMore, chatHistoryLoadedBytes, petSessionId]);
 
   React.useEffect(() => {
     if (!api.onChatEvent) return;
@@ -538,6 +596,10 @@ export function PetStateProvider({
       setChatModelKey,
       delegationReceipts,
       hostActionReceipts,
+      chatHistoryLoadedBytes,
+      chatHistoryHasMore,
+      chatHistoryLoading,
+      loadOlderChatHistory,
       longTasks,
       longTaskBusyIds,
       longTaskCleanupBusy,
@@ -557,6 +619,10 @@ export function PetStateProvider({
       chatModelKey,
       delegationReceipts,
       hostActionReceipts,
+      chatHistoryLoadedBytes,
+      chatHistoryHasMore,
+      chatHistoryLoading,
+      loadOlderChatHistory,
       longTasks,
       longTaskBusyIds,
       longTaskCleanupBusy,
@@ -594,6 +660,10 @@ const INERT_PET_CONTEXT: PetStateContextValue = {
   setChatModelKey: () => {},
   delegationReceipts: [],
   hostActionReceipts: [],
+  chatHistoryLoadedBytes: 0,
+  chatHistoryHasMore: false,
+  chatHistoryLoading: false,
+  loadOlderChatHistory: async () => false,
   longTasks: { revision: 0, observedAt: 0, tasks: [] },
   longTaskBusyIds: new Set(),
   longTaskCleanupBusy: false,

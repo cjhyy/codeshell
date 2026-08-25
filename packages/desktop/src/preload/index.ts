@@ -986,6 +986,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   listRuns: () => ipcRenderer.invoke("runs:list"),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   getSessionTranscript: (sessionId: string) => ipcRenderer.invoke("sessions:transcript", sessionId),
+  getSessionTranscriptPage: (sessionId: string, options?: { maxBytes?: number }) =>
+    ipcRenderer.invoke("sessions:transcriptPage", sessionId, options),
   listDiskSessions: (opts?: { limit?: number; cursor?: string }) =>
     ipcRenderer.invoke("sessions:listDisk", opts ?? {}),
   /**

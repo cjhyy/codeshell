@@ -1422,7 +1422,7 @@ export class Engine {
         // the archived view rather than waiting until the following turn.
         messages =
           this.compactedMessagesBySession.get(session.state.sessionId) ??
-          this.sessionManager.resume(session.state.sessionId).transcript.toMessages();
+          this.sessionManager.resumeForRun(session.state.sessionId).transcript.toMessages();
         const archived = { before, after: estimateTokens(messages) };
         if (archived.before > archived.after) {
           options.onStream?.({

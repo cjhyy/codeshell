@@ -281,6 +281,8 @@ export const pet = {
         workMemoryTitle: "上一段纪要",
         historyCompacted: "此前对话已自动压缩为历史",
         historyCompactedWithTokens: "此前对话已自动压缩为历史（{before} → {after} tokens）",
+        loadOlderHistory: "加载更早记录",
+        loadingOlderHistory: "正在加载更早记录…",
         deliverySent: "已发送到{channel}",
         delegation: {
           dispatched: "已派出 Session",
@@ -625,6 +627,8 @@ export const pet = {
         historyCompacted: "Earlier conversation was compacted into history",
         historyCompactedWithTokens:
           "Earlier conversation was compacted into history ({before} → {after} tokens)",
+        loadOlderHistory: "Load earlier messages",
+        loadingOlderHistory: "Loading earlier messages…",
         deliverySent: "Sent to {channel}",
         delegation: {
           dispatched: "Session dispatched",

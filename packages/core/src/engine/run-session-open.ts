@@ -82,7 +82,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
 
   if (options?.sessionId && args.sessionManager.exists(options.sessionId)) {
     resumedFromDisk = true;
-    session = args.sessionManager.resume(options.sessionId);
+    session = args.sessionManager.resumeForRun(options.sessionId);
     const cachedCompacted = args.cachedCompactedMessages;
     messages = cachedCompacted ? [...cachedCompacted] : session.transcript.toMessages();
     // If the previous run was Ctrl+C'd or crashed between an assistant

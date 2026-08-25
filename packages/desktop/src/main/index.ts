@@ -347,7 +347,11 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import { getSessionTranscript } from "./transcript-reader.js";
+import {
+  getSessionTranscript,
+  getSessionTranscriptPage,
+  MAX_TRANSCRIPT_PAGE_BYTES,
+} from "./transcript-reader.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
@@ -6687,6 +6691,28 @@ ipcMain.handle("sessions:transcript", async (_e, sessionId: string) => {
   assertDesktopSessionId(sessionId);
   return getSessionTranscript(sessionId);
 });
+ipcMain.handle(
+  "sessions:transcriptPage",
+  async (_e, sessionId: string, options?: { maxBytes?: number }) => {
+    assertDesktopSessionId(sessionId);
+    if (
+      options !== undefined &&
+      (!options || typeof options !== "object" || Array.isArray(options))
+    ) {
+      throw new Error("invalid transcript page options");
+    }
+    if (
+      options?.maxBytes !== undefined &&
+      (typeof options.maxBytes !== "number" ||
+        !Number.isSafeInteger(options.maxBytes) ||
+        options.maxBytes <= 0 ||
+        options.maxBytes > MAX_TRANSCRIPT_PAGE_BYTES)
+    ) {
+      throw new Error("invalid transcript page size");
+    }
+    return getSessionTranscriptPage(sessionId, options);
+  },
+);
 ipcMain.handle("sessions:listDisk", async (_e, opts: { limit?: number; cursor?: string }) => {
   const limit =
     typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0

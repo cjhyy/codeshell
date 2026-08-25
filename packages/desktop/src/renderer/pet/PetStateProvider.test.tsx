@@ -586,4 +586,91 @@ describe("PetStateProvider", () => {
     if (originalCodeshell === undefined) delete testWindow.codeshell;
     else testWindow.codeshell = originalCodeshell;
   });
+
+  test("hydrates only the recent Mimi page and expands it on demand", async () => {
+    ensureMiniDom();
+    const requestedBytes: number[] = [];
+    const testWindow = window as unknown as Record<string, unknown>;
+    const originalCodeshell = testWindow.codeshell;
+    testWindow.codeshell = {
+      getSessionTranscript: async () => {
+        throw new Error("paged hydration should not use the legacy full reader");
+      },
+      getSessionTranscriptPage: async (_sessionId: string, options?: { maxBytes?: number }) => {
+        requestedBytes.push(options?.maxBytes ?? 0);
+        if (requestedBytes.length === 1) {
+          return {
+            items: [{ kind: "user", text: "recent" }],
+            loadedBytes: 512 * 1024,
+            hasMore: true,
+          };
+        }
+        return {
+          items: [
+            { kind: "user", text: "older" },
+            { kind: "user", text: "recent" },
+          ],
+          loadedBytes: 1024 * 1024,
+          hasMore: false,
+        };
+      },
+      onStreamEvent: () => () => {},
+      log: () => {},
+    };
+    const api: PetApi = {
+      getSnapshot: async () => snapshot(),
+      onProjectionEvent: () => () => {},
+      openSession: async () => ({ status: "not-found" }),
+      dispatch: async (command) =>
+        command.type === "get_global_status"
+          ? {
+              ok: true,
+              type: "global_status",
+              version: 0,
+              generation: 0,
+              observedAt: 1,
+              workerState: "active",
+              petSessionId: "pet-paged",
+              runningCount: 0,
+              queuedCount: 0,
+              pendingCount: 0,
+              sessions: [],
+            }
+          : { ok: false, code: "invalid-command" },
+      getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+      onAttentionEvent: () => () => {},
+      setActiveSession: async () => ({ ok: true }),
+      markAttentionReceipt: async () => ({ ok: true }),
+    };
+    let latest: ReturnType<typeof usePetState> | undefined;
+    function Consumer() {
+      latest = usePetState();
+      return null;
+    }
+    const root = createRoot(document.createElement("div"));
+    await act(async () => {
+      root.render(
+        <PetStateProvider api={api}>
+          <Consumer />
+        </PetStateProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(requestedBytes).toEqual([512 * 1024]);
+    expect(latest?.chatState.messages.map((message) => message.text)).toEqual(["recent"]);
+    expect(latest?.chatHistoryHasMore).toBe(true);
+    await act(async () => {
+      await latest?.loadOlderChatHistory();
+      await flushMicrotasks();
+    });
+    expect(requestedBytes).toEqual([512 * 1024, 1024 * 1024]);
+    expect(latest?.chatState.messages.map((message) => message.text)).toEqual(["older", "recent"]);
+    expect(latest?.chatHistoryHasMore).toBe(false);
+
+    await act(async () => root.unmount());
+    if (originalCodeshell === undefined) delete testWindow.codeshell;
+    else testWindow.codeshell = originalCodeshell;
+  });
 });
