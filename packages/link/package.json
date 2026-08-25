@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-link",
-  "version": "0.8.16",
+  "version": "0.8.17",
   "description": "Framework-independent provider manifests and authorization guides for CodeShell Link.",
   "type": "module",
   "main": "./dist/index.js",
