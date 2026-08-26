@@ -93,7 +93,13 @@ export function panelExecutableDirectories(
   const platform = options.platform ?? process.platform;
   const env = options.env ?? process.env;
   const directories = [managedBin];
-  if (platform === "win32") {
+  if (platform === "darwin") {
+    if (options.home) directories.push(join(options.home, ".local", "bin"));
+    directories.push("/opt/homebrew/bin", "/usr/local/bin");
+  } else if (platform === "linux") {
+    if (options.home) directories.push(join(options.home, ".local", "bin"));
+    directories.push("/home/linuxbrew/.linuxbrew/bin", "/usr/local/bin");
+  } else if (platform === "win32") {
     const localAppData =
       env.LOCALAPPDATA || (options.home ? join(options.home, "AppData", "Local") : "");
     if (localAppData) {
@@ -128,9 +134,12 @@ function safeProcessEnv(
     allowed.flatMap((key) => (source[key] === undefined ? [] : [[key, source[key]]])),
   );
   const currentPath = safe.PATH ?? "";
-  safe.PATH = [...extraPathDirectories.filter(Boolean), currentPath]
-    .filter(Boolean)
-    .join(delimiter);
+  safe.PATH = [
+    ...new Set([
+      ...extraPathDirectories.filter(Boolean),
+      ...currentPath.split(delimiter).filter(Boolean),
+    ]),
+  ].join(delimiter);
   return safe;
 }
 

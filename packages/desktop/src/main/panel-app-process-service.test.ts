@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -20,7 +28,12 @@ describe("PanelAppProcessService", () => {
 
   function executable(name: string, body: string): string {
     root ||= mkdtempSync(join(tmpdir(), "panel-process-"));
-    const path = join(root, name);
+    return executableAt(root, name, body);
+  }
+
+  function executableAt(directory: string, name: string, body: string): string {
+    mkdirSync(directory, { recursive: true });
+    const path = join(directory, name);
     writeFileSync(path, `#!/bin/sh\n${body}\n`);
     chmodSync(path, 0o755);
     return path;
@@ -75,6 +88,84 @@ describe("PanelAppProcessService", () => {
       "C:\\Users\\Mimi\\AppData\\Local/Microsoft/WinGet/Links",
       "C:\\Users\\Mimi\\AppData\\Local/Microsoft/WindowsApps",
     ]);
+  });
+
+  test("adds macOS and Linux executable directories in Host-first order", () => {
+    expect(
+      panelExecutableDirectories("/managed/bin", {
+        platform: "darwin",
+        home: "/Users/Mimi",
+      }),
+    ).toEqual(["/managed/bin", "/Users/Mimi/.local/bin", "/opt/homebrew/bin", "/usr/local/bin"]);
+    expect(
+      panelExecutableDirectories("/managed/bin", {
+        platform: "linux",
+        home: "/home/mimi",
+      }),
+    ).toEqual([
+      "/managed/bin",
+      "/home/mimi/.local/bin",
+      "/home/linuxbrew/.linuxbrew/bin",
+      "/usr/local/bin",
+    ]);
+    expect(
+      panelExecutableDirectories("/usr/local/bin", {
+        platform: "darwin",
+        home: "",
+      }),
+    ).toEqual(["/usr/local/bin", "/opt/homebrew/bin"]);
+  });
+
+  test("keeps Host-known executable directories in the spawned PATH", async () => {
+    root = mkdtempSync(join(tmpdir(), "panel-process-"));
+    const home = join(root, "home");
+    const localBin = join(home, ".local", "bin");
+    const inheritedBin = join(root, "inherited", "bin");
+    executableAt(localBin, "companion-tool", 'printf "companion-ok\\n"');
+    executableAt(inheritedBin, "companion-tool", 'printf "inherited-wrong\\n"');
+    executableAt(localBin, "primary-tool", "companion-tool");
+    const events: Array<{ event: string; payload: Record<string, unknown> }> = [];
+    let resolveExit = (): void => undefined;
+    const exited = new Promise<void>((resolve) => {
+      resolveExit = resolve;
+    });
+    const owner: PanelProcessOwner = {
+      guestId: 6,
+      appId: "path-demo",
+      appTitle: "Path Demo",
+      revision: "r1",
+      send: (event, payload) => {
+        events.push({ event, payload });
+        if (event === "process.exit") resolveExit();
+      },
+    };
+    const service = new PanelAppProcessService({
+      env: { PATH: inheritedBin },
+      platform: "darwin",
+      extraPathDirectories: () =>
+        panelExecutableDirectories(join(root, "managed", "bin"), {
+          platform: "darwin",
+          home,
+        }),
+      confirmExecution: async () => true,
+    });
+    const found = await service.findExecutable(owner, { name: "primary-tool" });
+    expect(found.available).toBe(true);
+    const directory = await service.grantDirectory(owner, root);
+    await service.start(owner, {
+      executableHandle: found.handle,
+      directoryHandle: directory.handle,
+      args: [],
+    });
+    await exited;
+
+    const output = events
+      .filter((entry) => entry.event === "process.output")
+      .map((entry) => entry.payload.text)
+      .join("");
+    expect(output).toContain("companion-ok");
+    expect(output).not.toContain("inherited-wrong");
+    expect(events.at(-1)?.payload.code).toBe(0);
   });
 
   test("runs argv without a shell and streams output to the owning guest", async () => {
