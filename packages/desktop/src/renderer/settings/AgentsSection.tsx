@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useT } from "../i18n/I18nProvider";
+import { requireProjectConfigurationTarget } from "../configurationTarget";
 
 interface Props {
   projects: TrackedProject[];
@@ -116,6 +117,10 @@ export function AgentsSection({ projects }: Props) {
 function AgentsEditor({ target }: { target: Target }) {
   const isProject = target.level === "project";
   const cwd = target.level === "project" ? target.cwd : "";
+  const configurationTarget = useMemo(
+    () => (isProject ? requireProjectConfigurationTarget(cwd) : null),
+    [cwd, isProject],
+  );
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   // Global denylist (always read — it's the baseline for project overlays too).
   const [disabled, setDisabled] = useState<string[]>([]);
@@ -134,7 +139,7 @@ function AgentsEditor({ target }: { target: Target }) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const list = await window.codeshell.listAgents(cwd);
+      const list = await window.codeshell.listAgents(configurationTarget);
       setAgents(list);
       // Global baseline always comes from user settings.
       const u = (await window.codeshell.getSettings("user")) ?? {};
@@ -164,15 +169,19 @@ function AgentsEditor({ target }: { target: Target }) {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
-  }, [cwd, isProject]);
+  }, [cwd, isProject, configurationTarget]);
 
   // Load on mount + auto-refresh when catalog/settings change anywhere (one
   // place wires the listeners — see useRefreshOnSettingsChange).
   useRefreshOnSettingsChange(() => void load());
 
-  // Write scope for saveAgent/deleteAgent mirrors the read scope (listAgents(cwd)).
-  const agentScope = (): { scope: "project"; cwd: string } | { scope: "user" } =>
-    isProject ? { scope: "project", cwd } : { scope: "user" };
+  // Write scope for saveAgent/deleteAgent mirrors the stable authority used by listAgents.
+  const agentScope = ():
+    | { scope: "project"; target: ReturnType<typeof requireProjectConfigurationTarget> }
+    | { scope: "user" } =>
+    isProject
+      ? { scope: "project", target: requireProjectConfigurationTarget(cwd) }
+      : { scope: "user" };
 
   const current = useMemo(
     () => agents.find((a) => a.name === selected) ?? null,

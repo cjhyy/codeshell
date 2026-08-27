@@ -30,6 +30,10 @@ import {
   type DigitalHumanTeamMode,
 } from "../../shared/digital-human-team";
 import type { DigitalHumanProfileImportPreview } from "../../shared/digital-human-profile-transfer";
+import {
+  optionalProjectConfigurationTarget,
+  requireProjectConfigurationTarget,
+} from "../configurationTarget";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -243,7 +247,7 @@ export function DigitalHumansView({
     try {
       const preview = await window.codeshell.previewProfileDeletion(
         profile.name,
-        activeProjectPath ?? undefined,
+        optionalProjectConfigurationTarget(activeProjectPath),
       );
       if (!preview.canDelete) {
         const reasons = [
@@ -285,7 +289,7 @@ export function DigitalHumansView({
           async () => {
             const result = await window.codeshell.forceDeleteProfile(
               profile.name,
-              activeProjectPath ?? undefined,
+              optionalProjectConfigurationTarget(activeProjectPath),
             );
             const notes = [
               result.unboundSessions.length
@@ -330,7 +334,7 @@ export function DigitalHumansView({
         `delete-profile:${profile.name}`,
         () =>
           window.codeshell.deleteProfile(profile.name, {
-            ...(activeProjectPath ? { cwd: activeProjectPath } : {}),
+            target: optionalProjectConfigurationTarget(activeProjectPath),
             ...(profile.active ? { clearActiveProject: true } : {}),
           }),
         { name: profile.label },
@@ -504,7 +508,7 @@ export function DigitalHumansView({
           reviewToken: preview.reviewToken,
           ...(overwrite ? { overwrite: true } : {}),
         },
-        activeProjectPath ?? undefined,
+        optionalProjectConfigurationTarget(activeProjectPath),
       );
       if (!committed.ok && committed.alreadyExists && !overwrite) {
         if (!(await confirmProfileOverwrite(preview))) return { canceled: true } as const;
@@ -513,7 +517,7 @@ export function DigitalHumansView({
             reviewToken: preview.reviewToken,
             overwrite: true,
           },
-          activeProjectPath ?? undefined,
+          optionalProjectConfigurationTarget(activeProjectPath),
         );
       }
       return { canceled: false, committed } as const;
@@ -999,13 +1003,15 @@ export function DigitalHumansView({
                               `profile:${profile.name}`,
                               async () => {
                                 if (profile.active) {
-                                  return window.codeshell.deactivateProfile(activeProjectPath);
+                                  return window.codeshell.deactivateProfile(
+                                    requireProjectConfigurationTarget(activeProjectPath),
+                                  );
                                 }
                                 // 补齐依赖后再启用，否则数字人声明的 skill 在这台
                                 // 机器上并不存在，启用了也是空壳。
                                 if (!(await ensureProfileRequirements(profile.name))) return;
                                 return window.codeshell.activateProfile(
-                                  activeProjectPath,
+                                  requireProjectConfigurationTarget(activeProjectPath),
                                   profile.name,
                                 );
                               },
@@ -1111,7 +1117,11 @@ export function DigitalHumansView({
             try {
               const saved = await run(
                 "save-profile",
-                () => window.codeshell.saveProfile(profile, activeProjectPath ?? undefined),
+                () =>
+                  window.codeshell.saveProfile(
+                    profile,
+                    optionalProjectConfigurationTarget(activeProjectPath),
+                  ),
                 { name: profile.label },
               );
               if (!saved) return;
@@ -1160,7 +1170,7 @@ export function DigitalHumansView({
                   const result = await operations.run(`enable-profile-memory:${profile.name}`, () =>
                     window.codeshell.saveProfile(
                       { ...definition, portableMemory: true },
-                      activeProjectPath ?? undefined,
+                      optionalProjectConfigurationTarget(activeProjectPath),
                     ),
                   );
                   if (!result.ok) {

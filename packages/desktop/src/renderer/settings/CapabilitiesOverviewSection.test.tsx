@@ -2,6 +2,18 @@ import { describe, expect, test } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CapabilitiesOverviewSection, capabilityCacheKey } from "./CapabilitiesOverviewSection";
+import { saveProjects } from "../projects";
+
+saveProjects([
+  {
+    id: "project-a",
+    name: "Alpha",
+    path: "/a",
+    roots: [{ id: "root-a", path: "/a", name: "Alpha", addedAt: 1 }],
+    primaryRootId: "root-a",
+    addedAt: 1,
+  },
+]);
 
 // useEffect (the data fetch) does not run under renderToStaticMarkup, so the
 // static render is the loading shell. The grouping/collapse/toggle logic is

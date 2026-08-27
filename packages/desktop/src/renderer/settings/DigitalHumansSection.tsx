@@ -15,6 +15,7 @@ import type { DigitalHumanProfileEntry, DigitalHumanSkillEntry } from "../digita
 import { ProfileSection } from "./ProfileSection";
 import { writeSettings } from "../settingsBus";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
+import { optionalProjectConfigurationTarget } from "../configurationTarget";
 
 interface Props {
   scope: "user" | "project";
@@ -32,7 +33,7 @@ function errorMessage(caught: unknown): string {
  * 设置中心「数字人」模块。全局 scope = 数字人库管理(与数字人页共享同一
  * 编辑对话框);项目 scope = 按项目激活/关闭(复用 ProfileSection)。
  *
- * 全局 scope 下 listProfiles() 不带 cwd:条目仍是完整的 WorkspaceProfile
+ * 全局 scope 下 listProfiles(null) 使用 user library；条目仍是完整的 WorkspaceProfile
  * 投影(plugins/skills/mcp/agents 等字段齐全,编辑保存不会丢配置)。列表
  * 不显示激活状态 —— 「项目默认」属于项目上下文,由项目 scope 的
  * ProfileSection 负责展示与切换。
@@ -53,11 +54,12 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
   const [error, setError] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
+    const target = optionalProjectConfigurationTarget(projectPath);
     // Profiles are the primary content; a skills failure only degrades the
     // editor's skill picker, so it must not discard a fetched profile list.
     const [profileResult, skillResult] = await Promise.allSettled([
-      window.codeshell.listProfiles(projectPath ?? undefined),
-      window.codeshell.listSkills(projectPath, { includeDisabled: true }),
+      window.codeshell.listProfiles(target),
+      window.codeshell.listSkills(target, { includeDisabled: true }),
     ]);
     if (profileResult.status === "fulfilled") {
       setProfiles(profileResult.value);
@@ -100,7 +102,7 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
     setBusy(true);
     setInstallingRequirements(Boolean(options?.installRequirements));
     try {
-      await window.codeshell.saveProfile(profile, projectPath ?? undefined);
+      await window.codeshell.saveProfile(profile, optionalProjectConfigurationTarget(projectPath));
       await refresh();
       if (options?.installRequirements) {
         const ready = await ensureDigitalHumanRequirements({

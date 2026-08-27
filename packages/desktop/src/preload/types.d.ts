@@ -44,6 +44,7 @@ import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/ag
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaAvailability, PluginMediaDto } from "../shared/plugin-media";
 import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
+import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type {
   DigitalHumanProfileExportResult,
   DigitalHumanProfileImportCommitInput,
@@ -73,6 +74,7 @@ export type {
   PanelAppPreview,
 };
 export type { ExpandedPluginCommand, PluginCommandDescriptor };
+export type { RendererConfigurationTarget };
 export type { PluginMediaAvailability, PluginMediaDto };
 export type {
   ReviewGitCommit,
@@ -1701,9 +1703,14 @@ export interface CodeshellApi {
    */
   noRepoCwd(): Promise<string>;
   getSettings(scope: "user"): Promise<Record<string, unknown> | null>;
-  getProjectSettings(projectId: string): Promise<Record<string, unknown> | null>;
+  getConfigurationSettings(
+    target: RendererConfigurationTarget,
+  ): Promise<Record<string, unknown> | null>;
   updateSettings(scope: "user", patch: Record<string, unknown>): Promise<void>;
-  updateProjectSettings(projectId: string, patch: Record<string, unknown>): Promise<void>;
+  updateConfigurationSettings(
+    target: RendererConfigurationTarget,
+    patch: Record<string, unknown>,
+  ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
   setSessionArchived(id: string, archived: boolean): Promise<void>;
   deleteSession(id: string): Promise<void>;
@@ -1746,12 +1753,15 @@ export interface CodeshellApi {
   /** Abort the in-flight run of cron job `id`, if any. Returns false when no
    *  run is in flight. Used by session delete to stop a still-running run. */
   cancelAutomationRun(id: string): Promise<boolean>;
-  listSkills(cwd: string | null, opts?: { includeDisabled?: boolean }): Promise<SkillSummary[]>;
-  listPlugins(cwd: string): Promise<PluginSummary[]>;
+  listSkills(
+    target: RendererConfigurationTarget | null,
+    opts?: { includeDisabled?: boolean },
+  ): Promise<SkillSummary[]>;
+  listPlugins(target: RendererConfigurationTarget | null): Promise<PluginSummary[]>;
   getPluginMedia(installKey: string, includeScreenshots?: boolean): Promise<PluginMediaDto | null>;
-  listPluginCommands(cwd: string): Promise<PluginCommandDescriptor[]>;
+  listPluginCommands(target: RendererConfigurationTarget): Promise<PluginCommandDescriptor[]>;
   expandPluginCommand(
-    cwd: string,
+    target: RendererConfigurationTarget,
     name: string,
     rawArguments: string,
   ): Promise<ExpandedPluginCommand>;
@@ -1788,14 +1798,14 @@ export interface CodeshellApi {
    * Unified capability view (builtin tools + MCP servers + skills + plugins)
    * via the core CapabilityService. Never throws — returns [] on error.
    */
-  listCapabilities(cwd: string): Promise<CapabilityDescriptor[]>;
+  listCapabilities(target: RendererConfigurationTarget | null): Promise<CapabilityDescriptor[]>;
   /**
    * Toggle one capability on/off. scope:"user" (default) routes to the global
    * settings key; scope:"project" writes a tri-state capabilityOverrides entry
    * for `cwd` (on/off only — use setCapabilityOverride for "inherit").
    */
   setCapabilityEnabled(
-    cwd: string,
+    target: RendererConfigurationTarget | null,
     id: string,
     on: boolean,
     opts?: { scope?: "user" | "project" },
@@ -1804,7 +1814,11 @@ export interface CodeshellApi {
    * Write a project tri-state override (继承/开/关). "inherit" deletes the
    * override key so the capability falls back to the global baseline.
    */
-  setCapabilityOverride(cwd: string, id: string, state: "inherit" | "on" | "off"): Promise<void>;
+  setCapabilityOverride(
+    target: RendererConfigurationTarget,
+    id: string,
+    state: "inherit" | "on" | "off",
+  ): Promise<void>;
   listSourceCatalog(): Promise<SourceDefinition[]>;
   saveSourceCatalog(definition: SourceDefinition): Promise<void>;
   deleteSourceCatalog(id: string): Promise<void>;
@@ -1818,7 +1832,7 @@ export interface CodeshellApi {
   listSourceScopes(sourceId: string): Promise<SourceScope[]>;
   pickAndUploadProjectSources(projectId: string): Promise<string[]>;
   deleteProjectUpload(projectId: string, name: string): Promise<void>;
-  listProfiles(cwd?: string): Promise<
+  listProfiles(target: RendererConfigurationTarget | null): Promise<
     Array<{
       name: string;
       label: string;
@@ -1836,8 +1850,8 @@ export interface CodeshellApi {
       version: string | undefined;
     }>
   >;
-  activateProfile(cwd: string, name: string): Promise<void>;
-  deactivateProfile(cwd: string): Promise<void>;
+  activateProfile(target: RendererConfigurationTarget, name: string): Promise<void>;
+  deactivateProfile(target: RendererConfigurationTarget): Promise<void>;
   /** Rebind a project Session to another digital human. */
   setSessionWorkspaceProfile(
     sessionId: string,
@@ -1897,7 +1911,7 @@ export interface CodeshellApi {
    */
   forceDeleteProfile(
     name: string,
-    cwd?: string,
+    target: RendererConfigurationTarget | null,
   ): Promise<{
     unboundSessions: string[];
     updatedTeams: string[];
@@ -1907,7 +1921,7 @@ export interface CodeshellApi {
   /** Read-only: why this digital human can or cannot be deleted. Deletes nothing. */
   previewProfileDeletion(
     name: string,
-    cwd?: string,
+    target: RendererConfigurationTarget | null,
   ): Promise<{
     name: string;
     canDelete: boolean;
@@ -1919,7 +1933,7 @@ export interface CodeshellApi {
   /** Read-only: what activating this digital human would install. Installs nothing. */
   previewProfileRequirements(
     name: string,
-    cwd: string,
+    target: RendererConfigurationTarget,
   ): Promise<{
     profileName: string;
     needsInstall: boolean;
@@ -1928,18 +1942,24 @@ export interface CodeshellApi {
     blockers: string[];
   }>;
   /** Runs `npx skills add` — call only after the user confirmed the preview. */
-  installProfileRequirements(name: string, cwd: string): Promise<{ ok: boolean; errors: string[] }>;
+  installProfileRequirements(
+    name: string,
+    target: RendererConfigurationTarget,
+  ): Promise<{ ok: boolean; errors: string[] }>;
   /** Saves the definition and refreshes its active-project capability snapshot. */
-  saveProfile(profile: WorkspaceProfile, cwd?: string): Promise<void>;
+  saveProfile(profile: WorkspaceProfile, target: RendererConfigurationTarget | null): Promise<void>;
   pickProfileDefinitionImport(): Promise<DigitalHumanProfileImportPickResult>;
   importReviewedProfileDefinition(
     input: DigitalHumanProfileImportCommitInput,
-    cwd?: string,
+    target: RendererConfigurationTarget | null,
   ): Promise<DigitalHumanProfileImportCommitResult>;
   exportProfileDefinition(name: string): Promise<DigitalHumanProfileExportResult>;
   deleteProfile(
     name: string,
-    options?: { cwd?: string; clearActiveProject?: boolean },
+    options?: {
+      target?: RendererConfigurationTarget | null;
+      clearActiveProject?: boolean;
+    },
   ): Promise<void>;
   listDigitalHumanTeams(): Promise<DigitalHumanTeam[]>;
   saveDigitalHumanTeam(team: DigitalHumanTeam): Promise<DigitalHumanTeam>;
@@ -2114,23 +2134,26 @@ export interface CodeshellApi {
   searchProjectFiles(projectId: string, query: string): Promise<ProjectFileSearchHit[]>;
   /** Bounded full-text search over on-disk session transcripts (session switcher). */
   searchSessionContent(query: string): Promise<SessionContentSearchResult>;
-  readSkillBody(filePath: string): Promise<string>;
+  readSkillBody(target: RendererConfigurationTarget | null, filePath: string): Promise<string>;
   installLocalSkill(
     sourceDir: string,
     scope: "user" | "project",
-    cwd?: string,
+    target: RendererConfigurationTarget | null,
     name?: string,
   ): Promise<InstalledSkill>;
   uninstallSkill(input: {
     scope: "user" | "project";
-    cwd?: string;
+    target?: RendererConfigurationTarget;
     skillName: string;
   }): Promise<void>;
   /**
    * Check if a GitHub-sourced skill has a newer commit upstream (network;
    * never throws). Locally-installed skills resolve to updateAvailable:false.
    */
-  checkSkillUpdate(filePath: string): Promise<{
+  checkSkillUpdate(
+    target: RendererConfigurationTarget | null,
+    filePath: string,
+  ): Promise<{
     filePath: string;
     updateAvailable: boolean;
     currentCommit?: string;
@@ -2142,23 +2165,34 @@ export interface CodeshellApi {
    * manual "update" button). Rejects on failure (UI alerts); a failed update
    * keeps the old version on disk.
    */
-  updateSkill(filePath: string): Promise<{ updated: boolean; reason: string }>;
-  listAgents(cwd: string): Promise<AgentSummary[]>;
-  readAgentBody(filePath: string): Promise<string>;
+  updateSkill(
+    target: RendererConfigurationTarget | null,
+    filePath: string,
+  ): Promise<{ updated: boolean; reason: string }>;
+  listAgents(target: RendererConfigurationTarget | null): Promise<AgentSummary[]>;
+  readAgentBody(target: RendererConfigurationTarget | null, filePath: string): Promise<string>;
   saveAgent(
     def: AgentDefinitionInput,
-    opts?: { scope?: "user" | "project"; cwd?: string },
+    opts?: {
+      scope?: "user" | "project";
+      target?: RendererConfigurationTarget;
+    },
   ): Promise<AgentSummary>;
-  deleteAgent(name: string, opts?: { scope?: "user" | "project"; cwd?: string }): Promise<void>;
+  deleteAgent(
+    name: string,
+    opts?: {
+      scope?: "user" | "project";
+      target?: RendererConfigurationTarget;
+    },
+  ): Promise<void>;
   inspectGithubSkill(url: string, existingNames?: string[]): Promise<GithubRepoInspection>;
   installFromGithub(input: GithubSkillInstallInput): Promise<InstalledSkill>;
   probeMcpServers(configs: McpServerProbeInput[], force?: boolean): Promise<McpProbeResult[]>;
   listMergedMcpServers(
     base: Record<string, unknown>,
     disabledPlugins?: string[],
-    /** When set, main folds project capabilityOverrides for THIS cwd over the
-     *  global list — pluginDisabled then reflects the effective state. */
-    cwd?: string,
+    /** Main resolves this identity before folding project capabilityOverrides. */
+    target?: RendererConfigurationTarget | null,
   ): Promise<
     Record<string, McpServerProbeInput & { source?: "settings" | "plugin"; editable?: boolean }>
   >;
@@ -2262,7 +2296,10 @@ export interface CodeshellApi {
       source: ProjectResolveSource,
     ): Promise<ProjectCwdResolution[]>;
     beginLegacyMigration(paths: string[]): Promise<{ completed: boolean; token?: string }>;
-    authorizeLegacyMigration(token: string, path: string): Promise<{
+    authorizeLegacyMigration(
+      token: string,
+      path: string,
+    ): Promise<{
       path: string;
       status: "migrated" | "reauthorization_required" | "failed";
       project?: LocalProject;
@@ -2579,7 +2616,7 @@ export interface GithubSkillInstallInput {
   inspection: GithubRepoInspection;
   selected: GithubDetectedSkill;
   scope: "user" | "project";
-  cwd?: string;
+  target?: RendererConfigurationTarget;
   installName?: string;
 }
 

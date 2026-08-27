@@ -4,6 +4,18 @@ import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { DialogProvider } from "../ui/DialogProvider";
 import { ProfileSection } from "./ProfileSection";
+import { saveProjects } from "../projects";
+
+saveProjects([
+  {
+    id: "project-repo",
+    name: "repo",
+    path: "/repo",
+    roots: [{ id: "root-repo", path: "/repo", name: "repo", addedAt: 1 }],
+    primaryRootId: "root-repo",
+    addedAt: 1,
+  },
+]);
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -94,7 +106,7 @@ describe("ProfileSection", () => {
     ensureMiniDom();
     let activeName = "seedance";
     let listCalls = 0;
-    const activations: Array<[string, string]> = [];
+    const activations: Array<[{ projectId: string }, string]> = [];
     Object.assign(window, {
       codeshell: {
         listProfiles: async () => {
@@ -116,8 +128,8 @@ describe("ProfileSection", () => {
             },
           ];
         },
-        activateProfile: async (cwd: string, name: string) => {
-          activations.push([cwd, name]);
+        activateProfile: async (target: { projectId: string }, name: string) => {
+          activations.push([target, name]);
           activeName = name;
         },
         previewProfileRequirements: async () => ({
@@ -152,7 +164,7 @@ describe("ProfileSection", () => {
       await flushMicrotasks();
     });
 
-    expect(activations).toEqual([["/repo", "ui-designer"]]);
+    expect(activations).toEqual([[{ projectId: "project-repo" }, "ui-designer"]]);
     expect(listCalls).toBe(2);
   });
 });

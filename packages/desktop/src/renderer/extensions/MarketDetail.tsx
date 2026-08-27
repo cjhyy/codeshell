@@ -5,9 +5,10 @@ import { useT } from "../i18n/I18nProvider";
 import { notifySettingsChanged } from "../settingsBus";
 import { Puzzle } from "lucide-react";
 import { PluginInstallJobsPanel } from "./PluginInstallJobsPanel";
+import type { RendererConfigurationTarget } from "../../preload/types";
 
 interface Props {
-  cwd: string;
+  configurationTarget: RendererConfigurationTarget;
   marketName: string;
   onBack: () => void;
   onInstalled: () => void;
@@ -20,7 +21,7 @@ type PluginInstallJob = Awaited<
   ReturnType<typeof window.codeshell.listPluginInstallJobs>
 >[number];
 
-export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
+export function MarketDetail({ configurationTarget, marketName, onBack, onInstalled }: Props) {
   const { t } = useT();
   const [market, setMarket] = useState<Marketplace | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -44,7 +45,7 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
     // entry — not only the ones installed during this visit.
     Promise.all([
       window.codeshell.loadMarketplace(marketName),
-      window.codeshell.listPlugins(cwd).catch(() => []),
+      window.codeshell.listPlugins(configurationTarget).catch(() => []),
     ])
       .then(([mp, plugins]) => {
         if (!alive) return;
@@ -67,7 +68,7 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
     return () => {
       alive = false;
     };
-  }, [cwd, marketName, reloadKey]);
+  }, [configurationTarget, marketName, reloadKey]);
 
   useEffect(() => {
     let alive = true;

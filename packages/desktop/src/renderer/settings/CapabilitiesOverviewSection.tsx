@@ -53,6 +53,7 @@ import {
 } from "./capabilitiesOverview";
 import { useT } from "../i18n/I18nProvider";
 import type { TFunction } from "../i18n/I18nProvider";
+import { optionalProjectConfigurationTarget } from "../configurationTarget";
 
 type ProjectState = "inherit" | "on" | "off";
 type LucideIcon = React.ComponentType<{ size?: number; className?: string }>;
@@ -138,6 +139,10 @@ export function CapabilitiesOverviewSection({
     off: t("settingsX.capOverview.off"),
   };
   const cwd = scope === "project" ? (projectPath ?? "") : "";
+  const configurationTarget = useMemo(
+    () => (scope === "project" ? optionalProjectConfigurationTarget(projectPath) : null),
+    [projectPath, scope],
+  );
   const cacheKey = capabilityCacheKey(scope, projectPath);
   const activeCacheKeyRef = useRef(cacheKey);
   activeCacheKeyRef.current = cacheKey;
@@ -181,7 +186,7 @@ export function CapabilitiesOverviewSection({
     setError(null);
     try {
       // Non-empty cwd → project overlay view; empty → user/global view.
-      const next = await window.codeshell.listCapabilities(cwd);
+      const next = await window.codeshell.listCapabilities(configurationTarget);
       // Panel Apps have no global baseline, so the group is project-scope only.
       // A failure here must not blank the capability list, which is the point
       // of this screen; the group just stays empty.
@@ -242,7 +247,7 @@ export function CapabilitiesOverviewSection({
     setError(null);
     try {
       for (const id of ids) {
-        await window.codeshell.setCapabilityEnabled("", id, next, { scope: "user" });
+        await window.codeshell.setCapabilityEnabled(null, id, next, { scope: "user" });
       }
     } catch (e) {
       if (activeCacheKeyRef.current === mutationCacheKey) {
@@ -260,7 +265,8 @@ export function CapabilitiesOverviewSection({
     setError(null);
     try {
       for (const id of idsFor(cap)) {
-        await window.codeshell.setCapabilityOverride(cwd, id, state);
+        if (!configurationTarget) throw new Error("project capability target is unavailable");
+        await window.codeshell.setCapabilityOverride(configurationTarget, id, state);
       }
       // Re-fetch so the row's effective value / source reflects the new overlay.
       await load();

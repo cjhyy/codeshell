@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DiscoverHome } from "./DiscoverHome";
 import { ManagePage, type TabKey } from "./ManagePage";
 import { useT } from "../i18n/I18nProvider";
+import { requireProjectConfigurationTarget } from "../configurationTarget";
 
 interface Props {
   activeProjectPath: string | null;
@@ -36,6 +37,13 @@ export function ExtensionsPage({ activeProjectPath, showDiscover = true }: Props
     };
   }, [activeProjectPath]);
   const cwd = activeProjectPath ?? noRepoCwd;
+  const configurationTarget = useMemo(
+    () =>
+      activeProjectPath
+        ? requireProjectConfigurationTarget(activeProjectPath)
+        : ({ noRepo: true } as const),
+    [activeProjectPath],
+  );
   const [view, setView] = useState<View>({ mode: "home" });
 
   if (!cwd) return null;
@@ -43,7 +51,11 @@ export function ExtensionsPage({ activeProjectPath, showDiscover = true }: Props
   if (!showDiscover) {
     return (
       <div className="h-full overflow-y-auto p-6">
-        <ManagePage cwd={cwd} activeProjectPath={activeProjectPath} />
+        <ManagePage
+          cwd={cwd}
+          configurationTarget={configurationTarget}
+          activeProjectPath={activeProjectPath}
+        />
       </div>
     );
   }
@@ -53,6 +65,7 @@ export function ExtensionsPage({ activeProjectPath, showDiscover = true }: Props
       {view.mode === "home" ? (
         <DiscoverHome
           cwd={cwd}
+          configurationTarget={configurationTarget}
           onOpenManage={(tab, query) => setView({ mode: "manage", tab, query })}
         />
       ) : (
@@ -65,6 +78,7 @@ export function ExtensionsPage({ activeProjectPath, showDiscover = true }: Props
           </button>
           <ManagePage
             cwd={cwd}
+            configurationTarget={configurationTarget}
             activeProjectPath={activeProjectPath}
             initialTab={view.tab}
             initialQuery={view.query}

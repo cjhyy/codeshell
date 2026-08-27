@@ -11,9 +11,11 @@ import {
   ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
+import type { RendererConfigurationTarget } from "../../preload/types";
 
 interface Props {
   cwd: string;
+  configurationTarget: RendererConfigurationTarget;
   onOpenManage: (tab: TabKey, query?: string) => void;
 }
 
@@ -31,7 +33,7 @@ interface Counts {
  * Counts are best-effort: any failing source falls back to 0 rather than
  * blocking the whole page.
  */
-export function DiscoverHome({ cwd, onOpenManage }: Props) {
+export function DiscoverHome({ cwd, configurationTarget, onOpenManage }: Props) {
   const { t, lang } = useT();
   const [counts, setCounts] = useState<Counts | null>(null);
   const [search, setSearch] = useState("");
@@ -40,10 +42,10 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
     let alive = true;
     setCounts(null);
     Promise.all([
-      window.codeshell.listPlugins(cwd).then((d) => d.length).catch(() => 0),
+      window.codeshell.listPlugins(configurationTarget).then((d) => d.length).catch(() => 0),
       window.codeshell.listPanelAppExtensions(cwd, lang).then((d) => d.length).catch(() => 0),
       window.codeshell
-        .listSkills(cwd, { includeDisabled: true })
+        .listSkills(configurationTarget, { includeDisabled: true })
         .then((d) => d.length)
         .catch(() => 0),
       // MCP 数量要算「插件捆绑 + 用户自配」的合并结果 —— 多数人 MCP 都来自
@@ -56,7 +58,7 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
           const disabledPlugins = Array.isArray(s?.disabledPlugins)
             ? s.disabledPlugins.filter((x): x is string => typeof x === "string")
             : [];
-          const merged = await window.codeshell.listMergedMcpServers(base, disabledPlugins, cwd);
+          const merged = await window.codeshell.listMergedMcpServers(base, disabledPlugins, configurationTarget);
           return Object.keys(merged ?? {}).length;
         })
         .catch(() => 0),
@@ -66,7 +68,7 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
     return () => {
       alive = false;
     };
-  }, [cwd, lang]);
+  }, [configurationTarget, cwd, lang]);
 
   const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") onOpenManage("skills", search.trim() || undefined);

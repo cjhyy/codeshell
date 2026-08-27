@@ -4,15 +4,17 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { skillBaseDir } from "./skillBaseDir";
 import { useT } from "../i18n/I18nProvider";
+import type { RendererConfigurationTarget } from "../../preload/types";
 
 interface Props {
   name: string;
+  configurationTarget: RendererConfigurationTarget;
   filePath: string;
   source: string;
   onClose: () => void;
 }
 
-export function SkillDetailModal({ name, filePath, source, onClose }: Props) {
+export function SkillDetailModal({ name, configurationTarget, filePath, source, onClose }: Props) {
   const { t } = useT();
   const [body, setBody] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export function SkillDetailModal({ name, filePath, source, onClose }: Props) {
     setBody(null);
     setError(null);
     window.codeshell
-      .readSkillBody(filePath)
+      .readSkillBody(configurationTarget, filePath)
       .then((t) => {
         if (alive) setBody(t);
       })
@@ -32,7 +34,7 @@ export function SkillDetailModal({ name, filePath, source, onClose }: Props) {
     return () => {
       alive = false;
     };
-  }, [filePath]);
+  }, [configurationTarget, filePath]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -73,11 +73,11 @@ export function ConversationSettingsSection() {
   // Monotonic token so a slow earlier load can't clobber a newer one.
   const loadSeq = useRef(0);
 
-  const reload = async (resolved: string) => {
+  const reload = async (_resolved: string) => {
     const seq = ++loadSeq.current;
     setError(null);
     try {
-      const next = await window.codeshell.listCapabilities(resolved);
+      const next = await window.codeshell.listCapabilities({ noRepo: true });
       if (seq !== loadSeq.current) return;
       setCaps(next);
       cacheSet("conversation-caps", next);
@@ -115,7 +115,7 @@ export function ConversationSettingsSection() {
     setSavingId(cap.id);
     setError(null);
     try {
-      await window.codeshell.setCapabilityOverride(cwd, cap.id, state);
+      await window.codeshell.setCapabilityOverride({ noRepo: true }, cap.id, state);
       notifySettingsChanged();
       await reload(cwd);
     } catch (e) {
@@ -144,7 +144,7 @@ export function ConversationSettingsSection() {
     setError(null);
     try {
       for (const c of enabledOptIns) {
-        await window.codeshell.setCapabilityOverride(cwd, c.id, "inherit");
+        await window.codeshell.setCapabilityOverride({ noRepo: true }, c.id, "inherit");
       }
       notifySettingsChanged();
       await reload(cwd);

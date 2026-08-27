@@ -72,6 +72,16 @@ describe("DigitalHumansSection — pet external session toggles (global scope)",
   });
 
   test("renders both pet toggles alongside ProfileSection in project scope", () => {
+    saveProjects([
+      {
+        id: "project-a",
+        name: "a",
+        path: "/a",
+        roots: [{ id: "root-a", path: "/a", name: "a", addedAt: 1 }],
+        primaryRootId: "root-a",
+        addedAt: 1,
+      },
+    ]);
     const html = renderToStaticMarkup(
       <DialogProvider>
         <DigitalHumansSection scope="project" projectPath="/a" />
@@ -264,12 +274,15 @@ describe("PetExternalSessionsToggles — toggle interaction (global scope)", () 
     Object.assign(window, {
       codeshell: {
         getSettings: async () => ({ pet: { showExternalCodexSessions: true } }),
-        getProjectSettings: async (projectId: string) => {
-          expect(projectId).toBe("project-a");
+        getConfigurationSettings: async (target: { projectId: string }) => {
+          expect(target).toEqual({ projectId: "project-a" });
           return projectSettings;
         },
-        updateProjectSettings: async (projectId: string, patch: Record<string, unknown>) => {
-          updateArgs.push([projectId, patch]);
+        updateConfigurationSettings: async (
+          target: { projectId: string },
+          patch: Record<string, unknown>,
+        ) => {
+          updateArgs.push([target.projectId, patch]);
           projectSettings = patch;
         },
       },

@@ -22,6 +22,7 @@ import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/ag
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaDto } from "../shared/plugin-media";
 import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
+import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type {
   LocalPluginPreview,
   PluginHookApprovalResult,
@@ -964,14 +965,14 @@ contextBridge.exposeInMainWorld("codeshell", {
    *  Renderer must use this, never recompute homedir() itself. */
   noRepoCwd: (): Promise<string> => ipcRenderer.invoke("no-repo:cwd"),
   getSettings: (scope: "user") => ipcRenderer.invoke("settings:get", scope),
-  getProjectSettings: (projectId: string) =>
-    ipcRenderer.invoke("settings:getProject", projectId),
-  updateSettings: (
-    scope: "user",
+  getConfigurationSettings: (target: RendererConfigurationTarget) =>
+    ipcRenderer.invoke("settings:getConfiguration", target),
+  updateSettings: (scope: "user", patch: Record<string, unknown>) =>
+    ipcRenderer.invoke("settings:set", scope, patch),
+  updateConfigurationSettings: (
+    target: RendererConfigurationTarget,
     patch: Record<string, unknown>,
-  ) => ipcRenderer.invoke("settings:set", scope, patch),
-  updateProjectSettings: (projectId: string, patch: Record<string, unknown>) =>
-    ipcRenderer.invoke("settings:setProject", projectId, patch),
+  ) => ipcRenderer.invoke("settings:setConfiguration", target, patch),
   listSessions: () => ipcRenderer.invoke("sessions:list"),
   setSessionArchived: (id: string, archived: boolean) =>
     ipcRenderer.invoke("sessions:setArchived", id, archived),
@@ -1036,26 +1037,27 @@ contextBridge.exposeInMainWorld("codeshell", {
   resumeAutomation: (id: string) => ipcRenderer.invoke("automation:resume", id),
   runAutomationNow: (id: string) => ipcRenderer.invoke("automation:runNow", id),
   cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
-  listSkills: (cwd: string | null, opts?: { includeDisabled?: boolean }) =>
-    ipcRenderer.invoke("skills:list", cwd, opts),
+  listSkills: (target: RendererConfigurationTarget | null, opts?: { includeDisabled?: boolean }) =>
+    ipcRenderer.invoke("skills:list", target, opts),
   searchProjectFiles: (projectId: string, query: string) =>
     ipcRenderer.invoke("files:searchProject", projectId, query),
   searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
     ipcRenderer.invoke("session:content-search", query),
-  listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
+  listPlugins: (target: RendererConfigurationTarget | null) =>
+    ipcRenderer.invoke("plugins:list", target),
   getPluginMedia: (
     installKey: string,
     includeScreenshots?: boolean,
   ): Promise<PluginMediaDto | null> =>
     ipcRenderer.invoke("plugins:media", installKey, includeScreenshots),
-  listPluginCommands: (cwd: string): Promise<PluginCommandDescriptor[]> =>
-    ipcRenderer.invoke("plugin-commands:list", cwd),
+  listPluginCommands: (target: RendererConfigurationTarget): Promise<PluginCommandDescriptor[]> =>
+    ipcRenderer.invoke("plugin-commands:list", target),
   expandPluginCommand: (
-    cwd: string,
+    target: RendererConfigurationTarget,
     name: string,
     rawArguments: string,
   ): Promise<ExpandedPluginCommand> =>
-    ipcRenderer.invoke("plugin-commands:expand", cwd, name, rawArguments),
+    ipcRenderer.invoke("plugin-commands:expand", target, name, rawArguments),
   onPluginCommandsChanged: (cb: () => void) => {
     const handler = () => cb();
     ipcRenderer.on("plugin-commands:changed", handler);
@@ -1100,15 +1102,19 @@ contextBridge.exposeInMainWorld("codeshell", {
       expectedRevision,
       cwd,
     ),
-  listCapabilities: (cwd: string) => ipcRenderer.invoke("capabilities:list", cwd),
+  listCapabilities: (target: RendererConfigurationTarget | null) =>
+    ipcRenderer.invoke("capabilities:list", target),
   setCapabilityEnabled: (
-    cwd: string,
+    target: RendererConfigurationTarget | null,
     id: string,
     on: boolean,
     opts?: { scope?: "user" | "project" },
-  ) => ipcRenderer.invoke("capabilities:setEnabled", cwd, id, on, opts),
-  setCapabilityOverride: (cwd: string, id: string, state: "inherit" | "on" | "off") =>
-    ipcRenderer.invoke("capabilities:setOverride", cwd, id, state),
+  ) => ipcRenderer.invoke("capabilities:setEnabled", target, id, on, opts),
+  setCapabilityOverride: (
+    target: RendererConfigurationTarget,
+    id: string,
+    state: "inherit" | "on" | "off",
+  ) => ipcRenderer.invoke("capabilities:setOverride", target, id, state),
   listSourceCatalog: () => ipcRenderer.invoke("sources:catalogList"),
   saveSourceCatalog: (definition: import("@cjhyy/code-shell-core").SourceDefinition) =>
     ipcRenderer.invoke("sources:catalogSave", definition),
@@ -1126,10 +1132,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("sources:pickAndUploadProject", projectId),
   deleteProjectUpload: (projectId: string, name: string) =>
     ipcRenderer.invoke("sources:deleteProjectUpload", projectId, name),
-  listProfiles: (cwd?: string) => ipcRenderer.invoke("profiles:list", cwd),
-  activateProfile: (cwd: string, name: string) =>
-    ipcRenderer.invoke("profiles:activate", cwd, name),
-  deactivateProfile: (cwd: string) => ipcRenderer.invoke("profiles:deactivate", cwd),
+  listProfiles: (target: RendererConfigurationTarget | null) =>
+    ipcRenderer.invoke("profiles:list", target),
+  activateProfile: (target: RendererConfigurationTarget, name: string) =>
+    ipcRenderer.invoke("profiles:activate", target, name),
+  deactivateProfile: (target: RendererConfigurationTarget) =>
+    ipcRenderer.invoke("profiles:deactivate", target),
   setSessionWorkspaceProfile: (sessionId: string, profileName: string) =>
     ipcRenderer.invoke("profiles:setSession", sessionId, profileName),
   listProfileCatalog: () => ipcRenderer.invoke("profiles:catalog"),
@@ -1137,25 +1145,29 @@ contextBridge.exposeInMainWorld("codeshell", {
   listProfileRepos: () => ipcRenderer.invoke("profiles:listRepos"),
   addProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:addRepo", repo),
   removeProfileRepo: (repo: string) => ipcRenderer.invoke("profiles:removeRepo", repo),
-  forceDeleteProfile: (name: string, cwd?: string) =>
-    ipcRenderer.invoke("profiles:forceDelete", name, cwd),
-  previewProfileDeletion: (name: string, cwd?: string) =>
-    ipcRenderer.invoke("profiles:previewDeletion", name, cwd),
-  previewProfileRequirements: (name: string, cwd: string) =>
-    ipcRenderer.invoke("profiles:previewRequirements", name, cwd),
-  installProfileRequirements: (name: string, cwd: string) =>
-    ipcRenderer.invoke("profiles:installRequirements", name, cwd),
-  saveProfile: (profile: import("@cjhyy/code-shell-core").WorkspaceProfile, cwd?: string) =>
-    ipcRenderer.invoke("profiles:save", profile, cwd),
+  forceDeleteProfile: (name: string, target: RendererConfigurationTarget | null) =>
+    ipcRenderer.invoke("profiles:forceDelete", name, target),
+  previewProfileDeletion: (name: string, target: RendererConfigurationTarget | null) =>
+    ipcRenderer.invoke("profiles:previewDeletion", name, target),
+  previewProfileRequirements: (name: string, target: RendererConfigurationTarget) =>
+    ipcRenderer.invoke("profiles:previewRequirements", name, target),
+  installProfileRequirements: (name: string, target: RendererConfigurationTarget) =>
+    ipcRenderer.invoke("profiles:installRequirements", name, target),
+  saveProfile: (
+    profile: import("@cjhyy/code-shell-core").WorkspaceProfile,
+    target: RendererConfigurationTarget | null,
+  ) => ipcRenderer.invoke("profiles:save", profile, target),
   pickProfileDefinitionImport: () => ipcRenderer.invoke("profiles:pickDefinitionImport"),
   importReviewedProfileDefinition: (
     input: import("../shared/digital-human-profile-transfer").DigitalHumanProfileImportCommitInput,
-    cwd?: string,
-  ) => ipcRenderer.invoke("profiles:importReviewedDefinition", input, cwd),
+    target: RendererConfigurationTarget | null,
+  ) => ipcRenderer.invoke("profiles:importReviewedDefinition", input, target),
   exportProfileDefinition: (name: string) => ipcRenderer.invoke("profiles:exportDefinition", name),
   exportProfileRepo: (names: string[]) => ipcRenderer.invoke("profiles:exportRepo", names),
-  deleteProfile: (name: string, options?: { cwd?: string; clearActiveProject?: boolean }) =>
-    ipcRenderer.invoke("profiles:delete", name, options),
+  deleteProfile: (
+    name: string,
+    options?: { target?: RendererConfigurationTarget | null; clearActiveProject?: boolean },
+  ) => ipcRenderer.invoke("profiles:delete", name, options),
   listDigitalHumanTeams: () => ipcRenderer.invoke("digital-human-teams:list"),
   saveDigitalHumanTeam: (team: import("../shared/digital-human-team").DigitalHumanTeam) =>
     ipcRenderer.invoke("digital-human-teams:save", team),
@@ -1277,28 +1289,45 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("panel-apps:installUpdate", input),
   uninstallPanelApp: (id: string, cwd?: string): Promise<void> =>
     ipcRenderer.invoke("panel-apps:uninstall", id, cwd),
-  readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
-  checkSkillUpdate: (filePath: string) => ipcRenderer.invoke("skills:checkUpdate", filePath),
-  updateSkill: (filePath: string) => ipcRenderer.invoke("skills:update", filePath),
-  installLocalSkill: (sourceDir: string, scope: "user" | "project", cwd?: string, name?: string) =>
-    ipcRenderer.invoke("skills:installLocal", sourceDir, scope, cwd, name),
-  uninstallSkill: (input: { scope: "user" | "project"; cwd?: string; skillName: string }) =>
-    ipcRenderer.invoke("skills:uninstall", input),
-  listAgents: (cwd: string) => ipcRenderer.invoke("agents:list", cwd),
-  readAgentBody: (filePath: string) => ipcRenderer.invoke("agents:read", filePath),
+  readSkillBody: (target: RendererConfigurationTarget | null, filePath: string) =>
+    ipcRenderer.invoke("skills:read", target, filePath),
+  checkSkillUpdate: (target: RendererConfigurationTarget | null, filePath: string) =>
+    ipcRenderer.invoke("skills:checkUpdate", target, filePath),
+  updateSkill: (target: RendererConfigurationTarget | null, filePath: string) =>
+    ipcRenderer.invoke("skills:update", target, filePath),
+  installLocalSkill: (
+    sourceDir: string,
+    scope: "user" | "project",
+    target: RendererConfigurationTarget | null,
+    name?: string,
+  ) => ipcRenderer.invoke("skills:installLocal", sourceDir, scope, target, name),
+  uninstallSkill: (input: {
+    scope: "user" | "project";
+    target?: RendererConfigurationTarget;
+    skillName: string;
+  }) => ipcRenderer.invoke("skills:uninstall", input),
+  listAgents: (target: RendererConfigurationTarget | null) =>
+    ipcRenderer.invoke("agents:list", target),
+  readAgentBody: (target: RendererConfigurationTarget | null, filePath: string) =>
+    ipcRenderer.invoke("agents:read", target, filePath),
   saveAgent: (
     def: import("./types").AgentDefinitionInput,
-    opts?: { scope?: "user" | "project"; cwd?: string },
+    opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },
   ) => ipcRenderer.invoke("agents:save", def, opts),
-  deleteAgent: (name: string, opts?: { scope?: "user" | "project"; cwd?: string }) =>
-    ipcRenderer.invoke("agents:delete", name, opts),
+  deleteAgent: (
+    name: string,
+    opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },
+  ) => ipcRenderer.invoke("agents:delete", name, opts),
   inspectGithubSkill: (url: string, existingNames?: string[]) =>
     ipcRenderer.invoke("skills:inspectGithub", url, existingNames),
   installFromGithub: (input: unknown) => ipcRenderer.invoke("skills:installFromGithub", input),
   probeMcpServers: (configs: unknown, force?: boolean) =>
     ipcRenderer.invoke("mcp:probe", configs, force),
-  listMergedMcpServers: (base: unknown, disabledPlugins?: unknown, cwd?: string) =>
-    ipcRenderer.invoke("mcp:listMerged", base, disabledPlugins, cwd),
+  listMergedMcpServers: (
+    base: unknown,
+    disabledPlugins?: unknown,
+    target?: RendererConfigurationTarget | null,
+  ) => ipcRenderer.invoke("mcp:listMerged", base, disabledPlugins, target),
   listPluginHooks: (disabledPlugins?: unknown) =>
     ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
   approvePluginHooks: (installKey: string): Promise<PluginHookApprovalResult[]> =>

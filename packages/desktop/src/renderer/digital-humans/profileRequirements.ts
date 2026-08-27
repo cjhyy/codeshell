@@ -1,18 +1,23 @@
 import type { TFunction } from "../i18n/I18nProvider";
 import type { ConfirmDialogOptions } from "../ui/dialogState";
 import type { ToastOptions } from "../ui/toastState";
+import type { RendererConfigurationTarget } from "../../preload/types";
+import { requireProjectConfigurationTarget } from "../configurationTarget";
 
 interface RequirementsApi {
   previewProfileRequirements(
     name: string,
-    cwd: string,
+    target: RendererConfigurationTarget,
   ): Promise<{
     needsInstall: boolean;
     willRun: string[];
     warnings: string[];
     blockers: string[];
   }>;
-  installProfileRequirements(name: string, cwd: string): Promise<{ ok: boolean; errors: string[] }>;
+  installProfileRequirements(
+    name: string,
+    target: RendererConfigurationTarget,
+  ): Promise<{ ok: boolean; errors: string[] }>;
 }
 
 export interface EnsureDigitalHumanRequirementsOptions {
@@ -46,8 +51,9 @@ export async function ensureDigitalHumanRequirements({
   }
 
   let preview: Awaited<ReturnType<RequirementsApi["previewProfileRequirements"]>>;
+  const target = requireProjectConfigurationTarget(projectPath);
   try {
-    preview = await api.previewProfileRequirements(name, projectPath);
+    preview = await api.previewProfileRequirements(name, target);
   } catch (error) {
     toast({
       message: t("digitalHumans.requirements.checkFailed", {
@@ -82,7 +88,7 @@ export async function ensureDigitalHumanRequirements({
   if (!accepted) return false;
 
   try {
-    const result = await api.installProfileRequirements(name, projectPath);
+    const result = await api.installProfileRequirements(name, target);
     if (result.ok) return true;
     toast({
       message: t("digitalHumans.requirements.installFailed", {

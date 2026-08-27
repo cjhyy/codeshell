@@ -14,9 +14,10 @@ import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
 import { Loader2, PlusCircle, ShoppingCart, Star } from "lucide-react";
 import { PluginInstallJobsPanel } from "./PluginInstallJobsPanel";
+import type { RendererConfigurationTarget } from "../../preload/types";
 
 interface Props {
-  cwd: string;
+  configurationTarget: RendererConfigurationTarget;
   onInstalled: () => void;
 }
 
@@ -81,7 +82,7 @@ function sameMarketplaceSource(
   return sourceKey(a) === sourceKey(b);
 }
 
-export function MarketList({ cwd, onInstalled }: Props) {
+export function MarketList({ configurationTarget, onInstalled }: Props) {
   const { t } = useT();
   const [markets, setMarkets] = useState<Marketplace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -257,7 +258,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
   if (selected !== null) {
     return (
       <MarketDetail
-        cwd={cwd}
+        configurationTarget={configurationTarget}
         marketName={selected}
         onBack={() => setSelected(null)}
         onInstalled={onInstalled}

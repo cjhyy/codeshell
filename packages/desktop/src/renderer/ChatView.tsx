@@ -64,6 +64,7 @@ import { useToast } from "./ui/ToastProvider";
 import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 import { pageAttribution } from "./browser/markerEcho";
 import { useT } from "./i18n/I18nProvider";
+import { conversationConfigurationTarget } from "./configurationTarget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -596,7 +597,10 @@ export function ChatView({
   const [slashSelected, setSlashSelected] = useState(0);
   const [pluginCommands, setPluginCommands] = useState<PluginCommandDescriptor[]>([]);
   const [expandingPluginCommand, setExpandingPluginCommand] = useState(false);
-  const pluginCommandCwd = messageCwd ?? activeProjectPath ?? "";
+  const pluginCommandTarget = useMemo(
+    () => conversationConfigurationTarget(engineSessionId, activeProjectId),
+    [engineSessionId, activeProjectId],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -606,7 +610,7 @@ export function ChatView({
           if (!cancelled) setPluginCommands([]);
           return;
         }
-        const commands = await window.codeshell.listPluginCommands(pluginCommandCwd);
+        const commands = await window.codeshell.listPluginCommands(pluginCommandTarget);
         if (!cancelled) setPluginCommands(commands);
       } catch {
         if (!cancelled) setPluginCommands([]);
@@ -627,7 +631,7 @@ export function ChatView({
       window.removeEventListener("codeshell:settings-changed", refresh);
       off?.();
     };
-  }, [pluginCommandCwd]);
+  }, [pluginCommandTarget]);
 
   const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
   const activeSupportsVision = activeModel?.supportsVision === true;
@@ -869,7 +873,7 @@ export function ChatView({
     closeSlash();
     try {
       const result = await window.codeshell.expandPluginCommand(
-        pluginCommandCwd,
+        pluginCommandTarget,
         item.pluginCommandName,
         rawArguments,
       );
@@ -1652,10 +1656,9 @@ export function ChatView({
               {mention && (
                 <MentionPopover
                   cwd={activeProjectPath}
+                  configurationTarget={pluginCommandTarget}
                   projectId={activeProjectId}
-                  projectRoots={
-                    projects.find((project) => project.id === activeProjectId)?.roots
-                  }
+                  projectRoots={projects.find((project) => project.id === activeProjectId)?.roots}
                   query={mention.query}
                   selected={mentionSelected}
                   onPick={applyMentionPick}

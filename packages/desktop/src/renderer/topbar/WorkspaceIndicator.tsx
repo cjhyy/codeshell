@@ -337,7 +337,7 @@ export function WorkspaceIndicator({
     const profiles =
       typeof window.codeshell.listSessionProfiles === "function"
         ? window.codeshell.listSessionProfiles(sessionId)
-        : window.codeshell.listProfiles(projectPath);
+        : window.codeshell.listProfiles({ sessionId });
     void profiles
       .then((profiles) => {
         if (!cancelled)

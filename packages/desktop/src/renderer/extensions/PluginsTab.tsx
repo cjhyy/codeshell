@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { LocalPluginPreview, PluginMediaDto, PluginSummary } from "../../preload/types";
+import type { LocalPluginPreview, PluginMediaDto, PluginSummary, RendererConfigurationTarget } from "../../preload/types";
 import { resolveUninstallTarget } from "./uninstallTarget";
 import { PluginDetailView } from "./PluginDetailView";
 import { PluginInstallReviewDialog } from "./PluginInstallReviewDialog";
@@ -28,13 +28,14 @@ import { pluginLogoSources, shouldLoadPluginListMedia } from "./pluginPresentati
 
 interface Props {
   cwd: string;
+  configurationTarget: RendererConfigurationTarget;
   query: string;
   isEnabled: (p: PluginSummary) => boolean;
   onToggle: (p: PluginSummary, next: boolean) => void;
   onChanged: () => void;
 }
 
-export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props) {
+export function PluginsTab({ cwd, configurationTarget, query, isEnabled, onToggle, onChanged }: Props) {
   const { t } = useT();
   const [plugins, setPlugins] = useState<PluginSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +67,7 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     setUpdatable({});
     setMediaByInstallKey({});
     window.codeshell
-      .listPlugins(cwd)
+      .listPlugins(configurationTarget)
       .then((d) => {
         if (!alive) return;
         setPlugins(d);
@@ -113,7 +114,7 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     return () => {
       alive = false;
     };
-  }, [cwd, reloadKey]);
+  }, [configurationTarget, reloadKey]);
   const uninstall = async (p: PluginSummary) => {
     const target = resolveUninstallTarget(p);
     if (!target.uninstallable) {

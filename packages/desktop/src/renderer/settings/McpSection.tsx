@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { readScopedSettings, updateScopedSettings } from "../settingsAuthority";
+import { optionalProjectConfigurationTarget } from "../configurationTarget";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import type { McpProbeResult, McpServerProbeInput, PluginMcpTrustEntry } from "../../preload/types";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
@@ -217,7 +218,9 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
         // Project scope must preview the SELECTED project instead; otherwise
         // editing project B while project A is active shows A's on/off badges
         // under B's settings header.
-        mcpEffectiveProjectPath(scope, settingsProjectPath, activeProjectPath),
+        optionalProjectConfigurationTarget(
+          mcpEffectiveProjectPath(scope, settingsProjectPath, activeProjectPath),
+        ),
       );
       const trust = await window.codeshell.listPluginMcpTrust();
       const list = mcpServersFromSettings(merged);

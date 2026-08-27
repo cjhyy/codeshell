@@ -125,7 +125,6 @@ import {
   requireRendererProject,
   requireRendererProjectEntryPath,
   requireRendererProjectPath,
-  requireRendererProjectPathOrGlobal,
   requireRendererProjectPrimary,
   requireRendererProjectRoot,
 } from "./renderer-project-path.js";
@@ -362,7 +361,6 @@ import {
   listSkills,
   readSkillBody,
   uninstallSkill,
-  uninstallListedSkill,
 } from "./skills-service.js";
 import {
   listPlugins,
@@ -534,6 +532,10 @@ import {
   readSessionFileForUi,
   sessionFileExistsForUi,
 } from "./session-fs-service.js";
+import {
+  resolveRendererConfigurationTarget,
+  type RendererConfigurationTarget,
+} from "./renderer-configuration-authority.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
@@ -3211,36 +3213,89 @@ app.whenReady().then(async () => {
   setInterval(() => void sweepStaleWorktrees("interval"), 60 * 60_000);
 });
 
+async function rendererConfigurationCwd(target: RendererConfigurationTarget): Promise<string> {
+  return (await resolveRendererConfigurationTarget(target)).cwd;
+}
+
+async function rendererOptionalConfigurationCwd(
+  target: RendererConfigurationTarget | null,
+  userCwd: string,
+): Promise<string> {
+  return target === null ? userCwd : rendererConfigurationCwd(target);
+}
+
+function rejectUnexpectedRendererKeys(
+  input: Record<string, unknown>,
+  allowed: readonly string[],
+  label: string,
+): void {
+  const allowedSet = new Set(allowed);
+  const unexpected = Object.keys(input).find((key) => !allowedSet.has(key));
+  if (unexpected) throw new Error(`${label} does not accept ${unexpected}`);
+}
+
+async function requireRendererListedSkillPath(
+  target: RendererConfigurationTarget | null,
+  filePath: unknown,
+): Promise<string> {
+  if (typeof filePath !== "string" || !filePath) throw new Error("skill filePath is required");
+  const cwd = await rendererOptionalConfigurationCwd(target, resolveNoRepoCwd());
+  const listed = listSkills(cwd, { includeDisabled: true }).some(
+    (skill) => resolve(skill.filePath) === resolve(filePath),
+  );
+  if (!listed) throw new Error("skill is not available for the configuration target");
+  return filePath;
+}
+
+async function requireRendererListedAgentPath(
+  target: RendererConfigurationTarget | null,
+  filePath: unknown,
+): Promise<string> {
+  if (typeof filePath !== "string" || !filePath) throw new Error("agent filePath is required");
+  const cwd = await rendererOptionalConfigurationCwd(target, "");
+  const listed = listAgents(cwd).some((agent) => resolve(agent.filePath) === resolve(filePath));
+  if (!listed) throw new Error("agent is not available for the configuration target");
+  return filePath;
+}
+
 ipcMain.handle(
   "skills:list",
-  async (_e, cwd: string | null, opts?: { includeDisabled?: boolean }) =>
-    listSkills(await requireRendererProjectPath(cwd ?? resolveNoRepoCwd()), {
+  async (_e, target: RendererConfigurationTarget | null, opts?: { includeDisabled?: boolean }) =>
+    listSkills(await rendererOptionalConfigurationCwd(target, resolveNoRepoCwd()), {
       includeDisabled: opts?.includeDisabled === true,
     }),
 );
-ipcMain.handle("capabilities:list", async (_e, cwd: unknown) => {
-  const resolvedCwd = await requireRendererProjectPathOrGlobal(cwd);
-  return listCapabilities(resolvedCwd);
-});
+ipcMain.handle("capabilities:list", async (_e, target: RendererConfigurationTarget | null) =>
+  listCapabilities(await rendererOptionalConfigurationCwd(target, "")),
+);
 ipcMain.handle(
   "capabilities:setEnabled",
-  async (_e, cwd: unknown, id: string, on: boolean, opts?: { scope?: "user" | "project" }) => {
+  async (
+    _e,
+    target: RendererConfigurationTarget | null,
+    id: string,
+    on: boolean,
+    opts?: { scope?: "user" | "project" },
+  ) => {
     const scope = opts?.scope ?? "user";
     if (scope !== "user" && scope !== "project") {
       throw new Error("capabilities:setEnabled requires scope user|project");
     }
-    const resolvedCwd =
-      scope === "user"
-        ? await requireRendererProjectPathOrGlobal(cwd)
-        : await requireRendererProjectPath(cwd);
+    if (scope === "user" && target !== null) {
+      throw new Error("user capability changes do not accept project authority");
+    }
+    if (scope === "project" && target === null) {
+      throw new Error("project capability changes require stable authority");
+    }
+    const resolvedCwd = await rendererOptionalConfigurationCwd(target, "");
     if (typeof id !== "string") throw new Error("capabilities:setEnabled requires id");
     setCapabilityEnabled(resolvedCwd, id, Boolean(on), { scope });
   },
 );
 ipcMain.handle(
   "capabilities:setOverride",
-  async (_e, cwd: string, id: string, state: "inherit" | "on" | "off") => {
-    cwd = await requireRendererProjectPath(cwd);
+  async (_e, target: RendererConfigurationTarget, id: string, state: "inherit" | "on" | "off") => {
+    const cwd = await rendererConfigurationCwd(target);
     if (typeof id !== "string") throw new Error("capabilities:setOverride requires id");
     if (state !== "inherit" && state !== "on" && state !== "off")
       throw new Error("capabilities:setOverride requires state inherit|on|off");
@@ -3298,19 +3353,19 @@ ipcMain.handle("sources:deleteProjectUpload", async (_e, projectId: string, name
   }
   deleteUpload(path, name);
 });
-ipcMain.handle("profiles:list", async (_e, cwd?: string) => {
-  if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
-    throw new Error("profiles:list cwd must be a non-empty string");
-  }
-  return listProfiles(cwd ? await requireRendererProjectPath(cwd) : undefined);
-});
-ipcMain.handle("profiles:activate", async (_e, cwd: string, name: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof name !== "string" || !name) throw new Error("profiles:activate requires name");
-  activateProfile(cwd, name);
-});
-ipcMain.handle("profiles:deactivate", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
+ipcMain.handle("profiles:list", async (_e, target: RendererConfigurationTarget | null) =>
+  listProfiles(target === null ? undefined : await rendererConfigurationCwd(target)),
+);
+ipcMain.handle(
+  "profiles:activate",
+  async (_e, target: RendererConfigurationTarget, name: string) => {
+    const cwd = await rendererConfigurationCwd(target);
+    if (typeof name !== "string" || !name) throw new Error("profiles:activate requires name");
+    activateProfile(cwd, name);
+  },
+);
+ipcMain.handle("profiles:deactivate", async (_e, target: RendererConfigurationTarget) => {
+  const cwd = await rendererConfigurationCwd(target);
   deactivateProfile(cwd);
 });
 ipcMain.handle("profiles:setSession", async (_e, sessionId: unknown, profileName: unknown) => {
@@ -3336,45 +3391,55 @@ ipcMain.handle("profiles:removeRepo", async (_e, repo: string) => {
   if (typeof repo !== "string" || !repo) throw new Error("profiles:removeRepo requires repo");
   removeProfileRepo(repo);
 });
-ipcMain.handle("profiles:forceDelete", async (_e, name: string, cwd?: string) => {
-  if (typeof name !== "string" || !name) throw new Error("profiles:forceDelete requires name");
-  if (cwd !== undefined && typeof cwd !== "string") {
-    throw new Error("profiles:forceDelete cwd must be a string");
-  }
-  const authorizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
-  return forceDeleteProfile(name, authorizedCwd ? { cwd: authorizedCwd } : {});
-});
-ipcMain.handle("profiles:previewDeletion", async (_e, name: string, cwd?: string) => {
-  if (typeof name !== "string" || !name) throw new Error("profiles:previewDeletion requires name");
-  if (cwd !== undefined && typeof cwd !== "string") {
-    throw new Error("profiles:previewDeletion cwd must be a string");
-  }
-  return previewProfileDeletion(name, cwd ? await requireRendererProjectPath(cwd) : undefined);
-});
-ipcMain.handle("profiles:previewRequirements", async (_e, name: string, cwd: string) => {
-  if (typeof name !== "string" || !name) {
-    throw new Error("profiles:previewRequirements requires name");
-  }
-  cwd = await requireRendererProjectPath(cwd);
-  return previewProfileRequirements(name, cwd);
-});
-ipcMain.handle("profiles:installRequirements", async (_e, name: string, cwd: string) => {
-  if (typeof name !== "string" || !name) {
-    throw new Error("profiles:installRequirements requires name");
-  }
-  cwd = await requireRendererProjectPath(cwd);
-  return installProfileRequirements(name, cwd);
-});
-ipcMain.handle("profiles:save", async (_e, profile: unknown, cwd?: unknown) => {
-  if (typeof profile !== "object" || profile === null || Array.isArray(profile)) {
-    throw new Error("profiles:save requires profile");
-  }
-  if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
-    throw new Error("profiles:save cwd must be a non-empty string");
-  }
-  const authorizedCwd = cwd === undefined ? undefined : await requireRendererProjectPath(cwd);
-  saveProfile(profile as Parameters<typeof saveProfile>[0], authorizedCwd);
-});
+ipcMain.handle(
+  "profiles:forceDelete",
+  async (_e, name: string, target: RendererConfigurationTarget | null) => {
+    if (typeof name !== "string" || !name) throw new Error("profiles:forceDelete requires name");
+    const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
+    return forceDeleteProfile(name, authorizedCwd ? { cwd: authorizedCwd } : {});
+  },
+);
+ipcMain.handle(
+  "profiles:previewDeletion",
+  async (_e, name: string, target: RendererConfigurationTarget | null) => {
+    if (typeof name !== "string" || !name)
+      throw new Error("profiles:previewDeletion requires name");
+    return previewProfileDeletion(
+      name,
+      target === null ? undefined : await rendererConfigurationCwd(target),
+    );
+  },
+);
+ipcMain.handle(
+  "profiles:previewRequirements",
+  async (_e, name: string, target: RendererConfigurationTarget) => {
+    if (typeof name !== "string" || !name) {
+      throw new Error("profiles:previewRequirements requires name");
+    }
+    const cwd = await rendererConfigurationCwd(target);
+    return previewProfileRequirements(name, cwd);
+  },
+);
+ipcMain.handle(
+  "profiles:installRequirements",
+  async (_e, name: string, target: RendererConfigurationTarget) => {
+    if (typeof name !== "string" || !name) {
+      throw new Error("profiles:installRequirements requires name");
+    }
+    const cwd = await rendererConfigurationCwd(target);
+    return installProfileRequirements(name, cwd);
+  },
+);
+ipcMain.handle(
+  "profiles:save",
+  async (_e, profile: unknown, target: RendererConfigurationTarget | null) => {
+    if (typeof profile !== "object" || profile === null || Array.isArray(profile)) {
+      throw new Error("profiles:save requires profile");
+    }
+    const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
+    saveProfile(profile as Parameters<typeof saveProfile>[0], authorizedCwd);
+  },
+);
 ipcMain.handle("profiles:pickDefinitionImport", async (event) => {
   const options: OpenDialogOptions = {
     title: "Import digital-human profile definition JSON",
@@ -3389,29 +3454,29 @@ ipcMain.handle("profiles:pickDefinitionImport", async (event) => {
   if (result.canceled || !filePath) return { canceled: true };
   return { canceled: false, preview: previewProfileDefinitionImport(filePath) };
 });
-ipcMain.handle("profiles:importReviewedDefinition", async (_e, input: unknown, cwd?: unknown) => {
-  if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    throw new Error("profiles:importReviewedDefinition requires input");
-  }
-  const candidate = input as { reviewToken?: unknown; overwrite?: unknown };
-  if (typeof candidate.reviewToken !== "string" || !candidate.reviewToken) {
-    throw new Error("profiles:importReviewedDefinition requires reviewToken");
-  }
-  if (candidate.overwrite !== undefined && typeof candidate.overwrite !== "boolean") {
-    throw new Error("profiles:importReviewedDefinition overwrite must be a boolean");
-  }
-  if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
-    throw new Error("profiles:importReviewedDefinition cwd must be a non-empty string");
-  }
-  const authorizedCwd = cwd === undefined ? undefined : await requireRendererProjectPath(cwd);
-  return importReviewedProfileDefinition(
-    {
-      reviewToken: candidate.reviewToken,
-      ...(candidate.overwrite === undefined ? {} : { overwrite: candidate.overwrite }),
-    },
-    authorizedCwd,
-  );
-});
+ipcMain.handle(
+  "profiles:importReviewedDefinition",
+  async (_e, input: unknown, target: RendererConfigurationTarget | null) => {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
+      throw new Error("profiles:importReviewedDefinition requires input");
+    }
+    const candidate = input as { reviewToken?: unknown; overwrite?: unknown };
+    if (typeof candidate.reviewToken !== "string" || !candidate.reviewToken) {
+      throw new Error("profiles:importReviewedDefinition requires reviewToken");
+    }
+    if (candidate.overwrite !== undefined && typeof candidate.overwrite !== "boolean") {
+      throw new Error("profiles:importReviewedDefinition overwrite must be a boolean");
+    }
+    const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
+    return importReviewedProfileDefinition(
+      {
+        reviewToken: candidate.reviewToken,
+        ...(candidate.overwrite === undefined ? {} : { overwrite: candidate.overwrite }),
+      },
+      authorizedCwd,
+    );
+  },
+);
 ipcMain.handle("profiles:exportDefinition", async (event, name: string) => {
   if (typeof name !== "string" || !WORKSPACE_PROFILE_NAME_RE.test(name)) {
     throw new Error("profiles:exportDefinition requires a valid profile name");
@@ -3445,13 +3510,24 @@ ipcMain.handle("profiles:exportRepo", async (event, names: string[]) => {
 });
 ipcMain.handle(
   "profiles:delete",
-  async (_e, name: string, options?: { cwd?: string; clearActiveProject?: boolean }) => {
+  async (
+    _e,
+    name: string,
+    options?: {
+      target?: RendererConfigurationTarget | null;
+      clearActiveProject?: boolean;
+    },
+  ) => {
     if (typeof name !== "string" || !name) throw new Error("profiles:delete requires name");
     if (options !== undefined && (typeof options !== "object" || options === null)) {
       throw new Error("profiles:delete options must be an object");
     }
-    if (options?.cwd !== undefined && (typeof options.cwd !== "string" || !options.cwd)) {
-      throw new Error("profiles:delete cwd must be a non-empty string");
+    if (options) {
+      rejectUnexpectedRendererKeys(
+        options as Record<string, unknown>,
+        ["target", "clearActiveProject"],
+        "profiles:delete",
+      );
     }
     if (
       options?.clearActiveProject !== undefined &&
@@ -3459,7 +3535,14 @@ ipcMain.handle(
     ) {
       throw new Error("profiles:delete clearActiveProject must be a boolean");
     }
-    deleteProfile(name, options);
+    const cwd =
+      options?.target == null ? undefined : await rendererConfigurationCwd(options.target);
+    deleteProfile(name, {
+      ...(cwd ? { cwd } : {}),
+      ...(options?.clearActiveProject === undefined
+        ? {}
+        : { clearActiveProject: options.clearActiveProject }),
+    });
   },
 );
 ipcMain.handle("digital-human-teams:list", async () =>
@@ -3474,9 +3557,9 @@ ipcMain.handle("digital-human-teams:delete", async (_e, id: string) => {
   if (typeof id !== "string" || !id) throw new Error("digital-human-teams:delete requires id");
   deleteDigitalHumanTeam(id);
 });
-ipcMain.handle("plugins:list", async (_e, cwd: string) => {
-  return listPlugins(await requireRendererProjectPath(cwd));
-});
+ipcMain.handle("plugins:list", async (_e, target: RendererConfigurationTarget | null) =>
+  listPlugins(await rendererOptionalConfigurationCwd(target, "")),
+);
 ipcMain.handle("plugins:media", async (_e, installKey: string, includeScreenshots?: boolean) => {
   if (typeof installKey !== "string" || !installKey) {
     throw new Error("plugins:media requires installKey");
@@ -3486,13 +3569,13 @@ ipcMain.handle("plugins:media", async (_e, installKey: string, includeScreenshot
   }
   return getPluginMedia(installKey, includeScreenshots === true);
 });
-ipcMain.handle("plugin-commands:list", async (_e, cwd: string) => {
-  return listPluginCommands(await requireRendererProjectPath(cwd));
-});
+ipcMain.handle("plugin-commands:list", async (_e, target: RendererConfigurationTarget) =>
+  listPluginCommands(await rendererConfigurationCwd(target)),
+);
 ipcMain.handle(
   "plugin-commands:expand",
-  async (_e, cwd: string, name: string, rawArguments: string) => {
-    cwd = await requireRendererProjectPath(cwd);
+  async (_e, target: RendererConfigurationTarget, name: string, rawArguments: string) => {
+    const cwd = await rendererConfigurationCwd(target);
     if (typeof name !== "string" || !name || name.length > 512) {
       throw new Error("plugin-commands:expand requires name");
     }
@@ -4527,11 +4610,21 @@ ipcMain.handle("themes:uninstall", async (_e, id: string) => {
   }
   return { ok: true };
 });
-ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
-ipcMain.handle("skills:checkUpdate", async (_e, filePath: string) =>
-  checkSkillUpdateEntry(filePath),
+ipcMain.handle(
+  "skills:read",
+  async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
+    readSkillBody(await requireRendererListedSkillPath(target, filePath)),
 );
-ipcMain.handle("skills:update", async (_e, filePath: string) => updateSkillEntry(filePath));
+ipcMain.handle(
+  "skills:checkUpdate",
+  async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
+    checkSkillUpdateEntry(await requireRendererListedSkillPath(target, filePath)),
+);
+ipcMain.handle(
+  "skills:update",
+  async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
+    updateSkillEntry(await requireRendererListedSkillPath(target, filePath)),
+);
 ipcMain.handle("files:searchProject", async (_e, projectId: string, query: string) => {
   const project = await requireRendererProject(projectId);
   const q = typeof query === "string" ? query : "";
@@ -4693,36 +4786,35 @@ ipcMain.handle(
   "skills:uninstall",
   async (
     _e,
-    input: { scope?: unknown; cwd?: unknown; skillName?: unknown } | string,
-    source?: "user" | "project" | "plugin" | "panel-app",
-    cwd?: string,
+    input: {
+      scope?: unknown;
+      target?: unknown;
+      skillName?: unknown;
+    },
   ) => {
-    if (typeof input === "string") {
-      if (
-        source !== "user" &&
-        source !== "project" &&
-        source !== "plugin" &&
-        source !== "panel-app"
-      ) {
-        throw new Error("invalid source");
-      }
-      const authorizedCwd = await requireRendererProjectPath(cwd);
-      return uninstallListedSkill(input, source, authorizedCwd);
-    }
     if (!input || typeof input !== "object") {
-      throw new Error("skills:uninstall requires { scope, cwd, skillName }");
+      throw new Error("skills:uninstall requires { scope, target, skillName }");
     }
+    rejectUnexpectedRendererKeys(
+      input as Record<string, unknown>,
+      ["scope", "target", "skillName"],
+      "skills:uninstall",
+    );
     const scope = input.scope === "user" || input.scope === "project" ? input.scope : null;
     if (!scope) throw new Error("invalid scope");
     if (typeof input.skillName !== "string") {
       throw new Error("skills:uninstall requires skillName");
     }
+    if (scope === "project" && input.target == null) {
+      throw new Error("project skill uninstall requires stable authority");
+    }
+    if (scope === "user" && input.target != null) {
+      throw new Error("user skill uninstall does not accept project authority");
+    }
     const authorizedCwd =
-      scope === "project"
-        ? await requireRendererProjectPath(input.cwd)
-        : typeof input.cwd === "string" && input.cwd
-          ? await requireRendererProjectPath(input.cwd)
-          : undefined;
+      input.target == null
+        ? undefined
+        : await rendererConfigurationCwd(input.target as RendererConfigurationTarget);
     return uninstallSkill({
       scope,
       cwd: authorizedCwd,
@@ -4731,14 +4823,14 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("agents:list", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  return listAgents(cwd);
-});
-ipcMain.handle("agents:read", async (_e, filePath: string) => {
-  if (typeof filePath !== "string") throw new Error("agents:read requires filePath");
-  return readAgentBody(filePath);
-});
+ipcMain.handle("agents:list", async (_e, target: RendererConfigurationTarget | null) =>
+  listAgents(await rendererOptionalConfigurationCwd(target, "")),
+);
+ipcMain.handle(
+  "agents:read",
+  async (_e, target: RendererConfigurationTarget | null, filePath: unknown) =>
+    readAgentBody(await requireRendererListedAgentPath(target, filePath)),
+);
 
 ipcMain.handle(
   "images:readDataUrl",
@@ -4787,36 +4879,60 @@ ipcMain.handle(
 );
 ipcMain.handle(
   "agents:save",
-  async (_e, def: AgentDefinition, opts?: { scope?: "user" | "project"; cwd?: string }) => {
+  async (
+    _e,
+    def: AgentDefinition,
+    opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },
+  ) => {
     if (!def || typeof def !== "object") throw new Error("agents:save requires def");
     if (typeof def.name !== "string" || typeof def.description !== "string")
       throw new Error("agents:save: name and description are required");
     if (opts?.scope !== undefined && opts.scope !== "user" && opts.scope !== "project") {
       throw new Error("invalid agent scope");
     }
-    const cwd =
-      opts?.scope === "project"
-        ? await requireRendererProjectPath(opts.cwd)
-        : typeof opts?.cwd === "string" && opts.cwd
-          ? await requireRendererProjectPath(opts.cwd)
-          : undefined;
-    return saveAgent(def, { ...opts, cwd });
+    if (opts) {
+      rejectUnexpectedRendererKeys(
+        opts as Record<string, unknown>,
+        ["scope", "target"],
+        "agents:save",
+      );
+    }
+    if (opts?.scope === "project" && !opts.target) {
+      throw new Error("project agent save requires stable authority");
+    }
+    if (opts?.scope !== "project" && opts?.target) {
+      throw new Error("user agent save does not accept project authority");
+    }
+    const cwd = opts?.target ? await rendererConfigurationCwd(opts.target) : undefined;
+    return saveAgent(def, { scope: opts?.scope, cwd });
   },
 );
 ipcMain.handle(
   "agents:delete",
-  async (_e, name: string, opts?: { scope?: "user" | "project"; cwd?: string }) => {
+  async (
+    _e,
+    name: string,
+    opts?: { scope?: "user" | "project"; target?: RendererConfigurationTarget },
+  ) => {
     if (typeof name !== "string" || !name) throw new Error("agents:delete requires name");
     if (opts?.scope !== undefined && opts.scope !== "user" && opts.scope !== "project") {
       throw new Error("invalid agent scope");
     }
-    const cwd =
-      opts?.scope === "project"
-        ? await requireRendererProjectPath(opts.cwd)
-        : typeof opts?.cwd === "string" && opts.cwd
-          ? await requireRendererProjectPath(opts.cwd)
-          : undefined;
-    return deleteAgent(name, { ...opts, cwd });
+    if (opts) {
+      rejectUnexpectedRendererKeys(
+        opts as Record<string, unknown>,
+        ["scope", "target"],
+        "agents:delete",
+      );
+    }
+    if (opts?.scope === "project" && !opts.target) {
+      throw new Error("project agent delete requires stable authority");
+    }
+    if (opts?.scope !== "project" && opts?.target) {
+      throw new Error("user agent delete does not accept project authority");
+    }
+    const cwd = opts?.target ? await rendererConfigurationCwd(opts.target) : undefined;
+    return deleteAgent(name, { scope: opts?.scope, cwd });
   },
 );
 
@@ -4843,7 +4959,14 @@ ipcMain.handle("skills:installFromGithub", async (event, input: unknown) => {
   if (!input || typeof input !== "object") {
     throw new Error("skills:installFromGithub requires { inspection, selected, scope }");
   }
-  const i = input as InstallFromGithubInput;
+  const i = input as Omit<InstallFromGithubInput, "cwd"> & {
+    target?: RendererConfigurationTarget;
+  };
+  rejectUnexpectedRendererKeys(
+    input as Record<string, unknown>,
+    ["inspection", "selected", "scope", "target", "installName"],
+    "skills:installFromGithub",
+  );
   if (!i.inspection || !i.selected) throw new Error("missing inspection/selected");
   if (i.scope !== "user" && i.scope !== "project") throw new Error("invalid scope");
   if (
@@ -4854,16 +4977,18 @@ ipcMain.handle("skills:installFromGithub", async (event, input: unknown) => {
   ) {
     throw new Error("invalid skill install name");
   }
-  const cwd =
-    i.scope === "project"
-      ? await requireRendererProjectPath(i.cwd)
-      : typeof i.cwd === "string" && i.cwd
-        ? await requireRendererProjectPath(i.cwd)
-        : undefined;
+  if (i.scope === "project" && !i.target) {
+    throw new Error("project skill install requires stable authority");
+  }
+  if (i.scope === "user" && i.target) {
+    throw new Error("user skill install does not accept project authority");
+  }
+  const cwd = i.target ? await rendererConfigurationCwd(i.target) : undefined;
   const reviewToken = (i.inspection as { reviewToken?: unknown }).reviewToken;
   const reviewed = githubSkillReviews.consume(event.sender.id, reviewToken, i.selected);
+  const { target: _target, ...installInput } = i;
   return installFromGithub({
-    ...i,
+    ...installInput,
     inspection: reviewed.inspection,
     selected: reviewed.selected,
     cwd,
@@ -4872,17 +4997,24 @@ ipcMain.handle("skills:installFromGithub", async (event, input: unknown) => {
 
 ipcMain.handle(
   "skills:installLocal",
-  async (_e, sourceDir: string, scope: "user" | "project", cwd?: string, name?: string) => {
+  async (
+    _e,
+    sourceDir: string,
+    scope: "user" | "project",
+    target: RendererConfigurationTarget | null,
+    name?: string,
+  ) => {
     if (typeof sourceDir !== "string" || !sourceDir) {
       throw new Error("skills:installLocal requires sourceDir");
     }
     if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-    const authorizedCwd =
-      scope === "project"
-        ? await requireRendererProjectPath(cwd)
-        : typeof cwd === "string" && cwd
-          ? await requireRendererProjectPath(cwd)
-          : undefined;
+    if (scope === "project" && target === null) {
+      throw new Error("project skill install requires stable authority");
+    }
+    if (scope === "user" && target !== null) {
+      throw new Error("user skill install does not accept project authority");
+    }
+    const authorizedCwd = target === null ? undefined : await rendererConfigurationCwd(target);
     return installSkillFromDirectory(sourceDir, scope, authorizedCwd, name);
   },
 );
@@ -4901,7 +5033,12 @@ ipcMain.handle("mcp:probe", async (_e, raw: unknown, force?: boolean) => {
 
 ipcMain.handle(
   "mcp:listMerged",
-  async (_e, rawBase: unknown, rawDisabledPlugins?: unknown, rawCwd?: unknown) => {
+  async (
+    _e,
+    rawBase: unknown,
+    rawDisabledPlugins?: unknown,
+    target?: RendererConfigurationTarget | null,
+  ) => {
     const base =
       rawBase && typeof rawBase === "object" ? (rawBase as Record<string, McpServerConfig>) : {};
     const rawList = Array.isArray(rawDisabledPlugins)
@@ -4910,8 +5047,7 @@ ipcMain.handle(
     // Fold project capabilityOverrides over the renderer's raw global list when
     // a cwd is known — the pluginDisabled flag must reflect the EFFECTIVE state
     // (能力总览 project "on" overrides global off), matching the engine's merge.
-    const cwd =
-      typeof rawCwd === "string" && rawCwd ? await requireRendererProjectPath(rawCwd) : undefined;
+    const cwd = target == null ? undefined : await rendererConfigurationCwd(target);
     const disabledPlugins = cwd
       ? computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd).disabledPlugins
       : rawList;
@@ -6492,10 +6628,9 @@ ipcMain.handle("settings:get", async (_e, scope: SettingsScope) => {
   if (scope !== "user") throw new Error("settings:get is user-scoped");
   return readSettings("user");
 });
-ipcMain.handle("settings:getProject", async (_e, projectId: string) => {
-  const { path } = await requireRendererProjectPrimary(projectId);
-  return readSettings("project", path);
-});
+ipcMain.handle("settings:getConfiguration", async (_e, target: RendererConfigurationTarget) =>
+  readSettings("project", await rendererConfigurationCwd(target)),
+);
 
 function validateRendererSettingsPatch(patch: Record<string, unknown>): void {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
@@ -6539,10 +6674,10 @@ ipcMain.handle(
   },
 );
 ipcMain.handle(
-  "settings:setProject",
-  async (_e, projectId: string, patch: Record<string, unknown>) => {
+  "settings:setConfiguration",
+  async (_e, target: RendererConfigurationTarget, patch: Record<string, unknown>) => {
     validateRendererSettingsPatch(patch);
-    const { path } = await requireRendererProjectPrimary(projectId);
+    const path = await rendererConfigurationCwd(target);
     await writeSettings("project", patch, path);
     await applyRendererSettingsSideEffects("project", patch);
   },

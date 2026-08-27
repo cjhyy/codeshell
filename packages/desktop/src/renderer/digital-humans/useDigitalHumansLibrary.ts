@@ -5,12 +5,17 @@ import type {
   DigitalHumanProfileEntry,
   DigitalHumanSkillEntry,
 } from "./types";
+import type { RendererConfigurationTarget } from "../../preload/types";
+import { optionalProjectConfigurationTarget } from "../configurationTarget";
 
 export interface DigitalHumansLibraryApi {
-  listProfiles(cwd?: string): Promise<DigitalHumanProfileEntry[]>;
+  listProfiles(target: RendererConfigurationTarget | null): Promise<DigitalHumanProfileEntry[]>;
   listProfileCatalog(): Promise<DigitalHumanCatalogEntry[]>;
   listDigitalHumanTeams(): Promise<DigitalHumanTeam[]>;
-  listSkills(cwd: string | null, options: { includeDisabled: true }): Promise<DigitalHumanSkillEntry[]>;
+  listSkills(
+    target: RendererConfigurationTarget | null,
+    options: { includeDisabled: true },
+  ): Promise<DigitalHumanSkillEntry[]>;
 }
 
 export type DigitalHumansLibraryStatus = "loading" | "refreshing" | "ready" | "error";
@@ -54,11 +59,12 @@ export function useDigitalHumansLibrary(
     setStatus(hasCurrentProjectData ? "refreshing" : "loading");
     setError(null);
     try {
+      const target = optionalProjectConfigurationTarget(activeProjectPath);
       const [nextProfiles, nextCatalog, nextTeams, nextSkills] = await Promise.all([
-        api.listProfiles(activeProjectPath ?? undefined),
+        api.listProfiles(target),
         api.listProfileCatalog(),
         api.listDigitalHumanTeams(),
-        api.listSkills(activeProjectPath, { includeDisabled: true }),
+        api.listSkills(target, { includeDisabled: true }),
       ]);
       if (generation !== requestGeneration.current) return false;
       setProfiles(nextProfiles);

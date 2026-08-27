@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "../i18n";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
+import { requireProjectConfigurationTarget } from "../configurationTarget";
 import {
   canAddDigitalHumanSkill,
   digitalHumanMissingSkillNames,
@@ -258,7 +259,8 @@ export function DigitalHumanEditorDialog({
     }
     setInstallingRequirements(true);
     try {
-      const preview = await window.codeshell.previewProfileRequirements(profile.name, projectPath);
+      const target = requireProjectConfigurationTarget(projectPath);
+      const preview = await window.codeshell.previewProfileRequirements(profile.name, target);
       const detail = [...preview.willRun, ...preview.warnings, ...preview.blockers].join("\n");
 
       if (!preview.needsInstall) {
@@ -288,7 +290,7 @@ export function DigitalHumanEditorDialog({
       });
       if (!accepted) return;
 
-      const result = await window.codeshell.installProfileRequirements(profile.name, projectPath);
+      const result = await window.codeshell.installProfileRequirements(profile.name, target);
       await onRequirementsInstalled?.();
       if (!result.ok) {
         toast({

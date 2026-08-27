@@ -16,7 +16,12 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Clock, FileText, Folder, Puzzle, Search } from "lucide-react";
-import type { SkillSummary, FileSearchHit, InputAttachmentMeta } from "../../preload/types";
+import type {
+  SkillSummary,
+  FileSearchHit,
+  InputAttachmentMeta,
+  RendererConfigurationTarget,
+} from "../../preload/types";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
 import { filterMentionSkills } from "./mention";
@@ -29,6 +34,7 @@ export type MentionItem =
 interface Props {
   /** Active repo cwd. When null the popover only shows skills (no files). */
   cwd: string | null;
+  configurationTarget: RendererConfigurationTarget;
   projectId?: string | null;
   projectRoots?: Array<{ id: string; path: string }>;
   /** Query string after the `@` — empty when user has only typed `@`. */
@@ -45,6 +51,7 @@ const EMPTY_PROJECT_ROOTS: Array<{ id: string; path: string }> = [];
 
 export function MentionPopover({
   cwd,
+  configurationTarget,
   projectId,
   projectRoots = EMPTY_PROJECT_ROOTS,
   query,
@@ -67,7 +74,7 @@ export function MentionPopover({
       return;
     }
     void window.codeshell
-      .listSkills(cwd)
+      .listSkills(configurationTarget)
       .then((s) => {
         if (!cancelled) setSkills(s);
       })
@@ -77,7 +84,7 @@ export function MentionPopover({
     return () => {
       cancelled = true;
     };
-  }, [cwd]);
+  }, [configurationTarget, cwd]);
 
   // File search: re-run whenever query changes, with a small debounce so
   // fast typing doesn't fire a search per character.

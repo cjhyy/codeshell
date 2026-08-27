@@ -5,6 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { ensureDigitalHumanRequirements } from "../digital-humans/profileRequirements";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
+import { requireProjectConfigurationTarget } from "../configurationTarget";
 
 interface ProfileEntry {
   name: string;
@@ -22,15 +23,16 @@ export function ProfileSection({ cwd }: { cwd: string }) {
   const [profiles, setProfiles] = React.useState<ProfileEntry[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const configurationTarget = React.useMemo(() => requireProjectConfigurationTarget(cwd), [cwd]);
 
   const refresh = React.useCallback(async () => {
     try {
-      setProfiles(await window.codeshell.listProfiles(cwd));
+      setProfiles(await window.codeshell.listProfiles(configurationTarget));
       setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     }
-  }, [cwd]);
+  }, [configurationTarget]);
 
   React.useEffect(() => {
     void refresh();
@@ -83,7 +85,9 @@ export function ProfileSection({ cwd }: { cwd: string }) {
                   size="sm"
                   variant="outline"
                   disabled={busy}
-                  onClick={() => void act(() => window.codeshell.deactivateProfile(cwd))}
+                  onClick={() =>
+                    void act(() => window.codeshell.deactivateProfile(configurationTarget))
+                  }
                 >
                   {t("settingsX.profiles.deactivate")}
                 </Button>
@@ -102,7 +106,7 @@ export function ProfileSection({ cwd }: { cwd: string }) {
                         t,
                       });
                       if (!ready) return;
-                      await window.codeshell.activateProfile(cwd, profile.name);
+                      await window.codeshell.activateProfile(configurationTarget, profile.name);
                     })
                   }
                 >

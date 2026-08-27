@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SkillSummary } from "../../main/skills-service";
+import type { RendererConfigurationTarget } from "../../preload/types";
 import { SkillDetailModal } from "./SkillDetailModal";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { useT } from "../i18n/I18nProvider";
 import { signalHotReload, runBatchUpdate, summarizeBatch } from "./applyUpdates";
 
 interface Props {
-  cwd: string;
+  configurationTarget: RendererConfigurationTarget;
   query: string;
   isEnabled: (s: SkillSummary) => boolean;
   onToggle: (s: SkillSummary, next: boolean) => void;
@@ -35,7 +36,7 @@ function displaySkillName(s: SkillSummary): string {
   return namespace ? s.name.slice(namespace.length + 1) : s.name;
 }
 
-export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
+export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: Props) {
   const { t } = useT();
   const [skills, setSkills] = useState<SkillSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
     setError(null);
     setUpdatable({});
     window.codeshell
-      .listSkills(cwd, { includeDisabled: true })
+      .listSkills(configurationTarget, { includeDisabled: true })
       .then((d) => {
         if (!alive) return;
         setSkills(d);
@@ -65,7 +66,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
         // fast no-op for everything else). Badges appear as checks return.
         for (const s of d) {
           window.codeshell
-            .checkSkillUpdate(s.filePath)
+            .checkSkillUpdate(configurationTarget, s.filePath)
             .then((r) => {
               if (alive && r.updateAvailable) {
                 setUpdatable((m) => ({ ...m, [s.filePath]: true }));
@@ -82,12 +83,12 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
     return () => {
       alive = false;
     };
-  }, [cwd, reloadKey]);
+  }, [configurationTarget, reloadKey]);
 
   const update = async (s: SkillSummary) => {
     setBusy(s.filePath);
     try {
-      const r = await window.codeshell.updateSkill(s.filePath);
+      const r = await window.codeshell.updateSkill(configurationTarget, s.filePath);
       setReloadKey((k) => k + 1);
       // Hot-reload: skills are disk-scanned live (next turn picks up the new
       // SKILL.md); fire the same event plugin update uses so any hooks/MCP a
@@ -115,7 +116,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
       const outcomes = await runBatchUpdate(
         targets.map((s) => s.filePath),
         (fp) => labelByPath.get(fp) ?? fp,
-        (fp) => window.codeshell.updateSkill(fp),
+        (fp) => window.codeshell.updateSkill(configurationTarget, fp),
       );
       setReloadKey((k) => k + 1);
       if (outcomes.some((o) => o.updated)) signalHotReload();
@@ -311,6 +312,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
       </div>
       {open && (
         <SkillDetailModal
+          configurationTarget={configurationTarget}
           name={open.name}
           filePath={open.filePath}
           source={open.source}

@@ -475,7 +475,7 @@ function App() {
       setSessionWorkspaceProfiles([]);
       return;
     }
-    void listProfiles(activeProject.path)
+    void listProfiles({ projectId: activeProject.id })
       .then((profiles) => {
         if (cancelled) return;
         setSessionWorkspaceProfiles(

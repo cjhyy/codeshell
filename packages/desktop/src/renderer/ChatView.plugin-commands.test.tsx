@@ -44,6 +44,7 @@ describe("ChatView plugin slash commands", () => {
     const onSend = mock(() => undefined);
     Object.defineProperty(window, "codeshell", {
       configurable: true,
+      writable: true,
       value: {
         sttAvailable: async () => ({ available: false }),
         listPluginCommands: async () => [],
@@ -62,7 +63,7 @@ describe("ChatView plugin slash commands", () => {
           onSend={onSend}
           onStop={() => undefined}
           busy={false}
-          activeProjectId={null}
+          activeProjectId="project-1"
           permissionMode="plan"
           onPermissionChange={() => undefined}
           goalEnabled={false}
@@ -112,6 +113,7 @@ describe("ChatView plugin slash commands", () => {
     }));
     Object.defineProperty(window, "codeshell", {
       configurable: true,
+      writable: true,
       value: {
         sttAvailable: async () => ({ available: false }),
         listPluginCommands: async () => [
@@ -138,7 +140,7 @@ describe("ChatView plugin slash commands", () => {
           onSend={onSend}
           onStop={() => undefined}
           busy={false}
-          activeProjectId={null}
+          activeProjectId="project-1"
           permissionMode="plan"
           onPermissionChange={() => undefined}
           goalEnabled={false}
@@ -198,7 +200,7 @@ describe("ChatView plugin slash commands", () => {
     });
 
     expect(expandPluginCommand).toHaveBeenCalledWith(
-      "/tmp/project",
+      { projectId: "project-1" },
       "demo:review",
       '"src/app.ts" FOCUS=security',
     );

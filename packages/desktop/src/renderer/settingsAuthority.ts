@@ -1,10 +1,4 @@
-import { projectIdForPath } from "./projects";
-
-function requireProjectId(projectPath: string | undefined): string {
-  const projectId = projectIdForPath(projectPath);
-  if (!projectId) throw new Error("project settings require a live V2 project id");
-  return projectId;
-}
+import { requireProjectConfigurationTarget } from "./configurationTarget";
 
 export function readScopedSettings(
   scope: "user" | "project",
@@ -12,7 +6,9 @@ export function readScopedSettings(
 ): Promise<Record<string, unknown> | null> {
   return scope === "user"
     ? window.codeshell.getSettings("user")
-    : window.codeshell.getProjectSettings(requireProjectId(projectPath));
+    : window.codeshell.getConfigurationSettings(
+        requireProjectConfigurationTarget(projectPath ?? ""),
+      );
 }
 
 export function updateScopedSettings(
@@ -22,5 +18,8 @@ export function updateScopedSettings(
 ): Promise<void> {
   return scope === "user"
     ? window.codeshell.updateSettings("user", patch)
-    : window.codeshell.updateProjectSettings(requireProjectId(projectPath), patch);
+    : window.codeshell.updateConfigurationSettings(
+        requireProjectConfigurationTarget(projectPath ?? ""),
+        patch,
+      );
 }

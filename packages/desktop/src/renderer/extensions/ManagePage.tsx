@@ -22,6 +22,7 @@ import { PanelsTab } from "./PanelsTab";
 import { SkillsTab } from "./SkillsTab";
 import { useT } from "../i18n/I18nProvider";
 import type { SkillSummary } from "../../main/skills-service";
+import type { RendererConfigurationTarget } from "../../preload/types";
 import {
   FileText,
   PanelTop,
@@ -44,12 +45,19 @@ export type TabKey = "plugins" | "panels" | "skills" | "mcp" | "market";
 
 interface Props {
   cwd: string;
+  configurationTarget: RendererConfigurationTarget;
   activeProjectPath: string | null;
   initialTab?: TabKey;
   initialQuery?: string;
 }
 
-export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }: Props) {
+export function ManagePage({
+  cwd,
+  configurationTarget,
+  activeProjectPath,
+  initialTab,
+  initialQuery,
+}: Props) {
   const { t } = useT();
   const [tab, setTab] = useState<TabKey>(initialTab ?? "plugins");
   const [query, setQuery] = useState(initialQuery ?? "");
@@ -59,7 +67,7 @@ export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }:
 
   const refresh = async () => {
     const [skillList, settings] = await Promise.all([
-      window.codeshell.listSkills(cwd, { includeDisabled: true }),
+      window.codeshell.listSkills(configurationTarget, { includeDisabled: true }),
       window.codeshell.getSettings("user"),
     ]);
     setSkills(skillList);
@@ -72,7 +80,7 @@ export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }:
   useEffect(() => {
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cwd]);
+  }, [configurationTarget]);
 
   const toggleSkill = async (name: string, shouldDisable: boolean) => {
     const next = new Set(disabledSkills);
@@ -161,6 +169,7 @@ export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }:
       {tab === "plugins" && (
         <PluginsTab
           cwd={cwd}
+          configurationTarget={configurationTarget}
           query={query}
           isEnabled={(p) => !disabledPlugins.has(p.name)}
           onToggle={(p, next) => void togglePlugin(p.name, !next)}
@@ -172,14 +181,16 @@ export function ManagePage({ cwd, activeProjectPath, initialTab, initialQuery }:
       )}
       {tab === "skills" && (
         <SkillsTab
-          cwd={cwd}
+          configurationTarget={configurationTarget}
           query={query}
           isEnabled={(s) => !disabledSkills.has(s.name)}
           onToggle={(s, next) => void toggleSkill(s.name, !next)}
         />
       )}
       {tab === "mcp" && <McpSection scope="user" activeProjectPath={activeProjectPath} />}
-      {tab === "market" && <MarketList cwd={cwd} onInstalled={() => void refresh()} />}
+      {tab === "market" && (
+        <MarketList configurationTarget={configurationTarget} onInstalled={() => void refresh()} />
+      )}
     </div>
   );
 }
