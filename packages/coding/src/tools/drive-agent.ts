@@ -160,6 +160,7 @@ type Runner = (opts: {
   permissionMode?: PermMode;
   signal?: AbortSignal;
   imagePaths?: string[];
+  onSessionId?: (sessionId: string) => void;
 }) => Promise<AgentRunResult>;
 type SessionStore = {
   get(cli: DriveCli, sessionId: string): ExternalAgentSessionBinding | undefined;
@@ -214,6 +215,7 @@ const defaultRunner: Runner = (opts) => {
       cwd: opts.cwd,
       permissionMode: opts.permissionMode ?? "default",
       imagePaths: opts.imagePaths,
+      onSessionId: opts.onSessionId,
     },
     opts.signal,
   );
@@ -444,7 +446,8 @@ function formatDriveJobListLine(job: BackgroundJobEntry): string {
     `${job.jobId}`,
     `status=${job.status}`,
     `cli=${cli}`,
-    `session=${job.sessionId}`,
+    `ownerSession=${job.sessionId}`,
+    `externalSessionId=${job.ccSessionId ?? "pending"}`,
     `launchCwd=${launchCwd}`,
     ...(job.worktreePath ? [`worktree=${job.worktreePath}`] : []),
     ...(job.worktreeBranch ? [`branch=${job.worktreeBranch}`] : []),
@@ -813,7 +816,7 @@ function trackBackgroundRun(params: {
   isolation: DriveIsolation;
   worktree?: ManagedDriveWorktree;
   promptSummary: string;
-  start: () => Promise<AgentRunResult>;
+  start: (onSessionId: (sessionId: string) => void) => Promise<AgentRunResult>;
   abort: () => void;
   sessionStore: SessionStore;
   writable: boolean;
@@ -865,7 +868,10 @@ function trackBackgroundRun(params: {
     return { error: "Error: DriveAgent owner session closed before the job could start." };
   }
   try {
-    run = params.start();
+    run = params.start((externalSessionId) => {
+      if (!isValidSessionId(externalSessionId)) return;
+      backgroundJobRegistry.recordArtifacts(jobId, { ccSessionId: externalSessionId });
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     backgroundJobRegistry.finish(jobId, { status: "failed", finalText: message });
@@ -1133,7 +1139,12 @@ export function makeDriveAgentTool(
         isolation,
         worktree: managedWorktree,
         promptSummary,
-        start: () => startRun(runner, { ...runOptsBase, signal: abortController.signal }),
+        start: (onSessionId) =>
+          startRun(runner, {
+            ...runOptsBase,
+            signal: abortController.signal,
+            onSessionId,
+          }),
         abort: () => abortController.abort(),
         sessionStore,
         writable: isWritableRun,
@@ -1171,7 +1182,16 @@ export function makeDriveAgentTool(
       return appendLifecycleNote(lease.error, lifecycle);
     }
     const foregroundAbort = makeAbortController(callerSignal, true);
-    const run = startRun(runner, { ...runOptsBase, signal: foregroundAbort.signal });
+    let liveExternalSessionId: string | undefined;
+    let backgroundSessionIdSink: ((sessionId: string) => void) | undefined;
+    const run = startRun(runner, {
+      ...runOptsBase,
+      signal: foregroundAbort.signal,
+      onSessionId: (sessionId) => {
+        liveExternalSessionId = sessionId;
+        backgroundSessionIdSink?.(sessionId);
+      },
+    });
     let result: Awaited<ReturnType<typeof waitForForegroundOrHandoff>>;
     try {
       result = await waitForForegroundOrHandoff(run, foregroundHandoffMs);
@@ -1199,7 +1219,11 @@ export function makeDriveAgentTool(
         isolation,
         worktree: managedWorktree,
         promptSummary,
-        start: () => run,
+        start: (onSessionId) => {
+          backgroundSessionIdSink = onSessionId;
+          if (liveExternalSessionId) onSessionId(liveExternalSessionId);
+          return run;
+        },
         abort: () => foregroundAbort.abort(),
         sessionStore,
         writable: isWritableRun,
@@ -1356,7 +1380,8 @@ function inspectDriveAgentJob(jobId: string | undefined): string {
     `jobId: ${job.jobId}`,
     `status: ${job.status}`,
     `cli: ${job.cli ?? "unknown"}`,
-    `session: ${job.sessionId}`,
+    `ownerSession: ${job.sessionId}`,
+    `externalSessionId: ${job.ccSessionId ?? "pending"}`,
     `launchCwd: ${job.launchCwd ?? job.cwd ?? "(unknown cwd)"}`,
     `startedAt: ${new Date(job.startedAt).toISOString()}`,
     `duration: ${jobDurationSeconds(job)}`,
@@ -1371,7 +1396,6 @@ function inspectDriveAgentJob(jobId: string | undefined): string {
   if (job.worktreeLifecycle) lines.push(`worktreeLifecycle: ${job.worktreeLifecycle}`);
   if (job.finishedAt !== undefined)
     lines.push(`finishedAt: ${new Date(job.finishedAt).toISOString()}`);
-  if (job.ccSessionId) lines.push(`ccSessionId: ${job.ccSessionId}`);
   if (job.changedFiles && job.changedFiles.length > 0) {
     lines.push("changedFiles:", ...job.changedFiles.map((file) => `- ${file}`));
   } else {
@@ -1537,11 +1561,12 @@ type LegacyRunner = (opts: {
   cwd: string;
   permissionMode?: PermMode;
   signal?: AbortSignal;
+  onSessionId?: (sessionId: string) => void;
 }) => Promise<AgentRunResult>;
 export function makeDriveClaudeCodeTool(runner?: LegacyRunner, options?: DriveAgentToolOptions) {
   const generic: Runner | undefined = runner
-    ? ({ prompt, resumeSessionId, model, cwd, permissionMode, signal }) =>
-        runner({ prompt, resumeSessionId, model, cwd, permissionMode, signal })
+    ? ({ prompt, resumeSessionId, model, cwd, permissionMode, signal, onSessionId }) =>
+        runner({ prompt, resumeSessionId, model, cwd, permissionMode, signal, onSessionId })
     : undefined;
   return makeDriveAgentTool(generic ?? defaultRunner, "claude", options);
 }
