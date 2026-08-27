@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  createWorkspaceContext,
   HookRegistry,
   PermissionClassifier,
   ToolExecutor,
@@ -87,5 +88,46 @@ describe("coding capability path policy", () => {
     );
     expect(rejected.asked()).toBeGreaterThanOrEqual(1);
     expect(result).toMatch(/path approval denied|blocked by path policy/i);
+  });
+
+  test("ApplyPatch writes a declared secondary root without an outside-workspace prompt", async () => {
+    const secondary = mkdtempSync(join(tmpdir(), "coding-path-secondary-"));
+    try {
+      const target = join(secondary, "p.txt");
+      writeFileSync(target, "old\n");
+      let asks = 0;
+      const context = {
+        cwd: workspace,
+        workspace: createWorkspaceContext({
+          projectId: "project-1",
+          projectRevision: 1,
+          sessionMainRootId: "main",
+          roots: [
+            { id: "main", path: workspace, role: "primary" },
+            { id: "secondary", path: secondary, role: "secondary" },
+          ],
+        }),
+        planMode: false,
+        askUser: async () => {
+          asks += 1;
+          return "拒绝";
+        },
+      } as unknown as ToolContext;
+      const patch = `*** Begin Patch
+*** Update File: ${target}
+@@
+-old
++new
+*** End Patch`;
+      expect(
+        await execute(
+          { id: "patch-secondary", toolName: "ApplyPatch", args: { patch } },
+          context,
+        ),
+      ).toContain("Patch applied successfully");
+      expect(asks).toBe(0);
+    } finally {
+      rmSync(secondary, { recursive: true, force: true });
+    }
   });
 });

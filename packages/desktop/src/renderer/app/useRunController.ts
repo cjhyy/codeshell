@@ -274,6 +274,7 @@ export function useRunController({
 
     const opts: {
       cwd?: string;
+      projectId?: string;
       sessionId?: string;
       bucket?: string;
       browserPartition?: string;
@@ -342,8 +343,10 @@ export function useRunController({
     // would otherwise default to a stale project (see noRepoCwdRef). Falls back
     // to undefined only if the one-time fetch hasn't resolved yet, in which case
     // the core-side stdio worker still defaults to noRepoDir() (defense #2).
-    if (targetProject) opts.cwd = targetProject.path;
-    else if (noRepoCwdRef.current) opts.cwd = noRepoCwdRef.current;
+    if (targetProject) {
+      opts.cwd = targetProject.path;
+      opts.projectId = targetProject.id;
+    } else if (noRepoCwdRef.current) opts.cwd = noRepoCwdRef.current;
     // Goal mode: this send's prompt IS the goal — the engine runs
     // loop-until-done. Goal text == prompt text (reuses the composer input).
     // Persistent goal (CC /goal): the toggle means "make THIS message a goal".
@@ -518,6 +521,7 @@ export function useRunController({
     const cwd = session.cwd ?? noRepoCwdRef.current ?? undefined;
     const opts: {
       cwd?: string;
+      projectId?: string;
       sessionId: string;
       bucket: string;
       browserPartition: string;
@@ -535,6 +539,8 @@ export function useRunController({
       quickChatClaimId: session.creationNonce,
     };
     if (cwd) opts.cwd = cwd;
+    const quickChatProjectId = parsePanelBucket(session.ownerBucket).projectId;
+    if (quickChatProjectId) opts.projectId = quickChatProjectId;
     if (attachments.length > 0) opts.attachments = attachments;
     if (sendPermissionMode !== null) {
       opts.permissionMode = toCorePermissionMode(sendPermissionMode);

@@ -13,6 +13,8 @@ import { useT } from "../i18n/I18nProvider";
 interface Props {
   projectPath: string | null;
   onDecide: (level: "trusted" | "untrusted") => void;
+  /** Re-prompt roots that were previously marked view-only before they become primary. */
+  promptWhenUntrusted?: boolean;
 }
 
 interface TrustRisks {
@@ -23,7 +25,7 @@ interface TrustRisks {
   setupScripts: boolean;
 }
 
-export function TrustGate({ projectPath, onDecide }: Props) {
+export function TrustGate({ projectPath, onDecide, promptWhenUntrusted = false }: Props) {
   const { t } = useT();
   const [pending, setPending] = useState(false);
   const [unknown, setUnknown] = useState(false);
@@ -38,9 +40,9 @@ export function TrustGate({ projectPath, onDecide }: Props) {
       .getTrust(projectPath)
       .then((tr) => {
         if (cancelled) return;
-        setUnknown(tr === "unknown");
+        setUnknown(tr === "unknown" || (promptWhenUntrusted && tr === "untrusted"));
         // Fetch the risk summary only when we'll actually prompt.
-        if (tr === "unknown") {
+        if (tr === "unknown" || (promptWhenUntrusted && tr === "untrusted")) {
           void window.codeshell
             .getTrustRisks(projectPath)
             .then((r) => {
@@ -57,7 +59,7 @@ export function TrustGate({ projectPath, onDecide }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [projectPath]);
+  }, [projectPath, promptWhenUntrusted]);
 
   if (!projectPath || !unknown) return null;
 

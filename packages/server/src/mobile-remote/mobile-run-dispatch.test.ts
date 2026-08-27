@@ -5,8 +5,10 @@ function fakeBridge(onInject: (line: string, emit: (line: string) => void) => vo
   let listener: ((line: string) => void) | undefined;
   let unsubscribed = false;
   const injected: string[] = [];
+  const metas: unknown[] = [];
   return {
     injected,
+    metas,
     get unsubscribed() {
       return unsubscribed;
     },
@@ -18,8 +20,9 @@ function fakeBridge(onInject: (line: string, emit: (line: string) => void) => vo
           listener = undefined;
         };
       },
-      injectWorkerMessage(line: string) {
+      injectWorkerMessage(line: string, meta: unknown) {
         injected.push(line);
+        metas.push(meta);
         onInject(line, (outbound) => listener?.(outbound));
       },
     },
@@ -48,13 +51,18 @@ describe("injectMobileRunAndAwaitAcceptance", () => {
       );
     });
 
-    const result = await injectMobileRunAndAwaitAcceptance(fake.bridge, {
-      id: "mobile-run-1",
-      params: { task: "", sessionId: "session-1", attachments: [{ id: "image" }] },
-    });
+    const result = await injectMobileRunAndAwaitAcceptance(
+      fake.bridge,
+      {
+        id: "mobile-run-1",
+        params: { task: "", sessionId: "session-1", attachments: [{ id: "image" }] },
+      },
+      { origin: "mobile", producer: "mobile-chat" },
+    );
 
     expect(result).toEqual({ ok: true });
     expect(fake.injected).toHaveLength(1);
+    expect(fake.metas).toEqual([{ origin: "mobile", producer: "mobile-chat" }]);
     expect(fake.unsubscribed).toBe(true);
   });
 
@@ -73,10 +81,14 @@ describe("injectMobileRunAndAwaitAcceptance", () => {
     });
 
     await expect(
-      injectMobileRunAndAwaitAcceptance(fake.bridge, {
-        id: "mobile-run-2",
-        params: { task: "", sessionId: "session-1" },
-      }),
+      injectMobileRunAndAwaitAcceptance(
+        fake.bridge,
+        {
+          id: "mobile-run-2",
+          params: { task: "", sessionId: "session-1" },
+        },
+        { origin: "mobile", producer: "mobile-chat" },
+      ),
     ).resolves.toEqual({
       ok: false,
       message: "task or a valid attachment is required",

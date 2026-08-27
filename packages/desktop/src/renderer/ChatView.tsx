@@ -1652,6 +1652,10 @@ export function ChatView({
               {mention && (
                 <MentionPopover
                   cwd={activeProjectPath}
+                  projectId={activeProjectId}
+                  projectRoots={
+                    projects.find((project) => project.id === activeProjectId)?.roots
+                  }
                   query={mention.query}
                   selected={mentionSelected}
                   onPick={applyMentionPick}

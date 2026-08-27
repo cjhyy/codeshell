@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { EngineConfig } from "./types.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
 import { defaultSandboxConfig, type SandboxBackend } from "../tool-system/sandbox/index.js";
+import { createWorkspaceContext, legacySingleRootWorkspace } from "../workspace/workspace-context.js";
 
 const offBackend: SandboxBackend = {
   name: "off",
@@ -27,8 +28,9 @@ describe("RunEnvironmentResolver", () => {
       },
     });
 
-    const first = await resolver.resolve("/repo");
-    const second = await resolver.resolve("/repo");
+    const run = { cwd: "/repo", workspaceContext: legacySingleRootWorkspace("/repo") };
+    const first = await resolver.resolve(run);
+    const second = await resolver.resolve(run);
     expect(calls).toBe(1);
     expect(first.sandbox).not.toBe(shared);
     expect(first.sandbox.network).toBe("deny");
@@ -53,8 +55,9 @@ describe("RunEnvironmentResolver", () => {
       },
     });
 
-    await expect(resolver.resolveSandbox("/repo")).rejects.toThrow("unavailable");
-    await expect(resolver.resolveSandbox("/repo")).resolves.toBe(offBackend);
+    const run = { cwd: "/repo", workspaceContext: legacySingleRootWorkspace("/repo") };
+    await expect(resolver.resolveSandbox(run)).rejects.toThrow("unavailable");
+    await expect(resolver.resolveSandbox(run)).resolves.toBe(offBackend);
     expect(calls).toBe(2);
   });
 
@@ -84,5 +87,31 @@ describe("RunEnvironmentResolver", () => {
       TOP: "settings",
       OVERLAP: "settings",
     });
+  });
+
+  it("appends every run root to explicit sandbox writableRoots and de-duplicates aliases", () => {
+    const resolver = new RunEnvironmentResolver({
+      config: () =>
+        ({
+          llm: { provider: "x", model: "m" },
+          sandbox: { ...defaultSandboxConfig("seatbelt"), writableRoots: ["/repo"] },
+        }) as EngineConfig,
+      settings: () => ({ get: () => ({}), getForScope: () => ({}) }),
+      credentialAccess: { envExposures: () => ({}) },
+      resolveBackend: async () => offBackend,
+    });
+    const workspaceContext = createWorkspaceContext({
+      projectId: "project-1",
+      projectRevision: 1,
+      sessionMainRootId: "main",
+      roots: [
+        { id: "main", path: "/repo", role: "primary" },
+        { id: "docs", path: "/docs", role: "secondary" },
+      ],
+    });
+
+    expect(resolver.resolveSandboxConfig({ cwd: "/repo", workspaceContext }).writableRoots).toEqual(
+      ["/repo", "/docs"],
+    );
   });
 });

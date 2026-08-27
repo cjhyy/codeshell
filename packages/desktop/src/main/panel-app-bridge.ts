@@ -405,7 +405,11 @@ export class PanelAppBridge {
                 maxContextTokens: input.maxContextTokens,
               },
               PANEL_AGENT_RUN_TIMEOUT_MS,
-              { settleOnExit: true, failFast: true },
+              {
+                settleOnExit: true,
+                failFast: true,
+                meta: { origin: "host", producer: "panel-agent-task" },
+              },
             );
             if (!response.ok) throw new Error(response.message);
             const result = (response.result ?? {}) as {
@@ -445,6 +449,7 @@ export class PanelAppBridge {
           const response = await bridge.requestWorker("agent/cancel", { sessionId }, 30_000, {
             settleOnExit: true,
             failFast: true,
+            meta: { origin: "host", producer: "panel-agent-cancel" },
           });
           if (!response.ok) throw new Error(response.message);
         },
@@ -1704,7 +1709,11 @@ export class PanelAppBridge {
         // real progress arrives on the session stream. The 24h timeout exists
         // only so the correlation is eventually reclaimed, so release it as soon
         // as the worker is known to be gone instead of holding it for a day.
-        { settleOnExit: true, failFast: true },
+        {
+          settleOnExit: true,
+          failFast: true,
+          meta: { origin: "host", producer: "panel-submit-prompt" },
+        },
       )
       .then((result) => {
         // Release once the worker has answered. By now either the run finished

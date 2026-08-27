@@ -373,7 +373,13 @@ export class ToolExecutor {
       const target = isAbsolutePath(raw) ? raw : resolvePath(this.toolCtx.cwd, raw);
       call = {
         ...call,
-        args: attachFinalWritePathSnapshot(call.args, target, this.toolCtx.cwd),
+        args: attachFinalWritePathSnapshot(
+          call.args,
+          target,
+          this.toolCtx.cwd,
+          this.toolCtx.workspace?.roots.map((root) => root.path),
+          this.toolCtx.workspace?.rootsDigest,
+        ),
       };
     }
     const pathPolicyError = await this.enforceDeclaredPathPolicy(toolDef, call.args);

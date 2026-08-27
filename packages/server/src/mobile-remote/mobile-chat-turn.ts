@@ -4,6 +4,7 @@ import { materializeMobileAttachments } from "./mobile-attachments.js";
 import { injectMobileRunAndAwaitAcceptance, type MobileRunBridge } from "./mobile-run-dispatch.js";
 import type { ClaimedMobileUpload, MobileUploadService } from "./mobile-upload-service.js";
 import type { MobileAttachmentSummary, MobileImageAttachment, PermissionMode } from "./types.js";
+import type { WorkerFrameMeta } from "../worker-bridge-core.js";
 
 type ChatTurnUploads = Pick<MobileUploadService, "claim" | "release" | "finalize">;
 
@@ -17,6 +18,7 @@ export interface DispatchMobileChatTurnInput {
   permissionMode?: PermissionMode;
   runId: string;
   bridge: MobileRunBridge;
+  meta: WorkerFrameMeta;
   uploads: ChatTurnUploads;
   resolveWorkspace: (sessionId: string, fallbackCwd: string) => Promise<string>;
   markSent?: typeof markAttachmentsSent;
@@ -81,17 +83,21 @@ export async function dispatchMobileChatTurn(
   const clientMessageId =
     suppliedClientMessageId ||
     `mobile:${input.sessionId}:${input.runId}:${stablePromptHash(`${text}\0${attachmentHash}`)}`;
-  const acceptance = await injectMobileRunAndAwaitAcceptance(input.bridge, {
-    id: input.runId,
-    params: {
-      task: text,
-      cwd,
-      sessionId: input.sessionId,
-      clientMessageId,
-      attachments: materialized.metas,
-      ...(input.permissionMode ? { permissionMode: input.permissionMode } : {}),
+  const acceptance = await injectMobileRunAndAwaitAcceptance(
+    input.bridge,
+    {
+      id: input.runId,
+      params: {
+        task: text,
+        cwd,
+        sessionId: input.sessionId,
+        clientMessageId,
+        attachments: materialized.metas,
+        ...(input.permissionMode ? { permissionMode: input.permissionMode } : {}),
+      },
     },
-  });
+    input.meta,
+  );
   if (!acceptance.ok) {
     await settleClaims(input.uploads, input.deviceId, materialized.claims, "release");
     return { ok: false, message: acceptance.message };

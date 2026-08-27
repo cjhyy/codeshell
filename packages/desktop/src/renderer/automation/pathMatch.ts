@@ -2,6 +2,7 @@ export interface ProjectLike {
   id: string;
   name: string;
   path: string;
+  roots?: Array<{ path: string }>;
 }
 
 /** True on platforms whose filesystems are case-insensitive by default. */
@@ -70,7 +71,8 @@ export function matchProjectIdForCwd(
 ): string | null {
   const target = normalizeCwd(cwd, caseInsensitive);
   for (const r of projects) {
-    if (normalizeCwd(r.path, caseInsensitive) === target) return r.id;
+    const roots = r.roots?.length ? r.roots : [{ path: r.path }];
+    if (roots.some((root) => normalizeCwd(root.path, caseInsensitive) === target)) return r.id;
   }
   return null;
 }

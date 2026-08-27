@@ -43,8 +43,9 @@ import {
 import { open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { dirname, isAbsolute, join, relative, resolve as resolvePath, sep } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { readInstalledPlugins } from "../plugins/installedPlugins.js";
+import { canonicalPath } from "../workspace/canonical-key.js";
 import type { ToolContext } from "./context.js";
 
 export type PathDecision = "allow" | "ask" | "deny";
@@ -61,11 +62,15 @@ export interface PathClassification {
   reason: string;
   /** Resolved absolute path (with symlinks followed when possible). */
   resolvedPath: string;
+  /** Canonical workspace root containing resolvedPath, when one matched. */
+  matchedRoot?: string;
 }
 
 export interface ClassifyOptions {
   /** Absolute path of the active workspace (Engine.cwd). */
   workspaceRoot: string;
+  /** Complete authorized root set. Omitted preserves legacy single-root behavior. */
+  workspaceRoots?: readonly string[];
   /** "read" or "write" — different defaults for sensitive paths. */
   operation: PathOperation;
 }
@@ -74,6 +79,8 @@ export interface FinalWritePathSnapshot {
   resolvedPath: string;
   workspacePath: string;
   insideWorkspace: boolean;
+  matchedRoot?: string;
+  rootsDigest?: string;
 }
 
 const FINAL_WRITE_PATH_SNAPSHOT = Symbol("codeshell.finalWritePathSnapshot");
@@ -384,6 +391,18 @@ export function clearSessionPathApprovals(sessionId: string): void {
   askChains.delete(sessionId);
 }
 
+/** Revoke only grants that point into a root removed from a live project. */
+export function clearSessionPathApprovalsUnderRoot(sessionId: string, root: string): void {
+  const grants = sessionPathGrants.get(sessionId);
+  if (!grants) return;
+  const canonicalRoot = safeRealpath(root);
+  for (const grant of [...grants]) {
+    const grantPath = safeRealpath(grant.prefix);
+    if (isInsideDir(grantPath, canonicalRoot)) grants.delete(grant);
+  }
+  if (grants.size === 0) sessionPathGrants.delete(sessionId);
+}
+
 /**
  * Best-effort resolution. realpath fails when the path doesn't exist yet —
  * the common case for Write creating a new file. We walk up to the nearest
@@ -396,28 +415,7 @@ export function clearSessionPathApprovals(sessionId: string): void {
  * would be misclassified as outside-workspace.
  */
 function safeRealpath(p: string): string {
-  const abs = isAbsolute(p) ? p : resolvePath(process.cwd(), p);
-  // Walk up to the nearest existing ancestor.
-  let candidate = abs;
-  const segments: string[] = [];
-  // Cap the walk so a pathological input can't spin forever.
-  for (let i = 0; i < 64; i++) {
-    try {
-      const resolved = realpathSync(candidate);
-      if (segments.length === 0) return resolved;
-      return resolvePath(resolved, ...segments.reverse());
-    } catch {
-      const parent = dirname(candidate);
-      if (parent === candidate) {
-        // Reached root without finding anything that exists — return the
-        // original absolute form so the caller still has a usable path.
-        return abs;
-      }
-      segments.push(candidate.slice(parent.length + (parent.endsWith(sep) ? 0 : 1)));
-      candidate = parent;
-    }
-  }
-  return abs;
+  return canonicalPath(p);
 }
 
 /**
@@ -429,13 +427,19 @@ export function attachFinalWritePathSnapshot(
   args: Record<string, unknown>,
   filePath: string,
   workspaceRoot: string,
+  workspaceRoots?: readonly string[],
+  rootsDigest?: string,
 ): Record<string, unknown> {
   const resolvedPath = safeRealpath(filePath);
   const workspacePath = safeRealpath(workspaceRoot);
+  const roots = (workspaceRoots?.length ? workspaceRoots : [workspaceRoot]).map(safeRealpath);
+  const matchedRoot = roots.find((root) => isInsideDir(resolvedPath, root));
   const snapshot: FinalWritePathSnapshot = {
     resolvedPath,
     workspacePath,
-    insideWorkspace: isInsideDir(resolvedPath, workspacePath),
+    insideWorkspace: matchedRoot !== undefined,
+    matchedRoot,
+    rootsDigest,
   };
   return { ...args, [FINAL_WRITE_PATH_SNAPSHOT]: snapshot };
 }
@@ -444,6 +448,8 @@ export function getFinalWritePathSnapshot(
   args: Record<string, unknown>,
   filePath: string,
   workspaceRoot: string,
+  workspaceRoots?: readonly string[],
+  rootsDigest?: string,
 ): FinalWritePathSnapshot {
   const carried = (args as Record<string, unknown> & { [FINAL_WRITE_PATH_SNAPSHOT]?: unknown })[
     FINAL_WRITE_PATH_SNAPSHOT
@@ -456,10 +462,14 @@ export function getFinalWritePathSnapshot(
   // read-to-write interval with a second check before its writeFile.
   const resolvedPath = safeRealpath(filePath);
   const workspacePath = safeRealpath(workspaceRoot);
+  const roots = (workspaceRoots?.length ? workspaceRoots : [workspaceRoot]).map(safeRealpath);
+  const matchedRoot = roots.find((root) => isInsideDir(resolvedPath, root));
   return {
     resolvedPath,
     workspacePath,
-    insideWorkspace: isInsideDir(resolvedPath, workspacePath),
+    insideWorkspace: matchedRoot !== undefined,
+    matchedRoot,
+    rootsDigest,
   };
 }
 
@@ -467,15 +477,29 @@ export function revalidateFinalWritePath(
   filePath: string,
   workspaceRoot: string,
   approved: FinalWritePathSnapshot,
+  workspaceRoots?: readonly string[],
+  rootsDigest?: string,
 ): { resolvedPath: string } | { error: string } {
   const currentPath = safeRealpath(filePath);
   const currentWorkspace = safeRealpath(workspaceRoot);
   const sameTarget = normPath(currentPath) === normPath(approved.resolvedPath);
   const sameWorkspace = normPath(currentWorkspace) === normPath(approved.workspacePath);
-  const crossedWorkspaceBoundary =
-    approved.insideWorkspace && !isInsideDir(currentPath, currentWorkspace);
+  const currentRoots = (workspaceRoots?.length ? workspaceRoots : [workspaceRoot]).map(safeRealpath);
+  const currentMatchedRoot = currentRoots.find((root) => isInsideDir(currentPath, root));
+  const crossedWorkspaceBoundary = approved.insideWorkspace && currentMatchedRoot === undefined;
+  const changedMatchedRoot =
+    approved.matchedRoot !== undefined &&
+    normPath(currentMatchedRoot ?? "") !== normPath(approved.matchedRoot);
+  const changedRootsDigest =
+    approved.rootsDigest !== undefined && rootsDigest !== approved.rootsDigest;
 
-  if (crossedWorkspaceBoundary || !sameTarget || !sameWorkspace) {
+  if (
+    crossedWorkspaceBoundary ||
+    changedMatchedRoot ||
+    changedRootsDigest ||
+    !sameTarget ||
+    !sameWorkspace
+  ) {
     const reason = crossedWorkspaceBoundary
       ? "final write path resolved outside the workspace after approval"
       : "final write path changed after approval";
@@ -730,12 +754,14 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
 
   const expanded = expandTilde(rawPath);
   const resolved = safeRealpath(expanded);
-  const workspace = safeRealpath(opts.workspaceRoot);
+  const workspaceRoots = opts.workspaceRoots?.length ? opts.workspaceRoots : [opts.workspaceRoot];
+  const workspaces = workspaceRoots.map((root) => safeRealpath(root));
 
   const sensitiveDir = matchSensitiveDir(resolved);
   const sensitiveFile = matchSensitiveFile(resolved);
   const sensitiveLabel = sensitiveDir ?? sensitiveFile;
-  const insideWorkspace = isInsideDir(resolved, workspace);
+  const matchedRoot = workspaces.find((workspace) => isInsideDir(resolved, workspace));
+  const insideWorkspace = matchedRoot !== undefined;
 
   // Registered Skill resources are managed runtime inputs. Their SKILL.md is
   // already readable through the Skill builtin; allow its contained reference
@@ -790,7 +816,12 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
   }
 
   if (insideWorkspace) {
-    return { decision: "allow", reason: "inside workspace", resolvedPath: resolved };
+    return {
+      decision: "allow",
+      reason: "inside workspace",
+      resolvedPath: resolved,
+      matchedRoot,
+    };
   }
 
   // Outside workspace: ask for both read and write. The conservative bias
@@ -857,7 +888,11 @@ export async function enforcePathPolicyWithApproval(
   // who chose full access still got prompted for project-external reads.
   if (ctx.permissionMode === "bypassPermissions") return null;
 
-  const c = classifyPath(filePath, { workspaceRoot: ctx.cwd, operation });
+  const c = classifyPath(filePath, {
+    workspaceRoot: ctx.cwd,
+    workspaceRoots: ctx.workspace?.roots.map((root) => root.path),
+    operation,
+  });
   if (c.decision === "allow") return null;
   if (c.decision === "deny") {
     return `Error: blocked by path policy — ${c.reason}. Path: ${c.resolvedPath}`;

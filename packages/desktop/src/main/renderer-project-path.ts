@@ -1,16 +1,25 @@
-import { readFile, readdir, realpath, stat } from "node:fs/promises";
+import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { homedir } from "node:os";
 import { sessionsRoot } from "@cjhyy/code-shell-core";
 import { loadProjects } from "./recents-store.js";
+import { getSessionCwdIndex } from "./session-cwd-index.js";
+import {
+  getProjectStore,
+  type LocalProject,
+  type LocalProjectRoot,
+} from "./project-store.js";
 
-const MAX_SESSION_DIRS_TO_SCAN = 20_000;
 const MAX_RENDERER_PATH_LENGTH = 32_768;
 
 interface RendererProjectPathOptions {
   registeredPaths?: readonly string[];
   noRepoPath?: string;
   sessionRoot?: string;
+}
+
+interface RendererProjectRegistryOptions {
+  projects?: readonly LocalProject[];
 }
 
 async function canonicalDirectory(input: unknown): Promise<string | undefined> {
@@ -50,28 +59,62 @@ async function canonicalProjectEntry(input: unknown): Promise<string | undefined
   }
 }
 
-async function hasPersistedSessionRoot(sessionRoot: string, requested: string): Promise<boolean> {
-  let entries;
-  try {
-    entries = await readdir(sessionRoot, { withFileTypes: true });
-  } catch {
-    return false;
-  }
-  for (const entry of entries.slice(0, MAX_SESSION_DIRS_TO_SCAN)) {
-    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-    try {
-      const state = JSON.parse(
-        await readFile(join(sessionRoot, entry.name, "state.json"), "utf8"),
-      ) as {
-        cwd?: unknown;
-      };
-      const root = await canonicalDirectory(state.cwd);
-      if (root === requested) return true;
-    } catch {
-      // A corrupt/unrelated session is isolated from authorization decisions.
+async function rendererProjects(options: RendererProjectRegistryOptions): Promise<LocalProject[]> {
+  return options.projects ? [...options.projects] : getProjectStore().list();
+}
+
+/** Resolve only a live project id from the authoritative main-process registry. */
+export async function requireRendererProject(
+  projectId: unknown,
+  options: RendererProjectRegistryOptions = {},
+): Promise<LocalProject> {
+  if (typeof projectId !== "string" || !projectId) throw new Error("project id is required");
+  const project = (await rendererProjects(options)).find(
+    (candidate) => candidate.id === projectId && candidate.deletedAt === undefined,
+  );
+  if (!project) throw new Error(`project not found: ${String(projectId)}`);
+  return project;
+}
+
+/** Resolve one registered root id and return its canonical on-disk directory. */
+export async function requireRendererProjectRoot(
+  projectId: unknown,
+  rootId: unknown,
+  options: RendererProjectRegistryOptions = {},
+): Promise<{ project: LocalProject; root: LocalProjectRoot; rootId: string; path: string }> {
+  const project = await requireRendererProject(projectId, options);
+  if (typeof rootId !== "string" || !rootId) throw new Error("project root id is required");
+  const root = project.roots.find((candidate) => candidate.id === rootId);
+  if (!root) throw new Error(`project root not found: ${String(rootId)}`);
+  const path = await canonicalDirectory(root.path);
+  if (!path) throw new Error(`project root is missing: ${root.path}`);
+  return { project, root, rootId: root.id, path };
+}
+
+/** Resolve an existing entry and identify the project root that contains its real target. */
+export async function requireRendererProjectRootEntry(
+  projectId: unknown,
+  input: unknown,
+  options: RendererProjectRegistryOptions = {},
+): Promise<{ entry: string; rootId: string }> {
+  const project = await requireRendererProject(projectId, options);
+  const entry = await canonicalProjectEntry(input);
+  if (!entry) throw new Error("project entry must be an existing absolute file or directory");
+  for (const root of project.roots) {
+    const canonicalRoot = await canonicalDirectory(root.path);
+    if (!canonicalRoot) continue;
+    const rel = relative(canonicalRoot, entry);
+    if (rel === "" || (!!rel && !rel.startsWith("..") && !isAbsolute(rel))) {
+      return { entry, rootId: root.id };
     }
   }
-  return false;
+  throw new Error("project entry is outside the authorized project roots");
+}
+
+async function hasPersistedSessionRoot(sessionRoot: string, requested: string): Promise<boolean> {
+  const index = getSessionCwdIndex(sessionRoot);
+  await index.ensureLoaded();
+  return index.resolveConfirmedCwds([requested])[0] === true;
 }
 
 /**

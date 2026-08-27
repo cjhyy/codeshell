@@ -11,11 +11,11 @@ import {
   type RoomMeta,
   type RoomPublic,
 } from "@cjhyy/code-shell-server/mobile-remote";
+import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 import { listDiskSessions } from "@cjhyy/code-shell-server/storage";
 import type { AgentBridge } from "../agent-bridge.js";
 import type { ApprovalBridge } from "../cc-room/approval-bridge.js";
 import type { TranscriptSubscriptionManager } from "../cc-room/transcript-subscriptions.js";
-import { getSessionWorkspaceForUi } from "../session-workspace-service.js";
 import { getSessionTranscript } from "../transcript-reader.js";
 import { handleCcRoomEvent } from "./handle-cc-room-event.js";
 import { handleRoomEvent } from "./handle-room-event.js";
@@ -63,7 +63,9 @@ export interface OrchestratorCtx {
   deviceState: (deviceId: string) => MobileDeviceState;
   ensureMobileSessionId: (state: MobileDeviceState) => string;
   lookupDiskSessionCwd: (sessionId: string) => Promise<string | null | undefined>;
-  effectiveMobileRunCwd: (state: MobileDeviceState, contextCwd?: string) => string;
+  effectiveMobileRunCwd: (state: MobileDeviceState) => string;
+  validateMobileSessionCwd: (cwd: string) => Promise<boolean>;
+  resolveSessionWorkspaceRoot: (sessionId: string, fallbackCwd: string) => Promise<string>;
   sendMobilePermissionMode: (deviceId: string | undefined, sessionId: string) => void;
   sendSelectedMobilePermissionModes: () => void;
   replayPendingMobileApprovals: (sessionId: string, deviceId?: string) => void;
@@ -110,6 +112,7 @@ export function injectAndAwaitResult(
   b: AgentBridge,
   method: string,
   params: Record<string, unknown>,
+  meta: WorkerFrameMeta,
 ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
   const id = `mobile-${method.replace(/\W+/g, "-")}-${Date.now()}-${mobileRequestSeq++}`;
   return new Promise((resolveResult) => {
@@ -145,8 +148,19 @@ export function injectAndAwaitResult(
     // Fallback: if the worker never answers (dead/slow), report failure rather
     // than hanging — the phone keeps showing its prior state.
     const timer = setTimeout(() => done({ ok: false, message: "worker did not respond" }), 5000);
-    b.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
+    b.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", id, method, params }), meta);
   });
+}
+
+export async function resolveMobileSessionCreateCwd(
+  requested: string | null | undefined,
+  isAllowed: (cwd: string) => Promise<boolean>,
+): Promise<string | null> {
+  if (requested == null) return null;
+  if (!(await isAllowed(requested))) {
+    throw new Error("session cwd is not a mounted project root or no-repo workspace");
+  }
+  return requested;
 }
 
 /**
@@ -221,14 +235,20 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "session.create") {
+    let selectedCwd: string | null;
+    try {
+      selectedCwd = await resolveMobileSessionCreateCwd(
+        "cwd" in event ? event.cwd : undefined,
+        ctx.validateMobileSessionCwd,
+      );
+    } catch (error) {
+      reply({ type: "error", message: error instanceof Error ? error.message : String(error) });
+      return;
+    }
     // Mint a fresh session for THIS device and make it its active selection.
     st.sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     st.selectedSessionId = st.sessionId;
-    if ("cwd" in event) {
-      st.selectedCwd = event.cwd ?? null;
-    } else {
-      st.selectedCwd = runContext.cwd ?? process.cwd();
-    }
+    st.selectedCwd = selectedCwd;
     ctx.mobileSessionCwds.set(st.sessionId, st.selectedCwd);
     if (st.permissionMode) ctx.mobilePermissionModes.set(st.sessionId, st.permissionMode);
     reply({ type: "chat.accepted", sessionId: st.sessionId, cwd: st.selectedCwd });
@@ -244,7 +264,7 @@ export async function handleClientEvent(
   }
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
-    const fallbackCwd = ctx.effectiveMobileRunCwd(st, runContext.cwd);
+    const fallbackCwd = ctx.effectiveMobileRunCwd(st);
     if (st.permissionMode && !ctx.mobilePermissionModes.has(sessionId)) {
       ctx.mobilePermissionModes.set(sessionId, st.permissionMode);
     }
@@ -261,11 +281,9 @@ export async function handleClientEvent(
       permissionMode,
       runId,
       bridge,
+      meta: { origin: "mobile", producer: "mobile-chat" },
       uploads: ctx.uploads,
-      resolveWorkspace: (targetSessionId, fallback) =>
-        getSessionWorkspaceForUi(targetSessionId, fallback)
-          .then((workspace) => workspace.root)
-          .catch(() => fallback),
+      resolveWorkspace: ctx.resolveSessionWorkspaceRoot,
     });
     if (!dispatched.ok) {
       reply({
@@ -320,6 +338,7 @@ export async function handleClientEvent(
         method: "agent/approve",
         params: { sessionId, requestId: event.approvalId, decision },
       }),
+      { origin: "mobile", producer: "mobile-approval" },
     );
     ctx.broadcastApprovalResolved({
       requestId: event.approvalId,
@@ -336,6 +355,7 @@ export async function handleClientEvent(
         method: "agent/cancel",
         params: { sessionId: resolveSessionId(event.sessionId) },
       }),
+      { origin: "mobile", producer: "mobile-run-stop" },
     );
     return;
   }
@@ -411,7 +431,12 @@ export async function handleClientEvent(
     // Only confirm the model AFTER the worker actually applied it; an invalid
     // model name must not be shown as the current model. Model is
     // engine-global, so a successful change broadcasts to all devices.
-    const res = await injectAndAwaitResult(bridge, "agent/configure", { model: event.model });
+    const res = await injectAndAwaitResult(
+      bridge,
+      "agent/configure",
+      { model: event.model },
+      { origin: "mobile", producer: "mobile-model-set" },
+    );
     if (res.ok) {
       ctx.remote.broadcast({ type: "model.current", model: event.model });
     } else {
@@ -420,13 +445,18 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "goal.extend") {
-    const res = await injectAndAwaitResult(bridge, "agent/goalExtend", {
-      sessionId: event.sessionId,
-      addTurns: event.addTurns,
-      addTokenBudget: event.addTokenBudget,
-      addTimeBudgetMs: event.addTimeBudgetMs,
-      addStopBlocks: event.addStopBlocks,
-    });
+    const res = await injectAndAwaitResult(
+      bridge,
+      "agent/goalExtend",
+      {
+        sessionId: event.sessionId,
+        addTurns: event.addTurns,
+        addTokenBudget: event.addTokenBudget,
+        addTimeBudgetMs: event.addTimeBudgetMs,
+        addStopBlocks: event.addStopBlocks,
+      },
+      { origin: "mobile", producer: "mobile-goal-extend" },
+    );
     // Report the REAL outcome (ok:false carries the worker's reason).
     reply({
       type: "goal.extended",
@@ -437,9 +467,12 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "goal.clear") {
-    const res = await injectAndAwaitResult(bridge, "agent/goalClear", {
-      sessionId: event.sessionId,
-    });
+    const res = await injectAndAwaitResult(
+      bridge,
+      "agent/goalClear",
+      { sessionId: event.sessionId },
+      { origin: "mobile", producer: "mobile-goal-clear" },
+    );
     // The worker's result carries { ok, cleared }; surface `cleared` so the
     // phone can tell "there was a goal, now gone" from "nothing to clear".
     const cleared =

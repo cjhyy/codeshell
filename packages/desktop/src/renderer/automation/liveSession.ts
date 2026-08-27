@@ -28,6 +28,10 @@ export interface PlaceLiveSessionDeps {
   resolveCwd?: (cwd: string) => string;
   /** Create a repo for an unmatched cwd; returns its id. */
   createProjectForCwd: (cwd: string) => string | null;
+  resolvedForCwd?: ReadonlyMap<
+    string,
+    { projectId: string; rootId: string; created: boolean } | { noRepo: true } | null
+  >;
 }
 
 export interface LiveSessionPlacement {
@@ -50,9 +54,16 @@ export function placeLiveAutomationSession(
   const cwd = deps.resolveCwd?.(ann.cwd) ?? ann.cwd;
   // The internal no-repo sandbox is a no-project chat → NO_REPO_KEY bucket
   // (projectId null), never a real repo.
-  const projectId = isNoRepoCwd(cwd)
-    ? null
-    : (matchProjectIdForCwd(cwd, projects, deps.caseInsensitive) ?? deps.createProjectForCwd(cwd));
+  const mainResolution = deps.resolvedForCwd?.get(cwd);
+  const projectId = deps.resolvedForCwd?.has(cwd)
+    ? mainResolution && "projectId" in mainResolution
+      ? mainResolution.projectId
+      : null
+    : isNoRepoCwd(cwd)
+      ? null
+      : (matchProjectIdForCwd(cwd, projects, deps.caseInsensitive) ??
+        deps.createProjectForCwd(cwd));
+  if (projectId === null && mainResolution === null) return null;
   if (projectId === null && !isNoRepoCwd(cwd)) return null;
   const now = Date.now();
   const summary: SessionSummary = {

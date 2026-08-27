@@ -37,6 +37,10 @@ export interface ImportDeps {
   /** Create a repo for an unmatched cwd; returns its id. */
   createProjectForCwd: (cwd: string) => string | null;
   resolveCwd?: (cwd: string) => string;
+  resolvedForCwd?: ReadonlyMap<
+    string,
+    { projectId: string; rootId: string; created: boolean } | { noRepo: true } | null
+  >;
   /** Max runs imported per repo (most-recent first). */
   cap: number;
 }
@@ -64,10 +68,15 @@ export async function importAutomationRuns(
     const cwd = deps.resolveCwd?.(r.cwd) ?? r.cwd;
     // The internal no-repo sandbox is a no-project chat → NO_REPO_KEY bucket
     // (projectId null), never a real repo.
-    let projectId = isNoRepoCwd(cwd)
-      ? null
-      : matchProjectIdForCwd(cwd, projects, deps.caseInsensitive);
-    if (!projectId && !isNoRepoCwd(cwd)) {
+    const mainResolution = deps.resolvedForCwd?.get(cwd);
+    let projectId = deps.resolvedForCwd?.has(cwd)
+      ? mainResolution && "projectId" in mainResolution
+        ? mainResolution.projectId
+        : null
+      : isNoRepoCwd(cwd)
+        ? null
+        : matchProjectIdForCwd(cwd, projects, deps.caseInsensitive);
+    if (!projectId && !isNoRepoCwd(cwd) && !deps.resolvedForCwd?.has(cwd)) {
       const key = normalizeCwd(cwd, deps.caseInsensitive);
       projectId = autoCreated.get(key) ?? null;
       if (!projectId) {
@@ -76,6 +85,7 @@ export async function importAutomationRuns(
         autoCreated.set(key, projectId);
       }
     }
+    if (projectId === null && mainResolution === null) continue;
     const list = byProject.get(projectId) ?? [];
     list.push(r);
     byProject.set(projectId, list);

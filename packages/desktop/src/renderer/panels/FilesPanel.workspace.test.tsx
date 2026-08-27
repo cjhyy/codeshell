@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { FilesPanel } from "./FilesPanel";
+import type { TrackedProject } from "../projects";
 
 const WORKTREE = "/repo/.worktrees/feature";
 
@@ -14,12 +15,31 @@ let revealNonce = 1;
 let revealConsumed = false;
 const readDirs: Array<[string, string]> = [];
 const readFiles: Array<[string, string]> = [];
+const readProjectDirs: Array<[string, string, string | undefined]> = [];
+let project: TrackedProject | undefined;
+
+function reactPropsOf(node: unknown): Record<string, any> {
+  const current = node as Record<string, any>;
+  const key = Object.keys(current).find((name) => name.startsWith("__reactProps$"));
+  return key ? current[key] : {};
+}
+
+function findElement(node: unknown, tagName: string): any {
+  const current = node as { tagName?: string; childNodes?: unknown[] };
+  if (current.tagName === tagName) return current;
+  for (const child of current.childNodes ?? []) {
+    const found = findElement(child, tagName);
+    if (found) return found;
+  }
+  return undefined;
+}
 
 async function render(): Promise<void> {
   await act(async () => {
     root?.render(
       <FilesPanel
         cwd={cwd}
+        project={project}
         revealFile={{ path: revealPath, cwd, nonce: revealNonce, consumed: revealConsumed }}
       />,
     );
@@ -38,6 +58,8 @@ beforeEach(async () => {
   });
   readDirs.length = 0;
   readFiles.length = 0;
+  readProjectDirs.length = 0;
+  project = undefined;
   cwd = WORKTREE;
   revealPath = `${WORKTREE}/src/worktree.ts`;
   revealNonce = 1;
@@ -52,6 +74,11 @@ beforeEach(async () => {
         readFiles.push([rootPath, path]);
         return { text: "content", reason: null, truncated: false };
       },
+      readProjectDir: async (projectId: string, rootId: string, dir?: string) => {
+        readProjectDirs.push([projectId, rootId, dir]);
+        return [];
+      },
+      readProjectFileContent: async () => ({ text: "content", size: 7 }),
     },
   });
   container = document.createElement("div") as unknown as HTMLElement;
@@ -93,5 +120,31 @@ describe("FilesPanel workspace identity", () => {
     await render();
 
     expect(readFiles).toEqual([]);
+  });
+
+  test("shows secondary roots and reads them through projectId/rootId authorization", async () => {
+    project = {
+      id: "project-1",
+      name: "Project",
+      path: "/repo",
+      roots: [
+        { id: "primary", path: "/repo", name: "repo", addedAt: 1 },
+        { id: "secondary", path: "/shared", name: "shared", addedAt: 2 },
+      ],
+      primaryRootId: "primary",
+      addedAt: 1,
+    };
+    cwd = "/repo";
+    revealConsumed = true;
+    await render();
+
+    const select = findElement(container, "SELECT");
+    expect(select).toBeDefined();
+    await act(async () => {
+      reactPropsOf(select).onChange({ target: { value: "secondary" } });
+      await flushMicrotasks();
+    });
+
+    expect(readProjectDirs).toContainEqual(["project-1", "secondary", "/shared"]);
   });
 });

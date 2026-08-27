@@ -63,8 +63,10 @@ export async function editTool(
   if (!existsSync(filePath)) return `Error: File not found: ${filePath}`;
 
   try {
-    const approvedPath = getFinalWritePathSnapshot(args, filePath, cwd);
-    const beforeRead = revalidateFinalWritePath(filePath, cwd, approvedPath);
+    const roots = ctx?.workspace?.roots.map((root) => root.path);
+    const digest = ctx?.workspace?.rootsDigest;
+    const approvedPath = getFinalWritePathSnapshot(args, filePath, cwd, roots, digest);
+    const beforeRead = revalidateFinalWritePath(filePath, cwd, approvedPath, roots, digest);
     if ("error" in beforeRead) return { ok: false, error: beforeRead.error };
     const raw = await readFile(beforeRead.resolvedPath, "utf-8");
 
@@ -91,7 +93,7 @@ export async function editTool(
 
     const updatedLf = replaceAll ? content.split(oldLf).join(newLf) : content.replace(oldLf, newLf);
 
-    const beforeWrite = revalidateFinalWritePath(filePath, cwd, approvedPath);
+    const beforeWrite = revalidateFinalWritePath(filePath, cwd, approvedPath, roots, digest);
     if ("error" in beforeWrite) return { ok: false, error: beforeWrite.error };
     await writeFileNoFollow(beforeWrite.resolvedPath, applyEol(updatedLf, eol));
     fileCache.invalidate(filePath);

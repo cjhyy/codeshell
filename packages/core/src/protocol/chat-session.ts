@@ -25,6 +25,7 @@ export interface TurnOpts {
   /** Working directory override for this turn. If omitted, Engine uses its
    *  configured cwd. */
   cwd?: string;
+  workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
   onStream?: (event: StreamEvent) => void;
   /** User-facing text persisted beside the full model-facing task. */
   displayText?: string;
@@ -384,6 +385,7 @@ export class ChatSession {
       const onStream = next.opts.onStream ?? this.defaultOnStream;
       const result = await this.engine.run(next.task, {
         cwd: next.opts.cwd,
+        workspaceContext: next.opts.workspaceContext,
         sessionId: this.id,
         displayText: next.opts.displayText,
         signal: this.controller.signal,

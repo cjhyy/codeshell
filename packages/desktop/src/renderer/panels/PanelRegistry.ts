@@ -13,6 +13,7 @@ import type { Anchor } from "../chat/anchors";
 import type { PanelAppAgentToolDescriptor, PanelAppDescriptor } from "../../shared/panel-apps";
 import { resolvePanelAppIcon } from "./panelAppIcons";
 import { FilesPanel } from "./FilesPanel";
+import type { TrackedProject } from "../projects";
 import { BrowserPanel } from "./BrowserPanel";
 import { ReviewPanel } from "./ReviewPanel";
 // TerminalPanel is the ONLY importer of @xterm/xterm (+ addon-fit + its CSS).
@@ -35,6 +36,7 @@ import type { DesktopBuiltinPanelAppHost } from "./DesktopBuiltinPanelApp";
 
 export interface PanelAvailabilityContext {
   projectPath: string | null;
+  project?: TrackedProject | null;
   cwd: string | null;
   engineSessionId: string | null;
 }
@@ -95,8 +97,8 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
     icon: FolderTree,
     order: 0,
     enabled: alwaysEnabled,
-    render: ({ cwd, onAttachImage, revealFile, onRevealConsumed }) =>
-      createElement(FilesPanel, { cwd, onAttachImage, revealFile, onRevealConsumed }),
+    render: ({ cwd, project, onAttachImage, revealFile, onRevealConsumed }) =>
+      createElement(FilesPanel, { cwd, project, onAttachImage, revealFile, onRevealConsumed }),
   }),
   builtin({
     key: "browser",

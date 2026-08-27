@@ -34,6 +34,12 @@ export function previewLine(s: string, max = 200): string {
 
 export type WorkerBridgeLog = (event: string, data?: Record<string, unknown>) => void;
 
+export interface WorkerFrameMeta {
+  origin: "renderer" | "mobile" | "host" | "serve";
+  /** Producer label for logs and audits. It is never an authorization input. */
+  producer: string;
+}
+
 export interface WorkerExitInfo {
   code: number | null;
   signal: NodeJS.Signals | null;
@@ -77,6 +83,8 @@ export interface WorkerRequestOptions {
   ensureWorker?: boolean;
   /** cwd handed to ensureWorker() when it spawns. Ignored unless ensureWorker. */
   ensureWorkerCwd?: string;
+  /** Main-owned provenance for this frame. */
+  meta: WorkerFrameMeta;
 }
 
 export interface WorkerBridgeCoreOptions {
@@ -94,7 +102,7 @@ export interface WorkerBridgeCoreOptions {
    * injected or correlated (e.g. agent/run trust metadata + on-demand spawn).
    * Returns the line to write; `method` is only used for log context.
    */
-  prepareInbound?: (line: string) => { line: string; method?: string };
+  prepareInbound?: (line: string, meta: WorkerFrameMeta) => { line: string; method?: string };
   /** A worker successfully spawned with piped stdio. */
   onWorkerStarted?: (info: { generation: number; pid?: number }) => void;
   /** spawn() threw synchronously, or stdio came back unpiped. No child. */
@@ -271,7 +279,11 @@ export class WorkerBridgeCore {
    */
   private settleMatchingRequest(line: string): boolean {
     if (this.pendingRequests.size === 0) return false;
-    let msg: { id?: string | number; result?: unknown; error?: { message?: string; code?: number } };
+    let msg: {
+      id?: string | number;
+      result?: unknown;
+      error?: { message?: string; code?: number };
+    };
     try {
       msg = JSON.parse(line) as typeof msg;
     } catch {
@@ -281,9 +293,7 @@ export class WorkerBridgeCore {
     const pending = this.pendingRequests.get(msg.id);
     if (!pending) return false;
     pending.settle(
-      msg.error
-        ? { status: "error", error: msg.error }
-        : { status: "result", result: msg.result },
+      msg.error ? { status: "error", error: msg.error } : { status: "result", result: msg.result },
     );
     return pending.consume;
   }
@@ -323,18 +333,25 @@ export class WorkerBridgeCore {
    * written, or dropped with a log when no worker is alive — identical
    * semantics for every front end (renderer, mobile remote, orchestrators).
    */
-  injectWorkerMessage(rawLine: string): void {
+  injectWorkerMessage(rawLine: string, meta: WorkerFrameMeta): void {
     const prep = this.opts.prepareInbound
-      ? this.opts.prepareInbound(rawLine)
+      ? this.opts.prepareInbound(rawLine, meta)
       : { line: rawLine, method: undefined };
     if (!this.canSend()) {
       this.log("inject.dropped", {
         reason: this.child ? "stdin destroyed" : "no child",
         method: prep.method,
+        origin: meta.origin,
+        producer: meta.producer,
       });
       return;
     }
-    this.log("inject→worker", { method: prep.method, raw: previewLine(prep.line) });
+    this.log("inject→worker", {
+      method: prep.method,
+      origin: meta.origin,
+      producer: meta.producer,
+      raw: previewLine(prep.line),
+    });
     this.sendLine(prep.line);
   }
 
@@ -386,7 +403,7 @@ export class WorkerBridgeCore {
         // bypassing this hook left the main process unable to route the first
         // Panel tool call for a restored session.
         const prepared = this.opts.prepareInbound
-          ? this.opts.prepareInbound(rawFrame)
+          ? this.opts.prepareInbound(rawFrame, options.meta)
           : { line: rawFrame, method: undefined };
         // Wake a lazily-unspawned worker before writing, so a spawn-triggering
         // request (pet/IM-gateway agent/run) isn't dropped by sendLine and left
@@ -396,6 +413,18 @@ export class WorkerBridgeCore {
         sent = this.sendLine(prepared.line);
       } catch (e) {
         sendError = e;
+      }
+      const rejected = sendError as { code?: unknown; message?: unknown } | undefined;
+      if (typeof rejected?.code === "number") {
+        settle({
+          status: "error",
+          error: {
+            code: rejected.code,
+            message:
+              typeof rejected.message === "string" ? rejected.message : "worker frame rejected",
+          },
+        });
+        return;
       }
       if (options.failFast && (!sent || sendError !== undefined)) {
         settle({ status: "sendFailed", error: sendError });

@@ -39,6 +39,7 @@ export function resolveRunProfileState(args: {
 
 export interface RunPromptComposerConfigInput {
   cwd: ComposerOptions["cwd"];
+  workspace: ComposerOptions["workspace"];
   /** Standing brief persisted on the Session (see SessionState.sessionBrief). */
   sessionBrief?: ComposerOptions["sessionBrief"];
   model: ComposerOptions["model"];
@@ -75,6 +76,7 @@ export interface RunPromptComposerConfigInput {
 export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): ComposerOptions {
   const {
     cwd,
+    workspace,
     model,
     preset,
     customSystemPrompt,
@@ -104,6 +106,7 @@ export function buildPromptComposerConfig(args: RunPromptComposerConfigInput): C
 
   return {
     cwd,
+    workspace,
     model,
     preset,
     customSystemPrompt,

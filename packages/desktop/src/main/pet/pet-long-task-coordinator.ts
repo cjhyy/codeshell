@@ -21,6 +21,7 @@ import type {
   PetStateAggregator,
 } from "./pet-state-aggregator.js";
 import { PetLongTaskStore } from "./pet-long-task-store.js";
+import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
 
 const MAX_PET_LONG_TASK_SUMMARY_LENGTH = 8_000;
 const PROJECTION_LAUNCH_GRACE_MS = 2_000;
@@ -30,7 +31,8 @@ interface PetLongTaskWorker {
   requestWorker(
     method: string,
     params: Record<string, unknown>,
-    timeoutMs?: number,
+    timeoutMs: number,
+    options: { meta: WorkerFrameMeta },
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
 }
 
@@ -727,7 +729,9 @@ export class PetLongTaskCoordinator {
         this.options.onBackgroundError?.("pause-goal", error),
       );
       await this.options.worker
-        .requestWorker("agent/cancel", { sessionId: paused.sessionId }, 15_000)
+        .requestWorker("agent/cancel", { sessionId: paused.sessionId }, 15_000, {
+          meta: { origin: "host", producer: "pet-long-task-pause" },
+        })
         .catch((error) => this.options.onBackgroundError?.("pause-cancel", error));
     }
     return { ok: true, task: this.options.store.get(task.id) ?? paused };
@@ -738,6 +742,7 @@ export class PetLongTaskCoordinator {
       "agent/goalGet",
       { sessionId: task.sessionId },
       10_000,
+      { meta: { origin: "host", producer: "pet-long-task-goal-get" } },
     );
     if (!state.ok) throw new Error(state.message);
     const goal = state.result as {
@@ -756,6 +761,7 @@ export class PetLongTaskCoordinator {
         expectedRevision: goal.revision,
       },
       10_000,
+      { meta: { origin: "host", producer: "pet-long-task-goal-pause" } },
     );
     if (!updated.ok) throw new Error(updated.message);
     const result = updated.result as { updated?: boolean } | undefined;
@@ -805,6 +811,7 @@ export class PetLongTaskCoordinator {
       "agent/goalGet",
       { sessionId: task.sessionId },
       10_000,
+      { meta: { origin: "host", producer: "pet-long-task-resume-get" } },
     );
     if (!state.ok) return false;
     const goal = state.result as {
@@ -823,6 +830,7 @@ export class PetLongTaskCoordinator {
         expectedRevision: goal.revision,
       },
       10_000,
+      { meta: { origin: "host", producer: "pet-long-task-goal-resume" } },
     );
     if (!updated.ok) return false;
     return (updated.result as { updated?: boolean } | undefined)?.updated === true;
@@ -880,6 +888,7 @@ export class PetLongTaskCoordinator {
           "agent/cancel",
           { sessionId: task.sessionId },
           15_000,
+          { meta: { origin: "host", producer: "pet-long-task-cancel" } },
         );
         if (!outcome.ok) throw new Error(outcome.message);
       } catch (error) {
@@ -902,7 +911,9 @@ export class PetLongTaskCoordinator {
     });
     if (hadLiveWorker) {
       await this.options.worker
-        .requestWorker("agent/goalClear", { sessionId: cancelled.sessionId }, 10_000)
+        .requestWorker("agent/goalClear", { sessionId: cancelled.sessionId }, 10_000, {
+          meta: { origin: "host", producer: "pet-long-task-goal-clear" },
+        })
         .catch((error) => this.options.onBackgroundError?.("cancel-goal", error));
     }
     await this.notifyClosed(cancelled);

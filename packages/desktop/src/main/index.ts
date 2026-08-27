@@ -122,9 +122,11 @@ import { availableExternalRuntimes } from "./external-runtime-availability.js";
 import type { ExternalRuntimeAttachment } from "@cjhyy/code-shell-capability-coding/external-runtimes";
 import { parseExternalRuntimeModelKey } from "../shared/external-runtime-models.js";
 import {
+  requireRendererProject,
   requireRendererProjectEntryPath,
   requireRendererProjectPath,
   requireRendererProjectPathOrGlobal,
+  requireRendererProjectRoot,
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
@@ -451,7 +453,7 @@ import {
   listDigitalHumanTeams,
   saveDigitalHumanTeam,
 } from "./digital-human-team-service.js";
-import { searchFiles } from "./file-search-service.js";
+import { searchFiles, searchProjectFiles } from "./file-search-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
 import {
@@ -470,7 +472,8 @@ import {
   quitAndInstall,
   getLastStatus,
 } from "./updater.js";
-import { loadRecents, pushRecent, loadProjects, setPinned, softDelete } from "./recents-store.js";
+import { loadRecents, loadProjects } from "./recents-store.js";
+import { getProjectStore } from "./project-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import {
   PET_WIDGET_WINDOW_SIZE,
@@ -1039,6 +1042,8 @@ const transcriptSubscriptions = new TranscriptSubscriptionManager({
 // Routes authenticated mobile events into the same run/permission path the
 // renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
 // see mobile-remote-orchestrator.ts.
+const projectStore = getProjectStore();
+const legacyPickedProjectPaths = new Set<string>();
 const mobileOrchestrator = new MobileRemoteOrchestrator({
   remote: mobileRemote,
   uploads: mobileUploads,
@@ -2115,13 +2120,17 @@ async function createWindow(): Promise<BrowserWindow> {
         range: { start: number; end: number },
         anchors?: PetArchiveAnchors,
       ): Promise<{ before: number; after: number }> => {
-        const response = await petBridge.requestWorker("agent/query", {
-          type: "archive_range",
-          sessionId,
-          start: range.start,
-          end: range.end,
-          ...(anchors ?? {}),
-        });
+        const response = await petBridge.requestWorker(
+          "agent/query",
+          {
+            type: "archive_range",
+            sessionId,
+            start: range.start,
+            end: range.end,
+            ...(anchors ?? {}),
+          },
+          { meta: { origin: "host", producer: "pet-archive-range" } },
+        );
         if (!response.ok) throw new Error(response.message);
         const data = (response.result as { data?: { before?: number; after?: number } })?.data;
         return { before: data?.before ?? 0, after: data?.after ?? 0 };
@@ -2218,13 +2227,17 @@ async function createWindow(): Promise<BrowserWindow> {
         if (!activeSegment?.boundaryBeforeMessageId || journalEntries.length === 0) return;
         const summary = buildMigrationSummary(journalEntries);
         if (!summary) return;
-        const response = await petBridge.requestWorker("agent/query", {
-          type: "archive_marker",
-          sessionId: petSessionId,
-          summary,
-          toClientMessageId: activeSegment.boundaryBeforeMessageId,
-          segmentId: "context-migration-v1",
-        });
+        const response = await petBridge.requestWorker(
+          "agent/query",
+          {
+            type: "archive_marker",
+            sessionId: petSessionId,
+            summary,
+            toClientMessageId: activeSegment.boundaryBeforeMessageId,
+            segmentId: "context-migration-v1",
+          },
+          { meta: { origin: "host", producer: "pet-context-migration" } },
+        );
         if (!response.ok) throw new Error(response.message);
         const appended = (response.result as { data?: { appended?: boolean } })?.data?.appended;
         // false covers two benign cases, not an error: this session was
@@ -2951,6 +2964,7 @@ function decodeGatewayAttachment(dataBase64: string, expectedSize: number): Buff
 
 app.whenReady().then(async () => {
   if (!ownsDesktopInstance) return;
+  await projectStore.warm();
   writeSettingsSchemaAtStartup();
   void cleanupKnownAttachments();
   // The main window and the pet popout both render on the default session, so
@@ -3090,11 +3104,12 @@ app.whenReady().then(async () => {
       // session. We turn that into a `stop` so the scheduler auto-disables this
       // recurring job (and the host notifies the user) rather than silently
       // re-firing into nothing every tick.
-      const res = await injectAndAwaitResult(bridge, "agent/run", {
-        task: prompt,
-        sessionId,
-        requireExisting: true,
-      });
+      const res = await injectAndAwaitResult(
+        bridge,
+        "agent/run",
+        { task: prompt, sessionId, requireExisting: true },
+        { origin: "host", producer: "automation-resume" },
+      );
       if (res.ok) {
         const r = res.result as { text?: string; reason?: string } | undefined;
         return { text: r?.text ?? "", reason: r?.reason ?? "done" };
@@ -4502,6 +4517,12 @@ ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
   if (q.length > 512) throw new Error("files:search query is too long");
   return searchFiles(cwd, q);
 });
+ipcMain.handle("files:searchProject", async (_e, projectId: string, query: string) => {
+  const project = await requireRendererProject(projectId);
+  const q = typeof query === "string" ? query : "";
+  if (q.length > 512) throw new Error("files:searchProject query is too long");
+  return searchProjectFiles(project.roots, q);
+});
 ipcMain.handle("session:content-search", async (_e, ...args: unknown[]) => {
   const query = args.length === 1 ? args[0] : undefined;
   if (typeof query !== "string") throw new Error("invalid content search query");
@@ -5218,19 +5239,131 @@ ipcMain.handle("projects:resolveRoot", async (_e, path: string) => {
   return { path: root, name: basename(root) };
 });
 ipcMain.handle("projects:add", async (_e, project: { path: string; name: string }) => {
-  const path = await requireRendererProjectPath(project?.path).catch(() => undefined);
+  const registeredPaths = [
+    ...(await loadProjects()).map((candidate) => candidate.path),
+    ...legacyPickedProjectPaths,
+  ];
+  const path = await requireRendererProjectPath(project?.path, { registeredPaths }).catch(
+    () => undefined,
+  );
   if (!path) return;
-  await pushRecent({ path, name: project.name || basename(path), lastOpenedAt: Date.now() });
+  await projectStore.createFromPath(path);
+  legacyPickedProjectPaths.delete(project.path);
+  legacyPickedProjectPaths.delete(path);
   await mobileOrchestrator.broadcastProjects();
 });
 ipcMain.handle("projects:remove", async (_e, projectPath: string) => {
-  await softDelete(projectPath);
+  const resolved = await projectStore.resolveProjectForCwd(projectPath, "live");
+  if (resolved && "projectId" in resolved) await projectStore.remove(resolved.projectId);
   await mobileOrchestrator.broadcastProjects();
 });
 ipcMain.handle("projects:setPinned", async (_e, projectPath: string, pinned: boolean) => {
-  await setPinned(projectPath, pinned);
+  const resolved = await projectStore.resolveProjectForCwd(projectPath, "live");
+  if (!resolved || !("projectId" in resolved)) throw new Error("project not found");
+  await projectStore.setPinned(resolved.projectId, pinned);
   await mobileOrchestrator.broadcastProjects();
 });
+
+async function pickProjectDirectory(): Promise<string | null> {
+  const result = await dialog.showOpenDialog({
+    title: "选择项目目录",
+    properties: ["openDirectory", "createDirectory"],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  await applyGitPathFromSettings();
+  return result.filePaths[0] ?? null;
+}
+
+async function broadcastProjectRegistry(): Promise<void> {
+  const projects = await projectStore.list();
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send("projectRegistry:changed", projects);
+  }
+  await mobileOrchestrator.broadcastProjects();
+}
+
+ipcMain.handle("projectRegistry:list", async () => projectStore.list());
+ipcMain.handle("projectRegistry:sessionMainRoots", async (_event, projectId: string) =>
+  projectStore.sessionMainRoots(projectId),
+);
+ipcMain.handle("projectRegistry:createFromPicker", async () => {
+  const picked = await pickProjectDirectory();
+  if (!picked) return null;
+  const project = await projectStore.createFromPath(picked);
+  await broadcastProjectRegistry();
+  return project;
+});
+ipcMain.handle("projectRegistry:addRootFromPicker", async (_event, projectId: string) => {
+  const picked = await pickProjectDirectory();
+  if (!picked) return null;
+  const result = await projectStore.addRoot(projectId, picked);
+  await broadcastProjectRegistry();
+  return result;
+});
+ipcMain.handle("projectRegistry:removeRoot", async (_event, projectId: string, rootId: string) => {
+  const project = await projectStore.removeRoot(projectId, rootId);
+  await broadcastProjectRegistry();
+  return project;
+});
+ipcMain.handle("projectRegistry:setPrimary", async (_event, projectId: string, rootId: string) => {
+  const root = await requireRendererProjectRoot(projectId, rootId);
+  if ((await getTrust(root.path)) !== "trusted") {
+    throw new Error("project root must be trusted before it can become primary");
+  }
+  const project = await projectStore.setPrimary(projectId, rootId);
+  await broadcastProjectRegistry();
+  return project;
+});
+ipcMain.handle("projectRegistry:revealRoot", async (_event, projectId: string, rootId: string) => {
+  const root = await requireRendererProjectRoot(projectId, rootId);
+  await revealInFinder(root.path, root.path);
+});
+ipcMain.handle("projectRegistry:openRoot", async (_event, projectId: string, rootId: string) => {
+  const root = await requireRendererProjectRoot(projectId, rootId);
+  return openPath(root.path, root.path);
+});
+ipcMain.handle("projectRegistry:rename", async (_event, projectId: string, name: string) => {
+  const project = await projectStore.rename(projectId, name);
+  await broadcastProjectRegistry();
+  return project;
+});
+ipcMain.handle("projectRegistry:setPinned", async (_event, projectId: string, pinned: boolean) => {
+  const project = await projectStore.setPinned(projectId, pinned);
+  await broadcastProjectRegistry();
+  return project;
+});
+ipcMain.handle("projectRegistry:remove", async (_event, projectId: string) => {
+  await projectStore.remove(projectId);
+  await broadcastProjectRegistry();
+});
+ipcMain.handle(
+  "projectRegistry:resolveForCwd",
+  async (_event, cwd: string, source: "disk-rebuild" | "automation-import" | "live") => {
+    const resolution = await projectStore.resolveProjectForCwd(cwd, source);
+    if (resolution && "created" in resolution && resolution.created) {
+      await broadcastProjectRegistry();
+    }
+    return resolution;
+  },
+);
+ipcMain.handle(
+  "projectRegistry:resolveForCwdBatch",
+  async (_event, cwds: string[], source: "disk-rebuild" | "automation-import" | "live") => {
+    const resolutions = await projectStore.resolveProjectForCwdBatch(cwds, source);
+    if (resolutions.some((resolution) => resolution && "created" in resolution && resolution.created)) {
+      await broadcastProjectRegistry();
+    }
+    return resolutions;
+  },
+);
+ipcMain.handle("projectRegistry:migrateLegacyPath", async (_event, path: string) => {
+  const project = await projectStore.migrateLegacyPath(await requireRendererProjectPath(path));
+  if (project) await broadcastProjectRegistry();
+  return project;
+});
+ipcMain.handle("projectRegistry:completeLegacyMigration", async () =>
+  projectStore.completeLegacyMigration(),
+);
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
 ipcMain.handle("rooms:list", async () =>
@@ -5434,8 +5567,11 @@ ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string
   await applyGitPathFromSettings();
   const picked = res.filePaths[0];
   const path = resolveProjectRoot(picked);
+  if (legacyPickedProjectPaths.size >= 512) {
+    legacyPickedProjectPaths.delete(legacyPickedProjectPaths.values().next().value ?? "");
+  }
+  legacyPickedProjectPaths.add(path);
   const result = { path, name: basename(path) };
-  await pushRecent({ ...result, lastOpenedAt: Date.now() });
   const win = BrowserWindow.fromWebContents(e.sender);
   if (win) void refreshAppMenu(win);
   return result;
@@ -6360,6 +6496,29 @@ ipcMain.handle("fs:exists", async (_e, root: string, path: string) => {
   if (typeof path !== "string" || !path) return false;
   return fsFileExists(root, path);
 });
+ipcMain.handle(
+  "fsRoot:readDir",
+  async (_e, projectId: string, rootId: string, dir?: string) => {
+    const root = await requireRendererProjectRoot(projectId, rootId);
+    return readDirectory(root.path, typeof dir === "string" && dir ? dir : root.path);
+  },
+);
+ipcMain.handle(
+  "fsRoot:readFile",
+  async (_e, projectId: string, rootId: string, path: string) => {
+    const root = await requireRendererProjectRoot(projectId, rootId);
+    if (typeof path !== "string" || !path) throw new Error("fsRoot:readFile requires path");
+    return fsReadFile(root.path, path);
+  },
+);
+ipcMain.handle(
+  "fsRoot:exists",
+  async (_e, projectId: string, rootId: string, path: string) => {
+    const root = await requireRendererProjectRoot(projectId, rootId).catch(() => null);
+    if (!root || typeof path !== "string" || !path) return false;
+    return fsFileExists(root.path, path);
+  },
+);
 
 // Authoritative no-repo conversation cwd (~/.code-shell/no-repo). The renderer
 // is a thin client and must NOT recompute homedir() itself; it asks main so the

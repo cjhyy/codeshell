@@ -12,7 +12,14 @@ import { describe, test, expect, beforeAll, afterAll, afterEach } from "bun:test
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { WorkerBridgeCore, previewLine, type WorkerExitInfo } from "./worker-bridge-core.js";
+import {
+  WorkerBridgeCore,
+  previewLine,
+  type WorkerExitInfo,
+  type WorkerFrameMeta,
+} from "./worker-bridge-core.js";
+
+const TEST_META: WorkerFrameMeta = { origin: "host", producer: "worker-bridge-test" };
 
 // Echo worker: line-delimited JSON-RPC on stdio.
 //   - on boot, emits a `test/hello` notification
@@ -123,7 +130,7 @@ describe("WorkerBridgeCore", () => {
     const outcome = await core.request(
       "test/echo",
       { x: 1 },
-      { id: "req-1", timeoutMs: 5_000 },
+      { id: "req-1", timeoutMs: 5_000, meta: TEST_META },
     );
     expect(outcome).toEqual({ status: "result", result: { method: "test/echo", echo: { x: 1 } } });
     // consume:false — the exact response line still reached line listeners.
@@ -139,6 +146,7 @@ describe("WorkerBridgeCore", () => {
       id: "req-consumed",
       timeoutMs: 5_000,
       consume: true,
+      meta: TEST_META,
     });
     expect(outcome.status).toBe("result");
     // Flush: round-trip one more visible line, then check the consumed id never surfaced.
@@ -153,6 +161,7 @@ describe("WorkerBridgeCore", () => {
     const outcome = await core.request("test/error", undefined, {
       id: "req-err",
       timeoutMs: 5_000,
+      meta: TEST_META,
     });
     expect(outcome).toEqual({ status: "error", error: { code: -32000, message: "boom" } });
   });
@@ -160,17 +169,30 @@ describe("WorkerBridgeCore", () => {
   test("request(): times out when the worker never answers", async () => {
     const core = makeCore();
     await waitForHello(core);
-    const outcome = await core.request("test/never", {}, { id: "req-slow", timeoutMs: 200 });
+    const outcome = await core.request(
+      "test/never",
+      {},
+      {
+        id: "req-slow",
+        timeoutMs: 200,
+        meta: TEST_META,
+      },
+    );
     expect(outcome).toEqual({ status: "timeout" });
   });
 
   test("request(): failFast settles sendFailed immediately with no worker", async () => {
     const core = makeCore();
-    const outcome = await core.request("test/echo", {}, {
-      id: "req-dead",
-      timeoutMs: 30_000,
-      failFast: true,
-    });
+    const outcome = await core.request(
+      "test/echo",
+      {},
+      {
+        id: "req-dead",
+        timeoutMs: 30_000,
+        failFast: true,
+        meta: TEST_META,
+      },
+    );
     expect(outcome.status).toBe("sendFailed");
   });
 
@@ -185,7 +207,7 @@ describe("WorkerBridgeCore", () => {
     const outcome = await core.request(
       "test/echo",
       { woke: true },
-      { id: "req-wake", timeoutMs: 5_000, ensureWorker: true },
+      { id: "req-wake", timeoutMs: 5_000, ensureWorker: true, meta: TEST_META },
     );
     expect(outcome).toEqual({
       status: "result",
@@ -196,8 +218,10 @@ describe("WorkerBridgeCore", () => {
 
   test("request(): prepareInbound registers and strips host-only agent/run metadata", async () => {
     let registered: { sessionId: string; bucket: string; cwd: string } | undefined;
+    let receivedMeta: WorkerFrameMeta | undefined;
     const core = makeCore({
-      prepareInbound: (line) => {
+      prepareInbound: (line, meta) => {
+        receivedMeta = meta;
         const frame = JSON.parse(line) as {
           method?: string;
           params?: Record<string, unknown>;
@@ -222,7 +246,7 @@ describe("WorkerBridgeCore", () => {
         bucket: "project::restored-session",
         cwd: "/project",
       },
-      { id: "req-panel-run", timeoutMs: 5_000, ensureWorker: true },
+      { id: "req-panel-run", timeoutMs: 5_000, ensureWorker: true, meta: TEST_META },
     );
 
     expect(registered).toEqual({
@@ -230,6 +254,7 @@ describe("WorkerBridgeCore", () => {
       bucket: "project::restored-session",
       cwd: "/project",
     });
+    expect(receivedMeta).toEqual(TEST_META);
     expect(outcome).toEqual({
       status: "result",
       result: {
@@ -247,11 +272,16 @@ describe("WorkerBridgeCore", () => {
     const exits: WorkerExitInfo[] = [];
     const core = makeCore({ onExit: (info) => exits.push(info) });
     await waitForHello(core);
-    const pending = core.request("test/never", {}, {
-      id: "req-exit",
-      timeoutMs: 30_000,
-      settleOnExit: true,
-    });
+    const pending = core.request(
+      "test/never",
+      {},
+      {
+        id: "req-exit",
+        timeoutMs: 30_000,
+        settleOnExit: true,
+        meta: TEST_META,
+      },
+    );
     core.sendLine(JSON.stringify({ jsonrpc: "2.0", method: "test/exit" }));
     expect(await pending).toEqual({ status: "workerExit" });
     expect(exits).toEqual([{ code: 0, signal: null, clean: true, gaveUp: false }]);
@@ -259,18 +289,26 @@ describe("WorkerBridgeCore", () => {
   });
 
   test("injectWorkerMessage(): prepareInbound rewrites the line before it hits the worker", async () => {
+    let receivedMeta: WorkerFrameMeta | undefined;
     const core = makeCore({
-      prepareInbound: (line) => ({
-        line: line.replace("original", "rewritten"),
-        method: "test/inject",
-      }),
+      prepareInbound: (line, meta) => {
+        receivedMeta = meta;
+        return {
+          line: line.replace("original", "rewritten"),
+          method: "test/inject",
+        };
+      },
     });
     await waitForHello(core);
     const echoed = waitForLine(core, (l) => l.includes("test/received"));
-    core.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", method: "original/notify" }));
+    core.injectWorkerMessage(
+      JSON.stringify({ jsonrpc: "2.0", method: "original/notify" }),
+      TEST_META,
+    );
     const received = JSON.parse(await echoed) as { params: { line: string } };
     expect(received.params.line).toContain("rewritten/notify");
     expect(received.params.line).not.toContain("original");
+    expect(receivedMeta).toEqual(TEST_META);
   });
 
   test("injectWorkerMessage() and sendLine() drop safely with no live worker", () => {
@@ -281,8 +319,18 @@ describe("WorkerBridgeCore", () => {
       },
     });
     expect(core.sendLine("{}")).toBe(false);
-    core.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", method: "agent/approve" }));
-    expect(dropped).toEqual([{ reason: "no child", method: undefined }]);
+    core.injectWorkerMessage(
+      JSON.stringify({ jsonrpc: "2.0", method: "agent/approve" }),
+      TEST_META,
+    );
+    expect(dropped).toEqual([
+      {
+        reason: "no child",
+        method: undefined,
+        origin: "host",
+        producer: "worker-bridge-test",
+      },
+    ]);
   });
 });
 

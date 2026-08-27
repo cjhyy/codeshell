@@ -72,13 +72,12 @@ import {
   saveProjects,
   loadActiveProjectId,
   saveActiveProjectId,
-  makeProjectId,
   isProjectPathRemoved,
   unmarkProjectPathRemoved,
-  reconcileProjectsFromDisk,
   reconcileProjectsFromDiskWithRemap,
   projectLabel,
   sortProjects,
+  trackedProjectFromRegistry,
   type TrackedProject,
 } from "./projects";
 import { foldTranscript } from "./automation/foldTranscript";
@@ -722,12 +721,14 @@ function App() {
   // phone, or our own add/remove/pin), reconciling against the localStorage cache
   // so each known path keeps its stable projectId (session buckets stay intact).
   useEffect(() => {
+    const registry = window.codeshell.projectRegistry;
+    if (!registry) return;
     let alive = true;
     const apply = (
-      projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
+      diskProjects: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0],
     ): void => {
       if (!alive) return;
-      setProjects((prev) => reconcileProjectsFromDisk(projects, prev));
+      setProjects((prev) => reconcileProjectsFromDiskWithRemap(diskProjects, prev).projects);
     };
     void (async () => {
       // Back-fill: legacy projects live only in the localStorage cache and were
@@ -735,8 +736,8 @@ function App() {
       // becomes a complete source of truth (no project silently disappears on
       // the first run after this change). Soft-deleted ones stay deleted because
       // pushRecent un-deletes only on explicit re-add, and we skip removed paths.
-      const disk = await window.codeshell.projects.list();
-      const onDisk = new Set(disk.map((p) => p.path));
+      const disk = await registry.list();
+      const onDisk = new Set(disk.flatMap((project) => project.roots.map((root) => root.path)));
       const cached = loadProjects();
       const normalizedCached = await Promise.all(
         cached.map(async (r) => {
@@ -755,15 +756,13 @@ function App() {
         seenMissing.add(r.path);
         return true;
       });
-      const latestDisk =
-        missing.length > 0
-          ? await (async () => {
-              for (const r of missing) {
-                await window.codeshell.projects.add({ path: r.path, name: r.name });
-              }
-              return window.codeshell.projects.list();
-            })()
-          : disk;
+      const latestDisk = await (async () => {
+        for (const project of missing) {
+          await registry.migrateLegacyPath(project.path).catch(() => null);
+        }
+        return missing.length > 0 ? registry.list() : disk;
+      })();
+      await registry.completeLegacyMigration();
       const { projects: reconciled, projectIdRemap } = reconcileProjectsFromDiskWithRemap(
         latestDisk,
         normalizedCached,
@@ -789,7 +788,7 @@ function App() {
         });
       }
     })();
-    const unsub = window.codeshell.projects.onChanged(apply);
+    const unsub = registry.onChanged(apply);
     return () => {
       alive = false;
       unsub();
@@ -1406,13 +1405,19 @@ function App() {
           const existing = projects.find((project) => project.path === p.path);
           if (existing) setActiveProjectId(existing.id);
           else {
-            const id = makeProjectId();
-            setProjects((prev) => [
-              ...prev,
-              { id, name: p.name, path: p.path, addedAt: Date.now() },
-            ]);
-            setActiveProjectId(id);
-            setSessionIndices((prev) => ({ ...prev, [id]: loadSessionIndex(id) }));
+            void window.codeshell.projectRegistry.list().then((registry) => {
+              const target = registry
+                .map(trackedProjectFromRegistry)
+                .find((project) => project.path === p.path);
+              if (!target) return;
+              setProjects((prev) =>
+                reconcileProjectsFromDiskWithRemap(registry, prev).projects,
+              );
+              setActiveProjectId(target.id);
+              setSessionIndices((prev) =>
+                prev[target.id] ? prev : { ...prev, [target.id]: loadSessionIndex(target.id) },
+              );
+            });
           }
           break;
         }

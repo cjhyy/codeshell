@@ -24,7 +24,12 @@ import {
   isQuickChatSessionId,
   type QuickChatSessionRef,
 } from "../quickChatSession";
-import { makeCreateProjectForCwd, loadProjects, type TrackedProject } from "../projects";
+import {
+  makeCreateProjectForCwd,
+  loadProjects,
+  resolveProjectCwds,
+  type TrackedProject,
+} from "../projects";
 import { placeLiveAutomationSession } from "../automation/liveSession";
 import { planDiskRebuild } from "../automation/rebuildFromDisk";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
@@ -384,9 +389,11 @@ export function useHostSubscriptions({
           return;
         }
         const projectFactory = makeCreateProjectForCwd(projectsAfterResolve);
+        const resolvedForCwd = await resolveProjectCwds([resolvedMeta.cwd], "live");
         const placement = placeLiveAutomationSession(resolvedMeta, projectsAfterResolve, {
           caseInsensitive: isCaseInsensitivePlatform(),
           createProjectForCwd: projectFactory.createProjectForCwd,
+          resolvedForCwd,
         });
         if (!placement) return;
         const { projectId, summary } = placement;
@@ -421,7 +428,7 @@ export function useHostSubscriptions({
         setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
       })();
     });
-    const announceHostSession = (
+    const announceHostSession = async (
       meta: {
         sessionId: string;
         cwd: string;
@@ -430,7 +437,7 @@ export function useHostSubscriptions({
         clientMessageId?: string;
       },
       source: "mobile" | "pet-delegation",
-    ): void => {
+    ): Promise<void> => {
       window.codeshell.log(`${source}.session.announce`, {
         sessionId: meta.sessionId,
         cwd: meta.cwd,
@@ -461,6 +468,7 @@ export function useHostSubscriptions({
       } else {
         const projectFactory = makeCreateProjectForCwd(projectsNow);
         const now = Date.now();
+        const resolvedForCwd = await resolveProjectCwds([meta.cwd], "live");
         const [placement] = planDiskRebuild(
           [
             {
@@ -476,6 +484,7 @@ export function useHostSubscriptions({
           {
             caseInsensitive: isCaseInsensitivePlatform(),
             createProjectForCwd: projectFactory.createProjectForCwd,
+            resolvedForCwd,
           },
         );
         if (!placement) return;
@@ -511,13 +520,13 @@ export function useHostSubscriptions({
       }
       setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: nextIdx }));
     };
-    const offMobileSession = window.codeshell.onMobileSession((meta) =>
-      announceHostSession(meta, "mobile"),
-    );
+    const offMobileSession = window.codeshell.onMobileSession((meta) => {
+      void announceHostSession(meta, "mobile");
+    });
     const offPetDelegationSession =
-      window.codeshell.onPetDelegationSession?.((meta) =>
-        announceHostSession(meta, "pet-delegation"),
-      ) ?? (() => undefined);
+      window.codeshell.onPetDelegationSession?.((meta) => {
+        void announceHostSession(meta, "pet-delegation");
+      }) ?? (() => undefined);
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
       window.codeshell.log("approval.request", {
         requestId: env.requestId,

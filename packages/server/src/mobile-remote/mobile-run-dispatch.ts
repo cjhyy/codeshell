@@ -1,6 +1,8 @@
+import type { WorkerFrameMeta } from "../worker-bridge-core.js";
+
 export interface MobileRunBridge {
   subscribeOutbound(listener: (line: string) => void): () => void;
-  injectWorkerMessage(line: string): void;
+  injectWorkerMessage(line: string, meta: WorkerFrameMeta): void;
 }
 
 export interface MobileRunRequest {
@@ -14,6 +16,7 @@ export type MobileRunAcceptance = { ok: true } | { ok: false; message: string; c
 export function injectMobileRunAndAwaitAcceptance(
   bridge: MobileRunBridge,
   request: MobileRunRequest,
+  meta: WorkerFrameMeta,
   timeoutMs = 5_000,
 ): Promise<MobileRunAcceptance> {
   return new Promise((resolve) => {
@@ -70,6 +73,7 @@ export function injectMobileRunAndAwaitAcceptance(
           method: "agent/run",
           params: request.params,
         }),
+        meta,
       );
     } catch (error) {
       finish({ ok: false, message: error instanceof Error ? error.message : String(error) });

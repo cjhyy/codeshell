@@ -41,6 +41,8 @@ export interface EngineConfig {
    */
   clientDefaults?: ClientDefaults;
   cwd?: string;
+  /** Trusted host-provided root authorization for runs created by this Engine. */
+  workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
   maxTurns?: number;
   /**
    * Override the goal-mode consecutive-stop-block cap (TODO 3.1). Falls back to

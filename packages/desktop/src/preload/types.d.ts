@@ -76,6 +76,33 @@ export type {
   DigitalHumanProfileImportPreview,
 } from "../shared/digital-human-profile-transfer";
 
+export interface LocalProjectRoot {
+  id: string;
+  path: string;
+  name: string;
+  addedAt: number;
+}
+
+export interface LocalProject {
+  id: string;
+  name: string;
+  displayName?: string;
+  roots: LocalProjectRoot[];
+  primaryRootId: string;
+  pinned?: boolean;
+  createdAt: number;
+  updatedAt: number;
+  lastOpenedAt: number;
+  deletedAt?: number;
+  revision: number;
+}
+
+export type ProjectResolveSource = "disk-rebuild" | "automation-import" | "live";
+export type ProjectCwdResolution =
+  | { projectId: string; rootId: string; created: boolean }
+  | { noRepo: true }
+  | null;
+
 export interface BrowserRuntimeHandoffStatus {
   granted: boolean;
   sessionId: string;
@@ -266,6 +293,7 @@ export type BackgroundWorkInfo =
       externalSessionId?: string;
       cli?: "claude" | "codex";
       cwd?: string;
+      projectId?: string;
       isolation?: "current" | "worktree" | "none";
       worktreePath?: string;
       worktreeBranch?: string;
@@ -1318,6 +1346,12 @@ export interface CodeshellApi {
   readFileContent(root: string, path: string): Promise<FileContent>;
   /** Does this path resolve to an existing file inside root? Never throws. */
   fileExists(root: string, path: string): Promise<boolean>;
+  /** List one directory level under an authoritative project root id. */
+  readProjectDir(projectId: string, rootId: string, dir?: string): Promise<FsEntry[]>;
+  /** Read a file under an authoritative project root id. */
+  readProjectFileContent(projectId: string, rootId: string, path: string): Promise<FileContent>;
+  /** Does a file exist under an authoritative project root id? */
+  projectFileExists(projectId: string, rootId: string, path: string): Promise<boolean>;
 
   // ── Credentials module ────────────────────────────────────────────────
   mcpOAuth: {
@@ -2058,6 +2092,8 @@ export interface CodeshellApi {
   uninstallPanelApp(id: string, cwd?: string): Promise<void>;
   /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
   searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
+  /** Fuzzy file search across every registered root in a project. */
+  searchProjectFiles(projectId: string, query: string): Promise<ProjectFileSearchHit[]>;
   /** Bounded full-text search over on-disk session transcripts (session switcher). */
   searchSessionContent(query: string): Promise<SessionContentSearchResult>;
   readSkillBody(filePath: string): Promise<string>;
@@ -2188,6 +2224,29 @@ export interface CodeshellApi {
         projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
       ) => void,
     ): () => void;
+  };
+  projectRegistry: {
+    list(): Promise<LocalProject[]>;
+    sessionMainRoots(projectId: string): Promise<Record<string, string[]>>;
+    createFromPicker(): Promise<LocalProject | null>;
+    addRootFromPicker(
+      projectId: string,
+    ): Promise<{ project: LocalProject; folded?: { picked: string; root: string } } | null>;
+    removeRoot(projectId: string, rootId: string): Promise<LocalProject>;
+    setPrimary(projectId: string, rootId: string): Promise<LocalProject>;
+    revealRoot(projectId: string, rootId: string): Promise<void>;
+    openRoot(projectId: string, rootId: string): Promise<string>;
+    rename(projectId: string, name: string): Promise<LocalProject>;
+    setPinned(projectId: string, pinned: boolean): Promise<LocalProject>;
+    remove(projectId: string): Promise<void>;
+    resolveForCwd(cwd: string, source: ProjectResolveSource): Promise<ProjectCwdResolution>;
+    resolveForCwdBatch(
+      cwds: string[],
+      source: ProjectResolveSource,
+    ): Promise<ProjectCwdResolution[]>;
+    migrateLegacyPath(path: string): Promise<LocalProject | null>;
+    completeLegacyMigration(): Promise<void>;
+    onChanged(cb: (projects: LocalProject[]) => void): Unsubscribe;
   };
   notify(opts: { title: string; body?: string; subtitle?: string }): Promise<void>;
   isWindowFullscreen(): Promise<boolean>;
@@ -2631,6 +2690,10 @@ export interface FileSearchHit {
   kind: "file" | "dir";
   size?: number;
   mime?: string;
+}
+
+export interface ProjectFileSearchHit extends FileSearchHit {
+  rootId: string;
 }
 
 /** One transcript content-search match. Structural mirror of the pet

@@ -27,6 +27,7 @@ export type EngineConfigSlice = Pick<
   | "maxTurns"
   | "maxContextTokens"
   | "cwd"
+  | "workspaceContext"
   | "projectTrusted"
   // Identity-scoped session persistence root. Only identity-derived managers
   // (see ChatSessionManager.forIdentity) set it; the default path leaves it

@@ -30,6 +30,13 @@ import {
 } from "./steer-queue.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
 import {
+  legacySingleRootWorkspace,
+  removedWorkspaceRootPaths,
+  type WorkspaceContext,
+} from "../workspace/workspace-context.js";
+import { clearSessionPathApprovalsUnderRoot } from "../tool-system/path-policy.js";
+import { canonicalKey } from "../workspace/canonical-key.js";
+import {
   type BuiltinTool,
   type BuiltinToolExposure,
   type BuiltinToolFn,
@@ -342,6 +349,8 @@ export class Engine {
   private lastMessages: Message[] | undefined;
   private lastSessionId: string | undefined;
   private compactedMessagesBySession = new Map<string, Message[]>();
+  /** Last immutable root set observed per Session, used to revoke grants on root removal. */
+  private workspaceContextBySession = new Map<string, WorkspaceContext>();
   /**
    * SIDs whose ctx-bar seed we've already emitted in this process. The seed
    * is a rough char/4 estimate; only useful before the first real
@@ -1256,6 +1265,7 @@ export class Engine {
       resolveBehaviorProfile: (kind, mode) => this.resolveBehaviorProfile(kind, mode),
       configPermissionMode: this.config.permissionMode,
       configCwd: this.config.cwd,
+      configWorkspaceContext: this.config.workspaceContext,
       settings: this.getSettingsManager(),
       processCwd: process.cwd(),
     });
@@ -1268,12 +1278,23 @@ export class Engine {
       runPermissionMode,
       runPlanMode,
       cwd,
+      workspaceContext,
+      authoritativeWorkspaceContext,
       profileState: {
         workspaceProfile: runWorkspaceProfile,
         sessionProfileOverrides,
         profileMemoryDir,
       },
     } = workspaceResolved.resolution;
+    if (options?.sessionId) {
+      const previousWorkspace = this.workspaceContextBySession.get(options.sessionId);
+      if (previousWorkspace) {
+        for (const removedRoot of removedWorkspaceRootPaths(previousWorkspace, workspaceContext)) {
+          clearSessionPathApprovalsUnderRoot(options.sessionId, removedRoot);
+        }
+      }
+      this.workspaceContextBySession.set(options.sessionId, workspaceContext);
+    }
     /** Structured results the profile's run services report; keyed per profile contract. */
     let profileReportedResults: Record<string, unknown> | undefined;
 
@@ -1300,6 +1321,7 @@ export class Engine {
       llm: this.config.llm,
       sessionId: options?.sessionId,
       attachments: options?.attachments,
+      workspaceContext,
     });
     if (!imageInput.ok) return imageInput.result;
     const { parsedTask, taskText } = imageInput;
@@ -1323,6 +1345,7 @@ export class Engine {
     const toolCtx = await this.wireRunSandboxToolContext({
       options,
       cwd,
+      workspaceContext,
       runPermissionMode,
       runPlanMode,
       profile,
@@ -1367,6 +1390,12 @@ export class Engine {
       cwd,
       sessionKind,
       sessionWorkspaceProfile,
+      projectBinding: authoritativeWorkspaceContext
+        ? {
+            projectId: workspaceContext.projectId,
+            mainRootId: workspaceContext.sessionMainRootId,
+          }
+        : undefined,
       ...(options?.sessionBrief ? { sessionBrief: options.sessionBrief } : {}),
       llmModel: this.config.llm.model,
       llmProvider: this.config.llm.provider,
@@ -1468,6 +1497,7 @@ export class Engine {
         options,
         session,
         cwd,
+        workspaceContext,
         toolCtx,
         profile,
         profileParams,
@@ -1834,6 +1864,7 @@ export class Engine {
     const sourceSessionId = session.state.sessionId;
     const sourceRoot = this.sessionManager.readSessionMainRoot(sourceSessionId);
     if (!sourceRoot) return;
+    const sourceBinding = this.sessionManager.readSessionProjectBinding(sourceSessionId);
 
     if (!this.sessionMessageRouter) return;
     const catalog: SessionMessageTarget[] = [];
@@ -1851,7 +1882,18 @@ export class Engine {
         continue;
       }
       if (seen.has(sessionId)) continue;
-      if (candidate.workspaceRoot !== sourceRoot) continue;
+      const candidateRoot =
+        typeof candidate.workspaceRoot === "string" ? candidate.workspaceRoot : "";
+      const targetBinding = this.sessionManager.readSessionProjectBinding(sessionId);
+      if (sourceBinding) {
+        if (targetBinding) {
+          if (targetBinding.projectId !== sourceBinding.projectId) continue;
+        } else if (canonicalKey(candidateRoot) !== canonicalKey(sourceRoot)) {
+          continue;
+        }
+      } else if (canonicalKey(candidateRoot) !== canonicalKey(sourceRoot)) {
+        continue;
+      }
       const title = typeof candidate.title === "string" ? candidate.title.trim() : "";
       if (!title || title.length > 512) continue;
       const workspaceProfile =
@@ -2079,6 +2121,7 @@ export class Engine {
   private async wireRunSandboxToolContext(args: {
     options: EngineRunOptions | undefined;
     cwd: string;
+    workspaceContext: import("../workspace/workspace-context.js").WorkspaceContext;
     runPermissionMode: NonNullable<EngineConfig["permissionMode"]>;
     runPlanMode: boolean;
     profile: RunBehaviorProfile | undefined;
@@ -2091,6 +2134,7 @@ export class Engine {
     const {
       options,
       cwd,
+      workspaceContext,
       runPermissionMode,
       runPlanMode,
       profile,
@@ -2105,7 +2149,8 @@ export class Engine {
     // solely from project/user settings rather than config.sandbox, while a
     // child intentionally skips project settings. Passing the complete
     // effective config is what makes undefined role sandbox mean inherit.
-    const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(cwd);
+    const sandboxRun = { cwd, workspaceContext };
+    const sandboxConfig = this.runEnvironmentResolver.resolveSandboxConfig(sandboxRun);
 
     // Build the per-Engine ToolContext that will be threaded through every
     // tool call. Replaces the old module-level singleton setters used by
@@ -2115,6 +2160,7 @@ export class Engine {
       parentSandbox: sandboxConfig,
       presetName: this.preset.name,
       cwd,
+      workspaceContext,
       permissionMode: runPermissionMode,
       modelPool: this.modelPool,
       parentStream: options?.onStream,
@@ -2142,7 +2188,7 @@ export class Engine {
     //
     // Backend is cached per runtime/engine so the capability probe runs once
     // per (mode, cwd) instead of every turn.
-    const sandboxBackend = await this.runEnvironmentResolver.resolveSandbox(cwd);
+    const sandboxBackend = await this.runEnvironmentResolver.resolveSandbox(sandboxRun);
 
     // Observability: surface what sandbox actually applied this run — the
     // configured mode vs the resolved backend (auto may downgrade to off when
@@ -2169,6 +2215,7 @@ export class Engine {
           ? sandboxBackend
           : { ...sandboxBackend, network: sandboxConfig.network },
       cwd,
+      workspace: workspaceContext,
       shellEnv: this.runEnvironmentResolver.readShellEnv(cwd),
       profile,
       profileParams,
@@ -2518,6 +2565,7 @@ export class Engine {
     options: EngineRunOptions | undefined;
     session: SessionBundle;
     cwd: string;
+    workspaceContext: import("../workspace/workspace-context.js").WorkspaceContext;
     toolCtx: ToolContext;
     profile: RunBehaviorProfile | undefined;
     profileParams: Readonly<Record<string, unknown>>;
@@ -2533,6 +2581,7 @@ export class Engine {
       options,
       session,
       cwd,
+      workspaceContext,
       toolCtx,
       profile,
       profileParams,
@@ -2567,6 +2616,7 @@ export class Engine {
     const promptComposer = new PromptComposer(
       buildPromptComposerConfig({
         cwd,
+        workspace: workspaceContext,
         model: this.config.llm.model,
         preset: this.preset,
         customSystemPrompt: profile?.disableInstructions
@@ -2795,6 +2845,7 @@ export class Engine {
             llm: this.config.llm,
             sessionId: sid,
             attachments: item.attachments,
+            workspaceContext: toolCtx.workspace,
           });
           if (!steerImageInput.ok) {
             throw new Error(steerImageInput.result.text);
@@ -4105,7 +4156,11 @@ export class Engine {
         const service = value({
           isSubAgent: this.config.isSubAgent === true,
           settings: this.getSettingsManager(),
-          resolveSandbox: (cwd) => this.runEnvironmentResolver.resolveSandbox(cwd),
+          resolveSandbox: (cwd) =>
+            this.runEnvironmentResolver.resolveSandbox({
+              cwd,
+              workspaceContext: legacySingleRootWorkspace(cwd),
+            }),
           readShellEnv: (cwd) => this.runEnvironmentResolver.readShellEnv(cwd),
           getSessionManager: () => this.sessionManager,
         });
@@ -4122,7 +4177,7 @@ export class Engine {
       capabilityServices,
       askUser: this.config.askUser,
       browser: this.config.browserBridge,
-      workspace: this.config.workspaceBridge,
+      workspaceBridge: this.config.workspaceBridge,
       panels: this.config.panelBridge,
       injectCredentialToBrowser: this.config.injectCredentialToBrowser,
       isSubAgent: this.config.isSubAgent === true,

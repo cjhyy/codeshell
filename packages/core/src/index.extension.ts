@@ -39,6 +39,15 @@ export {
 export type { FeatureFlagName, FeatureFlagOverrides } from "./settings/feature-flags.js";
 export { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 export type { ToolContext } from "./tool-system/context.js";
+export {
+  createWorkspaceContext,
+  legacySingleRootWorkspace,
+  validateWorkspaceContext,
+} from "./workspace/workspace-context.js";
+export type {
+  ProjectRootContext,
+  WorkspaceContext,
+} from "./workspace/workspace-context.js";
 // The `panels` tool-context seam. A host that drives a session outside the
 // Engine (external Agent Runtime) has to supply this itself — on the native
 // path the worker's protocol server provides it. Type-only: core owns no

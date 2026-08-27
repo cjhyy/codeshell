@@ -28,6 +28,7 @@ const MAX_DIRECTORY_TREE_DEPTH = 2;
 export interface BuildInputAttachmentContextOptions {
   includeImageBytes?: boolean;
   expectedSessionId?: string;
+  workspaceRoots?: readonly string[];
 }
 
 interface PendingImageAttachment {
@@ -161,7 +162,11 @@ export async function buildInputAttachmentContext(
       continue;
     }
 
-    const policy = classifyPath(resolved, { workspaceRoot: cwdReal, operation: "read" });
+    const policy = classifyPath(resolved, {
+      workspaceRoot: cwdReal,
+      workspaceRoots: options.workspaceRoots,
+      operation: "read",
+    });
     if (policy.decision !== "allow") {
       errors.push(
         `attachment ${id === "(unknown)" ? displayPath : id} blocked by path policy: ${policy.reason}`,
@@ -198,7 +203,7 @@ export async function buildInputAttachmentContext(
     }
 
     if (attachment.kind === "directory" || info.isDirectory()) {
-      const tree = await directoryTree(realPath, cwdReal).catch((err) => ({
+      const tree = await directoryTree(realPath, policy.matchedRoot ?? cwdReal).catch((err) => ({
         lines: [`(directory tree unavailable: ${(err as Error).message})`],
         truncated: true,
         entryCount: 0,

@@ -81,6 +81,7 @@ export type BackgroundWorkInfo =
       externalSessionId?: string;
       cli?: "claude" | "codex";
       cwd?: string;
+      projectId?: string;
       isolation?: "current" | "worktree" | "none";
       worktreePath?: string;
       worktreeBranch?: string;
@@ -1032,6 +1033,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   listSkills: (cwd: string | null, opts?: { includeDisabled?: boolean }) =>
     ipcRenderer.invoke("skills:list", cwd, opts),
   searchFiles: (cwd: string, query: string) => ipcRenderer.invoke("files:search", cwd, query),
+  searchProjectFiles: (projectId: string, query: string) =>
+    ipcRenderer.invoke("files:searchProject", projectId, query),
   searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
     ipcRenderer.invoke("session:content-search", query),
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
@@ -1348,6 +1351,39 @@ contextBridge.exposeInMainWorld("codeshell", {
       return () => ipcRenderer.removeListener("projects:changed", h);
     },
   },
+  projectRegistry: {
+    list: () => ipcRenderer.invoke("projectRegistry:list"),
+    sessionMainRoots: (projectId: string) =>
+      ipcRenderer.invoke("projectRegistry:sessionMainRoots", projectId),
+    createFromPicker: () => ipcRenderer.invoke("projectRegistry:createFromPicker"),
+    addRootFromPicker: (projectId: string) =>
+      ipcRenderer.invoke("projectRegistry:addRootFromPicker", projectId),
+    removeRoot: (projectId: string, rootId: string) =>
+      ipcRenderer.invoke("projectRegistry:removeRoot", projectId, rootId),
+    setPrimary: (projectId: string, rootId: string) =>
+      ipcRenderer.invoke("projectRegistry:setPrimary", projectId, rootId),
+    revealRoot: (projectId: string, rootId: string) =>
+      ipcRenderer.invoke("projectRegistry:revealRoot", projectId, rootId),
+    openRoot: (projectId: string, rootId: string) =>
+      ipcRenderer.invoke("projectRegistry:openRoot", projectId, rootId),
+    rename: (projectId: string, name: string) =>
+      ipcRenderer.invoke("projectRegistry:rename", projectId, name),
+    setPinned: (projectId: string, pinned: boolean) =>
+      ipcRenderer.invoke("projectRegistry:setPinned", projectId, pinned),
+    remove: (projectId: string) => ipcRenderer.invoke("projectRegistry:remove", projectId),
+    resolveForCwd: (cwd: string, source: "disk-rebuild" | "automation-import" | "live") =>
+      ipcRenderer.invoke("projectRegistry:resolveForCwd", cwd, source),
+    resolveForCwdBatch: (cwds: string[], source: "disk-rebuild" | "automation-import" | "live") =>
+      ipcRenderer.invoke("projectRegistry:resolveForCwdBatch", cwds, source),
+    migrateLegacyPath: (path: string) =>
+      ipcRenderer.invoke("projectRegistry:migrateLegacyPath", path),
+    completeLegacyMigration: () => ipcRenderer.invoke("projectRegistry:completeLegacyMigration"),
+    onChanged: (cb: (projects: unknown[]) => void): (() => void) => {
+      const handler = (_event: IpcRendererEvent, projects: unknown[]) => cb(projects);
+      ipcRenderer.on("projectRegistry:changed", handler);
+      return () => ipcRenderer.removeListener("projectRegistry:changed", handler);
+    },
+  },
   notify: (opts: { title: string; body?: string; subtitle?: string }) =>
     ipcRenderer.invoke("notify:show", opts),
   isWindowFullscreen: () => ipcRenderer.invoke("window:isFullscreen"),
@@ -1426,6 +1462,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Does this path resolve to an existing file inside root? Never throws. */
   fileExists: (root: string, path: string): Promise<boolean> =>
     ipcRenderer.invoke("fs:exists", root, path),
+  readProjectDir: (projectId: string, rootId: string, dir?: string) =>
+    ipcRenderer.invoke("fsRoot:readDir", projectId, rootId, dir),
+  readProjectFileContent: (projectId: string, rootId: string, path: string) =>
+    ipcRenderer.invoke("fsRoot:readFile", projectId, rootId, path),
+  projectFileExists: (projectId: string, rootId: string, path: string) =>
+    ipcRenderer.invoke("fsRoot:exists", projectId, rootId, path),
 
   // ── Browser popout window ─────────────────────────────────────────────
   /** Credentials module: token/link/oauth store CRUD + cookie capture. */

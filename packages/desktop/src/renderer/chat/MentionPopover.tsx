@@ -29,6 +29,8 @@ export type MentionItem =
 interface Props {
   /** Active repo cwd. When null the popover only shows skills (no files). */
   cwd: string | null;
+  projectId?: string | null;
+  projectRoots?: Array<{ id: string; path: string }>;
   /** Query string after the `@` — empty when user has only typed `@`. */
   query: string;
   /** Index into the flat list (skills first, then files). */
@@ -39,7 +41,17 @@ interface Props {
   onItemsChange: (items: MentionItem[]) => void;
 }
 
-export function MentionPopover({ cwd, query, selected, onPick, onItemsChange }: Props) {
+const EMPTY_PROJECT_ROOTS: Array<{ id: string; path: string }> = [];
+
+export function MentionPopover({
+  cwd,
+  projectId,
+  projectRoots = EMPTY_PROJECT_ROOTS,
+  query,
+  selected,
+  onPick,
+  onItemsChange,
+}: Props) {
   const { t } = useT();
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [files, setFiles] = useState<FileSearchHit[]>([]);
@@ -76,8 +88,20 @@ export function MentionPopover({ cwd, query, selected, onPick, onItemsChange }: 
       return;
     }
     const handle = setTimeout(() => {
-      void window.codeshell
-        .searchFiles(cwd, query)
+      const request = projectId
+        ? window.codeshell.searchProjectFiles(projectId, query).then((hits) =>
+            hits.map((hit) => {
+              const root = projectRoots.find((candidate) => candidate.id === hit.rootId);
+              if (!root) return hit;
+              const separator = root.path.includes("\\") ? "\\" : "/";
+              return {
+                ...hit,
+                path: `${root.path.replace(/[\\/]+$/, "")}${separator}${hit.path}`,
+              };
+            }),
+          )
+        : window.codeshell.searchFiles(cwd, query);
+      void request
         .then((hits) => {
           if (!cancelled) setFiles(hits);
         })
@@ -89,7 +113,7 @@ export function MentionPopover({ cwd, query, selected, onPick, onItemsChange }: 
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [cwd, query]);
+  }, [cwd, projectId, projectRoots, query]);
 
   useEffect(() => {
     let cancelled = false;

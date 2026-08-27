@@ -47,8 +47,8 @@ const TEST_WORKSPACE_MODULE: AgentModule = {
           execute: async (args, ctx) => {
             const target = typeof args.target === "string" ? args.target : "";
             if (!target) return "Error: target is required";
-            if (!ctx?.workspace) return "Error: workspace bridge unavailable";
-            const workspace = await ctx.workspace.switch(target);
+            if (!ctx?.workspaceBridge) return "Error: workspace bridge unavailable";
+            const workspace = await ctx.workspaceBridge.switch(target);
             ctx.setSessionWorkspace?.(workspace);
             return `Switched session workspace to ${workspace.root}`;
           },

@@ -79,14 +79,28 @@ import {
   quickChatRunSessionId,
 } from "./agent-bridge-fallback.js";
 import { QuickChatForkRouter, type QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
-import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-run-metadata.js";
+import {
+  AgentRunMetadataError,
+  forgetHostSessionMaps,
+  prepareAgentRunMetadata,
+  reserveHostSessionMaps,
+  resolveCredentialSessionCwd,
+  type AgentRunMetadataDeps,
+  type HostReservation,
+} from "./agent-run-metadata.js";
+import { getProjectStore } from "./project-store.js";
+import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { getTrustCachedSync } from "./trust-store.js";
 import { reloadAutomations } from "./automation-service.js";
 import { switchSessionWorkspaceForUi } from "./session-workspace-service.js";
 import { PetWorkerProjectionGeneration } from "./pet/pet-worker-generation.js";
 import type { AgentBridgePetEvent, PetStateBridge } from "./pet/pet-state-aggregator.js";
-import { previewLine, WorkerBridgeCore } from "@cjhyy/code-shell-server/worker";
+import {
+  previewLine,
+  WorkerBridgeCore,
+  type WorkerFrameMeta,
+} from "@cjhyy/code-shell-server/worker";
 import type {
   AgentPanelHostRequest,
   AgentPanelHostResponse,
@@ -227,6 +241,8 @@ export class AgentBridge implements PetStateBridge {
    * credentialId). Keyed by sessionId; cleared in forgetSession.
    */
   private sessionCwd = new Map<string, string>();
+  private readonly hostReservations = new Map<string, HostReservation>();
+  private readonly tentativeRunsByRequest = new Map<string, string>();
   /**
    * Renderer window that owns each session's host-loopback surface. Panel tools
    * mutate renderer-owned tab/app state, so broadcasting them to every window can
@@ -283,7 +299,7 @@ export class AgentBridge implements PetStateBridge {
       }),
       fallbackCwd: resolveNoRepoCwd,
       log: (event, data) => dlog("bridge", event, data),
-      prepareInbound: (line) => this.prepareInboundLine(line),
+      prepareInbound: (line, meta) => this.prepareInboundLine(line, meta),
       onStderr: (text) => {
         dlog("agent", "stderr", { text: previewLine(text, 800) });
         process.stderr.write(`[agent] ${text}`);
@@ -298,6 +314,7 @@ export class AgentBridge implements PetStateBridge {
         this.safeSend("agent:lifecycle", { type: "gave_up" });
       },
       onSpawnError: () => {
+        this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
         // Snapshots intentionally survive worker exit — a respawn may resume
         // the same session, and a remounted renderer still needs to replay.
@@ -306,6 +323,7 @@ export class AgentBridge implements PetStateBridge {
         this.safeSend("agent:lifecycle", { type: "gave_up" });
       },
       onExit: ({ code, clean, gaveUp }) => {
+        this.evictPendingTentativeRuns();
         this.failPendingQuickChatForks();
         this.snapshots.onWorkerExit(this.workerSnapshotSessionIds);
         if (clean) {
@@ -321,7 +339,21 @@ export class AgentBridge implements PetStateBridge {
     this.core.subscribeLines((line) => this.handleWorkerLine(line));
     this.registerWindow(window);
     this.quickChatForkRouter = quickChatForkLifecycle
-      ? new QuickChatForkRouter(quickChatForkLifecycle)
+      ? new QuickChatForkRouter(quickChatForkLifecycle, async (request, result) => {
+          if (!request.sourceSessionId) return;
+          const source = await getSessionCwdIndex().lookup(request.sourceSessionId);
+          if (!source || source.status !== "confirmed") return;
+          getSessionCwdIndex().upsert(request.sessionId, {
+            cwd: source.cwd,
+            ...(typeof result.workspace?.root === "string"
+              ? { workspaceRoot: result.workspace.root }
+              : source.workspaceRoot
+                ? { workspaceRoot: source.workspaceRoot }
+                : {}),
+            ...(source.projectId ? { projectId: source.projectId } : {}),
+            ...(source.mainRootId ? { mainRootId: source.mainRootId } : {}),
+          });
+        })
       : null;
     this.attachIpcListener();
   }
@@ -355,6 +387,7 @@ export class AgentBridge implements PetStateBridge {
    * then forwards to renderer windows + outbound taps.
    */
   private handleWorkerLine(line: string): void {
+    this.updateTentativeRunLifecycle(line);
     // Internal credential access: worker asks main to resolve/materialize
     // secrets. Consumed here; never forwarded to renderer/transcript.
     if (this.maybeHandleCredentialAccessMessage(line)) return;
@@ -446,6 +479,12 @@ export class AgentBridge implements PetStateBridge {
     if (prepared.sessionId && prepared.cwd) {
       this.sessionCwd.set(prepared.sessionId, prepared.cwd);
     }
+    if (prepared.sessionId && prepared.tentative) {
+      getSessionCwdIndex().setTentative(prepared.sessionId, prepared.tentative);
+      if (prepared.parsed.id !== undefined) {
+        this.tentativeRunsByRequest.set(String(prepared.parsed.id), prepared.sessionId);
+      }
+    }
     if (prepared.sessionId && prepared.bucket) {
       try {
         registerSessionBucket(prepared.sessionId, prepared.bucket, prepared.browserPartition);
@@ -457,14 +496,96 @@ export class AgentBridge implements PetStateBridge {
     return prepared.outLine;
   }
 
+  private updateTentativeRunLifecycle(line: string): void {
+    let message: {
+      id?: string | number;
+      method?: string;
+      params?: { requestId?: string | number; sessionId?: string; event?: { type?: string; sessionId?: string } };
+    };
+    try {
+      message = JSON.parse(line) as typeof message;
+    } catch {
+      return;
+    }
+    if (message.method === Methods.RunAccepted) {
+      const sessionId = message.params?.sessionId;
+      if (typeof sessionId === "string") getSessionCwdIndex().extendTentative(sessionId);
+      return;
+    }
+    const event = message.params?.event;
+    if (event?.type === "session_started") {
+      const sessionId = message.params?.sessionId ?? event.sessionId;
+      if (typeof sessionId === "string") {
+        getSessionCwdIndex().confirm(sessionId);
+        for (const [requestId, pendingSessionId] of this.tentativeRunsByRequest) {
+          if (pendingSessionId === sessionId) this.tentativeRunsByRequest.delete(requestId);
+        }
+      }
+      return;
+    }
+    if (message.id !== undefined && message.method === undefined) {
+      const sessionId = this.tentativeRunsByRequest.get(String(message.id));
+      if (sessionId) {
+        getSessionCwdIndex().evictTentative(sessionId);
+        this.tentativeRunsByRequest.delete(String(message.id));
+      }
+    }
+  }
+
+  private evictPendingTentativeRuns(): void {
+    for (const sessionId of this.tentativeRunsByRequest.values()) {
+      getSessionCwdIndex().evictTentative(sessionId);
+    }
+    this.tentativeRunsByRequest.clear();
+  }
+
+  private agentRunMetadataDeps(): AgentRunMetadataDeps {
+    return {
+      isProjectTrusted: (cwd) => getTrustCachedSync(cwd) === "trusted",
+      isNoRepoCwd: (cwd) => getProjectStore().isNoRepoCwd(cwd),
+      lookupSession: (sessionId, refresh) =>
+        refresh
+          ? getSessionCwdIndex().refreshSync(sessionId)
+          : getSessionCwdIndex().lookupCached(sessionId),
+      resolveProjectRun: (projectId, sessionId) => {
+        const resolved = getProjectStore().resolveRunProjectSync(projectId, sessionId);
+        return {
+          cwd: resolved.cwd,
+          trustCwd: resolved.mainRoot.path,
+          projectId: resolved.project.id,
+          mainRootId: resolved.mainRoot.id,
+          projectPrimaryRootId: resolved.project.primaryRootId,
+          workspaceContext: resolved.workspaceContext,
+        };
+      },
+      resolveExactRoot: (cwd) => {
+        const resolved = getProjectStore().resolveExactRootSync(cwd);
+        return resolved
+          ? {
+              cwd: resolved.cwd,
+              trustCwd: resolved.mainRoot.path,
+              projectId: resolved.project.id,
+              mainRootId: resolved.mainRoot.id,
+              projectPrimaryRootId: resolved.project.primaryRootId,
+              workspaceContext: resolved.workspaceContext,
+            }
+          : undefined;
+      },
+      hostReservation: (sessionId) => this.hostReservations.get(sessionId),
+    };
+  }
+
   /**
    * WorkerBridgeCore prepareInbound hook: rewrite every injected or correlated
    * host frame the same way the renderer IPC path does (an `agent/run` spawns
    * the worker on demand and gets trust/session metadata injected; everything
    * else passes through verbatim).
    */
-  private prepareInboundLine(line: string): { line: string; method?: string } {
-    const prepared = prepareAgentRunMetadata(line, (cwd) => getTrustCachedSync(cwd) === "trusted");
+  private prepareInboundLine(
+    line: string,
+    meta: WorkerFrameMeta,
+  ): { line: string; method?: string } {
+    const prepared = prepareAgentRunMetadata(line, meta, this.agentRunMetadataDeps());
     const parsed = prepared.parsed;
     let outLine = line;
     if (parsed.method === "agent/run") {
@@ -489,10 +610,35 @@ export class AgentBridge implements PetStateBridge {
       // Inspect the message: an agent/run is the only one that can trigger
       // a fresh spawn. Other messages (agent/approve, agent/cancel) only
       // make sense if the worker is already alive.
-      const prepared = prepareAgentRunMetadata(
-        line,
-        (cwd) => getTrustCachedSync(cwd) === "trusted",
-      );
+      let prepared: ReturnType<typeof prepareAgentRunMetadata>;
+      try {
+        prepared = prepareAgentRunMetadata(
+          line,
+          { origin: "renderer", producer: "agent:msg" },
+          this.agentRunMetadataDeps(),
+        );
+      } catch (error) {
+        if (error instanceof AgentRunMetadataError) {
+          let id: unknown;
+          try {
+            id = (JSON.parse(line) as { id?: unknown }).id;
+          } catch {
+            id = undefined;
+          }
+          if (id !== undefined && !event.sender.isDestroyed()) {
+            event.sender.send(
+              "agent:msg",
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id,
+                error: { code: error.code, message: error.message },
+              }),
+            );
+          }
+          return;
+        }
+        throw error;
+      }
       const parsed = prepared.parsed;
       // Line forwarded to the worker. Only rewritten when we inject fields
       // (agent/run trust) — everything else is passed through verbatim so we
@@ -547,6 +693,12 @@ export class AgentBridge implements PetStateBridge {
       }
 
       if (!this.core.canSend()) {
+        if (parsed.method === "agent/run" && prepared.sessionId) {
+          getSessionCwdIndex().evictTentative(prepared.sessionId);
+          if (prepared.parsed.id !== undefined) {
+            this.tentativeRunsByRequest.delete(String(prepared.parsed.id));
+          }
+        }
         // No live worker. For approve / cancel this is fine — drop.
         // For run, ensureWorker above should have created one; if it
         // didn't, log and drop.
@@ -825,9 +977,9 @@ export class AgentBridge implements PetStateBridge {
         if (!parsed.sessionId) throw new Error("workspace action requires sessionId");
         if (parsed.action !== "switch")
           throw new Error(`unsupported workspace action: ${parsed.action}`);
-        const cwd =
-          this.sessionCwd.get(parsed.sessionId) ?? this.lastRunContext.cwd ?? process.cwd();
+        const cwd = this.cwdForSessionOrThrow(parsed.sessionId);
         const list = await switchSessionWorkspaceForUi(parsed.sessionId, cwd, parsed.target);
+        getSessionCwdIndex().setWorkspaceRoot(parsed.sessionId, list.current.root);
         this.safeSend("workspace:changed", {
           sessionId: parsed.sessionId,
           workspace: list.current,
@@ -1026,6 +1178,7 @@ export class AgentBridge implements PetStateBridge {
       consume: true,
       settleOnExit: true,
       failFast: true,
+      meta: { origin: "host", producer: "pet-projection-snapshot" },
     });
     if (outcome.status !== "result" || !outcome.result) return null;
     return this.petWorkerGeneration.normalizeSnapshot(
@@ -1045,10 +1198,23 @@ export class AgentBridge implements PetStateBridge {
     return () => this.petReportObservers.delete(observer);
   }
 
+  requestWorker(
+    method: string,
+    params: Record<string, unknown>,
+    options: { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
+  ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
+  requestWorker(
+    method: string,
+    params: Record<string, unknown>,
+    timeoutMs: number,
+    options: { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
+  ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }>;
   async requestWorker(
     method: string,
     params: Record<string, unknown>,
-    timeoutMs = 120_000,
+    timeoutOrOptions:
+      | number
+      | { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
     /**
      * Opt-in lifecycle tightening for callers that do NOT await the agent's real
      * completion (the Panel App fire-and-forget submit). Such a call uses a very
@@ -1058,8 +1224,10 @@ export class AgentBridge implements PetStateBridge {
      *   failFast     — a failed/dropped write settles it instead of waiting.
      * Default OFF so existing callers keep the old inject-then-wait semantics.
      */
-    options: { settleOnExit?: boolean; failFast?: boolean } = {},
+    maybeOptions?: { settleOnExit?: boolean; failFast?: boolean; meta: WorkerFrameMeta },
   ): Promise<{ ok: true; result: unknown } | { ok: false; message: string; code?: number }> {
+    const timeoutMs = typeof timeoutOrOptions === "number" ? timeoutOrOptions : 120_000;
+    const options = typeof timeoutOrOptions === "number" ? maybeOptions! : timeoutOrOptions;
     const id = `desktop-pet-host-${++this.petHostRequestId}`;
     // consume: false — the response line still flows to renderer + taps, like
     // any other worker output. failFast defaults unset — a dropped send waits out
@@ -1074,10 +1242,18 @@ export class AgentBridge implements PetStateBridge {
     const outcome = await this.core.request(method, params, {
       id,
       timeoutMs,
+      meta: options.meta,
       ...(options.settleOnExit ? { settleOnExit: true } : {}),
       ...(options.failFast ? { failFast: true } : {}),
       ...(ensureWorker ? { ensureWorker: true, ...(cwd ? { ensureWorkerCwd: cwd } : {}) } : {}),
     });
+    if (method === "agent/run") {
+      const sessionId = typeof params.sessionId === "string" ? params.sessionId : undefined;
+      if (sessionId && getSessionCwdIndex().lookupCached(sessionId)?.status === "tentative") {
+        getSessionCwdIndex().evictTentative(sessionId);
+      }
+      this.tentativeRunsByRequest.delete(id);
+    }
     switch (outcome.status) {
       case "result":
         return { ok: true, result: outcome.result };
@@ -1129,7 +1305,8 @@ export class AgentBridge implements PetStateBridge {
   /** Drop a session's snapshot (e.g. when the session is deleted). */
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
-    this.sessionCwd.delete(sessionId);
+    forgetHostSessionMaps(this.sessionCwd, this.hostReservations, sessionId);
+    getSessionCwdIndex().forget(sessionId);
     this.panelHostWindowRoutes.forgetSession(sessionId);
     browserRuntime.close(interactiveBrowserRuntimeOwner(sessionId));
     builtInBrowserHandoffGrants.revoke(sessionId);
@@ -1142,8 +1319,15 @@ export class AgentBridge implements PetStateBridge {
   }
 
   /** Reserve a main-owned Session before a headless producer submits agent/run. */
-  reserveHostSession(sessionId: string, cwd: string): void {
-    this.sessionCwd.set(sessionId, cwd);
+  reserveHostSession(sessionId: string, cwd: string, producer = "host-reservation"): void {
+    reserveHostSessionMaps(this.sessionCwd, this.hostReservations, sessionId, cwd, producer);
+  }
+
+  hostReservation(
+    sessionId: string,
+  ): { cwd: string; producer: string; reservedAt: number } | undefined {
+    const reservation = this.hostReservations.get(sessionId);
+    return reservation ? { ...reservation } : undefined;
   }
 
   /** Rebind a main-owned Session to the browser/Panel bucket of its current host tab. */
@@ -1338,8 +1522,8 @@ export class AgentBridge implements PetStateBridge {
    * alive — identical semantics to the renderer path. The caller is
    * responsible for building a well-formed line (see preload's rpc()).
    */
-  injectWorkerMessage(line: string): void {
-    this.core.injectWorkerMessage(line);
+  injectWorkerMessage(line: string, meta: WorkerFrameMeta): void {
+    this.core.injectWorkerMessage(line, meta);
   }
 
   /**
@@ -1373,7 +1557,12 @@ export class AgentBridge implements PetStateBridge {
     const outcome = await this.core.request(
       "agent/closeSession",
       { sessionId },
-      { id, timeoutMs: 30_000, failFast: true },
+      {
+        id,
+        timeoutMs: 30_000,
+        failFast: true,
+        meta: { origin: "host", producer: "close-session" },
+      },
     );
     switch (outcome.status) {
       case "result": {
@@ -1402,7 +1591,12 @@ export class AgentBridge implements PetStateBridge {
     const outcome = await this.core.request(
       "agent/releaseWorkspace",
       { sessionId },
-      { id, timeoutMs: 5_000, failFast: true },
+      {
+        id,
+        timeoutMs: 5_000,
+        failFast: true,
+        meta: { origin: "host", producer: "release-workspace" },
+      },
     );
     switch (outcome.status) {
       case "result": {
@@ -1433,6 +1627,7 @@ export class AgentBridge implements PetStateBridge {
       Methods.SetWorkspace,
       { sessionId, workspace },
       5_000,
+      { meta: { origin: "host", producer: "set-workspace" } },
     );
     if (!response.ok) throw new Error(response.message);
     const result = response.result as { ok?: boolean; workspace?: SessionWorkspace | null };

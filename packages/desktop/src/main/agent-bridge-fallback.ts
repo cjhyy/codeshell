@@ -28,6 +28,7 @@ export interface ParsedRpc {
 export interface QuickChatForkRequest {
   requestId: number | string;
   sessionId: string;
+  sourceSessionId?: string;
   ownerId: number;
   claimId: string;
 }
@@ -69,7 +70,7 @@ export function quickChatForkRequest(
   parsed: ParsedRpc,
   ownerId: number,
 ): QuickChatForkRequest | null {
-  const { targetSessionId, quickChatClaimId } = parsed.params ?? {};
+  const { sourceSessionId, targetSessionId, quickChatClaimId } = parsed.params ?? {};
   if (
     parsed.method !== "agent/forkSession" ||
     parsed.id === undefined ||
@@ -80,7 +81,13 @@ export function quickChatForkRequest(
   ) {
     return null;
   }
-  return { requestId: parsed.id, sessionId: targetSessionId, ownerId, claimId: quickChatClaimId };
+  return {
+    requestId: parsed.id,
+    sessionId: targetSessionId,
+    ...(typeof sourceSessionId === "string" && sourceSessionId ? { sourceSessionId } : {}),
+    ownerId,
+    claimId: quickChatClaimId,
+  };
 }
 
 export function forkSourceSessionId(parsed: ParsedRpc): string | null {

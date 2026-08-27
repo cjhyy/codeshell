@@ -118,6 +118,7 @@ describe("dispatchMobileChatTurn", () => {
           );
         },
       },
+      meta: { origin: "mobile", producer: "mobile-chat" },
     });
 
     expect(result.ok).toBe(true);
@@ -188,6 +189,7 @@ describe("dispatchMobileChatTurn", () => {
           );
         },
       },
+      meta: { origin: "mobile", producer: "mobile-chat" },
     });
 
     expect(result).toEqual({ ok: false, message: "rejected" });

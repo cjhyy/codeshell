@@ -13,7 +13,12 @@ import {
   type SessionIndex,
   type SessionSummary,
 } from "../transcripts";
-import { loadProjects, makeCreateProjectForCwd, type TrackedProject } from "../projects";
+import {
+  loadProjects,
+  makeCreateProjectForCwd,
+  resolveProjectCwds,
+  type TrackedProject,
+} from "../projects";
 export interface AutomationSessionImportParams {
   sessionIndicesRef: MutableRefObject<Record<string, SessionIndex>>;
   setSessionIndices: Dispatch<SetStateAction<Record<string, SessionIndex>>>;
@@ -95,12 +100,17 @@ export function useAutomationSessionImport({
 
       const touchedProjectIds = new Set<string | null>();
       const projectFactory = makeCreateProjectForCwd(currentProjects);
+      const resolvedForCwd = await resolveProjectCwds(
+        runs.map((run) => run.cwd),
+        "automation-import",
+      );
       await importAutomationRuns(runs, currentProjects, {
         caseInsensitive: isCaseInsensitivePlatform(),
         existingEngineSessionIds: known,
         cap: 50,
         fetchTranscript: (sessionId) => window.codeshell.getSessionTranscript(sessionId),
         createProjectForCwd: projectFactory.createProjectForCwd,
+        resolvedForCwd,
         writeImported: (projectId, summary, state) => {
           saveTranscript(projectId, summary.id, state);
           upsertImportedSession(projectId, summary);
@@ -159,9 +169,14 @@ export function useAutomationSessionImport({
         );
         const projectsNow = loadProjects();
         const projectFactory = makeCreateProjectForCwd(projectsNow);
+        const resolvedForCwd = await resolveProjectCwds(
+          resolvedSessions.map((session) => session.cwd),
+          "disk-rebuild",
+        );
         const placements = planDiskRebuild(resolvedSessions, projectsNow, {
           caseInsensitive: isCaseInsensitivePlatform(),
           createProjectForCwd: projectFactory.createProjectForCwd,
+          resolvedForCwd,
         });
         const touched = new Set<string>();
         for (const { projectId, summary } of placements) {

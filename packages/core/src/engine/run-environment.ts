@@ -8,6 +8,8 @@ import { resolveSandboxConfig, type SettingsSandbox } from "./sandbox-config.js"
 import { sandboxCacheKey } from "./sandbox-cache-key.js";
 import type { EngineRuntime } from "./runtime.js";
 import type { EngineConfig } from "./types.js";
+import { canonicalKey, canonicalPath } from "../workspace/canonical-key.js";
+import type { WorkspaceContext } from "../workspace/workspace-context.js";
 
 type EnvironmentSettings = {
   get(): unknown;
@@ -22,6 +24,26 @@ export interface RunEnvironmentResolverDeps {
   resolveBackend?: (config: SandboxConfig, cwd: string) => Promise<SandboxBackend>;
 }
 
+export interface RunEnvironmentInput {
+  cwd: string;
+  workspaceContext: WorkspaceContext;
+}
+
+function appendWorkspaceRoots(config: SandboxConfig, workspace: WorkspaceContext): SandboxConfig {
+  const writableRoots = [...config.writableRoots];
+  const seen = new Set<string>();
+  for (const root of writableRoots) {
+    if (root !== "${workspace}") seen.add(canonicalKey(root));
+  }
+  for (const root of workspace.roots) {
+    const key = canonicalKey(root.path);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    writableRoots.push(canonicalPath(root.path));
+  }
+  return { ...config, writableRoots };
+}
+
 export class RunEnvironmentResolver {
   private readonly sandboxCache = new Map<string, Promise<SandboxBackend>>();
   private readonly resolveBackend: (config: SandboxConfig, cwd: string) => Promise<SandboxBackend>;
@@ -30,7 +52,8 @@ export class RunEnvironmentResolver {
     this.resolveBackend = deps.resolveBackend ?? resolveSandboxBackend;
   }
 
-  resolveSandboxConfig(cwd: string): SandboxConfig {
+  resolveSandboxConfig(run: RunEnvironmentInput): SandboxConfig {
+    const { cwd, workspaceContext } = run;
     const config = this.deps.config();
     let projectSandbox: SettingsSandbox | undefined;
     let globalSandbox: SettingsSandbox | undefined;
@@ -44,16 +67,20 @@ export class RunEnvironmentResolver {
     } catch {
       // Missing settings fall through to the run default.
     }
-    return resolveSandboxConfig(
-      config.sandbox,
-      projectSandbox,
-      globalSandbox,
-      config.headless === true,
+    return appendWorkspaceRoots(
+      resolveSandboxConfig(
+        config.sandbox,
+        projectSandbox,
+        globalSandbox,
+        config.headless === true,
+      ),
+      workspaceContext,
     );
   }
 
-  resolveSandbox(cwd: string): Promise<SandboxBackend> {
-    const config = this.resolveSandboxConfig(cwd);
+  resolveSandbox(run: RunEnvironmentInput): Promise<SandboxBackend> {
+    const { cwd } = run;
+    const config = this.resolveSandboxConfig(run);
     if (this.deps.runtime) return this.deps.runtime.resolveSandbox(config, cwd);
 
     const key = sandboxCacheKey(config, cwd);
@@ -68,13 +95,14 @@ export class RunEnvironmentResolver {
     return cached;
   }
 
-  async resolve(cwd: string): Promise<{
+  async resolve(run: RunEnvironmentInput): Promise<{
     sandbox: SandboxBackend;
     sandboxConfig: SandboxConfig;
     shellEnv?: Record<string, string>;
   }> {
-    const sandboxConfig = this.resolveSandboxConfig(cwd);
-    const backend = await this.resolveSandbox(cwd);
+    const { cwd } = run;
+    const sandboxConfig = this.resolveSandboxConfig(run);
+    const backend = await this.resolveSandbox(run);
     return {
       sandbox: backend.name === "off" ? backend : { ...backend, network: sandboxConfig.network },
       sandboxConfig,

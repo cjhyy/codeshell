@@ -31,6 +31,7 @@ export async function prepareRunImageInput(args: {
   llm: Pick<LLMConfig, "provider" | "providerKind" | "model">;
   sessionId?: string;
   attachments?: readonly InputAttachmentMeta[];
+  workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
 }): Promise<PrepareRunImageInputResult> {
   const { task, cwd, llm, sessionId } = args;
 
@@ -64,6 +65,7 @@ export async function prepareRunImageInput(args: {
     attachmentContext = await buildInputAttachmentContext(args.attachments, cwd, {
       includeImageBytes: cap.supportsVision,
       expectedSessionId: sessionId,
+      workspaceRoots: args.workspaceContext?.roots.map((root) => root.path),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

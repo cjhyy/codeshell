@@ -113,6 +113,8 @@ export const panels = {
       },
       files: {
         filterPlaceholder: "筛选文件…",
+        rootPicker: "项目文件夹",
+        primaryRoot: "主目录",
         hideTree: "隐藏文件树",
         showTree: "显示文件树",
         refreshTitle: "刷新(重新读取文件与目录)",
@@ -374,6 +376,8 @@ export const panels = {
       },
       files: {
         filterPlaceholder: "Filter files…",
+        rootPicker: "Project folder",
+        primaryRoot: "primary",
         hideTree: "Hide file tree",
         showTree: "Show file tree",
         refreshTitle: "Refresh (re-read files and directories)",

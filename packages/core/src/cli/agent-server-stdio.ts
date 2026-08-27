@@ -291,6 +291,7 @@ const chatManager = new ChatSessionManager({
       // cwd). The slice.cwd spread below is now redundant with this but kept
       // for clarity / explicitness.
       cwd: sessionCwd,
+      workspaceContext: slice.workspaceContext,
       runtime,
       // This stdio worker exists only to serve the desktop app, so every
       // session it creates is a desktop-origin session.

@@ -21,6 +21,11 @@ import {
   quickChatRunRequest,
   quickChatRunSessionId,
 } from "./agent-bridge-fallback.js";
+import {
+  forgetHostSessionMaps,
+  reserveHostSessionMaps,
+  type HostReservation,
+} from "./agent-run-metadata.js";
 
 describe("buildNoChildFallbackReply — no live worker", () => {
   let dir: string;
@@ -166,6 +171,7 @@ describe("forkSourceSessionId", () => {
     ).toEqual({
       requestId: 42,
       sessionId: "qchat-target-1",
+      sourceSessionId: "source-session",
       ownerId: 101,
       claimId: "generation-1",
     });
@@ -211,5 +217,27 @@ describe("quick-chat run ownership parsing", () => {
     expect(
       quickChatRunSessionId({ id: 47, method: "agent/run", params: { sessionId: "regular" } }),
     ).toBeNull();
+  });
+});
+
+describe("AgentBridge host reservation maps", () => {
+  test("host reserve writes both maps while ordinary runs write only session cwd", () => {
+    const sessionCwd = new Map<string, string>();
+    const reservations = new Map<string, HostReservation>();
+
+    sessionCwd.set("renderer", "/renderer");
+    expect(reservations.has("renderer")).toBe(false);
+    reserveHostSessionMaps(sessionCwd, reservations, "host", "/host", "panel", 123);
+    expect(sessionCwd.get("host")).toBe("/host");
+    expect(reservations.get("host")).toEqual({
+      cwd: "/host",
+      producer: "panel",
+      reservedAt: 123,
+    });
+
+    forgetHostSessionMaps(sessionCwd, reservations, "host");
+    expect(sessionCwd.has("host")).toBe(false);
+    expect(reservations.has("host")).toBe(false);
+    expect(sessionCwd.get("renderer")).toBe("/renderer");
   });
 });

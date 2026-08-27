@@ -10,10 +10,15 @@
  */
 
 import { isCaseInsensitivePlatform, normalizeCwd } from "./automation/pathMatch";
-import type { TrackedProject } from "./projects";
-
 /** @deprecated Project semantics; use TrackedProject from projects.ts. */
-export type Repo = TrackedProject;
+export interface Repo {
+  id: string;
+  name: string;
+  path: string;
+  addedAt: number;
+  displayName?: string;
+  pinned?: boolean;
+}
 
 const REPOS_KEY = "codeshell.repos";
 const ACTIVE_KEY = "codeshell.activeRepoId";

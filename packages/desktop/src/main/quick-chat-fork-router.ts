@@ -22,6 +22,11 @@ export interface QuickChatForkStart {
   line: string;
 }
 
+export type QuickChatForkSucceeded = (
+  request: QuickChatForkRequest,
+  result: { sessionId?: unknown; workspace?: { root?: unknown } },
+) => Promise<void> | void;
+
 let nextQuickChatForkWireId = 1;
 
 /**
@@ -32,7 +37,10 @@ let nextQuickChatForkWireId = 1;
 export class QuickChatForkRouter {
   private readonly pending = new Map<string, PendingQuickChatFork>();
 
-  constructor(private readonly lifecycle: QuickChatForkLifecycle) {}
+  constructor(
+    private readonly lifecycle: QuickChatForkLifecycle,
+    private readonly onSucceeded?: QuickChatForkSucceeded,
+  ) {}
 
   get pendingCount(): number {
     return this.pending.size;
@@ -88,7 +96,9 @@ export class QuickChatForkRouter {
     const { request, target } = pending;
     this.sendToTarget(target, JSON.stringify({ ...response, id: request.requestId }));
     const succeeded = !response.error && response.result?.sessionId === request.sessionId;
-    return Promise.resolve(this.lifecycle.settle({ ...request, succeeded }));
+    return Promise.resolve()
+      .then(() => (succeeded ? this.onSucceeded?.(request, response.result ?? {}) : undefined))
+      .then(() => this.lifecycle.settle({ ...request, succeeded }));
   }
 
   async fail(wireId: string): Promise<void> {

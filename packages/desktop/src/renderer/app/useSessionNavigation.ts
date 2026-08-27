@@ -25,10 +25,11 @@ import {
 import {
   loadProjects,
   makeCreateProjectForCwd,
-  makeProjectId,
   markProjectPathRemoved,
   projectLabel,
   unmarkProjectPathRemoved,
+  trackedProjectFromRegistry,
+  resolveProjectCwds,
   type TrackedProject,
 } from "../projects";
 import { planSessionDeletion } from "../sessionDeletionPlan";
@@ -121,25 +122,19 @@ export function useSessionNavigation({
 
   const addProject = async (): Promise<void> => {
     window.codeshell.log("sidebar.add_clicked", {});
-    const picked = await window.codeshell.pickDir();
-    if (!picked) return;
-    const duplicate = projects.find((project) => project.path === picked.path);
+    const created = await window.codeshell.projectRegistry.createFromPicker();
+    if (!created) return;
+    const next = trackedProjectFromRegistry(created);
+    const duplicate = projects.find((project) => project.id === next.id);
     if (duplicate) {
-      unmarkProjectPathRemoved(picked.path);
+      unmarkProjectPathRemoved(next.path);
       setActiveProjectId(duplicate.id);
       return;
     }
-    const next: TrackedProject = {
-      id: makeProjectId(),
-      name: picked.name,
-      path: picked.path,
-      addedAt: Date.now(),
-    };
     unmarkProjectPathRemoved(next.path);
     setProjects((prev) => [...prev, next]);
     setActiveProjectId(next.id);
     setSessionIndices((prev) => ({ ...prev, [next.id]: loadSessionIndex(next.id) }));
-    void window.codeshell.projects.add({ path: next.path, name: next.name });
     window.codeshell.log("repo.added", { id: next.id, path: next.path });
   };
 
@@ -147,7 +142,7 @@ export function useSessionNavigation({
     const project = projects.find((candidate) => candidate.id === id);
     if (project) {
       markProjectPathRemoved(project.path);
-      void window.codeshell.projects.remove(project.path);
+      void window.codeshell.projectRegistry.remove(project.id);
     }
     const index = sessionIndices[projectBucketSegment(id)] ?? loadSessionIndex(id);
     if (project) await releaseWorkspacesForArchiveMany(index.sessions, window.codeshell);
@@ -176,13 +171,14 @@ export function useSessionNavigation({
     setProjects((prev) =>
       prev.map((candidate) => (candidate.id === id ? { ...candidate, pinned } : candidate)),
     );
-    if (project) void window.codeshell.projects.setPinned(project.path, pinned);
+    if (project) void window.codeshell.projectRegistry.setPinned(project.id, pinned);
   };
 
   const renameProject = (id: string, name: string): void => {
     setProjects((prev) =>
       prev.map((project) => (project.id === id ? { ...project, displayName: name } : project)),
     );
+    void window.codeshell.projectRegistry.rename(id, name);
   };
 
   const archiveAllProjectSessions = async (id: string): Promise<void> => {
@@ -324,6 +320,7 @@ export function useSessionNavigation({
     const touchedProjectIds = new Set<string | null>();
     const projectFactory = makeCreateProjectForCwd(projectsNow);
     const cwd = await resolveProjectCwd(run.cwd);
+    const resolvedForCwd = await resolveProjectCwds([cwd], "automation-import");
     await importAutomationRuns(
       [{ ...run, sessionId: run.sessionId, cwd, source: "automation" }],
       projectsNow,
@@ -333,6 +330,7 @@ export function useSessionNavigation({
         cap: 1,
         fetchTranscript: (sessionId) => window.codeshell.getSessionTranscript(sessionId),
         createProjectForCwd: projectFactory.createProjectForCwd,
+        resolvedForCwd,
         writeImported: (projectId, summary, state) => {
           saveTranscript(projectId, summary.id, state);
           upsertImportedSession(projectId, summary);
@@ -366,14 +364,13 @@ export function useSessionNavigation({
     }
     const projectsNow = loadProjects();
     const projectFactory = makeCreateProjectForCwd(projectsNow);
-    const [placement] = planDiskRebuild(
-      [{ ...session, cwd: await resolveProjectCwd(session.cwd) }],
-      projectsNow,
-      {
-        caseInsensitive: isCaseInsensitivePlatform(),
-        createProjectForCwd: projectFactory.createProjectForCwd,
-      },
-    );
+    const cwd = await resolveProjectCwd(session.cwd);
+    const resolvedForCwd = await resolveProjectCwds([cwd], "disk-rebuild");
+    const [placement] = planDiskRebuild([{ ...session, cwd }], projectsNow, {
+      caseInsensitive: isCaseInsensitivePlatform(),
+      createProjectForCwd: projectFactory.createProjectForCwd,
+      resolvedForCwd,
+    });
     if (!placement) return;
     let state: MessagesReducerState;
     try {

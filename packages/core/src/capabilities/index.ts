@@ -21,6 +21,7 @@ export interface CapabilityEngineHookContribution {
 
 export interface CapabilityDynamicContext {
   cwd: string;
+  workspace: import("../workspace/workspace-context.js").WorkspaceContext;
   preset: AgentPreset;
 }
 

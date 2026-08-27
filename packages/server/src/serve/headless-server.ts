@@ -304,7 +304,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         // Spawn-on-first-frame (idempotent): the browser's first request wakes
         // the worker, mirroring the renderer's spawn-on-agent/run semantics.
         bridge.ensureWorker(opts.cwd);
-        bridge.injectWorkerMessage(workerLine);
+        bridge.injectWorkerMessage(workerLine, { origin: "serve", producer: "serve-ws" });
       });
       ws.on("close", () => {
         tabs.delete(ws);

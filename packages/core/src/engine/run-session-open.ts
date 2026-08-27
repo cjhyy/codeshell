@@ -4,7 +4,7 @@
  * early), user-message append, cold-start summary and the turnSeq bump.
  */
 import { getCurrentSid, logger } from "../logging/logger.js";
-import type { Message, SessionKind } from "../types.js";
+import type { Message, SessionKind, SessionProjectBinding } from "../types.js";
 import type { SessionBundle, SessionManager } from "../session/session-manager.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import type { ParsedTask } from "./parse-task.js";
@@ -21,6 +21,7 @@ export interface OpenRunSessionArgs {
   cwd: string;
   sessionKind: SessionKind;
   sessionWorkspaceProfile: string | undefined;
+  projectBinding?: SessionProjectBinding;
   /** Standing brief resent by the host each turn until the Session persists it. */
   sessionBrief?: string;
   llmModel: string;
@@ -83,6 +84,9 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
   if (options?.sessionId && args.sessionManager.exists(options.sessionId)) {
     resumedFromDisk = true;
     session = args.sessionManager.resume(options.sessionId);
+    if (!session.state.project && args.projectBinding) {
+      args.sessionManager.saveStateOrUpdateFields(session.state, { project: args.projectBinding });
+    }
     const cachedCompacted = args.cachedCompactedMessages;
     messages = cachedCompacted ? [...cachedCompacted] : session.transcript.toMessages();
     // If the previous run was Ctrl+C'd or crashed between an assistant
@@ -174,6 +178,9 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
       args.sessionKind,
       options?.ephemeral === true,
     );
+    if (args.projectBinding) {
+      args.sessionManager.saveStateOrUpdateFields(session.state, { project: args.projectBinding });
+    }
     const userMsg: Message = { role: "user", content: args.userMessageContent };
     claimClientMessageId(session, options?.clientMessageId, "submit");
     if (args.parsedTask.hasImages) freshImageMessage = userMsg;

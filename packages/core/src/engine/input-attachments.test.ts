@@ -98,6 +98,34 @@ describe("buildInputAttachmentContext", () => {
     }
   });
 
+  test("accepts attachments from a declared secondary workspace root", async () => {
+    const secondary = mkdtempSync(join(tmpdir(), "input-attachments-secondary-"));
+    try {
+      const note = join(secondary, "notes.txt");
+      writeFileSync(note, "secondary", "utf-8");
+      const out = await buildInputAttachmentContext(
+        [
+          meta({
+            id: "secondary-file",
+            kind: "file",
+            path: note,
+            absPath: note,
+            relPath: undefined,
+            mime: "text/plain",
+            size: 9,
+            origin: "mention",
+          }),
+        ],
+        cwd,
+        { expectedSessionId: "sid", workspaceRoots: [cwd, secondary] },
+      );
+      expect(out.errors).toEqual([]);
+      expect(out.text).toContain(`path="${note}"`);
+    } finally {
+      rmSync(secondary, { recursive: true, force: true });
+    }
+  });
+
   test("rejects workspace symlink file attachments whose realpath escapes cwd", async () => {
     const outside = mkdtempSync(join(tmpdir(), "input-attachments-symlink-file-outside-"));
     try {

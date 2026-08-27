@@ -141,4 +141,37 @@ describe("QuickChatForkRouter", () => {
     expect(router.pendingCount).toBe(0);
     expect(target.messages).toEqual([]);
   });
+
+  test("reports a successful fork so Main can index the new session cwd", async () => {
+    const settled: string[] = [];
+    const succeeded: Array<{ sourceSessionId: string; sessionId: string }> = [];
+    const router = new QuickChatForkRouter(
+      {
+        begin: () => true,
+        settle: ({ sessionId }) => settled.push(sessionId),
+      },
+      ({ sourceSessionId, sessionId }) => succeeded.push({ sourceSessionId, sessionId }),
+    );
+    const target = responseTarget(404);
+    const fork = {
+      ...request(404, "qchat-indexed", "claim-indexed"),
+      sourceSessionId: "source-session",
+    };
+    const started = router.start(
+      fork,
+      target,
+      JSON.stringify({ jsonrpc: "2.0", id: 1, method: "agent/forkSession", params: {} }),
+    );
+
+    await router.routeWorkerResponse(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: started!.wireId,
+        result: { sessionId: fork.sessionId },
+      }),
+    );
+
+    expect(succeeded).toEqual([{ sourceSessionId: "source-session", sessionId: "qchat-indexed" }]);
+    expect(settled).toEqual(["qchat-indexed"]);
+  });
 });

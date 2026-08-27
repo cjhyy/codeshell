@@ -22,6 +22,10 @@ export interface RebuildDeps {
   caseInsensitive: boolean;
   resolveCwd?: (cwd: string) => string;
   createProjectForCwd: (cwd: string) => string | null;
+  resolvedForCwd?: ReadonlyMap<
+    string,
+    { projectId: string; rootId: string; created: boolean } | { noRepo: true } | null
+  >;
 }
 
 export interface RebuildPlacement {
@@ -38,10 +42,15 @@ export function planDiskRebuild(
   return sessions.flatMap((s) => {
     const cwd = deps.resolveCwd?.(s.cwd) ?? s.cwd;
     // The internal no-repo sandbox is a no-project chat, never a real repo.
-    const projectId = isNoRepoCwd(cwd)
-      ? null
-      : (matchProjectIdForCwd(cwd, projects, deps.caseInsensitive) ??
-        deps.createProjectForCwd(cwd));
+    const mainResolution = deps.resolvedForCwd?.get(cwd);
+    const projectId = deps.resolvedForCwd?.has(cwd)
+      ? mainResolution && "projectId" in mainResolution
+        ? mainResolution.projectId
+        : null
+      : isNoRepoCwd(cwd)
+        ? null
+        : (matchProjectIdForCwd(cwd, projects, deps.caseInsensitive) ??
+          deps.createProjectForCwd(cwd));
     if (projectId === null && !isNoRepoCwd(cwd)) return [];
     const summary: SessionSummary = {
       id: s.id,

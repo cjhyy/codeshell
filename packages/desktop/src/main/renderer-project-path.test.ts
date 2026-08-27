@@ -3,15 +3,91 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  requireRendererProject,
   requireRendererProjectEntryPath,
   requireRendererProjectPath,
   requireRendererProjectPathOrGlobal,
+  requireRendererProjectRoot,
+  requireRendererProjectRootEntry,
 } from "./renderer-project-path.js";
 
 const roots: string[] = [];
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
+
+describe("project-id renderer authorization", () => {
+  test("resolves only live project and root ids from the main-owned registry", async () => {
+    const { root, project } = await fixture();
+    const secondary = join(root, "secondary");
+    await mkdir(secondary);
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project",
+        roots: [
+          { id: "primary", path: project, name: "project", addedAt: 1 },
+          { id: "secondary", path: secondary, name: "secondary", addedAt: 2 },
+        ],
+        primaryRootId: "primary",
+        createdAt: 1,
+        updatedAt: 1,
+        lastOpenedAt: 1,
+        revision: 1,
+      },
+    ];
+
+    await expect(requireRendererProject("project-1", { projects })).resolves.toMatchObject({
+      id: "project-1",
+    });
+    await expect(
+      requireRendererProjectRoot("project-1", "secondary", { projects }),
+    ).resolves.toMatchObject({ rootId: "secondary", path: await realpath(secondary) });
+    await expect(requireRendererProject("unknown", { projects })).rejects.toThrow(/not found/);
+    await expect(
+      requireRendererProjectRoot("project-1", "unknown", { projects }),
+    ).rejects.toThrow(/root not found/);
+  });
+
+  test("maps a real entry to its root and rejects traversal and symlink escapes", async () => {
+    const { root, project } = await fixture();
+    const secondary = join(root, "secondary");
+    const outside = join(root, "outside.txt");
+    const inside = join(secondary, "inside.txt");
+    await mkdir(secondary);
+    await writeFile(inside, "inside");
+    await writeFile(outside, "outside");
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project",
+        roots: [
+          { id: "primary", path: project, name: "project", addedAt: 1 },
+          { id: "secondary", path: secondary, name: "secondary", addedAt: 2 },
+        ],
+        primaryRootId: "primary",
+        createdAt: 1,
+        updatedAt: 1,
+        lastOpenedAt: 1,
+        revision: 1,
+      },
+    ];
+
+    await expect(
+      requireRendererProjectRootEntry("project-1", inside, { projects }),
+    ).resolves.toEqual({ entry: await realpath(inside), rootId: "secondary" });
+    await expect(
+      requireRendererProjectRootEntry("project-1", outside, { projects }),
+    ).rejects.toThrow(/outside/);
+    if (process.platform !== "win32") {
+      const escapingLink = join(secondary, "escaping-link");
+      await symlink(outside, escapingLink, "file");
+      await expect(
+        requireRendererProjectRootEntry("project-1", escapingLink, { projects }),
+      ).rejects.toThrow(/outside/);
+    }
+  });
 });
 
 async function fixture(): Promise<{ root: string; project: string; sessions: string }> {
@@ -44,6 +120,15 @@ describe("requireRendererProjectPath", () => {
     const sessionDir = join(sessions, "session-1");
     await mkdir(sessionDir);
     await writeFile(join(sessionDir, "state.json"), JSON.stringify({ cwd: project }));
+    expect(
+      await requireRendererProjectPath(project, {
+        registeredPaths: [],
+        noRepoPath: join(root, "no-repo"),
+        sessionRoot: sessions,
+      }),
+    ).toBe(await realpath(project));
+
+    await rm(join(sessionDir, "state.json"));
     expect(
       await requireRendererProjectPath(project, {
         registeredPaths: [],

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { searchFiles } from "./file-search-service.js";
+import { searchFiles, searchProjectFiles } from "./file-search-service.js";
 
 describe("searchFiles", () => {
   let cwd: string;
@@ -33,5 +33,40 @@ describe("searchFiles", () => {
   test("ignored directories do not appear", async () => {
     const hits = await searchFiles(cwd, "node");
     expect(hits.some((hit) => hit.path.startsWith("node_modules"))).toBe(false);
+  });
+});
+
+describe("searchProjectFiles", () => {
+  test("merges roots serially, preserves rootId, deduplicates, reranks, and caps results", async () => {
+    const calls: string[] = [];
+    const hits = await searchProjectFiles(
+      [
+        { id: "root-a", path: "/a" },
+        { id: "root-b", path: "/b" },
+      ],
+      "button",
+      async (cwd) => {
+        calls.push(cwd);
+        if (cwd === "/a") {
+          return [
+            { path: "src/Button.tsx", name: "Button.tsx", kind: "file" },
+            { path: "src/Button.tsx", name: "Button.tsx", kind: "file" },
+          ];
+        }
+        return Array.from({ length: 35 }, (_, index) => ({
+          path: index === 0 ? "Button.md" : `docs/button-${index}.md`,
+          name: index === 0 ? "Button.md" : `button-${index}.md`,
+          kind: "file" as const,
+        }));
+      },
+    );
+
+    expect(calls).toEqual(["/a", "/b"]);
+    expect(hits).toHaveLength(30);
+    expect(hits[0]).toMatchObject({ rootId: "root-b", path: "Button.md" });
+    expect(
+      hits.filter((hit) => hit.rootId === "root-a" && hit.path === "src/Button.tsx"),
+    ).toHaveLength(1);
+    expect(hits.some((hit) => hit.rootId === "root-b")).toBe(true);
   });
 });

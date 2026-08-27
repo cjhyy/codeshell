@@ -17,6 +17,7 @@ import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { MoreHorizontal, Paperclip } from "lucide-react";
 import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
 import { useT, type TFunction } from "../i18n/I18nProvider";
+import type { TrackedProject } from "../projects";
 
 /** localStorage key persisting whether the file tree is shown ("1") or hidden ("0"). */
 const TREE_OPEN_KEY = "codeshell.filesPanel.treeOpen";
@@ -84,6 +85,7 @@ function sameStringSet(a: Set<string>, b: Set<string>): boolean {
 interface Props {
   /** Workspace root; null when no project is active. */
   cwd: string | null;
+  project?: TrackedProject | null;
   /** Attach an image file to the composer by absolute path (TODO 2.1). */
   onAttachImage?: (absPath: string) => void;
   /** A chat path-link asked to reveal this file; nonce re-fires on re-click. */
@@ -93,12 +95,60 @@ interface Props {
   onRevealConsumed?: (nonce: number) => void;
 }
 
+interface FileSystemReader {
+  readDir: (root: string, dir: string) => Promise<FsEntry[]>;
+  readFile: (root: string, path: string) => Promise<FileContent>;
+}
+
+const LEGACY_FILE_SYSTEM: FileSystemReader = {
+  readDir: (root, dir) => window.codeshell.readDir(root, dir),
+  readFile: (root, path) => window.codeshell.readFileContent(root, path),
+};
+
+const FileSystemContext = React.createContext<FileSystemReader>(LEGACY_FILE_SYSTEM);
+
 /**
  * File-browser panel, modeled on Codex's fs RPC tree: lazy directory
  * expansion (fs:readDir per level) + a capped text preview (fs:readFile).
  */
-export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }: Props) {
+export function FilesPanel({
+  cwd: workspaceCwd,
+  project,
+  onAttachImage,
+  revealFile,
+  onRevealConsumed,
+}: Props) {
   const { t } = useT();
+  const rootOptions = useMemo(() => {
+    if (!project) return workspaceCwd ? [{ id: "legacy", path: workspaceCwd, name: "" }] : [];
+    const primary = project.roots.find((root) => root.id === project.primaryRootId);
+    return [
+      ...(primary
+        ? [{ ...primary, path: workspaceCwd ?? primary.path }]
+        : workspaceCwd
+          ? [{ id: project.primaryRootId, path: workspaceCwd, name: project.name, addedAt: 0 }]
+          : []),
+      ...project.roots.filter((root) => root.id !== project.primaryRootId),
+    ];
+  }, [project, workspaceCwd]);
+  const [selectedRootId, setSelectedRootId] = useState<string | null>(
+    project?.primaryRootId ?? (workspaceCwd ? "legacy" : null),
+  );
+  useEffect(() => {
+    setSelectedRootId(project?.primaryRootId ?? (workspaceCwd ? "legacy" : null));
+  }, [project?.id, project?.primaryRootId, workspaceCwd]);
+  const activeRoot =
+    rootOptions.find((root) => root.id === selectedRootId) ?? rootOptions[0] ?? null;
+  const cwd = activeRoot?.path ?? null;
+  const usesProjectRootApi = !!project && activeRoot?.id !== project.primaryRootId;
+  const fileSystem = useMemo<FileSystemReader>(() => {
+    if (!project || !activeRoot || !usesProjectRootApi) return LEGACY_FILE_SYSTEM;
+    return {
+      readDir: (_root, dir) => window.codeshell.readProjectDir(project.id, activeRoot.id, dir),
+      readFile: (_root, path) =>
+        window.codeshell.readProjectFileContent(project.id, activeRoot.id, path),
+    };
+  }, [activeRoot, project, usesProjectRootApi]);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   // Show/hide the file tree — persisted so hiding it sticks across panel
@@ -153,6 +203,11 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
   // brand-new tab opened by that same click.
   useEffect(() => {
     if (!revealFile || revealFile.consumed || !cwd) return;
+    const containingRoot = rootOptions.find((root) => resolveUnderRoot(root.path, revealFile.path));
+    if (containingRoot && containingRoot.id !== activeRoot?.id) {
+      setSelectedRootId(containingRoot.id);
+      return;
+    }
     const abs = resolveUnderRoot(cwd, revealFile.path);
     if (!abs) return;
     selectedRootRef.current = cwd;
@@ -164,7 +219,7 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
     // the Files tab, this effect runs on the freshly-mounted panel and reveals
     // immediately — the request is only marked consumed once that has happened.
     onRevealConsumed?.(revealFile.nonce);
-  }, [revealFile?.nonce, revealFile?.consumed, cwd, onRevealConsumed]);
+  }, [activeRoot?.id, cwd, onRevealConsumed, revealFile, rootOptions]);
 
   useEffect(() => {
     if (!treeOpen || !selectedForCurrentRoot || !cwd) return;
@@ -183,10 +238,26 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
   }
 
   return (
+    <FileSystemContext.Provider value={fileSystem}>
     <div className="flex min-h-0 flex-1">
       {treeOpen && (
         <div className="flex w-72 shrink-0 flex-col border-r border-border">
           <div className="shrink-0 border-b border-border p-2">
+            {rootOptions.length > 1 && (
+              <select
+                className="mb-2 h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                aria-label={t("panels.files.rootPicker")}
+                value={activeRoot?.id ?? ""}
+                onChange={(event) => setSelectedRootId(event.target.value)}
+              >
+                {rootOptions.map((root) => (
+                  <option key={root.id} value={root.id}>
+                    {root.name || root.path}
+                    {root.id === project?.primaryRootId ? ` (${t("panels.files.primaryRoot")})` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
             <Input
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -249,6 +320,7 @@ export function FilesPanel({ cwd, onAttachImage, revealFile, onRevealConsumed }:
         </div>
       </div>
     </div>
+    </FileSystemContext.Provider>
   );
 }
 
@@ -276,6 +348,7 @@ function DirNode({
   reloadNonce: number;
 }) {
   const { t } = useT();
+  const fileSystem = React.useContext(FileSystemContext);
   const [entries, setEntries] = useState<FsEntry[] | null>(null);
   // Top level auto-expands; deeper levels expand on click.
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -305,7 +378,7 @@ function DirNode({
 
   useEffect(() => {
     let cancelled = false;
-    void window.codeshell
+    void fileSystem
       .readDir(root, dir)
       .then((e) => {
         if (!cancelled) setEntries(e);
@@ -316,7 +389,7 @@ function DirNode({
     return () => {
       cancelled = true;
     };
-  }, [root, dir, reloadNonce]);
+  }, [dir, fileSystem, reloadNonce, root]);
 
   if (!entries)
     return (
@@ -615,6 +688,7 @@ function TextPreview({
   reloadNonce: number;
 }) {
   const { t } = useT();
+  const fileSystem = React.useContext(FileSystemContext);
   const [content, setContent] = useState<FileContent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -627,8 +701,8 @@ function TextPreview({
   }, [root, path]);
   useEffect(() => {
     let cancelled = false;
-    void window.codeshell
-      .readFileContent(root, path)
+    void fileSystem
+      .readFile(root, path)
       .then((c) => {
         if (!cancelled) setContent(c);
       })
@@ -638,7 +712,7 @@ function TextPreview({
     return () => {
       cancelled = true;
     };
-  }, [root, path, reloadNonce]);
+  }, [fileSystem, path, reloadNonce, root]);
 
   if (error)
     return (

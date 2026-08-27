@@ -167,6 +167,7 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
         hidden={hidden}
         keepActiveBodyLive={keepActiveBodyLive}
         projectPath={panelProject?.path ?? null}
+        project={panelProject}
         onClose={() =>
           props.updatePanelBucket(panelBucket, (state) => ({
             ...state,

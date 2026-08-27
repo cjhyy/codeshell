@@ -38,6 +38,7 @@ export function buildRunToolContext(args: {
   agentDefinitions: ToolContext["agentDefinitions"];
   sandbox: ToolContext["sandbox"]; // engine 已完成 network 贴附的 backend(或 off)
   cwd: string;
+  workspace: ToolContext["workspace"];
   shellEnv: ToolContext["shellEnv"];
   profile: RunBehaviorProfile | undefined;
   profileParams: Readonly<Record<string, unknown>>;
@@ -62,6 +63,7 @@ export function buildRunToolContext(args: {
     // properties and survive the spread. Off keeps network undefined.
     sandbox: args.sandbox,
     cwd: args.cwd,
+    workspace: args.workspace,
     shellEnv: args.shellEnv,
     // TodoWrite reads this to push task_update events independently
     // of its return value, so the UI's pinned task panel refreshes
@@ -226,6 +228,7 @@ export async function connectRunMcp(args: {
  */
 export interface ToolVisibilityInputs {
   cwd: string;
+  workspace?: ToolContext["workspace"];
   hasGoal: boolean;
   sessionId?: string;
   settingsScope?: SettingsScope;
@@ -255,6 +258,7 @@ export function buildToolVisibility(
 ): import("../tool-system/context.js").ToolVisibilityContext {
   return {
     cwd: inputs.cwd,
+    ...(inputs.workspace ? { workspace: inputs.workspace } : {}),
     hasGoal: inputs.hasGoal,
     ...(inputs.sessionId ? { sessionId: inputs.sessionId } : {}),
     ...(inputs.settingsScope ? { settingsScope: inputs.settingsScope } : {}),
@@ -299,6 +303,7 @@ export function assembleRunToolDefs(args: {
   const guardCwd = args.guardCwd;
   const toolVisibility = buildToolVisibility({
     cwd: guardCwd,
+    workspace: toolCtx.workspace,
     hasGoal: args.hasRunnableGoal,
     sessionId: toolCtx.sessionId,
     settingsScope: args.settingsScope,

@@ -115,6 +115,7 @@ export interface CreateSubAgentSpawnerDeps {
   parentSandbox: SandboxConfig;
   presetName: AgentPresetName;
   cwd: string;
+  workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
   permissionMode: NonNullable<EngineConfig["permissionMode"]>;
   modelPool?: ModelPool;
   appendParentSubagent: (agentId: string, description: string) => void;
@@ -320,6 +321,7 @@ export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgent
           retryMaxAttempts: 2,
         },
         cwd: deps.cwd,
+        workspaceContext: deps.workspaceContext ?? deps.parentConfig.workspaceContext,
         permissionMode: deps.permissionMode,
         preset: deps.presetName,
         enabledBuiltinTools: scope.enabled,

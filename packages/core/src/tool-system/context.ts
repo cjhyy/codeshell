@@ -200,6 +200,7 @@ export interface SubAgentSpawnResult {
  */
 export interface ToolVisibilityContext {
   cwd: string;
+  workspace?: import("../workspace/workspace-context.js").WorkspaceContext;
   hasGoal: boolean;
   /** Resolved Session identity for per-session extension-tool visibility. */
   sessionId?: string;
@@ -477,7 +478,9 @@ export interface ToolContext {
    * switcher. Undefined outside hosts that can switch this conversation's
    * session workspace.
    */
-  workspace?: import("./workspace-bridge.js").WorkspaceBridge;
+  workspaceBridge?: import("./workspace-bridge.js").WorkspaceBridge;
+  /** Immutable roots authorized for this run. */
+  workspace?: import("../workspace/workspace-context.js").WorkspaceContext;
   /** Host panel discovery/focus bridge. Undefined in non-Desktop/headless engines. */
   panels?: import("./panel-bridge.js").PanelHostBridge;
   /**

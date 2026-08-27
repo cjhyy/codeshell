@@ -84,7 +84,10 @@ export async function applyPatchTool(
 
   let result;
   try {
-    result = await applyPatch(parsed.hunks, { cwd });
+    result = await applyPatch(parsed.hunks, {
+      cwd,
+      workspaceRoots: ctx?.workspace?.roots.map((root) => root.path),
+    });
   } catch (err) {
     return `Error applying patch: ${(err as Error).message}`;
   }

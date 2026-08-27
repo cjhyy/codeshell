@@ -52,7 +52,7 @@ export async function switchSessionWorkspaceTool(
 ): Promise<string> {
   const target = stringArg(args.target);
   if (!target) return "Error: target is required";
-  const bridge = ctx?.workspace;
+  const bridge = ctx?.workspaceBridge;
   if (!bridge) {
     return (
       "SwitchSessionWorkspace is not available in this host. " +

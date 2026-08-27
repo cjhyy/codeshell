@@ -7,6 +7,7 @@ import {
   wrapChildStream,
 } from "./subagent-spawner.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
+import { legacySingleRootWorkspace } from "../workspace/workspace-context.js";
 import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 
@@ -370,7 +371,10 @@ describe("subagent spawner", () => {
       }),
       credentialAccess: { envExposures: () => ({}) },
     });
-    const effectiveSandbox = resolver.resolveSandboxConfig("/repo");
+    const effectiveSandbox = resolver.resolveSandboxConfig({
+      cwd: "/repo",
+      workspaceContext: legacySingleRootWorkspace("/repo"),
+    });
     let childConfig: EngineConfig | undefined;
     const spawner = createSubAgentSpawner({
       parentConfig: parent,

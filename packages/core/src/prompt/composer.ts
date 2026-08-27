@@ -18,6 +18,7 @@ import type { CapabilityDynamicContextProvider } from "../capabilities/index.js"
 
 export interface ComposerOptions {
   cwd: string;
+  workspace: import("../workspace/workspace-context.js").WorkspaceContext;
   model: string;
   instructionOptions?: ScanOptions;
   /** Resolved preset — used to load section-based prompt. */
@@ -160,7 +161,7 @@ export class PromptComposer {
     const parts = await Promise.all(
       (this.options.dynamicContextProviders ?? []).map(async (provider) => {
         try {
-          return await provider({ cwd: this.options.cwd, preset });
+          return await provider({ cwd: this.options.cwd, workspace: this.options.workspace, preset });
         } catch {
           // A capability's optional context must not make a turn fail.
           return undefined;
@@ -268,6 +269,10 @@ export class PromptComposer {
         const lines = [
           `You are an AI agent powered by ${this.options.model}.`,
           `Working directory: ${this.options.cwd}`,
+          `Workspace roots (${this.options.workspace.roots.length}):`,
+          ...this.options.workspace.roots.map(
+            (root) => `- [${root.role}] ${root.path} (rootId: ${root.id})`,
+          ),
           `Platform: ${process.platform}`,
           `Shell: ${process.env.SHELL ?? "unknown"}`,
         ];

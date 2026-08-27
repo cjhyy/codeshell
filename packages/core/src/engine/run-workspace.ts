@@ -11,6 +11,13 @@ import type { SettingsManager } from "../settings/manager.js";
 import type { EngineConfig, EngineResult } from "./types.js";
 import type { EngineRunOptions, RunBehaviorProfile } from "./run-types.js";
 import { resolveRunProfileState, type RunProfileState } from "./run-setup.js";
+import { canonicalKey } from "../workspace/canonical-key.js";
+import {
+  legacySingleRootWorkspace,
+  validateWorkspaceContext,
+  workspacePrimaryRoot,
+  type WorkspaceContext,
+} from "../workspace/workspace-context.js";
 
 /**
  * Resolve the working directory for a run. Precedence for legacy sessions:
@@ -34,6 +41,9 @@ export interface RunWorkspaceResolution {
   runPermissionMode: NonNullable<EngineConfig["permissionMode"]>;
   runPlanMode: boolean;
   cwd: string;
+  workspaceContext: WorkspaceContext;
+  /** False only for the compatibility context synthesized from a lone cwd. */
+  authoritativeWorkspaceContext: boolean;
   profileState: RunProfileState;
 }
 
@@ -50,6 +60,7 @@ export async function resolveRunWorkspace(args: {
     | "readSessionWorkspaceProfile"
     | "resolveSessionWorkspaceForResume"
     | "readSessionMainRoot"
+    | "readSessionProjectBinding"
   >;
   resolveBehaviorProfile: (
     sessionKind: string,
@@ -57,6 +68,7 @@ export async function resolveRunWorkspace(args: {
   ) => RunBehaviorProfile | undefined;
   configPermissionMode: EngineConfig["permissionMode"];
   configCwd: string | undefined;
+  configWorkspaceContext: WorkspaceContext | undefined;
   settings: SettingsManager;
   processCwd: string;
 }): Promise<ResolveRunWorkspaceResult> {
@@ -158,6 +170,43 @@ export async function resolveRunWorkspace(args: {
       configCwd: args.configCwd,
       processCwd: args.processCwd,
     });
+  const rawWorkspaceContext = options?.workspaceContext ?? args.configWorkspaceContext;
+  let workspaceContext: WorkspaceContext;
+  try {
+    workspaceContext = rawWorkspaceContext
+      ? validateWorkspaceContext(rawWorkspaceContext)
+      : legacySingleRootWorkspace(cwd);
+  } catch (error) {
+    return workspaceError(options?.sessionId, error instanceof Error ? error.message : String(error));
+  }
+  const authoritativeWorkspaceContext = rawWorkspaceContext !== undefined;
+  const primary = workspacePrimaryRoot(workspaceContext);
+  if (canonicalKey(primary.path) !== canonicalKey(cwd)) {
+    return workspaceError(
+      options?.sessionId,
+      `WorkspaceContext primary does not match effective cwd: ${primary.path} != ${cwd}`,
+    );
+  }
+  if (
+    workspaceResume?.ok &&
+    workspaceResume.reason !== "legacy" &&
+    canonicalKey(workspaceResume.workspace.root) !== canonicalKey(primary.path)
+  ) {
+    return workspaceError(options?.sessionId, "WorkspaceContext primary does not match SessionWorkspace");
+  }
+  const binding = options?.sessionId
+    ? args.sessionManager.readSessionProjectBinding(options.sessionId)
+    : undefined;
+  if (binding && !authoritativeWorkspaceContext) {
+    return workspaceError(options?.sessionId, "bound Session requires an authoritative WorkspaceContext");
+  }
+  if (
+    binding &&
+    (binding.projectId !== workspaceContext.projectId ||
+      binding.mainRootId !== workspaceContext.sessionMainRootId)
+  ) {
+    return workspaceError(options?.sessionId, "WorkspaceContext does not match persisted project binding");
+  }
   const profileState = profile?.disableWorkspaceProfile
     ? {
         workspaceProfile: undefined,
@@ -180,7 +229,22 @@ export async function resolveRunWorkspace(args: {
       runPermissionMode,
       runPlanMode,
       cwd,
+      workspaceContext,
+      authoritativeWorkspaceContext,
       profileState,
+    },
+  };
+}
+
+function workspaceError(sessionId: string | undefined, message: string): ResolveRunWorkspaceResult {
+  return {
+    ok: false,
+    result: {
+      text: `ERROR: ${message}`,
+      reason: "completed",
+      sessionId: sessionId ?? "workspace-invalid",
+      turnCount: 0,
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
     },
   };
 }

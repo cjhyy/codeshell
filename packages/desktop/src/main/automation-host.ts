@@ -29,12 +29,89 @@ import {
   defaultSandboxConfig,
   type CronRunner,
   type CronRunResult,
+  type WorkspaceContext,
 } from "@cjhyy/code-shell-core/internal";
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
 import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
 import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
 import { stablePromptHash } from "@cjhyy/code-shell-server/storage";
 import { browserRuntime, type BrowserRuntimeLike } from "./browser-runtime/index.js";
+import { getProjectStore } from "./project-store.js";
+import { getSessionCwdIndex } from "./session-cwd-index.js";
+import { getTrustCachedSync } from "./trust-store.js";
+
+export interface AutomationWorkspaceResolution {
+  cwd: string;
+  projectTrusted: boolean;
+  workspaceContext?: WorkspaceContext;
+}
+
+export interface AutomationWorkspaceDeps {
+  noRepoCwd: () => string;
+  foldProjectRoot: (cwd: string) => string;
+  resolveProjectRoot: (
+    cwd: string,
+  ) => { cwd: string; trustCwd: string; workspaceContext: WorkspaceContext } | undefined;
+  hasPersistedSessionCwd: (cwd: string) => boolean;
+  isProjectTrusted: (cwd: string) => boolean;
+}
+
+export function resolveAutomationWorkspace(
+  requestedCwd: string | undefined,
+  deps: AutomationWorkspaceDeps,
+): AutomationWorkspaceResolution | null {
+  if (!requestedCwd) {
+    const cwd = deps.noRepoCwd();
+    return { cwd, projectTrusted: deps.isProjectTrusted(cwd) };
+  }
+  let cwd: string;
+  try {
+    cwd = deps.foldProjectRoot(requestedCwd);
+  } catch {
+    return null;
+  }
+  const project = deps.resolveProjectRoot(cwd);
+  if (project) {
+    return {
+      cwd: project.cwd,
+      projectTrusted: deps.isProjectTrusted(project.trustCwd),
+      workspaceContext: project.workspaceContext,
+    };
+  }
+  if (deps.hasPersistedSessionCwd(cwd)) {
+    return { cwd, projectTrusted: deps.isProjectTrusted(cwd) };
+  }
+  return null;
+}
+
+function resolveDesktopAutomationWorkspace(cwd: string | undefined): AutomationWorkspaceResolution | null {
+  return resolveAutomationWorkspace(cwd, {
+    noRepoCwd: automationNoRepoCwd,
+    foldProjectRoot: resolveProjectRoot,
+    resolveProjectRoot: (candidate) => {
+      const resolved = getProjectStore().resolveExactRootSync(candidate);
+      return resolved
+        ? {
+            cwd: resolved.cwd,
+            trustCwd: resolved.mainRoot.path,
+            workspaceContext: resolved.workspaceContext,
+          }
+        : undefined;
+    },
+    hasPersistedSessionCwd: (candidate) =>
+      getSessionCwdIndex().resolveConfirmedCwds([candidate])[0] === true,
+    isProjectTrusted: (candidate) => getTrustCachedSync(candidate) === "trusted",
+  });
+}
+
+function automationNoRepoCwd(): string {
+  const cwd = join(homedir(), ".code-shell", "no-repo");
+  mkdirSync(cwd, { recursive: true });
+  return cwd;
+}
 
 /**
  * Build a read-only RunManager for automation. Per-job cwd is passed at submit
@@ -100,7 +177,15 @@ export function buildDesktopAutomationRunner(
   runtime: BrowserRuntimeLike = browserRuntime,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
-    const jobCwd = resolveProjectRoot(req.job.cwd ?? process.cwd());
+    const workspace = resolveDesktopAutomationWorkspace(req.job.cwd);
+    if (!workspace) {
+      return {
+        text: "",
+        reason: "workspace-unresolved",
+        stop: { reason: "workspace-unresolved" },
+      };
+    }
+    const jobCwd = workspace.cwd;
     const settings = new SettingsManager(jobCwd, "full").get();
     const llm = resolveLLMConfigForTag(
       settings,
@@ -140,6 +225,8 @@ export function buildDesktopAutomationRunner(
       const engine = new Engine({
         llm,
         cwd: jobCwd,
+        workspaceContext: workspace.workspaceContext,
+        projectTrusted: workspace.projectTrusted,
         settingsScope: "full",
         headless: true,
         origin: "automation",
@@ -208,6 +295,7 @@ export function buildDesktopAutomationRunner(
       try {
         const result = await engine.run(req.prompt, {
           cwd: jobCwd,
+          workspaceContext: workspace.workspaceContext,
           onStream,
           signal: req.signal,
           clientMessageId,

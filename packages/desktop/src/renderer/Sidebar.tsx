@@ -22,6 +22,8 @@ import {
   GitBranch,
   Loader2,
   Pin,
+  Star,
+  Trash2,
   UsersRound,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
@@ -41,8 +43,17 @@ import { useT } from "./i18n";
 import { PetSidebarEntry } from "./pet/PetSidebarEntry";
 import { compactSidebarSessions, sortSidebarSessions } from "./sidebarSessionVisibility";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { SessionWorkspace } from "../preload/types";
+import { TrustGate } from "./workspace-trust/TrustGate";
 
 interface SidebarProps {
   projects: TrackedProject[];
@@ -108,6 +119,12 @@ type WorkspaceChangeEvent = {
   mainRoot?: string;
 };
 
+export function shouldPromptForPrimaryTrust(
+  level: "trusted" | "untrusted" | "unknown",
+): boolean {
+  return level !== "trusted";
+}
+
 export function Sidebar({
   projects,
   sessions,
@@ -146,6 +163,12 @@ export function Sidebar({
 }: SidebarProps) {
   const { t } = useT();
   const [menu, setMenu] = useState<MenuTarget | null>(null);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [pendingPrimary, setPendingPrimary] = useState<{
+    projectId: string;
+    rootId: string;
+    path: string;
+  } | null>(null);
   const [workspaceChange, setWorkspaceChange] = useState<WorkspaceChangeEvent | null>(null);
   const closeMenu = (): void => setMenu(null);
   const confirm = useConfirm();
@@ -158,6 +181,23 @@ export function Sidebar({
 
   // Pin sort (sortProjects: pinned first, then by addedAt asc).
   const orderedProjects = useMemo(() => sortProjects(projects), [projects]);
+  const editingProject = projects.find((project) => project.id === editingProjectId) ?? null;
+
+  const setPrimary = useCallback(
+    async (projectId: string, rootId: string, path: string): Promise<void> => {
+      try {
+        const trust = await window.codeshell.getTrust(path);
+        if (shouldPromptForPrimaryTrust(trust)) {
+          setPendingPrimary({ projectId, rootId, path });
+          return;
+        }
+        await window.codeshell.projectRegistry.setPrimary(projectId, rootId);
+      } catch (error) {
+        toast({ message: String(error), variant: "error" });
+      }
+    },
+    [toast],
+  );
 
   // Keep one workspace listener for the whole sidebar. Project groups use the
   // event to refresh only the visible session row that changed.
@@ -175,6 +215,10 @@ export function Sidebar({
   );
 
   const projectMenu = (project: TrackedProject): ContextMenuItem[] => [
+    {
+      label: t("sidebar.editProjectFolders"),
+      onClick: () => setEditingProjectId(project.id),
+    },
     {
       label: t("projectConfig.open"),
       onClick: () => onOpenProjectConfig(project.id),
@@ -464,7 +508,209 @@ export function Sidebar({
           }
         />
       )}
+      {editingProject && (
+        <ProjectFoldersDialog
+          project={editingProject}
+          onClose={() => setEditingProjectId(null)}
+          onMakePrimary={(rootId, path) => void setPrimary(editingProject.id, rootId, path)}
+        />
+      )}
+      <TrustGate
+        projectPath={pendingPrimary?.path ?? null}
+        promptWhenUntrusted
+        onDecide={(level) => {
+          const pending = pendingPrimary;
+          setPendingPrimary(null);
+          if (level === "trusted" && pending) {
+            void window.codeshell.projectRegistry
+              .setPrimary(pending.projectId, pending.rootId)
+              .catch((error) => toast({ message: String(error), variant: "error" }));
+          }
+        }}
+      />
     </aside>
+  );
+}
+
+function ProjectFoldersDialog({
+  project,
+  onClose,
+  onMakePrimary,
+}: {
+  project: TrackedProject;
+  onClose: () => void;
+  onMakePrimary: (rootId: string, path: string) => void;
+}) {
+  const { t } = useT();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [missing, setMissing] = useState<Set<string>>(() => new Set());
+  const [sessionRoots, setSessionRoots] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([
+      window.codeshell.projectRegistry.sessionMainRoots(project.id),
+      Promise.all(
+        project.roots.map(async (root) => {
+          try {
+            await window.codeshell.readProjectDir(project.id, root.id);
+            return null;
+          } catch {
+            return root.id;
+          }
+        }),
+      ),
+    ]).then(([usage, missingRoots]) => {
+      if (cancelled) return;
+      setSessionRoots(usage);
+      setMissing(new Set(missingRoots.filter((rootId): rootId is string => rootId !== null)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [project]);
+
+  const action = async (key: string, operation: () => Promise<unknown>): Promise<void> => {
+    setBusy(key);
+    try {
+      await operation();
+    } catch (error) {
+      toast({ message: String(error), variant: "error" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t("sidebar.projectFoldersTitle")}</DialogTitle>
+          <DialogDescription>{t("sidebar.projectFoldersDescription")}</DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[55vh] space-y-2 overflow-y-auto">
+          {project.roots.map((root) => {
+            const primary = root.id === project.primaryRootId;
+            const sessionCount = sessionRoots[root.id]?.length ?? 0;
+            return (
+              <div key={root.id} className="rounded-md border border-border p-3">
+                <div className="flex items-start gap-3">
+                  <Folder className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-medium">{root.name}</span>
+                      {primary && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                          {t("sidebar.primaryFolder")}
+                        </span>
+                      )}
+                      {missing.has(root.id) && (
+                        <span className="text-xs text-status-err">{t("sidebar.missingFolder")}</span>
+                      )}
+                      {sessionCount > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {t("sidebar.sessionMainRoot", { count: sessionCount })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 truncate font-mono text-xs text-muted-foreground">
+                      {root.path}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap justify-end gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy !== null || missing.has(root.id)}
+                    onClick={() =>
+                      void action(`open:${root.id}`, () =>
+                        window.codeshell.projectRegistry.openRoot(project.id, root.id),
+                      )
+                    }
+                  >
+                    <FolderOpen className="size-3.5" />
+                    {t("sidebar.openFolder")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy !== null || missing.has(root.id)}
+                    onClick={() =>
+                      void action(`reveal:${root.id}`, () =>
+                        window.codeshell.projectRegistry.revealRoot(project.id, root.id),
+                      )
+                    }
+                  >
+                    {t("sidebar.revealInFinder")}
+                  </Button>
+                  {!primary && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={busy !== null || missing.has(root.id)}
+                      onClick={() => onMakePrimary(root.id, root.path)}
+                    >
+                      <Star className="size-3.5" />
+                      {t("sidebar.makePrimary")}
+                    </Button>
+                  )}
+                  {!primary && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-status-err"
+                      disabled={busy !== null}
+                      onClick={() => {
+                        void confirm({
+                          title: t("sidebar.removeFolderTitle"),
+                          message: t("sidebar.removeFolderMessage", { name: root.name }),
+                          confirmLabel: t("common.remove"),
+                          destructive: true,
+                        }).then((ok) => {
+                          if (ok) {
+                            void action(`remove:${root.id}`, () =>
+                              window.codeshell.projectRegistry.removeRoot(project.id, root.id),
+                            );
+                          }
+                        });
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                      {t("common.remove")}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() =>
+              void action("add", () =>
+                window.codeshell.projectRegistry.addRootFromPicker(project.id),
+              )
+            }
+          >
+            <Plus className="size-4" />
+            {t("sidebar.addFolder")}
+          </Button>
+          <Button type="button" variant="solid" onClick={onClose}>
+            {t("common.confirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

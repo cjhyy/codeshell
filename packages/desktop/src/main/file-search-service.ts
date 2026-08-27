@@ -25,6 +25,15 @@ export interface FileSearchHit {
   mime?: string;
 }
 
+export interface ProjectFileSearchHit extends FileSearchHit {
+  rootId: string;
+}
+
+export interface ProjectSearchRoot {
+  id: string;
+  path: string;
+}
+
 interface CacheEntry {
   entries: SearchEntry[];
   fetchedAt: number;
@@ -36,7 +45,7 @@ interface SearchEntry {
 }
 
 const CACHE_TTL_MS = 15_000;
-const MAX_HITS = 30;
+export const MAX_HITS = 30;
 const cache = new Map<string, CacheEntry>();
 
 function normalize(p: string): string {
@@ -170,7 +179,7 @@ async function loadFileList(cwd: string): Promise<SearchEntry[]> {
  * Subsequence fuzzy match. Returns a score (lower = better) or null.
  * Matches in the basename are preferred over directory hits.
  */
-function fuzzyScore(query: string, candidate: string): number | null {
+export function fuzzyScore(query: string, candidate: string): number | null {
   if (!query) return candidate.length; // any file ranks by path length when no query
   const q = query.toLowerCase();
   const c = candidate.toLowerCase();
@@ -197,6 +206,32 @@ function fuzzyScore(query: string, candidate: string): number | null {
     ci = found + 1;
   }
   return score + candidate.length / 1000;
+}
+
+/** Search every project root in declaration order, then globally rank the merged result. */
+export async function searchProjectFiles(
+  roots: readonly ProjectSearchRoot[],
+  query: string,
+  search: (cwd: string, query: string) => Promise<FileSearchHit[]> = searchFiles,
+): Promise<ProjectFileSearchHit[]> {
+  const merged = new Map<string, { hit: ProjectFileSearchHit; score: number }>();
+  for (const root of roots) {
+    const hits = await search(root.path, query);
+    for (const hit of hits) {
+      const key = `${root.id}\0${hit.path}`;
+      if (merged.has(key)) continue;
+      const score = fuzzyScore(query.trim(), hit.path);
+      if (score === null) continue;
+      merged.set(key, {
+        hit: { ...hit, rootId: root.id },
+        score: score + (hit.kind === "dir" ? -0.05 : 0),
+      });
+    }
+  }
+  return [...merged.values()]
+    .sort((a, b) => a.score - b.score || a.hit.path.localeCompare(b.hit.path))
+    .slice(0, MAX_HITS)
+    .map(({ hit }) => hit);
 }
 
 export async function searchFiles(cwd: string, query: string): Promise<FileSearchHit[]> {

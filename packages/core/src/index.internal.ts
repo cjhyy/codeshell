@@ -19,6 +19,21 @@ export {
 } from "./utils/intl.js";
 
 export { env } from "./utils/env.js";
+export { canonicalKey, canonicalPath } from "./workspace/canonical-key.js";
+export {
+  computeWorkspaceRootsDigest,
+  createWorkspaceContext,
+  legacySingleRootWorkspace,
+  validateWorkspaceContext,
+  workspacePrimaryRoot,
+} from "./workspace/workspace-context.js";
+export type {
+  ProjectId,
+  ProjectRootContext,
+  ProjectRootId,
+  WorkspaceContext,
+  WorkspaceContextInput,
+} from "./workspace/workspace-context.js";
 export { default as sliceAnsi } from "./utils/sliceAnsi.js";
 export { execFileNoThrow } from "./utils/execFileNoThrow.js";
 export {

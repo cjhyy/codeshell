@@ -14,7 +14,6 @@
 
 import { basename } from "node:path";
 import { Methods } from "@cjhyy/code-shell-core";
-import { listDiskSessions } from "@cjhyy/code-shell-server/storage";
 import {
   type ClaimedMobileUpload,
   type MobilePermissionModeSnapshotEntry,
@@ -37,7 +36,11 @@ import {
   type MobileDeviceState,
   type OrchestratorCtx,
 } from "./mobile-remote/handle-client-event.js";
-import { loadProjects } from "./recents-store.js";
+import { getProjectStore } from "./project-store.js";
+import { toMobileProjectMeta } from "./mobile-project-meta.js";
+export { toMobileProjectMeta } from "./mobile-project-meta.js";
+import { getSessionCwdIndex } from "./session-cwd-index.js";
+import { getSessionWorkspaceForUi } from "./session-workspace-service.js";
 
 export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
 export { resolveRoomPermissionMode } from "./mobile-remote/handle-room-event.js";
@@ -52,10 +55,13 @@ function normalizeMobileProjects(projects: unknown): MobileProjectMeta[] {
     if (!p || typeof p.path !== "string" || !p.path || seen.has(p.path)) continue;
     seen.add(p.path);
     out.push({
+      ...(typeof p.id === "string" ? { id: p.id } : {}),
       path: p.path,
       name: typeof p.name === "string" && p.name.trim() ? p.name : basename(p.path),
       ...(typeof p.addedAt === "number" ? { addedAt: p.addedAt } : {}),
       ...(typeof p.pinned === "boolean" ? { pinned: p.pinned } : {}),
+      ...(Array.isArray(p.roots) ? { roots: p.roots } : {}),
+      ...(typeof p.primaryRootId === "string" ? { primaryRootId: p.primaryRootId } : {}),
     });
   }
   return out;
@@ -113,14 +119,11 @@ export class MobileRemoteOrchestrator {
     // legacy in-memory `mobileProjects` (pushed from the renderer's
     // localStorage) is only a fallback if disk is somehow empty — disk wins so
     // a desktop add/remove/pin is reflected on phones and survives restart.
-    const projects = await loadProjects().catch(() => []);
+    const projects = await getProjectStore()
+      .list()
+      .catch(() => []);
     if (projects.length > 0) {
-      return projects.map((r) => ({
-        path: r.path,
-        name: r.name,
-        addedAt: r.lastOpenedAt,
-        pinned: r.pinned,
-      }));
+      return projects.map(toMobileProjectMeta);
     }
     return this.mobileProjects;
   }
@@ -265,29 +268,16 @@ export class MobileRemoteOrchestrator {
   private async lookupDiskSessionCwd(sessionId: string): Promise<string | null | undefined> {
     const cached = this.mobileSessionCwds.get(sessionId);
     if (cached !== undefined) return cached;
-    let cursor: string | undefined;
-    for (let page = 0; page < 10; page++) {
-      const res = await listDiskSessions({ limit: 100, cursor }).catch(() => ({
-        sessions: [],
-        nextCursor: null,
-      }));
-      for (const s of res.sessions) {
-        this.mobileSessionCwds.set(s.id, s.cwd || null);
-        if (s.id === sessionId || s.engineSessionId === sessionId) {
-          const cwd = s.cwd || null;
-          this.mobileSessionCwds.set(sessionId, cwd);
-          return cwd;
-        }
-      }
-      if (!res.nextCursor) break;
-      cursor = res.nextCursor;
-    }
-    return undefined;
+    const entry = await getSessionCwdIndex().lookup(sessionId);
+    if (!entry) return undefined;
+    const cwd = entry.cwd || null;
+    this.mobileSessionCwds.set(sessionId, cwd);
+    return cwd;
   }
 
-  private effectiveMobileRunCwd(st: MobileDeviceState, ctxCwd?: string): string {
+  private effectiveMobileRunCwd(st: MobileDeviceState): string {
     if (st.selectedCwd === null) return resolveNoRepoCwd();
-    return st.selectedCwd || ctxCwd || process.cwd();
+    return st.selectedCwd || resolveNoRepoCwd();
   }
 
   // ── Event routing ──────────────────────────────────────────────────────────
@@ -305,7 +295,13 @@ export class MobileRemoteOrchestrator {
       deviceState: (deviceId) => this.deviceState(deviceId),
       ensureMobileSessionId: (state) => this.ensureMobileSessionId(state),
       lookupDiskSessionCwd: (sessionId) => this.lookupDiskSessionCwd(sessionId),
-      effectiveMobileRunCwd: (state, contextCwd) => this.effectiveMobileRunCwd(state, contextCwd),
+      effectiveMobileRunCwd: (state) => this.effectiveMobileRunCwd(state),
+      validateMobileSessionCwd: async (cwd) =>
+        getProjectStore().isNoRepoCwd(cwd) || getProjectStore().resolveExactRootSync(cwd) !== undefined,
+      resolveSessionWorkspaceRoot: (sessionId, fallbackCwd) =>
+        getSessionWorkspaceForUi(sessionId, fallbackCwd)
+          .then((workspace) => workspace.root)
+          .catch(() => fallbackCwd),
       sendMobilePermissionMode: (deviceId, sessionId) =>
         this.sendMobilePermissionMode(deviceId, sessionId),
       sendSelectedMobilePermissionModes: () => this.sendSelectedMobilePermissionModes(),

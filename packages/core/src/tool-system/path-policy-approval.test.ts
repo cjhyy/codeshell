@@ -2,7 +2,11 @@ import { describe, test, expect } from "bun:test";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, realpathSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { join } from "node:path";
-import { enforcePathPolicyWithApproval, _resetSessionPathGrants } from "./path-policy.js";
+import {
+  clearSessionPathApprovalsUnderRoot,
+  enforcePathPolicyWithApproval,
+  _resetSessionPathGrants,
+} from "./path-policy.js";
 import type { ToolContext } from "./context.js";
 
 // TODO §5.1 — path-approval fixes:
@@ -174,6 +178,33 @@ describe("enforcePathPolicyWithApproval", () => {
     } as unknown as ToolContext;
     expect(await enforcePathPolicyWithApproval(fileA, "read", ctxOther)).toContain("denied");
     expect(asked2).toBe(true);
+    cleanup();
+  });
+
+  test("removing a workspace root revokes session grants under that root", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const formerRoot = mkdtempSync(join(tmpdir(), "cs-removed-root-"));
+    dirs.push(formerRoot);
+    const fileA = join(formerRoot, "a.txt");
+    const fileB = join(formerRoot, "b.txt");
+    let calls = 0;
+    const ctx = {
+      cwd: ws,
+      sessionId: "sess-root-removal",
+      askUser: async () => {
+        calls += 1;
+        return "本目录本会话允许";
+      },
+    } as unknown as ToolContext;
+
+    expect(await enforcePathPolicyWithApproval(fileA, "read", ctx)).toBeNull();
+    expect(await enforcePathPolicyWithApproval(fileB, "read", ctx)).toBeNull();
+    expect(calls).toBe(1);
+
+    clearSessionPathApprovalsUnderRoot("sess-root-removal", formerRoot);
+    expect(await enforcePathPolicyWithApproval(fileB, "read", ctx)).toBeNull();
+    expect(calls).toBe(2);
     cleanup();
   });
 

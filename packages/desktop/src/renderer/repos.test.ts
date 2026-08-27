@@ -65,7 +65,20 @@ describe("canonical project persistence compatibility", () => {
     localStorage.setItem("codeshell.activeRepoId", "stable-project-id");
     localStorage.setItem("codeshell.removedRepoPaths", JSON.stringify(["/work/removed/"]));
 
-    expect(loadProjects()).toEqual(projects);
+    expect(loadProjects()).toEqual([
+      {
+        ...projects[0],
+        primaryRootId: "legacy-root:stable-project-id",
+        roots: [
+          {
+            id: "legacy-root:stable-project-id",
+            path: "/work/code-shell",
+            name: "code-shell",
+            addedAt: 123,
+          },
+        ],
+      },
+    ]);
     expect(loadActiveProjectId()).toBe("stable-project-id");
     expect(loadRemovedProjectPaths()).toEqual(["/work/removed"]);
   });
@@ -89,6 +102,15 @@ describe("canonical project persistence compatibility", () => {
       addedAt: 123,
       displayName: "CodeShell",
       pinned: true,
+      primaryRootId: "legacy-root:stable-project-id",
+      roots: [
+        {
+          id: "legacy-root:stable-project-id",
+          path: "/work/code-shell",
+          name: "code-shell",
+          addedAt: 123,
+        },
+      ],
     });
   });
 

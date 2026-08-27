@@ -123,6 +123,8 @@ export const ISOLATED_TASK_PROFILE: RunBehaviorProfile = {
 
 export interface EngineRunOptions {
   cwd?: string;
+  /** Trusted run-scoped root authorization. Protocol hosts must strip untrusted values. */
+  workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
   onStream?: StreamCallback;
   signal?: AbortSignal;
   sessionId?: string;

@@ -83,25 +83,29 @@ export class PetWorkDelegationHost {
     // (credentials, browser partition) — especially if the reuse run is then
     // rejected and the entry is intentionally kept.
     if (!wasKnownToHost) this.options.bridge.reserveHostSession(sessionId, cwd);
-    const acceptance = await injectMobileRunAndAwaitAcceptance(this.options.bridge, {
-      id: runId,
-      params: {
-        task: delegation.task,
-        sessionId,
-        cwd,
-        clientMessageId: workClientMessageId,
-        // Delegation does not grant Mimi authority to bypass the user's normal
-        // permission and sensitive-path boundaries. A run that needs approval
-        // remains visible as waiting instead of silently receiving full access.
-        permissionMode: "default",
-        // Goal is opt-in. Ordinary Work Sessions can still use tools, span many
-        // model/tool steps, and resume from async notifications; forcing every
-        // loosely-worded delegation into persistent Goal mode caused ambiguous
-        // objectives to keep re-driving instead of returning a useful result.
-        ...(delegation.goalObjective ? { goal: delegation.goalObjective } : {}),
-        ...(delegation.targetSessionId ? { requireExisting: true } : {}),
+    const acceptance = await injectMobileRunAndAwaitAcceptance(
+      this.options.bridge,
+      {
+        id: runId,
+        params: {
+          task: delegation.task,
+          sessionId,
+          cwd,
+          clientMessageId: workClientMessageId,
+          // Delegation does not grant Mimi authority to bypass the user's normal
+          // permission and sensitive-path boundaries. A run that needs approval
+          // remains visible as waiting instead of silently receiving full access.
+          permissionMode: "default",
+          // Goal is opt-in. Ordinary Work Sessions can still use tools, span many
+          // model/tool steps, and resume from async notifications; forcing every
+          // loosely-worded delegation into persistent Goal mode caused ambiguous
+          // objectives to keep re-driving instead of returning a useful result.
+          ...(delegation.goalObjective ? { goal: delegation.goalObjective } : {}),
+          ...(delegation.targetSessionId ? { requireExisting: true } : {}),
+        },
       },
-    });
+      { origin: "host", producer: "pet-work-delegation" },
+    );
     if (!acceptance.ok) {
       if (!wasKnownToHost) this.options.bridge.forgetSession(sessionId);
       throw new Error(acceptance.message);

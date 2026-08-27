@@ -102,6 +102,10 @@ export type { InputAttachmentKind, InputAttachmentOrigin, InputAttachmentMeta } 
 export interface RunParams {
   sessionId: string; // required, client-minted
   task: string;
+  /** Renderer/mobile project hint. Desktop Main resolves it to authoritative roots. */
+  projectId?: string;
+  /** Trusted host-injected roots. Desktop Main strips any renderer/mobile supplied value. */
+  workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
   /**
    * Optional user-facing representation of `task`. The model still receives
    * the full task, while session feeds and transcript replay show this text.

@@ -41,14 +41,16 @@ export async function writeTool(
   const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
 
   try {
-    const approvedPath = getFinalWritePathSnapshot(args, filePath, cwd);
-    const beforeMkdir = revalidateFinalWritePath(filePath, cwd, approvedPath);
+    const roots = ctx?.workspace?.roots.map((root) => root.path);
+    const digest = ctx?.workspace?.rootsDigest;
+    const approvedPath = getFinalWritePathSnapshot(args, filePath, cwd, roots, digest);
+    const beforeMkdir = revalidateFinalWritePath(filePath, cwd, approvedPath, roots, digest);
     if ("error" in beforeMkdir) return { ok: false, error: beforeMkdir.error };
     await mkdir(dirname(beforeMkdir.resolvedPath), { recursive: true });
 
     // mkdir may have crossed an existing symlink in a missing parent chain;
     // resolve again immediately before opening the final file.
-    const beforeWrite = revalidateFinalWritePath(filePath, cwd, approvedPath);
+    const beforeWrite = revalidateFinalWritePath(filePath, cwd, approvedPath, roots, digest);
     if ("error" in beforeWrite) return { ok: false, error: beforeWrite.error };
     await writeFileNoFollow(beforeWrite.resolvedPath, content);
     fileCache.invalidate(filePath);

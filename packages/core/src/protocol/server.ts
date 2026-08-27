@@ -1557,6 +1557,7 @@ export class AgentServer {
 
     const sessionConfig = {
       cwd: params.cwd,
+      workspaceContext: params.workspaceContext,
       projectTrusted: params.projectTrusted,
       preset:
         params.preset ??
@@ -1649,6 +1650,7 @@ export class AgentServer {
       }
       const run = session.enqueueTurn(params.task, {
         cwd: params.cwd,
+        workspaceContext: params.workspaceContext,
         displayText: displayText || undefined,
         injected: params.injected === true,
         attachments: Array.isArray(params.attachments) ? params.attachments : undefined,
@@ -1811,6 +1813,7 @@ export class AgentServer {
       });
       const result = await this.legacyEngine!.run(params.task, {
         cwd: params.cwd,
+        workspaceContext: params.workspaceContext,
         sessionId: params.sessionId,
         displayText: displayText || undefined,
         injected: params.injected === true,

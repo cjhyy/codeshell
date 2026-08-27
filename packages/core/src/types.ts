@@ -253,6 +253,11 @@ export interface SessionWorkspace {
   };
 }
 
+export interface SessionProjectBinding {
+  projectId: string;
+  mainRootId: string;
+}
+
 export interface ContextUsageAnchor {
   promptTokens: number;
   messageCount: number;
@@ -298,6 +303,8 @@ export interface SessionState {
   cwd: string;
   /** Current main/worktree execution pointer. Absent only on legacy state.json files. */
   workspace?: SessionWorkspace;
+  /** Stable Desktop project identity. Absent on legacy/no-repo sessions. */
+  project?: SessionProjectBinding;
   startedAt: number;
   model: string;
   provider: string;

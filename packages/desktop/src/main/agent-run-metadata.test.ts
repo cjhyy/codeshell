@@ -1,7 +1,58 @@
 import { describe, expect, test } from "bun:test";
 import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-run-metadata.js";
+import { createWorkspaceContext } from "@cjhyy/code-shell-core/internal";
+
+const projectContext = createWorkspaceContext({
+  projectId: "p1",
+  projectRevision: 3,
+  sessionMainRootId: "r1",
+  roots: [
+    { id: "r1", path: "/primary", role: "primary" },
+    { id: "r2", path: "/secondary", role: "secondary" },
+  ],
+});
+
+function baseDeps() {
+  return {
+    isProjectTrusted: (cwd: string) => cwd === "/primary" || cwd === "/repo",
+    isNoRepoCwd: (cwd: string) => cwd === "/no-repo",
+    lookupSession: () => undefined,
+    resolveExactRoot: (cwd: string) =>
+      cwd === "/primary" || cwd === "/secondary"
+        ? {
+            cwd,
+            trustCwd: cwd,
+            projectId: "p1",
+            mainRootId: cwd === "/primary" ? "r1" : "r2",
+            projectPrimaryRootId: "r1",
+            workspaceContext:
+              cwd === "/primary"
+                ? projectContext
+                : createWorkspaceContext({
+                    projectId: "p1",
+                    projectRevision: 3,
+                    sessionMainRootId: "r2",
+                    roots: [
+                      { id: "r1", path: "/primary", role: "secondary" },
+                      { id: "r2", path: "/secondary", role: "primary" },
+                    ],
+                  }),
+          }
+        : undefined,
+    resolveProjectRun: () => ({
+      cwd: "/primary",
+      trustCwd: "/primary",
+      projectId: "p1",
+      mainRootId: "r1",
+      projectPrimaryRootId: "r1",
+      workspaceContext: projectContext,
+    }),
+    hostReservation: () => undefined,
+  };
+}
 
 describe("prepareAgentRunMetadata", () => {
+  const meta = { origin: "renderer" as const, producer: "agent:msg" };
   test("strips main-only browser routing fields and injects main-owned trust", () => {
     const line = JSON.stringify({
       jsonrpc: "2.0",
@@ -17,7 +68,10 @@ describe("prepareAgentRunMetadata", () => {
       },
     });
 
-    const prepared = prepareAgentRunMetadata(line, (cwd) => cwd === "/repo");
+    const prepared = prepareAgentRunMetadata(line, meta, {
+      ...baseDeps(),
+      isNoRepoCwd: (cwd) => cwd === "/repo",
+    });
     expect(prepared).toMatchObject({
       cwd: "/repo",
       sessionId: "s1",
@@ -34,23 +88,205 @@ describe("prepareAgentRunMetadata", () => {
   });
 
   test("main-owned trust fails closed when cwd is absent or untrusted", () => {
-    const trustedMissingCwd = prepareAgentRunMetadata(
-      JSON.stringify({ method: "agent/run", params: { sessionId: "s1", projectTrusted: true } }),
-      () => true,
-    );
-    expect(JSON.parse(trustedMissingCwd.outLine).params.projectTrusted).toBe(false);
+    expect(() =>
+      prepareAgentRunMetadata(
+        JSON.stringify({ method: "agent/run", params: { sessionId: "s1", projectTrusted: true } }),
+        meta,
+        { ...baseDeps(), isNoRepoCwd: () => true, isProjectTrusted: () => true },
+      ),
+    ).toThrow(/requires an authorized cwd/);
 
     const untrusted = prepareAgentRunMetadata(
-      JSON.stringify({ method: "agent/run", params: { cwd: "/repo", projectTrusted: true } }),
-      () => false,
+      JSON.stringify({
+        method: "agent/run",
+        params: { sessionId: "s2", cwd: "/repo", projectTrusted: true },
+      }),
+      meta,
+      { ...baseDeps(), isNoRepoCwd: () => true, isProjectTrusted: () => false },
     );
     expect(JSON.parse(untrusted.outLine).params.projectTrusted).toBe(false);
   });
 
   test("non-run or malformed lines pass through", () => {
     const query = JSON.stringify({ method: "agent/query", params: { sessionId: "s1" } });
-    expect(prepareAgentRunMetadata(query, () => true).outLine).toBe(query);
-    expect(prepareAgentRunMetadata("{not json", () => true).outLine).toBe("{not json");
+    expect(prepareAgentRunMetadata(query, meta, baseDeps()).outLine).toBe(
+      query,
+    );
+    expect(
+      prepareAgentRunMetadata("{not json", meta, baseDeps()).outLine,
+    ).toBe("{not json");
+  });
+
+  test("records trusted origin metadata and strips renderer-supplied workspace authority", () => {
+    const prepared = prepareAgentRunMetadata(
+      JSON.stringify({
+        method: "agent/run",
+        params: { sessionId: "s1", cwd: "/repo", workspaceContext: { projectId: "forged" } },
+      }),
+      meta,
+      { ...baseDeps(), isNoRepoCwd: () => true, isProjectTrusted: () => false },
+    );
+    expect(prepared.meta).toEqual(meta);
+    expect(JSON.parse(prepared.outLine).params.workspaceContext).toBeUndefined();
+  });
+
+  test("projectId makes Main replace cwd and rejects unknown projects", () => {
+    const line = JSON.stringify({
+      method: "agent/run",
+      params: { projectId: "p1", sessionId: "s1", cwd: "/forged" },
+    });
+    const prepared = prepareAgentRunMetadata(line, meta, {
+      isProjectTrusted: (cwd) => cwd === "/primary",
+      ...baseDeps(),
+    });
+    expect(JSON.parse(prepared.outLine).params).toMatchObject({
+      projectId: "p1",
+      sessionId: "s1",
+      cwd: "/primary",
+      projectTrusted: true,
+    });
+    expect(() =>
+      prepareAgentRunMetadata(line, meta, {
+        ...baseDeps(),
+        resolveProjectRun: () => {
+          throw new Error("project not found");
+        },
+      }),
+    ).toThrow(/project not found/);
+  });
+
+  test("injects a complete authoritative context for a project run", () => {
+    const prepared = prepareAgentRunMetadata(
+      JSON.stringify({ method: "agent/run", params: { sessionId: "new", projectId: "p1" } }),
+      meta,
+      baseDeps(),
+    );
+    const params = JSON.parse(prepared.outLine).params;
+    expect(params.workspaceContext).toEqual(projectContext);
+    expect(params.cwd).toBe("/primary");
+    expect(prepared.tentative).toMatchObject({ cwd: "/primary", projectId: "p1" });
+  });
+
+  test("renderer existing-session mismatch refreshes once, then fails closed", () => {
+    let refreshes = 0;
+    const deps = {
+      ...baseDeps(),
+      lookupSession: (_sessionId: string, refresh: boolean) => {
+        if (refresh) refreshes += 1;
+        return { sessionId: "s1", cwd: "/primary", workspaceRoot: "/worktree", status: "confirmed" as const };
+      },
+    };
+    expect(() =>
+      prepareAgentRunMetadata(
+        JSON.stringify({ method: "agent/run", params: { sessionId: "s1", cwd: "/forged" } }),
+        meta,
+        deps,
+      ),
+    ).toThrow(/does not match persisted Session/);
+    expect(refreshes).toBe(1);
+
+    const healed = prepareAgentRunMetadata(
+      JSON.stringify({ method: "agent/run", params: { sessionId: "s1", cwd: "/worktree-new" } }),
+      meta,
+      {
+        ...deps,
+        lookupSession: (_sessionId, refresh) =>
+          refresh
+            ? { sessionId: "s1", cwd: "/primary", workspaceRoot: "/worktree-new", status: "confirmed" }
+            : { sessionId: "s1", cwd: "/primary", workspaceRoot: "/old", status: "confirmed" },
+      },
+    );
+    expect(JSON.parse(healed.outLine).params.cwd).toBe("/worktree-new");
+  });
+
+  test("host existing Session ignores a supplied cwd, while renderer cannot use a host reservation", () => {
+    const lookupSession = () => ({
+      sessionId: "s1",
+      cwd: "/primary",
+      workspaceRoot: "/worktree",
+      status: "confirmed" as const,
+    });
+    const host = prepareAgentRunMetadata(
+      JSON.stringify({ method: "agent/run", params: { sessionId: "s1", cwd: "/forged" } }),
+      { origin: "host", producer: "pet" },
+      { ...baseDeps(), lookupSession },
+    );
+    expect(JSON.parse(host.outLine).params.cwd).toBe("/worktree");
+
+    const reserved = { ...baseDeps(), hostReservation: () => ({ cwd: "/reserved", producer: "pet", reservedAt: 1 }) };
+    expect(() =>
+      prepareAgentRunMetadata(
+        JSON.stringify({ method: "agent/run", params: { sessionId: "new", cwd: "/reserved" } }),
+        meta,
+        reserved,
+      ),
+    ).toThrow(/not authorized/);
+    expect(
+      JSON.parse(
+        prepareAgentRunMetadata(
+          JSON.stringify({ method: "agent/run", params: { sessionId: "new", cwd: "/reserved" } }),
+          { origin: "host", producer: "pet" },
+          reserved,
+        ).outLine,
+      ).params.cwd,
+    ).toBe("/reserved");
+  });
+
+  test("renderer and mobile cannot bypass cwd matching through a persisted project binding", () => {
+    const lookupSession = () => ({
+      sessionId: "bound",
+      cwd: "/primary",
+      workspaceRoot: "/worktree",
+      projectId: "p1",
+      mainRootId: "r1",
+      status: "confirmed" as const,
+    });
+    const line = JSON.stringify({
+      method: "agent/run",
+      params: { sessionId: "bound", cwd: "/forged" },
+    });
+
+    for (const origin of ["renderer", "mobile"] as const) {
+      expect(() =>
+        prepareAgentRunMetadata(line, { origin, producer: `${origin}-test` }, {
+          ...baseDeps(),
+          lookupSession,
+        }),
+      ).toThrow(/does not match persisted Session/);
+    }
+    const host = prepareAgentRunMetadata(line, { origin: "host", producer: "panel" }, {
+      ...baseDeps(),
+      lookupSession,
+    });
+    expect(JSON.parse(host.outLine).params).toMatchObject({
+      cwd: "/primary",
+      projectId: "p1",
+      workspaceContext: projectContext,
+    });
+  });
+
+  test("new primary gets full context; secondary stays legacy; unknown cwd is rejected", () => {
+    const primary = prepareAgentRunMetadata(
+      JSON.stringify({ method: "agent/run", params: { sessionId: "p", cwd: "/primary" } }),
+      meta,
+      baseDeps(),
+    );
+    expect(JSON.parse(primary.outLine).params.workspaceContext).toEqual(projectContext);
+
+    const secondary = prepareAgentRunMetadata(
+      JSON.stringify({ method: "agent/run", params: { sessionId: "s", cwd: "/secondary" } }),
+      meta,
+      baseDeps(),
+    );
+    expect(JSON.parse(secondary.outLine).params.workspaceContext).toBeUndefined();
+    expect(JSON.parse(secondary.outLine).params.projectId).toBeUndefined();
+    expect(() =>
+      prepareAgentRunMetadata(
+        JSON.stringify({ method: "agent/run", params: { sessionId: "x", cwd: "/unknown" } }),
+        meta,
+        baseDeps(),
+      ),
+    ).toThrow(/not authorized/);
   });
 
   test("credential cwd resolution uses session or persisted cwd and otherwise fails closed", () => {

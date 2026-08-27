@@ -70,10 +70,13 @@ export interface MobilePermissionModeSnapshotEntry {
 }
 
 export interface MobileProjectMeta {
+  id?: string;
   path: string;
   name: string;
   addedAt?: number;
   pinned?: boolean;
+  roots?: Array<{ id: string; path: string; name: string; role: "primary" | "secondary" }>;
+  primaryRootId?: string;
 }
 
 export type MobileImageMime = "image/png" | "image/jpeg" | "image/webp" | "image/gif";

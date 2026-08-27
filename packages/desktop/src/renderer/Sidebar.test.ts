@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import React, { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { formatRelative, ProjectGroup, sessionHoverBranch, worktreeBranchOf } from "./Sidebar";
+import {
+  formatRelative,
+  ProjectGroup,
+  sessionHoverBranch,
+  shouldPromptForPrimaryTrust,
+  worktreeBranchOf,
+} from "./Sidebar";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import type { TrackedProject } from "./projects";
 import type { SessionIndex } from "./transcripts";
@@ -39,6 +45,8 @@ const project: TrackedProject = {
   id: "project-1",
   name: "Project",
   path: "/repo",
+  roots: [{ id: "root-1", path: "/repo", name: "repo", addedAt: 1 }],
+  primaryRootId: "root-1",
   addedAt: 1,
 };
 
@@ -120,6 +128,14 @@ describe("Sidebar worktree marker", () => {
   test("falls back to the project branch for ordinary Sessions", () => {
     expect(worktreeBranchOf({ root: "/repo", kind: "main" })).toBeUndefined();
     expect(sessionHoverBranch(undefined, "main")).toBe("main");
+  });
+});
+
+describe("Sidebar project root trust", () => {
+  test("requires TrustGate again for unknown and explicitly untrusted secondary roots", () => {
+    expect(shouldPromptForPrimaryTrust("trusted")).toBe(false);
+    expect(shouldPromptForPrimaryTrust("unknown")).toBe(true);
+    expect(shouldPromptForPrimaryTrust("untrusted")).toBe(true);
   });
 });
 

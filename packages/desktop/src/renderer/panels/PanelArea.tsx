@@ -24,6 +24,7 @@ import {
 } from "./PanelWorkspaceRootConsumer";
 import type { PanelWorkspaceState } from "./usePanelWorkspaceRoot";
 import type { OpenCliSessionRequest } from "../cc-room/types";
+import type { TrackedProject } from "../projects";
 import {
   DesktopPanelLifecycleBoundary,
   type DesktopBuiltinPanelAppHost,
@@ -40,6 +41,7 @@ let panelTabSeq = 0;
 interface Props {
   /** Registered repository root used only as the main-workspace fallback. */
   projectPath: string | null;
+  project?: TrackedProject | null;
   /**
    * When true the whole dock is visually hidden. Normal close uses display:none
    * so the dock occupies no width; keepActiveBodyLive uses an invisible absolute
@@ -129,6 +131,7 @@ export function PanelArea(props: Props) {
 
 function ResolvedPanelArea({
   projectPath,
+  project,
   hidden = false,
   keepActiveBodyLive = false,
   onClose,
@@ -438,6 +441,7 @@ function ResolvedPanelArea({
                     visible={visibility.lifecycleVisible}
                     foregroundVisible={visibility.foregroundVisible}
                     projectPath={projectPath}
+                    project={project}
                     cwd={cwd}
                     reviewFiles={reviewFiles}
                     reviewDiff={reviewDiff}
@@ -509,6 +513,7 @@ function PanelBody({
   visible,
   foregroundVisible,
   projectPath,
+  project,
   cwd,
   reviewFiles,
   reviewDiff,
@@ -530,6 +535,7 @@ function PanelBody({
   visible: boolean;
   foregroundVisible: boolean;
   projectPath: string | null;
+  project?: TrackedProject | null;
   cwd: string | null;
   reviewFiles?: string[];
   reviewDiff?: string;
@@ -560,6 +566,7 @@ function PanelBody({
     visible,
     foregroundVisible,
     projectPath,
+    project,
     cwd,
     reviewFiles,
     reviewDiff,

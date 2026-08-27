@@ -679,6 +679,33 @@ export class SessionManager {
     }
   }
 
+  /** Cheap durable project-binding read; absent for legacy/no-repo Sessions. */
+  readSessionProjectBinding(
+    sessionId: string,
+  ): import("../types.js").SessionProjectBinding | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+      const processLocal = this.processLocalBundle(sessionId);
+      const state = processLocal
+        ? processLocal.state
+        : sessionId.startsWith("qchat-")
+          ? undefined
+          : (JSON.parse(
+              readFileSync(join(this.sessionsDir, sessionId, "state.json"), "utf-8"),
+            ) as SessionState);
+      const project = state?.project;
+      return project &&
+        typeof project.projectId === "string" &&
+        project.projectId.length > 0 &&
+        typeof project.mainRootId === "string" &&
+        project.mainRootId.length > 0
+        ? { projectId: project.projectId, mainRootId: project.mainRootId }
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   /** Cheap durable classification read. Legacy sessions are ordinary work sessions. */
   readSessionKind(sessionId: string): SessionKind | undefined {
     try {

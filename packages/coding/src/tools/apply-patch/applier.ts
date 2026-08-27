@@ -20,6 +20,8 @@ import { detectEol, toLf, applyEol } from "./eol.js";
 export interface ApplyPatchOptions {
   /** Working directory for resolving relative paths in the patch. */
   cwd: string;
+  /** Immutable roots authorized for this run. Relative patch paths still resolve from cwd. */
+  workspaceRoots?: readonly string[];
   /**
    * If true, skip the snapshot/rollback safety net and apply each planned
    * change one at a time, leaving partial work on disk if a later write
@@ -51,7 +53,7 @@ export async function applyPatch(
     throw new Error("No files were modified.");
   }
 
-  const planned = await planHunks(hunks, options.cwd);
+  const planned = await planHunks(hunks, options.cwd, options.workspaceRoots ?? [options.cwd]);
   return commitPlanned(planned, !!options.allowPartialOnCommit);
 }
 
@@ -71,7 +73,11 @@ interface PlannedSet {
   deleted: string[];
 }
 
-async function planHunks(hunks: Hunk[], cwd: string): Promise<PlannedSet> {
+async function planHunks(
+  hunks: Hunk[],
+  cwd: string,
+  workspaceRoots: readonly string[],
+): Promise<PlannedSet> {
   const set: PlannedSet = {
     byPath: new Map(),
     added: [],
@@ -90,7 +96,7 @@ async function planHunks(hunks: Hunk[], cwd: string): Promise<PlannedSet> {
 
   for (const hunk of hunks) {
     const original = hunk.path;
-    const sourcePath = resolveAgainst(original, cwd);
+    const sourcePath = resolveAgainst(original, cwd, workspaceRoots);
 
     if (hunk.kind === "add") {
       const existed = await readIfExists(sourcePath);
@@ -135,7 +141,7 @@ async function planHunks(hunks: Hunk[], cwd: string): Promise<PlannedSet> {
     const newText = applyEol(applyChunksToText(originalText, hunk.chunks, sourcePath), eol);
 
     if (hunk.movePath !== undefined) {
-      const destPath = resolveAgainst(hunk.movePath, cwd);
+      const destPath = resolveAgainst(hunk.movePath, cwd, workspaceRoots);
       if (destPath === sourcePath) {
         // Rename to self → degenerate update.
         schedule(sourcePath, {
@@ -315,13 +321,13 @@ async function writeChange(change: PlannedFileChange): Promise<void> {
  * symlink planted inside cwd that points outside — a plain string `resolve()`
  * would look contained while the write follows the link out.
  */
-function resolveAgainst(p: string, cwd: string): string {
+function resolveAgainst(p: string, cwd: string, workspaceRoots: readonly string[]): string {
   const resolved = isAbsolute(p) ? p : resolve(cwd, p);
-  const realCwd = nearestRealPath(cwd);
   const realTarget = nearestRealPath(resolved);
-  if (!isInside(realTarget, realCwd)) {
+  const realRoots = workspaceRoots.map(nearestRealPath);
+  if (!realRoots.some((root) => isInside(realTarget, root))) {
     throw new Error(
-      `Refusing to apply patch outside the working directory: "${p}" resolves to "${realTarget}", which escapes "${realCwd}".`,
+      `Refusing to apply patch outside the workspace roots: "${p}" resolves to "${realTarget}".`,
     );
   }
   return resolved;

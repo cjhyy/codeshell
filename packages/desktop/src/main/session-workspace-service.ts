@@ -13,6 +13,7 @@ import {
   type WorktreeInfo,
   type WorktreeWorkspaceOwner,
 } from "@cjhyy/code-shell-capability-coding/git";
+import { getSessionCwdIndex } from "./session-cwd-index.js";
 
 export type WorkspaceCleanupAction = "detach" | "discard";
 
@@ -258,6 +259,7 @@ export async function switchSessionWorkspaceForUi(
 
   if (opts.setLiveWorkspace) await opts.setLiveWorkspace(sessionId, next);
   else sm.setSessionWorkspace(sessionId, next);
+  getSessionCwdIndex().setWorkspaceRoot(sessionId, next.root);
   sm.recordWorkspaceHandoff(sessionId, from, next);
   return await listSessionWorktreesForUi(sessionId, mainRoot);
 }
@@ -283,9 +285,11 @@ export async function releaseSessionWorkspaceForUi(
     const from = currentWorkspaceFor(sm, sessionId, mainRoot);
     const next: SessionWorkspace = { root: mainRoot, kind: "main" };
     if (from.kind === "main" && resolve(from.root) === resolve(mainRoot)) {
+      getSessionCwdIndex().setWorkspaceRoot(sessionId, next.root);
       return { sessionId, ok: true, status: "released", workspace: next };
     }
     sm.setSessionWorkspace(sessionId, next);
+    getSessionCwdIndex().setWorkspaceRoot(sessionId, next.root);
     sm.recordWorkspaceHandoff(sessionId, from, next);
     return { sessionId, ok: true, status: "released", workspace: next };
   } catch (err) {
@@ -354,6 +358,7 @@ export async function cleanupSessionWorktreeForUi(
     const mainWorkspace: SessionWorkspace = { root: mainRoot, kind: "main" };
     if (opts.setLiveWorkspace) await opts.setLiveWorkspace(sessionId, mainWorkspace);
     else sm.setSessionWorkspace(sessionId, mainWorkspace);
+    getSessionCwdIndex().setWorkspaceRoot(sessionId, mainWorkspace.root);
     sm.recordWorkspaceHandoff(sessionId, current, mainWorkspace);
   }
   removeWorktree(match.path, action === "discard", { prefix });
