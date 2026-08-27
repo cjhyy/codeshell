@@ -7,8 +7,12 @@ import {
   wrapChildStream,
 } from "./subagent-spawner.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
-import { legacySingleRootWorkspace } from "../workspace/workspace-context.js";
-import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
+import {
+  createWorkspaceContext,
+  legacySingleRootWorkspace,
+} from "../workspace/workspace-context.js";
+import { defaultSandboxConfig, expandPath } from "../tool-system/sandbox/index.js";
+import { canonicalKey } from "../workspace/canonical-key.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 
 function parentConfig(): EngineConfig {
@@ -407,6 +411,76 @@ describe("subagent spawner", () => {
     expect(effectiveSandbox.mode).toBe("seatbelt");
     expect(effectiveSandbox.network).toBe("deny");
     expect(childConfig?.sandbox).toEqual(effectiveSandbox);
+  });
+
+  it("inherits canonical multi-root parentSandbox without duplicating roots", async () => {
+    const parent = parentConfig();
+    delete parent.sandbox;
+    const workspaceContext = createWorkspaceContext({
+      projectId: "project-1",
+      projectRevision: 1,
+      sessionMainRootId: "main",
+      roots: [
+        { id: "main", path: "/repo", role: "primary" },
+        { id: "docs", path: "/docs", role: "secondary" },
+      ],
+    });
+    const parentResolver = new RunEnvironmentResolver({
+      config: () => parent,
+      settings: () => ({
+        get: () => ({}),
+        getForScope: (scope: string) =>
+          scope === "project" ? { sandbox: { mode: "seatbelt" } } : {},
+      }),
+      credentialAccess: { envExposures: () => ({}) },
+    });
+    const effectiveSandbox = parentResolver.resolveSandboxConfig({
+      cwd: "/repo",
+      workspaceContext,
+    });
+    let childConfig: EngineConfig | undefined;
+    const spawner = createSubAgentSpawner({
+      parentConfig: parent,
+      parentSandbox: effectiveSandbox,
+      presetName: "general",
+      cwd: "/repo",
+      workspaceContext,
+      permissionMode: "acceptEdits",
+      appendParentSubagent: () => {},
+      sessionExists: () => false,
+      childRunner: {
+        async runChild(config, _task, options) {
+          childConfig = config;
+          return {
+            text: "done",
+            sessionId: options.sessionId!,
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          };
+        },
+      },
+    });
+
+    await spawner.spawn({
+      agentId: "child-multi-root-sandbox",
+      description: "inherit multi-root sandbox",
+      prompt: "inspect",
+      maxTurns: 2,
+      signal: new AbortController().signal,
+    });
+
+    const childResolver = new RunEnvironmentResolver({
+      config: () => childConfig!,
+      settings: () => ({ get: () => ({}), getForScope: () => ({}) }),
+      credentialAccess: { envExposures: () => ({}) },
+    });
+    const childSandbox = childResolver.resolveSandboxConfig({ cwd: "/repo", workspaceContext });
+    const expandedKeys = childSandbox.writableRoots.map((root) =>
+      canonicalKey(expandPath(root, "/repo")),
+    );
+
+    expect(childConfig?.sandbox).toEqual(effectiveSandbox);
+    expect(childSandbox.writableRoots).toEqual(effectiveSandbox.writableRoots);
+    expect(new Set(expandedKeys).size).toBe(expandedKeys.length);
   });
 
   it("preserves an empty MCP allowlist as no child servers", async () => {

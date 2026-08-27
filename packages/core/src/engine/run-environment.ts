@@ -1,5 +1,6 @@
 import type { CredentialAccess } from "../credentials/access.js";
 import {
+  expandPath,
   resolveSandboxBackend,
   type SandboxBackend,
   type SandboxConfig,
@@ -29,13 +30,18 @@ export interface RunEnvironmentInput {
   workspaceContext: WorkspaceContext;
 }
 
-function appendWorkspaceRoots(config: SandboxConfig, workspace: WorkspaceContext): SandboxConfig {
-  const writableRoots = [...config.writableRoots];
+function appendWorkspaceRoots(config: SandboxConfig, run: RunEnvironmentInput): SandboxConfig {
+  const writableRoots: string[] = [];
   const seen = new Set<string>();
-  for (const root of writableRoots) {
-    if (root !== "${workspace}") seen.add(canonicalKey(root));
+  // Key configured roots after placeholder expansion so `${workspace}` wins
+  // over the equivalent primary path. Keep the first spelling and order.
+  for (const root of config.writableRoots) {
+    const key = canonicalKey(expandPath(root, run.cwd));
+    if (seen.has(key)) continue;
+    seen.add(key);
+    writableRoots.push(root);
   }
-  for (const root of workspace.roots) {
+  for (const root of run.workspaceContext.roots) {
     const key = canonicalKey(root.path);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -53,7 +59,7 @@ export class RunEnvironmentResolver {
   }
 
   resolveSandboxConfig(run: RunEnvironmentInput): SandboxConfig {
-    const { cwd, workspaceContext } = run;
+    const { cwd } = run;
     const config = this.deps.config();
     let projectSandbox: SettingsSandbox | undefined;
     let globalSandbox: SettingsSandbox | undefined;
@@ -68,13 +74,8 @@ export class RunEnvironmentResolver {
       // Missing settings fall through to the run default.
     }
     return appendWorkspaceRoots(
-      resolveSandboxConfig(
-        config.sandbox,
-        projectSandbox,
-        globalSandbox,
-        config.headless === true,
-      ),
-      workspaceContext,
+      resolveSandboxConfig(config.sandbox, projectSandbox, globalSandbox, config.headless === true),
+      run,
     );
   }
 

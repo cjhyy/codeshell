@@ -8,7 +8,7 @@ import { createWorkspaceContext } from "../../workspace/workspace-context.js";
 import { canonicalPath } from "../../workspace/canonical-key.js";
 import type { ToolContext } from "../context.js";
 import { createOffBackend } from "../sandbox/off.js";
-import { defaultSandboxConfig, type SandboxConfig } from "../sandbox/index.js";
+import { defaultSandboxConfig, expandConfig, type SandboxConfig } from "../sandbox/index.js";
 import { bashTool } from "./bash.js";
 
 let fixtureRoot: string | undefined;
@@ -70,9 +70,11 @@ describe("Bash multi-root sandbox", () => {
     await bashTool({ command: "echo background", run_in_background: true }, context);
 
     expect(resolvedConfigs).toHaveLength(1);
-    expect(resolvedConfigs[0]?.writableRoots).toEqual(
+    const expandedRoots = expandConfig(resolvedConfigs[0]!, primary).writableRoots;
+    expect(expandedRoots).toEqual(
       expect.arrayContaining([canonicalPath(primary), canonicalPath(secondary)]),
     );
+    expect(new Set(expandedRoots).size).toBe(expandedRoots.length);
     expect(wrappedCommands).toEqual(["echo foreground", "echo background"]);
   });
 });
