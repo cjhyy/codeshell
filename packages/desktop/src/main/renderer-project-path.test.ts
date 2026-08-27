@@ -27,8 +27,20 @@ describe("project-id renderer authorization", () => {
         id: "project-1",
         name: "Project",
         roots: [
-          { id: "primary", path: project, name: "project", addedAt: 1 },
-          { id: "secondary", path: secondary, name: "secondary", addedAt: 2 },
+          {
+            id: "primary",
+            path: project,
+            canonicalIdentity: await realpath(project),
+            name: "project",
+            addedAt: 1,
+          },
+          {
+            id: "secondary",
+            path: secondary,
+            canonicalIdentity: await realpath(secondary),
+            name: "secondary",
+            addedAt: 2,
+          },
         ],
         primaryRootId: "primary",
         createdAt: 1,
@@ -45,9 +57,9 @@ describe("project-id renderer authorization", () => {
       requireRendererProjectRoot("project-1", "secondary", { projects }),
     ).resolves.toMatchObject({ rootId: "secondary", path: await realpath(secondary) });
     await expect(requireRendererProject("unknown", { projects })).rejects.toThrow(/not found/);
-    await expect(
-      requireRendererProjectRoot("project-1", "unknown", { projects }),
-    ).rejects.toThrow(/root not found/);
+    await expect(requireRendererProjectRoot("project-1", "unknown", { projects })).rejects.toThrow(
+      /root not found/,
+    );
   });
 
   test("maps a real entry to its root and rejects traversal and symlink escapes", async () => {
@@ -63,8 +75,20 @@ describe("project-id renderer authorization", () => {
         id: "project-1",
         name: "Project",
         roots: [
-          { id: "primary", path: project, name: "project", addedAt: 1 },
-          { id: "secondary", path: secondary, name: "secondary", addedAt: 2 },
+          {
+            id: "primary",
+            path: project,
+            canonicalIdentity: await realpath(project),
+            name: "project",
+            addedAt: 1,
+          },
+          {
+            id: "secondary",
+            path: secondary,
+            canonicalIdentity: await realpath(secondary),
+            name: "secondary",
+            addedAt: 2,
+          },
         ],
         primaryRootId: "primary",
         createdAt: 1,
@@ -87,6 +111,43 @@ describe("project-id renderer authorization", () => {
         requireRendererProjectRootEntry("project-1", escapingLink, { projects }),
       ).rejects.toThrow(/outside/);
     }
+  });
+
+  test("rejects an fsRoot whose registered directory was replaced by an outside symlink", async () => {
+    if (process.platform === "win32") return;
+    const { root, project } = await fixture();
+    const outside = join(root, "outside");
+    await mkdir(outside);
+    await writeFile(join(outside, "secret.txt"), "outside");
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project",
+        roots: [
+          {
+            id: "primary",
+            path: project,
+            canonicalIdentity: await realpath(project),
+            name: "project",
+            addedAt: 1,
+          },
+        ],
+        primaryRootId: "primary",
+        createdAt: 1,
+        updatedAt: 1,
+        lastOpenedAt: 1,
+        revision: 1,
+      },
+    ];
+
+    await rm(project, { recursive: true, force: true });
+    await symlink(outside, project, "dir");
+    await expect(requireRendererProjectRoot("project-1", "primary", { projects })).rejects.toThrow(
+      /root_replaced/,
+    );
+    await expect(
+      requireRendererProjectRootEntry("project-1", join(project, "secret.txt"), { projects }),
+    ).rejects.toThrow(/root_replaced|outside/);
   });
 });
 

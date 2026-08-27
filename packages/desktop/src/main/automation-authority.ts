@@ -318,6 +318,10 @@ export function desktopAutomationAuthorityDeps(): AutomationAuthorityDeps {
           rootId: resolved.mainRoot.id,
         };
       }
+      const validation = projectStore.validateRegisteredRootPathSync(entry.cwd);
+      if (validation && validation.status !== "ok") {
+        throw new Error(validation.message ?? `project root status ${validation.status}`);
+      }
       return {
         sessionId,
         cwd: entry.cwd,

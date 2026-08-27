@@ -22,6 +22,7 @@ import {
 } from "@cjhyy/code-shell-capability-coding/git";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { getProjectStore, type ProjectStore } from "./project-store.js";
+import { requireMountedProjectRoot, validateMountedProjectRoot } from "./mounted-project-root.js";
 
 export type WorkspaceCleanupAction = "detach" | "discard";
 
@@ -31,8 +32,12 @@ export interface SessionWorkspaceList {
   worktrees: WorktreeInfo[];
 }
 
-export type SessionRootStatus = "ok" | "dir_missing" | "root_removed";
-export type SessionRootStatusReason = "directory_missing" | "project_missing" | "root_not_mounted";
+export type SessionRootStatus = "ok" | "dir_missing" | "root_removed" | "root_replaced";
+export type SessionRootStatusReason =
+  | "directory_missing"
+  | "project_missing"
+  | "root_not_mounted"
+  | "identity_mismatch";
 
 export interface SessionWorkspaceAuthority {
   workspace: SessionWorkspace;
@@ -169,15 +174,16 @@ async function mainRootAuthorityFor(
           `is no longer mounted in project ${binding.projectId}`,
       };
     }
-    if (!isDirectory(root.path)) {
+    const validation = validateMountedProjectRoot(root);
+    if (validation.status !== "ok") {
       return {
         projectId: binding.projectId,
         mainRootId: root.id,
         mainRoot: root.path,
         mainRootName: root.name,
-        rootStatus: "dir_missing",
-        rootStatusReason: "directory_missing",
-        rootStatusMessage: `Session root status dir_missing: directory is missing: ${root.path}`,
+        rootStatus: validation.status,
+        rootStatusReason: validation.reason,
+        rootStatusMessage: `Session root status ${validation.status}: ${validation.message}`,
       };
     }
     await findMainWorktreeRootIfUsable(root.path);
@@ -187,6 +193,20 @@ async function mainRootAuthorityFor(
       mainRoot: root.path,
       mainRootName: root.name,
       rootStatus: "ok",
+    };
+  }
+  const registeredValidation = projects().validateRegisteredRootPathSync(fromSession);
+  if (registeredValidation && registeredValidation.status !== "ok") {
+    return {
+      projectId: null,
+      mainRootId: null,
+      mainRoot: fromSession,
+      mainRootName: rootName(fromSession),
+      rootStatus: registeredValidation.status,
+      rootStatusReason: registeredValidation.reason,
+      rootStatusMessage:
+        `Session root status ${registeredValidation.status}: ` +
+        (registeredValidation.message ?? "registered root identity changed"),
     };
   }
   if (!isDirectory(fromSession)) {
@@ -328,13 +348,17 @@ export async function resolveSessionReviewWorkspaceForUi(sessionId: string): Pro
   requireUsableSessionRootAuthority(authority);
   if (authority.projectId && authority.mainRootId) {
     const project = await projects().requireLive(authority.projectId);
+    const mountedPaths = new Map(
+      project.roots.map((root) => [root.id, requireMountedProjectRoot(root)] as const),
+    );
     const context = createWorkspaceContext({
       projectId: project.id,
       projectRevision: project.revision,
       sessionMainRootId: authority.mainRootId,
       roots: project.roots.map((root) => ({
         id: root.id,
-        path: root.id === authority.mainRootId ? authority.workspace.root : root.path,
+        path:
+          root.id === authority.mainRootId ? authority.workspace.root : mountedPaths.get(root.id)!,
         role: root.id === authority.mainRootId ? "primary" : "secondary",
       })),
     });
@@ -388,7 +412,7 @@ export async function requireSessionFileRootForUi(
   const project = await projects().requireLive(authority.projectId);
   const root = project.roots.find((candidate) => candidate.id === rootId);
   if (!root) throw new Error("session project root not found");
-  return root.path;
+  return requireMountedProjectRoot(root);
 }
 
 export async function listSessionWorktreesForUi(

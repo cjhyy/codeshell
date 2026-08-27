@@ -235,6 +235,127 @@ describe("prepareAgentRunMetadata", () => {
     ).toThrow(/project root not found/);
   });
 
+  test("hostile renderer cannot choose any root for a new project Session", () => {
+    const seenRootIds: Array<string | undefined> = [];
+    const deps = {
+      ...baseDeps(),
+      resolveProjectRun: (
+        _projectId: string,
+        _sessionId: string,
+        _session: unknown,
+        rootId?: string,
+      ) => {
+        seenRootIds.push(rootId);
+        if (rootId === "unknown-root" || rootId === "cross-project-root") {
+          throw new Error("project root not found");
+        }
+        if (rootId === "r2") {
+          return {
+            ...baseDeps().resolveProjectRun(),
+            cwd: "/secondary",
+            trustCwd: "/secondary",
+            mainRootId: "r2",
+            workspaceContext: createWorkspaceContext({
+              projectId: "p1",
+              projectRevision: 3,
+              sessionMainRootId: "r2",
+              roots: [
+                { id: "r1", path: "/primary", role: "secondary" },
+                { id: "r2", path: "/secondary", role: "primary" },
+              ],
+            }),
+          };
+        }
+        return baseDeps().resolveProjectRun();
+      },
+    };
+
+    for (const rootId of ["r1", "r2", "unknown-root", "cross-project-root"]) {
+      expect(() =>
+        prepareAgentRunMetadata(
+          JSON.stringify({
+            method: "agent/run",
+            params: { sessionId: `renderer-${rootId}`, projectId: "p1", rootId },
+          }),
+          meta,
+          deps,
+        ),
+      ).toThrow(/renderer.*rootId|rootId.*renderer/i);
+    }
+    expect(seenRootIds).toEqual([]);
+
+    const primary = prepareAgentRunMetadata(
+      JSON.stringify({
+        method: "agent/run",
+        params: { sessionId: "renderer-primary", projectId: "p1", cwd: "/forged" },
+      }),
+      meta,
+      deps,
+    );
+    expect(JSON.parse(primary.outLine).params).toMatchObject({
+      cwd: "/primary",
+      rootId: "r1",
+      workspaceContext: projectContext,
+    });
+
+    for (const origin of ["mobile", "host"] as const) {
+      const secondary = prepareAgentRunMetadata(
+        JSON.stringify({
+          method: "agent/run",
+          params: { sessionId: `${origin}-verified-secondary`, projectId: "p1", rootId: "r2" },
+        }),
+        { origin, producer: `${origin}-verified-create` },
+        deps,
+      );
+      expect(JSON.parse(secondary.outLine).params).toMatchObject({
+        cwd: "/secondary",
+        rootId: "r2",
+      });
+    }
+  });
+
+  test("renderer rootId on an existing Session is only a persisted-binding assertion", () => {
+    const session = {
+      sessionId: "bound",
+      cwd: "/primary",
+      projectId: "p1",
+      mainRootId: "r1",
+      status: "confirmed" as const,
+    };
+    const resolveProjectRun = (
+      _projectId: string,
+      _sessionId: string,
+      _session: unknown,
+      rootId?: string,
+    ) => {
+      if (rootId !== undefined && rootId !== session.mainRootId) {
+        throw new Error("requested root does not match persisted Session authority");
+      }
+      return baseDeps().resolveProjectRun();
+    };
+
+    expect(() =>
+      prepareAgentRunMetadata(
+        JSON.stringify({
+          method: "agent/run",
+          params: { sessionId: session.sessionId, projectId: "p1", rootId: "r2" },
+        }),
+        meta,
+        { ...baseDeps(), lookupSession: () => session, resolveProjectRun },
+      ),
+    ).toThrow(/persisted Session authority/);
+
+    const asserted = prepareAgentRunMetadata(
+      JSON.stringify({
+        method: "agent/run",
+        params: { sessionId: session.sessionId, projectId: "p1", rootId: "r1" },
+      }),
+      meta,
+      { ...baseDeps(), lookupSession: () => session, resolveProjectRun },
+    );
+    expect(JSON.parse(asserted.outLine).params.rootId).toBe("r1");
+  });
+
   test("cold explicit-project runs resolve ordinary forks and externally created Sessions from one state read", () => {
     const cases = [
       {
@@ -525,6 +646,29 @@ describe("prepareAgentRunMetadata", () => {
       expect((caught as AgentRunMetadataError).code).toBe(-32602);
       expect((caught as Error).message).toContain(rootStatus);
     }
+  });
+
+  test("rejects an unbound persisted Session when its registered root identity was replaced", () => {
+    let validated: string | undefined;
+    expect(() =>
+      prepareAgentRunMetadata(
+        JSON.stringify({ method: "agent/run", params: { sessionId: "legacy-retarget" } }),
+        meta,
+        {
+          ...baseDeps(),
+          lookupSession: () => ({
+            sessionId: "legacy-retarget",
+            cwd: "/registered-root",
+            status: "confirmed",
+          }),
+          validatePersistedRoot: (cwd) => {
+            validated = cwd;
+            throw new Error("project root status root_replaced: identity changed");
+          },
+        },
+      ),
+    ).toThrow(/root_replaced/);
+    expect(validated).toBe("/registered-root");
   });
 
   test("new primary gets full context; secondary stays legacy; unknown cwd is rejected", () => {

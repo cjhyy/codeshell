@@ -95,6 +95,7 @@ export type {
 export interface LocalProjectRoot {
   id: string;
   path: string;
+  canonicalIdentity?: string;
   name: string;
   addedAt: number;
 }
@@ -619,8 +620,12 @@ export interface SessionWorkspaceAuthority {
   mainRootId: string | null;
   mainRoot: string;
   mainRootName: string;
-  rootStatus: "ok" | "dir_missing" | "root_removed";
-  rootStatusReason?: "directory_missing" | "project_missing" | "root_not_mounted";
+  rootStatus: "ok" | "dir_missing" | "root_removed" | "root_replaced";
+  rootStatusReason?:
+    | "directory_missing"
+    | "project_missing"
+    | "root_not_mounted"
+    | "identity_mismatch";
   rootStatusMessage?: string;
 }
 

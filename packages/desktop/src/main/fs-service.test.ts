@@ -73,4 +73,16 @@ describe("fileExists", () => {
       await rm(outside, { recursive: true, force: true });
     }
   });
+
+  it("keeps an internal file symlink readable under the existing final path policy", async () => {
+    if (process.platform === "win32") return;
+    const root = await mkdtemp(join(tmpdir(), "fsx-internal-link-"));
+    try {
+      await writeFile(join(root, "target.txt"), "inside");
+      await symlink(join(root, "target.txt"), join(root, "link.txt"));
+      expect(await fileExists(root, "link.txt")).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

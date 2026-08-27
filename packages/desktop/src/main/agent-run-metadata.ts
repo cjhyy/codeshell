@@ -33,6 +33,7 @@ export interface AgentRunMetadataDeps {
   ) => ResolvedAgentProjectRun;
   resolveExactRoot?: (cwd: string) => ResolvedAgentProjectRun | undefined;
   lookupSession?: (sessionId: string, refresh: boolean) => SessionCwdIndexEntry | undefined;
+  validatePersistedRoot?: (cwd: string) => void;
   isNoRepoCwd?: (cwd: string) => boolean;
   hostReservation?: (sessionId: string) => HostReservation | undefined;
 }
@@ -115,6 +116,19 @@ export function prepareAgentRunMetadata(
       }
       let session = deps.lookupSession?.(sessionId, false);
       if (!session) session = deps.lookupSession?.(sessionId, true);
+      if (meta.origin === "renderer" && !session && hasRootId) {
+        throw new AgentRunMetadataError("renderer cannot specify rootId for a new Session");
+      }
+      if (
+        meta.origin === "renderer" &&
+        session?.mainRootId &&
+        rootId &&
+        rootId !== session.mainRootId
+      ) {
+        throw new AgentRunMetadataError(
+          "requested root does not match persisted Session authority",
+        );
+      }
       try {
         const resolution = deps.resolveProjectRun(projectId, sessionId, session, rootId);
         return prepareResolvedProject({
@@ -178,6 +192,14 @@ export function prepareAgentRunMetadata(
             error instanceof Error ? error.message : "bound project run could not be resolved",
           );
         }
+      }
+
+      try {
+        deps.validatePersistedRoot?.(session.cwd);
+      } catch (error) {
+        throw new AgentRunMetadataError(
+          error instanceof Error ? error.message : "persisted Session root could not be validated",
+        );
       }
 
       cwd = session.workspaceRoot ?? session.cwd;

@@ -809,6 +809,120 @@ describe("ProjectStore", () => {
     ).toThrow(/root_removed/);
   });
 
+  test("persists mount identity and rejects a registered directory retargeted to an outside symlink", async () => {
+    if (process.platform === "win32") return;
+    const mounted = dir("retarget-mounted");
+    const outside = dir("retarget-outside");
+    writeFileSync(join(outside, "secret.txt"), "outside\n");
+    const index = new SessionCwdIndex({
+      sessionsRoot: join(fixtureRoot, "sessions"),
+      fs: fakeEmptySessionFs(),
+    });
+    await index.ensureLoaded();
+    const projects = store({ index });
+    const project = await projects.createFromPath(mounted);
+    const registeredRoot = project.roots[0]!;
+
+    expect(registeredRoot).toMatchObject({
+      path: realpathSync(mounted),
+      canonicalIdentity: realpathSync(mounted),
+    });
+    expect(JSON.parse(readFileSync(projectsFile, "utf8")).projects[0].roots[0]).toMatchObject({
+      canonicalIdentity: realpathSync(mounted),
+    });
+
+    rmSync(mounted, { recursive: true, force: true });
+    symlinkSync(outside, mounted, "dir");
+    const boundSession = {
+      sessionId: "retarget-session",
+      cwd: registeredRoot.path,
+      projectId: project.id,
+      mainRootId: registeredRoot.id,
+      status: "confirmed" as const,
+    };
+
+    expect(() =>
+      projects.resolveRunProjectSync(project.id, boundSession.sessionId, boundSession),
+    ).toThrow(/root_replaced/);
+    expect(() => projects.resolveProjectRootByIdSync(project.id, registeredRoot.id)).toThrow(
+      /root_replaced/,
+    );
+    expect(projects.resolveExactRootSync(mounted)).toBeUndefined();
+    expect(projects.resolveExactRootSync(outside)).toBeUndefined();
+    expect(projects.validateRegisteredRootPathSync(registeredRoot.path)).toMatchObject({
+      status: "root_replaced",
+      reason: "identity_mismatch",
+    });
+    await expect(projects.resolveProjectForCwd(mounted)).resolves.toBeNull();
+    await expect(projects.resolveProjectForCwd(outside)).resolves.toBeNull();
+  });
+
+  test("safely backfills old V2 identity but never blesses an old root's current symlink target", async () => {
+    if (process.platform === "win32") return;
+    const safe = dir("legacy-v2-safe");
+    const replaced = dir("legacy-v2-replaced");
+    const outside = dir("legacy-v2-outside");
+    rmSync(replaced, { recursive: true, force: true });
+    symlinkSync(outside, replaced, "dir");
+    writeFileSync(
+      projectsFile,
+      JSON.stringify({
+        version: 2,
+        projects: [
+          registryProject("legacy-safe", [{ id: "safe-root", path: safe }]),
+          // A trailing slash must not make lstat follow and bless the symlink target.
+          registryProject("legacy-replaced", [{ id: "replaced-root", path: `${replaced}/` }]),
+        ],
+      }),
+    );
+
+    const projects = store();
+    const listed = await projects.list();
+    expect(listed.find((project) => project.id === "legacy-safe")?.roots[0]).toMatchObject({
+      canonicalIdentity: realpathSync(safe),
+    });
+    expect(
+      listed.find((project) => project.id === "legacy-replaced")?.roots[0]?.canonicalIdentity,
+    ).toBeUndefined();
+    const persisted = JSON.parse(readFileSync(projectsFile, "utf8"));
+    expect(
+      persisted.projects.find((project: { id: string }) => project.id === "legacy-safe").roots[0],
+    ).toMatchObject({ canonicalIdentity: realpathSync(safe) });
+    expect(
+      persisted.projects.find((project: { id: string }) => project.id === "legacy-replaced")
+        .roots[0].canonicalIdentity,
+    ).toBeUndefined();
+
+    expect(projects.resolveProjectRootByIdSync("legacy-safe", "safe-root").cwd).toBe(safe);
+    expect(() => projects.resolveProjectRootByIdSync("legacy-replaced", "replaced-root")).toThrow(
+      /root_replaced/,
+    );
+    expect(projects.resolveExactRootSync(outside)).toBeUndefined();
+  });
+
+  test("refuses to construct sandbox-bearing WorkspaceContext when any secondary mount is replaced", async () => {
+    if (process.platform === "win32") return;
+    const primary = dir("context-primary");
+    const secondary = dir("context-secondary");
+    const outside = dir("context-outside");
+    const projects = store();
+    const project = await projects.createFromPath(primary);
+    const withSecondary = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = withSecondary.roots.find(
+      (root) => root.id !== withSecondary.primaryRootId,
+    )!;
+
+    rmSync(secondary, { recursive: true, force: true });
+    symlinkSync(outside, secondary, "dir");
+
+    expect(() => projects.resolveProjectRootByIdSync(project.id, project.primaryRootId)).toThrow(
+      /root_replaced/,
+    );
+    expect(() => projects.resolveProjectRootByIdSync(project.id, secondaryRoot.id)).toThrow(
+      /root_replaced/,
+    );
+  });
+
   test("soft deletes projects while retaining tombstones and refuses unsafe registry roots", async () => {
     const primary = dir("primary");
     const projects = store();

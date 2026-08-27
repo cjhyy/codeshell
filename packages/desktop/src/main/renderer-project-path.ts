@@ -1,11 +1,8 @@
 import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { homedir } from "node:os";
-import {
-  getProjectStore,
-  type LocalProject,
-  type LocalProjectRoot,
-} from "./project-store.js";
+import { getProjectStore, type LocalProject, type LocalProjectRoot } from "./project-store.js";
+import { requireMountedProjectRoot, validateMountedProjectRoot } from "./mounted-project-root.js";
 
 const MAX_RENDERER_PATH_LENGTH = 32_768;
 
@@ -82,8 +79,7 @@ export async function requireRendererProjectRoot(
   if (typeof rootId !== "string" || !rootId) throw new Error("project root id is required");
   const root = project.roots.find((candidate) => candidate.id === rootId);
   if (!root) throw new Error(`project root not found: ${String(rootId)}`);
-  const path = await canonicalDirectory(root.path);
-  if (!path) throw new Error(`project root is missing: ${root.path}`);
+  const path = requireMountedProjectRoot(root);
   return { project, root, rootId: root.id, path };
 }
 
@@ -106,8 +102,7 @@ export async function requireRendererProjectRootEntry(
   const entry = await canonicalProjectEntry(input);
   if (!entry) throw new Error("project entry must be an existing absolute file or directory");
   for (const root of project.roots) {
-    const canonicalRoot = await canonicalDirectory(root.path);
-    if (!canonicalRoot) continue;
+    const canonicalRoot = requireMountedProjectRoot(root);
     const rel = relative(canonicalRoot, entry);
     if (rel === "" || (!!rel && !rel.startsWith("..") && !isAbsolute(rel))) {
       return { entry, rootId: root.id };
@@ -135,11 +130,16 @@ export async function requireRendererProjectPath(
   );
   if (requested === noRepo) return requested;
 
-  const registered =
-    options.registeredPaths ??
-    (await getProjectStore().list()).flatMap((project) => project.roots.map((root) => root.path));
-  for (const path of registered) {
-    if ((await canonicalDirectory(path)) === requested) return requested;
+  if (options.registeredPaths) {
+    for (const path of options.registeredPaths) {
+      if ((await canonicalDirectory(path)) === requested) return requested;
+    }
+  } else {
+    const roots = (await getProjectStore().list()).flatMap((project) => project.roots);
+    for (const root of roots) {
+      const validated = validateMountedProjectRoot(root);
+      if (validated.status === "ok" && validated.path === requested) return requested;
+    }
   }
 
   throw new Error(`project path is not registered with CodeShell: ${String(input)}`);

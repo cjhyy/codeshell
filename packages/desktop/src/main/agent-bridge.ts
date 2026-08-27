@@ -568,6 +568,12 @@ export class AgentBridge implements PetStateBridge {
         refresh
           ? getSessionCwdIndex().refreshSync(sessionId)
           : getSessionCwdIndex().lookupCached(sessionId),
+      validatePersistedRoot: (cwd) => {
+        const validation = getProjectStore().validateRegisteredRootPathSync(cwd);
+        if (validation && validation.status !== "ok") {
+          throw new Error(validation.message ?? `project root status ${validation.status}`);
+        }
+      },
       resolveProjectRun: (projectId, sessionId, session, rootId) => {
         const resolved = getProjectStore().resolveRunProjectSync(
           projectId,

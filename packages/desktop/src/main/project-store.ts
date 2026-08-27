@@ -30,6 +30,15 @@ import {
   type SessionCwdIndex,
   type SessionCwdIndexEntry,
 } from "./session-cwd-index.js";
+import {
+  backfillProjectRootIdentity,
+  captureProjectRootIdentity,
+  requireMountedProjectRoot,
+  storedProjectRootIdentityKey,
+  storedProjectRootPathKey,
+  validateMountedProjectRoot,
+  type MountedProjectRootValidation,
+} from "./mounted-project-root.js";
 
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_PROJECTS = 5_000;
@@ -43,6 +52,8 @@ export type ProjectRootId = string;
 export interface LocalProjectRoot {
   id: ProjectRootId;
   path: string;
+  /** Registration-time realpath identity. Optional only while old V2 data is quarantined. */
+  canonicalIdentity?: string;
   name: string;
   addedAt: number;
 }
@@ -186,7 +197,7 @@ export class ProjectStore {
         rootId = entry.mainRootId;
       } else if (!entry.projectId) {
         const cwdKey = canonicalKey(entry.cwd);
-        rootId = project.roots.find((root) => canonicalKey(root.path) === cwdKey)?.id;
+        rootId = project.roots.find((root) => storedProjectRootIdentityKey(root) === cwdKey)?.id;
       }
       if (rootId) (result[rootId] ??= []).push(entry.sessionId);
     }
@@ -227,7 +238,15 @@ export class ProjectStore {
       const newProject: LocalProject = {
         id: this.makeId(),
         name: root.name,
-        roots: [{ id: rootId, path: root.path, name: root.name, addedAt: timestamp }],
+        roots: [
+          {
+            id: rootId,
+            path: root.path,
+            canonicalIdentity: root.canonicalIdentity,
+            name: root.name,
+            addedAt: timestamp,
+          },
+        ],
         primaryRootId: rootId,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -269,6 +288,7 @@ export class ProjectStore {
       target.roots.push({
         id: this.makeId(),
         path: root.path,
+        canonicalIdentity: root.canonicalIdentity,
         name: root.name,
         addedAt: timestamp,
       });
@@ -334,9 +354,7 @@ export class ProjectStore {
     const project = await this.requireLive(binding.projectId);
     const target = project.roots.find((root) => root.id === targetRootId);
     if (!target) throw new Error("migration target root not found in the same project");
-    if (!existsDirectory(target.path)) {
-      throw new Error(`migration target directory is missing: ${target.path}`);
-    }
+    requireMountedProjectRoot(target);
 
     let from = state.workspace ?? ({ root: state.cwd, kind: "main" } as const);
     const workspace: SessionWorkspace = { root: target.path, kind: "main" };
@@ -392,9 +410,7 @@ export class ProjectStore {
           ) {
             throw new Error("migration target root changed during migration");
           }
-          if (!existsDirectory(durableTarget.path)) {
-            throw new Error(`migration target directory is missing: ${durableTarget.path}`);
-          }
+          requireMountedProjectRoot(durableTarget);
           from = durable.workspace ?? ({ root: durable.cwd, kind: "main" } as const);
           this.sessionManager.migrateSessionMainRootIfRevision(
             sessionId,
@@ -453,8 +469,9 @@ export class ProjectStore {
   async setPrimary(projectId: string, rootId: string): Promise<LocalProject> {
     const project = this.mutate((registry) => {
       const target = requireLiveProject(registry, projectId);
-      if (!target.roots.some((root) => root.id === rootId))
-        throw new Error("project root not found");
+      const primary = target.roots.find((root) => root.id === rootId);
+      if (!primary) throw new Error("project root not found");
+      requireMountedProjectRoot(primary);
       if (target.primaryRootId !== rootId) {
         target.primaryRootId = rootId;
         touchProject(target, this.now());
@@ -528,7 +545,7 @@ export class ProjectStore {
       const found = findRoot(registry.projects, candidate.path);
       if (found?.project.deletedAt !== undefined) {
         results.push(null);
-      } else if (found && existsDirectory(found.root.path)) {
+      } else if (found && validateMountedProjectRoot(found.root).status === "ok") {
         results.push({ projectId: found.project.id, rootId: found.root.id, created: false });
       } else if (candidate.key === noRepoKey) {
         results.push({ noRepo: true });
@@ -645,8 +662,11 @@ export class ProjectStore {
     if (requestedRootId && requestedRootId !== mainRoot.id) {
       throw new Error("requested root does not match persisted Session authority");
     }
-    if (!existsDirectory(mainRoot.path)) {
-      throw new Error(`Session root status dir_missing: directory is missing: ${mainRoot.path}`);
+    const mainRootValidation = validateMountedProjectRoot(mainRoot);
+    if (mainRootValidation.status !== "ok") {
+      throw new Error(
+        `Session root status ${mainRootValidation.status}: ${mainRootValidation.message}`,
+      );
     }
     return {
       project: cloneProject(project),
@@ -666,9 +686,7 @@ export class ProjectStore {
     if (!project) throw new Error("project not found");
     const mainRoot = project.roots.find((root) => root.id === (rootId ?? project.primaryRootId));
     if (!mainRoot) throw new Error("project root not found");
-    if (!existsDirectory(mainRoot.path)) {
-      throw new Error(`project root directory is missing: ${mainRoot.path}`);
-    }
+    requireMountedProjectRoot(mainRoot);
     return {
       project: cloneProject(project),
       mainRoot: { ...mainRoot },
@@ -682,7 +700,11 @@ export class ProjectStore {
     this.ensureInitialized();
     const registry = readRegistryFile(this.file);
     const found = findRoot(registry.projects, cwd);
-    if (!found || found.project.deletedAt !== undefined || !existsDirectory(found.root.path)) {
+    if (
+      !found ||
+      found.project.deletedAt !== undefined ||
+      validateMountedProjectRoot(found.root).status !== "ok"
+    ) {
       return undefined;
     }
     return {
@@ -693,31 +715,65 @@ export class ProjectStore {
     };
   }
 
+  /**
+   * Check whether a persisted path still names the registered mount stored at
+   * that exact spelling. This deliberately does not realpath the lookup key:
+   * doing so would turn a retargeted symlink into the attacker's destination.
+   */
+  validateRegisteredRootPathSync(cwd: string): MountedProjectRootValidation | undefined {
+    this.ensureInitialized();
+    if (!validAbsolutePath(cwd)) return undefined;
+    const pathKey = storedProjectRootPathKey(cwd);
+    const registry = readRegistryFile(this.file);
+    for (const project of registry.projects) {
+      const root = project.roots.find(
+        (candidate) => storedProjectRootPathKey(candidate.path) === pathKey,
+      );
+      if (root) return validateMountedProjectRoot(root);
+    }
+    return undefined;
+  }
+
   isNoRepoCwd(cwd: string): boolean {
     return canonicalKey(cwd) === canonicalKey(this.noRepoPath);
   }
 
-  private resolvePickedRoot(pickedPath: string): { path: string; key: string; name: string } {
+  private resolvePickedRoot(pickedPath: string): {
+    path: string;
+    canonicalIdentity: string;
+    key: string;
+    name: string;
+  } {
     if (!validAbsolutePath(pickedPath) || !existsDirectory(pickedPath)) {
       throw new Error("project root must be an existing absolute directory");
     }
     const folded = this.foldProjectRoot(realpathSync(resolve(pickedPath)));
     if (!existsDirectory(folded)) throw new Error("resolved project root must exist");
-    const real = realpathSync(resolve(folded));
-    return { path: real, key: canonicalKey(real), name: basename(real) || real };
+    const captured = captureProjectRootIdentity(realpathSync(resolve(folded)));
+    return {
+      path: captured.path,
+      canonicalIdentity: captured.canonicalIdentity,
+      key: canonicalKey(captured.canonicalIdentity),
+      name: basename(captured.path) || captured.path,
+    };
   }
 
   private ensureInitialized(): void {
     if (this.initialized && existsSync(this.file)) return;
     let created = false;
+    let migratedIdentities = false;
     mutateJsonFile<LocalProjectRegistryV2>(this.file, {
       parse: (raw) => {
-        if (raw !== undefined) return parseRegistryText(raw, this.file);
+        if (raw !== undefined) {
+          const registry = parseRegistryText(raw, this.file);
+          migratedIdentities = backfillRegistryRootIdentities(registry);
+          return registry;
+        }
         created = true;
         return this.migrateRecents();
       },
       serialize: serializeRegistry,
-      mutation: (registry) => ({ value: created ? registry : undefined }),
+      mutation: (registry) => ({ value: created || migratedIdentities ? registry : undefined }),
       mode: 0o600,
       maxBytes: MAX_FILE_BYTES,
     });
@@ -730,8 +786,10 @@ export class ProjectStore {
     const projects: LocalProject[] = [];
     const seen = new Set<string>();
     for (const recent of recents.slice(0, MAX_PROJECTS)) {
-      const path = canonicalStoredPath(recent.path);
-      const key = canonicalKey(path);
+      const storedPath = resolve(recent.path);
+      const canonicalIdentity = backfillProjectRootIdentity({ path: storedPath });
+      const path = canonicalIdentity ?? storedPath;
+      const key = storedProjectRootIdentityKey({ path, canonicalIdentity });
       if (seen.has(key)) continue;
       seen.add(key);
       const rootId = this.makeId();
@@ -739,7 +797,13 @@ export class ProjectStore {
         id: this.makeId(),
         name: recent.name,
         roots: [
-          { id: rootId, path, name: basename(path) || recent.name, addedAt: recent.lastOpenedAt },
+          {
+            id: rootId,
+            path,
+            ...(canonicalIdentity ? { canonicalIdentity } : {}),
+            name: basename(path) || recent.name,
+            addedAt: recent.lastOpenedAt,
+          },
         ],
         primaryRootId: rootId,
         ...(recent.pinned === true ? { pinned: true } : {}),
@@ -816,13 +880,16 @@ function workspaceContextFor(
   mainRoot: LocalProjectRoot,
   runtimeMainPath: string,
 ): WorkspaceContext {
+  const mountedPaths = new Map(
+    project.roots.map((root) => [root.id, requireMountedProjectRoot(root)] as const),
+  );
   return createWorkspaceContext({
     projectId: project.id,
     projectRevision: project.revision,
     sessionMainRootId: mainRoot.id,
     roots: project.roots.map((root) => ({
       id: root.id,
-      path: root.id === mainRoot.id ? runtimeMainPath : root.path,
+      path: root.id === mainRoot.id ? runtimeMainPath : mountedPaths.get(root.id)!,
       role: root.id === mainRoot.id ? ("primary" as const) : ("secondary" as const),
     })),
   });
@@ -869,6 +936,25 @@ function parseRegistryText(raw: string, file: string): LocalProjectRegistryV2 {
   return { version: 2, projects: isolateRegistryConflicts(projects) };
 }
 
+function backfillRegistryRootIdentities(registry: LocalProjectRegistryV2): boolean {
+  let changed = false;
+  for (const project of registry.projects) {
+    for (const root of project.roots) {
+      if (root.canonicalIdentity) continue;
+      const canonicalIdentity = backfillProjectRootIdentity(root);
+      if (!canonicalIdentity) continue;
+      root.canonicalIdentity = canonicalIdentity;
+      changed = true;
+    }
+  }
+  const isolated = isolateRegistryConflicts(registry.projects);
+  if (isolated.length !== registry.projects.length) {
+    registry.projects = isolated;
+    changed = true;
+  }
+  return changed;
+}
+
 function isolateRegistryConflicts(projects: readonly LocalProject[]): LocalProject[] {
   const conflicts = new Set<number>();
   const projectIdOwners = new Map<string, number>();
@@ -890,7 +976,7 @@ function isolateRegistryConflicts(projects: readonly LocalProject[]): LocalProje
     recordOwner(projectIdOwners, project.id, projectIndex);
     for (const root of project.roots) {
       recordOwner(rootIdOwners, root.id, projectIndex);
-      recordOwner(rootPathOwners, canonicalKey(root.path), projectIndex);
+      recordOwner(rootPathOwners, storedProjectRootIdentityKey(root), projectIndex);
     }
   }
 
@@ -918,11 +1004,18 @@ function parseProject(value: unknown): LocalProject | undefined {
   if (item.displayName !== undefined && !validName(item.displayName)) return undefined;
   if (item.pinned !== undefined && typeof item.pinned !== "boolean") return undefined;
   if (item.deletedAt !== undefined && !validTimestamp(item.deletedAt)) return undefined;
-  const keys = roots.map((root) => canonicalKey(root.path));
+  const keys = roots.map(storedProjectRootIdentityKey);
   if (new Set(keys).size !== keys.length) return undefined;
   if (
     roots.some((root, index) =>
-      roots.some((other, j) => index !== j && pathsOverlap(root.path, other.path)),
+      roots.some(
+        (other, j) =>
+          index !== j &&
+          identityKeysOverlap(
+            storedProjectRootIdentityKey(root),
+            storedProjectRootIdentityKey(other),
+          ),
+      ),
     )
   ) {
     return undefined;
@@ -946,8 +1039,19 @@ function parseRoot(value: unknown): LocalProjectRoot | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const item = value as Record<string, unknown>;
   if (!validId(item.id) || !validAbsolutePath(item.path) || !validName(item.name)) return undefined;
+  if (item.canonicalIdentity !== undefined && !validAbsolutePath(item.canonicalIdentity)) {
+    return undefined;
+  }
   if (!validTimestamp(item.addedAt)) return undefined;
-  return { id: item.id, path: item.path, name: item.name.trim(), addedAt: item.addedAt };
+  return {
+    id: item.id,
+    path: item.path,
+    ...(typeof item.canonicalIdentity === "string"
+      ? { canonicalIdentity: item.canonicalIdentity }
+      : {}),
+    name: item.name.trim(),
+    addedAt: item.addedAt,
+  };
 }
 
 function readRegistryFile(file: string): LocalProjectRegistryV2 {
@@ -1023,7 +1127,7 @@ function findRoot(
 ): { project: LocalProject; root: LocalProjectRoot } | undefined {
   const key = canonicalKey(cwd);
   for (const project of projects) {
-    const root = project.roots.find((candidate) => canonicalKey(candidate.path) === key);
+    const root = project.roots.find((candidate) => storedProjectRootIdentityKey(candidate) === key);
     if (root) return { project, root };
   }
   return undefined;
@@ -1035,19 +1139,13 @@ function checkedComparablePath(cwd: string): { path: string; key: string } {
   return { path, key: canonicalKey(path) };
 }
 
-function canonicalStoredPath(input: string): string {
-  if (!validAbsolutePath(input)) return resolve(input);
-  try {
-    const real = realpathSync(input);
-    return existsDirectory(real) ? realpathSync(resolveProjectRoot(real)) : real;
-  } catch {
-    return resolve(input);
-  }
-}
-
 function pathsOverlap(left: string, right: string): boolean {
   const a = canonicalKey(left);
   const b = canonicalKey(right);
+  return identityKeysOverlap(a, b);
+}
+
+function identityKeysOverlap(a: string, b: string): boolean {
   if (a === b) return true;
   const aToB = relative(a, b);
   const bToA = relative(b, a);

@@ -66,6 +66,7 @@ export interface AutomationWorkspaceDeps {
     rootId: string,
   ) => { cwd: string; trustCwd: string; workspaceContext: WorkspaceContext } | undefined;
   hasPersistedSessionCwd: (cwd: string) => boolean;
+  validatePersistedRoot?: (cwd: string) => void;
   isProjectTrusted: (cwd: string) => boolean;
   isNoRepoCwd: (cwd: string) => boolean;
   isDirectory: (cwd: string) => boolean;
@@ -90,6 +91,11 @@ export function resolveAutomationWorkspace(
   if (!requestedCwd) {
     const cwd = deps.noRepoCwd();
     return { cwd, projectTrusted: false };
+  }
+  try {
+    deps.validatePersistedRoot?.(requestedCwd);
+  } catch {
+    return null;
   }
   let cwd: string;
   try {
@@ -145,6 +151,12 @@ function resolveDesktopAutomationWorkspace(
     },
     hasPersistedSessionCwd: (candidate) =>
       getSessionCwdIndex().resolveConfirmedCwds([candidate])[0] === true,
+    validatePersistedRoot: (candidate) => {
+      const validation = getProjectStore().validateRegisteredRootPathSync(candidate);
+      if (validation && validation.status !== "ok") {
+        throw new Error(validation.message ?? `project root status ${validation.status}`);
+      }
+    },
     isProjectTrusted: (candidate) => getTrustCachedSync(candidate) === "trusted",
     isNoRepoCwd: (candidate) => getProjectStore().isNoRepoCwd(candidate),
     isDirectory: existingDirectory,

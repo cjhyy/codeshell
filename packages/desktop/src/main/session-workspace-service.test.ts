@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "@cjhyy/code-shell-core";
@@ -189,6 +197,44 @@ describe("cleanupSessionWorktreeForUi", () => {
     );
     expect(persisted.workspaceMissing).toBeUndefined();
     expect(persisted.rootStatus).toBeUndefined();
+  });
+
+  test("derives root_replaced and denies Session FS after the mounted root is symlink-retargeted", async () => {
+    if (process.platform === "win32") return;
+    const outside = join(root, "retarget-outside");
+    mkdirSync(outside);
+    writeFileSync(join(outside, "secret.txt"), "outside\n");
+    const projectStore = await projectStoreForFixture(root, sessionsDir);
+    const project = await projectStore.createFromPath(repo);
+    __setSessionWorkspaceServiceProjectStoreForTests(projectStore);
+    const sessionId = "status-root-replaced";
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", sessionId);
+    bindSession(sessionsDir, sessionId, project.id, project.primaryRootId);
+    const legacySessionId = "status-root-replaced-legacy";
+    sm.create(repo, "m", "p", legacySessionId);
+
+    rmSync(repo, { recursive: true, force: true });
+    symlinkSync(outside, repo, "dir");
+
+    await expect(getSessionWorkspaceAuthorityForUi(sessionId)).resolves.toMatchObject({
+      projectId: project.id,
+      mainRootId: project.primaryRootId,
+      rootStatus: "root_replaced",
+      rootStatusReason: "identity_mismatch",
+    });
+    await expect(getSessionWorkspaceAuthorityForUi(legacySessionId)).resolves.toMatchObject({
+      projectId: null,
+      mainRootId: null,
+      rootStatus: "root_replaced",
+      rootStatusReason: "identity_mismatch",
+    });
+    await expect(readSessionDirectoryForUi(sessionId, project.primaryRootId)).rejects.toThrow(
+      /root_replaced/,
+    );
+    await expect(
+      readSessionFileForUi(sessionId, project.primaryRootId, join(repo, "secret.txt")),
+    ).rejects.toThrow(/root_replaced/);
   });
 
   test("authorizes FilesPanel worktree and secondary reads by Session binding and rejects escapes", async () => {

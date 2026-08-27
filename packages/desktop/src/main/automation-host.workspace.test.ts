@@ -77,6 +77,25 @@ describe("resolveAutomationWorkspace", () => {
     ).toBeNull();
   });
 
+  test("stops a legacy job before folding when its registered mount identity was replaced", () => {
+    let validated: string | undefined;
+    expect(
+      resolveAutomationWorkspace(
+        { cwd: "/retargeted-root" },
+        {
+          ...deps(),
+          foldProjectRoot: () => "/outside",
+          hasPersistedSessionCwd: (cwd) => cwd === "/outside",
+          validatePersistedRoot: (cwd) => {
+            validated = cwd;
+            throw new Error("project root status root_replaced");
+          },
+        },
+      ),
+    ).toBeNull();
+    expect(validated).toBe("/retargeted-root");
+  });
+
   test("prefers stable ids, ignores stale cwd, and remains bound across make-primary", () => {
     expect(
       resolveAutomationWorkspace(
