@@ -451,6 +451,56 @@ describe("SwitchSessionWorkspace bridge tool", () => {
     expect(out).toContain("next turn");
   });
 
+  test("keeps an explicit bridge usable beside multi-root workspace authority", async () => {
+    let bridgeTarget = "";
+    const switched = { root: "/repo", kind: "main" as const };
+    const out = await switchSessionWorkspaceTool({ target: "main" }, {
+      cwd: "/repo",
+      workspace: {
+        version: 1,
+        projectId: "project-1",
+        projectRevision: 1,
+        sessionMainRootId: "main",
+        rootsDigest: "trusted-by-host",
+        roots: [
+          { id: "main", path: "/repo", role: "primary" },
+          { id: "docs", path: "/docs", role: "secondary" },
+        ],
+      },
+      workspaceBridge: {
+        switch: async (target: string) => {
+          bridgeTarget = target;
+          return switched;
+        },
+      },
+    } as unknown as ToolContext);
+
+    expect(bridgeTarget).toBe("main");
+    expect(out).toContain("Switched session workspace");
+  });
+
+  test("never treats multi-root workspace authority as a legacy executable bridge", async () => {
+    let called = false;
+    const out = await switchSessionWorkspaceTool({ target: "main" }, {
+      cwd: "/repo",
+      workspace: {
+        version: 1,
+        projectId: "project-1",
+        projectRevision: 1,
+        sessionMainRootId: "main",
+        rootsDigest: "trusted-by-host",
+        roots: [{ id: "main", path: "/repo", role: "primary" }],
+        switch: async () => {
+          called = true;
+          return { root: "/repo", kind: "main" as const };
+        },
+      },
+    } as unknown as ToolContext);
+
+    expect(called).toBe(false);
+    expect(out).toContain("not available");
+  });
+
   test("tool description tells the model when to use it", () => {
     expect(switchSessionWorkspaceToolDef.description).toContain("isolated");
     expect(switchSessionWorkspaceToolDef.description).toContain("parallel");

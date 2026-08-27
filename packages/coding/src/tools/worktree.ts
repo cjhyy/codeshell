@@ -52,7 +52,7 @@ export async function switchSessionWorkspaceTool(
 ): Promise<string> {
   const target = stringArg(args.target);
   if (!target) return "Error: target is required";
-  const bridge = ctx?.workspaceBridge;
+  const bridge = workspaceBridgeForContext(ctx);
   if (!bridge) {
     return (
       "SwitchSessionWorkspace is not available in this host. " +
@@ -76,6 +76,23 @@ export async function switchSessionWorkspaceTool(
   } catch (err) {
     return `Error: switching workspace failed: ${(err as Error).message}`;
   }
+}
+
+function workspaceBridgeForContext(
+  ctx?: ToolContext,
+): NonNullable<ToolContext["workspaceBridge"]> | undefined {
+  if (ctx?.workspaceBridge) return ctx.workspaceBridge;
+
+  // Before multi-root authority landed, the host bridge occupied `workspace`.
+  // Keep those single-root hosts and injected harnesses working, but never
+  // interpret a versioned/root-bearing WorkspaceContext as an executable bridge.
+  const legacy = ctx?.workspace as unknown;
+  if (!legacy || typeof legacy !== "object") return undefined;
+  if ("version" in legacy || "roots" in legacy || "projectId" in legacy) return undefined;
+  const candidate = legacy as { switch?: unknown };
+  return typeof candidate.switch === "function"
+    ? (candidate as NonNullable<ToolContext["workspaceBridge"]>)
+    : undefined;
 }
 
 export const enterWorktreeToolDef: ToolDefinition = {

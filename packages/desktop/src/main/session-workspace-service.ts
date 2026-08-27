@@ -1,12 +1,7 @@
 import { statSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
-import {
-  createWorkspaceContext,
-  SessionManager,
-  SettingsManager,
-  type SessionWorkspace,
-} from "@cjhyy/code-shell-core";
-import { canonicalKey } from "@cjhyy/code-shell-core/internal";
+import { SessionManager, SettingsManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
+import { canonicalKey, createWorkspaceContext } from "@cjhyy/code-shell-core/internal";
 import {
   createWorktree,
   currentBranch,

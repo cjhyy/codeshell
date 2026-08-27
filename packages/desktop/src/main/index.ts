@@ -313,7 +313,6 @@ import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
-import { createLegacyProjectMigrationService } from "./legacy-project-migration.js";
 import {
   getGitStatus,
   getGitBranches,
@@ -469,6 +468,7 @@ import {
 } from "./updater.js";
 import { loadRecents, loadProjects } from "./recents-store.js";
 import { getProjectStore } from "./project-store.js";
+import { registerProjectAuthorityIpc } from "./project-authority-ipc.js";
 import { reviewService } from "./review-service.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import {
@@ -508,18 +508,6 @@ import {
   registerSecondInstanceFocus,
   runOwnedQuickChatStartupCleanup,
 } from "./quick-chat-startup-cleanup.js";
-import {
-  cleanupSessionWorktreeForUi,
-  getSessionWorktreeDiffForUi,
-  getSessionWorkspaceAuthorityForUi,
-  getSessionWorkspaceForUi,
-  listSessionWorktreesForUi,
-  releaseManySessionWorkspacesForUi,
-  releaseSessionWorkspaceForUi,
-  requireUsableSessionRootAuthority,
-  switchSessionWorkspaceForUi,
-  type WorkspaceCleanupAction,
-} from "./session-workspace-service.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import {
   readSessionDirectoryForUi,
@@ -832,16 +820,6 @@ function normalizeMcpOAuthLoginInput(raw: unknown): McpOAuthLoginInput {
   };
 }
 
-function broadcastWorkspaceChanged(payload: {
-  sessionId: string;
-  workspace?: unknown;
-  mainRoot?: string;
-}): void {
-  for (const w of BrowserWindow.getAllWindows()) {
-    if (!w.isDestroyed()) w.webContents.send("workspace:changed", payload);
-  }
-}
-
 function broadcastPluginCommandsChanged(windows: Iterable<BrowserWindow>): void {
   for (const window of windows) {
     if (!window.isDestroyed()) window.webContents.send("plugin-commands:changed");
@@ -1057,10 +1035,6 @@ const transcriptSubscriptions = new TranscriptSubscriptionManager({
 // renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
 // see mobile-remote-orchestrator.ts.
 const projectStore = getProjectStore();
-const legacyProjectMigration = createLegacyProjectMigrationService({
-  store: projectStore,
-  pickDirectory: pickProjectDirectory,
-});
 const mobileOrchestrator = new MobileRemoteOrchestrator({
   remote: mobileRemote,
   uploads: mobileUploads,
@@ -5391,142 +5365,23 @@ ipcMain.handle(
   },
 );
 
-async function pickProjectDirectory(): Promise<string | null> {
-  const result = await dialog.showOpenDialog({
-    title: "选择项目目录",
-    properties: ["openDirectory", "createDirectory"],
-  });
-  if (result.canceled || result.filePaths.length === 0) return null;
-  await applyGitPathFromSettings();
-  return result.filePaths[0] ?? null;
-}
+const knownGitRoots = new Set<string>();
 
-async function broadcastProjectRegistry(): Promise<void> {
-  const projects = await projectStore.list();
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) window.webContents.send("projectRegistry:changed", projects);
-  }
-  await mobileOrchestrator.broadcastProjects();
-}
-
-ipcMain.handle("projectRegistry:list", async () => projectStore.list());
-ipcMain.handle("projectRegistry:sessionMainRoots", async (_event, projectId: string) =>
-  projectStore.sessionMainRoots(projectId),
-);
-ipcMain.handle("projectRegistry:createFromPicker", async () => {
-  const picked = await pickProjectDirectory();
-  if (!picked) return null;
-  const project = await projectStore.createFromPath(picked);
-  await broadcastProjectRegistry();
-  return project;
-});
-ipcMain.handle("projectRegistry:addRootFromPicker", async (_event, projectId: string) => {
-  const picked = await pickProjectDirectory();
-  if (!picked) return null;
-  const result = await projectStore.addRoot(projectId, picked);
-  await broadcastProjectRegistry();
-  return result;
-});
-ipcMain.handle("projectRegistry:removeRoot", async (_event, projectId: string, rootId: string) => {
-  const project = await projectStore.removeRoot(projectId, rootId);
-  await broadcastProjectRegistry();
-  return project;
-});
-ipcMain.handle(
-  "projectRegistry:migrateSessionMainRoot",
-  async (_event, sessionId: string, targetRootId: string) => {
-    assertDesktopSessionId(sessionId);
-    if (typeof targetRootId !== "string" || !targetRootId || targetRootId.length > 512) {
-      throw new Error("target root id is required");
-    }
-    const currentBridge = bridge;
-    const migrated = await projectStore.migrateSessionMainRoot(sessionId, targetRootId, {
-      owner: currentBridge
-        ? {
-            migrate: async ({ sessionId: id, projectId, mainRootId, mainRoot, workspaceContext }) =>
-              currentBridge.migrateSessionMainRoot(id, { projectId, mainRootId }, mainRoot, {
-                workspaceContext,
-                projectTrusted: (await getTrust(mainRoot)) === "trusted",
-              }),
-            complete: ({ sessionId: id, ownershipToken }) =>
-              currentBridge.completeSessionMainRootMigration(id, ownershipToken),
-          }
-        : undefined,
-    });
-    broadcastWorkspaceChanged({
-      sessionId,
-      workspace: migrated.workspace,
-      mainRoot: migrated.mainRoot,
-    });
-    return migrated;
-  },
-);
-ipcMain.handle("projectRegistry:setPrimary", async (_event, projectId: string, rootId: string) => {
-  const root = await requireRendererProjectRoot(projectId, rootId);
-  if ((await getTrust(root.path)) !== "trusted") {
-    throw new Error("project root must be trusted before it can become primary");
-  }
-  const project = await projectStore.setPrimary(projectId, rootId);
-  await broadcastProjectRegistry();
-  return project;
-});
-ipcMain.handle("projectRegistry:revealRoot", async (_event, projectId: string, rootId: string) => {
-  const root = await requireRendererProjectRoot(projectId, rootId);
-  await revealInFinder(root.path, root.path);
-});
-ipcMain.handle("projectRegistry:openRoot", async (_event, projectId: string, rootId: string) => {
-  const root = await requireRendererProjectRoot(projectId, rootId);
-  return openPath(root.path, root.path);
-});
-ipcMain.handle("projectRegistry:rename", async (_event, projectId: string, name: string) => {
-  const project = await projectStore.rename(projectId, name);
-  await broadcastProjectRegistry();
-  return project;
-});
-ipcMain.handle("projectRegistry:setPinned", async (_event, projectId: string, pinned: boolean) => {
-  const project = await projectStore.setPinned(projectId, pinned);
-  await broadcastProjectRegistry();
-  return project;
-});
-ipcMain.handle("projectRegistry:remove", async (_event, projectId: string) => {
-  await projectStore.remove(projectId);
-  await broadcastProjectRegistry();
-});
-ipcMain.handle(
-  "projectRegistry:resolveForCwd",
-  async (_event, cwd: string, source: "disk-rebuild" | "automation-import" | "live") => {
-    const resolution = await projectStore.resolveProjectForCwd(cwd, source);
-    if (resolution && "created" in resolution && resolution.created) {
-      await broadcastProjectRegistry();
-    }
-    return resolution;
-  },
-);
-ipcMain.handle(
-  "projectRegistry:resolveForCwdBatch",
-  async (_event, cwds: string[], source: "disk-rebuild" | "automation-import" | "live") => {
-    const resolutions = await projectStore.resolveProjectForCwdBatch(cwds, source);
-    if (
-      resolutions.some((resolution) => resolution && "created" in resolution && resolution.created)
-    ) {
-      await broadcastProjectRegistry();
-    }
-    return resolutions;
-  },
-);
-ipcMain.handle("projectRegistry:beginLegacyMigration", async (_event, paths: string[]) =>
-  legacyProjectMigration.begin(paths),
-);
-ipcMain.handle(
-  "projectRegistry:authorizeLegacyMigration",
-  async (_event, token: string, path: string) => {
-    const result = await legacyProjectMigration.authorizePath(token, path);
-    if (result.status === "migrated") await broadcastProjectRegistry();
-    return result;
-  },
-);
-ipcMain.handle("projectRegistry:completeLegacyMigration", async (_event, token: string) => {
-  await legacyProjectMigration.complete(token);
+registerProjectAuthorityIpc({
+  ipcMain,
+  getAllWindows: () => BrowserWindow.getAllWindows(),
+  showOpenDialog: (options) => dialog.showOpenDialog(options),
+  applyGitPathFromSettings,
+  projectStore,
+  getBridge: () => bridge,
+  getTrust,
+  assertSessionId: assertDesktopSessionId,
+  trackGitRoot: (root) => knownGitRoots.add(root),
+  broadcastMobileProjects: () => mobileOrchestrator.broadcastProjects(),
+  getGitStatus,
+  getGitBranches,
+  revealInFinder,
+  openPath,
 });
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
@@ -6242,16 +6097,13 @@ ipcMain.handle("git:projectSwitchBranch", async (_e, projectId: string, branch: 
   return switchGitBranch(path, branch);
 });
 
-ipcMain.handle(
-  "git:projectStashAndSwitchBranch",
-  async (_e, projectId: string, branch: string) => {
-    if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
-      throw new Error("git:projectStashAndSwitchBranch requires a bounded branch");
-    }
-    const { path } = await requireRendererProjectPrimary(projectId);
-    return stashAndSwitchGitBranch(path, branch);
-  },
-);
+ipcMain.handle("git:projectStashAndSwitchBranch", async (_e, projectId: string, branch: string) => {
+  if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
+    throw new Error("git:projectStashAndSwitchBranch requires a bounded branch");
+  }
+  const { path } = await requireRendererProjectPrimary(projectId);
+  return stashAndSwitchGitBranch(path, branch);
+});
 
 ipcMain.handle("review:status", async (_e, sessionId: string) => {
   assertDesktopSessionId(sessionId);
@@ -6301,8 +6153,6 @@ ipcMain.handle("git:setPrefs", async (_e, prefs: MainGitPrefs) => {
   dlog("main", "git.prefs.updated", { ...gitPrefsCache });
 });
 
-const knownGitRoots = new Set<string>();
-
 function broadcastWorktreeCleanupSkipped(
   root: string,
   skipped: StaleWorktreeCleanupSkipped[],
@@ -6345,157 +6195,6 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
     }
   }
 }
-
-ipcMain.handle("workspace:current", async (_e, sessionId: string, cwd: string) => {
-  assertDesktopSessionId(sessionId);
-  if (typeof cwd !== "string" || !cwd) throw new Error("workspace:current requires cwd");
-  return await getSessionWorkspaceForUi(sessionId, cwd);
-});
-
-ipcMain.handle("workspace:authority", async (_e, sessionId: string) => {
-  assertDesktopSessionId(sessionId);
-  return getSessionWorkspaceAuthorityForUi(sessionId);
-});
-
-ipcMain.handle("workspace:gitStatus", async (_e, sessionId: string) => {
-  assertDesktopSessionId(sessionId);
-  const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
-  requireUsableSessionRootAuthority(authority);
-  knownGitRoots.add(authority.mainRoot);
-  return getGitStatus(authority.mainRoot);
-});
-
-ipcMain.handle("workspace:gitBranches", async (_e, sessionId: string) => {
-  assertDesktopSessionId(sessionId);
-  const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
-  requireUsableSessionRootAuthority(authority);
-  knownGitRoots.add(authority.mainRoot);
-  return getGitBranches(authority.mainRoot);
-});
-
-ipcMain.handle("workspace:profiles", async (_e, sessionId: string) => {
-  assertDesktopSessionId(sessionId);
-  const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
-  requireUsableSessionRootAuthority(authority);
-  return listProfiles(authority.mainRoot);
-});
-
-ipcMain.handle("workspace:list", async (_e, sessionId: string, cwd: string) => {
-  assertDesktopSessionId(sessionId);
-  if (typeof cwd !== "string" || !cwd) throw new Error("workspace:list requires cwd");
-  const list = await listSessionWorktreesForUi(sessionId, cwd);
-  knownGitRoots.add(list.mainRoot);
-  return list;
-});
-
-ipcMain.handle("workspace:diff", async (_e, sessionId: string, worktreePath: string) => {
-  assertDesktopSessionId(sessionId);
-  if (
-    typeof worktreePath !== "string" ||
-    !worktreePath ||
-    worktreePath.length > 32_768 ||
-    worktreePath.includes("\0")
-  ) {
-    throw new Error("workspace:diff requires worktreePath");
-  }
-  return await getSessionWorktreeDiffForUi(sessionId, worktreePath);
-});
-
-ipcMain.handle("workspace:switch", async (_e, sessionId: string, cwd: string, target: string) => {
-  assertDesktopSessionId(sessionId);
-  if (typeof cwd !== "string" || !cwd) throw new Error("workspace:switch requires cwd");
-  if (
-    typeof target !== "string" ||
-    !target.trim() ||
-    target.length > 32_768 ||
-    target.includes("\0")
-  ) {
-    throw new Error("workspace:switch requires target");
-  }
-  const currentBridge = bridge;
-  const list = await switchSessionWorkspaceForUi(sessionId, cwd, target, {
-    setLiveWorkspace:
-      currentBridge?.hasLiveWorker() && currentBridge.hasKnownSession(sessionId)
-        ? (id, workspace) => currentBridge.setWorkspace(id, workspace)
-        : undefined,
-  });
-  knownGitRoots.add(list.mainRoot);
-  broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
-  return list;
-});
-
-ipcMain.handle("workspace:release", async (_e, sessionId: string) => {
-  assertDesktopSessionId(sessionId);
-  const currentBridge = bridge;
-  const released = await releaseSessionWorkspaceForUi(sessionId, {
-    releaseLiveWorkspace:
-      currentBridge && currentBridge.hasKnownSession(sessionId)
-        ? (id) => currentBridge.releaseWorkspace(id)
-        : undefined,
-  });
-  if (released.status === "released") {
-    broadcastWorkspaceChanged({ sessionId, workspace: released.workspace });
-  }
-  return released;
-});
-
-ipcMain.handle("workspace:releaseMany", async (_e, sessionIds: string[]) => {
-  if (!Array.isArray(sessionIds) || sessionIds.length > 500) {
-    throw new Error("workspace:releaseMany requires sessionIds");
-  }
-  for (const id of sessionIds) assertDesktopSessionId(id);
-  const ids = [...new Set(sessionIds)];
-  const currentBridge = bridge;
-  const released = await releaseManySessionWorkspacesForUi(ids, {
-    releaseLiveWorkspace: currentBridge
-      ? async (id) => {
-          if (!currentBridge.hasKnownSession(id)) return;
-          await currentBridge.releaseWorkspace(id);
-        }
-      : undefined,
-  });
-  for (const item of released) {
-    if (item.status === "released") {
-      broadcastWorkspaceChanged({ sessionId: item.sessionId, workspace: item.workspace });
-    }
-  }
-  return released;
-});
-
-ipcMain.handle(
-  "workspace:cleanup",
-  async (
-    _e,
-    sessionId: string,
-    cwd: string,
-    worktreePath: string,
-    action: WorkspaceCleanupAction,
-  ) => {
-    assertDesktopSessionId(sessionId);
-    if (typeof cwd !== "string" || !cwd) throw new Error("workspace:cleanup requires cwd");
-    if (
-      typeof worktreePath !== "string" ||
-      !worktreePath ||
-      worktreePath.length > 32_768 ||
-      worktreePath.includes("\0")
-    ) {
-      throw new Error("workspace:cleanup requires worktreePath");
-    }
-    if (action !== "detach" && action !== "discard") {
-      throw new Error("workspace:cleanup requires action detach or discard");
-    }
-    const currentBridge = bridge;
-    const list = await cleanupSessionWorktreeForUi(sessionId, cwd, worktreePath, action, {
-      setLiveWorkspace:
-        currentBridge?.hasLiveWorker() && currentBridge.hasKnownSession(sessionId)
-          ? (id, workspace) => currentBridge.setWorkspace(id, workspace)
-          : undefined,
-    });
-    knownGitRoots.add(list.mainRoot);
-    broadcastWorkspaceChanged({ sessionId, workspace: list.current, mainRoot: list.mainRoot });
-    return list;
-  },
-);
 
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
@@ -6649,11 +6348,7 @@ async function applyRendererSettingsSideEffects(
 ): Promise<void> {
   if ("git" in patch) void applyGitPathFromSettings();
   if (touchesExternalSessionVisibility(scope, patch)) await reconcileExternalAdapters?.();
-  if (
-    "disabledPanelApps" in patch ||
-    "panelAppBindings" in patch ||
-    "panelAppOverrides" in patch
-  ) {
+  if ("disabledPanelApps" in patch || "panelAppBindings" in patch || "panelAppOverrides" in patch) {
     broadcastPanelAppsChanged(mainWindows);
   }
   if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
@@ -6661,15 +6356,12 @@ async function applyRendererSettingsSideEffects(
   }
 }
 
-ipcMain.handle(
-  "settings:set",
-  async (_e, scope: SettingsScope, patch: Record<string, unknown>) => {
-    if (scope !== "user") throw new Error("settings:set is user-scoped");
-    validateRendererSettingsPatch(patch);
-    await writeSettings("user", patch);
-    await applyRendererSettingsSideEffects("user", patch);
-  },
-);
+ipcMain.handle("settings:set", async (_e, scope: SettingsScope, patch: Record<string, unknown>) => {
+  if (scope !== "user") throw new Error("settings:set is user-scoped");
+  validateRendererSettingsPatch(patch);
+  await writeSettings("user", patch);
+  await applyRendererSettingsSideEffects("user", patch);
+});
 ipcMain.handle(
   "settings:setConfiguration",
   async (_e, target: RendererConfigurationTarget, patch: Record<string, unknown>) => {

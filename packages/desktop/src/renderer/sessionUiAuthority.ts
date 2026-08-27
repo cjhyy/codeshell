@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 
 import type { RendererConfigurationTarget, SessionWorkspaceAuthority } from "../preload/types";
+import type { TrackedProject } from "./projects";
+import type { SessionIndex } from "./transcripts";
 
 export interface SessionUiAuthority {
   configurationTarget: RendererConfigurationTarget;
@@ -200,4 +202,49 @@ export function useSessionUiAuthority({
     requestKey,
     sessionId,
   ]);
+}
+
+interface ActiveSessionAuthorityParams {
+  activeProject: TrackedProject | null;
+  activeProjectId: string | null;
+  activeSessionId: string | null;
+  sessions: SessionIndex["sessions"];
+  noRepoCwd: string | null;
+  locallyCreatedSessionIds: MutableRefObject<Set<string>>;
+}
+
+export function useActiveSessionUiAuthority({
+  activeProject,
+  activeProjectId,
+  activeSessionId,
+  sessions,
+  noRepoCwd,
+  locallyCreatedSessionIds,
+}: ActiveSessionAuthorityParams) {
+  const activeSessionSummary = sessions.find((session) => session.id === activeSessionId) ?? null;
+  const activeEngineSessionId = activeSessionId
+    ? (activeSessionSummary?.engineSessionId ?? activeSessionId)
+    : null;
+  const projectAuthorityVersion = activeProject
+    ? `${activeProject.primaryRootId}\0${activeProject.roots
+        .map((root) => `${root.id}\0${root.path}`)
+        .join("\0")}`
+    : "";
+  const sessionUiAuthority = useSessionUiAuthority({
+    sessionId: activeEngineSessionId,
+    projectId: activeProjectId,
+    projectPrimaryRoot: activeProject?.path ?? null,
+    projectPrimaryRootId: activeProject?.primaryRootId ?? null,
+    projectAuthorityVersion,
+    noRepoCwd,
+    allowProjectFallback: activeEngineSessionId
+      ? locallyCreatedSessionIds.current.has(activeEngineSessionId)
+      : false,
+  });
+  useEffect(() => {
+    if (activeEngineSessionId && sessionUiAuthority.rootStatus === "ok") {
+      locallyCreatedSessionIds.current.delete(activeEngineSessionId);
+    }
+  }, [activeEngineSessionId, locallyCreatedSessionIds, sessionUiAuthority.rootStatus]);
+  return { activeSessionSummary, activeEngineSessionId, sessionUiAuthority };
 }

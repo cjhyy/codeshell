@@ -45,6 +45,7 @@ import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/p
 import type { PluginMediaAvailability, PluginMediaDto } from "../shared/plugin-media";
 import type { InstalledThemePack, ThemePickPreview } from "../shared/theme-packs";
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
+import type { ProjectAuthorityApi } from "./project-authority-types";
 import type {
   DigitalHumanProfileExportResult,
   DigitalHumanProfileImportCommitInput,
@@ -52,13 +53,6 @@ import type {
   DigitalHumanProfileImportPickResult,
 } from "../shared/digital-human-profile-transfer";
 import type { DigitalHumanTeam } from "../shared/digital-human-team";
-import type {
-  ReviewGitCommit,
-  ReviewGitDiffRequest,
-  ReviewGitDiffResult,
-  ReviewGitStatusResult,
-} from "../shared/review";
-
 export type {
   PanelAppBindInput,
   PanelAppDescriptor,
@@ -75,6 +69,16 @@ export type {
 };
 export type { ExpandedPluginCommand, PluginCommandDescriptor };
 export type { RendererConfigurationTarget };
+export type {
+  LocalProject,
+  LocalProjectRoot,
+  FileContent,
+  FsEntry,
+  ProjectCwdResolution,
+  ProjectResolveSource,
+  SessionWorkspaceAuthority,
+  WorkspaceReleaseResult,
+} from "./project-authority-types";
 export type { PluginMediaAvailability, PluginMediaDto };
 export type {
   ReviewGitCommit,
@@ -91,34 +95,6 @@ export type {
   DigitalHumanProfileImportPickResult,
   DigitalHumanProfileImportPreview,
 } from "../shared/digital-human-profile-transfer";
-
-export interface LocalProjectRoot {
-  id: string;
-  path: string;
-  canonicalIdentity?: string;
-  name: string;
-  addedAt: number;
-}
-
-export interface LocalProject {
-  id: string;
-  name: string;
-  displayName?: string;
-  roots: LocalProjectRoot[];
-  primaryRootId: string;
-  pinned?: boolean;
-  createdAt: number;
-  updatedAt: number;
-  lastOpenedAt: number;
-  deletedAt?: number;
-  revision: number;
-}
-
-export type ProjectResolveSource = "disk-rebuild" | "automation-import" | "live";
-export type ProjectCwdResolution =
-  | { projectId: string; rootId: string; created: boolean }
-  | { noRepo: true }
-  | null;
 
 export interface BrowserRuntimeHandoffStatus {
   granted: boolean;
@@ -614,21 +590,6 @@ export interface SessionWorkspaceList {
   worktrees: SessionWorkspaceWorktreeInfo[];
 }
 
-export interface SessionWorkspaceAuthority {
-  workspace: SessionWorkspace;
-  projectId: string | null;
-  mainRootId: string | null;
-  mainRoot: string;
-  mainRootName: string;
-  rootStatus: "ok" | "dir_missing" | "root_removed" | "root_replaced";
-  rootStatusReason?:
-    | "directory_missing"
-    | "project_missing"
-    | "root_not_mounted"
-    | "identity_mismatch";
-  rootStatusMessage?: string;
-}
-
 export interface WorkspaceProfileSummary {
   name: string;
   label: string;
@@ -646,11 +607,6 @@ export interface WorkspaceProfileSummary {
   version: string | undefined;
 }
 
-export type WorkspaceReleaseResult =
-  | { sessionId: string; ok: true; status: "released"; workspace: SessionWorkspace }
-  | { sessionId: string; ok: true; status: "missing"; reason: string }
-  | { sessionId: string; ok: false; status: "error"; error: string };
-
 export interface CreatedWorktree {
   path: string;
   name: string;
@@ -662,23 +618,6 @@ export interface InstalledSkill {
   name: string;
   targetDir: string;
   filePath: string;
-}
-
-/** One entry in the file-browser tree. */
-export interface FsEntry {
-  name: string;
-  /** Absolute path. */
-  path: string;
-  isDirectory: boolean;
-}
-
-/** A file's contents for the file-browser preview. */
-export interface FileContent {
-  path: string;
-  /** UTF-8 text, or null when binary / too large. */
-  text: string | null;
-  reason?: "too-large" | "binary";
-  size: number;
 }
 
 /** A stored credential (token/link/oauth/cookie) as edited in the renderer. */
@@ -1074,7 +1013,7 @@ export type ImGatewayUiEvent =
       conversation: DingTalkDiscoveredConversation;
     };
 
-export interface CodeshellApi {
+export interface CodeshellApi extends ProjectAuthorityApi {
   /** Read-only bounded Pet projection. */
   pet: PetApi;
   /** Main-process platform (`process.platform`), used for window chrome layout. */
@@ -1302,40 +1241,6 @@ export interface CodeshellApi {
   pickSkillDir(): Promise<{ path: string; name: string } | null>;
   pickGitBinary(): Promise<string | null>;
 
-  // Stable project-id Git actions and Session-scoped workspace Git reads.
-  getProjectGitStatus(projectId: string): Promise<GitStatus>;
-  getProjectGitBranches(projectId: string): Promise<GitBranches>;
-  switchProjectGitBranch(projectId: string, branch: string): Promise<GitBranches>;
-  stashAndSwitchProjectGitBranch(projectId: string, branch: string): Promise<GitBranches>;
-  getSessionWorkspace(sessionId: string, cwd: string): Promise<SessionWorkspace>;
-  getSessionWorkspaceAuthority(sessionId: string): Promise<SessionWorkspaceAuthority>;
-  getSessionGitStatus(sessionId: string): Promise<GitStatus>;
-  getSessionGitBranches(sessionId: string): Promise<GitBranches>;
-  /** Aggregate Git status across the authoritative repositories for this Session. */
-  getReviewStatus(sessionId: string): Promise<ReviewGitStatusResult>;
-  /** Aggregate a Review diff without accepting renderer-supplied roots or repository paths. */
-  getReviewDiff(sessionId: string, request: ReviewGitDiffRequest): Promise<ReviewGitDiffResult>;
-  /** Recent commits labeled with their authoritative mounted root and repository. */
-  getReviewRecentCommits(sessionId: string, limit?: number): Promise<ReviewGitCommit[]>;
-  listSessionProfiles(sessionId: string): Promise<WorkspaceProfileSummary[]>;
-  listSessionWorktrees(sessionId: string, cwd: string): Promise<SessionWorkspaceList>;
-  getSessionWorktreeDiff(sessionId: string, worktreePath: string): Promise<WorktreeDiffSummary>;
-  switchSessionWorkspace(
-    sessionId: string,
-    cwd: string,
-    target: string,
-  ): Promise<SessionWorkspaceList>;
-  releaseSessionWorkspace(sessionId: string): Promise<WorkspaceReleaseResult>;
-  releaseManySessionWorkspaces(sessionIds: string[]): Promise<WorkspaceReleaseResult[]>;
-  onWorkspaceChanged(
-    cb: (event: { sessionId: string; workspace?: SessionWorkspace; mainRoot?: string }) => void,
-  ): Unsubscribe;
-  cleanupSessionWorktree(
-    sessionId: string,
-    cwd: string,
-    worktreePath: string,
-    action: "detach" | "discard",
-  ): Promise<SessionWorkspaceList>;
   /**
    * Push Electron-local Git prefs (branch prefix, auto-cleanup) to
    * main. The renderer is the source of truth (localStorage); main
@@ -1371,17 +1276,6 @@ export interface CodeshellApi {
   ): () => void;
 
   // ── Filesystem — file-browser panel ───────────────────────────────────
-  /** List one directory level under an authoritative project root id. */
-  readProjectDir(projectId: string, rootId: string, dir?: string): Promise<FsEntry[]>;
-  /** Read a file under an authoritative project root id. */
-  readProjectFileContent(projectId: string, rootId: string, path: string): Promise<FileContent>;
-  /** Does a file exist under an authoritative project root id? */
-  projectFileExists(projectId: string, rootId: string, path: string): Promise<boolean>;
-  /** Session-scoped reads resolve mainRootId/current worktree in Main. */
-  readSessionDir(sessionId: string, rootId: string, dir?: string): Promise<FsEntry[]>;
-  readSessionFileContent(sessionId: string, rootId: string, path: string): Promise<FileContent>;
-  sessionFileExists(sessionId: string, rootId: string, path: string): Promise<boolean>;
-
   // ── Credentials module ────────────────────────────────────────────────
   mcpOAuth: {
     login(input: McpOAuthLoginInput): Promise<McpOAuthActionResult>;
@@ -2268,49 +2162,6 @@ export interface CodeshellApi {
     setupScripts: boolean;
   }>;
   recents(): Promise<{ path: string; name: string; lastOpenedAt: number }[]>;
-  projectRegistry: {
-    list(): Promise<LocalProject[]>;
-    sessionMainRoots(projectId: string): Promise<Record<string, string[]>>;
-    createFromPicker(): Promise<LocalProject | null>;
-    addRootFromPicker(
-      projectId: string,
-    ): Promise<{ project: LocalProject; folded?: { picked: string; root: string } } | null>;
-    removeRoot(projectId: string, rootId: string): Promise<LocalProject>;
-    migrateSessionMainRoot(
-      sessionId: string,
-      targetRootId: string,
-    ): Promise<{
-      sessionId: string;
-      projectId: string;
-      previousMainRootId: string;
-      targetRootId: string;
-      mainRoot: string;
-      workspace: SessionWorkspace;
-    }>;
-    setPrimary(projectId: string, rootId: string): Promise<LocalProject>;
-    revealRoot(projectId: string, rootId: string): Promise<void>;
-    openRoot(projectId: string, rootId: string): Promise<string>;
-    rename(projectId: string, name: string): Promise<LocalProject>;
-    setPinned(projectId: string, pinned: boolean): Promise<LocalProject>;
-    remove(projectId: string): Promise<void>;
-    resolveForCwd(cwd: string, source: ProjectResolveSource): Promise<ProjectCwdResolution>;
-    resolveForCwdBatch(
-      cwds: string[],
-      source: ProjectResolveSource,
-    ): Promise<ProjectCwdResolution[]>;
-    beginLegacyMigration(paths: string[]): Promise<{ completed: boolean; token?: string }>;
-    authorizeLegacyMigration(
-      token: string,
-      path: string,
-    ): Promise<{
-      path: string;
-      status: "migrated" | "reauthorization_required" | "failed";
-      project?: LocalProject;
-      error?: string;
-    }>;
-    completeLegacyMigration(token: string): Promise<void>;
-    onChanged(cb: (projects: LocalProject[]) => void): Unsubscribe;
-  };
   notify(opts: { title: string; body?: string; subtitle?: string }): Promise<void>;
   isWindowFullscreen(): Promise<boolean>;
   onWindowFullscreenChange(cb: (state: { fullscreen: boolean }) => void): Unsubscribe;

@@ -19,20 +19,19 @@ export {
 } from "./utils/intl.js";
 
 export { env } from "./utils/env.js";
-export { canonicalKey, canonicalPath } from "./workspace/canonical-key.js";
 export {
+  canonicalKey,
+  canonicalPath,
   computeWorkspaceRootsDigest,
   createWorkspaceContext,
   legacySingleRootWorkspace,
   validateWorkspaceContext,
   workspacePrimaryRoot,
-} from "./workspace/workspace-context.js";
-export type {
-  ProjectId,
-  ProjectRootContext,
-  ProjectRootId,
-  WorkspaceContext,
-  WorkspaceContextInput,
+  type ProjectId,
+  type ProjectRootContext,
+  type ProjectRootId,
+  type WorkspaceContext,
+  type WorkspaceContextInput,
 } from "./workspace/workspace-context.js";
 export { default as sliceAnsi } from "./utils/sliceAnsi.js";
 export { execFileNoThrow } from "./utils/execFileNoThrow.js";
@@ -101,7 +100,6 @@ export {
   type NotificationItem,
 } from "./tool-system/builtin/agent-notifications.js";
 export { backgroundJobRegistry } from "./tool-system/builtin/background-jobs.js";
-export type { BackgroundAgentCompletedEvent } from "./types.js";
 export {
   startAutomation,
   type StartAutomationDeps,
@@ -198,7 +196,13 @@ export { type ProviderConfig } from "./llm/provider-catalog.js";
 
 // ─── Extended host types ─────────────────────────────────────────
 
-export type { ApprovalRequest, ApprovalResult, ApprovalScope, TaskInfo } from "./types.js";
+export type {
+  ApprovalRequest,
+  ApprovalResult,
+  ApprovalScope,
+  BackgroundAgentCompletedEvent,
+  TaskInfo,
+} from "./types.js";
 export { fileCache } from "./tool-system/builtin/file-cache.js";
 export { validateToolArgs } from "./tool-system/validation.js";
 export { createOffBackend } from "./tool-system/sandbox/off.js";

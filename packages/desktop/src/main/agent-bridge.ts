@@ -55,8 +55,8 @@ import {
   type MigrateSessionMainRootResult,
   type SessionProjectBinding,
   type SessionWorkspace,
-  type WorkspaceContext,
 } from "@cjhyy/code-shell-core";
+import type { WorkspaceContext } from "@cjhyy/code-shell-core/internal";
 import {
   PET_REPORT_TO_MIMI_METHOD,
   type PetProjectionDelta,

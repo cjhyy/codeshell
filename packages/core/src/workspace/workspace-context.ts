@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { isAbsolute, relative, sep } from "node:path";
 import { canonicalKey, canonicalPath } from "./canonical-key.js";
 
+export { canonicalKey, canonicalPath };
+
 export type ProjectId = string;
 export type ProjectRootId = string;
 

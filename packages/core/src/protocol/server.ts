@@ -27,10 +27,6 @@ import {
   type SteerParams,
   type UnsteerParams,
   type GoalUpdateParams,
-  type SetWorkspaceParams,
-  type MigrateSessionMainRootParams,
-  type CompleteSessionMainRootMigrationParams,
-  type MigrateSessionMainRootResult,
   type PluginCommandsListParams,
   type PluginCommandExpandParams,
   type PendingApprovalMetadata,
@@ -79,8 +75,7 @@ import { compileComposition } from "../composition/compiler.js";
 import { attachProtocolContributions } from "../composition/protocol-attach.js";
 import type { ResolvedComposition } from "../composition/types.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
-import { validateWorkspaceContext, workspacePrimaryRoot } from "../workspace/workspace-context.js";
-import { canonicalKey } from "../workspace/canonical-key.js";
+import { SessionWorkspaceRpcHandlers } from "./session-workspace-rpc.js";
 import {
   describePluginCommands,
   expandPluginCommandBody,
@@ -608,6 +603,7 @@ export class AgentServer {
    */
   private bgAgentBusUnsubscribe: (() => void) | null = null;
   private readonly wakeupsInFlight = new Set<string>();
+  private readonly sessionWorkspaceRpc: SessionWorkspaceRpcHandlers;
 
   /**
    * Effective session manager for the connection this server serves. Without
@@ -655,6 +651,15 @@ export class AgentServer {
     }
 
     this.transport = options.transport;
+    this.sessionWorkspaceRpc = new SessionWorkspaceRpcHandlers({
+      transport: this.transport,
+      getChatManager: () => this.chatManager,
+      getLegacyEngine: () => this.legacyEngine,
+      getLastSlice: (sessionId) => this.lastSliceBySession.get(sessionId),
+      rememberSessionSlice: (sessionId, slice) => this.rememberSessionSlice(sessionId, slice),
+      wireInteractiveSession: (session, sessionId) =>
+        this.wireInteractiveSession(session, sessionId),
+    });
 
     // Protocol surface from the compiled composition. Each contributing
     // module may attach one observer; the server calls them at every
@@ -1032,16 +1037,16 @@ export class AgentServer {
         await this.handleCloseSession(req);
         break;
       case Methods.ReleaseWorkspace:
-        this.handleReleaseWorkspace(req);
+        this.sessionWorkspaceRpc.release(req);
         break;
       case Methods.SetWorkspace:
-        this.handleSetWorkspace(req);
+        this.sessionWorkspaceRpc.set(req);
         break;
       case Methods.MigrateSessionMainRoot:
-        await this.handleMigrateSessionMainRoot(req);
+        await this.sessionWorkspaceRpc.migrateMainRoot(req);
         break;
       case Methods.CompleteSessionMainRootMigration:
-        this.handleCompleteSessionMainRootMigration(req);
+        this.sessionWorkspaceRpc.completeMainRootMigration(req);
         break;
       case Methods.GoalExtend:
         this.handleGoalExtend(req);
@@ -2588,237 +2593,6 @@ export class AgentServer {
     // are kept for the panel, so explicit teardown is where they're released.
     backgroundJobRegistry.dropForSession(params.sessionId);
     this.transport.send(createResponse(req.id, { ok: true }));
-  }
-
-  // ─── ReleaseWorkspace ──────────────────────────────────────────
-
-  private handleReleaseWorkspace(req: RpcRequest): void {
-    const params = (req.params ?? {}) as unknown as import("./types.js").ReleaseWorkspaceParams;
-    if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
-      );
-      return;
-    }
-    if (this.chatManager) {
-      const session = this.chatManager.get(params.sessionId);
-      if (!session) {
-        this.transport.send(createResponse(req.id, { ok: true, workspace: null }));
-        return;
-      }
-      const engine = session.engine as Engine & {
-        releaseSessionWorkspace?: (
-          sessionId: string,
-        ) => import("../types.js").SessionWorkspace | null;
-      };
-      const workspace = engine.releaseSessionWorkspace?.(params.sessionId) ?? null;
-      this.transport.send(createResponse(req.id, { ok: true, workspace }));
-      return;
-    }
-    const engine = this.legacyEngine as
-      | (Engine & {
-          releaseSessionWorkspace?: (
-            sessionId: string,
-          ) => import("../types.js").SessionWorkspace | null;
-        })
-      | null;
-    const workspace = engine?.releaseSessionWorkspace?.(params.sessionId) ?? null;
-    this.transport.send(createResponse(req.id, { ok: true, workspace }));
-  }
-
-  private handleSetWorkspace(req: RpcRequest): void {
-    const params = (req.params ?? {}) as unknown as SetWorkspaceParams;
-    if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
-      );
-      return;
-    }
-    if (
-      !params.workspace ||
-      typeof params.workspace !== "object" ||
-      typeof params.workspace.root !== "string" ||
-      params.workspace.root.length === 0 ||
-      (params.workspace.kind !== "main" && params.workspace.kind !== "worktree")
-    ) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "valid workspace is required"),
-      );
-      return;
-    }
-    const engine = this.chatManager
-      ? this.chatManager.get(params.sessionId)?.engine
-      : this.legacyEngine;
-    if (!engine) {
-      this.transport.send(createResponse(req.id, { ok: true, workspace: null }));
-      return;
-    }
-    const workspace = (
-      engine as Engine & {
-        setSessionWorkspace?: (
-          sessionId: string,
-          workspace: import("../types.js").SessionWorkspace,
-        ) => import("../types.js").SessionWorkspace | null;
-      }
-    ).setSessionWorkspace?.(params.sessionId, params.workspace);
-    this.transport.send(
-      createResponse(req.id, {
-        ok: workspace !== undefined && workspace !== null,
-        workspace: workspace ?? null,
-      }),
-    );
-  }
-
-  private async handleMigrateSessionMainRoot(req: RpcRequest): Promise<void> {
-    const params = (req.params ?? {}) as unknown as MigrateSessionMainRootParams;
-    if (
-      typeof params.sessionId !== "string" ||
-      params.sessionId.length === 0 ||
-      !params.project ||
-      typeof params.project.projectId !== "string" ||
-      params.project.projectId.length === 0 ||
-      typeof params.project.mainRootId !== "string" ||
-      params.project.mainRootId.length === 0 ||
-      typeof params.mainRoot !== "string" ||
-      params.mainRoot.length === 0 ||
-      typeof params.projectTrusted !== "boolean" ||
-      typeof params.ownershipToken !== "string" ||
-      params.ownershipToken.length === 0 ||
-      params.ownershipToken.length > 128
-    ) {
-      this.transport.send(
-        createErrorResponse(
-          req.id,
-          ErrorCodes.InvalidParams,
-          "valid Session root migration is required",
-        ),
-      );
-      return;
-    }
-    let workspaceContext: import("../workspace/workspace-context.js").WorkspaceContext;
-    try {
-      workspaceContext = validateWorkspaceContext(params.workspaceContext);
-      const primary = workspacePrimaryRoot(workspaceContext);
-      if (
-        workspaceContext.projectId !== params.project.projectId ||
-        workspaceContext.sessionMainRootId !== params.project.mainRootId ||
-        canonicalKey(primary.path) !== canonicalKey(params.mainRoot)
-      ) {
-        throw new Error("migration target authority does not match the requested root");
-      }
-    } catch (error) {
-      this.transport.send(
-        createErrorResponse(
-          req.id,
-          ErrorCodes.InvalidParams,
-          error instanceof Error ? error.message : "valid target authority is required",
-        ),
-      );
-      return;
-    }
-    let engine: Engine | null | undefined;
-    let residentSession: ChatSession | undefined;
-    if (this.chatManager) {
-      const ownership = this.chatManager.beginSessionMigration(
-        params.sessionId,
-        params.ownershipToken,
-      );
-      if (ownership.status === "not-resident") {
-        this.transport.send(
-          createResponse(req.id, {
-            status: "not-resident",
-            ownershipToken: ownership.ownershipToken,
-          } satisfies MigrateSessionMainRootResult),
-        );
-        return;
-      }
-      if (ownership.status === "failed") {
-        this.transport.send(
-          createResponse(req.id, {
-            status: "failed",
-            error: ownership.error,
-          } satisfies MigrateSessionMainRootResult),
-        );
-        return;
-      }
-      residentSession = ownership.session;
-      engine = residentSession.engine;
-    } else {
-      engine = this.legacyEngine;
-    }
-    if (!engine) {
-      this.transport.send(
-        createResponse(req.id, {
-          status: "failed",
-          error: "Session migration owner is unavailable",
-        } satisfies MigrateSessionMainRootResult),
-      );
-      return;
-    }
-    try {
-      const workspace = residentSession
-        ? await this.chatManager!.migrateResidentSessionMainRoot(params.sessionId, {
-            project: params.project,
-            mainRoot: params.mainRoot,
-            workspaceContext,
-            projectTrusted: params.projectTrusted,
-          })
-        : (
-            engine as Engine & {
-              migrateSessionMainRoot?: (
-                sessionId: string,
-                project: import("../types.js").SessionProjectBinding,
-                mainRoot: string,
-              ) => import("../types.js").SessionWorkspace | null;
-            }
-          ).migrateSessionMainRoot?.(params.sessionId, params.project, params.mainRoot);
-      if (!workspace) throw new Error(`Session ${params.sessionId} migration was not committed`);
-      if (residentSession) {
-        this.rememberSessionSlice(params.sessionId, {
-          ...(this.lastSliceBySession.get(params.sessionId) ?? {}),
-          cwd: params.mainRoot,
-          workspaceContext,
-          projectTrusted: params.projectTrusted,
-        } as EngineConfigSlice);
-        this.wireInteractiveSession(residentSession, params.sessionId);
-      }
-      this.transport.send(
-        createResponse(req.id, {
-          status: "migrated",
-          workspace,
-        } satisfies MigrateSessionMainRootResult),
-      );
-    } catch (error) {
-      this.transport.send(
-        createResponse(req.id, {
-          status: "failed",
-          error: error instanceof Error ? error.message : String(error),
-        } satisfies MigrateSessionMainRootResult),
-      );
-    }
-  }
-
-  private handleCompleteSessionMainRootMigration(req: RpcRequest): void {
-    const params = (req.params ?? {}) as unknown as CompleteSessionMainRootMigrationParams;
-    if (
-      typeof params.sessionId !== "string" ||
-      params.sessionId.length === 0 ||
-      typeof params.ownershipToken !== "string" ||
-      params.ownershipToken.length === 0 ||
-      params.ownershipToken.length > 128
-    ) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "valid migration claim is required"),
-      );
-      return;
-    }
-    if (!this.chatManager?.completeSessionMigration(params.sessionId, params.ownershipToken)) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, "migration claim is not active"),
-      );
-      return;
-    }
-    this.transport.send(createResponse(req.id, { released: true }));
   }
 
   // ─── Configure ──────────────────────────────────────────────────

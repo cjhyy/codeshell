@@ -29,13 +29,7 @@ import {
   type SteerItem,
 } from "./steer-queue.js";
 import { RunEnvironmentResolver } from "./run-environment.js";
-import {
-  legacySingleRootWorkspace,
-  removedWorkspaceRootPaths,
-  type WorkspaceContext,
-} from "../workspace/workspace-context.js";
-import { clearSessionPathApprovalsUnderRoot } from "../tool-system/path-policy.js";
-import { canonicalKey } from "../workspace/canonical-key.js";
+import { legacySingleRootWorkspace } from "../workspace/workspace-context.js";
 import {
   type BuiltinTool,
   type BuiltinToolExposure,
@@ -77,7 +71,6 @@ import {
 import { PromptComposer } from "../prompt/composer.js";
 import {
   SessionManager,
-  assertSafeSessionId,
   isEphemeralSessionState,
   sessionsRoot,
   type ForkSessionOptions,
@@ -87,7 +80,14 @@ import {
   type SessionStateFieldPatch,
   type GoalTerminalSaveOutcome,
 } from "../session/session-manager.js";
-import type { SessionMessageRouter, SessionMessageTarget } from "../session/session-message.js";
+import type { SessionMessageRouter } from "../session/session-message.js";
+import {
+  createAuthorizedSessionMessageService,
+  migrateOwnedSessionMainRoot,
+  releaseOwnedSessionWorkspace,
+  SessionWorkspaceAuthorityTracker,
+  setOwnedSessionWorkspace,
+} from "./engine-workspace-authority.js";
 import { createRunUsageAccounting, wireRunModelFacade } from "./run-accounting.js";
 import { logger, runWithSid } from "../logging/logger.js";
 import { recordSessionStart } from "../logging/session-recorder.js";
@@ -136,10 +136,7 @@ import {
 } from "./prompt-cache-diagnostics.js";
 import { EngineRuntime } from "./runtime.js";
 import { buildRunUserMessageContent, prepareRunImageInput } from "./run-image-input.js";
-import {
-  type EngineRunOptions,
-  type RunBehaviorProfile,
-} from "./run-types.js";
+import { type EngineRunOptions, type RunBehaviorProfile } from "./run-types.js";
 import { createSubAgentSpawner } from "./subagent-spawner.js";
 import { AuxiliaryPipeline, sameLlmIdentity } from "./auxiliary-pipeline.js";
 import { PermissionController } from "./permission-controller.js";
@@ -349,8 +346,7 @@ export class Engine {
   private lastMessages: Message[] | undefined;
   private lastSessionId: string | undefined;
   private compactedMessagesBySession = new Map<string, Message[]>();
-  /** Last immutable root set observed per Session, used to revoke grants on root removal. */
-  private workspaceContextBySession = new Map<string, WorkspaceContext>();
+  private workspaceAuthorities = new SessionWorkspaceAuthorityTracker();
   /**
    * SIDs whose ctx-bar seed we've already emitted in this process. The seed
    * is a rough char/4 estimate; only useful before the first real
@@ -580,8 +576,7 @@ export class Engine {
       throw new ConfigError("EngineConfig.composition is mutually exclusive with modules");
     }
     // Single composition fact source for every module contribution.
-    this.composition =
-      config.composition ?? compileComposition({ modules: config.modules ?? [] });
+    this.composition = config.composition ?? compileComposition({ modules: config.modules ?? [] });
     this.toolCatalog = compositionToolCatalog(this.composition);
     this.toolGuards = new Map(
       this.toolCatalog.flatMap((tool) =>
@@ -1289,13 +1284,7 @@ export class Engine {
       },
     } = workspaceResolved.resolution;
     if (options?.sessionId) {
-      const previousWorkspace = this.workspaceContextBySession.get(options.sessionId);
-      if (previousWorkspace) {
-        for (const removedRoot of removedWorkspaceRootPaths(previousWorkspace, workspaceContext)) {
-          clearSessionPathApprovalsUnderRoot(options.sessionId, removedRoot);
-        }
-      }
-      this.workspaceContextBySession.set(options.sessionId, workspaceContext);
+      this.workspaceAuthorities.remember(options.sessionId, workspaceContext);
     }
     /** Structured results the profile's run services report; keyed per profile contract. */
     let profileReportedResults: Record<string, unknown> | undefined;
@@ -1863,71 +1852,12 @@ export class Engine {
     session: SessionBundle,
     options: EngineRunOptions | undefined,
   ): void {
-    const sourceSessionId = session.state.sessionId;
-    const sourceRoot = this.sessionManager.readSessionMainRoot(sourceSessionId);
-    if (!sourceRoot) return;
-    const sourceBinding = this.sessionManager.readSessionProjectBinding(sourceSessionId);
-
-    if (!this.sessionMessageRouter) return;
-    const catalog: SessionMessageTarget[] = [];
-    const seen = new Set<string>();
-    const rawTargets: unknown[] = Array.isArray(options?.sessionMessageTargets)
-      ? [...options.sessionMessageTargets]
-      : [];
-    for (const raw of rawTargets.slice(0, 100)) {
-      if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
-      const candidate = raw as Record<string, unknown>;
-      const sessionId = typeof candidate.sessionId === "string" ? candidate.sessionId : "";
-      try {
-        assertSafeSessionId(sessionId);
-      } catch {
-        continue;
-      }
-      if (seen.has(sessionId)) continue;
-      const candidateRoot =
-        typeof candidate.workspaceRoot === "string" ? candidate.workspaceRoot : "";
-      const targetBinding = this.sessionManager.readSessionProjectBinding(sessionId);
-      if (sourceBinding) {
-        if (targetBinding) {
-          if (targetBinding.projectId !== sourceBinding.projectId) continue;
-        } else if (canonicalKey(candidateRoot) !== canonicalKey(sourceRoot)) {
-          continue;
-        }
-      } else if (canonicalKey(candidateRoot) !== canonicalKey(sourceRoot)) {
-        continue;
-      }
-      const title = typeof candidate.title === "string" ? candidate.title.trim() : "";
-      if (!title || title.length > 512) continue;
-      const workspaceProfile =
-        typeof candidate.workspaceProfile === "string"
-          ? candidate.workspaceProfile.trim().slice(0, 256)
-          : "";
-      seen.add(sessionId);
-      catalog.push({
-        sessionId,
-        title,
-        workspaceRoot: sourceRoot,
-        ...(workspaceProfile ? { workspaceProfile } : {}),
-      });
-    }
-
-    const targets = catalog.filter((target) => target.sessionId !== sourceSessionId);
-    toolCtx.sessionMessages = {
-      targets,
-      send: async ({ targetSessionId, message }) => {
-        const target = targets.find((candidate) => candidate.sessionId === targetSessionId);
-        if (!target) throw new Error("target Session is not in the host-authorized project list");
-        if (!message.trim()) throw new Error("message is required");
-        if (message.length > 48_000) throw new Error("message exceeds 48000 characters");
-        await this.sessionMessageRouter!({
-          sourceSessionId,
-          target,
-          message,
-          catalog,
-        });
-        return target;
-      },
-    };
+    toolCtx.sessionMessages = createAuthorizedSessionMessageService({
+      sessionManager: this.sessionManager,
+      router: this.sessionMessageRouter,
+      sourceSessionId: session.state.sessionId,
+      rawTargets: options?.sessionMessageTargets,
+    });
   }
 
   /**
@@ -3280,7 +3210,7 @@ export class Engine {
     } finally {
       this.hooks.clear();
       this.settingsHookHandles = [];
-      this.workspaceContextBySession.clear();
+      this.workspaceAuthorities.clear();
       this.steerQueueBySid.clear();
       this.compactedMessagesBySession.clear();
       this.agentDefsCache = undefined;
@@ -3579,61 +3509,36 @@ export class Engine {
     return had;
   }
 
-  /**
-   * Persist a workspace pointer through the Engine that owns the live bundle.
-   * Host-side workspace actions use this RPC-facing seam so advancing the disk
-   * revision also rebases the active run before its next progress write.
-   */
   setSessionWorkspace(sessionId: string, workspace: SessionWorkspace): SessionWorkspace | null {
-    if (!sessionId || !this.sessionManager.exists(sessionId)) return null;
-    try {
-      const stateRevision = this.sessionManager.setSessionWorkspace(sessionId, workspace);
-      if (this.activeRunSession?.state.sessionId === sessionId) {
-        Object.assign(this.activeRunSession.state, { workspace, stateRevision });
-      }
-      return workspace;
-    } catch {
-      return null;
-    }
+    return setOwnedSessionWorkspace({
+      sessionManager: this.sessionManager,
+      activeState: this.activeRunSession?.state,
+      sessionId,
+      workspace,
+    });
   }
 
-  /** Rebase every live and durable main-root field through the owning Engine. */
   migrateSessionMainRoot(
     sessionId: string,
     project: import("../types.js").SessionProjectBinding,
     mainRoot: string,
   ): SessionWorkspace {
-    if (!sessionId || !this.sessionManager.exists(sessionId)) {
-      throw new Error(`Session ${sessionId} does not exist`);
-    }
-    const workspace: SessionWorkspace = { root: mainRoot, kind: "main" };
-    const stateRevision = this.sessionManager.migrateSessionMainRoot(sessionId, project, mainRoot);
-    if (this.activeRunSession?.state.sessionId === sessionId) {
-      Object.assign(this.activeRunSession.state, {
-        project: { ...project },
-        cwd: mainRoot,
-        workspace,
-        stateRevision,
-      });
-    }
-    this.workspaceContextBySession.delete(sessionId);
-    return workspace;
+    return migrateOwnedSessionMainRoot({
+      sessionManager: this.sessionManager,
+      activeState: this.activeRunSession?.state,
+      authorities: this.workspaceAuthorities,
+      sessionId,
+      project,
+      mainRoot,
+    });
   }
 
-  /**
-   * Reset a session's workspace pointer back to its main root. If the session is
-   * actively running, mutate that live SessionBundle first so the run's next
-   * saveState cannot resurrect a stale worktree pointer.
-   */
   releaseSessionWorkspace(sessionId: string): SessionWorkspace | null {
-    if (!sessionId || !this.sessionManager.exists(sessionId)) return null;
-    const mainRoot =
-      this.sessionManager.readSessionMainRoot(sessionId) ??
-      (this.activeRunSession?.state.sessionId === sessionId
-        ? this.activeRunSession.state.cwd
-        : undefined);
-    if (!mainRoot) return null;
-    return this.setSessionWorkspace(sessionId, { root: mainRoot, kind: "main" });
+    return releaseOwnedSessionWorkspace({
+      sessionManager: this.sessionManager,
+      activeState: this.activeRunSession?.state,
+      sessionId,
+    });
   }
 
   injectContext(sessionId: string, content: string): void {

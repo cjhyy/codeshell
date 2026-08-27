@@ -73,6 +73,15 @@ const expectedRuntimeExportsByPartition = {
     "getTheme",
     "resolveThemeSetting",
   ],
+  workspaceAuthority: [
+    "canonicalKey",
+    "canonicalPath",
+    "computeWorkspaceRootsDigest",
+    "createWorkspaceContext",
+    "legacySingleRootWorkspace",
+    "validateWorkspaceContext",
+    "workspacePrimaryRoot",
+  ],
   logging: ["rotateLogs", "recordUIEvent"],
   toolSystemAndHostServices: [
     "getInteractiveApprovalBackend",
@@ -270,6 +279,13 @@ const hostOnlySamples = [
   "detectEnvKeys",
   "getCurrentVersion",
   "checkForUpdate",
+  "canonicalKey",
+  "canonicalPath",
+  "computeWorkspaceRootsDigest",
+  "createWorkspaceContext",
+  "legacySingleRootWorkspace",
+  "validateWorkspaceContext",
+  "workspacePrimaryRoot",
 ] as const;
 
 // Runtime members of the /extension capability contract (coding/arena imports).
@@ -360,6 +376,17 @@ describe("core public/internal export contract", () => {
     // The extension entry stays narrow: no Engine, no host UI utilities.
     expect(extensionApi).not.toHaveProperty("Engine");
     expect(extensionApi).not.toHaveProperty("sliceAnsi");
+    for (const name of [
+      "canonicalKey",
+      "canonicalPath",
+      "computeWorkspaceRootsDigest",
+      "createWorkspaceContext",
+      "legacySingleRootWorkspace",
+      "validateWorkspaceContext",
+      "workspacePrimaryRoot",
+    ]) {
+      expect(extensionApi, `${name} is host-only workspace authority`).not.toHaveProperty(name);
+    }
   });
 
   it("declares the internal package subpath and an exact source alias", async () => {

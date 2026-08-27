@@ -736,18 +736,3 @@ export type {
   AXNode,
 } from "./tool-system/browser-bridge.js";
 export type { WorkspaceBridge } from "./tool-system/workspace-bridge.js";
-export { canonicalKey, canonicalPath } from "./workspace/canonical-key.js";
-export {
-  computeWorkspaceRootsDigest,
-  createWorkspaceContext,
-  legacySingleRootWorkspace,
-  validateWorkspaceContext,
-  workspacePrimaryRoot,
-} from "./workspace/workspace-context.js";
-export type {
-  ProjectId,
-  ProjectRootContext,
-  ProjectRootId,
-  WorkspaceContext,
-  WorkspaceContextInput,
-} from "./workspace/workspace-context.js";

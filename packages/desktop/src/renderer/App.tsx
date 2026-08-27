@@ -37,7 +37,6 @@ import {
 import { transcriptsReducer, type TranscriptsMap } from "./transcriptsReducer";
 import {
   saveTranscript,
-  migrateProjectSessionBucket,
   loadSessionIndex,
   saveSessionIndex,
   unbindWorkspaceProfileEverywhere,
@@ -50,7 +49,6 @@ import {
   bucketKey,
   projectBucketSegment as projectBucketSegmentFor,
   migrateBucketOverride,
-  migrateProjectBucketOverrides,
   setSessionWorkspaceProfileLocal,
   type SessionIndex,
 } from "./transcripts";
@@ -71,13 +69,10 @@ import {
   loadProjects,
   saveProjects,
   loadActiveProjectId,
-  readLegacyProjectsForMigration,
   saveActiveProjectId,
-  migrateLegacyProjects,
   unmarkProjectPathRemoved,
   reconcileProjectsFromDiskWithRemap,
   projectLabel,
-  sortProjects,
   trackedProjectFromRegistry,
   type TrackedProject,
 } from "./projects";
@@ -124,7 +119,8 @@ import { useRunController } from "./app/useRunController";
 import { usePanelBuckets } from "./app/usePanelBuckets";
 import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
-import { useSessionUiAuthority } from "./sessionUiAuthority";
+import { useActiveSessionUiAuthority } from "./sessionUiAuthority";
+import { useProjectRegistrySync } from "./app/useProjectRegistrySync";
 
 // Large, low-frequency pages stay off the chat startup path. Each route keeps
 // its own visible loading state through the Suspense boundaries below.
@@ -306,37 +302,18 @@ function App() {
   const activeProjectBucketSegment = projectBucketSegmentFor(activeProjectId);
   const activeSessionId = sessionIndices[activeProjectBucketSegment]?.activeSessionId ?? null;
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
-  const activeSessionSummary =
-    sessionIndices[activeProjectBucketSegment]?.sessions.find(
-      (session) => session.id === activeSessionId,
-    ) ?? null;
-  const activeEngineSessionId = activeSessionId
-    ? (activeSessionSummary?.engineSessionId ?? activeSessionId)
-    : null;
   const [noRepoCwd, setNoRepoCwd] = useState<string | null>(null);
   const noRepoCwdRef = useRef<string | null>(null);
   noRepoCwdRef.current = noRepoCwd;
-  const projectAuthorityVersion = activeProject
-    ? `${activeProject.primaryRootId}\0${activeProject.roots
-        .map((root) => `${root.id}\0${root.path}`)
-        .join("\0")}`
-    : "";
-  const sessionUiAuthority = useSessionUiAuthority({
-    sessionId: activeEngineSessionId,
-    projectId: activeProjectId,
-    projectPrimaryRoot: activeProject?.path ?? null,
-    projectPrimaryRootId: activeProject?.primaryRootId ?? null,
-    projectAuthorityVersion,
-    noRepoCwd,
-    allowProjectFallback: activeEngineSessionId
-      ? locallyCreatedSessionIdsRef.current.has(activeEngineSessionId)
-      : false,
-  });
-  useEffect(() => {
-    if (activeEngineSessionId && sessionUiAuthority.rootStatus === "ok") {
-      locallyCreatedSessionIdsRef.current.delete(activeEngineSessionId);
-    }
-  }, [activeEngineSessionId, sessionUiAuthority.rootStatus]);
+  const { activeSessionSummary, activeEngineSessionId, sessionUiAuthority } =
+    useActiveSessionUiAuthority({
+      activeProject,
+      activeProjectId,
+      activeSessionId,
+      sessions: sessionIndices[activeProjectBucketSegment]?.sessions ?? [],
+      noRepoCwd,
+      locallyCreatedSessionIds: locallyCreatedSessionIdsRef,
+    });
   const activeBucket = bucketKey(activeProjectId, activeSessionId);
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
   // The model shown/used for the ACTIVE session: its own override if it has
@@ -764,73 +741,14 @@ function App() {
       off?.();
     };
   }, []);
-  // Main's V2 ProjectStore is the sole project id/root authority. localStorage
-  // is read once below only to preserve upgrade-only buckets and paths.
-  useEffect(() => {
-    const registry = window.codeshell.projectRegistry;
-    if (!registry) return;
-    let alive = true;
-    const apply = (
-      diskProjects: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0],
-    ): void => {
-      if (!alive) return;
-      const next = reconcileProjectsFromDiskWithRemap(diskProjects, loadProjects()).projects;
-      setProjects(next);
-      setSessionIndices((prev) => {
-        const updated = { ...prev };
-        for (const project of next) {
-          if (!updated[project.id]) updated[project.id] = loadSessionIndex(project.id);
-        }
-        return updated;
-      });
-    };
-    void (async () => {
-      // Back-fill localStorage-only projects only through the dedicated token
-      // + same-call native picker proof flow. Failed paths remain in
-      // codeshell.repos for the next retry and never join the live snapshot.
-      const disk = await registry.list();
-      const cached = readLegacyProjectsForMigration();
-      const { projects: reconciled, projectIdRemap } = await migrateLegacyProjects({
-        diskProjects: disk,
-        cachedProjects: cached,
-        registry,
-      });
-      const remapEntries = Object.entries(projectIdRemap);
-      const migratedProjectIds = new Set<string>();
-      for (const [fromProjectId, toProjectId] of remapEntries) {
-        migrateProjectSessionBucket(fromProjectId, toProjectId);
-        migratedProjectIds.add(toProjectId);
-      }
-      if (!alive) return;
-      setProjects(reconciled);
-      setSessionIndices((prev) => {
-        const next = { ...prev };
-        for (const project of reconciled) {
-          if (!next[project.id]) next[project.id] = loadSessionIndex(project.id);
-        }
-        return next;
-      });
-      if (remapEntries.length > 0) {
-        setActiveProjectId((prev) => (prev && projectIdRemap[prev] ? projectIdRemap[prev] : prev));
-        setPermissionOverrides((prev) => migrateProjectBucketOverrides(prev, projectIdRemap));
-        setModelOverrides((prev) => migrateProjectBucketOverrides(prev, projectIdRemap));
-        setGoalOverrides((prev) => migrateProjectBucketOverrides(prev, projectIdRemap));
-        setSessionIndices((prev) => {
-          const next = { ...prev };
-          for (const [fromProjectId] of remapEntries) delete next[fromProjectId];
-          for (const id of migratedProjectIds) next[id] = loadSessionIndex(id);
-          return next;
-        });
-      }
-    })();
-    const unsub = registry.onChanged(apply);
-    return () => {
-      alive = false;
-      unsub();
-    };
-    // Mount-only: the subscription handles all subsequent changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useProjectRegistrySync({
+    setProjects,
+    setSessionIndices,
+    setActiveProjectId,
+    setPermissionOverrides,
+    setModelOverrides,
+    setGoalOverrides,
+  });
   useEffect(() => {
     const entries: MobilePermissionModeSnapshotEntry[] = [];
     const seen = new Set<string>();
