@@ -28,18 +28,22 @@ describe("architecture growth budgets", () => {
       290,
     );
     // v0.8.17 added the reviewed Panel catalog/task bridge to both preload
-    // surfaces, including one new invoke without widening renderer imports.
-    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_823);
+    // surfaces. Mimi's bounded transcript pagination adds one typed invoke;
+    // the validation and file-reading implementation remain extracted in main.
+    expect(lines("packages/desktop/src/preload/index.ts")).toBeLessThanOrEqual(1_825);
     expect(
       matches("packages/desktop/src/preload/index.ts", /ipcRenderer\.invoke\(/g),
-    ).toBeLessThanOrEqual(299);
+    ).toBeLessThanOrEqual(300);
     // GitHub skill previews and Panel task hosting carry main-issued review and
-    // ownership fields across the typed preload boundary.
-    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_842);
+    // ownership fields across the typed preload boundary. The optional Mimi
+    // transcript-page method adds its bounded response shape without widening
+    // the renderer's direct imports.
+    expect(lines("packages/desktop/src/preload/types.d.ts")).toBeLessThanOrEqual(2_852);
     expect(lines("packages/desktop/src/renderer/App.tsx")).toBeLessThanOrEqual(2_686);
     // Goal-extension and pre-turn archive inputs now fail closed at protocol
-    // ingress instead of trusting arbitrary numeric/object payloads.
-    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_497);
+    // ingress instead of trusting arbitrary numeric/object payloads. Manual
+    // Mimi clears also validate their host-authored summary at this boundary.
+    expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_506);
     // Topic-boundary archival is deliberately inside run startup so it cannot
     // race the current turn's exclusive-end anchor.
     expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_251);

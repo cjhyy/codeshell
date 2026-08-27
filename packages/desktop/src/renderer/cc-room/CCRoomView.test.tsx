@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
@@ -31,6 +31,10 @@ mock.module("@/components/ui/dialog", () => ({
 const { CCRoomView } = await import("./CCRoomView");
 
 let root: Root | null = null;
+
+afterAll(() => {
+  mock.restore();
+});
 
 function findElements(node: unknown, tagName: string): unknown[] {
   const current = node as { tagName?: string; childNodes?: unknown[] };

@@ -1278,6 +1278,19 @@ export class SessionManager {
   }
 
   resume(sessionId: string): SessionBundle {
+    return this.resumeWithTranscriptMode(sessionId, false);
+  }
+
+  /**
+   * Resume a model run with a bounded active replay for large Pet transcripts
+   * that already contain a full-history archive boundary. Audit/detail callers
+   * continue to use resume() and receive every persisted event.
+   */
+  resumeForRun(sessionId: string): SessionBundle {
+    return this.resumeWithTranscriptMode(sessionId, true);
+  }
+
+  private resumeWithTranscriptMode(sessionId: string, contextOnly: boolean): SessionBundle {
     assertSafeSessionId(sessionId);
     const processLocal = this.processLocalBundle(sessionId);
     if (processLocal) {
@@ -1317,9 +1330,12 @@ export class SessionManager {
       chmodSync(sessionDir, 0o700);
       chmodSync(stateFile, 0o600);
     }
-    const transcript = Transcript.loadFromFile(transcriptFile);
-
     state.kind = normalizedSessionKind(state.kind);
+    const transcript =
+      contextOnly && state.kind === "pet"
+        ? Transcript.loadContextFromFile(transcriptFile)
+        : Transcript.loadFromFile(transcriptFile);
+
     state.status = "active";
     delete state.lastCompletionKind;
     Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));

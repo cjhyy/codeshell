@@ -376,9 +376,10 @@ setCronChangedSink(() => {
   stdioTransport.send(createNotification("agent/cronChanged", {}));
 });
 
-// EditModelCatalog writes in this worker process, while the mounted settings
-// and connection pages live in the desktop renderer. Notify them immediately
-// after a successful write instead of relying on a later turn_complete event.
+// Catalog and model-connection tools write in this worker process, while the
+// mounted settings/connection pages live in the desktop renderer. Notify them
+// immediately after a successful write instead of relying on a later
+// turn_complete event.
 setModelCatalogChangedSink(() => {
   stdioTransport.send(createNotification(Methods.SettingsChanged, {}));
 });

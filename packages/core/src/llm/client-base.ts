@@ -27,6 +27,7 @@ export abstract class LLMClientBase {
   readonly timeout: number;
   readonly retryMaxAttempts: number;
   readonly imageDetail?: ClientDefaults["imageDetail"];
+  protected readonly fetch?: ClientDefaults["fetch"];
 
   /**
    * Process-wide hook fired on every LLM response. The CLI installs this in
@@ -41,7 +42,7 @@ export abstract class LLMClientBase {
   /**
    * `config` carries model identity (provider/model/apiKey/baseUrl/maxTokens/
    * thinking/providerKind). `defaults` carries cross-model runtime knobs
-   * (temperature/timeout/retryMaxAttempts/imageDetail) — those are owned by
+   * (temperature/timeout/retryMaxAttempts/imageDetail/fetch) — those are owned by
    * the Engine and stay stable across hot model switches.
    */
   constructor(
@@ -60,6 +61,7 @@ export abstract class LLMClientBase {
     this.timeout = defaults?.timeout ?? 120_000;
     this.retryMaxAttempts = defaults?.retryMaxAttempts ?? 3;
     this.imageDetail = defaults?.imageDetail;
+    this.fetch = defaults?.fetch;
     this.initClient();
   }
 

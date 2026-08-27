@@ -8,6 +8,7 @@ import {
   FileText,
   FolderKanban,
   ImageIcon,
+  LoaderCircle,
   Settings,
   Sparkles,
   X,
@@ -697,11 +698,23 @@ export function PetChatHost({
     setChatModelKey,
     delegationReceipts,
     hostActionReceipts,
+    chatHistoryLoadedBytes,
+    chatHistoryHasMore,
+    chatHistoryLoading,
+    loadOlderChatHistory,
   } = usePetState();
   const [error, setError] = React.useState<string | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
   const [pathAttachments, setPathAttachments] = React.useState<string[]>([]);
   const endRef = React.useRef<HTMLDivElement>(null);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const historyRequestPendingRef = React.useRef(false);
+  const pendingHistoryAnchorRef = React.useRef<{
+    loadedBytes: number;
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
+  const skipAutoScrollRef = React.useRef(false);
   const effectiveModelKey = chatModelKey ?? defaultModelKey;
   const segments = state.projection?.workMemorySegments;
   const rows = React.useMemo(
@@ -728,7 +741,50 @@ export function PetChatHost({
       });
   };
 
+  const requestOlderHistory = React.useCallback((): void => {
+    const scroller = scrollRef.current;
+    if (
+      !scroller ||
+      !chatHistoryHasMore ||
+      chatBusy ||
+      chatHistoryLoading ||
+      historyRequestPendingRef.current
+    ) {
+      return;
+    }
+    historyRequestPendingRef.current = true;
+    pendingHistoryAnchorRef.current = {
+      loadedBytes: chatHistoryLoadedBytes,
+      scrollHeight: scroller.scrollHeight,
+      scrollTop: scroller.scrollTop,
+    };
+    void loadOlderChatHistory().then((loaded) => {
+      historyRequestPendingRef.current = false;
+      if (!loaded) pendingHistoryAnchorRef.current = null;
+    });
+  }, [
+    chatBusy,
+    chatHistoryHasMore,
+    chatHistoryLoadedBytes,
+    chatHistoryLoading,
+    loadOlderChatHistory,
+  ]);
+
+  React.useLayoutEffect(() => {
+    const pending = pendingHistoryAnchorRef.current;
+    const scroller = scrollRef.current;
+    if (!pending || !scroller || chatHistoryLoadedBytes <= pending.loadedBytes) return;
+    scroller.scrollTop =
+      pending.scrollTop + Math.max(0, scroller.scrollHeight - pending.scrollHeight);
+    pendingHistoryAnchorRef.current = null;
+    skipAutoScrollRef.current = true;
+  }, [chatHistoryLoadedBytes, rows.length]);
+
   React.useEffect(() => {
+    if (skipAutoScrollRef.current) {
+      skipAutoScrollRef.current = false;
+      return;
+    }
     endRef.current?.scrollIntoView({ block: "end" });
   }, [chatBusy, rows.length, rows.at(-1)?.text]);
 
@@ -876,7 +932,30 @@ export function PetChatHost({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-muted/15 px-4 py-5 @min-[1440px]/pet-page:px-5">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto bg-muted/15 px-4 py-5 @min-[1440px]/pet-page:px-5"
+        onScroll={(event) => {
+          if (event.currentTarget.scrollTop <= 72) requestOlderHistory();
+        }}
+      >
+        {(chatHistoryHasMore || chatHistoryLoading) && (
+          <div className="mb-3.5 flex justify-center" data-pet-chat-history-page="true">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm transition hover:bg-muted disabled:cursor-wait disabled:opacity-70"
+              disabled={chatBusy || chatHistoryLoading}
+              onClick={requestOlderHistory}
+            >
+              {chatHistoryLoading && (
+                <LoaderCircle size={12} className="animate-spin" aria-hidden="true" />
+              )}
+              {chatHistoryLoading
+                ? t("pet.chat.loadingOlderHistory")
+                : t("pet.chat.loadOlderHistory")}
+            </button>
+          </div>
+        )}
         {rows.length === 0 ? (
           <div className="flex h-full min-h-56 items-center justify-center px-5 text-center">
             <div className="max-w-xs">

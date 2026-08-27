@@ -100,6 +100,45 @@ describe("PetDispatchService", () => {
     expect(workerCalls).toBe(0);
   });
 
+  test("handles /clear as a host command without calling the manager model", async () => {
+    let workerCalls = 0;
+    let clearCalls = 0;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async () => {
+          workerCalls += 1;
+          return { ok: true, result: { text: "model must not answer" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      segmentController: {
+        requestContextClear: async () => {
+          clearCalls += 1;
+        },
+        beginTurn: async () => undefined,
+        completeSegmentClosure: async () => {},
+        onDelegationClosed: async () => {},
+      },
+    });
+
+    expect(
+      await service.dispatch({ type: "chat", message: " /CLEAR ", clientMessageId: "clear-1" }),
+    ).toMatchObject({
+      ok: true,
+      type: "chat",
+      petSessionId: "pet-one",
+      contextCleared: true,
+      authoritativeReply: "上下文已清空。有什么新活要干？",
+    });
+    expect(clearCalls).toBe(1);
+    expect(workerCalls).toBe(0);
+  });
+
   test("boundedWorld keeps the 25 most recently active sessions, newest first", () => {
     const manySessions = Array.from({ length: 30 }, (_, index) => ({
       agentSessionId: `a-${String(index).padStart(2, "0")}`,
@@ -1815,6 +1854,49 @@ describe("PetDispatchService", () => {
       segmentId: "seg-old",
     });
     expect(completed).toEqual(["seg-old"]);
+  });
+
+  test("forwards the fixed manual-clear summary to the pre-model archive boundary", async () => {
+    let runParams: Record<string, unknown> | undefined;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          runParams = params;
+          return { ok: true, result: { text: "fresh answer" } };
+        },
+      },
+      hostCwd: "/safe/pet",
+      segmentController: {
+        beginTurn: async () => ({
+          archiveSummary: "The old topic was cleared.",
+          closedSegment: {
+            segmentId: "seg-old",
+            closingBoundaryMessageId: "client-old",
+            nextBoundaryMessageId: "client-new",
+            startedAt: 1,
+            endedAt: 2,
+          },
+        }),
+        completeSegmentClosure: async () => {},
+        onDelegationClosed: async () => {},
+      },
+    });
+
+    await service.dispatch({
+      type: "chat",
+      message: "fresh topic",
+      clientMessageId: "client-new",
+    });
+
+    expect(runParams?.archiveBeforeCurrentTurn).toEqual({
+      segmentId: "seg-old",
+      summary: "The old topic was cleared.",
+    });
   });
 
   test("does not record launch acceptance as a completed work-memory closure", async () => {

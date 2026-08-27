@@ -110,6 +110,38 @@ describe("Pet host-action completion", () => {
     });
   });
 
+  test("persists a host-handled control turn before its authoritative reply", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-control-completion-"));
+    roots.push(root);
+    const service = new PetHostActionReceiptService({
+      sessionsRootDir: root,
+      qrDir: join(root, "qr"),
+    });
+
+    await service.record({
+      petSessionId: "pet-one",
+      clientMessageId: "clear-one",
+      userMessage: "/clear",
+      executions: [],
+      baseMessage: "上下文已清空。有什么新活要干？",
+      replaceAssistant: true,
+    });
+
+    const rows = readFileSync(join(root, "pet-one", "transcript.jsonl"), "utf-8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(rows.map((row) => row.data.role)).toEqual(["user", "assistant"]);
+    expect(rows[0]?.data).toMatchObject({
+      content: "/clear",
+      clientMessageId: "clear-one",
+    });
+    expect(rows[1]?.data).toMatchObject({
+      content: "上下文已清空。有什么新活要干？",
+      clientMessageId: "pet-host-action-replace-clear-one",
+    });
+  });
+
   test("persists a Gateway reply as the visible WeChat body with delivery metadata", async () => {
     const root = mkdtempSync(join(tmpdir(), "pet-gateway-completion-"));
     roots.push(root);

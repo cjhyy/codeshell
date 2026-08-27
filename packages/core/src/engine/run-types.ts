@@ -144,6 +144,8 @@ export interface EngineRunOptions {
   archiveBeforeCurrentTurn?: {
     fromClientMessageId?: string;
     segmentId?: string;
+    /** Host-authored replacement for the archived span; skips the summarizer. */
+    summary?: string;
   };
   attachments?: InputAttachmentMeta[];
   /** Named per-run behavior profile supplied by interactive product surfaces. */

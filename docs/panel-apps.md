@@ -114,7 +114,7 @@ No Host capability is granted by default.
 | `audio.transcribe`    | Lets the Panel capture microphone audio and send a bounded recording to the user's configured speech-to-text provider; requires `context.workspace`, explicit package review, and OS microphone consent.                         |
 | `credentials.cookies` | Lists only masked Cookie-account metadata matching a requested HTTPS site, opens a host-owned isolated login-and-save window, and restores a selected saved login after confirmation. Cookie values never enter the Panel guest. |
 | `automations.manage`  | Lists, creates, updates, pauses, resumes, runs, and deletes recurring jobs only when they are bound to the Panel's current workspace and task; requires both context permissions.                                                |
-| `process`             | Resolves PATH executables to opaque app-scoped handles, grants Downloads or a user-selected directory as an opaque working-directory handle, and starts/cancels bounded local processes without a shell.                         |
+| `process`             | Resolves PATH executables to opaque app-scoped handles, grants persistent app-local data, Downloads, or a user-selected directory as an opaque working-directory handle, and starts/cancels bounded local processes without a shell. |
 
 Workspace calls reject traversal, hidden paths, `node_modules`, symlinks,
 binary files, invalid UTF-8, control characters, Windows device names, and path
@@ -192,6 +192,15 @@ Passing that handle in `process.spawn.fileArgumentHandles` inserts the fixed
 nor the path cross into the Panel guest. Grants are scoped to one guest and one
 resolved executable, and their temporary files are removed when the Panel
 closes.
+
+Panel API v11 adds the `app-data` known directory to
+`filesystem.getKnownDirectory` for apps that declare `process`. The Host creates
+one persistent owner-only directory below CodeShell's user-data root, keyed by
+the reviewed Panel App id, and returns an opaque process working-directory
+handle. Data survives app updates, never lands in the bound project or Git by
+default, and cannot be shared across Panel App ids. The Panel still needs an
+approved local executable to read, write, index, or migrate files in this
+directory; arbitrary host filesystem access is not exposed to guest code.
 
 ```js
 const task = await window.codeshellPanel.call("agent.task.start", {

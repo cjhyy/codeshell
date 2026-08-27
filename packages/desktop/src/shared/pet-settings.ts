@@ -1,12 +1,21 @@
+import { isExternalRuntimeModelKey } from "./external-runtime-models.js";
+
 export const PET_CHAT_MODEL_SETTING = "chatModelKey";
 
-function validModelKey(value: unknown): value is string {
+/**
+ * Mimi manager turns run in CodeShell's in-process Engine because they depend
+ * on the Pet behavior profile and its host tools. External Agent Runtime model
+ * keys are valid for ordinary Work Sessions, but cannot be used as Mimi's
+ * manager model.
+ */
+export function isPetChatModelKey(value: unknown): value is string {
   return (
     typeof value === "string" &&
     value.length > 0 &&
     value.length <= 512 &&
     value.trim() === value &&
-    !/[\u0000-\u001f\u007f]/u.test(value)
+    !/[\u0000-\u001f\u007f]/u.test(value) &&
+    !isExternalRuntimeModelKey(value)
   );
 }
 
@@ -15,11 +24,13 @@ export function petChatModelKeyFromSettings(settings: unknown): string | null {
   const pet = (settings as Record<string, unknown>).pet;
   if (!pet || typeof pet !== "object" || Array.isArray(pet)) return null;
   const value = (pet as Record<string, unknown>)[PET_CHAT_MODEL_SETTING];
-  return validModelKey(value) ? value : null;
+  return isPetChatModelKey(value) ? value : null;
 }
 
 export function petChatModelSettingsPatch(modelKey: string | null): Record<string, unknown> {
-  return { pet: { [PET_CHAT_MODEL_SETTING]: modelKey } };
+  return {
+    pet: { [PET_CHAT_MODEL_SETTING]: isPetChatModelKey(modelKey) ? modelKey : null },
+  };
 }
 
 export const PET_MEMORY_AUTO_EXTRACT_SETTING = "memoryAutoExtract";

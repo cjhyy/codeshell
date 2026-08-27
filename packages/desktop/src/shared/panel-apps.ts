@@ -1,4 +1,4 @@
-export const PANEL_APP_API_VERSION = 10 as const;
+export const PANEL_APP_API_VERSION = 11 as const;
 
 export const PANEL_APP_PERMISSION_NAMES = [
   "context.session",

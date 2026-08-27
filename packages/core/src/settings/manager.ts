@@ -475,6 +475,41 @@ export class SettingsManager {
   }
 
   /**
+   * Mutate one writable settings layer under the same cross-process lock used
+   * by the desktop settings service. Domain tools use this when two related
+   * fields must change atomically (for example modelConnections + defaults):
+   * composing multiple save*Setting calls would expose an intermediate state
+   * and could interleave with another process between writes.
+   *
+   * The callback receives only the selected layer's raw object, not the merged
+   * settings view. The result is schema-validated before it replaces the file.
+   * Returning false makes the operation a no-op.
+   */
+  mutateSettingsForScope(
+    scope: "user" | "project",
+    cwd: string,
+    mutate: (current: Record<string, unknown>) => boolean | void,
+  ): void {
+    const path =
+      scope === "user"
+        ? join(this.userConfigDir(), "settings.json")
+        : this.projectSettingsPath(cwd);
+    if (scope === "project") {
+      this.validateProjectCwd(cwd, "project");
+      if (!existsSync(cwd)) throw new Error(`project directory does not exist: ${cwd}`);
+    }
+    this.mutateSettingsFile(path, (current) => {
+      if (mutate(current) === false) return false;
+      // Validate the complete resulting layer before persistence. We keep the
+      // original object for serialization so forward-compatible unknown keys
+      // are preserved instead of being stripped by Zod's parsed result.
+      validateSettings(current);
+      return true;
+    });
+    this.invalidate();
+  }
+
+  /**
    * Delete a single dotted key from the PROJECT-level config file. Used to
    * express "inherit" — we don't persist the literal "inherit"; we remove the
    * override key. No-ops if the file or any intermediate segment is absent.

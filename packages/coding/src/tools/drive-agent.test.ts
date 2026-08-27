@@ -36,7 +36,8 @@ function legacyDriveJobListLine(job: BackgroundJobEntry): string {
     job.jobId,
     `status=${job.status}`,
     `cli=${job.cli ?? "unknown"}`,
-    `session=${job.sessionId}`,
+    `ownerSession=${job.sessionId}`,
+    `externalSessionId=${job.ccSessionId ?? "pending"}`,
     `launchCwd=${job.launchCwd ?? job.cwd ?? "(unknown cwd)"}`,
     `startedAt=${new Date(job.startedAt).toISOString()}`,
     `duration=${duration}`,
@@ -223,6 +224,55 @@ describe("DriveAgent tool", () => {
       expect(output).toContain("无需轮询");
       expect(yielded).toBe("background_notification");
     } finally {
+      backgroundJobRegistry.reset?.();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("binds a running Codex job to its external thread as soon as the CLI reports it", async () => {
+    backgroundJobRegistry.reset?.();
+    const tmp = mkdtempSync(join(tmpdir(), "drive-live-session-"));
+    let resolveRun!: (r: any) => void;
+    try {
+      const tool = makeDriveAgentTool(
+        (options: any) =>
+          new Promise<any>((resolve) => {
+            resolveRun = resolve;
+            options.onSessionId?.("thread-live");
+          }),
+      );
+      const output = await tool(
+        { prompt: "keep editing", cwd: tmp, cli: "codex" } as any,
+        { cwd: tmp, sessionId: "S-OWNER" } as any,
+      );
+      const jobId = output.match(/jobId ([A-Za-z0-9][A-Za-z0-9._:-]*)/)?.[1];
+      expect(jobId).toBeDefined();
+      if (!jobId) throw new Error("expected background job id");
+
+      for (let i = 0; i < 20 && !backgroundJobRegistry.get(jobId)?.ccSessionId; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(backgroundJobRegistry.get(jobId)).toMatchObject({
+        status: "running",
+        sessionId: "S-OWNER",
+        ccSessionId: "thread-live",
+      });
+
+      const inspected = await driveAgentJobsTool(
+        { action: "inspect", jobId } as any,
+        { cwd: tmp, sessionId: "S-OWNER" } as any,
+      );
+      expect(inspected).toContain("ownerSession: S-OWNER");
+      expect(inspected).toContain("externalSessionId: thread-live");
+    } finally {
+      resolveRun?.({
+        sessionId: "thread-live",
+        finalText: "done",
+        isError: false,
+        exitCode: 0,
+        lines: [],
+      });
+      await new Promise((resolve) => setTimeout(resolve, 20));
       backgroundJobRegistry.reset?.();
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -457,8 +507,9 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     try {
       let resolveRun!: (r: any) => void;
       let runCount = 0;
-      const runner = () => {
+      const runner = (options: any) => {
         runCount++;
+        options.onSessionId?.("CC-HANDOFF");
         return new Promise<any>((res) => {
           resolveRun = res;
         });
@@ -485,6 +536,7 @@ describe("DriveClaudeCode alias (back-compat)", () => {
       expect(job).toBeDefined();
       if (!job) throw new Error("expected background job");
       expect(job.jobId).toBe(jobId);
+      expect(job.ccSessionId).toBe("CC-HANDOFF");
       const jobCwd = job.cwd;
       expect(jobCwd).toBeDefined();
       if (!jobCwd) throw new Error("expected background job cwd");
@@ -890,7 +942,8 @@ describe("DriveAgentJobs tool", () => {
       expect(out).toContain(job.jobId);
       expect(out).toContain("status=running");
       expect(out).toContain("cli=codex");
-      expect(out).toContain(`session=S-JOBS-LIST`);
+      expect(out).toContain(`ownerSession=S-JOBS-LIST`);
+      expect(out).toContain("externalSessionId=pending");
       expect(out).toContain(realpathSync(tmp));
       expect(out).toContain("edit src/alpha.ts");
       expect(out).toContain("changedFiles=unknown");

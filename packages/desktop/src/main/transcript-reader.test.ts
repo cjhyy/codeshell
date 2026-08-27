@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { transcriptToFoldItems, getSessionTranscript } from "./transcript-reader";
+import {
+  transcriptToFoldItems,
+  getSessionTranscript,
+  getSessionTranscriptPage,
+} from "./transcript-reader";
 
 function line(type: string, data: Record<string, unknown>): string {
   return JSON.stringify({ id: "x", type, timestamp: 1, turnNumber: 0, data });
@@ -498,6 +502,34 @@ describe("getSessionTranscript", () => {
     expect(await getSessionTranscript("sess-9", dir)).toEqual([
       { kind: "user", text: "yo", timestamp: 1 },
     ]);
+  });
+
+  it("hydrates a bounded recent window and expands it for older history", async () => {
+    const sdir = path.join(dir, "paged");
+    fs.mkdirSync(sdir, { recursive: true });
+    const lines = Array.from({ length: 8 }, (_, index) =>
+      line("message", {
+        role: "user",
+        content: `history-${index}-${"x".repeat(120)}`,
+        clientMessageId: `m-${index}`,
+      }),
+    );
+    fs.writeFileSync(path.join(sdir, "transcript.jsonl"), `${lines.join("\n")}\n`);
+
+    const recent = await getSessionTranscriptPage("paged", { maxBytes: 400 }, dir);
+    const recentTexts = recent.items.flatMap((item) => (item.kind === "user" ? [item.text] : []));
+    expect(recent.hasMore).toBe(true);
+    expect(recent.loadedBytes).toBe(400);
+    expect(recentTexts.some((text) => text.startsWith("history-7-"))).toBe(true);
+    expect(recentTexts.some((text) => text.startsWith("history-0-"))).toBe(false);
+
+    const expanded = await getSessionTranscriptPage("paged", { maxBytes: 8_000 }, dir);
+    const expandedTexts = expanded.items.flatMap((item) =>
+      item.kind === "user" ? [item.text] : [],
+    );
+    expect(expanded.hasMore).toBe(false);
+    expect(expandedTexts.some((text) => text.startsWith("history-0-"))).toBe(true);
+    expect(expandedTexts.some((text) => text.startsWith("history-7-"))).toBe(true);
   });
 
   // ── replay-subagent-cards: rebuild sub-agent cards from "subagent" anchors ──

@@ -24,6 +24,9 @@ export function runWithLines(
 
 export interface DriverRunOpts extends Omit<BuildArgsOpts, "permissionMode"> {
   permissionMode?: PermissionMode;
+  /** Called once as soon as the external CLI reports its durable session/thread
+   *  id. This normally happens near process startup, well before the turn exits. */
+  onSessionId?: (sessionId: string) => void;
 }
 
 const codexImageFlagCache = new Map<string, Promise<boolean>>();
@@ -260,6 +263,18 @@ export function runAgentOnce(
         detached: false,
         stdio: [viaStdin ? "pipe" : "ignore", "pipe", "pipe"],
       });
+      let reportedSessionId = "";
+      const reportSessionId = (candidate: unknown): void => {
+        if (reportedSessionId || typeof candidate !== "string" || !candidate.trim()) return;
+        reportedSessionId = candidate.trim();
+        try {
+          opts.onSessionId?.(reportedSessionId);
+        } catch {
+          // Session observation is best-effort metadata. A UI/persistence
+          // listener must never be able to fail the external agent run.
+        }
+      };
+      reportSessionId(opts.resumeSessionId);
       let settled = false;
       let abortRequested = false;
       let termination: Promise<void> | undefined;
@@ -279,7 +294,17 @@ export function runAgentOnce(
       const lines: string[] = [];
       if (child.stdout) {
         const rl = createInterface({ input: child.stdout });
-        rl.on("line", (line) => lines.push(line));
+        rl.on("line", (line) => {
+          lines.push(line);
+          if (!reportedSessionId) {
+            try {
+              reportSessionId(adapter.parseResult([line]).sessionId);
+            } catch {
+              // Keep collecting output. The complete parse at exit remains the
+              // source of truth and will surface malformed output normally.
+            }
+          }
+        });
       }
       child.on("error", (err) => {
         if (settled) return;
@@ -303,7 +328,9 @@ export function runAgentOnce(
         settled = true;
         cleanup();
         void (termination ?? Promise.resolve()).then(() => {
-          resolve(runWithLines(adapter, lines, code));
+          const result = runWithLines(adapter, lines, code);
+          reportSessionId(result.sessionId);
+          resolve(result);
         });
       });
     })().catch(reject);

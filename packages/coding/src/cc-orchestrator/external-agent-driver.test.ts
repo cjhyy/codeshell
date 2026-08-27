@@ -196,6 +196,59 @@ describe.serial("external agent driver", () => {
       expect(receivedModel).toBe("review-model-override");
     });
 
+    it.serial("reports the Codex thread id before the process exits", async () => {
+      const dir = mkdtempSync(join(tmpdir(), "codex-live-session-id-"));
+      const script = join(dir, "fake-codex");
+      const release = join(dir, "release");
+      let run: ReturnType<typeof runAgentOnce> | undefined;
+      let observedSessionId = "";
+      let settled = false;
+      try {
+        writeFileSync(
+          script,
+          [
+            "#!/usr/bin/env node",
+            'const { existsSync } = require("node:fs");',
+            'console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-live" }));',
+            "const timer = setInterval(() => {",
+            `  if (!existsSync(${JSON.stringify(release)})) return;`,
+            "  clearInterval(timer);",
+            '  console.log(JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "done" } }));',
+            "}, 10);",
+          ].join("\n"),
+          "utf-8",
+        );
+        chmodSync(script, 0o755);
+        const liveCodexAdapter: AgentAdapter = {
+          ...codexAdapter,
+          promptViaStdin: false,
+          buildArgs: () => [script],
+        };
+
+        run = runAgentOnce(liveCodexAdapter, {
+          command: process.execPath,
+          prompt: "keep working",
+          cwd: dir,
+          onSessionId: (sessionId) => {
+            observedSessionId = sessionId;
+          },
+        });
+        void run.then(() => {
+          settled = true;
+        });
+
+        for (let i = 0; i < 100 && !observedSessionId; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        expect(observedSessionId).toBe("thread-live");
+        expect(settled).toBe(false);
+      } finally {
+        writeFileSync(release, "1", "utf-8");
+        await run?.catch(() => undefined);
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
     it.serial(
       "does not spawn the main codex CLI when aborted during image support probing",
       async () => {

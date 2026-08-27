@@ -304,6 +304,54 @@ describe("registerPetIpc", () => {
     );
   });
 
+  test("persists /clear as a host-handled control turn", async () => {
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
+    const receiptInputs: unknown[] = [];
+    registerPetIpc({
+      ipcMain: {
+        handle: (channel, handler) => handlers.set(channel, handler),
+        removeHandler: () => {},
+      },
+      aggregator: {
+        getSnapshot: snapshot,
+        subscribe: () => () => {},
+        resolveNavigation: async () => ({ status: "not-found" }),
+      },
+      dispatcher: {
+        dispatch: async () => ({
+          ok: true,
+          type: "chat",
+          petSessionId: "pet-one",
+          result: { reason: "context_cleared" },
+          authoritativeReply: "上下文已清空。有什么新活要干？",
+          contextCleared: true,
+        }),
+      },
+      hostActionReceipt: {
+        record: async (input) => {
+          receiptInputs.push(input);
+          return { message: "上下文已清空。有什么新活要干？", replaceAssistant: true };
+        },
+      },
+      windows: () => [],
+    });
+
+    await handlers.get("pet:dispatch")?.(
+      {},
+      { type: "chat", message: " /clear ", clientMessageId: "clear-one" },
+    );
+
+    expect(receiptInputs).toEqual([
+      expect.objectContaining({
+        petSessionId: "pet-one",
+        clientMessageId: "clear-one",
+        userMessage: "/clear",
+        baseMessage: "上下文已清空。有什么新活要干？",
+        replaceAssistant: true,
+      }),
+    ]);
+  });
+
   test("broadcasts a structured Session receipt after delegated work starts", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const sent: Array<[string, unknown]> = [];
@@ -645,6 +693,9 @@ describe("registerPetIpc", () => {
     expect(() => dispatch({}, { type: "chat", message: "hello", model: " padded " })).toThrow(
       "invalid pet command",
     );
+    expect(() =>
+      dispatch({}, { type: "chat", message: "hello", model: "codex/gpt-5.6-sol" }),
+    ).toThrow("invalid pet command");
   });
 
   test("accepts only a structured navigation request and delegates revalidation", async () => {

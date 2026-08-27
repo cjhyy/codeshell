@@ -1,4 +1,5 @@
 import { Transcript } from "@cjhyy/code-shell-core";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX,
@@ -24,6 +25,8 @@ export interface PetHostActionReceiptRecordInput {
   replaceAssistant?: boolean;
   /** Channel that accepted the displayed reply, used only for the delivery tip. */
   deliveryChannel?: string;
+  /** Persist a host-handled control turn whose user message never reached Engine.run. */
+  userMessage?: string;
 }
 
 export interface PetHostActionReceiptResult {
@@ -79,9 +82,14 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
       if (typeof resultChannel === "string") deliveryChannel = resultChannel;
     }
     try {
-      const transcript = new Transcript(
-        join(this.options.sessionsRootDir, input.petSessionId, "transcript.jsonl"),
-      );
+      const sessionDir = join(this.options.sessionsRootDir, input.petSessionId);
+      await mkdir(sessionDir, { recursive: true, mode: 0o700 });
+      const transcript = new Transcript(join(sessionDir, "transcript.jsonl"));
+      if (input.userMessage?.trim() && !transcript.hasClientMessageId(input.clientMessageId)) {
+        transcript.appendMessage("user", input.userMessage.trim(), {
+          clientMessageId: input.clientMessageId,
+        });
+      }
       transcript.appendMessage("assistant", message, {
         clientMessageId: replaceAssistant
           ? deliveryChannel

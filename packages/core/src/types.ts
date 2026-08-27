@@ -890,6 +890,11 @@ export interface ClientDefaults {
   /** Max retry attempts for transient errors. Default 3. */
   retryMaxAttempts?: number;
   /**
+   * Optional HTTP transport override. Primarily used by embedders and tests
+   * that need an isolated transport without mutating process-global fetch.
+   */
+  fetch?: typeof globalThis.fetch;
+  /**
    * Provider-agnostic image clarity level. Drives the renderer-side
    * downscale (long-edge cap: low→~1024 / standard→~1568 / high→~2576)
    * so BOTH providers save tokens before send. On the OpenAI path it

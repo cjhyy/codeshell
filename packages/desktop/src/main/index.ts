@@ -344,7 +344,8 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import { getSessionTranscript } from "./transcript-reader.js";
+import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
+import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
@@ -1770,6 +1771,10 @@ async function createWindow(): Promise<BrowserWindow> {
       personalization: async () =>
         petPersonalizationFromSettings(await readSettings("user").catch(() => null)),
       segmentController: {
+        requestContextClear: async () => {
+          if (!petSegmentController) throw new Error("Pet work-memory sink is not ready");
+          await petSegmentController.requestContextClear();
+        },
         beginTurn: async (clientMessageId) => {
           if (!petSegmentController) return undefined;
           const before = petSegmentController.segmentBoundaries().length;
@@ -2888,7 +2893,7 @@ async function dispatchGatewayPetChat(
   // state changes, memory confirmations) are appended here so the IM reply
   // carries what Mimi could only promise during her turn.
   const enriched = await enrichPetChatReplyWithHostActions(
-    typeof worker?.text === "string" ? worker.text : "",
+    result.authoritativeReply ?? (typeof worker?.text === "string" ? worker.text : ""),
     result.hostActions,
     {
       qrDir: resolve(app.getPath("userData"), "pet", "qr"),
@@ -2914,6 +2919,7 @@ async function dispatchGatewayPetChat(
         clientMessageId,
         executions: result.hostActions ?? [],
         authoritativeMessage: enriched.text,
+        ...(result.contextCleared ? { userMessage: request.message.trim() } : {}),
         ...(replacesGatewayTurn
           ? {
               replaceAssistant: true,
@@ -5771,20 +5777,6 @@ const MAX_EXTERNAL_RUNTIME_CONTEXT_CHARS = 512 * 1024;
 const MAX_EXTERNAL_RUNTIME_ATTACHMENTS = 32;
 const MAX_EXTERNAL_RUNTIME_ID_CHARS = 512;
 
-function assertDesktopSessionId(value: unknown): asserts value is string {
-  if (
-    typeof value !== "string" ||
-    value.length === 0 ||
-    value.length > 128 ||
-    value === "." ||
-    value === ".." ||
-    value.includes("..") ||
-    !/^[A-Za-z0-9_.-]+$/.test(value)
-  ) {
-    throw new Error("invalid desktop sessionId");
-  }
-}
-
 /** Which runtimes this machine can run — gates the model picker entries. */
 ipcMain.handle("externalRuntime:available", () => {
   if (!externalRuntimeService?.isEnabled()) return [];
@@ -6643,10 +6635,7 @@ ipcMain.handle("runs:get", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
   return getRun(runId);
 });
-ipcMain.handle("sessions:transcript", async (_e, sessionId: string) => {
-  assertDesktopSessionId(sessionId);
-  return getSessionTranscript(sessionId);
-});
+registerSessionTranscriptIpc(ipcMain);
 ipcMain.handle("sessions:listDisk", async (_e, opts: { limit?: number; cursor?: string }) => {
   const limit =
     typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0

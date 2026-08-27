@@ -83,7 +83,7 @@ export function openRunSession(args: OpenRunSessionArgs): OpenRunSessionResult {
 
   if (options?.sessionId && args.sessionManager.exists(options.sessionId)) {
     resumedFromDisk = true;
-    session = args.sessionManager.resume(options.sessionId);
+    session = args.sessionManager.resumeForRun(options.sessionId);
     if (!session.state.project && args.projectBinding) {
       args.sessionManager.saveStateOrUpdateFields(session.state, { project: args.projectBinding });
     }

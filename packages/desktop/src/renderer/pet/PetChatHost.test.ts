@@ -177,6 +177,14 @@ describe("PetChatHost", () => {
     expect(source).toContain('data-pet-path-attachments="true"');
   });
 
+  test("loads older Mimi history near the top without losing the scroll anchor", () => {
+    const source = readFileSync(join(import.meta.dir, "PetChatHost.tsx"), "utf8");
+    expect(source).toContain('data-pet-chat-history-page="true"');
+    expect(source).toContain("scrollTop <= 72");
+    expect(source).toContain("scroller.scrollHeight - pending.scrollHeight");
+    expect(source).toContain("loadOlderChatHistory()");
+  });
+
   test("places a structured delegation receipt after the matching assistant reply", () => {
     const rows = selectPetChatRows(
       [

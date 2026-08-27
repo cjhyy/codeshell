@@ -85,6 +85,8 @@ describe("App Pet lifecycle boundaries", () => {
     expect(appSource).toContain('onOpenSettings={() => setViewMode("pet_settings")}');
     expect(appSource).toContain('onOpenPersonalization={() => setViewMode("pet_personalization")}');
     expect(appSource).toContain("hasModelOverride={petChatModelKey !== null}");
+    expect(appSource).toContain("defaultModelKey={quickChatDefaultModelKey}");
+    expect(appSource).toContain("modelOptions={quickChatModelOptions}");
     expect(appSource).not.toContain("model: petChatModelKey");
   });
 

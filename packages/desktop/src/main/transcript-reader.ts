@@ -40,6 +40,8 @@ interface TaskInfoLike {
 const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
 const MAX_SESSION_ID_LENGTH = 128;
 const MAX_FOLDED_TRANSCRIPT_SCAN_BYTES = 128 * 1024 * 1024;
+export const DEFAULT_TRANSCRIPT_PAGE_BYTES = 512 * 1024;
+export const MAX_TRANSCRIPT_PAGE_BYTES = MAX_FOLDED_TRANSCRIPT_SCAN_BYTES;
 const MAX_SUBAGENT_TRANSCRIPT_SCAN_BYTES = 32 * 1024 * 1024;
 const MAX_SUBAGENT_STATE_BYTES = 2 * 1024 * 1024;
 const MAX_FOLD_ITEMS = 100_000;
@@ -77,6 +79,13 @@ async function readBoundedFile(file: string, maxBytes: number): Promise<string> 
 }
 
 async function readTailFile(file: string, maxBytes: number): Promise<string> {
+  return (await readTailWindow(file, maxBytes)).text;
+}
+
+async function readTailWindow(
+  file: string,
+  maxBytes: number,
+): Promise<{ text: string; loadedBytes: number; hasMore: boolean }> {
   const handle = await fs.open(file, "r");
   try {
     const stat = await handle.stat();
@@ -93,10 +102,14 @@ async function readTailFile(file: string, maxBytes: number): Promise<string> {
     let window = buffer.subarray(0, total);
     if (start > 0) {
       const newline = window.indexOf(0x0a);
-      if (newline < 0) return "";
+      if (newline < 0) return { text: "", loadedBytes: length, hasMore: true };
       window = window.subarray(newline + 1);
     }
-    return window.toString("utf8");
+    return {
+      text: window.toString("utf8"),
+      loadedBytes: length,
+      hasMore: start > 0,
+    };
   } finally {
     await handle.close();
   }
@@ -494,6 +507,52 @@ export async function getSessionTranscript(
   }
 }
 
+export interface SessionTranscriptPage {
+  items: FoldItem[];
+  /** Number of bytes covered from the current end of transcript.jsonl. */
+  loadedBytes: number;
+  /** True when older bytes remain before this cumulative tail window. */
+  hasMore: boolean;
+}
+
+/**
+ * Read a cumulative tail window for paged chat hydration. Callers increase
+ * `maxBytes` when the user asks for older history, then replace their folded
+ * snapshot with the returned one. Re-folding one contiguous suffix avoids
+ * splitting a tool/turn state machine across independently folded pages.
+ */
+export async function getSessionTranscriptPage(
+  sessionId: string,
+  options: { maxBytes?: number } = {},
+  baseDir: string = sessionsRoot(),
+): Promise<SessionTranscriptPage> {
+  if (!isSafeSessionId(sessionId)) return { items: [], loadedBytes: 0, hasMore: false };
+  const requested = options.maxBytes;
+  const maxBytes =
+    typeof requested === "number" && Number.isSafeInteger(requested) && requested > 0
+      ? Math.min(requested, MAX_TRANSCRIPT_PAGE_BYTES)
+      : DEFAULT_TRANSCRIPT_PAGE_BYTES;
+  const file = path.join(baseDir, sessionId, "transcript.jsonl");
+  try {
+    const sessionInfo = await fs.lstat(path.join(baseDir, sessionId));
+    if (sessionInfo.isSymbolicLink() || !sessionInfo.isDirectory()) {
+      return { items: [], loadedBytes: 0, hasMore: false };
+    }
+    const transcriptInfo = await fs.lstat(file);
+    if (transcriptInfo.isSymbolicLink() || !transcriptInfo.isFile()) {
+      return { items: [], loadedBytes: 0, hasMore: false };
+    }
+    const page = await readTailWindow(file, maxBytes);
+    const items = await enrichSubagentCards(transcriptToFoldItems(page.text), baseDir);
+    return { items, loadedBytes: page.loadedBytes, hasMore: page.hasMore };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return { items: [], loadedBytes: 0, hasMore: false };
+    }
+    throw error;
+  }
+}
+
 /** Statuses that mean the sub-agent finished/ended (terminal). Anything else
  *  (stuck "active") means it never wrapped up → render as interrupted. */
 const SUBAGENT_DONE_STATUSES = new Set([
@@ -534,9 +593,9 @@ async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<
       const stateFile = path.join(agentDir, "state.json");
       const stateInfo = await fs.lstat(stateFile);
       if (stateInfo.isSymbolicLink() || !stateInfo.isFile()) continue;
-      const state = JSON.parse(
-        await readBoundedFile(stateFile, MAX_SUBAGENT_STATE_BYTES),
-      ) as { status?: string };
+      const state = JSON.parse(await readBoundedFile(stateFile, MAX_SUBAGENT_STATE_BYTES)) as {
+        status?: string;
+      };
       status = typeof state.status === "string" ? state.status : "active";
     } catch {
       continue; // no sub-agent session on disk → leave bare agent_start

@@ -226,6 +226,12 @@ export type FoldItem =
   // it the interrupted turn folds behind the process-card header on reload.
   | { kind: "turn_stopped"; timestamp?: number };
 
+export interface SessionTranscriptPage {
+  items: FoldItem[];
+  loadedBytes: number;
+  hasMore: boolean;
+}
+
 /**
  * The wire envelope the agent server sends for tool approvals. The
  * outer requestId is what the renderer echoes back via approve();
@@ -1624,6 +1630,10 @@ export interface CodeshellApi extends ProjectAuthorityApi {
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
   getSessionTranscript(sessionId: string): Promise<FoldItem[]>;
+  getSessionTranscriptPage?(
+    sessionId: string,
+    options?: { maxBytes?: number },
+  ): Promise<SessionTranscriptPage>;
   listDiskSessions(opts?: { limit?: number; cursor?: string }): Promise<{
     sessions: Array<{
       id: string;

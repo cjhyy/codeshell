@@ -341,6 +341,27 @@ describeIsolated("PanelAppBridge", () => {
       ).toBe(true);
       expect(panelAppElectronMock.openedPaths).toHaveLength(1);
 
+      const appData = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+        { sender: guest },
+        "filesystem.getKnownDirectory",
+        { name: "app-data" },
+      )) as { handle: string; path: string; name: string };
+      expect(appData.handle).toBeString();
+      expect(appData.path).toBe(realpathSync(join(directory, "panel-app-data", "demo")));
+      expect(appData.name).toBe("demo");
+      expect(statSync(appData.path).isDirectory()).toBe(true);
+      if (process.platform !== "win32") {
+        expect(statSync(appData.path).mode & 0o777).toBe(0o700);
+      }
+      expect(
+        await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
+          { sender: guest },
+          "filesystem.openDirectory",
+          { handle: appData.handle },
+        ),
+      ).toBe(true);
+      expect(panelAppElectronMock.openedPaths.at(-1)).toBe(realpathSync(appData.path));
+
       panelAppElectronMock.openDialogResult = { canceled: false, filePaths: [directory] };
       const picked = (await panelAppElectronMock.ipcHandlers.get("panel-app:call")!(
         { sender: guest },

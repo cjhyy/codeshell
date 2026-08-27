@@ -172,6 +172,8 @@ export type PetDispatchResult =
        * guess and persist it as a replacement in Mimi's visible transcript.
        */
       authoritativeReply?: string;
+      /** True when the host handled /clear without calling the manager model. */
+      contextCleared?: boolean;
       delegation?: PetStartedDelegation;
       delegations?: PetStartedDelegation[];
       /**
@@ -249,6 +251,7 @@ interface PetDispatchOptions {
    */
   segmentController?: {
     beginTurn(clientMessageId?: string): Promise<PetSegmentTurnStart | undefined>;
+    requestContextClear?(): Promise<void>;
     completeSegmentClosure(closed: PetSegmentClosed): Promise<void>;
     onDelegationClosed(closure: {
       objective: string;
@@ -278,6 +281,7 @@ interface PetDispatchOptions {
 }
 
 const NO_WORKSPACE_ID = "no-workspace";
+const MIMI_CONTEXT_CLEARED_REPLY = "上下文已清空。有什么新活要干？";
 const MAX_AUTONOMOUS_CONTINUATION_DEPTH = 3;
 const MAX_PET_RUNTIME_CONTEXT_LENGTH = 32_768;
 const OMIT_JSON_VALUE = Symbol("omit-json-value");
@@ -1225,6 +1229,31 @@ export class PetDispatchService {
           return { ok: false, code: "invalid-command" };
         }
         const metadata = await this.options.metadata.ensure();
+        if (command.message.trim().toLowerCase() === "/clear") {
+          if (attachments.length > 0) {
+            return {
+              ok: false,
+              code: "invalid-command",
+              message: "/clear 不支持同时发送附件",
+            };
+          }
+          if (!this.options.segmentController?.requestContextClear) {
+            return {
+              ok: false,
+              code: "worker-error",
+              message: "Mimi 上下文清理能力暂不可用",
+            };
+          }
+          await this.options.segmentController.requestContextClear();
+          return {
+            ok: true,
+            type: "chat",
+            petSessionId: metadata.petSessionId,
+            result: { text: MIMI_CONTEXT_CLEARED_REPLY, reason: "context_cleared" },
+            authoritativeReply: MIMI_CONTEXT_CLEARED_REPLY,
+            contextCleared: true,
+          };
+        }
         const [
           listedWorkspaces,
           listedReusableSessions,
@@ -1491,12 +1520,16 @@ export class PetDispatchService {
               ...(segmentTurn?.closedSegment && command.clientMessageId
                 ? {
                     archiveBeforeCurrentTurn: {
-                      ...(segmentTurn.closedSegment.closingBoundaryMessageId
+                      ...(segmentTurn.closedSegment.closingBoundaryMessageId &&
+                      !segmentTurn.archiveSummary
                         ? {
                             fromClientMessageId: segmentTurn.closedSegment.closingBoundaryMessageId,
                           }
                         : {}),
                       segmentId: segmentTurn.closedSegment.segmentId,
+                      ...(segmentTurn.archiveSummary
+                        ? { summary: segmentTurn.archiveSummary }
+                        : {}),
                     },
                   }
                 : {}),

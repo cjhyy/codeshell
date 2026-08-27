@@ -54,6 +54,33 @@ function cachedTokensOf(usage: unknown): { cacheReadTokens?: number; cacheCreati
   return out;
 }
 
+/** Read the effective output-token ceiling from a built Chat Completions request. */
+function outputTokenLimitOf(requestBody: Record<string, unknown>): number | undefined {
+  const value = requestBody.max_completion_tokens ?? requestBody.max_tokens;
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+/**
+ * Some OpenAI-compatible gateways return finish_reason `tool_calls` when the
+ * output ceiling cuts a function-argument JSON string off. The malformed JSON
+ * plus exact cap usage is the evidence that distinguishes this from an ordinary
+ * completed tool call.
+ */
+function didHitToolArgumentOutputLimit(input: {
+  finishReason: string | undefined;
+  malformedToolArguments: boolean;
+  completionTokens: number | undefined;
+  outputTokenLimit: number | undefined;
+}): boolean {
+  return (
+    input.finishReason === "tool_calls" &&
+    input.malformedToolArguments &&
+    input.outputTokenLimit !== undefined &&
+    input.completionTokens !== undefined &&
+    input.completionTokens >= input.outputTokenLimit
+  );
+}
+
 interface RunStreamOpts {
   idleTimeoutMs?: number;
   requestId?: string;
@@ -247,6 +274,7 @@ function normalizeOpenAIToolMessagePairs(
 
 export class OpenAIClient extends LLMClientBase {
   private _client: OpenAI | null = null;
+  private readonly dangerouslyAllowBrowser: boolean;
   // Sticky override: once the endpoint tells us `max_tokens` is rejected for
   // this model, switch to `max_completion_tokens` for the lifetime of the
   // client. Cheaper and more reliable than re-deriving from the model id when
@@ -260,8 +288,13 @@ export class OpenAIClient extends LLMClientBase {
   // fine for our background/aux calls.
   private _dropReasoningEffort = false;
 
-  constructor(config: LLMConfig, defaults?: ClientDefaults) {
+  constructor(
+    config: LLMConfig,
+    defaults?: ClientDefaults,
+    runtimeOptions: { dangerouslyAllowBrowser?: boolean } = {},
+  ) {
     super(config, defaults);
+    this.dangerouslyAllowBrowser = runtimeOptions.dangerouslyAllowBrowser === true;
   }
 
   protected initClient(): void {
@@ -280,6 +313,8 @@ export class OpenAIClient extends LLMClientBase {
           (Object.keys(headers).length > 0 ? "x-headers-auth" : undefined),
         ...(this.config.baseUrl ? { baseURL: this.config.baseUrl } : {}),
         ...(Object.keys(headers).length > 0 ? { defaultHeaders: headers } : {}),
+        ...(this.fetch ? { fetch: this.fetch } : {}),
+        ...(this.dangerouslyAllowBrowser ? { dangerouslyAllowBrowser: true } : {}),
         timeout: this.timeout,
       });
     }
@@ -561,14 +596,9 @@ export class OpenAIClient extends LLMClientBase {
     requestSignal?: AbortSignal,
   ): Promise<LLMResponse> {
     try {
+      const requestBody = this.buildRequestBody(options, messages, tools, reasoning, false);
       const response = await this.client.chat.completions.create(
-        this.buildRequestBody(
-          options,
-          messages,
-          tools,
-          reasoning,
-          false,
-        ) as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
+        requestBody as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
         { signal: requestSignal ?? options.signal },
       );
 
@@ -585,7 +615,7 @@ export class OpenAIClient extends LLMClientBase {
       };
       this.recordUsage(usage, options);
 
-      return this.processChoice(choice, usage);
+      return this.processChoice(choice, usage, outputTokenLimitOf(requestBody));
     } catch (err) {
       this.handleApiError(err);
       throw err;
@@ -601,16 +631,12 @@ export class OpenAIClient extends LLMClientBase {
   ): Promise<LLMResponse> {
     const sdkSignal = requestSignal ?? options.signal;
     try {
+      const requestBody = this.buildRequestBody(options, messages, tools, reasoning, true);
       const stream = await this.client.chat.completions.create(
-        this.buildRequestBody(
-          options,
-          messages,
-          tools,
-          reasoning,
-          true,
-        ) as unknown as OpenAI.ChatCompletionCreateParamsStreaming,
+        requestBody as unknown as OpenAI.ChatCompletionCreateParamsStreaming,
         { signal: sdkSignal },
       );
+      const outputTokenLimit = outputTokenLimitOf(requestBody);
 
       let text = "";
       let reasoningContent = "";
@@ -728,6 +754,7 @@ export class OpenAIClient extends LLMClientBase {
       });
 
       const toolCalls: ToolCall[] = [];
+      let malformedToolArguments = false;
       for (const [, tc] of toolCallsMap) {
         // Drop incomplete tool calls: an empty id or name (the fallbacks set
         // when a delta never delivered them) would become a malformed call
@@ -743,9 +770,16 @@ export class OpenAIClient extends LLMClientBase {
         try {
           args = JSON.parse(tc.args || "{}");
         } catch {
-          /* intentional: model emitted malformed tool-call JSON — fall back to
-             empty args rather than crashing the stream; the tool layer reports
-             the resulting validation error back to the model. */
+          malformedToolArguments = true;
+          // Keep the historical empty-args fallback for genuinely malformed
+          // model output. If usage also proves the configured output ceiling was
+          // reached, the stop reason is normalized to "length" below so the turn
+          // loop retries instead of executing this misleading empty call.
+          logger.warn("openai.malformed_tool_arguments", {
+            id: tc.id,
+            name: tc.name,
+            argumentChars: tc.args.length,
+          });
         }
         toolCalls.push({ id: tc.id, toolName: tc.name, args });
       }
@@ -758,11 +792,32 @@ export class OpenAIClient extends LLMClientBase {
       };
       this.recordUsage(usage, options);
 
+      const inferredToolArgumentTruncation = didHitToolArgumentOutputLimit({
+        finishReason,
+        malformedToolArguments,
+        completionTokens: usage.completionTokens,
+        outputTokenLimit,
+      });
+      if (inferredToolArgumentTruncation) {
+        logger.warn("openai.tool_arguments_truncation_inferred", {
+          provider: this.provider,
+          model: this.model,
+          finishReason,
+          completionTokens: usage.completionTokens,
+          outputTokenLimit,
+          toolCount: toolCalls.length,
+        });
+      }
+
       return {
         text,
         toolCalls,
         usage,
-        stopReason: finishReason ?? "stop",
+        // OpenRouter can report `tool_calls` even when max_tokens cuts a tool's
+        // argument JSON off. Normalize that proven cap hit to the standard
+        // OpenAI `length` spelling so the shared continuation guard can skip
+        // execution and ask the model to retry with a smaller call.
+        stopReason: inferredToolArgumentTruncation ? "length" : (finishReason ?? "stop"),
         ...(reasoningContent ? { reasoningContent } : {}),
       };
     } catch (err) {
@@ -771,9 +826,14 @@ export class OpenAIClient extends LLMClientBase {
     }
   }
 
-  private processChoice(choice: OpenAI.ChatCompletion.Choice, usage: TokenUsage): LLMResponse {
+  private processChoice(
+    choice: OpenAI.ChatCompletion.Choice,
+    usage: TokenUsage,
+    outputTokenLimit?: number,
+  ): LLMResponse {
     const text = choice.message.content ?? "";
     const toolCalls: ToolCall[] = [];
+    let malformedToolArguments = false;
 
     if (choice.message.tool_calls) {
       for (const tc of choice.message.tool_calls) {
@@ -781,9 +841,12 @@ export class OpenAIClient extends LLMClientBase {
         try {
           args = JSON.parse(tc.function.arguments || "{}");
         } catch {
-          /* intentional: model emitted malformed tool-call JSON — fall back to
-             empty args rather than crashing; the tool layer reports the
-             resulting validation error back to the model. */
+          malformedToolArguments = true;
+          logger.warn("openai.malformed_tool_arguments", {
+            id: tc.id,
+            name: tc.function.name,
+            argumentChars: tc.function.arguments?.length ?? 0,
+          });
         }
         toolCalls.push({
           id: tc.id,
@@ -796,12 +859,18 @@ export class OpenAIClient extends LLMClientBase {
     const reasoningContent = extractReasoningContent(
       choice.message as unknown as Record<string, unknown>,
     );
+    const inferredToolArgumentTruncation = didHitToolArgumentOutputLimit({
+      finishReason: choice.finish_reason ?? undefined,
+      malformedToolArguments,
+      completionTokens: usage.completionTokens,
+      outputTokenLimit,
+    });
 
     return {
       text,
       toolCalls,
       usage,
-      stopReason: choice.finish_reason ?? undefined,
+      stopReason: inferredToolArgumentTruncation ? "length" : (choice.finish_reason ?? undefined),
       ...(reasoningContent ? { reasoningContent } : {}),
     };
   }

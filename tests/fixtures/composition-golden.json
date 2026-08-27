@@ -52,6 +52,14 @@
         ]
       },
       {
+        "name": "ConfigureModelConnection",
+        "moduleId": "core",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "general"
+        ]
+      },
+      {
         "name": "GenerateImage",
         "moduleId": "core",
         "exposure": "preset-tags",

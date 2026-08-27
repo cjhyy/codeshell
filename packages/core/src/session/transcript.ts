@@ -26,6 +26,8 @@ type TranscriptWriter = (filePath: string, data: string, encoding: "utf-8") => v
 
 type ParsedEvents = { events: TranscriptEvent[]; malformedLineCount: number };
 
+const DEFAULT_CONTEXT_TAIL_SCAN_BYTES = 32 * 1024 * 1024;
+
 function appendTranscriptLine(filePath: string, data: string): void {
   // Use one append-mode descriptor so concurrent OS writers cannot overwrite
   // one another. Also repair the record boundary after a crash-torn final line;
@@ -844,6 +846,90 @@ export class Transcript {
     // Repair pairing on load
     transcript.repairToolResultPairs();
 
+    return transcript;
+  }
+
+  /**
+   * Load the active replay for a model run while leaving the append-only audit
+   * transcript untouched on disk. A host-authored from-less range archive
+   * replaces everything before its `to` anchor, so a large Mimi transcript can
+   * retain only that boundary and the live tail in memory. If the boundary is
+   * absent, too old, malformed, or not self-contained in the bounded tail, we
+   * fail open to the full loader.
+   */
+  static loadContextFromFile(
+    filePath: string,
+    maxTailBytes: number = DEFAULT_CONTEXT_TAIL_SCAN_BYTES,
+  ): Transcript {
+    if (!existsSync(filePath)) return new Transcript(filePath);
+    let tail: string;
+    try {
+      const fd = openSync(filePath, "r");
+      try {
+        const fileSize = fstatSync(fd).size;
+        if (fileSize <= maxTailBytes) return Transcript.loadFromFile(filePath);
+        const length = Math.min(fileSize, Math.max(1, maxTailBytes));
+        const buffer = Buffer.allocUnsafe(length);
+        const bytesRead = readSync(fd, buffer, 0, length, fileSize - length);
+        let window = buffer.subarray(0, bytesRead);
+        const newline = window.indexOf(0x0a);
+        if (newline < 0) return Transcript.loadFromFile(filePath);
+        window = window.subarray(newline + 1);
+        tail = window.toString("utf8");
+      } finally {
+        closeSync(fd);
+      }
+    } catch {
+      return Transcript.loadFromFile(filePath);
+    }
+
+    const events: TranscriptEvent[] = [];
+    for (const line of tail.split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        events.push(JSON.parse(line) as TranscriptEvent);
+      } catch {
+        // A malformed tail must not turn a partial window into authoritative
+        // context. The normal loader keeps its established skip behavior.
+        return Transcript.loadFromFile(filePath);
+      }
+    }
+    let markerIndex = -1;
+    let toClientMessageId: string | undefined;
+    for (const [index, event] of events.entries()) {
+      if (event.type !== "range_archive") continue;
+      const data = event.data as {
+        summary?: unknown;
+        toClientMessageId?: unknown;
+        fromClientMessageId?: unknown;
+      };
+      if (
+        data.fromClientMessageId === undefined &&
+        typeof data.summary === "string" &&
+        typeof data.toClientMessageId === "string"
+      ) {
+        markerIndex = index;
+        toClientMessageId = data.toClientMessageId;
+      }
+    }
+    if (markerIndex < 0 || !toClientMessageId) return Transcript.loadFromFile(filePath);
+    const anchorIndex = events.findIndex(
+      (event, index) =>
+        index < markerIndex &&
+        event.type === "message" &&
+        (event.data as { clientMessageId?: unknown }).clientMessageId === toClientMessageId,
+    );
+    if (anchorIndex < 0) return Transcript.loadFromFile(filePath);
+
+    let startIndex = anchorIndex;
+    for (let index = anchorIndex - 1; index >= 0; index -= 1) {
+      if (events[index]?.type !== "turn_boundary") continue;
+      startIndex = index;
+      break;
+    }
+    const transcript = new Transcript(filePath);
+    transcript.loadEvents(events.slice(startIndex));
+    transcript.repairToolResultPairs();
     return transcript;
   }
 

@@ -110,6 +110,11 @@ describe("preset builtin tool whitelist", () => {
     expect(general.builtinTools).toContain("EditModelCatalog");
   });
 
+  it("the general preset offers ConfigureModelConnection (AI 配置模型连接入口)", () => {
+    const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
+    expect(general.builtinTools).toContain("ConfigureModelConnection");
+  });
+
   it("the general preset offers AddMarketplace for adding plugin sources", () => {
     const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
     expect(general.builtinTools).toContain("AddMarketplace");

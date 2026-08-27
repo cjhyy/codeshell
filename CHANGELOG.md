@@ -8,6 +8,13 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+
+- Added Panel API v11's Host-managed `app-data` process directory so every
+  reviewed Panel App can keep large local indexes, snapshots, and databases
+  outside the bound project and Git, isolated by stable app id and retained
+  across app updates.
+
 ## [0.8.9] - 2026-08-11
 
 ### Added

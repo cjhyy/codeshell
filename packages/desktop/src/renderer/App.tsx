@@ -2190,16 +2190,16 @@ function App() {
                   />
                   <PetChatHost
                     defaultProjectPath={activeProject?.path ?? null}
-                    defaultModelKey={defaultActiveModelKey}
-                    modelOptions={modelOptions}
+                    defaultModelKey={quickChatDefaultModelKey}
+                    modelOptions={quickChatModelOptions}
                     onOpenSession={(request) => void handleOpenPetTarget(request)}
                     onOpenSettings={() => setViewMode("pet_settings")}
                   />
                 </PetPage>
               ) : isPetSettingsView ? (
                 <PetSettingsPage
-                  activeModelKey={petChatModelKey ?? defaultActiveModelKey}
-                  modelOptions={modelOptions}
+                  activeModelKey={petChatModelKey ?? quickChatDefaultModelKey}
+                  modelOptions={quickChatModelOptions}
                   hasModelOverride={petChatModelKey !== null}
                   widgetVisible={petWidgetVisible}
                   onSelectModel={(option) => setPetChatModelKey(option.key)}

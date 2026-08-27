@@ -23,6 +23,7 @@ import {
   completePetHostActionReceipt,
   type PetHostActionReceiptRecorder,
 } from "./pet-host-action-completion.js";
+import { isPetChatModelKey } from "../../shared/pet-settings.js";
 
 export const PET_SNAPSHOT_CHANNEL = "pet:get-snapshot";
 export const PET_WORK_MEMORY_CHANNEL = "pet:get-work-memory";
@@ -236,11 +237,7 @@ function parseDispatchCommand(value: unknown): PetDispatchCommand {
         (record.clientMessageId !== undefined &&
           (typeof record.clientMessageId !== "string" || !record.clientMessageId.trim())) ||
         (record.model !== undefined &&
-          (typeof record.model !== "string" ||
-            !record.model.trim() ||
-            record.model !== record.model.trim() ||
-            record.model.length > 256 ||
-            /[\u0000-\u001f\u007f]/u.test(record.model))) ||
+          (!isPetChatModelKey(record.model) || record.model.length > 256)) ||
         (record.preferredProjectPath !== undefined &&
           (typeof record.preferredProjectPath !== "string" ||
             !record.preferredProjectPath.trim() ||
@@ -408,6 +405,7 @@ export function registerPetIpc(options: {
                 petSessionId: result.petSessionId,
                 clientMessageId: command.clientMessageId,
                 executions: result.hostActions ?? [],
+                ...(result.contextCleared ? { userMessage: command.message.trim() } : {}),
                 ...(result.authoritativeReply
                   ? {
                       baseMessage: result.authoritativeReply,
