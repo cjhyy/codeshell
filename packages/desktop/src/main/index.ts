@@ -347,11 +347,8 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import {
-  getSessionTranscript,
-  getSessionTranscriptPage,
-  MAX_TRANSCRIPT_PAGE_BYTES,
-} from "./transcript-reader.js";
+import { registerSessionTranscriptIpc } from "./session-transcript-ipc.js";
+import { assertDesktopSessionId } from "./session-validation.js";
 import { probeLocalhostPorts } from "./port-probe.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
@@ -5650,20 +5647,6 @@ const MAX_EXTERNAL_RUNTIME_CONTEXT_CHARS = 512 * 1024;
 const MAX_EXTERNAL_RUNTIME_ATTACHMENTS = 32;
 const MAX_EXTERNAL_RUNTIME_ID_CHARS = 512;
 
-function assertDesktopSessionId(value: unknown): asserts value is string {
-  if (
-    typeof value !== "string" ||
-    value.length === 0 ||
-    value.length > 128 ||
-    value === "." ||
-    value === ".." ||
-    value.includes("..") ||
-    !/^[A-Za-z0-9_.-]+$/.test(value)
-  ) {
-    throw new Error("invalid desktop sessionId");
-  }
-}
-
 /** Which runtimes this machine can run — gates the model picker entries. */
 ipcMain.handle("externalRuntime:available", () => {
   if (!externalRuntimeService?.isEnabled()) return [];
@@ -6687,32 +6670,7 @@ ipcMain.handle("runs:get", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
   return getRun(runId);
 });
-ipcMain.handle("sessions:transcript", async (_e, sessionId: string) => {
-  assertDesktopSessionId(sessionId);
-  return getSessionTranscript(sessionId);
-});
-ipcMain.handle(
-  "sessions:transcriptPage",
-  async (_e, sessionId: string, options?: { maxBytes?: number }) => {
-    assertDesktopSessionId(sessionId);
-    if (
-      options !== undefined &&
-      (!options || typeof options !== "object" || Array.isArray(options))
-    ) {
-      throw new Error("invalid transcript page options");
-    }
-    if (
-      options?.maxBytes !== undefined &&
-      (typeof options.maxBytes !== "number" ||
-        !Number.isSafeInteger(options.maxBytes) ||
-        options.maxBytes <= 0 ||
-        options.maxBytes > MAX_TRANSCRIPT_PAGE_BYTES)
-    ) {
-      throw new Error("invalid transcript page size");
-    }
-    return getSessionTranscriptPage(sessionId, options);
-  },
-);
+registerSessionTranscriptIpc(ipcMain);
 ipcMain.handle("sessions:listDisk", async (_e, opts: { limit?: number; cursor?: string }) => {
   const limit =
     typeof opts?.limit === "number" && Number.isSafeInteger(opts.limit) && opts.limit > 0
