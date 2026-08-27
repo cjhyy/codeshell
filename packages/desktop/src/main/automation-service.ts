@@ -13,6 +13,12 @@ import type {
   CronPermissionLevel,
   CronTemplateSource,
 } from "@cjhyy/code-shell-core/internal";
+import {
+  resolveAutomationCreateAuthority,
+  resolveAutomationUpdateAuthority,
+  validateAutomationResumeAuthority,
+  type AutomationAuthorityDeps,
+} from "./automation-authority.js";
 
 export interface AutomationSummary {
   id: string;
@@ -52,12 +58,15 @@ export interface CreateAutomationInput {
   schedule: string;
   prompt: string;
   cwd?: string;
-  projectId?: string;
-  rootId?: string;
+  projectId?: string | null;
+  rootId?: string | null;
   timezone?: string;
   permissionLevel?: CronPermissionLevel;
   /** Optional existing task to continue when the schedule fires. */
   resumeSessionId?: string;
+  /** Main-only creator authority; never persisted. */
+  authoritySessionId?: string;
+  once?: boolean;
 }
 
 let scheduler: CronScheduler | null = null;
@@ -132,16 +141,21 @@ export function getAutomation(id: string): AutomationSummary | null {
   return job ? automationSummary(job) : null;
 }
 
-export function createAutomation(input: CreateAutomationInput): AutomationSummary {
+export async function createAutomation(
+  input: CreateAutomationInput,
+  authorityDeps: AutomationAuthorityDeps,
+): Promise<AutomationSummary> {
+  const authority = await resolveAutomationCreateAuthority(input, authorityDeps);
   const s = requireScheduler();
   syncFromStore();
   const job = s.create(input.name, input.schedule, input.prompt, {
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
-    ...(input.projectId !== undefined ? { projectId: input.projectId } : {}),
-    ...(input.rootId !== undefined ? { rootId: input.rootId } : {}),
+    ...(authority.cwd !== undefined ? { cwd: authority.cwd } : {}),
+    ...(typeof authority.projectId === "string" ? { projectId: authority.projectId } : {}),
+    ...(typeof authority.rootId === "string" ? { rootId: authority.rootId } : {}),
     ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
     ...(input.permissionLevel !== undefined ? { permissionLevel: input.permissionLevel } : {}),
     ...(input.resumeSessionId !== undefined ? { resumeSessionId: input.resumeSessionId } : {}),
+    ...(input.once === true ? { once: true } : {}),
   });
   return automationSummary(job);
 }
@@ -155,16 +169,53 @@ export interface UpdateAutomationInput {
   projectId?: string | null;
   rootId?: string | null;
   permissionLevel?: CronPermissionLevel;
+  resumeSessionId?: string | null;
 }
 
-export function updateAutomation(
+export async function updateAutomation(
   id: string,
   patch: UpdateAutomationInput,
-): AutomationSummary | null {
+  authorityDeps: AutomationAuthorityDeps,
+  scope?: { resumeSessionId: string },
+): Promise<AutomationSummary | null> {
   const s = requireScheduler();
   syncFromStore();
-  const job = s.update(id, patch);
+  const existing = s.get(id);
+  if (!existing) return null;
+  if (scope && existing.resumeSessionId !== scope.resumeSessionId) {
+    throw new Error("automation is not bound to the authorized resume Session");
+  }
+  const authority = await resolveAutomationUpdateAuthority(patch, existing, authorityDeps);
+  const {
+    cwd: _cwd,
+    projectId: _projectId,
+    rootId: _rootId,
+    resumeSessionId: _resumeSessionId,
+    ...definition
+  } = patch;
+  const job = s.update(id, { ...definition, ...authority });
   return job ? automationSummary(job) : null;
+}
+
+export async function listAutomationsForResumeSession(
+  resumeSessionId: string,
+  authorityDeps: AutomationAuthorityDeps,
+): Promise<AutomationSummary[]> {
+  const candidates = listAutomations().filter((job) => job.resumeSessionId === resumeSessionId);
+  const validations = await Promise.all(
+    candidates.map((job) =>
+      validateAutomationResumeAuthority(
+        {
+          cwd: job.cwd ?? undefined,
+          projectId: job.projectId ?? undefined,
+          rootId: job.rootId ?? undefined,
+          resumeSessionId,
+        },
+        authorityDeps,
+      ),
+    ),
+  );
+  return candidates.filter((_job, index) => validations[index]?.ok === true);
 }
 
 export function deleteAutomation(id: string): boolean {

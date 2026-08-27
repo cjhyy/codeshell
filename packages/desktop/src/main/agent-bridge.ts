@@ -155,6 +155,8 @@ function describePanelFailure(result: AgentPanelHostResult): string {
 
 export type { QuickChatForkLifecycle } from "./quick-chat-fork-router.js";
 
+type WorkerAutomationCreate = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+
 const require = createRequire(import.meta.url);
 const agentEntry = require.resolve("@cjhyy/code-shell-core/bin/agent-server-stdio");
 // Resolve host-owned AgentModules from the desktop package before spawning the
@@ -297,6 +299,7 @@ export class AgentBridge implements PetStateBridge {
       forceRefresh?: boolean;
     }) => Promise<{ accessToken: string; expiresAt?: string }>,
     private readonly quickChatForkLifecycle?: QuickChatForkLifecycle,
+    private readonly workerAutomationCreate?: WorkerAutomationCreate,
   ) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.core = new WorkerBridgeCore({
@@ -418,6 +421,7 @@ export class AgentBridge implements PetStateBridge {
     if (this.maybeHandlePanelAction(line)) return;
     // cron change: the worker created/deleted a cron job (agent/cronChanged);
     // reload main's scheduler so it arms immediately. DON'T forward to renderer.
+    if (this.maybeHandleAutomationAuthorityMessage(line)) return;
     if (this.maybeHandleCronChanged(line)) return;
     // Pet projection is a host-only read model. Its snapshot RPC responses are
     // consumed inside WorkerBridgeCore (consume: true); the delta notification
@@ -882,6 +886,39 @@ export class AgentBridge implements PetStateBridge {
     } catch (err) {
       dlog("bridge", "cronChanged.reload_failed", { error: String(err) });
     }
+    return true;
+  }
+
+  /** Main-owned CronCreate. The worker never writes caller cwd/resume ids to the shared store. */
+  private maybeHandleAutomationAuthorityMessage(line: string): boolean {
+    let parsed: { id?: string | number; method?: string; params?: Record<string, unknown> };
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      return false;
+    }
+    if (parsed.method !== "desktop/automationCreate") return false;
+    if (parsed.id === undefined) return true;
+    void (async () => {
+      let reply: Record<string, unknown>;
+      try {
+        if (!this.workerAutomationCreate) {
+          throw new Error("Desktop Main automation authority is unavailable");
+        }
+        const result = await this.workerAutomationCreate(parsed.params ?? {});
+        reply = { jsonrpc: "2.0", id: parsed.id, result };
+      } catch (error) {
+        reply = {
+          jsonrpc: "2.0",
+          id: parsed.id,
+          error: {
+            code: ErrorCodes.InvalidParams,
+            message: error instanceof Error ? error.message : String(error),
+          },
+        };
+      }
+      this.core.sendLine(JSON.stringify(reply));
+    })();
     return true;
   }
 

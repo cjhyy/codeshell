@@ -2893,10 +2893,11 @@ export interface CreateAutomationInput {
   schedule: string;
   prompt: string;
   cwd?: string;
-  projectId?: string;
-  rootId?: string;
+  projectId?: string | null;
+  rootId?: string | null;
   timezone?: string;
   permissionLevel?: AutomationPermissionLevel;
+  resumeSessionId?: string;
 }
 
 export interface UpdateAutomationInput {
@@ -2908,6 +2909,7 @@ export interface UpdateAutomationInput {
   projectId?: string | null;
   rootId?: string | null;
   permissionLevel?: AutomationPermissionLevel;
+  resumeSessionId?: string | null;
 }
 
 export interface RunSummary {

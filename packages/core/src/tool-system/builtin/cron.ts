@@ -6,7 +6,7 @@ import { resolve } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { cronScheduler } from "../../automation/scheduler.js";
-import type { CronPermissionLevel } from "../../automation/scheduler.js";
+import type { CronJob, CronPermissionLevel, CreateJobOptions } from "../../automation/scheduler.js";
 import { getCurrentSid } from "../../logging/logger.js";
 
 export { cronListToolDef } from "./cron-list.definition.js";
@@ -26,6 +26,23 @@ function fireCronChanged(): void {
   } catch {
     // Notifying the host is best-effort; never break the tool on it.
   }
+}
+
+export interface CronCreateAuthorityInput extends CreateJobOptions {
+  name: string;
+  schedule: string;
+  prompt: string;
+  /** Current Engine Session, used by Desktop Main as authority even for standalone jobs. */
+  authoritySessionId?: string;
+}
+
+export type CronCreateAuthority = (input: CronCreateAuthorityInput) => Promise<CronJob>;
+
+let cronCreateAuthority: CronCreateAuthority | null = null;
+
+/** Desktop installs a Main-process delegate; other hosts keep the local scheduler path. */
+export function setCronCreateAuthority(authority: CronCreateAuthority | null): void {
+  cronCreateAuthority = authority;
 }
 
 export const cronCreateToolDef: ToolDefinition = {
@@ -154,16 +171,32 @@ export async function cronCreateTool(
           rootId: context.workspace.sessionMainRootId,
         }
       : undefined;
-  let job;
+  let job: CronJob;
   try {
-    job = cronScheduler.create(name, schedule, prompt, {
+    const createInput: CronCreateAuthorityInput = {
+      name,
+      schedule,
+      prompt,
       ...(timezone !== undefined ? { timezone } : {}),
       ...(cwd !== undefined ? { cwd } : {}),
       ...(stableWorkspace ?? {}),
       ...(permissionLevel !== undefined ? { permissionLevel } : {}),
       ...(once ? { once: true } : {}),
       ...(resumeSessionId !== undefined ? { resumeSessionId } : {}),
-    });
+      ...(getCurrentSid() ? { authoritySessionId: getCurrentSid() } : {}),
+    };
+    if (cronCreateAuthority) {
+      job = await cronCreateAuthority(createInput);
+    } else {
+      const {
+        name: _name,
+        schedule: _schedule,
+        prompt: _prompt,
+        authoritySessionId: _authoritySessionId,
+        ...createOptions
+      } = createInput;
+      job = cronScheduler.create(name, schedule, prompt, createOptions);
+    }
   } catch (err) {
     return `Error: ${err instanceof Error ? err.message : String(err)}`;
   }
@@ -192,12 +225,14 @@ export const cronDeleteToolDef: ToolDefinition = {
 export async function cronDeleteTool(args: Record<string, unknown>): Promise<string> {
   const id = args.jobId as string;
   if (!id) return "Error: jobId is required";
+  cronScheduler.loadJobs({ arm: false });
   const deleted = cronScheduler.delete(id);
   if (deleted) fireCronChanged();
   return deleted ? `Cron job #${id} deleted.` : `Cron job #${id} not found.`;
 }
 
 export async function cronListTool(_args: Record<string, unknown>): Promise<string> {
+  cronScheduler.loadJobs({ arm: false });
   const jobs = cronScheduler.list();
   if (jobs.length === 0) return "No cron jobs scheduled.";
   const lines = jobs.map((j) => {

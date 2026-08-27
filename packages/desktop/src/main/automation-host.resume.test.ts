@@ -109,7 +109,7 @@ describe("makeCronRunnerWithResume — routes by job.resumeSessionId", () => {
     expect(seen).toBe(ac.signal);
   });
 
-  test("permanently stops an ID-bound resume job whose project/root is no longer valid", async () => {
+  test("permanently stops a resume job with the authority validator's explicit reason", async () => {
     let headlessCalls = 0;
     let injectCalls = 0;
     const runner = makeCronRunnerWithResume(
@@ -121,7 +121,7 @@ describe("makeCronRunnerWithResume — routes by job.resumeSessionId", () => {
         injectCalls += 1;
         return { text: "injected", reason: "done" };
       },
-      () => false,
+      async () => ({ ok: false as const, reason: "resume Session root changed" }),
     );
 
     const result = await runner(
@@ -129,10 +129,28 @@ describe("makeCronRunnerWithResume — routes by job.resumeSessionId", () => {
     );
     expect(result).toEqual({
       text: "",
-      reason: "workspace-unresolved",
-      stop: { reason: "workspace-unresolved" },
+      reason: "resume-authority-invalid",
+      stop: { reason: "resume Session root changed" },
     });
     expect(headlessCalls).toBe(0);
     expect(injectCalls).toBe(0);
+  });
+
+  test("passes the validated stable ids into the resume injection for Main's second check", async () => {
+    let injectedJob: CronRunRequest["job"] | undefined;
+    const runner = makeCronRunnerWithResume(
+      async () => ({ text: "headless", reason: "done" }),
+      async (_sid, _prompt, _signal, job) => {
+        injectedJob = job;
+        return { text: "injected", reason: "done" };
+      },
+      async () => ({
+        ok: true as const,
+        authority: { cwd: "/repo", projectId: "p1", rootId: "r1" },
+      }),
+    );
+
+    await runner(req({ job: { resumeSessionId: "sess-42", projectId: "p1", rootId: "r1" } }));
+    expect(injectedJob).toMatchObject({ projectId: "p1", rootId: "r1" });
   });
 });

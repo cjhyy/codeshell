@@ -43,6 +43,11 @@ import { browserRuntime, type BrowserRuntimeLike } from "./browser-runtime/index
 import { getProjectStore } from "./project-store.js";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
 import { getTrustCachedSync } from "./trust-store.js";
+import {
+  desktopAutomationAuthorityDeps,
+  validateAutomationResumeAuthority,
+  type AutomationResumeAuthorityValidation,
+} from "./automation-authority.js";
 
 export interface AutomationWorkspaceResolution {
   cwd: string;
@@ -146,11 +151,11 @@ function resolveDesktopAutomationWorkspace(
   });
 }
 
-/** Shared preflight for resume jobs, which otherwise bypass the headless runner. */
+/** Trigger-time durable Session preflight for resume jobs. */
 export function resolveDesktopAutomationJobWorkspace(
-  job: Pick<CronJob, "cwd" | "projectId" | "rootId">,
-): boolean {
-  return resolveDesktopAutomationWorkspace(job) !== null;
+  job: Pick<CronJob, "cwd" | "projectId" | "rootId" | "resumeSessionId">,
+): Promise<AutomationResumeAuthorityValidation> {
+  return validateAutomationResumeAuthority(job, desktopAutomationAuthorityDeps());
 }
 
 function existingDirectory(cwd: string): boolean {
@@ -393,6 +398,7 @@ export type ResumeInjector = (
   sessionId: string,
   prompt: string,
   signal?: AbortSignal,
+  job?: CronJob,
 ) => Promise<CronRunResult>;
 
 /**
@@ -407,19 +413,24 @@ export type ResumeInjector = (
 export function makeCronRunnerWithResume(
   headless: CronRunner,
   injectResume: ResumeInjector,
-  validateWorkspace?: (job: CronJob) => boolean,
+  validateWorkspace?: (
+    job: CronJob,
+  ) => AutomationResumeAuthorityValidation | Promise<AutomationResumeAuthorityValidation>,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
     const sid = req.job.resumeSessionId;
     if (typeof sid === "string" && sid.length > 0) {
-      if (validateWorkspace && !validateWorkspace(req.job)) {
-        return {
-          text: "",
-          reason: "workspace-unresolved",
-          stop: { reason: "workspace-unresolved" },
-        };
+      if (validateWorkspace) {
+        const validation = await validateWorkspace(req.job);
+        if (!validation.ok) {
+          return {
+            text: "",
+            reason: "resume-authority-invalid",
+            stop: { reason: validation.reason },
+          };
+        }
       }
-      return injectResume(sid, req.prompt, req.signal);
+      return injectResume(sid, req.prompt, req.signal, req.job);
     }
     return headless(req);
   };

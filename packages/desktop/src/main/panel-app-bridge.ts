@@ -166,7 +166,7 @@ export interface PanelAppBridgeOptions {
   };
   /** Project- and task-scoped recurring jobs. The Panel never receives jobs from another cwd. */
   automations?: {
-    list(): Promise<
+    list(scope: { resumeSessionId: string }): Promise<
       Array<{
         id: string;
         name: string;
@@ -182,15 +182,16 @@ export interface PanelAppBridgeOptions {
         resumeSessionId: string | null;
       }>
     >;
-    create(input: {
-      name: string;
-      schedule: string;
-      prompt: string;
-      cwd: string;
-      timezone?: string;
-      permissionLevel: "full";
-      resumeSessionId: string;
-    }): Promise<unknown>;
+    create(
+      input: {
+        name: string;
+        schedule: string;
+        prompt: string;
+        timezone?: string;
+        permissionLevel: "full";
+      },
+      scope: { resumeSessionId: string },
+    ): Promise<unknown>;
     update(
       id: string,
       patch: {
@@ -199,6 +200,7 @@ export interface PanelAppBridgeOptions {
         prompt?: string;
         timezone?: string;
       },
+      scope: { resumeSessionId: string },
     ): Promise<unknown>;
     pause(id: string): Promise<boolean>;
     resume(id: string): Promise<boolean>;
@@ -1186,17 +1188,9 @@ export class PanelAppBridge {
     return host;
   }
 
-  private isPanelAutomationInScope(
-    binding: GuestBinding,
-    automation: { cwd: string | null; resumeSessionId: string | null },
-  ): boolean {
-    return Boolean(
-      binding.context.cwd &&
-      binding.context.sessionId &&
-      automation.cwd &&
-      resolve(automation.cwd) === resolve(binding.context.cwd) &&
-      automation.resumeSessionId === binding.context.sessionId,
-    );
+  private panelAutomationScope(binding: GuestBinding): { resumeSessionId: string } {
+    this.panelAutomationHost(binding);
+    return { resumeSessionId: binding.context.sessionId! };
   }
 
   private automationId(params: unknown): string {
@@ -1209,19 +1203,17 @@ export class PanelAppBridge {
 
   private async listPanelAutomations(binding: GuestBinding): Promise<unknown> {
     const host = this.panelAutomationHost(binding);
-    const jobs = await host.list();
-    return {
-      automations: jobs.filter((job) => this.isPanelAutomationInScope(binding, job)),
-    };
+    return { automations: await host.list(this.panelAutomationScope(binding)) };
   }
 
   private async requireScopedPanelAutomation(binding: GuestBinding, id: string) {
     const host = this.panelAutomationHost(binding);
-    const automation = (await host.list()).find((job) => job.id === id);
-    if (!automation || !this.isPanelAutomationInScope(binding, automation)) {
+    const scope = this.panelAutomationScope(binding);
+    const automation = (await host.list(scope)).find((job) => job.id === id);
+    if (!automation) {
       throw new Error("Panel App automation is not available in this project task");
     }
-    return { host, automation };
+    return { host, automation, scope };
   }
 
   private async createPanelAutomation(binding: GuestBinding, params: unknown): Promise<unknown> {
@@ -1231,7 +1223,19 @@ export class PanelAppBridge {
       schedule?: unknown;
       prompt?: unknown;
       timezone?: unknown;
+      cwd?: unknown;
+      projectId?: unknown;
+      rootId?: unknown;
+      resumeSessionId?: unknown;
     } | null;
+    if (
+      input &&
+      ["cwd", "projectId", "rootId", "resumeSessionId"].some((key) =>
+        Object.prototype.hasOwnProperty.call(input, key),
+      )
+    ) {
+      throw new Error("Panel App cannot submit automation workspace authority fields");
+    }
     const name = typeof input?.name === "string" ? input.name.trim() : "";
     const schedule = typeof input?.schedule === "string" ? input.schedule.trim() : "";
     const prompt = typeof input?.prompt === "string" ? input.prompt.trim() : "";
@@ -1245,26 +1249,38 @@ export class PanelAppBridge {
     if (timezone !== undefined && (!timezone || timezone.length > 120)) {
       throw new Error("Panel App automation timezone is invalid");
     }
-    return host.create({
-      name,
-      schedule,
-      prompt,
-      cwd: binding.context.cwd!,
-      ...(timezone ? { timezone } : {}),
-      permissionLevel: "full",
-      resumeSessionId: binding.context.sessionId!,
-    });
+    return host.create(
+      {
+        name,
+        schedule,
+        prompt,
+        ...(timezone ? { timezone } : {}),
+        permissionLevel: "full",
+      },
+      this.panelAutomationScope(binding),
+    );
   }
 
   private async updatePanelAutomation(binding: GuestBinding, params: unknown): Promise<unknown> {
     const id = this.automationId(params);
-    const { host } = await this.requireScopedPanelAutomation(binding, id);
+    const { host, scope } = await this.requireScopedPanelAutomation(binding, id);
     const input = params as {
       name?: unknown;
       schedule?: unknown;
       prompt?: unknown;
       timezone?: unknown;
+      cwd?: unknown;
+      projectId?: unknown;
+      rootId?: unknown;
+      resumeSessionId?: unknown;
     };
+    if (
+      ["cwd", "projectId", "rootId", "resumeSessionId"].some((key) =>
+        Object.prototype.hasOwnProperty.call(input, key),
+      )
+    ) {
+      throw new Error("Panel App cannot submit automation workspace authority fields");
+    }
     const patch: { name?: string; schedule?: string; prompt?: string; timezone?: string } = {};
     if (input.name !== undefined) {
       if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 120) {
@@ -1303,7 +1319,7 @@ export class PanelAppBridge {
       patch.timezone = input.timezone.trim();
     }
     if (!Object.keys(patch).length) throw new Error("Panel App automation update is empty");
-    return host.update(id, patch);
+    return host.update(id, patch, scope);
   }
 
   private async controlPanelAutomation(

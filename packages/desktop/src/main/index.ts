@@ -233,6 +233,7 @@ import {
   getAutomation,
   createAutomation,
   updateAutomation,
+  listAutomationsForResumeSession,
   deleteAutomation,
   pauseAutomation,
   resumeAutomation,
@@ -241,11 +242,7 @@ import {
   type CreateAutomationInput,
   type UpdateAutomationInput,
 } from "./automation-service.js";
-import {
-  resolveAutomationCreateAuthority,
-  resolveAutomationUpdateAuthority,
-  type AutomationAuthorityDeps,
-} from "./automation-authority.js";
+import { desktopAutomationAuthorityDeps } from "./automation-authority.js";
 import { dlog } from "./desktop-logger.js";
 import {
   ptyStart,
@@ -740,9 +737,15 @@ const panelAppBridge = new PanelAppBridge({
     },
   },
   automations: {
-    list: async () => listAutomations(),
-    create: async (input) => createAutomation(input),
-    update: async (id, patch) => updateAutomation(id, patch),
+    list: async (scope) =>
+      listAutomationsForResumeSession(scope.resumeSessionId, desktopAutomationAuthorityDeps()),
+    create: async (input, scope) =>
+      createAutomation(
+        { ...input, resumeSessionId: scope.resumeSessionId },
+        desktopAutomationAuthorityDeps(),
+      ),
+    update: async (id, patch, scope) =>
+      updateAutomation(id, patch, desktopAutomationAuthorityDeps(), scope),
     pause: async (id) => pauseAutomation(id),
     resume: async (id) => resumeAutomation(id),
     delete: async (id) => deleteAutomation(id),
@@ -1426,6 +1429,11 @@ async function createWindow(): Promise<BrowserWindow> {
         isClaimActive: ({ sessionId, ownerId, claimId }) =>
           quickChatOwnership.isClaimActive(sessionId, ownerId, claimId),
       },
+      async (input) =>
+        (await createAutomation(
+          input as unknown as CreateAutomationInput,
+          desktopAutomationAuthorityDeps(),
+        )) as unknown as Record<string, unknown>,
     );
     // External Agent Runtimes (Codex / Claude Code). Everything
     // security-relevant is resolved here, in the composition root: this is the
@@ -3114,6 +3122,7 @@ app.whenReady().then(async () => {
       sessionId: string,
       prompt: string,
       _signal?: AbortSignal,
+      job?: import("@cjhyy/code-shell-core/internal").CronJob,
     ): Promise<CronRunResult> => {
       if (!bridge) return { text: "", reason: "no-bridge" };
       // requireExisting: if the user deleted the target conversation, the worker
@@ -3124,7 +3133,13 @@ app.whenReady().then(async () => {
       const res = await injectAndAwaitResult(
         bridge,
         "agent/run",
-        { task: prompt, sessionId, requireExisting: true },
+        {
+          task: prompt,
+          sessionId,
+          requireExisting: true,
+          ...(job?.projectId ? { projectId: job.projectId } : {}),
+          ...(job?.rootId ? { rootId: job.rootId } : {}),
+        },
         { origin: "host", producer: "automation-resume" },
       );
       if (res.ok) {
@@ -4276,12 +4291,12 @@ ipcMain.handle(
     if (installKey.length > 512 || templateId.length > 512 || expectedRevision.length > 512) {
       throw new Error("plugin automation identifiers are too long");
     }
-    const workspace = await resolveAutomationCreateAuthority({ cwd }, automationAuthorityDeps());
     return createAutomationFromPluginTemplate(
       installKey,
       templateId,
       expectedRevision,
-      workspace as { cwd?: string; projectId?: string; rootId?: string },
+      { cwd },
+      desktopAutomationAuthorityDeps(),
     );
   },
 );
@@ -7014,31 +7029,6 @@ function validAutomationBindingId(value: unknown): boolean {
   );
 }
 
-function automationAuthorityDeps(): AutomationAuthorityDeps {
-  return {
-    requireRendererPath: (cwd) => requireRendererProjectPath(cwd),
-    isNoRepoCwd: (cwd) => projectStore.isNoRepoCwd(cwd),
-    resolveProjectRootById: (projectId, rootId) => {
-      const resolved = projectStore.resolveProjectRootByIdSync(projectId, rootId);
-      return {
-        projectId: resolved.project.id,
-        rootId: resolved.mainRoot.id,
-        cwd: resolved.cwd,
-      };
-    },
-    resolveExactRoot: (cwd) => {
-      const resolved = projectStore.resolveExactRootSync(cwd);
-      return resolved
-        ? {
-            projectId: resolved.project.id,
-            rootId: resolved.mainRoot.id,
-            cwd: resolved.cwd,
-          }
-        : undefined;
-    },
-  };
-}
-
 ipcMain.handle("automation:list", async () => listAutomations());
 ipcMain.handle("automation:get", async (_e, id: string) => {
   assertAutomationId(id);
@@ -7071,9 +7061,10 @@ ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => 
     throw new Error("invalid automation payload");
   }
   if (input.resumeSessionId !== undefined) assertDesktopSessionId(input.resumeSessionId);
-  const { cwd: _cwd, projectId: _projectId, rootId: _rootId, ...definition } = input;
-  const authority = await resolveAutomationCreateAuthority(input, automationAuthorityDeps());
-  return createAutomation({ ...definition, ...authority } as CreateAutomationInput);
+  if (Object.prototype.hasOwnProperty.call(input, "authoritySessionId")) {
+    throw new Error("renderer cannot submit automation Session authority");
+  }
+  return createAutomation(input, desktopAutomationAuthorityDeps());
 });
 ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomationInput) => {
   assertAutomationId(id);
@@ -7099,9 +7090,7 @@ ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomati
   ) {
     throw new Error("invalid automation patch");
   }
-  const { cwd: _cwd, projectId: _projectId, rootId: _rootId, ...definition } = patch;
-  const authority = await resolveAutomationUpdateAuthority(patch, automationAuthorityDeps());
-  return updateAutomation(id, { ...definition, ...authority });
+  return updateAutomation(id, patch, desktopAutomationAuthorityDeps());
 });
 ipcMain.handle("automation:delete", async (_e, id: string) => {
   assertAutomationId(id);

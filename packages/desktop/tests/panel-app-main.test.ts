@@ -1091,6 +1091,8 @@ describeIsolated("PanelAppBridge", () => {
 
   test("scopes Panel automations to the bound workspace and task", async () => {
     const created: any[] = [];
+    const listedScopes: any[] = [];
+    const updatedScopes: any[] = [];
     const jobs: any[] = [
       {
         id: "scoped",
@@ -1127,12 +1129,18 @@ describeIsolated("PanelAppBridge", () => {
       isPanelAppBound: () => true,
       getAgentBridge: () => null,
       automations: {
-        list: async () => jobs,
-        create: async (input) => {
-          created.push(input);
+        list: async (scope) => {
+          listedScopes.push(scope);
+          return jobs.filter((job) => job.id === "scoped");
+        },
+        create: async (input, scope) => {
+          created.push({ input, scope });
           return { id: "created", ...input, enabled: true };
         },
-        update: async () => null,
+        update: async (_id, _patch, scope) => {
+          updatedScopes.push(scope);
+          return null;
+        },
         pause: async () => true,
         resume: async () => true,
         delete: async () => true,
@@ -1164,11 +1172,40 @@ describeIsolated("PanelAppBridge", () => {
       prompt: "discover complete JDs",
       timezone: "Asia/Singapore",
     });
-    expect(created[0]).toMatchObject({
-      cwd: "/repo",
-      permissionLevel: "full",
-      resumeSessionId: "session-1",
+    expect(listedScopes[0]).toEqual({ resumeSessionId: "session-1" });
+    expect(created[0]).toEqual({
+      input: {
+        name: "Scheduled jobs",
+        schedule: "0 9 * * 1-5",
+        prompt: "discover complete JDs",
+        timezone: "Asia/Singapore",
+        permissionLevel: "full",
+      },
+      scope: { resumeSessionId: "session-1" },
     });
+    await call("automations.update", { id: "scoped", prompt: "updated" });
+    expect(updatedScopes).toEqual([{ resumeSessionId: "session-1" }]);
+    await expect(
+      call("automations.update", {
+        id: "scoped",
+        prompt: "forged update",
+        cwd: "/other",
+        projectId: "other-project",
+        rootId: "other-root",
+      }),
+    ).rejects.toThrow(/workspace authority fields/i);
+    expect(updatedScopes).toHaveLength(1);
+    await expect(
+      call("automations.create", {
+        name: "forged",
+        schedule: "1h",
+        prompt: "p",
+        cwd: "/other",
+        projectId: "other-project",
+        rootId: "other-root",
+      }),
+    ).rejects.toThrow(/workspace authority fields/i);
+    expect(created).toHaveLength(1);
     await expect(call("automations.pause", { id: "other-project" })).rejects.toThrow(
       /not available in this project task/,
     );

@@ -14,6 +14,22 @@ describe("plugin automation template service", () => {
   let previousHome: string | undefined;
   let scheduler: CronScheduler;
 
+  const authorityDeps = () => ({
+    requireRendererPath: async (cwd: string) => cwd,
+    isNoRepoCwd: () => false,
+    resolveProjectRootById: (projectId: string, rootId?: string) => ({
+      projectId,
+      rootId: rootId ?? "root-1",
+      cwd: project,
+    }),
+    resolveExactRoot: (cwd: string) => ({
+      projectId: "project-1",
+      rootId: "root-1",
+      cwd,
+    }),
+    resolveSessionAuthority: async () => undefined,
+  });
+
   beforeEach(() => {
     previousHome = process.env.HOME;
     home = mkdtempSync(join(tmpdir(), "plugin-automation-home-"));
@@ -74,19 +90,22 @@ describe("plugin automation template service", () => {
     rmSync(project, { recursive: true, force: true });
   });
 
-  test("binds the reviewed revision and copies standalone provenance", () => {
+  test("binds the reviewed revision and copies standalone provenance", async () => {
     const contribution = loadPluginAutomationTemplateContributions()[0]!;
-    const created = createAutomationFromPluginTemplate(
+    const created = await createAutomationFromPluginTemplate(
       contribution.installKey,
       contribution.template.id,
       contribution.revision,
       project,
+      authorityDeps(),
     );
 
     expect(created).toMatchObject({
       name: "Weekday review",
       prompt: "Inspect pending work without modifying files.",
       cwd: project,
+      projectId: "project-1",
+      rootId: "root-1",
       permissionLevel: "read-only",
       templateSource: {
         installKey: "review-plugin@local",
@@ -100,38 +119,40 @@ describe("plugin automation template service", () => {
     expect(scheduler.get(created.id)?.prompt).toBe("Inspect pending work without modifying files.");
   });
 
-  test("rejects stale revisions after a plugin template changes", () => {
+  test("rejects stale revisions after a plugin template changes", async () => {
     const contribution = loadPluginAutomationTemplateContributions()[0]!;
     const canonicalPath = join(installPath, ".cs-plugin-manifest.json");
     const canonical = JSON.parse(readFileSync(canonicalPath, "utf-8"));
     canonical.automations.templates[0].prompt = "Changed after review.";
     writeFileSync(canonicalPath, JSON.stringify(canonical));
 
-    expect(() =>
+    await expect(
       createAutomationFromPluginTemplate(
         contribution.installKey,
         contribution.template.id,
         contribution.revision,
         project,
+        authorityDeps(),
       ),
-    ).toThrow(/changed after review/);
+    ).rejects.toThrow(/changed after review/);
     expect(scheduler.list()).toHaveLength(0);
   });
 
-  test("rejects templates owned by a disabled plugin", () => {
+  test("rejects templates owned by a disabled plugin", async () => {
     const contribution = loadPluginAutomationTemplateContributions()[0]!;
     writeFileSync(
       join(home, ".code-shell", "settings.json"),
       JSON.stringify({ disabledPlugins: ["review-plugin"] }),
     );
 
-    expect(() =>
+    await expect(
       createAutomationFromPluginTemplate(
         contribution.installKey,
         contribution.template.id,
         contribution.revision,
         project,
+        authorityDeps(),
       ),
-    ).toThrow(/plugin is disabled/);
+    ).rejects.toThrow(/plugin is disabled/);
   });
 });

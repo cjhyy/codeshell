@@ -40,7 +40,7 @@ import { validateSettings, type ValidatedSettings } from "../settings/schema.js"
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
 import { createNotification, Methods } from "../protocol/types.js";
-import { setCronChangedSink } from "../tool-system/builtin/cron.js";
+import { setCronChangedSink, setCronCreateAuthority } from "../tool-system/builtin/cron.js";
 import { setModelCatalogChangedSink } from "../tool-system/builtin/edit-model-catalog.js";
 import { setCapabilityChangedSink } from "../tool-system/builtin/install-capability.js";
 import { SettingsManager, noRepoDir } from "../settings/manager.js";
@@ -56,6 +56,7 @@ import { cronScheduler } from "../automation/scheduler.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
 import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
 import { createIpcCredentialAccess, setDefaultCredentialAccess } from "../credentials/access.js";
+import { createDesktopAutomationAuthorityClient } from "../automation/desktop-authority-client.js";
 import { compileComposition } from "../composition/compiler.js";
 import type { AgentModule } from "../composition/types.js";
 
@@ -365,6 +366,7 @@ cronScheduler.loadJobs();
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
 setDefaultCredentialAccess(createIpcCredentialAccess(stdioTransport));
+setCronCreateAuthority(createDesktopAutomationAuthorityClient(stdioTransport));
 
 // Cron jobs are persisted by this worker but only main arms/executes their
 // timers (this worker keeps setExecutionEnabled(false) above). When an AI tool

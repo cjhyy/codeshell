@@ -1014,10 +1014,11 @@ contextBridge.exposeInMainWorld("codeshell", {
     schedule: string;
     prompt: string;
     cwd?: string;
-    projectId?: string;
-    rootId?: string;
+    projectId?: string | null;
+    rootId?: string | null;
     timezone?: string;
     permissionLevel?: string;
+    resumeSessionId?: string;
   }) => ipcRenderer.invoke("automation:create", input),
   updateAutomation: (
     id: string,
@@ -1030,6 +1031,7 @@ contextBridge.exposeInMainWorld("codeshell", {
       projectId?: string | null;
       rootId?: string | null;
       permissionLevel?: string;
+      resumeSessionId?: string | null;
     },
   ) => ipcRenderer.invoke("automation:update", id, patch),
   deleteAutomation: (id: string) => ipcRenderer.invoke("automation:delete", id),
