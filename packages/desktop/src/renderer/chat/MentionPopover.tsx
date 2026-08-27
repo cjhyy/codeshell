@@ -34,6 +34,8 @@ export type MentionItem =
 interface Props {
   /** Active repo cwd. When null the popover only shows skills (no files). */
   cwd: string | null;
+  /** Authoritative root within a multi-root project. */
+  rootId: string | null;
   configurationTarget: RendererConfigurationTarget;
   projectId?: string | null;
   projectRoots?: Array<{ id: string; path: string }>;
@@ -51,6 +53,7 @@ const EMPTY_PROJECT_ROOTS: Array<{ id: string; path: string }> = [];
 
 export function MentionPopover({
   cwd,
+  rootId,
   configurationTarget,
   projectId,
   projectRoots = EMPTY_PROJECT_ROOTS,
@@ -97,15 +100,17 @@ export function MentionPopover({
     const handle = setTimeout(() => {
       const request = projectId
         ? window.codeshell.searchProjectFiles(projectId, query).then((hits) =>
-            hits.map((hit) => {
-              const root = projectRoots.find((candidate) => candidate.id === hit.rootId);
-              if (!root) return hit;
-              const separator = root.path.includes("\\") ? "\\" : "/";
-              return {
-                ...hit,
-                path: `${root.path.replace(/[\\/]+$/, "")}${separator}${hit.path}`,
-              };
-            }),
+            hits
+              .filter((hit) => hit.rootId === rootId)
+              .map((hit) => {
+                const root = projectRoots.find((candidate) => candidate.id === hit.rootId);
+                if (!root) return hit;
+                const separator = root.path.includes("\\") ? "\\" : "/";
+                return {
+                  ...hit,
+                  path: `${root.path.replace(/[\\/]+$/, "")}${separator}${hit.path}`,
+                };
+              }),
           )
         : Promise.resolve([]);
       void request
@@ -120,7 +125,7 @@ export function MentionPopover({
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [cwd, projectId, projectRoots, query]);
+  }, [cwd, projectId, projectRoots, query, rootId]);
 
   useEffect(() => {
     let cancelled = false;

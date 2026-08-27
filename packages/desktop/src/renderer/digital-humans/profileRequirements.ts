@@ -23,6 +23,7 @@ interface RequirementsApi {
 export interface EnsureDigitalHumanRequirementsOptions {
   name: string;
   projectPath: string | null;
+  configurationTarget?: RendererConfigurationTarget;
   api: RequirementsApi;
   confirm: (options: ConfirmDialogOptions) => Promise<boolean>;
   toast: (options: ToastOptions) => void;
@@ -40,18 +41,19 @@ export interface EnsureDigitalHumanRequirementsOptions {
 export async function ensureDigitalHumanRequirements({
   name,
   projectPath,
+  configurationTarget,
   api,
   confirm,
   toast,
   t,
 }: EnsureDigitalHumanRequirementsOptions): Promise<boolean> {
-  if (!projectPath) {
+  if (!projectPath && !configurationTarget) {
     toast({ message: t("digitalHumans.pickProject"), variant: "error" });
     return false;
   }
 
   let preview: Awaited<ReturnType<RequirementsApi["previewProfileRequirements"]>>;
-  const target = requireProjectConfigurationTarget(projectPath);
+  const target = configurationTarget ?? requireProjectConfigurationTarget(projectPath ?? "");
   try {
     preview = await api.previewProfileRequirements(name, target);
   } catch (error) {

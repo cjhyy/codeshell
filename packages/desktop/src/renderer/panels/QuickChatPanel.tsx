@@ -160,8 +160,10 @@ export function QuickChatPanel({
             projects={[]}
             onSelectProject={() => undefined}
             onAddProject={() => undefined}
-            activeProjectPath={cwd ?? null}
-            messageCwd={cwd}
+            configurationTarget={{ sessionId }}
+            configurationAvailable={Boolean(cwd)}
+            conversationRoot={cwd ?? null}
+            conversationRootId={null}
             welcomeNode={
               <div className="text-sm text-muted-foreground">{t("panels.quickChat.empty")}</div>
             }

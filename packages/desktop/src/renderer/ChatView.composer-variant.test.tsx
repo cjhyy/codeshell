@@ -37,7 +37,10 @@ function renderComposer(variant: "main" | "quickChat" | "pet", permissionMode = 
       projects={[]}
       onSelectProject={() => undefined}
       onAddProject={() => undefined}
-      activeProjectPath={null}
+      configurationTarget={{ noRepo: true }}
+      configurationAvailable={false}
+      conversationRoot={null}
+      conversationRootId={null}
       draft=""
       onDraftChange={() => undefined}
       attachments={[]}

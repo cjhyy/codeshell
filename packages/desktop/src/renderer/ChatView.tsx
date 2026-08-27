@@ -33,6 +33,7 @@ import type {
   FileSearchHit,
   InputAttachmentMeta,
   PluginCommandDescriptor,
+  RendererConfigurationTarget,
 } from "../preload/types";
 import {
   buildAttachments,
@@ -64,7 +65,6 @@ import { useToast } from "./ui/ToastProvider";
 import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 import { pageAttribution } from "./browser/markerEcho";
 import { useT } from "./i18n/I18nProvider";
-import { conversationConfigurationTarget } from "./configurationTarget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -180,11 +180,14 @@ interface Props {
   projects: TrackedProject[];
   onSelectProject: (id: string | null) => void;
   onAddProject: () => void;
-  activeProjectPath: string | null;
-  /** cwd for resolving message content (relative path links / inline images).
-   *  Equals activeProjectPath for a real project, the sandbox cwd for a no-project chat.
-   *  Kept separate from activeProjectPath so git/STT/branch stay project-only. */
-  messageCwd?: string | null;
+  /** Main-resolved configuration identity. Existing Sessions always use sessionId. */
+  configurationTarget: RendererConfigurationTarget;
+  /** False while authority is loading or its rootStatus is not ok. */
+  configurationAvailable: boolean;
+  /** Main-resolved active workspace root; null means path-based UI must fail closed. */
+  conversationRoot: string | null;
+  /** Main-resolved root identity used to constrain multi-root file discovery. */
+  conversationRootId: string | null;
   repoClean?: boolean | null;
 
   // Title shown above the composer in new-chat mode (empty stream)
@@ -374,8 +377,10 @@ export function ChatView({
   projects,
   onSelectProject,
   onAddProject,
-  activeProjectPath,
-  messageCwd,
+  configurationTarget,
+  configurationAvailable,
+  conversationRoot,
+  conversationRootId,
   repoClean,
   welcomeNode,
   composerSeed,
@@ -460,8 +465,12 @@ export function ChatView({
   // mic button reflects whether voice input is usable right now.
   useEffect(() => {
     let cancelled = false;
+    if (!configurationAvailable || !conversationRoot) {
+      setSttAvailable(false);
+      return;
+    }
     void window.codeshell
-      .sttAvailable(activeProjectPath ?? "")
+      .sttAvailable(conversationRoot)
       .then((r) => {
         if (!cancelled) setSttAvailable(r.available);
       })
@@ -471,7 +480,7 @@ export function ChatView({
     return () => {
       cancelled = true;
     };
-  }, [activeProjectPath]);
+  }, [configurationAvailable, conversationRoot]);
 
   const transcribeChunks = useCallback(
     async (blob: Blob, mimeType: string) => {
@@ -481,7 +490,7 @@ export function ChatView({
         const buf = await blob.arrayBuffer();
         if (!mountedRef.current) return;
         const res = await window.codeshell.transcribeAudio({
-          cwd: activeProjectPath ?? "",
+          cwd: conversationRoot ?? "",
           audio: buf,
           mimeType,
         });
@@ -507,7 +516,7 @@ export function ChatView({
         if (mountedRef.current) setVoiceState("idle");
       }
     },
-    [activeProjectPath, setDraft, toast, t],
+    [conversationRoot, setDraft, toast, t],
   );
 
   const startRecording = useCallback(async () => {
@@ -597,14 +606,27 @@ export function ChatView({
   const [slashSelected, setSlashSelected] = useState(0);
   const [pluginCommands, setPluginCommands] = useState<PluginCommandDescriptor[]>([]);
   const [expandingPluginCommand, setExpandingPluginCommand] = useState(false);
+  const configurationTargetKey =
+    "sessionId" in configurationTarget
+      ? `session:${configurationTarget.sessionId}`
+      : "projectId" in configurationTarget
+        ? `project:${configurationTarget.projectId}`
+        : "no-repo";
   const pluginCommandTarget = useMemo(
-    () => conversationConfigurationTarget(engineSessionId, activeProjectId),
-    [engineSessionId, activeProjectId],
+    () => configurationTarget,
+    // Stable identity avoids re-running discovery when a wrapper recreates the
+    // same one-key target object during an unrelated composer render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [configurationTargetKey],
   );
 
   useEffect(() => {
     let cancelled = false;
     const load = async (): Promise<void> => {
+      if (!configurationAvailable) {
+        if (!cancelled) setPluginCommands([]);
+        return;
+      }
       try {
         if (typeof window.codeshell.listPluginCommands !== "function") {
           if (!cancelled) setPluginCommands([]);
@@ -631,7 +653,7 @@ export function ChatView({
       window.removeEventListener("codeshell:settings-changed", refresh);
       off?.();
     };
-  }, [pluginCommandTarget]);
+  }, [configurationAvailable, pluginCommandTarget]);
 
   const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
   const activeSupportsVision = activeModel?.supportsVision === true;
@@ -793,7 +815,7 @@ export function ChatView({
             references,
             referenceFromAbsPath(
               path,
-              attachmentContext.cwd ?? messageCwd,
+              attachmentContext.cwd ?? conversationRoot,
               attachmentContext.sessionId ?? engineSessionId,
               origin,
             ),
@@ -829,7 +851,7 @@ export function ChatView({
           cur,
           referenceFromFileHit(
             item.file,
-            attachmentContext?.cwd ?? messageCwd,
+            attachmentContext?.cwd ?? conversationRoot,
             attachmentContext?.sessionId ?? engineSessionId,
           ),
         ),
@@ -864,7 +886,7 @@ export function ChatView({
     item: Extract<SlashCommandItem, { kind: "plugin" }>,
     rawArguments: string,
   ): Promise<void> => {
-    if (compacting || expandingPluginCommand) return;
+    if (compacting || expandingPluginCommand || !configurationAvailable) return;
     if (typeof window.codeshell.expandPluginCommand !== "function") {
       toast({ message: t("chat.slash.pluginExpandUnavailable"), variant: "error" });
       return;
@@ -1365,7 +1387,7 @@ export function ChatView({
             onExtendGoal={onExtendGoal}
             trailing={inlineApproval}
             trailingKey={pendingApproval?.requestId ?? null}
-            cwd={messageCwd ?? activeProjectPath}
+            cwd={conversationRoot}
             sendEpoch={sendEpoch}
             onContextPackageCreated={onContextPackageCreated}
             onContextSelectionChange={setContextSelectionOpen}
@@ -1655,7 +1677,8 @@ export function ChatView({
             <div className="relative">
               {mention && (
                 <MentionPopover
-                  cwd={activeProjectPath}
+                  cwd={configurationAvailable ? conversationRoot : null}
+                  rootId={configurationAvailable ? conversationRootId : null}
                   configurationTarget={pluginCommandTarget}
                   projectId={activeProjectId}
                   projectRoots={projects.find((project) => project.id === activeProjectId)?.roots}
@@ -2002,7 +2025,7 @@ export function ChatView({
             would be confusing (cwd / context / engine sessionId are
             already tied to the existing project). Use the sidebar to
             jump projects after a session has started. */}
-          {isNewChat && variant === "main" && (
+          {isNewChat && variant === "main" && !engineSessionId && (
             <div className="mt-2 flex items-center gap-2">
               <ProjectPicker
                 projects={projects}
@@ -2020,7 +2043,7 @@ export function ChatView({
               </span>
               <BranchPicker
                 projectId={activeProjectId}
-                cwd={activeProjectPath}
+                cwd={conversationRoot}
                 clean={repoClean}
                 disabled={controlsDisabled}
               />

@@ -1,14 +1,32 @@
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
+import type { RendererConfigurationTarget } from "../preload/types";
+import type { ModelOption } from "./chat/ModelPill";
+import type { PermissionMode } from "./chat/PermissionPill";
 
 interface ChatProps {
   compacting?: boolean;
   onCompactCommand?: () => void;
+  activeProjectId?: string | null;
+  activeModelKey?: string | null;
+  modelOptions?: ModelOption[];
+  permissionMode?: PermissionMode | null;
+  imageDetail?: "low" | "standard" | "high";
+  configurationTarget?: RendererConfigurationTarget;
+  configurationAvailable?: boolean;
+  conversationRoot?: string | null;
+  conversationRootId?: string | null;
+  onPrepareAttachmentSession?: () => { cwd: string; sessionId: string } | null;
 }
 
 let chatProps: ChatProps | null = null;
+let topBarProps: Record<string, any> | null = null;
+let sidebarProps: Record<string, any> | null = null;
 
 mock.module("./ChatView", () => ({
   ChatView(props: ChatProps) {
@@ -25,7 +43,16 @@ mock.module("./ChatView", () => ({
 }));
 
 mock.module("./app/AppSidebar", () => ({
-  Sidebar: () => <div data-testid="sidebar" />,
+  Sidebar: (props: Record<string, any>) => {
+    sidebarProps = props;
+    return <div data-testid="sidebar" />;
+  },
+}));
+mock.module("./TopBar", () => ({
+  TopBar: (props: Record<string, any>) => {
+    topBarProps = props;
+    return <div data-testid="topbar" />;
+  },
 }));
 mock.module("./panels/PanelArea", () => ({ PanelArea: () => <div data-testid="panel" /> }));
 mock.module("./workspace-trust/TrustGate", () => ({ TrustGate: () => null }));
@@ -179,6 +206,7 @@ function installCodeshellStub(): void {
     registerBrowserSessionBucket: () => undefined,
     setGitPrefs: async () => undefined,
     getProjectGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
+    getSessionGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
     getProjectGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
     getSessionWorkspace: async () => ({ root: "/tmp/repo-a", kind: "main" }),
     listSessionWorktrees: async () => ({
@@ -255,6 +283,8 @@ beforeEach(async () => {
   compactCalls.length = 0;
   compactResponses.length = 0;
   chatProps = null;
+  topBarProps = null;
+  sidebarProps = null;
   installCodeshellStub();
   container = document.createElement("div");
   root = createRoot(container);
@@ -302,5 +332,323 @@ describe("App compact session UI", () => {
 
     expect(chatProps?.compacting).toBe(false);
     expect(reactPropsOf(composer).disabled).toBe(false);
+  });
+
+  test("keeps every Session UI/config consumer on its authoritative root after Make primary", async () => {
+    await act(async () => {
+      root?.unmount();
+      await flushMicrotasks();
+    });
+    root = null;
+    container = null;
+    localStorageMock.clear();
+
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "codeshell-session-ui-authority-"));
+    const oldRoot = join(fixtureRoot, "old-git-root");
+    const newRoot = join(fixtureRoot, "new-plain-root");
+    const writeRoot = (
+      cwd: string,
+      fixture: {
+        model: string;
+        permissionMode: string;
+        imageDetail: string;
+        profile: string;
+        pluginCommand: string;
+        skill: string;
+        relativeFile: string;
+      },
+    ): void => {
+      mkdirSync(join(cwd, ".code-shell"), { recursive: true });
+      writeFileSync(
+        join(cwd, ".code-shell", "settings.json"),
+        JSON.stringify({
+          defaults: { text: fixture.model },
+          permissionMode: fixture.permissionMode,
+          images: { detail: fixture.imageDetail },
+          modelConnections: [
+            {
+              id: fixture.model,
+              catalogId: "fixture-provider",
+              tag: "text",
+              model: fixture.model,
+            },
+          ],
+        }),
+      );
+      writeFileSync(join(cwd, ".code-shell", "profiles.json"), JSON.stringify([fixture.profile]));
+      writeFileSync(
+        join(cwd, ".code-shell", "plugin-commands.json"),
+        JSON.stringify([fixture.pluginCommand]),
+      );
+      writeFileSync(join(cwd, ".code-shell", "skills.json"), JSON.stringify([fixture.skill]));
+      writeFileSync(join(cwd, "same-relative.md"), fixture.relativeFile);
+    };
+    writeRoot(oldRoot, {
+      model: "old-model",
+      permissionMode: "bypass",
+      imageDetail: "high",
+      profile: "old-profile",
+      pluginCommand: "old:review",
+      skill: "old-skill",
+      relativeFile: "old relative file",
+    });
+    mkdirSync(join(oldRoot, ".git"));
+    writeRoot(newRoot, {
+      model: "new-model",
+      permissionMode: "plan",
+      imageDetail: "low",
+      profile: "new-profile",
+      pluginCommand: "new:review",
+      skill: "new-skill",
+      relativeFile: "new relative file",
+    });
+
+    try {
+      const project = {
+        id: "repoA",
+        name: "Two Roots",
+        roots: [
+          { id: "old-root", path: oldRoot, name: "old", addedAt: 1 },
+          { id: "new-root", path: newRoot, name: "new", addedAt: 2 },
+        ],
+        primaryRootId: "old-root",
+        createdAt: 1,
+        updatedAt: 1,
+        lastOpenedAt: 1,
+        revision: 1,
+      };
+      localStorageMock.setItem(
+        "codeshell.repos",
+        JSON.stringify([
+          {
+            id: project.id,
+            name: project.name,
+            path: oldRoot,
+            roots: project.roots,
+            primaryRootId: project.primaryRootId,
+            addedAt: 1,
+          },
+        ]),
+      );
+      localStorageMock.setItem("codeshell.activeRepoId", project.id);
+      localStorageMock.setItem(
+        "codeshell.view",
+        JSON.stringify({ viewMode: "chat", sidebarCollapsed: false, inspectorCollapsed: false }),
+      );
+      localStorageMock.setItem(
+        "codeshell.sessionIndex.repoA",
+        JSON.stringify({
+          activeSessionId: "session-old",
+          sessions: [
+            {
+              id: "session-old",
+              engineSessionId: "engine-old",
+              title: "Old Session",
+              workspaceProfile: "old-profile",
+              createdAt: 1,
+              updatedAt: 2,
+            },
+          ],
+        }),
+      );
+
+      installCodeshellStub();
+      let registryListener: ((projects: any[]) => void) | null = null;
+      let workspaceListener: ((event: { sessionId: string }) => void) | null = null;
+      let oldSessionRootStatus: "ok" | "root_removed" = "ok";
+      const configurationCalls: RendererConfigurationTarget[] = [];
+      const profileCalls: RendererConfigurationTarget[] = [];
+      const resolveTargetRoot = (target: RendererConfigurationTarget): string => {
+        if ("sessionId" in target) {
+          return target.sessionId === "engine-old" ? oldRoot : newRoot;
+        }
+        if ("projectId" in target) {
+          return project.primaryRootId === "old-root" ? oldRoot : newRoot;
+        }
+        throw new Error("unexpected no-repo target");
+      };
+      const readJson = <T,>(cwd: string, name: string): T =>
+        JSON.parse(readFileSync(join(cwd, ".code-shell", name), "utf8")) as T;
+      Object.assign(window.codeshell, {
+        projectRegistry: {
+          list: async () => [project],
+          beginLegacyMigration: async () => ({ completed: true }),
+          authorizeLegacyMigration: async () => ({ status: "migrated" }),
+          completeLegacyMigration: async () => undefined,
+          resolveForCwdBatch: async () => [],
+          onChanged: (listener: (projects: any[]) => void) => {
+            registryListener = listener;
+            return () => undefined;
+          },
+        },
+        externalRuntime: { available: async () => [] },
+        getSessionWorkspaceAuthority: async (sessionId: string) =>
+          sessionId === "engine-old" && oldSessionRootStatus !== "ok"
+            ? {
+                workspace: { root: oldRoot, kind: "main" as const },
+                projectId: project.id,
+                mainRootId: "old-root",
+                mainRoot: oldRoot,
+                mainRootName: "old",
+                rootStatus: oldSessionRootStatus,
+                rootStatusReason: "root_not_mounted" as const,
+                rootStatusMessage: "old Session root was removed",
+              }
+            : {
+                workspace: {
+                  root: sessionId === "engine-old" ? oldRoot : newRoot,
+                  kind: "main" as const,
+                },
+                projectId: project.id,
+                mainRootId: sessionId === "engine-old" ? "old-root" : "new-root",
+                mainRoot: sessionId === "engine-old" ? oldRoot : newRoot,
+                mainRootName: sessionId === "engine-old" ? "old" : "new",
+                rootStatus: "ok" as const,
+              },
+        onWorkspaceChanged: (listener: (event: { sessionId: string }) => void) => {
+          workspaceListener = listener;
+          return () => undefined;
+        },
+        getConfigurationSettings: async (target: RendererConfigurationTarget) => {
+          configurationCalls.push(target);
+          return readJson<Record<string, unknown>>(resolveTargetRoot(target), "settings.json");
+        },
+        listProfiles: async (target: RendererConfigurationTarget) => {
+          profileCalls.push(target);
+          return readJson<string[]>(resolveTargetRoot(target), "profiles.json").map((name) => ({
+            name,
+            label: name,
+            description: undefined,
+            basePreset: "general",
+            plugins: [],
+            skills: [],
+            mcp: [],
+            agents: [],
+            mainInstruction: undefined,
+            active: false,
+            portableMemory: false,
+            exclusiveCapabilities: false,
+            version: undefined,
+          }));
+        },
+        listPluginCommands: async (target: RendererConfigurationTarget) =>
+          readJson<string[]>(resolveTargetRoot(target), "plugin-commands.json"),
+        listSkills: async (target: RendererConfigurationTarget) =>
+          readJson<string[]>(resolveTargetRoot(target), "skills.json"),
+        getModelCatalog: async () => [
+          {
+            id: "fixture-provider",
+            displayName: "Fixture",
+            modelPresets: [],
+          },
+        ],
+      });
+
+      container = document.createElement("div");
+      root = createRoot(container);
+      await act(async () => {
+        root?.render(<App />);
+        await flushMicrotasks();
+      });
+
+      expect(chatProps?.configurationTarget).toEqual({ sessionId: "engine-old" });
+      expect(chatProps?.configurationAvailable).toBe(true);
+      expect(chatProps?.conversationRoot).toBe(oldRoot);
+      expect(chatProps?.conversationRootId).toBe("old-root");
+      expect(chatProps?.activeModelKey).toBe("old-model");
+      expect(chatProps?.modelOptions?.map((option) => option.key)).toEqual(["old-model"]);
+      expect(chatProps?.permissionMode).toBe("bypass");
+      expect(chatProps?.imageDetail).toBe("high");
+      expect(topBarProps?.workspaceProfiles).toEqual([
+        { name: "old-profile", label: "old-profile" },
+      ]);
+      expect(topBarProps?.projectPath).toBe(oldRoot);
+      expect(readFileSync(join(chatProps!.conversationRoot!, "same-relative.md"), "utf8")).toBe(
+        "old relative file",
+      );
+      expect(await window.codeshell.listPluginCommands(chatProps!.configurationTarget!)).toEqual([
+        "old:review",
+      ]);
+      expect(await window.codeshell.listSkills(chatProps!.configurationTarget!)).toEqual([
+        "old-skill",
+      ]);
+
+      project.primaryRootId = "new-root";
+      project.updatedAt = 2;
+      project.revision = 2;
+      await act(async () => {
+        registryListener?.([project]);
+        await flushMicrotasks();
+      });
+
+      expect(chatProps?.configurationTarget).toEqual({ sessionId: "engine-old" });
+      expect(chatProps?.conversationRoot).toBe(oldRoot);
+      expect(chatProps?.conversationRootId).toBe("old-root");
+      expect(chatProps?.activeModelKey).toBe("old-model");
+      expect(topBarProps?.workspaceProfiles).toEqual([
+        { name: "old-profile", label: "old-profile" },
+      ]);
+      expect(topBarProps?.projectPath).toBe(oldRoot);
+      expect(configurationCalls.at(-1)).toEqual({ sessionId: "engine-old" });
+      expect(profileCalls.at(-1)).toEqual({ sessionId: "engine-old" });
+
+      const configurationCallCount = configurationCalls.length;
+      const profileCallCount = profileCalls.length;
+      oldSessionRootStatus = "root_removed";
+      await act(async () => {
+        workspaceListener?.({ sessionId: "engine-old" });
+        await flushMicrotasks();
+      });
+      expect(chatProps?.configurationAvailable).toBe(false);
+      expect(chatProps?.conversationRoot).toBeNull();
+      expect(chatProps?.conversationRootId).toBe("old-root");
+      expect(chatProps?.activeModelKey).toBeNull();
+      expect(chatProps?.modelOptions).toEqual([]);
+      expect(topBarProps?.workspaceProfiles).toEqual([]);
+      expect(topBarProps?.projectPath).toBeNull();
+      expect(configurationCalls).toHaveLength(configurationCallCount);
+      expect(profileCalls).toHaveLength(profileCallCount);
+
+      await act(async () => {
+        sidebarProps?.onNewConversation?.();
+        await flushMicrotasks();
+      });
+
+      expect(chatProps?.configurationTarget).toEqual({ projectId: project.id });
+      expect(chatProps?.conversationRoot).toBe(newRoot);
+      expect(chatProps?.conversationRootId).toBe("new-root");
+      expect(chatProps?.activeModelKey).toBe("new-model");
+      expect(chatProps?.permissionMode).toBe("plan");
+      expect(chatProps?.imageDetail).toBe("low");
+      expect(topBarProps?.workspaceProfiles).toEqual([
+        { name: "new-profile", label: "new-profile" },
+      ]);
+      expect(topBarProps?.projectPath).toBe(newRoot);
+      expect(readFileSync(join(chatProps!.conversationRoot!, "same-relative.md"), "utf8")).toBe(
+        "new relative file",
+      );
+      expect(await window.codeshell.listPluginCommands(chatProps!.configurationTarget!)).toEqual([
+        "new:review",
+      ]);
+      expect(await window.codeshell.listSkills(chatProps!.configurationTarget!)).toEqual([
+        "new-skill",
+      ]);
+
+      let createdContext: { cwd: string; sessionId: string } | null = null;
+      await act(async () => {
+        createdContext = chatProps?.onPrepareAttachmentSession?.() ?? null;
+        await flushMicrotasks();
+      });
+      expect(createdContext?.cwd).toBe(newRoot);
+      expect(chatProps?.configurationTarget).toEqual({
+        sessionId: createdContext?.sessionId,
+      });
+      expect(chatProps?.configurationAvailable).toBe(true);
+      expect(chatProps?.conversationRoot).toBe(newRoot);
+      expect(chatProps?.conversationRootId).toBe("new-root");
+      expect(chatProps?.activeModelKey).toBe("new-model");
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   });
 });

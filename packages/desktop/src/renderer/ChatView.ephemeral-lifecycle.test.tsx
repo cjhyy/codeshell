@@ -132,7 +132,10 @@ async function mountChatView(options: {
         projects={[]}
         onSelectProject={() => undefined}
         onAddProject={() => undefined}
-        activeProjectPath="/tmp/project"
+        configurationTarget={{ sessionId: "qchat-lifecycle" }}
+        configurationAvailable
+        conversationRoot="/tmp/project"
+        conversationRootId="root-1"
         draft={draft}
         onDraftChange={updateDraft}
         attachments={attachments}

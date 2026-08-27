@@ -82,8 +82,10 @@ describe("ChatView plugin slash commands", () => {
           projects={[]}
           onSelectProject={() => undefined}
           onAddProject={() => undefined}
-          activeProjectPath="/tmp/project"
-          messageCwd="/tmp/project"
+          configurationTarget={{ projectId: "project-1" }}
+          configurationAvailable
+          conversationRoot="/tmp/project"
+          conversationRootId="root-1"
           composerSeed="Draft this starter prompt"
           composerSeedNonce={1}
           draft={draft}
@@ -108,6 +110,14 @@ describe("ChatView plugin slash commands", () => {
   test("Enter expands a command into the draft without sending it", async () => {
     ensureMiniDom();
     const onSend = mock(() => undefined);
+    const listPluginCommands = mock(async () => [
+      {
+        name: "demo:review",
+        pluginName: "demo",
+        description: "Review a code change",
+        argumentHint: "<path> [FOCUS=value]",
+      },
+    ]);
     const expandPluginCommand = mock(async () => ({
       prompt: "Review src/app.ts for security issues.",
     }));
@@ -116,14 +126,7 @@ describe("ChatView plugin slash commands", () => {
       writable: true,
       value: {
         sttAvailable: async () => ({ available: false }),
-        listPluginCommands: async () => [
-          {
-            name: "demo:review",
-            pluginName: "demo",
-            description: "Review a code change",
-            argumentHint: "<path> [FOCUS=value]",
-          },
-        ],
+        listPluginCommands,
         expandPluginCommand,
         onPluginCommandsChanged: () => () => undefined,
       },
@@ -137,6 +140,7 @@ describe("ChatView plugin slash commands", () => {
         <ChatView
           variant="quickChat"
           messages={[]}
+          engineSessionId="old-session"
           onSend={onSend}
           onStop={() => undefined}
           busy={false}
@@ -159,8 +163,10 @@ describe("ChatView plugin slash commands", () => {
           projects={[]}
           onSelectProject={() => undefined}
           onAddProject={() => undefined}
-          activeProjectPath="/tmp/project"
-          messageCwd="/tmp/project"
+          configurationTarget={{ sessionId: "old-session" }}
+          configurationAvailable
+          conversationRoot="/tmp/old-root"
+          conversationRootId="old-root"
           draft={draft}
           onDraftChange={setDraft}
           attachments={[]}
@@ -200,13 +206,187 @@ describe("ChatView plugin slash commands", () => {
     });
 
     expect(expandPluginCommand).toHaveBeenCalledWith(
-      { projectId: "project-1" },
+      { sessionId: "old-session" },
       "demo:review",
       '"src/app.ts" FOCUS=security',
     );
+    expect(listPluginCommands).toHaveBeenCalledWith({ sessionId: "old-session" });
     expect(onSend).not.toHaveBeenCalled();
     expect(reactProps(findComposer(container)).value).toBe(
       "Review src/app.ts for security issues.",
     );
+  });
+
+  test("fails closed when Session root authority is unavailable", async () => {
+    ensureMiniDom();
+    const listPluginCommands = mock(async () => []);
+    const listSkills = mock(async () => []);
+    const inspectAttachments = mock(async () => []);
+    const searchProjectFiles = mock(async () => []);
+    Object.defineProperty(window, "codeshell", {
+      configurable: true,
+      writable: true,
+      value: {
+        sttAvailable: async () => ({ available: false }),
+        listPluginCommands,
+        listSkills,
+        inspectAttachments,
+        searchProjectFiles,
+        onPluginCommandsChanged: () => () => undefined,
+      },
+    });
+
+    const container = document.createElement("div");
+    root = createRoot(container);
+    function Host() {
+      const [draft, setDraft] = React.useState("");
+      return (
+        <ChatView
+          variant="quickChat"
+          messages={[]}
+          engineSessionId="missing-session"
+          onSend={() => undefined}
+          onStop={() => undefined}
+          busy={false}
+          activeProjectId="project-1"
+          permissionMode="plan"
+          onPermissionChange={() => undefined}
+          goalEnabled={false}
+          onGoalToggle={() => undefined}
+          modelOptions={[]}
+          activeModelKey={null}
+          onModelChange={() => undefined}
+          contextTokens={0}
+          projects={[]}
+          onSelectProject={() => undefined}
+          onAddProject={() => undefined}
+          configurationTarget={{ sessionId: "missing-session" }}
+          configurationAvailable={false}
+          conversationRoot={null}
+          conversationRootId={null}
+          draft={draft}
+          onDraftChange={setDraft}
+          attachments={[]}
+          onAttachmentsChange={() => undefined}
+        />
+      );
+    }
+
+    await act(async () => {
+      root?.render(<Host />);
+      await flushMicrotasks();
+    });
+
+    const textarea = findComposer(container);
+    await act(async () => {
+      reactProps(textarea).onChange({ target: { value: "@", selectionStart: 1 } });
+      await flushMicrotasks();
+    });
+
+    expect(listPluginCommands).not.toHaveBeenCalled();
+    expect(listSkills).not.toHaveBeenCalled();
+    expect(inspectAttachments).not.toHaveBeenCalled();
+    expect(searchProjectFiles).not.toHaveBeenCalled();
+  });
+
+  test("uses the Session target and authoritative root for Mention discovery", async () => {
+    ensureMiniDom();
+    Object.getPrototypeOf(document.createElement("div")).scrollIntoView = () => undefined;
+    const listSkills = mock(async () => [
+      {
+        name: "old-skill",
+        description: "from old root",
+        filePath: "/old-root/.agents/skills/old-skill/SKILL.md",
+        enabled: true,
+      },
+    ]);
+    const inspectAttachments = mock(async () => []);
+    const searchProjectFiles = mock(async () => [
+      { rootId: "old-root", path: "same-relative.md", name: "same-relative.md", kind: "file" },
+      { rootId: "new-root", path: "same-relative.md", name: "same-relative.md", kind: "file" },
+    ]);
+    Object.defineProperty(window, "codeshell", {
+      configurable: true,
+      writable: true,
+      value: {
+        sttAvailable: async () => ({ available: false }),
+        listPluginCommands: async () => [],
+        listSkills,
+        inspectAttachments,
+        searchProjectFiles,
+        onPluginCommandsChanged: () => () => undefined,
+      },
+    });
+
+    const container = document.createElement("div");
+    root = createRoot(container);
+    function Host() {
+      const [draft, setDraft] = React.useState("");
+      return (
+        <ChatView
+          variant="quickChat"
+          messages={[]}
+          engineSessionId="old-session"
+          onSend={() => undefined}
+          onStop={() => undefined}
+          busy={false}
+          activeProjectId="project-1"
+          permissionMode="plan"
+          onPermissionChange={() => undefined}
+          goalEnabled={false}
+          onGoalToggle={() => undefined}
+          modelOptions={[]}
+          activeModelKey={null}
+          onModelChange={() => undefined}
+          contextTokens={0}
+          projects={[
+            {
+              id: "project-1",
+              name: "Multi root",
+              path: "/new-root",
+              roots: [
+                { id: "old-root", path: "/old-root", name: "Old", addedAt: 1 },
+                { id: "new-root", path: "/new-root", name: "New", addedAt: 2 },
+              ],
+              primaryRootId: "new-root",
+              addedAt: 1,
+            },
+          ]}
+          onSelectProject={() => undefined}
+          onAddProject={() => undefined}
+          configurationTarget={{ sessionId: "old-session" }}
+          configurationAvailable
+          conversationRoot="/old-root"
+          conversationRootId="old-root"
+          draft={draft}
+          onDraftChange={setDraft}
+          attachments={[]}
+          onAttachmentsChange={() => undefined}
+        />
+      );
+    }
+
+    await act(async () => {
+      root?.render(<Host />);
+      await flushMicrotasks();
+    });
+    const textarea = findComposer(container);
+    await act(async () => {
+      reactProps(textarea).onChange({ target: { value: "@same", selectionStart: 5 } });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      await flushMicrotasks();
+    });
+
+    expect(listSkills).toHaveBeenCalledWith({ sessionId: "old-session" });
+    expect(inspectAttachments).toHaveBeenCalledWith({ cwd: "/old-root" });
+    expect(searchProjectFiles).toHaveBeenCalledWith("project-1", "same");
+    const renderedText = descendants(container)
+      .map((node) => node.nodeValue ?? node.textContent ?? "")
+      .join("");
+    expect(renderedText).toContain("/old-root/same-relative.md");
+    expect(renderedText).not.toContain("/new-root/same-relative.md");
   });
 });

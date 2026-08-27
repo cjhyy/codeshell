@@ -415,7 +415,16 @@ function installCodeshellStub(
     },
     setGitPrefs: async () => undefined,
     getProjectGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
+    getSessionGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
     getProjectGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+    getSessionWorkspaceAuthority: async () => ({
+      workspace: { root: "/tmp/repo-a", kind: "main" },
+      projectId: "repoA",
+      mainRootId: "root-a",
+      mainRoot: "/tmp/repo-a",
+      mainRootName: "Repo A",
+      rootStatus: "ok",
+    }),
     getSessionWorkspace: async () => ({ root: "/tmp/repo-a", kind: "main" }),
     listSessionWorktrees: async () => ({
       current: { root: "/tmp/repo-a", kind: "main" },

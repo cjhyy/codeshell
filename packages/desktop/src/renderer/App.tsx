@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { readScopedSettings } from "./settingsAuthority";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
@@ -125,6 +124,7 @@ import { useRunController } from "./app/useRunController";
 import { usePanelBuckets } from "./app/usePanelBuckets";
 import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
+import { useSessionUiAuthority } from "./sessionUiAuthority";
 
 // Large, low-frequency pages stay off the chat startup path. Each route keeps
 // its own visible loading state through the Suspense boundaries below.
@@ -285,6 +285,7 @@ function App() {
     }
     return ids;
   }, [sessionIndices]);
+  const locallyCreatedSessionIdsRef = useRef<Set<string>>(new Set());
 
   /**
    * Create a fresh session on demand (lazy: only when the user actually
@@ -298,11 +299,44 @@ function App() {
     const active = loadSessionIndex(projectId).activeSessionId;
     if (active) return active;
     const { sessionId } = createSession(projectId);
+    locallyCreatedSessionIdsRef.current.add(sessionId);
     return sessionId;
   };
 
   const activeProjectBucketSegment = projectBucketSegmentFor(activeProjectId);
   const activeSessionId = sessionIndices[activeProjectBucketSegment]?.activeSessionId ?? null;
+  const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
+  const activeSessionSummary =
+    sessionIndices[activeProjectBucketSegment]?.sessions.find(
+      (session) => session.id === activeSessionId,
+    ) ?? null;
+  const activeEngineSessionId = activeSessionId
+    ? (activeSessionSummary?.engineSessionId ?? activeSessionId)
+    : null;
+  const [noRepoCwd, setNoRepoCwd] = useState<string | null>(null);
+  const noRepoCwdRef = useRef<string | null>(null);
+  noRepoCwdRef.current = noRepoCwd;
+  const projectAuthorityVersion = activeProject
+    ? `${activeProject.primaryRootId}\0${activeProject.roots
+        .map((root) => `${root.id}\0${root.path}`)
+        .join("\0")}`
+    : "";
+  const sessionUiAuthority = useSessionUiAuthority({
+    sessionId: activeEngineSessionId,
+    projectId: activeProjectId,
+    projectPrimaryRoot: activeProject?.path ?? null,
+    projectPrimaryRootId: activeProject?.primaryRootId ?? null,
+    projectAuthorityVersion,
+    noRepoCwd,
+    allowProjectFallback: activeEngineSessionId
+      ? locallyCreatedSessionIdsRef.current.has(activeEngineSessionId)
+      : false,
+  });
+  useEffect(() => {
+    if (activeEngineSessionId && sessionUiAuthority.rootStatus === "ok") {
+      locallyCreatedSessionIdsRef.current.delete(activeEngineSessionId);
+    }
+  }, [activeEngineSessionId, sessionUiAuthority.rootStatus]);
   const activeBucket = bucketKey(activeProjectId, activeSessionId);
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
   // The model shown/used for the ACTIVE session: its own override if it has
@@ -363,16 +397,18 @@ function App() {
   // TODO 2.1). The staged attachment keeps the real path as its name so the
   // chip shows it and the wire payload carries it. Reads bytes via IPC.
   const attachImageByPath = async (absPath: string): Promise<void> => {
+    const context = prepareAttachmentSession();
+    if (!context) return;
     const dataUrl = await window.codeshell.readImageDataUrl(absPath, {
-      cwd: activeProject?.path ?? undefined,
+      cwd: context.cwd,
+      sessionId: context.sessionId,
     });
     if (!dataUrl) {
       window.codeshell.log("attach.path.not_image", { path: absPath });
       return;
     }
-    const context = prepareAttachmentSession();
     const sha256 = await sha256FromDataUrl(dataUrl).catch(() => undefined);
-    const modelPath = context ? pathForModel(absPath, context.cwd) : absPath;
+    const modelPath = pathForModel(absPath, context.cwd);
     setComposerDraftAttachments((cur) => {
       const { attachment } = buildPathAttachment(absPath, dataUrl, cur, {
         path: modelPath,
@@ -380,7 +416,7 @@ function App() {
         absPath,
         sha256,
         origin: "file-panel",
-        sessionId: context?.sessionId,
+        sessionId: context.sessionId,
       });
       return attachment ? [...cur, attachment] : cur;
     });
@@ -434,13 +470,10 @@ function App() {
    *  operation in another tab suppress this bucket's reconciliation. */
   const goalMutationSeqRef = useRef<Map<string, number>>(new Map());
   /**
-   * The no-repo sandbox cwd (~/.code-shell/no-repo), fetched once from main.
-   * A no-repo "纯聊天" send must pass THIS explicitly as cwd — if we omit cwd,
-   * the long-lived worker (reused across projects) defaults to whatever project
-   * first spawned it, silently running the chat against an unrelated repo AND
-   * defeating the no-repo skill/plugin whitelist (which keys on cwd===noRepoDir).
+   * The no-repo sandbox cwd (~/.code-shell/no-repo), fetched once from Main.
+   * State feeds the draft authority projection; the ref still serves callbacks
+   * that must observe it without waiting for a render.
    */
-  const noRepoCwdRef = useRef<string | null>(null);
   /**
    * Mirror of `sessionIndices` for the mount-time stream listener (which
    * closes over stale state). Lets resolveBucket reverse-look-up an engine
@@ -462,11 +495,9 @@ function App() {
    */
   const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(() => null);
   const defaultPermissionModeRef = useRef<PermissionMode | null>(null);
-  const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
-
   useEffect(() => {
     let cancelled = false;
-    if (!activeProject) {
+    if (!sessionUiAuthority.configurationAvailable) {
       setSessionWorkspaceProfiles([]);
       return;
     }
@@ -475,7 +506,7 @@ function App() {
       setSessionWorkspaceProfiles([]);
       return;
     }
-    void listProfiles({ projectId: activeProject.id })
+    void listProfiles(sessionUiAuthority.configurationTarget)
       .then((profiles) => {
         if (cancelled) return;
         setSessionWorkspaceProfiles(
@@ -488,7 +519,11 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeProject?.path, view.viewMode]);
+  }, [
+    sessionUiAuthority.configurationAvailable,
+    sessionUiAuthority.configurationTarget,
+    view.viewMode,
+  ]);
 
   // A persisted project-config route can outlive a removed project. Fail back
   // to chat instead of leaving a full-page overlay with no project to render.
@@ -585,20 +620,31 @@ function App() {
     // to the session the user just left.
     const liveBucket = parsePanelBucket(activeBucketRef.current);
     const projectId = liveBucket.projectId;
-    const project = projects.find((candidate) => candidate.id === projectId) ?? null;
-    const cwd = project?.path ?? (projectId === null ? noRepoCwdRef.current : null);
-    if (!cwd) return null;
     if (liveBucket.sessionId) {
       const sessionId = resolveAttachmentSessionId(
         liveBucket.sessionId,
         sessionIndices[projectBucketSegmentFor(projectId)]?.sessions ??
           loadSessionIndex(projectId).sessions,
       );
-      return { cwd, sessionId: sessionId ?? liveBucket.sessionId };
+      const engineSessionId = sessionId ?? liveBucket.sessionId;
+      if (
+        !sessionUiAuthority.configurationAvailable ||
+        !("sessionId" in sessionUiAuthority.configurationTarget) ||
+        sessionUiAuthority.configurationTarget.sessionId !== engineSessionId ||
+        !sessionUiAuthority.workspaceRoot
+      ) {
+        return null;
+      }
+      return { cwd: sessionUiAuthority.workspaceRoot, sessionId: engineSessionId };
     }
+
+    const project = projects.find((candidate) => candidate.id === projectId) ?? null;
+    const cwd = project?.path ?? (projectId === null ? noRepoCwdRef.current : null);
+    if (!cwd) return null;
 
     const draftBucket = bucketKey(projectId, null);
     const { index, sessionId } = createSession(projectId);
+    locallyCreatedSessionIdsRef.current.add(sessionId);
     const nextBucket = bucketKey(projectId, sessionId);
     activeBucketRef.current = nextBucket;
     setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: index }));
@@ -827,6 +873,7 @@ function App() {
       .noRepoCwd()
       .then((p) => {
         noRepoCwdRef.current = p;
+        setNoRepoCwd(p);
       })
       .catch(() => {});
   }, []);
@@ -877,14 +924,18 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!activeProject?.path) {
+    const target = sessionUiAuthority.configurationTarget;
+    if (!sessionUiAuthority.configurationAvailable || "noRepo" in target) {
       setActiveGitMeta({ branch: null, clean: null });
       return () => {
         cancelled = true;
       };
     }
-    void window.codeshell
-      .getProjectGitStatus(activeProject.id)
+    const status =
+      "sessionId" in target
+        ? window.codeshell.getSessionGitStatus(target.sessionId)
+        : window.codeshell.getProjectGitStatus(target.projectId);
+    void status
       .then((status) => {
         if (!cancelled) {
           setActiveGitMeta({
@@ -899,7 +950,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeProject?.id, busy]);
+  }, [busy, sessionUiAuthority.configurationAvailable, sessionUiAuthority.configurationTarget]);
 
   // No auto-create here: a null activeSessionId is the legitimate
   // "draft" state. A real session row only appears after the user
@@ -1252,33 +1303,53 @@ function App() {
     }
     return compatibilityApi.onAgentPanelRequest((request) => {
       if (request.bucket !== activeBucket && !panelByBucket[request.bucket]) return;
-      const { projectId } = parsePanelBucket(request.bucket);
-      const cwd = projectId
-        ? (projects.find((project) => project.id === projectId)?.path ?? null)
-        : noRepoCwdRef.current;
-      void resolveAgentPanelHostRequest(request, {
-        availability: {
-          projectPath: projectId ? cwd : null,
-          cwd,
-          engineSessionId: request.sessionId,
-        },
-        translate: (key) => t(key as never),
-        open: (panelId) => {
-          updatePanelBucket(request.bucket, (state) => ({
-            ...state,
-            open: true,
-            requestNonce: state.requestNonce + 1,
-            requestKind: panelId,
-          }));
-        },
-        invoke: (panelId, toolName, args) =>
-          window.codeshell.invokePanelAppAgentTool({
-            appDescriptorId: panelId,
-            bucket: request.bucket,
-            toolName,
-            arguments: args,
-          }),
-      }).then((response) => compatibilityApi.respondAgentPanelRequest?.(response));
+      void (async () => {
+        const { projectId } = parsePanelBucket(request.bucket);
+        let cwd: string | null = null;
+        let projectPath: string | null = null;
+        if (request.sessionId) {
+          try {
+            const authority = await window.codeshell.getSessionWorkspaceAuthority(
+              request.sessionId,
+            );
+            if (authority.rootStatus === "ok") {
+              cwd = authority.workspace.root;
+              projectPath = authority.mainRoot;
+            }
+          } catch {
+            // A Session-owned panel request without authority is unavailable.
+          }
+        } else if (projectId) {
+          projectPath = projects.find((project) => project.id === projectId)?.path ?? null;
+          cwd = projectPath;
+        } else {
+          cwd = noRepoCwdRef.current;
+        }
+        const response = await resolveAgentPanelHostRequest(request, {
+          availability: {
+            projectPath,
+            cwd,
+            engineSessionId: request.sessionId,
+          },
+          translate: (key) => t(key as never),
+          open: (panelId) => {
+            updatePanelBucket(request.bucket, (state) => ({
+              ...state,
+              open: true,
+              requestNonce: state.requestNonce + 1,
+              requestKind: panelId,
+            }));
+          },
+          invoke: (panelId, toolName, args) =>
+            window.codeshell.invokePanelAppAgentTool({
+              appDescriptorId: panelId,
+              bucket: request.bucket,
+              toolName,
+              arguments: args,
+            }),
+        });
+        compatibilityApi.respondAgentPanelRequest?.(response);
+      })();
     });
   }, [activeBucket, panelByBucket, projects, t, updatePanelBucket]);
 
@@ -1421,10 +1492,23 @@ function App() {
   // Refresh model list + active selection + permission from settings.
   useEffect(() => {
     let cancelled = false;
+    const clear = (): void => {
+      if (cancelled) return;
+      setDefaultActiveModelKey(null);
+      setDefaultPermissionMode(null);
+      setImageDetail(undefined);
+      setModelOptions([]);
+    };
     const refresh = async (): Promise<void> => {
+      if (!sessionUiAuthority.configurationAvailable) {
+        clear();
+        return;
+      }
       try {
-        const cwd = activeProject?.path;
-        const projectS = cwd ? ((await readScopedSettings("project", cwd)) ?? {}) : {};
+        const projectS =
+          (await window.codeshell.getConfigurationSettings(
+            sessionUiAuthority.configurationTarget,
+          )) ?? {};
         const userS = (await window.codeshell.getSettings("user")) ?? {};
         const merged: Record<string, unknown> = { ...userS, ...projectS };
         // Unified catalog (统一模型接入方案 §6): the composer picker lists text
@@ -1501,14 +1585,19 @@ function App() {
           );
         }
       } catch {
-        // ignore
+        clear();
       }
     };
     void refresh();
     return () => {
       cancelled = true;
     };
-  }, [activeProject, view.viewMode, settingsRevision]);
+  }, [
+    sessionUiAuthority.configurationAvailable,
+    sessionUiAuthority.configurationTarget,
+    view.viewMode,
+    settingsRevision,
+  ]);
 
   useEffect(() => {
     void window.codeshell.setBadgeCount(approvalQueue.length);
@@ -1622,11 +1711,7 @@ function App() {
    * the new normal (UI sessionId == engine sessionId).
    */
   const engineSessionIdForActive = (): string | null => {
-    if (!activeSessionId) return null;
-    const summary = sessionIndices[activeProjectBucketSegment]?.sessions.find(
-      (s) => s.id === activeSessionId,
-    );
-    return summary?.engineSessionId ?? activeSessionId;
+    return activeEngineSessionId;
   };
 
   useEffect(() => {
@@ -1653,15 +1738,18 @@ function App() {
     }, 0);
   }, [state.messages, searchQuery]);
 
-  const activeSessionSummary = (() => {
-    const idx = sessionIndices[activeProjectBucketSegment];
-    return idx?.sessions.find((session) => session.id === activeSessionId) ?? null;
-  })();
   const sessionTitleForTop = activeSessionSummary?.title ?? null;
 
   const handleSessionWorkspaceProfileChange = useCallback(
     async (profileName: string): Promise<void> => {
-      if (!activeProjectId || !activeSessionSummary || busy || profileSwitchBusy) return;
+      if (
+        !activeProjectId ||
+        !activeSessionSummary ||
+        !sessionUiAuthority.configurationAvailable ||
+        busy ||
+        profileSwitchBusy
+      )
+        return;
       const previousProfile = activeSessionSummary.workspaceProfile;
       if (previousProfile === profileName) return;
       setProfileSwitchBusy(true);
@@ -1670,7 +1758,8 @@ function App() {
           profileName !== "" &&
           !(await ensureDigitalHumanRequirements({
             name: profileName,
-            projectPath: activeProject?.path ?? null,
+            projectPath: sessionUiAuthority.mainRoot,
+            configurationTarget: sessionUiAuthority.configurationTarget,
             api: window.codeshell,
             confirm,
             toast,
@@ -1725,11 +1814,13 @@ function App() {
     [
       activeProjectBucketSegment,
       activeProjectId,
-      activeProject?.path,
       activeSessionSummary,
       busy,
       confirm,
       profileSwitchBusy,
+      sessionUiAuthority.configurationAvailable,
+      sessionUiAuthority.configurationTarget,
+      sessionUiAuthority.mainRoot,
       sessionWorkspaceProfiles,
       t,
       toast,
@@ -2069,7 +2160,7 @@ function App() {
         <div className="shrink-0">
           <TopBar
             projectName={sessionChromeVisible ? (activeProject?.name ?? null) : null}
-            projectPath={sessionChromeVisible ? (activeProject?.path ?? null) : null}
+            projectPath={sessionChromeVisible ? sessionUiAuthority.mainRoot : null}
             sessionId={sessionChromeVisible ? engineSessionIdForActive() : null}
             sessionTitle={sessionChromeVisible ? sessionTitleForTop : null}
             workspaceProfile={sessionChromeVisible ? activeSessionSummary?.workspaceProfile : null}
@@ -2282,6 +2373,7 @@ function App() {
                               }
                             : {}),
                         });
+                        locallyCreatedSessionIdsRef.current.add(created.sessionId);
                         if (index === leadIndex) activeCreatedId = created.sessionId;
                         latestIndex = created.index;
                         roster.push({ profileName, sessionId: created.sessionId, label });
@@ -2456,13 +2548,10 @@ function App() {
                     onAddProject={() => {
                       void handleAddProject();
                     }}
-                    activeProjectPath={activeProject?.path ?? null}
-                    // cwd used to RESOLVE message content (relative path links, inline
-                    // images) — distinct from activeProjectPath (git/STT/branch, which
-                    // must stay null for a no-repo chat). A no-repo session actually
-                    // runs under the sandbox cwd, so fall back to it; otherwise a
-                    // relative `docs/x.md` link can't resolve and renders as dead text.
-                    messageCwd={activeProject?.path ?? noRepoCwdRef.current}
+                    configurationTarget={sessionUiAuthority.configurationTarget}
+                    configurationAvailable={sessionUiAuthority.configurationAvailable}
+                    conversationRoot={sessionUiAuthority.workspaceRoot}
+                    conversationRootId={sessionUiAuthority.mainRootId}
                     repoClean={activeGitMeta.clean}
                     welcomeNode={
                       showWelcome ? (
@@ -2581,7 +2670,7 @@ function App() {
         />
 
         <TrustGate
-          projectPath={activeProject?.path ?? null}
+          projectPath={sessionUiAuthority.mainRoot}
           onDecide={() => {
             /* trust persisted in main */
           }}

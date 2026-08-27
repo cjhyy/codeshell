@@ -20,6 +20,7 @@ function harness(preview: {
     options: {
       name: "director",
       projectPath: "/repo",
+      configurationTarget: { projectId: "project" } as const,
       api: {
         previewProfileRequirements: async () => preview,
         installProfileRequirements: async () => {
@@ -40,6 +41,23 @@ function harness(preview: {
 }
 
 describe("ensureDigitalHumanRequirements", () => {
+  test("uses an explicit Session configuration target when switching an existing Session", async () => {
+    const h = harness({ needsInstall: false, willRun: [], warnings: [], blockers: [] });
+    const targets: unknown[] = [];
+    h.options.api.previewProfileRequirements = async (_name, target) => {
+      targets.push(target);
+      return { needsInstall: false, willRun: [], warnings: [], blockers: [] };
+    };
+    expect(
+      await ensureDigitalHumanRequirements({
+        ...h.options,
+        projectPath: "/old-root",
+        configurationTarget: { sessionId: "old-session" },
+      }),
+    ).toBe(true);
+    expect(targets).toEqual([{ sessionId: "old-session" }]);
+  });
+
   test("passes through a profile whose dependencies are ready", async () => {
     const h = harness({ needsInstall: false, willRun: [], warnings: [], blockers: [] });
     expect(await ensureDigitalHumanRequirements(h.options)).toBe(true);
