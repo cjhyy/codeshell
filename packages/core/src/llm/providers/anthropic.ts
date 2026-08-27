@@ -3,7 +3,14 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import type { ClientDefaults, LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } from "../../types.js";
+import type {
+  ClientDefaults,
+  LLMConfig,
+  LLMResponse,
+  ToolCall,
+  ToolDefinition,
+  TokenUsage,
+} from "../../types.js";
 import type { CreateMessageOptions } from "../types.js";
 import type { ReasoningSetting } from "../reasoning-setting.js";
 import { LLMClientBase } from "../client-base.js";
@@ -29,6 +36,31 @@ const ANTHROPIC_FALLBACK_MAX_TOKENS = 4096;
  */
 const ANTHROPIC_DEFAULT_THINKING_BUDGET = 4096;
 
+/**
+ * Anthropic reports uncached input, cache writes, and cache reads as three
+ * disjoint counters. `TokenUsage.promptTokens` is the whole prompt throughout
+ * CodeShell (OpenAI includes cached tokens in prompt_tokens), so normalize the
+ * Anthropic shape before context accounting, compaction, cache-hit math, and
+ * cost tracking consume it.
+ */
+function tokenUsageFromAnthropic(usage: {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+}): TokenUsage {
+  const cacheReadTokens = usage.cache_read_input_tokens ?? 0;
+  const cacheCreationTokens = usage.cache_creation_input_tokens ?? 0;
+  const promptTokens = usage.input_tokens + cacheReadTokens + cacheCreationTokens;
+  return {
+    promptTokens,
+    completionTokens: usage.output_tokens,
+    totalTokens: promptTokens + usage.output_tokens,
+    ...(usage.cache_read_input_tokens != null ? { cacheReadTokens } : {}),
+    ...(usage.cache_creation_input_tokens != null ? { cacheCreationTokens } : {}),
+  };
+}
+
 /** Shape of the SDK's `thinking` request field when extended thinking is on. */
 type ThinkingParam = { type: "enabled"; budget_tokens: number };
 
@@ -51,6 +83,7 @@ export class AnthropicClient extends LLMClientBase {
         apiKey: resolveApiKey(this.config, process.env.ANTHROPIC_API_KEY),
         ...(this.config.baseUrl ? { baseURL: this.config.baseUrl } : {}),
         ...(Object.keys(headers).length > 0 ? { defaultHeaders: headers } : {}),
+        ...(this.fetch ? { fetch: this.fetch } : {}),
         timeout: this.timeout,
       });
     }
@@ -128,9 +161,7 @@ export class AnthropicClient extends LLMClientBase {
       return undefined;
     }
     let budget =
-      reasoning.mode === "budget"
-        ? reasoning.budgetTokens
-        : ANTHROPIC_DEFAULT_THINKING_BUDGET; // "on" or "effort" → default budget
+      reasoning.mode === "budget" ? reasoning.budgetTokens : ANTHROPIC_DEFAULT_THINKING_BUDGET; // "on" or "effort" → default budget
     // Clamp into [min, ceiling] — both bounds are now guaranteed ≥ min.
     budget = Math.min(Math.max(budget, min), ceiling);
 
@@ -138,40 +169,43 @@ export class AnthropicClient extends LLMClientBase {
   }
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
-    return this.withRetry(async (requestSignal) => {
-      const messages = this.buildMessages(options.messages);
-      const tools = options.tools ? this.convertTools(options.tools) : undefined;
+    return this.withRetry(
+      async (requestSignal) => {
+        const messages = this.buildMessages(options.messages);
+        const tools = options.tools ? this.convertTools(options.tools) : undefined;
 
-      // One span per outbound LLM request. Begin emits debug-level so the
-      // info log isn't spammed during normal operation; end emits info with
-      // duration_ms + usage so `--debug=llm` already gives a quick latency
-      // histogram even at info level.
-      const span = logger.span("llm.request", {
-        cat: "llm",
-        provider: this.provider,
-        model: this.model,
-        stream: !!(options.stream && options.onChunk),
-        messageCount: messages.length,
-        toolCount: tools?.length ?? 0,
-      });
-      try {
-        const response =
-          options.stream && options.onChunk
-            ? await this.streamMessage(options, messages, tools, requestSignal)
-            : await this.nonStreamMessage(options, messages, tools, requestSignal);
-        span.end({
-          stopReason: response.stopReason,
-          promptTokens: response.usage?.promptTokens,
-          completionTokens: response.usage?.completionTokens,
-          cacheReadTokens: response.usage?.cacheReadTokens,
-          cacheCreationTokens: response.usage?.cacheCreationTokens,
+        // One span per outbound LLM request. Begin emits debug-level so the
+        // info log isn't spammed during normal operation; end emits info with
+        // duration_ms + usage so `--debug=llm` already gives a quick latency
+        // histogram even at info level.
+        const span = logger.span("llm.request", {
+          cat: "llm",
+          provider: this.provider,
+          model: this.model,
+          stream: !!(options.stream && options.onChunk),
+          messageCount: messages.length,
+          toolCount: tools?.length ?? 0,
         });
-        return response;
-      } catch (err) {
-        span.fail(err);
-        throw err;
-      }
-    }, { signal: options.signal });
+        try {
+          const response =
+            options.stream && options.onChunk
+              ? await this.streamMessage(options, messages, tools, requestSignal)
+              : await this.nonStreamMessage(options, messages, tools, requestSignal);
+          span.end({
+            stopReason: response.stopReason,
+            promptTokens: response.usage?.promptTokens,
+            completionTokens: response.usage?.completionTokens,
+            cacheReadTokens: response.usage?.cacheReadTokens,
+            cacheCreationTokens: response.usage?.cacheCreationTokens,
+          });
+          return response;
+        } catch (err) {
+          span.fail(err);
+          throw err;
+        }
+      },
+      { signal: options.signal },
+    );
   }
 
   private async nonStreamMessage(
@@ -207,13 +241,7 @@ export class AnthropicClient extends LLMClientBase {
         { signal: requestSignal ?? options.signal },
       );
 
-      const usage: TokenUsage = {
-        promptTokens: response.usage.input_tokens,
-        completionTokens: response.usage.output_tokens,
-        totalTokens: response.usage.input_tokens + response.usage.output_tokens,
-        cacheReadTokens: (response.usage as any).cache_read_input_tokens,
-        cacheCreationTokens: (response.usage as any).cache_creation_input_tokens,
-      };
+      const usage = tokenUsageFromAnthropic(response.usage);
       this.recordUsage(usage, options);
 
       return this.processResponse(response, usage);
@@ -254,10 +282,8 @@ export class AnthropicClient extends LLMClientBase {
         { signal: requestSignal ?? options.signal },
       );
 
-      let currentText = "";
       let currentToolName = "";
       let currentToolId = "";
-      let currentToolInput = "";
 
       // Abort-guarded emit: once the turn is cancelled, stop forwarding chunks
       // to the UI. The SDK's event emitter can keep firing buffered text/
@@ -294,7 +320,6 @@ export class AnthropicClient extends LLMClientBase {
             ttft_ms: Date.now() - streamStartedAt,
           });
         }
-        currentText += text;
         emit({ type: "text", text, tokens: countTokens(text) });
       });
 
@@ -302,7 +327,6 @@ export class AnthropicClient extends LLMClientBase {
         if (block.type === "tool_use") {
           currentToolName = block.name;
           currentToolId = block.id;
-          currentToolInput = "";
           emit({
             type: "tool_use_start",
             toolCall: { id: block.id, toolName: block.name, args: {} },
@@ -311,7 +335,6 @@ export class AnthropicClient extends LLMClientBase {
       });
 
       stream.on("inputJson", (_delta, snapshot) => {
-        currentToolInput = JSON.stringify(snapshot);
         if (currentToolId) {
           emit({
             type: "tool_use_delta",
@@ -326,13 +349,7 @@ export class AnthropicClient extends LLMClientBase {
 
       const finalMessage = await stream.finalMessage();
 
-      const usage: TokenUsage = {
-        promptTokens: finalMessage.usage.input_tokens,
-        completionTokens: finalMessage.usage.output_tokens,
-        totalTokens: finalMessage.usage.input_tokens + finalMessage.usage.output_tokens,
-        cacheReadTokens: (finalMessage.usage as any).cache_read_input_tokens,
-        cacheCreationTokens: (finalMessage.usage as any).cache_creation_input_tokens,
-      };
+      const usage = tokenUsageFromAnthropic(finalMessage.usage);
       this.recordUsage(usage, options);
 
       options.onChunk?.({ type: "stop", stopReason: finalMessage.stop_reason ?? undefined });
@@ -471,11 +488,7 @@ export class AnthropicClient extends LLMClientBase {
         // marking them would 400. buildMessages never emits them today (thinking
         // is a top-level request field, not history content), but guard anyway
         // so a future block type can't silently break the request.
-        if (
-          lastBlock &&
-          lastBlock.type !== "thinking" &&
-          lastBlock.type !== "redacted_thinking"
-        ) {
+        if (lastBlock && lastBlock.type !== "thinking" && lastBlock.type !== "redacted_thinking") {
           lastBlock.cache_control = { type: "ephemeral" };
         }
       }

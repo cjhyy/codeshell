@@ -24,6 +24,11 @@ import {
 } from "../../model-catalog/types.js";
 import { upsertModelPreset } from "../../model-catalog/upsert.js";
 import { PROVIDER_KINDS, type ProviderKindName } from "../../llm/provider-kinds.js";
+import {
+  notifySettingsChanged,
+  setSettingsChangedSink,
+  type SettingsChangedSink,
+} from "./settings-changed.js";
 
 const CATALOG_ADAPTER_KINDS = [...Object.keys(PROVIDER_KINDS), "fal"].join("|");
 
@@ -65,22 +70,14 @@ function providerIdentityError(entry: CatalogEntry): string | undefined {
   );
 }
 
-/** Notifies process hosts after the user catalog has been persisted. Desktop
- * uses this to refresh mounted settings/connection views without waiting for
- * a parent turn_complete event (which may be absent for child/yielded runs). */
-type ModelCatalogChangedSink = () => void;
-let modelCatalogChangedSink: ModelCatalogChangedSink | null = null;
-
-export function setModelCatalogChangedSink(sink: ModelCatalogChangedSink | null): void {
-  modelCatalogChangedSink = sink;
+/** Backwards-compatible catalog-specific name for the shared settings/resource
+ * invalidation sink. */
+export function setModelCatalogChangedSink(sink: SettingsChangedSink | null): void {
+  setSettingsChangedSink(sink);
 }
 
 function fireModelCatalogChanged(): void {
-  try {
-    modelCatalogChangedSink?.();
-  } catch {
-    // Host notification is best-effort; the catalog write itself succeeded.
-  }
+  notifySettingsChanged();
 }
 
 export const editModelCatalogToolDef: ToolDefinition = {

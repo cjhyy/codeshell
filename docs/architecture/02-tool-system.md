@@ -120,6 +120,7 @@ Core's `BUILTIN_TOOLS` and every capability tool entry carry the definition, exe
 Registered builtin tools by category:
 
 - **File/workspace**: `Read`, `Write`, `Edit`, `Glob`, `Grep`, `view_image`, `EditModelCatalog`
+- **Model configuration**: `ConfigureModelConnection` validates a catalog model, reuses an existing credential by reference, atomically writes the connection/default, refreshes the desktop settings view, and can run a small real text-model request for verification.
 - **Shell/runtime**: `Bash`, `PowerShell`, `REPL`, `BashOutput`, `KillShell`, `ListShells`
 - **Web/media/browser**: `WebSearch`, `WebFetch`, `GenerateImage`, `GenerateVideo`, `browser_observe`, `browser_act`, `browser_navigate`
 - **Agent/multi-model/orchestration**: `Agent`, `AgentStatus`, `AgentCancel`, `AgentSendInput`, `Arena`

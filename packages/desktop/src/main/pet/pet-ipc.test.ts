@@ -645,6 +645,9 @@ describe("registerPetIpc", () => {
     expect(() => dispatch({}, { type: "chat", message: "hello", model: " padded " })).toThrow(
       "invalid pet command",
     );
+    expect(() =>
+      dispatch({}, { type: "chat", message: "hello", model: "codex/gpt-5.6-sol" }),
+    ).toThrow("invalid pet command");
   });
 
   test("accepts only a structured navigation request and delegates revalidation", async () => {

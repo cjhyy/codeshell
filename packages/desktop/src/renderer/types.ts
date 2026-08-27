@@ -410,6 +410,17 @@ function assistantMessageToText(content: unknown): string | undefined {
   return text.length > 0 ? text : undefined;
 }
 
+function sealToolWithoutResult(tool: ToolMessage, endedAt: number): ToolMessage {
+  if (tool.status !== "running") return tool;
+  return {
+    ...tool,
+    status: "failed",
+    error: tool.error ?? "Tool execution ended without a result.",
+    endedAt,
+    durationMs: Math.max(0, endedAt - tool.startedAt),
+  };
+}
+
 /**
  * Fold a single StreamEvent into the message list. Pure — returns a
  * new state. Unknown event types are no-ops so future Engine event
@@ -1066,6 +1077,7 @@ export function applyStreamEvent(
           // result; just refresh activeAgents bookkeeping.
           if (!m.done) {
             const flushed = m.textBuffer.length > 0 ? (m.text ?? "") + m.textBuffer : m.text;
+            const toolEndedAt = endedAt ?? m.startedAt;
             msgs[idx] = {
               ...m,
               done: true,
@@ -1074,6 +1086,7 @@ export function applyStreamEvent(
               textBuffer: "",
               error: event.error,
               endedAt,
+              toolCalls: m.toolCalls.map((tool) => sealToolWithoutResult(tool, toolEndedAt)),
             };
           }
         }
@@ -1305,12 +1318,14 @@ export function applyStreamEvent(
           // after the parent turn ends — it reports done later via agent_end /
           // background_agent_completed — so it must NOT be swept here (else the
           // card collapses + loses its "running" state). Still flush its buffer.
+          const endedAt = m.endedAt ?? now() ?? m.startedAt;
           msgs[idx] = {
             ...m,
             text: flushedText,
             textBuffer: "",
             done: true,
-            endedAt: m.endedAt ?? now(),
+            endedAt,
+            toolCalls: m.toolCalls.map((tool) => sealToolWithoutResult(tool, endedAt)),
           };
           delete nextActiveAgents[agentId];
         } else if (cleanSweep && !m.backgrounded) {
@@ -1329,6 +1344,14 @@ export function applyStreamEvent(
         }
         if (m.kind === "thinking" && m.id === streamingThinkingId) {
           return { ...m, done: true };
+        }
+        // A terminal turn cannot still own a running top-level tool. Normally
+        // tool_result closes it first; this is the defensive recovery path for
+        // a provider/runtime that ended or reconnected without that event.
+        // Leaving it running makes the card claim "working" indefinitely.
+        if (m.kind === "tool" && m.status === "running") {
+          const endedAt = turnDoneAt ?? m.startedAt;
+          return sealToolWithoutResult(m, endedAt);
         }
         return m;
       });

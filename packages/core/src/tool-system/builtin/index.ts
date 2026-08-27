@@ -13,6 +13,10 @@ import {
 } from "./generate-image.js";
 import { editModelCatalogToolDef, editModelCatalogTool } from "./edit-model-catalog.js";
 import {
+  configureModelConnectionToolDef,
+  configureModelConnectionTool,
+} from "./configure-model-connection.js";
+import {
   generateVideoToolDef,
   generateVideoTool,
   isGenerateVideoAvailable,
@@ -301,6 +305,19 @@ const BUILTIN_CONTRIBUTIONS: Array<{
       isConcurrencySafe: false, // serializes writes to the single catalog file
     },
     execute: editModelCatalogTool,
+    exposure: expose(GENERAL_TAGS),
+  },
+  {
+    definition: {
+      ...configureModelConnectionToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      // One lock-protected settings transaction; concurrent model connection
+      // mutations must serialize to preserve unique ids and defaults.
+      isConcurrencySafe: false,
+    },
+    execute: configureModelConnectionTool,
     exposure: expose(GENERAL_TAGS),
   },
   {

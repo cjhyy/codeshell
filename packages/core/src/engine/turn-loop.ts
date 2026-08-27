@@ -1107,6 +1107,23 @@ export class TurnLoop {
           if (response.text) {
             messages.push({ role: "assistant", content: response.text });
           }
+          // Anthropic streams tool_use_start as soon as the content block
+          // opens. If max_tokens cuts the JSON arguments off, we deliberately
+          // do not execute that call, but the renderer still needs a terminal
+          // event for the already-open card. Without it Claude tool cards stay
+          // "working" forever (often until a later context compaction hides
+          // them), even though the loop has moved on to a retry.
+          for (const toolCall of response.toolCalls) {
+            this.config.onStream?.({
+              type: "tool_result",
+              result: {
+                id: toolCall.id,
+                toolName: toolCall.toolName,
+                error: "Tool call was not executed because its arguments were truncated.",
+                isError: true,
+              },
+            });
+          }
           messages.push({
             role: "user",
             content:

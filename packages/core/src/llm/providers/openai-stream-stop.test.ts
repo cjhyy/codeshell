@@ -15,11 +15,12 @@ function fakeStream(chunks: any[]): AsyncIterable<any> {
 }
 
 /** An OpenAIClient whose network client is replaced by a canned stream. */
-function clientReturning(chunks: any[]): OpenAIClient {
+function clientReturning(chunks: any[], maxTokens?: number): OpenAIClient {
   const client = new OpenAIClient({
     provider: "openai",
     model: "gpt-4o",
     apiKey: "test",
+    maxTokens,
   });
   // Replace the lazy SDK client with a stub that yields our chunks.
   (client as any)._client = {
@@ -55,5 +56,66 @@ describe("OpenAIClient streaming stopReason", () => {
     ];
     const resp = await clientReturning(chunks).createMessage(baseOpts());
     expect(resp.stopReason).toBe("stop");
+  });
+
+  it("normalizes a cap-truncated OpenRouter tool call from 'tool_calls' to 'length'", async () => {
+    const chunks = [
+      {
+        choices: [
+          {
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "call_write",
+                  function: {
+                    name: "Write",
+                    arguments: '{"file_path":"/tmp/report.json","content":"unfinished',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        choices: [{ delta: {}, finish_reason: "tool_calls" }],
+        usage: { prompt_tokens: 100, completion_tokens: 4096, total_tokens: 4196 },
+      },
+    ];
+
+    const resp = await clientReturning(chunks, 4096).createMessage(baseOpts());
+
+    expect(resp.stopReason).toBe("length");
+    expect(resp.toolCalls).toEqual([{ id: "call_write", toolName: "Write", args: {} }]);
+    expect(resp.usage?.completionTokens).toBe(4096);
+  });
+
+  it("does not infer truncation for malformed tool arguments below the output cap", async () => {
+    const chunks = [
+      {
+        choices: [
+          {
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "call_write",
+                  function: { name: "Write", arguments: '{"file_path":' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        choices: [{ delta: {}, finish_reason: "tool_calls" }],
+        usage: { prompt_tokens: 100, completion_tokens: 200, total_tokens: 300 },
+      },
+    ];
+
+    const resp = await clientReturning(chunks, 4096).createMessage(baseOpts());
+
+    expect(resp.stopReason).toBe("tool_calls");
   });
 });

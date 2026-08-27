@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  loadPetChatModelKey,
-  savePetChatModelKey,
-} from "./petPreferences";
+import { loadPetChatModelKey, savePetChatModelKey } from "./petPreferences";
 
 function settingsBridge(seed?: unknown) {
   let settings: Record<string, unknown> = seed ? { pet: { chatModelKey: seed } } : {};
@@ -28,5 +25,13 @@ describe("Pet model preference", () => {
   test("rejects malformed persisted keys", async () => {
     expect(await loadPetChatModelKey(settingsBridge("\u0000bad"))).toBeNull();
     expect(await loadPetChatModelKey(settingsBridge(" padded "))).toBeNull();
+  });
+
+  test("does not persist external runtime models as Mimi's manager model", async () => {
+    const bridge = settingsBridge("codex/gpt-5.6-sol");
+    expect(await loadPetChatModelKey(bridge)).toBeNull();
+
+    await savePetChatModelKey("codex/gpt-5.6-sol", bridge);
+    expect(await loadPetChatModelKey(bridge)).toBeNull();
   });
 });

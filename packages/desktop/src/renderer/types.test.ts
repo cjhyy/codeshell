@@ -358,6 +358,21 @@ describe("applyStreamEvent — tool_use_start idempotency", () => {
     expect(tool.images).toBeUndefined();
   });
 
+  test("terminal turn seals a tool whose result event was lost", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("tool_use_start", {
+        toolCall: { id: "orphan", toolName: "Read", args: { file: "x" } },
+      } as any),
+      turnComplete,
+    ]);
+    const tool = s.messages.find((m) => m.kind === "tool" && m.id === "orphan");
+    if (!tool || tool.kind !== "tool") throw new Error("no tool msg");
+    expect(tool.status).toBe("failed");
+    expect(tool.error).toContain("without a result");
+    expect(tool.endedAt).toBeDefined();
+  });
+
   test("duplicate agent tool_use_start does not append a second toolCall", () => {
     const dup = ev("tool_use_start", {
       agentId: "A",
@@ -478,6 +493,22 @@ describe("applyStreamEvent — subagent isolation", () => {
     expect(agent.toolCount).toBe(1);
     // And no top-level tool message:
     expect(s.messages.filter((m) => m.kind === "tool").length).toBe(0);
+  });
+
+  test("2b. agent_end seals a nested tool whose result event was lost", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("tool_use_start", {
+        agentId: "A",
+        toolCall: { id: "nested-orphan", toolName: "Read", args: { file: "x" } },
+      } as any),
+      ev("agent_end", { agentId: "A", text: "finished" } as any),
+    ]);
+    const tool = findAgent(s, "A").toolCalls[0]!;
+    expect(tool.status).toBe("failed");
+    expect(tool.error).toContain("without a result");
+    expect(tool.endedAt).toBeDefined();
   });
 
   test("3. concurrent agents keep their textBuffers separate", () => {

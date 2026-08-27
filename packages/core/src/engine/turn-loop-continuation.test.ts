@@ -207,7 +207,8 @@ describe("TurnLoop max-output continuation", () => {
       usage: { promptTokens: 10, completionTokens: 8192, totalTokens: 8202 },
     };
     const { deps, calls, callArgs } = makeDeps([truncatedWithTool, resp("done", "stop")]);
-    const loop = new TurnLoop(deps, config);
+    const events: StreamEvent[] = [];
+    const loop = new TurnLoop(deps, { ...config, onStream: (event) => events.push(event) });
     await loop.run([{ role: "user", content: "write a long doc" }]);
 
     // It must NOT just execute the truncated tool — it retries with the model.
@@ -216,6 +217,17 @@ describe("TurnLoop max-output continuation", () => {
     const retryMessages = callArgs[1] ?? [];
     const blob = JSON.stringify(retryMessages);
     expect(blob).toMatch(/truncat|output token|max.?output/i);
+    // Claude streams the tool card before it knows the arguments were cut off.
+    // The skipped call must still receive a terminal UI event.
+    expect(events).toContainEqual({
+      type: "tool_result",
+      result: {
+        id: "c1",
+        toolName: "Write",
+        error: "Tool call was not executed because its arguments were truncated.",
+        isError: true,
+      },
+    });
   });
 
   it("charges a truncated tool-call response to the Goal budget before retrying", async () => {
