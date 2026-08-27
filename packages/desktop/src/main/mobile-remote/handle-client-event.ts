@@ -46,6 +46,9 @@ export interface MobileDeviceState {
   selectedSessionId?: string;
   /** The cwd bound to the selected or freshly-created mobile session. */
   selectedCwd?: string | null;
+  /** Stable V2 authority for a freshly-created mobile Session. */
+  selectedProjectId?: string | null;
+  selectedRootId?: string;
   /** Preset chosen before this device has a concrete session; promoted later. */
   permissionMode?: PermissionMode;
 }
@@ -64,6 +67,10 @@ export interface OrchestratorCtx {
   ensureMobileSessionId: (state: MobileDeviceState) => string;
   lookupDiskSessionCwd: (sessionId: string) => Promise<string | null | undefined>;
   effectiveMobileRunCwd: (state: MobileDeviceState) => string;
+  resolveMobileProjectRoot: (
+    projectId: string,
+    rootId?: string,
+  ) => { projectId: string; rootId: string; cwd: string };
   validateMobileSessionCwd: (cwd: string) => Promise<boolean>;
   resolveSessionWorkspaceRoot: (sessionId: string, fallbackCwd: string) => Promise<string>;
   sendMobilePermissionMode: (deviceId: string | undefined, sessionId: string) => void;
@@ -163,6 +170,35 @@ export async function resolveMobileSessionCreateCwd(
   return requested;
 }
 
+export interface MobileSessionCreateResolution {
+  cwd: string | null;
+  projectId?: string | null;
+  rootId?: string;
+}
+
+export async function resolveMobileSessionCreateTarget(
+  event: Extract<MobileClientEvent, { type: "session.create" }>,
+  deps: {
+    resolveProjectRoot: (
+      projectId: string,
+      rootId?: string,
+    ) => { projectId: string; rootId: string; cwd: string };
+    isLegacyCwdAllowed: (cwd: string) => Promise<boolean>;
+  },
+): Promise<MobileSessionCreateResolution> {
+  if (Object.prototype.hasOwnProperty.call(event, "projectId")) {
+    if (event.projectId === null) {
+      if (event.rootId !== undefined) throw new Error("no-repo session cannot specify rootId");
+      return { projectId: null, cwd: null };
+    }
+    if (!event.projectId) throw new Error("session projectId is required");
+    return deps.resolveProjectRoot(event.projectId, event.rootId);
+  }
+  if (event.rootId !== undefined) throw new Error("session rootId requires projectId");
+  const cwd = await resolveMobileSessionCreateCwd(event.cwd, deps.isLegacyCwdAllowed);
+  return { cwd };
+}
+
 /**
  * Route an authenticated mobile client event into the SAME run/permission
  * path the renderer uses, via AgentBridge.injectWorkerMessage.
@@ -221,6 +257,8 @@ export async function handleClientEvent(
     explicit ?? st.selectedSessionId ?? runContext.sessionId ?? ctx.ensureMobileSessionId(st);
   if (event.type === "session.select") {
     st.selectedSessionId = event.sessionId;
+    st.selectedProjectId = undefined;
+    st.selectedRootId = undefined;
     const cwd = await ctx.lookupDiskSessionCwd(event.sessionId);
     if (cwd !== undefined) st.selectedCwd = cwd;
     if (deviceId) ctx.sendMobilePermissionMode(deviceId, event.sessionId);
@@ -235,12 +273,12 @@ export async function handleClientEvent(
     return;
   }
   if (event.type === "session.create") {
-    let selectedCwd: string | null;
+    let selection: MobileSessionCreateResolution;
     try {
-      selectedCwd = await resolveMobileSessionCreateCwd(
-        "cwd" in event ? event.cwd : undefined,
-        ctx.validateMobileSessionCwd,
-      );
+      selection = await resolveMobileSessionCreateTarget(event, {
+        resolveProjectRoot: ctx.resolveMobileProjectRoot,
+        isLegacyCwdAllowed: ctx.validateMobileSessionCwd,
+      });
     } catch (error) {
       reply({ type: "error", message: error instanceof Error ? error.message : String(error) });
       return;
@@ -248,10 +286,18 @@ export async function handleClientEvent(
     // Mint a fresh session for THIS device and make it its active selection.
     st.sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     st.selectedSessionId = st.sessionId;
-    st.selectedCwd = selectedCwd;
+    st.selectedCwd = selection.cwd;
+    st.selectedProjectId = selection.projectId;
+    st.selectedRootId = selection.rootId;
     ctx.mobileSessionCwds.set(st.sessionId, st.selectedCwd);
     if (st.permissionMode) ctx.mobilePermissionModes.set(st.sessionId, st.permissionMode);
-    reply({ type: "chat.accepted", sessionId: st.sessionId, cwd: st.selectedCwd });
+    reply({
+      type: "chat.accepted",
+      sessionId: st.sessionId,
+      cwd: st.selectedCwd,
+      ...(selection.projectId !== undefined ? { projectId: selection.projectId } : {}),
+      ...(selection.rootId ? { rootId: selection.rootId } : {}),
+    });
     if (deviceId) ctx.sendMobilePermissionMode(deviceId, st.sessionId);
     else {
       reply({
@@ -275,6 +321,8 @@ export async function handleClientEvent(
       deviceId: deviceId ?? "",
       sessionId,
       fallbackCwd,
+      ...(typeof st.selectedProjectId === "string" ? { projectId: st.selectedProjectId } : {}),
+      ...(st.selectedRootId ? { rootId: st.selectedRootId } : {}),
       text,
       attachments: event.attachments,
       clientMessageId: event.clientMessageId,

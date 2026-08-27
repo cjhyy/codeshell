@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import { useT } from "@/i18n";
 import type { MobileProjectMeta, MobileSessionMeta } from "@protocol";
-import { basename, relativeTime, groupByProject, projectForCwd } from "@cjhyy/code-shell-web";
+import { relativeTime, groupByProject, projectForCwd } from "@cjhyy/code-shell-web";
 
 function sameCwd(a?: string | null, b?: string | null): boolean {
   const norm = (v?: string | null): string => (v ?? "").replace(/[/\\]+$/, "").toLowerCase();
@@ -21,6 +21,7 @@ export function SessionList({
   activeSessionId,
   currentCwd,
   activeProjectCwd,
+  activeProjectId,
   onSelect,
   onSelectProject,
   onNew,
@@ -33,9 +34,13 @@ export function SessionList({
   activeSessionId?: string;
   currentCwd?: string | null;
   activeProjectCwd?: string | null;
+  activeProjectId?: string | null;
   onSelect: (id: string) => void;
-  onSelectProject?: (cwd: string) => void;
-  onNew: (cwd?: string | null, name?: string) => void;
+  onSelectProject?: (projectIdOrCwd: string) => void;
+  onNew: (
+    target?: { projectId: string; rootId?: string } | { projectId: null } | string | null,
+    name?: string,
+  ) => void;
   onRefresh: () => void;
   loading?: boolean;
   unreadSessionIds?: ReadonlySet<string>;
@@ -48,6 +53,7 @@ export function SessionList({
   const currentGroup = activeProjectCwd
     ? allGroups.find(
         (g) =>
+          (activeProjectId && g.projectId === activeProjectId) ||
           sameCwd(g.cwd, activeProjectCwd) ||
           sameCwd(projectForCwd(g.cwd, projects)?.path, activeProjectCwd),
       )
@@ -55,10 +61,6 @@ export function SessionList({
   const groups = currentGroup ? [currentGroup] : activeProjectCwd ? [] : allGroups;
   const currentProject = projectForCwd(currentCwd, projects);
   const currentProjectCwd = currentProject?.path ?? currentCwd;
-  const currentKnown = currentCwd !== undefined;
-  const otherProjects = currentProject
-    ? projects.filter((p) => p.path !== currentProject.path)
-    : projects;
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="mobile-side-header flex items-center gap-2 px-3 py-3">
@@ -92,67 +94,27 @@ export function SessionList({
           <p className="mb-1.5 px-1 text-[11px] text-muted-foreground">
             {t("mobile.sessionList.createHint")}
           </p>
-          <div className="flex flex-col gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                onNew(currentKnown ? currentProjectCwd : undefined, currentProject?.name);
-                setCreating(false);
-              }}
-              className="mobile-list-item flex w-full min-w-0 flex-col rounded-lg px-2.5 py-2 text-left text-sm"
-            >
-              <span className="truncate font-medium text-foreground">
-                {currentProjectCwd
-                  ? t("mobile.sessionList.currentProject", {
-                      name: currentProject?.name ?? basename(currentProjectCwd),
-                    })
-                  : currentKnown
-                    ? t("mobile.sessionList.noProjectConversation")
-                    : t("mobile.sessionList.desktopCwd")}
-              </span>
-              <span className="min-w-0 truncate text-[11px] text-muted-foreground">
-                {currentProjectCwd ||
-                  (currentKnown
-                    ? t("mobile.sessionList.unboundRepo")
-                    : t("mobile.sessionList.followsDesktopCwd"))}
-              </span>
-            </button>
-            {otherProjects.length > 0 && (
-              <>
-                <p className="px-1 pt-2 text-[11px] text-muted-foreground">
-                  {t("mobile.sessionList.otherProjects")}
-                </p>
-                {otherProjects.map((p) => (
-                  <button
-                    key={p.path}
-                    type="button"
-                    onClick={() => {
-                      onNew(p.path, p.name);
-                      setCreating(false);
-                    }}
-                    className="mobile-list-item flex w-full min-w-0 flex-col rounded-lg px-2.5 py-2 text-left text-sm"
-                  >
-                    <span className="truncate font-medium text-foreground">{p.name}</span>
-                    <span className="min-w-0 truncate text-[11px] text-muted-foreground">
-                      {p.path}
-                    </span>
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
+          <ProjectRootPicker
+            projects={projects}
+            activeProjectId={activeProjectId ?? currentProject?.id}
+            legacyCurrentCwd={currentProject ? undefined : currentProjectCwd}
+            onNew={(target, name) => {
+              onNew(target, name);
+              setCreating(false);
+            }}
+          />
         </div>
       )}
       {onSelectProject && projects.length > 1 && (
         <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain border-b border-border/70 px-2 py-1.5">
           {projects.map((p) => (
             <button
-              key={p.path}
+              key={p.id ?? p.path}
               type="button"
-              onClick={() => onSelectProject(p.path)}
+              onClick={() => onSelectProject(p.id ?? p.path)}
               className={cn(
                 "max-w-44 shrink-0 truncate rounded-full border px-2.5 py-1 text-[11px]",
-                sameCwd(p.path, activeProjectCwd)
+                (p.id && p.id === activeProjectId) || sameCwd(p.path, activeProjectCwd)
                   ? "border-primary bg-primary/15 text-foreground"
                   : "border-border/70 text-muted-foreground",
               )}
@@ -236,6 +198,105 @@ export function SessionList({
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+export function ProjectRootPicker({
+  projects,
+  activeProjectId,
+  legacyCurrentCwd,
+  onNew,
+}: {
+  projects: MobileProjectMeta[];
+  activeProjectId?: string;
+  legacyCurrentCwd?: string | null;
+  onNew: (
+    target: { projectId: string; rootId?: string } | { projectId: null } | string,
+    name?: string,
+  ) => void;
+}) {
+  const { t } = useT();
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={() => onNew({ projectId: null })}
+        className="mobile-list-item flex w-full min-w-0 flex-col rounded-lg px-2.5 py-2 text-left text-sm"
+      >
+        <span className="truncate font-medium text-foreground">
+          {t("mobile.sessionList.noProjectConversation")}
+        </span>
+        <span className="text-[11px] text-muted-foreground">
+          {t("mobile.sessionList.unboundRepo")}
+        </span>
+      </button>
+      {legacyCurrentCwd && projects.length === 0 && (
+        <button
+          type="button"
+          onClick={() => onNew(legacyCurrentCwd)}
+          className="mobile-list-item flex w-full min-w-0 flex-col rounded-lg px-2.5 py-2 text-left text-sm"
+        >
+          <span className="truncate font-medium text-foreground">
+            {t("mobile.sessionList.desktopCwd")}
+          </span>
+          <span className="truncate text-[11px] text-muted-foreground">{legacyCurrentCwd}</span>
+        </button>
+      )}
+      {projects.map((project) => {
+        const roots = project.roots?.length
+          ? project.roots
+          : [
+              {
+                id: project.primaryRootId ?? "",
+                path: project.path,
+                name: project.name,
+                role: "primary" as const,
+              },
+            ];
+        return (
+          <details
+            key={project.id ?? project.path}
+            open={project.id === activeProjectId}
+            className="rounded-lg border border-border/60 bg-black/10"
+          >
+            <summary className="cursor-pointer truncate px-2.5 py-2 text-sm font-medium text-foreground">
+              {project.name}
+            </summary>
+            <div className="flex flex-col gap-1 px-1.5 pb-1.5">
+              {roots.map((root) => (
+                <button
+                  key={root.id || root.path}
+                  type="button"
+                  onClick={() =>
+                    onNew(
+                      project.id
+                        ? { projectId: project.id, ...(root.id ? { rootId: root.id } : {}) }
+                        : project.path,
+                      project.name,
+                    )
+                  }
+                  className="mobile-list-item flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-2 text-left"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-medium text-foreground">
+                      {root.name}
+                    </span>
+                    <span className="block truncate text-[11px] text-muted-foreground">
+                      {root.path}
+                    </span>
+                  </span>
+                  <span className="shrink-0 rounded-full border border-border/70 px-1.5 text-[10px] text-muted-foreground">
+                    {root.role === "primary"
+                      ? t("mobile.sessionList.primaryRoot")
+                      : t("mobile.sessionList.secondaryRoot")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </details>
+        );
+      })}
     </div>
   );
 }

@@ -31,11 +31,15 @@ describe("automation-service", () => {
       schedule: "0 9 * * 1-5",
       prompt: "review",
       cwd: "/tmp/proj",
+      projectId: "project-1",
+      rootId: "root-2",
       timezone: "Asia/Shanghai",
       permissionLevel: "read-only",
     });
     expect(created.name).toBe("nightly");
     expect(created.cwd).toBe("/tmp/proj");
+    expect(created.projectId).toBe("project-1");
+    expect(created.rootId).toBe("root-2");
     expect(created.permissionLevel).toBe("read-only");
     expect(created.templateSource).toBeNull();
     expect(typeof created.nextRun).toBe("number");
@@ -67,6 +71,30 @@ describe("automation-service", () => {
     expect(updated?.schedule).toBe("0 9 * * 1-5");
     expect(updated?.timezone).toBe("UTC");
     expect(getAutomation(job.id)?.prompt).toBe("new");
+    sched.stopAll();
+  });
+
+  test("update can atomically rebind or clear stable workspace ids", () => {
+    const job = createAutomation({
+      name: "j",
+      schedule: "1h",
+      prompt: "old",
+      cwd: "/primary",
+      projectId: "project-1",
+      rootId: "root-1",
+    });
+    expect(
+      updateAutomation(job.id, {
+        cwd: "/secondary",
+        projectId: "project-1",
+        rootId: "root-2",
+      }),
+    ).toMatchObject({ cwd: "/secondary", projectId: "project-1", rootId: "root-2" });
+    expect(updateAutomation(job.id, { cwd: "", projectId: null, rootId: null })).toMatchObject({
+      cwd: "",
+      projectId: null,
+      rootId: null,
+    });
     sched.stopAll();
   });
 

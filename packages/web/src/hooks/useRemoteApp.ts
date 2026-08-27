@@ -97,7 +97,7 @@ export interface RemoteApp {
   sendChat: (input: { text: string; attachments: MobileComposerAttachment[] }) => Promise<boolean>;
   stopRun: () => void;
   selectSession: (id: string) => void;
-  newSession: (cwd?: string | null, name?: string) => void;
+  newSession: (target?: MobileSessionCreateTarget, name?: string) => void;
   refreshSessions: () => void;
   respondApproval: (
     requestId: string,
@@ -116,7 +116,8 @@ export interface RemoteApp {
   leaveRoom: () => void;
   // cc rooms (external claude CLI sessions, per selected project)
   activeProjectCwd: string | null;
-  selectProject: (cwd: string) => void;
+  activeProjectId: string | null;
+  selectProject: (projectIdOrCwd: string) => void;
   ccSessions: CcDiscoveredSession[];
   ccProbe: { available: boolean; reason?: string } | null;
   /** Selected CC CLI (Claude Code / Codex). Switching re-probes + re-lists. */
@@ -129,6 +130,12 @@ export interface RemoteApp {
     decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
   ) => void;
 }
+
+export type MobileSessionCreateTarget =
+  | { projectId: string; rootId?: string }
+  | { projectId: null }
+  | string
+  | null;
 
 /** Tools whose grants can be remembered with a path scope (file/dir). */
 const PATH_SCOPED = new Set([
@@ -185,6 +192,8 @@ export function useRemoteApp(): RemoteApp {
   const roomsRef = useRef<RoomPublic[]>(rooms);
   roomsRef.current = rooms;
   const [projects, setProjects] = useState<MobileProjectMeta[]>([]);
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
   const [activeRoomId, setActiveRoomId] = useState<string | undefined>();
   // activeRoomId via ref so socket callbacks see the latest value.
   const activeRoomIdRef = useRef<string | undefined>(undefined);
@@ -198,6 +207,9 @@ export function useRemoteApp(): RemoteApp {
   const [activeProjectCwd, setActiveProjectCwd] = useState<string | null>(null);
   const activeProjectCwdRef = useRef(activeProjectCwd);
   activeProjectCwdRef.current = activeProjectCwd;
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const activeProjectIdRef = useRef(activeProjectId);
+  activeProjectIdRef.current = activeProjectId;
   // Which external CLI the CC pane is showing (Claude Code or Codex). Switching
   // re-probes + re-lists for that CLI (mirrors desktop CCRoomView's cliKind).
   const [ccCliKind, setCcCliKind] = useState<CcCliKind>("claude-code");
@@ -571,7 +583,14 @@ export function useRemoteApp(): RemoteApp {
           setLoadingKey("rooms", false);
           break;
         case "room.projects.ok":
+          projectsRef.current = event.projects;
           setProjects(event.projects);
+          if (activeProjectIdRef.current) {
+            const selected = event.projects.find(
+              (project) => project.id === activeProjectIdRef.current,
+            );
+            if (selected) setActiveProjectCwd(selected.path);
+          }
           setLoadingKey("projects", false);
           break;
         case "room.message":
@@ -1085,7 +1104,12 @@ export function useRemoteApp(): RemoteApp {
   /** Select a project (like the desktop sidebar): set the one-true-source cwd and
    *  pull that project's chat sessions + external cc sessions. */
   const selectProject = useCallback(
-    (cwd: string) => {
+    (projectIdOrCwd: string) => {
+      const project = projectsRef.current.find(
+        (candidate) => candidate.id === projectIdOrCwd || candidate.path === projectIdOrCwd,
+      );
+      const cwd = project?.path ?? projectIdOrCwd;
+      setActiveProjectId(project?.id ?? null);
       setActiveProjectCwd(cwd);
       setLoadingKey("sessions", true);
       socket.send({ type: "session.list" });
@@ -1126,14 +1150,43 @@ export function useRemoteApp(): RemoteApp {
   );
 
   const newSession = useCallback(
-    (cwd?: string | null, name?: string) => {
+    (target?: MobileSessionCreateTarget, name?: string) => {
       if (activeRoomIdRef.current) {
         socket.send({
           type: "ccRoom.unsubscribeTranscript",
           roomId: activeRoomIdRef.current,
         });
       }
-      const nextCwd = cwd === undefined ? activeCwdRef.current : cwd;
+      const stableTarget =
+        target === undefined && activeProjectIdRef.current
+          ? { projectId: activeProjectIdRef.current }
+          : target;
+      const selectedProject =
+        stableTarget && typeof stableTarget === "object" && stableTarget.projectId
+          ? projectsRef.current.find((project) => project.id === stableTarget.projectId)
+          : undefined;
+      const selectedRoot =
+        selectedProject &&
+        stableTarget &&
+        typeof stableTarget === "object" &&
+        "rootId" in stableTarget &&
+        stableTarget.rootId
+          ? selectedProject.roots?.find((root) => root.id === stableTarget.rootId)
+          : selectedProject?.roots?.find((root) => root.id === selectedProject.primaryRootId);
+      const nextCwd =
+        stableTarget && typeof stableTarget === "object"
+          ? stableTarget.projectId === null
+            ? null
+            : (selectedRoot?.path ?? selectedProject?.path)
+          : stableTarget === undefined
+            ? activeCwdRef.current
+            : stableTarget;
+      if (stableTarget && typeof stableTarget === "object") {
+        setActiveProjectId(stableTarget.projectId);
+        setActiveProjectCwd(
+          stableTarget.projectId === null ? null : (selectedProject?.path ?? null),
+        );
+      }
       boundSessionRef.current = undefined;
       ccHistorySessionRef.current = undefined;
       ccHistoryCwdRef.current = undefined;
@@ -1152,11 +1205,15 @@ export function useRemoteApp(): RemoteApp {
       setApprovals([]);
       setLoadingKey("sessionHistory", false);
       dispatchChat({ kind: "reset" });
-      socket.send(
-        cwd === undefined
-          ? { type: "session.create", ...(name ? { name } : {}) }
-          : { type: "session.create", cwd, ...(name ? { name } : {}) },
-      );
+      if (stableTarget && typeof stableTarget === "object") {
+        socket.send({ type: "session.create", ...stableTarget, ...(name ? { name } : {}) });
+      } else {
+        socket.send(
+          stableTarget === undefined
+            ? { type: "session.create", ...(name ? { name } : {}) }
+            : { type: "session.create", cwd: stableTarget, ...(name ? { name } : {}) },
+        );
+      }
     },
     [socket, setLoadingKey],
   );
@@ -1259,6 +1316,8 @@ export function useRemoteApp(): RemoteApp {
     // Adopt this cwd as the project context so the listSessions echo guard
     // (event.cwd === activeProjectCwdRef.current) matches the reply.
     setActiveProjectCwd(ccDiscoverCwd);
+    const project = projectForCwd(ccDiscoverCwd, projectsRef.current);
+    if (project?.id) setActiveProjectId(project.id);
     setCcProbe(null);
     setCcSessions([]);
     setLoadingKey("ccSessions", true);
@@ -1292,6 +1351,7 @@ export function useRemoteApp(): RemoteApp {
     clearGoal,
     leaveRoom,
     activeProjectCwd,
+    activeProjectId,
     selectProject,
     ccSessions,
     ccProbe,

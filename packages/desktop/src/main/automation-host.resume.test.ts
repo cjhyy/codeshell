@@ -7,7 +7,9 @@ import type { CronRunRequest, CronRunResult } from "@cjhyy/code-shell-core/inter
 // injectResume — the "cron = a human typing at a scheduled time" model. A job
 // without resumeSessionId keeps running the headless isolated-automation path.
 
-function req(over: Partial<CronRunRequest> & { job?: Partial<CronRunRequest["job"]> } = {}): CronRunRequest {
+function req(
+  over: Partial<CronRunRequest> & { job?: Partial<CronRunRequest["job"]> } = {},
+): CronRunRequest {
   return {
     job: {
       id: "job-1",
@@ -105,5 +107,32 @@ describe("makeCronRunnerWithResume — routes by job.resumeSessionId", () => {
     await runner(req({ job: { resumeSessionId: "sess-42" }, signal: ac.signal }));
 
     expect(seen).toBe(ac.signal);
+  });
+
+  test("permanently stops an ID-bound resume job whose project/root is no longer valid", async () => {
+    let headlessCalls = 0;
+    let injectCalls = 0;
+    const runner = makeCronRunnerWithResume(
+      async () => {
+        headlessCalls += 1;
+        return { text: "headless", reason: "done" };
+      },
+      async () => {
+        injectCalls += 1;
+        return { text: "injected", reason: "done" };
+      },
+      () => false,
+    );
+
+    const result = await runner(
+      req({ job: { resumeSessionId: "sess-42", projectId: "p1", rootId: "removed" } }),
+    );
+    expect(result).toEqual({
+      text: "",
+      reason: "workspace-unresolved",
+      stop: { reason: "workspace-unresolved" },
+    });
+    expect(headlessCalls).toBe(0);
+    expect(injectCalls).toBe(0);
   });
 });

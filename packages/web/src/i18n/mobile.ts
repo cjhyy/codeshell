@@ -123,6 +123,8 @@ export const mobile = {
         automation: "自动",
         noProjectPath: "无项目路径",
         unreadAria: "有新内容",
+        primaryRoot: "主目录",
+        secondaryRoot: "次目录",
       },
       status: {
         conn: {
@@ -285,6 +287,8 @@ export const mobile = {
         automation: "Automation",
         noProjectPath: "No project path",
         unreadAria: "New content",
+        primaryRoot: "Primary",
+        secondaryRoot: "Secondary",
       },
       status: {
         conn: {

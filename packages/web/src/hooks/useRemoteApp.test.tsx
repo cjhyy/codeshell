@@ -378,16 +378,15 @@ describe("useRemoteApp mobile image sends", () => {
 
   test("keeps the draft result false when the socket drops during a large-image PUT", async () => {
     setupBrowser();
-    let ws!: FakeWebSocket;
     const restoreFetch = defineTestProperty(window, "fetch", {
       value: async () => {
-        ws.close();
+        FakeWebSocket.instances[0]!.close();
         return new Response(null, { status: 201 });
       },
       writable: true,
     });
     const hook = await renderHook(() => useRemoteApp());
-    ws = FakeWebSocket.instances[0]!;
+    const ws = FakeWebSocket.instances[0]!;
     await act(async () => {
       ws.open();
       ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
@@ -423,6 +422,87 @@ describe("useRemoteApp mobile image sends", () => {
     expect(hook.result.current.chat.items.some((item) => item.kind === "user")).toBe(false);
     await hook.unmount();
     restoreFetch();
+  });
+});
+
+describe("useRemoteApp project V2 session creation", () => {
+  test("sends stable project/root ids and follows a make-primary projection by project id", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({
+        type: "room.projects.ok",
+        projects: [
+          {
+            id: "project-1",
+            path: "/primary-old",
+            name: "multi-root",
+            primaryRootId: "root-old",
+            roots: [
+              { id: "root-old", path: "/primary-old", name: "old", role: "primary" },
+              { id: "root-new", path: "/primary-new", name: "new", role: "secondary" },
+            ],
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectProject("project-1");
+      hook.result.current.newSession({ projectId: "project-1", rootId: "root-new" });
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
+      type: "session.create",
+      projectId: "project-1",
+      rootId: "root-new",
+    });
+    expect(hook.result.current.activeProjectId).toBe("project-1");
+    expect(hook.result.current.activeProjectCwd).toBe("/primary-old");
+
+    await act(async () => {
+      ws.message({
+        type: "room.projects.ok",
+        projects: [
+          {
+            id: "project-1",
+            path: "/primary-new",
+            name: "multi-root",
+            primaryRootId: "root-new",
+            roots: [
+              { id: "root-old", path: "/primary-old", name: "old", role: "secondary" },
+              { id: "root-new", path: "/primary-new", name: "new", role: "primary" },
+            ],
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.activeProjectId).toBe("project-1");
+    expect(hook.result.current.activeProjectCwd).toBe("/primary-new");
+
+    await hook.unmount();
+  });
+
+  test("uses an explicit V2 no-repo target", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      hook.result.current.newSession({ projectId: null });
+      await flushMicrotasks();
+    });
+    expect(ws.sent.map((payload) => JSON.parse(payload))).toContainEqual({
+      type: "session.create",
+      projectId: null,
+    });
+    await hook.unmount();
   });
 });
 

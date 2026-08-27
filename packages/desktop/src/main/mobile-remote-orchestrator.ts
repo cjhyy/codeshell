@@ -296,8 +296,17 @@ export class MobileRemoteOrchestrator {
       ensureMobileSessionId: (state) => this.ensureMobileSessionId(state),
       lookupDiskSessionCwd: (sessionId) => this.lookupDiskSessionCwd(sessionId),
       effectiveMobileRunCwd: (state) => this.effectiveMobileRunCwd(state),
+      resolveMobileProjectRoot: (projectId, rootId) => {
+        const resolved = getProjectStore().resolveProjectRootByIdSync(projectId, rootId);
+        return {
+          projectId: resolved.project.id,
+          rootId: resolved.mainRoot.id,
+          cwd: resolved.cwd,
+        };
+      },
       validateMobileSessionCwd: async (cwd) =>
-        getProjectStore().isNoRepoCwd(cwd) || getProjectStore().resolveExactRootSync(cwd) !== undefined,
+        getProjectStore().isNoRepoCwd(cwd) ||
+        getProjectStore().resolveExactRootSync(cwd) !== undefined,
       resolveSessionWorkspaceRoot: (sessionId, fallbackCwd) =>
         getSessionWorkspaceForUi(sessionId, fallbackCwd)
           .then((workspace) => workspace.root)

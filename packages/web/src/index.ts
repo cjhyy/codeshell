@@ -15,6 +15,7 @@ export {
   type CcCliKind,
   type PendingApproval,
   type RemoteApp,
+  type MobileSessionCreateTarget,
 } from "./hooks/useRemoteApp.js";
 export {
   useRemoteSocket,

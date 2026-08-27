@@ -387,6 +387,40 @@ describe("ProjectStore", () => {
     expect(resolved[4]).toBeNull();
   });
 
+  test("resolves stable project/root ids across make-primary and rejects stale bindings", async () => {
+    const primary = dir("stable-primary");
+    const secondary = dir("stable-secondary");
+    const foreign = dir("stable-foreign");
+    const projects = store();
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const primaryRoot = updated.roots.find((root) => root.id === updated.primaryRootId)!;
+    const secondaryRoot = updated.roots.find((root) => root.id !== updated.primaryRootId)!;
+    const foreignProject = await projects.createFromPath(foreign);
+
+    expect(projects.resolveProjectRootByIdSync(project.id, secondaryRoot.id)).toMatchObject({
+      cwd: realpathSync(secondary),
+      mainRoot: { id: secondaryRoot.id },
+    });
+    await projects.setPrimary(project.id, secondaryRoot.id);
+    expect(projects.resolveProjectRootByIdSync(project.id).mainRoot.id).toBe(secondaryRoot.id);
+    expect(projects.resolveProjectRootByIdSync(project.id, primaryRoot.id).mainRoot.id).toBe(
+      primaryRoot.id,
+    );
+    expect(() =>
+      projects.resolveProjectRootByIdSync(project.id, foreignProject.primaryRootId),
+    ).toThrow(/root not found/);
+
+    await projects.removeRoot(project.id, primaryRoot.id);
+    expect(() => projects.resolveProjectRootByIdSync(project.id, primaryRoot.id)).toThrow(
+      /root not found/,
+    );
+    rmSync(secondary, { recursive: true, force: true });
+    expect(() => projects.resolveProjectRootByIdSync(project.id, secondaryRoot.id)).toThrow(
+      /directory is missing/,
+    );
+  });
+
   test("resolves explicit project runs from the caller-confirmed cold Session entry", async () => {
     const primary = dir("run-primary");
     const secondary = dir("run-secondary");

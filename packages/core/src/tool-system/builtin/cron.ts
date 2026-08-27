@@ -147,11 +147,19 @@ export async function cronCreateTool(
   // Engine's ALS context). Empty/unknown sid → treat as standalone.
   const resumeSessionId =
     args.continueInSession === true && getCurrentSid() ? getCurrentSid() : undefined;
+  const stableWorkspace =
+    context?.workspace && !context.workspace.projectId.startsWith("legacy-")
+      ? {
+          projectId: context.workspace.projectId,
+          rootId: context.workspace.sessionMainRootId,
+        }
+      : undefined;
   let job;
   try {
     job = cronScheduler.create(name, schedule, prompt, {
       ...(timezone !== undefined ? { timezone } : {}),
       ...(cwd !== undefined ? { cwd } : {}),
+      ...(stableWorkspace ?? {}),
       ...(permissionLevel !== undefined ? { permissionLevel } : {}),
       ...(once ? { once: true } : {}),
       ...(resumeSessionId !== undefined ? { resumeSessionId } : {}),

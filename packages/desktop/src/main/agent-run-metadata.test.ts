@@ -167,6 +167,74 @@ describe("prepareAgentRunMetadata", () => {
     expect(prepared.tentative).toMatchObject({ cwd: "/primary", projectId: "p1" });
   });
 
+  test("new project runs pass rootId to Main authority and never trust a supplied cwd", () => {
+    const secondaryContext = createWorkspaceContext({
+      projectId: "p1",
+      projectRevision: 3,
+      sessionMainRootId: "r2",
+      roots: [
+        { id: "r1", path: "/primary", role: "secondary" },
+        { id: "r2", path: "/secondary", role: "primary" },
+      ],
+    });
+    const seen: unknown[][] = [];
+    const prepared = prepareAgentRunMetadata(
+      JSON.stringify({
+        method: "agent/run",
+        params: {
+          sessionId: "new-secondary",
+          projectId: "p1",
+          rootId: "r2",
+          cwd: "/forged",
+        },
+      }),
+      { origin: "mobile", producer: "mobile-chat" },
+      {
+        ...baseDeps(),
+        resolveProjectRun: (...args: unknown[]) => {
+          seen.push(args);
+          return {
+            cwd: "/secondary",
+            trustCwd: "/secondary",
+            projectId: "p1",
+            mainRootId: "r2",
+            projectPrimaryRootId: "r1",
+            workspaceContext: secondaryContext,
+          };
+        },
+      },
+    );
+
+    expect(seen[0]?.[3]).toBe("r2");
+    expect(JSON.parse(prepared.outLine).params).toMatchObject({
+      cwd: "/secondary",
+      projectId: "p1",
+      rootId: "r2",
+      workspaceContext: secondaryContext,
+    });
+    expect(prepared.tentative).toMatchObject({
+      projectId: "p1",
+      mainRootId: "r2",
+      cwd: "/secondary",
+    });
+
+    expect(() =>
+      prepareAgentRunMetadata(
+        JSON.stringify({
+          method: "agent/run",
+          params: { sessionId: "forged", projectId: "p1", rootId: "foreign-root" },
+        }),
+        { origin: "mobile", producer: "mobile-chat" },
+        {
+          ...baseDeps(),
+          resolveProjectRun: () => {
+            throw new Error("project root not found");
+          },
+        },
+      ),
+    ).toThrow(/project root not found/);
+  });
+
   test("cold explicit-project runs resolve ordinary forks and externally created Sessions from one state read", () => {
     const cases = [
       {

@@ -29,6 +29,7 @@ import {
   defaultSandboxConfig,
   type CronRunner,
   type CronRunResult,
+  type CronJob,
   type WorkspaceContext,
 } from "@cjhyy/code-shell-core/internal";
 import { mkdirSync, statSync } from "node:fs";
@@ -55,6 +56,10 @@ export interface AutomationWorkspaceDeps {
   resolveProjectRoot: (
     cwd: string,
   ) => { cwd: string; trustCwd: string; workspaceContext: WorkspaceContext } | undefined;
+  resolveProjectRootById: (
+    projectId: string,
+    rootId: string,
+  ) => { cwd: string; trustCwd: string; workspaceContext: WorkspaceContext } | undefined;
   hasPersistedSessionCwd: (cwd: string) => boolean;
   isProjectTrusted: (cwd: string) => boolean;
   isNoRepoCwd: (cwd: string) => boolean;
@@ -62,9 +67,21 @@ export interface AutomationWorkspaceDeps {
 }
 
 export function resolveAutomationWorkspace(
-  requestedCwd: string | undefined,
+  job: Pick<CronJob, "cwd" | "projectId" | "rootId">,
   deps: AutomationWorkspaceDeps,
 ): AutomationWorkspaceResolution | null {
+  const hasStableId = job.projectId !== undefined || job.rootId !== undefined;
+  if (hasStableId) {
+    if (!job.projectId || !job.rootId) return null;
+    const project = deps.resolveProjectRootById(job.projectId, job.rootId);
+    if (!project || !deps.isDirectory(project.cwd)) return null;
+    return {
+      cwd: project.cwd,
+      projectTrusted: deps.isProjectTrusted(project.trustCwd),
+      workspaceContext: project.workspaceContext,
+    };
+  }
+  const requestedCwd = job.cwd;
   if (!requestedCwd) {
     const cwd = deps.noRepoCwd();
     return { cwd, projectTrusted: false };
@@ -93,8 +110,10 @@ export function resolveAutomationWorkspace(
   return null;
 }
 
-function resolveDesktopAutomationWorkspace(cwd: string | undefined): AutomationWorkspaceResolution | null {
-  return resolveAutomationWorkspace(cwd, {
+function resolveDesktopAutomationWorkspace(
+  job: Pick<CronJob, "cwd" | "projectId" | "rootId">,
+): AutomationWorkspaceResolution | null {
+  return resolveAutomationWorkspace(job, {
     noRepoCwd: automationNoRepoCwd,
     foldProjectRoot: resolveProjectRoot,
     resolveProjectRoot: (candidate) => {
@@ -107,12 +126,31 @@ function resolveDesktopAutomationWorkspace(cwd: string | undefined): AutomationW
           }
         : undefined;
     },
+    resolveProjectRootById: (projectId, rootId) => {
+      try {
+        const resolved = getProjectStore().resolveProjectRootByIdSync(projectId, rootId);
+        return {
+          cwd: resolved.cwd,
+          trustCwd: resolved.mainRoot.path,
+          workspaceContext: resolved.workspaceContext,
+        };
+      } catch {
+        return undefined;
+      }
+    },
     hasPersistedSessionCwd: (candidate) =>
       getSessionCwdIndex().resolveConfirmedCwds([candidate])[0] === true,
     isProjectTrusted: (candidate) => getTrustCachedSync(candidate) === "trusted",
     isNoRepoCwd: (candidate) => getProjectStore().isNoRepoCwd(candidate),
     isDirectory: existingDirectory,
   });
+}
+
+/** Shared preflight for resume jobs, which otherwise bypass the headless runner. */
+export function resolveDesktopAutomationJobWorkspace(
+  job: Pick<CronJob, "cwd" | "projectId" | "rootId">,
+): boolean {
+  return resolveDesktopAutomationWorkspace(job) !== null;
 }
 
 function existingDirectory(cwd: string): boolean {
@@ -193,7 +231,7 @@ export function buildDesktopAutomationRunner(
   runtime: BrowserRuntimeLike = browserRuntime,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
-    const workspace = resolveDesktopAutomationWorkspace(req.job.cwd);
+    const workspace = resolveDesktopAutomationWorkspace(req.job);
     if (!workspace) {
       return {
         text: "",
@@ -369,10 +407,18 @@ export type ResumeInjector = (
 export function makeCronRunnerWithResume(
   headless: CronRunner,
   injectResume: ResumeInjector,
+  validateWorkspace?: (job: CronJob) => boolean,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
     const sid = req.job.resumeSessionId;
     if (typeof sid === "string" && sid.length > 0) {
+      if (validateWorkspace && !validateWorkspace(req.job)) {
+        return {
+          text: "",
+          reason: "workspace-unresolved",
+          stop: { reason: "workspace-unresolved" },
+        };
+      }
       return injectResume(sid, req.prompt, req.signal);
     }
     return headless(req);

@@ -509,6 +509,7 @@ export class ProjectStore {
     projectId: string,
     sessionId: string,
     session: SessionCwdIndexEntry | undefined,
+    requestedRootId?: string,
   ): ProjectRunResolution {
     this.ensureInitialized();
     if (!this.sessionIndex.isLoaded()) {
@@ -530,7 +531,10 @@ export class ProjectStore {
     let mainRoot: LocalProjectRoot | undefined;
     let cwd: string;
     if (!session) {
-      mainRoot = project.roots.find((root) => root.id === project.primaryRootId);
+      mainRoot = project.roots.find(
+        (root) => root.id === (requestedRootId ?? project.primaryRootId),
+      );
+      if (!mainRoot) throw new Error("project root not found");
       cwd = mainRoot?.path ?? "";
     } else if (session.projectId || session.mainRootId) {
       if (session.projectId !== projectId || !session.mainRootId) {
@@ -547,6 +551,9 @@ export class ProjectStore {
     if (!mainRoot) {
       throw new Error("Session root status root_removed: main root is not mounted in the project");
     }
+    if (requestedRootId && requestedRootId !== mainRoot.id) {
+      throw new Error("requested root does not match persisted Session authority");
+    }
     if (!existsDirectory(mainRoot.path)) {
       throw new Error(`Session root status dir_missing: directory is missing: ${mainRoot.path}`);
     }
@@ -555,6 +562,27 @@ export class ProjectStore {
       mainRoot: { ...mainRoot },
       cwd,
       workspaceContext: workspaceContextFor(project, mainRoot, cwd),
+    };
+  }
+
+  /** Resolve an opaque project/root pair without accepting a caller-supplied path. */
+  resolveProjectRootByIdSync(projectId: string, rootId?: string): ProjectRunResolution {
+    this.ensureInitialized();
+    const registry = readRegistryFile(this.file);
+    const project = registry.projects.find(
+      (candidate) => candidate.id === projectId && candidate.deletedAt === undefined,
+    );
+    if (!project) throw new Error("project not found");
+    const mainRoot = project.roots.find((root) => root.id === (rootId ?? project.primaryRootId));
+    if (!mainRoot) throw new Error("project root not found");
+    if (!existsDirectory(mainRoot.path)) {
+      throw new Error(`project root directory is missing: ${mainRoot.path}`);
+    }
+    return {
+      project: cloneProject(project),
+      mainRoot: { ...mainRoot },
+      cwd: mainRoot.path,
+      workspaceContext: workspaceContextFor(project, mainRoot, mainRoot.path),
     };
   }
 

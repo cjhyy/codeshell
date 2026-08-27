@@ -44,6 +44,8 @@ describe("CronStore", () => {
     const store = new CronStore(file);
     const jobs = [
       job({
+        projectId: "project-1",
+        rootId: "root-2",
         templateSource: {
           installKey: "review@local",
           templateId: "nightly-review",
@@ -59,6 +61,7 @@ describe("CronStore", () => {
     expect(loaded).toHaveLength(2);
     expect(loaded[0].name).toBe("nightly");
     expect(loaded[0].templateSource).toEqual(jobs[0].templateSource);
+    expect(loaded[0]).toMatchObject({ projectId: "project-1", rootId: "root-2" });
     expect(loaded[1].enabled).toBe(false);
   });
 
@@ -95,6 +98,9 @@ describe("CronStore", () => {
       /invalid cron job/i,
     );
     expect(existsSync(file)).toBe(false);
+    expect(() => store.save([job({ projectId: "x".repeat(513), rootId: "root-1" })])).toThrow(
+      /invalid cron job/i,
+    );
   });
 
   test("save is atomic — leaves no .tmp file behind", () => {

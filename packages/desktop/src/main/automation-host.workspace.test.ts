@@ -15,6 +15,10 @@ function deps() {
     foldProjectRoot: (cwd: string) => (cwd === "/repo/subdir" ? "/repo" : cwd),
     resolveProjectRoot: (cwd: string) =>
       cwd === "/repo" ? { cwd: "/repo", trustCwd: "/repo", workspaceContext } : undefined,
+    resolveProjectRootById: (projectId: string, rootId: string) =>
+      projectId === "p1" && rootId === "r1"
+        ? { cwd: "/repo", trustCwd: "/repo", workspaceContext }
+        : undefined,
     hasPersistedSessionCwd: (cwd: string) => cwd === "/legacy",
     isProjectTrusted: (cwd: string) => cwd === "/repo",
     isNoRepoCwd: (cwd: string) => cwd === "/no-repo",
@@ -25,18 +29,18 @@ function deps() {
 describe("resolveAutomationWorkspace", () => {
   test("uses no-repo when a job has no cwd", () => {
     const trustedNoRepoDeps = { ...deps(), isProjectTrusted: () => true };
-    expect(resolveAutomationWorkspace(undefined, trustedNoRepoDeps)).toEqual({
+    expect(resolveAutomationWorkspace({}, trustedNoRepoDeps)).toEqual({
       cwd: "/no-repo",
       projectTrusted: false,
     });
-    expect(resolveAutomationWorkspace("/no-repo", trustedNoRepoDeps)).toEqual({
+    expect(resolveAutomationWorkspace({ cwd: "/no-repo" }, trustedNoRepoDeps)).toEqual({
       cwd: "/no-repo",
       projectTrusted: false,
     });
   });
 
   test("folds git subdirectories and returns the project WorkspaceContext", () => {
-    expect(resolveAutomationWorkspace("/repo/subdir", deps())).toEqual({
+    expect(resolveAutomationWorkspace({ cwd: "/repo/subdir" }, deps())).toEqual({
       cwd: "/repo",
       projectTrusted: true,
       workspaceContext,
@@ -44,26 +48,58 @@ describe("resolveAutomationWorkspace", () => {
   });
 
   test("allows a persisted legacy Session cwd but stops unresolved paths", () => {
-    expect(resolveAutomationWorkspace("/legacy", deps())).toEqual({
+    expect(resolveAutomationWorkspace({ cwd: "/legacy" }, deps())).toEqual({
       cwd: "/legacy",
       projectTrusted: false,
     });
-    expect(resolveAutomationWorkspace("/removed", deps())).toBeNull();
+    expect(resolveAutomationWorkspace({ cwd: "/removed" }, deps())).toBeNull();
   });
 
   test("stops permanently when a persisted Session cwd or project root was deleted", () => {
     expect(
-      resolveAutomationWorkspace("/deleted-session", {
-        ...deps(),
-        hasPersistedSessionCwd: (cwd) => cwd === "/deleted-session",
-      }),
+      resolveAutomationWorkspace(
+        { cwd: "/deleted-session" },
+        {
+          ...deps(),
+          hasPersistedSessionCwd: (cwd) => cwd === "/deleted-session",
+        },
+      ),
     ).toBeNull();
     expect(
-      resolveAutomationWorkspace("/deleted-project", {
-        ...deps(),
-        resolveProjectRoot: (cwd) =>
-          cwd === "/deleted-project" ? { cwd, trustCwd: cwd, workspaceContext } : undefined,
-      }),
+      resolveAutomationWorkspace(
+        { cwd: "/deleted-project" },
+        {
+          ...deps(),
+          resolveProjectRoot: (cwd) =>
+            cwd === "/deleted-project" ? { cwd, trustCwd: cwd, workspaceContext } : undefined,
+        },
+      ),
+    ).toBeNull();
+  });
+
+  test("prefers stable ids, ignores stale cwd, and remains bound across make-primary", () => {
+    expect(
+      resolveAutomationWorkspace(
+        { projectId: "p1", rootId: "r1", cwd: "/forged-or-old-primary" },
+        deps(),
+      ),
+    ).toEqual({ cwd: "/repo", projectTrusted: true, workspaceContext });
+  });
+
+  test("invalid, cross-project, removed, or partial ids stop without legacy fallback", () => {
+    for (const job of [
+      { projectId: "unknown", rootId: "r1", cwd: "/legacy" },
+      { projectId: "p1", rootId: "foreign", cwd: "/legacy" },
+      { projectId: "p1", cwd: "/legacy" },
+      { rootId: "r1", cwd: "/legacy" },
+    ]) {
+      expect(resolveAutomationWorkspace(job, deps())).toBeNull();
+    }
+    expect(
+      resolveAutomationWorkspace(
+        { projectId: "p1", rootId: "r1" },
+        { ...deps(), resolveProjectRootById: () => undefined },
+      ),
     ).toBeNull();
   });
 });

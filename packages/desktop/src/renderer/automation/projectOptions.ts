@@ -19,6 +19,8 @@ export interface ProjectOptionSource {
   /** Sidebar display name — `displayName` overrides `name`. */
   name: string;
   displayName?: string;
+  roots?: Array<{ id: string; path: string; name: string }>;
+  primaryRootId?: string;
 }
 
 export interface ProjectOption {
@@ -67,7 +69,16 @@ export function buildProjectOptions(
   // synthesizing a bogus project option labelled with the full sandbox path —
   // otherwise the dropdown shows a duplicate "ghost project" next to 无项目.
   if (cwd && !seen.has(cwd) && !isNoRepoCwd(cwd)) {
-    out.push({ value: cwd, label: cwd });
+    const mounted = projects
+      .map((project) => ({
+        project,
+        root: project.roots?.find((root) => root.path === cwd),
+      }))
+      .find((entry) => entry.root);
+    out.push({
+      value: cwd,
+      label: mounted?.root ? `${projectLabel(mounted.project)} · ${mounted.root.name}` : cwd,
+    });
   }
   return out;
 }

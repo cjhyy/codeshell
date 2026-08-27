@@ -68,6 +68,10 @@ export interface CronJob {
   createdAt: number;
   /** Working directory the job runs in (the project it monitors/edits). */
   cwd?: string;
+  /** Stable desktop project binding. Legacy jobs may omit both identifiers. */
+  projectId?: string;
+  /** Stable root within projectId. */
+  rootId?: string;
   /** IANA timezone for cron-expression schedules (e.g. "Asia/Shanghai"). Default "UTC". */
   timezone?: string;
   /** Permission tier; defaults to read-only when unset. */
@@ -119,6 +123,8 @@ export interface CronExecutionOutcome {
 /** Optional metadata accepted by create(). */
 export interface CreateJobOptions {
   cwd?: string;
+  projectId?: string;
+  rootId?: string;
   timezone?: string;
   permissionLevel?: CronPermissionLevel;
   once?: boolean;
@@ -133,6 +139,8 @@ export interface UpdateJobPatch {
   schedule?: string;
   timezone?: string;
   cwd?: string;
+  projectId?: string | null;
+  rootId?: string | null;
   permissionLevel?: CronPermissionLevel;
 }
 
@@ -141,12 +149,15 @@ const MAX_JOB_SCHEDULE_CHARS = 512;
 const MAX_JOB_PROMPT_CHARS = 1024 * 1024;
 const MAX_JOB_CWD_CHARS = 32_768;
 const MAX_JOB_TIMEZONE_CHARS = 128;
+const MAX_JOB_BINDING_ID_CHARS = 512;
 
 function validateJobFields(input: {
   name?: unknown;
   schedule?: unknown;
   prompt?: unknown;
   cwd?: unknown;
+  projectId?: unknown;
+  rootId?: unknown;
   timezone?: unknown;
   permissionLevel?: unknown;
 }): void {
@@ -179,9 +190,26 @@ function validateJobFields(input: {
   }
   if (
     input.cwd !== undefined &&
-    (typeof input.cwd !== "string" || input.cwd.length > MAX_JOB_CWD_CHARS || input.cwd.includes("\0"))
+    (typeof input.cwd !== "string" ||
+      input.cwd.length > MAX_JOB_CWD_CHARS ||
+      input.cwd.includes("\0"))
   ) {
     throw new Error("automation cwd must be a bounded string");
+  }
+  for (const [field, value] of [
+    ["projectId", input.projectId],
+    ["rootId", input.rootId],
+  ] as const) {
+    if (
+      value !== undefined &&
+      value !== null &&
+      (typeof value !== "string" ||
+        !value ||
+        value.length > MAX_JOB_BINDING_ID_CHARS ||
+        value.includes("\0"))
+    ) {
+      throw new Error(`automation ${field} must be a bounded non-empty string`);
+    }
   }
   if (
     input.timezone !== undefined &&
@@ -499,6 +527,8 @@ export class CronScheduler {
           runCount: 0,
           createdAt: Date.now(),
           ...(opts?.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts?.projectId !== undefined ? { projectId: opts.projectId } : {}),
+          ...(opts?.rootId !== undefined ? { rootId: opts.rootId } : {}),
           ...(opts?.timezone !== undefined ? { timezone: opts.timezone } : {}),
           ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
           ...(opts?.once === true ? { once: true } : {}),
@@ -522,6 +552,8 @@ export class CronScheduler {
       runCount: 0,
       createdAt: Date.now(),
       ...(opts?.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      ...(opts?.projectId !== undefined ? { projectId: opts.projectId } : {}),
+      ...(opts?.rootId !== undefined ? { rootId: opts.rootId } : {}),
       ...(opts?.timezone !== undefined ? { timezone: opts.timezone } : {}),
       ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
       ...(opts?.once === true ? { once: true } : {}),
@@ -674,6 +706,10 @@ export class CronScheduler {
           if (patch.schedule !== undefined) job.schedule = patch.schedule;
           if (patch.timezone !== undefined) job.timezone = patch.timezone;
           if (patch.cwd !== undefined) job.cwd = patch.cwd;
+          if (patch.projectId === null) delete job.projectId;
+          else if (patch.projectId !== undefined) job.projectId = patch.projectId;
+          if (patch.rootId === null) delete job.rootId;
+          else if (patch.rootId !== undefined) job.rootId = patch.rootId;
           if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
           if (scheduleChanged) this.refreshNextRunForDisplay(job);
           updated = job;
@@ -704,6 +740,10 @@ export class CronScheduler {
     if (patch.schedule !== undefined) job.schedule = patch.schedule;
     if (patch.timezone !== undefined) job.timezone = patch.timezone;
     if (patch.cwd !== undefined) job.cwd = patch.cwd;
+    if (patch.projectId === null) delete job.projectId;
+    else if (patch.projectId !== undefined) job.projectId = patch.projectId;
+    if (patch.rootId === null) delete job.rootId;
+    else if (patch.rootId !== undefined) job.rootId = patch.rootId;
     if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
 
     // Re-arm only when the schedule definition changed, or when an enabled job

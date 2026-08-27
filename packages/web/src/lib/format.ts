@@ -20,8 +20,15 @@ function isSameOrInside(cwd: string, root: string): boolean {
   return target === base || target.startsWith(`${base}/`);
 }
 
-/** Return the desktop project whose root owns `cwd` (longest prefix wins). */
-export function projectForCwd<T extends { path: string; name: string }>(
+interface ProjectPathLike {
+  id?: string;
+  path: string;
+  name: string;
+  roots?: Array<{ path: string }>;
+}
+
+/** Return the desktop project whose V2 root owns `cwd` (longest prefix wins). */
+export function projectForCwd<T extends ProjectPathLike>(
   cwd: string | null | undefined,
   projects: T[] = [],
 ): T | undefined {
@@ -29,11 +36,14 @@ export function projectForCwd<T extends { path: string; name: string }>(
   let best: T | undefined;
   let bestLen = -1;
   for (const p of projects) {
-    if (!p.path || !isSameOrInside(cwd, p.path)) continue;
-    const len = normalizePath(p.path).length;
-    if (len > bestLen) {
-      best = p;
-      bestLen = len;
+    const roots = p.roots?.length ? p.roots.map((root) => root.path) : [p.path];
+    for (const root of roots) {
+      if (!root || !isSameOrInside(cwd, root)) continue;
+      const len = normalizePath(root).length;
+      if (len > bestLen) {
+        best = p;
+        bestLen = len;
+      }
     }
   }
   return best;
@@ -44,36 +54,45 @@ export function projectForCwd<T extends { path: string; name: string }>(
  *  bucket, sorted last. Generic over any item carrying `cwd` + `updatedAt`. */
 export function groupByProject<T extends { cwd: string; updatedAt: number }>(
   items: T[],
-  projects: Array<{ path: string; name: string }> = [],
+  projects: ProjectPathLike[] = [],
   lang: UILanguage = loadUILanguage(),
-): { cwd: string; name: string; items: T[]; updatedAt: number }[] {
+): { cwd: string; projectId?: string; name: string; items: T[]; updatedAt: number }[] {
   const map = new Map<string, T[]>();
   for (const it of items) {
-    const key = projectForCwd(it.cwd, projects)?.path ?? it.cwd ?? "";
+    const project = projectForCwd(it.cwd, projects);
+    const key = project ? `project:${project.id ?? project.path}` : `cwd:${it.cwd ?? ""}`;
     const arr = map.get(key);
     if (arr) arr.push(it);
     else map.set(key, [it]);
   }
-  const projectByPath = new Map(projects.map((p, i) => [p.path, { ...p, order: i }]));
-  const groups = [...map.entries()].map(([cwd, list]) => ({
-    cwd,
-    name: cwd
-      ? projectByPath.get(cwd)?.name || basename(cwd) || cwd
-      : translate(lang, "mobile.format.noProject"),
-    items: list,
-    updatedAt: Math.max(...list.map((i) => i.updatedAt)),
-  }));
+  const projectByKey = new Map(
+    projects.map((project, order) => [`project:${project.id ?? project.path}`, { project, order }]),
+  );
+  const groups = [...map.entries()].map(([key, list]) => {
+    const projectEntry = projectByKey.get(key);
+    const cwd = projectEntry?.project.path ?? key.slice("cwd:".length);
+    return {
+      cwd,
+      ...(projectEntry?.project.id ? { projectId: projectEntry.project.id } : {}),
+      name: cwd
+        ? projectEntry?.project.name || basename(cwd) || cwd
+        : translate(lang, "mobile.format.noProject"),
+      items: list,
+      updatedAt: Math.max(...list.map((i) => i.updatedAt)),
+      order: projectEntry?.order,
+    };
+  });
   groups.sort((a, b) => {
     if (!a.cwd && b.cwd) return 1; // 无项目 sinks to bottom
     if (a.cwd && !b.cwd) return -1;
-    const ao = projectByPath.get(a.cwd)?.order;
-    const bo = projectByPath.get(b.cwd)?.order;
+    const ao = a.order;
+    const bo = b.order;
     if (ao !== undefined && bo !== undefined && ao !== bo) return ao - bo;
     if (ao !== undefined && bo === undefined) return -1;
     if (ao === undefined && bo !== undefined) return 1;
     return b.updatedAt - a.updatedAt; // newest project first
   });
-  return groups;
+  return groups.map(({ order: _order, ...group }) => group);
 }
 
 /** Coarse relative time ("刚刚" / "5 分钟前" / "3 小时前" / "2 天前").

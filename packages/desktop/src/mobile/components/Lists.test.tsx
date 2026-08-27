@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { SessionList } from "./SessionList";
+import { ProjectRootPicker, SessionList } from "./SessionList";
 import type { MobileProjectMeta, MobileSessionMeta } from "@protocol";
 
 const sessions: MobileSessionMeta[] = [
@@ -81,4 +81,35 @@ test("SessionList 给未读普通会话显示圆点,当前会话不显示", () =
     />,
   );
   expect(activeHtml).not.toContain("有新内容");
+});
+
+test("SessionList 展开 V2 项目的全部 roots 并标注主/次目录", () => {
+  const html = renderToStaticMarkup(
+    <ProjectRootPicker
+      projects={[
+        {
+          id: "project-1",
+          path: "/work/primary",
+          name: "multi-root",
+          primaryRootId: "root-primary",
+          roots: [
+            { id: "root-primary", path: "/work/primary", name: "primary", role: "primary" },
+            {
+              id: "root-secondary",
+              path: "/docs/secondary",
+              name: "docs",
+              role: "secondary",
+            },
+          ],
+        },
+      ]}
+      activeProjectId="project-1"
+      onNew={() => {}}
+    />,
+  );
+  expect(html).toContain("multi-root");
+  expect(html).toContain("/work/primary");
+  expect(html).toContain("/docs/secondary");
+  expect(html).toContain("主目录");
+  expect(html).toContain("次目录");
 });

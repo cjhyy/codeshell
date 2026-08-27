@@ -105,6 +105,8 @@ export interface RunParams {
   task: string;
   /** Renderer/mobile project hint. Desktop Main resolves it to authoritative roots. */
   projectId?: string;
+  /** Renderer/mobile root hint. Desktop Main resolves it within projectId. */
+  rootId?: string;
   /** Trusted host-injected roots. Desktop Main strips any renderer/mobile supplied value. */
   workspaceContext?: import("../workspace/workspace-context.js").WorkspaceContext;
   /**

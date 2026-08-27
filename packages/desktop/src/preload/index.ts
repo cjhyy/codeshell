@@ -1031,6 +1031,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     schedule: string;
     prompt: string;
     cwd?: string;
+    projectId?: string;
+    rootId?: string;
     timezone?: string;
     permissionLevel?: string;
   }) => ipcRenderer.invoke("automation:create", input),
@@ -1042,6 +1044,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       schedule?: string;
       timezone?: string;
       cwd?: string;
+      projectId?: string | null;
+      rootId?: string | null;
       permissionLevel?: string;
     },
   ) => ipcRenderer.invoke("automation:update", id, patch),

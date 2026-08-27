@@ -52,6 +52,31 @@ test("projectForCwd 用最长项目前缀匹配", () => {
   expect(projectForCwd("/u/other", projects)).toBeUndefined();
 });
 
+test("projectForCwd 和 groupByProject 识别 V2 secondary root", () => {
+  const projects = [
+    {
+      id: "project-1",
+      path: "/u/primary",
+      name: "multi-root",
+      roots: [
+        { id: "root-primary", path: "/u/primary" },
+        { id: "root-secondary", path: "/docs/secondary" },
+      ],
+    },
+  ];
+  expect(projectForCwd("/docs/secondary/guide.md", projects)?.id).toBe("project-1");
+  const groups = groupByProject(
+    [
+      { id: "a", cwd: "/u/primary", updatedAt: 100 },
+      { id: "b", cwd: "/docs/secondary", updatedAt: 200 },
+    ],
+    projects,
+  );
+  expect(groups).toHaveLength(1);
+  expect(groups[0]).toMatchObject({ projectId: "project-1", name: "multi-root" });
+  expect(groups[0]?.items.map((item) => item.id).sort()).toEqual(["a", "b"]);
+});
+
 test("groupByProject 空数组 → 空", () => {
   expect(groupByProject([])).toEqual([]);
 });

@@ -29,6 +29,7 @@ export interface AgentRunMetadataDeps {
     projectId: string,
     sessionId: string,
     session: SessionCwdIndexEntry | undefined,
+    rootId?: string,
   ) => ResolvedAgentProjectRun;
   resolveExactRoot?: (cwd: string) => ResolvedAgentProjectRun | undefined;
   lookupSession?: (sessionId: string, refresh: boolean) => SessionCwdIndexEntry | undefined;
@@ -101,6 +102,12 @@ export function prepareAgentRunMetadata(
       typeof paramsRecord.projectId === "string" && paramsRecord.projectId.length > 0
         ? paramsRecord.projectId
         : undefined;
+    const hasRootId = Object.prototype.hasOwnProperty.call(paramsRecord, "rootId");
+    const rootId =
+      typeof paramsRecord.rootId === "string" && paramsRecord.rootId.length > 0
+        ? paramsRecord.rootId
+        : undefined;
+    if (hasRootId && !rootId) throw new AgentRunMetadataError("invalid project rootId");
     if (projectId) {
       if (!sessionId) throw new AgentRunMetadataError("project run requires a sessionId");
       if (!deps.resolveProjectRun) {
@@ -109,7 +116,7 @@ export function prepareAgentRunMetadata(
       let session = deps.lookupSession?.(sessionId, false);
       if (!session) session = deps.lookupSession?.(sessionId, true);
       try {
-        const resolution = deps.resolveProjectRun(projectId, sessionId, session);
+        const resolution = deps.resolveProjectRun(projectId, sessionId, session, rootId);
         return prepareResolvedProject({
           parsed,
           paramsRecord,
@@ -127,6 +134,8 @@ export function prepareAgentRunMetadata(
         );
       }
     }
+
+    if (rootId) throw new AgentRunMetadataError("rootId requires projectId");
 
     if (!sessionId) throw new AgentRunMetadataError("agent run requires a sessionId");
     let session = deps.lookupSession?.(sessionId, false);
@@ -149,7 +158,8 @@ export function prepareAgentRunMetadata(
         }
       }
       if (session.projectId) {
-        if (!deps.resolveProjectRun) throw new AgentRunMetadataError("project registry is unavailable");
+        if (!deps.resolveProjectRun)
+          throw new AgentRunMetadataError("project registry is unavailable");
         try {
           const resolution = deps.resolveProjectRun(session.projectId, sessionId, session);
           return prepareResolvedProject({
@@ -173,6 +183,7 @@ export function prepareAgentRunMetadata(
       cwd = session.workspaceRoot ?? session.cwd;
       paramsRecord.cwd = cwd;
       delete paramsRecord.projectId;
+      delete paramsRecord.rootId;
       paramsRecord.projectTrusted = deps.isProjectTrusted(session.cwd);
       return {
         parsed,
@@ -182,9 +193,7 @@ export function prepareAgentRunMetadata(
         bucket,
         browserPartition,
         meta,
-        ...(session.status === "tentative"
-          ? { tentative: tentativeFromSession(session) }
-          : {}),
+        ...(session.status === "tentative" ? { tentative: tentativeFromSession(session) } : {}),
       };
     }
 
@@ -192,7 +201,16 @@ export function prepareAgentRunMetadata(
       throw new AgentRunMetadataError("new agent run requires an authorized cwd or projectId");
     }
     if (deps.isNoRepoCwd?.(requestedCwd)) {
-      return prepareLegacyNew(parsed, paramsRecord, requestedCwd, sessionId, bucket, browserPartition, meta, deps);
+      return prepareLegacyNew(
+        parsed,
+        paramsRecord,
+        requestedCwd,
+        sessionId,
+        bucket,
+        browserPartition,
+        meta,
+        deps,
+      );
     }
     const root = deps.resolveExactRoot?.(requestedCwd);
     if (root) {
@@ -209,11 +227,29 @@ export function prepareAgentRunMetadata(
           tentative: true,
         });
       }
-      return prepareLegacyNew(parsed, paramsRecord, root.cwd, sessionId, bucket, browserPartition, meta, deps);
+      return prepareLegacyNew(
+        parsed,
+        paramsRecord,
+        root.cwd,
+        sessionId,
+        bucket,
+        browserPartition,
+        meta,
+        deps,
+      );
     }
     const reservation = meta.origin === "host" ? deps.hostReservation?.(sessionId) : undefined;
     if (reservation && canonicalKey(reservation.cwd) === canonicalKey(requestedCwd)) {
-      return prepareLegacyNew(parsed, paramsRecord, reservation.cwd, sessionId, bucket, browserPartition, meta, deps);
+      return prepareLegacyNew(
+        parsed,
+        paramsRecord,
+        reservation.cwd,
+        sessionId,
+        bucket,
+        browserPartition,
+        meta,
+        deps,
+      );
     }
     throw new AgentRunMetadataError("new agent run cwd is not authorized");
   }
@@ -235,6 +271,7 @@ function prepareResolvedProject(args: {
   const { resolution } = args;
   args.paramsRecord.cwd = resolution.cwd;
   args.paramsRecord.projectId = resolution.projectId;
+  args.paramsRecord.rootId = resolution.mainRootId;
   args.paramsRecord.workspaceContext = resolution.workspaceContext;
   args.paramsRecord.projectTrusted = args.isTrusted;
   return {
@@ -270,6 +307,7 @@ function prepareLegacyNew(
 ): PreparedAgentRunMetadata {
   paramsRecord.cwd = cwd;
   delete paramsRecord.projectId;
+  delete paramsRecord.rootId;
   delete paramsRecord.workspaceContext;
   paramsRecord.projectTrusted = deps.isProjectTrusted(cwd);
   return {
@@ -286,8 +324,10 @@ function prepareLegacyNew(
 
 function matchesSessionCwd(cwd: string, entry: SessionCwdIndexEntry): boolean {
   const key = canonicalKey(cwd);
-  return key === canonicalKey(entry.cwd) ||
-    (entry.workspaceRoot !== undefined && key === canonicalKey(entry.workspaceRoot));
+  return (
+    key === canonicalKey(entry.cwd) ||
+    (entry.workspaceRoot !== undefined && key === canonicalKey(entry.workspaceRoot))
+  );
 }
 
 function tentativeFromSession(

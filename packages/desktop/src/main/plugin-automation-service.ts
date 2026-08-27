@@ -25,16 +25,17 @@ export function createAutomationFromPluginTemplate(
   installKey: string,
   templateId: string,
   expectedRevision: string,
-  cwd?: string,
+  workspace: string | { cwd?: string; projectId?: string; rootId?: string } = {},
 ): AutomationSummary {
+  const normalizedWorkspace = typeof workspace === "string" ? { cwd: workspace } : workspace;
   return automationSummary(
     instantiatePluginAutomationTemplate({
       scheduler: requireAutomationScheduler(),
       installKey,
       templateId,
       expectedRevision,
-      ...(cwd ? { cwd } : {}),
-      disabledPluginNames: disabledPluginNames(cwd ?? process.cwd()),
+      ...normalizedWorkspace,
+      disabledPluginNames: disabledPluginNames(normalizedWorkspace.cwd ?? process.cwd()),
     }),
   );
 }

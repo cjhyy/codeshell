@@ -51,9 +51,13 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "session.create":
       valid =
-        (event.cwd === undefined ||
-          event.cwd === null ||
-          boundedPath(event.cwd)) &&
+        (event.cwd === undefined || event.cwd === null || boundedPath(event.cwd)) &&
+        (event.projectId === undefined ||
+          event.projectId === null ||
+          boundedString(event.projectId, MAX_ID_LENGTH)) &&
+        optionalBoundedString(event.rootId, MAX_ID_LENGTH) &&
+        (event.rootId === undefined || typeof event.projectId === "string") &&
+        !(event.projectId === null && event.rootId !== undefined) &&
         optionalBoundedString(event.name, MAX_NAME_LENGTH);
       break;
     case "run.stop":
@@ -76,8 +80,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "session.sync":
       valid =
-        boundedString(event.sessionId, MAX_ID_LENGTH) &&
-        optionalNonNegativeInteger(event.sinceSeq);
+        boundedString(event.sessionId, MAX_ID_LENGTH) && optionalNonNegativeInteger(event.sinceSeq);
       break;
     case "permission.setMode":
       valid =
@@ -121,8 +124,7 @@ export function parseMobileClientEvent(value: unknown): MobileClientEvent | unde
       break;
     case "room.history":
       valid =
-        boundedString(event.roomId, MAX_ID_LENGTH) &&
-        optionalNonNegativeInteger(event.sinceSeq);
+        boundedString(event.roomId, MAX_ID_LENGTH) && optionalNonNegativeInteger(event.sinceSeq);
       break;
     case "ccRoom.probe":
       valid =
@@ -225,9 +227,7 @@ function isBoundedHistoryLimit(value: unknown): value is number {
 function optionalAttachments(value: unknown): boolean {
   return (
     value === undefined ||
-    (Array.isArray(value) &&
-      value.length <= MAX_MOBILE_ATTACHMENTS &&
-      value.every(isAttachment))
+    (Array.isArray(value) && value.length <= MAX_MOBILE_ATTACHMENTS && value.every(isAttachment))
   );
 }
 
@@ -251,11 +251,10 @@ function isApprovalDecision(value: unknown): boolean {
   if (!isRecord(value)) return false;
   if (value.behavior === "allow") {
     return (
-      (value.answer === undefined || boundedOptionalEmptyString(value.answer, MAX_MESSAGE_LENGTH)) &&
+      (value.answer === undefined ||
+        boundedOptionalEmptyString(value.answer, MAX_MESSAGE_LENGTH)) &&
       (value.updatedInput === undefined || isRecord(value.updatedInput))
     );
   }
-  return (
-    value.behavior === "deny" && boundedOptionalEmptyString(value.message, MAX_MESSAGE_LENGTH)
-  );
+  return value.behavior === "deny" && boundedOptionalEmptyString(value.message, MAX_MESSAGE_LENGTH);
 }

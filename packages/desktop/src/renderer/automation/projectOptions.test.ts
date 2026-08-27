@@ -60,6 +60,25 @@ describe("buildProjectOptions", () => {
     expect(opts).toHaveLength(projects.length + 1); // no-project + 2 projects, no ghost
     expect(opts.some((o) => o.label.includes("no-repo"))).toBe(false);
   });
+
+  it("keeps an ID-bound former primary visible under its project after make-primary", () => {
+    const opts = buildProjectOptions(
+      [
+        {
+          id: "multi",
+          path: "/new-primary",
+          name: "multi-root",
+          primaryRootId: "new",
+          roots: [
+            { id: "old", path: "/old-primary", name: "old" },
+            { id: "new", path: "/new-primary", name: "new" },
+          ],
+        },
+      ],
+      "/old-primary",
+    );
+    expect(opts).toContainEqual({ value: "/old-primary", label: "multi-root · old" });
+  });
 });
 
 describe("selectedProjectValue", () => {

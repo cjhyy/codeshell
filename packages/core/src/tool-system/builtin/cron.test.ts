@@ -71,6 +71,29 @@ describe("CronCreate tool — conversational config", () => {
     expect(cronScheduler.list().find((job) => job.name === "escape")).toBeUndefined();
   });
 
+  test("persists stable project/root ids from the Main-authorized workspace context", async () => {
+    const workspace = {
+      version: 1,
+      projectId: "project-1",
+      projectRevision: 7,
+      sessionMainRootId: "root-2",
+      roots: [
+        { id: "root-1", path: "/primary", role: "secondary" },
+        { id: "root-2", path: "/secondary", role: "primary" },
+      ],
+      rootsDigest: "digest",
+    } as ToolContext["workspace"];
+    await cronCreateTool({ name: "bound", schedule: "1h", prompt: "check" }, {
+      cwd: "/secondary",
+      workspace,
+    } as ToolContext);
+    expect(cronScheduler.list().find((job) => job.name === "bound")).toMatchObject({
+      cwd: "/secondary",
+      projectId: "project-1",
+      rootId: "root-2",
+    });
+  });
+
   test("rejects non-string and oversized payloads without creating a job", async () => {
     expect(await cronCreateTool({ name: 42, schedule: "1h", prompt: "check" })).toMatch(/error/i);
     expect(

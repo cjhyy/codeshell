@@ -220,7 +220,11 @@ import {
   runChromeNativeMessagingHost,
   type ChromeNativeRegistrationResult,
 } from "./browser-runtime/index.js";
-import { buildDesktopAutomationRunner, makeCronRunnerWithResume } from "./automation-host.js";
+import {
+  buildDesktopAutomationRunner,
+  makeCronRunnerWithResume,
+  resolveDesktopAutomationJobWorkspace,
+} from "./automation-host.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
@@ -237,6 +241,11 @@ import {
   type CreateAutomationInput,
   type UpdateAutomationInput,
 } from "./automation-service.js";
+import {
+  resolveAutomationCreateAuthority,
+  resolveAutomationUpdateAuthority,
+  type AutomationAuthorityDeps,
+} from "./automation-authority.js";
 import { dlog } from "./desktop-logger.js";
 import {
   ptyStart,
@@ -3150,7 +3159,11 @@ app.whenReady().then(async () => {
       }
       return { text: "", reason: res.message };
     };
-    const automationRunner = makeCronRunnerWithResume(headlessAutomationRunner, injectResumeTurn);
+    const automationRunner = makeCronRunnerWithResume(
+      headlessAutomationRunner,
+      injectResumeTurn,
+      (job) => resolveDesktopAutomationJobWorkspace(job),
+    );
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
       runner: automationRunner,
@@ -4186,12 +4199,12 @@ ipcMain.handle(
     if (installKey.length > 512 || templateId.length > 512 || expectedRevision.length > 512) {
       throw new Error("plugin automation identifiers are too long");
     }
-    const normalizedCwd = cwd ? await requireRendererProjectPath(cwd) : undefined;
+    const workspace = await resolveAutomationCreateAuthority({ cwd }, automationAuthorityDeps());
     return createAutomationFromPluginTemplate(
       installKey,
       templateId,
       expectedRevision,
-      normalizedCwd,
+      workspace as { cwd?: string; projectId?: string; rootId?: string },
     );
   },
 );
@@ -6987,6 +7000,39 @@ function assertAutomationId(value: unknown): asserts value is string {
   }
 }
 
+function validAutomationBindingId(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (typeof value === "string" && value.length > 0 && value.length <= 512 && !value.includes("\0"))
+  );
+}
+
+function automationAuthorityDeps(): AutomationAuthorityDeps {
+  return {
+    requireRendererPath: (cwd) => requireRendererProjectPath(cwd),
+    isNoRepoCwd: (cwd) => projectStore.isNoRepoCwd(cwd),
+    resolveProjectRootById: (projectId, rootId) => {
+      const resolved = projectStore.resolveProjectRootByIdSync(projectId, rootId);
+      return {
+        projectId: resolved.project.id,
+        rootId: resolved.mainRoot.id,
+        cwd: resolved.cwd,
+      };
+    },
+    resolveExactRoot: (cwd) => {
+      const resolved = projectStore.resolveExactRootSync(cwd);
+      return resolved
+        ? {
+            projectId: resolved.project.id,
+            rootId: resolved.mainRoot.id,
+            cwd: resolved.cwd,
+          }
+        : undefined;
+    },
+  };
+}
+
 ipcMain.handle("automation:list", async () => listAutomations());
 ipcMain.handle("automation:get", async (_e, id: string) => {
   assertAutomationId(id);
@@ -7012,15 +7058,16 @@ ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => 
     (input.permissionLevel !== undefined &&
       input.permissionLevel !== "read-only" &&
       input.permissionLevel !== "workspace-write" &&
-      input.permissionLevel !== "full")
+      input.permissionLevel !== "full") ||
+    !validAutomationBindingId(input.projectId) ||
+    !validAutomationBindingId(input.rootId)
   ) {
     throw new Error("invalid automation payload");
   }
   if (input.resumeSessionId !== undefined) assertDesktopSessionId(input.resumeSessionId);
-  const normalized = input.cwd
-    ? { ...input, cwd: await requireRendererProjectPath(input.cwd) }
-    : input;
-  return createAutomation(normalized);
+  const { cwd: _cwd, projectId: _projectId, rootId: _rootId, ...definition } = input;
+  const authority = await resolveAutomationCreateAuthority(input, automationAuthorityDeps());
+  return createAutomation({ ...definition, ...authority } as CreateAutomationInput);
 });
 ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomationInput) => {
   assertAutomationId(id);
@@ -7040,15 +7087,15 @@ ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomati
     (patch.permissionLevel !== undefined &&
       patch.permissionLevel !== "read-only" &&
       patch.permissionLevel !== "workspace-write" &&
-      patch.permissionLevel !== "full")
+      patch.permissionLevel !== "full") ||
+    !validAutomationBindingId(patch.projectId) ||
+    !validAutomationBindingId(patch.rootId)
   ) {
     throw new Error("invalid automation patch");
   }
-  const normalized =
-    patch.cwd === undefined
-      ? patch
-      : { ...patch, cwd: patch.cwd ? await requireRendererProjectPath(patch.cwd) : "" };
-  return updateAutomation(id, normalized);
+  const { cwd: _cwd, projectId: _projectId, rootId: _rootId, ...definition } = patch;
+  const authority = await resolveAutomationUpdateAuthority(patch, automationAuthorityDeps());
+  return updateAutomation(id, { ...definition, ...authority });
 });
 ipcMain.handle("automation:delete", async (_e, id: string) => {
   assertAutomationId(id);

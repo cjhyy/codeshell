@@ -2890,6 +2890,8 @@ export interface AutomationSummary {
   prompt: string;
   enabled: boolean;
   cwd: string | null;
+  projectId: string | null;
+  rootId: string | null;
   timezone: string | null;
   permissionLevel: AutomationPermissionLevel | null;
   lastRun: number | null;
@@ -2913,6 +2915,8 @@ export interface CreateAutomationInput {
   schedule: string;
   prompt: string;
   cwd?: string;
+  projectId?: string;
+  rootId?: string;
   timezone?: string;
   permissionLevel?: AutomationPermissionLevel;
 }
@@ -2923,6 +2927,8 @@ export interface UpdateAutomationInput {
   schedule?: string;
   timezone?: string;
   cwd?: string;
+  projectId?: string | null;
+  rootId?: string | null;
   permissionLevel?: AutomationPermissionLevel;
 }
 

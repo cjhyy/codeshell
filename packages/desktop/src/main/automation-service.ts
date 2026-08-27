@@ -21,6 +21,8 @@ export interface AutomationSummary {
   prompt: string;
   enabled: boolean;
   cwd: string | null;
+  projectId: string | null;
+  rootId: string | null;
   timezone: string | null;
   permissionLevel: CronPermissionLevel | null;
   lastRun: number | null;
@@ -50,6 +52,8 @@ export interface CreateAutomationInput {
   schedule: string;
   prompt: string;
   cwd?: string;
+  projectId?: string;
+  rootId?: string;
   timezone?: string;
   permissionLevel?: CronPermissionLevel;
   /** Optional existing task to continue when the schedule fires. */
@@ -71,6 +75,8 @@ export function automationSummary(job: CronJob): AutomationSummary {
     prompt: job.prompt,
     enabled: job.enabled,
     cwd: job.cwd ?? null,
+    projectId: job.projectId ?? null,
+    rootId: job.rootId ?? null,
     timezone: job.timezone ?? null,
     permissionLevel: job.permissionLevel ?? null,
     lastRun: job.lastRun ?? null,
@@ -131,6 +137,8 @@ export function createAutomation(input: CreateAutomationInput): AutomationSummar
   syncFromStore();
   const job = s.create(input.name, input.schedule, input.prompt, {
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
+    ...(input.projectId !== undefined ? { projectId: input.projectId } : {}),
+    ...(input.rootId !== undefined ? { rootId: input.rootId } : {}),
     ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
     ...(input.permissionLevel !== undefined ? { permissionLevel: input.permissionLevel } : {}),
     ...(input.resumeSessionId !== undefined ? { resumeSessionId: input.resumeSessionId } : {}),
@@ -144,6 +152,8 @@ export interface UpdateAutomationInput {
   schedule?: string;
   timezone?: string;
   cwd?: string;
+  projectId?: string | null;
+  rootId?: string | null;
   permissionLevel?: CronPermissionLevel;
 }
 

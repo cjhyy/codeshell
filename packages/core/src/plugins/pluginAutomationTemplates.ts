@@ -9,6 +9,8 @@ export interface InstantiatePluginAutomationTemplateOptions {
   templateId: string;
   expectedRevision: string;
   cwd?: string;
+  projectId?: string;
+  rootId?: string;
   /** Effective project/global disable list computed by the host for this cwd. */
   disabledPluginNames: ReadonlySet<string>;
   maxJobs?: number;
@@ -58,6 +60,10 @@ export function instantiatePluginAutomationTemplate(
   const template = contribution.template;
   return options.scheduler.create(template.title.default, template.schedule, template.prompt, {
     ...(template.workspace === "current" && options.cwd ? { cwd: options.cwd } : {}),
+    ...(template.workspace === "current" && options.projectId
+      ? { projectId: options.projectId }
+      : {}),
+    ...(template.workspace === "current" && options.rootId ? { rootId: options.rootId } : {}),
     ...(template.timezone ? { timezone: template.timezone } : {}),
     permissionLevel: template.permissionLevel,
     templateSource: {

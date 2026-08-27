@@ -112,7 +112,16 @@ export type MobileClientEvent =
       size: number;
     }
   | { type: "session.select"; sessionId: string }
-  | { type: "session.create"; cwd?: string | null; name?: string }
+  | {
+      type: "session.create";
+      /** Stable V2 project identity. null explicitly selects the no-repo workspace. */
+      projectId?: string | null;
+      /** Stable V2 root identity. Omit to use the project's current primary root. */
+      rootId?: string;
+      /** Legacy client compatibility only; Main validates it against mounted roots. */
+      cwd?: string | null;
+      name?: string;
+    }
   | { type: "run.stop"; sessionId?: string }
   // Approval — full desktop parity: deny reason, AskUser answer, remembered
   // scope (once/session/project) + path scope (file/dir/tool).
@@ -206,6 +215,8 @@ export type MobileServerEvent =
       type: "chat.accepted";
       sessionId?: string;
       cwd?: string | null;
+      projectId?: string | null;
+      rootId?: string;
       clientMessageId?: string;
       attachments?: MobileAttachmentSummary[];
     }

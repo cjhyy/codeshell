@@ -85,6 +85,17 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
   ) {
     return invalid("cwd");
   }
+  for (const field of ["projectId", "rootId"] as const) {
+    if (
+      raw[field] !== undefined &&
+      (typeof raw[field] !== "string" ||
+        !(raw[field] as string) ||
+        (raw[field] as string).length > 512 ||
+        (raw[field] as string).includes("\0"))
+    ) {
+      return invalid(field);
+    }
+  }
   if (
     raw.timezone !== undefined &&
     (typeof raw.timezone !== "string" || raw.timezone.length > 128 || raw.timezone.includes("\0"))
@@ -128,7 +139,11 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
 
   let templateSource: CronJob["templateSource"];
   if (raw.templateSource !== undefined) {
-    if (!raw.templateSource || typeof raw.templateSource !== "object" || Array.isArray(raw.templateSource)) {
+    if (
+      !raw.templateSource ||
+      typeof raw.templateSource !== "object" ||
+      Array.isArray(raw.templateSource)
+    ) {
       return invalid("templateSource");
     }
     const source = raw.templateSource as Record<string, unknown>;
@@ -172,6 +187,8 @@ function normalizeJob(value: unknown, strict: boolean): CronJob | undefined {
     ...(typeof raw.lastRun === "number" ? { lastRun: raw.lastRun } : {}),
     ...(typeof raw.nextRun === "number" ? { nextRun: raw.nextRun } : {}),
     ...(typeof raw.cwd === "string" ? { cwd: raw.cwd } : {}),
+    ...(typeof raw.projectId === "string" ? { projectId: raw.projectId } : {}),
+    ...(typeof raw.rootId === "string" ? { rootId: raw.rootId } : {}),
     ...(typeof raw.timezone === "string" ? { timezone: raw.timezone } : {}),
     ...(raw.permissionLevel === "read-only" ||
     raw.permissionLevel === "workspace-write" ||
@@ -212,9 +229,10 @@ export class CronStore {
    * safe path for create/update/delete/pause/resume across the desktop main
    * process and the agent worker process.
    */
-  mutate<T>(
-    fn: (jobs: CronJob[]) => { jobs: CronJob[]; result: T },
-  ): { jobs: CronJob[]; result: T } {
+  mutate<T>(fn: (jobs: CronJob[]) => { jobs: CronJob[]; result: T }): {
+    jobs: CronJob[];
+    result: T;
+  } {
     const release = this.acquireStoreLock();
     try {
       const current = this.loadUnlocked();

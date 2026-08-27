@@ -414,6 +414,8 @@ export function AutomationDetail(props: {
     prompt?: string;
     timezone?: string;
     cwd?: string;
+    projectId?: string | null;
+    rootId?: string | null;
     permissionLevel?: AutomationPermissionLevel;
   }) => void;
   sessions: AutomationSessionLink[];
@@ -793,7 +795,30 @@ export function AutomationDetail(props: {
             value={selectedProjectValue(job.cwd)}
             onValueChange={(v) => {
               const nextCwd = cwdFromSelection(v);
-              if (nextCwd !== (job.cwd ?? "")) props.onSave({ cwd: nextCwd });
+              const project = props.projects.find(
+                (candidate) =>
+                  candidate.path === nextCwd ||
+                  candidate.roots.some((root) => root.path === nextCwd),
+              );
+              const root = project?.roots.find((candidate) => candidate.path === nextCwd);
+              if (project && root) {
+                if (
+                  nextCwd !== (job.cwd ?? "") ||
+                  project.id !== job.projectId ||
+                  root.id !== job.rootId
+                ) {
+                  props.onSave({
+                    cwd: root.path,
+                    projectId: project.id,
+                    rootId: root.id,
+                  });
+                }
+              } else if (nextCwd !== (job.cwd ?? "") || job.projectId || job.rootId) {
+                props.onSave({
+                  cwd: nextCwd,
+                  ...(nextCwd ? {} : { projectId: null, rootId: null }),
+                });
+              }
             }}
           >
             <SelectTrigger className="h-8 w-[220px]">

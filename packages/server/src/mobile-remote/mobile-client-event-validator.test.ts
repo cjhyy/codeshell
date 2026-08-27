@@ -29,6 +29,17 @@ describe("parseMobileClientEvent", () => {
         decision: { behavior: "deny", message: "no" },
       })?.type,
     ).toBe("ccRoom.respondApproval");
+    expect(
+      parseMobileClientEvent({
+        type: "session.create",
+        projectId: "project-1",
+        rootId: "root-2",
+      }),
+    ).toEqual({ type: "session.create", projectId: "project-1", rootId: "root-2" });
+    expect(parseMobileClientEvent({ type: "session.create", projectId: null })).toEqual({
+      type: "session.create",
+      projectId: null,
+    });
   });
 
   test("rejects non-objects, unknown types, and malformed privileged events", () => {
@@ -55,6 +66,15 @@ describe("parseMobileClientEvent", () => {
       }),
     ).toBeUndefined();
     expect(parseMobileClientEvent({ type: "session.create", cwd: "" })).toBeUndefined();
+    expect(
+      parseMobileClientEvent({ type: "session.create", projectId: "project-1", rootId: "" }),
+    ).toBeUndefined();
+    expect(
+      parseMobileClientEvent({ type: "session.create", projectId: null, rootId: "root-1" }),
+    ).toBeUndefined();
+    expect(
+      parseMobileClientEvent({ type: "session.create", rootId: "root-without-project" }),
+    ).toBeUndefined();
     expect(parseMobileClientEvent({ type: "room.create", cwd: "/repo\0escape" })).toBeUndefined();
     expect(
       parseMobileClientEvent({

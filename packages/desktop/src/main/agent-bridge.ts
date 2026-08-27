@@ -505,7 +505,11 @@ export class AgentBridge implements PetStateBridge {
     let message: {
       id?: string | number;
       method?: string;
-      params?: { requestId?: string | number; sessionId?: string; event?: { type?: string; sessionId?: string } };
+      params?: {
+        requestId?: string | number;
+        sessionId?: string;
+        event?: { type?: string; sessionId?: string };
+      };
     };
     try {
       message = JSON.parse(line) as typeof message;
@@ -552,8 +556,13 @@ export class AgentBridge implements PetStateBridge {
         refresh
           ? getSessionCwdIndex().refreshSync(sessionId)
           : getSessionCwdIndex().lookupCached(sessionId),
-      resolveProjectRun: (projectId, sessionId, session) => {
-        const resolved = getProjectStore().resolveRunProjectSync(projectId, sessionId, session);
+      resolveProjectRun: (projectId, sessionId, session, rootId) => {
+        const resolved = getProjectStore().resolveRunProjectSync(
+          projectId,
+          sessionId,
+          session,
+          rootId,
+        );
         return {
           cwd: resolved.cwd,
           trustCwd: resolved.mainRoot.path,

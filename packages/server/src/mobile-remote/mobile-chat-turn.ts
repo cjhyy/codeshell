@@ -12,6 +12,8 @@ export interface DispatchMobileChatTurnInput {
   deviceId: string;
   sessionId: string;
   fallbackCwd: string;
+  projectId?: string;
+  rootId?: string;
   text: string;
   attachments?: MobileImageAttachment[];
   clientMessageId?: string;
@@ -91,6 +93,8 @@ export async function dispatchMobileChatTurn(
         task: text,
         cwd,
         sessionId: input.sessionId,
+        ...(input.projectId ? { projectId: input.projectId } : {}),
+        ...(input.rootId ? { rootId: input.rootId } : {}),
         clientMessageId,
         attachments: materialized.metas,
         ...(input.permissionMode ? { permissionMode: input.permissionMode } : {}),
