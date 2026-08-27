@@ -120,22 +120,16 @@ export function UnifiedDiffViewer({
     }
     setError(null);
     setDiff(null);
-    const fetchDiff =
-      reviewSessionId && reviewRequest
-        ? window.codeshell.getReviewDiff(reviewSessionId, reviewRequest)
-        : range
-          ? window.codeshell.getGitRangeDiff(cwd, range, file)
-          : window.codeshell.getGitDiff(cwd, file, mode);
+    if (!reviewSessionId || !reviewRequest) {
+      setError("review requires Session authority");
+      return () => {
+        cancelled = true;
+      };
+    }
+    const fetchDiff = window.codeshell.getReviewDiff(reviewSessionId, reviewRequest);
     void fetchDiff
       .then((result) => {
         if (cancelled) return;
-        if (typeof result === "string") {
-          setDiff({
-            files: loadedFiles({ rootId: "legacy", repoRoot: cwd }, result),
-            errors: [],
-          });
-          return;
-        }
         setDiff({
           files: result.repositories.flatMap((repository) =>
             loadedFiles(repository, repository.diff),

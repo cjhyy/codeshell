@@ -11,6 +11,7 @@ interface Props {
   message: AssistantMessage;
   /** Session workspace dir — lets Markdown resolve relative image paths. */
   cwd?: string | null;
+  sessionId?: string | null;
 }
 
 /**
@@ -24,7 +25,7 @@ interface Props {
  * when that specific message's text/done changes, so siblings skip
  * re-render entirely during a long session.
  */
-function AssistantMessageViewImpl({ message, cwd }: Props) {
+function AssistantMessageViewImpl({ message, cwd, sessionId }: Props) {
   const { t } = useT();
   const [copied, setCopied] = useState(false);
   // Nothing to draw without text — this view renders only `message.text`
@@ -49,7 +50,7 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
       data-message-kind="assistant"
       data-message-state={message.done ? "done" : "streaming"}
     >
-      <StreamingMarkdown text={message.text} done={message.done} cwd={cwd} />
+      <StreamingMarkdown text={message.text} done={message.done} cwd={cwd} sessionId={sessionId} />
       {message.done && (
         <div className="mt-1 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
           {(() => {

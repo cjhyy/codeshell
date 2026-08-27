@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { readScopedSettings } from "../settingsAuthority";
 import type { CatalogEntry } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
 import { useConfirm } from "../ui/ConfirmDialog";
@@ -76,7 +77,7 @@ export function useModelConnections(
   const load = useCallback(async () => {
     const cat = (await window.codeshell.getModelCatalog().catch(() => [])) as CatalogEntry[];
     setCatalog(cat);
-    const s = ((await window.codeshell.getSettings(scope, projectPath)) ?? {}) as Record<
+    const s = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<
       string,
       unknown
     >;
@@ -110,7 +111,7 @@ export function useModelConnections(
 
   const persist = useCallback(
     async (next: ModelInstance[], nextCreds: Credential[], nextDefault: string) => {
-      const s = ((await window.codeshell.getSettings(scope, projectPath)) ?? {}) as Record<
+      const s = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<
         string,
         unknown
       >;
@@ -133,7 +134,7 @@ export function useModelConnections(
   const setAux = useCallback(
     async (id: string) => {
       setAuxId(id);
-      const s = ((await window.codeshell.getSettings(scope, projectPath)) ?? {}) as Record<
+      const s = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<
         string,
         unknown
       >;
@@ -222,7 +223,7 @@ export function useModelConnections(
 
   const removeCredential = useCallback(
     async (id: string) => {
-      const settings = ((await window.codeshell.getSettings(scope, projectPath)) ?? {}) as Record<
+      const settings = ((await readScopedSettings(scope, projectPath)) ?? {}) as Record<
         string,
         unknown
       >;

@@ -849,28 +849,14 @@ contextBridge.exposeInMainWorld("codeshell", {
   pickSkillDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickSkillDir"),
   pickGitBinary: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickGitBinary"),
-  getGitStatus: (cwd: string) => ipcRenderer.invoke("git:status", cwd),
-  /** Per-file +/- line counts for the review tree (TODO 2.3a). */
-  getGitNumstat: (cwd: string) =>
-    ipcRenderer.invoke("git:numstat", cwd) as Promise<
-      Record<string, { added: number; removed: number }>
-    >,
-  /** Changed files + numstat for a committed range (TODO 2.3a). */
-  getGitRangeChanges: (cwd: string, range: string) =>
-    ipcRenderer.invoke("git:rangeChanges", cwd, range) as Promise<{
-      entries: { code: string; path: string }[];
-      numstat: Record<string, { added: number; removed: number }>;
-    }>,
-  /** Base branch (main/master/upstream) to diff against for branch scope (TODO 2.3a). */
-  getGitBranchBase: (cwd: string) => ipcRenderer.invoke("git:branchBase", cwd) as Promise<string>,
-  getGitBranches: (cwd: string) => ipcRenderer.invoke("git:branches", cwd),
-  switchGitBranch: (cwd: string, branch: string) =>
-    ipcRenderer.invoke("git:switchBranch", cwd, branch),
-  stashAndSwitchGitBranch: (cwd: string, branch: string) =>
-    ipcRenderer.invoke("git:stashAndSwitchBranch", cwd, branch),
-  createWorktree: (cwd: string, name: string, branchPrefix?: string) =>
-    ipcRenderer.invoke("git:createWorktree", cwd, name, branchPrefix),
-  listWorktrees: (cwd: string) => ipcRenderer.invoke("git:listWorktrees", cwd),
+  getProjectGitStatus: (projectId: string) =>
+    ipcRenderer.invoke("git:projectStatus", projectId),
+  getProjectGitBranches: (projectId: string) =>
+    ipcRenderer.invoke("git:projectBranches", projectId),
+  switchProjectGitBranch: (projectId: string, branch: string) =>
+    ipcRenderer.invoke("git:projectSwitchBranch", projectId, branch),
+  stashAndSwitchProjectGitBranch: (projectId: string, branch: string) =>
+    ipcRenderer.invoke("git:projectStashAndSwitchBranch", projectId, branch),
   getSessionWorkspace: (sessionId: string, cwd: string) =>
     ipcRenderer.invoke("workspace:current", sessionId, cwd),
   getSessionWorkspaceAuthority: (sessionId: string) =>
@@ -916,12 +902,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktrees: boolean;
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
-  getGitDiff: (cwd: string, file?: string, mode?: "unstaged" | "staged" | "all") =>
-    ipcRenderer.invoke("git:diff", cwd, file, mode),
-  getGitRangeDiff: (cwd: string, range: string, file?: string) =>
-    ipcRenderer.invoke("git:rangeDiff", cwd, range, file),
-  getGitRecentCommits: (cwd: string, limit?: number) =>
-    ipcRenderer.invoke("git:recentCommits", cwd, limit),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:revealInFinder", path, cwd),
@@ -983,13 +963,15 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Authoritative no-repo conversation cwd (~/.code-shell/no-repo) from main.
    *  Renderer must use this, never recompute homedir() itself. */
   noRepoCwd: (): Promise<string> => ipcRenderer.invoke("no-repo:cwd"),
-  getSettings: (scope: "user" | "project", projectPath?: string) =>
-    ipcRenderer.invoke("settings:get", scope, projectPath),
+  getSettings: (scope: "user") => ipcRenderer.invoke("settings:get", scope),
+  getProjectSettings: (projectId: string) =>
+    ipcRenderer.invoke("settings:getProject", projectId),
   updateSettings: (
-    scope: "user" | "project",
+    scope: "user",
     patch: Record<string, unknown>,
-    projectPath?: string,
-  ) => ipcRenderer.invoke("settings:set", scope, patch, projectPath),
+  ) => ipcRenderer.invoke("settings:set", scope, patch),
+  updateProjectSettings: (projectId: string, patch: Record<string, unknown>) =>
+    ipcRenderer.invoke("settings:setProject", projectId, patch),
   listSessions: () => ipcRenderer.invoke("sessions:list"),
   setSessionArchived: (id: string, archived: boolean) =>
     ipcRenderer.invoke("sessions:setArchived", id, archived),
@@ -1056,7 +1038,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
   listSkills: (cwd: string | null, opts?: { includeDisabled?: boolean }) =>
     ipcRenderer.invoke("skills:list", cwd, opts),
-  searchFiles: (cwd: string, query: string) => ipcRenderer.invoke("files:search", cwd, query),
   searchProjectFiles: (projectId: string, query: string) =>
     ipcRenderer.invoke("files:searchProject", projectId, query),
   searchSessionContent: (query: string): Promise<SessionContentSearchResult> =>
@@ -1132,15 +1113,19 @@ contextBridge.exposeInMainWorld("codeshell", {
   saveSourceCatalog: (definition: import("@cjhyy/code-shell-core").SourceDefinition) =>
     ipcRenderer.invoke("sources:catalogSave", definition),
   deleteSourceCatalog: (id: string) => ipcRenderer.invoke("sources:catalogDelete", id),
-  workspaceSourceAccess: (cwd: string) => ipcRenderer.invoke("sources:workspaceAccess", cwd),
-  bindSource: (cwd: string, binding: import("@cjhyy/code-shell-core").WorkspaceSourceBinding) =>
-    ipcRenderer.invoke("sources:bind", cwd, binding),
-  unbindSource: (cwd: string, sourceId: string) =>
-    ipcRenderer.invoke("sources:unbind", cwd, sourceId),
+  projectSourceAccess: (projectId: string) =>
+    ipcRenderer.invoke("sources:projectAccess", projectId),
+  bindProjectSource: (
+    projectId: string,
+    binding: import("@cjhyy/code-shell-core").WorkspaceSourceBinding,
+  ) => ipcRenderer.invoke("sources:bindProject", projectId, binding),
+  unbindProjectSource: (projectId: string, sourceId: string) =>
+    ipcRenderer.invoke("sources:unbindProject", projectId, sourceId),
   listSourceScopes: (sourceId: string) => ipcRenderer.invoke("sources:listScopes", sourceId),
-  pickAndUploadSources: (cwd: string) => ipcRenderer.invoke("sources:pickAndUpload", cwd),
-  deleteUpload: (cwd: string, name: string) =>
-    ipcRenderer.invoke("sources:deleteUpload", cwd, name),
+  pickAndUploadProjectSources: (projectId: string) =>
+    ipcRenderer.invoke("sources:pickAndUploadProject", projectId),
+  deleteProjectUpload: (projectId: string, name: string) =>
+    ipcRenderer.invoke("sources:deleteProjectUpload", projectId, name),
   listProfiles: (cwd?: string) => ipcRenderer.invoke("profiles:list", cwd),
   activateProfile: (cwd: string, name: string) =>
     ipcRenderer.invoke("profiles:activate", cwd, name),
@@ -1351,30 +1336,6 @@ contextBridge.exposeInMainWorld("codeshell", {
     setupScripts: boolean;
   }> => ipcRenderer.invoke("trust:risks", path),
   recents: () => ipcRenderer.invoke("recents:list"),
-  projects: {
-    list: (): Promise<Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>> =>
-      ipcRenderer.invoke("projects:list"),
-    resolveRoot: (path: string): Promise<{ path: string; name: string }> =>
-      ipcRenderer.invoke("projects:resolveRoot", path),
-    add: (project: { path: string; name: string }): Promise<void> =>
-      ipcRenderer.invoke("projects:add", project),
-    remove: (projectPath: string): Promise<void> =>
-      ipcRenderer.invoke("projects:remove", projectPath),
-    setPinned: (projectPath: string, pinned: boolean): Promise<void> =>
-      ipcRenderer.invoke("projects:setPinned", projectPath, pinned),
-    onChanged: (
-      cb: (
-        projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
-      ) => void,
-    ): (() => void) => {
-      const h = (
-        _e: IpcRendererEvent,
-        p: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
-      ) => cb(p);
-      ipcRenderer.on("projects:changed", h);
-      return () => ipcRenderer.removeListener("projects:changed", h);
-    },
-  },
   projectRegistry: {
     list: () => ipcRenderer.invoke("projectRegistry:list"),
     sessionMainRoots: (projectId: string) =>
@@ -1401,10 +1362,12 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("projectRegistry:resolveForCwd", cwd, source),
     resolveForCwdBatch: (cwds: string[], source: "disk-rebuild" | "automation-import" | "live") =>
       ipcRenderer.invoke("projectRegistry:resolveForCwdBatch", cwds, source),
-    migrateLegacyPaths: (paths: string[]) =>
-      ipcRenderer.invoke("projectRegistry:migrateLegacyPaths", paths),
-    reauthorizeLegacyPath: (path: string) =>
-      ipcRenderer.invoke("projectRegistry:reauthorizeLegacyPath", path),
+    beginLegacyMigration: (paths: string[]) =>
+      ipcRenderer.invoke("projectRegistry:beginLegacyMigration", paths),
+    authorizeLegacyMigration: (token: string, path: string) =>
+      ipcRenderer.invoke("projectRegistry:authorizeLegacyMigration", token, path),
+    completeLegacyMigration: (token: string) =>
+      ipcRenderer.invoke("projectRegistry:completeLegacyMigration", token),
     onChanged: (cb: (projects: unknown[]) => void): (() => void) => {
       const handler = (_event: IpcRendererEvent, projects: unknown[]) => cb(projects);
       ipcRenderer.on("projectRegistry:changed", handler);
@@ -1484,11 +1447,6 @@ contextBridge.exposeInMainWorld("codeshell", {
   },
 
   // ── Filesystem (file-browser panel) ───────────────────────────────────
-  readDir: (root: string, dir: string) => ipcRenderer.invoke("fs:readDir", root, dir),
-  readFileContent: (root: string, path: string) => ipcRenderer.invoke("fs:readFile", root, path),
-  /** Does this path resolve to an existing file inside root? Never throws. */
-  fileExists: (root: string, path: string): Promise<boolean> =>
-    ipcRenderer.invoke("fs:exists", root, path),
   readProjectDir: (projectId: string, rootId: string, dir?: string) =>
     ipcRenderer.invoke("fsRoot:readDir", projectId, rootId, dir),
   readProjectFileContent: (projectId: string, rootId: string, path: string) =>
@@ -1777,9 +1735,6 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.on("mobileRemote:tunnelStatus", h);
       return () => ipcRenderer.removeListener("mobileRemote:tunnelStatus", h);
     },
-    updateProjects: (
-      projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
-    ) => ipcRenderer.invoke("mobileRemote:updateProjects", projects),
     updatePermissionModes: (entries: Array<{ sessionId: string; mode: string }>) =>
       ipcRenderer.invoke("mobileRemote:updatePermissionModes", entries),
     notifyApprovalResolved: (input: {

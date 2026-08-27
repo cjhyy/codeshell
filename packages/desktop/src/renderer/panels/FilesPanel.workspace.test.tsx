@@ -13,10 +13,9 @@ let cwd = WORKTREE;
 let revealPath = `${WORKTREE}/src/worktree.ts`;
 let revealNonce = 1;
 let revealConsumed = false;
-const readDirs: Array<[string, string]> = [];
-const readFiles: Array<[string, string]> = [];
 const readProjectDirs: Array<[string, string, string | undefined]> = [];
 const readSessionDirs: Array<[string, string, string | undefined]> = [];
+const readSessionFiles: Array<[string, string, string]> = [];
 let project: TrackedProject | undefined;
 let engineSessionId: string | undefined;
 let sessionMainRootId: string | undefined;
@@ -61,27 +60,25 @@ beforeEach(async () => {
       setItem: () => undefined,
     },
   });
-  readDirs.length = 0;
-  readFiles.length = 0;
   readProjectDirs.length = 0;
   readSessionDirs.length = 0;
-  project = undefined;
-  engineSessionId = undefined;
-  sessionMainRootId = undefined;
+  readSessionFiles.length = 0;
+  project = {
+    id: "project-1",
+    name: "Project",
+    path: "/repo",
+    roots: [{ id: "primary", path: "/repo", name: "repo", addedAt: 1 }],
+    primaryRootId: "primary",
+    addedAt: 1,
+  };
+  engineSessionId = "session-1";
+  sessionMainRootId = "primary";
   cwd = WORKTREE;
   revealPath = `${WORKTREE}/src/worktree.ts`;
   revealNonce = 1;
   revealConsumed = false;
   Object.assign(window, {
     codeshell: {
-      readDir: async (rootPath: string, dir: string) => {
-        readDirs.push([rootPath, dir]);
-        return [];
-      },
-      readFileContent: async (rootPath: string, path: string) => {
-        readFiles.push([rootPath, path]);
-        return { text: "content", reason: null, truncated: false };
-      },
       readProjectDir: async (projectId: string, rootId: string, dir?: string) => {
         readProjectDirs.push([projectId, rootId, dir]);
         return [];
@@ -91,7 +88,10 @@ beforeEach(async () => {
         readSessionDirs.push([sessionId, rootId, dir]);
         return [];
       },
-      readSessionFileContent: async () => ({ text: "content", size: 7 }),
+      readSessionFileContent: async (sessionId: string, rootId: string, path: string) => {
+        readSessionFiles.push([sessionId, rootId, path]);
+        return { text: "content", size: 7 };
+      },
     },
   });
   container = document.createElement("div") as unknown as HTMLElement;
@@ -109,15 +109,19 @@ afterEach(async () => {
 
 describe("FilesPanel workspace identity", () => {
   test("uses the resolved root for fs and clears a nested-worktree selection when returning to main", async () => {
-    expect(readDirs).toContainEqual([WORKTREE, WORKTREE]);
-    expect(readFiles).toContainEqual([WORKTREE, `${WORKTREE}/src/worktree.ts`]);
+    expect(readSessionDirs).toContainEqual(["session-1", "primary", WORKTREE]);
+    expect(readSessionFiles).toContainEqual([
+      "session-1",
+      "primary",
+      `${WORKTREE}/src/worktree.ts`,
+    ]);
 
-    readFiles.length = 0;
+    readSessionFiles.length = 0;
     revealConsumed = true;
     cwd = "/repo";
     await render();
 
-    expect(readFiles).toEqual([]);
+    expect(readSessionFiles).toEqual([]);
   });
 
   test("clears a main selection when switching into a nested worktree", async () => {
@@ -125,14 +129,14 @@ describe("FilesPanel workspace identity", () => {
     revealPath = "/repo/src/main.ts";
     revealNonce = 2;
     await render();
-    expect(readFiles.at(-1)).toEqual(["/repo", "/repo/src/main.ts"]);
+    expect(readSessionFiles.at(-1)).toEqual(["session-1", "primary", "/repo/src/main.ts"]);
 
-    readFiles.length = 0;
+    readSessionFiles.length = 0;
     revealConsumed = true;
     cwd = WORKTREE;
     await render();
 
-    expect(readFiles).toEqual([]);
+    expect(readSessionFiles).toEqual([]);
   });
 
   test("shows secondary roots and reads them through projectId/rootId authorization", async () => {
@@ -148,6 +152,8 @@ describe("FilesPanel workspace identity", () => {
       addedAt: 1,
     };
     cwd = "/repo";
+    engineSessionId = undefined;
+    sessionMainRootId = undefined;
     revealConsumed = true;
     await render();
 

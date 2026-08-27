@@ -1,3 +1,5 @@
+import { readScopedSettings, updateScopedSettings } from "../settingsAuthority";
+
 /**
  * 能力总览 — unified, scope-aware capability view (spec §7.5).
  *
@@ -282,8 +284,8 @@ export function CapabilitiesOverviewSection({
     setSavingPanelApp(app.appId);
     setError(null);
     try {
-      const settings = (await window.codeshell.getSettings("project", projectPath)) ?? {};
-      await window.codeshell.updateSettings(
+      const settings = (await readScopedSettings("project", projectPath)) ?? {};
+      await updateScopedSettings(
         "project",
         {
           panelAppBindings: nextPanelAppBindings(settings.panelAppBindings, app.appId, bound),

@@ -126,6 +126,7 @@ import {
   requireRendererProjectEntryPath,
   requireRendererProjectPath,
   requireRendererProjectPathOrGlobal,
+  requireRendererProjectPrimary,
   requireRendererProjectRoot,
 } from "./renderer-project-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
@@ -322,17 +323,9 @@ import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } fro
 import { createLegacyProjectMigrationService } from "./legacy-project-migration.js";
 import {
   getGitStatus,
-  getGitNumstat,
-  getGitRangeChanges,
-  getGitBranchBase,
   getGitBranches,
-  getGitDiff,
-  getGitRangeDiff,
-  getGitRecentCommits,
   switchGitBranch,
   stashAndSwitchGitBranch,
-  createPermanentWorktree,
-  listGitWorktrees,
   cleanupStaleWorktrees,
   openExternal,
   revealInFinder,
@@ -463,7 +456,7 @@ import {
   listDigitalHumanTeams,
   saveDigitalHumanTeam,
 } from "./digital-human-team-service.js";
-import { searchFiles, searchProjectFiles } from "./file-search-service.js";
+import { searchProjectFiles } from "./file-search-service.js";
 import { listAgents, readAgentBody, saveAgent, deleteAgent } from "./agents-service.js";
 import type { AgentDefinition } from "@cjhyy/code-shell-core";
 import {
@@ -1066,7 +1059,6 @@ const legacyProjectMigration = createLegacyProjectMigrationService({
   store: projectStore,
   pickDirectory: pickProjectDirectory,
 });
-const legacyPickedProjectPaths = new Set<string>();
 const mobileOrchestrator = new MobileRemoteOrchestrator({
   remote: mobileRemote,
   uploads: mobileUploads,
@@ -3266,23 +3258,23 @@ ipcMain.handle("sources:catalogDelete", async (_e, id: string) => {
   if (typeof id !== "string" || !id) throw new Error("sources:catalogDelete requires id");
   deleteSourceCatalog(id);
 });
-ipcMain.handle("sources:workspaceAccess", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  return workspaceSourceAccess(cwd);
+ipcMain.handle("sources:projectAccess", async (_e, projectId: string) => {
+  const { path } = await requireRendererProjectPrimary(projectId);
+  return workspaceSourceAccess(path);
 });
-ipcMain.handle("sources:bind", async (_e, cwd: string, binding: unknown) => {
-  cwd = await requireRendererProjectPath(cwd);
+ipcMain.handle("sources:bindProject", async (_e, projectId: string, binding: unknown) => {
+  const { path } = await requireRendererProjectPrimary(projectId);
   if (typeof binding !== "object" || binding === null || Array.isArray(binding)) {
-    throw new Error("sources:bind requires binding");
+    throw new Error("sources:bindProject requires binding");
   }
-  bindSource(cwd, binding as Parameters<typeof bindSource>[1]);
+  bindSource(path, binding as Parameters<typeof bindSource>[1]);
 });
-ipcMain.handle("sources:unbind", async (_e, cwd: string, sourceId: string) => {
-  cwd = await requireRendererProjectPath(cwd);
+ipcMain.handle("sources:unbindProject", async (_e, projectId: string, sourceId: string) => {
+  const { path } = await requireRendererProjectPrimary(projectId);
   if (typeof sourceId !== "string" || !sourceId) {
-    throw new Error("sources:unbind requires sourceId");
+    throw new Error("sources:unbindProject requires sourceId");
   }
-  unbindSource(cwd, sourceId);
+  unbindSource(path, sourceId);
 });
 ipcMain.handle("sources:listScopes", async (_e, sourceId: string) => {
   if (typeof sourceId !== "string" || !sourceId) {
@@ -3290,19 +3282,21 @@ ipcMain.handle("sources:listScopes", async (_e, sourceId: string) => {
   }
   return listSourceScopes(sourceId);
 });
-ipcMain.handle("sources:pickAndUpload", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
+ipcMain.handle("sources:pickAndUploadProject", async (_e, projectId: string) => {
+  const { path } = await requireRendererProjectPrimary(projectId);
   const result = await dialog.showOpenDialog({
     title: "选择数据源文件",
     properties: ["openFile", "multiSelections"],
   });
   if (result.canceled || result.filePaths.length === 0) return [];
-  return uploadFiles(cwd, result.filePaths);
+  return uploadFiles(path, result.filePaths);
 });
-ipcMain.handle("sources:deleteUpload", async (_e, cwd: string, name: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof name !== "string" || !name) throw new Error("sources:deleteUpload requires name");
-  deleteUpload(cwd, name);
+ipcMain.handle("sources:deleteProjectUpload", async (_e, projectId: string, name: string) => {
+  const { path } = await requireRendererProjectPrimary(projectId);
+  if (typeof name !== "string" || !name) {
+    throw new Error("sources:deleteProjectUpload requires name");
+  }
+  deleteUpload(path, name);
 });
 ipcMain.handle("profiles:list", async (_e, cwd?: string) => {
   if (cwd !== undefined && (typeof cwd !== "string" || !cwd)) {
@@ -4538,12 +4532,6 @@ ipcMain.handle("skills:checkUpdate", async (_e, filePath: string) =>
   checkSkillUpdateEntry(filePath),
 );
 ipcMain.handle("skills:update", async (_e, filePath: string) => updateSkillEntry(filePath));
-ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  const q = typeof query === "string" ? query : "";
-  if (q.length > 512) throw new Error("files:search query is too long");
-  return searchFiles(cwd, q);
-});
 ipcMain.handle("files:searchProject", async (_e, projectId: string, query: string) => {
   const project = await requireRendererProject(projectId);
   const q = typeof query === "string" ? query : "";
@@ -5237,10 +5225,6 @@ ipcMain.handle("mobileRemote:tunnelStatus", async () => ({
   running: tunnelManager.isRunning(),
   connected: tunnelManager.isConnected(),
 }));
-ipcMain.handle("mobileRemote:updateProjects", async (_e, projects: unknown) => {
-  await mobileOrchestrator.updateProjects(projects);
-  return true;
-});
 ipcMain.handle("mobileRemote:updatePermissionModes", async (_e, entries: unknown) => {
   mobileOrchestrator.updatePermissionModes(entries);
   return true;
@@ -5258,38 +5242,6 @@ ipcMain.handle(
     return true;
   },
 );
-
-// ── Projects (disk recents = source of truth; renderer is a projection) ─────
-ipcMain.handle("projects:list", async () => mobileOrchestrator.projectList());
-ipcMain.handle("projects:resolveRoot", async (_e, path: string) => {
-  const root = resolveProjectRoot(path);
-  return { path: root, name: basename(root) };
-});
-ipcMain.handle("projects:add", async (_e, project: { path: string; name: string }) => {
-  const registeredPaths = [
-    ...(await loadProjects()).map((candidate) => candidate.path),
-    ...legacyPickedProjectPaths,
-  ];
-  const path = await requireRendererProjectPath(project?.path, { registeredPaths }).catch(
-    () => undefined,
-  );
-  if (!path) return;
-  await projectStore.createFromPath(path);
-  legacyPickedProjectPaths.delete(project.path);
-  legacyPickedProjectPaths.delete(path);
-  await mobileOrchestrator.broadcastProjects();
-});
-ipcMain.handle("projects:remove", async (_e, projectPath: string) => {
-  const resolved = await projectStore.resolveProjectForCwd(projectPath, "live");
-  if (resolved && "projectId" in resolved) await projectStore.remove(resolved.projectId);
-  await mobileOrchestrator.broadcastProjects();
-});
-ipcMain.handle("projects:setPinned", async (_e, projectPath: string, pinned: boolean) => {
-  const resolved = await projectStore.resolveProjectForCwd(projectPath, "live");
-  if (!resolved || !("projectId" in resolved)) throw new Error("project not found");
-  await projectStore.setPinned(resolved.projectId, pinned);
-  await mobileOrchestrator.broadcastProjects();
-});
 
 async function pickProjectDirectory(): Promise<string | null> {
   const result = await dialog.showOpenDialog({
@@ -5408,17 +5360,19 @@ ipcMain.handle(
     return resolutions;
   },
 );
-ipcMain.handle("projectRegistry:migrateLegacyPaths", async (_event, paths: string[]) => {
-  const result = await legacyProjectMigration.migratePaths(paths);
-  if (result.results.some((entry) => entry.status === "migrated")) {
-    await broadcastProjectRegistry();
-  }
-  return result;
-});
-ipcMain.handle("projectRegistry:reauthorizeLegacyPath", async (_event, path: string) => {
-  const result = await legacyProjectMigration.reauthorizePath(path);
-  if (result.status === "migrated") await broadcastProjectRegistry();
-  return result;
+ipcMain.handle("projectRegistry:beginLegacyMigration", async (_event, paths: string[]) =>
+  legacyProjectMigration.begin(paths),
+);
+ipcMain.handle(
+  "projectRegistry:authorizeLegacyMigration",
+  async (_event, token: string, path: string) => {
+    const result = await legacyProjectMigration.authorizePath(token, path);
+    if (result.status === "migrated") await broadcastProjectRegistry();
+    return result;
+  },
+);
+ipcMain.handle("projectRegistry:completeLegacyMigration", async (_event, token: string) => {
+  await legacyProjectMigration.complete(token);
 });
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
@@ -5623,10 +5577,6 @@ ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string
   await applyGitPathFromSettings();
   const picked = res.filePaths[0];
   const path = resolveProjectRoot(picked);
-  if (legacyPickedProjectPaths.size >= 512) {
-    legacyPickedProjectPaths.delete(legacyPickedProjectPaths.values().next().value ?? "");
-  }
-  legacyPickedProjectPaths.add(path);
   const result = { path, name: basename(path) };
   const win = BrowserWindow.fromWebContents(e.sender);
   if (win) void refreshAppMenu(win);
@@ -6141,10 +6091,34 @@ ipcMain.on("browser:anchor-update", (e, update: unknown) => {
   }
 });
 
-ipcMain.handle("git:status", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  return getGitStatus(cwd);
+ipcMain.handle("git:projectStatus", async (_e, projectId: string) => {
+  const { path } = await requireRendererProjectPrimary(projectId);
+  return getGitStatus(path);
 });
+
+ipcMain.handle("git:projectBranches", async (_e, projectId: string) => {
+  const { path } = await requireRendererProjectPrimary(projectId);
+  return getGitBranches(path);
+});
+
+ipcMain.handle("git:projectSwitchBranch", async (_e, projectId: string, branch: string) => {
+  if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
+    throw new Error("git:projectSwitchBranch requires a bounded branch");
+  }
+  const { path } = await requireRendererProjectPrimary(projectId);
+  return switchGitBranch(path, branch);
+});
+
+ipcMain.handle(
+  "git:projectStashAndSwitchBranch",
+  async (_e, projectId: string, branch: string) => {
+    if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
+      throw new Error("git:projectStashAndSwitchBranch requires a bounded branch");
+    }
+    const { path } = await requireRendererProjectPrimary(projectId);
+    return stashAndSwitchGitBranch(path, branch);
+  },
+);
 
 ipcMain.handle("review:status", async (_e, sessionId: string) => {
   assertDesktopSessionId(sessionId);
@@ -6163,67 +6137,6 @@ ipcMain.handle("review:recentCommits", async (_e, sessionId: string, limit?: num
   assertDesktopSessionId(sessionId);
   return reviewService.getRecentCommits(sessionId, limit);
 });
-
-ipcMain.handle("git:numstat", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  return getGitNumstat(cwd);
-});
-
-ipcMain.handle("git:rangeChanges", async (_e, cwd: string, range: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof range !== "string" || !range || range.length > 512 || range.includes("\0")) {
-    throw new Error("git:rangeChanges requires a bounded range");
-  }
-  return getGitRangeChanges(cwd, range);
-});
-
-ipcMain.handle("git:branchBase", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  return getGitBranchBase(cwd);
-});
-
-ipcMain.handle("git:branches", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  return getGitBranches(cwd);
-});
-
-ipcMain.handle("git:switchBranch", async (_e, cwd: string, branch: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
-    throw new Error("git:switchBranch requires a bounded branch");
-  }
-  return switchGitBranch(cwd, branch);
-});
-
-ipcMain.handle("git:stashAndSwitchBranch", async (_e, cwd: string, branch: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof branch !== "string" || !branch || branch.length > 1_024 || branch.includes("\0")) {
-    throw new Error("git:stashAndSwitchBranch requires a bounded branch");
-  }
-  return stashAndSwitchGitBranch(cwd, branch);
-});
-
-ipcMain.handle(
-  "git:createWorktree",
-  async (_e, cwd: string, name: string, branchPrefix?: string) => {
-    cwd = await requireRendererProjectPath(cwd);
-    if (typeof name !== "string" || !name.trim() || name.length > 512 || name.includes("\0"))
-      throw new Error("git:createWorktree requires name");
-    if (
-      branchPrefix !== undefined &&
-      (typeof branchPrefix !== "string" || branchPrefix.length > 512 || branchPrefix.includes("\0"))
-    ) {
-      throw new Error("git:createWorktree branchPrefix is invalid");
-    }
-    const prefix =
-      typeof branchPrefix === "string" && branchPrefix.trim()
-        ? branchPrefix
-        : gitPrefsCache.branchPrefix;
-    const result = await createPermanentWorktree(cwd, name, prefix);
-    knownGitRoots.add(cwd);
-    return result;
-  },
-);
 
 interface MainGitPrefs {
   branchPrefix: string;
@@ -6299,12 +6212,6 @@ async function sweepStaleWorktrees(reason: string): Promise<void> {
     }
   }
 }
-
-ipcMain.handle("git:listWorktrees", async (_e, cwd: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  knownGitRoots.add(cwd);
-  return listGitWorktrees(cwd);
-});
 
 ipcMain.handle("workspace:current", async (_e, sessionId: string, cwd: string) => {
   assertDesktopSessionId(sessionId);
@@ -6457,43 +6364,6 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle(
-  "git:diff",
-  async (_e, cwd: string, file?: string, mode?: "unstaged" | "staged" | "all") => {
-    cwd = await requireRendererProjectPath(cwd);
-    if (
-      file !== undefined &&
-      (typeof file !== "string" || file.length > 32_768 || file.includes("\0"))
-    ) {
-      throw new Error("git:diff file is invalid");
-    }
-    return getGitDiff(cwd, file, mode);
-  },
-);
-
-ipcMain.handle("git:recentCommits", async (_e, cwd: string, limit?: number) => {
-  cwd = await requireRendererProjectPath(cwd);
-  const boundedLimit =
-    typeof limit === "number" && Number.isSafeInteger(limit) && limit > 0
-      ? Math.min(limit, 100)
-      : undefined;
-  return getGitRecentCommits(cwd, boundedLimit);
-});
-
-ipcMain.handle("git:rangeDiff", async (_e, cwd: string, range: string, file?: string) => {
-  cwd = await requireRendererProjectPath(cwd);
-  if (typeof range !== "string" || !range || range.length > 512 || range.includes("\0")) {
-    throw new Error("git:rangeDiff requires a bounded range");
-  }
-  if (
-    file !== undefined &&
-    (typeof file !== "string" || file.length > 32_768 || file.includes("\0"))
-  ) {
-    throw new Error("git:rangeDiff file is invalid");
-  }
-  return getGitRangeDiff(cwd, range, file);
-});
-
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {
   if (typeof url !== "string" || !url || url.length > 16_384 || url.includes("\0")) {
     throw new Error("openExternal requires a bounded url");
@@ -6583,21 +6453,6 @@ ipcMain.handle("pty:kill", (e, sessionId: string) => {
 });
 
 // ── Filesystem reads — file-browser panel ──────────────────────────────────
-ipcMain.handle("fs:readDir", async (_e, root: string, dir: string) => {
-  root = await requireRendererProjectPath(root);
-  return readDirectory(root, typeof dir === "string" && dir ? dir : root);
-});
-ipcMain.handle("fs:readFile", async (_e, root: string, path: string) => {
-  root = await requireRendererProjectPath(root);
-  if (typeof path !== "string" || !path) throw new Error("fs:readFile requires path");
-  return fsReadFile(root, path);
-});
-ipcMain.handle("fs:exists", async (_e, root: string, path: string) => {
-  root = await requireRendererProjectPath(root).catch(() => "");
-  if (!root) return false;
-  if (typeof path !== "string" || !path) return false;
-  return fsFileExists(root, path);
-});
 ipcMain.handle("fsRoot:readDir", async (_e, projectId: string, rootId: string, dir?: string) => {
   const root = await requireRendererProjectRoot(projectId, rootId);
   return readDirectory(root.path, typeof dir === "string" && dir ? dir : root.path);
@@ -6633,50 +6488,63 @@ ipcMain.handle("fsSession:exists", async (_e, sessionId: string, rootId: string,
 // path it writes capabilityOverrides to is byte-identical to the worker cwd.
 ipcMain.handle("no-repo:cwd", async () => resolveNoRepoCwd());
 
-ipcMain.handle("settings:get", async (_e, scope: SettingsScope, projectPath?: string) => {
-  if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-  return readSettings(
-    scope,
-    scope === "project" ? await requireRendererProjectPath(projectPath) : undefined,
-  );
+ipcMain.handle("settings:get", async (_e, scope: SettingsScope) => {
+  if (scope !== "user") throw new Error("settings:get is user-scoped");
+  return readSettings("user");
 });
+ipcMain.handle("settings:getProject", async (_e, projectId: string) => {
+  const { path } = await requireRendererProjectPrimary(projectId);
+  return readSettings("project", path);
+});
+
+function validateRendererSettingsPatch(patch: Record<string, unknown>): void {
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+    throw new Error("patch must be object");
+  }
+  try {
+    if (Buffer.byteLength(JSON.stringify(patch)) > 2 * 1024 * 1024) {
+      throw new Error("settings patch is too large");
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === "settings patch is too large") throw error;
+    throw new Error("settings patch must be JSON-serializable", { cause: error });
+  }
+}
+
+async function applyRendererSettingsSideEffects(
+  scope: SettingsScope,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  if ("git" in patch) void applyGitPathFromSettings();
+  if (touchesExternalSessionVisibility(scope, patch)) await reconcileExternalAdapters?.();
+  if (
+    "disabledPanelApps" in patch ||
+    "panelAppBindings" in patch ||
+    "panelAppOverrides" in patch
+  ) {
+    broadcastPanelAppsChanged(mainWindows);
+  }
+  if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
+    broadcastPluginCommandsChanged(mainWindows);
+  }
+}
 
 ipcMain.handle(
   "settings:set",
-  async (_e, scope: SettingsScope, patch: Record<string, unknown>, projectPath?: string) => {
-    if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
-    if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
-      throw new Error("patch must be object");
-    }
-    try {
-      if (Buffer.byteLength(JSON.stringify(patch)) > 2 * 1024 * 1024) {
-        throw new Error("settings patch is too large");
-      }
-    } catch (error) {
-      if (error instanceof Error && error.message === "settings patch is too large") throw error;
-      throw new Error("settings patch must be JSON-serializable", { cause: error });
-    }
-    await writeSettings(
-      scope,
-      patch,
-      scope === "project" ? await requireRendererProjectPath(projectPath) : undefined,
-    );
-    // git.path may have changed — re-apply to core's git resolver immediately.
-    if ("git" in patch) void applyGitPathFromSettings();
-    // Re-tune immediately for both the user baseline and per-project override.
-    if (touchesExternalSessionVisibility(scope, patch)) {
-      await reconcileExternalAdapters?.();
-    }
-    if (
-      "disabledPanelApps" in patch ||
-      "panelAppBindings" in patch ||
-      "panelAppOverrides" in patch
-    ) {
-      broadcastPanelAppsChanged(mainWindows);
-    }
-    if ("disabledPlugins" in patch || "capabilityOverrides" in patch) {
-      broadcastPluginCommandsChanged(mainWindows);
-    }
+  async (_e, scope: SettingsScope, patch: Record<string, unknown>) => {
+    if (scope !== "user") throw new Error("settings:set is user-scoped");
+    validateRendererSettingsPatch(patch);
+    await writeSettings("user", patch);
+    await applyRendererSettingsSideEffects("user", patch);
+  },
+);
+ipcMain.handle(
+  "settings:setProject",
+  async (_e, projectId: string, patch: Record<string, unknown>) => {
+    validateRendererSettingsPatch(patch);
+    const { path } = await requireRendererProjectPrimary(projectId);
+    await writeSettings("project", patch, path);
+    await applyRendererSettingsSideEffects("project", patch);
   },
 );
 

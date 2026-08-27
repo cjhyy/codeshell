@@ -638,8 +638,12 @@ export function SettingsPage({
                 />
               )}
               {active === "instructions" &&
-                (scope === "project" && scopeProjectPath ? (
-                  <ProjectInstructionsSection cwd={scopeProjectPath} />
+                (scope === "project" && scopeProject ? (
+                  <ProjectInstructionsSection
+                    projectId={scopeProject.id}
+                    rootId={scopeProject.primaryRootId}
+                    cwd={scopeProject.path}
+                  />
                 ) : (
                   <InstructionFilesSection
                     scope={scope}
@@ -707,7 +711,7 @@ export function SettingsPage({
                 />
               )}
               {active === "data-sources" && (
-                <DataSourcesModule scope={scope} projectPath={scopeProjectPath} />
+                <DataSourcesModule scope={scope} projectId={scopeProject?.id ?? null} />
               )}
               {active === "git" && <GitSection />}
               {active === "environment" && <EnvironmentSection projects={projects} />}

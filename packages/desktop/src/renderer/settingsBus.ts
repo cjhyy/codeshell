@@ -1,3 +1,5 @@
+import { updateScopedSettings } from "./settingsAuthority";
+
 /**
  * Settings change broadcast.
  *
@@ -22,6 +24,6 @@ export async function writeSettings(
   patch: Record<string, unknown>,
   projectPath?: string,
 ): Promise<void> {
-  await window.codeshell.updateSettings(scope, patch, projectPath);
+  await updateScopedSettings(scope, patch, projectPath);
   notifySettingsChanged();
 }

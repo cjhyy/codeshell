@@ -4,7 +4,7 @@
  * The renderer imports no `@cjhyy/code-shell-core`, so the binding semantics
  * from `core/src/panel-apps/bindings.ts` (`resolvePanelAppBindingPolicy` +
  * `isPanelAppBound`) are mirrored here over raw settings objects read via
- * `window.codeshell.getSettings("project", path)`. Keep the two in sync:
+ * the V2 project-settings API. Keep the two in sync:
  * an app counts as bound when the project lists it in `panelAppBindings`,
  * with legacy `panelAppOverrides` "on"/"off" entries applied on top, and the
  * user-level `disabledPanelApps` denylist still able to veto.

@@ -770,7 +770,7 @@ export function sessionMainRootLabel(
   );
 }
 
-function useProjectBranch(projectPath: string): {
+function useProjectBranch(projectId: string, projectPath: string): {
   branch: string | undefined;
   refresh: () => void;
 } {
@@ -780,14 +780,14 @@ function useProjectBranch(projectPath: string): {
   const refresh = useCallback(() => {
     const version = ++requestVersion.current;
     void window.codeshell
-      .getGitStatus(projectPath)
+      .getProjectGitStatus(projectId)
       .then((status) => {
         if (requestVersion.current === version) setBranch(status.branch ?? undefined);
       })
       .catch(() => {
         if (requestVersion.current === version) setBranch(undefined);
       });
-  }, [projectPath]);
+  }, [projectId]);
 
   useEffect(() => {
     refresh();
@@ -860,10 +860,7 @@ function useVisibleSessionWorkspaces(
         if (authority && authority.rootStatus !== "ok") {
           return { workspace, authority, branch: undefined };
         }
-        const status =
-          typeof window.codeshell.getSessionGitStatus === "function"
-            ? await window.codeshell.getSessionGitStatus(sessionId)
-            : await window.codeshell.getGitStatus(authority?.mainRoot ?? projectPath);
+        const status = await window.codeshell.getSessionGitStatus(sessionId);
         return { workspace, authority, branch: status.branch ?? undefined };
       })()
         .then((next) => {
@@ -945,7 +942,10 @@ export function ProjectGroup({
     workspaceSessions,
     workspaceChange,
   );
-  const { branch: projectBranch, refresh: refreshProjectBranch } = useProjectBranch(project.path);
+  const { branch: projectBranch, refresh: refreshProjectBranch } = useProjectBranch(
+    project.id,
+    project.path,
+  );
 
   return (
     <div className="mb-1">
@@ -975,18 +975,6 @@ export function ProjectGroup({
             <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
           )}
           <span className="flex-1 truncate text-left font-medium">{projectLabel(project)}</span>
-          {project.migrationStatus && (
-            <span
-              data-project-migration-status={project.migrationStatus}
-              className="shrink-0 text-[10px] font-medium text-destructive"
-            >
-              {t(
-                project.migrationStatus === "reauthorization_required"
-                  ? "sidebar.migrationNeedsAuthorization"
-                  : "sidebar.migrationFailed",
-              )}
-            </span>
-          )}
           {project.pinned && (
             <span className="text-primary" title={t("sidebar.pinned")}>
               ·

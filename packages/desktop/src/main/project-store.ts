@@ -457,21 +457,16 @@ export class ProjectStore {
     return results;
   }
 
-  async migrateLegacyPath(path: string): Promise<LocalProject | null> {
-    if (existsSync(this.migrationMarkerFile)) {
-      throw new Error("legacy project migration is complete");
-    }
-    const resolution = await this.resolveProjectForCwd(path, "live");
-    if (!resolution || "noRepo" in resolution) return null;
-    return (await this.get(resolution.projectId)) ?? null;
+  isLegacyMigrationComplete(): boolean {
+    return existsSync(this.migrationMarkerFile);
   }
 
-  /** Register a legacy path only when the native picker selected that same canonical root. */
-  async migrateLegacyPickedPath(
+  /** Register a legacy path only when the same migration call's native picker proves it. */
+  async authorizeLegacyMigration(
     expectedPath: string,
     pickedPath: string,
   ): Promise<LocalProject | null> {
-    if (existsSync(this.migrationMarkerFile)) {
+    if (this.isLegacyMigrationComplete()) {
       throw new Error("legacy project migration is complete");
     }
     const expected = this.resolvePickedRoot(expectedPath);
@@ -481,6 +476,9 @@ export class ProjectStore {
   }
 
   async completeLegacyMigration(): Promise<void> {
+    if (this.isLegacyMigrationComplete()) {
+      throw new Error("legacy project migration is complete");
+    }
     mutateJsonFile<{ completed: true }>(this.migrationMarkerFile, {
       parse: (raw) => {
         if (raw === undefined) return { completed: true };
@@ -680,6 +678,9 @@ export class ProjectStore {
   }
 
   private projectRecents(registry: LocalProjectRegistryV2): void {
+    // v6 rollback window: for one release cycle, old builds can reopen V2
+    // projects through recents.json. This is output-only; ensureInitialized()
+    // imports recents solely when projects.json does not exist.
     const projected = registry.projects.map((project) => {
       const primary = project.roots.find((root) => root.id === project.primaryRootId)!;
       return {

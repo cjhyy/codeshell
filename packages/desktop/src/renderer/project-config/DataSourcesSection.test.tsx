@@ -95,7 +95,7 @@ async function renderSection(
     root?.render(
       <DialogProvider>
         <form>
-          <DataSourcesSection cwd="/repo" confirmDeleteUpload={confirmDeleteUpload} />
+          <DataSourcesSection projectId="project-1" confirmDeleteUpload={confirmDeleteUpload} />
         </form>
       </DialogProvider>,
     );
@@ -121,12 +121,12 @@ describe("DataSourcesSection", () => {
     Object.assign(window, {
       codeshell: {
         listSourceCatalog: async () => [mockSource],
-        workspaceSourceAccess: async () => snapshot([okAccess, danglingAccess], [uploadedBrief]),
+        projectSourceAccess: async () => snapshot([okAccess, danglingAccess], [uploadedBrief]),
         listSourceScopes: async () => [],
-        bindSource: async () => undefined,
-        unbindSource: async () => undefined,
-        pickAndUploadSources: async () => [],
-        deleteUpload: async () => undefined,
+        bindProjectSource: async () => undefined,
+        unbindProjectSource: async () => undefined,
+        pickAndUploadProjectSources: async () => [],
+        deleteProjectUpload: async () => undefined,
       },
     });
 
@@ -146,17 +146,17 @@ describe("DataSourcesSection", () => {
     Object.assign(window, {
       codeshell: {
         listSourceCatalog: async () => [mockSource],
-        workspaceSourceAccess: async () => {
+        projectSourceAccess: async () => {
           accessCalls += 1;
           return snapshot([okAccess]);
         },
         listSourceScopes: async () => [],
-        bindSource: async () => undefined,
-        unbindSource: async (cwd: string, sourceId: string) => {
-          unbound.push([cwd, sourceId]);
+        bindProjectSource: async () => undefined,
+        unbindProjectSource: async (projectId: string, sourceId: string) => {
+          unbound.push([projectId, sourceId]);
         },
-        pickAndUploadSources: async () => [],
-        deleteUpload: async () => undefined,
+        pickAndUploadProjectSources: async () => [],
+        deleteProjectUpload: async () => undefined,
       },
     });
     const container = await renderSection();
@@ -170,7 +170,7 @@ describe("DataSourcesSection", () => {
       await flushMicrotasks();
     });
 
-    expect(unbound).toEqual([["/repo", "mock-one"]]);
+    expect(unbound).toEqual([["project-1", "mock-one"]]);
     expect(accessCalls).toBe(2);
   });
 
@@ -181,16 +181,16 @@ describe("DataSourcesSection", () => {
     Object.assign(window, {
       codeshell: {
         listSourceCatalog: async () => [],
-        workspaceSourceAccess: async () => {
+        projectSourceAccess: async () => {
           accessCalls += 1;
           return snapshot([], [uploadedBrief]);
         },
         listSourceScopes: async () => [],
-        bindSource: async () => undefined,
-        unbindSource: async () => undefined,
-        pickAndUploadSources: async () => [],
-        deleteUpload: async (cwd: string, name: string) => {
-          deleted.push([cwd, name]);
+        bindProjectSource: async () => undefined,
+        unbindProjectSource: async () => undefined,
+        pickAndUploadProjectSources: async () => [],
+        deleteProjectUpload: async (projectId: string, name: string) => {
+          deleted.push([projectId, name]);
         },
       },
     });
@@ -205,7 +205,7 @@ describe("DataSourcesSection", () => {
       await flushMicrotasks();
     });
 
-    expect(deleted).toEqual([["/repo", "brief.md"]]);
+    expect(deleted).toEqual([["project-1", "brief.md"]]);
     expect(accessCalls).toBe(2);
   });
 
@@ -216,18 +216,18 @@ describe("DataSourcesSection", () => {
     Object.assign(window, {
       codeshell: {
         listSourceCatalog: async () => [],
-        workspaceSourceAccess: async () => {
+        projectSourceAccess: async () => {
           accessCalls += 1;
           return snapshot();
         },
         listSourceScopes: async () => [],
-        bindSource: async () => undefined,
-        unbindSource: async () => undefined,
-        pickAndUploadSources: async (cwd: string) => {
-          uploads.push(cwd);
+        bindProjectSource: async () => undefined,
+        unbindProjectSource: async () => undefined,
+        pickAndUploadProjectSources: async (projectId: string) => {
+          uploads.push(projectId);
           return ["brief.md"];
         },
-        deleteUpload: async () => undefined,
+        deleteProjectUpload: async () => undefined,
       },
     });
     const container = await renderSection();
@@ -241,7 +241,7 @@ describe("DataSourcesSection", () => {
       await flushMicrotasks();
     });
 
-    expect(uploads).toEqual(["/repo"]);
+    expect(uploads).toEqual(["project-1"]);
     expect(accessCalls).toBe(2);
   });
 
@@ -253,7 +253,7 @@ describe("DataSourcesSection", () => {
     Object.assign(window, {
       codeshell: {
         listSourceCatalog: async () => [mockSource],
-        workspaceSourceAccess: async () => {
+        projectSourceAccess: async () => {
           accessCalls += 1;
           return snapshot();
         },
@@ -264,12 +264,12 @@ describe("DataSourcesSection", () => {
             { id: "beta", label: "Beta" },
           ];
         },
-        bindSource: async (cwd: string, binding: WorkspaceSourceBinding) => {
-          bindings.push([cwd, binding]);
+        bindProjectSource: async (projectId: string, binding: WorkspaceSourceBinding) => {
+          bindings.push([projectId, binding]);
         },
-        unbindSource: async () => undefined,
-        pickAndUploadSources: async () => [],
-        deleteUpload: async () => undefined,
+        unbindProjectSource: async () => undefined,
+        pickAndUploadProjectSources: async () => [],
+        deleteProjectUpload: async () => undefined,
       },
     });
     const container = await renderSection();
@@ -303,7 +303,7 @@ describe("DataSourcesSection", () => {
 
     expect(scopeCalls).toEqual(["mock-one"]);
     expect(bindings).toEqual([
-      ["/repo", { sourceId: "mock-one", scopes: ["alpha"], readPolicy: "deny" }],
+      ["project-1", { sourceId: "mock-one", scopes: ["alpha"], readPolicy: "deny" }],
     ]);
     expect(accessCalls).toBe(2);
   });

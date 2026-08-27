@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { readScopedSettings } from "../settingsAuthority";
 import {
   AlertTriangle,
   Briefcase,
@@ -146,8 +147,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
           .then((value) => value ?? {})
           .catch(() => null),
         ...tracked.map((project) =>
-          window.codeshell
-            .getSettings("project", project.path)
+          readScopedSettings("project", project.path)
             .then((value) => (value ?? {}) as Record<string, unknown>)
             // A per-project read must not fail the whole list: null marks the
             // row unreadable so a permissions error is distinguishable from
@@ -177,7 +177,7 @@ export function PanelsTab({ cwd, activeProjectPath, query }: Props) {
       setError(null);
       let previous: ProjectSettingsMap | null = null;
       try {
-        const settings = (await window.codeshell.getSettings("project", projectPath)) ?? {};
+        const settings = (await readScopedSettings("project", projectPath)) ?? {};
         const nextBindings = nextPanelAppBindings(settings.panelAppBindings, appId, bound);
         const nextOverrides = withoutLegacyOverride(settings.panelAppOverrides, appId);
         // Apply locally first: the row is the only thing that changed, and a

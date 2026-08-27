@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { saveProjects } from "./projects";
 import { bucketKey } from "./transcripts";
 
 type SendFn = (
@@ -106,6 +107,16 @@ describe("App send draft overrides", () => {
     chatProps = null;
     runCalls.length = 0;
     localStorageMock.clear();
+    saveProjects([
+      {
+        id: "repoA",
+        name: "Repo A",
+        path: "/tmp/repo-a",
+        roots: [{ id: "root-a", path: "/tmp/repo-a", name: "Repo A", addedAt: 1 }],
+        primaryRootId: "root-a",
+        addedAt: 1,
+      },
+    ]);
   });
 
   test("passes the rendered session bucket to ChatView send callbacks", async () => {

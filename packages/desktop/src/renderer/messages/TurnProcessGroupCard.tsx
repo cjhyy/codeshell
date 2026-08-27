@@ -18,6 +18,7 @@ interface Props {
   turnEpoch?: number;
   /** Session cwd, forwarded to member tool cards for attachment resolution. */
   cwd?: string | null;
+  sessionId?: string | null;
 }
 
 /**
@@ -46,7 +47,7 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
  * Live turn: defaults to OPEN with a 1s elapsed ticker. Closed turn:
  * defaults to CLOSED with static total wall time.
  */
-function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
+function TurnProcessGroupCardImpl({ group, turnEpoch, cwd, sessionId }: Props) {
   const [open, setOpen] = useState(group.isLive);
   const prevIsLiveRef = useRef(group.isLive);
   const prevTurnEpochRef = useRef(turnEpoch);
@@ -126,7 +127,12 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd }: Props) {
                       turn — same session, same cwd the card already holds — so
                       forward it (matches AssistantMessageView). Relative image
                       paths / path links now resolve here too (stage 0b). */}
-                  <StreamingMarkdown text={m.text} done={m.done} cwd={cwd ?? null} />
+                  <StreamingMarkdown
+                    text={m.text}
+                    done={m.done}
+                    cwd={cwd ?? null}
+                    sessionId={sessionId}
+                  />
                 </div>
               );
             }

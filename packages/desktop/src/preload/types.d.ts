@@ -1297,25 +1297,11 @@ export interface CodeshellApi {
   pickSkillDir(): Promise<{ path: string; name: string } | null>;
   pickGitBinary(): Promise<string | null>;
 
-  // Phase 4 — git / shell services (renderer never spawns child procs directly).
-  getGitStatus(cwd: string): Promise<GitStatus>;
-  /** Per-file +/- line counts (vs HEAD) for the review tree (TODO 2.3a). */
-  getGitNumstat(cwd: string): Promise<Record<string, { added: number; removed: number }>>;
-  /** Changed files + numstat for a committed range, e.g. "HEAD~1..HEAD" (TODO 2.3a). */
-  getGitRangeChanges(
-    cwd: string,
-    range: string,
-  ): Promise<{
-    entries: GitStatusEntry[];
-    numstat: Record<string, { added: number; removed: number }>;
-  }>;
-  /** Base branch to diff against for branch scope; "" if none (TODO 2.3a). */
-  getGitBranchBase(cwd: string): Promise<string>;
-  getGitBranches(cwd: string): Promise<GitBranches>;
-  switchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
-  stashAndSwitchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
-  createWorktree(cwd: string, name: string, branchPrefix?: string): Promise<CreatedWorktree>;
-  listWorktrees(cwd: string): Promise<WorktreeInfo[]>;
+  // Stable project-id Git actions and Session-scoped workspace Git reads.
+  getProjectGitStatus(projectId: string): Promise<GitStatus>;
+  getProjectGitBranches(projectId: string): Promise<GitBranches>;
+  switchProjectGitBranch(projectId: string, branch: string): Promise<GitBranches>;
+  stashAndSwitchProjectGitBranch(projectId: string, branch: string): Promise<GitBranches>;
   getSessionWorkspace(sessionId: string, cwd: string): Promise<SessionWorkspace>;
   getSessionWorkspaceAuthority(sessionId: string): Promise<SessionWorkspaceAuthority>;
   getSessionGitStatus(sessionId: string): Promise<GitStatus>;
@@ -1356,18 +1342,6 @@ export interface CodeshellApi {
     autoDeleteWorktrees: boolean;
     autoDeleteWorktreesGraceMins: number;
   }): Promise<void>;
-  /** Unified diff for the working tree (vs HEAD). file optional. */
-  getGitDiff(
-    cwd: string,
-    file?: string,
-    /** Which uncommitted changes to diff (review-panel scope). Default "all". */
-    mode?: "unstaged" | "staged" | "all",
-  ): Promise<string>;
-  /** Unified diff for a committed range (e.g. "HEAD~1..HEAD"); optional file (TODO 2.3a). */
-  getGitRangeDiff(cwd: string, range: string, file?: string): Promise<string>;
-  /** Most recent commits for the review panel's 提交 submenu. */
-  getGitRecentCommits(cwd: string, limit?: number): Promise<GitCommit[]>;
-
   // ── Terminal (pty) — interactive shell panel ──────────────────────────
   /** Token unique to this window's renderer process (for window-unique ids). */
   windowToken: string;
@@ -1392,12 +1366,6 @@ export interface CodeshellApi {
   ): () => void;
 
   // ── Filesystem — file-browser panel ───────────────────────────────────
-  /** List one directory level under the workspace root (dirs first). */
-  readDir(root: string, dir: string): Promise<FsEntry[]>;
-  /** Read a text file (capped at 2 MB; binary/oversize → text null). */
-  readFileContent(root: string, path: string): Promise<FileContent>;
-  /** Does this path resolve to an existing file inside root? Never throws. */
-  fileExists(root: string, path: string): Promise<boolean>;
   /** List one directory level under an authoritative project root id. */
   readProjectDir(projectId: string, rootId: string, dir?: string): Promise<FsEntry[]>;
   /** Read a file under an authoritative project root id. */
@@ -1732,15 +1700,10 @@ export interface CodeshellApi {
    * the worker's runtime cwd byte-for-byte.
    */
   noRepoCwd(): Promise<string>;
-  getSettings(
-    scope: "user" | "project",
-    projectPath?: string,
-  ): Promise<Record<string, unknown> | null>;
-  updateSettings(
-    scope: "user" | "project",
-    patch: Record<string, unknown>,
-    projectPath?: string,
-  ): Promise<void>;
+  getSettings(scope: "user"): Promise<Record<string, unknown> | null>;
+  getProjectSettings(projectId: string): Promise<Record<string, unknown> | null>;
+  updateSettings(scope: "user", patch: Record<string, unknown>): Promise<void>;
+  updateProjectSettings(projectId: string, patch: Record<string, unknown>): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
   setSessionArchived(id: string, archived: boolean): Promise<void>;
   deleteSession(id: string): Promise<void>;
@@ -1845,16 +1808,16 @@ export interface CodeshellApi {
   listSourceCatalog(): Promise<SourceDefinition[]>;
   saveSourceCatalog(definition: SourceDefinition): Promise<void>;
   deleteSourceCatalog(id: string): Promise<void>;
-  workspaceSourceAccess(cwd: string): Promise<{
+  projectSourceAccess(projectId: string): Promise<{
     bindings: WorkspaceSourceBinding[];
     access: EffectiveSourceAccess[];
     uploads: SourceResourceMeta[];
   }>;
-  bindSource(cwd: string, binding: WorkspaceSourceBinding): Promise<void>;
-  unbindSource(cwd: string, sourceId: string): Promise<void>;
+  bindProjectSource(projectId: string, binding: WorkspaceSourceBinding): Promise<void>;
+  unbindProjectSource(projectId: string, sourceId: string): Promise<void>;
   listSourceScopes(sourceId: string): Promise<SourceScope[]>;
-  pickAndUploadSources(cwd: string): Promise<string[]>;
-  deleteUpload(cwd: string, name: string): Promise<void>;
+  pickAndUploadProjectSources(projectId: string): Promise<string[]>;
+  deleteProjectUpload(projectId: string, name: string): Promise<void>;
   listProfiles(cwd?: string): Promise<
     Array<{
       name: string;
@@ -2147,8 +2110,6 @@ export interface CodeshellApi {
   }): Promise<{ ok: true; id: string } | { ok: false; previewChanged?: true; error: string }>;
   /** Remove one independently installed Panel App. */
   uninstallPanelApp(id: string, cwd?: string): Promise<void>;
-  /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
-  searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
   /** Fuzzy file search across every registered root in a project. */
   searchProjectFiles(projectId: string, query: string): Promise<ProjectFileSearchHit[]>;
   /** Bounded full-text search over on-disk session transcripts (session switcher). */
@@ -2270,18 +2231,6 @@ export interface CodeshellApi {
     setupScripts: boolean;
   }>;
   recents(): Promise<{ path: string; name: string; lastOpenedAt: number }[]>;
-  projects: {
-    list(): Promise<Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>>;
-    resolveRoot(path: string): Promise<{ path: string; name: string }>;
-    add(project: { path: string; name: string }): Promise<void>;
-    remove(projectPath: string): Promise<void>;
-    setPinned(projectPath: string, pinned: boolean): Promise<void>;
-    onChanged(
-      cb: (
-        projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>,
-      ) => void,
-    ): () => void;
-  };
   projectRegistry: {
     list(): Promise<LocalProject[]>;
     sessionMainRoots(projectId: string): Promise<Record<string, string[]>>;
@@ -2312,21 +2261,14 @@ export interface CodeshellApi {
       cwds: string[],
       source: ProjectResolveSource,
     ): Promise<ProjectCwdResolution[]>;
-    migrateLegacyPaths(paths: string[]): Promise<{
-      results: Array<{
-        path: string;
-        status: "migrated" | "reauthorization_required" | "failed";
-        project?: LocalProject;
-        error?: string;
-      }>;
-      completed: boolean;
-    }>;
-    reauthorizeLegacyPath(path: string): Promise<{
+    beginLegacyMigration(paths: string[]): Promise<{ completed: boolean; token?: string }>;
+    authorizeLegacyMigration(token: string, path: string): Promise<{
       path: string;
       status: "migrated" | "reauthorization_required" | "failed";
       project?: LocalProject;
       error?: string;
     }>;
+    completeLegacyMigration(token: string): Promise<void>;
     onChanged(cb: (projects: LocalProject[]) => void): Unsubscribe;
   };
   notify(opts: { title: string; body?: string; subtitle?: string }): Promise<void>;
@@ -2402,7 +2344,6 @@ export interface CodeshellApi {
     setPasscode(passcode: string): Promise<boolean>;
     tunnelStatus(): Promise<{ running: boolean; connected: boolean }>;
     onTunnelStatus(cb: (s: { status: string; detail?: unknown }) => void): Unsubscribe;
-    updateProjects(projects: MobileProjectMeta[]): Promise<boolean>;
     updatePermissionModes(entries: MobilePermissionModeSnapshotEntry[]): Promise<boolean>;
     notifyApprovalResolved(input: ApprovalResolvedEnvelope): Promise<boolean>;
   };

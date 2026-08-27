@@ -33,7 +33,6 @@ import {
 import { placeLiveAutomationSession } from "../automation/liveSession";
 import { planDiskRebuild } from "../automation/rebuildFromDisk";
 import { isCaseInsensitivePlatform } from "../automation/pathMatch";
-import { resolveProjectCwd } from "./useAutomationSessionImport";
 import { browserPartitionForBucket, fromMobilePermissionMode, stablePromptHash } from "./appUtils";
 import { titleFromWire } from "../chat/attachments";
 import { useToast } from "../ui/ToastProvider";
@@ -370,10 +369,7 @@ export function useHostSubscriptions({
         return;
       }
       void (async () => {
-        const resolvedMeta = {
-          ...meta,
-          cwd: await resolveProjectCwd(meta.cwd),
-        };
+        const resolvedMeta = meta;
         const projectsAfterResolve = loadProjects();
         const existingProjectId = [
           null as string | null,

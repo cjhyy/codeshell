@@ -1,3 +1,5 @@
+import { readScopedSettings } from "../settingsAuthority";
+
 /**
  * SandboxSection — sandbox (isolation + network) config, scoped global or per
  * project. Drill-in IA (matches 本地环境/钩子/记忆/子代理): a list shows a
@@ -121,7 +123,7 @@ function SandboxEditor({
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await readScopedSettings(scope, cwd)) ?? {};
     const sandbox = objectOf((s as Record<string, unknown>).sandbox);
     const m = strOf(sandbox.mode);
     // No mode written: global → off (the default), project → follow global.

@@ -15,6 +15,8 @@ interface StreamingMarkdownProps {
   done: boolean;
   /** Session workspace dir — lets the done Markdown resolve relative image paths. */
   cwd?: string | null;
+  /** Session-scoped FS authority for completed path links. */
+  sessionId?: string | null;
   /**
    * When false, streaming falls back to today's plain `<pre>` (feature-flag /
    * conservative rollback). Defaults to true (rich streaming render).
@@ -35,10 +37,11 @@ export function StreamingMarkdown({
   text,
   done,
   cwd,
+  sessionId,
   streamingRichRender = true,
 }: StreamingMarkdownProps) {
   if (text === "") return null;
-  if (done) return <Markdown text={text} cwd={cwd} />;
+  if (done) return <Markdown text={text} cwd={cwd} sessionId={sessionId} />;
   if (!streamingRichRender) {
     return (
       <div className={streamingMarkdownClassName}>

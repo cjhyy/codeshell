@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
+import { saveProjects } from "../projects";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { DialogProvider } from "../ui/DialogProvider";
 import {
@@ -248,18 +249,27 @@ describe("PetExternalSessionsToggles — toggle interaction (global scope)", () 
 
   test("project switch resolves the global baseline and writes a force-off override", async () => {
     ensureMiniDom();
-    const updateArgs: Array<[string, Record<string, unknown>, string | undefined]> = [];
+    saveProjects([
+      {
+        id: "project-a",
+        name: "a",
+        path: "/work/a",
+        roots: [{ id: "root-a", path: "/work/a", name: "a", addedAt: 1 }],
+        primaryRootId: "root-a",
+        addedAt: 1,
+      },
+    ]);
+    const updateArgs: Array<[string, Record<string, unknown>]> = [];
     let projectSettings: Record<string, unknown> = { capabilityOverrides: {} };
     Object.assign(window, {
       codeshell: {
-        getSettings: async (scope: string) =>
-          scope === "user" ? { pet: { showExternalCodexSessions: true } } : projectSettings,
-        updateSettings: async (
-          scope: string,
-          patch: Record<string, unknown>,
-          projectPath?: string,
-        ) => {
-          updateArgs.push([scope, patch, projectPath]);
+        getSettings: async () => ({ pet: { showExternalCodexSessions: true } }),
+        getProjectSettings: async (projectId: string) => {
+          expect(projectId).toBe("project-a");
+          return projectSettings;
+        },
+        updateProjectSettings: async (projectId: string, patch: Record<string, unknown>) => {
+          updateArgs.push([projectId, patch]);
           projectSettings = patch;
         },
       },
@@ -274,9 +284,8 @@ describe("PetExternalSessionsToggles — toggle interaction (global scope)", () 
 
     expect(updateArgs).toEqual([
       [
-        "project",
+        "project-a",
         { capabilityOverrides: { pet: { showExternalCodexSessions: "off" } } },
-        "/work/a",
       ],
     ]);
     expect(reactPropsOf(switchButtons(container)[0])["aria-checked"]).toBe(false);

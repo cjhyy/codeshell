@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
+import { readScopedSettings } from "../settingsAuthority";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import type { SearchProbeInput, SearchProbeResult } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
@@ -202,7 +203,7 @@ function SearchProvidersGrid({ scope, activeProjectPath }: Props) {
   const { t } = useT();
 
   const load = useCallback(async () => {
-    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+    const s = (await readScopedSettings(scope, projectPath)) ?? {};
     const search =
       s.search && typeof s.search === "object" ? (s.search as Record<string, unknown>) : {};
     // Legacy schema stored a single { provider, apiKey, baseUrl }. We migrate

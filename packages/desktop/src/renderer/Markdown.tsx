@@ -151,6 +151,8 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   text: string;
+  /** Opaque Session authority used for file-existence checks. */
+  sessionId?: string | null;
   /**
    * Workspace dir for the session this message belongs to. Used to resolve
    * relative image paths (e.g. `docs/x.png`) to an absolute `file://` URL so
@@ -202,7 +204,7 @@ export const streamingMarkdownClassName = cn(
  * assistant message in the transcript, which is the dominant cost
  * in long sessions.
  */
-function MarkdownImpl({ text, cwd }: Props) {
+function MarkdownImpl({ text, cwd, sessionId }: Props) {
   return (
     <div className={markdownBodyClassName}>
       <ReactMarkdown
@@ -274,6 +276,7 @@ function MarkdownImpl({ text, cwd }: Props) {
                   path={decoded.path}
                   line={decoded.line}
                   cwd={cwd}
+                  sessionId={sessionId}
                   isScheme={schemeDecoded !== null}
                 >
                   {children}
@@ -348,7 +351,7 @@ function toAbsolute(path: string, cwd?: string | null): string {
   return joinPath(cwd, path);
 }
 
-// Existence-check cache: keyed by `${cwd}\0${path}`. A path can appear many
+// Existence-check cache: keyed by `${sessionId}\0${cwd}\0${path}`. A path can appear many
 // times across a transcript; this keeps repeated answers from re-hitting the
 // fs:exists IPC for the same file.
 //
@@ -362,15 +365,28 @@ function toAbsolute(path: string, cwd?: string | null): string {
 // re-run on the next mount, and `files-changed` (fired when an AI turn ends)
 // also clears the cache so a just-written file re-validates immediately.
 const existsCache = new Map<string, boolean>();
-function checkExists(cwd: string | null, path: string): Promise<boolean> {
+const sessionRootIds = new Map<string, Promise<string | null>>();
+
+function sessionMainRootId(sessionId: string): Promise<string | null> {
+  const cached = sessionRootIds.get(sessionId);
+  if (cached) return cached;
+  const pending = window.codeshell
+    .getSessionWorkspaceAuthority(sessionId)
+    .then((authority) => authority.mainRootId ?? null)
+    .catch(() => null);
+  sessionRootIds.set(sessionId, pending);
+  return pending;
+}
+
+function checkExists(sessionId: string | null, cwd: string | null, path: string): Promise<boolean> {
   const root = cwd ?? "";
-  const key = `${root}\0${path}`;
+  const key = `${sessionId ?? ""}\0${root}\0${path}`;
   if (existsCache.get(key) === true) return Promise.resolve(true);
-  // No workspace root → can't resolve a relative path; treat absolute-only.
-  const p =
-    root || isAbsolutePath(path)
-      ? window.codeshell.fileExists(root || "/", path).catch(() => false)
-      : Promise.resolve(false);
+  const p = sessionId
+    ? sessionMainRootId(sessionId).then((rootId) =>
+        rootId ? window.codeshell.sessionFileExists(sessionId, rootId, path) : false,
+      )
+    : Promise.resolve(false);
   return p.then((ok) => {
     if (ok) existsCache.set(key, true); // memoize positives only
     return ok;
@@ -407,12 +423,14 @@ function PathLink({
   path,
   line,
   cwd,
+  sessionId,
   isScheme,
   children,
 }: {
   path: string;
   line?: number;
   cwd?: string | null;
+  sessionId?: string | null;
   /** True when the link came from the codeshell-path: scheme (vs a local href). */
   isScheme: boolean;
   children?: React.ReactNode;
@@ -435,13 +453,13 @@ function PathLink({
     // Don't blink an already-resolved link back to plain text on a re-check;
     // only show the neutral "checking" state on a genuinely new path/cwd.
     setExists((prev) => (prev === true ? true : null));
-    void checkExists(cwd ?? null, path).then((ok) => {
+    void checkExists(sessionId ?? null, cwd ?? null, path).then((ok) => {
       if (!cancelled) setExists(ok);
     });
     return () => {
       cancelled = true;
     };
-  }, [path, cwd, filesNonce]);
+  }, [path, cwd, filesNonce, sessionId]);
 
   // Not (yet) a known-existing file → render the original text, unstyled.
   if (exists !== true) {

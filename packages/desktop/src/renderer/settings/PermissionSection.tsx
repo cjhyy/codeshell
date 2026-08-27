@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { readScopedSettings, updateScopedSettings } from "../settingsAuthority";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import {
   fromSettingsPermissionMode,
@@ -37,7 +38,7 @@ export function PermissionSection({ scope, activeProjectPath }: Props) {
 
   const load = async () => {
     try {
-      const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+      const s = (await readScopedSettings(scope, projectPath)) ?? {};
       const permissions =
         s.permissions && typeof s.permissions === "object"
           ? (s.permissions as Record<string, unknown>)
@@ -54,7 +55,7 @@ export function PermissionSection({ scope, activeProjectPath }: Props) {
   const choose = async (m: PermissionMode) => {
     setSaving(true);
     try {
-      await window.codeshell.updateSettings(
+      await updateScopedSettings(
         scope,
         {
           permissionMode: m,

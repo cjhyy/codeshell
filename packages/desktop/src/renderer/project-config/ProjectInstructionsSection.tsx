@@ -12,7 +12,15 @@ interface InstructionFileDefinition {
   primary?: boolean;
 }
 
-export function ProjectInstructionsSection({ cwd }: { cwd: string }) {
+export function ProjectInstructionsSection({
+  projectId,
+  rootId,
+  cwd,
+}: {
+  projectId: string;
+  rootId: string;
+  cwd: string;
+}) {
   const { t } = useT();
   const files: InstructionFileDefinition[] = [
     {
@@ -43,7 +51,10 @@ export function ProjectInstructionsSection({ cwd }: { cwd: string }) {
     setExists(Object.fromEntries(files.map((file) => [file.name, null])));
     setError(null);
     void Promise.all(
-      files.map(async (file) => [file.name, await window.codeshell.fileExists(cwd, file.name)]),
+      files.map(async (file) => [
+        file.name,
+        await window.codeshell.projectFileExists(projectId, rootId, file.name),
+      ]),
     )
       .then((entries) => {
         if (!cancelled) setExists(Object.fromEntries(entries));
@@ -56,14 +67,14 @@ export function ProjectInstructionsSection({ cwd }: { cwd: string }) {
     return () => {
       cancelled = true;
     };
-  }, [cwd]);
+  }, [cwd, projectId, rootId]);
 
   const open = async (fileName: string) => {
     setOpening(fileName);
     setError(null);
     try {
       await window.codeshell.openInEditor(fileName, cwd);
-      const next = await window.codeshell.fileExists(cwd, fileName);
+      const next = await window.codeshell.projectFileExists(projectId, rootId, fileName);
       setExists((current) => ({ ...current, [fileName]: next }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));

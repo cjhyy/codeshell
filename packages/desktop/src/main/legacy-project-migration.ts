@@ -1,5 +1,5 @@
+import { randomUUID } from "node:crypto";
 import type { LocalProject, ProjectStore } from "./project-store.js";
-import { requireRendererProjectPath } from "./renderer-project-path.js";
 
 export type LegacyProjectMigrationStatus = "migrated" | "reauthorization_required" | "failed";
 
@@ -18,58 +18,50 @@ export interface LegacyProjectMigrationBatchResult {
 interface LegacyProjectMigrationOptions {
   store: ProjectStore;
   pickDirectory: () => Promise<string | null>;
-  noRepoPath?: string;
-  sessionRoot?: string;
+  makeToken?: () => string;
 }
 
 export interface LegacyProjectMigrationService {
-  migratePaths(paths: string[]): Promise<LegacyProjectMigrationBatchResult>;
-  reauthorizePath(path: string): Promise<LegacyProjectMigrationPathResult>;
+  begin(paths: string[]): Promise<{ completed: boolean; token?: string }>;
+  authorizePath(token: string, path: string): Promise<LegacyProjectMigrationPathResult>;
+  complete(token: string): Promise<void>;
 }
 
 export function createLegacyProjectMigrationService(
   options: LegacyProjectMigrationOptions,
 ): LegacyProjectMigrationService {
-  const registeredPaths = async (): Promise<string[]> =>
-    (await options.store.list()).flatMap((project) => project.roots.map((root) => root.path));
+  const migrations = new Map<string, Set<string>>();
+
+  const requirePending = (token: string): Set<string> => {
+    if (options.store.isLegacyMigrationComplete()) {
+      throw new Error("legacy project migration is complete");
+    }
+    const pending = migrations.get(token);
+    if (!pending) throw new Error("legacy project migration token is invalid or expired");
+    return pending;
+  };
 
   return {
-    async migratePaths(paths) {
+    async begin(paths) {
       if (!Array.isArray(paths) || paths.length > 5_000) {
         throw new Error("legacy project migration paths must be a bounded array");
       }
-      const uniquePaths = [...new Set(paths)];
-      const results: LegacyProjectMigrationPathResult[] = [];
-      for (const path of uniquePaths) {
-        try {
-          const authorized = await requireRendererProjectPath(path, {
-            registeredPaths: await registeredPaths(),
-            noRepoPath: options.noRepoPath,
-            sessionRoot: options.sessionRoot,
-          });
-          const project = await options.store.migrateLegacyPath(authorized);
-          results.push(
-            project
-              ? { path, status: "migrated", project }
-              : { path, status: "failed", error: "legacy project could not be migrated" },
-          );
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          results.push({
-            path,
-            status: /not registered with CodeShell/i.test(message)
-              ? "reauthorization_required"
-              : "failed",
-            error: message,
-          });
+      if (options.store.isLegacyMigrationComplete()) return { completed: true };
+      for (const path of paths) {
+        if (typeof path !== "string" || !path || path.length > 32_768 || path.includes("\0")) {
+          throw new Error("legacy project migration path is invalid");
         }
       }
-      const completed = results.every((result) => result.status === "migrated");
-      if (completed) await options.store.completeLegacyMigration();
-      return { results, completed };
+      const token = (options.makeToken ?? randomUUID)();
+      migrations.set(token, new Set(paths));
+      return { completed: false, token };
     },
 
-    async reauthorizePath(path) {
+    async authorizePath(token, path) {
+      const pending = requirePending(token);
+      if (!pending.has(path)) {
+        throw new Error("legacy project path is not pending for this migration token");
+      }
       const picked = await options.pickDirectory();
       if (!picked) {
         return {
@@ -79,7 +71,8 @@ export function createLegacyProjectMigrationService(
         };
       }
       try {
-        const project = await options.store.migrateLegacyPickedPath(path, picked);
+        const project = await options.store.authorizeLegacyMigration(path, picked);
+        if (project) pending.delete(path);
         return project
           ? { path, status: "migrated", project }
           : {
@@ -94,6 +87,15 @@ export function createLegacyProjectMigrationService(
           error: error instanceof Error ? error.message : String(error),
         };
       }
+    },
+
+    async complete(token) {
+      const pending = requirePending(token);
+      if (pending.size > 0) {
+        throw new Error("legacy project migration still requires picker authorization");
+      }
+      await options.store.completeLegacyMigration();
+      migrations.clear();
     },
   };
 }

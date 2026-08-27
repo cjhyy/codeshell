@@ -80,4 +80,57 @@ describe("desktop IPC contract", () => {
       expect(mainHandles).toContain(channel);
     }
   });
+
+  test("retires legacy project and cwd project IPC while keeping V2 authorities", () => {
+    const mainHandles = registeredMainHandleChannels(sourceFiles("src/main"));
+    const preloadInvokes = literalChannels(
+      sourceFiles("src/preload"),
+      /ipcRenderer\.invoke\(\s*["']([^"']+)["']/g,
+    );
+    const retired = [
+      "projects:list",
+      "projects:resolveRoot",
+      "projects:add",
+      "projects:remove",
+      "projects:setPinned",
+      "files:search",
+      "fs:readDir",
+      "fs:readFile",
+      "fs:exists",
+      "sources:workspaceAccess",
+      "sources:bind",
+      "sources:unbind",
+      "sources:pickAndUpload",
+      "sources:deleteUpload",
+    ];
+    const v2 = [
+      "projectRegistry:list",
+      "projectRegistry:beginLegacyMigration",
+      "projectRegistry:authorizeLegacyMigration",
+      "projectRegistry:completeLegacyMigration",
+      "settings:getProject",
+      "settings:setProject",
+      "sources:projectAccess",
+      "sources:bindProject",
+      "sources:unbindProject",
+      "sources:pickAndUploadProject",
+      "sources:deleteProjectUpload",
+      "files:searchProject",
+      "fsRoot:readDir",
+      "fsRoot:readFile",
+      "fsRoot:exists",
+      "fsSession:readDir",
+      "fsSession:readFile",
+      "fsSession:exists",
+    ];
+
+    for (const channel of retired) {
+      expect(preloadInvokes).not.toContain(channel);
+      expect(mainHandles).not.toContain(channel);
+    }
+    for (const channel of v2) {
+      expect(preloadInvokes).toContain(channel);
+      expect(mainHandles).toContain(channel);
+    }
+  });
 });

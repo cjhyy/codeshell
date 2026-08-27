@@ -8,28 +8,28 @@ type SourceMethods = Pick<
   | "listSourceCatalog"
   | "saveSourceCatalog"
   | "deleteSourceCatalog"
-  | "workspaceSourceAccess"
-  | "bindSource"
-  | "unbindSource"
+  | "projectSourceAccess"
+  | "bindProjectSource"
+  | "unbindProjectSource"
   | "listSourceScopes"
-  | "pickAndUploadSources"
-  | "deleteUpload"
+  | "pickAndUploadProjectSources"
+  | "deleteProjectUpload"
 >;
 
 const methodChannels = {
   listSourceCatalog: "sources:catalogList",
   saveSourceCatalog: "sources:catalogSave",
   deleteSourceCatalog: "sources:catalogDelete",
-  workspaceSourceAccess: "sources:workspaceAccess",
-  bindSource: "sources:bind",
-  unbindSource: "sources:unbind",
+  projectSourceAccess: "sources:projectAccess",
+  bindProjectSource: "sources:bindProject",
+  unbindProjectSource: "sources:unbindProject",
   listSourceScopes: "sources:listScopes",
-  pickAndUploadSources: "sources:pickAndUpload",
-  deleteUpload: "sources:deleteUpload",
+  pickAndUploadProjectSources: "sources:pickAndUploadProject",
+  deleteProjectUpload: "sources:deleteProjectUpload",
 } satisfies Record<keyof SourceMethods, string>;
 
 describe("preload sources contract", () => {
-  test("keeps all nine renderer methods wired to matching main IPC channels", () => {
+  test("keeps all nine renderer methods wired to project-id main IPC channels", () => {
     const preload = readFileSync(join(import.meta.dir, "index.ts"), "utf8");
     const main = readFileSync(join(import.meta.dir, "..", "main", "index.ts"), "utf8");
 

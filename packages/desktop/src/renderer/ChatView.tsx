@@ -2015,7 +2015,12 @@ export function ChatView({
                 <Monitor size={12} />
                 <span>{t("chat.localMode")}</span>
               </span>
-              <BranchPicker cwd={activeProjectPath} clean={repoClean} disabled={controlsDisabled} />
+              <BranchPicker
+                projectId={activeProjectId}
+                cwd={activeProjectPath}
+                clean={repoClean}
+                disabled={controlsDisabled}
+              />
             </div>
           )}
         </div>

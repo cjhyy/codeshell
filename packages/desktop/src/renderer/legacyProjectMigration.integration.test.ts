@@ -5,7 +5,29 @@ import { join } from "node:path";
 import { SessionCwdIndex } from "../main/session-cwd-index";
 import { ProjectStore } from "../main/project-store";
 import { createLegacyProjectMigrationService } from "../main/legacy-project-migration";
-import { adaptLegacyRepo, migrateLegacyProjects, type TrackedProject } from "./projects";
+import {
+  __resetProjectSnapshotForTest,
+  adaptLegacyRepo,
+  migrateLegacyProjects,
+  readLegacyProjectsForMigration,
+  type TrackedProject,
+} from "./projects";
+
+class MemoryStorage {
+  private readonly data = new Map<string, string>();
+
+  getItem(key: string): string | null {
+    return this.data.get(key) ?? null;
+  }
+
+  setItem(key: string, value: string): void {
+    this.data.set(key, value);
+  }
+
+  removeItem(key: string): void {
+    this.data.delete(key);
+  }
+}
 
 describe("localStorage-only project migration", () => {
   let root: string;
@@ -16,6 +38,11 @@ describe("localStorage-only project migration", () => {
   let store: ProjectStore;
 
   beforeEach(() => {
+    Object.defineProperty(globalThis, "localStorage", {
+      value: new MemoryStorage(),
+      configurable: true,
+    });
+    __resetProjectSnapshotForTest();
     root = mkdtempSync(join(tmpdir(), "codeshell-legacy-project-migration-"));
     legacyPath = join(root, "local-storage-only");
     otherPath = join(root, "other");
@@ -46,6 +73,13 @@ describe("localStorage-only project migration", () => {
   });
 
   test("keeps an unprovable localStorage path pending, retries, and completes only after same-path picker authorization", async () => {
+    const legacyRecord = {
+      id: "legacy-renderer-id",
+      name: "local-storage-only",
+      path: legacyPath,
+      addedAt: 1,
+    };
+    localStorage.setItem("codeshell.repos", JSON.stringify([legacyRecord]));
     const cached: TrackedProject[] = [
       adaptLegacyRepo({
         id: "legacy-renderer-id",
@@ -56,14 +90,15 @@ describe("localStorage-only project migration", () => {
     ];
     const service = createLegacyProjectMigrationService({
       store,
-      sessionRoot: join(root, "sessions"),
-      noRepoPath: join(root, "no-repo"),
       pickDirectory: async () => pickedPath,
+      makeToken: () => "migration-token",
     });
     const registry = {
       list: () => store.list(),
-      migrateLegacyPaths: (paths: string[]) => service.migratePaths(paths),
-      reauthorizeLegacyPath: (path: string) => service.reauthorizePath(path),
+      beginLegacyMigration: (paths: string[]) => service.begin(paths),
+      authorizeLegacyMigration: (token: string, path: string) =>
+        service.authorizePath(token, path),
+      completeLegacyMigration: (token: string) => service.complete(token),
     };
 
     const first = await migrateLegacyProjects({
@@ -76,20 +111,15 @@ describe("localStorage-only project migration", () => {
     expect(first.results).toEqual([
       expect.objectContaining({ path: legacyPath, status: "reauthorization_required" }),
     ]);
-    expect(first.projects).toEqual([
-      expect.objectContaining({
-        id: "legacy-renderer-id",
-        path: legacyPath,
-        migrationStatus: "reauthorization_required",
-      }),
-    ]);
+    expect(first.projects).toEqual([]);
     expect(await store.list()).toEqual([]);
     expect(existsSync(markerFile)).toBe(false);
+    expect(localStorage.getItem("codeshell.repos")).toBe(JSON.stringify([legacyRecord]));
 
     pickedPath = otherPath;
     const mismatch = await migrateLegacyProjects({
       diskProjects: await store.list(),
-      cachedProjects: first.projects,
+      cachedProjects: cached,
       registry,
     });
     expect(mismatch.completed).toBe(false);
@@ -98,11 +128,12 @@ describe("localStorage-only project migration", () => {
     ]);
     expect(await store.list()).toEqual([]);
     expect(existsSync(markerFile)).toBe(false);
+    expect(localStorage.getItem("codeshell.repos")).toBe(JSON.stringify([legacyRecord]));
 
     pickedPath = legacyPath;
     const green = await migrateLegacyProjects({
       diskProjects: await store.list(),
-      cachedProjects: mismatch.projects,
+      cachedProjects: cached,
       registry,
     });
 
@@ -112,9 +143,29 @@ describe("localStorage-only project migration", () => {
     ]);
     expect(green.projects).toHaveLength(1);
     expect(green.projects[0]).toMatchObject({ path: realpathSync(legacyPath) });
-    expect(green.projects[0]?.migrationStatus).toBeUndefined();
-    expect(green.projectIdRemap["legacy-renderer-id"]).toBe(green.projects[0]!.id);
+    expect(green.projects[0]).not.toHaveProperty("migrationStatus");
+    expect(green.projectIdRemap).toEqual({
+      "legacy-renderer-id": green.projects[0]!.id,
+    });
     expect(await store.list()).toHaveLength(1);
     expect(existsSync(markerFile)).toBe(true);
+    expect(localStorage.getItem("codeshell.repos")).toBeNull();
+    await expect(service.authorizePath("migration-token", otherPath)).rejects.toThrow(
+      /migration.*complete/i,
+    );
+  });
+
+  test("reads the legacy collection once without making it the live snapshot", () => {
+    localStorage.setItem(
+      "codeshell.repos",
+      JSON.stringify([{ id: "first", name: "first", path: legacyPath, addedAt: 1 }]),
+    );
+    expect(readLegacyProjectsForMigration().map((project) => project.id)).toEqual(["first"]);
+
+    localStorage.setItem(
+      "codeshell.repos",
+      JSON.stringify([{ id: "second", name: "second", path: otherPath, addedAt: 2 }]),
+    );
+    expect(readLegacyProjectsForMigration().map((project) => project.id)).toEqual(["first"]);
   });
 });

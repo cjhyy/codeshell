@@ -12,7 +12,6 @@
  * IPC broadcast, and desktop services (settings, workspaces, transcripts).
  */
 
-import { basename } from "node:path";
 import { Methods } from "@cjhyy/code-shell-core";
 import {
   type ClaimedMobileUpload,
@@ -45,27 +44,6 @@ import { getSessionWorkspaceForUi } from "./session-workspace-service.js";
 export { injectAndAwaitResult } from "./mobile-remote/handle-client-event.js";
 export { resolveRoomPermissionMode } from "./mobile-remote/handle-room-event.js";
 export type { AuthenticatedMobileClientEvent } from "./mobile-remote/handle-client-event.js";
-
-function normalizeMobileProjects(projects: unknown): MobileProjectMeta[] {
-  if (!Array.isArray(projects)) return [];
-  const out: MobileProjectMeta[] = [];
-  const seen = new Set<string>();
-  for (const item of projects) {
-    const p = item as Partial<MobileProjectMeta> | null;
-    if (!p || typeof p.path !== "string" || !p.path || seen.has(p.path)) continue;
-    seen.add(p.path);
-    out.push({
-      ...(typeof p.id === "string" ? { id: p.id } : {}),
-      path: p.path,
-      name: typeof p.name === "string" && p.name.trim() ? p.name : basename(p.path),
-      ...(typeof p.addedAt === "number" ? { addedAt: p.addedAt } : {}),
-      ...(typeof p.pinned === "boolean" ? { pinned: p.pinned } : {}),
-      ...(Array.isArray(p.roots) ? { roots: p.roots } : {}),
-      ...(typeof p.primaryRootId === "string" ? { primaryRootId: p.primaryRootId } : {}),
-    });
-  }
-  return out;
-}
 
 function normalizePermissionMode(raw: unknown): PermissionMode | null {
   return raw === "default" || raw === "acceptEdits" || raw === "bypassPermissions" ? raw : null;
@@ -100,12 +78,6 @@ export interface MobileRemoteOrchestratorDeps {
 }
 
 export class MobileRemoteOrchestrator {
-  /**
-   * Legacy in-memory project list (pushed from the renderer's localStorage).
-   * Disk recents are the source of truth; this is only a fallback if disk is
-   * somehow empty.
-   */
-  private mobileProjects: MobileProjectMeta[] = [];
   private readonly mobileDeviceStates = new Map<string, MobileDeviceState>();
   private readonly mobileSessionCwds = new Map<string, string | null>();
   private readonly mobilePermissionModes = new Map<string, PermissionMode>();
@@ -115,17 +87,7 @@ export class MobileRemoteOrchestrator {
   // ── Projects ───────────────────────────────────────────────────────────────
 
   async projectList(): Promise<MobileProjectMeta[]> {
-    // Disk recents are the source of truth (pinned + soft-delete aware). The
-    // legacy in-memory `mobileProjects` (pushed from the renderer's
-    // localStorage) is only a fallback if disk is somehow empty — disk wins so
-    // a desktop add/remove/pin is reflected on phones and survives restart.
-    const projects = await getProjectStore()
-      .list()
-      .catch(() => []);
-    if (projects.length > 0) {
-      return projects.map(toMobileProjectMeta);
-    }
-    return this.mobileProjects;
+    return (await getProjectStore().list()).map(toMobileProjectMeta);
   }
 
   private async sendProjectList(deviceId?: string): Promise<void> {
@@ -137,23 +99,10 @@ export class MobileRemoteOrchestrator {
     else this.deps.remote.broadcast(event);
   }
 
-  /**
-   * After a disk project change (add / remove / pin), push the fresh list to
-   * BOTH transports: phones via room.projects.ok, desktop windows via
-   * projects:changed (so the renderer re-projects its localStorage cache).
-   * Disk is the truth; this is how a desktop edit becomes live on phones and
-   * how every window stays synced.
-   */
+  /** Push the Main-owned V2 snapshot to phones after a registry mutation. */
   async broadcastProjects(): Promise<void> {
     const projects = await this.projectList();
     this.deps.remote.broadcast({ type: "room.projects.ok", projects });
-    this.deps.broadcastToWindows("projects:changed", projects);
-  }
-
-  /** Replace the legacy renderer-pushed project list and re-broadcast it. */
-  async updateProjects(projects: unknown): Promise<void> {
-    this.mobileProjects = normalizeMobileProjects(projects);
-    await this.sendProjectList();
   }
 
   // ── Permission modes ───────────────────────────────────────────────────────

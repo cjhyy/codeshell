@@ -45,10 +45,10 @@ function kindLabel(t: TFunction, kind: string): string {
 
 /** Project-local upload and source-binding controls. Content reads stay in ReadSource. */
 export function DataSourcesSection({
-  cwd,
+  projectId,
   confirmDeleteUpload,
 }: {
-  cwd: string;
+  projectId: string;
   /** Test seam; production uses the app-level themed confirmation dialog. */
   confirmDeleteUpload?: (upload: SourceResourceMeta) => Promise<boolean>;
 }) {
@@ -74,7 +74,7 @@ export function DataSourcesSection({
     try {
       const [nextCatalog, nextSnapshot] = await Promise.all([
         window.codeshell.listSourceCatalog(),
-        window.codeshell.workspaceSourceAccess(cwd),
+        window.codeshell.projectSourceAccess(projectId),
       ]);
       setCatalog(nextCatalog);
       setSnapshot({ access: nextSnapshot.access, uploads: nextSnapshot.uploads });
@@ -84,7 +84,7 @@ export function DataSourcesSection({
     } finally {
       setLoading(false);
     }
-  }, [cwd]);
+  }, [projectId]);
 
   React.useEffect(() => {
     void refresh();
@@ -186,7 +186,7 @@ export function DataSourcesSection({
             size="sm"
             disabled={busy}
             onClick={() =>
-              void act(() => window.codeshell.pickAndUploadSources(cwd), {
+              void act(() => window.codeshell.pickAndUploadProjectSources(projectId), {
                 successMessage: t("projectConfig.dataSources.uploadDone"),
               })
             }
@@ -227,7 +227,7 @@ export function DataSourcesSection({
                         });
                     void approval.then((accepted) => {
                       if (!accepted) return;
-                      void act(() => window.codeshell.deleteUpload(cwd, upload.name), {
+                      void act(() => window.codeshell.deleteProjectUpload(projectId, upload.name), {
                         successMessage: t("projectConfig.dataSources.deleteUploadDone"),
                       });
                     });
@@ -285,7 +285,7 @@ export function DataSourcesSection({
                     variant="outline"
                     disabled={busy}
                     onClick={() =>
-                      void act(() => window.codeshell.unbindSource(cwd, item.sourceId), {
+                      void act(() => window.codeshell.unbindProjectSource(projectId, item.sourceId), {
                         successMessage: t("projectConfig.dataSources.unbindDone"),
                       })
                     }
@@ -406,7 +406,7 @@ export function DataSourcesSection({
               onClick={() =>
                 void act(
                   () =>
-                    window.codeshell.bindSource(cwd, {
+                    window.codeshell.bindProjectSource(projectId, {
                       sourceId: selectedSourceId,
                       scopes: scopes
                         .filter((scope) => selectedScopes.has(scope.id))

@@ -5,18 +5,18 @@ import { DataSourcesSection } from "../project-config/DataSourcesSection";
 
 interface Props {
   scope: "user" | "project";
-  projectPath: string | null;
+  projectId: string | null;
 }
 
 /**
  * 设置中心「数据源」模块。全局 scope = 连接目录(与凭证页共享同一组件,
  * 单一数据源);项目 scope = 该项目的绑定与上传(复用项目配置组件)。
  */
-export function DataSourcesModule({ scope, projectPath }: Props) {
+export function DataSourcesModule({ scope, projectId }: Props) {
   const { t } = useT();
   if (scope === "project") {
-    if (!projectPath) return null;
-    return <DataSourcesSection cwd={projectPath} />;
+    if (!projectId) return null;
+    return <DataSourcesSection projectId={projectId} />;
   }
   return (
     <div className="flex flex-col gap-4">

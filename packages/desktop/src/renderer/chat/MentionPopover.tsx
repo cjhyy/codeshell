@@ -100,7 +100,7 @@ export function MentionPopover({
               };
             }),
           )
-        : window.codeshell.searchFiles(cwd, query);
+        : Promise.resolve([]);
       void request
         .then((hits) => {
           if (!cancelled) setFiles(hits);

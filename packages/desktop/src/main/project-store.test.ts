@@ -519,36 +519,59 @@ describe("ProjectStore", () => {
     }
   });
 
-  test("accepts legacy-path backfill only until the one-time V2 migration closes", async () => {
+  test("requires same-path picker proof and closes the one-time migration permanently", async () => {
     const legacy = dir("legacy-local-storage");
     const another = dir("late-legacy");
-    const index = new SessionCwdIndex({
-      sessionsRoot: join(fixtureRoot, "sessions"),
-      fs: {
-        async readdir() {
-          return [];
-        },
-        async readFile() {
-          throw new Error("missing");
-        },
-        async stat() {
-          throw new Error("missing");
-        },
-      },
-    });
-    await index.ensureLoaded();
-    index.upsert("legacy-session", { cwd: legacy });
-    index.upsert("late-session", { cwd: another });
-    const projects = store({ index });
+    const projects = store();
 
-    await expect(projects.migrateLegacyPath(legacy)).resolves.toMatchObject({
+    await expect(projects.authorizeLegacyMigration(legacy, another)).resolves.toBeNull();
+    expect(await projects.list()).toEqual([]);
+    await expect(projects.authorizeLegacyMigration(legacy, legacy)).resolves.toMatchObject({
       name: "legacy-local-storage",
     });
     await projects.completeLegacyMigration();
-    await expect(projects.migrateLegacyPath(another)).rejects.toThrow(/migration.*complete/i);
+    await expect(projects.authorizeLegacyMigration(another, another)).rejects.toThrow(
+      /migration.*complete/i,
+    );
 
-    const reopened = store({ index });
-    await expect(reopened.migrateLegacyPath(another)).rejects.toThrow(/migration.*complete/i);
+    const reopened = store();
+    await expect(reopened.authorizeLegacyMigration(another, another)).rejects.toThrow(
+      /migration.*complete/i,
+    );
+  });
+
+  test("keeps recents as a rollback-only output projection when V2 already exists", async () => {
+    const v2Root = dir("v2-authority");
+    const staleRecent = dir("stale-recent");
+    writeFileSync(
+      projectsFile,
+      JSON.stringify({
+        version: 2,
+        projects: [
+          {
+            id: "v2-project",
+            name: "V2",
+            roots: [{ id: "v2-root", path: v2Root, name: "V2", addedAt: 1 }],
+            primaryRootId: "v2-root",
+            createdAt: 1,
+            updatedAt: 1,
+            lastOpenedAt: 1,
+            revision: 1,
+          },
+        ],
+      }),
+    );
+    writeFileSync(
+      recentsFile,
+      JSON.stringify([{ path: staleRecent, name: "stale", lastOpenedAt: 2 }]),
+    );
+
+    const projects = store();
+    expect((await projects.list()).map((project) => project.id)).toEqual(["v2-project"]);
+    await projects.setPinned("v2-project", true);
+    expect(JSON.parse(readFileSync(recentsFile, "utf8"))).toEqual([
+      expect.objectContaining({ path: v2Root, name: "V2", pinned: true }),
+    ]);
   });
 });
 

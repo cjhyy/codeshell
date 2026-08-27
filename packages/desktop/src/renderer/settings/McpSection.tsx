@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { readScopedSettings, updateScopedSettings } from "../settingsAuthority";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import type { McpProbeResult, McpServerProbeInput, PluginMcpTrustEntry } from "../../preload/types";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
@@ -205,7 +206,7 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
   const load = useCallback(async () => {
     setError(null);
     try {
-      const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+      const s = (await readScopedSettings(scope, projectPath)) ?? {};
       const disabledPlugins = Array.isArray(s.disabledPlugins)
         ? s.disabledPlugins.filter((x): x is string => typeof x === "string")
         : [];
@@ -286,7 +287,7 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
       destructive: true,
     });
     if (!ok) return;
-    await window.codeshell.updateSettings(scope, { mcpServers: { [name]: null } }, projectPath);
+    await updateScopedSettings(scope, { mcpServers: { [name]: null } }, projectPath);
     await window.codeshell.invalidateMcpProbeCache(name);
     setProbes((prev) => {
       const { [name]: _, ...rest } = prev;
@@ -303,7 +304,7 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
       const updated = servers.map((x) =>
         x.name === s.name ? { ...x, enabled: nextEnabled, hasOverride: true } : x,
       );
-      await window.codeshell.updateSettings(
+      await updateScopedSettings(
         "user",
         { mcpServerOverrides: { [s.name]: { enabled: nextEnabled } } },
         undefined,
@@ -328,7 +329,7 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
     // the whole entry (not a partial) because updateSettings merges records
     // key-by-key but replaces a server entry wholesale.
     const updated = servers.map((x) => (x.name === s.name ? { ...x, enabled: nextEnabled } : x));
-    await window.codeshell.updateSettings(
+    await updateScopedSettings(
       scope,
       { mcpServers: { [s.name]: stripNameFromServer({ ...s, enabled: nextEnabled }) } },
       projectPath,
@@ -364,7 +365,7 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
     if (originalName && originalName !== next.name) {
       record[originalName] = null;
     }
-    await window.codeshell.updateSettings(scope, { mcpServers: record }, projectPath);
+    await updateScopedSettings(scope, { mcpServers: record }, projectPath);
     setServers(updated);
     if (originalName && originalName !== next.name) {
       await window.codeshell.invalidateMcpProbeCache(originalName);
@@ -392,7 +393,7 @@ export function McpSection({ scope, activeProjectPath, settingsProjectPath }: Pr
     }
     // No fields left → drop the whole override entry (null deletes the key).
     const value = any ? supplement : null;
-    await window.codeshell.updateSettings(
+    await updateScopedSettings(
       "user",
       { mcpServerOverrides: { [name]: value } },
       undefined,

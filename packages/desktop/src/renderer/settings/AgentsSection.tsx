@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { readScopedSettings, updateScopedSettings } from "../settingsAuthority";
 import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import type { AgentSummary, AgentDefinitionInput } from "../../preload/types";
 import { useConfirm } from "../ui/ConfirmDialog";
@@ -149,7 +150,7 @@ function AgentsEditor({ target }: { target: Target }) {
       setModels(catalogModelOptions(conns, catalog).map((o) => ({ key: o.key, label: o.label })));
       // Project overlay (unmerged project file).
       if (isProject) {
-        const p = (await window.codeshell.getSettings("project", cwd)) ?? {};
+        const p = (await readScopedSettings("project", cwd)) ?? {};
         const ov = (p as { capabilityOverrides?: { agents?: Record<string, unknown> } })
           .capabilityOverrides?.agents;
         const clean: Record<string, "on" | "off"> = {};
@@ -242,7 +243,7 @@ function AgentsEditor({ target }: { target: Target }) {
     if (value === "inherit") delete next[name];
     else next[name] = value;
     setOverrides(next);
-    await window.codeshell.updateSettings(
+    await updateScopedSettings(
       "project",
       { capabilityOverrides: { agents: { [name]: value === "inherit" ? null : value } } },
       cwd,

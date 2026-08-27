@@ -102,12 +102,14 @@ interface FileSystemReader {
   readFile: (root: string, path: string) => Promise<FileContent>;
 }
 
-const LEGACY_FILE_SYSTEM: FileSystemReader = {
-  readDir: (root, dir) => window.codeshell.readDir(root, dir),
-  readFile: (root, path) => window.codeshell.readFileContent(root, path),
+const UNAVAILABLE_FILE_SYSTEM: FileSystemReader = {
+  readDir: async () => [],
+  readFile: async () => {
+    throw new Error("project or Session file authority is required");
+  },
 };
 
-const FileSystemContext = React.createContext<FileSystemReader>(LEGACY_FILE_SYSTEM);
+const FileSystemContext = React.createContext<FileSystemReader>(UNAVAILABLE_FILE_SYSTEM);
 
 /**
  * File-browser panel, modeled on Codex's fs RPC tree: lazy directory
@@ -124,7 +126,7 @@ export function FilesPanel({
 }: Props) {
   const { t } = useT();
   const rootOptions = useMemo(() => {
-    if (!project) return workspaceCwd ? [{ id: "legacy", path: workspaceCwd, name: "" }] : [];
+    if (!project) return [];
     const mainRootId = sessionMainRootId ?? project.primaryRootId;
     const primary = project.roots.find((root) => root.id === mainRootId);
     return [
@@ -137,17 +139,14 @@ export function FilesPanel({
     ];
   }, [project, sessionMainRootId, workspaceCwd]);
   const [selectedRootId, setSelectedRootId] = useState<string | null>(
-    sessionMainRootId ?? project?.primaryRootId ?? (workspaceCwd ? "legacy" : null),
+    sessionMainRootId ?? project?.primaryRootId ?? null,
   );
   useEffect(() => {
-    setSelectedRootId(
-      sessionMainRootId ?? project?.primaryRootId ?? (workspaceCwd ? "legacy" : null),
-    );
+    setSelectedRootId(sessionMainRootId ?? project?.primaryRootId ?? null);
   }, [project?.id, project?.primaryRootId, sessionMainRootId, workspaceCwd]);
   const activeRoot =
     rootOptions.find((root) => root.id === selectedRootId) ?? rootOptions[0] ?? null;
   const cwd = activeRoot?.path ?? null;
-  const usesProjectRootApi = !!project && activeRoot?.id !== project.primaryRootId;
   const fileSystem = useMemo<FileSystemReader>(() => {
     if (engineSessionId && sessionMainRootId && activeRoot) {
       return {
@@ -157,13 +156,13 @@ export function FilesPanel({
           window.codeshell.readSessionFileContent(engineSessionId, activeRoot.id, path),
       };
     }
-    if (!project || !activeRoot || !usesProjectRootApi) return LEGACY_FILE_SYSTEM;
+    if (!project || !activeRoot) return UNAVAILABLE_FILE_SYSTEM;
     return {
       readDir: (_root, dir) => window.codeshell.readProjectDir(project.id, activeRoot.id, dir),
       readFile: (_root, path) =>
         window.codeshell.readProjectFileContent(project.id, activeRoot.id, path),
     };
-  }, [activeRoot, engineSessionId, project, sessionMainRootId, usesProjectRootApi]);
+  }, [activeRoot, engineSessionId, project, sessionMainRootId]);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   // Show/hide the file tree — persisted so hiding it sticks across panel

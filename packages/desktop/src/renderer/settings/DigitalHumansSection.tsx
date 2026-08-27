@@ -1,4 +1,5 @@
 import React from "react";
+import { readScopedSettings } from "../settingsAuthority";
 import { Download, ExternalLink, Loader2, Pencil, Plus, RotateCcw, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -612,7 +613,7 @@ export function PetExternalSessionsToggles({
     if (scope === "project" && projectPath) {
       const [userSettings, projectSettings] = await Promise.all([
         window.codeshell.getSettings("user"),
-        window.codeshell.getSettings("project", projectPath),
+        readScopedSettings("project", projectPath),
       ]);
       setPet(petOf((userSettings as Record<string, unknown> | null)?.pet));
       setOverrides(projectPetOverridesOf(projectSettings));

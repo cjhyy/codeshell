@@ -102,7 +102,7 @@ async function fixture(): Promise<{ root: string; project: string; sessions: str
 
 describe("requireRendererProjectPath", () => {
   test("accepts a registered project and its symlink spelling", async () => {
-    const { root, project, sessions } = await fixture();
+    const { root, project } = await fixture();
     const alias = join(root, "alias");
     const requested = process.platform === "win32" ? project : alias;
     if (process.platform !== "win32") await symlink(project, alias, "dir");
@@ -110,32 +110,21 @@ describe("requireRendererProjectPath", () => {
       await requireRendererProjectPath(requested, {
         registeredPaths: [project],
         noRepoPath: join(root, "no-repo"),
-        sessionRoot: sessions,
       }),
     ).toBe(await realpath(project));
   });
 
-  test("accepts a legacy project backed by a persisted session", async () => {
+  test("does not treat a persisted Session cwd as general project authorization", async () => {
     const { root, project, sessions } = await fixture();
     const sessionDir = join(sessions, "session-1");
     await mkdir(sessionDir);
     await writeFile(join(sessionDir, "state.json"), JSON.stringify({ cwd: project }));
-    expect(
-      await requireRendererProjectPath(project, {
+    await expect(
+      requireRendererProjectPath(project, {
         registeredPaths: [],
         noRepoPath: join(root, "no-repo"),
-        sessionRoot: sessions,
       }),
-    ).toBe(await realpath(project));
-
-    await rm(join(sessionDir, "state.json"));
-    expect(
-      await requireRendererProjectPath(project, {
-        registeredPaths: [],
-        noRepoPath: join(root, "no-repo"),
-        sessionRoot: sessions,
-      }),
-    ).toBe(await realpath(project));
+    ).rejects.toThrow(/not registered/);
   });
 
   test("rejects an arbitrary directory and ignores corrupt session state", async () => {
@@ -147,19 +136,17 @@ describe("requireRendererProjectPath", () => {
       requireRendererProjectPath(project, {
         registeredPaths: [],
         noRepoPath: join(root, "no-repo"),
-        sessionRoot: sessions,
       }),
     ).rejects.toThrow(/not registered/);
   });
 
   test("rejects relative, missing, and file-shaped paths", async () => {
-    const { root, sessions } = await fixture();
+    const { root } = await fixture();
     const file = join(root, "file");
     await writeFile(file, "x");
     const options = {
       registeredPaths: [],
       noRepoPath: join(root, "no-repo"),
-      sessionRoot: sessions,
     };
     await expect(requireRendererProjectPath("relative", options)).rejects.toThrow(/absolute/);
     await expect(requireRendererProjectPath(join(root, "missing"), options)).rejects.toThrow(
@@ -169,11 +156,10 @@ describe("requireRendererProjectPath", () => {
   });
 
   test("accepts only the explicit empty-string sentinel for global settings scope", async () => {
-    const { root, sessions } = await fixture();
+    const { root } = await fixture();
     const options = {
       registeredPaths: [],
       noRepoPath: join(root, "no-repo"),
-      sessionRoot: sessions,
     };
 
     await expect(requireRendererProjectPathOrGlobal("", options)).resolves.toBe("");

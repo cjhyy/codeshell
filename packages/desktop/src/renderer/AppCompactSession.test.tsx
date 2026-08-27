@@ -146,21 +146,31 @@ function seedActiveSession(): void {
 
 function installCodeshellStub(): void {
   const unsubscribe = () => undefined;
-  const project = { path: "/tmp/repo-a", name: "Repo A", addedAt: 1 };
+  const project = {
+    id: "repoA",
+    name: "Repo A",
+    roots: [{ id: "root-a", path: "/tmp/repo-a", name: "Repo A", addedAt: 1 }],
+    primaryRootId: "root-a",
+    createdAt: 1,
+    updatedAt: 1,
+    lastOpenedAt: 1,
+    revision: 1,
+  };
   (window as unknown as { codeshell: Record<string, any>; innerWidth: number }).innerWidth = 1200;
   (window as unknown as { codeshell: Record<string, any> }).codeshell = {
     platform: "linux",
     log: () => undefined,
     isWindowFullscreen: async () => false,
     onWindowFullscreenChange: () => unsubscribe,
-    projects: {
+    projectRegistry: {
       list: async () => [project],
-      resolveRoot: async () => project,
-      add: async () => undefined,
+      beginLegacyMigration: async () => ({ completed: true }),
+      authorizeLegacyMigration: async () => ({ status: "migrated" }),
+      completeLegacyMigration: async () => undefined,
+      resolveForCwdBatch: async () => [],
       onChanged: () => unsubscribe,
     },
     mobileRemote: {
-      updateProjects: async () => undefined,
       updatePermissionModes: async () => undefined,
       notifyApprovalResolved: async () => undefined,
     },
@@ -168,8 +178,8 @@ function installCodeshellStub(): void {
     configure: async () => undefined,
     registerBrowserSessionBucket: () => undefined,
     setGitPrefs: async () => undefined,
-    getGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
-    getGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+    getProjectGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
+    getProjectGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
     getSessionWorkspace: async () => ({ root: "/tmp/repo-a", kind: "main" }),
     listSessionWorktrees: async () => ({
       current: { root: "/tmp/repo-a", kind: "main" },

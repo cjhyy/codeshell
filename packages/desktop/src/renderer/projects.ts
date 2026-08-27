@@ -1,28 +1,6 @@
-/**
- * Canonical renderer terminology for user-tracked projects.
- *
- * Persistence deliberately remains implemented by the legacy `repos.ts`
- * module for this compatibility phase. In particular, these exports keep
- * reading and writing the existing `codeshell.repos`,
- * `codeshell.activeRepoId`, and `codeshell.removedRepoPaths` contracts.
- */
-import {
-  isRepoPathRemoved,
-  loadActiveRepoId,
-  loadRemovedRepoPaths,
-  loadRepos,
-  makeCreateRepoForCwd,
-  makeRepoId,
-  markRepoPathRemoved,
-  reconcileReposFromDisk,
-  repoLabel,
-  saveActiveRepoId,
-  saveRemovedRepoPaths,
-  saveRepos,
-  sortRepos,
-  unmarkRepoPathRemoved,
-  type Repo,
-} from "./repos";
+/** Renderer projection of Main's authoritative V2 project registry. */
+
+import { isCaseInsensitivePlatform, normalizeCwd } from "./automation/pathMatch";
 
 export type ProjectId = string;
 export type ProjectRootId = string;
@@ -34,23 +12,24 @@ export interface TrackedProjectRoot {
   addedAt: number;
 }
 
-/** Canonical renderer model for a project tracked in the sidebar. */
 export interface TrackedProject {
-  /** Stable project id. Persisted as the legacy `id` JSON field for compatibility. */
   id: ProjectId;
-  /** Default name derived from the path basename when first added. */
   name: string;
-  /** Absolute canonical project path. */
   path: string;
   roots: TrackedProjectRoot[];
   primaryRootId: ProjectRootId;
   addedAt: number;
-  /** User-set rename, which wins over `name` in project UI. */
   displayName?: string;
-  /** Pinned projects render before unpinned projects. */
   pinned?: boolean;
-  /** Legacy localStorage-only entry awaiting a safe Main-side migration retry. */
-  migrationStatus?: "reauthorization_required" | "failed";
+}
+
+interface LegacyRepo {
+  id: string;
+  name: string;
+  path: string;
+  addedAt: number;
+  displayName?: string;
+  pinned?: boolean;
 }
 
 export interface ReconciledProjects {
@@ -69,25 +48,80 @@ export interface LegacyProjectMigrationResult extends ReconciledProjects {
   completed: boolean;
 }
 
+type RegistryProject = Parameters<typeof reconcileProjectsFromDiskWithRemap>[0][number];
+
 interface LegacyProjectMigrationRegistry {
-  list(): Promise<Parameters<typeof reconcileProjectsFromDiskWithRemap>[0]>;
-  migrateLegacyPaths(paths: string[]): Promise<{
-    results: Array<
-      LegacyProjectMigrationPathResult & {
-        project?: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0][number];
-      }
-    >;
-    completed: boolean;
-  }>;
-  reauthorizeLegacyPath(path: string): Promise<
-    LegacyProjectMigrationPathResult & {
-      project?: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0][number];
-    }
-  >;
+  list(): Promise<RegistryProject[]>;
+  beginLegacyMigration(paths: string[]): Promise<{ completed: boolean; token?: string }>;
+  authorizeLegacyMigration(
+    token: string,
+    path: string,
+  ): Promise<LegacyProjectMigrationPathResult & { project?: RegistryProject }>;
+  completeLegacyMigration(token: string): Promise<void>;
 }
 
-/** Convert a value read through the legacy Repo API into the canonical project model. */
-export function adaptLegacyRepo(repo: Repo): TrackedProject {
+const LEGACY_PROJECTS_KEY = "codeshell.repos";
+const ACTIVE_PROJECT_KEY = "codeshell.activeRepoId";
+const REMOVED_PATHS_KEY = "codeshell.removedRepoPaths";
+
+let projectSnapshot: TrackedProject[] = [];
+let legacyProjectsRead = false;
+let legacyProjectsSnapshot: TrackedProject[] = [];
+
+/** Read the current Main-supplied V2 snapshot. Never consults localStorage. */
+export function loadProjects(): TrackedProject[] {
+  return projectSnapshot.slice();
+}
+
+/** Replace the renderer projection after a V2 list/change notification. */
+export function saveProjects(projects: TrackedProject[]): void {
+  projectSnapshot = projects.slice();
+}
+
+/** Read codeshell.repos at most once, solely for the one-time upgrade migration. */
+export function readLegacyProjectsForMigration(): TrackedProject[] {
+  if (legacyProjectsRead) return legacyProjectsSnapshot.slice();
+  legacyProjectsRead = true;
+  try {
+    const raw = localStorage.getItem(LEGACY_PROJECTS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    if (Array.isArray(parsed)) {
+      legacyProjectsSnapshot = parsed
+        .filter(isLegacyRepo)
+        .map((repo) => adaptLegacyRepo(repo));
+    }
+  } catch {
+    legacyProjectsSnapshot = [];
+  }
+  return legacyProjectsSnapshot.slice();
+}
+
+function clearLegacyProjectsAfterMigration(): void {
+  try {
+    localStorage.removeItem(LEGACY_PROJECTS_KEY);
+  } catch {
+    // Storage may be disabled; Main's completion marker still prevents reuse.
+  }
+}
+
+export function __resetProjectSnapshotForTest(): void {
+  projectSnapshot = [];
+  legacyProjectsRead = false;
+  legacyProjectsSnapshot = [];
+}
+
+function isLegacyRepo(value: unknown): value is LegacyRepo {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const item = value as Partial<LegacyRepo>;
+  return (
+    typeof item.id === "string" &&
+    typeof item.name === "string" &&
+    typeof item.path === "string" &&
+    typeof item.addedAt === "number"
+  );
+}
+
+export function adaptLegacyRepo(repo: LegacyRepo): TrackedProject {
   const rootId = `legacy-root:${repo.id}`;
   return {
     id: repo.id,
@@ -96,44 +130,65 @@ export function adaptLegacyRepo(repo: Repo): TrackedProject {
     roots: [{ id: rootId, path: repo.path, name: repo.name, addedAt: repo.addedAt }],
     primaryRootId: rootId,
     addedAt: repo.addedAt,
-    displayName: repo.displayName,
-    pinned: repo.pinned,
-    migrationStatus: repo.migrationStatus,
+    ...(repo.displayName ? { displayName: repo.displayName } : {}),
+    ...(repo.pinned === true ? { pinned: true } : {}),
   };
 }
 
-export function loadProjects(): TrackedProject[] {
-  return loadRepos().map(adaptLegacyRepo);
-}
-export function saveProjects(projects: TrackedProject[]): void {
-  saveRepos(projects);
-}
-export const loadActiveProjectId = loadActiveRepoId;
-export const saveActiveProjectId = saveActiveRepoId;
-export const loadRemovedProjectPaths = loadRemovedRepoPaths;
-export const saveRemovedProjectPaths = saveRemovedRepoPaths;
-export const isProjectPathRemoved = isRepoPathRemoved;
-export const markProjectPathRemoved = markRepoPathRemoved;
-export const unmarkProjectPathRemoved = unmarkRepoPathRemoved;
-export const makeProjectId = makeRepoId;
-export const reconcileProjectsFromDisk = reconcileReposFromDisk;
-export function projectLabel(project: TrackedProject): string {
-  return repoLabel(project);
+export function loadActiveProjectId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_PROJECT_KEY);
+  } catch {
+    return null;
+  }
 }
 
-export function sortProjects(projects: TrackedProject[]): TrackedProject[] {
-  return sortRepos(projects) as TrackedProject[];
+export function saveActiveProjectId(id: string | null): void {
+  try {
+    if (id === null) localStorage.removeItem(ACTIVE_PROJECT_KEY);
+    else localStorage.setItem(ACTIVE_PROJECT_KEY, id);
+  } catch {
+    // Best-effort UI selection state.
+  }
 }
 
-export function makeCreateProjectForCwd(projectList: TrackedProject[]): {
-  createProjectForCwd: (cwd: string) => ProjectId | null;
-  changed: () => boolean;
-} {
-  const legacy = makeCreateRepoForCwd(projectList as Repo[]);
-  return {
-    createProjectForCwd: legacy.createRepoForCwd,
-    changed: legacy.changed,
-  };
+function normalizeProjectPath(path: string): string {
+  const trimmed = path.trim();
+  return trimmed ? normalizeCwd(trimmed, isCaseInsensitivePlatform()) : "";
+}
+
+export function loadRemovedProjectPaths(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(REMOVED_PATHS_KEY) ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return [...new Set(parsed.filter((path): path is string => typeof path === "string").map(normalizeProjectPath).filter(Boolean))];
+  } catch {
+    return [];
+  }
+}
+
+export function saveRemovedProjectPaths(paths: string[]): void {
+  try {
+    localStorage.setItem(
+      REMOVED_PATHS_KEY,
+      JSON.stringify([...new Set(paths.map(normalizeProjectPath).filter(Boolean))]),
+    );
+  } catch {
+    // Best-effort legacy UI state; Main tombstones remain authoritative.
+  }
+}
+
+export function isProjectPathRemoved(path: string): boolean {
+  return loadRemovedProjectPaths().includes(normalizeProjectPath(path));
+}
+
+export function markProjectPathRemoved(path: string): void {
+  saveRemovedProjectPaths([...loadRemovedProjectPaths(), path]);
+}
+
+export function unmarkProjectPathRemoved(path: string): void {
+  const normalized = normalizeProjectPath(path);
+  saveRemovedProjectPaths(loadRemovedProjectPaths().filter((candidate) => candidate !== normalized));
 }
 
 export function reconcileProjectsFromDiskWithRemap(
@@ -150,13 +205,14 @@ export function reconcileProjectsFromDiskWithRemap(
   }>,
   cached: TrackedProject[],
 ): ReconciledProjects {
-  const byPath = new Map(cached.map((project) => [project.path, project]));
-  const projects: TrackedProject[] = diskProjects.map((disk) => {
+  const cachedByPath = new Map(cached.map((project) => [project.path, project]));
+  const projects = diskProjects.map((disk): TrackedProject => {
     const declaredPrimary = disk.roots?.find((root) => root.id === disk.primaryRootId);
     const diskPath = declaredPrimary?.path ?? disk.path ?? disk.roots?.[0]?.path;
     if (!diskPath) throw new Error("project registry entry has no primary path");
-    const prior = byPath.get(diskPath);
-    const id = disk.id ?? prior?.id ?? makeProjectId();
+    const prior = cachedByPath.get(diskPath);
+    const id = disk.id ?? prior?.id;
+    if (!id) throw new Error("project registry entry has no stable id");
     const roots =
       disk.roots && disk.roots.length > 0
         ? disk.roots
@@ -176,12 +232,12 @@ export function reconcileProjectsFromDiskWithRemap(
     return {
       id,
       name: disk.name,
-      displayName: disk.displayName ?? prior?.displayName,
       path: primary.path,
       roots,
       primaryRootId,
-      addedAt: disk.addedAt ?? disk.createdAt ?? prior?.addedAt ?? Date.now(),
-      pinned: disk.pinned,
+      addedAt: disk.addedAt ?? disk.createdAt ?? roots[0]!.addedAt,
+      ...(disk.displayName ? { displayName: disk.displayName } : {}),
+      ...(disk.pinned === true ? { pinned: true } : {}),
     };
   });
   const targetByPath = new Map(projects.map((project) => [project.path, project]));
@@ -190,10 +246,14 @@ export function reconcileProjectsFromDiskWithRemap(
     const target = targetByPath.get(project.path);
     if (target && target.id !== project.id) projectIdRemap[project.id] = target.id;
   }
-  for (const project of cached) {
-    if (project.migrationStatus && !targetByPath.has(project.path)) projects.push(project);
-  }
   return { projects, projectIdRemap };
+}
+
+export function reconcileProjectsFromDisk(
+  diskProjects: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0],
+  cached: TrackedProject[],
+): TrackedProject[] {
+  return reconcileProjectsFromDiskWithRemap(diskProjects, cached).projects;
 }
 
 export async function migrateLegacyProjects(options: {
@@ -202,80 +262,47 @@ export async function migrateLegacyProjects(options: {
   registry: LegacyProjectMigrationRegistry;
 }): Promise<LegacyProjectMigrationResult> {
   const diskPaths = new Set(
-    options.diskProjects.flatMap((project) => {
-      const roots = project.roots?.map((root) => root.path) ?? [];
-      return project.path ? [...roots, project.path] : roots;
-    }),
+    options.diskProjects.flatMap((project) => [
+      ...(project.roots?.map((root) => root.path) ?? []),
+      ...(project.path ? [project.path] : []),
+    ]),
   );
-  const missing: TrackedProject[] = [];
-  const seen = new Set<string>();
-  for (const project of options.cachedProjects) {
-    if (
-      diskPaths.has(project.path) ||
-      isProjectPathRemoved(project.path) ||
-      seen.has(project.path)
-    ) {
-      continue;
-    }
-    seen.add(project.path);
-    missing.push(project);
-  }
-
+  const missing = options.cachedProjects.filter(
+    (project, index, projects) =>
+      !diskPaths.has(project.path) && projects.findIndex((item) => item.path === project.path) === index,
+  );
   const paths = missing.map((project) => project.path);
-  let batch = await options.registry.migrateLegacyPaths(paths);
-  if (!batch.completed) {
-    const retried: LegacyProjectMigrationPathResult[] = [];
-    for (const result of batch.results) {
-      retried.push(
-        result.status === "reauthorization_required"
-          ? await options.registry.reauthorizeLegacyPath(result.path)
-          : result,
-      );
+  const session = await options.registry.beginLegacyMigration(paths);
+  const results: Array<LegacyProjectMigrationPathResult & { project?: RegistryProject }> = [];
+
+  if (!session.completed) {
+    if (!session.token) throw new Error("legacy project migration did not return a token");
+    for (const path of paths) {
+      results.push(await options.registry.authorizeLegacyMigration(session.token, path));
     }
-    if (retried.every((result) => result.status === "migrated")) {
-      batch = await options.registry.migrateLegacyPaths(paths);
-    } else {
-      batch = { results: retried, completed: false };
+    if (results.every((result) => result.status === "migrated")) {
+      await options.registry.completeLegacyMigration(session.token);
     }
   }
 
-  const disk = paths.length > 0 ? await options.registry.list() : options.diskProjects;
-  const migratedPath = new Map(
-    batch.results.flatMap((result) => {
-      const primary = result.project?.roots?.find(
-        (root) => root.id === result.project?.primaryRootId,
-      );
-      return result.status === "migrated" && primary ? [[result.path, primary.path] as const] : [];
-    }),
-  );
-  const cachedForReconcile = options.cachedProjects.map((project) => {
-    const path = migratedPath.get(project.path);
-    return path ? { ...project, path, migrationStatus: undefined } : project;
-  });
-  const reconciled = reconcileProjectsFromDiskWithRemap(disk, cachedForReconcile);
-  const resultByPath = new Map(batch.results.map((result) => [result.path, result]));
-  const unresolved = missing.flatMap((project) => {
-    const result = resultByPath.get(project.path);
-    return result && result.status !== "migrated"
-      ? [{ ...project, migrationStatus: result.status }]
-      : [];
-  });
-  return {
-    ...reconciled,
-    projects: [
-      ...reconciled.projects,
-      ...unresolved.filter(
-        (project) => !reconciled.projects.some((candidate) => candidate.path === project.path),
-      ),
-    ],
-    results: batch.results,
-    completed: batch.completed,
-  };
+  const completed = session.completed || results.every((result) => result.status === "migrated");
+  const disk = paths.length > 0 || session.completed ? await options.registry.list() : options.diskProjects;
+  const reconciled = reconcileProjectsFromDiskWithRemap(disk, options.cachedProjects);
+  // Main canonicalizes the picked path, so its spelling may differ from the
+  // legacy renderer path (for example /var vs /private/var). The migration
+  // result is the proof-backed bridge for remapping renderer UI buckets.
+  for (const result of results) {
+    if (result.status !== "migrated" || !result.project) continue;
+    const legacy = options.cachedProjects.find((project) => project.path === result.path);
+    if (legacy && result.project.id && legacy.id !== result.project.id) {
+      reconciled.projectIdRemap[legacy.id] = result.project.id;
+    }
+  }
+  if (completed) clearLegacyProjectsAfterMigration();
+  return { ...reconciled, results, completed };
 }
 
-export function trackedProjectFromRegistry(
-  project: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0][number],
-): TrackedProject {
+export function trackedProjectFromRegistry(project: RegistryProject): TrackedProject {
   return reconcileProjectsFromDiskWithRemap([project], []).projects[0]!;
 }
 
@@ -287,6 +314,30 @@ export function projectPath(project: TrackedProject): string {
   return projectPrimary(project).path;
 }
 
+export function projectLabel(project: TrackedProject): string {
+  return project.displayName?.trim() || project.name;
+}
+
+export function sortProjects(projects: TrackedProject[]): TrackedProject[] {
+  return [...projects].sort((left, right) => {
+    if (Boolean(left.pinned) !== Boolean(right.pinned)) return left.pinned ? -1 : 1;
+    return left.addedAt - right.addedAt;
+  });
+}
+
+/** Legacy planner seam: Main resolution may create projects; renderer never mints ids. */
+export function makeCreateProjectForCwd(_projects: TrackedProject[]): {
+  createProjectForCwd: (_cwd: string) => null;
+  changed: () => false;
+} {
+  return { createProjectForCwd: () => null, changed: () => false };
+}
+
+export function projectIdForPath(path: string | undefined): string | undefined {
+  if (!path) return undefined;
+  return projectSnapshot.find((project) => project.roots.some((root) => root.path === path))?.id;
+}
+
 export async function resolveProjectCwds(
   cwds: readonly string[],
   source: "disk-rebuild" | "automation-import" | "live",
@@ -294,13 +345,6 @@ export async function resolveProjectCwds(
   Map<string, { projectId: string; rootId: string; created: boolean } | { noRepo: true } | null>
 > {
   const unique = [...new Set(cwds)];
-  const allowed = unique.filter((cwd) => !isProjectPathRemoved(cwd));
-  const resolutions = await window.codeshell.projectRegistry.resolveForCwdBatch(allowed, source);
-  const result = new Map<
-    string,
-    { projectId: string; rootId: string; created: boolean } | { noRepo: true } | null
-  >();
-  unique.forEach((cwd) => result.set(cwd, null));
-  allowed.forEach((cwd, index) => result.set(cwd, resolutions[index] ?? null));
-  return result;
+  const resolutions = await window.codeshell.projectRegistry.resolveForCwdBatch(unique, source);
+  return new Map(unique.map((cwd, index) => [cwd, resolutions[index] ?? null]));
 }

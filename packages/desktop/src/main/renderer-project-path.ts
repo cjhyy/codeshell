@@ -1,9 +1,6 @@
 import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { homedir } from "node:os";
-import { sessionsRoot } from "@cjhyy/code-shell-core";
-import { loadProjects } from "./recents-store.js";
-import { getSessionCwdIndex } from "./session-cwd-index.js";
 import {
   getProjectStore,
   type LocalProject,
@@ -15,7 +12,6 @@ const MAX_RENDERER_PATH_LENGTH = 32_768;
 interface RendererProjectPathOptions {
   registeredPaths?: readonly string[];
   noRepoPath?: string;
-  sessionRoot?: string;
 }
 
 interface RendererProjectRegistryOptions {
@@ -91,6 +87,15 @@ export async function requireRendererProjectRoot(
   return { project, root, rootId: root.id, path };
 }
 
+/** Resolve the current primary root from an opaque V2 project id. */
+export async function requireRendererProjectPrimary(
+  projectId: unknown,
+  options: RendererProjectRegistryOptions = {},
+): Promise<{ project: LocalProject; root: LocalProjectRoot; rootId: string; path: string }> {
+  const project = await requireRendererProject(projectId, options);
+  return requireRendererProjectRoot(project.id, project.primaryRootId, options);
+}
+
 /** Resolve an existing entry and identify the project root that contains its real target. */
 export async function requireRendererProjectRootEntry(
   projectId: unknown,
@@ -111,20 +116,12 @@ export async function requireRendererProjectRootEntry(
   throw new Error("project entry is outside the authorized project roots");
 }
 
-async function hasPersistedSessionRoot(sessionRoot: string, requested: string): Promise<boolean> {
-  const index = getSessionCwdIndex(sessionRoot);
-  await index.ensureLoaded();
-  return index.resolveConfirmedCwds([requested])[0] === true;
-}
-
 /**
  * Validate a renderer-supplied project path against main-owned facts.
  *
- * A directory becomes eligible only through the native project picker (which
- * records it in recents), the main-owned no-repo workspace, or a persisted
- * CodeShell session. The session fallback is deliberately retained for the
- * one-time legacy localStorage migration; it is a compatibility gate, not a
- * sandbox against a fully compromised first-party renderer.
+ * A directory becomes eligible only when it is a live V2 root or the
+ * main-owned no-repo workspace. Persisted Session cwd values are deliberately
+ * excluded: Session authority must flow through Session-scoped IPC.
  */
 export async function requireRendererProjectPath(
   input: unknown,
@@ -139,14 +136,12 @@ export async function requireRendererProjectPath(
   if (requested === noRepo) return requested;
 
   const registered =
-    options.registeredPaths ?? (await loadProjects()).map((project) => project.path);
+    options.registeredPaths ??
+    (await getProjectStore().list()).flatMap((project) => project.roots.map((root) => root.path));
   for (const path of registered) {
     if ((await canonicalDirectory(path)) === requested) return requested;
   }
 
-  if (await hasPersistedSessionRoot(options.sessionRoot ?? sessionsRoot(), requested)) {
-    return requested;
-  }
   throw new Error(`project path is not registered with CodeShell: ${String(input)}`);
 }
 

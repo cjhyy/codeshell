@@ -382,7 +382,7 @@ describe("WorkspaceIndicator", () => {
     ensureMiniDom();
     const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
       getSessionWorkspace: async () => mainWorkspace,
       listSessionWorktrees: async () => ({
         current: mainWorkspace,
@@ -430,7 +430,7 @@ describe("WorkspaceIndicator", () => {
     ensureMiniDom();
     const mainWorkspace: SessionWorkspace = { root: "/notes", kind: "main" };
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: false, current: null, branches: [] }),
+      getSessionGitBranches: async () => ({ isRepo: false, current: null, branches: [] }),
       getSessionWorkspace: async () => mainWorkspace,
       listSessionWorktrees: async () => ({
         current: mainWorkspace,
@@ -472,7 +472,7 @@ describe("WorkspaceIndicator", () => {
     ensureMiniDom();
     const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
       getSessionWorkspace: async () => mainWorkspace,
       listSessionWorktrees: async () => ({
         current: mainWorkspace,
@@ -515,9 +515,6 @@ describe("WorkspaceIndicator", () => {
       },
       getSessionWorkspace: async () => {
         throw new Error("must not fall back to current project path");
-      },
-      getGitBranches: async () => {
-        throw new Error("must not use project primary");
       },
       listProfiles: async () => {
         throw new Error("must not use project primary");
@@ -572,10 +569,6 @@ describe("WorkspaceIndicator", () => {
         calls.push(`profiles:${sessionId}`);
         return [{ name: "old-profile", label: "Old Profile", active: true }];
       },
-      getGitBranches: async (cwd: string) => {
-        calls.push(`generic-git:${cwd}`);
-        return { isRepo: false, current: null, branches: [] };
-      },
       listProfiles: async (cwd: string) => {
         calls.push(`generic-profiles:${cwd}`);
         return [];
@@ -611,7 +604,7 @@ describe("WorkspaceIndicator", () => {
     let currentBranch = "release/2026";
     let branchCalls = 0;
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => {
+      getSessionGitBranches: async () => {
         branchCalls += 1;
         return { isRepo: true, current: currentBranch, branches: [currentBranch] };
       },
@@ -660,7 +653,7 @@ describe("WorkspaceIndicator", () => {
       },
     };
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
       getSessionWorkspace: async () => worktree,
       listSessionWorktrees: async () => ({ current: worktree, mainRoot: "/repo", worktrees: [] }),
     };
@@ -691,7 +684,7 @@ describe("WorkspaceIndicator", () => {
     ensureMiniDom();
     const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: "release/main", branches: [] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: "release/main", branches: [] }),
       getSessionWorkspace: async () => mainWorkspace,
       listSessionWorktrees: async () => ({
         current: mainWorkspace,

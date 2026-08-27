@@ -287,10 +287,7 @@ export function WorkspaceIndicator({
       return;
     }
     try {
-      const res =
-        typeof window.codeshell.getSessionGitBranches === "function"
-          ? await window.codeshell.getSessionGitBranches(sessionId)
-          : await window.codeshell.getGitBranches(projectPath);
+      const res = await window.codeshell.getSessionGitBranches(sessionId);
       if (gitProbeRequestId.current !== requestId) return;
       setIsGitRepo(res.isRepo === true);
       setMainBranch(res.isRepo === true ? normalizeCurrentBranch(res.current) : null);

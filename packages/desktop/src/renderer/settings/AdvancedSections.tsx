@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { readScopedSettings } from "../settingsAuthority";
 import { Folder, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { projectLabel, type TrackedProject } from "../projects";
@@ -81,7 +82,7 @@ export function PersonalizationSection({ scope, activeProjectPath }: ScopedProps
   useEffect(() => {
     const generation = ++loadGeneration.current;
     void (async () => {
-      const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+      const s = (await readScopedSettings(scope, projectPath)) ?? {};
       if (loadGeneration.current !== generation) return;
       const agent = objectOf(s.agent);
       setInstructions(stringOf(agent.appendSystemPrompt));
@@ -150,7 +151,7 @@ export function ResponsePrefsSection({ scope, activeProjectPath }: ScopedProps) 
   useEffect(() => {
     const generation = ++loadGeneration.current;
     void (async () => {
-      const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+      const s = (await readScopedSettings(scope, projectPath)) ?? {};
       if (loadGeneration.current !== generation) return;
       const agent = objectOf(s.agent);
       setLanguage(stringOf(agent.responseLanguage));
@@ -214,7 +215,7 @@ export function InstructionFilesSection({ scope, activeProjectPath }: ScopedProp
   const writeChain = useRef<Promise<unknown>>(Promise.resolve());
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+    const s = (await readScopedSettings(scope, projectPath)) ?? {};
     const agent = objectOf(s.agent);
     const instr = objectOf(agent.instructions);
     const claude = instr.compatClaude !== false;
@@ -401,7 +402,7 @@ function ProjectHooksEditor({
 
   const load = async () => {
     try {
-      const s = (await window.codeshell.getSettings(scope, cwd ?? undefined)) ?? {};
+      const s = (await readScopedSettings(scope, cwd ?? undefined)) ?? {};
       setHooks(Array.isArray(s.hooks) ? (s.hooks as Array<Record<string, unknown>>) : []);
       const disabledPlugins = Array.isArray(s.disabledPlugins)
         ? (s.disabledPlugins as unknown[]).filter((x): x is string => typeof x === "string")
@@ -1081,7 +1082,7 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
   const { t } = useT();
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(targetScope, cwd)) ?? {};
+    const s = (await readScopedSettings(targetScope, cwd)) ?? {};
     const localEnvironment = objectOf(s.localEnvironment);
     setName(stringOf(localEnvironment.name) || projectName);
     setSetupScripts(scriptMapOf(localEnvironment.setupScripts));
@@ -1255,7 +1256,7 @@ export function ToggleCapabilitySection({
   const projectPath = scope === "project" ? (activeProjectPath ?? undefined) : undefined;
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+    const s = (await readScopedSettings(scope, projectPath)) ?? {};
     setEnabled(objectOf(s[settingKey]).enabled === true);
   };
   useEffect(() => {
@@ -1311,7 +1312,7 @@ export function ImageSettingsSection({ scope, activeProjectPath }: ScopedProps) 
   const { t } = useT();
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, projectPath)) ?? {};
+    const s = (await readScopedSettings(scope, projectPath)) ?? {};
     const images = objectOf(s.images);
     // Migrate legacy "original" → "high".
     const d = images.detail === "original" ? "high" : images.detail;
@@ -1325,7 +1326,7 @@ export function ImageSettingsSection({ scope, activeProjectPath }: ScopedProps) 
     setDetail(next);
     setSaving(true);
     try {
-      const current = objectOf((await window.codeshell.getSettings(scope, projectPath))?.images);
+      const current = objectOf((await readScopedSettings(scope, projectPath))?.images);
       const nextImages = next ? { ...current, detail: next } : { ...current, detail: undefined };
       await writeSettings(scope, { images: nextImages }, projectPath);
     } finally {

@@ -166,7 +166,7 @@ describe("Sidebar project session visibility", () => {
     ensureMiniDom();
     Object.assign(window, {
       codeshell: {
-        getGitStatus: async () => ({ branch: "main" }),
+        getProjectGitStatus: async () => ({ branch: "main" }),
       },
     });
 
@@ -223,7 +223,7 @@ describe("Sidebar project session visibility", () => {
           calls.push(`git:${sessionId}`);
           return { branch: "old-main", entries: [], clean: true };
         },
-        getGitStatus: async () => {
+        getProjectGitStatus: async () => {
           calls.push("generic-git");
           return { branch: "new-primary", entries: [], clean: true };
         },
@@ -286,7 +286,7 @@ describe("Sidebar project session visibility", () => {
     };
     Object.assign(window, {
       codeshell: {
-        getGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
+        getProjectGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
         getSessionWorkspaceAuthority: async (sessionId: string) =>
           sessionId === "engine-missing-dir"
             ? {

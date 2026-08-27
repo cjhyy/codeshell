@@ -319,7 +319,7 @@ export function useSessionNavigation({
     const projectsNow = loadProjects();
     const touchedProjectIds = new Set<string | null>();
     const projectFactory = makeCreateProjectForCwd(projectsNow);
-    const cwd = await resolveProjectCwd(run.cwd);
+    const cwd = run.cwd;
     const resolvedForCwd = await resolveProjectCwds([cwd], "automation-import");
     await importAutomationRuns(
       [{ ...run, sessionId: run.sessionId, cwd, source: "automation" }],
@@ -364,7 +364,7 @@ export function useSessionNavigation({
     }
     const projectsNow = loadProjects();
     const projectFactory = makeCreateProjectForCwd(projectsNow);
-    const cwd = await resolveProjectCwd(session.cwd);
+    const cwd = session.cwd;
     const resolvedForCwd = await resolveProjectCwds([cwd], "disk-rebuild");
     const [placement] = planDiskRebuild([{ ...session, cwd }], projectsNow, {
       caseInsensitive: isCaseInsensitivePlatform(),
@@ -405,13 +405,4 @@ export function useSessionNavigation({
     handleOpenAutomationRunSession: openAutomationRunSession,
     handleOpenAutomationDiskSession: openAutomationDiskSession,
   };
-}
-
-async function resolveProjectCwd(cwd: string): Promise<string> {
-  if (!cwd) return cwd;
-  try {
-    return (await window.codeshell.projects.resolveRoot(cwd)).path;
-  } catch {
-    return cwd;
-  }
 }

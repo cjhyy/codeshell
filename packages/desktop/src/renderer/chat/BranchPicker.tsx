@@ -7,6 +7,7 @@ import { useAnchoredPopover } from "./useAnchoredPopover";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
+  projectId: string | null;
   cwd: string | null;
   clean?: boolean | null;
   disabled?: boolean;
@@ -18,7 +19,7 @@ function notifyGitBranchesChanged(cwd: string): void {
   window.dispatchEvent(new CustomEvent("codeshell:git-branches-changed", { detail: { cwd } }));
 }
 
-export function BranchPicker({ cwd, clean, disabled }: Props) {
+export function BranchPicker({ projectId, cwd, clean, disabled }: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<LoadState>("idle");
@@ -42,7 +43,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
   });
 
   useEffect(() => {
-    if (!cwd) {
+    if (!projectId || !cwd) {
       setOpen(false);
       setState("unavailable");
       setBranches({ isRepo: false, current: null, branches: [] });
@@ -54,7 +55,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
     setState("loading");
     setError(null);
     window.codeshell
-      .getGitBranches(cwd)
+      .getProjectGitBranches(projectId)
       .then((result) => {
         if (cancelled) return;
         setBranches(result);
@@ -70,7 +71,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [cwd]);
+  }, [cwd, projectId]);
 
   useEffect(() => {
     if (!open) {
@@ -102,12 +103,12 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
   })();
 
   const switchClean = async (branch: string): Promise<void> => {
-    if (!cwd) return;
+    if (!projectId || !cwd) return;
     const previous = branches;
     setState("loading");
     setError(null);
     try {
-      const next = await window.codeshell.switchGitBranch(cwd, branch);
+      const next = await window.codeshell.switchProjectGitBranch(projectId, branch);
       setBranches(next);
       setState(next.isRepo && next.branches.length > 0 ? "ready" : "unavailable");
       setPendingBranch(null);
@@ -121,12 +122,12 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
   };
 
   const stashAndSwitch = async (): Promise<void> => {
-    if (!cwd || !pendingBranch) return;
+    if (!projectId || !cwd || !pendingBranch) return;
     const previous = branches;
     setState("loading");
     setError(null);
     try {
-      const next = await window.codeshell.stashAndSwitchGitBranch(cwd, pendingBranch);
+      const next = await window.codeshell.stashAndSwitchProjectGitBranch(projectId, pendingBranch);
       setBranches(next);
       setState(next.isRepo && next.branches.length > 0 ? "ready" : "unavailable");
       setPendingBranch(null);
@@ -140,13 +141,13 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
   };
 
   const choose = async (branch: string): Promise<void> => {
-    if (!cwd || branch === branches.current) {
+    if (!projectId || !cwd || branch === branches.current) {
       setOpen(false);
       return;
     }
     setError(null);
     try {
-      const status = await window.codeshell.getGitStatus(cwd);
+      const status = await window.codeshell.getProjectGitStatus(projectId);
       if (!status.clean) {
         setPendingBranch(branch);
         return;

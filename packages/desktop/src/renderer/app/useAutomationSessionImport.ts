@@ -36,15 +36,6 @@ export interface AutomationSessionImportResult {
   loadDiskSessionCatalogPage: (cursor?: string) => Promise<void>;
 }
 
-async function resolveProjectCwd(cwd: string): Promise<string> {
-  if (!cwd) return cwd;
-  try {
-    return (await window.codeshell.projects.resolveRoot(cwd)).path;
-  } catch {
-    return cwd;
-  }
-}
-
 /** Imports automation/disk sessions into the renderer's sidebar projection. */
 export function useAutomationSessionImport({
   sessionIndicesRef,
@@ -79,11 +70,6 @@ export function useAutomationSessionImport({
         return;
       }
       if (cancelled || runs.length === 0) return;
-      runs = await Promise.all(
-        runs.map(async (run) => ({ ...run, cwd: await resolveProjectCwd(run.cwd) })),
-      );
-      if (cancelled) return;
-
       const terminalRun = new Set(["completed", "failed", "cancelled"]);
       const dedupable = (session: SessionSummary): boolean =>
         session.source !== "automation" || !session.runStatus || terminalRun.has(session.runStatus);
@@ -156,17 +142,7 @@ export function useAutomationSessionImport({
           (session) =>
             !knownIds.has(session.id) && !knownIds.has(session.engineSessionId || session.id),
         );
-        const resolvedCwds = new Map<string, Promise<string>>();
-        const resolveOnce = (cwd: string): Promise<string> => {
-          const existing = resolvedCwds.get(cwd);
-          if (existing) return existing;
-          const resolving = resolveProjectCwd(cwd);
-          resolvedCwds.set(cwd, resolving);
-          return resolving;
-        };
-        const resolvedSessions = await Promise.all(
-          missing.map(async (session) => ({ ...session, cwd: await resolveOnce(session.cwd) })),
-        );
+        const resolvedSessions = missing;
         const projectsNow = loadProjects();
         const projectFactory = makeCreateProjectForCwd(projectsNow);
         const resolvedForCwd = await resolveProjectCwds(
@@ -228,5 +204,3 @@ export function useAutomationSessionImport({
 
   return { diskSessionCatalog, loadDiskSessionCatalogPage };
 }
-
-export { resolveProjectCwd };

@@ -347,7 +347,15 @@ export function MessageStream({
 
   const renderStreamItem = (m: RenderedStreamItem): React.ReactNode => {
     if (m.kind === "turn_process_group") {
-      return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
+      return (
+        <TurnProcessGroupCard
+          key={m.id}
+          group={m}
+          turnEpoch={turnEpoch}
+          cwd={cwd}
+          sessionId={engineSessionId}
+        />
+      );
     }
     if (m.kind === "tool_group") {
       return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} cwd={cwd} />;
@@ -420,7 +428,14 @@ export function MessageStream({
         );
       }
       case "assistant":
-        return <AssistantMessageView key={m.id} message={m} cwd={cwd ?? null} />;
+        return (
+          <AssistantMessageView
+            key={m.id}
+            message={m}
+            cwd={cwd ?? null}
+            sessionId={engineSessionId}
+          />
+        );
       case "thinking":
         return <ThinkingMessageView key={m.id} message={m} />;
       case "agent":

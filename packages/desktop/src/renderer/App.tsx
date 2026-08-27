@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { readScopedSettings } from "./settingsAuthority";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import type { ContextPackageCreatedOptions } from "./MessageStream";
@@ -71,6 +72,7 @@ import {
   loadProjects,
   saveProjects,
   loadActiveProjectId,
+  readLegacyProjectsForMigration,
   saveActiveProjectId,
   migrateLegacyProjects,
   unmarkProjectPathRemoved,
@@ -464,7 +466,7 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!activeProject?.path) {
+    if (!activeProject) {
       setSessionWorkspaceProfiles([]);
       return;
     }
@@ -716,10 +718,8 @@ function App() {
       off?.();
     };
   }, []);
-  // Disk recents are the source of truth for the project SET + pinned/soft-delete.
-  // Hydrate from disk on mount and re-project on every change (another window, a
-  // phone, or our own add/remove/pin), reconciling against the localStorage cache
-  // so each known path keeps its stable projectId (session buckets stay intact).
+  // Main's V2 ProjectStore is the sole project id/root authority. localStorage
+  // is read once below only to preserve upgrade-only buckets and paths.
   useEffect(() => {
     const registry = window.codeshell.projectRegistry;
     if (!registry) return;
@@ -728,27 +728,25 @@ function App() {
       diskProjects: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0],
     ): void => {
       if (!alive) return;
-      setProjects((prev) => reconcileProjectsFromDiskWithRemap(diskProjects, prev).projects);
+      const next = reconcileProjectsFromDiskWithRemap(diskProjects, loadProjects()).projects;
+      setProjects(next);
+      setSessionIndices((prev) => {
+        const updated = { ...prev };
+        for (const project of next) {
+          if (!updated[project.id]) updated[project.id] = loadSessionIndex(project.id);
+        }
+        return updated;
+      });
     };
     void (async () => {
-      // Back-fill legacy localStorage-only projects through Main's per-path
-      // result. Unprovable paths stay visible and retryable until the user
-      // reselects that exact folder in the native picker.
+      // Back-fill localStorage-only projects only through the dedicated token
+      // + same-call native picker proof flow. Failed paths remain in
+      // codeshell.repos for the next retry and never join the live snapshot.
       const disk = await registry.list();
-      const cached = loadProjects();
-      const normalizedCached = await Promise.all(
-        cached.map(async (r) => {
-          try {
-            const root = await window.codeshell.projects.resolveRoot(r.path);
-            return { ...r, path: root.path, name: r.name || root.name };
-          } catch {
-            return r;
-          }
-        }),
-      );
+      const cached = readLegacyProjectsForMigration();
       const { projects: reconciled, projectIdRemap } = await migrateLegacyProjects({
         diskProjects: disk,
-        cachedProjects: normalizedCached,
+        cachedProjects: cached,
         registry,
       });
       const remapEntries = Object.entries(projectIdRemap);
@@ -759,6 +757,13 @@ function App() {
       }
       if (!alive) return;
       setProjects(reconciled);
+      setSessionIndices((prev) => {
+        const next = { ...prev };
+        for (const project of reconciled) {
+          if (!next[project.id]) next[project.id] = loadSessionIndex(project.id);
+        }
+        return next;
+      });
       if (remapEntries.length > 0) {
         setActiveProjectId((prev) => (prev && projectIdRemap[prev] ? projectIdRemap[prev] : prev));
         setPermissionOverrides((prev) => migrateProjectBucketOverrides(prev, projectIdRemap));
@@ -780,16 +785,6 @@ function App() {
     // Mount-only: the subscription handles all subsequent changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  useEffect(() => {
-    void window.codeshell.mobileRemote.updateProjects(
-      sortProjects(projects).map((project) => ({
-        path: project.path,
-        name: projectLabel(project),
-        addedAt: project.addedAt,
-        pinned: Boolean(project.pinned),
-      })),
-    );
-  }, [projects]);
   useEffect(() => {
     const entries: MobilePermissionModeSnapshotEntry[] = [];
     const seen = new Set<string>();
@@ -889,7 +884,7 @@ function App() {
       };
     }
     void window.codeshell
-      .getGitStatus(activeProject.path)
+      .getProjectGitStatus(activeProject.id)
       .then((status) => {
         if (!cancelled) {
           setActiveGitMeta({
@@ -904,7 +899,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeProject?.path, busy]);
+  }, [activeProject?.id, busy]);
 
   // No auto-create here: a null activeSessionId is the legitimate
   // "draft" state. A real session row only appears after the user
@@ -1429,7 +1424,7 @@ function App() {
     const refresh = async (): Promise<void> => {
       try {
         const cwd = activeProject?.path;
-        const projectS = cwd ? ((await window.codeshell.getSettings("project", cwd)) ?? {}) : {};
+        const projectS = cwd ? ((await readScopedSettings("project", cwd)) ?? {}) : {};
         const userS = (await window.codeshell.getSettings("user")) ?? {};
         const merged: Record<string, unknown> = { ...userS, ...projectS };
         // Unified catalog (统一模型接入方案 §6): the composer picker lists text
