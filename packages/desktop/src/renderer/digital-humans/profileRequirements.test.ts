@@ -19,7 +19,6 @@ function harness(preview: {
     installCalls: () => installCalls,
     options: {
       name: "director",
-      projectPath: "/repo",
       configurationTarget: { projectId: "project" } as const,
       api: {
         previewProfileRequirements: async () => preview,
@@ -51,7 +50,6 @@ describe("ensureDigitalHumanRequirements", () => {
     expect(
       await ensureDigitalHumanRequirements({
         ...h.options,
-        projectPath: "/old-root",
         configurationTarget: { sessionId: "old-session" },
       }),
     ).toBe(true);
@@ -63,6 +61,23 @@ describe("ensureDigitalHumanRequirements", () => {
     expect(await ensureDigitalHumanRequirements(h.options)).toBe(true);
     expect(h.confirmations).toEqual([]);
     expect(h.installCalls()).toBe(0);
+  });
+
+  test("uses an explicit no-repo target and fails before a requirements read", async () => {
+    const h = harness({ needsInstall: false, willRun: [], warnings: [], blockers: [] });
+    let previewCalls = 0;
+    h.options.api.previewProfileRequirements = async () => {
+      previewCalls += 1;
+      return { needsInstall: false, willRun: [], warnings: [], blockers: [] };
+    };
+    expect(
+      await ensureDigitalHumanRequirements({
+        ...h.options,
+        configurationTarget: { noRepo: true },
+      }),
+    ).toBe(false);
+    expect(previewCalls).toBe(0);
+    expect(h.toasts).toHaveLength(1);
   });
 
   test("reviews and installs missing Skills", async () => {

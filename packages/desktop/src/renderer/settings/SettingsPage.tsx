@@ -60,6 +60,7 @@ import {
 import { projectLabel } from "../projects";
 import type { TrackedProject } from "../projects";
 import type { SessionIndex } from "../transcripts";
+import type { RendererConfigurationTarget } from "../../preload/types";
 import { useT } from "../i18n/I18nProvider";
 import type { TFunction } from "../i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
@@ -364,6 +365,14 @@ export function SettingsPage({
     scopeState.kind === "project"
       ? (projects.find((project) => project.path === scopeState.path) ?? null)
       : null;
+  const digitalHumansProjectId =
+    scopeState.kind === "project"
+      ? (scopeProject?.id ?? null)
+      : (projects.find((project) => project.path === activeProjectPath)?.id ?? null);
+  const digitalHumansConfigurationTarget = useMemo<RendererConfigurationTarget>(
+    () => (digitalHumansProjectId ? { projectId: digitalHumansProjectId } : { noRepo: true }),
+    [digitalHumansProjectId],
+  );
   const showTrafficLightGutter = isMac && !isFullscreen;
   const activeModule = MODULES.find((module) => module.id === active) ?? MODULES[0];
   const activeUsesPageScope = activeModule ? moduleUsesPageScope(activeModule) : true;
@@ -668,6 +677,7 @@ export function SettingsPage({
                   // Global library editing still needs the active project for
                   // requirement installation and project-scoped Skill status.
                   projectPath={scopeProjectPath ?? activeProjectPath}
+                  configurationTarget={digitalHumansConfigurationTarget}
                   onOpenDigitalHumans={onOpenDigitalHumans}
                 />
               )}

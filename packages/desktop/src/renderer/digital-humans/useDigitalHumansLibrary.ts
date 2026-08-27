@@ -6,14 +6,13 @@ import type {
   DigitalHumanSkillEntry,
 } from "./types";
 import type { RendererConfigurationTarget } from "../../preload/types";
-import { optionalProjectConfigurationTarget } from "../configurationTarget";
 
 export interface DigitalHumansLibraryApi {
-  listProfiles(target: RendererConfigurationTarget | null): Promise<DigitalHumanProfileEntry[]>;
+  listProfiles(target: RendererConfigurationTarget): Promise<DigitalHumanProfileEntry[]>;
   listProfileCatalog(): Promise<DigitalHumanCatalogEntry[]>;
   listDigitalHumanTeams(): Promise<DigitalHumanTeam[]>;
   listSkills(
-    target: RendererConfigurationTarget | null,
+    target: RendererConfigurationTarget,
     options: { includeDisabled: true },
   ): Promise<DigitalHumanSkillEntry[]>;
 }
@@ -31,7 +30,7 @@ export interface DigitalHumansLibraryState {
 }
 
 export function useDigitalHumansLibrary(
-  activeProjectPath: string | null,
+  target: RendererConfigurationTarget,
   api: DigitalHumansLibraryApi = window.codeshell,
 ): DigitalHumansLibraryState {
   const [profiles, setProfiles] = React.useState<DigitalHumanProfileEntry[]>([]);
@@ -41,61 +40,77 @@ export function useDigitalHumansLibrary(
   const [status, setStatus] = React.useState<DigitalHumansLibraryStatus>("loading");
   const [error, setError] = React.useState<string | null>(null);
   const requestGeneration = React.useRef(0);
-  const loadedProjectPath = React.useRef<string | null | undefined>(undefined);
+  const targetRef = React.useRef(target);
+  targetRef.current = target;
+  const targetKey =
+    "projectId" in target
+      ? `project:${target.projectId}`
+      : "sessionId" in target
+        ? `session:${target.sessionId}`
+        : "no-repo";
+  const targetKeyRef = React.useRef(targetKey);
+  targetKeyRef.current = targetKey;
+  const loadedTargetKey = React.useRef<string | undefined>(undefined);
 
   const refresh = React.useCallback(async () => {
     const generation = ++requestGeneration.current;
-    const hasCurrentProjectData = loadedProjectPath.current === activeProjectPath;
-    const projectChanged =
-      loadedProjectPath.current !== undefined && loadedProjectPath.current !== activeProjectPath;
-    if (projectChanged) {
+    const requestTarget = targetRef.current;
+    const requestTargetKey = targetKeyRef.current;
+    const hasCurrentTargetData = loadedTargetKey.current === requestTargetKey;
+    const targetChanged =
+      loadedTargetKey.current !== undefined && loadedTargetKey.current !== requestTargetKey;
+    if (targetChanged) {
       // Profiles contain a project-specific `active` flag and skills can be
       // project-filtered. Never render the previous project's values while a
       // new project is loading or after its first load fails.
       setProfiles([]);
       setAvailableSkills([]);
-      loadedProjectPath.current = undefined;
+      loadedTargetKey.current = undefined;
     }
-    setStatus(hasCurrentProjectData ? "refreshing" : "loading");
+    setStatus(hasCurrentTargetData ? "refreshing" : "loading");
     setError(null);
     try {
-      const target = optionalProjectConfigurationTarget(activeProjectPath);
       const [nextProfiles, nextCatalog, nextTeams, nextSkills] = await Promise.all([
-        api.listProfiles(target),
+        api.listProfiles(requestTarget),
         api.listProfileCatalog(),
         api.listDigitalHumanTeams(),
-        api.listSkills(target, { includeDisabled: true }),
+        api.listSkills(requestTarget, { includeDisabled: true }),
       ]);
       if (generation !== requestGeneration.current) return false;
       setProfiles(nextProfiles);
       setCatalog(nextCatalog);
       setTeams(nextTeams);
       setAvailableSkills(nextSkills);
-      loadedProjectPath.current = activeProjectPath;
+      loadedTargetKey.current = requestTargetKey;
       setStatus("ready");
       return true;
     } catch (caught) {
       if (generation !== requestGeneration.current) return false;
       setError(caught instanceof Error ? caught.message : String(caught));
-      setStatus(hasCurrentProjectData ? "ready" : "error");
+      setStatus(hasCurrentTargetData ? "ready" : "error");
       return false;
     }
-  }, [activeProjectPath, api]);
+  }, [api]);
 
   React.useEffect(() => {
     void refresh();
     return () => {
       requestGeneration.current += 1;
     };
-  }, [refresh]);
+  }, [refresh, targetKey]);
+
+  // A prop change renders before the replacement effect starts. Mask data
+  // synchronously in that render so even one frame cannot expose A under B.
+  const masksPreviousTarget =
+    loadedTargetKey.current !== undefined && loadedTargetKey.current !== targetKey;
 
   return {
-    profiles,
+    profiles: masksPreviousTarget ? [] : profiles,
     catalog,
     teams,
-    availableSkills,
-    status,
-    error,
+    availableSkills: masksPreviousTarget ? [] : availableSkills,
+    status: masksPreviousTarget ? "loading" : status,
+    error: masksPreviousTarget ? null : error,
     refresh,
   };
 }

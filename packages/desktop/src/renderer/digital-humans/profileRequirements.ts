@@ -2,7 +2,6 @@ import type { TFunction } from "../i18n/I18nProvider";
 import type { ConfirmDialogOptions } from "../ui/dialogState";
 import type { ToastOptions } from "../ui/toastState";
 import type { RendererConfigurationTarget } from "../../preload/types";
-import { requireProjectConfigurationTarget } from "../configurationTarget";
 
 interface RequirementsApi {
   previewProfileRequirements(
@@ -22,8 +21,7 @@ interface RequirementsApi {
 
 export interface EnsureDigitalHumanRequirementsOptions {
   name: string;
-  projectPath: string | null;
-  configurationTarget?: RendererConfigurationTarget;
+  configurationTarget: RendererConfigurationTarget;
   api: RequirementsApi;
   confirm: (options: ConfirmDialogOptions) => Promise<boolean>;
   toast: (options: ToastOptions) => void;
@@ -40,22 +38,20 @@ export interface EnsureDigitalHumanRequirementsOptions {
  */
 export async function ensureDigitalHumanRequirements({
   name,
-  projectPath,
   configurationTarget,
   api,
   confirm,
   toast,
   t,
 }: EnsureDigitalHumanRequirementsOptions): Promise<boolean> {
-  if (!projectPath && !configurationTarget) {
+  if ("noRepo" in configurationTarget) {
     toast({ message: t("digitalHumans.pickProject"), variant: "error" });
     return false;
   }
 
   let preview: Awaited<ReturnType<RequirementsApi["previewProfileRequirements"]>>;
-  const target = configurationTarget ?? requireProjectConfigurationTarget(projectPath ?? "");
   try {
-    preview = await api.previewProfileRequirements(name, target);
+    preview = await api.previewProfileRequirements(name, configurationTarget);
   } catch (error) {
     toast({
       message: t("digitalHumans.requirements.checkFailed", {
@@ -90,7 +86,7 @@ export async function ensureDigitalHumanRequirements({
   if (!accepted) return false;
 
   try {
-    const result = await api.installProfileRequirements(name, target);
+    const result = await api.installProfileRequirements(name, configurationTarget);
     if (result.ok) return true;
     toast({
       message: t("digitalHumans.requirements.installFailed", {

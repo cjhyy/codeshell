@@ -44,7 +44,11 @@ describe("DigitalHumansSection — pet external session toggles (global scope)",
       // The editor dialog now uses useConfirm (unsaved-changes guard), which
       // requires the provider main.tsx wraps the whole app in.
       <DialogProvider>
-        <DigitalHumansSection scope="user" projectPath={null} />
+        <DigitalHumansSection
+          scope="user"
+          projectPath={null}
+          configurationTarget={{ noRepo: true }}
+        />
       </DialogProvider>,
     );
     // Codex toggle
@@ -63,7 +67,11 @@ describe("DigitalHumansSection — pet external session toggles (global scope)",
       // The editor dialog now uses useConfirm (unsaved-changes guard), which
       // requires the provider main.tsx wraps the whole app in.
       <DialogProvider>
-        <DigitalHumansSection scope="user" projectPath={null} />
+        <DigitalHumansSection
+          scope="user"
+          projectPath={null}
+          configurationTarget={{ noRepo: true }}
+        />
       </DialogProvider>,
     );
     const unchecked = html.match(/aria-checked="false"/g) ?? [];
@@ -84,7 +92,11 @@ describe("DigitalHumansSection — pet external session toggles (global scope)",
     ]);
     const html = renderToStaticMarkup(
       <DialogProvider>
-        <DigitalHumansSection scope="project" projectPath="/a" />
+        <DigitalHumansSection
+          scope="project"
+          projectPath="/a"
+          configurationTarget={{ projectId: "project-a" }}
+        />
       </DialogProvider>,
     );
     expect(html).toContain("给这个 Workspace 设一个默认数字同事");
@@ -296,10 +308,7 @@ describe("PetExternalSessionsToggles — toggle interaction (global scope)", () 
     await clickSwitch(codexSwitch);
 
     expect(updateArgs).toEqual([
-      [
-        "project-a",
-        { capabilityOverrides: { pet: { showExternalCodexSessions: "off" } } },
-      ],
+      ["project-a", { capabilityOverrides: { pet: { showExternalCodexSessions: "off" } } }],
     ]);
     expect(reactPropsOf(switchButtons(container)[0])["aria-checked"]).toBe(false);
   });

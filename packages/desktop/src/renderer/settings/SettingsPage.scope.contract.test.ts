@@ -25,6 +25,13 @@ describe("SettingsPage scope contract", () => {
     expect(source).toContain("scopeProjectPath");
   });
 
+  test("digital humans receive stable project or explicit no-repo authority", () => {
+    expect(source).toContain("digitalHumansConfigurationTarget");
+    expect(source).toContain("{ projectId: digitalHumansProjectId }");
+    expect(source).toContain("{ noRepo: true }");
+    expect(source).toContain("configurationTarget={digitalHumansConfigurationTarget}");
+  });
+
   test("opening with an initial project preselects project scope", () => {
     expect(source).toContain("initialProjectPath");
   });

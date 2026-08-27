@@ -15,12 +15,14 @@ import type { DigitalHumanProfileEntry, DigitalHumanSkillEntry } from "../digita
 import { ProfileSection } from "./ProfileSection";
 import { writeSettings } from "../settingsBus";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
-import { optionalProjectConfigurationTarget } from "../configurationTarget";
+import type { RendererConfigurationTarget } from "../../preload/types";
 
 interface Props {
   scope: "user" | "project";
   /** Selected/active project, used for activation and Skill installation status. */
   projectPath: string | null;
+  /** Stable Main-resolved authority for every profile/Skill operation. */
+  configurationTarget: RendererConfigurationTarget;
   /** Jump to the full digital-humans page (market / teams). */
   onOpenDigitalHumans?: () => void;
 }
@@ -33,12 +35,17 @@ function errorMessage(caught: unknown): string {
  * 设置中心「数字人」模块。全局 scope = 数字人库管理(与数字人页共享同一
  * 编辑对话框);项目 scope = 按项目激活/关闭(复用 ProfileSection)。
  *
- * 全局 scope 下 listProfiles(null) 使用 user library；条目仍是完整的 WorkspaceProfile
+ * 全局 scope 下使用显式 no-repo 或当前 project target；条目仍是完整的 WorkspaceProfile
  * 投影(plugins/skills/mcp/agents 等字段齐全,编辑保存不会丢配置)。列表
  * 不显示激活状态 —— 「项目默认」属于项目上下文,由项目 scope 的
  * ProfileSection 负责展示与切换。
  */
-export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }: Props) {
+export function DigitalHumansSection({
+  scope,
+  projectPath,
+  configurationTarget,
+  onOpenDigitalHumans,
+}: Props) {
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
@@ -54,12 +61,11 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
   const [error, setError] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
-    const target = optionalProjectConfigurationTarget(projectPath);
     // Profiles are the primary content; a skills failure only degrades the
     // editor's skill picker, so it must not discard a fetched profile list.
     const [profileResult, skillResult] = await Promise.allSettled([
-      window.codeshell.listProfiles(target),
-      window.codeshell.listSkills(target, { includeDisabled: true }),
+      window.codeshell.listProfiles(configurationTarget),
+      window.codeshell.listSkills(configurationTarget, { includeDisabled: true }),
     ]);
     if (profileResult.status === "fulfilled") {
       setProfiles(profileResult.value);
@@ -77,7 +83,7 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
         variant: "error",
       });
     }
-  }, [projectPath, t, toast]);
+  }, [configurationTarget, t, toast]);
 
   React.useEffect(() => {
     if (scope === "user") void refresh();
@@ -87,7 +93,7 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
     if (!projectPath) return null;
     return (
       <div className="space-y-4">
-        <ProfileSection cwd={projectPath} />
+        <ProfileSection configurationTarget={configurationTarget} />
         <PetExternalSessionsToggles scope="project" projectPath={projectPath} />
       </div>
     );
@@ -102,12 +108,12 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
     setBusy(true);
     setInstallingRequirements(Boolean(options?.installRequirements));
     try {
-      await window.codeshell.saveProfile(profile, optionalProjectConfigurationTarget(projectPath));
+      await window.codeshell.saveProfile(profile, configurationTarget);
       await refresh();
       if (options?.installRequirements) {
         const ready = await ensureDigitalHumanRequirements({
           name: profile.name,
-          projectPath,
+          configurationTarget,
           api: window.codeshell,
           confirm,
           toast,
@@ -261,7 +267,7 @@ export function DigitalHumansSection({ scope, projectPath, onOpenDigitalHumans }
           existingIds={profiles.map((profile) => profile.name)}
           skills={skills.filter((skill) => skill.source !== "project")}
           projectSkills={skills.filter((skill) => skill.source === "project")}
-          projectPath={projectPath}
+          configurationTarget={configurationTarget}
           busy={busy}
           installing={installingRequirements}
           onRequirementsInstalled={refresh}

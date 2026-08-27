@@ -4,18 +4,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { DialogProvider } from "../ui/DialogProvider";
 import { ProfileSection } from "./ProfileSection";
-import { saveProjects } from "../projects";
-
-saveProjects([
-  {
-    id: "project-repo",
-    name: "repo",
-    path: "/repo",
-    roots: [{ id: "root-repo", path: "/repo", name: "repo", addedAt: 1 }],
-    primaryRootId: "root-repo",
-    addedAt: 1,
-  },
-]);
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -87,7 +75,7 @@ describe("ProfileSection", () => {
     await act(async () => {
       root?.render(
         <DialogProvider>
-          <ProfileSection cwd="/repo" />
+          <ProfileSection configurationTarget={{ projectId: "project-repo" }} />
         </DialogProvider>,
       );
       await flushMicrotasks();
@@ -147,7 +135,7 @@ describe("ProfileSection", () => {
     await act(async () => {
       root?.render(
         <DialogProvider>
-          <ProfileSection cwd="/repo" />
+          <ProfileSection configurationTarget={{ projectId: "project-repo" }} />
         </DialogProvider>,
       );
       await flushMicrotasks();

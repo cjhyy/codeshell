@@ -6,6 +6,7 @@ import {
   useDigitalHumansLibrary,
   type DigitalHumansLibraryApi,
 } from "./useDigitalHumansLibrary";
+import type { RendererConfigurationTarget } from "../../preload/types";
 import { useDigitalHumanTeamDraft } from "./DigitalHumansView";
 import {
   DIGITAL_HUMAN_TEAM_MEMBER_MAX,
@@ -45,21 +46,28 @@ afterEach(async () => {
 });
 
 describe("useDigitalHumansLibrary", () => {
+  type LibraryTarget = Parameters<typeof useDigitalHumansLibrary>[0];
+  const _stableTargetIsAccepted: LibraryTarget = { projectId: "project-a" };
+  const _legacyPathIsRejected: string extends LibraryTarget ? false : true = true;
+  void _stableTargetIsAccepted;
+  void _legacyPathIsRejected;
+
   test("does not let an older project response overwrite the latest project", async () => {
     ensureMiniDom();
     const first = deferred<ReturnType<typeof profile>[]>();
     const second = deferred<ReturnType<typeof profile>[]>();
     const api: DigitalHumansLibraryApi = {
-      listProfiles: (cwd) => (cwd === "/project-a" ? first.promise : second.promise),
+      listProfiles: (target) =>
+        "projectId" in target && target.projectId === "project-a" ? first.promise : second.promise,
       listProfileCatalog: async () => [],
       listDigitalHumanTeams: async () => [],
       listSkills: async () => [],
     };
-    let activeProjectPath = "/project-a";
-    const hook = await renderHook(() => useDigitalHumansLibrary(activeProjectPath, api));
+    let target: RendererConfigurationTarget = { projectId: "project-a" };
+    const hook = await renderHook(() => useDigitalHumansLibrary(target, api));
     cleanup = hook.unmount;
 
-    activeProjectPath = "/project-b";
+    target = { projectId: "project-b" };
     await hook.rerender();
     await act(async () => {
       second.resolve([profile("new-project")]);
@@ -76,21 +84,25 @@ describe("useDigitalHumansLibrary", () => {
     ensureMiniDom();
     const next = deferred<ReturnType<typeof profile>[]>();
     const api: DigitalHumansLibraryApi = {
-      listProfiles: (cwd) =>
-        cwd === "/project-a" ? Promise.resolve([profile("project-a-profile")]) : next.promise,
+      listProfiles: (target) =>
+        "projectId" in target && target.projectId === "project-a"
+          ? Promise.resolve([profile("project-a-profile")])
+          : next.promise,
       listProfileCatalog: async () => [],
       listDigitalHumanTeams: async () => [],
-      listSkills: async (cwd) =>
-        cwd === "/project-a" ? [{ name: "project-a-skill", description: "" }] : [],
+      listSkills: async (target) =>
+        "projectId" in target && target.projectId === "project-a"
+          ? [{ name: "project-a-skill", description: "" }]
+          : [],
     };
-    let activeProjectPath = "/project-a";
-    const hook = await renderHook(() => useDigitalHumansLibrary(activeProjectPath, api));
+    let target: RendererConfigurationTarget = { projectId: "project-a" };
+    const hook = await renderHook(() => useDigitalHumansLibrary(target, api));
     cleanup = hook.unmount;
     expect(hook.result.current.status).toBe("ready");
     expect(hook.result.current.profiles).toHaveLength(1);
     expect(hook.result.current.availableSkills).toHaveLength(1);
 
-    activeProjectPath = "/project-b";
+    target = { projectId: "project-b" };
     await hook.rerender();
     expect(hook.result.current.status).toBe("loading");
     expect(hook.result.current.profiles).toEqual([]);
@@ -104,31 +116,68 @@ describe("useDigitalHumansLibrary", () => {
     expect(hook.result.current.profiles).toEqual([]);
   });
 
-  test("stays in a load error after a rapid project round-trip cleared the old data", async () => {
+  test("an earlier refresh handle retries only the current target", async () => {
     ensureMiniDom();
-    const projectB = deferred<ReturnType<typeof profile>[]>();
-    const projectAReload = deferred<ReturnType<typeof profile>[]>();
-    let projectACalls = 0;
+    const targets: RendererConfigurationTarget[] = [];
     const api: DigitalHumansLibraryApi = {
-      listProfiles: (cwd) => {
-        if (cwd === "/project-b") return projectB.promise;
-        projectACalls += 1;
-        return projectACalls === 1
-          ? Promise.resolve([profile("project-a-profile")])
-          : projectAReload.promise;
+      listProfiles: async (target) => {
+        targets.push(target);
+        const name = "projectId" in target ? target.projectId : "no-repo";
+        return [profile(name)];
       },
       listProfileCatalog: async () => [],
       listDigitalHumanTeams: async () => [],
       listSkills: async () => [],
     };
-    let activeProjectPath = "/project-a";
-    const hook = await renderHook(() => useDigitalHumansLibrary(activeProjectPath, api));
+    let target: RendererConfigurationTarget = { projectId: "project-a" };
+    const hook = await renderHook(() => useDigitalHumansLibrary(target, api));
     cleanup = hook.unmount;
-    expect(hook.result.current.status).toBe("ready");
+    const refreshFromProjectA = hook.result.current.refresh;
 
-    activeProjectPath = "/project-b";
+    target = { projectId: "project-b" };
     await hook.rerender();
-    activeProjectPath = "/project-a";
+    await act(async () => {
+      await refreshFromProjectA();
+      await flushMicrotasks();
+    });
+
+    expect(hook.result.current.status).toBe("ready");
+    expect(hook.result.current.profiles.map((entry) => entry.name)).toEqual(["project-b"]);
+    expect(targets).toEqual([
+      { projectId: "project-a" },
+      { projectId: "project-b" },
+      { projectId: "project-b" },
+    ]);
+  });
+
+  test("rejects same-target stale responses after A to B to A and retries only current A", async () => {
+    ensureMiniDom();
+    const firstProjectA = deferred<ReturnType<typeof profile>[]>();
+    const projectB = deferred<ReturnType<typeof profile>[]>();
+    const projectAReload = deferred<ReturnType<typeof profile>[]>();
+    let projectACalls = 0;
+    const targets: RendererConfigurationTarget[] = [];
+    const api: DigitalHumansLibraryApi = {
+      listProfiles: (target) => {
+        targets.push(target);
+        if ("projectId" in target && target.projectId === "project-b") return projectB.promise;
+        projectACalls += 1;
+        if (projectACalls === 1) return firstProjectA.promise;
+        if (projectACalls === 2) return projectAReload.promise;
+        return Promise.resolve([profile("project-a-retried")]);
+      },
+      listProfileCatalog: async () => [],
+      listDigitalHumanTeams: async () => [],
+      listSkills: async () => [],
+    };
+    let target: RendererConfigurationTarget = { projectId: "project-a" };
+    const hook = await renderHook(() => useDigitalHumansLibrary(target, api));
+    cleanup = hook.unmount;
+    expect(hook.result.current.status).toBe("loading");
+
+    target = { projectId: "project-b" };
+    await hook.rerender();
+    target = { projectId: "project-a" };
     await hook.rerender();
     expect(hook.result.current.status).toBe("loading");
     expect(hook.result.current.profiles).toEqual([]);
@@ -136,9 +185,26 @@ describe("useDigitalHumansLibrary", () => {
     await act(async () => {
       projectAReload.reject(new Error("project-a reload failed"));
       await flushMicrotasks();
+      firstProjectA.resolve([profile("stale-project-a")]);
+      projectB.resolve([profile("stale-project-b")]);
+      await flushMicrotasks();
     });
     expect(hook.result.current.status).toBe("error");
     expect(hook.result.current.error).toBe("project-a reload failed");
+    expect(hook.result.current.profiles).toEqual([]);
+
+    await act(async () => {
+      await hook.result.current.refresh();
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.status).toBe("ready");
+    expect(hook.result.current.profiles.map((entry) => entry.name)).toEqual(["project-a-retried"]);
+    expect(targets).toEqual([
+      { projectId: "project-a" },
+      { projectId: "project-b" },
+      { projectId: "project-a" },
+      { projectId: "project-a" },
+    ]);
   });
 
   test("exposes an initial load error and recovers through retry", async () => {
@@ -154,7 +220,7 @@ describe("useDigitalHumansLibrary", () => {
       listDigitalHumanTeams: async () => [],
       listSkills: async () => [],
     };
-    const hook = await renderHook(() => useDigitalHumansLibrary(null, api));
+    const hook = await renderHook(() => useDigitalHumansLibrary({ noRepo: true }, api));
     cleanup = hook.unmount;
 
     expect(hook.result.current.status).toBe("error");

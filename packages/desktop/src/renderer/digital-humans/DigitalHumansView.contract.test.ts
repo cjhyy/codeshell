@@ -113,9 +113,14 @@ describe("DigitalHumansView contract", () => {
   test("creates and edits a digital human with installed Skill assignment", () => {
     expect(source).toContain("DigitalHumanEditorDialog");
     expect(source).toContain("window.codeshell.saveProfile");
-    expect(source).toContain("activeProjectPath ?? undefined");
+    expect(source).toContain("configurationTarget");
+    expect(source).not.toContain("activeProjectPath");
     expect(source).toContain("availableSkills");
     expect(libraryHook).toContain("api.listSkills");
+    expect(libraryHook).toContain("target: RendererConfigurationTarget");
+    expect(libraryHook).not.toContain("optionalProjectConfigurationTarget");
+    expect(app).toContain("{ projectId: activeProjectId }");
+    expect(app).toContain("{ noRepo: true }");
     expect(editor).toContain("profile?.skills");
     expect(editor).toContain("selectedSkills");
     expect(editor).toContain("projectSkillsDescription");
@@ -229,7 +234,7 @@ describe("DigitalHumansView contract", () => {
     expect(source).toContain("preview.capabilityCounts");
     expect(source).toContain("preview.portableMemory");
     expect(source).toContain("confirmProfileOverwrite");
-    expect(source).toContain("activeProjectPath ?? undefined");
+    expect(source).toContain("configurationTarget");
     expect(source).toContain("digitalHumans.transfer.definitionOnlyNotice");
     expect(source).not.toContain("window.codeshell.exportProfileDefinition");
     expect(dhSection).toContain("window.codeshell.exportProfileDefinition");

@@ -30,10 +30,7 @@ import {
   type DigitalHumanTeamMode,
 } from "../../shared/digital-human-team";
 import type { DigitalHumanProfileImportPreview } from "../../shared/digital-human-profile-transfer";
-import {
-  optionalProjectConfigurationTarget,
-  requireProjectConfigurationTarget,
-} from "../configurationTarget";
+import type { RendererConfigurationTarget } from "../../preload/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,7 +78,8 @@ import { CURATED_DIGITAL_HUMAN_TEAMS, profileSamplePrompts } from "./marketplace
 import { useDigitalHumanOperations, useDigitalHumansLibrary } from "./useDigitalHumansLibrary";
 
 interface Props {
-  activeProjectPath: string | null;
+  configurationTarget: RendererConfigurationTarget;
+  projectName: string | null;
   onUse: (selection: DigitalHumanSelection, starterPrompt?: string) => void;
   confirmDelete?: (request: DigitalHumanDeleteRequest) => Promise<boolean>;
   /** Jump to settings › digital humans, where repos are managed in full. */
@@ -123,7 +121,8 @@ function sameMembers(left: Set<string>, right: string[]): boolean {
 }
 
 export function DigitalHumansView({
-  activeProjectPath,
+  configurationTarget,
+  projectName,
   onUse,
   confirmDelete,
   onOpenSettings,
@@ -133,7 +132,7 @@ export function DigitalHumansView({
   const toast = useToast();
   const confirm = useConfirm();
   const { profiles, catalog, teams, availableSkills, status, error, refresh } =
-    useDigitalHumansLibrary(activeProjectPath);
+    useDigitalHumansLibrary(configurationTarget);
   const operations = useDigitalHumanOperations(refresh);
   const [query, setQuery] = React.useState("");
   const [activeTab, setActiveTab] = React.useState<DigitalHumanTab>("mine");
@@ -247,7 +246,7 @@ export function DigitalHumansView({
     try {
       const preview = await window.codeshell.previewProfileDeletion(
         profile.name,
-        optionalProjectConfigurationTarget(activeProjectPath),
+        configurationTarget,
       );
       if (!preview.canDelete) {
         const reasons = [
@@ -289,7 +288,7 @@ export function DigitalHumansView({
           async () => {
             const result = await window.codeshell.forceDeleteProfile(
               profile.name,
-              optionalProjectConfigurationTarget(activeProjectPath),
+              configurationTarget,
             );
             const notes = [
               result.unboundSessions.length
@@ -334,7 +333,7 @@ export function DigitalHumansView({
         `delete-profile:${profile.name}`,
         () =>
           window.codeshell.deleteProfile(profile.name, {
-            target: optionalProjectConfigurationTarget(activeProjectPath),
+            target: configurationTarget,
             ...(profile.active ? { clearActiveProject: true } : {}),
           }),
         { name: profile.label },
@@ -416,7 +415,7 @@ export function DigitalHumansView({
   const ensureProfileRequirements = async (name: string): Promise<boolean> => {
     return ensureDigitalHumanRequirements({
       name,
-      projectPath: activeProjectPath,
+      configurationTarget,
       api: window.codeshell,
       confirm,
       toast,
@@ -508,7 +507,7 @@ export function DigitalHumansView({
           reviewToken: preview.reviewToken,
           ...(overwrite ? { overwrite: true } : {}),
         },
-        optionalProjectConfigurationTarget(activeProjectPath),
+        configurationTarget,
       );
       if (!committed.ok && committed.alreadyExists && !overwrite) {
         if (!(await confirmProfileOverwrite(preview))) return { canceled: true } as const;
@@ -517,7 +516,7 @@ export function DigitalHumansView({
             reviewToken: preview.reviewToken,
             overwrite: true,
           },
-          optionalProjectConfigurationTarget(activeProjectPath),
+          configurationTarget,
         );
       }
       return { canceled: false, committed } as const;
@@ -648,8 +647,8 @@ export function DigitalHumansView({
         ? operations.isBusy(`install-team:${detail.team.id}`)
         : false);
   const activeProfile = profiles.find((profile) => profile.active);
-  const activeProjectName =
-    activeProjectPath?.split(/[\\/]/).filter(Boolean).at(-1) ?? t("digitalHumans.workspace.none");
+  const hasRepositoryTarget = !("noRepo" in configurationTarget);
+  const activeProjectName = projectName ?? t("digitalHumans.workspace.none");
   const activeSection =
     activeTab === "mine"
       ? {
@@ -785,7 +784,7 @@ export function DigitalHumansView({
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     {t("digitalHumans.workspace.title")}
                   </p>
-                  <p className="mt-2 truncate text-sm font-medium" title={activeProjectPath ?? ""}>
+                  <p className="mt-2 truncate text-sm font-medium" title={projectName ?? ""}>
                     {activeProjectName}
                   </p>
                   <div className="mt-3 flex items-center gap-2 border-t border-border/60 pt-3">
@@ -984,7 +983,7 @@ export function DigitalHumansView({
                           requirementsNeedReview={hasDigitalHumanCatchAllSkillRequirement(
                             profile.requires,
                           )}
-                          hasProject={Boolean(activeProjectPath)}
+                          hasProject={hasRepositoryTarget}
                           busy={
                             selectionBusy ||
                             operations.isBusy(`profile:${profile.name}`) ||
@@ -998,20 +997,18 @@ export function DigitalHumansView({
                           onMemory={() => setMemoryProfile(profile)}
                           onDelete={() => void deleteProfileEntry(profile)}
                           onToggleDefault={() => {
-                            if (!activeProjectPath) return;
+                            if (!hasRepositoryTarget) return;
                             void run(
                               `profile:${profile.name}`,
                               async () => {
                                 if (profile.active) {
-                                  return window.codeshell.deactivateProfile(
-                                    requireProjectConfigurationTarget(activeProjectPath),
-                                  );
+                                  return window.codeshell.deactivateProfile(configurationTarget);
                                 }
                                 // 补齐依赖后再启用，否则数字人声明的 skill 在这台
                                 // 机器上并不存在，启用了也是空壳。
                                 if (!(await ensureProfileRequirements(profile.name))) return;
                                 return window.codeshell.activateProfile(
-                                  requireProjectConfigurationTarget(activeProjectPath),
+                                  configurationTarget,
                                   profile.name,
                                 );
                               },
@@ -1101,7 +1098,7 @@ export function DigitalHumansView({
         existingIds={profiles.map((profile) => profile.name)}
         skills={availableSkills.filter((skill) => skill.source !== "project")}
         projectSkills={availableSkills.filter((skill) => skill.source === "project")}
-        projectPath={activeProjectPath}
+        configurationTarget={configurationTarget}
         busy={editorSaveFlowBusy || operations.isBusy("save-profile")}
         installing={editorInstallFlowBusy}
         onRequirementsInstalled={refresh}
@@ -1117,11 +1114,7 @@ export function DigitalHumansView({
             try {
               const saved = await run(
                 "save-profile",
-                () =>
-                  window.codeshell.saveProfile(
-                    profile,
-                    optionalProjectConfigurationTarget(activeProjectPath),
-                  ),
+                () => window.codeshell.saveProfile(profile, configurationTarget),
                 { name: profile.label },
               );
               if (!saved) return;
@@ -1170,7 +1163,7 @@ export function DigitalHumansView({
                   const result = await operations.run(`enable-profile-memory:${profile.name}`, () =>
                     window.codeshell.saveProfile(
                       { ...definition, portableMemory: true },
-                      optionalProjectConfigurationTarget(activeProjectPath),
+                      configurationTarget,
                     ),
                   );
                   if (!result.ok) {

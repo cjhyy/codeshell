@@ -5,7 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { ensureDigitalHumanRequirements } from "../digital-humans/profileRequirements";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
-import { requireProjectConfigurationTarget } from "../configurationTarget";
+import type { RendererConfigurationTarget } from "../../preload/types";
 
 interface ProfileEntry {
   name: string;
@@ -16,15 +16,17 @@ interface ProfileEntry {
 }
 
 /** 数字人（WorkspaceProfile）管理区块：列库、激活/切换/关闭。 */
-export function ProfileSection({ cwd }: { cwd: string }) {
+export function ProfileSection({
+  configurationTarget,
+}: {
+  configurationTarget: RendererConfigurationTarget;
+}) {
   const { t } = useT();
   const confirm = useConfirm();
   const toast = useToast();
   const [profiles, setProfiles] = React.useState<ProfileEntry[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const configurationTarget = React.useMemo(() => requireProjectConfigurationTarget(cwd), [cwd]);
-
   const refresh = React.useCallback(async () => {
     try {
       setProfiles(await window.codeshell.listProfiles(configurationTarget));
@@ -99,7 +101,7 @@ export function ProfileSection({ cwd }: { cwd: string }) {
                     void act(async () => {
                       const ready = await ensureDigitalHumanRequirements({
                         name: profile.name,
-                        projectPath: cwd,
+                        configurationTarget,
                         api: window.codeshell,
                         confirm,
                         toast,

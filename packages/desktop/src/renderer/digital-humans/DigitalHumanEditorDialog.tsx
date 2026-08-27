@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "../i18n";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
-import { requireProjectConfigurationTarget } from "../configurationTarget";
+import type { RendererConfigurationTarget } from "../../preload/types";
 import {
   canAddDigitalHumanSkill,
   digitalHumanMissingSkillNames,
@@ -68,7 +68,7 @@ interface Props {
   existingIds: string[];
   skills: DigitalHumanSkillEntry[];
   projectSkills?: DigitalHumanSkillEntry[];
-  projectPath?: string | null;
+  configurationTarget: RendererConfigurationTarget;
   busy: boolean;
   installing?: boolean;
   onRequirementsInstalled?: () => void | Promise<unknown>;
@@ -85,7 +85,7 @@ export function DigitalHumanEditorDialog({
   existingIds,
   skills,
   projectSkills = [],
-  projectPath,
+  configurationTarget,
   busy,
   installing = false,
   onRequirementsInstalled,
@@ -237,9 +237,10 @@ export function DigitalHumanEditorDialog({
 
   const requirementLimitExceeded =
     nextSkillRequirements.length > DIGITAL_HUMAN_PROFILE_LIMITS.requirementCount;
+  const hasRepositoryTarget = !("noRepo" in configurationTarget);
   const canInstallMissingSkills = Boolean(
     profile &&
-    projectPath &&
+    hasRepositoryTarget &&
     hasCatchAllSkillRequirement &&
     !busy &&
     !installing &&
@@ -249,7 +250,7 @@ export function DigitalHumanEditorDialog({
   const installMissingSkills = async () => {
     if (
       !profile ||
-      !projectPath ||
+      !hasRepositoryTarget ||
       !hasCatchAllSkillRequirement ||
       busy ||
       installing ||
@@ -259,8 +260,10 @@ export function DigitalHumanEditorDialog({
     }
     setInstallingRequirements(true);
     try {
-      const target = requireProjectConfigurationTarget(projectPath);
-      const preview = await window.codeshell.previewProfileRequirements(profile.name, target);
+      const preview = await window.codeshell.previewProfileRequirements(
+        profile.name,
+        configurationTarget,
+      );
       const detail = [...preview.willRun, ...preview.warnings, ...preview.blockers].join("\n");
 
       if (!preview.needsInstall) {
@@ -290,7 +293,10 @@ export function DigitalHumanEditorDialog({
       });
       if (!accepted) return;
 
-      const result = await window.codeshell.installProfileRequirements(profile.name, target);
+      const result = await window.codeshell.installProfileRequirements(
+        profile.name,
+        configurationTarget,
+      );
       await onRequirementsInstalled?.();
       if (!result.ok) {
         toast({
@@ -349,7 +355,7 @@ export function DigitalHumanEditorDialog({
     !requirementLimitExceeded &&
     !operationBusy;
   const canSaveAndInstall = Boolean(
-    canSave && profile && projectPath && allMissingSkillsHaveSource,
+    canSave && profile && hasRepositoryTarget && allMissingSkillsHaveSource,
   );
   /**
    * Has the user typed anything not yet saved? Radix closes the dialog on a
@@ -695,7 +701,7 @@ export function DigitalHumanEditorDialog({
                             <p className="mt-1 text-xs leading-5 text-muted-foreground">
                               {!profile
                                 ? t("digitalHumans.editor.missingSkillsSaveFirst")
-                                : !projectPath
+                                : !hasRepositoryTarget
                                   ? t("digitalHumans.editor.missingSkillsPickProject")
                                   : hasCatchAllSkillRequirement
                                     ? t("digitalHumans.editor.catchAllRequirementDescription")

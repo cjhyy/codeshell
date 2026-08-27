@@ -1758,7 +1758,6 @@ function App() {
           profileName !== "" &&
           !(await ensureDigitalHumanRequirements({
             name: profileName,
-            projectPath: sessionUiAuthority.mainRoot,
             configurationTarget: sessionUiAuthority.configurationTarget,
             api: window.codeshell,
             confirm,
@@ -2315,7 +2314,10 @@ function App() {
               ) : view.viewMode === "digital_humans" ? (
                 <React.Suspense fallback={<PageLoading label={t("ext.common.loading")} />}>
                   <DigitalHumansView
-                    activeProjectPath={activeProject?.path ?? null}
+                    configurationTarget={
+                      activeProjectId ? { projectId: activeProjectId } : { noRepo: true }
+                    }
+                    projectName={activeProject ? projectLabel(activeProject) : null}
                     onOpenSettings={() => {
                       setSettingsInitialModule("digital-humans");
                       setViewMode("settings_page");
