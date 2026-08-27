@@ -11,6 +11,7 @@ import { processGroupLabel, type RenderedTurnProcessGroup } from "./streamGroups
 import { AgentGroupCard } from "./AgentGroupCard";
 import { isSystemReminderText } from "../contextSelection";
 import { SystemReminderTask } from "./SystemReminderTask";
+import type { MarkdownRootStatus } from "../Markdown";
 
 interface Props {
   /** Rendered shape: inner items may include an AgentGroup (foldAgentGroups). */
@@ -19,6 +20,8 @@ interface Props {
   /** Session cwd, forwarded to member tool cards for attachment resolution. */
   cwd?: string | null;
   sessionId?: string | null;
+  sessionMainRootId?: string | null;
+  rootStatus?: MarkdownRootStatus;
 }
 
 /**
@@ -47,7 +50,14 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
  * Live turn: defaults to OPEN with a 1s elapsed ticker. Closed turn:
  * defaults to CLOSED with static total wall time.
  */
-function TurnProcessGroupCardImpl({ group, turnEpoch, cwd, sessionId }: Props) {
+function TurnProcessGroupCardImpl({
+  group,
+  turnEpoch,
+  cwd,
+  sessionId,
+  sessionMainRootId,
+  rootStatus,
+}: Props) {
   const [open, setOpen] = useState(group.isLive);
   const prevIsLiveRef = useRef(group.isLive);
   const prevTurnEpochRef = useRef(turnEpoch);
@@ -132,6 +142,8 @@ function TurnProcessGroupCardImpl({ group, turnEpoch, cwd, sessionId }: Props) {
                     done={m.done}
                     cwd={cwd ?? null}
                     sessionId={sessionId}
+                    sessionMainRootId={sessionMainRootId}
+                    rootStatus={rootStatus}
                   />
                 </div>
               );

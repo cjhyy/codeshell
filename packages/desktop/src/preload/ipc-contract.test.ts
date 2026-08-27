@@ -88,6 +88,7 @@ describe("desktop IPC contract", () => {
       /ipcRenderer\.invoke\(\s*["']([^"']+)["']/g,
     );
     const retired = [
+      "dialog:pickDir",
       "projects:list",
       "projects:resolveRoot",
       "projects:add",
@@ -104,6 +105,8 @@ describe("desktop IPC contract", () => {
       "sources:deleteUpload",
     ];
     const v2 = [
+      "projectRegistry:createFromPicker",
+      "projectRegistry:addRootFromPicker",
       "projectRegistry:list",
       "projectRegistry:beginLegacyMigration",
       "projectRegistry:authorizeLegacyMigration",

@@ -1299,8 +1299,6 @@ export interface CodeshellApi {
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
   onWorktreeCleanupSkipped(cb: (evt: WorktreeCleanupSkippedEvent) => void): Unsubscribe;
-  /** Show native folder picker. Resolves to null if user canceled. */
-  pickDir(): Promise<{ path: string; name: string } | null>;
   pickSkillDir(): Promise<{ path: string; name: string } | null>;
   pickGitBinary(): Promise<string | null>;
 

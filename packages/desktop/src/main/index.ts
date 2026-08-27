@@ -106,10 +106,7 @@ import {
   type ExternalSessionDiscoveryScope,
   type QuotaResult,
 } from "@cjhyy/code-shell-capability-coding/orchestration";
-import {
-  normalizeWorktreeBranchPrefix,
-  resolveProjectRoot,
-} from "@cjhyy/code-shell-capability-coding/git";
+import { normalizeWorktreeBranchPrefix } from "@cjhyy/code-shell-capability-coding/git";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { externalRuntimeBrowserBucket } from "./external-runtime-browser-bucket.js";
 import { ExternalRuntimeService } from "./external-runtime-service.js";
@@ -494,7 +491,7 @@ import {
   summarizeProjectTrustRisks,
   type TrustLevel,
 } from "./trust-store.js";
-import { installAppMenu, refreshAppMenu } from "./menu.js";
+import { installAppMenu } from "./menu.js";
 import { seedDefaults } from "./seed-defaults.js";
 import { bootstrapCorePlugins } from "./bootstrap-core-plugins.js";
 import {
@@ -5718,27 +5715,6 @@ ipcMain.handle(
     return checkQuota({ creds, providers });
   },
 );
-
-ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string } | null> => {
-  const res = await dialog.showOpenDialog({
-    title: "选择项目目录",
-    properties: ["openDirectory", "createDirectory"],
-  });
-  if (res.canceled || res.filePaths.length === 0) return null;
-  // Project-boundary rule: if the user picked a SUBDIRECTORY of a git repo,
-  // snap to the repo root so it belongs to that one project (not a separate
-  // project per subdir — e.g. picking packages/desktop in a monorepo opens the
-  // repo root). Non-git folders are returned unchanged. Best-effort; falls back
-  // to the picked path on any git failure. applyGitPathFromSettings first so a
-  // user-configured git.path is honored by resolveGit.
-  await applyGitPathFromSettings();
-  const picked = res.filePaths[0];
-  const path = resolveProjectRoot(picked);
-  const result = { path, name: basename(path) };
-  const win = BrowserWindow.fromWebContents(e.sender);
-  if (win) void refreshAppMenu(win);
-  return result;
-});
 
 ipcMain.handle("dialog:pickSkillDir", async (): Promise<{ path: string; name: string } | null> => {
   const res = await dialog.showOpenDialog({

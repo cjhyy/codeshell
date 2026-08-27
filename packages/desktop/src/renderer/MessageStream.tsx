@@ -38,6 +38,7 @@ import {
 } from "./contextSelection";
 import { DriveAgentJobsLoader } from "./tool-cards/DriveAgentJobsContext";
 import { SystemReminderTask } from "./messages/SystemReminderTask";
+import type { MarkdownRootStatus } from "./Markdown";
 
 // Stable fallback so memoized AskUserMessageView siblings don't see a
 // fresh onAnswer prop on every render.
@@ -105,6 +106,9 @@ interface Props {
    * this cwd. Null when the session was created without a repo.
    */
   cwd?: string | null;
+  /** Main-resolved Session root authority for completed relative Markdown links. */
+  rootId?: string | null;
+  rootStatus?: MarkdownRootStatus;
   /**
    * Monotonic counter bumped by ChatView on each user send. Forces the
    * stream to snap to the bottom + re-arm follow so the user always sees
@@ -130,6 +134,8 @@ export function MessageStream({
   engineSessionId,
   liveTurnActive,
   cwd,
+  rootId,
+  rootStatus,
   sendEpoch,
   onContextPackageCreated,
   onContextSelectionChange,
@@ -354,6 +360,8 @@ export function MessageStream({
           turnEpoch={turnEpoch}
           cwd={cwd}
           sessionId={engineSessionId}
+          sessionMainRootId={rootId}
+          rootStatus={rootStatus}
         />
       );
     }
@@ -434,6 +442,8 @@ export function MessageStream({
             message={m}
             cwd={cwd ?? null}
             sessionId={engineSessionId}
+            sessionMainRootId={rootId}
+            rootStatus={rootStatus}
           />
         );
       case "thinking":

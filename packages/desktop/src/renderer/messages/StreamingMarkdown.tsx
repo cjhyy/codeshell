@@ -6,6 +6,7 @@ import {
   MarkdownTable,
   markdownBodyClassName,
   streamingMarkdownClassName,
+  type MarkdownRootStatus,
 } from "../Markdown";
 import { splitStreamingMarkdown } from "../markdown/splitStreamingMarkdown";
 
@@ -17,6 +18,9 @@ interface StreamingMarkdownProps {
   cwd?: string | null;
   /** Session-scoped FS authority for completed path links. */
   sessionId?: string | null;
+  /** Main-resolved root id/status for Session-scoped relative paths. */
+  sessionMainRootId?: string | null;
+  rootStatus?: MarkdownRootStatus;
   /**
    * When false, streaming falls back to today's plain `<pre>` (feature-flag /
    * conservative rollback). Defaults to true (rich streaming render).
@@ -38,10 +42,22 @@ export function StreamingMarkdown({
   done,
   cwd,
   sessionId,
+  sessionMainRootId,
+  rootStatus,
   streamingRichRender = true,
 }: StreamingMarkdownProps) {
   if (text === "") return null;
-  if (done) return <Markdown text={text} cwd={cwd} sessionId={sessionId} />;
+  if (done) {
+    return (
+      <Markdown
+        text={text}
+        cwd={cwd}
+        sessionId={sessionId}
+        sessionMainRootId={sessionMainRootId}
+        rootStatus={rootStatus}
+      />
+    );
+  }
   if (!streamingRichRender) {
     return (
       <div className={streamingMarkdownClassName}>

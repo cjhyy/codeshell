@@ -148,11 +148,18 @@ import { useToast } from "./ui/ToastProvider";
 import { useT } from "./i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { SessionUiAuthority } from "./sessionUiAuthority";
+
+export type MarkdownRootStatus = SessionUiAuthority["rootStatus"];
 
 interface Props {
   text: string;
   /** Opaque Session authority used for file-existence checks. */
   sessionId?: string | null;
+  /** Current Main-resolved Session root identity. */
+  sessionMainRootId?: string | null;
+  /** Current Session root health; relative paths fail closed unless it is ok. */
+  rootStatus?: MarkdownRootStatus;
   /**
    * Workspace dir for the session this message belongs to. Used to resolve
    * relative image paths (e.g. `docs/x.png`) to an absolute `file://` URL so
@@ -204,7 +211,7 @@ export const streamingMarkdownClassName = cn(
  * assistant message in the transcript, which is the dominant cost
  * in long sessions.
  */
-function MarkdownImpl({ text, cwd, sessionId }: Props) {
+function MarkdownImpl({ text, cwd, sessionId, sessionMainRootId, rootStatus }: Props) {
   return (
     <div className={markdownBodyClassName}>
       <ReactMarkdown
@@ -235,7 +242,15 @@ function MarkdownImpl({ text, cwd, sessionId }: Props) {
           img: ({ src, alt, node: _node, ...rest }) => {
             const localDecoded = src ? decodeLocalPathHref(src) : null;
             if (localDecoded && classifyPath(localDecoded.path) === "image") {
-              return <InlineImageLink path={localDecoded.path} cwd={cwd} alt={alt} />;
+              return (
+                <InlineImageLink
+                  path={localDecoded.path}
+                  cwd={cwd}
+                  sessionId={sessionId}
+                  rootStatus={rootStatus}
+                  alt={alt}
+                />
+              );
             }
             // A plain local/relative image src (e.g. a README's
             // `<img src="docs/images/x.png">` or markdown `![](docs/x.png)`)
@@ -244,7 +259,15 @@ function MarkdownImpl({ text, cwd, sessionId }: Props) {
             // and loads the bytes as a data: URL. data:/http(s)/blob srcs are
             // already loadable, so leave those as a plain <img>.
             if (src && !/^(data:|https?:|blob:)/i.test(src)) {
-              return <InlineImageLink path={src} cwd={cwd} alt={alt} />;
+              return (
+                <InlineImageLink
+                  path={src}
+                  cwd={cwd}
+                  sessionId={sessionId}
+                  rootStatus={rootStatus}
+                  alt={alt}
+                />
+              );
             }
             return <img src={src} alt={alt} {...rest} />;
           },
@@ -259,10 +282,24 @@ function MarkdownImpl({ text, cwd, sessionId }: Props) {
             // unclickable path. Click opens a full-screen Lightbox; the
             // filename caption still opens the file in the OS app.
             if (schemeDecoded && classifyPath(schemeDecoded.path) === "image") {
-              return <InlineImageLink path={schemeDecoded.path} cwd={cwd} />;
+              return (
+                <InlineImageLink
+                  path={schemeDecoded.path}
+                  cwd={cwd}
+                  sessionId={sessionId}
+                  rootStatus={rootStatus}
+                />
+              );
             }
             if (localDecoded && classifyPath(localDecoded.path) === "image") {
-              return <InlineImageLink path={localDecoded.path} cwd={cwd} />;
+              return (
+                <InlineImageLink
+                  path={localDecoded.path}
+                  cwd={cwd}
+                  sessionId={sessionId}
+                  rootStatus={rootStatus}
+                />
+              );
             }
             // A path reference: render it as a file link ONLY if the file
             // actually exists in the workspace (checked async in PathLink).
@@ -277,6 +314,8 @@ function MarkdownImpl({ text, cwd, sessionId }: Props) {
                   line={decoded.line}
                   cwd={cwd}
                   sessionId={sessionId}
+                  sessionMainRootId={sessionMainRootId}
+                  rootStatus={rootStatus}
                   isScheme={schemeDecoded !== null}
                 >
                   {children}
@@ -365,28 +404,20 @@ function toAbsolute(path: string, cwd?: string | null): string {
 // re-run on the next mount, and `files-changed` (fired when an AI turn ends)
 // also clears the cache so a just-written file re-validates immediately.
 const existsCache = new Map<string, boolean>();
-const sessionRootIds = new Map<string, Promise<string | null>>();
 
-function sessionMainRootId(sessionId: string): Promise<string | null> {
-  const cached = sessionRootIds.get(sessionId);
-  if (cached) return cached;
-  const pending = window.codeshell
-    .getSessionWorkspaceAuthority(sessionId)
-    .then((authority) => authority.mainRootId ?? null)
-    .catch(() => null);
-  sessionRootIds.set(sessionId, pending);
-  return pending;
-}
-
-function checkExists(sessionId: string | null, cwd: string | null, path: string): Promise<boolean> {
+function checkExists(
+  sessionId: string | null,
+  sessionMainRootId: string | null,
+  rootStatus: MarkdownRootStatus | undefined,
+  cwd: string | null,
+  path: string,
+): Promise<boolean> {
   const root = cwd ?? "";
-  const key = `${sessionId ?? ""}\0${root}\0${path}`;
+  const key = `${sessionId ?? ""}\0${sessionMainRootId ?? ""}\0${rootStatus ?? ""}\0${root}\0${path}`;
   if (existsCache.get(key) === true) return Promise.resolve(true);
-  const p = sessionId
-    ? sessionMainRootId(sessionId).then((rootId) =>
-        rootId ? window.codeshell.sessionFileExists(sessionId, rootId, path) : false,
-      )
-    : Promise.resolve(false);
+  if (!sessionId || !sessionMainRootId) return Promise.resolve(false);
+  if (!isAbsolutePath(path) && rootStatus !== "ok") return Promise.resolve(false);
+  const p = window.codeshell.sessionFileExists(sessionId, sessionMainRootId, path);
   return p.then((ok) => {
     if (ok) existsCache.set(key, true); // memoize positives only
     return ok;
@@ -424,6 +455,8 @@ function PathLink({
   line,
   cwd,
   sessionId,
+  sessionMainRootId,
+  rootStatus,
   isScheme,
   children,
 }: {
@@ -431,6 +464,8 @@ function PathLink({
   line?: number;
   cwd?: string | null;
   sessionId?: string | null;
+  sessionMainRootId?: string | null;
+  rootStatus?: MarkdownRootStatus;
   /** True when the link came from the codeshell-path: scheme (vs a local href). */
   isScheme: boolean;
   children?: React.ReactNode;
@@ -453,16 +488,22 @@ function PathLink({
     // Don't blink an already-resolved link back to plain text on a re-check;
     // only show the neutral "checking" state on a genuinely new path/cwd.
     setExists((prev) => (prev === true ? true : null));
-    void checkExists(sessionId ?? null, cwd ?? null, path).then((ok) => {
+    void checkExists(
+      sessionId ?? null,
+      sessionMainRootId ?? null,
+      rootStatus,
+      cwd ?? null,
+      path,
+    ).then((ok) => {
       if (!cancelled) setExists(ok);
     });
     return () => {
       cancelled = true;
     };
-  }, [path, cwd, filesNonce, sessionId]);
+  }, [path, cwd, filesNonce, sessionId, sessionMainRootId, rootStatus]);
 
   // Not (yet) a known-existing file → render the original text, unstyled.
-  if (exists !== true) {
+  if ((!isAbsolutePath(path) && rootStatus !== "ok") || exists !== true) {
     return <span>{children}</span>;
   }
 
@@ -493,7 +534,19 @@ function PathLink({
  * Until the data URL resolves (and if it fails — relative path with no cwd,
  * deleted file, non-image), it shows a clickable filename link instead.
  */
-function InlineImageLink({ path, cwd, alt }: { path: string; cwd?: string | null; alt?: string }) {
+function InlineImageLink({
+  path,
+  cwd,
+  sessionId,
+  rootStatus,
+  alt,
+}: {
+  path: string;
+  cwd?: string | null;
+  sessionId?: string | null;
+  rootStatus?: MarkdownRootStatus;
+  alt?: string;
+}) {
   const [failed, setFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
@@ -504,7 +557,8 @@ function InlineImageLink({ path, cwd, alt }: { path: string; cwd?: string | null
   // base64 data: URL. Absolute paths used as-is; relative (docs/x.png) joined
   // onto the session workspace.
   const isAbs = isAbsolutePath(path);
-  const abs = isAbs ? path : cwd ? joinPath(cwd, path) : null;
+  const relativeAuthorityUnavailable = !isAbs && Boolean(sessionId) && rootStatus !== "ok";
+  const abs = relativeAuthorityUnavailable ? null : isAbs ? path : cwd ? joinPath(cwd, path) : null;
   // Tri-state: while the IPC is in flight we render nothing rather than the
   // fallback link, so a valid image doesn't flash "link → thumbnail" on every
   // mount. The link only shows once we know the image won't load (`failed`).
@@ -530,6 +584,8 @@ function InlineImageLink({ path, cwd, alt }: { path: string; cwd?: string | null
       cancelled = true;
     };
   }, [abs]);
+
+  if (relativeAuthorityUnavailable) return <span>{filename}</span>;
 
   if (loading) {
     return (

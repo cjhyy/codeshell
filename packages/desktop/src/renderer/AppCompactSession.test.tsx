@@ -5,7 +5,7 @@ import { join } from "node:path";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
-import type { RendererConfigurationTarget } from "../preload/types";
+import type { RendererConfigurationTarget, SessionWorkspaceAuthority } from "../preload/types";
 import type { ModelOption } from "./chat/ModelPill";
 import type { PermissionMode } from "./chat/PermissionPill";
 
@@ -21,6 +21,7 @@ interface ChatProps {
   configurationAvailable?: boolean;
   conversationRoot?: string | null;
   conversationRootId?: string | null;
+  conversationRootStatus?: SessionWorkspaceAuthority["rootStatus"] | "loading" | "unavailable";
   onPrepareAttachmentSession?: () => { cwd: string; sessionId: string } | null;
 }
 
@@ -456,11 +457,14 @@ describe("App compact session UI", () => {
       let registryListener: ((projects: any[]) => void) | null = null;
       let workspaceListener: ((event: { sessionId: string }) => void) | null = null;
       let oldSessionRootStatus: "ok" | "root_removed" = "ok";
+      let oldSessionMainRootId = "old-root";
       const configurationCalls: RendererConfigurationTarget[] = [];
       const profileCalls: RendererConfigurationTarget[] = [];
       const resolveTargetRoot = (target: RendererConfigurationTarget): string => {
         if ("sessionId" in target) {
-          return target.sessionId === "engine-old" ? oldRoot : newRoot;
+          return target.sessionId === "engine-old" && oldSessionMainRootId === "old-root"
+            ? oldRoot
+            : newRoot;
         }
         if ("projectId" in target) {
           return project.primaryRootId === "old-root" ? oldRoot : newRoot;
@@ -487,7 +491,7 @@ describe("App compact session UI", () => {
             ? {
                 workspace: { root: oldRoot, kind: "main" as const },
                 projectId: project.id,
-                mainRootId: "old-root",
+                mainRootId: oldSessionMainRootId,
                 mainRoot: oldRoot,
                 mainRootName: "old",
                 rootStatus: oldSessionRootStatus,
@@ -496,13 +500,20 @@ describe("App compact session UI", () => {
               }
             : {
                 workspace: {
-                  root: sessionId === "engine-old" ? oldRoot : newRoot,
+                  root:
+                    sessionId === "engine-old" && oldSessionMainRootId === "old-root"
+                      ? oldRoot
+                      : newRoot,
                   kind: "main" as const,
                 },
                 projectId: project.id,
-                mainRootId: sessionId === "engine-old" ? "old-root" : "new-root",
-                mainRoot: sessionId === "engine-old" ? oldRoot : newRoot,
-                mainRootName: sessionId === "engine-old" ? "old" : "new",
+                mainRootId: sessionId === "engine-old" ? oldSessionMainRootId : "new-root",
+                mainRoot:
+                  sessionId === "engine-old" && oldSessionMainRootId === "old-root"
+                    ? oldRoot
+                    : newRoot,
+                mainRootName:
+                  sessionId === "engine-old" && oldSessionMainRootId === "old-root" ? "old" : "new",
                 rootStatus: "ok" as const,
               },
         onWorkspaceChanged: (listener: (event: { sessionId: string }) => void) => {
@@ -555,6 +566,7 @@ describe("App compact session UI", () => {
       expect(chatProps?.configurationAvailable).toBe(true);
       expect(chatProps?.conversationRoot).toBe(oldRoot);
       expect(chatProps?.conversationRootId).toBe("old-root");
+      expect(chatProps?.conversationRootStatus).toBe("ok");
       expect(chatProps?.activeModelKey).toBe("old-model");
       expect(chatProps?.modelOptions?.map((option) => option.key)).toEqual(["old-model"]);
       expect(chatProps?.permissionMode).toBe("bypass");
@@ -584,6 +596,7 @@ describe("App compact session UI", () => {
       expect(chatProps?.configurationTarget).toEqual({ sessionId: "engine-old" });
       expect(chatProps?.conversationRoot).toBe(oldRoot);
       expect(chatProps?.conversationRootId).toBe("old-root");
+      expect(chatProps?.conversationRootStatus).toBe("ok");
       expect(chatProps?.activeModelKey).toBe("old-model");
       expect(topBarProps?.workspaceProfiles).toEqual([
         { name: "old-profile", label: "old-profile" },
@@ -602,12 +615,28 @@ describe("App compact session UI", () => {
       expect(chatProps?.configurationAvailable).toBe(false);
       expect(chatProps?.conversationRoot).toBeNull();
       expect(chatProps?.conversationRootId).toBe("old-root");
+      expect(chatProps?.conversationRootStatus).toBe("root_removed");
       expect(chatProps?.activeModelKey).toBeNull();
       expect(chatProps?.modelOptions).toEqual([]);
       expect(topBarProps?.workspaceProfiles).toEqual([]);
       expect(topBarProps?.projectPath).toBeNull();
       expect(configurationCalls).toHaveLength(configurationCallCount);
       expect(profileCalls).toHaveLength(profileCallCount);
+
+      oldSessionRootStatus = "ok";
+      oldSessionMainRootId = "new-root";
+      await act(async () => {
+        workspaceListener?.({ sessionId: "engine-old" });
+        await flushMicrotasks();
+      });
+      expect(chatProps?.configurationTarget).toEqual({ sessionId: "engine-old" });
+      expect(chatProps?.configurationAvailable).toBe(true);
+      expect(chatProps?.conversationRoot).toBe(newRoot);
+      expect(chatProps?.conversationRootId).toBe("new-root");
+      expect(chatProps?.conversationRootStatus).toBe("ok");
+      expect(readFileSync(join(chatProps!.conversationRoot!, "same-relative.md"), "utf8")).toBe(
+        "new relative file",
+      );
 
       await act(async () => {
         sidebarProps?.onNewConversation?.();

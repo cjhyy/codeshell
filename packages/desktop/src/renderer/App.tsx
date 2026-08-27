@@ -2552,6 +2552,7 @@ function App() {
                     configurationAvailable={sessionUiAuthority.configurationAvailable}
                     conversationRoot={sessionUiAuthority.workspaceRoot}
                     conversationRootId={sessionUiAuthority.mainRootId}
+                    conversationRootStatus={sessionUiAuthority.rootStatus}
                     repoClean={activeGitMeta.clean}
                     welcomeNode={
                       showWelcome ? (

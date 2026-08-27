@@ -6,12 +6,15 @@ import { formatMessageTime } from "../messages/time";
 import type { AssistantMessage } from "../types";
 import { Button } from "@/components/ui/button";
 import { useT } from "../i18n/I18nProvider";
+import type { MarkdownRootStatus } from "../Markdown";
 
 interface Props {
   message: AssistantMessage;
   /** Session workspace dir — lets Markdown resolve relative image paths. */
   cwd?: string | null;
   sessionId?: string | null;
+  sessionMainRootId?: string | null;
+  rootStatus?: MarkdownRootStatus;
 }
 
 /**
@@ -25,7 +28,13 @@ interface Props {
  * when that specific message's text/done changes, so siblings skip
  * re-render entirely during a long session.
  */
-function AssistantMessageViewImpl({ message, cwd, sessionId }: Props) {
+function AssistantMessageViewImpl({
+  message,
+  cwd,
+  sessionId,
+  sessionMainRootId,
+  rootStatus,
+}: Props) {
   const { t } = useT();
   const [copied, setCopied] = useState(false);
   // Nothing to draw without text — this view renders only `message.text`
@@ -50,7 +59,14 @@ function AssistantMessageViewImpl({ message, cwd, sessionId }: Props) {
       data-message-kind="assistant"
       data-message-state={message.done ? "done" : "streaming"}
     >
-      <StreamingMarkdown text={message.text} done={message.done} cwd={cwd} sessionId={sessionId} />
+      <StreamingMarkdown
+        text={message.text}
+        done={message.done}
+        cwd={cwd}
+        sessionId={sessionId}
+        sessionMainRootId={sessionMainRootId}
+        rootStatus={rootStatus}
+      />
       {message.done && (
         <div className="mt-1 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
           {(() => {

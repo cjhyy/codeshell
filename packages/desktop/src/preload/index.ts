@@ -845,8 +845,6 @@ contextBridge.exposeInMainWorld("codeshell", {
       if (i >= 0) worktreeCleanupSkippedListeners.splice(i, 1);
     };
   },
-  pickDir: (): Promise<{ path: string; name: string } | null> =>
-    ipcRenderer.invoke("dialog:pickDir"),
   pickSkillDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickSkillDir"),
   pickGitBinary: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickGitBinary"),

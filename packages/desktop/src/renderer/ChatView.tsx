@@ -68,6 +68,7 @@ import { useT } from "./i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { MarkdownRootStatus } from "./Markdown";
 
 interface Props {
   /** Quick chats reuse the normal composer but omit durable-session controls. */
@@ -188,6 +189,8 @@ interface Props {
   conversationRoot: string | null;
   /** Main-resolved root identity used to constrain multi-root file discovery. */
   conversationRootId: string | null;
+  /** Current Main-resolved root health for Session-relative Markdown links. */
+  conversationRootStatus?: MarkdownRootStatus;
   repoClean?: boolean | null;
 
   // Title shown above the composer in new-chat mode (empty stream)
@@ -381,6 +384,7 @@ export function ChatView({
   configurationAvailable,
   conversationRoot,
   conversationRootId,
+  conversationRootStatus,
   repoClean,
   welcomeNode,
   composerSeed,
@@ -1388,6 +1392,8 @@ export function ChatView({
             trailing={inlineApproval}
             trailingKey={pendingApproval?.requestId ?? null}
             cwd={conversationRoot}
+            rootId={conversationRootId}
+            rootStatus={conversationRootStatus}
             sendEpoch={sendEpoch}
             onContextPackageCreated={onContextPackageCreated}
             onContextSelectionChange={setContextSelectionOpen}
