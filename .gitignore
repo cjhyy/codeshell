@@ -93,3 +93,11 @@ packages/web/dist-app/
 
 # 视频生成产物，throwaway
 video-output/
+
+# Investment Desk legacy workspace output. Panel API v11 writes new live and
+# selection snapshots to Host-managed panel-app-data instead; keep existing
+# CSVs, reports, news state, and portfolio records local and out of Git.
+/data/market/
+/data/market-insights/
+/data/news/
+/portfolio/

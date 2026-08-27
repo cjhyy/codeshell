@@ -1075,6 +1075,9 @@ export class PanelAppBridge {
     if (name === "user-bin") {
       return this.grantManagedBinDirectory(binding);
     }
+    if (name === "app-data") {
+      return this.grantPanelAppDataDirectory(binding);
+    }
     throw new Error("unsupported known directory");
   }
 
@@ -1085,6 +1088,21 @@ export class PanelAppBridge {
   private async grantManagedBinDirectory(binding: GuestBinding): Promise<unknown> {
     const path = this.managedBinDirectory();
     await mkdir(path, { recursive: true, mode: 0o700 });
+    return this.processService.grantDirectory(this.processOwner(binding), path);
+  }
+
+  private panelAppDataDirectory(binding: GuestBinding): string {
+    const appId = binding.resource.descriptor.appId;
+    if (!/^[a-z][a-z0-9-]{0,63}$/u.test(appId)) {
+      throw new Error("Panel App id is unsafe for local data");
+    }
+    return join(app.getPath("userData"), "panel-app-data", appId);
+  }
+
+  private async grantPanelAppDataDirectory(binding: GuestBinding): Promise<unknown> {
+    const path = this.panelAppDataDirectory(binding);
+    await mkdir(path, { recursive: true, mode: 0o700 });
+    await chmod(path, 0o700).catch(() => undefined);
     return this.processService.grantDirectory(this.processOwner(binding), path);
   }
 
