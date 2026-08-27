@@ -8,6 +8,7 @@ import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
 import { ToastProvider } from "../ui/ToastProvider";
 import type {
   SessionWorkspace,
+  SessionWorkspaceAuthority,
   SessionWorkspaceList,
   SessionWorkspaceWorktreeInfo,
 } from "../../preload/types";
@@ -96,6 +97,22 @@ function deferred<T>(): {
     reject = rej;
   });
   return { promise, resolve, reject };
+}
+
+function sessionAuthority(
+  sessionId: string,
+  workspace: SessionWorkspace,
+  options: { mainRoot?: string; mainRootId?: string } = {},
+): SessionWorkspaceAuthority {
+  const mainRoot = options.mainRoot ?? `/roots/${sessionId}`;
+  return {
+    workspace,
+    projectId: "project-1",
+    mainRootId: options.mainRootId ?? `root-${sessionId}`,
+    mainRoot,
+    mainRootName: sessionId,
+    rootStatus: "ok",
+  };
 }
 
 function textOf(node: unknown): string {
@@ -780,7 +797,7 @@ describe("WorkspaceIndicator", () => {
     };
     const responses: Array<ReturnType<typeof deferred<SessionWorkspace>>> = [];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: () => {
         const next = deferred<SessionWorkspace>();
         responses.push(next);
@@ -860,7 +877,7 @@ describe("WorkspaceIndicator", () => {
     const currentResponses: Array<ReturnType<typeof deferred<SessionWorkspace>>> = [];
     const listResponses: Array<ReturnType<typeof deferred<SessionWorkspaceList>>> = [];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: () => {
         const next = deferred<SessionWorkspace>();
         currentResponses.push(next);
@@ -916,18 +933,17 @@ describe("WorkspaceIndicator", () => {
     expect(currentResponses).toHaveLength(2);
 
     await act(async () => {
-      listResponses[0].resolve(listResponse);
-      await flushMicrotasks();
-    });
-
-    expect(textOf(container)).not.toContain(translate("zh", "topbar.workspace.loading"));
-    expect(textOf(container)).toContain("worktree/feature-session");
-
-    await act(async () => {
       currentResponses[1].resolve(currentWorkspace);
       await flushMicrotasks();
     });
+    expect(textOf(container)).toContain("worktree/current-session");
 
+    await act(async () => {
+      listResponses[0].resolve(listResponse);
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toContain(translate("zh", "topbar.workspace.loading"));
+    expect(textOf(container)).toContain("worktree/feature-session");
     expect(textOf(container)).toContain("worktree/current-session");
   });
 
@@ -949,7 +965,7 @@ describe("WorkspaceIndicator", () => {
     };
     const diffResponse = deferred<SessionWorkspaceWorktreeInfo["diff"]>();
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async () => mainWorkspace,
       listSessionWorktrees: async () => listResponse,
       getSessionWorktreeDiff: () => diffResponse.promise,
@@ -994,7 +1010,7 @@ describe("WorkspaceIndicator", () => {
     const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
     const listResponse = deferred<SessionWorkspaceList>();
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async () => mainWorkspace,
       listSessionWorktrees: () => listResponse.promise,
     };
@@ -1041,7 +1057,7 @@ describe("WorkspaceIndicator", () => {
       ReturnType<typeof deferred<SessionWorkspaceList>> & { sessionId: string; cwd: string }
     > = [];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async (_sessionId: string, cwd: string) => ({ root: cwd, kind: "main" }),
       listSessionWorktrees: (sessionId: string, cwd: string) => {
         const next = deferred<SessionWorkspaceList>();
@@ -1116,7 +1132,7 @@ describe("WorkspaceIndicator", () => {
       }
     > = [];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async (_sessionId: string, cwd: string) => ({ root: cwd, kind: "main" }),
       listSessionWorktrees: (sessionId: string) => {
         if (sessionId === "old-session") {
@@ -1217,7 +1233,7 @@ describe("WorkspaceIndicator", () => {
       },
     ];
     (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
-      getGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
+      getSessionGitBranches: async () => ({ isRepo: true, current: null, branches: [] }),
       getSessionWorkspace: async () => workspaces[Math.min(currentCalls++, workspaces.length - 1)]!,
       listSessionWorktrees: async () => ({
         current: workspaces[Math.min(currentCalls, workspaces.length - 1)]!,
@@ -1257,6 +1273,262 @@ describe("WorkspaceIndicator", () => {
 
     expect(currentCalls).toBe(2);
     expect(textOf(container)).toContain("worktree/feature");
+  });
+
+  test("keeps same-authority current visible while workspace:changed refreshes", async () => {
+    ensureMiniDom();
+    let changed: ((event: { sessionId: string }) => void) | undefined;
+    let authorityCalls = 0;
+    const refresh = deferred<SessionWorkspaceAuthority>();
+    const initialWorkspace: SessionWorkspace = {
+      root: "/repo/.worktrees/initial",
+      kind: "worktree",
+      worktree: {
+        path: "/repo/.worktrees/initial",
+        branch: "worktree/initial",
+        baseRef: "main",
+        createdBy: "codeshell",
+      },
+    };
+    const refreshedWorkspace: SessionWorkspace = {
+      root: "/repo/.worktrees/refreshed",
+      kind: "worktree",
+      worktree: {
+        path: "/repo/.worktrees/refreshed",
+        branch: "worktree/refreshed",
+        baseRef: "main",
+        createdBy: "codeshell",
+      },
+    };
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspaceAuthority: () => {
+        authorityCalls += 1;
+        return authorityCalls === 1
+          ? Promise.resolve(
+              sessionAuthority("session", initialWorkspace, {
+                mainRoot: "/repo",
+                mainRootId: "root-main",
+              }),
+            )
+          : refresh.promise;
+      },
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+      onWorkspaceChanged: (callback: (event: { sessionId: string }) => void) => {
+        changed = callback;
+        return () => {
+          changed = undefined;
+        };
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("worktree/initial");
+
+    await act(async () => {
+      changed?.({ sessionId: "session" });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("worktree/initial");
+
+    await act(async () => {
+      refresh.resolve(
+        sessionAuthority("session", refreshedWorkspace, {
+          mainRoot: "/repo",
+          mainRootId: "root-main",
+        }),
+      );
+      await flushMicrotasks();
+    });
+    expect(authorityCalls).toBe(2);
+    expect(textOf(container)).toContain("worktree/refreshed");
+    expect(textOf(container)).not.toContain("worktree/initial");
+  });
+
+  test("fails closed when a same-target authority refresh becomes unavailable", async () => {
+    ensureMiniDom();
+    let changed: ((event: { sessionId: string }) => void) | undefined;
+    let authorityCalls = 0;
+    const refresh = deferred<SessionWorkspaceAuthority>();
+    const initialWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspaceAuthority: () => {
+        authorityCalls += 1;
+        return authorityCalls === 1
+          ? Promise.resolve(
+              sessionAuthority("session", initialWorkspace, {
+                mainRoot: "/repo",
+                mainRootId: "root-main",
+              }),
+            )
+          : refresh.promise;
+      },
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+      onWorkspaceChanged: (callback: (event: { sessionId: string }) => void) => {
+        changed = callback;
+        return () => {
+          changed = undefined;
+        };
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo" projectName="repo" />,
+      );
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("main");
+
+    await act(async () => {
+      changed?.({ sessionId: "session" });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("main");
+
+    await act(async () => {
+      refresh.reject(new Error("authority offline"));
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toMatch(/主目录已移除|Root removed/);
+    expect(textOf(container)).not.toContain("authority offline");
+    expect(
+      findElement(container, (node) =>
+        Boolean(
+          (node as { attributes?: Map<string, string> }).attributes?.has(
+            "data-session-root-status",
+          ),
+        ),
+      ),
+    ).not.toBeNull();
+  });
+
+  test("authority identity changes clear rows and invalidate old diffs", async () => {
+    ensureMiniDom();
+    let changed: ((event: { sessionId: string }) => void) | undefined;
+    let authorityCalls = 0;
+    let listCalls = 0;
+    const authorityRefresh = deferred<SessionWorkspaceAuthority>();
+    const newList = deferred<SessionWorkspaceList>();
+    const oldDiff = deferred<SessionWorkspaceWorktreeInfo["diff"]>();
+    const initialWorkspace: SessionWorkspace = { root: "/repo-a", kind: "main" };
+    const refreshedWorkspace: SessionWorkspace = {
+      root: "/repo-b/.worktrees/new",
+      kind: "worktree",
+      worktree: {
+        path: "/repo-b/.worktrees/new",
+        branch: "worktree/new-authority",
+        baseRef: "main",
+        createdBy: "codeshell",
+      },
+    };
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspaceAuthority: () => {
+        authorityCalls += 1;
+        return authorityCalls === 1
+          ? Promise.resolve(
+              sessionAuthority("session", initialWorkspace, {
+                mainRoot: "/repo-a",
+                mainRootId: "root-a",
+              }),
+            )
+          : authorityRefresh.promise;
+      },
+      getSessionGitBranches: async () => ({ isRepo: true, current: "main", branches: ["main"] }),
+      listSessionWorktrees: () => {
+        listCalls += 1;
+        if (listCalls === 1) {
+          return Promise.resolve({
+            current: initialWorkspace,
+            mainRoot: "/repo-a",
+            worktrees: [
+              {
+                path: "/repo-a/.worktrees/old",
+                branch: "worktree/old-authority",
+                head: "abc123",
+                isManaged: true,
+              },
+            ],
+          } satisfies SessionWorkspaceList);
+        }
+        return newList.promise;
+      },
+      getSessionWorktreeDiff: (_sessionId: string, path: string) =>
+        path.startsWith("/repo-a/") ? oldDiff.promise : Promise.resolve(undefined),
+      onWorkspaceChanged: (callback: (event: { sessionId: string }) => void) => {
+        changed = callback;
+        return () => {
+          changed = undefined;
+        };
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="session" projectPath="/repo-a" projectName="repo-a" />,
+      );
+      await flushMicrotasks();
+    });
+    const trigger = findElement(container, (node) => node.tagName === "BUTTON");
+    expect(trigger).not.toBeNull();
+    await act(async () => {
+      clickHostNode(trigger);
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("worktree/old-authority");
+
+    await act(async () => {
+      changed?.({ sessionId: "session" });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("worktree/old-authority");
+
+    await act(async () => {
+      authorityRefresh.resolve(
+        sessionAuthority("session", refreshedWorkspace, {
+          mainRoot: "/repo-b",
+          mainRootId: "root-b",
+        }),
+      );
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("worktree/new-authority");
+    expect(textOf(container)).not.toContain("worktree/old-authority");
+    expect(listCalls).toBe(2);
+
+    await act(async () => {
+      oldDiff.resolve({ changedFiles: 9, aheadCommits: 3, hasUncommittedChanges: true });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).not.toMatch(/9 files|9 文件/);
+
+    await act(async () => {
+      newList.resolve({
+        current: refreshedWorkspace,
+        mainRoot: "/repo-b",
+        worktrees: [
+          {
+            path: "/repo-b/.worktrees/new",
+            branch: "worktree/new-authority",
+            head: "def456",
+            isManaged: true,
+          },
+        ],
+      });
+      await flushMicrotasks();
+    });
+    expect(textOf(container)).toContain("worktree/new-authority");
+    expect(textOf(container)).not.toContain("worktree/old-authority");
   });
 });
 

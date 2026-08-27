@@ -45,6 +45,34 @@ interface CleanupConfirm {
   action: CleanupAction;
 }
 
+interface AuthoritySnapshot {
+  requestTargetKey: string;
+  targetKey: string;
+  status: "ready" | "unavailable";
+  authority: SessionWorkspaceAuthority | null;
+  error?: string;
+}
+
+interface TargetedValue<T> {
+  targetKey: string;
+  value: T;
+}
+
+function authorityTargetKey(
+  requestTargetKey: string,
+  authority: SessionWorkspaceAuthority | null,
+  legacyRoot: string,
+): string {
+  if (!authority) return `${requestTargetKey}\0legacy:${legacyRoot}`;
+  return [
+    requestTargetKey,
+    authority.mainRootId ?? "legacy",
+    authority.mainRoot,
+    authority.projectId ?? "no-project",
+    authority.rootStatus,
+  ].join("\0");
+}
+
 export function workspaceIndicatorText(
   workspace: SessionWorkspace | null,
   projectName: string | null,
@@ -137,36 +165,65 @@ export function WorkspaceIndicator({
   const { t } = useT();
   const toast = useToast();
   const [open, setOpen] = useState(false);
-  const [workspace, setWorkspace] = useState<SessionWorkspace | null>(null);
-  const [authority, setAuthority] = useState<SessionWorkspaceAuthority | null>(null);
-  const [list, setList] = useState<SessionWorkspaceList | null>(null);
-  const [currentLoading, setCurrentLoading] = useState(false);
-  const [listLoading, setListLoading] = useState(false);
+  const [authorityState, setAuthorityState] = useState<AuthoritySnapshot | null>(null);
+  const [workspaceState, setWorkspaceState] =
+    useState<TargetedValue<SessionWorkspace | null> | null>(null);
+  const [listState, setListState] = useState<TargetedValue<SessionWorkspaceList> | null>(null);
+  const [currentLoadingTarget, setCurrentLoadingTarget] = useState<string | null>(null);
+  const [listLoadingTarget, setListLoadingTarget] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [slug, setSlug] = useState("");
   const [confirm, setConfirm] = useState<CleanupConfirm | null>(null);
   // Whether projectPath is an actual git repo. null = not yet probed. The
   // indicator is a git-worktree switcher, so on a non-git folder it must not
-  // render at all (worktrees don't exist there). Probed via getGitBranches,
-  // the same signal BranchPicker uses.
-  const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
-  const [mainBranch, setMainBranch] = useState<string | null>(null);
-  const [activeProfileLabel, setActiveProfileLabel] = useState<string | null>(null);
+  // render at all (worktrees don't exist there). Probed through the
+  // Session-scoped Git API so the renderer never substitutes projectPath.
+  const [gitState, setGitState] = useState<TargetedValue<{
+    isGitRepo: boolean;
+    mainBranch: string | null;
+  }> | null>(null);
+  const [profileState, setProfileState] = useState<TargetedValue<string | null> | null>(null);
+  const authorityRequestId = useRef(0);
   const currentRequestId = useRef(0);
   const listRequestId = useRef(0);
   const diffRequestId = useRef(0);
   const gitProbeRequestId = useRef(0);
-  const targetKey = `${sessionId ?? ""}\0${projectPath ?? ""}`;
-  const targetKeyRef = useRef(targetKey);
-  if (targetKeyRef.current !== targetKey) {
-    targetKeyRef.current = targetKey;
+  const requestTargetKey = `${sessionId ?? ""}\0${projectPath ?? ""}`;
+  const requestTargetKeyRef = useRef(requestTargetKey);
+  const activeAuthorityTargetKeyRef = useRef<string | null>(null);
+  const activeAuthorityRef = useRef<SessionWorkspaceAuthority | null>(null);
+  const activeAuthorityStatusRef = useRef<AuthoritySnapshot["status"] | null>(null);
+  const openRef = useRef(open);
+  openRef.current = open;
+  if (requestTargetKeyRef.current !== requestTargetKey) {
+    requestTargetKeyRef.current = requestTargetKey;
+    activeAuthorityTargetKeyRef.current = null;
+    activeAuthorityRef.current = null;
+    activeAuthorityStatusRef.current = null;
+    authorityRequestId.current += 1;
+    currentRequestId.current += 1;
     listRequestId.current += 1;
     diffRequestId.current += 1;
     gitProbeRequestId.current += 1;
   }
 
   const canLoad = Boolean(sessionId && projectPath);
+  const visibleAuthorityState =
+    authorityState?.requestTargetKey === requestTargetKey ? authorityState : null;
+  const activeTargetKey = visibleAuthorityState?.targetKey ?? null;
+  const authority =
+    visibleAuthorityState?.status === "ready" ? visibleAuthorityState.authority : null;
+  const workspace =
+    workspaceState && workspaceState.targetKey === activeTargetKey ? workspaceState.value : null;
+  const list = listState && listState.targetKey === activeTargetKey ? listState.value : null;
+  const visibleGitState = gitState?.targetKey === activeTargetKey ? gitState.value : null;
+  const isGitRepo = visibleGitState?.isGitRepo ?? null;
+  const mainBranch = visibleGitState?.mainBranch ?? null;
+  const activeProfileLabel =
+    profileState?.targetKey === requestTargetKey ? profileState.value : null;
+  const currentLoading = currentLoadingTarget === requestTargetKey;
+  const listLoading = Boolean(activeTargetKey && listLoadingTarget === activeTargetKey);
   const isLoading = currentLoading || listLoading;
 
   const reportError = useCallback(
@@ -181,61 +238,124 @@ export function WorkspaceIndicator({
     [t, toast],
   );
 
-  const refreshCurrent = useCallback(async () => {
-    const requestId = ++currentRequestId.current;
+  const refreshCurrent = useCallback(async (): Promise<boolean> => {
+    const requestAuthorityId = ++authorityRequestId.current;
+    const requestCurrentId = ++currentRequestId.current;
+    const requestKey = requestTargetKeyRef.current;
     if (!sessionId || !projectPath) {
-      setCurrentLoading(false);
-      setWorkspace(null);
-      setAuthority(null);
-      setList(null);
-      return;
+      setCurrentLoadingTarget(null);
+      return false;
     }
-    setCurrentLoading(true);
+    setCurrentLoadingTarget(requestKey);
     try {
       const authorityApi = window.codeshell.getSessionWorkspaceAuthority;
       const nextAuthority =
         typeof authorityApi === "function" ? await authorityApi(sessionId) : null;
-      if (nextAuthority && nextAuthority.rootStatus !== "ok") {
-        if (currentRequestId.current !== requestId) return;
-        setAuthority(nextAuthority);
-        setWorkspace(null);
-        return;
+      if (
+        authorityRequestId.current !== requestAuthorityId ||
+        currentRequestId.current !== requestCurrentId ||
+        requestTargetKeyRef.current !== requestKey
+      ) {
+        return false;
       }
-      const next =
-        nextAuthority?.workspace ??
-        (await window.codeshell.getSessionWorkspace(sessionId, projectPath));
-      if (currentRequestId.current !== requestId) return;
-      setAuthority(nextAuthority);
-      setWorkspace(next);
-    } catch {
-      if (currentRequestId.current !== requestId) return;
-      setAuthority(null);
-      setWorkspace(null);
+
+      if (!nextAuthority && typeof authorityApi === "function") {
+        throw new Error("Session workspace authority is unavailable");
+      }
+
+      let next: SessionWorkspace | null = nextAuthority?.workspace ?? null;
+      if (!nextAuthority) {
+        next = await window.codeshell.getSessionWorkspace(sessionId, projectPath);
+        if (
+          currentRequestId.current !== requestCurrentId ||
+          requestTargetKeyRef.current !== requestKey
+        ) {
+          return false;
+        }
+      }
+
+      const nextTargetKey = authorityTargetKey(requestKey, nextAuthority, projectPath);
+      if (activeAuthorityTargetKeyRef.current !== nextTargetKey) {
+        activeAuthorityTargetKeyRef.current = nextTargetKey;
+        listRequestId.current += 1;
+        diffRequestId.current += 1;
+        gitProbeRequestId.current += 1;
+      }
+      activeAuthorityRef.current = nextAuthority;
+      activeAuthorityStatusRef.current = "ready";
+      setAuthorityState({
+        requestTargetKey: requestKey,
+        targetKey: nextTargetKey,
+        status: "ready",
+        authority: nextAuthority,
+      });
+      if (nextAuthority && nextAuthority.rootStatus !== "ok") {
+        setWorkspaceState({ targetKey: nextTargetKey, value: null });
+        return false;
+      }
+      setWorkspaceState({ targetKey: nextTargetKey, value: next });
+      return true;
+    } catch (error) {
+      if (
+        authorityRequestId.current !== requestAuthorityId ||
+        currentRequestId.current !== requestCurrentId ||
+        requestTargetKeyRef.current !== requestKey
+      ) {
+        return false;
+      }
+      const unavailableTargetKey = `${requestKey}\0authority-unavailable`;
+      if (activeAuthorityTargetKeyRef.current !== unavailableTargetKey) {
+        activeAuthorityTargetKeyRef.current = unavailableTargetKey;
+        listRequestId.current += 1;
+        diffRequestId.current += 1;
+        gitProbeRequestId.current += 1;
+      }
+      activeAuthorityRef.current = null;
+      activeAuthorityStatusRef.current = "unavailable";
+      setAuthorityState({
+        requestTargetKey: requestKey,
+        targetKey: unavailableTargetKey,
+        status: "unavailable",
+        authority: null,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      setWorkspaceState({ targetKey: unavailableTargetKey, value: null });
+      return false;
     } finally {
-      if (currentRequestId.current === requestId) setCurrentLoading(false);
+      if (
+        currentRequestId.current === requestCurrentId &&
+        requestTargetKeyRef.current === requestKey
+      ) {
+        setCurrentLoadingTarget(null);
+      }
     }
   }, [projectPath, sessionId]);
 
   const hydrateDiffs = useCallback(
-    (next: SessionWorkspaceList) => {
+    (next: SessionWorkspaceList, targetKey: string, requestSessionId: string) => {
       const getDiff = window.codeshell.getSessionWorktreeDiff;
-      if (typeof getDiff !== "function" || !sessionId) return;
+      if (typeof getDiff !== "function") return;
       const requestId = ++diffRequestId.current;
-      const requestTargetKey = targetKeyRef.current;
       for (const row of next.worktrees) {
-        void getDiff(sessionId, row.path)
+        void getDiff(requestSessionId, row.path)
           .then((diff) => {
             if (diffRequestId.current !== requestId) return;
-            if (targetKeyRef.current !== requestTargetKey) return;
-            setList((current) => {
-              if (!current || current.mainRoot !== next.mainRoot) return current;
+            if (activeAuthorityTargetKeyRef.current !== targetKey) return;
+            setListState((current) => {
+              if (
+                !current ||
+                current.targetKey !== targetKey ||
+                current.value.mainRoot !== next.mainRoot
+              ) {
+                return current;
+              }
               let changed = false;
-              const worktrees = current.worktrees.map((existing) => {
+              const worktrees = current.value.worktrees.map((existing) => {
                 if (existing.path !== row.path) return existing;
                 changed = true;
                 return { ...existing, diff };
               });
-              return changed ? { ...current, worktrees } : current;
+              return changed ? { ...current, value: { ...current.value, worktrees } } : current;
             });
           })
           .catch(() => {
@@ -244,62 +364,130 @@ export function WorkspaceIndicator({
           });
       }
     },
-    [sessionId],
+    [],
   );
 
   const applyWorkspaceList = useCallback(
-    (next: SessionWorkspaceList) => {
-      setList(next);
-      setWorkspace(next.current);
-      hydrateDiffs(next);
+    (
+      next: SessionWorkspaceList,
+      targetKey: string,
+      requestSessionId: string,
+      updateCurrent: boolean,
+    ) => {
+      if (activeAuthorityTargetKeyRef.current !== targetKey) return;
+      const requestAuthority = activeAuthorityRef.current;
+      if (requestAuthority && !samePath(next.mainRoot, requestAuthority.mainRoot)) return;
+      setListState({ targetKey, value: next });
+      if (updateCurrent) setWorkspaceState({ targetKey, value: next.current });
+      hydrateDiffs(next, targetKey, requestSessionId);
     },
     [hydrateDiffs],
   );
 
   const refreshList = useCallback(async () => {
     const requestId = ++listRequestId.current;
-    const requestTargetKey = targetKeyRef.current;
-    if (!sessionId || !projectPath) {
-      setList(null);
-      setListLoading(false);
+    const targetKey = activeAuthorityTargetKeyRef.current;
+    const requestKey = requestTargetKeyRef.current;
+    const requestAuthority = activeAuthorityRef.current;
+    const currentRequestAtStart = currentRequestId.current;
+    if (
+      !sessionId ||
+      !projectPath ||
+      !targetKey ||
+      activeAuthorityStatusRef.current !== "ready" ||
+      (requestAuthority && requestAuthority.rootStatus !== "ok")
+    ) {
+      setListLoadingTarget(null);
       return;
     }
-    setListLoading(true);
+    setListLoadingTarget(targetKey);
     try {
-      const next = await window.codeshell.listSessionWorktrees(sessionId, projectPath);
+      const next = await window.codeshell.listSessionWorktrees(
+        sessionId,
+        requestAuthority?.mainRoot ?? projectPath,
+      );
       if (listRequestId.current !== requestId) return;
-      if (targetKeyRef.current !== requestTargetKey) return;
-      applyWorkspaceList(next);
+      if (
+        requestTargetKeyRef.current !== requestKey ||
+        activeAuthorityTargetKeyRef.current !== targetKey
+      ) {
+        return;
+      }
+      applyWorkspaceList(
+        next,
+        targetKey,
+        sessionId,
+        currentRequestId.current === currentRequestAtStart,
+      );
     } catch (error) {
       if (listRequestId.current !== requestId) return;
-      if (targetKeyRef.current !== requestTargetKey) return;
+      if (
+        requestTargetKeyRef.current !== requestKey ||
+        activeAuthorityTargetKeyRef.current !== targetKey
+      ) {
+        return;
+      }
       reportError(error);
     } finally {
-      if (listRequestId.current === requestId) setListLoading(false);
+      if (
+        listRequestId.current === requestId &&
+        requestTargetKeyRef.current === requestKey &&
+        activeAuthorityTargetKeyRef.current === targetKey
+      ) {
+        setListLoadingTarget(null);
+      }
     }
   }, [applyWorkspaceList, projectPath, reportError, sessionId]);
 
   const refreshGitProbe = useCallback(async () => {
     const requestId = ++gitProbeRequestId.current;
-    if (!projectPath || !sessionId) {
-      setIsGitRepo(null);
-      setMainBranch(null);
+    const targetKey = activeAuthorityTargetKeyRef.current;
+    const requestKey = requestTargetKeyRef.current;
+    if (
+      !projectPath ||
+      !sessionId ||
+      !targetKey ||
+      activeAuthorityStatusRef.current !== "ready" ||
+      (activeAuthorityRef.current && activeAuthorityRef.current.rootStatus !== "ok")
+    ) {
       return;
     }
     try {
       const res = await window.codeshell.getSessionGitBranches(sessionId);
-      if (gitProbeRequestId.current !== requestId) return;
-      setIsGitRepo(res.isRepo === true);
-      setMainBranch(res.isRepo === true ? normalizeCurrentBranch(res.current) : null);
+      if (
+        gitProbeRequestId.current !== requestId ||
+        requestTargetKeyRef.current !== requestKey ||
+        activeAuthorityTargetKeyRef.current !== targetKey
+      ) {
+        return;
+      }
+      setGitState({
+        targetKey,
+        value: {
+          isGitRepo: res.isRepo === true,
+          mainBranch: res.isRepo === true ? normalizeCurrentBranch(res.current) : null,
+        },
+      });
     } catch {
-      if (gitProbeRequestId.current !== requestId) return;
-      setIsGitRepo(false);
-      setMainBranch(null);
+      if (
+        gitProbeRequestId.current !== requestId ||
+        requestTargetKeyRef.current !== requestKey ||
+        activeAuthorityTargetKeyRef.current !== targetKey
+      ) {
+        return;
+      }
+      setGitState({ targetKey, value: { isGitRepo: false, mainBranch: null } });
     }
   }, [projectPath, sessionId]);
+  const refreshListRef = useRef(refreshList);
+  refreshListRef.current = refreshList;
+  const refreshGitProbeRef = useRef(refreshGitProbe);
+  refreshGitProbeRef.current = refreshGitProbe;
+  const currentEffectTargetRef = useRef(requestTargetKey);
 
   useEffect(() => {
     return () => {
+      authorityRequestId.current += 1;
       currentRequestId.current += 1;
       listRequestId.current += 1;
       diffRequestId.current += 1;
@@ -310,46 +498,51 @@ export function WorkspaceIndicator({
   useEffect(() => {
     listRequestId.current += 1;
     diffRequestId.current += 1;
-    setList(null);
-    setListLoading(false);
+    setListLoadingTarget(null);
     setBusyAction(null);
     setConfirm(null);
-    if (open) void refreshList();
-  }, [targetKey]);
+  }, [requestTargetKey]);
 
   useEffect(() => {
-    void refreshCurrent();
-  }, [refreshCurrent, sessionBusy]);
-
-  useEffect(() => {
-    setIsGitRepo(null);
-    setMainBranch(null);
-    void refreshGitProbe();
-  }, [refreshGitProbe]);
+    const targetChanged = currentEffectTargetRef.current !== requestTargetKey;
+    currentEffectTargetRef.current = requestTargetKey;
+    void refreshCurrent().then((ready) => {
+      if (!ready) return;
+      void refreshGitProbeRef.current();
+      if (targetChanged && openRef.current) void refreshListRef.current();
+    });
+  }, [refreshCurrent, requestTargetKey, sessionBusy]);
 
   useEffect(() => {
     let cancelled = false;
+    const profileTargetKey = requestTargetKey;
     if (!projectPath || !sessionId || typeof window.codeshell.listProfiles !== "function") {
-      setActiveProfileLabel(null);
+      setProfileState({ targetKey: profileTargetKey, value: null });
       return;
     }
-    setActiveProfileLabel(null);
+    setProfileState({ targetKey: profileTargetKey, value: null });
     const profiles =
       typeof window.codeshell.listSessionProfiles === "function"
         ? window.codeshell.listSessionProfiles(sessionId)
         : window.codeshell.listProfiles({ sessionId });
     void profiles
       .then((profiles) => {
-        if (!cancelled)
-          setActiveProfileLabel(profiles.find((profile) => profile.active)?.label ?? null);
+        if (!cancelled && requestTargetKeyRef.current === profileTargetKey) {
+          setProfileState({
+            targetKey: profileTargetKey,
+            value: profiles.find((profile) => profile.active)?.label ?? null,
+          });
+        }
       })
       .catch(() => {
-        if (!cancelled) setActiveProfileLabel(null);
+        if (!cancelled && requestTargetKeyRef.current === profileTargetKey) {
+          setProfileState({ targetKey: profileTargetKey, value: null });
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [projectPath, sessionId]);
+  }, [projectPath, requestTargetKey, sessionId]);
 
   useEffect(() => {
     if (!projectPath) return;
@@ -374,10 +567,13 @@ export function WorkspaceIndicator({
     if (typeof subscribe !== "function" || !sessionId) return;
     return subscribe((event) => {
       if (event.sessionId !== sessionId) return;
-      void refreshCurrent();
-      if (open) void refreshList();
+      void refreshCurrent().then((ready) => {
+        if (!ready) return;
+        void refreshGitProbeRef.current();
+        if (openRef.current) void refreshListRef.current();
+      });
     });
-  }, [open, refreshCurrent, refreshList, sessionId]);
+  }, [refreshCurrent, sessionId]);
 
   const onOpenChange = (next: boolean) => {
     setOpen(next);
@@ -389,10 +585,19 @@ export function WorkspaceIndicator({
 
   const switchTo = async (target: string): Promise<boolean> => {
     if (!sessionId || !projectPath || sessionBusy) return false;
+    const requestKey = requestTargetKeyRef.current;
+    const targetKey = activeAuthorityTargetKeyRef.current;
+    if (!targetKey || activeAuthorityStatusRef.current !== "ready") return false;
     setBusyAction(target);
     try {
       const next = await window.codeshell.switchSessionWorkspace(sessionId, projectPath, target);
-      applyWorkspaceList(next);
+      if (
+        requestTargetKeyRef.current !== requestKey ||
+        activeAuthorityTargetKeyRef.current !== targetKey
+      ) {
+        return false;
+      }
+      applyWorkspaceList(next, targetKey, sessionId, true);
       setOpen(false);
       return true;
     } catch (error) {
@@ -415,6 +620,9 @@ export function WorkspaceIndicator({
 
   const cleanup = async () => {
     if (!confirm || !sessionId || !projectPath || sessionBusy) return;
+    const requestKey = requestTargetKeyRef.current;
+    const targetKey = activeAuthorityTargetKeyRef.current;
+    if (!targetKey || activeAuthorityStatusRef.current !== "ready") return;
     const { row, action } = confirm;
     setBusyAction(`${action}:${row.path}`);
     try {
@@ -424,7 +632,13 @@ export function WorkspaceIndicator({
         row.path,
         action,
       );
-      applyWorkspaceList(next);
+      if (
+        requestTargetKeyRef.current !== requestKey ||
+        activeAuthorityTargetKeyRef.current !== targetKey
+      ) {
+        return;
+      }
+      applyWorkspaceList(next, targetKey, sessionId, true);
       setConfirm(null);
     } catch (error) {
       reportError(error);
@@ -456,16 +670,23 @@ export function WorkspaceIndicator({
   ) : null;
 
   if (!canLoad) return null;
-  if (authority?.rootStatus !== undefined && authority.rootStatus !== "ok") {
+  const unavailable = visibleAuthorityState?.status === "unavailable";
+  const failedRootStatus =
+    unavailable || (authority?.rootStatus !== undefined && authority.rootStatus !== "ok")
+      ? unavailable
+        ? "unavailable"
+        : authority!.rootStatus
+      : null;
+  if (failedRootStatus) {
     return (
       <>
         <span
-          data-session-root-status={authority.rootStatus}
-          title={authority.rootStatusMessage}
+          data-session-root-status={failedRootStatus}
+          title={unavailable ? visibleAuthorityState?.error : authority?.rootStatusMessage}
           className="no-drag ml-1 inline-flex h-7 items-center rounded-sm bg-destructive/10 px-2 text-xs font-medium text-destructive"
         >
           {t(
-            authority.rootStatus === "dir_missing"
+            failedRootStatus === "dir_missing"
               ? "sidebar.sessionRootDirMissing"
               : "sidebar.sessionRootRemoved",
           )}
@@ -474,6 +695,9 @@ export function WorkspaceIndicator({
       </>
     );
   }
+  // A new target has no authority/current snapshot yet. Same-target refreshes
+  // retain the tagged snapshot above, so their trigger remains stable.
+  if (!visibleAuthorityState || workspace === null) return profileBadge;
   // The worktree switcher is meaningless outside a git repo, but the active
   // digital human belongs to the project and remains useful there.
   if (isGitRepo !== true) return profileBadge;

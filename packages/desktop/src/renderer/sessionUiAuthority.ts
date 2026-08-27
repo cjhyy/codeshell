@@ -24,7 +24,7 @@ interface Params {
 }
 
 interface LoadedAuthority {
-  sessionId: string;
+  requestKey: string;
   authority: SessionWorkspaceAuthority | null;
   error?: string;
 }
@@ -65,18 +65,27 @@ export function useSessionUiAuthority({
   const requestKey = sessionId ? `${sessionId}\0${projectAuthorityVersion}` : "";
   const [loaded, setLoaded] = useState<LoadedAuthority | null>(null);
   const requestIdRef = useRef(0);
+  const requestKeyRef = useRef(requestKey);
+
+  // Invalidate the old request during render. An earlier authority promise can
+  // otherwise settle after the new target renders but before its effect runs.
+  if (requestKeyRef.current !== requestKey) {
+    requestKeyRef.current = requestKey;
+    requestIdRef.current += 1;
+  }
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!sessionId) return;
     const requestId = ++requestIdRef.current;
+    const requestTargetKey = requestKeyRef.current;
     try {
       const authority = await window.codeshell.getSessionWorkspaceAuthority(sessionId);
-      if (requestIdRef.current !== requestId) return;
-      setLoaded({ sessionId, authority });
+      if (requestIdRef.current !== requestId || requestKeyRef.current !== requestTargetKey) return;
+      setLoaded({ requestKey: requestTargetKey, authority });
     } catch (error) {
-      if (requestIdRef.current !== requestId) return;
+      if (requestIdRef.current !== requestId || requestKeyRef.current !== requestTargetKey) return;
       setLoaded({
-        sessionId,
+        requestKey: requestTargetKey,
         authority: null,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -150,7 +159,7 @@ export function useSessionUiAuthority({
       };
     }
 
-    if (!loaded || loaded.sessionId !== sessionId) {
+    if (!loaded || loaded.requestKey !== requestKey) {
       if (allowProjectFallback) return projectFallback();
       return unavailableSessionAuthority(sessionId, "loading");
     }
