@@ -39,6 +39,22 @@ function dir(name: string): string {
   return value;
 }
 
+function registryProject(
+  id: string,
+  roots: Array<{ id: string; path: string }>,
+): Record<string, unknown> {
+  return {
+    id,
+    name: id,
+    roots: roots.map((root) => ({ ...root, name: root.id, addedAt: 1 })),
+    primaryRootId: roots[0]!.id,
+    createdAt: 1,
+    updatedAt: 1,
+    lastOpenedAt: 1,
+    revision: 1,
+  };
+}
+
 function store(
   options: {
     index?: SessionCwdIndex;
@@ -385,6 +401,108 @@ describe("ProjectStore", () => {
     expect(resolved[2]).toEqual({ noRepo: true });
     expect(resolved[3]).toMatchObject({ created: true });
     expect(resolved[4]).toBeNull();
+  });
+
+  test("does not revive a tombstone from persisted Sessions unless a native picker restores it", async () => {
+    const primary = dir("tombstone-primary");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const projects = store({ sessionManager });
+    const project = await projects.createFromPath(primary);
+    sessionManager.create(primary, "model", "provider", "confirmed-session");
+    sessionManager.create(primary, "model", "provider", "archived-session");
+    sessionManager.setSessionArchived("archived-session", 2_000);
+    await projects.remove(project.id);
+    const tombstone = await projects.get(project.id);
+    expect(tombstone).toMatchObject({
+      deletedAt: expect.any(Number),
+      revision: project.revision + 1,
+    });
+
+    const restartedIndex = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    const restarted = store({ index: restartedIndex, sessionManager });
+    await restarted.warm();
+    expect(
+      restartedIndex
+        .confirmedEntries()
+        .map((entry) => entry.sessionId)
+        .sort(),
+    ).toEqual(["archived-session", "confirmed-session"]);
+
+    await expect(restarted.resolveProjectForCwdBatch([primary], "disk-rebuild")).resolves.toEqual([
+      null,
+    ]);
+    await expect(restarted.resolveProjectForCwd(primary, "automation-import")).resolves.toBeNull();
+    await expect(restarted.resolveProjectForCwd(primary)).resolves.toBeNull();
+    expect(await restarted.get(project.id)).toEqual(tombstone);
+
+    const restored = await restarted.createFromPath(primary);
+    expect(restored).toMatchObject({
+      id: project.id,
+      primaryRootId: project.primaryRootId,
+      revision: tombstone!.revision + 1,
+    });
+    expect(restored).not.toHaveProperty("deletedAt");
+    expect((await restarted.list({ includeDeleted: true }))[0]).toEqual(restored);
+    expect(JSON.parse(readFileSync(recentsFile, "utf8"))[0]).not.toHaveProperty("deletedAt");
+  });
+
+  test("quarantines every globally conflicting V2 project independent of registry order", async () => {
+    const clean = registryProject("clean-project", [{ id: "clean-root", path: dir("clean") }]);
+    const ancestor = dir("allowed-ancestor");
+    const descendant = join(ancestor, "child");
+    mkdirSync(descendant);
+    const allowedParent = registryProject("allowed-parent", [
+      { id: "allowed-parent-root", path: ancestor },
+    ]);
+    const allowedChild = registryProject("allowed-child", [
+      { id: "allowed-child-root", path: descendant },
+    ]);
+    const duplicateProjectIdA = registryProject("duplicate-project", [
+      { id: "duplicate-project-root-a", path: dir("duplicate-project-a") },
+    ]);
+    const duplicateProjectIdB = registryProject("duplicate-project", [
+      { id: "duplicate-project-root-b", path: dir("duplicate-project-b") },
+    ]);
+    const duplicateWithinProject = registryProject("duplicate-within-project", [
+      { id: "duplicate-within-root", path: dir("duplicate-within-a") },
+      { id: "duplicate-within-root", path: dir("duplicate-within-b") },
+    ]);
+    const duplicateRootIdA = registryProject("duplicate-root-project-a", [
+      { id: "duplicate-across-root", path: dir("duplicate-root-a") },
+    ]);
+    const duplicateRootIdB = registryProject("duplicate-root-project-b", [
+      { id: "duplicate-across-root", path: dir("duplicate-root-b") },
+    ]);
+    const duplicatePath = dir("duplicate-canonical-path");
+    const duplicatePathA = registryProject("duplicate-path-project-a", [
+      { id: "duplicate-path-root-a", path: duplicatePath },
+    ]);
+    const duplicatePathB = registryProject("duplicate-path-project-b", [
+      { id: "duplicate-path-root-b", path: `${duplicatePath}/.` },
+    ]);
+    const registryProjects = [
+      duplicateProjectIdA,
+      clean,
+      duplicateRootIdA,
+      allowedParent,
+      duplicatePathA,
+      duplicateWithinProject,
+      duplicateProjectIdB,
+      allowedChild,
+      duplicateRootIdB,
+      duplicatePathB,
+    ];
+    const expectedIds = ["allowed-child", "allowed-parent", "clean-project"];
+
+    for (const projects of [registryProjects, [...registryProjects].reverse()]) {
+      writeFileSync(projectsFile, JSON.stringify({ version: 2, projects }));
+      const parsed = store();
+      expect((await parsed.list()).map((project) => project.id).sort()).toEqual(expectedIds);
+      expect(parsed.resolveExactRootSync(duplicatePath)).toBeUndefined();
+      expect(parsed.resolveExactRootSync(ancestor)?.project.id).toBe("allowed-parent");
+      expect(parsed.resolveExactRootSync(descendant)?.project.id).toBe("allowed-child");
+    }
   });
 
   test("resolves stable project/root ids across make-primary and rejects stale bindings", async () => {

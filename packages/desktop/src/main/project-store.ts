@@ -185,13 +185,25 @@ export class ProjectStore {
     return result;
   }
 
+  /** Register a path selected by Main's native picker, including explicit tombstone restoration. */
   async createFromPath(pickedPath: string): Promise<LocalProject> {
+    const registered = await this.registerFromPath(pickedPath, true);
+    if (!registered) throw new Error("picker-authorized project registration failed");
+    return registered.project;
+  }
+
+  private async registerFromPath(
+    pickedPath: string,
+    restoreTombstone: boolean,
+  ): Promise<{ project: LocalProject; created: boolean } | null> {
     const root = this.resolvePickedRoot(pickedPath);
     let changed = false;
+    let createdNew = false;
     const project = this.mutate((registry) => {
       const existing = findRoot(registry.projects, root.path);
       if (existing) {
         if (existing.project.deletedAt !== undefined) {
+          if (!restoreTombstone) return null;
           const timestamp = this.now();
           delete existing.project.deletedAt;
           existing.project.updatedAt = timestamp;
@@ -204,7 +216,7 @@ export class ProjectStore {
       if (registry.projects.length >= MAX_PROJECTS) throw new Error("project registry is full");
       const timestamp = this.now();
       const rootId = this.makeId();
-      const created: LocalProject = {
+      const newProject: LocalProject = {
         id: this.makeId(),
         name: root.name,
         roots: [{ id: rootId, path: root.path, name: root.name, addedAt: timestamp }],
@@ -214,12 +226,13 @@ export class ProjectStore {
         lastOpenedAt: timestamp,
         revision: 1,
       };
-      registry.projects.push(created);
+      registry.projects.push(newProject);
       changed = true;
-      return created;
+      createdNew = true;
+      return newProject;
     });
     if (changed) await this.didChange();
-    return cloneProject(project);
+    return project ? { project: cloneProject(project), created: createdNew } : null;
   }
 
   async addRoot(projectId: string, pickedPath: string): Promise<AddedProjectRoot> {
@@ -443,13 +456,23 @@ export class ProjectStore {
     for (let index = 0; index < normalized.length; index += 1) {
       const candidate = normalized[index]!;
       const found = findRoot(registry.projects, candidate.path);
-      if (found && found.project.deletedAt === undefined && existsDirectory(found.root.path)) {
+      if (found?.project.deletedAt !== undefined) {
+        results.push(null);
+      } else if (found && existsDirectory(found.root.path)) {
         results.push({ projectId: found.project.id, rootId: found.root.id, created: false });
       } else if (candidate.key === noRepoKey) {
         results.push({ noRepo: true });
       } else if (confirmed[index]) {
-        const created = await this.createFromPath(candidate.path);
-        results.push({ projectId: created.id, rootId: created.primaryRootId, created: true });
+        const registered = await this.registerFromPath(candidate.path, false);
+        results.push(
+          registered
+            ? {
+                projectId: registered.project.id,
+                rootId: registered.project.primaryRootId,
+                created: registered.created,
+              }
+            : null,
+        );
       } else {
         results.push(null);
       }
@@ -773,7 +796,35 @@ function parseRegistryText(raw: string, file: string): LocalProjectRegistryV2 {
     .slice(0, MAX_PROJECTS)
     .map(parseProject)
     .filter((project): project is LocalProject => project !== undefined);
-  return { version: 2, projects };
+  return { version: 2, projects: isolateRegistryConflicts(projects) };
+}
+
+function isolateRegistryConflicts(projects: readonly LocalProject[]): LocalProject[] {
+  const conflicts = new Set<number>();
+  const projectIdOwners = new Map<string, number>();
+  const rootIdOwners = new Map<string, number>();
+  const rootPathOwners = new Map<string, number>();
+
+  const recordOwner = (owners: Map<string, number>, key: string, projectIndex: number): void => {
+    const owner = owners.get(key);
+    if (owner === undefined) {
+      owners.set(key, projectIndex);
+      return;
+    }
+    conflicts.add(owner);
+    conflicts.add(projectIndex);
+  };
+
+  for (let projectIndex = 0; projectIndex < projects.length; projectIndex += 1) {
+    const project = projects[projectIndex]!;
+    recordOwner(projectIdOwners, project.id, projectIndex);
+    for (const root of project.roots) {
+      recordOwner(rootIdOwners, root.id, projectIndex);
+      recordOwner(rootPathOwners, canonicalKey(root.path), projectIndex);
+    }
+  }
+
+  return projects.filter((_project, projectIndex) => !conflicts.has(projectIndex));
 }
 
 function parseProject(value: unknown): LocalProject | undefined {
