@@ -368,6 +368,20 @@ export class ProjectStore {
     return (await this.get(resolution.projectId)) ?? null;
   }
 
+  /** Register a legacy path only when the native picker selected that same canonical root. */
+  async migrateLegacyPickedPath(
+    expectedPath: string,
+    pickedPath: string,
+  ): Promise<LocalProject | null> {
+    if (existsSync(this.migrationMarkerFile)) {
+      throw new Error("legacy project migration is complete");
+    }
+    const expected = this.resolvePickedRoot(expectedPath);
+    const picked = this.resolvePickedRoot(pickedPath);
+    if (expected.key !== picked.key) return null;
+    return this.createFromPath(picked.path);
+  }
+
   async completeLegacyMigration(): Promise<void> {
     mutateJsonFile<{ completed: true }>(this.migrationMarkerFile, {
       parse: (raw) => {

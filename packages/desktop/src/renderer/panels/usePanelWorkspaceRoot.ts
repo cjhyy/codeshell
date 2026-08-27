@@ -3,6 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export interface PanelWorkspaceState {
   root: string | null;
   kind: "main" | "worktree" | null;
+  mainRoot: string | null;
+  mainRootId: string | null;
+  projectId: string | null;
   ready: boolean;
   error?: string;
 }
@@ -11,9 +14,32 @@ function immediateState(
   engineSessionId: string | null,
   projectPath: string | null,
 ): PanelWorkspaceState {
-  if (!projectPath) return { root: null, kind: null, ready: true };
-  if (!engineSessionId) return { root: projectPath, kind: "main", ready: true };
-  return { root: null, kind: null, ready: false };
+  if (!projectPath)
+    return {
+      root: null,
+      kind: null,
+      mainRoot: null,
+      mainRootId: null,
+      projectId: null,
+      ready: true,
+    };
+  if (!engineSessionId)
+    return {
+      root: projectPath,
+      kind: "main",
+      mainRoot: projectPath,
+      mainRootId: null,
+      projectId: null,
+      ready: true,
+    };
+  return {
+    root: null,
+    kind: null,
+    mainRoot: null,
+    mainRootId: null,
+    projectId: null,
+    ready: false,
+  };
 }
 
 /**
@@ -53,17 +79,39 @@ export function usePanelWorkspaceRoot(
     setWorkspace((current) =>
       current.root && targetKeyRef.current === requestTargetKey
         ? { ...current, ready: false, error: undefined }
-        : { root: null, kind: null, ready: false },
+        : {
+            root: null,
+            kind: null,
+            mainRoot: null,
+            mainRootId: null,
+            projectId: null,
+            ready: false,
+          },
     );
     try {
-      const next = await window.codeshell.getSessionWorkspace(engineSessionId, projectPath);
+      const authorityApi = window.codeshell.getSessionWorkspaceAuthority;
+      const authority =
+        typeof authorityApi === "function" ? await authorityApi(engineSessionId) : undefined;
+      const next =
+        authority?.workspace ??
+        (await window.codeshell.getSessionWorkspace(engineSessionId, projectPath));
       if (requestIdRef.current !== requestId || targetKeyRef.current !== requestTargetKey) return;
-      setWorkspace({ root: next.root, kind: next.kind, ready: true });
+      setWorkspace({
+        root: next.root,
+        kind: next.kind,
+        mainRoot: authority?.mainRoot ?? projectPath,
+        mainRootId: authority?.mainRootId ?? null,
+        projectId: authority?.projectId ?? null,
+        ready: true,
+      });
     } catch (error) {
       if (requestIdRef.current !== requestId || targetKeyRef.current !== requestTargetKey) return;
       setWorkspace({
         root: projectPath,
         kind: "main",
+        mainRoot: projectPath,
+        mainRootId: null,
+        projectId: null,
         ready: true,
         error: error instanceof Error ? error.message : String(error),
       });

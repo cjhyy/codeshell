@@ -1,5 +1,6 @@
 import { isAbsolute, resolve } from "node:path";
 import { SessionManager, SettingsManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
+import { canonicalKey } from "@cjhyy/code-shell-core/internal";
 import {
   createWorktree,
   currentBranch,
@@ -14,6 +15,7 @@ import {
   type WorktreeWorkspaceOwner,
 } from "@cjhyy/code-shell-capability-coding/git";
 import { getSessionCwdIndex } from "./session-cwd-index.js";
+import { getProjectStore, type ProjectStore } from "./project-store.js";
 
 export type WorkspaceCleanupAction = "detach" | "discard";
 
@@ -21,6 +23,17 @@ export interface SessionWorkspaceList {
   current: SessionWorkspace;
   mainRoot: string;
   worktrees: WorktreeInfo[];
+}
+
+export type SessionRootStatus = "ok";
+
+export interface SessionWorkspaceAuthority {
+  workspace: SessionWorkspace;
+  projectId: string | null;
+  mainRootId: string | null;
+  mainRoot: string;
+  mainRootName: string;
+  rootStatus: SessionRootStatus;
 }
 
 export interface ReleasedSessionWorkspace {
@@ -65,6 +78,7 @@ export interface SessionWorkspaceMutationOptions {
 let sessionManagerSingleton: SessionManager | undefined;
 let sessionManagerHome: string | undefined;
 let sessionManagerForTests: SessionManager | undefined;
+let projectStoreForTests: ProjectStore | undefined;
 
 export function __setSessionWorkspaceServiceSessionManagerForTests(
   sm: SessionManager | undefined,
@@ -72,6 +86,12 @@ export function __setSessionWorkspaceServiceSessionManagerForTests(
   sessionManagerForTests = sm;
   sessionManagerSingleton = undefined;
   sessionManagerHome = undefined;
+}
+
+export function __setSessionWorkspaceServiceProjectStoreForTests(
+  store: ProjectStore | undefined,
+): void {
+  projectStoreForTests = store;
 }
 
 function sessions(): SessionManager {
@@ -84,6 +104,10 @@ function sessions(): SessionManager {
   return sessionManagerSingleton;
 }
 
+function projects(): ProjectStore {
+  return projectStoreForTests ?? getProjectStore();
+}
+
 function workspaceOwners(sm: SessionManager): WorktreeWorkspaceOwner[] {
   return sm.list(10_000).map((state) => ({
     sessionId: state.sessionId,
@@ -92,6 +116,13 @@ function workspaceOwners(sm: SessionManager): WorktreeWorkspaceOwner[] {
 }
 
 async function mainRootFor(sm: SessionManager, sessionId: string): Promise<string> {
+  return (await mainRootAuthorityFor(sm, sessionId)).mainRoot;
+}
+
+async function mainRootAuthorityFor(
+  sm: SessionManager,
+  sessionId: string,
+): Promise<Omit<SessionWorkspaceAuthority, "workspace">> {
   const fromSession = sm.readSessionMainRoot(sessionId);
   if (!fromSession) {
     throw new Error("session exists but has no valid state — cannot resolve workspace root");
@@ -99,8 +130,28 @@ async function mainRootFor(sm: SessionManager, sessionId: string): Promise<strin
   // Probe Git usability, but preserve the persisted spelling. On macOS Git may
   // canonicalize /var to /private/var; rewriting that into Session state breaks
   // stable workspace identity and creates a spurious handoff.
+  const binding = sm.readSessionProjectBinding(sessionId);
+  if (binding) {
+    const project = await projects().requireLive(binding.projectId);
+    const root = project.roots.find((candidate) => candidate.id === binding.mainRootId);
+    if (!root) throw new Error("session main root is not mounted in the project");
+    await findMainWorktreeRootIfUsable(root.path);
+    return {
+      projectId: binding.projectId,
+      mainRootId: root.id,
+      mainRoot: root.path,
+      mainRootName: root.name,
+      rootStatus: "ok",
+    };
+  }
   await findMainWorktreeRootIfUsable(fromSession);
-  return fromSession;
+  return {
+    projectId: null,
+    mainRootId: null,
+    mainRoot: fromSession,
+    mainRootName: fromSession.split(/[\\/]/).filter(Boolean).at(-1) ?? fromSession,
+    rootStatus: "ok",
+  };
 }
 
 async function findMainWorktreeRootIfUsable(cwd: string): Promise<string | undefined> {
@@ -171,6 +222,55 @@ export async function getSessionWorkspaceForUi(
   requireKnownSession(sm, sessionId);
   const mainRoot = await mainRootFor(sm, sessionId);
   return currentWorkspaceFor(sm, sessionId, mainRoot);
+}
+
+export async function getSessionWorkspaceAuthorityForUi(
+  sessionId: string,
+): Promise<SessionWorkspaceAuthority> {
+  const sm = sessions();
+  requireKnownSession(sm, sessionId);
+  const authority = await mainRootAuthorityFor(sm, sessionId);
+  return {
+    workspace: currentWorkspaceFor(sm, sessionId, authority.mainRoot),
+    ...authority,
+  };
+}
+
+export async function requireSessionFileRootForUi(
+  sessionId: string,
+  rootId: string,
+): Promise<string> {
+  if (typeof rootId !== "string" || !rootId) throw new Error("session file root id is required");
+  const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  if (!authority.projectId || !authority.mainRootId) {
+    throw new Error("session is not bound to a project root");
+  }
+  if (rootId === authority.mainRootId) {
+    const current = authority.workspace;
+    if (current.kind === "main") {
+      if (canonicalKey(current.root) !== canonicalKey(authority.mainRoot)) {
+        throw new Error("session main workspace does not match its authoritative root");
+      }
+      return current.root;
+    }
+    if (
+      current.worktree?.createdBy !== "codeshell" ||
+      canonicalKey(current.worktree.path) !== canonicalKey(current.root)
+    ) {
+      throw new Error("session workspace is not an authorized worktree");
+    }
+    const entries = await listWorktreesFast(authority.mainRoot, {
+      prefix: worktreeBranchPrefix(authority.mainRoot),
+    });
+    if (!entries.some((entry) => canonicalKey(entry.path) === canonicalKey(current.root))) {
+      throw new Error("session workspace is not an authorized worktree");
+    }
+    return current.root;
+  }
+  const project = await projects().requireLive(authority.projectId);
+  const root = project.roots.find((candidate) => candidate.id === rootId);
+  if (!root) throw new Error("session project root not found");
+  return root.path;
 }
 
 export async function listSessionWorktreesForUi(

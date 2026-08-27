@@ -173,8 +173,9 @@ function ResolvedPanelArea({
         projectPath,
         cwd,
         engineSessionId: engineSessionId ?? null,
+        sessionMainRootId: workspace.mainRootId,
       }),
-    [cwd, engineSessionId, panelRegistryRevision, projectPath],
+    [cwd, engineSessionId, panelRegistryRevision, projectPath, workspace.mainRootId],
   );
   const enabledPanelIds = useMemo(
     () => new Set(enabledPanels.map((entry) => entry.key)),
@@ -443,6 +444,7 @@ function ResolvedPanelArea({
                     projectPath={projectPath}
                     project={project}
                     cwd={cwd}
+                    sessionMainRootId={workspace.mainRootId}
                     reviewFiles={reviewFiles}
                     reviewDiff={reviewDiff}
                     engineSessionId={engineSessionId}
@@ -515,6 +517,7 @@ function PanelBody({
   projectPath,
   project,
   cwd,
+  sessionMainRootId,
   reviewFiles,
   reviewDiff,
   revealFile,
@@ -537,6 +540,7 @@ function PanelBody({
   projectPath: string | null;
   project?: TrackedProject | null;
   cwd: string | null;
+  sessionMainRootId?: string | null;
   reviewFiles?: string[];
   reviewDiff?: string;
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
@@ -568,6 +572,7 @@ function PanelBody({
     projectPath,
     project,
     cwd,
+    sessionMainRootId,
     reviewFiles,
     reviewDiff,
     revealFile,

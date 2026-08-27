@@ -31,7 +31,9 @@ function registeredMainHandleChannels(files: string[]): Set<string> {
     for (const match of source.matchAll(/\bconst\s+([A-Z][A-Z0-9_]*)\s*=\s*["']([^"']+)["']/g)) {
       constants.set(match[1]!, match[2]!);
     }
-    for (const match of source.matchAll(/(?:ipcMain|options\.ipcMain)\.handle\(\s*([A-Z][A-Z0-9_]*)/g)) {
+    for (const match of source.matchAll(
+      /(?:ipcMain|options\.ipcMain)\.handle\(\s*([A-Z][A-Z0-9_]*)/g,
+    )) {
       const channel = constants.get(match[1]!);
       if (channel) channels.add(channel);
     }
@@ -50,5 +52,27 @@ describe("desktop IPC contract", () => {
 
     expect(missing).toEqual([]);
     expect(preloadInvokes.size).toBeGreaterThan(300);
+  });
+
+  test("exposes Session-authoritative workspace, git/profile, and file APIs end to end", () => {
+    const mainHandles = registeredMainHandleChannels(sourceFiles("src/main"));
+    const preloadInvokes = literalChannels(
+      sourceFiles("src/preload"),
+      /ipcRenderer\.invoke\(\s*["']([^"']+)["']/g,
+    );
+    const channels = [
+      "workspace:authority",
+      "workspace:gitStatus",
+      "workspace:gitBranches",
+      "workspace:profiles",
+      "fsSession:readDir",
+      "fsSession:readFile",
+      "fsSession:exists",
+    ];
+
+    for (const channel of channels) {
+      expect(preloadInvokes).toContain(channel);
+      expect(mainHandles).toContain(channel);
+    }
   });
 });

@@ -52,7 +52,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import type { SessionWorkspace } from "../preload/types";
+import type { SessionWorkspace, SessionWorkspaceAuthority } from "../preload/types";
 import { TrustGate } from "./workspace-trust/TrustGate";
 
 interface SidebarProps {
@@ -119,9 +119,7 @@ type WorkspaceChangeEvent = {
   mainRoot?: string;
 };
 
-export function shouldPromptForPrimaryTrust(
-  level: "trusted" | "untrusted" | "unknown",
-): boolean {
+export function shouldPromptForPrimaryTrust(level: "trusted" | "untrusted" | "unknown"): boolean {
   return level !== "trusted";
 }
 
@@ -607,7 +605,9 @@ function ProjectFoldersDialog({
                         </span>
                       )}
                       {missing.has(root.id) && (
-                        <span className="text-xs text-status-err">{t("sidebar.missingFolder")}</span>
+                        <span className="text-xs text-status-err">
+                          {t("sidebar.missingFolder")}
+                        </span>
                       )}
                       {sessionCount > 0 && (
                         <span className="text-xs text-muted-foreground">
@@ -757,6 +757,18 @@ export function sessionHoverBranch(
   return worktreeBranch ?? projectBranch;
 }
 
+export function sessionMainRootLabel(
+  project: TrackedProject,
+  authority: Pick<SessionWorkspaceAuthority, "mainRootId" | "mainRootName"> | undefined,
+): string {
+  if (!authority?.mainRootId) return project.name;
+  return (
+    project.roots.find((root) => root.id === authority.mainRootId)?.name ||
+    authority.mainRootName ||
+    project.name
+  );
+}
+
 function useProjectBranch(projectPath: string): {
   branch: string | undefined;
   refresh: () => void;
@@ -792,17 +804,22 @@ function useProjectBranch(projectPath: string): {
   return { branch, refresh };
 }
 
-function useVisibleWorktreeBranches(
+interface VisibleSessionWorkspace {
+  workspace: SessionWorkspace;
+  authority?: SessionWorkspaceAuthority;
+  branch?: string;
+}
+
+function useVisibleSessionWorkspaces(
   projectPath: string,
   sessions: SessionSummary[],
   workspaceChange: WorkspaceChangeEvent | null,
-): Record<string, string> {
+): Record<string, VisibleSessionWorkspace> {
   const requestVersions = useRef(new Map<string, number>());
-  const [branches, setBranches] = useState<Record<string, string>>({});
-  // One `getSessionWorkspace` IPC per visible Session. Expanding a project with
-  // ~1000 Sessions fired ~1000 concurrent IPCs, each reading a state file in
-  // main — that, not the DOM, was what froze the sidebar. The branch icon is
-  // decoration, so cap it and let the rest render without.
+  const [workspaces, setWorkspaces] = useState<Record<string, VisibleSessionWorkspace>>({});
+  // Session authority + Git decoration are bounded per visible Session.
+  // Expanding ~1000 Sessions used to issue an unbounded state-read burst in
+  // Main, so cap this decoration path and let the rest render without it.
   //
   // Keyed by a joined string rather than the array: the effect below calls
   // setBranches, which re-renders, which produced a fresh array identity and
@@ -816,24 +833,12 @@ function useVisibleWorktreeBranches(
     [engineSessionIdKey],
   );
 
-  const commitWorkspace = useCallback((sessionId: string, workspace: SessionWorkspace) => {
-    const branch = worktreeBranchOf(workspace);
-    setBranches((current) => {
-      if (branch && current[sessionId] === branch) return current;
-      if (!branch && current[sessionId] === undefined) return current;
-      const next = { ...current };
-      if (branch) next[sessionId] = branch;
-      else delete next[sessionId];
-      return next;
-    });
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
     const visible = new Set(engineSessionIds);
     // Return the SAME object when nothing is stale. Building a new one every run
     // made this setState unconditional, and each render fed the effect again.
-    setBranches((current) => {
+    setWorkspaces((current) => {
       const stale = Object.keys(current).filter((sessionId) => !visible.has(sessionId));
       if (stale.length === 0) return current;
       const next = { ...current };
@@ -844,11 +849,22 @@ function useVisibleWorktreeBranches(
     for (const sessionId of engineSessionIds) {
       const version = (requestVersions.current.get(sessionId) ?? 0) + 1;
       requestVersions.current.set(sessionId, version);
-      void window.codeshell
-        .getSessionWorkspace(sessionId, projectPath)
-        .then((workspace) => {
+      void (async () => {
+        const authorityApi = window.codeshell.getSessionWorkspaceAuthority;
+        const authority =
+          typeof authorityApi === "function" ? await authorityApi(sessionId) : undefined;
+        const workspace =
+          authority?.workspace ??
+          (await window.codeshell.getSessionWorkspace(sessionId, projectPath));
+        const status =
+          typeof window.codeshell.getSessionGitStatus === "function"
+            ? await window.codeshell.getSessionGitStatus(sessionId)
+            : await window.codeshell.getGitStatus(authority?.mainRoot ?? projectPath);
+        return { workspace, authority, branch: status.branch ?? undefined };
+      })()
+        .then((next) => {
           if (cancelled || requestVersions.current.get(sessionId) !== version) return;
-          commitWorkspace(sessionId, workspace);
+          setWorkspaces((current) => ({ ...current, [sessionId]: next }));
         })
         .catch(() => {
           // Legacy/missing engine sessions simply have no worktree marker.
@@ -858,27 +874,9 @@ function useVisibleWorktreeBranches(
     return () => {
       cancelled = true;
     };
-  }, [commitWorkspace, engineSessionIds, projectPath]);
+  }, [engineSessionIds, projectPath, workspaceChange]);
 
-  useEffect(() => {
-    if (!workspaceChange || !engineSessionIds.includes(workspaceChange.sessionId)) return;
-    const { sessionId, workspace } = workspaceChange;
-    const version = (requestVersions.current.get(sessionId) ?? 0) + 1;
-    requestVersions.current.set(sessionId, version);
-    if (workspace) {
-      commitWorkspace(sessionId, workspace);
-      return;
-    }
-    void window.codeshell
-      .getSessionWorkspace(sessionId, projectPath)
-      .then((next) => {
-        if (requestVersions.current.get(sessionId) !== version) return;
-        commitWorkspace(sessionId, next);
-      })
-      .catch(() => {});
-  }, [commitWorkspace, engineSessionIds, projectPath, workspaceChange]);
-
-  return branches;
+  return workspaces;
 }
 
 export function ProjectGroup({
@@ -937,7 +935,7 @@ export function ProjectGroup({
   );
   const hiddenLiveCount = Math.max(0, live.length - visibleLive.length);
   const workspaceSessions = useMemo(() => (collapsed ? [] : visibleLive), [collapsed, visibleLive]);
-  const worktreeBranches = useVisibleWorktreeBranches(
+  const sessionWorkspaces = useVisibleSessionWorkspaces(
     project.path,
     workspaceSessions,
     workspaceChange,
@@ -972,6 +970,18 @@ export function ProjectGroup({
             <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
           )}
           <span className="flex-1 truncate text-left font-medium">{projectLabel(project)}</span>
+          {project.migrationStatus && (
+            <span
+              data-project-migration-status={project.migrationStatus}
+              className="shrink-0 text-[10px] font-medium text-destructive"
+            >
+              {t(
+                project.migrationStatus === "reauthorization_required"
+                  ? "sidebar.migrationNeedsAuthorization"
+                  : "sidebar.migrationFailed",
+              )}
+            </span>
+          )}
           {project.pinned && (
             <span className="text-primary" title={t("sidebar.pinned")}>
               ·
@@ -1015,29 +1025,33 @@ export function ProjectGroup({
         <>
           {live.length > 0 && (
             <ul className="ml-3 mt-0.5 space-y-0.5 pl-2">
-              {visibleLive.map((s, i) => (
-                <SessionRow
-                  key={s.id}
-                  s={s}
-                  isActive={isActiveProject && activeSessionId === s.id}
-                  status={statusFor(s.id)}
-                  worktreeBranch={
-                    s.engineSessionId ? worktreeBranches[s.engineSessionId] : undefined
-                  }
-                  branch={sessionHoverBranch(
-                    s.engineSessionId ? worktreeBranches[s.engineSessionId] : undefined,
-                    projectBranch,
-                  )}
-                  folderName={project.name}
-                  showKbd={isActiveProject && i < 5}
-                  kbdIndex={i + 1}
-                  onClick={() => onSelectSession(s.id)}
-                  onContextMenu={(e) => onSessionContextMenu(e, s)}
-                  onPin={() => onPinSession(s.id, !s.pinned)}
-                  onArchive={() => onArchiveSession(s.id)}
-                  onHover={refreshProjectBranch}
-                />
-              ))}
+              {visibleLive.map((s, i) => {
+                const sessionWorkspace = s.engineSessionId
+                  ? sessionWorkspaces[s.engineSessionId]
+                  : undefined;
+                const worktreeBranch = worktreeBranchOf(sessionWorkspace?.workspace);
+                return (
+                  <SessionRow
+                    key={s.id}
+                    s={s}
+                    isActive={isActiveProject && activeSessionId === s.id}
+                    status={statusFor(s.id)}
+                    worktreeBranch={worktreeBranch}
+                    branch={sessionHoverBranch(
+                      worktreeBranch,
+                      sessionWorkspace?.branch ?? projectBranch,
+                    )}
+                    folderName={sessionMainRootLabel(project, sessionWorkspace?.authority)}
+                    showKbd={isActiveProject && i < 5}
+                    kbdIndex={i + 1}
+                    onClick={() => onSelectSession(s.id)}
+                    onContextMenu={(e) => onSessionContextMenu(e, s)}
+                    onPin={() => onPinSession(s.id, !s.pinned)}
+                    onArchive={() => onArchiveSession(s.id)}
+                    onHover={refreshProjectBranch}
+                  />
+                );
+              })}
               {hiddenLiveCount > 0 && (
                 <li>
                   <Button

@@ -72,7 +72,7 @@ import {
   saveProjects,
   loadActiveProjectId,
   saveActiveProjectId,
-  isProjectPathRemoved,
+  migrateLegacyProjects,
   unmarkProjectPathRemoved,
   reconcileProjectsFromDiskWithRemap,
   projectLabel,
@@ -731,13 +731,10 @@ function App() {
       setProjects((prev) => reconcileProjectsFromDiskWithRemap(diskProjects, prev).projects);
     };
     void (async () => {
-      // Back-fill: legacy projects live only in the localStorage cache and were
-      // never written to disk. Push any cached path missing from disk so disk
-      // becomes a complete source of truth (no project silently disappears on
-      // the first run after this change). Soft-deleted ones stay deleted because
-      // pushRecent un-deletes only on explicit re-add, and we skip removed paths.
+      // Back-fill legacy localStorage-only projects through Main's per-path
+      // result. Unprovable paths stay visible and retryable until the user
+      // reselects that exact folder in the native picker.
       const disk = await registry.list();
-      const onDisk = new Set(disk.flatMap((project) => project.roots.map((root) => root.path)));
       const cached = loadProjects();
       const normalizedCached = await Promise.all(
         cached.map(async (r) => {
@@ -749,24 +746,11 @@ function App() {
           }
         }),
       );
-      const seenMissing = new Set<string>();
-      const missing = normalizedCached.filter((r) => {
-        if (onDisk.has(r.path) || isProjectPathRemoved(r.path) || seenMissing.has(r.path))
-          return false;
-        seenMissing.add(r.path);
-        return true;
+      const { projects: reconciled, projectIdRemap } = await migrateLegacyProjects({
+        diskProjects: disk,
+        cachedProjects: normalizedCached,
+        registry,
       });
-      const latestDisk = await (async () => {
-        for (const project of missing) {
-          await registry.migrateLegacyPath(project.path).catch(() => null);
-        }
-        return missing.length > 0 ? registry.list() : disk;
-      })();
-      await registry.completeLegacyMigration();
-      const { projects: reconciled, projectIdRemap } = reconcileProjectsFromDiskWithRemap(
-        latestDisk,
-        normalizedCached,
-      );
       const remapEntries = Object.entries(projectIdRemap);
       const migratedProjectIds = new Set<string>();
       for (const [fromProjectId, toProjectId] of remapEntries) {
@@ -1410,9 +1394,7 @@ function App() {
                 .map(trackedProjectFromRegistry)
                 .find((project) => project.path === p.path);
               if (!target) return;
-              setProjects((prev) =>
-                reconcileProjectsFromDiskWithRemap(registry, prev).projects,
-              );
+              setProjects((prev) => reconcileProjectsFromDiskWithRemap(registry, prev).projects);
               setActiveProjectId(target.id);
               setSessionIndices((prev) =>
                 prev[target.id] ? prev : { ...prev, [target.id]: loadSessionIndex(target.id) },

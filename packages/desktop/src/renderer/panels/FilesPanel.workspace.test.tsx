@@ -16,7 +16,10 @@ let revealConsumed = false;
 const readDirs: Array<[string, string]> = [];
 const readFiles: Array<[string, string]> = [];
 const readProjectDirs: Array<[string, string, string | undefined]> = [];
+const readSessionDirs: Array<[string, string, string | undefined]> = [];
 let project: TrackedProject | undefined;
+let engineSessionId: string | undefined;
+let sessionMainRootId: string | undefined;
 
 function reactPropsOf(node: unknown): Record<string, any> {
   const current = node as Record<string, any>;
@@ -40,6 +43,8 @@ async function render(): Promise<void> {
       <FilesPanel
         cwd={cwd}
         project={project}
+        engineSessionId={engineSessionId}
+        sessionMainRootId={sessionMainRootId}
         revealFile={{ path: revealPath, cwd, nonce: revealNonce, consumed: revealConsumed }}
       />,
     );
@@ -59,7 +64,10 @@ beforeEach(async () => {
   readDirs.length = 0;
   readFiles.length = 0;
   readProjectDirs.length = 0;
+  readSessionDirs.length = 0;
   project = undefined;
+  engineSessionId = undefined;
+  sessionMainRootId = undefined;
   cwd = WORKTREE;
   revealPath = `${WORKTREE}/src/worktree.ts`;
   revealNonce = 1;
@@ -79,6 +87,11 @@ beforeEach(async () => {
         return [];
       },
       readProjectFileContent: async () => ({ text: "content", size: 7 }),
+      readSessionDir: async (sessionId: string, rootId: string, dir?: string) => {
+        readSessionDirs.push([sessionId, rootId, dir]);
+        return [];
+      },
+      readSessionFileContent: async () => ({ text: "content", size: 7 }),
     },
   });
   container = document.createElement("div") as unknown as HTMLElement;
@@ -146,5 +159,38 @@ describe("FilesPanel workspace identity", () => {
     });
 
     expect(readProjectDirs).toContainEqual(["project-1", "secondary", "/shared"]);
+  });
+
+  test("uses the Session mainRootId for a worktree after Make primary without duplicating the old root", async () => {
+    project = {
+      id: "project-1",
+      name: "Project",
+      path: "/notes",
+      roots: [
+        { id: "old-main", path: "/repo", name: "repo", addedAt: 1 },
+        { id: "new-primary", path: "/notes", name: "notes", addedAt: 2 },
+      ],
+      primaryRootId: "new-primary",
+      addedAt: 1,
+    };
+    cwd = WORKTREE;
+    engineSessionId = "old-session";
+    sessionMainRootId = "old-main";
+    revealConsumed = true;
+    await render();
+
+    expect(readSessionDirs).toContainEqual(["old-session", "old-main", WORKTREE]);
+    const select = findElement(container, "SELECT");
+    const optionValues = (select?.childNodes ?? []).map(
+      (option: unknown) => reactPropsOf(option).value,
+    );
+    expect(optionValues).toEqual(["old-main", "new-primary"]);
+
+    await act(async () => {
+      reactPropsOf(select).onChange({ target: { value: "new-primary" } });
+      await flushMicrotasks();
+    });
+    expect(readSessionDirs).toContainEqual(["old-session", "new-primary", "/notes"]);
+    expect(readProjectDirs).toEqual([]);
   });
 });

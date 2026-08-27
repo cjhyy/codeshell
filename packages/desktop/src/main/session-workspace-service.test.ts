@@ -5,9 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "@cjhyy/code-shell-core";
 import { createWorktree, removeWorktree } from "@cjhyy/code-shell-capability-coding/git";
+import { ProjectStore } from "./project-store";
+import { SessionCwdIndex } from "./session-cwd-index";
 import {
+  __setSessionWorkspaceServiceProjectStoreForTests,
   __setSessionWorkspaceServiceSessionManagerForTests,
   cleanupSessionWorktreeForUi,
+  getSessionWorkspaceAuthorityForUi,
   getSessionWorktreeDiffForUi,
   getSessionWorkspaceForUi,
   listSessionWorktreesForUi,
@@ -15,6 +19,7 @@ import {
   releaseSessionWorkspaceForUi,
   switchSessionWorkspaceForUi,
 } from "./session-workspace-service";
+import { readSessionDirectoryForUi, readSessionFileForUi } from "./session-fs-service";
 
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
 
@@ -47,8 +52,109 @@ describe("cleanupSessionWorktreeForUi", () => {
   });
 
   afterEach(() => {
+    __setSessionWorkspaceServiceProjectStoreForTests(undefined);
     __setSessionWorkspaceServiceSessionManagerForTests(undefined);
     rmSync(root, { recursive: true, force: true });
+  });
+
+  test("keeps old and new Sessions bound to their authoritative main roots after Make primary", async () => {
+    const newPrimary = join(root, "notes");
+    mkdirSync(newPrimary);
+    const projectStore = await projectStoreForFixture(root, sessionsDir);
+    const project = await projectStore.createFromPath(repo);
+    const withSecondary = await projectStore.addRoot(project.id, newPrimary);
+    const oldMainRoot = withSecondary.project.roots.find(
+      (entry) => entry.id === project.primaryRootId,
+    )!;
+    const newPrimaryRoot = withSecondary.project.roots.find(
+      (entry) => entry.id !== oldMainRoot.id,
+    )!;
+    __setSessionWorkspaceServiceProjectStoreForTests(projectStore);
+
+    const oldSessionId = "old-root-session";
+    const newSessionId = "new-root-session";
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", oldSessionId);
+    bindSession(sessionsDir, oldSessionId, project.id, oldMainRoot.id);
+    await projectStore.setPrimary(project.id, newPrimaryRoot.id);
+    sm.create(newPrimary, "m", "p", newSessionId);
+    bindSession(sessionsDir, newSessionId, project.id, newPrimaryRoot.id);
+
+    await expect(getSessionWorkspaceAuthorityForUi(oldSessionId)).resolves.toEqual({
+      workspace: { root: repo, kind: "main" },
+      projectId: project.id,
+      mainRootId: oldMainRoot.id,
+      mainRoot: oldMainRoot.path,
+      mainRootName: oldMainRoot.name,
+      rootStatus: "ok",
+    });
+    await expect(getSessionWorkspaceAuthorityForUi(newSessionId)).resolves.toEqual({
+      workspace: { root: newPrimary, kind: "main" },
+      projectId: project.id,
+      mainRootId: newPrimaryRoot.id,
+      mainRoot: newPrimaryRoot.path,
+      mainRootName: newPrimaryRoot.name,
+      rootStatus: "ok",
+    });
+  });
+
+  test("authorizes FilesPanel worktree and secondary reads by Session binding and rejects escapes", async () => {
+    const secondary = join(root, "secondary");
+    mkdirSync(secondary);
+    writeFileSync(join(secondary, "secondary.txt"), "secondary\n");
+    writeFileSync(join(root, "outside.txt"), "outside\n");
+    const projectStore = await projectStoreForFixture(root, sessionsDir);
+    const project = await projectStore.createFromPath(repo);
+    const withSecondary = await projectStore.addRoot(project.id, secondary);
+    const mainRoot = withSecondary.project.roots.find(
+      (entry) => entry.id === project.primaryRootId,
+    )!;
+    const secondaryRoot = withSecondary.project.roots.find((entry) => entry.id !== mainRoot.id)!;
+    await projectStore.setPrimary(project.id, secondaryRoot.id);
+    __setSessionWorkspaceServiceProjectStoreForTests(projectStore);
+
+    const sessionId = "session-files-worktree";
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", sessionId);
+    bindSession(sessionsDir, sessionId, project.id, mainRoot.id);
+    const wt = await createWorktree(repo, "files", sessionId);
+    writeFileSync(join(wt.worktreePath, "worktree.txt"), "worktree\n");
+    sm.setSessionWorkspace(sessionId, {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+
+    const mainEntries = await readSessionDirectoryForUi(sessionId, mainRoot.id);
+    expect(mainEntries.map((entry) => entry.name)).toContain("worktree.txt");
+    const secondaryEntries = await readSessionDirectoryForUi(sessionId, secondaryRoot.id);
+    expect(secondaryEntries.map((entry) => entry.name)).toContain("secondary.txt");
+    await expect(
+      readSessionFileForUi(sessionId, mainRoot.id, join(root, "outside.txt")),
+    ).rejects.toThrow(/outside|escape/i);
+
+    const outside = join(root, "not-a-worktree");
+    mkdirSync(outside);
+    writeFileSync(join(outside, "secret.txt"), "secret\n");
+    sm.setSessionWorkspace(sessionId, {
+      root: outside,
+      kind: "worktree",
+      worktree: {
+        path: outside,
+        branch: "forged",
+        baseRef: "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+    await expect(readSessionDirectoryForUi(sessionId, mainRoot.id)).rejects.toThrow(
+      /authorized worktree/i,
+    );
+    removeWorktree(wt.worktreePath, true);
   });
 
   test("discard partial branch-delete failure still moves the active session back to main", async () => {
@@ -595,3 +701,30 @@ describe("cleanupSessionWorktreeForUi", () => {
     });
   });
 });
+
+async function projectStoreForFixture(root: string, sessionsDir: string): Promise<ProjectStore> {
+  const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+  await index.ensureLoaded();
+  let id = 0;
+  return new ProjectStore({
+    file: join(root, "desktop", "projects.json"),
+    recentsFile: join(root, "desktop", "recents.json"),
+    migrationMarkerFile: join(root, "desktop", "migration.json"),
+    sessionIndex: index,
+    noRepoPath: join(root, "no-repo"),
+    randomUUID: () => `session-project-id-${++id}`,
+    resolveProjectRoot: (path) => path,
+  });
+}
+
+function bindSession(
+  sessionsDir: string,
+  sessionId: string,
+  projectId: string,
+  mainRootId: string,
+): void {
+  const statePath = join(sessionsDir, sessionId, "state.json");
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+  state.project = { projectId, mainRootId };
+  writeFileSync(statePath, JSON.stringify(state));
+}

@@ -867,6 +867,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   listWorktrees: (cwd: string) => ipcRenderer.invoke("git:listWorktrees", cwd),
   getSessionWorkspace: (sessionId: string, cwd: string) =>
     ipcRenderer.invoke("workspace:current", sessionId, cwd),
+  getSessionWorkspaceAuthority: (sessionId: string) =>
+    ipcRenderer.invoke("workspace:authority", sessionId),
+  getSessionGitStatus: (sessionId: string) => ipcRenderer.invoke("workspace:gitStatus", sessionId),
+  getSessionGitBranches: (sessionId: string) =>
+    ipcRenderer.invoke("workspace:gitBranches", sessionId),
+  listSessionProfiles: (sessionId: string) => ipcRenderer.invoke("workspace:profiles", sessionId),
   listSessionWorktrees: (sessionId: string, cwd: string) =>
     ipcRenderer.invoke("workspace:list", sessionId, cwd),
   getSessionWorktreeDiff: (sessionId: string, worktreePath: string) =>
@@ -1375,9 +1381,10 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("projectRegistry:resolveForCwd", cwd, source),
     resolveForCwdBatch: (cwds: string[], source: "disk-rebuild" | "automation-import" | "live") =>
       ipcRenderer.invoke("projectRegistry:resolveForCwdBatch", cwds, source),
-    migrateLegacyPath: (path: string) =>
-      ipcRenderer.invoke("projectRegistry:migrateLegacyPath", path),
-    completeLegacyMigration: () => ipcRenderer.invoke("projectRegistry:completeLegacyMigration"),
+    migrateLegacyPaths: (paths: string[]) =>
+      ipcRenderer.invoke("projectRegistry:migrateLegacyPaths", paths),
+    reauthorizeLegacyPath: (path: string) =>
+      ipcRenderer.invoke("projectRegistry:reauthorizeLegacyPath", path),
     onChanged: (cb: (projects: unknown[]) => void): (() => void) => {
       const handler = (_event: IpcRendererEvent, projects: unknown[]) => cb(projects);
       ipcRenderer.on("projectRegistry:changed", handler);
@@ -1468,6 +1475,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("fsRoot:readFile", projectId, rootId, path),
   projectFileExists: (projectId: string, rootId: string, path: string) =>
     ipcRenderer.invoke("fsRoot:exists", projectId, rootId, path),
+  readSessionDir: (sessionId: string, rootId: string, dir?: string) =>
+    ipcRenderer.invoke("fsSession:readDir", sessionId, rootId, dir),
+  readSessionFileContent: (sessionId: string, rootId: string, path: string) =>
+    ipcRenderer.invoke("fsSession:readFile", sessionId, rootId, path),
+  sessionFileExists: (sessionId: string, rootId: string, path: string) =>
+    ipcRenderer.invoke("fsSession:exists", sessionId, rootId, path),
 
   // ── Browser popout window ─────────────────────────────────────────────
   /** Credentials module: token/link/oauth store CRUD + cookie capture. */

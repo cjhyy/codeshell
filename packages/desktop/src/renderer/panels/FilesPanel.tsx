@@ -86,6 +86,8 @@ interface Props {
   /** Workspace root; null when no project is active. */
   cwd: string | null;
   project?: TrackedProject | null;
+  engineSessionId?: string;
+  sessionMainRootId?: string;
   /** Attach an image file to the composer by absolute path (TODO 2.1). */
   onAttachImage?: (absPath: string) => void;
   /** A chat path-link asked to reveal this file; nonce re-fires on re-click. */
@@ -114,6 +116,8 @@ const FileSystemContext = React.createContext<FileSystemReader>(LEGACY_FILE_SYST
 export function FilesPanel({
   cwd: workspaceCwd,
   project,
+  engineSessionId,
+  sessionMainRootId,
   onAttachImage,
   revealFile,
   onRevealConsumed,
@@ -121,34 +125,45 @@ export function FilesPanel({
   const { t } = useT();
   const rootOptions = useMemo(() => {
     if (!project) return workspaceCwd ? [{ id: "legacy", path: workspaceCwd, name: "" }] : [];
-    const primary = project.roots.find((root) => root.id === project.primaryRootId);
+    const mainRootId = sessionMainRootId ?? project.primaryRootId;
+    const primary = project.roots.find((root) => root.id === mainRootId);
     return [
       ...(primary
         ? [{ ...primary, path: workspaceCwd ?? primary.path }]
         : workspaceCwd
-          ? [{ id: project.primaryRootId, path: workspaceCwd, name: project.name, addedAt: 0 }]
+          ? [{ id: mainRootId, path: workspaceCwd, name: project.name, addedAt: 0 }]
           : []),
-      ...project.roots.filter((root) => root.id !== project.primaryRootId),
+      ...project.roots.filter((root) => root.id !== mainRootId),
     ];
-  }, [project, workspaceCwd]);
+  }, [project, sessionMainRootId, workspaceCwd]);
   const [selectedRootId, setSelectedRootId] = useState<string | null>(
-    project?.primaryRootId ?? (workspaceCwd ? "legacy" : null),
+    sessionMainRootId ?? project?.primaryRootId ?? (workspaceCwd ? "legacy" : null),
   );
   useEffect(() => {
-    setSelectedRootId(project?.primaryRootId ?? (workspaceCwd ? "legacy" : null));
-  }, [project?.id, project?.primaryRootId, workspaceCwd]);
+    setSelectedRootId(
+      sessionMainRootId ?? project?.primaryRootId ?? (workspaceCwd ? "legacy" : null),
+    );
+  }, [project?.id, project?.primaryRootId, sessionMainRootId, workspaceCwd]);
   const activeRoot =
     rootOptions.find((root) => root.id === selectedRootId) ?? rootOptions[0] ?? null;
   const cwd = activeRoot?.path ?? null;
   const usesProjectRootApi = !!project && activeRoot?.id !== project.primaryRootId;
   const fileSystem = useMemo<FileSystemReader>(() => {
+    if (engineSessionId && sessionMainRootId && activeRoot) {
+      return {
+        readDir: (_root, dir) =>
+          window.codeshell.readSessionDir(engineSessionId, activeRoot.id, dir),
+        readFile: (_root, path) =>
+          window.codeshell.readSessionFileContent(engineSessionId, activeRoot.id, path),
+      };
+    }
     if (!project || !activeRoot || !usesProjectRootApi) return LEGACY_FILE_SYSTEM;
     return {
       readDir: (_root, dir) => window.codeshell.readProjectDir(project.id, activeRoot.id, dir),
       readFile: (_root, path) =>
         window.codeshell.readProjectFileContent(project.id, activeRoot.id, path),
     };
-  }, [activeRoot, project, usesProjectRootApi]);
+  }, [activeRoot, engineSessionId, project, sessionMainRootId, usesProjectRootApi]);
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   // Show/hide the file tree — persisted so hiding it sticks across panel
@@ -239,87 +254,89 @@ export function FilesPanel({
 
   return (
     <FileSystemContext.Provider value={fileSystem}>
-    <div className="flex min-h-0 flex-1">
-      {treeOpen && (
-        <div className="flex w-72 shrink-0 flex-col border-r border-border">
-          <div className="shrink-0 border-b border-border p-2">
-            {rootOptions.length > 1 && (
-              <select
-                className="mb-2 h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
-                aria-label={t("panels.files.rootPicker")}
-                value={activeRoot?.id ?? ""}
-                onChange={(event) => setSelectedRootId(event.target.value)}
-              >
-                {rootOptions.map((root) => (
-                  <option key={root.id} value={root.id}>
-                    {root.name || root.path}
-                    {root.id === project?.primaryRootId ? ` (${t("panels.files.primaryRoot")})` : ""}
-                  </option>
-                ))}
-              </select>
-            )}
-            <Input
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder={t("panels.files.filterPlaceholder")}
-              className="h-8"
-            />
-          </div>
-          <div className="min-h-0 flex-1 overflow-auto py-1">
-            <DirNode
-              root={cwd}
-              dir={cwd}
-              depth={0}
-              selected={selectedForCurrentRoot}
-              onSelect={(path) => {
-                selectedRootRef.current = cwd;
-                setSelected(path);
-              }}
-              filter={filter.trim().toLowerCase()}
-              onAttachImage={onAttachImage}
-              revealDirs={revealDirsForCurrentRoot}
-              reloadNonce={reloadNonce}
-            />
-          </div>
-        </div>
-      )}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center border-b border-border px-1 py-1">
-          <button
-            type="button"
-            aria-label={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
-            title={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent"
-            onClick={() => setTreeOpen((v) => !v)}
-          >
-            <PanelLeftClose className={treeOpen ? "h-4 w-4" : "h-4 w-4 rotate-180"} />
-          </button>
-          <div className="flex-1" />
-          <button
-            type="button"
-            aria-label={t("panels.common.refresh")}
-            title={t("panels.files.refreshTitle")}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent"
-            onClick={() => setReloadNonce((n) => n + 1)}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-hidden">
-          {selectedForCurrentRoot ? (
-            <FileViewer root={cwd} path={selectedForCurrentRoot} reloadNonce={reloadNonce} />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
-              <Folder className="h-7 w-7" />
-              <div className="text-sm font-medium text-foreground">
-                {t("panels.files.openFile")}
-              </div>
-              <div className="text-xs">{t("panels.files.openFileHint")}</div>
+      <div className="flex min-h-0 flex-1">
+        {treeOpen && (
+          <div className="flex w-72 shrink-0 flex-col border-r border-border">
+            <div className="shrink-0 border-b border-border p-2">
+              {rootOptions.length > 1 && (
+                <select
+                  className="mb-2 h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                  aria-label={t("panels.files.rootPicker")}
+                  value={activeRoot?.id ?? ""}
+                  onChange={(event) => setSelectedRootId(event.target.value)}
+                >
+                  {rootOptions.map((root) => (
+                    <option key={root.id} value={root.id}>
+                      {root.name || root.path}
+                      {root.id === project?.primaryRootId
+                        ? ` (${t("panels.files.primaryRoot")})`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <Input
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder={t("panels.files.filterPlaceholder")}
+                className="h-8"
+              />
             </div>
-          )}
+            <div className="min-h-0 flex-1 overflow-auto py-1">
+              <DirNode
+                root={cwd}
+                dir={cwd}
+                depth={0}
+                selected={selectedForCurrentRoot}
+                onSelect={(path) => {
+                  selectedRootRef.current = cwd;
+                  setSelected(path);
+                }}
+                filter={filter.trim().toLowerCase()}
+                onAttachImage={onAttachImage}
+                revealDirs={revealDirsForCurrentRoot}
+                reloadNonce={reloadNonce}
+              />
+            </div>
+          </div>
+        )}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex shrink-0 items-center border-b border-border px-1 py-1">
+            <button
+              type="button"
+              aria-label={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
+              title={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
+              className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+              onClick={() => setTreeOpen((v) => !v)}
+            >
+              <PanelLeftClose className={treeOpen ? "h-4 w-4" : "h-4 w-4 rotate-180"} />
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
+              aria-label={t("panels.common.refresh")}
+              title={t("panels.files.refreshTitle")}
+              className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+              onClick={() => setReloadNonce((n) => n + 1)}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            {selectedForCurrentRoot ? (
+              <FileViewer root={cwd} path={selectedForCurrentRoot} reloadNonce={reloadNonce} />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                <Folder className="h-7 w-7" />
+                <div className="text-sm font-medium text-foreground">
+                  {t("panels.files.openFile")}
+                </div>
+                <div className="text-xs">{t("panels.files.openFileHint")}</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </FileSystemContext.Provider>
   );
 }

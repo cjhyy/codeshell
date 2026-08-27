@@ -39,6 +39,7 @@ export interface PanelAvailabilityContext {
   project?: TrackedProject | null;
   cwd: string | null;
   engineSessionId: string | null;
+  sessionMainRootId?: string | null;
 }
 
 export interface PanelRenderContext extends PanelAvailabilityContext {
@@ -97,8 +98,24 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
     icon: FolderTree,
     order: 0,
     enabled: alwaysEnabled,
-    render: ({ cwd, project, onAttachImage, revealFile, onRevealConsumed }) =>
-      createElement(FilesPanel, { cwd, project, onAttachImage, revealFile, onRevealConsumed }),
+    render: ({
+      cwd,
+      project,
+      engineSessionId,
+      sessionMainRootId,
+      onAttachImage,
+      revealFile,
+      onRevealConsumed,
+    }) =>
+      createElement(FilesPanel, {
+        cwd,
+        project,
+        engineSessionId: engineSessionId ?? undefined,
+        sessionMainRootId: sessionMainRootId ?? undefined,
+        onAttachImage,
+        revealFile,
+        onRevealConsumed,
+      }),
   }),
   builtin({
     key: "browser",

@@ -49,11 +49,41 @@ export interface TrackedProject {
   displayName?: string;
   /** Pinned projects render before unpinned projects. */
   pinned?: boolean;
+  /** Legacy localStorage-only entry awaiting a safe Main-side migration retry. */
+  migrationStatus?: "reauthorization_required" | "failed";
 }
 
 export interface ReconciledProjects {
   projects: TrackedProject[];
   projectIdRemap: Record<ProjectId, ProjectId>;
+}
+
+export interface LegacyProjectMigrationPathResult {
+  path: string;
+  status: "migrated" | "reauthorization_required" | "failed";
+  error?: string;
+}
+
+export interface LegacyProjectMigrationResult extends ReconciledProjects {
+  results: LegacyProjectMigrationPathResult[];
+  completed: boolean;
+}
+
+interface LegacyProjectMigrationRegistry {
+  list(): Promise<Parameters<typeof reconcileProjectsFromDiskWithRemap>[0]>;
+  migrateLegacyPaths(paths: string[]): Promise<{
+    results: Array<
+      LegacyProjectMigrationPathResult & {
+        project?: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0][number];
+      }
+    >;
+    completed: boolean;
+  }>;
+  reauthorizeLegacyPath(path: string): Promise<
+    LegacyProjectMigrationPathResult & {
+      project?: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0][number];
+    }
+  >;
 }
 
 /** Convert a value read through the legacy Repo API into the canonical project model. */
@@ -68,6 +98,7 @@ export function adaptLegacyRepo(repo: Repo): TrackedProject {
     addedAt: repo.addedAt,
     displayName: repo.displayName,
     pinned: repo.pinned,
+    migrationStatus: repo.migrationStatus,
   };
 }
 
@@ -120,7 +151,7 @@ export function reconcileProjectsFromDiskWithRemap(
   cached: TrackedProject[],
 ): ReconciledProjects {
   const byPath = new Map(cached.map((project) => [project.path, project]));
-  const projects = diskProjects.map((disk) => {
+  const projects: TrackedProject[] = diskProjects.map((disk) => {
     const declaredPrimary = disk.roots?.find((root) => root.id === disk.primaryRootId);
     const diskPath = declaredPrimary?.path ?? disk.path ?? disk.roots?.[0]?.path;
     if (!diskPath) throw new Error("project registry entry has no primary path");
@@ -159,7 +190,87 @@ export function reconcileProjectsFromDiskWithRemap(
     const target = targetByPath.get(project.path);
     if (target && target.id !== project.id) projectIdRemap[project.id] = target.id;
   }
+  for (const project of cached) {
+    if (project.migrationStatus && !targetByPath.has(project.path)) projects.push(project);
+  }
   return { projects, projectIdRemap };
+}
+
+export async function migrateLegacyProjects(options: {
+  diskProjects: Parameters<typeof reconcileProjectsFromDiskWithRemap>[0];
+  cachedProjects: TrackedProject[];
+  registry: LegacyProjectMigrationRegistry;
+}): Promise<LegacyProjectMigrationResult> {
+  const diskPaths = new Set(
+    options.diskProjects.flatMap((project) => {
+      const roots = project.roots?.map((root) => root.path) ?? [];
+      return project.path ? [...roots, project.path] : roots;
+    }),
+  );
+  const missing: TrackedProject[] = [];
+  const seen = new Set<string>();
+  for (const project of options.cachedProjects) {
+    if (
+      diskPaths.has(project.path) ||
+      isProjectPathRemoved(project.path) ||
+      seen.has(project.path)
+    ) {
+      continue;
+    }
+    seen.add(project.path);
+    missing.push(project);
+  }
+
+  const paths = missing.map((project) => project.path);
+  let batch = await options.registry.migrateLegacyPaths(paths);
+  if (!batch.completed) {
+    const retried: LegacyProjectMigrationPathResult[] = [];
+    for (const result of batch.results) {
+      retried.push(
+        result.status === "reauthorization_required"
+          ? await options.registry.reauthorizeLegacyPath(result.path)
+          : result,
+      );
+    }
+    if (retried.every((result) => result.status === "migrated")) {
+      batch = await options.registry.migrateLegacyPaths(paths);
+    } else {
+      batch = { results: retried, completed: false };
+    }
+  }
+
+  const disk = paths.length > 0 ? await options.registry.list() : options.diskProjects;
+  const migratedPath = new Map(
+    batch.results.flatMap((result) => {
+      const primary = result.project?.roots?.find(
+        (root) => root.id === result.project?.primaryRootId,
+      );
+      return result.status === "migrated" && primary ? [[result.path, primary.path] as const] : [];
+    }),
+  );
+  const cachedForReconcile = options.cachedProjects.map((project) => {
+    const path = migratedPath.get(project.path);
+    return path ? { ...project, path, migrationStatus: undefined } : project;
+  });
+  const reconciled = reconcileProjectsFromDiskWithRemap(disk, cachedForReconcile);
+  const resultByPath = new Map(batch.results.map((result) => [result.path, result]));
+  const unresolved = missing.flatMap((project) => {
+    const result = resultByPath.get(project.path);
+    return result && result.status !== "migrated"
+      ? [{ ...project, migrationStatus: result.status }]
+      : [];
+  });
+  return {
+    ...reconciled,
+    projects: [
+      ...reconciled.projects,
+      ...unresolved.filter(
+        (project) => !reconciled.projects.some((candidate) => candidate.path === project.path),
+      ),
+    ],
+    results: batch.results,
+    completed: batch.completed,
+  };
 }
 
 export function trackedProjectFromRegistry(

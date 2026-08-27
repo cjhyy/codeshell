@@ -597,6 +597,33 @@ export interface SessionWorkspaceList {
   worktrees: SessionWorkspaceWorktreeInfo[];
 }
 
+export interface SessionWorkspaceAuthority {
+  workspace: SessionWorkspace;
+  projectId: string | null;
+  mainRootId: string | null;
+  mainRoot: string;
+  mainRootName: string;
+  /** Extensible now; root_removed/dir_missing land with the later migration flow. */
+  rootStatus: "ok";
+}
+
+export interface WorkspaceProfileSummary {
+  name: string;
+  label: string;
+  description: string | undefined;
+  basePreset: string;
+  plugins: string[];
+  skills: string[];
+  mcp: string[];
+  agents: string[];
+  mainInstruction: string | undefined;
+  requires?: WorkspaceProfile["requires"];
+  active: boolean;
+  portableMemory: boolean;
+  exclusiveCapabilities: boolean;
+  version: string | undefined;
+}
+
 export type WorkspaceReleaseResult =
   | { sessionId: string; ok: true; status: "released"; workspace: SessionWorkspace }
   | { sessionId: string; ok: true; status: "missing"; reason: string }
@@ -1275,6 +1302,10 @@ export interface CodeshellApi {
   createWorktree(cwd: string, name: string, branchPrefix?: string): Promise<CreatedWorktree>;
   listWorktrees(cwd: string): Promise<WorktreeInfo[]>;
   getSessionWorkspace(sessionId: string, cwd: string): Promise<SessionWorkspace>;
+  getSessionWorkspaceAuthority(sessionId: string): Promise<SessionWorkspaceAuthority>;
+  getSessionGitStatus(sessionId: string): Promise<GitStatus>;
+  getSessionGitBranches(sessionId: string): Promise<GitBranches>;
+  listSessionProfiles(sessionId: string): Promise<WorkspaceProfileSummary[]>;
   listSessionWorktrees(sessionId: string, cwd: string): Promise<SessionWorkspaceList>;
   getSessionWorktreeDiff(sessionId: string, worktreePath: string): Promise<WorktreeDiffSummary>;
   switchSessionWorkspace(
@@ -1352,6 +1383,10 @@ export interface CodeshellApi {
   readProjectFileContent(projectId: string, rootId: string, path: string): Promise<FileContent>;
   /** Does a file exist under an authoritative project root id? */
   projectFileExists(projectId: string, rootId: string, path: string): Promise<boolean>;
+  /** Session-scoped reads resolve mainRootId/current worktree in Main. */
+  readSessionDir(sessionId: string, rootId: string, dir?: string): Promise<FsEntry[]>;
+  readSessionFileContent(sessionId: string, rootId: string, path: string): Promise<FileContent>;
+  sessionFileExists(sessionId: string, rootId: string, path: string): Promise<boolean>;
 
   // ── Credentials module ────────────────────────────────────────────────
   mcpOAuth: {
@@ -2244,8 +2279,21 @@ export interface CodeshellApi {
       cwds: string[],
       source: ProjectResolveSource,
     ): Promise<ProjectCwdResolution[]>;
-    migrateLegacyPath(path: string): Promise<LocalProject | null>;
-    completeLegacyMigration(): Promise<void>;
+    migrateLegacyPaths(paths: string[]): Promise<{
+      results: Array<{
+        path: string;
+        status: "migrated" | "reauthorization_required" | "failed";
+        project?: LocalProject;
+        error?: string;
+      }>;
+      completed: boolean;
+    }>;
+    reauthorizeLegacyPath(path: string): Promise<{
+      path: string;
+      status: "migrated" | "reauthorization_required" | "failed";
+      project?: LocalProject;
+      error?: string;
+    }>;
     onChanged(cb: (projects: LocalProject[]) => void): Unsubscribe;
   };
   notify(opts: { title: string; body?: string; subtitle?: string }): Promise<void>;

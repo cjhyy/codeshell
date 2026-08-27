@@ -43,11 +43,25 @@ describe("usePanelWorkspaceRoot", () => {
     let projectPath: string | null = null;
     const hook = await renderHook(() => usePanelWorkspaceRoot(sessionId, projectPath));
     cleanup = hook.unmount;
-    expect(hook.result.current).toEqual({ root: null, kind: null, ready: true });
+    expect(hook.result.current).toEqual({
+      root: null,
+      kind: null,
+      mainRoot: null,
+      mainRootId: null,
+      projectId: null,
+      ready: true,
+    });
 
     projectPath = "/repo";
     await hook.rerender();
-    expect(hook.result.current).toEqual({ root: "/repo", kind: "main", ready: true });
+    expect(hook.result.current).toEqual({
+      root: "/repo",
+      kind: "main",
+      mainRoot: "/repo",
+      mainRootId: null,
+      projectId: null,
+      ready: true,
+    });
     expect(calls).toBe(0);
   });
 
@@ -67,7 +81,14 @@ describe("usePanelWorkspaceRoot", () => {
 
     const hook = await renderHook(() => usePanelWorkspaceRoot("engine-1", "/repo"));
     cleanup = hook.unmount;
-    expect(hook.result.current).toEqual({ root: null, kind: null, ready: false });
+    expect(hook.result.current).toEqual({
+      root: null,
+      kind: null,
+      mainRoot: null,
+      mainRootId: null,
+      projectId: null,
+      ready: false,
+    });
     expect(calls).toEqual([["engine-1", "/repo"]]);
 
     await act(async () => {
@@ -77,6 +98,40 @@ describe("usePanelWorkspaceRoot", () => {
     expect(hook.result.current).toEqual({
       root: "/repo/.worktrees/feature",
       kind: "worktree",
+      mainRoot: "/repo",
+      mainRootId: null,
+      projectId: null,
+      ready: true,
+    });
+  });
+
+  test("returns Main-authoritative Session binding fields without trusting the project path", async () => {
+    ensureMiniDom();
+    Object.assign(window, {
+      codeshell: {
+        getSessionWorkspaceAuthority: async () => ({
+          workspace: { root: "/repo/.worktrees/feature", kind: "worktree" },
+          projectId: "project-1",
+          mainRootId: "old-main",
+          mainRoot: "/repo",
+          mainRootName: "repo",
+          rootStatus: "ok",
+        }),
+        getSessionWorkspace: async () => {
+          throw new Error("legacy workspace API must not be used");
+        },
+        onWorkspaceChanged: () => () => {},
+      },
+    });
+
+    const hook = await renderHook(() => usePanelWorkspaceRoot("engine-1", "/notes"));
+    cleanup = hook.unmount;
+    expect(hook.result.current).toMatchObject({
+      root: "/repo/.worktrees/feature",
+      kind: "worktree",
+      mainRoot: "/repo",
+      mainRootId: "old-main",
+      projectId: "project-1",
       ready: true,
     });
   });
@@ -171,6 +226,9 @@ describe("usePanelWorkspaceRoot", () => {
     expect(hook.result.current).toEqual({
       root: "/repo",
       kind: "main",
+      mainRoot: "/repo",
+      mainRootId: null,
+      projectId: null,
       ready: true,
       error: "unavailable",
     });

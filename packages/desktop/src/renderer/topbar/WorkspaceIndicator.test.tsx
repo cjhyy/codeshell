@@ -494,6 +494,62 @@ describe("WorkspaceIndicator", () => {
     expect(textOf(container)).not.toContain("Seedance 制片人");
   });
 
+  test("keeps old Session Git, profile, and label bound when the project primary becomes non-Git", async () => {
+    ensureMiniDom();
+    const calls: string[] = [];
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspaceAuthority: async (sessionId: string) => {
+        calls.push(`authority:${sessionId}`);
+        return {
+          workspace: { root: "/repo", kind: "main" },
+          projectId: "project-1",
+          mainRootId: "old-main",
+          mainRoot: "/repo",
+          mainRootName: "repo",
+          rootStatus: "ok",
+        };
+      },
+      getSessionGitBranches: async (sessionId: string) => {
+        calls.push(`git:${sessionId}`);
+        return { isRepo: true, current: "old-branch", branches: ["old-branch"] };
+      },
+      listSessionProfiles: async (sessionId: string) => {
+        calls.push(`profiles:${sessionId}`);
+        return [{ name: "old-profile", label: "Old Profile", active: true }];
+      },
+      getGitBranches: async (cwd: string) => {
+        calls.push(`generic-git:${cwd}`);
+        return { isRepo: false, current: null, branches: [] };
+      },
+      listProfiles: async (cwd: string) => {
+        calls.push(`generic-profiles:${cwd}`);
+        return [];
+      },
+      listSessionWorktrees: async () => ({
+        current: { root: "/repo", kind: "main" },
+        mainRoot: "/repo",
+        worktrees: [],
+      }),
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator sessionId="old-session" projectPath="/notes" projectName="notes" />,
+      );
+      await flushMicrotasks();
+    });
+
+    expect(calls).toContain("authority:old-session");
+    expect(calls).toContain("git:old-session");
+    expect(calls).toContain("profiles:old-session");
+    expect(calls.some((call) => call.startsWith("generic-git:"))).toBe(false);
+    expect(calls.some((call) => call.startsWith("generic-profiles:"))).toBe(false);
+    expect(textOf(container)).toContain("old-branch (repo)");
+    expect(textOf(container)).toContain("Old Profile");
+  });
+
   test("uses the real main branch and refreshes after a branch-change event", async () => {
     ensureMiniDom();
     const mainWorkspace: SessionWorkspace = { root: "/repo", kind: "main" };

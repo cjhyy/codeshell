@@ -310,6 +310,7 @@ import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { TranscriptSubscriptionManager } from "./cc-room/transcript-subscriptions.js";
 import { QuickChatOwnershipRegistry } from "./quick-chat-ownership.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
+import { createLegacyProjectMigrationService } from "./legacy-project-migration.js";
 import {
   getGitStatus,
   getGitNumstat,
@@ -515,6 +516,7 @@ import {
 import {
   cleanupSessionWorktreeForUi,
   getSessionWorktreeDiffForUi,
+  getSessionWorkspaceAuthorityForUi,
   getSessionWorkspaceForUi,
   listSessionWorktreesForUi,
   releaseManySessionWorkspacesForUi,
@@ -522,6 +524,11 @@ import {
   switchSessionWorkspaceForUi,
   type WorkspaceCleanupAction,
 } from "./session-workspace-service.js";
+import {
+  readSessionDirectoryForUi,
+  readSessionFileForUi,
+  sessionFileExistsForUi,
+} from "./session-fs-service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const chromeNativeMessagingOrigin = nativeMessagingOriginFromArgv(process.argv);
@@ -1043,6 +1050,10 @@ const transcriptSubscriptions = new TranscriptSubscriptionManager({
 // renderer uses (chat/approvals/sessions/rooms/cc-rooms). Extracted glue —
 // see mobile-remote-orchestrator.ts.
 const projectStore = getProjectStore();
+const legacyProjectMigration = createLegacyProjectMigrationService({
+  store: projectStore,
+  pickDirectory: pickProjectDirectory,
+});
 const legacyPickedProjectPaths = new Set<string>();
 const mobileOrchestrator = new MobileRemoteOrchestrator({
   remote: mobileRemote,
@@ -5350,20 +5361,26 @@ ipcMain.handle(
   "projectRegistry:resolveForCwdBatch",
   async (_event, cwds: string[], source: "disk-rebuild" | "automation-import" | "live") => {
     const resolutions = await projectStore.resolveProjectForCwdBatch(cwds, source);
-    if (resolutions.some((resolution) => resolution && "created" in resolution && resolution.created)) {
+    if (
+      resolutions.some((resolution) => resolution && "created" in resolution && resolution.created)
+    ) {
       await broadcastProjectRegistry();
     }
     return resolutions;
   },
 );
-ipcMain.handle("projectRegistry:migrateLegacyPath", async (_event, path: string) => {
-  const project = await projectStore.migrateLegacyPath(await requireRendererProjectPath(path));
-  if (project) await broadcastProjectRegistry();
-  return project;
+ipcMain.handle("projectRegistry:migrateLegacyPaths", async (_event, paths: string[]) => {
+  const result = await legacyProjectMigration.migratePaths(paths);
+  if (result.results.some((entry) => entry.status === "migrated")) {
+    await broadcastProjectRegistry();
+  }
+  return result;
 });
-ipcMain.handle("projectRegistry:completeLegacyMigration", async () =>
-  projectStore.completeLegacyMigration(),
-);
+ipcMain.handle("projectRegistry:reauthorizeLegacyPath", async (_event, path: string) => {
+  const result = await legacyProjectMigration.reauthorizePath(path);
+  if (result.status === "migrated") await broadcastProjectRegistry();
+  return result;
+});
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
 ipcMain.handle("rooms:list", async () =>
@@ -6238,6 +6255,31 @@ ipcMain.handle("workspace:current", async (_e, sessionId: string, cwd: string) =
   return await getSessionWorkspaceForUi(sessionId, cwd);
 });
 
+ipcMain.handle("workspace:authority", async (_e, sessionId: string) => {
+  assertDesktopSessionId(sessionId);
+  return getSessionWorkspaceAuthorityForUi(sessionId);
+});
+
+ipcMain.handle("workspace:gitStatus", async (_e, sessionId: string) => {
+  assertDesktopSessionId(sessionId);
+  const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  knownGitRoots.add(authority.mainRoot);
+  return getGitStatus(authority.mainRoot);
+});
+
+ipcMain.handle("workspace:gitBranches", async (_e, sessionId: string) => {
+  assertDesktopSessionId(sessionId);
+  const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  knownGitRoots.add(authority.mainRoot);
+  return getGitBranches(authority.mainRoot);
+});
+
+ipcMain.handle("workspace:profiles", async (_e, sessionId: string) => {
+  assertDesktopSessionId(sessionId);
+  const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  return listProfiles(authority.mainRoot);
+});
+
 ipcMain.handle("workspace:list", async (_e, sessionId: string, cwd: string) => {
   assertDesktopSessionId(sessionId);
   if (typeof cwd !== "string" || !cwd) throw new Error("workspace:list requires cwd");
@@ -6496,29 +6538,35 @@ ipcMain.handle("fs:exists", async (_e, root: string, path: string) => {
   if (typeof path !== "string" || !path) return false;
   return fsFileExists(root, path);
 });
+ipcMain.handle("fsRoot:readDir", async (_e, projectId: string, rootId: string, dir?: string) => {
+  const root = await requireRendererProjectRoot(projectId, rootId);
+  return readDirectory(root.path, typeof dir === "string" && dir ? dir : root.path);
+});
+ipcMain.handle("fsRoot:readFile", async (_e, projectId: string, rootId: string, path: string) => {
+  const root = await requireRendererProjectRoot(projectId, rootId);
+  if (typeof path !== "string" || !path) throw new Error("fsRoot:readFile requires path");
+  return fsReadFile(root.path, path);
+});
+ipcMain.handle("fsRoot:exists", async (_e, projectId: string, rootId: string, path: string) => {
+  const root = await requireRendererProjectRoot(projectId, rootId).catch(() => null);
+  if (!root || typeof path !== "string" || !path) return false;
+  return fsFileExists(root.path, path);
+});
+ipcMain.handle("fsSession:readDir", async (_e, sessionId: string, rootId: string, dir?: string) => {
+  assertDesktopSessionId(sessionId);
+  return readSessionDirectoryForUi(sessionId, rootId, dir);
+});
 ipcMain.handle(
-  "fsRoot:readDir",
-  async (_e, projectId: string, rootId: string, dir?: string) => {
-    const root = await requireRendererProjectRoot(projectId, rootId);
-    return readDirectory(root.path, typeof dir === "string" && dir ? dir : root.path);
+  "fsSession:readFile",
+  async (_e, sessionId: string, rootId: string, path: string) => {
+    assertDesktopSessionId(sessionId);
+    return readSessionFileForUi(sessionId, rootId, path);
   },
 );
-ipcMain.handle(
-  "fsRoot:readFile",
-  async (_e, projectId: string, rootId: string, path: string) => {
-    const root = await requireRendererProjectRoot(projectId, rootId);
-    if (typeof path !== "string" || !path) throw new Error("fsRoot:readFile requires path");
-    return fsReadFile(root.path, path);
-  },
-);
-ipcMain.handle(
-  "fsRoot:exists",
-  async (_e, projectId: string, rootId: string, path: string) => {
-    const root = await requireRendererProjectRoot(projectId, rootId).catch(() => null);
-    if (!root || typeof path !== "string" || !path) return false;
-    return fsFileExists(root.path, path);
-  },
-);
+ipcMain.handle("fsSession:exists", async (_e, sessionId: string, rootId: string, path: string) => {
+  assertDesktopSessionId(sessionId);
+  return sessionFileExistsForUi(sessionId, rootId, path);
+});
 
 // Authoritative no-repo conversation cwd (~/.code-shell/no-repo). The renderer
 // is a thin client and must NOT recompute homedir() itself; it asks main so the

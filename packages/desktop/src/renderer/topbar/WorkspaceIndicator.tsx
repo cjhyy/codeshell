@@ -23,6 +23,7 @@ import { useToast } from "../ui/ToastProvider";
 import { cn } from "@/lib/utils";
 import type {
   SessionWorkspace,
+  SessionWorkspaceAuthority,
   SessionWorkspaceList,
   SessionWorkspaceWorktreeInfo,
 } from "../../preload/types";
@@ -137,6 +138,7 @@ export function WorkspaceIndicator({
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [workspace, setWorkspace] = useState<SessionWorkspace | null>(null);
+  const [authority, setAuthority] = useState<SessionWorkspaceAuthority | null>(null);
   const [list, setList] = useState<SessionWorkspaceList | null>(null);
   const [currentLoading, setCurrentLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
@@ -184,16 +186,24 @@ export function WorkspaceIndicator({
     if (!sessionId || !projectPath) {
       setCurrentLoading(false);
       setWorkspace(null);
+      setAuthority(null);
       setList(null);
       return;
     }
     setCurrentLoading(true);
     try {
-      const next = await window.codeshell.getSessionWorkspace(sessionId, projectPath);
+      const authorityApi = window.codeshell.getSessionWorkspaceAuthority;
+      const nextAuthority =
+        typeof authorityApi === "function" ? await authorityApi(sessionId) : null;
+      const next =
+        nextAuthority?.workspace ??
+        (await window.codeshell.getSessionWorkspace(sessionId, projectPath));
       if (currentRequestId.current !== requestId) return;
+      setAuthority(nextAuthority);
       setWorkspace(next);
     } catch {
       if (currentRequestId.current !== requestId) return;
+      setAuthority(null);
       setWorkspace({ root: projectPath, kind: "main" });
     } finally {
       if (currentRequestId.current === requestId) setCurrentLoading(false);
@@ -265,13 +275,16 @@ export function WorkspaceIndicator({
 
   const refreshGitProbe = useCallback(async () => {
     const requestId = ++gitProbeRequestId.current;
-    if (!projectPath) {
+    if (!projectPath || !sessionId) {
       setIsGitRepo(null);
       setMainBranch(null);
       return;
     }
     try {
-      const res = await window.codeshell.getGitBranches(projectPath);
+      const res =
+        typeof window.codeshell.getSessionGitBranches === "function"
+          ? await window.codeshell.getSessionGitBranches(sessionId)
+          : await window.codeshell.getGitBranches(projectPath);
       if (gitProbeRequestId.current !== requestId) return;
       setIsGitRepo(res.isRepo === true);
       setMainBranch(res.isRepo === true ? normalizeCurrentBranch(res.current) : null);
@@ -280,7 +293,7 @@ export function WorkspaceIndicator({
       setIsGitRepo(false);
       setMainBranch(null);
     }
-  }, [projectPath]);
+  }, [projectPath, sessionId]);
 
   useEffect(() => {
     return () => {
@@ -313,13 +326,16 @@ export function WorkspaceIndicator({
 
   useEffect(() => {
     let cancelled = false;
-    if (!projectPath || typeof window.codeshell.listProfiles !== "function") {
+    if (!projectPath || !sessionId || typeof window.codeshell.listProfiles !== "function") {
       setActiveProfileLabel(null);
       return;
     }
     setActiveProfileLabel(null);
-    void window.codeshell
-      .listProfiles(projectPath)
+    const profiles =
+      typeof window.codeshell.listSessionProfiles === "function"
+        ? window.codeshell.listSessionProfiles(sessionId)
+        : window.codeshell.listProfiles(projectPath);
+    void profiles
       .then((profiles) => {
         if (!cancelled)
           setActiveProfileLabel(profiles.find((profile) => profile.active)?.label ?? null);
@@ -330,13 +346,14 @@ export function WorkspaceIndicator({
     return () => {
       cancelled = true;
     };
-  }, [projectPath]);
+  }, [projectPath, sessionId]);
 
   useEffect(() => {
     if (!projectPath) return;
     const onBranchesChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ cwd?: string }>).detail;
-      if (!detail?.cwd || samePath(detail.cwd, projectPath)) void refreshGitProbe();
+      if (!detail?.cwd || samePath(detail.cwd, authority?.mainRoot ?? projectPath))
+        void refreshGitProbe();
     };
     const onFilesChanged = () => {
       void refreshGitProbe();
@@ -347,7 +364,7 @@ export function WorkspaceIndicator({
       window.removeEventListener("codeshell:git-branches-changed", onBranchesChanged);
       window.removeEventListener("codeshell:files-changed", onFilesChanged);
     };
-  }, [refreshGitProbe, projectPath]);
+  }, [authority?.mainRoot, refreshGitProbe, projectPath]);
 
   useEffect(() => {
     const subscribe = window.codeshell.onWorkspaceChanged;
@@ -415,11 +432,11 @@ export function WorkspaceIndicator({
 
   const label = useMemo(
     () =>
-      workspaceIndicatorText(workspace, projectName, {
+      workspaceIndicatorText(workspace, authority?.mainRootName ?? projectName, {
         includeProjectName: includeProjectNameInLabel,
         mainBranch,
       }),
-    [includeProjectNameInLabel, mainBranch, projectName, workspace],
+    [authority?.mainRootName, includeProjectNameInLabel, mainBranch, projectName, workspace],
   );
   const rows = list?.worktrees ?? [];
   const mainRows = rows.filter((row) => row.isMain);

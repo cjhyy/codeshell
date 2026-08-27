@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import {
   formatRelative,
   ProjectGroup,
+  sessionMainRootLabel,
   sessionHoverBranch,
   shouldPromptForPrimaryTrust,
   worktreeBranchOf,
@@ -129,6 +130,27 @@ describe("Sidebar worktree marker", () => {
     expect(worktreeBranchOf({ root: "/repo", kind: "main" })).toBeUndefined();
     expect(sessionHoverBranch(undefined, "main")).toBe("main");
   });
+
+  test("uses the Session main-root label instead of the project's new primary", () => {
+    const switched: TrackedProject = {
+      id: "project-1",
+      name: "Project",
+      path: "/notes",
+      roots: [
+        { id: "old-main", path: "/repo", name: "repo", addedAt: 1 },
+        { id: "new-primary", path: "/notes", name: "notes", addedAt: 2 },
+      ],
+      primaryRootId: "new-primary",
+      addedAt: 1,
+    };
+
+    expect(
+      sessionMainRootLabel(switched, {
+        mainRootId: "old-main",
+        mainRootName: "repo",
+      }),
+    ).toBe("repo");
+  });
 });
 
 describe("Sidebar project root trust", () => {
@@ -179,5 +201,74 @@ describe("Sidebar project session visibility", () => {
     expect(buttonWithText(container, "Session 4")).toBeDefined();
     expect(buttonWithText(container, "Session 3")).toBeUndefined();
     expect(buttonWithText(container, "展开显示3")).toBeDefined();
+  });
+
+  test("probes an old Session's Git branch through the Session-scoped API", async () => {
+    ensureMiniDom();
+    const calls: string[] = [];
+    Object.assign(window, {
+      codeshell: {
+        getSessionWorkspaceAuthority: async (sessionId: string) => {
+          calls.push(`authority:${sessionId}`);
+          return {
+            workspace: { root: "/repo", kind: "main" },
+            projectId: "project-1",
+            mainRootId: "root-1",
+            mainRoot: "/repo",
+            mainRootName: "repo",
+            rootStatus: "ok",
+          };
+        },
+        getSessionGitStatus: async (sessionId: string) => {
+          calls.push(`git:${sessionId}`);
+          return { branch: "old-main", entries: [], clean: true };
+        },
+        getGitStatus: async () => {
+          calls.push("generic-git");
+          return { branch: "new-primary", entries: [], clean: true };
+        },
+      },
+    });
+    const boundIndex: SessionIndex = {
+      sessions: [
+        {
+          id: "ui-session",
+          engineSessionId: "engine-old",
+          title: "Old Session",
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+      activeSessionId: null,
+    };
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        React.createElement(ProjectGroup, {
+          project,
+          index: boundIndex,
+          collapsed: false,
+          isActiveProject: false,
+          activeSessionId: null,
+          statusFor: () => undefined,
+          onToggle: () => undefined,
+          onSelectProject: () => undefined,
+          onSelectSession: () => undefined,
+          onMenuClick: () => undefined,
+          onNewChat: () => undefined,
+          onProjectContextMenu: () => undefined,
+          onSessionContextMenu: () => undefined,
+          onPinSession: () => undefined,
+          onArchiveSession: () => undefined,
+          workspaceChange: null,
+        }),
+      );
+      await flushMicrotasks();
+    });
+
+    expect(calls).toContain("authority:engine-old");
+    expect(calls).toContain("git:engine-old");
   });
 });

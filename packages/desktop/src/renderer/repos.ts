@@ -18,6 +18,7 @@ export interface Repo {
   addedAt: number;
   displayName?: string;
   pinned?: boolean;
+  migrationStatus?: "reauthorization_required" | "failed";
 }
 
 const REPOS_KEY = "codeshell.repos";
