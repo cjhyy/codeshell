@@ -5429,11 +5429,14 @@ ipcMain.handle(
     }
     const currentBridge = bridge;
     const migrated = await projectStore.migrateSessionMainRoot(sessionId, targetRootId, {
-      persistLive:
-        currentBridge?.hasLiveWorker() && currentBridge.hasKnownSession(sessionId)
-          ? ({ sessionId: id, projectId, mainRootId, mainRoot }) =>
-              currentBridge.migrateSessionMainRoot(id, { projectId, mainRootId }, mainRoot)
-          : undefined,
+      owner: currentBridge
+        ? {
+            migrate: ({ sessionId: id, projectId, mainRootId, mainRoot }) =>
+              currentBridge.migrateSessionMainRoot(id, { projectId, mainRootId }, mainRoot),
+            complete: ({ sessionId: id, ownershipToken }) =>
+              currentBridge.completeSessionMainRootMigration(id, ownershipToken),
+          }
+        : undefined,
     });
     broadcastWorkspaceChanged({
       sessionId,

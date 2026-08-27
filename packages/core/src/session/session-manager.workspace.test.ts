@@ -118,4 +118,30 @@ describe("SessionManager SessionWorkspace", () => {
       chmodSync(join(dir, "s-rollback"), 0o700);
     }
   });
+
+  test("offline migration refuses to write when the revalidated durable revision changed", () => {
+    const sm = new SessionManager(dir);
+    sm.create("/repo/old", "m", "p", "s-offline-race");
+    sm.updateSessionState("s-offline-race", {
+      project: { projectId: "project-1", mainRootId: "root-old" },
+    });
+    const expectedRevision = sm.readSessionState("s-offline-race")!.stateRevision;
+
+    sm.updateSessionState("s-offline-race", { title: "won by another writer" });
+
+    expect(() =>
+      sm.migrateSessionMainRootIfRevision(
+        "s-offline-race",
+        { projectId: "project-1", mainRootId: "root-new" },
+        "/repo/new",
+        expectedRevision,
+      ),
+    ).toThrow(/revision conflict/i);
+    expect(sm.readSessionState("s-offline-race")).toMatchObject({
+      cwd: "/repo/old",
+      title: "won by another writer",
+      project: { projectId: "project-1", mainRootId: "root-old" },
+      workspace: { root: "/repo/old", kind: "main" },
+    });
+  });
 });

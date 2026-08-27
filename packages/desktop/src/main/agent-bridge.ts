@@ -20,6 +20,7 @@
  *     will trigger a fresh spawn anyway.
  */
 
+import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -48,8 +49,10 @@ import {
   replaceStreamEventInLine,
 } from "./browser-runtime/index.js";
 import {
+  ErrorCodes,
   Methods,
   SessionManager,
+  type MigrateSessionMainRootResult,
   type SessionProjectBinding,
   type SessionWorkspace,
 } from "@cjhyy/code-shell-core";
@@ -246,6 +249,11 @@ export class AgentBridge implements PetStateBridge {
    * credentialId). Keyed by sessionId; cleared in forgetSession.
    */
   private sessionCwd = new Map<string, string>();
+  /**
+   * Main-process half of the non-resident ownership fence. It survives worker
+   * exit/restart and rejects a new run until the durable attempt completes.
+   */
+  private readonly sessionMainRootMigrationClaims = new Map<string, string>();
   private readonly hostReservations = new Map<string, HostReservation>();
   private readonly tentativeRunsByRequest = new Map<string, string>();
   /**
@@ -603,6 +611,12 @@ export class AgentBridge implements PetStateBridge {
     const parsed = prepared.parsed;
     let outLine = line;
     if (parsed.method === "agent/run") {
+      if (prepared.sessionId && this.sessionMainRootMigrationClaims.has(prepared.sessionId)) {
+        throw Object.assign(
+          new Error(`Session ${prepared.sessionId} root migration is in progress; retry the run`),
+          { code: ErrorCodes.Overloaded },
+        );
+      }
       outLine = this.handleAgentRunMetadata(prepared);
     }
     return { line: outLine, method: parsed.method };
@@ -654,6 +668,26 @@ export class AgentBridge implements PetStateBridge {
         throw error;
       }
       const parsed = prepared.parsed;
+      if (
+        parsed.method === "agent/run" &&
+        prepared.sessionId &&
+        this.sessionMainRootMigrationClaims.has(prepared.sessionId)
+      ) {
+        if (parsed.id !== undefined && !event.sender.isDestroyed()) {
+          event.sender.send(
+            "agent:msg",
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: parsed.id,
+              error: {
+                code: ErrorCodes.Overloaded,
+                message: `Session ${prepared.sessionId} root migration is in progress; retry the run`,
+              },
+            }),
+          );
+        }
+        return;
+      }
       // Line forwarded to the worker. Only rewritten when we inject fields
       // (agent/run trust) — everything else is passed through verbatim so we
       // don't re-serialize on the hot path.
@@ -1537,6 +1571,32 @@ export class AgentBridge implements PetStateBridge {
    * responsible for building a well-formed line (see preload's rpc()).
    */
   injectWorkerMessage(line: string, meta: WorkerFrameMeta): void {
+    let parsed: { id?: string | number; method?: string; params?: { sessionId?: string } };
+    try {
+      parsed = JSON.parse(line) as typeof parsed;
+    } catch {
+      parsed = {};
+    }
+    const sessionId = parsed.params?.sessionId;
+    if (
+      parsed.method === "agent/run" &&
+      typeof sessionId === "string" &&
+      this.sessionMainRootMigrationClaims.has(sessionId)
+    ) {
+      if (parsed.id !== undefined) {
+        this.handleWorkerLine(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: parsed.id,
+            error: {
+              code: ErrorCodes.Overloaded,
+              message: `Session ${sessionId} root migration is in progress; retry the run`,
+            },
+          }),
+        );
+      }
+      return;
+    }
     this.core.injectWorkerMessage(line, meta);
   }
 
@@ -1654,20 +1714,79 @@ export class AgentBridge implements PetStateBridge {
     sessionId: string,
     project: SessionProjectBinding,
     mainRoot: string,
-  ): Promise<void> {
+  ): Promise<MigrateSessionMainRootResult> {
     if (!this.core.canSend()) {
-      throw new Error(`no live worker for session ${sessionId}`);
+      // Starting a worker with no resident Engine lets it mint the same
+      // non-resident ownership fence used after idle eviction. This avoids a
+      // no-worker check racing a concurrent agent/run that spawns one.
+      this.core.ensureWorker(mainRoot);
     }
+    if (!this.core.canSend()) {
+      throw new Error(`could not start a migration owner for session ${sessionId}`);
+    }
+    const ownershipToken = randomUUID();
     const response = await this.requestWorker(
       Methods.MigrateSessionMainRoot,
-      { sessionId, project, mainRoot },
+      { sessionId, project, mainRoot, ownershipToken },
       5_000,
       { meta: { origin: "host", producer: "migrate-session-main-root" } },
     );
-    if (!response.ok) throw new Error(response.message);
-    const result = response.result as { ok?: boolean; workspace?: SessionWorkspace | null };
-    if (result.ok !== true || result.workspace?.kind !== "main") {
-      throw new Error(`worker could not migrate main root for session ${sessionId}`);
+    if (!response.ok) {
+      await this.tryCompleteSessionMainRootMigration(sessionId, ownershipToken);
+      throw new Error(response.message);
+    }
+    const result = response.result as Partial<MigrateSessionMainRootResult> | undefined;
+    if (result?.status === "migrated" && result.workspace?.kind === "main") {
+      return result as Extract<MigrateSessionMainRootResult, { status: "migrated" }>;
+    }
+    if (
+      result?.status === "not-resident" &&
+      typeof result.ownershipToken === "string" &&
+      result.ownershipToken === ownershipToken
+    ) {
+      this.sessionMainRootMigrationClaims.set(sessionId, ownershipToken);
+      return result as Extract<MigrateSessionMainRootResult, { status: "not-resident" }>;
+    }
+    if (
+      result?.status === "failed" &&
+      typeof result.error === "string" &&
+      result.error.length > 0
+    ) {
+      return result as Extract<MigrateSessionMainRootResult, { status: "failed" }>;
+    }
+    await this.tryCompleteSessionMainRootMigration(sessionId, ownershipToken);
+    throw new Error(`worker returned an invalid migration result for session ${sessionId}`);
+  }
+
+  private async tryCompleteSessionMainRootMigration(
+    sessionId: string,
+    ownershipToken: string,
+  ): Promise<void> {
+    try {
+      await this.completeSessionMainRootMigration(sessionId, ownershipToken);
+    } catch {
+      // No claim is expected for migrated/failed requests. If the worker died,
+      // its in-memory fence died with it; otherwise a matching claim is released.
+    }
+  }
+
+  async completeSessionMainRootMigration(sessionId: string, ownershipToken: string): Promise<void> {
+    try {
+      const response = await this.requestWorker(
+        Methods.CompleteSessionMainRootMigration,
+        { sessionId, ownershipToken },
+        5_000,
+        { meta: { origin: "host", producer: "complete-session-main-root-migration" } },
+      );
+      if (!response.ok) throw new Error(response.message);
+      const result = response.result as { released?: boolean } | undefined;
+      if (result?.released !== true) {
+        throw new Error(`worker did not release migration ownership for session ${sessionId}`);
+      }
+    } finally {
+      if (this.sessionMainRootMigrationClaims.get(sessionId) === ownershipToken) {
+        this.sessionMainRootMigrationClaims.delete(sessionId);
+      }
     }
   }
 

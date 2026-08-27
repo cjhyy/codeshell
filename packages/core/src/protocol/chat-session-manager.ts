@@ -103,11 +103,23 @@ export interface LiveChatSessionSnapshot {
 
 export const CLOSED_CHAT_SESSION_TOMBSTONE_LIMIT = 4096;
 
+interface SessionMigrationClaim {
+  ownershipToken: string;
+  released: Promise<void>;
+  release: () => void;
+}
+
+export type SessionMigrationOwnership =
+  | { status: "resident"; session: ChatSession }
+  | { status: "not-resident"; ownershipToken: string }
+  | { status: "failed"; error: string };
+
 export class ChatSessionManager {
   private readonly sessions = new Map<string, ChatSession>();
   private readonly closingSessions = new Map<string, Promise<void>>();
   private readonly closedSessions = new Set<string>();
   private readonly sessionGeneration = new Map<string, number>();
+  private readonly migrationClaims = new Map<string, SessionMigrationClaim>();
   readonly runtime: EngineRuntime;
   /** Identity scope this manager serves ("local" unless injected). */
   readonly identity: string;
@@ -158,11 +170,56 @@ export class ChatSessionManager {
   }
 
   async getOrCreate(sessionId: string, slice: EngineConfigSlice): Promise<ChatSession> {
-    const closing = this.closingSessions.get(sessionId);
-    if (closing) {
-      await closing;
+    // A non-resident migration claim is a short ownership handoff to Main.
+    // Wait rather than fail the user's run: once Main atomically commits (or
+    // aborts) and releases the token, the Engine is created from current disk.
+    for (;;) {
+      const claim = this.migrationClaims.get(sessionId);
+      if (claim) {
+        await claim.released;
+        continue;
+      }
+      const closing = this.closingSessions.get(sessionId);
+      if (closing) {
+        await closing;
+        continue;
+      }
+      // No await separates the final claim check from getOrCreateNow. On this
+      // process's event loop, either this creates the resident owner first or
+      // beginSessionMigration installs the fence first; both cannot win.
+      return this.getOrCreateNow(sessionId, slice);
     }
-    return this.getOrCreateNow(sessionId, slice);
+  }
+
+  /**
+   * Prove whether this worker currently owns a resident Engine, or fence the
+   * Session so Main can perform one durable migration without a re-resume race.
+   */
+  beginSessionMigration(sessionId: string, ownershipToken: string): SessionMigrationOwnership {
+    const resident = this.sessions.get(sessionId);
+    if (resident) return { status: "resident", session: resident };
+    if (this.closingSessions.has(sessionId)) {
+      return { status: "failed", error: `Session ${sessionId} is closing` };
+    }
+    if (this.migrationClaims.has(sessionId)) {
+      return { status: "failed", error: `Session ${sessionId} migration is already in progress` };
+    }
+
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.migrationClaims.set(sessionId, { ownershipToken, released, release });
+    return { status: "not-resident", ownershipToken };
+  }
+
+  /** Release only the exact claim minted for this Session. */
+  completeSessionMigration(sessionId: string, ownershipToken: string): boolean {
+    const claim = this.migrationClaims.get(sessionId);
+    if (!claim || claim.ownershipToken !== ownershipToken) return false;
+    this.migrationClaims.delete(sessionId);
+    claim.release();
+    return true;
   }
 
   /**
@@ -371,6 +428,9 @@ export class ChatSessionManager {
    * immediately afterward (the TUI REPL) doesn't orphan detached dev servers.
    */
   async closeAllAsync(): Promise<void> {
+    for (const [sessionId, claim] of [...this.migrationClaims]) {
+      this.completeSessionMigration(sessionId, claim.ownershipToken);
+    }
     await Promise.all([...this.sessions.keys()].map((id) => this.close(id)));
     // App/worker shutdown — reap every background shell so a detached
     // `npm run dev` doesn't outlive the process as an orphan holding a port

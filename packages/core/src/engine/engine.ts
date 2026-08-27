@@ -3581,28 +3581,22 @@ export class Engine {
     sessionId: string,
     project: import("../types.js").SessionProjectBinding,
     mainRoot: string,
-  ): SessionWorkspace | null {
-    if (!sessionId || !this.sessionManager.exists(sessionId)) return null;
-    try {
-      const workspace: SessionWorkspace = { root: mainRoot, kind: "main" };
-      const stateRevision = this.sessionManager.migrateSessionMainRoot(
-        sessionId,
-        project,
-        mainRoot,
-      );
-      if (this.activeRunSession?.state.sessionId === sessionId) {
-        Object.assign(this.activeRunSession.state, {
-          project: { ...project },
-          cwd: mainRoot,
-          workspace,
-          stateRevision,
-        });
-      }
-      this.workspaceContextBySession.delete(sessionId);
-      return workspace;
-    } catch {
-      return null;
+  ): SessionWorkspace {
+    if (!sessionId || !this.sessionManager.exists(sessionId)) {
+      throw new Error(`Session ${sessionId} does not exist`);
     }
+    const workspace: SessionWorkspace = { root: mainRoot, kind: "main" };
+    const stateRevision = this.sessionManager.migrateSessionMainRoot(sessionId, project, mainRoot);
+    if (this.activeRunSession?.state.sessionId === sessionId) {
+      Object.assign(this.activeRunSession.state, {
+        project: { ...project },
+        cwd: mainRoot,
+        workspace,
+        stateRevision,
+      });
+    }
+    this.workspaceContextBySession.delete(sessionId);
+    return workspace;
   }
 
   /**

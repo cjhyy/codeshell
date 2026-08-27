@@ -259,6 +259,199 @@ describe("ProjectStore", () => {
     });
   });
 
+  test("uses the resident worker as the single migration writer", async () => {
+    const primary = dir("resident-migration-primary");
+    const secondary = dir("resident-migration-secondary");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    await index.ensureLoaded();
+    const projects = store({ index, sessionManager });
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = updated.roots.find((root) => root.path === realpathSync(secondary))!;
+    const sessionId = "resident-owner-migration";
+    sessionManager.create(secondaryRoot.path, "m", "p", sessionId);
+    sessionManager.updateSessionState(sessionId, {
+      project: { projectId: project.id, mainRootId: secondaryRoot.id },
+    });
+    index.upsert(sessionId, {
+      cwd: secondaryRoot.path,
+      workspaceRoot: secondaryRoot.path,
+      projectId: project.id,
+      mainRootId: secondaryRoot.id,
+    });
+    let ownerWrites = 0;
+    let completed = false;
+
+    await projects.migrateSessionMainRoot(sessionId, project.primaryRootId, {
+      owner: {
+        async migrate(input) {
+          ownerWrites += 1;
+          sessionManager.migrateSessionMainRoot(
+            input.sessionId,
+            { projectId: input.projectId, mainRootId: input.mainRootId },
+            input.mainRoot,
+          );
+          return {
+            status: "migrated",
+            workspace: { root: input.mainRoot, kind: "main" },
+          };
+        },
+        async complete() {
+          completed = true;
+        },
+      },
+    });
+
+    expect(ownerWrites).toBe(1);
+    expect(completed).toBe(false);
+    expect(sessionManager.readSessionState(sessionId)).toMatchObject({
+      cwd: realpathSync(primary),
+      project: { projectId: project.id, mainRootId: project.primaryRootId },
+      workspace: { root: realpathSync(primary), kind: "main" },
+    });
+    expect(index.lookupCached(sessionId)).toMatchObject({
+      cwd: realpathSync(primary),
+      workspaceRoot: realpathSync(primary),
+      projectId: project.id,
+      mainRootId: project.primaryRootId,
+    });
+  });
+
+  test("migrates an idle-evicted Session through durable state only after the worker proves not-resident", async () => {
+    const primary = dir("idle-migration-primary");
+    const secondary = dir("idle-migration-secondary");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    await index.ensureLoaded();
+    const projects = store({ index, sessionManager });
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = updated.roots.find((root) => root.path === realpathSync(secondary))!;
+    const sessionId = "idle-evicted-migration";
+    sessionManager.create(secondaryRoot.path, "m", "p", sessionId);
+    sessionManager.updateSessionState(sessionId, {
+      project: { projectId: project.id, mainRootId: secondaryRoot.id },
+    });
+    index.upsert(sessionId, {
+      cwd: secondaryRoot.path,
+      workspaceRoot: secondaryRoot.path,
+      projectId: project.id,
+      mainRootId: secondaryRoot.id,
+    });
+    const calls: unknown[] = [];
+
+    await projects.migrateSessionMainRoot(sessionId, project.primaryRootId, {
+      owner: {
+        async migrate(input) {
+          calls.push({ migrate: input });
+          return { status: "not-resident", ownershipToken: "idle-claim" };
+        },
+        async complete(input) {
+          calls.push({ complete: input });
+        },
+      },
+    });
+
+    expect(calls).toEqual([
+      {
+        migrate: {
+          sessionId,
+          projectId: project.id,
+          mainRootId: project.primaryRootId,
+          mainRoot: realpathSync(primary),
+        },
+      },
+      { complete: { sessionId, ownershipToken: "idle-claim" } },
+    ]);
+    expect(sessionManager.readSessionState(sessionId)).toMatchObject({
+      cwd: realpathSync(primary),
+      project: { projectId: project.id, mainRootId: project.primaryRootId },
+      workspace: { root: realpathSync(primary), kind: "main" },
+    });
+    expect(index.lookupCached(sessionId)).toMatchObject({
+      cwd: realpathSync(primary),
+      workspaceRoot: realpathSync(primary),
+      projectId: project.id,
+      mainRootId: project.primaryRootId,
+    });
+    const transcript = readFileSync(join(sessionsDir, sessionId, "transcript.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(transcript.at(-1)).toMatchObject({
+      type: "session_meta",
+      data: {
+        handoffFrom: secondaryRoot.path,
+        workspace: { root: realpathSync(primary), kind: "main" },
+      },
+    });
+  });
+
+  test("fails closed when the resident worker reports a real migration error", async () => {
+    const primary = dir("failed-owner-primary");
+    const secondary = dir("failed-owner-secondary");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    await index.ensureLoaded();
+    const projects = store({ index, sessionManager });
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = updated.roots.find((root) => root.path === realpathSync(secondary))!;
+    const sessionId = "failed-owner-migration";
+    sessionManager.create(secondaryRoot.path, "m", "p", sessionId);
+    sessionManager.updateSessionState(sessionId, {
+      project: { projectId: project.id, mainRootId: secondaryRoot.id },
+    });
+    index.upsert(sessionId, {
+      cwd: secondaryRoot.path,
+      workspaceRoot: secondaryRoot.path,
+      projectId: project.id,
+      mainRootId: secondaryRoot.id,
+    });
+    const before = readFileSync(join(sessionsDir, sessionId, "state.json"), "utf8");
+    let completed = false;
+
+    await expect(
+      projects.migrateSessionMainRoot(sessionId, project.primaryRootId, {
+        owner: {
+          async migrate() {
+            return { status: "failed", error: "worker state lock failed" };
+          },
+          async complete() {
+            completed = true;
+          },
+        },
+      }),
+    ).rejects.toThrow("worker state lock failed");
+
+    expect(completed).toBe(false);
+    expect(readFileSync(join(sessionsDir, sessionId, "state.json"), "utf8")).toBe(before);
+    expect(index.lookupCached(sessionId)).toMatchObject({
+      cwd: secondaryRoot.path,
+      workspaceRoot: secondaryRoot.path,
+      mainRootId: secondaryRoot.id,
+    });
+
+    await expect(
+      projects.migrateSessionMainRoot(sessionId, project.primaryRootId, {
+        owner: {
+          async migrate() {
+            throw new Error("worker RPC timed out");
+          },
+          async complete() {
+            completed = true;
+          },
+        },
+      }),
+    ).rejects.toThrow("worker RPC timed out");
+    expect(completed).toBe(false);
+    expect(readFileSync(join(sessionsDir, sessionId, "state.json"), "utf8")).toBe(before);
+  });
+
   test("rejects nonexistent, cross-project, and physically missing migration targets without partial state", async () => {
     const primary = dir("reject-primary");
     const secondary = dir("reject-secondary");

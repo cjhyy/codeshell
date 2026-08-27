@@ -29,6 +29,8 @@ import {
   type GoalUpdateParams,
   type SetWorkspaceParams,
   type MigrateSessionMainRootParams,
+  type CompleteSessionMainRootMigrationParams,
+  type MigrateSessionMainRootResult,
   type PluginCommandsListParams,
   type PluginCommandExpandParams,
   type PendingApprovalMetadata,
@@ -1035,6 +1037,9 @@ export class AgentServer {
         break;
       case Methods.MigrateSessionMainRoot:
         this.handleMigrateSessionMainRoot(req);
+        break;
+      case Methods.CompleteSessionMainRootMigration:
+        this.handleCompleteSessionMainRootMigration(req);
         break;
       case Methods.GoalExtend:
         this.handleGoalExtend(req);
@@ -2673,7 +2678,10 @@ export class AgentServer {
       typeof params.project.mainRootId !== "string" ||
       params.project.mainRootId.length === 0 ||
       typeof params.mainRoot !== "string" ||
-      params.mainRoot.length === 0
+      params.mainRoot.length === 0 ||
+      typeof params.ownershipToken !== "string" ||
+      params.ownershipToken.length === 0 ||
+      params.ownershipToken.length > 128
     ) {
       this.transport.send(
         createErrorResponse(
@@ -2684,28 +2692,91 @@ export class AgentServer {
       );
       return;
     }
-    const engine = this.chatManager
-      ? this.chatManager.get(params.sessionId)?.engine
-      : this.legacyEngine;
+    let engine: Engine | null | undefined;
+    if (this.chatManager) {
+      const ownership = this.chatManager.beginSessionMigration(
+        params.sessionId,
+        params.ownershipToken,
+      );
+      if (ownership.status === "not-resident") {
+        this.transport.send(
+          createResponse(req.id, {
+            status: "not-resident",
+            ownershipToken: ownership.ownershipToken,
+          } satisfies MigrateSessionMainRootResult),
+        );
+        return;
+      }
+      if (ownership.status === "failed") {
+        this.transport.send(
+          createResponse(req.id, {
+            status: "failed",
+            error: ownership.error,
+          } satisfies MigrateSessionMainRootResult),
+        );
+        return;
+      }
+      engine = ownership.session.engine;
+    } else {
+      engine = this.legacyEngine;
+    }
     if (!engine) {
-      this.transport.send(createResponse(req.id, { ok: false, workspace: null }));
+      this.transport.send(
+        createResponse(req.id, {
+          status: "failed",
+          error: "Session migration owner is unavailable",
+        } satisfies MigrateSessionMainRootResult),
+      );
       return;
     }
-    const workspace = (
-      engine as Engine & {
-        migrateSessionMainRoot?: (
-          sessionId: string,
-          project: import("../types.js").SessionProjectBinding,
-          mainRoot: string,
-        ) => import("../types.js").SessionWorkspace | null;
-      }
-    ).migrateSessionMainRoot?.(params.sessionId, params.project, params.mainRoot);
-    this.transport.send(
-      createResponse(req.id, {
-        ok: workspace !== undefined && workspace !== null,
-        workspace: workspace ?? null,
-      }),
-    );
+    try {
+      const workspace = (
+        engine as Engine & {
+          migrateSessionMainRoot?: (
+            sessionId: string,
+            project: import("../types.js").SessionProjectBinding,
+            mainRoot: string,
+          ) => import("../types.js").SessionWorkspace | null;
+        }
+      ).migrateSessionMainRoot?.(params.sessionId, params.project, params.mainRoot);
+      if (!workspace) throw new Error(`Session ${params.sessionId} migration was not committed`);
+      this.transport.send(
+        createResponse(req.id, {
+          status: "migrated",
+          workspace,
+        } satisfies MigrateSessionMainRootResult),
+      );
+    } catch (error) {
+      this.transport.send(
+        createResponse(req.id, {
+          status: "failed",
+          error: error instanceof Error ? error.message : String(error),
+        } satisfies MigrateSessionMainRootResult),
+      );
+    }
+  }
+
+  private handleCompleteSessionMainRootMigration(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as CompleteSessionMainRootMigrationParams;
+    if (
+      typeof params.sessionId !== "string" ||
+      params.sessionId.length === 0 ||
+      typeof params.ownershipToken !== "string" ||
+      params.ownershipToken.length === 0 ||
+      params.ownershipToken.length > 128
+    ) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "valid migration claim is required"),
+      );
+      return;
+    }
+    if (!this.chatManager?.completeSessionMigration(params.sessionId, params.ownershipToken)) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "migration claim is not active"),
+      );
+      return;
+    }
+    this.transport.send(createResponse(req.id, { released: true }));
   }
 
   // ─── Configure ──────────────────────────────────────────────────

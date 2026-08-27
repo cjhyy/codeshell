@@ -326,6 +326,26 @@ export interface MigrateSessionMainRootParams {
   sessionId: string;
   project: SessionProjectBinding;
   mainRoot: string;
+  /** Main-minted nonce used to fence and later release a non-resident handoff. */
+  ownershipToken: string;
+}
+
+/**
+ * Proven ownership result for a Session main-root migration.
+ *
+ * `not-resident` is the only result that authorizes a durable host fallback.
+ * The ownership token fences a concurrent getOrCreate until the host reports
+ * that its atomic disk commit (or failed attempt) has finished.
+ */
+export type MigrateSessionMainRootResult =
+  | { status: "migrated"; workspace: SessionWorkspace }
+  | { status: "not-resident"; ownershipToken: string }
+  | { status: "failed"; error: string };
+
+/** Release the non-resident ownership fence after Main's durable attempt. */
+export interface CompleteSessionMainRootMigrationParams {
+  sessionId: string;
+  ownershipToken: string;
 }
 
 /** Inject context into a session transcript. */
@@ -585,6 +605,8 @@ export const Methods = {
   SetWorkspace: "agent/setWorkspace",
   /** Atomically migrate a Session's main-root authority through its live owner. */
   MigrateSessionMainRoot: "agent/migrateSessionMainRoot",
+  /** Release a non-resident migration fence after Main's durable attempt. */
+  CompleteSessionMainRootMigration: "agent/completeSessionMainRootMigration",
   /** Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). */
   GoalExtend: "agent/goalExtend",
   /** Edit or pause/resume a session's persisted goal. */

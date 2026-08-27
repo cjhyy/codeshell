@@ -910,6 +910,53 @@ export class SessionManager {
     });
   }
 
+  /**
+   * Commit a host-owned offline migration only if the durable snapshot Main
+   * just revalidated is still current. Unlike the ordinary field-level writer,
+   * this must not retry onto a newer revision: a new writer means ownership is
+   * no longer provably unchanged, so the migration fails closed.
+   */
+  migrateSessionMainRootIfRevision(
+    sessionId: string,
+    project: import("../types.js").SessionProjectBinding,
+    mainRoot: string,
+    expectedStateRevision: number | undefined,
+  ): number {
+    assertSafeSessionId(sessionId);
+    if (
+      !project ||
+      typeof project.projectId !== "string" ||
+      project.projectId.length === 0 ||
+      typeof project.mainRootId !== "string" ||
+      project.mainRootId.length === 0 ||
+      typeof mainRoot !== "string" ||
+      mainRoot.length === 0
+    ) {
+      throw new SessionError(`invalid main-root migration for ${sessionId}`);
+    }
+    const state = this.readPersistedState(sessionId);
+    if (state.stateRevision !== expectedStateRevision) {
+      throw new SessionError(`Session state revision conflict for ${sessionId}`);
+    }
+    Object.assign(state, {
+      project: { ...project },
+      cwd: mainRoot,
+      workspace: { root: mainRoot, kind: "main" } as SessionWorkspace,
+    });
+    const result = this.saveStateAttempt(state);
+    if (result.ok) return state.stateRevision!;
+    if (result.reason === "generation_conflict") {
+      throw new SessionError(`Session generation conflict for ${sessionId}`);
+    }
+    if (result.reason === "lock_conflict") {
+      throw new SessionError(`Session state lock contention for ${sessionId}`);
+    }
+    if (result.reason === "kind_conflict") {
+      throw new SessionError(`Session kind is immutable for ${sessionId}`);
+    }
+    throw new SessionError(`Session state revision conflict for ${sessionId}`);
+  }
+
   /** Read the durable archival timestamp; undefined = not archived / unprovable. */
   readSessionArchivedAt(sessionId: string): number | undefined {
     try {

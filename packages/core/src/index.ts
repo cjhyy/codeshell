@@ -273,6 +273,7 @@ export {
   type RunResult,
   type ForkSessionParams,
   type ForkSessionResult as ProtocolForkSessionResult,
+  type MigrateSessionMainRootResult,
 } from "./protocol/types.js";
 export type * from "./protocol/mobile-remote-types.js";
 

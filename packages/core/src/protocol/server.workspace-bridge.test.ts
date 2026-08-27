@@ -339,6 +339,7 @@ describe("AgentServer workspace bridge", () => {
         sessionId: "sess-migrate-root",
         project: { projectId: "project-1", mainRootId: "root-new" },
         mainRoot: "/repo/new",
+        ownershipToken: "live-owner-token",
       },
     });
 
@@ -354,8 +355,158 @@ describe("AgentServer workspace bridge", () => {
       },
     ]);
     expect(response.result).toEqual({
-      ok: true,
+      status: "migrated",
       workspace: { root: "/repo/new", kind: "main" },
     });
+  });
+
+  test("agent/migrateSessionMainRoot claims an idle-evicted Session until Main finishes its durable migration", async () => {
+    let runs = 0;
+    const engine = {
+      setAskUser() {},
+      setPlanMode() {},
+      setBrowserBridge() {},
+      setInjectCredential() {},
+      setSessionMessageRouter() {},
+      isHeadless: () => false,
+      async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
+        runs += 1;
+        return {
+          text: "ok",
+          reason: "completed",
+          sessionId: opts.sessionId,
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+      idleTtlMs: 0,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+    const sessionId = "sess-idle-migrate-root";
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: Methods.Run,
+      params: { sessionId, task: "start" },
+    });
+    await waitFor(() => t.sent.find((m) => m.id === 1 && m.result), "session should finish");
+    chatManager.get(sessionId)!.lastActivityAt = Date.now() - 1;
+    chatManager.sweepIdle();
+    expect(chatManager.get(sessionId)).toBeUndefined();
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.MigrateSessionMainRoot,
+      params: {
+        sessionId,
+        project: { projectId: "project-1", mainRootId: "root-new" },
+        mainRoot: "/repo/new",
+        ownershipToken: "idle-owner-token",
+      },
+    });
+    const migration = await waitFor(
+      () => t.sent.find((m) => m.id === 2 && m.result),
+      "idle migration ownership should resolve",
+    );
+    const ownershipToken = migration.result.ownershipToken as string;
+    expect(migration.result.status).toBe("not-resident");
+    expect(ownershipToken).toBe("idle-owner-token");
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 3,
+      method: Methods.Run,
+      params: { sessionId, task: "resume while Main commits" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(t.sent.some((m) => m.id === 3)).toBe(false);
+    expect(chatManager.get(sessionId)).toBeUndefined();
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 4,
+      method: Methods.CompleteSessionMainRootMigration,
+      params: { sessionId, ownershipToken: "wrong-owner-token" },
+    });
+    const rejectedCompletion = await waitFor(
+      () => t.sent.find((m) => m.id === 4),
+      "a mismatched claim completion should resolve",
+    );
+    expect(rejectedCompletion.error).toMatchObject({ code: -32602 });
+    expect(chatManager.get(sessionId)).toBeUndefined();
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 5,
+      method: Methods.CompleteSessionMainRootMigration,
+      params: { sessionId, ownershipToken },
+    });
+    const completion = await waitFor(
+      () => t.sent.find((m) => m.id === 5),
+      "claim completion should resolve",
+    );
+    expect(completion).toEqual({ jsonrpc: "2.0", id: 5, result: { released: true } });
+    await waitFor(() => t.sent.find((m) => m.id === 3 && m.result), "blocked run should resume");
+    expect(runs).toBe(2);
+    expect(chatManager.get(sessionId)).toBeDefined();
+  });
+
+  test("agent/migrateSessionMainRoot reports a resident owner error as failed", async () => {
+    const engine = {
+      setAskUser() {},
+      setPlanMode() {},
+      setBrowserBridge() {},
+      setInjectCredential() {},
+      setSessionMessageRouter() {},
+      isHeadless: () => false,
+      migrateSessionMainRoot() {
+        throw new Error("state lock failed");
+      },
+      async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
+        return {
+          text: "ok",
+          reason: "completed",
+          sessionId: opts.sessionId,
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: Methods.Run,
+      params: { sessionId: "sess-failed-migrate-root", task: "start" },
+    });
+    await waitFor(() => t.sent.find((m) => m.id === 1 && m.result), "session should be live");
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.MigrateSessionMainRoot,
+      params: {
+        sessionId: "sess-failed-migrate-root",
+        project: { projectId: "project-1", mainRootId: "root-new" },
+        mainRoot: "/repo/new",
+        ownershipToken: "failed-owner-token",
+      },
+    });
+    const response = await waitFor(
+      () => t.sent.find((m) => m.id === 2 && m.result),
+      "failed migration should resolve",
+    );
+    expect(response.result).toEqual({ status: "failed", error: "state lock failed" });
   });
 });
