@@ -152,7 +152,9 @@ describe("ProjectStore", () => {
     const projects = store({ index });
     const project = await projects.createFromPath(primary);
     const added = await projects.addRoot(project.id, secondary);
-    const secondaryRoot = added.project.roots.find((root) => root.path === realpathSync(secondary))!;
+    const secondaryRoot = added.project.roots.find(
+      (root) => root.path === realpathSync(secondary),
+    )!;
 
     index.upsert("legacy-session", { cwd: secondary });
     await expect(projects.removeRoot(project.id, secondaryRoot.id)).rejects.toThrow(
@@ -205,6 +207,57 @@ describe("ProjectStore", () => {
     expect(resolved[4]).toBeNull();
   });
 
+  test("resolves explicit project runs from the caller-confirmed cold Session entry", async () => {
+    const primary = dir("run-primary");
+    const secondary = dir("run-secondary");
+    const index = new SessionCwdIndex({
+      sessionsRoot: join(fixtureRoot, "sessions"),
+      fs: fakeEmptySessionFs(),
+    });
+    await index.ensureLoaded();
+    const projects = store({ index });
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = updated.roots.find((root) => root.path === realpathSync(secondary))!;
+
+    const ordinaryFork = projects.resolveRunProjectSync(project.id, "ordinary-fork", {
+      sessionId: "ordinary-fork",
+      cwd: secondary,
+      status: "confirmed",
+    });
+    expect(ordinaryFork.mainRoot.id).toBe(secondaryRoot.id);
+    expect(ordinaryFork.cwd).toBe(secondary);
+
+    const worktree = join(fixtureRoot, "external-worktree");
+    const externalSession = projects.resolveRunProjectSync(project.id, "external-session", {
+      sessionId: "external-session",
+      cwd: primary,
+      workspaceRoot: worktree,
+      projectId: project.id,
+      mainRootId: project.primaryRootId,
+      status: "confirmed",
+    });
+    expect(externalSession.mainRoot.id).toBe(project.primaryRootId);
+    expect(externalSession.cwd).toBe(worktree);
+
+    expect(() =>
+      projects.resolveRunProjectSync(project.id, "bound-elsewhere", {
+        sessionId: "bound-elsewhere",
+        cwd: primary,
+        projectId: "another-project",
+        mainRootId: project.primaryRootId,
+        status: "confirmed",
+      }),
+    ).toThrow(/binding does not match/);
+    expect(() =>
+      projects.resolveRunProjectSync(project.id, "legacy-elsewhere", {
+        sessionId: "legacy-elsewhere",
+        cwd: join(fixtureRoot, "unmounted"),
+        status: "confirmed",
+      }),
+    ).toThrow(/main root is not mounted/);
+  });
+
   test("soft deletes projects while retaining tombstones and refuses unsafe registry roots", async () => {
     const primary = dir("primary");
     const projects = store();
@@ -248,7 +301,9 @@ describe("ProjectStore", () => {
     index.upsert("late-session", { cwd: another });
     const projects = store({ index });
 
-    await expect(projects.migrateLegacyPath(legacy)).resolves.toMatchObject({ name: "legacy-local-storage" });
+    await expect(projects.migrateLegacyPath(legacy)).resolves.toMatchObject({
+      name: "legacy-local-storage",
+    });
     await projects.completeLegacyMigration();
     await expect(projects.migrateLegacyPath(another)).rejects.toThrow(/migration.*complete/i);
 

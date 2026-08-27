@@ -211,13 +211,9 @@ interface PetDispatchOptions {
   /** Opaque, host-authorized proactive owner destinations. */
   listOutboundTargets?(): Promise<PetOutboundTargetOption[]>;
   /**
-   * Exact lookup for a reusable-Session selector outside the recent candidate
-   * list (e.g. an open follow-up source or one Mimi found via the read-only
-   * Sessions tool). Fail-closed: null/throw keeps the existing rejection. The
-   * implementation owns the pool boundaries the in-list
-   * listReusableSessions path applies (desktop origin, not archived); this
-   * service re-checks only its per-turn constraints on the resolved candidate
-   * (not Mimi's own session, not busy, workspace must match the delegation).
+   * Exact lookup used only to add host-owned follow-up sources to the reusable
+   * candidate set before the manager prompt is built. Model output validation
+   * never calls this resolver or expands that disclosed set.
    */
   resolveReusableSessionBySelector?(
     selectorId: string,
@@ -1527,32 +1523,12 @@ export class PetDispatchService {
             message: "Mimi returned a Workspace outside the host-provided list",
           };
         }
-        const resolvedDelegations = await Promise.all(
-          workDelegations.map(async (entry) => {
-            let reusableSession = entry.reusableSessionId
-              ? reusableSessionById.get(entry.reusableSessionId)
-              : undefined;
-            if (!reusableSession && entry.reusableSessionId) {
-              const resolved = await this.options
-                .resolveReusableSessionBySelector?.(entry.reusableSessionId)
-                .catch(() => null);
-              if (
-                resolved &&
-                resolved.sessionId !== metadata.petSessionId &&
-                !unavailableSessionIds.has(resolved.sessionId)
-              ) {
-                const workspaceId =
-                  resolved.workspacePath === null
-                    ? NO_WORKSPACE_ID
-                    : workspaceIdByPath.get(normalizeWorkspacePath(resolved.workspacePath));
-                if (workspaceId === entry.workspaceId) {
-                  reusableSession = { ...resolved, workspaceId };
-                }
-              }
-            }
-            return { entry, reusableSession };
-          }),
-        );
+        const resolvedDelegations = workDelegations.map((entry) => ({
+          entry,
+          reusableSession: entry.reusableSessionId
+            ? reusableSessionById.get(entry.reusableSessionId)
+            : undefined,
+        }));
         if (
           resolvedDelegations.some(
             ({ entry, reusableSession }) => entry.reusableSessionId && !reusableSession,

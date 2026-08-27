@@ -547,8 +547,8 @@ export class AgentBridge implements PetStateBridge {
         refresh
           ? getSessionCwdIndex().refreshSync(sessionId)
           : getSessionCwdIndex().lookupCached(sessionId),
-      resolveProjectRun: (projectId, sessionId) => {
-        const resolved = getProjectStore().resolveRunProjectSync(projectId, sessionId);
+      resolveProjectRun: (projectId, sessionId, session) => {
+        const resolved = getProjectStore().resolveRunProjectSync(projectId, sessionId, session);
         return {
           cwd: resolved.cwd,
           trustCwd: resolved.mainRoot.path,

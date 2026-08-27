@@ -109,12 +109,8 @@ describe("prepareAgentRunMetadata", () => {
 
   test("non-run or malformed lines pass through", () => {
     const query = JSON.stringify({ method: "agent/query", params: { sessionId: "s1" } });
-    expect(prepareAgentRunMetadata(query, meta, baseDeps()).outLine).toBe(
-      query,
-    );
-    expect(
-      prepareAgentRunMetadata("{not json", meta, baseDeps()).outLine,
-    ).toBe("{not json");
+    expect(prepareAgentRunMetadata(query, meta, baseDeps()).outLine).toBe(query);
+    expect(prepareAgentRunMetadata("{not json", meta, baseDeps()).outLine).toBe("{not json");
   });
 
   test("records trusted origin metadata and strips renderer-supplied workspace authority", () => {
@@ -167,13 +163,156 @@ describe("prepareAgentRunMetadata", () => {
     expect(prepared.tentative).toMatchObject({ cwd: "/primary", projectId: "p1" });
   });
 
+  test("cold explicit-project runs resolve ordinary forks and externally created Sessions from one state read", () => {
+    const cases = [
+      {
+        name: "ordinary fork",
+        entry: {
+          sessionId: "ordinary-fork",
+          cwd: "/secondary",
+          status: "confirmed" as const,
+        },
+        resolution: {
+          cwd: "/secondary",
+          trustCwd: "/secondary",
+          projectId: "p1",
+          mainRootId: "r2",
+          projectPrimaryRootId: "r1",
+          workspaceContext: createWorkspaceContext({
+            projectId: "p1",
+            projectRevision: 3,
+            sessionMainRootId: "r2",
+            roots: [
+              { id: "r1", path: "/primary", role: "secondary" },
+              { id: "r2", path: "/secondary", role: "primary" },
+            ],
+          }),
+        },
+      },
+      {
+        name: "externally created bound Session",
+        entry: {
+          sessionId: "external-session",
+          cwd: "/primary",
+          workspaceRoot: "/worktree",
+          projectId: "p1",
+          mainRootId: "r1",
+          status: "confirmed" as const,
+        },
+        resolution: {
+          cwd: "/worktree",
+          trustCwd: "/primary",
+          projectId: "p1",
+          mainRootId: "r1",
+          projectPrimaryRootId: "r1",
+          workspaceContext: projectContext,
+        },
+      },
+    ];
+
+    for (const scenario of cases) {
+      const lookups: boolean[] = [];
+      let resolverEntry: unknown;
+      const prepared = prepareAgentRunMetadata(
+        JSON.stringify({
+          method: "agent/run",
+          params: { sessionId: scenario.entry.sessionId, projectId: "p1", cwd: "/forged" },
+        }),
+        meta,
+        {
+          ...baseDeps(),
+          lookupSession: (_sessionId, refresh) => {
+            lookups.push(refresh);
+            return refresh ? scenario.entry : undefined;
+          },
+          resolveProjectRun: (...args: unknown[]) => {
+            resolverEntry = args[2];
+            if (resolverEntry !== scenario.entry) {
+              throw new Error("explicit project resolver requires the confirmed Session entry");
+            }
+            return scenario.resolution;
+          },
+        },
+      );
+
+      expect(lookups, scenario.name).toEqual([false, true]);
+      expect(resolverEntry, scenario.name).toBe(scenario.entry);
+      expect(JSON.parse(prepared.outLine).params.cwd, scenario.name).toBe(scenario.resolution.cwd);
+      expect(prepared.tentative, scenario.name).toBeUndefined();
+    }
+  });
+
+  test("cold explicit-project runs reject persisted binding and legacy cwd mismatches", () => {
+    const cases = [
+      {
+        name: "binding mismatch",
+        entry: {
+          sessionId: "bound-elsewhere",
+          cwd: "/primary",
+          projectId: "p2",
+          mainRootId: "other-root",
+          status: "confirmed" as const,
+        },
+        message: "session project binding does not match the requested project",
+      },
+      {
+        name: "legacy cwd mismatch",
+        entry: {
+          sessionId: "legacy-elsewhere",
+          cwd: "/unmounted",
+          status: "confirmed" as const,
+        },
+        message: "session main root is not mounted in the project",
+      },
+    ];
+
+    for (const scenario of cases) {
+      let refreshes = 0;
+      expect(
+        () =>
+          prepareAgentRunMetadata(
+            JSON.stringify({
+              method: "agent/run",
+              params: { sessionId: scenario.entry.sessionId, projectId: "p1" },
+            }),
+            meta,
+            {
+              ...baseDeps(),
+              lookupSession: (_sessionId, refresh) => {
+                if (refresh) refreshes += 1;
+                return refresh ? scenario.entry : undefined;
+              },
+              resolveProjectRun: (...args: unknown[]) => {
+                const entry = args[2] as typeof scenario.entry | undefined;
+                if (!entry) return baseDeps().resolveProjectRun();
+                if (entry.projectId && entry.projectId !== "p1") {
+                  throw new Error("session project binding does not match the requested project");
+                }
+                if (entry.cwd !== "/primary" && entry.cwd !== "/secondary") {
+                  throw new Error("session main root is not mounted in the project");
+                }
+                return baseDeps().resolveProjectRun();
+              },
+            },
+          ),
+        scenario.name,
+      ).toThrow(scenario.message);
+      expect(refreshes, scenario.name).toBe(1);
+    }
+  });
+
   test("renderer existing-session mismatch refreshes once, then fails closed", () => {
     let refreshes = 0;
     const deps = {
       ...baseDeps(),
       lookupSession: (_sessionId: string, refresh: boolean) => {
         if (refresh) refreshes += 1;
-        return { sessionId: "s1", cwd: "/primary", workspaceRoot: "/worktree", status: "confirmed" as const };
+        return {
+          sessionId: "s1",
+          cwd: "/primary",
+          workspaceRoot: "/worktree",
+          status: "confirmed" as const,
+        };
       },
     };
     expect(() =>
@@ -192,7 +331,12 @@ describe("prepareAgentRunMetadata", () => {
         ...deps,
         lookupSession: (_sessionId, refresh) =>
           refresh
-            ? { sessionId: "s1", cwd: "/primary", workspaceRoot: "/worktree-new", status: "confirmed" }
+            ? {
+                sessionId: "s1",
+                cwd: "/primary",
+                workspaceRoot: "/worktree-new",
+                status: "confirmed",
+              }
             : { sessionId: "s1", cwd: "/primary", workspaceRoot: "/old", status: "confirmed" },
       },
     );
@@ -213,7 +357,10 @@ describe("prepareAgentRunMetadata", () => {
     );
     expect(JSON.parse(host.outLine).params.cwd).toBe("/worktree");
 
-    const reserved = { ...baseDeps(), hostReservation: () => ({ cwd: "/reserved", producer: "pet", reservedAt: 1 }) };
+    const reserved = {
+      ...baseDeps(),
+      hostReservation: () => ({ cwd: "/reserved", producer: "pet", reservedAt: 1 }),
+    };
     expect(() =>
       prepareAgentRunMetadata(
         JSON.stringify({ method: "agent/run", params: { sessionId: "new", cwd: "/reserved" } }),
@@ -248,16 +395,24 @@ describe("prepareAgentRunMetadata", () => {
 
     for (const origin of ["renderer", "mobile"] as const) {
       expect(() =>
-        prepareAgentRunMetadata(line, { origin, producer: `${origin}-test` }, {
-          ...baseDeps(),
-          lookupSession,
-        }),
+        prepareAgentRunMetadata(
+          line,
+          { origin, producer: `${origin}-test` },
+          {
+            ...baseDeps(),
+            lookupSession,
+          },
+        ),
       ).toThrow(/does not match persisted Session/);
     }
-    const host = prepareAgentRunMetadata(line, { origin: "host", producer: "panel" }, {
-      ...baseDeps(),
-      lookupSession,
-    });
+    const host = prepareAgentRunMetadata(
+      line,
+      { origin: "host", producer: "panel" },
+      {
+        ...baseDeps(),
+        lookupSession,
+      },
+    );
     expect(JSON.parse(host.outLine).params).toMatchObject({
       cwd: "/primary",
       projectId: "p1",

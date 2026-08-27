@@ -31,7 +31,7 @@ import {
   type CronRunResult,
   type WorkspaceContext,
 } from "@cjhyy/code-shell-core/internal";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
@@ -57,6 +57,8 @@ export interface AutomationWorkspaceDeps {
   ) => { cwd: string; trustCwd: string; workspaceContext: WorkspaceContext } | undefined;
   hasPersistedSessionCwd: (cwd: string) => boolean;
   isProjectTrusted: (cwd: string) => boolean;
+  isNoRepoCwd: (cwd: string) => boolean;
+  isDirectory: (cwd: string) => boolean;
 }
 
 export function resolveAutomationWorkspace(
@@ -65,7 +67,7 @@ export function resolveAutomationWorkspace(
 ): AutomationWorkspaceResolution | null {
   if (!requestedCwd) {
     const cwd = deps.noRepoCwd();
-    return { cwd, projectTrusted: deps.isProjectTrusted(cwd) };
+    return { cwd, projectTrusted: false };
   }
   let cwd: string;
   try {
@@ -73,6 +75,10 @@ export function resolveAutomationWorkspace(
   } catch {
     return null;
   }
+  if (deps.isNoRepoCwd(cwd)) {
+    return { cwd: deps.noRepoCwd(), projectTrusted: false };
+  }
+  if (!deps.isDirectory(cwd)) return null;
   const project = deps.resolveProjectRoot(cwd);
   if (project) {
     return {
@@ -104,7 +110,17 @@ function resolveDesktopAutomationWorkspace(cwd: string | undefined): AutomationW
     hasPersistedSessionCwd: (candidate) =>
       getSessionCwdIndex().resolveConfirmedCwds([candidate])[0] === true,
     isProjectTrusted: (candidate) => getTrustCachedSync(candidate) === "trusted",
+    isNoRepoCwd: (candidate) => getProjectStore().isNoRepoCwd(candidate),
+    isDirectory: existingDirectory,
   });
+}
+
+function existingDirectory(cwd: string): boolean {
+  try {
+    return statSync(cwd).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 function automationNoRepoCwd(): string {

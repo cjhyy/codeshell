@@ -28,6 +28,7 @@ export interface AgentRunMetadataDeps {
   resolveProjectRun?: (
     projectId: string,
     sessionId: string,
+    session: SessionCwdIndexEntry | undefined,
   ) => ResolvedAgentProjectRun;
   resolveExactRoot?: (cwd: string) => ResolvedAgentProjectRun | undefined;
   lookupSession?: (sessionId: string, refresh: boolean) => SessionCwdIndexEntry | undefined;
@@ -105,8 +106,10 @@ export function prepareAgentRunMetadata(
       if (!deps.resolveProjectRun) {
         throw new AgentRunMetadataError("project registry is unavailable");
       }
+      let session = deps.lookupSession?.(sessionId, false);
+      if (!session) session = deps.lookupSession?.(sessionId, true);
       try {
-        const resolution = deps.resolveProjectRun(projectId, sessionId);
+        const resolution = deps.resolveProjectRun(projectId, sessionId, session);
         return prepareResolvedProject({
           parsed,
           paramsRecord,
@@ -116,7 +119,7 @@ export function prepareAgentRunMetadata(
           browserPartition,
           meta,
           isTrusted: deps.isProjectTrusted(resolution.trustCwd),
-          tentative: deps.lookupSession?.(sessionId, false) === undefined,
+          tentative: session?.status !== "confirmed",
         });
       } catch (error) {
         throw new AgentRunMetadataError(
@@ -148,7 +151,7 @@ export function prepareAgentRunMetadata(
       if (session.projectId) {
         if (!deps.resolveProjectRun) throw new AgentRunMetadataError("project registry is unavailable");
         try {
-          const resolution = deps.resolveProjectRun(session.projectId, sessionId);
+          const resolution = deps.resolveProjectRun(session.projectId, sessionId, session);
           return prepareResolvedProject({
             parsed,
             paramsRecord,

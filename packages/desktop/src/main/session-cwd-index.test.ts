@@ -4,6 +4,7 @@ import {
   SessionCwdIndex,
   type SessionCwdIndexFs,
   type SessionCwdIndexState,
+  type SessionCwdIndexSyncFs,
 } from "./session-cwd-index.js";
 
 function fakeFs(initial: Record<string, SessionCwdIndexState>): {
@@ -78,6 +79,46 @@ describe("SessionCwdIndex", () => {
     expect(fixture.counts).toEqual({ readdir: 1, readFile: 1, stat: 1 });
     expect(await index.lookup("external")).toMatchObject({ workspaceRoot: "/worktree" });
     expect(fixture.counts).toEqual({ readdir: 1, readFile: 1, stat: 1 });
+  });
+
+  test("a synchronous cold miss reads exactly one externally-created Session state", async () => {
+    const fixture = fakeFs({});
+    const syncCounts = { readFile: 0, stat: 0 };
+    const state: SessionCwdIndexState = {
+      sessionId: "external-sync",
+      cwd: "/repo",
+      workspace: { kind: "worktree", root: "/worktree" },
+      project: { projectId: "p1", mainRootId: "r1" },
+    };
+    const syncFs: SessionCwdIndexSyncFs = {
+      readFileSync() {
+        syncCounts.readFile += 1;
+        return JSON.stringify(state);
+      },
+      statSync() {
+        syncCounts.stat += 1;
+        return { isFile: () => true };
+      },
+    };
+    const index = new SessionCwdIndex({
+      sessionsRoot: "/sessions",
+      fs: fixture.fs,
+      syncFs,
+    });
+    await index.ensureLoaded();
+
+    expect(index.lookupCached("external-sync")).toBeUndefined();
+    expect(index.refreshSync("external-sync")).toEqual({
+      sessionId: "external-sync",
+      cwd: "/repo",
+      workspaceRoot: "/worktree",
+      projectId: "p1",
+      mainRootId: "r1",
+      status: "confirmed",
+    });
+    expect(syncCounts).toEqual({ readFile: 1, stat: 1 });
+    expect(index.lookupCached("external-sync")?.workspaceRoot).toBe("/worktree");
+    expect(syncCounts).toEqual({ readFile: 1, stat: 1 });
   });
 
   test("refresh reads one state file and workspace updates never rescan", async () => {

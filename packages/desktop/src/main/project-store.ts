@@ -20,7 +20,11 @@ import {
 } from "@cjhyy/code-shell-core/internal";
 import { resolveProjectRoot } from "@cjhyy/code-shell-capability-coding/git";
 import { dlog } from "./desktop-logger.js";
-import { getSessionCwdIndex, type SessionCwdIndex } from "./session-cwd-index.js";
+import {
+  getSessionCwdIndex,
+  type SessionCwdIndex,
+  type SessionCwdIndexEntry,
+} from "./session-cwd-index.js";
 
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_PROJECTS = 5_000;
@@ -389,14 +393,20 @@ export class ProjectStore {
     return project;
   }
 
-  resolveRunProjectSync(projectId: string, sessionId: string): ProjectRunResolution {
+  resolveRunProjectSync(
+    projectId: string,
+    sessionId: string,
+    session: SessionCwdIndexEntry | undefined,
+  ): ProjectRunResolution {
     this.ensureInitialized();
     if (!this.sessionIndex.isLoaded()) {
       throw new Error("session cwd index is not ready");
     }
     const registry = readRegistryFile(this.file);
     const project = requireLiveProject(registry, projectId);
-    const session = this.sessionIndex.lookupCached(sessionId);
+    if (session && session.sessionId !== sessionId) {
+      throw new Error("resolved Session entry does not match the requested session");
+    }
     let mainRoot: LocalProjectRoot | undefined;
     let cwd: string;
     if (!session) {
