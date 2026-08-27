@@ -55,6 +55,7 @@ import {
   type MigrateSessionMainRootResult,
   type SessionProjectBinding,
   type SessionWorkspace,
+  type WorkspaceContext,
 } from "@cjhyy/code-shell-core";
 import {
   PET_REPORT_TO_MIMI_METHOD,
@@ -1757,6 +1758,7 @@ export class AgentBridge implements PetStateBridge {
     sessionId: string,
     project: SessionProjectBinding,
     mainRoot: string,
+    authority: { workspaceContext: WorkspaceContext; projectTrusted: boolean },
   ): Promise<MigrateSessionMainRootResult> {
     if (!this.core.canSend()) {
       // Starting a worker with no resident Engine lets it mint the same
@@ -1770,7 +1772,7 @@ export class AgentBridge implements PetStateBridge {
     const ownershipToken = randomUUID();
     const response = await this.requestWorker(
       Methods.MigrateSessionMainRoot,
-      { sessionId, project, mainRoot, ownershipToken },
+      { sessionId, project, mainRoot, ...authority, ownershipToken },
       5_000,
       { meta: { origin: "host", producer: "migrate-session-main-root" } },
     );

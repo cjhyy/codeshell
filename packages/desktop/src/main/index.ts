@@ -5446,8 +5446,11 @@ ipcMain.handle(
     const migrated = await projectStore.migrateSessionMainRoot(sessionId, targetRootId, {
       owner: currentBridge
         ? {
-            migrate: ({ sessionId: id, projectId, mainRootId, mainRoot }) =>
-              currentBridge.migrateSessionMainRoot(id, { projectId, mainRootId }, mainRoot),
+            migrate: async ({ sessionId: id, projectId, mainRootId, mainRoot, workspaceContext }) =>
+              currentBridge.migrateSessionMainRoot(id, { projectId, mainRootId }, mainRoot, {
+                workspaceContext,
+                projectTrusted: (await getTrust(mainRoot)) === "trusted",
+              }),
             complete: ({ sessionId: id, ownershipToken }) =>
               currentBridge.completeSessionMainRootMigration(id, ownershipToken),
           }

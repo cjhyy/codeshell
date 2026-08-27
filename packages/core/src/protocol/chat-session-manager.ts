@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { ChatSession } from "./chat-session.js";
 import { codeShellHome } from "../session/session-manager.js";
 import type { SessionKind } from "../types.js";
+import type { SessionProjectBinding, SessionWorkspace } from "../types.js";
 import type { Engine } from "../engine/engine.js";
 import type { EngineRuntime } from "../engine/runtime.js";
 import type { EngineConfig } from "../engine/types.js";
@@ -109,6 +110,18 @@ interface SessionMigrationClaim {
   release: () => void;
 }
 
+interface ResidentMigration {
+  released: Promise<void>;
+  release: () => void;
+}
+
+export interface ResidentSessionMainRootMigration {
+  project: SessionProjectBinding;
+  mainRoot: string;
+  workspaceContext: import("../workspace/workspace-context.js").WorkspaceContext;
+  projectTrusted: boolean;
+}
+
 export type SessionMigrationOwnership =
   | { status: "resident"; session: ChatSession }
   | { status: "not-resident"; ownershipToken: string }
@@ -119,7 +132,9 @@ export class ChatSessionManager {
   private readonly closingSessions = new Map<string, Promise<void>>();
   private readonly closedSessions = new Set<string>();
   private readonly sessionGeneration = new Map<string, number>();
+  private readonly sessionSlices = new Map<string, EngineConfigSlice>();
   private readonly migrationClaims = new Map<string, SessionMigrationClaim>();
+  private readonly residentMigrations = new Map<string, ResidentMigration>();
   readonly runtime: EngineRuntime;
   /** Identity scope this manager serves ("local" unless injected). */
   readonly identity: string;
@@ -174,6 +189,11 @@ export class ChatSessionManager {
     // Wait rather than fail the user's run: once Main atomically commits (or
     // aborts) and releases the token, the Engine is created from current disk.
     for (;;) {
+      const residentMigration = this.residentMigrations.get(sessionId);
+      if (residentMigration) {
+        await residentMigration.released;
+        continue;
+      }
       const claim = this.migrationClaims.get(sessionId);
       if (claim) {
         await claim.released;
@@ -196,6 +216,9 @@ export class ChatSessionManager {
    * Session so Main can perform one durable migration without a re-resume race.
    */
   beginSessionMigration(sessionId: string, ownershipToken: string): SessionMigrationOwnership {
+    if (this.residentMigrations.has(sessionId)) {
+      return { status: "failed", error: `Session ${sessionId} migration is already in progress` };
+    }
     const resident = this.sessions.get(sessionId);
     if (resident) return { status: "resident", session: resident };
     if (this.closingSessions.has(sessionId)) {
@@ -220,6 +243,80 @@ export class ChatSessionManager {
     this.migrationClaims.delete(sessionId);
     claim.release();
     return true;
+  }
+
+  /**
+   * Rebuild an idle resident Engine against a new authoritative main root.
+   *
+   * Transaction order is intentional:
+   * 1. construct and restore the candidate while durable state still points at
+   *    the old owner (factory/restore failure is therefore a no-op),
+   * 2. atomically commit durable state through the old owning Engine,
+   * 3. synchronously swap the Engine inside the existing ChatSession,
+   * 4. dispose the unreachable old Engine before reporting success.
+   *
+   * No await occurs between the idle check, durable commit and owner swap.
+   */
+  async migrateResidentSessionMainRoot(
+    sessionId: string,
+    target: ResidentSessionMainRootMigration,
+  ): Promise<SessionWorkspace> {
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} is not resident`);
+    if (session.isBusy() || session.queueDepth() > 0) {
+      throw new Error(`Session ${sessionId} is running or has queued turns`);
+    }
+    if (this.residentMigrations.has(sessionId) || this.migrationClaims.has(sessionId)) {
+      throw new Error(`Session ${sessionId} migration is already in progress`);
+    }
+
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.residentMigrations.set(sessionId, { released, release });
+
+    const previous = session.engine;
+    let candidate: Engine | undefined;
+    let committed = false;
+    try {
+      const previousSlice = this.sessionSlices.get(sessionId) ?? ({} as EngineConfigSlice);
+      const permissionMode = previous.getPermissionMode?.() ?? previousSlice.permissionMode;
+      const nextSlice = {
+        ...previousSlice,
+        cwd: target.mainRoot,
+        workspaceContext: target.workspaceContext,
+        projectTrusted: target.projectTrusted,
+        ...(permissionMode ? { permissionMode } : {}),
+      } as EngineConfigSlice;
+      const built = this.factory(nextSlice);
+      if (built === previous) {
+        throw new Error(`Session ${sessionId} Engine factory reused the resident owner`);
+      }
+      candidate = built;
+      if (permissionMode && candidate.getPermissionMode?.() !== permissionMode) {
+        candidate.setPermissionMode?.(permissionMode);
+      }
+      const candidateGeneration =
+        this.engineSessionManager(candidate)?.registerSessionGeneration(sessionId) ??
+        this.sessionGeneration.get(sessionId) ??
+        1;
+      candidate.restoreSessionModel?.(sessionId);
+
+      const workspace = previous.migrateSessionMainRoot(sessionId, target.project, target.mainRoot);
+      session.replaceEngine(previous, candidate);
+      this.sessionGeneration.set(sessionId, candidateGeneration);
+      this.sessionSlices.set(sessionId, nextSlice);
+      committed = true;
+      await this.disposeEngine(previous, sessionId);
+      return workspace;
+    } catch (error) {
+      if (!committed && candidate) await this.disposeEngine(candidate, sessionId);
+      throw error;
+    } finally {
+      this.residentMigrations.delete(sessionId);
+      release();
+    }
   }
 
   /**
@@ -268,6 +365,7 @@ export class ChatSessionManager {
     const sessionManager = this.engineSessionManager(engine);
     const generation = sessionManager?.registerSessionGeneration(sessionId) ?? 1;
     this.sessionGeneration.set(sessionId, generation);
+    this.sessionSlices.set(sessionId, { ...slice });
     this.sessions.set(sessionId, session);
     // A direct user run is an explicit resume/open and may clear the tombstone.
     // Background wakeups must check isUnavailable() before reaching this path.
@@ -353,6 +451,10 @@ export class ChatSessionManager {
   }
 
   private closeSession(sessionId: string, markClosed: boolean): Promise<void> {
+    const migration = this.residentMigrations.get(sessionId);
+    if (migration) {
+      return migration.released.then(() => this.closeSession(sessionId, markClosed));
+    }
     const alreadyClosing = this.closingSessions.get(sessionId);
     if (alreadyClosing) return alreadyClosing;
     const s = this.sessions.get(sessionId);
@@ -386,6 +488,7 @@ export class ChatSessionManager {
       if (markClosed) this.rememberClosedSession(sessionId);
       else this.closedSessions.delete(sessionId);
       this.sessionGeneration.delete(sessionId);
+      this.sessionSlices.delete(sessionId);
     };
     if (!s.isBusy()) {
       finishClose();
@@ -489,6 +592,37 @@ export class ChatSessionManager {
         error: err instanceof Error ? err.message : String(err),
       });
     });
+  }
+
+  private async disposeEngine(engine: Engine, sessionId: string): Promise<void> {
+    const dispose = (engine as Engine & { dispose?: () => void | Promise<void> }).dispose;
+    if (typeof dispose === "function") {
+      try {
+        await dispose.call(engine);
+      } catch (error) {
+        logger.warn("chat_session.engine_dispose_failed", {
+          sessionId,
+          identity: this.identity,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return;
+    }
+    const mcpPool = (
+      this.runtime as {
+        mcpPool?: { unregisterOwner?: (owner: unknown) => Promise<void> };
+      }
+    ).mcpPool;
+    if (typeof mcpPool?.unregisterOwner !== "function") return;
+    try {
+      await mcpPool.unregisterOwner(engine);
+    } catch (error) {
+      logger.warn("chat_session.mcp_owner_unregister_failed", {
+        sessionId,
+        identity: this.identity,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private engineSessionManager(engine: Engine):

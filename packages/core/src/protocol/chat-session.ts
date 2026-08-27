@@ -86,7 +86,7 @@ interface QueuedTurn {
  */
 export class ChatSession {
   readonly id: string;
-  readonly engine: Engine;
+  private currentEngine: Engine;
   /**
    * Per-session approval callbacks and resolver-free metadata indexed by requestId.
    * `readonly` guards the Map reference (preventing reassignment); the
@@ -130,8 +130,27 @@ export class ChatSession {
 
   constructor(opts: ChatSessionOptions) {
     this.id = opts.id;
-    this.engine = opts.engine;
+    this.currentEngine = opts.engine;
     this.defaultOnStream = opts.onStream;
+  }
+
+  get engine(): Engine {
+    return this.currentEngine;
+  }
+
+  /**
+   * Swap the Engine at an idle run boundary without replacing the ChatSession
+   * that owns the queue, stream callback, approvals, idle timestamp and id.
+   * The expected-owner check makes a stale migration fail closed.
+   */
+  replaceEngine(expected: Engine, replacement: Engine): void {
+    if (this.active || this.exclusiveOperation || this.queue.length > 0) {
+      throw new Error(`Session ${this.id} is running or has queued turns`);
+    }
+    if (this.currentEngine !== expected) {
+      throw new Error(`Session ${this.id} Engine ownership changed during migration`);
+    }
+    this.currentEngine = replacement;
   }
 
   enqueueTurn(task: string, opts: TurnOpts): Promise<EngineResult> {

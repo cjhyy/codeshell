@@ -4,6 +4,7 @@ import { ChatSessionManager } from "./chat-session-manager.js";
 import { Methods } from "./types.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
 import type { WorkspaceBridge } from "../tool-system/workspace-bridge.js";
+import { createWorkspaceContext } from "../workspace/workspace-context.js";
 
 function makeTransport() {
   const sent: any[] = [];
@@ -29,6 +30,39 @@ async function waitFor<T>(read: () => T | undefined, message: string): Promise<T
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
   throw new Error(message);
+}
+
+function migrationAuthority(mainRoot: string) {
+  return {
+    projectTrusted: true,
+    workspaceContext: createWorkspaceContext({
+      projectId: "project-1",
+      projectRevision: 1,
+      sessionMainRootId: "root-new",
+      roots: [{ id: "root-new", path: mainRoot, role: "primary" }],
+    }),
+  };
+}
+
+function replacementEngine(): Engine {
+  return {
+    setAskUser() {},
+    setPlanMode() {},
+    setBrowserBridge() {},
+    setInjectCredential() {},
+    setSessionMessageRouter() {},
+    isHeadless: () => false,
+    restoreSessionModel() {},
+    async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
+      return {
+        text: "ok",
+        reason: "completed",
+        sessionId: opts.sessionId,
+        turnCount: 1,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    },
+  } as unknown as Engine;
 }
 
 function makeWorkspaceBridgeEngine() {
@@ -317,9 +351,10 @@ describe("AgentServer workspace bridge", () => {
         };
       },
     } as unknown as Engine;
+    let factoryCalls = 0;
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
-      engineFactory: () => engine,
+      engineFactory: () => (++factoryCalls === 1 ? engine : replacementEngine()),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -339,6 +374,7 @@ describe("AgentServer workspace bridge", () => {
         sessionId: "sess-migrate-root",
         project: { projectId: "project-1", mainRootId: "root-new" },
         mainRoot: "/repo/new",
+        ...migrationAuthority("/repo/new"),
         ownershipToken: "live-owner-token",
       },
     });
@@ -362,6 +398,7 @@ describe("AgentServer workspace bridge", () => {
 
   test("agent/migrateSessionMainRoot claims an idle-evicted Session until Main finishes its durable migration", async () => {
     let runs = 0;
+    const slices: unknown[] = [];
     const engine = {
       setAskUser() {},
       setPlanMode() {},
@@ -382,7 +419,10 @@ describe("AgentServer workspace bridge", () => {
     } as unknown as Engine;
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
-      engineFactory: () => engine,
+      engineFactory: (slice) => {
+        slices.push(slice);
+        return engine;
+      },
       idleTtlMs: 0,
     });
     const t = makeTransport();
@@ -407,6 +447,7 @@ describe("AgentServer workspace bridge", () => {
         sessionId,
         project: { projectId: "project-1", mainRootId: "root-new" },
         mainRoot: "/repo/new",
+        ...migrationAuthority("/repo/new"),
         ownershipToken: "idle-owner-token",
       },
     });
@@ -422,7 +463,12 @@ describe("AgentServer workspace bridge", () => {
       jsonrpc: "2.0",
       id: 3,
       method: Methods.Run,
-      params: { sessionId, task: "resume while Main commits" },
+      params: {
+        sessionId,
+        task: "resume while Main commits",
+        cwd: "/repo/new",
+        ...migrationAuthority("/repo/new"),
+      },
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(t.sent.some((m) => m.id === 3)).toBe(false);
@@ -455,6 +501,11 @@ describe("AgentServer workspace bridge", () => {
     await waitFor(() => t.sent.find((m) => m.id === 3 && m.result), "blocked run should resume");
     expect(runs).toBe(2);
     expect(chatManager.get(sessionId)).toBeDefined();
+    expect(slices[1]).toMatchObject({
+      cwd: "/repo/new",
+      projectTrusted: true,
+      workspaceContext: migrationAuthority("/repo/new").workspaceContext,
+    });
   });
 
   test("agent/migrateSessionMainRoot reports a resident owner error as failed", async () => {
@@ -478,9 +529,10 @@ describe("AgentServer workspace bridge", () => {
         };
       },
     } as unknown as Engine;
+    let factoryCalls = 0;
     const chatManager = new ChatSessionManager({
       runtime: {} as never,
-      engineFactory: () => engine,
+      engineFactory: () => (++factoryCalls === 1 ? engine : replacementEngine()),
     });
     const t = makeTransport();
     new AgentServer({ transport: t.transport, chatManager });
@@ -500,6 +552,7 @@ describe("AgentServer workspace bridge", () => {
         sessionId: "sess-failed-migrate-root",
         project: { projectId: "project-1", mainRootId: "root-new" },
         mainRoot: "/repo/new",
+        ...migrationAuthority("/repo/new"),
         ownershipToken: "failed-owner-token",
       },
     });

@@ -79,6 +79,8 @@ import { compileComposition } from "../composition/compiler.js";
 import { attachProtocolContributions } from "../composition/protocol-attach.js";
 import type { ResolvedComposition } from "../composition/types.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
+import { validateWorkspaceContext, workspacePrimaryRoot } from "../workspace/workspace-context.js";
+import { canonicalKey } from "../workspace/canonical-key.js";
 import {
   describePluginCommands,
   expandPluginCommandBody,
@@ -1036,7 +1038,7 @@ export class AgentServer {
         this.handleSetWorkspace(req);
         break;
       case Methods.MigrateSessionMainRoot:
-        this.handleMigrateSessionMainRoot(req);
+        await this.handleMigrateSessionMainRoot(req);
         break;
       case Methods.CompleteSessionMainRootMigration:
         this.handleCompleteSessionMainRootMigration(req);
@@ -2667,7 +2669,7 @@ export class AgentServer {
     );
   }
 
-  private handleMigrateSessionMainRoot(req: RpcRequest): void {
+  private async handleMigrateSessionMainRoot(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as MigrateSessionMainRootParams;
     if (
       typeof params.sessionId !== "string" ||
@@ -2679,6 +2681,7 @@ export class AgentServer {
       params.project.mainRootId.length === 0 ||
       typeof params.mainRoot !== "string" ||
       params.mainRoot.length === 0 ||
+      typeof params.projectTrusted !== "boolean" ||
       typeof params.ownershipToken !== "string" ||
       params.ownershipToken.length === 0 ||
       params.ownershipToken.length > 128
@@ -2692,7 +2695,29 @@ export class AgentServer {
       );
       return;
     }
+    let workspaceContext: import("../workspace/workspace-context.js").WorkspaceContext;
+    try {
+      workspaceContext = validateWorkspaceContext(params.workspaceContext);
+      const primary = workspacePrimaryRoot(workspaceContext);
+      if (
+        workspaceContext.projectId !== params.project.projectId ||
+        workspaceContext.sessionMainRootId !== params.project.mainRootId ||
+        canonicalKey(primary.path) !== canonicalKey(params.mainRoot)
+      ) {
+        throw new Error("migration target authority does not match the requested root");
+      }
+    } catch (error) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          error instanceof Error ? error.message : "valid target authority is required",
+        ),
+      );
+      return;
+    }
     let engine: Engine | null | undefined;
+    let residentSession: ChatSession | undefined;
     if (this.chatManager) {
       const ownership = this.chatManager.beginSessionMigration(
         params.sessionId,
@@ -2716,7 +2741,8 @@ export class AgentServer {
         );
         return;
       }
-      engine = ownership.session.engine;
+      residentSession = ownership.session;
+      engine = residentSession.engine;
     } else {
       engine = this.legacyEngine;
     }
@@ -2730,16 +2756,32 @@ export class AgentServer {
       return;
     }
     try {
-      const workspace = (
-        engine as Engine & {
-          migrateSessionMainRoot?: (
-            sessionId: string,
-            project: import("../types.js").SessionProjectBinding,
-            mainRoot: string,
-          ) => import("../types.js").SessionWorkspace | null;
-        }
-      ).migrateSessionMainRoot?.(params.sessionId, params.project, params.mainRoot);
+      const workspace = residentSession
+        ? await this.chatManager!.migrateResidentSessionMainRoot(params.sessionId, {
+            project: params.project,
+            mainRoot: params.mainRoot,
+            workspaceContext,
+            projectTrusted: params.projectTrusted,
+          })
+        : (
+            engine as Engine & {
+              migrateSessionMainRoot?: (
+                sessionId: string,
+                project: import("../types.js").SessionProjectBinding,
+                mainRoot: string,
+              ) => import("../types.js").SessionWorkspace | null;
+            }
+          ).migrateSessionMainRoot?.(params.sessionId, params.project, params.mainRoot);
       if (!workspace) throw new Error(`Session ${params.sessionId} migration was not committed`);
+      if (residentSession) {
+        this.rememberSessionSlice(params.sessionId, {
+          ...(this.lastSliceBySession.get(params.sessionId) ?? {}),
+          cwd: params.mainRoot,
+          workspaceContext,
+          projectTrusted: params.projectTrusted,
+        } as EngineConfigSlice);
+        this.wireInteractiveSession(residentSession, params.sessionId);
+      }
       this.transport.send(
         createResponse(req.id, {
           status: "migrated",

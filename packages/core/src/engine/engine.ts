@@ -413,6 +413,7 @@ export class Engine {
    * writers are additionally fenced by SessionManager's persisted revision CAS.
    */
   private runInProgress = false;
+  private disposed = false;
   private agentControlStateListener?: (state: LiveChildState) => void;
   private agentDirectionsDeliveredListener?: (envelopeIds: string[]) => void;
   /** Permission update requested while runInProgress. Applied in run() finally. */
@@ -1212,6 +1213,7 @@ export class Engine {
    * policy (for example ChatSession's FIFO queue).
    */
   async run(task: string, options?: EngineRunOptions): Promise<EngineResult> {
+    if (this.disposed) throw new Error("Engine has been disposed");
     if (this.runInProgress) {
       throw new Error("Engine.run() cannot start while another run is in progress");
     }
@@ -3265,6 +3267,25 @@ export class Engine {
 
   getConfig(): EngineConfig {
     return this.config;
+  }
+
+  /** Release Engine-local registrations after its owning ChatSession is replaced. */
+  async dispose(): Promise<void> {
+    if (this.disposed) return;
+    if (this.runInProgress) throw new Error("Engine cannot be disposed while a run is in progress");
+    this.disposed = true;
+    try {
+      const mcp = this.runtime?.mcpPool ?? this.mcpManager;
+      await mcp?.unregisterOwner(this);
+    } finally {
+      this.hooks.clear();
+      this.settingsHookHandles = [];
+      this.workspaceContextBySession.clear();
+      this.steerQueueBySid.clear();
+      this.compactedMessagesBySession.clear();
+      this.agentDefsCache = undefined;
+      this.lastContextManager = undefined;
+    }
   }
 
   /**

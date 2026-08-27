@@ -355,17 +355,28 @@ describe("ProjectStore", () => {
       },
     });
 
-    expect(calls).toEqual([
-      {
-        migrate: {
-          sessionId,
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toMatchObject({
+      migrate: {
+        sessionId,
+        projectId: project.id,
+        mainRootId: project.primaryRootId,
+        mainRoot: realpathSync(primary),
+        workspaceContext: {
           projectId: project.id,
-          mainRootId: project.primaryRootId,
-          mainRoot: realpathSync(primary),
+          sessionMainRootId: project.primaryRootId,
+          roots: expect.arrayContaining([
+            {
+              id: project.primaryRootId,
+              path: realpathSync(primary),
+              role: "primary",
+            },
+            { id: secondaryRoot.id, path: secondaryRoot.path, role: "secondary" },
+          ]),
         },
       },
-      { complete: { sessionId, ownershipToken: "idle-claim" } },
-    ]);
+    });
+    expect(calls[1]).toEqual({ complete: { sessionId, ownershipToken: "idle-claim" } });
     expect(sessionManager.readSessionState(sessionId)).toMatchObject({
       cwd: realpathSync(primary),
       project: { projectId: project.id, mainRootId: project.primaryRootId },

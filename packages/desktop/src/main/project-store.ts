@@ -133,6 +133,7 @@ export interface MigrateSessionMainRootOptions {
       projectId: ProjectId;
       mainRootId: ProjectRootId;
       mainRoot: string;
+      workspaceContext: WorkspaceContext;
     }) => Promise<MigrateSessionMainRootResult>;
     complete: (input: { sessionId: string; ownershipToken: string }) => Promise<void>;
   };
@@ -363,6 +364,7 @@ export class ProjectStore {
       projectId: project.id,
       mainRootId: target.id,
       mainRoot: target.path,
+      workspaceContext: workspaceContextFor(project, target, target.path),
     };
 
     if (options.owner) {

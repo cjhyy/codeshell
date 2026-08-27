@@ -326,6 +326,10 @@ export interface MigrateSessionMainRootParams {
   sessionId: string;
   project: SessionProjectBinding;
   mainRoot: string;
+  /** Main-resolved target authority used to construct the replacement Engine. */
+  workspaceContext: import("../workspace/workspace-context.js").WorkspaceContext;
+  /** Trust decision for the target main root, resolved by the host trust store. */
+  projectTrusted: boolean;
   /** Main-minted nonce used to fence and later release a non-resident handoff. */
   ownershipToken: string;
 }
