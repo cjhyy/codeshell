@@ -15,10 +15,16 @@ import { buildSkillListing } from "../tool-system/builtin/skill-prompt.js";
 import { resolveAgentPreset, buildPresetSystemPrompt, type AgentPreset } from "../preset/index.js";
 import type { BuiltinTool } from "../tool-system/builtin/index.js";
 import type { CapabilityDynamicContextProvider } from "../capabilities/index.js";
+import {
+  legacySingleRootWorkspace,
+  validateWorkspaceContext,
+  type WorkspaceContext,
+} from "../workspace/workspace-context.js";
 
 export interface ComposerOptions {
   cwd: string;
-  workspace: import("../workspace/workspace-context.js").WorkspaceContext;
+  /** Run workspace; omitted by legacy callers that only provide cwd. */
+  workspace?: WorkspaceContext;
   model: string;
   instructionOptions?: ScanOptions;
   /** Resolved preset — used to load section-based prompt. */
@@ -111,11 +117,24 @@ export interface ComposerOptions {
   disableSourcesContext?: boolean;
 }
 
+type NormalizedComposerOptions = Omit<ComposerOptions, "workspace"> & {
+  workspace: WorkspaceContext;
+};
+
 export class PromptComposer {
   private sectionCache = new SectionCache();
   private cachedInstructions: string | null = null;
+  private readonly options: NormalizedComposerOptions;
 
-  constructor(private readonly options: ComposerOptions) {}
+  constructor(options: ComposerOptions) {
+    this.options = {
+      ...options,
+      workspace:
+        options.workspace === undefined
+          ? legacySingleRootWorkspace(options.cwd)
+          : validateWorkspaceContext(options.workspace),
+    };
+  }
 
   /**
    * Build the system prompt from sections.
