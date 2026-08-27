@@ -1,5 +1,10 @@
 import { isAbsolute, resolve } from "node:path";
-import { SessionManager, SettingsManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
+import {
+  createWorkspaceContext,
+  SessionManager,
+  SettingsManager,
+  type SessionWorkspace,
+} from "@cjhyy/code-shell-core";
 import { canonicalKey } from "@cjhyy/code-shell-core/internal";
 import {
   createWorktree,
@@ -233,6 +238,44 @@ export async function getSessionWorkspaceAuthorityForUi(
   return {
     workspace: currentWorkspaceFor(sm, sessionId, authority.mainRoot),
     ...authority,
+  };
+}
+
+/**
+ * Main-owned Review entry point. Project-bound Sessions are expanded through
+ * their persisted binding and current WorkspaceContext; legacy Sessions keep a
+ * deterministic single-root identity. No renderer-supplied root participates.
+ */
+export async function resolveSessionReviewWorkspaceForUi(sessionId: string): Promise<{
+  projectId: string | null;
+  mainRootId: string;
+  roots: Array<{ id: string; path: string; role: "primary" | "secondary" }>;
+}> {
+  const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  if (authority.projectId && authority.mainRootId) {
+    const project = await projects().requireLive(authority.projectId);
+    const context = createWorkspaceContext({
+      projectId: project.id,
+      projectRevision: project.revision,
+      sessionMainRootId: authority.mainRootId,
+      roots: project.roots.map((root) => ({
+        id: root.id,
+        path: root.id === authority.mainRootId ? authority.workspace.root : root.path,
+        role: root.id === authority.mainRootId ? "primary" : "secondary",
+      })),
+    });
+    return {
+      projectId: context.projectId,
+      mainRootId: context.sessionMainRootId,
+      roots: context.roots,
+    };
+  }
+
+  const rootId = `legacy:${sessionId}`;
+  return {
+    projectId: null,
+    mainRootId: rootId,
+    roots: [{ id: rootId, path: authority.workspace.root, role: "primary" }],
   };
 }
 

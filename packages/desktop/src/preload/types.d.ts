@@ -51,6 +51,12 @@ import type {
   DigitalHumanProfileImportPickResult,
 } from "../shared/digital-human-profile-transfer";
 import type { DigitalHumanTeam } from "../shared/digital-human-team";
+import type {
+  ReviewGitCommit,
+  ReviewGitDiffRequest,
+  ReviewGitDiffResult,
+  ReviewGitStatusResult,
+} from "../shared/review";
 
 export type {
   PanelAppBindInput,
@@ -68,6 +74,14 @@ export type {
 };
 export type { ExpandedPluginCommand, PluginCommandDescriptor };
 export type { PluginMediaAvailability, PluginMediaDto };
+export type {
+  ReviewGitCommit,
+  ReviewGitDiffRequest,
+  ReviewGitDiffResult,
+  ReviewGitStatusResult,
+  ReviewRepositoryError,
+  ReviewRepositoryIdentity,
+} from "../shared/review";
 export type {
   DigitalHumanProfileExportResult,
   DigitalHumanProfileImportCommitInput,
@@ -1305,6 +1319,12 @@ export interface CodeshellApi {
   getSessionWorkspaceAuthority(sessionId: string): Promise<SessionWorkspaceAuthority>;
   getSessionGitStatus(sessionId: string): Promise<GitStatus>;
   getSessionGitBranches(sessionId: string): Promise<GitBranches>;
+  /** Aggregate Git status across the authoritative repositories for this Session. */
+  getReviewStatus(sessionId: string): Promise<ReviewGitStatusResult>;
+  /** Aggregate a Review diff without accepting renderer-supplied roots or repository paths. */
+  getReviewDiff(sessionId: string, request: ReviewGitDiffRequest): Promise<ReviewGitDiffResult>;
+  /** Recent commits labeled with their authoritative mounted root and repository. */
+  getReviewRecentCommits(sessionId: string, limit?: number): Promise<ReviewGitCommit[]>;
   listSessionProfiles(sessionId: string): Promise<WorkspaceProfileSummary[]>;
   listSessionWorktrees(sessionId: string, cwd: string): Promise<SessionWorkspaceList>;
   getSessionWorktreeDiff(sessionId: string, worktreePath: string): Promise<WorktreeDiffSummary>;

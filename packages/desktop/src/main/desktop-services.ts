@@ -19,6 +19,7 @@ import {
 } from "@cjhyy/code-shell-capability-coding/git";
 import { editorCandidates, splitTarget, buildEditorInvocation } from "./editor.js";
 import { resolveTargetPath } from "./paths.js";
+import { canonicalPath } from "@cjhyy/code-shell-core/internal";
 
 const execFileAsync = promisify(execFile);
 
@@ -83,6 +84,32 @@ async function gitRun(cwd: string, args: string[]): Promise<string> {
   return stdout;
 }
 
+/** Resolve a mounted directory to its canonical Git toplevel. A normal
+ * non-repository directory returns null; execution failures remain observable
+ * so Review can isolate and label them instead of silently dropping a repo. */
+export async function getGitRepositoryRoot(cwd: string): Promise<string | null> {
+  try {
+    const root = (await gitRun(cwd, ["rev-parse", "--show-toplevel"])).trim();
+    return root ? canonicalPath(root) : null;
+  } catch (error) {
+    const detail = gitErrorDetail(error);
+    if (/not a git repository/i.test(detail)) return null;
+    throw new Error(detail || "failed to resolve Git repository root", { cause: error });
+  }
+}
+
+function gitErrorDetail(error: unknown): string {
+  const candidate = error as { stderr?: unknown; message?: unknown };
+  const stderr =
+    typeof candidate?.stderr === "string"
+      ? candidate.stderr
+      : Buffer.isBuffer(candidate?.stderr)
+        ? candidate.stderr.toString("utf8")
+        : "";
+  if (stderr.trim()) return stderr.trim();
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function getGitStatus(cwd: string): Promise<GitStatus> {
   let branch: string | null;
   try {
@@ -102,6 +129,25 @@ export async function getGitStatus(cwd: string): Promise<GitStatus> {
     const code = line.slice(0, 2);
     const p = line.slice(3).trim();
     entries.push({ code, path: p });
+  }
+  return { branch, entries, clean: entries.length === 0 };
+}
+
+/** Review-only status variant: keep branch probing best-effort, but surface a
+ * repository-local status failure so fan-in can label it without affecting
+ * successful repositories. The legacy getGitStatus contract remains unchanged. */
+export async function getGitStatusForReview(cwd: string): Promise<GitStatus> {
+  let branch: string | null;
+  try {
+    branch = (await gitRun(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
+  } catch {
+    branch = null;
+  }
+  const raw = await gitRun(cwd, ["status", "--porcelain=v1"]);
+  const entries: GitStatusEntry[] = [];
+  for (const line of raw.split("\n")) {
+    if (!line.trim()) continue;
+    entries.push({ code: line.slice(0, 2), path: line.slice(3).trim() });
   }
   return { branch, entries, clean: entries.length === 0 };
 }
@@ -543,6 +589,28 @@ export async function getGitDiff(
     return await gitRun(cwd, args);
   } catch {
     return "";
+  }
+}
+
+/** Review-only full-repository diff variant. Unlike the legacy API it surfaces
+ * execution failures to the per-repository fan-in layer. A missing HEAD keeps
+ * the legacy empty-diff behavior for a freshly initialized repository. */
+export async function getGitDiffForReview(cwd: string, mode: GitDiffMode = "all"): Promise<string> {
+  const base = ["diff", "--no-color", "--unified=3"];
+  const args =
+    mode === "staged" ? [...base, "--cached"] : mode === "all" ? [...base, "HEAD"] : base;
+  try {
+    return await gitRun(cwd, args);
+  } catch (error) {
+    if (
+      mode === "all" &&
+      /(?:bad revision|unknown revision).*HEAD|ambiguous argument 'HEAD'/i.test(
+        gitErrorDetail(error),
+      )
+    ) {
+      return "";
+    }
+    throw error;
   }
 }
 

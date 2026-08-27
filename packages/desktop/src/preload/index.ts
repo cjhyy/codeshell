@@ -28,6 +28,12 @@ import type {
   PluginMcpApprovalResult,
 } from "./types";
 import { forwardAgentSideEffectEvent } from "./agent-side-effect-events";
+import type {
+  ReviewGitCommit,
+  ReviewGitDiffRequest,
+  ReviewGitDiffResult,
+  ReviewGitStatusResult,
+} from "../shared/review";
 
 /** One background shell as surfaced to the dock panel (TODO 3.2). Mirrors core
  *  BgShell's public shape; renderer-local since the renderer can't import core. */
@@ -872,6 +878,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   getSessionGitStatus: (sessionId: string) => ipcRenderer.invoke("workspace:gitStatus", sessionId),
   getSessionGitBranches: (sessionId: string) =>
     ipcRenderer.invoke("workspace:gitBranches", sessionId),
+  getReviewStatus: (sessionId: string) =>
+    ipcRenderer.invoke("review:status", sessionId) as Promise<ReviewGitStatusResult>,
+  getReviewDiff: (sessionId: string, request: ReviewGitDiffRequest) =>
+    ipcRenderer.invoke("review:diff", sessionId, request) as Promise<ReviewGitDiffResult>,
+  getReviewRecentCommits: (sessionId: string, limit?: number) =>
+    ipcRenderer.invoke("review:recentCommits", sessionId, limit) as Promise<ReviewGitCommit[]>,
   listSessionProfiles: (sessionId: string) => ipcRenderer.invoke("workspace:profiles", sessionId),
   listSessionWorktrees: (sessionId: string, cwd: string) =>
     ipcRenderer.invoke("workspace:list", sessionId, cwd),

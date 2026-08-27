@@ -151,8 +151,13 @@ const BUILTIN_PANEL_ENTRIES: PanelEntry[] = [
     icon: GitCompare,
     order: 20,
     enabled: alwaysEnabled,
-    render: ({ cwd, reviewFiles, reviewDiff }) =>
-      createElement(ReviewPanel, { cwd, files: reviewFiles, turnDiff: reviewDiff }),
+    render: ({ cwd, engineSessionId, reviewFiles, reviewDiff }) =>
+      createElement(ReviewPanel, {
+        cwd,
+        sessionId: engineSessionId,
+        files: reviewFiles,
+        turnDiff: reviewDiff,
+      }),
   }),
   builtin({
     key: "terminal",

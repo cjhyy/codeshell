@@ -17,6 +17,7 @@ import {
   listSessionWorktreesForUi,
   releaseManySessionWorkspacesForUi,
   releaseSessionWorkspaceForUi,
+  resolveSessionReviewWorkspaceForUi,
   switchSessionWorkspaceForUi,
 } from "./session-workspace-service";
 import { readSessionDirectoryForUi, readSessionFileForUi } from "./session-fs-service";
@@ -96,6 +97,34 @@ describe("cleanupSessionWorktreeForUi", () => {
       mainRootName: newPrimaryRoot.name,
       rootStatus: "ok",
     });
+
+    await expect(resolveSessionReviewWorkspaceForUi(oldSessionId)).resolves.toEqual({
+      projectId: project.id,
+      mainRootId: oldMainRoot.id,
+      roots: [
+        { id: oldMainRoot.id, path: repo, role: "primary" },
+        { id: newPrimaryRoot.id, path: newPrimaryRoot.path, role: "secondary" },
+      ],
+    });
+    await expect(resolveSessionReviewWorkspaceForUi(newSessionId)).resolves.toEqual({
+      projectId: project.id,
+      mainRootId: newPrimaryRoot.id,
+      roots: [
+        { id: oldMainRoot.id, path: oldMainRoot.path, role: "secondary" },
+        { id: newPrimaryRoot.id, path: newPrimary, role: "primary" },
+      ],
+    });
+  });
+
+  test("derives a deterministic single-root Review workspace for a legacy Session", async () => {
+    const sessionId = "legacy-review-session";
+    new SessionManager(sessionsDir).create(repo, "m", "p", sessionId);
+
+    await expect(resolveSessionReviewWorkspaceForUi(sessionId)).resolves.toEqual({
+      projectId: null,
+      mainRootId: `legacy:${sessionId}`,
+      roots: [{ id: `legacy:${sessionId}`, path: repo, role: "primary" }],
+    });
   });
 
   test("authorizes FilesPanel worktree and secondary reads by Session binding and rejects escapes", async () => {
@@ -134,6 +163,14 @@ describe("cleanupSessionWorktreeForUi", () => {
     expect(mainEntries.map((entry) => entry.name)).toContain("worktree.txt");
     const secondaryEntries = await readSessionDirectoryForUi(sessionId, secondaryRoot.id);
     expect(secondaryEntries.map((entry) => entry.name)).toContain("secondary.txt");
+    await expect(resolveSessionReviewWorkspaceForUi(sessionId)).resolves.toEqual({
+      projectId: project.id,
+      mainRootId: mainRoot.id,
+      roots: [
+        { id: mainRoot.id, path: wt.worktreePath, role: "primary" },
+        { id: secondaryRoot.id, path: secondaryRoot.path, role: "secondary" },
+      ],
+    });
     await expect(
       readSessionFileForUi(sessionId, mainRoot.id, join(root, "outside.txt")),
     ).rejects.toThrow(/outside|escape/i);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import type { GitCommit } from "../../preload/types";
+import type { ReviewGitCommit } from "../../preload/types";
 import { ensureMiniDom, flushMicrotasks, renderHook } from "../test-utils/renderHook";
 import { ReviewPanel, useWorkspaceRecentCommits } from "./ReviewPanel";
 
@@ -36,18 +36,16 @@ afterEach(async () => {
 
 describe("ReviewPanel workspace requests", () => {
   test("ignores an older workspace's commit response", async () => {
-    const requests = {
-      "/repo-a": deferred<GitCommit[]>(),
-      "/repo-b": deferred<GitCommit[]>(),
-    };
+    const requests = [deferred<ReviewGitCommit[]>(), deferred<ReviewGitCommit[]>()];
+    let requestIndex = 0;
     Object.assign(window, {
       codeshell: {
-        getGitRecentCommits: (cwd: string) => requests[cwd as keyof typeof requests].promise,
+        getReviewRecentCommits: () => requests[requestIndex++]!.promise,
       },
     });
 
     let cwd = "/repo-a";
-    const hook = await renderHook(() => useWorkspaceRecentCommits(cwd));
+    const hook = await renderHook(() => useWorkspaceRecentCommits("session-1", cwd));
     cleanup = hook.unmount;
     hook.result.current.loadCommits();
 
@@ -55,29 +53,45 @@ describe("ReviewPanel workspace requests", () => {
     await hook.rerender();
     hook.result.current.loadCommits();
     await act(async () => {
-      requests["/repo-b"].resolve([
-        { hash: "bbbb", subject: "B commit", author: "B", relativeDate: "now" },
+      requests[1]!.resolve([
+        {
+          hash: "bbbb",
+          shortHash: "bbbb",
+          subject: "B commit",
+          relativeDate: "now",
+          rootId: "root-b",
+          rootIds: ["root-b"],
+          repoRoot: "/repo-b",
+        },
       ]);
       await flushMicrotasks();
     });
     expect(hook.result.current.commits?.[0]?.hash).toBe("bbbb");
 
     await act(async () => {
-      requests["/repo-a"].resolve([
-        { hash: "aaaa", subject: "A stale commit", author: "A", relativeDate: "old" },
+      requests[0]!.resolve([
+        {
+          hash: "aaaa",
+          shortHash: "aaaa",
+          subject: "A stale commit",
+          relativeDate: "old",
+          rootId: "root-a",
+          rootIds: ["root-a"],
+          repoRoot: "/repo-a",
+        },
       ]);
       await flushMicrotasks();
     });
     expect(hook.result.current.commits?.[0]?.hash).toBe("bbbb");
   });
 
-  test("passes the resolved root to the git diff consumer", async () => {
-    const diffRoots: string[] = [];
+  test("passes the authoritative Session id instead of a renderer cwd to Review Git", async () => {
+    const requests: unknown[][] = [];
     Object.assign(window, {
       codeshell: {
-        getGitDiff: async (cwd: string) => {
-          diffRoots.push(cwd);
-          return "";
+        getReviewDiff: async (...args: unknown[]) => {
+          requests.push(args);
+          return { repositories: [], errors: [] };
         },
       },
     });
@@ -85,9 +99,10 @@ describe("ReviewPanel workspace requests", () => {
     root = createRoot(container);
 
     await act(async () => {
-      root?.render(<ReviewPanel cwd="/repo/.worktrees/feature" />);
+      root?.render(<ReviewPanel cwd="/renderer-spoofed-cwd" sessionId="authoritative-session" />);
       await flushMicrotasks();
     });
-    expect(diffRoots).toContain("/repo/.worktrees/feature");
+    expect(requests).toContainEqual(["authoritative-session", { kind: "working", mode: "all" }]);
+    expect(JSON.stringify(requests)).not.toContain("renderer-spoofed-cwd");
   });
 });

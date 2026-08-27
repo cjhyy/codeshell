@@ -133,6 +133,25 @@ describe("PanelRegistry", () => {
     expect(rendered.props.active).toBe(false);
   });
 
+  it("routes the active Session identity into the Review panel", () => {
+    const rendered = getPanelEntry("review")!.render({
+      projectPath: "/repo",
+      cwd: "/repo/.worktrees/feature",
+      engineSessionId: "session-review",
+      sessionMainRootId: "main-root",
+      tabId: "review-1",
+      bucket: "project::session-review",
+      busy: false,
+      visible: true,
+      foregroundVisible: true,
+    }) as ReactElement<{ cwd: string; sessionId: string }>;
+
+    expect(rendered.props).toMatchObject({
+      cwd: "/repo/.worktrees/feature",
+      sessionId: "session-review",
+    });
+  });
+
   it("supports dynamic registration, duplicate rejection, and idempotent disposal", () => {
     const registry = new PanelRegistry();
     const entry = {

@@ -475,6 +475,7 @@ import {
 } from "./updater.js";
 import { loadRecents, loadProjects } from "./recents-store.js";
 import { getProjectStore } from "./project-store.js";
+import { reviewService } from "./review-service.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import {
   PET_WIDGET_WINDOW_SIZE,
@@ -6105,6 +6106,24 @@ ipcMain.on("browser:anchor-update", (e, update: unknown) => {
 ipcMain.handle("git:status", async (_e, cwd: string) => {
   cwd = await requireRendererProjectPath(cwd);
   return getGitStatus(cwd);
+});
+
+ipcMain.handle("review:status", async (_e, sessionId: string) => {
+  assertDesktopSessionId(sessionId);
+  return reviewService.getStatus(sessionId);
+});
+
+ipcMain.handle("review:diff", async (_e, sessionId: string, request: unknown) => {
+  assertDesktopSessionId(sessionId);
+  return reviewService.getDiff(
+    sessionId,
+    request as import("../shared/review.js").ReviewGitDiffRequest,
+  );
+});
+
+ipcMain.handle("review:recentCommits", async (_e, sessionId: string, limit?: number) => {
+  assertDesktopSessionId(sessionId);
+  return reviewService.getRecentCommits(sessionId, limit);
 });
 
 ipcMain.handle("git:numstat", async (_e, cwd: string) => {

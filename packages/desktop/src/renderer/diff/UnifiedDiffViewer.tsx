@@ -7,10 +7,18 @@ import { openFileTarget } from "../chat/openWith";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
+import type {
+  ReviewGitDiffRequest,
+  ReviewRepositoryError,
+  ReviewRepositoryIdentity,
+} from "../../preload/types";
 
 interface Props {
   /** cwd to ask git for the diff. */
   cwd: string;
+  /** Session-authoritative aggregate Review query. cwd remains display/open context only. */
+  reviewSessionId?: string;
+  reviewRequest?: ReviewGitDiffRequest;
   /** Optional file path to limit the diff. */
   file?: string;
   /** Optional session-scoped diff text. When present, do not ask Git. */
@@ -41,15 +49,70 @@ interface Props {
   onStats?: (stats: { added: number; removed: number }) => void;
 }
 
-export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, onStats }: Props) {
+interface LoadedDiffFile {
+  file: DiffFile;
+  rootId: string;
+  repoRoot: string;
+  key: string;
+}
+
+interface LoadedDiff {
+  files: LoadedDiffFile[];
+  errors: ReviewRepositoryError[];
+}
+
+export function reviewDiffFileKey(
+  repository: Pick<ReviewRepositoryIdentity, "rootId" | "repoRoot">,
+  file: DiffFile,
+  index: number,
+): string {
+  return [
+    repository.rootId,
+    repository.repoRoot,
+    file.newPath ?? file.oldPath ?? file.hunks[0]?.header ?? "",
+    String(index),
+  ].join("\0");
+}
+
+function loadedFiles(
+  repository: Pick<ReviewRepositoryIdentity, "rootId" | "repoRoot">,
+  raw: string,
+): LoadedDiffFile[] {
+  return parseUnifiedDiff(raw).map((parsed, index) => ({
+    file: parsed,
+    rootId: repository.rootId,
+    repoRoot: repository.repoRoot,
+    key: reviewDiffFileKey(repository, parsed, index),
+  }));
+}
+
+function absoluteReviewPath(repoRoot: string, file: string): string {
+  const separator = repoRoot.includes("\\") ? "\\" : "/";
+  return `${repoRoot.replace(/[\\/]+$/, "")}${separator}${file.replace(/^\.\//, "")}`;
+}
+
+export function UnifiedDiffViewer({
+  cwd,
+  reviewSessionId,
+  reviewRequest,
+  file,
+  diffText,
+  range,
+  onlyPath,
+  mode,
+  onStats,
+}: Props) {
   const { t } = useT();
-  const [diff, setDiff] = useState<DiffFile[] | null>(null);
+  const [diff, setDiff] = useState<LoadedDiff | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     if (diffText !== undefined) {
-      setDiff(parseUnifiedDiff(diffText));
+      setDiff({
+        files: loadedFiles({ rootId: "snapshot", repoRoot: cwd }, diffText),
+        errors: [],
+      });
       setError(null);
       return () => {
         cancelled = true;
@@ -57,13 +120,28 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
     }
     setError(null);
     setDiff(null);
-    const fetchDiff = range
-      ? window.codeshell.getGitRangeDiff(cwd, range, file)
-      : window.codeshell.getGitDiff(cwd, file, mode);
+    const fetchDiff =
+      reviewSessionId && reviewRequest
+        ? window.codeshell.getReviewDiff(reviewSessionId, reviewRequest)
+        : range
+          ? window.codeshell.getGitRangeDiff(cwd, range, file)
+          : window.codeshell.getGitDiff(cwd, file, mode);
     void fetchDiff
-      .then((raw) => {
+      .then((result) => {
         if (cancelled) return;
-        setDiff(parseUnifiedDiff(raw));
+        if (typeof result === "string") {
+          setDiff({
+            files: loadedFiles({ rootId: "legacy", repoRoot: cwd }, result),
+            errors: [],
+          });
+          return;
+        }
+        setDiff({
+          files: result.repositories.flatMap((repository) =>
+            loadedFiles(repository, repository.diff),
+          ),
+          errors: result.errors,
+        });
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -73,7 +151,7 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
     return () => {
       cancelled = true;
     };
-  }, [cwd, file, diffText, range, mode]);
+  }, [cwd, reviewSessionId, reviewRequest, file, diffText, range, mode]);
 
   // Report total +/- to the parent whenever the diff (re)loads. Computed over
   // the full parsed diff (not the onlyPath-filtered view) so the summary
@@ -83,8 +161,8 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
     if (!onStats || !diff) return;
     let added = 0;
     let removed = 0;
-    for (const f of diff) {
-      for (const h of f.hunks) {
+    for (const loaded of diff.files) {
+      for (const h of loaded.file.hunks) {
         for (const l of h.lines) {
           if (l.kind === "add") added++;
           else if (l.kind === "del") removed++;
@@ -94,12 +172,18 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
     onStats({ added, removed });
   }, [diff]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (error) return <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{t("panels.diff.gitDiffFailed", { error })}</div>;
-  if (!diff) return <div className="p-3 text-sm text-muted-foreground">{t("panels.diff.loadingDiff")}</div>;
+  if (error)
+    return (
+      <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">
+        {t("panels.diff.gitDiffFailed", { error })}
+      </div>
+    );
+  if (!diff)
+    return <div className="p-3 text-sm text-muted-foreground">{t("panels.diff.loadingDiff")}</div>;
   const visible = onlyPath
-    ? diff.filter((f) => (f.newPath ?? f.oldPath) === onlyPath)
-    : diff;
-  if (visible.length === 0) {
+    ? diff.files.filter((loaded) => (loaded.file.newPath ?? loaded.file.oldPath) === onlyPath)
+    : diff.files;
+  if (visible.length === 0 && diff.errors.length === 0) {
     return <div className="p-3 text-sm text-muted-foreground">{t("panels.diff.noChanges")}</div>;
   }
   // Guard against rendering an enormous diff (e.g. a whole "branch vs base"
@@ -108,23 +192,36 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
   // rendered; past the cap, show a notice prompting the user to pick a single
   // file. (#5 ③ hang / ④ OOM)
   const totalLines = visible.reduce(
-    (n, f) => n + f.hunks.reduce((m, h) => m + h.lines.length, 0),
+    (n, loaded) => n + loaded.file.hunks.reduce((m, h) => m + h.lines.length, 0),
     0,
   );
   const overCap = totalLines > MAX_RENDERED_LINES;
   const filesToRender = overCap ? capFiles(visible, MAX_RENDERED_LINES) : visible;
+  const showRepository = new Set(visible.map((entry) => entry.repoRoot)).size > 1;
   return (
     <div className="flex min-w-0 flex-col gap-3 overflow-x-auto text-sm">
+      {diff.errors.map((repositoryError) => (
+        <div
+          key={`${repositoryError.operation}:${repositoryError.repoRoot ?? repositoryError.rootId}`}
+          className="rounded-md bg-status-err/10 p-3 text-sm text-status-err"
+        >
+          {t("panels.diff.gitDiffFailed", {
+            error: `[${repositoryError.repoRoot ?? repositoryError.rootId}] ${repositoryError.message}`,
+          })}
+        </div>
+      ))}
       {overCap && (
         <div className="rounded-md bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
           {t("panels.diff.largeDiff", { total: totalLines, max: MAX_RENDERED_LINES })}
         </div>
       )}
-      {filesToRender.map((f) => (
+      {filesToRender.map((loaded) => (
         <DiffFileBlock
-          key={f.newPath ?? f.oldPath ?? f.hunks[0]?.header ?? ""}
-          file={f}
-          cwd={cwd}
+          key={loaded.key}
+          file={loaded.file}
+          cwd={loaded.repoRoot}
+          repoRoot={loaded.repoRoot}
+          showRepository={showRepository}
         />
       ))}
     </div>
@@ -138,19 +235,29 @@ const MAX_RENDERED_LINES = 2000;
 /** Keep whole files from the front of the diff until adding the next one would
  *  exceed the line budget. Always returns at least the first file so something
  *  shows. */
-function capFiles(diff: DiffFile[], budget: number): DiffFile[] {
-  const out: DiffFile[] = [];
+function capFiles(diff: LoadedDiffFile[], budget: number): LoadedDiffFile[] {
+  const out: LoadedDiffFile[] = [];
   let used = 0;
-  for (const f of diff) {
-    const lines = f.hunks.reduce((m, h) => m + h.lines.length, 0);
+  for (const loaded of diff) {
+    const lines = loaded.file.hunks.reduce((m, h) => m + h.lines.length, 0);
     if (out.length > 0 && used + lines > budget) break;
-    out.push(f);
+    out.push(loaded);
     used += lines;
   }
   return out;
 }
 
-function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
+function DiffFileBlock({
+  file,
+  cwd,
+  repoRoot,
+  showRepository,
+}: {
+  file: DiffFile;
+  cwd: string;
+  repoRoot: string;
+  showRepository: boolean;
+}) {
   const { t } = useT();
   const title = file.newPath ?? file.oldPath ?? t("panels.diff.unknownFile");
   // Which line is currently being commented on, keyed by "hunkIdx:lineIdx".
@@ -187,18 +294,39 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
         )}
         {/* "‎" (LRM) keeps the path reading LTR while direction:rtl clips
             the ellipsis at the START — see .diff-file-path. */}
-        <span className="min-w-0 flex-1 truncate font-mono text-xs" title={title}>{"\u200e" + title}</span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          {showRepository && (
+            <span className="truncate font-mono text-[10px] text-muted-foreground" title={repoRoot}>
+              {"\u200e" + repoRoot}
+            </span>
+          )}
+          <span className="truncate font-mono text-xs" title={title}>
+            {"\u200e" + title}
+          </span>
+        </span>
         {/* Status as a symbol (Codex style), not a text label: added → green
             dot, deleted → red dash, renamed → amber dot; modified shows
             nothing (the +/- counts already convey it). */}
         {file.status === "added" && (
-          <span className="shrink-0 h-2 w-2 rounded-full bg-status-ok" title={t("panels.diff.added")} aria-label={t("panels.diff.added")} />
+          <span
+            className="shrink-0 h-2 w-2 rounded-full bg-status-ok"
+            title={t("panels.diff.added")}
+            aria-label={t("panels.diff.added")}
+          />
         )}
         {file.status === "deleted" && (
-          <span className="shrink-0 h-0.5 w-2.5 rounded bg-status-err" title={t("panels.diff.deleted")} aria-label={t("panels.diff.deleted")} />
+          <span
+            className="shrink-0 h-0.5 w-2.5 rounded bg-status-err"
+            title={t("panels.diff.deleted")}
+            aria-label={t("panels.diff.deleted")}
+          />
         )}
         {file.status === "renamed" && (
-          <span className="shrink-0 h-2 w-2 rounded-full bg-status-warn" title={t("panels.diff.renamed")} aria-label={t("panels.diff.renamed")} />
+          <span
+            className="shrink-0 h-2 w-2 rounded-full bg-status-warn"
+            title={t("panels.diff.renamed")}
+            aria-label={t("panels.diff.renamed")}
+          />
         )}
         <span className="shrink-0 pl-2 text-xs tabular-nums">
           <span className="text-status-ok">+{added}</span>{" "}
@@ -215,78 +343,86 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
           className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
           onClick={(e) => {
             e.stopPropagation();
-            openFileTarget(e, { path: title, cwd });
+            openFileTarget(e, { path: absoluteReviewPath(repoRoot, title), cwd });
           }}
         >
           <ExternalLink className="h-3.5 w-3.5" />
         </span>
       </Button>
-      {!collapsed && file.hunks.map((h, i) => (
-        <div key={h.header || i} className="overflow-x-auto border-b last:border-b-0">
-          <div className="border-b bg-muted/40 px-3 py-1 font-mono text-xs text-muted-foreground">{h.header}</div>
-          <table className="w-full border-collapse font-mono text-xs">
-            <tbody>
-              {h.lines.map((l, j) => {
-                const key = `${i}:${j}`;
-                const lineNo = l.newLine ?? l.oldLine ?? null;
-                return (
-                  <React.Fragment key={j}>
-                    <tr className={cn("group", lineTone(l.kind))}>
-                      <td className="w-12 select-none border-r px-2 py-0.5 text-right tabular-nums text-muted-foreground">{l.oldLine ?? ""}</td>
-                      <td className="w-12 select-none border-r px-2 py-0.5 text-right tabular-nums text-muted-foreground">{l.newLine ?? ""}</td>
-                      <td className="w-6 select-none border-r px-2 py-0.5 text-center text-muted-foreground">
-                        {l.kind === "add" ? "+" : l.kind === "del" ? "-" : " "}
-                      </td>
-                      <td className="min-w-[520px] whitespace-pre px-2 py-0.5">
-                        {/* The line text keeps `white-space: pre` (from
+      {!collapsed &&
+        file.hunks.map((h, i) => (
+          <div key={h.header || i} className="overflow-x-auto border-b last:border-b-0">
+            <div className="border-b bg-muted/40 px-3 py-1 font-mono text-xs text-muted-foreground">
+              {h.header}
+            </div>
+            <table className="w-full border-collapse font-mono text-xs">
+              <tbody>
+                {h.lines.map((l, j) => {
+                  const key = `${i}:${j}`;
+                  const lineNo = l.newLine ?? l.oldLine ?? null;
+                  return (
+                    <React.Fragment key={j}>
+                      <tr className={cn("group", lineTone(l.kind))}>
+                        <td className="w-12 select-none border-r px-2 py-0.5 text-right tabular-nums text-muted-foreground">
+                          {l.oldLine ?? ""}
+                        </td>
+                        <td className="w-12 select-none border-r px-2 py-0.5 text-right tabular-nums text-muted-foreground">
+                          {l.newLine ?? ""}
+                        </td>
+                        <td className="w-6 select-none border-r px-2 py-0.5 text-center text-muted-foreground">
+                          {l.kind === "add" ? "+" : l.kind === "del" ? "-" : " "}
+                        </td>
+                        <td className="min-w-[520px] whitespace-pre px-2 py-0.5">
+                          {/* The line text keeps `white-space: pre` (from
                             .diff-text) so it extends and the hunk scrolls
                             horizontally; the comment button is positioned
                             relative to the row, not inline, so it doesn't
                             force-wrap or get lost off-screen on scroll. */}
-                        <span className="relative block pr-6">
-                          {l.text || " "}
-                          <button
-                            type="button"
-                            aria-label={t("panels.diff.commentThisLine")}
-                            title={t("panels.diff.commentThisLineTitle")}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
-                            onClick={() => setCommenting(commenting === key ? null : key)}
-                          >
-                            <MessageSquarePlus size={12} />
-                          </button>
-                        </span>
-                      </td>
-                    </tr>
-                    {commenting === key && (
-                      <tr>
-                        <td colSpan={4} className="px-2">
-                          <CommentBox
-                            title={`${title}${lineNo != null ? `:${lineNo}` : ""}`}
-                            onCancel={() => setCommenting(null)}
-                            onSubmit={(comment) => {
-                              addAnchor({
-                                kind: "diff",
-                                label: `${title.split("/").pop()}${lineNo != null ? `:${lineNo}` : ""}`,
-                                locator: {
-                                  文件: title,
-                                  ...(lineNo != null ? { 行号: String(lineNo) } : {}),
-                                  代码: l.text.trim().slice(0, 200),
-                                },
-                                comment,
-                              });
-                              setCommenting(null);
-                            }}
-                          />
+                          <span className="relative block pr-6">
+                            {l.text || " "}
+                            <button
+                              type="button"
+                              aria-label={t("panels.diff.commentThisLine")}
+                              title={t("panels.diff.commentThisLineTitle")}
+                              className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
+                              onClick={() => setCommenting(commenting === key ? null : key)}
+                            >
+                              <MessageSquarePlus size={12} />
+                            </button>
+                          </span>
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ))}
+                      {commenting === key && (
+                        <tr>
+                          <td colSpan={4} className="px-2">
+                            <CommentBox
+                              title={`${showRepository ? `${repoRoot}:` : ""}${title}${lineNo != null ? `:${lineNo}` : ""}`}
+                              onCancel={() => setCommenting(null)}
+                              onSubmit={(comment) => {
+                                addAnchor({
+                                  kind: "diff",
+                                  label: `${title.split("/").pop()}${lineNo != null ? `:${lineNo}` : ""}`,
+                                  locator: {
+                                    ...(showRepository ? { 仓库: repoRoot } : {}),
+                                    文件: title,
+                                    ...(lineNo != null ? { 行号: String(lineNo) } : {}),
+                                    代码: l.text.trim().slice(0, 200),
+                                  },
+                                  comment,
+                                });
+                                setCommenting(null);
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ))}
     </div>
   );
 }
