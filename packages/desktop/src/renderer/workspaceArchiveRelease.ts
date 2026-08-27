@@ -3,6 +3,7 @@ import type { SessionSummary } from "./transcripts";
 export interface WorkspaceReleaseApi {
   releaseSessionWorkspace(sessionId: string): Promise<unknown>;
   releaseManySessionWorkspaces(sessionIds: string[]): Promise<unknown>;
+  setSessionArchived?(sessionId: string, archived: boolean): Promise<void>;
 }
 
 type WorkspaceReleaseResult =
@@ -27,14 +28,17 @@ export async function releaseWorkspaceForArchive(
   archived: boolean,
   api: WorkspaceReleaseApi,
 ): Promise<void> {
-  if (!archived || !session) return;
+  if (!session) return;
   const id = session.engineSessionId ?? session.id;
   if (!id) return;
-  try {
-    logWorkspaceReleaseResults(await api.releaseSessionWorkspace(id));
-  } catch (err) {
-    console.error("workspace release failed before archive", err);
+  if (archived) {
+    try {
+      logWorkspaceReleaseResults(await api.releaseSessionWorkspace(id));
+    } catch (err) {
+      console.error("workspace release failed before archive", err);
+    }
   }
+  await api.setSessionArchived?.(id, archived);
 }
 
 export async function releaseWorkspacesForArchiveMany(
@@ -48,6 +52,7 @@ export async function releaseWorkspacesForArchiveMany(
   } catch (err) {
     console.error("workspace releaseMany failed before archive", err);
   }
+  for (const id of ids) await api.setSessionArchived?.(id, true);
 }
 
 function logWorkspaceReleaseResults(raw: unknown): void {

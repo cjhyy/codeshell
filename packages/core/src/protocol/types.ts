@@ -20,6 +20,7 @@ import type {
   PermissionMode,
   SessionForkLineage,
   SessionKind,
+  SessionProjectBinding,
   SessionWorkspace,
 } from "../types.js";
 import type { RunBehaviorMode } from "../engine/run-types.js";
@@ -318,6 +319,13 @@ export interface SetWorkspaceParams {
   workspace: SessionWorkspace;
 }
 
+/** Atomically rebind every main-root field through the live Session owner. */
+export interface MigrateSessionMainRootParams {
+  sessionId: string;
+  project: SessionProjectBinding;
+  mainRoot: string;
+}
+
 /** Inject context into a session transcript. */
 export interface InjectParams {
   sessionId: string;
@@ -573,6 +581,8 @@ export const Methods = {
   ReleaseWorkspace: "agent/releaseWorkspace",
   /** Persist a workspace pointer through the live session owner. */
   SetWorkspace: "agent/setWorkspace",
+  /** Atomically migrate a Session's main-root authority through its live owner. */
+  MigrateSessionMainRoot: "agent/migrateSessionMainRoot",
   /** Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). */
   GoalExtend: "agent/goalExtend",
   /** Edit or pause/resume a session's persisted goal. */

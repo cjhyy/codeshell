@@ -617,8 +617,9 @@ export interface SessionWorkspaceAuthority {
   mainRootId: string | null;
   mainRoot: string;
   mainRootName: string;
-  /** Extensible now; root_removed/dir_missing land with the later migration flow. */
-  rootStatus: "ok";
+  rootStatus: "ok" | "dir_missing" | "root_removed";
+  rootStatusReason?: "directory_missing" | "project_missing" | "root_not_mounted";
+  rootStatusMessage?: string;
 }
 
 export interface WorkspaceProfileSummary {
@@ -1741,6 +1742,7 @@ export interface CodeshellApi {
     projectPath?: string,
   ): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
+  setSessionArchived(id: string, archived: boolean): Promise<void>;
   deleteSession(id: string): Promise<void>;
   claimQuickChatSession(id: string, claimId: string): Promise<void>;
   isQuickChatClaimActive(id: string, claimId: string): Promise<boolean>;
@@ -2288,6 +2290,17 @@ export interface CodeshellApi {
       projectId: string,
     ): Promise<{ project: LocalProject; folded?: { picked: string; root: string } } | null>;
     removeRoot(projectId: string, rootId: string): Promise<LocalProject>;
+    migrateSessionMainRoot(
+      sessionId: string,
+      targetRootId: string,
+    ): Promise<{
+      sessionId: string;
+      projectId: string;
+      previousMainRootId: string;
+      targetRootId: string;
+      mainRoot: string;
+      workspace: SessionWorkspace;
+    }>;
     setPrimary(projectId: string, rootId: string): Promise<LocalProject>;
     revealRoot(projectId: string, rootId: string): Promise<void>;
     openRoot(projectId: string, rootId: string): Promise<string>;

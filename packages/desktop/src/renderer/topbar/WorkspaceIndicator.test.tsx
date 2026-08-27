@@ -494,6 +494,61 @@ describe("WorkspaceIndicator", () => {
     expect(textOf(container)).not.toContain("Seedance 制片人");
   });
 
+  test("shows a derived missing-root badge without falling back to the current project path", async () => {
+    ensureMiniDom();
+    (window as unknown as { codeshell: Record<string, unknown> }).codeshell = {
+      getSessionWorkspaceAuthority: async () => ({
+        workspace: { root: "/removed", kind: "main" },
+        projectId: "project-1",
+        mainRootId: "root-removed",
+        mainRoot: "/removed",
+        mainRootName: "removed",
+        rootStatus: "root_removed",
+        rootStatusReason: "root_not_mounted",
+        rootStatusMessage: "Session root status root_removed",
+      }),
+      getSessionGitBranches: async () => {
+        throw new Error("root_removed");
+      },
+      listSessionProfiles: async () => {
+        throw new Error("root_removed");
+      },
+      getSessionWorkspace: async () => {
+        throw new Error("must not fall back to current project path");
+      },
+      getGitBranches: async () => {
+        throw new Error("must not use project primary");
+      },
+      listProfiles: async () => {
+        throw new Error("must not use project primary");
+      },
+    };
+    const container = document.createElement("div");
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <WorkspaceIndicator
+          sessionId="missing-session"
+          projectPath="/current-primary"
+          projectName="current-primary"
+        />,
+      );
+      await flushMicrotasks();
+    });
+
+    expect(textOf(container)).toMatch(/主目录已移除|Root removed/);
+    expect(
+      findElement(container, (node) =>
+        Boolean(
+          (node as { attributes?: Map<string, string> }).attributes?.has(
+            "data-session-root-status",
+          ),
+        ),
+      ),
+    ).not.toBeNull();
+  });
+
   test("keeps old Session Git, profile, and label bound when the project primary becomes non-Git", async () => {
     ensureMiniDom();
     const calls: string[] = [];

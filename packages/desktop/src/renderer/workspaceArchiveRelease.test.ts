@@ -37,8 +37,11 @@ describe("workspace archive release helpers", () => {
       releaseManySessionWorkspaces: async () => {
         throw new Error("not used");
       },
+      setSessionArchived: async (sessionId, archived) => {
+        calls.push(`archive:${sessionId}:${archived}`);
+      },
     });
-    expect(calls).toEqual(["engine-1"]);
+    expect(calls).toEqual(["engine-1", "archive:engine-1:true"]);
   });
 
   test("unknown release result is logged and does not block single archive", async () => {
@@ -72,12 +75,15 @@ describe("workspace archive release helpers", () => {
       releaseManySessionWorkspaces: async () => {
         throw new Error("not used");
       },
+      setSessionArchived: async (sessionId, archived) => {
+        calls.push(`archive:${sessionId}:${archived}`);
+      },
     });
-    expect(calls).toEqual([]);
+    expect(calls).toEqual(["archive:engine-1:false"]);
   });
 
   test("archive-all and project-delete use releaseMany for unarchived sessions", async () => {
-    const calls: string[][] = [];
+    const calls: string[] = [];
     await releaseWorkspacesForArchiveMany(
       [summary("ui-1", "engine-1"), summary("ui-2"), summary("ui-3", "engine-3", true)],
       {
@@ -85,11 +91,14 @@ describe("workspace archive release helpers", () => {
           throw new Error("not used");
         },
         releaseManySessionWorkspaces: async (sessionIds) => {
-          calls.push(sessionIds);
+          calls.push(`release:${sessionIds.join(",")}`);
+        },
+        setSessionArchived: async (sessionId, archived) => {
+          calls.push(`archive:${sessionId}:${archived}`);
         },
       },
     );
-    expect(calls).toEqual([["engine-1", "ui-2"]]);
+    expect(calls).toEqual(["release:engine-1,ui-2", "archive:engine-1:true", "archive:ui-2:true"]);
   });
 
   test("releaseMany mixed valid and missing results do not block archiving all", async () => {

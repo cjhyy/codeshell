@@ -195,6 +195,12 @@ export function WorkspaceIndicator({
       const authorityApi = window.codeshell.getSessionWorkspaceAuthority;
       const nextAuthority =
         typeof authorityApi === "function" ? await authorityApi(sessionId) : null;
+      if (nextAuthority && nextAuthority.rootStatus !== "ok") {
+        if (currentRequestId.current !== requestId) return;
+        setAuthority(nextAuthority);
+        setWorkspace(null);
+        return;
+      }
       const next =
         nextAuthority?.workspace ??
         (await window.codeshell.getSessionWorkspace(sessionId, projectPath));
@@ -204,7 +210,7 @@ export function WorkspaceIndicator({
     } catch {
       if (currentRequestId.current !== requestId) return;
       setAuthority(null);
-      setWorkspace({ root: projectPath, kind: "main" });
+      setWorkspace(null);
     } finally {
       if (currentRequestId.current === requestId) setCurrentLoading(false);
     }
@@ -453,6 +459,24 @@ export function WorkspaceIndicator({
   ) : null;
 
   if (!canLoad) return null;
+  if (authority?.rootStatus !== undefined && authority.rootStatus !== "ok") {
+    return (
+      <>
+        <span
+          data-session-root-status={authority.rootStatus}
+          title={authority.rootStatusMessage}
+          className="no-drag ml-1 inline-flex h-7 items-center rounded-sm bg-destructive/10 px-2 text-xs font-medium text-destructive"
+        >
+          {t(
+            authority.rootStatus === "dir_missing"
+              ? "sidebar.sessionRootDirMissing"
+              : "sidebar.sessionRootRemoved",
+          )}
+        </span>
+        {profileBadge}
+      </>
+    );
+  }
   // The worktree switcher is meaningless outside a git repo, but the active
   // digital human belongs to the project and remains useful there.
   if (isGitRepo !== true) return profileBadge;

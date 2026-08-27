@@ -522,9 +522,11 @@ import {
   listSessionWorktreesForUi,
   releaseManySessionWorkspacesForUi,
   releaseSessionWorkspaceForUi,
+  requireUsableSessionRootAuthority,
   switchSessionWorkspaceForUi,
   type WorkspaceCleanupAction,
 } from "./session-workspace-service.js";
+import { getSessionCwdIndex } from "./session-cwd-index.js";
 import {
   readSessionDirectoryForUi,
   readSessionFileForUi,
@@ -5317,6 +5319,29 @@ ipcMain.handle("projectRegistry:removeRoot", async (_event, projectId: string, r
   await broadcastProjectRegistry();
   return project;
 });
+ipcMain.handle(
+  "projectRegistry:migrateSessionMainRoot",
+  async (_event, sessionId: string, targetRootId: string) => {
+    assertDesktopSessionId(sessionId);
+    if (typeof targetRootId !== "string" || !targetRootId || targetRootId.length > 512) {
+      throw new Error("target root id is required");
+    }
+    const currentBridge = bridge;
+    const migrated = await projectStore.migrateSessionMainRoot(sessionId, targetRootId, {
+      persistLive:
+        currentBridge?.hasLiveWorker() && currentBridge.hasKnownSession(sessionId)
+          ? ({ sessionId: id, projectId, mainRootId, mainRoot }) =>
+              currentBridge.migrateSessionMainRoot(id, { projectId, mainRootId }, mainRoot)
+          : undefined,
+    });
+    broadcastWorkspaceChanged({
+      sessionId,
+      workspace: migrated.workspace,
+      mainRoot: migrated.mainRoot,
+    });
+    return migrated;
+  },
+);
 ipcMain.handle("projectRegistry:setPrimary", async (_event, projectId: string, rootId: string) => {
   const root = await requireRendererProjectRoot(projectId, rootId);
   if ((await getTrust(root.path)) !== "trusted") {
@@ -6282,6 +6307,7 @@ ipcMain.handle("workspace:authority", async (_e, sessionId: string) => {
 ipcMain.handle("workspace:gitStatus", async (_e, sessionId: string) => {
   assertDesktopSessionId(sessionId);
   const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  requireUsableSessionRootAuthority(authority);
   knownGitRoots.add(authority.mainRoot);
   return getGitStatus(authority.mainRoot);
 });
@@ -6289,6 +6315,7 @@ ipcMain.handle("workspace:gitStatus", async (_e, sessionId: string) => {
 ipcMain.handle("workspace:gitBranches", async (_e, sessionId: string) => {
   assertDesktopSessionId(sessionId);
   const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  requireUsableSessionRootAuthority(authority);
   knownGitRoots.add(authority.mainRoot);
   return getGitBranches(authority.mainRoot);
 });
@@ -6296,6 +6323,7 @@ ipcMain.handle("workspace:gitBranches", async (_e, sessionId: string) => {
 ipcMain.handle("workspace:profiles", async (_e, sessionId: string) => {
   assertDesktopSessionId(sessionId);
   const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  requireUsableSessionRootAuthority(authority);
   return listProfiles(authority.mainRoot);
 });
 
@@ -6789,6 +6817,12 @@ ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
 });
 
 ipcMain.handle("sessions:list", async () => listSessions());
+ipcMain.handle("sessions:setArchived", async (_event, id: string, archived: boolean) => {
+  assertDesktopSessionId(id);
+  if (typeof archived !== "boolean") throw new Error("archived must be a boolean");
+  await archiveDiskSession(id, archived ? Date.now() : undefined);
+  await getSessionCwdIndex().refresh(id);
+});
 async function deleteDesktopSession(id: string): Promise<void> {
   const ephemeralBrowserPartition = id.startsWith("qchat-") ? partitionForSession(id) : null;
   // Reap the session's background shells (if any) before dropping it —

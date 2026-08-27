@@ -991,6 +991,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     projectPath?: string,
   ) => ipcRenderer.invoke("settings:set", scope, patch, projectPath),
   listSessions: () => ipcRenderer.invoke("sessions:list"),
+  setSessionArchived: (id: string, archived: boolean) =>
+    ipcRenderer.invoke("sessions:setArchived", id, archived),
   deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),
   claimQuickChatSession: (id: string, claimId: string) =>
     ipcRenderer.invoke("quickChat:claimSession", id, claimId),
@@ -1378,6 +1380,8 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("projectRegistry:addRootFromPicker", projectId),
     removeRoot: (projectId: string, rootId: string) =>
       ipcRenderer.invoke("projectRegistry:removeRoot", projectId, rootId),
+    migrateSessionMainRoot: (sessionId: string, targetRootId: string) =>
+      ipcRenderer.invoke("projectRegistry:migrateSessionMainRoot", sessionId, targetRootId),
     setPrimary: (projectId: string, rootId: string) =>
       ipcRenderer.invoke("projectRegistry:setPrimary", projectId, rootId),
     revealRoot: (projectId: string, rootId: string) =>

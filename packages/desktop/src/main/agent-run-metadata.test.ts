@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { prepareAgentRunMetadata, resolveCredentialSessionCwd } from "./agent-run-metadata.js";
+import {
+  AgentRunMetadataError,
+  prepareAgentRunMetadata,
+  resolveCredentialSessionCwd,
+} from "./agent-run-metadata.js";
 import { createWorkspaceContext } from "@cjhyy/code-shell-core/internal";
 
 const projectContext = createWorkspaceContext({
@@ -418,6 +422,41 @@ describe("prepareAgentRunMetadata", () => {
       projectId: "p1",
       workspaceContext: projectContext,
     });
+  });
+
+  test("fails closed with -32602 for derived dir_missing and root_removed Sessions", () => {
+    const lookupSession = () => ({
+      sessionId: "missing-root-session",
+      cwd: "/persisted-old-root",
+      workspaceRoot: "/persisted-old-root",
+      projectId: "p1",
+      mainRootId: "r-old",
+      status: "confirmed" as const,
+    });
+    for (const rootStatus of ["dir_missing", "root_removed"] as const) {
+      let caught: unknown;
+      try {
+        prepareAgentRunMetadata(
+          JSON.stringify({
+            method: "agent/run",
+            params: { sessionId: "missing-root-session" },
+          }),
+          meta,
+          {
+            ...baseDeps(),
+            lookupSession,
+            resolveProjectRun: () => {
+              throw new Error(`Session root status ${rootStatus}: repair the Session before run`);
+            },
+          },
+        );
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(AgentRunMetadataError);
+      expect((caught as AgentRunMetadataError).code).toBe(-32602);
+      expect((caught as Error).message).toContain(rootStatus);
+    }
   });
 
   test("new primary gets full context; secondary stays legacy; unknown cwd is rejected", () => {

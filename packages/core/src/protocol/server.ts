@@ -28,6 +28,7 @@ import {
   type UnsteerParams,
   type GoalUpdateParams,
   type SetWorkspaceParams,
+  type MigrateSessionMainRootParams,
   type PluginCommandsListParams,
   type PluginCommandExpandParams,
   type PendingApprovalMetadata,
@@ -1031,6 +1032,9 @@ export class AgentServer {
         break;
       case Methods.SetWorkspace:
         this.handleSetWorkspace(req);
+        break;
+      case Methods.MigrateSessionMainRoot:
+        this.handleMigrateSessionMainRoot(req);
         break;
       case Methods.GoalExtend:
         this.handleGoalExtend(req);
@@ -2650,6 +2654,52 @@ export class AgentServer {
         ) => import("../types.js").SessionWorkspace | null;
       }
     ).setSessionWorkspace?.(params.sessionId, params.workspace);
+    this.transport.send(
+      createResponse(req.id, {
+        ok: workspace !== undefined && workspace !== null,
+        workspace: workspace ?? null,
+      }),
+    );
+  }
+
+  private handleMigrateSessionMainRoot(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as MigrateSessionMainRootParams;
+    if (
+      typeof params.sessionId !== "string" ||
+      params.sessionId.length === 0 ||
+      !params.project ||
+      typeof params.project.projectId !== "string" ||
+      params.project.projectId.length === 0 ||
+      typeof params.project.mainRootId !== "string" ||
+      params.project.mainRootId.length === 0 ||
+      typeof params.mainRoot !== "string" ||
+      params.mainRoot.length === 0
+    ) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          "valid Session root migration is required",
+        ),
+      );
+      return;
+    }
+    const engine = this.chatManager
+      ? this.chatManager.get(params.sessionId)?.engine
+      : this.legacyEngine;
+    if (!engine) {
+      this.transport.send(createResponse(req.id, { ok: false, workspace: null }));
+      return;
+    }
+    const workspace = (
+      engine as Engine & {
+        migrateSessionMainRoot?: (
+          sessionId: string,
+          project: import("../types.js").SessionProjectBinding,
+          mainRoot: string,
+        ) => import("../types.js").SessionWorkspace | null;
+      }
+    ).migrateSessionMainRoot?.(params.sessionId, params.project, params.mainRoot);
     this.transport.send(
       createResponse(req.id, {
         ok: workspace !== undefined && workspace !== null,

@@ -293,4 +293,69 @@ describe("AgentServer workspace bridge", () => {
     expect(updates).toEqual([{ sessionId: "sess-set-workspace", workspace }]);
     expect(response.result).toEqual({ ok: true, workspace });
   });
+
+  test("agent/migrateSessionMainRoot forwards one complete authoritative commit to the live engine", async () => {
+    const updates: unknown[] = [];
+    const engine = {
+      setAskUser() {},
+      setPlanMode() {},
+      setBrowserBridge() {},
+      setInjectCredential() {},
+      setSessionMessageRouter() {},
+      isHeadless: () => false,
+      migrateSessionMainRoot(sessionId: string, project: unknown, mainRoot: string) {
+        updates.push({ sessionId, project, mainRoot });
+        return { root: mainRoot, kind: "main" };
+      },
+      async run(_task: string, opts: { sessionId: string }): Promise<EngineResult> {
+        return {
+          text: "ok",
+          reason: "completed",
+          sessionId: opts.sessionId,
+          turnCount: 1,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: Methods.Run,
+      params: { sessionId: "sess-migrate-root", task: "start" },
+    });
+    await waitFor(() => t.sent.find((m) => m.id === 1 && m.result), "session should be live");
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 2,
+      method: Methods.MigrateSessionMainRoot,
+      params: {
+        sessionId: "sess-migrate-root",
+        project: { projectId: "project-1", mainRootId: "root-new" },
+        mainRoot: "/repo/new",
+      },
+    });
+
+    const response = await waitFor(
+      () => t.sent.find((m) => m.id === 2 && m.result),
+      "migrateSessionMainRoot response should resolve",
+    );
+    expect(updates).toEqual([
+      {
+        sessionId: "sess-migrate-root",
+        project: { projectId: "project-1", mainRootId: "root-new" },
+        mainRoot: "/repo/new",
+      },
+    ]);
+    expect(response.result).toEqual({
+      ok: true,
+      workspace: { root: "/repo/new", kind: "main" },
+    });
+  });
 });

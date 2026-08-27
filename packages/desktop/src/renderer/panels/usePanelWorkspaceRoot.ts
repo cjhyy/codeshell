@@ -92,6 +92,21 @@ export function usePanelWorkspaceRoot(
       const authorityApi = window.codeshell.getSessionWorkspaceAuthority;
       const authority =
         typeof authorityApi === "function" ? await authorityApi(engineSessionId) : undefined;
+      if (authority && authority.rootStatus !== "ok") {
+        if (requestIdRef.current !== requestId || targetKeyRef.current !== requestTargetKey) return;
+        setWorkspace({
+          root: null,
+          kind: null,
+          mainRoot: authority.mainRoot,
+          mainRootId: authority.mainRootId,
+          projectId: authority.projectId,
+          ready: true,
+          error:
+            authority.rootStatusMessage ??
+            `Session root status ${authority.rootStatus}: repair required`,
+        });
+        return;
+      }
       const next =
         authority?.workspace ??
         (await window.codeshell.getSessionWorkspace(engineSessionId, projectPath));
@@ -107,9 +122,9 @@ export function usePanelWorkspaceRoot(
     } catch (error) {
       if (requestIdRef.current !== requestId || targetKeyRef.current !== requestTargetKey) return;
       setWorkspace({
-        root: projectPath,
-        kind: "main",
-        mainRoot: projectPath,
+        root: null,
+        kind: null,
+        mainRoot: null,
         mainRootId: null,
         projectId: null,
         ready: true,

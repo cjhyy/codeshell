@@ -47,7 +47,12 @@ import {
   interactiveBrowserRuntimeOwner,
   replaceStreamEventInLine,
 } from "./browser-runtime/index.js";
-import { Methods, SessionManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
+import {
+  Methods,
+  SessionManager,
+  type SessionProjectBinding,
+  type SessionWorkspace,
+} from "@cjhyy/code-shell-core";
 import {
   PET_REPORT_TO_MIMI_METHOD,
   type PetProjectionDelta,
@@ -1633,6 +1638,27 @@ export class AgentBridge implements PetStateBridge {
     const result = response.result as { ok?: boolean; workspace?: SessionWorkspace | null };
     if (result.ok !== true || !result.workspace) {
       throw new Error(`worker could not rebase workspace for session ${sessionId}`);
+    }
+  }
+
+  async migrateSessionMainRoot(
+    sessionId: string,
+    project: SessionProjectBinding,
+    mainRoot: string,
+  ): Promise<void> {
+    if (!this.core.canSend()) {
+      throw new Error(`no live worker for session ${sessionId}`);
+    }
+    const response = await this.requestWorker(
+      Methods.MigrateSessionMainRoot,
+      { sessionId, project, mainRoot },
+      5_000,
+      { meta: { origin: "host", producer: "migrate-session-main-root" } },
+    );
+    if (!response.ok) throw new Error(response.message);
+    const result = response.result as { ok?: boolean; workspace?: SessionWorkspace | null };
+    if (result.ok !== true || result.workspace?.kind !== "main") {
+      throw new Error(`worker could not migrate main root for session ${sessionId}`);
     }
   }
 

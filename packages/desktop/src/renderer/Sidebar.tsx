@@ -25,6 +25,7 @@ import {
   Star,
   Trash2,
   UsersRound,
+  Wrench,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -856,6 +857,9 @@ function useVisibleSessionWorkspaces(
         const workspace =
           authority?.workspace ??
           (await window.codeshell.getSessionWorkspace(sessionId, projectPath));
+        if (authority && authority.rootStatus !== "ok") {
+          return { workspace, authority, branch: undefined };
+        }
         const status =
           typeof window.codeshell.getSessionGitStatus === "function"
             ? await window.codeshell.getSessionGitStatus(sessionId)
@@ -915,6 +919,7 @@ export function ProjectGroup({
   workspaceChange: WorkspaceChangeEvent | null;
 }) {
   const { t } = useT();
+  const toast = useToast();
   const [showMore, setShowMore] = useState(false);
   /** How many EXPANDED_SESSION_PAGE-sized pages of the expanded list to render. */
   const [expandedPage, setExpandedPage] = useState(1);
@@ -1030,6 +1035,18 @@ export function ProjectGroup({
                   ? sessionWorkspaces[s.engineSessionId]
                   : undefined;
                 const worktreeBranch = worktreeBranchOf(sessionWorkspace?.workspace);
+                const rootStatus = sessionWorkspace?.authority?.rootStatus;
+                const repairTarget =
+                  rootStatus && rootStatus !== "ok"
+                    ? (project.roots.find(
+                        (root) =>
+                          root.id === project.primaryRootId &&
+                          root.id !== sessionWorkspace.authority?.mainRootId,
+                      ) ??
+                      project.roots.find(
+                        (root) => root.id !== sessionWorkspace.authority?.mainRootId,
+                      ))
+                    : undefined;
                 return (
                   <SessionRow
                     key={s.id}
@@ -1042,12 +1059,32 @@ export function ProjectGroup({
                       sessionWorkspace?.branch ?? projectBranch,
                     )}
                     folderName={sessionMainRootLabel(project, sessionWorkspace?.authority)}
+                    rootStatus={rootStatus}
+                    rootStatusMessage={sessionWorkspace?.authority?.rootStatusMessage}
+                    repairTargetRootId={repairTarget?.id}
                     showKbd={isActiveProject && i < 5}
                     kbdIndex={i + 1}
                     onClick={() => onSelectSession(s.id)}
                     onContextMenu={(e) => onSessionContextMenu(e, s)}
                     onPin={() => onPinSession(s.id, !s.pinned)}
                     onArchive={() => onArchiveSession(s.id)}
+                    onRepair={
+                      s.engineSessionId && repairTarget
+                        ? () => {
+                            void window.codeshell.projectRegistry
+                              .migrateSessionMainRoot(s.engineSessionId!, repairTarget.id)
+                              .then(() =>
+                                toast({
+                                  message: t("sidebar.sessionRootRepairComplete"),
+                                  variant: "success",
+                                }),
+                              )
+                              .catch((error) =>
+                                toast({ message: String(error), variant: "error" }),
+                              );
+                          }
+                        : undefined
+                    }
                     onHover={refreshProjectBranch}
                   />
                 );
@@ -1232,12 +1269,16 @@ const SessionRow = React.memo(
     worktreeBranch,
     branch,
     folderName,
+    rootStatus,
+    rootStatusMessage,
+    repairTargetRootId,
     showKbd,
     kbdIndex,
     onClick,
     onContextMenu,
     onPin,
     onArchive,
+    onRepair,
     onHover,
   }: {
     s: SessionSummary;
@@ -1246,12 +1287,16 @@ const SessionRow = React.memo(
     worktreeBranch?: string;
     branch?: string;
     folderName: string;
+    rootStatus?: SessionWorkspaceAuthority["rootStatus"];
+    rootStatusMessage?: string;
+    repairTargetRootId?: string;
     showKbd: boolean;
     kbdIndex: number;
     onClick: () => void;
     onContextMenu: (e: React.MouseEvent) => void;
     onPin?: () => void;
     onArchive?: () => void;
+    onRepair?: () => void;
     onHover?: () => void;
   }) {
     const { t, lang } = useT();
@@ -1351,6 +1396,19 @@ const SessionRow = React.memo(
               />
             )}
             <span className="flex-1 truncate text-left">{s.title}</span>
+            {rootStatus && rootStatus !== "ok" && (
+              <span
+                data-session-root-status={rootStatus}
+                title={rootStatusMessage}
+                className="shrink-0 rounded bg-destructive/10 px-1 py-0.5 text-[9px] font-medium text-destructive"
+              >
+                {t(
+                  rootStatus === "dir_missing"
+                    ? "sidebar.sessionRootDirMissing"
+                    : "sidebar.sessionRootRemoved",
+                )}
+              </span>
+            )}
             {s.pinned && (
               <Pin
                 className="h-3 w-3 shrink-0 fill-current text-primary"
@@ -1376,6 +1434,23 @@ const SessionRow = React.memo(
               />
             ) : null}
           </Button>
+          {rootStatus && rootStatus !== "ok" && onRepair && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 shrink-0 gap-1 px-1.5 text-[10px] text-primary"
+              title={rootStatusMessage}
+              data-repair-target-root-id={repairTargetRootId}
+              onClick={(event) => {
+                event.stopPropagation();
+                onRepair();
+              }}
+            >
+              <Wrench size={11} />
+              {t("sidebar.repairSessionRoot")}
+            </Button>
+          )}
           <span className="relative flex shrink-0 items-center">
             {confirming ? (
               <Button
@@ -1468,6 +1543,9 @@ const SessionRow = React.memo(
     prev.worktreeBranch === next.worktreeBranch &&
     prev.branch === next.branch &&
     prev.folderName === next.folderName &&
+    prev.rootStatus === next.rootStatus &&
+    prev.rootStatusMessage === next.rootStatusMessage &&
+    prev.repairTargetRootId === next.repairTargetRootId &&
     prev.showKbd === next.showKbd &&
     prev.kbdIndex === next.kbdIndex,
 );

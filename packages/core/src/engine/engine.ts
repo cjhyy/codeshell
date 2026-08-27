@@ -3576,6 +3576,35 @@ export class Engine {
     }
   }
 
+  /** Rebase every live and durable main-root field through the owning Engine. */
+  migrateSessionMainRoot(
+    sessionId: string,
+    project: import("../types.js").SessionProjectBinding,
+    mainRoot: string,
+  ): SessionWorkspace | null {
+    if (!sessionId || !this.sessionManager.exists(sessionId)) return null;
+    try {
+      const workspace: SessionWorkspace = { root: mainRoot, kind: "main" };
+      const stateRevision = this.sessionManager.migrateSessionMainRoot(
+        sessionId,
+        project,
+        mainRoot,
+      );
+      if (this.activeRunSession?.state.sessionId === sessionId) {
+        Object.assign(this.activeRunSession.state, {
+          project: { ...project },
+          cwd: mainRoot,
+          workspace,
+          stateRevision,
+        });
+      }
+      this.workspaceContextBySession.delete(sessionId);
+      return workspace;
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Reset a session's workspace pointer back to its main root. If the session is
    * actively running, mutate that live SessionBundle first so the run's next

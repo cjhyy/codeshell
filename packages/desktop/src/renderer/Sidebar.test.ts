@@ -271,4 +271,116 @@ describe("Sidebar project session visibility", () => {
     expect(calls).toContain("authority:engine-old");
     expect(calls).toContain("git:engine-old");
   });
+
+  test("shows a root_removed badge and repairs through sessionId plus Main-resolved targetRootId", async () => {
+    ensureMiniDom();
+    const calls: unknown[][] = [];
+    const multiRootProject: TrackedProject = {
+      ...project,
+      path: "/current-primary",
+      roots: [
+        { id: "root-primary", path: "/current-primary", name: "current-primary", addedAt: 1 },
+        { id: "root-other", path: "/other", name: "other", addedAt: 2 },
+      ],
+      primaryRootId: "root-primary",
+    };
+    Object.assign(window, {
+      codeshell: {
+        getGitStatus: async () => ({ branch: "main", entries: [], clean: true }),
+        getSessionWorkspaceAuthority: async (sessionId: string) =>
+          sessionId === "engine-missing-dir"
+            ? {
+                workspace: { root: "/other", kind: "main" },
+                projectId: project.id,
+                mainRootId: "root-other",
+                mainRoot: "/other",
+                mainRootName: "other",
+                rootStatus: "dir_missing",
+                rootStatusReason: "directory_missing",
+                rootStatusMessage: "Session main root directory is missing",
+              }
+            : {
+                workspace: { root: "/removed", kind: "main" },
+                projectId: project.id,
+                mainRootId: "root-removed",
+                mainRoot: "/removed",
+                mainRootName: "removed",
+                rootStatus: "root_removed",
+                rootStatusReason: "root_not_mounted",
+                rootStatusMessage: "Session main root is no longer mounted",
+              },
+        getSessionGitStatus: async () => {
+          throw new Error("missing roots must not reach Git");
+        },
+        projectRegistry: {
+          migrateSessionMainRoot: async (sessionId: string, targetRootId: string) => {
+            calls.push([sessionId, targetRootId]);
+          },
+        },
+      },
+    });
+    const index: SessionIndex = {
+      sessions: [
+        {
+          id: "ui-session-dir",
+          engineSessionId: "engine-missing-dir",
+          title: "Missing Directory Session",
+          createdAt: 2,
+          updatedAt: 2,
+        },
+        {
+          id: "ui-session",
+          engineSessionId: "engine-missing",
+          title: "Missing Session",
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+      activeSessionId: null,
+    };
+    const container = document.createElement("div") as unknown as HTMLElement;
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        React.createElement(ProjectGroup, {
+          project: multiRootProject,
+          index,
+          collapsed: false,
+          isActiveProject: false,
+          activeSessionId: null,
+          statusFor: () => undefined,
+          onToggle: () => undefined,
+          onSelectProject: () => undefined,
+          onSelectSession: () => undefined,
+          onMenuClick: () => undefined,
+          onNewChat: () => undefined,
+          onProjectContextMenu: () => undefined,
+          onSessionContextMenu: () => undefined,
+          onPinSession: () => undefined,
+          onArchiveSession: () => undefined,
+          workspaceChange: null,
+        }),
+      );
+      await flushMicrotasks();
+    });
+
+    expect(
+      findElements(container, "SPAN").some(
+        (span) => reactPropsOf(span)["data-session-root-status"] === "root_removed",
+      ),
+    ).toBe(true);
+    expect(
+      findElements(container, "SPAN").some(
+        (span) => reactPropsOf(span)["data-session-root-status"] === "dir_missing",
+      ),
+    ).toBe(true);
+    const repair = buttonWithText(container, "修复");
+    expect(repair).toBeDefined();
+    await act(async () => {
+      reactPropsOf(repair).onClick({ stopPropagation: () => undefined });
+      await flushMicrotasks();
+    });
+    expect(calls).toEqual([["engine-missing-dir", "root-primary"]]);
+  });
 });

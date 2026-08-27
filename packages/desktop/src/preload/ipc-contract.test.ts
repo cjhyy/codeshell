@@ -62,6 +62,8 @@ describe("desktop IPC contract", () => {
     );
     const channels = [
       "workspace:authority",
+      "projectRegistry:migrateSessionMainRoot",
+      "sessions:setArchived",
       "workspace:gitStatus",
       "workspace:gitBranches",
       "workspace:profiles",

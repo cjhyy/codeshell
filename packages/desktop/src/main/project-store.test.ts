@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { SessionManager } from "@cjhyy/code-shell-core";
 import { SessionCwdIndex, type SessionCwdIndexFs } from "./session-cwd-index.js";
 import { ProjectStore } from "./project-store.js";
 
@@ -38,7 +39,13 @@ function dir(name: string): string {
   return value;
 }
 
-function store(options: { index?: SessionCwdIndex; noRepoPath?: string } = {}): ProjectStore {
+function store(
+  options: {
+    index?: SessionCwdIndex;
+    sessionManager?: SessionManager;
+    noRepoPath?: string;
+  } = {},
+): ProjectStore {
   let sequence = 0;
   return new ProjectStore({
     file: projectsFile,
@@ -60,6 +67,7 @@ function store(options: { index?: SessionCwdIndex; noRepoPath?: string } = {}): 
           },
         },
       }),
+    sessionManager: options.sessionManager,
     noRepoPath: options.noRepoPath ?? join(fixtureRoot, "no-repo"),
     randomUUID: () => `id-${++sequence}`,
     now: () => 1_000 + sequence,
@@ -171,6 +179,178 @@ describe("ProjectStore", () => {
     );
   });
 
+  test("atomically migrates a bound worktree Session to main and synchronizes index, handoff, and removal lifecycle", async () => {
+    const primary = dir("migration-primary");
+    const secondary = dir("migration-secondary");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    await index.ensureLoaded();
+    const projects = store({ index, sessionManager });
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = updated.roots.find((root) => root.path === realpathSync(secondary))!;
+    const sessionId = "migrate-worktree-session";
+    const worktree = join(fixtureRoot, "old-worktree");
+    mkdirSync(worktree);
+    sessionManager.create(secondaryRoot.path, "m", "p", sessionId);
+    sessionManager.updateSessionState(sessionId, {
+      project: { projectId: project.id, mainRootId: secondaryRoot.id },
+      workspace: {
+        root: worktree,
+        kind: "worktree",
+        worktree: {
+          path: worktree,
+          branch: "worktree/old",
+          baseRef: "main",
+          createdBy: "codeshell",
+        },
+      },
+    });
+    index.upsert(sessionId, {
+      cwd: secondaryRoot.path,
+      workspaceRoot: worktree,
+      projectId: project.id,
+      mainRootId: secondaryRoot.id,
+    });
+
+    await projects.migrateSessionMainRoot(sessionId, project.primaryRootId);
+
+    expect(sessionManager.readSessionState(sessionId)).toMatchObject({
+      cwd: realpathSync(primary),
+      project: { projectId: project.id, mainRootId: project.primaryRootId },
+      workspace: { root: realpathSync(primary), kind: "main" },
+    });
+    expect(index.lookupCached(sessionId)).toMatchObject({
+      cwd: realpathSync(primary),
+      workspaceRoot: realpathSync(primary),
+      projectId: project.id,
+      mainRootId: project.primaryRootId,
+    });
+    const transcript = readFileSync(join(sessionsDir, sessionId, "transcript.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(transcript.at(-1)).toMatchObject({
+      type: "session_meta",
+      data: {
+        handoffFrom: worktree,
+        workspace: { root: realpathSync(primary), kind: "main" },
+      },
+    });
+    await expect(projects.removeRoot(project.id, secondaryRoot.id)).resolves.toMatchObject({
+      id: project.id,
+    });
+  });
+
+  test("rejects nonexistent, cross-project, and physically missing migration targets without partial state", async () => {
+    const primary = dir("reject-primary");
+    const secondary = dir("reject-secondary");
+    const foreign = dir("reject-foreign");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    await index.ensureLoaded();
+    const projects = store({ index, sessionManager });
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = updated.roots.find((root) => root.path === realpathSync(secondary))!;
+    const foreignProject = await projects.createFromPath(foreign);
+    const sessionId = "reject-migration-session";
+    sessionManager.create(secondaryRoot.path, "m", "p", sessionId);
+    sessionManager.updateSessionState(sessionId, {
+      project: { projectId: project.id, mainRootId: secondaryRoot.id },
+    });
+    index.upsert(sessionId, {
+      cwd: secondaryRoot.path,
+      workspaceRoot: secondaryRoot.path,
+      projectId: project.id,
+      mainRootId: secondaryRoot.id,
+    });
+    const before = readFileSync(join(sessionsDir, sessionId, "state.json"), "utf8");
+
+    await expect(projects.migrateSessionMainRoot(sessionId, "missing-root")).rejects.toThrow(
+      /target.*not found/i,
+    );
+    await expect(
+      projects.migrateSessionMainRoot(sessionId, foreignProject.primaryRootId),
+    ).rejects.toThrow(/same project|target.*not found/i);
+    rmSync(primary, { recursive: true, force: true });
+    await expect(projects.migrateSessionMainRoot(sessionId, project.primaryRootId)).rejects.toThrow(
+      /directory.*missing/i,
+    );
+    expect(readFileSync(join(sessionsDir, sessionId, "state.json"), "utf8")).toBe(before);
+    expect(index.lookupCached(sessionId)).toMatchObject({
+      cwd: secondaryRoot.path,
+      mainRootId: secondaryRoot.id,
+    });
+  });
+
+  test("repairs a Session whose bound root was externally removed from otherwise valid project data", async () => {
+    const primary = dir("removed-repair-primary");
+    const secondary = dir("removed-repair-secondary");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    await index.ensureLoaded();
+    const projects = store({ index, sessionManager });
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = updated.roots.find((root) => root.id !== project.primaryRootId)!;
+    const sessionId = "removed-root-repair";
+    sessionManager.create(secondaryRoot.path, "m", "p", sessionId);
+    sessionManager.updateSessionState(sessionId, {
+      project: { projectId: project.id, mainRootId: secondaryRoot.id },
+    });
+    index.upsert(sessionId, {
+      cwd: secondaryRoot.path,
+      projectId: project.id,
+      mainRootId: secondaryRoot.id,
+    });
+    const registry = JSON.parse(readFileSync(projectsFile, "utf8"));
+    registry.projects[0].roots = registry.projects[0].roots.filter(
+      (root: { id: string }) => root.id !== secondaryRoot.id,
+    );
+    writeFileSync(projectsFile, JSON.stringify(registry, null, 2));
+
+    await projects.migrateSessionMainRoot(sessionId, project.primaryRootId);
+
+    expect(sessionManager.readSessionState(sessionId)).toMatchObject({
+      cwd: realpathSync(primary),
+      project: { projectId: project.id, mainRootId: project.primaryRootId },
+      workspace: { root: realpathSync(primary), kind: "main" },
+    });
+  });
+
+  test("allows root removal after the only bound Session is durably archived", async () => {
+    const primary = dir("archive-primary");
+    const secondary = dir("archive-secondary");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    await index.ensureLoaded();
+    const projects = store({ index, sessionManager });
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = updated.roots.find((root) => root.path === realpathSync(secondary))!;
+    const sessionId = "archived-root-session";
+    sessionManager.create(secondaryRoot.path, "m", "p", sessionId);
+    sessionManager.updateSessionState(sessionId, {
+      project: { projectId: project.id, mainRootId: secondaryRoot.id },
+    });
+    index.upsert(sessionId, {
+      cwd: secondaryRoot.path,
+      projectId: project.id,
+      mainRootId: secondaryRoot.id,
+    });
+
+    await expect(projects.removeRoot(project.id, secondaryRoot.id)).rejects.toThrow(sessionId);
+    sessionManager.setSessionArchived(sessionId, 1234);
+    await expect(projects.removeRoot(project.id, secondaryRoot.id)).resolves.toMatchObject({
+      id: project.id,
+    });
+  });
+
   test("resolves every root, no-repo, batch ownership, and confirmed legacy cwd", async () => {
     const primary = dir("primary");
     const secondary = dir("secondary");
@@ -256,6 +436,32 @@ describe("ProjectStore", () => {
         status: "confirmed",
       }),
     ).toThrow(/main root is not mounted/);
+
+    rmSync(secondaryRoot.path, { recursive: true, force: true });
+    expect(() =>
+      projects.resolveRunProjectSync(project.id, "missing-dir", {
+        sessionId: "missing-dir",
+        cwd: secondaryRoot.path,
+        projectId: project.id,
+        mainRootId: secondaryRoot.id,
+        status: "confirmed",
+      }),
+    ).toThrow(/dir_missing/);
+
+    const registry = JSON.parse(readFileSync(projectsFile, "utf8"));
+    registry.projects[0].roots = registry.projects[0].roots.filter(
+      (root: { id: string }) => root.id !== secondaryRoot.id,
+    );
+    writeFileSync(projectsFile, JSON.stringify(registry, null, 2));
+    expect(() =>
+      projects.resolveRunProjectSync(project.id, "removed-root", {
+        sessionId: "removed-root",
+        cwd: secondaryRoot.path,
+        projectId: project.id,
+        mainRootId: secondaryRoot.id,
+        status: "confirmed",
+      }),
+    ).toThrow(/root_removed/);
   });
 
   test("soft deletes projects while retaining tombstones and refuses unsafe registry roots", async () => {

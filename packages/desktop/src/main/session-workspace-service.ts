@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import {
   createWorkspaceContext,
@@ -30,7 +31,8 @@ export interface SessionWorkspaceList {
   worktrees: WorktreeInfo[];
 }
 
-export type SessionRootStatus = "ok";
+export type SessionRootStatus = "ok" | "dir_missing" | "root_removed";
+export type SessionRootStatusReason = "directory_missing" | "project_missing" | "root_not_mounted";
 
 export interface SessionWorkspaceAuthority {
   workspace: SessionWorkspace;
@@ -39,6 +41,8 @@ export interface SessionWorkspaceAuthority {
   mainRoot: string;
   mainRootName: string;
   rootStatus: SessionRootStatus;
+  rootStatusReason?: SessionRootStatusReason;
+  rootStatusMessage?: string;
 }
 
 export interface ReleasedSessionWorkspace {
@@ -121,7 +125,9 @@ function workspaceOwners(sm: SessionManager): WorktreeWorkspaceOwner[] {
 }
 
 async function mainRootFor(sm: SessionManager, sessionId: string): Promise<string> {
-  return (await mainRootAuthorityFor(sm, sessionId)).mainRoot;
+  const authority = await mainRootAuthorityFor(sm, sessionId);
+  requireUsableSessionRootAuthority(authority);
+  return authority.mainRoot;
 }
 
 async function mainRootAuthorityFor(
@@ -137,9 +143,43 @@ async function mainRootAuthorityFor(
   // stable workspace identity and creates a spurious handoff.
   const binding = sm.readSessionProjectBinding(sessionId);
   if (binding) {
-    const project = await projects().requireLive(binding.projectId);
+    const project = await projects().get(binding.projectId);
+    if (!project || project.deletedAt !== undefined) {
+      return {
+        projectId: binding.projectId,
+        mainRootId: binding.mainRootId,
+        mainRoot: fromSession,
+        mainRootName: rootName(fromSession),
+        rootStatus: "root_removed",
+        rootStatusReason: "project_missing",
+        rootStatusMessage: `Session root status root_removed: project ${binding.projectId} is unavailable`,
+      };
+    }
     const root = project.roots.find((candidate) => candidate.id === binding.mainRootId);
-    if (!root) throw new Error("session main root is not mounted in the project");
+    if (!root) {
+      return {
+        projectId: binding.projectId,
+        mainRootId: binding.mainRootId,
+        mainRoot: fromSession,
+        mainRootName: rootName(fromSession),
+        rootStatus: "root_removed",
+        rootStatusReason: "root_not_mounted",
+        rootStatusMessage:
+          `Session root status root_removed: root ${binding.mainRootId} ` +
+          `is no longer mounted in project ${binding.projectId}`,
+      };
+    }
+    if (!isDirectory(root.path)) {
+      return {
+        projectId: binding.projectId,
+        mainRootId: root.id,
+        mainRoot: root.path,
+        mainRootName: root.name,
+        rootStatus: "dir_missing",
+        rootStatusReason: "directory_missing",
+        rootStatusMessage: `Session root status dir_missing: directory is missing: ${root.path}`,
+      };
+    }
     await findMainWorktreeRootIfUsable(root.path);
     return {
       projectId: binding.projectId,
@@ -149,14 +189,47 @@ async function mainRootAuthorityFor(
       rootStatus: "ok",
     };
   }
+  if (!isDirectory(fromSession)) {
+    return {
+      projectId: null,
+      mainRootId: null,
+      mainRoot: fromSession,
+      mainRootName: rootName(fromSession),
+      rootStatus: "dir_missing",
+      rootStatusReason: "directory_missing",
+      rootStatusMessage: `Session root status dir_missing: directory is missing: ${fromSession}`,
+    };
+  }
   await findMainWorktreeRootIfUsable(fromSession);
   return {
     projectId: null,
     mainRootId: null,
     mainRoot: fromSession,
-    mainRootName: fromSession.split(/[\\/]/).filter(Boolean).at(-1) ?? fromSession,
+    mainRootName: rootName(fromSession),
     rootStatus: "ok",
   };
+}
+
+function rootName(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
+}
+
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+export function requireUsableSessionRootAuthority(
+  authority: Pick<SessionWorkspaceAuthority, "rootStatus" | "rootStatusMessage">,
+): void {
+  if (authority.rootStatus !== "ok") {
+    throw new Error(
+      authority.rootStatusMessage ?? `Session root status ${authority.rootStatus}: repair required`,
+    );
+  }
 }
 
 async function findMainWorktreeRootIfUsable(cwd: string): Promise<string | undefined> {
@@ -252,6 +325,7 @@ export async function resolveSessionReviewWorkspaceForUi(sessionId: string): Pro
   roots: Array<{ id: string; path: string; role: "primary" | "secondary" }>;
 }> {
   const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  requireUsableSessionRootAuthority(authority);
   if (authority.projectId && authority.mainRootId) {
     const project = await projects().requireLive(authority.projectId);
     const context = createWorkspaceContext({
@@ -285,6 +359,7 @@ export async function requireSessionFileRootForUi(
 ): Promise<string> {
   if (typeof rootId !== "string" || !rootId) throw new Error("session file root id is required");
   const authority = await getSessionWorkspaceAuthorityForUi(sessionId);
+  requireUsableSessionRootAuthority(authority);
   if (!authority.projectId || !authority.mainRootId) {
     throw new Error("session is not bound to a project root");
   }

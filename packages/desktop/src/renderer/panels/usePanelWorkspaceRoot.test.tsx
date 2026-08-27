@@ -210,7 +210,7 @@ describe("usePanelWorkspaceRoot", () => {
     expect(unsubscribed).toBe(1);
   });
 
-  test("falls back to this bucket's repository after IPC failure", async () => {
+  test("fails closed instead of falling back to this bucket's renderer project path", async () => {
     ensureMiniDom();
     Object.assign(window, {
       codeshell: {
@@ -224,13 +224,47 @@ describe("usePanelWorkspaceRoot", () => {
     const hook = await renderHook(() => usePanelWorkspaceRoot("engine-1", "/repo"));
     cleanup = hook.unmount;
     expect(hook.result.current).toEqual({
-      root: "/repo",
-      kind: "main",
-      mainRoot: "/repo",
+      root: null,
+      kind: null,
+      mainRoot: null,
       mainRootId: null,
       projectId: null,
       ready: true,
       error: "unavailable",
+    });
+  });
+
+  test("fails closed when Main derives a missing Session root", async () => {
+    ensureMiniDom();
+    Object.assign(window, {
+      codeshell: {
+        getSessionWorkspaceAuthority: async () => ({
+          workspace: { root: "/removed", kind: "main" },
+          projectId: "project-1",
+          mainRootId: "root-removed",
+          mainRoot: "/removed",
+          mainRootName: "removed",
+          rootStatus: "root_removed",
+          rootStatusReason: "root_not_mounted",
+          rootStatusMessage: "Session root root-removed is no longer mounted",
+        }),
+        getSessionWorkspace: async () => {
+          throw new Error("legacy workspace API must not be used");
+        },
+        onWorkspaceChanged: () => () => {},
+      },
+    });
+
+    const hook = await renderHook(() => usePanelWorkspaceRoot("engine-1", "/current-primary"));
+    cleanup = hook.unmount;
+    expect(hook.result.current).toEqual({
+      root: null,
+      kind: null,
+      mainRoot: "/removed",
+      mainRootId: "root-removed",
+      projectId: "project-1",
+      ready: true,
+      error: "Session root root-removed is no longer mounted",
     });
   });
 });

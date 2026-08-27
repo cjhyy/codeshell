@@ -11,7 +11,7 @@ import {
   statSync,
 } from "node:fs";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
-import { codeShellHome } from "@cjhyy/code-shell-core";
+import { codeShellHome, SessionManager, type SessionWorkspace } from "@cjhyy/code-shell-core";
 import {
   canonicalKey,
   createWorkspaceContext,
@@ -81,6 +81,7 @@ interface ProjectStoreOptions {
   recentsFile?: string;
   migrationMarkerFile?: string;
   sessionIndex?: SessionCwdIndex;
+  sessionManager?: SessionManager;
   noRepoPath?: string;
   randomUUID?: () => string;
   now?: () => number;
@@ -99,11 +100,31 @@ export interface ProjectRunResolution {
   workspaceContext: WorkspaceContext;
 }
 
+export interface MigratedSessionMainRoot {
+  sessionId: string;
+  projectId: ProjectId;
+  previousMainRootId: ProjectRootId;
+  targetRootId: ProjectRootId;
+  mainRoot: string;
+  workspace: SessionWorkspace;
+}
+
+export interface MigrateSessionMainRootOptions {
+  /** Route the commit through the worker that owns an active Session bundle. */
+  persistLive?: (input: {
+    sessionId: string;
+    projectId: ProjectId;
+    mainRootId: ProjectRootId;
+    mainRoot: string;
+  }) => Promise<void>;
+}
+
 export class ProjectStore {
   private readonly file: string;
   private readonly recentsFile: string;
   private readonly migrationMarkerFile: string;
   private readonly sessionIndex: SessionCwdIndex;
+  private readonly sessionManager: SessionManager;
   private readonly noRepoPath: string;
   private readonly makeId: () => string;
   private readonly now: () => number;
@@ -118,6 +139,7 @@ export class ProjectStore {
     this.migrationMarkerFile =
       options.migrationMarkerFile ?? join(desktopDir, "projects-v2-migration.json");
     this.sessionIndex = options.sessionIndex ?? getSessionCwdIndex();
+    this.sessionManager = options.sessionManager ?? new SessionManager();
     this.noRepoPath = options.noRepoPath ?? join(codeShellHome(), "no-repo");
     this.makeId = options.randomUUID ?? randomUUID;
     this.now = options.now ?? Date.now;
@@ -150,6 +172,7 @@ export class ProjectStore {
     await this.sessionIndex.ensureLoaded();
     const result: Record<string, string[]> = {};
     for (const entry of this.sessionIndex.confirmedEntries()) {
+      if (this.sessionManager.readSessionArchivedAt(entry.sessionId) !== undefined) continue;
       let rootId: string | undefined;
       if (entry.projectId === projectId && entry.mainRootId) {
         rootId = entry.mainRootId;
@@ -248,8 +271,9 @@ export class ProjectStore {
       .confirmedEntries()
       .filter(
         (entry) =>
-          (entry.projectId === projectId && entry.mainRootId === rootId) ||
-          (!entry.projectId && canonicalKey(entry.cwd) === removedKey),
+          this.sessionManager.readSessionArchivedAt(entry.sessionId) === undefined &&
+          ((entry.projectId === projectId && entry.mainRootId === rootId) ||
+            (!entry.projectId && canonicalKey(entry.cwd) === removedKey)),
       )
       .map((entry) => entry.sessionId);
     if (affected.length > 0) {
@@ -267,6 +291,80 @@ export class ProjectStore {
     });
     await this.didChange();
     return cloneProject(project);
+  }
+
+  /**
+   * Main-authoritative Session root migration. The renderer supplies only the
+   * opaque Session and target-root ids; project identity and paths are resolved
+   * from durable Session state plus this registry.
+   */
+  async migrateSessionMainRoot(
+    sessionId: string,
+    targetRootId: string,
+    options: MigrateSessionMainRootOptions = {},
+  ): Promise<MigratedSessionMainRoot> {
+    await this.sessionIndex.ensureLoaded();
+    const state = this.sessionManager.readSessionState(sessionId);
+    if (!state) throw new Error(`unknown or corrupt Session: ${sessionId}`);
+    const binding = state.project;
+    if (!binding?.projectId || !binding.mainRootId) {
+      throw new Error("Session is not bound to a project root");
+    }
+    const project = await this.requireLive(binding.projectId);
+    const target = project.roots.find((root) => root.id === targetRootId);
+    if (!target) throw new Error("migration target root not found in the same project");
+    if (!existsDirectory(target.path)) {
+      throw new Error(`migration target directory is missing: ${target.path}`);
+    }
+
+    const from = state.workspace ?? ({ root: state.cwd, kind: "main" } as const);
+    const workspace: SessionWorkspace = { root: target.path, kind: "main" };
+    const commit = {
+      sessionId,
+      projectId: project.id,
+      mainRootId: target.id,
+      mainRoot: target.path,
+    };
+
+    if (options.persistLive) {
+      try {
+        await options.persistLive(commit);
+      } catch (error) {
+        // A worker response can be lost after its atomic rename. Re-read the
+        // commit point: a fully matching state is success and can safely finish
+        // the recoverable index/handoff projections; anything else is failure.
+        if (!sessionRootMigrationMatches(this.sessionManager.readSessionState(sessionId), commit)) {
+          throw error;
+        }
+      }
+      if (!sessionRootMigrationMatches(this.sessionManager.readSessionState(sessionId), commit)) {
+        throw new Error("live Session owner did not commit the root migration");
+      }
+    } else {
+      this.sessionManager.migrateSessionMainRoot(
+        sessionId,
+        { projectId: project.id, mainRootId: target.id },
+        target.path,
+      );
+    }
+
+    // state.json is the commit point. These projections are deterministic and
+    // replayable: a process restart rebuilds the index from that same state.
+    this.sessionIndex.upsert(sessionId, {
+      cwd: target.path,
+      workspaceRoot: target.path,
+      projectId: project.id,
+      mainRootId: target.id,
+    });
+    this.sessionManager.recordWorkspaceHandoff(sessionId, from, workspace);
+    return {
+      sessionId,
+      projectId: project.id,
+      previousMainRootId: binding.mainRootId,
+      targetRootId: target.id,
+      mainRoot: target.path,
+      workspace,
+    };
   }
 
   async setPrimary(projectId: string, rootId: string): Promise<LocalProject> {
@@ -417,7 +515,15 @@ export class ProjectStore {
       throw new Error("session cwd index is not ready");
     }
     const registry = readRegistryFile(this.file);
-    const project = requireLiveProject(registry, projectId);
+    const project = registry.projects.find(
+      (candidate) => candidate.id === projectId && candidate.deletedAt === undefined,
+    );
+    if (!project) {
+      if (session?.projectId === projectId) {
+        throw new Error("Session root status root_removed: bound project is unavailable");
+      }
+      throw new Error("project not found");
+    }
     if (session && session.sessionId !== sessionId) {
       throw new Error("resolved Session entry does not match the requested session");
     }
@@ -438,8 +544,12 @@ export class ProjectStore {
       );
       cwd = session.workspaceRoot ?? session.cwd;
     }
-    if (!mainRoot) throw new Error("session main root is not mounted in the project");
-    if (!existsDirectory(mainRoot.path)) throw new Error("session main root directory is missing");
+    if (!mainRoot) {
+      throw new Error("Session root status root_removed: main root is not mounted in the project");
+    }
+    if (!existsDirectory(mainRoot.path)) {
+      throw new Error(`Session root status dir_missing: directory is missing: ${mainRoot.path}`);
+    }
     return {
       project: cloneProject(project),
       mainRoot: { ...mainRoot },
@@ -594,6 +704,26 @@ function workspaceContextFor(
       role: root.id === mainRoot.id ? ("primary" as const) : ("secondary" as const),
     })),
   });
+}
+
+function sessionRootMigrationMatches(
+  state:
+    | {
+        cwd: string;
+        project?: { projectId: string; mainRootId: string };
+        workspace?: SessionWorkspace;
+      }
+    | undefined,
+  commit: { projectId: string; mainRootId: string; mainRoot: string },
+): boolean {
+  return Boolean(
+    state &&
+    state.project?.projectId === commit.projectId &&
+    state.project.mainRootId === commit.mainRootId &&
+    canonicalKey(state.cwd) === canonicalKey(commit.mainRoot) &&
+    state.workspace?.kind === "main" &&
+    canonicalKey(state.workspace.root) === canonicalKey(commit.mainRoot),
+  );
 }
 
 function parseRegistryText(raw: string, file: string): LocalProjectRegistryV2 {

@@ -127,6 +127,70 @@ describe("cleanupSessionWorktreeForUi", () => {
     });
   });
 
+  test("derives ok, dir_missing, and root_removed without persisting a missing flag", async () => {
+    const missingDir = join(root, "missing-root");
+    const removedDir = join(root, "removed-root");
+    mkdirSync(missingDir);
+    mkdirSync(removedDir);
+    const projectStore = await projectStoreForFixture(root, sessionsDir);
+    const project = await projectStore.createFromPath(repo);
+    const withMissing = (await projectStore.addRoot(project.id, missingDir)).project;
+    const withRemoved = (await projectStore.addRoot(project.id, removedDir)).project;
+    const missingRoot = withMissing.roots.find((entry) => entry.id !== project.primaryRootId)!;
+    const removedRoot = withRemoved.roots.find(
+      (entry) => !withMissing.roots.some((existing) => existing.id === entry.id),
+    )!;
+    __setSessionWorkspaceServiceProjectStoreForTests(projectStore);
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", "status-ok");
+    bindSession(sessionsDir, "status-ok", project.id, project.primaryRootId);
+    sm.create(missingDir, "m", "p", "status-dir-missing");
+    bindSession(sessionsDir, "status-dir-missing", project.id, missingRoot.id);
+    sm.create(removedDir, "m", "p", "status-root-removed");
+    bindSession(sessionsDir, "status-root-removed", project.id, removedRoot.id);
+    rmSync(missingDir, { recursive: true, force: true });
+    const registryFile = join(root, "desktop", "projects.json");
+    const registry = JSON.parse(readFileSync(registryFile, "utf8"));
+    registry.projects[0].roots = registry.projects[0].roots.filter(
+      (entry: { id: string }) => entry.id !== removedRoot.id,
+    );
+    writeFileSync(registryFile, JSON.stringify(registry, null, 2));
+
+    await expect(getSessionWorkspaceAuthorityForUi("status-ok")).resolves.toMatchObject({
+      projectId: project.id,
+      mainRootId: project.primaryRootId,
+      mainRoot: project.roots[0]!.path,
+      rootStatus: "ok",
+    });
+    await expect(getSessionWorkspaceAuthorityForUi("status-dir-missing")).resolves.toMatchObject({
+      projectId: project.id,
+      mainRootId: missingRoot.id,
+      mainRoot: missingRoot.path,
+      rootStatus: "dir_missing",
+      rootStatusReason: "directory_missing",
+      rootStatusMessage: expect.stringContaining(missingRoot.path),
+    });
+    await expect(getSessionWorkspaceAuthorityForUi("status-root-removed")).resolves.toMatchObject({
+      projectId: project.id,
+      mainRootId: removedRoot.id,
+      mainRoot: removedDir,
+      rootStatus: "root_removed",
+      rootStatusReason: "root_not_mounted",
+      rootStatusMessage: expect.stringContaining(removedRoot.id),
+    });
+    await expect(getSessionWorkspaceForUi("status-dir-missing", repo)).rejects.toThrow(
+      /dir_missing/,
+    );
+    await expect(listSessionWorktreesForUi("status-root-removed", repo)).rejects.toThrow(
+      /root_removed/,
+    );
+    const persisted = JSON.parse(
+      readFileSync(join(sessionsDir, "status-root-removed", "state.json"), "utf8"),
+    );
+    expect(persisted.workspaceMissing).toBeUndefined();
+    expect(persisted.rootStatus).toBeUndefined();
+  });
+
   test("authorizes FilesPanel worktree and secondary reads by Session binding and rejects escapes", async () => {
     const secondary = join(root, "secondary");
     mkdirSync(secondary);

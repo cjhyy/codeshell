@@ -879,6 +879,37 @@ export class SessionManager {
     return this.updateSessionState(sessionId, { workspace });
   }
 
+  /**
+   * Commit a Session main-root migration as one state.json replacement.
+   *
+   * `cwd`, the durable project binding, and the execution workspace are one
+   * consistency unit: exposing any subset would let a resumed run combine the
+   * old authority with a new path. Derived availability such as dir_missing is
+   * deliberately absent from this patch and is recomputed by the host.
+   */
+  migrateSessionMainRoot(
+    sessionId: string,
+    project: import("../types.js").SessionProjectBinding,
+    mainRoot: string,
+  ): number {
+    if (
+      !project ||
+      typeof project.projectId !== "string" ||
+      project.projectId.length === 0 ||
+      typeof project.mainRootId !== "string" ||
+      project.mainRootId.length === 0 ||
+      typeof mainRoot !== "string" ||
+      mainRoot.length === 0
+    ) {
+      throw new SessionError(`invalid main-root migration for ${sessionId}`);
+    }
+    return this.updateSessionState(sessionId, {
+      project: { ...project },
+      cwd: mainRoot,
+      workspace: { root: mainRoot, kind: "main" },
+    });
+  }
+
   /** Read the durable archival timestamp; undefined = not archived / unprovable. */
   readSessionArchivedAt(sessionId: string): number | undefined {
     try {

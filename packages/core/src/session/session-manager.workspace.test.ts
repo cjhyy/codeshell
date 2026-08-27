@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SessionManager } from "./session-manager.js";
@@ -60,5 +60,62 @@ describe("SessionManager SessionWorkspace", () => {
 
     expect(sm.resume("legacy").state.workspace).toBeUndefined();
     expect(sm.getSessionWorkspace("legacy")).toEqual({ root: "/legacy/repo", kind: "main" });
+  });
+
+  test("atomically migrates the project binding, cwd, and worktree pointer without persisting derived status", () => {
+    const sm = new SessionManager(dir);
+    sm.create("/repo/old", "m", "p", "s-migrate");
+    sm.updateSessionState("s-migrate", {
+      project: { projectId: "project-1", mainRootId: "root-old" },
+      workspace: {
+        root: "/repo/.worktrees/feature",
+        kind: "worktree",
+        worktree: {
+          path: "/repo/.worktrees/feature",
+          branch: "worktree/feature",
+          baseRef: "main",
+          createdBy: "codeshell",
+        },
+      },
+    });
+
+    sm.migrateSessionMainRoot(
+      "s-migrate",
+      { projectId: "project-1", mainRootId: "root-new" },
+      "/repo/new",
+    );
+
+    const state = JSON.parse(readFileSync(join(dir, "s-migrate", "state.json"), "utf8"));
+    expect(state).toMatchObject({
+      cwd: "/repo/new",
+      project: { projectId: "project-1", mainRootId: "root-new" },
+      workspace: { root: "/repo/new", kind: "main" },
+    });
+    expect(state.workspaceMissing).toBeUndefined();
+    expect(state.rootStatus).toBeUndefined();
+  });
+
+  test("keeps the complete previous root state when the atomic migration write fails", () => {
+    if (process.platform === "win32") return;
+    const sm = new SessionManager(dir);
+    sm.create("/repo/old", "m", "p", "s-rollback");
+    sm.updateSessionState("s-rollback", {
+      project: { projectId: "project-1", mainRootId: "root-old" },
+    });
+    const stateFile = join(dir, "s-rollback", "state.json");
+    const before = readFileSync(stateFile, "utf8");
+    chmodSync(join(dir, "s-rollback"), 0o500);
+    try {
+      expect(() =>
+        sm.migrateSessionMainRoot(
+          "s-rollback",
+          { projectId: "project-1", mainRootId: "root-new" },
+          "/repo/new",
+        ),
+      ).toThrow();
+      expect(readFileSync(stateFile, "utf8")).toBe(before);
+    } finally {
+      chmodSync(join(dir, "s-rollback"), 0o700);
+    }
   });
 });
