@@ -81,7 +81,12 @@ const {
   workspaceIsExternal,
   workspaceRowDisabledReason,
 } = await import("./WorkspaceIndicator");
-const { TopBar } = await import("../TopBar");
+// `bun test` shares one module registry across files, and AppCompactSession's
+// suite stubs "../TopBar" with an empty div. Re-register the real module so
+// these tests render the actual TopBar no matter which suite loaded first.
+const realTopBar = await import("../TopBar?real");
+mock.module("../TopBar", () => realTopBar);
+const { TopBar } = realTopBar;
 
 const t: TFunction = (key, params) => translate("en", key, params);
 
