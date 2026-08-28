@@ -37,7 +37,7 @@ interface SessionPanelDockProps {
   onRevealConsumed: (bucket: string, nonce: number) => void;
   onOpenCliSessionConsumed: (bucket: string, nonce: number) => void;
   panelWidth: number;
-  beginPanelResize: (startX: number, startWidth: number) => void;
+  beginPanelResize: (startX: number, startWidth: number, target: HTMLElement) => void;
   onAttachImage: (path: string) => void;
   anchorsByBucket: AnchorsByBucket;
   removeAnchor: (id: string) => void;

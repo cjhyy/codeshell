@@ -96,7 +96,7 @@ interface Props {
   /** Controlled dock width (px). The divider on the left edge resizes it. */
   width: number;
   /** Drag the divider: report the new width (parent clamps + persists). */
-  onResizeStart: (startX: number, startWidth: number) => void;
+  onResizeStart: (startX: number, startWidth: number, target: HTMLElement) => void;
   /** Attach an on-disk image to the composer by absolute path (TODO 2.1). */
   onAttachImage?: (absPath: string) => void;
   /** Active session's browser anchors — echoed by the browser panel (圈选统一). */
@@ -318,8 +318,10 @@ function ResolvedPanelArea({
           aria-orientation="vertical"
           aria-label={t("panels.area.resizeWidth")}
           onMouseDown={(e) => {
+            if (e.button !== 0) return;
             e.preventDefault();
-            onResizeStart(e.clientX, width);
+            const target = e.currentTarget.parentElement;
+            if (target) onResizeStart(e.clientX, width, target);
           }}
           className="absolute left-0 top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize hover:bg-primary/40"
         />
