@@ -28,6 +28,7 @@ import {
   panelProcessInfo,
   type PanelProcessOwner,
 } from "./panel-app-process-service.js";
+import { PanelAppProcessApprovalStore } from "./panel-app-process-approval-store.js";
 import {
   DEFAULT_PANEL_APP_STORAGE_QUOTA_BYTES,
   panelAppStorageKey,
@@ -351,9 +352,14 @@ export class PanelAppBridge {
   private readonly agentTaskService: PanelAppAgentTaskService;
 
   constructor(private readonly options: PanelAppBridgeOptions) {
+    const processApprovalStore = new PanelAppProcessApprovalStore(
+      join(app.getPath("userData"), "panel-app-process-approvals.json"),
+    );
     this.processService = new PanelAppProcessService({
       extraPathDirectories: () =>
         panelExecutableDirectories(this.managedBinDirectory(), { home: app.getPath("home") }),
+      isExecutionApproved: (scope) => processApprovalStore.has(scope),
+      rememberExecutionApproval: (scope) => processApprovalStore.remember(scope),
       confirmExecution: async ({ guestId, appTitle, executable, executablePath }) => {
         const owner = this.guests.get(guestId);
         const window = owner ? BrowserWindow.fromId(owner.ownerWindowId) : null;
@@ -367,7 +373,7 @@ export class PanelAppBridge {
           message: `${appTitle} wants to run ${executable}`,
           detail:
             `${executablePath}\n\n` +
-            "CodeShell will run it without a shell. This approval lasts until CodeShell restarts or the app updates.",
+            "CodeShell will run it without a shell. This approval is remembered for this installed app version. Updating the app or executable asks again.",
           noLink: true,
         });
         return decision.response === 0;

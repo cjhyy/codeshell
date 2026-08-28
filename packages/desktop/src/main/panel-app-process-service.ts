@@ -1,9 +1,10 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { access, realpath, stat } from "node:fs/promises";
 import { basename, delimiter, extname, join } from "node:path";
 import { killProcessGroup } from "@cjhyy/code-shell-core/extension";
+import type { PanelProcessApprovalScope } from "./panel-app-process-approval-store.js";
 
 const EXECUTABLE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._+-]{0,127}$/;
 const FILE_ARGUMENT_NAME = /^--[a-zA-Z][a-zA-Z0-9-]{0,63}$/;
@@ -63,6 +64,8 @@ export interface PanelAppProcessServiceOptions {
     executable: string;
     executablePath: string;
   }): Promise<boolean>;
+  isExecutionApproved?(scope: PanelProcessApprovalScope): Promise<boolean>;
+  rememberExecutionApproval?(scope: PanelProcessApprovalScope): Promise<void>;
 }
 
 export function panelProcessInfo(
@@ -80,6 +83,22 @@ export function panelProcessInfo(
       ? "glibc"
       : "musl";
   return { platform, arch, libc };
+}
+
+async function executableFingerprint(path: string): Promise<string> {
+  const info = await stat(path);
+  if (!info.isFile()) throw new Error("resolved executable is no longer a regular file");
+  return createHash("sha256")
+    .update(String(info.dev))
+    .update("\0")
+    .update(String(info.ino))
+    .update("\0")
+    .update(String(info.size))
+    .update("\0")
+    .update(String(info.mtimeMs))
+    .update("\0")
+    .update(String(info.mode))
+    .digest("hex");
 }
 
 export function panelExecutableDirectories(
@@ -345,7 +364,19 @@ export class PanelAppProcessService {
       throw new Error(`Panel App may run at most ${MAX_CONCURRENT_PROCESSES} processes at once`);
     }
 
-    const approvalKey = `${owner.appId}\0${owner.revision}\0${executable.path}`;
+    const scope: PanelProcessApprovalScope = {
+      appId: owner.appId,
+      revision: owner.revision,
+      executablePath: executable.path,
+      executableFingerprint: await executableFingerprint(executable.path),
+    };
+    const approvalKey = `${scope.appId}\0${scope.revision}\0${scope.executablePath}\0${scope.executableFingerprint}`;
+    if (
+      !this.approvedExecutables.has(approvalKey) &&
+      (await this.options.isExecutionApproved?.(scope).catch(() => false))
+    ) {
+      this.approvedExecutables.add(approvalKey);
+    }
     if (!this.approvedExecutables.has(approvalKey)) {
       const allowed = await this.options.confirmExecution({
         guestId: owner.guestId,
@@ -356,6 +387,7 @@ export class PanelAppProcessService {
       });
       if (!allowed) throw new Error(`User denied running ${executable.name}`);
       this.approvedExecutables.add(approvalKey);
+      await this.options.rememberExecutionApproval?.(scope).catch(() => undefined);
     }
 
     const processId = randomUUID();

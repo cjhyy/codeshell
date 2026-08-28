@@ -212,6 +212,57 @@ describe("PanelAppProcessService", () => {
     expect(approvals).toBe(1);
   });
 
+  test("reuses a durable approval until the Panel App or executable changes", async () => {
+    executable("remembered-tool", 'printf "ok\\n"');
+    const remembered = new Set<string>();
+    let approvals = 0;
+    let writes = 0;
+    const options = {
+      env: { PATH: root },
+      isExecutionApproved: async (scope: unknown) => remembered.has(JSON.stringify(scope)),
+      rememberExecutionApproval: async (scope: unknown) => {
+        writes += 1;
+        remembered.add(JSON.stringify(scope));
+      },
+      confirmExecution: async () => {
+        approvals += 1;
+        return true;
+      },
+    };
+    const run = async (service: PanelAppProcessService, revision: string) => {
+      let resolveExit = (): void => undefined;
+      const exited = new Promise<void>((resolve) => {
+        resolveExit = resolve;
+      });
+      const owner: PanelProcessOwner = {
+        guestId: 17,
+        appId: "remembered-demo",
+        appTitle: "Remembered Demo",
+        revision,
+        send: (event) => {
+          if (event === "process.exit") resolveExit();
+        },
+      };
+      const found = await service.findExecutable(owner, { name: "remembered-tool" });
+      const directory = await service.grantDirectory(owner, root);
+      await service.start(owner, {
+        executableHandle: found.handle,
+        directoryHandle: directory.handle,
+        args: [],
+      });
+      await exited;
+    };
+
+    await run(new PanelAppProcessService(options), "r1");
+    await run(new PanelAppProcessService(options), "r1");
+    expect(approvals).toBe(1);
+    expect(writes).toBe(1);
+
+    await run(new PanelAppProcessService(options), "r2");
+    expect(approvals).toBe(2);
+    expect(writes).toBe(2);
+  });
+
   test("keeps executable and directory handles scoped to one guest", async () => {
     executable("demo-tool", 'printf "ok\\n"');
     const service = new PanelAppProcessService({
