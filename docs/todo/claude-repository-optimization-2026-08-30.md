@@ -724,25 +724,25 @@ bun test packages/server/src/serve/headless-server.test.ts
 
 ### 6.2 Commit 清单（`3c3c024e..HEAD`，共 17 条）
 
-| #   | Hash       | Message                                                                |
-| --- | ---------- | ---------------------------------------------------------------------- |
-| 1   | `ef574ca6` | `docs: audit repository optimization candidates`                       |
-| 2   | `32327e89` | `fix(coding): hand off session-less DriveAgent foreground runs`        |
-| 3   | `81755703` | `fix(coding): tighten DriveAgent handoff regression assertions`        |
-| 4   | `f7977900` | `docs: record C1 optimization results`                                 |
-| 5   | `0053f3be` | `fix(coding): defer DriveAgent worktree cleanup to run settlement`     |
-| 6   | `93b0a13e` | `docs: correct C1 results after second review round`                   |
-| 7   | `9c396c42` | `fix(server): contain static assets by real path, not string prefix`   |
-| 8   | `43c0e116` | `fix(server): scope the static containment guarantee to symlinks`      |
-| 9   | `2281b8db` | `docs: record C2 static path containment results`                      |
-| 10  | `960b0935` | `fix(core): persist Config writes through SettingsManager`             |
-| 11  | `abed0219` | `fix(core): report Config write failures instead of throwing`          |
-| 12  | `0524b50f` | `test(core): make the Config concurrency tests non-vacuous`            |
-| 13  | `e67f9f19` | `docs(core): note the YAML fold-in inherited by Config writes`         |
-| 14  | `e35014a2` | `docs: record C3 Config settings write results`                        |
-| 15  | `c4bcc0b6` | `fix(core): fail closed when a settings mutation cannot read the file` |
-| 16  | `5d137fc3` | `docs: record C3 second-review fail-closed fix`                        |
-| 17  | —          | `docs: finalize repository optimization sweep`（本条）                 |
+| #   | Hash       | Message                                                                   |
+| --- | ---------- | ------------------------------------------------------------------------- |
+| 1   | `ef574ca6` | `docs: audit repository optimization candidates`                          |
+| 2   | `32327e89` | `fix(coding): hand off session-less DriveAgent foreground runs`           |
+| 3   | `81755703` | `fix(coding): tighten DriveAgent handoff regression assertions`           |
+| 4   | `f7977900` | `docs: record C1 optimization results`                                    |
+| 5   | `0053f3be` | `fix(coding): defer DriveAgent worktree cleanup to run settlement`        |
+| 6   | `93b0a13e` | `docs: correct C1 results after second review round`                      |
+| 7   | `9c396c42` | `fix(server): contain static assets by real path, not string prefix`      |
+| 8   | `43c0e116` | `fix(server): scope the static containment guarantee to symlinks`         |
+| 9   | `2281b8db` | `docs: record C2 static path containment results`                         |
+| 10  | `960b0935` | `fix(core): persist Config writes through SettingsManager`                |
+| 11  | `abed0219` | `fix(core): report Config write failures instead of throwing`             |
+| 12  | `0524b50f` | `test(core): make the Config concurrency tests non-vacuous`               |
+| 13  | `e67f9f19` | `docs(core): note the YAML fold-in inherited by Config writes`            |
+| 14  | `e35014a2` | `docs: record C3 Config settings write results`                           |
+| 15  | `c4bcc0b6` | `fix(core): fail closed when a settings mutation cannot read the file`    |
+| 16  | `5d137fc3` | `docs: record C3 second-review fail-closed fix`                           |
+| 17  | `3983c0f1` | `docs: finalize repository optimization sweep`（本条，hash 为提交后回填） |
 
 ### 6.3 每批文件范围
 
