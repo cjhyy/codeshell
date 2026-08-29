@@ -185,6 +185,12 @@ mock.module("./app/useAppPetSprite", () => ({ usePetSprite: () => "dog.png" }));
 // test runtime does not, so without this stub the PNG is parsed as JavaScript.
 mock.module("./assets/codeshell-dog-icon.png", () => ({ default: "dog.png" }));
 
+// This suite renders the real TopBar to reach its panel toggle, but
+// AppCompactSession's suite stubs "./TopBar" with an empty div for the whole
+// process. Re-register the real module before App resolves it.
+const realTopBar = await import("./TopBar?real");
+mock.module("./TopBar", () => realTopBar);
+
 const { App } = await import("./App");
 
 class MemoryLocalStorage {
