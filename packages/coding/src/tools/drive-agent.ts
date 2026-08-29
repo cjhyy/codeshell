@@ -806,7 +806,8 @@ function attachDriveCompletion(params: {
 }
 
 function trackBackgroundRun(params: {
-  sessionId: string;
+  /** May be absent/invalid: registration below fails closed and returns an error. */
+  sessionId: string | undefined;
   label: string;
   cli: DriveCli;
   cwd: string;
@@ -824,6 +825,17 @@ function trackBackgroundRun(params: {
   recordExternalFileChanges?: ToolContext["recordExternalFileChanges"];
   originClientMessageId?: string;
 }): { jobId: string } | { error: string } {
+  const { sessionId } = params;
+  if (!isValidSessionId(sessionId)) {
+    // Mirrors the background:true refusal above: a job whose completion
+    // notification cannot be routed would run and then vanish. Say so instead
+    // of registering work nobody can track. The caller aborts the run and
+    // finalizes any managed worktree on this error path.
+    return {
+      error:
+        "Error: cannot track this DriveAgent run without a session — its result notification would be dropped. Re-run inside a session, or keep the task short enough to finish in the foreground.",
+    };
+  }
   const conflict = duplicateCwdError(
     params.effectiveWorkspaceCwd,
     params.effectiveWorkspaceRoot,
@@ -836,7 +848,7 @@ function trackBackgroundRun(params: {
     // Publish ownership before starting the external process. Registry
     // listeners are synchronous and may re-enter session teardown from the
     // start notification; starting first would leave that process orphaned.
-    backgroundJobRegistry.start(jobId, params.sessionId, params.label, {
+    backgroundJobRegistry.start(jobId, sessionId, params.label, {
       kind: "drive-agent",
       launchCwd: params.cwd,
       effectiveWorkspaceCwd: params.effectiveWorkspaceCwd,
@@ -877,7 +889,7 @@ function trackBackgroundRun(params: {
     backgroundJobRegistry.finish(jobId, { status: "failed", finalText: message });
     return { error: `Error: failed to start DriveAgent job: ${message}` };
   }
-  attachDriveCompletion({ ...params, jobId, run });
+  attachDriveCompletion({ ...params, sessionId, jobId, run });
   return { jobId };
 }
 
@@ -1203,13 +1215,21 @@ export function makeDriveAgentTool(
         lifecycle,
       );
     }
-    if (result.kind === "handoff" && isValidSessionId(ctx?.sessionId)) {
+    if (result.kind === "handoff") {
+      // Handing off is NOT gated on a valid ctx.sessionId. Gating it there left
+      // a session-less foreground run falling through to `await run`, blocking
+      // until the 30min tool cap whose abort kills the external CLI — the work
+      // was destroyed with no jobId and no notification path. trackBackgroundRun
+      // owns the session check instead: it registers a tracked job when the
+      // session can receive the completion, and otherwise returns an error the
+      // branch below turns into an abort + worktree finalize + explanation.
+      //
       // Registration below is synchronous. Release the foreground lease and
       // replace it with the background registry entry in the same event-loop
       // turn, so another dispatch cannot slip into a gap.
       lease.release();
       const tracked = trackBackgroundRun({
-        sessionId: ctx.sessionId,
+        sessionId: ctx?.sessionId,
         label,
         cli,
         cwd,

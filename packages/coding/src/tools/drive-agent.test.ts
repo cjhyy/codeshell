@@ -562,6 +562,42 @@ describe("DriveClaudeCode alias (back-compat)", () => {
     }
   });
 
+  it("background:false without a session settles at the handoff deadline instead of blocking", async () => {
+    // Regression: the handoff branch was gated on a valid ctx.sessionId, so a
+    // foreground run without one fell through to `await run` and blocked until
+    // the 30min tool cap — whose abort kills the external CLI, destroying the
+    // work with no jobId and no notification path.
+    backgroundJobRegistry.reset?.();
+    const BLOCKED = Symbol("still blocked past the handoff deadline");
+    const tmp = mkdtempSync(join(tmpdir(), "drive-nosession-"));
+    try {
+      let aborted = false;
+      const runner = (options: any) => {
+        options.signal?.addEventListener?.("abort", () => {
+          aborted = true;
+        });
+        return new Promise<any>(() => {});
+      };
+      const tool = makeDriveClaudeCodeTool(runner as any, { foregroundHandoffMs: 5 });
+
+      const settled = await Promise.race([
+        tool({ prompt: "no session", cwd: tmp, background: false } as any, { cwd: tmp } as any),
+        new Promise<symbol>((res) => setTimeout(() => res(BLOCKED), 300)),
+      ]);
+
+      expect(settled).not.toBe(BLOCKED);
+      expect(typeof settled).toBe("string");
+      // It must not silently swallow the task: the caller gets an actionable
+      // message rather than a hung turn.
+      expect(String(settled)).toContain("session");
+      // The external CLI is only torn down on this deliberate bail-out path,
+      // never left orphaned behind a returned result.
+      expect(aborted).toBe(true);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a second writable background DriveAgent when a non-git cwd cannot be isolated", async () => {
     backgroundJobRegistry.reset?.();
     const tmp = mkdtempSync(join(tmpdir(), "drive-cwd-"));
