@@ -119,6 +119,16 @@ async function runConfigTool(
     // documented in utils/file-mutex.ts). saveProjectSetting re-reads inside
     // the lock, writes atomically, and invalidates the merged cache so a
     // following read sees this write.
+    //
+    // Side effect worth knowing about on a YAML-configured project:
+    // SettingsManager reads a sibling settings.yaml when settings.json is
+    // absent but always writes back JSON, so the first write folds the YAML
+    // content into a new settings.json and the now-shadowed YAML is left on
+    // disk. That is SettingsManager's established behaviour for every caller,
+    // and it is strictly better than what this tool used to do (write the one
+    // new key and lose the YAML content entirely) — so it is inherited
+    // deliberately rather than special-cased here.
+    //
     // Both this and the old hand-rolled write throw on a hostile state dir (a
     // `.code-shell` that is a file or a link). Every other failure in this tool
     // is reported as a string, so keep that contract rather than letting the
