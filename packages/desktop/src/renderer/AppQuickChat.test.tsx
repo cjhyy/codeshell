@@ -188,16 +188,22 @@ mock.module("./app/useAppPetSprite", () => ({ usePetSprite: () => "dog.png" }));
 // does not hand a stubbed module to petSprite's own tests.
 stubPetSpriteAssets();
 
-// This suite needs the real TopBar to reach its panel toggle, but
 // AppCompactSession's suite stubs "./TopBar" with an empty div for the whole
-// process. Re-registering the module is not enough: on CI another file has
-// already evaluated App, so App holds the stub and a later mock.module cannot
-// rebind it. Load App through a distinct specifier too, forcing it to resolve
-// TopBar again — via the same trick, since App's own import is "./TopBar".
-const realTopBar = await import("./TopBar?real");
-mock.module("./TopBar", () => realTopBar);
+// process, and re-registering the real module does not help once another file
+// has evaluated App — App keeps the binding it resolved then. Rather than race
+// the registry, own the stub here and expose the one control this suite drives,
+// so the test no longer depends on which file loaded TopBar first.
+mock.module("./TopBar", () => ({
+  TopBar: (props: Record<string, any>) => (
+    <div data-testid="topbar">
+      {props.panelAvailable === true && (
+        <button type="button" data-panel-action="toggle" onClick={props.onTogglePanel} />
+      )}
+    </div>
+  ),
+}));
 
-const { App } = await import("./App?real");
+const { App } = await import("./App");
 
 class MemoryLocalStorage {
   private readonly store = new Map<string, string>();
