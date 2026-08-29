@@ -3,9 +3,9 @@
  */
 
 import type { ToolDefinition } from "../../types.js";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { setDottedSetting } from "../../settings/manager.js";
+import { SettingsManager, setDottedSetting } from "../../settings/manager.js";
 import type { ToolContext } from "../context.js";
 import { enforcePathPolicyWithApproval } from "../path-policy.js";
 
@@ -34,9 +34,40 @@ export const configToolDef: ToolDefinition = {
   },
 };
 
+export interface ConfigToolDeps {
+  makeSettingsManager(cwd: string, scope: "full" | "project"): SettingsManager;
+  /** Test seam: awaited inside the write path, after the key/value checks and
+   *  before the value is persisted, so a test can park one writer in the
+   *  read→write window and drive a deterministic interleaving. */
+  beforeWrite?: () => Promise<void>;
+}
+
+const DEFAULT_DEPS: ConfigToolDeps = {
+  makeSettingsManager: (cwd, scope) => new SettingsManager(cwd, scope),
+};
+
+/** Factory so tests can inject a SettingsManager (barrier/fake); production
+ *  uses the default instance-per-call, matching the other builtins. */
+export function makeConfigTool(deps: ConfigToolDeps = DEFAULT_DEPS) {
+  return async function configTool(
+    args: Record<string, unknown>,
+    ctx?: ToolContext,
+  ): Promise<string> {
+    return runConfigTool(args, ctx, deps);
+  };
+}
+
 export async function configTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
+): Promise<string> {
+  return runConfigTool(args, ctx, DEFAULT_DEPS);
+}
+
+async function runConfigTool(
+  args: Record<string, unknown>,
+  ctx: ToolContext | undefined,
+  deps: ConfigToolDeps,
 ): Promise<string> {
   const action = args.action as string;
   const cwd = ctx?.cwd ?? process.cwd();
@@ -60,18 +91,18 @@ export async function configTool(
     if (!key) return "Error: 'key' is required for write action.";
     if (value === undefined) return "Error: 'value' is required for write action.";
 
-    // Read or create settings
-    let settings: Record<string, unknown> = {};
-    if (existsSync(configPath)) {
-      settings = JSON.parse(readFileSync(configPath, "utf-8"));
-    }
-
+    // Validate the key BEFORE touching disk, preserving the existing contract
+    // that an unsafe dotted key is rejected without creating settings.json.
+    // setDottedSetting is the same validator saveProjectSetting applies inside
+    // the lock; running it here on a throwaway object only surfaces the error.
     try {
-      setDottedSetting(settings, key, value);
+      setDottedSetting({}, key, value);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return `Error: ${message}`;
     }
+
+    await deps.beforeWrite?.();
 
     // Never resurrect a deleted project root: a recursive mkdir of
     // <cwd>/.code-shell would recreate `cwd` itself as an empty shell when the
@@ -80,8 +111,15 @@ export async function configTool(
     if (!existsSync(cwd)) {
       return `Error: project directory does not exist: ${cwd}`;
     }
-    mkdirSync(join(cwd, ".code-shell"), { recursive: true });
-    writeFileSync(configPath, JSON.stringify(settings, null, 2), "utf-8");
+
+    // Persist through SettingsManager rather than a hand-rolled
+    // read → modify → writeFileSync. That path had no lock and no temp+rename,
+    // so two writers that both read before either wrote each persisted their
+    // own stale snapshot and silently dropped the other's key (the class
+    // documented in utils/file-mutex.ts). saveProjectSetting re-reads inside
+    // the lock, writes atomically, and invalidates the merged cache so a
+    // following read sees this write.
+    deps.makeSettingsManager(cwd, "project").saveProjectSetting(key, value, cwd);
 
     return `Updated ${key} = ${JSON.stringify(value)}`;
   }
