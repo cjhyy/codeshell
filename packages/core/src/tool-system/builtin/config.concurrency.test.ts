@@ -77,33 +77,75 @@ describe("config tool — concurrent writes", () => {
     expect(final.existing).toBe("keep-me"); // pre-existing siblings untouched
   });
 
-  test("concurrent writes of distinct keys all survive", async () => {
+  test("several writers all parked before persisting each keep their key", async () => {
+    // The persist path is fully synchronous, so a bare Promise.all can never
+    // interleave in one process — it would pass against the OLD implementation
+    // too (measured: 0 of 12 keys lost). Every writer therefore has to be parked
+    // in the read→write window explicitly for this to mean anything.
     const dir = mkdtempSync(join(tmpdir(), "cs-config-many-"));
     dirs.push(dir);
-    const tool = makeConfigTool();
     const ctx = { cwd: dir } as ToolContext;
+    const keys = Array.from({ length: 6 }, (_, i) => `k${i}`);
 
-    const keys = Array.from({ length: 12 }, (_, i) => `k${i}`);
-    await Promise.all(keys.map((k) => tool({ action: "write", key: k, value: k }, ctx)));
+    let release!: () => void;
+    const mayWrite = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let parked = 0;
+    let allParked!: () => void;
+    const everyoneParked = new Promise<void>((resolve) => {
+      allParked = resolve;
+    });
+    const tool = makeConfigTool({
+      makeSettingsManager: (cwd, scope) => new SettingsManager(cwd, scope),
+      beforeWrite: async () => {
+        if (++parked === keys.length) allParked();
+        await mayWrite;
+      },
+    });
+
+    const writes = keys.map((k) => tool({ action: "write", key: k, value: k }, ctx));
+    await everyoneParked; // all 6 have passed the read point, none has written
+    release();
+    await Promise.all(writes);
 
     const final = readSettings(dir);
     for (const k of keys) expect(final[k]).toBe(k);
   });
 
-  test("same-key writes keep last-writer-wins and never leave torn JSON", async () => {
+  test("same-key writers parked together leave one winner and parseable JSON", async () => {
     const dir = mkdtempSync(join(tmpdir(), "cs-config-same-"));
     dirs.push(dir);
-    const tool = makeConfigTool();
     const ctx = { cwd: dir } as ToolContext;
+    const values = ["one", "two", "three"];
 
-    await Promise.all(
-      ["one", "two", "three"].map((v) => tool({ action: "write", key: "shared", value: v }, ctx)),
-    );
+    let release!: () => void;
+    const mayWrite = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let parked = 0;
+    let allParked!: () => void;
+    const everyoneParked = new Promise<void>((resolve) => {
+      allParked = resolve;
+    });
+    const tool = makeConfigTool({
+      makeSettingsManager: (cwd, scope) => new SettingsManager(cwd, scope),
+      beforeWrite: async () => {
+        if (++parked === values.length) allParked();
+        await mayWrite;
+      },
+    });
 
-    // Serialized by the lock, so the file always parses and holds exactly one
-    // of the writes — which one is racy by nature and deliberately not pinned.
+    const writes = values.map((v) => tool({ action: "write", key: "shared", value: v }, ctx));
+    await everyoneParked;
+    release();
+    await Promise.all(writes);
+
+    // Same key, so last-writer-wins is the defined semantic; WHICH writer lands
+    // last is racy by nature and deliberately not pinned. What is guaranteed is
+    // that the file parses and holds exactly one of the written values.
     const final = readSettings(dir);
-    expect(["one", "two", "three"]).toContain(final.shared);
+    expect(values).toContain(final.shared);
   });
 });
 
