@@ -69,7 +69,53 @@ env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO bun test --timeout
 
 ## 2. 候选清单（按优先级）
 
-### C1 — DriveAgent `background:false` 在无 session 时超时静默丢任务（P0，推荐第一批）
+### C1 — DriveAgent `background:false` 在无 session 时超时静默丢任务（P0）
+
+> **状态：completed（2026-08-30）。**
+>
+> - 实现 + 回归测试：`32327e89` `fix(coding): hand off session-less DriveAgent foreground runs`
+> - 复审修正：`81755703` `fix(coding): tighten DriveAgent handoff regression assertions`
+> - 改动文件仅两个：`packages/coding/src/tools/drive-agent.ts`、`packages/coding/src/tools/drive-agent.test.ts`
+>
+> **最终实现与下方「建议修复方向」不同，以本状态块为准。** 原建议是「提前失败」；
+> 实际采用的契约是**优先转为可追踪的后台 job**：交接分支不再以 session 为前置条件，
+> 改由 `trackBackgroundRun` 统一裁决 —— session 可送达完成通知时注册后台 job 并返回 jobId，
+> 否则返回明确错误，由调用方既有的 `abort + safeFinalizeDriveWorktree` 分支收口。
+> 这样保住了「有 session 就不丢工作」，同时消除了无限阻塞。
+>
+> **RED（修复前，必须失败）**
+>
+> ```bash
+> bun test packages/coding/src/tools/drive-agent.test.ts -t 'without a session'
+> # → 1 fail：Expected: not Symbol(still blocked past the handoff deadline)
+> #   即交接期限后 promise 仍未 settle，命中目标缺陷而非 import/fixture 错误
+> ```
+>
+> 复审修正后已再次验证：临时还原 `isValidSessionId` 条件，该用例仍然失败，证明断言非同义反复。
+>
+> **GREEN（修复后）**
+>
+> ```bash
+> bun test packages/coding/src/tools/drive-agent.test.ts          # 50 pass / 0 fail（49 既有 + 1 新增）
+> bun test packages/coding/src/tools/drive-agent-worktree.test.ts # 4 pass / 0 fail
+> bun run --filter '@cjhyy/code-shell-capability-coding' typecheck # exit 0
+> bunx eslint <两个改动文件>                                        # exit 0
+> ```
+>
+> **全仓门禁**（均加 `env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO`）：
+> `bun test` **9145 pass / 45 skip / 0 fail**，`Ran 9190 tests across 1259 files`，exit 0
+> （= 基线 9144 + 本批新增的 1 个用例，零回归）、
+> `bun run typecheck` exit 0（含完整 build）、`bun run lint` exit 0（119 warning / 0 error，与基线持平）、
+> `lint:engine-bypass` / `lint:workflow-test-paths` / `lint:baseline` 均 exit 0。
+>
+> **独立复审结论：** Critical 0、Important 1、Minor 2。Important（失败路径上 lease 已释放但
+> 尚无 job 的窗口）经核验在当前代码中**不可达** —— 该区间全同步、无 `await`，已补注释固化该不变量；
+> 两个 Minor 中的断言过宽问题已在 `81755703` 修复（改为断言
+> `result notification would be dropped` 并追加「未注册任何 job」断言）。
+>
+> **附带发现（未处理，不属本批）：** `bun run lint:baseline` 会把
+> `scripts/lint-baseline.json` 从 `maxWarnings: 122` 自动改写为 `119`。该漂移在
+> `3c3c024e` 上即已存在（文件记 122，实测 119），与 C1 无关，已 revert 未纳入本批提交。
 
 **证据（已实测复现）**
 
@@ -330,7 +376,12 @@ bun test packages/server/src/serve/headless-server.test.ts
   **不放入第一批的原因：** 与 C5 同文件同区域，应在 C5 之后作为同文件的后续批次处理，
   避免同批内混入两个不同性质的改动。
 
-## 5. 推荐第一批与验收标准
+## 5. 第一批与验收标准（C1 — 已完成）
+
+> **已实施并收口，见 §2 C1 状态块。** 实际落地的契约与下方第 2 条「最小实现」不同：
+> 采用「优先转后台可追踪 job，不可送达时才报错」，而非一律提前失败。
+> 其余验收标准（红灯先行、49 个既有用例保持通过、门禁全绿、diff 只含两个文件）均已满足。
+> 下一批为 C2，尚未开始。
 
 **推荐：C1（DriveAgent 无 session 前台交接静默丢任务）。**
 
