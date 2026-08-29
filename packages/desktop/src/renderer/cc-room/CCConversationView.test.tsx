@@ -1,8 +1,14 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
-import { CCConversationView } from "./CCConversationView";
+
+// `bun test` shares one module registry across files, and CCRoomView's suite
+// stubs "./CCConversationView". Re-register the real module through a distinct
+// specifier so these tests exercise the component no matter the file order.
+const realConversationView = await import("./CCConversationView?real");
+mock.module("./CCConversationView", () => realConversationView);
+const { CCConversationView } = realConversationView;
 
 let root: Root | null = null;
 

@@ -181,6 +181,9 @@ mock.module("./shell/SessionSearchModal", () => ({
   SessionSearchModal: () => <div data-testid="session-search" />,
 }));
 mock.module("./app/useAppPetSprite", () => ({ usePetSprite: () => "dog.png" }));
+// petSprite.ts imports the icon as a module. Vite has a loader for that, the
+// test runtime does not, so without this stub the PNG is parsed as JavaScript.
+mock.module("./assets/codeshell-dog-icon.png", () => ({ default: "dog.png" }));
 
 const { App } = await import("./App");
 
