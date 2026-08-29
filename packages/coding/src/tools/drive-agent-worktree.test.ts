@@ -273,4 +273,86 @@ describe("DriveAgent worktree isolation lifecycle", () => {
       rmSync(join(root, ".worktrees"), { recursive: true, force: true });
     }
   });
+
+  test("session-less handoff finalizes the worktree only after the run settles", async () => {
+    // Regression: the failure branch called abort() then synchronously removed
+    // the worktree. Aborting only *starts* async teardown (SIGTERM, 500ms grace,
+    // SIGKILL), so the CLI was still alive and holding the worktree — the
+    // removal raced a live process and git's index.lock.
+    const { root, repo } = createRepo("drive-wt-nosession-");
+    try {
+      let worktreeCwd: string | undefined;
+      let worktreeExistedAtSettle: boolean | undefined;
+      const tool = makeDriveAgentTool(
+        (options: any) =>
+          new Promise((_resolve, reject) => {
+            worktreeCwd = options.cwd;
+            options.signal?.addEventListener?.("abort", () => {
+              // Stand in for the driver's async process-tree teardown: the run
+              // settles a turn later, and the worktree must still be intact.
+              setTimeout(() => {
+                worktreeExistedAtSettle = existsSync(options.cwd);
+                reject(Object.assign(new Error("Agent run aborted"), { name: "AbortError" }));
+              }, 20);
+            });
+          }),
+        undefined,
+        { foregroundHandoffMs: 5 },
+      );
+
+      const out = await tool(
+        { prompt: "no session", cwd: repo, isolation: "worktree", background: false } as any,
+        { cwd: repo } as any,
+      );
+
+      expect(out).toContain("result notification would be dropped");
+      expect(worktreeCwd).toBeDefined();
+      // Give the deferred settlement + finalization time to run.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(worktreeExistedAtSettle).toBe(true);
+      // And it must still be cleaned up eventually — deferred, not skipped.
+      expect(existsSync(worktreeCwd!)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(join(root, ".worktrees"), { recursive: true, force: true });
+    }
+  });
+
+  test("session-less handoff survives a run that rejects after the abort", async () => {
+    // The deferred finalization below subscribes to `run`, so a rejecting run
+    // must be consumed there. Bun fails a test on an unhandled rejection, so
+    // this test failing with "Agent run aborted" means the handler is missing.
+    const { root, repo } = createRepo("drive-wt-reject-");
+    try {
+      let worktreeCwd: string | undefined;
+      const tool = makeDriveAgentTool(
+        (options: any) =>
+          new Promise((_resolve, reject) => {
+            worktreeCwd = options.cwd;
+            options.signal?.addEventListener?.("abort", () => {
+              setTimeout(() => {
+                reject(Object.assign(new Error("Agent run aborted"), { name: "AbortError" }));
+              }, 20);
+            });
+          }),
+        undefined,
+        { foregroundHandoffMs: 5 },
+      );
+
+      const out = await tool(
+        { prompt: "no session", cwd: repo, isolation: "worktree", background: false } as any,
+        { cwd: repo } as any,
+      );
+
+      expect(out).toContain("result notification would be dropped");
+      // Let the deferred rejection land; an unconsumed one fails this test.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      // A rejected run must still get its worktree cleaned up.
+      expect(worktreeCwd).toBeDefined();
+      expect(existsSync(worktreeCwd!)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(join(root, ".worktrees"), { recursive: true, force: true });
+    }
+  });
 });

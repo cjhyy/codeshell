@@ -396,6 +396,27 @@ function safeFinalizeDriveWorktree(
   }
 }
 
+/**
+ * Finalize a managed worktree once `run` settles, never before.
+ *
+ * Aborting a run only starts the driver's async process-tree teardown, so the
+ * external CLI can still be holding the worktree (and git's index.lock) when
+ * abort() returns. Cleaning up synchronously races that; waiting for the run to
+ * settle does not. Doubles as the rejection sink for an aborted run.
+ */
+function finalizeDriveWorktreeAfter(
+  run: Promise<AgentRunResult>,
+  managed: ManagedDriveWorktree | undefined,
+): void {
+  void run
+    .catch(() => undefined)
+    .then(() => {
+      // safeFinalizeDriveWorktree already degrades a failed cleanup to a
+      // "kept" note rather than throwing, so nothing can escape this chain.
+      safeFinalizeDriveWorktree(managed);
+    });
+}
+
 function summarizePrompt(prompt: string, max = 120): string {
   const oneLine = prompt.replace(/\s+/g, " ").trim();
   if (oneLine.length <= max) return oneLine;
@@ -1222,15 +1243,16 @@ export function makeDriveAgentTool(
       // was destroyed with no jobId and no notification path. trackBackgroundRun
       // owns the session check instead: it registers a tracked job when the
       // session can receive the completion, and otherwise returns an error the
-      // branch below turns into an abort + worktree finalize + explanation.
+      // branch below turns into an abort + deferred cleanup + explanation.
       //
       // Registration below is synchronous. Release the foreground lease and
       // replace it with the background registry entry in the same event-loop
       // turn, so another dispatch cannot slip into a gap. The same invariant
       // covers the failure path: the lease is dropped and no job exists between
-      // here and the return below, so everything in between — including
-      // safeFinalizeDriveWorktree — MUST stay synchronous. Introducing an await
-      // would open that gap to a concurrent writable dispatch.
+      // here and the return below, so that span MUST stay synchronous — an
+      // await would open the gap to a concurrent writable dispatch. Worktree
+      // finalization is deliberately NOT in that span: it is deferred to run
+      // settlement, after this turn has already returned.
       lease.release();
       const tracked = trackBackgroundRun({
         sessionId: ctx?.sessionId,
@@ -1256,9 +1278,16 @@ export function makeDriveAgentTool(
         originClientMessageId: ctx?.originClientMessageId,
       });
       if ("error" in tracked) {
+        // abort() only STARTS teardown (SIGTERM, grace, SIGKILL); the CLI is
+        // still alive when it returns. Finalizing here would race the live
+        // process for the worktree and git's index.lock, so defer cleanup to
+        // run settlement and consume the abort rejection while we are at it.
+        // The message must not claim a cleanup that has not happened yet.
         foregroundAbort.abort();
-        const lifecycle = safeFinalizeDriveWorktree(managedWorktree);
-        return appendLifecycleNote(tracked.error, lifecycle);
+        finalizeDriveWorktreeAfter(run, managedWorktree);
+        return managedWorktree
+          ? `${tracked.error}\n\n[worktree lifecycle] Cleaning up ${managedWorktree.session.worktreePath} once ${cliName} exits.`
+          : tracked.error;
       }
       ctx?.runYield?.request("background_notification");
       return [
