@@ -808,7 +808,24 @@ describe("App quick-chat integration", () => {
       container,
       (node) => reactPropsOf(node)["data-panel-action"] === "toggle",
     );
-    expect(panelButton).not.toBeNull();
+    if (!panelButton) {
+      const seen: string[] = [];
+      const walk = (node: any, depth: number): void => {
+        if (depth > 40 || !node) return;
+        const props = reactPropsOf(node);
+        const keys = Object.keys(props).filter((k) => k.startsWith("data-") || k === "aria-label");
+        if (node.tagName || keys.length) {
+          seen.push(
+            `${" ".repeat(depth)}<${node.tagName ?? "?"}${keys
+              .map((k) => ` ${k}=${JSON.stringify(props[k])}`)
+              .join("")}>`,
+          );
+        }
+        for (const child of node.childNodes ?? []) walk(child, depth + 1);
+      };
+      walk(container, 0);
+      throw new Error(`panel toggle missing. rendered tree:\n${seen.join("\n")}`);
+    }
     expect(runCalls).toEqual([]);
 
     await act(async () => {
