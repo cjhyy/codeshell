@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { ApprovalRequestEnvelope } from "../preload/types";
 import type { Message } from "./types";
+import { stubPetSpriteAssets } from "./test-utils/stubPetSpriteAssets";
 import { ensureMiniDom, flushMicrotasks } from "./test-utils/renderHook";
 import type { PermissionMode } from "./chat/PermissionPill";
 import type { ModelOption } from "./chat/ModelPill";
@@ -181,9 +182,11 @@ mock.module("./shell/SessionSearchModal", () => ({
   SessionSearchModal: () => <div data-testid="session-search" />,
 }));
 mock.module("./app/useAppPetSprite", () => ({ usePetSprite: () => "dog.png" }));
-// petSprite.ts imports the icon as a module. Vite has a loader for that, the
-// test runtime does not, so without this stub the PNG is parsed as JavaScript.
-mock.module("./assets/codeshell-dog-icon.png", () => ({ default: "dog.png" }));
+// petSprite.ts imports its sprites as modules. Vite resolves those through a
+// loader; the test runtime parses them as JavaScript and throws before any
+// test runs. Stub the asset files rather than petSprite itself, so this suite
+// does not hand a stubbed module to petSprite's own tests.
+stubPetSpriteAssets();
 
 // This suite renders the real TopBar to reach its panel toggle, but
 // AppCompactSession's suite stubs "./TopBar" with an empty div for the whole
