@@ -320,7 +320,10 @@ root 内符号链接指向合法资源，该修复会改变行为，因此测试
 > - 复审修正 1（异常改为字符串）：`abed0219` `fix(core): report Config write failures instead of throwing`
 > - 复审修正 2（测试去空转）：`0524b50f` `test(core): make the Config concurrency tests non-vacuous`
 > - 复审修正 3（YAML 行为说明）：`e67f9f19` `docs(core): note the YAML fold-in inherited by Config writes`
-> - 改动文件两个：`packages/core/src/tool-system/builtin/config.ts`、
+> - **第二轮复审修正（阻塞级，数据丢失）：`c4bcc0b6` `fix(core): fail closed when a settings mutation cannot read the file`**
+> - 改动文件四个：`packages/core/src/settings/manager.ts`、
+>   `packages/core/src/settings/manager.mutate-fail-closed.test.ts`（新增）、
+>   `packages/core/src/tool-system/builtin/config.ts`、
 >   `packages/core/src/tool-system/builtin/config.concurrency.test.ts`（新增）
 >
 > **证据实施前已复核成立**：`config.ts` 当时仍是自己 `readFileSync` → `setDottedSetting`
@@ -386,14 +389,79 @@ root 内符号链接指向合法资源，该修复会改变行为，因此测试
 >
 > 既有 `config.resurrect.test.ts` 的删除保护、cwd 信任边界与四条原型污染用例全部未弱化、保持通过。
 >
+> 注：在 `960b0935` 上跑的那次全仓门禁曾出现 1 fail，正是「hostile state dir 抛异常」这一条，
+> 已由 `abed0219` 修复。
+>
+> ---
+>
+> ### 第二轮独立复审：NOT APPROVED，两个阻塞 Important。已在 `c4bcc0b6` 收口。
+>
+> **本轮承认：C3 第一版引入了可达的数据丢失，复审判断正确。**
+>
+> `SettingsManager` 的 `parseConfigFile` 把 unreadable / malformed / oversize / absent
+> **一律折叠为 null**，mutation 路径再把 null 当 `{}` 用。C3 让 Config 改走该路径后，
+> 「存在但读不了」的文件会被静默重写成只含新 key，并返回成功。**已实测复现**：
+>
+> ```text
+> 修复前 · malformed：'{"keep":"me", BROKEN'  →  文件变成 { "newKey": "v" }，返回 Updated
+> 修复前 · oversize ：5242902 字节            →  文件变成 19 字节，        返回 Updated
+> ```
+>
+> 并已实测**旧 Config 的行为更安全**，确认这是本批引入的回归而非既有问题：
+> 旧实现对 malformed 直接抛异常且**字节完全保留**；对 oversize 正常 `JSON.parse`
+> 后写回，`keep` 键仍在。
+>
+> **RED（修复前）**
+>
+> ```bash
+> bun test packages/core/src/settings/manager.mutate-fail-closed.test.ts
+> # → 3 fail：malformed JSON / oversize / malformed YAML 均 "Received function did not throw"
+>
+> bun test packages/core/src/tool-system/builtin/config.concurrency.test.ts -t 'refuses to overwrite'
+> # → 2 fail：Expected /^Error: /，Received "Updated newKey = \"v\""
+> ```
+>
+> 修复后临时还原两处读取再复跑，两个文件合计 **5 个用例失败**，证明断言非同义反复。
+>
+> **修复（在持久化原语层，所有 caller 受益）**：新增严格读取 `readConfigFileForMutation` ——
+> 文件**不存在**才返回 undefined（可从 `{}` 起步）；**存在但无法解析为有界对象**则抛错，
+> 此时锁仍持有，文件**逐字节不变**。`mutateSettingsFile` 与 `saveUserSetting` 都改用它
+> （后者那个文件可能存放明文 API key，是最不能被静默清空的）。
+> 另需注意 `resolveConfigPath` 对「不存在」和「存在但不安全（symlink/非文件/超限）」
+> **都返回 null** —— oversize 正是从这里漏过去的，故 `readJsonObjectForMutation`
+> 在 null 时会重新检查候选路径再决定是抛错还是从 `{}` 起步。
+>
+> **明确保留的语义**：普通 `load`/`get` 仍然容错（损坏层跳过、应用照常启动，
+> 由 `yaml-config.test.ts` 钉住），**只有** read-modify-write 路径变严格；
+> 锁内重读、原子写、YAML fold-in、缓存失效、project-only、并发语义全部不变。
+> 错误信息只含路径、**不含文件内容**（settings 可能有明文凭据，且该文本会进入工具输出）。
+>
+> **Minor（已处理）**：
+>
+> - **文件模式 0644 → 0600**：旧 `writeFileSync` 按 umask 落 0644，`SettingsManager` 写 0600。
+>   这是**有意的安全硬化**（settings.json 可能有明文 API key，应 owner-only），
+>   已在 `config.ts` 注释中说明：既有的 world-readable 文件会在下次写入时被收紧。
+> - **hostile-dir 注释不准确**：原注释说「新旧都 throw」，实际旧行为是**异常逃逸**、
+>   新行为是返回 `Error:` 字符串。注释已更正。
+>
+> **GREEN（修复后）**
+>
+> ```bash
+> bun test packages/core/src/settings/manager.mutate-fail-closed.test.ts \
+>          packages/core/src/tool-system/builtin/config.concurrency.test.ts \
+>          packages/core/src/tool-system/builtin/config.resurrect.test.ts   # 24 pass / 0 fail
+> bun test packages/core/src/settings packages/core/src/tool-system          # 1077 pass / 0 fail
+> bun run --filter '@cjhyy/code-shell-core' typecheck                        # exit 0
+> ```
+>
+> 端到端确认：malformed 与 oversize 两种输入下，返回 `Error: settings file exists but
+could not be read...`，文件字节与大小**完全不变**，且返回文本不泄露文件内容。
+>
 > **全仓门禁**（均加 `env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO`）：
-> `bun test` **9160 pass / 45 skip / 0 fail**，`Ran 9205 tests across 1260 files`，exit 0
-> （= C2 结束时的 9152 + 本批新增 8 个用例，零回归）、
+> `bun test` **9169 pass / 45 skip / 0 fail**，`Ran 9214 tests across 1261 files`，exit 0
+> （= C2 结束时的 9152 + C3 两轮累计新增 17 个用例，零回归）、
 > `bun run typecheck` exit 0（含完整 build）、`bun run lint` exit 0（119 warning / 0 error，与基线持平）、
 > `lint:engine-bypass` / `lint:workflow-test-paths` / `lint:baseline` 均 exit 0。
->
-> 注：在 `960b0935` 上跑的那次全仓门禁曾出现 1 fail，正是「hostile state dir 抛异常」这一条，
-> 已由 `abed0219` 修复；上面的数字来自最终树上的重跑。
 
 **证据**
 
