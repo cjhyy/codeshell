@@ -74,13 +74,15 @@ env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO bun test --timeout
 > **状态：completed（2026-08-30）。**
 >
 > - 实现 + 回归测试：`32327e89` `fix(coding): hand off session-less DriveAgent foreground runs`
-> - 复审修正：`81755703` `fix(coding): tighten DriveAgent handoff regression assertions`
-> - 改动文件仅两个：`packages/coding/src/tools/drive-agent.ts`、`packages/coding/src/tools/drive-agent.test.ts`
+> - 复审修正（断言收紧）：`81755703` `fix(coding): tighten DriveAgent handoff regression assertions`
+> - **第二轮复审修正（生命周期）：`0053f3be` `fix(coding): defer DriveAgent worktree cleanup to run settlement`**
+> - 改动文件仅三个：`packages/coding/src/tools/drive-agent.ts`、
+>   `packages/coding/src/tools/drive-agent.test.ts`、`packages/coding/src/tools/drive-agent-worktree.test.ts`
 >
 > **最终实现与下方「建议修复方向」不同，以本状态块为准。** 原建议是「提前失败」；
 > 实际采用的契约是**优先转为可追踪的后台 job**：交接分支不再以 session 为前置条件，
 > 改由 `trackBackgroundRun` 统一裁决 —— session 可送达完成通知时注册后台 job 并返回 jobId，
-> 否则返回明确错误，由调用方既有的 `abort + safeFinalizeDriveWorktree` 分支收口。
+> 否则返回明确错误，并把托管 worktree 的清理**延后到 run settlement**（见下方第二轮复审）。
 > 这样保住了「有 session 就不丢工作」，同时消除了无限阻塞。
 >
 > **RED（修复前，必须失败）**
@@ -93,23 +95,57 @@ env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO bun test --timeout
 >
 > 复审修正后已再次验证：临时还原 `isValidSessionId` 条件，该用例仍然失败，证明断言非同义反复。
 >
+> **第二轮独立复审：NOT APPROVED，两个 Important。已在 `0053f3be` 收口。**
+>
+> 1. **同步 finalize 与仍存活的 CLI 竞态（已修）。** 失败分支原本是
+>    `foregroundAbort.abort(); safeFinalizeDriveWorktree(managedWorktree)`。但 abort 只是**启动**
+>    异步进程树终止 —— `packages/coding/src/cc-orchestrator/external-agent-driver.ts:186`
+>    的 `terminateAttachedProcessTree(child).then(() => fail(abortError()))`，内部是
+>    SIGTERM → 500ms grace（`:34 AGENT_TERMINATE_GRACE_MS`）→ SIGKILL。abort() 返回时 CLI 仍可能活着，
+>    同步删除 worktree 会与活进程和 git `index.lock` 竞态，且返回文案**虚称已清理**。
+>    修复：新增 `finalizeDriveWorktreeAfter(run, managed)`，把清理挂到 `run` settlement 之后；
+>    立即返回的文案改为「将在 CLI 退出后清理」，不虚称已完成。
+>    finalize 仍是 **exactly once**（该分支 return 在先，够不到 fall-through 的 finalize）；
+>    `managedWorktree === undefined`、run resolve、run reject、finalize 自身抛错四条路径都已覆盖
+>    （`safeFinalizeDriveWorktree` 对 undefined 早返回，对异常降级为 "kept" 说明而不抛）。
+> 2. **失败分支未消费 run rejection —— 核实为不成立（no-op，但已顺带加固）。**
+>    `waitForForegroundOrHandoff`（`drive-agent.ts:906`）内的 `run.then(...)` 会**永久**订阅 `run`，
+>    因此无论 race 由哪一支胜出，`run` 都始终有 handler，abort 导致的 reject 不会成为
+>    unhandled rejection。已在还原后的旧实现上实测确认：异步 reject 后无 unhandled rejection。
+>    尽管如此，新的 `finalizeDriveWorktreeAfter` 自身订阅了 `run`，其中的
+>    `.catch(() => undefined)` 保证新增链路不会引入新的未消费 rejection，并有回归测试固化。
+>
+> 另：`bun` 的 unhandled rejection **不会**触发 `process.on("unhandledRejection")`，而是直接判定该
+> 用例失败 —— 探针实测确认。故回归测试以「Bun 判失败」为断言手段，而非监听事件。
+>
+> **RED（第二轮，旧实现上失败）**
+>
+> ```bash
+> bun test packages/coding/src/tools/drive-agent-worktree.test.ts -t 'session-less handoff'
+> # → 1 fail：expect(worktreeExistedAtSettle).toBe(true) — Expected: true, Received: false
+> #   即 run settle 时 worktree 已被提前删除，正中「同步 finalize 竞态」缺陷
+> ```
+>
+> 已通过临时还原旧失败分支再次验证该用例仍然失败，证明断言非同义反复。
+>
 > **GREEN（修复后）**
 >
 > ```bash
-> bun test packages/coding/src/tools/drive-agent.test.ts          # 50 pass / 0 fail（49 既有 + 1 新增）
-> bun test packages/coding/src/tools/drive-agent-worktree.test.ts # 4 pass / 0 fail
-> bun run --filter '@cjhyy/code-shell-capability-coding' typecheck # exit 0
-> bunx eslint <两个改动文件>                                        # exit 0
+> bun test packages/coding/src/tools/drive-agent.test.ts \
+>          packages/coding/src/tools/drive-agent-worktree.test.ts  # 56 pass / 0 fail
+> bun run --filter '@cjhyy/code-shell-capability-coding' typecheck  # exit 0
+> bunx eslint <改动文件>                                             # exit 0
 > ```
 >
 > **全仓门禁**（均加 `env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO`）：
-> `bun test` **9145 pass / 45 skip / 0 fail**，`Ran 9190 tests across 1259 files`，exit 0
-> （= 基线 9144 + 本批新增的 1 个用例，零回归）、
+> `bun test` **9147 pass / 45 skip / 0 fail**，`Ran 9192 tests across 1259 files`，exit 0
+> （= 基线 9144 + 本批累计新增 3 个用例，零回归）、
 > `bun run typecheck` exit 0（含完整 build）、`bun run lint` exit 0（119 warning / 0 error，与基线持平）、
 > `lint:engine-bypass` / `lint:workflow-test-paths` / `lint:baseline` 均 exit 0。
 >
-> **独立复审结论：** Critical 0、Important 1、Minor 2。Important（失败路径上 lease 已释放但
-> 尚无 job 的窗口）经核验在当前代码中**不可达** —— 该区间全同步、无 `await`，已补注释固化该不变量；
+> **第一轮复审结论：** Critical 0、Important 1、Minor 2。Important（失败路径上 lease 已释放但
+> 尚无 job 的窗口）经核验在当前代码中**不可达** —— 该区间全同步、无 `await`，已补注释固化该不变量
+> （`0053f3be` 同步更新了该注释：worktree finalization 现已明确**不在**该同步区间内）；
 > 两个 Minor 中的断言过宽问题已在 `81755703` 修复（改为断言
 > `result notification would be dropped` 并追加「未注册任何 job」断言）。
 >
