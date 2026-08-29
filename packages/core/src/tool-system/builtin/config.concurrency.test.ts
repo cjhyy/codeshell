@@ -144,6 +144,22 @@ describe("config tool — read/write contract", () => {
     expect(readSettings(dir).alpha).toBe(1);
   });
 
+  test("reports a hostile state dir as a string instead of throwing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cs-config-hostile-"));
+    dirs.push(dir);
+    // `.code-shell` exists but is a regular file, so the settings dir can never
+    // be created. Every other failure in this tool is a returned string; an
+    // escaping exception would surface very differently to the caller.
+    writeFileSync(join(dir, ".code-shell"), "not a directory");
+
+    const result = await makeConfigTool()({ action: "write", key: "alpha", value: 1 }, {
+      cwd: dir,
+    } as ToolContext);
+
+    expect(typeof result).toBe("string");
+    expect(result).toMatch(/^Error: /);
+  });
+
   test("rejects a missing key and an unknown action without writing", async () => {
     const dir = mkdtempSync(join(tmpdir(), "cs-config-bad-"));
     dirs.push(dir);

@@ -119,7 +119,16 @@ async function runConfigTool(
     // documented in utils/file-mutex.ts). saveProjectSetting re-reads inside
     // the lock, writes atomically, and invalidates the merged cache so a
     // following read sees this write.
-    deps.makeSettingsManager(cwd, "project").saveProjectSetting(key, value, cwd);
+    // Both this and the old hand-rolled write throw on a hostile state dir (a
+    // `.code-shell` that is a file or a link). Every other failure in this tool
+    // is reported as a string, so keep that contract rather than letting the
+    // exception escape into the tool executor.
+    try {
+      deps.makeSettingsManager(cwd, "project").saveProjectSetting(key, value, cwd);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return `Error: ${message}`;
+    }
 
     return `Updated ${key} = ${JSON.stringify(value)}`;
   }
