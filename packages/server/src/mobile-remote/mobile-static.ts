@@ -59,6 +59,10 @@ function isContained(root: string, target: string): boolean {
  *  the lexical path: `statSync` follows symlinks, so a link sitting inside the
  *  root but pointing outside it — e.g. a `node_modules` link left by a packaging
  *  step — used to pass a string-prefix check and serve the target's contents.
+ *  This covers symlinks (including chains and symlinked directories) but NOT
+ *  hardlinks: a hardlink IS a real name inside the root, so no path-level check
+ *  can see through it. Guarding that would need inode/device policy, and anyone
+ *  able to hardlink into the served root can already write files there.
  *
  *  The returned path is the REQUESTED one, not the realpath: callers stream it
  *  directly and the resolved-name contract is relied on elsewhere (on macOS the
