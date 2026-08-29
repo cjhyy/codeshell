@@ -1,11 +1,15 @@
 # Claude Code 全仓优化 — 证据化候选清单（2026-08-30）
 
-> 状态：审计完成，待实施。本文件是 `docs/superpowers/plans/2026-08-30-claude-code-repository-optimization.md`
-> Task 2 的产出，只做只读审计，不含任何生产代码改动。
+> **状态：本轮已收口。C1 / C2 / C3 已实施并验证完成；C4 / C5 未启动。**
+> 本文件起初是 `docs/superpowers/plans/2026-08-30-claude-code-repository-optimization.md`
+> Task 2 的只读审计产出，随后逐批追加了实施结果，最后由 §6 Final Summary 收口。
+> **注意：这不代表「整个仓库已优化完」** —— 本轮只在额度窗口内完成 3 个批次。
 >
 > **基线 commit：** `3c3c024e377c11440970f22fc5c714d3d50f6d37`
 > **隔离 worktree：** `/Users/admin/Documents/个人学习/代码学习/.worktrees/drive-claude-acd9nu5p`
 > **分支：** `worktree/drive-claude-acd9nu5p`
+>
+> **最终结果见文末 §6 Final Summary。**
 
 ## 1. 基线门禁实测
 
@@ -501,6 +505,10 @@ bun test packages/core/src/tool-system/builtin/config.concurrency.test.ts
 
 ### C4 — `MemoryManager.save` 的记忆正文非原子写，撕裂即静默丢记忆（P2）
 
+> **状态：not started（pending）。** 本轮额度窗口在 C3 收口后已逼近边界，按设计文档 §6
+> 「到达边界时不再启动新事项，已开始的批次必须完整验证」的规定**主动不启动**，
+> 避免留下半成品。证据与实施方案见下，可直接作为下一轮第一批。
+
 **证据**
 
 - `packages/core/src/session/memory.ts:292` — `writeFileSync(filePath, content, "utf-8")`，
@@ -541,6 +549,10 @@ bun test packages/core/src/session/memory.atomic-save.test.ts
 ---
 
 ### C5 — headless serve 的 WebSocket 未设 `maxPayload`（P2）
+
+> **状态：not started（pending）。** 同 C4，本轮额度边界前不启动新批次。
+> 该项与「§4 记录但本轮不实施」中的 `pendingWorkerResponses` 无上限属同文件同区域，
+> 建议下一轮合并为一批处理。
 
 **证据**
 
@@ -691,3 +703,121 @@ bun test packages/server/src/serve/headless-server.test.ts
 
 **建议后续顺序：** C1 → C2 → C3 →（C3 同根因的 onboarding 跟进）→ C4 → C5 →
 （C5 同文件的 `pendingWorkerResponses` 跟进）。每批一个独立 Conventional Commit。
+
+---
+
+## 6. Final Summary（本轮收口，2026-08-30）
+
+> **范围声明：本轮**在 Claude Code 额度窗口内**完成了 3 个批次（C1、C2、C3）**，
+> **不是**「整个仓库已全部优化完」。C4、C5 及 §4 记录的两项跟进仍未实施，
+> 审计范围本身也只覆盖了本文件列出的候选。
+
+### 6.1 工作区
+
+| 项目              | 值                                                                          |
+| ----------------- | --------------------------------------------------------------------------- |
+| worktree 绝对路径 | `/Users/admin/Documents/个人学习/代码学习/.worktrees/drive-claude-acd9nu5p` |
+| 分支              | `worktree/drive-claude-acd9nu5p`（平台托管，`locked`）                      |
+| base commit       | `3c3c024e`（`docs: plan Claude Code optimization sweep`）                   |
+| 最终 HEAD         | 见下方 commit 清单最后一条                                                  |
+| 最终 `git status` | 干净（无未跟踪、无未暂存）                                                  |
+
+### 6.2 Commit 清单（`3c3c024e..HEAD`，共 17 条）
+
+| #   | Hash       | Message                                                                |
+| --- | ---------- | ---------------------------------------------------------------------- |
+| 1   | `ef574ca6` | `docs: audit repository optimization candidates`                       |
+| 2   | `32327e89` | `fix(coding): hand off session-less DriveAgent foreground runs`        |
+| 3   | `81755703` | `fix(coding): tighten DriveAgent handoff regression assertions`        |
+| 4   | `f7977900` | `docs: record C1 optimization results`                                 |
+| 5   | `0053f3be` | `fix(coding): defer DriveAgent worktree cleanup to run settlement`     |
+| 6   | `93b0a13e` | `docs: correct C1 results after second review round`                   |
+| 7   | `9c396c42` | `fix(server): contain static assets by real path, not string prefix`   |
+| 8   | `43c0e116` | `fix(server): scope the static containment guarantee to symlinks`      |
+| 9   | `2281b8db` | `docs: record C2 static path containment results`                      |
+| 10  | `960b0935` | `fix(core): persist Config writes through SettingsManager`             |
+| 11  | `abed0219` | `fix(core): report Config write failures instead of throwing`          |
+| 12  | `0524b50f` | `test(core): make the Config concurrency tests non-vacuous`            |
+| 13  | `e67f9f19` | `docs(core): note the YAML fold-in inherited by Config writes`         |
+| 14  | `e35014a2` | `docs: record C3 Config settings write results`                        |
+| 15  | `c4bcc0b6` | `fix(core): fail closed when a settings mutation cannot read the file` |
+| 16  | `5d137fc3` | `docs: record C3 second-review fail-closed fix`                        |
+| 17  | —          | `docs: finalize repository optimization sweep`（本条）                 |
+
+### 6.3 每批文件范围
+
+- **C1（coding）**：`packages/coding/src/tools/drive-agent.ts`、`drive-agent.test.ts`、
+  `drive-agent-worktree.test.ts`。
+- **C2（server）**：`packages/server/src/mobile-remote/mobile-static.ts`、
+  `mobile-static.test.ts`、`packages/server/src/serve/headless-server.test.ts`。
+- **C3（core）**：`packages/core/src/settings/manager.ts`、
+  `manager.mutate-fail-closed.test.ts`（新增）、
+  `packages/core/src/tool-system/builtin/config.ts`、`config.concurrency.test.ts`（新增）。
+- **文档**：`docs/todo/claude-repository-optimization-2026-08-30.md`。
+
+合计 11 个文件；**未触及任何 desktop / Pet 代码**。
+
+### 6.4 最终门禁（在最终代码树 `5d137fc3` 上重跑，全部新鲜）
+
+所有命令均加 `env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO`（原因见 §1.1）。
+
+| 门禁                               | 结果                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------- |
+| `bun test`                         | **9169 pass / 45 skip / 0 fail**，`Ran 9214 tests across 1261 files`，exit 0 |
+| `bun run typecheck`                | exit 0（含完整 build，11 个 workspace）                                      |
+| `bun run lint`                     | exit 0 —— 119 warnings / **0 errors**，与基线完全一致，零新增                |
+| `bun run lint:engine-bypass`       | exit 0                                                                       |
+| `bun run lint:workflow-test-paths` | exit 0                                                                       |
+| `bun run lint:baseline`            | exit 0                                                                       |
+| `git diff --check 3c3c024e...HEAD` | exit 0                                                                       |
+
+相对基线 `9144 pass`，本轮净增 **25 个测试用例**，零回归。
+
+> `lint:baseline` 每次运行都会把 `scripts/lint-baseline.json` 从 `maxWarnings: 122`
+> 自动改写为 `119`。该漂移在 `3c3c024e` 上即已存在（文件记 122、实测 119），
+> 与本轮三批均无关，每次都已 revert、**未纳入任何 commit**。建议单独一条 commit 收口。
+
+### 6.5 独立复审结论汇总
+
+| 批次 | 轮次   | 结论                                                                                                                                                              |
+| ---- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1   | 第一轮 | Critical 0 / Important 1 / Minor 2 —— Important 经核验**不可达**（同步区间），已补注释固化不变量；断言过宽的 Minor 已修                                           |
+| C1   | 第二轮 | **NOT APPROVED**，2 个 Important。①同步 finalize 与存活 CLI 竞态 → 已改为延后到 run settlement；②未消费 rejection → 核实**不成立**并给出反证。收口后 **APPROVED** |
+| C2   | 单轮   | **Critical 0 / Important 0**，4 个 Minor。唯一处理项为 hardlink 不在保护范围（文档收敛措辞）。**APPROVED**                                                        |
+| C3   | 第一轮 | Critical 0 / Important 2 —— ①并发测试实为空转（实测旧实现 0/12 丢失）已重写；②YAML 折叠行为已记录                                                                 |
+| C3   | 第二轮 | **NOT APPROVED**，2 个阻塞 Important：malformed / oversize 会被静默覆盖（**本批引入的回归**）。已在 `c4bcc0b6` 于持久化原语层 fail-closed 收口。**APPROVED**      |
+
+**诚实说明**：C1 与 C3 各有一轮 NOT APPROVED，其中 C3 第二轮确认是本轮实现**引入的**
+可达数据丢失（malformed 文件被改写成只含新 key、5 MB 文件被截成 19 字节且返回成功）。
+两者均已用「先 RED、再最小修复、再复跑」的方式收口，并保留了复现证据。
+
+### 6.6 残余风险（已知、已记录、本轮未处理）
+
+1. **静态资源硬链接**（C2）：root 内指向 root 外文件的**硬链接**仍会被服务，
+   `realpath` 原理上看不穿。需 inode/device 策略；且能在服务根内建硬链接者本就能写文件。
+2. **静态资源 TOCTOU**（C2）：`resolveSafe` 返回请求路径而非 realpath，保留了模块**原有的**
+   stat-then-read 窗口（**未加宽**）。彻底关闭需把两个调用方改成 open-then-fstat。
+3. **`assets/` 缓存头按请求路径计算**（C2 Minor，既有）：in-root 别名可能拿到 immutable 头。
+4. **settings 文件模式 0644 → 0600**（C3）：有意的安全硬化；既有 world-readable 文件在
+   下次写入时被收紧，属行为变化，已在代码注释与 C3 状态块记录。
+5. **YAML 项目首次写入会折叠为 JSON**（C3）：`SettingsManager` 对所有 caller 的既定行为，
+   优于旧路径（旧路径会丢掉 YAML 内容），已记录、未改变。
+6. **`lint:baseline` 122→119 漂移**（既有）：见 §6.4。
+
+### 6.7 未实施候选（下一轮建议顺序）
+
+1. **C4** —— `MemoryManager.save` 正文非原子写（P2，仅做原子性，**不要**混入锁内读改写）。
+2. **C5** —— headless serve WS `maxPayload`（P2），建议与 §4 的
+   `pendingWorkerResponses` 无上限**合并为一批**（同文件同区域）。
+3. **§4 的 `appendOnboardingResult` 未加锁读改写** —— 与 C3 同根因，
+   现在 C3 已验证 `SettingsManager` / `mutateJsonFile` 的迁移模式，可直接套用。
+4. **`scripts/lint-baseline.json` 漂移** —— 一条独立 commit 即可收口。
+
+### 6.8 隔离与集成状态
+
+- 全部写操作都在上述隔离 worktree 完成；**主工作区的 Pet / desktop 未提交改动完全未被触碰**，
+  两个禁区文件（`AppQuickChat.test.tsx`、`cc-room/CCConversationView.test.tsx`）
+  在整个 `3c3c024e..HEAD` 区间内**零改动**（已用 `git log -- <path>` 逐一核验）。
+- `main` 在本轮期间新增的 6 条 Pet/desktop commit **未被合入本分支**。
+- **未 push、未 merge、未 rebase、未 reset --hard、未 clean、未绕过 hooks。**
+- worktree 保留，等待用户决定审阅 / 合并 / 丢弃。
