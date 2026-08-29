@@ -210,6 +210,73 @@ bun test packages/coding/src/tools/drive-agent.test.ts -t 'without a session'
 
 ### C2 — 静态资源服务缺符号链接遏制，可读取 root 之外文件（P1）
 
+> **状态：completed（2026-08-30）。**
+>
+> - 实现 + 回归测试：`9c396c42` `fix(server): contain static assets by real path, not string prefix`
+> - 复审修正（文档诚实性）：`43c0e116` `fix(server): scope the static containment guarantee to symlinks`
+> - 改动文件三个：`packages/server/src/mobile-remote/mobile-static.ts`、
+>   `packages/server/src/mobile-remote/mobile-static.test.ts`、
+>   `packages/server/src/serve/headless-server.test.ts`
+>
+> **证据已在实施前重新核验成立**：`resolveSafe` 当时仍是
+> `full.startsWith(rootResolved + sep)` + `statSync`（跟随符号链接），无 `lstat`/`realpath`。
+>
+> **RED（旧实现，两级证明真实泄漏）**
+>
+> ```bash
+> bun test packages/server/src/mobile-remote/mobile-static.test.ts
+> # → resolveSafe rejects a symlinked file escaping the root:
+> #   expect(received).toBeNull() — Received: ".../mobile-static-XXXX/leak.txt"
+> # → resolveSafe rejects a file reached through a symlinked directory:
+> #   Received: ".../linked/secret.txt"
+>
+> bun test packages/server/src/serve/headless-server.test.ts -t 'symlink inside the static root'
+> # → expect(leak.status).toBe(404) — Expected: 404, Received: 200
+> #   即 headless host 真的以 200 把 root 外文件内容发了出去（端到端 HTTP 证明）
+> ```
+>
+> 修复后又临时还原旧实现复跑，端到端用例仍失败，证明断言非同义反复。
+>
+> **实现（最小）**：新增基于 `relative()` 的 `isContained`（不是 `startsWith`，
+> 因此 `/srv/app-old` 这类同前缀兄弟目录也挡得住），在既有词法 `..` 检查与
+> `existsSync/statSync` 之后追加**两侧都 `realpathSync`** 的遏制判定，并用 `try/catch`
+> 兜住 dangling link / EACCES / stat 后被删，保持 404 契约不变成 500。
+> **返回值仍是请求路径而非 realpath**：调用方直接 `createReadStream`/`readFileSync`，
+> 且既有测试（`mobile-static.test.ts:48,52`）钉住了该契约；在 macOS 上 `/var` 的 realpath
+> 是 `/private/var`，返回 realpath 会改变每一个结果。这保持了模块原有的
+> stat-then-read 同步窗口 —— **未新增** TOCTOU（攻击者在旧实现下本就有更容易的路径），
+> 彻底关闭需要把两个调用方改成 open-then-fstat，超出本批范围。
+>
+> **兼容性**：符号链接指向 root 内部仍可服务；**root 自身是符号链接**（常见部署形态）
+> 仍可服务 —— 因为两侧都做 realpath，只 realpath 目标的天真写法会在这里破功；
+> SPA fallback、index.html、`assets/` 缓存头与 dev proxy 均未触及。
+>
+> **GREEN**
+>
+> ```bash
+> bun test packages/server/src/mobile-remote/mobile-static.test.ts  # 12 pass / 0 fail
+> bun test packages/server/src                                      # 325 pass / 0 fail（29 文件）
+> bun run --filter '@cjhyy/code-shell-server' typecheck              # exit 0
+> bunx eslint <三个改动文件>                                          # exit 0，零新增 warning
+> ```
+>
+> **全仓门禁**（均加 `env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO`）：
+> `bun test` **9152 pass / 45 skip / 0 fail**，`Ran 9197 tests across 1259 files`，exit 0
+> （= C1 结束时的 9147 + 本批新增 5 个用例，零回归）、
+> `bun run typecheck` exit 0（含完整 build）、`bun run lint` exit 0（119 warning / 0 error，与基线持平）、
+> `lint:engine-bypass` / `lint:workflow-test-paths` / `lint:baseline` 均 exit 0。
+>
+> **独立复审结论：Critical 0、Important 0**，4 个 Minor。其中唯一需要处理的是
+> **硬链接不在 realpath 的保护范围内**：已实测确认 root 内指向 root 外文件的硬链接仍会被服务，
+> 且路径级检查原理上看不穿（硬链接本身就是 root 内的一个真实名字）。这是**既有风险、非本批引入**，
+> 已在 `43c0e116` 把 docblock 的措辞收敛为「只保证符号链接」，不虚称更强的保证；
+> 真要防需引入 inode/device 策略，且能在服务根内建硬链接的人本就能直接写文件。
+> 其余 3 个 Minor（`assets/` 缓存头按请求路径计算、两处测试断言可更强）均为既有且非安全性问题，未处理。
+>
+> **已实测的绕过尝试（全部被拦截）**：符号链接链（link→link→root 外）、相对符号链接
+> （`../outside/secret`）、嵌套目录内的逃逸链接、同名前缀兄弟目录；同时确认
+> 「链条终点仍在 root 内」的合法情形依然可服务。
+
 **证据**
 
 - `packages/server/src/mobile-remote/mobile-static.ts:55-58` — 遏制判定是纯字符串的
@@ -417,7 +484,7 @@ bun test packages/server/src/serve/headless-server.test.ts
 > **已实施并收口，见 §2 C1 状态块。** 实际落地的契约与下方第 2 条「最小实现」不同：
 > 采用「优先转后台可追踪 job，不可送达时才报错」，而非一律提前失败。
 > 其余验收标准（红灯先行、49 个既有用例保持通过、门禁全绿、diff 只含两个文件）均已满足。
-> 下一批为 C2，尚未开始。
+> C2 亦已完成（见 §2 C2 状态块）。下一批为 C3，尚未开始。
 
 **推荐：C1（DriveAgent 无 session 前台交接静默丢任务）。**
 
