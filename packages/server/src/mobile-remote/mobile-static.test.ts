@@ -1,5 +1,5 @@
 import { test, expect, beforeAll, afterAll } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer, request as httpRequest, type Server } from "node:http";
@@ -61,6 +61,75 @@ test("resolveSafe rejects path traversal", () => {
   expect(resolveSafe(root, "../../etc/passwd")).toBeNull();
   expect(resolveSafe(root, "assets/../../escape")).toBeNull();
   expect(resolveSafe(root, "/etc/passwd")).toBeNull();
+});
+
+// Lexical `..` was already blocked; a symlink INSIDE the root pointing OUT of it
+// was not. `statSync` follows symlinks and the containment check was a string
+// compare on the pre-resolution path, so the link passed and its target was
+// served. A packaging step or `bun install` leaving a `node_modules` link in the
+// served directory is the realistic source.
+test("resolveSafe rejects a symlinked file escaping the root", () => {
+  if (process.platform === "win32") return; // symlink creation needs elevation
+  const outside = mkdtempSync(join(tmpdir(), "mobile-static-outside-"));
+  try {
+    const secret = join(outside, "secret.txt");
+    writeFileSync(secret, "TOP SECRET");
+    const link = join(root, "leak.txt");
+    symlinkSync(secret, link);
+    try {
+      expect(resolveSafe(root, "leak.txt")).toBeNull();
+    } finally {
+      rmSync(link, { force: true });
+    }
+  } finally {
+    rmSync(outside, { recursive: true, force: true });
+  }
+});
+
+test("resolveSafe rejects a file reached through a symlinked directory", () => {
+  if (process.platform === "win32") return;
+  const outside = mkdtempSync(join(tmpdir(), "mobile-static-outsidedir-"));
+  try {
+    writeFileSync(join(outside, "secret.txt"), "TOP SECRET");
+    const link = join(root, "linked");
+    symlinkSync(outside, link, "dir");
+    try {
+      expect(resolveSafe(root, "linked/secret.txt")).toBeNull();
+    } finally {
+      rmSync(link, { force: true });
+    }
+  } finally {
+    rmSync(outside, { recursive: true, force: true });
+  }
+});
+
+// The fix must not break links that stay inside the root — a legitimate
+// deployment may symlink an asset to another file in the same tree. The
+// returned path stays the requested one (callers stream it directly, and the
+// existing tests above pin that contract); only the containment CHECK is
+// realpath-based.
+test("resolveSafe still serves a symlink whose target is inside the root", () => {
+  if (process.platform === "win32") return;
+  const link = join(root, "alias.js");
+  symlinkSync(join(root, "assets", "app.js"), link);
+  try {
+    expect(resolveSafe(root, "alias.js")).toBe(join(root, "alias.js"));
+  } finally {
+    rmSync(link, { force: true });
+  }
+});
+
+// A link pointing at nothing must 404 through the normal contract, not throw a
+// realpath ENOENT that would surface as a 500.
+test("resolveSafe returns null for a dangling symlink instead of throwing", () => {
+  if (process.platform === "win32") return;
+  const link = join(root, "dangling.js");
+  symlinkSync(join(root, "does-not-exist.js"), link);
+  try {
+    expect(resolveSafe(root, "dangling.js")).toBeNull();
+  } finally {
+    rmSync(link, { force: true });
+  }
 });
 
 // Dev proxy: vite is configured with base "/mobile/", so the proxy MUST forward

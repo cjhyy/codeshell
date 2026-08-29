@@ -5,7 +5,7 @@
 // (same pattern as worker-bridge-core.test.ts) stands in for the real
 // agent-server-stdio, so the pipe is exercised end to end without an LLM.
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WebSocket } from "ws";
@@ -187,6 +187,28 @@ describe("headless serve — HTTP gate + static", () => {
     expect(asset.status).toBe(200);
     const evil = await fetch(`${server.url}/..%2f..%2fetc%2fpasswd`, { headers: { cookie } });
     expect([400, 404]).toContain(evil.status);
+  });
+
+  test("a symlink inside the static root cannot serve a file outside it", async () => {
+    if (process.platform === "win32") return; // symlink creation needs elevation
+    const outside = mkdtempSync(join(tmpdir(), "headless-outside-"));
+    const link = join(staticDir, "leak.js");
+    try {
+      writeFileSync(join(outside, "secret.txt"), "TOP_SECRET_VALUE");
+      symlinkSync(join(outside, "secret.txt"), link);
+      const server = await boot();
+      const cookie = await authenticate(server);
+      // Requested as an asset (not a navigation) so the SPA fallback stays out
+      // of it and the status reflects the containment decision alone.
+      const leak = await fetch(`${server.url}/leak.js`, {
+        headers: { cookie, accept: "*/*" },
+      });
+      expect(leak.status).toBe(404);
+      expect(await leak.text()).not.toContain("TOP_SECRET_VALUE");
+    } finally {
+      rmSync(link, { force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 
   test("unknown paths fall back to index.html (SPA routing) once authenticated", async () => {
