@@ -587,12 +587,14 @@ describe("DriveClaudeCode alias (back-compat)", () => {
 
       expect(settled).not.toBe(BLOCKED);
       expect(typeof settled).toBe("string");
-      // It must not silently swallow the task: the caller gets an actionable
-      // message rather than a hung turn.
-      expect(String(settled)).toContain("session");
+      // Pin the actual contract, not just any error containing "session" —
+      // the isolation-conflict and resume errors would match that too.
+      expect(String(settled)).toContain("result notification would be dropped");
       // The external CLI is only torn down on this deliberate bail-out path,
       // never left orphaned behind a returned result.
       expect(aborted).toBe(true);
+      // Nothing half-registered: the guard returns before any job is created.
+      expect(backgroundJobRegistry.list()).toHaveLength(0);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

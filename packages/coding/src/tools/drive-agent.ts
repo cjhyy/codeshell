@@ -1226,7 +1226,11 @@ export function makeDriveAgentTool(
       //
       // Registration below is synchronous. Release the foreground lease and
       // replace it with the background registry entry in the same event-loop
-      // turn, so another dispatch cannot slip into a gap.
+      // turn, so another dispatch cannot slip into a gap. The same invariant
+      // covers the failure path: the lease is dropped and no job exists between
+      // here and the return below, so everything in between — including
+      // safeFinalizeDriveWorktree — MUST stay synchronous. Introducing an await
+      // would open that gap to a concurrent writable dispatch.
       lease.release();
       const tracked = trackBackgroundRun({
         sessionId: ctx?.sessionId,
