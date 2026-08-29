@@ -129,10 +129,16 @@ async function runConfigTool(
     // new key and lose the YAML content entirely) — so it is inherited
     // deliberately rather than special-cased here.
     //
-    // Both this and the old hand-rolled write throw on a hostile state dir (a
-    // `.code-shell` that is a file or a link). Every other failure in this tool
-    // is reported as a string, so keep that contract rather than letting the
-    // exception escape into the tool executor.
+    // saveProjectSetting throws on a hostile state dir (a `.code-shell` that is
+    // a file or a link) and on an existing-but-unreadable settings file, where
+    // it refuses to overwrite rather than rewrite from {}. The old hand-rolled
+    // write also threw on those inputs, but let the exception escape; every
+    // other failure in this tool is reported as a string, so convert it here.
+    //
+    // Note the file mode also changed: the old writeFileSync left settings.json
+    // at the umask default (typically 0644), while SettingsManager writes 0600.
+    // settings.json can hold plaintext API keys, so owner-only is the intended
+    // posture — an existing world-readable file is tightened on its next write.
     try {
       deps.makeSettingsManager(cwd, "project").saveProjectSetting(key, value, cwd);
     } catch (error) {

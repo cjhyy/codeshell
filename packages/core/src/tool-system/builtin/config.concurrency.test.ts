@@ -186,6 +186,40 @@ describe("config tool — read/write contract", () => {
     expect(readSettings(dir).alpha).toBe(1);
   });
 
+  test("refuses to overwrite malformed settings.json and keeps the bytes", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cs-config-malformed-"));
+    dirs.push(dir);
+    mkdirSync(join(dir, ".code-shell"), { recursive: true });
+    const path = join(dir, ".code-shell", "settings.json");
+    const original = '{"keep":"me", BROKEN';
+    writeFileSync(path, original);
+
+    const result = await makeConfigTool()({ action: "write", key: "newKey", value: "v" }, {
+      cwd: dir,
+    } as ToolContext);
+
+    // Must NOT report success, and must not have replaced the user's file with
+    // an object holding only the new key.
+    expect(result).toMatch(/^Error: /);
+    expect(readFileSync(path, "utf-8")).toBe(original);
+  });
+
+  test("refuses to overwrite an oversize settings.json and keeps the bytes", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "cs-config-oversize-"));
+    dirs.push(dir);
+    mkdirSync(join(dir, ".code-shell"), { recursive: true });
+    const path = join(dir, ".code-shell", "settings.json");
+    const original = JSON.stringify({ keep: "me", pad: "x".repeat(5 * 1024 * 1024) });
+    writeFileSync(path, original);
+
+    const result = await makeConfigTool()({ action: "write", key: "newKey", value: "v" }, {
+      cwd: dir,
+    } as ToolContext);
+
+    expect(result).toMatch(/^Error: /);
+    expect(readFileSync(path, "utf-8")).toBe(original);
+  });
+
   test("reports a hostile state dir as a string instead of throwing", async () => {
     const dir = mkdtempSync(join(tmpdir(), "cs-config-hostile-"));
     dirs.push(dir);
