@@ -314,6 +314,87 @@ root 内符号链接指向合法资源，该修复会改变行为，因此测试
 
 ### C3 — `Config` 工具绕过锁直接读改写项目 `settings.json`（P1）
 
+> **状态：completed（2026-08-30）。**
+>
+> - 实现 + 回归测试：`960b0935` `fix(core): persist Config writes through SettingsManager`
+> - 复审修正 1（异常改为字符串）：`abed0219` `fix(core): report Config write failures instead of throwing`
+> - 复审修正 2（测试去空转）：`0524b50f` `test(core): make the Config concurrency tests non-vacuous`
+> - 复审修正 3（YAML 行为说明）：`e67f9f19` `docs(core): note the YAML fold-in inherited by Config writes`
+> - 改动文件两个：`packages/core/src/tool-system/builtin/config.ts`、
+>   `packages/core/src/tool-system/builtin/config.concurrency.test.ts`（新增）
+>
+> **证据实施前已复核成立**：`config.ts` 当时仍是自己 `readFileSync` → `setDottedSetting`
+> → `writeFileSync`，无 `acquireFileLock`、无 temp+rename，完全绕过 `SettingsManager`。
+>
+> **RED（确定性，非概率循环）**：用注入的 `beforeWrite` 屏障把写者 A 停在
+> read→write 窗口，让写者 B 全程跑完再放行 A。
+>
+> ```bash
+> bun test packages/core/src/tool-system/builtin/config.concurrency.test.ts
+> # → expect(final.beta).toBe("B") — Expected: "B", Received: undefined
+> ```
+>
+> 旧实现的落盘证据（实测抓取）：
+>
+> ```text
+> AFTER B:        { "existing": "keep-me", "beta": "B" }
+> OLD FINAL JSON: { "existing": "keep-me", "alpha": "A" }   ← beta 被 A 的陈旧快照抹掉
+> ```
+>
+> **实现（最小、复用既有原语）**：写入改为
+> `SettingsManager.saveProjectSetting(key, value, cwd)` —— 它已经做了锁内重读 +
+> 原子 temp+rename + 缓存失效，**不新建第二套 lock/atomic 实现**。key 校验提前到落盘前
+> （在丢弃对象上跑同一个 `setDottedSetting` 验证器），保住「非法 dotted key 不创建
+> settings.json」的既有契约；「不复活已删除项目根」的前置检查原样保留。
+> 引入 `makeConfigTool(deps)` 工厂（对齐 `configure-model-connection.ts` 的
+> `DEFAULT_DEPS` 惯例）作为最窄注入点。
+>
+> **并发语义（已测）**：
+>
+> - **不同 key 并发** —— 全部保留，任何一个都不会被别人的陈旧快照覆盖。
+> - **同一 key 并发** —— 维持 **last-writer-wins**；哪一个最后落盘按本质是竞态，
+>   刻意不做断言，但保证文件始终可解析且恰好是其中一个写入值。
+> - **读** —— `action=read` 仍逐字返回项目 `settings.json`（不是合并视图），
+>   与工具描述一致；`saveProjectSetting` 的 `invalidate()` 对它无影响（manager 每次调用即弃）。
+> - **scope** —— 只写 `${cwd}/.code-shell/settings.json`，永不触及 `~/.code-shell`。
+>
+> **独立复审：Critical 0、Important 2，均已处理。**
+>
+> 1. **并发测试实为空转（已修 `0524b50f`）。** `saveProjectSetting` 是同步的，
+>    裸 `Promise.all` 在单进程内根本不会交错 —— 实测在旧实现下 12 个 key **一个都没丢**，
+>    即这两个用例根本抓不到它们本该抓的 bug。已改为把每个写者都用屏障停在 read→write
+>    窗口再一起放行；改后在旧实现上由 2 个失败变为 **3 个失败**。
+> 2. **YAML 项目会被折叠进 JSON（已记录 `e67f9f19`，不改行为）。** 实测：YAML-only 项目
+>    首次写入会把 `settings.yaml` 内容折进新建的 `settings.json`，YAML 被遮蔽但留在盘上。
+>    这是 `SettingsManager` 对**所有**调用方的既定行为，且**优于**旧路径
+>    （旧路径只写新 key、直接丢掉 YAML 内容）。特殊处理它反而会偏离「复用既有原语」
+>    这一约束，因此只补文档说明。
+>
+> 另有自查发现并修复（`abed0219`）：`.code-shell` 是普通文件时 `saveProjectSetting` 会
+> **抛异常**；旧 `mkdirSync` 路径同样抛 EEXIST，故非本次引入，但该工具其余错误一律返回字符串，
+> 已包 try/catch 保持契约一致并补回归测试。
+>
+> **GREEN**
+>
+> ```bash
+> bun test packages/core/src/tool-system/builtin/config.concurrency.test.ts \
+>          packages/core/src/tool-system/builtin/config.resurrect.test.ts   # 15 pass / 0 fail
+> bun test packages/core/src/tool-system packages/core/src/settings          # 1068 pass / 0 fail
+> bun run --filter '@cjhyy/code-shell-core' typecheck                        # exit 0
+> bunx eslint <两个改动文件>                                                   # exit 0，零新增 warning
+> ```
+>
+> 既有 `config.resurrect.test.ts` 的删除保护、cwd 信任边界与四条原型污染用例全部未弱化、保持通过。
+>
+> **全仓门禁**（均加 `env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO`）：
+> `bun test` **9160 pass / 45 skip / 0 fail**，`Ran 9205 tests across 1260 files`，exit 0
+> （= C2 结束时的 9152 + 本批新增 8 个用例，零回归）、
+> `bun run typecheck` exit 0（含完整 build）、`bun run lint` exit 0（119 warning / 0 error，与基线持平）、
+> `lint:engine-bypass` / `lint:workflow-test-paths` / `lint:baseline` 均 exit 0。
+>
+> 注：在 `960b0935` 上跑的那次全仓门禁曾出现 1 fail，正是「hostile state dir 抛异常」这一条，
+> 已由 `abed0219` 修复；上面的数字来自最终树上的重跑。
+
 **证据**
 
 - `packages/core/src/tool-system/builtin/config.ts:64` 读，`:68` 改，`:84`
@@ -484,7 +565,7 @@ bun test packages/server/src/serve/headless-server.test.ts
 > **已实施并收口，见 §2 C1 状态块。** 实际落地的契约与下方第 2 条「最小实现」不同：
 > 采用「优先转后台可追踪 job，不可送达时才报错」，而非一律提前失败。
 > 其余验收标准（红灯先行、49 个既有用例保持通过、门禁全绿、diff 只含两个文件）均已满足。
-> C2 亦已完成（见 §2 C2 状态块）。下一批为 C3，尚未开始。
+> C2、C3 亦已完成（见 §2 各自状态块）。下一批为 C4，尚未开始。
 
 **推荐：C1（DriveAgent 无 session 前台交接静默丢任务）。**
 
