@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CodeShell 运行时架构总览",
+    "locale": "zh-CN",
+    "subtitle": "多入口经宿主与传输层汇入领域无关的核心引擎，再连接可选能力、集成与模型提供商",
+    "output": "codeshell-runtime-overview.html",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "desktop-request-path",
+        "label": "桌面请求主路由",
+        "focus": ["desktop-entry", "desktop-host", "core-engine", "llm-providers"],
+        "note": "桌面渲染器经主进程代理与协议层发起请求，并沿同一路径接收流式响应。"
+      },
+      {
+        "id": "terminal-capabilities",
+        "label": "终端与可选能力",
+        "focus": ["tui-entry", "core-engine", "coding-capability", "arena-capability", "pet-capability"],
+        "note": "TUI 组合核心与按需能力包；能力通过 Core extension 契约保持单向依赖。"
+      },
+      {
+        "id": "remote-integrations",
+        "label": "远程入口与集成",
+        "focus": ["web-remote-entry", "server-chat-transport", "core-engine", "runtime-integrations"],
+        "note": "Web / Remote 经 Server 与 Chat 接入面进入运行时，工具和外部代理由集成边界承接。"
+      }
+    ],
+    "legend": {
+      "mode": "all",
+      "entries": {
+        "frontend": { "label": "用户入口" },
+        "backend": { "label": "宿主、运行时与能力" },
+        "messagebus": { "label": "传输与集成边界" },
+        "external": { "label": "外部服务" }
+      }
+    },
+    "viewBox": [1390, 820]
+  },
+  "components": [
+    {
+      "id": "desktop-entry",
+      "type": "frontend",
+      "label": "桌面端",
+      "sublabel": "Electron renderer",
+      "tag": "用户入口",
+      "pos": [50, 150],
+      "size": [170, 72]
+    },
+    {
+      "id": "tui-entry",
+      "type": "frontend",
+      "label": "终端界面",
+      "sublabel": "TUI REPL / run",
+      "tag": "用户入口",
+      "pos": [50, 330],
+      "size": [170, 72]
+    },
+    {
+      "id": "web-remote-entry",
+      "type": "frontend",
+      "label": "网页 / 远程端",
+      "sublabel": "Web client / phone remote",
+      "tag": "用户入口",
+      "pos": [50, 510],
+      "size": [170, 72]
+    },
+    {
+      "id": "desktop-host",
+      "type": "backend",
+      "label": "桌面宿主",
+      "sublabel": "Main broker / stdio worker",
+      "tag": "组合宿主",
+      "pos": [330, 150],
+      "size": [200, 72]
+    },
+    {
+      "id": "server-chat-transport",
+      "type": "messagebus",
+      "label": "Server / Chat 传输",
+      "sublabel": "HTTP + WebSocket / channel gateway",
+      "tag": "远程接入",
+      "pos": [330, 510],
+      "size": [220, 72]
+    },
+    {
+      "id": "core-engine",
+      "type": "backend",
+      "label": "Core Engine",
+      "sublabel": "协议 · 会话 · TurnLoop · 工具 · 权限",
+      "tag": "核心引擎",
+      "pos": [650, 300],
+      "size": [240, 112]
+    },
+    {
+      "id": "coding-capability",
+      "type": "backend",
+      "label": "Coding 能力",
+      "sublabel": "Git / LSP / worktree",
+      "tag": "可选能力",
+      "pos": [540, 610],
+      "size": [170, 72]
+    },
+    {
+      "id": "arena-capability",
+      "type": "backend",
+      "label": "Arena 能力",
+      "sublabel": "多模型编排",
+      "tag": "可选能力",
+      "pos": [770, 610],
+      "size": [170, 72]
+    },
+    {
+      "id": "pet-capability",
+      "type": "backend",
+      "label": "Pet 能力",
+      "sublabel": "Mimi / DelegateWork / 投影",
+      "tag": "可选能力",
+      "pos": [1000, 610],
+      "size": [190, 72]
+    },
+    {
+      "id": "runtime-integrations",
+      "type": "messagebus",
+      "label": "运行时集成",
+      "sublabel": "Link / CDP / MCP / CLI Agent",
+      "tag": "集成边界",
+      "pos": [1010, 140],
+      "size": [240, 82]
+    },
+    {
+      "id": "llm-providers",
+      "type": "external",
+      "label": "LLM 提供商",
+      "sublabel": "模型目录 / 连接 / 流式输出",
+      "tag": "外部服务",
+      "pos": [1090, 330],
+      "size": [190, 82]
+    }
+  ],
+  "connections": [
+    {
+      "id": "desktop-to-host",
+      "from": "desktop-entry",
+      "to": "desktop-host",
+      "label": "发起请求",
+      "variant": "emphasis",
+      "width": 2
+    },
+    {
+      "id": "desktop-host-to-core",
+      "from": "desktop-host",
+      "to": "core-engine",
+      "label": "协议请求 / 流式响应",
+      "variant": "emphasis",
+      "width": 2
+    },
+    {
+      "id": "tui-to-core",
+      "from": "tui-entry",
+      "to": "core-engine",
+      "label": "进程内请求 / 流式响应",
+      "variant": "emphasis",
+      "width": 2
+    },
+    {
+      "id": "web-to-transport",
+      "from": "web-remote-entry",
+      "to": "server-chat-transport",
+      "label": "远程请求",
+      "variant": "emphasis",
+      "width": 2
+    },
+    {
+      "id": "transport-to-core",
+      "from": "server-chat-transport",
+      "to": "core-engine",
+      "label": "协议请求 / 事件响应",
+      "variant": "emphasis",
+      "labelDx": -24,
+      "width": 2
+    },
+    {
+      "id": "core-to-providers",
+      "from": "core-engine",
+      "to": "llm-providers",
+      "label": "模型请求 / 流式响应",
+      "variant": "emphasis",
+      "labelDx": 28,
+      "labelDy": 24,
+      "width": 2
+    },
+    {
+      "id": "coding-to-core",
+      "from": "coding-capability",
+      "to": "core-engine",
+      "label": "extension 契约",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "arena-to-core",
+      "from": "arena-capability",
+      "to": "core-engine",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "pet-to-core",
+      "from": "pet-capability",
+      "to": "core-engine"
+    },
+    {
+      "id": "core-to-integrations",
+      "from": "core-engine",
+      "to": "runtime-integrations",
+      "label": "工具与接入"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "入口与主路由",
+      "items": ["桌面、TUI 与远程入口共享协议语义", "请求与流式响应沿宿主 / 传输层往返"]
+    },
+    {
+      "dot": "violet",
+      "title": "Core First",
+      "items": ["核心引擎保持 UI 与领域无关", "Coding、Arena、Pet 通过 extension 契约组合"]
+    },
+    {
+      "dot": "emerald",
+      "title": "开放集成",
+      "items": ["Link、CDP、MCP 与 CLI Agent 位于集成边界", "模型差异由目录、连接与能力规则表达"]
+    }
+  ]
+}
