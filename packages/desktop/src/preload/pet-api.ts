@@ -51,6 +51,12 @@ export type PetChatEvent =
     }
   | ({ kind: "delegation-started" } & PetDelegationReceiptGroup)
   | {
+      kind: "transcript-updated";
+      source: "long-task-closure";
+      taskId: string;
+      createdAt: number;
+    }
+  | {
       kind: "host-action-completed";
       clientMessageId: string;
       message: string;

@@ -587,6 +587,305 @@ describe("PetStateProvider", () => {
     else testWindow.codeshell = originalCodeshell;
   });
 
+  test("refreshes a completed delegated reply from durable history without duplicates", async () => {
+    ensureMiniDom();
+    let chatListener: Parameters<NonNullable<PetApi["onChatEvent"]>>[0] | undefined;
+    let transcriptVersion = 0;
+    let transcriptReads = 0;
+    const testWindow = window as unknown as Record<string, unknown>;
+    const originalCodeshell = testWindow.codeshell;
+    testWindow.codeshell = {
+      getSessionTranscript: async () => [],
+      getSessionTranscriptPage: async () => {
+        transcriptReads += 1;
+        return {
+          items:
+            transcriptVersion === 0
+              ? [
+                  { kind: "user", text: "检查额度" },
+                  {
+                    kind: "stream",
+                    event: {
+                      type: "assistant_message",
+                      messageId: "started",
+                      message: { role: "assistant", content: "任务已启动，正在处理。" },
+                    },
+                  },
+                ]
+              : [
+                  { kind: "user", text: "检查额度" },
+                  {
+                    kind: "stream",
+                    event: {
+                      type: "assistant_message",
+                      messageId: "started",
+                      message: { role: "assistant", content: "任务已启动，正在处理。" },
+                    },
+                  },
+                  {
+                    kind: "stream",
+                    event: {
+                      type: "assistant_message",
+                      messageId: "result",
+                      message: { role: "assistant", content: "额度检查结果出来了。" },
+                    },
+                  },
+                ],
+          loadedBytes: 512 * 1024,
+          hasMore: false,
+        };
+      },
+      onStreamEvent: () => () => {},
+      log: () => {},
+    };
+    const api: PetApi = {
+      getSnapshot: async () => snapshot(),
+      onProjectionEvent: () => () => {},
+      openSession: async () => ({ status: "not-found" }),
+      onChatEvent: (listener) => {
+        chatListener = listener;
+        return () => {
+          if (chatListener === listener) chatListener = undefined;
+        };
+      },
+      dispatch: async (command) =>
+        command.type === "get_global_status"
+          ? {
+              ok: true,
+              type: "global_status",
+              version: 0,
+              generation: 0,
+              observedAt: 1,
+              workerState: "active",
+              petSessionId: "pet-one",
+              runningCount: 0,
+              queuedCount: 0,
+              pendingCount: 0,
+              sessions: [],
+            }
+          : { ok: false, code: "invalid-command" },
+      getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+      onAttentionEvent: () => () => {},
+      setActiveSession: async () => ({ ok: true }),
+      markAttentionReceipt: async () => ({ ok: true }),
+    };
+    let latest: ReturnType<typeof usePetState> | undefined;
+    function Consumer() {
+      latest = usePetState();
+      return null;
+    }
+    const root = createRoot(document.createElement("div"));
+    await act(async () => {
+      root.render(
+        <PetStateProvider api={api}>
+          <Consumer />
+        </PetStateProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    expect(latest?.petSessionId).toBe("pet-one");
+    expect(transcriptReads).toBe(1);
+    expect(latest?.chatState.messages.map((message) => message.text)).toEqual([
+      "检查额度",
+      "任务已启动，正在处理。",
+    ]);
+
+    transcriptVersion = 1;
+    await act(async () => {
+      chatListener?.({
+        kind: "transcript-updated",
+        source: "long-task-closure",
+        taskId: "pet-task-0123456789abcdef01234567",
+        createdAt: 42,
+      });
+      await flushMicrotasks();
+    });
+    expect(latest?.chatState.messages.map((message) => message.text)).toEqual([
+      "检查额度",
+      "任务已启动，正在处理。",
+      "额度检查结果出来了。",
+    ]);
+
+    await act(async () => {
+      chatListener?.({
+        kind: "transcript-updated",
+        source: "long-task-closure",
+        taskId: "pet-task-0123456789abcdef01234567",
+        createdAt: 43,
+      });
+      await flushMicrotasks();
+    });
+    expect(
+      latest?.chatState.messages.filter(
+        (message) => message.kind === "assistant" && message.text === "额度检查结果出来了。",
+      ),
+    ).toHaveLength(1);
+    expect(transcriptReads).toBe(3);
+
+    await act(async () => root.unmount());
+    if (originalCodeshell === undefined) delete testWindow.codeshell;
+    else testWindow.codeshell = originalCodeshell;
+  });
+
+  test("does not collapse expanded history when a narrower completion refresh settles last", async () => {
+    ensureMiniDom();
+    let chatListener: Parameters<NonNullable<PetApi["onChatEvent"]>>[0] | undefined;
+    const requestedBytes: number[] = [];
+    const pendingReads: Array<
+      (page: { items: unknown[]; loadedBytes: number; hasMore: boolean }) => void
+    > = [];
+    const testWindow = window as unknown as Record<string, unknown>;
+    const originalCodeshell = testWindow.codeshell;
+    testWindow.codeshell = {
+      getSessionTranscript: async () => [],
+      getSessionTranscriptPage: async (_sessionId: string, options?: { maxBytes?: number }) => {
+        requestedBytes.push(options?.maxBytes ?? 0);
+        if (requestedBytes.length === 1) {
+          return {
+            items: [{ kind: "user" as const, text: "recent" }],
+            loadedBytes: 512 * 1024,
+            hasMore: true,
+          };
+        }
+        return await new Promise((resolve) => pendingReads.push(resolve));
+      },
+      onStreamEvent: () => () => {},
+      log: () => {},
+    };
+    const api: PetApi = {
+      getSnapshot: async () => snapshot(),
+      onProjectionEvent: () => () => {},
+      openSession: async () => ({ status: "not-found" }),
+      onChatEvent: (listener) => {
+        chatListener = listener;
+        return () => {
+          if (chatListener === listener) chatListener = undefined;
+        };
+      },
+      dispatch: async (command) =>
+        command.type === "get_global_status"
+          ? {
+              ok: true,
+              type: "global_status",
+              version: 0,
+              generation: 0,
+              observedAt: 1,
+              workerState: "active",
+              petSessionId: "pet-race",
+              runningCount: 0,
+              queuedCount: 0,
+              pendingCount: 0,
+              sessions: [],
+            }
+          : { ok: false, code: "invalid-command" },
+      getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+      onAttentionEvent: () => () => {},
+      setActiveSession: async () => ({ ok: true }),
+      markAttentionReceipt: async () => ({ ok: true }),
+    };
+    let latest: ReturnType<typeof usePetState> | undefined;
+    function Consumer() {
+      latest = usePetState();
+      return null;
+    }
+    const root = createRoot(document.createElement("div"));
+    await act(async () => {
+      root.render(
+        <PetStateProvider api={api}>
+          <Consumer />
+        </PetStateProvider>,
+      );
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      chatListener?.({
+        kind: "transcript-updated",
+        source: "long-task-closure",
+        taskId: "pet-task-0123456789abcdef01234567",
+        createdAt: 42,
+      });
+      await flushMicrotasks();
+    });
+    expect(requestedBytes).toEqual([512 * 1024, 512 * 1024]);
+
+    let olderRead: Promise<boolean> | undefined;
+    await act(async () => {
+      olderRead = latest?.loadOlderChatHistory();
+      await flushMicrotasks();
+    });
+    expect(requestedBytes).toEqual([512 * 1024, 512 * 1024, 1024 * 1024]);
+
+    await act(async () => {
+      pendingReads[1]?.({
+        items: [
+          { kind: "user", text: "older" },
+          { kind: "user", text: "recent" },
+        ],
+        loadedBytes: 1024 * 1024,
+        hasMore: false,
+      });
+      await olderRead;
+      await flushMicrotasks();
+    });
+    expect(latest?.chatState.messages.map((message) => message.text)).toEqual(["older", "recent"]);
+
+    await act(async () => {
+      pendingReads[0]?.({
+        items: [
+          { kind: "user", text: "recent" },
+          {
+            kind: "stream",
+            event: {
+              type: "assistant_message",
+              messageId: "done",
+              message: { role: "assistant", content: "done" },
+            },
+          },
+        ],
+        loadedBytes: 512 * 1024,
+        hasMore: true,
+      });
+      await flushMicrotasks();
+    });
+    expect(requestedBytes).toEqual([512 * 1024, 512 * 1024, 1024 * 1024, 1024 * 1024]);
+
+    await act(async () => {
+      pendingReads[2]?.({
+        items: [
+          { kind: "user", text: "older" },
+          { kind: "user", text: "recent" },
+          {
+            kind: "stream",
+            event: {
+              type: "assistant_message",
+              messageId: "done",
+              message: { role: "assistant", content: "done" },
+            },
+          },
+        ],
+        loadedBytes: 1024 * 1024,
+        hasMore: false,
+      });
+      await flushMicrotasks();
+    });
+    expect(latest?.chatState.messages.map((message) => message.text)).toEqual([
+      "older",
+      "recent",
+      "done",
+    ]);
+    expect(latest?.chatHistoryLoadedBytes).toBe(1024 * 1024);
+
+    await act(async () => root.unmount());
+    if (originalCodeshell === undefined) delete testWindow.codeshell;
+    else testWindow.codeshell = originalCodeshell;
+  });
+
   test("hydrates only the recent Mimi page and expands it on demand", async () => {
     ensureMiniDom();
     const requestedBytes: number[] = [];

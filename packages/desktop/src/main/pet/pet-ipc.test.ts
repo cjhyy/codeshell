@@ -3,7 +3,7 @@ import type {
   DesktopPetProjectionEvent,
   DesktopPetProjectionSnapshot,
 } from "./pet-state-aggregator";
-import { registerPetIpc } from "./pet-ipc";
+import { broadcastPetChatTranscriptUpdated, registerPetIpc } from "./pet-ipc";
 
 function snapshot(): DesktopPetProjectionSnapshot {
   return {
@@ -17,6 +17,31 @@ function snapshot(): DesktopPetProjectionSnapshot {
 }
 
 describe("registerPetIpc", () => {
+  test("broadcasts durable Mimi transcript invalidations to every live window", () => {
+    const sent: Array<[string, unknown]> = [];
+    const event = broadcastPetChatTranscriptUpdated(
+      [
+        {
+          isDestroyed: () => false,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+        {
+          isDestroyed: () => true,
+          webContents: { send: (channel, payload) => sent.push([channel, payload]) },
+        },
+      ],
+      { taskId: "pet-task-0123456789abcdef01234567", createdAt: 42 },
+    );
+
+    expect(event).toEqual({
+      kind: "transcript-updated",
+      source: "long-task-closure",
+      taskId: "pet-task-0123456789abcdef01234567",
+      createdAt: 42,
+    });
+    expect(sent).toEqual([["pet:chat-event", event]]);
+  });
+
   test("exposes validated memory CRUD and broadcasts persisted snapshots", async () => {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const sent: Array<[string, unknown]> = [];

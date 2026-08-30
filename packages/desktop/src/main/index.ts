@@ -139,7 +139,11 @@ import {
   createPetSegmentClosureService,
   type PetSegmentClosureService,
 } from "./pet/pet-segment-closure-service.js";
-import { PET_CHAT_EVENT_CHANNEL, registerPetIpc } from "./pet/pet-ipc.js";
+import {
+  broadcastPetChatTranscriptUpdated,
+  PET_CHAT_EVENT_CHANNEL,
+  registerPetIpc,
+} from "./pet/pet-ipc.js";
 import {
   completePetHostActionReceipt,
   PetHostActionReceiptService,
@@ -1609,6 +1613,15 @@ async function createWindow(): Promise<BrowserWindow> {
             message = report.text;
             continued = report.continued;
             closureHostActions = report.hostActions;
+            // The closure manager runs outside the renderer-initiated chat IPC.
+            // Its stream is owner-window scoped, so other open Mimi surfaces can
+            // miss the final assistant reply even though it is durable on disk.
+            // Invalidate every window after agent/run settles; each renderer
+            // rehydrates the canonical transcript and naturally deduplicates a
+            // reply it already received through the live stream.
+            broadcastPetChatTranscriptUpdated(BrowserWindow.getAllWindows(), {
+              taskId: task.id,
+            });
           }
         } catch (error) {
           // The deterministic fallback below still reaches the originating IM

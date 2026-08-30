@@ -162,6 +162,9 @@ export function PetStateProvider({
   const [chatHistoryHasMore, setChatHistoryHasMore] = React.useState(false);
   const [chatHistoryLoading, setChatHistoryLoading] = React.useState(false);
   const chatHistoryLoadingRef = React.useRef(false);
+  const chatHistoryRequestedBytesRef = React.useRef(0);
+  const chatHistoryRefreshInFlightRef = React.useRef(false);
+  const chatHistoryRefreshQueuedRef = React.useRef(false);
 
   React.useEffect(() => {
     let active = true;
@@ -307,6 +310,7 @@ export function PetStateProvider({
           setPetSessionId(sessionId);
           setChatHistoryLoadedBytes(0);
           setChatHistoryHasMore(false);
+          chatHistoryRequestedBytesRef.current = INITIAL_PET_HISTORY_BYTES;
           if (!shell?.getSessionTranscript) {
             finishHydration(sessionId);
             return;
@@ -366,6 +370,13 @@ export function PetStateProvider({
       Math.max(INITIAL_PET_HISTORY_BYTES, previousBytes * 2),
     );
     if (nextBytes <= previousBytes) return false;
+    // Publish the larger requested window before awaiting it. A simultaneous
+    // completion refresh must not apply a smaller recent-only page after this
+    // request settles and collapse history the user has already expanded.
+    chatHistoryRequestedBytesRef.current = Math.max(
+      chatHistoryRequestedBytesRef.current,
+      nextBytes,
+    );
     chatHistoryLoadingRef.current = true;
     setChatHistoryLoading(true);
     try {
@@ -387,6 +398,54 @@ export function PetStateProvider({
     }
   }, [chatHistoryHasMore, chatHistoryLoadedBytes, petSessionId]);
 
+  const refreshRecentChatHistory = React.useCallback((): void => {
+    const shell = globalThis.window?.codeshell;
+    if (!petSessionId || !shell?.getSessionTranscript) return;
+    chatHistoryRefreshQueuedRef.current = true;
+    if (chatHistoryRefreshInFlightRef.current) return;
+    chatHistoryRefreshInFlightRef.current = true;
+    const sessionId = petSessionId;
+    void (async () => {
+      try {
+        while (chatHistoryRefreshQueuedRef.current) {
+          chatHistoryRefreshQueuedRef.current = false;
+          const maxBytes = Math.max(
+            INITIAL_PET_HISTORY_BYTES,
+            chatHistoryLoadedBytes,
+            chatHistoryRequestedBytesRef.current,
+          );
+          chatHistoryRequestedBytesRef.current = maxBytes;
+          const page = shell.getSessionTranscriptPage
+            ? await shell.getSessionTranscriptPage(sessionId, { maxBytes })
+            : null;
+          const transcript = page?.items ?? (await shell.getSessionTranscript(sessionId));
+          if (chatHistoryRequestedBytesRef.current > maxBytes) {
+            // An older-history request widened the desired window while this
+            // read was in flight. Discard the stale narrow page and refresh at
+            // the new watermark instead of temporarily deleting older bubbles.
+            chatHistoryRefreshQueuedRef.current = true;
+            continue;
+          }
+          chatDispatch({
+            type: "hydrate",
+            bucket: PET_CHAT_BUCKET,
+            state: foldTranscript(transcript),
+          });
+          if (page) {
+            setChatHistoryLoadedBytes(page.loadedBytes);
+            setChatHistoryHasMore(
+              Boolean(page.hasMore && page.loadedBytes < MAX_PET_HISTORY_BYTES),
+            );
+          }
+        }
+      } catch (error) {
+        window.codeshell.log("pet.chat.history.refresh.failed", { error: String(error) });
+      } finally {
+        chatHistoryRefreshInFlightRef.current = false;
+      }
+    })();
+  }, [chatHistoryLoadedBytes, petSessionId]);
+
   React.useEffect(() => {
     if (!api.onChatEvent) return;
     return api.onChatEvent((event) => {
@@ -398,6 +457,10 @@ export function PetStateProvider({
           clientMessageId: event.clientMessageId,
           attachments: event.attachments,
         });
+        return;
+      }
+      if (event.kind === "transcript-updated") {
+        refreshRecentChatHistory();
         return;
       }
       if (event.kind === "host-action-completed") {
@@ -418,7 +481,7 @@ export function PetStateProvider({
         return next.slice(-100);
       });
     });
-  }, [api]);
+  }, [api, refreshRecentChatHistory]);
 
   React.useEffect(() => {
     if (!api.getLongTasks || !api.onLongTasksChanged) return;

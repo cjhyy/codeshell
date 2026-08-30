@@ -81,7 +81,9 @@ describe("Pet preload contract", () => {
     const chatMessages: string[] = [];
     const offFirst = api.onProjectionEvent((event) => first.push(event));
     api.onProjectionEvent((event) => second.push(event));
-    const offChat = api.onChatEvent?.((event) => chatMessages.push(event.message));
+    const offChat = api.onChatEvent?.((event) => {
+      if (event.kind === "user-submitted") chatMessages.push(event.message);
+    });
     const delta: PetProjectionEvent = {
       kind: "reset",
       version: 1,

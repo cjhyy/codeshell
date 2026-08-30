@@ -73,6 +73,27 @@ export interface PetIpcWindowLike {
   webContents: { send(channel: string, payload: unknown): void };
 }
 
+export function broadcastPetChatTranscriptUpdated(
+  windows: readonly PetIpcWindowLike[],
+  input: { taskId: string; createdAt?: number },
+): {
+  kind: "transcript-updated";
+  source: "long-task-closure";
+  taskId: string;
+  createdAt: number;
+} {
+  const event = {
+    kind: "transcript-updated" as const,
+    source: "long-task-closure" as const,
+    taskId: input.taskId,
+    createdAt: input.createdAt ?? Date.now(),
+  };
+  for (const window of windows) {
+    if (!window.isDestroyed()) window.webContents.send(PET_CHAT_EVENT_CHANNEL, event);
+  }
+  return event;
+}
+
 export interface PetIpcDispatcher {
   dispatch(command: PetDispatchCommand): Promise<PetDispatchResult>;
 }
