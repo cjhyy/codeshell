@@ -1,5 +1,5 @@
-import { createReadStream, existsSync, statSync } from "node:fs";
-import { join, normalize, resolve, sep, extname } from "node:path";
+import { createReadStream, existsSync, realpathSync, statSync } from "node:fs";
+import { isAbsolute, join, normalize, relative, resolve, sep, extname } from "node:path";
 import { request as httpRequest, type IncomingMessage, type ServerResponse } from "node:http";
 import { contentTypeFor } from "../static-files.js";
 
@@ -43,9 +43,33 @@ export function mobileEntryRedirect(reqUrl: string): string | null {
   return null;
 }
 
+/** True when `target` is `root` itself or sits underneath it. Uses `relative`
+ *  rather than a `startsWith` prefix compare so a sibling directory sharing the
+ *  root's name prefix (`/srv/app-old` vs `/srv/app`) can't slip through. */
+function isContained(root: string, target: string): boolean {
+  const rel = relative(root, target);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
+}
+
 /** Resolve an asset sub-path to an absolute file inside `root`, or null if it
  *  would escape the root (traversal) or does not resolve to a regular file. An
- *  empty sub-path resolves to index.html (SPA entry). */
+ *  empty sub-path resolves to index.html (SPA entry).
+ *
+ *  Containment is checked on the REAL paths (both sides `realpathSync`d), not on
+ *  the lexical path: `statSync` follows symlinks, so a link sitting inside the
+ *  root but pointing outside it — e.g. a `node_modules` link left by a packaging
+ *  step — used to pass a string-prefix check and serve the target's contents.
+ *  This covers symlinks (including chains and symlinked directories) but NOT
+ *  hardlinks: a hardlink IS a real name inside the root, so no path-level check
+ *  can see through it. Guarding that would need inode/device policy, and anyone
+ *  able to hardlink into the served root can already write files there.
+ *
+ *  The returned path is the REQUESTED one, not the realpath: callers stream it
+ *  directly and the resolved-name contract is relied on elsewhere (on macOS the
+ *  realpath of a /var root is /private/var, which would change every result).
+ *  That leaves the same synchronous stat-then-read window this module always
+ *  had; closing it properly needs an open-then-fstat rework of both callers,
+ *  which is out of scope for this fix. */
 export function resolveSafe(root: string, subPath: string): string | null {
   const rootResolved = resolve(root);
   const rel = normalize(subPath || "index.html");
@@ -54,8 +78,15 @@ export function resolveSafe(root: string, subPath: string): string | null {
     return null;
   }
   const full = resolve(join(rootResolved, rel));
-  if (full !== rootResolved && !full.startsWith(rootResolved + sep)) return null;
+  if (!isContained(rootResolved, full)) return null;
   if (!existsSync(full) || !statSync(full).isFile()) return null;
+  // realpathSync throws on a dangling link or a race-deleted file; a missing
+  // target is a 404 through the normal contract, never a 500.
+  try {
+    if (!isContained(realpathSync(rootResolved), realpathSync(full))) return null;
+  } catch {
+    return null;
+  }
   return full;
 }
 

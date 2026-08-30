@@ -421,7 +421,11 @@ export class SettingsManager {
     // from the added serialization.
     const release = acquireFileLock(path);
     try {
-      const current = parseConfigFile(path) ?? {};
+      // Strict read: an existing-but-unreadable user settings file must abort
+      // the write rather than be rewritten from {}. This file can hold plaintext
+      // API keys, so silently replacing it with just the new key is the worst
+      // possible outcome. See readConfigFileForMutation.
+      const current = readConfigFileForMutation(path) ?? {};
 
       setDottedSetting(current, key, value);
 
@@ -638,6 +642,32 @@ export class SettingsManager {
     return parseConfigFile(resolved) ?? {};
   }
 
+  /**
+   * Same resolution as readJsonObject (JSON wins, sibling YAML is folded in),
+   * but a resolved file that cannot be read as a bounded object THROWS instead
+   * of degrading to {}. Only the read-modify-write path uses this: rewriting
+   * the whole object off a silently-empty read destroys the file's contents.
+   */
+  private readJsonObjectForMutation(path: string): Record<string, unknown> {
+    const resolved = resolveConfigPath(path);
+    if (!resolved) {
+      // resolveConfigPath returns null both for "no candidate exists" and for
+      // "a candidate exists but is unsafe" (symlink, non-file, or over the size
+      // bound). Only the former may start from {}; the latter must not be
+      // overwritten, so re-check the candidates before deciding.
+      for (const candidate of settingsCandidatePaths(path)) {
+        if (existsSync(candidate)) {
+          throw new Error(
+            `settings file exists but could not be read as a valid, bounded object: ${candidate}. ` +
+              `Refusing to overwrite it. Fix or move the file, then retry.`,
+          );
+        }
+      }
+      return {};
+    }
+    return readConfigFileForMutation(resolved) ?? {};
+  }
+
   private atomicWriteJson(path: string, data: Record<string, unknown>): void {
     assertSafeSettingsWriteTarget(path);
     const serialized = JSON.stringify(data, null, 2);
@@ -683,8 +713,10 @@ export class SettingsManager {
     try {
       assertSafeSettingsWriteTarget(path);
       // Re-read INSIDE the lock: a snapshot taken before acquiring it would be
-      // exactly the stale value that drops the other writer's key.
-      const current = this.readJsonObject(path);
+      // exactly the stale value that drops the other writer's key. Strict read:
+      // an existing-but-unreadable file must abort the mutation rather than be
+      // rewritten from {} — see readConfigFileForMutation.
+      const current = this.readJsonObjectForMutation(path);
       if (mutate(current) === false) return;
       this.atomicWriteJson(path, current);
     } finally {
@@ -757,6 +789,41 @@ function parseConfigFile(path: string): Record<string, unknown> | null {
     // Corrupt file — skip rather than crash.
   }
   return null;
+}
+
+/**
+ * Strict counterpart of `parseConfigFile` for the read-modify-write path.
+ *
+ * A mutation rewrites the WHOLE object, so it must be able to tell "absent"
+ * (start from {}) from "present but unreadable" (malformed, oversize, or
+ * otherwise unreadable). `parseConfigFile` deliberately folds every one of
+ * those to null so an ordinary load can skip a corrupt layer and still boot —
+ * but a writer that treats null as {} silently replaces the user's file with
+ * an object holding only the new key. Fail closed here instead; the caller's
+ * lock is still held, so the file is left byte-for-byte untouched.
+ *
+ * Returns undefined only when the file genuinely does not exist.
+ */
+function readConfigFileForMutation(path: string): Record<string, unknown> | undefined {
+  if (!existsSync(path)) return undefined;
+  const parsed = parseConfigFile(path);
+  if (parsed === null) {
+    // Deliberately does not include the file's contents — settings may hold
+    // plaintext credentials and this message reaches tool output.
+    throw new Error(
+      `settings file exists but could not be read as a valid, bounded object: ${path}. ` +
+        `Refusing to overwrite it. Fix or move the file, then retry.`,
+    );
+  }
+  return parsed;
+}
+
+/** The .json path plus the sibling YAML paths resolveConfigPath would consider,
+ *  in the same precedence order. Used by the mutation path to tell "nothing is
+ *  there" from "something is there but unsafe to read". */
+function settingsCandidatePaths(jsonPath: string): string[] {
+  const base = jsonPath.replace(/\.json$/, "");
+  return [jsonPath, `${base}.yaml`, `${base}.yml`];
 }
 
 /** Read through a no-follow descriptor so a settings-file symlink cannot escape its layer. */
