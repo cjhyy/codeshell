@@ -24,15 +24,7 @@
  * rather than removed, so accidental deletions are recoverable.
  */
 
-import {
-  mkdirSync,
-  existsSync,
-  readFileSync,
-  writeFileSync,
-  readdirSync,
-  renameSync,
-  statSync,
-} from "node:fs";
+import { mkdirSync, existsSync, readFileSync, readdirSync, renameSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { createHash, randomUUID } from "node:crypto";
@@ -289,7 +281,7 @@ export class MemoryManager {
       `---\n\n` +
       `${entry.content}\n`;
 
-    writeFileSync(filePath, content, "utf-8");
+    writeFileAtomic(filePath, content, 0o600);
 
     // Incremental index update. Initialize the cache on first
     // save by paying one loadAll() — every save after that just
