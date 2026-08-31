@@ -74,9 +74,13 @@ export {
 } from "./current-time.js";
 export {
   MANAGE_SESSIONS_TOOL_NAME,
+  WATCH_SESSION_TOOL_NAME,
   manageSessionsToolDef,
   manageSessionsTool,
   manageSessionsAvailability,
+  watchSessionToolDef,
+  watchSessionTool,
+  watchSessionAvailability,
 } from "./session-control.js";
 export {
   FOLLOW_UPS_TOOL_NAME,

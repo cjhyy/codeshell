@@ -63,6 +63,7 @@ export type PetLongTaskEventKind =
   | "artifact"
   | "checkpoint"
   | "verification-changed"
+  | "completion-target-set"
   | "interrupted"
   | "completed"
   | "failed"
@@ -185,6 +186,7 @@ export type PetLongTaskTransition =
       artifacts?: PetLongTaskArtifact[];
     }
   | { kind: "verification-changed"; at: number; mode: PetLongTaskVerificationMode }
+  | { kind: "completion-target-set"; at: number; completionTarget: PetLongTaskCompletionTarget }
   | {
       /** Repairs rows written by hosts that closed a foreground background_wait yield. */
       kind: "background-wait-recovered";
@@ -619,6 +621,18 @@ export function transitionPetLongTask(
             : "Completion now follows the ordinary Work Session result",
       };
       break;
+    case "completion-target-set": {
+      const completionTarget = normalizeCompletionTarget(transition.completionTarget);
+      if (!completionTarget) return current;
+      Object.assign(next, { completionTarget });
+      event = {
+        kind: transition.kind,
+        at: transition.at,
+        phase: next.phase,
+        message: "Completion notification route registered",
+      };
+      break;
+    }
     case "background-wait-recovered":
       Object.assign(next, {
         status: "interrupted",
@@ -839,6 +853,7 @@ function isEventKind(value: unknown): value is PetLongTaskEventKind {
       "artifact",
       "checkpoint",
       "verification-changed",
+      "completion-target-set",
       "interrupted",
       "completed",
       "failed",

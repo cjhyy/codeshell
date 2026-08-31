@@ -177,6 +177,30 @@ describe("enrichPetChatReplyWithHostActions", () => {
     expect(enriched.attachments).toEqual([]);
   });
 
+  test("confirms a live Session watch and reports a race that already ended", async () => {
+    const enriched = await enrichPetChatReplyWithHostActions(
+      "我来设置提醒。",
+      [
+        {
+          kind: "sessionWatch",
+          payload: { sessionId: "session-running" },
+          ok: true,
+          result: { watching: true, title: "审查后端路线图题目", status: "running" },
+        },
+        {
+          kind: "sessionWatch",
+          payload: { sessionId: "session-ended" },
+          ok: true,
+          result: { watching: false, title: "另一个任务", status: "completed" },
+        },
+      ],
+      { qrDir: join(tmpdir(), "unused") },
+    );
+
+    expect(enriched.text).toContain("已订阅任务「审查后端路线图题目」");
+    expect(enriched.text).toContain("任务「另一个任务」在订阅前就已完成");
+  });
+
   test("keeps outbound receipt generation and legacy replacement recognition in one contract", async () => {
     const sourceClientMessageId = "message-with-punctuation";
     const enriched = await enrichPetChatReplyWithHostActions(

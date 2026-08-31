@@ -16,6 +16,7 @@ const HOST_ACTION_LABELS: Record<string, string> = {
   memory: "记忆",
   gatewayReply: "Gateway 回复",
   followUpMutation: "跟进项",
+  sessionWatch: "任务订阅",
   sessionArchive: "Session 归档",
   outboundMessage: "主动消息",
 };
@@ -91,6 +92,8 @@ export async function enrichPetChatReplyWithHostActions(
       lines.push(renderMemoryLine(execution));
     } else if (execution.kind === "followUpMutation") {
       lines.push(renderFollowUpMutationLine(execution));
+    } else if (execution.kind === "sessionWatch") {
+      lines.push(renderSessionWatchLine(execution));
     } else if (execution.kind === "sessionArchive") {
       lines.push(renderSessionArchiveLine(execution));
     } else if (execution.kind === "outboundMessage") {
@@ -241,6 +244,25 @@ function renderSessionArchiveLine(execution: PetHostActionExecution): string {
         ? execution.result.archived.length
         : 0;
   return count > 0 ? `已归档 ${count} 个工作 Session。` : "没有需要归档的工作 Session。";
+}
+
+function renderSessionWatchLine(execution: PetHostActionExecution): string {
+  const title =
+    typeof execution.result?.title === "string"
+      ? execution.result.title.replace(/\s+/gu, " ").trim().slice(0, 120)
+      : "该任务";
+  if (execution.result?.watching === true) {
+    return execution.result.alreadyWatching === true
+      ? `任务「${title}」已在当前会话订阅，无需重复设置。`
+      : `已订阅任务「${title}」；结束后会在当前会话回告。`;
+  }
+  const status = String(execution.result?.status ?? "ended");
+  const statusLabel: Record<string, string> = {
+    completed: "已完成",
+    failed: "已失败",
+    cancelled: "已取消",
+  };
+  return `任务「${title}」在订阅前就${statusLabel[status] ?? "已结束"}，不会再等待后续通知。`;
 }
 
 function renderOutboundMessageLine(execution: PetHostActionExecution): string {

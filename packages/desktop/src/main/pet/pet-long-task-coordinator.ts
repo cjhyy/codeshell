@@ -5,6 +5,7 @@ import {
   type PetLongTask,
   type PetLongTaskArtifact,
   type PetLongTaskClosureDecision,
+  type PetLongTaskCompletionTarget,
   type PetLongTaskContinuationDecision,
   type PetLongTaskContext,
   type PetLongTaskControlRequest,
@@ -50,8 +51,31 @@ export interface PetLongTaskLaunch extends PetWorkDelegationLaunch {
   taskId: string;
 }
 
+export interface PetSessionWatchInput {
+  originClientMessageId: string;
+  requestedAt: number;
+  sessionId: string;
+  objective: string;
+  workspacePath: string | null;
+  completionTarget: PetLongTaskCompletionTarget;
+}
+
+export interface PetSessionWatchResult {
+  task: PetLongTask;
+  alreadyWatching: boolean;
+}
+
 function taskIdFor(clientMessageId: string): string {
   return `pet-task-${createHash("sha256").update(clientMessageId).digest("hex").slice(0, 24)}`;
+}
+
+function watchTaskIdFor(clientMessageId: string, sessionId: string): string {
+  return `pet-watch-${createHash("sha256")
+    .update(clientMessageId)
+    .update("\0")
+    .update(sessionId)
+    .digest("hex")
+    .slice(0, 24)}`;
 }
 
 function isTerminal(task: PetLongTask): boolean {
@@ -250,6 +274,11 @@ export class PetLongTaskCoordinator {
     return buildPetLongTaskContext(this.options.store.getSnapshot().tasks);
   }
 
+  /** Close any watched task whose terminal marker arrived during watch setup. */
+  async reconcileNow(): Promise<void> {
+    await this.reconcile(this.options.projection.getSnapshot());
+  }
+
   async recordClosureDecision(
     taskId: string,
     decision: Pick<PetLongTaskClosureDecision, "key" | "text"> & {
@@ -317,6 +346,80 @@ export class PetLongTaskCoordinator {
       await this.notifyClosed(failed);
       throw error;
     }
+  }
+
+  /**
+   * Adopt an already-running ordinary Work Session into Mimi's durable task
+   * ledger so the normal terminal-event and proactive-receipt path can watch it.
+   * This does not launch, resume, or otherwise mutate the observed Session.
+   */
+  async watchSession(input: PetSessionWatchInput): Promise<PetSessionWatchResult> {
+    const active = this.options.store.activeForSession(input.sessionId);
+    if (active) {
+      const target = active.completionTarget;
+      if (!target) {
+        const task = await this.options.store.transition(active.id, {
+          kind: "completion-target-set",
+          at: this.now(),
+          completionTarget: input.completionTarget,
+        });
+        return { task, alreadyWatching: false };
+      }
+      if (
+        target?.kind === input.completionTarget.kind &&
+        target.channel === input.completionTarget.channel &&
+        target.target === input.completionTarget.target
+      ) {
+        return { task: active, alreadyWatching: true };
+      }
+      throw new Error("This Session is already managed with a different completion route");
+    }
+
+    const snapshot = this.options.projection.getSnapshot();
+    const session = snapshot.sessions.find(
+      (candidate) => candidate.agentSessionId === input.sessionId,
+    );
+    if (!session) throw new Error("The selected Work Session is no longer available");
+    if (session.terminal) throw new Error("The selected Work Session has already ended");
+    if (
+      session.runState !== "running" &&
+      session.runState !== "queued" &&
+      session.pendingDecisionCount === 0 &&
+      session.completionKind !== "background_wait"
+    ) {
+      throw new Error("The selected Work Session is not active");
+    }
+
+    const at = input.requestedAt;
+    const created = await this.options.store.create({
+      id: watchTaskIdFor(input.originClientMessageId, input.sessionId),
+      originClientMessageId: input.originClientMessageId,
+      objective: input.objective,
+      workspacePath: input.workspacePath,
+      sessionId: input.sessionId,
+      verificationMode: "turn",
+      completionTarget: input.completionTarget,
+      at,
+    });
+    let task = await this.options.store.transition(created.id, {
+      kind: "started",
+      at,
+      message: "Mimi subscribed to an existing Work Session",
+    });
+    if (session.pendingDecisionCount > 0) {
+      task = await this.options.store.transition(created.id, {
+        kind: "waiting",
+        at,
+        waitingFor: session.summary ?? "The work session needs a user decision",
+      });
+    } else if (session.completionKind === "background_wait") {
+      task = await this.options.store.transition(created.id, {
+        kind: "waiting-worker",
+        at,
+        waitingFor: interruptReasonForCompletionKind(session.completionKind),
+      });
+    }
+    return { task, alreadyWatching: false };
   }
 
   async control(request: PetLongTaskControlRequest): Promise<PetLongTaskControlResult> {

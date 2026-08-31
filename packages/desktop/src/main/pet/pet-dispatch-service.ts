@@ -85,9 +85,18 @@ export interface PetReusableSessionCandidate {
   status?: "active" | "paused" | "completed" | "failed" | "cancelled";
 }
 
+export interface PetHostActionContext {
+  originClientMessageId: string;
+  /** Host clock captured before Mimi begins composing this turn. */
+  requestedAt: number;
+  /** Host-authenticated route of the current IM turn, never model supplied. */
+  completionTarget?: PetLongTaskCompletionTarget;
+}
+
 /** Host-side executor for one Mimi host-action kind; throws to signal failure. */
 export type PetHostActionExecutor = (
   payload: Record<string, unknown>,
+  context?: PetHostActionContext,
 ) => Promise<Record<string, unknown>>;
 
 /** Outcome of executing one host action Mimi requested this turn. */
@@ -191,6 +200,7 @@ interface PetDispatchOptions {
   aggregator: {
     getSnapshot(): DesktopPetProjectionSnapshot;
     resolveNavigation(request: PetNavigationRequest): Promise<PetNavigationResult>;
+    refreshCatalog?(emit?: boolean, opts?: { full?: boolean }): Promise<void>;
   };
   worker: {
     requestWorker(
@@ -1218,10 +1228,21 @@ export class PetDispatchService {
           result: await this.options.aggregator.resolveNavigation(command.target),
         };
       case "chat": {
+        const requestedAt = Date.now();
         const attachments = Array.isArray(command.attachments) ? command.attachments : [];
         const replyAttachmentKinds = replyAttachmentKindsFor(command.source);
         const gatewayReplyCapability = gatewayReplyCapabilityFor(command.source);
         const gatewayCatalog = gatewayCatalogFor(command.source);
+        const currentCompletionTarget: PetLongTaskCompletionTarget | undefined = command.source
+          ?.target
+          ? {
+              kind: "im-gateway",
+              channel: command.source.channel,
+              target: command.source.target,
+              replyButton: command.source.capabilities?.outbound.button ?? "link",
+              ...(replyAttachmentKinds.length > 0 ? { replyAttachmentKinds } : {}),
+            }
+          : undefined;
         if (
           typeof command.message !== "string" ||
           (!command.message.trim() && attachments.length === 0)
@@ -1318,6 +1339,11 @@ export class PetDispatchService {
                 : workspace.path,
           });
         }
+        // Chat status is user-facing truth. Pull the latest durable terminal
+        // markers now instead of waiting for the periodic catalog refresh.
+        if (this.options.aggregator.refreshCatalog) {
+          await this.options.aggregator.refreshCatalog(false).catch(() => undefined);
+        }
         const snapshot = this.options.aggregator.getSnapshot();
         const unavailableSessionIds = new Set(
           snapshot.sessions
@@ -1403,7 +1429,11 @@ export class PetDispatchService {
         const hostActionKinds =
           command.source?.kind === "im-gateway"
             ? Object.keys(this.options.hostActions ?? {})
-                .filter((kind) => kind !== "gatewayReply" || gatewayReplyCapability !== undefined)
+                .filter(
+                  (kind) =>
+                    (kind !== "gatewayReply" || gatewayReplyCapability !== undefined) &&
+                    (kind !== "sessionWatch" || currentCompletionTarget !== undefined),
+                )
                 .sort()
             : Object.keys(this.options.hostActions ?? {})
                 .filter((kind) => desktopHostActionKinds.has(kind))
@@ -1599,17 +1629,7 @@ export class PetDispatchService {
               workspacePath: workspacePathById.get(entry.workspaceId) ?? null,
               ...(entry.executionBackend === "codex" ? { executionBackend: "codex" as const } : {}),
               ...(reusableSession ? { targetSessionId: reusableSession.sessionId } : {}),
-              ...(command.source?.target
-                ? {
-                    completionTarget: {
-                      kind: "im-gateway" as const,
-                      channel: command.source.channel,
-                      target: command.source.target,
-                      replyButton: command.source.capabilities?.outbound.button ?? "link",
-                      ...(replyAttachmentKinds.length > 0 ? { replyAttachmentKinds } : {}),
-                    },
-                  }
-                : {}),
+              ...(currentCompletionTarget ? { completionTarget: currentCompletionTarget } : {}),
             }),
           );
           // A delegation-launch failure must not discard Mimi's already-generated
@@ -1673,6 +1693,11 @@ export class PetDispatchService {
                 ["followUpMutation", "Work Session 刚刚启动，跟进项只能在真实完成后再标记已处理"],
               ])
             : undefined,
+          {
+            originClientMessageId: command.clientMessageId ?? `pet-${randomUUID()}`,
+            requestedAt,
+            ...(currentCompletionTarget ? { completionTarget: currentCompletionTarget } : {}),
+          },
         );
         // Launch acceptance is not task completion. PetLongTaskCoordinator owns
         // the real terminal signal and records work memory only after a worker
@@ -1718,6 +1743,8 @@ export class PetDispatchService {
     replayIdentity?: { petSessionId: string; clientMessageId?: string },
     /** Deterministic per-turn guards, persisted through the normal receipt path. */
     blockedReasons?: ReadonlyMap<string, string>,
+    /** Trusted per-turn routing facts for host actions that need an origin. */
+    context?: PetHostActionContext,
   ): Promise<PetHostActionExecution[]> {
     const executions: PetHostActionExecution[] = [];
     const receipts = this.options.hostActionReceipts;
@@ -1784,7 +1811,7 @@ export class PetDispatchService {
             throw new Error("Gateway 渠道不支持所请求的附件");
           }
         }
-        const result = await executor(request.payload);
+        const result = await executor(request.payload, context);
         if (
           request.kind === "gatewayReply" &&
           (!gatewayReplyCapability || !gatewayReplyResultFits(result, gatewayReplyCapability))

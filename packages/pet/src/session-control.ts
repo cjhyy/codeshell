@@ -3,6 +3,52 @@ import { hostActionAvailability, hostActionService } from "./host-actions.js";
 import { hasOnlyDeclaredToolArguments } from "./tool-arguments.js";
 
 export const MANAGE_SESSIONS_TOOL_NAME = "ManageSessions";
+export const WATCH_SESSION_TOOL_NAME = "WatchSession";
+
+export const watchSessionToolDef: ToolDefinition = {
+  name: WATCH_SESSION_TOOL_NAME,
+  description:
+    "Subscribe the current originating IM conversation to the completion of one currently active " +
+    "CodeShell Work Session. session_id must be copied exactly from the trusted sessions runtime " +
+    "context. Tool acceptance only records a pending host request; do not promise a completion " +
+    "notification until the host confirms the subscription in its post-turn receipt.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      session_id: {
+        type: "string",
+        minLength: 1,
+        maxLength: 128,
+        description: "Exact agentSessionId from the trusted sessions runtime context.",
+      },
+    },
+    required: ["session_id"],
+  },
+};
+
+export const watchSessionAvailability = hostActionAvailability("sessionWatch");
+
+export async function watchSessionTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
+  const request = hostActionService(ctx);
+  if (!request) return "Error: WatchSession is available only in an IM-originated Mimi turn.";
+  const sessionId = typeof args.session_id === "string" ? args.session_id.trim() : "";
+  if (
+    !/^[A-Za-z0-9_-]{1,128}$/u.test(sessionId) ||
+    !hasOnlyDeclaredToolArguments(args, ["session_id"])
+  ) {
+    return "Error: session_id must be one exact Session id from the trusted runtime context.";
+  }
+  const decision = request({ kind: "sessionWatch", payload: { sessionId } });
+  if (!decision.ok) return `Error: ${decision.error ?? "session watch was rejected"}`;
+  return (
+    "Session watch request accepted for host validation after this turn. " +
+    "Do not claim that completion notification is active until the host confirms it."
+  );
+}
 
 export const manageSessionsToolDef: ToolDefinition = {
   name: MANAGE_SESSIONS_TOOL_NAME,

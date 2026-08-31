@@ -19,6 +19,7 @@ export const PET_HOST_ACTION_KINDS = [
   "memory",
   "gatewayReply",
   "followUpMutation",
+  "sessionWatch",
   "sessionArchive",
   "outboundMessage",
 ] as const;
@@ -164,6 +165,9 @@ export function isPetHostActionRequest(value: unknown): value is PetHostActionRe
       (payload.action === "complete" || payload.action === "dismiss") &&
       isOpaqueId(payload.followUpId)
     );
+  }
+  if (value.kind === "sessionWatch") {
+    return hasExactKeys(payload, ["sessionId"]) && isOpaqueId(payload.sessionId);
   }
   if (value.kind === "sessionArchive") {
     return (

@@ -2380,6 +2380,74 @@ describe("PetDispatchService", () => {
     expect(executed).toHaveLength(2);
   });
 
+  test("passes only the trusted current IM route to a Session watch executor", async () => {
+    let refreshes = 0;
+    let executionContext: unknown;
+    const service = new PetDispatchService({
+      metadata: { ensure: async () => ({ petSessionId: "pet-one" }) },
+      aggregator: {
+        getSnapshot: () => snapshot,
+        resolveNavigation: async () => ({ status: "not-found" }),
+        refreshCatalog: async () => {
+          refreshes += 1;
+        },
+      },
+      worker: {
+        requestWorker: async (_method, params) => {
+          expect((params.profileParams as { hostActions: string[] }).hostActions).toContain(
+            "sessionWatch",
+          );
+          return {
+            ok: true,
+            result: {
+              text: "我来设置完成提醒。",
+              extensions: {
+                pet: {
+                  hostActions: [{ kind: "sessionWatch", payload: { sessionId: "work-a" } }],
+                },
+              },
+            },
+          };
+        },
+      },
+      hostCwd: "/safe/pet",
+      hostActions: {
+        sessionWatch: async (_payload, context) => {
+          executionContext = context;
+          return { watching: true, title: "Work A", status: "running" };
+        },
+      },
+    });
+
+    const result = await service.dispatch({
+      type: "chat",
+      message: "完成后通知我",
+      clientMessageId: "im-message-one",
+      source: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "trusted-owner-target",
+        capabilities: textOnlyChannelCapabilities,
+      },
+    });
+
+    expect(refreshes).toBe(1);
+    expect(executionContext).toEqual({
+      originClientMessageId: "im-message-one",
+      requestedAt: expect.any(Number),
+      completionTarget: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "trusted-owner-target",
+        replyButton: "link",
+      },
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      hostActions: [{ kind: "sessionWatch", ok: true, result: { watching: true } }],
+    });
+  });
+
   test("drops the whole host-action envelope when any entry is malformed or duplicated", async () => {
     const envelopes: unknown[][] = [
       [{ kind: "mobileRemote", payload: { action: "destroy" } }],

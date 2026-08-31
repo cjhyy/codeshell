@@ -35,6 +35,9 @@ import {
   manageSessionsAvailability,
   manageSessionsTool,
   manageSessionsToolDef,
+  watchSessionAvailability,
+  watchSessionTool,
+  watchSessionToolDef,
 } from "./session-control.js";
 import {
   followUpsAvailability,
@@ -296,6 +299,21 @@ function buildPetParts(): PetParts {
           presetTags: ["harness-min", "general"],
           defaultPermissionRules: [{ tool: manageFollowUpToolDef.name, decision: "allow" }],
           availability: manageFollowUpAvailability,
+        },
+      },
+      {
+        definition: {
+          ...watchSessionToolDef,
+          source: "builtin",
+          permissionDefault: "allow",
+          isReadOnly: false,
+          isConcurrencySafe: false,
+        },
+        execute: watchSessionTool,
+        exposure: {
+          presetTags: ["harness-min", "general"],
+          defaultPermissionRules: [{ tool: watchSessionToolDef.name, decision: "allow" }],
+          availability: watchSessionAvailability,
         },
       },
       {

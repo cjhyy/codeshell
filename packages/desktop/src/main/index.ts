@@ -1837,6 +1837,54 @@ async function createWindow(): Promise<BrowserWindow> {
           if (!controlled.ok) throw new Error(controlled.message);
           return { action, objective: controlled.task.objective, status: controlled.task.status };
         },
+        sessionWatch: async (payload, context) => {
+          const sessionId = typeof payload.sessionId === "string" ? payload.sessionId : "";
+          const completionTarget = context?.completionTarget;
+          if (
+            !sessionId ||
+            !completionTarget ||
+            !context?.originClientMessageId ||
+            !Number.isFinite(context.requestedAt)
+          ) {
+            throw new Error("当前消息没有可用的完成回告路由");
+          }
+          // Reconcile immediately so a Session that ended while Mimi was
+          // composing her reply is reported as ended instead of registered as
+          // a watcher that can never receive another terminal event.
+          await aggregator.refreshCatalog(false).catch(() => undefined);
+          const session = aggregator
+            .getSnapshot()
+            .sessions.find((candidate) => candidate.agentSessionId === sessionId);
+          if (!session) throw new Error("指定的工作 Session 已不存在或不可见");
+          const title = session.title?.trim() || "未命名任务";
+          if (session.terminal) {
+            return {
+              watching: false,
+              title,
+              status: session.terminal.status,
+              endedAt: session.terminal.at,
+            };
+          }
+          const watched = await longTaskCoordinator.watchSession({
+            originClientMessageId: context.originClientMessageId,
+            requestedAt: context.requestedAt,
+            sessionId,
+            objective: title,
+            workspacePath: null,
+            completionTarget,
+          });
+          // Close the setup race: a terminal event may have landed after the
+          // first status check but before the durable watcher was created.
+          await aggregator.refreshCatalog(false).catch(() => undefined);
+          await longTaskCoordinator.reconcileNow();
+          return {
+            watching: true,
+            alreadyWatching: watched.alreadyWatching,
+            taskId: watched.task.id,
+            title,
+            status: watched.task.status,
+          };
+        },
         memory: async (payload) => {
           const action = payload.action;
           const text = typeof payload.text === "string" ? payload.text : "";

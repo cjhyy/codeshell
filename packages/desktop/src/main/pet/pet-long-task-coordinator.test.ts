@@ -30,15 +30,19 @@ function emptySnapshot(): DesktopPetProjectionSnapshot {
 }
 
 function fakeProjection(snapshot = emptySnapshot()) {
+  let current = snapshot;
   const listeners = new Set<(event: DesktopPetProjectionEvent) => void>();
   return {
-    getSnapshot: () => snapshot,
+    getSnapshot: () => current,
     subscribe: (listener: (event: DesktopPetProjectionEvent) => void) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
     emit: (event: DesktopPetProjectionEvent) => {
       for (const listener of listeners) listener(event);
+    },
+    setSnapshot: (next: DesktopPetProjectionSnapshot) => {
+      current = next;
     },
   };
 }
@@ -137,6 +141,146 @@ function waitForTaskStatus(
 }
 
 describe("PetLongTaskCoordinator", () => {
+  test("adopts an already-running Session and routes its later completion", async () => {
+    const h = await harness({
+      ...emptySnapshot(),
+      sessions: [
+        {
+          agentSessionId: "standalone-session",
+          title: "Review the backend roadmap",
+          workspaceDisplayName: "coding-learning",
+          runState: "running",
+          phase: "model",
+          queueDepth: 0,
+          lastActivityAt: 900,
+          pendingDecisionCount: 0,
+          freshness: { source: "live-event", observedAt: 900, workerState: "active" },
+        },
+      ],
+    });
+    const watched = await h.coordinator.watchSession({
+      originClientMessageId: "im:wechat:watch-one",
+      requestedAt: 1_000,
+      sessionId: "standalone-session",
+      objective: "Review the backend roadmap",
+      workspacePath: null,
+      completionTarget: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "owner-conversation",
+      },
+    });
+
+    expect(watched.alreadyWatching).toBe(false);
+    expect(watched.task).toMatchObject({
+      status: "running",
+      sessionId: "standalone-session",
+      completionTarget: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "owner-conversation",
+      },
+    });
+
+    h.tick(2_000);
+    await h.coordinator.observeSessionEvent("standalone-session", {
+      type: "assistant_message",
+      message: { role: "assistant", content: "Roadmap review complete." },
+    });
+    await h.coordinator.observeSessionEvent("standalone-session", {
+      type: "turn_complete",
+      reason: "completed",
+    });
+
+    expect(h.store.get(watched.task.id)).toMatchObject({
+      status: "completed",
+      resultSummary: "Roadmap review complete.",
+    });
+    expect(h.closed).toEqual([{ id: watched.task.id, status: "completed" }]);
+  });
+
+  test("attaches the current IM route to an existing task that had no completion target", async () => {
+    const h = await harness();
+    const launch = await h.coordinator.startDelegation({
+      clientMessageId: "desktop-launch",
+      task: "Review the roadmap",
+      workspacePath: "/work/app",
+    });
+
+    const watched = await h.coordinator.watchSession({
+      originClientMessageId: "im:wechat:watch-existing",
+      requestedAt: 1_000,
+      sessionId: launch.sessionId,
+      objective: "Review the roadmap",
+      workspacePath: "/work/app",
+      completionTarget: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "owner-conversation",
+      },
+    });
+
+    expect(watched).toMatchObject({
+      alreadyWatching: false,
+      task: {
+        id: launch.taskId,
+        completionTarget: {
+          kind: "im-gateway",
+          channel: "wechat",
+          target: "owner-conversation",
+        },
+      },
+    });
+    expect(h.store.get(launch.taskId)?.events.at(-1)?.kind).toBe("completion-target-set");
+  });
+
+  test("reconciles a completion that lands while the Session watch is being registered", async () => {
+    const running = {
+      agentSessionId: "racing-session",
+      title: "Race-safe review",
+      workspaceDisplayName: "coding-learning",
+      runState: "running" as const,
+      phase: "model" as const,
+      queueDepth: 0,
+      lastActivityAt: 900,
+      pendingDecisionCount: 0,
+      freshness: { source: "live-event" as const, observedAt: 900, workerState: "active" as const },
+    };
+    const h = await harness({ ...emptySnapshot(), sessions: [running] });
+    h.tick(1_500);
+    const watched = await h.coordinator.watchSession({
+      originClientMessageId: "im:wechat:watch-race",
+      requestedAt: 1_000,
+      sessionId: "racing-session",
+      objective: "Race-safe review",
+      workspacePath: null,
+      completionTarget: {
+        kind: "im-gateway",
+        channel: "wechat",
+        target: "owner-conversation",
+      },
+    });
+
+    h.projection.setSnapshot({
+      ...emptySnapshot(),
+      version: 2,
+      observedAt: 1_200,
+      sessions: [
+        {
+          ...running,
+          runState: "terminal",
+          phase: undefined,
+          lastActivityAt: 1_200,
+          terminal: { status: "completed", at: 1_200 },
+        },
+      ],
+    });
+    await h.coordinator.reconcileNow();
+
+    expect(h.store.get(watched.task.id)?.status).toBe("completed");
+    expect(h.closed).toEqual([{ id: watched.task.id, status: "completed" }]);
+  });
+
   test("repairs a persisted completion that was written while background work was pending", async () => {
     const root = await mkdtemp(join(tmpdir(), "pet-long-task-background-recovery-"));
     roots.push(root);

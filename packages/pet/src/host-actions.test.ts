@@ -17,6 +17,11 @@ import {
 import { mobileRemoteAvailability, mobileRemoteTool } from "./mobile-remote.js";
 import { GATEWAY_TOOL_NAME } from "./gateway.js";
 import { PET_ALLOWED_TOOL_NAMES, PET_BEHAVIOR_PROFILE, PET_SYSTEM_PROMPT } from "./profile.js";
+import {
+  WATCH_SESSION_TOOL_NAME,
+  watchSessionAvailability,
+  watchSessionTool,
+} from "./session-control.js";
 
 const richGatewayReply = {
   button: "native" as const,
@@ -74,6 +79,25 @@ describe("ControlLongTask tool", () => {
         runScopedServices: {},
       } as unknown as ToolContext),
     ).resolves.toContain("available only in a Mimi manager turn");
+  });
+});
+
+describe("WatchSession tool", () => {
+  test("records one exact Session subscription request", async () => {
+    const { ctx, recorded } = context();
+
+    expect(await watchSessionTool({ session_id: "s-running-123" }, ctx)).toContain("accepted");
+    expect(recorded).toEqual([{ kind: "sessionWatch", payload: { sessionId: "s-running-123" } }]);
+  });
+
+  test("rejects malformed or undeclared Session inputs", async () => {
+    const { ctx, recorded } = context();
+
+    expect(await watchSessionTool({ session_id: "../session" }, ctx)).toContain("Error");
+    expect(
+      await watchSessionTool({ session_id: "s-running", target: "raw-owner-id" }, ctx),
+    ).toContain("Error");
+    expect(recorded).toEqual([]);
   });
 });
 
@@ -262,6 +286,12 @@ describe("host-action envelope validation", () => {
     ).toBe(true);
     expect(
       isPetHostActionRequest({
+        kind: "sessionWatch",
+        payload: { sessionId: "session-one" },
+      }),
+    ).toBe(true);
+    expect(
+      isPetHostActionRequest({
         kind: "outboundMessage",
         payload: {
           targetId: "owner-one",
@@ -296,6 +326,12 @@ describe("host-action envelope validation", () => {
       isPetHostActionRequest({
         kind: "sessionArchive",
         payload: { action: "archive", sessionIds: ["session-one", "session-one"] },
+      }),
+    ).toBe(false);
+    expect(
+      isPetHostActionRequest({
+        kind: "sessionWatch",
+        payload: { sessionId: "session-one", target: "owner" },
       }),
     ).toBe(false);
     expect(
@@ -384,6 +420,8 @@ describe("pet profile host-action integration", () => {
     expect(PET_ALLOWED_TOOL_NAMES.has(MEMORY_TOOL_NAME)).toBe(true);
     expect(PET_ALLOWED_TOOL_NAMES.has(GATEWAY_TOOL_NAME)).toBe(true);
     expect(PET_ALLOWED_TOOL_NAMES.has(GATEWAY_REPLY_TOOL_NAME)).toBe(true);
+    expect(PET_ALLOWED_TOOL_NAMES.has(WATCH_SESSION_TOOL_NAME)).toBe(true);
+    expect(PET_SYSTEM_PROMPT).toContain("status snapshot, not a completion subscription");
 
     const reported: Array<{ key: string; value: unknown }> = [];
     const services = PET_BEHAVIOR_PROFILE.createRunServices!({
@@ -430,6 +468,21 @@ describe("pet profile host-action integration", () => {
       PET_BEHAVIOR_PROFILE.buildVisibilityMeta!({ hostActions: ["memory"] }).petHostActionKinds,
     ).toEqual(["memory"]);
     expect(PET_BEHAVIOR_PROFILE.buildVisibilityMeta!({}).petHostActionKinds).toEqual([]);
+  });
+
+  test("exposes WatchSession only when the host declares the session-watch action", () => {
+    expect(
+      watchSessionAvailability({
+        behaviorProfile: "pet",
+        profileMeta: { petHostActionKinds: ["sessionWatch"] },
+      } as never),
+    ).toBe(true);
+    expect(
+      watchSessionAvailability({
+        behaviorProfile: "pet",
+        profileMeta: { petHostActionKinds: [] },
+      } as never),
+    ).toBe(false);
   });
 
   test("mobile-remote tool rides the same host-action service", async () => {

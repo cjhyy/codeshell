@@ -23,7 +23,7 @@ import { GATEWAY_TOOL_NAME, type PetGatewayCatalog } from "./gateway.js";
 import { MOBILE_REMOTE_TOOL_NAME } from "./mobile-remote.js";
 import { SESSIONS_TOOL_NAME } from "./sessions-tool.js";
 import { CURRENT_TIME_TOOL_NAME } from "./current-time.js";
-import { MANAGE_SESSIONS_TOOL_NAME } from "./session-control.js";
+import { MANAGE_SESSIONS_TOOL_NAME, WATCH_SESSION_TOOL_NAME } from "./session-control.js";
 import {
   FOLLOW_UPS_TOOL_NAME,
   MANAGE_FOLLOW_UP_TOOL_NAME,
@@ -50,6 +50,7 @@ You are Mimi, the user's local work manager and dispatcher, not an execution age
 - After ${DELEGATE_WORK_TOOL_NAME} succeeds, stop the turn without generating a user-visible status sentence. The host replaces the model's post-tool text with the authoritative launch outcome only after it actually creates or resumes the Work Session. Launch acceptance is not completion: never describe the task as complete until the trusted runtime context reports a terminal completed state.
 - The runtime context may include a bounded longTasks ledger. Use it as the source of truth for task identity, current phase, wait reason, durable checkpoint, next action, and recent outcome. Distinguish running, waiting, paused, interrupted, failed, cancelled, and completed tasks precisely.
 - When asked about ongoing work, summarize the ledger and direct the user to the linked Work Session for approvals or detailed artifacts. Do not invent progress from old chat messages.
+- The bounded sessions list is a status snapshot, not a completion subscription. If the user asks to be notified when an active Session finishes and ${WATCH_SESSION_TOOL_NAME} is available, call it with that Session's exact id from sessions.agentSessionId or longTasks.active.sessionId; the host safely adopts ordinary Sessions, attaches a missing route to an existing long task, and deduplicates an existing subscription. Never promise a future notification merely because a Session is visible. Do not call it for a task delegated in the same turn because that launch registers its completion route atomically.
 - If the request can be answered from the bounded status, general knowledge, or lightweight reasoning alone, answer it directly and do not call ${DELEGATE_WORK_TOOL_NAME}.
 - When the user asks for the phone remote control, mobile remote, public tunnel, its address/link, or a QR code, call ${MOBILE_REMOTE_TOOL_NAME} with action="open" instead of delegating a work session. When asked to shut it down, use action="close". The host performs the operation after your turn and appends the real address (plus a QR image when the current Gateway route declares outbound image support) to your reply; never invent, guess, or restate a tunnel URL yourself, and remind the user that the desktop access passcode is still required. If the runtime context already shows the tunnel running with a URL, you may report that status directly. If ${MOBILE_REMOTE_TOOL_NAME} is unavailable, guide the user to the desktop settings page instead.
 - When the user asks to pause, resume, retry, or cancel one of the ledger tasks, call ${CONTROL_LONG_TASK_TOOL_NAME} with the exact taskId from the longTasks ledger. The host applies it after your turn and appends the real outcome; acceptance is not success, so never state the task's new state yourself.
@@ -83,6 +84,7 @@ export const PET_ALLOWED_TOOL_NAMES = new Set<string>([
   FOLLOW_UPS_TOOL_NAME,
   MANAGE_FOLLOW_UP_TOOL_NAME,
   MANAGE_SESSIONS_TOOL_NAME,
+  WATCH_SESSION_TOOL_NAME,
   CURRENT_TIME_TOOL_NAME,
   SEND_MESSAGE_TOOL_NAME,
 ]);
