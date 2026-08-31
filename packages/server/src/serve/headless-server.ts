@@ -127,9 +127,24 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   const pendingResponsesByTab = new Map<number, number>();
   let nextTabId = 1;
   let nextWorkerRequestId = 1;
+  const sendToTab = (tab: WebSocket, line: string, context: string): boolean => {
+    if (tab.readyState !== tab.OPEN) return false;
+    try {
+      tab.send(line);
+      return true;
+    } catch (error) {
+      // readyState can change between the guard and send. A dead browser must
+      // never crash the shared worker router or its timeout reaper.
+      log("tab.send_failed", {
+        context,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  };
   const broadcast = (line: string): void => {
     for (const tab of tabs) {
-      if (tab.readyState === tab.OPEN) tab.send(line);
+      sendToTab(tab, line, "broadcast");
     }
   };
 
@@ -150,8 +165,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
 
   const failPendingWorkerResponses = (message: string): void => {
     for (const { tab, originalId } of pendingWorkerResponses.values()) {
-      if (tab.readyState !== tab.OPEN) continue;
-      tab.send(hostQueryError(originalId, -32000, message));
+      sendToTab(tab, hostQueryError(originalId, -32000, message), "worker-exit");
     }
     pendingWorkerResponses.clear();
     pendingResponsesByTab.clear();
@@ -162,9 +176,11 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     for (const [requestId, route] of pendingWorkerResponses) {
       if (now - route.insertedAt < pendingResponseTtlMs) continue;
       deletePendingWorkerResponse(requestId);
-      if (route.tab.readyState === route.tab.OPEN) {
-        route.tab.send(hostQueryError(route.originalId, -32000, "agent worker response timed out"));
-      }
+      sendToTab(
+        route.tab,
+        hostQueryError(route.originalId, -32000, "agent worker response timed out"),
+        "worker-timeout",
+      );
     }
   }, pendingResponseReaperMs);
   pendingResponseReaper.unref?.();
@@ -197,8 +213,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       return;
     }
     deletePendingWorkerResponse(String(message.id));
-    if (route.tab.readyState !== route.tab.OPEN) return;
-    route.tab.send(JSON.stringify({ ...message, id: route.originalId }));
+    sendToTab(route.tab, JSON.stringify({ ...message, id: route.originalId }), "worker-response");
   };
 
   const bridge = new WorkerBridgeCore({
@@ -380,13 +395,21 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     });
   });
 
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(opts.port ?? 8790, host, () => {
-      server.off("error", reject);
-      resolve();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(opts.port ?? 8790, host, () => {
+        server.off("error", reject);
+        resolve();
+      });
     });
-  });
+  } catch (error) {
+    clearInterval(pendingResponseReaper);
+    bridge.kill();
+    wss.close();
+    server.close();
+    throw error;
+  }
   const address = server.address();
   const port = typeof address === "object" && address ? address.port : (opts.port ?? 8790);
   const url = `http://${host}:${port}`;
