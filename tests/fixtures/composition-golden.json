@@ -1,5 +1,5 @@
 {
-  "baselineCommit": "35e0f7c4db3cc1aec61d08b41429443572a298cd",
+  "baselineCommit": "fe7b48ef6ca1b79f60ac5e76512423f5172d9b00",
   "snapshot": {
     "version": 1,
     "modules": [
@@ -655,6 +655,15 @@
       },
       {
         "name": "ManageFollowUp",
+        "moduleId": "pet",
+        "exposure": "preset-tags",
+        "presetTags": [
+          "harness-min",
+          "general"
+        ]
+      },
+      {
+        "name": "WatchSession",
         "moduleId": "pet",
         "exposure": "preset-tags",
         "presetTags": [
