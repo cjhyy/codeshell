@@ -165,6 +165,8 @@ import { archivePetSessionsBySelector } from "./pet/pet-session-archive.js";
 import { createPetFollowUpService } from "./pet/pet-follow-up-service.js";
 import { PetWorkMemoryStore } from "./pet/pet-work-memory-store.js";
 import { PetSegmentController, type PetArchiveAnchors } from "./pet/pet-segment-controller.js";
+import { recordPetDelegationClosureBestEffort } from "./pet/pet-delegation-closure.js";
+import { PetReportReceiptStore } from "./pet/pet-report-receipt-store.js";
 import { PetLongTaskStore } from "./pet/pet-long-task-store.js";
 import { PetLongTaskCoordinator } from "./pet/pet-long-task-coordinator.js";
 import { selectSessionsToArchive } from "./pet/pet-auto-archive.js";
@@ -1597,14 +1599,21 @@ async function createWindow(): Promise<BrowserWindow> {
       worker: bridge,
       launcher: petWorkDelegationHost,
       onTaskClosed: async (task) => {
-        if (!petSegmentController) throw new Error("Pet work-memory sink is not ready");
-        await petSegmentController.onDelegationClosed({
-          dedupeKey: `${task.id}:${task.attempt}:${task.status}`,
-          objective: task.objective,
-          outcome: task.status === "completed" ? "completed" : "failed",
-          ...(task.workspacePath ? { workspace: task.workspacePath } : {}),
-          sessionRef: task.sessionId,
-        });
+        await recordPetDelegationClosureBestEffort(
+          petSegmentController,
+          {
+            dedupeKey: `${task.id}:${task.attempt}:${task.status}`,
+            objective: task.objective,
+            outcome: task.status === "completed" ? "completed" : "failed",
+            ...(task.workspacePath ? { workspace: task.workspacePath } : {}),
+            sessionRef: task.sessionId,
+          },
+          (error) =>
+            dlog("main", "pet.longTask.memory.failed", {
+              taskId: task.id,
+              error: String(error),
+            }),
+        );
 
         let message = formatPetLongTaskClosureMessage(task);
         let continued = false;
@@ -2050,14 +2059,15 @@ async function createWindow(): Promise<BrowserWindow> {
       startWorkSession: (delegation) => longTaskCoordinator.startDelegation(delegation),
     });
     const processingPetReports = new Set<string>();
-    const deliveredPetReports = new Set<string>();
+    const deliveredPetReports = new PetReportReceiptStore(
+      resolve(app.getPath("userData"), "pet", "report-receipts.json"),
+    );
     unsubscribePetReportStream = bridge.subscribePetReports(async (event) => {
-      if (processingPetReports.has(event.reportId) || deliveredPetReports.has(event.reportId)) {
-        return;
-      }
+      if (processingPetReports.has(event.reportId)) return;
       processingPetReports.add(event.reportId);
       try {
-        const task = longTaskStore.latestForSession(event.sessionId);
+        if (await deliveredPetReports.has(event.reportId)) return;
+        const task = longTaskStore.activeForSession(event.sessionId);
         if (!petDispatchService) throw new Error("Mimi dispatch service is unavailable");
         const report = await petDispatchService.reportSessionMessage(
           {
@@ -2129,11 +2139,7 @@ async function createWindow(): Promise<BrowserWindow> {
             },
           });
         }
-        deliveredPetReports.add(event.reportId);
-        if (deliveredPetReports.size > 1_000) {
-          const oldest = deliveredPetReports.values().next().value;
-          if (oldest) deliveredPetReports.delete(oldest);
-        }
+        await deliveredPetReports.mark(event.reportId);
         dlog("main", "pet.report.delivered_to_mimi", {
           reportId: event.reportId,
           sourceSessionId: event.sessionId,

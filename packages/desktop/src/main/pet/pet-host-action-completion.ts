@@ -46,6 +46,8 @@ export interface PetHostActionCompletedEvent extends PetHostActionReceiptResult 
 }
 
 export class PetHostActionReceiptService implements PetHostActionReceiptRecorder {
+  private recordQueue: Promise<unknown> = Promise.resolve();
+
   constructor(
     private readonly options: {
       sessionsRootDir: string;
@@ -54,7 +56,15 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
     },
   ) {}
 
-  async record(input: PetHostActionReceiptRecordInput): Promise<PetHostActionReceiptResult | null> {
+  record(input: PetHostActionReceiptRecordInput): Promise<PetHostActionReceiptResult | null> {
+    const run = this.recordQueue.catch(() => undefined).then(() => this.recordOnce(input));
+    this.recordQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async recordOnce(
+    input: PetHostActionReceiptRecordInput,
+  ): Promise<PetHostActionReceiptResult | null> {
     const renderedMessage =
       input.authoritativeMessage === undefined
         ? (
@@ -84,21 +94,24 @@ export class PetHostActionReceiptService implements PetHostActionReceiptRecorder
     try {
       const sessionDir = join(this.options.sessionsRootDir, input.petSessionId);
       await mkdir(sessionDir, { recursive: true, mode: 0o700 });
-      const transcript = new Transcript(join(sessionDir, "transcript.jsonl"));
+      const transcript = Transcript.loadFromFile(join(sessionDir, "transcript.jsonl"));
       if (input.userMessage?.trim() && !transcript.hasClientMessageId(input.clientMessageId)) {
         transcript.appendMessage("user", input.userMessage.trim(), {
           clientMessageId: input.clientMessageId,
         });
       }
-      transcript.appendMessage("assistant", message, {
-        clientMessageId: replaceAssistant
-          ? deliveryChannel
-            ? `${PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX}${encodeURIComponent(
-                deliveryChannel,
-              )}:${input.clientMessageId}`
-            : `${PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX}${input.clientMessageId}`
-          : `${PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX}${input.clientMessageId}`,
-      });
+      const assistantClientMessageId = replaceAssistant
+        ? deliveryChannel
+          ? `${PET_HOST_ACTION_REPLACE_DELIVERY_CLIENT_ID_PREFIX}${encodeURIComponent(
+              deliveryChannel,
+            )}:${input.clientMessageId}`
+          : `${PET_HOST_ACTION_REPLACE_CLIENT_ID_PREFIX}${input.clientMessageId}`
+        : `${PET_HOST_ACTION_RECEIPT_CLIENT_ID_PREFIX}${input.clientMessageId}`;
+      if (!transcript.hasClientMessageId(assistantClientMessageId)) {
+        transcript.appendMessage("assistant", message, {
+          clientMessageId: assistantClientMessageId,
+        });
+      }
     } catch (error) {
       this.options.onPersistError?.(error, input);
     }
