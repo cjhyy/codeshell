@@ -4,10 +4,7 @@
   "meta": {
     "title": "CodeShell 运行时架构总览",
     "locale": "zh-CN",
-    "subtitle": "多入口经宿主与传输层汇入领域无关的核心引擎，再连接可选能力、集成与模型提供商",
     "output": "codeshell-runtime-overview.html",
-    "animation": "trace",
-    "visual_preset": "signal-flow",
     "quality_profile": "showcase",
     "views": [
       {
@@ -90,7 +87,7 @@
       "id": "core-engine",
       "type": "backend",
       "label": "Core Engine",
-      "sublabel": "协议 · 会话 · TurnLoop · 工具 · 权限",
+      "sublabel": "Session · Prompt · LLM · Tool · Protocol",
       "tag": "核心引擎",
       "pos": [650, 300],
       "size": [240, 112]
@@ -154,7 +151,7 @@
       "id": "desktop-host-to-core",
       "from": "desktop-host",
       "to": "core-engine",
-      "label": "协议请求 / 流式响应",
+      "label": "/internal 宿主契约 / 协议流",
       "variant": "emphasis",
       "width": 2
     },
@@ -162,7 +159,7 @@
       "id": "tui-to-core",
       "from": "tui-entry",
       "to": "core-engine",
-      "label": "进程内请求 / 流式响应",
+      "label": "/internal 进程内调用 / 流式响应",
       "variant": "emphasis",
       "width": 2
     },

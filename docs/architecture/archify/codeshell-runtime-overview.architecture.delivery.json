@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/admin/Documents/个人学习/代码学习/.worktrees/archify-runtime-overview-s-mtg157/docs/architecture/archify/codeshell-runtime-overview.architecture.json",
+  "output": "/Users/admin/Documents/个人学习/代码学习/.worktrees/archify-runtime-overview-s-mtg157/docs/architecture/archify/codeshell-runtime-overview.architecture.html",
+  "specification": {
+    "sha256": "c0d59be99b12e03653a66a069ab6a22c989bdde0dc37257550025d1e122697e8",
+    "bytes": 6464
+  },
+  "artifact": {
+    "sha256": "952ade61d1ec9407fcf07883b15af45f28570fdcfee3b894bf0795fad56af7b8",
+    "bytes": 719945
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}
