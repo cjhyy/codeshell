@@ -83,6 +83,16 @@ design-output/
 .claude/worktrees/
 packages/desktop/.preview/
 
+# Project-local Archify installation. `npx skills add --agent "*"` fans the
+# third-party runtime out to multiple agent-compatible locations and writes a
+# local provenance lock. The generated diagrams under docs/architecture/ stay
+# tracked; only the reinstallable Skill runtime is machine-local.
+/.agents/skills/archify/
+/agent/skills/archify/
+/.claude/skills/archify
+/data/skills/archify
+/skills-lock.json
+
 # Renderer source 'logs/' view dir is NOT a runtime-logs dir — keep it tracked
 !packages/desktop/src/renderer/logs/
 !packages/desktop/src/renderer/logs/**
