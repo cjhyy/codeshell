@@ -227,6 +227,7 @@ import {
   resolveDesktopAutomationJobWorkspace,
 } from "./automation-host.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
+import { DesktopNotifier } from "./desktop-notifier.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
   setAutomationScheduler,
@@ -573,6 +574,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  * same worker" — not "extra concurrent agents".
  */
 let bridge: AgentBridge | null = null;
+let desktopNotifier: DesktopNotifier | null = null;
 let chromeNativeRegistration: ChromeNativeRegistrationResult | undefined;
 /**
  * Sessions backed by Codex / Claude Code instead of the native Engine.
@@ -1648,15 +1650,16 @@ async function createWindow(): Promise<BrowserWindow> {
           });
           message = enriched.text;
           const completionAttachments = enriched.attachments;
+          const deliveryKey = createHash("sha256")
+            .update("pet-task-closure\0")
+            .update(task.id)
+            .update("\0")
+            .update(String(task.attempt))
+            .update("\0")
+            .update(task.status)
+            .digest("hex");
           await publishGatewayControlEvent({
-            deliveryKey: createHash("sha256")
-              .update("pet-task-closure\0")
-              .update(task.id)
-              .update("\0")
-              .update(String(task.attempt))
-              .update("\0")
-              .update(task.status)
-              .digest("hex"),
+            deliveryKey,
             type: completed
               ? "pet.task.completed"
               : cancelled
@@ -1714,17 +1717,12 @@ async function createWindow(): Promise<BrowserWindow> {
             );
           }
 
-          try {
-            if (!BrowserWindow.getFocusedWindow() && Notification.isSupported()) {
-              new Notification({
-                title,
-                body: message.replace(/\s+/gu, " ").trim().slice(0, 180),
-              }).show();
-            }
-          } catch {
-            // Desktop notifications are best-effort; the durable Mimi reply and
-            // targeted IM receipt above remain the authoritative delivery paths.
-          }
+          await desktopNotifier?.notify({ key: deliveryKey, title, body: message }).catch((error) =>
+            dlog("main", "desktop_notification.pet_closure.failed", {
+              taskId: task.id,
+              error: String(error),
+            }),
+          );
         }
       },
       onBackgroundError: (operation, error) => {
@@ -3027,6 +3025,14 @@ function decodeGatewayAttachment(dataBase64: string, expectedSize: number): Buff
 
 app.whenReady().then(async () => {
   if (!ownsDesktopInstance) return;
+  desktopNotifier = new DesktopNotifier(
+    resolve(app.getPath("userData"), "notifications", "delivered.json"),
+    {
+      hasFocusedWindow: () => BrowserWindow.getFocusedWindow() !== null,
+      isSupported: () => Notification.isSupported(),
+      show: (input) => new Notification(input).show(),
+    },
+  );
   await projectStore.warm();
   writeSettingsSchemaAtStartup();
   void cleanupKnownAttachments();
@@ -3188,15 +3194,27 @@ app.whenReady().then(async () => {
         // Tell the user their scheduled "continue this conversation" job was
         // stopped because its target conversation is gone — best-effort, fires
         // even when focused since it's a rare, consequential state change.
-        try {
-          if (Notification.isSupported()) {
-            new Notification({
+        const stoppedNotification = job
+          ? automationLifecycleNotification({
+              type: "job_stopped",
+              job,
+              reason: "续接的对话已被删除,已停止该定时任务",
+            })
+          : undefined;
+        if (stoppedNotification?.deliveryKey) {
+          await desktopNotifier
+            ?.notify({
+              key: stoppedNotification.deliveryKey,
               title: "定时任务已停止",
               body: "续接的对话已被删除,该定时任务已自动停用。可在自动化面板查看或删除。",
-            }).show();
-          }
-        } catch {
-          // Notifications are best-effort.
+              urgent: true,
+            })
+            .catch((error) =>
+              dlog("main", "desktop_notification.automation_stopped.failed", {
+                jobId: job?.id,
+                error: String(error),
+              }),
+            );
         }
         return {
           text: "",
@@ -3219,16 +3237,20 @@ app.whenReady().then(async () => {
         if (!notification) return;
         publishGatewayControlEventBestEffort(notification);
         if (event.type !== "job_missed") return;
-        try {
-          if (Notification.isSupported()) {
-            new Notification({
-              title: notification.title ?? "定时任务已错过",
-              body: notification.text,
-            }).show();
-          }
-        } catch {
-          // A missed-run notice is best-effort and must never affect re-arming.
-        }
+        if (!notification.deliveryKey) return;
+        void desktopNotifier
+          ?.notify({
+            key: notification.deliveryKey,
+            title: notification.title ?? "定时任务已错过",
+            body: notification.text,
+            urgent: true,
+          })
+          .catch((error) =>
+            dlog("main", "desktop_notification.automation_missed.failed", {
+              jobId: event.job.id,
+              error: String(error),
+            }),
+          );
       },
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
@@ -3239,21 +3261,22 @@ app.whenReady().then(async () => {
 
     // Surface background-agent completions (incl. automation runs) as desktop
     // notifications when the app isn't focused, so unattended jobs are visible.
-    agentNotificationBus.subscribe((_sessionId, event) => {
-      try {
-        // The bus now also carries agent_heartbeat (liveness pings) — only a
-        // background-agent COMPLETION should raise a desktop notification.
-        if (event.type !== "background_agent_completed") return;
-        if (BrowserWindow.getFocusedWindow()) return; // user is watching; skip
-        const ok = event.status === "completed";
-        const cancelled = event.status === "cancelled";
-        new Notification({
+    agentNotificationBus.subscribe((envelope) => {
+      if (envelope.kind !== "result") return;
+      const ok = envelope.payload.status === "completed";
+      const cancelled = envelope.payload.status === "cancelled";
+      void desktopNotifier
+        ?.notify({
+          key: envelope.id,
           title: ok ? "自动化任务完成" : cancelled ? "自动化任务已取消" : "自动化任务失败",
-          body: event.description?.slice(0, 120) ?? "",
-        }).show();
-      } catch {
-        // Notifications are best-effort.
-      }
+          body: envelope.payload.description,
+        })
+        .catch((error) =>
+          dlog("main", "desktop_notification.background_result.failed", {
+            envelopeId: envelope.id,
+            error: String(error),
+          }),
+        );
     });
   } catch (err) {
     // Automation is non-critical to the GUI — never block startup on it.

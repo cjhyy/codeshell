@@ -20,7 +20,6 @@ export {
   type OAuthRefreshOptions,
   type HardenedOAuthFetchOptions,
 } from "./oauth.js";
-export { notify, notifyComplete, notifyError } from "./notifier.js";
 export { diagnostics } from "./diagnostics.js";
 export {
   buildExtractionPrompt,
