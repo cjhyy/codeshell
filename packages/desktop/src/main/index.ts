@@ -230,6 +230,7 @@ import {
 } from "./automation-host.js";
 import { automationLifecycleNotification } from "./automation-notification.js";
 import { DesktopNotifier } from "./desktop-notifier.js";
+import * as desktopNotifications from "./desktop-notification-routes.js";
 import type { CronRunResult } from "@cjhyy/code-shell-core/internal";
 import {
   setAutomationScheduler,
@@ -1726,12 +1727,12 @@ async function createWindow(): Promise<BrowserWindow> {
             );
           }
 
-          await desktopNotifier?.notify({ key: deliveryKey, title, body: message }).catch((error) =>
-            dlog("main", "desktop_notification.pet_closure.failed", {
-              taskId: task.id,
-              error: String(error),
-            }),
-          );
+          await desktopNotifications.notifyPetTaskClosure(desktopNotifier, {
+            deliveryKey,
+            title,
+            message,
+            taskId: task.id,
+          });
         }
       },
       onBackgroundError: (operation, error) => {
@@ -3197,31 +3198,8 @@ app.whenReady().then(async () => {
         return { text: r?.text ?? "", reason: r?.reason ?? "done" };
       }
       if (res.code === ErrorCodes.SessionNotFound) {
-        // Tell the user their scheduled "continue this conversation" job was
-        // stopped because its target conversation is gone — best-effort, fires
-        // even when focused since it's a rare, consequential state change.
-        const stoppedNotification = job
-          ? automationLifecycleNotification({
-              type: "job_stopped",
-              job,
-              reason: "续接的对话已被删除,已停止该定时任务",
-            })
-          : undefined;
-        if (stoppedNotification?.deliveryKey) {
-          await desktopNotifier
-            ?.notify({
-              key: stoppedNotification.deliveryKey,
-              title: "定时任务已停止",
-              body: "续接的对话已被删除,该定时任务已自动停用。可在自动化面板查看或删除。",
-              urgent: true,
-            })
-            .catch((error) =>
-              dlog("main", "desktop_notification.automation_stopped.failed", {
-                jobId: job?.id,
-                error: String(error),
-              }),
-            );
-        }
+        // A missing bound conversation is rare and consequential, so notify even while focused.
+        await desktopNotifications.notifyMissingAutomationResumeTarget(desktopNotifier, job);
         return {
           text: "",
           reason: "resume-target-missing",
@@ -3242,21 +3220,7 @@ app.whenReady().then(async () => {
         const notification = automationLifecycleNotification(event);
         if (!notification) return;
         publishGatewayControlEventBestEffort(notification);
-        if (event.type !== "job_missed") return;
-        if (!notification.deliveryKey) return;
-        void desktopNotifier
-          ?.notify({
-            key: notification.deliveryKey,
-            title: notification.title ?? "定时任务已错过",
-            body: notification.text,
-            urgent: true,
-          })
-          .catch((error) =>
-            dlog("main", "desktop_notification.automation_missed.failed", {
-              jobId: event.job.id,
-              error: String(error),
-            }),
-          );
+        desktopNotifications.notifyMissedAutomation(desktopNotifier, notification, event);
       },
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
@@ -3265,25 +3229,9 @@ app.whenReady().then(async () => {
     // every cron job runs one headless codeshell turn. Driving Claude Code is
     // just one such turn calling DriveClaudeCode — no CC-specific scheduling.
 
-    // Surface background-agent completions (incl. automation runs) as desktop
-    // notifications when the app isn't focused, so unattended jobs are visible.
-    agentNotificationBus.subscribe((envelope) => {
-      if (envelope.kind !== "result") return;
-      const ok = envelope.payload.status === "completed";
-      const cancelled = envelope.payload.status === "cancelled";
-      void desktopNotifier
-        ?.notify({
-          key: envelope.id,
-          title: ok ? "自动化任务完成" : cancelled ? "自动化任务已取消" : "自动化任务失败",
-          body: envelope.payload.description,
-        })
-        .catch((error) =>
-          dlog("main", "desktop_notification.background_result.failed", {
-            envelopeId: envelope.id,
-            error: String(error),
-          }),
-        );
-    });
+    agentNotificationBus.subscribe((envelope) =>
+      desktopNotifications.notifyBackgroundResult(desktopNotifier, envelope),
+    );
   } catch (err) {
     // Automation is non-critical to the GUI — never block startup on it.
     console.error("automation: failed to start", err);
