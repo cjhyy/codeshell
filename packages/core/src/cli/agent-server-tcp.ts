@@ -35,12 +35,40 @@ import { startAutomation } from "../automation/index.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
 import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
 import { randomUUID } from "node:crypto";
+import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { getApprovalRouter } from "../tool-system/permission.js";
-import { SessionManager } from "../session/session-manager.js";
+import { assertSafeSessionId, SessionManager, sessionsRoot } from "../session/session-manager.js";
+import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 const port = Number(process.env.AGENT_TCP_PORT ?? "4321");
 const host = process.env.AGENT_TCP_HOST ?? "127.0.0.1";
+const notificationSessionsDir = sessionsRoot();
+
+notificationQueue.attachPersistence({
+  fileForSession(sessionId) {
+    try {
+      assertSafeSessionId(sessionId);
+      return join(notificationSessionsDir, sessionId, "pending-notifications.json");
+    } catch {
+      return null;
+    }
+  },
+  listSessionIds() {
+    try {
+      return readdirSync(notificationSessionsDir, { withFileTypes: true })
+        .filter(
+          (entry) =>
+            entry.isDirectory() &&
+            existsSync(join(notificationSessionsDir, entry.name, "pending-notifications.json")),
+        )
+        .map((entry) => entry.name);
+    } catch {
+      return [];
+    }
+  },
+});
 
 const settingsManager = new SettingsManager(cwd, "full");
 // Read once at startup and reuse for every session (see engineFactory below).

@@ -4,6 +4,7 @@ import type { StreamEvent } from "../types.js";
 import {
   buildNotificationMessage,
   notificationQueue,
+  type NotificationQueue,
 } from "../tool-system/builtin/agent-notifications.js";
 import type { ApprovalRouter } from "../tool-system/permission.js";
 import type { ChatSession } from "./chat-session.js";
@@ -15,6 +16,7 @@ interface BackgroundResultWakeOptions {
   rehydrate(sessionId: string): Promise<ChatSession | null>;
   approvalRouter: ApprovalRouter;
   onStream(event: StreamEvent): void;
+  notificationMailbox?: NotificationQueue;
 }
 
 /**
@@ -28,6 +30,7 @@ export async function wakeSessionForBackgroundResults({
   rehydrate,
   approvalRouter,
   onStream,
+  notificationMailbox = notificationQueue,
 }: BackgroundResultWakeOptions): Promise<boolean> {
   if (!manager) {
     logger.debug("bg_wakeup.skipped", { sessionId, reason: "no_chat_manager" });
@@ -46,7 +49,7 @@ export async function wakeSessionForBackgroundResults({
   while (session.isBusy()) {
     logger.debug("bg_wakeup.waiting_for_idle", {
       sessionId,
-      pendingCount: notificationQueue.getSnapshot(sessionId).length,
+      pendingCount: notificationMailbox.getSnapshot(sessionId).length,
     });
     await session.settled;
     if (manager.isUnavailable(sessionId)) {
@@ -96,7 +99,7 @@ export async function wakeSessionForBackgroundResults({
     return false;
   }
 
-  const pending = notificationQueue.drainAll(sessionId);
+  const pending = notificationMailbox.drainAll(sessionId);
   if (pending.length === 0) {
     logger.debug("bg_wakeup.skipped", { sessionId, reason: "no_pending_results" });
     return false;
@@ -110,7 +113,7 @@ export async function wakeSessionForBackgroundResults({
       approvalRouter,
     });
     if (result.turnCount === 0) {
-      const restored = notificationQueue.restoreResults(sessionId, pending);
+      const restored = notificationMailbox.restoreResults(sessionId, pending);
       logger.warn("bg_wakeup.turn_not_started", {
         sessionId,
         restored,
@@ -121,7 +124,7 @@ export async function wakeSessionForBackgroundResults({
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const restored = notificationQueue.restoreResults(sessionId, pending);
+    const restored = notificationMailbox.restoreResults(sessionId, pending);
     logger.warn("bg_wakeup.turn_failed", { sessionId, error: message, restored });
     // A setup failure can occur before the turn loop emits its own terminal
     // event. Emit an error so every renderer clears its busy state, but keep

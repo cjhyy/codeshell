@@ -54,6 +54,8 @@ import {
   agentNotificationBus,
   notificationQueue,
   notificationEnvelopeToLegacyStreamEvent,
+  type NotificationQueue,
+  type NotificationQueuePersistence,
 } from "../tool-system/builtin/agent-notifications.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
@@ -499,6 +501,10 @@ export interface AgentServerOptions {
    * write.
    */
   sessionDiskRoot?: string;
+  /** Durable per-session result mailbox. Omitted keeps the in-memory behavior. */
+  notificationPersistence?: NotificationQueuePersistence;
+  /** Test/host seam; production uses the process singleton. */
+  notificationMailbox?: NotificationQueue;
   /** Shared owner router; injectable for hosts/tests, process singleton by default. */
   approvalRouter?: ApprovalRouter;
   /**
@@ -613,6 +619,7 @@ export class AgentServer {
   private bgAgentBusUnsubscribe: (() => void) | null = null;
   private readonly wakeupsInFlight = new Set<string>();
   private readonly sessionWorkspaceRpc: SessionWorkspaceRpcHandlers;
+  private readonly notificationMailbox: NotificationQueue;
 
   /**
    * Effective session manager for the connection this server serves. Without
@@ -637,6 +644,10 @@ export class AgentServer {
   }
 
   constructor(options: AgentServerOptions) {
+    this.notificationMailbox = options.notificationMailbox ?? notificationQueue;
+    if (options.notificationPersistence) {
+      this.notificationMailbox.attachPersistence(options.notificationPersistence);
+    }
     this.baseChatManager = options.chatManager ?? null;
     this.resolveIdentity = options.resolveIdentity ?? null;
     this.sessionDiskRoot = options.sessionDiskRoot;
@@ -768,6 +779,13 @@ export class AgentServer {
       // never wakes anything (no task/service classification needed).
     });
 
+    // Results restored from disk are deliberately not republished on the
+    // observation bus: their required destination is the original chat. Feed
+    // them into the same guarded wake path as live completions instead.
+    for (const sessionId of this.notificationMailbox.restorePersistedSessions()) {
+      this.maybeWakeIdleSession(sessionId);
+    }
+
     // Notify client we're ready
     this.notify(Methods.Status, { status: "ready" });
   }
@@ -800,7 +818,7 @@ export class AgentServer {
     void this.wakeIdleSession(sessionId)
       .then((ranTurn) => {
         this.wakeupsInFlight.delete(sessionId);
-        if (ranTurn && notificationQueue.getSnapshot(sessionId).length > 0) {
+        if (ranTurn && this.notificationMailbox.getSnapshot(sessionId).length > 0) {
           this.maybeWakeIdleSession(sessionId);
         }
       })
@@ -820,6 +838,7 @@ export class AgentServer {
       rehydrate: (id) => this.rehydrateSessionForWake(id),
       approvalRouter: this.approvalRouter,
       onStream: (event) => this.notify(Methods.StreamEvent, { sessionId, event }),
+      notificationMailbox: this.notificationMailbox,
     });
   }
 
@@ -827,7 +846,7 @@ export class AgentServer {
     if (!this.chatManager) return null;
     if (this.chatManager.isUnavailable(sessionId)) return null;
     try {
-      const pending = notificationQueue.getSnapshot(sessionId);
+      const pending = this.notificationMailbox.getSnapshot(sessionId);
       if (pending.length === 0) {
         logger.debug("bg_wakeup.rehydrate_skipped_no_pending", { sessionId });
         return null;

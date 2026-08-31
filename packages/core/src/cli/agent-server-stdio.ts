@@ -31,11 +31,12 @@
  */
 
 import { join } from "node:path";
+import { existsSync, readdirSync } from "node:fs";
 import { Engine } from "../engine/engine.js";
 import { EngineRuntime } from "../engine/runtime.js";
 import { ChatSessionManager } from "../protocol/chat-session-manager.js";
 import type { EngineConfigSlice } from "../protocol/chat-session-manager.js";
-import { SessionManager } from "../session/session-manager.js";
+import { assertSafeSessionId, SessionManager, sessionsRoot } from "../session/session-manager.js";
 import { validateSettings, type ValidatedSettings } from "../settings/schema.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
@@ -133,6 +134,31 @@ const composition = compileComposition({ modules: await loadConfiguredAgentModul
 // byte-for-byte.
 const dataRoot = process.env.CODE_SHELL_DATA_ROOT?.trim() || undefined;
 const dataSessionsDir = dataRoot ? join(dataRoot, "sessions") : undefined;
+const notificationSessionsDir = dataSessionsDir ?? sessionsRoot();
+
+const notificationPersistence = {
+  fileForSession(sessionId: string): string | null {
+    try {
+      assertSafeSessionId(sessionId);
+      return join(notificationSessionsDir, sessionId, "pending-notifications.json");
+    } catch {
+      return null;
+    }
+  },
+  listSessionIds(): string[] {
+    try {
+      return readdirSync(notificationSessionsDir, { withFileTypes: true })
+        .filter(
+          (entry) =>
+            entry.isDirectory() &&
+            existsSync(join(notificationSessionsDir, entry.name, "pending-notifications.json")),
+        )
+        .map((entry) => entry.name);
+    } catch {
+      return [];
+    }
+  },
+};
 
 // Load settings once to derive llm config for the seed engine.
 // Desktop is a host application: read the full disk hierarchy (incl. the
@@ -410,6 +436,7 @@ const agentServer = new AgentServer({
   // Cold background-wakeup rehydrate must read the same sessions store the
   // engines write when the data root is relocated (undefined → default root).
   sessionDiskRoot: dataSessionsDir,
+  notificationPersistence,
   // Config hot-reload (layer 2) reads disk through the SAME closure the
   // engineFactory uses for new sessions, so a reloaded running session and a
   // newly-created session converge on identical disk config (no divergence).

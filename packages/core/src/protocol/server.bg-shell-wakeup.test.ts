@@ -1,11 +1,14 @@
 import { describe, it, expect, afterEach } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AgentServer } from "./server.js";
 import { ChatSessionManager, type EngineConfigSlice } from "./chat-session-manager.js";
 import { SessionManager } from "../session/session-manager.js";
-import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
+import {
+  NotificationQueue,
+  notificationQueue,
+} from "../tool-system/builtin/agent-notifications.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
 import {
   createWorkspaceContext,
@@ -167,7 +170,7 @@ describe("AgentServer — background shell completion wakes an idle session", ()
 
     expect(runs).toHaveLength(1);
     expect(runs[0]).toContain("Background shell exited (exit 1)");
-    expect(runs[0]).toContain("status=\"failed\"");
+    expect(runs[0]).toContain('status="failed"');
     expect(notificationQueue.getSnapshot(SID)).toHaveLength(0);
   });
 
@@ -539,6 +542,65 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     } finally {
       if (previousHome === undefined) delete process.env.CODE_SHELL_HOME;
       else process.env.CODE_SHELL_HOME = previousHome;
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("scans persisted completions on server startup and writes them back to the original chat", async () => {
+    const sid = "bg-wake-restart-s1";
+    const home = mkdtempSync(join(tmpdir(), "cs-bg-wake-restart-"));
+    const sessionsDir = join(home, "sessions");
+    const pendingFile = join(sessionsDir, sid, "pending-notifications.json");
+    const persistence = {
+      fileForSession: (sessionId: string) =>
+        join(sessionsDir, sessionId, "pending-notifications.json"),
+      listSessionIds: () => [sid],
+    };
+    try {
+      new SessionManager(sessionsDir).create(
+        "/tmp/project-from-restart",
+        "model-a",
+        "provider-a",
+        sid,
+      );
+      const beforeRestart = new NotificationQueue();
+      beforeRestart.attachPersistence(persistence);
+      beforeRestart.enqueue(
+        {
+          agentId: "bg_before_restart",
+          description: "Background task completed before restart",
+          status: "completed",
+          finalText: "durable result",
+          enqueuedAt: 1,
+        },
+        sid,
+      );
+
+      notificationQueue.reset();
+      const { engineFactory, runs } = makeRehydratableEngineFactory(true, sid);
+      const chatManager = new ChatSessionManager({ runtime: {} as never, engineFactory });
+      const t = makeTransport();
+      const afterRestart = new NotificationQueue();
+      servers.push(
+        new AgentServer({
+          transport: t.transport,
+          chatManager,
+          sessionDiskRoot: sessionsDir,
+          notificationPersistence: persistence,
+          notificationMailbox: afterRestart,
+        }),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      expect(runs).toHaveLength(1);
+      expect(runs[0]!.task).toContain("Background task completed before restart");
+      expect(afterRestart.getSnapshot(sid)).toHaveLength(0);
+      expect(JSON.parse(readFileSync(pendingFile, "utf8"))).toEqual({
+        schemaVersion: 1,
+        results: [],
+      });
+    } finally {
       rmSync(home, { recursive: true, force: true });
     }
   });

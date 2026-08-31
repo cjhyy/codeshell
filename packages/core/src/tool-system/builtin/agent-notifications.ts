@@ -1,7 +1,20 @@
 import { nanoid } from "nanoid";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+} from "node:fs";
+import { dirname } from "node:path";
 
 import { logger } from "../../logging/logger.js";
 import type { BackgroundAgentCompletedEvent, StreamEvent } from "../../types.js";
+import { acquireLockOnPath, writeFileAtomic } from "../../utils/file-mutex.js";
 
 export type NotificationAuthority = "user" | "agent" | "system" | "policy";
 
@@ -228,9 +241,96 @@ export type NotificationItem = {
 
 type Listener = () => void;
 const EMPTY: readonly NotificationEnvelope[] = Object.freeze([]);
+const PERSISTENCE_SCHEMA_VERSION = 1;
+const MAX_PERSISTED_BYTES = 16 * 1024 * 1024;
+
+interface PersistedNotificationResults {
+  schemaVersion: typeof PERSISTENCE_SCHEMA_VERSION;
+  results: ResultEnvelope[];
+}
+
+export interface NotificationQueuePersistence {
+  fileForSession(sessionId: string): string | null;
+  /** Optional startup inventory. Lazy per-session restore works without it. */
+  listSessionIds?(): readonly string[];
+}
 
 function isValidSessionId(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNotificationAuthority(value: unknown): value is NotificationAuthority {
+  return value === "user" || value === "agent" || value === "system" || value === "policy";
+}
+
+function isEndpoint(value: unknown): value is NotificationEndpoint {
+  if (!isRecord(value) || !isValidSessionId(value.sessionId)) return false;
+  if (value.agentId !== undefined && typeof value.agentId !== "string") return false;
+  return isNotificationAuthority(value.authority);
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function isResultPayload(value: unknown): value is ResultPayload {
+  if (!isRecord(value)) return false;
+  if (!isValidSessionId(value.workId) || typeof value.description !== "string") return false;
+  if (value.status !== "completed" && value.status !== "failed" && value.status !== "cancelled") {
+    return false;
+  }
+  if (
+    value.workKind !== "agent" &&
+    value.workKind !== "shell" &&
+    value.workKind !== "video" &&
+    value.workKind !== "cc"
+  ) {
+    return false;
+  }
+  if (!Number.isFinite(value.finishedAt)) return false;
+  if (
+    !isOptionalString(value.name) ||
+    !isOptionalString(value.finalText) ||
+    !isOptionalString(value.error) ||
+    !isOptionalString(value.command) ||
+    !isOptionalString(value.ccSessionId) ||
+    !isOptionalString(value.cwd) ||
+    !isOptionalString(value.originClientMessageId)
+  ) {
+    return false;
+  }
+  return (
+    value.changedFiles === undefined ||
+    (Array.isArray(value.changedFiles) &&
+      value.changedFiles.every((item) => typeof item === "string"))
+  );
+}
+
+function isPersistedResultEnvelope(value: unknown): value is ResultEnvelope {
+  if (!isRecord(value)) return false;
+  if (
+    value.schemaVersion !== 1 ||
+    value.kind !== "result" ||
+    value.delivery !== "idle-drain" ||
+    !isValidSessionId(value.id) ||
+    !isEndpoint(value.from) ||
+    !isEndpoint(value.to) ||
+    !Number.isSafeInteger(value.sequence) ||
+    (value.sequence as number) < 1 ||
+    !Number.isFinite(value.createdAt) ||
+    !isResultPayload(value.payload)
+  ) {
+    return false;
+  }
+  if (value.teamId !== undefined || !isOptionalString(value.correlationId)) return false;
+  return (
+    value.runtimeGeneration === undefined ||
+    (Number.isSafeInteger(value.runtimeGeneration) && (value.runtimeGeneration as number) > 0)
+  );
 }
 
 function routeSequenceKey(draft: NotificationEnvelopeDraft): string {
@@ -316,12 +416,122 @@ function installLegacyResultAliases(envelope: ResultEnvelope): void {
   }
 }
 
-class NotificationQueue {
+export class NotificationQueue {
   private buckets = new Map<string, NotificationEnvelope[]>();
   private listeners = new Set<Listener>();
   private sequences = new Map<string, number>();
   private sequenceRoutes = new Map<string, { from: string; to: string }>();
+  private persistence: NotificationQueuePersistence | null = null;
+  private restoredSessions = new Set<string>();
   private readonly maxSequenceRoutes = 4_096;
+
+  attachPersistence(persistence: NotificationQueuePersistence | null): void {
+    this.persistence = persistence;
+    this.restoredSessions.clear();
+  }
+
+  /** Restore every persisted mailbox discovered by the host during startup. */
+  restorePersistedSessions(): string[] {
+    const restored: string[] = [];
+    for (const sessionId of this.persistence?.listSessionIds?.() ?? []) {
+      if (!isValidSessionId(sessionId) || this.restoredSessions.has(sessionId)) continue;
+      this.restorePersistedSession(sessionId);
+      if (this.resultSnapshot(sessionId).length > 0) restored.push(sessionId);
+    }
+    return restored;
+  }
+
+  restorePersistedSession(sessionId: string): number {
+    if (!isValidSessionId(sessionId) || this.restoredSessions.has(sessionId)) return 0;
+    this.restoredSessions.add(sessionId);
+    const file = this.persistence?.fileForSession(sessionId) ?? null;
+    if (!file || !existsSync(file)) return 0;
+
+    let pathInfo;
+    try {
+      pathInfo = lstatSync(file);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
+      this.restoredSessions.delete(sessionId);
+      logger.warn("notification_queue.persistence_read_failed", {
+        file,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return 0;
+    }
+    if (pathInfo.isSymbolicLink() || !pathInfo.isFile() || pathInfo.size > MAX_PERSISTED_BYTES) {
+      this.quarantineCorruptFile(
+        file,
+        new Error("pending notification file is not a bounded regular file"),
+      );
+      return 0;
+    }
+
+    let raw: string;
+    try {
+      const descriptor = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      try {
+        const opened = fstatSync(descriptor);
+        if (!opened.isFile() || opened.size > MAX_PERSISTED_BYTES) {
+          throw new Error("pending notification file is not a bounded regular file");
+        }
+        raw = readFileSync(descriptor, "utf8");
+      } finally {
+        closeSync(descriptor);
+      }
+    } catch (error) {
+      this.restoredSessions.delete(sessionId);
+      logger.warn("notification_queue.persistence_read_failed", {
+        file,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return 0;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      this.quarantineCorruptFile(file, error);
+      return 0;
+    }
+    if (
+      !isRecord(parsed) ||
+      parsed.schemaVersion !== PERSISTENCE_SCHEMA_VERSION ||
+      !Array.isArray(parsed.results)
+    ) {
+      this.quarantineCorruptFile(file, new Error("invalid pending notification schema"));
+      return 0;
+    }
+
+    const valid: ResultEnvelope[] = [];
+    const invalid: unknown[] = [];
+    for (const candidate of parsed.results) {
+      if (isPersistedResultEnvelope(candidate) && candidate.to.sessionId === sessionId) {
+        installLegacyResultAliases(candidate);
+        valid.push(candidate);
+      } else {
+        invalid.push(candidate);
+      }
+    }
+    if (invalid.length > 0) {
+      this.quarantineCorruptFile(
+        file,
+        new Error(`${invalid.length} invalid pending notification entries`),
+      );
+      this.writePersistedResults(file, valid);
+    }
+    if (valid.length === 0) return 0;
+
+    const bucket = this.buckets.get(sessionId) ?? [];
+    const ids = new Set(bucket.map((item) => item.id));
+    const restored = valid.filter((item) => !ids.has(item.id));
+    if (restored.length === 0) return 0;
+    this.buckets.set(sessionId, [...restored, ...bucket]);
+    for (const envelope of restored) this.reseedSequence(envelope);
+    this.notify();
+    return restored.length;
+  }
 
   enqueue(draft: NotificationEnvelopeDraft): NotificationEnvelope | undefined;
   enqueue(item: NotificationItem, sessionId: string): ResultEnvelope | undefined;
@@ -352,6 +562,8 @@ class NotificationQueue {
       logger.warn("notification_queue.invalid_direction_draft");
       return undefined;
     }
+
+    this.restorePersistedSession(draft.to.sessionId);
 
     const sequenceKey = routeSequenceKey(draft);
     const sequence = (this.sequences.get(sequenceKey) ?? 0) + 1;
@@ -399,6 +611,7 @@ class NotificationQueue {
       this.sequences.delete(oldest);
     }
     this.buckets.set(envelope.to.sessionId, [...next, envelope]);
+    if (envelope.kind === "result") this.persistSession(envelope.to.sessionId);
     this.notify();
     agentNotificationBus.publish(envelope);
     return envelope;
@@ -411,6 +624,7 @@ class NotificationQueue {
 
   getSnapshot = (sessionId: string): readonly NotificationEnvelope[] => {
     if (!isValidSessionId(sessionId)) return EMPTY;
+    this.restorePersistedSession(sessionId);
     return this.buckets.get(sessionId) ?? EMPTY;
   };
 
@@ -419,6 +633,7 @@ class NotificationQueue {
     predicate: (envelope: NotificationEnvelope) => boolean,
   ): NotificationEnvelope[] {
     if (!isValidSessionId(sessionId)) return [];
+    this.restorePersistedSession(sessionId);
     const bucket = this.buckets.get(sessionId);
     if (!bucket?.length) return [];
     const drained: NotificationEnvelope[] = [];
@@ -429,6 +644,7 @@ class NotificationQueue {
     if (drained.length === 0) return [];
     if (retained.length > 0) this.buckets.set(sessionId, retained);
     else this.buckets.delete(sessionId);
+    this.persistSession(sessionId);
     this.notify();
     return drained;
   }
@@ -447,6 +663,7 @@ class NotificationQueue {
    */
   restoreResults(sessionId: string, envelopes: readonly ResultEnvelope[]): number {
     if (!isValidSessionId(sessionId) || envelopes.length === 0) return 0;
+    this.restorePersistedSession(sessionId);
     const bucket = this.buckets.get(sessionId) ?? [];
     const ids = new Set(bucket.map((item) => item.id));
     const restored = envelopes.filter(
@@ -454,6 +671,8 @@ class NotificationQueue {
     );
     if (restored.length === 0) return 0;
     this.buckets.set(sessionId, [...restored, ...bucket]);
+    for (const envelope of restored) this.reseedSequence(envelope);
+    this.persistSession(sessionId);
     this.notify();
     return restored.length;
   }
@@ -489,11 +708,18 @@ class NotificationQueue {
 
   reset(sessionId?: string): void {
     if (sessionId === undefined) {
-      if (this.buckets.size === 0 && this.sequences.size === 0) return;
+      if (this.buckets.size === 0 && this.sequences.size === 0) {
+        this.restoredSessions.clear();
+        return;
+      }
+      const persistedSessions = [...this.buckets.keys()];
       this.buckets.clear();
       this.sequences.clear();
       this.sequenceRoutes.clear();
+      for (const persistedSession of persistedSessions) this.persistSession(persistedSession);
+      this.restoredSessions.clear();
     } else {
+      this.restorePersistedSession(sessionId);
       const hadBucket = this.buckets.delete(sessionId);
       let clearedRoute = false;
       for (const [key, route] of this.sequenceRoutes) {
@@ -503,8 +729,72 @@ class NotificationQueue {
         clearedRoute = true;
       }
       if (!hadBucket && !clearedRoute) return;
+      this.persistSession(sessionId);
+      this.restoredSessions.delete(sessionId);
     }
     this.notify();
+  }
+
+  private resultSnapshot(sessionId: string): ResultEnvelope[] {
+    return (this.buckets.get(sessionId) ?? []).filter(
+      (item): item is ResultEnvelope => item.kind === "result",
+    );
+  }
+
+  private persistSession(sessionId: string): void {
+    const file = this.persistence?.fileForSession(sessionId) ?? null;
+    if (!file) return;
+    try {
+      this.writePersistedResults(file, this.resultSnapshot(sessionId));
+    } catch (error) {
+      logger.error("notification_queue.persistence_write_failed", {
+        sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private writePersistedResults(file: string, results: readonly ResultEnvelope[]): void {
+    const state: PersistedNotificationResults = {
+      schemaVersion: PERSISTENCE_SCHEMA_VERSION,
+      results: [...results],
+    };
+    const serialized = `${JSON.stringify(state, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, "utf8") > MAX_PERSISTED_BYTES) {
+      throw new Error(`pending notification state exceeds ${MAX_PERSISTED_BYTES} bytes`);
+    }
+    mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
+    if (!existsSync(file)) writeFileAtomic(file, '{"schemaVersion":1,"results":[]}\n', 0o600);
+    const release = acquireLockOnPath(file);
+    try {
+      writeFileAtomic(file, serialized, 0o600);
+    } finally {
+      release();
+    }
+  }
+
+  private quarantineCorruptFile(file: string, error: unknown): void {
+    const corruptFile = `${file}.${Date.now()}.${nanoid(6)}.corrupt`;
+    try {
+      renameSync(file, corruptFile);
+      logger.warn("notification_queue.persistence_quarantined", {
+        file,
+        corruptFile,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } catch (quarantineError) {
+      logger.warn("notification_queue.persistence_quarantine_failed", {
+        file,
+        error: quarantineError instanceof Error ? quarantineError.message : String(quarantineError),
+      });
+    }
+  }
+
+  private reseedSequence(envelope: ResultEnvelope): void {
+    const key = routeSequenceKey(envelope);
+    this.sequences.set(key, Math.max(this.sequences.get(key) ?? 0, envelope.sequence));
+    this.sequenceRoutes.delete(key);
+    this.sequenceRoutes.set(key, { from: envelope.from.sessionId, to: envelope.to.sessionId });
   }
 
   private notify(): void {
