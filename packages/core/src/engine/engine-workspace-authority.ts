@@ -8,9 +8,15 @@ import type {
 import { clearSessionPathApprovalsUnderRoot } from "../tool-system/path-policy.js";
 import { canonicalKey } from "../workspace/canonical-key.js";
 import {
+  rebaseWorkspacePrimaryRoot,
   removedWorkspaceRootPaths,
   type WorkspaceContext,
 } from "../workspace/workspace-context.js";
+
+export interface SyntheticRunWorkspace {
+  cwd: string;
+  workspaceContext?: WorkspaceContext;
+}
 
 export class SessionWorkspaceAuthorityTracker {
   private readonly contexts = new Map<string, WorkspaceContext>();
@@ -25,6 +31,10 @@ export class SessionWorkspaceAuthorityTracker {
     this.contexts.set(sessionId, context);
   }
 
+  get(sessionId: string): WorkspaceContext | undefined {
+    return this.contexts.get(sessionId);
+  }
+
   delete(sessionId: string): void {
     this.contexts.delete(sessionId);
   }
@@ -32,6 +42,43 @@ export class SessionWorkspaceAuthorityTracker {
   clear(): void {
     this.contexts.clear();
   }
+}
+
+/**
+ * Reconstruct authoritative options for a core-originated continuation.
+ * Interactive turns carry a fresh WorkspaceContext from their host, whereas
+ * background-result wakeups must rebase the last trusted context onto the
+ * SessionWorkspace persisted after a worktree switch.
+ */
+export function resolveSyntheticRunWorkspace(
+  sessionManager: SessionManager,
+  authorities: SessionWorkspaceAuthorityTracker,
+  config: { cwd?: string; workspaceContext?: WorkspaceContext },
+  sessionId: string,
+): SyntheticRunWorkspace {
+  const workspace = sessionManager.getSessionWorkspace(sessionId);
+  const cwd =
+    workspace?.root ?? sessionManager.readSessionMainRoot(sessionId) ?? config.cwd ?? process.cwd();
+  const binding = sessionManager.readSessionProjectBinding(sessionId);
+  const baseContext = authorities.get(sessionId) ?? config.workspaceContext;
+
+  // A legacy Session with no host authority must stay legacy. Passing a
+  // synthesized prior-run context would persist a spurious project binding.
+  if (!binding && !config.workspaceContext) return { cwd };
+  if (!baseContext) {
+    throw new Error(`Session ${sessionId} has a project binding but no WorkspaceContext`);
+  }
+  if (
+    binding &&
+    (binding.projectId !== baseContext.projectId ||
+      binding.mainRootId !== baseContext.sessionMainRootId)
+  ) {
+    throw new Error(`Session ${sessionId} WorkspaceContext does not match its project binding`);
+  }
+  return {
+    cwd,
+    workspaceContext: rebaseWorkspacePrimaryRoot(baseContext, cwd),
+  };
 }
 
 export function createAuthorizedSessionMessageService(options: {

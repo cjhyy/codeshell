@@ -49,7 +49,8 @@ export const viewImageToolDef: ToolDefinition = {
       imageNumber: {
         type: "number",
         description:
-          "Image history number N from an earlier [image #N, already provided] placeholder.",
+          "Positive image history number N from an earlier [image #N, already provided] " +
+          "placeholder. Omit this field entirely when path is provided; do not send 0.",
       },
       detail: {
         type: "string",
@@ -68,7 +69,12 @@ export async function viewImageTool(
   const rawPath = args.path;
   const rawImageNumber = args.imageNumber;
   const hasPath = typeof rawPath === "string" && rawPath.trim().length > 0;
-  const hasImageNumber = rawImageNumber !== undefined && rawImageNumber !== null;
+  const hasImageNumberInput = rawImageNumber !== undefined && rawImageNumber !== null;
+  // Some tool-calling models materialize every optional numeric property with
+  // a zero sentinel. With a real path, imageNumber: 0 unambiguously means
+  // "unused" because valid history numbers start at 1. Accept that one
+  // compatibility shape while keeping path + a real image number forbidden.
+  const hasImageNumber = hasImageNumberInput && !(hasPath && rawImageNumber === 0);
 
   if (hasPath === hasImageNumber) {
     return "Error: provide exactly one of path or imageNumber";

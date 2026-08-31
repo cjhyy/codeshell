@@ -136,6 +136,28 @@ export function workspacePrimaryRoot(context: WorkspaceContext): ProjectRootCont
   return context.roots.find((root) => root.id === context.sessionMainRootId)!;
 }
 
+/**
+ * Rebase only the Session's primary runtime path while preserving the host's
+ * authoritative project/root identities and the mounted secondary roots.
+ *
+ * A worktree switch changes where the primary root executes; it does not mint
+ * a new project or root id. Rebuilding through createWorkspaceContext also
+ * recomputes rootsDigest and re-runs the overlap/absolute-path validation.
+ */
+export function rebaseWorkspacePrimaryRoot(
+  context: WorkspaceContext,
+  primaryPath: string,
+): WorkspaceContext {
+  return createWorkspaceContext({
+    projectId: context.projectId,
+    projectRevision: context.projectRevision,
+    sessionMainRootId: context.sessionMainRootId,
+    roots: context.roots.map((root) =>
+      root.id === context.sessionMainRootId ? { ...root, path: primaryPath } : root,
+    ),
+  });
+}
+
 /** Paths present in the previous run-scoped root set but absent from the next one. */
 export function removedWorkspaceRootPaths(
   previous: Pick<WorkspaceContext, "roots">,

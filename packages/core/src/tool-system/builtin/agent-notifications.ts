@@ -438,6 +438,26 @@ class NotificationQueue {
     return this.drain(sessionId, (item) => item.kind === "result") as ResultEnvelope[];
   }
 
+  /**
+   * Restore terminal results that a consumer drained but could not deliver.
+   * Existing envelopes retain their ids/sequences and are prepended ahead of
+   * results that arrived during the failed delivery attempt. This is an
+   * internal mailbox rollback, so it deliberately does not republish bus
+   * events (which would recursively schedule another wake immediately).
+   */
+  restoreResults(sessionId: string, envelopes: readonly ResultEnvelope[]): number {
+    if (!isValidSessionId(sessionId) || envelopes.length === 0) return 0;
+    const bucket = this.buckets.get(sessionId) ?? [];
+    const ids = new Set(bucket.map((item) => item.id));
+    const restored = envelopes.filter(
+      (item) => item.kind === "result" && item.to.sessionId === sessionId && !ids.has(item.id),
+    );
+    if (restored.length === 0) return 0;
+    this.buckets.set(sessionId, [...restored, ...bucket]);
+    this.notify();
+    return restored.length;
+  }
+
   clearProgress(sessionId: string, agentId: string, runtimeGeneration?: number): boolean {
     const bucket = this.buckets.get(sessionId);
     if (!bucket?.length) return false;

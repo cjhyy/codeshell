@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   createWorkspaceContext,
   legacySingleRootWorkspace,
+  rebaseWorkspacePrimaryRoot,
   removedWorkspaceRootPaths,
   validateWorkspaceContext,
 } from "./workspace-context.js";
@@ -101,5 +102,30 @@ describe("WorkspaceContext", () => {
       sessionMainRootId: "main",
     };
     expect(removedWorkspaceRootPaths(previous, next)).toEqual(["/tmp/docs"]);
+  });
+
+  test("rebases the primary runtime path while preserving project authority", () => {
+    const original = createWorkspaceContext({
+      projectId: "project-1",
+      projectRevision: 9,
+      sessionMainRootId: "main",
+      roots: [
+        { id: "main", path: "/tmp/main", role: "primary" },
+        { id: "docs", path: "/tmp/docs", role: "secondary" },
+      ],
+    });
+    const rebased = rebaseWorkspacePrimaryRoot(original, "/tmp/worktree");
+
+    expect(rebased).toMatchObject({
+      projectId: original.projectId,
+      projectRevision: original.projectRevision,
+      sessionMainRootId: original.sessionMainRootId,
+      roots: [
+        { id: "main", path: "/tmp/worktree", role: "primary" },
+        { id: "docs", path: "/tmp/docs", role: "secondary" },
+      ],
+    });
+    expect(rebased.rootsDigest).not.toBe(original.rootsDigest);
+    expect(validateWorkspaceContext(rebased)).toEqual(rebased);
   });
 });

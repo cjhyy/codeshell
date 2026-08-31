@@ -2,6 +2,32 @@ import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../../shared
 import type { PanelAvailabilityContext } from "./PanelRegistry";
 import { getEnabledPanelEntries, getPanelEntry, panelEntryTitle } from "./PanelRegistry";
 
+/**
+ * Owner-routed requests must be handled even after the user switches buckets.
+ * Broadcast compatibility requests still need a local bucket guard so an
+ * unrelated window cannot win the first-response race.
+ */
+export function shouldHandleAgentPanelHostRequest(
+  request: AgentPanelHostRequest,
+  isLocalBucket: boolean,
+): boolean {
+  return request.routing === "owner" || isLocalBucket;
+}
+
+export function agentPanelHostErrorResponse(
+  request: AgentPanelHostRequest,
+  error: unknown,
+): AgentPanelHostResponse {
+  return {
+    requestId: request.requestId,
+    result: {
+      ok: false,
+      panelId: request.panelId,
+      detail: error instanceof Error ? error.message : String(error),
+    },
+  };
+}
+
 /** Resolve one trusted main-process panel request against the live registry. */
 export function resolveAgentPanelHostRequest(
   request: AgentPanelHostRequest,
@@ -9,11 +35,7 @@ export function resolveAgentPanelHostRequest(
     availability: PanelAvailabilityContext;
     translate(key: string): string;
     open(panelId: string): void;
-    invoke(
-      panelId: string,
-      toolName: string,
-      args: Record<string, unknown>,
-    ): Promise<unknown>;
+    invoke(panelId: string, toolName: string, args: Record<string, unknown>): Promise<unknown>;
   },
 ): Promise<AgentPanelHostResponse> {
   if (request.action === "list") {

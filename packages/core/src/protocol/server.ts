@@ -53,7 +53,6 @@ import {
 import {
   agentNotificationBus,
   notificationQueue,
-  buildNotificationMessage,
   notificationEnvelopeToLegacyStreamEvent,
 } from "../tool-system/builtin/agent-notifications.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
@@ -63,6 +62,7 @@ import { logger } from "../logging/logger.js";
 import { nanoid } from "nanoid";
 import type { ChatSession } from "./chat-session.js";
 import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manager.js";
+import { wakeSessionForBackgroundResults } from "./background-result-wakeup.js";
 import { assertSafeSessionId, SessionManager } from "../session/session-manager.js";
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
@@ -746,20 +746,26 @@ export class AgentServer {
     // hands us.
     this.bgAgentBusUnsubscribe = agentNotificationBus.subscribe((envelope) => {
       const sessionId = envelope.to.sessionId;
-      const event = notificationEnvelopeToLegacyStreamEvent(envelope);
-      if (event) this.notify(Methods.StreamEvent, { sessionId, event });
-      // Background work that finishes while the session is IDLE (a
+      try {
+        const event = notificationEnvelopeToLegacyStreamEvent(envelope);
+        if (event) this.notify(Methods.StreamEvent, { sessionId, event });
+      } finally {
+        // Waking the model is the durable-consumption path; forwarding the
+        // legacy UI event is only an observation path. A renderer transport
+        // failure after accepting the event must not strand the result in the
+        // queue, so schedule the wake from finally.
+        if (envelope.kind === "result") this.maybeWakeIdleSession(sessionId);
+      }
+      // Background work that finishes while the session is idle (a
       // run_in_background Bash like a download, a background sub-agent, or a
       // video poll — the engine no longer parks on any of them) would otherwise
       // leave its completion sitting in the queue until the user manually sends.
       // Wake the session with one run carrying the notification so the model
       // reads "download complete" and continues on its own (the persisted goal
       // is judged that turn). If the work finishes while a run is still in
-      // flight, the idle guard below skips it and the run-boundary re-check
-      // (trigger B) drains it at end-of-turn instead. A never-exiting dev server
-      // emits no completion, so it never wakes anything (no task/service
-      // classification needed).
-      if (envelope.kind === "result") this.maybeWakeIdleSession(sessionId);
+      // flight, wakeIdleSession waits for that run to settle and then queues the
+      // continuation. A never-exiting dev server emits no completion, so it
+      // never wakes anything (no task/service classification needed).
     });
 
     // Notify client we're ready
@@ -775,10 +781,10 @@ export class AgentServer {
    * Guards:
    * - chatManager path only (the legacy single-engine / headless path drives
    *   its own loop and has no idle-session-resume concept).
-   * - Session must exist AND be idle. If it's busy, we do nothing: the in-flight
-   *   run's end-of-turn `drainAll` already collects every pending notification,
-   *   so a second run would be redundant — and `enqueueTurn` while busy would
-   *   queue a spurious extra turn.
+   * - Session must exist. If it is busy, keep ownership of this wake request and
+   *   wait for `settled` before draining. Merely returning here loses a wake when
+   *   the bus event races the run-boundary re-check: both triggers can observe
+   *   the other as in-flight and leave the result queued forever.
    * - We `drainAll` exactly here and feed the items into the woken turn. This
    *   also merges a burst of near-simultaneous completions into one wakeup:
    *   the first drains all currently-pending items; subsequent bus events for
@@ -798,62 +804,23 @@ export class AgentServer {
           this.maybeWakeIdleSession(sessionId);
         }
       })
-      .catch(() => {
+      .catch((error) => {
         this.wakeupsInFlight.delete(sessionId);
+        logger.warn("bg_wakeup.failed", {
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
       });
   }
 
   private async wakeIdleSession(sessionId: string): Promise<boolean> {
-    if (!this.chatManager) return false;
-    if (this.chatManager.isUnavailable(sessionId)) return false;
-    const session =
-      this.chatManager.get(sessionId) ?? (await this.rehydrateSessionForWake(sessionId));
-    if (!session || session.isBusy()) return false;
-    // Headless / automation runs are one-shot: the caller takes result.text and
-    // is gone, so there's no consumer for a woken continuation turn. Headless
-    // already drained its background sub-agents inside engine.run before
-    // returning; any remaining queued notification (video/shell) must NOT spin
-    // an orphan turn. Only the interactive path auto-continues.
-    if (session.engine.isHeadless()) return false;
-    // Don't resurrect a session the user just Stopped: cancel() leaves it idle
-    // (active=null) so isBusy() reads false, but auto-running a fresh turn here
-    // would defeat the Stop. The flag clears the moment the user sends again.
-    if (session.wasCancelledSinceLastTurn()) return false;
-    const pending = notificationQueue.drainAll(sessionId);
-    if (pending.length === 0) return false;
-    const task = `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`;
-    try {
-      await session.enqueueTurn(task, {
-        // Synthetic notification, not the user's own input: persisted with an
-        // `injected` flag so a disk rebuild doesn't render it as a phantom user
-        // bubble (the live UI shows only the woken assistant's reply).
-        injected: true,
-        onStream: (event: StreamEvent) => this.notify(Methods.StreamEvent, { sessionId, event }),
-        approvalRouter: this.approvalRouter,
-      });
-    } catch (err) {
-      // A wakeup turn failing must not crash the bus fan-out. The drained
-      // notifications are already in the transcript via the run's messages;
-      // log and move on.
-      logger.warn("bg_wakeup.turn_failed", {
-        sessionId,
-        error: (err as Error).message,
-      });
-      // Belt-and-braces, mirroring the send() path's run().then(clear-busy):
-      // the renderer set the composer "working" spinner on this run's
-      // session_started, and clears it on turn_complete/error. A failure
-      // BEFORE the turn-loop runs (e.g. a setup error) emits neither, which
-      // would leave the spinner stuck. Emit a terminal `error` (NOT a
-      // turn_complete) so the renderer clears busy AND a woken automation
-      // session's runStatus flips to "failed" rather than being mislabeled
-      // "completed". If the turn-loop already emitted its own `error`, this is
-      // a harmless duplicate (busy already cleared, status already failed).
-      this.notify(Methods.StreamEvent, {
-        sessionId,
-        event: { type: "error", error: (err as Error)?.message ?? "background wakeup failed" },
-      });
-    }
-    return true;
+    return wakeSessionForBackgroundResults({
+      sessionId,
+      manager: this.chatManager,
+      rehydrate: (id) => this.rehydrateSessionForWake(id),
+      approvalRouter: this.approvalRouter,
+      onStream: (event) => this.notify(Methods.StreamEvent, { sessionId, event }),
+    });
   }
 
   private async rehydrateSessionForWake(sessionId: string): Promise<ChatSession | null> {
@@ -1721,11 +1688,12 @@ export class AgentServer {
         petWorkDelegation: result.petWorkDelegation,
       };
       this.transport.send(createResponse(req.id, runResult));
-      // Run-boundary re-check (trigger B): the session is idle now. If a
-      // background task (shell/video) completed DURING this run, its bus event
-      // fired while we were busy and trigger A skipped it — drain it now and
-      // wake a continuation turn. Interactive path only; headless already
-      // drained its sub-agents inside engine.run before returning.
+      // Run-boundary re-check (trigger B): normally trigger A already owns a
+      // completion that arrived while this run was busy and is waiting on the
+      // session's `settled` promise. Keep this check as a recovery path for a
+      // missed/delayed bus event and for results committed at the run boundary.
+      // Interactive path only; headless already drained its sub-agents inside
+      // engine.run before returning.
       this.maybeWakeIdleSession(sid);
     } catch (err) {
       this.observeRunBoundary(sid, "error");

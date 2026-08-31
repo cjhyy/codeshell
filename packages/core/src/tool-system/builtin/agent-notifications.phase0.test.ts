@@ -86,6 +86,26 @@ describe("Phase 0 notification envelope mailbox", () => {
     expect(notificationQueue.getSnapshot("parent").map((item) => item.kind)).toEqual(["progress"]);
   });
 
+  it("restores drained results ahead of arrivals without republishing them", () => {
+    const seen: string[] = [];
+    const unsubscribe = agentNotificationBus.subscribe((envelope) => seen.push(envelope.id));
+    const first = notificationQueue.enqueue(result())!;
+    const drained = notificationQueue.drainAll("parent");
+    const second = notificationQueue.enqueue({
+      ...result(),
+      from: { sessionId: "child-2", agentId: "worker-2", authority: "agent" },
+      payload: { ...result().payload, workId: "worker-2" },
+    })!;
+
+    expect(notificationQueue.restoreResults("parent", drained)).toBe(1);
+    expect(notificationQueue.getSnapshot("parent").map((item) => item.id)).toEqual([
+      first.id,
+      second.id,
+    ]);
+    expect(seen).toEqual([first.id, second.id]);
+    unsubscribe();
+  });
+
   it("keeps only latest progress and terminal result clears stale progress", () => {
     notificationQueue.enqueue(progress(10));
     notificationQueue.enqueue(progress(20));

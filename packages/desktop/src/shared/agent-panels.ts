@@ -15,6 +15,7 @@ export interface AgentPanelToolDescriptorWire {
 
 export interface AgentPanelHostRequest {
   requestId: string;
+  routing: "owner" | "broadcast";
   sessionId: string;
   bucket: string;
   action: "list" | "open" | "tools" | "invoke";

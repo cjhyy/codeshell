@@ -1,11 +1,35 @@
 import { describe, expect, test } from "bun:test";
 import { installQuickChatPanelApp } from "./apps/quickChatPanelApp";
-import { resolveAgentPanelHostRequest } from "./AgentPanelHost";
+import {
+  agentPanelHostErrorResponse,
+  resolveAgentPanelHostRequest,
+  shouldHandleAgentPanelHostRequest,
+} from "./AgentPanelHost";
 import { replacePanelApps } from "./PanelRegistry";
 
 installQuickChatPanelApp();
 
 describe("resolveAgentPanelHostRequest", () => {
+  test("handles owner-routed requests after the owner switches buckets", () => {
+    const ownerRequest = {
+      requestId: "request-owner-background",
+      routing: "owner" as const,
+      sessionId: "session-background",
+      bucket: "repo::session-background",
+      action: "list" as const,
+    };
+    expect(shouldHandleAgentPanelHostRequest(ownerRequest, false)).toBe(true);
+
+    const broadcastRequest = { ...ownerRequest, routing: "broadcast" as const };
+    expect(shouldHandleAgentPanelHostRequest(broadcastRequest, false)).toBe(false);
+    expect(shouldHandleAgentPanelHostRequest(broadcastRequest, true)).toBe(true);
+
+    expect(agentPanelHostErrorResponse(ownerRequest, new Error("registry unavailable"))).toEqual({
+      requestId: ownerRequest.requestId,
+      result: { ok: false, panelId: undefined, detail: "registry unavailable" },
+    });
+  });
+
   test("lists built-in Panel Apps and opens them by stable id", async () => {
     const availability = {
       projectPath: "/repo",
@@ -15,6 +39,7 @@ describe("resolveAgentPanelHostRequest", () => {
     const listed = await resolveAgentPanelHostRequest(
       {
         requestId: "request-list",
+        routing: "owner",
         sessionId: "session-1",
         bucket: "repo::session-1",
         action: "list",
@@ -36,6 +61,7 @@ describe("resolveAgentPanelHostRequest", () => {
     const response = await resolveAgentPanelHostRequest(
       {
         requestId: "request-open",
+        routing: "owner",
         sessionId: "session-1",
         bucket: "repo::session-1",
         action: "open",
@@ -56,6 +82,7 @@ describe("resolveAgentPanelHostRequest", () => {
     const response = await resolveAgentPanelHostRequest(
       {
         requestId: "request-missing",
+        routing: "owner",
         sessionId: "session-1",
         bucket: "repo::session-1",
         action: "open",
@@ -111,6 +138,7 @@ describe("resolveAgentPanelHostRequest", () => {
       const unrelated = await resolveAgentPanelHostRequest(
         {
           requestId: "request-other-project",
+          routing: "owner",
           sessionId: "session-2",
           bucket: "other::session-2",
           action: "list",
@@ -140,6 +168,7 @@ describe("resolveAgentPanelHostRequest", () => {
       const tools = await resolveAgentPanelHostRequest(
         {
           requestId: "request-tools",
+          routing: "owner",
           sessionId: "session-1",
           bucket: "repo::session-1",
           action: "tools",
@@ -156,6 +185,7 @@ describe("resolveAgentPanelHostRequest", () => {
       const invoked = await resolveAgentPanelHostRequest(
         {
           requestId: "request-invoke",
+          routing: "owner",
           sessionId: "session-1",
           bucket: "repo::session-1",
           action: "invoke",

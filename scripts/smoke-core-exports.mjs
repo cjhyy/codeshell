@@ -160,6 +160,9 @@ const expectedInternalTypeExports = [
   "ParsedCron",
   "ParsedSource",
   "PluginListRow",
+  "ProjectId",
+  "ProjectRootContext",
+  "ProjectRootId",
   "ProtocolModelEntry",
   "ProviderConfig",
   "ProviderKindName",
@@ -187,6 +190,8 @@ const expectedInternalTypeExports = [
   "UpdateInfo",
   "UpdateJobPatch",
   "UpdateResult",
+  "WorkspaceContext",
+  "WorkspaceContextInput",
   "WriteJobGitOps",
   "WritePolicy",
 ];

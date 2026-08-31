@@ -67,7 +67,9 @@ jobs:
       - name: build workspace packages
         run: bun run build
       - name: full test suite
-        run: bun test --timeout 30000
+        # Use the repository-scoped entry point so project-local .agents Skills
+        # cannot inject their own upstream tests into CodeShell's suite.
+        run: bun run test
 
   coverage:
     name: builtin integration coverage

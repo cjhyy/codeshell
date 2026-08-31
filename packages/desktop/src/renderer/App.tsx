@@ -99,7 +99,11 @@ import {
 import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
 import type { QuickChatSessionRef } from "./quickChatSession";
 import type { SettingsModuleId } from "./settings/SettingsPage";
-import { resolveAgentPanelHostRequest } from "./panels/AgentPanelHost";
+import {
+  agentPanelHostErrorResponse,
+  resolveAgentPanelHostRequest,
+  shouldHandleAgentPanelHostRequest,
+} from "./panels/AgentPanelHost";
 import {
   browserPartitionForBucket,
   EMPTY_ATTACHMENTS,
@@ -1220,13 +1224,15 @@ function App() {
       return;
     }
     return compatibilityApi.onAgentPanelRequest((request) => {
-      if (request.bucket !== activeBucket && !panelByBucket[request.bucket]) return;
+      const isLocalBucket =
+        request.bucket === activeBucket || Boolean(panelByBucket[request.bucket]);
+      if (!shouldHandleAgentPanelHostRequest(request, isLocalBucket)) return;
       void (async () => {
-        const { projectId } = parsePanelBucket(request.bucket);
-        let cwd: string | null = null;
-        let projectPath: string | null = null;
-        if (request.sessionId) {
-          try {
+        try {
+          const { projectId } = parsePanelBucket(request.bucket);
+          let cwd: string | null = null;
+          let projectPath: string | null = null;
+          if (request.sessionId) {
             const authority = await window.codeshell.getSessionWorkspaceAuthority(
               request.sessionId,
             );
@@ -1234,39 +1240,39 @@ function App() {
               cwd = authority.workspace.root;
               projectPath = authority.mainRoot;
             }
-          } catch {
-            // A Session-owned panel request without authority is unavailable.
+          } else if (projectId) {
+            projectPath = projects.find((project) => project.id === projectId)?.path ?? null;
+            cwd = projectPath;
+          } else {
+            cwd = noRepoCwdRef.current;
           }
-        } else if (projectId) {
-          projectPath = projects.find((project) => project.id === projectId)?.path ?? null;
-          cwd = projectPath;
-        } else {
-          cwd = noRepoCwdRef.current;
+          const response = await resolveAgentPanelHostRequest(request, {
+            availability: {
+              projectPath,
+              cwd,
+              engineSessionId: request.sessionId,
+            },
+            translate: (key) => t(key as never),
+            open: (panelId) => {
+              updatePanelBucket(request.bucket, (state) => ({
+                ...state,
+                open: true,
+                requestNonce: state.requestNonce + 1,
+                requestKind: panelId,
+              }));
+            },
+            invoke: (panelId, toolName, args) =>
+              window.codeshell.invokePanelAppAgentTool({
+                appDescriptorId: panelId,
+                bucket: request.bucket,
+                toolName,
+                arguments: args,
+              }),
+          });
+          compatibilityApi.respondAgentPanelRequest?.(response);
+        } catch (error) {
+          compatibilityApi.respondAgentPanelRequest?.(agentPanelHostErrorResponse(request, error));
         }
-        const response = await resolveAgentPanelHostRequest(request, {
-          availability: {
-            projectPath,
-            cwd,
-            engineSessionId: request.sessionId,
-          },
-          translate: (key) => t(key as never),
-          open: (panelId) => {
-            updatePanelBucket(request.bucket, (state) => ({
-              ...state,
-              open: true,
-              requestNonce: state.requestNonce + 1,
-              requestKind: panelId,
-            }));
-          },
-          invoke: (panelId, toolName, args) =>
-            window.codeshell.invokePanelAppAgentTool({
-              appDescriptorId: panelId,
-              bucket: request.bucket,
-              toolName,
-              arguments: args,
-            }),
-        });
-        compatibilityApi.respondAgentPanelRequest?.(response);
       })();
     });
   }, [activeBucket, panelByBucket, projects, t, updatePanelBucket]);

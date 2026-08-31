@@ -211,6 +211,11 @@ describe("view_image by imageNumber", () => {
     expect(both as string).toContain("path");
     expect(both as string).toContain("imageNumber");
   });
+
+  it("still rejects imageNumber zero when no path is provided", async () => {
+    const out = await viewImageTool({ imageNumber: 0 }, ctxWith(sm, "imagehist123", root));
+    expect(out as string).toContain("positive integer");
+  });
 });
 
 describe("collectBase64Images", () => {

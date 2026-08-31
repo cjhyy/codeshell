@@ -72,6 +72,17 @@ describe("view_image", () => {
     expect((out as { contentBlocks: any[] }).contentBlocks[0].type).toBe("image");
   });
 
+  it("treats imageNumber: 0 beside a path as an unused model-generated sentinel", async () => {
+    const p = join(dir, "sentinel.png");
+    await writeFile(p, Buffer.from(PNG_B64, "base64"));
+    const out = await viewImageTool(
+      { path: p, imageNumber: 0, detail: "high" },
+      ctxWith("claude-sonnet-4-6", "anthropic", dir),
+    );
+    expect(typeof out).toBe("object");
+    expect((out as { contentBlocks: any[] }).contentBlocks[0].type).toBe("image");
+  });
+
   it("rejects invalid detail values", async () => {
     const out = await viewImageTool(
       { path: "a.png", detail: "original" },

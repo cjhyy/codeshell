@@ -7,6 +7,11 @@ import { ChatSessionManager, type EngineConfigSlice } from "./chat-session-manag
 import { SessionManager } from "../session/session-manager.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
 import type { Engine, EngineResult } from "../engine/engine.js";
+import {
+  createWorkspaceContext,
+  workspacePrimaryRoot,
+  type WorkspaceContext,
+} from "../workspace/workspace-context.js";
 
 const SID = "bg-shell-wakeup-session";
 
@@ -98,13 +103,15 @@ function makeRehydratableEngineFactory(
   return { engineFactory, runs, slices };
 }
 
-function enqueueShellExit(sid: string, agentId = "bg_abc123") {
+function enqueueShellExit(sid: string, agentId = "bg_abc123", exitCode = 0) {
+  const ok = exitCode === 0;
   notificationQueue.enqueue(
     {
       agentId,
       name: "background shell",
-      description: `Background shell exited (exit 0): yt-dlp ...`,
-      status: "completed",
+      description: `Background shell exited (exit ${exitCode}): yt-dlp ...`,
+      status: ok ? "completed" : "failed",
+      error: ok ? undefined : `Background shell ${agentId} exited with exit ${exitCode}.`,
       enqueuedAt: 1,
     },
     sid,
@@ -145,7 +152,108 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     expect(notificationQueue.getSnapshot(SID).length).toBe(0);
   });
 
-  it("does NOT wake a busy session (the in-flight run drains it at end)", async () => {
+  it("starts a continuation when a background shell exits unsuccessfully", async () => {
+    const { engine, runs } = makeFakeEngine();
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    await chatManager.getOrCreate(SID, {} as never);
+    const t = makeTransport();
+    servers.push(new AgentServer({ transport: t.transport, chatManager }));
+
+    enqueueShellExit(SID, "bg_failed", 1);
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toContain("Background shell exited (exit 1)");
+    expect(runs[0]).toContain("status=\"failed\"");
+    expect(notificationQueue.getSnapshot(SID)).toHaveLength(0);
+  });
+
+  it("wakes a worktree-switched session with matching authoritative run options", async () => {
+    const mainRoot = "/tmp/project-main";
+    const worktreeRoot = "/tmp/project-worktree";
+    const worktreeContext = createWorkspaceContext({
+      projectId: "project-worktree-wake",
+      projectRevision: 3,
+      sessionMainRootId: "root-main",
+      roots: [{ id: "root-main", path: worktreeRoot, role: "primary" }],
+    });
+    const runs: Array<{ cwd?: string; workspaceContext?: WorkspaceContext }> = [];
+    const engine = {
+      setAskUser() {},
+      setPlanMode() {},
+      isHeadless: () => false,
+      resolveSessionRunWorkspace: () => ({
+        cwd: worktreeRoot,
+        workspaceContext: worktreeContext,
+      }),
+      async run(
+        _task: string,
+        opts?: { cwd?: string; workspaceContext?: WorkspaceContext },
+      ): Promise<EngineResult> {
+        runs.push({ cwd: opts?.cwd, workspaceContext: opts?.workspaceContext });
+        const matched =
+          opts?.cwd === worktreeRoot &&
+          opts.workspaceContext !== undefined &&
+          workspacePrimaryRoot(opts.workspaceContext).path === worktreeRoot;
+        return {
+          text: matched ? "ok" : `ERROR: stale workspace ${mainRoot}`,
+          reason: "completed",
+          sessionId: SID,
+          turnCount: matched ? 1 : 0,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    await chatManager.getOrCreate(SID, {} as never);
+    const t = makeTransport();
+    servers.push(new AgentServer({ transport: t.transport, chatManager }));
+
+    enqueueShellExit(SID, "bg_worktree");
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0]?.cwd).toBe(worktreeRoot);
+    expect(workspacePrimaryRoot(runs[0]!.workspaceContext!).path).toBe(worktreeRoot);
+    expect(notificationQueue.getSnapshot(SID)).toHaveLength(0);
+  });
+
+  it("restores the completion when workspace validation prevents the turn from starting", async () => {
+    const engine = {
+      setAskUser() {},
+      setPlanMode() {},
+      isHeadless: () => false,
+      async run(): Promise<EngineResult> {
+        return {
+          text: "ERROR: WorkspaceContext primary does not match SessionWorkspace",
+          reason: "completed",
+          sessionId: SID,
+          turnCount: 0,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      },
+    } as unknown as Engine;
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    await chatManager.getOrCreate(SID, {} as never);
+    const t = makeTransport();
+    servers.push(new AgentServer({ transport: t.transport, chatManager }));
+
+    enqueueShellExit(SID, "bg_workspace_rejected");
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(notificationQueue.getSnapshot(SID)).toHaveLength(1);
+  });
+
+  it("waits for a busy session and then starts the background-result continuation", async () => {
     // Engine whose run blocks until released, so the session stays busy.
     const runs: string[] = [];
     let release!: () => void;
@@ -179,14 +287,44 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     await new Promise((r) => setTimeout(r, 5));
     expect(runs.length).toBe(1);
 
-    // Completion arrives while busy → must NOT start a second run; the
-    // notification stays queued for the in-flight run's end-of-turn drain.
+    // Completion arrives while busy: it cannot start a second run yet, but it
+    // must retain responsibility for waking the session after this run settles.
     enqueueShellExit(SID);
     await new Promise((r) => setTimeout(r, 20));
     expect(runs.length).toBe(1);
     expect(notificationQueue.getSnapshot(SID).length).toBe(1);
 
     release();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(runs).toHaveLength(2);
+    expect(runs[1]).toContain("Background shell exited");
+    expect(notificationQueue.getSnapshot(SID)).toHaveLength(0);
+  });
+
+  it("still wakes when forwarding the legacy completion event throws", async () => {
+    const { engine, runs } = makeFakeEngine();
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    await chatManager.getOrCreate(SID, {} as never);
+    const t = makeTransport();
+    const send = t.transport.send.bind(t.transport);
+    t.transport.send = (message: any) => {
+      send(message);
+      if (message?.params?.event?.type === "background_agent_completed") {
+        throw new Error("renderer transport failed after accepting the completion event");
+      }
+    };
+    servers.push(new AgentServer({ transport: t.transport, chatManager }));
+
+    enqueueShellExit(SID);
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toContain("Background shell exited");
+    expect(notificationQueue.getSnapshot(SID)).toHaveLength(0);
   });
 
   it("emits a terminal error when the woken run fails (clears UI busy, no false 'completed')", async () => {
@@ -231,6 +369,9 @@ describe("AgentServer — background shell completion wakes an idle session", ()
         m?.params?.event?.type === "turn_complete",
     );
     expect(falseComplete).toBeUndefined();
+    // A setup failure must not consume the completion permanently. The next
+    // user turn can still drain it after the underlying configuration recovers.
+    expect(notificationQueue.getSnapshot(SID)).toHaveLength(1);
   });
 
   it("does NOT wake a session the user just Stopped (cancel suppresses wakeup)", async () => {

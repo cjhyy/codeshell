@@ -85,8 +85,10 @@ import {
   createAuthorizedSessionMessageService,
   migrateOwnedSessionMainRoot,
   releaseOwnedSessionWorkspace,
+  resolveSyntheticRunWorkspace,
   SessionWorkspaceAuthorityTracker,
   setOwnedSessionWorkspace,
+  type SyntheticRunWorkspace,
 } from "./engine-workspace-authority.js";
 import { createRunUsageAccounting, wireRunModelFacade } from "./run-accounting.js";
 import { logger, runWithSid } from "../logging/logger.js";
@@ -3097,6 +3099,15 @@ export class Engine {
 
   getSessionManager(): SessionManager {
     return this.sessionManager;
+  }
+
+  resolveSessionRunWorkspace(sessionId: string): SyntheticRunWorkspace {
+    return resolveSyntheticRunWorkspace(
+      this.sessionManager,
+      this.workspaceAuthorities,
+      this.config,
+      sessionId,
+    );
   }
 
   /**

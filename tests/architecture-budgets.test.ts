@@ -44,9 +44,10 @@ describe("architecture growth budgets", () => {
     // ingress instead of trusting arbitrary numeric/object payloads. Manual
     // Mimi clears also validate their host-authored summary at this boundary.
     expect(lines("packages/core/src/protocol/server.ts")).toBeLessThanOrEqual(4_506);
-    // Topic-boundary archival is deliberately inside run startup so it cannot
-    // race the current turn's exclusive-end anchor.
-    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_251);
+    // Topic-boundary archival stays inside run startup. Synthetic worktree
+    // authority is only a public delegation seam here; its implementation was
+    // extracted to engine-workspace-authority.ts.
+    expect(lines("packages/core/src/engine/engine.ts")).toBeLessThanOrEqual(4_262);
   });
 
   test("published entry points cannot silently expand their compatibility surface", () => {

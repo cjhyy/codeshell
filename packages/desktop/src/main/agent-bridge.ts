@@ -1090,7 +1090,7 @@ export class AgentBridge implements PetStateBridge {
   }
 
   private requestPanelHost(
-    request: Omit<AgentPanelHostRequest, "requestId">,
+    request: Omit<AgentPanelHostRequest, "requestId" | "routing">,
   ): Promise<AgentPanelHostResult> {
     const requestId = `panel-host-${++this.panelHostRequestId}`;
     return new Promise((resolve) => {
@@ -1113,7 +1113,11 @@ export class AgentBridge implements PetStateBridge {
         () => finish({ ok: false, panelId: request.panelId, detail: "panel host timed out" }),
         20_000,
       );
-      const payload: AgentPanelHostRequest = { ...request, requestId };
+      const payload: AgentPanelHostRequest = {
+        ...request,
+        requestId,
+        routing: ownerRoute.window ? "owner" : "broadcast",
+      };
       try {
         if (ownerRoute.window) {
           ownerRoute.window.webContents.send("panel:agent-request", payload);
@@ -1530,7 +1534,9 @@ export class AgentBridge implements PetStateBridge {
   panelBridgeForSession(sessionId: string): PanelHostBridge {
     const call = (
       action: "list" | "open" | "tools" | "invoke",
-      extra: Partial<Omit<AgentPanelHostRequest, "requestId" | "sessionId" | "action">> = {},
+      extra: Partial<
+        Omit<AgentPanelHostRequest, "requestId" | "routing" | "sessionId" | "action">
+      > = {},
     ): Promise<AgentPanelHostResult> =>
       this.requestPanelHost({
         sessionId,

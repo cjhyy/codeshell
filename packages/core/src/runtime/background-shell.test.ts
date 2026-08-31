@@ -68,6 +68,24 @@ describe("spawnBackground + readOutput + exit notification", () => {
     expect(notifs.length).toBe(1);
     expect(notifs[0].description).toContain("echo hi");
   });
+
+  test("non-zero exit enqueues a failed result that can wake the owning session", async () => {
+    const r = mgr.spawnBackground({
+      command: "echo broken >&2; exit 7",
+      cwd: home,
+      sessionId: "sessFailed",
+    });
+    if (!r.ok) throw new Error("spawn failed");
+
+    await until(() => mgr.get(r.shellId)?.status === "exited");
+
+    const [result] = notificationQueue.getSnapshot("sessFailed");
+    expect(result?.kind).toBe("result");
+    if (result?.kind !== "result") throw new Error("missing shell result notification");
+    expect(result.payload.status).toBe("failed");
+    expect(result.payload.description).toContain("exit 7");
+    expect(result.payload.error).toContain(`Background shell ${r.shellId} exited with exit 7`);
+  });
 });
 
 describe("incremental cursor", () => {
