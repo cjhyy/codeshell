@@ -62,6 +62,10 @@ export interface HeadlessServeOptions {
    */
   passcode?: string;
   log?: WorkerBridgeLog;
+  /** Test/host tuning; production defaults to 60 seconds. */
+  pendingWorkerResponseTtlMs?: number;
+  /** Test/host tuning; production defaults to a 5-second sweep. */
+  pendingWorkerResponseReaperMs?: number;
 }
 
 export interface HeadlessServer {
@@ -74,6 +78,8 @@ export interface HeadlessServer {
   bridge: WorkerBridgeCore;
   /** Live authenticated tab count (for tests/status). */
   tabCount(): number;
+  /** Outstanding browser→worker RPC count (for status/tests). */
+  pendingResponseCount(): number;
   close(): Promise<void>;
 }
 
@@ -93,6 +99,16 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     );
   }
   const sessionManager = new SessionManager(sessionRootDir);
+  const pendingResponseTtlMs = opts.pendingWorkerResponseTtlMs ?? 60_000;
+  const pendingResponseReaperMs = opts.pendingWorkerResponseReaperMs ?? 5_000;
+  if (
+    !Number.isSafeInteger(pendingResponseTtlMs) ||
+    pendingResponseTtlMs <= 0 ||
+    !Number.isSafeInteger(pendingResponseReaperMs) ||
+    pendingResponseReaperMs <= 0
+  ) {
+    throw new Error("pending worker response timeouts must be positive safe integers");
+  }
 
   const passcode = new AccessPasscode({ filePath: join(opts.dataDir, "access.json") });
   let generatedPasscode: string | undefined;
@@ -106,13 +122,29 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   const tabs = new Set<WebSocket>();
   const pendingWorkerResponses = new Map<
     string,
-    { tab: WebSocket; originalId: string | number; tabId: number }
+    { tab: WebSocket; originalId: string | number; tabId: number; insertedAt: number }
   >();
+  const pendingResponsesByTab = new Map<number, number>();
   let nextTabId = 1;
   let nextWorkerRequestId = 1;
   const broadcast = (line: string): void => {
     for (const tab of tabs) {
       if (tab.readyState === tab.OPEN) tab.send(line);
+    }
+  };
+
+  const deletePendingWorkerResponse = (requestId: string): void => {
+    const route = pendingWorkerResponses.get(requestId);
+    if (!route) return;
+    pendingWorkerResponses.delete(requestId);
+    const remaining = (pendingResponsesByTab.get(route.tabId) ?? 1) - 1;
+    if (remaining > 0) pendingResponsesByTab.set(route.tabId, remaining);
+    else pendingResponsesByTab.delete(route.tabId);
+  };
+
+  const clearPendingWorkerResponsesForTab = (tabId: number): void => {
+    for (const [requestId, route] of pendingWorkerResponses) {
+      if (route.tabId === tabId) deletePendingWorkerResponse(requestId);
     }
   };
 
@@ -122,7 +154,20 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       tab.send(hostQueryError(originalId, -32000, message));
     }
     pendingWorkerResponses.clear();
+    pendingResponsesByTab.clear();
   };
+
+  const pendingResponseReaper = setInterval(() => {
+    const now = Date.now();
+    for (const [requestId, route] of pendingWorkerResponses) {
+      if (now - route.insertedAt < pendingResponseTtlMs) continue;
+      deletePendingWorkerResponse(requestId);
+      if (route.tab.readyState === route.tab.OPEN) {
+        route.tab.send(hostQueryError(route.originalId, -32000, "agent worker response timed out"));
+      }
+    }
+  }, pendingResponseReaperMs);
+  pendingResponseReaper.unref?.();
 
   // Notifications describe shared agent state and are broadcast. Correlated
   // JSON-RPC responses must return only to the tab that issued the request;
@@ -151,7 +196,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       log("worker.response_dropped", { reason: "unknown request id", id: message.id });
       return;
     }
-    pendingWorkerResponses.delete(String(message.id));
+    deletePendingWorkerResponse(String(message.id));
     if (route.tab.readyState !== route.tab.OPEN) return;
     route.tab.send(JSON.stringify({ ...message, id: route.originalId }));
   };
@@ -236,7 +281,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     serveStatic(req, res);
   });
 
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
   server.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
     if (pathname !== "/ws" || !passcode.allows(req as never)) {
@@ -249,6 +294,11 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       tabs.add(ws);
       log("tab.connected", { tabs: tabs.size });
       ws.on("message", (data) => {
+        if (webSocketPayloadBytes(data) > 1024 * 1024) {
+          log("tab.frame_dropped", { reason: "payload too large" });
+          ws.close(1009, "payload too large");
+          return;
+        }
         const line = String(data);
         // Validate framing before touching the worker: a malformed frame from
         // one tab must never kill the shared pipe.
@@ -292,12 +342,24 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           return;
         }
         if (workerMessage.id !== undefined) {
+          if ((pendingResponsesByTab.get(tabId) ?? 0) >= 64) {
+            ws.send(
+              hostQueryError(
+                workerMessage.id,
+                -32000,
+                "too many pending agent worker requests for this tab",
+              ),
+            );
+            return;
+          }
           const workerRequestId = `serve-${tabId}-${nextWorkerRequestId++}`;
           pendingWorkerResponses.set(workerRequestId, {
             tab: ws,
             originalId: workerMessage.id,
             tabId,
+            insertedAt: Date.now(),
           });
+          pendingResponsesByTab.set(tabId, (pendingResponsesByTab.get(tabId) ?? 0) + 1);
           workerMessage.id = workerRequestId;
         }
         const workerLine = JSON.stringify(workerMessage);
@@ -308,13 +370,12 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       });
       ws.on("close", () => {
         tabs.delete(ws);
-        for (const [requestId, route] of pendingWorkerResponses) {
-          if (route.tabId === tabId) pendingWorkerResponses.delete(requestId);
-        }
+        clearPendingWorkerResponsesForTab(tabId);
         log("tab.closed", { tabs: tabs.size });
       });
       ws.on("error", () => {
         tabs.delete(ws);
+        clearPendingWorkerResponsesForTab(tabId);
       });
     });
   });
@@ -339,7 +400,9 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     passcode,
     bridge,
     tabCount: () => tabs.size,
+    pendingResponseCount: () => pendingWorkerResponses.size,
     close: async () => {
+      clearInterval(pendingResponseReaper);
       for (const tab of tabs) {
         try {
           tab.terminate();
@@ -359,6 +422,21 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
       });
     },
   };
+}
+
+function webSocketPayloadBytes(data: unknown): number {
+  if (typeof data === "string") return Buffer.byteLength(data, "utf8");
+  if (Array.isArray(data)) {
+    return data.reduce(
+      (total, item) => total + (typeof item?.byteLength === "number" ? item.byteLength : 0),
+      0,
+    );
+  }
+  if (data && typeof data === "object" && "byteLength" in data) {
+    const byteLength = (data as { byteLength?: unknown }).byteLength;
+    return typeof byteLength === "number" ? byteLength : Number.POSITIVE_INFINITY;
+  }
+  return Buffer.byteLength(String(data), "utf8");
 }
 
 function replyToHostSessionQuery(

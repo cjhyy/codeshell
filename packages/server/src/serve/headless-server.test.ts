@@ -8,6 +8,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { randomBytes } from "node:crypto";
 import { WebSocket } from "ws";
 import { startHeadlessServer, type HeadlessServer } from "./headless-server.js";
 
@@ -34,6 +35,7 @@ const PASSCODE = "serve-test-passcode";
 
 let dir: string;
 let entryPath: string;
+let silentEntryPath: string;
 let staticDir: string;
 const servers: HeadlessServer[] = [];
 
@@ -41,6 +43,8 @@ beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), "cs-headless-serve-"));
   entryPath = join(dir, "echo-worker.cjs");
   writeFileSync(entryPath, WORKER_SCRIPT);
+  silentEntryPath = join(dir, "silent-worker.cjs");
+  writeFileSync(silentEntryPath, "process.stdin.resume();\n");
   staticDir = join(dir, "webapp");
   mkdirSync(staticDir, { recursive: true });
   writeFileSync(join(staticDir, "index.html"), "<!doctype html><title>cs web</title>ROOT_OK");
@@ -55,7 +59,14 @@ afterEach(async () => {
   for (const s of servers.splice(0)) await s.close();
 });
 
-async function boot(options: { seedSession?: boolean } = {}): Promise<HeadlessServer> {
+async function boot(
+  options: {
+    seedSession?: boolean;
+    workerEntryPath?: string;
+    pendingWorkerResponseTtlMs?: number;
+    pendingWorkerResponseReaperMs?: number;
+  } = {},
+): Promise<HeadlessServer> {
   const runtimeDir = mkdtempSync(join(dir, "runtime-"));
   const sessionRootDir = join(runtimeDir, "sessions");
   if (options.seedSession) {
@@ -103,11 +114,17 @@ async function boot(options: { seedSession?: boolean } = {}): Promise<HeadlessSe
     port: 0,
     cwd: dir,
     dataDir: join(runtimeDir, "serve-data"),
-    workerEntryPath: entryPath,
+    workerEntryPath: options.workerEntryPath ?? entryPath,
     sessionRootDir,
     execPath: process.execPath,
     staticRootDir: staticDir,
     passcode: PASSCODE,
+    ...(options.pendingWorkerResponseTtlMs
+      ? { pendingWorkerResponseTtlMs: options.pendingWorkerResponseTtlMs }
+      : {}),
+    ...(options.pendingWorkerResponseReaperMs
+      ? { pendingWorkerResponseReaperMs: options.pendingWorkerResponseReaperMs }
+      : {}),
   });
   servers.push(server);
   return server;
@@ -372,5 +389,103 @@ describe("headless serve — WS pipe", () => {
     expect((replyB.result as { echo: { task: string } }).echo.task).toBe("B");
     a.close();
     b.close();
+  });
+
+  test("an oversized frame closes only its tab and leaves the server available", async () => {
+    const server = await boot();
+    const oversized = await openWs(server, { "x-access-passcode": PASSCODE });
+    oversized.send(randomBytes(1024 * 1024 + 1));
+    for (let attempt = 0; attempt < 100 && server.tabCount() > 0; attempt += 1) {
+      await Bun.sleep(5);
+    }
+    expect(server.tabCount()).toBe(0);
+    oversized.terminate();
+
+    const healthy = await openWs(server, { "x-access-passcode": PASSCODE });
+    healthy.send(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "after-oversized",
+        method: "agent/query",
+        params: { type: "sessions" },
+      }),
+    );
+    expect(await nextMessage(healthy, (message) => message.id === "after-oversized")).toMatchObject(
+      {
+        result: { type: "sessions", data: [] },
+      },
+    );
+    healthy.close();
+  });
+
+  test("caps pending worker requests per tab", async () => {
+    const server = await boot({ workerEntryPath: silentEntryPath });
+    const ws = await openWs(server, { "x-access-passcode": PASSCODE });
+    const rejected = nextMessage(ws, (message) => message.id === "request-64");
+    for (let index = 0; index <= 64; index += 1) {
+      ws.send(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: `request-${index}`,
+          method: "agent/run",
+          params: { task: `task-${index}` },
+        }),
+      );
+    }
+
+    expect(await rejected).toMatchObject({
+      id: "request-64",
+      error: { code: -32000, message: expect.stringContaining("too many pending") },
+    });
+    expect(server.pendingResponseCount()).toBe(64);
+    ws.close();
+  });
+
+  test("times out pending worker responses and reports the original request id", async () => {
+    const server = await boot({
+      workerEntryPath: silentEntryPath,
+      pendingWorkerResponseTtlMs: 20,
+      pendingWorkerResponseReaperMs: 5,
+    });
+    const ws = await openWs(server, { "x-access-passcode": PASSCODE });
+    const timedOut = nextMessage(ws, (message) => message.id === "slow-request");
+    ws.send(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "slow-request",
+        method: "agent/run",
+        params: { task: "never replies" },
+      }),
+    );
+
+    expect(await timedOut).toMatchObject({
+      id: "slow-request",
+      error: { code: -32000, message: expect.stringContaining("timed out") },
+    });
+    expect(server.pendingResponseCount()).toBe(0);
+    ws.close();
+  });
+
+  test("an abruptly terminated tab releases all of its pending response routes", async () => {
+    const server = await boot({ workerEntryPath: silentEntryPath });
+    const ws = await openWs(server, { "x-access-passcode": PASSCODE });
+    ws.send(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: "pending-on-error",
+        method: "agent/run",
+        params: { task: "never replies" },
+      }),
+    );
+    for (let attempt = 0; attempt < 50 && server.pendingResponseCount() === 0; attempt += 1) {
+      await Bun.sleep(2);
+    }
+    expect(server.pendingResponseCount()).toBe(1);
+
+    ws.terminate();
+    for (let attempt = 0; attempt < 50 && server.pendingResponseCount() > 0; attempt += 1) {
+      await Bun.sleep(2);
+    }
+    expect(server.pendingResponseCount()).toBe(0);
   });
 });
