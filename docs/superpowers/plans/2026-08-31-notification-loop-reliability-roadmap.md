@@ -6,8 +6,8 @@
 > 隔离 worktree → RED 先行 → 最小实现 → 独立复审 → 全仓门禁 → 单条 Conventional Commit。
 > 阶段三及以后是设计草案，**动工前必须先各自过 brainstorming + 独立 PRD/计划**。
 
-**Goal:** 让后台任务（Mimi 委派、后台 agent、自动化）的完成结果**必达**：持久写回原聊天、
-重启可补投、去重不重复；随后收口四项已确认的可靠性债务；再在此地基上统一本地任务中心。
+**Goal:** 让后台任务（Mimi 委派、后台 agent、自动化）**已经产出的完成结果必达**：持久写回
+原聊天、重启可补投、去重不重复；随后收口四项已确认的可靠性债务；再在此地基上统一本地任务中心。
 
 **Architecture:** 不新建通知系统。现有架构已有三条设计正确的"必达"范式 ——
 long-task ledger 的 `closureRecordedAt` 水位线、IM Gateway 的持久 outbox + 连续 ack、
@@ -175,16 +175,22 @@ PR 工作流(P1) → 原生产物 → Computer Use → 连接器深化 → 平�
 
 ### 1.5 阶段一验收（对照原始五条要求）
 
+**阶段边界（2026-09-01 真机验收确认）：** 本阶段保证结果一旦进入 durable notification、
+long-task terminal closure 或 Gateway outbox 后可跨重启补投；不保证桌面主进程被杀时仍在执行的
+worker 继续存活。后者当前会安全地进入 `interrupted`，由用户恢复，避免自动重跑已产生副作用的
+工具。独立执行宿主、重连与 verify/retry 归阶段三本地任务中心处理。
+
 | 要求 | 达成机制 | 验证方式 |
 | --- | --- | --- |
 | 结果持久写回原聊天 | 唤醒 turn 写 transcript（既有）+ N1 让"待写回"本身可持久 | N1 RED 1/3 |
 | 系统通知只作辅助 | D2 单一出口，写回链路不依赖它 | N2 用例 |
-| 应用重启后补投 | long-task 水位线（既有）+ N1 启动扫描唤醒 + Gateway outbox（既有） | N1 集成测试 + 真机：杀进程→重启→Mimi 聊天出现结果 |
+| 应用重启后补投 | long-task 水位线（既有）+ N1 启动扫描唤醒 + Gateway outbox（既有） | N1 集成测试 + 真机：持久结果待投递时重启→Mimi 聊天出现结果 |
 | 完成/失败/取消/等待审批都能通知 | 终态三种已由 ledger 覆盖（1.1 表）；等待审批由 pet-attention-policy + mobile pending-approvals 重放（已核验有测试）覆盖 | 既有测试 + N2 迁移不回归 |
 | 重复事件不重复发消息 | deliveryKey 去重（既有）+ N2 持久通知去重 + N3 三处幂等 | N2/N3 RED 用例 |
 
-真机验收脚本（手动，一次跑完）：委派一个 30s 后台任务 → 任务运行中杀掉 app →
-重启 → 断言 ①Mimi 聊天里出现结果消息 ②系统通知至多一条 ③再重启一次零新增消息。
+真机验收脚本（手动，一次跑完）：准备一条已持久化但尚未投递的后台完成结果 → 重启 app →
+断言 ①Mimi 聊天里出现结果消息 ②系统通知至多一条 ③再重启一次零新增消息。另做边界验证：
+任务运行中杀掉 app → 重启后任务显示 `interrupted` 且可恢复，不自动重复执行。
 
 ---
 
@@ -248,7 +254,7 @@ PR 工作流(P1) → 原生产物 → Computer Use → 连接器深化 → 平�
 
 | 门禁 | 结果 |
 | --- | --- |
-| 全仓 CodeShell 测试 | `9215 pass / 45 skip / 0 fail`，1268 files |
+| 全仓 CodeShell 测试 | `9225 pass / 45 skip / 0 fail` |
 | typecheck + workspace builds | exit 0 |
 | ESLint | `0 errors / 118 warnings` |
 | `lint:engine-bypass` | exit 0 |
@@ -302,7 +308,7 @@ GitHub Link 已能列出/读取 PR。缺口是把两者接通：PR checkout → 
    `env -u CODE_SHELL_CAPABILITY_MODULES -u CODESHELL_AGENT_STDIO bun test --timeout 30000 tests packages`
    （宿主 app 环境变量泄漏会造成假失败；显式限定本仓测试树，避免 Bun 扫入已被 Git ignore
    的本地 `.agents/skills` / `agent/skills` 第三方自测）；typecheck / lint / lint:engine-bypass /
-   lint:workflow-test-paths / lint:baseline 全部 exit 0，lint 维持 119 warning / 0 error。
+   lint:workflow-test-paths / lint:baseline 全部 exit 0，lint 维持 118 warning / 0 error。
 2. **core → 下游**：改 `packages/core` 后先重建 core 再跑 desktop/pet 测试（下游吃 dist）。
 3. **跨进程共享文件写入一律走 `file-mutex` 原语**，这是一个根因不是多个 bug；
    同目录并列资源用 `acquireLockOnPath` 而非目录锁。
@@ -317,7 +323,7 @@ GitHub Link 已能列出/读取 PR。缺口是把两者接通：PR checkout → 
 
 | 里程碑 | 内容 | 出口判据 |
 | --- | --- | --- |
-| M1 | N1–N3 | 1.5 验收矩阵全过 + 真机杀进程补投脚本通过 |
+| M1 | N1–N3 | 1.5 验收矩阵全过 + 已持久结果重启补投/去重真机脚本通过 |
 | M2 | R1–R4 | 四批各自 RED→GREEN + 全仓门禁，审计文档 §6.7 清零 |
 | M3 | 任务中心 PRD | brainstorming 收敛，独立计划文档 |
 | M4 | PR 工作流 PRD | 同上 |
