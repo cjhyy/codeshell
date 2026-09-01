@@ -49,9 +49,18 @@ export function OnboardingPrompt({
   // Arena: which newly-added model aliases participate.
   const [arenaPicks, setArenaPicks] = useState<Set<string>>(new Set());
   const [arenaIdx, setArenaIdx] = useState(0);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // ─── Arena step input ──────────────────────────────────────────────
   useInput((input, key) => {
+    if (saveError) {
+      if (key.escape) {
+        onCancel();
+      } else if (key.return && flowResult) {
+        finish(flowResult, arenaPicks);
+      }
+      return;
+    }
     if (step !== "arena" || !flowResult) return;
     const aliases = flowResult.addedModels.map((m) => m.key);
     if (key.escape) {
@@ -102,21 +111,27 @@ export function OnboardingPrompt({
       baseUrl: active.baseUrl,
     };
 
-    appendOnboardingResult({
-      models: result.addedModels.map((m) => ({
-        instanceId: m.key,
-        // provider kind → catalogId mapping happens in core; prefer the
-        // explicit added-provider kind, fall back to the model's own provider.
-        kind: result.addedProvider?.kind ?? m.provider,
-        model: m.model,
-        apiKey: m.apiKey,
-        baseUrl: m.baseUrl,
-      })),
-      activeId: result.activeModelKey ?? result.addedModels[0]?.key ?? "",
-    });
+    try {
+      setSaveError(null);
+      appendOnboardingResult({
+        models: result.addedModels.map((m) => ({
+          instanceId: m.key,
+          // provider kind → catalogId mapping happens in core; prefer the
+          // explicit added-provider kind, fall back to the model's own provider.
+          kind: result.addedProvider?.kind ?? m.provider,
+          model: m.model,
+          apiKey: m.apiKey,
+          baseUrl: m.baseUrl,
+        })),
+        activeId: result.activeModelKey ?? result.addedModels[0]?.key ?? "",
+      });
 
-    if (picks.size >= 2) {
-      saveArenaSettingsByKeys([...picks]);
+      if (picks.size >= 2) {
+        saveArenaSettingsByKeys([...picks]);
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : String(error));
+      return;
     }
 
     onComplete(onboardingResult);
@@ -139,6 +154,22 @@ export function OnboardingPrompt({
   }
 
   // ─── Render ────────────────────────────────────────────────────────
+
+  if (saveError) {
+    return (
+      <Box flexDirection="column" marginLeft={1}>
+        <Text color="ansi:red" bold>
+          配置没有保存
+        </Text>
+        <Box marginTop={1} marginLeft={2}>
+          <Text>{saveError}</Text>
+        </Box>
+        <Box marginLeft={2}>
+          <Text dim>请修复 ~/.code-shell/settings.json 后按 Enter 重试，或按 Esc 取消。</Text>
+        </Box>
+      </Box>
+    );
+  }
 
   if (step === "flow") {
     return (
@@ -184,7 +215,10 @@ export function OnboardingPrompt({
                 {focused ? "❯ " : "  "}
                 {`[${checked ? "x" : " "}] ${m.key}`}
               </Text>
-              <Text dim>{"  "}{m.model}</Text>
+              <Text dim>
+                {"  "}
+                {m.model}
+              </Text>
             </Box>
           );
         })}

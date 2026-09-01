@@ -23,6 +23,7 @@ import { EngineRuntime } from "../engine/runtime.js";
 import { ChatSessionManager } from "../protocol/chat-session-manager.js";
 import { AgentServer } from "../protocol/server.js";
 import { listenTcp } from "../protocol/tcp-transport.js";
+import type { Transport } from "../protocol/transport.js";
 import { SettingsManager } from "../settings/manager.js";
 import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { personalizationFrom } from "../settings/personalization.js";
@@ -44,7 +45,9 @@ import { notificationQueue } from "../tool-system/builtin/agent-notifications.js
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 const port = Number(process.env.AGENT_TCP_PORT ?? "4321");
 const host = process.env.AGENT_TCP_HOST ?? "127.0.0.1";
-const notificationSessionsDir = sessionsRoot();
+const dataRoot = process.env.CODE_SHELL_DATA_ROOT?.trim() || undefined;
+const dataSessionsDir = dataRoot ? join(dataRoot, "sessions") : undefined;
+const notificationSessionsDir = dataSessionsDir ?? sessionsRoot();
 
 notificationQueue.attachPersistence({
   fileForSession(sessionId) {
@@ -94,7 +97,12 @@ if (!seedLlm) {
 const llmConfig = seedLlm;
 
 // ── Shared runtime (same bootstrap as stdio) ─────────────────────
-const seedEngine = new Engine({ llm: llmConfig, cwd, settingsScope: "full" });
+const seedEngine = new Engine({
+  llm: llmConfig,
+  cwd,
+  settingsScope: "full",
+  sessionStorageDir: dataSessionsDir,
+});
 const modelPool = seedEngine.getModelPool();
 const toolRegistry = seedEngine.getRuntimeToolRegistry();
 const resolvedLlmConfig = seedEngine.getConfig().llm;
@@ -142,11 +150,13 @@ const chatManager = new ChatSessionManager({
       ...personalizationFrom(settings.agent),
       maxTurns: slice.maxTurns,
       maxContextTokens: slice.maxContextTokens,
+      sessionStorageDir: slice.sessionStorageDir ?? dataSessionsDir,
       ...(slice.cwd ? { cwd: slice.cwd } : {}),
     });
   },
   maxSessions: 16,
   idleTtlMs: 30 * 60 * 1000,
+  ...(dataRoot ? { dataRoot } : {}),
 });
 chatManager.startIdleSweeper();
 
@@ -160,27 +170,52 @@ const automationRunManager = createRunManager({
   approvalBackend: new HeadlessApprovalBackend("approve-read-only"),
 });
 const automation = startAutomation({
-  store: new CronStore(defaultCronStorePath()),
+  store: new CronStore(defaultCronStorePath(dataRoot)),
   runManager: automationRunManager,
 });
 
 // ── Serve over TCP ──────────────────────────────────────────────
 // One AgentServer per accepted connection, all sharing the same chatManager.
 const servers = new Set<AgentServer>();
-const goalDiskManager = new SessionManager();
+const goalDiskManager = new SessionManager(dataSessionsDir);
 
-listenTcp({ port, host }, (transport, socket) => {
-  const server = new AgentServer({
+function createTcpAgentServer(
+  transport: Transport,
+  connectionId: string,
+  ownsBackgroundWakeups: boolean,
+): AgentServer {
+  return new AgentServer({
     chatManager,
     transport,
-    connectionId: randomUUID(),
+    connectionId,
     approvalRouter: getApprovalRouter(),
+    sessionDiskRoot: dataSessionsDir,
+    ownsBackgroundWakeups,
     readActiveGoalFromDisk: (sessionId) => goalDiskManager.readActiveGoal(sessionId),
     updateActiveGoalOnDisk: (sessionId, patch) =>
       goalDiskManager.updateActiveGoal(sessionId, patch)?.goal,
     clearActiveGoalOnDisk: (sessionId, expected) =>
       goalDiskManager.clearActiveGoal(sessionId, expected),
   });
+}
+
+// Own restoration for the whole TCP process, not for the first client. This
+// wakes pending chats immediately after a headless restart even if nobody has
+// connected a UI yet. Per-connection servers still forward live observations
+// but do not race this owner for mailbox consumption.
+const backgroundWakeTransport: Transport = {
+  send() {},
+  onMessage() {},
+  close() {},
+};
+const backgroundWakeServer = createTcpAgentServer(
+  backgroundWakeTransport,
+  "tcp-background-wakeup",
+  true,
+);
+
+listenTcp({ port, host }, (transport, socket) => {
+  const server = createTcpAgentServer(transport, randomUUID(), false);
   servers.add(server);
   socket.once("close", () => {
     server.disconnect();
@@ -193,6 +228,7 @@ listenTcp({ port, host }, (transport, socket) => {
     const shutdown = () => {
       automation.stop();
       for (const s of servers) s.close();
+      backgroundWakeServer.close();
       void listener.close().then(() => process.exit(0));
     };
     process.on("SIGTERM", shutdown);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -31,13 +31,37 @@ describe("PetReportReceiptStore", () => {
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([{ reportId, deliveredAt: 10 }]);
   });
 
-  it("fails closed without overwriting malformed receipt history", async () => {
-    const { file } = fixture();
+  it("quarantines malformed history and continues delivering", async () => {
+    const { root, file } = fixture();
     writeFileSync(file, '{"broken":');
     const store = new PetReportReceiptStore(file);
 
-    await expect(store.has("b".repeat(32))).rejects.toThrow();
-    await expect(store.mark("b".repeat(32))).rejects.toThrow();
-    expect(readFileSync(file, "utf8")).toBe('{"broken":');
+    const reportId = "b".repeat(32);
+    expect(await store.has(reportId)).toBe(false);
+    await store.mark(reportId);
+
+    expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([expect.objectContaining({ reportId })]);
+    const quarantined = readdirSync(root).find((name) => name.endsWith(".corrupt"));
+    expect(quarantined).toBeDefined();
+    expect(readFileSync(join(root, quarantined!), "utf8")).toBe('{"broken":');
+  });
+
+  it("preserves valid receipts while isolating malformed rows", async () => {
+    const { root, file } = fixture();
+    const delivered = "c".repeat(32);
+    writeFileSync(
+      file,
+      JSON.stringify([{ reportId: delivered, deliveredAt: 5 }, { broken: true }]),
+    );
+    const store = new PetReportReceiptStore(file, () => 10);
+
+    expect(await store.has(delivered)).toBe(true);
+    await store.mark("d".repeat(32));
+
+    expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([
+      { reportId: delivered, deliveredAt: 5 },
+      { reportId: "d".repeat(32), deliveredAt: 10 },
+    ]);
+    expect(readdirSync(root).some((name) => name.endsWith(".corrupt"))).toBe(true);
   });
 });

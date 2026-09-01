@@ -3,7 +3,10 @@ import { constants } from "node:fs";
 import { chmod, lstat, mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-export async function readBoundedJson(path: string, maxBytes: number): Promise<unknown | undefined> {
+export async function readBoundedJson(
+  path: string,
+  maxBytes: number,
+): Promise<unknown | undefined> {
   let handle: Awaited<ReturnType<typeof open>> | undefined;
   try {
     const entry = await lstat(path);
@@ -21,6 +24,26 @@ export async function readBoundedJson(path: string, maxBytes: number): Promise<u
     throw error;
   } finally {
     await handle?.close().catch(() => undefined);
+  }
+}
+
+/**
+ * Move unreadable owner state aside before starting from a clean store.
+ *
+ * A corrupt receipt must not disable every future delivery, but silently
+ * overwriting it would destroy the only forensic copy. Rename keeps the bad
+ * bytes for diagnosis and makes the original path available for an atomic
+ * replacement. A failed quarantine is deliberately surfaced so callers never
+ * overwrite a target they could not isolate.
+ */
+export async function quarantineCorruptJson(path: string): Promise<string | undefined> {
+  const quarantinePath = `${path}.${Date.now()}.${randomUUID()}.corrupt`;
+  try {
+    await rename(path, quarantinePath);
+    return quarantinePath;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
   }
 }
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -19,6 +19,7 @@ function fixture(overrides: Partial<DesktopNotifierDependencies> = {}) {
     ...overrides,
   };
   return {
+    root,
     path: join(root, "notifications.json"),
     shown,
     dependencies,
@@ -66,23 +67,83 @@ describe("DesktopNotifier", () => {
     expect(f.shown[0]!.body).toBe("x".repeat(180));
   });
 
-  it("rate-limits bursts without consuming the skipped key", async () => {
-    const f = fixture({ maxNotificationsPerWindow: 1 });
+  it("delays bursts instead of dropping them", async () => {
+    let now = 100;
+    const waits: number[] = [];
+    const f = fixture({
+      maxNotificationsPerWindow: 1,
+      rateWindowMs: 10,
+      now: () => now,
+      sleep: async (delayMs) => {
+        waits.push(delayMs);
+        now += delayMs;
+      },
+    });
     const notifier = new DesktopNotifier(f.path, f.dependencies);
     expect(await notifier.notify({ key: "one", title: "完成", body: "one" })).toBe("shown");
-    expect(await notifier.notify({ key: "two", title: "完成", body: "two" })).toBe("rate-limited");
+    expect(await notifier.notify({ key: "two", title: "完成", body: "two" })).toBe("shown");
+    expect(waits).toEqual([10]);
+    expect(f.shown).toHaveLength(2);
+  });
+
+  it("lets urgent notifications bypass a saturated rate window", async () => {
+    const f = fixture({
+      maxNotificationsPerWindow: 1,
+      sleep: async () => {
+        throw new Error("urgent notification unexpectedly waited");
+      },
+    });
+    const notifier = new DesktopNotifier(f.path, f.dependencies);
+    await notifier.notify({ key: "one", title: "完成", body: "one" });
+    expect(
+      await notifier.notify({ key: "urgent", title: "停止", body: "urgent", urgent: true }),
+    ).toBe("shown");
+    expect(f.shown).toHaveLength(2);
+  });
+
+  it("does not charge urgent notifications against the ordinary burst budget", async () => {
+    const f = fixture({
+      maxNotificationsPerWindow: 1,
+      sleep: async () => {
+        throw new Error("ordinary notification waited behind an exempt urgent notification");
+      },
+    });
+    const notifier = new DesktopNotifier(f.path, f.dependencies);
+    await notifier.notify({ key: "urgent-first", title: "停止", body: "urgent", urgent: true });
+    expect(await notifier.notify({ key: "ordinary", title: "完成", body: "ordinary" })).toBe(
+      "shown",
+    );
+    expect(f.shown).toHaveLength(2);
+  });
+
+  it("does not persist a receipt when show throws", async () => {
+    let shouldThrow = true;
+    const f = fixture({
+      show: (input) => {
+        if (shouldThrow) throw new Error("native notification failed");
+        f.shown.push(input);
+      },
+    });
+    const notifier = new DesktopNotifier(f.path, f.dependencies);
+    expect(await notifier.notify({ key: "retry", title: "完成", body: "body" })).toBe("failed");
+    shouldThrow = false;
+    expect(await notifier.notify({ key: "retry", title: "完成", body: "body" })).toBe("shown");
     expect(f.shown).toHaveLength(1);
   });
 
-  it("fails closed without overwriting an unreadable dedupe history", async () => {
+  it("quarantines unreadable history and continues notifying", async () => {
     const f = fixture();
     writeFileSync(f.path, '{"broken":');
     const notifier = new DesktopNotifier(f.path, f.dependencies);
 
     expect(await notifier.notify({ key: "after-corrupt", title: "完成", body: "body" })).toBe(
-      "failed",
+      "shown",
     );
-    expect(readFileSync(f.path, "utf8")).toBe('{"broken":');
-    expect(f.shown).toEqual([]);
+    expect(JSON.parse(readFileSync(f.path, "utf8"))).toEqual([
+      expect.objectContaining({ key: "after-corrupt" }),
+    ]);
+    const quarantine = readdirSync(f.root).find((name) => name.endsWith(".corrupt"));
+    expect(quarantine).toBeDefined();
+    expect(f.shown).toHaveLength(1);
   });
 });

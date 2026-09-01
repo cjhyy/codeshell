@@ -186,13 +186,36 @@ describe("Pet long-task state machine", () => {
       kind: "closure-recorded",
       at: 250,
     });
-    const retrying = transitionPetLongTask(recorded, {
+    const remembered = transitionPetLongTask(recorded, {
+      kind: "work-memory-recorded",
+      at: 260,
+    });
+    const retrying = transitionPetLongTask(remembered, {
       kind: "retrying",
       at: 300,
     });
     expect(retrying).toMatchObject({ status: "queued", phase: "planning", attempt: 2 });
     expect(retrying.closureRecordedAt).toBeUndefined();
+    expect(retrying.workMemoryRecordedAt).toBeUndefined();
     expect(retrying.events.at(-1)?.kind).toBe("retrying");
+  });
+
+  test("ignores a late closure watermark from an older attempt", () => {
+    const failed = transitionPetLongTask(created(), {
+      kind: "failed",
+      at: 200,
+      error: "worker exited",
+    });
+    const retrying = transitionPetLongTask(failed, { kind: "retrying", at: 300 });
+    const stale = transitionPetLongTask(retrying, {
+      kind: "closure-recorded",
+      at: 400,
+      attempt: 1,
+      status: "failed",
+    });
+
+    expect(stale).toBe(retrying);
+    expect(stale.closureRecordedAt).toBeUndefined();
   });
 
   test("fences a terminal event older than current progress or retry attempt", () => {

@@ -5,16 +5,14 @@ import {
   existsSync,
   fstatSync,
   lstatSync,
-  mkdirSync,
   openSync,
   readFileSync,
   renameSync,
 } from "node:fs";
-import { dirname } from "node:path";
 
 import { logger } from "../../logging/logger.js";
 import type { BackgroundAgentCompletedEvent, StreamEvent } from "../../types.js";
-import { acquireLockOnPath, writeFileAtomic } from "../../utils/file-mutex.js";
+import { mutateJsonFile } from "../../utils/file-mutex.js";
 
 export type NotificationAuthority = "user" | "agent" | "system" | "policy";
 
@@ -519,7 +517,10 @@ export class NotificationQueue {
         file,
         new Error(`${invalid.length} invalid pending notification entries`),
       );
-      this.writePersistedResults(file, valid);
+      // Merge the salvaged rows back under the directory lock. A concurrent
+      // writer may already have recreated the active path after quarantine;
+      // replacing it with this earlier snapshot would lose that new result.
+      this.persistAddedResults(sessionId, valid);
     }
     if (valid.length === 0) return 0;
 
@@ -611,7 +612,9 @@ export class NotificationQueue {
       this.sequences.delete(oldest);
     }
     this.buckets.set(envelope.to.sessionId, [...next, envelope]);
-    if (envelope.kind === "result") this.persistSession(envelope.to.sessionId);
+    if (envelope.kind === "result") {
+      this.persistAddedResults(envelope.to.sessionId, [envelope]);
+    }
     this.notify();
     agentNotificationBus.publish(envelope);
     return envelope;
@@ -644,7 +647,12 @@ export class NotificationQueue {
     if (drained.length === 0) return [];
     if (retained.length > 0) this.buckets.set(sessionId, retained);
     else this.buckets.delete(sessionId);
-    this.persistSession(sessionId);
+    this.persistRemovedResults(
+      sessionId,
+      drained
+        .filter((item): item is ResultEnvelope => item.kind === "result")
+        .map((item) => item.id),
+    );
     this.notify();
     return drained;
   }
@@ -672,7 +680,7 @@ export class NotificationQueue {
     if (restored.length === 0) return 0;
     this.buckets.set(sessionId, [...restored, ...bucket]);
     for (const envelope of restored) this.reseedSequence(envelope);
-    this.persistSession(sessionId);
+    this.persistAddedResults(sessionId, restored);
     this.notify();
     return restored.length;
   }
@@ -716,7 +724,10 @@ export class NotificationQueue {
       this.buckets.clear();
       this.sequences.clear();
       this.sequenceRoutes.clear();
-      for (const persistedSession of persistedSessions) this.persistSession(persistedSession);
+      for (const persistedSession of persistedSessions) {
+        const file = this.persistence?.fileForSession(persistedSession) ?? null;
+        if (file) this.replacePersistedResults(file, []);
+      }
       this.restoredSessions.clear();
     } else {
       this.restorePersistedSession(sessionId);
@@ -729,7 +740,8 @@ export class NotificationQueue {
         clearedRoute = true;
       }
       if (!hadBucket && !clearedRoute) return;
-      this.persistSession(sessionId);
+      const file = this.persistence?.fileForSession(sessionId) ?? null;
+      if (file) this.replacePersistedResults(file, []);
       this.restoredSessions.delete(sessionId);
     }
     this.notify();
@@ -741,11 +753,24 @@ export class NotificationQueue {
     );
   }
 
-  private persistSession(sessionId: string): void {
+  private persistAddedResults(sessionId: string, results: readonly ResultEnvelope[]): void {
+    if (results.length === 0) return;
     const file = this.persistence?.fileForSession(sessionId) ?? null;
     if (!file) return;
     try {
-      this.writePersistedResults(file, this.resultSnapshot(sessionId));
+      this.mutatePersistedResults(file, (current) => {
+        const merged = [...current.results];
+        const ids = new Set(merged.map((item) => item.id));
+        for (const result of results) {
+          if (ids.has(result.id)) continue;
+          ids.add(result.id);
+          merged.push(result);
+        }
+        // Always return the validated state: parse may have quarantined a
+        // mixed-validity file, in which case even a duplicate add must reseed
+        // the active path with the valid rows.
+        return merged;
+      });
     } catch (error) {
       logger.error("notification_queue.persistence_write_failed", {
         sessionId,
@@ -754,23 +779,86 @@ export class NotificationQueue {
     }
   }
 
-  private writePersistedResults(file: string, results: readonly ResultEnvelope[]): void {
-    const state: PersistedNotificationResults = {
-      schemaVersion: PERSISTENCE_SCHEMA_VERSION,
-      results: [...results],
-    };
-    const serialized = `${JSON.stringify(state, null, 2)}\n`;
-    if (Buffer.byteLength(serialized, "utf8") > MAX_PERSISTED_BYTES) {
-      throw new Error(`pending notification state exceeds ${MAX_PERSISTED_BYTES} bytes`);
-    }
-    mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-    if (!existsSync(file)) writeFileAtomic(file, '{"schemaVersion":1,"results":[]}\n', 0o600);
-    const release = acquireLockOnPath(file);
+  private persistRemovedResults(sessionId: string, resultIds: readonly string[]): void {
+    if (resultIds.length === 0) return;
+    const file = this.persistence?.fileForSession(sessionId) ?? null;
+    if (!file) return;
     try {
-      writeFileAtomic(file, serialized, 0o600);
-    } finally {
-      release();
+      const removed = new Set(resultIds);
+      this.mutatePersistedResults(file, (current) => {
+        const retained = current.results.filter((item) => !removed.has(item.id));
+        return retained;
+      });
+    } catch (error) {
+      logger.error("notification_queue.persistence_write_failed", {
+        sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
+  }
+
+  private replacePersistedResults(file: string, results: readonly ResultEnvelope[]): void {
+    this.mutatePersistedResults(file, () => [...results]);
+  }
+
+  /**
+   * Cross-process mailbox mutation. The directory lock exists before the JSON
+   * file does, and the current contents are re-read inside that lock. This
+   * avoids both the old lock-outside seed race and stale-snapshot overwrite.
+   */
+  private mutatePersistedResults(
+    file: string,
+    mutation: (current: PersistedNotificationResults) => ResultEnvelope[] | undefined,
+  ): void {
+    mutateJsonFile<PersistedNotificationResults>(file, {
+      parse: (raw) => this.parsePersistedResultsForMutation(file, raw),
+      serialize: (value) => `${JSON.stringify(value, null, 2)}\n`,
+      mutation: (current) => {
+        const results = mutation(current);
+        return results === undefined
+          ? {}
+          : {
+              value: {
+                schemaVersion: PERSISTENCE_SCHEMA_VERSION,
+                results,
+              },
+            };
+      },
+      mode: 0o600,
+      maxBytes: MAX_PERSISTED_BYTES,
+    });
+  }
+
+  private parsePersistedResultsForMutation(
+    file: string,
+    raw: string | undefined,
+  ): PersistedNotificationResults {
+    if (raw === undefined) {
+      return { schemaVersion: PERSISTENCE_SCHEMA_VERSION, results: [] };
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      this.quarantineCorruptFile(file, error);
+      return { schemaVersion: PERSISTENCE_SCHEMA_VERSION, results: [] };
+    }
+    if (
+      !isRecord(parsed) ||
+      parsed.schemaVersion !== PERSISTENCE_SCHEMA_VERSION ||
+      !Array.isArray(parsed.results)
+    ) {
+      this.quarantineCorruptFile(file, new Error("invalid pending notification schema"));
+      return { schemaVersion: PERSISTENCE_SCHEMA_VERSION, results: [] };
+    }
+    const valid = parsed.results.filter(isPersistedResultEnvelope);
+    if (valid.length !== parsed.results.length) {
+      this.quarantineCorruptFile(
+        file,
+        new Error(`${parsed.results.length - valid.length} invalid pending notification entries`),
+      );
+    }
+    return { schemaVersion: PERSISTENCE_SCHEMA_VERSION, results: valid };
   }
 
   private quarantineCorruptFile(file: string, error: unknown): void {

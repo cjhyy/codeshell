@@ -120,4 +120,41 @@ describe("NotificationQueue persistence", () => {
     restarted.attachPersistence(persistence(root));
     expect(restarted.restorePersistedSessions()).toEqual(["parent"]);
   });
+
+  it("merges writers that both observed a missing mailbox", () => {
+    const root = tempRoot();
+    const first = new NotificationQueue();
+    const second = new NotificationQueue();
+    first.attachPersistence(persistence(root));
+    second.attachPersistence(persistence(root));
+
+    // Both processes cache the initial missing state before either commits.
+    expect(first.getSnapshot("parent")).toEqual([]);
+    expect(second.getSnapshot("parent")).toEqual([]);
+    const left = first.enqueue(result("left", "child-left"))!;
+    const right = second.enqueue(result("right", "child-right"))!;
+
+    const file = join(root, "parent", "pending-notifications.json");
+    expect(
+      JSON.parse(readFileSync(file, "utf8")).results.map((row: { id: string }) => row.id),
+    ).toEqual([left.id, right.id]);
+  });
+
+  it("applies concurrent-style drain and enqueue as id mutations", () => {
+    const root = tempRoot();
+    const first = new NotificationQueue();
+    first.attachPersistence(persistence(root));
+    const consumed = first.enqueue(result("consumed"))!;
+
+    const second = new NotificationQueue();
+    second.attachPersistence(persistence(root));
+    expect(second.getSnapshot("parent")).toHaveLength(1);
+    expect(first.drainAll("parent").map((row) => row.id)).toEqual([consumed.id]);
+    const retained = second.enqueue(result("retained", "other-child"))!;
+
+    const file = join(root, "parent", "pending-notifications.json");
+    expect(
+      JSON.parse(readFileSync(file, "utf8")).results.map((row: { id: string }) => row.id),
+    ).toEqual([retained.id]);
+  });
 });

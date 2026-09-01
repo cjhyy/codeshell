@@ -1600,22 +1600,6 @@ async function createWindow(): Promise<BrowserWindow> {
       worker: bridge,
       launcher: petWorkDelegationHost,
       onTaskClosed: async (task) => {
-        await recordPetDelegationClosureBestEffort(
-          petSegmentController,
-          {
-            dedupeKey: `${task.id}:${task.attempt}:${task.status}`,
-            objective: task.objective,
-            outcome: task.status === "completed" ? "completed" : "failed",
-            ...(task.workspacePath ? { workspace: task.workspacePath } : {}),
-            sessionRef: task.sessionId,
-          },
-          (error) =>
-            dlog("main", "pet.longTask.memory.failed", {
-              taskId: task.id,
-              error: String(error),
-            }),
-        );
-
         let message = formatPetLongTaskClosureMessage(task);
         let continued = false;
         let closureHostActions: PetHostActionExecution[] | undefined;
@@ -1734,6 +1718,21 @@ async function createWindow(): Promise<BrowserWindow> {
             taskId: task.id,
           });
         }
+      },
+      onTaskWorkMemory: async (task) => {
+        const recorded = await recordPetDelegationClosureBestEffort(
+          petSegmentController,
+          {
+            dedupeKey: `${task.id}:${task.attempt}:${task.status}`,
+            objective: task.objective,
+            outcome: task.status === "completed" ? "completed" : "failed",
+            ...(task.workspacePath ? { workspace: task.workspacePath } : {}),
+            sessionRef: task.sessionId,
+          },
+          (error) =>
+            dlog("main", "pet.longTask.memory.failed", { taskId: task.id, error: String(error) }),
+        );
+        if (!recorded) throw new Error("Pet work-memory distillation remains pending");
       },
       onBackgroundError: (operation, error) => {
         dlog("main", `pet.longTask.${operation}.failed`, { error: String(error) });

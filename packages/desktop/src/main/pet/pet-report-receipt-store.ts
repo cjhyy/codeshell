@@ -1,4 +1,9 @@
-import { readBoundedJson, writeOwnerJsonAtomic } from "./bounded-json-store.js";
+import { dlog } from "../desktop-logger.js";
+import {
+  quarantineCorruptJson,
+  readBoundedJson,
+  writeOwnerJsonAtomic,
+} from "./bounded-json-store.js";
 
 interface PetReportReceipt {
   reportId: string;
@@ -46,18 +51,53 @@ export class PetReportReceiptStore {
   }
 
   private async load(): Promise<void> {
-    if (!this.loadPromise) this.loadPromise = this.loadFromDisk();
+    if (!this.loadPromise) {
+      const attempt = this.loadFromDisk().catch((error) => {
+        // A transient quarantine/read failure must be retryable. Caching the
+        // rejected promise would poison every report for the process lifetime.
+        if (this.loadPromise === attempt) this.loadPromise = undefined;
+        throw error;
+      });
+      this.loadPromise = attempt;
+    }
     await this.loadPromise;
   }
 
   private async loadFromDisk(): Promise<void> {
-    const parsed = await readBoundedJson(this.filePath, MAX_FILE_BYTES);
+    let parsed: unknown | undefined;
+    try {
+      parsed = await readBoundedJson(this.filePath, MAX_FILE_BYTES);
+    } catch (error) {
+      const quarantinePath = await quarantineCorruptJson(this.filePath);
+      dlog("main", "pet.report_receipts.quarantined", {
+        file: this.filePath,
+        quarantinePath,
+        error: String(error),
+      });
+      await writeOwnerJsonAtomic(this.filePath, [], MAX_FILE_BYTES);
+      return;
+    }
     if (parsed === undefined) return;
-    if (!Array.isArray(parsed)) throw new Error("Mimi report receipt file is invalid");
-    const valid = parsed.map((candidate) => {
-      if (!isReceipt(candidate)) throw new Error("Mimi report receipt is invalid");
-      return candidate;
-    });
+    if (!Array.isArray(parsed)) {
+      const quarantinePath = await quarantineCorruptJson(this.filePath);
+      dlog("main", "pet.report_receipts.quarantined", {
+        file: this.filePath,
+        quarantinePath,
+        error: "Mimi report receipt file is invalid",
+      });
+      await writeOwnerJsonAtomic(this.filePath, [], MAX_FILE_BYTES);
+      return;
+    }
+    const valid = parsed.filter(isReceipt);
+    if (valid.length !== parsed.length) {
+      const quarantinePath = await quarantineCorruptJson(this.filePath);
+      dlog("main", "pet.report_receipts.quarantined", {
+        file: this.filePath,
+        quarantinePath,
+        invalidEntries: parsed.length - valid.length,
+      });
+      await writeOwnerJsonAtomic(this.filePath, valid.slice(-MAX_RECEIPTS), MAX_FILE_BYTES);
+    }
     for (const receipt of valid.slice(-MAX_RECEIPTS)) {
       this.receipts.delete(receipt.reportId);
       this.receipts.set(receipt.reportId, receipt);

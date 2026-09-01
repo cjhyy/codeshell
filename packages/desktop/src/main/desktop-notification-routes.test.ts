@@ -71,14 +71,61 @@ describe("desktop notification routes", () => {
     notifyBackgroundResult(sink, {
       kind: "progress",
       id: "progress-1",
-      payload: { status: "completed", description: "ignored" },
+      from: { sessionId: "child" },
+      to: { sessionId: "parent" },
+      payload: {
+        workId: "work-1",
+        workKind: "agent",
+        status: "completed",
+        description: "ignored",
+        finishedAt: 100,
+      },
     });
     notifyBackgroundResult(sink, {
       kind: "result",
       id: "result-1",
-      payload: { status: "cancelled", description: "stopped" },
+      from: { sessionId: "child" },
+      to: { sessionId: "parent" },
+      payload: {
+        workId: "work-1",
+        workKind: "agent",
+        status: "cancelled",
+        description: "stopped",
+        finishedAt: 100,
+      },
     });
     await Promise.resolve();
-    expect(calls).toEqual([{ key: "result-1", title: "自动化任务已取消", body: "stopped" }]);
+    expect(calls).toEqual([
+      { key: expect.stringMatching(/^[a-f0-9]{64}$/), title: "自动化任务已取消", body: "stopped" },
+    ]);
+  });
+
+  it("uses one semantic receipt key across duplicate envelope ids", async () => {
+    const { sink, calls } = fixture();
+    const payload = {
+      workId: "work-stable",
+      workKind: "shell",
+      status: "completed",
+      description: "done",
+      finishedAt: 123,
+    };
+    notifyBackgroundResult(sink, {
+      kind: "result",
+      id: "first-envelope",
+      from: { sessionId: "worker" },
+      to: { sessionId: "owner" },
+      payload,
+    });
+    notifyBackgroundResult(sink, {
+      kind: "result",
+      id: "replayed-envelope",
+      from: { sessionId: "worker" },
+      to: { sessionId: "owner" },
+      payload,
+    });
+    await Promise.resolve();
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.key).toBe(calls[1]?.key);
   });
 });

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { CronJob, CronJobLifecycleEvent } from "@cjhyy/code-shell-core/internal";
 
 import { automationLifecycleNotification } from "./automation-notification.js";
@@ -12,6 +13,8 @@ export interface DesktopNotificationSink {
 interface BackgroundResultEnvelope {
   kind: string;
   id: string;
+  from?: { sessionId?: unknown };
+  to?: { sessionId?: unknown };
   payload: unknown;
 }
 
@@ -22,7 +25,8 @@ async function deliver(
   details: Record<string, unknown>,
 ): Promise<void> {
   try {
-    await notifier?.notify(input);
+    const outcome = await notifier?.notify(input);
+    if (outcome === "failed") dlog("main", failureEvent, { ...details, outcome });
   } catch (error) {
     dlog("main", failureEvent, { ...details, error: String(error) });
   }
@@ -90,25 +94,51 @@ export function notifyBackgroundResult(
 ): void {
   if (envelope.kind !== "result") return;
   if (!envelope.payload || typeof envelope.payload !== "object") return;
-  const payload = envelope.payload as { status?: unknown; description?: unknown };
+  const payload = envelope.payload as {
+    workId?: unknown;
+    workKind?: unknown;
+    status?: unknown;
+    description?: unknown;
+    finishedAt?: unknown;
+  };
   if (
     (payload.status !== "completed" &&
       payload.status !== "failed" &&
       payload.status !== "cancelled") ||
-    typeof payload.description !== "string"
+    typeof payload.description !== "string" ||
+    typeof payload.workId !== "string" ||
+    typeof payload.workKind !== "string" ||
+    typeof payload.finishedAt !== "number" ||
+    !Number.isFinite(payload.finishedAt) ||
+    typeof envelope.from?.sessionId !== "string" ||
+    typeof envelope.to?.sessionId !== "string"
   ) {
     return;
   }
   const completed = payload.status === "completed";
   const cancelled = payload.status === "cancelled";
+  const deliveryKey = createHash("sha256")
+    .update("background-result\0")
+    .update(envelope.from.sessionId)
+    .update("\0")
+    .update(envelope.to.sessionId)
+    .update("\0")
+    .update(payload.workKind)
+    .update("\0")
+    .update(payload.workId)
+    .update("\0")
+    .update(payload.status)
+    .update("\0")
+    .update(String(payload.finishedAt))
+    .digest("hex");
   void deliver(
     notifier,
     {
-      key: envelope.id,
+      key: deliveryKey,
       title: completed ? "自动化任务完成" : cancelled ? "自动化任务已取消" : "自动化任务失败",
       body: payload.description,
     },
     "desktop_notification.background_result.failed",
-    { envelopeId: envelope.id },
+    { envelopeId: envelope.id, deliveryKey },
   );
 }

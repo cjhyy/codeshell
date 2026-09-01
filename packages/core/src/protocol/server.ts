@@ -505,6 +505,12 @@ export interface AgentServerOptions {
   notificationPersistence?: NotificationQueuePersistence;
   /** Test/host seam; production uses the process singleton. */
   notificationMailbox?: NotificationQueue;
+  /**
+   * Whether this server instance owns durable result restoration and idle
+   * wakeups. Defaults to true. Multi-connection hosts set one process-lifetime
+   * owner and leave connection servers as observation-only forwarders.
+   */
+  ownsBackgroundWakeups?: boolean;
   /** Shared owner router; injectable for hosts/tests, process singleton by default. */
   approvalRouter?: ApprovalRouter;
   /**
@@ -617,6 +623,7 @@ export class AgentServer {
    * itself outlives the server (it's a process-local singleton).
    */
   private bgAgentBusUnsubscribe: (() => void) | null = null;
+  private readonly ownsBackgroundWakeups: boolean;
   private readonly wakeupsInFlight = new Set<string>();
   private readonly sessionWorkspaceRpc: SessionWorkspaceRpcHandlers;
   private readonly notificationMailbox: NotificationQueue;
@@ -645,6 +652,7 @@ export class AgentServer {
 
   constructor(options: AgentServerOptions) {
     this.notificationMailbox = options.notificationMailbox ?? notificationQueue;
+    this.ownsBackgroundWakeups = options.ownsBackgroundWakeups !== false;
     if (options.notificationPersistence) {
       this.notificationMailbox.attachPersistence(options.notificationPersistence);
     }
@@ -765,7 +773,9 @@ export class AgentServer {
         // legacy UI event is only an observation path. A renderer transport
         // failure after accepting the event must not strand the result in the
         // queue, so schedule the wake from finally.
-        if (envelope.kind === "result") this.maybeWakeIdleSession(sessionId);
+        if (this.ownsBackgroundWakeups && envelope.kind === "result") {
+          this.maybeWakeIdleSession(sessionId);
+        }
       }
       // Background work that finishes while the session is idle (a
       // run_in_background Bash like a download, a background sub-agent, or a
@@ -782,8 +792,10 @@ export class AgentServer {
     // Results restored from disk are deliberately not republished on the
     // observation bus: their required destination is the original chat. Feed
     // them into the same guarded wake path as live completions instead.
-    for (const sessionId of this.notificationMailbox.restorePersistedSessions()) {
-      this.maybeWakeIdleSession(sessionId);
+    if (this.ownsBackgroundWakeups) {
+      for (const sessionId of this.notificationMailbox.restorePersistedSessions()) {
+        this.maybeWakeIdleSession(sessionId);
+      }
     }
 
     // Notify client we're ready
@@ -813,6 +825,7 @@ export class AgentServer {
    * wakeup turns while getOrCreate waits for a closing generation to settle.
    */
   private maybeWakeIdleSession(sessionId: string): void {
+    if (!this.ownsBackgroundWakeups) return;
     if (this.wakeupsInFlight.has(sessionId)) return;
     this.wakeupsInFlight.add(sessionId);
     void this.wakeIdleSession(sessionId)

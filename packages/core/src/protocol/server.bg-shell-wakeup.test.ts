@@ -155,6 +155,32 @@ describe("AgentServer — background shell completion wakes an idle session", ()
     expect(notificationQueue.getSnapshot(SID).length).toBe(0);
   });
 
+  it("lets an observation-only connection forward results without racing the wake owner", async () => {
+    const { engine, runs } = makeFakeEngine();
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => engine,
+    });
+    await chatManager.getOrCreate(SID, {} as never);
+    const t = makeTransport();
+    servers.push(
+      new AgentServer({
+        transport: t.transport,
+        chatManager,
+        ownsBackgroundWakeups: false,
+      }),
+    );
+
+    enqueueShellExit(SID, "bg_observed");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(runs).toHaveLength(0);
+    expect(notificationQueue.getSnapshot(SID)).toHaveLength(1);
+    expect(
+      t.sent.some((message: any) => message?.params?.event?.type === "background_agent_completed"),
+    ).toBe(true);
+  });
+
   it("starts a continuation when a background shell exits unsuccessfully", async () => {
     const { engine, runs } = makeFakeEngine();
     const chatManager = new ChatSessionManager({

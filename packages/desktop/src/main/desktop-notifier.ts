@@ -1,4 +1,9 @@
-import { readBoundedJson, writeOwnerJsonAtomic } from "./pet/bounded-json-store.js";
+import { dlog } from "./desktop-logger.js";
+import {
+  quarantineCorruptJson,
+  readBoundedJson,
+  writeOwnerJsonAtomic,
+} from "./pet/bounded-json-store.js";
 
 export interface DesktopNotificationInput {
   key: string;
@@ -11,7 +16,6 @@ export type DesktopNotificationOutcome =
   | "shown"
   | "duplicate"
   | "focused"
-  | "rate-limited"
   | "unsupported"
   | "failed";
 
@@ -25,6 +29,7 @@ export interface DesktopNotifierDependencies {
   isSupported(): boolean;
   show(input: { title: string; body: string }): void;
   now?(): number;
+  sleep?(delayMs: number): Promise<void>;
   rateWindowMs?: number;
   maxNotificationsPerWindow?: number;
 }
@@ -40,7 +45,6 @@ const MAX_NOTIFICATIONS_PER_WINDOW = 5;
 export class DesktopNotifier {
   private receipts = new Map<string, DesktopNotificationReceipt>();
   private loadPromise: Promise<void> | undefined;
-  private loadError: unknown;
   private mutationQueue: Promise<unknown> = Promise.resolve();
   private notifyTimes: number[] = [];
 
@@ -60,19 +64,53 @@ export class DesktopNotifier {
 
   private async load(): Promise<void> {
     if (!this.loadPromise) {
-      this.loadPromise = this.loadFromDisk().catch((error) => {
-        this.loadError = error;
+      const attempt = this.loadFromDisk().catch((error) => {
+        // Do not permanently poison this notifier on a transient filesystem
+        // failure. A later delivery gets a fresh read/quarantine attempt.
+        if (this.loadPromise === attempt) this.loadPromise = undefined;
+        throw error;
       });
+      this.loadPromise = attempt;
     }
     await this.loadPromise;
   }
 
   private async loadFromDisk(): Promise<void> {
-    const parsed = await readBoundedJson(this.filePath, MAX_FILE_BYTES);
+    let parsed: unknown | undefined;
+    try {
+      parsed = await readBoundedJson(this.filePath, MAX_FILE_BYTES);
+    } catch (error) {
+      const quarantinePath = await quarantineCorruptJson(this.filePath);
+      dlog("main", "desktop_notification.receipts_quarantined", {
+        file: this.filePath,
+        quarantinePath,
+        error: String(error),
+      });
+      await writeOwnerJsonAtomic(this.filePath, [], MAX_FILE_BYTES);
+      return;
+    }
     if (parsed === undefined) return;
-    if (!Array.isArray(parsed)) throw new Error("desktop notification receipt file is invalid");
-    for (const candidate of parsed.slice(-MAX_RECEIPTS)) {
-      if (!isReceipt(candidate)) throw new Error("desktop notification receipt is invalid");
+    if (!Array.isArray(parsed)) {
+      const quarantinePath = await quarantineCorruptJson(this.filePath);
+      dlog("main", "desktop_notification.receipts_quarantined", {
+        file: this.filePath,
+        quarantinePath,
+        error: "desktop notification receipt file is invalid",
+      });
+      await writeOwnerJsonAtomic(this.filePath, [], MAX_FILE_BYTES);
+      return;
+    }
+    const valid = parsed.filter(isReceipt).slice(-MAX_RECEIPTS);
+    if (valid.length !== parsed.length) {
+      const quarantinePath = await quarantineCorruptJson(this.filePath);
+      dlog("main", "desktop_notification.receipts_quarantined", {
+        file: this.filePath,
+        quarantinePath,
+        invalidEntries: parsed.length - valid.length,
+      });
+      await writeOwnerJsonAtomic(this.filePath, valid, MAX_FILE_BYTES);
+    }
+    for (const candidate of valid) {
       this.receipts.delete(candidate.key);
       this.receipts.set(candidate.key, candidate);
     }
@@ -82,24 +120,13 @@ export class DesktopNotifier {
     if (!validKey(input.key)) throw new Error("desktop notification key is invalid");
     if (!validTitle(input.title)) throw new Error("desktop notification title is invalid");
     if (typeof input.body !== "string") throw new Error("desktop notification body is invalid");
-    if (this.loadError) return "failed";
     if (this.receipts.has(input.key)) return "duplicate";
     if (!input.urgent && this.dependencies.hasFocusedWindow()) return "focused";
     if (!this.dependencies.isSupported()) return "unsupported";
 
-    const now = this.dependencies.now?.() ?? Date.now();
-    const rateWindowMs = this.dependencies.rateWindowMs ?? RATE_WINDOW_MS;
-    const maxNotifications =
-      this.dependencies.maxNotificationsPerWindow ?? MAX_NOTIFICATIONS_PER_WINDOW;
-    this.notifyTimes = this.notifyTimes.filter((shownAt) => now - shownAt < rateWindowMs);
-    if (this.notifyTimes.length >= maxNotifications) return "rate-limited";
-
-    const staged = new Map(this.receipts);
-    staged.set(input.key, { key: input.key, shownAt: now });
-    while (staged.size > MAX_RECEIPTS) staged.delete(staged.keys().next().value!);
-    await writeOwnerJsonAtomic(this.filePath, [...staged.values()], MAX_FILE_BYTES);
-    this.receipts = staged;
-    this.notifyTimes.push(now);
+    // Urgent lifecycle failures bypass burst throttling. Ordinary completions
+    // wait for a slot instead of silently dropping the sixth notification.
+    const now = input.urgent ? this.now() : await this.waitForRateSlot();
 
     try {
       this.dependencies.show({
@@ -108,9 +135,48 @@ export class DesktopNotifier {
           .slice(0, MAX_BODY_LENGTH)
           .join(""),
       });
-      return "shown";
     } catch {
       return "failed";
+    }
+
+    // Only a successful show() call earns a durable receipt. Marking before
+    // show made a synchronous Electron failure look like a delivered duplicate
+    // on every replay.
+    const staged = new Map(this.receipts);
+    staged.set(input.key, { key: input.key, shownAt: now });
+    while (staged.size > MAX_RECEIPTS) staged.delete(staged.keys().next().value!);
+    // show() already succeeded, so keep the in-process receipt even if the
+    // following disk commit fails. A retry in this process must not display a
+    // second native notification; restart remains the unavoidable boundary of
+    // a non-transactional OS side effect.
+    this.receipts = staged;
+    if (!input.urgent) this.notifyTimes.push(now);
+    await writeOwnerJsonAtomic(this.filePath, [...staged.values()], MAX_FILE_BYTES);
+    return "shown";
+  }
+
+  private now(): number {
+    return this.dependencies.now?.() ?? Date.now();
+  }
+
+  private async waitForRateSlot(): Promise<number> {
+    const rateWindowMs = this.dependencies.rateWindowMs ?? RATE_WINDOW_MS;
+    const maxNotifications =
+      this.dependencies.maxNotificationsPerWindow ?? MAX_NOTIFICATIONS_PER_WINDOW;
+    if (!Number.isFinite(rateWindowMs) || rateWindowMs <= 0) {
+      throw new Error("desktop notification rate window must be positive");
+    }
+    if (!Number.isSafeInteger(maxNotifications) || maxNotifications <= 0) {
+      throw new Error("desktop notification rate limit must be a positive integer");
+    }
+
+    for (;;) {
+      const now = this.now();
+      this.notifyTimes = this.notifyTimes.filter((shownAt) => now - shownAt < rateWindowMs);
+      if (this.notifyTimes.length < maxNotifications) return now;
+      const delayMs = Math.max(1, this.notifyTimes[0]! + rateWindowMs - now);
+      await (this.dependencies.sleep?.(delayMs) ??
+        new Promise<void>((resolve) => setTimeout(resolve, delayMs)));
     }
   }
 }
